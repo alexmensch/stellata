@@ -177,7 +177,7 @@ counts rather than at zero: `parked*` per reason, from `PARKED_COUNT_KEY`.
    **LMC kinematic override** (`applyLmcKinematicOverride`), which gates on the
    direction tier's own place, the motion steps 2–3 settled, and step 0's
    parallax with its error. See
-   [Multi-layer distance refinement](../distance/README.md#multi-layer-distance-refinement).
+   [Multi-layer distance refinement](../distance/refinement/README.md#multi-layer-distance-refinement).
 5. **`MAX_DIST_PC = 50_000` bounded-scope cutoff** (`stars-parse.ts`).
    **Drops** rows still beyond LMC depth after every override —
    `droppedTooFar`.

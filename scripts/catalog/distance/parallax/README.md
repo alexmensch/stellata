@@ -5,7 +5,7 @@ retire its printed cell, and the only one whose residual is a membership event:
 rv and PM fall back to a null — zero motion, the star stays where it is —
 whereas a record with no distance cannot be placed at all.
 
-[Multi-layer distance refinement](../README.md#multi-layer-distance-refinement) owns the two override layers
+[Multi-layer distance refinement](../refinement/README.md#multi-layer-distance-refinement) owns the two override layers
 that sit *above* this cascade; this file owns which parallax they override.
 
 ## Files in this area

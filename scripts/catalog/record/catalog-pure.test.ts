@@ -1,7 +1,7 @@
 import { DIST_VIA_VALUES } from '../distance/parallax/parallax-cascade';
 import { MiB, WORKERS_MAX_ASSET_BYTES } from '../../release/asset-size-pure';
 import { describe, it, expect } from 'vitest';
-import { parseBailerJonesTsv } from '../distance/bailer-jones-source';
+import { parseBailerJonesTsv } from '../distance/refinement/bailer-jones-source';
 import { parseGaiaApsisTsv } from './gaia-apsis-source';
 import {
   normaliseGjKey,

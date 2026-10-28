@@ -332,7 +332,7 @@ which is exactly what `tests/artifact-freshness.test.ts` fails on.
 
 ## Consumed by
 
-- `simbad_sample.tsv` → `scripts/catalog/distance/distance-regression-check.ts`
+- `simbad_sample.tsv` → `scripts/catalog/distance/refinement/distance-regression-check.ts`
   (Tier-C build-time subset) + `scripts/catalog/validate/validate-simbad-sample.ts`
   (Tier-C manual full run, `pnpm run validate:simbad`).
 - `simbad_sptype.tsv` → `scripts/catalog/build-catalog.ts` (Tier-1

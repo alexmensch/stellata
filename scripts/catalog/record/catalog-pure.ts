@@ -1536,7 +1536,7 @@ export function applyBailerJonesOverride(
 //   - Pietrzyński 2019 (/data/papers/index.md#pietrzynski2019):
 //     eclipsing-binary distance 49.59 kpc, ± 0.09 statistical ± 0.54
 //     systematic (shipped as 49.594, an open decision:
-//     /scripts/catalog/distance/README.md#layer-2--lmc-kinematic-override).
+//     /scripts/catalog/distance/refinement/README.md#layer-2--lmc-kinematic-override).
 //   - van der Marel 2014 (/data/papers/index.md#vandermarel2014):
 //     PM dynamical centre (RA, Dec) = (78.76°, −69.19°)
 //     = (05h 15m 02s, −69° 11′ 24″) — their PM-field fit, not the NED/SIMBAD
@@ -1594,7 +1594,7 @@ export function isInLmcCone(raHours: number, decDegrees: number): boolean {
 
 export const LMC_PARALLAX_MAS = 1000 / LMC_DISTANCE_PC;
 
-/** Measured, not chosen: `../distance/README.md#layer-2--lmc-kinematic-override`. */
+/** Measured, not chosen: `../distance/refinement/README.md#layer-2--lmc-kinematic-override`. */
 export const LMC_PARALLAX_CONSISTENCY_SIGMA = 10;
 
 export type LmcKinematicVerdict =

@@ -4,7 +4,7 @@ import type { BuildCounts } from '../build-counts';
 import type { DirectionSources } from '../distance/direction-cascade';
 import type { DustGrid } from '../distance/dust/dust-deextinction-pure';
 import { DUST_GRID } from '../distance/dust/dust-grid-source';
-import { BAILER_JONES } from '../distance/bailer-jones-source';
+import { BAILER_JONES } from '../distance/refinement/bailer-jones-source';
 import { GAIA_ASTROMETRY } from '../distance/gaia-astrometry-source';
 import { GAIA_NSS } from '../distance/gaia-nss-source';
 import { HIP2 } from '../distance/hip2-source';

@@ -59,7 +59,7 @@ import {
   mergeReasonsFromSnapshot,
   simbadSampleDistances,
   type RegressionReport,
-} from './distance/distance-regression-check';
+} from './distance/refinement/distance-regression-check';
 import {
   CONSTELLATIONS,
   assertFigureVerticesInFirstChunk,
@@ -151,7 +151,7 @@ const __dirname = dirname(__filename);
 const EXPECTED_COUNTS = resolve(ROOT, BUILD_COUNTS_EXPECTED_FILE);
 const EXPECTED_OUTLIERS = resolve(
   __dirname,
-  'distance/build-distance-outliers-expected.json',
+  'distance/refinement/build-distance-outliers-expected.json',
 );
 
 const CATALOG_STAMP = stampPath('catalog');

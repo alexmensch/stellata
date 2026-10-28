@@ -111,7 +111,7 @@ Three tiers, all snapshot-pinned:
   reads identically across the two builds. A `BuildCounts` entry is
   either a scalar or a per-tier partition (`emptyTallyPartition`); the latter
   diffs as one `parent.bucket` row per bucket, so a single drifting population
-  names itself ([Override-layer authoring discipline](../distance/README.md#override-layer-authoring-discipline)).
+  names itself ([Override-layer authoring discipline](../distance/refinement/README.md#override-layer-authoring-discipline)).
 - **Tier C — SIMBAD random sample.**
   `scripts/catalog/validate/validate-simbad-sample.ts` cross-checks the built
   `public/catalog.bin` against a stratified random 10k SIMBAD sample

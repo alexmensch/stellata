@@ -1,7 +1,7 @@
 // Bailer-Jones 2021 (/data/papers/index.md#bailerjones2021) DR3 distance posteriors, declared.
 
-import { defineSource, type Declared } from '../../util/sources/source';
-import { readTable } from '../../util/tsv/table-pure';
+import { defineSource, type Declared } from '../../../util/sources/source';
+import { readTable } from '../../../util/tsv/table-pure';
 
 /** Parse the TSV produced by `scripts/refresh/refresh-bailer-jones.py` into a
  *  Gaia DR3 source_id → distance (pc) map. `source_id` is kept as a

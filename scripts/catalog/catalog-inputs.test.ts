@@ -17,7 +17,7 @@ describe('catalogInputPaths', () => {
 
   it('keys the count snapshots the build asserts against', () => {
     expect(inputs).toContain(abs('scripts/catalog/build-catalog-expected.json'));
-    expect(inputs).toContain(abs('scripts/catalog/distance/build-distance-outliers-expected.json'));
+    expect(inputs).toContain(abs('scripts/catalog/distance/refinement/build-distance-outliers-expected.json'));
   });
 
   it('keys the naming tables, the dust chunks and the magnitude pull', () => {

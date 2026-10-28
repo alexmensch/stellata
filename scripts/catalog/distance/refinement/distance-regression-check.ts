@@ -2,9 +2,9 @@
 // shipped distance has drifted from the parallax cascade's own inversion or
 // from SIMBAD's parallax-derived value. Snapshot-pinned by build-catalog.ts.
 
-import type { SimbadSampleRow } from '../validate/simbad-sample-parse';
-import type { Star } from '../parse/stars-parse';
-import type { DistVia } from './parallax/parallax-cascade';
+import type { SimbadSampleRow } from '../../validate/simbad-sample-parse';
+import type { Star } from '../../parse/stars-parse';
+import type { DistVia } from '../parallax/parallax-cascade';
 
 // Only an override layer moves a record off its own inversion. Bailer-Jones
 // legitimately re-anchors the low-S/N tail of Gaia parallaxes, so that tier

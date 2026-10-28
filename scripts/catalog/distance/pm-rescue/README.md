@@ -31,7 +31,7 @@ advances the position too](#the-rescued-motion-advances-the-position-too)). It r
 **Most of the 2p population never arrives, because the parallax cascade parks
 it.** A 2p fit states neither a parallax nor a proper motion, so the same defect
 that would bring a row here also leaves it with no owned parallax — and a row no
-parallax tier reaches builds no record at all ([Multi-layer distance refinement](../README.md#multi-layer-distance-refinement)).
+parallax tier reaches builds no record at all ([Multi-layer distance refinement](../refinement/README.md#multi-layer-distance-refinement)).
 Of the spine's **1,537** 2p rows: **1,219** route
 `hip2_saturated`, take HIP2's motion and were never static; **282** are parked
 (272 of the 283 `distRefusedNoOwnedParallax` rows are 2p); **36** reach this
