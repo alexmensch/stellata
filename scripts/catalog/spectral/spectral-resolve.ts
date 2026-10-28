@@ -49,19 +49,12 @@ export function emptySimbadSpectralIndex(): SimbadSpectralIndex {
  *  reason `parseGaiaApsisTsv` uses. A row is indexed under every namespace it
  *  carries; the rows the pull enumerated by SIMBAD oid alone carry none and
  *  index nowhere. */
-const SPTYPE_REQUIRED = ['source_id', 'sp_type'] as const;
-const SPTYPE_OPTIONAL = ['hip', 'tyc', 'gj', 'sp_qual', 'otype'] as const;
-type SptypeColumn = (typeof SPTYPE_REQUIRED)[number] | (typeof SPTYPE_OPTIONAL)[number];
-
-const SPTYPE_TABLE: TableSpec<SptypeColumn> = {
+const SPTYPE_TABLE = {
   file: 'data/simbad/simbad_sptype.tsv',
-  columns: SPTYPE_REQUIRED,
-  optional: SPTYPE_OPTIONAL,
+  columns: ['source_id', 'sp_type', 'hip', 'tyc', 'gj', 'sp_qual', 'otype'] as const,
   hint: 'Re-run scripts/refresh/refresh-simbad-sptype.py.',
-};
+} satisfies TableSpec<string>;
 
-/** See ../parse/README.md#tsv-header-resolution for why the optional columns
- *  are optional. */
 export function parseSimbadSptypeTsv(text: string): SimbadSpectralIndex {
   const index = emptySimbadSpectralIndex();
   for (const row of readTable(SPTYPE_TABLE, text)) {

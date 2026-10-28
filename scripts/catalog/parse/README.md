@@ -76,7 +76,7 @@ empty map turns a missing file into a silently zeroed join that only surfaces
 as a count drift much later. A valid header with no data rows is a different
 thing and legitimately yields no rows.
 
-Three deliberate departures:
+Two deliberate departures:
 
 - `gaia-xmatch.ts`'s whole-text parser feeds its line-fed accumulator rather
   than `readTable`; the accumulator's result calls the reader's `finish()`, so
@@ -88,15 +88,13 @@ Three deliberate departures:
   row carry exactly that many cells, where `readTable` resolves columns by
   name in any order. A header that merely parses is a file nobody meant to
   ship.
-- `parseSimbadSptypeTsv` (`../spectral/spectral-resolve.ts`) demands only
-  `source_id` and `sp_type`, treating `hip` / `tyc` / `gj` / `sp_qual` /
-  `otype` as `optional` spec columns. Four of those five ARE the ladder's designation tiers,
-  so a column vanishing from a re-pull zeroes a tier rather than throwing —
-  the failure mode this section otherwise exists to prevent. What catches it
-  instead is downstream: `spectralSimbadByTyc` / `ByGj` are pinned in
-  `../build-catalog-expected.json`, so a zeroed tier fails the build's count
-  assert. Declaring all seven in the spec would move that catch upstream to
-  the read.
+
+`parseSimbadSptypeTsv` (`../spectral/spectral-resolve.ts`) requires all seven
+columns it reads, `hip` / `tyc` / `gj` / `sp_qual` / `otype` included. Four of
+those ARE the SIMBAD ladder's designation tiers, so an optional one vanishing
+from a re-pull would zero a tier silently and surface only as a count drift in
+`../build-catalog-expected.json`; required, it fails at the read with the
+pull's refresh hint.
 
 ## Streaming a committed table
 
