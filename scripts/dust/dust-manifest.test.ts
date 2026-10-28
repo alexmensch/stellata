@@ -8,9 +8,11 @@ import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, it, expect } from 'vitest';
 
+import { DUST_GRID } from '../catalog/distance/dust/dust-grid-source';
+
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
-const DUST_DIR = resolve(ROOT, 'data', 'dust');
-const MANIFEST = resolve(DUST_DIR, 'manifest.json');
+const MANIFEST = resolve(ROOT, DUST_GRID.file);
+const DUST_DIR = dirname(MANIFEST);
 
 interface Manifest {
   version: number;
@@ -34,7 +36,7 @@ interface Manifest {
 
 const manifest = JSON.parse(readFileSync(MANIFEST, 'utf-8')) as Manifest;
 
-describe('data/dust/manifest.json encode contract', () => {
+describe('dust manifest.json encode contract', () => {
   it('pins the fixed encode window', () => {
     expect(manifest.version).toBe(2);
     expect(manifest.format).toBe('u8-log-window');
@@ -73,7 +75,7 @@ const firstChunk = resolve(DUST_DIR, 'chunk_0_0_0.bin');
 const chunkIsReal =
   existsSync(firstChunk) && statSync(firstChunk).size === 128 ** 3;
 
-describe.skipIf(!chunkIsReal)('data/dust chunk integrity (LFS)', () => {
+describe.skipIf(!chunkIsReal)('dust chunk integrity (LFS)', () => {
   it('committed chunk bytes match the manifest sha256', () => {
     const entry = manifest.chunks.find((c) => c.file === 'chunk_0_0_0.bin')!;
     const bytes = readFileSync(firstChunk);

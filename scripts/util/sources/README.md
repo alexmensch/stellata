@@ -99,9 +99,14 @@ declaration by the calls in the closure's other modules: `read` (a source's
 `encodeLine`), `both`, or `unused`. A step's data inputs are the `read` and
 `both` ones (`isRead`), so a step never depends on its own output and an
 artifact it reads and rewrites stays an input; the test fails any step with
-an `unused` one. Across
-all of `scripts/` it also fails on a `data/` path literal outside a declaring
-or `*-outputs.ts` module.
+an `unused` one. Across `scripts/`, `src/`, `tests/` and the `vite*.ts`
+configs — test code included — it also fails on a `data/` path literal
+outside a declaring or `*-outputs.ts` module: a test names a data file through
+its declaration (`X.file`, `isReadable(X)`, `X.read()`). The test's named
+`DATA_PATH_SPELLERS` are the exceptions: the two input-set pins, which check a
+derivation from outside the declarations, and the scanners of the repo's
+top-level folders and paper store. A pure parser's test labels its fixtures
+`fixture/…`, never a real path.
 
 A helper that a non-reader needs does not live beside a declaration: it moves
 to a module of its own, or the closure of every caller reaches the file.

@@ -3,6 +3,8 @@ import { describe, expect, it } from 'vitest';
 
 import { REPO_ROOT } from '../util/paths';
 import { CATALOG_OUTPUTS } from './catalog-outputs';
+import { PARKED_LEDGER } from './distance/parallax/parked-ledger-tsv';
+import { SIMBAD_SOURCED_DISTANCES } from './distance/parallax/simbad-sourced-ledger-tsv';
 import { catalogChunkFilename } from './record/catalog-pure';
 
 const repoRelative = (p: string) => relative(REPO_ROOT, p);
@@ -10,8 +12,8 @@ const repoRelative = (p: string) => relative(REPO_ROOT, p);
 describe('CATALOG_OUTPUTS', () => {
   it('declares the committed ledgers, so the catalogue stamp records them', () => {
     expect(Object.values(CATALOG_OUTPUTS.files).map(repoRelative)).toEqual(expect.arrayContaining([
-      'data/membership/parked-ledger.tsv',
-      'data/athyg/simbad_sourced_distances.tsv',
+      PARKED_LEDGER.file,
+      SIMBAD_SOURCED_DISTANCES.file,
     ]));
   });
 

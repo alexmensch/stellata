@@ -1,9 +1,6 @@
 import { describe, it, expect } from 'vitest';
 
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
-
-import { REPO_ROOT } from '../../util/paths';
+import { listingFiles, openDeclared } from '../../util/sources/source';
 import {
   FAINTS_HEADER,
   NEC_HEADER,
@@ -14,9 +11,9 @@ import {
 } from './wgsn-parse-pure';
 import { WGSN_FAINTS } from './wgsn-faints-source';
 
-const NEC = { file: 'data/iau-wgsn/NEC.csv', hint: 'Re-run the refresh.' };
-const FAINTS = { file: 'data/iau-wgsn/wgsnFaints.csv', hint: 'Re-run the refresh.' };
-const CORRECTIONS = { file: 'data/iau-wgsn/wgsn_faints_corrections.tsv', hint: 'h' };
+const NEC = { file: 'fixture/iau-wgsn/NEC.csv', hint: 'Re-run the refresh.' };
+const FAINTS = { file: 'fixture/iau-wgsn/wgsnFaints.csv', hint: 'Re-run the refresh.' };
+const CORRECTIONS = { file: 'fixture/iau-wgsn/wgsn_faints_corrections.tsv', hint: 'h' };
 const NO_CORRECTIONS = { sets: [], file: CORRECTIONS.file };
 
 describe('splitCsvLine', () => {
@@ -107,7 +104,7 @@ describe('wgsnFaints.csv Vmag', () => {
 
   it('reads strictly: a G magnitude in the V column fails the parse', () => {
     expect(() => parseWgsnFaintsCsv([FAINTS_HEADER, G_ROW].join('\n'), FAINTS, NO_CORRECTIONS))
-      .toThrow('data/iau-wgsn/wgsnFaints.csv row 10032: "G12.53" is not a decimal number');
+      .toThrow('fixture/iau-wgsn/wgsnFaints.csv row 10032: "G12.53" is not a decimal number');
   });
 
   it('a curated correction empties the cell before the parse reads it', () => {
@@ -118,16 +115,17 @@ describe('wgsnFaints.csv Vmag', () => {
   it('refuses a correction keying no row, restating the cell, or naming no column or evidence', () => {
     const csv = [FAINTS_HEADER, G_ROW].join('\n');
     expect(() => parseWgsnFaintsCsv(csv, FAINTS, fix('99999\tVmag\t\tx\n')))
-      .toThrow('data/iau-wgsn/wgsn_faints_corrections.tsv: row "99999" matches no data/iau-wgsn/wgsnFaints.csv row');
+      .toThrow('fixture/iau-wgsn/wgsn_faints_corrections.tsv: row "99999" matches no fixture/iau-wgsn/wgsnFaints.csv row');
     expect(() => parseWgsnFaintsCsv(csv, FAINTS, fix('10032\tVmag\tG12.53\tx\n')))
-      .toThrow(/sets Vmag to the value the data\/iau-wgsn\/wgsnFaints\.csv already states/);
+      .toThrow(/sets Vmag to the value the fixture\/iau-wgsn\/wgsnFaints\.csv already states/);
     expect(() => fix('10032\tVmagg\t\tx\n')).toThrow(/column: "Vmagg" is not one of/);
     expect(() => fix('10032\tVmag\t\t\n')).toThrow(/row 10032 states no evidence/);
   });
 
   it('the committed file parses strictly under the committed corrections', () => {
-    const text = readFileSync(resolve(REPO_ROOT, FAINTS.file), 'utf8');
-    const corrections = parseFaintsCorrections(readFileSync(resolve(REPO_ROOT, CORRECTIONS.file), 'utf8'), CORRECTIONS);
+    const [faints, correctionsFile] = listingFiles(WGSN_FAINTS.files()).map((file) => ({ file, hint: WGSN_FAINTS.hint }));
+    const text = openDeclared(faints).text();
+    const corrections = parseFaintsCorrections(openDeclared(correctionsFile).text(), correctionsFile);
     expect(corrections.map((c) => c.key)).toEqual(['10032', '10039', '10117']);
     expect(() => parseWgsnFaintsCsv(text, FAINTS, NO_CORRECTIONS)).toThrow(/is not a decimal number/);
     expect(WGSN_FAINTS.read()).toHaveLength(132);

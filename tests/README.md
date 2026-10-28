@@ -184,7 +184,9 @@ source-declarations.test.ts
                          each declared source and artifact it reaches
                          (/scripts/util/sources/README.md#reached-means-read);
                          a data/ path literal sits only in a declaring or
-                         outputs module; defineSource / defineArtifact only
+                         outputs module, across scripts/, src/, tests/ and
+                         vite*.ts (named DATA_PATH_SPELLERS excepted);
+                         defineSource / defineArtifact only
                          in a *-source.ts / *-tsv.ts module.
 site-claims.test.ts      The homepage against what it states: figures are
                          published tokens, never literals · every saved-view

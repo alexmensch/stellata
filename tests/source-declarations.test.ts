@@ -1,6 +1,6 @@
 // See tests/README.md (source-declarations.test.ts).
 
-import { readFileSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
@@ -11,6 +11,18 @@ import { REPO_ROOT } from '../scripts/util/paths';
 import { isProductionTs, walkFiles } from './walk-files';
 
 const OUT_OF_PIPELINE = /^scripts\/(perf|release|hooks|ci)\//;
+
+const DATA_PATH_SPELLERS = [
+  'scripts/catalog/catalog-inputs.test.ts',
+  'scripts/local-group/local-group-inputs.test.ts',
+  'tests/citation-index.test.ts',
+  'tests/doc-pointer-resolution.test.ts',
+  'tests/folder-readme-coverage.test.ts',
+  'tests/paper-store-link.test.ts',
+  'tests/readme-size.test.ts',
+];
+
+const isTs = (path: string): boolean => path.endsWith('.ts') && !path.endsWith('.d.ts');
 
 /** Modules that call a define* only inside a factory the declaring modules call. */
 const DECLARATION_FACTORIES = ['scripts/util/mirror-to-public.ts'];
@@ -38,16 +50,20 @@ describe('source declarations', () => {
     expect(unread.map(({ module, name }) => `${module}#${name}`)).toEqual([]);
   }, 60_000);
 
-  it('names a data/ path only in a declaring or outputs module', () => {
+  it('names a data/ path only in a declaring or outputs module, tree-wide', () => {
+    const files = [
+      ...['scripts', 'src', 'tests'].flatMap((root) => [...walkFiles(resolve(REPO_ROOT, root), { include: isTs })]),
+      ...readdirSync(REPO_ROOT).filter((name) => /^vite.*\.ts$/.test(name)).map((name) => resolve(REPO_ROOT, name)),
+    ];
     const offenders: string[] = [];
-    for (const file of walkFiles(resolve(REPO_ROOT, 'scripts'), { include: isProductionTs })) {
+    for (const file of files) {
       const rel = file.slice(REPO_ROOT.length + 1);
-      if (OUT_OF_PIPELINE.test(rel)) continue;
+      if (OUT_OF_PIPELINE.test(rel) || DATA_PATH_SPELLERS.includes(rel)) continue;
       if (DECLARING_MODULE.test(rel) || /-outputs\.ts$/.test(rel)) continue;
       readFileSync(file, 'utf8').split('\n').forEach((line, i) => {
         const code = line.replace(/\/\/.*$/, '');
         if (/^\s*(\*|\/\*)/.test(code)) return;
-        if (/['"`]data(\/|['"`])/.test(code)) offenders.push(`${rel}:${i + 1}`);
+        if (/['"`]data\/|,\s*['"]data['"]\s*[,)]/.test(code)) offenders.push(`${rel}:${i + 1}`);
       });
     }
     expect(offenders).toEqual([]);

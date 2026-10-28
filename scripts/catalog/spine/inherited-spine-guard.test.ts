@@ -8,8 +8,11 @@ import { resolve } from 'node:path';
 import { beforeAll, describe, expect, it } from 'vitest';
 
 import { compareCountSnapshot } from '../build-counts';
-import { REPO_ROOT, isLfsPointer, lfsContentReadable } from '../../util/paths';
-import { readTable, type TableSpec } from '../../util/tsv/table-pure';
+import { GAIA_ASTROMETRY } from '../distance/gaia-astrometry-source';
+import { SIMBAD_VALUES } from '../simbad/simbad-values-source';
+import { REPO_ROOT, isLfsPointer } from '../../util/paths';
+import { isReadable, openDeclared, type Declared } from '../../util/sources/source';
+import { readTable } from '../../util/tsv/table-pure';
 import {
   INHERITED_SPINE_EXPECTED_FILE,
   SPINE_COLUMNS,
@@ -19,24 +22,13 @@ import {
   type SpineRow,
 } from './inherited-spine-pure';
 import { INHERITED_SPINE } from './inherited-spine-tsv';
+import { STALE_GAIA_SOURCE_IDS } from './stale-gaia-source-ids-source';
 
-const STALE_GAIA_SOURCE_IDS_FILE = 'data/athyg/stale_gaia_source_ids.tsv';
 const SPINE_PATH = resolve(REPO_ROOT, INHERITED_SPINE.file);
 const EXPECTED_PATH = resolve(REPO_ROOT, INHERITED_SPINE_EXPECTED_FILE);
-const ASTROMETRY_FILE = 'data/gaia/gaia_dr3_astrometry_catalog.tsv';
-const SIMBAD_VALUES_FILE = 'data/simbad/simbad_values.tsv';
-const ASTROMETRY_PATH = resolve(REPO_ROOT, ASTROMETRY_FILE);
-const SIMBAD_VALUES_PATH = resolve(REPO_ROOT, SIMBAD_VALUES_FILE);
 
-const STALE_QUEUE = {
-  file: STALE_GAIA_SOURCE_IDS_FILE,
-  columns: ['gaia_source_id', 'simbad_oid', 'simbad_dr3_source_id'] as const,
-  hint: 'Re-derive it from the spine, the 5p pull and the SIMBAD values pull.',
-} satisfies TableSpec<string>;
-
-function* keyColumn(file: string, column: string, hint: string): Generator<string> {
-  const spec = { file, columns: [column], hint };
-  for (const row of readTable(spec, readFileSync(resolve(REPO_ROOT, file), 'utf-8'))) {
+function* keyColumn(declared: Declared, column: string): Generator<string> {
+  for (const row of readTable({ ...declared, columns: [column] }, openDeclared(declared).text())) {
     yield row.raw(column);
   }
 }
@@ -104,9 +96,9 @@ describe.skipIf(!available)('committed inherited spine', () => {
 
 // Needs the 5p pull and the SIMBAD values pull as well as the spine, so it
 // gates on all three rather than reusing the block above.
-const staleInputs = [SPINE_PATH, ASTROMETRY_PATH, SIMBAD_VALUES_PATH];
+const staleInputs: readonly Declared[] = [INHERITED_SPINE, GAIA_ASTROMETRY, SIMBAD_VALUES];
 
-describe.skipIf(!staleInputs.every(lfsContentReadable))(
+describe.skipIf(!staleInputs.every(isReadable))(
   'spine source_ids Gaia DR3 publishes no row for',
   () => {
     let queue: Record<string, string>[];
@@ -114,17 +106,9 @@ describe.skipIf(!staleInputs.every(lfsContentReadable))(
     let reachedOids: Set<string>;
 
     beforeAll(() => {
-      queue = [...readTable(
-        STALE_QUEUE, readFileSync(resolve(REPO_ROOT, STALE_GAIA_SOURCE_IDS_FILE), 'utf-8'),
-      )].map((row) => Object.fromEntries(
-        STALE_QUEUE.columns.map((c) => [c, row.text(c) ?? '']),
-      ));
-      published = new Set(keyColumn(
-        ASTROMETRY_FILE, 'source_id', 'Re-run scripts/refresh/refresh-gaia-astrometry-catalog.py.',
-      ));
-      reachedOids = new Set(keyColumn(
-        SIMBAD_VALUES_FILE, 'simbad_oid', 'Re-run `pnpm run refresh:simbad-values`.',
-      ));
+      queue = STALE_GAIA_SOURCE_IDS.read();
+      published = new Set(keyColumn(GAIA_ASTROMETRY, 'source_id'));
+      reachedOids = new Set(keyColumn(SIMBAD_VALUES, 'simbad_oid'));
     });
 
     it('enumerates exactly the spine rows the 5p pull cannot key', () => {

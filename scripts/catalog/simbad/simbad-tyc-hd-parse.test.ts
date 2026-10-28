@@ -15,6 +15,7 @@ import {
   parseSimbadTycHdTsv,
   type SimbadTycHdRow,
 } from './simbad-tyc-hd-parse';
+import { SIMBAD_SPTYPE } from '../spectral/simbad-sptype-source';
 
 const TYC_HD_FROM = { file: 'simbad_tyc_hd.tsv', hint: 'h' };
 const HEADER = ['tyc', 'simbad_oid', 'simbad_main_id', 'hd'].join('\t');
@@ -181,12 +182,12 @@ describe.skipIf(!ADJUDICATION_INPUTS.every(lfsContentReadable))(
   },
 );
 
-const SRC_SIMBAD_SPTYPE = AT('data/simbad/simbad_sptype.tsv');
+const SRC_SIMBAD_SPTYPE = AT(SIMBAD_SPTYPE.file);
 const SPLIT_INPUTS = [...ADJUDICATION_INPUTS, SRC_SIMBAD_SPTYPE];
 const SIMBAD_SPTYPE_OBJECTS = {
-  file: 'data/simbad/simbad_sptype.tsv',
+  file: SIMBAD_SPTYPE.file,
+  hint: SIMBAD_SPTYPE.hint,
   columns: ['source_id', 'simbad_main_id'] as const,
-  hint: 'Re-run scripts/refresh/refresh-simbad-sptype.py.',
 };
 
 /** The move set of README.md#which-witness-decides-a-close-pairs-hd: the

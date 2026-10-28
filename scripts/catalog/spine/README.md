@@ -159,7 +159,8 @@ consequence of the V-tier move: three records ship as unsplit blends.
 Six rows carry a Gaia **DR2** id in the column the pipeline reads as DR3,
 so the 5p pull has no row for them however the request is composed. They
 are enumerated with their DR3 status in
-`data/athyg/stale_gaia_source_ids.tsv`, and three assertions here keep that
+`data/athyg/stale_gaia_source_ids.tsv` (`STALE_GAIA_SOURCE_IDS`,
+`stale-gaia-source-ids-source.ts`), and three assertions here keep that
 queue honest: it is exactly the spine's unpublished source_ids, every one
 of them reaches the SIMBAD values pull, and no successor id it names is
 itself a spine cell — which would put two records on one SIMBAD row and

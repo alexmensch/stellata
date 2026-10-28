@@ -80,6 +80,9 @@ scripts/catalog/classic-ids/
                                   artifact.
   route-disagreements-tsv.ts      The two gate queues' codecs:
   rejected-bindings-tsv.ts        ROUTE_DISAGREEMENTS, REJECTED_BINDINGS.
+  route-disagreements-review-     ROUTE_DISAGREEMENTS_REVIEW: the curated
+    source.ts                     disposition of each route-disagreement
+                                  row, declared; read by parity-ledger.test.ts.
   committed-artifacts.test.ts     The overlay, both gate queues and the
                                   label flips each round-trip their committed
                                   file byte for byte.
