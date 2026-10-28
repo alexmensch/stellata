@@ -79,7 +79,12 @@ dr-reconcile.ts           pnpm run sid:dr-reconcile — churn report for a
                           review in build/sid/dr-reconcile-bridges.tsv
                           (dr-reconcile-outputs.ts; gitignored, a draft for
                           sameas-overrides.tsv, never committed itself). Defaults replay the committed DR2→DR3
-                          dry-run inputs (/docs/sid.md#62-dr2dr3-dry-run-measured-2026-07-07).
+                          dry-run inputs (/docs/sid.md#62-dr2dr3-dry-run-measured-2026-07-07):
+                          dr2-neighbourhood-source.ts declares that pair,
+                          the request at the path dr-risk-set-outputs.ts
+                          declares. --request= / --neighbourhood= read
+                          another transition's files through the same
+                          presence check.
 dr-reconcile-pure.ts      Pure classifier + request/neighbourhood TSV
                           readers. ACCEPT_MAS / MAG_REVIEW_DELTA live
                           here.
