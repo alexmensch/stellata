@@ -7,6 +7,11 @@ export function nullableCell(v: string | number | null): string {
   return v === null ? '' : String(v);
 }
 
+/** Code-unit order: the same on every machine, unlike `localeCompare`. */
+export function byText<R>(text: (r: R) => string): (a: R, b: R) => number {
+  return (a, b) => (text(a) < text(b) ? -1 : text(a) > text(b) ? 1 : 0);
+}
+
 /** `by-line` sorts the encoded lines; `as-given` keeps the caller's order. */
 export type ArtifactOrder<R> = 'by-line' | 'as-given' | ((a: R, b: R) => number);
 

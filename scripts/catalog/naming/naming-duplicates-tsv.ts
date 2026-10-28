@@ -1,7 +1,7 @@
 // Codec for naming-duplicates.tsv. See README.md#the-parity-ledger.
 
-import { defineArtifact } from '../../util/tsv/artifact-pure';
-import { byText, type DuplicateRow } from './naming-parity-pure';
+import { byText, defineArtifact } from '../../util/tsv/artifact-pure';
+import type { DuplicateRow } from './naming-parity-pure';
 
 const KEY_SEPARATOR = '|';
 

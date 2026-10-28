@@ -1,7 +1,7 @@
 // Codec for naming-parity.tsv. See README.md#the-parity-ledger.
 
-import { defineArtifact } from '../../util/tsv/artifact-pure';
-import { RESOLVES, byText, type ParityRow } from './naming-parity-pure';
+import { byText, defineArtifact } from '../../util/tsv/artifact-pure';
+import { RESOLVES, type ParityRow } from './naming-parity-pure';
 
 export const NAMING_PARITY = defineArtifact({
   file: 'scripts/catalog/naming/naming-parity.tsv',

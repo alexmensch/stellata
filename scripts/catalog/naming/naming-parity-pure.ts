@@ -48,10 +48,6 @@ export interface ParityRow {
 
 export const RESOLVES = ['yes', 'no', 'absent'] as const;
 
-export function byText<R>(text: (r: R) => string): (a: R, b: R) => number {
-  return (a, b) => (text(a) < text(b) ? -1 : text(a) > text(b) ? 1 : 0);
-}
-
 export interface LabelResolver {
   fuzzyEntries: readonly { label: string; index: number }[];
   hipMap: ReadonlyMap<number, number>;
