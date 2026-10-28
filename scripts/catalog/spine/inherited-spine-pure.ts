@@ -3,7 +3,7 @@
 
 import { SOL_PROPER_NAME } from '../record/catalog-pure';
 import { starDesignations } from '../../sid/sid-pure';
-import { defineArtifact } from '../../util/tsv/artifact-pure';
+import { defineArtifact, nullableCell } from '../../util/tsv/artifact-pure';
 import { idCell } from '../../util/tsv/table-pure';
 import type { Star } from '../parse/stars-parse';
 
@@ -71,10 +71,6 @@ export type SpineRow = Record<SpineColumn, string>;
 /** The AT-HYG cells a row copies verbatim, keyed by their upstream name. */
 export type SpinePrintedCells = Record<SpinePrintedColumn, string>;
 
-function starCell(value: number | string | null): string {
-  return value === null ? '' : String(value);
-}
-
 export function buildSpineRow(
   star: SpineStarFields,
   printed: SpinePrintedCells,
@@ -82,7 +78,7 @@ export function buildSpineRow(
   const row = {} as SpineRow;
   for (const spec of COLUMN_SPEC) {
     row[spec.column] = 'star' in spec
-      ? starCell(star[spec.star])
+      ? nullableCell(star[spec.star])
       : printed[spec.column];
   }
   return row;
