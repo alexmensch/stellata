@@ -1,0 +1,66 @@
+# TSV — the one table reader and the artifact codecs
+
+Every tab-separated table a TypeScript build step reads goes through this
+folder: an external input through `readTable`, a file this repo writes itself
+through its `defineArtifact` codec. Nothing else walks a TSV header or parses
+a cell.
+
+## Files in this area
+
+```
+scripts/util/tsv/
+  table-pure.ts (+ test)      readTable / tableLineReader, TableRow and the
+                              cell parsers (textCell, floatCell, intCell,
+                              oneOfCell).
+  artifact-pure.ts (+ test)   defineArtifact — a self-written table's codec.
+```
+
+## Reading a table
+
+`readTable(spec, text)` yields one `TableRow` per data row;
+`tableLineReader(spec, onRow)` is the same walk fed a line at a time, for a
+table too large to hold as one string
+([Streaming a committed table](../../catalog/parse/README.md#streaming-a-committed-table)).
+A `TableSpec` names the `file` (repo-relative, and the label every error
+carries), the `columns` the reader needs, and the `hint` an error prints:
+the target that rebuilds or re-pulls the file.
+
+- **The column index is typed.** A row is read by column name —
+  `row.float('plx_mas')` — and the name must be one the spec lists, so a typo
+  is a compile error rather than a column that silently reads empty.
+- **The header resolves by name, in any order**, and a missing column throws.
+  So does an empty or headerless file: every input is committed, usually LFS,
+  and zero rows means truncated or unsmudged, never an empty dataset. A valid
+  header with no rows yields no rows.
+- **Absent and malformed are different states.** `text`, `float` and `int`
+  answer null for an empty cell and throw — naming file, line and column — on
+  a non-empty cell they cannot parse. `float` takes only a plain decimal
+  (`12abc`, `nan`, `Infinity` and hex all throw); `int` only an integer
+  (`12.0` throws). A cell past the end of a short row reads as empty.
+  `oneOf(column, values)` returns the cell typed to a closed set or throws.
+- `raw` is the cell exactly as written, for a reader whose meaning depends on
+  untrimmed text.
+
+The bare cell parsers serve the frozen regression corpora, which address
+records through `../../catalog/parse/corpus-tsv.ts`'s record refs.
+
+## Artifact codecs
+
+`defineArtifact({file, columns, hint, order, decode, encode})` is a table
+this repo writes. The artifact constant is both what its writer serializes
+through and what every reader imports, so the column roster, its encoding
+and its parse each have one owner.
+
+- **The header must equal `columns` byte for byte, and every row carry exactly
+  that many cells.** The serializer writes the header, so a header that merely
+  parses was never shipped.
+- `serialize(records)` is the only writer. It refuses a cell holding a tab or
+  newline, orders the rows (`by-line` sorts the encoded lines, a comparator
+  sorts the records, `as-given` keeps the caller's order) and ends with a
+  newline.
+- `parse`, `rows` (a generator) and `lineReader` decode through the one
+  `decode`. The decoded record is typed: a closed column decodes through
+  `oneOf`, so an unknown value fails at the read rather than downstream.
+- Each artifact constant lives in a leaf module that only its readers and its
+  writer import ([The step table](../../pipeline/README.md#the-step-table--stepsts),
+  "Reachable must mean read").
