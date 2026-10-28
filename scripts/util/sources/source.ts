@@ -167,7 +167,3 @@ export async function streamArtifact<C extends string, R, K>(
   await openDeclared(artifact).lines(reader);
   reader.finish();
 }
-
-export function isSource(value: unknown): value is Source<unknown, unknown[], unknown> {
-  return typeof value === 'object' && value !== null && (value as { kind?: unknown }).kind === 'source';
-}
