@@ -10,10 +10,7 @@ import {
   CLASSIC_ID_OVERRIDES_FILE,
   parseLabelOverridesTsv,
 } from '../classic-ids/label-merge/label-merge-pure';
-import {
-  MEMBERSHIP_MANIFEST_FILE,
-  parseManifestTsv,
-} from '../membership/membership-manifest-pure';
+import { MEMBERSHIP_MANIFEST, MEMBERSHIP_MANIFEST_FILE } from '../membership/membership-manifest-tsv';
 import {
   hdNumbers,
   parseSimbadTycHdTsv,
@@ -134,10 +131,8 @@ describe.skipIf(!ADJUDICATION_INPUTS.every(lfsContentReadable))(
         dissent: 0, dissentInconsistent: 0, faithful: 0, vindicating: 0,
         bothAgainst: 0,
       };
-      for (const row of parseManifestTsv(readFileSync(SRC_MANIFEST, 'utf-8'))) {
-        const tyc = row.tyc.trim();
-        const shipped = Number.parseInt(row.hd.trim(), 10);
-        if (tyc === '' || !Number.isFinite(shipped)) continue;
+      for (const { tyc, hd: shipped } of MEMBERSHIP_MANIFEST.rows(readFileSync(SRC_MANIFEST, 'utf-8'))) {
+        if (tyc === null || shipped === null) continue;
         counts.bothCells += 1;
         const answer = simbad.get(tyc);
         if (answer === undefined) { counts.silent += 1; continue; }
@@ -231,17 +226,17 @@ describe.skipIf(!SPLIT_INPUTS.every(lfsContentReadable))('the four-witness split
     // the eight asserted having left the class.
     // Keyed on the TYC, not the source: a mutual swap is two rows.
     const contested = new Map<string, string>();
-    for (const row of parseManifestTsv(readFileSync(SPLIT_INPUTS[2], 'utf-8'))) {
-      const tyc = row.tyc.trim();
-      const shipped = Number.parseInt(row.hd.trim(), 10);
+    for (const row of MEMBERSHIP_MANIFEST.rows(readFileSync(SPLIT_INPUTS[2], 'utf-8'))) {
+      const { tyc, hd: shipped } = row;
+      if (tyc === null || shipped === null) continue;
       const answer = simbad.get(tyc);
       const printed = iv.get(tyc);
-      if (tyc === '' || !Number.isFinite(shipped) || answer === undefined) continue;
+      if (answer === undefined) continue;
       if (printed === undefined) continue;
       const stated = hdNumbers(answer);
       if (!stated.some((hd) => printed.has(hd))) continue;
       if (stated.includes(shipped) || printed.has(shipped)) continue;
-      contested.set(tyc, row.gaia_source_id);
+      contested.set(tyc, row.gaiaSourceId ?? '');
     }
 
     // The fourth witness: SIMBAD's object for the record's own Gaia source.
@@ -333,9 +328,9 @@ describe.skipIf(!ASSERTED_INPUTS.every(lfsContentReadable))(
       }
 
       const tycOfSource = new Map<string, string>();
-      for (const row of parseManifestTsv(readFileSync(SRC_MANIFEST, 'utf-8'))) {
-        if (hdBySource.has(row.gaia_source_id)) {
-          tycOfSource.set(row.gaia_source_id, row.tyc.trim());
+      for (const row of MEMBERSHIP_MANIFEST.rows(readFileSync(SRC_MANIFEST, 'utf-8'))) {
+        if (row.gaiaSourceId !== null && hdBySource.has(row.gaiaSourceId)) {
+          tycOfSource.set(row.gaiaSourceId, row.tyc ?? '');
         }
       }
       asserted = [...hdBySource].map(([sourceId, hd]) => ({
