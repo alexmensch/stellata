@@ -1,15 +1,11 @@
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
 import { describe, it, expect } from 'vitest';
 
-import { REPO_ROOT, lfsContentReadable } from '../../../util/paths';
+import { describeCommittedRoundTrip } from '../../../util/tsv/committed-round-trip';
 
 import {
   SIMBAD_SOURCED_DISTANCES,
   parseSimbadSourcedDistancesTsv,
 } from './simbad-sourced-ledger';
-
-const COMMITTED = resolve(REPO_ROOT, SIMBAD_SOURCED_DISTANCES.file);
 
 describe('simbad-sourced-ledger', () => {
   it('round-trips both join keys, so either match route excludes the record', () => {
@@ -38,9 +34,4 @@ describe('simbad-sourced-ledger', () => {
   });
 });
 
-describe.skipIf(!lfsContentReadable(COMMITTED))('simbad-sourced ledger — the committed file', () => {
-  it('round-trips byte for byte', () => {
-    const text = readFileSync(COMMITTED, 'utf8');
-    expect(SIMBAD_SOURCED_DISTANCES.serialize(SIMBAD_SOURCED_DISTANCES.parse(text)) === text).toBe(true);
-  });
-});
+describeCommittedRoundTrip(SIMBAD_SOURCED_DISTANCES);

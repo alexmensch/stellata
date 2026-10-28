@@ -56,6 +56,8 @@ scripts/catalog/membership/
                                   generator writes, as its emitArtifacts
                                   declaration (../../util/README.md).
                                   Side-effect free.
+  committed-artifacts.test.ts     Each of the four codecs above round-trips
+                                  its committed file byte for byte.
   membership-manifest-gate.test.ts
                                   The replacement parity gate, (i)–(iii) below,
                                   over the COMMITTED artifacts. LFS-gated.

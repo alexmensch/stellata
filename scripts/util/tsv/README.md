@@ -13,6 +13,10 @@ scripts/util/tsv/
                               cell parsers (textCell, floatCell, intCell,
                               oneOfCell).
   artifact-pure.ts (+ test)   defineArtifact — a self-written table's codec.
+  committed-round-trip.ts     Test support: describeCommittedRoundTrip, an
+                              artifact's codec over its committed file, byte
+                              for byte. Each folder that owns artifacts
+                              calls it once per artifact.
 ```
 
 ## Reading a table

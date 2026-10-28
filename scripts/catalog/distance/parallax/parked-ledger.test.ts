@@ -1,8 +1,6 @@
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
 import { describe, it, expect } from 'vitest';
 
-import { REPO_ROOT, lfsContentReadable } from '../../../util/paths';
+import { describeCommittedRoundTrip } from '../../../util/tsv/committed-round-trip';
 
 import {
   PARKED_REASONS,
@@ -11,8 +9,6 @@ import {
   parseParkedRecordsTsv,
   type ParkedRecord,
 } from './parked-ledger';
-
-const COMMITTED = resolve(REPO_ROOT, PARKED_LEDGER.file);
 
 const SIGMA_ORI: ParkedRecord = {
   tyc: '4771-1188-1', hip: 26549, hd: 37468, gl: null,
@@ -78,9 +74,4 @@ describe('parked-ledger', () => {
   });
 });
 
-describe.skipIf(!lfsContentReadable(COMMITTED))('parked ledger — the committed file', () => {
-  it('round-trips byte for byte', () => {
-    const text = readFileSync(COMMITTED, 'utf8');
-    expect(PARKED_LEDGER.serialize(PARKED_LEDGER.parse(text)) === text).toBe(true);
-  });
-});
+describeCommittedRoundTrip(PARKED_LEDGER);

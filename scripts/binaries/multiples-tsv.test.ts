@@ -1,19 +1,9 @@
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
-import { REPO_ROOT, lfsContentReadable } from '../util/paths';
+import { describeCommittedRoundTrip } from '../util/tsv/committed-round-trip';
 import { MULTIPLES_COLUMNS, MULTIPLES_TSV } from './multiples-tsv';
 
-const PATH = resolve(REPO_ROOT, MULTIPLES_TSV.file);
-
-describe.skipIf(!lfsContentReadable(PATH))('multiples.tsv codec over the committed file', () => {
-  const text = readFileSync(PATH, 'utf8');
-
-  it('round-trips byte for byte', () => {
-    expect(MULTIPLES_TSV.serialize(MULTIPLES_TSV.parse(text)) === text).toBe(true);
-  });
-});
+describeCommittedRoundTrip(MULTIPLES_TSV);
 
 describe('multiples.tsv codec', () => {
   const header = MULTIPLES_COLUMNS.join('\t');

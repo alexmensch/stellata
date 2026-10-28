@@ -73,6 +73,9 @@ scripts/catalog/classic-ids/
                                   parseOverlayTsv.
   route-disagreements-tsv.ts      The two gate queues' codecs:
   rejected-bindings-tsv.ts        ROUTE_DISAGREEMENTS, REJECTED_BINDINGS.
+  committed-artifacts.test.ts     The overlay, both gate queues and the
+                                  label flips each round-trip their committed
+                                  file byte for byte.
   classic-id-overlay-pure.ts      The join (`joinOverlayCandidates`, which
     (+ test)                      reads no evidence), the binding gate and its
                                   counts. The gate itself — evidence,
