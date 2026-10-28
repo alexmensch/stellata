@@ -113,7 +113,7 @@ and its parse each have one owner.
   at the read — verdict, reason — but hand it on as a string.
 - A reader opens the file through `readArtifact` / `streamArtifact`
   (`../sources/`), which fail on a missing file or an LFS pointer before
-  decoding. An optional `rowKey` lets lineage cite the artifact's rows
+  decoding. A declared `rowKey` (then required in the artifact's type) lets lineage cite its rows
   ([SourceRowRef](../sources/README.md#sourcerowref)).
 - Each artifact constant lives in a leaf module that only its readers and its
   writer import ([The step table](../../pipeline/README.md#the-step-table--stepsts),

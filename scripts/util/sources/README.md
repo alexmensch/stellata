@@ -104,6 +104,12 @@ to a module of its own, or the closure of every caller reaches the file.
 `{ source, row }`: a row of a declared source or artifact, by that source's
 typed row key — never a path string
 ([SourceRowRef](../../catalog/lineage/README.md#sourcerowref)). A declaration
-carries a `rowKey` (`{id, text}`) only once something cites its rows, so
-`sourceRowRef` is a compile error on any other. Its text form is
-`<id>:<row>`.
+carries a `rowKey` (`{id, text}`) only once something cites its rows; its
+type then holds a required `rowKey` (`RowKeyOf<K>`), and a keyless one holds
+`undefined`, so `sourceRowRef` is a compile error on a keyless declaration
+or a wrongly typed row. Every declaration also carries a type-only brand
+(`Declaration`) that no object literal can, so a hand-written
+`{file, rowKey}` stand-in does not compile either
+(`row-ref-pure.test.ts`). Keyed today: the spine (`spine:<line>`),
+`multiples.tsv` (`multiples:<system_id>/<comp>`) and the magnitude pull
+(`gaia-dr3:<source_id>`). Its text form is `<id>:<row>`.

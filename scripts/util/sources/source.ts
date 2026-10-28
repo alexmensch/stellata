@@ -6,7 +6,7 @@ import { createInterface } from 'node:readline';
 
 import type { Artifact } from '../tsv/artifact-pure';
 import { lfsContentReadable, REPO_ROOT } from '../paths.ts';
-import type { RowKey } from './row-ref-pure';
+import type { Declaration, RowKey, RowKeyOf } from './row-ref-pure';
 
 export interface Declared {
   /** Repo-relative. */
@@ -39,9 +39,9 @@ export type Listing =
   | { readonly kind: 'listed'; readonly files: readonly string[] }
   | { readonly kind: 'unlistable'; readonly file: string };
 
-export interface Source<T, A extends unknown[] = [], K = never> extends Declared {
+export interface Source<T, A extends unknown[] = [], K = never> extends Declared, Declaration {
   readonly kind: 'source';
-  readonly rowKey?: RowKey<K>;
+  readonly rowKey: RowKeyOf<K>;
   read(...args: A): T;
   files(): Listing;
 }
@@ -90,8 +90,8 @@ export function defineSource<T, A extends unknown[] = [], K = never>(
     kind: 'source',
     file: spec.file,
     hint: spec.hint,
-    rowKey: spec.rowKey,
-    read: (...args) => {
+    rowKey: spec.rowKey as RowKeyOf<K>,
+    read: (...args: A) => {
       const input = openDeclared(spec);
       const opened = memberList(() => input).map(openDeclared);
       const member = (file: string): SourceInput => {
@@ -105,7 +105,7 @@ export function defineSource<T, A extends unknown[] = [], K = never>(
       if (typeof members === 'function' && !isReadable(spec)) return { kind: 'unlistable', file: spec.file };
       return { kind: 'listed', files: [spec.file, ...memberList(() => openDeclared(spec)).map((m) => m.file)] };
     },
-  };
+  } as Source<T, A, K>;
 }
 
 export interface FolderInput extends Declared {
@@ -144,7 +144,7 @@ export function defineFolder<T, A extends unknown[] = []>(spec: FolderSpec<T, A>
     files: () => (present()
       ? { kind: 'listed', files: listing().map((m) => m.file) }
       : { kind: 'unlistable', file: spec.dir }),
-  };
+  } as Source<T, A>;
 }
 
 export function readArtifact<C extends string, R, K>(artifact: Artifact<C, R, K>): R[] {

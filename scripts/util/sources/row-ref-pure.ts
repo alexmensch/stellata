@@ -6,7 +6,18 @@ export interface RowKey<K> {
   text(row: K): string;
 }
 
-export interface RowKeyed<K> {
+/** A declaration's key: present exactly when the declaration names one. */
+export type RowKeyOf<K> = [K] extends [never] ? undefined : RowKey<K>;
+
+declare const declaration: unique symbol;
+
+/** Carried only by `defineSource` / `defineFolder` / `defineArtifact` results:
+ *  a hand-written `{file, rowKey}` cannot stand in for a declaration. */
+export interface Declaration {
+  readonly [declaration]: true;
+}
+
+export interface RowKeyed<K> extends Declaration {
   readonly file: string;
   readonly rowKey: RowKey<K>;
 }

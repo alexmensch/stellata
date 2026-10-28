@@ -4,7 +4,6 @@ import { afterAll, describe, expect, it } from 'vitest';
 
 import { defineArtifact } from '../tsv/artifact-pure';
 import { REPO_ROOT } from '../paths';
-import { sourceRowRef, sourceRowRefText } from './row-ref-pure';
 import { defineFolder, defineSource, listingFiles, readArtifact, streamArtifact } from './source';
 
 mkdirSync(join(REPO_ROOT, 'build'), { recursive: true });
@@ -145,12 +144,5 @@ describe('artifact reads', () => {
 
   it('fails a missing artifact before decoding', () => {
     expect(() => readArtifact(art('none.tsv'))).toThrow(/none\.tsv is missing/);
-  });
-});
-
-describe('SourceRowRef', () => {
-  it('prints <id>:<row>', () => {
-    const src = { file: 'f', rowKey: { id: 'spine', text: (line: number) => String(line) } };
-    expect(sourceRowRefText(sourceRowRef(src, 42))).toBe('spine:42');
   });
 });

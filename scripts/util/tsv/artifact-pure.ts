@@ -1,7 +1,7 @@
 // A self-written TSV's codec: exact header, one decoder for its readers, and
 // one serializer as its only writer. See README.md#artifact-codecs.
 
-import type { RowKey } from '../sources/row-ref-pure';
+import type { Declaration, RowKey, RowKeyOf } from '../sources/row-ref-pure';
 import {
   readTable, tableLineReader, type TableLineReader, type TableRow, type TableSpec,
 } from './table-pure';
@@ -28,8 +28,10 @@ export interface ArtifactSpec<C extends string, R, K = never> {
   encode(record: R): Readonly<Record<C, string>>;
 }
 
-export interface Artifact<C extends string, R, K = never> extends ArtifactSpec<C, R, K> {
+export interface Artifact<C extends string, R, K = never>
+  extends Omit<ArtifactSpec<C, R, K>, 'rowKey'>, Declaration {
   readonly kind: 'artifact';
+  readonly rowKey: RowKeyOf<K>;
   readonly table: TableSpec<C>;
   rows(text: string): Generator<R>;
   parse(text: string): R[];
@@ -62,6 +64,7 @@ export function defineArtifact<C extends string, R, K = never>(
   return {
     ...spec,
     kind: 'artifact',
+    rowKey: spec.rowKey as RowKeyOf<K>,
     table,
     rows,
     parse: (text) => [...rows(text)],
@@ -74,5 +77,5 @@ export function defineArtifact<C extends string, R, K = never>(
       if (order === 'by-line') lines.sort();
       return `${[spec.columns.join('\t'), ...lines].join('\n')}\n`;
     },
-  };
+  } as Artifact<C, R, K>;
 }
