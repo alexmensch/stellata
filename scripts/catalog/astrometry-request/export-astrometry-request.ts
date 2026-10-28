@@ -10,7 +10,7 @@ import {
   magnitudeWeighableSourceIds,
 } from '../classic-ids/classic-id-overlay-pure';
 import { loadHipVMag } from '../membership/binding/binding-evidence';
-import { MULTIPLES_TSV, readMultiplesTsv } from '../companions/companion-promotion';
+import { readMultiplesTsv } from '../companions/companion-promotion';
 import { pairMemberSourceIds } from '../distance/parallax/pair-member-parallax';
 import {
   derivationCandidateSourceIds,
@@ -82,7 +82,7 @@ async function main(): Promise<void> {
   for (const id of derivation) ids.add(id);
   const afterDerivation = ids.size;
 
-  const siblings = pairMemberSourceIds(readMultiplesTsv(MULTIPLES_TSV));
+  const siblings = pairMemberSourceIds(readMultiplesTsv());
   for (const id of siblings) ids.add(id);
 
   const sorted = sortSourceIdsNumeric(ids);

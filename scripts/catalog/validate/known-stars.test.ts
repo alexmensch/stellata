@@ -48,12 +48,11 @@ import {
   type RecordRef,
 } from '../parse/corpus-tsv';
 import { AU_PER_PC } from '../../../src/client/util/astronomy-constants';
-import { REPO_ROOT } from '../../util/paths';
+import { MULTIPLES_TSV, MULTIPLES_TSV_PATH } from '../../binaries/multiples-tsv';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const KNOWN_STARS_TSV = resolve(__dirname, 'known-stars.tsv');
 const TOPOLOGY_TSV = resolve(__dirname, 'system-pair-topology.tsv');
-const MULTIPLES_TSV = resolve(REPO_ROOT, 'data/binaries/multiples.tsv');
 
 // The corpus needs public/catalog.bin and data/binaries/multiples.tsv —
 // the first is generated (gitignored, ~24 MB), the second is LFS-tracked.
@@ -62,7 +61,7 @@ const MULTIPLES_TSV = resolve(REPO_ROOT, 'data/binaries/multiples.tsv');
 // `build-catalog` job runs the full suite after `pnpm run build:catalog`
 // + LFS pull, so the assertions execute against real data on every PR.
 const CATALOG_BIN_PRESENT = existsSync(DEFAULT_CATALOG_MANIFEST);
-const MULTIPLES_PRESENT = existsSync(MULTIPLES_TSV);
+const MULTIPLES_PRESENT = existsSync(MULTIPLES_TSV_PATH);
 const FIXTURES_READY = CATALOG_BIN_PRESENT && MULTIPLES_PRESENT;
 if (!FIXTURES_READY) {
   // eslint-disable-next-line no-console
@@ -293,28 +292,18 @@ function loadTopologySync(): TopologyRow[] {
 }
 
 function loadMultiplesIndexSync(): Map<string, MultiplesRow[]> {
-  const text = readFileSync(MULTIPLES_TSV, 'utf-8');
-  const rows = parse(text, {
-    delimiter: '\t',
-    columns: true,
-    skip_empty_lines: true,
-    trim: false,
-  }) as Record<string, string>[];
-
   const idx = new Map<string, MultiplesRow[]>();
-  for (const row of rows) {
-    const sysId = (row.system_id ?? '').trim();
-    if (!sysId) continue;
-    const wdsId = sysId.replace(/-[^-]+$/, '');
+  for (const r of MULTIPLES_TSV.parse(readFileSync(MULTIPLES_TSV_PATH, 'utf-8'))) {
+    const wdsId = r.systemId.replace(/-[^-]+$/, '');
     const parsed: MultiplesRow = {
-      systemId: sysId,
-      comp: (row.comp ?? '').trim(),
-      hip: parseIntOrNull(row.hip ?? ''),
-      gaiaSourceId: nonEmpty(row.gaia_source_id ?? ''),
-      absmag: parseFloatOrNull(row.absmag ?? ''),
-      spect: (row.spect ?? '').trim(),
-      name: (row.name ?? '').trim(),
-      periodDays: parseFloatOrNull(row.P_days ?? ''),
+      systemId: r.systemId,
+      comp: r.comp,
+      hip: r.hip,
+      gaiaSourceId: r.gaiaSourceId,
+      absmag: r.absmag,
+      spect: r.spect.trim(),
+      name: r.name.trim(),
+      periodDays: r.pDays,
     };
     const bucket = idx.get(wdsId);
     if (bucket) bucket.push(parsed);

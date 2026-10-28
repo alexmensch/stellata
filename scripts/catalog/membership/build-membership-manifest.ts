@@ -24,7 +24,6 @@ import {
   parseLabelOverridesTsv,
 } from '../classic-ids/label-merge/label-merge-pure';
 import {
-  MULTIPLES_TSV,
   readMultiplesTsv,
   sourceIdsWithSiblingComponent,
 } from '../companions/companion-promotion';
@@ -92,7 +91,7 @@ async function main(): Promise<void> {
     overrides: existsSync(overridesPath)
       ? parseLabelOverridesTsv(readFileSync(overridesPath, 'utf8'))
       : new Map(),
-    siblingRenderedSourceIds: sourceIdsWithSiblingComponent(readMultiplesTsv(MULTIPLES_TSV)),
+    siblingRenderedSourceIds: sourceIdsWithSiblingComponent(readMultiplesTsv()),
     evidence,
     dispositions: parseBindingDispositionsTsv(
       readRequired(resolve(ROOT, BINDING_DISPOSITIONS_FILE), DISPOSITIONS_HINT),

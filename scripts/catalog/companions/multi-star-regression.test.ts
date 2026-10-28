@@ -47,12 +47,12 @@ import { evaluateOrbitSkyAU } from '../../../src/client/binaries/binary-orbit-pu
 import { BinaryOrbitField } from '../../../src/client/binaries/binary-orbit-field';
 import { AU_PC, AU_PER_PC } from '../../../src/client/util/astronomy-constants';
 import { readMultiplesTsv, wdsRootOf } from './companion-promotion';
+import { MULTIPLES_TSV, MULTIPLES_TSV_PATH } from '../../binaries/multiples-tsv';
 import { REPO_ROOT } from '../../util/paths';
 import { DEFAULT_ROW_INDEX_MAP } from '../catalog-lookup';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const CORPUS_TSV = resolve(__dirname, 'multi-star-regression.tsv');
-const MULTIPLES_TSV = resolve(REPO_ROOT, 'data/binaries/multiples.tsv');
 const BINARIES_BIN = resolve(REPO_ROOT, 'public/binaries.bin');
 const NAMING_DUPLICATES = resolve(REPO_ROOT, 'scripts/catalog/naming/naming-duplicates.tsv');
 
@@ -60,14 +60,14 @@ const NAMING_DUPLICATES = resolve(REPO_ROOT, 'scripts/catalog/naming/naming-dupl
 // generated). CI's plain `pnpm test` job skips; the Tier-A corpus job
 // runs the full corpus against real artifacts.
 const FIXTURES_READY =
-  existsSync(DEFAULT_CATALOG_MANIFEST) && existsSync(MULTIPLES_TSV)
+  existsSync(DEFAULT_CATALOG_MANIFEST) && existsSync(MULTIPLES_TSV_PATH)
   && existsSync(BINARIES_BIN) && existsSync(DEFAULT_ROW_INDEX_MAP);
 if (!FIXTURES_READY) {
   // eslint-disable-next-line no-console
   console.warn(
     `[multi-star-regression] skipping corpus assertions — ` +
     `catalog.bin ${existsSync(DEFAULT_CATALOG_MANIFEST) ? 'present' : 'MISSING'}, ` +
-    `multiples.tsv ${existsSync(MULTIPLES_TSV) ? 'present' : 'MISSING'}, ` +
+    `multiples.tsv ${existsSync(MULTIPLES_TSV_PATH) ? 'present' : 'MISSING'}, ` +
     `binaries.bin ${existsSync(BINARIES_BIN) ? 'present' : 'MISSING'}. ` +
     `Run \`pnpm run build:catalog\` + \`pnpm run build:binaries-runtime\` (with LFS pulled).`,
   );
@@ -188,27 +188,19 @@ function loadCorpusSync(): CorpusPair[] {
 }
 
 function loadMultiplesGeomSync(): Map<string, MultiplesGeomRow[]> {
-  const rows = parse(readFileSync(MULTIPLES_TSV, 'utf-8'), {
-    delimiter: '\t',
-    columns: true,
-    skip_empty_lines: true,
-    trim: false,
-  }) as Record<string, string>[];
   const idx = new Map<string, MultiplesGeomRow[]>();
-  for (const row of rows) {
-    const sysId = (row.system_id ?? '').trim();
-    if (!sysId) continue;
+  for (const row of MULTIPLES_TSV.parse(readFileSync(MULTIPLES_TSV_PATH, 'utf-8'))) {
     const parsed: MultiplesGeomRow = {
-      comp: (row.comp ?? '').trim(),
-      sepArcsec: parseFloatOrNull(row.sep_arcsec),
-      paDeg: parseFloatOrNull(row.pa_deg),
-      epochJd: parseFloatOrNull(row.sep_pa_epoch_jd),
-      pDays: parseFloatOrNull(row.P_days),
-      tJd: parseFloatOrNull(row.T_jd),
+      comp: row.comp,
+      sepArcsec: row.sepArcsec,
+      paDeg: row.paDeg,
+      epochJd: row.sepPaEpochJd,
+      pDays: row.pDays,
+      tJd: row.tJd,
     };
-    const bucket = idx.get(sysId);
+    const bucket = idx.get(row.systemId);
     if (bucket) bucket.push(parsed);
-    else idx.set(sysId, [parsed]);
+    else idx.set(row.systemId, [parsed]);
   }
   return idx;
 }
@@ -865,7 +857,7 @@ function buildWdsRootToIndices(): Map<string, number[]> {
     const g = rootToIndices.get(root);
     if (g) g.push(idx); else rootToIndices.set(root, [idx]);
   };
-  for (const row of readMultiplesTsv(MULTIPLES_TSV)) {
+  for (const row of readMultiplesTsv()) {
     const root = wdsRootOf(row.systemId);
     if (root === null) continue;
     let rec = row.gaiaSourceId ? lookupByGaiaSourceId(catalog, row.gaiaSourceId) : null;

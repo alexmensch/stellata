@@ -3,7 +3,6 @@
 // See ./README.md#companion-promotion-from-databinariesmultiplestsv `data/binaries/multiples.tsv`.
 
 import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
 
 import {
   FLAG_BINARY_COMPANION_ONLY,
@@ -12,7 +11,6 @@ import {
   OPTICAL_DOUBLE_MIN_SEP_PC,
   absoluteToApparentMagnitude,
   apparentToAbsoluteMagnitude,
-  parseGaiaSourceIdStr,
 } from '../record/catalog-pure';
 import {
   SPECTRAL_UNKNOWN,
@@ -32,7 +30,7 @@ import {
   RIELLO_G_MINUS_V_SIGMA,
   vTierIsSystemBlend,
 } from '../photometry/v-magnitude-pure';
-import { REPO_ROOT } from '../../util/paths';
+import { MULTIPLES_TSV, MULTIPLES_TSV_PATH, type MultiplesRecord, type PhotometryVia } from '../../binaries/multiples-tsv';
 import { emptyTallyPartition } from '../../util/tally';
 import { ARCSEC_TO_RAD } from '../../../src/client/util/astronomy-constants';
 import { equatorialTangentBasisAt } from '../../../src/client/util/equatorial-basis';
@@ -53,60 +51,14 @@ const INDEPENDENT_FIT_ROUTES: ReadonlySet<string> = new Set([
   'hip2_long_baseline',
 ]);
 
-// ---- TSV row schema -----------------------------------------------------
-
-export type OrbitRole = 'primary' | 'secondary' | 'standalone';
-
-export interface MultiplesTsvRow {
-  systemId: string;
-  comp: string;
-  hip: number | null;
-  gaiaSourceId: string | null;
-  x_pc: number | null;
-  y_pc: number | null;
-  z_pc: number | null;
-  absmag: number | null;
-  ci: number | null;
-  spect: string;
-  name: string;
-  source: string;
-  astrometryVia: string;
-  spectVia: string;
-  /** Stage 6's per-row photometry provenance. `athyg_own` /
-   *  `athyg_system_inherited` / `none`. Companion promotion reads
-   *  this to detect inherited photometry directly instead of
-   *  comparing absmag to the primary's by float equality. */
-  photometryVia: string;
-  orbitRole: OrbitRole;
-  distPc: number | null;
-  /** Stage 4 orbital elements. Promotion consults them only through
-   *  hasRenderableOrbit — placement and brightness rules fork on
-   *  whether the runtime BinaryOrbitField will animate the pair. */
-  pDays: number | null;
-  tJd: number | null;
-  e: number | null;
-  aAU: number | null;
-  iRad: number | null;
-  omegaRad: number | null;
-  q: number | null;
-  sepArcsec: number | null;
-  paDeg: number | null;
-  sepPaEpochJd: number | null;
-  dmag: number | null;
-  /** README.md#promoted-companion-field-inheritance. */
-  anchorComp: string | null;
+export type MultiplesTsvRow = Omit<MultiplesRecord, 'anchorSepArcsec' | 'anchorPaDeg'> & {
   anchorOffset: Stage6Offset;
-  /** The pair row's published WDS apparent magnitudes (a row's OWN mag
-   *  is magPri when it is the pair primary, magSec when secondary).
-   *  Feeds the wds_mag absmag path. */
-  magPri: number | null;
-  magSec: number | null;
-}
+};
 
-export const PHOTOMETRY_VIA_OWN = 'athyg_own';
-export const PHOTOMETRY_VIA_SYSTEM_INHERITED = 'athyg_system_inherited';
-export const PHOTOMETRY_VIA_GAIA = 'gaia_photometry';
-export const PHOTOMETRY_VIA_NONE = 'none';
+export const PHOTOMETRY_VIA_OWN = 'athyg_own' satisfies PhotometryVia;
+export const PHOTOMETRY_VIA_SYSTEM_INHERITED = 'athyg_system_inherited' satisfies PhotometryVia;
+export const PHOTOMETRY_VIA_GAIA = 'gaia_photometry' satisfies PhotometryVia;
+export const PHOTOMETRY_VIA_NONE = 'none' satisfies PhotometryVia;
 
 /** spect_via values whose `spect` string genuinely describes THIS
  *  component rather than the whole system: Stage 6's curated-override
@@ -124,24 +76,6 @@ export const PER_COMPONENT_SPECT_VIA: ReadonlySet<string> = new Set([
 export function hasRenderableOrbit(row: MultiplesTsvRow): boolean {
   return row.pDays !== null && row.tJd !== null && row.e !== null
     && row.aAU !== null && row.omegaRad !== null && row.q !== null;
-}
-
-function nonEmpty(s: string | undefined): string | null {
-  if (!s) return null;
-  const t = s.trim();
-  return t ? t : null;
-}
-
-function parseFloatOrNull(s: string | undefined): number | null {
-  const t = nonEmpty(s);
-  if (t === null) return null;
-  const v = Number(t);
-  return Number.isFinite(v) ? v : null;
-}
-
-function parseIntOrNull(s: string | undefined): number | null {
-  const v = parseFloatOrNull(s);
-  return v === null ? null : Math.trunc(v);
 }
 
 /** Source_ids whose system names more than one component, so the pair's other
@@ -170,113 +104,20 @@ export function sourceIdsWithSiblingComponent(
   return out;
 }
 
-export function parseMultiplesTsv(text: string): MultiplesTsvRow[] {
-  const lines = text.split(/\r?\n/);
-  if (lines.length === 0) return [];
-  const header = lines[0].split('\t');
-  const col = (name: string): number => {
-    const idx = header.indexOf(name);
-    if (idx < 0) {
-      throw new Error(
-        `multiples.tsv is missing required column "${name}". ` +
-          `Re-run pnpm run build:binaries.`,
-      );
-    }
-    return idx;
+export function promotionRow(record: MultiplesRecord): MultiplesTsvRow {
+  const { anchorSepArcsec, anchorPaDeg, ...rest } = record;
+  return {
+    ...rest,
+    anchorOffset: parseStage6Offset(record.comp, record.anchorComp, anchorSepArcsec, anchorPaDeg),
   };
-  // Resolve every needed column up front so a header rename fails
-  // loudly at parse start, not deep into row iteration.
-  const idx = {
-    systemId: col('system_id'),
-    comp: col('comp'),
-    hip: col('hip'),
-    gaiaSourceId: col('gaia_source_id'),
-    x_pc: col('x_pc'),
-    y_pc: col('y_pc'),
-    z_pc: col('z_pc'),
-    absmag: col('absmag'),
-    ci: col('ci'),
-    spect: col('spect'),
-    name: col('name'),
-    source: col('source'),
-    astrometryVia: col('astrometry_via'),
-    spectVia: col('spect_via'),
-    photometryVia: col('photometry_via'),
-    orbitRole: col('orbit_role'),
-    distPc: col('dist_pc'),
-    pDays: col('P_days'),
-    tJd: col('T_jd'),
-    e: col('e'),
-    aAU: col('a_AU'),
-    iRad: col('i_rad'),
-    omegaRad: col('omega_rad'),
-    q: col('q'),
-    sepArcsec: col('sep_arcsec'),
-    paDeg: col('pa_deg'),
-    sepPaEpochJd: col('sep_pa_epoch_jd'),
-    dmag: col('dmag'),
-    anchorSepArcsec: col('anchor_sep_arcsec'),
-    anchorPaDeg: col('anchor_pa_deg'),
-    anchorComp: col('anchor_comp'),
-    magPri: col('mag_pri'),
-    magSec: col('mag_sec'),
-  };
-
-  const rows: MultiplesTsvRow[] = [];
-  for (let i = 1; i < lines.length; i++) {
-    const line = lines[i];
-    if (!line.trim()) continue;
-    const cells = line.split('\t');
-    const role = cells[idx.orbitRole] as OrbitRole;
-    const anchorComp = nonEmpty(cells[idx.anchorComp]);
-    rows.push({
-      systemId: cells[idx.systemId],
-      comp: cells[idx.comp],
-      hip: parseIntOrNull(cells[idx.hip]),
-      gaiaSourceId: parseGaiaSourceIdStr(cells[idx.gaiaSourceId]),
-      x_pc: parseFloatOrNull(cells[idx.x_pc]),
-      y_pc: parseFloatOrNull(cells[idx.y_pc]),
-      z_pc: parseFloatOrNull(cells[idx.z_pc]),
-      absmag: parseFloatOrNull(cells[idx.absmag]),
-      ci: parseFloatOrNull(cells[idx.ci]),
-      spect: cells[idx.spect] ?? '',
-      name: cells[idx.name] ?? '',
-      source: cells[idx.source] ?? '',
-      astrometryVia: cells[idx.astrometryVia] ?? '',
-      spectVia: cells[idx.spectVia] ?? '',
-      photometryVia: cells[idx.photometryVia] ?? '',
-      orbitRole: role,
-      distPc: parseFloatOrNull(cells[idx.distPc]),
-      pDays: parseFloatOrNull(cells[idx.pDays]),
-      tJd: parseFloatOrNull(cells[idx.tJd]),
-      e: parseFloatOrNull(cells[idx.e]),
-      aAU: parseFloatOrNull(cells[idx.aAU]),
-      iRad: parseFloatOrNull(cells[idx.iRad]),
-      omegaRad: parseFloatOrNull(cells[idx.omegaRad]),
-      q: parseFloatOrNull(cells[idx.q]),
-      sepArcsec: parseFloatOrNull(cells[idx.sepArcsec]),
-      paDeg: parseFloatOrNull(cells[idx.paDeg]),
-      sepPaEpochJd: parseFloatOrNull(cells[idx.sepPaEpochJd]),
-      dmag: parseFloatOrNull(cells[idx.dmag]),
-      anchorComp,
-      anchorOffset: parseStage6Offset(
-        cells[idx.comp], anchorComp,
-        parseFloatOrNull(cells[idx.anchorSepArcsec]),
-        parseFloatOrNull(cells[idx.anchorPaDeg]),
-      ),
-      magPri: parseFloatOrNull(cells[idx.magPri]),
-      magSec: parseFloatOrNull(cells[idx.magSec]),
-    });
-  }
-  return rows;
 }
 
-/** The Stage-6 pair table, named here because this module owns its shape —
- *  the parallax cascade's sibling index reads the same file. */
-export const MULTIPLES_TSV = resolve(REPO_ROOT, 'data/binaries/multiples.tsv');
+export function parseMultiplesTsv(text: string): MultiplesTsvRow[] {
+  return MULTIPLES_TSV.parse(text).map(promotionRow);
+}
 
-export function readMultiplesTsv(path: string): MultiplesTsvRow[] {
-  return parseMultiplesTsv(readFileSync(path, 'utf8'));
+export function readMultiplesTsv(): MultiplesTsvRow[] {
+  return parseMultiplesTsv(readFileSync(MULTIPLES_TSV_PATH, 'utf8'));
 }
 
 // ---- Tangent-plane projection ------------------------------------------

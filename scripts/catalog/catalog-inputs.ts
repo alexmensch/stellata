@@ -9,7 +9,7 @@ import {
   HEAD_PATH, LEDGER_PATH, OVERRIDES_PATH, REINSTATEMENTS_PATH, RETIREMENTS_PATH,
 } from '../sid/registry-io';
 import { DESIGNATION_CONSTELLATION_INPUT_PATHS } from './classic-ids/apply-designation-constellation';
-import { MULTIPLES_TSV } from './companions/companion-promotion';
+import { MULTIPLES_TSV_PATH } from '../binaries/multiples-tsv';
 import { STAR_NAMING_INPUT_PATHS } from './naming/apply-star-names';
 import { STELLARIUM_SKYCULTURE_JSON } from './parse/constellations/constellations';
 import { readStarsInputPaths } from './parse/read-stars-inputs';
@@ -30,7 +30,7 @@ export async function catalogInputPaths(): Promise<string[]> {
     ...DESIGNATION_CONSTELLATION_INPUT_PATHS,
     ...STAR_NAMING_INPUT_PATHS,
     STELLARIUM_SKYCULTURE_JSON, SRC_GCVS, SRC_GCVS_XREF, SRC_GAIA_HIP_XMATCH, SRC_HIP_CCDM,
-    SRC_SIMBAD_SAMPLE, MULTIPLES_TSV,
+    SRC_SIMBAD_SAMPLE, MULTIPLES_TSV_PATH,
     LEDGER_PATH, HEAD_PATH, OVERRIDES_PATH, RETIREMENTS_PATH, REINSTATEMENTS_PATH,
     ...code.map((path) => resolve(REPO_ROOT, path)),
   ];

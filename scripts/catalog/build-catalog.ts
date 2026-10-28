@@ -76,7 +76,6 @@ import {
 import {
   promoteCompanions,
   readMultiplesTsv,
-  MULTIPLES_TSV,
   parkedRefusals,
   RECURATED_BRIGHTNESS,
 } from './companions/companion-promotion';
@@ -151,6 +150,7 @@ import {
   SRC_GAIA_HIP_XMATCH, SRC_GCVS, SRC_GCVS_XREF, SRC_HIP_CCDM, SRC_SIMBAD_SAMPLE,
   catalogInputPaths,
 } from './catalog-inputs';
+import { MULTIPLES_TSV_PATH } from '../binaries/multiples-tsv';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -662,8 +662,8 @@ async function main() {
   // whose identifier isn't already a record. Promoted companions ride
   // catalog.bin with FLAG_BINARY_COMPANION_ONLY set; the renderer/picker
   // hover/focus stack picks them up with zero code change.
-  const multiplesRows = existsSync(MULTIPLES_TSV)
-    ? readMultiplesTsv(MULTIPLES_TSV)
+  const multiplesRows = existsSync(MULTIPLES_TSV_PATH)
+    ? readMultiplesTsv()
     : null;
   const synthGaiaBridges = syntheticGaiaBridges(loadStoredEdges());
   if (multiplesRows !== null) {
