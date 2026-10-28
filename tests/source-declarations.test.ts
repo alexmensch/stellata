@@ -7,6 +7,7 @@ import { describe, expect, it } from 'vitest';
 import { declaredInputs, DECLARING_MODULE, type DeclaredInput } from '../scripts/util/sources/declared-inputs';
 import { scriptClosure } from '../scripts/util/import-closure';
 import { tsxEntry } from '../scripts/util/import-closure-pure';
+import { escapeRegExp } from '../scripts/util/escape-regexp';
 import { PACKAGE_JSON, REPO_ROOT } from '../scripts/util/paths';
 import { isProductionTs, walkFiles } from './walk-files';
 
@@ -21,13 +22,9 @@ const STEPS = Object.keys(scripts)
   .filter((name) => /^(build|fetch):/.test(name) || MANUAL_TS_STEPS.includes(name))
   .filter((name) => !OUT_OF_PIPELINE.test(tsxEntry(scripts, name)));
 
-function escape(name: string): string {
-  return name.replace(/[$]/g, '\\$');
-}
-
 /** A read or, for an artifact, a write of `input` somewhere in `texts`. */
 function touches(input: DeclaredInput, texts: readonly string[]): boolean {
-  const n = escape(input.name);
+  const n = escapeRegExp(input.name);
   const pattern = input.value.kind === 'source'
     ? new RegExp(`\\b${n}\\.read\\(`)
     : new RegExp(`\\b(readArtifact|artifactRows|artifactText|streamArtifact)\\(\\s*${n}\\b|\\b${n}\\.(serialize|encodeLine)\\(`);
