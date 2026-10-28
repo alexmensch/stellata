@@ -3,17 +3,12 @@
 import { defineSource, type Declared } from '../../util/sources/source';
 import { splitCsvLine } from '../naming/wgsn-parse-pure';
 
-const FROM: Declared = {
-  file: 'data/athyg/athyg_33_classic_ids.csv',
-  hint: 'It is frozen; restore it from git rather than regenerating it.',
-};
-
-function* athygHdRows(text: string): Generator<{ hd: string; hyg: string }> {
+function* athygHdRows(text: string, from: Declared): Generator<{ hd: string; hyg: string }> {
   const lines = text.split('\n');
   const header = splitCsvLine(lines[0]);
   const iHd = header.indexOf('hd');
   const iHyg = header.indexOf('hyg');
-  if (iHd < 0 || iHyg < 0) throw new Error(`${FROM.file}: no hd / hyg column. ${FROM.hint}`);
+  if (iHd < 0 || iHyg < 0) throw new Error(`${from.file}: no hd / hyg column. ${from.hint}`);
   for (let i = 1; i < lines.length; i++) {
     if (lines[i] === '') continue;
     const cells = splitCsvLine(lines[i]);
@@ -22,6 +17,7 @@ function* athygHdRows(text: string): Generator<{ hd: string; hyg: string }> {
 }
 
 export const ATHYG_CLASSIC_IDS = defineSource({
-  ...FROM,
-  parse: (input) => athygHdRows(input.text()),
+  file: 'data/athyg/athyg_33_classic_ids.csv',
+  hint: 'It is frozen; restore it from git rather than regenerating it.',
+  parse: (input) => athygHdRows(input.text(), input),
 });

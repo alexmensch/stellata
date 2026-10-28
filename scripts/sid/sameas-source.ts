@@ -6,14 +6,10 @@ import { dirname } from 'node:path';
 import { defineSource, openDeclared, type Declared, type SourceInput } from '../util/sources/source';
 import { parseSameasTsv } from './sid-pure';
 
-const OVERRIDES_FROM: Declared = {
+export const SAMEAS_OVERRIDES = defineSource({
   file: 'data/sid/sameas-overrides.tsv',
   hint: 'Same-as edges are curated (/docs/sid.md#41-same-as-equivalence-graph).',
-};
-
-export const SAMEAS_OVERRIDES = defineSource({
-  ...OVERRIDES_FROM,
-  parse: (input) => parseSameasTsv(input.text(), OVERRIDES_FROM),
+  parse: (input) => parseSameasTsv(input.text(), input),
 });
 
 const BRIDGES_DIR = 'data/sid/bridges';

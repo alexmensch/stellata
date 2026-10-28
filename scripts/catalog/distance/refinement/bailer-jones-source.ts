@@ -28,12 +28,8 @@ export function parseBailerJonesTsv(text: string, from: Declared): Map<string, n
   return out;
 }
 
-const FROM: Declared = {
+export const BAILER_JONES = defineSource({
   file: 'data/bailer-jones/bailer-jones-dr3.tsv',
   hint: 'Re-run `pnpm run refresh:bailer-jones`.',
-};
-
-export const BAILER_JONES = defineSource({
-  ...FROM,
-  parse: (input) => parseBailerJonesTsv(input.text(), FROM),
+  parse: (input) => parseBailerJonesTsv(input.text(), input),
 });

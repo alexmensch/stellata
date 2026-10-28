@@ -1,14 +1,10 @@
 // The IAU WGSN names table (NEC.csv), declared.
 
-import { defineSource, type Declared } from '../../util/sources/source';
+import { defineSource } from '../../util/sources/source';
 import { parseNecCsv } from './wgsn-parse-pure';
 
-const FROM: Declared = {
+export const WGSN_NEC = defineSource({
   file: 'data/iau-wgsn/NEC.csv',
   hint: 'Re-run scripts/refresh/refresh-iau-wgsn.py.',
-};
-
-export const WGSN_NEC = defineSource({
-  ...FROM,
-  parse: (input) => parseNecCsv(input.text(), FROM),
+  parse: (input) => parseNecCsv(input.text(), input),
 });

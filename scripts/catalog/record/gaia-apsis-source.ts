@@ -35,12 +35,8 @@ export function parseGaiaApsisTsv(text: string, from: Declared): Map<string, Aps
   return out;
 }
 
-const FROM: Declared = {
+export const GAIA_APSIS = defineSource({
   file: 'data/gaia/gaia_dr3_apsis.tsv',
   hint: 'Re-run `pnpm run refresh:gaia-apsis`.',
-};
-
-export const GAIA_APSIS = defineSource({
-  ...FROM,
-  parse: (input) => parseGaiaApsisTsv(input.text(), FROM),
+  parse: (input) => parseGaiaApsisTsv(input.text(), input),
 });

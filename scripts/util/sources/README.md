@@ -29,8 +29,9 @@ scripts/util/sources/
 `defineSource({file, hint, parse, members?, rowKey?})`:
 
 - `file` is repo-relative; `hint` is the target that rebuilds or re-pulls it,
-  and every failure names it. A `TableSpec` spreads the source's `file` and
-  `hint` rather than restating them.
+  and every failure names it. The `input` a parse receives carries both, so a
+  parser takes `input` as its `{file, hint}` and a `TableSpec` spreads it
+  rather than restating them.
 - `parse(input, ...args)` is any parse over the file — `input.text()`,
   `input.bytes()`, or `input.lines(onLine)` for a table too large to hold as
   one string ([Streaming a committed table](../../catalog/parse/README.md#streaming-a-committed-table)).

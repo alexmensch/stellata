@@ -3,11 +3,6 @@
 import { defineSource, type Declared } from '../../util/sources/source';
 import { readTable } from '../../util/tsv/table-pure';
 
-const FROM: Declared = {
-  file: 'data/naming/name_overrides.tsv',
-  hint: 'It is hand-curated: restore the sid and display_name columns.',
-};
-
 export function parseNameOverrides(text: string, from: Declared): Map<number, string> {
   const out = new Map<number, string>();
   for (const row of readTable({ ...from, columns: ['sid', 'display_name'] as const }, text)) {
@@ -27,6 +22,7 @@ export function parseNameOverrides(text: string, from: Declared): Map<number, st
  *  authority cannot express, never as a home for the folk names the naming authority (/docs/star-naming.md#2-authority--one-source-approves-names-everything-else-compiles-them) routes
  *  to aliases. */
 export const NAME_OVERRIDES = defineSource({
-  ...FROM,
-  parse: (input) => parseNameOverrides(input.text(), FROM),
+  file: 'data/naming/name_overrides.tsv',
+  hint: 'It is hand-curated: restore the sid and display_name columns.',
+  parse: (input) => parseNameOverrides(input.text(), input),
 });

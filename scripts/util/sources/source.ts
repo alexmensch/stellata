@@ -15,7 +15,7 @@ export interface Declared {
   readonly hint: string;
 }
 
-export interface SourceInput {
+export interface SourceInput extends Declared {
   readonly path: string;
   text(): string;
   bytes(): Buffer;
@@ -47,6 +47,8 @@ export function openDeclared(declared: Declared): SourceInput {
     );
   }
   return {
+    file: declared.file,
+    hint: declared.hint,
     path,
     text: () => readFileSync(path, 'utf8'),
     bytes: () => readFileSync(path),

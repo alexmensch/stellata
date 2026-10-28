@@ -98,10 +98,9 @@ export function parseGaiaTycXmatchTsv(
  *  string peaks near a gigabyte alongside the join's own maps. */
 export async function streamGaiaTycXmatch(
   input: SourceInput,
-  from: Declared,
   keep?: ReadonlySet<string>,
 ): Promise<Map<string, string>> {
-  const acc = bestNeighbourAccumulator(TYC_SPEC, from, keep);
+  const acc = bestNeighbourAccumulator(TYC_SPEC, input, keep);
   await input.lines(acc.line);
   return acc.result();
 }

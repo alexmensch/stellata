@@ -4,14 +4,14 @@ import { defineSource, openDeclared, type Declared } from '../util/sources/sourc
 import { parseTycho2Tsvs } from './tycho2-parse';
 
 const HINT = 'Re-run `pnpm run refresh:tycho2`.';
-const MAIN: Declared = { file: 'data/tycho2/tycho2_main.tsv', hint: HINT };
 const SUPPL1: Declared = { file: 'data/tycho2/tycho2_suppl1.tsv', hint: HINT };
 
 export const TYCHO2 = defineSource({
-  ...MAIN,
+  file: 'data/tycho2/tycho2_main.tsv',
+  hint: HINT,
   members: [SUPPL1],
   parse: (input) => parseTycho2Tsvs(
-    { text: input.text(), from: MAIN },
+    { text: input.text(), from: input },
     { text: openDeclared(SUPPL1).text(), from: SUPPL1 },
   ),
 });

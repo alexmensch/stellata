@@ -7,21 +7,17 @@ import {
   parseCrossIndexTsv,
 } from './classic-ids-parse';
 
-const TABLE: Declared = {
-  file: 'data/classic-ids/cross_index.tsv',
-  hint: 'Refresh the CDS inputs with `pnpm run refresh:classic-ids`.',
-};
-
 const CORRECTIONS: Declared = {
   file: 'data/classic-ids/cross_index_corrections.tsv',
   hint: 'Restore it from the repo — it is hand-curated, not generated.',
 };
 
 export const CROSS_INDEX = defineSource({
-  ...TABLE,
+  file: 'data/classic-ids/cross_index.tsv',
+  hint: 'Refresh the CDS inputs with `pnpm run refresh:classic-ids`.',
   members: [CORRECTIONS],
   parse: (input) => applyCrossIndexCorrections(
-    parseCrossIndexTsv(input.text(), TABLE),
+    parseCrossIndexTsv(input.text(), input),
     parseCrossIndexCorrectionsTsv(openDeclared(CORRECTIONS).text(), CORRECTIONS),
     CORRECTIONS,
   ),
