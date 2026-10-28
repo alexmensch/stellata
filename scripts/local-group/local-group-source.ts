@@ -5,7 +5,7 @@ import { parseAliases, parseLvdb, parseOverrides } from './local-group-parse';
 
 const LVDB_FROM: Declared = {
   file: 'data/local-group/lvdb-snapshot.csv',
-  hint: 'Refresh it by hand from LVDB (scripts/local-group/README.md#inputs-and-output).',
+  hint: 'Refresh it by hand from LVDB (/scripts/local-group/README.md#inputs-and-output).',
 };
 const OVERRIDES_FROM: Declared = {
   file: 'data/local-group/overrides.tsv',
