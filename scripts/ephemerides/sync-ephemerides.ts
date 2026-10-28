@@ -1,6 +1,5 @@
 // Mirrors data/ephemerides/ (committed element tables) → public/ephemerides/
-// (gitignored) so Vite + the Cloudflare static-asset build serve them. A missing source
-// folder is not an error — the runtime falls back to Standish 1992 (/data/papers/index.md#standish1992).
+// (gitignored) so Vite + the Cloudflare static-asset build serve them.
 
 import { mirrorDataFolder } from '../util/mirror-to-public';
 

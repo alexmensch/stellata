@@ -1,6 +1,6 @@
 // Mirrors data/textures/ (committed artifacts) → public/textures/
 // (gitignored) so Vite + the Cloudflare static-asset build serve the
-// per-body maps. Missing data/textures/ is not an error.
+// per-body maps.
 
 import { mirrorDataFolder } from '../util/mirror-to-public';
 

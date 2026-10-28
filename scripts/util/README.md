@@ -190,8 +190,9 @@ same thing — single-use helpers stay with their consumer.
   emitters.
 - `mirror-to-public.ts` — `mirrorDataFolder(spec)`, the one
   `data/<folder>/` → `public/<folder>/` copy used by
-  `scripts/{dust,textures,probes}/sync-*.ts`. Mtime+size skip for
-  up-to-date files; **allowlist**, never denylist, because Vite copies
+  `scripts/{dust,textures,probes,ephemerides}/sync-*.ts`. A missing source
+  folder or an unsmudged LFS file fails the sync rather than shipping an
+  empty or stub layer. Mtime+size skip for up-to-date files; **allowlist**, never denylist, because Vite copies
   `public/` wholesale — anything left in the destination ships, so the
   mirror also purges non-allowlisted strays a previous sync left behind.
   `flattenSubDirs` copies named subfolders of the source into the same

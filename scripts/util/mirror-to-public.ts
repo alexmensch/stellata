@@ -4,7 +4,7 @@
 import { existsSync, mkdirSync, readdirSync, statSync, copyFileSync, rmSync } from 'node:fs';
 import { resolve } from 'node:path';
 
-import { REPO_ROOT } from './paths';
+import { lfsContentReadable, REPO_ROOT } from './paths';
 
 export type MirrorSpec = {
   /** Repo-relative source folder, e.g. `data/dust`. */
@@ -27,22 +27,22 @@ export function mirrorDataFolder(spec: MirrorSpec): void {
   const src = resolve(REPO_ROOT, spec.srcDir);
   const dst = resolve(REPO_ROOT, spec.dstDir);
 
-  if (!existsSync(src)) {
-    console.log(`${spec.srcDir}/ not found; skipping ${spec.label} sync.`);
-    return;
-  }
+  if (!existsSync(src)) throw new Error(`${spec.srcDir}/ is missing; the ${spec.label} mirror has nothing to serve.`);
   mkdirSync(dst, { recursive: true });
 
   let copied = 0;
   let skipped = 0;
   for (const from of [src, ...(spec.flattenSubDirs ?? []).map((d) => resolve(src, d))]) {
-    if (!existsSync(from)) continue;
+    if (!existsSync(from)) throw new Error(`${from} is missing; the ${spec.label} mirror has nothing to serve.`);
     for (const name of readdirSync(from)) {
       if (!spec.isPublicAsset(name)) continue;
       const srcPath = resolve(from, name);
       const dstPath = resolve(dst, name);
       const srcStat = statSync(srcPath);
       if (!srcStat.isFile()) continue;
+      if (!lfsContentReadable(srcPath)) {
+        throw new Error(`${srcPath} is an unsmudged LFS pointer. Confirm git LFS is pulled (\`git lfs pull\`).`);
+      }
       if (existsSync(dstPath)) {
         const dstStat = statSync(dstPath);
         if (dstStat.size === srcStat.size && dstStat.mtimeMs >= srcStat.mtimeMs) {
