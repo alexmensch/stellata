@@ -1,7 +1,7 @@
 /** README.md#request-routing. */
 
-import { APP_PATH, legacyShareRedirect, ownedByApp } from './client/util/url-state/share-path-pure';
-import { prefersMarkdown } from './negotiation-pure';
+import { APP_PATH, legacyShareRedirect, ownedByApp } from './client/util/url-state/share-path-pure.ts';
+import { prefersMarkdown } from './negotiation-pure.ts';
 import {
   NOT_FOUND_SOURCE,
   SITE_PAGES,
@@ -11,7 +11,7 @@ import {
   renditionPath,
   servedPath,
   type SitePage,
-} from './site/pages';
+} from './site/pages.ts';
 
 /** Where every canonical URL points, whichever host served the request. */
 export const SITE_ORIGIN = 'https://stellata.xyz';
