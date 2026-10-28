@@ -32,7 +32,7 @@ export const SRC_TYCHO2_SUPPL1 = resolve(ROOT, 'data/tycho2/tycho2_suppl1.tsv');
 export const SRC_SIMBAD_SPTYPE = resolve(ROOT, 'data/simbad/simbad_sptype.tsv');
 
 export const LFS_HINT = 'run `git lfs pull`.';
-const HIP_VMAG_HINT = 'run `pnpm run refresh:hip-vmag`.';
+const HIP_VMAG_HINT = 'Re-run `pnpm run refresh:hip-vmag`.';
 const WGSN_HINT = 'run `pnpm run build:wgsn`.';
 
 const HIP_MAIN = {
@@ -44,13 +44,13 @@ const HIP_MAIN = {
 const HIP2_HIPS = {
   file: 'data/hipparcos/hip2_van_leeuwen.tsv',
   columns: ['hip'] as const,
-  hint: LFS_HINT,
+  hint: 'Re-run `pnpm run refresh:hip2`.',
 } satisfies TableSpec<string>;
 
 const SIMBAD_SPTYPE_XIDS = {
   file: 'data/simbad/simbad_sptype.tsv',
   columns: ['source_id', 'hip', 'tyc', 'gj'] as const,
-  hint: LFS_HINT,
+  hint: 'Re-run scripts/refresh/refresh-simbad-sptype.py.',
 } satisfies TableSpec<string>;
 
 function readHip2Hips(): Set<number> {

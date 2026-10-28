@@ -487,7 +487,7 @@ export function parseGaiaAstrometryCatalogTsv(
 const HIP2 = {
   file: 'data/hipparcos/hip2_van_leeuwen.tsv',
   columns: ['hip', 'ra_icrs', 'de_icrs', 'plx', 'e_plx', 'pm_ra', 'pm_de'] as const,
-  hint: 'Restore data/hipparcos/hip2_van_leeuwen.tsv from LFS.',
+  hint: 'Re-run `pnpm run refresh:hip2`.',
 } satisfies TableSpec<string>;
 
 export function parseHip2Tsv(text: string): Map<number, Hip2AstrometryRow> {

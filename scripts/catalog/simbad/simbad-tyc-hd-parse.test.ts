@@ -188,7 +188,7 @@ const SPLIT_INPUTS = [...ADJUDICATION_INPUTS, SRC_SIMBAD_SPTYPE];
 const SIMBAD_SPTYPE_OBJECTS = {
   file: 'data/simbad/simbad_sptype.tsv',
   columns: ['source_id', 'simbad_main_id'] as const,
-  hint: 'Re-run `pnpm run refresh:simbad-sptype`.',
+  hint: 'Re-run scripts/refresh/refresh-simbad-sptype.py.',
 };
 
 /** The move set of README.md#which-witness-decides-a-close-pairs-hd: the
