@@ -30,8 +30,7 @@ scripts/catalog/parse/
   gaia-tyc-xmatch-source.ts       cross-walks declared one per module, so a
                                   step reaches only the one it reads.
   gaia-xmatch.ts (+ test)         Gaia DR3 best-neighbour cross-walk parsing
-                                  (HIP + TYC, one shared accumulator) plus the
-                                  Apsis and 5p astrometry side-tables. The HIP
+                                  (HIP + TYC, one shared accumulator). The HIP
                                   walk now serves the GCVS byGaia bridge in
                                   build-catalog.ts, not the record walk. The
                                   TYC reader streams and takes a keep-set —

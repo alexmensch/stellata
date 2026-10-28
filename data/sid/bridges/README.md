@@ -1,6 +1,6 @@
 # SID bridges — cross-release Gaia same-as edges
 
-One `<from>_<to>.tsv` per Gaia data-release transition (`dr2_dr3.tsv`, …):
+One `<from>_<to>.tsv` per Gaia data-release transition (`gaia_dr3_dr4.tsv`, …):
 the carried one-to-one source matches `pnpm run sid:dr-reconcile` drafts into
 `build/sid/dr-reconcile-bridges.tsv`, reviewed by hand and committed here
 when a release bump lands ([§ 6](/docs/sid.md#6-gaia-data-release-reconciliation)).

@@ -170,8 +170,9 @@ decoding it.
 
 ## Gaia DR3 Apsis surfacing
 
-`scripts/catalog/build-catalog.ts` loads `data/gaia/gaia_dr3_apsis.tsv`
-through `GAIA_APSIS` (`record/gaia-apsis-source.ts`) into a `Map<source_id, ApsisRow>` and writes
+`loadReadStarsInputs` (`parse/read-stars-inputs.ts`) loads `data/gaia/gaia_dr3_apsis.tsv`
+through `GAIA_APSIS` (`record/gaia-apsis-source.ts`) into a `Map<source_id, ApsisRow>`, and
+`build-catalog.ts` writes
 seven `float32` Apsis fields per record into the v6 binary (offsets
 52–79; see [Binary catalog format](record/README.md#binary-catalog-format-publiccatalogbini--manifest) above). Coverage: 98.7% of records
 match an Apsis row (<!-- count:build-catalog/apsisMatched -->967,309<!-- /count --> of <!-- count:build-catalog/recordCount -->979,676<!-- /count -->); 88.3% of the catalogue has a

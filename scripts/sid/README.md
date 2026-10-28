@@ -89,8 +89,10 @@ dr-reconcile.ts           pnpm run sid:dr-reconcile — churn report for a
                           DR transition (/docs/sid.md#61-procedure classes),
                           plus the carried-1:1 same-as edges for human
                           review in build/sid/dr-reconcile-bridges.tsv
-                          (dr-reconcile-outputs.ts; gitignored, a draft for
-                          sameas-overrides.tsv, never committed itself). Defaults replay the committed DR2→DR3
+                          (dr-reconcile-outputs.ts; gitignored, a draft
+                          reviewed and committed as
+                          data/sid/bridges/<from>_<to>.tsv, never
+                          committed itself). Defaults replay the committed DR2→DR3
                           dry-run inputs (/docs/sid.md#62-dr2dr3-dry-run-measured-2026-07-07):
                           dr2-neighbourhood-source.ts declares that pair.
                           --request= (a fresh sid:risk-set export) /
