@@ -37,6 +37,17 @@ export function mirrorSource(spec: MirrorSourceSpec): Source<MirroredFolder> {
   });
 }
 
+/** Copies `src` over `dst` unless `dst` already holds its size and is no older. */
+export function syncFile(src: string, dst: string): 'copied' | 'up-to-date' {
+  if (existsSync(dst)) {
+    const srcStat = statSync(src);
+    const dstStat = statSync(dst);
+    if (dstStat.size === srcStat.size && dstStat.mtimeMs >= srcStat.mtimeMs) return 'up-to-date';
+  }
+  copyFileSync(src, dst);
+  return 'copied';
+}
+
 export interface MirrorSpec {
   /** Repo-relative destination folder, e.g. `public/dust`. */
   readonly dstDir: string;
@@ -51,18 +62,8 @@ export function mirrorDataFolder({ files, isPublicAsset }: MirroredFolder, spec:
   let copied = 0;
   let skipped = 0;
   for (const { file } of files) {
-    const srcPath = resolve(REPO_ROOT, file);
-    const dstPath = resolve(dst, basename(file));
-    const srcStat = statSync(srcPath);
-    if (existsSync(dstPath)) {
-      const dstStat = statSync(dstPath);
-      if (dstStat.size === srcStat.size && dstStat.mtimeMs >= srcStat.mtimeMs) {
-        skipped++;
-        continue;
-      }
-    }
-    copyFileSync(srcPath, dstPath);
-    copied++;
+    if (syncFile(resolve(REPO_ROOT, file), resolve(dst, basename(file))) === 'copied') copied++;
+    else skipped++;
   }
 
   let purged = 0;

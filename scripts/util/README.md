@@ -183,7 +183,7 @@ same thing — single-use helpers stay with their consumer.
   thousand-row artifact still diffs sample-by-sample in git) and
   `roundSignificant`, shared by the probe-trajectory and planet-element
   emitters.
-- `mirror-to-public.ts` — `mirrorDataFolder(folder, spec)`, the one
+- `mirror-to-public.ts` (+ test) — `mirrorDataFolder(folder, spec)`, the one
   `data/<folder>/` → `public/<folder>/` copy used by
   `scripts/{dust,textures,probes,ephemerides}/sync-*.ts`. `mirrorSource`
   declares the mirrored folder as a folder source (`sources/`): every
@@ -201,9 +201,10 @@ same thing — single-use helpers stay with their consumer.
   them: the allowlist is by name, and the purge pass cannot tell two
   same-named files apart.
   `tests/bundle-content.test.ts` asserts the built tree against the same
-  predicates. The single-file copies (`sync-local-bubble.ts`,
-  `sync-cloud-surfaces.ts`) are a different shape and stay standalone, each
-  reading its binary through a declared source beside it.
+  predicates. `syncFile(src, dst)` is the one size-and-mtime skip-or-copy:
+  the folder mirror's loop and the two single-file copies
+  (`sync-local-bubble.ts`, `sync-cloud-surfaces.ts`, each reading its binary
+  through a declared source beside it) all call it.
 
 ## Proving a restructuring byte-identical
 
