@@ -70,8 +70,8 @@ scripts/catalog/spine/
                                   data/sid/sameas-overrides.tsv. Every table
                                   comes through the declaration the record
                                   build reads too (HIP2, HIP_PHOTOMETRY for
-                                  I/239, TYC2_HD, BSC5, …), so one file has
-                                  one parse.
+                                  I/239, TYC2_HD, BSC5, SIMBAD_SPTYPE's
+                                  cross-IDs, …), so one file has one parse.
   athyg-classic-ids-source.ts     AT-HYG's classic-ID CSV, declared: the
                                   hd / hyg cells the primaries audit tallies.
   association-audit-pure.ts       Per row, whether the primaries' own

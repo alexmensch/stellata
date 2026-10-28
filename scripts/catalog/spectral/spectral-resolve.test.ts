@@ -221,7 +221,7 @@ describe('parseSimbadSptypeTsv', () => {
     const tsv = HDR +
       '57848\t*  56 Cyg\tA6V\tC\t1995ApJS...99..135A\tPM*\t102843\t2067050940754838656\n' +
       '370513\tHD  47606\tkA6hA7mF1(III)\tD\t2020AJ....160...52M\t*\t32151\t1001011023904917760\n';
-    const { bySourceId, byHip } = parseSimbadSptypeTsv(tsv, FROM);
+    const { bySourceId, byHip } = parseSimbadSptypeTsv(tsv, FROM).spectral;
     expect(bySourceId.size).toBe(2);
     expect(byHip.size).toBe(2);
     const a = bySourceId.get('2067050940754838656');
@@ -237,7 +237,7 @@ describe('parseSimbadSptypeTsv', () => {
     const tsv = HDR +
       '51431\t* bet Per\tB8V\tC\t\tSB*\t14576\t\n' +
       '999\tBlank\t\t\t\t\t\t1234\n';
-    const { bySourceId, byHip } = parseSimbadSptypeTsv(tsv, FROM);
+    const { bySourceId, byHip } = parseSimbadSptypeTsv(tsv, FROM).spectral;
     expect(bySourceId.size).toBe(1);
     expect(bySourceId.has('1234')).toBe(true);
     expect(byHip.size).toBe(1);
@@ -246,7 +246,7 @@ describe('parseSimbadSptypeTsv', () => {
 
   it('drops rows with no source_id, HIP or TYC', () => {
     const tsv = HDR + '42\tNo keys\tG2V\t\t\t\t\t\n';
-    const { bySourceId, byHip, byTyc } = parseSimbadSptypeTsv(tsv, FROM);
+    const { bySourceId, byHip, byTyc } = parseSimbadSptypeTsv(tsv, FROM).spectral;
     expect(bySourceId.size).toBe(0);
     expect(byHip.size).toBe(0);
     expect(byTyc.size).toBe(0);
@@ -255,7 +255,7 @@ describe('parseSimbadSptypeTsv', () => {
   it('indexes by TYC, keeping a row SIMBAD gives no Gaia id or HIP', () => {
     const tsv = HDR +
       '7\tTYC only\tK2III\tC\t\t*\t\t\t1234-5678-1\t\n';
-    const { bySourceId, byHip, byTyc } = parseSimbadSptypeTsv(tsv, FROM);
+    const { bySourceId, byHip, byTyc } = parseSimbadSptypeTsv(tsv, FROM).spectral;
     expect(bySourceId.size).toBe(0);
     expect(byHip.size).toBe(0);
     expect(byTyc.get('1234-5678-1')?.spType).toBe('K2III');
@@ -301,16 +301,24 @@ describe('parseSimbadSptypeTsv', () => {
     const dupHip = HDR +
       '1\tComponent\t\t\t\t*\t14576\t\n' +
       '2\tThe star\tK0III\tD\t\t*\t14576\t\n';
-    expect(parseSimbadSptypeTsv(dupHip, FROM).byHip.get(14576)?.spType).toBe('K0III');
+    expect(parseSimbadSptypeTsv(dupHip, FROM).spectral.byHip.get(14576)?.spType).toBe('K0III');
     const reversed = HDR +
       '1\tThe star\tK0III\tD\t\t*\t14576\t\n' +
       '2\tComponent\t\t\t\t*\t14576\t\n';
-    expect(parseSimbadSptypeTsv(reversed, FROM).byHip.get(14576)?.spType).toBe('K0III');
+    expect(parseSimbadSptypeTsv(reversed, FROM).spectral.byHip.get(14576)?.spType).toBe('K0III');
+  });
+
+  it('carries each source_id row\'s cross-identifiers, typed or not', () => {
+    const tsv = HDR +
+      '1\tA\t\t\t\t*\t14576\t9876\t1-2-1\tGl 165A\n' +
+      '2\tB\tG2V\tC\t\t*\t\t\t3-4-1\t\n';
+    const { xids } = parseSimbadSptypeTsv(tsv, FROM);
+    expect([...xids]).toEqual([['9876', { hip: 14576, tyc: '1-2-1', gj: 'Gl 165A' }]]);
   });
 
   it('decodes blank sp_type / sp_qual / otype cells as null', () => {
     const tsv = HDR + '111\t*\t\t\t\t\t\t9876\n';
-    const { bySourceId } = parseSimbadSptypeTsv(tsv, FROM);
+    const { bySourceId } = parseSimbadSptypeTsv(tsv, FROM).spectral;
     const r = bySourceId.get('9876');
     expect(r?.spType).toBeNull();
     expect(r?.spQual).toBeNull();

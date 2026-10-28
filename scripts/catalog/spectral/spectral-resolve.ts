@@ -11,6 +11,7 @@ import {
   type SimbadNamespaceIndex,
   type SimbadRecordKeys,
 } from '../record/catalog-pure';
+import type { SimbadXids } from '../spine/primaries-audit-pure';
 import type { Declared } from '../../util/sources/source';
 import { readTable } from '../../util/tsv/table-pure';
 import {
@@ -52,8 +53,14 @@ export function emptySimbadSpectralIndex(): SimbadSpectralIndex {
  *  index nowhere. */
 const SPTYPE_TABLE_COLUMNS = ['source_id', 'sp_type', 'hip', 'tyc', 'gj', 'sp_qual', 'otype'] as const;
 
-export function parseSimbadSptypeTsv(text: string, from: Declared): SimbadSpectralIndex {
+export interface SimbadSptype {
+  spectral: SimbadSpectralIndex;
+  xids: Map<string, SimbadXids>;
+}
+
+export function parseSimbadSptypeTsv(text: string, from: Declared): SimbadSptype {
   const index = emptySimbadSpectralIndex();
+  const xids = new Map<string, SimbadXids>();
   for (const row of readTable({ ...from, columns: SPTYPE_TABLE_COLUMNS }, text)) {
     const spType = row.text('sp_type');
     const spQual = row.text('sp_qual');
@@ -84,8 +91,11 @@ export function parseSimbadSptypeTsv(text: string, from: Declared): SimbadSpectr
         );
       },
     );
+    if (keys.sourceId !== null) {
+      xids.set(keys.sourceId, { hip: keys.hip, tyc: row.raw('tyc') || null, gj: row.raw('gj') || null });
+    }
   }
-  return index;
+  return { spectral: index, xids };
 }
 
 /** A row is this record's only while nothing in it says otherwise. Both ids

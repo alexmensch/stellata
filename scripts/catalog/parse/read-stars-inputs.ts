@@ -76,7 +76,7 @@ export async function loadReadStarsInputs(): Promise<ReadStarsInputs> {
   const apsisMap = timed('Parsing Gaia DR3 Apsis astrophysical parameters', () => GAIA_APSIS.read(), entries);
   const gspcMap = timed('Parsing Gaia DR3 synthetic photometry', () => GAIA_GSPC.read(), entries);
   const simbadSpectral = timed(
-    'Parsing SIMBAD sp_type catalogue', () => SIMBAD_SPTYPE.read(), (i) => entries(i.bySourceId),
+    'Parsing SIMBAD sp_type catalogue', () => SIMBAD_SPTYPE.read().spectral, (i) => entries(i.bySourceId),
   );
   const simbadValues = timed(
     'Parsing SIMBAD bibcoded values', () => SIMBAD_VALUES.read(), (i) => `${i.rowCount} rows`,
