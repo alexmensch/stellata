@@ -12,6 +12,9 @@ import { isProductionTs, walkFiles } from './walk-files';
 
 const OUT_OF_PIPELINE = /^scripts\/(perf|release|hooks|ci)\//;
 
+/** Modules that call a define* only inside a factory the declaring modules call. */
+const DECLARATION_FACTORIES = ['scripts/util/mirror-to-public.ts'];
+
 const scripts = packageScripts();
 const MANUAL_TS_STEPS = ['sid:allocate', 'sid:risk-set'];
 /** Targets named like steps that are not pipeline steps (Vite is not a step; the seed wrapper runs steps). */
@@ -54,8 +57,8 @@ describe('source declarations', () => {
     const misplaced: string[] = [];
     for (const file of walkFiles(resolve(REPO_ROOT, 'scripts'), { include: isProductionTs })) {
       const rel = file.slice(REPO_ROOT.length + 1);
-      if (rel.startsWith('scripts/util/')) continue;
-      if (/\b(defineSource|defineArtifact)\(/.test(readFileSync(file, 'utf8')) && !DECLARING_MODULE.test(rel)) {
+      if (DECLARATION_FACTORIES.includes(rel)) continue;
+      if (/\b(defineSource|defineFolder|defineArtifact)\(/.test(readFileSync(file, 'utf8')) && !DECLARING_MODULE.test(rel)) {
         misplaced.push(rel);
       }
     }
