@@ -11,9 +11,9 @@ floor, the filter over the pull, and the union onto that manifest.
 ```
 scripts/catalog/membership/magnitude-term/
   magnitude-term-pure.ts        MAGNITUDE_FLOOR_V, the per-row verdict over
-    (+ test)                    the Riello transform, the line-fed accumulator
-                                the whole-text and streaming readers share,
-                                and the union's dedupe. Pure.
+    (+ test)                    the Riello transform, the row fold the
+                                whole-text and line-fed streaming readers
+                                share, and the union's dedupe. Pure.
   magnitude-term.ts             The streaming reads: the floor's selection and
                                 the 5p astrometry over the ~200 MB pull, and
                                 the term's own source_ids out of the manifest.
