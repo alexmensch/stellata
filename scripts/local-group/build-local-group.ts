@@ -72,7 +72,7 @@ export function parseLvdb(csv: string): LvdbRow[] {
 }
 
 const OVERRIDES_FILE = 'data/local-group/overrides.tsv';
-const OVERRIDES_HINT = 'It is hand-curated; see data/local-group/README.md#override-schema.';
+const OVERRIDES_HINT = 'It is hand-curated; see /data/local-group/README.md#override-schema.';
 const OVERRIDES_REQUIRED = ['name', 'a_pc', 'b_pc', 'c_pc', 'orient', 'source'] as const;
 const OVERRIDES_OPTIONAL = [
   'ra_deg', 'dec_deg', 'distance_kpc', 'm_v', 'profile', 'n_sersic', 'r_d_pc',
@@ -89,7 +89,7 @@ function forEachCuratedLine(tsv: string, onLine: (line: string) => void): void {
   }
 }
 
-/** Schema and per-column semantics: data/local-group/README.md#override-schema. */
+/** Schema and per-column semantics: /data/local-group/README.md#override-schema. */
 export function parseOverrides(tsv: string): OverrideRow[] {
   const out: OverrideRow[] = [];
   let read: ((line: string) => void) | null = null;

@@ -67,7 +67,7 @@ export function readNeighbourhoodRows(
   const spec = {
     file,
     columns: [riskCol, candidateCol, 'angular_distance', 'magnitude_difference'],
-    hint: 'Re-pull it per docs/sid.md#61-procedure.',
+    hint: 'Re-pull it per /docs/sid.md#61-procedure.',
   };
   return [...readTable(spec, text)].map((row) => ({
     riskId: BigInt(row.raw(riskCol)),
