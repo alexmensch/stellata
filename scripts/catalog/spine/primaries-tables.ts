@@ -4,7 +4,8 @@
 import { resolve } from 'node:path';
 
 import { REPO_ROOT as ROOT, readRequired } from '../../util/paths';
-import { dataRows, parseIntOrNull } from '../parse/corpus-tsv';
+import { WGSN_DESIGNATIONS } from '../naming/wgsn-designations-tsv';
+import { WGSN_NAMES } from '../naming/wgsn-names-tsv';
 import { readTable, type TableSpec } from '../../util/tsv/table-pure';
 import { readGaiaHipXmatch, readGaiaTycXmatch } from '../parse/gaia-xmatch';
 import {
@@ -28,8 +29,6 @@ export const SRC_HIP_MAIN = resolve(ROOT, 'data/hipparcos/hip_main_vmag.tsv');
 export const SRC_HIP2 = resolve(ROOT, 'data/hipparcos/hip2_van_leeuwen.tsv');
 export const SRC_TYCHO2_MAIN = resolve(ROOT, 'data/tycho2/tycho2_main.tsv');
 export const SRC_TYCHO2_SUPPL1 = resolve(ROOT, 'data/tycho2/tycho2_suppl1.tsv');
-export const SRC_WGSN_NAMES = resolve(ROOT, 'data/iau-wgsn/wgsn_names.tsv');
-export const SRC_WGSN_DESIGNATIONS = resolve(ROOT, 'data/iau-wgsn/wgsn_designations.tsv');
 export const SRC_SIMBAD_SPTYPE = resolve(ROOT, 'data/simbad/simbad_sptype.tsv');
 
 export const LFS_HINT = 'run `git lfs pull`.';
@@ -85,30 +84,18 @@ function readWgsn(): WgsnKeys {
   const hip = new Set<number>();
   const flamByHd = new Map<number, Set<number>>();
   const flamByHip = new Map<number, Set<number>>();
-  for (const { cells, idx } of dataRows(
-    readRequired(SRC_WGSN_NAMES, WGSN_HINT), ['name', 'aliases', 'hip', 'hd'],
-    'wgsn_names.tsv', WGSN_HINT,
-  )) {
-    if (cells[idx.name]) names.add(cells[idx.name]);
-    for (const alias of (cells[idx.aliases] ?? '').split('|')) if (alias) names.add(alias);
-    const h = parseIntOrNull(cells[idx.hip]);
-    const d = parseIntOrNull(cells[idx.hd]);
-    if (h !== null) hip.add(h);
-    if (d !== null) hd.add(d);
+  for (const row of WGSN_NAMES.rows(readRequired(resolve(ROOT, WGSN_NAMES.file), WGSN_HINT))) {
+    names.add(row.name);
+    for (const alias of row.aliases) if (alias) names.add(alias);
+    if (row.hip !== null) hip.add(row.hip);
+    if (row.hd !== null) hd.add(row.hd);
   }
-  for (const { cells, idx } of dataRows(
-    readRequired(SRC_WGSN_DESIGNATIONS, WGSN_HINT), ['kind', 'num', 'hip', 'hd'],
-    'wgsn_designations.tsv', WGSN_HINT,
-  )) {
-    const h = parseIntOrNull(cells[idx.hip]);
-    const d = parseIntOrNull(cells[idx.hd]);
-    if (h !== null) hip.add(h);
-    if (d !== null) hd.add(d);
-    if (cells[idx.kind] !== 'flamsteed') continue;
-    const num = parseIntOrNull(cells[idx.num]);
-    if (num === null) continue;
-    if (d !== null) addKeyed(flamByHd, d, num);
-    if (h !== null) addKeyed(flamByHip, h, num);
+  for (const row of WGSN_DESIGNATIONS.rows(readRequired(resolve(ROOT, WGSN_DESIGNATIONS.file), WGSN_HINT))) {
+    if (row.hip !== null) hip.add(row.hip);
+    if (row.hd !== null) hd.add(row.hd);
+    if (row.kind !== 'flamsteed' || row.num === null) continue;
+    if (row.hd !== null) addKeyed(flamByHd, row.hd, row.num);
+    if (row.hip !== null) addKeyed(flamByHip, row.hip, row.num);
   }
   return { names, hd, hip, flamByHd, flamByHip };
 }

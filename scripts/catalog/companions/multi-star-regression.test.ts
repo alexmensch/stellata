@@ -49,13 +49,13 @@ import { BinaryOrbitField } from '../../../src/client/binaries/binary-orbit-fiel
 import { AU_PC, AU_PER_PC } from '../../../src/client/util/astronomy-constants';
 import { readMultiplesTsv, wdsRootOf } from './companion-promotion';
 import { MULTIPLES_TSV, MULTIPLES_TSV_PATH } from '../../binaries/multiples-tsv';
+import { NAMING_DUPLICATES } from '../naming/naming-duplicates-tsv';
 import { REPO_ROOT } from '../../util/paths';
 import { DEFAULT_ROW_INDEX_MAP } from '../catalog-lookup';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const CORPUS_TSV = resolve(__dirname, 'multi-star-regression.tsv');
 const BINARIES_BIN = resolve(REPO_ROOT, 'public/binaries.bin');
-const NAMING_DUPLICATES = resolve(REPO_ROOT, 'scripts/catalog/naming/naming-duplicates.tsv');
 
 // Same fixture gate as known-stars.test.ts, plus binaries.bin (also
 // generated). CI's plain `pnpm test` job skips; the Tier-A corpus job
@@ -654,8 +654,8 @@ describe.runIf(FIXTURES_READY)('component display-name uniqueness', () => {
     // catalogue entries claiming one designation, or one physical star held
     // as two records. A NEW one is a regression in the composer.
     const pinned = new Set(
-      readFileSync(NAMING_DUPLICATES, 'utf-8').split('\n').slice(1)
-        .filter((l) => l.trim() !== '').map((l) => l.split('\t')[0]),
+      NAMING_DUPLICATES.parse(readFileSync(resolve(REPO_ROOT, NAMING_DUPLICATES.file), 'utf-8'))
+        .map((r) => r.label),
     );
     const unpinned = offenders.filter(
       (o) => !pinned.has(o.slice(o.indexOf('"') + 1, o.lastIndexOf('"'))),
