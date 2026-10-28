@@ -94,8 +94,13 @@ and its parse each have one owner.
   sorts the records, `as-given` keeps the caller's order) and ends with a
   newline.
 - `parse`, `rows` (a generator) and `lineReader` decode through the one
-  `decode`. The decoded record is typed: a closed column decodes through
-  `oneOf`, so an unknown value fails at the read rather than downstream.
+  `decode`. Most codecs decode a typed record — numbers parsed, a closed
+  column through `oneOf`, so an unknown value fails at the read rather than
+  downstream. Four decode a **cell record** instead, every column the string
+  as written (`row.cells()`): the spine (`INHERITED_SPINE`, frozen and read
+  verbatim) and the three membership ledgers (`BINDING_REVIEW`,
+  `ADDITIONS_LEDGER`, `LABEL_DROPS`). Those still check their closed column
+  at the read — verdict, reason — but hand it on as a string.
 - Each artifact constant lives in a leaf module that only its readers and its
   writer import ([The step table](../../pipeline/README.md#the-step-table--stepsts),
   "Reachable must mean read").
