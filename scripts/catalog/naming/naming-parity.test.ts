@@ -18,14 +18,14 @@ import {
   labelIndexOf,
   labelResolvesTo,
   ledgerKeys,
-  parseDuplicateLedger,
-  parseParityLedger,
   type RowIndexMap,
 } from './naming-parity-pure';
+import { NAMING_DUPLICATES } from './naming-duplicates-tsv';
+import { NAMING_PARITY } from './naming-parity-tsv';
+import { MEMBERSHIP_MANIFEST, MEMBERSHIP_MANIFEST_FILE } from '../membership/membership-manifest-tsv';
 
-const HERE = resolve(REPO_ROOT, 'scripts/catalog/naming');
 const WGSN_NAMES_PATH = resolve(REPO_ROOT, WGSN_NAMES.file);
-const MANIFEST = resolve(REPO_ROOT, 'data/membership/membership-manifest.tsv');
+const MANIFEST = resolve(REPO_ROOT, MEMBERSHIP_MANIFEST_FILE);
 
 /** Published names reaching no record: the wgsnFaints hosts whose only key
  *  was a survey id the normaliser drops (they name stars outside the
@@ -38,10 +38,8 @@ const FIXTURES_READY = existsSync(DEFAULT_SEARCH_INDEX) && existsSync(DEFAULT_RO
 
 const readJson = <T>(path: string): T => JSON.parse(readFileSync(path, 'utf8')) as T;
 
-const parity = parseParityLedger(readFileSync(resolve(HERE, 'naming-parity.tsv'), 'utf8'));
-const duplicates = parseDuplicateLedger(
-  readFileSync(resolve(HERE, 'naming-duplicates.tsv'), 'utf8'),
-);
+const parity = NAMING_PARITY.parse(readFileSync(resolve(REPO_ROOT, NAMING_PARITY.file), 'utf8'));
+const duplicates = NAMING_DUPLICATES.parse(readFileSync(resolve(REPO_ROOT, NAMING_DUPLICATES.file), 'utf8'));
 
 interface Fixtures {
   raw: SearchEntry[];
@@ -121,11 +119,8 @@ describe.runIf(FIXTURES_READY)('naming parity ledger', () => {
     for (const row of WGSN_NAMES.parse(readFileSync(WGSN_NAMES_PATH, 'utf8'))) {
       for (const spelling of [row.name, ...row.aliases]) published.add(spelling);
     }
-    const manifest = readFileSync(MANIFEST, 'utf8').split('\n');
-    const properCol = manifest[0].split('\t').indexOf('proper');
-    for (const line of manifest.slice(1)) {
-      const cell = (line.split('\t')[properCol] ?? '').trim();
-      if (cell !== '') published.add(cell);
+    for (const r of MEMBERSHIP_MANIFEST.rows(readFileSync(MANIFEST, 'utf8'))) {
+      if (r.proper !== null) published.add(r.proper);
     }
     // A name the authority approves for a star the catalogue does not carry
     // has no record to reach; those are counted at ingest

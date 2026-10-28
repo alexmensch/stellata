@@ -10,17 +10,17 @@ import {
 import type { SearchEntry } from '../record/catalog-pure';
 import { buildSearchIndex, normalizeGlKey } from '../../../src/client/typeahead/search-corpus';
 import { displayNamesFromSearchIndex } from './star-naming-pure';
+import { readTable } from '../../util/tsv/table-pure';
 import {
-  formatDuplicateLedger,
-  formatParityLedger,
   labelIndexOf,
   labelResolvesTo,
   ledgerKeys,
-  parseParityLedger,
   type DuplicateRow,
   type ParityRow,
   type RowIndexMap,
 } from './naming-parity-pure';
+import { NAMING_DUPLICATES } from './naming-duplicates-tsv';
+import { NAMING_PARITY } from './naming-parity-tsv';
 import { NAMING_PARITY_OUTPUTS } from './naming-parity-outputs';
 
 const PARITY = NAMING_PARITY_OUTPUTS.files.parity;
@@ -36,16 +36,14 @@ function readJson<T>(path: string): T {
 function frozenOldLabels(): Map<string, string> {
   const seed = process.env.NAMING_PARITY_SEED;
   if (seed !== undefined) {
-    const out = new Map<string, string>();
-    const lines = readFileSync(seed, 'utf8').split('\n');
-    for (const line of lines.slice(1)) {
-      if (line.trim() === '') continue;
-      const [key, old] = line.split('\t');
-      out.set(key, old);
-    }
-    return out;
+    const spec = {
+      file: seed,
+      columns: ['key', 'old'] as const,
+      hint: 'NAMING_PARITY_SEED must name a key/old TSV.',
+    };
+    return new Map([...readTable(spec, readFileSync(seed, 'utf8'))].map((r) => [r.raw('key'), r.raw('old')]));
   }
-  const rows = parseParityLedger(readFileSync(PARITY, 'utf8'));
+  const rows = NAMING_PARITY.parse(readFileSync(PARITY, 'utf8'));
   return new Map(rows.map((r) => [r.key, r.old]));
 }
 
@@ -99,8 +97,8 @@ function main(): void {
   emitArtifacts({
     outputs: NAMING_PARITY_OUTPUTS,
     files: {
-      parity: formatParityLedger(changed),
-      duplicates: formatDuplicateLedger(duplicates),
+      parity: NAMING_PARITY.serialize(changed),
+      duplicates: NAMING_DUPLICATES.serialize(duplicates),
     },
   });
 

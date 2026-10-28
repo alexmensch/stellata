@@ -84,8 +84,13 @@ scripts/catalog/naming/
                                 name, with the NAME tiers written into
                                 `proper`. Also the curated override's join,
                                 which hard-fails on an unmatched SID.
-  naming-parity-pure.ts         Ledger codec + the record-identity key and
-    (+ test)                    the shared label resolver.
+  naming-parity-pure.ts         Ledger row types, the record-identity key
+                                and the shared label resolver.
+  naming-parity-tsv.ts          NAMING_PARITY / NAMING_DUPLICATES — the
+  naming-duplicates-tsv.ts      two ledgers' artifact codecs, sorted by
+    (+ naming-ledgers-tsv.test) key and by label.
+  committed-artifacts.test.ts   serialize(parse(committed)) === committed
+                                for all four artifacts this folder writes.
   build-naming-parity.ts        Refreshes the ledger and the duplicate
                                 list from the built artifacts, both in
                                 one emitArtifacts call.

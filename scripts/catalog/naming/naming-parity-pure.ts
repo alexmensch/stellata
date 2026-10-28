@@ -46,38 +46,10 @@ export interface ParityRow {
   record: ParityRecord;
 }
 
-const PARITY_HEADER = 'key\told\tnew\tresolves';
-const ABSENT = 'absent';
+export const RESOLVES = ['yes', 'no', 'absent'] as const;
 
-export function parseParityLedger(text: string): ParityRow[] {
-  const lines = text.split('\n').filter((l) => l.trim() !== '');
-  if (lines[0] !== PARITY_HEADER) {
-    throw new Error(`naming-parity.tsv header must be ${PARITY_HEADER}`);
-  }
-  return lines.slice(1).map((line) => {
-    const [key, old, next = '', resolves = ''] = line.split('\t');
-    if (resolves === ABSENT) {
-      if (next !== '') throw new Error(`naming-parity.tsv ${key}: an absent record composes no label`);
-      return { key, old, record: { present: false } };
-    }
-    if (resolves !== 'yes' && resolves !== 'no') {
-      throw new Error(`naming-parity.tsv ${key}: resolves must be yes, no or ${ABSENT}`);
-    }
-    return { key, old, record: { present: true, new: next, resolves: resolves === 'yes' } };
-  });
-}
-
-function formatRecord(record: ParityRecord): string {
-  if (!record.present) return `\t${ABSENT}`;
-  return `${record.new}\t${record.resolves ? 'yes' : 'no'}`;
-}
-
-export function formatParityLedger(rows: readonly ParityRow[]): string {
-  const sorted = [...rows].sort((a, b) => (a.key < b.key ? -1 : a.key > b.key ? 1 : 0));
-  return [
-    PARITY_HEADER,
-    ...sorted.map((r) => `${r.key}\t${r.old}\t${formatRecord(r.record)}`),
-  ].join('\n') + '\n';
+export function byText<R>(text: (r: R) => string): (a: R, b: R) => number {
+  return (a, b) => (text(a) < text(b) ? -1 : text(a) > text(b) ? 1 : 0);
 }
 
 export interface LabelResolver {
@@ -130,17 +102,3 @@ export interface DuplicateRow {
   keys: string[];
 }
 
-export function parseDuplicateLedger(text: string): DuplicateRow[] {
-  const lines = text.split('\n').filter((l) => l.trim() !== '');
-  return lines.slice(1).map((line) => {
-    const [label, keys] = line.split('\t');
-    return { label, keys: keys.split('|') };
-  });
-}
-
-export function formatDuplicateLedger(rows: readonly DuplicateRow[]): string {
-  const sorted = [...rows].sort((a, b) =>
-    a.label < b.label ? -1 : a.label > b.label ? 1 : 0);
-  return ['label\tkeys', ...sorted.map((r) => `${r.label}\t${r.keys.join('|')}`)]
-    .join('\n') + '\n';
-}
