@@ -27,6 +27,20 @@ describe('catalogInputPaths', () => {
     expect(inputs).toContain(abs('data/gaia/gaia_dr3_magnitude_pull.tsv'));
   });
 
+  it('keys a declared source\'s members and every frozen input the build reads', () => {
+    expect(inputs).toContain(abs('data/tycho2/tycho2_suppl1.tsv'));
+    expect(inputs).toContain(abs('data/classic-ids/cross_index_corrections.tsv'));
+    expect(inputs).toContain(abs('data/stellarium/stellarium-modern-skyculture.json'));
+    expect(inputs).toContain(abs('data/gcvs/crossid.txt'));
+  });
+
+  it('leaves out the outputs it writes and the files it never reads', () => {
+    expect(inputs).not.toContain(abs('data/membership/parked-ledger.tsv'));
+    expect(inputs).not.toContain(abs('data/athyg/simbad_sourced_distances.tsv'));
+    expect(inputs).not.toContain(abs('data/gaia/gaia_dr3_tyc_xmatch.tsv'));
+    expect(inputs).not.toContain(abs('data/sid/ledger-head.json'));
+  });
+
   it('leaves out the build steps it does not run', () => {
     expect(inputs).not.toContain(abs('scripts/catalog/membership/build-membership-manifest.ts'));
     expect(inputs).not.toContain(abs('scripts/catalog/classic-ids/build-classic-id-overlay.ts'));
