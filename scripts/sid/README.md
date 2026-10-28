@@ -55,7 +55,9 @@ export-dr-risk-set.ts     pnpm run sid:risk-set — source_ids of the
                           request TSV (/docs/sid.md#61-procedure step 1),
                           through emitArtifacts to
                           build/sid/dr-risk-set-request.tsv
-                          (dr-risk-set-outputs.ts; gitignored). Never the
+                          (dr-risk-set-outputs.ts; gitignored). Run by
+                          hand at a DR transition, never by the build:
+                          no step reads its output. Never the
                           committed DR2 request: that one is frozen as
                           half of the dry-run pair (DR2_DRY_RUN), and
                           tests/step-outputs.test.ts fails if any step's

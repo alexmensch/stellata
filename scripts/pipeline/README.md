@@ -7,8 +7,9 @@ is the design; `steps.ts` and `run.ts` land in this folder to implement it.
 ## The model
 
 Every producer of a file under `data/`, `public/` or `build/` that the build
-or a pull depends on is a **step**. Report and draft writers
-(`sid:dr-reconcile`, `identity:snapshot`) are excluded by name, and a test
+or a pull depends on is a **step**. Report, draft and on-demand writers
+(`sid:dr-reconcile`, `sid:risk-set`, `identity:snapshot`) are excluded by
+name, and a test
 holds every `declareOutputs` constant under `scripts/` to an entry in
 `steps.ts` or that list.
 
@@ -29,7 +30,7 @@ Vite (`build:client`, `build:site`) is not a step. `pnpm run build` and
 
 | Kind | Runner runs it? | Record | Stale when | Today |
 |---|---|---|---|---|
-| `build` | yes | `build/stamps/<step>.json` (gitignored) | an input or an output hash moved | the catalogue chain, the four generators, binaries, clouds, local-group, the mirrors, `sid:risk-set` (the next DR transition's neighbourhood request, in `build/sid/`; the DR2 pull's committed request is frozen data, no step's output) |
+| `build` | yes | `build/stamps/<step>.json` (gitignored) | an input or an output hash moved | the catalogue chain, the four generators, binaries, clouds, local-group, the mirrors |
 | `pull` | never | `data/stamps/<step>.json` (committed) | its request rows, a data input, its query or an output hash moved | every `refresh:*`, both `fetch:*`, the two `dustmaps` datasets |
 | `bake` | never | `data/stamps/<step>.json` (committed) | an input or an output hash moved | dust, local-bubble, cloud-surfaces, textures, icons, og |
 | `allocate` | never | the SID ledger itself | `allocate.ts --check` finds a record to mint or an orphaned synthetic key | `sid:allocate` |
