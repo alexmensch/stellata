@@ -5,6 +5,8 @@ export interface TableSpec<C extends string> {
   /** Repo-relative path; also the label every parse error names. */
   readonly file: string;
   readonly columns: readonly C[];
+  /** Columns a header may omit; an omitted one reads as empty in every row. */
+  readonly optional?: readonly C[];
   /** What to run when the file is wrong: its refresh or build target. */
   readonly hint: string;
   /** Header must equal `columns` byte for byte and every row carry exactly
@@ -54,6 +56,12 @@ export class TableRow<C extends string> {
     readonly line: number,
   ) {}
 
+  /** Whether the header carries the column — false only for an omitted
+   *  optional one. */
+  has(c: C): boolean {
+    return this.idx[c] >= 0;
+  }
+
   /** The cell as written, '' when the row stops short of it. */
   raw(c: C): string {
     return this.cells[this.idx[c]] ?? '';
@@ -99,6 +107,7 @@ function headerIndex<C extends string>(spec: TableSpec<C>, headerLine: string): 
   }
   const header = headerLine.split('\t').map((h) => h.trim());
   const idx = Object.create(null) as Record<C, number>;
+  for (const c of spec.optional ?? []) idx[c] = header.indexOf(c);
   const missing = spec.columns.filter((c) => (idx[c] = header.indexOf(c)) < 0);
   if (missing.length) {
     throw new Error(`${spec.file} is missing required columns: ${missing.join(', ')}. ${spec.hint}`);

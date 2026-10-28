@@ -40,6 +40,14 @@ describe('readTable', () => {
     expect(row.float('v')).toBeNull();
   });
 
+  it('reads an omitted optional column as empty, and says it was omitted', () => {
+    const spec = { ...SPEC, columns: ['id'] as const, optional: ['v'] as const };
+    const [row] = readTable(spec, 'id\nA\n');
+    expect([row.has('v'), row.raw('v'), row.float('v')]).toEqual([false, '', null]);
+    const [withV] = readTable(spec, 'v\tid\n2\tA\n');
+    expect([withV.has('v'), withV.float('v')]).toEqual([true, 2]);
+  });
+
   it('throws on a missing column and on an empty file', () => {
     expect(() => [...readTable(SPEC, 'id\nA\n')]).toThrow('data/t.tsv is missing required columns: v. Re-run x.');
     expect(() => [...readTable(SPEC, '')]).toThrow(/missing required columns: id, v/);

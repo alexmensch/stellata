@@ -40,6 +40,9 @@ the target that rebuilds or re-pulls the file.
   `oneOf(column, values)` returns the cell typed to a closed set or throws.
 - `raw` is the cell exactly as written, for a reader whose meaning depends on
   untrimmed text.
+- **`optional` columns may be absent from the header.** An absent one reads as
+  empty in every row; `row.has(column)` says whether the header carried it,
+  for the reader that must tell a missing column from an empty cell.
 
 The bare cell parsers serve the frozen regression corpora, which address
 records through `../../catalog/parse/corpus-tsv.ts`'s record refs.
