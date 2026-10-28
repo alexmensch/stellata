@@ -15,9 +15,11 @@ scripts/dust/prefilter/
   prefilter-pins.ts     The pinned geometry both entry points share: the
                         summation patch, the cell angle derived from it, the
                         slice count, the fill rate.
-  dust-grid.ts          Chunk reader + the cascade's analytic tier. Grid
-                        geometry and the u8-log decode come from
-                        data/dust/manifest.json, never from constants here.
+  dust-grid.ts          The voxel field read through DUST_GRID (the
+                        catalogue build's declared dust source) + the
+                        cascade's analytic tier. Grid geometry and the
+                        u8-log decode come from that read, never from
+                        constants here.
   froxel.ts             The grid emulation, the reference march, and the
     (+ test)            direct-read alternative.
   march-plan.ts         The band march factored so the dust read is a
