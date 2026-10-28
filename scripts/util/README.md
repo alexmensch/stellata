@@ -71,11 +71,14 @@ same thing — single-use helpers stay with their consumer.
   the only list. Both pinned by co-located tests
   (`python3 scripts/util/build_stamp.test.py`).
 - `import-closure.ts` / `import-closure-pure.ts` (+ test) — a TypeScript
-  build's code inputs. `scriptClosure(names)` is every module the named
-  `package.json` scripts import, read from an esbuild metafile, so a new
-  import joins without anyone listing it; `tsxEntry` holds each such script
-  to exactly `tsx <file>.ts`, so `package.json` is the one place an entry is
-  named; `closureWithSiblings(closure, files)` adds every file beside a
+  build's code inputs. `entryClosure(entries)` is every module the given
+  entry files import, read from an esbuild metafile, so a new import joins
+  without anyone listing it; `scriptClosure(names)` is that over the named
+  `package.json` scripts, each held by `tsxEntry` to exactly `tsx <file>.ts`,
+  so `package.json` is the one place an entry is named and no half of a
+  chained script is keyed alone. `scriptParts` is the one parser of a
+  script's `&&`-chained commands (`tsx`, `python3`, `pnpm run`, or `other`)
+  and `tsxEntries` every `tsx` entry among them; `closureWithSiblings(closure, files)` adds every file beside a
   closure module except `.ts`, `.py` and `.md`, which is how the `*-expected.json`
   snapshots a build reads by path get keyed. Shared by the catalogue stamp and
   CI's catalogue cache key ([The catalogue build cache](../ci/README.md#the-catalogue-build-cache)), so the two

@@ -178,7 +178,9 @@ sid-ledger-guard.test.ts Append-only CI guard for data/sid/ (/docs/sid.md#45-ci-
                          full vitest and locally.
 source-declarations.test.ts
                          Every TypeScript pipeline step's (build:*,
-                         fetch:*, sid:allocate, sid:risk-set) import closure reads
+                         fetch:*, sid:allocate, sid:risk-set; every tsx
+                         entry of a chained script, and a step-named script
+                         it cannot classify fails) import closure reads
                          each declared source and artifact it reaches
                          (/scripts/util/sources/README.md#reached-means-read);
                          a data/ path literal sits only in a declaring or

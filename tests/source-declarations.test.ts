@@ -5,25 +5,33 @@ import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 import { declaredInputs, DECLARING_MODULE } from '../scripts/util/sources/declared-inputs';
-import { scriptClosure } from '../scripts/util/import-closure';
-import { tsxEntry } from '../scripts/util/import-closure-pure';
-import { PACKAGE_JSON, REPO_ROOT } from '../scripts/util/paths';
+import { entryClosure, packageScripts } from '../scripts/util/import-closure';
+import { scriptParts, tsxEntries } from '../scripts/util/import-closure-pure';
+import { REPO_ROOT } from '../scripts/util/paths';
 import { isProductionTs, walkFiles } from './walk-files';
 
 const OUT_OF_PIPELINE = /^scripts\/(perf|release|hooks|ci)\//;
 
-const { scripts } = JSON.parse(readFileSync(resolve(REPO_ROOT, PACKAGE_JSON), 'utf8')) as {
-  scripts: Record<string, string>;
-};
+const scripts = packageScripts();
 const MANUAL_TS_STEPS = ['sid:allocate', 'sid:risk-set'];
-const STEPS = Object.keys(scripts)
-  .filter((name) => /^tsx \S+\.ts$/.test(scripts[name]))
+/** Targets named like steps that are not pipeline steps (Vite is not a step; the seed wrapper runs steps). */
+const NOT_STEPS = ['build:client', 'build:site', 'build:seed'];
+const STEP_NAMED = Object.keys(scripts)
   .filter((name) => /^(build|fetch):/.test(name) || MANUAL_TS_STEPS.includes(name))
-  .filter((name) => !OUT_OF_PIPELINE.test(tsxEntry(scripts, name)));
+  .filter((name) => !NOT_STEPS.includes(name));
+/** Every step with TypeScript in it; an all-`pnpm run` target is an aggregate of steps checked on their own, and an all-Python step records its reads at run time. */
+const TS_STEPS = STEP_NAMED.filter((name) => tsxEntries(scripts, name).length > 0);
 
 describe('source declarations', () => {
-  it.each(STEPS)('%s reads every source and artifact its import closure reaches', async (step) => {
-    const unread = (await declaredInputs(await scriptClosure([step]))).filter(({ use }) => use === 'unused');
+  it('resolves every step-named script into steps it can check', () => {
+    const unresolved = STEP_NAMED.filter((name) => scriptParts(scripts, name).some((p) => p.kind === 'other'));
+    expect(unresolved).toEqual([]);
+    expect(TS_STEPS).toEqual(expect.arrayContaining(['build:catalog', 'build:local-group', 'build:clouds', 'sid:allocate']));
+  });
+
+  it.each(TS_STEPS)('%s reads every source and artifact its import closure reaches', async (step) => {
+    const unread = (await declaredInputs(await entryClosure(tsxEntries(scripts, step))))
+      .filter(({ use }) => use === 'unused');
     expect(unread.map(({ module, name }) => `${module}#${name}`)).toEqual([]);
   }, 60_000);
 
