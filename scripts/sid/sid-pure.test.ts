@@ -16,14 +16,13 @@ import {
   namespaceRank,
   parseDesignation,
   effectiveRetirements,
-  parseLedgerTsv,
   parseReinstatementsTsv,
   parseRetirementsTsv,
   parseSameasTsv,
   parseSolObjectsTsv,
   resolveSids,
   sidSuccessorPairs,
-  splitTsv,
+  registryLines,
   starDesignations,
   validateLedger,
   validateReinstatements,
@@ -100,7 +99,7 @@ describe('TSV codecs', () => {
   const ledgerText = `${LEDGER_HEADER}\n1\thip:32349\tstar\t2026-07-10\n2\tcloud:orion-a\tcloud\t2026-07-10\n`;
 
   it('parses and re-serializes ledger rows', () => {
-    const rows = parseLedgerTsv(ledgerText);
+    const rows = LEDGER.parse(ledgerText);
     expect(rows).toHaveLength(2);
     expect(rows[0]).toEqual({
       sid: 1,
@@ -112,9 +111,9 @@ describe('TSV codecs', () => {
   });
 
   it('refuses a signed sid, a short row and an unknown kind', () => {
-    expect(() => parseLedgerTsv(`${LEDGER_HEADER}\n+1\thip:1\tstar\t2026-07-10\n`)).toThrow(/sid: "\+1" is not an identifier/);
-    expect(() => parseLedgerTsv(`${LEDGER_HEADER}\n1\thip:1\tstar\n`)).toThrow(/expected 4/);
-    expect(() => parseLedgerTsv(`${LEDGER_HEADER}\n1\thip:1\tcomet\t2026-07-10\n`)).toThrow(/kind/);
+    expect(() => LEDGER.parse(`${LEDGER_HEADER}\n+1\thip:1\tstar\t2026-07-10\n`)).toThrow(/sid: "\+1" is not an identifier/);
+    expect(() => LEDGER.parse(`${LEDGER_HEADER}\n1\thip:1\tstar\n`)).toThrow(/expected 4/);
+    expect(() => LEDGER.parse(`${LEDGER_HEADER}\n1\thip:1\tcomet\t2026-07-10\n`)).toThrow(/kind/);
     expect(() => parseRetirementsTsv(`${RETIREMENTS_HEADER}\n5\t2026-07-10\tx\t03a\n`))
       .toThrow(/successor_sid/);
   });
@@ -142,11 +141,19 @@ describe('TSV codecs', () => {
     expect(() => parseSolObjectsTsv('key\tkind\nsun\tcomet\n')).toThrow(/kind: "comet"/);
   });
 
-  it('splitTsv enforces LF, trailing newline, header, and no blank lines', () => {
-    expect(() => splitTsv('a\n1\r\n', 'a', 't')).toThrow(/CR/);
-    expect(() => splitTsv('a\n1', 'a', 't')).toThrow(/trailing newline/);
-    expect(() => splitTsv('b\n1\n', 'a', 't')).toThrow(/bad header/);
-    expect(() => splitTsv('a\n\n1\n', 'a', 't')).toThrow(/blank/);
+  it('every registry file refuses CR line endings, a missing final newline, a blank line and a foreign header', () => {
+    const ok = `${RETIREMENTS_HEADER}\n5\t2026-07-10\tx\t\n`;
+    expect(parseRetirementsTsv(ok)).toHaveLength(1);
+    expect(() => parseRetirementsTsv(ok.replace(/\n/g, '\r\n'))).toThrow(/CR line ending/);
+    expect(() => parseRetirementsTsv(ok.slice(0, -1))).toThrow(/missing final newline/);
+    expect(() => parseRetirementsTsv(`${RETIREMENTS_HEADER}\n\n5\t2026-07-10\tx\t\n`)).toThrow(/:2: blank line/);
+    expect(() => LEDGER.parse(`${LEDGER_HEADER}\n1\thip:1\tstar\t2026-07-10`)).toThrow(/missing final newline/);
+    expect(() => parseSolObjectsTsv('kind\tkey\n')).toThrow(/header mismatch/);
+  });
+
+  it('registryLines yields each data row as written', () => {
+    expect(registryLines(LEDGER.table, `${LEDGER_HEADER}\n1\thip:1\tstar\t2026-07-10\n`))
+      .toEqual(['1\thip:1\tstar\t2026-07-10']);
   });
 });
 

@@ -174,12 +174,12 @@ export function canonicalKeyOf(designations: Iterable<string>): string {
 
 export { SID_KINDS, type LedgerRow, type SidKind };
 
-const RETIREMENTS_TABLE = {
+export const RETIREMENTS_TABLE = {
   file: 'data/sid/retirements.tsv',
   columns: ['sid', 'retired', 'reason', 'successor_sid'] as const,
   hint: 'It is hand-appended: restore the row (/docs/sid.md#43-ledger--datasidledgertsv).',
 } satisfies TableSpec<string>;
-const REINSTATEMENTS_TABLE = {
+export const REINSTATEMENTS_TABLE = {
   file: 'data/sid/reinstatements.tsv',
   columns: ['sid', 'reinstated', 'reason'] as const,
   hint: 'It is hand-appended: restore the row (/docs/sid.md#43-ledger--datasidledgertsv).',
@@ -214,51 +214,39 @@ export interface SameasEdge {
 
 const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
-export interface TsvFile {
-  header: string;
-  dataLines: string[];
-}
-
-/** Strict TSV split: LF line endings, trailing newline required, no blank
- *  interior lines. */
-export function splitTsv(text: string, expectedHeader: string, label: string): TsvFile {
-  if (text.includes('\r')) throw new Error(`${label}: CR line endings not allowed`);
-  if (!text.endsWith('\n')) throw new Error(`${label}: missing trailing newline`);
-  const lines = text.slice(0, -1).split('\n');
-  if (lines[0] !== expectedHeader) {
-    throw new Error(`${label}: bad header "${lines[0]}" (expected "${expectedHeader}")`);
-  }
-  const dataLines = lines.slice(1);
-  if (dataLines.some((l) => l.length === 0)) throw new Error(`${label}: blank data line`);
-  return { header: lines[0], dataLines };
-}
-
-/** splitTsv is not redundant with `exact`: see README.md (sid-pure.ts). */
 function registryRows<C extends string>(spec: TableSpec<C>, text: string): TableRow<C>[] {
-  splitTsv(text, spec.columns.join('\t'), spec.file);
   return [...readTable({ ...spec, exact: true }, text)];
 }
 
-export function parseLedgerTsv(text: string): LedgerRow[] {
-  splitTsv(text, LEDGER_HEADER, LEDGER.file);
-  return LEDGER.parse(text);
+/** Each data row's line as written: what the head hash and the append-only
+ *  check compare. */
+export function registryLines<C extends string>(spec: TableSpec<C>, text: string): string[] {
+  return registryRows(spec, text).map((row) => row.rawLine);
 }
 
-export function parseRetirementsTsv(text: string): RetirementRow[] {
-  return registryRows(RETIREMENTS_TABLE, text).map((row) => ({
+function retirementRow(row: TableRow<(typeof RETIREMENTS_TABLE.columns)[number]>): RetirementRow {
+  return {
     sid: row.requiredId('sid'),
     retired: row.raw('retired'),
     reason: row.raw('reason'),
     successorSid: row.id('successor_sid'),
-  }));
+  };
 }
 
-export function parseReinstatementsTsv(text: string): ReinstatementRow[] {
-  return registryRows(REINSTATEMENTS_TABLE, text).map((row) => ({
+function reinstatementRow(row: TableRow<(typeof REINSTATEMENTS_TABLE.columns)[number]>): ReinstatementRow {
+  return {
     sid: row.requiredId('sid'),
     reinstated: row.raw('reinstated'),
     reason: row.raw('reason'),
-  }));
+  };
+}
+
+export function parseRetirementsTsv(text: string): RetirementRow[] {
+  return registryRows(RETIREMENTS_TABLE, text).map(retirementRow);
+}
+
+export function parseReinstatementsTsv(text: string): ReinstatementRow[] {
+  return registryRows(REINSTATEMENTS_TABLE, text).map(reinstatementRow);
 }
 
 /** Effective retirement state (/docs/sid.md#43-ledger--datasidledgertsv): a sid is retired iff
@@ -469,19 +457,24 @@ export interface LedgerHead {
   reinstatements?: HeadTriple;
 }
 
-/** Hash of the first `rows.length` data lines, each LF-terminated; the
- *  header line is pinned by splitTsv, not hashed. */
+/** Hash of the data lines, each LF-terminated; the header line is pinned by
+ *  the exact header check, not hashed. */
 export function sha256OfDataLines(dataLines: string[]): string {
   const h = createHash('sha256');
   for (const line of dataLines) h.update(`${line}\n`, 'utf-8');
   return h.digest('hex');
 }
 
-function headTriple(dataLines: string[], sids: number[]): HeadTriple {
+function headTriple<C extends string>(
+  spec: TableSpec<C>,
+  text: string,
+  decode: (row: TableRow<C>) => { sid: number },
+): HeadTriple {
+  const rows = registryRows(spec, text);
   return {
-    rows: dataLines.length,
-    max_sid: sids.reduce((max, sid) => Math.max(max, sid), 0),
-    sha256: sha256OfDataLines(dataLines),
+    rows: rows.length,
+    max_sid: rows.reduce((max, row) => Math.max(max, decode(row).sid), 0),
+    sha256: sha256OfDataLines(rows.map((row) => row.rawLine)),
   };
 }
 
@@ -491,18 +484,9 @@ export function computeLedgerHead(
   reinstatementsText: string = `${REINSTATEMENTS_HEADER}\n`,
 ): LedgerHead {
   return {
-    ledger: headTriple(
-      splitTsv(ledgerText, LEDGER_HEADER, LEDGER.file).dataLines,
-      parseLedgerTsv(ledgerText).map((r) => r.sid),
-    ),
-    retirements: headTriple(
-      splitTsv(retirementsText, RETIREMENTS_HEADER, RETIREMENTS_TABLE.file).dataLines,
-      parseRetirementsTsv(retirementsText).map((r) => r.sid),
-    ),
-    reinstatements: headTriple(
-      splitTsv(reinstatementsText, REINSTATEMENTS_HEADER, REINSTATEMENTS_TABLE.file).dataLines,
-      parseReinstatementsTsv(reinstatementsText).map((r) => r.sid),
-    ),
+    ledger: headTriple(LEDGER.table, ledgerText, LEDGER.decode),
+    retirements: headTriple(RETIREMENTS_TABLE, retirementsText, retirementRow),
+    reinstatements: headTriple(REINSTATEMENTS_TABLE, reinstatementsText, reinstatementRow),
   };
 }
 
@@ -537,7 +521,7 @@ export function checkAppendOnly(
     );
   }
   if (opts.newSidsPastBaseMax) {
-    const appended = LEDGER.parse([LEDGER_HEADER, ...dataLines.slice(base.rows)].join('\n'));
+    const appended = LEDGER.parse([LEDGER_HEADER, ...dataLines.slice(base.rows), ''].join('\n'));
     for (const { sid } of appended) {
       if (!(sid > base.max_sid)) {
         errors.push(`${label}: appended sid ${sid} not > frozen max_sid ${base.max_sid}`);

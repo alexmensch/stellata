@@ -11,7 +11,6 @@ import {
   LEDGER_HEADER,
   REINSTATEMENTS_HEADER,
   RETIREMENTS_HEADER,
-  parseLedgerTsv,
   parseReinstatementsTsv,
   parseRetirementsTsv,
   parseSameasTsv,
@@ -79,7 +78,7 @@ export function loadRegistry(): Registry {
   const reinstatementsText = existsSync(REINSTATEMENTS_PATH)
     ? readFileSync(REINSTATEMENTS_PATH, 'utf-8')
     : `${REINSTATEMENTS_HEADER}\n`;
-  const ledger = parseLedgerTsv(ledgerText);
+  const ledger = LEDGER.parse(ledgerText);
   const retirements = parseRetirementsTsv(retirementsText);
   const reinstatements = parseReinstatementsTsv(reinstatementsText);
   const errors = [

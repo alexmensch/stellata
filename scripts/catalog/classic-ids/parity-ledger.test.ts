@@ -12,7 +12,8 @@ import { PARKED_LEDGER } from '../distance/parallax/parked-ledger';
 import { ROUTE_DISAGREEMENTS } from './route-disagreements-tsv';
 import { REPO_ROOT, lfsContentReadable } from '../../util/paths';
 import { LEDGER_PATH, OVERRIDES_PATH, SAMEAS_OVERRIDES_FILE } from '../../sid/registry-io';
-import { parseLedgerTsv, parseSameasTsv } from '../../sid/sid-pure';
+import { parseSameasTsv } from '../../sid/sid-pure';
+import { LEDGER } from '../../sid/ledger-tsv';
 import { INHERITED_SPINE, INHERITED_SPINE_FILE } from '../spine/inherited-spine-pure';
 import { parseBsc5Tsv } from './classic-ids-parse';
 import {
@@ -80,7 +81,7 @@ describe.skipIf(!ledgerReadable)('label delta vs the SID ledger', () => {
   // are the shipped shape (/docs/catalog-driver.md#4-how-hd-reaches-gaia).
   it('bridges every canonical key the merge removes from its record', () => {
     const canonical = new Set(
-      parseLedgerTsv(readFileSync(LEDGER_PATH, 'utf-8')).map((r) => r.canonicalKey),
+      LEDGER.parse(readFileSync(LEDGER_PATH, 'utf-8')).map((r) => r.canonicalKey),
     );
     const bridgeEndpoints = new Set(
       parseSameasTsv(readFileSync(OVERRIDES_PATH, 'utf-8'), SAMEAS_OVERRIDES_FILE)

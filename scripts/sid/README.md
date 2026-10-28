@@ -13,10 +13,11 @@ sid-pure.ts               Pure algebra: designation grammar (/docs/sid.md#3-desi
                           allocation (/docs/sid.md#41-same-as-equivalence-graph, /docs/sid.md#44-allocation), per-record designation
                           extraction (starDesignations) + read-only
                           resolution (resolveSids, mint = error),
-                          readers for every registry file (readTable,
-                          exact header, plus splitTsv's LF / trailing-
-                          newline / no-blank-line framing the head hash
-                          relies on), head snapshot + append-only checks (/docs/sid.md#43-ledger--datasidledgertsv, /docs/sid.md#45-ci-guard).
+                          readers for every registry file (readTable in
+                          exact mode, which also owns the LF / final-
+                          newline / no-blank-line layout the head hash
+                          relies on; the hash reads each row's rawLine
+                          from the same walk), head snapshot + append-only checks (/docs/sid.md#43-ledger--datasidledgertsv, /docs/sid.md#45-ci-guard).
                           Tests import its constants — never redefine
                           them.
 ledger-tsv.ts (+ test)    LEDGER — ledger.tsv's artifact codec, with

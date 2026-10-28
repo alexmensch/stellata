@@ -83,9 +83,9 @@ describe('serializeSpine / parseSpineTsv', () => {
 
   // The header has exactly as many cells as a data row, so a walk that reads
   // it twice yields a row of column names — 'hip' parsing as a designation.
-  it('yields nothing from a header with no data rows, terminated or not', () => {
+  it('yields nothing from a terminated header alone, and refuses an unterminated one', () => {
     expect(INHERITED_SPINE.parse(`${SPINE_COLUMNS.join('\t')}\n`)).toEqual([]);
-    expect(INHERITED_SPINE.parse(SPINE_COLUMNS.join('\t'))).toEqual([]);
+    expect(() => INHERITED_SPINE.parse(SPINE_COLUMNS.join('\t'))).toThrow(/missing final newline/);
   });
 
   it('walks lazily — readStars must not hold all 313,257 rows at once', () => {

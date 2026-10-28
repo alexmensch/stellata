@@ -10,19 +10,19 @@ import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 import { REPO_ROOT, isLfsPointer } from '../scripts/util/paths';
+import { LEDGER } from '../scripts/sid/ledger-tsv';
 import {
   EMPTY_HEAD_TRIPLE,
-  LEDGER_HEADER,
   REINSTATEMENTS_HEADER,
-  RETIREMENTS_HEADER,
+  REINSTATEMENTS_TABLE,
+  RETIREMENTS_TABLE,
   checkAppendOnly,
   computeLedgerHead,
-  parseLedgerTsv,
   parseReinstatementsTsv,
   parseRetirementsTsv,
   parseSameasTsv,
   parseSolObjectsTsv,
-  splitTsv,
+  registryLines,
   validateLedger,
   validateReinstatements,
   validateRetirements,
@@ -60,7 +60,7 @@ describe.skipIf(!available)('sid ledger guard', () => {
   const reinstatementsText = existsSync(REINSTATEMENTS_PATH)
     ? readFileSync(REINSTATEMENTS_PATH, 'utf-8')
     : `${REINSTATEMENTS_HEADER}\n`;
-  const ledger = () => parseLedgerTsv(ledgerText!);
+  const ledger = () => LEDGER.parse(ledgerText!);
 
   it('ledger, retirements, and reinstatements are structurally valid', () => {
     const rows = ledger();
@@ -92,12 +92,8 @@ describe.skipIf(!available)('sid ledger guard', () => {
       skip('no merge-base ledger-head.json (first PR, shallow clone, or no origin/main)');
       return;
     }
-    const ledgerLines = splitTsv(ledgerText!, LEDGER_HEADER, 'ledger.tsv').dataLines;
-    const retirementLines = splitTsv(
-      retirementsText,
-      RETIREMENTS_HEADER,
-      'retirements.tsv',
-    ).dataLines;
+    const ledgerLines = registryLines(LEDGER.table, ledgerText!);
+    const retirementLines = registryLines(RETIREMENTS_TABLE, retirementsText);
     expect(
       checkAppendOnly(base.ledger, ledgerLines, 'ledger.tsv', { newSidsPastBaseMax: true }),
     ).toEqual([]);
@@ -106,11 +102,7 @@ describe.skipIf(!available)('sid ledger guard', () => {
         newSidsPastBaseMax: false,
       }),
     ).toEqual([]);
-    const reinstatementLines = splitTsv(
-      reinstatementsText,
-      REINSTATEMENTS_HEADER,
-      'reinstatements.tsv',
-    ).dataLines;
+    const reinstatementLines = registryLines(REINSTATEMENTS_TABLE, reinstatementsText);
     // Heads written before reinstatements.tsv existed freeze zero rows.
     expect(
       checkAppendOnly(

@@ -23,7 +23,6 @@ import {
   allocate,
   computeLedgerHead,
   parseDesignation,
-  parseLedgerTsv,
   parseReinstatementsTsv,
   parseRetirementsTsv,
   parseSolObjectsTsv,
@@ -158,7 +157,7 @@ async function main(): Promise<void> {
   const reinstatementsText = existsSync(REINSTATEMENTS_PATH)
     ? readFileSync(REINSTATEMENTS_PATH, 'utf-8')
     : `${REINSTATEMENTS_HEADER}\n`;
-  const ledger = parseLedgerTsv(ledgerText);
+  const ledger = LEDGER.parse(ledgerText);
   const retirements = parseRetirementsTsv(retirementsText);
   const reinstatements = parseReinstatementsTsv(reinstatementsText);
   const structural = [

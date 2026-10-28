@@ -127,6 +127,20 @@ describe('readTable', () => {
     expect([...readTable(exact, 'id\tv\nA\t\n')]).toHaveLength(1);
   });
 
+  it('holds an exact table to its layout: LF only, no blank line, a final newline', () => {
+    const exact = { ...SPEC, exact: true };
+    expect(() => [...readTable(exact, 'id\tv\r\nA\t1\r\n')]).toThrow('data/t.tsv:1: CR line ending. Re-run x.');
+    expect(() => [...readTable(exact, 'id\tv\nA\t1\r\n')]).toThrow(/data\/t\.tsv:2: CR line ending/);
+    expect(() => [...readTable(exact, 'id\tv\nA\t1\n\nB\t2\n')]).toThrow('data/t.tsv:3: blank line. Re-run x.');
+    expect(() => [...readTable(exact, 'id\tv\nA\t1')]).toThrow('data/t.tsv: missing final newline. Re-run x.');
+    expect([...readTable(SPEC, 'id\tv\r\nA\t1\r\n\nB\t2')].map((r) => r.raw('id'))).toEqual(['A', 'B']);
+  });
+
+  it('keeps each row\'s line as written', () => {
+    const rows = [...readTable(SPEC, 'id\tv\n A \t1\r\n')];
+    expect(rows[0].rawLine).toBe(' A \t1');
+  });
+
   it('reads a source_id as bare digits, kept a string', () => {
     const [row] = readTable(SPEC, 'id\tv\n4295806720123456789\t\n');
     expect(row.sourceId('id')).toBe('4295806720123456789');

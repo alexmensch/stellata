@@ -2,15 +2,10 @@
 
 Every tab-separated table a TypeScript build step reads goes through this
 folder: an external input through `readTable`, a file this repo writes itself
-through its `defineArtifact` codec. Two places stand outside it, named so a
-third is a finding rather than precedent:
-
-- the WGSN tables (`../../catalog/naming/wgsn-parse-pure.ts`) are
-  comma-separated CSV, not TSV, and that module parses their cells itself —
-  its `vmagCell` leniently;
-- `../../sid/sid-pure.ts`'s `splitTsv`, which pins the registry files' line
-  framing (LF, a final newline, no blank line) that the head hash relies on,
-  before each table reads through `readTable`.
+through its `defineArtifact` codec. One place stands outside it, named so a
+second is a finding rather than precedent: the WGSN tables
+(`../../catalog/naming/wgsn-parse-pure.ts`) are comma-separated CSV, not TSV,
+and that module parses their cells itself — its `vmagCell` leniently.
 
 ## Files in this area
 
@@ -88,6 +83,12 @@ and its parse each have one owner.
 - **The header must equal `columns` byte for byte, and every row carry exactly
   that many cells.** The serializer writes the header, so a header that merely
   parses was never shipped.
+- **The layout is the serializer's too**: LF line endings, no blank line, a
+  final newline. `exact` mode refuses each departure, `readTable` naming the
+  line (a missing final newline is its alone to see; a line-fed reader is
+  handed lines). So the bytes a reader accepts are the bytes `serialize`
+  writes, and `row.rawLine` — the line as written — is what a hash over the
+  rows may read: the SID registry's head hash does.
 - `serialize(records)` is the only writer. It refuses a cell holding a tab or
   newline, orders the rows (`by-line` sorts the encoded lines, a comparator
   sorts the records, `as-given` keeps the caller's order) and ends with a

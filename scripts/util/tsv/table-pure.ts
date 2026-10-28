@@ -106,6 +106,7 @@ export class TableRow<C extends string> {
     private readonly idx: Readonly<Record<C, number>>,
     private readonly values: readonly string[],
     readonly line: number,
+    readonly rawLine: string,
   ) {}
 
   /** Whether the header carries the column — false only for an omitted
@@ -210,20 +211,24 @@ function lineParser<C extends string>(spec: TableSpec<C>): {
   return {
     parse(line) {
       lineNo++;
+      if (spec.exact && line.endsWith('\r')) {
+        throw new Error(`${spec.file}:${lineNo}: CR line ending. ${spec.hint}`);
+      }
       if (spec.comments && COMMENT.test(line)) return null;
       if (idx === null) {
         if (!spec.exact && line.trim() === '') return null;
         idx = headerIndex(spec, line);
         return null;
       }
-      if (line === '' || (!spec.exact && line.trim() === '')) return null;
+      if (spec.exact && line === '') throw new Error(`${spec.file}:${lineNo}: blank line. ${spec.hint}`);
+      if (!spec.exact && line.trim() === '') return null;
       const cells = line.split('\t');
       if (spec.exact && cells.length !== spec.columns.length) {
         throw new Error(
           `${spec.file}:${lineNo}: row has ${cells.length} cells, expected ${spec.columns.length}. ${spec.hint}`,
         );
       }
-      return new TableRow(spec, idx, cells, lineNo);
+      return new TableRow(spec, idx, cells, lineNo, line);
     },
     finish() {
       if (idx === null) {
@@ -257,13 +262,14 @@ export function* readTable<C extends string>(
   text: string,
 ): Generator<TableRow<C>> {
   const { parse, finish } = lineParser(spec);
-  let start = 0;
-  do {
+  for (let start = 0; start < text.length;) {
     const end = text.indexOf('\n', start);
+    if (end === -1 && spec.exact) throw new Error(`${spec.file}: missing final newline. ${spec.hint}`);
     const stop = end === -1 ? text.length : end;
-    const row = parse(text.charCodeAt(stop - 1) === 13 ? text.slice(start, stop - 1) : text.slice(start, stop));
+    const line = text.slice(start, stop);
+    const row = parse(!spec.exact && line.endsWith('\r') ? line.slice(0, -1) : line);
     if (row !== null) yield row;
     start = stop + 1;
-  } while (start <= text.length);
+  }
   finish();
 }

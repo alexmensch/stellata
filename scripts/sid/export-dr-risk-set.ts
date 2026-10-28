@@ -7,12 +7,12 @@ import { existsSync, readFileSync } from 'node:fs';
 import { sortSourceIdsNumeric } from '../catalog/astrometry-request/export-astrometry-request-pure';
 import { emitArtifacts, runStep } from '../util/emit-artifacts';
 import { DR_RISK_SET_OUTPUTS } from './dr-risk-set-outputs';
+import { LEDGER } from './ledger-tsv';
 import { LEDGER_PATH, REINSTATEMENTS_PATH, RETIREMENTS_PATH } from './registry-io';
 import {
   REINSTATEMENTS_HEADER,
   effectiveRetirements,
   parseDesignation,
-  parseLedgerTsv,
   parseReinstatementsTsv,
   parseRetirementsTsv,
 } from './sid-pure';
@@ -22,7 +22,7 @@ function main(): void {
     console.error(`sid:risk-set: ${LEDGER_PATH} missing — run pnpm run sid:allocate first`);
     process.exit(1);
   }
-  const ledger = parseLedgerTsv(readFileSync(LEDGER_PATH, 'utf-8'));
+  const ledger = LEDGER.parse(readFileSync(LEDGER_PATH, 'utf-8'));
   const reinstatementsText = existsSync(REINSTATEMENTS_PATH)
     ? readFileSync(REINSTATEMENTS_PATH, 'utf-8')
     : `${REINSTATEMENTS_HEADER}\n`;
