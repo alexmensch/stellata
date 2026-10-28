@@ -1,7 +1,6 @@
 // Emit data/gaia/gaia_catalog_source_id_request.tsv — every Gaia source the
 // build needs a row for: the membership manifest's bindings, both gates'
 // candidates, bound-pair siblings. See README.md.
-import { resolve } from 'node:path';
 
 import { ASTROMETRY_REQUEST_OUTPUTS } from './astrometry-request-outputs';
 import { sortSourceIdsNumeric } from './export-astrometry-request-pure';
@@ -17,31 +16,26 @@ import {
   indexSimbadSources,
 } from '../membership/binding/binding-derivation-pure';
 import {
-  SPINE_CORRECTIONS_FILE,
   additionItemCells,
   applySpineCorrections,
-  parseSpineCorrectionsTsv,
 } from '../membership/membership-manifest-pure';
-import { MEMBERSHIP_MANIFEST, MEMBERSHIP_MANIFEST_FILE } from '../membership/membership-manifest-tsv';
+import { MEMBERSHIP_MANIFEST } from '../membership/membership-manifest-tsv';
+import { SPINE_CORRECTIONS } from '../membership/spine-corrections-source';
 import { printedVLookups } from '../photometry/v-magnitude-pure';
 import { INHERITED_SPINE } from '../spine/inherited-spine-tsv';
 import { indexCns5 } from '../spine/primaries-audit-pure';
 import { loadPrimaryTables } from '../spine/primaries-tables';
-import { readArtifact } from '../../util/sources/source';
+import { artifactRows, readArtifact } from '../../util/sources/source';
 import { emitArtifacts, runStep } from '../../util/emit-artifacts';
-import { readRequired, REPO_ROOT as ROOT } from '../../util/paths';
 
-const SRC_MANIFEST = resolve(ROOT, MEMBERSHIP_MANIFEST_FILE);
 const OUT = ASTROMETRY_REQUEST_OUTPUTS.files.request;
 
-const MANIFEST_HINT = 'run `pnpm run build:membership`, or `git lfs pull` if it is an LFS stub.';
-const CORRECTIONS_HINT = 'it is committed and hand-curated (../membership/README.md#correcting-a-merge-decision).';
 
 async function main(): Promise<void> {
   const ids = new Set<string>();
   let rows = 0;
   let withoutSourceId = 0;
-  for (const row of MEMBERSHIP_MANIFEST.rows(readRequired(SRC_MANIFEST, MANIFEST_HINT))) {
+  for (const row of artifactRows(MEMBERSHIP_MANIFEST)) {
     if (row.term === 'magnitude') continue;
     rows++;
     if (row.gaiaSourceId === null) withoutSourceId++;
@@ -55,9 +49,7 @@ async function main(): Promise<void> {
   // read the same tables the derivation's do, and the TYC cross-walk has to
   // cover IV/25's Tycho ids as well as the spine's for the gate's arm.
   const spine = readArtifact(INHERITED_SPINE);
-  const { kept } = applySpineCorrections(spine, parseSpineCorrectionsTsv(
-    readRequired(resolve(ROOT, SPINE_CORRECTIONS_FILE), CORRECTIONS_HINT),
-  ));
+  const { kept } = applySpineCorrections(spine, SPINE_CORRECTIONS.read());
   const tables = await loadPrimaryTables(kept.map((r) => r.tyc).filter((t) => t !== ''));
 
   const candidates = magnitudeWeighableSourceIds(

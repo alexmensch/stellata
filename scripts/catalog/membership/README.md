@@ -42,6 +42,10 @@ scripts/catalog/membership/
                                   two curated inputs (dispositions, spine
                                   corrections), and the spine ↔ manifest
                                   matcher the gate runs. Pure.
+  binding-review-dispositions-    The two curated inputs, declared
+    source.ts                     (../../util/sources/):
+  spine-corrections-source.ts     BINDING_REVIEW_DISPOSITIONS,
+                                  SPINE_CORRECTIONS.
   build-membership-manifest.ts    `pnpm run build:membership` — loads the
                                   spine and its corrections, the primaries, the
                                   overlay, the binding gates' evidence,

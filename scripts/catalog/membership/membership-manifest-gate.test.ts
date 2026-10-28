@@ -28,15 +28,13 @@ import {
   type SpineRow,
 } from '../spine/inherited-spine-pure';
 import { INHERITED_SPINE } from '../spine/inherited-spine-tsv';
+import { BINDING_REVIEW_DISPOSITIONS } from './binding-review-dispositions-source';
+import { SPINE_CORRECTIONS } from './spine-corrections-source';
 import {
-  BINDING_DISPOSITIONS_FILE,
   MEMBERSHIP_EXPECTED_FILE,
-  SPINE_CORRECTIONS_FILE,
   applySpineCorrections,
   manifestKey,
   matchSpineToManifest,
-  parseBindingDispositionsTsv,
-  parseSpineCorrectionsTsv,
   type SpineFold,
   type MembershipCounts,
   type SpineMatch,
@@ -66,12 +64,9 @@ import {
 const SPINE_PATH = resolve(REPO_ROOT, INHERITED_SPINE.file);
 const MANIFEST_PATH = resolve(REPO_ROOT, MEMBERSHIP_MANIFEST_FILE);
 const LEDGER_PATH = resolve(REPO_ROOT, ADDITIONS_LEDGER_FILE);
-const CORRECTIONS_PATH = resolve(REPO_ROOT, SPINE_CORRECTIONS_FILE);
 
 const queue = BINDING_REVIEW.parse(readFileSync(resolve(REPO_ROOT, BINDING_REVIEW_FILE), 'utf-8'));
-const dispositions = parseBindingDispositionsTsv(
-  readFileSync(resolve(REPO_ROOT, BINDING_DISPOSITIONS_FILE), 'utf-8'),
-);
+const dispositions = BINDING_REVIEW_DISPOSITIONS.read();
 
 const inputsReadable = [SPINE_PATH, MANIFEST_PATH, LEDGER_PATH].every(lfsContentReadable);
 const built = [DEFAULT_CATALOG_MANIFEST, DEFAULT_SEARCH_INDEX, DEFAULT_ROW_INDEX_MAP]
@@ -129,7 +124,7 @@ describe.skipIf(!inputsReadable)('membership manifest ↔ inherited spine', () =
     spine = INHERITED_SPINE.parse(readFileSync(SPINE_PATH, 'utf-8'));
     ({ corrected, folds } = applySpineCorrections(
       spine,
-      parseSpineCorrectionsTsv(readFileSync(CORRECTIONS_PATH, 'utf-8')),
+      SPINE_CORRECTIONS.read(),
     ));
     manifest = MEMBERSHIP_MANIFEST.parse(readFileSync(MANIFEST_PATH, 'utf-8'));
     match = matchSpineToManifest(

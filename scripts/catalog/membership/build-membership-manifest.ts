@@ -4,7 +4,7 @@
 
 import { resolve } from 'node:path';
 
-import { REPO_ROOT as ROOT, readRequired } from '../../util/paths';
+import { REPO_ROOT as ROOT } from '../../util/paths';
 import { emitArtifacts, runStep } from '../../util/emit-artifacts';
 import { artifactRows, readArtifact } from '../../util/sources/source';
 import { MEMBERSHIP_OUTPUTS } from './membership-manifest-outputs';
@@ -31,12 +31,8 @@ import { MAGNITUDE_FLOOR_V } from './magnitude-term/magnitude-term-pure';
 import { INHERITED_SPINE } from '../spine/inherited-spine-tsv';
 import { loadPrimaryTables } from '../spine/primaries-tables';
 import {
-  BINDING_DISPOSITIONS_FILE,
   MEMBERSHIP_EXPECTED_FILE,
-  SPINE_CORRECTIONS_FILE,
   buildMembership,
-  parseBindingDispositionsTsv,
-  parseSpineCorrectionsTsv,
   type MembershipCounts,
 } from './membership-manifest-pure';
 import {
@@ -49,9 +45,9 @@ import {
   LABEL_DROPS,
 } from './label-drops-tsv';
 import { MEMBERSHIP_MANIFEST } from './membership-manifest-tsv';
+import { BINDING_REVIEW_DISPOSITIONS } from './binding-review-dispositions-source';
+import { SPINE_CORRECTIONS } from './spine-corrections-source';
 
-const DISPOSITIONS_HINT = 'dispose every row of binding-review.tsv there (README.md#the-spine-side).';
-const CORRECTIONS_HINT = 'it is committed and hand-curated (README.md#correcting-a-merge-decision).';
 
 /** Per-identifier overlay coverage over the membership term, as a ratio of the
  *  merge's own counts — the same walk that decides what the manifest ships. */
@@ -93,12 +89,8 @@ async function main(): Promise<void> {
     overrides: CLASSIC_ID_OVERRIDES.read(),
     siblingRenderedSourceIds: sourceIdsWithSiblingComponent(readMultiplesTsv()),
     evidence,
-    dispositions: parseBindingDispositionsTsv(
-      readRequired(resolve(ROOT, BINDING_DISPOSITIONS_FILE), DISPOSITIONS_HINT),
-    ),
-    corrections: parseSpineCorrectionsTsv(
-      readRequired(resolve(ROOT, SPINE_CORRECTIONS_FILE), CORRECTIONS_HINT),
-    ),
+    dispositions: BINDING_REVIEW_DISPOSITIONS.read(),
+    corrections: SPINE_CORRECTIONS.read(),
     magnitudeTerm: MAGNITUDE_FLOOR_V === null
       ? null
       : await readMagnitudeTerm(MAGNITUDE_FLOOR_V),

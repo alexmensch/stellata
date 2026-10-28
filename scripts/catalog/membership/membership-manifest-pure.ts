@@ -4,6 +4,7 @@
 
 import { SOL_APPARENT_V_MAGNITUDE, SOL_PROPER_NAME, normaliseGjKey } from '../record/catalog-pure';
 import type { Cns5Row } from '../classic-ids/classic-ids-parse';
+import type { Declared } from '../../util/sources/source';
 import {
   BRIGHT_TIER_MAG_CEILING,
   type ClassicIdOverlay,
@@ -103,7 +104,6 @@ export const BINDING_OUTCOMES = [
 ] as const;
 export type BindingOutcome = (typeof BINDING_OUTCOMES)[number];
 
-export const BINDING_DISPOSITIONS_FILE = 'data/membership/binding-review-dispositions.tsv';
 export const BINDING_DISPOSITION_COLUMNS = [
   ...BINDING_REVIEW_KEY_COLUMNS, 'derived_source_id',
   'keep_source_id', 'basis', 'evidence',
@@ -132,11 +132,8 @@ export function dispositionOf(d: BindingDispositionRow): BindingDisposition {
   return 'other';
 }
 
-
-
-
-
-export const SPINE_CORRECTIONS_FILE = 'data/membership/spine-corrections.tsv';
+/** The corrections file as its own messages name it. */
+const SPINE_CORRECTIONS_NAME = 'spine-corrections.tsv';
 export const SPINE_CORRECTION_COLUMNS = [
   ...BINDING_REVIEW_KEY_COLUMNS, 'op', 'cell', 'value', 'evidence',
 ] as const;
@@ -152,16 +149,9 @@ export type SpineCorrectionRow = Record<
   (typeof SPINE_CORRECTION_COLUMNS)[number], string
 > & { op: SpineCorrectionOp };
 
-const SPINE_CORRECTIONS_TABLE = {
-  file: SPINE_CORRECTIONS_FILE,
-  columns: SPINE_CORRECTION_COLUMNS,
-  hint: 'It is committed and hand-curated; do not regenerate it.',
-  comments: true,
-} as const;
-
-export function parseSpineCorrectionsTsv(text: string): SpineCorrectionRow[] {
+export function parseSpineCorrectionsTsv(text: string, from: Declared): SpineCorrectionRow[] {
   const out: SpineCorrectionRow[] = [];
-  for (const row of readTable(SPINE_CORRECTIONS_TABLE, text)) {
+  for (const row of readTable({ ...from, columns: SPINE_CORRECTION_COLUMNS, comments: true }, text)) {
     const cells = row.cells();
     const op = row.oneOf('op', SPINE_CORRECTION_OPS);
     if (op === 'set' && !(SPINE_CORRECTION_CELLS as readonly string[]).includes(cells.cell)) {
@@ -209,7 +199,7 @@ export function applySpineCorrections(
   const resolve = (key: string, what: string): number => {
     const i = byKey.get(key);
     if (i === undefined) {
-      throw new Error(`${SPINE_CORRECTIONS_FILE}: ${what} "${key}" matches no spine row`);
+      throw new Error(`${SPINE_CORRECTIONS_NAME}: ${what} "${key}" matches no spine row`);
     }
     return i;
   };
@@ -219,7 +209,7 @@ export function applySpineCorrections(
     corrections.filter((c) => c.op === 'set')
       .map((c) => ({ key: bindingReviewKey(c), cell: c.cell as SpineCorrectionCell, value: c.value })),
     {
-      file: SPINE_CORRECTIONS_FILE,
+      file: SPINE_CORRECTIONS_NAME,
       target: 'spine',
       keyOf: bindingReviewKey,
       get: (row, cell) => row[cell],
@@ -232,14 +222,14 @@ export function applySpineCorrections(
     const i = resolve(bindingReviewKey(c), 'row');
     const survivor = resolve(c.value, 'fold target');
     if (survivor === i) {
-      throw new Error(`${SPINE_CORRECTIONS_FILE}: row ${bindingReviewKey(c)} folds onto itself`);
+      throw new Error(`${SPINE_CORRECTIONS_NAME}: row ${bindingReviewKey(c)} folds onto itself`);
     }
     foldedTo.set(i, survivor);
   }
   for (const survivor of foldedTo.values()) {
     if (foldedTo.has(survivor)) {
       throw new Error(
-        `${SPINE_CORRECTIONS_FILE}: a fold target is itself folded — fold both onto the survivor`,
+        `${SPINE_CORRECTIONS_NAME}: a fold target is itself folded — fold both onto the survivor`,
       );
     }
   }
@@ -404,19 +394,12 @@ function splitValues(cell: string): string[] {
   return cell === '' ? [] : cell.split(MANIFEST_VALUE_SEPARATOR);
 }
 
-
-
-
-const BINDING_DISPOSITIONS_TABLE = {
-  file: BINDING_DISPOSITIONS_FILE,
-  columns: BINDING_DISPOSITION_COLUMNS,
-  hint: 'It is committed and hand-curated; do not regenerate it.',
-  exact: true,
-} as const;
-
-export function parseBindingDispositionsTsv(text: string): Map<string, BindingDispositionRow> {
+export function parseBindingDispositionsTsv(
+  text: string,
+  from: Declared,
+): Map<string, BindingDispositionRow> {
   const out = new Map<string, BindingDispositionRow>();
-  for (const row of readTable(BINDING_DISPOSITIONS_TABLE, text)) {
+  for (const row of readTable({ ...from, columns: BINDING_DISPOSITION_COLUMNS, exact: true }, text)) {
     const cells = row.cells();
     const key = bindingReviewKey(cells);
     for (const column of ['derived_source_id', 'keep_source_id'] as const) row.sourceId(column);
@@ -607,7 +590,7 @@ function settleBinding(
   const key = bindingReviewKey(disposition);
   if (disposition.derived_source_id !== (derived.sourceId ?? '')) {
     throw new Error(
-      `${BINDING_DISPOSITIONS_FILE}: row ${key} disposes a derivation reaching `
+      `binding-review-dispositions.tsv: row ${key} disposes a derivation reaching `
         + `${disposition.derived_source_id || '(nothing)'}, but it now reaches `
         + `${derived.sourceId || '(nothing)'}; re-review it`,
     );
@@ -619,7 +602,7 @@ function settleBinding(
   // it; dropping the exemption fails the build on the rows that basis exists for.
   if (asserted && disposition.basis !== 'simbad_dr2_object' && !evidence.hasPulledRow(keep)) {
     throw new Error(
-      `${BINDING_DISPOSITIONS_FILE}: row ${key} keeps ${keep}, which no source proposes `
+      `binding-review-dispositions.tsv: row ${key} keeps ${keep}, which no source proposes `
         + 'and the Gaia DR3 astrometry catalogue has no row for; re-check the id',
     );
   }
@@ -1095,7 +1078,7 @@ export function buildMembership(input: MembershipInput): MembershipResult {
   });
   for (const key of dispositions.keys()) {
     if (!applied.has(key)) {
-      throw new Error(`${BINDING_DISPOSITIONS_FILE}: row ${key} disposes no spine row; remove it`);
+      throw new Error(`binding-review-dispositions.tsv: row ${key} disposes no spine row; remove it`);
     }
   }
   const held = new Map<string, number>();
@@ -1145,7 +1128,7 @@ export function buildMembership(input: MembershipInput): MembershipResult {
     const lost = spineDesignations(corrected[foldedRow]).filter((d) => !survivorHolds.has(d));
     if (lost.length > 0) {
       throw new Error(
-        `${SPINE_CORRECTIONS_FILE}: folding ${bindingReviewKey(corrected[foldedRow])} loses `
+        `${SPINE_CORRECTIONS_NAME}: folding ${bindingReviewKey(corrected[foldedRow])} loses `
           + `${lost.join(', ')} — the survivor does not answer to it`,
       );
     }

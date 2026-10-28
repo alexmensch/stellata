@@ -16,6 +16,8 @@ import {
 } from './binding-derivation-pure';
 import { printedVOf } from '../../photometry/photometry-fixture';
 
+const FROM = { file: 'fixture.tsv', hint: 'h' };
+
 const simbadBySourceId = new Map<string, SimbadXids>([
   ['100', { hip: 10, tyc: '1-1-1', gj: null }],
   ['200', { hip: null, tyc: '2-2-1', gj: '820 A' }],
@@ -122,7 +124,7 @@ const WDS_XIDS = parseSimbadWdsXidsTsv([
   'wds_id\tcomponent\tgaia_source_id\thip',
   '00001+0000\tA\t500\t50',
   '00001+0000\tB\t501\t',
-].join('\n'));
+].join('\n'), FROM);
 
 describe('deriveBinding', () => {
   const gMag = new Map([['a', 12.0], ['b', 5.05], ['c', 5.1]]);
@@ -193,7 +195,7 @@ describe('deriveBinding', () => {
       'wds_id\tcomponent\tgaia_source_id\thip',
       '00002+0000\tA\t600\t60',
       '00002+0000\tB\t601\t60',
-    ].join('\n'));
+    ].join('\n'), FROM);
     const witnessed = bindingEvidence(
       new Map([['600', 5.0], ['601', 5.2]]),
       xids,
