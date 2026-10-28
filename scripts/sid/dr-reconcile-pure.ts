@@ -52,10 +52,9 @@ export interface DrClassification {
   distanceQuantiles: { p50: number; p90: number; p99: number; max: number };
 }
 
-export function readRiskIds(text: string): bigint[] {
-  const lines = text.trimEnd().split('\n');
-  if (lines[0] !== 'gaia_source_id') throw new Error(`bad request header "${lines[0]}"`);
-  return lines.slice(1).map((l) => BigInt(l));
+export function readRiskIds(text: string, file: string): bigint[] {
+  const spec = { file, columns: ['gaia_source_id'], hint: 'Re-run `pnpm run sid:risk-set`.' };
+  return [...readTable(spec, text)].map((row) => BigInt(row.requiredSourceId('gaia_source_id')));
 }
 
 export function readNeighbourhoodRows(

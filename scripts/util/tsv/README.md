@@ -2,8 +2,15 @@
 
 Every tab-separated table a TypeScript build step reads goes through this
 folder: an external input through `readTable`, a file this repo writes itself
-through its `defineArtifact` codec. Nothing else walks a TSV header or parses
-a cell.
+through its `defineArtifact` codec. Two places stand outside it, named so a
+third is a finding rather than precedent:
+
+- the WGSN tables (`../../catalog/naming/wgsn-parse-pure.ts`) are
+  comma-separated CSV, not TSV, and that module parses their cells itself —
+  its `vmagCell` leniently;
+- `../../sid/sid-pure.ts`'s `splitTsv`, which pins the registry files' line
+  framing (LF, a final newline, no blank line) that the head hash relies on,
+  before each table reads through `readTable`.
 
 ## Files in this area
 

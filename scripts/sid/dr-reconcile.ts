@@ -48,7 +48,7 @@ function main(): void {
     console.error('sid:dr-reconcile: inputs are LFS pointer stubs — run `git lfs pull` first');
     process.exit(1);
   }
-  const riskIds = readRiskIds(requestText);
+  const riskIds = readRiskIds(requestText, args.request);
   const rows = readNeighbourhoodRows(neighbourhoodText, args.riskCol, args.candidateCol, args.neighbourhood);
   const c = classifyDrTransition(riskIds, rows);
 
