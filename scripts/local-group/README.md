@@ -17,7 +17,8 @@ override rows; optional emission columns are resolved by header name.
 
 ## Inputs and output
 
-Reads two committed source files under `data/local-group/`:
+Reads three committed source files under `data/local-group/`, each
+required:
 
 - `lvdb-snapshot.csv` — [Pace 2025](/data/papers/index.md#pace2025)
   LVDB dwarf_all table (CC0).

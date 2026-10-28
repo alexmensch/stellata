@@ -267,9 +267,11 @@ async function main(): Promise<void> {
   const lvdb = parseLvdb(readFileSync(SRC_CSV, 'utf8'));
   const overrides = parseOverrides(readFileSync(SRC_OVERRIDES, 'utf8'));
   const overrideByName = new Map(overrides.map((o) => [o.name, o]));
-  const aliasRows = existsSync(SRC_ALIASES)
-    ? parseAliases(readFileSync(SRC_ALIASES, 'utf8'))
-    : [];
+  if (!existsSync(SRC_ALIASES)) {
+    console.error(`error: missing ${SRC_ALIASES}`);
+    process.exit(1);
+  }
+  const aliasRows = parseAliases(readFileSync(SRC_ALIASES, 'utf8'));
   const aliasByName = new Map(aliasRows.map((a) => [a.name, a]));
   const aliasMatched = new Set<string>();
 
