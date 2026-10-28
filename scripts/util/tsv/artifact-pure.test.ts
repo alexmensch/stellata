@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { defineArtifact } from './artifact-pure';
+import { firstDifferingLine } from './committed-round-trip';
 
 interface Rec { key: string; n: number | null }
 
@@ -42,5 +43,14 @@ describe('defineArtifact', () => {
     const feed = artifact('as-given').lineReader((r) => seen.push(r));
     for (const line of ['key\tn', 'b\t2', 'a\t']) feed(line);
     expect(seen).toEqual(RECS);
+  });
+});
+
+describe('firstDifferingLine', () => {
+  it('names the first line a round trip changed, and both versions of it', () => {
+    expect(firstDifferingLine('h\na\nb\n', 'h\na\nb\n')).toBeNull();
+    expect(firstDifferingLine('h\na\nb\n', 'h\na\nc\n')).toEqual({ line: 3, committed: 'b', written: 'c' });
+    expect(firstDifferingLine('h\na\n', 'h\na\nb\n')).toEqual({ line: 3, committed: '', written: 'b' });
+    expect(firstDifferingLine('h\na', 'h\na\n')).toEqual({ line: 3, committed: '(end of file)', written: '' });
   });
 });

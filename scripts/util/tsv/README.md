@@ -23,8 +23,10 @@ scripts/util/tsv/
   artifact-pure.ts (+ test)   defineArtifact — a self-written table's codec.
   committed-round-trip.ts     Test support: describeCommittedRoundTrip, an
                               artifact's codec over its committed file, byte
-                              for byte. Each folder that owns artifacts
-                              calls it once per artifact.
+                              for byte; a failure names the first line
+                              that changed and prints both versions of it.
+                              Each folder that owns artifacts calls it
+                              once per artifact.
 ```
 
 ## Reading a table
