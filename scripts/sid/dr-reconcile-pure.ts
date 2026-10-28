@@ -2,6 +2,8 @@
 // carried / contested / dropped classes, shared-candidate grouping, and
 // the Δmag review flag. Procedure and measured dry run: /docs/sid.md#6-gaia-data-release-reconciliation.
 
+import { readTable } from '../util/tsv/table-pure';
+
 /** Acceptance radius for a cross-match candidate (/docs/sid.md#61-procedure). */
 export const ACCEPT_MAS = 400;
 
@@ -60,25 +62,19 @@ export function readNeighbourhoodRows(
   text: string,
   riskCol: string,
   candidateCol: string,
+  file = 'data/gaia/gaia_dr2_neighbourhood.tsv',
 ): NeighbourhoodRow[] {
-  const lines = text.trimEnd().split('\n');
-  const cols = lines[0].split('\t');
-  const iRisk = cols.indexOf(riskCol);
-  const iCand = cols.indexOf(candidateCol);
-  const iDist = cols.indexOf('angular_distance');
-  const iDmag = cols.indexOf('magnitude_difference');
-  if (iRisk < 0 || iCand < 0 || iDist < 0 || iDmag < 0) {
-    throw new Error(`neighbourhood TSV lacks a required column (header: ${lines[0]})`);
-  }
-  return lines.slice(1).map((line) => {
-    const cells = line.split('\t');
-    return {
-      riskId: BigInt(cells[iRisk]),
-      candidateId: BigInt(cells[iCand]),
-      angularDistanceMas: Number(cells[iDist]),
-      magnitudeDifference: cells[iDmag] === '' ? null : Number(cells[iDmag]),
-    };
-  });
+  const spec = {
+    file,
+    columns: [riskCol, candidateCol, 'angular_distance', 'magnitude_difference'],
+    hint: 'Re-pull it per docs/sid.md#61-procedure.',
+  };
+  return [...readTable(spec, text)].map((row) => ({
+    riskId: BigInt(row.raw(riskCol)),
+    candidateId: BigInt(row.raw(candidateCol)),
+    angularDistanceMas: row.float('angular_distance') ?? row.fail('angular_distance is empty'),
+    magnitudeDifference: row.float('magnitude_difference'),
+  }));
 }
 
 function nearestRank(sorted: number[], q: number): number {
