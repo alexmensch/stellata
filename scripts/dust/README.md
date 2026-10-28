@@ -3,7 +3,8 @@
 `build-dust.py` —
 [Edenhofer 2024](/data/papers/index.md#edenhofer2024) dust
 posteriors → resampled voxel chunks. Outputs to `data/dust/`
-(LFS-committed). `sync-dust.ts` mirrors `data/dust/` → `public/dust/` on
+(LFS-committed). `sync-dust.ts` mirrors `data/dust/` (declared in
+`dust-mirror-source.ts`) → `public/dust/` on
 dev/build — allowlisted runtime assets only (`manifest.json`,
 `chunk_*.bin`; predicate in `sync-dust-pure.ts`, mirrored by
 `build-dust.py`'s own `copy_to_public`), so folder docs and build

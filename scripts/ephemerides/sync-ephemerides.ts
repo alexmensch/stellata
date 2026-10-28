@@ -3,11 +3,6 @@
 
 import { mirrorDataFolder } from '../util/mirror-to-public';
 
-import { isPlanetElementPublicAsset } from './sync-ephemerides-pure';
+import { EPHEMERIDES_MIRROR } from './ephemerides-mirror-source';
 
-mirrorDataFolder({
-  srcDir: 'data/ephemerides',
-  dstDir: 'public/ephemerides',
-  isPublicAsset: isPlanetElementPublicAsset,
-  label: 'planet element table',
-});
+mirrorDataFolder(EPHEMERIDES_MIRROR.read(), { dstDir: 'public/ephemerides', label: 'planet element table' });

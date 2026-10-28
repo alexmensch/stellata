@@ -188,11 +188,15 @@ same thing — single-use helpers stay with their consumer.
   thousand-row artifact still diffs sample-by-sample in git) and
   `roundSignificant`, shared by the probe-trajectory and planet-element
   emitters.
-- `mirror-to-public.ts` — `mirrorDataFolder(spec)`, the one
+- `mirror-to-public.ts` — `mirrorDataFolder(folder, spec)`, the one
   `data/<folder>/` → `public/<folder>/` copy used by
-  `scripts/{dust,textures,probes,ephemerides}/sync-*.ts`. A missing source
-  folder or an unsmudged LFS file fails the sync rather than shipping an
-  empty or stub layer. Mtime+size skip for up-to-date files; **allowlist**, never denylist, because Vite copies
+  `scripts/{dust,textures,probes,ephemerides}/sync-*.ts`. `mirrorSource`
+  declares the mirrored folder as a source (`sources/`): its `README.md` is
+  the declared file and every allowlisted file a member, so each is
+  presence-checked and a file added to the folder joins the step's inputs.
+  Each folder's constant lives in its `*-mirror-source.ts`. A missing
+  source folder or an unsmudged LFS file fails the sync rather than
+  shipping an empty or stub layer. Mtime+size skip for up-to-date files; **allowlist**, never denylist, because Vite copies
   `public/` wholesale — anything left in the destination ships, so the
   mirror also purges non-allowlisted strays a previous sync left behind.
   `flattenSubDirs` copies named subfolders of the source into the same
@@ -203,7 +207,8 @@ same thing — single-use helpers stay with their consumer.
   same-named files apart.
   `tests/bundle-content.test.ts` asserts the built tree against the same
   predicates. The single-file copies (`sync-local-bubble.ts`,
-  `sync-cloud-surfaces.ts`) are a different shape and stay standalone.
+  `sync-cloud-surfaces.ts`) are a different shape and stay standalone, each
+  reading its binary through a declared source beside it.
 
 ## Proving a restructuring byte-identical
 

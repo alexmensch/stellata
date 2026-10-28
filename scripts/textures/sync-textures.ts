@@ -4,14 +4,6 @@
 
 import { mirrorDataFolder } from '../util/mirror-to-public';
 
-import { isTexturePublicAsset } from './sync-textures-pure';
+import { TEXTURES_MIRROR } from './textures-mirror-source';
 
-mirrorDataFolder({
-  srcDir: 'data/textures',
-  dstDir: 'public/textures',
-  isPublicAsset: isTexturePublicAsset,
-  label: 'texture',
-  // relief/ groups the big DEM-derived maps at rest; they still serve from
-  // public/textures/ alongside the colour rungs, so no renderer URL moves.
-  flattenSubDirs: ['relief'],
-});
+mirrorDataFolder(TEXTURES_MIRROR.read(), { dstDir: 'public/textures', label: 'texture' });

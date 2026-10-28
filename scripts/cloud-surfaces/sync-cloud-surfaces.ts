@@ -1,31 +1,26 @@
 // Copies the committed data/molecular-clouds/cloud-surfaces.bin →
 // public/ (gitignored) so the build serves it without astro-Python. See the folder README.
 
-import { existsSync, mkdirSync, statSync, copyFileSync } from 'node:fs';
-import { resolve, dirname } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { copyFileSync, existsSync, mkdirSync, statSync } from 'node:fs';
+import { dirname, resolve } from 'node:path';
 
-import { lfsContentReadable } from '../util/paths';
+import { REPO_ROOT } from '../util/paths';
+import { CLOUD_SURFACES_BIN } from './cloud-surfaces-source';
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const ROOT = resolve(__dirname, '..', '..');
-const SRC = resolve(ROOT, 'data/molecular-clouds/cloud-surfaces.bin');
-const DST = resolve(ROOT, 'public/cloud-surfaces.bin');
+const DST = resolve(REPO_ROOT, 'public/cloud-surfaces.bin');
 
 function main(): void {
-  if (!lfsContentReadable(SRC)) {
-    throw new Error(`${SRC} is missing or an unsmudged LFS pointer. Confirm git LFS is pulled (\`git lfs pull\`); regenerate it offline with \`pnpm run build:cloud-surfaces\`.`);
-  }
+  const src = CLOUD_SURFACES_BIN.read();
   mkdirSync(dirname(DST), { recursive: true });
   if (existsSync(DST)) {
-    const s = statSync(SRC);
+    const s = statSync(src);
     const d = statSync(DST);
     if (d.size === s.size && d.mtimeMs >= s.mtimeMs) {
       console.log('public/cloud-surfaces.bin up to date.');
       return;
     }
   }
-  copyFileSync(SRC, DST);
+  copyFileSync(src, DST);
   console.log(`synced cloud-surfaces.bin (${statSync(DST).size} bytes).`);
 }
 

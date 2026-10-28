@@ -4,11 +4,6 @@
 
 import { mirrorDataFolder } from '../util/mirror-to-public';
 
-import { isDustPublicAsset } from './sync-dust-pure';
+import { DUST_MIRROR } from './dust-mirror-source';
 
-mirrorDataFolder({
-  srcDir: 'data/dust',
-  dstDir: 'public/dust',
-  isPublicAsset: isDustPublicAsset,
-  label: 'dust',
-});
+mirrorDataFolder(DUST_MIRROR.read(), { dstDir: 'public/dust', label: 'dust' });

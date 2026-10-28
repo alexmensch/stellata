@@ -3,11 +3,6 @@
 
 import { mirrorDataFolder } from '../util/mirror-to-public';
 
-import { isProbePublicAsset } from './sync-probes-pure';
+import { PROBES_MIRROR } from './probes-mirror-source';
 
-mirrorDataFolder({
-  srcDir: 'data/probes',
-  dstDir: 'public/probes',
-  isPublicAsset: isProbePublicAsset,
-  label: 'probe',
-});
+mirrorDataFolder(PROBES_MIRROR.read(), { dstDir: 'public/probes', label: 'probe' });

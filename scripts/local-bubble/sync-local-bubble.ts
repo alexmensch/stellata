@@ -1,31 +1,26 @@
 // Copies the committed data/local-bubble/local-bubble.bin → public/
 // (gitignored) so the build serves it without astro-Python. See the folder README.
 
-import { existsSync, mkdirSync, statSync, copyFileSync } from 'node:fs';
-import { resolve, dirname } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { copyFileSync, existsSync, mkdirSync, statSync } from 'node:fs';
+import { dirname, resolve } from 'node:path';
 
-import { lfsContentReadable } from '../util/paths';
+import { REPO_ROOT } from '../util/paths';
+import { LOCAL_BUBBLE_BIN } from './local-bubble-source';
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const ROOT = resolve(__dirname, '..', '..');
-const SRC = resolve(ROOT, 'data/local-bubble/local-bubble.bin');
-const DST = resolve(ROOT, 'public/local-bubble.bin');
+const DST = resolve(REPO_ROOT, 'public/local-bubble.bin');
 
 function main(): void {
-  if (!lfsContentReadable(SRC)) {
-    throw new Error(`${SRC} is missing or an unsmudged LFS pointer. Confirm git LFS is pulled (\`git lfs pull\`); regenerate it offline with \`pnpm run build:local-bubble\`.`);
-  }
+  const src = LOCAL_BUBBLE_BIN.read();
   mkdirSync(dirname(DST), { recursive: true });
   if (existsSync(DST)) {
-    const s = statSync(SRC);
+    const s = statSync(src);
     const d = statSync(DST);
     if (d.size === s.size && d.mtimeMs >= s.mtimeMs) {
       console.log('public/local-bubble.bin up to date.');
       return;
     }
   }
-  copyFileSync(SRC, DST);
+  copyFileSync(src, DST);
   console.log(`synced local-bubble.bin (${statSync(DST).size} bytes).`);
 }
 
