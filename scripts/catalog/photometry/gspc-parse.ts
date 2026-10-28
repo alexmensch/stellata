@@ -35,7 +35,7 @@ export interface GspcColour {
 export function parseGspcTsv(text: string): Map<string, GspcColour> {
   const out = new Map<string, GspcColour>();
   for (const row of readTable(GSPC, text)) {
-    const sourceId = row.text('source_id');
+    const sourceId = row.sourceId('source_id');
     if (sourceId === null) continue;
     const b = row.float('b_jkc_mag');
     const v = row.float('v_jkc_mag');

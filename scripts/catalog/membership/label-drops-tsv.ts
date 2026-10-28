@@ -19,6 +19,7 @@ export const LABEL_DROPS = defineArtifact({
   order: 'by-line',
   decode: (row): LabelDropRow => {
     row.oneOf('reason', LABEL_DROP_REASONS);
+    row.sourceId('gaia_source_id');
     return row.cells();
   },
   encode: (r) => r,

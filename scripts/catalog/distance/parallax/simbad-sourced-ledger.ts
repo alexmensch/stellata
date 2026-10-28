@@ -21,7 +21,7 @@ export const SIMBAD_SOURCED_DISTANCES = defineArtifact({
   columns: ['gaia_source_id', 'hip'] as const,
   hint: 'Re-run `pnpm run build:catalog`.',
   order: 'by-line',
-  decode: (row): SimbadSourcedDistance => ({ gaiaSourceId: row.text('gaia_source_id'), hip: row.int('hip') }),
+  decode: (row): SimbadSourcedDistance => ({ gaiaSourceId: row.sourceId('gaia_source_id'), hip: row.int('hip') }),
   encode: (r: SimbadSourcedDistance) => ({
     gaia_source_id: nullableCell(r.gaiaSourceId), hip: nullableCell(r.hip),
   }),

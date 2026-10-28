@@ -150,6 +150,9 @@ describe('readTable', () => {
     const [bad] = readTable(SPEC, 'id\tv\n-12\t1e3\n');
     expect(() => bad.sourceId('id')).toThrow('data/t.tsv:2: id: "-12" is not a source_id. Re-run x.');
     expect(() => bad.requiredSourceId('v')).toThrow(/v: "1e3" is not a source_id/);
+    const [list] = readTable(SPEC, 'id\tv\n12|34\t12||34\n');
+    expect(list.sourceIdList('id', '|')).toEqual(['12', '34']);
+    expect(() => list.sourceIdList('v', '|')).toThrow('data/t.tsv:2: v: is empty. Re-run x.');
   });
 
   it('names file, line and column on a bad identifier', () => {

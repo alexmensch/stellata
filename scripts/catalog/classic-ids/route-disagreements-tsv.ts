@@ -18,8 +18,8 @@ export const ROUTE_DISAGREEMENTS = defineArtifact({
   decode: (row): HdHipRouteDisagreement => ({
     hd: row.int('hd') ?? row.fail('hd is empty'),
     hip: row.int('hip') ?? row.fail('hip is empty'),
-    hdRouteSourceIds: row.raw('hd_route_source_ids').split(OVERLAY_VALUE_SEPARATOR),
-    hipRouteSourceId: row.raw('hip_route_source_id'),
+    hdRouteSourceIds: row.sourceIdList('hd_route_source_ids', OVERLAY_VALUE_SEPARATOR),
+    hipRouteSourceId: row.requiredSourceId('hip_route_source_id'),
   }),
   encode: (d) => ({
     hd: String(d.hd),

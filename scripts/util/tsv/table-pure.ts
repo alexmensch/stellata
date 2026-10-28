@@ -157,6 +157,10 @@ export class TableRow<C extends string> {
     return this.cell(c, (raw) => present(sourceIdCell(raw)));
   }
 
+  sourceIdList(c: C, separator: string): string[] {
+    return this.cell(c, (raw) => (raw === '' ? [] : raw.split(separator).map((v) => present(sourceIdCell(v)))));
+  }
+
   oneOf<T extends string>(c: C, allowed: readonly T[]): T {
     return this.cell(c, (raw) => oneOfCell(raw, allowed));
   }

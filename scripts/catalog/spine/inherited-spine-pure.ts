@@ -91,7 +91,10 @@ export const INHERITED_SPINE = defineArtifact({
   columns: SPINE_COLUMNS,
   hint: 'It is frozen; restore it from git rather than regenerating it.',
   order: 'as-given',
-  decode: (row): SpineRow => row.cells(),
+  decode: (row): SpineRow => {
+    row.sourceId('gaia_source_id');
+    return row.cells();
+  },
   encode: (row) => row,
 });
 

@@ -92,7 +92,6 @@ import {
   apparentToAbsoluteMagnitude,
   applyBailerJonesOverride,
   isBailerJonesEligible,
-  parseGaiaSourceIdStr,
   applyLmcKinematicOverride,
   LMC_PARALLAX_CONSISTENCY_SIGMA,
   LMC_PARALLAX_MAS,
@@ -1533,41 +1532,6 @@ describe('catalog-pure / isBailerJonesEligible', () => {
     // Only the resolved tier decides.
     expect(isBailerJonesEligible('123', 'hip2_parallax')).toBe(false);
     expect(isBailerJonesEligible('123', 'gaia_dr3_inversion')).toBe(true);
-  });
-});
-
-describe('catalog-pure / parseGaiaSourceIdStr', () => {
-  it('returns the trimmed decimal string for a valid Gaia source_id', () => {
-    expect(parseGaiaSourceIdStr('5877748442128924544')).toBe('5877748442128924544');
-    expect(parseGaiaSourceIdStr('  5877748442128924544  ')).toBe('5877748442128924544');
-  });
-
-  it('preserves digits beyond 2^53 verbatim (never coerces to Number)', () => {
-    // The whole point: a value above 2^53 would lose bits if parsed
-    // numerically. Round-trip via BigInt to prove the string is BigInt-safe.
-    const raw = '9876543210123456789';
-    const parsed = parseGaiaSourceIdStr(raw);
-    expect(parsed).toBe(raw);
-    expect(BigInt(parsed!).toString()).toBe(raw);
-  });
-
-  it('returns null for null / undefined / empty / whitespace-only inputs', () => {
-    expect(parseGaiaSourceIdStr(null)).toBeNull();
-    expect(parseGaiaSourceIdStr(undefined)).toBeNull();
-    expect(parseGaiaSourceIdStr('')).toBeNull();
-    expect(parseGaiaSourceIdStr('   ')).toBeNull();
-  });
-
-  it('returns null for non-decimal cells so BigInt() never sees garbage', () => {
-    // BigInt('abc') throws SyntaxError; the gate above must catch
-    // anything that isn't pure decimal digits before it gets there.
-    expect(parseGaiaSourceIdStr('abc')).toBeNull();
-    expect(parseGaiaSourceIdStr('123abc')).toBeNull();
-    expect(parseGaiaSourceIdStr('1.23')).toBeNull();
-    expect(parseGaiaSourceIdStr('-123')).toBeNull();
-    expect(parseGaiaSourceIdStr('+123')).toBeNull();
-    expect(parseGaiaSourceIdStr('1e9')).toBeNull();
-    expect(parseGaiaSourceIdStr('0x1234')).toBeNull();
   });
 });
 

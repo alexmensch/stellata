@@ -17,7 +17,7 @@ export const LABEL_FLIPS = defineArtifact({
     || (a.sourceId < b.sourceId ? -1 : a.sourceId > b.sourceId ? 1 : 0)
     || (a.disposition < b.disposition ? -1 : 1),
   decode: (row): LabelFlip => ({
-    sourceId: row.raw('gaia_source_id'),
+    sourceId: row.requiredSourceId('gaia_source_id'),
     label: row.raw('label'),
     field: row.oneOf('field', LABEL_FIELDS),
     spine: row.raw('spine'),

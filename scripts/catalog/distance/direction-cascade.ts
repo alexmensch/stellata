@@ -428,7 +428,7 @@ function foldAstrometryRow(
   out: Map<string, GaiaAstrometryCatalogRow>,
   keep?: ReadonlySet<string>,
 ): void {
-  const sourceId = row.text('source_id');
+  const sourceId = row.sourceId('source_id');
   if (sourceId === null) return;
   if (keep && !keep.has(sourceId)) return;
   const raDeg = row.float('ra');
@@ -522,7 +522,7 @@ const GAIA_NSS = {
 export function parseNssSourceIdSet(text: string): Set<string> {
   const out = new Set<string>();
   for (const row of readTable(GAIA_NSS, text)) {
-    const sourceId = row.text('source_id');
+    const sourceId = row.sourceId('source_id');
     if (sourceId !== null) out.add(sourceId);
   }
   return out;

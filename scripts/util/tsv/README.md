@@ -65,7 +65,10 @@ the target that rebuilds or re-pulls the file.
   byte.
   `sourceId` takes bare digits only and answers a string, since a DR3
   source_id exceeds `Number.MAX_SAFE_INTEGER`; `requiredSourceId` also throws
-  on an empty cell. `compareSourceIds` is the one order over them: absent
+  on an empty cell, and `sourceIdList(column, separator)` reads a list of
+  them. Every source_id column a TypeScript reader takes goes through these,
+  `gaia-xmatch.ts` alone excepted: its skip of a non-digit cell is pinned to
+  `scripts/binaries/parsers.py`'s by a parity test. `compareSourceIds` is the one order over them: absent
   first, then by `BigInt` value.
   `oneOf(column, values)` returns the cell typed to a closed set or throws.
 - `raw` is the cell exactly as written, for a reader whose meaning depends on

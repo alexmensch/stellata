@@ -36,6 +36,7 @@ export const ADDITIONS_LEDGER = defineArtifact({
   hint: 'Re-run `pnpm run build:membership`.',
   order: 'by-line',
   decode: (row): AdditionLedgerRow => {
+    row.sourceId('gaia_source_id');
     const reason = row.raw('reason');
     if (!isLedgerReason(reason)) {
       row.fail(`reason "${reason}" is not one of ${ADDITION_REASONS.join(' | ')} | ${COMPONENT_REASON_PREFIX}<designation>`);

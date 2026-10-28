@@ -112,7 +112,7 @@ export function parseSimbadValuesTsv(text: string): SimbadValueIndex {
   const index = emptySimbadValueIndex();
   for (const row of readTable(SIMBAD_VALUES, text)) {
     const keys: SimbadRecordKeys = {
-      sourceId: row.text('source_id'),
+      sourceId: row.sourceId('source_id'),
       hip: row.int('hip'),
       tyc: row.text('tyc'),
       gl: row.text('gj'),

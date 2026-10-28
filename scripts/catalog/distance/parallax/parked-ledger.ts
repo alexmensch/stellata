@@ -78,7 +78,7 @@ export const PARKED_LEDGER = defineArtifact({
     hip: row.int('hip'),
     hd: row.int('hd'),
     gl: row.text('gl'),
-    gaiaSourceId: row.text('gaia_source_id'),
+    gaiaSourceId: row.sourceId('gaia_source_id'),
     reason: row.oneOf('reason', PARKED_REASONS),
   }),
   encode: (e: ParkedLedgerEntry) => ({

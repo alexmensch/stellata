@@ -62,7 +62,7 @@ export function parseSimbadSptypeTsv(text: string): SimbadSpectralIndex {
     const spQual = row.text('sp_qual');
     const otype = row.text('otype');
     const keys: SimbadRecordKeys = {
-      sourceId: row.text('source_id'),
+      sourceId: row.sourceId('source_id'),
       hip: row.int('hip'),
       tyc: row.text('tyc'),
       gl: row.text('gj'),

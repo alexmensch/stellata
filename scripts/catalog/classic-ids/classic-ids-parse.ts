@@ -230,7 +230,7 @@ export function parseCns5Tsv(text: string): Cns5Row[] {
     const cns5 = row.int('cns5');
     const gj = row.text('gj');
     if (cns5 === null || gj === null) continue;
-    const src = row.text('gaia_source_id');
+    const src = row.sourceId('gaia_source_id');
     const raDeg = row.float('ra_deg');
     const decDeg = row.float('de_deg');
     const posEpoch = row.float('pos_epoch');

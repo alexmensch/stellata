@@ -103,8 +103,8 @@ function readWgsn(): WgsnKeys {
 function readSimbadXids(): Map<string, SimbadXids> {
   const out = new Map<string, SimbadXids>();
   for (const row of readTable(SIMBAD_SPTYPE_XIDS, readRequired(SRC_SIMBAD_SPTYPE, LFS_HINT))) {
-    const sourceId = row.raw('source_id');
-    if (!sourceId) continue;
+    const sourceId = row.sourceId('source_id');
+    if (sourceId === null) continue;
     // Two rows under one id would make the corroboration verdict depend on file
     // order; the values parser refuses the same shape (README.md#six-source_ids-dr3-does-not-publish).
     if (out.has(sourceId)) row.fail(`duplicate source_id ${sourceId}`);

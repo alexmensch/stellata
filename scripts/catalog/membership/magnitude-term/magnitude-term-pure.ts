@@ -67,7 +67,7 @@ function magnitudeTermFold(floorV: number): {
 
   return {
     fold: (row) => {
-      const sourceId = row.text('source_id');
+      const sourceId = row.sourceId('source_id');
       if (sourceId === null) return;
       counts.rows++;
       const verdict = magnitudeVerdict(

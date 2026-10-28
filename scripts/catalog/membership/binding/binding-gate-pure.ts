@@ -1,7 +1,6 @@
 // See README.md#both-gates-weigh-every-candidate.
 
 import { readTable, type TableSpec } from '../../../util/tsv/table-pure';
-import { parseGaiaSourceIdStr } from '../../record/catalog-pure';
 import type { PrintedV, PrintedVLookups } from '../../photometry/v-magnitude-pure';
 
 /** Magnitude-consistency gate for Gaia source bindings, shared with the
@@ -52,7 +51,7 @@ export function parseSimbadWdsXidsTsv(text: string): SimbadWdsXidIndex {
     const component = row.text('component');
     if (wdsId === null || component === null) continue;
     const attr: WdsComponentAttribution = { wdsId, component };
-    const src = parseGaiaSourceIdStr(row.raw('gaia_source_id'));
+    const src = row.sourceId('gaia_source_id');
     if (src) {
       const list = bySource.get(src);
       if (list) list.push(attr);

@@ -43,7 +43,7 @@ export function parseSimbadSampleRows(text: string): SimbadSampleRow[] {
       simbadOid: row.int('simbad_oid') ?? row.fail('simbad_oid is empty'),
       simbadMainId: row.raw('simbad_main_id'),
       hip: row.int('hip'),
-      gaiaSourceId: row.raw('gaia_source_id') || null,
+      gaiaSourceId: row.sourceId('gaia_source_id'),
       plxValue: row.float('plx_value'),
       plxErr: row.float('plx_err'),
       pmra: row.float('pmra'),

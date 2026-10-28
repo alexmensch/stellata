@@ -1484,14 +1484,6 @@ export function isBailerJonesEligible(
  *  guards the build's `BigInt(s.gaiaSourceId)` call against a malformed row
  *  throwing a SyntaxError mid-write. Same `/^\d+$/` shape gate as
  *  `parseGaiaHipXmatchTsv` in `gaia-xmatch.ts`. */
-export function parseGaiaSourceIdStr(s: string | undefined | null): string | null {
-  if (s === undefined || s === null) return null;
-  const t = s.trim();
-  if (!t) return null;
-  if (!/^\d+$/.test(t)) return null;
-  return t;
-}
-
 /** Parse the TSV produced by `scripts/refresh/refresh-bailer-jones.py` into a
  *  Gaia DR3 source_id → distance (pc) map. `source_id` is kept as a
  *  string: Gaia source_ids exceed `Number.MAX_SAFE_INTEGER`, so any
@@ -1512,7 +1504,7 @@ const BAILER_JONES = {
 export function parseBailerJonesTsv(text: string): Map<string, number> {
   const out = new Map<string, number>();
   for (const row of readTable(BAILER_JONES, text)) {
-    const sourceId = row.text('source_id');
+    const sourceId = row.sourceId('source_id');
     if (sourceId === null) continue;
     const d = row.float('r_med_photogeo') ?? row.float('r_med_geo');
     if (d === null || d <= 0) continue;
@@ -1562,7 +1554,7 @@ const GAIA_APSIS = {
 export function parseGaiaApsisTsv(text: string): Map<string, ApsisRow> {
   const out = new Map<string, ApsisRow>();
   for (const row of readTable(GAIA_APSIS, text)) {
-    const sourceId = row.text('source_id');
+    const sourceId = row.sourceId('source_id');
     if (sourceId === null) continue;
     out.set(sourceId, {
       teffGspphot: row.float('teff_gspphot'),
