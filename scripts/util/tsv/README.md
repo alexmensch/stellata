@@ -42,7 +42,9 @@ the target that rebuilds or re-pulls the file.
 - **The column index is typed.** A row is read by column name —
   `row.float('plx_mas')` — and the name must be one the spec lists, so a typo
   is a compile error rather than a column that silently reads empty.
-- **The header resolves by name, in any order**, and a missing column throws.
+- **The header resolves by name, in any order**, and a missing column throws,
+  as does a column the spec reads that the header names twice — which of the
+  two a row meant is not the reader's to guess.
   So does an empty or headerless file: every input is committed, usually LFS,
   and zero rows means truncated or unsmudged, never an empty dataset. A valid
   header with no rows yields no rows. Blank lines before the header are

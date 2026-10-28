@@ -83,6 +83,13 @@ describe('readTable', () => {
     expect(() => [...readTable(SPEC, '\n\n')]).toThrow(/has no header row/);
   });
 
+  it('throws on a requested column the header names twice, and ignores other repeats', () => {
+    expect(() => [...readTable(SPEC, 'id\tv\tid\nA\t1\tB\n')]).toThrow('data/t.tsv header names id more than once. Re-run x.');
+    const spec = { ...SPEC, columns: ['id'] as const, optional: ['v'] as const };
+    expect(() => [...readTable(spec, 'v\tid\tv\n1\tA\t2\n')]).toThrow(/header names v more than once/);
+    expect([...readTable(SPEC, 'x\tid\tx\tv\n0\tA\t0\t1\n')][0].raw('id')).toBe('A');
+  });
+
   it('skips blank lines before the header', () => {
     const rows = [...readTable(SPEC, '\n  \nid\tv\nA\t1\n')];
     expect(rows.map((r) => [r.raw('id'), r.line])).toEqual([['A', 4]]);

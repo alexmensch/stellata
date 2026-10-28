@@ -183,6 +183,11 @@ function headerIndex<C extends string>(spec: TableSpec<C>, headerLine: string): 
     return Object.fromEntries(spec.columns.map((c, i) => [c, i])) as Record<C, number>;
   }
   const header = headerLine.split('\t').map((h) => h.trim());
+  const repeated = [...spec.columns, ...(spec.optional ?? [])]
+    .filter((c) => header.indexOf(c) !== header.lastIndexOf(c));
+  if (repeated.length) {
+    throw new Error(`${spec.file} header names ${repeated.join(', ')} more than once. ${spec.hint}`);
+  }
   const idx = Object.create(null) as Record<C, number>;
   for (const c of spec.optional ?? []) idx[c] = header.indexOf(c);
   const missing = spec.columns.filter((c) => (idx[c] = header.indexOf(c)) < 0);
