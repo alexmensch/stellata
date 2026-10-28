@@ -38,7 +38,9 @@ scripts/util/sources/
   derived like the declared file.
 
 `source.read(...)` and `readArtifact(artifact)` / `artifactRows(artifact)`
-(a generator) / `streamArtifact(artifact, onRecord)` are the reads.
+(a generator) / `streamArtifact(artifact, onRecord)` are the reads;
+`artifactText(artifact)` is the file as written, for a reader that hashes its
+lines (the SID ledger's head).
 
 **Every source is required.** A missing file and an unsmudged LFS pointer are
 one failure — the content is not on disk — and `read` throws naming the file,
@@ -53,8 +55,8 @@ that module is imported only by code that reads (or, for an artifact, writes)
 the file through it. Import reachability then equals reading, which is what
 lets a step's data inputs be derived from its closure.
 `tests/source-declarations.test.ts` holds every `tsx` pipeline step to it —
-each reached source has a `.read(` call, each reached artifact a
-`readArtifact` / `streamArtifact` or a `serialize` / `encodeLine`, somewhere
+each reached source has a `.read(` call, each reached artifact one of the
+artifact reads or a `serialize` / `encodeLine`, somewhere
 else in the closure — and fails on a `data/` path literal outside a declaring
 or `*-outputs.ts` module.
 

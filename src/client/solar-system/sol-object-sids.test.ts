@@ -1,24 +1,16 @@
-import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
-import { parseSolObjectsTsv } from '../../../scripts/sid/sid-pure';
-import {
-  LedgerUnavailableError,
-  SOL_OBJECTS_PATH,
-  loadRegistry,
-  type Registry,
-} from '../../../scripts/sid/registry-io';
+import { SOL_OBJECTS } from '../../../scripts/sid/object-mints-source';
+import { LEDGER } from '../../../scripts/sid/ledger-tsv';
+import { REPO_ROOT, lfsContentReadable } from '../../../scripts/util/paths';
+import { loadRegistry } from '../../../scripts/sid/registry-io';
 import { PROBE_MISSIONS } from '../../../scripts/probes/probe-roster';
 import { SOL_BODIES } from './planet-system';
 import { SOL_OBJECT_SIDS } from './sol-object-sids';
 
-let registry: Registry | null = null;
-try {
-  registry = loadRegistry();
-} catch (e) {
-  if (!(e instanceof LedgerUnavailableError)) throw e;
-}
+const registry = lfsContentReadable(resolve(REPO_ROOT, LEDGER.file)) ? loadRegistry() : null;
 
 const suite = registry ? describe : describe.skip;
 
@@ -37,7 +29,7 @@ suite('SOL_OBJECT_SIDS pins against the ledger', () => {
   });
 
   it('covers exactly the sol-objects.tsv mint list', () => {
-    const mintKeys = parseSolObjectsTsv(readFileSync(SOL_OBJECTS_PATH, 'utf-8'))
+    const mintKeys = SOL_OBJECTS.read()
       .map((r) => r.key)
       .sort();
     expect(Object.keys(SOL_OBJECT_SIDS).sort()).toEqual(mintKeys);

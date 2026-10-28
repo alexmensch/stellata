@@ -141,7 +141,8 @@ import {
   resolveSids, sidSuccessorPairs, starDesignations, syntheticGaiaBridges,
   type SidObject,
 } from '../sid/sid-pure';
-import { loadRegistry, loadStoredEdges } from '../sid/registry-io';
+import { loadRegistry } from '../sid/registry-io';
+import { loadStoredEdges } from '../sid/stored-edges';
 import { catalogInputPaths } from './catalog-inputs';
 
 const __filename = fileURLToPath(import.meta.url);

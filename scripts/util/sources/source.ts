@@ -81,6 +81,10 @@ export function readArtifact<C extends string, R, K>(artifact: Artifact<C, R, K>
   return artifact.parse(openDeclared(artifact).text());
 }
 
+export function artifactText<C extends string, R, K>(artifact: Artifact<C, R, K>): string {
+  return openDeclared(artifact).text();
+}
+
 export function artifactRows<C extends string, R, K>(artifact: Artifact<C, R, K>): Generator<R> {
   return artifact.rows(openDeclared(artifact).text());
 }

@@ -18,7 +18,7 @@ import { HIP2 } from '../distance/hip2-source';
 import { HIP_PHOTOMETRY } from '../photometry/hip-photometry-source';
 import { artifactRows } from '../../util/sources/source';
 import { TYCHO2 } from '../tycho2-source';
-import { loadStoredEdges } from '../../sid/registry-io';
+import { loadStoredEdges } from '../../sid/stored-edges';
 import {
   addKeyed, glAliasesFromEdges,
   type BindingTables, type PrimaryTables, type SimbadXids, type WgsnKeys,

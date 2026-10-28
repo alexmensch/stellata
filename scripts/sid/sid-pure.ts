@@ -4,10 +4,11 @@
 
 import { createHash } from 'node:crypto';
 
+import type { Declared } from '../util/sources/source';
 import { readTable, type TableRow, type TableSpec } from '../util/tsv/table-pure';
 import {
-  LEDGER, SID_KINDS, type LedgerRow, type SidKind,
-} from './ledger-tsv';
+  decodeLedgerRow, LEDGER_COLUMNS, SID_KINDS, type LedgerRow, type SidKind,
+} from './ledger-pure';
 
 // ---- Designation grammar (/docs/sid.md#3-designation-namespaces) -------------------------------
 
@@ -174,22 +175,14 @@ export function canonicalKeyOf(designations: Iterable<string>): string {
 
 export { SID_KINDS, type LedgerRow, type SidKind };
 
-export const RETIREMENTS_TABLE = {
-  file: 'data/sid/retirements.tsv',
-  columns: ['sid', 'retired', 'reason', 'successor_sid'] as const,
-  hint: 'It is hand-appended: restore the row (/docs/sid.md#43-ledger--datasidledgertsv).',
-} satisfies TableSpec<string>;
-export const REINSTATEMENTS_TABLE = {
-  file: 'data/sid/reinstatements.tsv',
-  columns: ['sid', 'reinstated', 'reason'] as const,
-  hint: 'It is hand-appended: restore the row (/docs/sid.md#43-ledger--datasidledgertsv).',
-} satisfies TableSpec<string>;
+const RETIREMENTS_COLUMNS = ['sid', 'retired', 'reason', 'successor_sid'] as const;
+const REINSTATEMENTS_COLUMNS = ['sid', 'reinstated', 'reason'] as const;
 const SAMEAS_COLUMNS = ['a', 'b', 'note'] as const;
 const OBJECT_MINT_COLUMNS = ['key', 'kind'] as const;
 
-export const LEDGER_HEADER = LEDGER.columns.join('\t');
-export const RETIREMENTS_HEADER = RETIREMENTS_TABLE.columns.join('\t');
-export const REINSTATEMENTS_HEADER = REINSTATEMENTS_TABLE.columns.join('\t');
+export const LEDGER_HEADER = LEDGER_COLUMNS.join('\t');
+export const RETIREMENTS_HEADER = RETIREMENTS_COLUMNS.join('\t');
+export const REINSTATEMENTS_HEADER = REINSTATEMENTS_COLUMNS.join('\t');
 export const SAMEAS_HEADER = SAMEAS_COLUMNS.join('\t');
 export const SOL_OBJECTS_HEADER = OBJECT_MINT_COLUMNS.join('\t');
 export const SHELL_OBJECTS_HEADER = OBJECT_MINT_COLUMNS.join('\t');
@@ -218,13 +211,21 @@ function registryRows<C extends string>(spec: TableSpec<C>, text: string): Table
   return [...readTable({ ...spec, exact: true }, text)];
 }
 
-/** Each data row's line as written: what the head hash and the append-only
- *  check compare. */
-export function registryLines<C extends string>(spec: TableSpec<C>, text: string): string[] {
-  return registryRows(spec, text).map((row) => row.rawLine);
+export interface RegistryFile<R> {
+  readonly rows: R[];
+  readonly lines: string[];
 }
 
-function retirementRow(row: TableRow<(typeof RETIREMENTS_TABLE.columns)[number]>): RetirementRow {
+export function registryFile<C extends string, R>(
+  spec: TableSpec<C>,
+  decode: (row: TableRow<C>) => R,
+  text: string,
+): RegistryFile<R> {
+  const rows = registryRows(spec, text);
+  return { rows: rows.map(decode), lines: rows.map((row) => row.rawLine) };
+}
+
+function retirementRow(row: TableRow<(typeof RETIREMENTS_COLUMNS)[number]>): RetirementRow {
   return {
     sid: row.requiredId('sid'),
     retired: row.raw('retired'),
@@ -233,7 +234,7 @@ function retirementRow(row: TableRow<(typeof RETIREMENTS_TABLE.columns)[number]>
   };
 }
 
-function reinstatementRow(row: TableRow<(typeof REINSTATEMENTS_TABLE.columns)[number]>): ReinstatementRow {
+function reinstatementRow(row: TableRow<(typeof REINSTATEMENTS_COLUMNS)[number]>): ReinstatementRow {
   return {
     sid: row.requiredId('sid'),
     reinstated: row.raw('reinstated'),
@@ -241,12 +242,12 @@ function reinstatementRow(row: TableRow<(typeof REINSTATEMENTS_TABLE.columns)[nu
   };
 }
 
-export function parseRetirementsTsv(text: string): RetirementRow[] {
-  return registryRows(RETIREMENTS_TABLE, text).map(retirementRow);
+export function retirementsFile(text: string, from: Declared): RegistryFile<RetirementRow> {
+  return registryFile({ ...from, columns: RETIREMENTS_COLUMNS }, retirementRow, text);
 }
 
-export function parseReinstatementsTsv(text: string): ReinstatementRow[] {
-  return registryRows(REINSTATEMENTS_TABLE, text).map(reinstatementRow);
+export function reinstatementsFile(text: string, from: Declared): RegistryFile<ReinstatementRow> {
+  return registryFile({ ...from, columns: REINSTATEMENTS_COLUMNS }, reinstatementRow, text);
 }
 
 /** Effective retirement state (/docs/sid.md#43-ledger--datasidledgertsv): a sid is retired iff
@@ -288,14 +289,9 @@ export function sidSuccessorPairs(
   return pairs.sort((a, b) => a[0] - b[0]);
 }
 
-/** `label` names the file read: the curated overrides or one bridges/ file. */
-export function parseSameasTsv(text: string, label: string): SameasEdge[] {
-  const spec = {
-    file: label,
-    columns: SAMEAS_COLUMNS,
-    hint: 'Same-as edges are curated (/docs/sid.md#41-same-as-equivalence-graph).',
-  };
-  return registryRows(spec, text).map((row) => {
+/** `from` is the file read: the curated overrides or one bridges/ file. */
+export function parseSameasTsv(text: string, from: Declared): SameasEdge[] {
+  return registryRows({ ...from, columns: SAMEAS_COLUMNS }, text).map((row) => {
     const a = row.raw('a');
     const b = row.raw('b');
     parseDesignation(a);
@@ -311,21 +307,20 @@ export interface SolObjectRow {
 
 /** A `key\tkind` mint list (sol-objects / shell-objects), each key valid
  *  under the `<ns>:<key>` designation grammar. */
-function parseObjectMintTsv(text: string, file: string, ns: string): SolObjectRow[] {
-  const spec = { file, columns: OBJECT_MINT_COLUMNS, hint: 'The mint list is curated under data/sid/.' };
-  return registryRows(spec, text).map((row) => {
+function parseObjectMintTsv(text: string, from: Declared, ns: string): SolObjectRow[] {
+  return registryRows({ ...from, columns: OBJECT_MINT_COLUMNS }, text).map((row) => {
     const key = row.raw('key');
     parseDesignation(`${ns}:${key}`);
     return { key, kind: row.oneOf('kind', SID_KINDS) };
   });
 }
 
-export function parseSolObjectsTsv(text: string): SolObjectRow[] {
-  return parseObjectMintTsv(text, 'data/sid/sol-objects.tsv', 'sol');
+export function parseSolObjectsTsv(text: string, from: Declared): SolObjectRow[] {
+  return parseObjectMintTsv(text, from, 'sol');
 }
 
-export function parseShellObjectsTsv(text: string): SolObjectRow[] {
-  return parseObjectMintTsv(text, 'data/sid/shell-objects.tsv', 'shell');
+export function parseShellObjectsTsv(text: string, from: Declared): SolObjectRow[] {
+  return parseObjectMintTsv(text, from, 'shell');
 }
 
 // ---- Structural validation (/docs/sid.md#45-ci-guard check 1) -------------------
@@ -465,28 +460,23 @@ export function sha256OfDataLines(dataLines: string[]): string {
   return h.digest('hex');
 }
 
-function headTriple<C extends string>(
-  spec: TableSpec<C>,
-  text: string,
-  decode: (row: TableRow<C>) => { sid: number },
-): HeadTriple {
-  const rows = registryRows(spec, text);
+function headTriple(file: RegistryFile<{ sid: number }>): HeadTriple {
   return {
-    rows: rows.length,
-    max_sid: rows.reduce((max, row) => Math.max(max, decode(row).sid), 0),
-    sha256: sha256OfDataLines(rows.map((row) => row.rawLine)),
+    rows: file.rows.length,
+    max_sid: file.rows.reduce((max, row) => Math.max(max, row.sid), 0),
+    sha256: sha256OfDataLines(file.lines),
   };
 }
 
 export function computeLedgerHead(
-  ledgerText: string,
-  retirementsText: string,
-  reinstatementsText: string = `${REINSTATEMENTS_HEADER}\n`,
+  ledger: RegistryFile<LedgerRow>,
+  retirements: RegistryFile<RetirementRow>,
+  reinstatements: RegistryFile<ReinstatementRow>,
 ): LedgerHead {
   return {
-    ledger: headTriple(LEDGER.table, ledgerText, LEDGER.decode),
-    retirements: headTriple(RETIREMENTS_TABLE, retirementsText, retirementRow),
-    reinstatements: headTriple(REINSTATEMENTS_TABLE, reinstatementsText, reinstatementRow),
+    ledger: headTriple(ledger),
+    retirements: headTriple(retirements),
+    reinstatements: headTriple(reinstatements),
   };
 }
 
@@ -521,7 +511,10 @@ export function checkAppendOnly(
     );
   }
   if (opts.newSidsPastBaseMax) {
-    const appended = LEDGER.parse([LEDGER_HEADER, ...dataLines.slice(base.rows), ''].join('\n'));
+    const appended = registryRows(
+      { file: label, columns: LEDGER_COLUMNS, hint: 'The ledger is append-only (/docs/sid.md#45-ci-guard).' },
+      [LEDGER_HEADER, ...dataLines.slice(base.rows), ''].join('\n'),
+    ).map(decodeLedgerRow);
     for (const { sid } of appended) {
       if (!(sid > base.max_sid)) {
         errors.push(`${label}: appended sid ${sid} not > frozen max_sid ${base.max_sid}`);

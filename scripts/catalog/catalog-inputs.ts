@@ -6,9 +6,6 @@ import { closureWithSiblings } from '../util/import-closure-pure';
 import { scriptClosure, trackedFiles } from '../util/import-closure';
 import { REPO_ROOT } from '../util/paths';
 import { declaredFiles, declaredInputs } from '../util/sources/declared-inputs';
-import {
-  OVERRIDES_PATH, REINSTATEMENTS_PATH, RETIREMENTS_PATH,
-} from '../sid/registry-io';
 import { CATALOG_OUTPUTS } from './catalog-outputs';
 
 /** Absolute paths. */
@@ -20,7 +17,6 @@ export async function catalogInputPaths(): Promise<string[]> {
     .filter((path) => !outputs.has(path));
   return [
     ...data,
-    OVERRIDES_PATH, RETIREMENTS_PATH, REINSTATEMENTS_PATH,
     ...closureWithSiblings(closure, trackedFiles()).map((path) => resolve(REPO_ROOT, path)),
   ];
 }

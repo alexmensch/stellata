@@ -99,9 +99,7 @@ scripts/catalog/
                                   CI's cache key shares) and every declared
                                   source and artifact that closure reaches
                                   (../util/sources/), less the build's own
-                                  outputs. The SID registry's retirements,
-                                  reinstatements and same-as overrides are
-                                  still listed by path.
+                                  outputs.
   catalog-outputs.ts (+ test)     CATALOG_OUTPUTS — every file the build
                                   writes, as its emitArtifacts declaration
                                   (../util/README.md): the public/ sidecars,

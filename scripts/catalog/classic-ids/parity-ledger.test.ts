@@ -11,8 +11,8 @@ import { MEMBERSHIP_MANIFEST } from '../membership/membership-manifest-tsv';
 import { PARKED_LEDGER } from '../distance/parallax/parked-ledger-tsv';
 import { ROUTE_DISAGREEMENTS } from './route-disagreements-tsv';
 import { REPO_ROOT, lfsContentReadable } from '../../util/paths';
-import { LEDGER_PATH, OVERRIDES_PATH, SAMEAS_OVERRIDES_FILE } from '../../sid/registry-io';
-import { parseSameasTsv } from '../../sid/sid-pure';
+import { SAMEAS_OVERRIDES } from '../../sid/sameas-source';
+import { readArtifact } from '../../util/sources/source';
 import { LEDGER } from '../../sid/ledger-tsv';
 import { INHERITED_SPINE } from '../spine/inherited-spine-tsv';
 import { BSC5 } from './bsc5-source';
@@ -70,7 +70,7 @@ describe('HD/HIP route-disagreement review', () => {
   });
 });
 
-const ledgerReadable = lfsContentReadable(LEDGER_PATH);
+const ledgerReadable = lfsContentReadable(resolve(REPO_ROOT, LEDGER.file));
 const bsc5Readable = lfsContentReadable(BSC5_PATH);
 const spineReadable = lfsContentReadable(SPINE_PATH);
 
@@ -81,11 +81,10 @@ describe.skipIf(!ledgerReadable)('label delta vs the SID ledger', () => {
   // are the shipped shape (/docs/catalog-driver.md#4-how-hd-reaches-gaia).
   it('bridges every canonical key the merge removes from its record', () => {
     const canonical = new Set(
-      LEDGER.parse(readFileSync(LEDGER_PATH, 'utf-8')).map((r) => r.canonicalKey),
+      readArtifact(LEDGER).map((r) => r.canonicalKey),
     );
     const bridgeEndpoints = new Set(
-      parseSameasTsv(readFileSync(OVERRIDES_PATH, 'utf-8'), SAMEAS_OVERRIDES_FILE)
-        .flatMap((e) => [e.a, e.b]),
+      SAMEAS_OVERRIDES.read().flatMap((e) => [e.a, e.b]),
     );
     const flips = LABEL_FLIPS.parse(
       readFileSync(resolve(REPO_ROOT, LABEL_FLIPS_FILE), 'utf-8'),

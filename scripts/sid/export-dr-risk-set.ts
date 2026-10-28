@@ -6,22 +6,13 @@ import { sortSourceIdsNumeric } from '../catalog/astrometry-request/export-astro
 import { emitArtifacts, runStep } from '../util/emit-artifacts';
 import { DR_RISK_SET_OUTPUTS } from './dr-risk-set-outputs';
 import { LEDGER } from './ledger-tsv';
-import { readRequired } from '../util/paths';
-import { LEDGER_PATH, REINSTATEMENTS_PATH, RETIREMENTS_PATH } from './registry-io';
-import {
-  effectiveRetirements,
-  parseDesignation,
-  parseReinstatementsTsv,
-  parseRetirementsTsv,
-} from './sid-pure';
+import { readArtifact } from '../util/sources/source';
+import { REINSTATEMENTS, RETIREMENTS } from './registry-source';
+import { effectiveRetirements, parseDesignation } from './sid-pure';
 
 function main(): void {
-  const hint = 'It is committed under data/sid/ (/docs/sid.md#43-ledger--datasidledgertsv).';
-  const ledger = LEDGER.parse(readRequired(LEDGER_PATH, hint));
-  const retired = effectiveRetirements(
-    parseRetirementsTsv(readRequired(RETIREMENTS_PATH, hint)),
-    parseReinstatementsTsv(readRequired(REINSTATEMENTS_PATH, hint)),
-  );
+  const ledger = readArtifact(LEDGER);
+  const retired = effectiveRetirements(RETIREMENTS.read().rows, REINSTATEMENTS.read().rows);
   const ids = new Set<string>();
   for (const row of ledger) {
     if (retired.has(row.sid)) continue;

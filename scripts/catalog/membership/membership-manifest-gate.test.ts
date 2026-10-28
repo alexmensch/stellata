@@ -7,13 +7,13 @@ import { resolve } from 'node:path';
 import { beforeAll, describe, expect, it } from 'vitest';
 
 import { REPO_ROOT, lfsContentReadable } from '../../util/paths';
-import { OVERRIDES_PATH, SAMEAS_OVERRIDES_FILE } from '../../sid/registry-io';
+import { SAMEAS_OVERRIDES } from '../../sid/sameas-source';
 import { catalogRecordDesignations } from '../../sid/catalog-designations';
 import {
-  SYNTH_RUNTIME_PREFIX, canonicalKeyOf, compareDesignations, parseSameasTsv,
+  SYNTH_RUNTIME_PREFIX, canonicalKeyOf, compareDesignations,
   syntheticGaiaBridges,
 } from '../../sid/sid-pure';
-import { loadStoredEdges } from '../../sid/registry-io';
+import { loadStoredEdges } from '../../sid/stored-edges';
 import {
   DEFAULT_CATALOG_MANIFEST,
   DEFAULT_ROW_INDEX_MAP,
@@ -120,7 +120,7 @@ describe.skipIf(!inputsReadable)('membership manifest ↔ inherited spine', () =
     match = matchSpineToManifest(
       spine.map(spineDesignations),
       manifest,
-      parseSameasTsv(readFileSync(OVERRIDES_PATH, 'utf-8'), SAMEAS_OVERRIDES_FILE),
+      SAMEAS_OVERRIDES.read(),
     );
   }, 180_000);
 
