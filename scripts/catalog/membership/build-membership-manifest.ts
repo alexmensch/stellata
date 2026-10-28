@@ -15,8 +15,10 @@ import { printedVLookups } from '../photometry/v-magnitude-pure';
 import { gaiaHas5pSolution } from '../distance/gaia-distrust';
 import {
   BRIGHT_TIER_MAG_CEILING,
-  parseOverlayTsv,
 } from '../classic-ids/classic-id-overlay-pure';
+import {
+  parseOverlayTsv,
+} from '../classic-ids/classic-id-overlay-tsv';
 import {
   CLASSIC_ID_OVERRIDES_FILE,
   LABEL_FIELDS,

@@ -9,10 +9,12 @@ import {
   glieseCellKey,
   glieseComponent,
   glieseNumber,
+} from '../classic-id-overlay-pure';
+import {
   OVERLAY_VALUE_SEPARATOR,
   type ClassicIdOverlay,
   type OverlayEntry,
-} from '../classic-id-overlay-pure';
+} from '../classic-id-overlay-tsv';
 
 export const LABEL_FIELDS = ['hip', 'hd', 'hr', 'gl', 'flam'] as const;
 export type LabelField = (typeof LABEL_FIELDS)[number];

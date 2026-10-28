@@ -1,7 +1,8 @@
 // The source_id-keyed classic-ID overlay join and its coverage counts.
 // Routes, ambiguity policy and precedence: /docs/catalog-driver.md#2-identifier-sources--frozen-cds-files-not-live-simbad and /docs/catalog-driver.md#4-how-hd-reaches-gaia.
 import type { Bsc5Row, Cns5Row, CrossIndexRow, Tyc2HdRow } from './classic-ids-parse';
-import { sortSourceIdsNumeric } from '../astrometry-request/export-astrometry-request-pure';
+import type { ClassicIdOverlay, OverlayEntry } from './classic-id-overlay-tsv';
+import type { HdHipRouteDisagreement } from './route-disagreements-tsv';
 import {
   rejectionOf,
   weighBinding,
@@ -17,36 +18,6 @@ import {
   type PrintedVLookups,
   type PrintedVVia,
 } from '../photometry/v-magnitude-pure';
-/** No cell is single-valued by construction: a designation naming a
- *  catalogue granularity rather than one object attaches to every matching
- *  record, and a record can carry several. */
-export const OVERLAY_VALUE_SEPARATOR = '|';
-
-export const OVERLAY_COLUMNS = [
-  'gaia_source_id',
-  'hd',
-  'hr',
-  'hip',
-  'gj',
-  'bayer',
-  'flamsteed',
-] as const;
-
-/** Every classic designation the frozen joins attach to one Gaia DR3
- *  source. `gj` is a bare CNS5 number with its component letter appended
- *  ("551C"); `bayer` / `flamsteed` carry IV/27A's constellation
- *  ("alf Lyr", "3 Lyr"). Each list is sorted and deduplicated. */
-export interface OverlayEntry {
-  hd: number[];
-  hr: number[];
-  hip: number[];
-  gj: string[];
-  bayer: string[];
-  flamsteed: string[];
-}
-
-export type ClassicIdOverlay = Map<string, OverlayEntry>;
-
 /** The frozen tables and cross-walks the join reads — no gate evidence. */
 export interface OverlayWalks {
   tyc2Hd: readonly Tyc2HdRow[];
@@ -151,12 +122,6 @@ export function applyBindingGate(
 /** An IV/27A row whose HD→TYC→source_id route and HIP→source_id route
  *  disagree. The HD route is the authority (/docs/catalog-driver.md#4-how-hd-reaches-gaia); these go to the parity
  *  ledger's review queue rather than being resolved mechanically. */
-export interface HdHipRouteDisagreement {
-  hd: number;
-  hip: number;
-  hdRouteSourceIds: string[];
-  hipRouteSourceId: string;
-}
 
 export interface OverlayJoinCounts {
   tyc2HdRows: number;
@@ -459,57 +424,6 @@ export function buildClassicIdOverlay(input: OverlayInput): OverlayJoin {
       gateSkippedNullGMag: gate.skippedNullGMag,
     },
   };
-}
-
-export function serializeOverlay(overlay: ClassicIdOverlay): string {
-  const sep = OVERLAY_VALUE_SEPARATOR;
-  const lines = [OVERLAY_COLUMNS.join('\t')];
-  for (const sourceId of sortSourceIdsNumeric(overlay.keys())) {
-    const e = overlay.get(sourceId)!;
-    lines.push([
-      sourceId,
-      e.hd.join(sep),
-      e.hr.join(sep),
-      e.hip.join(sep),
-      e.gj.join(sep),
-      e.bayer.join(sep),
-      e.flamsteed.join(sep),
-    ].join('\t'));
-  }
-  return `${lines.join('\n')}\n`;
-}
-
-/** Read the committed overlay back. Demands the header be `OVERLAY_COLUMNS`
- *  byte for byte, in order — the same contract `iterSpineTsv` holds its own
- *  frozen artifact to (`../parse/README.md#tsv-header-resolution`): this
- *  file's only writer is `serializeOverlay` above, so a header that merely
- *  parses is already a file nobody meant to ship. */
-export function parseOverlayTsv(text: string): ClassicIdOverlay {
-  const lines = text.split(/\r?\n/);
-  const header = OVERLAY_COLUMNS.join('\t');
-  if (lines[0] !== header) {
-    throw new Error(
-      `classic_id_overlay.tsv header is "${lines[0] ?? ''}", expected ` +
-        `"${header}" — re-run \`pnpm run build:classic-ids\`.`,
-    );
-  }
-  const overlay: ClassicIdOverlay = new Map();
-  const cells = (v: string): string[] =>
-    v === '' ? [] : v.split(OVERLAY_VALUE_SEPARATOR);
-  const ints = (v: string): number[] => cells(v).map(Number);
-  for (let i = 1; i < lines.length; i++) {
-    if (!lines[i]) continue;
-    const [sourceId, hd, hr, hip, gj, bayer, flamsteed] = lines[i].split('\t');
-    overlay.set(sourceId, {
-      hd: ints(hd),
-      hr: ints(hr),
-      hip: ints(hip),
-      gj: cells(gj),
-      bayer: cells(bayer),
-      flamsteed: cells(flamsteed),
-    });
-  }
-  return overlay;
 }
 
 /** Gaia saturates around G ≈ 3, so neither best-neighbour cross-walk carries
