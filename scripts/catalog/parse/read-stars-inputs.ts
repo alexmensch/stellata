@@ -57,7 +57,7 @@ import {
 } from '../membership/magnitude-term/magnitude-term';
 import { MAGNITUDE_FLOOR_V } from '../membership/magnitude-term/magnitude-term-pure';
 import type { ReadStarsOptions } from './stars-parse';
-import { REPO_ROOT as ROOT } from '../../util/paths';
+import { REPO_ROOT as ROOT, requireExists } from '../../util/paths';
 import { MULTIPLES_TSV_PATH } from '../../binaries/multiples-tsv';
 
 export const MEMBERSHIP_MANIFEST_TSV = resolve(ROOT, MEMBERSHIP_MANIFEST_FILE);
@@ -123,7 +123,25 @@ export interface ReadStarsInputs extends Required<ReadStarsOptions> {
   sizes: ReadStarsInputSizes;
 }
 
+const REQUIRED_INPUTS: readonly (readonly [string, string])[] = [
+  [SRC_BAILER_JONES, 'Re-run scripts/refresh/refresh-bailer-jones.py.'],
+  [SRC_GAIA_APSIS, 'Re-run scripts/refresh/refresh-gaia-apsis.py.'],
+  [SRC_GAIA_GSPC, 'Re-run `pnpm run refresh:gaia-gspc`.'],
+  [SRC_SIMBAD_SPTYPE, 'Re-run scripts/refresh/refresh-simbad-sptype.py.'],
+  [SRC_SIMBAD_VALUES, 'Re-run `pnpm run refresh:simbad-values`.'],
+  [SRC_GAIA_ASTROMETRY, 'Re-run scripts/refresh/refresh-gaia-astrometry-catalog.py.'],
+  [SRC_HIP2, 'Re-run `pnpm run refresh:hip2`.'],
+  [SRC_GAIA_NSS, 'Re-run `pnpm run refresh:gaia-nss`.'],
+  [SRC_HIP_VMAG, 'Re-run `pnpm run refresh:hip-vmag`.'],
+  [SRC_TYCHO2_MAIN, 'Re-run `pnpm run refresh:tycho2`.'],
+  [SRC_TYCHO2_SUPPL1, 'Re-run `pnpm run refresh:tycho2`.'],
+  [SRC_CNS5, 'Re-run `pnpm run refresh:classic-ids`.'],
+  [SRC_GLIESE, 'Re-run `pnpm run refresh:gliese`.'],
+  [MULTIPLES_TSV_PATH, 'Re-run `pnpm run build:binaries`.'],
+];
+
 export async function loadReadStarsInputs(): Promise<ReadStarsInputs> {
+  for (const [path, hint] of REQUIRED_INPUTS) requireExists(path, hint);
   const sizes: ReadStarsInputSizes = {
     bjEntries: 0,
     apsisEntries: 0,
