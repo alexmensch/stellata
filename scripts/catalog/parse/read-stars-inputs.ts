@@ -61,11 +61,16 @@ export interface ReadStarsInputs extends Required<ReadStarsOptions> {
   sizes: ReadStarsInputSizes;
 }
 
-function timed<T>(label: string, read: () => T, size: (value: T) => string): T {
+function timer(label: string): (summary: string) => void {
   console.log(`${label}...`);
   const t = Date.now();
+  return (summary) => console.log(`  ${summary} in ${Date.now() - t}ms`);
+}
+
+function timed<T>(label: string, read: () => T, size: (value: T) => string): T {
+  const done = timer(label);
   const value = read();
-  console.log(`  ${size(value)} in ${Date.now() - t}ms`);
+  done(size(value));
   return value;
 }
 
@@ -94,8 +99,7 @@ export async function loadReadStarsInputs(): Promise<ReadStarsInputs> {
     cns5: timed('Parsing CNS5 astrometry', () => cns5AstrometryByGj(CNS5.read()), entries),
   };
   if (MAGNITUDE_FLOOR_V !== null) {
-    console.log('Parsing Gaia DR3 5p astrometry (magnitude term)...');
-    const t = Date.now();
+    const done = timer('Parsing Gaia DR3 5p astrometry (magnitude term)');
     const keep = await readMagnitudeTermSourceIds();
     let added = 0;
     for (const [sourceId, row] of await readMagnitudeTermAstrometry(keep)) {
@@ -103,7 +107,7 @@ export async function loadReadStarsInputs(): Promise<ReadStarsInputs> {
       directions.gaiaAstrometry.set(sourceId, row);
       added++;
     }
-    console.log(`  ${added} of ${keep.size} sources in ${Date.now() - t}ms`);
+    done(`${added} of ${keep.size} sources`);
   }
 
   const { vmag: hipVMag, bv: hipBv } = timed(
