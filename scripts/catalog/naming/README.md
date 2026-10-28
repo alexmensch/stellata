@@ -53,14 +53,20 @@ scripts/catalog/naming/
                                 the joins, and emit the two derived
                                 tables through emitArtifacts once the
                                 count snapshot passes.
+  wgsn-names-tsv.ts             WGSN_NAMES / WGSN_DESIGNATIONS — the two
+  wgsn-designations-tsv.ts      derived tables' artifact codecs
+    (+ wgsn-tables-tsv.test)    (../../util/tsv/README.md#artifact-codecs).
+                                Designation rows sort by
+                                compareDesignationRows.
   wgsn-tables-outputs.ts        WGSN_OUTPUTS — the two derived tables as
                                 build:wgsn's emitArtifacts declaration
                                 (../../util/README.md). Side-effect free.
   wgsn-expected.json            Pinned count snapshot
                                 (UPDATE_BUILD_COUNTS=1 refreshes).
-  wgsn-index-pure.ts (+ test)   The record-side join: readers for the two
-                                committed tables and the disposition file,
-                                the keyed index, the three pickers, and the
+  wgsn-index-pure.ts (+ test)   The record-side join: the disposition
+                                file's reader (readTable — it is
+                                hand-curated), the keyed index, the three
+                                pickers, and the
                                 /docs/star-naming.md#2-authority--one-source-approves-names-everything-else-compiles-them class routing (README.md#the-record-side-join).
   apply-star-names.ts           I/O + the record pass: loads the committed
                                 tables and writes each record's authority

@@ -5,8 +5,11 @@ import type { CrossIndexRow } from '../classic-ids/classic-ids-parse';
 import { normaliseIv27aBayer, type NormalisedCell } from './wgsn-normalise-pure';
 import type { WgsnRow } from './wgsn-parse-pure';
 
+export const DESIGNATION_KINDS = ['bayer', 'flamsteed', 'gould'] as const;
+export const DESIGNATION_SOURCES = ['nec', 'faints', 'iv27a'] as const;
+
 export interface DesignationRow {
-  kind: 'bayer' | 'flamsteed' | 'gould';
+  kind: (typeof DESIGNATION_KINDS)[number];
   letter: string | null;
   sup: number | null;
   num: number | null;
@@ -16,8 +19,10 @@ export interface DesignationRow {
   hip: number | null;
   hr: number | null;
   hd: number | null;
-  source: 'nec' | 'faints' | 'iv27a';
+  source: (typeof DESIGNATION_SOURCES)[number];
 }
+
+export const tsvCell = (v: string | number | null): string => (v === null ? '' : String(v));
 
 type DesignationKeys = Pick<DesignationRow, 'hip' | 'hr' | 'hd' | 'source'>;
 
@@ -106,20 +111,10 @@ export function unionIv27aBayer(
  *  comparison of two disjoint sets that both look populated. */
 export function membershipProperKey(
   proper: string,
-  hip: string,
-  hd: string,
+  hip: number | null,
+  hd: number | null,
 ): string {
-  return [proper, hip, hd].join('|');
-}
-
-export function parseDispositionKeys(tsv: string): Set<string> {
-  const lines = tsv.split('\n').filter((l) => l.trim() !== '');
-  const keys = new Set<string>();
-  for (const line of lines.slice(1)) {
-    const [proper, , hip = '', hd = ''] = line.split('\t');
-    keys.add(membershipProperKey(proper, hip, hd));
-  }
-  return keys;
+  return [proper, hip ?? '', hd ?? ''].join('|');
 }
 
 /** The naming-authority gate (/docs/star-naming.md#2-authority--one-source-approves-names-everything-else-compiles-them) is exact set equality in both directions: an unmatched
@@ -137,19 +132,20 @@ export function diffDispositions(
 
 /** Every field participates: a comparator that ties leaves the committed
  *  row order to the engine's sort, and CI diffs these files byte for byte. */
-export function sortDesignations(rows: DesignationRow[]): {
-  sorted: DesignationRow[];
-  duplicateRows: number;
-} {
-  const sortKey = (d: DesignationRow) => [
+function designationSortKey(d: DesignationRow): string {
+  return [
     d.kind, d.dc, String(d.num ?? '').padStart(4, '0'), d.letter ?? '',
     String(d.sup ?? ''), d.half ?? '', d.component ?? '', String(d.hd ?? ''),
     String(d.hip ?? ''), String(d.hr ?? ''), d.source,
   ].join(' ');
-  const keyed = rows.map((d) => ({ key: sortKey(d), d }));
-  keyed.sort((a, b) => (a.key < b.key ? -1 : a.key > b.key ? 1 : 0));
-  return {
-    sorted: keyed.map((k) => k.d),
-    duplicateRows: keyed.length - new Set(keyed.map((k) => k.key)).size,
-  };
+}
+
+export function compareDesignationRows(a: DesignationRow, b: DesignationRow): number {
+  const ka = designationSortKey(a);
+  const kb = designationSortKey(b);
+  return ka < kb ? -1 : ka > kb ? 1 : 0;
+}
+
+export function duplicateDesignationRows(rows: readonly DesignationRow[]): number {
+  return rows.length - new Set(rows.map(designationSortKey)).size;
 }

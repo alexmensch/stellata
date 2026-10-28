@@ -13,7 +13,7 @@ import type { SearchEntry } from '../record/catalog-pure';
 import { buildSearchIndex, normalizeGlKey } from '../../../src/client/typeahead/search-corpus';
 import { displayNamesFromSearchIndex } from './star-naming-pure';
 import { foldNameKey } from './wgsn-normalise-pure';
-import { parseWgsnNamesTsv } from './wgsn-index-pure';
+import { WGSN_NAMES } from './wgsn-names-tsv';
 import {
   labelIndexOf,
   labelResolvesTo,
@@ -24,7 +24,7 @@ import {
 } from './naming-parity-pure';
 
 const HERE = resolve(REPO_ROOT, 'scripts/catalog/naming');
-const WGSN_NAMES = resolve(REPO_ROOT, 'data/iau-wgsn/wgsn_names.tsv');
+const WGSN_NAMES_PATH = resolve(REPO_ROOT, WGSN_NAMES.file);
 const MANIFEST = resolve(REPO_ROOT, 'data/membership/membership-manifest.tsv');
 
 /** Published names reaching no record: the wgsnFaints hosts whose only key
@@ -118,7 +118,7 @@ describe.runIf(FIXTURES_READY)('naming parity ledger', () => {
       byLabel.has(label.toLowerCase());
 
     const published = new Set<string>();
-    for (const row of parseWgsnNamesTsv(readFileSync(WGSN_NAMES, 'utf8'))) {
+    for (const row of WGSN_NAMES.parse(readFileSync(WGSN_NAMES_PATH, 'utf8'))) {
       for (const spelling of [row.name, ...row.aliases]) published.add(spelling);
     }
     const manifest = readFileSync(MANIFEST, 'utf8').split('\n');

@@ -21,18 +21,20 @@ import {
   bayerKeySets,
   designationFromCell,
   diffDispositions,
-  parseDispositionKeys,
-  sortDesignations,
+  duplicateDesignationRows,
   membershipProperKey,
   unionIv27aBayer,
   type DesignationRow,
 } from './wgsn-tables-pure';
+import { PROPER_DISPOSITIONS_TABLE, parseProperDispositions, type WgsnNameRow } from './wgsn-index-pure';
+import { WGSN_DESIGNATIONS } from './wgsn-designations-tsv';
+import { WGSN_NAMES } from './wgsn-names-tsv';
 import { WGSN_OUTPUTS } from './wgsn-tables-outputs';
 
 const DATA = resolve(REPO_ROOT, 'data/iau-wgsn');
 const NEC_CSV = resolve(DATA, 'NEC.csv');
 const FAINTS_CSV = resolve(DATA, 'wgsnFaints.csv');
-const DISPOSITIONS = resolve(DATA, 'athyg_proper_dispositions.tsv');
+const DISPOSITIONS = resolve(REPO_ROOT, PROPER_DISPOSITIONS_TABLE.file);
 const MANIFEST = resolve(REPO_ROOT, MEMBERSHIP_MANIFEST_FILE);
 const SNAPSHOT = resolve(REPO_ROOT, 'scripts/catalog/naming/wgsn-expected.json');
 
@@ -70,9 +72,6 @@ export interface WgsnCounts {
   membershipBayerRowsCovered: number;
 }
 
-const cellStr = (v: string | number | null): string =>
-  v === null ? '' : String(v);
-
 interface MembershipNaming {
   /** proper-row key ("<proper>|<hip>|<hd>") → the raw proper string. */
   propers: Map<string, string>;
@@ -84,7 +83,7 @@ function readManifest(): MembershipNaming {
   const bayerKeys: { hip: number | null; hd: number | null }[] = [];
   for (const r of MEMBERSHIP_MANIFEST.rows(readFileSync(MANIFEST, 'utf8'))) {
     if (r.proper !== null && !r.isSol) {
-      propers.set(membershipProperKey(r.proper, cellStr(r.hip), cellStr(r.hd)), r.proper);
+      propers.set(membershipProperKey(r.proper, r.hip, r.hd), r.proper);
     }
     if (r.bayer !== null) bayerKeys.push({ hip: r.hip, hd: r.hd });
   }
@@ -98,7 +97,7 @@ async function main(): Promise<void> {
 
   const classCounts = new Map<string, number>();
   const designations: DesignationRow[] = [];
-  const nameLines: string[] = [];
+  const nameRows: WgsnNameRow[] = [];
   const nameKeys = new Set<string>();
   const nameRowKeys: string[] = [];
   let namedRows = 0;
@@ -124,11 +123,11 @@ async function main(): Promise<void> {
         [foldNameKey(name), row.hip, row.hr, row.hd].join('|'),
       );
       if (row.hip === null && row.hr === null && row.hd === null) namesKeyless++;
-      nameLines.push([
-        name, aliases.join('|'), cellStr(row.hip), cellStr(row.hipComponent),
-        cellStr(row.hr), cellStr(row.hd), cellStr(row.hdComponent),
-        cellStr(row.vmag), row.source, row.id,
-      ].join('\t'));
+      nameRows.push({
+        name, aliases, hip: row.hip, hipComponent: row.hipComponent,
+        hr: row.hr, hd: row.hd, hdComponent: row.hdComponent,
+        vmag: row.vmag, source: row.source, srcId: row.id,
+      });
     }
   }
 
@@ -144,7 +143,8 @@ async function main(): Promise<void> {
   }
   const { missing, stale } = diffDispositions(
     unmatched,
-    parseDispositionKeys(readFileSync(DISPOSITIONS, 'utf8')),
+    new Set(parseProperDispositions(readFileSync(DISPOSITIONS, 'utf8'))
+      .map((d) => membershipProperKey(d.proper, d.hip, d.hd))),
   );
   if (missing.length > 0 || stale.length > 0) {
     for (const k of missing) console.error(`undisposed membership proper: ${k}`);
@@ -162,21 +162,6 @@ async function main(): Promise<void> {
   const membershipBayerRowsCovered = membership.bayerKeys.filter(
     (k) => unioned.reaches(k.hip, k.hd),
   ).length;
-
-  const { sorted, duplicateRows } = sortDesignations(designations);
-
-  const namesTsv = [
-    'name\taliases\thip\thip_component\thr\thd\thd_component\tvmag\tsource\tsrc_id',
-    ...nameLines,
-  ].join('\n') + '\n';
-  const designationsTsv = [
-    'kind\tletter\tsup\tnum\tdc\thalf\tcomponent\thip\thr\thd\tsource',
-    ...sorted.map((d) => [
-      d.kind, cellStr(d.letter), cellStr(d.sup), cellStr(d.num), d.dc,
-      cellStr(d.half), cellStr(d.component), cellStr(d.hip), cellStr(d.hr),
-      cellStr(d.hd), d.source,
-    ].join('\t')),
-  ].join('\n') + '\n';
 
   const counts: WgsnCounts = {
     necRows: nec.length,
@@ -201,11 +186,11 @@ async function main(): Promise<void> {
     iv27aBayerCovered: iv27a.covered,
     iv27aVariableRejected: iv27a.variableRejected,
     iv27aUnparsed: iv27a.unparsed,
-    designationRows: sorted.length,
-    designationsKeyless: sorted.filter(
+    designationRows: designations.length,
+    designationsKeyless: designations.filter(
       (d) => d.hip === null && d.hr === null && d.hd === null,
     ).length,
-    designationDuplicateRows: duplicateRows,
+    designationDuplicateRows: duplicateDesignationRows(designations),
     nameDuplicateRows: nameRowKeys.length - new Set(nameRowKeys).size,
     membershipPropers: membership.propers.size,
     membershipProperMatched: matched,
@@ -216,7 +201,10 @@ async function main(): Promise<void> {
 
   emitArtifacts({
     outputs: WGSN_OUTPUTS,
-    files: { names: namesTsv, designations: designationsTsv },
+    files: {
+      names: WGSN_NAMES.serialize(nameRows),
+      designations: WGSN_DESIGNATIONS.serialize(designations),
+    },
     checks: [snapshotCheck<WgsnCounts>({
       envVar: 'UPDATE_BUILD_COUNTS',
       snapshotPath: SNAPSHOT,
@@ -226,7 +214,7 @@ async function main(): Promise<void> {
       refreshCommand: 'UPDATE_BUILD_COUNTS=1 pnpm run build:wgsn',
     })],
   });
-  console.log(`wgsn_names.tsv: ${nameLines.length} rows`);
+  console.log(`wgsn_names.tsv: ${nameRows.length} rows`);
   console.log(`wgsn_designations.tsv: ${designations.length} rows`);
 }
 

@@ -11,20 +11,20 @@ import { FLAG_IS_SOL, NO_CONSTELLATION_INDEX } from '../record/catalog-pure';
 import { CON_INDEX } from '../parse/constellations/constellations';
 import { foldNameKey } from './wgsn-normalise-pure';
 import {
+  PROPER_DISPOSITIONS_TABLE,
   buildWgsnIndex,
-  parseProperDispositionsTsv,
-  parseWgsnDesignationsTsv,
-  parseWgsnNamesTsv,
+  parseProperDispositions,
   routeDisposedProper,
   type ProperDisposition,
-  type WgsnDesignationRow,
   type WgsnNameRow,
 } from './wgsn-index-pure';
+import type { DesignationRow } from './wgsn-tables-pure';
+import { WGSN_DESIGNATIONS } from './wgsn-designations-tsv';
+import { WGSN_NAMES } from './wgsn-names-tsv';
 
-const DATA = resolve(REPO_ROOT, 'data/iau-wgsn');
-const WGSN_NAMES = resolve(DATA, 'wgsn_names.tsv');
-const WGSN_DESIGNATIONS = resolve(DATA, 'wgsn_designations.tsv');
-const PROPER_DISPOSITIONS = resolve(DATA, 'athyg_proper_dispositions.tsv');
+const WGSN_NAMES_PATH = resolve(REPO_ROOT, WGSN_NAMES.file);
+const WGSN_DESIGNATIONS_PATH = resolve(REPO_ROOT, WGSN_DESIGNATIONS.file);
+const PROPER_DISPOSITIONS = resolve(REPO_ROOT, PROPER_DISPOSITIONS_TABLE.file);
 const NAME_OVERRIDES = {
   file: 'data/naming/name_overrides.tsv',
   columns: ['sid', 'display_name'] as const,
@@ -34,20 +34,21 @@ const OVERRIDES = resolve(REPO_ROOT, NAME_OVERRIDES.file);
 
 /** Every file loadStarNamingInputs and loadNameOverrides read. */
 export const STAR_NAMING_INPUT_PATHS: readonly string[] = [
-  WGSN_NAMES, WGSN_DESIGNATIONS, PROPER_DISPOSITIONS, OVERRIDES,
+  WGSN_NAMES_PATH, WGSN_DESIGNATIONS_PATH, PROPER_DISPOSITIONS, OVERRIDES,
 ];
 
 export interface StarNamingInputs {
   names: WgsnNameRow[];
-  designations: WgsnDesignationRow[];
+  designations: DesignationRow[];
   dispositions: Map<string, ProperDisposition>;
 }
 
 export function loadStarNamingInputs(): StarNamingInputs {
   return {
-    names: parseWgsnNamesTsv(readFileSync(WGSN_NAMES, 'utf8')),
-    designations: parseWgsnDesignationsTsv(readFileSync(WGSN_DESIGNATIONS, 'utf8')),
-    dispositions: parseProperDispositionsTsv(readFileSync(PROPER_DISPOSITIONS, 'utf8')),
+    names: WGSN_NAMES.parse(readFileSync(WGSN_NAMES_PATH, 'utf8')),
+    designations: WGSN_DESIGNATIONS.parse(readFileSync(WGSN_DESIGNATIONS_PATH, 'utf8')),
+    dispositions: new Map(parseProperDispositions(readFileSync(PROPER_DISPOSITIONS, 'utf8'))
+      .map((d) => [d.proper, d.disposition])),
   };
 }
 

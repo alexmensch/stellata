@@ -2,49 +2,34 @@ import { describe, expect, it } from 'vitest';
 
 import {
   buildWgsnIndex,
-  parseProperDispositionsTsv,
-  parseWgsnDesignationsTsv,
-  parseWgsnNamesTsv,
+  parseProperDispositions,
   pickBayerRow,
   pickNameRow,
   routeDisposedProper,
-  type WgsnDesignationRow,
 } from './wgsn-index-pure';
+import { WGSN_NAMES } from './wgsn-names-tsv';
+import type { DesignationRow } from './wgsn-tables-pure';
 
-const bayer = (over: Partial<WgsnDesignationRow>): WgsnDesignationRow => ({
+const bayer = (over: Partial<DesignationRow>): DesignationRow => ({
   kind: 'bayer', letter: null, sup: null, num: null, dc: '', half: null,
-  component: null, hip: null, hr: null, hd: null, ...over,
+  component: null, hip: null, hr: null, hd: null, source: 'nec', ...over,
 });
 
-describe('parsers', () => {
-  it('reads the derived name table, splitting the alias cell', () => {
-    const rows = parseWgsnNamesTsv(
-      'name\taliases\thip\thip_component\thr\thd\thd_component\tvmag\tsource\tsrc_id\n'
-      + 'Nganurganity\tUnurgunite\t33856\t\t2646\t53244\t\t3.5\tnec\t4200\n'
-      + 'Maru\t\t\t\t\t\t\t9.9\tfaints\t12\n',
-    );
-    expect(rows[0]).toEqual({
-      name: 'Nganurganity', aliases: ['Unurgunite'], hip: 33856, hr: 2646,
-      hd: 53244, srcId: '4200',
-    });
-    expect(rows[1]).toMatchObject({ aliases: [], hip: null, hr: null, hd: null });
+const NAMES_HEADER = `${WGSN_NAMES.columns.join('\t')}\n`;
+
+describe('the disposition reader', () => {
+  it('reads a short row, its absent keys as null', () => {
+    expect(parseProperDispositions(
+      'proper\tclass\thip\thd\nRoss 128\tdiscovery-designation\t57548\t\nRoss 248\tdiscovery-designation\n',
+    )).toEqual([
+      { proper: 'Ross 128', disposition: 'discovery-designation', hip: 57548, hd: null },
+      { proper: 'Ross 248', disposition: 'discovery-designation', hip: null, hd: null },
+    ]);
   });
 
-  it('reads the derived designation table', () => {
-    const rows = parseWgsnDesignationsTsv(
-      'kind\tletter\tsup\tnum\tdc\thalf\tcomponent\thip\thr\thd\tsource\n'
-      + 'gould\t\t\t4\tSer\tCau\t\t\t\t123456\tnec\n',
-    );
-    expect(rows[0]).toMatchObject({
-      kind: 'gould', num: 4, dc: 'Ser', half: 'Cau', letter: null, hd: 123456,
-    });
-  });
-
-  it('reads the disposition classes', () => {
-    const map = parseProperDispositionsTsv(
-      'proper\tclass\thip\thd\nRoss 128\tdiscovery-designation\t57548\t\n',
-    );
-    expect(map.get('Ross 128')).toBe('discovery-designation');
+  it('refuses a class outside the routed set', () => {
+    expect(() => parseProperDispositions('proper\tclass\thip\thd\nX\tfolk-name\t\t\n'))
+      .toThrow(/athyg_proper_dispositions\.tsv:2: class/);
   });
 });
 
@@ -69,8 +54,8 @@ describe('the record-side join', () => {
   it('falls back to the record\'s own printed name where no key reaches one', () => {
     // Albireo B's spine row is HD 183914 against the authority's 183913,
     // and the faints hosts Kaewkosin and Maru carry no identifier at all.
-    const names = parseWgsnNamesTsv(
-      'name\taliases\thip\thip_component\thr\thd\thd_component\tvmag\tsource\tsrc_id\n'
+    const names = WGSN_NAMES.parse(
+      NAMES_HEADER
       + 'Albireo B\t\t\t\t\t183913\t\t5.15\tnec\t7412\n',
     );
     const withNames = buildWgsnIndex(names, []);
@@ -109,8 +94,8 @@ describe('pickers', () => {
   });
 
   it('prefers the bare NAME: a lettered one names a component of the star', () => {
-    const rows = parseWgsnNamesTsv(
-      'name\taliases\thip\thip_component\thr\thd\thd_component\tvmag\tsource\tsrc_id\n'
+    const rows = WGSN_NAMES.parse(
+      NAMES_HEADER
       + 'Albireo A\t\t95947\t\t7417\t183912\t\t3.2\tnec\t7411\n'
       + 'Albireo\t\t95947\t\t7417\t183912\t\t3.08\tnec\t7410\n',
     );
