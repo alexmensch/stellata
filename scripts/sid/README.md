@@ -35,8 +35,9 @@ registry-io.ts            Filesystem access to the committed registry:
 allocate.ts               pnpm run sid:allocate — the ONLY writer of
                           ledger.tsv, appending each mint as one
                           LEDGER.encodeLine line and never rewriting a
-                          committed one (+ retirements bootstrap +
-                          ledger-head.json). Reads the BUILT artifacts:
+                          committed one (+ ledger-head.json). The ledger,
+                          retirements and reinstatements are required
+                          inputs. Reads the BUILT artifacts:
                           catalog manifest/chunks, search-index.json,
                           catalog-row-index-map.json, clouds.json,
                           local-group.json, data/sid/sol-objects.tsv,

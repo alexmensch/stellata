@@ -16,7 +16,8 @@ Like the dust grid and the Local Bubble, the Python build runs
 **offline** and its output is **committed** (LFS). The deploy build
 never runs it: `build:cloud-surfaces-sync` (`sync-cloud-surfaces.ts`,
 in the `pnpm run build` chain) just copies the committed binary →
-`public/cloud-surfaces.bin`. Regenerate offline and commit:
+`public/cloud-surfaces.bin`, and fails when the binary is missing or an
+unsmudged LFS pointer. Regenerate offline and commit:
 
 ```
 ./.venv/bin/pip install -r scripts/cloud-surfaces/requirements.txt

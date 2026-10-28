@@ -53,7 +53,8 @@ shell-objects.tsv       The shell: namespace mint list (key → kind):
                         src/client/fresnel-shell/shell-object-sids.ts.
 bridges/<from>_<to>.tsv Machine-generated cross-release Gaia bridges
                         (/docs/sid.md#6-gaia-data-release-reconciliation), human-reviewed per DR bump.
-                        Directory appears with the first bridge.
+                        Own README; the folder is always present, so
+                        every SID read lists it.
 ```
 
 Tooling (allocation, risk-set export, DR reconciliation) lives in

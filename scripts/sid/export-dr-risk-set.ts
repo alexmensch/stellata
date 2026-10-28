@@ -2,15 +2,13 @@
 // non-retired ledger rows whose canonical key is gaia_*-namespaced, as the
 // request TSV a refresh:gaia-*-neighbourhood pull reads. /docs/sid.md#61-procedure.
 
-import { existsSync, readFileSync } from 'node:fs';
-
 import { sortSourceIdsNumeric } from '../catalog/astrometry-request/export-astrometry-request-pure';
 import { emitArtifacts, runStep } from '../util/emit-artifacts';
 import { DR_RISK_SET_OUTPUTS } from './dr-risk-set-outputs';
 import { LEDGER } from './ledger-tsv';
+import { readRequired } from '../util/paths';
 import { LEDGER_PATH, REINSTATEMENTS_PATH, RETIREMENTS_PATH } from './registry-io';
 import {
-  REINSTATEMENTS_HEADER,
   effectiveRetirements,
   parseDesignation,
   parseReinstatementsTsv,
@@ -18,17 +16,11 @@ import {
 } from './sid-pure';
 
 function main(): void {
-  if (!existsSync(LEDGER_PATH)) {
-    console.error(`sid:risk-set: ${LEDGER_PATH} missing — run pnpm run sid:allocate first`);
-    process.exit(1);
-  }
-  const ledger = LEDGER.parse(readFileSync(LEDGER_PATH, 'utf-8'));
-  const reinstatementsText = existsSync(REINSTATEMENTS_PATH)
-    ? readFileSync(REINSTATEMENTS_PATH, 'utf-8')
-    : `${REINSTATEMENTS_HEADER}\n`;
+  const hint = 'It is committed under data/sid/ (/docs/sid.md#43-ledger--datasidledgertsv).';
+  const ledger = LEDGER.parse(readRequired(LEDGER_PATH, hint));
   const retired = effectiveRetirements(
-    parseRetirementsTsv(readFileSync(RETIREMENTS_PATH, 'utf-8')),
-    parseReinstatementsTsv(reinstatementsText),
+    parseRetirementsTsv(readRequired(RETIREMENTS_PATH, hint)),
+    parseReinstatementsTsv(readRequired(REINSTATEMENTS_PATH, hint)),
   );
   const ids = new Set<string>();
   for (const row of ledger) {

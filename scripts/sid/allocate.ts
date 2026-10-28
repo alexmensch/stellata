@@ -12,14 +12,11 @@ import {
 } from '../catalog/catalog-lookup';
 import { FLAG_IS_SOL, type SearchEntry } from '../catalog/record/catalog-pure';
 import { catalogRecordDesignations } from './catalog-designations';
-import { REPO_ROOT as ROOT } from '../util/paths';
+import { REPO_ROOT as ROOT, readRequired } from '../util/paths';
 import { readTable } from '../util/tsv/table-pure';
 import { MULTIPLES_TSV, MULTIPLES_TSV_PATH } from '../binaries/multiples-tsv';
 import { LEDGER } from './ledger-tsv';
 import {
-  LEDGER_HEADER,
-  REINSTATEMENTS_HEADER,
-  RETIREMENTS_HEADER,
   allocate,
   computeLedgerHead,
   parseDesignation,
@@ -110,14 +107,13 @@ function synthChurnReport(orphanKeys: string[], currentSynthKeys: string[]): str
     pa: string;
   }
   const rowsByWds = new Map<string, PairRow[]>();
-  if (existsSync(MULTIPLES_TSV_PATH)) {
-    for (const r of readTable(MULTIPLES_TSV.table, readFileSync(MULTIPLES_TSV_PATH, 'utf-8'))) {
-      const system = r.raw('system_id');
-      const row = { comp: r.raw('comp'), sep: r.raw('sep_arcsec'), pa: r.raw('pa_deg') };
-      const list = rowsByWds.get(system);
-      if (list) list.push(row);
-      else rowsByWds.set(system, [row]);
-    }
+  const multiplesText = readRequired(MULTIPLES_TSV_PATH, MULTIPLES_TSV.hint);
+  for (const r of readTable(MULTIPLES_TSV.table, multiplesText)) {
+    const system = r.raw('system_id');
+    const row = { comp: r.raw('comp'), sep: r.raw('sep_arcsec'), pa: r.raw('pa_deg') };
+    const list = rowsByWds.get(system);
+    if (list) list.push(row);
+    else rowsByWds.set(system, [row]);
   }
   const lines: string[] = [];
   for (const key of orphanKeys) {
@@ -148,15 +144,10 @@ async function main(): Promise<void> {
   const { objects, starCount } = await collectObjects();
   const storedEdges = loadStoredEdges();
 
-  const ledgerText = existsSync(LEDGER_PATH)
-    ? readFileSync(LEDGER_PATH, 'utf-8')
-    : `${LEDGER_HEADER}\n`;
-  const retirementsText = existsSync(RETIREMENTS_PATH)
-    ? readFileSync(RETIREMENTS_PATH, 'utf-8')
-    : `${RETIREMENTS_HEADER}\n`;
-  const reinstatementsText = existsSync(REINSTATEMENTS_PATH)
-    ? readFileSync(REINSTATEMENTS_PATH, 'utf-8')
-    : `${REINSTATEMENTS_HEADER}\n`;
+  const registryHint = 'It is committed under data/sid/ (/docs/sid.md#43-ledger--datasidledgertsv).';
+  const ledgerText = readRequired(LEDGER_PATH, registryHint);
+  const retirementsText = readRequired(RETIREMENTS_PATH, registryHint);
+  const reinstatementsText = readRequired(REINSTATEMENTS_PATH, registryHint);
   const ledger = LEDGER.parse(ledgerText);
   const retirements = parseRetirementsTsv(retirementsText);
   const reinstatements = parseReinstatementsTsv(reinstatementsText);
@@ -267,11 +258,8 @@ async function main(): Promise<void> {
 
   if (result.minted.length > 0) {
     const appended = result.minted.map((row) => `${LEDGER.encodeLine(row)}\n`).join('');
-    if (existsSync(LEDGER_PATH)) appendFileSync(LEDGER_PATH, appended);
-    else writeFileSync(LEDGER_PATH, ledgerText + appended);
+    appendFileSync(LEDGER_PATH, appended);
   }
-  if (!existsSync(RETIREMENTS_PATH)) writeFileSync(RETIREMENTS_PATH, retirementsText);
-  if (!existsSync(REINSTATEMENTS_PATH)) writeFileSync(REINSTATEMENTS_PATH, reinstatementsText);
 
   const head = computeLedgerHead(
     readFileSync(LEDGER_PATH, 'utf-8'), retirementsText, reinstatementsText,
