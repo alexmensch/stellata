@@ -2,13 +2,13 @@
 // HD-attribution witness independent of IV/25.
 // See /data/simbad/README.md#the-tyc--hd-pull.
 
-import { dataRows, nonEmpty, parseIntOrNull } from '../parse/corpus-tsv';
+import { intCell, readTable, type TableSpec } from '../../util/tsv/table-pure';
 
-const LABEL = 'data/simbad/simbad_tyc_hd.tsv';
-const REFRESH_HINT =
-  'Re-run `python3 scripts/refresh/refresh-simbad-tyc-hd.py`.';
-
-const COLUMNS = ['tyc', 'simbad_oid', 'simbad_main_id', 'hd'] as const;
+const SIMBAD_TYC_HD = {
+  file: 'data/simbad/simbad_tyc_hd.tsv',
+  columns: ['tyc', 'simbad_oid', 'simbad_main_id', 'hd'] as const,
+  hint: 'Re-run `python3 scripts/refresh/refresh-simbad-tyc-hd.py`.',
+} satisfies TableSpec<string>;
 
 export interface SimbadTycHdRow {
   /** The HD idents' suffixes as SIMBAD states them, component letter
@@ -28,7 +28,7 @@ export interface SimbadTycHdRow {
 export function hdNumbers(row: SimbadTycHdRow): number[] {
   const out: number[] = [];
   for (const ident of row.hdIdents) {
-    const n = parseIntOrNull(/^\d+/.exec(ident)?.[0]);
+    const n = intCell(/^\d+/.exec(ident)?.[0]);
     if (n !== null && !out.includes(n)) out.push(n);
   }
   return out;
@@ -41,15 +41,15 @@ export function hdNumbers(row: SimbadTycHdRow): number[] {
  *  manifest mention. */
 export function parseSimbadTycHdTsv(text: string): Map<string, SimbadTycHdRow> {
   const out = new Map<string, SimbadTycHdRow>();
-  for (const { cells, idx } of dataRows(text, COLUMNS, LABEL, REFRESH_HINT)) {
-    const tyc = nonEmpty(cells[idx.tyc]);
-    const oid = parseIntOrNull(cells[idx.simbad_oid]);
-    const hd = nonEmpty(cells[idx.hd]);
+  for (const row of readTable(SIMBAD_TYC_HD, text)) {
+    const tyc = row.text('tyc');
+    const oid = row.int('simbad_oid');
+    const hd = row.text('hd');
     if (tyc === null || oid === null || hd === null) continue;
     out.set(tyc, {
       hdIdents: hd.split('|').map((s) => s.trim()).filter((s) => s.length > 0),
       simbadOid: oid,
-      mainId: nonEmpty(cells[idx.simbad_main_id]),
+      mainId: row.text('simbad_main_id'),
     });
   }
   return out;

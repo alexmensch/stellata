@@ -4,7 +4,7 @@ import { resolve } from 'node:path';
 import { beforeAll, describe, it, expect } from 'vitest';
 
 import { REPO_ROOT, lfsContentReadable } from '../../util/paths';
-import { dataRows } from '../parse/corpus-tsv';
+import { readTable } from '../../util/tsv/table-pure';
 import { parseBsc5Tsv, parseTyc2HdTsv } from '../classic-ids/classic-ids-parse';
 import {
   CLASSIC_ID_OVERRIDES_FILE,
@@ -190,6 +190,11 @@ describe.skipIf(!ADJUDICATION_INPUTS.every(lfsContentReadable))(
 
 const SRC_SIMBAD_SPTYPE = AT('data/simbad/simbad_sptype.tsv');
 const SPLIT_INPUTS = [...ADJUDICATION_INPUTS, SRC_SIMBAD_SPTYPE];
+const SIMBAD_SPTYPE_OBJECTS = {
+  file: 'data/simbad/simbad_sptype.tsv',
+  columns: ['source_id', 'simbad_main_id'] as const,
+  hint: 'Re-run `pnpm run refresh:simbad-sptype`.',
+};
 
 /** The move set of README.md#which-witness-decides-a-close-pairs-hd: the
  *  rows all four witnesses agree the record's own component is not the one its
@@ -244,14 +249,9 @@ describe.skipIf(!SPLIT_INPUTS.every(lfsContentReadable))('the four-witness split
     // column index reads a neighbouring cell after a re-pull reorders it.
     const sources = new Set([...contested.values()].filter((s) => s !== ''));
     const objectOfSource = new Map<string, string>();
-    for (const { cells, idx } of dataRows(
-      readFileSync(SRC_SIMBAD_SPTYPE, 'utf-8'),
-      ['source_id', 'simbad_main_id'],
-      'simbad_sptype.tsv',
-      'Re-run `pnpm run refresh:simbad-sptype`.',
-    )) {
-      const sourceId = cells[idx.source_id];
-      if (sources.has(sourceId)) objectOfSource.set(sourceId, cells[idx.simbad_main_id]);
+    for (const row of readTable(SIMBAD_SPTYPE_OBJECTS, readFileSync(SRC_SIMBAD_SPTYPE, 'utf-8'))) {
+      const sourceId = row.raw('source_id');
+      if (sources.has(sourceId)) objectOfSource.set(sourceId, row.raw('simbad_main_id'));
     }
 
     move = [];
@@ -346,10 +346,9 @@ describe.skipIf(!ASSERTED_INPUTS.every(lfsContentReadable))(
       }));
 
       objectOfSource = new Map();
-      for (const line of readFileSync(SRC_SIMBAD_SPTYPE, 'utf-8').split('\n').slice(1)) {
-        if (line === '') continue;
-        const cells = line.split('\t');
-        if (hdBySource.has(cells[7])) objectOfSource.set(cells[7], cells[1]);
+      for (const row of readTable(SIMBAD_SPTYPE_OBJECTS, readFileSync(SRC_SIMBAD_SPTYPE, 'utf-8'))) {
+        const sourceId = row.raw('source_id');
+        if (hdBySource.has(sourceId)) objectOfSource.set(sourceId, row.raw('simbad_main_id'));
       }
     });
 

@@ -1,7 +1,7 @@
 // Parser and per-record lookup for data/simbad/simbad_values.tsv — the
 // bibcoded bottom tier of the value cascades in /docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers.
 
-import { dataRows, nonEmpty, parseFloatOrNull, parseIntOrNull } from '../parse/corpus-tsv';
+import { readTable, type TableRow, type TableSpec } from '../../util/tsv/table-pure';
 import {
   emptySimbadNamespaceIndex,
   indexSimbadRow,
@@ -12,15 +12,18 @@ import {
 import { citedParallax, type CitedParallax } from '../cited-parallax';
 import { citedProperMotion, type CitedProperMotion } from '../cited-proper-motion';
 
-const FILE_LABEL = 'data/simbad/simbad_values.tsv';
-const REFRESH_HINT = 'Re-run `pnpm run refresh:simbad-values`.';
+const SIMBAD_VALUES = {
+  file: 'data/simbad/simbad_values.tsv',
+  columns: [
+    'rvz_radvel', 'rvz_type', 'rvz_bibcode',
+    'ra', 'dec', 'coo_bibcode', 'pmra', 'pmdec', 'pm_bibcode',
+    'plx_value', 'plx_err', 'plx_bibcode',
+    'hip', 'source_id', 'tyc', 'gj',
+  ] as const,
+  hint: 'Re-run `pnpm run refresh:simbad-values`.',
+} satisfies TableSpec<string>;
 
-const COLUMNS = [
-  'rvz_radvel', 'rvz_type', 'rvz_bibcode',
-  'ra', 'dec', 'coo_bibcode', 'pmra', 'pmdec', 'pm_bibcode',
-  'plx_value', 'plx_err', 'plx_bibcode',
-  'hip', 'source_id', 'tyc', 'gj',
-] as const;
+type ValuesRow = TableRow<(typeof SIMBAD_VALUES.columns)[number]>;
 
 /** One SIMBAD row's radial velocity, with the bibcode that is its actual
  *  source. */
@@ -68,10 +71,10 @@ export function emptySimbadValueIndex(): SimbadValueIndex {
  *  reads 243,879 km/s. An unbibcoded value cannot arrive (the pull drops the
  *  whole quantity at write time), so the bibcode check here guards a
  *  re-pulled file rather than this one. */
-function parseRv(cells: string[], idx: Record<string, number>): SimbadRadialVelocity | null {
-  if (nonEmpty(cells[idx.rvz_type]) !== 'v') return null;
-  const kmS = parseFloatOrNull(cells[idx.rvz_radvel]);
-  const bibcode = nonEmpty(cells[idx.rvz_bibcode]);
+function parseRv(row: ValuesRow): SimbadRadialVelocity | null {
+  if (row.text('rvz_type') !== 'v') return null;
+  const kmS = row.float('rvz_radvel');
+  const bibcode = row.text('rvz_bibcode');
   if (kmS === null || bibcode === null) return null;
   return { kmS, bibcode };
 }
@@ -86,19 +89,17 @@ function parseRv(cells: string[], idx: Record<string, number>): SimbadRadialVelo
  *  position but no motion is a real shape (the tier keeps the position and
  *  takes a zero tangential term). A PM missing its own bibcode is dropped the
  *  same way, leaving the position standing. */
-function parseAstrometry(
-  cells: string[], idx: Record<string, number>,
-): SimbadAstrometry | null {
-  const raDeg = parseFloatOrNull(cells[idx.ra]);
-  const decDeg = parseFloatOrNull(cells[idx.dec]);
-  const cooBibcode = nonEmpty(cells[idx.coo_bibcode]);
+function parseAstrometry(row: ValuesRow): SimbadAstrometry | null {
+  const raDeg = row.float('ra');
+  const decDeg = row.float('dec');
+  const cooBibcode = row.text('coo_bibcode');
   if (raDeg === null || decDeg === null || cooBibcode === null) return null;
   return {
     raDeg, decDeg, cooBibcode,
     pm: citedProperMotion(
-      parseFloatOrNull(cells[idx.pmra]),
-      parseFloatOrNull(cells[idx.pmdec]),
-      nonEmpty(cells[idx.pm_bibcode]),
+      row.float('pmra'),
+      row.float('pmdec'),
+      row.text('pm_bibcode'),
     ),
   };
 }
@@ -109,27 +110,24 @@ function parseAstrometry(
  *  binding the cascade would then read off the wrong star. */
 export function parseSimbadValuesTsv(text: string): SimbadValueIndex {
   const index = emptySimbadValueIndex();
-  for (const { cells, idx } of dataRows(text, COLUMNS, FILE_LABEL, REFRESH_HINT)) {
+  for (const row of readTable(SIMBAD_VALUES, text)) {
     const keys: SimbadRecordKeys = {
-      sourceId: nonEmpty(cells[idx.source_id]),
-      hip: parseIntOrNull(cells[idx.hip]),
-      tyc: nonEmpty(cells[idx.tyc]),
-      gl: nonEmpty(cells[idx.gj]),
+      sourceId: row.text('source_id'),
+      hip: row.int('hip'),
+      tyc: row.text('tyc'),
+      gl: row.text('gj'),
     };
-    const row: SimbadValueRow = {
-      rv: parseRv(cells, idx),
+    const value: SimbadValueRow = {
+      rv: parseRv(row),
       parallax: citedParallax(
-        parseFloatOrNull(cells[idx.plx_value]),
-        parseFloatOrNull(cells[idx.plx_err]),
-        nonEmpty(cells[idx.plx_bibcode]),
+        row.float('plx_value'),
+        row.float('plx_err'),
+        row.text('plx_bibcode'),
       ),
-      astrometry: parseAstrometry(cells, idx),
+      astrometry: parseAstrometry(row),
     };
-    indexSimbadRow(index, keys, row, (namespace, key) => {
-      throw new Error(
-        `${FILE_LABEL} has two rows keyed ${namespace}=${key}. ${REFRESH_HINT}`,
-      );
-    });
+    indexSimbadRow(index, keys, value, (namespace, key) =>
+      row.fail(`two rows keyed ${namespace}=${key}`));
     index.rowCount++;
   }
   return index;

@@ -67,14 +67,12 @@ describe('parseSimbadValuesTsv', () => {
   });
 
   // The cascade takes `kmS` as finite without re-testing it, so the parser is
-  // where a malformed cell has to become an absent value.
-  it('drops a value no number parses out of', () => {
-    const index = parseSimbadValuesTsv(tsv(
-      row({ rv: '~', bibcode: 'X', hip: '4' }),
-      row({ rv: 'NaN', bibcode: 'X', hip: '5' }),
-    ));
-    expect(lookupSimbadValues(index, { ...NO_KEYS, hip: 4 })?.rv).toBeNull();
-    expect(lookupSimbadValues(index, { ...NO_KEYS, hip: 5 })?.rv).toBeNull();
+  // where a malformed cell has to stop the read.
+  it('throws on a value no number parses out of', () => {
+    expect(() => parseSimbadValuesTsv(tsv(row({ rv: '~', bibcode: 'X', hip: '4' }))))
+      .toThrow(/simbad_values\.tsv:2: rvz_radvel: "~" is not a decimal number/);
+    expect(() => parseSimbadValuesTsv(tsv(row({ rv: 'NaN', bibcode: 'X', hip: '5' }))))
+      .toThrow(/rvz_radvel: "NaN" is not a decimal number/);
   });
 
   // The pull also enumerates by SIMBAD oid, so a row carrying none of the four
