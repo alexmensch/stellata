@@ -1,7 +1,10 @@
 // A self-written TSV's codec: exact header, one decoder for its readers, and
 // one serializer as its only writer. See README.md#artifact-codecs.
 
-import { readTable, tableLineReader, type TableRow, type TableSpec } from './table-pure';
+import type { RowKey } from '../sources/row-ref-pure';
+import {
+  readTable, tableLineReader, type TableLineReader, type TableRow, type TableSpec,
+} from './table-pure';
 
 export function nullableCell(v: string | number | null): string {
   return v === null ? '' : String(v);
@@ -15,26 +18,30 @@ export function byText<R>(text: (r: R) => string): (a: R, b: R) => number {
 /** `by-line` sorts the encoded lines; `as-given` keeps the caller's order. */
 export type ArtifactOrder<R> = 'by-line' | 'as-given' | ((a: R, b: R) => number);
 
-export interface ArtifactSpec<C extends string, R> {
+export interface ArtifactSpec<C extends string, R, K = never> {
   readonly file: string;
   readonly columns: readonly C[];
   readonly hint: string;
   readonly order: ArtifactOrder<R>;
+  readonly rowKey?: RowKey<K>;
   decode(row: TableRow<C>): R;
   encode(record: R): Readonly<Record<C, string>>;
 }
 
-export interface Artifact<C extends string, R> extends ArtifactSpec<C, R> {
+export interface Artifact<C extends string, R, K = never> extends ArtifactSpec<C, R, K> {
+  readonly kind: 'artifact';
   readonly table: TableSpec<C>;
   rows(text: string): Generator<R>;
   parse(text: string): R[];
-  lineReader(onRecord: (record: R) => void): (line: string) => void;
+  lineReader(onRecord: (record: R) => void): TableLineReader;
   /** One record's data line, without its newline: what an append writes. */
   encodeLine(record: R): string;
   serialize(records: readonly R[]): string;
 }
 
-export function defineArtifact<C extends string, R>(spec: ArtifactSpec<C, R>): Artifact<C, R> {
+export function defineArtifact<C extends string, R, K = never>(
+  spec: ArtifactSpec<C, R, K>,
+): Artifact<C, R, K> {
   const table: TableSpec<C> = { file: spec.file, columns: spec.columns, hint: spec.hint, exact: true };
 
   const encodeLine = (record: R): string => {
@@ -54,6 +61,7 @@ export function defineArtifact<C extends string, R>(spec: ArtifactSpec<C, R>): A
 
   return {
     ...spec,
+    kind: 'artifact',
     table,
     rows,
     parse: (text) => [...rows(text)],
