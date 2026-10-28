@@ -197,6 +197,11 @@ async function main() {
     process.exit(1);
   }
   requireExists(SRC_SIMBAD_SAMPLE, 'it is committed (LFS); absence means a broken working tree.');
+  requireExists(SRC_GCVS, 'It is frozen: restore it from the repo (data/gcvs/README.md).');
+  requireExists(SRC_GCVS_XREF, 'It is frozen: restore it from the repo (data/gcvs/README.md).');
+  requireExists(SRC_GAIA_HIP_XMATCH, 'Re-run `pnpm run refresh:gaia-hip`.');
+  requireExists(SRC_HIP_CCDM, 'It is a frozen VizieR slice: restore it from the repo (data/hipparcos/README.md).');
+  requireExists(MULTIPLES_TSV_PATH, 'Re-run `pnpm run build:binaries`.');
 
   sweepStaged(CATALOG_OUTPUTS);
   // The UPDATE_* snapshot-refresh flags rewrite artifacts written at the end
