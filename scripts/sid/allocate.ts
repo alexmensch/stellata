@@ -1,8 +1,8 @@
-// `pnpm run sid:allocate` — the only writer of data/sid/ledger.tsv: resolves
-// every built-artifact object against the frozen ledger and appends mints.
+// `pnpm run sid:allocate` — the only writer of data/sid/ledger.tsv: resolves every built
+// object against the frozen ledger and appends mints, never rewriting a committed line.
 // `pnpm run sid:check` (--check): read-only CI mode — /docs/sid.md#45-ci-guard.
 
-import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { appendFileSync, existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 import {
@@ -266,7 +266,9 @@ async function main(): Promise<void> {
   }
 
   if (result.minted.length > 0) {
-    writeFileSync(LEDGER_PATH, LEDGER.serialize([...ledger, ...result.minted]));
+    const appended = result.minted.map((row) => `${LEDGER.encodeLine(row)}\n`).join('');
+    if (existsSync(LEDGER_PATH)) appendFileSync(LEDGER_PATH, appended);
+    else writeFileSync(LEDGER_PATH, ledgerText + appended);
   }
   if (!existsSync(RETIREMENTS_PATH)) writeFileSync(RETIREMENTS_PATH, retirementsText);
   if (!existsSync(REINSTATEMENTS_PATH)) writeFileSync(REINSTATEMENTS_PATH, reinstatementsText);

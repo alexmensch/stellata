@@ -33,8 +33,9 @@ registry-io.ts            Filesystem access to the committed registry:
                           LedgerUnavailableError on an LFS-stub ledger).
                           Shared by allocate, build-catalog, and the stamp.
 allocate.ts               pnpm run sid:allocate — the ONLY writer of
-                          ledger.tsv, rewritten through LEDGER.serialize
-                          (+ retirements bootstrap +
+                          ledger.tsv, appending each mint as one
+                          LEDGER.encodeLine line and never rewriting a
+                          committed one (+ retirements bootstrap +
                           ledger-head.json). Reads the BUILT artifacts:
                           catalog manifest/chunks, search-index.json,
                           catalog-row-index-map.json, clouds.json,

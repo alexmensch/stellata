@@ -89,10 +89,12 @@ and its parse each have one owner.
   handed lines). So the bytes a reader accepts are the bytes `serialize`
   writes, and `row.rawLine` — the line as written — is what a hash over the
   rows may read: the SID registry's head hash does.
-- `serialize(records)` is the only writer. It refuses a cell holding a tab or
-  newline, orders the rows (`by-line` sorts the encoded lines, a comparator
-  sorts the records, `as-given` keeps the caller's order) and ends with a
-  newline.
+- `serialize(records)` is the only writer of a whole file. It refuses a cell
+  holding a tab or newline, orders the rows (`by-line` sorts the encoded
+  lines, a comparator sorts the records, `as-given` keeps the caller's order)
+  and ends with a newline. `encodeLine(record)` is the same encoding for one
+  row, delimiter check included — what an append-only writer adds to an
+  `as-given` file, byte-identical to the rewrite it replaces.
 - `parse`, `rows` (a generator) and `lineReader` decode through the one
   `decode`. Most codecs decode a typed record — numbers parsed, a closed
   column through `oneOf`, so an unknown value fails at the read rather than

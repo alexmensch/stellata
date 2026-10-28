@@ -32,6 +32,13 @@ describe('defineArtifact', () => {
 
   it('refuses a cell holding a delimiter', () => {
     expect(() => artifact('as-given').serialize([{ key: 'a\tb', n: 1 }])).toThrow(/contains a TSV delimiter/);
+    expect(() => artifact('as-given').encodeLine({ key: 'a\nb', n: 1 })).toThrow(/contains a TSV delimiter/);
+  });
+
+  it('encodeLine writes the line serialize would, so an append matches a rewrite', () => {
+    const a = artifact('as-given');
+    const appended = a.serialize(RECS.slice(0, 1)) + `${a.encodeLine(RECS[1])}\n`;
+    expect(appended).toBe(a.serialize(RECS));
   });
 
   it('demands its own header exactly', () => {

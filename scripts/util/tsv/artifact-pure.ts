@@ -24,6 +24,8 @@ export interface Artifact<C extends string, R> extends ArtifactSpec<C, R> {
   rows(text: string): Generator<R>;
   parse(text: string): R[];
   lineReader(onRecord: (record: R) => void): (line: string) => void;
+  /** One record's data line, without its newline: what an append writes. */
+  encodeLine(record: R): string;
   serialize(records: readonly R[]): string;
 }
 
@@ -51,6 +53,7 @@ export function defineArtifact<C extends string, R>(spec: ArtifactSpec<C, R>): A
     rows,
     parse: (text) => [...rows(text)],
     lineReader: (onRecord) => tableLineReader(table, (row) => onRecord(spec.decode(row))),
+    encodeLine,
     serialize(records) {
       const { order } = spec;
       const sorted = typeof order === 'function' ? [...records].sort(order) : records;
