@@ -35,6 +35,7 @@ import {
 import { parkedRecordKey } from '../distance/parallax/parked-ledger';
 import { intCell, readTable } from '../../util/tsv/table-pure';
 import { nullableCell } from '../../util/tsv/artifact-pure';
+import { applyCellSets, evidenceOf } from '../../util/tsv/cell-corrections-pure';
 import {
   ADDITION_REASONS,
   COMPONENT_REASON_PREFIX,
@@ -178,7 +179,7 @@ export function parseSpineCorrectionsTsv(text: string): SpineCorrectionRow[] {
           + 'so a blank one corrects the Sun',
       );
     }
-    if (cells.evidence.trim() === '') row.fail(`row ${bindingReviewKey(cells)} states no evidence`);
+    evidenceOf(row, 'evidence', bindingReviewKey(cells));
     out.push({ ...cells, op });
   }
   return out;
@@ -216,21 +217,22 @@ export function applySpineCorrections(
     return i;
   };
 
-  const rows = spine.slice();
+  const rows = applyCellSets<SpineRow, SpineCorrectionCell>(
+    spine,
+    corrections.filter((c) => c.op === 'set')
+      .map((c) => ({ key: bindingReviewKey(c), cell: c.cell as SpineCorrectionCell, value: c.value })),
+    {
+      file: SPINE_CORRECTIONS_FILE,
+      target: 'spine',
+      keyOf: bindingReviewKey,
+      get: (row, cell) => row[cell],
+      with: (row, cell, value) => ({ ...row, [cell]: value }),
+    },
+  );
   const foldedTo = new Map<number, number>();
   for (const c of corrections) {
+    if (c.op !== 'fold') continue;
     const i = resolve(bindingReviewKey(c), 'row');
-    if (c.op === 'set') {
-      const cell = c.cell as SpineCorrectionCell;
-      if (rows[i][cell] === c.value) {
-        throw new Error(
-          `${SPINE_CORRECTIONS_FILE}: row ${bindingReviewKey(c)} sets ${c.cell} to the value `
-            + 'the spine already states; remove it',
-        );
-      }
-      rows[i] = { ...rows[i], [cell]: c.value };
-      continue;
-    }
     const survivor = resolve(c.value, 'fold target');
     if (survivor === i) {
       throw new Error(`${SPINE_CORRECTIONS_FILE}: row ${bindingReviewKey(c)} folds onto itself`);
@@ -422,7 +424,7 @@ export function parseBindingDispositionsTsv(text: string): Map<string, BindingDi
     const key = bindingReviewKey(cells);
     for (const column of ['derived_source_id', 'keep_source_id'] as const) row.sourceId(column);
     if (out.has(key)) row.fail(`duplicate record ${key}`);
-    if (cells.evidence.trim() === '') row.fail(`row ${key} states no evidence`);
+    evidenceOf(row, 'evidence', key);
     out.set(key, { ...cells, basis: row.oneOf('basis', BINDING_DISPOSITION_BASES) });
   }
   return out;

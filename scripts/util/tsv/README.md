@@ -22,6 +22,9 @@ scripts/util/tsv/
                               that changed and prints both versions of it.
                               Each folder that owns artifacts calls it
                               once per artifact.
+  cell-corrections-pure.ts    applyCellSets / evidenceOf — a hand-curated
+    (+ test)                  correction file's discipline
+                              (README.md#cell-corrections).
 ```
 
 ## Reading a table
@@ -106,3 +109,20 @@ and its parse each have one owner.
 - Each artifact constant lives in a leaf module that only its readers and its
   writer import ([The step table](../../pipeline/README.md#the-step-table--stepsts),
   "Reachable must mean read").
+
+## Cell corrections
+
+A hand-curated file that rewrites cells of another table — a merge decision
+review found wrong, an upstream cell that is not what its column says — keeps
+one discipline, because a curated row that silently does nothing is worse
+than none:
+
+- **every row states its evidence** — `evidenceOf` fails one that does not;
+- **every `set` keys a row** of the table it corrects, and
+- **every `set` changes the cell** — restating the value already there means
+  the correction is stale, and `applyCellSets` fails it rather than carry it.
+
+`applyCellSets(rows, sets, table)` takes the corrected table's own key,
+getter and copy-with-cell, so it applies to a typed record and to a raw
+cell array alike. Its callers: `data/membership/spine-corrections.tsv`'s
+`set` rows (`../../catalog/membership/`).
