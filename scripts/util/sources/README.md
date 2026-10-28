@@ -19,7 +19,9 @@ scripts/util/sources/
                        `.ts` extension.
   declared-inputs.ts   declaredInputs(closure) — the sources and artifacts an
                        import closure reaches, by importing its declaring
-                       modules; declaredFiles, their repo-relative files.
+                       modules, each classified read / written / both /
+                       unused; isRead, the step's data inputs among them;
+                       declaredFiles, their repo-relative files.
   row-ref-pure.ts      SourceRowRef, RowKey — a cited source row
                        (#sourcerowref).
 ```
@@ -84,9 +86,13 @@ lets a step's data inputs be derived from its closure.
 it — the `build:*` and `fetch:*` targets plus `sid:allocate` and
 `sid:risk-set`, the step kinds in
 [Step kinds](../../pipeline/README.md#step-kinds); reports, audits and
-validators are not steps. In each step's closure every reached source has a
-`.read(` call, every reached artifact one of the artifact reads or a
-`serialize` / `encodeLine`, somewhere other than its declaring module. Across
+validators are not steps. `declaredInputs(closure)` classifies each reached
+declaration by the calls in the closure's other modules: `read` (a source's
+`.read(`, an artifact read), `written` (an artifact's `serialize` /
+`encodeLine`), `both`, or `unused`. A step's data inputs are the `read` and
+`both` ones (`isRead`), so a step never depends on its own output and an
+artifact it reads and rewrites stays an input; the test fails any step with
+an `unused` one. Across
 all of `scripts/` it also fails on a `data/` path literal outside a declaring
 or `*-outputs.ts` module.
 

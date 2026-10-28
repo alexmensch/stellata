@@ -4,10 +4,9 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
-import { declaredInputs, DECLARING_MODULE, type DeclaredInput } from '../scripts/util/sources/declared-inputs';
+import { declaredInputs, DECLARING_MODULE } from '../scripts/util/sources/declared-inputs';
 import { scriptClosure } from '../scripts/util/import-closure';
 import { tsxEntry } from '../scripts/util/import-closure-pure';
-import { escapeRegExp } from '../scripts/util/escape-regexp';
 import { PACKAGE_JSON, REPO_ROOT } from '../scripts/util/paths';
 import { isProductionTs, walkFiles } from './walk-files';
 
@@ -22,25 +21,9 @@ const STEPS = Object.keys(scripts)
   .filter((name) => /^(build|fetch):/.test(name) || MANUAL_TS_STEPS.includes(name))
   .filter((name) => !OUT_OF_PIPELINE.test(tsxEntry(scripts, name)));
 
-/** A read or, for an artifact, a write of `input` somewhere in `texts`. */
-function touches(input: DeclaredInput, texts: readonly string[]): boolean {
-  const n = escapeRegExp(input.name);
-  const pattern = input.value.kind === 'source'
-    ? new RegExp(`\\b${n}\\.read\\(`)
-    : new RegExp(`\\b(readArtifact|artifactRows|artifactText|streamArtifact)\\(\\s*${n}\\b|\\b${n}\\.(serialize|encodeLine)\\(`);
-  return texts.some((t) => pattern.test(t));
-}
-
 describe('source declarations', () => {
   it.each(STEPS)('%s reads every source and artifact its import closure reaches', async (step) => {
-    const closure = await scriptClosure([step]);
-    const inputs = await declaredInputs(closure);
-    const unread = inputs.filter((input) => {
-      const others = [...closure]
-        .filter((m) => m !== input.module && m.endsWith('.ts'))
-        .map((m) => readFileSync(resolve(REPO_ROOT, m), 'utf8'));
-      return !touches(input, others);
-    });
+    const unread = (await declaredInputs(await scriptClosure([step]))).filter(({ use }) => use === 'unused');
     expect(unread.map(({ module, name }) => `${module}#${name}`)).toEqual([]);
   }, 60_000);
 
