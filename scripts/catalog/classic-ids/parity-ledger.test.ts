@@ -12,7 +12,7 @@ import { PARKED_LEDGER } from '../distance/parallax/parked-ledger-tsv';
 import { ROUTE_DISAGREEMENTS } from './route-disagreements-tsv';
 import { REPO_ROOT, lfsContentReadable } from '../../util/paths';
 import { SAMEAS_OVERRIDES } from '../../sid/sameas-source';
-import { readArtifact } from '../../util/sources/source';
+import { isReadable, readArtifact } from '../../util/sources/source';
 import { LEDGER } from '../../sid/ledger-tsv';
 import { INHERITED_SPINE } from '../spine/inherited-spine-tsv';
 import { BSC5 } from './bsc5-source';
@@ -27,7 +27,6 @@ import {
 const ADDITIONS_PATH = resolve(REPO_ROOT, 'data/membership/additions-ledger.tsv');
 const QUEUE_PATH = resolve(REPO_ROOT, 'data/classic-ids/hd_hip_route_disagreements.tsv');
 const REVIEW_PATH = resolve(REPO_ROOT, 'data/classic-ids/hd_hip_route_disagreements_review.tsv');
-const BSC5_PATH = resolve(REPO_ROOT, BSC5.file);
 const SPINE_PATH = resolve(REPO_ROOT, INHERITED_SPINE.file);
 
 const REVIEW_HINT = 'Dispose the row in hd_hip_route_disagreements_review.tsv.';
@@ -70,9 +69,9 @@ describe('HD/HIP route-disagreement review', () => {
   });
 });
 
-const ledgerReadable = lfsContentReadable(resolve(REPO_ROOT, LEDGER.file));
-const bsc5Readable = lfsContentReadable(BSC5_PATH);
-const spineReadable = lfsContentReadable(SPINE_PATH);
+const ledgerReadable = isReadable(LEDGER);
+const bsc5Readable = isReadable(BSC5);
+const spineReadable = isReadable(INHERITED_SPINE);
 
 describe.skipIf(!ledgerReadable)('label delta vs the SID ledger', () => {
   // A spine designation the merge moves off its record stops feeding that

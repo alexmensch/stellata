@@ -1,18 +1,16 @@
-import { resolve } from 'node:path';
-
 import { describe, expect, it } from 'vitest';
 
 import { SHELL_OBJECTS } from '../../../scripts/sid/object-mints-source';
 import { LEDGER } from '../../../scripts/sid/ledger-tsv';
-import { REPO_ROOT, lfsContentReadable } from '../../../scripts/util/paths';
 import { loadRegistry } from '../../../scripts/sid/registry-io';
 import { SHELL_KEYS } from './shell-registry';
 import { SHELL_OBJECT_SIDS } from './shell-object-sids';
+import { isReadable } from '../../../scripts/util/sources/source';
 
 // The append-only ledger is LFS; in the bare CI `test` job it is a pointer
 // stub, so this suite self-skips there and runs for real locally + in the
 // lfs-enabled build-catalog job (mirrors sol-object-sids.test.ts).
-const registry = lfsContentReadable(resolve(REPO_ROOT, LEDGER.file)) ? loadRegistry() : null;
+const registry = isReadable(LEDGER) ? loadRegistry() : null;
 
 const suite = registry ? describe : describe.skip;
 

@@ -1,16 +1,14 @@
-import { resolve } from 'node:path';
-
 import { describe, expect, it } from 'vitest';
 
 import { SOL_OBJECTS } from '../../../scripts/sid/object-mints-source';
 import { LEDGER } from '../../../scripts/sid/ledger-tsv';
-import { REPO_ROOT, lfsContentReadable } from '../../../scripts/util/paths';
 import { loadRegistry } from '../../../scripts/sid/registry-io';
 import { PROBE_MISSIONS } from '../../../scripts/probes/probe-roster';
 import { SOL_BODIES } from './planet-system';
 import { SOL_OBJECT_SIDS } from './sol-object-sids';
+import { isReadable } from '../../../scripts/util/sources/source';
 
-const registry = lfsContentReadable(resolve(REPO_ROOT, LEDGER.file)) ? loadRegistry() : null;
+const registry = isReadable(LEDGER) ? loadRegistry() : null;
 
 const suite = registry ? describe : describe.skip;
 

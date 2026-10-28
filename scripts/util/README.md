@@ -42,8 +42,9 @@ same thing — single-use helpers stay with their consumer.
   `isLfsPointerFile(path)` probes a file's head for one — the state the
   bare CI test job leaves LFS-tracked inputs in — without reading the
   tens of megabytes behind it. `lfsContentReadable(path)` is the
-  present-and-smudged predicate over the probe, and the one every
-  artifact-backed suite gates its `describe.skipIf` on; reach for
+  present-and-smudged predicate over the probe — over a declared file,
+  through `sources/source.ts`'s `isReadable(declared)`, which the presence
+  check and every suite gating on a declaration's file both call; reach for
   `isLfsPointer` only where the text has to be read anyway. Consumers are
   `sources/source.ts`'s presence check, which every declared read goes
   through, and those suites. All three live here rather than in a domain

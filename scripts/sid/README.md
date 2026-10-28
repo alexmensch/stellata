@@ -48,7 +48,7 @@ registry-io.ts            loadRegistry: the ledger, retirements,
                           reinstatements and stored edges, structurally
                           validated, for a read-only consumer. Every file
                           is required; a suite that may meet an LFS-stub
-                          ledger gates on lfsContentReadable itself.
+                          ledger gates on isReadable(LEDGER) itself.
                           Shared by build-catalog and the stamp.
 allocate.ts               pnpm run sid:allocate — the ONLY writer of
                           ledger.tsv, appending each mint as one
@@ -122,9 +122,9 @@ for real in `build-catalog`, checked out with the full history its
 merge-base check reads, and locally.
 
 The LFS-stub predicates themselves (`isLfsPointer`, `isLfsPointerFile`,
-and `lfsContentReadable`, the present-and-smudged gate a `skipIf` takes)
-live in `scripts/util/paths.ts`, not here — see that folder's README for
-why.
+and `lfsContentReadable`) live in `scripts/util/paths.ts`, not here — see
+that folder's README for why; a suite gating on a declared file takes
+`isReadable(declared)` (`scripts/util/sources/`).
 
 ## Designation extraction — where each namespace comes from
 

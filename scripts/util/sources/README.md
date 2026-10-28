@@ -63,6 +63,10 @@ changes it.
 `artifactText(artifact)` is the file as written, for a reader that hashes its
 lines (the SID ledger's head).
 
+`isReadable(declared)` is the presence predicate itself (present and not an
+LFS pointer): the one `openDeclared` checks, and the one a suite that may
+meet an unpulled declaration gates its `skipIf` on.
+
 **Every source is required.** A missing file and an unsmudged LFS pointer are
 one failure — the content is not on disk — and `read` throws naming the file,
 `git lfs pull` and the hint, before any parse runs. No read substitutes an

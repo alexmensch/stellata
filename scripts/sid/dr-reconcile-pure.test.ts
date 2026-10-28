@@ -1,7 +1,5 @@
-import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
-import { REPO_ROOT, lfsContentReadable } from '../util/paths';
 import {
   ACCEPT_MAS,
   MAG_REVIEW_DELTA,
@@ -11,6 +9,7 @@ import {
   type NeighbourhoodRow,
 } from './dr-reconcile-pure';
 import { DR2_NEIGHBOURHOOD, DR2_NEIGHBOURHOOD_REQUEST } from './dr2-neighbourhood-source';
+import { isReadable } from '../util/sources/source';
 
 describe('classifyDrTransition', () => {
   const row = (
@@ -99,7 +98,7 @@ describe('readNeighbourhoodRows', () => {
 // files are pointer stubs (the bare CI test job); runs in the
 // SID-ledger-guard job and locally.
 const available = [DR2_NEIGHBOURHOOD_REQUEST, DR2_NEIGHBOURHOOD]
-  .every((src) => lfsContentReadable(resolve(REPO_ROOT, src.file)));
+  .every((src) => isReadable(src));
 
 describe.skipIf(!available)('DR2→DR3 dry run (committed snapshot)', () => {
   it('reproduces the /docs/sid.md#62-dr2dr3-dry-run-measured-2026-07-07 classification exactly', () => {

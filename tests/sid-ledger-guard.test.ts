@@ -9,8 +9,8 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
-import { REPO_ROOT, lfsContentReadable } from '../scripts/util/paths';
-import { artifactText } from '../scripts/util/sources/source';
+import { REPO_ROOT } from '../scripts/util/paths';
+import { artifactText, isReadable } from '../scripts/util/sources/source';
 import { LEDGER, LEDGER_HEAD_FILE, ledgerFile } from '../scripts/sid/ledger-tsv';
 import { SHELL_OBJECTS, SOL_OBJECTS } from '../scripts/sid/object-mints-source';
 import { REINSTATEMENTS, RETIREMENTS } from '../scripts/sid/registry-source';
@@ -25,7 +25,7 @@ import {
   type LedgerHead,
 } from '../scripts/sid/sid-pure';
 
-const available = lfsContentReadable(resolve(REPO_ROOT, LEDGER.file));
+const available = isReadable(LEDGER);
 
 function git(...args: string[]): string {
   return execFileSync('git', args, {
