@@ -36,7 +36,13 @@ the target that rebuilds or re-pulls the file.
 - **The header resolves by name, in any order**, and a missing column throws.
   So does an empty or headerless file: every input is committed, usually LFS,
   and zero rows means truncated or unsmudged, never an empty dataset. A valid
-  header with no rows yields no rows.
+  header with no rows yields no rows. Blank lines before the header are
+  skipped; a line-fed reader calls `finish()` at the end, which throws when
+  no header ever arrived.
+- **`comments: true` skips every line whose first cell starts with `#`**,
+  before or after the header — a hand-curated file's own commentary. The line
+  numbers errors name stay physical: the reader is fed every line and counts
+  each, so no caller filters lines before handing them over.
 - **Absent and malformed are different states.** `text`, `float` and `int`
   answer null for an empty cell and throw — naming file, line and column — on
   a non-empty cell they cannot parse. `float` takes only a plain decimal

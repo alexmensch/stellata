@@ -73,7 +73,27 @@ describe('readTable', () => {
 
   it('throws on a missing column and on an empty file', () => {
     expect(() => [...readTable(SPEC, 'id\nA\n')]).toThrow('data/t.tsv is missing required columns: v. Re-run x.');
-    expect(() => [...readTable(SPEC, '')]).toThrow(/missing required columns: id, v/);
+    expect(() => [...readTable(SPEC, '')]).toThrow('data/t.tsv has no header row: expected columns id, v. Re-run x.');
+    expect(() => [...readTable(SPEC, '\n\n')]).toThrow(/has no header row/);
+  });
+
+  it('skips blank lines before the header', () => {
+    const rows = [...readTable(SPEC, '\n  \nid\tv\nA\t1\n')];
+    expect(rows.map((r) => [r.raw('id'), r.line])).toEqual([['A', 4]]);
+  });
+
+  it('skips comment lines anywhere when the spec says so, numbering lines physically', () => {
+    const spec = { ...SPEC, comments: true } as const;
+    const text = '# preamble\n#\nid\tv\n# note\nA\t1\n  # indented\nB\t1x\n';
+    const rows = [...readTable(spec, text)];
+    expect(rows.map((r) => [r.raw('id'), r.line])).toEqual([['A', 5], ['B', 7]]);
+    expect(() => rows[1].float('v')).toThrow('data/t.tsv:7: v: "1x" is not a decimal number. Re-run x.');
+    expect(() => [...readTable(spec, '# only a comment\n')]).toThrow(/has no header row/);
+  });
+
+  it('reads a # row as data when the spec does not take comments', () => {
+    const [row] = readTable(SPEC, 'id\tv\n#A\t1\n');
+    expect(row.raw('id')).toBe('#A');
   });
 
   it('names file, line and column on a malformed cell', () => {
@@ -121,5 +141,12 @@ describe('tableLineReader', () => {
     const feed = tableLineReader(SPEC, (r) => seen.push(r.raw('id')));
     for (const line of ['v\tid', '1\tA', '', '2\tB']) feed(line);
     expect(seen).toEqual(['A', 'B']);
+    feed.finish();
+  });
+
+  it('finish throws when no header was fed', () => {
+    const feed = tableLineReader(SPEC, () => {});
+    feed('');
+    expect(() => feed.finish()).toThrow('data/t.tsv has no header row: expected columns id, v. Re-run x.');
   });
 });

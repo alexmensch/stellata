@@ -167,12 +167,12 @@ const SPINE_CORRECTIONS_TABLE = {
   file: SPINE_CORRECTIONS_FILE,
   columns: SPINE_CORRECTION_COLUMNS,
   hint: 'It is committed and hand-curated; do not regenerate it.',
+  comments: true,
 } as const;
 
 export function parseSpineCorrectionsTsv(text: string): SpineCorrectionRow[] {
   const out: SpineCorrectionRow[] = [];
   for (const row of readTable(SPINE_CORRECTIONS_TABLE, text)) {
-    if (row.raw(SPINE_CORRECTION_COLUMNS[0]).startsWith('#')) continue;
     const cells = Object.fromEntries(
       SPINE_CORRECTION_COLUMNS.map((c) => [c, row.raw(c)]),
     ) as Record<(typeof SPINE_CORRECTION_COLUMNS)[number], string>;

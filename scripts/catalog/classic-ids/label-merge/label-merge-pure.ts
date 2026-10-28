@@ -248,6 +248,7 @@ const CLASSIC_ID_OVERRIDES = {
   file: CLASSIC_ID_OVERRIDES_FILE,
   columns: ['gaia_source_id', 'field', 'value'] as const,
   hint: 'Columns are gaia_source_id, field, value (empty value = keep the spine).',
+  comments: true,
 } satisfies TableSpec<string>;
 
 export function parseLabelOverridesTsv(text: string): LabelOverrides {
@@ -256,7 +257,7 @@ export function parseLabelOverridesTsv(text: string): LabelOverrides {
   for (const row of readTable(CLASSIC_ID_OVERRIDES, text)) {
     const sourceId = row.text('gaia_source_id');
     const field = row.text('field');
-    if (sourceId === null || sourceId.startsWith('#') || field === null) continue;
+    if (sourceId === null || field === null) continue;
     if (!known.has(field)) {
       row.fail(`"${field}" is not a merged identifier (${LABEL_FIELDS.join(', ')})`);
     }

@@ -82,10 +82,9 @@ thing and legitimately yields no rows.
 
 Three deliberate departures:
 
-- `gaia-xmatch.ts`'s accumulator skips empty lines before the header and
-  reads `angular_distance` only where the header carries it (a row without
-  one ranks last). Its whole-text parser feeds the same accumulator rather
-  than `readTable`, so an empty file still fails as having no header row.
+- `gaia-xmatch.ts`'s whole-text parser feeds its line-fed accumulator rather
+  than `readTable`; the accumulator's result calls the reader's `finish()`, so
+  an empty file still fails as having no header row.
 - A file this repo writes is read through its `defineArtifact` codec
   (`../../util/tsv/README.md#artifact-codecs`) — the manifest's
   `MEMBERSHIP_MANIFEST`, the spine's `INHERITED_SPINE` and the rest — which

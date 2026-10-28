@@ -2,7 +2,7 @@
 // the chart-mode wings glyph. See /scripts/catalog/multiplicity/README.md#ccdm-double-star-cross-match.
 import { existsSync, readFileSync } from 'node:fs';
 
-import { tableLineReader, type TableSpec } from '../../util/tsv/table-pure';
+import { readTable, type TableSpec } from '../../util/tsv/table-pure';
 import {
   applyDoublesFlag as applyDoublesFlagPure,
   isOpticalDoublePrimary,
@@ -64,11 +64,12 @@ const HIP_CCDM = {
   file: 'data/hipparcos/hip_ccdm.tsv',
   columns: ['HIP', 'CCDM', 'MultFlag'] as const,
   hint: 'Re-fetch from VizieR with -out=HIP,CCDM,MultFlag.',
+  comments: true,
 } satisfies TableSpec<string>;
 
-function isVizierSeparator(line: string): boolean {
-  return line.split('\t').every((c) => /^[-\s]+$/.test(c) && c.includes('-'));
-}
+/** VizieR rules a dash line under its header (after a units line the reader
+ *  already skips as blank); no TableSpec option expresses it. */
+const VIZIER_SEPARATOR = /^-+$/;
 
 export function parseHipCcdm(srcPath: string): Map<string, number[]> {
   const groups = new Map<string, number[]>();
@@ -78,33 +79,30 @@ export function parseHipCcdm(srcPath: string): Map<string, number[]> {
   let scanned = 0, kept = 0, viaOverride = 0;
   let droppedNoHip = 0, droppedNoCcdm = 0, droppedMultFlag = 0;
 
-  const read = tableLineReader({ ...HIP_CCDM, file: srcPath }, (row) => {
+  for (const row of readTable({ ...HIP_CCDM, file: srcPath }, readFileSync(srcPath, 'utf8'))) {
+    if (VIZIER_SEPARATOR.test(row.raw('HIP'))) continue;
     scanned++;
     const hip = row.int('HIP');
-    if (hip === null || hip <= 0) { droppedNoHip++; return; }
+    if (hip === null || hip <= 0) { droppedNoHip++; continue; }
 
     if (KNOWN_VISUAL_DOUBLE_HIPS.has(hip)) {
       viaOverride++;
-      return; // the curated list supplies this system at flag time
+      continue; // the curated list supplies this system at flag time
     }
 
     const ccdm = row.text('CCDM');
-    if (ccdm === null) { droppedNoCcdm++; return; }
+    if (ccdm === null) { droppedNoCcdm++; continue; }
 
     const mf = row.text('MultFlag');
     if (mf !== 'C' && mf !== 'G' && mf !== 'O') {
       droppedMultFlag++;
-      return;
+      continue;
     }
 
     const list = groups.get(ccdm);
     if (list) list.push(hip);
     else groups.set(ccdm, [hip]);
     kept++;
-  });
-  for (const line of readFileSync(srcPath, 'utf8').split(/\r?\n/)) {
-    if (!line.trim() || line.startsWith('#') || isVizierSeparator(line)) continue;
-    read(line);
   }
 
   console.log(

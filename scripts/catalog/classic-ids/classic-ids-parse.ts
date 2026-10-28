@@ -93,12 +93,12 @@ const CROSS_INDEX_CORRECTIONS = {
   file: CROSS_INDEX_CORRECTIONS_FILE,
   columns: ['hd', 'belongs_to'] as const,
   hint: 'Restore it from git — it is hand-curated, not generated.',
+  comments: true,
 } satisfies TableSpec<string>;
 
 export function parseCrossIndexCorrectionsTsv(text: string): CrossIndexCorrection[] {
   const out: CrossIndexCorrection[] = [];
   for (const row of readTable(CROSS_INDEX_CORRECTIONS, text)) {
-    if (row.raw('hd').startsWith('#')) continue;
     const hd = row.int('hd');
     const belongsTo = row.int('belongs_to');
     if (hd === null || belongsTo === null) {

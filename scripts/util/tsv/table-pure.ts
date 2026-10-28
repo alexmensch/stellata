@@ -12,6 +12,7 @@ export interface TableSpec<C extends string> {
   /** Header must equal `columns` byte for byte and every row carry exactly
    *  that many cells: the contract for a file this repo writes itself. */
   readonly exact?: boolean;
+  readonly comments?: true;
 }
 
 const DECIMAL = /^[+-]?(\d+\.?\d*|\.\d+)([eE][+-]?\d+)?$/;
@@ -186,38 +187,57 @@ function headerIndex<C extends string>(spec: TableSpec<C>, headerLine: string): 
   return idx;
 }
 
-/** The first line resolves the header and yields null, as does a blank line;
- *  every other line becomes a row. */
-function lineParser<C extends string>(spec: TableSpec<C>): (line: string) => TableRow<C> | null {
+const COMMENT = /^\s*#/;
+
+/** Every line fed counts toward the line number an error names, so it must
+ *  be fed every physical line. */
+function lineParser<C extends string>(spec: TableSpec<C>): {
+  parse(line: string): TableRow<C> | null;
+  finish(): void;
+} {
   let idx: Record<C, number> | null = null;
   let lineNo = 0;
-  return (line) => {
-    lineNo++;
-    if (idx === null) {
-      idx = headerIndex(spec, line);
-      return null;
-    }
-    if (line === '' || (!spec.exact && line.trim() === '')) return null;
-    const cells = line.split('\t');
-    if (spec.exact && cells.length !== spec.columns.length) {
-      throw new Error(
-        `${spec.file}:${lineNo}: row has ${cells.length} cells, expected ${spec.columns.length}. ${spec.hint}`,
-      );
-    }
-    return new TableRow(spec, idx, cells, lineNo);
+  return {
+    parse(line) {
+      lineNo++;
+      if (spec.comments && COMMENT.test(line)) return null;
+      if (idx === null) {
+        if (!spec.exact && line.trim() === '') return null;
+        idx = headerIndex(spec, line);
+        return null;
+      }
+      if (line === '' || (!spec.exact && line.trim() === '')) return null;
+      const cells = line.split('\t');
+      if (spec.exact && cells.length !== spec.columns.length) {
+        throw new Error(
+          `${spec.file}:${lineNo}: row has ${cells.length} cells, expected ${spec.columns.length}. ${spec.hint}`,
+        );
+      }
+      return new TableRow(spec, idx, cells, lineNo);
+    },
+    finish() {
+      if (idx === null) {
+        throw new Error(`${spec.file} has no header row: expected columns ${spec.columns.join(', ')}. ${spec.hint}`);
+      }
+    },
   };
+}
+
+export interface TableLineReader {
+  (line: string): void;
+  finish(): void;
 }
 
 /** Fed one line at a time, for a table too large to hold as one string. */
 export function tableLineReader<C extends string>(
   spec: TableSpec<C>,
   onRow: (row: TableRow<C>) => void,
-): (line: string) => void {
-  const parse = lineParser(spec);
-  return (line) => {
+): TableLineReader {
+  const { parse, finish } = lineParser(spec);
+  return Object.assign((line: string) => {
     const row = parse(line);
     if (row !== null) onRow(row);
-  };
+  }, { finish });
 }
 
 /** Every data row of `text`, walked rather than split: several inputs run to
@@ -226,7 +246,7 @@ export function* readTable<C extends string>(
   spec: TableSpec<C>,
   text: string,
 ): Generator<TableRow<C>> {
-  const parse = lineParser(spec);
+  const { parse, finish } = lineParser(spec);
   let start = 0;
   do {
     const end = text.indexOf('\n', start);
@@ -235,4 +255,5 @@ export function* readTable<C extends string>(
     if (row !== null) yield row;
     start = stop + 1;
   } while (start <= text.length);
+  finish();
 }

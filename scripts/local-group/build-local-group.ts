@@ -8,7 +8,7 @@ import { fileURLToPath } from 'node:url';
 import { parse } from 'csv-parse/sync';
 
 import { emitArtifacts, runStep, sweepStaged } from '../util/emit-artifacts';
-import { tableLineReader, type TableRow, type TableSpec } from '../util/tsv/table-pure';
+import { readTable, type TableRow, type TableSpec } from '../util/tsv/table-pure';
 import { LOCAL_GROUP_OUTPUTS } from './local-group-outputs';
 import {
   applyAliasMeta,
@@ -80,34 +80,17 @@ const OVERRIDES_OPTIONAL = [
 ] as const;
 type OverridesColumn = (typeof OVERRIDES_REQUIRED)[number] | (typeof OVERRIDES_OPTIONAL)[number];
 
-/** `#` lines and blank lines are dropped before the table reader sees them,
- *  so the first line left is the header. */
-function forEachCuratedLine(tsv: string, onLine: (line: string) => void): void {
-  for (const raw of tsv.split(/\r?\n/)) {
-    if (!raw.trim() || raw.startsWith('#')) continue;
-    onLine(raw);
-  }
-}
+const OVERRIDES = {
+  file: OVERRIDES_FILE,
+  columns: OVERRIDES_REQUIRED,
+  optional: OVERRIDES_OPTIONAL,
+  hint: OVERRIDES_HINT,
+  comments: true,
+} satisfies TableSpec<OverridesColumn>;
 
 /** Schema and per-column semantics: /data/local-group/README.md#override-schema. */
 export function parseOverrides(tsv: string): OverrideRow[] {
-  const out: OverrideRow[] = [];
-  let read: ((line: string) => void) | null = null;
-  forEachCuratedLine(tsv, (line) => {
-    if (read === null) {
-      read = tableLineReader(
-        {
-          file: OVERRIDES_FILE,
-          columns: OVERRIDES_REQUIRED,
-          optional: OVERRIDES_OPTIONAL,
-          hint: OVERRIDES_HINT,
-        } satisfies TableSpec<OverridesColumn>,
-        (row) => out.push(overrideRow(row)),
-      );
-    }
-    read(line);
-  });
-  return out;
+  return [...readTable(OVERRIDES, tsv)].map(overrideRow);
 }
 
 function overrideRow(row: TableRow<OverridesColumn>): OverrideRow {
@@ -183,11 +166,11 @@ const ALIASES = {
   file: 'data/local-group/aliases.tsv',
   columns: ['name', 'type', 'aliases', 'canonical'] as const,
   hint: 'It is hand-curated; see data/local-group/README.md.',
-};
+  comments: true,
+} satisfies TableSpec<string>;
 
 export function parseAliases(tsv: string): AliasRow[] {
-  const out: AliasRow[] = [];
-  const read = tableLineReader(ALIASES, (row) => {
+  return [...readTable(ALIASES, tsv)].map((row) => {
     const name = row.text('name') ?? '';
     const type = row.text('type');
     if (type === null) return row.fail(`'${name}' has an empty type`);
@@ -199,15 +182,13 @@ export function parseAliases(tsv: string): AliasRow[] {
     if (canonical && !aliases.includes(canonical)) {
       row.fail(`'${name}' promotes '${canonical}', which is not one of its aliases`);
     }
-    out.push({
+    return {
       name,
       type,
       aliases,
       ...(canonical ? { canonical } : {}),
-    });
+    };
   });
-  forEachCuratedLine(tsv, read);
-  return out;
 }
 
 /** Trims numeric precision so repeat builds produce stable diffs. */

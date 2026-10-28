@@ -77,7 +77,7 @@ describe('selectMagnitudeTerm', () => {
   });
 
   it('throws on an empty file rather than reading it as a term of no rows', () => {
-    expect(() => selectMagnitudeTerm('', 11)).toThrow(/missing required columns/);
+    expect(() => selectMagnitudeTerm('', 11)).toThrow(/has no header row/);
   });
 
   it('yields no rows from a valid header alone', () => {

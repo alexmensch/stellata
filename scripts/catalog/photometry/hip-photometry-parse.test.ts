@@ -42,6 +42,6 @@ describe('hip-photometry-parse / parseHipPhotometryTsv', () => {
   it('throws on an empty file rather than yielding an empty gate', () => {
     // An empty map would silently disable the binding gate, which is the
     // failure this parser exists to make loud.
-    expect(() => parseHipPhotometryTsv('')).toThrow(/missing required columns/);
+    expect(() => parseHipPhotometryTsv('')).toThrow(/has no header row/);
   });
 });

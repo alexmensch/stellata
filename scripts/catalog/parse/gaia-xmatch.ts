@@ -43,13 +43,11 @@ const TYC_SPEC: BestNeighbourSpec<string> = {
 
 /** Line-fed accumulator so the whole-text parser and the streaming reader
  *  share one implementation. `keep`, when given, admits only those keys —
- *  the TYC table is 2.5 M rows read for a ~350 k-row join. Its two
- *  departures from readTable: README.md#tsv-header-resolution. */
+ *  the TYC table is 2.5 M rows read for a ~350 k-row join. */
 function bestNeighbourAccumulator<K>(
   spec: BestNeighbourSpec<K>,
   keep?: ReadonlySet<K>,
 ) {
-  let read: ((line: string) => void) | null = null;
   const best = new Map<K, { ang: number; src: string }>();
 
   const fold = (row: TableRow<string>): void => {
@@ -65,26 +63,15 @@ function bestNeighbourAccumulator<K>(
     if (!prev || ang < prev.ang) best.set(key, { ang, src: gaiaRaw });
   };
 
+  const read = tableLineReader(
+    { file: spec.file, columns: [spec.keyColumn, GAIA_COL], optional: [ANG_COL], hint: spec.hint },
+    fold,
+  );
+
   return {
-    line(line: string): void {
-      if (!line) return;
-      if (read === null) {
-        read = tableLineReader(
-          { file: spec.file, columns: [spec.keyColumn, GAIA_COL], optional: [ANG_COL], hint: spec.hint },
-          fold,
-        );
-      }
-      read(line);
-    },
+    line: read,
     result(): Map<K, string> {
-      // A file that never yielded a header is a truncated or unsmudged LFS
-      // input, not an empty cross-walk. Returning an empty map instead would
-      // silently zero every backfill this table feeds.
-      if (read === null) {
-        throw new Error(
-          `gaia xmatch: no header row — expected columns ${spec.keyColumn} + ${GAIA_COL}`,
-        );
-      }
+      read.finish();
       const out = new Map<K, string>();
       for (const [key, { src }] of best) out.set(key, src);
       return out;
