@@ -72,11 +72,12 @@ describe('parseOverrides', () => {
     expect(parseOverrides(tsv)).toHaveLength(1);
   });
 
-  it('throws on a malformed header (wrong column order or missing required columns)', () => {
-    expect(() => parseOverrides('name\tfoo\tbar\n')).toThrow(/malformed header/);
+  it('throws on a header missing a required column', () => {
+    expect(() => parseOverrides('name\tfoo\tbar\n'))
+      .toThrow(/overrides\.tsv is missing required columns: a_pc, b_pc, c_pc, orient, source/);
     expect(() =>
       parseOverrides('name\ta_pc\tb_pc\tc_pc\torient\twrong\n'),
-    ).toThrow(/header column/);
+    ).toThrow(/missing required columns: source/);
   });
 
   it('parses the emission columns by header name (LMC-shaped disc row)', () => {
@@ -115,7 +116,7 @@ describe('parseOverrides', () => {
 
   it('throws on a non-numeric value in a numeric emission column', () => {
     const tsv = `${FULL_HEADER}\nX\t1\t1\t1\tlos\tx\t\t\t\tbright\t\t\t\t\t\t\t\t\n`;
-    expect(() => parseOverrides(tsv)).toThrow(/non-numeric m_v 'bright'/);
+    expect(() => parseOverrides(tsv)).toThrow(/overrides\.tsv:2: m_v: "bright" is not a decimal number/);
   });
 });
 
@@ -333,10 +334,11 @@ describe('parseAliases + type/alias plumbing', () => {
   });
   it('throws on a malformed header or empty type', () => {
     expect(() => parseAliases('name\twrong\taliases\tcanonical\nX\tY\t\n'))
-      .toThrow(/malformed header/);
+      .toThrow(/missing required columns: type/);
     // The pre-canonical 3-column header no longer parses — a stale TSV
     // would silently ship un-promoted names.
-    expect(() => parseAliases('name\ttype\taliases\nX\tY\t\n')).toThrow(/malformed header/);
+    expect(() => parseAliases('name\ttype\taliases\nX\tY\t\n'))
+      .toThrow(/missing required columns: canonical/);
     expect(() => parseAliases(`${HEADER}X\t\t\n`)).toThrow(/empty type/);
   });
   it('throws when a promotion names a designation the row does not list', () => {
