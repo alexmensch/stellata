@@ -363,13 +363,15 @@ can never silently re-point a synth-keyed SID at a different star.
 Gaia source_ids are **not stable across data releases**. Mitigation
 is structural, then procedural:
 
-- **Structural (98.4% of the catalogue):** every class holding a
+- **Structural (39% of ledger rows on 2026-10-28):** every class holding a
   non-Gaia stable designation (hip/hd/hr/gl/synth/sol buckets in
   [§ 4.2](#42-canonical-key--stability-first)) has **zero SID churn by construction** — the SID is pinned
   by the stable key; a DR bump merely attaches the new `gaia_dr4:`
   designation via the recomputed intra-release cross-walks
   ([Refreshing data when DR4 lands](/scripts/refresh/README.md#refreshing-data-when-dr4--new-at-hyg-lands)).
-- **Procedural (the 5,085 `gaia_*`-keyed rows, 1.56%):** carried
+- **Procedural (the `gaia_*`-keyed rows: 600,304 of 984,015, 61%, on
+  2026-10-28; `pnpm run sid:risk-set` prints the current non-retired
+  count):** carried
   forward via Gaia's official neighbourhood cross-match table for the
   transition (DR2→DR3: `gaiadr3.dr2_neighbourhood`; DPAC publishes
   the analogue for each release).
@@ -431,10 +433,13 @@ per [§ 6.1](#61-procedure) with `ACCEPT_MAS = 400`.
 
 Read-outs:
 
-- **Worst-case SID churn on a real DR transition is bounded at 233
-  objects = 0.072% of the catalogue.** Everything else is either
-  structurally immune (98.4%) or carries forward mechanically
-  (95.4% of the risk set, zero contested).
+- **At the 2026-07-06 catalogue (5,085-id risk set), worst-case SID
+  churn was 233 objects = 0.072% of the catalogue.** Everything else
+  was either structurally immune (98.4%) or carried forward
+  mechanically (95.4% of the risk set, zero contested). The risk set
+  has since grown with membership (596,944 non-retired ids on
+  2026-10-28): at this dry run's 4.58% drop rate, the next transition
+  would drop about 27,000.
 - 7.9% of *cleanly matched* sources changed source_id anyway
   (383 of 4,852) — direct empirical confirmation that a raw Gaia
   source_id is not a stable wire key, i.e. the SID indirection is
