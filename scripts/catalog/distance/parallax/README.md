@@ -23,11 +23,12 @@ scripts/catalog/distance/parallax/
                                 ../../parse/read-stars-inputs.ts.
   simbad-sourced-ledger.ts      The `simbad_plx` records, by the two keys a
     (+ test)                    SIMBAD-based validator joins on — /docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers's
-                                validation independence. Written by
+                                validation independence, and the file's codec
+                                (SIMBAD_SOURCED_DISTANCES). Written by
                                 build-catalog.ts, read by
                                 ../../validate/validate-simbad-sample.ts.
-  parked-ledger.ts (+ test)     The /docs/catalog-driver.md#61-record-parity dropped list — where it is committed,
-                                its closed reason enum, and the identifier key
+  parked-ledger.ts (+ test)     The /docs/catalog-driver.md#61-record-parity dropped list — its codec
+                                (PARKED_LEDGER), its closed reason enum, and the identifier key
                                 the parity gate matches it on. The producer is
                                 build-catalog.ts, the consumer
                                 ../../membership/membership-manifest-gate.test.ts.

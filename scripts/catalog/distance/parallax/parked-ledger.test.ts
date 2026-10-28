@@ -1,12 +1,18 @@
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { describe, it, expect } from 'vitest';
+
+import { REPO_ROOT, lfsContentReadable } from '../../../util/paths';
 
 import {
   PARKED_REASONS,
-  formatParkedRecordsTsv,
+  PARKED_LEDGER,
   parkedRecordKey,
   parseParkedRecordsTsv,
   type ParkedRecord,
 } from './parked-ledger';
+
+const COMMITTED = resolve(REPO_ROOT, PARKED_LEDGER.file);
 
 const SIGMA_ORI: ParkedRecord = {
   tyc: '4771-1188-1', hip: 26549, hd: 37468, gl: null,
@@ -31,7 +37,7 @@ const PLACELESS: ParkedRecord = {
 describe('parked-ledger', () => {
   it('round-trips a written ledger back to the keys the parity gate matches on', () => {
     const rows = parseParkedRecordsTsv(
-      formatParkedRecordsTsv([SIGMA_ORI, NO_IDS, UNLIT, PLACELESS]),
+      PARKED_LEDGER.serialize([SIGMA_ORI, NO_IDS, UNLIT, PLACELESS]),
     );
     expect(rows).toHaveLength(4);
     expect(rows.map((r) => r.reason).sort()).toEqual([...PARKED_REASONS].sort());
@@ -42,7 +48,7 @@ describe('parked-ledger', () => {
   });
 
   it('carries a park the V cascade caused, not only the two parallax reasons', () => {
-    const [row] = parseParkedRecordsTsv(formatParkedRecordsTsv([UNLIT]));
+    const [row] = parseParkedRecordsTsv(PARKED_LEDGER.serialize([UNLIT]));
     expect(row.reason).toBe('no_v_magnitude');
     expect(row.recordKey).toBe(parkedRecordKey({
       tyc: '1234-567-1', hip: '', hd: '999999', gl: '',
@@ -52,7 +58,7 @@ describe('parked-ledger', () => {
 
   it('carries a park no direction tier could place — lit and given a distance '
     + 'by a bound sibling, with nothing to point it at', () => {
-    const [row] = parseParkedRecordsTsv(formatParkedRecordsTsv([PLACELESS]));
+    const [row] = parseParkedRecordsTsv(PARKED_LEDGER.serialize([PLACELESS]));
     expect(row.reason).toBe('no_position');
     expect(row.recordKey).toBe(parkedRecordKey({
       tyc: '', hip: '10270', hd: '', gl: '', gaia_source_id: '',
@@ -61,13 +67,20 @@ describe('parked-ledger', () => {
 
   it('keys a row carrying no identifier at all — the ledger still has to name '
     + 'it, and an empty tuple is that name', () => {
-    const [row] = parseParkedRecordsTsv(formatParkedRecordsTsv([NO_IDS]));
+    const [row] = parseParkedRecordsTsv(PARKED_LEDGER.serialize([NO_IDS]));
     expect(row.recordKey).toBe(parkedRecordKey({
       tyc: '', hip: '', hd: '', gl: '', gaia_source_id: '',
     }));
   });
 
   it('refuses a file whose columns moved rather than reading the wrong cells', () => {
-    expect(() => parseParkedRecordsTsv('hip\treason\n1\tx\n')).toThrow(/unexpected header/);
+    expect(() => parseParkedRecordsTsv('hip\treason\n1\tx\n')).toThrow(/header mismatch/);
+  });
+});
+
+describe.skipIf(!lfsContentReadable(COMMITTED))('parked ledger — the committed file', () => {
+  it('round-trips byte for byte', () => {
+    const text = readFileSync(COMMITTED, 'utf8');
+    expect(PARKED_LEDGER.serialize(PARKED_LEDGER.parse(text)) === text).toBe(true);
   });
 });

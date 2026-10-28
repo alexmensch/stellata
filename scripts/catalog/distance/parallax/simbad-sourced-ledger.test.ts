@@ -1,13 +1,19 @@
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { describe, it, expect } from 'vitest';
 
+import { REPO_ROOT, lfsContentReadable } from '../../../util/paths';
+
 import {
-  formatSimbadSourcedDistancesTsv,
+  SIMBAD_SOURCED_DISTANCES,
   parseSimbadSourcedDistancesTsv,
 } from './simbad-sourced-ledger';
 
+const COMMITTED = resolve(REPO_ROOT, SIMBAD_SOURCED_DISTANCES.file);
+
 describe('simbad-sourced-ledger', () => {
   it('round-trips both join keys, so either match route excludes the record', () => {
-    const keys = parseSimbadSourcedDistancesTsv(formatSimbadSourcedDistancesTsv([
+    const keys = parseSimbadSourcedDistancesTsv(SIMBAD_SOURCED_DISTANCES.serialize([
       { gaiaSourceId: '4343066192373820800', hip: 78727 },
       { gaiaSourceId: null, hip: 12345 },
       { gaiaSourceId: '1118916397395366656', hip: null },
@@ -21,13 +27,20 @@ describe('simbad-sourced-ledger', () => {
   });
 
   it('reads an empty list as excluding nothing rather than as a parse failure', () => {
-    const keys = parseSimbadSourcedDistancesTsv(formatSimbadSourcedDistancesTsv([]));
+    const keys = parseSimbadSourcedDistancesTsv(SIMBAD_SOURCED_DISTANCES.serialize([]));
     expect(keys.gaia.size).toBe(0);
     expect(keys.hip.size).toBe(0);
   });
 
   it('refuses a file whose columns moved rather than reading the wrong cells', () => {
     expect(() => parseSimbadSourcedDistancesTsv('hip\tgaia_source_id\n1\t2\n'))
-      .toThrow(/unexpected header/);
+      .toThrow(/header mismatch/);
+  });
+});
+
+describe.skipIf(!lfsContentReadable(COMMITTED))('simbad-sourced ledger — the committed file', () => {
+  it('round-trips byte for byte', () => {
+    const text = readFileSync(COMMITTED, 'utf8');
+    expect(SIMBAD_SOURCED_DISTANCES.serialize(SIMBAD_SOURCED_DISTANCES.parse(text)) === text).toBe(true);
   });
 });

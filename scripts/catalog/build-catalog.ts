@@ -114,12 +114,12 @@ import {
   PARKED_LEDGER_FILE,
   PARKED_COUNT_KEY,
   PARKED_REASONS,
-  formatParkedRecordsTsv,
+  PARKED_LEDGER,
   type ParkedRecord,
 } from './distance/parallax/parked-ledger';
 import {
   SIMBAD_SOURCED_DISTANCES_FILE,
-  formatSimbadSourcedDistancesTsv,
+  SIMBAD_SOURCED_DISTANCES,
 } from './distance/parallax/simbad-sourced-ledger';
 import {
   MEMBERSHIP_MANIFEST_TSV,
@@ -170,7 +170,7 @@ const CATALOG_STAMP = stampPath('catalog');
  *  a membership change, and Gaia DR4 should empty most of it. */
 function parkedRecordsTsv(parked: readonly ParkedRecord[]): string {
   console.log(`  parked (record parity): ${parked.length} → ${PARKED_LEDGER_FILE}`);
-  return formatParkedRecordsTsv(parked);
+  return PARKED_LEDGER.serialize(parked);
 }
 
 /** Validation independence (/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers), made checkable: a record whose distance came
@@ -184,7 +184,7 @@ function simbadSourcedDistancesTsv(stars: readonly Star[]): string {
   console.log(
     `  SIMBAD-sourced distances: ${rows.length} → ${SIMBAD_SOURCED_DISTANCES_FILE}`,
   );
-  return formatSimbadSourcedDistancesTsv(rows);
+  return SIMBAD_SOURCED_DISTANCES.serialize(rows);
 }
 
 async function main() {
