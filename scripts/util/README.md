@@ -45,21 +45,12 @@ same thing — single-use helpers stay with their consumer.
   present-and-smudged predicate over the probe, and the one every
   artifact-backed suite gates its `describe.skipIf` on; reach for
   `isLfsPointer` only where the text has to be read anyway. Consumers are
-  the SID registry readers and those suites. All three live here rather
-  than in `sid/sid-pure.ts` so this module stays a dependency leaf: the
-  SID folder imports `REPO_ROOT` from it, so the reverse edge would put
-  a domain module under every consumer of a path helper.
-  `requireExists(path, refreshHint)` / `readRequired(path, refreshHint)` are the
-  build scripts' hard-fail on a missing input: they name `git lfs pull` and the
-  file's own refresh target, because the parsers downstream fail on a pointer
-  stub with a header error that mentions neither. Both the classic-ID overlay
-  build and the astrometry request read the same four cross-walk inputs, which
-  is why the guard is here and not in either.
+  `sources/source.ts`'s presence check, which every declared read goes
+  through, and those suites. All three live here rather than in a domain
+  module so this module stays a dependency leaf: everything imports
+  `REPO_ROOT` from it.
   `paths.test.ts` pins the pointer-probe cases.
-  **No data paths live here.** `ATHYG_CSV` used to, back when three folders
-  read the catalogue; the astrometry request moved onto the membership
-  manifest and the boundary-epoch cross-check is the last reader left, so the
-  literal sits in that suite ([Consumed by](/data/athyg/README.md#consumed-by)).
+  **No data paths live here**: each is a declaration (`sources/`).
 - `build-stamp.ts` / `build_stamp.py` — the content-hash skip gate
   ([Preprocessor idempotency](../README.md#preprocessor-idempotency)): `fileHashes` maps each file's
   repo-relative path to its sha1, `null` when absent, so an input's arrival is
