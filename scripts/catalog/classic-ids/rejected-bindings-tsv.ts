@@ -2,6 +2,7 @@
 
 import { compareSourceIds } from '../../util/tsv/table-pure';
 import { defineArtifact, nullableCell } from '../../util/tsv/artifact-pure';
+import { GATE_REASONS, type GateReason } from '../membership/binding/binding-gate-pure';
 import { PRINTED_V_TIERS, type PrintedVVia } from '../photometry/v-magnitude-pure';
 
 /** One overlay binding the gate refused, as the review file prints it. */
@@ -11,7 +12,7 @@ export interface RejectedBindingRow {
   vMag: number | null;
   vVia: PrintedVVia | null;
   gMag: number | null;
-  reason: 'mag' | 'sibling';
+  reason: GateReason;
   designations: string;
 }
 
@@ -34,7 +35,7 @@ export const REJECTED_BINDINGS = defineArtifact({
     vMag: row.float('v_mag'),
     vVia: row.raw('v_via') === '' ? null : row.oneOf('v_via', PRINTED_V_TIERS),
     gMag: row.float('g_mag'),
-    reason: row.oneOf('reason', ['mag', 'sibling'] as const),
+    reason: row.oneOf('reason', GATE_REASONS),
     designations: row.raw('designations'),
   }),
   encode: (r) => ({

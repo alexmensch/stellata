@@ -10,7 +10,7 @@ import {
 import {
   type ClassicIdOverlay,
 } from '../classic-ids/classic-id-overlay-tsv';
-import type { BindingEvidence } from './binding/binding-gate-pure';
+import type { BindingEvidence, GateReason } from './binding/binding-gate-pure';
 import {
   BINDING_SOURCES,
   bindingCandidates,
@@ -315,7 +315,7 @@ export interface MembershipCounts extends LabelMergeCounts {
    *  cited basis alone. */
   dispositionAsserted: number;
   /** Candidates a gate refused, the winner's losing rivals included. */
-  derivedRejected: Record<'mag' | 'sibling', number>;
+  derivedRejected: Record<GateReason, number>;
   /** Spine rows with a candidate and no printed V to weigh it against. */
   derivedUngateable: number;
   /** Candidates weighed with no row in the astrometry pull. Pinned at zero —

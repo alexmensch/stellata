@@ -164,7 +164,8 @@ export function bindingEvidence(
   };
 }
 
-export type GateReason = 'mag' | 'sibling';
+export const GATE_REASONS = ['mag', 'sibling'] as const;
+export type GateReason = (typeof GATE_REASONS)[number];
 
 /** Why a candidate's G could not be held against a printed V: the row has no
  *  printed V, the astrometry pull returned no row for the source (the request
