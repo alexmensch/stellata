@@ -17,14 +17,12 @@ import {
   indexSimbadSources,
 } from '../membership/binding/binding-derivation-pure';
 import {
-  MEMBERSHIP_MANIFEST_FILE,
   SPINE_CORRECTIONS_FILE,
   additionItemCells,
   applySpineCorrections,
-  iterManifestTsv,
   parseSpineCorrectionsTsv,
 } from '../membership/membership-manifest-pure';
-import { isMagnitudeTermRow } from '../membership/magnitude-term/magnitude-term-pure';
+import { MEMBERSHIP_MANIFEST, MEMBERSHIP_MANIFEST_FILE } from '../membership/membership-manifest-tsv';
 import { printedVLookups } from '../photometry/v-magnitude-pure';
 import { INHERITED_SPINE_FILE, parseSpineTsv } from '../spine/inherited-spine-pure';
 import { indexCns5 } from '../spine/primaries-audit-pure';
@@ -42,11 +40,11 @@ async function main(): Promise<void> {
   const ids = new Set<string>();
   let rows = 0;
   let withoutSourceId = 0;
-  for (const row of iterManifestTsv(readRequired(SRC_MANIFEST, MANIFEST_HINT))) {
-    if (isMagnitudeTermRow(row)) continue;
+  for (const row of MEMBERSHIP_MANIFEST.rows(readRequired(SRC_MANIFEST, MANIFEST_HINT))) {
+    if (row.term === 'magnitude') continue;
     rows++;
-    if (row.gaia_source_id === '') withoutSourceId++;
-    else ids.add(row.gaia_source_id);
+    if (row.gaiaSourceId === null) withoutSourceId++;
+    else ids.add(row.gaiaSourceId);
   }
   const membership = ids.size;
 

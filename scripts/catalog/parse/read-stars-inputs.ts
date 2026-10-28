@@ -49,7 +49,7 @@ import {
   emptyPairMemberParallaxIndex,
   type PairMemberParallaxIndex,
 } from '../distance/parallax/pair-member-parallax';
-import { MEMBERSHIP_MANIFEST_FILE } from '../membership/membership-manifest-pure';
+import { MEMBERSHIP_MANIFEST_FILE } from '../membership/membership-manifest-tsv';
 import {
   MAGNITUDE_PULL_TSV,
   readMagnitudeTermAstrometry,

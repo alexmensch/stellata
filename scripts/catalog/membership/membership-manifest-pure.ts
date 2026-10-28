@@ -51,48 +51,34 @@ import {
 } from '../spine/primaries-audit-pure';
 import {
   UnionFind,
-  canonicalKeyOf,
   compareDesignations,
-  starDesignations,
   type SameasEdge,
 } from '../../sid/sid-pure';
+import {
+  BINDING_CLASSES,
+  MANIFEST_VALUE_SEPARATOR,
+  MEMBERSHIP_MANIFEST,
+  manifestDesignations,
+  manifestRecord,
+  sortManifestRecords,
+  type BindingClass,
+  type ManifestColumn,
+  type ManifestRecord,
+} from './membership-manifest-tsv';
 import {
   magnitudeTermNewcomers,
   type MagnitudeTermCounts,
   type MagnitudeTermSelection,
 } from './magnitude-term/magnitude-term-pure';
 
-export const MEMBERSHIP_MANIFEST_FILE = 'data/membership/membership-manifest.tsv';
 export const ADDITIONS_LEDGER_FILE = 'data/membership/additions-ledger.tsv';
 export const BINDING_REVIEW_FILE = 'data/membership/binding-review.tsv';
 export const MEMBERSHIP_EXPECTED_FILE =
   'scripts/catalog/membership/membership-manifest-expected.json';
 
-/** Multi-value separator inside `hd_alt` / `hr_alt` / `routes`. */
-export const MANIFEST_VALUE_SEPARATOR = '|';
-
-export const MANIFEST_COLUMNS = [
-  'tyc', 'hip', 'hd', 'hd_alt', 'hr', 'hr_alt', 'gl', 'flam', 'bayer', 'proper',
-  'gaia_source_id', 'binding', 'routes', 'term',
-] as const;
-export type ManifestColumn = (typeof MANIFEST_COLUMNS)[number];
-export type ManifestRow = Record<ManifestColumn, string>;
-
-/** Which term of `/docs/catalog-driver.md#1-the-driver-model`'s union admitted the row.
- *  `magnitude-term/README.md#the-column-is-the-ledger`. */
-export const MEMBERSHIP_TERMS = ['primaries', 'magnitude'] as const;
-export type MembershipTerm = (typeof MEMBERSHIP_TERMS)[number];
-
-/** How the row's `gaia_source_id` is justified. `crosswalk_gated` is a TYC /
- *  HIP / CNS5 candidate the HD-route gates (/docs/catalog-driver.md#4-how-hd-reaches-gaia) passed; `simbad_corroborated` is the
- *  source SIMBAD's frozen cross-IDs hold under the record's own designation,
- *  through the same gates; `reviewed` is the value a committed disposition row
- *  settles on stated evidence; `gaia_native` is the pull row itself; `none` is
- *  an empty cell. */
-export const BINDING_CLASSES = [
-  'crosswalk_gated', 'simbad_corroborated', 'reviewed', 'gaia_native', 'none',
-] as const;
-export type BindingClass = (typeof BINDING_CLASSES)[number];
+/** A manifest row as the generator assembles it, cell by cell, before
+ *  `manifestRecord` types it. */
+type ManifestCells = Record<ManifestColumn, string>;
 
 /** See binding/README.md. */
 export const BINDING_OUTCOMES = [
@@ -422,7 +408,7 @@ export interface MembershipCounts extends LabelMergeCounts {
 }
 
 export interface MembershipResult {
-  rows: ManifestRow[];
+  rows: ManifestRecord[];
   ledger: AdditionLedgerRow[];
   bindingReview: BindingReviewRow[];
   labelDrops: LabelDropRow[];
@@ -446,19 +432,6 @@ function joinValues(values: readonly (string | number)[]): string {
 
 function splitValues(cell: string): string[] {
   return cell === '' ? [] : cell.split(MANIFEST_VALUE_SEPARATOR);
-}
-
-export function serializeManifest(rows: readonly ManifestRow[]): string {
-  const lines = [MANIFEST_COLUMNS.join('\t')];
-  for (const row of rows) {
-    lines.push(MANIFEST_COLUMNS.map((c) => {
-      if (/[\t\n\r]/.test(row[c])) {
-        throw new Error(`manifest cell ${c}="${row[c]}" contains a TSV delimiter`);
-      }
-      return row[c];
-    }).join('\t'));
-  }
-  return `${lines.join('\n')}\n`;
 }
 
 /** Demands the header byte for byte, as `iterSpineTsv` does: the only writers
@@ -497,37 +470,12 @@ function* tsvRows(
   }
 }
 
-/** The same contract, fed a line at a time, so a reader needing one column can
- *  stream the manifest instead of holding it as one string. */
-export function manifestLineReader(onRow: (row: ManifestRow) => void): (line: string) => void {
-  let sawHeader = false;
-  return (line) => {
-    if (!sawHeader) {
-      checkTsvHeader(line, MANIFEST_COLUMNS, MEMBERSHIP_MANIFEST_FILE);
-      sawHeader = true;
-      return;
-    }
-    if (line === '') return;
-    onRow(rowFrom(MANIFEST_COLUMNS, tsvCells(line, MANIFEST_COLUMNS, MEMBERSHIP_MANIFEST_FILE)));
-  };
-}
-
 function rowFrom<C extends string>(
   columns: readonly C[], cells: readonly string[],
 ): Record<C, string> {
   const row = {} as Record<C, string>;
   columns.forEach((c, i) => { row[c] = cells[i]; });
   return row;
-}
-
-export function* iterManifestTsv(text: string): Generator<ManifestRow> {
-  for (const cells of tsvRows(text, MANIFEST_COLUMNS, MEMBERSHIP_MANIFEST_FILE)) {
-    yield rowFrom(MANIFEST_COLUMNS, cells);
-  }
-}
-
-export function parseManifestTsv(text: string): ManifestRow[] {
-  return [...iterManifestTsv(text)];
 }
 
 export function serializeLedger(rows: readonly AdditionLedgerRow[]): string {
@@ -613,39 +561,8 @@ export function parseLabelDropsTsv(text: string): LabelDropRow[] {
 
 /** The identifier tuple a ledger row and a manifest row share — the same five
  *  cells the parked ledger keys on. */
-export function manifestKey(
-  row: Pick<ManifestRow, 'tyc' | 'hip' | 'hd' | 'gl' | 'gaia_source_id'>,
-): string {
-  return parkedRecordKey(row);
-}
-
-// ---- designations ------------------------------------------------------------
-
-/** The `starDesignations` set a manifest row stands in for — the membership
- *  term's half of SID resolution once the build reads this file. */
-export function manifestDesignations(row: ManifestRow): string[] {
-  return starDesignations({
-    isSol: row.proper === SOL_PROPER_NAME,
-    hip: parseIntOrNull(row.hip),
-    hd: parseIntOrNull(row.hd),
-    hr: parseIntOrNull(row.hr),
-    hdAlt: splitValues(row.hd_alt).map(Number),
-    hrAlt: splitValues(row.hr_alt).map(Number),
-    gl: row.gl === '' ? null : row.gl,
-    gaiaSourceId: row.gaia_source_id === '' ? null : row.gaia_source_id,
-    syntheticId: null,
-  });
-}
-
-/** Rows in SID canonical-key order, then TYC, then source — a total order over
- *  committed inputs, so a regeneration diffs by content and never by walk order. */
-export function sortManifestRows(rows: readonly ManifestRow[]): ManifestRow[] {
-  return rows
-    .map((row) => ({ row, key: canonicalKeyOf(manifestDesignations(row)) }))
-    .sort((a, b) => compareDesignations(a.key, b.key)
-      || (a.row.tyc < b.row.tyc ? -1 : a.row.tyc > b.row.tyc ? 1 : 0)
-      || compareBigIntStrings(a.row.gaia_source_id, b.row.gaia_source_id))
-    .map((d) => d.row);
+export function manifestKey(record: ManifestRecord): string {
+  return parkedRecordKey(MEMBERSHIP_MANIFEST.encode(record));
 }
 
 // ---- the spine side ----------------------------------------------------------
@@ -847,7 +764,7 @@ function settleBinding(
  *  needs: the HD drop runs first because IV/27A can publish a Flamsteed number
  *  against an HD no HD primary attests. */
 function dropUnattestedLabels(
-  row: ManifestRow, tables: PrimaryTables, idx: PrimaryIndex, into: LabelDropRow[],
+  row: ManifestCells, tables: PrimaryTables, idx: PrimaryIndex, into: LabelDropRow[],
 ): RowAttestation {
   const dropped: Array<{ cell: 'hd' | 'flam'; value: string; reason: LabelDropReason }> = [];
   const hds = [row.hd, ...splitValues(row.hd_alt)].filter((h) => h !== '');
@@ -886,6 +803,12 @@ function routesCell(a: RowAttestation): {
   return { routes: joinValues(routes), unattested: a.unattested };
 }
 
+function toRecord(cells: ManifestCells): ManifestRecord {
+  return manifestRecord((c) => cells[c], (m) => {
+    throw new Error(`manifest row ${parkedRecordKey(cells)}: ${m}`);
+  });
+}
+
 function intCell(v: number | null): string {
   return v === null ? '' : String(v);
 }
@@ -894,7 +817,7 @@ function manifestRowFromRecord(
   cells: { tyc: string; bayer: string; proper: string },
   r: LabelMergeRecord,
   binding: BindingClass,
-): ManifestRow {
+): ManifestCells {
   return {
     tyc: cells.tyc,
     hip: intCell(r.hip),
@@ -915,7 +838,7 @@ function manifestRowFromRecord(
 
 /** One magnitude-term row — every classical cell empty, the source_id its
  *  whole identity. */
-export function magnitudeTermRow(sourceId: string): ManifestRow {
+function magnitudeTermRow(sourceId: string): ManifestCells {
   return {
     tyc: '', hip: '', hd: '', hd_alt: '', hr: '', hr_alt: '', gl: '', flam: '',
     bayer: '', proper: '',
@@ -1130,7 +1053,7 @@ function compareAdditionGroupCells(a: AdditionGroup, b: AdditionGroup): number {
 }
 
 interface Admission {
-  row: ManifestRow | null;
+  row: ManifestCells | null;
   /** The admitted row's record, for the claim set — null on a component row. */
   record: LabelMergeRecord | null;
   ledger: AdditionLedgerRow;
@@ -1238,8 +1161,8 @@ export function buildMembership(input: MembershipInput): MembershipResult {
   ) as Record<ClassicalCell, number>;
   const bindingReview: BindingReviewRow[] = [];
   const labelDrops: LabelDropRow[] = [];
-  const rows: ManifestRow[] = [];
-  const attest = (row: ManifestRow, a?: RowAttestation): void => {
+  const rows: ManifestCells[] = [];
+  const attest = (row: ManifestCells, a?: RowAttestation): void => {
     const { routes, unattested } = routesCell(a ?? attestSpineRow(row, tables, idx));
     row.routes = routes;
     for (const cell of unattested) unattestedByCell[cell]++;
@@ -1333,7 +1256,7 @@ export function buildMembership(input: MembershipInput): MembershipResult {
   let spineRowsWithoutSourceId = 0;
   let spineBrightRows = 0;
   let spineBrightRowsWithoutOverlayEntry = 0;
-  const spineManifestRows: ManifestRow[] = [];
+  const spineManifestRows: ManifestCells[] = [];
   records.forEach((record, i) => {
     const noEntry = record.gaiaSourceId === null || !overlay.has(record.gaiaSourceId);
     if (record.gaiaSourceId === null) spineRowsWithoutSourceId++;
@@ -1353,7 +1276,7 @@ export function buildMembership(input: MembershipInput): MembershipResult {
   // answering to everything the folded row did — otherwise the fold is a
   // silent record drop rather than a merge.
   for (const { foldedRow, survivorKept } of folds) {
-    const survivorHolds = new Set(manifestDesignations(spineManifestRows[survivorKept]));
+    const survivorHolds = new Set(manifestDesignations(toRecord(spineManifestRows[survivorKept])));
     const lost = spineDesignations(corrected[foldedRow]).filter((d) => !survivorHolds.has(d));
     if (lost.length > 0) {
       throw new Error(
@@ -1423,7 +1346,7 @@ export function buildMembership(input: MembershipInput): MembershipResult {
     }
     additionsByReason[a.ledger.reason as AdditionReason]++;
     if (a.blocked.length > 0) additionsWithBlockedDesignation++;
-    const designations = manifestDesignations(a.row);
+    const designations = manifestDesignations(toRecord(a.row));
     if (designations.length === 1 && designations[0].startsWith('gaia_dr3:')) additionGaiaKeyedOnly++;
     claimRecord(claims, a.record);
     attest(a.row);
@@ -1447,7 +1370,7 @@ export function buildMembership(input: MembershipInput): MembershipResult {
     rows.push(row);
   }
 
-  const sorted = sortManifestRows(rows);
+  const sorted = sortManifestRecords(rows.map(toRecord));
   const owners = new Map<string, number>();
   for (const row of sorted) {
     for (const d of new Set(manifestDesignations(row))) owners.set(d, (owners.get(d) ?? 0) + 1);
@@ -1490,8 +1413,8 @@ export function buildMembership(input: MembershipInput): MembershipResult {
     additionRouteSourceDisagree,
     additionsWithBlockedDesignation,
     sharedDesignations: [...owners.values()].filter((n) => n > 1).length,
-    rowsWithHdAlt: sorted.filter((r) => r.hd_alt !== '').length,
-    rowsWithHrAlt: sorted.filter((r) => r.hr_alt !== '').length,
+    rowsWithHdAlt: sorted.filter((r) => r.hdAlt.length > 0).length,
+    rowsWithHrAlt: sorted.filter((r) => r.hrAlt.length > 0).length,
     spineRowsWithoutSourceId,
     spineBrightRows,
     spineBrightRowsWithoutOverlayEntry,
@@ -1523,7 +1446,7 @@ export interface SpineMatch {
  *  not split the match: the SID never rode on it. */
 export function matchSpineToManifest(
   spineDesignations: readonly (readonly string[])[],
-  manifestRows: readonly ManifestRow[],
+  manifestRows: readonly ManifestRecord[],
   storedEdges: readonly SameasEdge[],
 ): SpineMatch {
   const owners = new Map<string, number>();

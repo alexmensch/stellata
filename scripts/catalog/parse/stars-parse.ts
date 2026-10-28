@@ -11,7 +11,6 @@ import {
   isInLmcCone,
   SOL_ABSOLUTE_V_MAGNITUDE,
   SOL_APPARENT_V_MAGNITUDE,
-  SOL_PROPER_NAME,
   FLAG_HAS_NAME,
   FLAG_IS_SOL,
   FLAG_HAS_BAYER,
@@ -104,10 +103,7 @@ import {
 import type { GspcColour } from '../photometry/gspc-parse';
 import { printedByHip } from '../photometry/hip-photometry-parse';
 import { emptyTallyPartition } from '../../util/tally';
-import {
-  MANIFEST_VALUE_SEPARATOR,
-  iterManifestTsv,
-} from '../membership/membership-manifest-pure';
+import { MEMBERSHIP_MANIFEST } from '../membership/membership-manifest-tsv';
 import { type ConstellationAssignment } from './constellations/constellations';
 
 // Drop stars farther than this from Sol. The catalogue carries a handful of
@@ -219,37 +215,6 @@ export interface Star {
    *  ../companions/README.md#companion-promotion-from-databinariesmultiplestsv
    *  `data/binaries/multiples.tsv`. */
   syntheticId: string | null;
-}
-
-export function parseFloatOrNull(s: string | undefined | null): number | null {
-  if (s === '' || s === undefined || s === null) return null;
-  const v = Number(s);
-  return Number.isFinite(v) ? v : null;
-}
-
-export function parseIntOrNull(s: string | undefined | null): number | null {
-  const v = parseFloatOrNull(s);
-  return v === null ? null : Math.trunc(v);
-}
-
-export function nonEmpty(s: string | undefined | null): string | null {
-  if (s === undefined || s === null) return null;
-  const t = s.trim();
-  return t ? t : null;
-}
-
-/** Throws rather than admitting a NaN: these reach the search index and the
- *  SID ledger through `starDesignations`, where a NaN designation is a key
- *  nothing can resolve and nothing would report. */
-function altCells(cell: string, column: string): number[] {
-  if (cell === '') return [];
-  return cell.split(MANIFEST_VALUE_SEPARATOR).map((v) => {
-    const n = parseIntOrNull(v);
-    if (n === null) {
-      throw new Error(`manifest ${column} cell "${cell}" holds a non-numeric value`);
-    }
-    return n;
-  });
 }
 
 /** The one gate a manifest row can still fail that is NOT a record-parity park (/docs/catalog-driver.md#61-record-parity), and
@@ -387,7 +352,7 @@ export function readStars(
     ciGspcValidatedRange: number;  // gspc-tier rows the archive calls in-range
   };
 } {
-  const rows = iterManifestTsv(readFileSync(manifestTsvPath, 'utf8'));
+  const rows = MEMBERSHIP_MANIFEST.rows(readFileSync(manifestTsvPath, 'utf8'));
 
   const stars: Star[] = [];
   const dropped: ReadStarsDrops = { tooFar: 0 };
@@ -433,12 +398,11 @@ export function readStars(
   const printedVLookup = printedVLookups(hipVMag, directions.tycho2, gliese);
   for (const row of rows) {
     total++;
-    const hip = parseIntOrNull(row.hip);
+    const { hip, gaiaSourceId, isSol } = row;
     // Read off the manifest column, never re-derived: the binding is the one
     // the manifest justified (/docs/catalog-driver.md#31-retiring-the-spine--the-membership-rule-measured-against-the-primaries), and re-deciding
     // it here would re-run a cross-walk against reference tables that have
     // moved since.
-    const gaiaSourceId = nonEmpty(row.gaia_source_id);
     const gaiaRow = gaiaSourceId !== null
       ? directions.gaiaAstrometry.get(gaiaSourceId) ?? null
       : null;
@@ -449,8 +413,8 @@ export function readStars(
     const simbadKeys: SimbadRecordKeys = {
       sourceId: gaiaSourceId,
       hip,
-      tyc: nonEmpty(row.tyc),
-      gl: nonEmpty(row.gl),
+      tyc: row.tyc,
+      gl: row.gl,
     };
     const simbadRow = lookupSimbadValues(simbadValues, simbadKeys);
     const rvRes = resolveRadialVelocity(gaiaRow, simbadRow?.rv ?? null);
@@ -468,8 +432,7 @@ export function readStars(
       if (rvErr !== null && rvErr > rvGaiaErrorMaxKmS) rvGaiaErrorMaxKmS = rvErr;
     }
 
-    const proper = nonEmpty(row.proper);
-    const isSol = proper === SOL_PROPER_NAME;
+    const { proper } = row;
     const tycho2Row = simbadKeys.tyc !== null
       ? directions.tycho2.get(simbadKeys.tyc) ?? null
       : null;
@@ -480,7 +443,7 @@ export function readStars(
       parked.push({
         tyc: simbadKeys.tyc,
         hip,
-        hd: parseIntOrNull(row.hd),
+        hd: row.hd,
         gl: simbadKeys.gl,
         gaiaSourceId,
         reason,
@@ -746,7 +709,7 @@ export function readStars(
       ? NO_CONSTELLATION_INDEX
       : conAssignment.indexAt(x, y, z);
 
-    const bayer = nonEmpty(row.bayer);
+    const { bayer } = row;
 
     let flags = 0;
     if (proper) flags |= FLAG_HAS_NAME;
@@ -766,9 +729,9 @@ export function readStars(
       desigConIndex: NO_CONSTELLATION_INDEX,
       flags,
       proper, bayer, hip,
-      hd: parseIntOrNull(row.hd),
-      hr: parseIntOrNull(row.hr),
-      flam: parseIntOrNull(row.flam),
+      hd: row.hd,
+      hr: row.hr,
+      flam: row.flam,
       iauName: null,
       eponym: null,
       bayerSup: null,
@@ -776,8 +739,8 @@ export function readStars(
       gould: null,
       gouldHalf: null,
       aliases: [],
-      hdAlt: altCells(row.hd_alt, 'hd_alt'),
-      hrAlt: altCells(row.hr_alt, 'hr_alt'),
+      hdAlt: row.hdAlt,
+      hrAlt: row.hrAlt,
       gl: simbadKeys.gl,
       tyc: simbadKeys.tyc,
       gaiaSourceId,

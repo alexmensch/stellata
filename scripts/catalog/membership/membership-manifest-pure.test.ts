@@ -13,28 +13,31 @@ import type { Tycho2Row } from '../tycho2-parse';
 import {
   ADDITION_REASONS,
   COMPONENT_REASON_PREFIX,
-  MANIFEST_COLUMNS,
   bindingReviewKey,
   additionItemCells,
   buildMembership,
-  manifestDesignations,
   manifestKey,
   matchSpineToManifest,
   parseBindingDispositionsTsv,
   parseLabelDropsTsv,
   parseLedgerTsv,
-  parseManifestTsv,
   parseBindingReviewTsv,
   parseSpineCorrectionsTsv,
   SPINE_CORRECTION_COLUMNS,
   serializeBindingReview,
   serializeLabelDrops,
   serializeLedger,
-  serializeManifest,
   type BindingDispositionRow,
-  type ManifestRow,
   type SpineCorrectionRow,
 } from './membership-manifest-pure';
+import {
+  MEMBERSHIP_MANIFEST,
+  manifestDesignations,
+  manifestRecord,
+  type ManifestColumn,
+  type ManifestRecord,
+} from './membership-manifest-tsv';
+import { parkedRecordKey } from '../distance/parallax/parked-ledger';
 
 function spineRow(cells: Partial<SpineRow>): SpineRow {
   const out = {} as SpineRow;
@@ -42,10 +45,9 @@ function spineRow(cells: Partial<SpineRow>): SpineRow {
   return out;
 }
 
-function manifestRow(cells: Partial<ManifestRow>): ManifestRow {
-  const out = {} as ManifestRow;
-  for (const c of MANIFEST_COLUMNS) out[c] = cells[c] ?? '';
-  return out;
+function manifestRow(cells: Partial<Record<ManifestColumn, string>>): ManifestRecord {
+  const defaults: Partial<Record<ManifestColumn, string>> = { binding: 'none', term: 'primaries' };
+  return manifestRecord((c) => cells[c] ?? defaults[c] ?? '', (m) => { throw new Error(m); });
 }
 
 function tycho2(vtMag: number, hip: number | null = null): Tycho2Row {
@@ -205,7 +207,7 @@ describe('buildMembership — the spine side', () => {
     expect(result.counts.spineRows).toBe(6);
     expect(byTyc.get('1-1-1')?.binding).toBe('crosswalk_gated');
     expect(byTyc.get('1-2-1')?.binding).toBe('simbad_corroborated');
-    expect(byTyc.get('1-2-1')?.gaia_source_id).toBe('222');
+    expect(byTyc.get('1-2-1')?.gaiaSourceId).toBe('222');
     expect(result.counts.derivationOutcome).toEqual({
       bound: 3, refused: 2, contested: 0, collision: 0, sol: 1,
     });
@@ -218,7 +220,7 @@ describe('buildMembership — the spine side', () => {
       ...input, dispositions: new Map([[HD40_KEY, disposition({})]]),
     });
     const row = disposed.rows.find((r) => r.tyc === '9-8-1')!;
-    expect(row).toMatchObject({ gaia_source_id: '888', binding: 'reviewed' });
+    expect(row).toMatchObject({ gaiaSourceId: '888', binding: 'reviewed' });
     expect(disposed.bindingReview).toHaveLength(1);
     expect(disposed.counts.bindingByClass.reviewed).toBe(1);
     expect(disposed.counts.bindingDispositions).toEqual({ derived: 0, other: 1, none: 0 });
@@ -231,7 +233,7 @@ describe('buildMembership — the spine side', () => {
       ...input, dispositions: new Map([[HD40_KEY, disposition({ keep_source_id: '' })]]),
     });
     expect(disposed.rows.find((r) => r.tyc === '9-8-1'))
-      .toMatchObject({ gaia_source_id: '', binding: 'none' });
+      .toMatchObject({ gaiaSourceId: null, binding: 'none' });
     expect(disposed.counts.bindingByClass.reviewed).toBe(0);
   });
 
@@ -261,8 +263,8 @@ describe('buildMembership — the spine side', () => {
         keep_source_id: '999', basis: 'simbad_dr2_object',
       })]]),
     });
-    expect(dr2.rows.find((r) => r.hd === '40'))
-      .toMatchObject({ gaia_source_id: '999', binding: 'reviewed' });
+    expect(dr2.rows.find((r) => r.hd === 40))
+      .toMatchObject({ gaiaSourceId: '999', binding: 'reviewed' });
     expect(dr2.counts.dispositionAsserted).toBe(1);
   });
 
@@ -279,7 +281,7 @@ describe('buildMembership — the spine side', () => {
     };
     const differing = buildMembership(differingInput);
     expect(differing.rows.find((r) => r.tyc === '6-6-1'))
-      .toMatchObject({ gaia_source_id: '6061', binding: 'crosswalk_gated' });
+      .toMatchObject({ gaiaSourceId: '6061', binding: 'crosswalk_gated' });
     expect(differing.bindingReview.map((r) => r.tyc)).not.toContain('6-6-1');
     expect(differing.counts.derivationOutcome.bound).toBe(4);
     const key = bindingReviewKey({ tyc: '6-6-1', hip: '60', hd: '600', gl: '' });
@@ -291,7 +293,7 @@ describe('buildMembership — the spine side', () => {
       })]]),
     });
     expect(reverted.rows.find((r) => r.tyc === '6-6-1'))
-      .toMatchObject({ gaia_source_id: '6060', binding: 'reviewed' });
+      .toMatchObject({ gaiaSourceId: '6060', binding: 'reviewed' });
   });
 
   it('binds a row the sources reach', () => {
@@ -299,8 +301,8 @@ describe('buildMembership — the spine side', () => {
       ...input,
       tables: { ...tables, hipToSource: new Map([...tables.hipToSource, [70, '7070']]) },
     });
-    expect(filled.rows.find((r) => r.hip === '70'))
-      .toMatchObject({ gaia_source_id: '7070', binding: 'crosswalk_gated' });
+    expect(filled.rows.find((r) => r.hip === 70))
+      .toMatchObject({ gaiaSourceId: '7070', binding: 'crosswalk_gated' });
     expect(filled.counts.derivationOutcome.bound).toBe(4);
     expect(filled.bindingReview).toHaveLength(0);
   });
@@ -315,8 +317,8 @@ describe('buildMembership — the spine side', () => {
       },
     };
     const contested = buildMembership(contestedInput);
-    expect(contested.rows.find((r) => r.hip === '70'))
-      .toMatchObject({ gaia_source_id: '7070', binding: 'crosswalk_gated' });
+    expect(contested.rows.find((r) => r.hip === 70))
+      .toMatchObject({ gaiaSourceId: '7070', binding: 'crosswalk_gated' });
     expect(contested.bindingReview).toContainEqual(expect.objectContaining({
       hip: '70', verdict: 'contested', derived_source_id: '7070', candidates: 'hip:7070|simbad:7071',
     }));
@@ -328,7 +330,7 @@ describe('buildMembership — the spine side', () => {
         keep_source_id: '7071', basis: 'gaia_photometry',
       })]]),
     });
-    expect(settled.rows.find((r) => r.hip === '70')).toMatchObject({ gaia_source_id: '7071', binding: 'reviewed' });
+    expect(settled.rows.find((r) => r.hip === 70)).toMatchObject({ gaiaSourceId: '7071', binding: 'reviewed' });
     expect(settled.counts.bindingDispositions).toEqual({ derived: 0, other: 1, none: 0 });
   });
 
@@ -347,8 +349,8 @@ describe('buildMembership — the spine side', () => {
       },
       evidence: gateEvidence(tables, new Map([['7070', 5.0], ['7071', 12.0]]), new Map([[70, 5.0]]), null),
     });
-    expect(settled.rows.find((r) => r.hip === '70'))
-      .toMatchObject({ gaia_source_id: '7070', binding: 'crosswalk_gated' });
+    expect(settled.rows.find((r) => r.hip === 70))
+      .toMatchObject({ gaiaSourceId: '7070', binding: 'crosswalk_gated' });
     expect(settled.counts.derivationOutcome).toMatchObject({ bound: 4, contested: 0 });
     expect(settled.bindingReview).toHaveLength(0);
   });
@@ -358,9 +360,9 @@ describe('buildMembership — the spine side', () => {
       ...input,
       tables: { ...tables, hipToSource: new Map([...tables.hipToSource, [70, '111']]) },
     });
-    expect(colliding.rows.find((r) => r.hip === '70'))
-      .toMatchObject({ gaia_source_id: '', binding: 'none' });
-    expect(colliding.rows.find((r) => r.tyc === '1-1-1')?.gaia_source_id).toBe('');
+    expect(colliding.rows.find((r) => r.hip === 70))
+      .toMatchObject({ gaiaSourceId: null, binding: 'none' });
+    expect(colliding.rows.find((r) => r.tyc === '1-1-1')?.gaiaSourceId).toBeNull();
     expect(colliding.bindingReview).toContainEqual(expect.objectContaining({
       hip: '70', verdict: 'collision', derived_source_id: '111',
     }));
@@ -383,7 +385,7 @@ describe('buildMembership — the spine side', () => {
       evidence: gateEvidence(tables, new Map([['6061', 12.0], ['6062', 5.1], ['333', 8.5]]), new Map([[60, 5.0]]), null),
     });
     expect(gated.rows.find((r) => r.tyc === '6-6-1'))
-      .toMatchObject({ gaia_source_id: '6062', binding: 'crosswalk_gated' });
+      .toMatchObject({ gaiaSourceId: '6062', binding: 'crosswalk_gated' });
     expect(gated.counts.derivedRejected).toEqual({ mag: 1, sibling: 0 });
     expect(gated.counts.derivedVia.hip).toBe(2);
     expect(gated.counts.derivedWeighedNoGMag).toBe(0);
@@ -405,7 +407,7 @@ describe('buildMembership — the spine side', () => {
       overlay: new Map([...overlay, ['1616', entry({ hd: [400], hip: [44] })]]),
     });
     expect(filled.rows.find((r) => r.tyc === '4-4-1'))
-      .toMatchObject({ gaia_source_id: '1616', hd: '400', hip: '44', binding: 'crosswalk_gated' });
+      .toMatchObject({ gaiaSourceId: '1616', hd: 400, hip: 44, binding: 'crosswalk_gated' });
     expect(filled.counts.derivationOutcome.bound).toBe(4);
     expect(filled.flips).toContainEqual(expect.objectContaining({
       sourceId: '1616', field: 'hip', spine: '', applied: '44', disposition: 'added',
@@ -426,15 +428,15 @@ describe('buildMembership — the spine side', () => {
       },
       overlay: new Map([...overlay, ['1515', entry({ hd: [70002, 70003] })]]),
     });
-    expect(promoted.rows.find((r) => r.tyc === '5-5-1')).toMatchObject({ hd: '70003' });
+    expect(promoted.rows.find((r) => r.tyc === '5-5-1')).toMatchObject({ hd: 70003 });
     expect(promoted.labelDrops).toContainEqual(expect.objectContaining({
       cell: 'hd', value: '70002', reason: 'hd_unattested',
     }));
   });
 
   it('drops the spine labels no primary attests onto the label ledger', () => {
-    const row = result.rows.find((r) => r.hip === '70')!;
-    expect(row).toMatchObject({ hd: '', flam: '', routes: 'hip:i239' });
+    const row = result.rows.find((r) => r.hip === 70)!;
+    expect(row).toMatchObject({ hd: null, flam: null, routes: 'hip:i239' });
     expect(result.labelDrops).toEqual([
       { tyc: '', hip: '70', hd: '', gl: '', gaia_source_id: '', cell: 'hd', value: '70000', reason: 'hd_unattested' },
       { tyc: '', hip: '70', hd: '', gl: '', gaia_source_id: '', cell: 'flam', value: '5', reason: 'flamsteed_unattested' },
@@ -446,7 +448,7 @@ describe('buildMembership — the spine side', () => {
 
   it('refuses a row no source reaches, and queues nothing', () => {
     const row = byTyc.get('9-8-1')!;
-    expect(row.gaia_source_id).toBe('');
+    expect(row.gaiaSourceId).toBeNull();
     expect(row.binding).toBe('none');
     expect(result.bindingReview).toEqual([]);
     expect(result.counts.bindingReviewRows).toBe(0);
@@ -455,8 +457,8 @@ describe('buildMembership — the spine side', () => {
 
   it('carries the label merge onto the row and attests the merged cells', () => {
     const row = byTyc.get('1-1-1')!;
-    expect(row.hr).toBe('1');
-    expect(row.flam).toBe('1');
+    expect(row.hr).toBe(1);
+    expect(row.flam).toBe(1);
     expect(row.routes).toBe('hd:iv25|hr:v50|hip:i239|flam:iv27a|tyc:tycho2');
     expect(result.flips.map((f) => `${f.field}:${f.applied}:${f.disposition}`).sort())
       .toEqual(['flam:1:added', 'hr:1:added']);
@@ -484,8 +486,8 @@ describe('spine corrections', () => {
       tables: { ...tables, tycToSource: new Map([...tables.tycToSource, ['1-9-1', '999']]) },
       corrections: [correction({ tyc: '1-2-1', hd: '5', cell: 'tyc', value: '1-9-1' })],
     });
-    const row = fixed.rows.find((r) => r.hd === '5')!;
-    expect(row).toMatchObject({ tyc: '1-9-1', gaia_source_id: '999' });
+    const row = fixed.rows.find((r) => r.hd === 5)!;
+    expect(row).toMatchObject({ tyc: '1-9-1', gaiaSourceId: '999' });
     expect(fixed.counts.spineCellsCorrected).toEqual({ tyc: 1 });
     expect(fixed.counts.spineRowsFolded).toBe(0);
   });
@@ -503,7 +505,7 @@ describe('spine corrections', () => {
     expect(folded.counts.spineRowsFolded).toBe(1);
     expect(folded.rows.filter((r) => r.gl === 'Gl 165A')).toHaveLength(1);
     expect(folded.rows.find((r) => r.gl === 'Gl 165A'))
-      .toMatchObject({ hip: '20', gaia_source_id: '333' });
+      .toMatchObject({ hip: 20, gaiaSourceId: '333' });
     expect(folded.counts.rows).toBe(result.counts.rows);
   });
 
@@ -603,21 +605,21 @@ describe('buildMembership — the additions', () => {
   it('admits an IV/25 star and merges the HIP Tycho-2 names for it into one row', () => {
     const row = byTyc.get('2-1-1')!;
     expect(row).toMatchObject({
-      hip: '30', hd: '60', hr: '2', flam: '7', gaia_source_id: '444', binding: 'crosswalk_gated',
+      hip: 30, hd: 60, hr: 2, flam: 7, gaiaSourceId: '444', binding: 'crosswalk_gated',
     });
     expect(row.routes).toBe('hd:iv25|hr:v50|hip:i239|flam:iv27a|tyc:tycho2');
-    expect(result.rows.filter((r) => r.hip === '30')).toHaveLength(1);
+    expect(result.rows.filter((r) => r.hip === 30)).toHaveLength(1);
   });
 
   it('ledgers each admitted row under the record-parity reason its designation earns', () => {
-    const reasons = new Map(result.ledger.map((l) => [manifestKey(l), l.reason]));
+    const reasons = new Map(result.ledger.map((l) => [parkedRecordKey(l), l.reason]));
     expect(reasons.get(manifestKey(byTyc.get('2-1-1')!))).toBe('admitted:hd_link_gap');
     expect(reasons.get(manifestKey(byTyc.get('2-2-1')!))).toBe('admitted:hd_omitted');
-    const hip40 = result.rows.find((r) => r.hip === '40')!;
+    const hip40 = result.rows.find((r) => r.hip === 40)!;
     expect(reasons.get(manifestKey(hip40))).toBe('admitted:hip_omitted');
     const gj = result.rows.find((r) => r.gl === 'GJ 10001')!;
     expect(reasons.get(manifestKey(gj))).toBe('admitted:cns5_census');
-    expect(gj.gaia_source_id).toBe('555');
+    expect(gj.gaiaSourceId).toBe('555');
     expect(result.counts.additionsByReason).toEqual({
       'admitted:hd_link_gap': 8, 'admitted:hd_omitted': 1,
       'admitted:hip_omitted': 1, 'admitted:cns5_census': 2,
@@ -646,14 +648,14 @@ describe('buildMembership — the additions', () => {
     expect(result.ledger).toContainEqual({
       tyc: '2-6-1', hip: '', hd: '60', gl: '', gaia_source_id: '', reason: 'component:hd:60',
     });
-    expect(byTyc.get('2-1-1')?.hd).toBe('60');
+    expect(byTyc.get('2-1-1')?.hd).toBe(60);
     expect(result.counts.sharedDesignations).toBe(0);
   });
 
   // The contested designation goes to the component a gated walk bound, not to
   // the lower TYC: the other would park for want of the parallax this one has.
   it('gives a contested designation to the group whose binding survives', () => {
-    expect(byTyc.get('2-8-1')).toMatchObject({ hd: '70', gaia_source_id: '1010' });
+    expect(byTyc.get('2-8-1')).toMatchObject({ hd: 70, gaiaSourceId: '1010' });
     expect(byTyc.has('2-7-1')).toBe(false);
     expect(result.ledger).toContainEqual({
       tyc: '2-7-1', hip: '', hd: '70', gl: '', gaia_source_id: '', reason: 'component:hd:70',
@@ -670,18 +672,18 @@ describe('buildMembership — the additions', () => {
       }),
       publishesGaiaParallax,
     });
-    const holder = (r: ReturnType<typeof pair>) => r.rows.find((row) => row.hd === '90')?.tyc;
+    const holder = (r: ReturnType<typeof pair>) => r.rows.find((row) => row.hd === 90)?.tyc;
     expect(holder(pair((id) => id !== '6101'))).toBe('6-2-1');
     expect(holder(pair(() => true))).toBe('6-1-1');
   });
 
   it('leaves the source empty where the walk binds a spine record\'s own source', () => {
-    expect(byTyc.get('2-4-1')).toMatchObject({ hd: '61', gaia_source_id: '', binding: 'none' });
+    expect(byTyc.get('2-4-1')).toMatchObject({ hd: 61, gaiaSourceId: null, binding: 'none' });
     expect(result.counts.additionSourceOnSpine).toBe(1);
   });
 
   it('leaves the source empty where the gate refused the binding', () => {
-    expect(byTyc.get('2-5-1')).toMatchObject({ hd: '62', gaia_source_id: '' });
+    expect(byTyc.get('2-5-1')).toMatchObject({ hd: 62, gaiaSourceId: null });
     expect(result.counts.additionSourceGateRefused).toBe(1);
   });
 
@@ -698,14 +700,14 @@ describe('buildMembership — the additions', () => {
   });
 
   it('leaves a source no group takes where two groups reach it', () => {
-    expect(byTyc.get('3-1-1')).toMatchObject({ hd: '80', gaia_source_id: '' });
-    expect(byTyc.get('3-2-1')).toMatchObject({ hd: '81', gaia_source_id: '' });
+    expect(byTyc.get('3-1-1')).toMatchObject({ hd: 80, gaiaSourceId: null });
+    expect(byTyc.get('3-2-1')).toMatchObject({ hd: 81, gaiaSourceId: null });
     expect(result.counts.additionSourceShared).toBe(1);
   });
 
   // The HD route (/docs/catalog-driver.md#4-how-hd-reaches-gaia) carries label authority; the source follows it too.
   it("takes the TYC route's source where the HIP route binds another", () => {
-    expect(byTyc.get('3-3-1')).toMatchObject({ hip: '50', gaia_source_id: '1313' });
+    expect(byTyc.get('3-3-1')).toMatchObject({ hip: 50, gaiaSourceId: '1313' });
     expect(result.counts.additionRouteSourceDisagree).toBe(1);
   });
 
@@ -723,8 +725,8 @@ describe('buildMembership — the additions', () => {
       },
     });
     expect(viaSimbad.rows.find((r) => r.tyc === '5-5-1'))
-      .toMatchObject({ hd: '500', gaia_source_id: '5050', binding: 'simbad_corroborated' });
-    expect(viaSimbad.rows.filter((r) => r.gaia_source_id === '5050')).toHaveLength(1);
+      .toMatchObject({ hd: 500, gaiaSourceId: '5050', binding: 'simbad_corroborated' });
+    expect(viaSimbad.rows.filter((r) => r.gaiaSourceId === '5050')).toHaveLength(1);
     expect(viaSimbad.counts.magnitudeRows).toBe(1);
     expect(viaSimbad.counts.magnitudeRowsOwnCandidate)
       .toEqual({ refused_mag: 1, refused_sibling: 0, withheld: 0, runner_up: 0, component: 0 });
@@ -740,8 +742,8 @@ describe('buildMembership — the additions', () => {
         simbadBySourceId: new Map([...tables.simbadBySourceId, ['5151', { hip: 61, tyc: '5-6-1', gj: null }]]),
       }),
     });
-    expect(oneStar.rows.filter((r) => r.gaia_source_id === '5151'))
-      .toEqual([expect.objectContaining({ tyc: '5-6-1', hd: '501', hip: '61' })]);
+    expect(oneStar.rows.filter((r) => r.gaiaSourceId === '5151'))
+      .toEqual([expect.objectContaining({ tyc: '5-6-1', hd: 501, hip: 61 })]);
     expect(oneStar.counts.additionSourceShared).toBe(result.counts.additionSourceShared);
   });
 
@@ -770,19 +772,19 @@ describe('buildMembership — the additions', () => {
         simbadBySourceId: new Map([...tables.simbadBySourceId, ['5172', { hip: null, tyc: '5-7-1', gj: null }]]),
       }),
     });
-    expect(twoSources.rows.find((r) => r.tyc === '5-7-1')?.gaia_source_id).toBe('5171');
+    expect(twoSources.rows.find((r) => r.tyc === '5-7-1')?.gaiaSourceId).toBe('5171');
     expect(twoSources.counts.additionContested - result.counts.additionContested).toBe(1);
   });
 
   // Admitted, but one designation short: HD 5 is a spine record's, so the
   // record ships without a number the primaries publish for it.
   it('counts an admitted row the guard withheld a designation from', () => {
-    expect(byTyc.get('3-4-1')).toMatchObject({ hd: '83', hd_alt: '' });
+    expect(byTyc.get('3-4-1')).toMatchObject({ hd: 83, hdAlt: [] });
     expect(result.counts.additionsWithBlockedDesignation).toBe(1);
   });
 
   it('carries no duplicate source_id and keys every row on a classical designation', () => {
-    const ids = result.rows.map((r) => r.gaia_source_id).filter((s) => s !== '');
+    const ids = result.rows.map((r) => r.gaiaSourceId).filter((s) => s !== null);
     expect(new Set(ids).size).toBe(ids.length);
     // Never the Gaia id alone: a group with no classical designation left is
     // ledgered, not admitted, so `sid:allocate` keys every mint hd / hip / gl.
@@ -815,19 +817,19 @@ describe('a group holding two items of one cohort', () => {
 
 describe('codecs', () => {
   it('round-trips the manifest, the ledger, the review queue and the label drops', () => {
-    expect(parseManifestTsv(serializeManifest(result.rows))).toEqual(result.rows);
+    expect(MEMBERSHIP_MANIFEST.parse(MEMBERSHIP_MANIFEST.serialize(result.rows))).toEqual(result.rows);
     expect(parseBindingReviewTsv(serializeBindingReview(result.bindingReview)))
       .toEqual(result.bindingReview);
     const ledger = parseLedgerTsv(serializeLedger(result.ledger));
     expect(ledger).toHaveLength(result.ledger.length);
-    expect(new Set(ledger.map(manifestKey))).toEqual(new Set(result.ledger.map(manifestKey)));
+    expect(new Set(ledger.map(parkedRecordKey))).toEqual(new Set(result.ledger.map(parkedRecordKey)));
     const drops = parseLabelDropsTsv(serializeLabelDrops(result.labelDrops));
     expect(new Set(drops.map((d) => JSON.stringify(d))))
       .toEqual(new Set(result.labelDrops.map((d) => JSON.stringify(d))));
   });
 
   it('refuses a manifest whose header is not the column list byte for byte', () => {
-    expect(() => parseManifestTsv('hip\ttyc\n')).toThrow(/header mismatch/);
+    expect(() => MEMBERSHIP_MANIFEST.parse('hip\ttyc\n')).toThrow(/header mismatch/);
   });
 
   // One reader behind all four codecs, so a short row throws wherever it lands
@@ -855,7 +857,7 @@ describe('codecs', () => {
 
   it('is deterministic across a re-run', () => {
     const again = buildMembership(input);
-    expect(serializeManifest(again.rows)).toBe(serializeManifest(result.rows));
+    expect(MEMBERSHIP_MANIFEST.serialize(again.rows)).toBe(MEMBERSHIP_MANIFEST.serialize(result.rows));
     expect(serializeLedger(again.ledger)).toBe(serializeLedger(result.ledger));
     expect(serializeLabelDrops(again.labelDrops)).toBe(serializeLabelDrops(result.labelDrops));
   });

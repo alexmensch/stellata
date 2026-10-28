@@ -23,6 +23,7 @@ import {
 import { FLAG_BINARY_COMPANION_ONLY, type SearchEntry } from '../record/catalog-pure';
 import {
   PARKED_LEDGER_FILE,
+  parkedRecordKey,
   parseParkedRecordsTsv,
 } from '../distance/parallax/parked-ledger';
 import {
@@ -39,11 +40,9 @@ import {
   COMPONENT_REASON_PREFIX,
   LABEL_DROPS_FILE,
   MEMBERSHIP_EXPECTED_FILE,
-  MEMBERSHIP_MANIFEST_FILE,
   SPINE_CORRECTIONS_FILE,
   applySpineCorrections,
   bindingReviewKey,
-  manifestDesignations,
   manifestKey,
   matchSpineToManifest,
   parseBindingDispositionsTsv,
@@ -51,12 +50,16 @@ import {
   parseLabelDropsTsv,
   parseSpineCorrectionsTsv,
   parseLedgerTsv,
-  parseManifestTsv,
-  type ManifestRow,
   type SpineFold,
   type MembershipCounts,
   type SpineMatch,
 } from './membership-manifest-pure';
+import {
+  MEMBERSHIP_MANIFEST,
+  MEMBERSHIP_MANIFEST_FILE,
+  manifestDesignations,
+  type ManifestRecord,
+} from './membership-manifest-tsv';
 
 const SPINE_PATH = resolve(REPO_ROOT, INHERITED_SPINE_FILE);
 const MANIFEST_PATH = resolve(REPO_ROOT, MEMBERSHIP_MANIFEST_FILE);
@@ -117,7 +120,7 @@ describe.skipIf(!inputsReadable)('membership manifest ↔ inherited spine', () =
    *  disposition joins on once a correction has moved one. */
   let corrected: SpineRow[];
   let folds: SpineFold[];
-  let manifest: ManifestRow[];
+  let manifest: ManifestRecord[];
   let match: SpineMatch;
 
   beforeAll(() => {
@@ -126,7 +129,7 @@ describe.skipIf(!inputsReadable)('membership manifest ↔ inherited spine', () =
       spine,
       parseSpineCorrectionsTsv(readFileSync(CORRECTIONS_PATH, 'utf-8')),
     ));
-    manifest = parseManifestTsv(readFileSync(MANIFEST_PATH, 'utf-8'));
+    manifest = MEMBERSHIP_MANIFEST.parse(readFileSync(MANIFEST_PATH, 'utf-8'));
     match = matchSpineToManifest(
       spine.map(spineDesignations),
       manifest,
@@ -177,7 +180,7 @@ describe.skipIf(!inputsReadable)('membership manifest ↔ inherited spine', () =
       .filter((i) => manifest[i].term === 'primaries')
       .map((i) => manifestKey(manifest[i]))
       .sort();
-    expect(admitted.map(manifestKey).sort()).toEqual(unreachedKeys);
+    expect(admitted.map(parkedRecordKey).sort()).toEqual(unreachedKeys);
     for (const l of admitted) {
       expect((ADDITION_REASONS as readonly string[]).includes(l.reason), l.reason).toBe(true);
     }
@@ -186,11 +189,11 @@ describe.skipIf(!inputsReadable)('membership manifest ↔ inherited spine', () =
     expect(Object.fromEntries(byReason)).toEqual(expected.additionsByReason);
 
     const manifestKeys = new Set(manifest.map(manifestKey));
-    const manifestTycs = new Set(manifest.map((r) => r.tyc).filter((t) => t !== ''));
+    const manifestTycs = new Set(manifest.map((r) => r.tyc).filter((t) => t !== null));
     const designations = new Set(manifest.flatMap(manifestDesignations));
     expect(components).toHaveLength(expected.componentRows);
     for (const c of components) {
-      expect(manifestKeys.has(manifestKey(c)), `component row is a manifest row: ${c.tyc}`).toBe(false);
+      expect(manifestKeys.has(parkedRecordKey(c)), `component row is a manifest row: ${c.tyc}`).toBe(false);
       if (c.tyc !== '') expect(manifestTycs.has(c.tyc), `component TYC admitted: ${c.tyc}`).toBe(false);
       const anchor = c.reason.slice(COMPONENT_REASON_PREFIX.length);
       expect(designations.has(anchor), `anchor ${anchor} is a manifest designation`).toBe(true);
@@ -198,14 +201,14 @@ describe.skipIf(!inputsReadable)('membership manifest ↔ inherited spine', () =
   });
 
   it('keys every row on a designation and carries no duplicate source_id', () => {
-    const ids = manifest.map((r) => r.gaia_source_id).filter((s) => s !== '');
+    const ids = manifest.map((r) => r.gaiaSourceId).filter((s) => s !== null);
     expect(new Set(ids).size).toBe(ids.length);
     expect(manifest.filter((r) => manifestDesignations(r).length === 0)).toEqual([]);
     expect(manifest.filter((r) => manifestDesignations(r).includes('sol:sun'))).toHaveLength(1);
   });
 
   it('ends no gl cell on a null marker or other punctuation', () => {
-    expect(manifest.map((r) => r.gl).filter((gl) => /[^A-Za-z0-9.]$/.test(gl))).toEqual([]);
+    expect(manifest.map((r) => r.gl).filter((gl) => gl !== null && /[^A-Za-z0-9.]$/.test(gl))).toEqual([]);
   });
 
   // A designation two rows carry keys neither of them (/docs/sid.md#41-same-as-equivalence-graph), so
@@ -236,7 +239,7 @@ describe.skipIf(!inputsReadable)('membership manifest ↔ inherited spine', () =
   it('carries every disposed binding as reviewed, and no other', () => {
     // Keyed on the CORRECTED cells: a disposition adjudicates the row the
     // generator derived from, and a `set` correction moves that key.
-    const bySpineKey = new Map<string, ManifestRow>();
+    const bySpineKey = new Map<string, ManifestRecord>();
     corrected.forEach((row, i) => {
       const target = match.manifestIndex[i];
       if (target !== null) bySpineKey.set(bindingReviewKey(row), manifest[target]);
@@ -244,8 +247,8 @@ describe.skipIf(!inputsReadable)('membership manifest ↔ inherited spine', () =
     for (const [key, d] of dispositions) {
       const row = bySpineKey.get(key)!;
       const value = d.keep_source_id;
-      expect([row.gaia_source_id, row.binding], key)
-        .toEqual([value, value === '' ? 'none' : 'reviewed']);
+      expect([row.gaiaSourceId, row.binding], key)
+        .toEqual([value === '' ? null : value, value === '' ? 'none' : 'reviewed']);
     }
     expect(manifest.filter((r) => r.binding === 'reviewed')).toHaveLength(
       [...dispositions.values()].filter((d) => d.keep_source_id !== '').length,
@@ -258,7 +261,7 @@ describe.skipIf(!inputsReadable)('membership manifest ↔ inherited spine', () =
     const drops = parseLabelDropsTsv(readFileSync(resolve(REPO_ROOT, LABEL_DROPS_FILE), 'utf-8'));
     const manifestKeys = new Set(manifest.map(manifestKey));
     for (const d of drops) {
-      expect(manifestKeys.has(manifestKey(d)), `label drop keys a manifest row: ${manifestKey(d)}`).toBe(true);
+      expect(manifestKeys.has(parkedRecordKey(d)), `label drop keys a manifest row: ${parkedRecordKey(d)}`).toBe(true);
       expect(['hd', 'flam']).toContain(d.cell);
     }
     const byReason = new Map<string, number>();
@@ -278,11 +281,11 @@ describe.skipIf(!inputsReadable)('membership manifest ↔ inherited spine', () =
     const moved: string[] = [];
     for (const d of drops) {
       if (d.cell === 'flam') {
-        expect(manifestDesignations(byKey.get(manifestKey(d))!)
+        expect(manifestDesignations(byKey.get(parkedRecordKey(d))!)
           .some((x) => x.startsWith('flam:'))).toBe(false);
         continue;
       }
-      const key = canonicalKeyOf(manifestDesignations(byKey.get(manifestKey(d))!));
+      const key = canonicalKeyOf(manifestDesignations(byKey.get(parkedRecordKey(d))!));
       if (compareDesignations(key, `hd:${d.value}`) >= 0) moved.push(`${key} vs hd:${d.value}`);
     }
     expect(moved).toEqual([]);
@@ -319,7 +322,7 @@ describe.skipIf(!inputsReadable)('membership manifest ↔ inherited spine', () =
           gaiaId, `synth:${synthId.slice(SYNTH_RUNTIME_PREFIX.length)}`,
         );
       }
-      const withBridgedSynth = (row: ManifestRow): string[] => {
+      const withBridgedSynth = (row: ManifestRecord): string[] => {
         const designations = manifestDesignations(row);
         for (const d of designations) {
           if (!d.startsWith('gaia_dr3:')) continue;

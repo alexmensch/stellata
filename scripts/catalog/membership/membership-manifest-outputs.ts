@@ -9,8 +9,8 @@ import {
   ADDITIONS_LEDGER_FILE,
   BINDING_REVIEW_FILE,
   LABEL_DROPS_FILE,
-  MEMBERSHIP_MANIFEST_FILE,
 } from './membership-manifest-pure';
+import { MEMBERSHIP_MANIFEST_FILE } from './membership-manifest-tsv';
 
 export const MEMBERSHIP_OUTPUTS = declareOutputs({
   labelFlips: resolve(ROOT, LABEL_FLIPS_FILE),

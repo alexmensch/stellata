@@ -41,9 +41,9 @@ import {
   serializeBindingReview,
   serializeLabelDrops,
   serializeLedger,
-  serializeManifest,
   type MembershipCounts,
 } from './membership-manifest-pure';
+import { MEMBERSHIP_MANIFEST } from './membership-manifest-tsv';
 
 const SRC_OVERLAY = resolve(ROOT, 'data/classic-ids/classic_id_overlay.tsv');
 const OVERLAY_HINT = 'run `pnpm run build:classic-ids`.';
@@ -156,7 +156,7 @@ async function main(): Promise<void> {
     outputs: MEMBERSHIP_OUTPUTS,
     files: {
       labelFlips: labelFlipsTsv(result.flips),
-      manifest: serializeManifest(result.rows),
+      manifest: MEMBERSHIP_MANIFEST.serialize(result.rows),
       additions: serializeLedger(result.ledger),
       bindingReview: serializeBindingReview(result.bindingReview),
       labelDrops: serializeLabelDrops(result.labelDrops),

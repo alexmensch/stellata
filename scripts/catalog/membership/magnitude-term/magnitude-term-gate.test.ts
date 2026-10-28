@@ -5,7 +5,7 @@ import { resolve } from 'node:path';
 import { beforeAll, describe, expect, it } from 'vitest';
 
 import { REPO_ROOT, lfsContentReadable } from '../../../util/paths';
-import { MEMBERSHIP_MANIFEST_FILE, iterManifestTsv } from '../membership-manifest-pure';
+import { MEMBERSHIP_MANIFEST, MEMBERSHIP_MANIFEST_FILE } from '../membership-manifest-tsv';
 import {
   MAGNITUDE_PULL_TSV,
   readMagnitudeTerm,
@@ -35,9 +35,9 @@ describe.skipIf(!readable)('the floor over the committed pull', () => {
     selection = await readMagnitudeTerm(GATE_FLOOR_V);
     boundSourceIds = new Set<string>();
     committedTermRows = 0;
-    for (const row of iterManifestTsv(readFileSync(MANIFEST_PATH, 'utf8'))) {
+    for (const row of MEMBERSHIP_MANIFEST.rows(readFileSync(MANIFEST_PATH, 'utf8'))) {
       if (row.term === 'magnitude') { committedTermRows++; continue; }
-      if (row.gaia_source_id) boundSourceIds.add(row.gaia_source_id);
+      if (row.gaiaSourceId !== null) boundSourceIds.add(row.gaiaSourceId);
     }
   }, 120_000);
 

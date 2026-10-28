@@ -21,10 +21,20 @@ and fails on any diff under `data/membership/`.
 
 ```
 scripts/catalog/membership/
+  membership-manifest-tsv.ts      MEMBERSHIP_MANIFEST, the manifest's codec:
+                                  the columns, the binding and term sets, and
+                                  ManifestRecord — typed ids, alias lists,
+                                  binding and term checked against their
+                                  sets, isSol. manifestRecord is the one
+                                  constructor, shared by the file decoder and
+                                  the generator, which assembles rows as
+                                  spine-shaped cells and types them at the
+                                  end. Leaf: readers import it, not the
+                                  generator module.
   membership-manifest-pure.ts     Row assembly (spine side, additions), the
     (+ test)                      review queue and the dispositions settling
                                   it, the admission rule, the /docs/catalog-driver.md#61-record-parity reason
-                                  codes, the label drops, the TSV codecs, and
+                                  codes, the label drops, the ledger codecs, and
                                   the spine ↔ manifest matcher the gate runs.
                                   Pure.
   build-membership-manifest.ts    `pnpm run build:membership` — loads the
@@ -91,7 +101,7 @@ gaia_source_id  binding  routes  term
   Flamsteed or HD cell leaves the row for `label-drops.tsv` instead
   ([The unattested labels leave the row](#the-unattested-labels-leave-the-row)).
 
-Rows are sorted by SID canonical key (`sortManifestRows`), then TYC, then
+Rows are sorted by SID canonical key (`sortManifestRecords`), then TYC, then
 source — a total order over content, so a regeneration diffs by what changed
 and never by walk order. Sol is first, keyed `sol:sun` alone.
 

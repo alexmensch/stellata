@@ -13,7 +13,7 @@ which is why it sits beside the record build rather than inside it
 ```
 scripts/catalog/astrometry-request/
   export-astrometry-request.ts    The generator. Streams the membership
-                                  manifest through iterManifestTsv for the
+                                  manifest through its codec for the
                                   membership half, adds both gates' candidates
                                   and the bound-pair siblings, sorts, and
                                   emits the request through emitArtifacts.

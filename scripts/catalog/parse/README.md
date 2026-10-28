@@ -86,13 +86,13 @@ Three deliberate exceptions:
 
 - `gaia-xmatch.ts` streams a 2.5 M-row table line-by-line and dedups on
   angular distance, so it needs its own accumulator.
-- `iterManifestTsv` (`../membership/membership-manifest-pure.ts`) and
+- The manifest codec (`MEMBERSHIP_MANIFEST`, `../membership/membership-manifest-tsv.ts`) and
   `iterSpineTsv` (`../spine/inherited-spine-pure.ts`) each demand the header be
   their column list **byte for byte, in order**, where `headerIndex` resolves
   columns by name in any order. That is the stricter contract on purpose: both
   files are generated, and the codec that writes each one also writes its
   header, so a header that merely parses is already a file nobody meant to
-  ship. `iterManifestTsv` additionally rejects any row whose cell count differs
+  ship. The manifest codec additionally rejects any row whose cell count differs
   from the column count.
 - `parseSimbadSptypeTsv` (`../spectral/spectral-resolve.ts`) demands only
   `source_id` and `sp_type`, treating `hip` / `tyc` / `gj` / `sp_qual` /
@@ -121,7 +121,7 @@ paths cannot diverge on what a row means:
 `bestNeighbourAccumulator` (`gaia-xmatch.ts`),
 `gaiaAstrometryAccumulator` (`../distance/direction-cascade.ts`),
 `magnitudeTermAccumulator` (`../membership/magnitude-term/`) and
-`manifestLineReader` (`../membership/membership-manifest-pure.ts`) are the
+`MEMBERSHIP_MANIFEST.lineReader` (`../membership/membership-manifest-tsv.ts`) are the
 four, each paired with its whole-text sibling.
 
 An accumulator that takes a **keep-set** filters during the fold rather than

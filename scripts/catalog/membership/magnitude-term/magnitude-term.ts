@@ -8,11 +8,11 @@ import {
   type GaiaAstrometryCatalogRow,
 } from '../../distance/direction-cascade';
 import { forEachLine } from '../../parse/tsv-stream';
-import { manifestLineReader } from '../membership-manifest-pure';
+import { MEMBERSHIP_MANIFEST } from '../membership-manifest-tsv';
 import {
   MAGNITUDE_PULL_FILE,
   MAGNITUDE_PULL_HINT,
-  isMagnitudeTermRow,
+  magnitudeTermSourceId,
   magnitudeTermAccumulator,
   type MagnitudeTermSelection,
 } from './magnitude-term-pure';
@@ -29,8 +29,9 @@ export async function readMagnitudeTerm(floorV: number): Promise<MagnitudeTermSe
  *  before it walks the manifest, and the file runs to tens of megabytes. */
 export async function readMagnitudeTermSourceIds(manifestPath: string): Promise<Set<string>> {
   const out = new Set<string>();
-  await forEachLine(manifestPath, manifestLineReader((row) => {
-    if (isMagnitudeTermRow(row)) out.add(row.gaia_source_id);
+  await forEachLine(manifestPath, MEMBERSHIP_MANIFEST.lineReader((row) => {
+    const sourceId = magnitudeTermSourceId(row);
+    if (sourceId !== null) out.add(sourceId);
   }));
   return out;
 }
