@@ -49,7 +49,10 @@ function main(): void {
     console.error('sid:dr-reconcile: inputs are LFS pointer stubs — run `git lfs pull` first');
     process.exit(1);
   }
-  const riskIds = readRiskIds(requestText, args.request);
+  const requestHint = args.request === DR2_DRY_RUN.request
+    ? 'It is the frozen dry-run snapshot: restore it from git.'
+    : 'Re-export it with `pnpm run sid:risk-set`.';
+  const riskIds = readRiskIds(requestText, args.request, requestHint);
   const rows = readNeighbourhoodRows(neighbourhoodText, args.riskCol, args.candidateCol, args.neighbourhood);
   const c = classifyDrTransition(riskIds, rows);
 

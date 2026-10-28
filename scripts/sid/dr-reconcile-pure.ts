@@ -58,8 +58,8 @@ export interface DrClassification {
   distanceQuantiles: { p50: number; p90: number; p99: number; max: number };
 }
 
-export function readRiskIds(text: string, file: string): bigint[] {
-  const spec = { file, columns: ['gaia_source_id'], hint: `Re-export with \`pnpm run sid:risk-set\`, or restore ${DR2_DRY_RUN.request} from git.` };
+export function readRiskIds(text: string, file: string, hint: string): bigint[] {
+  const spec = { file, columns: ['gaia_source_id'], hint };
   return [...readTable(spec, text)].map((row) => BigInt(row.requiredSourceId('gaia_source_id')));
 }
 
