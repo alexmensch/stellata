@@ -88,10 +88,6 @@ describe('readNeighbourhoodRows', () => {
   });
 });
 
-// End-to-end pin of the DR2→DR3 dry run (/docs/sid.md#62-dr2dr3-dry-run-measured-2026-07-07) against the
-// committed request + neighbourhood snapshots. Self-skips where those LFS
-// files are pointer stubs (the bare CI test job); runs in the
-// SID-ledger-guard job and locally.
 describe('DR2_DRY_RUN', () => {
   it('is no step output, so a build never rewrites the frozen pair', () => {
     const declared = Object.values(DR_RISK_SET_OUTPUTS.files);
@@ -99,6 +95,10 @@ describe('DR2_DRY_RUN', () => {
   });
 });
 
+// End-to-end pin of the DR2→DR3 dry run (/docs/sid.md#62-dr2dr3-dry-run-measured-2026-07-07) against the
+// committed request + neighbourhood snapshots. Self-skips where those LFS
+// files are pointer stubs (the bare CI test job); runs in the
+// SID-ledger-guard job and locally.
 const REQUEST = resolve(REPO_ROOT, DR2_DRY_RUN.request);
 const NEIGHBOURHOOD = resolve(REPO_ROOT, DR2_DRY_RUN.neighbourhood);
 const available = lfsContentReadable(REQUEST) && lfsContentReadable(NEIGHBOURHOOD);
