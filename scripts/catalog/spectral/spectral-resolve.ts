@@ -68,17 +68,19 @@ export function parseSimbadSptypeTsv(text: string, from: Declared): SimbadSpectr
       index, keys, { spType, spQual, otype, sourceId: keys.sourceId },
       // No key repeats in the committed file (../naming/README.md#the-union-policy
       // adds rows,
-      // never a second row under one key). The row stating a type is the
-      // verdict a pull that did emit two would need; two rows both stating one
-      // cannot be ordered here and are a curation fault.
+      // never a second row under one key). On a designation key the row stating
+      // a type is the verdict a pull that did emit two would need; two rows both
+      // stating one cannot be ordered here and are a curation fault.
       (namespace, key, incumbent, candidate) => {
+        if (namespace === 'source_id') {
+          throw new Error(`${from.file} has two rows keyed source_id=${key}. ${from.hint}`);
+        }
         if (incumbent.spType === null) return candidate;
         if (candidate.spType === null) return incumbent;
         throw new Error(
-          `data/simbad/simbad_sptype.tsv has two rows keyed ${namespace}=${key}, `
+          `${from.file} has two rows keyed ${namespace}=${key}, `
             + `both stating a spectral type (${incumbent.spType} / `
-            + `${candidate.spType}). Curate the pair or re-run `
-            + `scripts/refresh/refresh-simbad-sptype.py.`,
+            + `${candidate.spType}). Curate the pair or ${from.hint}`,
         );
       },
     );

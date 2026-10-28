@@ -297,9 +297,9 @@ object, so a designation the union asks under can only resolve to the
 object that holds it, and an object an earlier phase already pulled adds
 nothing ([The union adds rows, never a second row under one key](/scripts/refresh/simbad/README.md#the-union-adds-rows-never-a-second-row-under-one-key)
 — it carries the check to re-run). No key repeats
-in any of the four namespaces. What the union did change is that
-`parseSimbadSptypeTsv` now MERGES a repeat rather than failing on one,
-keeping whichever row states a type; that decides nothing today.
+in any of the four namespaces. A repeated `source_id` fails the read for
+every consumer of the file; a repeat under a designation key (`hip`, `tyc`,
+`gj`) merges to whichever row states a type, which decides nothing today.
 `data/binaries/multiples.tsv` is byte-identical across the re-pull: the
 binaries-side join keys on `simbad_oid` through `simbad_wds_xids.tsv`, so
 the sp_type namespaces are not on its path at all.

@@ -283,6 +283,9 @@ describe('parseSimbadSptypeTsv', () => {
     expect(() => parseSimbadSptypeTsv(dupSource, FROM))
       .toThrow(/two rows keyed source_id=9876/);
     expect(() => parseSimbadSptypeTsv(HDR +
+      '1\tFirst\t\t\t\t*\t\t9876\n' +
+      '2\tSecond\tK0III\tD\t\t*\t\t9876\n', FROM)).toThrow(/two rows keyed source_id=9876\. h/);
+    expect(() => parseSimbadSptypeTsv(HDR +
       '1\tA\tB8V\tC\t\t*\t\t\t1-2-1\t\n' +
       '2\tB\tK0III\tD\t\t*\t\t\t1-2-1\t\n', FROM)).toThrow(/two rows keyed tyc=1-2-1/);
     // The GJ collision is only visible after the fold: `Gl 165A` and `165 A`
