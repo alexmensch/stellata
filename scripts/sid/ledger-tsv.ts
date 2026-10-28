@@ -4,8 +4,6 @@ import { defineArtifact } from '../util/tsv/artifact-pure';
 import { decodeLedgerRow, encodeLedgerRow, LEDGER_COLUMNS, type LedgerRow } from './ledger-pure';
 import { registryFile, type RegistryFile } from './sid-pure';
 
-export const LEDGER_HEAD_FILE = 'data/sid/ledger-head.json';
-
 export const LEDGER = defineArtifact({
   file: 'data/sid/ledger.tsv',
   columns: LEDGER_COLUMNS,

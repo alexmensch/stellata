@@ -25,7 +25,7 @@ sid-pure.ts               Pure algebra: designation grammar (/docs/sid.md#3-desi
 ledger-pure.ts            ledger.tsv's row shape, SID_KINDS and cell
                           encoding, apart from its declaration.
 ledger-tsv.ts (+ test)    LEDGER — ledger.tsv's artifact codec, plus
-                          ledgerFile and the ledger-head.json path. Every
+                          ledgerFile. Every
                           registry file reads a sid as TableRow.id
                           (../util/tsv/README.md). The test round-trips
                           the committed ledger byte for byte.
@@ -50,6 +50,9 @@ registry-io.ts            loadRegistry: the ledger, retirements,
                           is required; a suite that may meet an LFS-stub
                           ledger gates on isReadable(LEDGER) itself.
                           Shared by build-catalog and the stamp.
+allocate-outputs.ts       ALLOCATE_OUTPUTS: what sid:allocate writes, the
+                          ledger and ledger-head.json, declared;
+                          tests/step-outputs.test.ts holds it.
 allocate.ts               pnpm run sid:allocate — the ONLY writer of
                           ledger.tsv, appending each mint as one
                           LEDGER.encodeLine line and never rewriting a

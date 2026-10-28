@@ -16,7 +16,8 @@ import { REPO_ROOT as ROOT } from '../util/paths';
 import { artifactText } from '../util/sources/source';
 import { readTable } from '../util/tsv/table-pure';
 import { MULTIPLES_TSV } from '../binaries/multiples-tsv';
-import { LEDGER, LEDGER_HEAD_FILE, ledgerFile } from './ledger-tsv';
+import { ALLOCATE_OUTPUTS } from './allocate-outputs';
+import { LEDGER, ledgerFile } from './ledger-tsv';
 import { SHELL_OBJECTS, SOL_OBJECTS } from './object-mints-source';
 import { REINSTATEMENTS, RETIREMENTS } from './registry-source';
 import { loadStoredEdges } from './stored-edges';
@@ -32,8 +33,7 @@ import {
 import { SIBLING_ARTIFACTS, siblingArtifactObjects, type SiblingItem } from './sibling-artifacts';
 
 const PUBLIC_DIR = resolve(ROOT, 'public');
-const LEDGER_PATH = resolve(ROOT, LEDGER.file);
-const HEAD_PATH = resolve(ROOT, LEDGER_HEAD_FILE);
+const { ledger: LEDGER_PATH, head: HEAD_PATH } = ALLOCATE_OUTPUTS.files;
 
 function requireFile(path: string, hint: string): string {
   if (!existsSync(path)) {

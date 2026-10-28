@@ -6,12 +6,13 @@
 
 import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { relative, resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 import { REPO_ROOT } from '../scripts/util/paths';
 import { artifactText, isReadable } from '../scripts/util/sources/source';
-import { LEDGER, LEDGER_HEAD_FILE, ledgerFile } from '../scripts/sid/ledger-tsv';
+import { ALLOCATE_OUTPUTS } from '../scripts/sid/allocate-outputs';
+import { LEDGER, ledgerFile } from '../scripts/sid/ledger-tsv';
 import { SHELL_OBJECTS, SOL_OBJECTS } from '../scripts/sid/object-mints-source';
 import { REINSTATEMENTS, RETIREMENTS } from '../scripts/sid/registry-source';
 import { SAMEAS_BRIDGES, SAMEAS_OVERRIDES } from '../scripts/sid/sameas-source';
@@ -38,7 +39,7 @@ function git(...args: string[]): string {
 function baseHead(): LedgerHead | null {
   try {
     const mergeBase = git('merge-base', 'HEAD', 'origin/main');
-    return JSON.parse(git('show', `${mergeBase}:${LEDGER_HEAD_FILE}`)) as LedgerHead;
+    return JSON.parse(git('show', `${mergeBase}:${relative(REPO_ROOT, ALLOCATE_OUTPUTS.files.head)}`)) as LedgerHead;
   } catch {
     return null;
   }
@@ -66,7 +67,7 @@ describe.skipIf(!available)('sid ledger guard', () => {
   });
 
   it('ledger-head.json exactly matches a recomputation over the working files', () => {
-    const head = JSON.parse(readFileSync(resolve(REPO_ROOT, LEDGER_HEAD_FILE), 'utf-8')) as LedgerHead;
+    const head = JSON.parse(readFileSync(ALLOCATE_OUTPUTS.files.head, 'utf-8')) as LedgerHead;
     expect(head).toEqual(computeLedgerHead(ledger(), retirements(), reinstatements()));
   });
 
