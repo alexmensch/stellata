@@ -65,6 +65,17 @@ describe('readTable', () => {
     expect([...readTable(exact, 'id\tv\nA\t\n')]).toHaveLength(1);
   });
 
+  it('reads a source_id as bare digits, kept a string', () => {
+    const [row] = readTable(SPEC, 'id\tv\n4295806720123456789\t\n');
+    expect(row.sourceId('id')).toBe('4295806720123456789');
+    expect(row.requiredSourceId('id')).toBe('4295806720123456789');
+    expect(row.sourceId('v')).toBeNull();
+    expect(() => row.requiredSourceId('v')).toThrow('data/t.tsv:2: v: is empty. Re-run x.');
+    const [bad] = readTable(SPEC, 'id\tv\n-12\t1e3\n');
+    expect(() => bad.sourceId('id')).toThrow('data/t.tsv:2: id: "-12" is not a source_id. Re-run x.');
+    expect(() => bad.requiredSourceId('v')).toThrow(/v: "1e3" is not a source_id/);
+  });
+
   it('oneOf accepts only the listed values', () => {
     const [row] = readTable(SPEC, 'id\tv\nA\tq\n');
     expect(row.oneOf('id', ['A', 'B'] as const)).toBe('A');

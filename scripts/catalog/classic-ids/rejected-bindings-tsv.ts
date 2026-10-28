@@ -29,7 +29,7 @@ export const REJECTED_BINDINGS = defineArtifact({
   order: (a: RejectedBindingRow, b: RejectedBindingRow) =>
     compareHipNullsFirst(a.hip, b.hip) || compareSourceIdsNumeric(a.sourceId, b.sourceId),
   decode: (row): RejectedBindingRow => ({
-    sourceId: row.raw('gaia_source_id'),
+    sourceId: row.requiredSourceId('gaia_source_id'),
     hip: row.int('hip'),
     vMag: row.float('v_mag'),
     vVia: row.raw('v_via') === '' ? null : row.oneOf('v_via', PRINTED_V_TIERS),

@@ -50,7 +50,7 @@ export const CLASSIC_ID_OVERLAY = defineArtifact({
     const ints = (c: (typeof OVERLAY_COLUMNS)[number]): number[] => list(c).map((v) => (
       INTEGER.test(v) ? Number(v) : row.fail(`${c} "${row.raw(c)}" is not an integer list`)));
     return {
-      sourceId: row.raw('gaia_source_id'),
+      sourceId: row.requiredSourceId('gaia_source_id'),
       hd: ints('hd'),
       hr: ints('hr'),
       hip: ints('hip'),

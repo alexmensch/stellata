@@ -24,6 +24,6 @@ describe('multiples.tsv codec', () => {
 
   it('rejects a source_id that is not digits', () => {
     expect(() => MULTIPLES_TSV.parse(`${header}\n${cells({ gaia_source_id: '12a' })}\n`))
-      .toThrow(/gaia_source_id "12a" is not a source_id/);
+      .toThrow(/multiples\.tsv:2: gaia_source_id: "12a" is not a source_id/);
   });
 });

@@ -99,16 +99,12 @@ export const MULTIPLES_TSV = defineArtifact({
   hint: 'Re-run `pnpm run build:binaries`.',
   order: 'as-given',
   decode: (row): MultiplesRecord => {
-    const gaiaSourceId = row.text('gaia_source_id');
-    if (gaiaSourceId !== null && !/^\d+$/.test(gaiaSourceId)) {
-      row.fail(`gaia_source_id "${gaiaSourceId}" is not a source_id`);
-    }
     const regime = row.int('regime') ?? row.fail('regime is empty');
     return {
       systemId: row.raw('system_id'),
       comp: row.raw('comp'),
       hip: row.int('hip'),
-      gaiaSourceId,
+      gaiaSourceId: row.sourceId('gaia_source_id'),
       hd: row.int('hd'),
       x_pc: row.float('x_pc'),
       y_pc: row.float('y_pc'),

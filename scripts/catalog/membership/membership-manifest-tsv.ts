@@ -1,6 +1,7 @@
 // See README.md#files-in-this-area.
 
 import { defineArtifact, nullableCell } from '../../util/tsv/artifact-pure';
+import { sourceIdCell } from '../../util/tsv/table-pure';
 import { SOL_PROPER_NAME } from '../record/catalog-pure';
 import { canonicalKeyOf, compareDesignations, starDesignations } from '../../sid/sid-pure';
 
@@ -73,8 +74,13 @@ export function manifestRecord(
     const v = cell(c);
     return (allowed as readonly string[]).includes(v) ? v as T : fail(`${c} "${v}" is not one of ${allowed.join(' | ')}`);
   };
-  const gaiaSourceId = text('gaia_source_id');
-  if (gaiaSourceId !== null && !INTEGER.test(gaiaSourceId)) fail(`gaia_source_id "${gaiaSourceId}" is not a source_id`);
+  const parsed = <T>(c: ManifestColumn, parse: (raw: string) => T): T => {
+    try {
+      return parse(cell(c));
+    } catch (e) {
+      return fail(`${c}: ${(e as Error).message}`);
+    }
+  };
   const proper = text('proper');
   return {
     tyc: text('tyc'),
@@ -87,7 +93,7 @@ export function manifestRecord(
     flam: int('flam'),
     bayer: text('bayer'),
     proper,
-    gaiaSourceId,
+    gaiaSourceId: parsed('gaia_source_id', sourceIdCell),
     binding: oneOf('binding', BINDING_CLASSES),
     routes: cell('routes'),
     term: oneOf('term', MEMBERSHIP_TERMS),

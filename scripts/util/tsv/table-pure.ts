@@ -39,6 +39,20 @@ export function intCell(raw: string | undefined): number | null {
   return Number(t);
 }
 
+const SOURCE_ID = /^\d+$/;
+
+export function sourceIdCell(raw: string | undefined): string | null {
+  const t = textCell(raw);
+  if (t === null) return null;
+  if (!SOURCE_ID.test(t)) throw new Error(`"${t}" is not a source_id`);
+  return t;
+}
+
+function present<T>(v: T | null): T {
+  if (v === null) throw new Error('is empty');
+  return v;
+}
+
 export function oneOfCell<T extends string>(raw: string | undefined, allowed: readonly T[]): T {
   const t = raw ?? '';
   if (!(allowed as readonly string[]).includes(t)) {
@@ -77,6 +91,14 @@ export class TableRow<C extends string> {
 
   int(c: C): number | null {
     return this.cell(c, intCell);
+  }
+
+  sourceId(c: C): string | null {
+    return this.cell(c, sourceIdCell);
+  }
+
+  requiredSourceId(c: C): string {
+    return this.cell(c, (raw) => present(sourceIdCell(raw)));
   }
 
   oneOf<T extends string>(c: C, allowed: readonly T[]): T {

@@ -11,7 +11,7 @@ a cell.
 scripts/util/tsv/
   table-pure.ts (+ test)      readTable / tableLineReader, TableRow and the
                               cell parsers (textCell, floatCell, intCell,
-                              oneOfCell).
+                              sourceIdCell, oneOfCell).
   artifact-pure.ts (+ test)   defineArtifact — a self-written table's codec.
   committed-round-trip.ts     Test support: describeCommittedRoundTrip, an
                               artifact's codec over its committed file, byte
@@ -41,6 +41,9 @@ the target that rebuilds or re-pulls the file.
   a non-empty cell they cannot parse. `float` takes only a plain decimal
   (`12abc`, `nan`, `Infinity` and hex all throw); `int` only an integer
   (`12.0` throws). A cell past the end of a short row reads as empty.
+  `sourceId` takes bare digits only and answers a string, since a DR3
+  source_id exceeds `Number.MAX_SAFE_INTEGER`; `requiredSourceId` also throws
+  on an empty cell.
   `oneOf(column, values)` returns the cell typed to a closed set or throws.
 - `raw` is the cell exactly as written, for a reader whose meaning depends on
   untrimmed text.
