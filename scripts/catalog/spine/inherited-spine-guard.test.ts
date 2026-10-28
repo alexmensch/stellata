@@ -8,8 +8,8 @@ import { resolve } from 'node:path';
 import { beforeAll, describe, expect, it } from 'vitest';
 
 import { compareCountSnapshot } from '../build-counts';
-import { dataRows } from '../parse/corpus-tsv';
 import { REPO_ROOT, isLfsPointer, lfsContentReadable } from '../../util/paths';
+import { readTable, type TableSpec } from '../../util/tsv/table-pure';
 import {
   INHERITED_SPINE_EXPECTED_FILE,
   INHERITED_SPINE_FILE,
@@ -24,24 +24,21 @@ import {
 
 const SPINE_PATH = resolve(REPO_ROOT, INHERITED_SPINE_FILE);
 const EXPECTED_PATH = resolve(REPO_ROOT, INHERITED_SPINE_EXPECTED_FILE);
-const ASTROMETRY_PATH = resolve(
-  REPO_ROOT, 'data/gaia/gaia_dr3_astrometry_catalog.tsv',
-);
-const SIMBAD_VALUES_PATH = resolve(REPO_ROOT, 'data/simbad/simbad_values.tsv');
+const ASTROMETRY_FILE = 'data/gaia/gaia_dr3_astrometry_catalog.tsv';
+const SIMBAD_VALUES_FILE = 'data/simbad/simbad_values.tsv';
+const ASTROMETRY_PATH = resolve(REPO_ROOT, ASTROMETRY_FILE);
+const SIMBAD_VALUES_PATH = resolve(REPO_ROOT, SIMBAD_VALUES_FILE);
 
-const STALE_QUEUE_COLUMNS = [
-  'gaia_source_id', 'simbad_oid', 'simbad_dr3_source_id',
-] as const;
-const STALE_QUEUE_HINT =
-  'Re-derive it from the spine, the 5p pull and the SIMBAD values pull.';
+const STALE_QUEUE = {
+  file: STALE_GAIA_SOURCE_IDS_FILE,
+  columns: ['gaia_source_id', 'simbad_oid', 'simbad_dr3_source_id'] as const,
+  hint: 'Re-derive it from the spine, the 5p pull and the SIMBAD values pull.',
+} satisfies TableSpec<string>;
 
-/** Key column of a big TSV, without materialising the rest of the row — both
- *  files here run to hundreds of thousands of lines and only the first cell
- *  is read. */
-function* firstColumn(text: string): Generator<string> {
-  for (const line of text.split(/\r?\n/).slice(1)) {
-    if (!line) continue;
-    yield line.slice(0, line.indexOf('\t'));
+function* keyColumn(file: string, column: string, hint: string): Generator<string> {
+  const spec = { file, columns: [column], hint };
+  for (const row of readTable(spec, readFileSync(resolve(REPO_ROOT, file), 'utf-8'))) {
+    yield row.raw(column);
   }
 }
 
@@ -118,14 +115,17 @@ describe.skipIf(!staleInputs.every(lfsContentReadable))(
     let reachedOids: Set<string>;
 
     beforeAll(() => {
-      queue = [...dataRows(
-        readFileSync(resolve(REPO_ROOT, STALE_GAIA_SOURCE_IDS_FILE), 'utf-8'),
-        STALE_QUEUE_COLUMNS, STALE_GAIA_SOURCE_IDS_FILE, STALE_QUEUE_HINT,
-      )].map(({ cells, idx }) => Object.fromEntries(
-        STALE_QUEUE_COLUMNS.map((c) => [c, (cells[idx[c]] ?? '').trim()]),
+      queue = [...readTable(
+        STALE_QUEUE, readFileSync(resolve(REPO_ROOT, STALE_GAIA_SOURCE_IDS_FILE), 'utf-8'),
+      )].map((row) => Object.fromEntries(
+        STALE_QUEUE.columns.map((c) => [c, row.text(c) ?? '']),
       ));
-      published = new Set(firstColumn(readFileSync(ASTROMETRY_PATH, 'utf-8')));
-      reachedOids = new Set(firstColumn(readFileSync(SIMBAD_VALUES_PATH, 'utf-8')));
+      published = new Set(keyColumn(
+        ASTROMETRY_FILE, 'source_id', 'Re-run scripts/refresh/refresh-gaia-astrometry-catalog.py.',
+      ));
+      reachedOids = new Set(keyColumn(
+        SIMBAD_VALUES_FILE, 'simbad_oid', 'Re-run `pnpm run refresh:simbad-values`.',
+      ));
     });
 
     it('enumerates exactly the spine rows the 5p pull cannot key', () => {
