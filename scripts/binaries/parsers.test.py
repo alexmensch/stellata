@@ -616,13 +616,21 @@ class GaiaXmatchTests(unittest.TestCase):
             "0\t1111111111111111111\t0.1\n"     # hip 0
             "-4\t2222222222222222222\t0.1\n"    # negative hip
             "12abc\t3333333333333333333\t0.1\n"  # partial-numeric hip
-            "20\t-8888888888888888888\t0.1\n"   # negative gaia
             "21\t4444444444444444444\t0.1\n"    # the one valid row
         )
         with tempfile.TemporaryDirectory() as td:
             p = _write(Path(td), "xm.tsv", body)
             m = parse_gaia_hip_xmatch(p)
         self.assertEqual(m, {21: 4444444444444444444})
+
+    def test_hip_xmatch_raises_on_malformed_source_id(self) -> None:
+        # In step with the TS reader's strict source_id: a cell that is not
+        # bare digits fails with its line rather than dropping the row.
+        body = "hip\tgaia_source_id\tangular_distance\n20\t-8888888888888888888\t0.1\n"
+        with tempfile.TemporaryDirectory() as td:
+            p = _write(Path(td), "xm.tsv", body)
+            with self.assertRaisesRegex(ValueError, r":2: gaia_source_id \"-8888888888888888888\" is not a source_id"):
+                parse_gaia_hip_xmatch(p)
 
     def test_tyc_xmatch(self) -> None:
         body = (

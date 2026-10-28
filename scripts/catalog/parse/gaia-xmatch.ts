@@ -52,15 +52,14 @@ function bestNeighbourAccumulator<K>(
 
   const fold = (row: TableRow<string>): void => {
     const keyRaw = row.raw(spec.keyColumn);
-    const gaiaRaw = row.raw(GAIA_COL);
-    if (!keyRaw || !gaiaRaw) return;
+    const src = row.sourceId(GAIA_COL);
+    if (!keyRaw || src === null || /^0+$/.test(src)) return;
     const key = spec.parseKey(keyRaw);
     if (key === null) return;
     if (keep && !keep.has(key)) return;
-    if (!/^\d+$/.test(gaiaRaw) || /^0+$/.test(gaiaRaw)) return;
     const ang = row.float(ANG_COL) ?? Number.POSITIVE_INFINITY;
     const prev = best.get(key);
-    if (!prev || ang < prev.ang) best.set(key, { ang, src: gaiaRaw });
+    if (!prev || ang < prev.ang) best.set(key, { ang, src });
   };
 
   const read = tableLineReader(

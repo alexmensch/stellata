@@ -44,18 +44,22 @@ describe('gaia-xmatch / parseGaiaHipXmatchTsv', () => {
     expect(m.get(7)).toBe('222');
   });
 
-  it('skips rows with non-numeric or empty hip / gaia_source_id', () => {
+  it('skips rows with a non-numeric or empty hip, or an empty gaia_source_id', () => {
     const text = [
       'hip\tgaia_source_id\tangular_distance',
       '\t111\t0.1',
       '8\t\t0.1',
-      '9\tnot-a-number\t0.1',
       '0\t555\t0.1',
       '10\t777\t0.1',
     ].join('\n');
     const m = parseGaiaHipXmatchTsv(text);
     expect(m.size).toBe(1);
     expect(m.get(10)).toBe('777');
+  });
+
+  it('throws on a gaia_source_id that is not digits, naming the line', () => {
+    const text = 'hip\tgaia_source_id\tangular_distance\n9\tnot-a-number\t0.1\n';
+    expect(() => parseGaiaHipXmatchTsv(text)).toThrow(/:2: gaia_source_id: "not-a-number" is not a source_id/);
   });
 
   it('skips partial-numeric hip and all-zero gaia_source_id', () => {

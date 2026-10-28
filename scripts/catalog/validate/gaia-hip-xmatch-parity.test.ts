@@ -3,8 +3,9 @@
 // either parser (tie-break, skip guards, big-int handling) fails here.
 
 import { execFileSync } from 'node:child_process';
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join, resolve } from 'node:path';
 import { describe, it, expect } from 'vitest';
 
 import { parseGaiaHipXmatchTsv } from '../parse/gaia-xmatch';
@@ -50,5 +51,14 @@ describe('gaia-hip-xmatch parity (parsers.py vs gaia-xmatch.ts)', () => {
     expect(ts).toEqual(EXPECTED);
     expect(py).toEqual(EXPECTED);
     expect(ts).toEqual(py);
+  });
+
+  it('both parsers refuse a gaia_source_id that is not digits', () => {
+    const path = join(mkdtempSync(join(tmpdir(), 'xmatch-')), 'xm.tsv');
+    writeFileSync(path, 'hip\tgaia_source_id\tangular_distance\n20\tnot-a-number\t0.1\n');
+    expect(() => parseGaiaHipXmatchTsv(readFileSync(path, 'utf8'))).toThrow(/is not a source_id/);
+    expect(() => execFileSync('python3', ['-c', PY_DUMP, path], {
+      cwd: resolve(REPO_ROOT), encoding: 'utf8', stdio: 'pipe',
+    })).toThrow(/is not a source_id/);
   });
 });
