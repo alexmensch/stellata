@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest';
 import { REPO_ROOT, lfsContentReadable } from '../util/paths';
 import {
   ACCEPT_MAS,
+  DR2_DRY_RUN,
   MAG_REVIEW_DELTA,
   classifyDrTransition,
   readNeighbourhoodRows,
@@ -90,18 +91,18 @@ describe('readNeighbourhoodRows', () => {
 // committed request + neighbourhood snapshots. Self-skips where those LFS
 // files are pointer stubs (the bare CI test job); runs in the
 // SID-ledger-guard job and locally.
-const REQUEST = resolve(REPO_ROOT, 'data/gaia/gaia_dr2_neighbourhood_request.tsv');
-const NEIGHBOURHOOD = resolve(REPO_ROOT, 'data/gaia/gaia_dr2_neighbourhood.tsv');
+const REQUEST = resolve(REPO_ROOT, DR2_DRY_RUN.request);
+const NEIGHBOURHOOD = resolve(REPO_ROOT, DR2_DRY_RUN.neighbourhood);
 const available = lfsContentReadable(REQUEST) && lfsContentReadable(NEIGHBOURHOOD);
 
 describe.skipIf(!available)('DR2→DR3 dry run (committed snapshot)', () => {
   it('reproduces the /docs/sid.md#62-dr2dr3-dry-run-measured-2026-07-07 classification exactly', () => {
-    const riskIds = readRiskIds(readFileSync(REQUEST, 'utf-8'), 'data/gaia/gaia_dr2_neighbourhood_request.tsv');
+    const riskIds = readRiskIds(readFileSync(REQUEST, 'utf-8'), DR2_DRY_RUN.request);
     const rows = readNeighbourhoodRows(
       readFileSync(NEIGHBOURHOOD, 'utf-8'),
       'dr3_source_id',
       'dr2_source_id',
-      'data/gaia/gaia_dr2_neighbourhood.tsv',
+      DR2_DRY_RUN.neighbourhood,
     );
     expect(riskIds).toHaveLength(5085);
     expect(rows).toHaveLength(5912);

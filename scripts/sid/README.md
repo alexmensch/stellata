@@ -63,7 +63,9 @@ dr-reconcile.ts           pnpm run sid:dr-reconcile — churn report for a
                           dry-run inputs (/docs/sid.md#62-dr2dr3-dry-run-measured-2026-07-07).
 dr-reconcile-pure.ts      Pure classifier + request/neighbourhood TSV
                           readers. ACCEPT_MAS / MAG_REVIEW_DELTA live
-                          here.
+                          here, and DR2_DRY_RUN: the frozen dry-run
+                          pair's paths, read by dr-reconcile.ts and the
+                          replay test.
 stamp-sibling-sids.ts     Stamps the frozen sid onto clouds.json /
                           local-group.json after their emitters run — the
                           tail of build:clouds / build:local-group (also
