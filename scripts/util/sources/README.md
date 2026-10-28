@@ -57,10 +57,14 @@ A declaration lives only in a module named `*-source.ts` or `*-tsv.ts`, and
 that module is imported only by code that reads (or, for an artifact, writes)
 the file through it. Import reachability then equals reading, which is what
 lets a step's data inputs be derived from its closure.
-`tests/source-declarations.test.ts` holds every `tsx` pipeline step to it —
-each reached source has a `.read(` call, each reached artifact one of the
-artifact reads or a `serialize` / `encodeLine`, somewhere
-else in the closure — and fails on a `data/` path literal outside a declaring
+`tests/source-declarations.test.ts` holds every TypeScript pipeline step to
+it — the `build:*` and `fetch:*` targets plus `sid:allocate` and
+`sid:risk-set`, the step kinds in
+[Step kinds](../../pipeline/README.md#step-kinds); reports, audits and
+validators are not steps. In each step's closure every reached source has a
+`.read(` call, every reached artifact one of the artifact reads or a
+`serialize` / `encodeLine`, somewhere other than its declaring module. Across
+all of `scripts/` it also fails on a `data/` path literal outside a declaring
 or `*-outputs.ts` module.
 
 A helper that a non-reader needs does not live beside a declaration: it moves
