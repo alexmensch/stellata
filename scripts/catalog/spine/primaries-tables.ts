@@ -4,7 +4,9 @@
 import { resolve } from 'node:path';
 
 import { REPO_ROOT as ROOT, readRequired } from '../../util/paths';
-import { dataRows, parseIntOrNull } from '../parse/corpus-tsv';
+import { WGSN_DESIGNATIONS } from '../naming/wgsn-designations-tsv';
+import { WGSN_NAMES } from '../naming/wgsn-names-tsv';
+import { readTable, type TableSpec } from '../../util/tsv/table-pure';
 import { readGaiaHipXmatch, readGaiaTycXmatch } from '../parse/gaia-xmatch';
 import {
   SRC_CNS5, SRC_HIP_XMATCH, SRC_TYC2_HD, SRC_TYC_XMATCH,
@@ -27,18 +29,34 @@ export const SRC_HIP_MAIN = resolve(ROOT, 'data/hipparcos/hip_main_vmag.tsv');
 export const SRC_HIP2 = resolve(ROOT, 'data/hipparcos/hip2_van_leeuwen.tsv');
 export const SRC_TYCHO2_MAIN = resolve(ROOT, 'data/tycho2/tycho2_main.tsv');
 export const SRC_TYCHO2_SUPPL1 = resolve(ROOT, 'data/tycho2/tycho2_suppl1.tsv');
-export const SRC_WGSN_NAMES = resolve(ROOT, 'data/iau-wgsn/wgsn_names.tsv');
-export const SRC_WGSN_DESIGNATIONS = resolve(ROOT, 'data/iau-wgsn/wgsn_designations.tsv');
 export const SRC_SIMBAD_SPTYPE = resolve(ROOT, 'data/simbad/simbad_sptype.tsv');
 
 export const LFS_HINT = 'run `git lfs pull`.';
-const HIP_VMAG_HINT = 'run `pnpm run refresh:hip-vmag`.';
+const HIP_VMAG_HINT = 'Re-run `pnpm run refresh:hip-vmag`.';
 const WGSN_HINT = 'run `pnpm run build:wgsn`.';
 
-function readIntColumn(path: string, hint: string, label: string, column: string): Set<number> {
+const HIP_MAIN = {
+  file: 'data/hipparcos/hip_main_vmag.tsv',
+  columns: ['hip', 'hd'] as const,
+  hint: HIP_VMAG_HINT,
+} satisfies TableSpec<string>;
+
+const HIP2_HIPS = {
+  file: 'data/hipparcos/hip2_van_leeuwen.tsv',
+  columns: ['hip'] as const,
+  hint: 'Re-run `pnpm run refresh:hip2`.',
+} satisfies TableSpec<string>;
+
+const SIMBAD_SPTYPE_XIDS = {
+  file: 'data/simbad/simbad_sptype.tsv',
+  columns: ['source_id', 'hip', 'tyc', 'gj'] as const,
+  hint: 'Re-run scripts/refresh/refresh-simbad-sptype.py.',
+} satisfies TableSpec<string>;
+
+function readHip2Hips(): Set<number> {
   const into = new Set<number>();
-  for (const { cells, idx } of dataRows(readRequired(path, hint), [column], label, hint)) {
-    const value = parseIntOrNull(cells[idx[column]]);
+  for (const row of readTable(HIP2_HIPS, readRequired(SRC_HIP2, LFS_HINT))) {
+    const value = row.int('hip');
     if (value !== null) into.add(value);
   }
   return into;
@@ -50,11 +68,9 @@ function readI239(): { hip: Set<number>; hd: Set<number>; hipHd: Map<number, num
   const hip = new Set<number>();
   const hd = new Set<number>();
   const hipHd = new Map<number, number>();
-  for (const { cells, idx } of dataRows(
-    readRequired(SRC_HIP_MAIN, HIP_VMAG_HINT), ['hip', 'hd'], 'hip_main_vmag.tsv', HIP_VMAG_HINT,
-  )) {
-    const h = parseIntOrNull(cells[idx.hip]);
-    const d = parseIntOrNull(cells[idx.hd]);
+  for (const row of readTable(HIP_MAIN, readRequired(SRC_HIP_MAIN, HIP_VMAG_HINT))) {
+    const h = row.int('hip');
+    const d = row.int('hd');
     if (h !== null) hip.add(h);
     if (d !== null) hd.add(d);
     if (h !== null && d !== null) hipHd.set(h, d);
@@ -68,51 +84,34 @@ function readWgsn(): WgsnKeys {
   const hip = new Set<number>();
   const flamByHd = new Map<number, Set<number>>();
   const flamByHip = new Map<number, Set<number>>();
-  for (const { cells, idx } of dataRows(
-    readRequired(SRC_WGSN_NAMES, WGSN_HINT), ['name', 'aliases', 'hip', 'hd'],
-    'wgsn_names.tsv', WGSN_HINT,
-  )) {
-    if (cells[idx.name]) names.add(cells[idx.name]);
-    for (const alias of (cells[idx.aliases] ?? '').split('|')) if (alias) names.add(alias);
-    const h = parseIntOrNull(cells[idx.hip]);
-    const d = parseIntOrNull(cells[idx.hd]);
-    if (h !== null) hip.add(h);
-    if (d !== null) hd.add(d);
+  for (const row of WGSN_NAMES.rows(readRequired(resolve(ROOT, WGSN_NAMES.file), WGSN_HINT))) {
+    names.add(row.name);
+    for (const alias of row.aliases) if (alias) names.add(alias);
+    if (row.hip !== null) hip.add(row.hip);
+    if (row.hd !== null) hd.add(row.hd);
   }
-  for (const { cells, idx } of dataRows(
-    readRequired(SRC_WGSN_DESIGNATIONS, WGSN_HINT), ['kind', 'num', 'hip', 'hd'],
-    'wgsn_designations.tsv', WGSN_HINT,
-  )) {
-    const h = parseIntOrNull(cells[idx.hip]);
-    const d = parseIntOrNull(cells[idx.hd]);
-    if (h !== null) hip.add(h);
-    if (d !== null) hd.add(d);
-    if (cells[idx.kind] !== 'flamsteed') continue;
-    const num = parseIntOrNull(cells[idx.num]);
-    if (num === null) continue;
-    if (d !== null) addKeyed(flamByHd, d, num);
-    if (h !== null) addKeyed(flamByHip, h, num);
+  for (const row of WGSN_DESIGNATIONS.rows(readRequired(resolve(ROOT, WGSN_DESIGNATIONS.file), WGSN_HINT))) {
+    if (row.hip !== null) hip.add(row.hip);
+    if (row.hd !== null) hd.add(row.hd);
+    if (row.kind !== 'flamsteed' || row.num === null) continue;
+    if (row.hd !== null) addKeyed(flamByHd, row.hd, row.num);
+    if (row.hip !== null) addKeyed(flamByHip, row.hip, row.num);
   }
   return { names, hd, hip, flamByHd, flamByHip };
 }
 
 function readSimbadXids(): Map<string, SimbadXids> {
   const out = new Map<string, SimbadXids>();
-  for (const { cells, idx } of dataRows(
-    readRequired(SRC_SIMBAD_SPTYPE, LFS_HINT), ['source_id', 'hip', 'tyc', 'gj'],
-    'simbad_sptype.tsv', LFS_HINT,
-  )) {
-    const sourceId = cells[idx.source_id];
-    if (!sourceId) continue;
+  for (const row of readTable(SIMBAD_SPTYPE_XIDS, readRequired(SRC_SIMBAD_SPTYPE, LFS_HINT))) {
+    const sourceId = row.sourceId('source_id');
+    if (sourceId === null) continue;
     // Two rows under one id would make the corroboration verdict depend on file
     // order; the values parser refuses the same shape (README.md#six-source_ids-dr3-does-not-publish).
-    if (out.has(sourceId)) {
-      throw new Error(`simbad_sptype.tsv: duplicate source_id ${sourceId}; ${LFS_HINT}`);
-    }
+    if (out.has(sourceId)) row.fail(`duplicate source_id ${sourceId}`);
     out.set(sourceId, {
-      hip: parseIntOrNull(cells[idx.hip]),
-      tyc: cells[idx.tyc] || null,
-      gj: cells[idx.gj] || null,
+      hip: row.int('hip'),
+      tyc: row.raw('tyc') || null,
+      gj: row.raw('gj') || null,
     });
   }
   return out;
@@ -156,7 +155,7 @@ export async function loadPrimaryTables(keepTycs: Iterable<string>): Promise<Pri
     hipI239: i239.hip,
     hdI239: i239.hd,
     i239HipHd: i239.hipHd,
-    hip2: readIntColumn(SRC_HIP2, LFS_HINT, 'hip2_van_leeuwen.tsv', 'hip'),
+    hip2: readHip2Hips(),
     wgsn: readWgsn(),
     tycho2: loadTycho2(),
   };

@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   MAGNITUDE_FLOOR_V,
   MAGNITUDE_PULL_G_BOUND,
-  isMagnitudeTermRow,
+  magnitudeTermSourceId,
   magnitudeTermNewcomers,
   magnitudeVerdict,
   selectMagnitudeTerm,
@@ -77,7 +77,7 @@ describe('selectMagnitudeTerm', () => {
   });
 
   it('throws on an empty file rather than reading it as a term of no rows', () => {
-    expect(() => selectMagnitudeTerm('', 11)).toThrow(/missing required columns/);
+    expect(() => selectMagnitudeTerm('', 11)).toThrow(/has no header row/);
   });
 
   it('yields no rows from a valid header alone', () => {
@@ -106,14 +106,10 @@ describe('magnitudeTermNewcomers', () => {
   });
 });
 
-describe('isMagnitudeTermRow', () => {
+describe('magnitudeTermSourceId', () => {
   it('takes the magnitude rows and leaves the primaries alone', () => {
-    expect(isMagnitudeTermRow({ term: 'magnitude', gaia_source_id: '2' })).toBe(true);
-    expect(isMagnitudeTermRow({ term: 'primaries', gaia_source_id: '1' })).toBe(false);
-  });
-
-  it('refuses a magnitude row with no source_id, which could key nothing', () => {
-    expect(isMagnitudeTermRow({ term: 'magnitude', gaia_source_id: '' })).toBe(false);
+    expect(magnitudeTermSourceId({ term: 'magnitude', gaiaSourceId: '2' })).toBe('2');
+    expect(magnitudeTermSourceId({ term: 'primaries', gaiaSourceId: '1' })).toBeNull();
   });
 });
 

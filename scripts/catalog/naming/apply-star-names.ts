@@ -6,42 +6,49 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 import { REPO_ROOT } from '../../util/paths';
+import { readTable, type TableSpec } from '../../util/tsv/table-pure';
 import { FLAG_IS_SOL, NO_CONSTELLATION_INDEX } from '../record/catalog-pure';
 import { CON_INDEX } from '../parse/constellations/constellations';
 import { foldNameKey } from './wgsn-normalise-pure';
 import {
+  PROPER_DISPOSITIONS_TABLE,
   buildWgsnIndex,
-  parseProperDispositionsTsv,
-  parseWgsnDesignationsTsv,
-  parseWgsnNamesTsv,
+  parseProperDispositions,
   routeDisposedProper,
   type ProperDisposition,
-  type WgsnDesignationRow,
   type WgsnNameRow,
 } from './wgsn-index-pure';
+import type { DesignationRow } from './wgsn-tables-pure';
+import { WGSN_DESIGNATIONS } from './wgsn-designations-tsv';
+import { WGSN_NAMES } from './wgsn-names-tsv';
 
-const DATA = resolve(REPO_ROOT, 'data/iau-wgsn');
-const WGSN_NAMES = resolve(DATA, 'wgsn_names.tsv');
-const WGSN_DESIGNATIONS = resolve(DATA, 'wgsn_designations.tsv');
-const PROPER_DISPOSITIONS = resolve(DATA, 'athyg_proper_dispositions.tsv');
-const OVERRIDES = resolve(REPO_ROOT, 'data/naming/name_overrides.tsv');
+const WGSN_NAMES_PATH = resolve(REPO_ROOT, WGSN_NAMES.file);
+const WGSN_DESIGNATIONS_PATH = resolve(REPO_ROOT, WGSN_DESIGNATIONS.file);
+const PROPER_DISPOSITIONS = resolve(REPO_ROOT, PROPER_DISPOSITIONS_TABLE.file);
+const NAME_OVERRIDES = {
+  file: 'data/naming/name_overrides.tsv',
+  columns: ['sid', 'display_name'] as const,
+  hint: 'It is hand-curated: restore the sid and display_name columns.',
+} satisfies TableSpec<string>;
+const OVERRIDES = resolve(REPO_ROOT, NAME_OVERRIDES.file);
 
 /** Every file loadStarNamingInputs and loadNameOverrides read. */
 export const STAR_NAMING_INPUT_PATHS: readonly string[] = [
-  WGSN_NAMES, WGSN_DESIGNATIONS, PROPER_DISPOSITIONS, OVERRIDES,
+  WGSN_NAMES_PATH, WGSN_DESIGNATIONS_PATH, PROPER_DISPOSITIONS, OVERRIDES,
 ];
 
 export interface StarNamingInputs {
   names: WgsnNameRow[];
-  designations: WgsnDesignationRow[];
+  designations: DesignationRow[];
   dispositions: Map<string, ProperDisposition>;
 }
 
 export function loadStarNamingInputs(): StarNamingInputs {
   return {
-    names: parseWgsnNamesTsv(readFileSync(WGSN_NAMES, 'utf8')),
-    designations: parseWgsnDesignationsTsv(readFileSync(WGSN_DESIGNATIONS, 'utf8')),
-    dispositions: parseProperDispositionsTsv(readFileSync(PROPER_DISPOSITIONS, 'utf8')),
+    names: WGSN_NAMES.parse(readFileSync(WGSN_NAMES_PATH, 'utf8')),
+    designations: WGSN_DESIGNATIONS.parse(readFileSync(WGSN_DESIGNATIONS_PATH, 'utf8')),
+    dispositions: new Map(parseProperDispositions(readFileSync(PROPER_DISPOSITIONS, 'utf8'))
+      .map((d) => [d.proper, d.disposition])),
   };
 }
 
@@ -52,20 +59,11 @@ export function loadStarNamingInputs(): StarNamingInputs {
  *  to aliases. */
 export function loadNameOverrides(): Map<number, string> {
   const out = new Map<number, string>();
-  const lines = readFileSync(OVERRIDES, 'utf8').split('\n');
-  const header = lines[0].split('\t');
-  const sidIdx = header.indexOf('sid');
-  const nameIdx = header.indexOf('display_name');
-  if (sidIdx < 0 || nameIdx < 0) {
-    throw new Error('data/naming/name_overrides.tsv needs sid + display_name columns');
-  }
-  for (const line of lines.slice(1)) {
-    if (line.trim() === '') continue;
-    const cells = line.split('\t');
-    const sid = Number(cells[sidIdx]);
-    const name = (cells[nameIdx] ?? '').trim();
-    if (!Number.isInteger(sid) || sid <= 0 || name === '') {
-      throw new Error(`data/naming/name_overrides.tsv: unusable row "${line}"`);
+  for (const row of readTable(NAME_OVERRIDES, readFileSync(OVERRIDES, 'utf8'))) {
+    const sid = row.int('sid');
+    const name = row.text('display_name');
+    if (sid === null || sid <= 0 || name === null) {
+      return row.fail('unusable row: needs a positive sid and a display_name');
     }
     out.set(sid, name);
   }

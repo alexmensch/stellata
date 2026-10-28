@@ -8,6 +8,7 @@ import { fileURLToPath } from 'node:url';
 import { parse } from 'csv-parse/sync';
 
 import { emitArtifacts, runStep, sweepStaged } from '../util/emit-artifacts';
+import { readTable, type TableRow, type TableSpec } from '../util/tsv/table-pure';
 import { LOCAL_GROUP_OUTPUTS } from './local-group-outputs';
 import {
   applyAliasMeta,
@@ -70,126 +71,85 @@ export function parseLvdb(csv: string): LvdbRow[] {
   }));
 }
 
-/** Parse overrides.tsv (header line + tab-separated rows; lines starting
- *  with # are comments).
- *
- *  Schema (6 required columns; optional columns follow, looked up by
- *  header name):
- *
- *    name<TAB>a_pc<TAB>b_pc<TAB>c_pc<TAB>orient<TAB>source
- *      [<TAB>ra_deg<TAB>dec_deg<TAB>distance_kpc]
- *      [<TAB>m_v<TAB>profile<TAB>n_sersic<TAB>r_d_pc
- *       <TAB>bulge_to_total<TAB>bulge_re_pc<TAB>bulge_n
- *       <TAB>source_profile<TAB>color]
- *
- *  ra_deg/dec_deg/distance_kpc are populated only for objects that
- *  aren't in LVDB at all (M31, M33). When present, the row is fully
- *  self-contained — buildStandaloneOverride synthesises an LgObject
- *  without an LVDB merge. When absent, the row supplements an LVDB row
- *  whose position drives the merge. The emission columns feed
- *  buildEmission; see data/local-group/README.md for per-column
- *  semantics.
- *
- *  Label visibility is governed at runtime (apparent-size ranking)
- *  rather than per-row, so no threshold column. */
+const OVERRIDES_FILE = 'data/local-group/overrides.tsv';
+const OVERRIDES_HINT = 'It is hand-curated; see /data/local-group/README.md#override-schema.';
+const OVERRIDES_REQUIRED = ['name', 'a_pc', 'b_pc', 'c_pc', 'orient', 'source'] as const;
+const OVERRIDES_OPTIONAL = [
+  'ra_deg', 'dec_deg', 'distance_kpc', 'm_v', 'profile', 'n_sersic', 'r_d_pc',
+  'bulge_to_total', 'bulge_re_pc', 'bulge_n', 'color',
+] as const;
+const OVERRIDE_PROFILES = ['', 'disc', 'sersic'] as const;
+type OverridesColumn = (typeof OVERRIDES_REQUIRED)[number] | (typeof OVERRIDES_OPTIONAL)[number];
+
+const OVERRIDES = {
+  file: OVERRIDES_FILE,
+  columns: OVERRIDES_REQUIRED,
+  optional: OVERRIDES_OPTIONAL,
+  hint: OVERRIDES_HINT,
+  comments: true,
+} satisfies TableSpec<OverridesColumn>;
+
+/** Schema and per-column semantics: /data/local-group/README.md#override-schema. */
 export function parseOverrides(tsv: string): OverrideRow[] {
-  const out: OverrideRow[] = [];
-  const lines = tsv.split(/\r?\n/);
-  let colIndex: Map<string, number> | null = null;
-  for (const raw of lines) {
-    if (!raw || raw.startsWith('#')) continue;
-    const fields = raw.split('\t');
-    if (!colIndex) {
-      // First non-comment line is the header. Sanity-check that the
-      // required leading columns are present in the expected order so a
-      // schema drift surfaces loudly at build time; optional columns are
-      // resolved by name from the header so their order can evolve.
-      const required = ['name', 'a_pc', 'b_pc', 'c_pc', 'orient', 'source'];
-      if (fields.length < required.length) {
-        throw new Error(`overrides.tsv: malformed header (got ${fields.length} fields, expected ≥ ${required.length})`);
-      }
-      for (let i = 0; i < required.length; i++) {
-        if (fields[i].trim() !== required[i]) {
-          throw new Error(`overrides.tsv: header column ${i} is '${fields[i]}', expected '${required[i]}'`);
-        }
-      }
-      colIndex = new Map(fields.map((f, i) => [f.trim(), i]));
-      continue;
+  return [...readTable(OVERRIDES, tsv)].map(overrideRow);
+}
+
+function overrideRow(row: TableRow<OverridesColumn>): OverrideRow {
+  const opt = (col: (typeof OVERRIDES_OPTIONAL)[number]): string | undefined => row.text(col) ?? undefined;
+  const optNum = (col: (typeof OVERRIDES_OPTIONAL)[number]): number | undefined => row.float(col) ?? undefined;
+  const axis = (col: 'a_pc' | 'b_pc' | 'c_pc'): number => row.float(col) ?? row.fail(`${col} is empty`);
+  const name = row.text('name') ?? '';
+  const result: OverrideRow = {
+    name,
+    axes: [axis('a_pc'), axis('b_pc'), axis('c_pc')],
+    orient: row.text('orient') ?? '',
+  };
+  // Standalone position columns: all three must be present and
+  // non-empty for the row to stand alone — partial population is a
+  // config error worth surfacing.
+  {
+    const ra = optNum('ra_deg');
+    const dec = optNum('dec_deg');
+    const dist = optNum('distance_kpc');
+    const count = [ra, dec, dist].filter((v) => v !== undefined).length;
+    if (count > 0 && count < 3) {
+      row.fail(
+        `'${name}' partially populates standalone position (ra/dec/distance) — all three must be set together or all empty`,
+      );
     }
-    if (fields.length < 6) continue;
-    const opt = (col: string): string | undefined => {
-      const i = colIndex!.get(col);
-      if (i === undefined || i >= fields.length) return undefined;
-      const v = fields[i].trim();
-      return v === '' ? undefined : v;
-    };
-    const optNum = (col: string): number | undefined => {
-      const v = opt(col);
-      if (v === undefined) return undefined;
-      const parsed = Number(v);
-      if (!Number.isFinite(parsed)) {
-        throw new Error(`overrides.tsv: '${fields[0].trim()}' has non-numeric ${col} '${v}'`);
-      }
-      return parsed;
-    };
-    const row: OverrideRow = {
-      name: fields[0].trim(),
-      axes: [parseFloat(fields[1]), parseFloat(fields[2]), parseFloat(fields[3])],
-      orient: fields[4].trim(),
-    };
-    // Standalone position columns: all three must be present and
-    // non-empty for the row to stand alone — partial population is a
-    // config error worth surfacing.
-    {
-      const ra = optNum('ra_deg');
-      const dec = optNum('dec_deg');
-      const dist = optNum('distance_kpc');
-      const present = [ra, dec, dist].filter((v) => v !== undefined).length;
-      if (present > 0 && present < 3) {
-        throw new Error(
-          `overrides.tsv: '${row.name}' partially populates standalone position (ra/dec/distance) — all three must be set together or all empty`,
-        );
-      }
-      if (present === 3) {
-        row.raDeg = ra;
-        row.decDeg = dec;
-        row.distanceKpc = dist;
-      }
+    if (count === 3) {
+      result.raDeg = ra;
+      result.decDeg = dec;
+      result.distanceKpc = dist;
     }
-    const mV = optNum('m_v');
-    if (mV !== undefined) row.mV = mV;
-    const profile = opt('profile');
-    if (profile !== undefined) {
-      if (profile !== 'disc' && profile !== 'sersic') {
-        throw new Error(`overrides.tsv: '${row.name}' has unrecognised profile '${profile}'`);
-      }
-      row.profile = profile;
-    }
-    const nSersic = optNum('n_sersic');
-    if (nSersic !== undefined) row.nSersic = nSersic;
-    const rdPc = optNum('r_d_pc');
-    if (rdPc !== undefined) row.rdPc = rdPc;
-    {
-      const bt = optNum('bulge_to_total');
-      const re = optNum('bulge_re_pc');
-      const bn = optNum('bulge_n');
-      const present = [bt, re, bn].filter((v) => v !== undefined).length;
-      if (present > 0 && present < 3) {
-        throw new Error(
-          `overrides.tsv: '${row.name}' partially populates the bulge (bulge_to_total/bulge_re_pc/bulge_n) — all three must be set together or all empty`,
-        );
-      }
-      if (present === 3) {
-        row.bulgeToTotal = bt;
-        row.bulgeRePc = re;
-        row.bulgeN = bn;
-      }
-    }
-    const color = opt('color');
-    if (color !== undefined) row.color = color;
-    out.push(row);
   }
-  return out;
+  const mV = optNum('m_v');
+  if (mV !== undefined) result.mV = mV;
+  const profile = row.oneOf('profile', OVERRIDE_PROFILES);
+  if (profile !== '') result.profile = profile;
+  const nSersic = optNum('n_sersic');
+  if (nSersic !== undefined) result.nSersic = nSersic;
+  const rdPc = optNum('r_d_pc');
+  if (rdPc !== undefined) result.rdPc = rdPc;
+  {
+    const bt = optNum('bulge_to_total');
+    const re = optNum('bulge_re_pc');
+    const bn = optNum('bulge_n');
+    const count = [bt, re, bn].filter((v) => v !== undefined).length;
+    if (count > 0 && count < 3) {
+      row.fail(
+        `'${name}' partially populates the bulge (bulge_to_total/bulge_re_pc/bulge_n) — all three must be set together or all empty`,
+      );
+    }
+    if (count === 3) {
+      result.bulgeToTotal = bt;
+      result.bulgeRePc = re;
+      result.bulgeN = bn;
+    }
+  }
+  const color = opt('color');
+  if (color !== undefined) result.color = color;
+  return result;
 }
 
 /** Parse aliases.tsv: name<TAB>type[<TAB>alias1|alias2…[<TAB>canonical]].
@@ -198,43 +158,33 @@ export function parseOverrides(tsv: string): OverrideRow[] {
  *  way in, so a curator writing "M 110" and "M110" in different columns
  *  still matches. A `canonical` naming no listed alias is a curation typo
  *  — the promoted name would be untypeable in search. */
-const ALIAS_HEADER = ['name', 'type', 'aliases', 'canonical'];
+const ALIASES = {
+  file: 'data/local-group/aliases.tsv',
+  columns: ['name', 'type', 'aliases', 'canonical'] as const,
+  hint: 'It is hand-curated; see data/local-group/README.md.',
+  comments: true,
+} satisfies TableSpec<string>;
 
 export function parseAliases(tsv: string): AliasRow[] {
-  const out: AliasRow[] = [];
-  let headerSeen = false;
-  for (const raw of tsv.split(/\r?\n/)) {
-    if (!raw || raw.startsWith('#')) continue;
-    const fields = raw.split('\t');
-    if (!headerSeen) {
-      if (ALIAS_HEADER.some((h, i) => fields[i]?.trim() !== h)) {
-        throw new Error(`aliases.tsv: malformed header (expected ${ALIAS_HEADER.join('<TAB>')})`);
-      }
-      headerSeen = true;
-      continue;
-    }
-    if (fields.length < 2) continue;
-    const name = fields[0].trim();
-    const type = fields[1].trim();
-    if (!type) throw new Error(`aliases.tsv: '${name}' has an empty type`);
-    const aliases = (fields[2] ?? '')
+  return [...readTable(ALIASES, tsv)].map((row) => {
+    const name = row.text('name') ?? '';
+    const type = row.text('type');
+    if (type === null) return row.fail(`'${name}' has an empty type`);
+    const aliases = row.raw('aliases')
       .split('|')
       .map((s) => canonicalDesignation(s.trim()))
       .filter(Boolean);
-    const canonical = canonicalDesignation((fields[3] ?? '').trim());
+    const canonical = canonicalDesignation(row.text('canonical') ?? '');
     if (canonical && !aliases.includes(canonical)) {
-      throw new Error(
-        `aliases.tsv: '${name}' promotes '${canonical}', which is not one of its aliases`,
-      );
+      row.fail(`'${name}' promotes '${canonical}', which is not one of its aliases`);
     }
-    out.push({
+    return {
       name,
       type,
       aliases,
       ...(canonical ? { canonical } : {}),
-    });
-  }
-  return out;
+    };
+  });
 }
 
 /** Trims numeric precision so repeat builds produce stable diffs. */

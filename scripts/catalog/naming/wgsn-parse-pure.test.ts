@@ -1,8 +1,14 @@
 import { describe, it, expect } from 'vitest';
 
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+
+import { REPO_ROOT } from '../../util/paths';
 import {
+  FAINTS_CORRECTIONS,
   FAINTS_HEADER,
   NEC_HEADER,
+  parseFaintsCorrections,
   parseNecCsv,
   parseWgsnFaintsCsv,
   splitCsvLine,
@@ -67,7 +73,7 @@ describe('parseWgsnFaintsCsv', () => {
       FAINTS_HEADER,
       '10001,Citadelle,HIP 1547,4.82,14.05,8.52,K0,,1502,,Pisces,546.31,0.92,,,',
       '10007,Mpingo,,29.26,0.75,10.56,G2,,_,WASP-71,Cetus,,0.79,,,_',
-    ].join('\n'));
+    ].join('\n'), []);
     expect(rows[0]).toMatchObject({
       name: 'Citadelle', hip: 1547, hd: 1502, wds: null, source: 'faints',
     });
@@ -82,7 +88,40 @@ describe('parseWgsnFaintsCsv', () => {
     const rows = parseWgsnFaintsCsv([
       FAINTS_HEADER,
       '10002,Toliman,HIP 71683,219.9,-60.83,-0.01,G2,,128620,,Centaurus,4.4,0.71,,,14396-6050B',
-    ].join('\n'));
+    ].join('\n'), []);
     expect(rows[0].wds).toBe('14396-6050B');
+  });
+});
+
+describe('wgsnFaints.csv Vmag', () => {
+  const G_ROW = '10032,Atakoraka,,101.1,-32.8,G12.53,,,_,WASP-64,CanisMajor,,,,,_';
+  const fix = (body: string) => parseFaintsCorrections(`wgsn_id\tcolumn\tvalue\tevidence\n${body}`);
+
+  it('reads strictly: a G magnitude in the V column fails the parse', () => {
+    expect(() => parseWgsnFaintsCsv([FAINTS_HEADER, G_ROW].join('\n'), []))
+      .toThrow('data/iau-wgsn/wgsnFaints.csv row 10032: "G12.53" is not a decimal number');
+  });
+
+  it('a curated correction empties the cell before the parse reads it', () => {
+    const [row] = parseWgsnFaintsCsv([FAINTS_HEADER, G_ROW].join('\n'), fix('10032\tVmag\t\tG in the V column\n'));
+    expect(row.vmag).toBeNull();
+  });
+
+  it('refuses a correction keying no row, restating the cell, or naming no column or evidence', () => {
+    const csv = [FAINTS_HEADER, G_ROW].join('\n');
+    expect(() => parseWgsnFaintsCsv(csv, fix('99999\tVmag\t\tx\n')))
+      .toThrow('data/iau-wgsn/wgsn_faints_corrections.tsv: row "99999" matches no data/iau-wgsn/wgsnFaints.csv row');
+    expect(() => parseWgsnFaintsCsv(csv, fix('10032\tVmag\tG12.53\tx\n')))
+      .toThrow(/sets Vmag to the value the data\/iau-wgsn\/wgsnFaints\.csv already states/);
+    expect(() => fix('10032\tVmagg\t\tx\n')).toThrow(/column: "Vmagg" is not one of/);
+    expect(() => fix('10032\tVmag\t\t\n')).toThrow(/row 10032 states no evidence/);
+  });
+
+  it('the committed file parses strictly under the committed corrections', () => {
+    const text = readFileSync(resolve(REPO_ROOT, 'data/iau-wgsn/wgsnFaints.csv'), 'utf8');
+    const corrections = parseFaintsCorrections(readFileSync(resolve(REPO_ROOT, FAINTS_CORRECTIONS.file), 'utf8'));
+    expect(corrections.map((c) => c.key)).toEqual(['10032', '10039', '10117']);
+    expect(() => parseWgsnFaintsCsv(text, [])).toThrow(/is not a decimal number/);
+    expect(parseWgsnFaintsCsv(text, corrections)).toHaveLength(132);
   });
 });

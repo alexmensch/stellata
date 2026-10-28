@@ -42,7 +42,6 @@ import {
   type GlieseIndex,
 } from '../gliese-parse';
 import {
-  MULTIPLES_TSV,
   readMultiplesTsv,
 } from '../companions/companion-promotion';
 import {
@@ -50,7 +49,7 @@ import {
   emptyPairMemberParallaxIndex,
   type PairMemberParallaxIndex,
 } from '../distance/parallax/pair-member-parallax';
-import { MEMBERSHIP_MANIFEST_FILE } from '../membership/membership-manifest-pure';
+import { MEMBERSHIP_MANIFEST_FILE } from '../membership/membership-manifest-tsv';
 import {
   MAGNITUDE_PULL_TSV,
   readMagnitudeTermAstrometry,
@@ -59,6 +58,7 @@ import {
 import { MAGNITUDE_FLOOR_V } from '../membership/magnitude-term/magnitude-term-pure';
 import type { ReadStarsOptions } from './stars-parse';
 import { REPO_ROOT as ROOT } from '../../util/paths';
+import { MULTIPLES_TSV_PATH } from '../../binaries/multiples-tsv';
 
 export const MEMBERSHIP_MANIFEST_TSV = resolve(ROOT, MEMBERSHIP_MANIFEST_FILE);
 const SRC_BAILER_JONES = resolve(ROOT, 'data/bailer-jones/bailer-jones-dr3.tsv');
@@ -83,7 +83,7 @@ export function readStarsInputPaths(): string[] {
     MEMBERSHIP_MANIFEST_TSV, SRC_BAILER_JONES, SRC_GAIA_APSIS, SRC_GAIA_GSPC,
     SRC_GAIA_ASTROMETRY, SRC_GAIA_NSS, SRC_HIP2, SRC_HIP_VMAG, SRC_SIMBAD_SPTYPE,
     SRC_SIMBAD_VALUES, SRC_TYCHO2_MAIN, SRC_TYCHO2_SUPPL1, SRC_CNS5, SRC_GLIESE,
-    STELLARIUM_SKYCULTURE_JSON, MULTIPLES_TSV, MAGNITUDE_PULL_TSV,
+    STELLARIUM_SKYCULTURE_JSON, MULTIPLES_TSV_PATH, MAGNITUDE_PULL_TSV,
     ...dustGridInputPaths(SRC_DUST_DIR),
   ];
 }
@@ -375,11 +375,11 @@ export async function loadReadStarsInputs(): Promise<ReadStarsInputs> {
   // the parallax cascade's sibling tier. Absent multiples.tsv leaves it empty
   // and its rows park, which the distPairMemberParallax pin then flags.
   let pairMemberParallax: PairMemberParallaxIndex = emptyPairMemberParallaxIndex();
-  if (existsSync(MULTIPLES_TSV)) {
+  if (existsSync(MULTIPLES_TSV_PATH)) {
     console.log('Indexing bound-pair sibling parallaxes...');
     const t = Date.now();
     pairMemberParallax = buildPairMemberParallaxIndex(
-      readMultiplesTsv(MULTIPLES_TSV), directions.gaiaAstrometry,
+      readMultiplesTsv(), directions.gaiaAstrometry,
     );
     const refused = pairMemberParallax.refused;
     console.log(
@@ -396,7 +396,7 @@ export async function loadReadStarsInputs(): Promise<ReadStarsInputs> {
     sizes.pairMemberSiblingBelowSnFloor = refused.belowSnFloor;
   } else {
     console.warn(
-      `WARNING: ${MULTIPLES_TSV} not found — the parallax cascade's sibling\n` +
+      `WARNING: ${MULTIPLES_TSV_PATH} not found — the parallax cascade's sibling\n` +
       `         tier is unavailable and its rows park instead of shipping.`,
     );
   }

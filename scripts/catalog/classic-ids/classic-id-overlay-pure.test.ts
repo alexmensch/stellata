@@ -8,11 +8,13 @@ import {
   glieseNumber,
   joinOverlayCandidates,
   magnitudeWeighableSourceIds,
+  type OverlayInput,
+} from './classic-id-overlay-pure';
+import {
   parseOverlayTsv,
   serializeOverlay,
   type ClassicIdOverlay,
-  type OverlayInput,
-} from './classic-id-overlay-pure';
+} from './classic-id-overlay-tsv';
 import { cns5Row } from './cns5-fixture';
 import { bindingEvidence } from '../membership/binding/binding-gate-pure';
 import {

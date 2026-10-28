@@ -35,6 +35,7 @@ import { R_V, avSolToStar, type DustGrid } from '../distance/dust/dust-deextinct
 import type { Star } from '../parse/stars-parse';
 import { makeStar as makeStarWithDefaults } from '../parse/star-fixture';
 import { multiplesRow } from './multiples-fixture';
+import { MULTIPLES_COLUMNS } from '../../binaries/multiples-tsv';
 import { gaiaAstrometryRow } from '../distance/astrometry-fixture';
 import { AU_PER_PC } from '../../../src/client/util/astronomy-constants';
 
@@ -60,81 +61,34 @@ const ORBIT_ELEMENTS = {
 } as const;
 
 describe('parseMultiplesTsv', () => {
-  it('parses a minimal header + one row', () => {
-    const header = [
-      'system_id','comp','hip','gaia_source_id','hd',
-      'x_pc','y_pc','z_pc','absmag','ci','spect','name',
-      'source','regime','resolve_via','astrometry_via','orbit_via',
-      'spect_via','photometry_via','orbit_role',
-      'P_days','T_jd','e','a_AU','i_rad','omega_rad','Omega_rad',
-      'q','dist_pc',
-      'sep_arcsec','pa_deg','sep_pa_epoch_jd','dmag',
-      'anchor_sep_arcsec','anchor_pa_deg','anchor_comp','mag_pri','mag_sec',
-    ].join('\t');
-    const body = [
-      'WDS-X-AB','A','12345','1234567890123456','48915',
-      '1.0','2.0','3.0','5.50','0.45','G2V','Sirius',
-      'athyg','2','orb6_hip','gaia_5p','orb6',
-      'simbad','athyg_own','primary',
-      '365.25','2451545.0','0.1','1.0','0.5','0.6','0.7',
-      '0.5','10.0',
-      '7.123','265.45','2458850.0','0.85',
-      '3.500','114.00','Aa','1.25','1.55',
-    ].join('\t');
-    const rows = parseMultiplesTsv(`${header}\n${body}\n`);
-    expect(rows).toHaveLength(1);
-    const r = rows[0];
-    expect(r.systemId).toBe('WDS-X-AB');
-    expect(r.comp).toBe('A');
-    expect(r.hip).toBe(12345);
-    expect(r.gaiaSourceId).toBe('1234567890123456');
-    expect(r.x_pc).toBe(1.0);
-    expect(r.absmag).toBe(5.5);
-    expect(r.spect).toBe('G2V');
-    expect(r.photometryVia).toBe('athyg_own');
-    expect(r.orbitRole).toBe('primary');
-    expect(r.sepArcsec).toBe(7.123);
-    expect(r.paDeg).toBe(265.45);
-    expect(r.dmag).toBe(0.85);
+  const tsv = (cells: Partial<Record<(typeof MULTIPLES_COLUMNS)[number], string>>): string => {
+    const base = {
+      source: 'wds', regime: '0', resolve_via: 'unresolved', astrometry_via: 'unresolved',
+      orbit_via: 'none', spect_via: 'none', photometry_via: 'none', a_via: 'none',
+      orbit_role: 'secondary', ...cells,
+    } as Record<string, string>;
+    return `${MULTIPLES_COLUMNS.join('\t')}\n${MULTIPLES_COLUMNS.map((c) => base[c] ?? '').join('\t')}\n`;
+  };
+
+  it('parses a row and its Stage 6 anchor offset', () => {
+    const [r] = parseMultiplesTsv(tsv({
+      system_id: 'WDS-X-AB', comp: 'A', hip: '12345', gaia_source_id: '1234567890123456',
+      x_pc: '1.0', absmag: '5.50', spect: 'G2V', photometry_via: 'athyg_own', orbit_role: 'primary',
+      sep_arcsec: '7.123', pa_deg: '265.45', dmag: '0.85',
+      anchor_sep_arcsec: '3.500', anchor_pa_deg: '114.00', anchor_comp: 'Aa', mag_pri: '1.25', mag_sec: '1.55',
+    }));
+    expect(r).toMatchObject({
+      systemId: 'WDS-X-AB', comp: 'A', hip: 12345, gaiaSourceId: '1234567890123456', x_pc: 1.0,
+      absmag: 5.5, spect: 'G2V', photometryVia: 'athyg_own', orbitRole: 'primary',
+      sepArcsec: 7.123, paDeg: 265.45, dmag: 0.85, anchorComp: 'Aa', magPri: 1.25, magSec: 1.55,
+    });
     expect(r.anchorOffset).toEqual({ kind: 'offset', offset: tangentOffset(3.5, 114.0) });
-    expect(r.anchorComp).toBe('Aa');
-    expect(r.magPri).toBe(1.25);
-    expect(r.magSec).toBe(1.55);
+    expect(r).not.toHaveProperty('anchorSepArcsec');
   });
 
   it('treats blank cells as null', () => {
-    const header = [
-      'system_id','comp','hip','gaia_source_id','hd',
-      'x_pc','y_pc','z_pc','absmag','ci','spect','name',
-      'source','regime','resolve_via','astrometry_via','orbit_via',
-      'spect_via','photometry_via','orbit_role',
-      'P_days','T_jd','e','a_AU','i_rad','omega_rad','Omega_rad',
-      'q','dist_pc',
-      'sep_arcsec','pa_deg','sep_pa_epoch_jd','dmag',
-      'anchor_sep_arcsec','anchor_pa_deg','anchor_comp','mag_pri','mag_sec',
-    ].join('\t');
-    const body = [
-      'WDS-X-AB','B','','','',
-      '','','','','','','',
-      'wds','0','unresolved','unresolved','none',
-      'none','none','secondary',
-      '','','','','','','',
-      '','',
-      '','','','',
-      '','','','','',
-    ].join('\t');
-    const rows = parseMultiplesTsv(`${header}\n${body}\n`);
-    expect(rows[0].hip).toBeNull();
-    expect(rows[0].gaiaSourceId).toBeNull();
-    expect(rows[0].x_pc).toBeNull();
-    expect(rows[0].absmag).toBeNull();
-    expect(rows[0].dmag).toBeNull();
-    expect(rows[0].anchorComp).toBeNull();
-  });
-
-  it('throws when a required column is missing from the header', () => {
-    const header = 'system_id\tcomp';
-    expect(() => parseMultiplesTsv(header)).toThrowError(/missing required column/);
+    const [r] = parseMultiplesTsv(tsv({ system_id: 'WDS-X-AB', comp: 'B' }));
+    expect([r.hip, r.gaiaSourceId, r.x_pc, r.absmag, r.dmag, r.anchorComp]).toEqual([null, null, null, null, null, null]);
   });
 });
 
@@ -2613,7 +2567,7 @@ describe('promoteCompanions', () => {
   // identifier, so promotion anchors on D instead.
   function idlessAnchorRoot(dOffset: { sep: number; pa: number } | null): MultiplesTsvRow[] {
     const root = { anchorComp: 'A', x_pc: 100, y_pc: 0, z_pc: 0, distPc: 100,
-      astrometryVia: 'system_inherited', absmag: 8.0, magPri: 9.0, magSec: 10.0 };
+      astrometryVia: 'system_inherited' as const, absmag: 8.0, magPri: 9.0, magSec: 10.0 };
     return [
       multiplesRow({ ...root, systemId: '00101+3825-AE', comp: 'A', orbitRole: 'primary',
         sepArcsec: 30.0, paDeg: 10.0 }),
@@ -2984,7 +2938,7 @@ describe('promoteCompanions / a parked record does not arrive by promotion', () 
       + ' — which is what the zero-pin is watching for', () => {
       const ownFit = blendedRows.map((r) => (r.comp === 'B'
         ? {
-          ...r, hip: 7980, astrometryVia: 'gaia_5p',
+          ...r, hip: 7980, astrometryVia: 'gaia_5p' as const,
           gaiaSourceId: '405578335904111745', ...placement,
         }
         : r));

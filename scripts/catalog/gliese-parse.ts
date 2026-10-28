@@ -2,16 +2,15 @@
 // first-order tier under Tycho-2 in the V cascade of
 // /docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers.
 
-import { dataRows, nonEmpty, parseFloatOrNull, parseIntOrNull } from './parse/corpus-tsv';
+import { readTable, type TableSpec } from '../util/tsv/table-pure';
 import { normaliseGjKey } from './record/catalog-pure';
 import type { MeasuredParallax } from './cited-parallax';
 
-const FILE_LABEL = 'data/gliese/gliese_v70a.tsv';
-const REFRESH_HINT = 'Re-run `pnpm run refresh:gliese`.';
-
-const COLUMNS = [
-  'name', 'comp', 'vmag', 'bv', 'sp', 'plx_mas', 'e_plx_mas', 'n_plx', 'hd',
-] as const;
+const GLIESE = {
+  file: 'data/gliese/gliese_v70a.tsv',
+  columns: ['name', 'comp', 'vmag', 'bv', 'sp', 'plx_mas', 'e_plx_mas', 'n_plx', 'hd'] as const,
+  hint: 'Re-run `pnpm run refresh:gliese`.',
+} satisfies TableSpec<string>;
 
 /** V/70A's resulting parallax, carrying which KIND of parallax it is.
  *
@@ -72,33 +71,31 @@ export function parseGlieseTsv(text: string): GlieseIndex {
   const index = emptyGlieseIndex();
   const parsed: Array<{ key: string; row: GlieseRow }> = [];
 
-  for (const { cells, idx } of dataRows(text, COLUMNS, FILE_LABEL, REFRESH_HINT)) {
-    const name = (cells[idx.name] ?? '').trim();
-    const comp = (cells[idx.comp] ?? '').trim();
+  for (const row of readTable(GLIESE, text)) {
+    const name = row.text('name') ?? '';
+    const comp = row.text('comp') ?? '';
     const key = catalogueKey(name, comp);
     if (key === null) continue;
-    const plxMas = parseFloatOrNull(cells[idx.plx_mas]);
-    const row: GlieseRow = {
+    const plxMas = row.float('plx_mas');
+    const entry: GlieseRow = {
       name,
       comp,
-      vMag: parseFloatOrNull(cells[idx.vmag]),
-      bMinusV: parseFloatOrNull(cells[idx.bv]),
-      spectral: nonEmpty(cells[idx.sp]),
+      vMag: row.float('vmag'),
+      bMinusV: row.float('bv'),
+      spectral: row.text('sp'),
       parallax: plxMas === null ? null : {
         mas: plxMas,
-        errMas: parseFloatOrNull(cells[idx.e_plx_mas]),
+        errMas: row.float('e_plx_mas'),
         // A blank `n_plx` is V/70A stating that its resulting parallax IS the
         // trigonometric one; every code the column carries names a photometric
         // or spectroscopic estimate.
-        trigonometric: nonEmpty(cells[idx.n_plx]) === null,
+        trigonometric: row.text('n_plx') === null,
       },
-      hd: parseIntOrNull(cells[idx.hd]),
+      hd: row.int('hd'),
     };
-    if (index.byKey.has(key)) {
-      throw new Error(`${FILE_LABEL} has two rows keyed ${key}. ${REFRESH_HINT}`);
-    }
-    index.byKey.set(key, row);
-    parsed.push({ key, row });
+    if (index.byKey.has(key)) row.fail(`two rows keyed ${key}`);
+    index.byKey.set(key, entry);
+    parsed.push({ key, row: entry });
     index.rowCount++;
   }
 

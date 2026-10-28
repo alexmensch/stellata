@@ -4,6 +4,11 @@
 
 import { createHash } from 'node:crypto';
 
+import { readTable, type TableRow, type TableSpec } from '../util/tsv/table-pure';
+import {
+  LEDGER, SID_KINDS, type LedgerRow, type SidKind,
+} from './ledger-tsv';
+
 // ---- Designation grammar (/docs/sid.md#3-designation-namespaces) -------------------------------
 
 const NAMESPACE_RE = /^[a-z0-9_]+$/;
@@ -167,22 +172,27 @@ export function canonicalKeyOf(designations: Iterable<string>): string {
 
 // ---- Ledger / retirements codecs (/docs/sid.md#43-ledger--datasidledgertsv) ---------------------
 
-export const SID_KINDS = ['star', 'cloud', 'galaxy', 'planet', 'shell', 'probe'] as const;
-export type SidKind = (typeof SID_KINDS)[number];
+export { SID_KINDS, type LedgerRow, type SidKind };
 
-export const LEDGER_HEADER = 'sid\tcanonical_key\tkind\tfirst_seen';
-export const RETIREMENTS_HEADER = 'sid\tretired\treason\tsuccessor_sid';
-export const REINSTATEMENTS_HEADER = 'sid\treinstated\treason';
-export const SAMEAS_HEADER = 'a\tb\tnote';
-export const SOL_OBJECTS_HEADER = 'key\tkind';
-export const SHELL_OBJECTS_HEADER = 'key\tkind';
+export const RETIREMENTS_TABLE = {
+  file: 'data/sid/retirements.tsv',
+  columns: ['sid', 'retired', 'reason', 'successor_sid'] as const,
+  hint: 'It is hand-appended: restore the row (/docs/sid.md#43-ledger--datasidledgertsv).',
+} satisfies TableSpec<string>;
+export const REINSTATEMENTS_TABLE = {
+  file: 'data/sid/reinstatements.tsv',
+  columns: ['sid', 'reinstated', 'reason'] as const,
+  hint: 'It is hand-appended: restore the row (/docs/sid.md#43-ledger--datasidledgertsv).',
+} satisfies TableSpec<string>;
+const SAMEAS_COLUMNS = ['a', 'b', 'note'] as const;
+const OBJECT_MINT_COLUMNS = ['key', 'kind'] as const;
 
-export interface LedgerRow {
-  sid: number;
-  canonicalKey: string;
-  kind: SidKind;
-  firstSeen: string;
-}
+export const LEDGER_HEADER = LEDGER.columns.join('\t');
+export const RETIREMENTS_HEADER = RETIREMENTS_TABLE.columns.join('\t');
+export const REINSTATEMENTS_HEADER = REINSTATEMENTS_TABLE.columns.join('\t');
+export const SAMEAS_HEADER = SAMEAS_COLUMNS.join('\t');
+export const SOL_OBJECTS_HEADER = OBJECT_MINT_COLUMNS.join('\t');
+export const SHELL_OBJECTS_HEADER = OBJECT_MINT_COLUMNS.join('\t');
 
 export interface RetirementRow {
   sid: number;
@@ -204,75 +214,39 @@ export interface SameasEdge {
 
 const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
-export interface TsvFile {
-  header: string;
-  dataLines: string[];
+function registryRows<C extends string>(spec: TableSpec<C>, text: string): TableRow<C>[] {
+  return [...readTable({ ...spec, exact: true }, text)];
 }
 
-/** Strict TSV split: LF line endings, trailing newline required, no blank
- *  interior lines. */
-export function splitTsv(text: string, expectedHeader: string, label: string): TsvFile {
-  if (text.includes('\r')) throw new Error(`${label}: CR line endings not allowed`);
-  if (!text.endsWith('\n')) throw new Error(`${label}: missing trailing newline`);
-  const lines = text.slice(0, -1).split('\n');
-  if (lines[0] !== expectedHeader) {
-    throw new Error(`${label}: bad header "${lines[0]}" (expected "${expectedHeader}")`);
-  }
-  const dataLines = lines.slice(1);
-  if (dataLines.some((l) => l.length === 0)) throw new Error(`${label}: blank data line`);
-  return { header: lines[0], dataLines };
+/** Each data row's line as written: what the head hash and the append-only
+ *  check compare. */
+export function registryLines<C extends string>(spec: TableSpec<C>, text: string): string[] {
+  return registryRows(spec, text).map((row) => row.rawLine);
 }
 
-export function parseLedgerLine(line: string): LedgerRow {
-  const cells = line.split('\t');
-  if (cells.length !== 4) throw new Error(`ledger row "${line}": expected 4 columns`);
-  const [sidStr, canonicalKey, kind, firstSeen] = cells;
-  if (!DIGITS_RE.test(sidStr)) throw new Error(`ledger row "${line}": bad sid`);
-  return { sid: Number(sidStr), canonicalKey, kind: kind as SidKind, firstSeen };
-}
-
-export function parseLedgerTsv(text: string): LedgerRow[] {
-  return splitTsv(text, LEDGER_HEADER, 'ledger.tsv').dataLines.map(parseLedgerLine);
-}
-
-export function serializeLedgerRow(row: LedgerRow): string {
-  return `${row.sid}\t${row.canonicalKey}\t${row.kind}\t${row.firstSeen}`;
-}
-
-export function parseRetirementLine(line: string): RetirementRow {
-  const cells = line.split('\t');
-  if (cells.length !== 4) throw new Error(`retirement row "${line}": expected 4 columns`);
-  const [sidStr, retired, reason, successorStr] = cells;
-  if (!DIGITS_RE.test(sidStr)) throw new Error(`retirement row "${line}": bad sid`);
-  if (successorStr !== '' && !DIGITS_RE.test(successorStr)) {
-    throw new Error(`retirement row "${line}": bad successor_sid`);
-  }
+function retirementRow(row: TableRow<(typeof RETIREMENTS_TABLE.columns)[number]>): RetirementRow {
   return {
-    sid: Number(sidStr),
-    retired,
-    reason,
-    successorSid: successorStr === '' ? null : Number(successorStr),
+    sid: row.requiredId('sid'),
+    retired: row.raw('retired'),
+    reason: row.raw('reason'),
+    successorSid: row.id('successor_sid'),
+  };
+}
+
+function reinstatementRow(row: TableRow<(typeof REINSTATEMENTS_TABLE.columns)[number]>): ReinstatementRow {
+  return {
+    sid: row.requiredId('sid'),
+    reinstated: row.raw('reinstated'),
+    reason: row.raw('reason'),
   };
 }
 
 export function parseRetirementsTsv(text: string): RetirementRow[] {
-  return splitTsv(text, RETIREMENTS_HEADER, 'retirements.tsv').dataLines.map(
-    parseRetirementLine,
-  );
-}
-
-export function parseReinstatementLine(line: string): ReinstatementRow {
-  const cells = line.split('\t');
-  if (cells.length !== 3) throw new Error(`reinstatement row "${line}": expected 3 columns`);
-  const [sidStr, reinstated, reason] = cells;
-  if (!DIGITS_RE.test(sidStr)) throw new Error(`reinstatement row "${line}": bad sid`);
-  return { sid: Number(sidStr), reinstated, reason };
+  return registryRows(RETIREMENTS_TABLE, text).map(retirementRow);
 }
 
 export function parseReinstatementsTsv(text: string): ReinstatementRow[] {
-  return splitTsv(text, REINSTATEMENTS_HEADER, 'reinstatements.tsv').dataLines.map(
-    parseReinstatementLine,
-  );
+  return registryRows(REINSTATEMENTS_TABLE, text).map(reinstatementRow);
 }
 
 /** Effective retirement state (/docs/sid.md#43-ledger--datasidledgertsv): a sid is retired iff
@@ -314,11 +288,16 @@ export function sidSuccessorPairs(
   return pairs.sort((a, b) => a[0] - b[0]);
 }
 
+/** `label` names the file read: the curated overrides or one bridges/ file. */
 export function parseSameasTsv(text: string, label: string): SameasEdge[] {
-  return splitTsv(text, SAMEAS_HEADER, label).dataLines.map((line) => {
-    const cells = line.split('\t');
-    if (cells.length !== 3) throw new Error(`${label} row "${line}": expected 3 columns`);
-    const [a, b] = cells;
+  const spec = {
+    file: label,
+    columns: SAMEAS_COLUMNS,
+    hint: 'Same-as edges are curated (/docs/sid.md#41-same-as-equivalence-graph).',
+  };
+  return registryRows(spec, text).map((row) => {
+    const a = row.raw('a');
+    const b = row.raw('b');
     parseDesignation(a);
     parseDesignation(b);
     return { a, b };
@@ -330,33 +309,23 @@ export interface SolObjectRow {
   kind: SidKind;
 }
 
-/** Parse a `key\tkind` mint list (sol-objects / shell-objects). Validates
- *  each row against the `<ns>:<key>` designation grammar and the kind
- *  enum. */
-function parseObjectMintTsv(
-  text: string,
-  header: string,
-  sourceLabel: string,
-  ns: string,
-): SolObjectRow[] {
-  return splitTsv(text, header, sourceLabel).dataLines.map((line) => {
-    const cells = line.split('\t');
-    if (cells.length !== 2) throw new Error(`${sourceLabel} row "${line}": expected 2 columns`);
-    const [key, kind] = cells;
+/** A `key\tkind` mint list (sol-objects / shell-objects), each key valid
+ *  under the `<ns>:<key>` designation grammar. */
+function parseObjectMintTsv(text: string, file: string, ns: string): SolObjectRow[] {
+  const spec = { file, columns: OBJECT_MINT_COLUMNS, hint: 'The mint list is curated under data/sid/.' };
+  return registryRows(spec, text).map((row) => {
+    const key = row.raw('key');
     parseDesignation(`${ns}:${key}`);
-    if (!(SID_KINDS as readonly string[]).includes(kind)) {
-      throw new Error(`${sourceLabel} row "${line}": bad kind "${kind}"`);
-    }
-    return { key, kind: kind as SidKind };
+    return { key, kind: row.oneOf('kind', SID_KINDS) };
   });
 }
 
 export function parseSolObjectsTsv(text: string): SolObjectRow[] {
-  return parseObjectMintTsv(text, SOL_OBJECTS_HEADER, 'sol-objects.tsv', 'sol');
+  return parseObjectMintTsv(text, 'data/sid/sol-objects.tsv', 'sol');
 }
 
 export function parseShellObjectsTsv(text: string): SolObjectRow[] {
-  return parseObjectMintTsv(text, SHELL_OBJECTS_HEADER, 'shell-objects.tsv', 'shell');
+  return parseObjectMintTsv(text, 'data/sid/shell-objects.tsv', 'shell');
 }
 
 // ---- Structural validation (/docs/sid.md#45-ci-guard check 1) -------------------
@@ -488,19 +457,24 @@ export interface LedgerHead {
   reinstatements?: HeadTriple;
 }
 
-/** Hash of the first `rows.length` data lines, each LF-terminated; the
- *  header line is pinned by splitTsv, not hashed. */
+/** Hash of the data lines, each LF-terminated; the header line is pinned by
+ *  the exact header check, not hashed. */
 export function sha256OfDataLines(dataLines: string[]): string {
   const h = createHash('sha256');
   for (const line of dataLines) h.update(`${line}\n`, 'utf-8');
   return h.digest('hex');
 }
 
-function headTriple(dataLines: string[], sids: number[]): HeadTriple {
+function headTriple<C extends string>(
+  spec: TableSpec<C>,
+  text: string,
+  decode: (row: TableRow<C>) => { sid: number },
+): HeadTriple {
+  const rows = registryRows(spec, text);
   return {
-    rows: dataLines.length,
-    max_sid: sids.reduce((max, sid) => Math.max(max, sid), 0),
-    sha256: sha256OfDataLines(dataLines),
+    rows: rows.length,
+    max_sid: rows.reduce((max, row) => Math.max(max, decode(row).sid), 0),
+    sha256: sha256OfDataLines(rows.map((row) => row.rawLine)),
   };
 }
 
@@ -509,24 +483,10 @@ export function computeLedgerHead(
   retirementsText: string,
   reinstatementsText: string = `${REINSTATEMENTS_HEADER}\n`,
 ): LedgerHead {
-  const ledger = splitTsv(ledgerText, LEDGER_HEADER, 'ledger.tsv');
-  const retirements = splitTsv(retirementsText, RETIREMENTS_HEADER, 'retirements.tsv');
-  const reinstatements = splitTsv(
-    reinstatementsText, REINSTATEMENTS_HEADER, 'reinstatements.tsv',
-  );
   return {
-    ledger: headTriple(
-      ledger.dataLines,
-      ledger.dataLines.map((l) => parseLedgerLine(l).sid),
-    ),
-    retirements: headTriple(
-      retirements.dataLines,
-      retirements.dataLines.map((l) => parseRetirementLine(l).sid),
-    ),
-    reinstatements: headTriple(
-      reinstatements.dataLines,
-      reinstatements.dataLines.map((l) => parseReinstatementLine(l).sid),
-    ),
+    ledger: headTriple(LEDGER.table, ledgerText, LEDGER.decode),
+    retirements: headTriple(RETIREMENTS_TABLE, retirementsText, retirementRow),
+    reinstatements: headTriple(REINSTATEMENTS_TABLE, reinstatementsText, reinstatementRow),
   };
 }
 
@@ -561,8 +521,8 @@ export function checkAppendOnly(
     );
   }
   if (opts.newSidsPastBaseMax) {
-    for (const line of dataLines.slice(base.rows)) {
-      const sid = Number(line.split('\t')[0]);
+    const appended = LEDGER.parse([LEDGER_HEADER, ...dataLines.slice(base.rows), ''].join('\n'));
+    for (const { sid } of appended) {
       if (!(sid > base.max_sid)) {
         errors.push(`${label}: appended sid ${sid} not > frozen max_sid ${base.max_sid}`);
       }

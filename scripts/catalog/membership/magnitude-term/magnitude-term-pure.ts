@@ -1,7 +1,10 @@
 // The V floor, the verdict it takes on a Gaia magnitude-pull row, and the
 // union's dedupe. See README.md.
 
-import { headerIndex } from '../../parse/corpus-tsv';
+import type { ManifestRecord } from '../membership-manifest-tsv';
+import {
+  readTable, tableLineReader, type TableRow, type TableSpec,
+} from '../../../util/tsv/table-pure';
 import { rielloVMagnitude } from '../../photometry/v-magnitude-pure';
 import type { GaiaPhotometry } from '../../photometry/gaia-photometry-pure';
 
@@ -15,11 +18,15 @@ export const MAGNITUDE_FLOOR_V: number | null = 11;
  *  README.md#the-floor-is-one-constant. */
 export const MAGNITUDE_PULL_G_BOUND = 11;
 
-const PULL_COLUMNS = [
-  'source_id', 'phot_g_mean_mag', 'phot_bp_mean_mag', 'phot_rp_mean_mag',
-] as const;
-
 export const MAGNITUDE_PULL_HINT = 'run `pnpm run refresh:gaia-magnitude`.';
+
+const MAGNITUDE_PULL = {
+  file: MAGNITUDE_PULL_FILE,
+  columns: ['source_id', 'phot_g_mean_mag', 'phot_bp_mean_mag', 'phot_rp_mean_mag'] as const,
+  hint: MAGNITUDE_PULL_HINT,
+} satisfies TableSpec<string>;
+
+type PullRow = TableRow<(typeof MAGNITUDE_PULL.columns)[number]>;
 
 /** README.md#the-filter-is-the-shipped-cascades-own-top-tier. */
 export const MAGNITUDE_VERDICTS = ['kept', 'above_floor', 'no_v'] as const;
@@ -42,10 +49,8 @@ export interface MagnitudeTermSelection {
   counts: MagnitudeTermCounts;
 }
 
-/** Line-fed, so the whole-text filter and the streaming reader share one
- *  implementation over a ~200 MB table. */
-export function magnitudeTermAccumulator(floorV: number): {
-  line: (raw: string) => void;
+function magnitudeTermFold(floorV: number): {
+  fold: (row: PullRow) => void;
   result: () => MagnitudeTermSelection;
 } {
   if (!Number.isFinite(floorV)) {
@@ -57,33 +62,19 @@ export function magnitudeTermAccumulator(floorV: number): {
         + `bound, so the selection would be incomplete — re-pull deeper first: ${MAGNITUDE_PULL_HINT}`,
     );
   }
-  let idx: Record<string, number> | null = null;
   const keptSourceIds = new Set<string>();
   const counts: MagnitudeTermCounts = { rows: 0, kept: 0, above_floor: 0, no_v: 0 };
 
-  const cell = (cells: string[], column: string): number | null => {
-    const raw = (cells[idx![column]] ?? '').trim();
-    if (!raw) return null;
-    const value = Number.parseFloat(raw);
-    return Number.isFinite(value) ? value : null;
-  };
-
   return {
-    line: (raw) => {
-      if (idx === null) {
-        idx = headerIndex(raw, PULL_COLUMNS, MAGNITUDE_PULL_FILE, MAGNITUDE_PULL_HINT);
-        return;
-      }
-      if (!raw.trim()) return;
-      const cells = raw.split('\t');
-      const sourceId = (cells[idx.source_id] ?? '').trim();
-      if (!sourceId) return;
+    fold: (row) => {
+      const sourceId = row.sourceId('source_id');
+      if (sourceId === null) return;
       counts.rows++;
       const verdict = magnitudeVerdict(
         {
-          gMag: cell(cells, 'phot_g_mean_mag'),
-          bpMag: cell(cells, 'phot_bp_mean_mag'),
-          rpMag: cell(cells, 'phot_rp_mean_mag'),
+          gMag: row.float('phot_g_mean_mag'),
+          bpMag: row.float('phot_bp_mean_mag'),
+          rpMag: row.float('phot_rp_mean_mag'),
         },
         floorV,
       );
@@ -94,18 +85,28 @@ export function magnitudeTermAccumulator(floorV: number): {
   };
 }
 
-export function selectMagnitudeTerm(text: string, floorV: number): MagnitudeTermSelection {
-  const acc = magnitudeTermAccumulator(floorV);
-  for (const line of text.split(/\r?\n/)) acc.line(line);
-  return acc.result();
+/** Line-fed, so the streaming reader over the ~200 MB pull folds rows
+ *  exactly as the whole-text filter does. */
+export function magnitudeTermAccumulator(floorV: number): {
+  line: (raw: string) => void;
+  result: () => MagnitudeTermSelection;
+} {
+  const { fold, result } = magnitudeTermFold(floorV);
+  return { line: tableLineReader(MAGNITUDE_PULL, fold), result };
 }
 
-/** A manifest row the magnitude term contributed, carrying the source_id the
- *  record build's astrometry read keys on. */
-export function isMagnitudeTermRow(
-  row: { term: string; gaia_source_id: string },
-): boolean {
-  return row.term === 'magnitude' && row.gaia_source_id !== '';
+export function selectMagnitudeTerm(text: string, floorV: number): MagnitudeTermSelection {
+  const { fold, result } = magnitudeTermFold(floorV);
+  for (const row of readTable(MAGNITUDE_PULL, text)) fold(row);
+  return result();
+}
+
+/** The source_id the record build's astrometry read keys on, for a manifest
+ *  row the magnitude term contributed; null for any other row. */
+export function magnitudeTermSourceId(
+  row: Pick<ManifestRecord, 'term' | 'gaiaSourceId'>,
+): string | null {
+  return row.term === 'magnitude' ? row.gaiaSourceId : null;
 }
 
 export function magnitudeTermNewcomers(

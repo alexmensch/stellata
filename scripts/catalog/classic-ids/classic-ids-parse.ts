@@ -1,6 +1,6 @@
 // Parsers for the frozen CDS classic-designation tables under
 // data/classic-ids/. See /data/classic-ids/README.md#provenance.
-import { dataRows, nonEmpty, parseFloatOrNull, parseIntOrNull } from '../parse/corpus-tsv';
+import { readTable, type TableSpec } from '../../util/tsv/table-pure';
 import { normaliseGjKey } from '../record/catalog-pure';
 import { citedParallax, type CitedParallax } from '../cited-parallax';
 import { citedProperMotion, type CitedProperMotion } from '../cited-proper-motion';
@@ -17,24 +17,26 @@ export interface Tyc2HdRow {
   nTyc: number;
 }
 
-const TYC2_HD_COLUMNS = ['tyc1', 'tyc2', 'tyc3', 'hd', 'n_hd', 'n_tyc'] as const;
+const TYC2_HD = {
+  file: 'data/classic-ids/tyc2_hd.tsv',
+  columns: ['tyc1', 'tyc2', 'tyc3', 'hd', 'n_hd', 'n_tyc'] as const,
+  hint: REFRESH_CLASSIC_IDS,
+} satisfies TableSpec<string>;
 
 export function parseTyc2HdTsv(text: string): Tyc2HdRow[] {
   const out: Tyc2HdRow[] = [];
-  for (const { cells, idx } of dataRows(
-    text, TYC2_HD_COLUMNS, 'tyc2_hd.tsv', REFRESH_CLASSIC_IDS,
-  )) {
-    const tyc1 = parseIntOrNull(cells[idx.tyc1]);
-    const tyc2 = parseIntOrNull(cells[idx.tyc2]);
-    const tyc3 = parseIntOrNull(cells[idx.tyc3]);
-    const hd = parseIntOrNull(cells[idx.hd]);
+  for (const row of readTable(TYC2_HD, text)) {
+    const tyc1 = row.int('tyc1');
+    const tyc2 = row.int('tyc2');
+    const tyc3 = row.int('tyc3');
+    const hd = row.int('hd');
     if (tyc1 === null || tyc2 === null || tyc3 === null || hd === null) continue;
     out.push({
       // Unpadded, matching gaia_dr3_tyc_xmatch.tsv's `tyc` key ("1-381-1").
       tyc: `${tyc1}-${tyc2}-${tyc3}`,
       hd,
-      nHd: parseIntOrNull(cells[idx.n_hd]) ?? 1,
-      nTyc: parseIntOrNull(cells[idx.n_tyc]) ?? 1,
+      nHd: row.int('n_hd') ?? 1,
+      nTyc: row.int('n_tyc') ?? 1,
     });
   }
   return out;
@@ -55,21 +57,23 @@ export interface CrossIndexRow {
   cst: string | null;
 }
 
-const CROSS_INDEX_COLUMNS = ['hd', 'hip', 'bayer', 'flamsteed', 'cst'] as const;
+const CROSS_INDEX = {
+  file: 'data/classic-ids/cross_index.tsv',
+  columns: ['hd', 'hip', 'bayer', 'flamsteed', 'cst'] as const,
+  hint: REFRESH_CLASSIC_IDS,
+} satisfies TableSpec<string>;
 
 export function parseCrossIndexTsv(text: string): CrossIndexRow[] {
   const out: CrossIndexRow[] = [];
-  for (const { cells, idx } of dataRows(
-    text, CROSS_INDEX_COLUMNS, 'cross_index.tsv', REFRESH_CLASSIC_IDS,
-  )) {
-    const hd = parseIntOrNull(cells[idx.hd]);
+  for (const row of readTable(CROSS_INDEX, text)) {
+    const hd = row.int('hd');
     if (hd === null) continue;
     out.push({
       hd,
-      hip: parseIntOrNull(cells[idx.hip]),
-      bayer: nonEmpty(cells[idx.bayer]),
-      flamsteed: parseIntOrNull(cells[idx.flamsteed]),
-      cst: nonEmpty(cells[idx.cst]),
+      hip: row.int('hip'),
+      bayer: row.text('bayer'),
+      flamsteed: row.int('flamsteed'),
+      cst: row.text('cst'),
     });
   }
   return out;
@@ -85,24 +89,19 @@ export interface CrossIndexCorrection {
 
 export const CROSS_INDEX_CORRECTIONS_FILE = 'data/classic-ids/cross_index_corrections.tsv';
 
-const CROSS_INDEX_CORRECTION_COLUMNS = ['hd', 'belongs_to'] as const;
+const CROSS_INDEX_CORRECTIONS = {
+  file: CROSS_INDEX_CORRECTIONS_FILE,
+  columns: ['hd', 'belongs_to'] as const,
+  hint: 'Restore it from git — it is hand-curated, not generated.',
+  comments: true,
+} satisfies TableSpec<string>;
 
 export function parseCrossIndexCorrectionsTsv(text: string): CrossIndexCorrection[] {
   const out: CrossIndexCorrection[] = [];
-  for (const { cells, idx } of dataRows(
-    text, CROSS_INDEX_CORRECTION_COLUMNS, 'cross_index_corrections.tsv',
-    'Restore it from git — it is hand-curated, not generated.',
-  )) {
-    if (cells[idx.hd].startsWith('#')) continue;
-    const hd = parseIntOrNull(cells[idx.hd]);
-    const belongsTo = parseIntOrNull(cells[idx.belongs_to]);
-    if (hd === null || belongsTo === null) {
-      throw new Error(
-        `${CROSS_INDEX_CORRECTIONS_FILE} row "${cells.join('\t')}" states no ` +
-          'hd / belongs_to pair. Comment the line with `#` or complete it — a ' +
-          'curated row skipped in silence is the fault this file guards against.',
-      );
-    }
+  for (const row of readTable(CROSS_INDEX_CORRECTIONS, text)) {
+    const hd = row.int('hd');
+    const belongsTo = row.int('belongs_to');
+    if (hd === null || belongsTo === null) return row.failIncompletePair('hd', 'belongs_to');
     out.push({ hd, belongsTo });
   }
   return out;
@@ -161,19 +160,21 @@ export interface Bsc5Row {
   name: string | null;
 }
 
-const BSC5_COLUMNS = ['hr', 'hd', 'name'] as const;
+const BSC5 = {
+  file: 'data/classic-ids/bsc5.tsv',
+  columns: ['hr', 'hd', 'name'] as const,
+  hint: REFRESH_CLASSIC_IDS,
+} satisfies TableSpec<string>;
 
 export function parseBsc5Tsv(text: string): Bsc5Row[] {
   const out: Bsc5Row[] = [];
-  for (const { cells, idx } of dataRows(
-    text, BSC5_COLUMNS, 'bsc5.tsv', REFRESH_CLASSIC_IDS,
-  )) {
-    const hr = parseIntOrNull(cells[idx.hr]);
+  for (const row of readTable(BSC5, text)) {
+    const hr = row.int('hr');
     if (hr === null) continue;
     out.push({
       hr,
-      hd: parseIntOrNull(cells[idx.hd]),
-      name: nonEmpty(cells[idx.name]),
+      hd: row.int('hd'),
+      name: row.text('name'),
     });
   }
   return out;
@@ -213,42 +214,44 @@ export interface Cns5Row {
   astrometry: Cns5Astrometry | null;
 }
 
-const CNS5_COLUMNS = [
-  'cns5', 'gj', 'gj_comp', 'gaia_source_id', 'hip',
-  'ra_deg', 'de_deg', 'pos_epoch', 'plx_mas', 'e_plx_mas', 'plx_bibcode',
-  'pm_ra', 'pm_de', 'pm_bibcode',
-] as const;
+const CNS5 = {
+  file: 'data/classic-ids/cns5.tsv',
+  columns: [
+    'cns5', 'gj', 'gj_comp', 'gaia_source_id', 'hip',
+    'ra_deg', 'de_deg', 'pos_epoch', 'plx_mas', 'e_plx_mas', 'plx_bibcode',
+    'pm_ra', 'pm_de', 'pm_bibcode',
+  ] as const,
+  hint: REFRESH_CLASSIC_IDS,
+} satisfies TableSpec<string>;
 
 export function parseCns5Tsv(text: string): Cns5Row[] {
   const out: Cns5Row[] = [];
-  for (const { cells, idx } of dataRows(
-    text, CNS5_COLUMNS, 'cns5.tsv', REFRESH_CLASSIC_IDS,
-  )) {
-    const cns5 = parseIntOrNull(cells[idx.cns5]);
-    const gj = nonEmpty(cells[idx.gj]);
+  for (const row of readTable(CNS5, text)) {
+    const cns5 = row.int('cns5');
+    const gj = row.text('gj');
     if (cns5 === null || gj === null) continue;
-    const src = nonEmpty(cells[idx.gaia_source_id]);
-    const raDeg = parseFloatOrNull(cells[idx.ra_deg]);
-    const decDeg = parseFloatOrNull(cells[idx.de_deg]);
-    const posEpoch = parseFloatOrNull(cells[idx.pos_epoch]);
+    const src = row.sourceId('gaia_source_id');
+    const raDeg = row.float('ra_deg');
+    const decDeg = row.float('de_deg');
+    const posEpoch = row.float('pos_epoch');
     out.push({
       cns5,
       gj,
-      gjComp: nonEmpty(cells[idx.gj_comp]),
+      gjComp: row.text('gj_comp'),
       gaiaSourceId: src !== null && /^\d+$/.test(src) ? src : null,
-      hip: parseIntOrNull(cells[idx.hip]),
+      hip: row.int('hip'),
       astrometry: raDeg !== null && decDeg !== null && posEpoch !== null
         ? {
             raDeg, decDeg, posEpoch,
             parallax: citedParallax(
-              parseFloatOrNull(cells[idx.plx_mas]),
-              parseFloatOrNull(cells[idx.e_plx_mas]),
-              nonEmpty(cells[idx.plx_bibcode]),
+              row.float('plx_mas'),
+              row.float('e_plx_mas'),
+              row.text('plx_bibcode'),
             ),
             pm: citedProperMotion(
-              parseFloatOrNull(cells[idx.pm_ra]),
-              parseFloatOrNull(cells[idx.pm_de]),
-              nonEmpty(cells[idx.pm_bibcode]),
+              row.float('pm_ra'),
+              row.float('pm_de'),
+              row.text('pm_bibcode'),
             ),
           }
         : null,
@@ -276,7 +279,7 @@ export function cns5AstrometryByGj(rows: readonly Cns5Row[]): Map<string, Cns5As
     if (key === null) continue;
     if (out.has(key)) {
       throw new Error(
-        `data/classic-ids/cns5.tsv has two rows keyed gj=${key}. ${REFRESH_CLASSIC_IDS}`,
+        `${CNS5.file} has two rows keyed gj=${key}. ${REFRESH_CLASSIC_IDS}`,
       );
     }
     out.set(key, row.astrometry);

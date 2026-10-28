@@ -35,6 +35,6 @@ describe('gspc-parse / parseGspcTsv', () => {
   });
 
   it('throws on an empty file rather than silently zeroing the tier', () => {
-    expect(() => parseGspcTsv('')).toThrow(/missing required columns/);
+    expect(() => parseGspcTsv('')).toThrow(/has no header row/);
   });
 });

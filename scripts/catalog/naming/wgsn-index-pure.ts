@@ -4,27 +4,21 @@
 
 import { GREEK_GLYPHS } from './greek-forms';
 import { foldNameKey } from './wgsn-normalise-pure';
+import type { DesignationRow } from './wgsn-tables-pure';
+import type { WgsnRow } from './wgsn-parse-pure';
+import { readTable, type TableSpec } from '../../util/tsv/table-pure';
 
 export interface WgsnNameRow {
   name: string;
   aliases: string[];
   hip: number | null;
+  hipComponent: string | null;
   hr: number | null;
   hd: number | null;
+  hdComponent: string | null;
+  vmag: number | null;
+  source: WgsnRow['source'];
   srcId: string;
-}
-
-export interface WgsnDesignationRow {
-  kind: 'bayer' | 'flamsteed' | 'gould';
-  letter: string | null;
-  sup: number | null;
-  num: number | null;
-  dc: string;
-  half: string | null;
-  component: string | null;
-  hip: number | null;
-  hr: number | null;
-  hd: number | null;
 }
 
 /** How each spine `proper` no WGSN name matches is routed
@@ -32,13 +26,15 @@ export interface WgsnDesignationRow {
  *  `gould-designation` joins the string tier rather than the structured one:
  *  the authority carries only one of the three (82 G. Eri), and both render
  *  the identical form. */
-export type ProperDisposition =
-  | 'discovery-designation'
-  | 'catalogue-designation'
-  | 'gould-designation'
-  | 'latin-bayer'
-  | 'component-letter'
-  | 'unattributed';
+export const PROPER_DISPOSITIONS = [
+  'discovery-designation',
+  'catalogue-designation',
+  'gould-designation',
+  'latin-bayer',
+  'component-letter',
+  'unattributed',
+] as const;
+export type ProperDisposition = (typeof PROPER_DISPOSITIONS)[number];
 
 const STRING_DESIGNATION_CLASSES: ReadonlySet<ProperDisposition> = new Set<ProperDisposition>([
   'discovery-designation', 'catalogue-designation', 'gould-designation',
@@ -51,54 +47,26 @@ const ALIAS_ONLY_CLASSES: ReadonlySet<ProperDisposition> = new Set<ProperDisposi
   'component-letter', 'unattributed', 'latin-bayer',
 ]);
 
-function tsvRows(text: string): Map<string, string>[] {
-  const lines = text.split('\n').filter((l) => l.trim() !== '');
-  const header = lines[0].split('\t');
-  return lines.slice(1).map((line) => {
-    const cells = line.split('\t');
-    return new Map(header.map((h, i) => [h, (cells[i] ?? '').trim()]));
-  });
+export const PROPER_DISPOSITIONS_TABLE = {
+  file: 'data/iau-wgsn/athyg_proper_dispositions.tsv',
+  columns: ['proper', 'class', 'hip', 'hd'] as const,
+  hint: 'It is hand-curated: restore the proper, class, hip and hd columns.',
+} satisfies TableSpec<string>;
+
+export interface ProperDispositionRow {
+  proper: string;
+  disposition: ProperDisposition;
+  hip: number | null;
+  hd: number | null;
 }
 
-const intOrNull = (v: string | undefined): number | null =>
-  v === undefined || v === '' ? null : Number(v);
-const strOrNull = (v: string | undefined): string | null =>
-  v === undefined || v === '' ? null : v;
-
-export function parseWgsnNamesTsv(text: string): WgsnNameRow[] {
-  return tsvRows(text).map((r) => ({
-    name: r.get('name') ?? '',
-    aliases: (r.get('aliases') ?? '') === '' ? [] : (r.get('aliases') as string).split('|'),
-    hip: intOrNull(r.get('hip')),
-    hr: intOrNull(r.get('hr')),
-    hd: intOrNull(r.get('hd')),
-    srcId: r.get('src_id') ?? '',
+export function parseProperDispositions(text: string): ProperDispositionRow[] {
+  return [...readTable(PROPER_DISPOSITIONS_TABLE, text)].map((row) => ({
+    proper: row.text('proper') ?? row.fail('proper is empty'),
+    disposition: row.oneOf('class', PROPER_DISPOSITIONS),
+    hip: row.int('hip'),
+    hd: row.int('hd'),
   }));
-}
-
-export function parseWgsnDesignationsTsv(text: string): WgsnDesignationRow[] {
-  return tsvRows(text).map((r) => ({
-    kind: (r.get('kind') ?? '') as WgsnDesignationRow['kind'],
-    letter: strOrNull(r.get('letter')),
-    sup: intOrNull(r.get('sup')),
-    num: intOrNull(r.get('num')),
-    dc: r.get('dc') ?? '',
-    half: strOrNull(r.get('half')),
-    component: strOrNull(r.get('component')),
-    hip: intOrNull(r.get('hip')),
-    hr: intOrNull(r.get('hr')),
-    hd: intOrNull(r.get('hd')),
-  }));
-}
-
-export function parseProperDispositionsTsv(
-  text: string,
-): Map<string, ProperDisposition> {
-  const out = new Map<string, ProperDisposition>();
-  for (const r of tsvRows(text)) {
-    out.set(r.get('proper') ?? '', (r.get('class') ?? '') as ProperDisposition);
-  }
-  return out;
 }
 
 /** Most component-specific first: a HIP-first join collapses p Eri A and B
@@ -172,8 +140,8 @@ export function pickNameRow(rows: readonly WgsnNameRow[]): WgsnNameRow {
  *  component of it, then a superscripted row is the component's own
  *  designation where the bare one names the pair. */
 export function pickBayerRow(
-  rows: readonly WgsnDesignationRow[],
-): WgsnDesignationRow {
+  rows: readonly DesignationRow[],
+): DesignationRow {
   const greek = rows.filter((r) => r.letter !== null && GREEK_GLYPHS.has(r.letter));
   const pool = greek.length > 0 ? greek : rows;
   return [...pool].sort((a, b) =>
@@ -184,8 +152,8 @@ export function pickBayerRow(
 }
 
 export function pickGouldRow(
-  rows: readonly WgsnDesignationRow[],
-): WgsnDesignationRow {
+  rows: readonly DesignationRow[],
+): DesignationRow {
   return [...rows].sort((a, b) =>
     (a.num ?? 0) - (b.num ?? 0)
     || (a.dc < b.dc ? -1 : a.dc > b.dc ? 1 : 0)
@@ -194,15 +162,15 @@ export function pickGouldRow(
 
 export interface WgsnIndex {
   nameOf(keys: NamingKeys): { row: WgsnNameRow; viaProper: boolean } | null;
-  bayerOf(keys: NamingKeys): WgsnDesignationRow | null;
-  gouldOf(keys: NamingKeys): WgsnDesignationRow | null;
+  bayerOf(keys: NamingKeys): DesignationRow | null;
+  gouldOf(keys: NamingKeys): DesignationRow | null;
   /** Folded name keys the authority approves — the naming-authority gate's own set (/docs/star-naming.md#2-authority--one-source-approves-names-everything-else-compiles-them). */
   approvedNameKeys: ReadonlySet<string>;
 }
 
 export function buildWgsnIndex(
   names: readonly WgsnNameRow[],
-  designations: readonly WgsnDesignationRow[],
+  designations: readonly DesignationRow[],
 ): WgsnIndex {
   const nameIdx = indexRows(names);
   const byFoldedName = new Map<string, WgsnNameRow[]>();

@@ -89,6 +89,9 @@ same thing — single-use helpers stay with their consumer.
   CI's catalogue cache key ([The catalogue build cache](../ci/README.md#the-catalogue-build-cache)), so the two
   cannot disagree on what the build reads. `trackedFiles()` is the listing the
   stamp passes as `files`.
+- `tsv/` — the one TSV reader (`readTable`, typed columns, cells that keep
+  empty and malformed apart) and `defineArtifact`, the codec of every table
+  this repo writes. Own README.
 - `output-identity.ts` (+ `output-identity-pure.ts`, its diff and test) —
   `pnpm run identity:snapshot` / `identity:diff`, the byte-identity check in
   [Proving a restructuring byte-identical](#proving-a-restructuring-byte-identical).

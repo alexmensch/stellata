@@ -11,6 +11,7 @@ import {
   type SimbadNamespaceIndex,
   type SimbadRecordKeys,
 } from '../record/catalog-pure';
+import { readTable, type TableSpec } from '../../util/tsv/table-pure';
 import {
   classifyFromGspspec,
   classifyFromSimbad,
@@ -48,39 +49,23 @@ export function emptySimbadSpectralIndex(): SimbadSpectralIndex {
  *  reason `parseGaiaApsisTsv` uses. A row is indexed under every namespace it
  *  carries; the rows the pull enumerated by SIMBAD oid alone carry none and
  *  index nowhere. */
+const SPTYPE_TABLE = {
+  file: 'data/simbad/simbad_sptype.tsv',
+  columns: ['source_id', 'sp_type', 'hip', 'tyc', 'gj', 'sp_qual', 'otype'] as const,
+  hint: 'Re-run scripts/refresh/refresh-simbad-sptype.py.',
+} satisfies TableSpec<string>;
+
 export function parseSimbadSptypeTsv(text: string): SimbadSpectralIndex {
   const index = emptySimbadSpectralIndex();
-  const lines = text.split(/\r?\n/);
-  const header = lines[0].split('\t').map((h) => h.trim());
-  const idIdx = header.indexOf('source_id');
-  const hipIdx = header.indexOf('hip');
-  const tycIdx = header.indexOf('tyc');
-  const gjIdx = header.indexOf('gj');
-  const spTypeIdx = header.indexOf('sp_type');
-  const spQualIdx = header.indexOf('sp_qual');
-  const otypeIdx = header.indexOf('otype');
-  const missing: string[] = [];
-  if (idIdx < 0) missing.push('source_id');
-  if (spTypeIdx < 0) missing.push('sp_type');
-  if (missing.length) {
-    throw new Error(
-      `SIMBAD sptype TSV missing required columns: ${missing.join(', ')}. ` +
-        `Re-run scripts/refresh/refresh-simbad-sptype.py.`,
-    );
-  }
-  for (let i = 1; i < lines.length; i++) {
-    const line = lines[i];
-    if (!line.trim()) continue;
-    const cells = line.split('\t');
-    const hipRaw = hipIdx >= 0 ? (cells[hipIdx] ?? '').trim() : '';
-    const spType = (cells[spTypeIdx] ?? '').trim() || null;
-    const spQual = spQualIdx >= 0 ? ((cells[spQualIdx] ?? '').trim() || null) : null;
-    const otype = otypeIdx >= 0 ? ((cells[otypeIdx] ?? '').trim() || null) : null;
+  for (const row of readTable(SPTYPE_TABLE, text)) {
+    const spType = row.text('sp_type');
+    const spQual = row.text('sp_qual');
+    const otype = row.text('otype');
     const keys: SimbadRecordKeys = {
-      sourceId: (cells[idIdx] ?? '').trim() || null,
-      hip: hipRaw ? Number(hipRaw) : null,
-      tyc: tycIdx >= 0 ? ((cells[tycIdx] ?? '').trim() || null) : null,
-      gl: gjIdx >= 0 ? ((cells[gjIdx] ?? '').trim() || null) : null,
+      sourceId: row.sourceId('source_id'),
+      hip: row.int('hip'),
+      tyc: row.text('tyc'),
+      gl: row.text('gj'),
     };
     indexSimbadRow(
       index, keys, { spType, spQual, otype, sourceId: keys.sourceId },

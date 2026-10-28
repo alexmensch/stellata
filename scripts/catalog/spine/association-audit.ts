@@ -9,14 +9,14 @@ import { REPO_ROOT as ROOT, readRequired } from '../../util/paths';
 import {
   LINK_CLASSES, auditAssociations, formatAssociationReport, linkTablesFrom,
 } from './association-audit-pure';
-import { INHERITED_SPINE_FILE, parseSpineTsv } from './inherited-spine-pure';
+import { INHERITED_SPINE, INHERITED_SPINE_FILE } from './inherited-spine-pure';
 import { LFS_HINT, loadPrimaryTables } from './primaries-tables';
 
 const ID_COLS = ['tyc', 'hip', 'hd', 'hr', 'gl', 'flam', 'bayer', 'proper', 'gaia_source_id'] as const;
 
 async function main(): Promise<void> {
   const outDir = process.argv.find((a) => a.startsWith('--out='))?.slice('--out='.length) ?? null;
-  const spine = parseSpineTsv(readRequired(resolve(ROOT, INHERITED_SPINE_FILE), LFS_HINT));
+  const spine = INHERITED_SPINE.parse(readRequired(resolve(ROOT, INHERITED_SPINE_FILE), LFS_HINT));
   const tables = await loadPrimaryTables(spine.map((r) => r.tyc).filter((t) => t !== ''));
   const links = linkTablesFrom(tables);
   const audit = auditAssociations(spine, links);

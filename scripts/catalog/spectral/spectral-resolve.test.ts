@@ -213,7 +213,7 @@ describe('resolveSpectralInfo — tier priority', () => {
 
 describe('parseSimbadSptypeTsv', () => {
   const HDR =
-    'simbad_oid\tsimbad_main_id\tsp_type\tsp_qual\tsp_bibcode\totype\thip\tsource_id\n';
+    'simbad_oid\tsimbad_main_id\tsp_type\tsp_qual\tsp_bibcode\totype\thip\tsource_id\ttyc\tgj\n';
 
   it('parses canonical rows into bySourceId and byHip', () => {
     const tsv = HDR +
@@ -251,8 +251,7 @@ describe('parseSimbadSptypeTsv', () => {
   });
 
   it('indexes by TYC, keeping a row SIMBAD gives no Gaia id or HIP', () => {
-    const tsv =
-      'simbad_oid\tsimbad_main_id\tsp_type\tsp_qual\tsp_bibcode\totype\thip\tsource_id\ttyc\tgj\n' +
+    const tsv = HDR +
       '7\tTYC only\tK2III\tC\t\t*\t\t\t1234-5678-1\t\n';
     const { bySourceId, byHip, byTyc } = parseSimbadSptypeTsv(tsv);
     expect(bySourceId.size).toBe(0);
@@ -260,12 +259,12 @@ describe('parseSimbadSptypeTsv', () => {
     expect(byTyc.get('1234-5678-1')?.spType).toBe('K2III');
   });
 
-  it('a file predating the tyc column parses with an empty byTyc', () => {
-    const tsv = HDR +
-      '57848\t*  56 Cyg\tA6V\tC\t1995ApJS...99..135A\tPM*\t102843\t2067050940754838656\n';
-    const { bySourceId, byTyc } = parseSimbadSptypeTsv(tsv);
-    expect(bySourceId.size).toBe(1);
-    expect(byTyc.size).toBe(0);
+  it('fails at the read on a pull missing any ladder or qualifier column', () => {
+    for (const column of ['hip', 'tyc', 'gj', 'sp_qual', 'otype']) {
+      const header = HDR.trimEnd().split('\t').filter((c) => c !== column).join('\t');
+      expect(() => parseSimbadSptypeTsv(`${header}\n`))
+        .toThrow(`data/simbad/simbad_sptype.tsv is missing required columns: ${column}. Re-run scripts/refresh/refresh-simbad-sptype.py.`);
+    }
   });
 
   it('throws rather than pick a winner when a key repeats', () => {
@@ -281,14 +280,12 @@ describe('parseSimbadSptypeTsv', () => {
       '2\tSecond\tK0III\tD\t\t*\t\t9876\n';
     expect(() => parseSimbadSptypeTsv(dupSource))
       .toThrow(/two rows keyed source_id=9876/);
-    const WIDE =
-      'simbad_oid\tsimbad_main_id\tsp_type\tsp_qual\tsp_bibcode\totype\thip\tsource_id\ttyc\tgj\n';
-    expect(() => parseSimbadSptypeTsv(WIDE +
+    expect(() => parseSimbadSptypeTsv(HDR +
       '1\tA\tB8V\tC\t\t*\t\t\t1-2-1\t\n' +
       '2\tB\tK0III\tD\t\t*\t\t\t1-2-1\t\n')).toThrow(/two rows keyed tyc=1-2-1/);
     // The GJ collision is only visible after the fold: `Gl 165A` and `165 A`
     // are one key, which a raw-cell comparison would miss.
-    expect(() => parseSimbadSptypeTsv(WIDE +
+    expect(() => parseSimbadSptypeTsv(HDR +
       '1\tA\tB8V\tC\t\t*\t\t\t\tGl 165A\n' +
       '2\tB\tK0III\tD\t\t*\t\t\t\t165 A\n')).toThrow(/two rows keyed gj=165A/);
   });

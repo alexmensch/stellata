@@ -1,7 +1,6 @@
 // See README.md#both-gates-weigh-every-candidate.
 
-import { headerIndex } from '../../parse/corpus-tsv';
-import { parseGaiaSourceIdStr } from '../../record/catalog-pure';
+import { readTable, type TableSpec } from '../../../util/tsv/table-pure';
 import type { PrintedV, PrintedVLookups } from '../../photometry/v-magnitude-pure';
 
 /** Magnitude-consistency gate for Gaia source bindings, shared with the
@@ -34,6 +33,12 @@ export interface SimbadWdsXidIndex {
   primarySourceLetterByWds: Map<string, string>;
 }
 
+const SIMBAD_WDS_XIDS = {
+  file: 'data/simbad/simbad_wds_xids.tsv',
+  columns: ['wds_id', 'component', 'gaia_source_id', 'hip'] as const,
+  hint: 'Re-run scripts/refresh/refresh-simbad-wds-xids.py.',
+} satisfies TableSpec<string>;
+
 /** Parse data/simbad/simbad_wds_xids.tsv (refresh-simbad-wds-xids.py)
  *  into per-source and per-HIP WDS-component attribution maps. Source
  *  ids stay strings — they exceed Number.MAX_SAFE_INTEGER. */
@@ -41,22 +46,12 @@ export function parseSimbadWdsXidsTsv(text: string): SimbadWdsXidIndex {
   const bySource = new Map<string, WdsComponentAttribution[]>();
   const byHip = new Map<number, WdsComponentAttribution[]>();
   const primarySourceLetterByWds = new Map<string, string>();
-  const lines = text.split(/\r?\n/);
-  const idx = headerIndex(
-    lines[0] ?? '',
-    ['wds_id', 'component', 'gaia_source_id', 'hip'],
-    'SIMBAD WDS xids TSV',
-    'Re-run scripts/refresh/refresh-simbad-wds-xids.py.',
-  );
-  for (let i = 1; i < lines.length; i++) {
-    const line = lines[i];
-    if (!line.trim()) continue;
-    const cells = line.split('\t');
-    const wdsId = (cells[idx.wds_id] ?? '').trim();
-    const component = (cells[idx.component] ?? '').trim();
-    if (!wdsId || !component) continue;
+  for (const row of readTable(SIMBAD_WDS_XIDS, text)) {
+    const wdsId = row.text('wds_id');
+    const component = row.text('component');
+    if (wdsId === null || component === null) continue;
     const attr: WdsComponentAttribution = { wdsId, component };
-    const src = parseGaiaSourceIdStr(cells[idx.gaia_source_id]);
+    const src = row.sourceId('gaia_source_id');
     if (src) {
       const list = bySource.get(src);
       if (list) list.push(attr);
@@ -66,8 +61,8 @@ export function parseSimbadWdsXidsTsv(text: string): SimbadWdsXidIndex {
         primarySourceLetterByWds.set(wdsId, component);
       }
     }
-    const hip = parseInt((cells[idx.hip] ?? '').trim(), 10);
-    if (Number.isFinite(hip) && hip > 0) {
+    const hip = row.int('hip');
+    if (hip !== null && hip > 0) {
       const list = byHip.get(hip);
       if (list) list.push(attr);
       else byHip.set(hip, [attr]);
@@ -168,7 +163,8 @@ export function bindingEvidence(
   };
 }
 
-export type GateReason = 'mag' | 'sibling';
+export const GATE_REASONS = ['mag', 'sibling'] as const;
+export type GateReason = (typeof GATE_REASONS)[number];
 
 /** Why a candidate's G could not be held against a printed V: the row has no
  *  printed V, the astrometry pull returned no row for the source (the request

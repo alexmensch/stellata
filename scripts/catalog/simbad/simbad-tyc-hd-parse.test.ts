@@ -4,16 +4,13 @@ import { resolve } from 'node:path';
 import { beforeAll, describe, it, expect } from 'vitest';
 
 import { REPO_ROOT, lfsContentReadable } from '../../util/paths';
-import { dataRows } from '../parse/corpus-tsv';
+import { readTable } from '../../util/tsv/table-pure';
 import { parseBsc5Tsv, parseTyc2HdTsv } from '../classic-ids/classic-ids-parse';
 import {
   CLASSIC_ID_OVERRIDES_FILE,
   parseLabelOverridesTsv,
 } from '../classic-ids/label-merge/label-merge-pure';
-import {
-  MEMBERSHIP_MANIFEST_FILE,
-  parseManifestTsv,
-} from '../membership/membership-manifest-pure';
+import { MEMBERSHIP_MANIFEST, MEMBERSHIP_MANIFEST_FILE } from '../membership/membership-manifest-tsv';
 import {
   hdNumbers,
   parseSimbadTycHdTsv,
@@ -134,10 +131,8 @@ describe.skipIf(!ADJUDICATION_INPUTS.every(lfsContentReadable))(
         dissent: 0, dissentInconsistent: 0, faithful: 0, vindicating: 0,
         bothAgainst: 0,
       };
-      for (const row of parseManifestTsv(readFileSync(SRC_MANIFEST, 'utf-8'))) {
-        const tyc = row.tyc.trim();
-        const shipped = Number.parseInt(row.hd.trim(), 10);
-        if (tyc === '' || !Number.isFinite(shipped)) continue;
+      for (const { tyc, hd: shipped } of MEMBERSHIP_MANIFEST.rows(readFileSync(SRC_MANIFEST, 'utf-8'))) {
+        if (tyc === null || shipped === null) continue;
         counts.bothCells += 1;
         const answer = simbad.get(tyc);
         if (answer === undefined) { counts.silent += 1; continue; }
@@ -190,6 +185,11 @@ describe.skipIf(!ADJUDICATION_INPUTS.every(lfsContentReadable))(
 
 const SRC_SIMBAD_SPTYPE = AT('data/simbad/simbad_sptype.tsv');
 const SPLIT_INPUTS = [...ADJUDICATION_INPUTS, SRC_SIMBAD_SPTYPE];
+const SIMBAD_SPTYPE_OBJECTS = {
+  file: 'data/simbad/simbad_sptype.tsv',
+  columns: ['source_id', 'simbad_main_id'] as const,
+  hint: 'Re-run scripts/refresh/refresh-simbad-sptype.py.',
+};
 
 /** The move set of README.md#which-witness-decides-a-close-pairs-hd: the
  *  rows all four witnesses agree the record's own component is not the one its
@@ -226,17 +226,17 @@ describe.skipIf(!SPLIT_INPUTS.every(lfsContentReadable))('the four-witness split
     // the eight asserted having left the class.
     // Keyed on the TYC, not the source: a mutual swap is two rows.
     const contested = new Map<string, string>();
-    for (const row of parseManifestTsv(readFileSync(SPLIT_INPUTS[2], 'utf-8'))) {
-      const tyc = row.tyc.trim();
-      const shipped = Number.parseInt(row.hd.trim(), 10);
+    for (const row of MEMBERSHIP_MANIFEST.rows(readFileSync(SPLIT_INPUTS[2], 'utf-8'))) {
+      const { tyc, hd: shipped } = row;
+      if (tyc === null || shipped === null) continue;
       const answer = simbad.get(tyc);
       const printed = iv.get(tyc);
-      if (tyc === '' || !Number.isFinite(shipped) || answer === undefined) continue;
+      if (answer === undefined) continue;
       if (printed === undefined) continue;
       const stated = hdNumbers(answer);
       if (!stated.some((hd) => printed.has(hd))) continue;
       if (stated.includes(shipped) || printed.has(shipped)) continue;
-      contested.set(tyc, row.gaia_source_id);
+      contested.set(tyc, row.gaiaSourceId ?? '');
     }
 
     // The fourth witness: SIMBAD's object for the record's own Gaia source.
@@ -244,14 +244,9 @@ describe.skipIf(!SPLIT_INPUTS.every(lfsContentReadable))('the four-witness split
     // column index reads a neighbouring cell after a re-pull reorders it.
     const sources = new Set([...contested.values()].filter((s) => s !== ''));
     const objectOfSource = new Map<string, string>();
-    for (const { cells, idx } of dataRows(
-      readFileSync(SRC_SIMBAD_SPTYPE, 'utf-8'),
-      ['source_id', 'simbad_main_id'],
-      'simbad_sptype.tsv',
-      'Re-run `pnpm run refresh:simbad-sptype`.',
-    )) {
-      const sourceId = cells[idx.source_id];
-      if (sources.has(sourceId)) objectOfSource.set(sourceId, cells[idx.simbad_main_id]);
+    for (const row of readTable(SIMBAD_SPTYPE_OBJECTS, readFileSync(SRC_SIMBAD_SPTYPE, 'utf-8'))) {
+      const sourceId = row.raw('source_id');
+      if (sources.has(sourceId)) objectOfSource.set(sourceId, row.raw('simbad_main_id'));
     }
 
     move = [];
@@ -333,9 +328,9 @@ describe.skipIf(!ASSERTED_INPUTS.every(lfsContentReadable))(
       }
 
       const tycOfSource = new Map<string, string>();
-      for (const row of parseManifestTsv(readFileSync(SRC_MANIFEST, 'utf-8'))) {
-        if (hdBySource.has(row.gaia_source_id)) {
-          tycOfSource.set(row.gaia_source_id, row.tyc.trim());
+      for (const row of MEMBERSHIP_MANIFEST.rows(readFileSync(SRC_MANIFEST, 'utf-8'))) {
+        if (row.gaiaSourceId !== null && hdBySource.has(row.gaiaSourceId)) {
+          tycOfSource.set(row.gaiaSourceId, row.tyc ?? '');
         }
       }
       asserted = [...hdBySource].map(([sourceId, hd]) => ({
@@ -346,10 +341,9 @@ describe.skipIf(!ASSERTED_INPUTS.every(lfsContentReadable))(
       }));
 
       objectOfSource = new Map();
-      for (const line of readFileSync(SRC_SIMBAD_SPTYPE, 'utf-8').split('\n').slice(1)) {
-        if (line === '') continue;
-        const cells = line.split('\t');
-        if (hdBySource.has(cells[7])) objectOfSource.set(cells[7], cells[1]);
+      for (const row of readTable(SIMBAD_SPTYPE_OBJECTS, readFileSync(SRC_SIMBAD_SPTYPE, 'utf-8'))) {
+        const sourceId = row.raw('source_id');
+        if (hdBySource.has(sourceId)) objectOfSource.set(sourceId, row.raw('simbad_main_id'));
       }
     });
 

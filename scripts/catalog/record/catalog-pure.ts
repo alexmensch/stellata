@@ -7,7 +7,7 @@
 // so everything reachable from the config needs them. Only typecheck and
 // vitest cover the rest of scripts/, and neither fails without them: dropping
 // these breaks `vite build` and `pnpm run dev` alone.
-import { headerIndex } from '../parse/corpus-tsv.ts';
+import { readTable, type TableSpec } from '../../util/tsv/table-pure.ts';
 // Type-only: distance/parallax/ reaches back here through its parsers, so a
 // value import would close a cycle. Erased at compile.
 import type { DistVia } from '../distance/parallax/parallax-cascade.ts';
@@ -1484,14 +1484,6 @@ export function isBailerJonesEligible(
  *  guards the build's `BigInt(s.gaiaSourceId)` call against a malformed row
  *  throwing a SyntaxError mid-write. Same `/^\d+$/` shape gate as
  *  `parseGaiaHipXmatchTsv` in `gaia-xmatch.ts`. */
-export function parseGaiaSourceIdStr(s: string | undefined | null): string | null {
-  if (s === undefined || s === null) return null;
-  const t = s.trim();
-  if (!t) return null;
-  if (!/^\d+$/.test(t)) return null;
-  return t;
-}
-
 /** Parse the TSV produced by `scripts/refresh/refresh-bailer-jones.py` into a
  *  Gaia DR3 source_id → distance (pc) map. `source_id` is kept as a
  *  string: Gaia source_ids exceed `Number.MAX_SAFE_INTEGER`, so any
@@ -1503,27 +1495,19 @@ export function parseGaiaSourceIdStr(s: string | undefined | null): string | nul
  *  population prior); `r_med_geo` is the geometric-only fallback for
  *  rows without photogeo (no usable G or BP–RP, or a colour outside the
  *  prior model's range). */
+const BAILER_JONES = {
+  file: 'data/bailer-jones/bailer-jones-dr3.tsv',
+  columns: ['source_id', 'r_med_geo', 'r_med_photogeo'] as const,
+  hint: 'Re-run scripts/refresh/refresh-bailer-jones.py.',
+} satisfies TableSpec<string>;
+
 export function parseBailerJonesTsv(text: string): Map<string, number> {
   const out = new Map<string, number>();
-  const lines = text.split(/\r?\n/);
-  const idx = headerIndex(
-    lines[0] ?? '',
-    ['source_id', 'r_med_geo', 'r_med_photogeo'],
-    'Bailer-Jones TSV',
-    'Re-run scripts/refresh/refresh-bailer-jones.py.',
-  );
-  for (let i = 1; i < lines.length; i++) {
-    const line = lines[i];
-    if (!line.trim()) continue;
-    const cells = line.split('\t');
-    const sourceId = (cells[idx.source_id] ?? '').trim();
-    if (!sourceId) continue;
-    const photogeo = parseFloat((cells[idx.r_med_photogeo] ?? '').trim());
-    const geo = parseFloat((cells[idx.r_med_geo] ?? '').trim());
-    const d = Number.isFinite(photogeo)
-      ? photogeo
-      : Number.isFinite(geo) ? geo : NaN;
-    if (!Number.isFinite(d) || d <= 0) continue;
+  for (const row of readTable(BAILER_JONES, text)) {
+    const sourceId = row.sourceId('source_id');
+    if (sourceId === null) continue;
+    const d = row.float('r_med_photogeo') ?? row.float('r_med_geo');
+    if (d === null || d <= 0) continue;
     out.set(sourceId, d);
   }
   return out;
@@ -1556,55 +1540,31 @@ export interface ApsisRow {
  *  Gaia source_ids exceed Number.MAX_SAFE_INTEGER so any numeric parse
  *  would silently corrupt the join key. Blank cells decode to `null` —
  *  the writer maps `null` to `NO_APSIS` (NaN) at pack time. */
-export function parseGaiaApsisTsv(text: string): Map<string, ApsisRow> {
-  const out = new Map<string, ApsisRow>();
-  const lines = text.split(/\r?\n/);
-  if (lines.length === 0) return out;
-  const header = lines[0].split('\t').map((h) => h.trim());
-  const cols = [
+const GAIA_APSIS = {
+  file: 'data/gaia/gaia_dr3_apsis.tsv',
+  columns: [
     'source_id',
     'teff_gspphot', 'logg_gspphot', 'mh_gspphot', 'azero_gspphot',
     'teff_gspspec', 'logg_gspspec', 'mh_gspspec',
     'spectraltype_esphs',
-  ] as const;
-  const idx: Record<(typeof cols)[number], number> = Object.create(null);
-  const missing: string[] = [];
-  for (const c of cols) {
-    const i = header.indexOf(c);
-    if (i < 0) missing.push(c);
-    idx[c] = i;
-  }
-  if (missing.length) {
-    throw new Error(
-      `Gaia DR3 Apsis TSV is missing required columns: ${missing.join(', ')}. ` +
-        `Re-run scripts/refresh/refresh-gaia-apsis.py.`,
-    );
-  }
-  const cell = (cells: string[], i: number): number | null => {
-    const s = (cells[i] ?? '').trim();
-    if (!s) return null;
-    const v = parseFloat(s);
-    return Number.isFinite(v) ? v : null;
-  };
-  const strCell = (cells: string[], i: number): string | null => {
-    const s = (cells[i] ?? '').trim();
-    return s ? s : null;
-  };
-  for (let i = 1; i < lines.length; i++) {
-    const line = lines[i];
-    if (!line.trim()) continue;
-    const cells = line.split('\t');
-    const sourceId = (cells[idx.source_id] ?? '').trim();
-    if (!sourceId) continue;
+  ] as const,
+  hint: 'Re-run scripts/refresh/refresh-gaia-apsis.py.',
+} satisfies TableSpec<string>;
+
+export function parseGaiaApsisTsv(text: string): Map<string, ApsisRow> {
+  const out = new Map<string, ApsisRow>();
+  for (const row of readTable(GAIA_APSIS, text)) {
+    const sourceId = row.sourceId('source_id');
+    if (sourceId === null) continue;
     out.set(sourceId, {
-      teffGspphot: cell(cells, idx.teff_gspphot),
-      loggGspphot: cell(cells, idx.logg_gspphot),
-      mhGspphot: cell(cells, idx.mh_gspphot),
-      azeroGspphot: cell(cells, idx.azero_gspphot),
-      teffGspspec: cell(cells, idx.teff_gspspec),
-      loggGspspec: cell(cells, idx.logg_gspspec),
-      mhGspspec: cell(cells, idx.mh_gspspec),
-      spectraltypeEsphs: strCell(cells, idx.spectraltype_esphs),
+      teffGspphot: row.float('teff_gspphot'),
+      loggGspphot: row.float('logg_gspphot'),
+      mhGspphot: row.float('mh_gspphot'),
+      azeroGspphot: row.float('azero_gspphot'),
+      teffGspspec: row.float('teff_gspspec'),
+      loggGspspec: row.float('logg_gspspec'),
+      mhGspspec: row.float('mh_gspspec'),
+      spectraltypeEsphs: row.text('spectraltype_esphs'),
     });
   }
   return out;

@@ -6,7 +6,9 @@ import {
   equatorialTangentBasis,
   type UnitVector,
 } from '../../../src/client/util/equatorial-basis';
-import { headerIndex } from '../parse/corpus-tsv';
+import {
+  readTable, tableLineReader, type TableRow, type TableSpec,
+} from '../../util/tsv/table-pure';
 import { gaiaHas5pSolution } from './gaia-distrust';
 import type { SimbadRecordKeys } from '../record/catalog-pure';
 import type { Tycho2Row } from '../tycho2-parse';
@@ -411,23 +413,47 @@ export function resolveDirection(
 
 // ---- TSV parsers ----------------------------------------------------------
 
-function floatCell(cells: string[], i: number): number | null {
-  const s = (cells[i] ?? '').trim();
-  if (!s) return null;
-  const v = parseFloat(s);
-  return Number.isFinite(v) ? v : null;
-}
-
 const ASTROMETRY_COLUMNS = [
   'source_id', 'ra', 'dec', 'parallax', 'parallax_error', 'pmra', 'pmdec',
   'ruwe', 'ipd_frac_multi_peak', 'phot_g_mean_mag', 'phot_bp_mean_mag',
   'phot_rp_mean_mag', 'radial_velocity', 'radial_velocity_error',
 ] as const;
 
-/** Line-fed, so the whole-text parse and a streaming read over the magnitude
- *  pull share one implementation. `keep` filters to a subset without holding
- *  the table; source_id stays a string — Gaia IDs exceed
- *  Number.MAX_SAFE_INTEGER, so a numeric parse would corrupt the key. */
+type AstrometryRow = TableRow<(typeof ASTROMETRY_COLUMNS)[number]>;
+
+/** source_id stays a string — Gaia IDs exceed Number.MAX_SAFE_INTEGER, so a
+ *  numeric parse would corrupt the key. */
+function foldAstrometryRow(
+  row: AstrometryRow,
+  out: Map<string, GaiaAstrometryCatalogRow>,
+  keep?: ReadonlySet<string>,
+): void {
+  const sourceId = row.sourceId('source_id');
+  if (sourceId === null) return;
+  if (keep && !keep.has(sourceId)) return;
+  const raDeg = row.float('ra');
+  const decDeg = row.float('dec');
+  if (raDeg === null || decDeg === null) return;
+  out.set(sourceId, {
+    raDeg,
+    decDeg,
+    parallaxMas: row.float('parallax'),
+    parallaxErrorMas: row.float('parallax_error'),
+    pmraMasyr: row.float('pmra'),
+    pmdecMasyr: row.float('pmdec'),
+    ruwe: row.float('ruwe'),
+    ipdFracMultiPeak: row.float('ipd_frac_multi_peak'),
+    gMag: row.float('phot_g_mean_mag'),
+    bpMag: row.float('phot_bp_mean_mag'),
+    rpMag: row.float('phot_rp_mean_mag'),
+    radialVelocityKmS: row.float('radial_velocity'),
+    radialVelocityErrorKmS: row.float('radial_velocity_error'),
+  });
+}
+
+/** Line-fed, so a streaming read over the magnitude pull folds rows exactly
+ *  as the whole-text parse does. `keep` filters to a subset without holding
+ *  the table. */
 export function gaiaAstrometryAccumulator(
   fileLabel: string,
   refreshHint: string,
@@ -436,102 +462,68 @@ export function gaiaAstrometryAccumulator(
   line: (raw: string) => void;
   result: () => Map<string, GaiaAstrometryCatalogRow>;
 } {
-  let idx: Record<string, number> | null = null;
   const out = new Map<string, GaiaAstrometryCatalogRow>();
+  const spec = { file: fileLabel, columns: ASTROMETRY_COLUMNS, hint: refreshHint };
   return {
-    line: (raw) => {
-      if (idx === null) {
-        idx = headerIndex(raw, ASTROMETRY_COLUMNS, fileLabel, refreshHint);
-        return;
-      }
-      if (!raw.trim()) return;
-      const cells = raw.split('\t');
-      const sourceId = (cells[idx.source_id] ?? '').trim();
-      if (!sourceId) return;
-      if (keep && !keep.has(sourceId)) return;
-      const raDeg = floatCell(cells, idx.ra);
-      const decDeg = floatCell(cells, idx.dec);
-      if (raDeg === null || decDeg === null) return;
-      out.set(sourceId, {
-        raDeg,
-        decDeg,
-        parallaxMas: floatCell(cells, idx.parallax),
-        parallaxErrorMas: floatCell(cells, idx.parallax_error),
-        pmraMasyr: floatCell(cells, idx.pmra),
-        pmdecMasyr: floatCell(cells, idx.pmdec),
-        ruwe: floatCell(cells, idx.ruwe),
-        ipdFracMultiPeak: floatCell(cells, idx.ipd_frac_multi_peak),
-        gMag: floatCell(cells, idx.phot_g_mean_mag),
-        bpMag: floatCell(cells, idx.phot_bp_mean_mag),
-        rpMag: floatCell(cells, idx.phot_rp_mean_mag),
-        radialVelocityKmS: floatCell(cells, idx.radial_velocity),
-        radialVelocityErrorKmS: floatCell(cells, idx.radial_velocity_error),
-      });
-    },
+    line: tableLineReader(spec, (row) => foldAstrometryRow(row, out, keep)),
     result: () => out,
   };
 }
 
+const GAIA_ASTROMETRY_CATALOG = {
+  file: 'data/gaia/gaia_dr3_astrometry_catalog.tsv',
+  columns: ASTROMETRY_COLUMNS,
+  hint: 'Re-run scripts/refresh/refresh-gaia-astrometry-catalog.py.',
+} satisfies TableSpec<string>;
+
 export function parseGaiaAstrometryCatalogTsv(
   text: string,
 ): Map<string, GaiaAstrometryCatalogRow> {
-  const acc = gaiaAstrometryAccumulator(
-    'Gaia astrometry catalog TSV',
-    'Re-run scripts/refresh/refresh-gaia-astrometry-catalog.py.',
-  );
-  for (const line of text.split(/\r?\n/)) acc.line(line);
-  return acc.result();
+  const out = new Map<string, GaiaAstrometryCatalogRow>();
+  for (const row of readTable(GAIA_ASTROMETRY_CATALOG, text)) foldAstrometryRow(row, out);
+  return out;
 }
+
+const HIP2 = {
+  file: 'data/hipparcos/hip2_van_leeuwen.tsv',
+  columns: ['hip', 'ra_icrs', 'de_icrs', 'plx', 'e_plx', 'pm_ra', 'pm_de'] as const,
+  hint: 'Re-run `pnpm run refresh:hip2`.',
+} satisfies TableSpec<string>;
 
 export function parseHip2Tsv(text: string): Map<number, Hip2AstrometryRow> {
   const out = new Map<number, Hip2AstrometryRow>();
-  const lines = text.split(/\r?\n/);
-  if (lines.length === 0) return out;
-  const idx = headerIndex(
-    lines[0],
-    ['hip', 'ra_icrs', 'de_icrs', 'plx', 'e_plx', 'pm_ra', 'pm_de'],
-    'HIP2 van Leeuwen TSV',
-    'Restore data/hipparcos/hip2_van_leeuwen.tsv from LFS.',
-  );
-  for (let i = 1; i < lines.length; i++) {
-    const line = lines[i];
-    if (!line.trim()) continue;
-    const cells = line.split('\t');
-    const hip = Number((cells[idx.hip] ?? '').trim());
-    if (!Number.isInteger(hip) || hip <= 0) continue;
-    const raDeg = floatCell(cells, idx.ra_icrs);
-    const decDeg = floatCell(cells, idx.de_icrs);
+  for (const row of readTable(HIP2, text)) {
+    const hip = row.int('hip');
+    if (hip === null || hip <= 0) continue;
+    const raDeg = row.float('ra_icrs');
+    const decDeg = row.float('de_icrs');
     if (raDeg === null || decDeg === null) continue;
     out.set(hip, {
       raDeg,
       decDeg,
-      plxMas: floatCell(cells, idx.plx),
-      plxErrorMas: floatCell(cells, idx.e_plx),
-      pmRaMasyr: floatCell(cells, idx.pm_ra),
-      pmDeMasyr: floatCell(cells, idx.pm_de),
+      plxMas: row.float('plx'),
+      plxErrorMas: row.float('e_plx'),
+      pmRaMasyr: row.float('pm_ra'),
+      pmDeMasyr: row.float('pm_de'),
     });
   }
   return out;
 }
+
+const GAIA_NSS = {
+  file: 'data/gaia/gaia_dr3_nss_two_body.tsv',
+  columns: ['source_id'] as const,
+  hint: 'Re-run scripts/refresh/refresh-gaia-nss.py.',
+} satisfies TableSpec<string>;
 
 /** Extract the set of Gaia DR3 source_ids carrying an NSS two-body
  *  orbit from `data/gaia/gaia_dr3_nss_two_body.tsv`. Only the first
  *  column is read — membership is the only signal the cascade needs. */
 export function parseNssSourceIdSet(text: string): Set<string> {
   const out = new Set<string>();
-  const lines = text.split(/\r?\n/);
-  if (lines.length === 0) return out;
-  const idx = headerIndex(
-    lines[0],
-    ['source_id'],
-    'Gaia NSS two-body TSV',
-    'Re-run scripts/refresh/refresh-gaia-nss.py.',
-  );
-  for (let i = 1; i < lines.length; i++) {
-    const line = lines[i];
-    if (!line.trim()) continue;
-    const sourceId = (line.split('\t')[idx.source_id] ?? '').trim();
-    if (sourceId) out.add(sourceId);
+  for (const row of readTable(GAIA_NSS, text)) {
+    const sourceId = row.sourceId('source_id');
+    if (sourceId !== null) out.add(sourceId);
   }
   return out;
 }

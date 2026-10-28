@@ -2,21 +2,21 @@
 // designation overlay. See README.md.
 import { resolve } from 'node:path';
 
-import { compareSourceIdsNumeric } from '../astrometry-request/export-astrometry-request-pure';
 import { compareCountSnapshot } from '../build-counts';
 import { loadClassicIdCrossWalks } from './binding-candidates';
 import { loadBindingEvidence, loadHipVMag } from '../membership/binding/binding-evidence';
 import { printedVLookups } from '../photometry/v-magnitude-pure';
 import { loadGliese, loadTycho2 } from '../spine/primaries-tables';
 import {
-  OVERLAY_VALUE_SEPARATOR,
   buildClassicIdOverlay,
+  type OverlayJoinCounts,
+} from './classic-id-overlay-pure';
+import { REJECTED_BINDINGS } from './rejected-bindings-tsv';
+import { ROUTE_DISAGREEMENTS } from './route-disagreements-tsv';
+import {
   serializeOverlay,
   type ClassicIdOverlay,
-  type OverlayJoinCounts,
-  type HdHipRouteDisagreement,
-  type RejectedBinding,
-} from './classic-id-overlay-pure';
+} from './classic-id-overlay-tsv';
 import { REPO_ROOT as ROOT } from '../../util/paths';
 import { emitArtifacts, runStep } from '../../util/emit-artifacts';
 import { CLASSIC_ID_OUTPUTS } from './classic-id-overlay-outputs';
@@ -29,42 +29,6 @@ const EXPECTED_COUNTS = resolve(
   ROOT,
   'scripts/catalog/classic-ids/classic-id-overlay-expected.json',
 );
-
-function tsv(header: string, rows: readonly string[]): string {
-  return `${[header, ...rows].join('\n')}\n`;
-}
-
-function disagreementsTsv(rows: readonly HdHipRouteDisagreement[]): string {
-  const sep = OVERLAY_VALUE_SEPARATOR;
-  return tsv(
-    'hd\thip\thd_route_source_ids\thip_route_source_id',
-    [...rows]
-      .sort((a, b) => a.hd - b.hd)
-      .map((d) => `${d.hd}\t${d.hip}\t${d.hdRouteSourceIds.join(sep)}\t${d.hipRouteSourceId}`),
-  );
-}
-
-function compareHipNullsFirst(a: number | null, b: number | null): number {
-  if (a === null || b === null) return (a === null ? 0 : 1) - (b === null ? 0 : 1);
-  return a - b;
-}
-
-function rejectedBindingsTsv(rows: readonly RejectedBinding[]): string {
-  return tsv(
-    'gaia_source_id\thip\tv_mag\tv_via\tg_mag\treason\tdesignations',
-    [...rows]
-      .sort((a, b) => compareHipNullsFirst(a.hip, b.hip) || compareSourceIdsNumeric(a.sourceId, b.sourceId))
-      .map((r) => [
-        r.sourceId,
-        r.hip ?? '',
-        r.printedV?.vMag.toFixed(3) ?? '',
-        r.printedV?.vVia ?? '',
-        r.gMag === null ? '' : r.gMag.toFixed(3),
-        r.reason,
-        r.designations,
-      ].join('\t')),
-  );
-}
 
 function logOverlay(overlay: ClassicIdOverlay, counts: OverlayJoinCounts): void {
   console.log(
@@ -106,8 +70,11 @@ async function main(): Promise<void> {
     outputs: CLASSIC_ID_OUTPUTS,
     files: {
       overlay: serializeOverlay(overlay),
-      disagreements: disagreementsTsv(disagreements),
-      rejected: rejectedBindingsTsv(rejectedBindings),
+      disagreements: ROUTE_DISAGREEMENTS.serialize(disagreements),
+      rejected: REJECTED_BINDINGS.serialize(rejectedBindings.map((r) => ({
+        sourceId: r.sourceId, hip: r.hip, vMag: r.printedV?.vMag ?? null, vVia: r.printedV?.vVia ?? null,
+        gMag: r.gMag, reason: r.reason, designations: r.designations,
+      }))),
     },
     checks: [snapshotCheck<OverlayJoinCounts>({
       envVar: 'UPDATE_BUILD_COUNTS',

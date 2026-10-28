@@ -3,6 +3,8 @@
 
 import { SOL_PROPER_NAME } from '../record/catalog-pure';
 import { starDesignations } from '../../sid/sid-pure';
+import { defineArtifact, nullableCell } from '../../util/tsv/artifact-pure';
+import { idCell } from '../../util/tsv/table-pure';
 import type { Star } from '../parse/stars-parse';
 
 /** Repo-relative, so the generator and the committed-artifact guard resolve
@@ -69,10 +71,6 @@ export type SpineRow = Record<SpineColumn, string>;
 /** The AT-HYG cells a row copies verbatim, keyed by their upstream name. */
 export type SpinePrintedCells = Record<SpinePrintedColumn, string>;
 
-function starCell(value: number | string | null): string {
-  return value === null ? '' : String(value);
-}
-
 export function buildSpineRow(
   star: SpineStarFields,
   printed: SpinePrintedCells,
@@ -80,68 +78,25 @@ export function buildSpineRow(
   const row = {} as SpineRow;
   for (const spec of COLUMN_SPEC) {
     row[spec.column] = 'star' in spec
-      ? starCell(star[spec.star])
+      ? nullableCell(star[spec.star])
       : printed[spec.column];
   }
   return row;
 }
 
-export function serializeSpine(rows: readonly SpineRow[]): string {
-  const lines = [SPINE_COLUMNS.join('\t')];
-  for (const row of rows) {
-    const cells = SPINE_COLUMNS.map((column) => {
-      const cell = row[column];
-      if (/[\t\n\r]/.test(cell)) {
-        throw new Error(`spine cell ${column}="${cell}" contains a TSV delimiter`);
-      }
-      return cell;
-    });
-    lines.push(cells.join('\t'));
-  }
-  return `${lines.join('\n')}\n`;
-}
-
-/** Lazy row walk. `readStars` consumes this rather than `parseSpineTsv`:
- *  313,257 materialised rows hold ~660 MB for the whole walk, concurrently
- *  with the Star array being built off them. */
-export function* iterSpineTsv(text: string): Generator<SpineRow> {
-  const headerEnd = text.indexOf('\n');
-  const header = (headerEnd === -1 ? text : text.slice(0, headerEnd)).split('\t');
-  if (header.join('\t') !== SPINE_COLUMNS.join('\t')) {
-    throw new Error(
-      `inherited-spine header mismatch: got ${header.join(',')}`,
-    );
-  }
-  let start = headerEnd === -1 ? text.length : headerEnd + 1;
-  while (start < text.length) {
-    const end = text.indexOf('\n', start);
-    const line = text.slice(start, end === -1 ? text.length : end);
-    start = end === -1 ? text.length : end + 1;
-    if (line === '') continue;
-    const cells = line.split('\t');
-    if (cells.length !== SPINE_COLUMNS.length) {
-      throw new Error(
-        `inherited-spine row has ${cells.length} cells, expected ${SPINE_COLUMNS.length}`,
-      );
-    }
-    const row = {} as SpineRow;
-    SPINE_COLUMNS.forEach((column, i) => { row[column] = cells[i]; });
-    yield row;
-  }
-}
-
-export function parseSpineTsv(text: string): SpineRow[] {
-  return [...iterSpineTsv(text)];
-}
-
-function intCell(cell: string): number | null {
-  if (cell === '') return null;
-  const n = Number.parseInt(cell, 10);
-  if (!Number.isFinite(n) || String(n) !== cell) {
-    throw new Error(`spine integer cell "${cell}" is not a round-trippable integer`);
-  }
-  return n;
-}
+/** Frozen: its committed bytes are the record of AT-HYG's merge decisions,
+ *  so the codec reads and writes the cells verbatim. */
+export const INHERITED_SPINE = defineArtifact({
+  file: INHERITED_SPINE_FILE,
+  columns: SPINE_COLUMNS,
+  hint: 'It is frozen; restore it from git rather than regenerating it.',
+  order: 'as-given',
+  decode: (row): SpineRow => {
+    row.sourceId('gaia_source_id');
+    return row.cells();
+  },
+  encode: (row) => row,
+});
 
 /** The `starDesignations` set a spine row stands in for — the membership term's
  *  half of SID resolution once AT-HYG leaves the build's input set. `synth:`
@@ -149,9 +104,9 @@ function intCell(cell: string): number | null {
 export function spineDesignations(row: SpineRow): string[] {
   return starDesignations({
     isSol: row.proper === SOL_PROPER_NAME,
-    hip: intCell(row.hip),
-    hd: intCell(row.hd),
-    hr: intCell(row.hr),
+    hip: idCell(row.hip),
+    hd: idCell(row.hd),
+    hr: idCell(row.hr),
     // The spine states one value per identifier; the alias lists are the
     // overlay's addition, and the review queue is what accounts for them.
     hdAlt: [], hrAlt: [],

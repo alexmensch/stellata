@@ -33,7 +33,11 @@ scripts/catalog/naming/
                                 cells), null spellings `_` / `~` / `-` /
                                 `null`, and both key columns' inline
                                 component letters (`HIP 518A`, `62264AB`).
-                                A key shape covered by neither throws.
+                                A key shape covered by neither throws, and
+                                so does a Vmag that is not a decimal; the
+                                faints file's reader of
+                                data/iau-wgsn/wgsn_faints_corrections.tsv
+                                sets its three G-in-V cells first.
   wgsn-normalise-pure.ts        Both /docs/star-naming.md#4-canonical-designation-forms normalisers. NEC `Bayer/other`
     (+ test)                    grammar → structured bayer / flamsteed /
                                 gould / variable / non-stellar /
@@ -53,14 +57,20 @@ scripts/catalog/naming/
                                 the joins, and emit the two derived
                                 tables through emitArtifacts once the
                                 count snapshot passes.
+  wgsn-names-tsv.ts             WGSN_NAMES / WGSN_DESIGNATIONS — the two
+  wgsn-designations-tsv.ts      derived tables' artifact codecs
+    (+ wgsn-tables-tsv.test)    (../../util/tsv/README.md#artifact-codecs).
+                                Designation rows sort by
+                                compareDesignationRows.
   wgsn-tables-outputs.ts        WGSN_OUTPUTS — the two derived tables as
                                 build:wgsn's emitArtifacts declaration
                                 (../../util/README.md). Side-effect free.
   wgsn-expected.json            Pinned count snapshot
                                 (UPDATE_BUILD_COUNTS=1 refreshes).
-  wgsn-index-pure.ts (+ test)   The record-side join: readers for the two
-                                committed tables and the disposition file,
-                                the keyed index, the three pickers, and the
+  wgsn-index-pure.ts (+ test)   The record-side join: the disposition
+                                file's reader (readTable — it is
+                                hand-curated), the keyed index, the three
+                                pickers, and the
                                 /docs/star-naming.md#2-authority--one-source-approves-names-everything-else-compiles-them class routing (README.md#the-record-side-join).
   apply-star-names.ts           I/O + the record pass: loads the committed
                                 tables and writes each record's authority
@@ -78,8 +88,13 @@ scripts/catalog/naming/
                                 name, with the NAME tiers written into
                                 `proper`. Also the curated override's join,
                                 which hard-fails on an unmatched SID.
-  naming-parity-pure.ts         Ledger codec + the record-identity key and
-    (+ test)                    the shared label resolver.
+  naming-parity-pure.ts         Ledger row types, the record-identity key
+                                and the shared label resolver.
+  naming-parity-tsv.ts          NAMING_PARITY / NAMING_DUPLICATES — the
+  naming-duplicates-tsv.ts      two ledgers' artifact codecs, sorted by
+    (+ naming-ledgers-tsv.test) key and by label.
+  committed-artifacts.test.ts   serialize(parse(committed)) === committed
+                                for all four artifacts this folder writes.
   build-naming-parity.ts        Refreshes the ledger and the duplicate
                                 list from the built artifacts, both in
                                 one emitArtifacts call.

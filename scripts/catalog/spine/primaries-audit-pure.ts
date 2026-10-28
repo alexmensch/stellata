@@ -10,7 +10,7 @@ import type {
   Tyc2HdRow,
 } from '../classic-ids/classic-ids-parse';
 import { lookupGliese, type GlieseIndex } from '../gliese-parse';
-import { parseIntOrNull } from '../parse/corpus-tsv';
+import { intCell } from '../../util/tsv/table-pure';
 import type { Tycho2Row } from '../tycho2-parse';
 import type { SpineRow } from './inherited-spine-pure';
 
@@ -298,10 +298,10 @@ export function attestSpineRow(
   tables: PrimaryTables,
   idx: PrimaryIndex,
 ): RowAttestation {
-  const hd = parseIntOrNull(row.hd);
-  const hr = parseIntOrNull(row.hr);
-  const hip = parseIntOrNull(row.hip);
-  const flam = parseIntOrNull(row.flam);
+  const hd = intCell(row.hd);
+  const hr = intCell(row.hr);
+  const hip = intCell(row.hip);
+  const flam = intCell(row.flam);
   const attestation: Attestation = {
     hd: hd === null ? null : attestHd(hd, idx, tables),
     hr: hr === null ? null : idx.hrSet.has(hr) ? 'v50' : null,
@@ -381,7 +381,7 @@ function corroborate(
   row: SpineRow, xids: SimbadXids | undefined, aliases: ReadonlyMap<string, readonly string[]>,
 ): SimbadCorroboration {
   if (xids === undefined) return 'no_object';
-  const hip = parseIntOrNull(row.hip);
+  const hip = intCell(row.hip);
   const glKey = normaliseGjKey(row.gl === '' ? null : row.gl);
   const simbadGl = bareGj(xids.gj);
   const compared: boolean[] = [];
@@ -400,7 +400,7 @@ export function checkIdentity(
   idx: PrimaryIndex,
 ): IdentityCheck {
   const spine = row.gaia_source_id === '' ? null : row.gaia_source_id;
-  const hip = parseIntOrNull(row.hip);
+  const hip = intCell(row.hip);
   const viaTyc = row.tyc === '' ? null : tables.tycToSource.get(row.tyc) ?? null;
   const viaHip = hip === null ? null : tables.hipToSource.get(hip) ?? null;
   const cns5Row = cns5RowFor(row.gl === '' ? null : row.gl, idx.cns5ByKey, tables.glAliases);
@@ -497,9 +497,9 @@ export function spineKeys(rows: Iterable<SpineRow>): SpineKeys {
   const gaia = new Set<string>();
   for (const row of rows) {
     if (row.tyc !== '') tyc.add(row.tyc);
-    const hdCell = parseIntOrNull(row.hd);
-    const hrCell = parseIntOrNull(row.hr);
-    const hipCell = parseIntOrNull(row.hip);
+    const hdCell = intCell(row.hd);
+    const hrCell = intCell(row.hr);
+    const hipCell = intCell(row.hip);
     if (hdCell !== null) hd.add(hdCell);
     if (hrCell !== null) hr.add(hrCell);
     if (hipCell !== null) hip.add(hipCell);

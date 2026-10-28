@@ -4,8 +4,10 @@ import { resolve } from 'node:path';
 
 import { declareOutputs } from '../../util/emit-artifacts';
 import { REPO_ROOT } from '../../util/paths';
+import { NAMING_DUPLICATES } from './naming-duplicates-tsv';
+import { NAMING_PARITY } from './naming-parity-tsv';
 
 export const NAMING_PARITY_OUTPUTS = declareOutputs({
-  parity: resolve(REPO_ROOT, 'scripts/catalog/naming/naming-parity.tsv'),
-  duplicates: resolve(REPO_ROOT, 'scripts/catalog/naming/naming-duplicates.tsv'),
+  parity: resolve(REPO_ROOT, NAMING_PARITY.file),
+  duplicates: resolve(REPO_ROOT, NAMING_DUPLICATES.file),
 });

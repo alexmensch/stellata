@@ -23,8 +23,13 @@ counted metrics.
 scripts/catalog/companions/
   companion-promotion.ts          promoteCompanions. Runs before the absmag
     (+ test)                      sort so promoted records take the same
-                                  final indexing as everything else. Names
-                                  `MULTIPLES_TSV`.
+                                  final indexing as everything else.
+                                  readMultiplesTsv decodes through the
+                                  `MULTIPLES_TSV` codec
+                                  (../../binaries/multiples-tsv.ts) and
+                                  hands promotion each row with its anchor
+                                  offset already parsed, never the raw
+                                  anchor cells.
   anchor-offset-pure.ts (+ test)  parseStage6Offset (the anchor columns'
                                   parse boundary) and rebasedAnchorOffset: a
                                   row's Stage 6 offset re-based onto

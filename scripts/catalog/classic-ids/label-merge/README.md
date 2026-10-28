@@ -11,16 +11,15 @@ contract is [§ 4](/docs/catalog-driver.md#4-how-hd-reaches-gaia).
 scripts/catalog/classic-ids/label-merge/
   label-merge-pure.ts (+ test)    The merge itself: the per-identifier rule,
                                   the collision guard, the curated overrides,
-                                  the review-queue codec, the designation
+                                  the designation
                                   delta the manifest parity gate replays, and
                                   the unnetted removals the parity ledger's
                                   canonical-key audit reads. Pure.
+  label-flips-tsv.ts              LABEL_FLIPS, the review queue's codec.
 ```
 
 `mergeClassicIdLabels` (`label-merge-pure.ts`) runs in **one place**, and one
-producer is what makes `label_flips.tsv` describe the labels actually shipped:
-it used to take a byte-identity assertion between two runs, and that assertion
-is what pinned the merge to the spine's frozen `gaia_source_id` cell.
+producer is what makes `label_flips.tsv` describe the labels actually shipped.
 
 **The key is the DERIVED binding** ([The four sources, in precedence order](../../membership/binding/README.md#the-four-sources-in-precedence-order)).
 Keyed on the frozen cell a label

@@ -4,8 +4,10 @@ import { resolve } from 'node:path';
 
 import { declareOutputs } from '../../util/emit-artifacts';
 import { REPO_ROOT } from '../../util/paths';
+import { WGSN_DESIGNATIONS } from './wgsn-designations-tsv';
+import { WGSN_NAMES } from './wgsn-names-tsv';
 
 export const WGSN_OUTPUTS = declareOutputs({
-  names: resolve(REPO_ROOT, 'data/iau-wgsn/wgsn_names.tsv'),
-  designations: resolve(REPO_ROOT, 'data/iau-wgsn/wgsn_designations.tsv'),
+  names: resolve(REPO_ROOT, WGSN_NAMES.file),
+  designations: resolve(REPO_ROOT, WGSN_DESIGNATIONS.file),
 });

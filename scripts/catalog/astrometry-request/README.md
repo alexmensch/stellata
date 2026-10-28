@@ -13,7 +13,7 @@ which is why it sits beside the record build rather than inside it
 ```
 scripts/catalog/astrometry-request/
   export-astrometry-request.ts    The generator. Streams the membership
-                                  manifest through iterManifestTsv for the
+                                  manifest through its codec for the
                                   membership half, adds both gates' candidates
                                   and the bound-pair siblings, sorts, and
                                   emits the request through emitArtifacts.
@@ -22,11 +22,10 @@ scripts/catalog/astrometry-request/
                                   declaration (../../util/README.md).
                                   Side-effect free.
   export-astrometry-request-pure.ts
-    (+ test)                      sortSourceIdsNumeric — the BigInt sort.
-                                  Also imported by ../classic-ids/ and
-                                  scripts/sid/export-dr-risk-set.ts, so it
-                                  is a shared source_id helper rather than
-                                  this script's private half.
+    (+ test)                      sortSourceIdsNumeric — the request's sort,
+                                  over ../../util/tsv/'s compareSourceIds.
+                                  Also imported by
+                                  scripts/sid/export-dr-risk-set.ts.
 ```
 
 Each non-membership contribution lives with the consumer that defines it, not
@@ -39,7 +38,9 @@ and `pairMemberSourceIds` in `../distance/parallax/pair-member-parallax.ts`.
 **source_ids exceed 2^53.** A lexicographic sort misorders unequal-length
 ids and a `Number` sort collides them, so `BigInt` is the only correct
 comparator — and it is what matches the ordering
-`write_astrometry_request` gives the binaries-scope request file.
+`write_astrometry_request` gives the binaries-scope request file. Every
+codec that orders by source_id shares the one comparator,
+`compareSourceIds` (`../../util/tsv/table-pure.ts`).
 
 ## Request and record build name the same set by construction
 

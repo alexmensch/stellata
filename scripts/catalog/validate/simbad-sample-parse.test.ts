@@ -38,7 +38,7 @@ describe('parseSimbadSampleRows', () => {
   it('throws on an empty file instead of reporting zero sample rows', () => {
     // The sample gates the build's distance-regression check, so a truncated
     // file must not read as "nothing to cross-check".
-    expect(() => parseSimbadSampleRows('')).toThrow(/missing required columns/);
+    expect(() => parseSimbadSampleRows('')).toThrow(/has no header row/);
   });
 
   it('returns no rows for a valid header with no data rows', () => {

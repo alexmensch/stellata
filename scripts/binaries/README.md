@@ -75,6 +75,13 @@ scripts/binaries/
                                   columns + per-pair WDS sep/PA/epoch/Δmag +
                                   system-anchor inheritance for tight inner
                                   binaries + SIMBAD standalone augmentation.
+  multiples-tsv.ts (+ test)       MULTIPLES_TSV: the TypeScript codec for
+                                  multiples.tsv — column roster, closed
+                                  value sets, per-column decimal places —
+                                  and the only parse of the file on the TS
+                                  side. Its test round-trips the committed
+                                  file byte for byte, which is what holds it
+                                  to the Python writer until Stage 6 ports.
   anchor_offsets.py               compute_anchor_offsets: each component's
                                   offset from its system's anchor letter,
                                   with the sub-letter photocentre link.

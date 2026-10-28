@@ -10,23 +10,21 @@ import {
   magnitudeWeighableSourceIds,
 } from '../classic-ids/classic-id-overlay-pure';
 import { loadHipVMag } from '../membership/binding/binding-evidence';
-import { MULTIPLES_TSV, readMultiplesTsv } from '../companions/companion-promotion';
+import { readMultiplesTsv } from '../companions/companion-promotion';
 import { pairMemberSourceIds } from '../distance/parallax/pair-member-parallax';
 import {
   derivationCandidateSourceIds,
   indexSimbadSources,
 } from '../membership/binding/binding-derivation-pure';
 import {
-  MEMBERSHIP_MANIFEST_FILE,
   SPINE_CORRECTIONS_FILE,
   additionItemCells,
   applySpineCorrections,
-  iterManifestTsv,
   parseSpineCorrectionsTsv,
 } from '../membership/membership-manifest-pure';
-import { isMagnitudeTermRow } from '../membership/magnitude-term/magnitude-term-pure';
+import { MEMBERSHIP_MANIFEST, MEMBERSHIP_MANIFEST_FILE } from '../membership/membership-manifest-tsv';
 import { printedVLookups } from '../photometry/v-magnitude-pure';
-import { INHERITED_SPINE_FILE, parseSpineTsv } from '../spine/inherited-spine-pure';
+import { INHERITED_SPINE, INHERITED_SPINE_FILE } from '../spine/inherited-spine-pure';
 import { indexCns5 } from '../spine/primaries-audit-pure';
 import { LFS_HINT, loadPrimaryTables } from '../spine/primaries-tables';
 import { emitArtifacts, runStep } from '../../util/emit-artifacts';
@@ -42,11 +40,11 @@ async function main(): Promise<void> {
   const ids = new Set<string>();
   let rows = 0;
   let withoutSourceId = 0;
-  for (const row of iterManifestTsv(readRequired(SRC_MANIFEST, MANIFEST_HINT))) {
-    if (isMagnitudeTermRow(row)) continue;
+  for (const row of MEMBERSHIP_MANIFEST.rows(readRequired(SRC_MANIFEST, MANIFEST_HINT))) {
+    if (row.term === 'magnitude') continue;
     rows++;
-    if (row.gaia_source_id === '') withoutSourceId++;
-    else ids.add(row.gaia_source_id);
+    if (row.gaiaSourceId === null) withoutSourceId++;
+    else ids.add(row.gaiaSourceId);
   }
   const membership = ids.size;
 
@@ -55,7 +53,7 @@ async function main(): Promise<void> {
   // One table load for both contributions: the gate's Tycho-2 / Gliese arms
   // read the same tables the derivation's do, and the TYC cross-walk has to
   // cover IV/25's Tycho ids as well as the spine's for the gate's arm.
-  const spine = parseSpineTsv(readRequired(resolve(ROOT, INHERITED_SPINE_FILE), LFS_HINT));
+  const spine = INHERITED_SPINE.parse(readRequired(resolve(ROOT, INHERITED_SPINE_FILE), LFS_HINT));
   const { kept } = applySpineCorrections(spine, parseSpineCorrectionsTsv(
     readRequired(resolve(ROOT, SPINE_CORRECTIONS_FILE), CORRECTIONS_HINT),
   ));
@@ -82,7 +80,7 @@ async function main(): Promise<void> {
   for (const id of derivation) ids.add(id);
   const afterDerivation = ids.size;
 
-  const siblings = pairMemberSourceIds(readMultiplesTsv(MULTIPLES_TSV));
+  const siblings = pairMemberSourceIds(readMultiplesTsv());
   for (const id of siblings) ids.add(id);
 
   const sorted = sortSourceIdsNumeric(ids);

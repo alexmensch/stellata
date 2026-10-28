@@ -68,7 +68,7 @@ layout, its codec, the chunk plan and the search-index wire entry — is
   pair's two components a record's cells name.
 - `membership/` — the membership term: the primaries-derived manifest
   (`pnpm run build:membership` → `data/membership/`), its parity gate and the
-  [§ 6.1](/docs/catalog-driver.md#61-record-parity) ledgers. `parse/` streams it through `iterManifestTsv`.
+  [§ 6.1](/docs/catalog-driver.md#61-record-parity) ledgers. `parse/` reads it through `MEMBERSHIP_MANIFEST`, its codec.
 - `spine/` — AT-HYG's merge decisions, frozen: `data/athyg/inherited-spine.tsv`,
   its codec and byte guard. Read by `build:membership` and the manifest gate,
   never by `build:catalog`.

@@ -2,6 +2,8 @@
 // identifier key the parity gate matches it on.
 // See README.md#why-the-residual-drops-rather-than-degrading.
 
+import { defineArtifact, nullableCell } from '../../../util/tsv/artifact-pure';
+
 /** Where the ledger is committed — beside the additions ledger it is the
  *  counterpart to, keyed on the same five identifier cells. */
 export const PARKED_LEDGER_FILE = 'data/membership/parked-ledger.tsv';
@@ -34,15 +36,19 @@ export const PARKED_COUNT_KEY = {
   no_position: 'parkedNoPosition',
 } as const satisfies Record<ParkedReason, string>;
 
-/** One manifest row the walk could not ship. Records leave the catalogue
- *  entirely, so nothing else in the build records that they existed. */
-export interface ParkedRecord {
+/** One ledger row: a manifest row the walk could not ship, by its five
+ *  identifier cells. Records leave the catalogue entirely, so nothing else in
+ *  the build records that they existed. */
+export interface ParkedLedgerEntry {
   tyc: string | null;
   hip: number | null;
   hd: number | null;
   gl: string | null;
   gaiaSourceId: string | null;
   reason: ParkedReason;
+}
+
+export interface ParkedRecord extends ParkedLedgerEntry {
   /** Build-time only — no ledger column carries it. Every parallax a skip rule
    *  refused on this row, mas, which is what companion promotion needs to tell a
    *  pair row re-serving the refusal from one merely sharing the blend's id
@@ -50,8 +56,6 @@ export interface ParkedRecord {
    *  three reasons that refused nothing. */
   refusedPlxMas: readonly number[];
 }
-
-const COLUMNS = ['tyc', 'hip', 'hd', 'gl', 'gaia_source_id', 'reason'] as const;
 
 /** The five identifier cells, joined — the manifest carries all of them under
  *  the same names, so the parity gate matches ledger row to manifest row on the
@@ -62,32 +66,39 @@ export function parkedRecordKey(cells: {
   return [cells.tyc, cells.hip, cells.hd, cells.gl, cells.gaia_source_id].join('\t');
 }
 
-export function formatParkedRecordsTsv(parked: readonly ParkedRecord[]): string {
-  // Sorted on the whole row, not on `tyc` alone: a park with no TYC would tie
-  // with every other and leave the file's order a function of the walk. The
-  // committed file is diffed in CI, so a reordering that moves no row would
-  // read as a change.
-  const lines = parked.map((p) => [
-    p.tyc ?? '', p.hip ?? '', p.hd ?? '', p.gl ?? '', p.gaiaSourceId ?? '', p.reason,
-  ].join('\t')).sort();
-  return [COLUMNS.join('\t'), ...lines].join('\n') + '\n';
-}
+/** Sorted on the whole row, not on `tyc` alone: a park with no TYC would tie
+ *  with every other and leave the file's order a function of the walk. */
+export const PARKED_LEDGER = defineArtifact({
+  file: PARKED_LEDGER_FILE,
+  columns: ['tyc', 'hip', 'hd', 'gl', 'gaia_source_id', 'reason'] as const,
+  hint: 'Re-run `pnpm run build:catalog`.',
+  order: 'by-line',
+  decode: (row): ParkedLedgerEntry => ({
+    tyc: row.text('tyc'),
+    hip: row.int('hip'),
+    hd: row.int('hd'),
+    gl: row.text('gl'),
+    gaiaSourceId: row.sourceId('gaia_source_id'),
+    reason: row.oneOf('reason', PARKED_REASONS),
+  }),
+  encode: (e: ParkedLedgerEntry) => ({
+    tyc: nullableCell(e.tyc),
+    hip: nullableCell(e.hip),
+    hd: nullableCell(e.hd),
+    gl: nullableCell(e.gl),
+    gaia_source_id: nullableCell(e.gaiaSourceId),
+    reason: e.reason,
+  }),
+});
 
 export interface ParkedLedgerRow {
   recordKey: string;
-  reason: string;
+  reason: ParkedReason;
 }
 
 export function parseParkedRecordsTsv(text: string): ParkedLedgerRow[] {
-  const [header, ...lines] = text.trimEnd().split('\n');
-  if (header !== COLUMNS.join('\t')) {
-    throw new Error(`${PARKED_LEDGER_FILE}: unexpected header "${header}"`);
-  }
-  return lines.filter((line) => line !== '').map((line) => {
-    const [tyc, hip, hd, gl, gaia_source_id, reason] = line.split('\t');
-    return {
-      recordKey: parkedRecordKey({ tyc, hip, hd, gl, gaia_source_id }),
-      reason,
-    };
-  });
+  return PARKED_LEDGER.parse(text).map((e) => ({
+    recordKey: parkedRecordKey(PARKED_LEDGER.encode(e)),
+    reason: e.reason,
+  }));
 }

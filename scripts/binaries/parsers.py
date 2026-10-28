@@ -557,6 +557,17 @@ def parse_hip2(path: Path) -> list[Hip2Row]:
 # ─── Gaia DR3 cross-walks ────────────────────────────────────────────
 
 
+def _xmatch_source_id(raw: str, path: Path, line: int) -> int | None:
+    """None for an empty cell; raises on a cell that is not bare digits, in
+    step with the TS reader's strict source_id (gaia-hip-xmatch-parity)."""
+    s = raw.strip()
+    if not s:
+        return None
+    if not s.isdigit():
+        raise ValueError(f'{path}:{line}: gaia_source_id "{s}" is not a source_id')
+    return int(s)
+
+
 def parse_gaia_hip_xmatch(path: Path) -> dict[int, int]:
     """Returns ``hip -> gaia_source_id``. Many-to-one collisions keep the
     nearest match (lowest ``angular_distance``). Rows with missing /
@@ -567,7 +578,7 @@ def parse_gaia_hip_xmatch(path: Path) -> dict[int, int]:
         reader = csv.DictReader(fh, delimiter="\t")
         for r in reader:
             hip = safe_int(r.get("hip") or "")
-            src = safe_int(r.get("gaia_source_id") or "")
+            src = _xmatch_source_id(r.get("gaia_source_id") or "", path, reader.line_num)
             if hip is None or hip <= 0 or src is None or src <= 0:
                 continue
             ang = safe_float(r.get("angular_distance") or "")
@@ -588,7 +599,7 @@ def parse_gaia_tyc_xmatch(path: Path) -> dict[str, int]:
         reader = csv.DictReader(fh, delimiter="\t")
         for r in reader:
             tyc = (r.get("tyc") or "").strip()
-            src = safe_int(r.get("gaia_source_id") or "")
+            src = _xmatch_source_id(r.get("gaia_source_id") or "", path, reader.line_num)
             if not tyc or src is None or src <= 0:
                 continue
             ang = safe_float(r.get("angular_distance") or "")

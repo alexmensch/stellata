@@ -31,8 +31,8 @@ function parseArgs(argv: string[]): CliArgs {
     return hit ? hit.slice(name.length + 3) : fallback;
   };
   return {
-    request: resolve(ROOT, get('request', 'data/gaia/gaia_dr2_neighbourhood_request.tsv')),
-    neighbourhood: resolve(ROOT, get('neighbourhood', 'data/gaia/gaia_dr2_neighbourhood.tsv')),
+    request: get('request', 'data/gaia/gaia_dr2_neighbourhood_request.tsv'),
+    neighbourhood: get('neighbourhood', 'data/gaia/gaia_dr2_neighbourhood.tsv'),
     riskCol: get('risk-col', 'dr3_source_id'),
     candidateCol: get('candidate-col', 'dr2_source_id'),
     riskNs: get('risk-ns', 'gaia_dr3'),
@@ -42,14 +42,14 @@ function parseArgs(argv: string[]): CliArgs {
 
 function main(): void {
   const args = parseArgs(process.argv.slice(2));
-  const requestText = readFileSync(args.request, 'utf-8');
-  const neighbourhoodText = readFileSync(args.neighbourhood, 'utf-8');
+  const requestText = readFileSync(resolve(ROOT, args.request), 'utf-8');
+  const neighbourhoodText = readFileSync(resolve(ROOT, args.neighbourhood), 'utf-8');
   if (isLfsPointer(requestText) || isLfsPointer(neighbourhoodText)) {
     console.error('sid:dr-reconcile: inputs are LFS pointer stubs — run `git lfs pull` first');
     process.exit(1);
   }
-  const riskIds = readRiskIds(requestText);
-  const rows = readNeighbourhoodRows(neighbourhoodText, args.riskCol, args.candidateCol);
+  const riskIds = readRiskIds(requestText, args.request);
+  const rows = readNeighbourhoodRows(neighbourhoodText, args.riskCol, args.candidateCol, args.neighbourhood);
   const c = classifyDrTransition(riskIds, rows);
 
   const pct = (n: number) => `${((n / riskIds.length) * 100).toFixed(2)}%`;

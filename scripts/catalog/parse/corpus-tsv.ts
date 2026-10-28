@@ -1,61 +1,6 @@
-// Shared TSV header, cell and record-ref parsing for the build's committed
-// tables and the Tier A corpora. See README.md#tsv-header-resolution.
+// Record refs for the Tier A corpora. See README.md#files-in-this-area.
 
-/** Throws on a missing column AND on an empty or headerless file, so a
- *  truncated or unsmudged input can never read as a zero-row table. */
-export function headerIndex(
-  headerLine: string,
-  cols: readonly string[],
-  fileLabel: string,
-  refreshHint: string,
-): Record<string, number> {
-  const header = headerLine.split('\t').map((h) => h.trim());
-  const idx: Record<string, number> = Object.create(null);
-  const missing: string[] = [];
-  for (const c of cols) {
-    const i = header.indexOf(c);
-    if (i < 0) missing.push(c);
-    idx[c] = i;
-  }
-  if (missing.length) {
-    throw new Error(
-      `${fileLabel} is missing required columns: ${missing.join(', ')}. ${refreshHint}`,
-    );
-  }
-  return idx;
-}
-
-/** Resolves the header once, and inherits `headerIndex`'s hard fail. */
-export function* dataRows(
-  text: string,
-  cols: readonly string[],
-  fileLabel: string,
-  refreshHint: string,
-): Generator<{ cells: string[]; idx: Record<string, number> }> {
-  const lines = text.split(/\r?\n/);
-  const idx = headerIndex(lines[0] ?? '', cols, fileLabel, refreshHint);
-  for (let i = 1; i < lines.length; i++) {
-    if (!lines[i]) continue;
-    yield { cells: lines[i].split('\t'), idx };
-  }
-}
-
-export function nonEmpty(s: string | undefined): string | null {
-  const t = (s ?? '').trim();
-  return t.length === 0 ? null : t;
-}
-
-export function parseFloatOrNull(s: string | undefined): number | null {
-  const t = nonEmpty(s);
-  if (t === null) return null;
-  const v = Number(t);
-  return Number.isFinite(v) ? v : null;
-}
-
-export function parseIntOrNull(s: string | undefined): number | null {
-  const v = parseFloatOrNull(s);
-  return v === null ? null : Math.trunc(v);
-}
+import { textCell } from '../../util/tsv/table-pure';
 
 /** How a corpus row addresses a catalog.bin record. `hd` reaches the records
  *  the other three cannot: a no-Gaia astrometry-tier record carries no HIP, no
@@ -93,6 +38,6 @@ export function parseOptionalRef(
   rowName: string,
   col: string,
 ): RecordRef | null {
-  const t = nonEmpty(cell);
+  const t = textCell(cell);
   return t === null ? null : parseRef(t, rowName, col);
 }

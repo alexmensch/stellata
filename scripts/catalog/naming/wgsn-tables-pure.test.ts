@@ -6,9 +6,9 @@ import type { WgsnRow } from './wgsn-parse-pure';
 import {
   bayerKeySets,
   designationFromCell,
+  compareDesignationRows,
   diffDispositions,
-  parseDispositionKeys,
-  sortDesignations,
+  duplicateDesignationRows,
   membershipProperKey,
   unionIv27aBayer,
   type DesignationRow,
@@ -101,58 +101,50 @@ describe('unionIv27aBayer', () => {
 });
 
 describe('the naming-authority disposition gate', () => {
-  const tsv = [
-    'proper\tclass\thip\thd',
-    "Kapteyn's Star\tdiscovery-designation\t24186\t33793",
-    'Ross 248\tdiscovery-designation',
-    'p Eridani\tlatin-bayer\t\t10361',
-  ].join('\n') + '\n';
+  const disposed = new Set([
+    membershipProperKey("Kapteyn's Star", 24186, 33793),
+    membershipProperKey('Ross 248', null, null),
+    membershipProperKey('p Eridani', null, 10361),
+  ]);
 
-  it('keys a short row the same way the spine side keys it', () => {
-    expect(parseDispositionKeys(tsv)).toEqual(new Set([
-      membershipProperKey("Kapteyn's Star", '24186', '33793'),
-      membershipProperKey('Ross 248', '', ''),
-      membershipProperKey('p Eridani', '', '10361'),
-    ]));
+  it('keys an absent number as an empty slot', () => {
+    expect(membershipProperKey('p Eridani', null, 10361)).toBe('p Eridani||10361');
   });
 
   it('fails an unmatched proper missing from the file, and a stale row', () => {
-    const disposed = parseDispositionKeys(tsv);
     const unmatched = new Set([
-      membershipProperKey('Ross 248', '', ''),
-      membershipProperKey('Vega', '91262', '172167'),
+      membershipProperKey('Ross 248', null, null),
+      membershipProperKey('Vega', 91262, 172167),
     ]);
     expect(diffDispositions(unmatched, disposed)).toEqual({
-      missing: [membershipProperKey('Vega', '91262', '172167')],
+      missing: [membershipProperKey('Vega', 91262, 172167)],
       stale: [
-        membershipProperKey("Kapteyn's Star", '24186', '33793'),
-        membershipProperKey('p Eridani', '', '10361'),
+        membershipProperKey("Kapteyn's Star", 24186, 33793),
+        membershipProperKey('p Eridani', null, 10361),
       ],
     });
   });
 
   it('passes on exact set equality', () => {
-    expect(diffDispositions(parseDispositionKeys(tsv), parseDispositionKeys(tsv)))
-      .toEqual({ missing: [], stale: [] });
+    expect(diffDispositions(disposed, new Set(disposed))).toEqual({ missing: [], stale: [] });
   });
 });
 
-describe('sortDesignations', () => {
+describe('designation order', () => {
   it('orders rows independently of input order', () => {
     const rows = [
       desig({ letter: 'β', dc: 'Cyg', hd: 2 }),
       desig({ letter: 'α', dc: 'Cyg', hd: 1 }),
       desig({ kind: 'gould', letter: null, num: 4, dc: 'Cet' }),
     ];
-    const forwards = sortDesignations(rows).sorted;
-    const backwards = sortDesignations([...rows].reverse()).sorted;
+    const forwards = [...rows].sort(compareDesignationRows);
+    const backwards = [...rows].reverse().sort(compareDesignationRows);
     expect(forwards).toEqual(backwards);
     expect(forwards.map((d) => d.letter ?? String(d.num))).toEqual(['α', 'β', '4']);
   });
 
   it('counts rows that tie on every sorted field', () => {
     const dup = desig({ hd: 7 });
-    expect(sortDesignations([dup, { ...dup }, desig({ hd: 8 })]))
-      .toMatchObject({ duplicateRows: 1 });
+    expect(duplicateDesignationRows([dup, { ...dup }, desig({ hd: 8 })])).toBe(1);
   });
 });

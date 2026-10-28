@@ -64,7 +64,7 @@ describe('parseOverrides', () => {
   it('throws when the standalone position is partially populated', () => {
     // ra + dec set but distance empty — half-set is a config error.
     const tsv = `${HEADER}\nM31\t15000\t15000\t500\tdisc:i=77,pa=37\tx\t10.6847\t41.2687\t\n`;
-    expect(() => parseOverrides(tsv)).toThrow(/partially populates/);
+    expect(() => parseOverrides(tsv)).toThrow(/^data\/local-group\/overrides\.tsv:2: 'M31' partially populates standalone position/);
   });
 
   it('skips comment lines and blank lines', () => {
@@ -72,11 +72,12 @@ describe('parseOverrides', () => {
     expect(parseOverrides(tsv)).toHaveLength(1);
   });
 
-  it('throws on a malformed header (wrong column order or missing required columns)', () => {
-    expect(() => parseOverrides('name\tfoo\tbar\n')).toThrow(/malformed header/);
+  it('throws on a header missing a required column', () => {
+    expect(() => parseOverrides('name\tfoo\tbar\n'))
+      .toThrow(/overrides\.tsv is missing required columns: a_pc, b_pc, c_pc, orient, source/);
     expect(() =>
       parseOverrides('name\ta_pc\tb_pc\tc_pc\torient\twrong\n'),
-    ).toThrow(/header column/);
+    ).toThrow(/missing required columns: source/);
   });
 
   it('parses the emission columns by header name (LMC-shaped disc row)', () => {
@@ -105,17 +106,17 @@ describe('parseOverrides', () => {
 
   it('throws when the bulge trio is partially populated', () => {
     const tsv = `${FULL_HEADER}\nM31\t15000\t15000\t500\tdisc:i=77,pa=37\tx\t10.6847\t41.2687\t776\t3.44\tdisc\t\t5300\t0.31\t\t\t\t\n`;
-    expect(() => parseOverrides(tsv)).toThrow(/partially populates the bulge/);
+    expect(() => parseOverrides(tsv)).toThrow(/^data\/local-group\/overrides\.tsv:2: 'M31' partially populates the bulge/);
   });
 
   it('throws on an unrecognised profile value', () => {
     const tsv = `${FULL_HEADER}\nX\t1\t1\t1\tlos\tx\t\t\t\t\tspiral\t\t\t\t\t\t\t\n`;
-    expect(() => parseOverrides(tsv)).toThrow(/unrecognised profile 'spiral'/);
+    expect(() => parseOverrides(tsv)).toThrow(/^data\/local-group\/overrides\.tsv:2: profile: "spiral" is not one of \(empty\) \| disc \| sersic/);
   });
 
   it('throws on a non-numeric value in a numeric emission column', () => {
     const tsv = `${FULL_HEADER}\nX\t1\t1\t1\tlos\tx\t\t\t\tbright\t\t\t\t\t\t\t\t\n`;
-    expect(() => parseOverrides(tsv)).toThrow(/non-numeric m_v 'bright'/);
+    expect(() => parseOverrides(tsv)).toThrow(/overrides\.tsv:2: m_v: "bright" is not a decimal number/);
   });
 });
 
@@ -333,10 +334,11 @@ describe('parseAliases + type/alias plumbing', () => {
   });
   it('throws on a malformed header or empty type', () => {
     expect(() => parseAliases('name\twrong\taliases\tcanonical\nX\tY\t\n'))
-      .toThrow(/malformed header/);
+      .toThrow(/missing required columns: type/);
     // The pre-canonical 3-column header no longer parses — a stale TSV
     // would silently ship un-promoted names.
-    expect(() => parseAliases('name\ttype\taliases\nX\tY\t\n')).toThrow(/malformed header/);
+    expect(() => parseAliases('name\ttype\taliases\nX\tY\t\n'))
+      .toThrow(/missing required columns: canonical/);
     expect(() => parseAliases(`${HEADER}X\t\t\n`)).toThrow(/empty type/);
   });
   it('throws when a promotion names a designation the row does not list', () => {

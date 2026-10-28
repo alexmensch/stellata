@@ -6,9 +6,11 @@ import { SOL_APPARENT_V_MAGNITUDE, SOL_PROPER_NAME, normaliseGjKey } from '../re
 import type { Cns5Row } from '../classic-ids/classic-ids-parse';
 import {
   BRIGHT_TIER_MAG_CEILING,
-  type ClassicIdOverlay,
 } from '../classic-ids/classic-id-overlay-pure';
-import type { BindingEvidence } from './binding/binding-gate-pure';
+import {
+  type ClassicIdOverlay,
+} from '../classic-ids/classic-id-overlay-tsv';
+import type { BindingEvidence, GateReason } from './binding/binding-gate-pure';
 import {
   BINDING_SOURCES,
   bindingCandidates,
@@ -31,7 +33,27 @@ import {
   type LabelOverrides,
 } from '../classic-ids/label-merge/label-merge-pure';
 import { parkedRecordKey } from '../distance/parallax/parked-ledger';
-import { dataRows, parseIntOrNull } from '../parse/corpus-tsv';
+import { intCell, readTable } from '../../util/tsv/table-pure';
+import { nullableCell } from '../../util/tsv/artifact-pure';
+import { applyCellSets, evidenceOf } from '../../util/tsv/cell-corrections-pure';
+import {
+  ADDITION_REASONS,
+  COMPONENT_REASON_PREFIX,
+  type AdditionLedgerRow,
+  type AdditionReason,
+} from './additions-ledger-tsv';
+import {
+  BINDING_REVIEW_KEY_COLUMNS,
+  BINDING_REVIEW_VERDICTS,
+  bindingReviewKey,
+  type BindingReviewRow,
+  type BindingReviewVerdict,
+} from './binding-review-tsv';
+import {
+  LABEL_DROP_REASONS,
+  type LabelDropReason,
+  type LabelDropRow,
+} from './label-drops-tsv';
 import { spineDesignations, type SpineRow } from '../spine/inherited-spine-pure';
 import {
   ATHYG_HD_LINK_FLOOR,
@@ -51,59 +73,40 @@ import {
 } from '../spine/primaries-audit-pure';
 import {
   UnionFind,
-  canonicalKeyOf,
   compareDesignations,
-  starDesignations,
   type SameasEdge,
 } from '../../sid/sid-pure';
+import {
+  BINDING_CLASSES,
+  MANIFEST_VALUE_SEPARATOR,
+  MEMBERSHIP_MANIFEST,
+  manifestDesignations,
+  manifestRecord,
+  sortManifestRecords,
+  type BindingClass,
+  type ManifestColumn,
+  type ManifestRecord,
+} from './membership-manifest-tsv';
 import {
   magnitudeTermNewcomers,
   type MagnitudeTermCounts,
   type MagnitudeTermSelection,
 } from './magnitude-term/magnitude-term-pure';
 
-export const MEMBERSHIP_MANIFEST_FILE = 'data/membership/membership-manifest.tsv';
-export const ADDITIONS_LEDGER_FILE = 'data/membership/additions-ledger.tsv';
-export const BINDING_REVIEW_FILE = 'data/membership/binding-review.tsv';
 export const MEMBERSHIP_EXPECTED_FILE =
   'scripts/catalog/membership/membership-manifest-expected.json';
 
-/** Multi-value separator inside `hd_alt` / `hr_alt` / `routes`. */
-export const MANIFEST_VALUE_SEPARATOR = '|';
-
-export const MANIFEST_COLUMNS = [
-  'tyc', 'hip', 'hd', 'hd_alt', 'hr', 'hr_alt', 'gl', 'flam', 'bayer', 'proper',
-  'gaia_source_id', 'binding', 'routes', 'term',
-] as const;
-export type ManifestColumn = (typeof MANIFEST_COLUMNS)[number];
-export type ManifestRow = Record<ManifestColumn, string>;
-
-/** Which term of `/docs/catalog-driver.md#1-the-driver-model`'s union admitted the row.
- *  `magnitude-term/README.md#the-column-is-the-ledger`. */
-export const MEMBERSHIP_TERMS = ['primaries', 'magnitude'] as const;
-export type MembershipTerm = (typeof MEMBERSHIP_TERMS)[number];
-
-/** How the row's `gaia_source_id` is justified. `crosswalk_gated` is a TYC /
- *  HIP / CNS5 candidate the HD-route gates (/docs/catalog-driver.md#4-how-hd-reaches-gaia) passed; `simbad_corroborated` is the
- *  source SIMBAD's frozen cross-IDs hold under the record's own designation,
- *  through the same gates; `reviewed` is the value a committed disposition row
- *  settles on stated evidence; `gaia_native` is the pull row itself; `none` is
- *  an empty cell. */
-export const BINDING_CLASSES = [
-  'crosswalk_gated', 'simbad_corroborated', 'reviewed', 'gaia_native', 'none',
-] as const;
-export type BindingClass = (typeof BINDING_CLASSES)[number];
+/** A manifest row as the generator assembles it, cell by cell, before
+ *  `manifestRecord` types it. */
+type ManifestCells = Record<ManifestColumn, string>;
 
 /** See binding/README.md. */
 export const BINDING_OUTCOMES = [
   'bound', 'refused', 'contested', 'collision', 'sol',
 ] as const;
 export type BindingOutcome = (typeof BINDING_OUTCOMES)[number];
-export const BINDING_REVIEW_VERDICTS = ['contested', 'collision', 'disposed'] as const;
-export type BindingReviewVerdict = (typeof BINDING_REVIEW_VERDICTS)[number];
 
 export const BINDING_DISPOSITIONS_FILE = 'data/membership/binding-review-dispositions.tsv';
-export const BINDING_REVIEW_KEY_COLUMNS = ['tyc', 'hip', 'hd', 'gl'] as const;
 export const BINDING_DISPOSITION_COLUMNS = [
   ...BINDING_REVIEW_KEY_COLUMNS, 'derived_source_id',
   'keep_source_id', 'basis', 'evidence',
@@ -132,40 +135,9 @@ export function dispositionOf(d: BindingDispositionRow): BindingDisposition {
   return 'other';
 }
 
-/** The record a queue row and its disposition join on. */
-export function bindingReviewKey(
-  row: Record<(typeof BINDING_REVIEW_KEY_COLUMNS)[number], string>,
-): string {
-  return BINDING_REVIEW_KEY_COLUMNS.map((c) => row[c]).join('|');
-}
 
-export const LABEL_DROPS_FILE = 'data/membership/label-drops.tsv';
-export const LABEL_DROP_COLUMNS = [
-  'tyc', 'hip', 'hd', 'gl', 'gaia_source_id', 'cell', 'value', 'reason',
-] as const;
-export type LabelDropRow = Record<(typeof LABEL_DROP_COLUMNS)[number], string>;
-/** The label-parity reasons (/docs/catalog-driver.md#62-label-parity) a spine label leaves the manifest: no primary publishes
- *  that Flamsteed number, or that HD number, for the star. */
-export const LABEL_DROP_REASONS = ['flamsteed_unattested', 'hd_unattested'] as const;
-export type LabelDropReason = (typeof LABEL_DROP_REASONS)[number];
 
-/** The record-parity reason enum (/docs/catalog-driver.md#61-record-parity) for records the primaries admit that the spine lacked. */
-export const ADDITION_REASONS = [
-  'admitted:hd_link_gap',
-  'admitted:hd_omitted',
-  'admitted:hip_omitted',
-  'admitted:cns5_census',
-] as const;
-export type AdditionReason = (typeof ADDITION_REASONS)[number];
 
-/** A primary's row whose every designation a spine record already answers to,
- *  so admitting it would make that record's SID key ambiguous. Ledgered onto
- *  the record it resolves to rather than admitted; the suffix is that record's
- *  designation. */
-export const COMPONENT_REASON_PREFIX = 'component:';
-
-export const LEDGER_COLUMNS = ['tyc', 'hip', 'hd', 'gl', 'gaia_source_id', 'reason'] as const;
-export type AdditionLedgerRow = Record<(typeof LEDGER_COLUMNS)[number], string>;
 
 export const SPINE_CORRECTIONS_FILE = 'data/membership/spine-corrections.tsv';
 export const SPINE_CORRECTION_COLUMNS = [
@@ -183,40 +155,32 @@ export type SpineCorrectionRow = Record<
   (typeof SPINE_CORRECTION_COLUMNS)[number], string
 > & { op: SpineCorrectionOp };
 
+const SPINE_CORRECTIONS_TABLE = {
+  file: SPINE_CORRECTIONS_FILE,
+  columns: SPINE_CORRECTION_COLUMNS,
+  hint: 'It is committed and hand-curated; do not regenerate it.',
+  comments: true,
+} as const;
+
 export function parseSpineCorrectionsTsv(text: string): SpineCorrectionRow[] {
   const out: SpineCorrectionRow[] = [];
-  // `dataRows`, not this module's `tsvRows`: a hand-curated file carries `#`
-  // comment lines, which have no cell count to check.
-  for (const { cells, idx } of dataRows(
-    text, SPINE_CORRECTION_COLUMNS, SPINE_CORRECTIONS_FILE,
-    'It is committed and hand-curated; do not regenerate it.',
-  )) {
-    if (cells[0].startsWith('#')) continue;
-    const row = Object.fromEntries(
-      SPINE_CORRECTION_COLUMNS.map((c) => [c, cells[idx[c]] ?? '']),
-    ) as SpineCorrectionRow;
-    if (!(SPINE_CORRECTION_OPS as readonly string[]).includes(row.op)) {
-      throw new Error(
-        `${SPINE_CORRECTIONS_FILE}: op "${row.op}" is not one of `
-          + SPINE_CORRECTION_OPS.join(', '),
+  for (const row of readTable(SPINE_CORRECTIONS_TABLE, text)) {
+    const cells = row.cells();
+    const op = row.oneOf('op', SPINE_CORRECTION_OPS);
+    if (op === 'set' && !(SPINE_CORRECTION_CELLS as readonly string[]).includes(cells.cell)) {
+      row.fail(
+        `set may write ${SPINE_CORRECTION_CELLS.join(', ')}, not "${cells.cell}" — `
+          + `a label exception belongs in ${CLASSIC_ID_OVERRIDES_FILE}`,
       );
     }
-    if (row.op === 'set' && !(SPINE_CORRECTION_CELLS as readonly string[]).includes(row.cell)) {
-      throw new Error(
-        `${SPINE_CORRECTIONS_FILE}: set may write ${SPINE_CORRECTION_CELLS.join(', ')}, `
-          + `not "${row.cell}" — a label exception belongs in ${CLASSIC_ID_OVERRIDES_FILE}`,
+    if (BINDING_REVIEW_KEY_COLUMNS.every((c) => cells[c].trim() === '')) {
+      row.fail(
+        "row names no spine row — every key cell is empty, and the empty key is Sol's own, "
+          + 'so a blank one corrects the Sun',
       );
     }
-    if (BINDING_REVIEW_KEY_COLUMNS.every((c) => row[c].trim() === '')) {
-      throw new Error(
-        `${SPINE_CORRECTIONS_FILE}: row names no spine row — every key cell is empty, and the `
-          + "empty key is Sol's own, so a blank one corrects the Sun",
-      );
-    }
-    if (row.evidence.trim() === '') {
-      throw new Error(`${SPINE_CORRECTIONS_FILE}: row ${bindingReviewKey(row)} states no evidence`);
-    }
-    out.push(row);
+    evidenceOf(row, 'evidence', bindingReviewKey(cells));
+    out.push({ ...cells, op });
   }
   return out;
 }
@@ -253,21 +217,22 @@ export function applySpineCorrections(
     return i;
   };
 
-  const rows = spine.slice();
+  const rows = applyCellSets<SpineRow, SpineCorrectionCell>(
+    spine,
+    corrections.filter((c) => c.op === 'set')
+      .map((c) => ({ key: bindingReviewKey(c), cell: c.cell as SpineCorrectionCell, value: c.value })),
+    {
+      file: SPINE_CORRECTIONS_FILE,
+      target: 'spine',
+      keyOf: bindingReviewKey,
+      get: (row, cell) => row[cell],
+      with: (row, cell, value) => ({ ...row, [cell]: value }),
+    },
+  );
   const foldedTo = new Map<number, number>();
   for (const c of corrections) {
+    if (c.op !== 'fold') continue;
     const i = resolve(bindingReviewKey(c), 'row');
-    if (c.op === 'set') {
-      const cell = c.cell as SpineCorrectionCell;
-      if (rows[i][cell] === c.value) {
-        throw new Error(
-          `${SPINE_CORRECTIONS_FILE}: row ${bindingReviewKey(c)} sets ${c.cell} to the value `
-            + 'the spine already states; remove it',
-        );
-      }
-      rows[i] = { ...rows[i], [cell]: c.value };
-      continue;
-    }
     const survivor = resolve(c.value, 'fold target');
     if (survivor === i) {
       throw new Error(`${SPINE_CORRECTIONS_FILE}: row ${bindingReviewKey(c)} folds onto itself`);
@@ -298,12 +263,6 @@ export function applySpineCorrections(
 /** One queue row: what the derivation reached, with everything
  *  the derivation weighed — every source's candidate, the gate rejections, the
  *  printed V and both candidates' G, and SIMBAD's cross-IDs for each. */
-export const BINDING_REVIEW_COLUMNS = [
-  'tyc', 'hip', 'hd', 'hr', 'gl', 'verdict', 'derived_source_id',
-  'derived_via', 'candidates', 'rejected', 'v_mag', 'v_via', 'derived_g',
-  'derived_simbad',
-] as const;
-export type BindingReviewRow = Record<(typeof BINDING_REVIEW_COLUMNS)[number], string>;
 
 export interface MembershipInput {
   spine: readonly SpineRow[];
@@ -358,7 +317,7 @@ export interface MembershipCounts extends LabelMergeCounts {
    *  cited basis alone. */
   dispositionAsserted: number;
   /** Candidates a gate refused, the winner's losing rivals included. */
-  derivedRejected: Record<'mag' | 'sibling', number>;
+  derivedRejected: Record<GateReason, number>;
   /** Spine rows with a candidate and no printed V to weigh it against. */
   derivedUngateable: number;
   /** Candidates weighed with no row in the astrometry pull. Pinned at zero —
@@ -422,7 +381,7 @@ export interface MembershipCounts extends LabelMergeCounts {
 }
 
 export interface MembershipResult {
-  rows: ManifestRow[];
+  rows: ManifestRecord[];
   ledger: AdditionLedgerRow[];
   bindingReview: BindingReviewRow[];
   labelDrops: LabelDropRow[];
@@ -448,204 +407,34 @@ function splitValues(cell: string): string[] {
   return cell === '' ? [] : cell.split(MANIFEST_VALUE_SEPARATOR);
 }
 
-export function serializeManifest(rows: readonly ManifestRow[]): string {
-  const lines = [MANIFEST_COLUMNS.join('\t')];
-  for (const row of rows) {
-    lines.push(MANIFEST_COLUMNS.map((c) => {
-      if (/[\t\n\r]/.test(row[c])) {
-        throw new Error(`manifest cell ${c}="${row[c]}" contains a TSV delimiter`);
-      }
-      return row[c];
-    }).join('\t'));
-  }
-  return `${lines.join('\n')}\n`;
-}
 
-/** Demands the header byte for byte, as `iterSpineTsv` does: the only writers
- *  are this module's serializers, so a header that merely parses was never
- *  shipped. */
-function checkTsvHeader(header: string, columns: readonly string[], label: string): void {
-  if (header !== columns.join('\t')) {
-    throw new Error(`${label}: header mismatch: got ${header}`);
-  }
-}
 
-function tsvCells(line: string, columns: readonly string[], label: string): string[] {
-  const cells = line.split('\t');
-  if (cells.length !== columns.length) {
-    throw new Error(
-      `${label}: row has ${cells.length} cells, expected ${columns.length}: "${line}"`,
-    );
-  }
-  return cells;
-}
 
-/** Walks the text rather than splitting it — the manifest runs to tens of
- *  megabytes, and every reader here shares the walk. */
-function* tsvRows(
-  text: string, columns: readonly string[], label: string,
-): Generator<string[]> {
-  const headerEnd = text.indexOf('\n');
-  checkTsvHeader(headerEnd === -1 ? text : text.slice(0, headerEnd), columns, label);
-  let start = headerEnd === -1 ? text.length : headerEnd + 1;
-  while (start < text.length) {
-    const end = text.indexOf('\n', start);
-    const line = text.slice(start, end === -1 ? text.length : end);
-    start = end === -1 ? text.length : end + 1;
-    if (line === '') continue;
-    yield tsvCells(line, columns, label);
-  }
-}
-
-/** The same contract, fed a line at a time, so a reader needing one column can
- *  stream the manifest instead of holding it as one string. */
-export function manifestLineReader(onRow: (row: ManifestRow) => void): (line: string) => void {
-  let sawHeader = false;
-  return (line) => {
-    if (!sawHeader) {
-      checkTsvHeader(line, MANIFEST_COLUMNS, MEMBERSHIP_MANIFEST_FILE);
-      sawHeader = true;
-      return;
-    }
-    if (line === '') return;
-    onRow(rowFrom(MANIFEST_COLUMNS, tsvCells(line, MANIFEST_COLUMNS, MEMBERSHIP_MANIFEST_FILE)));
-  };
-}
-
-function rowFrom<C extends string>(
-  columns: readonly C[], cells: readonly string[],
-): Record<C, string> {
-  const row = {} as Record<C, string>;
-  columns.forEach((c, i) => { row[c] = cells[i]; });
-  return row;
-}
-
-export function* iterManifestTsv(text: string): Generator<ManifestRow> {
-  for (const cells of tsvRows(text, MANIFEST_COLUMNS, MEMBERSHIP_MANIFEST_FILE)) {
-    yield rowFrom(MANIFEST_COLUMNS, cells);
-  }
-}
-
-export function parseManifestTsv(text: string): ManifestRow[] {
-  return [...iterManifestTsv(text)];
-}
-
-export function serializeLedger(rows: readonly AdditionLedgerRow[]): string {
-  const lines = rows.map((r) => LEDGER_COLUMNS.map((c) => r[c]).join('\t')).sort();
-  return `${[LEDGER_COLUMNS.join('\t'), ...lines].join('\n')}\n`;
-}
-
-export function parseLedgerTsv(text: string): AdditionLedgerRow[] {
-  return [...tsvRows(text, LEDGER_COLUMNS, ADDITIONS_LEDGER_FILE)]
-    .map((cells) => rowFrom(LEDGER_COLUMNS, cells));
-}
-
-function compareBigIntStrings(a: string, b: string): number {
-  if (a === b) return 0;
-  if (a === '') return -1;
-  if (b === '') return 1;
-  const ba = BigInt(a);
-  const bb = BigInt(b);
-  return ba < bb ? -1 : ba > bb ? 1 : 0;
-}
-
-export function serializeBindingReview(rows: readonly BindingReviewRow[]): string {
-  const lines = [...rows]
-    .sort((a, b) => compareBigIntStrings(a.derived_source_id, b.derived_source_id)
-      || a.verdict.localeCompare(b.verdict) || bindingReviewKey(a).localeCompare(bindingReviewKey(b)))
-    .map((r) => BINDING_REVIEW_COLUMNS.map((c) => r[c]).join('\t'));
-  return `${[BINDING_REVIEW_COLUMNS.join('\t'), ...lines].join('\n')}\n`;
-}
-
-export function parseBindingReviewTsv(text: string): BindingReviewRow[] {
-  return [...tsvRows(text, BINDING_REVIEW_COLUMNS, BINDING_REVIEW_FILE)].map((cells) => {
-    const row = rowFrom(BINDING_REVIEW_COLUMNS, cells);
-    oneOf(row.verdict, BINDING_REVIEW_VERDICTS, 'verdict', BINDING_REVIEW_FILE);
-    return row;
-  });
-}
-
-function oneOf<T extends string>(
-  value: string, allowed: readonly T[], what: string, label: string,
-): T {
-  if (!(allowed as readonly string[]).includes(value)) {
-    throw new Error(`${label}: ${what} "${value}" is not one of ${allowed.join(' | ')}`);
-  }
-  return value as T;
-}
+const BINDING_DISPOSITIONS_TABLE = {
+  file: BINDING_DISPOSITIONS_FILE,
+  columns: BINDING_DISPOSITION_COLUMNS,
+  hint: 'It is committed and hand-curated; do not regenerate it.',
+  exact: true,
+} as const;
 
 export function parseBindingDispositionsTsv(text: string): Map<string, BindingDispositionRow> {
   const out = new Map<string, BindingDispositionRow>();
-  for (const cells of tsvRows(text, BINDING_DISPOSITION_COLUMNS, BINDING_DISPOSITIONS_FILE)) {
-    const raw = rowFrom(BINDING_DISPOSITION_COLUMNS, cells);
-    const key = bindingReviewKey(raw);
-    for (const column of ['derived_source_id', 'keep_source_id'] as const) {
-      if (!/^\d*$/.test(raw[column])) {
-        throw new Error(`${BINDING_DISPOSITIONS_FILE}: ${column} "${raw[column]}" is not an integer`);
-      }
-    }
-    if (out.has(key)) {
-      throw new Error(`${BINDING_DISPOSITIONS_FILE}: duplicate record ${key}`);
-    }
-    if (raw.evidence.trim() === '') {
-      throw new Error(`${BINDING_DISPOSITIONS_FILE}: row ${key} states no evidence`);
-    }
-    out.set(key, {
-      ...raw,
-      basis: oneOf(raw.basis, BINDING_DISPOSITION_BASES, 'basis', BINDING_DISPOSITIONS_FILE),
-    });
+  for (const row of readTable(BINDING_DISPOSITIONS_TABLE, text)) {
+    const cells = row.cells();
+    const key = bindingReviewKey(cells);
+    for (const column of ['derived_source_id', 'keep_source_id'] as const) row.sourceId(column);
+    if (out.has(key)) row.fail(`duplicate record ${key}`);
+    evidenceOf(row, 'evidence', key);
+    out.set(key, { ...cells, basis: row.oneOf('basis', BINDING_DISPOSITION_BASES) });
   }
   return out;
 }
 
-export function serializeLabelDrops(rows: readonly LabelDropRow[]): string {
-  const lines = rows.map((r) => LABEL_DROP_COLUMNS.map((c) => r[c]).join('\t')).sort();
-  return `${[LABEL_DROP_COLUMNS.join('\t'), ...lines].join('\n')}\n`;
-}
-
-export function parseLabelDropsTsv(text: string): LabelDropRow[] {
-  return [...tsvRows(text, LABEL_DROP_COLUMNS, LABEL_DROPS_FILE)].map((cells) => {
-    const row = rowFrom(LABEL_DROP_COLUMNS, cells);
-    oneOf(row.reason, LABEL_DROP_REASONS, 'reason', LABEL_DROPS_FILE);
-    return row;
-  });
-}
 
 /** The identifier tuple a ledger row and a manifest row share — the same five
  *  cells the parked ledger keys on. */
-export function manifestKey(
-  row: Pick<ManifestRow, 'tyc' | 'hip' | 'hd' | 'gl' | 'gaia_source_id'>,
-): string {
-  return parkedRecordKey(row);
-}
-
-// ---- designations ------------------------------------------------------------
-
-/** The `starDesignations` set a manifest row stands in for — the membership
- *  term's half of SID resolution once the build reads this file. */
-export function manifestDesignations(row: ManifestRow): string[] {
-  return starDesignations({
-    isSol: row.proper === SOL_PROPER_NAME,
-    hip: parseIntOrNull(row.hip),
-    hd: parseIntOrNull(row.hd),
-    hr: parseIntOrNull(row.hr),
-    hdAlt: splitValues(row.hd_alt).map(Number),
-    hrAlt: splitValues(row.hr_alt).map(Number),
-    gl: row.gl === '' ? null : row.gl,
-    gaiaSourceId: row.gaia_source_id === '' ? null : row.gaia_source_id,
-    syntheticId: null,
-  });
-}
-
-/** Rows in SID canonical-key order, then TYC, then source — a total order over
- *  committed inputs, so a regeneration diffs by content and never by walk order. */
-export function sortManifestRows(rows: readonly ManifestRow[]): ManifestRow[] {
-  return rows
-    .map((row) => ({ row, key: canonicalKeyOf(manifestDesignations(row)) }))
-    .sort((a, b) => compareDesignations(a.key, b.key)
-      || (a.row.tyc < b.row.tyc ? -1 : a.row.tyc > b.row.tyc ? 1 : 0)
-      || compareBigIntStrings(a.row.gaia_source_id, b.row.gaia_source_id))
-    .map((d) => d.row);
+export function manifestKey(record: ManifestRecord): string {
+  return parkedRecordKey(MEMBERSHIP_MANIFEST.encode(record));
 }
 
 // ---- the spine side ----------------------------------------------------------
@@ -847,12 +636,12 @@ function settleBinding(
  *  needs: the HD drop runs first because IV/27A can publish a Flamsteed number
  *  against an HD no HD primary attests. */
 function dropUnattestedLabels(
-  row: ManifestRow, tables: PrimaryTables, idx: PrimaryIndex, into: LabelDropRow[],
+  row: ManifestCells, tables: PrimaryTables, idx: PrimaryIndex, into: LabelDropRow[],
 ): RowAttestation {
   const dropped: Array<{ cell: 'hd' | 'flam'; value: string; reason: LabelDropReason }> = [];
   const hds = [row.hd, ...splitValues(row.hd_alt)].filter((h) => h !== '');
   const kept = hds.filter((h) => {
-    const hd = parseIntOrNull(h);
+    const hd = intCell(h);
     if (hd !== null && attestHd(hd, idx, tables) !== null) return true;
     dropped.push({ cell: 'hd', value: h, reason: 'hd_unattested' });
     return false;
@@ -886,24 +675,26 @@ function routesCell(a: RowAttestation): {
   return { routes: joinValues(routes), unattested: a.unattested };
 }
 
-function intCell(v: number | null): string {
-  return v === null ? '' : String(v);
+function toRecord(cells: ManifestCells): ManifestRecord {
+  return manifestRecord((c) => cells[c], (m) => {
+    throw new Error(`manifest row ${parkedRecordKey(cells)}: ${m}`);
+  });
 }
 
 function manifestRowFromRecord(
   cells: { tyc: string; bayer: string; proper: string },
   r: LabelMergeRecord,
   binding: BindingClass,
-): ManifestRow {
+): ManifestCells {
   return {
     tyc: cells.tyc,
-    hip: intCell(r.hip),
-    hd: intCell(r.hd),
+    hip: nullableCell(r.hip),
+    hd: nullableCell(r.hd),
     hd_alt: joinValues(r.hdAlt),
-    hr: intCell(r.hr),
+    hr: nullableCell(r.hr),
     hr_alt: joinValues(r.hrAlt),
     gl: r.gl ?? '',
-    flam: intCell(r.flam),
+    flam: nullableCell(r.flam),
     bayer: cells.bayer,
     proper: cells.proper,
     gaia_source_id: r.gaiaSourceId ?? '',
@@ -915,7 +706,7 @@ function manifestRowFromRecord(
 
 /** One magnitude-term row — every classical cell empty, the source_id its
  *  whole identity. */
-export function magnitudeTermRow(sourceId: string): ManifestRow {
+function magnitudeTermRow(sourceId: string): ManifestCells {
   return {
     tyc: '', hip: '', hd: '', hd_alt: '', hr: '', hr_alt: '', gl: '', flam: '',
     bayer: '', proper: '',
@@ -1130,7 +921,7 @@ function compareAdditionGroupCells(a: AdditionGroup, b: AdditionGroup): number {
 }
 
 interface Admission {
-  row: ManifestRow | null;
+  row: ManifestCells | null;
   /** The admitted row's record, for the claim set — null on a component row. */
   record: LabelMergeRecord | null;
   ledger: AdditionLedgerRow;
@@ -1188,8 +979,8 @@ function admitGroup(
       blocked,
       ledger: {
         tyc,
-        hip: intCell(hipItem?.hip ?? null),
-        hd: intCell(hdItem === null ? null : Math.min(...hdItem.hds)),
+        hip: nullableCell(hipItem?.hip ?? null),
+        hd: nullableCell(hdItem === null ? null : Math.min(...hdItem.hds)),
         gl: rawGl ?? '',
         gaia_source_id: '',
         reason: `${COMPONENT_REASON_PREFIX}${blocked.sort(compareDesignations)[0]}`,
@@ -1238,8 +1029,8 @@ export function buildMembership(input: MembershipInput): MembershipResult {
   ) as Record<ClassicalCell, number>;
   const bindingReview: BindingReviewRow[] = [];
   const labelDrops: LabelDropRow[] = [];
-  const rows: ManifestRow[] = [];
-  const attest = (row: ManifestRow, a?: RowAttestation): void => {
+  const rows: ManifestCells[] = [];
+  const attest = (row: ManifestCells, a?: RowAttestation): void => {
     const { routes, unattested } = routesCell(a ?? attestSpineRow(row, tables, idx));
     row.routes = routes;
     for (const cell of unattested) unattestedByCell[cell]++;
@@ -1333,7 +1124,7 @@ export function buildMembership(input: MembershipInput): MembershipResult {
   let spineRowsWithoutSourceId = 0;
   let spineBrightRows = 0;
   let spineBrightRowsWithoutOverlayEntry = 0;
-  const spineManifestRows: ManifestRow[] = [];
+  const spineManifestRows: ManifestCells[] = [];
   records.forEach((record, i) => {
     const noEntry = record.gaiaSourceId === null || !overlay.has(record.gaiaSourceId);
     if (record.gaiaSourceId === null) spineRowsWithoutSourceId++;
@@ -1353,7 +1144,7 @@ export function buildMembership(input: MembershipInput): MembershipResult {
   // answering to everything the folded row did — otherwise the fold is a
   // silent record drop rather than a merge.
   for (const { foldedRow, survivorKept } of folds) {
-    const survivorHolds = new Set(manifestDesignations(spineManifestRows[survivorKept]));
+    const survivorHolds = new Set(manifestDesignations(toRecord(spineManifestRows[survivorKept])));
     const lost = spineDesignations(corrected[foldedRow]).filter((d) => !survivorHolds.has(d));
     if (lost.length > 0) {
       throw new Error(
@@ -1423,7 +1214,7 @@ export function buildMembership(input: MembershipInput): MembershipResult {
     }
     additionsByReason[a.ledger.reason as AdditionReason]++;
     if (a.blocked.length > 0) additionsWithBlockedDesignation++;
-    const designations = manifestDesignations(a.row);
+    const designations = manifestDesignations(toRecord(a.row));
     if (designations.length === 1 && designations[0].startsWith('gaia_dr3:')) additionGaiaKeyedOnly++;
     claimRecord(claims, a.record);
     attest(a.row);
@@ -1447,7 +1238,7 @@ export function buildMembership(input: MembershipInput): MembershipResult {
     rows.push(row);
   }
 
-  const sorted = sortManifestRows(rows);
+  const sorted = sortManifestRecords(rows.map(toRecord));
   const owners = new Map<string, number>();
   for (const row of sorted) {
     for (const d of new Set(manifestDesignations(row))) owners.set(d, (owners.get(d) ?? 0) + 1);
@@ -1490,8 +1281,8 @@ export function buildMembership(input: MembershipInput): MembershipResult {
     additionRouteSourceDisagree,
     additionsWithBlockedDesignation,
     sharedDesignations: [...owners.values()].filter((n) => n > 1).length,
-    rowsWithHdAlt: sorted.filter((r) => r.hd_alt !== '').length,
-    rowsWithHrAlt: sorted.filter((r) => r.hr_alt !== '').length,
+    rowsWithHdAlt: sorted.filter((r) => r.hdAlt.length > 0).length,
+    rowsWithHrAlt: sorted.filter((r) => r.hrAlt.length > 0).length,
     spineRowsWithoutSourceId,
     spineBrightRows,
     spineBrightRowsWithoutOverlayEntry,
@@ -1523,7 +1314,7 @@ export interface SpineMatch {
  *  not split the match: the SID never rode on it. */
 export function matchSpineToManifest(
   spineDesignations: readonly (readonly string[])[],
-  manifestRows: readonly ManifestRow[],
+  manifestRows: readonly ManifestRecord[],
   storedEdges: readonly SameasEdge[],
 ): SpineMatch {
   const owners = new Map<string, number>();

@@ -15,22 +15,25 @@ import { printedVLookups } from '../photometry/v-magnitude-pure';
 import { gaiaHas5pSolution } from '../distance/gaia-distrust';
 import {
   BRIGHT_TIER_MAG_CEILING,
-  parseOverlayTsv,
 } from '../classic-ids/classic-id-overlay-pure';
+import {
+  parseOverlayTsv,
+} from '../classic-ids/classic-id-overlay-tsv';
 import {
   CLASSIC_ID_OVERRIDES_FILE,
   LABEL_FIELDS,
-  labelFlipsTsv,
   parseLabelOverridesTsv,
 } from '../classic-ids/label-merge/label-merge-pure';
 import {
-  MULTIPLES_TSV,
+  LABEL_FLIPS,
+} from '../classic-ids/label-merge/label-flips-tsv';
+import {
   readMultiplesTsv,
   sourceIdsWithSiblingComponent,
 } from '../companions/companion-promotion';
 import { readMagnitudeTerm } from './magnitude-term/magnitude-term';
 import { MAGNITUDE_FLOOR_V } from './magnitude-term/magnitude-term-pure';
-import { INHERITED_SPINE_FILE, parseSpineTsv } from '../spine/inherited-spine-pure';
+import { INHERITED_SPINE, INHERITED_SPINE_FILE } from '../spine/inherited-spine-pure';
 import { LFS_HINT, loadPrimaryTables } from '../spine/primaries-tables';
 import {
   BINDING_DISPOSITIONS_FILE,
@@ -39,12 +42,18 @@ import {
   buildMembership,
   parseBindingDispositionsTsv,
   parseSpineCorrectionsTsv,
-  serializeBindingReview,
-  serializeLabelDrops,
-  serializeLedger,
-  serializeManifest,
   type MembershipCounts,
 } from './membership-manifest-pure';
+import {
+  ADDITIONS_LEDGER,
+} from './additions-ledger-tsv';
+import {
+  BINDING_REVIEW,
+} from './binding-review-tsv';
+import {
+  LABEL_DROPS,
+} from './label-drops-tsv';
+import { MEMBERSHIP_MANIFEST } from './membership-manifest-tsv';
 
 const SRC_OVERLAY = resolve(ROOT, 'data/classic-ids/classic_id_overlay.tsv');
 const OVERLAY_HINT = 'run `pnpm run build:classic-ids`.';
@@ -79,7 +88,7 @@ function reportLabelCoverage(c: MembershipCounts): void {
 }
 
 async function main(): Promise<void> {
-  const spine = parseSpineTsv(readRequired(resolve(ROOT, INHERITED_SPINE_FILE), LFS_HINT));
+  const spine = INHERITED_SPINE.parse(readRequired(resolve(ROOT, INHERITED_SPINE_FILE), LFS_HINT));
   const tables = await loadPrimaryTables(spine.map((r) => r.tyc).filter((t) => t !== ''));
   const overridesPath = resolve(ROOT, CLASSIC_ID_OVERRIDES_FILE);
   const { evidence, gaiaAstrometry } = loadBindingEvidence(
@@ -92,7 +101,7 @@ async function main(): Promise<void> {
     overrides: existsSync(overridesPath)
       ? parseLabelOverridesTsv(readFileSync(overridesPath, 'utf8'))
       : new Map(),
-    siblingRenderedSourceIds: sourceIdsWithSiblingComponent(readMultiplesTsv(MULTIPLES_TSV)),
+    siblingRenderedSourceIds: sourceIdsWithSiblingComponent(readMultiplesTsv()),
     evidence,
     dispositions: parseBindingDispositionsTsv(
       readRequired(resolve(ROOT, BINDING_DISPOSITIONS_FILE), DISPOSITIONS_HINT),
@@ -156,11 +165,11 @@ async function main(): Promise<void> {
   emitArtifacts({
     outputs: MEMBERSHIP_OUTPUTS,
     files: {
-      labelFlips: labelFlipsTsv(result.flips),
-      manifest: serializeManifest(result.rows),
-      additions: serializeLedger(result.ledger),
-      bindingReview: serializeBindingReview(result.bindingReview),
-      labelDrops: serializeLabelDrops(result.labelDrops),
+      labelFlips: LABEL_FLIPS.serialize(result.flips),
+      manifest: MEMBERSHIP_MANIFEST.serialize(result.rows),
+      additions: ADDITIONS_LEDGER.serialize(result.ledger),
+      bindingReview: BINDING_REVIEW.serialize(result.bindingReview),
+      labelDrops: LABEL_DROPS.serialize(result.labelDrops),
     },
     checks: [snapshotCheck<MembershipCounts>({
       envVar: 'UPDATE_BUILD_COUNTS',

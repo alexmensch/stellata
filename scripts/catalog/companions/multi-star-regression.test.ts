@@ -19,7 +19,8 @@ import {
   lookupByName,
   lookupByRef,
 } from '../catalog-lookup';
-import { parseFloatOrNull, parseRef, type RecordRef } from '../parse/corpus-tsv';
+import { parseRef, type RecordRef } from '../parse/corpus-tsv';
+import { floatCell } from '../../util/tsv/table-pure';
 import {
   KM_S_TO_PC_YR,
   VELOCITY_SANITY_CEILING_PC_YR,
@@ -47,27 +48,27 @@ import { evaluateOrbitSkyAU } from '../../../src/client/binaries/binary-orbit-pu
 import { BinaryOrbitField } from '../../../src/client/binaries/binary-orbit-field';
 import { AU_PC, AU_PER_PC } from '../../../src/client/util/astronomy-constants';
 import { readMultiplesTsv, wdsRootOf } from './companion-promotion';
+import { MULTIPLES_TSV, MULTIPLES_TSV_PATH } from '../../binaries/multiples-tsv';
+import { NAMING_DUPLICATES } from '../naming/naming-duplicates-tsv';
 import { REPO_ROOT } from '../../util/paths';
 import { DEFAULT_ROW_INDEX_MAP } from '../catalog-lookup';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const CORPUS_TSV = resolve(__dirname, 'multi-star-regression.tsv');
-const MULTIPLES_TSV = resolve(REPO_ROOT, 'data/binaries/multiples.tsv');
 const BINARIES_BIN = resolve(REPO_ROOT, 'public/binaries.bin');
-const NAMING_DUPLICATES = resolve(REPO_ROOT, 'scripts/catalog/naming/naming-duplicates.tsv');
 
 // Same fixture gate as known-stars.test.ts, plus binaries.bin (also
 // generated). CI's plain `pnpm test` job skips; the Tier-A corpus job
 // runs the full corpus against real artifacts.
 const FIXTURES_READY =
-  existsSync(DEFAULT_CATALOG_MANIFEST) && existsSync(MULTIPLES_TSV)
+  existsSync(DEFAULT_CATALOG_MANIFEST) && existsSync(MULTIPLES_TSV_PATH)
   && existsSync(BINARIES_BIN) && existsSync(DEFAULT_ROW_INDEX_MAP);
 if (!FIXTURES_READY) {
   // eslint-disable-next-line no-console
   console.warn(
     `[multi-star-regression] skipping corpus assertions — ` +
     `catalog.bin ${existsSync(DEFAULT_CATALOG_MANIFEST) ? 'present' : 'MISSING'}, ` +
-    `multiples.tsv ${existsSync(MULTIPLES_TSV) ? 'present' : 'MISSING'}, ` +
+    `multiples.tsv ${existsSync(MULTIPLES_TSV_PATH) ? 'present' : 'MISSING'}, ` +
     `binaries.bin ${existsSync(BINARIES_BIN) ? 'present' : 'MISSING'}. ` +
     `Run \`pnpm run build:catalog\` + \`pnpm run build:binaries-runtime\` (with LFS pulled).`,
   );
@@ -148,19 +149,19 @@ function loadCorpusSync(): CorpusPair[] {
     const pairName = (row.pair_name ?? '').trim();
     const name = pairName || `row ${i + 1}`;
     const required = (col: string): number => {
-      const v = parseFloatOrNull(row[col]);
+      const v = floatCell(row[col]);
       if (v === null) throw new Error(`${name}: missing required numeric column "${col}"`);
       return v;
     };
-    const xyzSepTolAu = parseFloatOrNull(row.xyz_sep_tol_au);
-    const xyzPaTolDeg = parseFloatOrNull(row.xyz_pa_tol_deg);
+    const xyzSepTolAu = floatCell(row.xyz_sep_tol_au);
+    const xyzPaTolDeg = floatCell(row.xyz_pa_tol_deg);
     if ((xyzSepTolAu === null) !== (xyzPaTolDeg === null)) {
       throw new Error(`${name}: xyz_sep_tol_au and xyz_pa_tol_deg must be set (or empty) together`);
     }
-    const orbitPDays = parseFloatOrNull(row.orbit_p_days);
-    const orbitTJd = parseFloatOrNull(row.orbit_t_jd);
-    const orbitSepTolArcsec = parseFloatOrNull(row.orbit_sep_tol_arcsec);
-    const orbitPaTolDeg = parseFloatOrNull(row.orbit_pa_tol_deg);
+    const orbitPDays = floatCell(row.orbit_p_days);
+    const orbitTJd = floatCell(row.orbit_t_jd);
+    const orbitSepTolArcsec = floatCell(row.orbit_sep_tol_arcsec);
+    const orbitPaTolDeg = floatCell(row.orbit_pa_tol_deg);
     if (orbitPDays !== null && orbitTJd === null) {
       throw new Error(`${name}: orbit_p_days requires orbit_t_jd`);
     }
@@ -188,27 +189,19 @@ function loadCorpusSync(): CorpusPair[] {
 }
 
 function loadMultiplesGeomSync(): Map<string, MultiplesGeomRow[]> {
-  const rows = parse(readFileSync(MULTIPLES_TSV, 'utf-8'), {
-    delimiter: '\t',
-    columns: true,
-    skip_empty_lines: true,
-    trim: false,
-  }) as Record<string, string>[];
   const idx = new Map<string, MultiplesGeomRow[]>();
-  for (const row of rows) {
-    const sysId = (row.system_id ?? '').trim();
-    if (!sysId) continue;
+  for (const row of MULTIPLES_TSV.parse(readFileSync(MULTIPLES_TSV_PATH, 'utf-8'))) {
     const parsed: MultiplesGeomRow = {
-      comp: (row.comp ?? '').trim(),
-      sepArcsec: parseFloatOrNull(row.sep_arcsec),
-      paDeg: parseFloatOrNull(row.pa_deg),
-      epochJd: parseFloatOrNull(row.sep_pa_epoch_jd),
-      pDays: parseFloatOrNull(row.P_days),
-      tJd: parseFloatOrNull(row.T_jd),
+      comp: row.comp,
+      sepArcsec: row.sepArcsec,
+      paDeg: row.paDeg,
+      epochJd: row.sepPaEpochJd,
+      pDays: row.pDays,
+      tJd: row.tJd,
     };
-    const bucket = idx.get(sysId);
+    const bucket = idx.get(row.systemId);
     if (bucket) bucket.push(parsed);
-    else idx.set(sysId, [parsed]);
+    else idx.set(row.systemId, [parsed]);
   }
   return idx;
 }
@@ -661,8 +654,8 @@ describe.runIf(FIXTURES_READY)('component display-name uniqueness', () => {
     // catalogue entries claiming one designation, or one physical star held
     // as two records. A NEW one is a regression in the composer.
     const pinned = new Set(
-      readFileSync(NAMING_DUPLICATES, 'utf-8').split('\n').slice(1)
-        .filter((l) => l.trim() !== '').map((l) => l.split('\t')[0]),
+      NAMING_DUPLICATES.parse(readFileSync(resolve(REPO_ROOT, NAMING_DUPLICATES.file), 'utf-8'))
+        .map((r) => r.label),
     );
     const unpinned = offenders.filter(
       (o) => !pinned.has(o.slice(o.indexOf('"') + 1, o.lastIndexOf('"'))),
@@ -865,7 +858,7 @@ function buildWdsRootToIndices(): Map<string, number[]> {
     const g = rootToIndices.get(root);
     if (g) g.push(idx); else rootToIndices.set(root, [idx]);
   };
-  for (const row of readMultiplesTsv(MULTIPLES_TSV)) {
+  for (const row of readMultiplesTsv()) {
     const root = wdsRootOf(row.systemId);
     if (root === null) continue;
     let rec = row.gaiaSourceId ? lookupByGaiaSourceId(catalog, row.gaiaSourceId) : null;

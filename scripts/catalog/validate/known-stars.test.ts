@@ -41,19 +41,16 @@ import {
   lookupByRef,
 } from '../catalog-lookup';
 import {
-  nonEmpty,
-  parseFloatOrNull,
-  parseIntOrNull,
   parseOptionalRef,
   type RecordRef,
 } from '../parse/corpus-tsv';
+import { floatCell, intCell, textCell } from '../../util/tsv/table-pure';
 import { AU_PER_PC } from '../../../src/client/util/astronomy-constants';
-import { REPO_ROOT } from '../../util/paths';
+import { MULTIPLES_TSV, MULTIPLES_TSV_PATH } from '../../binaries/multiples-tsv';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const KNOWN_STARS_TSV = resolve(__dirname, 'known-stars.tsv');
 const TOPOLOGY_TSV = resolve(__dirname, 'system-pair-topology.tsv');
-const MULTIPLES_TSV = resolve(REPO_ROOT, 'data/binaries/multiples.tsv');
 
 // The corpus needs public/catalog.bin and data/binaries/multiples.tsv —
 // the first is generated (gitignored, ~24 MB), the second is LFS-tracked.
@@ -62,7 +59,7 @@ const MULTIPLES_TSV = resolve(REPO_ROOT, 'data/binaries/multiples.tsv');
 // `build-catalog` job runs the full suite after `pnpm run build:catalog`
 // + LFS pull, so the assertions execute against real data on every PR.
 const CATALOG_BIN_PRESENT = existsSync(DEFAULT_CATALOG_MANIFEST);
-const MULTIPLES_PRESENT = existsSync(MULTIPLES_TSV);
+const MULTIPLES_PRESENT = existsSync(MULTIPLES_TSV_PATH);
 const FIXTURES_READY = CATALOG_BIN_PRESENT && MULTIPLES_PRESENT;
 if (!FIXTURES_READY) {
   // eslint-disable-next-line no-console
@@ -193,8 +190,8 @@ function parseCompanions(cell: string): CorpusCompanion[] {
     }
     return {
       letter: letter.trim(),
-      hip: parseIntOrNull(hipStr),
-      gaiaSourceId: nonEmpty(gaiaStr),
+      hip: intCell(hipStr),
+      gaiaSourceId: textCell(gaiaStr),
       absmag,
       maxSepAuFromPrimary,
     };
@@ -213,41 +210,41 @@ function parseCorpusRows(text: string): CorpusRow[] {
   return rows.map((row, i) => {
     const name = (row.system_name ?? '').trim();
     const required = (col: string): number => {
-      const v = parseFloatOrNull(row[col] ?? '');
+      const v = floatCell(row[col] ?? '');
       if (v === null) {
         throw new Error(`row ${i + 1} (${name}): missing required numeric column "${col}"`);
       }
       return v;
     };
-    const varTypeRaw = nonEmpty(row.var_type);
+    const varTypeRaw = textCell(row.var_type);
     if (varTypeRaw !== null && !(varTypeRaw in VAR_TYPE_TOKENS)) {
       throw new Error(
         `row ${i + 1} (${name}): var_type "${varTypeRaw}" — expected one of ${Object.keys(VAR_TYPE_TOKENS).join(' / ')}`,
       );
     }
-    const tierRaw = nonEmpty(row.tier);
+    const tierRaw = textCell(row.tier);
     if (tierRaw === null || !(CORPUS_TIERS as readonly string[]).includes(tierRaw)) {
       throw new Error(
         `row ${i + 1} (${name}): tier "${row.tier ?? ''}" — expected one of ${CORPUS_TIERS.join(' / ')}`,
       );
     }
     return {
-      wdsId: nonEmpty(row.wds_id),
+      wdsId: textCell(row.wds_id),
       systemName: name,
-      primaryHip: parseIntOrNull(row.primary_hip),
-      primaryGaiaSourceId: nonEmpty(row.primary_gaia_source_id),
+      primaryHip: intCell(row.primary_hip),
+      primaryGaiaSourceId: textCell(row.primary_gaia_source_id),
       primaryDistancePc: required('primary_distance_pc'),
       primaryDistancePcErr: required('primary_distance_pc_err'),
       primaryAbsmag: required('primary_absmag'),
       primarySpectral: (row.primary_spectral ?? '').trim(),
-      primaryCi: parseFloatOrNull(row.primary_ci),
-      primaryRadiusRsun: parseFloatOrNull(row.primary_radius_rsun),
-      radiusRelTol: parseFloatOrNull(row.radius_rel_tol),
+      primaryCi: floatCell(row.primary_ci),
+      primaryRadiusRsun: floatCell(row.primary_radius_rsun),
+      radiusRelTol: floatCell(row.radius_rel_tol),
       companions: parseCompanions(row.companions ?? ''),
-      orbitalPeriodDays: parseFloatOrNull(row.orbital_period_days),
+      orbitalPeriodDays: floatCell(row.orbital_period_days),
       varType: varTypeRaw as CorpusRow['varType'],
-      varPeriodDays: parseFloatOrNull(row.var_period_days),
-      varAmpMag: parseFloatOrNull(row.var_amp_mag),
+      varPeriodDays: floatCell(row.var_period_days),
+      varAmpMag: floatCell(row.var_amp_mag),
       tier: tierRaw as CorpusTier,
       notesSource: (row.notes_source ?? '').trim(),
     };
@@ -275,7 +272,7 @@ function loadTopologySync(): TopologyRow[] {
     }
     const primaryRef = parseOptionalRef(row.primary_ref, name, 'primary_ref');
     const secondaryRef = parseOptionalRef(row.secondary_ref, name, 'secondary_ref');
-    const minSepPc = parseFloatOrNull(row.min_sep_pc);
+    const minSepPc = floatCell(row.min_sep_pc);
     const sepPinParts = [primaryRef, secondaryRef, minSepPc].filter(p => p !== null).length;
     if (sepPinParts !== 0 && sepPinParts !== 3) {
       throw new Error(`${name}: primary_ref, secondary_ref, min_sep_pc must be set together or not at all`);
@@ -293,28 +290,18 @@ function loadTopologySync(): TopologyRow[] {
 }
 
 function loadMultiplesIndexSync(): Map<string, MultiplesRow[]> {
-  const text = readFileSync(MULTIPLES_TSV, 'utf-8');
-  const rows = parse(text, {
-    delimiter: '\t',
-    columns: true,
-    skip_empty_lines: true,
-    trim: false,
-  }) as Record<string, string>[];
-
   const idx = new Map<string, MultiplesRow[]>();
-  for (const row of rows) {
-    const sysId = (row.system_id ?? '').trim();
-    if (!sysId) continue;
-    const wdsId = sysId.replace(/-[^-]+$/, '');
+  for (const r of MULTIPLES_TSV.parse(readFileSync(MULTIPLES_TSV_PATH, 'utf-8'))) {
+    const wdsId = r.systemId.replace(/-[^-]+$/, '');
     const parsed: MultiplesRow = {
-      systemId: sysId,
-      comp: (row.comp ?? '').trim(),
-      hip: parseIntOrNull(row.hip ?? ''),
-      gaiaSourceId: nonEmpty(row.gaia_source_id ?? ''),
-      absmag: parseFloatOrNull(row.absmag ?? ''),
-      spect: (row.spect ?? '').trim(),
-      name: (row.name ?? '').trim(),
-      periodDays: parseFloatOrNull(row.P_days ?? ''),
+      systemId: r.systemId,
+      comp: r.comp,
+      hip: r.hip,
+      gaiaSourceId: r.gaiaSourceId,
+      absmag: r.absmag,
+      spect: r.spect.trim(),
+      name: r.name.trim(),
+      periodDays: r.pDays,
     };
     const bucket = idx.get(wdsId);
     if (bucket) bucket.push(parsed);

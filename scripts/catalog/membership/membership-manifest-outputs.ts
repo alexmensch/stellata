@@ -4,13 +4,21 @@ import { resolve } from 'node:path';
 
 import { declareOutputs } from '../../util/emit-artifacts';
 import { REPO_ROOT as ROOT } from '../../util/paths';
-import { LABEL_FLIPS_FILE } from '../classic-ids/label-merge/label-merge-pure';
+import {
+  LABEL_FLIPS_FILE,
+} from '../classic-ids/label-merge/label-flips-tsv';
+import {
+} from './membership-manifest-pure';
 import {
   ADDITIONS_LEDGER_FILE,
+} from './additions-ledger-tsv';
+import {
   BINDING_REVIEW_FILE,
+} from './binding-review-tsv';
+import {
   LABEL_DROPS_FILE,
-  MEMBERSHIP_MANIFEST_FILE,
-} from './membership-manifest-pure';
+} from './label-drops-tsv';
+import { MEMBERSHIP_MANIFEST_FILE } from './membership-manifest-tsv';
 
 export const MEMBERSHIP_OUTPUTS = declareOutputs({
   labelFlips: resolve(ROOT, LABEL_FLIPS_FILE),

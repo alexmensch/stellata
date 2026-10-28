@@ -6,8 +6,9 @@ import { appendFileSync, mkdirSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 import { REPO_ROOT as ROOT, readRequired } from '../../util/paths';
+import { nullableCell } from '../../util/tsv/artifact-pure';
 import { splitCsvLine } from '../naming/wgsn-parse-pure';
-import { INHERITED_SPINE_FILE, parseSpineTsv, type SpineRow } from './inherited-spine-pure';
+import { INHERITED_SPINE, INHERITED_SPINE_FILE, type SpineRow } from './inherited-spine-pure';
 import {
   CLASSICAL_CELLS, auditSpine, formatAuditReport, tallyAthygHdProvenance,
   type AthygHdProvenance, type RowSink,
@@ -84,7 +85,7 @@ function attestationWriter(path: string): { onRow: RowSink; close: () => void } 
 async function main(): Promise<void> {
   const outDir = process.argv.find((a) => a.startsWith('--out='))?.slice('--out='.length) ?? null;
 
-  const spine = parseSpineTsv(readRequired(resolve(ROOT, INHERITED_SPINE_FILE), LFS_HINT));
+  const spine = INHERITED_SPINE.parse(readRequired(resolve(ROOT, INHERITED_SPINE_FILE), LFS_HINT));
   const tables = await loadPrimaryTables(spine.map((r) => r.tyc).filter((t) => t !== ''));
   const athygHd: AthygHdProvenance = tallyAthygHdProvenance(athygHdRows());
 
@@ -116,7 +117,7 @@ async function main(): Promise<void> {
   writeFileSync(resolve(outDir, 'additions_hd.tsv'), tsv(
     ['tyc', 'hd', 'ambiguous', 'vt_mag', 'in_tycho2', 'gaia_source_id'],
     result.additions.hd.map((a) => [
-      a.tyc, a.hds.join('|'), a.ambiguous ? '1' : '0', a.vtMag === null ? '' : String(a.vtMag),
+      a.tyc, a.hds.join('|'), a.ambiguous ? '1' : '0', nullableCell(a.vtMag),
       a.inTycho2 ? '1' : '0', a.gaiaSourceId ?? '',
     ]),
   ));
@@ -132,7 +133,7 @@ async function main(): Promise<void> {
   ));
   const cns5Cells = (r: { cns5: number; gj: string; gjComp: string | null;
     gaiaSourceId: string | null; hip: number | null }): string[] => [
-    String(r.cns5), r.gj, r.gjComp ?? '', r.gaiaSourceId ?? '', r.hip === null ? '' : String(r.hip),
+    String(r.cns5), r.gj, r.gjComp ?? '', r.gaiaSourceId ?? '', nullableCell(r.hip),
   ];
   const cns5Header = ['cns5', 'gj', 'gj_comp', 'gaia_source_id', 'hip'];
   writeFileSync(resolve(outDir, 'additions_cns5.tsv'), tsv(
@@ -144,13 +145,13 @@ async function main(): Promise<void> {
   writeFileSync(resolve(outDir, 'additions_iv27a.tsv'), tsv(
     ['hd', 'hip', 'bayer', 'flamsteed', 'cst'],
     result.additions.iv27a.map((r) => [
-      String(r.hd), r.hip === null ? '' : String(r.hip), r.bayer ?? '',
-      r.flamsteed === null ? '' : String(r.flamsteed), r.cst ?? '',
+      String(r.hd), nullableCell(r.hip), r.bayer ?? '',
+      nullableCell(r.flamsteed), r.cst ?? '',
     ]),
   ));
   writeFileSync(resolve(outDir, 'additions_v50.tsv'), tsv(
     ['hr', 'hd', 'name'],
-    result.additions.v50.map((r) => [String(r.hr), r.hd === null ? '' : String(r.hd), r.name ?? '']),
+    result.additions.v50.map((r) => [String(r.hr), nullableCell(r.hd), r.name ?? '']),
   ));
   console.log(`wrote ${outDir}`);
 }

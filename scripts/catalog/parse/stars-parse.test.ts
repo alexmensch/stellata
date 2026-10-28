@@ -19,10 +19,10 @@ import { emptySimbadValueIndex, type SimbadValueIndex } from '../simbad/simbad-v
 import { unitVectorFromRaDec, type UnitVector } from '../../../src/client/util/equatorial-basis';
 import type { GlieseIndex } from '../gliese-parse';
 import {
-  MANIFEST_COLUMNS,
-  serializeManifest,
-  type ManifestRow,
-} from '../membership/membership-manifest-pure';
+  MEMBERSHIP_MANIFEST,
+  manifestRecord,
+  type ManifestColumn,
+} from '../membership/membership-manifest-tsv';
 import { CONSTELLATIONS, createConstellationAssignment } from './constellations/constellations';
 import { readStars } from './stars-parse';
 
@@ -30,15 +30,17 @@ const CON_ASSIGNMENT = createConstellationAssignment();
 const conIndexOf = (code: string): number =>
   CONSTELLATIONS.findIndex((c) => c.code.toLowerCase() === code);
 
+type ManifestRow = Partial<Record<ManifestColumn, string>>;
+
 // Emitted through the shipped codec, so a column added or renamed in
 // MANIFEST_COLUMNS fails here rather than silently shifting every cell.
-function writeManifestTsv(rows: readonly Partial<ManifestRow>[]): string {
+function writeManifestTsv(rows: readonly ManifestRow[]): string {
   const dir = mkdtempSync(join(tmpdir(), 'manifest-'));
   const path = join(dir, 'membership-manifest.tsv');
-  const blank = Object.fromEntries(
-    MANIFEST_COLUMNS.map((column) => [column, '']),
-  ) as ManifestRow;
-  writeFileSync(path, serializeManifest(rows.map((row) => ({ ...blank, ...row }))));
+  const defaults: ManifestRow = { binding: 'none', term: 'primaries' };
+  writeFileSync(path, MEMBERSHIP_MANIFEST.serialize(rows.map((row) => manifestRecord(
+    (c) => row[c] ?? defaults[c] ?? '', (m) => { throw new Error(m); },
+  ))));
   return path;
 }
 
@@ -87,7 +89,7 @@ function tycho2Sources(
 }
 
 // Placed at ra=0°, dec=0°, 100 pc → xyz=(100,0,0). V 10 at 100 pc is absmag 5.
-const AT_ORIGIN_SIGHTLINE: Partial<ManifestRow> = { tyc: ORIGIN_TYC, gl: ORIGIN_GL };
+const AT_ORIGIN_SIGHTLINE: ManifestRow = { tyc: ORIGIN_TYC, gl: ORIGIN_GL };
 const AT_ORIGIN_DIRECTIONS = (): DirectionSources =>
   tycho2Sources([{ tyc: ORIGIN_TYC, raDeg: 0, decDeg: 0, vMag: 10.0 }]);
 
@@ -260,7 +262,7 @@ describe('readStars constellation assignment', () => {
   // ra=20h14m16.6s / dec=+15°11'51" — ρ Aql, whose 1992 boundary crossing by
   // proper motion is the whole reason the two constellations are separate
   // fields. See /src/client/constellation-boundaries/iau-geometry/README.md#ρ-aquilae.
-  const RHO_AQL: Partial<ManifestRow> = {
+  const RHO_AQL: ManifestRow = {
     bayer: 'Rho', flam: '67', hip: '99742', hd: '192425', hr: '7724',
     tyc: RHO_AQL_TYC, gl: RHO_AQL_GL,
   };
@@ -330,7 +332,7 @@ describe('readStars PM rescue', () => {
   const TYCHO2_PM = { pmRaMasyr: -453.7, pmDecMasyr: -591.4 };
   const GAIA_EDR3 = '2020yCat.1350....0G';
 
-  const MANIFEST_ROW: Partial<ManifestRow> = {
+  const MANIFEST_ROW: ManifestRow = {
     tyc: RESCUE_TYC, gl: RESCUE_GL, proper: 'Rescued',
   };
 

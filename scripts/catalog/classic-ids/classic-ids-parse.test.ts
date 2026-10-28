@@ -59,8 +59,8 @@ describe('classic-ids-parse / parseTyc2HdTsv', () => {
     // Every input here is a committed LFS artifact: "no rows" means truncated,
     // and answering [] would leave the join silently keyed on nothing until
     // the count snapshot flagged the drift a layer later.
-    expect(() => parseTyc2HdTsv('')).toThrow(/missing required columns/);
-    expect(() => parseTyc2HdTsv('\n\n')).toThrow(/missing required columns/);
+    expect(() => parseTyc2HdTsv('')).toThrow(/has no header row/);
+    expect(() => parseTyc2HdTsv('\n\n')).toThrow(/has no header row/);
   });
 
   it('returns no rows for a valid header with no data rows', () => {
@@ -100,7 +100,7 @@ describe('classic-ids-parse / cross-index corrections', () => {
   // than wrong, and no count moves to say so.
   it('throws on a row that states no hd / belongs_to pair', () => {
     expect(() => corrections('35148\t\n')).toThrow(/states no hd \/ belongs_to pair/);
-    expect(() => corrections('notanumber\t35149\n')).toThrow(/states no hd \/ belongs_to pair/);
+    expect(() => corrections('notanumber\t35149\n')).toThrow(/hd: "notanumber" is not an integer/);
   });
 
   it('drops the corrected row and leaves every other', () => {

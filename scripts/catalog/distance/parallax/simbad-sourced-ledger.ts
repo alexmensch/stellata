@@ -2,6 +2,8 @@
 // /docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers's validation-independence rule made checkable. See README.md#the-skip-rules--one-principle-two-publications
 // and ../../validate/README.md for the validator that reads it.
 
+import { defineArtifact, nullableCell } from '../../../util/tsv/artifact-pure';
+
 /** Where the exclusion list is committed. */
 export const SIMBAD_SOURCED_DISTANCES_FILE =
   'data/athyg/simbad_sourced_distances.tsv';
@@ -14,16 +16,16 @@ export interface SimbadSourcedDistance {
   hip: number | null;
 }
 
-const COLUMNS = ['gaia_source_id', 'hip'] as const;
-
-export function formatSimbadSourcedDistancesTsv(
-  rows: readonly SimbadSourcedDistance[],
-): string {
-  const lines = [...rows]
-    .map((r) => [r.gaiaSourceId ?? '', r.hip ?? ''].join('\t'))
-    .sort();
-  return [COLUMNS.join('\t'), ...lines].join('\n') + '\n';
-}
+export const SIMBAD_SOURCED_DISTANCES = defineArtifact({
+  file: SIMBAD_SOURCED_DISTANCES_FILE,
+  columns: ['gaia_source_id', 'hip'] as const,
+  hint: 'Re-run `pnpm run build:catalog`.',
+  order: 'by-line',
+  decode: (row): SimbadSourcedDistance => ({ gaiaSourceId: row.sourceId('gaia_source_id'), hip: row.int('hip') }),
+  encode: (r: SimbadSourcedDistance) => ({
+    gaia_source_id: nullableCell(r.gaiaSourceId), hip: nullableCell(r.hip),
+  }),
+});
 
 /** The two key sets a validator excludes on. Kept apart rather than folded
  *  into one string key: the validator resolves a sample row to a record by
@@ -38,19 +40,11 @@ export function emptySimbadSourcedKeys(): SimbadSourcedKeys {
 }
 
 export function parseSimbadSourcedDistancesTsv(text: string): SimbadSourcedKeys {
-  const [header, ...lines] = text.trimEnd().split('\n');
-  if (header !== COLUMNS.join('\t')) {
-    throw new Error(
-      `${SIMBAD_SOURCED_DISTANCES_FILE}: unexpected header "${header}"`,
-    );
-  }
   const gaia = new Set<string>();
   const hip = new Set<number>();
-  for (const line of lines) {
-    if (line === '') continue;
-    const [sourceId, hipCell] = line.split('\t');
-    if (sourceId) gaia.add(sourceId);
-    if (hipCell) hip.add(Number(hipCell));
+  for (const r of SIMBAD_SOURCED_DISTANCES.rows(text)) {
+    if (r.gaiaSourceId !== null) gaia.add(r.gaiaSourceId);
+    if (r.hip !== null) hip.add(r.hip);
   }
   return { gaia, hip };
 }

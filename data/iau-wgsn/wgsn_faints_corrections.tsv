@@ -1,0 +1,9 @@
+# Cells of the frozen wgsnFaints.csv that are not what their column says,
+# set right before the parse reads them. One row per cell: `wgsn_id` keys the
+# row, `column` names the CSV column, `value` replaces the cell (empty = the
+# file states no value), `evidence` says why. A row keying no faints row, or
+# restating the cell's current value, fails build:wgsn.
+wgsn_id	column	value	evidence
+10032	Vmag		Atakoraka (WASP-64): the Vmag cell prints G12.53, a Gaia G magnitude in the V column; wgsnFaints.csv has no Gmag column and states no V
+10039	Vmag		Kaewkosin (GJ 3470): the Vmag cell prints G11.36, a Gaia G magnitude in the V column; wgsnFaints.csv has no Gmag column and states no V
+10117	Vmag		Solaris (HIP 104780): the Vmag cell prints G9.36, a Gaia G magnitude in the V column; wgsnFaints.csv has no Gmag column and states no V

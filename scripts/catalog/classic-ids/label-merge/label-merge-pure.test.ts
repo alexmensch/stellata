@@ -2,20 +2,25 @@ import { describe, it, expect } from 'vitest';
 
 import { NO_CONSTELLATION_INDEX } from '../../record/catalog-pure';
 import { CON_INDEX } from '../../parse/constellations/constellations';
-import type { ClassicIdOverlay, OverlayEntry } from '../classic-id-overlay-pure';
+import type {
+  ClassicIdOverlay,
+  OverlayEntry,
+} from '../classic-id-overlay-tsv';
 import {
   buildDesignationConIndex,
   resolveDesignationConIndex,
 } from '../designation-constellation-pure';
 import {
   labelFlipDesignationDelta,
-  labelFlipsTsv,
   mergeClassicIdLabels,
   parseLabelOverridesTsv,
   spineDesignationsRemovedBy,
   type LabelFlip,
   type LabelMergeRecord,
 } from './label-merge-pure';
+import {
+  LABEL_FLIPS,
+} from './label-flips-tsv';
 
 const SRC_A = '4911306239828325632';
 const SRC_B = '4911306239828325760';
@@ -352,10 +357,19 @@ describe('mergeClassicIdLabels', () => {
       .toEqual(['override-spine', 'override-value']);
   });
 
+  it('refuses a row missing its source or its field, and skips only a comment', () => {
+    const header = 'gaia_source_id\tfield\tvalue\n';
+    for (const row of [`\thd\t5\n`, `${SRC_A}\t\t5\n`]) {
+      expect(() => parseLabelOverridesTsv(header + row))
+        .toThrow(/classic_id_overrides\.tsv:2: states no gaia_source_id \/ field pair/);
+    }
+    expect(parseLabelOverridesTsv(`${header}# ${SRC_A}\thd\t5\n`).size).toBe(0);
+  });
+
   it('rejects an override naming an identifier the merge does not own', () => {
     expect(() => parseLabelOverridesTsv(
       `gaia_source_id\tfield\tvalue\n${SRC_A}\tbayer\talf\n`,
-    )).toThrow(/not a merged identifier/);
+    )).toThrow(/classic_id_overrides\.tsv:2: field: "bayer" is not one of hip \| hd \| hr \| gl \| flam/);
   });
 });
 
@@ -365,7 +379,7 @@ describe('labelFlipsTsv', () => {
     const { flips } = merge(records, new Map([
       [SRC_A, entry({ hd: [4083], hr: [5506] })],
     ]));
-    const lines = labelFlipsTsv(flips).trimEnd().split('\n');
+    const lines = LABEL_FLIPS.serialize(flips).trimEnd().split('\n');
     expect(lines[0]).toBe(
       'gaia_source_id\tlabel\tfield\tspine\toverlay\tapplied\tdisposition',
     );

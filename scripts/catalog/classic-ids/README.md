@@ -68,10 +68,17 @@ scripts/catalog/classic-ids/
                                   A module, not a test-file export: four suites
                                   across two folders build these, so a new
                                   column lands in one place.
+  classic-id-overlay-tsv.ts       CLASSIC_ID_OVERLAY, the overlay's codec,
+                                  with the Map adapters serializeOverlay /
+                                  parseOverlayTsv.
+  route-disagreements-tsv.ts      The two gate queues' codecs:
+  rejected-bindings-tsv.ts        ROUTE_DISAGREEMENTS, REJECTED_BINDINGS.
+  committed-artifacts.test.ts     The overlay, both gate queues and the
+                                  label flips each round-trip their committed
+                                  file byte for byte.
   classic-id-overlay-pure.ts      The join (`joinOverlayCandidates`, which
-    (+ test)                      reads no evidence), the binding gate, its
-                                  counts, and the overlay TSV codec (both
-                                  directions). The gate itself — evidence,
+    (+ test)                      reads no evidence), the binding gate and its
+                                  counts. The gate itself — evidence,
                                   thresholds, `weighBinding` — is
                                   ../membership/binding/'s; this module
                                   imports it. Pure.

@@ -1,7 +1,10 @@
 // Hipparcos CCDM parser plus curated visual-double overrides, feeding
 // the chart-mode wings glyph. See /scripts/catalog/multiplicity/README.md#ccdm-double-star-cross-match.
 import { existsSync, readFileSync } from 'node:fs';
+import { relative } from 'node:path';
 
+import { REPO_ROOT } from '../../util/paths';
+import { readTable, type TableSpec } from '../../util/tsv/table-pure';
 import {
   applyDoublesFlag as applyDoublesFlagPure,
   isOpticalDoublePrimary,
@@ -59,61 +62,41 @@ export const KNOWN_VISUAL_DOUBLE_HIPS: Set<number> = new Set(
 // Real CCDM keys only. A HIP the curated list already claims is skipped here
 // and unioned in by applyDoublesFlag instead, so no synthetic key is minted
 // that would share a type with a real CCDM ID.
+const HIP_CCDM = {
+  file: 'data/hipparcos/hip_ccdm.tsv',
+  columns: ['HIP', 'CCDM', 'MultFlag'] as const,
+  hint: 'Re-fetch from VizieR with -out=HIP,CCDM,MultFlag.',
+  comments: true,
+} satisfies TableSpec<string>;
+
+/** VizieR rules a dash line under its header (after a units line the reader
+ *  already skips as blank); no TableSpec option expresses it. */
+const VIZIER_SEPARATOR = /^-+$/;
+
 export function parseHipCcdm(srcPath: string): Map<string, number[]> {
   const groups = new Map<string, number[]>();
 
   if (!existsSync(srcPath)) return groups;
 
-  const text = readFileSync(srcPath, 'utf8');
-  const rawLines = text.split(/\r?\n/);
-
-  let header: string[] | null = null;
-  let hipIdx = -1, ccdmIdx = -1, mfIdx = -1;
   let scanned = 0, kept = 0, viaOverride = 0;
   let droppedNoHip = 0, droppedNoCcdm = 0, droppedMultFlag = 0;
 
-  for (const line of rawLines) {
-    if (!line || !line.trim()) continue;
-    if (line.startsWith('#')) continue;
-
-    const cols = line.split('\t');
-    // VizieR TSVs include a dash-separator row right after the header.
-    if (cols.every((c) => /^[-\s]+$/.test(c) && c.includes('-'))) continue;
-
-    if (!header) {
-      header = cols.map((c) => c.trim());
-      hipIdx = header.indexOf('HIP');
-      ccdmIdx = header.indexOf('CCDM');
-      mfIdx = header.indexOf('MultFlag');
-      const missing: string[] = [];
-      if (hipIdx < 0) missing.push('HIP');
-      if (ccdmIdx < 0) missing.push('CCDM');
-      if (mfIdx < 0) missing.push('MultFlag');
-      if (missing.length) {
-        throw new Error(
-          `Hipparcos CCDM TSV is missing required columns: ${missing.join(', ')}.\n` +
-            `  Header was: ${header.map((h) => JSON.stringify(h)).join(', ')}\n` +
-            `  Re-fetch from VizieR with -out=HIP,CCDM,MultFlag.`,
-        );
-      }
-      continue;
-    }
-
+  const spec = { ...HIP_CCDM, file: relative(REPO_ROOT, srcPath) };
+  for (const row of readTable(spec, readFileSync(srcPath, 'utf8'))) {
+    if (VIZIER_SEPARATOR.test(row.raw('HIP'))) continue;
     scanned++;
-    const hipStr = (cols[hipIdx] ?? '').trim();
-    if (!hipStr) { droppedNoHip++; continue; }
-    const hip = parseInt(hipStr, 10);
-    if (!Number.isFinite(hip) || hip <= 0) { droppedNoHip++; continue; }
+    const hip = row.int('HIP');
+    if (hip === null || hip <= 0) { droppedNoHip++; continue; }
 
     if (KNOWN_VISUAL_DOUBLE_HIPS.has(hip)) {
       viaOverride++;
       continue; // the curated list supplies this system at flag time
     }
 
-    const ccdm = (cols[ccdmIdx] ?? '').trim();
-    if (!ccdm) { droppedNoCcdm++; continue; }
+    const ccdm = row.text('CCDM');
+    if (ccdm === null) { droppedNoCcdm++; continue; }
 
-    const mf = (cols[mfIdx] ?? '').trim();
+    const mf = row.text('MultFlag');
     if (mf !== 'C' && mf !== 'G' && mf !== 'O') {
       droppedMultFlag++;
       continue;

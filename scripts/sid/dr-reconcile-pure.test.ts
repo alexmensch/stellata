@@ -62,6 +62,30 @@ describe('classifyDrTransition', () => {
   });
 });
 
+describe('readRiskIds', () => {
+  it('reads the request column as source_ids, naming file and line on a bad one', () => {
+    expect(readRiskIds('gaia_source_id\n12\n34\n', 'r.tsv')).toEqual([12n, 34n]);
+    expect(() => readRiskIds('gaia_source_id\n12\n\t\n-3\n', 'r.tsv')).toThrow(/^r\.tsv:4: gaia_source_id: "-3" is not a source_id/);
+    expect(() => readRiskIds('source_id\n12\n', 'r.tsv')).toThrow(/r\.tsv is missing required columns: gaia_source_id/);
+  });
+});
+
+describe('readNeighbourhoodRows', () => {
+  const header = 'dr3_source_id\tdr2_source_id\tangular_distance\tmagnitude_difference';
+
+  it('reads both id columns as source_ids', () => {
+    expect(readNeighbourhoodRows(`${header}\n12\t34\t1.5\t\n`, 'dr3_source_id', 'dr2_source_id', 'n.tsv'))
+      .toEqual([{ riskId: 12n, candidateId: 34n, angularDistanceMas: 1.5, magnitudeDifference: null }]);
+  });
+
+  it('names file, line and column on an id that is not a source_id', () => {
+    expect(() => readNeighbourhoodRows(`${header}\n12\t\t1.5\t\n`, 'dr3_source_id', 'dr2_source_id', 'n.tsv'))
+      .toThrow(/^n\.tsv:2: dr2_source_id: is empty/);
+    expect(() => readNeighbourhoodRows(`${header}\n1e3\t34\t1.5\t\n`, 'dr3_source_id', 'dr2_source_id', 'n.tsv'))
+      .toThrow(/^n\.tsv:2: dr3_source_id: "1e3" is not a source_id/);
+  });
+});
+
 // End-to-end pin of the DR2→DR3 dry run (/docs/sid.md#62-dr2dr3-dry-run-measured-2026-07-07) against the
 // committed request + neighbourhood snapshots. Self-skips where those LFS
 // files are pointer stubs (the bare CI test job); runs in the
@@ -72,11 +96,12 @@ const available = lfsContentReadable(REQUEST) && lfsContentReadable(NEIGHBOURHOO
 
 describe.skipIf(!available)('DR2→DR3 dry run (committed snapshot)', () => {
   it('reproduces the /docs/sid.md#62-dr2dr3-dry-run-measured-2026-07-07 classification exactly', () => {
-    const riskIds = readRiskIds(readFileSync(REQUEST, 'utf-8'));
+    const riskIds = readRiskIds(readFileSync(REQUEST, 'utf-8'), 'data/gaia/gaia_dr2_neighbourhood_request.tsv');
     const rows = readNeighbourhoodRows(
       readFileSync(NEIGHBOURHOOD, 'utf-8'),
       'dr3_source_id',
       'dr2_source_id',
+      'data/gaia/gaia_dr2_neighbourhood.tsv',
     );
     expect(riskIds).toHaveLength(5085);
     expect(rows).toHaveLength(5912);
