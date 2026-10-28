@@ -15,7 +15,7 @@ export default defineConfig(() => ({
   plugins: [
     figureSubstitution(figures),
     documentRoutingInDev(import.meta.dirname, figures),
-    indexCitations(import.meta.dirname),
+    indexCitations(),
   ],
   root: resolve(import.meta.dirname, 'src/client'),
   publicDir: resolve(import.meta.dirname, 'public'),

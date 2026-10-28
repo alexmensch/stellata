@@ -16,7 +16,7 @@ export function buildFigures(root: string): Figures {
     VITE_APP_VERSION: appVersion(root),
     VITE_STAR_COUNT: catalogueRecordCount(root).toLocaleString('en-US'),
     VITE_SOURCE_COUNT: String(creditedSourceCount(root)),
-    VITE_REFERENCE_COUNT: String(citedReferenceCount(root)),
+    VITE_REFERENCE_COUNT: String(citedReferenceCount()),
   };
 }
 

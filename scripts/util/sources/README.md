@@ -13,7 +13,10 @@ closure reaches is that step's data input set — derived, never listed
 scripts/util/sources/
   source.ts            defineSource, readArtifact / streamArtifact, and
                        openDeclared — the one presence check and the one
-                       place a declared file is opened.
+                       place a declared file is opened. Vite's native
+                       config loader reaches it (vite.env.ts →
+                       ../../site/), so its value imports name their
+                       `.ts` extension.
   declared-inputs.ts   declaredInputs(closure) — the sources and artifacts an
                        import closure reaches, by importing its declaring
                        modules; declaredFiles, their repo-relative files.

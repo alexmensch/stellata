@@ -5,7 +5,7 @@ import { resolve } from 'node:path';
 import { createInterface } from 'node:readline';
 
 import type { Artifact } from '../tsv/artifact-pure';
-import { lfsContentReadable, REPO_ROOT } from '../paths';
+import { lfsContentReadable, REPO_ROOT } from '../paths.ts';
 import type { RowKey } from './row-ref-pure';
 
 export interface Declared {

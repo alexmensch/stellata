@@ -56,7 +56,7 @@ export default defineConfig(() => ({
     figureSubstitution(figures),
     pageMetaFill(),
     captureCommentStrip(),
-    indexCitations(import.meta.dirname),
+    indexCitations(),
     markdownRenditions(),
   ],
   root: SITE_DIR,

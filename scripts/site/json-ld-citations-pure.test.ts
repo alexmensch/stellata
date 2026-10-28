@@ -107,7 +107,7 @@ describe('withIndexCitations', () => {
 });
 
 describe('the homepage', () => {
-  const entries = citationEntries(ROOT);
+  const entries = citationEntries();
   const hand = citations(HOME);
   const built = citations(withIndexCitations(HOME, entries));
 

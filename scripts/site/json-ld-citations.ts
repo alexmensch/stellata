@@ -6,10 +6,10 @@ import type { IndexEntry } from '../util/citation-index-pure.ts';
 import { withIndexCitations } from './json-ld-citations-pure.ts';
 import { citationEntries } from './site-metrics.ts';
 
-export function indexCitations(root: string): Plugin {
+export function indexCitations(): Plugin {
   let entries: IndexEntry[] | null = null;
   return {
     name: 'stellata:index-citations',
-    transformIndexHtml: (html) => withIndexCitations(html, (entries ??= citationEntries(root))),
+    transformIndexHtml: (html) => withIndexCitations(html, (entries ??= citationEntries())),
   };
 }

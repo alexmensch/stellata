@@ -6,10 +6,10 @@ import { join } from 'node:path';
 import { selectAll } from 'hast-util-select';
 
 import { catalogChunkFilename, readCatalogHeader } from '../catalog/record/catalog-pure.ts';
-import { type IndexEntry, parseIndex } from '../util/citation-index-pure.ts';
+import type { IndexEntry } from '../util/citation-index-pure.ts';
 import { parseHtml } from '../util/parse-html.ts';
+import { CITATION_INDEX } from './citation-index-source.ts';
 
-const CITATION_INDEX = 'data/papers/index.md';
 const APP_DOC = 'src/client/app/index.html';
 
 const COUNT_SNAPSHOT = 'scripts/catalog/build-catalog-expected.json';
@@ -43,10 +43,10 @@ export function creditedSourceCount(root: string): number {
   return credits.length;
 }
 
-export function citationEntries(root: string): IndexEntry[] {
-  const entries = parseIndex(readFileSync(join(root, CITATION_INDEX), 'utf8'));
+export function citationEntries(): IndexEntry[] {
+  const entries = CITATION_INDEX.read();
   if (entries.length === 0) {
-    throw new Error(`site metrics: no entries found in ${CITATION_INDEX}`);
+    throw new Error(`site metrics: no entries found in ${CITATION_INDEX.file}`);
   }
   return entries;
 }
@@ -59,6 +59,6 @@ export function appVersion(root: string): string {
   return version;
 }
 
-export function citedReferenceCount(root: string): number {
-  return citationEntries(root).length;
+export function citedReferenceCount(): number {
+  return citationEntries().length;
 }

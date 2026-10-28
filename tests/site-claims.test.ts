@@ -157,7 +157,7 @@ describe('the derivations behind those figures', () => {
   });
 
   it('counts the works the citation index records', () => {
-    expect(citedReferenceCount(ROOT)).toBe(200);
+    expect(citedReferenceCount()).toBe(200);
   });
 });
 
@@ -224,7 +224,7 @@ describe('the browser chrome takes the page ground from the token file', () => {
 const AUTHOR_YEARS = /(\p{Lu}[\p{L}'’-]+(?: \p{Lu}[\p{L}'’-]+)*) (\d{4}[a-z]?(?: & \d{4}[a-z]?)*)\b/gu;
 
 describe('every author-year the sources table names', () => {
-  const labels = new Set(citationEntries(ROOT).map((entry) => entry.label));
+  const labels = new Set(citationEntries().map((entry) => entry.label));
   const named = selectAll('table.sources tbody tr', HOME).flatMap((row) =>
     [...textOf(selectAll('td', row)[2]).matchAll(AUTHOR_YEARS)].flatMap(([, author, years]) =>
       years.split(' & ').map((year) => `${author} ${year}`),
