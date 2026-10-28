@@ -1,6 +1,7 @@
 // Cut multiples.tsv and the catalogue row-index map down to the golden's WDS systems. See README.md.
 
 import type { CatalogRowIndexMap } from '../../catalog/companions/record-index/record-index';
+import type { MultiplesRecord } from '../multiples-tsv';
 
 export const FIXTURE_SYSTEMS: readonly string[] = [
   '00003-4417', '00004+7305', '00005+2031', '00006-5306', '00008+1659', '00012+1357',
@@ -13,11 +14,11 @@ export function wdsIdOf(systemId: string): string {
   return systemId.slice(0, systemId.lastIndexOf('-'));
 }
 
-export function cutMultiples(tsv: string, systems: readonly string[]): string {
+export function cutMultiples(
+  records: readonly MultiplesRecord[], systems: readonly string[],
+): MultiplesRecord[] {
   const keep = new Set(systems);
-  const [header, ...rows] = tsv.split('\n').filter((line) => line !== '');
-  const kept = rows.filter((row) => keep.has(wdsIdOf(row.split('\t', 1)[0])));
-  return [header, ...kept].map((line) => `${line}\n`).join('');
+  return records.filter((r) => keep.has(wdsIdOf(r.systemId)));
 }
 
 function pick(table: Readonly<Record<string, number>>, keys: Iterable<string>): Record<string, number> {
@@ -29,14 +30,12 @@ function pick(table: Readonly<Record<string, number>>, keys: Iterable<string>): 
 }
 
 export function cutRowIndexMap(
-  map: CatalogRowIndexMap, fixtureTsv: string, systems: readonly string[],
+  map: CatalogRowIndexMap, records: readonly MultiplesRecord[], systems: readonly string[],
 ): CatalogRowIndexMap {
-  const [header, ...rows] = fixtureTsv.split('\n').filter((line) => line !== '').map((l) => l.split('\t'));
-  const column = (name: string) => rows.map((cells) => cells[header.indexOf(name)]).filter((c) => c !== '');
   const synthPrefixes = systems.map((wds) => `synth-${wds}-`);
   return {
-    byGaia: pick(map.byGaia, column('gaia_source_id')),
-    byHip: pick(map.byHip, column('hip')),
+    byGaia: pick(map.byGaia, records.flatMap((r) => (r.gaiaSourceId === null ? [] : [r.gaiaSourceId]))),
+    byHip: pick(map.byHip, records.flatMap((r) => (r.hip === null ? [] : [String(r.hip)]))),
     bySynth: pick(map.bySynth, Object.keys(map.bySynth).filter((k) => synthPrefixes.some((p) => k.startsWith(p)))),
   };
 }
