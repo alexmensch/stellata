@@ -41,12 +41,10 @@ import {
   lookupByRef,
 } from '../catalog-lookup';
 import {
-  nonEmpty,
-  parseFloatOrNull,
-  parseIntOrNull,
   parseOptionalRef,
   type RecordRef,
 } from '../parse/corpus-tsv';
+import { floatCell, intCell, textCell } from '../../util/tsv/table-pure';
 import { AU_PER_PC } from '../../../src/client/util/astronomy-constants';
 import { MULTIPLES_TSV, MULTIPLES_TSV_PATH } from '../../binaries/multiples-tsv';
 
@@ -192,8 +190,8 @@ function parseCompanions(cell: string): CorpusCompanion[] {
     }
     return {
       letter: letter.trim(),
-      hip: parseIntOrNull(hipStr),
-      gaiaSourceId: nonEmpty(gaiaStr),
+      hip: intCell(hipStr),
+      gaiaSourceId: textCell(gaiaStr),
       absmag,
       maxSepAuFromPrimary,
     };
@@ -212,41 +210,41 @@ function parseCorpusRows(text: string): CorpusRow[] {
   return rows.map((row, i) => {
     const name = (row.system_name ?? '').trim();
     const required = (col: string): number => {
-      const v = parseFloatOrNull(row[col] ?? '');
+      const v = floatCell(row[col] ?? '');
       if (v === null) {
         throw new Error(`row ${i + 1} (${name}): missing required numeric column "${col}"`);
       }
       return v;
     };
-    const varTypeRaw = nonEmpty(row.var_type);
+    const varTypeRaw = textCell(row.var_type);
     if (varTypeRaw !== null && !(varTypeRaw in VAR_TYPE_TOKENS)) {
       throw new Error(
         `row ${i + 1} (${name}): var_type "${varTypeRaw}" — expected one of ${Object.keys(VAR_TYPE_TOKENS).join(' / ')}`,
       );
     }
-    const tierRaw = nonEmpty(row.tier);
+    const tierRaw = textCell(row.tier);
     if (tierRaw === null || !(CORPUS_TIERS as readonly string[]).includes(tierRaw)) {
       throw new Error(
         `row ${i + 1} (${name}): tier "${row.tier ?? ''}" — expected one of ${CORPUS_TIERS.join(' / ')}`,
       );
     }
     return {
-      wdsId: nonEmpty(row.wds_id),
+      wdsId: textCell(row.wds_id),
       systemName: name,
-      primaryHip: parseIntOrNull(row.primary_hip),
-      primaryGaiaSourceId: nonEmpty(row.primary_gaia_source_id),
+      primaryHip: intCell(row.primary_hip),
+      primaryGaiaSourceId: textCell(row.primary_gaia_source_id),
       primaryDistancePc: required('primary_distance_pc'),
       primaryDistancePcErr: required('primary_distance_pc_err'),
       primaryAbsmag: required('primary_absmag'),
       primarySpectral: (row.primary_spectral ?? '').trim(),
-      primaryCi: parseFloatOrNull(row.primary_ci),
-      primaryRadiusRsun: parseFloatOrNull(row.primary_radius_rsun),
-      radiusRelTol: parseFloatOrNull(row.radius_rel_tol),
+      primaryCi: floatCell(row.primary_ci),
+      primaryRadiusRsun: floatCell(row.primary_radius_rsun),
+      radiusRelTol: floatCell(row.radius_rel_tol),
       companions: parseCompanions(row.companions ?? ''),
-      orbitalPeriodDays: parseFloatOrNull(row.orbital_period_days),
+      orbitalPeriodDays: floatCell(row.orbital_period_days),
       varType: varTypeRaw as CorpusRow['varType'],
-      varPeriodDays: parseFloatOrNull(row.var_period_days),
-      varAmpMag: parseFloatOrNull(row.var_amp_mag),
+      varPeriodDays: floatCell(row.var_period_days),
+      varAmpMag: floatCell(row.var_amp_mag),
       tier: tierRaw as CorpusTier,
       notesSource: (row.notes_source ?? '').trim(),
     };
@@ -274,7 +272,7 @@ function loadTopologySync(): TopologyRow[] {
     }
     const primaryRef = parseOptionalRef(row.primary_ref, name, 'primary_ref');
     const secondaryRef = parseOptionalRef(row.secondary_ref, name, 'secondary_ref');
-    const minSepPc = parseFloatOrNull(row.min_sep_pc);
+    const minSepPc = floatCell(row.min_sep_pc);
     const sepPinParts = [primaryRef, secondaryRef, minSepPc].filter(p => p !== null).length;
     if (sepPinParts !== 0 && sepPinParts !== 3) {
       throw new Error(`${name}: primary_ref, secondary_ref, min_sep_pc must be set together or not at all`);

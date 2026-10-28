@@ -19,7 +19,8 @@ import {
   lookupByName,
   lookupByRef,
 } from '../catalog-lookup';
-import { parseFloatOrNull, parseRef, type RecordRef } from '../parse/corpus-tsv';
+import { parseRef, type RecordRef } from '../parse/corpus-tsv';
+import { floatCell } from '../../util/tsv/table-pure';
 import {
   KM_S_TO_PC_YR,
   VELOCITY_SANITY_CEILING_PC_YR,
@@ -148,19 +149,19 @@ function loadCorpusSync(): CorpusPair[] {
     const pairName = (row.pair_name ?? '').trim();
     const name = pairName || `row ${i + 1}`;
     const required = (col: string): number => {
-      const v = parseFloatOrNull(row[col]);
+      const v = floatCell(row[col]);
       if (v === null) throw new Error(`${name}: missing required numeric column "${col}"`);
       return v;
     };
-    const xyzSepTolAu = parseFloatOrNull(row.xyz_sep_tol_au);
-    const xyzPaTolDeg = parseFloatOrNull(row.xyz_pa_tol_deg);
+    const xyzSepTolAu = floatCell(row.xyz_sep_tol_au);
+    const xyzPaTolDeg = floatCell(row.xyz_pa_tol_deg);
     if ((xyzSepTolAu === null) !== (xyzPaTolDeg === null)) {
       throw new Error(`${name}: xyz_sep_tol_au and xyz_pa_tol_deg must be set (or empty) together`);
     }
-    const orbitPDays = parseFloatOrNull(row.orbit_p_days);
-    const orbitTJd = parseFloatOrNull(row.orbit_t_jd);
-    const orbitSepTolArcsec = parseFloatOrNull(row.orbit_sep_tol_arcsec);
-    const orbitPaTolDeg = parseFloatOrNull(row.orbit_pa_tol_deg);
+    const orbitPDays = floatCell(row.orbit_p_days);
+    const orbitTJd = floatCell(row.orbit_t_jd);
+    const orbitSepTolArcsec = floatCell(row.orbit_sep_tol_arcsec);
+    const orbitPaTolDeg = floatCell(row.orbit_pa_tol_deg);
     if (orbitPDays !== null && orbitTJd === null) {
       throw new Error(`${name}: orbit_p_days requires orbit_t_jd`);
     }
