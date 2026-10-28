@@ -54,10 +54,6 @@ scripts/catalog/parse/
                                   system-pair-topology.tsv). RECORD_REF_KINDS
                                   is the one list of ways a corpus row
                                   addresses a record — hip / gaia / name / hd.
-                                  Its headerIndex / dataRows serve only the
-                                  self-written tables not yet read through
-                                  their artifact codec; an external table goes
-                                  through readTable (README.md#tsv-header-resolution).
   star-fixture.ts                 Test-only star-record builder.
   spectral-encoding-parity.test.ts
                                   Pins the spectral encode/decode round-trip
