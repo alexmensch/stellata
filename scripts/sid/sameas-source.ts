@@ -3,7 +3,7 @@
 import { readdirSync } from 'node:fs';
 import { dirname } from 'node:path';
 
-import { defineSource, openDeclared, type Declared, type SourceInput } from '../util/sources/source';
+import { defineSource, type Declared, type SourceInput } from '../util/sources/source';
 import { parseSameasTsv } from './sid-pure';
 
 export const SAMEAS_OVERRIDES = defineSource({
@@ -26,5 +26,5 @@ export const SAMEAS_BRIDGES = defineSource({
   file: `${BRIDGES_DIR}/README.md`,
   hint: BRIDGE_HINT,
   members: bridgeFiles,
-  parse: (readme) => bridgeFiles(readme).flatMap((bridge) => parseSameasTsv(openDeclared(bridge).text(), bridge)),
+  parse: (readme) => readme.members.flatMap((bridge) => parseSameasTsv(bridge.text(), bridge)),
 });

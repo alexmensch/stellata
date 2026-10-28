@@ -70,4 +70,16 @@ describe('source declarations', () => {
     }
     expect(misplaced).toEqual([]);
   });
+
+  it('opens a declared file only inside the sources core', () => {
+    const openers: string[] = [];
+    for (const root of ['scripts', 'src']) {
+      for (const file of walkFiles(resolve(REPO_ROOT, root), { include: isProductionTs })) {
+        const rel = file.slice(REPO_ROOT.length + 1);
+        if (rel === 'scripts/util/sources/source.ts') continue;
+        if (/\bopenDeclared\(/.test(readFileSync(file, 'utf8'))) openers.push(rel);
+      }
+    }
+    expect(openers).toEqual([]);
+  });
 });

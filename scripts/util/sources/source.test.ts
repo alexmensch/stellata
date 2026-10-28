@@ -51,6 +51,19 @@ describe('defineSource', () => {
     expect(() => src.read()).toThrow(/m2\.bin is missing/);
   });
 
+  it('hands the parse its opened members, and refuses an undeclared one', () => {
+    const extra = file('extra.txt', 'x\n');
+    const src = defineSource({
+      file: file('main.txt', 'm\n'),
+      hint: 'h',
+      members: [{ file: extra, hint: 'h' }],
+      parse: (input) => [input.members.map((m) => m.text()), input.member(extra).file],
+    });
+    expect(src.read()).toEqual([['x\n'], extra]);
+    const stray = defineSource({ file: file('main2.txt', 'm\n'), hint: 'h', parse: (input) => input.member('nope') });
+    expect(() => stray.read()).toThrow(/nope is not a declared member/);
+  });
+
   it('lists fixed members without opening the declared file', () => {
     const src = defineSource({
       file: relative(REPO_ROOT, join(dir, 'pointer-only.tsv')),

@@ -1,6 +1,6 @@
 // IV/27A with its curated corrections applied, declared. See README.md#one-designation-two-hd-numbers.
 
-import { defineSource, openDeclared, type Declared } from '../../util/sources/source';
+import { defineSource, type Declared } from '../../util/sources/source';
 import {
   applyCrossIndexCorrections,
   parseCrossIndexCorrectionsTsv,
@@ -16,9 +16,12 @@ export const CROSS_INDEX = defineSource({
   file: 'data/classic-ids/cross_index.tsv',
   hint: 'Refresh the CDS inputs with `pnpm run refresh:classic-ids`.',
   members: [CORRECTIONS],
-  parse: (input) => applyCrossIndexCorrections(
-    parseCrossIndexTsv(input.text(), input),
-    parseCrossIndexCorrectionsTsv(openDeclared(CORRECTIONS).text(), CORRECTIONS),
-    CORRECTIONS,
-  ),
+  parse: (input) => {
+    const [corrections] = input.members;
+    return applyCrossIndexCorrections(
+      parseCrossIndexTsv(input.text(), input),
+      parseCrossIndexCorrectionsTsv(corrections.text(), corrections),
+      corrections,
+    );
+  },
 });

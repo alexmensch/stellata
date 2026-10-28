@@ -36,7 +36,7 @@ export function mirrorSource(spec: MirrorSourceSpec): Source<MirroredFolder> {
     file: `${spec.dir}/README.md`,
     hint: spec.hint,
     members: files,
-    parse: () => ({ files: files(), isPublicAsset: spec.isPublicAsset }),
+    parse: (input) => ({ files: input.members, isPublicAsset: spec.isPublicAsset }),
   });
 }
 

@@ -22,8 +22,15 @@ export interface SourceInput extends Declared {
   lines(onLine: (line: string) => void): Promise<void>;
 }
 
+/** The declared file plus every member, each already presence-checked. */
+export interface ParseInput extends SourceInput {
+  readonly members: readonly SourceInput[];
+  /** Throws for a file `members` did not list. */
+  member(file: string): SourceInput;
+}
+
 export interface SourceSpec<T, A extends unknown[], K> extends Declared {
-  parse(input: SourceInput, ...args: A): T;
+  parse(input: ParseInput, ...args: A): T;
   readonly members?: readonly Declared[] | ((input: SourceInput) => Declared[]);
   readonly rowKey?: RowKey<K>;
 }
@@ -75,8 +82,13 @@ export function defineSource<T, A extends unknown[] = [], K = never>(
     rowKey: spec.rowKey,
     read: (...args) => {
       const input = openDeclared(spec);
-      for (const member of memberList(() => input)) openDeclared(member);
-      return spec.parse(input, ...args);
+      const opened = memberList(() => input).map(openDeclared);
+      const member = (file: string): SourceInput => {
+        const hit = opened.find((m) => m.file === file);
+        if (hit === undefined) throw new Error(`${spec.file}: ${file} is not a declared member`);
+        return hit;
+      };
+      return spec.parse({ ...input, members: opened, member }, ...args);
     },
     files: () => [spec.file, ...memberList(() => openDeclared(spec)).map((m) => m.file)],
   };
