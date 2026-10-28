@@ -93,6 +93,7 @@ describe.skipIf(!available)('DR2→DR3 dry run (committed snapshot)', () => {
       readFileSync(NEIGHBOURHOOD, 'utf-8'),
       'dr3_source_id',
       'dr2_source_id',
+      'data/gaia/gaia_dr2_neighbourhood.tsv',
     );
     expect(riskIds).toHaveLength(5085);
     expect(rows).toHaveLength(5912);

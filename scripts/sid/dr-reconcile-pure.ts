@@ -62,7 +62,7 @@ export function readNeighbourhoodRows(
   text: string,
   riskCol: string,
   candidateCol: string,
-  file = 'data/gaia/gaia_dr2_neighbourhood.tsv',
+  file: string,
 ): NeighbourhoodRow[] {
   const spec = {
     file,
