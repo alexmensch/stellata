@@ -2,26 +2,32 @@
 // — the first-order tier under HIP2 in the direction, PM and V cascades (/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers).
 // See data/tycho2/README.md.
 
-import { dataRows, parseFloatOrNull, parseIntOrNull } from './parse/corpus-tsv';
+import { readTable, type TableSpec } from '../util/tsv/table-pure';
 
-const MAIN_LABEL = 'data/tycho2/tycho2_main.tsv';
-const SUPPL1_LABEL = 'data/tycho2/tycho2_suppl1.tsv';
 const REFRESH_HINT = 'Re-run `pnpm run refresh:tycho2`.';
 
 /** `pflag='P'` on the main table: the mean solution is an unresolved double's
  *  photocentre rather than one star's place. */
 const MAIN_PFLAG_PHOTOCENTRE = 'P';
 
-const MAIN_COLUMNS = [
-  'tyc1', 'tyc2', 'tyc3', 'pflag',
-  'ra_mdeg', 'de_mdeg', 'pm_ra', 'pm_de',
-  'ra_icrs', 'de_icrs', 'bt_mag', 'vt_mag', 'hip',
-] as const;
+const MAIN = {
+  file: 'data/tycho2/tycho2_main.tsv',
+  columns: [
+    'tyc1', 'tyc2', 'tyc3', 'pflag',
+    'ra_mdeg', 'de_mdeg', 'pm_ra', 'pm_de',
+    'ra_icrs', 'de_icrs', 'bt_mag', 'vt_mag', 'hip',
+  ] as const,
+  hint: REFRESH_HINT,
+} satisfies TableSpec<string>;
 
-const SUPPL1_COLUMNS = [
-  'tyc1', 'tyc2', 'tyc3',
-  'ra_icrs', 'de_icrs', 'pm_ra', 'pm_de', 'bt_mag', 'vt_mag', 'hip',
-] as const;
+const SUPPL1 = {
+  file: 'data/tycho2/tycho2_suppl1.tsv',
+  columns: [
+    'tyc1', 'tyc2', 'tyc3',
+    'ra_icrs', 'de_icrs', 'pm_ra', 'pm_de', 'bt_mag', 'vt_mag', 'hip',
+  ] as const,
+  hint: REFRESH_HINT,
+} satisfies TableSpec<string>;
 
 /** The epoch `ra_mdeg` / `de_mdeg` is stated at.
  *
@@ -95,41 +101,41 @@ function icrsPosition(
 export function parseTycho2Tsvs(mainText: string, suppl1Text: string): Map<string, Tycho2Row> {
   const out = new Map<string, Tycho2Row>();
 
-  for (const { cells, idx } of dataRows(mainText, MAIN_COLUMNS, MAIN_LABEL, REFRESH_HINT)) {
+  for (const row of readTable(MAIN, mainText)) {
     const position = meanPosition(
-      parseFloatOrNull(cells[idx.ra_mdeg]), parseFloatOrNull(cells[idx.de_mdeg]),
+      row.float('ra_mdeg'), row.float('de_mdeg'),
     ) ?? icrsPosition(
-      parseFloatOrNull(cells[idx.ra_icrs]), parseFloatOrNull(cells[idx.de_icrs]),
+      row.float('ra_icrs'), row.float('de_icrs'),
     );
     if (position === null) continue;
-    out.set(tycho2Key(cells[idx.tyc1] ?? '', cells[idx.tyc2] ?? '', cells[idx.tyc3] ?? ''), {
+    out.set(tycho2Key(row.raw('tyc1'), row.raw('tyc2'), row.raw('tyc3')), {
       ...position,
-      pmRaMasyr: parseFloatOrNull(cells[idx.pm_ra]),
-      pmDecMasyr: parseFloatOrNull(cells[idx.pm_de]),
-      btMag: parseFloatOrNull(cells[idx.bt_mag]),
-      vtMag: parseFloatOrNull(cells[idx.vt_mag]),
-      isPhotocentre: (cells[idx.pflag] ?? '').trim() === MAIN_PFLAG_PHOTOCENTRE,
-      hip: parseIntOrNull(cells[idx.hip]),
+      pmRaMasyr: row.float('pm_ra'),
+      pmDecMasyr: row.float('pm_de'),
+      btMag: row.float('bt_mag'),
+      vtMag: row.float('vt_mag'),
+      isPhotocentre: row.text('pflag') === MAIN_PFLAG_PHOTOCENTRE,
+      hip: row.int('hip'),
     });
   }
 
   // Supplement 1 carries Tycho-1 and Hipparcos stars at an observed position
   // only, and states no photocentre flag.
-  for (const { cells, idx } of dataRows(suppl1Text, SUPPL1_COLUMNS, SUPPL1_LABEL, REFRESH_HINT)) {
-    const key = tycho2Key(cells[idx.tyc1] ?? '', cells[idx.tyc2] ?? '', cells[idx.tyc3] ?? '');
+  for (const row of readTable(SUPPL1, suppl1Text)) {
+    const key = tycho2Key(row.raw('tyc1'), row.raw('tyc2'), row.raw('tyc3'));
     if (out.has(key)) continue;
     const position = icrsPosition(
-      parseFloatOrNull(cells[idx.ra_icrs]), parseFloatOrNull(cells[idx.de_icrs]),
+      row.float('ra_icrs'), row.float('de_icrs'),
     );
     if (position === null) continue;
     out.set(key, {
       ...position,
-      pmRaMasyr: parseFloatOrNull(cells[idx.pm_ra]),
-      pmDecMasyr: parseFloatOrNull(cells[idx.pm_de]),
-      btMag: parseFloatOrNull(cells[idx.bt_mag]),
-      vtMag: parseFloatOrNull(cells[idx.vt_mag]),
+      pmRaMasyr: row.float('pm_ra'),
+      pmDecMasyr: row.float('pm_de'),
+      btMag: row.float('bt_mag'),
+      vtMag: row.float('vt_mag'),
       isPhotocentre: false,
-      hip: parseIntOrNull(cells[idx.hip]),
+      hip: row.int('hip'),
     });
   }
 
