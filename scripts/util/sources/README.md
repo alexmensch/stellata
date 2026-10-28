@@ -40,14 +40,21 @@ scripts/util/sources/
   own, checked and derived like the declared file. A fixed list (Tycho-2's
   supplement, the cross index's and WGSN faints' curated corrections) is
   listed without opening anything. A function of the declared file's content
-  (the dust grid's chunks, named by its manifest; the SID bridges folder)
-  opens that file just to list, so only a file outside LFS may use it: the
+  (the dust grid's chunks, named by its manifest) opens that file just to list, so only a file outside LFS may use it: the
   bare CI test job derives input sets over LFS pointer stubs. `read` opens
   every member and hands them to the parse as `input.members` (in declared
   order) and `input.member(file)`, which refuses a file the list did not
   name; no parse opens a file itself, so one it reads cannot escape the
   presence check or the input set. `tests/source-declarations.test.ts` fails
   on an `openDeclared` call outside `source.ts`.
+
+**A folder source** (`defineFolder({dir, hint, include, subDirs?, parse})`)
+is a folder whose present files are the input: the SID bridges and the four
+mirrored data folders. Its presence check is that the folder exists; its
+members are the listing (`include` over `dir` and each `subDirs` folder),
+each presence-checked, and `files()` is that listing alone — no README or
+other anchor file joins the input set, and a file added to the folder
+changes it.
 
 `source.read(...)` and `readArtifact(artifact)` / `artifactRows(artifact)`
 (a generator) / `streamArtifact(artifact, onRecord)` are the reads;

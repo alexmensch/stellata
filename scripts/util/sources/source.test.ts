@@ -5,7 +5,7 @@ import { afterAll, describe, expect, it } from 'vitest';
 import { defineArtifact } from '../tsv/artifact-pure';
 import { REPO_ROOT } from '../paths';
 import { sourceRowRef, sourceRowRefText } from './row-ref-pure';
-import { defineSource, readArtifact, streamArtifact } from './source';
+import { defineFolder, defineSource, readArtifact, streamArtifact } from './source';
 
 mkdirSync(join(REPO_ROOT, 'build'), { recursive: true });
 const dir = mkdtempSync(join(REPO_ROOT, 'build', 'source-test-'));
@@ -85,6 +85,35 @@ describe('defineSource', () => {
       },
     });
     expect(await src.read()).toEqual(['a', 'b']);
+  });
+});
+
+describe('defineFolder', () => {
+  it('lists the included files of the folder and its subfolders, and reads them', () => {
+    mkdirSync(join(dir, 'fold', 'sub'), { recursive: true });
+    file('fold/README.md', 'r');
+    file('fold/a.tsv', 'A');
+    file('fold/sub/b.tsv', 'B');
+    const rel = relative(REPO_ROOT, join(dir, 'fold'));
+    const src = defineFolder({
+      dir: rel,
+      hint: 'h',
+      include: (name) => name.endsWith('.tsv'),
+      subDirs: ['sub'],
+      parse: (folder) => folder.members.map((m) => m.text()),
+    });
+    expect(src.files()).toEqual([`${rel}/a.tsv`, `${rel}/sub/b.tsv`]);
+    expect(src.read()).toEqual(['A', 'B']);
+  });
+
+  it('fails a missing folder with its hint', () => {
+    const src = defineFolder({
+      dir: relative(REPO_ROOT, join(dir, 'no-such-folder')),
+      hint: 'Restore it.',
+      include: () => true,
+      parse: () => 0,
+    });
+    expect(() => src.read()).toThrow(/no-such-folder\/ is missing\. Restore it\./);
   });
 });
 

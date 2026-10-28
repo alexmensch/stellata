@@ -9,5 +9,5 @@ and every SID read takes the union of that file and every bridge here as the
 stored same-as edges ([§ 4.1](/docs/sid.md#41-same-as-equivalence-graph)).
 
 The folder holds no bridge until the first release transition; this README
-keeps it present, so the readers list it as a required input and a new
-bridge file changes their input set.
+keeps it present, since the readers declare the folder itself as a required
+input (`SAMEAS_BRIDGES`) and a new bridge file changes their input set.

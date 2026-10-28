@@ -182,9 +182,9 @@ same thing — single-use helpers stay with their consumer.
 - `mirror-to-public.ts` — `mirrorDataFolder(folder, spec)`, the one
   `data/<folder>/` → `public/<folder>/` copy used by
   `scripts/{dust,textures,probes,ephemerides}/sync-*.ts`. `mirrorSource`
-  declares the mirrored folder as a source (`sources/`): its `README.md` is
-  the declared file and every allowlisted file a member, so each is
-  presence-checked and a file added to the folder joins the step's inputs.
+  declares the mirrored folder as a folder source (`sources/`): every
+  allowlisted file is a member, so each is presence-checked and a file
+  added to the folder joins the step's inputs.
   Each folder's constant lives in its `*-mirror-source.ts`. A missing
   source folder or an unsmudged LFS file fails the sync rather than
   shipping an empty or stub layer. Mtime+size skip for up-to-date files; **allowlist**, never denylist, because Vite copies

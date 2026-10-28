@@ -32,9 +32,9 @@ ledger-tsv.ts (+ test)    LEDGER — ledger.tsv's artifact codec, plus
 registry-source.ts        RETIREMENTS, REINSTATEMENTS — the hand-appended
                           registry files, declared (../util/sources/).
 sameas-source.ts          SAMEAS_OVERRIDES and SAMEAS_BRIDGES: the curated
-                          edges, and every data/sid/bridges/*.tsv as members
-                          of the folder's README, so a new bridge changes
-                          a reader's input set.
+                          edges, and data/sid/bridges/ as a folder source
+                          whose *.tsv files are its members, so a new
+                          bridge changes a reader's input set.
 object-mints-source.ts    SOL_OBJECTS, SHELL_OBJECTS — the sol: / shell:
                           mint lists, declared.
 stored-edges.ts           loadStoredEdges: overrides plus bridges, the

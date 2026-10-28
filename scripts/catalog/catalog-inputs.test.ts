@@ -34,6 +34,12 @@ describe('catalogInputPaths', () => {
     expect(inputs).toContain(abs('data/gcvs/crossid.txt'));
   });
 
+  it('keys the SID bridges folder by its listing, never its README', () => {
+    expect(inputs).not.toContain(abs('data/sid/bridges/README.md'));
+    expect([...inputs].filter((p) => p.startsWith(abs('data/sid/bridges/')))
+      .every((p) => p.endsWith('.tsv'))).toBe(true);
+  });
+
   it('leaves out the outputs it writes and the files it never reads', () => {
     expect(inputs).not.toContain(abs('data/membership/parked-ledger.tsv'));
     expect(inputs).not.toContain(abs('data/athyg/simbad_sourced_distances.tsv'));

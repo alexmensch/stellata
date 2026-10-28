@@ -5,7 +5,7 @@ import { existsSync, mkdirSync, readdirSync, statSync, copyFileSync, rmSync } fr
 import { basename, resolve } from 'node:path';
 
 import { REPO_ROOT } from './paths';
-import { defineSource, type Declared, type Source } from './sources/source';
+import { defineFolder, type Declared, type Source } from './sources/source';
 
 export interface MirroredFolder {
   readonly files: readonly Declared[];
@@ -13,8 +13,8 @@ export interface MirroredFolder {
 }
 
 export interface MirrorSourceSpec {
-  /** Repo-relative folder; its README.md is the declared file, every
-   *  allowlisted file in it (and in `flattenSubDirs`) a member. */
+  /** Repo-relative folder; every allowlisted file in it (and in
+   *  `flattenSubDirs`) is a member. */
   readonly dir: string;
   readonly hint: string;
   readonly isPublicAsset: (name: string) => boolean;
@@ -28,15 +28,12 @@ export interface MirrorSourceSpec {
 }
 
 export function mirrorSource(spec: MirrorSourceSpec): Source<MirroredFolder> {
-  const files = (): Declared[] => [spec.dir, ...(spec.flattenSubDirs ?? []).map((d) => `${spec.dir}/${d}`)]
-    .flatMap((dir) => readdirSync(resolve(REPO_ROOT, dir))
-      .filter((name) => spec.isPublicAsset(name) && statSync(resolve(REPO_ROOT, dir, name)).isFile())
-      .map((name) => ({ file: `${dir}/${name}`, hint: spec.hint })));
-  return defineSource({
-    file: `${spec.dir}/README.md`,
+  return defineFolder({
+    dir: spec.dir,
     hint: spec.hint,
-    members: files,
-    parse: (input) => ({ files: input.members, isPublicAsset: spec.isPublicAsset }),
+    include: spec.isPublicAsset,
+    subDirs: spec.flattenSubDirs,
+    parse: (folder) => ({ files: folder.members, isPublicAsset: spec.isPublicAsset }),
   });
 }
 

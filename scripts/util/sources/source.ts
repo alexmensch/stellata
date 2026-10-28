@@ -1,6 +1,6 @@
 // Declared data inputs and their reads. See README.md.
 
-import { createReadStream, readFileSync } from 'node:fs';
+import { createReadStream, readdirSync, readFileSync, statSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { createInterface } from 'node:readline';
 
@@ -91,6 +91,45 @@ export function defineSource<T, A extends unknown[] = [], K = never>(
       return spec.parse({ ...input, members: opened, member }, ...args);
     },
     files: () => [spec.file, ...memberList(() => openDeclared(spec)).map((m) => m.file)],
+  };
+}
+
+export interface FolderInput extends Declared {
+  readonly path: string;
+  readonly members: readonly SourceInput[];
+}
+
+export interface FolderSpec<T, A extends unknown[]> {
+  /** Repo-relative folder. */
+  readonly dir: string;
+  readonly hint: string;
+  /** Which entries of `dir` (and of each `subDirs` folder) are members. */
+  include(name: string): boolean;
+  readonly subDirs?: readonly string[];
+  parse(folder: FolderInput, ...args: A): T;
+}
+
+export function defineFolder<T, A extends unknown[] = []>(spec: FolderSpec<T, A>): Source<T, A> {
+  const folder: Declared = { file: spec.dir, hint: spec.hint };
+  const listing = (): Declared[] => {
+    const path = resolve(REPO_ROOT, spec.dir);
+    if (!statSync(path, { throwIfNoEntry: false })?.isDirectory()) {
+      throw new Error(`${spec.dir}/ is missing. ${spec.hint}`);
+    }
+    return [spec.dir, ...(spec.subDirs ?? []).map((d) => `${spec.dir}/${d}`)].flatMap((dir) =>
+      readdirSync(resolve(REPO_ROOT, dir))
+        .sort()
+        .filter((name) => spec.include(name) && statSync(resolve(REPO_ROOT, dir, name)).isFile())
+        .map((name) => ({ file: `${dir}/${name}`, hint: spec.hint })));
+  };
+  return {
+    kind: 'source',
+    ...folder,
+    read: (...args) => spec.parse(
+      { ...folder, path: resolve(REPO_ROOT, spec.dir), members: listing().map(openDeclared) },
+      ...args,
+    ),
+    files: () => listing().map((m) => m.file),
   };
 }
 

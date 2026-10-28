@@ -1,9 +1,6 @@
 // The stored same-as edges, declared: the curated overrides and every committed bridge.
 
-import { readdirSync } from 'node:fs';
-import { dirname } from 'node:path';
-
-import { defineSource, type Declared, type SourceInput } from '../util/sources/source';
+import { defineFolder, defineSource } from '../util/sources/source';
 import { parseSameasTsv } from './sid-pure';
 
 export const SAMEAS_OVERRIDES = defineSource({
@@ -12,19 +9,9 @@ export const SAMEAS_OVERRIDES = defineSource({
   parse: (input) => parseSameasTsv(input.text(), input),
 });
 
-const BRIDGES_DIR = 'data/sid/bridges';
-const BRIDGE_HINT = 'Bridges are reviewed and committed per Gaia release (/docs/sid.md#6-gaia-data-release-reconciliation).';
-
-function bridgeFiles(readme: SourceInput): Declared[] {
-  return readdirSync(dirname(readme.path))
-    .sort()
-    .filter((name) => name.endsWith('.tsv'))
-    .map((name) => ({ file: `${BRIDGES_DIR}/${name}`, hint: BRIDGE_HINT }));
-}
-
-export const SAMEAS_BRIDGES = defineSource({
-  file: `${BRIDGES_DIR}/README.md`,
-  hint: BRIDGE_HINT,
-  members: bridgeFiles,
-  parse: (readme) => readme.members.flatMap((bridge) => parseSameasTsv(bridge.text(), bridge)),
+export const SAMEAS_BRIDGES = defineFolder({
+  dir: 'data/sid/bridges',
+  hint: 'Bridges are reviewed and committed per Gaia release (/docs/sid.md#6-gaia-data-release-reconciliation).',
+  include: (name) => name.endsWith('.tsv'),
+  parse: (folder) => folder.members.flatMap((bridge) => parseSameasTsv(bridge.text(), bridge)),
 });
