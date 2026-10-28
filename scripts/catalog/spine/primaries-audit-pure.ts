@@ -12,6 +12,7 @@ import type {
 import { lookupGliese, type GlieseIndex } from '../gliese-parse';
 import { intCell } from '../../util/tsv/table-pure';
 import type { Tycho2Row } from '../tycho2-parse';
+import type { SimbadXids } from '../spectral/spectral-resolve';
 import type { SpineRow } from './inherited-spine-pure';
 
 /** The HD number above which AT-HYG's Tycho-2 → HD link took effect. Below it
@@ -39,14 +40,6 @@ export interface WgsnKeys {
   /** Flamsteed numbers WGSN publishes, by the star's own HD / HIP. */
   flamByHd: ReadonlyMap<number, ReadonlySet<number>>;
   flamByHip: ReadonlyMap<number, ReadonlySet<number>>;
-}
-
-/** The designations SIMBAD's `ident` table hangs on the object it holds under
- *  a Gaia DR3 source_id — the frozen sp_type pull's cross-ID columns. */
-export interface SimbadXids {
-  hip: number | null;
-  tyc: string | null;
-  gj: string | null;
 }
 
 /** The tables a Gaia binding is derived from — the four sources

@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest';
 
 import { bindingEvidence, parseSimbadWdsXidsTsv } from './binding-gate-pure';
 import { cns5Row } from '../../classic-ids/cns5-fixture';
-import { indexCns5, type BindingTables, type SimbadXids } from '../../spine/primaries-audit-pure';
+import { indexCns5, type BindingTables } from '../../spine/primaries-audit-pure';
+import type { SimbadXids } from '../../spectral/spectral-resolve';
 import {
   bindingCandidates,
   bindingClassOf,

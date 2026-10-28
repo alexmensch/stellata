@@ -52,8 +52,8 @@ import {
   type PrimaryIndex,
   type PrimaryTables,
   type RowAttestation,
-  type SimbadXids,
 } from '../spine/primaries-audit-pure';
+import type { SimbadXids } from '../spectral/spectral-resolve';
 import {
   UnionFind,
   compareDesignations,

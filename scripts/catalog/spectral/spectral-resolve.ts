@@ -11,7 +11,6 @@ import {
   type SimbadNamespaceIndex,
   type SimbadRecordKeys,
 } from '../record/catalog-pure';
-import type { SimbadXids } from '../spine/primaries-audit-pure';
 import type { Declared } from '../../util/sources/source';
 import { readTable } from '../../util/tsv/table-pure';
 import {
@@ -29,6 +28,14 @@ import {
  *  (separate column — never bleeds into sp_type). Both carried for
  *  display + future filtering, but the spectral resolver consumes only
  *  spType. */
+/** The designations SIMBAD's `ident` table hangs on the object it holds under
+ *  a Gaia DR3 source_id — the frozen sp_type pull's cross-ID columns. */
+export interface SimbadXids {
+  hip: number | null;
+  tyc: string | null;
+  gj: string | null;
+}
+
 export interface SimbadSpectralRow {
   spType: string | null;
   spQual: string | null;

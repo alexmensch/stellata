@@ -19,8 +19,8 @@ import {
   glKeyForms,
   glKeyVariants,
   type BindingTables,
-  type SimbadXids,
 } from '../../spine/primaries-audit-pure';
+import type { SimbadXids } from '../../spectral/spectral-resolve';
 
 /** Precedence order: the record's own TYC through the Tycho-2 best-neighbour
  *  walk, its HIP through the Hipparcos-2 walk, CNS5's EDR3 id on its GJ, then
