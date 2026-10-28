@@ -24,7 +24,7 @@ export interface SourceInput {
 
 export interface SourceSpec<T, A extends unknown[], K> extends Declared {
   parse(input: SourceInput, ...args: A): T;
-  members?(input: SourceInput): string[];
+  members?(input: SourceInput): Declared[];
   readonly rowKey?: RowKey<K>;
 }
 
@@ -70,15 +70,19 @@ export function defineSource<T, A extends unknown[] = [], K = never>(
     rowKey: spec.rowKey,
     read: (...args) => {
       const input = openDeclared(spec);
-      for (const member of spec.members?.(input) ?? []) openDeclared({ file: member, hint: spec.hint });
+      for (const member of spec.members?.(input) ?? []) openDeclared(member);
       return spec.parse(input, ...args);
     },
-    files: () => (spec.members ? [spec.file, ...spec.members(openDeclared(spec))] : [spec.file]),
+    files: () => [spec.file, ...(spec.members?.(openDeclared(spec)) ?? []).map((m) => m.file)],
   };
 }
 
 export function readArtifact<C extends string, R, K>(artifact: Artifact<C, R, K>): R[] {
   return artifact.parse(openDeclared(artifact).text());
+}
+
+export function artifactRows<C extends string, R, K>(artifact: Artifact<C, R, K>): Generator<R> {
+  return artifact.rows(openDeclared(artifact).text());
 }
 
 export async function streamArtifact<C extends string, R, K>(

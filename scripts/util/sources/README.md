@@ -32,12 +32,13 @@ scripts/util/sources/
   `input.bytes()`, or `input.lines(onLine)` for a table too large to hold as
   one string ([Streaming a committed table](../../catalog/parse/README.md#streaming-a-committed-table)).
   Extra arguments (a keep-set) pass through `read(...args)`.
-- `members(input)` lists further files the parse opens, named by the declared
-  one: the dust grid's chunks, listed by its manifest. They are checked and
+- `members(input)` lists further files the parse opens, each a `{file, hint}`
+  of its own: the dust grid's chunks, listed by its manifest; Tycho-2's
+  supplement; the cross index's curated corrections. They are checked and
   derived like the declared file.
 
-`source.read(...)` and `readArtifact(artifact)` / `streamArtifact(artifact,
-onRecord)` are the reads.
+`source.read(...)` and `readArtifact(artifact)` / `artifactRows(artifact)`
+(a generator) / `streamArtifact(artifact, onRecord)` are the reads.
 
 **Every source is required.** A missing file and an unsmudged LFS pointer are
 one failure — the content is not on disk — and `read` throws naming the file,

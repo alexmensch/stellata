@@ -44,7 +44,7 @@ describe('defineSource', () => {
     const src = defineSource({
       file: manifest,
       hint: 'h',
-      members: (input) => input.text().trim().split('\n'),
+      members: (input) => input.text().trim().split('\n').map((f) => ({ file: f, hint: 'h' })),
       parse: () => 0,
     });
     expect(src.files()).toEqual([manifest, member, relative(REPO_ROOT, join(dir, 'm2.bin'))]);
