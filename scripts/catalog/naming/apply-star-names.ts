@@ -6,6 +6,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 import { REPO_ROOT } from '../../util/paths';
+import { readTable, type TableSpec } from '../../util/tsv/table-pure';
 import { FLAG_IS_SOL, NO_CONSTELLATION_INDEX } from '../record/catalog-pure';
 import { CON_INDEX } from '../parse/constellations/constellations';
 import { foldNameKey } from './wgsn-normalise-pure';
@@ -24,7 +25,12 @@ const DATA = resolve(REPO_ROOT, 'data/iau-wgsn');
 const WGSN_NAMES = resolve(DATA, 'wgsn_names.tsv');
 const WGSN_DESIGNATIONS = resolve(DATA, 'wgsn_designations.tsv');
 const PROPER_DISPOSITIONS = resolve(DATA, 'athyg_proper_dispositions.tsv');
-const OVERRIDES = resolve(REPO_ROOT, 'data/naming/name_overrides.tsv');
+const NAME_OVERRIDES = {
+  file: 'data/naming/name_overrides.tsv',
+  columns: ['sid', 'display_name'] as const,
+  hint: 'It is hand-curated: restore the sid and display_name columns.',
+} satisfies TableSpec<string>;
+const OVERRIDES = resolve(REPO_ROOT, NAME_OVERRIDES.file);
 
 /** Every file loadStarNamingInputs and loadNameOverrides read. */
 export const STAR_NAMING_INPUT_PATHS: readonly string[] = [
@@ -52,20 +58,11 @@ export function loadStarNamingInputs(): StarNamingInputs {
  *  to aliases. */
 export function loadNameOverrides(): Map<number, string> {
   const out = new Map<number, string>();
-  const lines = readFileSync(OVERRIDES, 'utf8').split('\n');
-  const header = lines[0].split('\t');
-  const sidIdx = header.indexOf('sid');
-  const nameIdx = header.indexOf('display_name');
-  if (sidIdx < 0 || nameIdx < 0) {
-    throw new Error('data/naming/name_overrides.tsv needs sid + display_name columns');
-  }
-  for (const line of lines.slice(1)) {
-    if (line.trim() === '') continue;
-    const cells = line.split('\t');
-    const sid = Number(cells[sidIdx]);
-    const name = (cells[nameIdx] ?? '').trim();
-    if (!Number.isInteger(sid) || sid <= 0 || name === '') {
-      throw new Error(`data/naming/name_overrides.tsv: unusable row "${line}"`);
+  for (const row of readTable(NAME_OVERRIDES, readFileSync(OVERRIDES, 'utf8'))) {
+    const sid = row.int('sid');
+    const name = row.text('display_name');
+    if (sid === null || sid <= 0 || name === null) {
+      return row.fail('unusable row: needs a positive sid and a display_name');
     }
     out.set(sid, name);
   }

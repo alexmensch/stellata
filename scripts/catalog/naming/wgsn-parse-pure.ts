@@ -2,6 +2,8 @@
 // Comma-CSV with quoted cells ("C5,5" spectral types), unlike every TSV
 // in the pipeline; `_`, `~`, `-` and a literal `null` all spell null.
 
+import { intCell, textCell } from '../../util/tsv/table-pure';
+
 export interface WgsnRow {
   /** NEC serial or WGSN-ID — provenance only, never a key. */
   id: string;
@@ -48,18 +50,13 @@ export function splitCsvLine(line: string): string[] {
 const NULL_SPELLINGS = new Set(['', '_', '~', '-', 'null']);
 
 function strCell(cells: string[], i: number): string | null {
-  const s = (cells[i] ?? '').trim();
-  return NULL_SPELLINGS.has(s) ? null : s;
+  const s = textCell(cells[i]);
+  return s === null || NULL_SPELLINGS.has(s) ? null : s;
 }
 
-function intCell(cells: string[], i: number): number | null {
-  const s = strCell(cells, i);
-  if (s === null) return null;
-  const v = Number(s);
-  return Number.isInteger(v) && v > 0 ? v : null;
-}
-
-function floatCell(cells: string[], i: number): number | null {
+/** Lenient: wgsnFaints.csv prints three Vmag cells as a Gaia G (`G12.53`),
+ *  which read as no V. */
+function vmagCell(cells: string[], i: number): number | null {
   const s = strCell(cells, i);
   if (s === null) return null;
   const v = parseFloat(s);
@@ -126,11 +123,11 @@ function parseFile(
       name: strCell(cells, col.name),
       hip: hip.value,
       hipComponent: hip.component,
-      hr: intCell(cells, col.hr),
+      hr: intCell(strCell(cells, col.hr) ?? undefined),
       hd: hd.value,
       hdComponent: hd.component,
       bayerOther: strCell(cells, col.bayer),
-      vmag: floatCell(cells, col.vmag),
+      vmag: vmagCell(cells, col.vmag),
       wds: col.wds !== undefined ? strCell(cells, col.wds) : null,
       source,
     });
