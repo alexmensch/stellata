@@ -57,10 +57,10 @@ gaia_dr2_neighbourhood_request.tsv     ~100 KB, LFS. DR3 source_ids of the
                                        Gaia-only catalog stars (no HIP/HD/HR/GJ)
                                        — the SID DR-churn risk set, frozen at
                                        the 2026-07-06 build so the pull below
-                                       stays consistent with it. Regenerate
-                                       from the ledger with `pnpm run
-                                       sid:risk-set` (/docs/sid.md#61-procedure) only
-                                       alongside a fresh neighbourhood pull.
+                                       stays consistent with it. Never
+                                       regenerated: `pnpm run sid:risk-set`
+                                       writes the next transition's request
+                                       to build/sid/ (/docs/sid.md#61-procedure).
 gaia_dr2_neighbourhood.tsv             ~320 KB, LFS. DR2 ↔ DR3 cross-match
                                        candidates for that risk set. NOTE:
                                        angular_distance is in mas, not the

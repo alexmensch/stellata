@@ -70,9 +70,18 @@ allocate.ts               pnpm run sid:allocate — the ONLY writer of
                           a per-PR invariant.
 export-dr-risk-set.ts     pnpm run sid:risk-set — source_ids of the
                           non-retired gaia_*-keyed ledger rows, written
-                          as the neighbourhood-pull request TSV (/docs/sid.md#61-procedure
-                          step 1), through emitArtifacts at the path
-                          dr-risk-set-outputs.ts declares.
+                          as the next DR transition's neighbourhood-pull
+                          request TSV (/docs/sid.md#61-procedure step 1),
+                          through emitArtifacts to
+                          build/sid/dr-risk-set-request.tsv
+                          (dr-risk-set-outputs.ts; gitignored). Run by
+                          hand at a DR transition, never by the build:
+                          no step reads its output. Never the
+                          committed DR2 request: that one is frozen as
+                          half of the dry-run pair
+                          (dr2-neighbourhood-source.ts), and
+                          tests/step-outputs.test.ts fails if any step's
+                          declared outputs cover either file.
 dr-reconcile.ts           pnpm run sid:dr-reconcile — churn report for a
                           DR transition (/docs/sid.md#61-procedure classes),
                           plus the carried-1:1 same-as edges for human
@@ -80,9 +89,9 @@ dr-reconcile.ts           pnpm run sid:dr-reconcile — churn report for a
                           (dr-reconcile-outputs.ts; gitignored, a draft for
                           sameas-overrides.tsv, never committed itself). Defaults replay the committed DR2→DR3
                           dry-run inputs (/docs/sid.md#62-dr2dr3-dry-run-measured-2026-07-07):
-                          dr2-neighbourhood-source.ts declares that pair,
-                          the request at the path dr-risk-set-outputs.ts
-                          declares. --request= / --neighbourhood= read
+                          dr2-neighbourhood-source.ts declares that pair.
+                          --request= (a fresh sid:risk-set export) /
+                          --neighbourhood= read
                           another transition's files through the same
                           presence check.
 dr-reconcile-pure.ts      Pure classifier + request/neighbourhood TSV

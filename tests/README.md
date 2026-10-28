@@ -221,7 +221,9 @@ step-outputs.test.ts     Imports every TS pipeline step's emitArtifacts
                          that runs its step on import fails here; pins
                          every declared path inside the repo and one
                          producer per path, sid:stamp's in-place rewrite
-                         of local-group.json the one exception.
+                         of local-group.json the one exception; no file
+                         or family may cover the frozen DR2 dry-run pair
+                         (scripts/sid/dr2-neighbourhood-source.ts).
 three-version-audit.test.ts
                          Tripwire pinning the three version the runtime
                          audit below was last run against. Fails on any

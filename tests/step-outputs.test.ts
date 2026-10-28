@@ -1,6 +1,6 @@
 // See tests/README.md (step-outputs.test.ts).
 
-import { isAbsolute, relative } from 'node:path';
+import { isAbsolute, relative, resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 import { ASTROMETRY_REQUEST_OUTPUTS } from '../scripts/catalog/astrometry-request/astrometry-request-outputs';
@@ -14,6 +14,7 @@ import { ELEMENT_TABLE_OUTPUTS } from '../scripts/ephemerides/planet-element-out
 import { LOCAL_GROUP_OUTPUTS } from '../scripts/local-group/local-group-outputs';
 import { PROBE_OUTPUTS } from '../scripts/probes/probe-trajectory-outputs';
 import { DR_RECONCILE_OUTPUTS } from '../scripts/sid/dr-reconcile-outputs';
+import { DR2_NEIGHBOURHOOD, DR2_NEIGHBOURHOOD_REQUEST } from '../scripts/sid/dr2-neighbourhood-source';
 import { DR_RISK_SET_OUTPUTS } from '../scripts/sid/dr-risk-set-outputs';
 import { SID_STAMP_OUTPUTS } from '../scripts/sid/sibling-stamp-outputs';
 import type { DeclaredOutputs } from '../scripts/util/emit-artifacts';
@@ -55,5 +56,17 @@ describe('step output declarations', () => {
     }
     const shared = [...producers].filter(([, steps]) => steps.length > 1);
     expect(shared).toEqual([['public/local-group.json', ['build:local-group', 'sid:stamp']]]);
+  });
+
+  it('never cover the frozen DR2 dry-run pair, as a file or inside a family', () => {
+    const frozen = [DR2_NEIGHBOURHOOD_REQUEST, DR2_NEIGHBOURHOOD].map((src) => resolve(REPO_ROOT, src.file));
+    for (const [step, outputs] of Object.entries(STEPS)) {
+      for (const p of frozen) {
+        expect(Object.values(outputs.files), step).not.toContain(p);
+        for (const { dir } of outputs.families) {
+          expect(relative(dir, p).startsWith('..'), `${step}: family ${dir}`).toBe(true);
+        }
+      }
+    }
   });
 });

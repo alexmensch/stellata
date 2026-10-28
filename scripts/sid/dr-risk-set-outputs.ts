@@ -6,5 +6,5 @@ import { declareOutputs } from '../util/emit-artifacts';
 import { REPO_ROOT } from '../util/paths';
 
 export const DR_RISK_SET_OUTPUTS = declareOutputs({
-  request: resolve(REPO_ROOT, 'data/gaia/gaia_dr2_neighbourhood_request.tsv'),
+  request: resolve(REPO_ROOT, 'build/sid/dr-risk-set-request.tsv'),
 });

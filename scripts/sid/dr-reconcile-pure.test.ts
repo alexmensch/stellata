@@ -71,6 +71,11 @@ describe('readRiskIds', () => {
     expect(() => readRiskIds('gaia_source_id\n12\n\t\n-3\n', R)).toThrow(/^r\.tsv:4: gaia_source_id: "-3" is not a source_id/);
     expect(() => readRiskIds('source_id\n12\n', R)).toThrow(/r\.tsv is missing required columns: gaia_source_id/);
   });
+
+  it("ends each error with the caller's recovery hint", () => {
+    expect(() => readRiskIds('source_id\n12\n', { file: 'r.tsv', hint: 'Restore it from git.' }))
+      .toThrow(/\. Restore it from git\.$/);
+  });
 });
 
 describe('readNeighbourhoodRows', () => {
