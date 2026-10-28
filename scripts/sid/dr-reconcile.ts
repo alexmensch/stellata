@@ -3,20 +3,19 @@
 // bridge edges for review. See scripts/sid/README.md.
 
 import { emitArtifacts, runStep } from '../util/emit-artifacts';
-import { openDeclared } from '../util/sources/source';
 import { DR_RECONCILE_OUTPUTS } from './dr-reconcile-outputs';
 import {
   DR2_NEIGHBOURHOOD,
   DR2_NEIGHBOURHOOD_REQUEST,
   NEIGHBOURHOOD_HINT,
   RISK_REQUEST_HINT,
+  neighbourhoodSource,
+  riskRequestSource,
 } from './dr2-neighbourhood-source';
 import {
   ACCEPT_MAS,
   MAG_REVIEW_DELTA,
   classifyDrTransition,
-  readNeighbourhoodRows,
-  readRiskIds,
 } from './dr-reconcile-pure';
 
 interface CliArgs {
@@ -46,14 +45,14 @@ function parseArgs(argv: string[]): CliArgs {
 
 function main(): void {
   const args = parseArgs(process.argv.slice(2));
-  const request = args.request === null ? null : { file: args.request, hint: RISK_REQUEST_HINT };
-  const neighbourhood = args.neighbourhood === null ? null : { file: args.neighbourhood, hint: NEIGHBOURHOOD_HINT };
-  const riskIds = request === null
-    ? DR2_NEIGHBOURHOOD_REQUEST.read()
-    : readRiskIds(openDeclared(request).text(), request);
-  const rows = neighbourhood === null
-    ? DR2_NEIGHBOURHOOD.read(args.riskCol, args.candidateCol)
-    : readNeighbourhoodRows(openDeclared(neighbourhood).text(), args.riskCol, args.candidateCol, neighbourhood);
+  const request = args.request === null
+    ? DR2_NEIGHBOURHOOD_REQUEST
+    : riskRequestSource({ file: args.request, hint: RISK_REQUEST_HINT });
+  const neighbourhood = args.neighbourhood === null
+    ? DR2_NEIGHBOURHOOD
+    : neighbourhoodSource({ file: args.neighbourhood, hint: NEIGHBOURHOOD_HINT });
+  const riskIds = request.read();
+  const rows = neighbourhood.read(args.riskCol, args.candidateCol);
   const c = classifyDrTransition(riskIds, rows);
 
   const pct = (n: number) => `${((n / riskIds.length) * 100).toFixed(2)}%`;

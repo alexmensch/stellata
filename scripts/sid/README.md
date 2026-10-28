@@ -91,9 +91,10 @@ dr-reconcile.ts           pnpm run sid:dr-reconcile — churn report for a
                           dry-run inputs (/docs/sid.md#62-dr2dr3-dry-run-measured-2026-07-07):
                           dr2-neighbourhood-source.ts declares that pair.
                           --request= (a fresh sid:risk-set export) /
-                          --neighbourhood= read
-                          another transition's files through the same
-                          presence check.
+                          --neighbourhood= declare another transition's
+                          files through the same module's
+                          riskRequestSource / neighbourhoodSource, so
+                          each file kind has one parse.
 dr-reconcile-pure.ts      Pure classifier + request/neighbourhood TSV
                           readers. ACCEPT_MAS / MAG_REVIEW_DELTA live
                           here.
