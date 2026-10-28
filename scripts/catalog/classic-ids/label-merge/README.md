@@ -16,6 +16,8 @@ scripts/catalog/classic-ids/label-merge/
                                   the unnetted removals the parity ledger's
                                   canonical-key audit reads. Pure.
   label-flips-tsv.ts              LABEL_FLIPS, the review queue's codec.
+  classic-id-overrides-source.ts  CLASSIC_ID_OVERRIDES, the curated
+                                  overrides, declared (../../../util/sources/).
 ```
 
 `mergeClassicIdLabels` (`label-merge-pure.ts`) runs in **one place**, and one

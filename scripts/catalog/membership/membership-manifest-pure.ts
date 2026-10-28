@@ -6,10 +6,8 @@ import { SOL_APPARENT_V_MAGNITUDE, SOL_PROPER_NAME, normaliseGjKey } from '../re
 import type { Cns5Row } from '../classic-ids/classic-ids-parse';
 import {
   BRIGHT_TIER_MAG_CEILING,
-} from '../classic-ids/classic-id-overlay-pure';
-import {
   type ClassicIdOverlay,
-} from '../classic-ids/classic-id-overlay-tsv';
+} from '../classic-ids/classic-id-overlay-pure';
 import type { BindingEvidence, GateReason } from './binding/binding-gate-pure';
 import {
   BINDING_SOURCES,
@@ -24,7 +22,6 @@ import {
   type RowGateEvidence,
 } from './binding/binding-derivation-pure';
 import {
-  CLASSIC_ID_OVERRIDES_FILE,
   mergeClassicIdLabels,
   spineLabelMergeRecord,
   type LabelFlip,
@@ -170,7 +167,7 @@ export function parseSpineCorrectionsTsv(text: string): SpineCorrectionRow[] {
     if (op === 'set' && !(SPINE_CORRECTION_CELLS as readonly string[]).includes(cells.cell)) {
       row.fail(
         `set may write ${SPINE_CORRECTION_CELLS.join(', ')}, not "${cells.cell}" — `
-          + `a label exception belongs in ${CLASSIC_ID_OVERRIDES_FILE}`,
+          + 'a label exception belongs in classic_id_overrides.tsv',
       );
     }
     if (BINDING_REVIEW_KEY_COLUMNS.every((c) => cells[c].trim() === '')) {

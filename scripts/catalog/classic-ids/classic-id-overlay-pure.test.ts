@@ -8,12 +8,13 @@ import {
   glieseNumber,
   joinOverlayCandidates,
   magnitudeWeighableSourceIds,
+  type ClassicIdOverlay,
   type OverlayInput,
 } from './classic-id-overlay-pure';
 import {
-  parseOverlayTsv,
-  serializeOverlay,
-  type ClassicIdOverlay,
+  CLASSIC_ID_OVERLAY,
+  overlayMap,
+  overlayRows,
 } from './classic-id-overlay-tsv';
 import { cns5Row } from './cns5-fixture';
 import { bindingEvidence } from '../membership/binding/binding-gate-pure';
@@ -451,7 +452,7 @@ describe('applyBindingGate — the tiers below Hipparcos', () => {
   });
 });
 
-describe('serializeOverlay', () => {
+describe('overlayRows', () => {
   it('sorts rows by numeric source_id and pipe-joins multi-values', () => {
     const { overlay } = buildClassicIdOverlay(
       input({
@@ -462,7 +463,7 @@ describe('serializeOverlay', () => {
         ],
       }),
     );
-    const lines = serializeOverlay(overlay).trimEnd().split('\n');
+    const lines = CLASSIC_ID_OVERLAY.serialize(overlayRows(overlay)).trimEnd().split('\n');
     expect(lines[0]).toBe('gaia_source_id\thd\thr\thip\tgj\tbayer\tflamsteed');
     // VEGA_SRC is 16 digits, SIRIUS_SRC 19 — a lexicographic sort would
     // misorder them.
@@ -506,7 +507,7 @@ describe('glieseCellKey', () => {
   });
 });
 
-describe('parseOverlayTsv', () => {
+describe('overlayMap', () => {
   it('round-trips the serialized artifact, multi-values included', () => {
     const { overlay } = buildClassicIdOverlay(
       input({
@@ -518,11 +519,11 @@ describe('parseOverlayTsv', () => {
         cns5: [cns5Row({ gj: '721', gjComp: 'A', gaiaSourceId: VEGA_SRC })],
       }),
     );
-    expect(parseOverlayTsv(serializeOverlay(overlay))).toEqual(overlay);
+    expect(overlayMap(CLASSIC_ID_OVERLAY.rows(CLASSIC_ID_OVERLAY.serialize(overlayRows(overlay))))).toEqual(overlay);
   });
 
   it('rejects a header that is not the column list byte for byte', () => {
-    expect(() => parseOverlayTsv('gaia_source_id\thd\n1\t2\n'))
+    expect(() => overlayMap(CLASSIC_ID_OVERLAY.rows('gaia_source_id\thd\n1\t2\n')))
       .toThrow(/header/);
   });
 });

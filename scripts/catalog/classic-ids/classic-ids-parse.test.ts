@@ -41,32 +41,32 @@ const CNS5 = [
 
 describe('classic-ids-parse / parseTyc2HdTsv', () => {
   it('composes the unpadded tyc key the Gaia cross-walk uses', () => {
-    const rows = parseTyc2HdTsv(TYC2_HD);
+    const rows = parseTyc2HdTsv(TYC2_HD, FROM);
     expect(rows.map((r) => r.tyc)).toEqual(['3105-2070-1', '1-381-1', '4-5-1']);
     expect(rows[0].hd).toBe(172167);
   });
 
   it('carries the upstream ambiguity flags', () => {
-    const rows = parseTyc2HdTsv(TYC2_HD);
+    const rows = parseTyc2HdTsv(TYC2_HD, FROM);
     expect(rows[2].nHd).toBe(2);
     expect(rows[2].nTyc).toBe(3);
     expect(rows[0].nHd).toBe(1);
   });
 
   it('throws when a required column is absent', () => {
-    expect(() => parseTyc2HdTsv('tyc1\ttyc2\thd\n1\t2\t3')).toThrow(/tyc3/);
+    expect(() => parseTyc2HdTsv('tyc1\ttyc2\thd\n1\t2\t3', FROM)).toThrow(/tyc3/);
   });
 
   it('throws on an empty or headerless file rather than reporting zero rows', () => {
     // Every input here is a committed LFS artifact: "no rows" means truncated,
     // and answering [] would leave the join silently keyed on nothing until
     // the count snapshot flagged the drift a layer later.
-    expect(() => parseTyc2HdTsv('')).toThrow(/has no header row/);
-    expect(() => parseTyc2HdTsv('\n\n')).toThrow(/has no header row/);
+    expect(() => parseTyc2HdTsv('', FROM)).toThrow(/has no header row/);
+    expect(() => parseTyc2HdTsv('\n\n', FROM)).toThrow(/has no header row/);
   });
 
   it('returns no rows for a valid header with no data rows', () => {
-    expect(parseTyc2HdTsv('tyc1\ttyc2\ttyc3\thd\tn_hd\tn_tyc\n')).toEqual([]);
+    expect(parseTyc2HdTsv('tyc1\ttyc2\ttyc3\thd\tn_hd\tn_tyc\n', FROM)).toEqual([]);
   });
 });
 
@@ -127,7 +127,7 @@ describe('classic-ids-parse / cross-index corrections', () => {
 
 describe('classic-ids-parse / parseBsc5Tsv', () => {
   it('nulls the HD-less and name-less cells rather than defaulting them', () => {
-    const rows = parseBsc5Tsv(BSC5);
+    const rows = parseBsc5Tsv(BSC5, FROM);
     expect(rows[0]).toEqual({ hr: 7001, hd: 172167, name: '3Alp Lyr' });
     expect(rows[1].name).toBeNull();
   });

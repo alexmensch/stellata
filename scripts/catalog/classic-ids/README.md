@@ -43,7 +43,9 @@ scripts/catalog/classic-ids/
                                   ../astrometry-request/ runs the same join
                                   off the primaries tables it already holds
                                   (README.md#the-gates-evidence-has-to-be-pulled).
-  cns5-source.ts                  CNS5, declared (../../util/sources/).
+  cns5-source.ts                  CNS5, IV/25 and V/50, declared
+  tyc2-hd-source.ts               (../../util/sources/). The parsers
+  bsc5-source.ts                  stay in classic-ids-parse.ts.
   classic-ids-parse.ts (+ test)   The four frozen-TSV parsers, plus the
                                   curated IV/27A corrections and their
                                   application. The gate's
@@ -70,8 +72,12 @@ scripts/catalog/classic-ids/
                                   across two folders build these, so a new
                                   column lands in one place.
   classic-id-overlay-tsv.ts       CLASSIC_ID_OVERLAY, the overlay's codec,
-                                  with the Map adapters serializeOverlay /
-                                  parseOverlayTsv.
+                                  with the Map adapters overlayRows /
+                                  overlayMap. The entry shape and the
+                                  value separator live in
+                                  classic-id-overlay-pure.ts, so a module
+                                  that only needs them does not reach the
+                                  artifact.
   route-disagreements-tsv.ts      The two gate queues' codecs:
   rejected-bindings-tsv.ts        ROUTE_DISAGREEMENTS, REJECTED_BINDINGS.
   committed-artifacts.test.ts     The overlay, both gate queues and the

@@ -15,6 +15,8 @@ scripts/catalog/simbad/
     (+ test)                      every namespace the pull keyed on. Bottom
                                   tier of the rv, direction/PM and distance
                                   cascades alike.
+  simbad-tyc-hd-source.ts         SIMBAD_TYC_HD, declared. No build step
+                                  reads it; the adjudication test does.
   simbad-tyc-hd-parse.ts          data/simbad/simbad_tyc_hd.tsv on the full
     (+ test)                      TYC, plus `hdNumbers` — the component letter
                                   dropped, for the integer comparison against

@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   type ClassicIdOverlay,
   type OverlayEntry,
-} from '../classic-ids/classic-id-overlay-tsv';
+} from '../classic-ids/classic-id-overlay-pure';
 import { parseGlieseTsv } from '../gliese-parse';
 import { SPINE_COLUMNS, spineDesignations, type SpineRow } from '../spine/inherited-spine-pure';
 import type { PrimaryTables } from '../spine/primaries-audit-pure';

@@ -15,7 +15,7 @@ import { LEDGER_PATH, OVERRIDES_PATH, SAMEAS_OVERRIDES_FILE } from '../../sid/re
 import { parseSameasTsv } from '../../sid/sid-pure';
 import { LEDGER } from '../../sid/ledger-tsv';
 import { INHERITED_SPINE, INHERITED_SPINE_FILE } from '../spine/inherited-spine-pure';
-import { parseBsc5Tsv } from './classic-ids-parse';
+import { BSC5 } from './bsc5-source';
 import {
   spineDesignationsRemovedBy,
 } from './label-merge/label-merge-pure';
@@ -27,7 +27,7 @@ import {
 const ADDITIONS_PATH = resolve(REPO_ROOT, 'data/membership/additions-ledger.tsv');
 const QUEUE_PATH = resolve(REPO_ROOT, 'data/classic-ids/hd_hip_route_disagreements.tsv');
 const REVIEW_PATH = resolve(REPO_ROOT, 'data/classic-ids/hd_hip_route_disagreements_review.tsv');
-const BSC5_PATH = resolve(REPO_ROOT, 'data/classic-ids/bsc5.tsv');
+const BSC5_PATH = resolve(REPO_ROOT, BSC5.file);
 const SPINE_PATH = resolve(REPO_ROOT, INHERITED_SPINE_FILE);
 
 const REVIEW_HINT = 'Dispose the row in hd_hip_route_disagreements_review.tsv.';
@@ -256,7 +256,7 @@ describe.skipIf(!lfsContentReadable(MANIFEST_PATH))('override-freed HD numbers',
 
 describe.skipIf(!bsc5Readable)('V/50 HD-less entries', () => {
   it('pins the out-of-scope set', () => {
-    const hdless = parseBsc5Tsv(readFileSync(BSC5_PATH, 'utf-8'))
+    const hdless = BSC5.read()
       .filter((r) => r.hd === null)
       .map((r) => r.hr);
     expect(hdless).toEqual(HD_LESS_HR);

@@ -9,8 +9,8 @@ import { WGSN_NAMES } from '../naming/wgsn-names-tsv';
 import { readTable, type TableSpec } from '../../util/tsv/table-pure';
 import { GAIA_HIP_XMATCH } from '../parse/gaia-hip-xmatch-source';
 import { GAIA_TYC_XMATCH } from '../parse/gaia-tyc-xmatch-source';
-import { SRC_TYC2_HD } from '../classic-ids/binding-candidates';
-import { parseBsc5Tsv, parseTyc2HdTsv } from '../classic-ids/classic-ids-parse';
+import { BSC5 } from '../classic-ids/bsc5-source';
+import { TYC2_HD } from '../classic-ids/tyc2-hd-source';
 import { CNS5 } from '../classic-ids/cns5-source';
 import { CROSS_INDEX } from '../classic-ids/cross-index-source';
 import { GLIESE } from '../gliese-source';
@@ -21,7 +21,6 @@ import {
   type BindingTables, type PrimaryTables, type SimbadXids, type WgsnKeys,
 } from './primaries-audit-pure';
 
-export const SRC_BSC5 = resolve(ROOT, 'data/classic-ids/bsc5.tsv');
 export const SRC_HIP_MAIN = resolve(ROOT, 'data/hipparcos/hip_main_vmag.tsv');
 export const SRC_HIP2 = resolve(ROOT, 'data/hipparcos/hip2_van_leeuwen.tsv');
 export const SRC_SIMBAD_SPTYPE = resolve(ROOT, 'data/simbad/simbad_sptype.tsv');
@@ -127,14 +126,14 @@ export async function loadBindingTables(keepTycs: ReadonlySet<string>): Promise<
 /** `keepTycs` narrows the 2.5 M-row TYC cross-walk to the Tycho ids the caller
  *  will look up — IV/25's plus the spine's. */
 export async function loadPrimaryTables(keepTycs: Iterable<string>): Promise<PrimaryTables> {
-  const iv25 = parseTyc2HdTsv(readRequired(SRC_TYC2_HD, LFS_HINT));
+  const iv25 = TYC2_HD.read();
   const keep = new Set<string>(iv25.map((r) => r.tyc));
   for (const tyc of keepTycs) keep.add(tyc);
   const i239 = readI239();
   return {
     ...await loadBindingTables(keep),
     iv25,
-    v50: parseBsc5Tsv(readRequired(SRC_BSC5, LFS_HINT)),
+    v50: BSC5.read(),
     iv27a: CROSS_INDEX.read(),
     gliese: GLIESE.read(),
     hipI239: i239.hip,

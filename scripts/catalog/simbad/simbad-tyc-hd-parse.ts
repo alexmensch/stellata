@@ -2,13 +2,10 @@
 // HD-attribution witness independent of IV/25.
 // See /data/simbad/README.md#the-tyc--hd-pull.
 
-import { intCell, readTable, type TableSpec } from '../../util/tsv/table-pure';
+import type { Declared } from '../../util/sources/source';
+import { intCell, readTable } from '../../util/tsv/table-pure';
 
-const SIMBAD_TYC_HD = {
-  file: 'data/simbad/simbad_tyc_hd.tsv',
-  columns: ['tyc', 'simbad_oid', 'simbad_main_id', 'hd'] as const,
-  hint: 'Re-run `python3 scripts/refresh/refresh-simbad-tyc-hd.py`.',
-} satisfies TableSpec<string>;
+const SIMBAD_TYC_HD_COLUMNS = ['tyc', 'simbad_oid', 'simbad_main_id', 'hd'] as const;
 
 export interface SimbadTycHdRow {
   /** The HD idents' suffixes as SIMBAD states them, component letter
@@ -39,9 +36,9 @@ export function hdNumbers(row: SimbadTycHdRow): number[] {
  *  absent from the file, so `has(tyc) === false` is "SIMBAD attributes no HD
  *  here" and never "not asked" — the pull requests every TYC IV/25 and the
  *  manifest mention. */
-export function parseSimbadTycHdTsv(text: string): Map<string, SimbadTycHdRow> {
+export function parseSimbadTycHdTsv(text: string, from: Declared): Map<string, SimbadTycHdRow> {
   const out = new Map<string, SimbadTycHdRow>();
-  for (const row of readTable(SIMBAD_TYC_HD, text)) {
+  for (const row of readTable({ ...from, columns: SIMBAD_TYC_HD_COLUMNS }, text)) {
     const tyc = row.text('tyc');
     const oid = row.int('simbad_oid');
     const hd = row.text('hd');

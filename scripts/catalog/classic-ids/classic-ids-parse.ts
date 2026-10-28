@@ -1,7 +1,7 @@
 // Parsers for the frozen CDS classic-designation tables under
 // data/classic-ids/. See /data/classic-ids/README.md#provenance.
 import type { Declared } from '../../util/sources/source';
-import { readTable, type TableSpec } from '../../util/tsv/table-pure';
+import { readTable } from '../../util/tsv/table-pure';
 import { normaliseGjKey } from '../record/catalog-pure';
 import { citedParallax, type CitedParallax } from '../cited-parallax';
 import { citedProperMotion, type CitedProperMotion } from '../cited-proper-motion';
@@ -18,15 +18,11 @@ export interface Tyc2HdRow {
   nTyc: number;
 }
 
-const TYC2_HD = {
-  file: 'data/classic-ids/tyc2_hd.tsv',
-  columns: ['tyc1', 'tyc2', 'tyc3', 'hd', 'n_hd', 'n_tyc'] as const,
-  hint: REFRESH_CLASSIC_IDS,
-} satisfies TableSpec<string>;
+const TYC2_HD_COLUMNS = ['tyc1', 'tyc2', 'tyc3', 'hd', 'n_hd', 'n_tyc'] as const;
 
-export function parseTyc2HdTsv(text: string): Tyc2HdRow[] {
+export function parseTyc2HdTsv(text: string, from: Declared): Tyc2HdRow[] {
   const out: Tyc2HdRow[] = [];
-  for (const row of readTable(TYC2_HD, text)) {
+  for (const row of readTable({ ...from, columns: TYC2_HD_COLUMNS }, text)) {
     const tyc1 = row.int('tyc1');
     const tyc2 = row.int('tyc2');
     const tyc3 = row.int('tyc3');
@@ -149,15 +145,11 @@ export interface Bsc5Row {
   name: string | null;
 }
 
-const BSC5 = {
-  file: 'data/classic-ids/bsc5.tsv',
-  columns: ['hr', 'hd', 'name'] as const,
-  hint: REFRESH_CLASSIC_IDS,
-} satisfies TableSpec<string>;
+const BSC5_COLUMNS = ['hr', 'hd', 'name'] as const;
 
-export function parseBsc5Tsv(text: string): Bsc5Row[] {
+export function parseBsc5Tsv(text: string, from: Declared): Bsc5Row[] {
   const out: Bsc5Row[] = [];
-  for (const row of readTable(BSC5, text)) {
+  for (const row of readTable({ ...from, columns: BSC5_COLUMNS }, text)) {
     const hr = row.int('hr');
     if (hr === null) continue;
     out.push({

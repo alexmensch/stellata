@@ -10,14 +10,12 @@ import { GLIESE } from '../gliese-source';
 import { TYCHO2 } from '../tycho2-source';
 import {
   buildClassicIdOverlay,
+  type ClassicIdOverlay,
   type OverlayJoinCounts,
 } from './classic-id-overlay-pure';
 import { REJECTED_BINDINGS } from './rejected-bindings-tsv';
 import { ROUTE_DISAGREEMENTS } from './route-disagreements-tsv';
-import {
-  serializeOverlay,
-  type ClassicIdOverlay,
-} from './classic-id-overlay-tsv';
+import { CLASSIC_ID_OVERLAY, overlayRows } from './classic-id-overlay-tsv';
 import { REPO_ROOT as ROOT } from '../../util/paths';
 import { emitArtifacts, runStep } from '../../util/emit-artifacts';
 import { CLASSIC_ID_OUTPUTS } from './classic-id-overlay-outputs';
@@ -70,7 +68,7 @@ async function main(): Promise<void> {
   emitArtifacts({
     outputs: CLASSIC_ID_OUTPUTS,
     files: {
-      overlay: serializeOverlay(overlay),
+      overlay: CLASSIC_ID_OVERLAY.serialize(overlayRows(overlay)),
       disagreements: ROUTE_DISAGREEMENTS.serialize(disagreements),
       rejected: REJECTED_BINDINGS.serialize(rejectedBindings.map((r) => ({
         sourceId: r.sourceId, hip: r.hip, vMag: r.printedV?.vMag ?? null, vVia: r.printedV?.vVia ?? null,

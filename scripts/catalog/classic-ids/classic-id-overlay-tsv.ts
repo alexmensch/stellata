@@ -2,11 +2,11 @@
 
 import { compareSourceIds } from '../../util/tsv/table-pure';
 import { defineArtifact } from '../../util/tsv/artifact-pure';
-
-/** No cell is single-valued by construction: a designation naming a
- *  catalogue granularity rather than one object attaches to every matching
- *  record, and a record can carry several. */
-export const OVERLAY_VALUE_SEPARATOR = '|';
+import {
+  OVERLAY_VALUE_SEPARATOR,
+  type ClassicIdOverlay,
+  type OverlayEntry,
+} from './classic-id-overlay-pure';
 
 export const OVERLAY_COLUMNS = [
   'gaia_source_id',
@@ -18,22 +18,7 @@ export const OVERLAY_COLUMNS = [
   'flamsteed',
 ] as const;
 
-/** Every classic designation the frozen joins attach to one Gaia DR3
- *  source. `gj` is a bare CNS5 number with its component letter appended
- *  ("551C"); `bayer` / `flamsteed` carry IV/27A's constellation
- *  ("alf Lyr", "3 Lyr"). Each list is sorted and deduplicated. */
-export interface OverlayEntry {
-  hd: number[];
-  hr: number[];
-  hip: number[];
-  gj: string[];
-  bayer: string[];
-  flamsteed: string[];
-}
-
-export type ClassicIdOverlay = Map<string, OverlayEntry>;
-
-interface OverlayRow extends OverlayEntry {
+export interface OverlayRow extends OverlayEntry {
   sourceId: string;
 }
 
@@ -66,12 +51,12 @@ export const CLASSIC_ID_OVERLAY = defineArtifact({
   }),
 });
 
-export function serializeOverlay(overlay: ClassicIdOverlay): string {
-  return CLASSIC_ID_OVERLAY.serialize([...overlay].map(([sourceId, e]) => ({ sourceId, ...e })));
+export function overlayRows(overlay: ClassicIdOverlay): OverlayRow[] {
+  return [...overlay].map(([sourceId, e]) => ({ sourceId, ...e }));
 }
 
-export function parseOverlayTsv(text: string): ClassicIdOverlay {
+export function overlayMap(rows: Iterable<OverlayRow>): ClassicIdOverlay {
   const overlay: ClassicIdOverlay = new Map();
-  for (const { sourceId, ...entry } of CLASSIC_ID_OVERLAY.rows(text)) overlay.set(sourceId, entry);
+  for (const { sourceId, ...entry } of rows) overlay.set(sourceId, entry);
   return overlay;
 }

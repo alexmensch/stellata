@@ -6,6 +6,7 @@ import { resolve } from 'node:path';
 
 import { REPO_ROOT as ROOT, readRequired } from '../../util/paths';
 import { emitArtifacts, runStep } from '../../util/emit-artifacts';
+import { artifactRows } from '../../util/sources/source';
 import { MEMBERSHIP_OUTPUTS } from './membership-manifest-outputs';
 import { snapshotCheck } from '../../util/snapshot-check';
 import { compareCountSnapshot } from '../build-counts';
@@ -15,14 +16,9 @@ import { gaiaHas5pSolution } from '../distance/gaia-distrust';
 import {
   BRIGHT_TIER_MAG_CEILING,
 } from '../classic-ids/classic-id-overlay-pure';
-import {
-  parseOverlayTsv,
-} from '../classic-ids/classic-id-overlay-tsv';
-import {
-  CLASSIC_ID_OVERRIDES_FILE,
-  LABEL_FIELDS,
-  parseLabelOverridesTsv,
-} from '../classic-ids/label-merge/label-merge-pure';
+import { CLASSIC_ID_OVERLAY, overlayMap } from '../classic-ids/classic-id-overlay-tsv';
+import { LABEL_FIELDS } from '../classic-ids/label-merge/label-merge-pure';
+import { CLASSIC_ID_OVERRIDES } from '../classic-ids/label-merge/classic-id-overrides-source';
 import {
   LABEL_FLIPS,
 } from '../classic-ids/label-merge/label-flips-tsv';
@@ -54,8 +50,6 @@ import {
 } from './label-drops-tsv';
 import { MEMBERSHIP_MANIFEST } from './membership-manifest-tsv';
 
-const SRC_OVERLAY = resolve(ROOT, 'data/classic-ids/classic_id_overlay.tsv');
-const OVERLAY_HINT = 'run `pnpm run build:classic-ids`.';
 const DISPOSITIONS_HINT = 'dispose every row of binding-review.tsv there (README.md#the-spine-side).';
 const CORRECTIONS_HINT = 'it is committed and hand-curated (README.md#correcting-a-merge-decision).';
 
@@ -95,10 +89,8 @@ async function main(): Promise<void> {
   const result = buildMembership({
     spine,
     tables,
-    overlay: parseOverlayTsv(readRequired(SRC_OVERLAY, OVERLAY_HINT)),
-    overrides: parseLabelOverridesTsv(
-      readRequired(resolve(ROOT, CLASSIC_ID_OVERRIDES_FILE), 'it is committed and hand-curated.'),
-    ),
+    overlay: overlayMap(artifactRows(CLASSIC_ID_OVERLAY)),
+    overrides: CLASSIC_ID_OVERRIDES.read(),
     siblingRenderedSourceIds: sourceIdsWithSiblingComponent(readMultiplesTsv()),
     evidence,
     dispositions: parseBindingDispositionsTsv(
