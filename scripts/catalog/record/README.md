@@ -12,8 +12,8 @@ it imports back from none of them but `../distance/parallax/` (beside
 
 ```
 scripts/catalog/record/
-  gaia-apsis-source.ts            GAIA_APSIS with its parse, declared
-    (test in catalog-pure.test)   (../../util/sources/).
+  gaia-apsis-source.ts (+ test)   GAIA_APSIS with its parse, declared
+                                  (../../util/sources/).
   catalog-pure.ts (+ test)        The v10 binary layout and its codec, the
                                   chunk plan, the SearchEntry wire shape, the
                                   aliased-id index the runtime dispatches

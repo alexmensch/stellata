@@ -3,6 +3,8 @@
 import { defineSource, type Declared } from '../../../util/sources/source';
 import { readTable } from '../../../util/tsv/table-pure';
 
+const BAILER_JONES_COLUMNS = ['source_id', 'r_med_geo', 'r_med_photogeo'] as const;
+
 /** Parse the TSV produced by `scripts/refresh/refresh-bailer-jones.py` into a
  *  Gaia DR3 source_id → distance (pc) map. `source_id` is kept as a
  *  string: Gaia source_ids exceed `Number.MAX_SAFE_INTEGER`, so any
@@ -14,8 +16,6 @@ import { readTable } from '../../../util/tsv/table-pure';
  *  population prior); `r_med_geo` is the geometric-only fallback for
  *  rows without photogeo (no usable G or BP–RP, or a colour outside the
  *  prior model's range). */
-const BAILER_JONES_COLUMNS = ['source_id', 'r_med_geo', 'r_med_photogeo'] as const;
-
 export function parseBailerJonesTsv(text: string, from: Declared): Map<string, number> {
   const out = new Map<string, number>();
   for (const row of readTable({ ...from, columns: BAILER_JONES_COLUMNS }, text)) {

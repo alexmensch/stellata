@@ -1,8 +1,6 @@
 import { DIST_VIA_VALUES } from '../distance/parallax/parallax-cascade';
 import { MiB, WORKERS_MAX_ASSET_BYTES } from '../../release/asset-size-pure';
 import { describe, it, expect } from 'vitest';
-import { parseBailerJonesTsv } from '../distance/refinement/bailer-jones-source';
-import { parseGaiaApsisTsv } from './gaia-apsis-source';
 import {
   normaliseGjKey,
   simbadHipKey,
@@ -107,7 +105,6 @@ import {
 } from './catalog-pure';
 import { MAX_DIST_PC } from '../parse/stars-parse';
 
-const FROM = { file: 'fixture.tsv', hint: 'h' };
 
 describe('catalog-pure / normaliseGjKey', () => {
   // The spine spells the catalogue word both ways and SIMBAD stores its own
@@ -1315,97 +1312,6 @@ describe('catalog-pure / search-index wire contract', () => {
 });
 
 // ─── Bailer-Jones (DR3) distance override ──────────────────────────────
-
-describe('catalog-pure / parseBailerJonesTsv', () => {
-  it('parses source_id as string and prefers r_med_photogeo', () => {
-    const tsv =
-      'source_id\tr_med_geo\tr_lo_geo\tr_hi_geo\tr_med_photogeo\tr_lo_photogeo\tr_hi_photogeo\tflag\n' +
-      '204531088580182016\t6366.668\t6300\t6420\t6244.791\t6200\t6280\t10033\n' +
-      '4773096563064098432\t93.528\t92\t94\t92.871\t92\t93\t10023\n';
-    const map = parseBailerJonesTsv(tsv, FROM);
-    expect(map.size).toBe(2);
-    expect(map.get('204531088580182016')).toBe(6244.791);
-    expect(map.get('4773096563064098432')).toBe(92.871);
-  });
-
-  it('falls back to r_med_geo when r_med_photogeo is empty', () => {
-    const tsv =
-      'source_id\tr_med_geo\tr_lo_geo\tr_hi_geo\tr_med_photogeo\tr_lo_photogeo\tr_hi_photogeo\tflag\n' +
-      '123\t250.0\t245\t255\t\t\t\t33333\n';
-    const map = parseBailerJonesTsv(tsv, FROM);
-    expect(map.get('123')).toBe(250.0);
-  });
-
-  it('throws on missing required columns', () => {
-    expect(() => parseBailerJonesTsv('source_id\tr_med_geo\n1\t10\n', FROM))
-      .toThrow(/r_med_photogeo/);
-  });
-
-  it('skips rows with non-positive distance and blank source_ids', () => {
-    const tsv =
-      'source_id\tr_med_geo\tr_lo_geo\tr_hi_geo\tr_med_photogeo\tr_lo_photogeo\tr_hi_photogeo\tflag\n' +
-      '\t10\t9\t11\t10\t9\t11\t1\n' +
-      '999\t-1\t-1\t-1\t\t\t\t1\n' +
-      '111\t100\t99\t101\t99\t98\t100\t1\n';
-    const map = parseBailerJonesTsv(tsv, FROM);
-    expect(map.size).toBe(1);
-    expect(map.get('111')).toBe(99);
-  });
-});
-
-describe('catalog-pure / parseGaiaApsisTsv', () => {
-  const HDR =
-    'source_id\tteff_gspphot\tlogg_gspphot\tmh_gspphot\tazero_gspphot\t' +
-    'teff_gspspec\tlogg_gspspec\tmh_gspspec\tspectraltype_esphs\n';
-
-  it('parses source_id as string, both gspphot and gspspec triples, plus the esphs enum', () => {
-    const tsv = HDR +
-      '7632157690368\t5028.8\t3.1614\t-0.1016\t0.2131\t4864.0\t2.6600\t-0.2000\tK\n' +
-      '44358422235136\t5787.8\t4.3140\t0.3385\t0.0648\t\t\t\tG\n';
-    const map = parseGaiaApsisTsv(tsv, FROM);
-    expect(map.size).toBe(2);
-    const a = map.get('7632157690368')!;
-    expect(a.teffGspphot).toBe(5028.8);
-    expect(a.loggGspphot).toBe(3.1614);
-    expect(a.mhGspphot).toBe(-0.1016);
-    expect(a.azeroGspphot).toBe(0.2131);
-    expect(a.teffGspspec).toBe(4864.0);
-    expect(a.loggGspspec).toBe(2.6600);
-    expect(a.mhGspspec).toBe(-0.2000);
-    expect(a.spectraltypeEsphs).toBe('K');
-    const b = map.get('44358422235136')!;
-    expect(b.teffGspphot).toBe(5787.8);
-    expect(b.teffGspspec).toBeNull();
-    expect(b.loggGspspec).toBeNull();
-    expect(b.mhGspspec).toBeNull();
-    expect(b.spectraltypeEsphs).toBe('G');
-  });
-
-  it('decodes blank cells as null without dropping the row', () => {
-    const tsv = HDR + '999\t\t\t\t\t6000\t4.0\t0.0\t\n';
-    const map = parseGaiaApsisTsv(tsv, FROM);
-    const r = map.get('999')!;
-    expect(r.teffGspphot).toBeNull();
-    expect(r.loggGspphot).toBeNull();
-    expect(r.mhGspphot).toBeNull();
-    expect(r.azeroGspphot).toBeNull();
-    expect(r.teffGspspec).toBe(6000);
-    expect(r.loggGspspec).toBe(4.0);
-    expect(r.mhGspspec).toBe(0.0);
-    expect(r.spectraltypeEsphs).toBeNull();
-  });
-
-  it('skips rows with a blank source_id', () => {
-    const tsv = HDR + '\t5000\t4\t0\t0\t5000\t4\t0\tG\n';
-    const map = parseGaiaApsisTsv(tsv, FROM);
-    expect(map.size).toBe(0);
-  });
-
-  it('throws on missing required columns', () => {
-    expect(() => parseGaiaApsisTsv('source_id\tteff_gspphot\n1\t5000\n', FROM))
-      .toThrow(/azero_gspphot|logg_gspphot|mh_gspphot|teff_gspspec|spectraltype_esphs/);
-  });
-});
 
 describe('catalog-pure / NO_APSIS sentinel', () => {
   it('is NaN, distinguishable from every finite Apsis value', () => {

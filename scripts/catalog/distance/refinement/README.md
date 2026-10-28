@@ -9,7 +9,7 @@ stack.
 
 ```
 scripts/catalog/distance/refinement/
-  bailer-jones-source.ts          BAILER_JONES, Layer 1's posteriors
+  bailer-jones-source.ts (+ test) BAILER_JONES, Layer 1's posteriors
                                   declared (../../../util/sources/), with
                                   their parse.
   distance-regression-check.ts    Post-build check that no override layer
