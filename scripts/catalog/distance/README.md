@@ -18,6 +18,11 @@ alongside its own position.
 
 ```
 scripts/catalog/distance/
+  bailer-jones-source.ts          BAILER_JONES, GAIA_ASTROMETRY, GAIA_NSS,
+  gaia-astrometry-source.ts       HIP2: the four distance-side inputs
+                                  declared (../../util/sources/). The Bailer-Jones
+  gaia-nss-source.ts              parse lives with its declaration; the
+  hip2-source.ts                  other three call direction-cascade.ts's.
   direction-cascade.ts (+ test)   Per-row sky-direction resolution cascade
                                   (which position source wins, and the
                                   precision each carries) plus the
@@ -297,8 +302,8 @@ inversion for the Bayesian posteriors published by
 [Bailer-Jones 2021](/data/papers/index.md#bailerjones2021) (CDS I/352).
 The pipeline:
 
-1. Load `data/bailer-jones/bailer-jones-dr3.tsv` via
-   `parseBailerJonesTsv` into a `Map<source_id, distance_pc>` keyed
+1. Load `data/bailer-jones/bailer-jones-dr3.tsv` through `BAILER_JONES`
+   (`bailer-jones-source.ts`) into a `Map<source_id, distance_pc>` keyed
    by Gaia DR3 `source_id`, kept as a **string** for the reason
    `data/bailer-jones/README.md` gives. Photogeometric
    `r_med_photogeo` is preferred; `r_med_geo` is the fallback when

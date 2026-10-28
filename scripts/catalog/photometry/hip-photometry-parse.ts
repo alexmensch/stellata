@@ -1,12 +1,9 @@
 // Printed Johnson V and B−V per HIP from the I/239/hip_main slice. See README.md.
 
-import { readTable, type TableSpec } from '../../util/tsv/table-pure';
+import type { Declared } from '../../util/sources/source';
+import { readTable } from '../../util/tsv/table-pure';
 
-const HIP_PHOTOMETRY = {
-  file: 'data/hipparcos/hip_main_vmag.tsv',
-  columns: ['hip', 'vmag', 'bv'] as const,
-  hint: 'Re-run `pnpm run refresh:hip-vmag`.',
-} satisfies TableSpec<string>;
+const HIP_PHOTOMETRY_COLUMNS = ['hip', 'vmag', 'bv'] as const;
 
 /** The two HIP-keyed printed values, as separate maps rather than one map of
  *  pairs: their consumers are disjoint, and 1,281 rows carry a V with no B−V,
@@ -36,10 +33,10 @@ export function printedByHip(
 }
 
 /** `data/hipparcos/hip_main_vmag.tsv` → the two printed-photometry tables. */
-export function parseHipPhotometryTsv(text: string): HipPhotometryTables {
+export function parseHipPhotometryTsv(text: string, from: Declared): HipPhotometryTables {
   const vmag = new Map<number, number>();
   const bv = new Map<number, number>();
-  for (const row of readTable(HIP_PHOTOMETRY, text)) {
+  for (const row of readTable({ ...from, columns: HIP_PHOTOMETRY_COLUMNS }, text)) {
     const hip = row.int('hip');
     if (hip === null || hip <= 0) continue;
     const v = row.float('vmag');

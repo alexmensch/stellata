@@ -1,5 +1,6 @@
 // Parsers for the frozen CDS classic-designation tables under
 // data/classic-ids/. See /data/classic-ids/README.md#provenance.
+import type { Declared } from '../../util/sources/source';
 import { readTable, type TableSpec } from '../../util/tsv/table-pure';
 import { normaliseGjKey } from '../record/catalog-pure';
 import { citedParallax, type CitedParallax } from '../cited-parallax';
@@ -57,15 +58,11 @@ export interface CrossIndexRow {
   cst: string | null;
 }
 
-const CROSS_INDEX = {
-  file: 'data/classic-ids/cross_index.tsv',
-  columns: ['hd', 'hip', 'bayer', 'flamsteed', 'cst'] as const,
-  hint: REFRESH_CLASSIC_IDS,
-} satisfies TableSpec<string>;
+const CROSS_INDEX_COLUMNS = ['hd', 'hip', 'bayer', 'flamsteed', 'cst'] as const;
 
-export function parseCrossIndexTsv(text: string): CrossIndexRow[] {
+export function parseCrossIndexTsv(text: string, from: Declared): CrossIndexRow[] {
   const out: CrossIndexRow[] = [];
-  for (const row of readTable(CROSS_INDEX, text)) {
+  for (const row of readTable({ ...from, columns: CROSS_INDEX_COLUMNS }, text)) {
     const hd = row.int('hd');
     if (hd === null) continue;
     out.push({
@@ -87,18 +84,9 @@ export interface CrossIndexCorrection {
   belongsTo: number;
 }
 
-export const CROSS_INDEX_CORRECTIONS_FILE = 'data/classic-ids/cross_index_corrections.tsv';
-
-const CROSS_INDEX_CORRECTIONS = {
-  file: CROSS_INDEX_CORRECTIONS_FILE,
-  columns: ['hd', 'belongs_to'] as const,
-  hint: 'Restore it from git — it is hand-curated, not generated.',
-  comments: true,
-} satisfies TableSpec<string>;
-
-export function parseCrossIndexCorrectionsTsv(text: string): CrossIndexCorrection[] {
+export function parseCrossIndexCorrectionsTsv(text: string, from: Declared): CrossIndexCorrection[] {
   const out: CrossIndexCorrection[] = [];
-  for (const row of readTable(CROSS_INDEX_CORRECTIONS, text)) {
+  for (const row of readTable({ ...from, columns: ['hd', 'belongs_to'] as const, comments: true }, text)) {
     const hd = row.int('hd');
     const belongsTo = row.int('belongs_to');
     if (hd === null || belongsTo === null) return row.failIncompletePair('hd', 'belongs_to');
@@ -118,6 +106,7 @@ function designationCells(row: CrossIndexRow): string {
 export function applyCrossIndexCorrections(
   rows: readonly CrossIndexRow[],
   corrections: readonly CrossIndexCorrection[],
+  from: Declared,
 ): CrossIndexRow[] {
   const byHd = new Map<number, CrossIndexRow[]>();
   for (const row of rows) {
@@ -132,7 +121,7 @@ export function applyCrossIndexCorrections(
     );
     if (withheld.length === 0) {
       throw new Error(
-        `${CROSS_INDEX_CORRECTIONS_FILE} corrects HD ${hd}, which states no ` +
+        `${from.file} corrects HD ${hd}, which states no ` +
           'IV/27A designation to withhold.',
       );
     }
@@ -140,7 +129,7 @@ export function applyCrossIndexCorrections(
     for (const row of withheld) {
       if (!kept.has(designationCells(row))) {
         throw new Error(
-          `${CROSS_INDEX_CORRECTIONS_FILE} gives HD ${hd}'s ` +
+          `${from.file} gives HD ${hd}'s ` +
             `"${designationCells(row)}" to HD ${belongsTo}, which IV/27A does ` +
             'not state it for — the correction would orphan the designation.',
         );
@@ -214,19 +203,15 @@ export interface Cns5Row {
   astrometry: Cns5Astrometry | null;
 }
 
-const CNS5 = {
-  file: 'data/classic-ids/cns5.tsv',
-  columns: [
+const CNS5_COLUMNS = [
     'cns5', 'gj', 'gj_comp', 'gaia_source_id', 'hip',
     'ra_deg', 'de_deg', 'pos_epoch', 'plx_mas', 'e_plx_mas', 'plx_bibcode',
     'pm_ra', 'pm_de', 'pm_bibcode',
-  ] as const,
-  hint: REFRESH_CLASSIC_IDS,
-} satisfies TableSpec<string>;
+  ] as const;
 
-export function parseCns5Tsv(text: string): Cns5Row[] {
+export function parseCns5Tsv(text: string, from: Declared): Cns5Row[] {
   const out: Cns5Row[] = [];
-  for (const row of readTable(CNS5, text)) {
+  for (const row of readTable({ ...from, columns: CNS5_COLUMNS }, text)) {
     const cns5 = row.int('cns5');
     const gj = row.text('gj');
     if (cns5 === null || gj === null) continue;
@@ -279,7 +264,7 @@ export function cns5AstrometryByGj(rows: readonly Cns5Row[]): Map<string, Cns5As
     if (key === null) continue;
     if (out.has(key)) {
       throw new Error(
-        `${CNS5.file} has two rows keyed gj=${key}. ${REFRESH_CLASSIC_IDS}`,
+        `CNS5 has two rows keyed gj=${key}. ${REFRESH_CLASSIC_IDS}`,
       );
     }
     out.set(key, row.astrometry);

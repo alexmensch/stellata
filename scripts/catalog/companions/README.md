@@ -24,8 +24,9 @@ scripts/catalog/companions/
   companion-promotion.ts          promoteCompanions. Runs before the absmag
     (+ test)                      sort so promoted records take the same
                                   final indexing as everything else.
-                                  readMultiplesTsv decodes through the
-                                  `MULTIPLES_TSV` codec
+                                  readMultiplesTsv reads through the
+                                  `MULTIPLES_TSV` codec (readArtifact,
+                                  so a missing file fails the build)
                                   (../../binaries/multiples-tsv.ts) and
                                   hands promotion each row with its anchor
                                   offset already parsed, never the raw

@@ -6,7 +6,8 @@ import { GREEK_GLYPHS } from './greek-forms';
 import { foldNameKey } from './wgsn-normalise-pure';
 import type { DesignationRow } from './wgsn-tables-pure';
 import type { WgsnRow } from './wgsn-parse-pure';
-import { readTable, type TableSpec } from '../../util/tsv/table-pure';
+import type { Declared } from '../../util/sources/source';
+import { readTable } from '../../util/tsv/table-pure';
 
 export interface WgsnNameRow {
   name: string;
@@ -47,11 +48,7 @@ const ALIAS_ONLY_CLASSES: ReadonlySet<ProperDisposition> = new Set<ProperDisposi
   'component-letter', 'unattributed', 'latin-bayer',
 ]);
 
-export const PROPER_DISPOSITIONS_TABLE = {
-  file: 'data/iau-wgsn/athyg_proper_dispositions.tsv',
-  columns: ['proper', 'class', 'hip', 'hd'] as const,
-  hint: 'It is hand-curated: restore the proper, class, hip and hd columns.',
-} satisfies TableSpec<string>;
+const PROPER_DISPOSITIONS_COLUMNS = ['proper', 'class', 'hip', 'hd'] as const;
 
 export interface ProperDispositionRow {
   proper: string;
@@ -60,8 +57,8 @@ export interface ProperDispositionRow {
   hd: number | null;
 }
 
-export function parseProperDispositions(text: string): ProperDispositionRow[] {
-  return [...readTable(PROPER_DISPOSITIONS_TABLE, text)].map((row) => ({
+export function parseProperDispositions(text: string, from: Declared): ProperDispositionRow[] {
+  return [...readTable({ ...from, columns: PROPER_DISPOSITIONS_COLUMNS }, text)].map((row) => ({
     proper: row.text('proper') ?? row.fail('proper is empty'),
     disposition: row.oneOf('class', PROPER_DISPOSITIONS),
     hip: row.int('hip'),

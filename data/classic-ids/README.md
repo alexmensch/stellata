@@ -11,7 +11,7 @@ tyc2_hd.tsv                        ~7.4 MB, LFS. HD ↔ Tycho-2 (353,527 rows).
 cross_index.tsv                    ~94 KB, LFS. Bayer / Flamsteed ↔ HD/HR/HIP
                                    (3,690 rows; 3,688 after the corrections
                                    below, which every consumer reads through
-                                   readCrossIndexTable).
+                                   CROSS_INDEX).
 cross_index_corrections.tsv        Hand-curated. Two rows; IV/27A rows whose
                                    designation names a star the row is not
                                    (/scripts/catalog/classic-ids/README.md#one-designation-two-hd-numbers).

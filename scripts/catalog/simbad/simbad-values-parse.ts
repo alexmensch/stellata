@@ -1,7 +1,8 @@
 // Parser and per-record lookup for data/simbad/simbad_values.tsv — the
 // bibcoded bottom tier of the value cascades in /docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers.
 
-import { readTable, type TableRow, type TableSpec } from '../../util/tsv/table-pure';
+import type { Declared } from '../../util/sources/source';
+import { readTable, type TableRow } from '../../util/tsv/table-pure';
 import {
   emptySimbadNamespaceIndex,
   indexSimbadRow,
@@ -12,18 +13,14 @@ import {
 import { citedParallax, type CitedParallax } from '../cited-parallax';
 import { citedProperMotion, type CitedProperMotion } from '../cited-proper-motion';
 
-const SIMBAD_VALUES = {
-  file: 'data/simbad/simbad_values.tsv',
-  columns: [
+const SIMBAD_VALUES_COLUMNS = [
     'rvz_radvel', 'rvz_type', 'rvz_bibcode',
     'ra', 'dec', 'coo_bibcode', 'pmra', 'pmdec', 'pm_bibcode',
     'plx_value', 'plx_err', 'plx_bibcode',
     'hip', 'source_id', 'tyc', 'gj',
-  ] as const,
-  hint: 'Re-run `pnpm run refresh:simbad-values`.',
-} satisfies TableSpec<string>;
+  ] as const;
 
-type ValuesRow = TableRow<(typeof SIMBAD_VALUES.columns)[number]>;
+type ValuesRow = TableRow<(typeof SIMBAD_VALUES_COLUMNS)[number]>;
 
 /** One SIMBAD row's radial velocity, with the bibcode that is its actual
  *  source. */
@@ -108,9 +105,9 @@ function parseAstrometry(row: ValuesRow): SimbadAstrometry | null {
  *  in any namespace collides in the committed file, so a duplicate is an
  *  upstream schema change and throws rather than silently overwriting a
  *  binding the cascade would then read off the wrong star. */
-export function parseSimbadValuesTsv(text: string): SimbadValueIndex {
+export function parseSimbadValuesTsv(text: string, from: Declared): SimbadValueIndex {
   const index = emptySimbadValueIndex();
-  for (const row of readTable(SIMBAD_VALUES, text)) {
+  for (const row of readTable({ ...from, columns: SIMBAD_VALUES_COLUMNS }, text)) {
     const keys: SimbadRecordKeys = {
       sourceId: row.sourceId('source_id'),
       hip: row.int('hip'),

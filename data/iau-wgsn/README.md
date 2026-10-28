@@ -98,7 +98,7 @@ the per-class counts, `wgsn-expected.json` pins them:
 
 `scripts/catalog/naming/build-wgsn-tables.ts` (`pnpm run build:wgsn`)
 reads the two frozen files, `wgsn_faints_corrections.tsv`, plus `data/classic-ids/cross_index.tsv` (the
-IV/27A Bayer tail, through `readCrossIndexTable` so its curated corrections
+IV/27A Bayer tail, through `CROSS_INDEX` so its curated corrections
 apply) and `data/membership/membership-manifest.tsv` (the [§ 2](/docs/star-naming.md#2-authority--one-source-approves-names-everything-else-compiles-them) residual
 verification), and writes the two derived tables. CI re-runs the build
 and fails on any diff, so artifact and code land together.

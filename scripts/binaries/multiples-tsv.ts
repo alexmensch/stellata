@@ -98,6 +98,10 @@ export const MULTIPLES_TSV = defineArtifact({
   columns: MULTIPLES_COLUMNS,
   hint: 'Re-run `pnpm run build:binaries`.',
   order: 'as-given',
+  rowKey: {
+    id: 'multiples',
+    text: ({ systemId, comp }: Pick<MultiplesRecord, 'systemId' | 'comp'>) => `${systemId}/${comp}`,
+  },
   decode: (row): MultiplesRecord => {
     const regime = row.int('regime') ?? row.fail('regime is empty');
     return {

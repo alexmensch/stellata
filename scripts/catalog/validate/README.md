@@ -17,6 +17,8 @@ scripts/catalog/validate/
                                   sample and writes
                                   docs/validation-residuals.md. Excludes the
                                   records whose distance came from SIMBAD.
+  simbad-sample-source.ts         SIMBAD_SAMPLE, the sample declared
+                                  (../../util/sources/).
   simbad-sample-parse.ts (+ test) Parser for data/simbad/simbad_sample.tsv.
   known-stars.test.ts             Tier-A corpus: named stars pinned against
   known-stars.tsv                 public/catalog.bin, plus the exact-set

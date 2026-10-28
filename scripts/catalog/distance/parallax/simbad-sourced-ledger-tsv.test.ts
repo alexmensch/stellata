@@ -5,7 +5,7 @@ import { describeCommittedRoundTrip } from '../../../util/tsv/committed-round-tr
 import {
   SIMBAD_SOURCED_DISTANCES,
   parseSimbadSourcedDistancesTsv,
-} from './simbad-sourced-ledger';
+} from './simbad-sourced-ledger-tsv';
 
 describe('simbad-sourced-ledger', () => {
   it('round-trips both join keys, so either match route excludes the record', () => {

@@ -11,7 +11,8 @@ import {
   type SimbadNamespaceIndex,
   type SimbadRecordKeys,
 } from '../record/catalog-pure';
-import { readTable, type TableSpec } from '../../util/tsv/table-pure';
+import type { Declared } from '../../util/sources/source';
+import { readTable } from '../../util/tsv/table-pure';
 import {
   classifyFromGspspec,
   classifyFromSimbad,
@@ -49,15 +50,11 @@ export function emptySimbadSpectralIndex(): SimbadSpectralIndex {
  *  reason `parseGaiaApsisTsv` uses. A row is indexed under every namespace it
  *  carries; the rows the pull enumerated by SIMBAD oid alone carry none and
  *  index nowhere. */
-const SPTYPE_TABLE = {
-  file: 'data/simbad/simbad_sptype.tsv',
-  columns: ['source_id', 'sp_type', 'hip', 'tyc', 'gj', 'sp_qual', 'otype'] as const,
-  hint: 'Re-run scripts/refresh/refresh-simbad-sptype.py.',
-} satisfies TableSpec<string>;
+const SPTYPE_TABLE_COLUMNS = ['source_id', 'sp_type', 'hip', 'tyc', 'gj', 'sp_qual', 'otype'] as const;
 
-export function parseSimbadSptypeTsv(text: string): SimbadSpectralIndex {
+export function parseSimbadSptypeTsv(text: string, from: Declared): SimbadSpectralIndex {
   const index = emptySimbadSpectralIndex();
-  for (const row of readTable(SPTYPE_TABLE, text)) {
+  for (const row of readTable({ ...from, columns: SPTYPE_TABLE_COLUMNS }, text)) {
     const spType = row.text('sp_type');
     const spQual = row.text('sp_qual');
     const otype = row.text('otype');

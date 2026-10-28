@@ -6,7 +6,8 @@ import { compareCountSnapshot } from '../build-counts';
 import { loadClassicIdCrossWalks } from './binding-candidates';
 import { loadBindingEvidence, loadHipVMag } from '../membership/binding/binding-evidence';
 import { printedVLookups } from '../photometry/v-magnitude-pure';
-import { loadGliese, loadTycho2 } from '../spine/primaries-tables';
+import { GLIESE } from '../gliese-source';
+import { TYCHO2 } from '../tycho2-source';
 import {
   buildClassicIdOverlay,
   type OverlayJoinCounts,
@@ -56,7 +57,7 @@ function logOverlay(overlay: ClassicIdOverlay, counts: OverlayJoinCounts): void 
 
 async function main(): Promise<void> {
   const { evidence } = loadBindingEvidence(
-    printedVLookups(loadHipVMag(), loadTycho2(), loadGliese()),
+    printedVLookups(loadHipVMag(), TYCHO2.read(), GLIESE.read()),
   );
   const {
     overlay,

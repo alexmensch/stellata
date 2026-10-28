@@ -5,33 +5,22 @@ import { resolve } from 'node:path';
 import { closureWithSiblings } from '../util/import-closure-pure';
 import { scriptClosure, trackedFiles } from '../util/import-closure';
 import { REPO_ROOT } from '../util/paths';
+import { declaredFiles, declaredInputs } from '../util/sources/declared-inputs';
 import {
-  HEAD_PATH, LEDGER_PATH, OVERRIDES_PATH, REINSTATEMENTS_PATH, RETIREMENTS_PATH,
+  OVERRIDES_PATH, REINSTATEMENTS_PATH, RETIREMENTS_PATH,
 } from '../sid/registry-io';
-import { DESIGNATION_CONSTELLATION_INPUT_PATHS } from './classic-ids/apply-designation-constellation';
-import { MULTIPLES_TSV_PATH } from '../binaries/multiples-tsv';
-import { STAR_NAMING_INPUT_PATHS } from './naming/apply-star-names';
-import { STELLARIUM_SKYCULTURE_JSON } from './parse/constellations/constellations';
-import { readStarsInputPaths } from './parse/read-stars-inputs';
-
-export const SRC_GCVS = resolve(REPO_ROOT, 'data/gcvs/gcvs5.txt');
-export const SRC_GCVS_XREF = resolve(REPO_ROOT, 'data/gcvs/crossid.txt');
-// GCVS keys on HIP and HD; this cross-walk is what lets a record carrying
-// only a source_id still resolve a variable-star designation.
-export const SRC_GAIA_HIP_XMATCH = resolve(REPO_ROOT, 'data/gaia/gaia_dr3_hip_xmatch.tsv');
-export const SRC_HIP_CCDM = resolve(REPO_ROOT, 'data/hipparcos/hip_ccdm.tsv');
-export const SRC_SIMBAD_SAMPLE = resolve(REPO_ROOT, 'data/simbad/simbad_sample.tsv');
+import { CATALOG_OUTPUTS } from './catalog-outputs';
 
 /** Absolute paths. */
 export async function catalogInputPaths(): Promise<string[]> {
-  const code = closureWithSiblings(await scriptClosure(['build:catalog']), trackedFiles());
+  const closure = await scriptClosure(['build:catalog']);
+  const outputs = new Set(Object.values(CATALOG_OUTPUTS.files));
+  const data = declaredFiles(await declaredInputs(closure))
+    .map((file) => resolve(REPO_ROOT, file))
+    .filter((path) => !outputs.has(path));
   return [
-    ...readStarsInputPaths(),
-    ...DESIGNATION_CONSTELLATION_INPUT_PATHS,
-    ...STAR_NAMING_INPUT_PATHS,
-    STELLARIUM_SKYCULTURE_JSON, SRC_GCVS, SRC_GCVS_XREF, SRC_GAIA_HIP_XMATCH, SRC_HIP_CCDM,
-    SRC_SIMBAD_SAMPLE, MULTIPLES_TSV_PATH,
-    LEDGER_PATH, HEAD_PATH, OVERRIDES_PATH, RETIREMENTS_PATH, REINSTATEMENTS_PATH,
-    ...code.map((path) => resolve(REPO_ROOT, path)),
+    ...data,
+    OVERRIDES_PATH, RETIREMENTS_PATH, REINSTATEMENTS_PATH,
+    ...closureWithSiblings(closure, trackedFiles()).map((path) => resolve(REPO_ROOT, path)),
   ];
 }

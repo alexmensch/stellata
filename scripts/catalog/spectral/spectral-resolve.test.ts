@@ -10,6 +10,8 @@ import {
   resolveSpectralInfo,
 } from './spectral-resolve';
 
+const FROM = { file: 'fixture.tsv', hint: 'h' };
+
 describe('resolveSpectralInfo — tier priority', () => {
   const GAIA_ID = '1234567890';
   const HIP = 14576;
@@ -219,7 +221,7 @@ describe('parseSimbadSptypeTsv', () => {
     const tsv = HDR +
       '57848\t*  56 Cyg\tA6V\tC\t1995ApJS...99..135A\tPM*\t102843\t2067050940754838656\n' +
       '370513\tHD  47606\tkA6hA7mF1(III)\tD\t2020AJ....160...52M\t*\t32151\t1001011023904917760\n';
-    const { bySourceId, byHip } = parseSimbadSptypeTsv(tsv);
+    const { bySourceId, byHip } = parseSimbadSptypeTsv(tsv, FROM);
     expect(bySourceId.size).toBe(2);
     expect(byHip.size).toBe(2);
     const a = bySourceId.get('2067050940754838656');
@@ -235,7 +237,7 @@ describe('parseSimbadSptypeTsv', () => {
     const tsv = HDR +
       '51431\t* bet Per\tB8V\tC\t\tSB*\t14576\t\n' +
       '999\tBlank\t\t\t\t\t\t1234\n';
-    const { bySourceId, byHip } = parseSimbadSptypeTsv(tsv);
+    const { bySourceId, byHip } = parseSimbadSptypeTsv(tsv, FROM);
     expect(bySourceId.size).toBe(1);
     expect(bySourceId.has('1234')).toBe(true);
     expect(byHip.size).toBe(1);
@@ -244,7 +246,7 @@ describe('parseSimbadSptypeTsv', () => {
 
   it('drops rows with no source_id, HIP or TYC', () => {
     const tsv = HDR + '42\tNo keys\tG2V\t\t\t\t\t\n';
-    const { bySourceId, byHip, byTyc } = parseSimbadSptypeTsv(tsv);
+    const { bySourceId, byHip, byTyc } = parseSimbadSptypeTsv(tsv, FROM);
     expect(bySourceId.size).toBe(0);
     expect(byHip.size).toBe(0);
     expect(byTyc.size).toBe(0);
@@ -253,7 +255,7 @@ describe('parseSimbadSptypeTsv', () => {
   it('indexes by TYC, keeping a row SIMBAD gives no Gaia id or HIP', () => {
     const tsv = HDR +
       '7\tTYC only\tK2III\tC\t\t*\t\t\t1234-5678-1\t\n';
-    const { bySourceId, byHip, byTyc } = parseSimbadSptypeTsv(tsv);
+    const { bySourceId, byHip, byTyc } = parseSimbadSptypeTsv(tsv, FROM);
     expect(bySourceId.size).toBe(0);
     expect(byHip.size).toBe(0);
     expect(byTyc.get('1234-5678-1')?.spType).toBe('K2III');
@@ -262,8 +264,8 @@ describe('parseSimbadSptypeTsv', () => {
   it('fails at the read on a pull missing any ladder or qualifier column', () => {
     for (const column of ['hip', 'tyc', 'gj', 'sp_qual', 'otype']) {
       const header = HDR.trimEnd().split('\t').filter((c) => c !== column).join('\t');
-      expect(() => parseSimbadSptypeTsv(`${header}\n`))
-        .toThrow(`data/simbad/simbad_sptype.tsv is missing required columns: ${column}. Re-run scripts/refresh/refresh-simbad-sptype.py.`);
+      expect(() => parseSimbadSptypeTsv(`${header}\n`, FROM))
+        .toThrow(`fixture.tsv is missing required columns: ${column}. h`);
     }
   });
 
@@ -274,20 +276,20 @@ describe('parseSimbadSptypeTsv', () => {
     const dupHip = HDR +
       '1\tFirst\tB8V\tC\t\t*\t14576\t\n' +
       '2\tSecond\tK0III\tD\t\t*\t14576\t\n';
-    expect(() => parseSimbadSptypeTsv(dupHip)).toThrow(/two rows keyed hip=14576/);
+    expect(() => parseSimbadSptypeTsv(dupHip, FROM)).toThrow(/two rows keyed hip=14576/);
     const dupSource = HDR +
       '1\tFirst\tB8V\tC\t\t*\t\t9876\n' +
       '2\tSecond\tK0III\tD\t\t*\t\t9876\n';
-    expect(() => parseSimbadSptypeTsv(dupSource))
+    expect(() => parseSimbadSptypeTsv(dupSource, FROM))
       .toThrow(/two rows keyed source_id=9876/);
     expect(() => parseSimbadSptypeTsv(HDR +
       '1\tA\tB8V\tC\t\t*\t\t\t1-2-1\t\n' +
-      '2\tB\tK0III\tD\t\t*\t\t\t1-2-1\t\n')).toThrow(/two rows keyed tyc=1-2-1/);
+      '2\tB\tK0III\tD\t\t*\t\t\t1-2-1\t\n', FROM)).toThrow(/two rows keyed tyc=1-2-1/);
     // The GJ collision is only visible after the fold: `Gl 165A` and `165 A`
     // are one key, which a raw-cell comparison would miss.
     expect(() => parseSimbadSptypeTsv(HDR +
       '1\tA\tB8V\tC\t\t*\t\t\t\tGl 165A\n' +
-      '2\tB\tK0III\tD\t\t*\t\t\t\t165 A\n')).toThrow(/two rows keyed gj=165A/);
+      '2\tB\tK0III\tD\t\t*\t\t\t\t165 A\n', FROM)).toThrow(/two rows keyed gj=165A/);
   });
 
   it('keeps the row stating a type where the other states none', () => {
@@ -296,16 +298,16 @@ describe('parseSimbadSptypeTsv', () => {
     const dupHip = HDR +
       '1\tComponent\t\t\t\t*\t14576\t\n' +
       '2\tThe star\tK0III\tD\t\t*\t14576\t\n';
-    expect(parseSimbadSptypeTsv(dupHip).byHip.get(14576)?.spType).toBe('K0III');
+    expect(parseSimbadSptypeTsv(dupHip, FROM).byHip.get(14576)?.spType).toBe('K0III');
     const reversed = HDR +
       '1\tThe star\tK0III\tD\t\t*\t14576\t\n' +
       '2\tComponent\t\t\t\t*\t14576\t\n';
-    expect(parseSimbadSptypeTsv(reversed).byHip.get(14576)?.spType).toBe('K0III');
+    expect(parseSimbadSptypeTsv(reversed, FROM).byHip.get(14576)?.spType).toBe('K0III');
   });
 
   it('decodes blank sp_type / sp_qual / otype cells as null', () => {
     const tsv = HDR + '111\t*\t\t\t\t\t\t9876\n';
-    const { bySourceId } = parseSimbadSptypeTsv(tsv);
+    const { bySourceId } = parseSimbadSptypeTsv(tsv, FROM);
     const r = bySourceId.get('9876');
     expect(r?.spType).toBeNull();
     expect(r?.spQual).toBeNull();
@@ -313,7 +315,7 @@ describe('parseSimbadSptypeTsv', () => {
   });
 
   it('throws on missing required columns', () => {
-    expect(() => parseSimbadSptypeTsv('simbad_oid\tsource_id\n1\t9876\n'))
+    expect(() => parseSimbadSptypeTsv('simbad_oid\tsource_id\n1\t9876\n', FROM))
       .toThrow(/sp_type/);
   });
 });

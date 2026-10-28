@@ -1,10 +1,7 @@
 // Hipparcos CCDM parser plus curated visual-double overrides, feeding
 // the chart-mode wings glyph. See /scripts/catalog/multiplicity/README.md#ccdm-double-star-cross-match.
-import { existsSync, readFileSync } from 'node:fs';
-import { relative } from 'node:path';
-
-import { REPO_ROOT } from '../../util/paths';
-import { readTable, type TableSpec } from '../../util/tsv/table-pure';
+import type { Declared } from '../../util/sources/source';
+import { readTable } from '../../util/tsv/table-pure';
 import {
   applyDoublesFlag as applyDoublesFlagPure,
   isOpticalDoublePrimary,
@@ -62,27 +59,19 @@ export const KNOWN_VISUAL_DOUBLE_HIPS: Set<number> = new Set(
 // Real CCDM keys only. A HIP the curated list already claims is skipped here
 // and unioned in by applyDoublesFlag instead, so no synthetic key is minted
 // that would share a type with a real CCDM ID.
-const HIP_CCDM = {
-  file: 'data/hipparcos/hip_ccdm.tsv',
-  columns: ['HIP', 'CCDM', 'MultFlag'] as const,
-  hint: 'Re-fetch from VizieR with -out=HIP,CCDM,MultFlag.',
-  comments: true,
-} satisfies TableSpec<string>;
+const HIP_CCDM_COLUMNS = ['HIP', 'CCDM', 'MultFlag'] as const;
 
 /** VizieR rules a dash line under its header (after a units line the reader
  *  already skips as blank); no TableSpec option expresses it. */
 const VIZIER_SEPARATOR = /^-+$/;
 
-export function parseHipCcdm(srcPath: string): Map<string, number[]> {
+export function parseHipCcdm(text: string, from: Declared): Map<string, number[]> {
   const groups = new Map<string, number[]>();
-
-  if (!existsSync(srcPath)) return groups;
 
   let scanned = 0, kept = 0, viaOverride = 0;
   let droppedNoHip = 0, droppedNoCcdm = 0, droppedMultFlag = 0;
 
-  const spec = { ...HIP_CCDM, file: relative(REPO_ROOT, srcPath) };
-  for (const row of readTable(spec, readFileSync(srcPath, 'utf8'))) {
+  for (const row of readTable({ ...from, columns: HIP_CCDM_COLUMNS, comments: true }, text)) {
     if (VIZIER_SEPARATOR.test(row.raw('HIP'))) continue;
     scanned++;
     const hip = row.int('HIP');

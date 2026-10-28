@@ -10,6 +10,8 @@ import {
 import { WGSN_NAMES } from './wgsn-names-tsv';
 import type { DesignationRow } from './wgsn-tables-pure';
 
+const FROM = { file: 'fixture.tsv', hint: 'h' };
+
 const bayer = (over: Partial<DesignationRow>): DesignationRow => ({
   kind: 'bayer', letter: null, sup: null, num: null, dc: '', half: null,
   component: null, hip: null, hr: null, hd: null, source: 'nec', ...over,
@@ -20,7 +22,7 @@ const NAMES_HEADER = `${WGSN_NAMES.columns.join('\t')}\n`;
 describe('the disposition reader', () => {
   it('reads a short row, its absent keys as null', () => {
     expect(parseProperDispositions(
-      'proper\tclass\thip\thd\nRoss 128\tdiscovery-designation\t57548\t\nRoss 248\tdiscovery-designation\n',
+      'proper\tclass\thip\thd\nRoss 128\tdiscovery-designation\t57548\t\nRoss 248\tdiscovery-designation\n', FROM,
     )).toEqual([
       { proper: 'Ross 128', disposition: 'discovery-designation', hip: 57548, hd: null },
       { proper: 'Ross 248', disposition: 'discovery-designation', hip: null, hd: null },
@@ -28,8 +30,8 @@ describe('the disposition reader', () => {
   });
 
   it('refuses a class outside the routed set', () => {
-    expect(() => parseProperDispositions('proper\tclass\thip\thd\nX\tfolk-name\t\t\n'))
-      .toThrow(/athyg_proper_dispositions\.tsv:2: class/);
+    expect(() => parseProperDispositions('proper\tclass\thip\thd\nX\tfolk-name\t\t\n', FROM))
+      .toThrow(/fixture\.tsv:2: class/);
   });
 });
 

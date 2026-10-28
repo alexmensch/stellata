@@ -2,8 +2,6 @@
 // secondaries not in AT-HYG into first-class catalog.bin records.
 // See ./README.md#companion-promotion-from-databinariesmultiplestsv `data/binaries/multiples.tsv`.
 
-import { readFileSync } from 'node:fs';
-
 import {
   FLAG_BINARY_COMPANION_ONLY,
   FLAG_BINARY_COMPANION_SYNTHETIC,
@@ -30,7 +28,8 @@ import {
   RIELLO_G_MINUS_V_SIGMA,
   vTierIsSystemBlend,
 } from '../photometry/v-magnitude-pure';
-import { MULTIPLES_TSV, MULTIPLES_TSV_PATH, type MultiplesRecord, type PhotometryVia } from '../../binaries/multiples-tsv';
+import { MULTIPLES_TSV, type MultiplesRecord, type PhotometryVia } from '../../binaries/multiples-tsv';
+import { readArtifact } from '../../util/sources/source';
 import { emptyTallyPartition } from '../../util/tally';
 import { ARCSEC_TO_RAD } from '../../../src/client/util/astronomy-constants';
 import { equatorialTangentBasisAt } from '../../../src/client/util/equatorial-basis';
@@ -117,7 +116,7 @@ export function parseMultiplesTsv(text: string): MultiplesTsvRow[] {
 }
 
 export function readMultiplesTsv(): MultiplesTsvRow[] {
-  return parseMultiplesTsv(readFileSync(MULTIPLES_TSV_PATH, 'utf8'));
+  return readArtifact(MULTIPLES_TSV).map(promotionRow);
 }
 
 // ---- Tangent-plane projection ------------------------------------------

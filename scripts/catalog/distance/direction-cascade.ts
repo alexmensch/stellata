@@ -7,11 +7,12 @@ import {
   type UnitVector,
 } from '../../../src/client/util/equatorial-basis';
 import {
-  readTable, tableLineReader, type TableRow, type TableSpec,
+  readTable, tableLineReader, type TableRow,
 } from '../../util/tsv/table-pure';
 import { gaiaHas5pSolution } from './gaia-distrust';
 import type { SimbadRecordKeys } from '../record/catalog-pure';
 import type { Tycho2Row } from '../tycho2-parse';
+import type { Declared } from '../../util/sources/source';
 import {
   lookupCns5Astrometry,
   type Cns5Astrometry,
@@ -455,44 +456,34 @@ function foldAstrometryRow(
  *  as the whole-text parse does. `keep` filters to a subset without holding
  *  the table. */
 export function gaiaAstrometryAccumulator(
-  fileLabel: string,
-  refreshHint: string,
+  from: Declared,
   keep?: ReadonlySet<string>,
 ): {
   line: (raw: string) => void;
   result: () => Map<string, GaiaAstrometryCatalogRow>;
 } {
   const out = new Map<string, GaiaAstrometryCatalogRow>();
-  const spec = { file: fileLabel, columns: ASTROMETRY_COLUMNS, hint: refreshHint };
+  const spec = { ...from, columns: ASTROMETRY_COLUMNS };
   return {
     line: tableLineReader(spec, (row) => foldAstrometryRow(row, out, keep)),
     result: () => out,
   };
 }
 
-const GAIA_ASTROMETRY_CATALOG = {
-  file: 'data/gaia/gaia_dr3_astrometry_catalog.tsv',
-  columns: ASTROMETRY_COLUMNS,
-  hint: 'Re-run scripts/refresh/refresh-gaia-astrometry-catalog.py.',
-} satisfies TableSpec<string>;
-
 export function parseGaiaAstrometryCatalogTsv(
   text: string,
+  from: Declared,
 ): Map<string, GaiaAstrometryCatalogRow> {
   const out = new Map<string, GaiaAstrometryCatalogRow>();
-  for (const row of readTable(GAIA_ASTROMETRY_CATALOG, text)) foldAstrometryRow(row, out);
+  for (const row of readTable({ ...from, columns: ASTROMETRY_COLUMNS }, text)) foldAstrometryRow(row, out);
   return out;
 }
 
-const HIP2 = {
-  file: 'data/hipparcos/hip2_van_leeuwen.tsv',
-  columns: ['hip', 'ra_icrs', 'de_icrs', 'plx', 'e_plx', 'pm_ra', 'pm_de'] as const,
-  hint: 'Re-run `pnpm run refresh:hip2`.',
-} satisfies TableSpec<string>;
+const HIP2_COLUMNS = ['hip', 'ra_icrs', 'de_icrs', 'plx', 'e_plx', 'pm_ra', 'pm_de'] as const;
 
-export function parseHip2Tsv(text: string): Map<number, Hip2AstrometryRow> {
+export function parseHip2Tsv(text: string, from: Declared): Map<number, Hip2AstrometryRow> {
   const out = new Map<number, Hip2AstrometryRow>();
-  for (const row of readTable(HIP2, text)) {
+  for (const row of readTable({ ...from, columns: HIP2_COLUMNS }, text)) {
     const hip = row.int('hip');
     if (hip === null || hip <= 0) continue;
     const raDeg = row.float('ra_icrs');
@@ -510,18 +501,14 @@ export function parseHip2Tsv(text: string): Map<number, Hip2AstrometryRow> {
   return out;
 }
 
-const GAIA_NSS = {
-  file: 'data/gaia/gaia_dr3_nss_two_body.tsv',
-  columns: ['source_id'] as const,
-  hint: 'Re-run scripts/refresh/refresh-gaia-nss.py.',
-} satisfies TableSpec<string>;
+const GAIA_NSS_COLUMNS = ['source_id'] as const;
 
 /** Extract the set of Gaia DR3 source_ids carrying an NSS two-body
  *  orbit from `data/gaia/gaia_dr3_nss_two_body.tsv`. Only the first
  *  column is read — membership is the only signal the cascade needs. */
-export function parseNssSourceIdSet(text: string): Set<string> {
+export function parseNssSourceIdSet(text: string, from: Declared): Set<string> {
   const out = new Set<string>();
-  for (const row of readTable(GAIA_NSS, text)) {
+  for (const row of readTable({ ...from, columns: GAIA_NSS_COLUMNS }, text)) {
     const sourceId = row.sourceId('source_id');
     if (sourceId !== null) out.add(sourceId);
   }

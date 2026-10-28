@@ -20,8 +20,7 @@ scripts/catalog/membership/binding/
                                 `loadHipVMag`. The printed-V lookups come from
                                 the calling build, over the tables it already
                                 parsed: build:membership's primaries tables,
-                                build:classic-ids' `loadTycho2` / `loadGliese`
-                                (../../spine/primaries-tables.ts).
+                                build:classic-ids' `TYCHO2` / `GLIESE` reads.
   binding-derivation-pure.ts    The four candidate sources, the consensus
     (+ test)                    ranking, both gates through
                                 weighBinding, and the candidate set the

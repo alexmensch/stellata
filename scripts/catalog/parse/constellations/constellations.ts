@@ -1,21 +1,20 @@
 // IAU-88 constellation table, the Stellarium stick-figure and boundary-edge
 // readers, and positional membership in the table's index space.
 // See README.md#positional-constellation-membership.
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
-
 import {
   constellationKey,
   createIauConstellationLookup,
   type IauConstellationLookup,
 } from '../../../../src/client/constellation-boundaries/iau-geometry/iau-boundaries-pure';
 import { raDecFromUnitVector } from '../../../../src/client/util/equatorial-basis';
-import { REPO_ROOT } from '../../../util/paths';
 
-export const STELLARIUM_SKYCULTURE_JSON = resolve(
-  REPO_ROOT,
-  'data/stellarium/stellarium-modern-skyculture.json',
-);
+/** The parsed Stellarium modern sky-culture JSON (stellarium-source.ts). */
+export interface StellariumSkyCulture {
+  edges?: unknown;
+  edges_epoch?: unknown;
+  edges_source?: unknown;
+  constellations?: Array<{ id: string; lines?: number[][] }>;
+}
 
 export const CONSTELLATIONS: { code: string; name: string }[] = [
   { code: 'And', name: 'Andromeda' },
@@ -133,13 +132,10 @@ const IAU_EDGES_SOURCE = 'https://pbarbier.com/constellations/edges_18.txt';
 // (Delporte 1930 (/data/papers/index.md#delporte1930)) boundary segments at
 // equinox B1875, parsed by
 // `src/client/constellation-boundaries/iau-geometry/iau-boundaries-pure.ts`.
-export function readIauEdgeRecords(
-  srcStellariumPath: string = STELLARIUM_SKYCULTURE_JSON,
-): string[] {
-  const raw = JSON.parse(readFileSync(srcStellariumPath, 'utf8'));
+export function iauEdgeRecords(raw: StellariumSkyCulture): string[] {
   const edges: unknown = raw.edges;
   if (!Array.isArray(edges) || edges.length === 0) {
-    throw new Error(`Stellarium sky culture carries no edges array: ${srcStellariumPath}`);
+    throw new Error('Stellarium sky culture carries no edges array');
   }
   if (raw.edges_epoch !== IAU_EDGES_EPOCH) {
     throw new Error(
@@ -155,7 +151,7 @@ export function readIauEdgeRecords(
     );
   }
   if (!edges.every((record): record is string => typeof record === 'string')) {
-    throw new Error(`Stellarium edges array holds a non-string record: ${srcStellariumPath}`);
+    throw new Error('Stellarium edges array holds a non-string record');
   }
   return edges;
 }
@@ -176,7 +172,7 @@ export interface ConstellationAssignment {
 /** Binds the boundary lookup to the IAU-88 table's indices. The origin has no
  *  direction, so `indexAt` throws there rather than answering for Sol. */
 export function createConstellationAssignment(
-  records: readonly string[] = readIauEdgeRecords(),
+  records: readonly string[],
 ): ConstellationAssignment {
   const lookup = createIauConstellationLookup(records);
   // The edge set and the table above are independent sources: a region naming
@@ -208,11 +204,10 @@ export function createConstellationAssignment(
 // deterministic HIP mapping is the whole point of the Stellarium source, and
 // a soft warning gives it up.
 export function buildFigureLines(
-  srcStellariumPath: string,
+  raw: StellariumSkyCulture,
   hipToIndex: Map<number, number>,
 ): Map<number, number[][]> {
-  const raw = JSON.parse(readFileSync(srcStellariumPath, 'utf8'));
-  const source: Array<{ id: string; lines?: number[][] }> = raw.constellations ?? [];
+  const source = raw.constellations ?? [];
 
   const out = new Map<number, number[][]>();
   const missing: Array<{ code: string; hip: number }> = [];

@@ -9,6 +9,8 @@ that owns everything else about a record is `../README.md`.
 
 ```
 scripts/catalog/parse/gcvs/
+  gcvs-source.ts           GCVS / GCVS_CROSSID, the two frozen files
+                           declared (../../../util/sources/).
   gcvs-parse.ts (+ test)   parseGcvsMain / parseGcvsCrossref (the two
                            frozen-file readers), bridgeGcvsByGaia, and
                            applyVariability — the post-sort walk that

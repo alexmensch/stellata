@@ -8,7 +8,7 @@ import {
 import type { BoundaryArtifact } from './boundaries-artifact-pure';
 
 /** Shape only — synthetic region codes and a 2 × 2 grid. Anything reading the
- *  real geometry builds from `readIauEdgeRecords` instead. Areas are the sphere
+ *  real geometry builds from `iauEdgeRecords` instead. Areas are the sphere
  *  split evenly, which is meaningless per-region but is what the validator's
  *  closure check reads. */
 export function boundaryArtifactFixture(

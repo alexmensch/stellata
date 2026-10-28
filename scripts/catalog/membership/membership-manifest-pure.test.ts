@@ -42,6 +42,8 @@ import {
 } from './membership-manifest-tsv';
 import { parkedRecordKey } from '../distance/parallax/parked-ledger';
 
+const FROM = { file: 'fixture.tsv', hint: 'h' };
+
 function spineRow(cells: Partial<SpineRow>): SpineRow {
   const out = {} as SpineRow;
   for (const c of SPINE_COLUMNS) out[c] = cells[c] ?? '';
@@ -136,7 +138,7 @@ const tables: PrimaryTables = {
     { cns5: 4, gj: '10002', gjComp: null, gaiaSourceId: null, hip: null, astrometry: null },
     { cns5: 0, gj: 'Sun', gjComp: null, gaiaSourceId: null, hip: null, astrometry: null },
   ],
-  gliese: parseGlieseTsv(GLIESE_TSV),
+  gliese: parseGlieseTsv(GLIESE_TSV, FROM),
   hipI239: new Set([10, 20, 30, 40, 50, 70]),
   hdI239: new Set<number>(),
   i239HipHd: new Map<number, number>(),

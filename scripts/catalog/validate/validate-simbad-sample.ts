@@ -14,22 +14,19 @@ import {
   type Catalog,
   type CatalogRecord,
 } from '../catalog-lookup';
-import {
-  parseSimbadSampleRows,
-  type SimbadSampleRow,
-} from './simbad-sample-parse';
+import type { SimbadSampleRow } from './simbad-sample-parse';
 import {
   SIMBAD_SOURCED_DISTANCES_FILE,
   emptySimbadSourcedKeys,
   parseSimbadSourcedDistancesTsv,
   type SimbadSourcedKeys,
-} from '../distance/parallax/simbad-sourced-ledger';
+} from '../distance/parallax/simbad-sourced-ledger-tsv';
 import { REPO_ROOT } from '../../util/paths';
+import { SIMBAD_SAMPLE } from './simbad-sample-source';
 
 const SIMBAD_SOURCED_PATH = resolve(REPO_ROOT, SIMBAD_SOURCED_DISTANCES_FILE);
 
 const __filename = fileURLToPath(import.meta.url);
-const DEFAULT_SAMPLE_PATH = resolve(REPO_ROOT, 'data/simbad/simbad_sample.tsv');
 const DEFAULT_REPORT_PATH = resolve(REPO_ROOT, 'docs/validation-residuals.md');
 
 // ─── Thresholds ──────────────────────────────────────────────────────
@@ -394,7 +391,6 @@ function isSimbadSourced(
 }
 
 interface RunOptions {
-  samplePath?: string;
   reportPath?: string;
   catalogManifestPath?: string;
 }
@@ -403,9 +399,8 @@ export async function runValidation(opts: RunOptions = {}): Promise<{
   report: ResidualReport;
   failures: string[];
 }> {
-  const samplePath = opts.samplePath ?? DEFAULT_SAMPLE_PATH;
   const reportPath = opts.reportPath ?? DEFAULT_REPORT_PATH;
-  const sample = parseSimbadSampleRows(readFileSync(samplePath, 'utf8'));
+  const sample = SIMBAD_SAMPLE.read();
   const catalog = await loadCatalog({ catalogManifestPath: opts.catalogManifestPath });
 
   const excludedKeys = existsSync(SIMBAD_SOURCED_PATH)

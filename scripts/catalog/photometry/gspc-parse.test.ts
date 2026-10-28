@@ -2,6 +2,8 @@ import { describe, it, expect } from 'vitest';
 
 import { parseGspcTsv } from './gspc-parse';
 
+const FROM = { file: 'fixture.tsv', hint: 'h' };
+
 describe('gspc-parse / parseGspcTsv', () => {
   const GSPC = [
     'source_id\tb_jkc_mag\tb_jkc_flux\tb_jkc_flux_error\tb_jkc_flag\tv_jkc_mag\tv_jkc_flux\tv_jkc_flux_error\tv_jkc_flag',
@@ -16,25 +18,25 @@ describe('gspc-parse / parseGspcTsv', () => {
   ].join('\n');
 
   it('keys by the source_id string and carries B − V', () => {
-    const m = parseGspcTsv(GSPC);
+    const m = parseGspcTsv(GSPC, FROM);
     // The ids exceed Number.MAX_SAFE_INTEGER, so the key must stay a string.
     expect(m.get('4472832130942575872')?.bMinusV).toBeCloseTo(1.694035, 6);
     expect(m.get('36747057287093632')?.bMinusV).toBeCloseTo(0.665726, 6);
   });
 
   it('skips a row missing either band rather than entering a partial colour', () => {
-    expect(parseGspcTsv(GSPC).has('10625474212633728')).toBe(false);
-    expect(parseGspcTsv(GSPC).size).toBe(3);
+    expect(parseGspcTsv(GSPC, FROM).has('10625474212633728')).toBe(false);
+    expect(parseGspcTsv(GSPC, FROM).size).toBe(3);
   });
 
   it('calls a row in range only when BOTH bands are flagged 1', () => {
-    const m = parseGspcTsv(GSPC);
+    const m = parseGspcTsv(GSPC, FROM);
     expect(m.get('36747057287093632')?.inValidatedRange).toBe(true);
     expect(m.get('4472832130942575872')?.inValidatedRange).toBe(false);
     expect(m.get('99999999999999999')?.inValidatedRange).toBe(false);
   });
 
   it('throws on an empty file rather than silently zeroing the tier', () => {
-    expect(() => parseGspcTsv('')).toThrow(/has no header row/);
+    expect(() => parseGspcTsv('', FROM)).toThrow(/has no header row/);
   });
 });

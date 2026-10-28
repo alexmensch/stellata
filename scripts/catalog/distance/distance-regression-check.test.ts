@@ -1,3 +1,4 @@
+import { parseSimbadSampleRows } from '../validate/simbad-sample-parse';
 import { describe, it, expect } from 'vitest';
 
 import type { Star } from '../parse/stars-parse';
@@ -12,7 +13,7 @@ import {
   finalDistance,
   formatRegressionDiff,
   mergeReasonsFromSnapshot,
-  parseSimbadSampleTsv,
+  simbadSampleDistances,
   starKey,
   type RegressionReport,
   type SimbadDistanceEntry,
@@ -196,7 +197,10 @@ describe('detectSimbadOutlier', () => {
   });
 });
 
-describe('parseSimbadSampleTsv', () => {
+describe('simbadSampleDistances', () => {
+  const FROM = { file: 'fixture.tsv', hint: 'h' };
+  const sampleDistances = (text: string) => simbadSampleDistances(parseSimbadSampleRows(text, FROM));
+
   const HEADER =
     'simbad_oid\tsimbad_main_id\thip\tgaia_source_id\tra\tdec\tplx_value\tplx_err\tpmra\tpmdec\tv_mag\tdistance_pc\tabsmag\tsp_type\totype';
 
@@ -204,7 +208,7 @@ describe('parseSimbadSampleTsv', () => {
     const tsv =
       `${HEADER}\n` +
       '23\tHD 199873\t\t1871565916603844224\t314.67\t36.98\t2.0625\t0.0147\t-5.18\t-2.05\t8.86\t484.848\t0.432\tA2\t*\n';
-    const map = parseSimbadSampleTsv(tsv);
+    const map = sampleDistances(tsv);
     expect(map.size).toBe(1);
     expect(map.get('gaia:1871565916603844224')?.distancePc).toBe(484.848);
   });
@@ -213,7 +217,7 @@ describe('parseSimbadSampleTsv', () => {
     const tsv =
       `${HEADER}\n` +
       '65\tHD 201252\t104242\t1868786041970250368\t316.80\t36.95\t1.39\t0.03\t3.0\t0.33\t8.18\t718.907\t-1.10\tA0\t*\n';
-    const map = parseSimbadSampleTsv(tsv);
+    const map = sampleDistances(tsv);
     expect(map.size).toBe(2);
     expect(map.get('hip:104242')?.simbadOid).toBe(65);
     expect(map.get('gaia:1868786041970250368')?.simbadOid).toBe(65);
@@ -223,12 +227,12 @@ describe('parseSimbadSampleTsv', () => {
     const tsv =
       `${HEADER}\n` +
       '11\t* eps Cas\t\t1234\t0\t0\t\t\t\t\t6.0\t\t\tB\t*\n';
-    const map = parseSimbadSampleTsv(tsv);
+    const map = sampleDistances(tsv);
     expect(map.size).toBe(0);
   });
 
   it('throws on a missing required column', () => {
-    expect(() => parseSimbadSampleTsv('simbad_oid\thip\n1\t100\n')).toThrow(
+    expect(() => sampleDistances('simbad_oid\thip\n1\t100\n')).toThrow(
       /missing required column/,
     );
   });

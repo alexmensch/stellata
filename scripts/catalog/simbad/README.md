@@ -9,6 +9,8 @@ owns how they are read and what a consumer may conclude from them.
 
 ```
 scripts/catalog/simbad/
+  simbad-values-source.ts         SIMBAD_VALUES, the pull declared
+                                  (../../util/sources/).
   simbad-values-parse.ts          data/simbad/simbad_values.tsv indexed by
     (+ test)                      every namespace the pull keyed on. Bottom
                                   tier of the rv, direction/PM and distance

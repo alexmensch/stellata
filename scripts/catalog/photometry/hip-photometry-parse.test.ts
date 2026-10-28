@@ -2,6 +2,8 @@ import { describe, it, expect } from 'vitest';
 
 import { parseHipPhotometryTsv, printedByHip } from './hip-photometry-parse';
 
+const FROM = { file: 'fixture.tsv', hint: 'h' };
+
 describe('hip-photometry-parse / parseHipPhotometryTsv', () => {
   const HIP_PHOTOMETRY = [
     'hip\tvmag\tbv',
@@ -13,7 +15,7 @@ describe('hip-photometry-parse / parseHipPhotometryTsv', () => {
   ].join('\n');
 
   it('maps HIP to printed V, dropping null-V and non-positive HIP rows', () => {
-    const { vmag } = parseHipPhotometryTsv(HIP_PHOTOMETRY);
+    const { vmag } = parseHipPhotometryTsv(HIP_PHOTOMETRY, FROM);
     expect(vmag.get(32349)).toBe(-1.44);
     expect(vmag.get(71681)).toBe(1.33);
     expect(vmag.has(99999)).toBe(false);
@@ -22,7 +24,7 @@ describe('hip-photometry-parse / parseHipPhotometryTsv', () => {
   });
 
   it('maps HIP to printed B−V independently of V', () => {
-    const { bv } = parseHipPhotometryTsv(HIP_PHOTOMETRY);
+    const { bv } = parseHipPhotometryTsv(HIP_PHOTOMETRY, FROM);
     expect(bv.get(32349)).toBe(0.009);
     // A row with no V still contributes its colour, and vice versa — the
     // 1,281 null-B−V rows must not cost the V map an entry.
@@ -33,7 +35,7 @@ describe('hip-photometry-parse / parseHipPhotometryTsv', () => {
   });
 
   it('reads a value for a record HIP, and null for both kinds of miss', () => {
-    const { bv } = parseHipPhotometryTsv(HIP_PHOTOMETRY);
+    const { bv } = parseHipPhotometryTsv(HIP_PHOTOMETRY, FROM);
     expect(printedByHip(bv, 32349)).toBe(0.009);
     expect(printedByHip(bv, 88888)).toBeNull();
     expect(printedByHip(bv, null)).toBeNull();
@@ -42,6 +44,6 @@ describe('hip-photometry-parse / parseHipPhotometryTsv', () => {
   it('throws on an empty file rather than yielding an empty gate', () => {
     // An empty map would silently disable the binding gate, which is the
     // failure this parser exists to make loud.
-    expect(() => parseHipPhotometryTsv('')).toThrow(/has no header row/);
+    expect(() => parseHipPhotometryTsv('', FROM)).toThrow(/has no header row/);
   });
 });

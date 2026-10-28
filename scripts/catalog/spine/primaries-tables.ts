@@ -7,16 +7,14 @@ import { REPO_ROOT as ROOT, readRequired } from '../../util/paths';
 import { WGSN_DESIGNATIONS } from '../naming/wgsn-designations-tsv';
 import { WGSN_NAMES } from '../naming/wgsn-names-tsv';
 import { readTable, type TableSpec } from '../../util/tsv/table-pure';
-import { readGaiaHipXmatch, readGaiaTycXmatch } from '../parse/gaia-xmatch';
-import {
-  SRC_CNS5, SRC_HIP_XMATCH, SRC_TYC2_HD, SRC_TYC_XMATCH,
-} from '../classic-ids/binding-candidates';
-import {
-  parseBsc5Tsv, parseCns5Tsv, parseTyc2HdTsv,
-} from '../classic-ids/classic-ids-parse';
-import { readCrossIndexTable } from '../classic-ids/cross-index';
-import { parseGlieseTsv } from '../gliese-parse';
-import { parseTycho2Tsvs } from '../tycho2-parse';
+import { GAIA_HIP_XMATCH } from '../parse/gaia-hip-xmatch-source';
+import { GAIA_TYC_XMATCH } from '../parse/gaia-tyc-xmatch-source';
+import { SRC_TYC2_HD } from '../classic-ids/binding-candidates';
+import { parseBsc5Tsv, parseTyc2HdTsv } from '../classic-ids/classic-ids-parse';
+import { CNS5 } from '../classic-ids/cns5-source';
+import { CROSS_INDEX } from '../classic-ids/cross-index-source';
+import { GLIESE } from '../gliese-source';
+import { TYCHO2 } from '../tycho2-source';
 import { loadStoredEdges } from '../../sid/registry-io';
 import {
   addKeyed, glAliasesFromEdges,
@@ -24,11 +22,8 @@ import {
 } from './primaries-audit-pure';
 
 export const SRC_BSC5 = resolve(ROOT, 'data/classic-ids/bsc5.tsv');
-export const SRC_GLIESE = resolve(ROOT, 'data/gliese/gliese_v70a.tsv');
 export const SRC_HIP_MAIN = resolve(ROOT, 'data/hipparcos/hip_main_vmag.tsv');
 export const SRC_HIP2 = resolve(ROOT, 'data/hipparcos/hip2_van_leeuwen.tsv');
-export const SRC_TYCHO2_MAIN = resolve(ROOT, 'data/tycho2/tycho2_main.tsv');
-export const SRC_TYCHO2_SUPPL1 = resolve(ROOT, 'data/tycho2/tycho2_suppl1.tsv');
 export const SRC_SIMBAD_SPTYPE = resolve(ROOT, 'data/simbad/simbad_sptype.tsv');
 
 export const LFS_HINT = 'run `git lfs pull`.';
@@ -121,22 +116,12 @@ function readSimbadXids(): Map<string, SimbadXids> {
  *  cross-walk to the Tycho ids the caller will look up. */
 export async function loadBindingTables(keepTycs: ReadonlySet<string>): Promise<BindingTables> {
   return {
-    cns5: parseCns5Tsv(readRequired(SRC_CNS5, LFS_HINT)),
+    cns5: CNS5.read(),
     glAliases: glAliasesFromEdges(loadStoredEdges()),
-    tycToSource: await readGaiaTycXmatch(SRC_TYC_XMATCH, keepTycs),
-    hipToSource: readGaiaHipXmatch(SRC_HIP_XMATCH),
+    tycToSource: await GAIA_TYC_XMATCH.read(keepTycs),
+    hipToSource: GAIA_HIP_XMATCH.read(),
     simbadBySourceId: readSimbadXids(),
   };
-}
-
-export function loadTycho2(): ReturnType<typeof parseTycho2Tsvs> {
-  return parseTycho2Tsvs(
-    readRequired(SRC_TYCHO2_MAIN, LFS_HINT), readRequired(SRC_TYCHO2_SUPPL1, LFS_HINT),
-  );
-}
-
-export function loadGliese(): ReturnType<typeof parseGlieseTsv> {
-  return parseGlieseTsv(readRequired(SRC_GLIESE, LFS_HINT));
 }
 
 /** `keepTycs` narrows the 2.5 M-row TYC cross-walk to the Tycho ids the caller
@@ -150,13 +135,13 @@ export async function loadPrimaryTables(keepTycs: Iterable<string>): Promise<Pri
     ...await loadBindingTables(keep),
     iv25,
     v50: parseBsc5Tsv(readRequired(SRC_BSC5, LFS_HINT)),
-    iv27a: readCrossIndexTable(),
-    gliese: loadGliese(),
+    iv27a: CROSS_INDEX.read(),
+    gliese: GLIESE.read(),
     hipI239: i239.hip,
     hdI239: i239.hd,
     i239HipHd: i239.hipHd,
     hip2: readHip2Hips(),
     wgsn: readWgsn(),
-    tycho2: loadTycho2(),
+    tycho2: TYCHO2.read(),
   };
 }

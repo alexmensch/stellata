@@ -1,18 +1,14 @@
 import { describe, expect, it } from 'vitest';
 
 import { unitVectorFromRaDec } from '../../../../src/client/util/equatorial-basis';
-import {
-  assertFigureVerticesInFirstChunk,
-  CONSTELLATIONS,
-  createConstellationAssignment,
-  readIauEdgeRecords,
-} from './constellations';
+import { assertFigureVerticesInFirstChunk, CONSTELLATIONS, createConstellationAssignment, iauEdgeRecords } from './constellations';
+import { STELLARIUM } from './stellarium-source';
 
 const conIndexOf = (code: string): number =>
   CONSTELLATIONS.findIndex((c) => c.code.toLowerCase() === code);
 
 describe('createConstellationAssignment', () => {
-  const assignment = createConstellationAssignment();
+  const assignment = createConstellationAssignment(iauEdgeRecords(STELLARIUM.read()));
 
   it('resolves a position into the IAU-88 index space', () => {
     // Sirius: 06h45m09s −16°42'58". Distance is irrelevant — only direction.
@@ -41,7 +37,7 @@ describe('createConstellationAssignment', () => {
     // invariant long before this check, so the reachable failure is exactly
     // this one — a swapped edge set that still decomposes cleanly but names a
     // constellation the table has never heard of (an Argo Navis-era set).
-    const renamed = readIauEdgeRecords().map((r) => r.replace(/\bMEN\b/g, 'ZZZ'));
+    const renamed = iauEdgeRecords(STELLARIUM.read()).map((r) => r.replace(/\bMEN\b/g, 'ZZZ'));
     expect(renamed.join('\n')).toContain('ZZZ');
     expect(() => createConstellationAssignment(renamed))
       .toThrow(/absent from the IAU-88 table: ZZZ/);
@@ -55,7 +51,7 @@ describe('createConstellationAssignment', () => {
   });
 
   it('reads the committed edge set by default', () => {
-    expect(createConstellationAssignment(readIauEdgeRecords()).indexAt(1, 0, 0))
+    expect(createConstellationAssignment(iauEdgeRecords(STELLARIUM.read())).indexAt(1, 0, 0))
       .toBe(assignment.indexAt(1, 0, 0));
   });
 });

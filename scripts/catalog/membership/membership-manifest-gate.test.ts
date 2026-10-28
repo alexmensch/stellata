@@ -21,11 +21,8 @@ import {
   loadCatalog,
 } from '../catalog-lookup';
 import { FLAG_BINARY_COMPANION_ONLY, type SearchEntry } from '../record/catalog-pure';
-import {
-  PARKED_LEDGER_FILE,
-  parkedRecordKey,
-  parseParkedRecordsTsv,
-} from '../distance/parallax/parked-ledger';
+import { parkedRecordKey } from '../distance/parallax/parked-ledger';
+import { PARKED_LEDGER, parseParkedRecordsTsv } from '../distance/parallax/parked-ledger-tsv';
 import {
   INHERITED_SPINE,
   INHERITED_SPINE_FILE,
@@ -313,7 +310,7 @@ describe.skipIf(!inputsReadable)('membership manifest ↔ inherited spine', () =
           .map((r) => r.designations),
       );
       const parked = new Set(parseParkedRecordsTsv(
-        readFileSync(resolve(REPO_ROOT, PARKED_LEDGER_FILE), 'utf-8'),
+        readFileSync(resolve(REPO_ROOT, PARKED_LEDGER.file), 'utf-8'),
       ).map((r) => r.recordKey));
       // A stored same-as edge is a THIRD source of designation, beside the
       // manifest and promotion: it states that a synthetic component key and a

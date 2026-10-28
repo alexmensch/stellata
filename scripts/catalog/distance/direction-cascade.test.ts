@@ -36,6 +36,8 @@ import {
   type UnitVector,
 } from '../../../src/client/util/equatorial-basis';
 
+const FROM = { file: 'fixture.tsv', hint: 'h' };
+
 const ARCSEC_PER_RAD = (180 * 3600) / Math.PI;
 
 // The cascade returns a solution, not a direction — production advances it at
@@ -448,7 +450,7 @@ describe('direction-cascade / TSV parsers', () => {
       '456\t200.0\t\t30.0\t\t\t\t\t\t\t\t2016.0\t\t\t9.0\t\t\t\t',
       '',
     ].join('\n');
-    const map = parseGaiaAstrometryCatalogTsv(tsv);
+    const map = parseGaiaAstrometryCatalogTsv(tsv, FROM);
     expect(map.size).toBe(2);
     expect(map.get('123')).toEqual({
       raDeg: 100.5, decDeg: -20.25,
@@ -471,7 +473,7 @@ describe('direction-cascade / TSV parsers', () => {
   });
 
   it('parseGaiaAstrometryCatalogTsv throws on a missing column', () => {
-    expect(() => parseGaiaAstrometryCatalogTsv('source_id\tra\tdec\n')).toThrow(/missing required columns/);
+    expect(() => parseGaiaAstrometryCatalogTsv('source_id\tra\tdec\n', FROM)).toThrow(/missing required columns/);
   });
 
   it('gaiaAstrometryAccumulator keeps only the requested sources', () => {
@@ -480,7 +482,7 @@ describe('direction-cascade / TSV parsers', () => {
       '123\t100.5\t0.1\t-20.25\t0.1\t50.0\t0.1\t10.5\t0.1\t-3.5\t0.1\t2016.0\t1.2\t0\t8.0\t8.6\t7.3\t-110.51\t0.22',
       '456\t200.0\t\t30.0\t\t\t\t\t\t\t\t2016.0\t\t\t9.0\t\t\t\t',
     ];
-    const acc = gaiaAstrometryAccumulator('pull', 'hint', new Set(['456']));
+    const acc = gaiaAstrometryAccumulator({ file: 'pull', hint: 'hint' }, new Set(['456']));
     for (const line of lines) acc.line(line);
     const map = acc.result();
     expect([...map.keys()]).toEqual(['456']);
@@ -488,7 +490,7 @@ describe('direction-cascade / TSV parsers', () => {
   });
 
   it('gaiaAstrometryAccumulator resolves source_id by name, not by position', () => {
-    const acc = gaiaAstrometryAccumulator('pull', 'hint', new Set(['123']));
+    const acc = gaiaAstrometryAccumulator({ file: 'pull', hint: 'hint' }, new Set(['123']));
     acc.line('ra\tsource_id\tra_error\tdec\tdec_error\tparallax\tparallax_error\tpmra\tpmra_error\tpmdec\tpmdec_error\tref_epoch\truwe\tipd_frac_multi_peak\tphot_g_mean_mag\tphot_bp_mean_mag\tphot_rp_mean_mag\tradial_velocity\tradial_velocity_error');
     acc.line('100.5\t123\t0.1\t-20.25\t0.1\t50.0\t0.1\t10.5\t0.1\t-3.5\t0.1\t2016.0\t1.2\t0\t8.0\t8.6\t7.3\t-110.51\t0.22');
     expect(acc.result().get('123')?.raDeg).toBe(100.5);
@@ -500,7 +502,7 @@ describe('direction-cascade / TSV parsers', () => {
       '32349\t101.28854105\t-16.71314306\t379.21\t1.58\t-546.01\t-1223.07\t1.33\t1.24\t0.99\t100',
       '\t\t\t\t\t\t\t\t\t\t',
     ].join('\n');
-    const map = parseHip2Tsv(tsv);
+    const map = parseHip2Tsv(tsv, FROM);
     expect(map.size).toBe(1);
     expect(map.get(32349)).toEqual({
       raDeg: 101.28854105, decDeg: -16.71314306,
@@ -516,7 +518,7 @@ describe('direction-cascade / TSV parsers', () => {
       '111\tSB1\t500',
       '222\tEclipsingBinary\t3',
     ].join('\n');
-    const set = parseNssSourceIdSet(tsv);
+    const set = parseNssSourceIdSet(tsv, FROM);
     expect(set.size).toBe(2);
     expect(set.has('111')).toBe(true);
     expect(set.has('222')).toBe(true);

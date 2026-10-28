@@ -2,7 +2,7 @@
 // shipped distance has drifted from the parallax cascade's own inversion or
 // from SIMBAD's parallax-derived value. Snapshot-pinned by build-catalog.ts.
 
-import { parseSimbadSampleRows } from '../validate/simbad-sample-parse';
+import type { SimbadSampleRow } from '../validate/simbad-sample-parse';
 import type { Star } from '../parse/stars-parse';
 import type { DistVia } from './parallax/parallax-cascade';
 
@@ -153,11 +153,11 @@ export function buildRegressionReport(
 /** Each row may contribute up to two entries (gaia:N and hip:N) when both
  *  identifiers are present, so star-side lookup can succeed via either key.
  *  Rows with no usable distance are skipped. */
-export function parseSimbadSampleTsv(
-  text: string,
+export function simbadSampleDistances(
+  rows: readonly SimbadSampleRow[],
 ): Map<string, SimbadDistanceEntry> {
   const out = new Map<string, SimbadDistanceEntry>();
-  for (const row of parseSimbadSampleRows(text)) {
+  for (const row of rows) {
     if (row.distancePc === null || row.distancePc <= 0) continue;
     const entry: SimbadDistanceEntry = {
       simbadOid: row.simbadOid,

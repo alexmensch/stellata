@@ -1,92 +1,32 @@
-// Source paths and loaders for every reference table readStars consumes,
-// plus the membership manifest it walks as the membership term. See README.md.
+// Loaders for every reference table readStars consumes. See README.md.
 
-import { existsSync, readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
-
-import {
-  parseBailerJonesTsv,
-  parseGaiaApsisTsv,
-  type ApsisRow,
-} from '../record/catalog-pure';
-import {
-  type SimbadSpectralIndex,
-  emptySimbadSpectralIndex,
-  parseSimbadSptypeTsv,
-} from '../spectral/spectral-resolve';
 import type { BuildCounts } from '../build-counts';
-import {
-  parseGaiaAstrometryCatalogTsv,
-  parseHip2Tsv,
-  parseNssSourceIdSet,
-  type DirectionSources,
-} from '../distance/direction-cascade';
-import { dustGridInputPaths, loadDustGrid } from '../distance/dust/dust-deextinction';
+import type { DirectionSources } from '../distance/direction-cascade';
 import type { DustGrid } from '../distance/dust/dust-deextinction-pure';
+import { DUST_GRID } from '../distance/dust/dust-grid-source';
+import { BAILER_JONES } from '../distance/bailer-jones-source';
+import { GAIA_ASTROMETRY } from '../distance/gaia-astrometry-source';
+import { GAIA_NSS } from '../distance/gaia-nss-source';
+import { HIP2 } from '../distance/hip2-source';
+import { GAIA_APSIS } from '../record/gaia-apsis-source';
+import { SIMBAD_SPTYPE } from '../spectral/simbad-sptype-source';
+import { SIMBAD_VALUES } from '../simbad/simbad-values-source';
+import { GAIA_GSPC } from '../photometry/gspc-source';
+import { HIP_PHOTOMETRY } from '../photometry/hip-photometry-source';
+import { TYCHO2 } from '../tycho2-source';
+import { GLIESE } from '../gliese-source';
+import { CNS5 } from '../classic-ids/cns5-source';
+import { cns5AstrometryByGj } from '../classic-ids/classic-ids-parse';
+import { createConstellationAssignment, iauEdgeRecords } from './constellations/constellations';
+import { STELLARIUM } from './constellations/stellarium-source';
+import { readMultiplesTsv } from '../companions/companion-promotion';
+import { buildPairMemberParallaxIndex } from '../distance/parallax/pair-member-parallax';
 import {
-  createConstellationAssignment,
-  STELLARIUM_SKYCULTURE_JSON,
-} from './constellations/constellations';
-import { parseGspcTsv, type GspcColour } from '../photometry/gspc-parse';
-import { parseHipPhotometryTsv } from '../photometry/hip-photometry-parse';
-import {
-  emptySimbadValueIndex,
-  parseSimbadValuesTsv,
-  type SimbadValueIndex,
-} from '../simbad/simbad-values-parse';
-import { parseTycho2Tsvs } from '../tycho2-parse';
-import { cns5AstrometryByGj, parseCns5Tsv } from '../classic-ids/classic-ids-parse';
-import {
-  emptyGlieseIndex,
-  parseGlieseTsv,
-  type GlieseIndex,
-} from '../gliese-parse';
-import {
-  readMultiplesTsv,
-} from '../companions/companion-promotion';
-import {
-  buildPairMemberParallaxIndex,
-  emptyPairMemberParallaxIndex,
-  type PairMemberParallaxIndex,
-} from '../distance/parallax/pair-member-parallax';
-import { MEMBERSHIP_MANIFEST_FILE } from '../membership/membership-manifest-tsv';
-import {
-  MAGNITUDE_PULL_TSV,
   readMagnitudeTermAstrometry,
   readMagnitudeTermSourceIds,
 } from '../membership/magnitude-term/magnitude-term';
 import { MAGNITUDE_FLOOR_V } from '../membership/magnitude-term/magnitude-term-pure';
 import type { ReadStarsOptions } from './stars-parse';
-import { REPO_ROOT as ROOT, requireExists } from '../../util/paths';
-import { MULTIPLES_TSV_PATH } from '../../binaries/multiples-tsv';
-
-export const MEMBERSHIP_MANIFEST_TSV = resolve(ROOT, MEMBERSHIP_MANIFEST_FILE);
-const SRC_BAILER_JONES = resolve(ROOT, 'data/bailer-jones/bailer-jones-dr3.tsv');
-const SRC_GAIA_APSIS = resolve(ROOT, 'data/gaia/gaia_dr3_apsis.tsv');
-const SRC_GAIA_GSPC = resolve(ROOT, 'data/gaia/gaia_dr3_gspc.tsv');
-const SRC_GAIA_ASTROMETRY = resolve(ROOT, 'data/gaia/gaia_dr3_astrometry_catalog.tsv');
-const SRC_GAIA_NSS = resolve(ROOT, 'data/gaia/gaia_dr3_nss_two_body.tsv');
-const SRC_HIP2 = resolve(ROOT, 'data/hipparcos/hip2_van_leeuwen.tsv');
-const SRC_HIP_VMAG = resolve(ROOT, 'data/hipparcos/hip_main_vmag.tsv');
-const SRC_SIMBAD_SPTYPE = resolve(ROOT, 'data/simbad/simbad_sptype.tsv');
-const SRC_SIMBAD_VALUES = resolve(ROOT, 'data/simbad/simbad_values.tsv');
-const SRC_TYCHO2_MAIN = resolve(ROOT, 'data/tycho2/tycho2_main.tsv');
-const SRC_TYCHO2_SUPPL1 = resolve(ROOT, 'data/tycho2/tycho2_suppl1.tsv');
-const SRC_CNS5 = resolve(ROOT, 'data/classic-ids/cns5.tsv');
-const SRC_GLIESE = resolve(ROOT, 'data/gliese/gliese_v70a.tsv');
-const SRC_DUST_DIR = resolve(ROOT, 'data/dust');
-
-/** Every file a readStars walk can read — the input set an artifact derived
- *  from that walk must invalidate against. */
-export function readStarsInputPaths(): string[] {
-  return [
-    MEMBERSHIP_MANIFEST_TSV, SRC_BAILER_JONES, SRC_GAIA_APSIS, SRC_GAIA_GSPC,
-    SRC_GAIA_ASTROMETRY, SRC_GAIA_NSS, SRC_HIP2, SRC_HIP_VMAG, SRC_SIMBAD_SPTYPE,
-    SRC_SIMBAD_VALUES, SRC_TYCHO2_MAIN, SRC_TYCHO2_SUPPL1, SRC_CNS5, SRC_GLIESE,
-    STELLARIUM_SKYCULTURE_JSON, MULTIPLES_TSV_PATH, MAGNITUDE_PULL_TSV,
-    ...dustGridInputPaths(SRC_DUST_DIR),
-  ];
-}
 
 /** Upstream table sizes — the `BuildCounts` fields this loader owns, so a
  *  consumer folds them in wholesale rather than field by field. */
@@ -117,164 +57,46 @@ export type ReadStarsInputSizes = Pick<
  *  own option shape rather than restating it — a new table added there is a
  *  compile error here until this loader supplies it. */
 export interface ReadStarsInputs extends Required<ReadStarsOptions> {
-  /** Loaded unconditionally: absent dust is a hard fail below, not a
-   *  soft-continue, so consumers never see the nullable form. */
   dustGrid: DustGrid;
   sizes: ReadStarsInputSizes;
 }
 
-const REQUIRED_INPUTS: readonly (readonly [string, string])[] = [
-  [SRC_BAILER_JONES, 'Re-run scripts/refresh/refresh-bailer-jones.py.'],
-  [SRC_GAIA_APSIS, 'Re-run scripts/refresh/refresh-gaia-apsis.py.'],
-  [SRC_GAIA_GSPC, 'Re-run `pnpm run refresh:gaia-gspc`.'],
-  [SRC_SIMBAD_SPTYPE, 'Re-run scripts/refresh/refresh-simbad-sptype.py.'],
-  [SRC_SIMBAD_VALUES, 'Re-run `pnpm run refresh:simbad-values`.'],
-  [SRC_GAIA_ASTROMETRY, 'Re-run scripts/refresh/refresh-gaia-astrometry-catalog.py.'],
-  [SRC_HIP2, 'Re-run `pnpm run refresh:hip2`.'],
-  [SRC_GAIA_NSS, 'Re-run `pnpm run refresh:gaia-nss`.'],
-  [SRC_HIP_VMAG, 'Re-run `pnpm run refresh:hip-vmag`.'],
-  [SRC_TYCHO2_MAIN, 'Re-run `pnpm run refresh:tycho2`.'],
-  [SRC_TYCHO2_SUPPL1, 'Re-run `pnpm run refresh:tycho2`.'],
-  [SRC_CNS5, 'Re-run `pnpm run refresh:classic-ids`.'],
-  [SRC_GLIESE, 'Re-run `pnpm run refresh:gliese`.'],
-  [MULTIPLES_TSV_PATH, 'Re-run `pnpm run build:binaries`.'],
-];
+function timed<T>(label: string, read: () => T, size: (value: T) => string): T {
+  console.log(`${label}...`);
+  const t = Date.now();
+  const value = read();
+  console.log(`  ${size(value)} in ${Date.now() - t}ms`);
+  return value;
+}
 
 export async function loadReadStarsInputs(): Promise<ReadStarsInputs> {
-  for (const [path, hint] of REQUIRED_INPUTS) requireExists(path, hint);
-  const sizes: ReadStarsInputSizes = {
-    bjEntries: 0,
-    apsisEntries: 0,
-    gspcEntries: 0,
-    simbadSptypeEntries: 0,
-    simbadValuesEntries: 0,
-    gaiaAstrometryEntries: 0,
-    hip2Entries: 0,
-    hipVMagEntries: 0,
-    hipBvEntries: 0,
-    nssSourceIdEntries: 0,
-    tycho2Entries: 0,
-    cns5AstrometryEntries: 0,
-    glieseEntries: 0,
-    pairMemberParallaxEntries: 0,
-    pairMemberSiblingNoAstrometryRow: 0,
-    pairMemberSiblingNoParallax: 0,
-    pairMemberSiblingNotAnchorGrade: 0,
-    pairMemberSiblingBelowSnFloor: 0,
-  };
+  const entries = (m: { size: number }) => `${m.size} entries`;
 
-  // Bailer-Jones 2021 (/data/papers/index.md#bailerjones2021) DR3
-  // distance posteriors. Optional in CI / fresh-clone
-  // builds where the LFS file hasn't pulled yet — without it every star
-  // keeps the cascade's naive 1/π inversion.
-  let bjMap = new Map<string, number>();
-  if (existsSync(SRC_BAILER_JONES)) {
-    console.log('Parsing Bailer-Jones DR3 distance posteriors...');
-    const t = Date.now();
-    bjMap = parseBailerJonesTsv(readFileSync(SRC_BAILER_JONES, 'utf8'));
-    console.log(`  ${bjMap.size} entries in ${Date.now() - t}ms`);
-    sizes.bjEntries = bjMap.size;
-  } else {
-    console.log('Bailer-Jones DR3 file not found; skipping distance override.');
-  }
+  const bjMap = timed('Parsing Bailer-Jones DR3 distance posteriors', () => BAILER_JONES.read(), entries);
+  const apsisMap = timed('Parsing Gaia DR3 Apsis astrophysical parameters', () => GAIA_APSIS.read(), entries);
+  const gspcMap = timed('Parsing Gaia DR3 synthetic photometry', () => GAIA_GSPC.read(), entries);
+  const simbadSpectral = timed(
+    'Parsing SIMBAD sp_type catalogue', () => SIMBAD_SPTYPE.read(), (i) => entries(i.bySourceId),
+  );
+  const simbadValues = timed(
+    'Parsing SIMBAD bibcoded values', () => SIMBAD_VALUES.read(), (i) => `${i.rowCount} rows`,
+  );
 
-  // Gaia DR3 Apsis (gspphot ∪ gspspec) astrophysical parameters. Optional
-  // in CI / fresh-clone builds where the LFS file hasn't pulled yet —
-  // without it every record gets the NO_APSIS sentinel.
-  let apsisMap = new Map<string, ApsisRow>();
-  if (existsSync(SRC_GAIA_APSIS)) {
-    console.log('Parsing Gaia DR3 Apsis astrophysical parameters...');
-    const t = Date.now();
-    apsisMap = parseGaiaApsisTsv(readFileSync(SRC_GAIA_APSIS, 'utf8'));
-    console.log(`  ${apsisMap.size} entries in ${Date.now() - t}ms`);
-    sizes.apsisEntries = apsisMap.size;
-  } else {
-    console.log('Gaia DR3 Apsis file not found; skipping astrophysical-parameter surface.');
-  }
-
-  // Gaia DR3 synthetic photometry — the ci cascade's tier below the
-  // Table-5.9 relation. Optional on the same terms as Apsis; without it the
-  // red rows fall to printed I/239 B−V and then to the derived tiers, which
-  // shows up as a ciVia drift in the count snapshot.
-  let gspcMap = new Map<string, GspcColour>();
-  if (existsSync(SRC_GAIA_GSPC)) {
-    console.log('Parsing Gaia DR3 synthetic photometry...');
-    const t = Date.now();
-    gspcMap = parseGspcTsv(readFileSync(SRC_GAIA_GSPC, 'utf8'));
-    console.log(`  ${gspcMap.size} entries in ${Date.now() - t}ms`);
-    sizes.gspcEntries = gspcMap.size;
-  } else {
-    console.warn(
-      `WARNING: ${SRC_GAIA_GSPC} not found — the ci cascade's synthetic tier\n` +
-      `         is unavailable; red rows fall to printed I/239 B−V and the\n` +
-      `         derived tiers. Re-run \`pnpm run refresh:gaia-gspc\`.`,
-    );
-  }
-
-  // SIMBAD sp_type under all four namespaces — the spectral resolver's first
-  // tier.
-  let simbadSpectral: SimbadSpectralIndex = emptySimbadSpectralIndex();
-  if (existsSync(SRC_SIMBAD_SPTYPE)) {
-    console.log('Parsing SIMBAD sp_type catalogue...');
-    const t = Date.now();
-    simbadSpectral = parseSimbadSptypeTsv(readFileSync(SRC_SIMBAD_SPTYPE, 'utf8'));
-    console.log(`  ${simbadSpectral.bySourceId.size} entries in ${Date.now() - t}ms`);
-    sizes.simbadSptypeEntries = simbadSpectral.bySourceId.size;
-  } else {
-    console.warn(
-      `WARNING: ${SRC_SIMBAD_SPTYPE} not found — spectral classification will\n` +
-      `         fall through to Gaia DR3 GSP-Spec and the unknown sentinel.\n` +
-      `         Re-run scripts/refresh/refresh-simbad-sptype.py to restore\n` +
-      `         the SIMBAD tier.`,
-    );
-  }
-
-  // SIMBAD bibcoded values over the per-field value cohort (/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers) — the rv cascade's bottom
-  // tier. Without it the rows no first-order catalogue reaches take a zero
-  // radial term, which shows up as an rvVia drift in the count snapshot.
-  let simbadValues: SimbadValueIndex = emptySimbadValueIndex();
-  if (existsSync(SRC_SIMBAD_VALUES)) {
-    console.log('Parsing SIMBAD bibcoded values...');
-    const t = Date.now();
-    simbadValues = parseSimbadValuesTsv(readFileSync(SRC_SIMBAD_VALUES, 'utf8'));
-    sizes.simbadValuesEntries = simbadValues.rowCount;
-    console.log(`  ${sizes.simbadValuesEntries} rows in ${Date.now() - t}ms`);
-  } else {
-    console.warn(
-      `WARNING: ${SRC_SIMBAD_VALUES} not found — the rv cascade's SIMBAD tier\n` +
-      `         is unavailable; its rows fall to a zero radial term.\n` +
-      `         Re-run \`pnpm run refresh:simbad-values\`.`,
-    );
-  }
-
-  // Direction-cascade inputs: Gaia DR3 5p astrometry, HIP2 van Leeuwen 2007
-  // (/data/papers/index.md#vanleeuwen2007), and the NSS two-body source_id set. Each optional in CI / fresh-clone
-  // builds — a missing file degrades that tier and the cascade falls
-  // through, which the build-counts assertion then flags.
   const directions: DirectionSources = {
-    gaiaAstrometry: new Map(),
-    hip2: new Map(),
-    nssSourceIds: new Set(),
-    tycho2: new Map(),
-    cns5: new Map(),
+    gaiaAstrometry: timed(
+      'Parsing Gaia DR3 5p astrometry (full catalog)', () => GAIA_ASTROMETRY.read(), entries,
+    ),
+    hip2: timed('Parsing HIP2 van Leeuwen astrometry', () => HIP2.read(), entries),
+    nssSourceIds: timed(
+      'Parsing Gaia DR3 NSS two-body source_ids', () => GAIA_NSS.read(), (s) => `${s.size} source_ids`,
+    ),
+    tycho2: timed('Parsing Tycho-2 astrometry and BT/VT photometry', () => TYCHO2.read(), entries),
+    cns5: timed('Parsing CNS5 astrometry', () => cns5AstrometryByGj(CNS5.read()), entries),
   };
-  if (existsSync(SRC_GAIA_ASTROMETRY)) {
-    console.log('Parsing Gaia DR3 5p astrometry (full catalog)...');
-    const t = Date.now();
-    directions.gaiaAstrometry = parseGaiaAstrometryCatalogTsv(readFileSync(SRC_GAIA_ASTROMETRY, 'utf8'));
-    console.log(`  ${directions.gaiaAstrometry.size} entries in ${Date.now() - t}ms`);
-    sizes.gaiaAstrometryEntries = directions.gaiaAstrometry.size;
-  } else {
-    console.warn(
-      `WARNING: ${SRC_GAIA_ASTROMETRY} not found — direction cascade tier 1\n` +
-      `         unavailable; sky directions fall back to HIP2 / Tycho-2 / CNS5.\n` +
-      `         Re-run scripts/refresh/refresh-gaia-astrometry-catalog.py.`,
-    );
-  }
   if (MAGNITUDE_FLOOR_V !== null) {
     console.log('Parsing Gaia DR3 5p astrometry (magnitude term)...');
     const t = Date.now();
-    const keep = await readMagnitudeTermSourceIds(MEMBERSHIP_MANIFEST_TSV);
+    const keep = await readMagnitudeTermSourceIds();
     let added = 0;
     for (const [sourceId, row] of await readMagnitudeTermAstrometry(keep)) {
       if (directions.gaiaAstrometry.has(sourceId)) continue;
@@ -282,159 +104,57 @@ export async function loadReadStarsInputs(): Promise<ReadStarsInputs> {
       added++;
     }
     console.log(`  ${added} of ${keep.size} sources in ${Date.now() - t}ms`);
-    sizes.gaiaAstrometryEntries = directions.gaiaAstrometry.size;
-  }
-  if (existsSync(SRC_HIP2)) {
-    console.log('Parsing HIP2 van Leeuwen astrometry...');
-    const t = Date.now();
-    directions.hip2 = parseHip2Tsv(readFileSync(SRC_HIP2, 'utf8'));
-    console.log(`  ${directions.hip2.size} entries in ${Date.now() - t}ms`);
-    sizes.hip2Entries = directions.hip2.size;
-  } else {
-    console.warn(
-      `WARNING: ${SRC_HIP2} not found — direction cascade tier 2 and the\n` +
-      `         parallax cascade's hip2_parallax tier are unavailable.`,
-    );
-  }
-  if (existsSync(SRC_GAIA_NSS)) {
-    console.log('Parsing Gaia DR3 NSS two-body source_ids...');
-    const t = Date.now();
-    directions.nssSourceIds = parseNssSourceIdSet(readFileSync(SRC_GAIA_NSS, 'utf8'));
-    console.log(`  ${directions.nssSourceIds.size} source_ids in ${Date.now() - t}ms`);
-    sizes.nssSourceIdEntries = directions.nssSourceIds.size;
-  } else {
-    console.warn(
-      `WARNING: ${SRC_GAIA_NSS} not found — NSS-systemic tagging disabled\n` +
-      `         (affects routing counts only; positions stay Gaia 5p).`,
-    );
   }
 
-  // Printed Johnson V and B−V per HIP — the V cascade's bright tier and the
-  // ci cascade's printed tier. Optional on the same terms as the
-  // direction-cascade tables: without it saturated and out-of-range rows fall
-  // to the tier below, which shows up as a vVia / ciVia drift in the count
-  // snapshot.
-  let hipVMag = new Map<number, number>();
-  let hipBv = new Map<number, number>();
-  if (existsSync(SRC_HIP_VMAG)) {
-    console.log('Parsing printed Hipparcos V magnitudes and colours...');
-    const t = Date.now();
-    ({ vmag: hipVMag, bv: hipBv } = parseHipPhotometryTsv(readFileSync(SRC_HIP_VMAG, 'utf8')));
-    console.log(`  ${hipVMag.size} V / ${hipBv.size} B−V entries in ${Date.now() - t}ms`);
-    sizes.hipVMagEntries = hipVMag.size;
-    sizes.hipBvEntries = hipBv.size;
-  } else {
-    console.warn(
-      `WARNING: ${SRC_HIP_VMAG} not found — the V cascade's bright tier and\n` +
-      `         the ci cascade's printed tier are unavailable.\n` +
-      `         Re-run \`pnpm run refresh:hip-vmag\`.`,
-    );
-  }
+  const { vmag: hipVMag, bv: hipBv } = timed(
+    'Parsing printed Hipparcos V magnitudes and colours',
+    () => HIP_PHOTOMETRY.read(),
+    (p) => `${p.vmag.size} V / ${p.bv.size} B−V entries`,
+  );
+  const gliese = timed('Parsing printed Gliese V/70A values', () => GLIESE.read(), (g) => `${g.rowCount} rows`);
 
-  // Tycho-2 mean positions, PM and BT/VT — the direction, PM and V cascades'
-  // tier for TYC-bearing rows Gaia and HIP2 both miss. Both tables are read
-  // together because the main one wins on the identifiers they share.
-  if (existsSync(SRC_TYCHO2_MAIN) && existsSync(SRC_TYCHO2_SUPPL1)) {
-    console.log('Parsing Tycho-2 astrometry and BT/VT photometry...');
-    const t = Date.now();
-    directions.tycho2 = parseTycho2Tsvs(
-      readFileSync(SRC_TYCHO2_MAIN, 'utf8'),
-      readFileSync(SRC_TYCHO2_SUPPL1, 'utf8'),
-    );
-    console.log(`  ${directions.tycho2.size} entries in ${Date.now() - t}ms`);
-    sizes.tycho2Entries = directions.tycho2.size;
-  } else {
-    console.warn(
-      `WARNING: ${SRC_TYCHO2_MAIN} not found — the direction, PM and V\n` +
-      `         cascades lose their Tycho-2 tier; its rows fall through and\n` +
-      `         those with no tier below lose their record. Re-run\n` +
-      `         \`pnpm run refresh:tycho2\`.`,
-    );
-  }
-
-  // CNS5's own astrometry, keyed on the record's GJ — the direction tier
-  // under Tycho-2 for the Gliese cohort.
-  if (existsSync(SRC_CNS5)) {
-    console.log('Parsing CNS5 astrometry...');
-    const t = Date.now();
-    directions.cns5 = cns5AstrometryByGj(parseCns5Tsv(readFileSync(SRC_CNS5, 'utf8')));
-    console.log(`  ${directions.cns5.size} entries in ${Date.now() - t}ms`);
-    sizes.cns5AstrometryEntries = directions.cns5.size;
-  } else {
-    console.warn(
-      `WARNING: ${SRC_CNS5} not found — the direction cascade's CNS5 tier is\n` +
-      `         unavailable; its rows fall to SIMBAD. Re-run\n` +
-      `         \`pnpm run refresh:classic-ids\`.`,
-    );
-  }
-
-  // Printed Gliese 1991 (/data/papers/index.md#gliese1991) V/70A
-  // values — the V cascade's tier under Tycho-2, and the
-  // only source reaching the GJ-only cohort at all (SIMBAD holds no V flux
-  // for those rows). Absent costs each of them its V, and a row with no V
-  // parks, so this shows up on the record-parity ledger (/docs/catalog-driver.md#61-record-parity) rather than as a routing
-  // drift.
-  let gliese: GlieseIndex = emptyGlieseIndex();
-  if (existsSync(SRC_GLIESE)) {
-    console.log('Parsing printed Gliese V/70A values...');
-    const t = Date.now();
-    gliese = parseGlieseTsv(readFileSync(SRC_GLIESE, 'utf8'));
-    console.log(`  ${gliese.rowCount} rows in ${Date.now() - t}ms`);
-    sizes.glieseEntries = gliese.rowCount;
-  } else {
-    console.warn(
-      `WARNING: ${SRC_GLIESE} not found — the V cascade's Gliese tier is\n` +
-      `         unavailable and the GJ-only cohort loses its records.\n` +
-      `         Re-run \`pnpm run refresh:gliese\`.`,
-    );
-  }
-
-  // The kept-physical pair rows crossed with the Gaia table already loaded —
-  // the parallax cascade's sibling tier. Absent multiples.tsv leaves it empty
-  // and its rows park, which the distPairMemberParallax pin then flags.
-  let pairMemberParallax: PairMemberParallaxIndex = emptyPairMemberParallaxIndex();
-  if (existsSync(MULTIPLES_TSV_PATH)) {
-    console.log('Indexing bound-pair sibling parallaxes...');
-    const t = Date.now();
-    pairMemberParallax = buildPairMemberParallaxIndex(
-      readMultiplesTsv(), directions.gaiaAstrometry,
-    );
-    const refused = pairMemberParallax.refused;
-    console.log(
-      `  ${pairMemberParallax.entryCount} anchor-grade siblings; refused `
+  const pairMemberParallax = timed(
+    'Indexing bound-pair sibling parallaxes',
+    () => buildPairMemberParallaxIndex(readMultiplesTsv(), directions.gaiaAstrometry),
+    ({ entryCount, refused }) => `${entryCount} anchor-grade siblings; refused `
       + `no-astrometry-row ${refused.noAstrometryRow}, `
       + `no-parallax ${refused.noParallax}, `
       + `not-anchor-grade ${refused.notAnchorGrade}, `
-      + `below-sn-floor ${refused.belowSnFloor} in ${Date.now() - t}ms`,
-    );
-    sizes.pairMemberParallaxEntries = pairMemberParallax.entryCount;
-    sizes.pairMemberSiblingNoAstrometryRow = refused.noAstrometryRow;
-    sizes.pairMemberSiblingNoParallax = refused.noParallax;
-    sizes.pairMemberSiblingNotAnchorGrade = refused.notAnchorGrade;
-    sizes.pairMemberSiblingBelowSnFloor = refused.belowSnFloor;
-  } else {
-    console.warn(
-      `WARNING: ${MULTIPLES_TSV_PATH} not found — the parallax cascade's sibling\n` +
-      `         tier is unavailable and its rows park instead of shipping.`,
-    );
-  }
+      + `below-sn-floor ${refused.belowSnFloor}`,
+  );
 
-  // Build-time de-extinction integral. Absent dust is a HARD FAIL (not
-  // the Bailer-Jones soft-continue): a soft-continue would carry
-  // extincted absmags into a runtime that assumes de-extincted, silently
-  // reintroducing the double-count the runtime raymarch fixes.
-  console.log('Loading dust grid for build-time de-extinction...');
-  const tDust = Date.now();
-  const dustGrid = loadDustGrid(SRC_DUST_DIR);
-  console.log(`  loaded ${dustGrid.gridSize}³ voxel grid in ${Date.now() - tDust}ms`);
+  const dustGrid = timed(
+    'Loading dust grid for build-time de-extinction',
+    () => DUST_GRID.read(),
+    (g) => `loaded ${g.gridSize}³ voxel grid`,
+  );
 
-  // IAU boundary decomposition. Committed alongside the stick figures and
-  // never optional: it is the sole source of catalog byte 34, and its own
-  // 89-region invariant throws rather than resolving a partial sky.
-  console.log('Decomposing the IAU B1875 constellation boundaries...');
-  const tCon = Date.now();
-  const conAssignment = createConstellationAssignment();
-  console.log(`  built the region grid in ${Date.now() - tCon}ms`);
+  const conAssignment = timed(
+    'Decomposing the IAU B1875 constellation boundaries',
+    () => createConstellationAssignment(iauEdgeRecords(STELLARIUM.read())),
+    () => 'built the region grid',
+  );
+
+  const sizes: ReadStarsInputSizes = {
+    bjEntries: bjMap.size,
+    apsisEntries: apsisMap.size,
+    gspcEntries: gspcMap.size,
+    simbadSptypeEntries: simbadSpectral.bySourceId.size,
+    simbadValuesEntries: simbadValues.rowCount,
+    gaiaAstrometryEntries: directions.gaiaAstrometry.size,
+    hip2Entries: directions.hip2.size,
+    hipVMagEntries: hipVMag.size,
+    hipBvEntries: hipBv.size,
+    nssSourceIdEntries: directions.nssSourceIds.size,
+    tycho2Entries: directions.tycho2.size,
+    cns5AstrometryEntries: directions.cns5.size,
+    glieseEntries: gliese.rowCount,
+    pairMemberParallaxEntries: pairMemberParallax.entryCount,
+    pairMemberSiblingNoAstrometryRow: pairMemberParallax.refused.noAstrometryRow,
+    pairMemberSiblingNoParallax: pairMemberParallax.refused.noParallax,
+    pairMemberSiblingNotAnchorGrade: pairMemberParallax.refused.notAnchorGrade,
+    pairMemberSiblingBelowSnFloor: pairMemberParallax.refused.belowSnFloor,
+  };
 
   return {
     bjMap, apsisMap, gspcMap, simbadSpectral, simbadValues, directions,

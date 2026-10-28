@@ -2,13 +2,10 @@
 // union's dedupe. See README.md.
 
 import type { ManifestRecord } from '../membership-manifest-tsv';
-import {
-  readTable, tableLineReader, type TableRow, type TableSpec,
-} from '../../../util/tsv/table-pure';
+import type { Declared } from '../../../util/sources/source';
+import { readTable, tableLineReader, type TableRow } from '../../../util/tsv/table-pure';
 import { rielloVMagnitude } from '../../photometry/v-magnitude-pure';
 import type { GaiaPhotometry } from '../../photometry/gaia-photometry-pure';
-
-export const MAGNITUDE_PULL_FILE = 'data/gaia/gaia_dr3_magnitude_pull.tsv';
 
 /** Johnson V the term admits on; `null` is the primaries alone.
  *  README.md#the-floor-is-one-constant. */
@@ -20,13 +17,9 @@ export const MAGNITUDE_PULL_G_BOUND = 11;
 
 export const MAGNITUDE_PULL_HINT = 'run `pnpm run refresh:gaia-magnitude`.';
 
-const MAGNITUDE_PULL = {
-  file: MAGNITUDE_PULL_FILE,
-  columns: ['source_id', 'phot_g_mean_mag', 'phot_bp_mean_mag', 'phot_rp_mean_mag'] as const,
-  hint: MAGNITUDE_PULL_HINT,
-} satisfies TableSpec<string>;
+const MAGNITUDE_PULL_COLUMNS = ['source_id', 'phot_g_mean_mag', 'phot_bp_mean_mag', 'phot_rp_mean_mag'] as const;
 
-type PullRow = TableRow<(typeof MAGNITUDE_PULL.columns)[number]>;
+type PullRow = TableRow<(typeof MAGNITUDE_PULL_COLUMNS)[number]>;
 
 /** README.md#the-filter-is-the-shipped-cascades-own-top-tier. */
 export const MAGNITUDE_VERDICTS = ['kept', 'above_floor', 'no_v'] as const;
@@ -87,17 +80,21 @@ function magnitudeTermFold(floorV: number): {
 
 /** Line-fed, so the streaming reader over the ~200 MB pull folds rows
  *  exactly as the whole-text filter does. */
-export function magnitudeTermAccumulator(floorV: number): {
+export function magnitudeTermAccumulator(floorV: number, from: Declared): {
   line: (raw: string) => void;
   result: () => MagnitudeTermSelection;
 } {
   const { fold, result } = magnitudeTermFold(floorV);
-  return { line: tableLineReader(MAGNITUDE_PULL, fold), result };
+  return { line: tableLineReader({ ...from, columns: MAGNITUDE_PULL_COLUMNS }, fold), result };
 }
 
-export function selectMagnitudeTerm(text: string, floorV: number): MagnitudeTermSelection {
+export function selectMagnitudeTerm(
+  text: string,
+  floorV: number,
+  from: Declared,
+): MagnitudeTermSelection {
   const { fold, result } = magnitudeTermFold(floorV);
-  for (const row of readTable(MAGNITUDE_PULL, text)) fold(row);
+  for (const row of readTable({ ...from, columns: MAGNITUDE_PULL_COLUMNS }, text)) fold(row);
   return result();
 }
 

@@ -1,7 +1,6 @@
 // Orchestrator for the catalog build; emits CATALOG_OUTPUTS (catalog-outputs.ts).
 // See scripts/catalog/README.md.
 
-import { existsSync, readFileSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -58,18 +57,16 @@ import {
   compareRegressionReports,
   formatRegressionDiff,
   mergeReasonsFromSnapshot,
-  parseSimbadSampleTsv,
+  simbadSampleDistances,
   type RegressionReport,
 } from './distance/distance-regression-check';
 import {
   CONSTELLATIONS,
-  STELLARIUM_SKYCULTURE_JSON as SRC_STELLARIUM,
   assertFigureVerticesInFirstChunk,
   buildFigureLines,
 } from './parse/constellations/constellations';
 import { renderBoundaryArtifact } from './boundaries/build-boundaries-artifact';
 import {
-  parseHipCcdm,
   applyDoublesFlag,
   collectPhysicalPairKeys,
 } from './multiplicity/visual-doubles';
@@ -84,12 +81,9 @@ import {
   buildComponentDesignations,
   renderableOrbitRelations,
   wingRenderablePrimaries,
-  type ComponentDesignation,
 } from './companions/record-index/record-index';
 import { applySystemDistanceCoherence } from './multiplicity/system-coherence';
 import {
-  parseGcvsMain,
-  parseGcvsCrossref,
   bridgeGcvsByGaia,
   applyVariability,
 } from './parse/gcvs/gcvs-parse';
@@ -105,28 +99,30 @@ import {
 } from './classic-ids/apply-designation-constellation';
 import {
   applyStarNames,
-  loadNameOverrides,
   loadStarNamingInputs,
 } from './naming/apply-star-names';
 import { assignDisplayNames } from './naming/display-names';
 import { readStars, type Star } from './parse/stars-parse';
 import {
-  PARKED_LEDGER_FILE,
   PARKED_COUNT_KEY,
   PARKED_REASONS,
-  PARKED_LEDGER,
   type ParkedRecord,
 } from './distance/parallax/parked-ledger';
+import { PARKED_LEDGER } from './distance/parallax/parked-ledger-tsv';
 import {
   SIMBAD_SOURCED_DISTANCES_FILE,
   SIMBAD_SOURCED_DISTANCES,
-} from './distance/parallax/simbad-sourced-ledger';
-import {
-  MEMBERSHIP_MANIFEST_TSV,
-  loadReadStarsInputs,
-} from './parse/read-stars-inputs';
-import { readGaiaHipXmatch } from './parse/gaia-xmatch';
-import { REPO_ROOT as ROOT, requireExists } from '../util/paths';
+} from './distance/parallax/simbad-sourced-ledger-tsv';
+import { loadReadStarsInputs } from './parse/read-stars-inputs';
+import { GAIA_HIP_XMATCH } from './parse/gaia-hip-xmatch-source';
+import { STELLARIUM } from './parse/constellations/stellarium-source';
+import { GCVS, GCVS_CROSSID } from './parse/gcvs/gcvs-source';
+import { HIP_CCDM } from './multiplicity/hip-ccdm-source';
+import { NAME_OVERRIDES } from './naming/name-overrides-source';
+import { SIMBAD_SAMPLE } from './validate/simbad-sample-source';
+import { MEMBERSHIP_MANIFEST } from './membership/membership-manifest-tsv';
+import { artifactRows } from '../util/sources/source';
+import { REPO_ROOT as ROOT } from '../util/paths';
 import {
   clearStamp, fileHashes, stampIsCurrent, stampPath,
 } from '../util/build-stamp';
@@ -146,11 +142,7 @@ import {
   type SidObject,
 } from '../sid/sid-pure';
 import { loadRegistry, loadStoredEdges } from '../sid/registry-io';
-import {
-  SRC_GAIA_HIP_XMATCH, SRC_GCVS, SRC_GCVS_XREF, SRC_HIP_CCDM, SRC_SIMBAD_SAMPLE,
-  catalogInputPaths,
-} from './catalog-inputs';
-import { MULTIPLES_TSV_PATH } from '../binaries/multiples-tsv';
+import { catalogInputPaths } from './catalog-inputs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -169,7 +161,7 @@ const CATALOG_STAMP = stampPath('catalog');
  *  these existed. Committed so the set is diffable: a refresh that moves it is
  *  a membership change, and Gaia DR4 should empty most of it. */
 function parkedRecordsTsv(parked: readonly ParkedRecord[]): string {
-  console.log(`  parked (record parity): ${parked.length} → ${PARKED_LEDGER_FILE}`);
+  console.log(`  parked (record parity): ${parked.length} → ${PARKED_LEDGER.file}`);
   return PARKED_LEDGER.serialize(parked);
 }
 
@@ -188,21 +180,6 @@ function simbadSourcedDistancesTsv(stars: readonly Star[]): string {
 }
 
 async function main() {
-  if (!existsSync(MEMBERSHIP_MANIFEST_TSV)) {
-    console.error(`Membership manifest not found: ${MEMBERSHIP_MANIFEST_TSV}`);
-    process.exit(1);
-  }
-  if (!existsSync(SRC_STELLARIUM)) {
-    console.error(`Stellarium sky culture JSON not found: ${SRC_STELLARIUM}`);
-    process.exit(1);
-  }
-  requireExists(SRC_SIMBAD_SAMPLE, 'it is committed (LFS); absence means a broken working tree.');
-  requireExists(SRC_GCVS, 'It is frozen: restore it from the repo (data/gcvs/README.md).');
-  requireExists(SRC_GCVS_XREF, 'It is frozen: restore it from the repo (data/gcvs/README.md).');
-  requireExists(SRC_GAIA_HIP_XMATCH, 'Re-run `pnpm run refresh:gaia-hip`.');
-  requireExists(SRC_HIP_CCDM, 'It is a frozen VizieR slice: restore it from the repo (data/hipparcos/README.md).');
-  requireExists(MULTIPLES_TSV_PATH, 'Re-run `pnpm run build:binaries`.');
-
   sweepStaged(CATALOG_OUTPUTS);
   // The UPDATE_* snapshot-refresh flags rewrite artifacts written at the end
   // of a full build, so they must force one even when the sources are
@@ -435,9 +412,9 @@ async function main() {
   } = inputs;
   Object.assign(counts, sizes);
 
-  console.log(`Reading ${MEMBERSHIP_MANIFEST_TSV}...`);
+  console.log(`Reading ${MEMBERSHIP_MANIFEST.file}...`);
   const t0 = Date.now();
-  const { stars, stats } = readStars(MEMBERSHIP_MANIFEST_TSV, inputs);
+  const { stars, stats } = readStars(artifactRows(MEMBERSHIP_MANIFEST), inputs);
   console.log(`  parsed ${stats.total} rows in ${Date.now() - t0}ms`);
   console.log(`  kept ${stars.length} stars; parked ${stats.parked.length}`);
   console.log(`  dropped:`, stats.dropped);
@@ -667,108 +644,101 @@ async function main() {
   // whose identifier isn't already a record. Promoted companions ride
   // catalog.bin with FLAG_BINARY_COMPANION_ONLY set; the renderer/picker
   // hover/focus stack picks them up with zero code change.
-  const multiplesRows = existsSync(MULTIPLES_TSV_PATH)
-    ? readMultiplesTsv()
-    : null;
+  const multiplesRows = readMultiplesTsv();
   const synthGaiaBridges = syntheticGaiaBridges(loadStoredEdges());
-  if (multiplesRows !== null) {
-    // Intra-system radial coherence BEFORE promotion, so minted members
-    // project off already-coherent anchor positions.
-    const coherence = applySystemDistanceCoherence(multiplesRows, stars, {
-      gaiaAstrometry: directions.gaiaAstrometry,
-      hip2: directions.hip2,
-      bjMap,
-    });
-    console.log(
-      `  system distance coherence: ${coherence.membersRepositioned} ` +
-        `members repositioned across ${coherence.systemsProcessed} systems ` +
-        `(${coherence.memberAnchorWins} member-anchor wins, ` +
-        `${coherence.memberAnchorPrecisionVetoed} vetoed on precision, ` +
-        `${coherence.significantDepthKept} significant depths kept)`,
-    );
-    counts.systemCoherenceRepositioned = coherence.membersRepositioned;
-    counts.systemCoherenceSystems = coherence.systemsProcessed;
-    counts.systemCoherenceMemberAnchorWins = coherence.memberAnchorWins;
-    counts.systemCoherenceSignificantDepthKept =
-      coherence.significantDepthKept;
-    counts.systemCoherenceAnchorInconsistent =
-      coherence.anchorPlacementInconsistent;
-    counts.systemCoherenceMemberAnchorPrecisionVetoed =
-      coherence.memberAnchorPrecisionVetoed;
-    console.log('Promoting binary companions from multiples.tsv...');
-    const tProm = Date.now();
-    const { newStars, stats: ps } = promoteCompanions(
-      multiplesRows, stars, conAssignment, dustGrid,
-      parkedRefusals(stats.parked), directions.gaiaAstrometry, synthGaiaBridges,
-    );
-    for (const ns of newStars) stars.push(ns);
-    console.log(
-      `  scanned ${ps.pairRowsScanned} pair rows; promoted ${ps.promoted} ` +
-        `(${ps.promotedSynthetic} via synthetic ID); ` +
-        `already-in-catalog ${ps.alreadyInCatalog} ` +
-        `(re-curated ${formatPartition(ps.existingMemberRecurated)}, ` +
-        `${ps.existingViaSameasBridge} via same-as bridge); ` +
-        `dropped (no-identifier=${ps.droppedNoIdentifier}, ` +
-        `no-position=${ps.droppedNoPosition}, ` +
-        `beyond-tidal=${ps.droppedBeyondTidalLimit}, ` +
-        `no-absmag=${ps.droppedNoAbsmag}, ` +
-        `no-primary=${ps.droppedNoPrimary}, ` +
-        `compound-comp=${ps.droppedCompoundComp}, ` +
-        `collocated-primary=${ps.droppedCollocatedPrimary}, ` +
-        `anchor-is-component=${ps.anchorIsComponent}); ` +
-        `absmag spectral-derived=${ps.absmagSpectralDerived}, ` +
-        `spect ms-from-own-absmag=${ps.spectMsFromOwnAbsmag}, ` +
-        `wds-mag-derived=${ps.absmagWdsMagDerived}, ` +
-        `inherited-twin-orbital=${ps.absmagInheritedTwinOrbital}, ` +
-        `blend-split=${ps.blendSplitRecords}, ` +
-        `dimmed-anchors=${ps.blendDimmedAnchors} (skipped ${ps.blendDimSkipped}, ` +
-        `unfit ${ps.blendDimMembersUnfit}, outside ${ps.blendDimMembersOutside}, ` +
-        `gaia-resolved ${ps.blendDimGaiaResolved}, ` +
-        `beyond-separation ${ps.blendDimMembersBeyondSeparation}, ` +
-        `misfit ${ps.blendDimMembersMisfit}), ` +
-        `repositioned-collocated-double=${ps.repositionedCollocatedDouble}, ` +
-        `constellation-split-from-anchor=${ps.constellationSplitFromAnchor}, ` +
-        `refused-parked=${ps.droppedParkedRecord} ` +
-        `(via gaia_5p ${ps.droppedParkedRecordViaGaia5p}, ` +
-        `owned fit ${ps.droppedParkedRecordOwnedFit}) ` +
-        `in ${Date.now() - tProm}ms`,
-    );
-    counts.companionRowsScanned = ps.pairRowsScanned;
-    counts.companionPromoted = ps.promoted;
-    counts.companionPromotedSynthetic = ps.promotedSynthetic;
-    counts.companionAlreadyInCatalog = ps.alreadyInCatalog;
-    counts.companionDroppedNoIdentifier = ps.droppedNoIdentifier;
-    counts.companionDroppedNoPosition = ps.droppedNoPosition;
-    counts.companionDroppedBeyondTidalLimit = ps.droppedBeyondTidalLimit;
-    counts.companionDroppedNoAbsmag = ps.droppedNoAbsmag;
-    counts.companionDroppedCompoundComp = ps.droppedCompoundComp;
-    counts.companionDroppedCollocatedPrimary = ps.droppedCollocatedPrimary;
-    counts.companionAnchorIsComponent = ps.anchorIsComponent;
-    counts.companionDroppedParkedRecord = ps.droppedParkedRecord;
-    counts.companionDroppedParkedViaGaia5p = ps.droppedParkedRecordViaGaia5p;
-    counts.companionDroppedParkedOwnedFit = ps.droppedParkedRecordOwnedFit;
-    counts.companionAbsmagSpectralDerived = ps.absmagSpectralDerived;
-    counts.companionSpectMsFromOwnAbsmag = ps.spectMsFromOwnAbsmag;
-    counts.companionAbsmagWdsMagDerived = ps.absmagWdsMagDerived;
-    counts.companionAbsmagAnchorCollocated = ps.absmagAnchorCollocated;
-    counts.companionAbsmagInheritedTwinOrbital = ps.absmagInheritedTwinOrbital;
-    counts.companionBlendSplit = ps.blendSplitRecords;
-    counts.companionBlendDimmedAnchors = ps.blendDimmedAnchors;
-    counts.companionBlendDimSkipped = ps.blendDimSkipped;
-    counts.companionBlendDimUnfit = ps.blendDimMembersUnfit;
-    counts.companionBlendDimOutside = ps.blendDimMembersOutside;
-    counts.companionBlendDimGaiaResolved = ps.blendDimGaiaResolved;
-    counts.companionBlendDimBeyondSeparation = ps.blendDimMembersBeyondSeparation;
-    counts.companionBlendDimMisfit = ps.blendDimMembersMisfit;
-    counts.companionRepositionedCollocatedDouble = ps.repositionedCollocatedDouble;
-    counts.companionConstellationSplitFromAnchor = ps.constellationSplitFromAnchor;
-    counts.companionExistingDesigConFromAnchor = ps.existingDesigConFromAnchor;
-    counts.companionExistingMemberRecurated = ps.existingMemberRecurated;
-    counts.companionExistingViaSameasBridge = ps.existingViaSameasBridge;
-
-  } else {
-    console.log('multiples.tsv not found; skipping companion promotion.');
-  }
+  // Intra-system radial coherence BEFORE promotion, so minted members
+  // project off already-coherent anchor positions.
+  const coherence = applySystemDistanceCoherence(multiplesRows, stars, {
+    gaiaAstrometry: directions.gaiaAstrometry,
+    hip2: directions.hip2,
+    bjMap,
+  });
+  console.log(
+    `  system distance coherence: ${coherence.membersRepositioned} ` +
+      `members repositioned across ${coherence.systemsProcessed} systems ` +
+      `(${coherence.memberAnchorWins} member-anchor wins, ` +
+      `${coherence.memberAnchorPrecisionVetoed} vetoed on precision, ` +
+      `${coherence.significantDepthKept} significant depths kept)`,
+  );
+  counts.systemCoherenceRepositioned = coherence.membersRepositioned;
+  counts.systemCoherenceSystems = coherence.systemsProcessed;
+  counts.systemCoherenceMemberAnchorWins = coherence.memberAnchorWins;
+  counts.systemCoherenceSignificantDepthKept =
+    coherence.significantDepthKept;
+  counts.systemCoherenceAnchorInconsistent =
+    coherence.anchorPlacementInconsistent;
+  counts.systemCoherenceMemberAnchorPrecisionVetoed =
+    coherence.memberAnchorPrecisionVetoed;
+  console.log('Promoting binary companions from multiples.tsv...');
+  const tProm = Date.now();
+  const { newStars, stats: ps } = promoteCompanions(
+    multiplesRows, stars, conAssignment, dustGrid,
+    parkedRefusals(stats.parked), directions.gaiaAstrometry, synthGaiaBridges,
+  );
+  for (const ns of newStars) stars.push(ns);
+  console.log(
+    `  scanned ${ps.pairRowsScanned} pair rows; promoted ${ps.promoted} ` +
+      `(${ps.promotedSynthetic} via synthetic ID); ` +
+      `already-in-catalog ${ps.alreadyInCatalog} ` +
+      `(re-curated ${formatPartition(ps.existingMemberRecurated)}, ` +
+      `${ps.existingViaSameasBridge} via same-as bridge); ` +
+      `dropped (no-identifier=${ps.droppedNoIdentifier}, ` +
+      `no-position=${ps.droppedNoPosition}, ` +
+      `beyond-tidal=${ps.droppedBeyondTidalLimit}, ` +
+      `no-absmag=${ps.droppedNoAbsmag}, ` +
+      `no-primary=${ps.droppedNoPrimary}, ` +
+      `compound-comp=${ps.droppedCompoundComp}, ` +
+      `collocated-primary=${ps.droppedCollocatedPrimary}, ` +
+      `anchor-is-component=${ps.anchorIsComponent}); ` +
+      `absmag spectral-derived=${ps.absmagSpectralDerived}, ` +
+      `spect ms-from-own-absmag=${ps.spectMsFromOwnAbsmag}, ` +
+      `wds-mag-derived=${ps.absmagWdsMagDerived}, ` +
+      `inherited-twin-orbital=${ps.absmagInheritedTwinOrbital}, ` +
+      `blend-split=${ps.blendSplitRecords}, ` +
+      `dimmed-anchors=${ps.blendDimmedAnchors} (skipped ${ps.blendDimSkipped}, ` +
+      `unfit ${ps.blendDimMembersUnfit}, outside ${ps.blendDimMembersOutside}, ` +
+      `gaia-resolved ${ps.blendDimGaiaResolved}, ` +
+      `beyond-separation ${ps.blendDimMembersBeyondSeparation}, ` +
+      `misfit ${ps.blendDimMembersMisfit}), ` +
+      `repositioned-collocated-double=${ps.repositionedCollocatedDouble}, ` +
+      `constellation-split-from-anchor=${ps.constellationSplitFromAnchor}, ` +
+      `refused-parked=${ps.droppedParkedRecord} ` +
+      `(via gaia_5p ${ps.droppedParkedRecordViaGaia5p}, ` +
+      `owned fit ${ps.droppedParkedRecordOwnedFit}) ` +
+      `in ${Date.now() - tProm}ms`,
+  );
+  counts.companionRowsScanned = ps.pairRowsScanned;
+  counts.companionPromoted = ps.promoted;
+  counts.companionPromotedSynthetic = ps.promotedSynthetic;
+  counts.companionAlreadyInCatalog = ps.alreadyInCatalog;
+  counts.companionDroppedNoIdentifier = ps.droppedNoIdentifier;
+  counts.companionDroppedNoPosition = ps.droppedNoPosition;
+  counts.companionDroppedBeyondTidalLimit = ps.droppedBeyondTidalLimit;
+  counts.companionDroppedNoAbsmag = ps.droppedNoAbsmag;
+  counts.companionDroppedCompoundComp = ps.droppedCompoundComp;
+  counts.companionDroppedCollocatedPrimary = ps.droppedCollocatedPrimary;
+  counts.companionAnchorIsComponent = ps.anchorIsComponent;
+  counts.companionDroppedParkedRecord = ps.droppedParkedRecord;
+  counts.companionDroppedParkedViaGaia5p = ps.droppedParkedRecordViaGaia5p;
+  counts.companionDroppedParkedOwnedFit = ps.droppedParkedRecordOwnedFit;
+  counts.companionAbsmagSpectralDerived = ps.absmagSpectralDerived;
+  counts.companionSpectMsFromOwnAbsmag = ps.spectMsFromOwnAbsmag;
+  counts.companionAbsmagWdsMagDerived = ps.absmagWdsMagDerived;
+  counts.companionAbsmagAnchorCollocated = ps.absmagAnchorCollocated;
+  counts.companionAbsmagInheritedTwinOrbital = ps.absmagInheritedTwinOrbital;
+  counts.companionBlendSplit = ps.blendSplitRecords;
+  counts.companionBlendDimmedAnchors = ps.blendDimmedAnchors;
+  counts.companionBlendDimSkipped = ps.blendDimSkipped;
+  counts.companionBlendDimUnfit = ps.blendDimMembersUnfit;
+  counts.companionBlendDimOutside = ps.blendDimMembersOutside;
+  counts.companionBlendDimGaiaResolved = ps.blendDimGaiaResolved;
+  counts.companionBlendDimBeyondSeparation = ps.blendDimMembersBeyondSeparation;
+  counts.companionBlendDimMisfit = ps.blendDimMembersMisfit;
+  counts.companionRepositionedCollocatedDouble = ps.repositionedCollocatedDouble;
+  counts.companionConstellationSplitFromAnchor = ps.constellationSplitFromAnchor;
+  counts.companionExistingDesigConFromAnchor = ps.existingDesigConFromAnchor;
+  counts.companionExistingMemberRecurated = ps.existingMemberRecurated;
+  counts.companionExistingViaSameasBridge = ps.existingViaSameasBridge;
 
   counts.recordCount = stars.length;
 
@@ -793,7 +763,7 @@ async function main() {
   const hipToIndex = buildHipToIndex(stars);
 
   // Throws if a referenced HIP is missing from the catalog.
-  const figureLines = buildFigureLines(SRC_STELLARIUM, hipToIndex);
+  const figureLines = buildFigureLines(STELLARIUM.read(), hipToIndex);
 
   // Geometric binary inference.
   console.log('Inferring binary/multiple systems...');
@@ -805,71 +775,59 @@ async function main() {
   counts.binaryPairs = binStats.pairs;
   counts.binaryMutualPairs = binStats.mutualPairs;
 
-  // GCVS variable-star cross-match. Optional — if the files aren't present
-  // we just skip, no variability rendered. xref.byGaia is bridged from
-  // byHip via gaia_dr3_hip_xmatch.tsv when present, so records that carry
-  // a gaia_source_id but no HIP still resolve.
-  if (existsSync(SRC_GCVS) && existsSync(SRC_GCVS_XREF)) {
-    console.log('Parsing GCVS variable-star catalogue...');
-    const tGcvs = Date.now();
-    const gcvsData = parseGcvsMain(SRC_GCVS);
-    const xref = parseGcvsCrossref(SRC_GCVS_XREF);
-    if (existsSync(SRC_GAIA_HIP_XMATCH)) {
-      const tX = Date.now();
-      const hipToGaia = readGaiaHipXmatch(SRC_GAIA_HIP_XMATCH);
-      console.log(
-        `  Gaia DR3 ↔ HIP cross-walk: ${hipToGaia.size} entries in ${Date.now() - tX}ms`,
-      );
-      bridgeGcvsByGaia(xref, hipToGaia);
-    } else {
-      console.log('  Gaia DR3 ↔ HIP cross-walk not found; GCVS byGaia bridge skipped.');
-    }
-    const m = applyVariability(stars, gcvsData, xref);
-    console.log(
-      `  ${gcvsData.size} GCVS entries, ${xref.byHip.size} Hip + ` +
-        `${xref.byHd.size} HD + ${xref.byGaia.size} Gaia xrefs, ` +
-        `${m.named} named for search (${m.matched} with a renderable period: ` +
-        `gaia=${m.matchedByGaia}, hip=${m.matchedByHip}, hd=${m.matchedByHd}) ` +
-        `in ${Date.now() - tGcvs}ms`,
-    );
-    counts.gcvsEntries = gcvsData.size;
-    counts.gcvsHipXrefs = xref.byHip.size;
-    counts.gcvsHdXrefs = xref.byHd.size;
-    counts.gcvsGaiaXrefs = xref.byGaia.size;
-    counts.gcvsMatched = m.matched;
-    counts.gcvsMatchedByGaia = m.matchedByGaia;
-    counts.gcvsMatchedByHip = m.matchedByHip;
-    counts.gcvsMatchedByHd = m.matchedByHd;
-    counts.gcvsNamed = m.named;
-    counts.gcvsDesignationCon = m.desigConSupplied;
-  } else {
-    console.log('GCVS files not found; skipping variability cross-match.');
-  }
+  // GCVS variable-star cross-match. xref.byGaia is bridged from byHip via
+  // gaia_dr3_hip_xmatch.tsv, so records that carry a gaia_source_id but no
+  // HIP still resolve.
+  console.log('Parsing GCVS variable-star catalogue...');
+  const tGcvs = Date.now();
+  const gcvsData = GCVS.read();
+  const xref = GCVS_CROSSID.read();
+  const tX = Date.now();
+  const hipToGaia = GAIA_HIP_XMATCH.read();
+  console.log(
+    `  Gaia DR3 ↔ HIP cross-walk: ${hipToGaia.size} entries in ${Date.now() - tX}ms`,
+  );
+  bridgeGcvsByGaia(xref, hipToGaia);
 
-  // Hipparcos CCDM double-star cross-match. Optional. Marks a primary on
+  const m = applyVariability(stars, gcvsData, xref);
+  console.log(
+    `  ${gcvsData.size} GCVS entries, ${xref.byHip.size} Hip + ` +
+      `${xref.byHd.size} HD + ${xref.byGaia.size} Gaia xrefs, ` +
+      `${m.named} named for search (${m.matched} with a renderable period: ` +
+      `gaia=${m.matchedByGaia}, hip=${m.matchedByHip}, hd=${m.matchedByHd}) ` +
+      `in ${Date.now() - tGcvs}ms`,
+  );
+  counts.gcvsEntries = gcvsData.size;
+  counts.gcvsHipXrefs = xref.byHip.size;
+  counts.gcvsHdXrefs = xref.byHd.size;
+  counts.gcvsGaiaXrefs = xref.byGaia.size;
+  counts.gcvsMatched = m.matched;
+  counts.gcvsMatchedByGaia = m.matchedByGaia;
+  counts.gcvsMatchedByHip = m.matchedByHip;
+  counts.gcvsMatchedByHd = m.matchedByHd;
+  counts.gcvsNamed = m.named;
+  counts.gcvsDesignationCon = m.desigConSupplied;
+
+  // Hipparcos CCDM double-star cross-match. Marks a primary on
   // the same FLAG_BINARY_PRIMARY bit the geometric pass uses, picking
   // exactly one primary per CCDM system so chart-mode wings surface both
   // sources without double-flagging components of the same system.
-  if (existsSync(SRC_HIP_CCDM)) {
-    console.log('Parsing Hipparcos CCDM double-star cross-reference...');
-    const tCcdm = Date.now();
-    const ccdmGroups = parseHipCcdm(SRC_HIP_CCDM);
-    const { systems, flagged, suppressed } = applyDoublesFlag(
-      stars,
-      ccdmGroups,
-      hipToIndex,
-      collectPhysicalPairKeys(multiplesRows),
-    );
-    console.log(
-      `  ${ccdmGroups.size} CCDM systems → ${systems} resolved in catalog, ${flagged} new primaries flagged, ${suppressed} suppressed as optical doubles in ${Date.now() - tCcdm}ms`,
-    );
-    counts.ccdmGroups = ccdmGroups.size;
-    counts.ccdmResolved = systems;
-    counts.ccdmFlagged = flagged;
-    counts.ccdmSuppressedOptical = suppressed;
-  } else {
-    console.log('Hipparcos CCDM file not found; skipping double-star cross-match.');
-  }
+  console.log('Parsing Hipparcos CCDM double-star cross-reference...');
+  const tCcdm = Date.now();
+  const ccdmGroups = HIP_CCDM.read();
+  const { systems, flagged, suppressed } = applyDoublesFlag(
+    stars,
+    ccdmGroups,
+    hipToIndex,
+    collectPhysicalPairKeys(multiplesRows),
+  );
+  console.log(
+    `  ${ccdmGroups.size} CCDM systems → ${systems} resolved in catalog, ${flagged} new primaries flagged, ${suppressed} suppressed as optical doubles in ${Date.now() - tCcdm}ms`,
+  );
+  counts.ccdmGroups = ccdmGroups.size;
+  counts.ccdmResolved = systems;
+  counts.ccdmFlagged = flagged;
+  counts.ccdmSuppressedOptical = suppressed;
 
   // Reuse FLAG_BINARY_PRIMARY (the wings bit) for every varType ==
   // ECLIPSING record the geometric / CCDM passes didn't already flag —
@@ -892,36 +850,32 @@ async function main() {
   // multiples.tsv rows exactly as the runtime binaries loader will.
   const rowIndexMap = buildCatalogRowIndexMap(stars, synthGaiaBridges);
 
-  let componentDesignations = new Map<number, ComponentDesignation>();
-  let multiplesMemberIndices = new Set<number>();
-  if (multiplesRows !== null) {
-    const { winged: renderableCompanionWinged, memberIndices } = wingRenderablePrimaries(
-      multiplesRows,
-      stars,
-      rowIndexMap,
-    );
-    multiplesMemberIndices = memberIndices;
-    counts.renderableCompanionWinged = renderableCompanionWinged;
-    console.log(
-      `  ${renderableCompanionWinged} renderable-companion primaries flagged as multi-star (wings)`,
-    );
+  const { winged: renderableCompanionWinged, memberIndices } = wingRenderablePrimaries(
+    multiplesRows,
+    stars,
+    rowIndexMap,
+  );
+  const multiplesMemberIndices = memberIndices;
+  counts.renderableCompanionWinged = renderableCompanionWinged;
+  console.log(
+    `  ${renderableCompanionWinged} renderable-companion primaries flagged as multi-star (wings)`,
+  );
 
-    const overlaps = physicalOverlaps(
-      stars,
-      orbitChainExemption(renderableOrbitRelations(multiplesRows, rowIndexMap)),
-    );
-    counts.physicalOverlaps = overlaps.length;
-    console.log(`  physical overlaps outside an orbit chain: ${overlaps.length}`);
-    for (const [a, b] of overlaps) {
-      console.log(`    ${overlapLabel(stars[a], a)} | ${overlapLabel(stars[b], b)}`);
-    }
-
-    componentDesignations = buildComponentDesignations(multiplesRows, rowIndexMap);
-    counts.componentDesignations = componentDesignations.size;
-    console.log(
-      `  ${componentDesignations.size} component designations for "<system> <letter>" search`,
-    );
+  const overlaps = physicalOverlaps(
+    stars,
+    orbitChainExemption(renderableOrbitRelations(multiplesRows, rowIndexMap)),
+  );
+  counts.physicalOverlaps = overlaps.length;
+  console.log(`  physical overlaps outside an orbit chain: ${overlaps.length}`);
+  for (const [a, b] of overlaps) {
+    console.log(`    ${overlapLabel(stars[a], a)} | ${overlapLabel(stars[b], b)}`);
   }
+
+  const componentDesignations = buildComponentDesignations(multiplesRows, rowIndexMap);
+  counts.componentDesignations = componentDesignations.size;
+  console.log(
+    `  ${componentDesignations.size} component designations for "<system> <letter>" search`,
+  );
 
   // Per-record multiplicity status (v9): resolved = a multiples.tsv member
   // row backs the record; unresolved = SIMBAD otype '**' by Gaia source_id
@@ -983,7 +937,7 @@ async function main() {
   // tiers alone — the runtime composes every designation off the search
   // index through the same pure function (/docs/star-naming.md#6-rendering--glyphs-everywhere-no-fallback-path).
   const display = assignDisplayNames(
-    stars, componentDesignations, CONSTELLATIONS, loadNameOverrides(), recordSids,
+    stars, componentDesignations, CONSTELLATIONS, NAME_OVERRIDES.read(), recordSids,
   );
   Object.assign(counts, {
     namingTierOverride: display.counts.namingTier.override,
@@ -1320,7 +1274,7 @@ function buildCountsCheck(actual: BuildCounts): Check {
 }
 
 function distanceOutliersCheck(stars: readonly Star[]): Check {
-  const simbadSample = parseSimbadSampleTsv(readFileSync(SRC_SIMBAD_SAMPLE, 'utf8'));
+  const simbadSample = simbadSampleDistances(SIMBAD_SAMPLE.read());
   const report = buildRegressionReport(stars, simbadSample);
   console.log(
     `distance-regression: SIMBAD sample loaded (${simbadSample.size} keys); ` +

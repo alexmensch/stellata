@@ -21,16 +21,18 @@ scripts/catalog/distance/parallax/
     (+ test)                    pair rows × the DR3 astrometry table, per WDS
                                 root. Built once before the walk, in
                                 ../../parse/read-stars-inputs.ts.
-  simbad-sourced-ledger.ts      The `simbad_plx` records, by the two keys a
+  simbad-sourced-ledger-tsv.ts  The `simbad_plx` records, by the two keys a
     (+ test)                    SIMBAD-based validator joins on — /docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers's
                                 validation independence, and the file's codec
                                 (SIMBAD_SOURCED_DISTANCES). Written by
                                 build-catalog.ts, read by
                                 ../../validate/validate-simbad-sample.ts.
-  parked-ledger.ts (+ test)     The /docs/catalog-driver.md#61-record-parity dropped list — its codec
-                                (PARKED_LEDGER), its closed reason enum, and the identifier key
-                                the parity gate matches it on. The producer is
-                                build-catalog.ts, the consumer
+  parked-ledger.ts (+ test)     The /docs/catalog-driver.md#61-record-parity dropped list's closed
+                                reason enum and the identifier key the parity
+                                gate matches it on.
+  parked-ledger-tsv.ts          Its codec (PARKED_LEDGER), apart so a module
+                                needing only the enum reaches no file. The
+                                producer is build-catalog.ts, the consumer
                                 ../../membership/membership-manifest-gate.test.ts.
 ```
 

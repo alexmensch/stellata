@@ -11,6 +11,8 @@ import {
 } from './classic-ids-parse';
 import { cns5Astrometry, cns5Row } from './cns5-fixture';
 
+const FROM = { file: 'fixture.tsv', hint: 'h' };
+
 const TYC2_HD = [
   'tyc1\ttyc2\ttyc3\thd\tn_hd\tn_tyc',
   '3105\t2070\t1\t172167\t1\t1',
@@ -70,7 +72,7 @@ describe('classic-ids-parse / parseTyc2HdTsv', () => {
 
 describe('classic-ids-parse / parseCrossIndexTsv', () => {
   it('reads Bayer in IV/27A\'s own lowercase form and nulls empty cells', () => {
-    const rows = parseCrossIndexTsv(CROSS_INDEX);
+    const rows = parseCrossIndexTsv(CROSS_INDEX, FROM);
     // No `hr`: HR reaches the overlay through V/50's own HR↔HD mapping, so
     // IV/27A's column is present in the committed slice but never parsed.
     expect(rows[0]).toEqual({
@@ -89,7 +91,7 @@ describe('classic-ids-parse / cross-index corrections', () => {
     '172167\t7001\t91262\talf\t3\tLyr',
   ].join('\n');
   const corrections = (body: string): ReturnType<typeof parseCrossIndexCorrectionsTsv> =>
-    parseCrossIndexCorrectionsTsv(`hd\tbelongs_to\n${body}`);
+    parseCrossIndexCorrectionsTsv(`hd\tbelongs_to\n${body}`, FROM);
 
   it('skips the comment lines the curated file carries', () => {
     expect(corrections('# a note\n35148\t35149\n')).toEqual([{ hd: 35148, belongsTo: 35149 }]);
@@ -105,20 +107,20 @@ describe('classic-ids-parse / cross-index corrections', () => {
 
   it('drops the corrected row and leaves every other', () => {
     const kept = applyCrossIndexCorrections(
-      parseCrossIndexTsv(PAIR), corrections('35148\t35149\n'),
+      parseCrossIndexTsv(PAIR, FROM), corrections('35148\t35149\n'), FROM,
     );
     expect(kept.map((r) => r.hd)).toEqual([35149, 172167]);
   });
 
   it('throws when the correction would do nothing', () => {
     expect(() => applyCrossIndexCorrections(
-      parseCrossIndexTsv(PAIR), corrections('99999\t35149\n'),
+      parseCrossIndexTsv(PAIR, FROM), corrections('99999\t35149\n'), FROM,
     )).toThrow(/states no IV\/27A designation/);
   });
 
   it('throws when the correction would orphan the designation', () => {
     expect(() => applyCrossIndexCorrections(
-      parseCrossIndexTsv(PAIR), corrections('35148\t172167\n'),
+      parseCrossIndexTsv(PAIR, FROM), corrections('35148\t172167\n'), FROM,
     )).toThrow(/orphan the designation/);
   });
 });
@@ -133,20 +135,20 @@ describe('classic-ids-parse / parseBsc5Tsv', () => {
 
 describe('classic-ids-parse / parseCns5Tsv', () => {
   it('keeps the EDR3 source_id as a decimal string past 2^53', () => {
-    const rows = parseCns5Tsv(CNS5);
+    const rows = parseCns5Tsv(CNS5, FROM);
     expect(rows[0].gaiaSourceId).toBe('5853498713190525696');
     expect(rows[0].gjComp).toBe('C');
   });
 
   it('keeps non-numeric GJ designations (CNS5 0 is "Sun") with a null source', () => {
-    const rows = parseCns5Tsv(CNS5);
+    const rows = parseCns5Tsv(CNS5, FROM);
     expect(rows[1].gj).toBe('Sun');
     expect(rows[1].gaiaSourceId).toBeNull();
     expect(rows[1].hip).toBeNull();
   });
 
   it('carries the PM bibcode, and drops an unbibcoded motion whole', () => {
-    const rows = parseCns5Tsv(CNS5);
+    const rows = parseCns5Tsv(CNS5, FROM);
     expect(rows[0].astrometry?.pm).toEqual({
       pmRaMasyr: -3781.74, pmDecMasyr: 769.47, bibcode: '2020yCat.1350....0G',
     });
@@ -157,7 +159,7 @@ describe('classic-ids-parse / parseCns5Tsv', () => {
 
   it('drops an unbibcoded PARALLAX whole too — the distance cascade\'s skip '
     + 'rules read that bibcode, so a value without one cannot be weighed', () => {
-    const rows = parseCns5Tsv(CNS5);
+    const rows = parseCns5Tsv(CNS5, FROM);
     expect(rows[0].astrometry?.parallax).toEqual({
       mas: 768.07, errMas: 0.05, bibcode: '2020yCat.1350....0G',
     });
@@ -170,7 +172,7 @@ describe('classic-ids-parse / parseCns5Tsv', () => {
   // only one whose signal-to-noise was structurally unknowable, so no cns5 row
   // could ever be counted low-precision.
   it('carries the parallax error CNS5 publishes, so the floor can read it', () => {
-    const errs = parseCns5Tsv(CNS5)
+    const errs = parseCns5Tsv(CNS5, FROM)
       .map((r) => r.astrometry?.parallax?.errMas)
       .filter((e) => e !== undefined);
     expect(errs).toEqual([0.05]);

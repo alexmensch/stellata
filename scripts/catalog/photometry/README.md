@@ -32,6 +32,8 @@ scripts/catalog/photometry/
                                  synthetic tier's measured colour bound, and
                                  the five-tier ci cascade with its
                                  observed-vs-intrinsic verdict. Pure.
+  gspc-source.ts                 GAIA_GSPC and HIP_PHOTOMETRY, the two
+  hip-photometry-source.ts       tables declared (../../util/sources/).
   gspc-parse.ts (+ test)         data/gaia/gaia_dr3_gspc.tsv → source_id →
                                  synthetic Johnson B−V + the archive's
                                  validated-range flag.

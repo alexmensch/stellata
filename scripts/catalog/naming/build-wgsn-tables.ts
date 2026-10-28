@@ -5,7 +5,7 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
-import { readCrossIndexTable } from '../classic-ids/cross-index';
+import { CROSS_INDEX } from '../classic-ids/cross-index-source';
 import { MEMBERSHIP_MANIFEST, MEMBERSHIP_MANIFEST_FILE } from '../membership/membership-manifest-tsv';
 import { REPO_ROOT } from '../../util/paths';
 import { emitArtifacts, runStep } from '../../util/emit-artifacts';
@@ -28,7 +28,8 @@ import {
   unionIv27aBayer,
   type DesignationRow,
 } from './wgsn-tables-pure';
-import { PROPER_DISPOSITIONS_TABLE, parseProperDispositions, type WgsnNameRow } from './wgsn-index-pure';
+import type { WgsnNameRow } from './wgsn-index-pure';
+import { PROPER_DISPOSITIONS } from './proper-dispositions-source';
 import { WGSN_DESIGNATIONS } from './wgsn-designations-tsv';
 import { WGSN_NAMES } from './wgsn-names-tsv';
 import { WGSN_OUTPUTS } from './wgsn-tables-outputs';
@@ -37,7 +38,6 @@ const DATA = resolve(REPO_ROOT, 'data/iau-wgsn');
 const NEC_CSV = resolve(DATA, 'NEC.csv');
 const FAINTS_CSV = resolve(DATA, 'wgsnFaints.csv');
 const FAINTS_CORRECTIONS_TSV = resolve(REPO_ROOT, FAINTS_CORRECTIONS.file);
-const DISPOSITIONS = resolve(REPO_ROOT, PROPER_DISPOSITIONS_TABLE.file);
 const MANIFEST = resolve(REPO_ROOT, MEMBERSHIP_MANIFEST_FILE);
 const SNAPSHOT = resolve(REPO_ROOT, 'scripts/catalog/naming/wgsn-expected.json');
 
@@ -137,7 +137,7 @@ async function main(): Promise<void> {
     }
   }
 
-  const iv27a = unionIv27aBayer(designations, readCrossIndexTable());
+  const iv27a = unionIv27aBayer(designations, CROSS_INDEX.read());
   designations.push(...iv27a.added);
 
   const membership = readManifest();
@@ -149,7 +149,7 @@ async function main(): Promise<void> {
   }
   const { missing, stale } = diffDispositions(
     unmatched,
-    new Set(parseProperDispositions(readFileSync(DISPOSITIONS, 'utf8'))
+    new Set(PROPER_DISPOSITIONS.read()
       .map((d) => membershipProperKey(d.proper, d.hip, d.hd))),
   );
   if (missing.length > 0 || stale.length > 0) {

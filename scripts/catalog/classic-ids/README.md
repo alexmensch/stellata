@@ -43,6 +43,7 @@ scripts/catalog/classic-ids/
                                   ../astrometry-request/ runs the same join
                                   off the primaries tables it already holds
                                   (README.md#the-gates-evidence-has-to-be-pulled).
+  cns5-source.ts                  CNS5, declared (../../util/sources/).
   classic-ids-parse.ts (+ test)   The four frozen-TSV parsers, plus the
                                   curated IV/27A corrections and their
                                   application. The gate's
@@ -82,7 +83,8 @@ scripts/catalog/classic-ids/
                                   thresholds, `weighBinding` — is
                                   ../membership/binding/'s; this module
                                   imports it. Pure.
-  cross-index.ts                  IV/27A as every consumer reads it: the
+  cross-index-source.ts           CROSS_INDEX — IV/27A as every consumer
+                                  reads it, declared: the
                                   frozen table with
                                   cross_index_corrections.tsv applied
                                   (README.md#one-designation-two-hd-numbers). Four
@@ -213,7 +215,7 @@ resolving to the brightest, and SID allocation keying no row off such a
 designation, are the consumer's job.
 
 The TYC cross-walk is 2.5 M rows for a ~350 k-row join, so
-`readGaiaTycXmatch` (`../parse/gaia-xmatch.ts`) streams it line-by-line
+`GAIA_TYC_XMATCH` (`../parse/gaia-tyc-xmatch-source.ts`) streams it line-by-line
 and takes a keep-set of the Tycho ids IV/25 actually mentions. Reading it
 as one string peaks near a gigabyte alongside the join's own maps.
 
@@ -230,7 +232,7 @@ The defect is the pair IV/27A joins that is **not one system**, where no
 component letter exists to tell the two apart and both records compose the
 identical label. `data/classic-ids/cross_index_corrections.tsv` is where
 review says so, keyed on the HD whose row leaves the table and naming the HD
-the designation belongs to; `readCrossIndexTable` applies it, so the join, the
+the designation belongs to; `CROSS_INDEX` applies it, so the join, the
 designation-constellation pass, the naming ladder's Bayer union and the
 primaries audit all read the corrected table. Two rows today (23 Ori and
 104 Aqr), each backed by V/50 membership, SIMBAD's own identification and the

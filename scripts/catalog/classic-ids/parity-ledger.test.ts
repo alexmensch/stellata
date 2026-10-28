@@ -8,7 +8,7 @@ import { beforeAll, describe, expect, it } from 'vitest';
 import { readTable } from '../../util/tsv/table-pure';
 import { ADDITIONS_LEDGER } from '../membership/additions-ledger-tsv';
 import { MEMBERSHIP_MANIFEST } from '../membership/membership-manifest-tsv';
-import { PARKED_LEDGER } from '../distance/parallax/parked-ledger';
+import { PARKED_LEDGER } from '../distance/parallax/parked-ledger-tsv';
 import { ROUTE_DISAGREEMENTS } from './route-disagreements-tsv';
 import { REPO_ROOT, lfsContentReadable } from '../../util/paths';
 import { LEDGER_PATH, OVERRIDES_PATH, SAMEAS_OVERRIDES_FILE } from '../../sid/registry-io';

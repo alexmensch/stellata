@@ -6,7 +6,8 @@ import { resolve } from 'node:path';
 import { parse } from 'csv-parse';
 import { beforeAll, describe, expect, it } from 'vitest';
 
-import { readIauEdgeRecords } from '../../../../scripts/catalog/parse/constellations/constellations';
+import { iauEdgeRecords } from '../../../../scripts/catalog/parse/constellations/constellations';
+import { STELLARIUM } from '../../../../scripts/catalog/parse/constellations/stellarium-source';
 import { REPO_ROOT, lfsContentReadable } from '../../../../scripts/util/paths';
 import { RA_HOURS_TO_DEG } from '../../util/astronomy-constants';
 import { createIauConstellationLookup } from './iau-boundaries-pure';
@@ -26,7 +27,7 @@ const ROWS_WITH_CON = 317_174;
  *  on the precession epoch — dating B1875.0 six months late triples it. */
 const DISAGREEMENTS = 61;
 
-const lookup = createIauConstellationLookup(readIauEdgeRecords());
+const lookup = createIauConstellationLookup(iauEdgeRecords(STELLARIUM.read()));
 
 interface Disagreement {
   hip: string;

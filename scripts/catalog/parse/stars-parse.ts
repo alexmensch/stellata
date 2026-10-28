@@ -1,7 +1,6 @@
 // Membership-manifest reader: per-row parallax cascade + its two override
 // layers × direction cascade → in-memory Star records for every downstream
 // builder step. See scripts/catalog/README.md.
-import { readFileSync } from 'node:fs';
 
 import {
   isBailerJonesEligible,
@@ -103,7 +102,7 @@ import {
 import type { GspcColour } from '../photometry/gspc-parse';
 import { printedByHip } from '../photometry/hip-photometry-parse';
 import { emptyTallyPartition } from '../../util/tally';
-import { MEMBERSHIP_MANIFEST } from '../membership/membership-manifest-tsv';
+import type { ManifestRecord } from '../membership/membership-manifest-tsv';
 import { type ConstellationAssignment } from './constellations/constellations';
 
 // Drop stars farther than this from Sol. The catalogue carries a handful of
@@ -261,7 +260,7 @@ export interface ReadStarsOptions {
 }
 
 export function readStars(
-  manifestTsvPath: string,
+  manifest: Iterable<ManifestRecord>,
   {
     conAssignment,
     bjMap = new Map(),
@@ -352,7 +351,7 @@ export function readStars(
     ciGspcValidatedRange: number;  // gspc-tier rows the archive calls in-range
   };
 } {
-  const rows = MEMBERSHIP_MANIFEST.rows(readFileSync(manifestTsvPath, 'utf8'));
+  const rows = manifest;
 
   const stars: Star[] = [];
   const dropped: ReadStarsDrops = { tooFar: 0 };

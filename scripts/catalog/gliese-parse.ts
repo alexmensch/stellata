@@ -2,15 +2,12 @@
 // first-order tier under Tycho-2 in the V cascade of
 // /docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers.
 
-import { readTable, type TableSpec } from '../util/tsv/table-pure';
+import type { Declared } from '../util/sources/source';
+import { readTable } from '../util/tsv/table-pure';
 import { normaliseGjKey } from './record/catalog-pure';
 import type { MeasuredParallax } from './cited-parallax';
 
-const GLIESE = {
-  file: 'data/gliese/gliese_v70a.tsv',
-  columns: ['name', 'comp', 'vmag', 'bv', 'sp', 'plx_mas', 'e_plx_mas', 'n_plx', 'hd'] as const,
-  hint: 'Re-run `pnpm run refresh:gliese`.',
-} satisfies TableSpec<string>;
+const GLIESE_COLUMNS = ['name', 'comp', 'vmag', 'bv', 'sp', 'plx_mas', 'e_plx_mas', 'n_plx', 'hd'] as const;
 
 /** V/70A's resulting parallax, carrying which KIND of parallax it is.
  *
@@ -67,11 +64,11 @@ function catalogueKey(name: string, comp: string): string | null {
  *  `AB` answers to `165A`) and the bare number. Derived keys never displace an
  *  exact one, so `Gl 559 A` keeps `559A` even though a hypothetical `AB` row
  *  would alias onto it. */
-export function parseGlieseTsv(text: string): GlieseIndex {
+export function parseGlieseTsv(text: string, from: Declared): GlieseIndex {
   const index = emptyGlieseIndex();
   const parsed: Array<{ key: string; row: GlieseRow }> = [];
 
-  for (const row of readTable(GLIESE, text)) {
+  for (const row of readTable({ ...from, columns: GLIESE_COLUMNS }, text)) {
     const name = row.text('name') ?? '';
     const comp = row.text('comp') ?? '';
     const key = catalogueKey(name, comp);

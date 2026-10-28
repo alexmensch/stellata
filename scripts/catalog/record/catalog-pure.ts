@@ -7,7 +7,6 @@
 // so everything reachable from the config needs them. Only typecheck and
 // vitest cover the rest of scripts/, and neither fails without them: dropping
 // these breaks `vite build` and `pnpm run dev` alone.
-import { readTable, type TableSpec } from '../../util/tsv/table-pure.ts';
 // Type-only: distance/parallax/ reaches back here through its parsers, so a
 // value import would close a cycle. Erased at compile.
 import type { DistVia } from '../distance/parallax/parallax-cascade.ts';
@@ -1480,39 +1479,6 @@ export function isBailerJonesEligible(
   return !!gaiaSourceId && distVia === 'gaia_dr3_inversion';
 }
 
-/** Null for a blank cell AND for one that is not pure decimal digits, which
- *  guards the build's `BigInt(s.gaiaSourceId)` call against a malformed row
- *  throwing a SyntaxError mid-write. Same `/^\d+$/` shape gate as
- *  `parseGaiaHipXmatchTsv` in `gaia-xmatch.ts`. */
-/** Parse the TSV produced by `scripts/refresh/refresh-bailer-jones.py` into a
- *  Gaia DR3 source_id → distance (pc) map. `source_id` is kept as a
- *  string: Gaia source_ids exceed `Number.MAX_SAFE_INTEGER`, so any
- *  numeric parse would silently corrupt the join key.
- *
- *  Per Bailer-Jones 2021 (/data/papers/index.md#bailerjones2021),
- *  `r_med_photogeo` is preferred when available
- *  (combines the parallax likelihood with a colour-and-magnitude
- *  population prior); `r_med_geo` is the geometric-only fallback for
- *  rows without photogeo (no usable G or BP–RP, or a colour outside the
- *  prior model's range). */
-const BAILER_JONES = {
-  file: 'data/bailer-jones/bailer-jones-dr3.tsv',
-  columns: ['source_id', 'r_med_geo', 'r_med_photogeo'] as const,
-  hint: 'Re-run scripts/refresh/refresh-bailer-jones.py.',
-} satisfies TableSpec<string>;
-
-export function parseBailerJonesTsv(text: string): Map<string, number> {
-  const out = new Map<string, number>();
-  for (const row of readTable(BAILER_JONES, text)) {
-    const sourceId = row.sourceId('source_id');
-    if (sourceId === null) continue;
-    const d = row.float('r_med_photogeo') ?? row.float('r_med_geo');
-    if (d === null || d <= 0) continue;
-    out.set(sourceId, d);
-  }
-  return out;
-}
-
 // ---- Gaia DR3 Apsis astrophysical parameters ----------------------------
 
 /** Per-source Apsis fields from `data/gaia/gaia_dr3_apsis.tsv`. The seven
@@ -1533,41 +1499,6 @@ export interface ApsisRow {
   loggGspspec: number | null;
   mhGspspec: number | null;
   spectraltypeEsphs: string | null;
-}
-
-/** Parse the TSV produced by `scripts/refresh/refresh-gaia-apsis.py` into
- *  a Gaia DR3 source_id → ApsisRow map. `source_id` is kept as a string:
- *  Gaia source_ids exceed Number.MAX_SAFE_INTEGER so any numeric parse
- *  would silently corrupt the join key. Blank cells decode to `null` —
- *  the writer maps `null` to `NO_APSIS` (NaN) at pack time. */
-const GAIA_APSIS = {
-  file: 'data/gaia/gaia_dr3_apsis.tsv',
-  columns: [
-    'source_id',
-    'teff_gspphot', 'logg_gspphot', 'mh_gspphot', 'azero_gspphot',
-    'teff_gspspec', 'logg_gspspec', 'mh_gspspec',
-    'spectraltype_esphs',
-  ] as const,
-  hint: 'Re-run scripts/refresh/refresh-gaia-apsis.py.',
-} satisfies TableSpec<string>;
-
-export function parseGaiaApsisTsv(text: string): Map<string, ApsisRow> {
-  const out = new Map<string, ApsisRow>();
-  for (const row of readTable(GAIA_APSIS, text)) {
-    const sourceId = row.sourceId('source_id');
-    if (sourceId === null) continue;
-    out.set(sourceId, {
-      teffGspphot: row.float('teff_gspphot'),
-      loggGspphot: row.float('logg_gspphot'),
-      mhGspphot: row.float('mh_gspphot'),
-      azeroGspphot: row.float('azero_gspphot'),
-      teffGspspec: row.float('teff_gspspec'),
-      loggGspspec: row.float('logg_gspspec'),
-      mhGspspec: row.float('mh_gspspec'),
-      spectraltypeEsphs: row.text('spectraltype_esphs'),
-    });
-  }
-  return out;
 }
 
 /** Apparent magnitude → absolute magnitude at given distance.

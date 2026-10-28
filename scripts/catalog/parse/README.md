@@ -15,14 +15,10 @@ it walks is `../membership/README.md`.
 scripts/catalog/parse/
   stars-parse.ts (+ test)         readStars — the per-row pipeline. The hub
                                   every other subfolder imports.
-  read-stars-inputs.ts            The manifest path, plus source paths +
-                                  loaders for every reference table readStars
-                                  consumes, and the input set derived
-                                  artifacts invalidate against
-                                  (readStarsInputPaths: every file it can
-                                  read, so every dust chunk, and the magnitude
-                                  pull whether or not the magnitude term is
-                                  on). One loader is
+  read-stars-inputs.ts            loadReadStarsInputs — every reference
+                                  table readStars consumes, each read through
+                                  its declared source (../../util/sources/),
+                                  so a missing one fails the build. One loader is
                                   a derived index rather than a file read: the
                                   bound-sibling parallaxes the distance
                                   cascade's bottom tier lends, which cross
@@ -30,6 +26,9 @@ scripts/catalog/parse/
                                   loaded here. Async, because the 5p tier has
                                   a second source once the magnitude term is
                                   on (README.md#the-direction-tiers-two-gaia-files).
+  gaia-hip-xmatch-source.ts       GAIA_HIP_XMATCH / GAIA_TYC_XMATCH, the two
+  gaia-tyc-xmatch-source.ts       cross-walks declared one per module, so a
+                                  step reaches only the one it reads.
   gaia-xmatch.ts (+ test)         Gaia DR3 best-neighbour cross-walk parsing
                                   (HIP + TYC, one shared accumulator) plus the
                                   Apsis and 5p astrometry side-tables. The HIP
@@ -45,9 +44,6 @@ scripts/catalog/parse/
   constellations/                 The IAU-88 table, byte 34's positional
                                   membership and the Stellarium stick
                                   figures, with its own README.
-  tsv-stream.ts                   forEachLine — the one line-at-a-time read
-                                  over a committed table too large to hold as
-                                  one string (README.md#streaming-a-committed-table).
   corpus-tsv.ts                   Record-ref parsing for the frozen regression
                                   corpora (known-stars.tsv,
                                   multi-star-regression.tsv,
@@ -100,7 +96,8 @@ pull's refresh hint.
 
 Three tables are too large to hold as one string: the 2.5 M-row TYC
 cross-walk, the ~200 MB magnitude pull, and the manifest once the magnitude
-term is on. Each is read through `forEachLine` (`tsv-stream.ts`) feeding a
+term is on. Each is read through its source's `input.lines` (or `streamArtifact`,
+`../../util/sources/`) feeding a
 **line-fed accumulator** — a `{ line, result }` pair whose `line` resolves the
 header on first call and folds every row after it.
 
