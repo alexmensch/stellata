@@ -1,11 +1,13 @@
 // data/gaia/gaia_dr3_gspc.tsv → source_id → synthetic Johnson B−V.
 // See README.md#the-ci-cascade.
 
-import { dataRows, parseFloatOrNull } from '../parse/corpus-tsv';
+import { readTable, type TableSpec } from '../../util/tsv/table-pure';
 
-const GSPC_COLUMNS = [
-  'source_id', 'b_jkc_mag', 'b_jkc_flag', 'v_jkc_mag', 'v_jkc_flag',
-] as const;
+const GSPC = {
+  file: 'data/gaia/gaia_dr3_gspc.tsv',
+  columns: ['source_id', 'b_jkc_mag', 'b_jkc_flag', 'v_jkc_mag', 'v_jkc_flag'] as const,
+  hint: 'Re-run `pnpm run refresh:gaia-gspc`.',
+} satisfies TableSpec<string>;
 
 /** `1` = the source's G and BP−RP lie where the JKC standardisation was
  *  validated (Montegriffo 2023 (/data/papers/index.md#montegriffo2023)
@@ -32,19 +34,17 @@ export interface GspcColour {
  *  side-table is. */
 export function parseGspcTsv(text: string): Map<string, GspcColour> {
   const out = new Map<string, GspcColour>();
-  for (const { cells, idx } of dataRows(
-    text, GSPC_COLUMNS, 'gaia_dr3_gspc.tsv', 'Re-run `pnpm run refresh:gaia-gspc`.',
-  )) {
-    const sourceId = (cells[idx.source_id] ?? '').trim();
-    if (!sourceId) continue;
-    const b = parseFloatOrNull(cells[idx.b_jkc_mag]);
-    const v = parseFloatOrNull(cells[idx.v_jkc_mag]);
+  for (const row of readTable(GSPC, text)) {
+    const sourceId = row.text('source_id');
+    if (sourceId === null) continue;
+    const b = row.float('b_jkc_mag');
+    const v = row.float('v_jkc_mag');
     if (b === null || v === null) continue;
     out.set(sourceId, {
       bMinusV: b - v,
       inValidatedRange:
-        (cells[idx.b_jkc_flag] ?? '').trim() === FLAG_IN_VALIDATED_RANGE &&
-        (cells[idx.v_jkc_flag] ?? '').trim() === FLAG_IN_VALIDATED_RANGE,
+        row.text('b_jkc_flag') === FLAG_IN_VALIDATED_RANGE &&
+        row.text('v_jkc_flag') === FLAG_IN_VALIDATED_RANGE,
     });
   }
   return out;
