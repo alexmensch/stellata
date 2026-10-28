@@ -2,7 +2,6 @@
 // the record-parity additions ledger (/docs/catalog-driver.md#61-record-parity) and the binding review queue, plus the label
 // merge's review queue. See README.md.
 
-import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 import { REPO_ROOT as ROOT, readRequired } from '../../util/paths';
@@ -90,7 +89,6 @@ function reportLabelCoverage(c: MembershipCounts): void {
 async function main(): Promise<void> {
   const spine = INHERITED_SPINE.parse(readRequired(resolve(ROOT, INHERITED_SPINE_FILE), LFS_HINT));
   const tables = await loadPrimaryTables(spine.map((r) => r.tyc).filter((t) => t !== ''));
-  const overridesPath = resolve(ROOT, CLASSIC_ID_OVERRIDES_FILE);
   const { evidence, gaiaAstrometry } = loadBindingEvidence(
     printedVLookups(loadHipVMag(), tables.tycho2, tables.gliese),
   );
@@ -98,9 +96,9 @@ async function main(): Promise<void> {
     spine,
     tables,
     overlay: parseOverlayTsv(readRequired(SRC_OVERLAY, OVERLAY_HINT)),
-    overrides: existsSync(overridesPath)
-      ? parseLabelOverridesTsv(readFileSync(overridesPath, 'utf8'))
-      : new Map(),
+    overrides: parseLabelOverridesTsv(
+      readRequired(resolve(ROOT, CLASSIC_ID_OVERRIDES_FILE), 'it is committed and hand-curated.'),
+    ),
     siblingRenderedSourceIds: sourceIdsWithSiblingComponent(readMultiplesTsv()),
     evidence,
     dispositions: parseBindingDispositionsTsv(
