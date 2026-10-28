@@ -4,7 +4,7 @@ import { indexCitations } from './scripts/site/json-ld-citations.ts';
 import { BUILD_TARGET, buildFigures, figureSubstitution, publishBuildEnv } from './vite.env.ts';
 import { documentRoutingInDev } from './vite.site-dev.ts';
 
-const figures = buildFigures(import.meta.dirname);
+const figures = buildFigures();
 publishBuildEnv(figures);
 
 export default defineConfig(() => ({

@@ -9,7 +9,7 @@ import { withoutCaptureComments } from './scripts/site/shipped-html-pure.ts';
 import { NOT_FOUND_SOURCE, SITE_PAGES, renditionPath } from './src/site/pages.ts';
 import { BUILD_TARGET, buildFigures, figureSubstitution, publishBuildEnv } from './vite.env.ts';
 
-const figures = buildFigures(import.meta.dirname);
+const figures = buildFigures();
 publishBuildEnv(figures);
 
 const SITE_DIR = resolve(import.meta.dirname, 'src/site');

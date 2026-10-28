@@ -24,7 +24,7 @@ const HOME_SOURCE = readFileSync(join(ROOT, 'src/site/index.html'), 'utf8');
 const HOME = parseHtml(HOME_SOURCE);
 const NOT_FOUND = parseHtml(readFileSync(join(ROOT, 'src/site/404.html'), 'utf8'));
 const TOKEN = new RegExp(`^%(?:${FIGURE_NAMES.join('|')})%$`);
-const FIGURES = buildFigures(ROOT);
+const FIGURES = buildFigures();
 const DOCUMENTS = [
   ...[...SITE_PAGES.map((page) => page.source), NOT_FOUND_SOURCE].map((source) => `src/site/${source}`),
   'src/client/app/index.html',
@@ -143,7 +143,7 @@ describe('every still offers the widths it names', () => {
 
 describe('the derivations behind those figures', () => {
   it('counts the sources the application credits', () => {
-    expect(creditedSourceCount(ROOT)).toBe(34);
+    expect(creditedSourceCount()).toBe(34);
   });
 
   // The subsystem table splits that same total, so a source added to the app
@@ -153,7 +153,7 @@ describe('the derivations behind those figures', () => {
     const perRow = rows.map((row) => Number(textOf(selectAll('td', row)[1])));
     expect(rows.length).toBeGreaterThan(0);
     expect(perRow.every(Number.isInteger)).toBe(true);
-    expect(perRow.reduce((a, b) => a + b, 0)).toBe(creditedSourceCount(ROOT));
+    expect(perRow.reduce((a, b) => a + b, 0)).toBe(creditedSourceCount());
   });
 
   it('counts the works the citation index records', () => {

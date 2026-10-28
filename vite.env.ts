@@ -11,11 +11,11 @@ import {
 
 export const BUILD_TARGET = 'es2022';
 
-export function buildFigures(root: string): Figures {
+export function buildFigures(): Figures {
   return {
-    VITE_APP_VERSION: appVersion(root),
-    VITE_STAR_COUNT: catalogueRecordCount(root).toLocaleString('en-US'),
-    VITE_SOURCE_COUNT: String(creditedSourceCount(root)),
+    VITE_APP_VERSION: appVersion(),
+    VITE_STAR_COUNT: catalogueRecordCount().toLocaleString('en-US'),
+    VITE_SOURCE_COUNT: String(creditedSourceCount()),
     VITE_REFERENCE_COUNT: String(citedReferenceCount()),
   };
 }
