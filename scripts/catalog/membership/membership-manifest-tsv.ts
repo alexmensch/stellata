@@ -1,7 +1,7 @@
 // See README.md#files-in-this-area.
 
 import { defineArtifact, nullableCell } from '../../util/tsv/artifact-pure';
-import { sourceIdCell } from '../../util/tsv/table-pure';
+import { idCell, idListCell, sourceIdCell } from '../../util/tsv/table-pure';
 import { SOL_PROPER_NAME } from '../record/catalog-pure';
 import { canonicalKeyOf, compareDesignations, starDesignations } from '../../sid/sid-pure';
 
@@ -51,8 +51,6 @@ export interface ManifestRecord {
   isSol: boolean;
 }
 
-const INTEGER = /^\d+$/;
-
 /** Builds a record from a row's cells as written. Throws, through `fail`, on
  *  any cell the column cannot hold. */
 export function manifestRecord(
@@ -60,16 +58,6 @@ export function manifestRecord(
   fail: (message: string) => never,
 ): ManifestRecord {
   const text = (c: ManifestColumn): string | null => (cell(c) === '' ? null : cell(c));
-  const int = (c: ManifestColumn): number | null => {
-    const v = cell(c);
-    if (v === '') return null;
-    return INTEGER.test(v) ? Number(v) : fail(`${c} "${v}" is not an integer`);
-  };
-  const ints = (c: ManifestColumn): number[] => {
-    const v = cell(c);
-    if (v === '') return [];
-    return v.split(MANIFEST_VALUE_SEPARATOR).map((n) => (INTEGER.test(n) ? Number(n) : fail(`${c} "${v}" is not an integer list`)));
-  };
   const oneOf = <T extends string>(c: ManifestColumn, allowed: readonly T[]): T => {
     const v = cell(c);
     return (allowed as readonly string[]).includes(v) ? v as T : fail(`${c} "${v}" is not one of ${allowed.join(' | ')}`);
@@ -81,6 +69,8 @@ export function manifestRecord(
       return fail(`${c}: ${(e as Error).message}`);
     }
   };
+  const int = (c: ManifestColumn): number | null => parsed(c, idCell);
+  const ints = (c: ManifestColumn): number[] => parsed(c, (raw) => idListCell(raw, MANIFEST_VALUE_SEPARATOR));
   const proper = text('proper');
   return {
     tyc: text('tyc'),

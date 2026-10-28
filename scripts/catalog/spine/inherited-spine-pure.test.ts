@@ -125,6 +125,7 @@ describe('spineDesignations', () => {
   });
 
   it('rejects an integer cell that would not round-trip', () => {
-    expect(() => spineDesignations(row({ hd: '48915.0' }))).toThrow(/round-trippable/);
+    expect(() => spineDesignations(row({ hd: '48915.0' }))).toThrow(/"48915.0" is not an identifier/);
+    expect(() => spineDesignations(row({ hd: '048915' }))).toThrow(/"048915" is not an identifier/);
   });
 });

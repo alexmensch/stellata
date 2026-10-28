@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
-import { floatCell, intCell, readTable, tableLineReader, textCell, type TableSpec } from './table-pure';
+import {
+  floatCell, idCell, idListCell, intCell, readTable, tableLineReader, textCell, type TableSpec,
+} from './table-pure';
 
 const SPEC: TableSpec<'id' | 'v'> = { file: 'data/t.tsv', columns: ['id', 'v'], hint: 'Re-run x.' };
 
@@ -25,6 +27,21 @@ describe('cells', () => {
       expect(() => floatCell(bad)).toThrow(/not a decimal/);
     }
     expect(() => intCell('12.0')).toThrow(/not an integer/);
+    expect(() => intCell('-9007199254740993')).toThrow(/past the safe integer range/);
+    expect(intCell('-9007199254740991')).toBe(-Number.MAX_SAFE_INTEGER);
+  });
+
+  it('reads an identifier only as the text it writes back to', () => {
+    expect(idCell('0')).toBe(0);
+    expect(idCell('48915')).toBe(48915);
+    expect(idCell('')).toBeNull();
+    for (const bad of ['048915', '+1', '-1', ' 1', '1.0']) {
+      expect(() => idCell(bad)).toThrow(/is not an identifier/);
+    }
+    expect(() => idCell('9007199254740993')).toThrow(/past the safe integer range/);
+    expect(idListCell('3|1|20', '|')).toEqual([3, 1, 20]);
+    expect(idListCell('', '|')).toEqual([]);
+    expect(() => idListCell('3||1', '|')).toThrow(/"3\|\|1" has an empty element/);
   });
 });
 
@@ -74,6 +91,15 @@ describe('readTable', () => {
     const [bad] = readTable(SPEC, 'id\tv\n-12\t1e3\n');
     expect(() => bad.sourceId('id')).toThrow('data/t.tsv:2: id: "-12" is not a source_id. Re-run x.');
     expect(() => bad.requiredSourceId('v')).toThrow(/v: "1e3" is not a source_id/);
+  });
+
+  it('names file, line and column on a bad identifier', () => {
+    const [row] = readTable(SPEC, 'id\tv\n07\t1||2\n');
+    expect(() => row.id('id')).toThrow('data/t.tsv:2: id: "07" is not an identifier. Re-run x.');
+    expect(() => row.idList('v', '|')).toThrow(/data\/t\.tsv:2: v: "1\|\|2" has an empty element/);
+    const [empty] = readTable(SPEC, 'id\tv\n\t3|4\n');
+    expect(() => empty.requiredId('id')).toThrow('data/t.tsv:2: id: is empty. Re-run x.');
+    expect(empty.idList('v', '|')).toEqual([3, 4]);
   });
 
   it('oneOf accepts only the listed values', () => {

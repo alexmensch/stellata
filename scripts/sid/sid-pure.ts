@@ -6,7 +6,7 @@ import { createHash } from 'node:crypto';
 
 import { readTable, type TableRow, type TableSpec } from '../util/tsv/table-pure';
 import {
-  LEDGER, SID_KINDS, requireSid, sidCell, type LedgerRow, type SidKind,
+  LEDGER, SID_KINDS, type LedgerRow, type SidKind,
 } from './ledger-tsv';
 
 // ---- Designation grammar (/docs/sid.md#3-designation-namespaces) -------------------------------
@@ -246,16 +246,16 @@ export function parseLedgerTsv(text: string): LedgerRow[] {
 
 export function parseRetirementsTsv(text: string): RetirementRow[] {
   return registryRows(RETIREMENTS_TABLE, text).map((row) => ({
-    sid: requireSid(row, 'sid'),
+    sid: row.requiredId('sid'),
     retired: row.raw('retired'),
     reason: row.raw('reason'),
-    successorSid: sidCell(row, 'successor_sid'),
+    successorSid: row.id('successor_sid'),
   }));
 }
 
 export function parseReinstatementsTsv(text: string): ReinstatementRow[] {
   return registryRows(REINSTATEMENTS_TABLE, text).map((row) => ({
-    sid: requireSid(row, 'sid'),
+    sid: row.requiredId('sid'),
     reinstated: row.raw('reinstated'),
     reason: row.raw('reason'),
   }));

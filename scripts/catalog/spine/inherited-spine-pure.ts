@@ -4,6 +4,7 @@
 import { SOL_PROPER_NAME } from '../record/catalog-pure';
 import { starDesignations } from '../../sid/sid-pure';
 import { defineArtifact } from '../../util/tsv/artifact-pure';
+import { idCell } from '../../util/tsv/table-pure';
 import type { Star } from '../parse/stars-parse';
 
 /** Repo-relative, so the generator and the committed-artifact guard resolve
@@ -98,24 +99,15 @@ export const INHERITED_SPINE = defineArtifact({
   encode: (row) => row,
 });
 
-function intCell(cell: string): number | null {
-  if (cell === '') return null;
-  const n = Number.parseInt(cell, 10);
-  if (!Number.isFinite(n) || String(n) !== cell) {
-    throw new Error(`spine integer cell "${cell}" is not a round-trippable integer`);
-  }
-  return n;
-}
-
 /** The `starDesignations` set a spine row stands in for — the membership term's
  *  half of SID resolution once AT-HYG leaves the build's input set. `synth:`
  *  is absent by construction: promoted companions are not spine rows. */
 export function spineDesignations(row: SpineRow): string[] {
   return starDesignations({
     isSol: row.proper === SOL_PROPER_NAME,
-    hip: intCell(row.hip),
-    hd: intCell(row.hd),
-    hr: intCell(row.hr),
+    hip: idCell(row.hip),
+    hd: idCell(row.hd),
+    hr: idCell(row.hr),
     // The spine states one value per identifier; the alias lists are the
     // overlay's addition, and the review queue is what accounts for them.
     hdAlt: [], hrAlt: [],

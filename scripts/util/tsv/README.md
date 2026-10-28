@@ -11,7 +11,8 @@ a cell.
 scripts/util/tsv/
   table-pure.ts (+ test)      readTable / tableLineReader, TableRow and the
                               cell parsers (textCell, floatCell, intCell,
-                              sourceIdCell, oneOfCell).
+                              idCell, idListCell, sourceIdCell,
+                              oneOfCell).
   artifact-pure.ts (+ test)   defineArtifact — a self-written table's codec.
   committed-round-trip.ts     Test support: describeCommittedRoundTrip, an
                               artifact's codec over its committed file, byte
@@ -39,8 +40,13 @@ the target that rebuilds or re-pulls the file.
 - **Absent and malformed are different states.** `text`, `float` and `int`
   answer null for an empty cell and throw — naming file, line and column — on
   a non-empty cell they cannot parse. `float` takes only a plain decimal
-  (`12abc`, `nan`, `Infinity` and hex all throw); `int` only an integer
+  (`12abc`, `nan`, `Infinity` and hex all throw); `int` only a safe integer
   (`12.0` throws). A cell past the end of a short row reads as empty.
+- **An identifier reads only as the text it writes back to.** `id` (and
+  `requiredId`, `idList(column, separator)`) take bare digits as written — no
+  sign, padding or leading zero, within the safe-integer range — so a
+  catalogue number or sid that parses is one its codec re-encodes byte for
+  byte.
   `sourceId` takes bare digits only and answers a string, since a DR3
   source_id exceeds `Number.MAX_SAFE_INTEGER`; `requiredSourceId` also throws
   on an empty cell.

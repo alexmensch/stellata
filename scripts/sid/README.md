@@ -20,9 +20,9 @@ sid-pure.ts               Pure algebra: designation grammar (/docs/sid.md#3-desi
                           Tests import its constants — never redefine
                           them.
 ledger-tsv.ts (+ test)    LEDGER — ledger.tsv's artifact codec, with
-                          SID_KINDS and the bare-digits sid cell every
-                          registry file reads. The test round-trips the
-                          committed ledger byte for byte.
+                          SID_KINDS. Every registry file reads a sid as
+                          TableRow.id (../util/tsv/README.md). The test
+                          round-trips the committed ledger byte for byte.
 catalog-designations.ts   Designation set per BUILT catalog record, from
                           catalog.bin + the two public/ sidecars (README.md#designation-extraction--where-each-namespace-comes-from). Shared by allocate and
                           the inherited spine's parity gate.

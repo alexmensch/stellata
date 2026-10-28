@@ -36,7 +36,32 @@ export function intCell(raw: string | undefined): number | null {
   const t = textCell(raw);
   if (t === null) return null;
   if (!INTEGER.test(t)) throw new Error(`"${t}" is not an integer`);
-  return Number(t);
+  return safeInteger(t);
+}
+
+function safeInteger(t: string): number {
+  const n = Number(t);
+  if (!Number.isSafeInteger(n)) throw new Error(`"${t}" is past the safe integer range`);
+  return n;
+}
+
+const ID = /^(0|[1-9]\d*)$/;
+
+export function idCell(raw: string | undefined): number | null {
+  const t = raw ?? '';
+  if (t === '') return null;
+  if (!ID.test(t)) throw new Error(`"${t}" is not an identifier`);
+  return safeInteger(t);
+}
+
+export function idListCell(raw: string | undefined, separator: string): number[] {
+  const t = raw ?? '';
+  if (t === '') return [];
+  return t.split(separator).map((v) => {
+    const n = idCell(v);
+    if (n === null) throw new Error(`"${t}" has an empty element`);
+    return n;
+  });
 }
 
 const SOURCE_ID = /^\d+$/;
@@ -91,6 +116,18 @@ export class TableRow<C extends string> {
 
   int(c: C): number | null {
     return this.cell(c, intCell);
+  }
+
+  id(c: C): number | null {
+    return this.cell(c, idCell);
+  }
+
+  requiredId(c: C): number {
+    return this.cell(c, (raw) => present(idCell(raw)));
+  }
+
+  idList(c: C, separator: string): number[] {
+    return this.cell(c, (raw) => idListCell(raw, separator));
   }
 
   sourceId(c: C): string | null {

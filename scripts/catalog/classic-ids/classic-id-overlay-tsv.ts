@@ -37,8 +37,6 @@ interface OverlayRow extends OverlayEntry {
   sourceId: string;
 }
 
-const INTEGER = /^\d+$/;
-
 export const CLASSIC_ID_OVERLAY = defineArtifact({
   file: 'data/classic-ids/classic_id_overlay.tsv',
   columns: OVERLAY_COLUMNS,
@@ -47,13 +45,11 @@ export const CLASSIC_ID_OVERLAY = defineArtifact({
   decode: (row): OverlayRow => {
     const list = (c: (typeof OVERLAY_COLUMNS)[number]): string[] =>
       (row.raw(c) === '' ? [] : row.raw(c).split(OVERLAY_VALUE_SEPARATOR));
-    const ints = (c: (typeof OVERLAY_COLUMNS)[number]): number[] => list(c).map((v) => (
-      INTEGER.test(v) ? Number(v) : row.fail(`${c} "${row.raw(c)}" is not an integer list`)));
     return {
       sourceId: row.requiredSourceId('gaia_source_id'),
-      hd: ints('hd'),
-      hr: ints('hr'),
-      hip: ints('hip'),
+      hd: row.idList('hd', OVERLAY_VALUE_SEPARATOR),
+      hr: row.idList('hr', OVERLAY_VALUE_SEPARATOR),
+      hip: row.idList('hip', OVERLAY_VALUE_SEPARATOR),
       gj: list('gj'),
       bayer: list('bayer'),
       flamsteed: list('flamsteed'),

@@ -112,7 +112,7 @@ describe('TSV codecs', () => {
   });
 
   it('refuses a signed sid, a short row and an unknown kind', () => {
-    expect(() => parseLedgerTsv(`${LEDGER_HEADER}\n+1\thip:1\tstar\t2026-07-10\n`)).toThrow(/not a sid/);
+    expect(() => parseLedgerTsv(`${LEDGER_HEADER}\n+1\thip:1\tstar\t2026-07-10\n`)).toThrow(/sid: "\+1" is not an identifier/);
     expect(() => parseLedgerTsv(`${LEDGER_HEADER}\n1\thip:1\tstar\n`)).toThrow(/expected 4/);
     expect(() => parseLedgerTsv(`${LEDGER_HEADER}\n1\thip:1\tcomet\t2026-07-10\n`)).toThrow(/kind/);
     expect(() => parseRetirementsTsv(`${RETIREMENTS_HEADER}\n5\t2026-07-10\tx\t03a\n`))
