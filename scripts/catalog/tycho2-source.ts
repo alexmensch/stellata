@@ -9,7 +9,7 @@ const SUPPL1: Declared = { file: 'data/tycho2/tycho2_suppl1.tsv', hint: HINT };
 
 export const TYCHO2 = defineSource({
   ...MAIN,
-  members: () => [SUPPL1],
+  members: [SUPPL1],
   parse: (input) => parseTycho2Tsvs(
     { text: input.text(), from: MAIN },
     { text: openDeclared(SUPPL1).text(), from: SUPPL1 },

@@ -24,7 +24,7 @@ export interface SourceInput {
 
 export interface SourceSpec<T, A extends unknown[], K> extends Declared {
   parse(input: SourceInput, ...args: A): T;
-  members?(input: SourceInput): Declared[];
+  readonly members?: readonly Declared[] | ((input: SourceInput) => Declared[]);
   readonly rowKey?: RowKey<K>;
 }
 
@@ -63,6 +63,9 @@ export function openDeclared(declared: Declared): SourceInput {
 export function defineSource<T, A extends unknown[] = [], K = never>(
   spec: SourceSpec<T, A, K>,
 ): Source<T, A, K> {
+  const { members = [] } = spec;
+  const memberList = (open: () => SourceInput): readonly Declared[] =>
+    (typeof members === 'function' ? members(open()) : members);
   return {
     kind: 'source',
     file: spec.file,
@@ -70,10 +73,10 @@ export function defineSource<T, A extends unknown[] = [], K = never>(
     rowKey: spec.rowKey,
     read: (...args) => {
       const input = openDeclared(spec);
-      for (const member of spec.members?.(input) ?? []) openDeclared(member);
+      for (const member of memberList(() => input)) openDeclared(member);
       return spec.parse(input, ...args);
     },
-    files: () => [spec.file, ...(spec.members?.(openDeclared(spec)) ?? []).map((m) => m.file)],
+    files: () => [spec.file, ...memberList(() => openDeclared(spec)).map((m) => m.file)],
   };
 }
 

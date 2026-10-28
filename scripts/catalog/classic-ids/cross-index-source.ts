@@ -19,7 +19,7 @@ const CORRECTIONS: Declared = {
 
 export const CROSS_INDEX = defineSource({
   ...TABLE,
-  members: () => [CORRECTIONS],
+  members: [CORRECTIONS],
   parse: (input) => applyCrossIndexCorrections(
     parseCrossIndexTsv(input.text(), TABLE),
     parseCrossIndexCorrectionsTsv(openDeclared(CORRECTIONS).text(), CORRECTIONS),

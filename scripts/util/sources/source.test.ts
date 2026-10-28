@@ -51,6 +51,16 @@ describe('defineSource', () => {
     expect(() => src.read()).toThrow(/m2\.bin is missing/);
   });
 
+  it('lists fixed members without opening the declared file', () => {
+    const src = defineSource({
+      file: relative(REPO_ROOT, join(dir, 'pointer-only.tsv')),
+      hint: 'h',
+      members: [{ file: 'm.tsv', hint: 'h' }],
+      parse: () => 0,
+    });
+    expect(src.files()).toEqual([relative(REPO_ROOT, join(dir, 'pointer-only.tsv')), 'm.tsv']);
+  });
+
   it('streams lines', async () => {
     const src = defineSource({
       file: file('lines.txt', 'a\nb\n'),

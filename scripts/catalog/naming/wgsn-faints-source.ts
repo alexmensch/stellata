@@ -16,7 +16,7 @@ const CORRECTIONS: Declared = {
 
 export const WGSN_FAINTS = defineSource({
   ...FROM,
-  members: () => [CORRECTIONS],
+  members: [CORRECTIONS],
   parse: (input) => parseWgsnFaintsCsv(input.text(), FROM, {
     sets: parseFaintsCorrections(openDeclared(CORRECTIONS).text(), CORRECTIONS),
     file: CORRECTIONS.file,

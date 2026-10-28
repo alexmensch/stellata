@@ -35,10 +35,13 @@ scripts/util/sources/
   `input.bytes()`, or `input.lines(onLine)` for a table too large to hold as
   one string ([Streaming a committed table](../../catalog/parse/README.md#streaming-a-committed-table)).
   Extra arguments (a keep-set) pass through `read(...args)`.
-- `members(input)` lists further files the parse opens, each a `{file, hint}`
-  of its own: the dust grid's chunks, listed by its manifest; Tycho-2's
-  supplement; the cross index's curated corrections. They are checked and
-  derived like the declared file.
+- `members` lists further files the parse opens, each a `{file, hint}` of its
+  own, checked and derived like the declared file. A fixed list (Tycho-2's
+  supplement, the cross index's and WGSN faints' curated corrections) is
+  listed without opening anything. A function of the declared file's content
+  (the dust grid's chunks, named by its manifest; the SID bridges folder)
+  opens that file just to list, so only a file outside LFS may use it: the
+  bare CI test job derives input sets over LFS pointer stubs.
 
 `source.read(...)` and `readArtifact(artifact)` / `artifactRows(artifact)`
 (a generator) / `streamArtifact(artifact, onRecord)` are the reads;
