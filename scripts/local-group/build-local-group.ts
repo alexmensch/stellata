@@ -7,7 +7,7 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { emitArtifacts, runStep, sweepStaged } from '../util/emit-artifacts';
-import { listingFiles } from '../util/sources/source';
+import { localGroupInputPaths } from './local-group-inputs';
 import { LOCAL_GROUP_OUTPUTS } from './local-group-outputs';
 import { LG_ALIASES, LG_OVERRIDES, LVDB } from './local-group-source';
 import {
@@ -79,11 +79,10 @@ function toJsonObject(o: LgObject) {
   };
 }
 
-function isUpToDate(): boolean {
+async function isUpToDate(): Promise<boolean> {
   if (!existsSync(OUT)) return false;
   const outMtime = statSync(OUT).mtimeMs;
-  const data = [LVDB, LG_OVERRIDES, LG_ALIASES].flatMap((src) => listingFiles(src.files())).map((file) => resolve(ROOT, file));
-  for (const src of [...data, __filename, resolve(__dirname, 'build-local-group-pure.ts')]) {
+  for (const src of await localGroupInputPaths()) {
     if (!existsSync(src)) return false;
     if (statSync(src).mtimeMs > outMtime) return false;
   }
@@ -93,7 +92,7 @@ function isUpToDate(): boolean {
 async function main(): Promise<void> {
   sweepStaged(LOCAL_GROUP_OUTPUTS);
   const force = process.argv.includes('--force');
-  if (!force && isUpToDate()) {
+  if (!force && await isUpToDate()) {
     console.log('local-group.json up to date — skipping (use --force to rebuild)');
     return;
   }
