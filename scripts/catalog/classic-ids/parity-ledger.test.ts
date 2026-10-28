@@ -11,7 +11,7 @@ import { MEMBERSHIP_MANIFEST } from '../membership/membership-manifest-tsv';
 import { PARKED_LEDGER } from '../distance/parallax/parked-ledger';
 import { ROUTE_DISAGREEMENTS } from './route-disagreements-tsv';
 import { REPO_ROOT, lfsContentReadable } from '../../util/paths';
-import { LEDGER_PATH, OVERRIDES_PATH } from '../../sid/registry-io';
+import { LEDGER_PATH, OVERRIDES_PATH, SAMEAS_OVERRIDES_FILE } from '../../sid/registry-io';
 import { parseLedgerTsv, parseSameasTsv } from '../../sid/sid-pure';
 import { INHERITED_SPINE, INHERITED_SPINE_FILE } from '../spine/inherited-spine-pure';
 import { parseBsc5Tsv } from './classic-ids-parse';
@@ -83,7 +83,7 @@ describe.skipIf(!ledgerReadable)('label delta vs the SID ledger', () => {
       parseLedgerTsv(readFileSync(LEDGER_PATH, 'utf-8')).map((r) => r.canonicalKey),
     );
     const bridgeEndpoints = new Set(
-      parseSameasTsv(readFileSync(OVERRIDES_PATH, 'utf-8'), 'sameas-overrides.tsv')
+      parseSameasTsv(readFileSync(OVERRIDES_PATH, 'utf-8'), SAMEAS_OVERRIDES_FILE)
         .flatMap((e) => [e.a, e.b]),
     );
     const flips = LABEL_FLIPS.parse(

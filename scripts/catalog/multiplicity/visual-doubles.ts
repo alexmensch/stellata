@@ -1,7 +1,9 @@
 // Hipparcos CCDM parser plus curated visual-double overrides, feeding
 // the chart-mode wings glyph. See /scripts/catalog/multiplicity/README.md#ccdm-double-star-cross-match.
 import { existsSync, readFileSync } from 'node:fs';
+import { relative } from 'node:path';
 
+import { REPO_ROOT } from '../../util/paths';
 import { readTable, type TableSpec } from '../../util/tsv/table-pure';
 import {
   applyDoublesFlag as applyDoublesFlagPure,
@@ -79,7 +81,8 @@ export function parseHipCcdm(srcPath: string): Map<string, number[]> {
   let scanned = 0, kept = 0, viaOverride = 0;
   let droppedNoHip = 0, droppedNoCcdm = 0, droppedMultFlag = 0;
 
-  for (const row of readTable({ ...HIP_CCDM, file: srcPath }, readFileSync(srcPath, 'utf8'))) {
+  const spec = { ...HIP_CCDM, file: relative(REPO_ROOT, srcPath) };
+  for (const row of readTable(spec, readFileSync(srcPath, 'utf8'))) {
     if (VIZIER_SEPARATOR.test(row.raw('HIP'))) continue;
     scanned++;
     const hip = row.int('HIP');

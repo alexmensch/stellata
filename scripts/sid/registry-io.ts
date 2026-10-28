@@ -29,7 +29,8 @@ export const LEDGER_PATH = resolve(ROOT, LEDGER.file);
 export const RETIREMENTS_PATH = resolve(SID_DIR, 'retirements.tsv');
 export const REINSTATEMENTS_PATH = resolve(SID_DIR, 'reinstatements.tsv');
 export const HEAD_PATH = resolve(SID_DIR, 'ledger-head.json');
-export const OVERRIDES_PATH = resolve(SID_DIR, 'sameas-overrides.tsv');
+export const SAMEAS_OVERRIDES_FILE = 'data/sid/sameas-overrides.tsv';
+export const OVERRIDES_PATH = resolve(ROOT, SAMEAS_OVERRIDES_FILE);
 export const SOL_OBJECTS_PATH = resolve(SID_DIR, 'sol-objects.tsv');
 export const SHELL_OBJECTS_PATH = resolve(SID_DIR, 'shell-objects.tsv');
 export const BRIDGES_DIR = resolve(SID_DIR, 'bridges');
@@ -37,12 +38,12 @@ export const BRIDGES_DIR = resolve(SID_DIR, 'bridges');
 /** The stored (committed) same-as edges: curated overrides plus every
  *  cross-release bridge under bridges/ (/docs/sid.md#41-same-as-equivalence-graph). */
 export function loadStoredEdges(): SameasEdge[] {
-  const edges = parseSameasTsv(readFileSync(OVERRIDES_PATH, 'utf-8'), 'sameas-overrides.tsv');
+  const edges = parseSameasTsv(readFileSync(OVERRIDES_PATH, 'utf-8'), SAMEAS_OVERRIDES_FILE);
   if (existsSync(BRIDGES_DIR)) {
     for (const name of readdirSync(BRIDGES_DIR).sort()) {
       if (!name.endsWith('.tsv')) continue;
       edges.push(
-        ...parseSameasTsv(readFileSync(resolve(BRIDGES_DIR, name), 'utf-8'), `bridges/${name}`),
+        ...parseSameasTsv(readFileSync(resolve(BRIDGES_DIR, name), 'utf-8'), `data/sid/bridges/${name}`),
       );
     }
   }

@@ -74,7 +74,7 @@ describe.skipIf(!available)('sid ledger guard', () => {
   it('stored same-as edges and the sol mint list parse under the designation grammar', () => {
     parseSameasTsv(
       readFileSync(resolve(SID_DIR, 'sameas-overrides.tsv'), 'utf-8'),
-      'sameas-overrides.tsv',
+      'data/sid/sameas-overrides.tsv',
     );
     parseSolObjectsTsv(readFileSync(resolve(SID_DIR, 'sol-objects.tsv'), 'utf-8'));
   });
