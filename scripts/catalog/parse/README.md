@@ -48,17 +48,16 @@ scripts/catalog/parse/
   tsv-stream.ts                   forEachLine — the one line-at-a-time read
                                   over a committed table too large to hold as
                                   one string (README.md#streaming-a-committed-table).
-  corpus-tsv.ts                   Shared TSV header, cell and record-ref
-                                  parsing. RECORD_REF_KINDS is the one list of
-                                  ways a corpus row addresses a record —
-                                  hip / gaia / name / hd. headerIndex
-                                  is the one header walk for every committed
-                                  table (see README.md#tsv-header-resolution) and
-                                  dataRows is the row iterator over it; the
-                                  cell + record-ref helpers additionally serve
-                                  the frozen regression corpora
-                                  (known-stars.tsv, multi-star-regression.tsv,
-                                  system-pair-topology.tsv).
+  corpus-tsv.ts                   Record-ref parsing for the frozen regression
+                                  corpora (known-stars.tsv,
+                                  multi-star-regression.tsv,
+                                  system-pair-topology.tsv). RECORD_REF_KINDS
+                                  is the one list of ways a corpus row
+                                  addresses a record — hip / gaia / name / hd.
+                                  Its headerIndex / dataRows serve only the
+                                  self-written tables not yet read through
+                                  their artifact codec; an external table goes
+                                  through readTable (README.md#tsv-header-resolution).
   star-fixture.ts                 Test-only star-record builder.
   spectral-encoding-parity.test.ts
                                   Pins the spectral encode/decode round-trip
@@ -67,13 +66,12 @@ scripts/catalog/parse/
 
 ## TSV header resolution
 
-`headerIndex(headerLine, cols, fileLabel, refreshHint)` in `corpus-tsv.ts` is
-the single header walk for every committed table the build reads:
-`parseGaiaAstrometryCatalogTsv` / `parseHip2Tsv` / `parseNssSourceIdSet`
-(`../distance/direction-cascade.ts`), `parseBailerJonesTsv` and
-`parseSimbadWdsXidsTsv` (`../record/catalog-pure.ts`), `parseSimbadSampleRows`
-(`../validate/simbad-sample-parse.ts`), and the classic-ID parsers
-(`../classic-ids/classic-ids-parse.ts`).
+Every external table the build reads — every pull, every frozen catalogue,
+every hand-curated file — resolves its header and parses its cells through
+`readTable` / `tableLineReader` (`../../util/tsv/table-pure.ts`, its own
+README), over a `TableSpec` naming the repo-relative file, the columns the
+reader needs and the refresh hint. A file this repo writes goes through its
+artifact codec instead.
 
 **It throws on a missing column AND on an empty or headerless file.** Every
 input is a committed, usually LFS-tracked artifact, so zero rows means
@@ -82,13 +80,15 @@ empty map turns a missing file into a silently zeroed join that only surfaces
 as a count drift much later. A valid header with no data rows is a different
 thing and legitimately yields no rows.
 
-Three deliberate exceptions:
+Three deliberate departures:
 
-- `gaia-xmatch.ts` streams a 2.5 M-row table line-by-line and dedups on
-  angular distance, so it needs its own accumulator.
+- `gaia-xmatch.ts`'s accumulator skips empty lines before the header and
+  reads `angular_distance` only where the header carries it (a row without
+  one ranks last). Its whole-text parser feeds the same accumulator rather
+  than `readTable`, so an empty file still fails as having no header row.
 - The manifest codec (`MEMBERSHIP_MANIFEST`, `../membership/membership-manifest-tsv.ts`) and
   `iterSpineTsv` (`../spine/inherited-spine-pure.ts`) each demand the header be
-  their column list **byte for byte, in order**, where `headerIndex` resolves
+  their column list **byte for byte, in order**, where `readTable` resolves
   columns by name in any order. That is the stricter contract on purpose: both
   files are generated, and the codec that writes each one also writes its
   header, so a header that merely parses is already a file nobody meant to
@@ -96,13 +96,14 @@ Three deliberate exceptions:
   from the column count.
 - `parseSimbadSptypeTsv` (`../spectral/spectral-resolve.ts`) demands only
   `source_id` and `sp_type`, treating `hip` / `tyc` / `gj` / `sp_qual` /
-  `otype` as optional. Four of those five ARE the ladder's designation tiers,
+  `otype` as optional: it checks the header line for which of them are
+  present and builds its spec from those. Four of those five ARE the ladder's designation tiers,
   so a column vanishing from a re-pull zeroes a tier rather than throwing —
   the failure mode this section otherwise exists to prevent. What catches it
   instead is downstream: `spectralSimbadByTyc` / `ByGj` are pinned in
   `../build-catalog-expected.json`, so a zeroed tier fails the build's count
-  assert. Tightening the parser onto `headerIndex` would move that catch
-  upstream to the read.
+  assert. Declaring all seven in the spec would move that catch upstream to
+  the read.
 
 ## Streaming a committed table
 
@@ -116,8 +117,9 @@ The accumulator is what makes the streaming real. A reader that collects
 matching lines and re-joins them for a whole-text parser holds the subset
 three times over — the array, the joined string, and the parser's own split —
 which is the cost streaming was reached for. Writing one means the whole-text
-entry point becomes a thin wrapper feeding the same accumulator, so the two
-paths cannot diverge on what a row means:
+entry point folds rows through the same function — `readTable` feeding it
+where the accumulator's `line` is a `tableLineReader` — so the two paths
+cannot diverge on what a row means:
 `bestNeighbourAccumulator` (`gaia-xmatch.ts`),
 `gaiaAstrometryAccumulator` (`../distance/direction-cascade.ts`),
 `magnitudeTermAccumulator` (`../membership/magnitude-term/`) and

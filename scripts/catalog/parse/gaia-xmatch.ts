@@ -3,6 +3,7 @@
 // nearest match.
 import { readFileSync } from 'node:fs';
 
+import { tableLineReader, type TableRow } from '../../util/tsv/table-pure';
 import { forEachLine } from './tsv-stream';
 
 const GAIA_COL = 'gaia_source_id';
@@ -10,6 +11,8 @@ const ANG_COL = 'angular_distance';
 
 /** `parseKey` returning null drops the row. */
 interface BestNeighbourSpec<K> {
+  readonly file: string;
+  readonly hint: string;
   readonly keyColumn: string;
   readonly parseKey: (raw: string) => K | null;
 }
@@ -18,6 +21,8 @@ interface BestNeighbourSpec<K> {
 // partial-numeric hip ("12abc") can't slip through and diverge from the
 // Python parser (parity pinned in gaia-hip-xmatch-parity.test.ts).
 const HIP_SPEC: BestNeighbourSpec<number> = {
+  file: 'data/gaia/gaia_dr3_hip_xmatch.tsv',
+  hint: 'Re-run `pnpm run refresh:gaia-hip`.',
   keyColumn: 'hip',
   parseKey: (raw) => {
     if (!/^\d+$/.test(raw)) return null;
@@ -30,57 +35,54 @@ const HIP_SPEC: BestNeighbourSpec<number> = {
 // parse_gaia_tyc_xmatch accepts any non-empty cell, and narrowing here
 // would drop rows the binaries pipeline still resolves.
 const TYC_SPEC: BestNeighbourSpec<string> = {
+  file: 'data/gaia/gaia_dr3_tyc_xmatch.tsv',
+  hint: 'Re-run `pnpm run refresh:gaia-tyc`.',
   keyColumn: 'tyc',
   parseKey: (raw) => (raw.length > 0 ? raw : null),
 };
 
 /** Line-fed accumulator so the whole-text parser and the streaming reader
  *  share one implementation. `keep`, when given, admits only those keys —
- *  the TYC table is 2.5 M rows read for a ~350 k-row join. */
+ *  the TYC table is 2.5 M rows read for a ~350 k-row join. Its two
+ *  departures from readTable: README.md#tsv-header-resolution. */
 function bestNeighbourAccumulator<K>(
   spec: BestNeighbourSpec<K>,
   keep?: ReadonlySet<K>,
 ) {
-  let keyIdx = -1;
-  let gaiaIdx = -1;
-  let angIdx = -1;
+  let read: ((line: string) => void) | null = null;
   const best = new Map<K, { ang: number; src: string }>();
+
+  const fold = (row: TableRow<string>, hasAngle: boolean): void => {
+    const keyRaw = row.raw(spec.keyColumn);
+    const gaiaRaw = row.raw(GAIA_COL);
+    if (!keyRaw || !gaiaRaw) return;
+    const key = spec.parseKey(keyRaw);
+    if (key === null) return;
+    if (keep && !keep.has(key)) return;
+    if (!/^\d+$/.test(gaiaRaw) || /^0+$/.test(gaiaRaw)) return;
+    const ang = (hasAngle ? row.float(ANG_COL) : null) ?? Number.POSITIVE_INFINITY;
+    const prev = best.get(key);
+    if (!prev || ang < prev.ang) best.set(key, { ang, src: gaiaRaw });
+  };
 
   return {
     line(line: string): void {
       if (!line) return;
-      const fields = line.split('\t');
-      if (keyIdx < 0) {
-        keyIdx = fields.indexOf(spec.keyColumn);
-        gaiaIdx = fields.indexOf(GAIA_COL);
-        angIdx = fields.indexOf(ANG_COL);
-        if (keyIdx < 0 || gaiaIdx < 0) {
-          throw new Error(
-            `gaia xmatch: expected columns ${spec.keyColumn} + ${GAIA_COL} in header`,
-          );
-        }
-        return;
+      if (read === null) {
+        const hasAngle = line.split('\t').some((h) => h.trim() === ANG_COL);
+        const columns = [spec.keyColumn, GAIA_COL, ...(hasAngle ? [ANG_COL] : [])];
+        read = tableLineReader(
+          { file: spec.file, columns, hint: spec.hint },
+          (row) => fold(row, hasAngle),
+        );
       }
-      const keyRaw = fields[keyIdx];
-      const gaiaRaw = fields[gaiaIdx];
-      if (!keyRaw || !gaiaRaw) return;
-      const key = spec.parseKey(keyRaw);
-      if (key === null) return;
-      if (keep && !keep.has(key)) return;
-      if (!/^\d+$/.test(gaiaRaw) || /^0+$/.test(gaiaRaw)) return;
-      let ang = Number.POSITIVE_INFINITY;
-      if (angIdx >= 0 && fields[angIdx]) {
-        const parsed = Number.parseFloat(fields[angIdx]);
-        if (Number.isFinite(parsed)) ang = parsed;
-      }
-      const prev = best.get(key);
-      if (!prev || ang < prev.ang) best.set(key, { ang, src: gaiaRaw });
+      read(line);
     },
     result(): Map<K, string> {
       // A file that never yielded a header is a truncated or unsmudged LFS
       // input, not an empty cross-walk. Returning an empty map instead would
       // silently zero every backfill this table feeds.
-      if (keyIdx < 0) {
+      if (read === null) {
         throw new Error(
           `gaia xmatch: no header row — expected columns ${spec.keyColumn} + ${GAIA_COL}`,
         );
