@@ -2,7 +2,6 @@
 // the collision guard and the curated overrides. See README.md#the-label-merge--overlay--spine-per-identifier
 // and /docs/catalog-driver.md#4-how-hd-reaches-gaia.
 import { starDesignations } from '../../../sid/sid-pure';
-import { dataRows } from '../../parse/corpus-tsv';
 import { intCell, readTable, textCell, type TableSpec } from '../../../util/tsv/table-pure';
 import type { SpineRow } from '../../spine/inherited-spine-pure';
 import {
@@ -21,7 +20,6 @@ export type LabelField = (typeof LABEL_FIELDS)[number];
 
 /** Repo-relative, so the emitter and every reader resolve one path. */
 export const CLASSIC_ID_OVERRIDES_FILE = 'data/classic-ids/classic_id_overrides.tsv';
-export const LABEL_FLIPS_FILE = 'data/classic-ids/label_flips.tsv';
 
 /** Per-identifier count partition, one bucket per merged field. */
 export type LabelPartition = Record<LabelField, number>;
@@ -48,15 +46,17 @@ export interface LabelMergeRecord {
   hrAlt: number[];
 }
 
-export type LabelDisposition =
-  | 'added'
-  | 'overlay-wins'
-  | 'override-spine'
-  | 'override-value'
-  | 'suppressed-collision'
-  | 'extra-alias'
-  | 'extra-sibling-rendered'
-  | 'extra-dropped';
+export const LABEL_DISPOSITIONS = [
+  'added',
+  'overlay-wins',
+  'override-spine',
+  'override-value',
+  'suppressed-collision',
+  'extra-alias',
+  'extra-sibling-rendered',
+  'extra-dropped',
+] as const;
+export type LabelDisposition = (typeof LABEL_DISPOSITIONS)[number];
 
 /** One row of the committed review queue — every place the merge's output
  *  departs from the spine's labels, plus the values a single-valued field could
@@ -312,26 +312,6 @@ export function labelForReview(fields: {
   return named.length > 0 ? named.join(' / ') : `Gaia ${fields.gaiaSourceId}`;
 }
 
-const LABEL_FLIPS_COLUMNS = [
-  'gaia_source_id', 'label', 'field', 'spine', 'overlay', 'applied', 'disposition',
-] as const;
-
-const LABEL_FLIPS_HEADER = LABEL_FLIPS_COLUMNS.join('\t');
-
-/** The committed review queue. Sorted by field then source_id so a diff reads
- *  as "which rows changed disposition", not "which order the walk ran in". */
-export function labelFlipsTsv(flips: readonly LabelFlip[]): string {
-  const rank = (f: LabelField): number => LABEL_FIELDS.indexOf(f);
-  const lines = [...flips]
-    .sort((a, b) => rank(a.field) - rank(b.field)
-      || (a.sourceId < b.sourceId ? -1 : a.sourceId > b.sourceId ? 1 : 0)
-      || (a.disposition < b.disposition ? -1 : 1))
-    .map((f) => [
-      f.sourceId, f.label, f.field, f.spine, f.overlay, f.applied, f.disposition,
-    ].join('\t'));
-  return `${[LABEL_FLIPS_HEADER, ...lines].join('\n')}\n`;
-}
-
 /** Which SID designation namespace an identifier keys, per `/docs/sid.md#3-designation-namespaces`.
  *  A Flamsteed number keys none: it is a display designation the search index
  *  carries, never an identity key. */
@@ -399,27 +379,6 @@ export function spineDesignationsRemovedBy(flips: readonly LabelFlip[]): string[
     if (designation !== null) removed.push(designation);
   }
   return removed;
-}
-
-/** Read the committed queue back — the sibling of `labelFlipsTsv`, for the
- *  parity gate that replays it against the spine. */
-export function parseLabelFlipsTsv(text: string): LabelFlip[] {
-  const out: LabelFlip[] = [];
-  for (const { cells, idx } of dataRows(
-    text, LABEL_FLIPS_COLUMNS, 'label_flips.tsv',
-    'Re-run `pnpm run build:membership`.',
-  )) {
-    out.push({
-      sourceId: cells[idx.gaia_source_id],
-      label: cells[idx.label],
-      field: cells[idx.field] as LabelField,
-      spine: cells[idx.spine],
-      overlay: cells[idx.overlay],
-      applied: cells[idx.applied],
-      disposition: cells[idx.disposition] as LabelDisposition,
-    });
-  }
-  return out;
 }
 
 export interface LabelMergeInput<R extends LabelMergeRecord> {

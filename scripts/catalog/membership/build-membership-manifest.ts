@@ -22,9 +22,11 @@ import {
 import {
   CLASSIC_ID_OVERRIDES_FILE,
   LABEL_FIELDS,
-  labelFlipsTsv,
   parseLabelOverridesTsv,
 } from '../classic-ids/label-merge/label-merge-pure';
+import {
+  LABEL_FLIPS,
+} from '../classic-ids/label-merge/label-flips-tsv';
 import {
   readMultiplesTsv,
   sourceIdsWithSiblingComponent,
@@ -163,7 +165,7 @@ async function main(): Promise<void> {
   emitArtifacts({
     outputs: MEMBERSHIP_OUTPUTS,
     files: {
-      labelFlips: labelFlipsTsv(result.flips),
+      labelFlips: LABEL_FLIPS.serialize(result.flips),
       manifest: MEMBERSHIP_MANIFEST.serialize(result.rows),
       additions: ADDITIONS_LEDGER.serialize(result.ledger),
       bindingReview: BINDING_REVIEW.serialize(result.bindingReview),

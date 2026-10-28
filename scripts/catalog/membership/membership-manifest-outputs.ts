@@ -4,7 +4,9 @@ import { resolve } from 'node:path';
 
 import { declareOutputs } from '../../util/emit-artifacts';
 import { REPO_ROOT as ROOT } from '../../util/paths';
-import { LABEL_FLIPS_FILE } from '../classic-ids/label-merge/label-merge-pure';
+import {
+  LABEL_FLIPS_FILE,
+} from '../classic-ids/label-merge/label-flips-tsv';
 import {
 } from './membership-manifest-pure';
 import {

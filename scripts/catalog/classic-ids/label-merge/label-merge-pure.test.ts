@@ -12,13 +12,15 @@ import {
 } from '../designation-constellation-pure';
 import {
   labelFlipDesignationDelta,
-  labelFlipsTsv,
   mergeClassicIdLabels,
   parseLabelOverridesTsv,
   spineDesignationsRemovedBy,
   type LabelFlip,
   type LabelMergeRecord,
 } from './label-merge-pure';
+import {
+  LABEL_FLIPS,
+} from './label-flips-tsv';
 
 const SRC_A = '4911306239828325632';
 const SRC_B = '4911306239828325760';
@@ -368,7 +370,7 @@ describe('labelFlipsTsv', () => {
     const { flips } = merge(records, new Map([
       [SRC_A, entry({ hd: [4083], hr: [5506] })],
     ]));
-    const lines = labelFlipsTsv(flips).trimEnd().split('\n');
+    const lines = LABEL_FLIPS.serialize(flips).trimEnd().split('\n');
     expect(lines[0]).toBe(
       'gaia_source_id\tlabel\tfield\tspine\toverlay\tapplied\tdisposition',
     );

@@ -5,18 +5,23 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { beforeAll, describe, expect, it } from 'vitest';
 
-import { dataRows } from '../parse/corpus-tsv';
-import { readTable, textCell } from '../../util/tsv/table-pure';
+import { readTable } from '../../util/tsv/table-pure';
+import { ADDITIONS_LEDGER } from '../membership/additions-ledger-tsv';
+import { MEMBERSHIP_MANIFEST } from '../membership/membership-manifest-tsv';
+import { PARKED_LEDGER } from '../distance/parallax/parked-ledger';
+import { ROUTE_DISAGREEMENTS } from './route-disagreements-tsv';
 import { REPO_ROOT, lfsContentReadable } from '../../util/paths';
 import { LEDGER_PATH, OVERRIDES_PATH } from '../../sid/registry-io';
 import { parseLedgerTsv, parseSameasTsv } from '../../sid/sid-pure';
 import { INHERITED_SPINE_FILE, iterSpineTsv } from '../spine/inherited-spine-pure';
 import { parseBsc5Tsv } from './classic-ids-parse';
 import {
-  LABEL_FLIPS_FILE,
-  parseLabelFlipsTsv,
   spineDesignationsRemovedBy,
 } from './label-merge/label-merge-pure';
+import {
+  LABEL_FLIPS_FILE,
+  LABEL_FLIPS,
+} from './label-merge/label-flips-tsv';
 
 const ADDITIONS_PATH = resolve(REPO_ROOT, 'data/membership/additions-ledger.tsv');
 const QUEUE_PATH = resolve(REPO_ROOT, 'data/classic-ids/hd_hip_route_disagreements.tsv');
@@ -34,12 +39,8 @@ const HD_LESS_HR = [
   92, 95, 182, 1057, 1841, 2472, 2496, 3515, 3671, 6309, 6515, 7189, 7539, 8296,
 ];
 
-const queueKeys = [...dataRows(
-  readFileSync(QUEUE_PATH, 'utf-8'),
-  ['hd', 'hip'],
-  'hd_hip_route_disagreements.tsv',
-  'Re-run `pnpm run build:classic-ids`.',
-)].map(({ cells, idx }) => `${cells[idx.hd]}\t${cells[idx.hip]}`);
+const queueKeys = ROUTE_DISAGREEMENTS.parse(readFileSync(QUEUE_PATH, 'utf-8'))
+  .map((d) => `${d.hd}\t${d.hip}`);
 
 const review = [...readTable(
   {
@@ -85,7 +86,7 @@ describe.skipIf(!ledgerReadable)('label delta vs the SID ledger', () => {
       parseSameasTsv(readFileSync(OVERRIDES_PATH, 'utf-8'), 'sameas-overrides.tsv')
         .flatMap((e) => [e.a, e.b]),
     );
-    const flips = parseLabelFlipsTsv(
+    const flips = LABEL_FLIPS.parse(
       readFileSync(resolve(REPO_ROOT, LABEL_FLIPS_FILE), 'utf-8'),
     );
     const removedCanonical = spineDesignationsRemovedBy(flips)
@@ -98,16 +99,9 @@ describe.skipIf(!ledgerReadable)('label delta vs the SID ledger', () => {
     // is the shape: the spine printed it on HIP 88267 (Bodu), the overlay
     // flipped that record to 164669, and the primaries admit 164668 itself.
     const admittedHd = new Set(
-      [...dataRows(
-        readFileSync(ADDITIONS_PATH, 'utf-8'),
-        ['hd', 'reason'],
-        'additions-ledger.tsv',
-        'Re-run `pnpm run build:membership`.',
-      )]
-        .filter(({ cells, idx }) => cells[idx.reason].startsWith('admitted:'))
-        .map(({ cells, idx }) => textCell(cells[idx.hd]))
-        .filter((hd): hd is string => hd !== null)
-        .map((hd) => `hd:${hd}`),
+      ADDITIONS_LEDGER.parse(readFileSync(ADDITIONS_PATH, 'utf-8'))
+        .filter((l) => l.reason.startsWith('admitted:') && l.hd !== '')
+        .map((l) => `hd:${l.hd}`),
     );
     const reOwned = removedCanonical.filter((d) => admittedHd.has(d));
     const orphaned = removedCanonical.filter((d) => !admittedHd.has(d));
@@ -159,19 +153,13 @@ describe.skipIf(!lfsContentReadable(MANIFEST_PATH))('withheld sibling HD numbers
 
   beforeAll(() => {
     withheld = new Set(
-      parseLabelFlipsTsv(readFileSync(resolve(REPO_ROOT, LABEL_FLIPS_FILE), 'utf-8'))
+      LABEL_FLIPS.parse(readFileSync(resolve(REPO_ROOT, LABEL_FLIPS_FILE), 'utf-8'))
         .filter((f) => f.disposition === 'extra-sibling-rendered' && f.field === 'hd')
         .map((f) => Number(f.applied)),
     );
     carriedBy = new Map();
-    for (const { cells, idx } of dataRows(
-      readFileSync(MANIFEST_PATH, 'utf-8'),
-      ['tyc', 'hd'],
-      'membership-manifest.tsv',
-      'Re-run `pnpm run build:membership`.',
-    )) {
-      const hd = Number(cells[idx.hd]);
-      if (withheld.has(hd)) carriedBy.set(hd, cells[idx.tyc]);
+    for (const { hd, tyc } of MEMBERSHIP_MANIFEST.rows(readFileSync(MANIFEST_PATH, 'utf-8'))) {
+      if (hd !== null && withheld.has(hd)) carriedBy.set(hd, tyc ?? '');
     }
   });
 
@@ -181,13 +169,8 @@ describe.skipIf(!lfsContentReadable(MANIFEST_PATH))('withheld sibling HD numbers
   });
 
   it('parks every one of those six for want of a published parallax', () => {
-    const parked = new Map(
-      [...dataRows(
-        readFileSync(PARKED_PATH, 'utf-8'),
-        ['tyc', 'reason'],
-        'parked-ledger.tsv',
-        'Re-run `pnpm run build:catalog`.',
-      )].map(({ cells, idx }) => [cells[idx.tyc], cells[idx.reason]]),
+    const parked = new Map<string, string>(
+      PARKED_LEDGER.parse(readFileSync(PARKED_PATH, 'utf-8')).map((e) => [e.tyc ?? '', e.reason]),
     );
     expect([...carriedBy.values()].map((tyc) => parked.get(tyc))).toEqual(
       WITHHELD_ON_THEIR_OWN_ROW.map(() => 'no_parallax_published'),
@@ -220,7 +203,7 @@ describe.skipIf(!lfsContentReadable(MANIFEST_PATH))('override-freed HD numbers',
   let parkedReason: Map<string, string>;
 
   beforeAll(() => {
-    const flips = parseLabelFlipsTsv(
+    const flips = LABEL_FLIPS.parse(
       readFileSync(resolve(REPO_ROOT, LABEL_FLIPS_FILE), 'utf-8'),
     ).filter((f) => f.disposition === 'override-value' && f.field === 'hd');
     // A mutual swap frees nothing: the partner's override takes the value the
@@ -232,25 +215,15 @@ describe.skipIf(!lfsContentReadable(MANIFEST_PATH))('override-freed HD numbers',
       .sort((a, b) => Number(a) - Number(b));
 
     rowsByHd = new Map();
-    for (const { cells, idx } of dataRows(
-      readFileSync(MANIFEST_PATH, 'utf-8'),
-      ['tyc', 'hd', 'gaia_source_id'],
-      'membership-manifest.tsv',
-      'Re-run `pnpm run build:membership`.',
-    )) {
-      const hd = cells[idx.hd];
+    for (const row of MEMBERSHIP_MANIFEST.rows(readFileSync(MANIFEST_PATH, 'utf-8'))) {
+      const hd = row.hd === null ? '' : String(row.hd);
       if (freed.includes(hd)) {
-        rowsByHd.set(hd, { tyc: cells[idx.tyc], sourceId: cells[idx.gaia_source_id] });
+        rowsByHd.set(hd, { tyc: row.tyc ?? '', sourceId: row.gaiaSourceId ?? '' });
       }
     }
 
     parkedReason = new Map(
-      [...dataRows(
-        readFileSync(PARKED_PATH, 'utf-8'),
-        ['tyc', 'reason'],
-        'parked-ledger.tsv',
-        'Re-run `pnpm run build:catalog`.',
-      )].map(({ cells, idx }) => [cells[idx.tyc], cells[idx.reason]]),
+      PARKED_LEDGER.parse(readFileSync(PARKED_PATH, 'utf-8')).map((e) => [e.tyc ?? '', e.reason]),
     );
   });
 
