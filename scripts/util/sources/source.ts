@@ -35,19 +35,30 @@ export interface SourceSpec<T, A extends unknown[], K> extends Declared {
   readonly rowKey?: RowKey<K>;
 }
 
+export type Listing =
+  | { readonly kind: 'listed'; readonly files: readonly string[] }
+  | { readonly kind: 'unlistable'; readonly file: string };
+
 export interface Source<T, A extends unknown[] = [], K = never> extends Declared {
   readonly kind: 'source';
   readonly rowKey?: RowKey<K>;
   read(...args: A): T;
-  /** Every repo-relative file a `read` opens: the declared file, then its members. */
-  files(): string[];
+  files(): Listing;
+}
+
+export function listingFiles(listing: Listing): readonly string[] {
+  return listing.kind === 'listed' ? listing.files : [listing.file];
+}
+
+export function isReadable(declared: Declared): boolean {
+  return lfsContentReadable(resolve(REPO_ROOT, declared.file));
 }
 
 /** A missing file and an unsmudged LFS pointer are the same failure: the
  *  content is not on disk. */
 export function openDeclared(declared: Declared): SourceInput {
   const path = resolve(REPO_ROOT, declared.file);
-  if (!lfsContentReadable(path)) {
+  if (!isReadable(declared)) {
     throw new Error(
       `${declared.file} is missing or an unsmudged LFS pointer. `
       + `Confirm git LFS is pulled (\`git lfs pull\`); ${declared.hint}`,
@@ -90,7 +101,10 @@ export function defineSource<T, A extends unknown[] = [], K = never>(
       };
       return spec.parse({ ...input, members: opened, member }, ...args);
     },
-    files: () => [spec.file, ...memberList(() => openDeclared(spec)).map((m) => m.file)],
+    files: () => {
+      if (typeof members === 'function' && !isReadable(spec)) return { kind: 'unlistable', file: spec.file };
+      return { kind: 'listed', files: [spec.file, ...memberList(() => openDeclared(spec)).map((m) => m.file)] };
+    },
   };
 }
 
@@ -111,11 +125,9 @@ export interface FolderSpec<T, A extends unknown[]> {
 
 export function defineFolder<T, A extends unknown[] = []>(spec: FolderSpec<T, A>): Source<T, A> {
   const folder: Declared = { file: spec.dir, hint: spec.hint };
+  const present = (): boolean => statSync(resolve(REPO_ROOT, spec.dir), { throwIfNoEntry: false })?.isDirectory() === true;
   const listing = (): Declared[] => {
-    const path = resolve(REPO_ROOT, spec.dir);
-    if (!statSync(path, { throwIfNoEntry: false })?.isDirectory()) {
-      throw new Error(`${spec.dir}/ is missing. ${spec.hint}`);
-    }
+    if (!present()) throw new Error(`${spec.dir}/ is missing. ${spec.hint}`);
     return [spec.dir, ...(spec.subDirs ?? []).map((d) => `${spec.dir}/${d}`)].flatMap((dir) =>
       readdirSync(resolve(REPO_ROOT, dir))
         .sort()
@@ -129,7 +141,9 @@ export function defineFolder<T, A extends unknown[] = []>(spec: FolderSpec<T, A>
       { ...folder, path: resolve(REPO_ROOT, spec.dir), members: listing().map(openDeclared) },
       ...args,
     ),
-    files: () => listing().map((m) => m.file),
+    files: () => (present()
+      ? { kind: 'listed', files: listing().map((m) => m.file) }
+      : { kind: 'unlistable', file: spec.dir }),
   };
 }
 

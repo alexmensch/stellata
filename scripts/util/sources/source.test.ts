@@ -5,7 +5,7 @@ import { afterAll, describe, expect, it } from 'vitest';
 import { defineArtifact } from '../tsv/artifact-pure';
 import { REPO_ROOT } from '../paths';
 import { sourceRowRef, sourceRowRefText } from './row-ref-pure';
-import { defineFolder, defineSource, readArtifact, streamArtifact } from './source';
+import { defineFolder, defineSource, listingFiles, readArtifact, streamArtifact } from './source';
 
 mkdirSync(join(REPO_ROOT, 'build'), { recursive: true });
 const dir = mkdtempSync(join(REPO_ROOT, 'build', 'source-test-'));
@@ -47,7 +47,7 @@ describe('defineSource', () => {
       members: (input) => input.text().trim().split('\n').map((f) => ({ file: f, hint: 'h' })),
       parse: () => 0,
     });
-    expect(src.files()).toEqual([manifest, member, relative(REPO_ROOT, join(dir, 'm2.bin'))]);
+    expect(src.files()).toEqual({ kind: 'listed', files: [manifest, member, relative(REPO_ROOT, join(dir, 'm2.bin'))] });
     expect(() => src.read()).toThrow(/m2\.bin is missing/);
   });
 
@@ -64,6 +64,13 @@ describe('defineSource', () => {
     expect(() => stray.read()).toThrow(/nope is not a declared member/);
   });
 
+  it('answers unlistable, never throws, when the file naming its members is absent', () => {
+    const absent = relative(REPO_ROOT, join(dir, 'absent-manifest.txt'));
+    const src = defineSource({ file: absent, hint: 'h', members: (input) => [{ file: input.text(), hint: 'h' }], parse: () => 0 });
+    expect(src.files()).toEqual({ kind: 'unlistable', file: absent });
+    expect(listingFiles(src.files())).toEqual([absent]);
+  });
+
   it('lists fixed members without opening the declared file', () => {
     const src = defineSource({
       file: relative(REPO_ROOT, join(dir, 'pointer-only.tsv')),
@@ -71,7 +78,7 @@ describe('defineSource', () => {
       members: [{ file: 'm.tsv', hint: 'h' }],
       parse: () => 0,
     });
-    expect(src.files()).toEqual([relative(REPO_ROOT, join(dir, 'pointer-only.tsv')), 'm.tsv']);
+    expect(src.files()).toEqual({ kind: 'listed', files: [relative(REPO_ROOT, join(dir, 'pointer-only.tsv')), 'm.tsv'] });
   });
 
   it('streams lines', async () => {
@@ -102,7 +109,7 @@ describe('defineFolder', () => {
       subDirs: ['sub'],
       parse: (folder) => folder.members.map((m) => m.text()),
     });
-    expect(src.files()).toEqual([`${rel}/a.tsv`, `${rel}/sub/b.tsv`]);
+    expect(src.files()).toEqual({ kind: 'listed', files: [`${rel}/a.tsv`, `${rel}/sub/b.tsv`] });
     expect(src.read()).toEqual(['A', 'B']);
   });
 
@@ -114,6 +121,7 @@ describe('defineFolder', () => {
       parse: () => 0,
     });
     expect(() => src.read()).toThrow(/no-such-folder\/ is missing\. Restore it\./);
+    expect(src.files()).toEqual({ kind: 'unlistable', file: relative(REPO_ROOT, join(dir, 'no-such-folder')) });
   });
 });
 

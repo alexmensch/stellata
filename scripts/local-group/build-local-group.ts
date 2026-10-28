@@ -7,6 +7,7 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { emitArtifacts, runStep, sweepStaged } from '../util/emit-artifacts';
+import { listingFiles } from '../util/sources/source';
 import { LOCAL_GROUP_OUTPUTS } from './local-group-outputs';
 import { LG_ALIASES, LG_OVERRIDES, LVDB } from './local-group-source';
 import {
@@ -81,7 +82,7 @@ function toJsonObject(o: LgObject) {
 function isUpToDate(): boolean {
   if (!existsSync(OUT)) return false;
   const outMtime = statSync(OUT).mtimeMs;
-  const data = [LVDB, LG_OVERRIDES, LG_ALIASES].flatMap((src) => src.files()).map((file) => resolve(ROOT, file));
+  const data = [LVDB, LG_OVERRIDES, LG_ALIASES].flatMap((src) => listingFiles(src.files())).map((file) => resolve(ROOT, file));
   for (const src of [...data, __filename, resolve(__dirname, 'build-local-group-pure.ts')]) {
     if (!existsSync(src)) return false;
     if (statSync(src).mtimeMs > outMtime) return false;

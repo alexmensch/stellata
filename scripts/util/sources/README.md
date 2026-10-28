@@ -67,6 +67,13 @@ one failure — the content is not on disk — and `read` throws naming the file
 empty table: a missing input surfaces at the read, not as a count drift
 afterwards.
 
+**Listing never throws.** `files()` answers `listed` (the declared file and
+its members) or `unlistable` (the file or folder that would name the members
+is not on disk). `listingFiles` turns either into what a content hash keys:
+an unlistable source counts as its declared file, which hashes as absent, so
+its arrival is a change like any other — a stamp over many steps marks the one
+step stale instead of failing to compute. The throw stays at `read`.
+
 ## Reached means read
 
 A declaration lives only in a module named `*-source.ts` or `*-tsv.ts`, and

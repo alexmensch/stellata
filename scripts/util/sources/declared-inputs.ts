@@ -4,7 +4,7 @@ import { resolve } from 'node:path';
 
 import type { Artifact } from '../tsv/artifact-pure';
 import { REPO_ROOT } from '../paths';
-import type { Source } from './source';
+import { listingFiles, type Source } from './source';
 
 /** The only module names a `defineSource` / `defineArtifact` may live in. */
 export const DECLARING_MODULE = /-(source|tsv)\.ts$/;
@@ -40,7 +40,7 @@ export async function declaredInputs(closure: Iterable<string>): Promise<Declare
 export function declaredFiles(inputs: readonly DeclaredInput[]): string[] {
   const files = new Set<string>();
   for (const { value } of inputs) {
-    for (const file of value.kind === 'source' ? value.files() : [value.file]) files.add(file);
+    for (const file of value.kind === 'source' ? listingFiles(value.files()) : [value.file]) files.add(file);
   }
   return [...files].sort();
 }
