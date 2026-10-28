@@ -78,6 +78,7 @@ const OVERRIDES_OPTIONAL = [
   'ra_deg', 'dec_deg', 'distance_kpc', 'm_v', 'profile', 'n_sersic', 'r_d_pc',
   'bulge_to_total', 'bulge_re_pc', 'bulge_n', 'color',
 ] as const;
+const OVERRIDE_PROFILES = ['', 'disc', 'sersic'] as const;
 type OverridesColumn = (typeof OVERRIDES_REQUIRED)[number] | (typeof OVERRIDES_OPTIONAL)[number];
 
 const OVERRIDES = {
@@ -112,8 +113,8 @@ function overrideRow(row: TableRow<OverridesColumn>): OverrideRow {
     const dist = optNum('distance_kpc');
     const count = [ra, dec, dist].filter((v) => v !== undefined).length;
     if (count > 0 && count < 3) {
-      throw new Error(
-        `overrides.tsv: '${name}' partially populates standalone position (ra/dec/distance) — all three must be set together or all empty`,
+      row.fail(
+        `'${name}' partially populates standalone position (ra/dec/distance) — all three must be set together or all empty`,
       );
     }
     if (count === 3) {
@@ -124,13 +125,8 @@ function overrideRow(row: TableRow<OverridesColumn>): OverrideRow {
   }
   const mV = optNum('m_v');
   if (mV !== undefined) result.mV = mV;
-  const profile = opt('profile');
-  if (profile !== undefined) {
-    if (profile !== 'disc' && profile !== 'sersic') {
-      throw new Error(`overrides.tsv: '${name}' has unrecognised profile '${profile}'`);
-    }
-    result.profile = profile;
-  }
+  const profile = row.oneOf('profile', OVERRIDE_PROFILES);
+  if (profile !== '') result.profile = profile;
   const nSersic = optNum('n_sersic');
   if (nSersic !== undefined) result.nSersic = nSersic;
   const rdPc = optNum('r_d_pc');
@@ -141,8 +137,8 @@ function overrideRow(row: TableRow<OverridesColumn>): OverrideRow {
     const bn = optNum('bulge_n');
     const count = [bt, re, bn].filter((v) => v !== undefined).length;
     if (count > 0 && count < 3) {
-      throw new Error(
-        `overrides.tsv: '${name}' partially populates the bulge (bulge_to_total/bulge_re_pc/bulge_n) — all three must be set together or all empty`,
+      row.fail(
+        `'${name}' partially populates the bulge (bulge_to_total/bulge_re_pc/bulge_n) — all three must be set together or all empty`,
       );
     }
     if (count === 3) {

@@ -64,7 +64,7 @@ describe('parseOverrides', () => {
   it('throws when the standalone position is partially populated', () => {
     // ra + dec set but distance empty — half-set is a config error.
     const tsv = `${HEADER}\nM31\t15000\t15000\t500\tdisc:i=77,pa=37\tx\t10.6847\t41.2687\t\n`;
-    expect(() => parseOverrides(tsv)).toThrow(/partially populates/);
+    expect(() => parseOverrides(tsv)).toThrow(/^data\/local-group\/overrides\.tsv:2: 'M31' partially populates standalone position/);
   });
 
   it('skips comment lines and blank lines', () => {
@@ -106,12 +106,12 @@ describe('parseOverrides', () => {
 
   it('throws when the bulge trio is partially populated', () => {
     const tsv = `${FULL_HEADER}\nM31\t15000\t15000\t500\tdisc:i=77,pa=37\tx\t10.6847\t41.2687\t776\t3.44\tdisc\t\t5300\t0.31\t\t\t\t\n`;
-    expect(() => parseOverrides(tsv)).toThrow(/partially populates the bulge/);
+    expect(() => parseOverrides(tsv)).toThrow(/^data\/local-group\/overrides\.tsv:2: 'M31' partially populates the bulge/);
   });
 
   it('throws on an unrecognised profile value', () => {
     const tsv = `${FULL_HEADER}\nX\t1\t1\t1\tlos\tx\t\t\t\t\tspiral\t\t\t\t\t\t\t\n`;
-    expect(() => parseOverrides(tsv)).toThrow(/unrecognised profile 'spiral'/);
+    expect(() => parseOverrides(tsv)).toThrow(/^data\/local-group\/overrides\.tsv:2: profile: "spiral" is not one of \(empty\) \| disc \| sersic/);
   });
 
   it('throws on a non-numeric value in a numeric emission column', () => {
