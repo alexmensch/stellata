@@ -11,7 +11,9 @@ import { REPO_ROOT } from '../../util/paths';
 import { emitArtifacts, runStep } from '../../util/emit-artifacts';
 import { snapshotCheck } from '../../util/snapshot-check';
 import { compareCountSnapshot } from '../build-counts';
-import { parseNecCsv, parseWgsnFaintsCsv } from './wgsn-parse-pure';
+import {
+  FAINTS_CORRECTIONS, parseFaintsCorrections, parseNecCsv, parseWgsnFaintsCsv,
+} from './wgsn-parse-pure';
 import {
   foldNameKey,
   normaliseWgsnCell,
@@ -34,6 +36,7 @@ import { WGSN_OUTPUTS } from './wgsn-tables-outputs';
 const DATA = resolve(REPO_ROOT, 'data/iau-wgsn');
 const NEC_CSV = resolve(DATA, 'NEC.csv');
 const FAINTS_CSV = resolve(DATA, 'wgsnFaints.csv');
+const FAINTS_CORRECTIONS_TSV = resolve(REPO_ROOT, FAINTS_CORRECTIONS.file);
 const DISPOSITIONS = resolve(REPO_ROOT, PROPER_DISPOSITIONS_TABLE.file);
 const MANIFEST = resolve(REPO_ROOT, MEMBERSHIP_MANIFEST_FILE);
 const SNAPSHOT = resolve(REPO_ROOT, 'scripts/catalog/naming/wgsn-expected.json');
@@ -92,7 +95,10 @@ function readManifest(): MembershipNaming {
 
 async function main(): Promise<void> {
   const nec = parseNecCsv(readFileSync(NEC_CSV, 'utf8'));
-  const faints = parseWgsnFaintsCsv(readFileSync(FAINTS_CSV, 'utf8'));
+  const faints = parseWgsnFaintsCsv(
+    readFileSync(FAINTS_CSV, 'utf8'),
+    parseFaintsCorrections(readFileSync(FAINTS_CORRECTIONS_TSV, 'utf8')),
+  );
   const rows = [...nec, ...faints];
 
   const classCounts = new Map<string, number>();

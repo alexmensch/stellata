@@ -33,7 +33,11 @@ scripts/catalog/naming/
                                 cells), null spellings `_` / `~` / `-` /
                                 `null`, and both key columns' inline
                                 component letters (`HIP 518A`, `62264AB`).
-                                A key shape covered by neither throws.
+                                A key shape covered by neither throws, and
+                                so does a Vmag that is not a decimal; the
+                                faints file's reader of
+                                data/iau-wgsn/wgsn_faints_corrections.tsv
+                                sets its three G-in-V cells first.
   wgsn-normalise-pure.ts        Both /docs/star-naming.md#4-canonical-designation-forms normalisers. NEC `Bayer/other`
     (+ test)                    grammar → structured bayer / flamsteed /
                                 gould / variable / non-stellar /

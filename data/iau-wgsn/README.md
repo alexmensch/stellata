@@ -35,6 +35,11 @@ athyg_proper_dispositions.tsv  Hand-curated. The /docs/star-naming.md#2-authorit
                                set — a later IAU approval moves a name by
                                data refresh + row deletion, never a code
                                edit.
+wgsn_faints_corrections.tsv    Hand-curated. wgsnFaints.csv cells that are
+                               not what their column says, set right before
+                               the parse reads them: wgsn_id, column, value,
+                               evidence. Three rows today, the Vmag cells
+                               below.
 ```
 
 All files stay on regular git (none exceeds the ~1 MB LFS threshold, and
@@ -64,6 +69,16 @@ the per-class counts, `wgsn-expected.json` pins them:
 - One corrupt `Bayer/other` cell: a Mathematica formula artifact on
   HIP 83057 (ρ² Ara). Classified `corrupt`, count pinned at <!-- count:wgsn/cellCorrupt -->1<!-- /count -->; the star's
   Bayer designation arrives via the IV/27A tail instead.
+- **wgsnFaints.csv's `Vmag` column is a V magnitude, and three of its cells
+  are not**: Atakoraka (WGSN-ID 10032), Kaewkosin (10039) and Solaris (10117)
+  print `G12.53`, `G11.36` and `G9.36` — a Gaia G in the V column, in a file
+  with no Gmag column. The parse reads Vmag strictly, so
+  `wgsn_faints_corrections.tsv` empties those three cells, each row with its
+  evidence, before the parse sees them. The file keeps the corrections
+  discipline the spine's has ([Cell corrections](/scripts/util/tsv/README.md#cell-corrections)):
+  a row keying no faints row, or restating the cell's current value, fails
+  `build:wgsn` — so a refresh that fixes the cells upstream retires its row
+  rather than leaving it to do nothing.
 - `82 G. Eri[3]` carries a footnote marker; stripped.
 - Gould numbered Serpens' halves separately (`4 G. Ser Cap` ≠
   `4 G. Ser Cau`), so the half is part of the designation and rides its
@@ -82,7 +97,7 @@ the per-class counts, `wgsn-expected.json` pins them:
 ## Consumed by
 
 `scripts/catalog/naming/build-wgsn-tables.ts` (`pnpm run build:wgsn`)
-reads the two frozen files plus `data/classic-ids/cross_index.tsv` (the
+reads the two frozen files, `wgsn_faints_corrections.tsv`, plus `data/classic-ids/cross_index.tsv` (the
 IV/27A Bayer tail, through `readCrossIndexTable` so its curated corrections
 apply) and `data/membership/membership-manifest.tsv` (the [§ 2](/docs/star-naming.md#2-authority--one-source-approves-names-everything-else-compiles-them) residual
 verification), and writes the two derived tables. CI re-runs the build

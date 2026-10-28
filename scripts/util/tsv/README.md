@@ -5,7 +5,8 @@ folder: an external input through `readTable`, a file this repo writes itself
 through its `defineArtifact` codec. One place stands outside it, named so a
 second is a finding rather than precedent: the WGSN tables
 (`../../catalog/naming/wgsn-parse-pure.ts`) are comma-separated CSV, not TSV,
-and that module parses their cells itself — its `vmagCell` leniently.
+so that module splits their lines itself — and parses each cell through this
+folder's strict cell parsers.
 
 ## Files in this area
 
@@ -125,4 +126,6 @@ than none:
 `applyCellSets(rows, sets, table)` takes the corrected table's own key,
 getter and copy-with-cell, so it applies to a typed record and to a raw
 cell array alike. Its callers: `data/membership/spine-corrections.tsv`'s
-`set` rows (`../../catalog/membership/`).
+`set` rows (`../../catalog/membership/`) and
+`data/iau-wgsn/wgsn_faints_corrections.tsv`, over wgsnFaints.csv's split
+CSV cells (`../../catalog/naming/`).

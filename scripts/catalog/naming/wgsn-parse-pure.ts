@@ -2,7 +2,8 @@
 // Comma-CSV with quoted cells ("C5,5" spectral types), unlike every TSV
 // in the pipeline; `_`, `~`, `-` and a literal `null` all spell null.
 
-import { intCell, textCell } from '../../util/tsv/table-pure';
+import { applyCellSets, evidenceOf, type CellSet } from '../../util/tsv/cell-corrections-pure';
+import { floatCell, intCell, readTable, textCell } from '../../util/tsv/table-pure';
 
 export interface WgsnRow {
   /** NEC serial or WGSN-ID — provenance only, never a key. */
@@ -54,17 +55,24 @@ function strCell(cells: string[], i: number): string | null {
   return s === null || NULL_SPELLINGS.has(s) ? null : s;
 }
 
-/** Lenient: wgsnFaints.csv prints three Vmag cells as a Gaia G (`G12.53`),
- *  which read as no V. */
-function vmagCell(cells: string[], i: number): number | null {
-  const s = strCell(cells, i);
-  if (s === null) return null;
-  const v = parseFloat(s);
-  return Number.isFinite(v) ? v : null;
-}
-
 export const NEC_HEADER = 'NEC,Name,HIP,RA2000,DE2000,Vmag,Gmag,type,HR,HD,Bayer/other,constellation,distance from Sun/ ly,B-V color,VmagMax,VmagMin';
 export const FAINTS_HEADER = 'WGSN-ID,Name,HIP,RA2000,DE2000,Vmag,type,HR,HD,Bayer/other,constellation,distance from Sun/ ly,B-V color,VmagMax,VmagMin,WDS';
+const FAINTS_COLUMNS = FAINTS_HEADER.split(',');
+
+export const FAINTS_CORRECTIONS = {
+  file: 'data/iau-wgsn/wgsn_faints_corrections.tsv',
+  columns: ['wgsn_id', 'column', 'value', 'evidence'] as const,
+  hint: 'It is hand-curated; see /data/iau-wgsn/README.md#upstream-quirks-the-pipeline-handles.',
+  comments: true,
+} as const;
+
+export function parseFaintsCorrections(text: string): CellSet<string>[] {
+  return [...readTable(FAINTS_CORRECTIONS, text)].map((row) => {
+    const key = row.text('wgsn_id') ?? row.fail('wgsn_id is empty');
+    evidenceOf(row, 'evidence', key);
+    return { key, cell: row.oneOf('column', FAINTS_COLUMNS), value: row.raw('value') };
+  });
+}
 
 interface KeyCell {
   value: number | null;
@@ -103,6 +111,7 @@ function parseFile(
   expectedHeader: string,
   source: 'nec' | 'faints',
   col: Record<string, number>,
+  corrections: readonly CellSet<string>[] = [],
 ): WgsnRow[] {
   const lines = text.replace(/^﻿/, '').split(/\r?\n/).filter((l) => l.trim() !== '');
   if (lines[0] !== expectedHeader) {
@@ -113,26 +122,36 @@ function parseFile(
     );
   }
   const file = source === 'nec' ? 'NEC.csv' : 'wgsnFaints.csv';
-  const rows: WgsnRow[] = [];
-  for (let i = 1; i < lines.length; i++) {
-    const cells = splitCsvLine(lines[i]);
-    const hip = parseKeyCell(cells, col.hip, HIP_SHAPE, 'HIP', file);
-    const hd = parseKeyCell(cells, col.hd, HD_SHAPE, 'HD', file);
-    rows.push({
-      id: (cells[0] ?? '').trim(),
-      name: strCell(cells, col.name),
-      hip: hip.value,
-      hipComponent: hip.component,
-      hr: intCell(strCell(cells, col.hr) ?? undefined),
-      hd: hd.value,
-      hdComponent: hd.component,
-      bayerOther: strCell(cells, col.bayer),
-      vmag: vmagCell(cells, col.vmag),
-      wds: col.wds !== undefined ? strCell(cells, col.wds) : null,
-      source,
-    });
-  }
-  return rows;
+  const header = expectedHeader.split(',');
+  const records = applyCellSets(lines.slice(1).map(splitCsvLine), corrections, {
+    file: FAINTS_CORRECTIONS.file,
+    target: `data/iau-wgsn/${file}`,
+    keyOf: (cells) => (cells[0] ?? '').trim(),
+    get: (cells, column) => cells[header.indexOf(column)] ?? '',
+    with: (cells, column, value) => cells.map((c, i) => (i === header.indexOf(column) ? value : c)),
+  });
+  return records.map((cells) => {
+    const id = (cells[0] ?? '').trim();
+    try {
+      const hip = parseKeyCell(cells, col.hip, HIP_SHAPE, 'HIP', file);
+      const hd = parseKeyCell(cells, col.hd, HD_SHAPE, 'HD', file);
+      return {
+        id,
+        name: strCell(cells, col.name),
+        hip: hip.value,
+        hipComponent: hip.component,
+        hr: intCell(strCell(cells, col.hr) ?? undefined),
+        hd: hd.value,
+        hdComponent: hd.component,
+        bayerOther: strCell(cells, col.bayer),
+        vmag: floatCell(strCell(cells, col.vmag) ?? undefined),
+        wds: col.wds !== undefined ? strCell(cells, col.wds) : null,
+        source,
+      };
+    } catch (e) {
+      throw new Error(`data/iau-wgsn/${file} row ${id}: ${(e as Error).message}`);
+    }
+  });
 }
 
 export function parseNecCsv(text: string): WgsnRow[] {
@@ -141,8 +160,8 @@ export function parseNecCsv(text: string): WgsnRow[] {
   });
 }
 
-export function parseWgsnFaintsCsv(text: string): WgsnRow[] {
+export function parseWgsnFaintsCsv(text: string, corrections: readonly CellSet<string>[]): WgsnRow[] {
   return parseFile(text, FAINTS_HEADER, 'faints', {
     name: 1, hip: 2, vmag: 5, hr: 7, hd: 8, bayer: 9, wds: 15,
-  });
+  }, corrections);
 }
