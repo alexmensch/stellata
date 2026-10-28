@@ -6,7 +6,7 @@ import { resolve } from 'node:path';
 
 import { REPO_ROOT as ROOT, readRequired } from '../../util/paths';
 import { emitArtifacts, runStep } from '../../util/emit-artifacts';
-import { artifactRows } from '../../util/sources/source';
+import { artifactRows, readArtifact } from '../../util/sources/source';
 import { MEMBERSHIP_OUTPUTS } from './membership-manifest-outputs';
 import { snapshotCheck } from '../../util/snapshot-check';
 import { compareCountSnapshot } from '../build-counts';
@@ -28,8 +28,8 @@ import {
 } from '../companions/companion-promotion';
 import { readMagnitudeTerm } from './magnitude-term/magnitude-term';
 import { MAGNITUDE_FLOOR_V } from './magnitude-term/magnitude-term-pure';
-import { INHERITED_SPINE, INHERITED_SPINE_FILE } from '../spine/inherited-spine-pure';
-import { LFS_HINT, loadPrimaryTables } from '../spine/primaries-tables';
+import { INHERITED_SPINE } from '../spine/inherited-spine-tsv';
+import { loadPrimaryTables } from '../spine/primaries-tables';
 import {
   BINDING_DISPOSITIONS_FILE,
   MEMBERSHIP_EXPECTED_FILE,
@@ -81,7 +81,7 @@ function reportLabelCoverage(c: MembershipCounts): void {
 }
 
 async function main(): Promise<void> {
-  const spine = INHERITED_SPINE.parse(readRequired(resolve(ROOT, INHERITED_SPINE_FILE), LFS_HINT));
+  const spine = readArtifact(INHERITED_SPINE);
   const tables = await loadPrimaryTables(spine.map((r) => r.tyc).filter((t) => t !== ''));
   const { evidence, gaiaAstrometry } = loadBindingEvidence(
     printedVLookups(loadHipVMag(), tables.tycho2, tables.gliese),

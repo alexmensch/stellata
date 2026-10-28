@@ -5,35 +5,19 @@
 import { appendFileSync, mkdirSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
-import { REPO_ROOT as ROOT, readRequired } from '../../util/paths';
 import { nullableCell } from '../../util/tsv/artifact-pure';
-import { splitCsvLine } from '../naming/wgsn-parse-pure';
-import { INHERITED_SPINE, INHERITED_SPINE_FILE, type SpineRow } from './inherited-spine-pure';
+import type { SpineRow } from './inherited-spine-pure';
+import { INHERITED_SPINE } from './inherited-spine-tsv';
+import { ATHYG_CLASSIC_IDS } from './athyg-classic-ids-source';
+import { readArtifact } from '../../util/sources/source';
 import {
   CLASSICAL_CELLS, auditSpine, formatAuditReport, tallyAthygHdProvenance,
   type AthygHdProvenance, type RowSink,
 } from './primaries-audit-pure';
-import { LFS_HINT, loadPrimaryTables } from './primaries-tables';
-
-const SRC_ATHYG_CSV = resolve(ROOT, 'data/athyg/athyg_33_classic_ids.csv');
+import { loadPrimaryTables } from './primaries-tables';
 
 /** Rows buffered before the per-row attestation file is appended to. */
 const ATTESTATION_FLUSH_ROWS = 50_000;
-
-function* athygHdRows(): Generator<{ hd: string; hyg: string }> {
-  const lines = readRequired(SRC_ATHYG_CSV, LFS_HINT).split('\n');
-  const header = splitCsvLine(lines[0]);
-  const iHd = header.indexOf('hd');
-  const iHyg = header.indexOf('hyg');
-  if (iHd < 0 || iHyg < 0) {
-    throw new Error(`athyg_33_classic_ids.csv: no hd / hyg column; ${LFS_HINT}`);
-  }
-  for (let i = 1; i < lines.length; i++) {
-    if (lines[i] === '') continue;
-    const cells = splitCsvLine(lines[i]);
-    yield { hd: cells[iHd] ?? '', hyg: cells[iHyg] ?? '' };
-  }
-}
 
 /** Tabs and newlines would silently re-shape the row they are written into. */
 function cell(value: string): string {
@@ -85,9 +69,9 @@ function attestationWriter(path: string): { onRow: RowSink; close: () => void } 
 async function main(): Promise<void> {
   const outDir = process.argv.find((a) => a.startsWith('--out='))?.slice('--out='.length) ?? null;
 
-  const spine = INHERITED_SPINE.parse(readRequired(resolve(ROOT, INHERITED_SPINE_FILE), LFS_HINT));
+  const spine = readArtifact(INHERITED_SPINE);
   const tables = await loadPrimaryTables(spine.map((r) => r.tyc).filter((t) => t !== ''));
-  const athygHd: AthygHdProvenance = tallyAthygHdProvenance(athygHdRows());
+  const athygHd: AthygHdProvenance = tallyAthygHdProvenance(ATHYG_CLASSIC_IDS.read());
 
   if (outDir !== null) mkdirSync(outDir, { recursive: true });
   const attestation = outDir === null

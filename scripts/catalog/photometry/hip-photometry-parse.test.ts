@@ -6,12 +6,12 @@ const FROM = { file: 'fixture.tsv', hint: 'h' };
 
 describe('hip-photometry-parse / parseHipPhotometryTsv', () => {
   const HIP_PHOTOMETRY = [
-    'hip\tvmag\tbv',
-    '32349\t-1.440\t0.009',
-    '71681\t1.330\t0.900',
-    '99999\t\t1.100',
-    '88888\t7.200\t',
-    '0\t4.000\t0.500',
+    'hip\tvmag\tbv\thd',
+    '32349\t-1.440\t0.009\t48915',
+    '71681\t1.330\t0.900\t',
+    '99999\t\t1.100\t',
+    '88888\t7.200\t\t',
+    '0\t4.000\t0.500\t',
   ].join('\n');
 
   it('maps HIP to printed V, dropping null-V and non-positive HIP rows', () => {
@@ -39,6 +39,13 @@ describe('hip-photometry-parse / parseHipPhotometryTsv', () => {
     expect(printedByHip(bv, 32349)).toBe(0.009);
     expect(printedByHip(bv, 88888)).toBeNull();
     expect(printedByHip(bv, null)).toBeNull();
+  });
+
+  it('lists every published HIP and HD, and pairs them where a row carries both', () => {
+    const { hips, hds, hdByHip } = parseHipPhotometryTsv(HIP_PHOTOMETRY, FROM);
+    expect([...hips].sort((a, b) => a - b)).toEqual([0, 32349, 71681, 88888, 99999]);
+    expect([...hds]).toEqual([48915]);
+    expect([...hdByHip]).toEqual([[32349, 48915]]);
   });
 
   it('throws on an empty file rather than yielding an empty gate', () => {

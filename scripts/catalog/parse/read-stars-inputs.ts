@@ -86,7 +86,7 @@ export async function loadReadStarsInputs(): Promise<ReadStarsInputs> {
     gaiaAstrometry: timed(
       'Parsing Gaia DR3 5p astrometry (full catalog)', () => GAIA_ASTROMETRY.read(), entries,
     ),
-    hip2: timed('Parsing HIP2 van Leeuwen astrometry', () => HIP2.read(), entries),
+    hip2: timed('Parsing HIP2 van Leeuwen astrometry', () => HIP2.read().astrometry, entries),
     nssSourceIds: timed(
       'Parsing Gaia DR3 NSS two-body source_ids', () => GAIA_NSS.read(), (s) => `${s.size} source_ids`,
     ),

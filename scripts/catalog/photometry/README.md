@@ -45,6 +45,10 @@ scripts/catalog/photometry/
                                  V cascade, both binding gates, the
                                  astrometry request) as `printedVLookups`'s
                                  `printed_hip` tier, which calls it too.
+                                 The same walk lists every HIP and HD the
+                                 slice publishes and its HIP → HD pairing,
+                                 which ../spine/primaries-tables.ts reads as
+                                 I/239: one parse for both readers.
   photometry-fixture.ts          Test-only GaiaPhotometry builders, plus
                                  `printedVOf` / `NO_PRINTED_V` —
                                  a `printedVLookups` over literal maps. A

@@ -481,10 +481,19 @@ export function parseGaiaAstrometryCatalogTsv(
 
 const HIP2_COLUMNS = ['hip', 'ra_icrs', 'de_icrs', 'plx', 'e_plx', 'pm_ra', 'pm_de'] as const;
 
-export function parseHip2Tsv(text: string, from: Declared): Map<number, Hip2AstrometryRow> {
+/** `hips` is every HIP the table publishes, positioned or not — what the
+ *  primaries audit attests a cell against. */
+export interface Hip2Table {
+  astrometry: Map<number, Hip2AstrometryRow>;
+  hips: Set<number>;
+}
+
+export function parseHip2Tsv(text: string, from: Declared): Hip2Table {
   const out = new Map<number, Hip2AstrometryRow>();
+  const hips = new Set<number>();
   for (const row of readTable({ ...from, columns: HIP2_COLUMNS }, text)) {
     const hip = row.int('hip');
+    if (hip !== null) hips.add(hip);
     if (hip === null || hip <= 0) continue;
     const raDeg = row.float('ra_icrs');
     const decDeg = row.float('de_icrs');
@@ -498,7 +507,7 @@ export function parseHip2Tsv(text: string, from: Declared): Map<number, Hip2Astr
       pmDeMasyr: row.float('pm_de'),
     });
   }
-  return out;
+  return { astrometry: out, hips };
 }
 
 const GAIA_NSS_COLUMNS = ['source_id'] as const;

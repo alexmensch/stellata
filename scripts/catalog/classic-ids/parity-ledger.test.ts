@@ -14,7 +14,7 @@ import { REPO_ROOT, lfsContentReadable } from '../../util/paths';
 import { LEDGER_PATH, OVERRIDES_PATH, SAMEAS_OVERRIDES_FILE } from '../../sid/registry-io';
 import { parseSameasTsv } from '../../sid/sid-pure';
 import { LEDGER } from '../../sid/ledger-tsv';
-import { INHERITED_SPINE, INHERITED_SPINE_FILE } from '../spine/inherited-spine-pure';
+import { INHERITED_SPINE } from '../spine/inherited-spine-tsv';
 import { BSC5 } from './bsc5-source';
 import {
   spineDesignationsRemovedBy,
@@ -28,7 +28,7 @@ const ADDITIONS_PATH = resolve(REPO_ROOT, 'data/membership/additions-ledger.tsv'
 const QUEUE_PATH = resolve(REPO_ROOT, 'data/classic-ids/hd_hip_route_disagreements.tsv');
 const REVIEW_PATH = resolve(REPO_ROOT, 'data/classic-ids/hd_hip_route_disagreements_review.tsv');
 const BSC5_PATH = resolve(REPO_ROOT, BSC5.file);
-const SPINE_PATH = resolve(REPO_ROOT, INHERITED_SPINE_FILE);
+const SPINE_PATH = resolve(REPO_ROOT, INHERITED_SPINE.file);
 
 const REVIEW_HINT = 'Dispose the row in hd_hip_route_disagreements_review.tsv.';
 const IDENTITY_VERDICTS = new Set(['no-identity-event', 'merge', 'split']);

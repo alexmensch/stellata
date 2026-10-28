@@ -24,11 +24,10 @@ import { FLAG_BINARY_COMPANION_ONLY, type SearchEntry } from '../record/catalog-
 import { parkedRecordKey } from '../distance/parallax/parked-ledger';
 import { PARKED_LEDGER, parseParkedRecordsTsv } from '../distance/parallax/parked-ledger-tsv';
 import {
-  INHERITED_SPINE,
-  INHERITED_SPINE_FILE,
   spineDesignations,
   type SpineRow,
 } from '../spine/inherited-spine-pure';
+import { INHERITED_SPINE } from '../spine/inherited-spine-tsv';
 import {
   BINDING_DISPOSITIONS_FILE,
   MEMBERSHIP_EXPECTED_FILE,
@@ -64,7 +63,7 @@ import {
   type ManifestRecord,
 } from './membership-manifest-tsv';
 
-const SPINE_PATH = resolve(REPO_ROOT, INHERITED_SPINE_FILE);
+const SPINE_PATH = resolve(REPO_ROOT, INHERITED_SPINE.file);
 const MANIFEST_PATH = resolve(REPO_ROOT, MEMBERSHIP_MANIFEST_FILE);
 const LEDGER_PATH = resolve(REPO_ROOT, ADDITIONS_LEDGER_FILE);
 const CORRECTIONS_PATH = resolve(REPO_ROOT, SPINE_CORRECTIONS_FILE);

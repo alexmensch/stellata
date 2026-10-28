@@ -23,6 +23,9 @@ scripts/catalog/distance/
                                   declared (../../util/sources/). The Bailer-Jones
   gaia-nss-source.ts              parse lives with its declaration; the
   hip2-source.ts                  other three call direction-cascade.ts's.
+                                  HIP2's parse also lists every HIP the table
+                                  publishes, positioned or not, for
+                                  ../spine/primaries-tables.ts.
   direction-cascade.ts (+ test)   Per-row sky-direction resolution cascade
                                   (which position source wins, and the
                                   precision each carries) plus the

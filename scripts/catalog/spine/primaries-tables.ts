@@ -14,6 +14,9 @@ import { TYC2_HD } from '../classic-ids/tyc2-hd-source';
 import { CNS5 } from '../classic-ids/cns5-source';
 import { CROSS_INDEX } from '../classic-ids/cross-index-source';
 import { GLIESE } from '../gliese-source';
+import { HIP2 } from '../distance/hip2-source';
+import { HIP_PHOTOMETRY } from '../photometry/hip-photometry-source';
+import { artifactRows } from '../../util/sources/source';
 import { TYCHO2 } from '../tycho2-source';
 import { loadStoredEdges } from '../../sid/registry-io';
 import {
@@ -21,25 +24,9 @@ import {
   type BindingTables, type PrimaryTables, type SimbadXids, type WgsnKeys,
 } from './primaries-audit-pure';
 
-export const SRC_HIP_MAIN = resolve(ROOT, 'data/hipparcos/hip_main_vmag.tsv');
-export const SRC_HIP2 = resolve(ROOT, 'data/hipparcos/hip2_van_leeuwen.tsv');
 export const SRC_SIMBAD_SPTYPE = resolve(ROOT, 'data/simbad/simbad_sptype.tsv');
 
 export const LFS_HINT = 'run `git lfs pull`.';
-const HIP_VMAG_HINT = 'Re-run `pnpm run refresh:hip-vmag`.';
-const WGSN_HINT = 'run `pnpm run build:wgsn`.';
-
-const HIP_MAIN = {
-  file: 'data/hipparcos/hip_main_vmag.tsv',
-  columns: ['hip', 'hd'] as const,
-  hint: HIP_VMAG_HINT,
-} satisfies TableSpec<string>;
-
-const HIP2_HIPS = {
-  file: 'data/hipparcos/hip2_van_leeuwen.tsv',
-  columns: ['hip'] as const,
-  hint: 'Re-run `pnpm run refresh:hip2`.',
-} satisfies TableSpec<string>;
 
 const SIMBAD_SPTYPE_XIDS = {
   file: 'data/simbad/simbad_sptype.tsv',
@@ -47,44 +34,19 @@ const SIMBAD_SPTYPE_XIDS = {
   hint: 'Re-run scripts/refresh/refresh-simbad-sptype.py.',
 } satisfies TableSpec<string>;
 
-function readHip2Hips(): Set<number> {
-  const into = new Set<number>();
-  for (const row of readTable(HIP2_HIPS, readRequired(SRC_HIP2, LFS_HINT))) {
-    const value = row.int('hip');
-    if (value !== null) into.add(value);
-  }
-  return into;
-}
-
-/** I/239 in one pass: the two key sets, and the HIP → HD pairing that the
- *  association audit's HIP↔HD link reads. */
-function readI239(): { hip: Set<number>; hd: Set<number>; hipHd: Map<number, number> } {
-  const hip = new Set<number>();
-  const hd = new Set<number>();
-  const hipHd = new Map<number, number>();
-  for (const row of readTable(HIP_MAIN, readRequired(SRC_HIP_MAIN, HIP_VMAG_HINT))) {
-    const h = row.int('hip');
-    const d = row.int('hd');
-    if (h !== null) hip.add(h);
-    if (d !== null) hd.add(d);
-    if (h !== null && d !== null) hipHd.set(h, d);
-  }
-  return { hip, hd, hipHd };
-}
-
 function readWgsn(): WgsnKeys {
   const names = new Set<string>();
   const hd = new Set<number>();
   const hip = new Set<number>();
   const flamByHd = new Map<number, Set<number>>();
   const flamByHip = new Map<number, Set<number>>();
-  for (const row of WGSN_NAMES.rows(readRequired(resolve(ROOT, WGSN_NAMES.file), WGSN_HINT))) {
+  for (const row of artifactRows(WGSN_NAMES)) {
     names.add(row.name);
     for (const alias of row.aliases) if (alias) names.add(alias);
     if (row.hip !== null) hip.add(row.hip);
     if (row.hd !== null) hd.add(row.hd);
   }
-  for (const row of WGSN_DESIGNATIONS.rows(readRequired(resolve(ROOT, WGSN_DESIGNATIONS.file), WGSN_HINT))) {
+  for (const row of artifactRows(WGSN_DESIGNATIONS)) {
     if (row.hip !== null) hip.add(row.hip);
     if (row.hd !== null) hd.add(row.hd);
     if (row.kind !== 'flamsteed' || row.num === null) continue;
@@ -129,17 +91,17 @@ export async function loadPrimaryTables(keepTycs: Iterable<string>): Promise<Pri
   const iv25 = TYC2_HD.read();
   const keep = new Set<string>(iv25.map((r) => r.tyc));
   for (const tyc of keepTycs) keep.add(tyc);
-  const i239 = readI239();
+  const i239 = HIP_PHOTOMETRY.read();
   return {
     ...await loadBindingTables(keep),
     iv25,
     v50: BSC5.read(),
     iv27a: CROSS_INDEX.read(),
     gliese: GLIESE.read(),
-    hipI239: i239.hip,
-    hdI239: i239.hd,
-    i239HipHd: i239.hipHd,
-    hip2: readHip2Hips(),
+    hipI239: i239.hips,
+    hdI239: i239.hds,
+    i239HipHd: i239.hdByHip,
+    hip2: HIP2.read().hips,
     wgsn: readWgsn(),
     tycho2: TYCHO2.read(),
   };

@@ -11,18 +11,17 @@ import { compareCountSnapshot } from '../build-counts';
 import { REPO_ROOT, isLfsPointer, lfsContentReadable } from '../../util/paths';
 import { readTable, type TableSpec } from '../../util/tsv/table-pure';
 import {
-  INHERITED_SPINE,
   INHERITED_SPINE_EXPECTED_FILE,
-  INHERITED_SPINE_FILE,
   SPINE_COLUMNS,
-  STALE_GAIA_SOURCE_IDS_FILE,
   spineCounts,
   spineDesignations,
   type SpineCounts,
   type SpineRow,
 } from './inherited-spine-pure';
+import { INHERITED_SPINE } from './inherited-spine-tsv';
 
-const SPINE_PATH = resolve(REPO_ROOT, INHERITED_SPINE_FILE);
+const STALE_GAIA_SOURCE_IDS_FILE = 'data/athyg/stale_gaia_source_ids.tsv';
+const SPINE_PATH = resolve(REPO_ROOT, INHERITED_SPINE.file);
 const EXPECTED_PATH = resolve(REPO_ROOT, INHERITED_SPINE_EXPECTED_FILE);
 const ASTROMETRY_FILE = 'data/gaia/gaia_dr3_astrometry_catalog.tsv';
 const SIMBAD_VALUES_FILE = 'data/simbad/simbad_values.tsv';
