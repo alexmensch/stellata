@@ -2,7 +2,7 @@
 // distance against SIMBAD's published values. Run: `pnpm run
 // validate:simbad`. See /scripts/catalog/validate/README.md#validation-harness-1.
 
-import { readFileSync, writeFileSync } from 'node:fs';
+import { writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -16,14 +16,13 @@ import {
 } from '../catalog-lookup';
 import type { SimbadSampleRow } from './simbad-sample-parse';
 import {
-  SIMBAD_SOURCED_DISTANCES_FILE,
-  parseSimbadSourcedDistancesTsv,
+  SIMBAD_SOURCED_DISTANCES,
+  simbadSourcedKeys,
   type SimbadSourcedKeys,
 } from '../distance/parallax/simbad-sourced-ledger-tsv';
 import { REPO_ROOT } from '../../util/paths';
+import { artifactRows } from '../../util/sources/source';
 import { SIMBAD_SAMPLE } from './simbad-sample-source';
-
-const SIMBAD_SOURCED_PATH = resolve(REPO_ROOT, SIMBAD_SOURCED_DISTANCES_FILE);
 
 const __filename = fileURLToPath(import.meta.url);
 const DEFAULT_REPORT_PATH = resolve(REPO_ROOT, 'docs/validation-residuals.md');
@@ -259,7 +258,7 @@ export function formatReport(report: ResidualReport): string {
     `Generated ${report.generatedAt} by `
     + '`pnpm run validate:simbad`. Compares Stellata\'s `catalog.bin` '
     + 'absmag and distance against SIMBAD published values for the '
-    + 'sample in `data/simbad/simbad_sample.tsv`.',
+    + `sample in \`${SIMBAD_SAMPLE.file}\`.`,
   );
   lines.push('');
   lines.push('## Match coverage');
@@ -402,7 +401,7 @@ export async function runValidation(opts: RunOptions = {}): Promise<{
   const sample = SIMBAD_SAMPLE.read();
   const catalog = await loadCatalog({ catalogManifestPath: opts.catalogManifestPath });
 
-  const excludedKeys = parseSimbadSourcedDistancesTsv(readFileSync(SIMBAD_SOURCED_PATH, 'utf8'));
+  const excludedKeys = simbadSourcedKeys(artifactRows(SIMBAD_SOURCED_DISTANCES));
 
   const residuals: ResidualRow[] = [];
   let matchedByGaia = 0;
