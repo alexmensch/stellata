@@ -1,7 +1,7 @@
 // Row shape + TSV parser for `data/simbad/simbad_sample.tsv`, the
 // stratified 10k SIMBAD cross-check sample. See
 // /scripts/catalog/validate/README.md#validation-harness-1 (Tier C).
-import { headerIndex } from '../parse/corpus-tsv';
+import { readTable, type TableSpec } from '../../util/tsv/table-pure';
 
 /** Full-row view of the SIMBAD sample TSV — every field downstream
  *  consumers might want, with no joining or filtering applied.
@@ -23,48 +23,34 @@ export interface SimbadSampleRow {
   absmag: number | null;
 }
 
-export function parseNumOrNull(raw: string | undefined): number | null {
-  if (raw === undefined || raw === '') return null;
-  const n = Number(raw);
-  return Number.isFinite(n) ? n : null;
-}
-
-const SAMPLE_COLUMNS = [
-  'simbad_oid', 'simbad_main_id', 'hip', 'gaia_source_id', 'plx_value',
-  'plx_err', 'pmra', 'pmdec', 'v_mag', 'distance_pc', 'absmag',
-] as const;
+const SIMBAD_SAMPLE = {
+  file: 'data/simbad/simbad_sample.tsv',
+  columns: [
+    'simbad_oid', 'simbad_main_id', 'hip', 'gaia_source_id', 'plx_value',
+    'plx_err', 'pmra', 'pmdec', 'v_mag', 'distance_pc', 'absmag',
+  ] as const,
+  hint: 'Re-run scripts/refresh/refresh-simbad-sample.py.',
+} satisfies TableSpec<string>;
 
 /** Sole TSV-parsing surface — single source of truth for column names,
  *  numeric coercion, and missing-value handling. An empty file throws rather
  *  than yielding zero rows: the sample gates the build's distance-regression
  *  check, so "no rows" must not read as "nothing to cross-check". */
 export function parseSimbadSampleRows(text: string): SimbadSampleRow[] {
-  const lines = text.split('\n');
-  const idx = headerIndex(
-    lines[0] ?? '',
-    SAMPLE_COLUMNS,
-    'simbad_sample.tsv',
-    'Re-run scripts/refresh/refresh-simbad-sample.py.',
-  );
   const rows: SimbadSampleRow[] = [];
-  for (let i = 1; i < lines.length; i++) {
-    const line = lines[i];
-    if (!line) continue;
-    const cols = line.split('\t');
-    const hipRaw = cols[idx.hip];
-    const gaiaRaw = cols[idx.gaia_source_id];
+  for (const row of readTable(SIMBAD_SAMPLE, text)) {
     rows.push({
-      simbadOid: Number(cols[idx.simbad_oid]),
-      simbadMainId: cols[idx.simbad_main_id] ?? '',
-      hip: hipRaw ? Number(hipRaw) : null,
-      gaiaSourceId: gaiaRaw || null,
-      plxValue: parseNumOrNull(cols[idx.plx_value]),
-      plxErr: parseNumOrNull(cols[idx.plx_err]),
-      pmra: parseNumOrNull(cols[idx.pmra]),
-      pmdec: parseNumOrNull(cols[idx.pmdec]),
-      vMag: parseNumOrNull(cols[idx.v_mag]),
-      distancePc: parseNumOrNull(cols[idx.distance_pc]),
-      absmag: parseNumOrNull(cols[idx.absmag]),
+      simbadOid: row.int('simbad_oid') ?? row.fail('simbad_oid is empty'),
+      simbadMainId: row.raw('simbad_main_id'),
+      hip: row.int('hip'),
+      gaiaSourceId: row.raw('gaia_source_id') || null,
+      plxValue: row.float('plx_value'),
+      plxErr: row.float('plx_err'),
+      pmra: row.float('pmra'),
+      pmdec: row.float('pmdec'),
+      vMag: row.float('v_mag'),
+      distancePc: row.float('distance_pc'),
+      absmag: row.float('absmag'),
     });
   }
   return rows;
