@@ -3,12 +3,11 @@
 // request TSV a refresh:gaia-*-neighbourhood pull reads. /docs/sid.md#61-procedure.
 
 import { existsSync, readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
 
 import { sortSourceIdsNumeric } from '../catalog/astrometry-request/export-astrometry-request-pure';
 import { emitArtifacts, runStep } from '../util/emit-artifacts';
-import { REPO_ROOT as ROOT } from '../util/paths';
 import { DR_RISK_SET_OUTPUTS } from './dr-risk-set-outputs';
+import { LEDGER_PATH, REINSTATEMENTS_PATH, RETIREMENTS_PATH } from './registry-io';
 import {
   REINSTATEMENTS_HEADER,
   effectiveRetirements,
@@ -17,10 +16,6 @@ import {
   parseReinstatementsTsv,
   parseRetirementsTsv,
 } from './sid-pure';
-
-const LEDGER_PATH = resolve(ROOT, 'data/sid/ledger.tsv');
-const RETIREMENTS_PATH = resolve(ROOT, 'data/sid/retirements.tsv');
-const REINSTATEMENTS_PATH = resolve(ROOT, 'data/sid/reinstatements.tsv');
 
 function main(): void {
   if (!existsSync(LEDGER_PATH)) {

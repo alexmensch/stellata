@@ -13,10 +13,16 @@ sid-pure.ts               Pure algebra: designation grammar (/docs/sid.md#3-desi
                           allocation (/docs/sid.md#41-same-as-equivalence-graph, /docs/sid.md#44-allocation), per-record designation
                           extraction (starDesignations) + read-only
                           resolution (resolveSids, mint = error),
-                          ledger/retirements/reinstatements codecs, head
-                          snapshot + append-only checks (/docs/sid.md#43-ledger--datasidledgertsv, /docs/sid.md#45-ci-guard).
+                          readers for every registry file (readTable,
+                          exact header, plus splitTsv's LF / trailing-
+                          newline / no-blank-line framing the head hash
+                          relies on), head snapshot + append-only checks (/docs/sid.md#43-ledger--datasidledgertsv, /docs/sid.md#45-ci-guard).
                           Tests import its constants — never redefine
                           them.
+ledger-tsv.ts (+ test)    LEDGER — ledger.tsv's artifact codec, with
+                          SID_KINDS and the bare-digits sid cell every
+                          registry file reads. The test round-trips the
+                          committed ledger byte for byte.
 catalog-designations.ts   Designation set per BUILT catalog record, from
                           catalog.bin + the two public/ sidecars (README.md#designation-extraction--where-each-namespace-comes-from). Shared by allocate and
                           the inherited spine's parity gate.
@@ -26,7 +32,8 @@ registry-io.ts            Filesystem access to the committed registry:
                           LedgerUnavailableError on an LFS-stub ledger).
                           Shared by allocate, build-catalog, and the stamp.
 allocate.ts               pnpm run sid:allocate — the ONLY writer of
-                          ledger.tsv (+ retirements bootstrap +
+                          ledger.tsv, rewritten through LEDGER.serialize
+                          (+ retirements bootstrap +
                           ledger-head.json). Reads the BUILT artifacts:
                           catalog manifest/chunks, search-index.json,
                           catalog-row-index-map.json, clouds.json,

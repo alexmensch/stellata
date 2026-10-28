@@ -2,7 +2,7 @@
 // every built-artifact object against the frozen ledger and appends mints.
 // `pnpm run sid:check` (--check): read-only CI mode — /docs/sid.md#45-ci-guard.
 
-import { existsSync, readFileSync, writeFileSync, appendFileSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 import {
@@ -13,6 +13,9 @@ import {
 import { FLAG_IS_SOL, type SearchEntry } from '../catalog/record/catalog-pure';
 import { catalogRecordDesignations } from './catalog-designations';
 import { REPO_ROOT as ROOT } from '../util/paths';
+import { readTable } from '../util/tsv/table-pure';
+import { MULTIPLES_TSV, MULTIPLES_TSV_PATH } from '../binaries/multiples-tsv';
+import { LEDGER } from './ledger-tsv';
 import {
   LEDGER_HEADER,
   REINSTATEMENTS_HEADER,
@@ -25,7 +28,6 @@ import {
   parseRetirementsTsv,
   parseSolObjectsTsv,
   parseShellObjectsTsv,
-  serializeLedgerRow,
   validateLedger,
   validateReinstatements,
   validateRetirements,
@@ -38,7 +40,6 @@ import {
 import { SIBLING_ARTIFACTS, siblingArtifactObjects, type SiblingItem } from './sibling-artifacts';
 
 const PUBLIC_DIR = resolve(ROOT, 'public');
-const MULTIPLES_PATH = resolve(ROOT, 'data/binaries/multiples.tsv');
 
 function requireFile(path: string, hint: string): string {
   if (!existsSync(path)) {
@@ -110,17 +111,13 @@ function synthChurnReport(orphanKeys: string[], currentSynthKeys: string[]): str
     pa: string;
   }
   const rowsByWds = new Map<string, PairRow[]>();
-  if (existsSync(MULTIPLES_PATH)) {
-    const lines = readFileSync(MULTIPLES_PATH, 'utf-8').trimEnd().split('\n');
-    const cols = lines[0].split('\t');
-    const col = (name: string) => cols.indexOf(name);
-    const [iSys, iComp, iSep, iPa] = [col('system_id'), col('comp'), col('sep_arcsec'), col('pa_deg')];
-    for (const line of lines.slice(1)) {
-      const cells = line.split('\t');
-      const list = rowsByWds.get(cells[iSys]);
-      const row = { comp: cells[iComp], sep: cells[iSep], pa: cells[iPa] };
+  if (existsSync(MULTIPLES_TSV_PATH)) {
+    for (const r of readTable(MULTIPLES_TSV.table, readFileSync(MULTIPLES_TSV_PATH, 'utf-8'))) {
+      const system = r.raw('system_id');
+      const row = { comp: r.raw('comp'), sep: r.raw('sep_arcsec'), pa: r.raw('pa_deg') };
+      const list = rowsByWds.get(system);
       if (list) list.push(row);
-      else rowsByWds.set(cells[iSys], [row]);
+      else rowsByWds.set(system, [row]);
     }
   }
   const lines: string[] = [];
@@ -270,9 +267,7 @@ async function main(): Promise<void> {
   }
 
   if (result.minted.length > 0) {
-    const appended = result.minted.map((r) => `${serializeLedgerRow(r)}\n`).join('');
-    if (existsSync(LEDGER_PATH)) appendFileSync(LEDGER_PATH, appended);
-    else writeFileSync(LEDGER_PATH, `${LEDGER_HEADER}\n${appended}`);
+    writeFileSync(LEDGER_PATH, LEDGER.serialize([...ledger, ...result.minted]));
   }
   if (!existsSync(RETIREMENTS_PATH)) writeFileSync(RETIREMENTS_PATH, retirementsText);
   if (!existsSync(REINSTATEMENTS_PATH)) writeFileSync(REINSTATEMENTS_PATH, reinstatementsText);

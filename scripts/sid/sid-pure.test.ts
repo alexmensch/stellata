@@ -22,7 +22,6 @@ import {
   parseSameasTsv,
   parseSolObjectsTsv,
   resolveSids,
-  serializeLedgerRow,
   sidSuccessorPairs,
   splitTsv,
   starDesignations,
@@ -33,6 +32,7 @@ import {
   type RetirementRow,
   type SidObject,
 } from './sid-pure';
+import { LEDGER } from './ledger-tsv';
 
 describe('designation grammar', () => {
   it('accepts namespace:key with no whitespace', () => {
@@ -108,7 +108,15 @@ describe('TSV codecs', () => {
       kind: 'star',
       firstSeen: '2026-07-10',
     });
-    expect(serializeLedgerRow(rows[0])).toBe('1\thip:32349\tstar\t2026-07-10');
+    expect(LEDGER.serialize(rows)).toBe(ledgerText);
+  });
+
+  it('refuses a signed sid, a short row and an unknown kind', () => {
+    expect(() => parseLedgerTsv(`${LEDGER_HEADER}\n+1\thip:1\tstar\t2026-07-10\n`)).toThrow(/not a sid/);
+    expect(() => parseLedgerTsv(`${LEDGER_HEADER}\n1\thip:1\tstar\n`)).toThrow(/expected 4/);
+    expect(() => parseLedgerTsv(`${LEDGER_HEADER}\n1\thip:1\tcomet\t2026-07-10\n`)).toThrow(/kind/);
+    expect(() => parseRetirementsTsv(`${RETIREMENTS_HEADER}\n5\t2026-07-10\tx\t03a\n`))
+      .toThrow(/successor_sid/);
   });
 
   it('parses retirements with and without successor', () => {
@@ -131,7 +139,7 @@ describe('TSV codecs', () => {
       { key: 'sun', kind: 'star' },
       { key: 'pluto', kind: 'planet' },
     ]);
-    expect(() => parseSolObjectsTsv('key\tkind\nsun\tcomet\n')).toThrow(/bad kind/);
+    expect(() => parseSolObjectsTsv('key\tkind\nsun\tcomet\n')).toThrow(/kind: "comet"/);
   });
 
   it('splitTsv enforces LF, trailing newline, header, and no blank lines', () => {

@@ -6,6 +6,7 @@ import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 import { REPO_ROOT as ROOT, isLfsPointer } from '../util/paths';
+import { LEDGER } from './ledger-tsv';
 import {
   LEDGER_HEADER,
   REINSTATEMENTS_HEADER,
@@ -24,7 +25,7 @@ import {
 } from './sid-pure';
 
 export const SID_DIR = resolve(ROOT, 'data/sid');
-export const LEDGER_PATH = resolve(SID_DIR, 'ledger.tsv');
+export const LEDGER_PATH = resolve(ROOT, LEDGER.file);
 export const RETIREMENTS_PATH = resolve(SID_DIR, 'retirements.tsv');
 export const REINSTATEMENTS_PATH = resolve(SID_DIR, 'reinstatements.tsv');
 export const HEAD_PATH = resolve(SID_DIR, 'ledger-head.json');
