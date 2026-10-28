@@ -33,9 +33,7 @@ import {
   type SpineRow,
 } from '../spine/inherited-spine-pure';
 import {
-  ADDITION_REASONS,
   BINDING_DISPOSITIONS_FILE,
-  COMPONENT_REASON_PREFIX,
   MEMBERSHIP_EXPECTED_FILE,
   SPINE_CORRECTIONS_FILE,
   applySpineCorrections,
@@ -48,8 +46,10 @@ import {
   type SpineMatch,
 } from './membership-manifest-pure';
 import {
+  ADDITION_REASONS,
   ADDITIONS_LEDGER_FILE,
   ADDITIONS_LEDGER,
+  COMPONENT_REASON_PREFIX,
 } from './additions-ledger-tsv';
 import {
   BINDING_REVIEW_FILE,

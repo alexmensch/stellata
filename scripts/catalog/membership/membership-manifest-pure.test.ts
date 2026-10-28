@@ -11,8 +11,6 @@ import { printedVLookups } from '../photometry/v-magnitude-pure';
 import { bindingEvidence } from './binding/binding-gate-pure';
 import type { Tycho2Row } from '../tycho2-parse';
 import {
-  ADDITION_REASONS,
-  COMPONENT_REASON_PREFIX,
   additionItemCells,
   buildMembership,
   manifestKey,
@@ -24,7 +22,9 @@ import {
   type SpineCorrectionRow,
 } from './membership-manifest-pure';
 import {
+  ADDITION_REASONS,
   ADDITIONS_LEDGER,
+  COMPONENT_REASON_PREFIX,
 } from './additions-ledger-tsv';
 import {
   bindingReviewKey,
@@ -819,6 +819,15 @@ describe('a group holding two items of one cohort', () => {
 });
 
 describe('codecs', () => {
+  it('decodes a ledger reason only as an admitted reason or a component of a designation', () => {
+    const ledger = (reason: string) => `tyc\thip\thd\tgl\tgaia_source_id\treason\n1-2-1\t\t5\t\t\t${reason}\n`;
+    expect(ADDITIONS_LEDGER.parse(ledger('admitted:hd_omitted'))[0].reason).toBe('admitted:hd_omitted');
+    expect(ADDITIONS_LEDGER.parse(ledger('component:hd:187260'))[0].reason).toBe('component:hd:187260');
+    for (const bad of ['admitted:typo', 'component:', 'component:hd187260']) {
+      expect(() => ADDITIONS_LEDGER.parse(ledger(bad))).toThrow(/additions-ledger\.tsv:2: reason ".*" is not one of/);
+    }
+  });
+
   it('round-trips the manifest, the ledger, the review queue and the label drops', () => {
     expect(MEMBERSHIP_MANIFEST.parse(MEMBERSHIP_MANIFEST.serialize(result.rows))).toEqual(result.rows);
     expect(BINDING_REVIEW.parse(BINDING_REVIEW.serialize(result.bindingReview)))

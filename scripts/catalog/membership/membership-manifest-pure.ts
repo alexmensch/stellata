@@ -35,7 +35,12 @@ import {
 import { parkedRecordKey } from '../distance/parallax/parked-ledger';
 import { intCell, readTable } from '../../util/tsv/table-pure';
 import { nullableCell } from '../../util/tsv/artifact-pure';
-import type { AdditionLedgerRow } from './additions-ledger-tsv';
+import {
+  ADDITION_REASONS,
+  COMPONENT_REASON_PREFIX,
+  type AdditionLedgerRow,
+  type AdditionReason,
+} from './additions-ledger-tsv';
 import {
   BINDING_REVIEW_KEY_COLUMNS,
   BINDING_REVIEW_VERDICTS,
@@ -131,20 +136,6 @@ export function dispositionOf(d: BindingDispositionRow): BindingDisposition {
 
 
 
-/** The record-parity reason enum (/docs/catalog-driver.md#61-record-parity) for records the primaries admit that the spine lacked. */
-export const ADDITION_REASONS = [
-  'admitted:hd_link_gap',
-  'admitted:hd_omitted',
-  'admitted:hip_omitted',
-  'admitted:cns5_census',
-] as const;
-export type AdditionReason = (typeof ADDITION_REASONS)[number];
-
-/** A primary's row whose every designation a spine record already answers to,
- *  so admitting it would make that record's SID key ambiguous. Ledgered onto
- *  the record it resolves to rather than admitted; the suffix is that record's
- *  designation. */
-export const COMPONENT_REASON_PREFIX = 'component:';
 
 
 export const SPINE_CORRECTIONS_FILE = 'data/membership/spine-corrections.tsv';

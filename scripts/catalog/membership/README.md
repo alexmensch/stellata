@@ -34,11 +34,11 @@ scripts/catalog/membership/
   additions-ledger-tsv.ts         The three ledgers' codecs, one leaf each:
   binding-review-tsv.ts           columns, row type, closed sets and sort
   label-drops-tsv.ts              order. The review queue's carries the key
-                                  a disposition joins on.
+                                  a disposition joins on; the additions
+                                  ledger's, the /docs/catalog-driver.md#61-record-parity reason codes.
   membership-manifest-pure.ts     Row assembly (spine side, additions), the
     (+ test)                      review queue and the dispositions settling
-                                  it, the admission rule, the /docs/catalog-driver.md#61-record-parity reason
-                                  codes, the label drops, the readers of the
+                                  it, the admission rule, the label drops, the readers of the
                                   two curated inputs (dispositions, spine
                                   corrections), and the spine ↔ manifest
                                   matcher the gate runs. Pure.
