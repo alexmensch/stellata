@@ -35,10 +35,6 @@ export interface SimbadSourcedKeys {
   hip: ReadonlySet<number>;
 }
 
-export function emptySimbadSourcedKeys(): SimbadSourcedKeys {
-  return { gaia: new Set(), hip: new Set() };
-}
-
 export function parseSimbadSourcedDistancesTsv(text: string): SimbadSourcedKeys {
   const gaia = new Set<string>();
   const hip = new Set<number>();

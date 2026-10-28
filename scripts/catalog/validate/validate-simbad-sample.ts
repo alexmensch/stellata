@@ -2,7 +2,7 @@
 // distance against SIMBAD's published values. Run: `pnpm run
 // validate:simbad`. See /scripts/catalog/validate/README.md#validation-harness-1.
 
-import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -17,7 +17,6 @@ import {
 import type { SimbadSampleRow } from './simbad-sample-parse';
 import {
   SIMBAD_SOURCED_DISTANCES_FILE,
-  emptySimbadSourcedKeys,
   parseSimbadSourcedDistancesTsv,
   type SimbadSourcedKeys,
 } from '../distance/parallax/simbad-sourced-ledger-tsv';
@@ -403,9 +402,7 @@ export async function runValidation(opts: RunOptions = {}): Promise<{
   const sample = SIMBAD_SAMPLE.read();
   const catalog = await loadCatalog({ catalogManifestPath: opts.catalogManifestPath });
 
-  const excludedKeys = existsSync(SIMBAD_SOURCED_PATH)
-    ? parseSimbadSourcedDistancesTsv(readFileSync(SIMBAD_SOURCED_PATH, 'utf8'))
-    : emptySimbadSourcedKeys();
+  const excludedKeys = parseSimbadSourcedDistancesTsv(readFileSync(SIMBAD_SOURCED_PATH, 'utf8'));
 
   const residuals: ResidualRow[] = [];
   let matchedByGaia = 0;
