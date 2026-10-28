@@ -2,18 +2,17 @@
 // files, unions the IV/27A Bayer tail, verifies the AT-HYG proper
 // dispositions, and pins the counts. `pnpm run build:wgsn`. See README.md.
 
-import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 import { CROSS_INDEX } from '../classic-ids/cross-index-source';
-import { MEMBERSHIP_MANIFEST, MEMBERSHIP_MANIFEST_FILE } from '../membership/membership-manifest-tsv';
+import { MEMBERSHIP_MANIFEST } from '../membership/membership-manifest-tsv';
+import { artifactRows } from '../../util/sources/source';
 import { REPO_ROOT } from '../../util/paths';
 import { emitArtifacts, runStep } from '../../util/emit-artifacts';
 import { snapshotCheck } from '../../util/snapshot-check';
 import { compareCountSnapshot } from '../build-counts';
-import {
-  FAINTS_CORRECTIONS, parseFaintsCorrections, parseNecCsv, parseWgsnFaintsCsv,
-} from './wgsn-parse-pure';
+import { WGSN_FAINTS } from './wgsn-faints-source';
+import { WGSN_NEC } from './wgsn-nec-source';
 import {
   foldNameKey,
   normaliseWgsnCell,
@@ -34,11 +33,6 @@ import { WGSN_DESIGNATIONS } from './wgsn-designations-tsv';
 import { WGSN_NAMES } from './wgsn-names-tsv';
 import { WGSN_OUTPUTS } from './wgsn-tables-outputs';
 
-const DATA = resolve(REPO_ROOT, 'data/iau-wgsn');
-const NEC_CSV = resolve(DATA, 'NEC.csv');
-const FAINTS_CSV = resolve(DATA, 'wgsnFaints.csv');
-const FAINTS_CORRECTIONS_TSV = resolve(REPO_ROOT, FAINTS_CORRECTIONS.file);
-const MANIFEST = resolve(REPO_ROOT, MEMBERSHIP_MANIFEST_FILE);
 const SNAPSHOT = resolve(REPO_ROOT, 'scripts/catalog/naming/wgsn-expected.json');
 
 export interface WgsnCounts {
@@ -84,7 +78,7 @@ interface MembershipNaming {
 function readManifest(): MembershipNaming {
   const propers = new Map<string, string>();
   const bayerKeys: { hip: number | null; hd: number | null }[] = [];
-  for (const r of MEMBERSHIP_MANIFEST.rows(readFileSync(MANIFEST, 'utf8'))) {
+  for (const r of artifactRows(MEMBERSHIP_MANIFEST)) {
     if (r.proper !== null && !r.isSol) {
       propers.set(membershipProperKey(r.proper, r.hip, r.hd), r.proper);
     }
@@ -94,11 +88,8 @@ function readManifest(): MembershipNaming {
 }
 
 async function main(): Promise<void> {
-  const nec = parseNecCsv(readFileSync(NEC_CSV, 'utf8'));
-  const faints = parseWgsnFaintsCsv(
-    readFileSync(FAINTS_CSV, 'utf8'),
-    parseFaintsCorrections(readFileSync(FAINTS_CORRECTIONS_TSV, 'utf8')),
-  );
+  const nec = WGSN_NEC.read();
+  const faints = WGSN_FAINTS.read();
   const rows = [...nec, ...faints];
 
   const classCounts = new Map<string, number>();

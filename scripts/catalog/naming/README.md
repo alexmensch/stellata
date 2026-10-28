@@ -28,6 +28,10 @@ scripts/catalog/naming/
                                 the runtime's search labels too. Plus the
                                 curly-variant folds (ϕ→φ, ϵ→ε) and the
                                 genitive → IAU-code map.
+  wgsn-nec-source.ts            WGSN_NEC and WGSN_FAINTS, declared
+  wgsn-faints-source.ts         (../../util/sources/); the faints source
+                                applies its curated corrections file, a
+                                member of the declaration.
   wgsn-parse-pure.ts (+ test)   NEC.csv / wgsnFaints.csv parsers — the
                                 pipeline's one comma-CSV source (quoted
                                 cells), null spellings `_` / `~` / `-` /

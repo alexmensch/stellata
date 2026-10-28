@@ -32,10 +32,14 @@ scripts/catalog/membership/
                                   end. Leaf: readers import it, not the
                                   generator module.
   additions-ledger-tsv.ts         The three ledgers' codecs, one leaf each:
-  binding-review-tsv.ts           columns, row type, closed sets and sort
-  label-drops-tsv.ts              order. The review queue's carries the key
-                                  a disposition joins on; the additions
-                                  ledger's, the /docs/catalog-driver.md#61-record-parity reason codes.
+  binding-review-tsv.ts           header check, decode and sort order.
+  label-drops-tsv.ts
+  ledger-rows-pure.ts             Their columns, row types and closed sets,
+                                  apart from the codecs so the row-assembly
+                                  rules reach no ledger file. The review
+                                  queue's carries the key a disposition joins
+                                  on; the additions ledger's, the
+                                  /docs/catalog-driver.md#61-record-parity reason codes.
   membership-manifest-pure.ts     Row assembly (spine side, additions), the
     (+ test)                      review queue and the dispositions settling
                                   it, the admission rule, the label drops, the readers of the

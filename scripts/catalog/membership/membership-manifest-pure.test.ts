@@ -21,18 +21,11 @@ import {
   type BindingDispositionRow,
   type SpineCorrectionRow,
 } from './membership-manifest-pure';
-import {
-  ADDITION_REASONS,
-  ADDITIONS_LEDGER,
-  COMPONENT_REASON_PREFIX,
-} from './additions-ledger-tsv';
-import {
-  bindingReviewKey,
-  BINDING_REVIEW,
-} from './binding-review-tsv';
-import {
-  LABEL_DROPS,
-} from './label-drops-tsv';
+import { ADDITIONS_LEDGER } from './additions-ledger-tsv';
+import { ADDITION_REASONS, COMPONENT_REASON_PREFIX } from './ledger-rows-pure';
+import { BINDING_REVIEW } from './binding-review-tsv';
+import { bindingReviewKey } from './ledger-rows-pure';
+import { LABEL_DROPS } from './label-drops-tsv';
 import {
   MEMBERSHIP_MANIFEST,
   manifestDesignations,

@@ -2,6 +2,7 @@
 // Comma-CSV with quoted cells ("C5,5" spectral types), unlike every TSV
 // in the pipeline; `_`, `~`, `-` and a literal `null` all spell null.
 
+import type { Declared } from '../../util/sources/source';
 import { applyCellSets, evidenceOf, type CellSet } from '../../util/tsv/cell-corrections-pure';
 import { floatCell, intCell, readTable, textCell } from '../../util/tsv/table-pure';
 
@@ -59,15 +60,10 @@ export const NEC_HEADER = 'NEC,Name,HIP,RA2000,DE2000,Vmag,Gmag,type,HR,HD,Bayer
 export const FAINTS_HEADER = 'WGSN-ID,Name,HIP,RA2000,DE2000,Vmag,type,HR,HD,Bayer/other,constellation,distance from Sun/ ly,B-V color,VmagMax,VmagMin,WDS';
 const FAINTS_COLUMNS = FAINTS_HEADER.split(',');
 
-export const FAINTS_CORRECTIONS = {
-  file: 'data/iau-wgsn/wgsn_faints_corrections.tsv',
-  columns: ['wgsn_id', 'column', 'value', 'evidence'] as const,
-  hint: 'It is hand-curated; see /data/iau-wgsn/README.md#upstream-quirks-the-pipeline-handles.',
-  comments: true,
-} as const;
+const FAINTS_CORRECTION_COLUMNS = ['wgsn_id', 'column', 'value', 'evidence'] as const;
 
-export function parseFaintsCorrections(text: string): CellSet<string>[] {
-  return [...readTable(FAINTS_CORRECTIONS, text)].map((row) => {
+export function parseFaintsCorrections(text: string, from: Declared): CellSet<string>[] {
+  return [...readTable({ ...from, columns: FAINTS_CORRECTION_COLUMNS, comments: true }, text)].map((row) => {
     const key = row.text('wgsn_id') ?? row.fail('wgsn_id is empty');
     evidenceOf(row, 'evidence', key);
     return { key, cell: row.oneOf('column', FAINTS_COLUMNS), value: row.raw('value') };
@@ -87,14 +83,13 @@ function parseKeyCell(
   i: number,
   shape: RegExp,
   label: string,
-  file: string,
 ): KeyCell {
   const s = strCell(cells, i);
   if (s === null) return { value: null, component: null };
   const m = s.match(shape);
   if (m === null) {
     throw new Error(
-      `data/iau-wgsn/${file}: unparsed ${label} cell ${JSON.stringify(s)}.\n`
+      `unparsed ${label} cell ${JSON.stringify(s)}.\n`
       + `Expected ${shape.source}, a component-letter form, or a null spelling `
       + `(${[...NULL_SPELLINGS].filter((n) => n !== '').join(' ')}).\n`
       + 'Add the shape to parseKeyCell once you have confirmed what it means.',
@@ -106,26 +101,33 @@ function parseKeyCell(
 const HIP_SHAPE = /^HIP\s+(\d+)([A-Za-z])?$/;
 const HD_SHAPE = /^(\d+)([A-Za-z]{1,2})?$/;
 
+/** The faints file's curated cell sets, and the file they came from. */
+export interface FaintsCorrections {
+  sets: readonly CellSet<string>[];
+  file: string;
+}
+
 function parseFile(
   text: string,
+  from: Declared,
   expectedHeader: string,
   source: 'nec' | 'faints',
   col: Record<string, number>,
-  corrections: readonly CellSet<string>[] = [],
+  corrections: FaintsCorrections | null,
 ): WgsnRow[] {
   const lines = text.replace(/^﻿/, '').split(/\r?\n/).filter((l) => l.trim() !== '');
   if (lines[0] !== expectedHeader) {
     throw new Error(
-      `data/iau-wgsn/${source === 'nec' ? 'NEC' : 'wgsnFaints'}.csv header drifted from the frozen schema.\n`
+      `${from.file} header drifted from the frozen schema.\n`
       + `  expected: ${expectedHeader}\n  got:      ${lines[0]}\n`
-      + 'Re-run scripts/refresh/refresh-iau-wgsn.py and review the upstream change.',
+      + `${from.hint} Review the upstream change.`,
     );
   }
-  const file = source === 'nec' ? 'NEC.csv' : 'wgsnFaints.csv';
   const header = expectedHeader.split(',');
-  const records = applyCellSets(lines.slice(1).map(splitCsvLine), corrections, {
-    file: FAINTS_CORRECTIONS.file,
-    target: `data/iau-wgsn/${file}`,
+  const raw = lines.slice(1).map(splitCsvLine);
+  const records = corrections === null ? raw : applyCellSets(raw, corrections.sets, {
+    file: corrections.file,
+    target: from.file,
     keyOf: (cells) => (cells[0] ?? '').trim(),
     get: (cells, column) => cells[header.indexOf(column)] ?? '',
     with: (cells, column, value) => cells.map((c, i) => (i === header.indexOf(column) ? value : c)),
@@ -133,8 +135,8 @@ function parseFile(
   return records.map((cells) => {
     const id = (cells[0] ?? '').trim();
     try {
-      const hip = parseKeyCell(cells, col.hip, HIP_SHAPE, 'HIP', file);
-      const hd = parseKeyCell(cells, col.hd, HD_SHAPE, 'HD', file);
+      const hip = parseKeyCell(cells, col.hip, HIP_SHAPE, 'HIP');
+      const hd = parseKeyCell(cells, col.hd, HD_SHAPE, 'HD');
       return {
         id,
         name: strCell(cells, col.name),
@@ -149,19 +151,23 @@ function parseFile(
         source,
       };
     } catch (e) {
-      throw new Error(`data/iau-wgsn/${file} row ${id}: ${(e as Error).message}`);
+      throw new Error(`${from.file} row ${id}: ${(e as Error).message}`);
     }
   });
 }
 
-export function parseNecCsv(text: string): WgsnRow[] {
-  return parseFile(text, NEC_HEADER, 'nec', {
+export function parseNecCsv(text: string, from: Declared): WgsnRow[] {
+  return parseFile(text, from, NEC_HEADER, 'nec', {
     name: 1, hip: 2, vmag: 5, hr: 8, hd: 9, bayer: 10,
-  });
+  }, null);
 }
 
-export function parseWgsnFaintsCsv(text: string, corrections: readonly CellSet<string>[]): WgsnRow[] {
-  return parseFile(text, FAINTS_HEADER, 'faints', {
+export function parseWgsnFaintsCsv(
+  text: string,
+  from: Declared,
+  corrections: FaintsCorrections,
+): WgsnRow[] {
+  return parseFile(text, from, FAINTS_HEADER, 'faints', {
     name: 1, hip: 2, vmag: 5, hr: 7, hd: 8, bayer: 9, wds: 15,
   }, corrections);
 }

@@ -34,24 +34,9 @@ import { parkedRecordKey } from '../distance/parallax/parked-ledger';
 import { intCell, readTable } from '../../util/tsv/table-pure';
 import { nullableCell } from '../../util/tsv/artifact-pure';
 import { applyCellSets, evidenceOf } from '../../util/tsv/cell-corrections-pure';
-import {
-  ADDITION_REASONS,
-  COMPONENT_REASON_PREFIX,
-  type AdditionLedgerRow,
-  type AdditionReason,
-} from './additions-ledger-tsv';
-import {
-  BINDING_REVIEW_KEY_COLUMNS,
-  BINDING_REVIEW_VERDICTS,
-  bindingReviewKey,
-  type BindingReviewRow,
-  type BindingReviewVerdict,
-} from './binding-review-tsv';
-import {
-  LABEL_DROP_REASONS,
-  type LabelDropReason,
-  type LabelDropRow,
-} from './label-drops-tsv';
+import { ADDITION_REASONS, COMPONENT_REASON_PREFIX, type AdditionLedgerRow, type AdditionReason } from './ledger-rows-pure';
+import { BINDING_REVIEW_KEY_COLUMNS, BINDING_REVIEW_VERDICTS, bindingReviewKey, type BindingReviewRow, type BindingReviewVerdict } from './ledger-rows-pure';
+import { LABEL_DROP_REASONS, type LabelDropReason, type LabelDropRow } from './ledger-rows-pure';
 import { spineDesignations, type SpineRow } from '../spine/inherited-spine-pure';
 import {
   ATHYG_HD_LINK_FLOOR,

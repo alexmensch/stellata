@@ -35,15 +35,9 @@ import {
   buildMembership,
   type MembershipCounts,
 } from './membership-manifest-pure';
-import {
-  ADDITIONS_LEDGER,
-} from './additions-ledger-tsv';
-import {
-  BINDING_REVIEW,
-} from './binding-review-tsv';
-import {
-  LABEL_DROPS,
-} from './label-drops-tsv';
+import { ADDITIONS_LEDGER } from './additions-ledger-tsv';
+import { BINDING_REVIEW } from './binding-review-tsv';
+import { LABEL_DROPS } from './label-drops-tsv';
 import { MEMBERSHIP_MANIFEST } from './membership-manifest-tsv';
 import { BINDING_REVIEW_DISPOSITIONS } from './binding-review-dispositions-source';
 import { SPINE_CORRECTIONS } from './spine-corrections-source';

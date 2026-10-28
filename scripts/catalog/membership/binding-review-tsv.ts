@@ -2,25 +2,14 @@
 
 import { byText, defineArtifact } from '../../util/tsv/artifact-pure';
 import { compareSourceIds } from '../../util/tsv/table-pure';
+import {
+  BINDING_REVIEW_COLUMNS,
+  BINDING_REVIEW_VERDICTS,
+  bindingReviewKey,
+  type BindingReviewRow,
+} from './ledger-rows-pure';
 
 export const BINDING_REVIEW_FILE = 'data/membership/binding-review.tsv';
-export const BINDING_REVIEW_VERDICTS = ['contested', 'collision', 'disposed'] as const;
-export type BindingReviewVerdict = (typeof BINDING_REVIEW_VERDICTS)[number];
-export const BINDING_REVIEW_KEY_COLUMNS = ['tyc', 'hip', 'hd', 'gl'] as const;
-
-/** The record a queue row and its disposition join on. */
-export function bindingReviewKey(
-  row: Record<(typeof BINDING_REVIEW_KEY_COLUMNS)[number], string>,
-): string {
-  return BINDING_REVIEW_KEY_COLUMNS.map((c) => row[c]).join('|');
-}
-
-export const BINDING_REVIEW_COLUMNS = [
-  'tyc', 'hip', 'hd', 'hr', 'gl', 'verdict', 'derived_source_id',
-  'derived_via', 'candidates', 'rejected', 'v_mag', 'v_via', 'derived_g',
-  'derived_simbad',
-] as const;
-export type BindingReviewRow = Record<(typeof BINDING_REVIEW_COLUMNS)[number], string>;
 
 const byVerdict = byText((r: BindingReviewRow) => r.verdict);
 const byKey = byText(bindingReviewKey);
