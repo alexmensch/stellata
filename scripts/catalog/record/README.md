@@ -5,8 +5,8 @@ layout with both directions of its codec, the record order, the transport chunk
 plan, and the
 `search-index.json` wire entry. `catalog-pure.ts` is the single statement of
 all three, which is why every subfolder and `src/client/loaders/` import it and
-it imports back from none of them but `../parse/corpus-tsv.ts` and
-`../distance/parallax/`.
+it imports back from none of them but `../distance/parallax/` (beside
+`../cited-parallax.ts` and the table reader `../../util/tsv/table-pure.ts`).
 
 ## Files in this area
 
