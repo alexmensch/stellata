@@ -1,13 +1,10 @@
 // data/gaia/gaia_dr3_gspc.tsv → source_id → synthetic Johnson B−V.
 // See README.md#the-ci-cascade.
 
-import { readTable, type TableSpec } from '../../util/tsv/table-pure';
+import type { Declared } from '../../util/sources/source';
+import { readTable } from '../../util/tsv/table-pure';
 
-const GSPC = {
-  file: 'data/gaia/gaia_dr3_gspc.tsv',
-  columns: ['source_id', 'b_jkc_mag', 'b_jkc_flag', 'v_jkc_mag', 'v_jkc_flag'] as const,
-  hint: 'Re-run `pnpm run refresh:gaia-gspc`.',
-} satisfies TableSpec<string>;
+const GSPC_COLUMNS = ['source_id', 'b_jkc_mag', 'b_jkc_flag', 'v_jkc_mag', 'v_jkc_flag'] as const;
 
 /** `1` = the source's G and BP−RP lie where the JKC standardisation was
  *  validated (Montegriffo 2023 (/data/papers/index.md#montegriffo2023)
@@ -32,9 +29,9 @@ export interface GspcColour {
  *  present entry always carries a usable B−V. Keyed by the `source_id`
  *  string for the same > `Number.MAX_SAFE_INTEGER` reason every other Gaia
  *  side-table is. */
-export function parseGspcTsv(text: string): Map<string, GspcColour> {
+export function parseGspcTsv(text: string, from: Declared): Map<string, GspcColour> {
   const out = new Map<string, GspcColour>();
-  for (const row of readTable(GSPC, text)) {
+  for (const row of readTable({ ...from, columns: GSPC_COLUMNS }, text)) {
     const sourceId = row.sourceId('source_id');
     if (sourceId === null) continue;
     const b = row.float('b_jkc_mag');

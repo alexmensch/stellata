@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   type ClassicIdOverlay,
   type OverlayEntry,
-} from '../classic-ids/classic-id-overlay-tsv';
+} from '../classic-ids/classic-id-overlay-pure';
 import { parseGlieseTsv } from '../gliese-parse';
 import { SPINE_COLUMNS, spineDesignations, type SpineRow } from '../spine/inherited-spine-pure';
 import type { PrimaryTables } from '../spine/primaries-audit-pure';
@@ -21,18 +21,11 @@ import {
   type BindingDispositionRow,
   type SpineCorrectionRow,
 } from './membership-manifest-pure';
-import {
-  ADDITION_REASONS,
-  ADDITIONS_LEDGER,
-  COMPONENT_REASON_PREFIX,
-} from './additions-ledger-tsv';
-import {
-  bindingReviewKey,
-  BINDING_REVIEW,
-} from './binding-review-tsv';
-import {
-  LABEL_DROPS,
-} from './label-drops-tsv';
+import { ADDITIONS_LEDGER } from './additions-ledger-tsv';
+import { ADDITION_REASONS, COMPONENT_REASON_PREFIX } from './ledger-rows-pure';
+import { BINDING_REVIEW } from './binding-review-tsv';
+import { bindingReviewKey } from './ledger-rows-pure';
+import { LABEL_DROPS } from './label-drops-tsv';
 import {
   MEMBERSHIP_MANIFEST,
   manifestDesignations,
@@ -41,6 +34,8 @@ import {
   type ManifestRecord,
 } from './membership-manifest-tsv';
 import { parkedRecordKey } from '../distance/parallax/parked-ledger';
+
+const FROM = { file: 'fixture.tsv', hint: 'h' };
 
 function spineRow(cells: Partial<SpineRow>): SpineRow {
   const out = {} as SpineRow;
@@ -136,7 +131,7 @@ const tables: PrimaryTables = {
     { cns5: 4, gj: '10002', gjComp: null, gaiaSourceId: null, hip: null, astrometry: null },
     { cns5: 0, gj: 'Sun', gjComp: null, gaiaSourceId: null, hip: null, astrometry: null },
   ],
-  gliese: parseGlieseTsv(GLIESE_TSV),
+  gliese: parseGlieseTsv(GLIESE_TSV, FROM),
   hipI239: new Set([10, 20, 30, 40, 50, 70]),
   hdI239: new Set<number>(),
   i239HipHd: new Map<number, number>(),
@@ -541,7 +536,7 @@ describe('spine corrections', () => {
       SPINE_CORRECTION_COLUMNS.join('\t'),
       ['1-2-1', '', '5', '', 'set', 'hd', '6', 'because'].join('\t'),
     ].join('\n') + '\n';
-    expect(() => parseSpineCorrectionsTsv(tsv)).toThrow(/set may write tyc/);
+    expect(() => parseSpineCorrectionsTsv(tsv, FROM)).toThrow(/set may write tyc/);
   });
 
   it('refuses a correction that states no evidence', () => {
@@ -549,7 +544,7 @@ describe('spine corrections', () => {
       SPINE_CORRECTION_COLUMNS.join('\t'),
       ['1-2-1', '', '5', '', 'set', 'tyc', '1-9-1', ''].join('\t'),
     ].join('\n') + '\n';
-    expect(() => parseSpineCorrectionsTsv(tsv)).toThrow(/states no evidence/);
+    expect(() => parseSpineCorrectionsTsv(tsv, FROM)).toThrow(/states no evidence/);
   });
 
   it('refuses a set writing the value the spine already states', () => {
@@ -588,7 +583,7 @@ describe('spine corrections', () => {
       SPINE_CORRECTION_COLUMNS.join('\t'),
       ['', '', '', '', 'set', 'tyc', '1-9-1', 'because'].join('\t'),
     ].join('\n') + '\n';
-    expect(() => parseSpineCorrectionsTsv(tsv)).toThrow(/every key cell is empty/);
+    expect(() => parseSpineCorrectionsTsv(tsv, FROM)).toThrow(/every key cell is empty/);
     expect(bindingReviewKey(spine[0])).toBe(bindingReviewKey({
       tyc: '', hip: '', hd: '', gl: '',
     }));
@@ -857,13 +852,13 @@ describe('codecs', () => {
   it('parses dispositions under the closed enums, refusing an unstated basis or evidence', () => {
     const header = 'tyc\thip\thd\tgl\tderived_source_id\tkeep_source_id\tbasis\tevidence\n';
     const row = (rest: string): string => `${header}9-8-1\t\t40\t\t\t${rest}\n`;
-    const parsed = parseBindingDispositionsTsv(row('888\ttycho2_position\tsep 0.1"'));
+    const parsed = parseBindingDispositionsTsv(row('888\ttycho2_position\tsep 0.1"'), FROM);
     expect(parsed.get(HD40_KEY)).toEqual(disposition({ evidence: 'sep 0.1"' }));
-    expect(() => parseBindingDispositionsTsv(row('888\tguesswork\tx'))).toThrow(/basis/);
-    expect(() => parseBindingDispositionsTsv(row('keep\ttycho2_position\tx'))).toThrow(/keep_source_id: "keep" is not a source_id/);
-    expect(() => parseBindingDispositionsTsv(row('888\ttycho2_position\t'))).toThrow(/evidence/);
+    expect(() => parseBindingDispositionsTsv(row('888\tguesswork\tx'), FROM)).toThrow(/basis/);
+    expect(() => parseBindingDispositionsTsv(row('keep\ttycho2_position\tx'), FROM)).toThrow(/keep_source_id: "keep" is not a source_id/);
+    expect(() => parseBindingDispositionsTsv(row('888\ttycho2_position\t'), FROM)).toThrow(/evidence/);
     expect(() => parseBindingDispositionsTsv(
-      `${row('888\ttycho2_position\tx')}9-8-1\t\t40\t\t\t\ttycho2_position\ty\n`,
+      `${row('888\ttycho2_position\tx')}9-8-1\t\t40\t\t\t\ttycho2_position\ty\n`, FROM,
     )).toThrow(/duplicate/);
   });
 

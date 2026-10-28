@@ -1,6 +1,7 @@
 // The tree's side of doc figures: the committed count snapshots, every doc that can carry a marker, and the catalogue-size scan.
 import { readFileSync } from 'node:fs';
 import { basename, extname, join } from 'node:path';
+import { CITATION_INDEX } from '../site/citation-index-source';
 import { gitFiles, lfsTracked, presentFiles } from '../util/git-files';
 import {
   catalogueSizeFigures,
@@ -30,7 +31,7 @@ const sizeScanned = (f: string): boolean =>
   SIZE_SCAN_KINDS.includes(extname(f)) &&
   !/\.test\.ts$|-fixture\.ts$|\.test\.py$/.test(f) &&
   !f.startsWith('research/') &&
-  f !== 'data/papers/index.md' &&
+  f !== CITATION_INDEX.file &&
   f !== SIZE_EXEMPTIONS_FILE;
 
 function snapshotNumber(snapshots: Snapshots, key: string): number {

@@ -1,36 +1,23 @@
 // The swap parity ledger's committed gates: the route-disagreement review
 // join, the canonical-key audit over the label delta, and the V/50 HD-less
 // out-of-scope pin. See ../spine/README.md#the-swap-parity-ledger.
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
 import { beforeAll, describe, expect, it } from 'vitest';
 
-import { readTable } from '../../util/tsv/table-pure';
 import { ADDITIONS_LEDGER } from '../membership/additions-ledger-tsv';
 import { MEMBERSHIP_MANIFEST } from '../membership/membership-manifest-tsv';
-import { PARKED_LEDGER } from '../distance/parallax/parked-ledger';
+import { PARKED_LEDGER } from '../distance/parallax/parked-ledger-tsv';
 import { ROUTE_DISAGREEMENTS } from './route-disagreements-tsv';
-import { REPO_ROOT, lfsContentReadable } from '../../util/paths';
-import { LEDGER_PATH, OVERRIDES_PATH, SAMEAS_OVERRIDES_FILE } from '../../sid/registry-io';
-import { parseSameasTsv } from '../../sid/sid-pure';
+import { SAMEAS_OVERRIDES } from '../../sid/sameas-source';
+import { artifactRows, isReadable, readArtifact } from '../../util/sources/source';
 import { LEDGER } from '../../sid/ledger-tsv';
-import { INHERITED_SPINE, INHERITED_SPINE_FILE } from '../spine/inherited-spine-pure';
-import { parseBsc5Tsv } from './classic-ids-parse';
+import { INHERITED_SPINE } from '../spine/inherited-spine-tsv';
+import { BSC5 } from './bsc5-source';
 import {
   spineDesignationsRemovedBy,
 } from './label-merge/label-merge-pure';
-import {
-  LABEL_FLIPS_FILE,
-  LABEL_FLIPS,
-} from './label-merge/label-flips-tsv';
+import { LABEL_FLIPS } from './label-merge/label-flips-tsv';
+import { ROUTE_DISAGREEMENTS_REVIEW } from './route-disagreements-review-source';
 
-const ADDITIONS_PATH = resolve(REPO_ROOT, 'data/membership/additions-ledger.tsv');
-const QUEUE_PATH = resolve(REPO_ROOT, 'data/classic-ids/hd_hip_route_disagreements.tsv');
-const REVIEW_PATH = resolve(REPO_ROOT, 'data/classic-ids/hd_hip_route_disagreements_review.tsv');
-const BSC5_PATH = resolve(REPO_ROOT, 'data/classic-ids/bsc5.tsv');
-const SPINE_PATH = resolve(REPO_ROOT, INHERITED_SPINE_FILE);
-
-const REVIEW_HINT = 'Dispose the row in hd_hip_route_disagreements_review.tsv.';
 const IDENTITY_VERDICTS = new Set(['no-identity-event', 'merge', 'split']);
 
 /** V/50's HD-less entries — novae/supernovae, four clusters (47 Tuc,
@@ -40,21 +27,9 @@ const HD_LESS_HR = [
   92, 95, 182, 1057, 1841, 2472, 2496, 3515, 3671, 6309, 6515, 7189, 7539, 8296,
 ];
 
-const queueKeys = ROUTE_DISAGREEMENTS.parse(readFileSync(QUEUE_PATH, 'utf-8'))
-  .map((d) => `${d.hd}\t${d.hip}`);
+const queueKeys = readArtifact(ROUTE_DISAGREEMENTS).map((d) => `${d.hd}\t${d.hip}`);
 
-const review = [...readTable(
-  {
-    file: 'data/classic-ids/hd_hip_route_disagreements_review.tsv',
-    columns: ['hd', 'hip', 'verdict', 'note'] as const,
-    hint: REVIEW_HINT,
-  },
-  readFileSync(REVIEW_PATH, 'utf-8'),
-)].map((row) => ({
-  key: `${row.raw('hd')}\t${row.raw('hip')}`,
-  verdict: row.raw('verdict'),
-  note: row.text('note'),
-}));
+const review = ROUTE_DISAGREEMENTS_REVIEW.read();
 
 describe('HD/HIP route-disagreement review', () => {
   it('disposes every queue row, and nothing else', () => {
@@ -70,9 +45,9 @@ describe('HD/HIP route-disagreement review', () => {
   });
 });
 
-const ledgerReadable = lfsContentReadable(LEDGER_PATH);
-const bsc5Readable = lfsContentReadable(BSC5_PATH);
-const spineReadable = lfsContentReadable(SPINE_PATH);
+const ledgerReadable = isReadable(LEDGER);
+const bsc5Readable = isReadable(BSC5);
+const spineReadable = isReadable(INHERITED_SPINE);
 
 describe.skipIf(!ledgerReadable)('label delta vs the SID ledger', () => {
   // A spine designation the merge moves off its record stops feeding that
@@ -81,15 +56,12 @@ describe.skipIf(!ledgerReadable)('label delta vs the SID ledger', () => {
   // are the shipped shape (/docs/catalog-driver.md#4-how-hd-reaches-gaia).
   it('bridges every canonical key the merge removes from its record', () => {
     const canonical = new Set(
-      LEDGER.parse(readFileSync(LEDGER_PATH, 'utf-8')).map((r) => r.canonicalKey),
+      readArtifact(LEDGER).map((r) => r.canonicalKey),
     );
     const bridgeEndpoints = new Set(
-      parseSameasTsv(readFileSync(OVERRIDES_PATH, 'utf-8'), SAMEAS_OVERRIDES_FILE)
-        .flatMap((e) => [e.a, e.b]),
+      SAMEAS_OVERRIDES.read().flatMap((e) => [e.a, e.b]),
     );
-    const flips = LABEL_FLIPS.parse(
-      readFileSync(resolve(REPO_ROOT, LABEL_FLIPS_FILE), 'utf-8'),
-    );
+    const flips = readArtifact(LABEL_FLIPS);
     const removedCanonical = spineDesignationsRemovedBy(flips)
       .filter((d) => canonical.has(d));
 
@@ -100,7 +72,7 @@ describe.skipIf(!ledgerReadable)('label delta vs the SID ledger', () => {
     // is the shape: the spine printed it on HIP 88267 (Bodu), the overlay
     // flipped that record to 164669, and the primaries admit 164668 itself.
     const admittedHd = new Set(
-      ADDITIONS_LEDGER.parse(readFileSync(ADDITIONS_PATH, 'utf-8'))
+      readArtifact(ADDITIONS_LEDGER)
         .filter((l) => l.reason.startsWith('admitted:') && l.hd !== '')
         .map((l) => `hd:${l.hd}`),
     );
@@ -137,10 +109,8 @@ describe.skipIf(!ledgerReadable)('label delta vs the SID ledger', () => {
   });
 });
 
-const MANIFEST_PATH = resolve(REPO_ROOT, 'data/membership/membership-manifest.tsv');
-const PARKED_PATH = resolve(REPO_ROOT, 'data/membership/parked-ledger.tsv');
 
-describe.skipIf(!lfsContentReadable(MANIFEST_PATH))('withheld sibling HD numbers', () => {
+describe.skipIf(!isReadable(MEMBERSHIP_MANIFEST))('withheld sibling HD numbers', () => {
   // label-merge/README.md#a-withheld-number-attaches-to-no-record-and-that-is-the-answer. Six of
   // the withheld numbers are the display cell of an admitted manifest row of
   // their own, and every one of those rows parks — which is what says the
@@ -154,12 +124,12 @@ describe.skipIf(!lfsContentReadable(MANIFEST_PATH))('withheld sibling HD numbers
 
   beforeAll(() => {
     withheld = new Set(
-      LABEL_FLIPS.parse(readFileSync(resolve(REPO_ROOT, LABEL_FLIPS_FILE), 'utf-8'))
+      readArtifact(LABEL_FLIPS)
         .filter((f) => f.disposition === 'extra-sibling-rendered' && f.field === 'hd')
         .map((f) => Number(f.applied)),
     );
     carriedBy = new Map();
-    for (const { hd, tyc } of MEMBERSHIP_MANIFEST.rows(readFileSync(MANIFEST_PATH, 'utf-8'))) {
+    for (const { hd, tyc } of artifactRows(MEMBERSHIP_MANIFEST)) {
       if (hd !== null && withheld.has(hd)) carriedBy.set(hd, tyc ?? '');
     }
   });
@@ -171,7 +141,7 @@ describe.skipIf(!lfsContentReadable(MANIFEST_PATH))('withheld sibling HD numbers
 
   it('parks every one of those six for want of a published parallax', () => {
     const parked = new Map<string, string>(
-      PARKED_LEDGER.parse(readFileSync(PARKED_PATH, 'utf-8')).map((e) => [e.tyc ?? '', e.reason]),
+      readArtifact(PARKED_LEDGER).map((e) => [e.tyc ?? '', e.reason]),
     );
     expect([...carriedBy.values()].map((tyc) => parked.get(tyc))).toEqual(
       WITHHELD_ON_THEIR_OWN_ROW.map(() => 'no_parallax_published'),
@@ -179,7 +149,7 @@ describe.skipIf(!lfsContentReadable(MANIFEST_PATH))('withheld sibling HD numbers
   });
 });
 
-describe.skipIf(!lfsContentReadable(MANIFEST_PATH))('override-freed HD numbers', () => {
+describe.skipIf(!isReadable(MEMBERSHIP_MANIFEST))('override-freed HD numbers', () => {
   // label-merge/README.md#what-a-freed-number-costs. A curated correction
   // hands the neighbour's number back, and where the row that takes it does
   // not build, the number resolves NOWHERE — worse reach than before the
@@ -204,9 +174,7 @@ describe.skipIf(!lfsContentReadable(MANIFEST_PATH))('override-freed HD numbers',
   let parkedReason: Map<string, string>;
 
   beforeAll(() => {
-    const flips = LABEL_FLIPS.parse(
-      readFileSync(resolve(REPO_ROOT, LABEL_FLIPS_FILE), 'utf-8'),
-    ).filter((f) => f.disposition === 'override-value' && f.field === 'hd');
+    const flips = readArtifact(LABEL_FLIPS).filter((f) => f.disposition === 'override-value' && f.field === 'hd');
     // A mutual swap frees nothing: the partner's override takes the value the
     // other vacates, so only a spine value no override applies is freed.
     const taken = new Set(flips.map((f) => f.applied));
@@ -216,7 +184,7 @@ describe.skipIf(!lfsContentReadable(MANIFEST_PATH))('override-freed HD numbers',
       .sort((a, b) => Number(a) - Number(b));
 
     rowsByHd = new Map();
-    for (const row of MEMBERSHIP_MANIFEST.rows(readFileSync(MANIFEST_PATH, 'utf-8'))) {
+    for (const row of artifactRows(MEMBERSHIP_MANIFEST)) {
       const hd = row.hd === null ? '' : String(row.hd);
       if (freed.includes(hd)) {
         rowsByHd.set(hd, { tyc: row.tyc ?? '', sourceId: row.gaiaSourceId ?? '' });
@@ -224,7 +192,7 @@ describe.skipIf(!lfsContentReadable(MANIFEST_PATH))('override-freed HD numbers',
     }
 
     parkedReason = new Map(
-      PARKED_LEDGER.parse(readFileSync(PARKED_PATH, 'utf-8')).map((e) => [e.tyc ?? '', e.reason]),
+      readArtifact(PARKED_LEDGER).map((e) => [e.tyc ?? '', e.reason]),
     );
   });
 
@@ -256,7 +224,7 @@ describe.skipIf(!lfsContentReadable(MANIFEST_PATH))('override-freed HD numbers',
 
 describe.skipIf(!bsc5Readable)('V/50 HD-less entries', () => {
   it('pins the out-of-scope set', () => {
-    const hdless = parseBsc5Tsv(readFileSync(BSC5_PATH, 'utf-8'))
+    const hdless = BSC5.read()
       .filter((r) => r.hd === null)
       .map((r) => r.hr);
     expect(hdless).toEqual(HD_LESS_HR);
@@ -274,7 +242,7 @@ describe.skipIf(!spineReadable)('the dispositions, against the spine', () => {
     pairHolders = new Map(noIdentityEvent.map((r) => [r.key, 0]));
     const outOfScope = new Set(HD_LESS_HR.map(String));
     hrHolders = [];
-    for (const row of INHERITED_SPINE.rows(readFileSync(SPINE_PATH, 'utf-8'))) {
+    for (const row of artifactRows(INHERITED_SPINE)) {
       const pair = `${row.hd}\t${row.hip}`;
       const held = pairHolders.get(pair);
       if (held !== undefined) pairHolders.set(pair, held + 1);

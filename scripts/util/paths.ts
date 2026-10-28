@@ -1,11 +1,10 @@
-// Repo-root path + input guards shared by TypeScript build scripts.
+// Repo-root path + LFS pointer probes shared by TypeScript build scripts.
 // See scripts/util/README.md.
 
 import {
   closeSync,
   existsSync,
   openSync,
-  readFileSync,
   readSync,
 } from 'node:fs';
 import { dirname, resolve } from 'node:path';
@@ -47,22 +46,4 @@ export function isLfsPointerFile(path: string): boolean {
  *  for the ones that have to read it anyway. */
 export function lfsContentReadable(path: string): boolean {
   return existsSync(path) && !isLfsPointerFile(path);
-}
-
-/** Exit a build script on a missing input, naming both ways one goes missing: a
- *  checkout without `git lfs pull`, and a refresh never run. `refreshHint` names
- *  the pipeline that regenerates this particular file. Every build script wants
- *  the same message, and the parsers downstream fail on a pointer stub with a
- *  header error that says nothing about LFS. */
-export function requireExists(path: string, refreshHint: string): void {
-  if (existsSync(path)) return;
-  console.error(
-    `Missing ${path}. Confirm git LFS is pulled (\`git lfs pull\`); ${refreshHint}`,
-  );
-  process.exit(1);
-}
-
-export function readRequired(path: string, refreshHint: string): string {
-  requireExists(path, refreshHint);
-  return readFileSync(path, 'utf8');
 }

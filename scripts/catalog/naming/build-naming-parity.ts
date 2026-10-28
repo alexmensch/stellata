@@ -11,6 +11,7 @@ import type { SearchEntry } from '../record/catalog-pure';
 import { buildSearchIndex, normalizeGlKey } from '../../../src/client/typeahead/search-corpus';
 import { displayNamesFromSearchIndex } from './star-naming-pure';
 import { readTable } from '../../util/tsv/table-pure';
+import { readArtifact } from '../../util/sources/source';
 import {
   labelIndexOf,
   labelResolvesTo,
@@ -22,8 +23,6 @@ import {
 import { NAMING_DUPLICATES } from './naming-duplicates-tsv';
 import { NAMING_PARITY } from './naming-parity-tsv';
 import { NAMING_PARITY_OUTPUTS } from './naming-parity-outputs';
-
-const PARITY = NAMING_PARITY_OUTPUTS.files.parity;
 
 function readJson<T>(path: string): T {
   return JSON.parse(readFileSync(path, 'utf8')) as T;
@@ -43,7 +42,7 @@ function frozenOldLabels(): Map<string, string> {
     };
     return new Map([...readTable(spec, readFileSync(seed, 'utf8'))].map((r) => [r.raw('key'), r.raw('old')]));
   }
-  const rows = NAMING_PARITY.parse(readFileSync(PARITY, 'utf8'));
+  const rows = readArtifact(NAMING_PARITY);
   return new Map(rows.map((r) => [r.key, r.old]));
 }
 

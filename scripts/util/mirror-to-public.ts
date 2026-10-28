@@ -2,62 +2,73 @@
 // See scripts/util/README.md.
 
 import { existsSync, mkdirSync, readdirSync, statSync, copyFileSync, rmSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { basename, resolve } from 'node:path';
 
 import { REPO_ROOT } from './paths';
+import { defineFolder, type Declared, type Source } from './sources/source';
 
-export type MirrorSpec = {
-  /** Repo-relative source folder, e.g. `data/dust`. */
-  srcDir: string;
-  /** Repo-relative destination folder, e.g. `public/dust`. */
-  dstDir: string;
-  isPublicAsset: (name: string) => boolean;
-  /** Prefix for the one-line console summary. */
-  label: string;
+export interface MirroredFolder {
+  readonly files: readonly Declared[];
+  readonly isPublicAsset: (name: string) => boolean;
+}
+
+export interface MirrorSourceSpec {
+  /** Repo-relative folder; every allowlisted file in it (and in
+   *  `flattenSubDirs`) is a member. */
+  readonly dir: string;
+  readonly hint: string;
+  readonly isPublicAsset: (name: string) => boolean;
   /**
-   * Subfolders of `srcDir` whose files are **flattened** into the same
+   * Subfolders of `dir` whose files are **flattened** into the same
    * destination.
    * Names must stay unique across all of them; the allowlist is by name
    * and the purge pass cannot tell two same-named files apart.
    */
-  flattenSubDirs?: readonly string[];
-};
+  readonly flattenSubDirs?: readonly string[];
+}
 
-export function mirrorDataFolder(spec: MirrorSpec): void {
-  const src = resolve(REPO_ROOT, spec.srcDir);
-  const dst = resolve(REPO_ROOT, spec.dstDir);
+export function mirrorSource(spec: MirrorSourceSpec): Source<MirroredFolder> {
+  return defineFolder({
+    dir: spec.dir,
+    hint: spec.hint,
+    include: spec.isPublicAsset,
+    subDirs: spec.flattenSubDirs,
+    parse: (folder) => ({ files: folder.members, isPublicAsset: spec.isPublicAsset }),
+  });
+}
 
-  if (!existsSync(src)) {
-    console.log(`${spec.srcDir}/ not found; skipping ${spec.label} sync.`);
-    return;
+/** Copies `src` over `dst` unless `dst` already holds its size and is no older. */
+export function syncFile(src: string, dst: string): 'copied' | 'up-to-date' {
+  if (existsSync(dst)) {
+    const srcStat = statSync(src);
+    const dstStat = statSync(dst);
+    if (dstStat.size === srcStat.size && dstStat.mtimeMs >= srcStat.mtimeMs) return 'up-to-date';
   }
+  copyFileSync(src, dst);
+  return 'copied';
+}
+
+export interface MirrorSpec {
+  /** Repo-relative destination folder, e.g. `public/dust`. */
+  readonly dstDir: string;
+  /** Prefix for the one-line console summary. */
+  readonly label: string;
+}
+
+export function mirrorDataFolder({ files, isPublicAsset }: MirroredFolder, spec: MirrorSpec): void {
+  const dst = resolve(REPO_ROOT, spec.dstDir);
   mkdirSync(dst, { recursive: true });
 
   let copied = 0;
   let skipped = 0;
-  for (const from of [src, ...(spec.flattenSubDirs ?? []).map((d) => resolve(src, d))]) {
-    if (!existsSync(from)) continue;
-    for (const name of readdirSync(from)) {
-      if (!spec.isPublicAsset(name)) continue;
-      const srcPath = resolve(from, name);
-      const dstPath = resolve(dst, name);
-      const srcStat = statSync(srcPath);
-      if (!srcStat.isFile()) continue;
-      if (existsSync(dstPath)) {
-        const dstStat = statSync(dstPath);
-        if (dstStat.size === srcStat.size && dstStat.mtimeMs >= srcStat.mtimeMs) {
-          skipped++;
-          continue;
-        }
-      }
-      copyFileSync(srcPath, dstPath);
-      copied++;
-    }
+  for (const { file } of files) {
+    if (syncFile(resolve(REPO_ROOT, file), resolve(dst, basename(file))) === 'copied') copied++;
+    else skipped++;
   }
 
   let purged = 0;
   for (const name of readdirSync(dst)) {
-    if (spec.isPublicAsset(name)) continue;
+    if (isPublicAsset(name)) continue;
     rmSync(resolve(dst, name), { recursive: true });
     purged++;
   }

@@ -1,7 +1,5 @@
 // GCVS variable-star catalogue parsing and per-Star cross-match.
 // See README.md.
-import { readFileSync } from 'node:fs';
-
 import {
   classifyGcvsVarType,
   isPlanetaryTransitOnly,
@@ -42,16 +40,9 @@ const GCVS_MAIN_COL_PERIOD = 10;
 const GCVS_CROSSID_COL_LEFT = 0;   // "<CATALOG> <NUM>"
 const GCVS_CROSSID_COL_RIGHT = 1;  // "= <GCVS_NAME>"
 
-// Both GCVS files (gcvs5.txt and crossid.txt) are pipe-delimited with
-// trailing whitespace inside each cell. Callers are expected to gate on
-// file existence before calling.
-function readPipeDelimited(path: string): string[][] {
-  return splitPipeDelimited(readFileSync(path, 'utf8'));
-}
-
-export function parseGcvsMain(srcPath: string): Map<string, VarStarData> {
+export function parseGcvsMain(text: string): Map<string, VarStarData> {
   const out = new Map<string, VarStarData>();
-  for (const fields of readPipeDelimited(srcPath)) {
+  for (const fields of splitPipeDelimited(text)) {
     if (fields.length < GCVS_MAIN_MIN_FIELDS) continue;
     const name = normalizeGcvsName(fields[GCVS_MAIN_COL_NAME] ?? '');
     if (!name) continue;
@@ -79,10 +70,10 @@ export function parseGcvsMain(srcPath: string): Map<string, VarStarData> {
   return out;
 }
 
-export function parseGcvsCrossref(srcPath: string): VarStarXref {
+export function parseGcvsCrossref(text: string): VarStarXref {
   const byHip = new Map<number, string>();
   const byHd = new Map<number, string>();
-  for (const fields of readPipeDelimited(srcPath)) {
+  for (const fields of splitPipeDelimited(text)) {
     // Each line: "<CATALOG> <NUM>          | = <GCVS_NAME>  | | |"
     // We only care about Hip and HD since those are what AT-HYG carries.
     const leftRaw = fields[GCVS_CROSSID_COL_LEFT] ?? '';

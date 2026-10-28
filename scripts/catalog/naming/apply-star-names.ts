@@ -2,18 +2,12 @@
 // names, glyph-bearing designations, disposition routing, aliases.
 // See README.md#the-record-side-join.
 
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
-
-import { REPO_ROOT } from '../../util/paths';
-import { readTable, type TableSpec } from '../../util/tsv/table-pure';
+import { readArtifact } from '../../util/sources/source';
 import { FLAG_IS_SOL, NO_CONSTELLATION_INDEX } from '../record/catalog-pure';
 import { CON_INDEX } from '../parse/constellations/constellations';
 import { foldNameKey } from './wgsn-normalise-pure';
 import {
-  PROPER_DISPOSITIONS_TABLE,
   buildWgsnIndex,
-  parseProperDispositions,
   routeDisposedProper,
   type ProperDisposition,
   type WgsnNameRow,
@@ -21,21 +15,7 @@ import {
 import type { DesignationRow } from './wgsn-tables-pure';
 import { WGSN_DESIGNATIONS } from './wgsn-designations-tsv';
 import { WGSN_NAMES } from './wgsn-names-tsv';
-
-const WGSN_NAMES_PATH = resolve(REPO_ROOT, WGSN_NAMES.file);
-const WGSN_DESIGNATIONS_PATH = resolve(REPO_ROOT, WGSN_DESIGNATIONS.file);
-const PROPER_DISPOSITIONS = resolve(REPO_ROOT, PROPER_DISPOSITIONS_TABLE.file);
-const NAME_OVERRIDES = {
-  file: 'data/naming/name_overrides.tsv',
-  columns: ['sid', 'display_name'] as const,
-  hint: 'It is hand-curated: restore the sid and display_name columns.',
-} satisfies TableSpec<string>;
-const OVERRIDES = resolve(REPO_ROOT, NAME_OVERRIDES.file);
-
-/** Every file loadStarNamingInputs and loadNameOverrides read. */
-export const STAR_NAMING_INPUT_PATHS: readonly string[] = [
-  WGSN_NAMES_PATH, WGSN_DESIGNATIONS_PATH, PROPER_DISPOSITIONS, OVERRIDES,
-];
+import { PROPER_DISPOSITIONS } from './proper-dispositions-source';
 
 export interface StarNamingInputs {
   names: WgsnNameRow[];
@@ -45,29 +25,10 @@ export interface StarNamingInputs {
 
 export function loadStarNamingInputs(): StarNamingInputs {
   return {
-    names: WGSN_NAMES.parse(readFileSync(WGSN_NAMES_PATH, 'utf8')),
-    designations: WGSN_DESIGNATIONS.parse(readFileSync(WGSN_DESIGNATIONS_PATH, 'utf8')),
-    dispositions: new Map(parseProperDispositions(readFileSync(PROPER_DISPOSITIONS, 'utf8'))
-      .map((d) => [d.proper, d.disposition])),
+    names: readArtifact(WGSN_NAMES),
+    designations: readArtifact(WGSN_DESIGNATIONS),
+    dispositions: new Map(PROPER_DISPOSITIONS.read().map((d) => [d.proper, d.disposition])),
   };
-}
-
-/** The curated escape hatch, keyed on SID because that identity survives
- *  re-indexing and a no-Gaia record has no source_id (/docs/star-naming.md#7-curation-seam).
- * Expected to stay empty: it exists for review findings the
- *  authority cannot express, never as a home for the folk names the naming authority (/docs/star-naming.md#2-authority--one-source-approves-names-everything-else-compiles-them) routes
- *  to aliases. */
-export function loadNameOverrides(): Map<number, string> {
-  const out = new Map<number, string>();
-  for (const row of readTable(NAME_OVERRIDES, readFileSync(OVERRIDES, 'utf8'))) {
-    const sid = row.int('sid');
-    const name = row.text('display_name');
-    if (sid === null || sid <= 0 || name === null) {
-      return row.fail('unusable row: needs a positive sid and a display_name');
-    }
-    out.set(sid, name);
-  }
-  return out;
 }
 
 /** Structural subset of `Star` the ladder reads and writes. */

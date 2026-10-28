@@ -5,18 +5,18 @@
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
-import { REPO_ROOT as ROOT, readRequired } from '../../util/paths';
 import {
   LINK_CLASSES, auditAssociations, formatAssociationReport, linkTablesFrom,
 } from './association-audit-pure';
-import { INHERITED_SPINE, INHERITED_SPINE_FILE } from './inherited-spine-pure';
-import { LFS_HINT, loadPrimaryTables } from './primaries-tables';
+import { INHERITED_SPINE } from './inherited-spine-tsv';
+import { readArtifact } from '../../util/sources/source';
+import { loadPrimaryTables } from './primaries-tables';
 
 const ID_COLS = ['tyc', 'hip', 'hd', 'hr', 'gl', 'flam', 'bayer', 'proper', 'gaia_source_id'] as const;
 
 async function main(): Promise<void> {
   const outDir = process.argv.find((a) => a.startsWith('--out='))?.slice('--out='.length) ?? null;
-  const spine = INHERITED_SPINE.parse(readRequired(resolve(ROOT, INHERITED_SPINE_FILE), LFS_HINT));
+  const spine = readArtifact(INHERITED_SPINE);
   const tables = await loadPrimaryTables(spine.map((r) => r.tyc).filter((t) => t !== ''));
   const links = linkTablesFrom(tables);
   const audit = auditAssociations(spine, links);

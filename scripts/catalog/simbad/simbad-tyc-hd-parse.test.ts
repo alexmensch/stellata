@@ -5,18 +5,19 @@ import { beforeAll, describe, it, expect } from 'vitest';
 
 import { REPO_ROOT, lfsContentReadable } from '../../util/paths';
 import { readTable } from '../../util/tsv/table-pure';
-import { parseBsc5Tsv, parseTyc2HdTsv } from '../classic-ids/classic-ids-parse';
-import {
-  CLASSIC_ID_OVERRIDES_FILE,
-  parseLabelOverridesTsv,
-} from '../classic-ids/label-merge/label-merge-pure';
+import { BSC5 } from '../classic-ids/bsc5-source';
+import { TYC2_HD } from '../classic-ids/tyc2-hd-source';
+import { CLASSIC_ID_OVERRIDES } from '../classic-ids/label-merge/classic-id-overrides-source';
+import { SIMBAD_TYC_HD } from './simbad-tyc-hd-source';
 import { MEMBERSHIP_MANIFEST, MEMBERSHIP_MANIFEST_FILE } from '../membership/membership-manifest-tsv';
 import {
   hdNumbers,
   parseSimbadTycHdTsv,
   type SimbadTycHdRow,
 } from './simbad-tyc-hd-parse';
+import { SIMBAD_SPTYPE } from '../spectral/simbad-sptype-source';
 
+const TYC_HD_FROM = { file: 'simbad_tyc_hd.tsv', hint: 'h' };
 const HEADER = ['tyc', 'simbad_oid', 'simbad_main_id', 'hd'].join('\t');
 
 function tsv(...rows: string[][]): string {
@@ -28,7 +29,7 @@ describe('parseSimbadTycHdTsv', () => {
     const index = parseSimbadTycHdTsv(tsv(
       ['7570-1585-1', '7426150', '* f Eri A', '24072'],
       ['7570-1586-1', '687096', '* f Eri B', '24071'],
-    ));
+    ), TYC_HD_FROM);
     expect([...index.keys()]).toEqual(['7570-1585-1', '7570-1586-1']);
     expect(index.get('7570-1585-1')).toEqual({
       hdIdents: ['24072'], simbadOid: 7426150, mainId: '* f Eri A',
@@ -37,20 +38,20 @@ describe('parseSimbadTycHdTsv', () => {
 
   it('keeps every HD a Tycho entry carries, in file order', () => {
     const row = parseSimbadTycHdTsv(
-      tsv(['1-1-1', '9', '', '12447|12448']),
+      tsv(['1-1-1', '9', '', '12447|12448']), TYC_HD_FROM,
     ).get('1-1-1')!;
     expect(row.hdIdents).toEqual(['12447', '12448']);
   });
 
   it('preserves a component letter on the ident', () => {
     const row = parseSimbadTycHdTsv(
-      tsv(['1-1-1', '9', '', '24071B']),
+      tsv(['1-1-1', '9', '', '24071B']), TYC_HD_FROM,
     ).get('1-1-1')!;
     expect(row.hdIdents).toEqual(['24071B']);
   });
 
   it('reads a blank main_id as null', () => {
-    expect(parseSimbadTycHdTsv(tsv(['1-1-1', '9', '', '1'])).get('1-1-1')!.mainId)
+    expect(parseSimbadTycHdTsv(tsv(['1-1-1', '9', '', '1']), TYC_HD_FROM).get('1-1-1')!.mainId)
       .toBeNull();
   });
 
@@ -60,12 +61,12 @@ describe('parseSimbadTycHdTsv', () => {
       ['2-2-2', '', 'x', '1'],
       ['3-3-3', '9', 'x', ''],
       ['4-4-4', '9', 'x', '1'],
-    ));
+    ), TYC_HD_FROM);
     expect([...index.keys()]).toEqual(['4-4-4']);
   });
 
   it('hard-fails on a header missing a column, so a truncated pull cannot read as empty', () => {
-    expect(() => parseSimbadTycHdTsv('tyc\tsimbad_oid\n1-1-1\t9\n')).toThrow();
+    expect(() => parseSimbadTycHdTsv('tyc\tsimbad_oid\n1-1-1\t9\n', TYC_HD_FROM)).toThrow();
   });
 });
 
@@ -93,11 +94,9 @@ describe('hdNumbers', () => {
   });
 });
 
-const SIMBAD_TYC_HD_FILE = 'data/simbad/simbad_tyc_hd.tsv';
-const TYC2_HD_FILE = 'data/classic-ids/tyc2_hd.tsv';
 const AT = (f: string): string => resolve(REPO_ROOT, f);
-const SRC_SIMBAD_TYC_HD = AT(SIMBAD_TYC_HD_FILE);
-const SRC_TYC2_HD = AT(TYC2_HD_FILE);
+const SRC_SIMBAD_TYC_HD = AT(SIMBAD_TYC_HD.file);
+const SRC_TYC2_HD = AT(TYC2_HD.file);
 const SRC_MANIFEST = AT(MEMBERSHIP_MANIFEST_FILE);
 const ADJUDICATION_INPUTS = [SRC_SIMBAD_TYC_HD, SRC_TYC2_HD, SRC_MANIFEST];
 
@@ -118,13 +117,13 @@ describe.skipIf(!ADJUDICATION_INPUTS.every(lfsContentReadable))(
       // TYC is the SET of its rows. Keying single-valued drops one and reads
       // SIMBAD's agreement with the other as a dissent — 7 phantom rows.
       const iv = new Map<string, { hd: Set<number>; consistent: boolean }>();
-      for (const row of parseTyc2HdTsv(readFileSync(SRC_TYC2_HD, 'utf-8'))) {
+      for (const row of TYC2_HD.read()) {
         const entry = iv.get(row.tyc) ?? { hd: new Set<number>(), consistent: true };
         entry.hd.add(row.hd);
         entry.consistent = entry.consistent && row.nHd === 1 && row.nTyc === 1;
         iv.set(row.tyc, entry);
       }
-      simbad = parseSimbadTycHdTsv(readFileSync(SRC_SIMBAD_TYC_HD, 'utf-8'));
+      simbad = SIMBAD_TYC_HD.read();
 
       counts = {
         bothCells: 0, answered: 0, silent: 0,
@@ -183,12 +182,12 @@ describe.skipIf(!ADJUDICATION_INPUTS.every(lfsContentReadable))(
   },
 );
 
-const SRC_SIMBAD_SPTYPE = AT('data/simbad/simbad_sptype.tsv');
+const SRC_SIMBAD_SPTYPE = AT(SIMBAD_SPTYPE.file);
 const SPLIT_INPUTS = [...ADJUDICATION_INPUTS, SRC_SIMBAD_SPTYPE];
 const SIMBAD_SPTYPE_OBJECTS = {
-  file: 'data/simbad/simbad_sptype.tsv',
+  file: SIMBAD_SPTYPE.file,
+  hint: SIMBAD_SPTYPE.hint,
   columns: ['source_id', 'simbad_main_id'] as const,
-  hint: 'Re-run scripts/refresh/refresh-simbad-sptype.py.',
 };
 
 /** The move set of README.md#which-witness-decides-a-close-pairs-hd: the
@@ -215,12 +214,12 @@ describe.skipIf(!SPLIT_INPUTS.every(lfsContentReadable))('the four-witness split
 
   beforeAll(() => {
     const iv = new Map<string, Set<number>>();
-    for (const row of parseTyc2HdTsv(readFileSync(SPLIT_INPUTS[1], 'utf-8'))) {
+    for (const row of TYC2_HD.read()) {
       const at = iv.get(row.tyc);
       if (at === undefined) iv.set(row.tyc, new Set([row.hd]));
       else at.add(row.hd);
     }
-    const simbad = parseSimbadTycHdTsv(readFileSync(SPLIT_INPUTS[0], 'utf-8'));
+    const simbad = SIMBAD_TYC_HD.read();
 
     // The rows both TYC witnesses contradict — the 15 of README.md#what-the-tyc--hd-pull-adjudicates
     // the eight asserted having left the class.
@@ -276,10 +275,8 @@ describe.skipIf(!SPLIT_INPUTS.every(lfsContentReadable))('the four-witness split
   });
 });
 
-const BSC5_FILE = 'data/classic-ids/bsc5.tsv';
-const OVERRIDES_FILE = CLASSIC_ID_OVERRIDES_FILE;
-const SRC_BSC5 = AT(BSC5_FILE);
-const SRC_OVERRIDES = AT(OVERRIDES_FILE);
+const SRC_BSC5 = AT(BSC5.file);
+const SRC_OVERRIDES = AT(CLASSIC_ID_OVERRIDES.file);
 const ASSERTED_INPUTS = [...SPLIT_INPUTS, SRC_BSC5, SRC_OVERRIDES];
 
 /** The one override that keeps the spine's value instead of asserting one:
@@ -306,17 +303,17 @@ describe.skipIf(!ASSERTED_INPUTS.every(lfsContentReadable))(
 
     beforeAll(() => {
       ivHd = new Map();
-      for (const row of parseTyc2HdTsv(readFileSync(SRC_TYC2_HD, 'utf-8'))) {
+      for (const row of TYC2_HD.read()) {
         const at = ivHd.get(row.tyc);
         if (at === undefined) ivHd.set(row.tyc, new Set([row.hd]));
         else at.add(row.hd);
       }
-      simbad = parseSimbadTycHdTsv(readFileSync(SRC_SIMBAD_TYC_HD, 'utf-8'));
+      simbad = SIMBAD_TYC_HD.read();
       hdOfHr = new Map(
-        parseBsc5Tsv(readFileSync(SRC_BSC5, 'utf-8')).map((r) => [r.hr, r.hd]),
+        BSC5.read().map((r) => [r.hr, r.hd]),
       );
 
-      const overrides = parseLabelOverridesTsv(readFileSync(SRC_OVERRIDES, 'utf-8'));
+      const overrides = CLASSIC_ID_OVERRIDES.read();
       const hdBySource = new Map<string, number>();
       const hrBySource = new Map<string, number>();
       refusals = [];

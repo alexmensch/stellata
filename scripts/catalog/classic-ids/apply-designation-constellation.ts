@@ -1,41 +1,22 @@
 // The record build's one remaining classic-ID pass: IV/27A's constellation
 // for each Bayer / Flamsteed designation, keyed on the record's HD / HIP.
 // See README.md#the-designation-constellation.
-import { existsSync } from 'node:fs';
-
 import { NO_CONSTELLATION_INDEX } from '../record/catalog-pure';
 import type { Star } from '../parse/stars-parse';
-import {
-  CROSS_INDEX_INPUT_PATHS,
-  SRC_CROSS_INDEX,
-  readCrossIndexTable,
-} from './cross-index';
+import { CROSS_INDEX } from './cross-index-source';
 import {
   buildDesignationConIndex,
   resolveDesignationConIndex,
   type DesignationConIndex,
 } from './designation-constellation-pure';
 
-/** The pass's inputs, for the artifact's mtime invalidation. */
-export const DESIGNATION_CONSTELLATION_INPUT_PATHS = CROSS_INDEX_INPUT_PATHS;
-
 export interface DesignationConstellationInputs {
   desigCon: DesignationConIndex;
   crossIndexUnknownCst: number;
 }
 
-/** IV/27A is a committed artifact and not optional: without it every Bayer /
- *  Flamsteed designation would fall back to its positional constellation — the
- *  ρ Aql rewrite. A missing file is a hard fail rather than a degraded tier,
- *  the same call `loadReadStarsInputs` makes for the dust grid. */
 export function loadDesignationConstellationInputs(): DesignationConstellationInputs {
-  if (!existsSync(SRC_CROSS_INDEX)) {
-    throw new Error(
-      `Missing ${SRC_CROSS_INDEX}. Confirm git LFS is pulled (\`git lfs pull\`), then ` +
-        `re-run \`pnpm run refresh:classic-ids\`.`,
-    );
-  }
-  const { index: desigCon, counts } = buildDesignationConIndex(readCrossIndexTable());
+  const { index: desigCon, counts } = buildDesignationConIndex(CROSS_INDEX.read());
   return { desigCon, crossIndexUnknownCst: counts.crossIndexUnknownCst };
 }
 

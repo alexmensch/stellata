@@ -9,10 +9,14 @@ owns how they are read and what a consumer may conclude from them.
 
 ```
 scripts/catalog/simbad/
+  simbad-values-source.ts         SIMBAD_VALUES, the pull declared
+                                  (../../util/sources/).
   simbad-values-parse.ts          data/simbad/simbad_values.tsv indexed by
     (+ test)                      every namespace the pull keyed on. Bottom
                                   tier of the rv, direction/PM and distance
                                   cascades alike.
+  simbad-tyc-hd-source.ts         SIMBAD_TYC_HD, declared. No build step
+                                  reads it; the adjudication test does.
   simbad-tyc-hd-parse.ts          data/simbad/simbad_tyc_hd.tsv on the full
     (+ test)                      TYC, plus `hdNumbers` — the component letter
                                   dropped, for the integer comparison against

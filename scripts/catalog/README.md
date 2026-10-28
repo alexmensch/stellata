@@ -96,8 +96,10 @@ scripts/catalog/
                                   reads, which its content-hash stamp keys:
                                   the import closure plus sibling snapshots
                                   (../util/import-closure-pure.ts, the rule
-                                  CI's cache key shares) and each loader's
-                                  exported data paths.
+                                  CI's cache key shares) and every declared
+                                  source and artifact that closure reaches
+                                  (../util/sources/), less the build's own
+                                  outputs.
   catalog-outputs.ts (+ test)     CATALOG_OUTPUTS — every file the build
                                   writes, as its emitArtifacts declaration
                                   (../util/README.md): the public/ sidecars,
@@ -116,11 +118,14 @@ scripts/catalog/
                                   `parallaxSignalToNoise` — a leaf, so the
                                   record codec can import it without pulling
                                   the cascade into vite.config.ts's graph.
+  tycho2-source.ts                TYCHO2: main and supplement 1 as one
+                                  declared source (../util/sources/).
   tycho2-parse.ts (+ test)        data/tycho2/ indexed on the full TYC, with
                                   the position-to-propagate-from choice and
                                   the main-table-wins rule resolved at parse
                                   time (data/tycho2/README.md). Feeds the
                                   direction, PM-rescue and V cascades.
+  gliese-source.ts                GLIESE, V/70A's declaration.
   gliese-parse.ts (+ test)        data/gliese/ keyed on the bare Gliese
                                   number + component, so the catalogue's four
                                   name prefixes and a record's `gl` cell meet
@@ -165,8 +170,9 @@ decoding it.
 
 ## Gaia DR3 Apsis surfacing
 
-`scripts/catalog/build-catalog.ts` loads `data/gaia/gaia_dr3_apsis.tsv`
-via `parseGaiaApsisTsv` into a `Map<source_id, ApsisRow>` and writes
+`loadReadStarsInputs` (`parse/read-stars-inputs.ts`) loads `data/gaia/gaia_dr3_apsis.tsv`
+through `GAIA_APSIS` (`record/gaia-apsis-source.ts`) into a `Map<source_id, ApsisRow>`, and
+`build-catalog.ts` writes
 seven `float32` Apsis fields per record into the v6 binary (offsets
 52–79; see [Binary catalog format](record/README.md#binary-catalog-format-publiccatalogbini--manifest) above). Coverage: 98.7% of records
 match an Apsis row (<!-- count:build-catalog/apsisMatched -->967,309<!-- /count --> of <!-- count:build-catalog/recordCount -->979,676<!-- /count -->); 88.3% of the catalogue has a

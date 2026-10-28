@@ -1,9 +1,5 @@
-// Loads the LFS-committed Edenhofer 2024 (/data/papers/index.md#edenhofer2024)
-// dust artifact (data/dust/) into a DustGrid for the build-time
-// de-extinction integral — README.md.
-
-import { existsSync, readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
+// Assembles the Edenhofer 2024 (/data/papers/index.md#edenhofer2024) dust
+// artifact into a DustGrid for the build-time de-extinction integral — README.md.
 
 import type { DustGrid } from './dust-deextinction-pure';
 
@@ -15,7 +11,7 @@ interface DustManifestChunk {
   bytes: number;
 }
 
-interface DustManifest {
+export interface DustManifest {
   gridSize: number;
   chunkSize: number;
   boundsPc: [number, number];
@@ -26,41 +22,20 @@ interface DustManifest {
   chunks: DustManifestChunk[];
 }
 
-function readDustManifest(manifestPath: string): DustManifest {
-  return JSON.parse(readFileSync(manifestPath, 'utf8')) as DustManifest;
+export function parseDustManifest(text: string): DustManifest {
+  return JSON.parse(text) as DustManifest;
 }
 
-/** The manifest plus every chunk it lists; the manifest alone while it is
- *  absent, whose null hash already marks the input set as changed. */
-export function dustGridInputPaths(dustDir: string): string[] {
-  const manifestPath = resolve(dustDir, 'manifest.json');
-  if (!existsSync(manifestPath)) return [manifestPath];
-  return [
-    manifestPath,
-    ...readDustManifest(manifestPath).chunks.map((chunk) => resolve(dustDir, chunk.file)),
-  ];
-}
-
-export function loadDustGrid(dustDir: string): DustGrid {
-  const manifestPath = resolve(dustDir, 'manifest.json');
-  if (!existsSync(manifestPath)) {
-    throw new Error(
-      `Dust manifest not found at ${manifestPath}. The build-time ` +
-        `de-extinction integral requires the Edenhofer dust artifact — ` +
-        `pull LFS (git lfs pull) or run scripts/dust/build-dust.py.`,
-    );
-  }
-  const manifest = readDustManifest(manifestPath);
+export function assembleDustGrid(
+  manifest: DustManifest,
+  readChunk: (file: string) => Uint8Array,
+): DustGrid {
   const n = manifest.gridSize;
   const c = manifest.chunkSize;
   const data = new Uint8Array(n * n * n);
 
   for (const chunk of manifest.chunks) {
-    const chunkPath = resolve(dustDir, chunk.file);
-    if (!existsSync(chunkPath)) {
-      throw new Error(`Dust chunk missing: ${chunkPath} (git lfs pull?)`);
-    }
-    const buf = readFileSync(chunkPath);
+    const buf = readChunk(chunk.file);
     if (buf.length !== chunk.bytes) {
       throw new Error(
         `Dust chunk size mismatch for ${chunk.file}: got ${buf.length}, ` +

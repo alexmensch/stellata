@@ -6,7 +6,7 @@ import { firstDifferingLine } from './committed-round-trip';
 interface Rec { key: string; n: number | null }
 
 const artifact = (order: 'by-line' | 'as-given' | ((a: Rec, b: Rec) => number)) => defineArtifact({
-  file: 'data/a.tsv',
+  file: 'fixture/a.tsv',
   columns: ['key', 'n'] as const,
   hint: 'Re-run y.',
   order,

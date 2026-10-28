@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
-import { CON_INDEX, readIauEdgeRecords } from '../../../../scripts/catalog/parse/constellations/constellations';
+import { CON_INDEX, iauEdgeRecords } from '../../../../scripts/catalog/parse/constellations/constellations';
+import { STELLARIUM } from '../../../../scripts/catalog/parse/constellations/stellarium-source';
 import { raDecFromUnitVector } from '../../util/equatorial-basis';
 import { B1875_JD, precessRaDec, precessionRotationFromJ2000 } from '../../util/precession';
 import {
@@ -17,7 +18,7 @@ import {
   parseIauEdges,
 } from './iau-boundaries-pure';
 
-const records = readIauEdgeRecords();
+const records = iauEdgeRecords(STELLARIUM.read());
 const lookup = createIauConstellationLookup(records);
 const { edges, grid } = lookup;
 const B1875 = precessionRotationFromJ2000(B1875_JD);

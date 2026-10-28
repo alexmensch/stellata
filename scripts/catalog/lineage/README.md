@@ -82,11 +82,13 @@ Every stage writes the same envelope:
 
 ### SourceRowRef
 
-`{ source, row }`: `source` is the source's declaration constant (the
-`defineSource` constant the typed input boundary introduces) and
-`row` is that source's typed row key — never a path string. Licence is a
-property of the source constant, so filtering a row's citations — its key
-and its evidence — by licence for a public surface is a join on `source`.
+`{ source, row }`: `source` is the source's declaration constant (a
+`defineSource` or `defineArtifact` constant,
+`../../util/sources/README.md#sourcerowref`) and `row` is that source's typed
+row key — never a path string. Licence will be a property of the source
+constant, so filtering a row's citations — its key and its evidence — by
+licence for a public surface is a join on `source`. No declaration carries a
+licence yet: the field lands with its first reader, the lineage core.
 
 Its text form is `<source>:<row>`. Every lineage file sorts by the byte
 order of that text form, then `role`, `code`, `params`, through one

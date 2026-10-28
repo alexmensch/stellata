@@ -14,6 +14,9 @@ scripts/catalog/membership/magnitude-term/
     (+ test)                    the Riello transform, the row fold the
                                 whole-text and line-fed streaming readers
                                 share, and the union's dedupe. Pure.
+  magnitude-pull-source.ts      MAGNITUDE_PULL, the pull's declaration
+                                (../../../util/sources/), keyed for lineage
+                                on its Gaia DR3 source_id.
   magnitude-term.ts             The streaming reads: the floor's selection and
                                 the 5p astrometry over the ~200 MB pull, and
                                 the term's own source_ids out of the manifest.

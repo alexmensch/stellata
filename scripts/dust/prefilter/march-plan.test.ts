@@ -11,12 +11,10 @@ import {
 const GRID = 32;
 const PARAMS: DustParams = {
   gridSize: GRID,
-  chunkSize: GRID / 4,
-  chunksPerAxis: 4,
   boundsHalfPc: 1250,
   voxelPc: (2 * 1250) / GRID,
   densityMin: 1e-7,
-  densityMax: 0.2,
+  logRatio: Math.log(0.2 / 1e-7),
   avPerDensityPerPc: 2.742,
 };
 /** Code 0 decodes to the noise floor, so the measured tier contributes nothing

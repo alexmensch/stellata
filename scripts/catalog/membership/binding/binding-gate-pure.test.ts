@@ -12,6 +12,8 @@ import {
 } from './binding-gate-pure';
 import { NO_PRINTED_V } from '../../photometry/photometry-fixture';
 
+const FROM = { file: 'fixture.tsv', hint: 'h' };
+
 describe('weighBinding', () => {
   // Toliman's wrong binding: a G 20.95 background source on α Cen B's V 1.33.
   const TOLIMAN_BAD_SRC = '5877748442128924544';
@@ -59,7 +61,7 @@ describe('weighBinding', () => {
       'wds_id\tcomponent\tgaia_source_id\thip',
       '17053+5428\tA\t1420101696285626624\t',
       '17053+5428\tB\t\t83608',
-    ].join('\n'));
+    ].join('\n'), FROM);
     const sibling = bindingEvidence(new Map(), xids, NO_PRINTED_V);
 
     it('refuses a source another letter owns, and still reports the magnitude arm', () => {
@@ -107,7 +109,7 @@ describe('isSiblingLetterAttribution', () => {
     '22222+2222\tA\t7\tlineage A\t\t100',
     '22222+2222\tAa\t8\tlineage Aa\t999\t',
   ].join('\n');
-  const xids = parseSimbadWdsXidsTsv(XIDS_TSV);
+  const xids = parseSimbadWdsXidsTsv(XIDS_TSV, FROM);
 
   it('parses source / HIP attributions and the primary source letter', () => {
     expect(xids.bySource.get('1420101696285626624')).toEqual([
@@ -122,7 +124,7 @@ describe('isSiblingLetterAttribution', () => {
   });
 
   it('rejects required-column drift', () => {
-    expect(() => parseSimbadWdsXidsTsv('wds_id\tcomponent\n')).toThrow(
+    expect(() => parseSimbadWdsXidsTsv('wds_id\tcomponent\n', FROM)).toThrow(
       /missing required columns/,
     );
   });

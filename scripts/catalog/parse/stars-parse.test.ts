@@ -1,7 +1,3 @@
-import { mkdtempSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
-
 import { describe, it, expect } from 'vitest';
 
 import { NO_CONSTELLATION_INDEX, SOLAR_BV_FALLBACK } from '../record/catalog-pure';
@@ -22,11 +18,13 @@ import {
   MEMBERSHIP_MANIFEST,
   manifestRecord,
   type ManifestColumn,
+  type ManifestRecord,
 } from '../membership/membership-manifest-tsv';
-import { CONSTELLATIONS, createConstellationAssignment } from './constellations/constellations';
+import { CONSTELLATIONS, createConstellationAssignment, iauEdgeRecords } from './constellations/constellations';
+import { STELLARIUM } from './constellations/stellarium-source';
 import { readStars } from './stars-parse';
 
-const CON_ASSIGNMENT = createConstellationAssignment();
+const CON_ASSIGNMENT = createConstellationAssignment(iauEdgeRecords(STELLARIUM.read()));
 const conIndexOf = (code: string): number =>
   CONSTELLATIONS.findIndex((c) => c.code.toLowerCase() === code);
 
@@ -34,14 +32,11 @@ type ManifestRow = Partial<Record<ManifestColumn, string>>;
 
 // Emitted through the shipped codec, so a column added or renamed in
 // MANIFEST_COLUMNS fails here rather than silently shifting every cell.
-function writeManifestTsv(rows: readonly ManifestRow[]): string {
-  const dir = mkdtempSync(join(tmpdir(), 'manifest-'));
-  const path = join(dir, 'membership-manifest.tsv');
+function manifestRows(rows: readonly ManifestRow[]): ManifestRecord[] {
   const defaults: ManifestRow = { binding: 'none', term: 'primaries' };
-  writeFileSync(path, MEMBERSHIP_MANIFEST.serialize(rows.map((row) => manifestRecord(
+  return MEMBERSHIP_MANIFEST.parse(MEMBERSHIP_MANIFEST.serialize(rows.map((row) => manifestRecord(
     (c) => row[c] ?? defaults[c] ?? '', (m) => { throw new Error(m); },
   ))));
-  return path;
 }
 
 // The manifest carries designations alone, so a fixture row needs a real
@@ -113,7 +108,7 @@ describe('readStars build-time de-extinction of ci', () => {
     // The observed colour arrives through the printed I/239 tier — the one
     // measured colour a row with no Gaia source can reach.
     const { stars } = readStars(
-      writeManifestTsv([
+      manifestRows([
         { ...AT_ORIGIN_SIGHTLINE, proper: 'BlankCi' },
         { ...AT_ORIGIN_SIGHTLINE, proper: 'ObservedCi', hip: '11111' },
       ]),
@@ -156,7 +151,7 @@ describe('readStars Gaia source_id', () => {
       })],
     ]);
     const { stars } = readStars(
-      writeManifestTsv([{
+      manifestRows([{
         ...AT_ORIGIN_SIGHTLINE, gaia_source_id: sourceId,
       }]),
       {
@@ -177,7 +172,7 @@ describe('readStars Gaia source_id', () => {
 describe('readStars manifest labels', () => {
   it('carries the alias lists and the cascade diagnostics onto the record', () => {
     const { stars } = readStars(
-      writeManifestTsv([{
+      manifestRows([{
         ...AT_ORIGIN_SIGHTLINE, hd: '100', hd_alt: '101|102', hr: '7', hr_alt: '8',
       }]),
       {
@@ -196,7 +191,7 @@ describe('readStars manifest labels', () => {
 
   it('parks a row no V tier lights, under its own record-parity reason', () => {
     const { stars, stats } = readStars(
-      writeManifestTsv([{ ...AT_ORIGIN_SIGHTLINE, hd: '55' }]),
+      manifestRows([{ ...AT_ORIGIN_SIGHTLINE, hd: '55' }]),
       {
         conAssignment: CON_ASSIGNMENT,
         directions: tycho2Sources([{ tyc: ORIGIN_TYC, raDeg: 0, decDeg: 0, vMag: null }]),
@@ -216,7 +211,7 @@ describe('readStars manifest labels', () => {
   // places and printed HIP photometry lights, which no positional tier reaches.
   it('parks a row placed and lit but that no direction tier states', () => {
     const { stars, stats } = readStars(
-      writeManifestTsv([{ hip: '4242', gl: ORIGIN_GL }]),
+      manifestRows([{ hip: '4242', gl: ORIGIN_GL }]),
       {
         conAssignment: CON_ASSIGNMENT,
         directions: tycho2Sources([]),
@@ -237,7 +232,7 @@ describe('readStars manifest labels', () => {
   // count, as claimed in ./README.md#per-row-pipeline.
   it('counts a park in the park partition alone', () => {
     const { stars, stats } = readStars(
-      writeManifestTsv([
+      manifestRows([
         { ...AT_ORIGIN_SIGHTLINE, hd: '55' },
         { hip: '4242', gl: ORIGIN_GL },
       ]),
@@ -278,7 +273,7 @@ describe('readStars constellation assignment', () => {
 
   it('resolves byte 34 positionally', () => {
     const { stars } = readStars(
-      writeManifestTsv([RHO_AQL]),
+      manifestRows([RHO_AQL]),
       { conAssignment: CON_ASSIGNMENT, directions: RHO_AQL_DIRECTIONS(), gliese: RHO_AQL_GLIESE() },
     );
     expect(stars).toHaveLength(1);
@@ -291,7 +286,7 @@ describe('readStars constellation assignment', () => {
     // passes downstream are the only sources, and this row reaches none of
     // them in a bare walk, so its aliases fall back to the positional index.
     const { stars } = readStars(
-      writeManifestTsv([RHO_AQL, { ...AT_ORIGIN_SIGHTLINE, proper: 'Anon' }]),
+      manifestRows([RHO_AQL, { ...AT_ORIGIN_SIGHTLINE, proper: 'Anon' }]),
       { conAssignment: CON_ASSIGNMENT, directions: RHO_AQL_DIRECTIONS(), gliese: RHO_AQL_GLIESE() },
     );
     expect(stars.map((s) => s.desigConIndex))
@@ -300,7 +295,7 @@ describe('readStars constellation assignment', () => {
 
   it('leaves Sol unclassified — the origin has no sky direction', () => {
     const { stars } = readStars(
-      writeManifestTsv([{ proper: 'Sol' }]),
+      manifestRows([{ proper: 'Sol' }]),
       { conAssignment: CON_ASSIGNMENT },
     );
     expect(stars).toHaveLength(1);
@@ -366,7 +361,7 @@ describe('readStars PM rescue', () => {
 
   it('rescues a 2p row off its own TYC, and credits Tycho-2 not the tier', () => {
     const { stars, stats } = readStars(
-      writeManifestTsv([{ ...MANIFEST_ROW, gaia_source_id: SOURCE_ID }]),
+      manifestRows([{ ...MANIFEST_ROW, gaia_source_id: SOURCE_ID }]),
       {
         conAssignment: CON_ASSIGNMENT,
         gliese: PARALLAXES,
@@ -384,7 +379,7 @@ describe('readStars PM rescue', () => {
 
   it('ships static where the cascade reaches nothing — the control', () => {
     const { stars, stats } = readStars(
-      writeManifestTsv([{ ...MANIFEST_ROW, gaia_source_id: SOURCE_ID }]),
+      manifestRows([{ ...MANIFEST_ROW, gaia_source_id: SOURCE_ID }]),
       {
         conAssignment: CON_ASSIGNMENT,
         gliese: PARALLAXES,
@@ -401,7 +396,7 @@ describe('readStars PM rescue', () => {
 
   it('never enters the cascade where the tier states its own motion', () => {
     const { stats } = readStars(
-      writeManifestTsv([{ ...MANIFEST_ROW, gaia_source_id: SOURCE_ID }]),
+      manifestRows([{ ...MANIFEST_ROW, gaia_source_id: SOURCE_ID }]),
       {
         conAssignment: CON_ASSIGNMENT,
         gliese: PARALLAXES,
@@ -420,7 +415,7 @@ describe('readStars PM rescue', () => {
 
   it("refuses a Gaia-bibcoded motion on the record's OWN 2p solution", () => {
     const { stars, stats } = readStars(
-      writeManifestTsv([{ ...MANIFEST_ROW, gaia_source_id: SOURCE_ID, gl: GJ }]),
+      manifestRows([{ ...MANIFEST_ROW, gaia_source_id: SOURCE_ID, gl: GJ }]),
       {
         conAssignment: CON_ASSIGNMENT,
         gliese: PARALLAXES,
@@ -441,7 +436,7 @@ describe('readStars PM rescue', () => {
     // whole of the difference: with no fit to distrust the citation is
     // ordinary. Inverting the predicate would strip the motion from these.
     const { stars, stats } = readStars(
-      writeManifestTsv([{ ...MANIFEST_ROW, gl: GJ }]),
+      manifestRows([{ ...MANIFEST_ROW, gl: GJ }]),
       {
         conAssignment: CON_ASSIGNMENT,
         gliese: PARALLAXES,
@@ -497,7 +492,7 @@ describe('readStars advances the position on a rescued PM', () => {
   });
 
   const built = (): ReturnType<typeof readStars> => readStars(
-    writeManifestTsv([{ tyc: NO_MEAN_TYC, gl: NO_MEAN_GL }]),
+    manifestRows([{ tyc: NO_MEAN_TYC, gl: NO_MEAN_GL }]),
     {
       conAssignment: CON_ASSIGNMENT,
       simbadValues: simbadPmOnly(),

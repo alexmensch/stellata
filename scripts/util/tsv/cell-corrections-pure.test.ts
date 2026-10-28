@@ -5,7 +5,7 @@ import { readTable } from './table-pure';
 
 type Row = Record<'id' | 'v', string>;
 const TABLE: CorrectedTable<Row, 'v'> = {
-  file: 'data/fixes.tsv',
+  file: 'fixture/fixes.tsv',
   target: 'thing',
   keyOf: (r) => r.id,
   get: (r, c) => r[c],
@@ -22,20 +22,20 @@ describe('applyCellSets', () => {
 
   it('refuses a set keying no row', () => {
     expect(() => applyCellSets(ROWS, [{ key: 'z', cell: 'v', value: '3' }], TABLE))
-      .toThrow('data/fixes.tsv: row "z" matches no thing row');
+      .toThrow('fixture/fixes.tsv: row "z" matches no thing row');
   });
 
   it('refuses a set restating the value the row already holds', () => {
     expect(() => applyCellSets(ROWS, [{ key: 'a', cell: 'v', value: '1' }], TABLE))
-      .toThrow('data/fixes.tsv: row a sets v to the value the thing already states; remove it');
+      .toThrow('fixture/fixes.tsv: row a sets v to the value the thing already states; remove it');
   });
 });
 
 describe('evidenceOf', () => {
   it('answers the evidence cell, or fails a row stating none', () => {
-    const spec = { file: 'data/fixes.tsv', columns: ['id', 'evidence'] as const, hint: 'Curate it.' };
+    const spec = { file: 'fixture/fixes.tsv', columns: ['id', 'evidence'] as const, hint: 'Curate it.' };
     const [ok, bare] = readTable(spec, 'id\tevidence\na\tseen\nb\t \n');
     expect(evidenceOf(ok, 'evidence', 'a')).toBe('seen');
-    expect(() => evidenceOf(bare, 'evidence', 'b')).toThrow('data/fixes.tsv:3: row b states no evidence. Curate it.');
+    expect(() => evidenceOf(bare, 'evidence', 'b')).toThrow('fixture/fixes.tsv:3: row b states no evidence. Curate it.');
   });
 });

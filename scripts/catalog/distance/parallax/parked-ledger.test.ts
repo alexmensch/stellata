@@ -2,13 +2,8 @@ import { describe, it, expect } from 'vitest';
 
 import { describeCommittedRoundTrip } from '../../../util/tsv/committed-round-trip';
 
-import {
-  PARKED_REASONS,
-  PARKED_LEDGER,
-  parkedRecordKey,
-  parseParkedRecordsTsv,
-  type ParkedRecord,
-} from './parked-ledger';
+import { PARKED_REASONS, parkedRecordKey, type ParkedRecord } from './parked-ledger';
+import { PARKED_LEDGER, parseParkedRecordsTsv } from './parked-ledger-tsv';
 
 const SIGMA_ORI: ParkedRecord = {
   tyc: '4771-1188-1', hip: 26549, hd: 37468, gl: null,

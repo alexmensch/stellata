@@ -1,7 +1,7 @@
 // Codec for data/classic-ids/hd_hip_route_disagreements.tsv. See README.md#files-in-this-area.
 
 import { defineArtifact } from '../../util/tsv/artifact-pure';
-import { OVERLAY_VALUE_SEPARATOR } from './classic-id-overlay-tsv';
+import { OVERLAY_VALUE_SEPARATOR } from './classic-id-overlay-pure';
 
 export interface HdHipRouteDisagreement {
   hd: number;

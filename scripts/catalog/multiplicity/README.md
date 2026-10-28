@@ -11,6 +11,8 @@ see `../companions/README.md`.
 
 ```
 scripts/catalog/multiplicity/
+  hip-ccdm-source.ts              HIP_CCDM, the I/239 CCDM slice declared
+                                  (../../util/sources/).
   visual-doubles.ts (+ test)      inferBinaries (geometric pair cells) +
                                   the CCDM cross-match and the tiered
                                   optical-double suppression cascade.

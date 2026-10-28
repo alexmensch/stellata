@@ -218,7 +218,7 @@ interface SightlineSet {
 
 function run(): void {
   const t0 = Date.now();
-  const field = loadDustField(process.cwd());
+  const field = loadDustField();
   console.log(`grid loaded in ${((Date.now() - t0) / 1000).toFixed(1)} s`);
 
   const origin = SOL_GALACTOCENTRIC_PC;

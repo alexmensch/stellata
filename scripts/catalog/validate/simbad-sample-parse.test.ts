@@ -2,6 +2,8 @@ import { describe, it, expect } from 'vitest';
 
 import { parseSimbadSampleRows } from './simbad-sample-parse';
 
+const FROM = { file: 'fixture.tsv', hint: 'h' };
+
 describe('parseSimbadSampleRows', () => {
   it('parses every required column into typed fields', () => {
     const tsv = [
@@ -9,7 +11,7 @@ describe('parseSimbadSampleRows', () => {
       '22\tBD+36 1\t\t100\t10\t20\t1.9\t0.02\t7.1\t-3.5\t9.25\t524.9\t0.65\tK0\t*',
       '33\tHD 1\t103799\t200\t11\t21\t2.7\t0.02\t12.0\t24.0\t8.0\t367.9\t0.17\tK5\t*',
     ].join('\n');
-    const rows = parseSimbadSampleRows(tsv);
+    const rows = parseSimbadSampleRows(tsv, FROM);
     expect(rows).toHaveLength(2);
     expect(rows[0].hip).toBeNull();
     expect(rows[0].gaiaSourceId).toBe('100');
@@ -23,14 +25,14 @@ describe('parseSimbadSampleRows', () => {
       'simbad_oid\tsimbad_main_id\thip\tgaia_source_id\tplx_value\tplx_err\tpmra\tpmdec\tv_mag\tdistance_pc\tabsmag',
       '1\tX\t\t\t\t\t\t\t\t\t',
     ].join('\n');
-    const [row] = parseSimbadSampleRows(tsv);
+    const [row] = parseSimbadSampleRows(tsv, FROM);
     expect(row.plxValue).toBeNull();
     expect(row.pmra).toBeNull();
     expect(row.absmag).toBeNull();
   });
 
   it('throws naming the column when a required header is absent', () => {
-    expect(() => parseSimbadSampleRows('simbad_oid\thip\n1\t100\n')).toThrow(
+    expect(() => parseSimbadSampleRows('simbad_oid\thip\n1\t100\n', FROM)).toThrow(
       /missing required columns: simbad_main_id/,
     );
   });
@@ -38,12 +40,12 @@ describe('parseSimbadSampleRows', () => {
   it('throws on an empty file instead of reporting zero sample rows', () => {
     // The sample gates the build's distance-regression check, so a truncated
     // file must not read as "nothing to cross-check".
-    expect(() => parseSimbadSampleRows('')).toThrow(/has no header row/);
+    expect(() => parseSimbadSampleRows('', FROM)).toThrow(/has no header row/);
   });
 
   it('returns no rows for a valid header with no data rows', () => {
     expect(parseSimbadSampleRows(
-      'simbad_oid\tsimbad_main_id\thip\tgaia_source_id\tplx_value\tplx_err\tpmra\tpmdec\tv_mag\tdistance_pc\tabsmag\n',
+      'simbad_oid\tsimbad_main_id\thip\tgaia_source_id\tplx_value\tplx_err\tpmra\tpmdec\tv_mag\tdistance_pc\tabsmag\n', FROM,
     )).toEqual([]);
   });
 });

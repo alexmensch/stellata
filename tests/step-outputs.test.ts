@@ -13,8 +13,9 @@ import { LUT_OUTPUTS } from '../scripts/colour/blackbody-lut-outputs';
 import { ELEMENT_TABLE_OUTPUTS } from '../scripts/ephemerides/planet-element-outputs';
 import { LOCAL_GROUP_OUTPUTS } from '../scripts/local-group/local-group-outputs';
 import { PROBE_OUTPUTS } from '../scripts/probes/probe-trajectory-outputs';
+import { ALLOCATE_OUTPUTS } from '../scripts/sid/allocate-outputs';
 import { DR_RECONCILE_OUTPUTS } from '../scripts/sid/dr-reconcile-outputs';
-import { DR2_DRY_RUN } from '../scripts/sid/dr-reconcile-pure';
+import { DR2_NEIGHBOURHOOD, DR2_NEIGHBOURHOOD_REQUEST } from '../scripts/sid/dr2-neighbourhood-source';
 import { DR_RISK_SET_OUTPUTS } from '../scripts/sid/dr-risk-set-outputs';
 import { SID_STAMP_OUTPUTS } from '../scripts/sid/sibling-stamp-outputs';
 import type { DeclaredOutputs } from '../scripts/util/emit-artifacts';
@@ -30,6 +31,7 @@ const STEPS: Record<string, DeclaredOutputs> = {
   'build:local-group': LOCAL_GROUP_OUTPUTS,
   'build:lut': LUT_OUTPUTS,
   'sid:stamp': SID_STAMP_OUTPUTS,
+  'sid:allocate': ALLOCATE_OUTPUTS,
   'sid:risk-set': DR_RISK_SET_OUTPUTS,
   'sid:dr-reconcile': DR_RECONCILE_OUTPUTS,
   'fetch:probes': PROBE_OUTPUTS,
@@ -59,7 +61,7 @@ describe('step output declarations', () => {
   });
 
   it('never cover the frozen DR2 dry-run pair, as a file or inside a family', () => {
-    const frozen = Object.values(DR2_DRY_RUN).map((p) => resolve(REPO_ROOT, p));
+    const frozen = [DR2_NEIGHBOURHOOD_REQUEST, DR2_NEIGHBOURHOOD].map((src) => resolve(REPO_ROOT, src.file));
     for (const [step, outputs] of Object.entries(STEPS)) {
       for (const p of frozen) {
         expect(Object.values(outputs.files), step).not.toContain(p);

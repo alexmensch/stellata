@@ -2,7 +2,7 @@
 // distance against SIMBAD's published values. Run: `pnpm run
 // validate:simbad`. See /scripts/catalog/validate/README.md#validation-harness-1.
 
-import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -14,22 +14,17 @@ import {
   type Catalog,
   type CatalogRecord,
 } from '../catalog-lookup';
+import type { SimbadSampleRow } from './simbad-sample-parse';
 import {
-  parseSimbadSampleRows,
-  type SimbadSampleRow,
-} from './simbad-sample-parse';
-import {
-  SIMBAD_SOURCED_DISTANCES_FILE,
-  emptySimbadSourcedKeys,
-  parseSimbadSourcedDistancesTsv,
+  SIMBAD_SOURCED_DISTANCES,
+  simbadSourcedKeys,
   type SimbadSourcedKeys,
-} from '../distance/parallax/simbad-sourced-ledger';
+} from '../distance/parallax/simbad-sourced-ledger-tsv';
 import { REPO_ROOT } from '../../util/paths';
-
-const SIMBAD_SOURCED_PATH = resolve(REPO_ROOT, SIMBAD_SOURCED_DISTANCES_FILE);
+import { artifactRows } from '../../util/sources/source';
+import { SIMBAD_SAMPLE } from './simbad-sample-source';
 
 const __filename = fileURLToPath(import.meta.url);
-const DEFAULT_SAMPLE_PATH = resolve(REPO_ROOT, 'data/simbad/simbad_sample.tsv');
 const DEFAULT_REPORT_PATH = resolve(REPO_ROOT, 'docs/validation-residuals.md');
 
 // ─── Thresholds ──────────────────────────────────────────────────────
@@ -263,7 +258,7 @@ export function formatReport(report: ResidualReport): string {
     `Generated ${report.generatedAt} by `
     + '`pnpm run validate:simbad`. Compares Stellata\'s `catalog.bin` '
     + 'absmag and distance against SIMBAD published values for the '
-    + 'sample in `data/simbad/simbad_sample.tsv`.',
+    + `sample in \`${SIMBAD_SAMPLE.file}\`.`,
   );
   lines.push('');
   lines.push('## Match coverage');
@@ -394,7 +389,6 @@ function isSimbadSourced(
 }
 
 interface RunOptions {
-  samplePath?: string;
   reportPath?: string;
   catalogManifestPath?: string;
 }
@@ -403,14 +397,11 @@ export async function runValidation(opts: RunOptions = {}): Promise<{
   report: ResidualReport;
   failures: string[];
 }> {
-  const samplePath = opts.samplePath ?? DEFAULT_SAMPLE_PATH;
   const reportPath = opts.reportPath ?? DEFAULT_REPORT_PATH;
-  const sample = parseSimbadSampleRows(readFileSync(samplePath, 'utf8'));
+  const sample = SIMBAD_SAMPLE.read();
   const catalog = await loadCatalog({ catalogManifestPath: opts.catalogManifestPath });
 
-  const excludedKeys = existsSync(SIMBAD_SOURCED_PATH)
-    ? parseSimbadSourcedDistancesTsv(readFileSync(SIMBAD_SOURCED_PATH, 'utf8'))
-    : emptySimbadSourcedKeys();
+  const excludedKeys = simbadSourcedKeys(artifactRows(SIMBAD_SOURCED_DISTANCES));
 
   const residuals: ResidualRow[] = [];
   let matchedByGaia = 0;

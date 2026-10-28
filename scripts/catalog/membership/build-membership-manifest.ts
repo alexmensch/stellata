@@ -2,11 +2,11 @@
 // the record-parity additions ledger (/docs/catalog-driver.md#61-record-parity) and the binding review queue, plus the label
 // merge's review queue. See README.md.
 
-import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
-import { REPO_ROOT as ROOT, readRequired } from '../../util/paths';
+import { REPO_ROOT as ROOT } from '../../util/paths';
 import { emitArtifacts, runStep } from '../../util/emit-artifacts';
+import { artifactRows, readArtifact } from '../../util/sources/source';
 import { MEMBERSHIP_OUTPUTS } from './membership-manifest-outputs';
 import { snapshotCheck } from '../../util/snapshot-check';
 import { compareCountSnapshot } from '../build-counts';
@@ -16,14 +16,9 @@ import { gaiaHas5pSolution } from '../distance/gaia-distrust';
 import {
   BRIGHT_TIER_MAG_CEILING,
 } from '../classic-ids/classic-id-overlay-pure';
-import {
-  parseOverlayTsv,
-} from '../classic-ids/classic-id-overlay-tsv';
-import {
-  CLASSIC_ID_OVERRIDES_FILE,
-  LABEL_FIELDS,
-  parseLabelOverridesTsv,
-} from '../classic-ids/label-merge/label-merge-pure';
+import { CLASSIC_ID_OVERLAY, overlayMap } from '../classic-ids/classic-id-overlay-tsv';
+import { LABEL_FIELDS } from '../classic-ids/label-merge/label-merge-pure';
+import { CLASSIC_ID_OVERRIDES } from '../classic-ids/label-merge/classic-id-overrides-source';
 import {
   LABEL_FLIPS,
 } from '../classic-ids/label-merge/label-flips-tsv';
@@ -33,32 +28,20 @@ import {
 } from '../companions/companion-promotion';
 import { readMagnitudeTerm } from './magnitude-term/magnitude-term';
 import { MAGNITUDE_FLOOR_V } from './magnitude-term/magnitude-term-pure';
-import { INHERITED_SPINE, INHERITED_SPINE_FILE } from '../spine/inherited-spine-pure';
-import { LFS_HINT, loadPrimaryTables } from '../spine/primaries-tables';
+import { INHERITED_SPINE } from '../spine/inherited-spine-tsv';
+import { loadPrimaryTables } from '../spine/primaries-tables';
 import {
-  BINDING_DISPOSITIONS_FILE,
   MEMBERSHIP_EXPECTED_FILE,
-  SPINE_CORRECTIONS_FILE,
   buildMembership,
-  parseBindingDispositionsTsv,
-  parseSpineCorrectionsTsv,
   type MembershipCounts,
 } from './membership-manifest-pure';
-import {
-  ADDITIONS_LEDGER,
-} from './additions-ledger-tsv';
-import {
-  BINDING_REVIEW,
-} from './binding-review-tsv';
-import {
-  LABEL_DROPS,
-} from './label-drops-tsv';
+import { ADDITIONS_LEDGER } from './additions-ledger-tsv';
+import { BINDING_REVIEW } from './binding-review-tsv';
+import { LABEL_DROPS } from './label-drops-tsv';
 import { MEMBERSHIP_MANIFEST } from './membership-manifest-tsv';
+import { BINDING_REVIEW_DISPOSITIONS } from './binding-review-dispositions-source';
+import { SPINE_CORRECTIONS } from './spine-corrections-source';
 
-const SRC_OVERLAY = resolve(ROOT, 'data/classic-ids/classic_id_overlay.tsv');
-const OVERLAY_HINT = 'run `pnpm run build:classic-ids`.';
-const DISPOSITIONS_HINT = 'dispose every row of binding-review.tsv there (README.md#the-spine-side).';
-const CORRECTIONS_HINT = 'it is committed and hand-curated (README.md#correcting-a-merge-decision).';
 
 /** Per-identifier overlay coverage over the membership term, as a ratio of the
  *  merge's own counts — the same walk that decides what the manifest ships. */
@@ -88,27 +71,20 @@ function reportLabelCoverage(c: MembershipCounts): void {
 }
 
 async function main(): Promise<void> {
-  const spine = INHERITED_SPINE.parse(readRequired(resolve(ROOT, INHERITED_SPINE_FILE), LFS_HINT));
+  const spine = readArtifact(INHERITED_SPINE);
   const tables = await loadPrimaryTables(spine.map((r) => r.tyc).filter((t) => t !== ''));
-  const overridesPath = resolve(ROOT, CLASSIC_ID_OVERRIDES_FILE);
   const { evidence, gaiaAstrometry } = loadBindingEvidence(
     printedVLookups(loadHipVMag(), tables.tycho2, tables.gliese),
   );
   const result = buildMembership({
     spine,
     tables,
-    overlay: parseOverlayTsv(readRequired(SRC_OVERLAY, OVERLAY_HINT)),
-    overrides: existsSync(overridesPath)
-      ? parseLabelOverridesTsv(readFileSync(overridesPath, 'utf8'))
-      : new Map(),
+    overlay: overlayMap(artifactRows(CLASSIC_ID_OVERLAY)),
+    overrides: CLASSIC_ID_OVERRIDES.read(),
     siblingRenderedSourceIds: sourceIdsWithSiblingComponent(readMultiplesTsv()),
     evidence,
-    dispositions: parseBindingDispositionsTsv(
-      readRequired(resolve(ROOT, BINDING_DISPOSITIONS_FILE), DISPOSITIONS_HINT),
-    ),
-    corrections: parseSpineCorrectionsTsv(
-      readRequired(resolve(ROOT, SPINE_CORRECTIONS_FILE), CORRECTIONS_HINT),
-    ),
+    dispositions: BINDING_REVIEW_DISPOSITIONS.read(),
+    corrections: SPINE_CORRECTIONS.read(),
     magnitudeTerm: MAGNITUDE_FLOOR_V === null
       ? null
       : await readMagnitudeTerm(MAGNITUDE_FLOOR_V),

@@ -4,7 +4,8 @@ import {
   buildBoundaryArtifact,
   type BoundaryArtifact,
 } from '../../../scripts/catalog/boundaries/boundaries-artifact-pure';
-import { CONSTELLATIONS, readIauEdgeRecords } from '../../../scripts/catalog/parse/constellations/constellations';
+import { CONSTELLATIONS, iauEdgeRecords } from '../../../scripts/catalog/parse/constellations/constellations';
+import { STELLARIUM } from '../../../scripts/catalog/parse/constellations/stellarium-source';
 import { fakeChromeLineMaterials } from '../chrome-lines/chrome-lines-mock';
 import { makeFrameCtx } from '../scene/frame-ctx-mock';
 import { unitVectorFromRaDec } from '../util/equatorial-basis';
@@ -17,7 +18,7 @@ import { createIauConstellationLookup } from './iau-geometry/iau-boundaries-pure
 // Bright stars sit 1–64 pc from their walls, the V 5 population 0.01–0.64 pc,
 // so the fade window is [1, 4] pc at limit 0 and [0.02, 0.07] pc from limit 5.
 const ARTIFACT: BoundaryArtifact = buildBoundaryArtifact(
-  createIauConstellationLookup(readIauEdgeRecords()),
+  createIauConstellationLookup(iauEdgeRecords(STELLARIUM.read())),
   [
     ...Array.from({ length: 64 }, (_, i) => ({ offsetPc: i + 1, appMag: 0 })),
     ...Array.from({ length: 64 }, (_, i) => ({ offsetPc: (i + 1) / 100, appMag: 5 })),

@@ -11,6 +11,8 @@ import { describe, it, expect } from 'vitest';
 import { parseGaiaHipXmatchTsv } from '../parse/gaia-xmatch';
 import { REPO_ROOT } from '../../util/paths';
 
+const FROM = { file: 'fixture.tsv', hint: 'h' };
+
 const FIXTURE = resolve(
   REPO_ROOT,
   'scripts/catalog/validate/gaia-hip-xmatch-parity.tsv',
@@ -38,7 +40,7 @@ print(json.dumps({str(h): str(s) for h, s in m.items()}))
 
 describe('gaia-hip-xmatch parity (parsers.py vs gaia-xmatch.ts)', () => {
   it('both parsers reduce the shared fixture to the same hip → gaia_source_id map', () => {
-    const tsMap = parseGaiaHipXmatchTsv(readFileSync(FIXTURE, 'utf8'));
+    const tsMap = parseGaiaHipXmatchTsv(readFileSync(FIXTURE, 'utf8'), FROM);
     const ts: Record<string, string> = {};
     for (const [hip, src] of tsMap) ts[String(hip)] = src;
 
@@ -56,7 +58,7 @@ describe('gaia-hip-xmatch parity (parsers.py vs gaia-xmatch.ts)', () => {
   it('both parsers refuse a gaia_source_id that is not digits', () => {
     const path = join(mkdtempSync(join(tmpdir(), 'xmatch-')), 'xm.tsv');
     writeFileSync(path, 'hip\tgaia_source_id\tangular_distance\n20\tnot-a-number\t0.1\n');
-    expect(() => parseGaiaHipXmatchTsv(readFileSync(path, 'utf8'))).toThrow(/is not a source_id/);
+    expect(() => parseGaiaHipXmatchTsv(readFileSync(path, 'utf8'), FROM)).toThrow(/is not a source_id/);
     expect(() => execFileSync('python3', ['-c', PY_DUMP, path], {
       cwd: resolve(REPO_ROOT), encoding: 'utf8', stdio: 'pipe',
     })).toThrow(/is not a source_id/);

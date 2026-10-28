@@ -47,7 +47,7 @@ Both by `scripts/catalog/parse/constellations/constellations.ts`, which owns the
   `scripts/catalog/build-catalog.ts`. See
   `scripts/catalog/parse/README.md`
   [Stick figures from Stellarium](/scripts/catalog/parse/constellations/README.md#stick-figures-from-stellarium).
-- `readIauEdgeRecords()` → the boundary segments, parsed and decomposed
+- `iauEdgeRecords(STELLARIUM.read())` → the boundary segments, parsed and decomposed
   into named sky regions by
   [`src/client/constellation-boundaries/`](../../src/client/constellation-boundaries/README.md).
 

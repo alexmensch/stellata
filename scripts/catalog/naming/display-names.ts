@@ -113,7 +113,7 @@ export function assignDisplayNames(
     const unmatched = [...overrides.keys()].filter((sid) => !present.has(sid));
     if (unmatched.length > 0) {
       throw new Error(
-        `data/naming/name_overrides.tsv names ${unmatched.length} SID(s) no record `
+        `The name overrides name ${unmatched.length} SID(s) no record `
         + `carries: ${unmatched.join(', ')} — a retired or mistyped SID, so the `
         + 'override would silently display nothing (/docs/star-naming.md#7-curation-seam)',
       );

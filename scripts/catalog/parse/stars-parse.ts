@@ -1,14 +1,9 @@
 // Membership-manifest reader: per-row parallax cascade + its two override
 // layers × direction cascade → in-memory Star records for every downstream
 // builder step. See scripts/catalog/README.md.
-import { readFileSync } from 'node:fs';
 
 import {
-  isBailerJonesEligible,
-  applyBailerJonesOverride,
-  applyLmcKinematicOverride,
   apparentToAbsoluteMagnitude,
-  isInLmcCone,
   SOL_ABSOLUTE_V_MAGNITUDE,
   SOL_APPARENT_V_MAGNITUDE,
   FLAG_HAS_NAME,
@@ -103,8 +98,14 @@ import {
 import type { GspcColour } from '../photometry/gspc-parse';
 import { printedByHip } from '../photometry/hip-photometry-parse';
 import { emptyTallyPartition } from '../../util/tally';
-import { MEMBERSHIP_MANIFEST } from '../membership/membership-manifest-tsv';
+import type { ManifestRecord } from '../membership/membership-manifest-tsv';
 import { type ConstellationAssignment } from './constellations/constellations';
+import {
+  applyBailerJonesOverride,
+  applyLmcKinematicOverride,
+  isBailerJonesEligible,
+  isInLmcCone,
+} from '../distance/refinement/distance-overrides-pure';
 
 // Drop stars farther than this from Sol. The catalogue carries a handful of
 // extragalactic stragglers (LMC supergiants pre-override, plus a few
@@ -112,7 +113,7 @@ import { type ConstellationAssignment } from './constellations/constellations';
 // stable; the LMC override snaps those back inside the cutoff before
 // it fires. Every kinematic-override target distance must stay below
 // this cut or its population is silently dropped here —
-// catalog-pure.test.ts pins LMC_DISTANCE_PC < MAX_DIST_PC.
+// distance/refinement/distance-overrides-pure.test.ts pins LMC_DISTANCE_PC < MAX_DIST_PC.
 export const MAX_DIST_PC = 50_000;
 
 export interface Star {
@@ -261,7 +262,7 @@ export interface ReadStarsOptions {
 }
 
 export function readStars(
-  manifestTsvPath: string,
+  manifest: Iterable<ManifestRecord>,
   {
     conAssignment,
     bjMap = new Map(),
@@ -352,7 +353,7 @@ export function readStars(
     ciGspcValidatedRange: number;  // gspc-tier rows the archive calls in-range
   };
 } {
-  const rows = MEMBERSHIP_MANIFEST.rows(readFileSync(manifestTsvPath, 'utf8'));
+  const rows = manifest;
 
   const stars: Star[] = [];
   const dropped: ReadStarsDrops = { tooFar: 0 };

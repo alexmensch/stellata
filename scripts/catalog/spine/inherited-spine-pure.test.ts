@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
 import {
-  INHERITED_SPINE,
   SPINE_COLUMNS,
   SPINE_PRINTED_COLUMNS,
   buildSpineRow,
@@ -10,6 +9,7 @@ import {
   type SpinePrintedCells,
   type SpineRow,
 } from './inherited-spine-pure';
+import { INHERITED_SPINE } from './inherited-spine-tsv';
 import { makeStar } from '../parse/star-fixture';
 
 function printed(overrides: Partial<SpinePrintedCells> = {}): SpinePrintedCells {

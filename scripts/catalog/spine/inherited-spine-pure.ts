@@ -3,16 +3,12 @@
 
 import { SOL_PROPER_NAME } from '../record/catalog-pure';
 import { starDesignations } from '../../sid/sid-pure';
-import { defineArtifact, nullableCell } from '../../util/tsv/artifact-pure';
+import { nullableCell } from '../../util/tsv/artifact-pure';
 import { idCell } from '../../util/tsv/table-pure';
 import type { Star } from '../parse/stars-parse';
 
-/** Repo-relative, so the generator and the committed-artifact guard resolve
- *  one path against REPO_ROOT rather than spelling it twice. */
-export const INHERITED_SPINE_FILE = 'data/athyg/inherited-spine.tsv';
 export const INHERITED_SPINE_EXPECTED_FILE =
   'scripts/catalog/spine/inherited-spine-expected.json';
-export const STALE_GAIA_SOURCE_IDS_FILE = 'data/athyg/stale_gaia_source_ids.tsv';
 
 /** Identifier fields the build resolved — the designation set
  *  `starDesignations` reads, plus the label columns the naming ladder will. */
@@ -83,20 +79,6 @@ export function buildSpineRow(
   }
   return row;
 }
-
-/** Frozen: its committed bytes are the record of AT-HYG's merge decisions,
- *  so the codec reads and writes the cells verbatim. */
-export const INHERITED_SPINE = defineArtifact({
-  file: INHERITED_SPINE_FILE,
-  columns: SPINE_COLUMNS,
-  hint: 'It is frozen; restore it from git rather than regenerating it.',
-  order: 'as-given',
-  decode: (row): SpineRow => {
-    row.sourceId('gaia_source_id');
-    return row.cells();
-  },
-  encode: (row) => row,
-});
 
 /** The `starDesignations` set a spine row stands in for — the membership term's
  *  half of SID resolution once AT-HYG leaves the build's input set. `synth:`

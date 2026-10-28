@@ -4,7 +4,7 @@ import { SPINE_COLUMNS, type SpineRow } from './inherited-spine-pure';
 import {
   auditAssociations, formatAssociationReport, partitionRow, type LinkTables,
 } from './association-audit-pure';
-import type { SimbadXids } from './primaries-audit-pure';
+import type { SimbadXids } from '../spectral/spectral-resolve';
 
 function row(cells: Partial<SpineRow>): SpineRow {
   const out = {} as SpineRow;

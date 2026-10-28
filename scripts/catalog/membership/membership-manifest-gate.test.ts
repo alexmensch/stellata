@@ -7,13 +7,13 @@ import { resolve } from 'node:path';
 import { beforeAll, describe, expect, it } from 'vitest';
 
 import { REPO_ROOT, lfsContentReadable } from '../../util/paths';
-import { OVERRIDES_PATH, SAMEAS_OVERRIDES_FILE } from '../../sid/registry-io';
+import { SAMEAS_OVERRIDES } from '../../sid/sameas-source';
 import { catalogRecordDesignations } from '../../sid/catalog-designations';
 import {
-  SYNTH_RUNTIME_PREFIX, canonicalKeyOf, compareDesignations, parseSameasTsv,
+  SYNTH_RUNTIME_PREFIX, canonicalKeyOf, compareDesignations,
   syntheticGaiaBridges,
 } from '../../sid/sid-pure';
-import { loadStoredEdges } from '../../sid/registry-io';
+import { loadStoredEdges } from '../../sid/stored-edges';
 import {
   DEFAULT_CATALOG_MANIFEST,
   DEFAULT_ROW_INDEX_MAP,
@@ -21,45 +21,29 @@ import {
   loadCatalog,
 } from '../catalog-lookup';
 import { FLAG_BINARY_COMPANION_ONLY, type SearchEntry } from '../record/catalog-pure';
+import { parkedRecordKey } from '../distance/parallax/parked-ledger';
+import { PARKED_LEDGER, parseParkedRecordsTsv } from '../distance/parallax/parked-ledger-tsv';
 import {
-  PARKED_LEDGER_FILE,
-  parkedRecordKey,
-  parseParkedRecordsTsv,
-} from '../distance/parallax/parked-ledger';
-import {
-  INHERITED_SPINE,
-  INHERITED_SPINE_FILE,
   spineDesignations,
   type SpineRow,
 } from '../spine/inherited-spine-pure';
+import { INHERITED_SPINE } from '../spine/inherited-spine-tsv';
+import { BINDING_REVIEW_DISPOSITIONS } from './binding-review-dispositions-source';
+import { SPINE_CORRECTIONS } from './spine-corrections-source';
 import {
-  BINDING_DISPOSITIONS_FILE,
   MEMBERSHIP_EXPECTED_FILE,
-  SPINE_CORRECTIONS_FILE,
   applySpineCorrections,
   manifestKey,
   matchSpineToManifest,
-  parseBindingDispositionsTsv,
-  parseSpineCorrectionsTsv,
   type SpineFold,
   type MembershipCounts,
   type SpineMatch,
 } from './membership-manifest-pure';
-import {
-  ADDITION_REASONS,
-  ADDITIONS_LEDGER_FILE,
-  ADDITIONS_LEDGER,
-  COMPONENT_REASON_PREFIX,
-} from './additions-ledger-tsv';
-import {
-  BINDING_REVIEW_FILE,
-  bindingReviewKey,
-  BINDING_REVIEW,
-} from './binding-review-tsv';
-import {
-  LABEL_DROPS_FILE,
-  LABEL_DROPS,
-} from './label-drops-tsv';
+import { ADDITIONS_LEDGER_FILE, ADDITIONS_LEDGER } from './additions-ledger-tsv';
+import { ADDITION_REASONS, COMPONENT_REASON_PREFIX } from './ledger-rows-pure';
+import { BINDING_REVIEW_FILE, BINDING_REVIEW } from './binding-review-tsv';
+import { bindingReviewKey } from './ledger-rows-pure';
+import { LABEL_DROPS_FILE, LABEL_DROPS } from './label-drops-tsv';
 import {
   MEMBERSHIP_MANIFEST,
   MEMBERSHIP_MANIFEST_FILE,
@@ -67,15 +51,12 @@ import {
   type ManifestRecord,
 } from './membership-manifest-tsv';
 
-const SPINE_PATH = resolve(REPO_ROOT, INHERITED_SPINE_FILE);
+const SPINE_PATH = resolve(REPO_ROOT, INHERITED_SPINE.file);
 const MANIFEST_PATH = resolve(REPO_ROOT, MEMBERSHIP_MANIFEST_FILE);
 const LEDGER_PATH = resolve(REPO_ROOT, ADDITIONS_LEDGER_FILE);
-const CORRECTIONS_PATH = resolve(REPO_ROOT, SPINE_CORRECTIONS_FILE);
 
 const queue = BINDING_REVIEW.parse(readFileSync(resolve(REPO_ROOT, BINDING_REVIEW_FILE), 'utf-8'));
-const dispositions = parseBindingDispositionsTsv(
-  readFileSync(resolve(REPO_ROOT, BINDING_DISPOSITIONS_FILE), 'utf-8'),
-);
+const dispositions = BINDING_REVIEW_DISPOSITIONS.read();
 
 const inputsReadable = [SPINE_PATH, MANIFEST_PATH, LEDGER_PATH].every(lfsContentReadable);
 const built = [DEFAULT_CATALOG_MANIFEST, DEFAULT_SEARCH_INDEX, DEFAULT_ROW_INDEX_MAP]
@@ -133,13 +114,13 @@ describe.skipIf(!inputsReadable)('membership manifest ↔ inherited spine', () =
     spine = INHERITED_SPINE.parse(readFileSync(SPINE_PATH, 'utf-8'));
     ({ corrected, folds } = applySpineCorrections(
       spine,
-      parseSpineCorrectionsTsv(readFileSync(CORRECTIONS_PATH, 'utf-8')),
+      SPINE_CORRECTIONS.read(),
     ));
     manifest = MEMBERSHIP_MANIFEST.parse(readFileSync(MANIFEST_PATH, 'utf-8'));
     match = matchSpineToManifest(
       spine.map(spineDesignations),
       manifest,
-      parseSameasTsv(readFileSync(OVERRIDES_PATH, 'utf-8'), SAMEAS_OVERRIDES_FILE),
+      SAMEAS_OVERRIDES.read(),
     );
   }, 180_000);
 
@@ -313,7 +294,7 @@ describe.skipIf(!inputsReadable)('membership manifest ↔ inherited spine', () =
           .map((r) => r.designations),
       );
       const parked = new Set(parseParkedRecordsTsv(
-        readFileSync(resolve(REPO_ROOT, PARKED_LEDGER_FILE), 'utf-8'),
+        readFileSync(resolve(REPO_ROOT, PARKED_LEDGER.file), 'utf-8'),
       ).map((r) => r.recordKey));
       // A stored same-as edge is a THIRD source of designation, beside the
       // manifest and promotion: it states that a synthetic component key and a

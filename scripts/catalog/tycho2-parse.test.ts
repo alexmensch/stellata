@@ -43,8 +43,9 @@ function supplRow(
     '10.5', '0.01', '10.0', '0.01', '', hip].join('\t');
 }
 
-const main = (...rows: string[]) => [MAIN_HEADER, ...rows].join('\n');
-const suppl = (...rows: string[]) => [SUPPL_HEADER, ...rows].join('\n');
+const FROM = { file: 'fixture.tsv', hint: 'h' };
+const main = (...rows: string[]) => ({ text: [MAIN_HEADER, ...rows].join('\n'), from: FROM });
+const suppl = (...rows: string[]) => ({ text: [SUPPL_HEADER, ...rows].join('\n'), from: FROM });
 
 describe('parseTycho2Tsvs', () => {
   // ep_ra / ep_de sit in the fixture at 1991.07 / 1991.00 precisely so this

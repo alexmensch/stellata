@@ -42,24 +42,16 @@ same thing — single-use helpers stay with their consumer.
   `isLfsPointerFile(path)` probes a file's head for one — the state the
   bare CI test job leaves LFS-tracked inputs in — without reading the
   tens of megabytes behind it. `lfsContentReadable(path)` is the
-  present-and-smudged predicate over the probe, and the one every
-  artifact-backed suite gates its `describe.skipIf` on; reach for
+  present-and-smudged predicate over the probe — over a declared file,
+  through `sources/source.ts`'s `isReadable(declared)`, which the presence
+  check and every suite gating on a declaration's file both call; reach for
   `isLfsPointer` only where the text has to be read anyway. Consumers are
-  the SID registry readers and those suites. All three live here rather
-  than in `sid/sid-pure.ts` so this module stays a dependency leaf: the
-  SID folder imports `REPO_ROOT` from it, so the reverse edge would put
-  a domain module under every consumer of a path helper.
-  `requireExists(path, refreshHint)` / `readRequired(path, refreshHint)` are the
-  build scripts' hard-fail on a missing input: they name `git lfs pull` and the
-  file's own refresh target, because the parsers downstream fail on a pointer
-  stub with a header error that mentions neither. Both the classic-ID overlay
-  build and the astrometry request read the same four cross-walk inputs, which
-  is why the guard is here and not in either.
+  `sources/source.ts`'s presence check, which every declared read goes
+  through, and those suites. All three live here rather than in a domain
+  module so this module stays a dependency leaf: everything imports
+  `REPO_ROOT` from it.
   `paths.test.ts` pins the pointer-probe cases.
-  **No data paths live here.** `ATHYG_CSV` used to, back when three folders
-  read the catalogue; the astrometry request moved onto the membership
-  manifest and the boundary-epoch cross-check is the last reader left, so the
-  literal sits in that suite ([Consumed by](/data/athyg/README.md#consumed-by)).
+  **No data paths live here**: each is a declaration (`sources/`).
 - `build-stamp.ts` / `build_stamp.py` — the content-hash skip gate
   ([Preprocessor idempotency](../README.md#preprocessor-idempotency)): `fileHashes` maps each file's
   repo-relative path to its sha1, `null` when absent, so an input's arrival is
@@ -79,11 +71,14 @@ same thing — single-use helpers stay with their consumer.
   the only list. Both pinned by co-located tests
   (`python3 scripts/util/build_stamp.test.py`).
 - `import-closure.ts` / `import-closure-pure.ts` (+ test) — a TypeScript
-  build's code inputs. `scriptClosure(names)` is every module the named
-  `package.json` scripts import, read from an esbuild metafile, so a new
-  import joins without anyone listing it; `tsxEntry` holds each such script
-  to exactly `tsx <file>.ts`, so `package.json` is the one place an entry is
-  named; `closureWithSiblings(closure, files)` adds every file beside a
+  build's code inputs. `entryClosure(entries)` is every module the given
+  entry files import, read from an esbuild metafile, so a new import joins
+  without anyone listing it; `scriptClosure(names)` is that over the named
+  `package.json` scripts, each held by `tsxEntry` to exactly `tsx <file>.ts`,
+  so `package.json` is the one place an entry is named and no half of a
+  chained script is keyed alone. `scriptParts` is the one parser of a
+  script's `&&`-chained commands (`tsx`, `python3`, `pnpm run`, or `other`)
+  and `tsxEntries` every `tsx` entry among them; `closureWithSiblings(closure, files)` adds every file beside a
   closure module except `.ts`, `.py` and `.md`, which is how the `*-expected.json`
   snapshots a build reads by path get keyed. Shared by the catalogue stamp and
   CI's catalogue cache key ([The catalogue build cache](../ci/README.md#the-catalogue-build-cache)), so the two
@@ -188,10 +183,15 @@ same thing — single-use helpers stay with their consumer.
   thousand-row artifact still diffs sample-by-sample in git) and
   `roundSignificant`, shared by the probe-trajectory and planet-element
   emitters.
-- `mirror-to-public.ts` — `mirrorDataFolder(spec)`, the one
+- `mirror-to-public.ts` (+ test) — `mirrorDataFolder(folder, spec)`, the one
   `data/<folder>/` → `public/<folder>/` copy used by
-  `scripts/{dust,textures,probes}/sync-*.ts`. Mtime+size skip for
-  up-to-date files; **allowlist**, never denylist, because Vite copies
+  `scripts/{dust,textures,probes,ephemerides}/sync-*.ts`. `mirrorSource`
+  declares the mirrored folder as a folder source (`sources/`): every
+  allowlisted file is a member, so each is presence-checked and a file
+  added to the folder joins the step's inputs.
+  Each folder's constant lives in its `*-mirror-source.ts`. A missing
+  source folder or an unsmudged LFS file fails the sync rather than
+  shipping an empty or stub layer. Mtime+size skip for up-to-date files; **allowlist**, never denylist, because Vite copies
   `public/` wholesale — anything left in the destination ships, so the
   mirror also purges non-allowlisted strays a previous sync left behind.
   `flattenSubDirs` copies named subfolders of the source into the same
@@ -201,8 +201,10 @@ same thing — single-use helpers stay with their consumer.
   them: the allowlist is by name, and the purge pass cannot tell two
   same-named files apart.
   `tests/bundle-content.test.ts` asserts the built tree against the same
-  predicates. The single-file copies (`sync-local-bubble.ts`,
-  `sync-cloud-surfaces.ts`) are a different shape and stay standalone.
+  predicates. `syncFile(src, dst)` is the one size-and-mtime skip-or-copy:
+  the folder mirror's loop and the two single-file copies
+  (`sync-local-bubble.ts`, `sync-cloud-surfaces.ts`, each reading its binary
+  through a declared source beside it) all call it.
 
 ## Proving a restructuring byte-identical
 

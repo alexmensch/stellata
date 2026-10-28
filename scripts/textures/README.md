@@ -173,7 +173,8 @@ rather than shipping it.
   `texture-calibration.test.ts` pins targets, achieved means, the index
   table and that conversion. Rationale:
   [Colour fidelity](/data/textures/README.md#colour-fidelity--index-anchored-calibration).
-- `sync-textures.ts` (+ `-pure.ts`, test) — mirrors the committed
+- `sync-textures.ts` (+ `-pure.ts`, test; `textures-mirror-source.ts`
+  declares the folder) — mirrors the committed
   artifacts to `public/textures/` (gitignored) on every `pnpm run
   build` / `dev`; pure copy, so CI/deploy never needs Pillow. The
   allowlist predicate keeps README/source files out of the deployed

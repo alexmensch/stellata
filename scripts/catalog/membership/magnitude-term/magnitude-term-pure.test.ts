@@ -9,6 +9,9 @@ import {
   selectMagnitudeTerm,
 } from './magnitude-term-pure';
 
+const FROM = { file: 'pull.tsv', hint: 'h' };
+const select = (text: string, floorV: number) => selectMagnitudeTerm(text, floorV, FROM);
+
 const HEADER = [
   'source_id', 'ra', 'dec', 'parallax', 'pmra', 'pmdec', 'ruwe',
   'phot_g_mean_mag', 'phot_bp_mean_mag', 'phot_rp_mean_mag',
@@ -44,7 +47,7 @@ describe('magnitudeVerdict', () => {
 
 describe('selectMagnitudeTerm', () => {
   it('partitions the pull over the three verdicts', () => {
-    const { keptSourceIds, counts } = selectMagnitudeTerm(
+    const { keptSourceIds, counts } = select(
       [HEADER, BLUE, RED, SATURATED, NO_BAND].join('\n'),
       11,
     );
@@ -53,7 +56,7 @@ describe('selectMagnitudeTerm', () => {
   });
 
   it('counts every row exactly once', () => {
-    const { counts } = selectMagnitudeTerm(
+    const { counts } = select(
       [HEADER, BLUE, RED, SATURATED, NO_BAND].join('\n'),
       11,
     );
@@ -62,7 +65,7 @@ describe('selectMagnitudeTerm', () => {
 
   it('keeps source_id a string, so a 19-digit id survives the walk', () => {
     const id = '4472832130942575872';
-    const { keptSourceIds } = selectMagnitudeTerm(
+    const { keptSourceIds } = select(
       [HEADER, row(id, '10.0', '0.5', '0.5')].join('\n'),
       11,
     );
@@ -71,28 +74,28 @@ describe('selectMagnitudeTerm', () => {
   });
 
   it('throws on a header missing a band rather than zeroing the term', () => {
-    expect(() => selectMagnitudeTerm('source_id\tphot_g_mean_mag\n', 11)).toThrow(
+    expect(() => select('source_id\tphot_g_mean_mag\n', 11)).toThrow(
       /missing required columns/,
     );
   });
 
   it('throws on an empty file rather than reading it as a term of no rows', () => {
-    expect(() => selectMagnitudeTerm('', 11)).toThrow(/has no header row/);
+    expect(() => select('', 11)).toThrow(/has no header row/);
   });
 
   it('yields no rows from a valid header alone', () => {
-    expect(selectMagnitudeTerm(HEADER, 11).counts.rows).toBe(0);
+    expect(select(HEADER, 11).counts.rows).toBe(0);
   });
 
   it('refuses a non-finite floor', () => {
-    expect(() => selectMagnitudeTerm(HEADER, Number.NaN)).toThrow(/finite/);
+    expect(() => select(HEADER, Number.NaN)).toThrow(/finite/);
   });
 
   it('refuses a floor deeper than the pull on disk, rather than under-selecting', () => {
-    expect(() => selectMagnitudeTerm(HEADER, MAGNITUDE_PULL_G_BOUND + 0.5)).toThrow(
+    expect(() => select(HEADER, MAGNITUDE_PULL_G_BOUND + 0.5)).toThrow(
       /exceeds the pull's G <= 11 bound/,
     );
-    expect(() => selectMagnitudeTerm(HEADER, MAGNITUDE_PULL_G_BOUND)).not.toThrow();
+    expect(() => select(HEADER, MAGNITUDE_PULL_G_BOUND)).not.toThrow();
   });
 });
 

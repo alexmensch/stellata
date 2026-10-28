@@ -2,24 +2,20 @@
 // the collision guard and the curated overrides. See README.md#the-label-merge--overlay--spine-per-identifier
 // and /docs/catalog-driver.md#4-how-hd-reaches-gaia.
 import { starDesignations } from '../../../sid/sid-pure';
-import { intCell, readTable, textCell, type TableSpec } from '../../../util/tsv/table-pure';
+import type { Declared } from '../../../util/sources/source';
+import { intCell, readTable, textCell } from '../../../util/tsv/table-pure';
 import type { SpineRow } from '../../spine/inherited-spine-pure';
 import {
   glieseCellKey,
   glieseComponent,
   glieseNumber,
-} from '../classic-id-overlay-pure';
-import {
   OVERLAY_VALUE_SEPARATOR,
   type ClassicIdOverlay,
   type OverlayEntry,
-} from '../classic-id-overlay-tsv';
+} from '../classic-id-overlay-pure';
 
 export const LABEL_FIELDS = ['hip', 'hd', 'hr', 'gl', 'flam'] as const;
 export type LabelField = (typeof LABEL_FIELDS)[number];
-
-/** Repo-relative, so the emitter and every reader resolve one path. */
-export const CLASSIC_ID_OVERRIDES_FILE = 'data/classic-ids/classic_id_overrides.tsv';
 
 /** Per-identifier count partition, one bucket per merged field. */
 export type LabelPartition = Record<LabelField, number>;
@@ -244,16 +240,11 @@ export function overrideKey(sourceId: string, field: LabelField): string {
   return `${sourceId}\t${field}`;
 }
 
-const CLASSIC_ID_OVERRIDES = {
-  file: CLASSIC_ID_OVERRIDES_FILE,
-  columns: ['gaia_source_id', 'field', 'value'] as const,
-  hint: 'Columns are gaia_source_id, field, value (empty value = keep the spine).',
-  comments: true,
-} satisfies TableSpec<string>;
+const LABEL_OVERRIDE_COLUMNS = ['gaia_source_id', 'field', 'value'] as const;
 
-export function parseLabelOverridesTsv(text: string): LabelOverrides {
+export function parseLabelOverridesTsv(text: string, from: Declared): LabelOverrides {
   const out: LabelOverrides = new Map();
-  for (const row of readTable(CLASSIC_ID_OVERRIDES, text)) {
+  for (const row of readTable({ ...from, columns: LABEL_OVERRIDE_COLUMNS, comments: true }, text)) {
     if (row.text('gaia_source_id') === null || row.text('field') === null) {
       row.failIncompletePair('gaia_source_id', 'field');
     }

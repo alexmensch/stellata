@@ -125,10 +125,11 @@ in: [§ 3.2](/docs/catalog-driver.md#32-retiring-the-spines-consumers--per-colum
 
 `athyg_33_classic_ids.csv` is **no longer an input to the record build, and no
 refresh script reads it.** It stays committed as the spine's provenance and for
-two consumers that walk the upstream cells directly:
-`src/client/constellation-boundaries/iau-geometry/iau-athyg-agreement.test.ts`
-(the boundary-epoch cross-check against the editorial `con` column — the only
-TypeScript reader left, and it spells the path itself) and
+consumers that walk the upstream cells directly, all naming it through
+`ATHYG_CLASSIC_IDS` (`scripts/catalog/spine/athyg-classic-ids-source.ts`) on
+the TypeScript side: `pnpm run audit:spine-primaries` (the `hd` / `hyg`
+tallies), `src/client/constellation-boundaries/iau-geometry/iau-athyg-agreement.test.ts`
+(the boundary-epoch cross-check against the editorial `con` column), and
 `scripts/binaries/build-binaries.py` (Stage 1's AT-HYG parse, on the
 `build:binaries` path, not `build:catalog`).
 

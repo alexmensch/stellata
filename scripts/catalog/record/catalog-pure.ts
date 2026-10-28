@@ -7,11 +7,9 @@
 // so everything reachable from the config needs them. Only typecheck and
 // vitest cover the rest of scripts/, and neither fails without them: dropping
 // these breaks `vite build` and `pnpm run dev` alone.
-import { readTable, type TableSpec } from '../../util/tsv/table-pure.ts';
 // Type-only: distance/parallax/ reaches back here through its parsers, so a
 // value import would close a cycle. Erased at compile.
 import type { DistVia } from '../distance/parallax/parallax-cascade.ts';
-import { parallaxSignalToNoise, type MeasuredParallax } from '../cited-parallax.ts';
 
 /** The bottom of every chromaticity cascade: ~0.65 renders a yellow disc
  *  rather than a hot blue or cold red default. */
@@ -1458,61 +1456,6 @@ export function inferBinaries(
   return { pairs, mutualPairs };
 }
 
-// ---- Bailer-Jones (DR3) distance override -------------------------------
-
-/** Whether a record is eligible for the Bailer-Jones override: it resolves to a
- *  Gaia DR3 source_id AND the parallax its own cascade settled on is Gaia's.
- *
- *  B-J publishes a Bayesian posterior over a Gaia parallax, so it may only
- *  supersede that same parallax. Applied to a record whose distance rests on
- *  Hipparcos, CNS5 or Gliese instead, it would discard a measurement and
- *  substitute a posterior computed from a different, worse one — which is how
- *  the override originally shipped without a filter and moved ~11 stars onto the
- *  Galactic-density prior tail at ~10–40 kpc.
- *
- *  This used to gate on the spine's `dist_src` cell, an AT-HYG editorial value
- *  standing in for the question. `/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers` forbids that: the
- *  build now resolves the parallax first-hand, so the tier IS the predicate. */
-export function isBailerJonesEligible(
-  gaiaSourceId: string | null,
-  distVia: DistVia,
-): boolean {
-  return !!gaiaSourceId && distVia === 'gaia_dr3_inversion';
-}
-
-/** Null for a blank cell AND for one that is not pure decimal digits, which
- *  guards the build's `BigInt(s.gaiaSourceId)` call against a malformed row
- *  throwing a SyntaxError mid-write. Same `/^\d+$/` shape gate as
- *  `parseGaiaHipXmatchTsv` in `gaia-xmatch.ts`. */
-/** Parse the TSV produced by `scripts/refresh/refresh-bailer-jones.py` into a
- *  Gaia DR3 source_id → distance (pc) map. `source_id` is kept as a
- *  string: Gaia source_ids exceed `Number.MAX_SAFE_INTEGER`, so any
- *  numeric parse would silently corrupt the join key.
- *
- *  Per Bailer-Jones 2021 (/data/papers/index.md#bailerjones2021),
- *  `r_med_photogeo` is preferred when available
- *  (combines the parallax likelihood with a colour-and-magnitude
- *  population prior); `r_med_geo` is the geometric-only fallback for
- *  rows without photogeo (no usable G or BP–RP, or a colour outside the
- *  prior model's range). */
-const BAILER_JONES = {
-  file: 'data/bailer-jones/bailer-jones-dr3.tsv',
-  columns: ['source_id', 'r_med_geo', 'r_med_photogeo'] as const,
-  hint: 'Re-run scripts/refresh/refresh-bailer-jones.py.',
-} satisfies TableSpec<string>;
-
-export function parseBailerJonesTsv(text: string): Map<string, number> {
-  const out = new Map<string, number>();
-  for (const row of readTable(BAILER_JONES, text)) {
-    const sourceId = row.sourceId('source_id');
-    if (sourceId === null) continue;
-    const d = row.float('r_med_photogeo') ?? row.float('r_med_geo');
-    if (d === null || d <= 0) continue;
-    out.set(sourceId, d);
-  }
-  return out;
-}
-
 // ---- Gaia DR3 Apsis astrophysical parameters ----------------------------
 
 /** Per-source Apsis fields from `data/gaia/gaia_dr3_apsis.tsv`. The seven
@@ -1535,41 +1478,6 @@ export interface ApsisRow {
   spectraltypeEsphs: string | null;
 }
 
-/** Parse the TSV produced by `scripts/refresh/refresh-gaia-apsis.py` into
- *  a Gaia DR3 source_id → ApsisRow map. `source_id` is kept as a string:
- *  Gaia source_ids exceed Number.MAX_SAFE_INTEGER so any numeric parse
- *  would silently corrupt the join key. Blank cells decode to `null` —
- *  the writer maps `null` to `NO_APSIS` (NaN) at pack time. */
-const GAIA_APSIS = {
-  file: 'data/gaia/gaia_dr3_apsis.tsv',
-  columns: [
-    'source_id',
-    'teff_gspphot', 'logg_gspphot', 'mh_gspphot', 'azero_gspphot',
-    'teff_gspspec', 'logg_gspspec', 'mh_gspspec',
-    'spectraltype_esphs',
-  ] as const,
-  hint: 'Re-run scripts/refresh/refresh-gaia-apsis.py.',
-} satisfies TableSpec<string>;
-
-export function parseGaiaApsisTsv(text: string): Map<string, ApsisRow> {
-  const out = new Map<string, ApsisRow>();
-  for (const row of readTable(GAIA_APSIS, text)) {
-    const sourceId = row.sourceId('source_id');
-    if (sourceId === null) continue;
-    out.set(sourceId, {
-      teffGspphot: row.float('teff_gspphot'),
-      loggGspphot: row.float('logg_gspphot'),
-      mhGspphot: row.float('mh_gspphot'),
-      azeroGspphot: row.float('azero_gspphot'),
-      teffGspspec: row.float('teff_gspspec'),
-      loggGspspec: row.float('logg_gspspec'),
-      mhGspspec: row.float('mh_gspspec'),
-      spectraltypeEsphs: row.text('spectraltype_esphs'),
-    });
-  }
-  return out;
-}
-
 /** Apparent magnitude → absolute magnitude at given distance.
  *  M = m − 5·log₁₀(d / 10 pc). */
 export function apparentToAbsoluteMagnitude(mag: number, distPc: number): number {
@@ -1580,115 +1488,4 @@ export function apparentToAbsoluteMagnitude(mag: number, distPc: number): number
  *  m = M + 5·log₁₀(d / 10 pc). */
 export function absoluteToApparentMagnitude(absmag: number, distPc: number): number {
   return absmag + 5 * Math.log10(distPc / 10);
-}
-
-/** The posterior distance in parsecs, B-J's own unit.
- *
- *  Every distance-override layer (Bailer-Jones, LMC kinematic, and future SMC
- *  kinematic / structural-disc / OGLE Cepheid layers) returns a bare distance:
- *  absmag is derived once from the V cascade and the distance the whole stack
- *  settled on (`../photometry/README.md#the-v-cascade`), so a layer cannot
- *  place a star at a new distance while lighting it for the old one. xyz is
- *  likewise not a layer's business — position is direction × distance, with
- *  the direction resolved independently by the direction cascade. */
-export function applyBailerJonesOverride(
-  gaiaSourceId: string | null,
-  bjMap: Map<string, number>,
-): number | null {
-  if (!gaiaSourceId) return null;
-  return bjMap.get(gaiaSourceId) ?? null;
-}
-
-// ---- LMC kinematic distance override -------------------------------------
-
-// LMC kinematic parameters. References:
-//   - Pietrzyński 2019 (/data/papers/index.md#pietrzynski2019):
-//     eclipsing-binary distance 49.59 kpc, ± 0.09 statistical ± 0.54
-//     systematic (shipped as 49.594, an open decision:
-//     /scripts/catalog/distance/README.md#layer-2--lmc-kinematic-override).
-//   - van der Marel 2014 (/data/papers/index.md#vandermarel2014):
-//     PM dynamical centre (RA, Dec) = (78.76°, −69.19°)
-//     = (05h 15m 02s, −69° 11′ 24″) — their PM-field fit, not the NED/SIMBAD
-//     photometric centre (05h 23m 34s, −69° 45′). Same paper's centre-of-mass
-//     bulk PM: μ_α* = +1.910 ± 0.020, μ_δ = +0.229 ± 0.047 mas/yr. The gate centre below (1.85, 0.20) is a
-//     rounded working value toward the field-mean (centroid) PM — the
-//     COM−gate difference (≤ 0.07 mas/yr) and the disc's internal-rotation
-//     spread (±0.3 mas/yr) both sit well inside the ±0.5 tolerance.
-//   - The 15° cone is wide enough to admit the visible disc and
-//     30 Doradus while keeping confusion with Galactic foreground low.
-// Tolerances chosen so Galactic halo / runaway stars in the same sky region
-// (which have very different PMs) fail the test — see catalog-pure.test.ts.
-export const LMC_DISTANCE_PC = 49_594;
-export const LMC_CENTRE_RA_HOURS = 5.25067;       // 78.76° / 15
-export const LMC_CENTRE_DEC_DEG = -69.19;
-export const LMC_CONE_HALF_ANGLE_DEG = 15;
-export const LMC_PM_RA_CENTRE = 1.85;             // mas/yr
-export const LMC_PM_DEC_CENTRE = 0.20;            // mas/yr
-export const LMC_PM_TOLERANCE = 0.5;              // mas/yr per component
-
-/** Angular separation (degrees) between two ICRS positions. Vector
- *  dot-product form — stable for small and wide separations alike, no
- *  cos/sin of differences. Input RA is hours, Dec is degrees. */
-export function angularSeparationDeg(
-  raHoursA: number,
-  decDegA: number,
-  raHoursB: number,
-  decDegB: number,
-): number {
-  const raA = raHoursA * (Math.PI / 12);
-  const raB = raHoursB * (Math.PI / 12);
-  const decA = decDegA * (Math.PI / 180);
-  const decB = decDegB * (Math.PI / 180);
-  const cosDecA = Math.cos(decA);
-  const cosDecB = Math.cos(decB);
-  const ax = cosDecA * Math.cos(raA);
-  const ay = cosDecA * Math.sin(raA);
-  const az = Math.sin(decA);
-  const bx = cosDecB * Math.cos(raB);
-  const by = cosDecB * Math.sin(raB);
-  const bz = Math.sin(decB);
-  const dot = Math.max(-1, Math.min(1, ax * bx + ay * by + az * bz));
-  return Math.acos(dot) * (180 / Math.PI);
-}
-
-/** Whether (raHours, decDegrees) falls within the LMC sky cone — the
- *  population predicate behind the `lmcCandidates` build-counter. */
-export function isInLmcCone(raHours: number, decDegrees: number): boolean {
-  const sep = angularSeparationDeg(
-    raHours, decDegrees,
-    LMC_CENTRE_RA_HOURS, LMC_CENTRE_DEC_DEG,
-  );
-  return sep <= LMC_CONE_HALF_ANGLE_DEG;
-}
-
-export const LMC_PARALLAX_MAS = 1000 / LMC_DISTANCE_PC;
-
-/** Measured, not chosen: `../distance/README.md#layer-2--lmc-kinematic-override`. */
-export const LMC_PARALLAX_CONSISTENCY_SIGMA = 10;
-
-export type LmcKinematicVerdict =
-  | { kind: 'snap'; distPc: number }
-  | { kind: 'parallax_rules_out' }
-  | { kind: 'not_member' };
-
-/** Every gate is evaluated here, so no caller can produce an override by
- *  forgetting one. */
-export function applyLmcKinematicOverride(
-  raHours: number,
-  decDegrees: number,
-  pmRa: number | null,
-  pmDec: number | null,
-  parallax: MeasuredParallax | null,
-): LmcKinematicVerdict {
-  if (pmRa === null || pmDec === null) return { kind: 'not_member' };
-  if (!isInLmcCone(raHours, decDegrees)) return { kind: 'not_member' };
-  if (Math.abs(pmRa - LMC_PM_RA_CENTRE) > LMC_PM_TOLERANCE) return { kind: 'not_member' };
-  if (Math.abs(pmDec - LMC_PM_DEC_CENTRE) > LMC_PM_TOLERANCE) return { kind: 'not_member' };
-  const sigmaAboveLmc = parallax === null
-    ? null
-    : parallaxSignalToNoise(parallax.mas - LMC_PARALLAX_MAS, parallax.errMas);
-  if (sigmaAboveLmc !== null && sigmaAboveLmc > LMC_PARALLAX_CONSISTENCY_SIGMA) {
-    return { kind: 'parallax_rules_out' };
-  }
-  return { kind: 'snap', distPc: LMC_DISTANCE_PC };
 }

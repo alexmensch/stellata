@@ -30,7 +30,8 @@ import {
   SPECTRAL_UNKNOWN,
   classifyFromSimbad,
 } from '../spectral/spectral-classify';
-import { CONSTELLATIONS, createConstellationAssignment } from '../parse/constellations/constellations';
+import { CONSTELLATIONS, createConstellationAssignment, iauEdgeRecords } from '../parse/constellations/constellations';
+import { STELLARIUM } from '../parse/constellations/stellarium-source';
 import { R_V, avSolToStar, type DustGrid } from '../distance/dust/dust-deextinction-pure';
 import type { Star } from '../parse/stars-parse';
 import { makeStar as makeStarWithDefaults } from '../parse/star-fixture';
@@ -42,7 +43,7 @@ import { AU_PER_PC } from '../../../src/client/util/astronomy-constants';
 // The real IAU decomposition, not a stub: the fixtures below carry real
 // coordinates, so a positional assertion (Sirius B in Canis Major) is a
 // genuine check rather than an echo of what the test injected.
-const CON_ASSIGNMENT = createConstellationAssignment();
+const CON_ASSIGNMENT = createConstellationAssignment(iauEdgeRecords(STELLARIUM.read()));
 
 const reached = (sepArcsec: number, paDeg: number): Stage6Offset =>
   ({ kind: 'offset', offset: tangentOffset(sepArcsec, paDeg) });

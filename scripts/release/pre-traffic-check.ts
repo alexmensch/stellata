@@ -23,7 +23,7 @@ import { rawGet, type RawAnswer } from './raw-get.ts';
 const ROOT = resolve(import.meta.dirname, '../..');
 const origin = process.argv[2];
 if (origin === undefined) throw new Error('usage: pre-traffic-check.ts <origin>');
-const version = appVersion(ROOT);
+const version = appVersion();
 const identifies = documentIdentifiers(ROOT);
 const at = (path: string) => new URL(path, origin);
 
