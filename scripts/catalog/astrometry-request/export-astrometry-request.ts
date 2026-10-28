@@ -24,7 +24,7 @@ import {
 } from '../membership/membership-manifest-pure';
 import { MEMBERSHIP_MANIFEST, MEMBERSHIP_MANIFEST_FILE } from '../membership/membership-manifest-tsv';
 import { printedVLookups } from '../photometry/v-magnitude-pure';
-import { INHERITED_SPINE_FILE, parseSpineTsv } from '../spine/inherited-spine-pure';
+import { INHERITED_SPINE, INHERITED_SPINE_FILE } from '../spine/inherited-spine-pure';
 import { indexCns5 } from '../spine/primaries-audit-pure';
 import { LFS_HINT, loadPrimaryTables } from '../spine/primaries-tables';
 import { emitArtifacts, runStep } from '../../util/emit-artifacts';
@@ -53,7 +53,7 @@ async function main(): Promise<void> {
   // One table load for both contributions: the gate's Tycho-2 / Gliese arms
   // read the same tables the derivation's do, and the TYC cross-walk has to
   // cover IV/25's Tycho ids as well as the spine's for the gate's arm.
-  const spine = parseSpineTsv(readRequired(resolve(ROOT, INHERITED_SPINE_FILE), LFS_HINT));
+  const spine = INHERITED_SPINE.parse(readRequired(resolve(ROOT, INHERITED_SPINE_FILE), LFS_HINT));
   const { kept } = applySpineCorrections(spine, parseSpineCorrectionsTsv(
     readRequired(resolve(ROOT, SPINE_CORRECTIONS_FILE), CORRECTIONS_HINT),
   ));

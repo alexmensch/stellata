@@ -1,12 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  INHERITED_SPINE,
   SPINE_COLUMNS,
   SPINE_PRINTED_COLUMNS,
   buildSpineRow,
-  iterSpineTsv,
-  parseSpineTsv,
-  serializeSpine,
   spineCounts,
   spineDesignations,
   type SpinePrintedCells,
@@ -66,33 +64,33 @@ describe('serializeSpine / parseSpineTsv', () => {
       row({ hip: '1', proper: 'Alpha' }),
       row({ hd: '2', spect: 'G2 V' }),
     ];
-    expect(parseSpineTsv(serializeSpine(rows))).toEqual(rows);
+    expect(INHERITED_SPINE.parse(INHERITED_SPINE.serialize(rows))).toEqual(rows);
   });
 
   it('rejects a cell holding a TSV delimiter', () => {
-    expect(() => serializeSpine([row({ proper: 'a\tb' })])).toThrow(/delimiter/);
+    expect(() => INHERITED_SPINE.serialize([row({ proper: 'a\tb' })])).toThrow(/delimiter/);
   });
 
   it('rejects a header that is not the current column list', () => {
-    expect(() => parseSpineTsv('hip\thd\n1\t2\n')).toThrow(/header mismatch/);
+    expect(() => INHERITED_SPINE.parse('hip\thd\n1\t2\n')).toThrow(/header mismatch/);
   });
 
   it('rejects a row whose cell count disagrees with the header', () => {
     const text = `${SPINE_COLUMNS.join('\t')}\n1\t2\n`;
-    expect(() => parseSpineTsv(text))
+    expect(() => INHERITED_SPINE.parse(text))
       .toThrow(new RegExp(`expected ${SPINE_COLUMNS.length}`));
   });
 
   // The header has exactly as many cells as a data row, so a walk that reads
   // it twice yields a row of column names — 'hip' parsing as a designation.
   it('yields nothing from a header with no data rows, terminated or not', () => {
-    expect(parseSpineTsv(`${SPINE_COLUMNS.join('\t')}\n`)).toEqual([]);
-    expect(parseSpineTsv(SPINE_COLUMNS.join('\t'))).toEqual([]);
+    expect(INHERITED_SPINE.parse(`${SPINE_COLUMNS.join('\t')}\n`)).toEqual([]);
+    expect(INHERITED_SPINE.parse(SPINE_COLUMNS.join('\t'))).toEqual([]);
   });
 
   it('walks lazily — readStars must not hold all 313,257 rows at once', () => {
-    const text = serializeSpine([row({ hip: '1' }), row({ hip: '2' })]);
-    const walk = iterSpineTsv(text);
+    const text = INHERITED_SPINE.serialize([row({ hip: '1' }), row({ hip: '2' })]);
+    const walk = INHERITED_SPINE.rows(text);
     expect(walk.next().value?.hip).toBe('1');
     expect(walk.next().value?.hip).toBe('2');
     expect(walk.next().done).toBe(true);

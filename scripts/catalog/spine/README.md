@@ -38,9 +38,10 @@ scripts/catalog/spine/
     (+ test)                      per-column counts, and the designation
                                   recovery (spineDesignations). Pure, and off
                                   the build:catalog path entirely.
-                                  iterSpineTsv streams for a single pass
-                                  (the parity ledger's replay); parseSpineTsv
-                                  materialises for the callers
+                                  INHERITED_SPINE is its codec: `rows`
+                                  streams for a single pass (the parity
+                                  ledger's replay); `parse` materialises for
+                                  the callers
                                   that index rows or walk them twice —
                                   build:membership, the audit, the guard, the
                                   manifest gate and ../astrometry-request/.

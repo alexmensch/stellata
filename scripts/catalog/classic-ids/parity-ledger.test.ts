@@ -13,7 +13,7 @@ import { ROUTE_DISAGREEMENTS } from './route-disagreements-tsv';
 import { REPO_ROOT, lfsContentReadable } from '../../util/paths';
 import { LEDGER_PATH, OVERRIDES_PATH } from '../../sid/registry-io';
 import { parseLedgerTsv, parseSameasTsv } from '../../sid/sid-pure';
-import { INHERITED_SPINE_FILE, iterSpineTsv } from '../spine/inherited-spine-pure';
+import { INHERITED_SPINE, INHERITED_SPINE_FILE } from '../spine/inherited-spine-pure';
 import { parseBsc5Tsv } from './classic-ids-parse';
 import {
   spineDesignationsRemovedBy,
@@ -273,7 +273,7 @@ describe.skipIf(!spineReadable)('the dispositions, against the spine', () => {
     pairHolders = new Map(noIdentityEvent.map((r) => [r.key, 0]));
     const outOfScope = new Set(HD_LESS_HR.map(String));
     hrHolders = [];
-    for (const row of iterSpineTsv(readFileSync(SPINE_PATH, 'utf-8'))) {
+    for (const row of INHERITED_SPINE.rows(readFileSync(SPINE_PATH, 'utf-8'))) {
       const pair = `${row.hd}\t${row.hip}`;
       const held = pairHolders.get(pair);
       if (held !== undefined) pairHolders.set(pair, held + 1);

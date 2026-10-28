@@ -3,6 +3,7 @@
 
 import { SOL_PROPER_NAME } from '../record/catalog-pure';
 import { starDesignations } from '../../sid/sid-pure';
+import { defineArtifact } from '../../util/tsv/artifact-pure';
 import type { Star } from '../parse/stars-parse';
 
 /** Repo-relative, so the generator and the committed-artifact guard resolve
@@ -86,53 +87,16 @@ export function buildSpineRow(
   return row;
 }
 
-export function serializeSpine(rows: readonly SpineRow[]): string {
-  const lines = [SPINE_COLUMNS.join('\t')];
-  for (const row of rows) {
-    const cells = SPINE_COLUMNS.map((column) => {
-      const cell = row[column];
-      if (/[\t\n\r]/.test(cell)) {
-        throw new Error(`spine cell ${column}="${cell}" contains a TSV delimiter`);
-      }
-      return cell;
-    });
-    lines.push(cells.join('\t'));
-  }
-  return `${lines.join('\n')}\n`;
-}
-
-/** Lazy row walk. `readStars` consumes this rather than `parseSpineTsv`:
- *  313,257 materialised rows hold ~660 MB for the whole walk, concurrently
- *  with the Star array being built off them. */
-export function* iterSpineTsv(text: string): Generator<SpineRow> {
-  const headerEnd = text.indexOf('\n');
-  const header = (headerEnd === -1 ? text : text.slice(0, headerEnd)).split('\t');
-  if (header.join('\t') !== SPINE_COLUMNS.join('\t')) {
-    throw new Error(
-      `inherited-spine header mismatch: got ${header.join(',')}`,
-    );
-  }
-  let start = headerEnd === -1 ? text.length : headerEnd + 1;
-  while (start < text.length) {
-    const end = text.indexOf('\n', start);
-    const line = text.slice(start, end === -1 ? text.length : end);
-    start = end === -1 ? text.length : end + 1;
-    if (line === '') continue;
-    const cells = line.split('\t');
-    if (cells.length !== SPINE_COLUMNS.length) {
-      throw new Error(
-        `inherited-spine row has ${cells.length} cells, expected ${SPINE_COLUMNS.length}`,
-      );
-    }
-    const row = {} as SpineRow;
-    SPINE_COLUMNS.forEach((column, i) => { row[column] = cells[i]; });
-    yield row;
-  }
-}
-
-export function parseSpineTsv(text: string): SpineRow[] {
-  return [...iterSpineTsv(text)];
-}
+/** Frozen: its committed bytes are the record of AT-HYG's merge decisions,
+ *  so the codec reads and writes the cells verbatim. */
+export const INHERITED_SPINE = defineArtifact({
+  file: INHERITED_SPINE_FILE,
+  columns: SPINE_COLUMNS,
+  hint: 'It is frozen; restore it from git rather than regenerating it.',
+  order: 'as-given',
+  decode: (row): SpineRow => Object.fromEntries(SPINE_COLUMNS.map((c) => [c, row.raw(c)])) as SpineRow,
+  encode: (row) => row,
+});
 
 function intCell(cell: string): number | null {
   if (cell === '') return null;

@@ -33,7 +33,7 @@ import {
 } from '../companions/companion-promotion';
 import { readMagnitudeTerm } from './magnitude-term/magnitude-term';
 import { MAGNITUDE_FLOOR_V } from './magnitude-term/magnitude-term-pure';
-import { INHERITED_SPINE_FILE, parseSpineTsv } from '../spine/inherited-spine-pure';
+import { INHERITED_SPINE, INHERITED_SPINE_FILE } from '../spine/inherited-spine-pure';
 import { LFS_HINT, loadPrimaryTables } from '../spine/primaries-tables';
 import {
   BINDING_DISPOSITIONS_FILE,
@@ -88,7 +88,7 @@ function reportLabelCoverage(c: MembershipCounts): void {
 }
 
 async function main(): Promise<void> {
-  const spine = parseSpineTsv(readRequired(resolve(ROOT, INHERITED_SPINE_FILE), LFS_HINT));
+  const spine = INHERITED_SPINE.parse(readRequired(resolve(ROOT, INHERITED_SPINE_FILE), LFS_HINT));
   const tables = await loadPrimaryTables(spine.map((r) => r.tyc).filter((t) => t !== ''));
   const overridesPath = resolve(ROOT, CLASSIC_ID_OVERRIDES_FILE);
   const { evidence, gaiaAstrometry } = loadBindingEvidence(

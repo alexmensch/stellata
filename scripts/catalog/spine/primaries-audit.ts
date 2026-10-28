@@ -7,7 +7,7 @@ import { resolve } from 'node:path';
 
 import { REPO_ROOT as ROOT, readRequired } from '../../util/paths';
 import { splitCsvLine } from '../naming/wgsn-parse-pure';
-import { INHERITED_SPINE_FILE, parseSpineTsv, type SpineRow } from './inherited-spine-pure';
+import { INHERITED_SPINE, INHERITED_SPINE_FILE, type SpineRow } from './inherited-spine-pure';
 import {
   CLASSICAL_CELLS, auditSpine, formatAuditReport, tallyAthygHdProvenance,
   type AthygHdProvenance, type RowSink,
@@ -84,7 +84,7 @@ function attestationWriter(path: string): { onRow: RowSink; close: () => void } 
 async function main(): Promise<void> {
   const outDir = process.argv.find((a) => a.startsWith('--out='))?.slice('--out='.length) ?? null;
 
-  const spine = parseSpineTsv(readRequired(resolve(ROOT, INHERITED_SPINE_FILE), LFS_HINT));
+  const spine = INHERITED_SPINE.parse(readRequired(resolve(ROOT, INHERITED_SPINE_FILE), LFS_HINT));
   const tables = await loadPrimaryTables(spine.map((r) => r.tyc).filter((t) => t !== ''));
   const athygHd: AthygHdProvenance = tallyAthygHdProvenance(athygHdRows());
 

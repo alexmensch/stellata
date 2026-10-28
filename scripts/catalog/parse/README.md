@@ -86,14 +86,13 @@ Three deliberate departures:
   reads `angular_distance` only where the header carries it (a row without
   one ranks last). Its whole-text parser feeds the same accumulator rather
   than `readTable`, so an empty file still fails as having no header row.
-- The manifest codec (`MEMBERSHIP_MANIFEST`, `../membership/membership-manifest-tsv.ts`) and
-  `iterSpineTsv` (`../spine/inherited-spine-pure.ts`) each demand the header be
-  their column list **byte for byte, in order**, where `readTable` resolves
-  columns by name in any order. That is the stricter contract on purpose: both
-  files are generated, and the codec that writes each one also writes its
-  header, so a header that merely parses is already a file nobody meant to
-  ship. The manifest codec additionally rejects any row whose cell count differs
-  from the column count.
+- A file this repo writes is read through its `defineArtifact` codec
+  (`../../util/tsv/README.md#artifact-codecs`) — the manifest's
+  `MEMBERSHIP_MANIFEST`, the spine's `INHERITED_SPINE` and the rest — which
+  demands the header be its column list **byte for byte, in order** and every
+  row carry exactly that many cells, where `readTable` resolves columns by
+  name in any order. A header that merely parses is a file nobody meant to
+  ship.
 - `parseSimbadSptypeTsv` (`../spectral/spectral-resolve.ts`) demands only
   `source_id` and `sp_type`, treating `hip` / `tyc` / `gj` / `sp_qual` /
   `otype` as optional: it checks the header line for which of them are

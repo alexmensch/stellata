@@ -11,11 +11,11 @@ import { compareCountSnapshot } from '../build-counts';
 import { REPO_ROOT, isLfsPointer, lfsContentReadable } from '../../util/paths';
 import { readTable, type TableSpec } from '../../util/tsv/table-pure';
 import {
+  INHERITED_SPINE,
   INHERITED_SPINE_EXPECTED_FILE,
   INHERITED_SPINE_FILE,
   SPINE_COLUMNS,
   STALE_GAIA_SOURCE_IDS_FILE,
-  parseSpineTsv,
   spineCounts,
   spineDesignations,
   type SpineCounts,
@@ -61,7 +61,7 @@ describe.skipIf(!available)('committed inherited spine', () => {
   // its body to collect tests, so parsing there would hit the pointer stub the
   // skip exists to avoid — and it keeps the 40 MB parse to once per run.
   let rows: SpineRow[];
-  beforeAll(() => { rows = parseSpineTsv(text!); });
+  beforeAll(() => { rows = INHERITED_SPINE.parse(text!); });
 
   it('is byte-for-byte the frozen artifact', () => {
     expect(bytes!.byteLength).toBe(FROZEN_BYTES);
@@ -129,7 +129,7 @@ describe.skipIf(!staleInputs.every(lfsContentReadable))(
     });
 
     it('enumerates exactly the spine rows the 5p pull cannot key', () => {
-      const unpublished = parseSpineTsv(text!)
+      const unpublished = INHERITED_SPINE.parse(text!)
         .map((r) => r.gaia_source_id)
         .filter((id) => id !== '' && !published.has(id));
       expect(new Set(unpublished)).toEqual(new Set(queue.map((r) => r.gaia_source_id)));
@@ -144,7 +144,7 @@ describe.skipIf(!staleInputs.every(lfsContentReadable))(
     // SIMBAD row, which the values parser rejects as a duplicate key rather
     // than arbitrating. Kept as a stated invariant, not an observation.
     it('names no successor id the spine already carries', () => {
-      const spineIds = new Set(parseSpineTsv(text!).map((r) => r.gaia_source_id));
+      const spineIds = new Set(INHERITED_SPINE.parse(text!).map((r) => r.gaia_source_id));
       const collisions = queue
         .map((r) => r.simbad_dr3_source_id)
         .filter((id) => id !== '' && spineIds.has(id));

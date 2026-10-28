@@ -27,8 +27,8 @@ import {
   parseParkedRecordsTsv,
 } from '../distance/parallax/parked-ledger';
 import {
+  INHERITED_SPINE,
   INHERITED_SPINE_FILE,
-  parseSpineTsv,
   spineDesignations,
   type SpineRow,
 } from '../spine/inherited-spine-pure';
@@ -130,7 +130,7 @@ describe.skipIf(!inputsReadable)('membership manifest ↔ inherited spine', () =
   let match: SpineMatch;
 
   beforeAll(() => {
-    spine = parseSpineTsv(readFileSync(SPINE_PATH, 'utf-8'));
+    spine = INHERITED_SPINE.parse(readFileSync(SPINE_PATH, 'utf-8'));
     ({ corrected, folds } = applySpineCorrections(
       spine,
       parseSpineCorrectionsTsv(readFileSync(CORRECTIONS_PATH, 'utf-8')),
