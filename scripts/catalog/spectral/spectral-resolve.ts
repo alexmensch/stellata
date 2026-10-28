@@ -11,7 +11,7 @@ import {
   type SimbadNamespaceIndex,
   type SimbadRecordKeys,
 } from '../record/catalog-pure';
-import { readTable, type TableRow } from '../../util/tsv/table-pure';
+import { readTable, type TableSpec } from '../../util/tsv/table-pure';
 import {
   classifyFromGspspec,
   classifyFromSimbad,
@@ -53,33 +53,26 @@ const SPTYPE_REQUIRED = ['source_id', 'sp_type'] as const;
 const SPTYPE_OPTIONAL = ['hip', 'tyc', 'gj', 'sp_qual', 'otype'] as const;
 type SptypeColumn = (typeof SPTYPE_REQUIRED)[number] | (typeof SPTYPE_OPTIONAL)[number];
 
-/** The optional columns are whichever of SPTYPE_OPTIONAL the header carries;
- *  see ../parse/README.md#tsv-header-resolution for why they are optional. */
+const SPTYPE_TABLE: TableSpec<SptypeColumn> = {
+  file: 'data/simbad/simbad_sptype.tsv',
+  columns: SPTYPE_REQUIRED,
+  optional: SPTYPE_OPTIONAL,
+  hint: 'Re-run scripts/refresh/refresh-simbad-sptype.py.',
+};
+
+/** See ../parse/README.md#tsv-header-resolution for why the optional columns
+ *  are optional. */
 export function parseSimbadSptypeTsv(text: string): SimbadSpectralIndex {
   const index = emptySimbadSpectralIndex();
-  const headerEnd = text.indexOf('\n');
-  const header = new Set(
-    text.slice(0, headerEnd === -1 ? text.length : headerEnd).split('\t').map((h) => h.trim()),
-  );
-  const present = SPTYPE_OPTIONAL.filter((c) => header.has(c));
-  const spec = {
-    file: 'data/simbad/simbad_sptype.tsv',
-    columns: [...SPTYPE_REQUIRED, ...present] as SptypeColumn[],
-    hint: 'Re-run scripts/refresh/refresh-simbad-sptype.py.',
-  };
-  const optional = (row: TableRow<SptypeColumn>, c: (typeof SPTYPE_OPTIONAL)[number]) =>
-    present.includes(c) ? row.text(c) : null;
-  const optionalInt = (row: TableRow<SptypeColumn>, c: (typeof SPTYPE_OPTIONAL)[number]) =>
-    present.includes(c) ? row.int(c) : null;
-  for (const row of readTable(spec, text)) {
+  for (const row of readTable(SPTYPE_TABLE, text)) {
     const spType = row.text('sp_type');
-    const spQual = optional(row, 'sp_qual');
-    const otype = optional(row, 'otype');
+    const spQual = row.text('sp_qual');
+    const otype = row.text('otype');
     const keys: SimbadRecordKeys = {
       sourceId: row.text('source_id'),
-      hip: optionalInt(row, 'hip'),
-      tyc: optional(row, 'tyc'),
-      gl: optional(row, 'gj'),
+      hip: row.int('hip'),
+      tyc: row.text('tyc'),
+      gl: row.text('gj'),
     };
     indexSimbadRow(
       index, keys, { spType, spQual, otype, sourceId: keys.sourceId },

@@ -8,7 +8,7 @@ import { fileURLToPath } from 'node:url';
 import { parse } from 'csv-parse/sync';
 
 import { emitArtifacts, runStep, sweepStaged } from '../util/emit-artifacts';
-import { tableLineReader, type TableRow } from '../util/tsv/table-pure';
+import { tableLineReader, type TableRow, type TableSpec } from '../util/tsv/table-pure';
 import { LOCAL_GROUP_OUTPUTS } from './local-group-outputs';
 import {
   applyAliasMeta,
@@ -95,15 +95,14 @@ export function parseOverrides(tsv: string): OverrideRow[] {
   let read: ((line: string) => void) | null = null;
   forEachCuratedLine(tsv, (line) => {
     if (read === null) {
-      const header = new Set(line.split('\t').map((h) => h.trim()));
-      const present = OVERRIDES_OPTIONAL.filter((c) => header.has(c));
       read = tableLineReader(
         {
           file: OVERRIDES_FILE,
-          columns: [...OVERRIDES_REQUIRED, ...present] as OverridesColumn[],
+          columns: OVERRIDES_REQUIRED,
+          optional: OVERRIDES_OPTIONAL,
           hint: OVERRIDES_HINT,
-        },
-        (row) => out.push(overrideRow(row, present)),
+        } satisfies TableSpec<OverridesColumn>,
+        (row) => out.push(overrideRow(row)),
       );
     }
     read(line);
@@ -111,14 +110,9 @@ export function parseOverrides(tsv: string): OverrideRow[] {
   return out;
 }
 
-function overrideRow(
-  row: TableRow<OverridesColumn>,
-  present: readonly (typeof OVERRIDES_OPTIONAL)[number][],
-): OverrideRow {
-  const opt = (col: (typeof OVERRIDES_OPTIONAL)[number]): string | undefined =>
-    present.includes(col) ? row.text(col) ?? undefined : undefined;
-  const optNum = (col: (typeof OVERRIDES_OPTIONAL)[number]): number | undefined =>
-    present.includes(col) ? row.float(col) ?? undefined : undefined;
+function overrideRow(row: TableRow<OverridesColumn>): OverrideRow {
+  const opt = (col: (typeof OVERRIDES_OPTIONAL)[number]): string | undefined => row.text(col) ?? undefined;
+  const optNum = (col: (typeof OVERRIDES_OPTIONAL)[number]): number | undefined => row.float(col) ?? undefined;
   const axis = (col: 'a_pc' | 'b_pc' | 'c_pc'): number => row.float(col) ?? row.fail(`${col} is empty`);
   const name = row.text('name') ?? '';
   const result: OverrideRow = {

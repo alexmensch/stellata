@@ -52,7 +52,7 @@ function bestNeighbourAccumulator<K>(
   let read: ((line: string) => void) | null = null;
   const best = new Map<K, { ang: number; src: string }>();
 
-  const fold = (row: TableRow<string>, hasAngle: boolean): void => {
+  const fold = (row: TableRow<string>): void => {
     const keyRaw = row.raw(spec.keyColumn);
     const gaiaRaw = row.raw(GAIA_COL);
     if (!keyRaw || !gaiaRaw) return;
@@ -60,7 +60,7 @@ function bestNeighbourAccumulator<K>(
     if (key === null) return;
     if (keep && !keep.has(key)) return;
     if (!/^\d+$/.test(gaiaRaw) || /^0+$/.test(gaiaRaw)) return;
-    const ang = (hasAngle ? row.float(ANG_COL) : null) ?? Number.POSITIVE_INFINITY;
+    const ang = row.float(ANG_COL) ?? Number.POSITIVE_INFINITY;
     const prev = best.get(key);
     if (!prev || ang < prev.ang) best.set(key, { ang, src: gaiaRaw });
   };
@@ -69,11 +69,9 @@ function bestNeighbourAccumulator<K>(
     line(line: string): void {
       if (!line) return;
       if (read === null) {
-        const hasAngle = line.split('\t').some((h) => h.trim() === ANG_COL);
-        const columns = [spec.keyColumn, GAIA_COL, ...(hasAngle ? [ANG_COL] : [])];
         read = tableLineReader(
-          { file: spec.file, columns, hint: spec.hint },
-          (row) => fold(row, hasAngle),
+          { file: spec.file, columns: [spec.keyColumn, GAIA_COL], optional: [ANG_COL], hint: spec.hint },
+          fold,
         );
       }
       read(line);

@@ -95,8 +95,7 @@ Three deliberate departures:
   ship.
 - `parseSimbadSptypeTsv` (`../spectral/spectral-resolve.ts`) demands only
   `source_id` and `sp_type`, treating `hip` / `tyc` / `gj` / `sp_qual` /
-  `otype` as optional: it checks the header line for which of them are
-  present and builds its spec from those. Four of those five ARE the ladder's designation tiers,
+  `otype` as `optional` spec columns. Four of those five ARE the ladder's designation tiers,
   so a column vanishing from a re-pull zeroes a tier rather than throwing —
   the failure mode this section otherwise exists to prevent. What catches it
   instead is downstream: `spectralSimbadByTyc` / `ByGj` are pinned in
