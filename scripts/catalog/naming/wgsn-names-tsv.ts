@@ -1,8 +1,7 @@
 // Codec for data/iau-wgsn/wgsn_names.tsv. See README.md#files-in-this-area.
 
-import { defineArtifact } from '../../util/tsv/artifact-pure';
+import { defineArtifact, nullableCell } from '../../util/tsv/artifact-pure';
 import type { WgsnNameRow } from './wgsn-index-pure';
-import { tsvCell } from './wgsn-tables-pure';
 
 const ALIAS_SEPARATOR = '|';
 
@@ -31,12 +30,12 @@ export const WGSN_NAMES = defineArtifact({
   encode: (r) => ({
     name: r.name,
     aliases: r.aliases.join(ALIAS_SEPARATOR),
-    hip: tsvCell(r.hip),
-    hip_component: tsvCell(r.hipComponent),
-    hr: tsvCell(r.hr),
-    hd: tsvCell(r.hd),
-    hd_component: tsvCell(r.hdComponent),
-    vmag: tsvCell(r.vmag),
+    hip: nullableCell(r.hip),
+    hip_component: nullableCell(r.hipComponent),
+    hr: nullableCell(r.hr),
+    hd: nullableCell(r.hd),
+    hd_component: nullableCell(r.hdComponent),
+    vmag: nullableCell(r.vmag),
     source: r.source,
     src_id: r.srcId,
   }),

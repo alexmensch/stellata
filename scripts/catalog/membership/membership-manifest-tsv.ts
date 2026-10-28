@@ -1,6 +1,6 @@
 // See README.md#files-in-this-area.
 
-import { defineArtifact } from '../../util/tsv/artifact-pure';
+import { defineArtifact, nullableCell } from '../../util/tsv/artifact-pure';
 import { SOL_PROPER_NAME } from '../record/catalog-pure';
 import { canonicalKeyOf, compareDesignations, starDesignations } from '../../sid/sid-pure';
 
@@ -131,8 +131,6 @@ export function sortManifestRecords(records: readonly ManifestRecord[]): Manifes
     .map((d) => d.record);
 }
 
-const cellOf = (v: string | number | null): string => (v === null ? '' : String(v));
-
 export const MEMBERSHIP_MANIFEST = defineArtifact({
   file: MEMBERSHIP_MANIFEST_FILE,
   columns: MANIFEST_COLUMNS,
@@ -140,17 +138,17 @@ export const MEMBERSHIP_MANIFEST = defineArtifact({
   order: 'as-given',
   decode: (row) => manifestRecord((c) => row.raw(c), (m) => row.fail(m)),
   encode: (r) => ({
-    tyc: cellOf(r.tyc),
-    hip: cellOf(r.hip),
-    hd: cellOf(r.hd),
+    tyc: nullableCell(r.tyc),
+    hip: nullableCell(r.hip),
+    hd: nullableCell(r.hd),
     hd_alt: r.hdAlt.join(MANIFEST_VALUE_SEPARATOR),
-    hr: cellOf(r.hr),
+    hr: nullableCell(r.hr),
     hr_alt: r.hrAlt.join(MANIFEST_VALUE_SEPARATOR),
-    gl: cellOf(r.gl),
-    flam: cellOf(r.flam),
-    bayer: cellOf(r.bayer),
-    proper: cellOf(r.proper),
-    gaia_source_id: cellOf(r.gaiaSourceId),
+    gl: nullableCell(r.gl),
+    flam: nullableCell(r.flam),
+    bayer: nullableCell(r.bayer),
+    proper: nullableCell(r.proper),
+    gaia_source_id: nullableCell(r.gaiaSourceId),
     binding: r.binding,
     routes: r.routes,
     term: r.term,

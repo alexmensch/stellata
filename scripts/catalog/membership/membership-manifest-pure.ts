@@ -34,6 +34,7 @@ import {
 } from '../classic-ids/label-merge/label-merge-pure';
 import { parkedRecordKey } from '../distance/parallax/parked-ledger';
 import { intCell, readTable } from '../../util/tsv/table-pure';
+import { nullableCell } from '../../util/tsv/artifact-pure';
 import type { AdditionLedgerRow } from './additions-ledger-tsv';
 import {
   BINDING_REVIEW_KEY_COLUMNS,
@@ -693,10 +694,6 @@ function toRecord(cells: ManifestCells): ManifestRecord {
   });
 }
 
-function cellOfInt(v: number | null): string {
-  return v === null ? '' : String(v);
-}
-
 function manifestRowFromRecord(
   cells: { tyc: string; bayer: string; proper: string },
   r: LabelMergeRecord,
@@ -704,13 +701,13 @@ function manifestRowFromRecord(
 ): ManifestCells {
   return {
     tyc: cells.tyc,
-    hip: cellOfInt(r.hip),
-    hd: cellOfInt(r.hd),
+    hip: nullableCell(r.hip),
+    hd: nullableCell(r.hd),
     hd_alt: joinValues(r.hdAlt),
-    hr: cellOfInt(r.hr),
+    hr: nullableCell(r.hr),
     hr_alt: joinValues(r.hrAlt),
     gl: r.gl ?? '',
-    flam: cellOfInt(r.flam),
+    flam: nullableCell(r.flam),
     bayer: cells.bayer,
     proper: cells.proper,
     gaia_source_id: r.gaiaSourceId ?? '',
@@ -995,8 +992,8 @@ function admitGroup(
       blocked,
       ledger: {
         tyc,
-        hip: cellOfInt(hipItem?.hip ?? null),
-        hd: cellOfInt(hdItem === null ? null : Math.min(...hdItem.hds)),
+        hip: nullableCell(hipItem?.hip ?? null),
+        hd: nullableCell(hdItem === null ? null : Math.min(...hdItem.hds)),
         gl: rawGl ?? '',
         gaia_source_id: '',
         reason: `${COMPONENT_REASON_PREFIX}${blocked.sort(compareDesignations)[0]}`,

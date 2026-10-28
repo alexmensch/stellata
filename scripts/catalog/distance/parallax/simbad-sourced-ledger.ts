@@ -2,7 +2,7 @@
 // /docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers's validation-independence rule made checkable. See README.md#the-skip-rules--one-principle-two-publications
 // and ../../validate/README.md for the validator that reads it.
 
-import { defineArtifact } from '../../../util/tsv/artifact-pure';
+import { defineArtifact, nullableCell } from '../../../util/tsv/artifact-pure';
 
 /** Where the exclusion list is committed. */
 export const SIMBAD_SOURCED_DISTANCES_FILE =
@@ -23,7 +23,7 @@ export const SIMBAD_SOURCED_DISTANCES = defineArtifact({
   order: 'by-line',
   decode: (row): SimbadSourcedDistance => ({ gaiaSourceId: row.text('gaia_source_id'), hip: row.int('hip') }),
   encode: (r: SimbadSourcedDistance) => ({
-    gaia_source_id: r.gaiaSourceId ?? '', hip: r.hip === null ? '' : String(r.hip),
+    gaia_source_id: nullableCell(r.gaiaSourceId), hip: nullableCell(r.hip),
   }),
 });
 

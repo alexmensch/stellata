@@ -22,7 +22,6 @@ export interface DesignationRow {
   source: (typeof DESIGNATION_SOURCES)[number];
 }
 
-export const tsvCell = (v: string | number | null): string => (v === null ? '' : String(v));
 
 type DesignationKeys = Pick<DesignationRow, 'hip' | 'hr' | 'hd' | 'source'>;
 

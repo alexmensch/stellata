@@ -2,7 +2,7 @@
 // identifier key the parity gate matches it on.
 // See README.md#why-the-residual-drops-rather-than-degrading.
 
-import { defineArtifact } from '../../../util/tsv/artifact-pure';
+import { defineArtifact, nullableCell } from '../../../util/tsv/artifact-pure';
 
 /** Where the ledger is committed — beside the additions ledger it is the
  *  counterpart to, keyed on the same five identifier cells. */
@@ -66,8 +66,6 @@ export function parkedRecordKey(cells: {
   return [cells.tyc, cells.hip, cells.hd, cells.gl, cells.gaia_source_id].join('\t');
 }
 
-const cellOf = (v: string | number | null): string => (v === null ? '' : String(v));
-
 /** Sorted on the whole row, not on `tyc` alone: a park with no TYC would tie
  *  with every other and leave the file's order a function of the walk. */
 export const PARKED_LEDGER = defineArtifact({
@@ -84,11 +82,11 @@ export const PARKED_LEDGER = defineArtifact({
     reason: row.oneOf('reason', PARKED_REASONS),
   }),
   encode: (e: ParkedLedgerEntry) => ({
-    tyc: cellOf(e.tyc),
-    hip: cellOf(e.hip),
-    hd: cellOf(e.hd),
-    gl: cellOf(e.gl),
-    gaia_source_id: cellOf(e.gaiaSourceId),
+    tyc: nullableCell(e.tyc),
+    hip: nullableCell(e.hip),
+    hd: nullableCell(e.hd),
+    gl: nullableCell(e.gl),
+    gaia_source_id: nullableCell(e.gaiaSourceId),
     reason: e.reason,
   }),
 });

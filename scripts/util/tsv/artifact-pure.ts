@@ -3,6 +3,10 @@
 
 import { readTable, tableLineReader, type TableRow, type TableSpec } from './table-pure';
 
+export function nullableCell(v: string | number | null): string {
+  return v === null ? '' : String(v);
+}
+
 /** `by-line` sorts the encoded lines; `as-given` keeps the caller's order. */
 export type ArtifactOrder<R> = 'by-line' | 'as-given' | ((a: R, b: R) => number);
 

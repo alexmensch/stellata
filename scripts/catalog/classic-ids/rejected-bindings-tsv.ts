@@ -1,7 +1,7 @@
 // Codec for data/classic-ids/rejected_bindings.tsv. See README.md#files-in-this-area.
 
 import { compareSourceIdsNumeric } from '../astrometry-request/export-astrometry-request-pure';
-import { defineArtifact } from '../../util/tsv/artifact-pure';
+import { defineArtifact, nullableCell } from '../../util/tsv/artifact-pure';
 import { PRINTED_V_TIERS, type PrintedVVia } from '../photometry/v-magnitude-pure';
 
 /** One overlay binding the gate refused, as the review file prints it. */
@@ -39,7 +39,7 @@ export const REJECTED_BINDINGS = defineArtifact({
   }),
   encode: (r) => ({
     gaia_source_id: r.sourceId,
-    hip: r.hip === null ? '' : String(r.hip),
+    hip: nullableCell(r.hip),
     v_mag: mag(r.vMag),
     v_via: r.vVia ?? '',
     g_mag: mag(r.gMag),

@@ -3,7 +3,7 @@
 import { resolve } from 'node:path';
 
 import { REPO_ROOT } from '../util/paths';
-import { defineArtifact } from '../util/tsv/artifact-pure';
+import { defineArtifact, nullableCell } from '../util/tsv/artifact-pure';
 
 export const MULTIPLES_COLUMNS = [
   'system_id', 'comp', 'hip', 'gaia_source_id', 'hd',
@@ -93,10 +93,6 @@ function fixed(v: number | null, places: number): string {
   return Object.is(v, -0) ? `-${s}` : s;
 }
 
-function int(v: number | string | null): string {
-  return v === null ? '' : String(v);
-}
-
 export const MULTIPLES_TSV = defineArtifact({
   file: 'data/binaries/multiples.tsv',
   columns: MULTIPLES_COLUMNS,
@@ -153,9 +149,9 @@ export const MULTIPLES_TSV = defineArtifact({
   encode: (r) => ({
     system_id: r.systemId,
     comp: r.comp,
-    hip: int(r.hip),
-    gaia_source_id: int(r.gaiaSourceId),
-    hd: int(r.hd),
+    hip: nullableCell(r.hip),
+    gaia_source_id: nullableCell(r.gaiaSourceId),
+    hd: nullableCell(r.hd),
     x_pc: fixed(r.x_pc, PLACES.x_pc),
     y_pc: fixed(r.y_pc, PLACES.y_pc),
     z_pc: fixed(r.z_pc, PLACES.z_pc),
