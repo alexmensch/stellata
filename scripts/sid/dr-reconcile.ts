@@ -10,6 +10,7 @@ import { REPO_ROOT as ROOT, isLfsPointer } from '../util/paths';
 import { DR_RECONCILE_OUTPUTS } from './dr-reconcile-outputs';
 import {
   ACCEPT_MAS,
+  DR2_DRY_RUN,
   MAG_REVIEW_DELTA,
   classifyDrTransition,
   readNeighbourhoodRows,
@@ -31,8 +32,8 @@ function parseArgs(argv: string[]): CliArgs {
     return hit ? hit.slice(name.length + 3) : fallback;
   };
   return {
-    request: get('request', 'data/gaia/gaia_dr2_neighbourhood_request.tsv'),
-    neighbourhood: get('neighbourhood', 'data/gaia/gaia_dr2_neighbourhood.tsv'),
+    request: get('request', DR2_DRY_RUN.request),
+    neighbourhood: get('neighbourhood', DR2_DRY_RUN.neighbourhood),
     riskCol: get('risk-col', 'dr3_source_id'),
     candidateCol: get('candidate-col', 'dr2_source_id'),
     riskNs: get('risk-ns', 'gaia_dr3'),
@@ -48,7 +49,10 @@ function main(): void {
     console.error('sid:dr-reconcile: inputs are LFS pointer stubs — run `git lfs pull` first');
     process.exit(1);
   }
-  const riskIds = readRiskIds(requestText, args.request);
+  const requestHint = args.request === DR2_DRY_RUN.request
+    ? 'It is the frozen dry-run snapshot: restore it from git.'
+    : 'Re-export it with `pnpm run sid:risk-set`.';
+  const riskIds = readRiskIds(requestText, args.request, requestHint);
   const rows = readNeighbourhoodRows(neighbourhoodText, args.riskCol, args.candidateCol, args.neighbourhood);
   const c = classifyDrTransition(riskIds, rows);
 

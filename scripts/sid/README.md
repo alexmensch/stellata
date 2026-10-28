@@ -51,9 +51,17 @@ allocate.ts               pnpm run sid:allocate — the ONLY writer of
                           a per-PR invariant.
 export-dr-risk-set.ts     pnpm run sid:risk-set — source_ids of the
                           non-retired gaia_*-keyed ledger rows, written
-                          as the neighbourhood-pull request TSV (/docs/sid.md#61-procedure
-                          step 1), through emitArtifacts at the path
-                          dr-risk-set-outputs.ts declares.
+                          as the next DR transition's neighbourhood-pull
+                          request TSV (/docs/sid.md#61-procedure step 1),
+                          through emitArtifacts to
+                          build/sid/dr-risk-set-request.tsv
+                          (dr-risk-set-outputs.ts; gitignored). Run by
+                          hand at a DR transition, never by the build:
+                          no step reads its output. Never the
+                          committed DR2 request: that one is frozen as
+                          half of the dry-run pair (DR2_DRY_RUN), and
+                          tests/step-outputs.test.ts fails if any step's
+                          declared outputs cover either file.
 dr-reconcile.ts           pnpm run sid:dr-reconcile — churn report for a
                           DR transition (/docs/sid.md#61-procedure classes),
                           plus the carried-1:1 same-as edges for human
@@ -63,7 +71,9 @@ dr-reconcile.ts           pnpm run sid:dr-reconcile — churn report for a
                           dry-run inputs (/docs/sid.md#62-dr2dr3-dry-run-measured-2026-07-07).
 dr-reconcile-pure.ts      Pure classifier + request/neighbourhood TSV
                           readers. ACCEPT_MAS / MAG_REVIEW_DELTA live
-                          here.
+                          here, and DR2_DRY_RUN: the frozen dry-run
+                          pair's paths, read by dr-reconcile.ts and the
+                          replay test.
 stamp-sibling-sids.ts     Stamps the frozen sid onto clouds.json /
                           local-group.json after their emitters run — the
                           tail of build:clouds / build:local-group (also
