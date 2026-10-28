@@ -62,6 +62,22 @@ describe('classifyDrTransition', () => {
   });
 });
 
+describe('readNeighbourhoodRows', () => {
+  const header = 'dr3_source_id\tdr2_source_id\tangular_distance\tmagnitude_difference';
+
+  it('reads both id columns as source_ids', () => {
+    expect(readNeighbourhoodRows(`${header}\n12\t34\t1.5\t\n`, 'dr3_source_id', 'dr2_source_id', 'n.tsv'))
+      .toEqual([{ riskId: 12n, candidateId: 34n, angularDistanceMas: 1.5, magnitudeDifference: null }]);
+  });
+
+  it('names file, line and column on an id that is not a source_id', () => {
+    expect(() => readNeighbourhoodRows(`${header}\n12\t\t1.5\t\n`, 'dr3_source_id', 'dr2_source_id', 'n.tsv'))
+      .toThrow(/^n\.tsv:2: dr2_source_id: is empty/);
+    expect(() => readNeighbourhoodRows(`${header}\n1e3\t34\t1.5\t\n`, 'dr3_source_id', 'dr2_source_id', 'n.tsv'))
+      .toThrow(/^n\.tsv:2: dr3_source_id: "1e3" is not a source_id/);
+  });
+});
+
 // End-to-end pin of the DR2→DR3 dry run (/docs/sid.md#62-dr2dr3-dry-run-measured-2026-07-07) against the
 // committed request + neighbourhood snapshots. Self-skips where those LFS
 // files are pointer stubs (the bare CI test job); runs in the
