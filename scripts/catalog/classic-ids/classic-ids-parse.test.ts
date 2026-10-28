@@ -100,7 +100,7 @@ describe('classic-ids-parse / cross-index corrections', () => {
   // than wrong, and no count moves to say so.
   it('throws on a row that states no hd / belongs_to pair', () => {
     expect(() => corrections('35148\t\n')).toThrow(/states no hd \/ belongs_to pair/);
-    expect(() => corrections('notanumber\t35149\n')).toThrow(/states no hd \/ belongs_to pair/);
+    expect(() => corrections('notanumber\t35149\n')).toThrow(/hd: "notanumber" is not an integer/);
   });
 
   it('drops the corrected row and leaves every other', () => {

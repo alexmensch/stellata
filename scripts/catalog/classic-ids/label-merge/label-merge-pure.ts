@@ -2,7 +2,8 @@
 // the collision guard and the curated overrides. See README.md#the-label-merge--overlay--spine-per-identifier
 // and /docs/catalog-driver.md#4-how-hd-reaches-gaia.
 import { starDesignations } from '../../../sid/sid-pure';
-import { dataRows, nonEmpty, parseIntOrNull } from '../../parse/corpus-tsv';
+import { dataRows } from '../../parse/corpus-tsv';
+import { intCell, readTable, textCell, type TableSpec } from '../../../util/tsv/table-pure';
 import type { SpineRow } from '../../spine/inherited-spine-pure';
 import {
   glieseCellKey,
@@ -241,27 +242,23 @@ export function overrideKey(sourceId: string, field: LabelField): string {
   return `${sourceId}\t${field}`;
 }
 
-const OVERRIDES_COLUMNS = ['gaia_source_id', 'field', 'value'] as const;
+const CLASSIC_ID_OVERRIDES = {
+  file: CLASSIC_ID_OVERRIDES_FILE,
+  columns: ['gaia_source_id', 'field', 'value'] as const,
+  hint: 'Columns are gaia_source_id, field, value (empty value = keep the spine).',
+} satisfies TableSpec<string>;
 
 export function parseLabelOverridesTsv(text: string): LabelOverrides {
   const out: LabelOverrides = new Map();
   const known = new Set<string>(LABEL_FIELDS);
-  for (const { cells, idx } of dataRows(
-    text,
-    OVERRIDES_COLUMNS,
-    'classic_id_overrides.tsv',
-    'Columns are gaia_source_id, field, value (empty value = keep the spine).',
-  )) {
-    const sourceId = nonEmpty(cells[idx.gaia_source_id]);
-    const field = nonEmpty(cells[idx.field]);
+  for (const row of readTable(CLASSIC_ID_OVERRIDES, text)) {
+    const sourceId = row.text('gaia_source_id');
+    const field = row.text('field');
     if (sourceId === null || sourceId.startsWith('#') || field === null) continue;
     if (!known.has(field)) {
-      throw new Error(
-        `classic_id_overrides.tsv: "${field}" is not a merged identifier ` +
-          `(${LABEL_FIELDS.join(', ')})`,
-      );
+      row.fail(`"${field}" is not a merged identifier (${LABEL_FIELDS.join(', ')})`);
     }
-    out.set(overrideKey(sourceId, field as LabelField), nonEmpty(cells[idx.value]));
+    out.set(overrideKey(sourceId, field as LabelField), row.text('value'));
   }
   return out;
 }
@@ -279,18 +276,18 @@ export function spineLabelMergeRecord(
   return {
     record: {
       gaiaSourceId,
-      hip: parseIntOrNull(row.hip),
-      hd: parseIntOrNull(row.hd),
-      hr: parseIntOrNull(row.hr),
-      gl: nonEmpty(row.gl),
-      flam: parseIntOrNull(row.flam),
+      hip: intCell(row.hip),
+      hd: intCell(row.hd),
+      hr: intCell(row.hr),
+      gl: textCell(row.gl),
+      flam: intCell(row.flam),
       hdAlt: [],
       hrAlt: [],
     },
     label: labelForReview({
-      proper: nonEmpty(row.proper),
-      hip: parseIntOrNull(row.hip),
-      hd: parseIntOrNull(row.hd),
+      proper: textCell(row.proper),
+      hip: intCell(row.hip),
+      hd: intCell(row.hd),
       gaiaSourceId,
     }),
   };

@@ -5,7 +5,8 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { beforeAll, describe, expect, it } from 'vitest';
 
-import { dataRows, nonEmpty } from '../parse/corpus-tsv';
+import { dataRows } from '../parse/corpus-tsv';
+import { readTable, textCell } from '../../util/tsv/table-pure';
 import { REPO_ROOT, lfsContentReadable } from '../../util/paths';
 import { LEDGER_PATH, OVERRIDES_PATH } from '../../sid/registry-io';
 import { parseLedgerTsv, parseSameasTsv } from '../../sid/sid-pure';
@@ -40,15 +41,17 @@ const queueKeys = [...dataRows(
   'Re-run `pnpm run build:classic-ids`.',
 )].map(({ cells, idx }) => `${cells[idx.hd]}\t${cells[idx.hip]}`);
 
-const review = [...dataRows(
+const review = [...readTable(
+  {
+    file: 'data/classic-ids/hd_hip_route_disagreements_review.tsv',
+    columns: ['hd', 'hip', 'verdict', 'note'] as const,
+    hint: REVIEW_HINT,
+  },
   readFileSync(REVIEW_PATH, 'utf-8'),
-  ['hd', 'hip', 'verdict', 'note'],
-  'hd_hip_route_disagreements_review.tsv',
-  REVIEW_HINT,
-)].map(({ cells, idx }) => ({
-  key: `${cells[idx.hd]}\t${cells[idx.hip]}`,
-  verdict: cells[idx.verdict],
-  note: nonEmpty(cells[idx.note]),
+)].map((row) => ({
+  key: `${row.raw('hd')}\t${row.raw('hip')}`,
+  verdict: row.raw('verdict'),
+  note: row.text('note'),
 }));
 
 describe('HD/HIP route-disagreement review', () => {
@@ -102,7 +105,7 @@ describe.skipIf(!ledgerReadable)('label delta vs the SID ledger', () => {
         'Re-run `pnpm run build:membership`.',
       )]
         .filter(({ cells, idx }) => cells[idx.reason].startsWith('admitted:'))
-        .map(({ cells, idx }) => nonEmpty(cells[idx.hd]))
+        .map(({ cells, idx }) => textCell(cells[idx.hd]))
         .filter((hd): hd is string => hd !== null)
         .map((hd) => `hd:${hd}`),
     );
