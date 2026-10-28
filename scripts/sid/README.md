@@ -57,8 +57,9 @@ export-dr-risk-set.ts     pnpm run sid:risk-set — source_ids of the
                           build/sid/dr-risk-set-request.tsv
                           (dr-risk-set-outputs.ts; gitignored). Never the
                           committed DR2 request: that one is frozen as
-                          half of the dry-run pair (DR2_DRY_RUN), and the
-                          replay test fails if a step declares it.
+                          half of the dry-run pair (DR2_DRY_RUN), and
+                          tests/step-outputs.test.ts fails if any step's
+                          declared outputs cover either file.
 dr-reconcile.ts           pnpm run sid:dr-reconcile — churn report for a
                           DR transition (/docs/sid.md#61-procedure classes),
                           plus the carried-1:1 same-as edges for human

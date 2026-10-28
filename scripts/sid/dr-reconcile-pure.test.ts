@@ -12,8 +12,6 @@ import {
   readRiskIds,
   type NeighbourhoodRow,
 } from './dr-reconcile-pure';
-import { DR_RISK_SET_OUTPUTS } from './dr-risk-set-outputs';
-
 describe('classifyDrTransition', () => {
   const row = (
     riskId: bigint,
@@ -85,13 +83,6 @@ describe('readNeighbourhoodRows', () => {
       .toThrow(/^n\.tsv:2: dr2_source_id: is empty/);
     expect(() => readNeighbourhoodRows(`${header}\n1e3\t34\t1.5\t\n`, 'dr3_source_id', 'dr2_source_id', 'n.tsv'))
       .toThrow(/^n\.tsv:2: dr3_source_id: "1e3" is not a source_id/);
-  });
-});
-
-describe('DR2_DRY_RUN', () => {
-  it('is no step output, so a build never rewrites the frozen pair', () => {
-    const declared = Object.values(DR_RISK_SET_OUTPUTS.files);
-    for (const path of Object.values(DR2_DRY_RUN)) expect(declared).not.toContain(resolve(REPO_ROOT, path));
   });
 });
 
