@@ -165,6 +165,15 @@ export class TableRow<C extends string> {
     throw new Error(`${this.spec.file}:${this.line}: ${message}. ${this.spec.hint}`);
   }
 
+  /** A hand-curated row missing either cell of the pair it exists to state:
+   *  refused, since skipping it would do nothing in silence. */
+  failIncompletePair(a: C, b: C): never {
+    return this.fail(
+      `states no ${a} / ${b} pair. Comment the line with \`#\` or complete it — a `
+        + 'curated row skipped in silence is the fault this file guards against',
+    );
+  }
+
   private cell<T>(c: C, parse: (raw: string) => T): T {
     try {
       return parse(this.raw(c));

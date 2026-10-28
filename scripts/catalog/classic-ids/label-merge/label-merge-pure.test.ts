@@ -357,6 +357,15 @@ describe('mergeClassicIdLabels', () => {
       .toEqual(['override-spine', 'override-value']);
   });
 
+  it('refuses a row missing its source or its field, and skips only a comment', () => {
+    const header = 'gaia_source_id\tfield\tvalue\n';
+    for (const row of [`\thd\t5\n`, `${SRC_A}\t\t5\n`]) {
+      expect(() => parseLabelOverridesTsv(header + row))
+        .toThrow(/classic_id_overrides\.tsv:2: states no gaia_source_id \/ field pair/);
+    }
+    expect(parseLabelOverridesTsv(`${header}# ${SRC_A}\thd\t5\n`).size).toBe(0);
+  });
+
   it('rejects an override naming an identifier the merge does not own', () => {
     expect(() => parseLabelOverridesTsv(
       `gaia_source_id\tfield\tvalue\n${SRC_A}\tbayer\talf\n`,

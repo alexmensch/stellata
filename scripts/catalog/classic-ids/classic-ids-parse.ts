@@ -101,12 +101,7 @@ export function parseCrossIndexCorrectionsTsv(text: string): CrossIndexCorrectio
   for (const row of readTable(CROSS_INDEX_CORRECTIONS, text)) {
     const hd = row.int('hd');
     const belongsTo = row.int('belongs_to');
-    if (hd === null || belongsTo === null) {
-      return row.fail(
-        'states no hd / belongs_to pair. Comment the line with `#` or complete it — a '
-          + 'curated row skipped in silence is the fault this file guards against',
-      );
-    }
+    if (hd === null || belongsTo === null) return row.failIncompletePair('hd', 'belongs_to');
     out.push({ hd, belongsTo });
   }
   return out;

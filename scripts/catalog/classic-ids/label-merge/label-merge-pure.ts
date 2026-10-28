@@ -254,9 +254,10 @@ const CLASSIC_ID_OVERRIDES = {
 export function parseLabelOverridesTsv(text: string): LabelOverrides {
   const out: LabelOverrides = new Map();
   for (const row of readTable(CLASSIC_ID_OVERRIDES, text)) {
-    const sourceId = row.text('gaia_source_id');
-    if (sourceId === null || row.text('field') === null) continue;
-    out.set(overrideKey(sourceId, row.oneOf('field', LABEL_FIELDS)), row.text('value'));
+    if (row.text('gaia_source_id') === null || row.text('field') === null) {
+      row.failIncompletePair('gaia_source_id', 'field');
+    }
+    out.set(overrideKey(row.requiredSourceId('gaia_source_id'), row.oneOf('field', LABEL_FIELDS)), row.text('value'));
   }
   return out;
 }
