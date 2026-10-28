@@ -13,7 +13,7 @@ import {
   type GateRow,
 } from './binding-gate-pure';
 import type { Cns5Row } from '../../classic-ids/classic-ids-parse';
-import { parseIntOrNull } from '../../parse/corpus-tsv';
+import { intCell } from '../../../util/tsv/table-pure';
 import {
   bareGjKey,
   glKeyForms,
@@ -81,7 +81,7 @@ function firstHeld<K, V>(index: ReadonlyMap<K, V>, keys: readonly K[]): V | unde
 export function simbadCandidate(
   row: BindingCells, simbad: SimbadSourceIndex, glAliases: ReadonlyMap<string, readonly string[]>,
 ): string | null {
-  const hip = parseIntOrNull(row.hip);
+  const hip = intCell(row.hip);
   if (hip !== null && simbad.byHip.has(hip)) return simbad.byHip.get(hip) ?? null;
   if (row.tyc !== '' && simbad.byTyc.has(row.tyc)) return simbad.byTyc.get(row.tyc) ?? null;
   const glKey = normaliseGjKey(row.gl === '' ? null : row.gl);
@@ -98,7 +98,7 @@ export function bindingCandidates(
   cns5ByOwnKey: ReadonlyMap<string, Cns5Row>,
   simbad: SimbadSourceIndex,
 ): BindingCandidates {
-  const hip = parseIntOrNull(row.hip);
+  const hip = intCell(row.hip);
   const glKey = normaliseGjKey(row.gl === '' ? null : row.gl);
   const cns5Row = glKey === null
     ? undefined
@@ -168,7 +168,7 @@ export function rowGateEvidence(
   evidence: BindingEvidence,
   simbad: SimbadSourceIndex,
 ): RowGateEvidence {
-  const hip = parseIntOrNull(row.hip);
+  const hip = intCell(row.hip);
   const tycWitness = row.tyc === '' ? null : simbad.byTyc.get(row.tyc) ?? null;
   const printed = printedV({
     printed_hip: hip === null ? [] : [hip],
