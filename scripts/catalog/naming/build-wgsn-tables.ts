@@ -6,7 +6,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 import { readCrossIndexTable } from '../classic-ids/cross-index';
-import { parseIntOrNull } from '../parse/stars-parse';
+import { MEMBERSHIP_MANIFEST, MEMBERSHIP_MANIFEST_FILE } from '../membership/membership-manifest-tsv';
 import { REPO_ROOT } from '../../util/paths';
 import { emitArtifacts, runStep } from '../../util/emit-artifacts';
 import { snapshotCheck } from '../../util/snapshot-check';
@@ -33,7 +33,7 @@ const DATA = resolve(REPO_ROOT, 'data/iau-wgsn');
 const NEC_CSV = resolve(DATA, 'NEC.csv');
 const FAINTS_CSV = resolve(DATA, 'wgsnFaints.csv');
 const DISPOSITIONS = resolve(DATA, 'athyg_proper_dispositions.tsv');
-const MANIFEST = resolve(REPO_ROOT, 'data/membership/membership-manifest.tsv');
+const MANIFEST = resolve(REPO_ROOT, MEMBERSHIP_MANIFEST_FILE);
 const SNAPSHOT = resolve(REPO_ROOT, 'scripts/catalog/naming/wgsn-expected.json');
 
 export interface WgsnCounts {
@@ -80,31 +80,13 @@ interface MembershipNaming {
 }
 
 function readManifest(): MembershipNaming {
-  const lines = readFileSync(MANIFEST, 'utf8').split('\n');
-  const header = lines[0].split('\t');
-  const col = (name: string) => {
-    const i = header.indexOf(name);
-    if (i < 0) throw new Error(`membership-manifest.tsv is missing '${name}'`);
-    return i;
-  };
-  const properIdx = col('proper');
-  const bayerIdx = col('bayer');
-  const hipIdx = col('hip');
-  const hdIdx = col('hd');
   const propers = new Map<string, string>();
   const bayerKeys: { hip: number | null; hd: number | null }[] = [];
-  for (let i = 1; i < lines.length; i++) {
-    if (!lines[i].trim()) continue;
-    const cells = lines[i].split('\t');
-    const hip = cells[hipIdx]?.trim() ?? '';
-    const hd = cells[hdIdx]?.trim() ?? '';
-    const proper = (cells[properIdx] ?? '').trim();
-    if (proper && proper !== 'Sol') {
-      propers.set(membershipProperKey(proper, hip, hd), proper);
+  for (const r of MEMBERSHIP_MANIFEST.rows(readFileSync(MANIFEST, 'utf8'))) {
+    if (r.proper !== null && !r.isSol) {
+      propers.set(membershipProperKey(r.proper, cellStr(r.hip), cellStr(r.hd)), r.proper);
     }
-    if ((cells[bayerIdx] ?? '').trim()) {
-      bayerKeys.push({ hip: parseIntOrNull(hip), hd: parseIntOrNull(hd) });
-    }
+    if (r.bayer !== null) bayerKeys.push({ hip: r.hip, hd: r.hd });
   }
   return { propers, bayerKeys };
 }
