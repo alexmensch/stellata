@@ -73,6 +73,18 @@ export function sourceIdCell(raw: string | undefined): string | null {
   return t;
 }
 
+/** Absent (null or empty) first, then by value. */
+export function compareSourceIds(a: string | null, b: string | null): number {
+  const x = a || null;
+  const y = b || null;
+  if (x === y) return 0;
+  if (x === null) return -1;
+  if (y === null) return 1;
+  const bx = BigInt(x);
+  const by = BigInt(y);
+  return bx < by ? -1 : bx > by ? 1 : 0;
+}
+
 function present<T>(v: T | null): T {
   if (v === null) throw new Error('is empty');
   return v;

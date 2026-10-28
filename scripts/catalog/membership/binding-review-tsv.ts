@@ -1,6 +1,7 @@
 // Codec for data/membership/binding-review.tsv. See binding/README.md.
 
 import { defineArtifact } from '../../util/tsv/artifact-pure';
+import { compareSourceIds } from '../../util/tsv/table-pure';
 
 export const BINDING_REVIEW_FILE = 'data/membership/binding-review.tsv';
 export const BINDING_REVIEW_VERDICTS = ['contested', 'collision', 'disposed'] as const;
@@ -21,20 +22,11 @@ export const BINDING_REVIEW_COLUMNS = [
 ] as const;
 export type BindingReviewRow = Record<(typeof BINDING_REVIEW_COLUMNS)[number], string>;
 
-function compareSourceIdCells(a: string, b: string): number {
-  if (a === b) return 0;
-  if (a === '') return -1;
-  if (b === '') return 1;
-  const ba = BigInt(a);
-  const bb = BigInt(b);
-  return ba < bb ? -1 : ba > bb ? 1 : 0;
-}
-
 export const BINDING_REVIEW = defineArtifact({
   file: BINDING_REVIEW_FILE,
   columns: BINDING_REVIEW_COLUMNS,
   hint: 'Re-run `pnpm run build:membership`.',
-  order: (a: BindingReviewRow, b: BindingReviewRow) => compareSourceIdCells(a.derived_source_id, b.derived_source_id)
+  order: (a: BindingReviewRow, b: BindingReviewRow) => compareSourceIds(a.derived_source_id, b.derived_source_id)
     || a.verdict.localeCompare(b.verdict) || bindingReviewKey(a).localeCompare(bindingReviewKey(b)),
   decode: (row): BindingReviewRow => {
     row.oneOf('verdict', BINDING_REVIEW_VERDICTS);

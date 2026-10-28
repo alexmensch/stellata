@@ -1,7 +1,7 @@
 // See README.md#files-in-this-area.
 
 import { defineArtifact, nullableCell } from '../../util/tsv/artifact-pure';
-import { idCell, idListCell, sourceIdCell } from '../../util/tsv/table-pure';
+import { compareSourceIds, idCell, idListCell, sourceIdCell } from '../../util/tsv/table-pure';
 import { SOL_PROPER_NAME } from '../record/catalog-pure';
 import { canonicalKeyOf, compareDesignations, starDesignations } from '../../sid/sid-pure';
 
@@ -105,15 +105,6 @@ export function manifestDesignations(r: ManifestRecord): string[] {
     gaiaSourceId: r.gaiaSourceId,
     syntheticId: null,
   });
-}
-
-function compareSourceIds(a: string | null, b: string | null): number {
-  if (a === b) return 0;
-  if (a === null) return -1;
-  if (b === null) return 1;
-  const ba = BigInt(a);
-  const bb = BigInt(b);
-  return ba < bb ? -1 : ba > bb ? 1 : 0;
 }
 
 /** SID canonical-key order, then TYC, then source — a total order over

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
-  floatCell, idCell, idListCell, intCell, readTable, tableLineReader, textCell, type TableSpec,
+  compareSourceIds, floatCell, idCell, idListCell, intCell, readTable, tableLineReader, textCell, type TableSpec,
 } from './table-pure';
 
 const SPEC: TableSpec<'id' | 'v'> = { file: 'data/t.tsv', columns: ['id', 'v'], hint: 'Re-run x.' };
@@ -29,6 +29,12 @@ describe('cells', () => {
     expect(() => intCell('12.0')).toThrow(/not an integer/);
     expect(() => intCell('-9007199254740993')).toThrow(/past the safe integer range/);
     expect(intCell('-9007199254740991')).toBe(-Number.MAX_SAFE_INTEGER);
+  });
+
+  it('orders source_ids absent first, then by value past 2^53', () => {
+    const ids = ['9007199254740993', '', '30', null, '9007199254740992', '100'];
+    expect([...ids].sort(compareSourceIds)).toEqual(['', null, '30', '100', '9007199254740992', '9007199254740993']);
+    expect(compareSourceIds(null, '')).toBe(0);
   });
 
   it('reads an identifier only as the text it writes back to', () => {

@@ -1,6 +1,6 @@
 // Codec for data/classic-ids/rejected_bindings.tsv. See README.md#files-in-this-area.
 
-import { compareSourceIdsNumeric } from '../astrometry-request/export-astrometry-request-pure';
+import { compareSourceIds } from '../../util/tsv/table-pure';
 import { defineArtifact, nullableCell } from '../../util/tsv/artifact-pure';
 import { PRINTED_V_TIERS, type PrintedVVia } from '../photometry/v-magnitude-pure';
 
@@ -27,7 +27,7 @@ export const REJECTED_BINDINGS = defineArtifact({
   columns: ['gaia_source_id', 'hip', 'v_mag', 'v_via', 'g_mag', 'reason', 'designations'] as const,
   hint: 'Re-run `pnpm run build:classic-ids`.',
   order: (a: RejectedBindingRow, b: RejectedBindingRow) =>
-    compareHipNullsFirst(a.hip, b.hip) || compareSourceIdsNumeric(a.sourceId, b.sourceId),
+    compareHipNullsFirst(a.hip, b.hip) || compareSourceIds(a.sourceId, b.sourceId),
   decode: (row): RejectedBindingRow => ({
     sourceId: row.requiredSourceId('gaia_source_id'),
     hip: row.int('hip'),

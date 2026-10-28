@@ -1,6 +1,6 @@
 // Codec for data/classic-ids/classic_id_overlay.tsv. See README.md#files-in-this-area.
 
-import { compareSourceIdsNumeric } from '../astrometry-request/export-astrometry-request-pure';
+import { compareSourceIds } from '../../util/tsv/table-pure';
 import { defineArtifact } from '../../util/tsv/artifact-pure';
 
 /** No cell is single-valued by construction: a designation naming a
@@ -41,7 +41,7 @@ export const CLASSIC_ID_OVERLAY = defineArtifact({
   file: 'data/classic-ids/classic_id_overlay.tsv',
   columns: OVERLAY_COLUMNS,
   hint: 'Re-run `pnpm run build:classic-ids`.',
-  order: (a: OverlayRow, b: OverlayRow) => compareSourceIdsNumeric(a.sourceId, b.sourceId),
+  order: (a: OverlayRow, b: OverlayRow) => compareSourceIds(a.sourceId, b.sourceId),
   decode: (row): OverlayRow => {
     const list = (c: (typeof OVERLAY_COLUMNS)[number]): string[] =>
       (row.raw(c) === '' ? [] : row.raw(c).split(OVERLAY_VALUE_SEPARATOR));
