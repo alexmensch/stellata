@@ -8,16 +8,13 @@ import { beforeAll, describe, expect, it } from 'vitest';
 
 import { iauEdgeRecords } from '../../../../scripts/catalog/parse/constellations/constellations';
 import { STELLARIUM } from '../../../../scripts/catalog/parse/constellations/stellarium-source';
-import { REPO_ROOT, lfsContentReadable } from '../../../../scripts/util/paths';
+import { ATHYG_CLASSIC_IDS } from '../../../../scripts/catalog/spine/athyg-classic-ids-source';
+import { REPO_ROOT } from '../../../../scripts/util/paths';
+import { isReadable } from '../../../../scripts/util/sources/source';
 import { RA_HOURS_TO_DEG } from '../../util/astronomy-constants';
 import { createIauConstellationLookup } from './iau-boundaries-pure';
 
-/** The upstream AT-HYG catalogue. Not an input to the record build, which
- *  walks `data/membership/membership-manifest.tsv`; `build:binaries` Stage 1
- *  still parses it. This suite is the last TypeScript reader, which is why the
- *  path is spelt here rather than shared (`/data/athyg/README.md#consumed-by`).
- * */
-const ATHYG_CSV = resolve(REPO_ROOT, 'data/athyg/athyg_33_classic_ids.csv');
+const ATHYG_CSV = resolve(REPO_ROOT, ATHYG_CLASSIC_IDS.file);
 
 /** AT-HYG rows carrying a `con` cell. Sol is the one row that does not. */
 const ROWS_WITH_CON = 317_174;
@@ -36,7 +33,7 @@ interface Disagreement {
   positionalCon: string;
 }
 
-const available = lfsContentReadable(ATHYG_CSV);
+const available = isReadable(ATHYG_CLASSIC_IDS);
 
 describe.skipIf(!available)('IAU-positional assignment vs the AT-HYG con column', () => {
   let rowsWithCon = 0;
