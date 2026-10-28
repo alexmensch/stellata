@@ -104,7 +104,7 @@ export class TableRow<C extends string> {
   constructor(
     private readonly spec: TableSpec<C>,
     private readonly idx: Readonly<Record<C, number>>,
-    private readonly cells: readonly string[],
+    private readonly values: readonly string[],
     readonly line: number,
   ) {}
 
@@ -116,7 +116,12 @@ export class TableRow<C extends string> {
 
   /** The cell as written, '' when the row stops short of it. */
   raw(c: C): string {
-    return this.cells[this.idx[c]] ?? '';
+    return this.values[this.idx[c]] ?? '';
+  }
+
+  cells(): Readonly<Record<C, string>> {
+    const columns = [...this.spec.columns, ...(this.spec.optional ?? [])];
+    return Object.fromEntries(columns.map((c) => [c, this.raw(c)])) as Record<C, string>;
   }
 
   text(c: C): string | null {

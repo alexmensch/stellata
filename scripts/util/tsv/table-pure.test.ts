@@ -63,6 +63,12 @@ describe('readTable', () => {
     expect(row.float('v')).toBeNull();
   });
 
+  it('cells keys every spec column, optional ones included, by its raw cell', () => {
+    const spec = { ...SPEC, columns: ['id'] as const, optional: ['v'] as const };
+    const [row] = readTable(spec, 'x\tid\n9\t A \n');
+    expect(row.cells()).toEqual({ id: ' A ', v: '' });
+  });
+
   it('reads an omitted optional column as empty, and says it was omitted', () => {
     const spec = { ...SPEC, columns: ['id'] as const, optional: ['v'] as const };
     const [row] = readTable(spec, 'id\nA\n');

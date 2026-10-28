@@ -12,9 +12,6 @@ export const ADDITIONS_LEDGER = defineArtifact({
   columns: LEDGER_COLUMNS,
   hint: 'Re-run `pnpm run build:membership`.',
   order: 'by-line',
-  decode: (row): AdditionLedgerRow => ({
-    tyc: row.raw('tyc'), hip: row.raw('hip'), hd: row.raw('hd'), gl: row.raw('gl'),
-    gaia_source_id: row.raw('gaia_source_id'), reason: row.raw('reason'),
-  }),
+  decode: (row): AdditionLedgerRow => row.cells(),
   encode: (r) => r,
 });

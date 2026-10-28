@@ -59,7 +59,7 @@ the target that rebuilds or re-pulls the file.
   first, then by `BigInt` value.
   `oneOf(column, values)` returns the cell typed to a closed set or throws.
 - `raw` is the cell exactly as written, for a reader whose meaning depends on
-  untrimmed text.
+  untrimmed text; `cells()` is every spec column's `raw` cell as one record.
 - **`optional` columns may be absent from the header.** An absent one reads as
   empty in every row; `row.has(column)` says whether the header carried it,
   for the reader that must tell a missing column from an empty cell.

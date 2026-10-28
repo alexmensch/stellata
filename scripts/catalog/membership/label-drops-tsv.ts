@@ -19,7 +19,7 @@ export const LABEL_DROPS = defineArtifact({
   order: 'by-line',
   decode: (row): LabelDropRow => {
     row.oneOf('reason', LABEL_DROP_REASONS);
-    return Object.fromEntries(LABEL_DROP_COLUMNS.map((c) => [c, row.raw(c)])) as LabelDropRow;
+    return row.cells();
   },
   encode: (r) => r,
 });

@@ -30,7 +30,7 @@ export const BINDING_REVIEW = defineArtifact({
     || a.verdict.localeCompare(b.verdict) || bindingReviewKey(a).localeCompare(bindingReviewKey(b)),
   decode: (row): BindingReviewRow => {
     row.oneOf('verdict', BINDING_REVIEW_VERDICTS);
-    return Object.fromEntries(BINDING_REVIEW_COLUMNS.map((c) => [c, row.raw(c)])) as BindingReviewRow;
+    return row.cells();
   },
   encode: (r) => r,
 });

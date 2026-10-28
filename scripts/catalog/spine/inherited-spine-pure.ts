@@ -95,7 +95,7 @@ export const INHERITED_SPINE = defineArtifact({
   columns: SPINE_COLUMNS,
   hint: 'It is frozen; restore it from git rather than regenerating it.',
   order: 'as-given',
-  decode: (row): SpineRow => Object.fromEntries(SPINE_COLUMNS.map((c) => [c, row.raw(c)])) as SpineRow,
+  decode: (row): SpineRow => row.cells(),
   encode: (row) => row,
 });
 

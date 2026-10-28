@@ -173,9 +173,7 @@ const SPINE_CORRECTIONS_TABLE = {
 export function parseSpineCorrectionsTsv(text: string): SpineCorrectionRow[] {
   const out: SpineCorrectionRow[] = [];
   for (const row of readTable(SPINE_CORRECTIONS_TABLE, text)) {
-    const cells = Object.fromEntries(
-      SPINE_CORRECTION_COLUMNS.map((c) => [c, row.raw(c)]),
-    ) as Record<(typeof SPINE_CORRECTION_COLUMNS)[number], string>;
+    const cells = row.cells();
     const op = row.oneOf('op', SPINE_CORRECTION_OPS);
     if (op === 'set' && !(SPINE_CORRECTION_CELLS as readonly string[]).includes(cells.cell)) {
       row.fail(
@@ -429,9 +427,7 @@ const BINDING_DISPOSITIONS_TABLE = {
 export function parseBindingDispositionsTsv(text: string): Map<string, BindingDispositionRow> {
   const out = new Map<string, BindingDispositionRow>();
   for (const row of readTable(BINDING_DISPOSITIONS_TABLE, text)) {
-    const cells = Object.fromEntries(
-      BINDING_DISPOSITION_COLUMNS.map((c) => [c, row.raw(c)]),
-    ) as Record<(typeof BINDING_DISPOSITION_COLUMNS)[number], string>;
+    const cells = row.cells();
     const key = bindingReviewKey(cells);
     for (const column of ['derived_source_id', 'keep_source_id'] as const) {
       if (!/^\d*$/.test(cells[column])) row.fail(`${column} "${cells[column]}" is not an integer`);
