@@ -1205,7 +1205,9 @@ export function buildMembership(input: MembershipInput): MembershipResult {
     if (r.gaiaSourceId !== null) keyBySource.set(r.gaiaSourceId, spineKey(i));
   });
   for (const { sourceId, ...flip } of merge.flips) {
-    outcomes.push({ key: keyBySource.get(sourceId)!, outcome: { kind: 'label-flip', flip } });
+    const key = keyBySource.get(sourceId);
+    if (key === undefined) throw new Error(`label merge flipped ${flip.field} on ${sourceId}, which no spine record binds`);
+    outcomes.push({ key, outcome: { kind: 'label-flip', flip } });
   }
   // A fold claims two spine rows are one star, so the survivor has to end up
   // answering to everything the folded row did — otherwise the fold is a
