@@ -303,10 +303,11 @@ name.
    record's full designation set (`catalogRecordDesignations`, `../../sid/`),
    so it needs a built catalogue. `matchName` tries the name exactly, then
    case- and accent-folded (`foldNameKey`, `../naming/`), so `algol` finds
-   Algol and `Yunu` finds Yunü. A folded name reaching two records refuses,
-   listing both: the designation half has case-only twins that are different
-   stars (`a Car`, `A Car`). `lookupByName` itself stays exact, for the
-   frozen corpora. Designations follow `sid-pure.ts`'s grammar; a SID
+   Algol and `Yunu` finds Yunü. A name reaching two records, exactly or
+   folded, refuses, listing both: one composed label can sit on two records
+   (`54 Leo`, a HIP primary and a Gaia-only companion), and the designation
+   half has case-only twins that are different stars (`a Car`, `A Car`).
+   `lookupByName` itself stays exact, for the frozen corpora. Designations follow `sid-pure.ts`'s grammar; a SID
    resolves to its canonical key through the ledger.
 2. Find the origin keys whose identity rows carry that designation. Parked
    and dropped records have lineage rows too, so they are found. Also find

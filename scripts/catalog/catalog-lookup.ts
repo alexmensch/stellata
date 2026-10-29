@@ -196,8 +196,9 @@ interface CatalogIndexes {
   /** Every string a record DISPLAYS: the name table, plus — where the
    *  search index was loaded — the labels the display-name composer builds
    *  from the wire, which is where a Bayer / Flamsteed / component
-   *  designation lives (`naming/README.md`). The name table wins a tie. */
-  byName: Map<string, number>;
+   *  designation lives (`naming/README.md`). Every record a string reaches,
+   *  name-table entries first, so the name table wins a tie at `[0]`. */
+  byName: Map<string, number[]>;
   /** The composed display label per record index — the reverse of the
    *  designation half of `byName`. Empty without the search index. */
   labelByIndex: Map<number, string>;
@@ -214,11 +215,16 @@ function getIndexes(catalog: Catalog): CatalogIndexes {
   if (hit) return hit;
   const byHip = new Map<number, number>();
   const byGaiaSourceId = new Map<string, number>();
-  const byName = new Map<string, number>();
+  const byName = new Map<string, number[]>();
+  const addName = (name: string, i: number): void => {
+    const records = byName.get(name);
+    if (records === undefined) byName.set(name, [i]);
+    else if (!records.includes(i)) records.push(i);
+  };
   for (const r of catalog.records()) {
     if (r.hip !== null) byHip.set(r.hip, r.i);
     if (r.gaiaSourceId !== null) byGaiaSourceId.set(r.gaiaSourceId.toString(), r.i);
-    if (r.name) byName.set(r.name, r.i);
+    if (r.name) addName(r.name, r.i);
   }
   const byHd = buildAliasedIdIndex(
     catalog.searchIndex ?? [], (e) => e.hd, (e) => e.hda,
@@ -229,7 +235,7 @@ function getIndexes(catalog: Catalog): CatalogIndexes {
       catalog.searchIndex, catalog.constellations,
     )) {
       labelByIndex.set(i, label.label);
-      if (!byName.has(label.label)) byName.set(label.label, i);
+      addName(label.label, i);
     }
   }
   const built = { byHip, byGaiaSourceId, byName, byHd, labelByIndex };
@@ -258,8 +264,8 @@ export function lookupByGaiaSourceId(catalog: Catalog, sourceId: bigint | string
   return i === undefined ? null : catalog.record(i);
 }
 
-/** `byName` whole: every name and composed label to its record index. */
-export function nameTable(catalog: Catalog): ReadonlyMap<string, number> {
+/** `byName` whole: every name and composed label to the records it reaches. */
+export function nameTable(catalog: Catalog): ReadonlyMap<string, readonly number[]> {
   return getIndexes(catalog).byName;
 }
 
@@ -268,8 +274,8 @@ export function nameTable(catalog: Catalog): ReadonlyMap<string, number> {
  *  tiers, so a corpus row naming a star by its DESIGNATION would read as
  *  "no such record" and silently stop testing anything. */
 export function lookupByName(catalog: Catalog, name: string): CatalogRecord | null {
-  const i = getIndexes(catalog).byName.get(name);
-  if (i !== undefined) return catalog.record(i);
+  const records = getIndexes(catalog).byName.get(name);
+  if (records !== undefined) return catalog.record(records[0]);
   if (catalog.searchIndex === undefined) {
     throw new Error(
       `name: record ref "${name}" missed catalog.bin's name table, which carries `

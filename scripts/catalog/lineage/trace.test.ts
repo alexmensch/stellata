@@ -35,9 +35,12 @@ const MEMBERSHIP = [
 const identity = [...identityRows(IDENTITY, 'fixture/identity.tsv')];
 const stages = [{ stage: 'membership', rows: [...lineageRows(MEMBERSHIP, 'fixture/membership.tsv')] }];
 /** SID 7's canonical key is HD 5; record 0, "Fixture Star" or "Yunü", is the
- *  record on HD 5; records 1 and 2 are case-only designation twins. */
-const NAMES = new Map([['Fixture Star', 0], ['Yunü', 0], ['a Car', 1], ['A Car', 2]]);
-const DESIGNATIONS = [['hd:5', 'gaia_dr3:222'], ['hd:9'], ['hd:10']];
+ *  record on HD 5; records 1 and 2 are case-only designation twins; records 3
+ *  and 4 both display "54 Leo". */
+const NAMES = new Map([
+  ['Fixture Star', [0]], ['Yunü', [0]], ['a Car', [1]], ['A Car', [2]], ['54 Leo', [3, 4]],
+]);
+const DESIGNATIONS = [['hd:5', 'gaia_dr3:222'], ['hd:9'], ['hd:10'], ['hd:11'], ['hd:12']];
 const LOOKUPS: TraceLookups = {
   canonicalKey: (sid) => (sid === 7 ? 'hd:5' : null),
   names: () => NAMES,
@@ -71,6 +74,12 @@ describe('matchName', () => {
   it('refuses a folded key reaching two records, naming both', () => {
     expect(matchName(NAMES, 'A CAR')).toEqual({ kind: 'ambiguous', candidates: [['a Car', 1], ['A Car', 2]] });
   });
+
+  it('refuses one string reaching two records, exact or folded', () => {
+    const both = { kind: 'ambiguous', candidates: [['54 Leo', 3], ['54 Leo', 4]] };
+    expect(matchName(NAMES, '54 Leo')).toEqual(both);
+    expect(matchName(NAMES, '54 leo')).toEqual(both);
+  });
 });
 
 describe('traceRecords over the fixture lineage', () => {
@@ -101,7 +110,7 @@ describe('traceRecords over the fixture lineage', () => {
   it('finds a name ignoring case and accents, refusing a fold that reaches two records', () => {
     expect(trace('fixture star').map((r) => r.key)).toEqual(['spine:3', 'spine:4']);
     expect(trace('Yunu').map((r) => r.key)).toEqual(['spine:3', 'spine:4']);
-    expect(() => trace('a car')).toThrow(/"a car" matches "a Car" \(record 1\), "A Car" \(record 2\)/);
+    expect(() => trace('a car')).toThrow(/"a car" reaches more than one record: "a Car" \(record 1\), "A Car" \(record 2\)/);
   });
 
   it('says so when nothing names the query', () => {
