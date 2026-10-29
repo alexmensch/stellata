@@ -1,9 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import type { ApsisRow, SimbadRecordKeys } from '../record/catalog-pure';
 import {
-  SPECTRAL_UNKNOWN,
-} from './spectral-classify';
-import {
   type SimbadSpectralIndex,
   type SimbadSpectralRow,
   parseSimbadSptypeTsv,
@@ -12,18 +9,16 @@ import {
 
 const FROM = { file: 'fixture.tsv', hint: 'h' };
 
-/** The resolution flattened to the fields the record reads: `none` renders
- *  as SPECTRAL_UNKNOWN with no display string. */
+/** A resolution expected to land on a tier, flattened; `none` fails the test. */
 const flatSp = (...args: Parameters<typeof resolveSpectralInfo>) => {
   const r = resolveSpectralInfo(...args);
-  return r.via === 'none'
-    ? { source: r.via, info: SPECTRAL_UNKNOWN, spectDisplay: null, simbadKey: undefined }
-    : {
-        source: r.via,
-        info: r.value.info,
-        spectDisplay: r.value.spectDisplay,
-        simbadKey: r.via === 'simbad' ? r.value.namespace : undefined,
-      };
+  if (r.via === 'none') throw new Error('resolved to none');
+  return {
+    source: r.via,
+    info: r.value.info,
+    spectDisplay: r.value.spectDisplay,
+    simbadKey: r.via === 'simbad' ? r.value.namespace : undefined,
+  };
 };
 
 describe('resolveSpectralInfo — tier priority', () => {
@@ -150,7 +145,7 @@ describe('resolveSpectralInfo — tier priority', () => {
     // pair — so a record holding both takes the component type, not the blend.
     expect(key(null, null, '1-2-1', 'Gl 165A')).toBe('gj');
     expect(key(null, null, '1-2-1', null)).toBe('tyc');
-    expect(key(null, null, null, null)).toBeUndefined();
+    expect(resolveSpectralInfo(keys(null, null, null, null), simbad, new Map()).via).toBe('none');
   });
 
   it('tier 5: GSP-Spec when SIMBAD is absent or unparseable', () => {
@@ -173,11 +168,9 @@ describe('resolveSpectralInfo — tier priority', () => {
     expect(out.info.classIdx).toBe(3); // F
   });
 
-  it('tier 6: SPECTRAL_UNKNOWN fallback when every upstream tier misses', () => {
-    const out = flatSp(keys(GAIA_ID, HIP), idx(), new Map());
-    expect(out.source).toBe('none');
-    expect(out.info).toBe(SPECTRAL_UNKNOWN);
-    expect(out.spectDisplay).toBeNull();
+  it('tier 6: none when every upstream tier misses', () => {
+    expect(resolveSpectralInfo(keys(GAIA_ID, HIP), idx(), new Map()))
+      .toEqual({ via: 'none', refusals: [] });
   });
 
   it('names each typed row it reached and could not take', () => {
@@ -194,11 +187,10 @@ describe('resolveSpectralInfo — tier priority', () => {
     });
   });
 
-  it('tier 6: no source_id and no HIP falls straight through to fallback', () => {
+  it('tier 6: no source_id and no HIP falls straight through to none', () => {
     const simbad = idx([['9999', row('A0V', 'C', 'PM*', '9999')]]);
-    const out = flatSp(keys(null, null), simbad, new Map());
-    expect(out.source).toBe('none');
-    expect(out.info).toBe(SPECTRAL_UNKNOWN);
+    expect(resolveSpectralInfo(keys(null, null), simbad, new Map()))
+      .toEqual({ via: 'none', refusals: [] });
   });
 
   it('a designation tier row naming another Gaia source does not match', () => {

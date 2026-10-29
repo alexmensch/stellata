@@ -12,9 +12,7 @@ import {
   gspcBMinusV,
   resolveColourIndex,
   ciIsObserved,
-  type ColourIndexSources,
 } from './colour-index-pure';
-import { SOLAR_BV_FALLBACK } from '../record/catalog-pure';
 import { RIELLO_BP_RP_MIN, rielloGMinusV } from './v-magnitude-pure';
 import {
   GAIA_PHOTOMETRY_SATURATION_G,
@@ -27,15 +25,6 @@ import { atColour, photometry } from './photometry-fixture';
 const bv = (p: GaiaPhotometry): number | null => gatedValueOrNull(gaiaBMinusV(p));
 const gspcBv = (p: GaiaPhotometry | null, g: GspcColour | null): number | null =>
   g === null ? null : gatedValueOrNull(gspcBMinusV(p, g));
-/** The value the record bakes, its tier, and the de-extinction verdict. */
-const flatCi = (src: ColourIndexSources) => {
-  const r = resolveColourIndex(src);
-  return {
-    ci: r.via === 'none' ? SOLAR_BV_FALLBACK : r.value,
-    via: r.via,
-    isObserved: ciIsObserved(r.via),
-  };
-};
 
 describe('Gaia DR3 Table 5.9 G−B relation', () => {
   // The literals ARE the assertion: these are the published values, so the
@@ -158,51 +147,59 @@ describe('resolveColourIndex cascade', () => {
   });
 
   it('takes the Gaia relation when it applies, marked observed', () => {
-    const r = flatCi(sources({ photometry: atColour(0.8) }));
-    expect(r.via).toBe('gaia_relation');
-    expect(r.ci).toBeCloseTo(bv(atColour(0.8))!, 12);
-    expect(r.isObserved).toBe(true);
+    const r = resolveColourIndex(sources({ photometry: atColour(0.8) }));
+    expect(r).toEqual({ via: 'gaia_relation', value: expect.any(Number), refusals: [] });
+    expect(r).toMatchObject({ value: (gaiaBMinusV(atColour(0.8)) as { value: number }).value });
+    expect(ciIsObserved(r.via)).toBe(true);
   });
 
   it('prefers the printed colour over the synthetic one', () => {
     // The inversion of the contract's stated order — the synthetic tier runs
     // outside the standardisation that ties it to the ground system, and
     // every corpus row carrying both prefers printed.
-    expect(flatCi(sources({ photometry: atColour(2.5) })))
-      .toEqual({ ci: 1.2, via: 'printed_hip_bv', isObserved: true });
+    expect(resolveColourIndex(sources({ photometry: atColour(2.5) }))).toMatchObject({
+      via: 'printed_hip_bv', value: 1.2,
+    });
+    expect(ciIsObserved('printed_hip_bv')).toBe(true);
   });
 
   it('falls to the synthetic colour where no printed one exists', () => {
-    expect(flatCi(sources({ photometry: atColour(2.5), printedHipBv: null })))
-      .toEqual({ ci: 2.1, via: 'gspc', isObserved: true });
+    expect(resolveColourIndex(sources({ photometry: atColour(2.5), printedHipBv: null })))
+      .toMatchObject({ via: 'gspc', value: 2.1 });
+    expect(ciIsObserved('gspc')).toBe(true);
   });
 
   it('skips a non-finite printed colour rather than propagating it', () => {
-    expect(flatCi(sources({ photometry: atColour(2.5), printedHipBv: NaN })))
-      .toEqual({ ci: 2.1, via: 'gspc', isObserved: true });
+    expect(resolveColourIndex(sources({ photometry: atColour(2.5), printedHipBv: NaN })))
+      .toMatchObject({ via: 'gspc', value: 2.1 });
   });
 
   it('skips the synthetic tier past its bound and with no photometry row', () => {
     const noPrinted = { printedHipBv: null } as const;
-    expect(flatCi(sources({ ...noPrinted, photometry: atColour(3.5) })).via)
+    expect(resolveColourIndex(sources({ ...noPrinted, photometry: atColour(3.5) })).via)
       .toBe('spectral_derived');
     // No broadband colour means the bound cannot be evaluated, so the tier is
     // skipped even though the pull carries a value.
-    expect(flatCi(sources(noPrinted)).via).toBe('spectral_derived');
+    expect(resolveColourIndex(sources(noPrinted)).via).toBe('spectral_derived');
   });
 
-  // The two derived tiers are intrinsic — de-extinction must not redden them
-  // a second time (companionCiIsObserved gates on the same contract).
+  // The derived tier is intrinsic — de-extinction must not redden it a second
+  // time (companionCiIsObserved gates on the same contract).
   it('derives the spectral colour only for a no-Apsis star, marked intrinsic', () => {
-    expect(flatCi(sources({ gspc: null, printedHipBv: null })))
-      .toEqual({ ci: 1.4, via: 'spectral_derived', isObserved: false });
-    expect(flatCi(sources({ gspc: null, printedHipBv: null, apsisTeff: 5200 })))
-      .toEqual({ ci: SOLAR_BV_FALLBACK, via: 'none', isObserved: false });
+    expect(resolveColourIndex(sources({ gspc: null, printedHipBv: null })))
+      .toEqual({ via: 'spectral_derived', value: 1.4, refusals: [] });
+    expect(ciIsObserved('spectral_derived')).toBe(false);
+    expect(resolveColourIndex(sources({ gspc: null, printedHipBv: null, apsisTeff: 5200 })))
+      .toEqual({
+        via: 'none',
+        refusals: [{ tier: 'spectral_derived', reason: 'apsis_teff_renders' }],
+      });
   });
 
-  it('falls to solar when the class yields no derivable colour', () => {
-    expect(flatCi(sources({ gspc: null, printedHipBv: null, spectralCi: null })))
-      .toEqual({ ci: SOLAR_BV_FALLBACK, via: 'none', isObserved: false });
+  it('reaches none when the class yields no derivable colour, and none is intrinsic', () => {
+    expect(resolveColourIndex(sources({ gspc: null, printedHipBv: null, spectralCi: null })))
+      .toEqual({ via: 'none', refusals: [] });
+    expect(ciIsObserved('none')).toBe(false);
   });
 
   it('names every candidate it passed over, on whichever tier it lands', () => {
