@@ -92,8 +92,8 @@ export const MEMBERSHIP_EXPECTED_FILE =
   'scripts/catalog/membership/membership-manifest-expected.json';
 
 /** A manifest row as the generator assembles it, cell by cell, before
- *  `manifestRecord` types it. */
-type ManifestCells = Record<ManifestColumn, string>;
+ *  `manifestRecord` types it with its origin key. */
+type ManifestCells = Record<Exclude<ManifestColumn, 'origin_key'>, string>;
 
 /** See binding/README.md. */
 export const BINDING_OUTCOMES = [
@@ -709,8 +709,8 @@ function routesCell(a: RowAttestation): {
   return { routes: joinValues(routes), unattested: a.unattested };
 }
 
-function toRecord(cells: ManifestCells): ManifestRecord {
-  return manifestRecord((c) => cells[c], (m) => {
+function toRecord(cells: ManifestCells, originKey: string): ManifestRecord {
+  return manifestRecord((c) => (c === 'origin_key' ? originKey : cells[c]), (m) => {
     throw new Error(`manifest row ${parkedRecordKey(cells)}: ${m}`);
   });
 }
@@ -1093,15 +1093,13 @@ export function buildMembership(input: MembershipInput): MembershipResult {
   ) as Record<ClassicalCell, number>;
   const outcomes: KeyedOutcome[] = [];
   const identity: IdentityRow[] = [];
-  const rows: ManifestCells[] = [];
-  const rowKeys: string[] = [];
+  const rows: { cells: ManifestCells; key: string }[] = [];
   const attest = (key: string, row: ManifestCells, a?: RowAttestation): void => {
     const { routes, unattested } = routesCell(a ?? attestSpineRow(row, tables, idx));
     row.routes = routes;
     for (const cell of unattested) unattestedByCell[cell]++;
     bindingByClass[row.binding as BindingClass]++;
-    rows.push(row);
-    rowKeys.push(key);
+    rows.push({ cells: row, key });
   };
 
   const derivationOutcome = Object.fromEntries(
@@ -1225,7 +1223,9 @@ export function buildMembership(input: MembershipInput): MembershipResult {
     const folded = corrected[foldedRow];
     outcomes.push({ key: keys.spine(foldedRow), outcome: { kind: 'fold', survivor: keys.spine(survivorRow) } });
     identity.push(identityOf(keys.spine(foldedRow), { ...folded, gaia_source_id: '' }, spineDesignations(folded)));
-    const survivorHolds = new Set(manifestDesignations(toRecord(spineManifestRows[survivorKept])));
+    const survivorHolds = new Set(manifestDesignations(
+      toRecord(spineManifestRows[survivorKept], spineKey(survivorKept)),
+    ));
     const lost = spineDesignations(corrected[foldedRow]).filter((d) => !survivorHolds.has(d));
     if (lost.length > 0) {
       throw new Error(
@@ -1309,7 +1309,7 @@ export function buildMembership(input: MembershipInput): MembershipResult {
     });
     additionsByReason[a.verdict.reason]++;
     if (a.blocked.length > 0) additionsWithBlockedDesignation++;
-    const designations = manifestDesignations(toRecord(a.verdict.row));
+    const designations = manifestDesignations(toRecord(a.verdict.row, g.origin));
     if (designations.length === 1 && designations[0].startsWith('gaia_dr3:')) additionGaiaKeyedOnly++;
     claimRecord(claims, a.verdict.record);
     attest(g.origin, a.verdict.row);
@@ -1317,7 +1317,7 @@ export function buildMembership(input: MembershipInput): MembershipResult {
 
   const primariesRows = rows.length;
   const boundSourceIds = new Set(
-    rows.map((r) => r.gaia_source_id).filter((s) => s !== ''),
+    rows.map((r) => r.cells.gaia_source_id).filter((s) => s !== ''),
   );
   const magnitudeRowsOwnCandidate = Object.fromEntries(
     OWN_CANDIDATE_REASONS.map((r) => [r, 0]),
@@ -1330,13 +1330,12 @@ export function buildMembership(input: MembershipInput): MembershipResult {
     if (own !== undefined) magnitudeRowsOwnCandidate[own]++;
     const row = magnitudeTermRow(sourceId);
     bindingByClass[row.binding as BindingClass]++;
-    rows.push(row);
-    rowKeys.push(keys.gaia(sourceId));
+    rows.push({ cells: row, key: keys.gaia(sourceId) });
     outcomes.push({ key: keys.gaia(sourceId), outcome: { kind: 'admit-magnitude' } });
   }
 
-  const typed = rows.map(toRecord);
-  typed.forEach((r, i) => identity.push(identityOf(rowKeys[i], rows[i], manifestDesignations(r))));
+  const typed = rows.map(({ cells, key }) => toRecord(cells, key));
+  typed.forEach((r, i) => identity.push(identityOf(r.originKey, rows[i].cells, manifestDesignations(r))));
   const lineage = outcomes.map(membershipLineageRow);
   const ledgers = membershipLedgers(lineage, new Map(identity.map((r) => [r.key, r])));
   const bindingReviewByVerdict = Object.fromEntries(BINDING_REVIEW_VERDICTS.map(

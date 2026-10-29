@@ -30,6 +30,7 @@ import {
 } from '../photometry/v-magnitude-pure';
 import { MULTIPLES_TSV, type MultiplesRecord, type PhotometryVia } from '../../binaries/multiples-tsv';
 import { readArtifact } from '../../util/sources/source';
+import { sourceRowRef, sourceRowRefText } from '../../util/sources/row-ref-pure';
 import { emptyTallyPartition } from '../../util/tally';
 import { ARCSEC_TO_RAD } from '../../../src/client/util/astronomy-constants';
 import { equatorialTangentBasisAt } from '../../../src/client/util/equatorial-basis';
@@ -1795,6 +1796,7 @@ function promoteRow(
     distVia: inheritAnchor?.distVia ?? null,
     vVia: null,
     syntheticId: usesSynth ? synthId : null,
+    originKey: sourceRowRefText(sourceRowRef(MULTIPLES_TSV, row)),
   });
   const newIdx = state.existingStarsLength + state.newStars.length - 1;
   // Flux conservation: a member whose light is embedded in whatever

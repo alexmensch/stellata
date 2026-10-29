@@ -49,7 +49,7 @@ function spineRow(cells: Partial<SpineRow>): SpineRow {
 }
 
 function manifestRow(cells: Partial<Record<ManifestColumn, string>>): ManifestRecord {
-  const defaults: Partial<Record<ManifestColumn, string>> = { binding: 'none', term: 'primaries' };
+  const defaults: Partial<Record<ManifestColumn, string>> = { binding: 'none', term: 'primaries', origin_key: 'spine:1' };
   return manifestRecord((c) => cells[c] ?? defaults[c] ?? '', (m) => { throw new Error(m); });
 }
 

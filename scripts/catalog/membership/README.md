@@ -99,7 +99,7 @@ audit, so the two instruments read one table set.
 
 ```
 tyc  hip  hd  hd_alt  hr  hr_alt  gl  flam  bayer  proper
-gaia_source_id  binding  routes  term
+gaia_source_id  binding  routes  term  origin_key
 ```
 
 - The identifier cells carry the record's **final** labels: for a spine row
@@ -126,6 +126,11 @@ gaia_source_id  binding  routes  term
   `data/iau-wgsn/athyg_proper_dispositions.tsv` disposes; an unattested
   Flamsteed or HD cell leaves the row for `label-drops.tsv` instead
   ([The unattested labels leave the row](#the-unattested-labels-leave-the-row)).
+- `origin_key` is the record's lineage origin key, the same one its lineage
+  rows and identity row are keyed on
+  ([Identity](../lineage/README.md#identity--the-origin-source-row)). `readStars`
+  carries it onto the record, so a later stage cites a record by it rather
+  than re-deriving it from the identifier cells.
 
 Rows are sorted by SID canonical key (`sortManifestRecords`), then TYC, then
 source — a total order over content, so a regeneration diffs by what changed

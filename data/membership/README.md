@@ -9,9 +9,10 @@ the two files marked hand-curated below, which the build reads as input. Contrac
 membership-manifest.tsv  LFS. One row per admitted record: final
                          labels (hd/hd_alt/hr/hr_alt/hip/gl/flam, the spine's
                          bayer/proper), gaia_source_id with its binding class,
-                         the primary attesting each cell, and `term` — which
+                         the primary attesting each cell, `term` — which
                          side of /docs/catalog-driver.md#1-the-driver-model's union admitted
-                         the row. 975,573 rows: 376,909 `primaries` and
+                         the row — and `origin_key`, the record's lineage
+                         key. 975,573 rows: 376,909 `primaries` and
                          598,664 `magnitude` at the V <= 11 floor
                          (scripts/catalog/membership/magnitude-term/README.md).
 additions-ledger.tsv     LFS. The /docs/catalog-driver.md#61-record-parity ledger for everything the

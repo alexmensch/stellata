@@ -33,7 +33,7 @@ type ManifestRow = Partial<Record<ManifestColumn, string>>;
 // Emitted through the shipped codec, so a column added or renamed in
 // MANIFEST_COLUMNS fails here rather than silently shifting every cell.
 function manifestRows(rows: readonly ManifestRow[]): ManifestRecord[] {
-  const defaults: ManifestRow = { binding: 'none', term: 'primaries' };
+  const defaults: ManifestRow = { binding: 'none', term: 'primaries', origin_key: 'spine:1' };
   return MEMBERSHIP_MANIFEST.parse(MEMBERSHIP_MANIFEST.serialize(rows.map((row) => manifestRecord(
     (c) => row[c] ?? defaults[c] ?? '', (m) => { throw new Error(m); },
   ))));

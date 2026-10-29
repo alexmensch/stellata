@@ -50,6 +50,7 @@ export function makeStar(overrides: Partial<Star> = {}): Star {
     // read as a system blend has to opt into a printed tier explicitly.
     vVia: 'gaia_riello',
     syntheticId: null,
+    originKey: 'spine:1',
     ...overrides,
   };
 }
