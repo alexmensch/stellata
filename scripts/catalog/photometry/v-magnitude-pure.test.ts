@@ -21,7 +21,6 @@ import {
 } from './v-magnitude-pure';
 import {
   GAIA_PHOTOMETRY_SATURATION_G,
-  gatedValueOrNull,
   type GaiaPhotometry,
 } from './gaia-photometry-pure';
 import { photometry, printedVOf } from './photometry-fixture';
@@ -75,8 +74,9 @@ describe('rielloVMagnitude', () => {
   it('transforms a well-measured unsaturated source inside the colour range', () => {
     // G = 10, BP-RP = 0.8: the gate's own inputs, so the returned V proves the
     // transform ran on the values the gate accepted rather than a re-derivation.
-    expect(gatedValueOrNull(rielloVMagnitude(photometry())))
-      .toBeCloseTo(10 - rielloGMinusV(0.8), 12);
+    const v = rielloVMagnitude(photometry());
+    expect(v.kind).toBe('value');
+    expect(v.kind === 'value' ? v.value : NaN).toBeCloseTo(10 - rielloGMinusV(0.8), 12);
   });
 
   it('rejects a missing band', () => {

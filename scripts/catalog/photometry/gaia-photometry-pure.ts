@@ -41,10 +41,6 @@ export type GatedValue =
   | { kind: 'value'; value: number }
   | { kind: 'refused'; reason: PhotometryRefusal };
 
-export function gatedValueOrNull(gated: GatedValue): number | null {
-  return gated.kind === 'value' ? gated.value : null;
-}
-
 /** Evaluate a coefficient list in ascending powers of `x` (Horner). */
 export function polynomial(coeffs: readonly number[], x: number): number {
   let acc = 0;

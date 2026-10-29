@@ -5,7 +5,7 @@ import type { ManifestRecord } from '../membership-manifest-tsv';
 import type { Declared } from '../../../util/sources/source';
 import { readTable, tableLineReader, type TableRow } from '../../../util/tsv/table-pure';
 import { rielloVMagnitude } from '../../photometry/v-magnitude-pure';
-import { gatedValueOrNull, type GaiaPhotometry } from '../../photometry/gaia-photometry-pure';
+import type { GaiaPhotometry } from '../../photometry/gaia-photometry-pure';
 
 /** Johnson V the term admits on; `null` is the primaries alone.
  *  README.md#the-floor-is-one-constant. */
@@ -29,9 +29,10 @@ export function magnitudeVerdict(
   photometry: GaiaPhotometry | null,
   floorV: number,
 ): MagnitudeVerdict {
-  const v = photometry === null ? null : gatedValueOrNull(rielloVMagnitude(photometry));
-  if (v === null) return 'no_v';
-  return v <= floorV ? 'kept' : 'above_floor';
+  if (photometry === null) return 'no_v';
+  const v = rielloVMagnitude(photometry);
+  if (v.kind === 'refused') return 'no_v';
+  return v.value <= floorV ? 'kept' : 'above_floor';
 }
 
 export type MagnitudeTermCounts = Record<MagnitudeVerdict | 'rows', number>;
