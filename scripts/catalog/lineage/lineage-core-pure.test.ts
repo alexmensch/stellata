@@ -24,13 +24,17 @@ describe('the lineage order', () => {
       row('gaia-dr3:4295806720123456789'), row('spine:2'), row('gaia-dr3:18014398509481985'),
     ];
     const keys = (rows: readonly LineageRow[]): string[] => rows.map((r) => r.key);
-    const written = [...lineageRows(stageLineageText(CODES, mixed), 'fixture/demo.tsv')];
+    const sorted = [...mixed].sort(compareLineageRows);
+    const written = [...lineageRows(stageLineageText(CODES, sorted), 'fixture/demo.tsv')];
     expect(keys(written)).toEqual([
       'gaia-dr3:18014398509481985', 'gaia-dr3:4295806720123456789', 'gaia-dr3:9',
       'multiples:00057+4549/B', 'spine:10', 'spine:2',
     ]);
-    expect(keys([...mixed].sort(compareLineageRows))).toEqual(keys(written));
     expect(diffLineage(written, written)).toEqual([]);
+  });
+
+  it('the writer refuses rows out of lineage order, as the diff does', () => {
+    expect(() => stageLineageText(CODES, [row('spine:3'), row('spine:2')])).toThrow(/not in lineage order/);
   });
 
   it('orders by code point, so an astral character sorts after U+FFFD', () => {

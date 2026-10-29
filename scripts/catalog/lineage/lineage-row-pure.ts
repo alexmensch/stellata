@@ -69,7 +69,18 @@ export function encodeLineageLine(row: LineageRow): string {
   return cells.join('\t');
 }
 
+export function assertLineageOrder(rows: readonly LineageRow[], what: string): void {
+  for (let i = 1; i < rows.length; i++) {
+    if (compareLineageRows(rows[i - 1], rows[i]) > 0) {
+      throw new Error(`lineage: ${what} is not in lineage order at key ${rows[i].key}`);
+    }
+  }
+}
+
+/** `rows` arrive sorted by compareLineageRows: a stage sorts once, for its
+ *  diff and its file both. */
 export function stageLineageText(codes: StageCodes<string>, rows: readonly LineageRow[]): string {
+  assertLineageOrder(rows, `the ${codes.stage} file`);
   for (const row of rows) {
     if (row.stage !== codes.stage) {
       throw new Error(`lineage: a row of stage ${row.stage} in the ${codes.stage} file (key ${row.key})`);
@@ -78,7 +89,7 @@ export function stageLineageText(codes: StageCodes<string>, rows: readonly Linea
       throw new Error(`lineage: ${row.code} is not a declared ${codes.stage} code (key ${row.key})`);
     }
   }
-  const lines = [...rows].sort(compareLineageRows).map(encodeLineageLine);
+  const lines = rows.map(encodeLineageLine);
   return `${[LINEAGE_COLUMNS.join('\t'), ...lines].join('\n')}\n`;
 }
 

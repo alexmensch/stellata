@@ -29,7 +29,8 @@ export interface StageLineageRun<F extends string> {
   /** The stage's own file: the one its diff reads. */
   readonly diffed: F;
   readonly rows: readonly LineageRow[];
-  readonly render: () => Readonly<Record<F, string>>;
+  /** Handed `rows` in lineage order. */
+  readonly render: (sorted: readonly LineageRow[]) => Readonly<Record<F, string>>;
   readonly joins: readonly DiffJoin[];
   readonly budget: LineageBudget;
   readonly argv: readonly string[];
@@ -58,11 +59,11 @@ export async function stageLineage<F extends string>(
 ): Promise<StageLineageEmission<F>> {
   const source = baselineSource(run);
   const verdict = judgeBaseline(source, mergeBaseWithMain(), run.argv.includes(ACCEPT_ANY_BASELINE_FLAG));
+  const sorted = [...run.rows].sort(compareLineageRows);
   let changes: KeyChange[] | null = null;
   if (verdict.kind === 'diff') {
     const dir = source.kind === 'against' ? source.dir : run.layout.current;
-    const current = [...run.rows].sort(compareLineageRows);
-    changes = diffLineage(readLineage(stageFile(dir, run.diffed)), current);
+    changes = diffLineage(readLineage(stageFile(dir, run.diffed)), sorted);
   } else if (verdict.kind === 'refused') {
     console.log(verdict.message);
   } else {
@@ -71,7 +72,7 @@ export async function stageLineage<F extends string>(
 
   const header = await stageHeader(run.spec, run.script);
   const started = performance.now();
-  const texts = run.render();
+  const texts = run.render(sorted);
   const diff = changes === null ? null : stageDiffText(changes, run.joins);
   const { files, members } = stageEmission(run.layout, run.spec, texts, header, diff);
   const writeMs = performance.now() - started;

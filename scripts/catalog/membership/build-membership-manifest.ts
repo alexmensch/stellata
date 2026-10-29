@@ -164,8 +164,8 @@ async function main(): Promise<void> {
     script: 'build:membership',
     diffed: 'membership',
     rows: result.lineage,
-    render: () => ({
-      membership: stageLineageText(MEMBERSHIP_CODES, result.lineage),
+    render: (sorted) => ({
+      membership: stageLineageText(MEMBERSHIP_CODES, sorted),
       identity: identityText(result.identity),
     }),
     joins: [multiplesComponentJoin(new Map(result.identity.map((r) => [r.key, r])), multiples)],

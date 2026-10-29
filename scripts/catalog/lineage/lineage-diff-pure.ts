@@ -1,7 +1,7 @@
 // The run-to-run diff: a merge-join of two key-sorted lineage files, and its TSV form. See README.md#run-to-run-diff.
 
 import {
-  LINEAGE_COLUMNS, compareLineageRows, compareUtf8, encodeLineageLine, type LineageRow,
+  LINEAGE_COLUMNS, assertLineageOrder, compareUtf8, encodeLineageLine, type LineageRow,
 } from './lineage-row-pure';
 
 export type KeyChangeKind = 'added' | 'removed' | 'changed';
@@ -16,11 +16,9 @@ export interface KeyChange {
 }
 
 function keyGroups(rows: readonly LineageRow[], side: string): LineageRow[][] {
+  assertLineageOrder(rows, `the diff's ${side} file`);
   const groups: LineageRow[][] = [];
   for (let i = 0; i < rows.length; i++) {
-    if (i > 0 && compareLineageRows(rows[i - 1], rows[i]) > 0) {
-      throw new Error(`lineage diff: the ${side} file is not in lineage order at key ${rows[i].key}`);
-    }
     if (i > 0 && rows[i - 1].key === rows[i].key) groups[groups.length - 1].push(rows[i]);
     else groups.push([rows[i]]);
   }
