@@ -217,9 +217,6 @@ site-dev-routing.test.ts The dev server's routing table held against the
                          gets the homepage, everything else 404s. Pairs
                          with src/worker.test.ts, which pins the same
                          table on the production side.
-skill-guard.test.ts      Behavioural pins for scripts/hooks/skill-guard.sh,
-                         one describe per skill gate (cube-css, code-craft);
-                         /scripts/hooks/README.md#how-skill-guard-works.
 step-outputs.test.ts     Imports every TS pipeline step's emitArtifacts
                          declaration (the *-outputs.ts modules), so one
                          that runs its step on import fails here; pins

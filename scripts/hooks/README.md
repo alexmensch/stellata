@@ -3,11 +3,12 @@
 Harness hooks for Claude Code, registered in `.claude/settings.json`. Claude
 Code's settings file watcher applies a registration change mid-session, so a
 session that adds or edits a hook here is governed by it from the next call.
-Each hook reads its payload as JSON on stdin. The six guards are PreToolUse /
+Each hook reads its payload as JSON on stdin. The five guards are PreToolUse /
 SessionStart hooks answering with a `permissionDecision`; paper-store-link
 answers nothing and acts only on the filesystem. The review
-design-pass reminder lives at user level, in the code-standards bundle
-(`~/.claude/hooks/code-standards/`).
+design-pass reminder and the skill guard live at user level, in the
+code-standards bundle (`~/.claude/hooks/code-standards/`; rules and
+rationale in its `hooks/README.md`, section Skill guard).
 
 ## Files in this area
 
@@ -55,13 +56,6 @@ scripts/hooks/
                            scripts/perf/arming/README.md owns the
                            design. Behaviour pinned by
                            tests/perf-guard.test.ts.
-  skill-guard.sh           Blocks Write / Edit / NotebookEdit against a
-                           file a rule names until that rule's skill has
-                           been invoked this session; a Skill call naming
-                           it arms the session. Rules: *.css → cube-css;
-                           code (ts/tsx/js/mjs/cjs/py/sh/wgsl/glsl) →
-                           code-craft.
-                           Behaviour pinned by tests/skill-guard.test.ts.
   paper-store-link.sh      SessionStart + PostToolUse on EnterWorktree:
                            links data/papers/pdf in every linked
                            worktree that lacks it to the main
@@ -189,53 +183,6 @@ host's truncation banner reads as plumbing metadata. Same conclusion
 as readme-guard: the harness executing the rule beats the model
 self-checking against it.
 
-## How skill-guard works
-
-Same shape as readme-guard, keyed on a skill instead of a folder. The rule
-table is one `case` on the edited path; each arm names the skill and what it
-carries (quoted in the denial), so a new gate is one arm. State is one
-marker per skill at
-`${TMPDIR:-/tmp}/claude-skill-guard/<skill>-${GUARD_SESSION:-$PPID}`, so a
-session arms once per skill and edits freely after.
-
-The hook sits on `Skill` as well as the edit tools, and that is the whole
-mechanism: every `Skill` call touches the marker for the name it invokes —
-the part after any directory-scoped or plugin prefix — and passes through.
-Only then does an edit a rule claims find its skill's marker and go ahead;
-without it the call is denied with the skill named. Arming every invoked
-name rather than only the guarded ones keeps the rule table the single list
-of which skills gate anything.
-
-The gate exists because the load looks redundant from inside the repo and
-is not. A folder README documents the **house style** — which layer each
-rule landed in here, and why — while the system underneath it (the layout
-primitives, the no-width-query mandate, the review gates) belongs to the
-skill, and a README describing the one reads convincingly like coverage of
-the other. A session that has read the README therefore believes it is
-already briefed.
-
-**code-craft has a second trap: the change does not look like design.**
-Its trigger names design, refactor and review, and a bug fix reads as none
-of them, so a bug-sweep session can scout, plan and draft a fix without
-the design pass. Gating at the first code edit is the last point the load
-can still shape the change. It does not reach a plan written before any
-edit, so the prose trigger still owns that.
-
-**Arming, not consent**, so it fails open the way readme-guard does: a
-hook that errors lets the call through, and the alternative — a stylesheet
-edit blocked by a broken gate — is worse than one made without the skill.
-The deny message names the marker path, so a session that genuinely needs
-to proceed creates it. Only cube-css offers that as an opt-out, for a
-stylesheet that is not CUBE; code-craft offers none, since "this change is
-too small for the design pass" is the excuse its gate exists to refuse.
-
-That path is also the answer to the one thing the test suite cannot
-settle, since it drives the script directly rather than through a harness:
-whether a given harness runs `PreToolUse` on `Skill` calls at all. Where
-one does not, the skill can be invoked and the marker still never appears,
-so the deny message says to create it and stop invoking — a loop being the
-failure mode a gate armed by another tool call invites.
-
 ## How pr-body-guard works
 
 `PreToolUse` on `Bash`. The two body guards judge only the PR body and the
@@ -354,8 +301,7 @@ Two paths:
    block — fix the comments), `[comment-ok: <reason>]` for the
    restatement sweep, `[figure-ok: <reason>]` for the snapshot-copy sweep. For `prime-guard`: delete the sentinel
    — any tool call naming that path is allowed through precisely so
-   the `rm` isn't itself blocked. For `skill-guard`: invoke the
-   skill, which is the intended route rather than an escape. For
+   the `rm` isn't itself blocked. For
    `pr-body-guard`: open the PR as a draft (`gh pr create --draft`).
 2. **Across the session.** Remove the entry from its event's array
    under `.claude/settings.json`'s `hooks`, or
