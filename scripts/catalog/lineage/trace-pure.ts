@@ -24,6 +24,47 @@ export function parseTraceQuery(text: string): TraceQuery {
   return { kind: 'name', name: q };
 }
 
+export interface TraceLookups {
+  /** The ledger's canonical key for a SID, or null for one it lacks. */
+  canonicalKey(sid: number): string | null;
+  /** A built record's designations by name, or null for no such record. */
+  nameDesignations(name: string): readonly string[] | null;
+}
+
+const GAIA_DESIGNATION = /^gaia_dr3:([0-9]+)$/;
+
+/** The designations a query names, and the bare Gaia ids among them, which
+ *  also find a row that only weighed or cited the source. */
+export function queryTerms(
+  q: TraceQuery, lookups: TraceLookups,
+): { designations: string[]; terms: string[] } {
+  let designations: readonly string[];
+  switch (q.kind) {
+    case 'designation': designations = [q.designation]; break;
+    case 'gaia': designations = [`gaia_dr3:${q.sourceId}`]; break;
+    case 'sid': {
+      const key = lookups.canonicalKey(q.sid);
+      if (key === null) throw new Error(`SID ${q.sid} is not in the ledger`);
+      designations = [key];
+      break;
+    }
+    case 'name': {
+      const found = lookups.nameDesignations(q.name);
+      if (found === null) throw new Error(`no catalogue record is named "${q.name}"`);
+      designations = found;
+      break;
+    }
+    default: {
+      const unhandled: never = q;
+      throw new Error(`unhandled trace query ${JSON.stringify(unhandled)}`);
+    }
+  }
+  return {
+    designations: [...designations],
+    terms: designations.flatMap((d) => GAIA_DESIGNATION.exec(d)?.[1] ?? []),
+  };
+}
+
 export interface StageRows {
   readonly stage: string;
   readonly rows: readonly LineageRow[];

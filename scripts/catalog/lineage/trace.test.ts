@@ -9,7 +9,7 @@ import { REPO_ROOT } from '../../util/paths';
 import { identityRows } from './identity-pure';
 import { gzipText, stageFile } from './lineage-io';
 import { lineageRows } from './lineage-row-pure';
-import { parseTraceQuery, traceRecords, traceText } from './trace-pure';
+import { parseTraceQuery, queryTerms, traceRecords, traceText, type TraceLookups } from './trace-pure';
 
 const REFUSED_ONLY = '4000000000000000009';
 const PARKED = '5000000000000000001';
@@ -34,8 +34,13 @@ const MEMBERSHIP = [
 
 const identity = [...identityRows(IDENTITY, 'fixture/identity.tsv')];
 const stages = [{ stage: 'membership', rows: [...lineageRows(MEMBERSHIP, 'fixture/membership.tsv')] }];
-const trace = (query: string, designations: string[], terms: string[] = []) => {
-  expect(parseTraceQuery(query).kind).toBeDefined();
+/** SID 7's canonical key is HD 5; "Fixture Star" is the record on HD 5. */
+const LOOKUPS: TraceLookups = {
+  canonicalKey: (sid) => (sid === 7 ? 'hd:5' : null),
+  nameDesignations: (name) => (name === 'Fixture Star' ? ['hd:5', 'gaia_dr3:222'] : null),
+};
+const trace = (query: string) => {
+  const { designations, terms } = queryTerms(parseTraceQuery(query), LOOKUPS);
   return traceRecords(designations, terms, identity, stages);
 };
 
@@ -52,24 +57,31 @@ describe('parseTraceQuery', () => {
 
 describe('traceRecords over the fixture lineage', () => {
   it('finds a record the catalogue parks, since every admitted record has lineage', () => {
-    const [parked] = trace(PARKED, [`gaia_dr3:${PARKED}`], [PARKED]);
+    const [parked] = trace(PARKED);
     expect(parked.key).toBe(`gaia-dr3:${PARKED}`);
     expect(parked.rows.map((r) => r.code)).toEqual(['membership.admit.magnitude']);
   });
 
   it('finds the record that refused a source no identity row carries', () => {
-    const records = trace(REFUSED_ONLY, [`gaia_dr3:${REFUSED_ONLY}`], [REFUSED_ONLY]);
+    const records = trace(`gaia_dr3:${REFUSED_ONLY}`);
     expect(records.map((r) => r.key)).toEqual(['spine:3']);
     expect(records[0].rows.map((r) => r.code)).toContain('membership.binding.gate-mag');
   });
 
   it('finds every record a designation names, the folded one by its evidence too', () => {
-    expect(trace('hd:5', ['hd:5']).map((r) => r.key)).toEqual(['spine:3', 'spine:4']);
-    expect(trace('spine:3', ['spine:3']).map((r) => r.key)).toEqual(['spine:4']);
+    expect(trace('hd:5').map((r) => r.key)).toEqual(['spine:3', 'spine:4']);
+    expect(trace('spine:3').map((r) => r.key)).toEqual(['spine:4']);
+  });
+
+  it('finds a SID through its canonical key and a name through its record\'s designations', () => {
+    expect(trace('sid:7').map((r) => r.key)).toEqual(['spine:3', 'spine:4']);
+    expect(trace('Fixture Star').map((r) => r.key)).toEqual(['spine:3', 'spine:4']);
+    expect(() => trace('sid:8')).toThrow(/SID 8 is not in the ledger/);
+    expect(() => trace('Nobody')).toThrow(/no catalogue record is named "Nobody"/);
   });
 
   it('says so when nothing names the query', () => {
-    expect(traceText(trace('hd:9', ['hd:9']))).toBe('no lineage row names it\n');
+    expect(traceText(trace('hd:9'))).toBe('no lineage row names it\n');
   });
 });
 
