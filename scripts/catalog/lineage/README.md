@@ -12,7 +12,8 @@ outcome arrays, so a snapshot and lineage are two projections of one value
 and neither is kept in step with the other. Membership is part-way there:
 its review-queue and label-drop counts fold from the outcomes, while the
 derivation, admission and component counters are still kept by hand beside
-them (stellata-hhaw.45.23).
+them (stellata-hhaw.45.23). Promotion's per-row counters all fold from its
+outcomes; its post-passes act on records and keep their own.
 
 ## Files in this area
 
@@ -246,7 +247,10 @@ letters; the binding-review columns ride the rows the queue lists — a
 contested or collision verdict and a disposition — since the candidates and
 refusals are rows of their own. `MEMBERSHIP_LINEAGE_BUDGET` pins 41 MB and
 15 s — the time ceiling sits well above the measurement because CI runners
-write slower than a workstation.
+write slower than a workstation. Promotion, measured the same day: <!-- count:build-binaries/multiples_rows_emitted -->47,018<!-- /count --> rows, one
+per `multiples.tsv` row, plus an identity row per minted companion, 0.70 MB
+gzipped in 0.7 s without a diff; `PROMOTION_LINEAGE_BUDGET` pins 0.8 MB and
+5 s.
 
 The committed form of lineage is `data/sid/events.tsv` plus the ledger views
 below; the derivation itself is a build artifact, regenerated every build.
@@ -376,3 +380,21 @@ in that PR. Retired state is still decided by counting retire against
 reinstate rows per SID. The migration needs the one-time edit to the ledger
 guard that `docs/sid.md` [§ 4.5](/docs/sid.md#45-ci-guard) reserves for owner
 sign-off; the owner gave it on 2026-10-21 by choosing this migration.
+
+## The promotion stage
+
+`build:catalog`'s companion promotion is the second stage
+(`../companions/promotion-lineage-pure.ts`). `promoteCompanions` returns one
+`PromotedRow` per `multiples.tsv` row, keyed on that row
+(`multiples:<system_id>/<comp>`), and `promotionLineageRow` serialises its
+`RowOutcome` (`../companions/README.md`) through an exhaustive `switch`. A
+pair's primary that anchors its pair, and a row in no pair, are
+`promotion.not-applicable`. Each row cites as evidence the record its pair
+resolved to and its WDS root's anchor; an adopted or repositioned row names
+the record it became in `params.record`. Both are origin keys: every record
+carries its own from the manifest's `origin_key` column
+(`../membership/README.md#columns`), so these are joins on the origin key.
+
+A minted companion is founded on its row, so promotion writes its identity
+row (`promotion.identity.tsv.gz`, named by `StageLineageSpec.identity`);
+every other record's is membership's.

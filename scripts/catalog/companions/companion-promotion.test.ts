@@ -1176,6 +1176,27 @@ describe('imputeCompanionCi', () => {
   });
 });
 
+describe('promoteCompanions rows', () => {
+  it('gives every multiples row one entry, citing the records its cursor resolved to', () => {
+    const anchor = makeStar({ gaiaSourceId: '111', x: 40, y: 0, z: 0, originKey: 'spine:7' });
+    const primary = multiplesRow({
+      systemId: '00001+0001-AB', comp: 'A', orbitRole: 'primary', gaiaSourceId: '111',
+      x_pc: 40, y_pc: 0, z_pc: 0, distPc: 40,
+    });
+    const secondary = multiplesRow({
+      systemId: '00001+0001-AB', comp: 'B', gaiaSourceId: '222', astrometryVia: 'gaia_5p',
+      x_pc: 40, y_pc: 0.01, z_pc: 0, distPc: 40,
+    });
+    const standalone = multiplesRow({ systemId: '00002+0002', comp: 'A', orbitRole: 'standalone' });
+    const { rows } = promoteCompanions([primary, secondary, standalone], [anchor], inputs());
+    expect(rows.map((r) => [r.row.comp, r.via, r.outcome.kind, r.anchor, r.systemAnchor])).toEqual([
+      ['A', 'primary', 'not-applicable', 'spine:7', 'spine:7'],
+      ['B', 'secondary', 'minted', 'spine:7', 'spine:7'],
+      ['A', 'unpaired', 'not-applicable', null, null],
+    ]);
+  });
+});
+
 describe('promoteCompanions build-time de-extinction', () => {
   // Uniform-density cube: A_V accrues along the sightline; avSolToStar
   // gives the exact expected subtraction (no hard-coded magic).
@@ -3330,6 +3351,7 @@ describe('an existing member whose own 5p solution Gaia rejects', () => {
 describe('foldRowOutcomes', () => {
   const row = multiplesRow();
   const own: MintedBrightness = { source: 'own', spectMsFromOwnAbsmag: true };
+  const unanchored = { anchor: null, systemAnchor: null };
   const outcomes: RowOutcome[] = [
     { kind: 'dropped', reason: 'compound-comp' },
     { kind: 'dropped', reason: 'beyond-tidal-limit' },
@@ -3358,8 +3380,9 @@ describe('foldRowOutcomes', () => {
 
   it('counts each per-row counter from its variant, and scans only secondaries', () => {
     const stats = foldRowOutcomes([
-      ...outcomes.map((outcome) => ({ row, via: 'secondary' as const, outcome })),
-      { row, via: 'escape', outcome: { kind: 'dropped', reason: 'collocated-primary' } },
+      ...outcomes.map((outcome) => ({ row, via: 'secondary' as const, outcome, ...unanchored })),
+      { row, via: 'escape', outcome: { kind: 'dropped', reason: 'collocated-primary' }, ...unanchored },
+      { row, via: 'primary', outcome: { kind: 'not-applicable' }, ...unanchored },
     ]);
     expect(stats).toEqual({
       pairRowsScanned: 14,

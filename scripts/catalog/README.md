@@ -86,10 +86,11 @@ scripts/catalog/
   build-catalog.ts                Orchestrator. Reads every reference
                                   catalogue, runs the per-row pipeline and
                                   each cross-match pass in order, then
-                                  emits the chunked binary, manifests and
-                                  both committed ledgers through
-                                  emitArtifacts once its two snapshot
-                                  checks pass. On a SID error it lands them
+                                  emits the chunked binary, manifests,
+                                  both committed ledgers and promotion's
+                                  lineage through emitArtifacts once its two
+                                  snapshot checks and the lineage budget
+                                  pass. On a SID error it lands them
                                   with no checks and then fails
                                   ([SID allocation](#sid-allocation)).
   catalog-inputs.test.ts          Pins stepInputPaths('build:catalog')
@@ -104,8 +105,9 @@ scripts/catalog/
                                   writes, as its emitArtifacts declaration
                                   (../util/README.md): the public/ sidecars,
                                   the row-index map, the two committed
-                                  ledgers, and the transport chunks as a
-                                  family. Side-effect free, so a reader can
+                                  ledgers, promotion's lineage files, and
+                                  the transport chunks and the lineage
+                                  baseline and diff as families. Side-effect free, so a reader can
                                   import the declaration without running
                                   the build.
   cited-proper-motion.ts (+ test) `CitedProperMotion` and `CitedParallax`,

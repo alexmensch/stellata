@@ -204,7 +204,8 @@ export type RowOutcome =
     brightness: MintedBrightness;
     constellationSplit: boolean;
   }
-  | { kind: 'repositioned'; idx: number; brightness: MintedBrightness };
+  | { kind: 'repositioned'; idx: number; brightness: MintedBrightness }
+  | { kind: 'not-applicable' };
 
 export interface MintedBrightness {
   source: CompanionAbsmagSource;
@@ -217,12 +218,13 @@ export interface Recuration {
   first: boolean;
 }
 
-/** A secondary row of a pair cursor, or a cursor primary promoted through the
- *  pair-row-primary escape. */
+/** See ../lineage/README.md#the-promotion-stage. */
 export interface PromotedRow {
   row: MultiplesTsvRow;
-  via: 'secondary' | 'escape';
+  via: 'secondary' | 'escape' | 'primary' | 'unpaired';
   outcome: RowOutcome;
+  anchor: string | null;
+  systemAnchor: string | null;
 }
 
 export type PromotionStats = RowOutcomeStats & PostPassStats;
@@ -563,6 +565,8 @@ export function foldRowOutcomes(rows: readonly PromotedRow[]): RowOutcomeStats {
       case 'repositioned':
         stats.repositionedCollocatedDouble++;
         countBrightness(o.brightness);
+        break;
+      case 'not-applicable':
         break;
       default: {
         const unhandled: never = o;
@@ -1861,7 +1865,7 @@ export function promoteCompanions(
   multiplesRows: MultiplesTsvRow[],
   existingStars: Star[],
   inputs: PromotionInputs,
-): { newStars: Star[]; stats: PromotionStats; groups: Map<string, PairCursor> } {
+): { newStars: Star[]; stats: PromotionStats; groups: Map<string, PairCursor>; rows: PromotedRow[] } {
   const promoted: PromotedRow[] = [];
   const post = emptyPostPassStats();
   const existing = buildExistingIndexes(existingStars);
@@ -1928,11 +1932,18 @@ export function promoteCompanions(
     g.pairs.push({ pIdx, sIdx, q });
   };
 
+  const keyAt = (idx: number | null): string | null => (idx === null ? null : getStarAt(idx).originKey);
+  const unpaired = (row: MultiplesTsvRow): PromotedRow => (
+    { row, via: 'unpaired', outcome: { kind: 'not-applicable' }, anchor: null, systemAnchor: null }
+  );
+  const escaped = new Set<MultiplesTsvRow>();
   const escapeCursorPrimary = (cursor: PairCursor): number | null => {
     const anchor = escapeAnchorOf(cursor, wdsRootAnchors);
     if (anchor === null) return null;
     const outcome = promoteCursorPrimary(anchor.primary, anchor.system, state);
-    promoted.push({ row: anchor.primary, via: 'escape', outcome });
+    const systemKey = anchor.system.star.originKey;
+    promoted.push({ row: anchor.primary, via: 'escape', outcome, anchor: systemKey, systemAnchor: systemKey });
+    escaped.add(anchor.primary);
     return placedRecordIdx(outcome);
   };
 
@@ -1940,7 +1951,10 @@ export function promoteCompanions(
     // Standalone rows are augmentation entries that aren't sides of a WDS
     // pair; their primary slot is empty. Skip — promoting them without
     // pair geometry needs a different rule than this path.
-    if (cursor.primary === null) continue;
+    if (cursor.primary === null) {
+      for (const row of cursor.secondaries) promoted.push(unpaired(row));
+      continue;
+    }
 
     // Existing records first, then previously-promoted ones — 40 Eri B is
     // promoted in the BC group and reused as the anchor for BD.
@@ -1968,11 +1982,11 @@ export function promoteCompanions(
       const synthKey = composeSyntheticId(
         cursor.primary.systemId, cursor.primary.comp,
       );
-      const escaped =
+      const escapedIdx =
         (synthKey !== null ? state.promotedBySynth.get(synthKey) : undefined)
         ?? escapeCursorPrimary(cursor);
-      if (escaped !== null && escaped !== undefined) {
-        primaryCatalogIdx = escaped;
+      if (escapedIdx !== null && escapedIdx !== undefined) {
+        primaryCatalogIdx = escapedIdx;
       }
     }
     if (primaryCatalogIdx === null) {
@@ -1996,6 +2010,15 @@ export function promoteCompanions(
       : null;
 
     const cursorRoot = wdsRootOf(cursor.primary.systemId);
+    const anchorKey = keyAt(primaryCatalogIdx);
+    const systemAnchorKey = cursorRoot !== null
+      ? wdsRootAnchors.get(cursorRoot)?.star.originKey ?? null : null;
+    if (!escaped.has(cursor.primary)) {
+      promoted.push({
+        row: cursor.primary, via: 'primary', outcome: { kind: 'not-applicable' },
+        anchor: anchorKey, systemAnchor: systemAnchorKey,
+      });
+    }
     const primaryKey = compKey(cursorRoot, cursor.primary.comp);
     // Don't let a blended primary (its id resolves onto a sibling)
     // overwrite a correct entry a prior pair recorded for this token.
@@ -2004,8 +2027,14 @@ export function promoteCompanions(
       componentIndex.set(primaryKey, primaryCatalogIdx);
     }
 
+    const decided = (row: MultiplesTsvRow, outcome: RowOutcome): PromotedRow => (
+      { row, via: 'secondary', outcome, anchor: anchorKey, systemAnchor: systemAnchorKey }
+    );
     for (const row of cursor.secondaries) {
-      if (row.orbitRole !== 'secondary') continue;
+      if (row.orbitRole !== 'secondary') {
+        promoted.push(unpaired(row));
+        continue;
+      }
       // WDS compound-secondary guard. "BC" / "AB" / "ABC" represent
       // unresolved aggregates of two-or-more components, not single
       // stars; promoting them would double-count the resolved
@@ -2015,7 +2044,7 @@ export function promoteCompanions(
       const wdsRoot = wdsRootOf(row.systemId);
       if (wdsRoot !== null
           && isUnresolvedCompound(row.comp, wdsRoot, singleLettersByRoot)) {
-        promoted.push({ row, via: 'secondary', outcome: { kind: 'dropped', reason: 'compound-comp' } });
+        promoted.push(decided(row, { kind: 'dropped', reason: 'compound-comp' }));
         continue;
       }
       const canonicalComp = canonicalCompLetter(
@@ -2023,7 +2052,7 @@ export function promoteCompanions(
       );
       const resolved = resolvePosition(row, cursor.primary, anchor);
       if (resolved === 'beyond-tidal') {
-        promoted.push({ row, via: 'secondary', outcome: { kind: 'dropped', reason: 'beyond-tidal-limit' } });
+        promoted.push(decided(row, { kind: 'dropped', reason: 'beyond-tidal-limit' }));
         continue;
       }
       const position = resolved;
@@ -2042,7 +2071,7 @@ export function promoteCompanions(
         },
         state,
       );
-      promoted.push({ row, via: 'secondary', outcome });
+      promoted.push(decided(row, outcome));
       const promotedIdx = placedRecordIdx(outcome);
       // A promoted secondary is authoritative for its token — it resolves
       // through the inherited-id escape onto its own record, so it
@@ -2367,7 +2396,7 @@ export function promoteCompanions(
     );
     post.blendDimmedAnchors++;
   }
-  return { newStars, stats: { ...foldRowOutcomes(promoted), ...post }, groups };
+  return { newStars, stats: { ...foldRowOutcomes(promoted), ...post }, groups, rows: promoted };
 }
 
 function lookupPromoted(

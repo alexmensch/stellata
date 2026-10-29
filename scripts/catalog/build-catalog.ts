@@ -77,6 +77,13 @@ import {
   RECURATED_BRIGHTNESS,
 } from './companions/companion-promotion';
 import {
+  PROMOTION_CODES, PROMOTION_LINEAGE_BUDGET, promotionIdentityRows, promotionLineageRow,
+} from './companions/promotion-lineage-pure';
+import { identityText } from './lineage/identity-pure';
+import { LINEAGE_LAYOUT } from './lineage/lineage-io';
+import { stageLineageText } from './lineage/lineage-row-pure';
+import { stageLineage } from './lineage/stage-lineage';
+import {
   buildCatalogRowIndexMap,
   buildComponentDesignations,
   renderableOrbitRelations,
@@ -131,7 +138,7 @@ import {
   DEFAULT_ROW_INDEX_MAP, DEFAULT_SEARCH_INDEX as OUT_SEARCH,
 } from './catalog-lookup';
 import {
-  CATALOG_CHUNK_DIR, CATALOG_OUTPUTS, CATALOG_STAMP, OUT_BOUNDARIES,
+  CATALOG_CHUNK_DIR, CATALOG_OUTPUTS, CATALOG_STAMP, OUT_BOUNDARIES, PROMOTION_LINEAGE,
 } from './catalog-outputs';
 import {
   emitArtifacts, runStep, sweepStaged, type ArtifactContents, type Check,
@@ -670,11 +677,13 @@ async function main() {
     coherence.memberAnchorPrecisionVetoed;
   console.log('Promoting binary companions from multiples.tsv...');
   const tProm = Date.now();
-  const { newStars, stats: ps } = promoteCompanions(multiplesRows, stars, {
+  const { newStars, stats: ps, rows: promotedRows } = promoteCompanions(multiplesRows, stars, {
     conAssignment, dustGrid, parked: parkedRefusals(stats.parked),
     gaiaAstrometry: directions.gaiaAstrometry, synthGaiaBridges,
   });
   for (const ns of newStars) stars.push(ns);
+  const promotionLineage = promotedRows.map((r) => promotionLineageRow(r, (idx) => stars[idx].originKey));
+  const promotionIdentity = promotionIdentityRows(promotedRows, stars);
   console.log(
     `  scanned ${ps.pairRowsScanned} pair rows; promoted ${ps.promoted} ` +
       `(${ps.promotedSynthetic} via synthetic ID); ` +
@@ -1225,6 +1234,20 @@ async function main() {
     );
   }
 
+  const lineage = await stageLineage({
+    layout: LINEAGE_LAYOUT,
+    spec: PROMOTION_LINEAGE,
+    script: 'build:catalog',
+    diffed: 'promotion',
+    rows: promotionLineage,
+    render: (sorted) => ({
+      promotion: stageLineageText(PROMOTION_CODES, sorted),
+      'promotion.identity': identityText(promotionIdentity),
+    }),
+    joins: () => [],
+    budget: PROMOTION_LINEAGE_BUDGET,
+    argv: process.argv.slice(2),
+  });
   const files = {
     manifest: manifestJson,
     constellations: constellationsJson,
@@ -1233,12 +1256,14 @@ async function main() {
     rowIndexMap: rowIndexMapJson,
     parkedLedger,
     simbadSourcedDistances,
+    ...lineage.files,
   };
+  const members = new Map([...chunks, ...lineage.members]);
   const sidResolved = recordSids.reduce((n, sid) => (sid !== 0 ? n + 1 : n), 0);
   console.log(`SID: ${sidResolved} / ${stars.length} records resolved to a ledger SID`);
   if (sidResolution.errors.length > 0) {
     const preview = sidResolution.errors.slice(0, 10);
-    emitArtifacts({ outputs: CATALOG_OUTPUTS, files, members: chunks });
+    emitArtifacts({ outputs: CATALOG_OUTPUTS, files, members });
     console.error(
       `\nSID resolution failed for ${sidResolution.errors.length} record(s):\n  ` +
         preview.join('\n  ') +
@@ -1254,8 +1279,8 @@ async function main() {
   emitArtifacts({
     outputs: CATALOG_OUTPUTS,
     files,
-    members: chunks,
-    checks: [buildCountsCheck(counts), distanceOutliersCheck(stars)],
+    members,
+    checks: [...lineage.checks, buildCountsCheck(counts), distanceOutliersCheck(stars)],
     stamp: { path: CATALOG_STAMP, inputs: inputHashesAtStart },
   });
 }

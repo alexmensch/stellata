@@ -35,3 +35,18 @@ membership.label.overlay-wins	membership	none	live		7.1.6	The overlay and the sp
 membership.label.override-spine	membership	none	live		7.1.6	A curated override keeps the spine's designation over the overlay's.
 membership.label.override-value	membership	none	live		7.1.6	A curated override sets the designation.
 membership.label.suppressed-collision	membership	none	live		7.1.6	The overlay's designation already names another record, so it is not added.
+promotion.adopted.earlier-mint	promotion	merge	live		7.1.6	An earlier row of this build already minted the record this row names.
+promotion.adopted.own-hip	promotion	merge	live		7.1.6	The row's Gaia source names no record, but its own HIP names one other than the anchor, which is the component.
+promotion.adopted.own-id	promotion	merge	live		7.1.6	The row's own Gaia source or HIP names a record already in the catalogue, which is the component.
+promotion.adopted.sameas-bridge	promotion	merge	live		7.1.6	A same-as edge bridges the row's synthetic key to a Gaia source already in the catalogue, whose record is the component.
+promotion.dropped.anchor-is-component	promotion	merge	live		7.1.6	The row's ids resolve to its anchor's record, which the naming authority already letters as this component, so that record is the component.
+promotion.dropped.beyond-tidal-limit	promotion	retire	live		7.1.6	Projected at the anchor's distance, the pair is wider than the 1 pc tidal limit, so it cannot be bound.
+promotion.dropped.collocated-primary	promotion	retire	live		7.1.6	A pair's primary promoted as the system anchor's companion has neither its own fit nor a measured offset from the anchor, so it has no position.
+promotion.dropped.compound-comp	promotion	retire	live		7.1.6	The row's component letter is an unresolved aggregate of components that have rows of their own, so it is not one star.
+promotion.dropped.no-absmag	promotion	retire	live		7.1.6	The row has no brightness of its own: no photometry, magnitude difference, WDS magnitude or per-component spectral type, and no renderable orbit.
+promotion.dropped.no-identifier	promotion	retire	live		7.1.6	The row has no Gaia source, no HIP of its own and no composable synthetic key.
+promotion.dropped.no-position	promotion	retire	live		7.1.6	The row has neither an independent fit nor a measured separation and position angle off its anchor.
+promotion.dropped.parked-record	promotion	park	live		7.1.6	The distance the row states is a parallax a tier above refused, so promoting it would ship the parked record.
+promotion.minted	promotion	none	live		7.1.6	The row becomes a new catalogue record.
+promotion.not-applicable	promotion	none	live		7.1.6	Promotion decides nothing for the row: a pair's primary that anchors it, or a row in no pair.
+promotion.repositioned	promotion	merge	live		7.1.6	An AT-HYG record sitting on the anchor under the anchor's name plus this letter is the component, and moves to the row's position.

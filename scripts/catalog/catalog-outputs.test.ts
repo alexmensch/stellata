@@ -17,8 +17,9 @@ describe('CATALOG_OUTPUTS', () => {
     ]));
   });
 
-  it('declares the transport chunks as one family in public/', () => {
-    expect(CATALOG_OUTPUTS.families).toHaveLength(1);
+  it('declares the transport chunks as one family in public/, beside promotion\'s lineage baseline and diff', () => {
+    expect(CATALOG_OUTPUTS.families.map((f) => repoRelative(f.dir)))
+      .toEqual(['public', 'build/lineage.previous', 'build/lineage-diff']);
     const [chunks] = CATALOG_OUTPUTS.families;
     expect(repoRelative(chunks.dir)).toBe('public');
     expect(chunks.member.test(catalogChunkFilename(12))).toBe(true);

@@ -19,6 +19,7 @@ import { MEMBERSHIP_MANIFEST_FILE } from './membership-manifest-tsv';
 export const MEMBERSHIP_LINEAGE: StageLineageSpec<'membership' | 'identity'> = {
   stage: MEMBERSHIP_STAGE,
   files: ['membership', 'identity'],
+  identity: 'identity',
 };
 
 export const MEMBERSHIP_OUTPUTS = declareOutputs({

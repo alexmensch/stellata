@@ -35,6 +35,8 @@ export const LINEAGE_LAYOUT = lineageLayout(resolve(REPO_ROOT, 'build'));
 export interface StageLineageSpec<F extends string> {
   readonly stage: string;
   readonly files: readonly F[];
+  /** The stem holding identity rows for the records the stage founds. */
+  readonly identity?: F;
 }
 
 export type StageOutputKey<F extends string> = `lineage:${F}` | 'lineage:header';

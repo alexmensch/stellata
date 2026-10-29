@@ -38,6 +38,10 @@ scripts/catalog/companions/
                                   Stage 6 reached either from no measured
                                   geometry, the two coincide, or the row is
                                   the chaining letter itself.
+  promotion-lineage-pure.ts       Promotion as a lineage stage: its reason
+    (+ test)                      codes, the serialiser over RowOutcome, and
+                                  the identity rows of the records it mints
+                                  (../lineage/README.md#the-promotion-stage).
   overlap-gate-pure.ts (+ test)   physicalOverlaps: record pairs closer than
                                   the sum of their radii, less those an orbit
                                   chain separates. See Overlap gate below.
