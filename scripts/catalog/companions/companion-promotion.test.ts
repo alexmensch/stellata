@@ -5,6 +5,7 @@ import {
   canonicalCompLetter,
   componentDepth,
   composeSyntheticId,
+  emptyParkedRefusals,
   GAIA_BLEND_MAX_SEP_ARCSEC,
   PRINTED_BLEND_MAX_SEP_ARCSEC,
   hasRenderableOrbit,
@@ -18,6 +19,7 @@ import {
   parkedRefusals,
   promoteCompanions,
   type MultiplesTsvRow,
+  type PromotionInputs,
   type PromotionStats,
 } from './companion-promotion';
 import {
@@ -44,6 +46,22 @@ import { AU_PER_PC } from '../../../src/client/util/astronomy-constants';
 // coordinates, so a positional assertion (Sirius B in Canis Major) is a
 // genuine check rather than an echo of what the test injected.
 const CON_ASSIGNMENT = createConstellationAssignment(iauEdgeRecords(STELLARIUM.read()));
+
+const TRANSPARENT_DUST: DustGrid = {
+  gridSize: 1, boundsHalfPc: 1, densityMin: 0, logRatio: 0,
+  avPerDensityPc: 0, voxelSizePc: 1, data: new Uint8Array(1),
+};
+
+function inputs(overrides: Partial<PromotionInputs> = {}): PromotionInputs {
+  return {
+    conAssignment: CON_ASSIGNMENT,
+    dustGrid: TRANSPARENT_DUST,
+    parked: emptyParkedRefusals(),
+    gaiaAstrometry: new Map(),
+    synthGaiaBridges: new Map(),
+    ...overrides,
+  };
+}
 
 const reached = (sepArcsec: number, paDeg: number): Stage6Offset =>
   ({ kind: 'offset', offset: tangentOffset(sepArcsec, paDeg) });
@@ -339,7 +357,7 @@ describe('a pair whose two ends resolve to one record', () => {
   it('mints nothing when the authority letters the anchor as this component', () => {
     const anchor = pEriB();
     const { newStars, stats } = promoteCompanions(
-      selfPairRows(), [anchor], CON_ASSIGNMENT,
+      selfPairRows(), [anchor], inputs(),
     );
     expect(stats.anchorIsComponent).toBe(1);
     expect(newStars).toHaveLength(0);
@@ -350,7 +368,7 @@ describe('a pair whose two ends resolve to one record', () => {
     // the authority attributes the anchor's designation to A, not to B.
     const anchor = pEriB({ bayerComponent: 'A' });
     const { newStars, stats } = promoteCompanions(
-      selfPairRows(), [anchor], CON_ASSIGNMENT,
+      selfPairRows(), [anchor], inputs(),
     );
     expect(stats.anchorIsComponent).toBe(0);
     expect(newStars).toHaveLength(1);
@@ -359,7 +377,7 @@ describe('a pair whose two ends resolve to one record', () => {
   it('still mints where the authority attributes no component at all', () => {
     const anchor = pEriB({ bayerComponent: null });
     const { newStars, stats } = promoteCompanions(
-      selfPairRows(), [anchor], CON_ASSIGNMENT,
+      selfPairRows(), [anchor], inputs(),
     );
     expect(stats.anchorIsComponent).toBe(0);
     expect(newStars).toHaveLength(1);
@@ -397,7 +415,7 @@ describe('anchor flux dimming', () => {
 
   it('re-splits a dmag-imputed blend jointly: both members honest, total light conserved', () => {
     const anchor = blendAnchor();
-    const { newStars, stats } = promoteCompanions(dimRows(2.0), [anchor], CON_ASSIGNMENT);
+    const { newStars, stats } = promoteCompanions(dimRows(2.0), [anchor], inputs());
     expect(newStars).toHaveLength(1);
     expect(stats.blendDimmedAnchors).toBe(1);
     // M_A = M_bl + 2.5·log10(1 + 10^(−0.4·2)) ≈ 1.15973; M_B = M_A + 2.
@@ -410,7 +428,7 @@ describe('anchor flux dimming', () => {
 
   it('a Δmag=0 twin splits the blend equally (Capella shape, never a gutted anchor)', () => {
     const anchor = blendAnchor();
-    const { newStars, stats } = promoteCompanions(dimRows(0.0), [anchor], CON_ASSIGNMENT);
+    const { newStars, stats } = promoteCompanions(dimRows(0.0), [anchor], inputs());
     expect(stats.blendDimmedAnchors).toBe(1);
     expect(stats.blendDimSkipped).toBe(0);
     const half = 1.0 + 2.5 * Math.log10(2);
@@ -422,7 +440,7 @@ describe('anchor flux dimming', () => {
     const anchor = blendAnchor();
     // No dmag → the secondary takes wds_mag: M = 1.0 at 10 pc, equal to
     // the blend itself — subtracting it would zero the residual.
-    const { stats } = promoteCompanions(dimRows(null, 1.0), [anchor], CON_ASSIGNMENT);
+    const { stats } = promoteCompanions(dimRows(null, 1.0), [anchor], inputs());
     expect(stats.blendDimSkipped).toBe(1);
     expect(stats.blendDimmedAnchors).toBe(0);
     expect(anchor.absmag).toBe(1.0);
@@ -437,7 +455,7 @@ describe('anchor flux dimming', () => {
     const anchor = blendAnchor();
     const rows = dimRows(2.0);
     rows[1].gaiaSourceId = '999900001111';
-    const { newStars, stats } = promoteCompanions(rows, [anchor], CON_ASSIGNMENT);
+    const { newStars, stats } = promoteCompanions(rows, [anchor], inputs());
     expect(stats.blendDimmedAnchors).toBe(1);
     expect(anchor.absmag).toBeCloseTo(1.15973, 4);
     expect(newStars[0].absmag).toBeCloseTo(3.15973, 4);
@@ -447,7 +465,7 @@ describe('anchor flux dimming', () => {
     const anchor = blendAnchor({ vVia: 'gaia_riello' });
     const rows = dimRows(2.0);
     rows[1].gaiaSourceId = '999900001111';
-    const { stats } = promoteCompanions(rows, [anchor], CON_ASSIGNMENT);
+    const { stats } = promoteCompanions(rows, [anchor], inputs());
     expect(stats.blendDimGaiaResolved).toBe(1);
     expect(stats.blendDimmedAnchors).toBe(0);
     expect(anchor.absmag).toBe(1.0);
@@ -494,7 +512,7 @@ describe('anchor flux dimming', () => {
     });
     const rows = gaiaAnchorRows(8.06, 8.20, 22.466861);
     const untouched = anchor.absmag;
-    const { newStars, stats } = promoteCompanions(rows, [anchor], CON_ASSIGNMENT);
+    const { newStars, stats } = promoteCompanions(rows, [anchor], inputs());
     expect(newStars).toHaveLength(1);
     expect(newStars[0].syntheticId).toBe('synth-02572-2458-B');
     expect(stats.blendDimmedAnchors).toBe(0);
@@ -512,7 +530,7 @@ describe('anchor flux dimming', () => {
       absmag: blendMag(10.50, 10.50), x: 10, y: 0, z: 0,
     });
     const rows = gaiaAnchorRows(10.50, 10.50, 10);
-    const { newStars, stats } = promoteCompanions(rows, [anchor], CON_ASSIGNMENT);
+    const { newStars, stats } = promoteCompanions(rows, [anchor], inputs());
     expect(stats.blendDimGaiaResolved).toBe(0);
     expect(stats.blendDimmedAnchors).toBe(1);
     expect(anchor.absmag).toBeCloseTo(10.50, 3);
@@ -539,7 +557,7 @@ describe('anchor flux dimming', () => {
       x: 17.93, y: 0, z: 0,
     });
     const gaiaStats = promoteCompanions(
-      rows(), [gaia], CON_ASSIGNMENT,
+      rows(), [gaia], inputs(),
     ).stats;
     expect(gaiaStats.blendDimGaiaResolved).toBe(1);
     expect(gaiaStats.blendDimmedAnchors).toBe(0);
@@ -552,7 +570,7 @@ describe('anchor flux dimming', () => {
       x: 17.93, y: 0, z: 0, vVia: 'printed_hip',
     });
     const printedStats = promoteCompanions(
-      rows(), [printed], CON_ASSIGNMENT,
+      rows(), [printed], inputs(),
     ).stats;
     expect(printedStats.blendDimGaiaResolved).toBe(0);
     expect(printedStats.blendDimmedAnchors).toBe(1);
@@ -573,7 +591,7 @@ describe('anchor flux dimming', () => {
       x: 10, y: 0, z: 0, vVia: 'printed_hip',
     });
     const printedStats = promoteCompanions(
-      noWdsMags(), [printed], CON_ASSIGNMENT,
+      noWdsMags(), [printed], inputs(),
     ).stats;
     expect(printedStats.blendDimmedAnchors).toBe(1);
     expect(printed.absmag).toBeCloseTo(1.15973, 4);
@@ -583,7 +601,7 @@ describe('anchor flux dimming', () => {
       x: 10, y: 0, z: 0,
     });
     const gaiaStats = promoteCompanions(
-      noWdsMags(), [gaia], CON_ASSIGNMENT,
+      noWdsMags(), [gaia], inputs(),
     ).stats;
     expect(gaiaStats.blendDimmedAnchors).toBe(0);
     expect(gaiaStats.blendDimMembersUnfit).toBe(1);
@@ -640,7 +658,7 @@ describe('anchor flux dimming', () => {
     const anchor = blendAnchor({ absmag: blend });
     const rows = solveRows({ dmag: 2.0, magPri: 2.1, magSec: 4.1 });
     rows[0].absmag = blend;
-    const { newStars, stats } = promoteCompanions(rows, [anchor], CON_ASSIGNMENT);
+    const { newStars, stats } = promoteCompanions(rows, [anchor], inputs());
     expect(newStars).toHaveLength(1);
     expect(newStars[0].syntheticId).not.toBeNull();
     expect(stats.blendDimmedAnchors).toBe(1);
@@ -663,7 +681,7 @@ describe('anchor flux dimming', () => {
     );
     rows[0].absmag = blend;
     rows[2].absmag = blend;
-    const { newStars, stats } = promoteCompanions(rows, [anchor], CON_ASSIGNMENT);
+    const { newStars, stats } = promoteCompanions(rows, [anchor], inputs());
     expect(newStars).toHaveLength(2);
     expect(stats.blendDimmedAnchors).toBe(1);
     expect(stats.blendDimMembersOutside).toBe(1); // D left outside the winning subset
@@ -679,7 +697,7 @@ describe('anchor flux dimming', () => {
       absmag: 12.0, dmag: 10.0, magPri: 2.0, magSec: 12.0,
     });
     rows[0].absmag = blend;
-    const { stats } = promoteCompanions(rows, [anchor], CON_ASSIGNMENT);
+    const { stats } = promoteCompanions(rows, [anchor], inputs());
     expect(stats.blendDimmedAnchors).toBe(0);
     expect(stats.blendDimMembersOutside).toBe(1);
     expect(anchor.absmag).toBe(blend);
@@ -694,7 +712,7 @@ describe('anchor flux dimming', () => {
     );
     rows[0].absmag = blend;
     rows[2].absmag = blend;
-    const { newStars, stats } = promoteCompanions(rows, [anchor], CON_ASSIGNMENT);
+    const { newStars, stats } = promoteCompanions(rows, [anchor], inputs());
     expect(newStars).toHaveLength(2);
     expect(stats.blendDimmedAnchors).toBe(1);
     expect(anchor.absmag).toBeCloseTo(2.0, 3);
@@ -731,7 +749,7 @@ describe('anchor flux dimming', () => {
       { dmag: 2.40, magPri: 5.02, magSec: 7.42 },
       'Aa',
     );
-    const { newStars, stats } = promoteCompanions(rows, [anchor], CON_ASSIGNMENT);
+    const { newStars, stats } = promoteCompanions(rows, [anchor], inputs());
     expect(newStars).toHaveLength(2);
     // Against 4.87 no hypothesis beats "anchor alone" by the decisive margin
     // and nothing dims at all; against 5.02 the {Ab} subset lands exactly on
@@ -756,7 +774,7 @@ describe('anchor flux dimming', () => {
       { dmag: 2.40, magPri: 5.02, magSec: 7.42 },
       'A',
     );
-    const { stats } = promoteCompanions(rows, [anchor], CON_ASSIGNMENT);
+    const { stats } = promoteCompanions(rows, [anchor], inputs());
     expect(stats.blendDimmedAnchors).toBe(0);
     expect(stats.blendDimMembersOutside).toBe(2);
     expect(anchor.absmag).toBe(blend);
@@ -797,7 +815,7 @@ describe('anchor flux dimming', () => {
     );
     rows[0].absmag = blend;
     rows[2].absmag = blend;
-    const { stats } = promoteCompanions(rows, [anchor], CON_ASSIGNMENT);
+    const { stats } = promoteCompanions(rows, [anchor], inputs());
     expect(stats.blendDimmedAnchors).toBe(1);
     expect(anchor.absmag).toBeCloseTo(5.64, 3);
   });
@@ -818,7 +836,7 @@ describe('anchor flux dimming', () => {
     // where every subset fits worse than leaving the anchor alone.
     const stale = blendAnchor({ absmag: blend });
     const staleStats = promoteCompanions(
-      rows(100), [stale], CON_ASSIGNMENT,
+      rows(100), [stale], inputs(),
     ).stats;
     expect(staleStats.blendDimmedAnchors).toBe(1);
     expect(stale.absmag).toBeCloseTo(2.1, 3);
@@ -826,7 +844,7 @@ describe('anchor flux dimming', () => {
     // And a row with no distance at all no longer strands the fit as unfittable.
     const absent = blendAnchor({ absmag: blend });
     const absentStats = promoteCompanions(
-      rows(null), [absent], CON_ASSIGNMENT,
+      rows(null), [absent], inputs(),
     ).stats;
     expect(absentStats.blendDimMembersUnfit).toBe(0);
     expect(absentStats.blendDimmedAnchors).toBe(1);
@@ -845,7 +863,7 @@ describe('anchor flux dimming', () => {
   const dimAt = (sepArcsec: number | null, anchorOver: Partial<Star> = {}) => {
     const anchor = blendAnchor({ absmag: blendMag(2.1, 4.1), ...anchorOver });
     const stats = promoteCompanions(
-      sepRows(sepArcsec), [anchor], CON_ASSIGNMENT,
+      sepRows(sepArcsec), [anchor], inputs(),
     ).stats;
     return { anchor, stats };
   };
@@ -891,7 +909,7 @@ describe('anchor flux dimming', () => {
     rows[0].absmag = blend;
     rows[0].sepArcsec = null;
     const { stats } = promoteCompanions(
-      rows, [anchor, member], CON_ASSIGNMENT,
+      rows, [anchor, member], inputs(),
     );
     expect(stats.alreadyInCatalog).toBe(1);
     expect(stats.blendDimMembersBeyondSeparation).toBe(1);
@@ -908,7 +926,7 @@ describe('anchor flux dimming', () => {
     });
     rows[0].absmag = blendMag(2.1, 4.1);
     rows[0].sepArcsec = 400.0;
-    const { stats } = promoteCompanions(rows, [anchor], CON_ASSIGNMENT);
+    const { stats } = promoteCompanions(rows, [anchor], inputs());
     expect(stats.blendDimMembersBeyondSeparation).toBe(0);
     expect(stats.blendDimmedAnchors).toBe(1);
     expect(anchor.absmag).toBeCloseTo(2.1, 3);
@@ -928,7 +946,7 @@ describe('anchor flux dimming', () => {
     });
     rows[0].absmag = blend;
     rows[0].sepArcsec = 400.0;
-    const { stats } = promoteCompanions(rows, [anchor], CON_ASSIGNMENT);
+    const { stats } = promoteCompanions(rows, [anchor], inputs());
     expect(stats.blendDimMembersBeyondSeparation).toBe(0);
     expect(stats.blendDimmedAnchors).toBe(1);
     expect(anchor.absmag).toBeCloseTo(2.1, 3);
@@ -947,7 +965,7 @@ describe('anchor flux dimming', () => {
     });
     rows[0].absmag = blend;
     const { newStars, stats } = promoteCompanions(
-      rows, [anchor, member], CON_ASSIGNMENT,
+      rows, [anchor, member], inputs(),
     );
     expect(newStars).toHaveLength(0);
     expect(stats.alreadyInCatalog).toBe(1);
@@ -973,7 +991,7 @@ describe('anchor flux dimming', () => {
     });
     rows[0].absmag = blendApparent;
     const { stats } = promoteCompanions(
-      rows, [anchor, member], CON_ASSIGNMENT,
+      rows, [anchor, member], inputs(),
     );
     expect(stats.blendDimmedAnchors).toBe(1);
     const memberApparent = 4.1 + 5 * Math.log10(20 / 10);
@@ -996,7 +1014,7 @@ describe('anchor flux dimming', () => {
     const anchor = blendAnchor({ absmag: blend - anchorOffset });
     const rows = solveRows({ dmag: 2.0, magPri: 2.1, magSec: 4.1 });
     rows[0].absmag = blend;
-    const { stats } = promoteCompanions(rows, [anchor], CON_ASSIGNMENT);
+    const { stats } = promoteCompanions(rows, [anchor], inputs());
     return stats;
   };
 
@@ -1019,7 +1037,7 @@ describe('anchor flux dimming', () => {
     const anchor = blendAnchor({ absmag: blend - 2.0 });
     const rows = solveRows({ hip: 7777, dmag: 2.0, magPri: 2.1, magSec: 4.1 });
     rows[0].absmag = blend;
-    const { stats } = promoteCompanions(rows, [anchor], CON_ASSIGNMENT);
+    const { stats } = promoteCompanions(rows, [anchor], inputs());
     expect(stats.blendDimMembersMisfit).toBe(0);
     expect(stats.blendDimmedAnchors).toBe(1);
   });
@@ -1037,7 +1055,7 @@ describe('anchor flux dimming', () => {
     // The AD cursor names the same record under comp D — one member, two rows.
     rows[3].comp = 'B';
     const { stats } = promoteCompanions(
-      rows, [anchor, member], CON_ASSIGNMENT,
+      rows, [anchor, member], inputs(),
     );
     expect(stats.alreadyInCatalog).toBe(2);
     expect(stats.blendDimmedAnchors).toBe(1);
@@ -1060,7 +1078,7 @@ describe('anchor flux dimming', () => {
     });
     rows[0].absmag = anchorAbsmag;
     const { stats } = promoteCompanions(
-      rows, [anchor, member], CON_ASSIGNMENT,
+      rows, [anchor, member], inputs(),
     );
     return { anchor, member, stats };
   };
@@ -1169,7 +1187,7 @@ describe('promoteCompanions build-time de-extinction', () => {
   // Secondary re-anchored per-component (own gaia_5p) so resolvePosition
   // uses its own xyz — the sightline the integral runs down.
   function promoteAt(
-    grid: DustGrid | null,
+    grid: DustGrid,
     rowOverrides: Partial<MultiplesTsvRow>,
   ): Star {
     const primaryStar = makeStar({ gaiaSourceId: '111', x: 40, y: 0, z: 0 });
@@ -1183,7 +1201,7 @@ describe('promoteCompanions build-time de-extinction', () => {
       ...rowOverrides,
     });
     const { newStars } = promoteCompanions(
-      [primaryRow, secondary], [primaryStar], CON_ASSIGNMENT, grid,
+      [primaryRow, secondary], [primaryStar], inputs({ dustGrid: grid }),
     );
     expect(newStars).toHaveLength(1);
     return newStars[0];
@@ -1194,7 +1212,7 @@ describe('promoteCompanions build-time de-extinction', () => {
       photometryVia: 'athyg_own', absmag: 3.0, ci: 0.5, spect: '', dmag: null,
     };
     const withGrid = promoteAt(grid, observed);
-    const noGrid = promoteAt(null, observed);
+    const noGrid = promoteAt(TRANSPARENT_DUST, observed);
     expect(noGrid.absmag - withGrid.absmag).toBeCloseTo(av, 6);
     expect(noGrid.ci - withGrid.ci).toBeCloseTo(av / R_V, 6);
   });
@@ -1208,7 +1226,7 @@ describe('promoteCompanions build-time de-extinction', () => {
       spect: 'B8V', dmag: null,
     };
     const withGrid = promoteAt(grid, intrinsic);
-    const noGrid = promoteAt(null, intrinsic);
+    const noGrid = promoteAt(TRANSPARENT_DUST, intrinsic);
     expect(withGrid.absmag).toBeCloseTo(noGrid.absmag, 6);
     expect(withGrid.ci).toBeCloseTo(noGrid.ci, 6);
   });
@@ -1258,7 +1276,7 @@ describe('promoteCompanions', () => {
   }
 
   it('promotes Sirius B with imputed absmag and FLAG_BINARY_COMPANION_ONLY', () => {
-    const { newStars, stats } = promoteCompanions(siriusRows(), [sirius_a_existing], CON_ASSIGNMENT);
+    const { newStars, stats } = promoteCompanions(siriusRows(), [sirius_a_existing], inputs());
     expect(stats.promoted).toBe(1);
     expect(stats.alreadyInCatalog).toBe(0);
     expect(newStars).toHaveLength(1);
@@ -1290,7 +1308,7 @@ describe('promoteCompanions', () => {
       gaiaSourceId: null,
       vx: 1.1e-5, vy: -2.3e-5, vz: 3.7e-6,
     });
-    const { newStars } = promoteCompanions(siriusRows(), [primary], CON_ASSIGNMENT);
+    const { newStars } = promoteCompanions(siriusRows(), [primary], inputs());
     expect(newStars).toHaveLength(1);
     expect([newStars[0].vx, newStars[0].vy, newStars[0].vz])
       .toEqual([primary.vx, primary.vy, primary.vz]);
@@ -1307,7 +1325,7 @@ describe('promoteCompanions', () => {
       spectClass: 2, lumClass: 2, proper: 'Sirius', hip: 32349,
       gaiaSourceId: null, conIndex: cma,
     });
-    const { newStars, stats } = promoteCompanions(siriusRows(), [primary], CON_ASSIGNMENT);
+    const { newStars, stats } = promoteCompanions(siriusRows(), [primary], inputs());
     expect(newStars).toHaveLength(1);
     expect(newStars[0].conIndex).toBe(cma);
     expect(stats.constellationSplitFromAnchor).toBe(0);
@@ -1342,7 +1360,7 @@ describe('promoteCompanions', () => {
         sepArcsec: 5.0, paDeg: 90, sepPaEpochJd: 2451545,
       }),
     ];
-    const { stats } = promoteCompanions(rows, [a, b], CON_ASSIGNMENT);
+    const { stats } = promoteCompanions(rows, [a, b], inputs());
     expect(stats.alreadyInCatalog).toBe(1); // B already in catalog, not promoted
     const expected = {
       x: (1 - q) * vA.x + q * vB.x,
@@ -1381,7 +1399,7 @@ describe('promoteCompanions', () => {
         absmag: 9.0, orbitRole: 'secondary',
       }),
     ];
-    const { stats } = promoteCompanions(rows, [anchor, member], CON_ASSIGNMENT);
+    const { stats } = promoteCompanions(rows, [anchor, member], inputs());
     expect(stats.alreadyInCatalog).toBe(1);
     expect(stats.existingDesigConFromAnchor).toBe(1);
     expect(member.desigConIndex).toBe(psa);
@@ -1412,7 +1430,7 @@ describe('promoteCompanions', () => {
         absmag: 9.0, orbitRole: 'secondary',
       }),
     ];
-    const { stats } = promoteCompanions(rows, [anchor, member], CON_ASSIGNMENT);
+    const { stats } = promoteCompanions(rows, [anchor, member], inputs());
     expect(stats.existingDesigConFromAnchor).toBe(0);
     expect(member.desigConIndex).toBe(aqr);
   });
@@ -1444,7 +1462,7 @@ describe('promoteCompanions', () => {
         sepPaEpochJd: 2451545,
       }),
     ];
-    const { newStars, stats } = promoteCompanions(rows, [anchor, cExisting], CON_ASSIGNMENT);
+    const { newStars, stats } = promoteCompanions(rows, [anchor, cExisting], inputs());
     expect(newStars).toHaveLength(0);
     expect(stats.alreadyInCatalog).toBe(1);
   });
@@ -1485,7 +1503,7 @@ describe('promoteCompanions', () => {
         pDays: 2.9, tJd: 2451545, e: 0, aAU: 0.05, omegaRad: 3.14, q: 0.14,
       }),
     ];
-    const { newStars, stats } = promoteCompanions(rows, [a_existing], CON_ASSIGNMENT);
+    const { newStars, stats } = promoteCompanions(rows, [a_existing], inputs());
     const b = newStars.find((s) => s.syntheticId === 'synth-TST-B');
     const bb = newStars.find((s) => s.syntheticId === 'synth-TST-Bb');
     expect(b, 'B promoted').toBeDefined();
@@ -1537,7 +1555,7 @@ describe('promoteCompanions', () => {
         pDays: 2.9, tJd: 2451545, e: 0, aAU: 0.05, omegaRad: 3.14, q: 0.5,
       }),
     ];
-    const { newStars } = promoteCompanions(rows, [castorA], CON_ASSIGNMENT);
+    const { newStars } = promoteCompanions(rows, [castorA], inputs());
     expect(newStars.map((star) => star.gaiaSourceId ?? star.syntheticId).sort())
       .toEqual([GA_C, 'synth-CAS-Cb']);
   });
@@ -1583,7 +1601,7 @@ describe('promoteCompanions', () => {
         pDays: 0.814, tJd: 2451545, e: 0, aAU: 0.017, omegaRad: 3.14, q: 0.5,
       }),
     ];
-    const { newStars, stats } = promoteCompanions(rows, [castorA], CON_ASSIGNMENT);
+    const { newStars, stats } = promoteCompanions(rows, [castorA], inputs());
     const c = newStars.find((s) => s.syntheticId === null);
     const cb = newStars.find((s) => s.syntheticId !== null);
     const split = COMBINED + 2.5 * Math.log10(2);
@@ -1606,7 +1624,7 @@ describe('promoteCompanions', () => {
     const existing = makeStar({
       gaiaSourceId: '2947050466531873024', absmag: 11.18,
     });
-    const { newStars, stats } = promoteCompanions(rows, [existing, sirius_a_existing], CON_ASSIGNMENT);
+    const { newStars, stats } = promoteCompanions(rows, [existing, sirius_a_existing], inputs());
     expect(stats.promoted).toBe(0);
     expect(stats.alreadyInCatalog).toBe(1);
     expect(newStars).toHaveLength(0);
@@ -1619,7 +1637,7 @@ describe('promoteCompanions', () => {
     const rows = siriusRows();
     rows[1].gaiaSourceId = null;
     rows[1].hip = null;
-    const { newStars, stats } = promoteCompanions(rows, [sirius_a_existing], CON_ASSIGNMENT);
+    const { newStars, stats } = promoteCompanions(rows, [sirius_a_existing], inputs());
     expect(stats.droppedNoIdentifier).toBe(0);
     expect(stats.promoted).toBe(1);
     expect(stats.promotedSynthetic).toBe(1);
@@ -1664,7 +1682,7 @@ describe('promoteCompanions', () => {
       x: 14.189408, y: 15.238769, z: 18.072089,
       absmag: -0.112, hip: 14576, proper: 'Algol',
     });
-    const { newStars, stats } = promoteCompanions(rows, [algolPrimary], CON_ASSIGNMENT);
+    const { newStars, stats } = promoteCompanions(rows, [algolPrimary], inputs());
     expect(stats.promotedSynthetic).toBe(1);
     expect(newStars).toHaveLength(1);
     const aa2 = newStars[0];
@@ -1676,7 +1694,7 @@ describe('promoteCompanions', () => {
     rows[1].gaiaSourceId = null;
     rows[1].hip = null;
     rows[1].comp = '';
-    const { stats } = promoteCompanions(rows, [sirius_a_existing], CON_ASSIGNMENT);
+    const { stats } = promoteCompanions(rows, [sirius_a_existing], inputs());
     expect(stats.droppedNoIdentifier).toBe(1);
     expect(stats.promoted).toBe(0);
   });
@@ -1694,7 +1712,7 @@ describe('promoteCompanions', () => {
     rows[1].gaiaSourceId = null;       // strip B's distinct gaia
     rows[1].hip = 32349;               // still shares primary's HIP
     rows[1].astrometryVia = 'system_inherited';
-    const { newStars, stats } = promoteCompanions(rows, [sirius_a_existing], CON_ASSIGNMENT);
+    const { newStars, stats } = promoteCompanions(rows, [sirius_a_existing], inputs());
     expect(stats.alreadyInCatalog).toBe(0);
     expect(stats.promoted).toBe(1);
     expect(stats.promotedSynthetic).toBe(1);
@@ -1724,7 +1742,7 @@ describe('promoteCompanions', () => {
     rows[0].gaiaSourceId = '555000111';
     rows[1].gaiaSourceId = '555000111';
     rows[1].hip = null;
-    const { newStars, stats } = promoteCompanions(rows, [primaryWithGaia], CON_ASSIGNMENT);
+    const { newStars, stats } = promoteCompanions(rows, [primaryWithGaia], inputs());
     expect(stats.alreadyInCatalog).toBe(0);
     expect(stats.promoted).toBe(1);
     expect(stats.promotedSynthetic).toBe(1);
@@ -1742,7 +1760,7 @@ describe('promoteCompanions', () => {
     const otherStar: Star = makeStar({ gaiaSourceId: '777', absmag: 5.0 });
     const rows = siriusRows();
     rows[1].gaiaSourceId = '777';
-    const { stats } = promoteCompanions(rows, [sirius_a_existing, otherStar], CON_ASSIGNMENT);
+    const { stats } = promoteCompanions(rows, [sirius_a_existing, otherStar], inputs());
     expect(stats.alreadyInCatalog).toBe(1);
     expect(stats.promoted).toBe(0);
   });
@@ -1758,7 +1776,7 @@ describe('promoteCompanions', () => {
     const rows = siriusRows();
     rows[1].gaiaSourceId = null;
     rows[1].hip = 99999;  // matches `otherStar`, NOT Sirius A
-    const { stats } = promoteCompanions(rows, [sirius_a_existing, otherStar], CON_ASSIGNMENT);
+    const { stats } = promoteCompanions(rows, [sirius_a_existing, otherStar], inputs());
     expect(stats.alreadyInCatalog).toBe(1);
     expect(stats.promoted).toBe(0);
   });
@@ -1770,7 +1788,7 @@ describe('promoteCompanions', () => {
     // Primary's absmag is 1.45 (inherited), so the secondary's null
     // absmag can't ride the inheritance shortcut either.
     rows[0].absmag = null;
-    const { stats } = promoteCompanions(rows, [sirius_a_existing], CON_ASSIGNMENT);
+    const { stats } = promoteCompanions(rows, [sirius_a_existing], inputs());
     expect(stats.droppedNoAbsmag).toBe(1);
     expect(stats.promoted).toBe(0);
   });
@@ -1778,7 +1796,7 @@ describe('promoteCompanions', () => {
   it('projects secondary position from sep+PA when astrometry is system_inherited', () => {
     const rows = siriusRows();
     rows[1].astrometryVia = 'system_inherited';
-    const { newStars } = promoteCompanions(rows, [sirius_a_existing], CON_ASSIGNMENT);
+    const { newStars } = promoteCompanions(rows, [sirius_a_existing], inputs());
     expect(newStars).toHaveLength(1);
     // Tangent-plane offset of 11.1″ at 2.637 pc ≈ 1.42e-4 pc. Companion
     // sits within that of the primary.
@@ -1800,7 +1818,7 @@ describe('promoteCompanions', () => {
     const rows = siriusRows();
     expect(rows[0].x_pc).toBe(-0.494399);  // multiples.tsv primary
     expect(sirius_a_existing.x).toBeCloseTo(-0.494, 3);  // catalog primary
-    const { newStars } = promoteCompanions(rows, [sirius_a_existing], CON_ASSIGNMENT);
+    const { newStars } = promoteCompanions(rows, [sirius_a_existing], inputs());
     expect(newStars).toHaveLength(1);
     const b = newStars[0];
     // Sep+PA at 11.1″ × 2.637 pc / 206265 ≈ 1.42e-4 pc ≈ 29 AU. The
@@ -1856,7 +1874,7 @@ describe('promoteCompanions', () => {
         dmag: 2.48,
       }),
     ];
-    const { newStars, stats } = promoteCompanions(rows, [algolPrimary], CON_ASSIGNMENT);
+    const { newStars, stats } = promoteCompanions(rows, [algolPrimary], inputs());
     expect(stats.promotedSynthetic).toBe(1);
     expect(newStars).toHaveLength(1);
     const ab = newStars[0];
@@ -1898,7 +1916,7 @@ describe('promoteCompanions', () => {
     const existing = makeStar({
       x: 0, y: 0, z: 2.637, absmag: 1.45, hip: 32349, proper: 'Test',
     });
-    const { newStars } = promoteCompanions([primaryRow, secondaryRow], [existing], CON_ASSIGNMENT);
+    const { newStars } = promoteCompanions([primaryRow, secondaryRow], [existing], inputs());
     expect(newStars).toHaveLength(1);
     // Companion takes its own z (own-astrometry branch), not sep+PA from
     // primary anchor.
@@ -1915,7 +1933,7 @@ describe('promoteCompanions', () => {
     expect(rows[0].astrometryVia).toBe('hip2_long_baseline');
     expect(rows[1].astrometryVia).toBe('hip2_long_baseline');
     expect(rows[1].x_pc).toBe(rows[0].x_pc);
-    const { newStars } = promoteCompanions(rows, [sirius_a_existing], CON_ASSIGNMENT);
+    const { newStars } = promoteCompanions(rows, [sirius_a_existing], inputs());
     expect(newStars).toHaveLength(1);
     const b = newStars[0];
     const dx = b.x - sirius_a_existing.x;
@@ -1934,7 +1952,7 @@ describe('promoteCompanions', () => {
     rows[1].astrometryVia = 'athyg_position';
     rows[1].sepArcsec = null;
     rows[1].paDeg = null;
-    const { stats } = promoteCompanions(rows, [sirius_a_existing], CON_ASSIGNMENT);
+    const { stats } = promoteCompanions(rows, [sirius_a_existing], inputs());
     expect(stats.droppedNoPosition).toBe(1);
     expect(stats.promoted).toBe(0);
   });
@@ -1944,7 +1962,7 @@ describe('promoteCompanions', () => {
     rows[1].astrometryVia = 'system_inherited';
     rows[1].sepArcsec = null;
     rows[1].paDeg = null;
-    const { stats } = promoteCompanions(rows, [sirius_a_existing], CON_ASSIGNMENT);
+    const { stats } = promoteCompanions(rows, [sirius_a_existing], inputs());
     expect(stats.droppedNoPosition).toBe(1);
     expect(stats.promoted).toBe(0);
   });
@@ -1972,7 +1990,7 @@ describe('promoteCompanions', () => {
         sepArcsec: 300.0, paDeg: 90.0, dmag: 2.5,
       }),
     ];
-    const { stats, newStars } = promoteCompanions(rows, [farPrimary], CON_ASSIGNMENT);
+    const { stats, newStars } = promoteCompanions(rows, [farPrimary], inputs());
     expect(stats.droppedBeyondTidalLimit).toBe(1);
     expect(stats.promoted).toBe(0);
     expect(newStars).toHaveLength(0);
@@ -1998,7 +2016,7 @@ describe('promoteCompanions', () => {
         sepArcsec: 300.0, paDeg: 90.0, dmag: 2.5,
       }),
     ];
-    const { stats } = promoteCompanions(rows, [nearPrimary], CON_ASSIGNMENT);
+    const { stats } = promoteCompanions(rows, [nearPrimary], inputs());
     expect(stats.droppedBeyondTidalLimit).toBe(0);
     expect(stats.promoted).toBe(1);
   });
@@ -2023,7 +2041,7 @@ describe('promoteCompanions', () => {
     rows[1].hip = null;
     rows[1].name = '';
     const { newStars, stats } = promoteCompanions(
-      rows, [primaryStar, athygB], CON_ASSIGNMENT,
+      rows, [primaryStar, athygB], inputs(),
     );
     expect(stats.repositionedCollocatedDouble).toBe(1);
     expect(stats.promoted).toBe(0);
@@ -2045,7 +2063,7 @@ describe('promoteCompanions', () => {
     rows[1].astrometryVia = 'athyg_position';
     rows[1].sepArcsec = 0.0;
     rows[1].paDeg = 75.0;
-    const { stats } = promoteCompanions(rows, [sirius_a_existing], CON_ASSIGNMENT);
+    const { stats } = promoteCompanions(rows, [sirius_a_existing], inputs());
     expect(stats.droppedNoPosition).toBe(1);
     expect(stats.promoted).toBe(0);
   });
@@ -2056,7 +2074,7 @@ describe('promoteCompanions', () => {
     rows[1].sepArcsec = 0.0;
     rows[1].paDeg = 43.0;
     Object.assign(rows[1], ORBIT_ELEMENTS);
-    const { newStars, stats } = promoteCompanions(rows, [sirius_a_existing], CON_ASSIGNMENT);
+    const { newStars, stats } = promoteCompanions(rows, [sirius_a_existing], inputs());
     expect(stats.promoted).toBe(1);
     expect(newStars[0].x).toBe(sirius_a_existing.x);
     expect(newStars[0].y).toBe(sirius_a_existing.y);
@@ -2072,7 +2090,7 @@ describe('promoteCompanions', () => {
     rows[1].sepArcsec = null;
     rows[1].paDeg = null;
     Object.assign(rows[1], ORBIT_ELEMENTS);
-    const { newStars, stats } = promoteCompanions(rows, [sirius_a_existing], CON_ASSIGNMENT);
+    const { newStars, stats } = promoteCompanions(rows, [sirius_a_existing], inputs());
     expect(stats.droppedNoPosition).toBe(0);
     expect(stats.promoted).toBe(1);
     expect(newStars[0].x).toBe(sirius_a_existing.x);
@@ -2110,7 +2128,7 @@ describe('promoteCompanions', () => {
         sepArcsec: 5.6, paDeg: 86.0, sepPaEpochJd: 2457023.75, dmag: 2.5,
       }),
     ];
-    const { newStars, stats } = promoteCompanions(rows, [alsephina], CON_ASSIGNMENT);
+    const { newStars, stats } = promoteCompanions(rows, [alsephina], inputs());
     expect(stats.droppedCollocatedPrimary).toBe(1);
     expect(stats.promoted).toBe(0);
     expect(newStars.find(s => s.gaiaSourceId === '5317053587002655872'))
@@ -2145,7 +2163,7 @@ describe('promoteCompanions', () => {
         sepArcsec: 3.0, paDeg: 90.0, sepPaEpochJd: 2460000.0, dmag: 2.0,
       }),
     ];
-    const { newStars, stats } = promoteCompanions(rows, [anchor], CON_ASSIGNMENT);
+    const { newStars, stats } = promoteCompanions(rows, [anchor], inputs());
     expect(stats.promoted).toBe(1);
     expect(stats.droppedCollocatedPrimary).toBe(0);
     const c = newStars.find(s => s.gaiaSourceId === 'g_pair_c');
@@ -2198,7 +2216,7 @@ describe('promoteCompanions', () => {
       x: -9.394045, y: 10.739872, z: -20.158656,
     });
     const { newStars, stats } = promoteCompanions(
-      alsephinaCDRows(), [alsephina], CON_ASSIGNMENT);
+      alsephinaCDRows(), [alsephina], inputs());
     expect(stats.droppedCollocatedPrimary).toBe(1);  // C still drops
     const d = newStars.find(s => s.gaiaSourceId === '5317053587001807104');
     expect(d, 'D promoted').toBeDefined();
@@ -2217,7 +2235,7 @@ describe('promoteCompanions', () => {
       conIndex: vel, vx: 0.011, vy: -0.022, vz: 0.033,
     });
     const { newStars, stats } = promoteCompanions(
-      alsephinaCDRows(), [alsephina], CON_ASSIGNMENT);
+      alsephinaCDRows(), [alsephina], inputs());
     const d = newStars.find((s) => s.gaiaSourceId === '5317053587001807104');
     expect(d, 'D promoted').toBeDefined();
     expect(d?.conIndex).toBe(vel);
@@ -2233,7 +2251,7 @@ describe('promoteCompanions', () => {
     // position, which inheritance could never do.
     const vel = CONSTELLATIONS.findIndex((c) => c.code.toLowerCase() === 'vel');
     const { newStars, stats } = promoteCompanions(
-      alsephinaCDRows(), [], CON_ASSIGNMENT);
+      alsephinaCDRows(), [], inputs());
     const d = newStars.find((s) => s.gaiaSourceId === '5317053587001807104');
     expect(d, 'D promoted').toBeDefined();
     expect(d?.conIndex).toBe(vel);
@@ -2282,7 +2300,7 @@ describe('promoteCompanions', () => {
         sepArcsec: 10.0, paDeg: 200.0, sepPaEpochJd: 2457023.75, dmag: 1.5,
       }),
     ];
-    const { newStars } = promoteCompanions(rows, [epsEquA, epsEquB], CON_ASSIGNMENT);
+    const { newStars } = promoteCompanions(rows, [epsEquA, epsEquB], inputs());
     const c = newStars.find(s => s.gaiaSourceId === '1731592451377571712');
     expect(c, 'C promoted').toBeDefined();
   });
@@ -2363,7 +2381,7 @@ describe('promoteCompanions', () => {
         sepArcsec: 7.7, paDeg: 327.0, sepPaEpochJd: 2460311.0, dmag: 1.64,
       }),
     ];
-    const { newStars, stats } = promoteCompanions(rows, [keid], CON_ASSIGNMENT);
+    const { newStars, stats } = promoteCompanions(rows, [keid], inputs());
     // The "BC" compound row drops; B and C both promote.
     expect(stats.droppedCompoundComp).toBe(1);
     expect(stats.promoted).toBe(2);
@@ -2468,7 +2486,7 @@ describe('promoteCompanions', () => {
         sepArcsec: 521.0, paDeg: 29.0, sepPaEpochJd: 2457389.0, dmag: 3.09,
       }),
     ];
-    const { newStars } = promoteCompanions(rows, [keid], CON_ASSIGNMENT);
+    const { newStars } = promoteCompanions(rows, [keid], inputs());
     // C, B, D all promoted. Only one B record (the BD group's "B primary"
     // hits the promoted lookup and short-circuits the escape).
     const gaiaIds = newStars.map(s => s.gaiaSourceId).sort();
@@ -2536,7 +2554,7 @@ describe('promoteCompanions', () => {
         sepArcsec: 88.4, paDeg: 204.0, dmag: 2.1,
       }),
     ];
-    const { newStars, stats } = promoteCompanions(rows, [acrux], CON_ASSIGNMENT);
+    const { newStars, stats } = promoteCompanions(rows, [acrux], inputs());
     const b = newStars.find(s => s.syntheticId === 'synth-12266-6306-B');
     expect(b).toBeDefined();
     if (!b) return;
@@ -2589,7 +2607,7 @@ describe('promoteCompanions', () => {
   it('re-bases a pair-row primary onto the resolvable anchor Stage 6 did not chain from', () => {
     const d: Star = makeStar({ hip: 823, absmag: 8.0, x: 100, y: 0, z: 0 });
     const { newStars } = promoteCompanions(
-      idlessAnchorRoot({ sep: 55.5, pa: 259.0 }), [d], CON_ASSIGNMENT,
+      idlessAnchorRoot({ sep: 55.5, pa: 259.0 }), [d], inputs(),
     );
     const h = newStars.find(s => s.syntheticId === 'synth-00101+3825-H');
     expect(h).toBeDefined();
@@ -2613,14 +2631,14 @@ describe('promoteCompanions', () => {
     });
     const rows = idlessAnchorRoot({ sep: 6.0, pa: 180.0 }).map((r) =>
       r.comp === 'H' ? { ...r, anchorOffset: reached(5.0, 0.0) } : r);
-    const { stats } = promoteCompanions(rows, [d], CON_ASSIGNMENT);
+    const { stats } = promoteCompanions(rows, [d], inputs());
     expect(stats.blendDimMembersBeyondSeparation).toBe(1);
   });
 
   it('refuses the offset when promotion\'s anchor is unreached from Stage 6\'s letter', () => {
     const d: Star = makeStar({ hip: 823, absmag: 8.0, x: 100, y: 0, z: 0 });
     const { newStars, stats } = promoteCompanions(
-      idlessAnchorRoot(null), [d], CON_ASSIGNMENT,
+      idlessAnchorRoot(null), [d], inputs(),
     );
     expect(newStars.map(s => s.syntheticId)).not.toContain('synth-00101+3825-H');
     expect(newStars.map(s => s.syntheticId)).not.toContain('synth-00101+3825-A');
@@ -2659,7 +2677,7 @@ describe('promoteCompanions', () => {
         sepArcsec: 88.4, paDeg: 204.0, dmag: 2.1,
       }),
     ];
-    const { newStars, stats } = promoteCompanions(rows, [anchor], CON_ASSIGNMENT);
+    const { newStars, stats } = promoteCompanions(rows, [anchor], inputs());
     expect(stats.droppedCollocatedPrimary).toBe(1);
     // B drops for want of an honest placement; C still promotes, anchored
     // on the blend record as before.
@@ -2707,7 +2725,7 @@ describe('promoteCompanions', () => {
         sepArcsec: 7.7, paDeg: 327.0, sepPaEpochJd: 2460311.0, dmag: 1.0,
       }),
     ];
-    const { newStars } = promoteCompanions(rows, [keid], CON_ASSIGNMENT);
+    const { newStars } = promoteCompanions(rows, [keid], inputs());
     // No promotion for the no-ID X primary.
     expect(newStars.find(s => s.proper === 'Keid X')).toBeUndefined();
   });
@@ -2720,7 +2738,7 @@ describe('promoteCompanions', () => {
         absmag: 5.0,
       }),
     ];
-    const { stats } = promoteCompanions(rows, [], CON_ASSIGNMENT);
+    const { stats } = promoteCompanions(rows, [], inputs());
     expect(stats.promoted).toBe(0);
     expect(stats.pairRowsScanned).toBe(0);
   });
@@ -2837,7 +2855,7 @@ describe('promoteCompanions / a parked record does not arrive by promotion', () 
 
   it('mints the row where nothing is parked — the control', () => {
     const { newStars, stats } = promoteCompanions(
-      rows, [anchor], CON_ASSIGNMENT,
+      rows, [anchor], inputs(),
     );
     expect(newStars).toHaveLength(1);
     expect(stats.droppedParkedRecord).toBe(0);
@@ -2845,11 +2863,10 @@ describe('promoteCompanions / a parked record does not arrive by promotion', () 
 
   it('refuses it once the ledger names the record, and counts the refusal', () => {
     const { newStars, stats } = promoteCompanions(
-      rows, [anchor], CON_ASSIGNMENT, null,
-      parkedRefusals([{
+      rows, [anchor], inputs({ parked: parkedRefusals([{
         gaiaSourceId: PARKED_SOURCE, hip: PARKED_HIP,
         reason: 'refused_no_defensible_parallax', refusedPlxMas: [3.04],
-      }]),
+      }]) }),
     );
     expect(newStars).toHaveLength(0);
     expect(stats.droppedParkedRecord).toBe(1);
@@ -2858,11 +2875,10 @@ describe('promoteCompanions / a parked record does not arrive by promotion', () 
 
   it('names a parked record by its HIP alone — the no-Gaia half of the cohort', () => {
     const { stats } = promoteCompanions(
-      rows, [anchor], CON_ASSIGNMENT, null,
-      parkedRefusals([{
+      rows, [anchor], inputs({ parked: parkedRefusals([{
         gaiaSourceId: null, hip: PARKED_HIP,
         reason: 'refused_no_defensible_parallax', refusedPlxMas: [3.04],
-      }]),
+      }]) }),
     );
     expect(stats.droppedParkedRecord).toBe(1);
   });
@@ -2900,7 +2916,7 @@ describe('promoteCompanions / a parked record does not arrive by promotion', () 
   it('mints the sibling from the blended id where nothing is parked, stripping '
     + 'the borrowed ids to a synth key — the control', () => {
     const { newStars, stats } = promoteCompanions(
-      blendedRows, [blendedPrimary], CON_ASSIGNMENT,
+      blendedRows, [blendedPrimary], inputs(),
     );
     expect(newStars).toHaveLength(1);
     expect(newStars[0].hip).toBeNull();
@@ -2911,11 +2927,10 @@ describe('promoteCompanions / a parked record does not arrive by promotion', () 
   it('refuses that sibling once the ledger names the id it borrowed, before '
     + 'the inheritance gates can turn it into a synth record', () => {
     const { newStars, stats } = promoteCompanions(
-      blendedRows, [blendedPrimary], CON_ASSIGNMENT, null,
-      parkedRefusals([{
+      blendedRows, [blendedPrimary], inputs({ parked: parkedRefusals([{
         gaiaSourceId: BLEND_SOURCE, hip: BLEND_HIP,
         reason: 'refused_no_defensible_parallax', refusedPlxMas: [0.97],
-      }]),
+      }]) }),
     );
     expect(newStars).toHaveLength(0);
     expect(stats.droppedParkedRecord).toBe(1);
@@ -2944,11 +2959,10 @@ describe('promoteCompanions / a parked record does not arrive by promotion', () 
         }
         : r));
       const { stats } = promoteCompanions(
-        ownFit, [blendedPrimary], CON_ASSIGNMENT, null,
-        parkedRefusals([{
+        ownFit, [blendedPrimary], inputs({ parked: parkedRefusals([{
           gaiaSourceId: '405578335904111745', hip: 7980,
           reason: 'refused_no_defensible_parallax', refusedPlxMas: [0.97],
-        }]),
+        }]) }),
       );
       expect(stats.droppedParkedRecord).toBe(1);
       expect(stats.droppedParkedRecordViaGaia5p).toBe(1);
@@ -2967,12 +2981,11 @@ describe('promoteCompanions / a parked record does not arrive by promotion', () 
   it('matches the row against every parallax refused on the record, not only '
     + 'the first', () => {
     const { stats } = promoteCompanions(
-      statesSecondRefusal, [blendedPrimary], CON_ASSIGNMENT, null,
-      parkedRefusals([{
+      statesSecondRefusal, [blendedPrimary], inputs({ parked: parkedRefusals([{
         gaiaSourceId: BLEND_SOURCE, hip: BLEND_HIP,
         reason: 'refused_no_defensible_parallax',
         refusedPlxMas: [0.97, SECOND_REFUSAL_MAS],
-      }]),
+      }]) }),
     );
     expect(stats.droppedParkedRecord).toBe(1);
   });
@@ -2980,12 +2993,11 @@ describe('promoteCompanions / a parked record does not arrive by promotion', () 
   it('promotes where the row states none of them — a second refusal does not '
     + 'widen the refusal back out to the id', () => {
     const { newStars, stats } = promoteCompanions(
-      blendedRows, [blendedPrimary], CON_ASSIGNMENT, null,
-      parkedRefusals([{
+      blendedRows, [blendedPrimary], inputs({ parked: parkedRefusals([{
         gaiaSourceId: BLEND_SOURCE, hip: BLEND_HIP,
         reason: 'refused_no_defensible_parallax',
         refusedPlxMas: [SECOND_REFUSAL_MAS, 6.8354],
-      }]),
+      }]) }),
     );
     expect(stats.droppedParkedRecord).toBe(0);
     expect(newStars).toHaveLength(1);
@@ -2994,8 +3006,7 @@ describe('promoteCompanions / a parked record does not arrive by promotion', () 
   it('reaches a refusal indexed under the row\'s HIP where its Gaia source '
     + 'carries a different one — the two indexes are read as one list', () => {
     const { stats } = promoteCompanions(
-      statesSecondRefusal, [blendedPrimary], CON_ASSIGNMENT, null,
-      parkedRefusals([
+      statesSecondRefusal, [blendedPrimary], inputs({ parked: parkedRefusals([
         {
           gaiaSourceId: BLEND_SOURCE, hip: null,
           reason: 'refused_no_defensible_parallax', refusedPlxMas: [0.97],
@@ -3005,7 +3016,7 @@ describe('promoteCompanions / a parked record does not arrive by promotion', () 
           reason: 'refused_no_defensible_parallax',
           refusedPlxMas: [SECOND_REFUSAL_MAS],
         },
-      ]),
+      ]) }),
     );
     expect(stats.droppedParkedRecord).toBe(1);
   });
@@ -3021,11 +3032,10 @@ describe('promoteCompanions / a parked record does not arrive by promotion', () 
     + 'refused, so there is nothing for the row to be laundering',
     (reason) => {
       const { newStars, stats } = promoteCompanions(
-        blendedRows, [blendedPrimary], CON_ASSIGNMENT, null,
-        parkedRefusals([{
+        blendedRows, [blendedPrimary], inputs({ parked: parkedRefusals([{
           gaiaSourceId: BLEND_SOURCE, hip: BLEND_HIP, reason,
           refusedPlxMas: [],
-        }]),
+        }]) }),
       );
       expect(newStars).toHaveLength(1);
       expect(newStars[0].syntheticId).toBe('synth-01425+5000-B');
@@ -3065,12 +3075,11 @@ describe('promoteCompanions / a parked record does not arrive by promotion', () 
   it('promotes a component carrying the parked blend\'s source_id where the '
     + 'distance it states is the anchor\'s own, not the refused value', () => {
     const { newStars, stats } = promoteCompanions(
-      alfHerRows, [rasalgethi], CON_ASSIGNMENT, null,
-      parkedRefusals([{
+      alfHerRows, [rasalgethi], inputs({ parked: parkedRefusals([{
         gaiaSourceId: ALF_HER_BLEND_SOURCE, hip: null,
         reason: 'refused_no_defensible_parallax',
         refusedPlxMas: [ALF_HER_REFUSED_MAS],
-      }]),
+      }]) }),
     );
     expect(stats.droppedParkedRecord).toBe(0);
     expect(newStars).toHaveLength(1);
@@ -3081,12 +3090,11 @@ describe('promoteCompanions / a parked record does not arrive by promotion', () 
     for (const distPc of [110.253583, 110.2536]) {
       const { stats } = promoteCompanions(
         alfHerRows.map((r) => ({ ...r, distPc })), [rasalgethi],
-        CON_ASSIGNMENT, null,
-        parkedRefusals([{
+        inputs({ parked: parkedRefusals([{
           gaiaSourceId: ALF_HER_BLEND_SOURCE, hip: null,
           reason: 'refused_no_defensible_parallax',
           refusedPlxMas: [1000 / 110.253583],
-        }]),
+        }]) }),
       );
       expect(stats.droppedParkedRecord, String(distPc)).toBe(1);
     }
@@ -3151,7 +3159,7 @@ describe('an existing member whose own 5p solution Gaia rejects', () => {
     a.distVia = 'hip2_parallax';
     const b = siriusB();
     const { newStars, stats } = promoteCompanions(
-      siriusRows(), [a, b], CON_ASSIGNMENT, null, undefined, rejectedFit(),
+      siriusRows(), [a, b], inputs({ gaiaAstrometry: rejectedFit() }),
     );
     expect(newStars).toHaveLength(0);
     expect(stats.existingMemberRecurated.dmag_imputed).toBe(1);
@@ -3178,7 +3186,7 @@ describe('an existing member whose own 5p solution Gaia rejects', () => {
     // No Δmag, and a dist_pc from the rejected fit rather than the anchor's.
     Object.assign(rows[1], { dmag: null, distPc: 2.9 });
     const { stats } = promoteCompanions(
-      rows, [a, b], CON_ASSIGNMENT, null, undefined, rejectedFit(),
+      rows, [a, b], inputs({ gaiaAstrometry: rejectedFit() }),
     );
     expect(stats.existingMemberRecurated.wds_mag).toBe(1);
     const dNew = Math.hypot(b.x, b.y, b.z);
@@ -3197,7 +3205,7 @@ describe('an existing member whose own 5p solution Gaia rejects', () => {
     const dOld = Math.hypot(b.x, b.y, b.z);
     const apparentBefore = b.absmag + 5 * Math.log10(dOld / 10);
     const { stats } = promoteCompanions(
-      rows, [a, b], CON_ASSIGNMENT, null, undefined, rejectedFit(),
+      rows, [a, b], inputs({ gaiaAstrometry: rejectedFit() }),
     );
     expect(stats.existingMemberRecurated.held).toBe(1);
     const dNew = Math.hypot(b.x, b.y, b.z);
@@ -3222,7 +3230,7 @@ describe('an existing member whose own 5p solution Gaia rejects', () => {
     }
     Object.assign(rows[0], { absmag: 1.0 });
     const { stats } = promoteCompanions(
-      rows, [a, b], CON_ASSIGNMENT, null, undefined, rejectedFit(),
+      rows, [a, b], inputs({ gaiaAstrometry: rejectedFit() }),
     );
     expect(stats.existingMemberRecurated.dmag_imputed).toBe(1);
     expect(stats.blendDimmedAnchors).toBe(1);
@@ -3235,7 +3243,7 @@ describe('an existing member whose own 5p solution Gaia rejects', () => {
     const b = siriusB();
     const before = { x: b.x, absmag: b.absmag, vx: b.vx };
     const { stats } = promoteCompanions(
-      siriusRows(), [a, b], CON_ASSIGNMENT, null, undefined, acceptedFit(),
+      siriusRows(), [a, b], inputs({ gaiaAstrometry: acceptedFit() }),
     );
     expect(recuratedTotal(stats)).toBe(0);
     expect(b.x).toBe(before.x);
@@ -3251,7 +3259,7 @@ describe('an existing member whose own 5p solution Gaia rejects', () => {
       x: -0.494296, y: 2.476716, z: -0.75871,
     });
     const { stats } = promoteCompanions(
-      siriusRows(), [a, b], CON_ASSIGNMENT, null, undefined, rejectedFit(),
+      siriusRows(), [a, b], inputs({ gaiaAstrometry: rejectedFit() }),
     );
     expect(recuratedTotal(stats)).toBe(0);
     expect(b.absmag).toBe(11.4666);
@@ -3260,7 +3268,7 @@ describe('an existing member whose own 5p solution Gaia rejects', () => {
   it('leaves a member alone when no astrometry row answers for it', () => {
     const a = siriusA();
     const b = siriusB();
-    const { stats } = promoteCompanions(siriusRows(), [a, b], CON_ASSIGNMENT);
+    const { stats } = promoteCompanions(siriusRows(), [a, b], inputs());
     expect(recuratedTotal(stats)).toBe(0);
     expect(b.absmag).toBe(11.4666);
   });
@@ -3294,8 +3302,7 @@ describe('an existing member whose own 5p solution Gaia rejects', () => {
       x: 58.362644, y: -66.547695, z: 19.991079,
     });
     const { newStars, stats } = promoteCompanions(
-      rows, [anchor, bridged], CON_ASSIGNMENT, null, undefined, new Map(),
-      new Map([['synth-20450+1244-B', '1755189379660877312']]),
+      rows, [anchor, bridged], inputs({ synthGaiaBridges: new Map([['synth-20450+1244-B', '1755189379660877312']]) }),
     );
     expect(newStars).toHaveLength(0);
     expect(stats.existingViaSameasBridge).toBe(1);
@@ -3311,7 +3318,7 @@ describe('an existing member whose own 5p solution Gaia rejects', () => {
       hip: 102398, absmag: 3.271,
       x: 68.494089, y: -78.099838, z: 23.461268,
     });
-    const { newStars, stats } = promoteCompanions(rows, [anchor], CON_ASSIGNMENT);
+    const { newStars, stats } = promoteCompanions(rows, [anchor], inputs());
     expect(stats.existingViaSameasBridge).toBe(0);
     expect(newStars).toHaveLength(1);
   });

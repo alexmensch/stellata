@@ -1189,6 +1189,7 @@ interface PromotionState {
   existingStarsLength: number;
   newStars: Star[];
   readonly conAssignment: ConstellationAssignment;
+  readonly dustGrid: DustGrid;
   promotedByGaia: Map<string, number>;
   promotedByHip: Map<number, number>;
   promotedBySynth: Map<string, number>;
@@ -1260,8 +1261,7 @@ function registerExistingMemberForAnchorDim(
   ctx: PromoteRowContext,
   state: PromotionState,
   memberIdx: number,
-  dustGrid: DustGrid | null,
-  recurated: RecuratedBrightness | null = null,
+  recurated: RecuratedBrightness | null,
 ): void {
   const { row, anchorPrimaryRow, anchorStar, anchorCatalogIdx } = ctx;
   if (recurated === 'spectral') return;
@@ -1289,7 +1289,7 @@ function registerExistingMemberForAnchorDim(
     // separation, so the fit and the separation bound can both judge it.
     structural: false,
     ...anchorDimGeometry(row, anchorPrimaryRow),
-    av: dustGrid ? avSolToStar(dustGrid, member.x, member.y, member.z) : 0,
+    av: avSolToStar(state.dustGrid, member.x, member.y, member.z),
   });
 }
 
@@ -1341,7 +1341,6 @@ function recurateExistingMember(
   ctx: PromoteRowContext,
   state: PromotionState,
   stats: PromotionStats,
-  dustGrid: DustGrid | null,
   memberIdx: number,
 ): RecuratedBrightness | null {
   const prior = state.recuratedMembers.get(memberIdx);
@@ -1358,7 +1357,7 @@ function recurateExistingMember(
   if (!ownFitFailsAnchorGrade(member, state.gaiaAstrometry)) return null;
 
   const avAt = (s: { x: number; y: number; z: number }): number =>
-    dustGrid ? avSolToStar(dustGrid, s.x, s.y, s.z) : 0;
+    avSolToStar(state.dustGrid, s.x, s.y, s.z);
   const dOld = starDistPc(member);
   const avOld = avAt(member);
   const dNew = starDistPc(position);
@@ -1401,15 +1400,14 @@ function adoptExistingMember(
   ctx: PromoteRowContext,
   state: PromotionState,
   stats: PromotionStats,
-  dustGrid: DustGrid | null,
   memberIdx: number,
 ): void {
   stats.alreadyInCatalog++;
   inheritAnchorDesignationCon(
     state.existingStars[memberIdx], ctx.anchorStar ?? ctx.systemAnchorStar, stats,
   );
-  const recurated = recurateExistingMember(ctx, state, stats, dustGrid, memberIdx);
-  registerExistingMemberForAnchorDim(ctx, state, memberIdx, dustGrid, recurated);
+  const recurated = recurateExistingMember(ctx, state, stats, memberIdx);
+  registerExistingMemberForAnchorDim(ctx, state, memberIdx, recurated);
 }
 
 /** A record a pair row resolves to displays a name composed off the anchor
@@ -1441,7 +1439,6 @@ function promoteRow(
   ctx: PromoteRowContext,
   state: PromotionState,
   stats: PromotionStats,
-  dustGrid: DustGrid | null,
 ): number | null {
   const { row, anchorPrimaryRow, anchorStar, systemAnchorStar, anchorCatalogIdx,
           position, canonicalComp, isPairRowPrimary } = ctx;
@@ -1499,7 +1496,7 @@ function promoteRow(
       && anchorCatalogIdx !== null
       && existingIdx === anchorCatalogIdx;
     if (existingIdx !== null && !inheritedIdCollision) {
-      adoptExistingMember(ctx, state, stats, dustGrid, existingIdx);
+      adoptExistingMember(ctx, state, stats, existingIdx);
       return null;
     }
     // A pair whose two ends resolve to ONE record has no second star to mint;
@@ -1523,7 +1520,7 @@ function promoteRow(
     if (existingIdx === null && row.gaiaSourceId !== null && rowHasOwnHip) {
       const hipHit = state.existing.byHip.get(row.hip as number);
       if (hipHit !== undefined && hipHit !== anchorCatalogIdx) {
-        adoptExistingMember(ctx, state, stats, dustGrid, hipHit);
+        adoptExistingMember(ctx, state, stats, hipHit);
         return null;
       }
     }
@@ -1570,7 +1567,7 @@ function promoteRow(
       ? undefined : state.existing.byGaia.get(bridged);
     if (bridgedIdx !== undefined) {
       stats.existingViaSameasBridge++;
-      adoptExistingMember(ctx, state, stats, dustGrid, bridgedIdx);
+      adoptExistingMember(ctx, state, stats, bridgedIdx);
       return null;
     }
   }
@@ -1594,8 +1591,7 @@ function promoteRow(
   if (imputed.source === 'inherited_twin') stats.absmagInheritedTwinOrbital++;
   // Runs before the MS re-derivation below, whose MV_MS_TABLE calibration
   // is intrinsic M_V.
-  const av = dustGrid
-    ? avSolToStar(dustGrid, position.x, position.y, position.z) : 0;
+  const av = avSolToStar(state.dustGrid, position.x, position.y, position.z);
   absmag = deExtinctCompanionAbsmag(imputed, av);
   if (!PER_COMPONENT_SPECT_VIA.has(row.spectVia)
       && OWN_BRIGHTNESS_ABSMAG_SOURCES.has(imputed.source)) {
@@ -1760,14 +1756,18 @@ function promoteRow(
   return newIdx;
 }
 
+export interface PromotionInputs {
+  conAssignment: ConstellationAssignment;
+  dustGrid: DustGrid;
+  parked: ParkedRefusals;
+  gaiaAstrometry: Map<string, GaiaAstrometryCatalogRow>;
+  synthGaiaBridges: Map<string, string>;
+}
+
 export function promoteCompanions(
   multiplesRows: MultiplesTsvRow[],
   existingStars: Star[],
-  conAssignment: ConstellationAssignment,
-  dustGrid: DustGrid | null = null,
-  parked: ParkedRefusals = emptyParkedRefusals(),
-  gaiaAstrometry: Map<string, GaiaAstrometryCatalogRow> = new Map(),
-  synthGaiaBridges: Map<string, string> = new Map(),
+  inputs: PromotionInputs,
 ): { newStars: Star[]; stats: PromotionStats; groups: Map<string, PairCursor> } {
   const stats = emptyPromotionStats();
   const existing = buildExistingIndexes(existingStars);
@@ -1783,20 +1783,17 @@ export function promoteCompanions(
   // promoted record (40 Eri B promoted in the BC group, then anchored
   // as a parent in the BD/BE groups).
   const state: PromotionState = {
+    ...inputs,
     existing,
-    parked,
     existingStars,
     existingStarsLength: existingStars.length,
     newStars,
-    conAssignment,
     promotedByGaia: new Map(),
     promotedByHip: new Map(),
     promotedBySynth: new Map(),
     gaiaPhotometryByBackingSource: new Map(),
     anchorDimCandidates: [],
     existingDimMembers: new Set(),
-    gaiaAstrometry,
-    synthGaiaBridges,
     recuratedMembers: new Map(),
   };
   const getStarAt = (idx: number): Star =>
@@ -1872,7 +1869,7 @@ export function promoteCompanions(
       const escaped =
         (synthKey !== null ? state.promotedBySynth.get(synthKey) : undefined)
         ?? tryPromoteCursorPrimary(
-          cursor, wdsRootAnchors, state, stats, dustGrid,
+          cursor, wdsRootAnchors, state, stats,
         );
       if (escaped !== null && escaped !== undefined) {
         primaryCatalogIdx = escaped;
@@ -1886,7 +1883,7 @@ export function promoteCompanions(
       // system anchor. 40 Eri B is the canonical case — a primary in BC/BD/BE
       // but never a secondary of A, so the secondary loop never reaches it.
       primaryCatalogIdx = tryPromoteCursorPrimary(
-        cursor, wdsRootAnchors, state, stats, dustGrid,
+        cursor, wdsRootAnchors, state, stats,
       );
     }
     const anchor: ProjectionAnchor | null = primaryCatalogIdx !== null
@@ -1946,7 +1943,7 @@ export function promoteCompanions(
           canonicalComp,
           isPairRowPrimary: false,
         },
-        state, stats, dustGrid,
+        state, stats,
       );
       // A promoted secondary is authoritative for its token — it resolves
       // through the inherited-id escape onto its own record, so it
@@ -2294,7 +2291,6 @@ function tryPromoteCursorPrimary(
   wdsRootAnchors: Map<string, SystemAnchor>,
   state: PromotionState,
   stats: PromotionStats,
-  dustGrid: DustGrid | null,
 ): number | null {
   const primary = cursor.primary;
   if (primary === null) return null;
@@ -2343,6 +2339,6 @@ function tryPromoteCursorPrimary(
       canonicalComp: primary.comp,
       isPairRowPrimary: true,
     },
-    state, stats, dustGrid,
+    state, stats,
   );
 }

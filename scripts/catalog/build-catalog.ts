@@ -670,10 +670,10 @@ async function main() {
     coherence.memberAnchorPrecisionVetoed;
   console.log('Promoting binary companions from multiples.tsv...');
   const tProm = Date.now();
-  const { newStars, stats: ps } = promoteCompanions(
-    multiplesRows, stars, conAssignment, dustGrid,
-    parkedRefusals(stats.parked), directions.gaiaAstrometry, synthGaiaBridges,
-  );
+  const { newStars, stats: ps } = promoteCompanions(multiplesRows, stars, {
+    conAssignment, dustGrid, parked: parkedRefusals(stats.parked),
+    gaiaAstrometry: directions.gaiaAstrometry, synthGaiaBridges,
+  });
   for (const ns of newStars) stars.push(ns);
   console.log(
     `  scanned ${ps.pairRowsScanned} pair rows; promoted ${ps.promoted} ` +
