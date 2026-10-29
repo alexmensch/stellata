@@ -8,7 +8,7 @@ import {
   type GatedValue,
   type PhotometryRefusal,
 } from './gaia-photometry-pure';
-import type { CascadeResult, UniformValues } from '../cascade-result';
+import type { CascadeRefusal, CascadeResult, UniformValues } from '../cascade-result';
 import type { GspcColour } from './gspc-parse';
 import { RIELLO_BP_RP_MIN, rielloGMinusV } from './v-magnitude-pure';
 
@@ -115,10 +115,10 @@ export function ciIsObserved(via: CiVia): boolean {
 /** A candidate colour a tier did not take. `apsis_teff_renders` is the derived
  *  tier standing down for a star whose colour the shader takes from its Apsis
  *  Teff instead. */
-export interface ColourIndexRefusal {
-  tier: Exclude<CiVia, 'none'>;
-  reason: PhotometryRefusal | 'non_finite' | 'apsis_teff_renders';
-}
+export type ColourIndexRefusal = CascadeRefusal<
+  Exclude<CiVia, 'none'>,
+  PhotometryRefusal | 'non_finite' | 'apsis_teff_renders'
+>;
 
 /** B−V. `none` is a row no tier colours; the record takes `SOLAR_BV_FALLBACK`. */
 export type ColourIndexResolution = CascadeResult<UniformValues<CiVia, number>, ColourIndexRefusal>;

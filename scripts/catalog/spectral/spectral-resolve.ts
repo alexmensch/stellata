@@ -18,7 +18,7 @@ import {
   classifyFromSimbad,
   type SpectralInfo,
 } from './spectral-classify';
-import type { CascadeResult } from '../cascade-result';
+import type { CascadeRefusal, CascadeResult } from '../cascade-result';
 
 /** Per-source SIMBAD spectral-classification row from
  *  `data/simbad/simbad_sptype.tsv`. `spType` is the canonical
@@ -118,10 +118,8 @@ export interface SpectralValue {
 
 /** A typed row a tier reached and did not take: a SIMBAD row stating another
  *  star's Gaia id, or a type string the classifier cannot parse. */
-export interface SpectralRefusal {
-  tier: 'simbad' | 'gspspec';
-  reason: 'gaia_id_contradicts' | 'unclassifiable';
-}
+export type SpectralRefusal =
+  CascadeRefusal<'simbad' | 'gspspec', 'gaia_id_contradicts' | 'unclassifiable'>;
 
 export type SpectralResolution = CascadeResult<
   {

@@ -6,7 +6,7 @@ import { gaiaRefusals, refusingPublication, type RefusedPublication } from '../g
 import type { GaiaAstrometryCatalogRow, VelocityVia } from '../direction-cascade';
 import type { Tycho2Row } from '../../tycho2-parse';
 import type { CitedProperMotion } from '../../cited-proper-motion';
-import type { CascadeResult, UniformValues } from '../../cascade-result';
+import type { CascadeRefusal, CascadeResult, UniformValues } from '../../cascade-result';
 
 export const PM_RESCUE_VIA_VALUES = [
   'tycho2',
@@ -39,10 +39,7 @@ export interface PmRescueSources {
 }
 
 /** A courier's PM the Gaia-bibcode skip rule rejected. */
-export interface PmRescueRefusal {
-  tier: 'cns5' | 'simbad';
-  reason: RefusedPublication;
-}
+export type PmRescueRefusal = CascadeRefusal<'cns5' | 'simbad', RefusedPublication>;
 
 /** mas/yr, μ_α* cos δ-applied. */
 export type PmRescueResolution = CascadeResult<

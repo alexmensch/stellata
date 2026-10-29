@@ -6,7 +6,7 @@ import { gaiaRefusals, refusingPublication, type RefusedPublication } from '../g
 import type { GaiaAstrometryCatalogRow, Hip2AstrometryRow } from '../direction-cascade';
 import { parallaxSignalToNoise } from '../../cited-parallax';
 import type { CitedParallax, MeasuredParallax } from '../../cited-parallax';
-import type { CascadeResult } from '../../cascade-result';
+import type { CascadeRefusal, CascadeResult } from '../../cascade-result';
 import type { SiblingParallax } from './pair-member-parallax';
 import type { GlieseRow } from '../../gliese-parse';
 
@@ -86,11 +86,8 @@ export type ParallaxTier = Exclude<DistVia, 'bailer_jones' | 'lmc_kinematic' | '
  *  (/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers) counts the
  *  two apart — and `mas` is what companion promotion matches a pair row's
  *  stated distance against (`../../companions/README.md#refused-parallax-refusal`). */
-export interface ParallaxRefusal {
-  tier: ParallaxTier;
-  reason: 'below_sn_floor' | RefusedPublication;
-  mas: number;
-}
+export type ParallaxRefusal =
+  CascadeRefusal<ParallaxTier, 'below_sn_floor' | RefusedPublication> & { readonly mas: number };
 
 /** `mas` always > 0. Sol's curated exit carries none: its distance is zero by
  *  construction. */
