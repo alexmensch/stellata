@@ -25,12 +25,23 @@ const TS_STEPS: Readonly<Record<string, { outputs: DeclaredOutputs; stamp?: stri
 const rel = (path: string): string => relative(REPO_ROOT, path);
 const scripts = packageScripts();
 
+function pythonOutputs(text: string): { outputs: string[]; stamp: string } {
+  const answer: unknown = JSON.parse(text);
+  if (typeof answer === 'object' && answer !== null && 'outputs' in answer && 'stamp' in answer) {
+    const { outputs, stamp } = answer;
+    if (Array.isArray(outputs) && outputs.every((o) => typeof o === 'string') && typeof stamp === 'string') {
+      return { outputs, stamp };
+    }
+  }
+  throw new Error(`malformed --outputs answer: ${text}`);
+}
+
 function stepOutputs(step: string): StepOutputs {
   const [part, ...rest] = scriptParts(scripts, step);
   if (rest.length > 0) throw new Error(`${step} is not one command`);
   if (part.kind === 'python') {
-    const answer = JSON.parse(execFileSync('python3', [part.entry, '--outputs'], { cwd: REPO_ROOT, encoding: 'utf8' }));
-    return { files: [...answer.outputs, answer.stamp], families: [] };
+    const { outputs, stamp } = pythonOutputs(execFileSync('python3', [part.entry, '--outputs'], { cwd: REPO_ROOT, encoding: 'utf8' }));
+    return { files: [...outputs, stamp], families: [] };
   }
   const declared = TS_STEPS[step];
   if (part.kind !== 'tsx' || declared === undefined) throw new Error(`no output declaration for seed step ${step}`);
