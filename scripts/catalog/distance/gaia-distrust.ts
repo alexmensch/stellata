@@ -78,7 +78,7 @@ export function gaiaRefusals(
  *  a value attributed to a publication a tier above it already refused — the
  *  one rule behind every skip
  *  (parallax/README.md#the-skip-rules--one-principle-two-publications). */
-export function refusingPublication(
+export function refusedPublicationCited(
   bibcode: string,
   refused: ReadonlySet<RefusedPublication>,
 ): RefusedPublication | null {

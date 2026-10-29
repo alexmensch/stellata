@@ -37,7 +37,7 @@ scripts/catalog/distance/
   gaia-distrust.ts (+ test)       `gaiaHas5pSolution`, `gaiaRowIs2p` and
                                   `isGaiaCatalogueBibcode` — one predicate per
                                   way this build refuses a Gaia value on a
-                                  blended row — and `refusingPublication`, the one skip
+                                  blended row — and `refusedPublicationCited`, the one skip
                                   rule every courier tier calls (parallax, PM
                                   rescue, rv). Both terms of the velocity
                                   import them, so the radial and the tangential

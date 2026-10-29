@@ -8,7 +8,7 @@ import {
 import {
   gaiaHas5pSolution,
   gaiaRefusals,
-  refusingPublication,
+  refusedPublicationCited,
   type RefusedPublication,
 } from '../gaia-distrust';
 import type { SimbadRadialVelocity } from '../../simbad/simbad-values-parse';
@@ -110,7 +110,7 @@ export function resolveRadialVelocity(
     refusals.push({ tier: 'gaia_dr3', reason: 'no_5p_solution' });
   }
   if (simbad !== null) {
-    const publication = refusingPublication(simbad.bibcode, gaiaRefusals(gaia));
+    const publication = refusedPublicationCited(simbad.bibcode, gaiaRefusals(gaia));
     if (publication === null) return { via: 'simbad', value: simbad, refusals };
     refusals.push({ tier: 'simbad', reason: publication });
   }

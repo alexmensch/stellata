@@ -2,7 +2,7 @@
 // Gliese V/70A → bibcoded SIMBAD → curated, with the two skip rules. See
 // README.md.
 
-import { gaiaRefusals, refusingPublication, type RefusedPublication } from '../gaia-distrust';
+import { gaiaRefusals, refusedPublicationCited, type RefusedPublication } from '../gaia-distrust';
 import type { GaiaAstrometryCatalogRow, Hip2AstrometryRow } from '../direction-cascade';
 import { parallaxSignalToNoise } from '../../cited-parallax';
 import type { CitedParallax, MeasuredParallax } from '../../cited-parallax';
@@ -147,7 +147,7 @@ export function resolveParallax(
     via: 'cns5_plx' | 'simbad_plx', p: CitedParallax | null,
   ): ParallaxResolution | null => {
     if (p === null || !usable(p.mas)) return null;
-    const publication = refusingPublication(p.bibcode, refused);
+    const publication = refusedPublicationCited(p.bibcode, refused);
     if (publication === null && !belowParallaxSnFloor(p.mas, p.errMas)) return hit(via, p);
     refusals.push({ tier: via, reason: publication ?? 'below_sn_floor', mas: p.mas });
     return null;

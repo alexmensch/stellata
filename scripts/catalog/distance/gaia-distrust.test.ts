@@ -6,7 +6,7 @@ import {
   gaiaRowIs2p,
   isGaiaCatalogueBibcode,
   gaiaRefusals,
-  refusingPublication,
+  refusedPublicationCited,
 } from './gaia-distrust';
 
 describe('gaiaHas5pSolution', () => {
@@ -51,29 +51,29 @@ describe('isGaiaCatalogueBibcode', () => {
   });
 });
 
-describe('refusingPublication', () => {
+describe('refusedPublicationCited', () => {
   const GAIA_DR2 = '2018yCat.1345....0G';
   const VAN_LEEUWEN_2007 = '2007A&A...474..653V';
   const LITERATURE = '2006AstL...32..759G';
 
   it('refuses a Gaia release only where the record\'s own fit is 2p', () => {
     const twoP = gaiaAstrometryRow({ parallaxMas: null });
-    expect(refusingPublication(GAIA_DR2, gaiaRefusals(twoP))).toBe('gaia_release');
-    expect(refusingPublication(GAIA_DR2, gaiaRefusals(gaiaAstrometryRow({ parallaxMas: 50 }))))
+    expect(refusedPublicationCited(GAIA_DR2, gaiaRefusals(twoP))).toBe('gaia_release');
+    expect(refusedPublicationCited(GAIA_DR2, gaiaRefusals(gaiaAstrometryRow({ parallaxMas: 50 }))))
       .toBeNull();
-    expect(refusingPublication(GAIA_DR2, gaiaRefusals(null))).toBeNull();
+    expect(refusedPublicationCited(GAIA_DR2, gaiaRefusals(null))).toBeNull();
   });
 
   // HIP 37 is the shape: HIP2 states 2.62 ± 2.55 mas, the floor refuses it, and
   // a courier citing van Leeuwen 2007 would serve 2.62 back without the error.
   it('refuses van Leeuwen 2007 only once a tier above refused HIP2', () => {
-    expect(refusingPublication(VAN_LEEUWEN_2007, new Set(['hipparcos2']))).toBe('hipparcos2');
-    expect(refusingPublication(
+    expect(refusedPublicationCited(VAN_LEEUWEN_2007, new Set(['hipparcos2']))).toBe('hipparcos2');
+    expect(refusedPublicationCited(
       VAN_LEEUWEN_2007, gaiaRefusals(gaiaAstrometryRow({ parallaxMas: null })),
     )).toBeNull();
   });
 
   it('never refuses the literature', () => {
-    expect(refusingPublication(LITERATURE, new Set(['gaia_release', 'hipparcos2']))).toBeNull();
+    expect(refusedPublicationCited(LITERATURE, new Set(['gaia_release', 'hipparcos2']))).toBeNull();
   });
 });

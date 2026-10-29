@@ -12,7 +12,7 @@ scripts/catalog/distance/pm-rescue/
   pm-rescue.ts (+ test)   The cascade, its tier enum, the outcome partition
                           the counts pin, and the map crediting each tier to
                           the `velocityVia` bucket for the catalogue it
-                          reached. Imports `refusingPublication` from
+                          reached. Imports `refusedPublicationCited` from
                           ../gaia-distrust — the same rule the rv and
                           parallax cascades' skips call.
 ```
