@@ -16,11 +16,14 @@ import {
   type SimbadNamespace,
   type SimbadRecordKeys,
 } from '../record/catalog-pure';
-import { classifyFromSimbad } from '../spectral/spectral-classify';
+import { classifyFromSimbad, SPECTRAL_UNKNOWN } from '../spectral/spectral-classify';
 import {
   type SimbadSpectralIndex,
+  type SpectralResolution,
+  type SpectralVia,
   emptySimbadSpectralIndex,
   resolveSpectralInfo,
+  SPECTRAL_VIA_VALUES,
 } from '../spectral/spectral-resolve';
 import {
   physicalRadius,
@@ -351,11 +354,8 @@ export function readStars(
     rvGaiaErrorBand: Record<RvErrorBand, number>; // gaia_dr3-tier rows by stated rv uncertainty
     rvGaiaErrorMaxKmS: number;     // largest stated rv uncertainty on a gaia_dr3-tier row
     rvApplied: number;             // rows whose velocity carries a non-zero radial velocity
-    spectralByCurated: number;     // rows classified via the curated HIP→sp_type override tier
-    spectralBySimbad: number;      // rows whose spectral classification came from SIMBAD sp_type
-    spectralSimbadKey: Record<SimbadNamespace, number>; // which namespace found that row
-    spectralByGspspec: number;     // rows that fell through to Gaia DR3 ESP-ELS spectraltype_esphs
-    spectralFallback: number;      // rows with neither SIMBAD nor GSP-Spec — classIdx=8/lumClass=255
+    spectralVia: Record<SpectralVia, number>; // per-tier spectral resolver routing; none renders classIdx=8/lumClass=255
+    spectralSimbadKey: Record<SimbadNamespace, number>; // which namespace found a SIMBAD-tier row
     ciVia: Record<CiVia, number>;  // per-tier B−V cascade routing
     ciGspcValidatedRange: number;  // gspc-tier rows the archive calls in-range
   };
@@ -398,10 +398,7 @@ export function readStars(
   const velocityClampedSample: string[] = [];
   let velocityAboveEscape = 0;
   const velocityAboveEscapeSample: string[] = [];
-  let spectralByCurated = 0;
-  let spectralBySimbad = 0;
-  let spectralByGspspec = 0;
-  let spectralFallback = 0;
+  const spectralVia = emptyTallyPartition(SPECTRAL_VIA_VALUES);
 
   const printedVLookup = printedVLookups(hipVMag, directions.tycho2, gliese);
   for (const row of rows) {
@@ -676,15 +673,16 @@ export function readStars(
     // Sol carries no HIP, no Gaia source_id, and no SIMBAD row, so every
     // machine tier misses and the unknown-class 5000 K row misizes it
     // (R 1.27 instead of ~1.03) — the one record addressable only by name.
-    const spectral = isSol
-      ? { info: classifyFromSimbad('G2V')!, source: 'curated' as const, spectDisplay: 'G2V' }
+    const spectral: SpectralResolution = isSol
+      ? {
+          via: 'curated',
+          value: { info: classifyFromSimbad('G2V')!, spectDisplay: 'G2V' },
+          refusals: [],
+        }
       : resolveSpectralInfo(simbadKeys, simbadSpectral, apsisMap);
-    const spectInfo = spectral.info;
-    if (spectral.source === 'curated') spectralByCurated++;
-    else if (spectral.source === 'simbad') spectralBySimbad++;
-    else if (spectral.source === 'gspspec') spectralByGspspec++;
-    else spectralFallback++;
-    if (spectral.simbadKey !== undefined) spectralSimbadKey[spectral.simbadKey]++;
+    const spectInfo = spectral.via === 'none' ? SPECTRAL_UNKNOWN : spectral.value.info;
+    spectralVia[spectral.via]++;
+    if (spectral.via === 'simbad') spectralSimbadKey[spectral.value.namespace]++;
     const apsisTeff = resolveApsisTeff(
       gaiaSourceId ? apsisMap.get(gaiaSourceId) : null,
     );
@@ -765,7 +763,7 @@ export function readStars(
       gl: simbadKeys.gl,
       tyc: simbadKeys.tyc,
       gaiaSourceId,
-      spectDisplay: spectral.spectDisplay,
+      spectDisplay: spectral.via === 'none' ? null : spectral.value.spectDisplay,
       companionIdx: -1,
       periodDays: 0,
       amplitudeMag: 0,
@@ -812,11 +810,8 @@ export function readStars(
       rvGaiaErrorBand,
       rvGaiaErrorMaxKmS,
       rvApplied,
-      spectralByCurated,
-      spectralBySimbad,
+      spectralVia,
       spectralSimbadKey,
-      spectralByGspspec,
-      spectralFallback,
       ciVia,
       ciGspcValidatedRange,
       vTycho2OutsideBtVtRange,

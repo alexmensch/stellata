@@ -582,16 +582,16 @@ async function main() {
   counts.rvRadialRejected = stats.rvRadialRejected;
   counts.rvGaiaErrorBands = stats.rvGaiaErrorBand;
   counts.rvGaiaErrorMaxKmS = stats.rvGaiaErrorMaxKmS;
-  counts.spectralByCurated = stats.spectralByCurated;
-  counts.spectralBySimbad = stats.spectralBySimbad;
+  counts.spectralByCurated = stats.spectralVia.curated;
+  counts.spectralBySimbad = stats.spectralVia.simbad;
   counts.spectralSimbadBySourceId = stats.spectralSimbadKey.source_id;
   counts.spectralSimbadByHip = stats.spectralSimbadKey.hip;
   counts.spectralSimbadByTyc = stats.spectralSimbadKey.tyc;
   counts.spectralSimbadByGj = stats.spectralSimbadKey.gj;
   const partitionError = spectralSimbadPartitionError(counts);
   if (partitionError !== null) throw new Error(partitionError);
-  counts.spectralByGspspec = stats.spectralByGspspec;
-  counts.spectralFallback = stats.spectralFallback;
+  counts.spectralByGspspec = stats.spectralVia.gspspec;
+  counts.spectralFallback = stats.spectralVia.none;
   counts.ciGaiaRelation = stats.ciVia.gaia_relation;
   counts.ciPrintedHipBv = stats.ciVia.printed_hip_bv;
   counts.ciGspc = stats.ciVia.gspc;
@@ -633,16 +633,16 @@ async function main() {
       `${namingCounts.namingAliasRecords} records`,
   );
 
-  const simbadPct = ((stats.spectralBySimbad / stars.length) * 100).toFixed(1);
-  const gspspecPct = ((stats.spectralByGspspec / stars.length) * 100).toFixed(1);
-  const fallbackPct = ((stats.spectralFallback / stars.length) * 100).toFixed(1);
+  const simbadPct = ((stats.spectralVia.simbad / stars.length) * 100).toFixed(1);
+  const gspspecPct = ((stats.spectralVia.gspspec / stars.length) * 100).toFixed(1);
+  const fallbackPct = ((stats.spectralVia.none / stars.length) * 100).toFixed(1);
   console.log(
-    `  spectral classification: curated ${stats.spectralByCurated}, ` +
-      `SIMBAD ${stats.spectralBySimbad} (${simbadPct}%; by source_id ` +
+    `  spectral classification: curated ${stats.spectralVia.curated}, ` +
+      `SIMBAD ${stats.spectralVia.simbad} (${simbadPct}%; by source_id ` +
       `${stats.spectralSimbadKey.source_id}, HIP ${stats.spectralSimbadKey.hip}, ` +
       `TYC ${stats.spectralSimbadKey.tyc}, GJ ${stats.spectralSimbadKey.gj}), ` +
-      `GSP-Spec ${stats.spectralByGspspec} (${gspspecPct}%), ` +
-      `unknown ${stats.spectralFallback} (${fallbackPct}%)`,
+      `GSP-Spec ${stats.spectralVia.gspspec} (${gspspecPct}%), ` +
+      `unknown ${stats.spectralVia.none} (${fallbackPct}%)`,
   );
 
   // Companion promotion — read data/binaries/multiples.tsv and add
