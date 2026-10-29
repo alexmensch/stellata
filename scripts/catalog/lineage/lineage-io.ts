@@ -1,6 +1,5 @@
 // A stage's lineage on disk: where its files live, the rotation into the baseline, gzip, git provenance. See README.md#run-to-run-diff.
 
-import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -8,7 +7,8 @@ import { gunzipSync, gzipSync } from 'node:zlib';
 
 import { fileHashes } from '../../util/build-stamp';
 import type { ArtifactContents, OutputFamily } from '../../util/emit-artifacts';
-import { PACKAGE_JSON, REPO_ROOT } from '../../util/paths';
+import { headState, packageVersion } from '../../util/git-provenance';
+import { REPO_ROOT } from '../../util/paths';
 import { stepInputPaths } from '../../util/step-inputs';
 import { escapeRegExp } from '../../util/escape-regexp';
 import { identityRows, type IdentityRow } from './identity-pure';
@@ -126,28 +126,6 @@ export function stageFile(dir: string, stem: string): string {
   return resolve(dir, fileName(stem));
 }
 
-function git(...args: string[]): string {
-  return execFileSync('git', args, {
-    cwd: REPO_ROOT, encoding: 'utf-8', stdio: ['ignore', 'pipe', 'pipe'],
-  }).trim();
-}
-
-export function headCommit(): string {
-  return git('rev-parse', 'HEAD');
-}
-
-export function mergeBaseWithMain(): string | null {
-  try {
-    return git('merge-base', 'HEAD', 'origin/main');
-  } catch {
-    return null;
-  }
-}
-
-export function packageVersion(): string {
-  return (JSON.parse(readFileSync(resolve(REPO_ROOT, PACKAGE_JSON), 'utf8')) as { version: string }).version;
-}
-
 export async function stageHeader<F extends string>(
   spec: StageLineageSpec<F>, script: string,
 ): Promise<StageHeader> {
@@ -155,7 +133,7 @@ export async function stageHeader<F extends string>(
   return {
     stage: spec.stage,
     version: packageVersion(),
-    commit: headCommit(),
+    commit: headState().commit,
     inputHash: createHash('sha1').update(JSON.stringify(hashes)).digest('hex'),
     files: spec.files.map(fileName),
   };

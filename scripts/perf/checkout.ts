@@ -4,6 +4,7 @@
 
 import { execFileSync } from 'node:child_process';
 import { readFileSync, writeFileSync } from 'node:fs';
+import { MAIN_REF, headState, mergeBaseWithMain } from '../util/git-provenance';
 import { dirname, resolve } from 'node:path';
 import {
   PIN_SCHEMA, PinError, compareToPin, type PinDiff, type PinFile,
@@ -17,14 +18,8 @@ import { formatPinTable } from './table-pure';
 
 export const REPO_ROOT = resolve(import.meta.dirname, '../..');
 
-const MAIN_REF = 'origin/main';
-
 const git = (...argv: string[]): string =>
   execFileSync('git', argv, { cwd: REPO_ROOT, encoding: 'utf-8' }).trim();
-
-export function packageVersion(): string {
-  return (JSON.parse(readFileSync(resolve(REPO_ROOT, 'package.json'), 'utf-8')) as { version: string }).version;
-}
 
 /** Runs are filed in the main checkout, which is not this worktree's root:
  *  `--git-common-dir` prints `<main checkout>/.git` from either. */
@@ -38,21 +33,15 @@ export function mainCheckout(): string {
 
 /** pins/provenance/README.md#what-the-commit-fields-hold. */
 export function gitMeta(): GitProvenance {
-  let commit = 'unavailable';
-  let dirty = true;
+  let head: { commit: string; dirty: boolean };
   try {
-    commit = git('rev-parse', 'HEAD');
-    dirty = git('status', '--porcelain').length > 0;
+    head = headState();
   } catch (e) {
     return { commit: `unavailable (${(e as Error).message})`, dirty: true, mainCommit: null, mainReachable: false };
   }
-  let mainCommit: string | null = null;
-  try {
-    mainCommit = git('merge-base', commit, MAIN_REF);
-  } catch {
-    mainCommit = null;
-  }
-  return { commit, dirty, mainCommit, mainReachable: commitState(commit) === 'landed' };
+  return {
+    ...head, mainCommit: mergeBaseWithMain(head.commit), mainReachable: commitState(head.commit) === 'landed',
+  };
 }
 
 /** Asked at comparison time, never read off the pin's own `mainReachable`: a

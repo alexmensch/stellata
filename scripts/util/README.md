@@ -84,6 +84,10 @@ same thing — single-use helpers stay with their consumer.
   CI's catalogue cache key ([The catalogue build cache](../ci/README.md#the-catalogue-build-cache)), so the two
   cannot disagree on what the build reads. `trackedFiles()` is the listing the
   stamp passes as `files`.
+- `git-provenance.ts` — what a build or instrument records about its
+  checkout: `packageVersion`, `headState` (HEAD and whether the tree is
+  dirty) and `mergeBaseWithMain` (null with no `origin/main` or in a shallow
+  clone). The lineage header and perf's `gitMeta` both read it.
 - `step-inputs.ts` — `stepInputPaths(script)`, every file a `package.json`
   step reads: the closure of each `tsx` entry it chains, the closure's
   siblings, and every declaration the closure reads (`sources/`). The

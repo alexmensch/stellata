@@ -5,7 +5,7 @@ import { resolve } from 'node:path';
 import { declareOutputs, emitArtifacts, runStep } from '../../util/emit-artifacts';
 import { REPO_ROOT } from '../../util/paths';
 import { readArtifact } from '../../util/sources/source';
-import { packageVersion } from './lineage-io';
+import { packageVersion } from '../../util/git-provenance';
 import { LINEAGE_STAGES } from './lineage-stages';
 import { reasonCodeList } from './reason-code-list-pure';
 import { REASON_CODES, REASON_CODES_FILE } from './reason-codes-tsv';

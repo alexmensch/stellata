@@ -4,12 +4,13 @@ import { existsSync } from 'node:fs';
 import { performance } from 'node:perf_hooks';
 
 import type { ArtifactContents, Check } from '../../util/emit-artifacts';
+import { mergeBaseWithMain } from '../../util/git-provenance';
 import { diffLineage, stageDiffText, type DiffJoin, type KeyChange } from './lineage-diff-pure';
 import {
   ACCEPT_ANY_BASELINE_FLAG, AGAINST_FLAG, judgeBaseline, type BaselineSource,
 } from './lineage-header-pure';
 import {
-  mergeBaseWithMain, readLineage, readStageHeader, stageEmission, stageFile, stageHeader,
+  readLineage, readStageHeader, stageEmission, stageFile, stageHeader,
   type LineageLayout, type StageLineageSpec, type StageOutputKey,
 } from './lineage-io';
 import { compareLineageRows, type LineageRow } from './lineage-row-pure';
