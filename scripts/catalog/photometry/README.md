@@ -138,12 +138,12 @@ B−V = (G−V)(BP−RP) − (G−B)(BP−RP)    inside both relations' validity
   → printed `I/239` B−V               data/hipparcos/, keyed on the record's HIP
   → Gaia synthetic B−V                data/gaia/gaia_dr3_gspc.tsv, BP−RP ≤ 3.0
   → intrinsic spectral-class colour   no-Apsis rows only
-  → SOLAR_BV_FALLBACK
+  → none                              the record bakes SOLAR_BV_FALLBACK
 ```
 
 Per-tier routing, pinned in build-counts: `gaia_relation` **342,594** ·
 `printed_hip_bv` **9,830** · `gspc` **11,907** · `spectral_derived` **4,510** ·
-`solar_fallback` **3,004**. The relation carries the bulk; the two measured
+`none` **3,004** (pinned as `ciSolarFallback`). The relation carries the bulk; the two measured
 tiers under it split the **21,737** rows past its colour and saturation
 bounds, and **7,514** reach neither and take a derived colour.
 
@@ -153,15 +153,18 @@ ourselves ([§ 5](/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers)
 alone reached a measured colour and hands them to the derived tiers. That is
 the trade the residual policy asks for.
 
-`resolveColourIndex` returns the value, the tier, **and** whether the value
-is observed-convention. That last one is not a convenience: build-time
-de-extinction subtracts `A_V / R_V` from an observed B−V and must leave an
-intrinsic one alone, and deciding that at the dust integral means deciding
-it a second time, in a place that no longer knows which tier ran. The two
-measured tiers are observed; the two derived ones are intrinsic.
-`companionCiIsObserved` states the same contract for promoted companions.
+`resolveColourIndex` returns the shared cascade shape (`../cascade-result.ts`):
+the tier, its value, and every candidate it passed over with the gate that
+refused it. **Whether the value is observed-convention is a function of the
+tier**, `ciIsObserved(via)`, and not a convenience: build-time de-extinction
+subtracts `A_V / R_V` from an observed B−V and must leave an intrinsic one
+alone, and deciding that at the dust integral from anything but the tier
+means deciding it a second time, in a place that no longer knows which tier
+ran. The three measured tiers are observed; the spectral-class colour and the
+solar value a `none` row bakes are intrinsic. `companionCiIsObserved` states
+the same contract for promoted companions.
 
-The derived tiers are gated on `apsisTeff === null` because the shader is a
+The derived tier is gated on `apsisTeff === null` because the shader is a
 two-tier read — `iTeffApsis > 0 ? Ballesteros(iTeffApsis) : iCi` — so an
 Apsis star never renders its baked `ci`. The measured tiers are ungated:
 storing a measurement costs nothing and the field is read by more than the

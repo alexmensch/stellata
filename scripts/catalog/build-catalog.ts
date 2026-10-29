@@ -474,7 +474,7 @@ async function main() {
     `  ci cascade: gaia_relation ${cv.gaia_relation}, ` +
       `printed_hip_bv ${cv.printed_hip_bv}, gspc ${cv.gspc} ` +
       `(${stats.ciGspcValidatedRange} flagged in-range), ` +
-      `spectral_derived ${cv.spectral_derived}, solar_fallback ${cv.solar_fallback}`,
+      `spectral_derived ${cv.spectral_derived}, solar_fallback ${cv.none}`,
   );
   const vv = stats.velocityVia;
   console.log(
@@ -597,7 +597,7 @@ async function main() {
   counts.ciGspc = stats.ciVia.gspc;
   counts.ciGspcValidatedRange = stats.ciGspcValidatedRange;
   counts.ciSpectralDerived = stats.ciVia.spectral_derived;
-  counts.ciSolarFallback = stats.ciVia.solar_fallback;
+  counts.ciSolarFallback = stats.ciVia.none;
 
   // The labels are the manifest's (/docs/catalog-driver.md#31-retiring-the-spine--the-membership-rule-measured-against-the-primaries); what the
   // classic-ID tables still supply per record is IV/27A's constellation for

@@ -190,11 +190,11 @@ counts rather than at zero: `parked*` per reason, from `PARKED_COUNT_KEY`.
    it). See `../spectral/README.md`.
 8. **B−V** (`resolveColourIndex`) — the Gaia relation, else printed
    `I/239` B−V, else Gaia's synthetic B−V, else the intrinsic
-   spectral-class colour, else solar. See
-   [The ci cascade](../photometry/README.md#the-ci-cascade). Its `isObserved` verdict is
-   what decides whether de-extinction de-reddens the value, so the two
-   measured tiers and the two derived ones part company here rather than at
-   the dust integral.
+   spectral-class colour, else `none`, which bakes solar. See
+   [The ci cascade](../photometry/README.md#the-ci-cascade). `ciIsObserved` on
+   the tier is what decides whether de-extinction de-reddens the value, so the
+   three measured tiers and the two intrinsic outcomes part company here
+   rather than at the dust integral.
 9. **Physical radius** (`physicalRadius`). Stefan-Boltzmann from absmag
    and the resolved Teff — the measured Apsis Teff (gspphot → gspspec
    via `resolveApsisTeff`, 2–60 kK sanity window) when present, else

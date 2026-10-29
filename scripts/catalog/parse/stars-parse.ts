@@ -11,6 +11,7 @@ import {
   FLAG_HAS_BAYER,
   NO_CONSTELLATION_INDEX,
   SIMBAD_NAMESPACE_VALUES,
+  SOLAR_BV_FALLBACK,
   type ApsisRow,
   type SimbadNamespace,
   type SimbadRecordKeys,
@@ -93,6 +94,7 @@ import {
   type GlieseIndex,
 } from '../gliese-parse';
 import {
+  ciIsObserved,
   resolveColourIndex,
   CI_VIA_VALUES,
   type CiVia,
@@ -688,7 +690,7 @@ export function readStars(
     );
 
     // B−V through the Gaia relation → printed I/239 B−V → synthetic
-    // photometry → intrinsic spectral class → solar. Printed above synthetic
+    // photometry → intrinsic spectral class, else solar. Printed above synthetic
     // inverts /docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers — ../photometry/README.md#the-ci-cascade.
     // The baked value only drives colour for no-Apsis stars, which is
     // why the derived tiers gate on apsisTeff.
@@ -702,7 +704,7 @@ export function readStars(
         ? spectralClassCi(spectInfo)
         : null,
     });
-    let ci = ciRes.ci;
+    let ci = ciRes.via === 'none' ? SOLAR_BV_FALLBACK : ciRes.value;
     ciVia[ciRes.via]++;
     if (ciRes.via === 'gspc' && gspc?.inValidatedRange) ciGspcValidatedRange++;
 
@@ -716,7 +718,7 @@ export function readStars(
     if (dustGrid) {
       const av = avSolToStar(dustGrid, x, y, z);
       absmag -= av;
-      if (ciRes.isObserved) ci -= av / R_V;
+      if (ciIsObserved(ciRes.via)) ci -= av / R_V;
     }
 
     const physRadius = physicalRadius(absmag, spectInfo, apsisTeff);

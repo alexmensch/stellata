@@ -11,11 +11,31 @@ import {
   gaiaGMinusB,
   gspcBMinusV,
   resolveColourIndex,
+  ciIsObserved,
+  type ColourIndexSources,
 } from './colour-index-pure';
 import { SOLAR_BV_FALLBACK } from '../record/catalog-pure';
 import { RIELLO_BP_RP_MIN, rielloGMinusV } from './v-magnitude-pure';
-import { GAIA_PHOTOMETRY_SATURATION_G } from './gaia-photometry-pure';
+import {
+  GAIA_PHOTOMETRY_SATURATION_G,
+  gatedValueOrNull,
+  type GaiaPhotometry,
+} from './gaia-photometry-pure';
+import type { GspcColour } from './gspc-parse';
 import { atColour, photometry } from './photometry-fixture';
+
+const bv = (p: GaiaPhotometry): number | null => gatedValueOrNull(gaiaBMinusV(p));
+const gspcBv = (p: GaiaPhotometry | null, g: GspcColour | null): number | null =>
+  g === null ? null : gatedValueOrNull(gspcBMinusV(p, g));
+/** The value the record bakes, its tier, and the de-extinction verdict. */
+const flatCi = (src: ColourIndexSources) => {
+  const r = resolveColourIndex(src);
+  return {
+    ci: r.via === 'none' ? SOLAR_BV_FALLBACK : r.value,
+    via: r.via,
+    isObserved: ciIsObserved(r.via),
+  };
+};
 
 describe('Gaia DR3 Table 5.9 G−B relation', () => {
   // The literals ARE the assertion: these are the published values, so the
@@ -47,7 +67,7 @@ describe('Gaia DR3 Table 5.9 G−B relation', () => {
 describe('gaiaBMinusV', () => {
   it('is the difference of the two Table 5.9 relations', () => {
     const x = 0.8;
-    expect(gaiaBMinusV(atColour(x))).toBeCloseTo(rielloGMinusV(x) - gaiaGMinusB(x), 12);
+    expect(bv(atColour(x))).toBeCloseTo(rielloGMinusV(x) - gaiaGMinusB(x), 12);
   });
 
   // Solar BP−RP is 0.82 (Casagrande 2018
@@ -55,37 +75,36 @@ describe('gaiaBMinusV', () => {
   // 0.65, so this pins both the sign of the difference and the ~0.05 mag
   // offset the |Δci| distribution in README.md#the-ci-cascade reports.
   it('lands near the solar B−V at the solar colour', () => {
-    const bv = gaiaBMinusV(atColour(0.82))!;
-    expect(bv).toBeGreaterThan(0.55);
-    expect(bv).toBeLessThan(0.65);
+    const solar = bv(atColour(0.82))!;
+    expect(solar).toBeGreaterThan(0.55);
+    expect(solar).toBeLessThan(0.65);
   });
 
   it('reddens monotonically across the accepted range', () => {
-    const blue = gaiaBMinusV(atColour(0.0))!;
-    const mid = gaiaBMinusV(atColour(0.9))!;
-    const red = gaiaBMinusV(atColour(1.7))!;
+    const blue = bv(atColour(0.0))!;
+    const mid = bv(atColour(0.9))!;
+    const red = bv(atColour(1.7))!;
     expect(blue).toBeLessThan(mid);
     expect(mid).toBeLessThan(red);
   });
 
   it('stops at the giant-only bound rather than the relation’s stated max', () => {
-    expect(gaiaBMinusV(atColour(GAIA_G_MINUS_B_GIANT_ONLY_BP_RP))).not.toBeNull();
-    expect(gaiaBMinusV(atColour(GAIA_G_MINUS_B_GIANT_ONLY_BP_RP + 0.001))).toBeNull();
-    expect(gaiaBMinusV(atColour(GAIA_G_MINUS_B_BP_RP_MAX - 0.5))).toBeNull();
+    expect(bv(atColour(GAIA_G_MINUS_B_GIANT_ONLY_BP_RP))).not.toBeNull();
+    expect(bv(atColour(GAIA_G_MINUS_B_GIANT_ONLY_BP_RP + 0.001))).toBeNull();
+    expect(bv(atColour(GAIA_G_MINUS_B_BP_RP_MAX - 0.5))).toBeNull();
   });
 
   // Both relations state the same blue end, so the difference has one bound —
   // asserting they agree is what would catch a revision moving only one.
   it('rejects colours below the blue bound the two relations share', () => {
     expect(GAIA_G_MINUS_B_BP_RP_MIN).toBe(RIELLO_BP_RP_MIN);
-    expect(gaiaBMinusV(atColour(RIELLO_BP_RP_MIN))).not.toBeNull();
-    expect(gaiaBMinusV(atColour(RIELLO_BP_RP_MIN - 0.001))).toBeNull();
+    expect(bv(atColour(RIELLO_BP_RP_MIN))).not.toBeNull();
+    expect(bv(atColour(RIELLO_BP_RP_MIN - 0.001))).toBeNull();
   });
 
   it('rejects a saturated source, a missing band and a null row', () => {
-    expect(gaiaBMinusV(photometry({ gMag: GAIA_PHOTOMETRY_SATURATION_G - 0.1 }))).toBeNull();
-    expect(gaiaBMinusV(photometry({ bpMag: null }))).toBeNull();
-    expect(gaiaBMinusV(null)).toBeNull();
+    expect(bv(photometry({ gMag: GAIA_PHOTOMETRY_SATURATION_G - 0.1 }))).toBeNull();
+    expect(bv(photometry({ bpMag: null }))).toBeNull();
   });
 });
 
@@ -101,30 +120,30 @@ describe('gspcBMinusV', () => {
   });
 
   it('takes the synthetic colour up to the bound and drops it past', () => {
-    expect(gspcBMinusV(atColour(2.9), synthetic(2.1))).toBe(2.1);
-    expect(gspcBMinusV(atColour(GSPC_BP_RP_MAX), synthetic(2.1))).toBe(2.1);
-    expect(gspcBMinusV(atColour(3.01), synthetic(2.1))).toBeNull();
+    expect(gspcBv(atColour(2.9), synthetic(2.1))).toBe(2.1);
+    expect(gspcBv(atColour(GSPC_BP_RP_MAX), synthetic(2.1))).toBe(2.1);
+    expect(gspcBv(atColour(3.01), synthetic(2.1))).toBeNull();
   });
 
   it('ignores the archive flag in both directions', () => {
-    expect(gspcBMinusV(atColour(2.0), synthetic(1.6, false))).toBe(1.6);
-    expect(gspcBMinusV(atColour(3.5), synthetic(1.6, true))).toBeNull();
+    expect(gspcBv(atColour(2.0), synthetic(1.6, false))).toBe(1.6);
+    expect(gspcBv(atColour(3.5), synthetic(1.6, true))).toBeNull();
   });
 
   it('keeps a colour blue of the flag box, which is bounded on one side only', () => {
     // The nine catalogue rows blue of −0.5 all reach printed first, so a blue
     // gate would only ever cost a measured colour — README.md#why-the-gspc-tier-does-not-gate-on-the-flag.
-    expect(gspcBMinusV(atColour(-1.0), synthetic(-0.33))).toBe(-0.33);
+    expect(gspcBv(atColour(-1.0), synthetic(-0.33))).toBe(-0.33);
   });
 
   it('drops a saturated source — its BP/RP spectrum came off the same CCDs', () => {
     const saturated = photometry({ gMag: GAIA_PHOTOMETRY_SATURATION_G - 0.1 });
-    expect(gspcBMinusV(saturated, synthetic(2.0))).toBeNull();
+    expect(gspcBv(saturated, synthetic(2.0))).toBeNull();
   });
 
   it('is null without a colour to bound-check, or without a GSPC row', () => {
-    expect(gspcBMinusV(null, synthetic(2.0))).toBeNull();
-    expect(gspcBMinusV(atColour(2.0), null)).toBeNull();
+    expect(gspcBv(null, synthetic(2.0))).toBeNull();
+    expect(gspcBv(atColour(2.0), null)).toBeNull();
   });
 });
 
@@ -139,9 +158,9 @@ describe('resolveColourIndex cascade', () => {
   });
 
   it('takes the Gaia relation when it applies, marked observed', () => {
-    const r = resolveColourIndex(sources({ photometry: atColour(0.8) }));
+    const r = flatCi(sources({ photometry: atColour(0.8) }));
     expect(r.via).toBe('gaia_relation');
-    expect(r.ci).toBeCloseTo(gaiaBMinusV(atColour(0.8))!, 12);
+    expect(r.ci).toBeCloseTo(bv(atColour(0.8))!, 12);
     expect(r.isObserved).toBe(true);
   });
 
@@ -149,40 +168,51 @@ describe('resolveColourIndex cascade', () => {
     // The inversion of the contract's stated order — the synthetic tier runs
     // outside the standardisation that ties it to the ground system, and
     // every corpus row carrying both prefers printed.
-    expect(resolveColourIndex(sources({ photometry: atColour(2.5) })))
+    expect(flatCi(sources({ photometry: atColour(2.5) })))
       .toEqual({ ci: 1.2, via: 'printed_hip_bv', isObserved: true });
   });
 
   it('falls to the synthetic colour where no printed one exists', () => {
-    expect(resolveColourIndex(sources({ photometry: atColour(2.5), printedHipBv: null })))
+    expect(flatCi(sources({ photometry: atColour(2.5), printedHipBv: null })))
       .toEqual({ ci: 2.1, via: 'gspc', isObserved: true });
   });
 
   it('skips a non-finite printed colour rather than propagating it', () => {
-    expect(resolveColourIndex(sources({ photometry: atColour(2.5), printedHipBv: NaN })))
+    expect(flatCi(sources({ photometry: atColour(2.5), printedHipBv: NaN })))
       .toEqual({ ci: 2.1, via: 'gspc', isObserved: true });
   });
 
   it('skips the synthetic tier past its bound and with no photometry row', () => {
     const noPrinted = { printedHipBv: null } as const;
-    expect(resolveColourIndex(sources({ ...noPrinted, photometry: atColour(3.5) })).via)
+    expect(flatCi(sources({ ...noPrinted, photometry: atColour(3.5) })).via)
       .toBe('spectral_derived');
     // No broadband colour means the bound cannot be evaluated, so the tier is
     // skipped even though the pull carries a value.
-    expect(resolveColourIndex(sources(noPrinted)).via).toBe('spectral_derived');
+    expect(flatCi(sources(noPrinted)).via).toBe('spectral_derived');
   });
 
   // The two derived tiers are intrinsic — de-extinction must not redden them
   // a second time (companionCiIsObserved gates on the same contract).
   it('derives the spectral colour only for a no-Apsis star, marked intrinsic', () => {
-    expect(resolveColourIndex(sources({ gspc: null, printedHipBv: null })))
+    expect(flatCi(sources({ gspc: null, printedHipBv: null })))
       .toEqual({ ci: 1.4, via: 'spectral_derived', isObserved: false });
-    expect(resolveColourIndex(sources({ gspc: null, printedHipBv: null, apsisTeff: 5200 })))
-      .toEqual({ ci: SOLAR_BV_FALLBACK, via: 'solar_fallback', isObserved: false });
+    expect(flatCi(sources({ gspc: null, printedHipBv: null, apsisTeff: 5200 })))
+      .toEqual({ ci: SOLAR_BV_FALLBACK, via: 'none', isObserved: false });
   });
 
   it('falls to solar when the class yields no derivable colour', () => {
-    expect(resolveColourIndex(sources({ gspc: null, printedHipBv: null, spectralCi: null })))
-      .toEqual({ ci: SOLAR_BV_FALLBACK, via: 'solar_fallback', isObserved: false });
+    expect(flatCi(sources({ gspc: null, printedHipBv: null, spectralCi: null })))
+      .toEqual({ ci: SOLAR_BV_FALLBACK, via: 'none', isObserved: false });
+  });
+
+  it('names every candidate it passed over, on whichever tier it lands', () => {
+    expect(resolveColourIndex(sources({
+      photometry: atColour(3.5), printedHipBv: NaN, apsisTeff: 5200,
+    })).refusals).toEqual([
+      { tier: 'gaia_relation', reason: 'colour_out_of_range' },
+      { tier: 'printed_hip_bv', reason: 'non_finite' },
+      { tier: 'gspc', reason: 'colour_out_of_range' },
+      { tier: 'spectral_derived', reason: 'apsis_teff_renders' },
+    ]);
   });
 });
