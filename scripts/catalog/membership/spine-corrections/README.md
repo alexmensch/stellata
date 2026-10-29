@@ -11,7 +11,8 @@ scripts/catalog/membership/spine-corrections/
   spine-corrections-source.ts     SPINE_CORRECTIONS, the file's declaration
                                   (../../../util/sources/).
   spine-corrections-pure.ts       parseSpineCorrectionsTsv and
-                                  applySpineCorrections. Tested through
+    (+ test)                      applySpineCorrections; what a correction
+                                  does to the manifest is tested through
                                   ../membership-manifest-pure.test.ts.
 ```
 
