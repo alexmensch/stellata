@@ -88,25 +88,30 @@ describe('judgeBaseline', () => {
   });
 
   it('diffs a baseline built at the merge-base, and nothing when there is none', () => {
-    expect(judgeBaseline({ kind: 'checkout', header: header('abc') }, 'abc', false))
+    expect(judgeBaseline({ kind: 'checkout', header: { kind: 'read', header: header('abc') } }, 'abc', false))
       .toEqual({ kind: 'diff', why: 'merge-base' });
     expect(judgeBaseline({ kind: 'absent' }, 'abc', false)).toEqual({ kind: 'none' });
   });
 
   it('refuses any other baseline, naming its commit, unless told to accept it', () => {
-    const refused = judgeBaseline({ kind: 'checkout', header: header('old') }, 'abc', false);
+    const refused = judgeBaseline({ kind: 'checkout', header: { kind: 'read', header: header('old') } }, 'abc', false);
     expect(refused.kind).toBe('refused');
     expect(refused.kind === 'refused' && refused.message).toMatch(/built at old, not the merge-base abc/);
-    expect(judgeBaseline({ kind: 'checkout', header: header('old') }, 'abc', true))
+    expect(judgeBaseline({ kind: 'checkout', header: { kind: 'read', header: header('old') } }, 'abc', true))
       .toEqual({ kind: 'diff', why: 'accepted' });
     expect(judgeBaseline({ kind: 'against', dir: '/elsewhere' }, null, false))
       .toEqual({ kind: 'diff', why: 'against' });
   });
 
+  it('refuses, never crashes on, a header an older build wrote in another shape', () => {
+    const verdict = judgeBaseline({ kind: 'checkout', header: { kind: 'unreadable', reason: 'no dirty flag' } }, 'abc', false);
+    expect(verdict.kind === 'refused' && verdict.message).toMatch(/header does not read \(no dirty flag\)/);
+  });
+
   it('refuses a baseline built over uncommitted edits, even at the merge-base', () => {
-    const dirty = judgeBaseline({ kind: 'checkout', header: header('abc', true) }, 'abc', false);
+    const dirty = judgeBaseline({ kind: 'checkout', header: { kind: 'read', header: header('abc', true) } }, 'abc', false);
     expect(dirty.kind === 'refused' && dirty.message).toMatch(/built at abc with uncommitted edits/);
-    expect(judgeBaseline({ kind: 'checkout', header: header('abc', true) }, 'abc', true))
+    expect(judgeBaseline({ kind: 'checkout', header: { kind: 'read', header: header('abc', true) } }, 'abc', true))
       .toEqual({ kind: 'diff', why: 'accepted' });
   });
 });

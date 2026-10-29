@@ -13,7 +13,7 @@ import { stepInputPaths } from '../../util/step-inputs';
 import { escapeRegExp } from '../../util/escape-regexp';
 import { identityRows, type IdentityRow } from './identity-pure';
 import { lineageRows, type LineageRow } from './lineage-row-pure';
-import { headerText, parseHeader, type StageHeader } from './lineage-header-pure';
+import { headerText, parseHeader, type HeaderRead, type StageHeader } from './lineage-header-pure';
 
 export interface LineageLayout {
   readonly current: string;
@@ -117,9 +117,14 @@ export function readIdentity(path: string): IdentityRow[] {
   return [...identityRows(gunzipSync(readFileSync(path)).toString('utf8'), path)];
 }
 
-export function readStageHeader(dir: string, stage: string): StageHeader | null {
+export function readStageHeader(dir: string, stage: string): HeaderRead {
   const path = resolve(dir, headerName(stage));
-  return existsSync(path) ? parseHeader(readFileSync(path, 'utf8'), path) : null;
+  if (!existsSync(path)) return { kind: 'missing' };
+  try {
+    return { kind: 'read', header: parseHeader(readFileSync(path, 'utf8'), path) };
+  } catch (err) {
+    return { kind: 'unreadable', reason: err instanceof Error ? err.message : String(err) };
+  }
 }
 
 export function stageFile(dir: string, stem: string): string {

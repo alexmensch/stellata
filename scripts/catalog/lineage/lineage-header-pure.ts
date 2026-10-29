@@ -29,8 +29,15 @@ export function parseHeader(text: string, file: string): StageHeader {
   return h as StageHeader;
 }
 
+/** A header written by an older build may not parse; that is a baseline to
+ *  refuse, never a failed build. */
+export type HeaderRead =
+  | { readonly kind: 'read'; readonly header: StageHeader }
+  | { readonly kind: 'missing' }
+  | { readonly kind: 'unreadable'; readonly reason: string };
+
 export type BaselineSource =
-  | { readonly kind: 'checkout'; readonly header: StageHeader | null }
+  | { readonly kind: 'checkout'; readonly header: HeaderRead }
   | { readonly kind: 'against'; readonly dir: string }
   | { readonly kind: 'absent' };
 
@@ -47,14 +54,16 @@ export function judgeBaseline(
 ): BaselineVerdict {
   if (source.kind === 'absent') return { kind: 'none' };
   if (source.kind === 'against') return { kind: 'diff', why: 'against' };
-  const { header } = source;
-  if (header !== null && !header.dirty && mergeBase !== null && header.commit === mergeBase) {
+  const read = source.header;
+  if (read.kind === 'read' && !read.header.dirty && mergeBase !== null && read.header.commit === mergeBase) {
     return { kind: 'diff', why: 'merge-base' };
   }
   if (acceptAny) return { kind: 'diff', why: 'accepted' };
-  const built = header === null
+  const built = read.kind === 'missing'
     ? 'a baseline with no header'
-    : `a baseline built at ${header.commit}${header.dirty ? ' with uncommitted edits' : ''}`;
+    : read.kind === 'unreadable'
+      ? `a baseline whose header does not read (${read.reason})`
+      : `a baseline built at ${read.header.commit}${read.header.dirty ? ' with uncommitted edits' : ''}`;
   const base = mergeBase === null ? 'no merge-base with origin/main' : `the merge-base ${mergeBase}`;
   return {
     kind: 'refused',
