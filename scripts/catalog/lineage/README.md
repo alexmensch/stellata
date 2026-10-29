@@ -11,6 +11,29 @@ serialised. The count snapshots fold from the same outcome arrays in memory,
 so a snapshot and lineage are two projections of one value and neither is
 kept in step with the other.
 
+## Files in this area
+
+```
+scripts/catalog/lineage/
+  lineage-row-pure.ts            The envelope, its one comparator
+  reason-codes-pure.ts           (compareLineageRows), the TSV text form, and
+                                 stageLineageText — the writer, which refuses
+                                 a code the stage does not declare.
+                                 stageCodes declares a stage's codes.
+  lineage-diff-pure.ts           diffLineage, the merge-join; stageDiffText,
+                                 the diff file.
+  lineage-header-pure.ts         StageHeader and judgeBaseline.
+  lineage-io.ts                  The on-disk layout (build/lineage/,
+                                 lineage.previous/, lineage-diff/), the
+                                 rotation and a stage's emission, gzip, git
+                                 provenance and the header's input hash.
+  lineage-core-pure.test.ts      Order, writer refusal, diff, baseline verdict.
+  lineage-rotation.test.ts       Rotation over a scratch build/: a failed or
+                                 absent emission moves nothing, another
+                                 stage's files are never touched.
+  spine-origin-key.test.ts       The spine origin key is unique and stable.
+```
+
 ## Identity — the origin source row
 
 Every row is keyed on the record's **origin**: a `SourceRowRef` naming the
@@ -85,16 +108,19 @@ Every stage writes the same envelope:
 `{ source, row }`: `source` is the source's declaration constant (a
 `defineSource` or `defineArtifact` constant,
 `../../util/sources/README.md#sourcerowref`) and `row` is that source's typed
-row key — never a path string. Licence will be a property of the source
-constant, so filtering a row's citations — its key and its evidence — by
-licence for a public surface is a join on `source`. No declaration carries a
-licence yet: the field lands with its first reader, the lineage core.
+row key — never a path string. A source's licence is credited once, on the
+site's credits surface; whether a public lineage surface must also filter its
+citations by licence is the release design's question, and the filter would
+be a join on `source`.
 
 Its text form is `<source>:<row>`. Every lineage file sorts by the byte
 order of that text form, then `role`, `code`, `params`, through one
-comparator the writer and the diff both import — never a numeric sort, so
+comparator the writer and the diff both import (`compareLineageRows`,
+`lineage-row-pure.ts`) — never a numeric sort, so
 Gaia ids above 2^53 order the same everywhere. A key's rows diff as a set:
-changed means the set of rows under one key differs.
+changed means the set of rows under one key differs. `params` is empty or a
+JSON object whose keys keep the stage's declared order, so one payload has
+one text; `evidence` is its references' text forms joined by `|`.
 
 ## Reason codes — closed, append-only, generated
 
@@ -177,19 +203,27 @@ A stage that fails, is skipped by its content-hash stamp, or does not run
 copies untouched.
 
 A fresh worktree is seeded with the main checkout's last `build/lineage/`
-(`.worktreeinclude`), which may come from an older commit. So the per-build
-header file records, per stage, the commit and the content hash of the
-inputs that stage was built from, and the diff refuses a baseline whose
-commit is not the branch's merge-base with main. The refusal names the
-baseline's commit and how to get a matching one; an explicit flag accepts
-it anyway. `--against <dir>` overrides the baseline. A
-stage diff is a merge-join of two files sorted by that one comparator: keys
-added, removed and changed.
+(`.worktreeinclude`), which may come from an older commit. So each stage
+writes a header beside its files, `<stage>.header.json`, recording the
+build version, the commit and the content hash of the inputs the stage was
+built from (`stepInputPaths`, `../../util/step-inputs.ts`); a header per
+stage is what lets one stage rotate without rewriting another's. The diff
+refuses a baseline whose commit is not the branch's merge-base with main
+(`judgeBaseline`, `lineage-header-pure.ts`). The refusal names the
+baseline's commit and how to get a matching one; `--any-baseline` accepts it
+anyway, and `--against <dir>` diffs against that directory instead. A
+refused diff fails nothing: the stage's lineage still lands, no diff is
+written, and a stale one is deleted, so a missing report is visible rather
+than out of date. A stage diff is a merge-join of two files sorted by that
+one comparator: keys added, removed and changed.
 
 Every stage diff writes `build/lineage-diff/<stage>.tsv` — outside
 `build/lineage/`, so a worktree's seed never carries another checkout's
-diff; the membership change report is the first. A PR whose build leaves a non-empty diff puts
-that diff's summary in its PR body.
+diff; the membership change report is the first. One line per row that
+differs within a changed key: `change` (added / removed / changed), `side`
+(`-` baseline, `+` current), the six envelope columns, then any column the
+stage joins on from another stage's facts. A PR whose build leaves a
+non-empty diff puts that diff's summary in its PR body.
 
 ## Trace
 
