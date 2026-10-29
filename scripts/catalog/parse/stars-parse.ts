@@ -507,7 +507,7 @@ export function readStars(
     // SIMBAD cascade. It is advanced to the scene epoch below, once the motion
     // the row carries is known; position is that direction × distance, both
     // float64 until the float32 pack at write time.
-    const dirRes = resolveDirection(
+    const direction = resolveDirection(
       { ...simbadKeys, simbad: simbadRow?.astrometry ?? null, isSol },
       directions,
     );
@@ -516,10 +516,11 @@ export function readStars(
     // sibling placed and printed HIP photometry lit, which no positional tier
     // reaches — the SIMBAD values cohort is still keyed on the spine and holds
     // no row for them.
-    if (dirRes === null) {
+    if (direction.via === 'none') {
       park('no_position');
       continue;
     }
+    const dirRes = direction.value;
 
     // The direction tier supplies the PM wherever its own solution carries
     // one. Where it does not — the 2p Gaia cohort, Tycho-2's rows with no mean
@@ -598,8 +599,8 @@ export function readStars(
     if (measuredPlx !== null && isLowPrecisionParallax(measuredPlx) && distVia === plxRes.via) {
       distLowPrecisionParallax++;
     }
-    directionVia[dirRes.via]++;
-    if (dirRes.via === 'tycho2' && tycho2Row !== null) {
+    directionVia[direction.via]++;
+    if (direction.via === 'tycho2' && tycho2Row !== null) {
       if (tycho2Row.fromIcrs) directionTycho2FromIcrs++;
       if (tycho2Row.isPhotocentre) directionTycho2Photocentre++;
     }

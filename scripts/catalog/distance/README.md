@@ -126,6 +126,11 @@ returned a direction would be returning one advanced on a motion the row may
 not keep. That single call site is what keeps the position and the velocity
 reading one motion ([The proper-motion rescue cascade](#the-proper-motion-rescue-cascade)).
 
+It returns the shared cascade shape (`../cascade-result.ts`): the tier and its
+`DirectionSolution`, or `none` — the `no_position` park. A Gaia solution the
+cascade passes over is a refusal on the result: `pm_disagrees_with_hip2` on a
+`hip2_pm_discrepant` row, `no_5p_solution` on a 2p row HIP2 covers.
+
 | Tier | Epoch of the position it reads |
 |---|---|
 | `gaia_5p` / `gaia_nss_systemic` | J2016.0 — a zero-Δt no-op |

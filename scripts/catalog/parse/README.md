@@ -159,7 +159,7 @@ counts rather than at zero: `parked*` per reason, from `PARKED_COUNT_KEY`.
 2. **Direction resolution** (`resolveDirection` in `direction-cascade.ts`)
    selects the tier's solution. See [Direction resolution](../distance/README.md#direction-resolution).
    Every solution propagates rather than shipping its source's own
-   epoch, so a row no tier reaches resolves to null and **parks** as
+   epoch, so a row no tier reaches resolves to `none` and **parks** as
    `no_position`: a distance with no direction has nothing to multiply. **One
    row**, HIP 88759 — a HIP-only addition a bound sibling's parallax placed and
    printed HIP photometry lit, for which SIMBAD resolves no object at all, so
