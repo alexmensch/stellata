@@ -87,7 +87,10 @@ origin key, the manifest's current five-cell tuple
 full designation set, all written by membership. Each column lands with the
 stage that computes it, never as a placeholder: the record index (after the
 apparent-V sort) arrives when the sort stage gains lineage, the SID with
-allocation's. A record membership does not admit — a folded spine row, a
+allocation's. A later stage writes its columns to an identity file of its
+own (`allocation.identity.tsv.gz`: key → SID), rotated with that stage and
+never by rewriting membership's; the identity row is the join of those files
+on the origin key. A record membership does not admit — a folded spine row, a
 component group — still gets one, keyed on the cells it arrived with, so
 trace finds it. The ledger views and trace take their key columns from
 this row, never re-deriving them — except where the deciding stage's input
