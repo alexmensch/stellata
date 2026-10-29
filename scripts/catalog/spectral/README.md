@@ -116,8 +116,8 @@ row it reaches and does not take is a refusal on the result:
 or `unclassifiable`.
 
 AT-HYG's contaminated `spect` cell is no longer consulted for
-classification (build-counts over the walked records: ~91.3% SIMBAD /
-~8.3% ESP-ELS / ~0.4% fallback); it is still used as a
+classification (build-counts over the walked records: SIMBAD
+**<!-- count:build-catalog/spectralBySimbad -->341,203<!-- /count -->** / ESP-ELS **<!-- count:build-catalog/spectralByGspspec -->617,169<!-- /count -->** / `none` **<!-- count:build-catalog/spectralFallback -->6,628<!-- /count -->**); it is still used as a
 last-resort hover-display fallback when both upstream sources are blank.
 
 `physicalRadius` then computes R/R☉ via Stefan–Boltzmann:
