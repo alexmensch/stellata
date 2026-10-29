@@ -6,5 +6,6 @@ import { parseHipPhotometryTsv } from './hip-photometry-parse';
 export const HIP_PHOTOMETRY = defineSource({
   file: 'data/hipparcos/hip_main_vmag.tsv',
   hint: 'Re-run `pnpm run refresh:hip-vmag`.',
+  rowKey: { id: 'i239', text: (hip: number) => String(hip) },
   parse: (input) => parseHipPhotometryTsv(input.text(), input),
 });

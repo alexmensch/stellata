@@ -123,5 +123,7 @@ or a wrongly typed row. Every declaration also carries a type-only brand
 (`Declaration`) that no object literal can, so a hand-written
 `{file, rowKey}` stand-in does not compile either
 (`row-ref-pure.test.ts`). Keyed today: the spine (`spine:<line>`),
-`multiples.tsv` (`multiples:<system_id>/<comp>`) and the magnitude pull
-(`gaia-dr3:<source_id>`). Its text form is `<id>:<row>`.
+`multiples.tsv` (`multiples:<system_id>/<comp>`), the magnitude pull
+(`gaia-dr3:<source_id>`), and the three tables an addition group is
+founded on — IV/25 (`iv25:<tyc>`), I/239 (`i239:<hip>`) and CNS5
+(`cns5:<cns5 id>`). Its text form is `<id>:<row>`.
