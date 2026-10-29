@@ -430,8 +430,6 @@ export function readStars(
     const rvRejected = radialTermExceedsCeiling(resolvedRvKmS);
     const rvKmS = rvRejected ? null : resolvedRvKmS;
     rvVia[rvRes.via]++;
-    // A Gaia citation on a shipped value is ordinary — the row is not the blend
-    // the skip rule refuses.
     if (rvRes.via === 'simbad' && isGaiaCatalogueBibcode(rvRes.value.bibcode)) {
       rvSimbadGaiaBibcode++;
     }
