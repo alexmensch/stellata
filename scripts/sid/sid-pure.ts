@@ -615,7 +615,8 @@ export interface SameAsClasses {
  *  A designation carried by more than one object names a catalogue
  *  granularity (an HD number covering both members of a pair), not one
  *  physical object: it is dropped first, so it can neither key a ledger row
- *  nor fuse two objects' identities. */
+ *  nor fuse two objects' identities. Throws on a stored edge naming one,
+ *  which would put it back in the graph. */
 export function sameAsClasses(
   designationSets: readonly (readonly string[])[],
   storedEdges: readonly SameasEdge[],
@@ -634,6 +635,14 @@ export function sameAsClasses(
   }
   const ambiguousSet = new Set(ambiguous.map((a) => a.designation));
   const kept = designationSets.map((ds) => [...new Set(ds)].filter((d) => !ambiguousSet.has(d)));
+  const ambiguousEdges = storedEdges.filter((e) => ambiguousSet.has(e.a) || ambiguousSet.has(e.b));
+  if (ambiguousEdges.length > 0) {
+    throw new Error(
+      `stored same-as edge(s) name a designation more than one object carries ` +
+        `(/docs/sid.md#41-same-as-equivalence-graph): ` +
+        ambiguousEdges.map((e) => `${e.a} = ${e.b}`).join(', '),
+    );
+  }
 
   const classes = new UnionFind();
   for (const ds of kept) {

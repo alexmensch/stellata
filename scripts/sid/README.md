@@ -164,7 +164,9 @@ catalogue granularity, not one physical object. Assigning it to either
 record would freeze an arbitrary claim into the append-only ledger;
 unioning through it would fuse two distinct objects' identities. So it
 is excluded from the same-as graph entirely — it can neither key a
-ledger row nor merge classes. Every affected record keys off its own
+ledger row nor merge classes. A stored edge (`sameas-overrides.tsv`,
+`bridges/`) naming one would put it back, so `sameAsClasses` throws on it
+and every allocation and resolution fails. Every affected record keys off its own
 unique HIP/Gaia id; a record whose ONLY designation is ambiguous would
 hard-fail allocation as keyless (zero such records today).
 

@@ -335,6 +335,12 @@ describe('sameAsClasses', () => {
     expect(classes.find('hip:1')).toBe(classes.find('gaia_dr3:9'));
   });
 
+  it('refuses a stored edge naming a designation two objects carry', () => {
+    expect(() =>
+      sameAsClasses([['hip:1', 'hd:100'], ['hip:2', 'hd:100']], [{ a: 'hd:100', b: 'gaia_dr3:9' }]),
+    ).toThrow('hd:100 = gaia_dr3:9');
+  });
+
   it('an object whose only designation is ambiguous becomes keyless', () => {
     const objects = [star('a', 'hip:1', 'hd:100'), star('b', 'hd:100')];
     const { kept } = sameAsClasses(objects.map((o) => o.designations), []);
