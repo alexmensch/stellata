@@ -124,14 +124,14 @@ import { MEMBERSHIP_MANIFEST } from './membership/membership-manifest-tsv';
 import { artifactRows } from '../util/sources/source';
 import { REPO_ROOT as ROOT } from '../util/paths';
 import {
-  clearStamp, fileHashes, stampIsCurrent, stampPath,
+  clearStamp, fileHashes, stampIsCurrent,
 } from '../util/build-stamp';
 import {
   DEFAULT_CATALOG_MANIFEST as OUT_MANIFEST, DEFAULT_CONSTELLATIONS_JSON as OUT_CON,
   DEFAULT_ROW_INDEX_MAP, DEFAULT_SEARCH_INDEX as OUT_SEARCH,
 } from './catalog-lookup';
 import {
-  CATALOG_CHUNK_DIR, CATALOG_OUTPUTS, OUT_BOUNDARIES,
+  CATALOG_CHUNK_DIR, CATALOG_OUTPUTS, CATALOG_STAMP, OUT_BOUNDARIES,
 } from './catalog-outputs';
 import {
   emitArtifacts, runStep, sweepStaged, type ArtifactContents, type Check,
@@ -153,8 +153,6 @@ const EXPECTED_OUTLIERS = resolve(
   __dirname,
   'distance/refinement/build-distance-outliers-expected.json',
 );
-
-const CATALOG_STAMP = stampPath('catalog');
 
 /** The record-parity dropped list (/docs/catalog-driver.md#61-record-parity). A record that reaches no owned parallax cannot be
  *  placed, so it does not ship — and unlike the low-precision rows, which stay

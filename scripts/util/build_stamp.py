@@ -28,6 +28,14 @@ def stamp_path(name: str) -> Path:
     return STAMP_DIR / f"{name}.json"
 
 
+def outputs_json(outputs: Iterable[Path], stamp: Path) -> str:
+    """A step's `--outputs` answer: its outputs and stamp, repo-relative."""
+    return json.dumps({
+        "outputs": [p.relative_to(REPO_ROOT).as_posix() for p in outputs],
+        "stamp": stamp.relative_to(REPO_ROOT).as_posix(),
+    })
+
+
 def hash_file(path: Path) -> str:
     h = hashlib.sha1()
     with path.open("rb") as f:

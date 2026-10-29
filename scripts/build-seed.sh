@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# `pnpm run build:stamped`, first stopping every older build:seed in this checkout.
+# `pnpm run build:seed-steps`, first stopping every older build:seed in this checkout.
 set -euo pipefail
 # Job control puts the build in its own process group, so one signal stops all of it.
 set -m
@@ -45,7 +45,7 @@ for entry in "$runs"/*; do
   fi
 done
 
-pnpm run build:stamped &
+pnpm run build:seed-steps &
 build=$!
 status=0
 wait "$build" || status=$?

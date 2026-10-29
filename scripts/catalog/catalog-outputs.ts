@@ -2,6 +2,7 @@
 
 import { dirname, resolve } from 'node:path';
 
+import { stampPath } from '../util/build-stamp';
 import { declareOutputs } from '../util/emit-artifacts';
 import { REPO_ROOT } from '../util/paths';
 import {
@@ -26,3 +27,5 @@ export const CATALOG_OUTPUTS = declareOutputs(
   },
   [{ dir: CATALOG_CHUNK_DIR, member: CATALOG_CHUNK_FILENAME }],
 );
+
+export const CATALOG_STAMP = stampPath('catalog');
