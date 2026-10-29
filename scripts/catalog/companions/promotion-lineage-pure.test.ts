@@ -25,7 +25,7 @@ describe('promotionLineageRow', () => {
   it('maps every variant to a code the writer accepts', () => {
     const outcomes: RowOutcome[] = [
       { kind: 'dropped', reason: 'compound-comp' },
-      { kind: 'dropped', reason: 'parked-record', viaGaia5p: true, ownedFit: false },
+      { kind: 'dropped', reason: 'parked-record', parked: 'spine:2', viaGaia5p: true, ownedFit: false },
       { kind: 'adopted', idx: 3, via: 'earlier-mint' },
       { kind: 'adopted', idx: 4, via: 'own-hip', desigConFromAnchor: true, recuration: null },
       { kind: 'minted', idx: 5, synthetic: true, brightness: own, constellationSplit: false },
@@ -61,6 +61,13 @@ describe('promotionLineageRow', () => {
     const r = promotionLineageRow(promoted({ kind: 'dropped', reason: 'anchor-is-component', idx: 7 }), recordKey);
     expect(r.code).toBe('promotion.dropped.anchor-is-component');
     expect(paramsOf(r)).toEqual({ via: 'secondary', record: 'spine:7' });
+  });
+
+  it('cites the parked record whose refused parallax the row would re-serve', () => {
+    const r = promotionLineageRow(promoted({
+      kind: 'dropped', reason: 'parked-record', parked: 'spine:2', viaGaia5p: false, ownedFit: false,
+    }), recordKey);
+    expect(r.evidence).toEqual(['spine:7', 'spine:2']);
   });
 
   it('cites the anchor and a distinct system anchor, never the row itself', () => {

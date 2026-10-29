@@ -189,7 +189,7 @@ export type RowOutcome =
       | 'no-identifier' | 'no-position' | 'no-absmag';
   }
   | { kind: 'dropped'; reason: 'anchor-is-component'; idx: number }
-  | { kind: 'dropped'; reason: 'parked-record'; viaGaia5p: boolean; ownedFit: boolean }
+  | { kind: 'dropped'; reason: 'parked-record'; parked: string; viaGaia5p: boolean; ownedFit: boolean }
   | { kind: 'adopted'; idx: number; via: 'earlier-mint' }
   | {
     kind: 'adopted';
@@ -313,7 +313,7 @@ export interface RowOutcomeStats {
   /** Pair rows refused because the distance they state IS a parallax a tier
    *  above refused — mostly the parked primary's siblings, which inherit its
    *  blended source_id or HIP along with its distance, rather than the parked
-   *  record itself. See {@link statesRefusedParallax}, which owns what the
+   *  record itself. See {@link refusalStated}, which owns what the
    *  match is on and why sharing the id is not enough. Without this the parked
    *  list names rows that ship anyway. */
   droppedParkedRecord: number;
@@ -391,7 +391,7 @@ export interface PostPassStats {
  *  Stage 2/3 bind one blended source to every component row of a sub-arcsec
  *  pair, so the parked primary's id sits on its siblings' rows as well — and
  *  those rows state the same refused distance, which is what
- *  {@link statesRefusedParallax} then checks. The SID ledger records every row
+ *  {@link refusalStated} then checks. The SID ledger records every row
  *  this refuses as a presence event naming DR4 as the reinstating event, never
  *  a dissolution: the pair is unchanged.
  *
@@ -400,8 +400,14 @@ export interface PostPassStats {
  *  carrying; a `no_v_magnitude` row was placed and not lit, a `no_position` row
  *  lit and not placed, and neither had a parallax refused either. */
 export interface ParkedRefusals {
-  gaia: ReadonlyMap<string, readonly number[]>;
-  hip: ReadonlyMap<number, readonly number[]>;
+  gaia: ReadonlyMap<string, readonly RefusedParallax[]>;
+  hip: ReadonlyMap<number, readonly RefusedParallax[]>;
+}
+
+/** One refused parallax, mas, and the origin key of the record it parked. */
+export interface RefusedParallax {
+  mas: number;
+  parked: string;
 }
 
 export function emptyParkedRefusals(): ParkedRefusals {
@@ -414,19 +420,21 @@ export function parkedRefusals(
     hip: number | null;
     reason: ParkedReason;
     refusedPlxMas: readonly number[];
+    originKey: string;
   }[],
 ): ParkedRefusals {
-  const gaia = new Map<string, number[]>();
-  const hip = new Map<number, number[]>();
-  const add = <K>(index: Map<K, number[]>, key: K, mas: readonly number[]) => {
+  const gaia = new Map<string, RefusedParallax[]>();
+  const hip = new Map<number, RefusedParallax[]>();
+  const add = <K>(index: Map<K, RefusedParallax[]>, key: K, refused: readonly RefusedParallax[]) => {
     const held = index.get(key);
-    if (held === undefined) index.set(key, [...mas]);
-    else held.push(...mas);
+    if (held === undefined) index.set(key, [...refused]);
+    else held.push(...refused);
   };
   for (const p of parked) {
     if (p.reason !== 'refused_no_defensible_parallax') continue;
-    if (p.gaiaSourceId !== null) add(gaia, p.gaiaSourceId, p.refusedPlxMas);
-    if (p.hip !== null && p.hip > 0) add(hip, p.hip, p.refusedPlxMas);
+    const refused = p.refusedPlxMas.map((mas) => ({ mas, parked: p.originKey }));
+    if (p.gaiaSourceId !== null) add(gaia, p.gaiaSourceId, refused);
+    if (p.hip !== null && p.hip > 0) add(hip, p.hip, refused);
   }
   return { gaia, hip };
 }
@@ -450,8 +458,8 @@ export function parkedRefusals(
  *  refusal promote. Re-measure if a refused row's pair ever lands there. */
 export const REFUSED_PARALLAX_MATCH_REL_TOL = 1e-5;
 
-/** Whether promoting this pair row would re-serve a parallax a tier above
- *  refused — the courier the per-field skip rules (/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers) exist to close.
+/** The parked record whose refused parallax this pair row would re-serve, by
+ *  origin key, or null — the courier the per-field skip rules (/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers) exist to close.
  *
  *  **The match is on the measurement, never on the identifier alone.**
  *  multiples.tsv states a distance for every component, and for a row carrying
@@ -464,20 +472,20 @@ export const REFUSED_PARALLAX_MATCH_REL_TOL = 1e-5;
  *  Rasalgethi's own HIP2 distance and 9% off the refused 100.89 pc. Refusing
  *  them on the shared id stranded three components of a system whose primary
  *  ships, which is what this predicate exists to stop. */
-export function statesRefusedParallax(
+export function refusalStated(
   refusals: ParkedRefusals,
   row: {
     gaiaSourceId: string | null; hip: number | null; distPc: number | null;
   },
-): boolean {
-  if (row.distPc === null || row.distPc <= 0) return false;
+): string | null {
+  if (row.distPc === null || row.distPc <= 0) return null;
   const refused = [
     ...(row.gaiaSourceId !== null
       ? refusals.gaia.get(row.gaiaSourceId) ?? [] : []),
     ...(row.hip !== null && row.hip > 0 ? refusals.hip.get(row.hip) ?? [] : []),
   ];
-  return refused.some((mas) => Math.abs(1000 / mas - row.distPc!)
-    <= REFUSED_PARALLAX_MATCH_REL_TOL * row.distPc!);
+  return refused.find(({ mas }) => Math.abs(1000 / mas - row.distPc!)
+    <= REFUSED_PARALLAX_MATCH_REL_TOL * row.distPc!)?.parked ?? null;
 }
 
 function emptyPostPassStats(): PostPassStats {
@@ -1649,10 +1657,12 @@ function promoteRow(
   // not the parked record arriving twice. Strip the ids first and such a sibling
   // would mint a synth record at the refused distance instead, with no id left
   // to recognise it by.
-  if (statesRefusedParallax(state.parked, row)) {
+  const parked = refusalStated(state.parked, row);
+  if (parked !== null) {
     return {
       kind: 'dropped',
       reason: 'parked-record',
+      parked,
       viaGaia5p: row.astrometryVia === 'gaia_5p',
       ownedFit: hasIndependentFitRoute(
         row, anchorPrimaryRow.gaiaSourceId, anchorPrimaryRow.hip,

@@ -2889,23 +2889,26 @@ describe('promoteCompanions / a parked record does not arrive by promotion', () 
     expect(stats.droppedParkedRecord).toBe(0);
   });
 
-  it('refuses it once the ledger names the record, and counts the refusal', () => {
-    const { newStars, stats } = promoteCompanions(
+  it('refuses it once the ledger names the record, counts the refusal and names the parked record', () => {
+    const { newStars, stats, rows: promoted } = promoteCompanions(
       rows, [anchor], inputs({ parked: parkedRefusals([{
         gaiaSourceId: PARKED_SOURCE, hip: PARKED_HIP,
-        reason: 'refused_no_defensible_parallax', refusedPlxMas: [3.04],
+        reason: 'refused_no_defensible_parallax', refusedPlxMas: [3.04], originKey: 'spine:1',
       }]) }),
     );
     expect(newStars).toHaveLength(0);
     expect(stats.droppedParkedRecord).toBe(1);
     expect(stats.promoted).toBe(0);
+    expect(promoted.map((r) => r.outcome)).toContainEqual(expect.objectContaining({
+      kind: 'dropped', reason: 'parked-record', parked: 'spine:1',
+    }));
   });
 
   it('names a parked record by its HIP alone — the no-Gaia half of the cohort', () => {
     const { stats } = promoteCompanions(
       rows, [anchor], inputs({ parked: parkedRefusals([{
         gaiaSourceId: null, hip: PARKED_HIP,
-        reason: 'refused_no_defensible_parallax', refusedPlxMas: [3.04],
+        reason: 'refused_no_defensible_parallax', refusedPlxMas: [3.04], originKey: 'spine:1',
       }]) }),
     );
     expect(stats.droppedParkedRecord).toBe(1);
@@ -2957,7 +2960,7 @@ describe('promoteCompanions / a parked record does not arrive by promotion', () 
     const { newStars, stats } = promoteCompanions(
       blendedRows, [blendedPrimary], inputs({ parked: parkedRefusals([{
         gaiaSourceId: BLEND_SOURCE, hip: BLEND_HIP,
-        reason: 'refused_no_defensible_parallax', refusedPlxMas: [0.97],
+        reason: 'refused_no_defensible_parallax', refusedPlxMas: [0.97], originKey: 'spine:1',
       }]) }),
     );
     expect(newStars).toHaveLength(0);
@@ -2989,7 +2992,7 @@ describe('promoteCompanions / a parked record does not arrive by promotion', () 
       const { stats } = promoteCompanions(
         ownFit, [blendedPrimary], inputs({ parked: parkedRefusals([{
           gaiaSourceId: '405578335904111745', hip: 7980,
-          reason: 'refused_no_defensible_parallax', refusedPlxMas: [0.97],
+          reason: 'refused_no_defensible_parallax', refusedPlxMas: [0.97], originKey: 'spine:1',
         }]) }),
       );
       expect(stats.droppedParkedRecord).toBe(1);
@@ -3012,7 +3015,7 @@ describe('promoteCompanions / a parked record does not arrive by promotion', () 
       statesSecondRefusal, [blendedPrimary], inputs({ parked: parkedRefusals([{
         gaiaSourceId: BLEND_SOURCE, hip: BLEND_HIP,
         reason: 'refused_no_defensible_parallax',
-        refusedPlxMas: [0.97, SECOND_REFUSAL_MAS],
+        refusedPlxMas: [0.97, SECOND_REFUSAL_MAS], originKey: 'spine:1',
       }]) }),
     );
     expect(stats.droppedParkedRecord).toBe(1);
@@ -3024,7 +3027,7 @@ describe('promoteCompanions / a parked record does not arrive by promotion', () 
       blendedRows, [blendedPrimary], inputs({ parked: parkedRefusals([{
         gaiaSourceId: BLEND_SOURCE, hip: BLEND_HIP,
         reason: 'refused_no_defensible_parallax',
-        refusedPlxMas: [SECOND_REFUSAL_MAS, 6.8354],
+        refusedPlxMas: [SECOND_REFUSAL_MAS, 6.8354], originKey: 'spine:1',
       }]) }),
     );
     expect(stats.droppedParkedRecord).toBe(0);
@@ -3037,12 +3040,12 @@ describe('promoteCompanions / a parked record does not arrive by promotion', () 
       statesSecondRefusal, [blendedPrimary], inputs({ parked: parkedRefusals([
         {
           gaiaSourceId: BLEND_SOURCE, hip: null,
-          reason: 'refused_no_defensible_parallax', refusedPlxMas: [0.97],
+          reason: 'refused_no_defensible_parallax', refusedPlxMas: [0.97], originKey: 'spine:1',
         },
         {
           gaiaSourceId: null, hip: BLEND_HIP,
           reason: 'refused_no_defensible_parallax',
-          refusedPlxMas: [SECOND_REFUSAL_MAS],
+          refusedPlxMas: [SECOND_REFUSAL_MAS], originKey: 'spine:1',
         },
       ]) }),
     );
@@ -3062,7 +3065,7 @@ describe('promoteCompanions / a parked record does not arrive by promotion', () 
       const { newStars, stats } = promoteCompanions(
         blendedRows, [blendedPrimary], inputs({ parked: parkedRefusals([{
           gaiaSourceId: BLEND_SOURCE, hip: BLEND_HIP, reason,
-          refusedPlxMas: [],
+          refusedPlxMas: [], originKey: 'spine:1',
         }]) }),
       );
       expect(newStars).toHaveLength(1);
@@ -3106,7 +3109,7 @@ describe('promoteCompanions / a parked record does not arrive by promotion', () 
       alfHerRows, [rasalgethi], inputs({ parked: parkedRefusals([{
         gaiaSourceId: ALF_HER_BLEND_SOURCE, hip: null,
         reason: 'refused_no_defensible_parallax',
-        refusedPlxMas: [ALF_HER_REFUSED_MAS],
+        refusedPlxMas: [ALF_HER_REFUSED_MAS], originKey: 'spine:1',
       }]) }),
     );
     expect(stats.droppedParkedRecord).toBe(0);
@@ -3121,7 +3124,7 @@ describe('promoteCompanions / a parked record does not arrive by promotion', () 
         inputs({ parked: parkedRefusals([{
           gaiaSourceId: ALF_HER_BLEND_SOURCE, hip: null,
           reason: 'refused_no_defensible_parallax',
-          refusedPlxMas: [1000 / 110.253583],
+          refusedPlxMas: [1000 / 110.253583], originKey: 'spine:1',
         }]) }),
       );
       expect(stats.droppedParkedRecord, String(distPc)).toBe(1);
@@ -3364,7 +3367,7 @@ describe('foldRowOutcomes', () => {
     { kind: 'dropped', reason: 'anchor-is-component', idx: 0 },
     { kind: 'dropped', reason: 'no-position' },
     { kind: 'dropped', reason: 'no-absmag' },
-    { kind: 'dropped', reason: 'parked-record', viaGaia5p: true, ownedFit: false },
+    { kind: 'dropped', reason: 'parked-record', parked: 'spine:2', viaGaia5p: true, ownedFit: false },
     { kind: 'adopted', idx: 1, via: 'earlier-mint' },
     {
       kind: 'adopted', idx: 2, via: 'sameas-bridge', desigConFromAnchor: true,

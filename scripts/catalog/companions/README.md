@@ -184,8 +184,9 @@ Per-row gates and resolution:
   `applyStarNames` runs before promotion, which is what puts `bayerComponent`
   on the record in time.
 - <a id="refused-parallax-refusal"></a>**Refused-parallax refusal.** A row never promotes when the distance it STATES
-  is a parallax a tier above refused — `statesRefusedParallax` matches the cell
-  against every refused value indexed under the row's ids. Sharing the id is not
+  is a parallax a tier above refused — `refusalStated` matches the cell
+  against every refused value indexed under the row's ids, and returns the
+  parked record's origin key, which the row's lineage cites. Sharing the id is not
   enough: Stage 2/3 bind one blended source to every component of a sub-arcsec
   pair, so a parked primary's id reaches siblings stating the ANCHOR's distance
   (α Her's B, Ba, Bb) as well as siblings re-serving the refusal (WDS

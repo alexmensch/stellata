@@ -452,6 +452,7 @@ export function readStars(
         gaiaSourceId,
         reason,
         refusedPlxMas,
+        originKey: row.originKey,
       });
       parkedVia[reason]++;
     };

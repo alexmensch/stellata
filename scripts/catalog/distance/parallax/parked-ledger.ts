@@ -49,6 +49,9 @@ export interface ParkedRecord extends ParkedLedgerEntry {
    *  (`../../companions/README.md#refused-parallax-refusal`). Empty on the
    *  three reasons that refused nothing. */
   refusedPlxMas: readonly number[];
+  /** Build-time only: the record's lineage origin key, which a promotion row
+   *  that would re-serve the refusal cites. */
+  originKey: string;
 }
 
 /** The five identifier cells, joined — the manifest carries all of them under

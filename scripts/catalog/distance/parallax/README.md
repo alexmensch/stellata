@@ -303,14 +303,14 @@ shape the gate refuses; the bound-sibling tier now places HIP 26549 itself off
 HIP 26551 D's clean fit, so it is no longer a row the gate sees. Promoting such
 a row re-serves a refusal through a courier, the general rule at the head of
 [The skip rules](#the-skip-rules--one-principle-two-publications). The refusal is counted as `companionDroppedParkedRecord`
-(**9**), and it matches on the measurement: `statesRefusedParallax` compares the
+(**<!-- count:build-catalog/companionDroppedParkedRecord -->8<!-- /count -->**), and it matches on the measurement: `refusalStated` compares the
 row's stated distance against every parallax a skip rule refused on that record,
 indexed by the id the pair row names it with.
 
 **Refusing withholds no measurement of the component's own**, and the build
-states that rather than arguing it. Two counts partition the 9:
+states that rather than arguing it. Two counts partition the <!-- count:build-catalog/companionDroppedParkedRecord -->8<!-- /count -->:
 `companionDroppedParkedViaGaia5p` is **<!-- count:build-catalog/companionDroppedParkedViaGaia5p -->0<!-- /count -->** — every refused row routes
-`hip2_long_baseline` (7) or `system_inherited` (2) — and
+`hip2_long_baseline` (7) or `system_inherited` (1) — and
 `companionDroppedParkedOwnedFit` is **<!-- count:build-catalog/companionDroppedParkedOwnedFit -->0<!-- /count -->**, which is the stronger claim and the
 pinned one: not one refused row satisfies `hasIndependentFitRoute`, so none
 carries an owned identifier on a per-component route. It asks about the ROUTE,

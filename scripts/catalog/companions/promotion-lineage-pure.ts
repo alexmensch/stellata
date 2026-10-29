@@ -65,14 +65,15 @@ export function promotionOriginKey(row: Pick<MultiplesTsvRow, 'systemId' | 'comp
 /** `recordKey` is the origin key of the record at a pre-sort catalogue index. */
 export function promotionLineageRow(r: PromotedRow, recordKey: (idx: number) => string): LineageRow {
   const key = promotionOriginKey(r.row);
-  const evidence = [...new Set([r.anchor, r.systemAnchor])]
+  const o: RowOutcome = r.outcome;
+  const cited = o.kind === 'dropped' && o.reason === 'parked-record' ? o.parked : null;
+  const evidence = [...new Set([r.anchor, r.systemAnchor, cited])]
     .filter((k): k is string => k !== null && k !== key);
   const via = r.via;
   const row = <B extends Branch>(branch: B, params: ParamsOf<B>): LineageRow => ({
     stage: PROMOTION_STAGE, key, role: 'outcome', code: PROMOTION_CODES.code(branch),
     params: paramsText(params as LineageParams), evidence,
   });
-  const o: RowOutcome = r.outcome;
   switch (o.kind) {
     case 'dropped':
       if (o.reason === 'parked-record') {
