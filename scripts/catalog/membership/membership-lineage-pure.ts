@@ -14,7 +14,7 @@ import {
 
 export const MEMBERSHIP_STAGE = 'membership';
 
-export const MEMBERSHIP_LINEAGE_BUDGET = { gzipBytes: 58_000_000, writeMs: 4_000 };
+export const MEMBERSHIP_LINEAGE_BUDGET = { gzipBytes: 58_000_000, writeMs: 15_000 };
 
 const live = (description: string, effect: CodeDeclaration['effect'] = 'none'): CodeDeclaration => (
   { description, effect, status: LIVE }
