@@ -52,7 +52,8 @@ scripts/catalog/lineage/
   lineage-rotation.test.ts       Rotation over a scratch build/: a failed or
                                  absent emission moves nothing, another
                                  stage's files are never touched.
-  spine-origin-key.test.ts       The spine origin key is unique and stable.
+  spine-origin-key.test.ts       The spine origin key is the physical line
+                                 and unique; the spine guard keeps it stable.
 ```
 
 ## Identity — the origin source row
@@ -70,8 +71,8 @@ source row that founded the record.
 The spine's line number is stable because the file is frozen and
 byte-guarded, and it covers Sol, whose identifier cells are empty; its
 identifier cells are not the key, since a curated correction can rewrite
-`tyc`. The lineage core proves the key unique and identical across two
-builds before anything relies on it, and keeps that as a regression test.
+`tyc`. `spine-origin-key.test.ts` pins the key to the physical line and unique;
+it is identical across builds because the spine guard pins the file's bytes.
 
 Retiring the spine re-founds each spine record on a first-order catalogue
 row, so its origin key changes while the star does not. That PR writes a
