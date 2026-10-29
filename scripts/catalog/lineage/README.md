@@ -235,12 +235,16 @@ below; the derivation itself is a build artifact, regenerated every build.
 
 ## Run-to-run diff
 
-The baseline is the last build in this checkout, kept per stage: a stage's
-current `<stage>.tsv.gz` replaces `build/lineage.previous/<stage>.tsv.gz` in
-the same emitArtifacts commit that renames the stage's new file into place.
-A stage that fails, is skipped by its content-hash stamp, or does not run
-(a standalone `build:membership`, a separate `sid:allocate`) leaves both its
-copies untouched.
+The baseline is kept per stage in `build/lineage.previous/`, and what a
+branch's report needs is the whole change against main, so a **clean build
+at the merge-base is pinned there**: while `lineage.previous/` holds one,
+every later build diffs against it and leaves it in place (`planBaseline`).
+Otherwise the stage's current `<stage>.tsv.gz` replaces
+`build/lineage.previous/<stage>.tsv.gz` in the same emitArtifacts commit
+that renames the stage's new file into place, and the build diffs against
+that last build if it is the merge-base's. A stage that fails, is skipped by
+its content-hash stamp, or does not run (a standalone `build:membership`, a
+separate `sid:allocate`) leaves both its copies untouched.
 
 A fresh worktree is seeded with the main checkout's last `build/lineage/`
 (`.worktreeinclude`), which may come from an older commit. So each stage

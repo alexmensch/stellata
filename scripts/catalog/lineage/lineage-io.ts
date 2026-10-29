@@ -76,14 +76,16 @@ export function stageDiffName(stage: string): string {
   return `${stage}.tsv`;
 }
 
-/** The stage's current files, read now, as the baseline copies that land in
- *  the same emission as their replacements. */
-export function rotationMembers<F extends string>(
-  layout: LineageLayout, spec: StageLineageSpec<F>,
+/** The baseline as it lands in the same emission as the stage's new files:
+ *  the current files, read now, when it rotates; the pinned merge-base copy,
+ *  re-emitted as it is, when it does not — the family deletes any it omits. */
+export function baselineMembers<F extends string>(
+  layout: LineageLayout, spec: StageLineageSpec<F>, rotate: boolean,
 ): Map<string, Uint8Array> {
+  const from = rotate ? layout.current : layout.previous;
   const members = new Map<string, Uint8Array>();
   for (const name of stageNames(spec)) {
-    const path = resolve(layout.current, name);
+    const path = resolve(from, name);
     if (existsSync(path)) members.set(resolve(layout.previous, name), readFileSync(path));
   }
   return members;
@@ -95,12 +97,13 @@ export function stageEmission<F extends string>(
   texts: Readonly<Record<F, string>>,
   header: StageHeader,
   diff: string | null,
+  rotate: boolean,
 ): { files: Record<StageOutputKey<F>, ArtifactContents>; members: Map<string, ArtifactContents> } {
   const files = Object.fromEntries(
     spec.files.map((f) => [`lineage:${f}`, gzipText(texts[f])]),
   ) as Record<StageOutputKey<F>, ArtifactContents>;
   files['lineage:header'] = headerText(header);
-  const members = new Map<string, ArtifactContents>(rotationMembers(layout, spec));
+  const members = new Map<string, ArtifactContents>(baselineMembers(layout, spec, rotate));
   if (diff !== null) members.set(resolve(layout.diff, stageDiffName(spec.stage)), diff);
   return { files, members };
 }

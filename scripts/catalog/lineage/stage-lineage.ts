@@ -7,7 +7,7 @@ import type { ArtifactContents, Check } from '../../util/emit-artifacts';
 import { mergeBaseWithMain } from '../../util/git-provenance';
 import { diffLineage, stageDiffText, type DiffJoin, type KeyChange } from './lineage-diff-pure';
 import {
-  ACCEPT_ANY_BASELINE_FLAG, AGAINST_FLAG, judgeBaseline, type BaselineSource,
+  ACCEPT_ANY_BASELINE_FLAG, AGAINST_FLAG, planBaseline, type BaselineSource,
 } from './lineage-header-pure';
 import {
   readLineage, readStageHeader, stageEmission, stageFile, stageHeader,
@@ -59,11 +59,15 @@ export async function stageLineage<F extends string>(
 ): Promise<StageLineageEmission<F>> {
   const started = performance.now();
   const source = baselineSource(run);
-  const verdict = judgeBaseline(source, mergeBaseWithMain(), run.argv.includes(ACCEPT_ANY_BASELINE_FLAG));
+  const plan = planBaseline(
+    readStageHeader(run.layout.previous, run.spec.stage), source, mergeBaseWithMain(),
+    run.argv.includes(ACCEPT_ANY_BASELINE_FLAG),
+  );
+  const { verdict } = plan;
   const sorted = [...run.rows].sort(compareLineageRows);
   let changes: KeyChange[] | null = null;
-  if (verdict.kind === 'diff') {
-    const dir = source.kind === 'against' ? source.dir : run.layout.current;
+  if (plan.from !== null) {
+    const dir = source.kind === 'against' ? source.dir : run.layout[plan.from === 'previous' ? 'previous' : 'current'];
     changes = diffLineage(readLineage(stageFile(dir, run.diffed)), sorted);
   } else if (verdict.kind === 'refused') {
     console.log(verdict.message);
@@ -74,7 +78,7 @@ export async function stageLineage<F extends string>(
   const header = await stageHeader(run.spec, run.script);
   const texts = run.render(sorted);
   const diff = changes === null ? null : stageDiffText(changes, run.joins);
-  const { files, members } = stageEmission(run.layout, run.spec, texts, header, diff);
+  const { files, members } = stageEmission(run.layout, run.spec, texts, header, diff, plan.rotate);
   const writeMs = performance.now() - started;
   const gzipBytes = run.spec.files.reduce(
     (n, f) => n + (files[`lineage:${f}` as StageOutputKey<F>] as Uint8Array).byteLength, 0,

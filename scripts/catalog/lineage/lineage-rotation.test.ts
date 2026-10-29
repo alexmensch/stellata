@@ -7,7 +7,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { declareOutputs, emitArtifacts, EmissionRefused } from '../../util/emit-artifacts';
 import type { StageHeader } from './lineage-header-pure';
 import {
-  lineageLayout, readLineage, rotationMembers, stageEmission, stageFamilies, stageFile,
+  baselineMembers, lineageLayout, readLineage, stageEmission, stageFamilies, stageFile,
   stageOutputFiles, type LineageLayout,
 } from './lineage-io';
 import { paramsText, stageLineageText } from './lineage-row-pure';
@@ -29,10 +29,11 @@ function text(source: string): string {
   }]);
 }
 
-function run(source: string, opts: { fail?: boolean; diff?: string | null } = {}): void {
+function run(source: string, opts: { fail?: boolean; diff?: string | null; rotate?: boolean } = {}): void {
   const outputs = declareOutputs(stageOutputFiles(layout, SPEC), stageFamilies(layout, SPEC));
   const { files, members } = stageEmission(
     layout, SPEC, { demo: text(source), identity: text(`id-${source}`) }, header(source), opts.diff ?? null,
+    opts.rotate ?? true,
   );
   emitArtifacts({
     outputs, files, members,
@@ -81,6 +82,17 @@ describe('stage rotation', () => {
     }
   });
 
+  it('keeps a pinned merge-base baseline across branch builds that do not rotate', () => {
+    run('base');
+    run('branch-1');
+    const pinned = readFileSync(stageFile(layout.previous, 'demo'));
+    run('branch-2', { rotate: false });
+    run('branch-3', { rotate: false });
+    expect(readFileSync(stageFile(layout.previous, 'demo'))).toEqual(pinned);
+    expect(readFileSync(resolve(layout.previous, 'demo.header.json'), 'utf8')).toMatch(/"commit": "base"/);
+    expect(readLineage(stageFile(layout.current, 'demo'))[0].params).toBe('{"source":"branch-3"}');
+  });
+
   it('a run with no diff deletes the stale one', () => {
     run('one', { diff: 'change\n' });
     run('two');
@@ -99,7 +111,8 @@ describe('stage rotation', () => {
     run('one');
     run('two');
     const before = snapshot();
-    rotationMembers(layout, SPEC);
+    baselineMembers(layout, SPEC, true);
+    baselineMembers(layout, SPEC, false);
     expect(snapshot()).toEqual(before);
   });
 });

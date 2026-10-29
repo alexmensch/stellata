@@ -49,15 +49,34 @@ export type BaselineVerdict =
 export const ACCEPT_ANY_BASELINE_FLAG = '--any-baseline';
 export const AGAINST_FLAG = '--against';
 
+export function isMergeBaseBuild(read: HeaderRead, mergeBase: string | null): boolean {
+  return read.kind === 'read' && !read.header.dirty && mergeBase !== null && read.header.commit === mergeBase;
+}
+
+export interface BaselinePlan {
+  readonly verdict: BaselineVerdict;
+  /** Which directory the diff reads, when it runs. */
+  readonly from: 'previous' | 'current' | 'against' | null;
+    readonly rotate: boolean;
+}
+
+export function planBaseline(
+  previous: HeaderRead, source: BaselineSource, mergeBase: string | null, acceptAny: boolean,
+): BaselinePlan {
+  const pinned = isMergeBaseBuild(previous, mergeBase);
+  if (source.kind === 'against') return { verdict: { kind: 'diff', why: 'against' }, from: 'against', rotate: !pinned };
+  if (pinned) return { verdict: { kind: 'diff', why: 'merge-base' }, from: 'previous', rotate: false };
+  const verdict = judgeBaseline(source, mergeBase, acceptAny);
+  return { verdict, from: verdict.kind === 'diff' ? 'current' : null, rotate: true };
+}
+
 export function judgeBaseline(
   source: BaselineSource, mergeBase: string | null, acceptAny: boolean,
 ): BaselineVerdict {
   if (source.kind === 'absent') return { kind: 'none' };
   if (source.kind === 'against') return { kind: 'diff', why: 'against' };
   const read = source.header;
-  if (read.kind === 'read' && !read.header.dirty && mergeBase !== null && read.header.commit === mergeBase) {
-    return { kind: 'diff', why: 'merge-base' };
-  }
+  if (isMergeBaseBuild(read, mergeBase)) return { kind: 'diff', why: 'merge-base' };
   if (acceptAny) return { kind: 'diff', why: 'accepted' };
   const built = read.kind === 'missing'
     ? 'a baseline with no header'

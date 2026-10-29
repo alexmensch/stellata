@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { diffLineage, stageDiffText } from './lineage-diff-pure';
-import { judgeBaseline, type StageHeader } from './lineage-header-pure';
+import { judgeBaseline, planBaseline, type StageHeader } from './lineage-header-pure';
 import {
   compareLineageRows, compareUtf8, lineageRows, paramsOf, paramsText, stageLineageText,
   type LineageRow,
@@ -105,6 +105,19 @@ describe('judgeBaseline', () => {
       .toEqual({ kind: 'diff', why: 'accepted' });
     expect(judgeBaseline({ kind: 'against', dir: '/elsewhere' }, null, false))
       .toEqual({ kind: 'diff', why: 'against' });
+  });
+
+  it('pins a merge-base baseline in lineage.previous: diffs against it and never rotates over it', () => {
+    const read = (commit: string, dirty = false) => ({ kind: 'read' as const, header: header(commit, dirty) });
+    const branchBuild = { kind: 'checkout' as const, header: read('branch') };
+    expect(planBaseline(read('abc'), branchBuild, 'abc', false))
+      .toEqual({ verdict: { kind: 'diff', why: 'merge-base' }, from: 'previous', rotate: false });
+    expect(planBaseline({ kind: 'missing' }, { kind: 'checkout', header: read('abc') }, 'abc', false))
+      .toEqual({ verdict: { kind: 'diff', why: 'merge-base' }, from: 'current', rotate: true });
+    expect(planBaseline(read('abc', true), branchBuild, 'abc', false))
+      .toMatchObject({ verdict: { kind: 'refused' }, from: null, rotate: true });
+    expect(planBaseline(read('abc'), { kind: 'against', dir: '/x' }, 'abc', false))
+      .toEqual({ verdict: { kind: 'diff', why: 'against' }, from: 'against', rotate: false });
   });
 
   it('refuses, never crashes on, a header an older build wrote in another shape', () => {
