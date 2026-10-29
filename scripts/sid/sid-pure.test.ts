@@ -316,7 +316,7 @@ describe('head snapshot + append-only', () => {
   });
 });
 
-describe('ambiguous-designation drop', () => {
+describe('sameAsClasses', () => {
   const star = (label: string, ...designations: string[]): SidObject => ({
     designations,
     kind: 'star',
