@@ -72,7 +72,11 @@ export const PER_COMPONENT_SPECT_VIA: ReadonlySet<string> = new Set([
  *  + orbit-relation-cache finite-elements gate): BinaryOrbitField
  *  animates the pair only when P, T, e, a, ω, q are all present.
  *  i and Ω are optional (Tier-2 galactic-plane fallback). */
-export function hasRenderableOrbit(row: MultiplesTsvRow): boolean {
+export type RenderableOrbitRow = MultiplesTsvRow & {
+  pDays: number; tJd: number; e: number; aAU: number; omegaRad: number; q: number;
+};
+
+export function hasRenderableOrbit(row: MultiplesTsvRow): row is RenderableOrbitRow {
   return row.pDays !== null && row.tJd !== null && row.e !== null
     && row.aAU !== null && row.omegaRad !== null && row.q !== null;
 }
@@ -1818,12 +1822,12 @@ export function promoteCompanions(
   // (Composition with binary orbital motion).
   interface SystemicGroup {
     anchorIdx: number | null;
-    pairs: { pIdx: number; sIdx: number; q: number | null }[];
+    pairs: { pIdx: number; sIdx: number; q: number }[];
   }
   const systemicGroups = new Map<string, SystemicGroup>();
   const recordOrbitPair = (
     root: string, anchorIdx: number | null,
-    pIdx: number, sIdx: number, q: number | null,
+    pIdx: number, sIdx: number, q: number,
   ): void => {
     let g = systemicGroups.get(root);
     if (g === undefined) {
@@ -2041,7 +2045,7 @@ export function promoteCompanions(
       const { pIdx, sIdx, q } = g.pairs[0];
       const p = getStarAt(pIdx);
       const s = getStarAt(sIdx);
-      const w = Math.max(0, Math.min(1, q ?? 0.5));
+      const w = Math.max(0, Math.min(1, q));
       const vx = (1 - w) * p.vx + w * s.vx;
       const vy = (1 - w) * p.vy + w * s.vy;
       const vz = (1 - w) * p.vz + w * s.vz;
