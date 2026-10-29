@@ -28,7 +28,12 @@ import {
 } from '../companions/companion-promotion';
 import { readMagnitudeTerm } from './magnitude-term/magnitude-term';
 import { MAGNITUDE_FLOOR_V } from './magnitude-term/magnitude-term-pure';
-import { INHERITED_SPINE } from '../spine/inherited-spine-tsv';
+import { INHERITED_SPINE, spineLine } from '../spine/inherited-spine-tsv';
+import { CNS5 } from '../classic-ids/cns5-source';
+import { TYC2_HD } from '../classic-ids/tyc2-hd-source';
+import { HIP_PHOTOMETRY } from '../photometry/hip-photometry-source';
+import { MAGNITUDE_PULL } from './magnitude-term/magnitude-pull-source';
+import { sourceRowRef, sourceRowRefText } from '../../util/sources/row-ref-pure';
 import { loadPrimaryTables } from '../spine/primaries-tables';
 import {
   MEMBERSHIP_EXPECTED_FILE,
@@ -91,6 +96,13 @@ async function main(): Promise<void> {
     publishesGaiaParallax: (sourceId) => {
       const row = gaiaAstrometry.get(sourceId);
       return row !== undefined && gaiaHas5pSolution(row);
+    },
+    keys: {
+      spine: (index) => sourceRowRefText(sourceRowRef(INHERITED_SPINE, spineLine(index))),
+      iv25: (tyc) => sourceRowRefText(sourceRowRef(TYC2_HD, tyc)),
+      i239: (hip) => sourceRowRefText(sourceRowRef(HIP_PHOTOMETRY, hip)),
+      cns5: (id) => sourceRowRefText(sourceRowRef(CNS5, id)),
+      gaia: (sourceId) => sourceRowRefText(sourceRowRef(MAGNITUDE_PULL, sourceId)),
     },
   });
 

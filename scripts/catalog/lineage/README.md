@@ -23,6 +23,8 @@ scripts/catalog/lineage/
   lineage-diff-pure.ts           diffLineage, the merge-join; stageDiffText,
                                  the diff file.
   lineage-header-pure.ts         StageHeader and judgeBaseline.
+  identity-pure.ts               The identity row and its file; refuses two
+                                 records on one key.
   lineage-io.ts                  The on-disk layout (build/lineage/,
                                  lineage.previous/, lineage-diff/), the
                                  rotation and a stage's emission, gzip, git
@@ -42,7 +44,7 @@ source row that founded the record.
 | Record founded by | Origin key |
 |---|---|
 | a spine row | its line number in the frozen `data/athyg/inherited-spine.tsv` |
-| an addition group | the group anchor's source row; the other members are evidence |
+| an addition group | the group anchor's source row — its IV/25 star, else its I/239 HIP, else its CNS5 row; the other members are evidence |
 | a magnitude-term row | its Gaia DR3 `source_id` |
 | a promoted companion | its `multiples.tsv` `(system_id, comp)` |
 
@@ -60,13 +62,21 @@ applies it across that transition, so those records diff as a changed
 source rather than a deletion and an addition, and no SID event follows.
 
 Record index and SID are attributes, never keys. One **identity row** per
-record carries: the origin key, the record index (after the apparent-V
-sort), the SID (from allocation), the manifest's current five-cell tuple
-(`tyc`/`hip`/`hd`/`gl`/`gaia_source_id`, with the bound Gaia id), and the
-full designation set. The ledger views and trace take their key columns
-from this row only, never re-deriving them. A parked or dropped record
-never gets an index or a SID: both columns are a tagged variant, a value or
-`none` with the reason code that removed the record, never an empty cell.
+record (`build/lineage/identity.tsv.gz`, `identity-pure.ts`) carries the
+origin key, the manifest's current five-cell tuple
+(`tyc`/`hip`/`hd`/`gl`/`gaia_source_id`, with the bound Gaia id) and the
+full designation set, all written by membership. Each column lands with the
+stage that computes it, never as a placeholder: the record index (after the
+apparent-V sort) arrives when the sort stage gains lineage, the SID with
+allocation's. A record membership does not admit — a folded spine row, a
+component group — still gets one, keyed on the cells it arrived with, so
+trace finds it. The ledger views and trace take their key columns from
+this row, never re-deriving them — except where the deciding stage's input
+cells ARE the ledger's key: `binding-review.tsv` keys on the spine cells
+the derivation weighed, which its curated dispositions join on, so those
+ride the binding row's `params`. A parked or dropped record never gets an
+index or a SID: both columns are a tagged variant, a value or `none` with
+the reason code that removed the record, never an empty cell.
 
 The manifest's five-cell tuple (`tyc`/`hip`/`hd`/`gl`/`gaia_source_id`) is
 not the key: it changes exactly when a binding or label decision changes, so
@@ -266,7 +276,20 @@ still regenerated and diffed by CI, so a PR diff keeps showing the change:
 | `data/membership/parked-ledger.tsv` | placement park rows |
 
 `binding-review.tsv` and `rejected_bindings.tsv` are then two filters over
-one row type. Each view moves when its writing stage gains lineage.
+one row type. Each view moves when its writing stage gains lineage; the
+first four are views now ([The membership stage](#the-membership-stage)).
+
+## The membership stage
+
+`build:membership` is the first stage with lineage
+(`../membership/membership-lineage-pure.ts`). `buildMembership` returns a
+keyed outcome per decision — admission, fold, component, the spine
+derivation's verdict with every candidate it refused, a disposition, an
+addition's binding, each label flip and label drop — and
+`membershipLineageRow` is the one serialiser, its `switch` exhaustive so a
+new variant without a row fails typecheck. Every record gets an admission
+row. `membershipLedgers` generates the four ledgers from those rows and the
+identity rows alone, byte-identical to the files they replaced as writers.
 
 Curated human input stays hand-written and is read by the build or its
 tests: `binding-review-dispositions.tsv`, `spine-corrections.tsv`,

@@ -40,6 +40,10 @@ scripts/catalog/membership/
                                   queue's carries the key a disposition joins
                                   on; the additions ledger's, the
                                   /docs/catalog-driver.md#61-record-parity reason codes.
+  membership-lineage-pure.ts      This stage's lineage: reason codes, the
+                                  outcome union and its serialiser, and the
+                                  four ledgers as views of it
+                                  (../lineage/README.md#the-membership-stage).
   membership-manifest-pure.ts     Row assembly (spine side, additions), the
     (+ test)                      review queue and the dispositions settling
                                   it, the admission rule, the label drops, the readers of the
