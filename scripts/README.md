@@ -137,9 +137,12 @@ the merge-base ([Run-to-run diff](catalog/lineage/README.md#run-to-run-diff)).
 Every listed file is an output of a step `build:seed` runs
 ([Seeding builds](#seeding-builds--buildseed)), so refreshing the main
 checkout's seed is that one command. `worktree-seed.test.ts` holds each
-pattern to a declared output or stamp of one of those steps: a TypeScript
-step's `declareOutputs` constant, a Python step's answer to `--outputs`. A
-worktree made any other way
+pattern to a declared output or stamp of one of those steps — a TypeScript
+step's `declareOutputs` constant, a Python step's answer to `--outputs` — and
+the converse: every such file or stamp under `public/` or `build/` is listed.
+An output family needs no line of its own: the catalogue chunks have one, and
+the lineage baseline copies and diff are never seeded, since a worktree pins
+its own baseline. A worktree made any other way
 (`git worktree add`) builds from scratch.
 
 The private paper-store link is not in that list — the harness's copy skips
@@ -167,10 +170,12 @@ built, so the next build there sees them rewritten and rebuilds.
 ## Seeding builds — `build:seed`
 
 `pnpm run build:seed` (`build-seed.sh`) runs `build:seed-steps` — exactly the
-steps whose outputs seed a new worktree ([Building in a worktree](#building-in-a-worktree)): `build:stamped`
-with `build:membership` before `build:catalog`, which reads the manifest it
-writes, so the main checkout always holds the lineage baseline a worktree
-diffs against — with one build per checkout. Each run registers `build/build-seed/<start ns>.<pid>`
+steps whose outputs seed a new worktree ([Building in a worktree](#building-in-a-worktree)) — with one
+build per checkout. That is `build:binaries`, `build:membership`, then
+`build:stamped`, whose `build:binaries` finds its stamp current and skips:
+membership reads `multiples.tsv` and `build:catalog` reads the manifest it
+writes, and running it keeps the main checkout holding the lineage baseline a
+worktree diffs against. Each run registers `build/build-seed/<start ns>.<pid>`
 before looking at the others, then stops every older live run and waits for it
 to exit, or exits at once if a newer one is registered; so the newest run
 builds and no two ever build at the same time, however many start together. A
