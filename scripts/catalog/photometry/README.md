@@ -141,11 +141,12 @@ B−V = (G−V)(BP−RP) − (G−B)(BP−RP)    inside both relations' validity
   → none                              the record bakes SOLAR_BV_FALLBACK
 ```
 
-Per-tier routing, pinned in build-counts: `gaia_relation` **342,594** ·
-`printed_hip_bv` **9,830** · `gspc` **11,907** · `spectral_derived` **4,510** ·
-`none` **3,004** (pinned as `ciSolarFallback`). The relation carries the bulk; the two measured
-tiers under it split the **21,737** rows past its colour and saturation
-bounds, and **7,514** reach neither and take a derived colour.
+Per-tier routing, pinned in build-counts: `gaia_relation` **<!-- count:build-catalog/ciGaiaRelation -->881,769<!-- /count -->** ·
+`printed_hip_bv` **<!-- count:build-catalog/ciPrintedHipBv -->9,754<!-- /count -->** · `gspc` **<!-- count:build-catalog/ciGspc -->12,014<!-- /count -->** ·
+`spectral_derived` **<!-- count:build-catalog/ciSpectralDerived -->3,775<!-- /count -->** · `none` **<!-- count:build-catalog/ciSolarFallback -->57,690<!-- /count -->** (pinned as
+`ciSolarFallback`). The relation carries the bulk; the two measured tiers under
+it take the rows past its colour and saturation bounds, and the rest reach
+neither and take a derived colour or none.
 
 The spine's printed `ci` cell used to sit where those two tiers now do. It is
 not a source — it is AT-HYG's amalgamation of catalogues we can pull
