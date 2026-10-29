@@ -6,23 +6,26 @@ import { runStep } from '../../util/emit-artifacts';
 import { readArtifact } from '../../util/sources/source';
 import { LEDGER } from '../../sid/ledger-tsv';
 import { catalogRecordDesignations } from '../../sid/catalog-designations';
-import { loadCatalog, lookupByName, type Catalog } from '../catalog-lookup';
+import { loadCatalog, nameTable, type SearchableCatalog } from '../catalog-lookup';
 import { LINEAGE_LAYOUT, readIdentity, readLineage, stageFile } from './lineage-io';
 import { LINEAGE_STAGES } from './lineage-stages';
 import { parseTraceQuery, queryTerms, traceRecords, traceText, type TraceLookups } from './trace-pure';
 
 const DIR_FLAG = '--dir';
 
-function lookups(catalog: Catalog | null): TraceLookups {
+function lookups(catalog: SearchableCatalog | null): TraceLookups {
+  const need = (): SearchableCatalog => {
+    if (catalog === null) throw new Error('a name query needs the built catalogue');
+    return catalog;
+  };
   return {
     canonicalKey: (sid) => readArtifact(LEDGER).find((r) => r.sid === sid)?.canonicalKey ?? null,
-    nameDesignations: (name) => {
-      if (catalog === null) throw new Error('a name query needs the built catalogue');
-      const record = lookupByName(catalog, name);
-      if (record === null) return null;
-      if (catalog.searchIndex === undefined) throw new Error('a name query needs the search index');
-      const all = catalogRecordDesignations(catalog, catalog.searchIndex, {});
-      return all.find((r) => r.i === record.i)?.designations ?? null;
+    names: () => nameTable(need()),
+    designations: (i) => {
+      const named = need();
+      const found = catalogRecordDesignations(named, named.searchIndex, {}).find((r) => r.i === i);
+      if (found === undefined) throw new Error(`record ${i} has no designation set`);
+      return found.designations;
     },
   };
 }

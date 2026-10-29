@@ -9,7 +9,7 @@ import { REPO_ROOT } from '../../util/paths';
 import { identityRows } from './identity-pure';
 import { gzipText, stageFile } from './lineage-io';
 import { lineageRows } from './lineage-row-pure';
-import { parseTraceQuery, queryTerms, traceRecords, traceText, type TraceLookups } from './trace-pure';
+import { matchName, parseTraceQuery, queryTerms, traceRecords, traceText, type TraceLookups } from './trace-pure';
 
 const REFUSED_ONLY = '4000000000000000009';
 const PARKED = '5000000000000000001';
@@ -34,10 +34,17 @@ const MEMBERSHIP = [
 
 const identity = [...identityRows(IDENTITY, 'fixture/identity.tsv')];
 const stages = [{ stage: 'membership', rows: [...lineageRows(MEMBERSHIP, 'fixture/membership.tsv')] }];
-/** SID 7's canonical key is HD 5; "Fixture Star" is the record on HD 5. */
+/** SID 7's canonical key is HD 5; record 0, "Fixture Star", "Yunü" or "Yunu", is the
+ *  record on HD 5; records 1 and 2 are case-only designation twins; records 3
+ *  and 4 both display "54 Leo". */
+const NAMES = new Map([
+  ['Fixture Star', [0]], ['Yunü', [0]], ['Yunu', [0]], ['a Car', [1]], ['A Car', [2]], ['54 Leo', [3, 4]],
+]);
+const DESIGNATIONS = [['hd:5', 'gaia_dr3:222'], ['hd:9'], ['hd:10'], ['hd:11'], ['hd:12']];
 const LOOKUPS: TraceLookups = {
   canonicalKey: (sid) => (sid === 7 ? 'hd:5' : null),
-  nameDesignations: (name) => (name === 'Fixture Star' ? ['hd:5', 'gaia_dr3:222'] : null),
+  names: () => NAMES,
+  designations: (i) => DESIGNATIONS[i],
 };
 const trace = (query: string) => {
   const { designations, terms } = queryTerms(parseTraceQuery(query), LOOKUPS);
@@ -52,6 +59,27 @@ describe('parseTraceQuery', () => {
     expect(parseTraceQuery('sid:7')).toEqual({ kind: 'sid', sid: 7 });
     expect(parseTraceQuery('hd:5')).toEqual({ kind: 'designation', designation: 'hd:5' });
     expect(parseTraceQuery('Sirius')).toEqual({ kind: 'name', name: 'Sirius' });
+  });
+});
+
+describe('matchName', () => {
+  it('takes an exact hit over a fold, then folds case and accents', () => {
+    expect(matchName(NAMES, 'a Car')).toEqual({ kind: 'found', i: 1 });
+    expect(matchName(NAMES, 'A Car')).toEqual({ kind: 'found', i: 2 });
+    expect(matchName(NAMES, 'FIXTURE STAR')).toEqual({ kind: 'found', i: 0 });
+    expect(matchName(NAMES, 'yunu')).toEqual({ kind: 'found', i: 0 });
+    expect(matchName(NAMES, 'YUNU')).toEqual({ kind: 'found', i: 0 });
+    expect(matchName(NAMES, 'Nobody')).toEqual({ kind: 'missing' });
+  });
+
+  it('refuses a folded key reaching two records, naming both', () => {
+    expect(matchName(NAMES, 'A CAR')).toEqual({ kind: 'ambiguous', candidates: [['a Car', 1], ['A Car', 2]] });
+  });
+
+  it('refuses one string reaching two records, exact or folded', () => {
+    const both = { kind: 'ambiguous', candidates: [['54 Leo', 3], ['54 Leo', 4]] };
+    expect(matchName(NAMES, '54 Leo')).toEqual(both);
+    expect(matchName(NAMES, '54 leo')).toEqual(both);
   });
 });
 
@@ -78,6 +106,12 @@ describe('traceRecords over the fixture lineage', () => {
     expect(trace('Fixture Star').map((r) => r.key)).toEqual(['spine:3', 'spine:4']);
     expect(() => trace('sid:8')).toThrow(/SID 8 is not in the ledger/);
     expect(() => trace('Nobody')).toThrow(/no catalogue record is named "Nobody"/);
+  });
+
+  it('finds a name ignoring case and accents, refusing a fold that reaches two records', () => {
+    expect(trace('fixture star').map((r) => r.key)).toEqual(['spine:3', 'spine:4']);
+    expect(trace('Yunu').map((r) => r.key)).toEqual(['spine:3', 'spine:4']);
+    expect(() => trace('a car')).toThrow(/"a car" reaches more than one record: "a Car" \(record 1\), "A Car" \(record 2\)/);
   });
 
   it('says so when nothing names the query', () => {

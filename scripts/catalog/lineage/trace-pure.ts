@@ -1,6 +1,7 @@
 // trace: a query to the origin keys it names, and every stage's rows for them in stage order. See README.md#trace.
 
 import { isValidDesignation } from '../../sid/sid-pure';
+import { foldNameKey } from '../naming/wgsn-normalise-pure';
 import type { IdentityRow } from './identity-pure';
 import { compareLineageRows, compareUtf8, type LineageRow } from './lineage-row-pure';
 
@@ -27,8 +28,28 @@ export function parseTraceQuery(text: string): TraceQuery {
 export interface TraceLookups {
   /** The ledger's canonical key for a SID, or null for one it lacks. */
   canonicalKey(sid: number): string | null;
-  /** A built record's designations by name, or null for no such record. */
-  nameDesignations(name: string): readonly string[] | null;
+  /** Every name and composed label a built record displays, to the records it reaches. */
+  names(): ReadonlyMap<string, readonly number[]>;
+  /** A built record's full designation set. */
+  designations(i: number): readonly string[];
+}
+
+export type NameMatch =
+  | { readonly kind: 'found'; readonly i: number }
+  | { readonly kind: 'missing' }
+  | { readonly kind: 'ambiguous'; readonly candidates: readonly (readonly [string, number])[] };
+
+/** See README.md#trace, step 1. */
+export function matchName(names: ReadonlyMap<string, readonly number[]>, name: string): NameMatch {
+  const exact = names.get(name);
+  const key = foldNameKey(name);
+  const candidates = exact !== undefined
+    ? exact.map((i) => [name, i] as const)
+    : [...names].filter(([n]) => foldNameKey(n) === key).flatMap(([n, is]) => is.map((i) => [n, i] as const));
+  const records = new Set(candidates.map(([, i]) => i));
+  if (records.size === 0) return { kind: 'missing' };
+  if (records.size === 1) return { kind: 'found', i: candidates[0][1] };
+  return { kind: 'ambiguous', candidates };
 }
 
 const GAIA_DESIGNATION = /^gaia_dr3:([0-9]+)$/;
@@ -49,9 +70,13 @@ export function queryTerms(
       break;
     }
     case 'name': {
-      const found = lookups.nameDesignations(q.name);
-      if (found === null) throw new Error(`no catalogue record is named "${q.name}"`);
-      designations = found;
+      const match = matchName(lookups.names(), q.name);
+      if (match.kind === 'missing') throw new Error(`no catalogue record is named "${q.name}"`);
+      if (match.kind === 'ambiguous') {
+        const listed = match.candidates.map(([n, i]) => `"${n}" (record ${i})`).join(', ');
+        throw new Error(`"${q.name}" reaches more than one record: ${listed}; give the exact name or a designation`);
+      }
+      designations = lookups.designations(match.i);
       break;
     }
     default: {

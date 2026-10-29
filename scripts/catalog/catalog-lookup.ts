@@ -110,6 +110,10 @@ export interface LoadCatalogOptions {
 
 interface ConstellationEntry { code: string }
 
+export type SearchableCatalog = Catalog & { readonly searchIndex: readonly SearchEntry[] };
+
+export function loadCatalog(opts: LoadCatalogOptions & { withSearchIndex: true }): Promise<SearchableCatalog>;
+export function loadCatalog(opts?: LoadCatalogOptions): Promise<Catalog>;
 export async function loadCatalog(opts: LoadCatalogOptions = {}): Promise<Catalog> {
   const manifestPath = opts.catalogManifestPath ?? DEFAULT_CATALOG_MANIFEST;
   const conPath = opts.constellationsJsonPath ?? DEFAULT_CONSTELLATIONS_JSON;
@@ -196,8 +200,8 @@ interface CatalogIndexes {
   /** Every string a record DISPLAYS: the name table, plus — where the
    *  search index was loaded — the labels the display-name composer builds
    *  from the wire, which is where a Bayer / Flamsteed / component
-   *  designation lives (`naming/README.md`). The name table wins a tie. */
-  byName: Map<string, number>;
+   *  designation lives (`naming/README.md`), to every record it reaches. */
+  byName: Map<string, number[]>;
   /** The composed display label per record index — the reverse of the
    *  designation half of `byName`. Empty without the search index. */
   labelByIndex: Map<number, string>;
@@ -214,11 +218,16 @@ function getIndexes(catalog: Catalog): CatalogIndexes {
   if (hit) return hit;
   const byHip = new Map<number, number>();
   const byGaiaSourceId = new Map<string, number>();
-  const byName = new Map<string, number>();
+  const byName = new Map<string, number[]>();
+  const addName = (name: string, i: number): void => {
+    const records = byName.get(name);
+    if (records === undefined) byName.set(name, [i]);
+    else if (!records.includes(i)) records.push(i);
+  };
   for (const r of catalog.records()) {
     if (r.hip !== null) byHip.set(r.hip, r.i);
     if (r.gaiaSourceId !== null) byGaiaSourceId.set(r.gaiaSourceId.toString(), r.i);
-    if (r.name) byName.set(r.name, r.i);
+    if (r.name) addName(r.name, r.i);
   }
   const byHd = buildAliasedIdIndex(
     catalog.searchIndex ?? [], (e) => e.hd, (e) => e.hda,
@@ -229,7 +238,7 @@ function getIndexes(catalog: Catalog): CatalogIndexes {
       catalog.searchIndex, catalog.constellations,
     )) {
       labelByIndex.set(i, label.label);
-      if (!byName.has(label.label)) byName.set(label.label, i);
+      addName(label.label, i);
     }
   }
   const built = { byHip, byGaiaSourceId, byName, byHd, labelByIndex };
@@ -258,13 +267,22 @@ export function lookupByGaiaSourceId(catalog: Catalog, sourceId: bigint | string
   return i === undefined ? null : catalog.record(i);
 }
 
+/** `byName` whole: every name and composed label to the records it reaches. */
+export function nameTable(catalog: Catalog): ReadonlyMap<string, readonly number[]> {
+  return getIndexes(catalog).byName;
+}
+
 /** Throws rather than answering null when a name misses and the catalog was
  *  loaded without its search index: the name table holds only the NAME
  *  tiers, so a corpus row naming a star by its DESIGNATION would read as
- *  "no such record" and silently stop testing anything. */
+ *  "no such record" and silently stop testing anything. Throws, too, on a
+ *  name two records answer to, rather than binding either. */
 export function lookupByName(catalog: Catalog, name: string): CatalogRecord | null {
-  const i = getIndexes(catalog).byName.get(name);
-  if (i !== undefined) return catalog.record(i);
+  const records = getIndexes(catalog).byName.get(name);
+  if (records !== undefined && records.length > 1) {
+    throw new Error(`name: record ref "${name}" reaches records ${records.join(', ')} — name it by a designation`);
+  }
+  if (records !== undefined) return catalog.record(records[0]);
   if (catalog.searchIndex === undefined) {
     throw new Error(
       `name: record ref "${name}" missed catalog.bin's name table, which carries `
