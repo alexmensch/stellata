@@ -258,6 +258,11 @@ export function lookupByGaiaSourceId(catalog: Catalog, sourceId: bigint | string
   return i === undefined ? null : catalog.record(i);
 }
 
+/** `byName` whole: every name and composed label to its record index. */
+export function nameTable(catalog: Catalog): ReadonlyMap<string, number> {
+  return getIndexes(catalog).byName;
+}
+
 /** Throws rather than answering null when a name misses and the catalog was
  *  loaded without its search index: the name table holds only the NAME
  *  tiers, so a corpus row naming a star by its DESIGNATION would read as

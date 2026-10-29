@@ -138,6 +138,9 @@ scripts/catalog/
                                   name table AND the composed display labels,
                                   so a corpus row may name a star by the
                                   designation it displays (`naming/README.md`).
+                                  That match is exact; `nameTable` hands
+                                  trace the same table for its folded one
+                                  (lineage/README.md#trace).
   build-counts.ts (+ test)        Per-strategy / per-tier count snapshot
                                   comparator, pinned by
                                   build-catalog-expected.json. Generic over

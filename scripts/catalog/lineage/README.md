@@ -39,8 +39,10 @@ scripts/catalog/lineage/
   generate-reason-codes.ts       `pnpm run lineage:codes`.
   reason-codes.test.ts           The list equals its generation, and is
                                  append-only against the merge-base.
-  trace-pure.ts (+ test)         The query parse and the record search.
+  trace-pure.ts                  The query parse, the name match and the
+                                 record search.
   trace.ts                       `pnpm run trace` (#trace).
+  trace.test.ts                  Both, the command over a committed fixture.
   stage-lineage.ts               stageLineage: one stage's files, header,
                                  baseline plan, diff and budget check,
                                  ready for the stage's emitArtifacts call.
@@ -296,10 +298,16 @@ more bare digits, or `gaia_dr3:<id>`, is a Gaia id (a SID never runs that
 long); fewer, or `sid:<n>`, a SID; `ns:key` a designation; anything else a
 name.
 
-1. A name resolves through `catalog-lookup.ts`'s `lookupByName` to its
+1. A name resolves over the name table `lookupByName` reads (`nameTable`,
+   `catalog-lookup.ts`: names plus composed designation labels) to its
    record's full designation set (`catalogRecordDesignations`, `../../sid/`),
-   so it needs a built catalogue; designations follow `sid-pure.ts`'s grammar;
-   a SID resolves to its canonical key through the ledger.
+   so it needs a built catalogue. `matchName` tries the name exactly, then
+   case- and accent-folded (`foldNameKey`, `../naming/`), so `algol` finds
+   Algol and `Yunu` finds Yunü. A folded name reaching two records refuses,
+   listing both: the designation half has case-only twins that are different
+   stars (`a Car`, `A Car`). `lookupByName` itself stays exact, for the
+   frozen corpora. Designations follow `sid-pure.ts`'s grammar; a SID
+   resolves to its canonical key through the ledger.
 2. Find the origin keys whose identity rows carry that designation. Parked
    and dropped records have lineage rows too, so they are found. Also find
    every row that names it in `params` or `evidence` — a source a gate
