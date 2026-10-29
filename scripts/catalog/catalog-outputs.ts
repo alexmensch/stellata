@@ -8,22 +8,14 @@ import { REPO_ROOT } from '../util/paths';
 import {
   DEFAULT_CATALOG_MANIFEST, DEFAULT_CONSTELLATIONS_JSON, DEFAULT_ROW_INDEX_MAP, DEFAULT_SEARCH_INDEX,
 } from './catalog-lookup';
-import { PROMOTION_STAGE } from './companions/promotion-lineage-pure';
+import { PROMOTION_LINEAGE } from './companions/promotion-lineage-pure';
 import { PARKED_LEDGER } from './distance/parallax/parked-ledger-tsv';
-import {
-  LINEAGE_LAYOUT, stageFamilies, stageOutputFiles, type StageLineageSpec,
-} from './lineage/lineage-io';
+import { LINEAGE_LAYOUT, stageFamilies, stageOutputFiles } from './lineage/lineage-io';
 import { SIMBAD_SOURCED_DISTANCES_FILE } from './distance/parallax/simbad-sourced-ledger-tsv';
 import { CATALOG_CHUNK_FILENAME } from './record/catalog-pure';
 
 export const CATALOG_CHUNK_DIR = dirname(DEFAULT_CATALOG_MANIFEST);
 export const OUT_BOUNDARIES = resolve(REPO_ROOT, 'public/constellation-boundaries.json');
-
-export const PROMOTION_LINEAGE: StageLineageSpec<'promotion' | 'promotion.identity'> = {
-  stage: PROMOTION_STAGE,
-  files: ['promotion', 'promotion.identity'],
-  identity: 'promotion.identity',
-};
 
 export const CATALOG_OUTPUTS = declareOutputs(
   {

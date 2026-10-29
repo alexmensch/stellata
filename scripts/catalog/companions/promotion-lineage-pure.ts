@@ -4,12 +4,19 @@ import { MULTIPLES_TSV } from '../../binaries/multiples-tsv';
 import { starDesignations } from '../../sid/sid-pure';
 import { sourceRowRef, sourceRowRefText } from '../../util/sources/row-ref-pure';
 import type { IdentityRow } from '../lineage/identity-pure';
+import type { StageLineageSpec } from '../lineage/lineage-io';
 import { paramsText, type LineageParams, type LineageRow } from '../lineage/lineage-row-pure';
 import { LIVE, stageCodes, type CodeDeclaration } from '../lineage/reason-codes-pure';
 import type { Star } from '../parse/stars-parse';
 import type { MintedBrightness, MultiplesTsvRow, PromotedRow, RowOutcome } from './companion-promotion';
 
 export const PROMOTION_STAGE = 'promotion';
+
+export const PROMOTION_LINEAGE: StageLineageSpec<'promotion' | 'promotion.identity'> = {
+  stage: PROMOTION_STAGE,
+  files: ['promotion', 'promotion.identity'],
+  identity: 'promotion.identity',
+};
 
 export const PROMOTION_LINEAGE_BUDGET = { gzipBytes: 800_000, writeMs: 5_000 };
 

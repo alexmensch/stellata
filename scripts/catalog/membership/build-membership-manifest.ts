@@ -7,13 +7,13 @@ import { resolve } from 'node:path';
 import { REPO_ROOT as ROOT } from '../../util/paths';
 import { emitArtifacts, runStep } from '../../util/emit-artifacts';
 import { artifactRows, readArtifact } from '../../util/sources/source';
-import { MEMBERSHIP_LINEAGE, MEMBERSHIP_OUTPUTS } from './membership-manifest-outputs';
+import { MEMBERSHIP_OUTPUTS } from './membership-manifest-outputs';
 import { identityText } from '../lineage/identity-pure';
 import { LINEAGE_LAYOUT, readIdentity, stageFile } from '../lineage/lineage-io';
 import { stageLineageText } from '../lineage/lineage-row-pure';
 import { stageLineage } from '../lineage/stage-lineage';
 import {
-  MEMBERSHIP_CODES, MEMBERSHIP_LINEAGE_BUDGET, multiplesComponentJoin,
+  MEMBERSHIP_CODES, MEMBERSHIP_LINEAGE_BUDGET, multiplesComponentJoin, MEMBERSHIP_LINEAGE,
 } from './membership-lineage-pure';
 import { snapshotCheck } from '../../util/snapshot-check';
 import { compareCountSnapshot } from '../build-counts';

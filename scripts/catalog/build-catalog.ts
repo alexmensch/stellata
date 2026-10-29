@@ -77,7 +77,7 @@ import {
   RECURATED_BRIGHTNESS,
 } from './companions/companion-promotion';
 import {
-  PROMOTION_CODES, PROMOTION_LINEAGE_BUDGET, promotionIdentityRows, promotionLineageRow,
+  PROMOTION_CODES, PROMOTION_LINEAGE, PROMOTION_LINEAGE_BUDGET, promotionIdentityRows, promotionLineageRow,
 } from './companions/promotion-lineage-pure';
 import { identityText } from './lineage/identity-pure';
 import { LINEAGE_LAYOUT } from './lineage/lineage-io';
@@ -138,7 +138,7 @@ import {
   DEFAULT_ROW_INDEX_MAP, DEFAULT_SEARCH_INDEX as OUT_SEARCH,
 } from './catalog-lookup';
 import {
-  CATALOG_CHUNK_DIR, CATALOG_OUTPUTS, CATALOG_STAMP, OUT_BOUNDARIES, PROMOTION_LINEAGE,
+  CATALOG_CHUNK_DIR, CATALOG_OUTPUTS, CATALOG_STAMP, OUT_BOUNDARIES,
 } from './catalog-outputs';
 import {
   emitArtifacts, runStep, sweepStaged, type ArtifactContents, type Check,

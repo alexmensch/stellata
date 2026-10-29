@@ -32,8 +32,9 @@ scripts/catalog/lineage/
                                  which baseline a build diffs against.
   identity-pure.ts               The identity row and its file; refuses two
                                  records on one key.
-  lineage-stages.ts              LINEAGE_STAGES, every stage's codes in
-                                 pipeline order.
+  lineage-stages.ts              LINEAGE_STAGES, every stage's codes and
+                                 files in pipeline order: the one list the
+                                 code generator and trace read.
   reason-code-list-pure.ts       reasonCodeList, the generated list, and
                                  appendOnlyViolations.
   reason-codes-tsv.ts            REASON_CODES, the list's codec.
