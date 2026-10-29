@@ -139,13 +139,17 @@ export function mergeBaseWithMain(): string | null {
   }
 }
 
+export function packageVersion(): string {
+  return (JSON.parse(readFileSync(resolve(REPO_ROOT, PACKAGE_JSON), 'utf8')) as { version: string }).version;
+}
+
 export async function stageHeader<F extends string>(
   spec: StageLineageSpec<F>, script: string,
 ): Promise<StageHeader> {
   const hashes = fileHashes(await stepInputPaths(script));
   return {
     stage: spec.stage,
-    version: (JSON.parse(readFileSync(resolve(REPO_ROOT, PACKAGE_JSON), 'utf8')) as { version: string }).version,
+    version: packageVersion(),
     commit: headCommit(),
     inputHash: createHash('sha1').update(JSON.stringify(hashes)).digest('hex'),
     files: spec.files.map(fileName),

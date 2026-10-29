@@ -12,6 +12,7 @@ this file carries only the cross-folder policies.
 | [`athyg/`](athyg/README.md) | AT-HYG v3.3 base stellar catalogue (classic-IDs subset) + the frozen inherited spine derived from it. Neither is a `build:catalog` input. |
 | [`classic-ids/`](classic-ids/README.md) | Frozen CDS HD/HR/Bayer/Flamsteed/GJ cross indexes + the source_id-keyed overlay joined from them. |
 | [`membership/`](membership/README.md) | Pipeline-derived membership manifest (`build:membership`): **the record build's membership term**, its [§ 6.1](/docs/catalog-driver.md#61-record-parity) additions and parked ledgers, and the binding review queue. |
+| [`lineage/`](lineage/README.md) | The generated, append-only list of record-lineage reason codes every pipeline decision is coded from (`pnpm run lineage:codes`). |
 | [`iau-wgsn/`](iau-wgsn/README.md) | IAU WGSN approved names + glyph-bearing designations (the naming authority) + the derived keyed tables. |
 | [`bailer-jones/`](bailer-jones/README.md) | [Bailer-Jones 2021](/data/papers/index.md#bailerjones2021) Bayesian distance posteriors. |
 | [`gaia/`](gaia/README.md) | Gaia DR3 — cross-walks, astrometry, NSS orbits, Apsis, and the `G ≤ 11` magnitude term of membership. |

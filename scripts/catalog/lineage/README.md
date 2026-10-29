@@ -25,6 +25,13 @@ scripts/catalog/lineage/
   lineage-header-pure.ts         StageHeader and judgeBaseline.
   identity-pure.ts               The identity row and its file; refuses two
                                  records on one key.
+  lineage-stages.ts              LINEAGE_STAGES, every stage's codes in
+                                 pipeline order.
+  reason-code-list-pure.ts       reasonCodeList, the generated list;
+  reason-codes-tsv.ts            appendOnlyViolations; REASON_CODES, its
+  generate-reason-codes.ts       codec; `pnpm run lineage:codes`.
+  reason-codes.test.ts           The list equals its generation, and is
+                                 append-only against the merge-base.
   stage-lineage.ts               stageLineage: one stage's files, header,
                                  baseline verdict, diff and budget check,
                                  ready for the stage's emitArtifacts call.
@@ -140,15 +147,18 @@ one text; `evidence` is its references' text forms joined by `|`.
 - One code per outcome-producing branch: two records with one code were
   decided for the same reason by the same code path. Per-instance detail goes
   in `params`, never the code.
-- Each stage declares its codes in its own module as `stage.rule-branch`.
-  The committed code list is generated from those declarations and checked
-  by CI, never hand-edited.
+- Each stage declares its codes in its own module as `stage.rule-branch`
+  (`stageCodes`), and `lineage-stages.ts` lists every stage. The committed
+  code list, `data/lineage/reason-codes.tsv`, is generated from those
+  declarations by `pnpm run lineage:codes` and checked by CI
+  (`reason-codes.test.ts`), never hand-edited.
 - A Python stage, with no compiler to force the mapping, declares its codes
   in a small data file beside it that the generator also reads, and a
   Python test checks that every outcome value it can emit maps to a row.
 - An entry carries the code, its stage, its declared effect (removal and
-  re-bind codes: retire, park or merge), a one-line description, the
-  version that first shipped it, and its status — `live`, `retired` (with
+  re-bind codes: retire, park or merge; `none` for every other code), a
+  one-line description, the version that first shipped it — the package
+  version of the tree that first generated it — and its status — `live`, `retired` (with
   the version that retired it) or `historical`, declared beside the code as
   a closed union. Historical codes carry legacy causes and are never mapped
   onto live ones.
@@ -156,7 +166,8 @@ one text; `evidence` is its references' text forms joined by `|`.
   change — the rule now picks different records — mints a new code; a fix
   that leaves the picked set unchanged keeps its code. CI diffs the
   generated list against its merge-base copy and fails if any code there is
-  missing, renamed, or has a changed stage, effect or description.
+  missing, renamed, or has a changed stage, effect, description or first
+  version, or a status moving any way but live to retired.
 - No placeholder codes. A stage gets its real codes before any change
   orphans a SID through it; an `*.unrecorded` code would be written into
   append-only `events.tsv` for good.
