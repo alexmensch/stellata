@@ -73,6 +73,7 @@ import type { SimbadXids } from '../spectral/spectral-resolve';
 import {
   UnionFind,
   compareDesignations,
+  sameAsClasses,
   type SameasEdge,
 } from '../../sid/sid-pure';
 import {
@@ -1307,29 +1308,12 @@ export function matchSpineToManifest(
   manifestRows: readonly ManifestRecord[],
   storedEdges: readonly SameasEdge[],
 ): SpineMatch {
-  const owners = new Map<string, number>();
-  const manifestSets = manifestRows.map(manifestDesignations);
-  for (const set of manifestSets) {
-    for (const d of new Set(set)) owners.set(d, (owners.get(d) ?? 0) + 1);
-  }
-  const uf = new UnionFind();
+  const { classes: uf, kept } = sameAsClasses(manifestRows.map(manifestDesignations), storedEdges);
   const rowByDesignation = new Map<string, number>();
-  manifestSets.forEach((set, i) => {
-    const kept = set.filter((d) => owners.get(d) === 1);
-    for (const d of kept) {
-      uf.add(d);
-      rowByDesignation.set(d, i);
-    }
-    for (let k = 1; k < kept.length; k++) uf.union(kept[0], kept[k]);
+  kept.forEach((ds, i) => {
+    for (const d of ds) rowByDesignation.set(d, i);
   });
-  const endpoints = new Set<string>();
-  for (const e of storedEdges) {
-    uf.add(e.a);
-    uf.add(e.b);
-    uf.union(e.a, e.b);
-    endpoints.add(e.a);
-    endpoints.add(e.b);
-  }
+  const endpoints = new Set(storedEdges.flatMap((e) => [e.a, e.b]));
   const rowsByRoot = new Map<string, Set<number>>();
   for (const [d, i] of rowByDesignation) {
     const root = uf.find(d);

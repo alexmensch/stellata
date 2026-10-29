@@ -597,17 +597,25 @@ export interface AllocateResult {
   mergedClasses: { sid: number; objects: number[] }[];
 }
 
-/** Designations carried by more than one object name a catalogue
- *  granularity (an HD number covering both members of a pair), not one
- *  physical object: they are dropped from the same-as graph so they can
- *  neither key a ledger row nor fuse two objects' identities. */
-export function dropAmbiguousDesignations(objects: SidObject[]): {
+export interface SameAsClasses {
+  classes: UnionFind;
+  /** Per object, its designations less the ambiguous ones. */
   kept: string[][];
   ambiguous: AmbiguousDesignation[];
-} {
+}
+
+/** The same-as graph over each object's designations plus the stored edges.
+ *  A designation carried by more than one object names a catalogue
+ *  granularity (an HD number covering both members of a pair), not one
+ *  physical object: it is dropped first, so it can neither key a ledger row
+ *  nor fuse two objects' identities. */
+export function sameAsClasses(
+  designationSets: readonly (readonly string[])[],
+  storedEdges: readonly SameasEdge[],
+): SameAsClasses {
   const owners = new Map<string, number[]>();
-  objects.forEach((obj, i) => {
-    for (const d of new Set(obj.designations)) {
+  designationSets.forEach((ds, i) => {
+    for (const d of new Set(ds)) {
       const list = owners.get(d);
       if (list) list.push(i);
       else owners.set(d, [i]);
@@ -618,10 +626,19 @@ export function dropAmbiguousDesignations(objects: SidObject[]): {
     if (objs.length > 1) ambiguous.push({ designation, objects: objs });
   }
   const ambiguousSet = new Set(ambiguous.map((a) => a.designation));
-  const kept = objects.map((obj) =>
-    [...new Set(obj.designations)].filter((d) => !ambiguousSet.has(d)),
-  );
-  return { kept, ambiguous };
+  const kept = designationSets.map((ds) => [...new Set(ds)].filter((d) => !ambiguousSet.has(d)));
+
+  const classes = new UnionFind();
+  for (const ds of kept) {
+    for (const d of ds) classes.add(d);
+    for (let k = 1; k < ds.length; k++) classes.union(ds[0], ds[k]);
+  }
+  for (const edge of storedEdges) {
+    classes.add(edge.a);
+    classes.add(edge.b);
+    classes.union(edge.a, edge.b);
+  }
+  return { classes, kept, ambiguous };
 }
 
 export function allocate(input: AllocateInput): AllocateResult {
@@ -632,19 +649,11 @@ export function allocate(input: AllocateInput): AllocateResult {
     for (const d of obj.designations) parseDesignation(d);
   }
 
-  const { kept, ambiguous } = dropAmbiguousDesignations(objects);
+  const { classes: uf, kept, ambiguous } = sameAsClasses(
+    objects.map((o) => o.designations),
+    storedEdges,
+  );
   const keyless = kept.flatMap((ds, i) => (ds.length === 0 ? [i] : []));
-
-  const uf = new UnionFind();
-  for (const ds of kept) {
-    for (const d of ds) uf.add(d);
-    for (let k = 1; k < ds.length; k++) uf.union(ds[0], ds[k]);
-  }
-  for (const edge of storedEdges) {
-    uf.add(edge.a);
-    uf.add(edge.b);
-    uf.union(edge.a, edge.b);
-  }
   for (const row of ledger) uf.add(row.canonicalKey);
 
   const retiredBySid = effectiveRetirements(retirements, reinstatements);
