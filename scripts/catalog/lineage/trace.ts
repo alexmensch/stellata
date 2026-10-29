@@ -2,6 +2,7 @@
 
 import { existsSync } from 'node:fs';
 
+import { runStep } from '../../util/emit-artifacts';
 import { readArtifact } from '../../util/sources/source';
 import { LEDGER } from '../../sid/ledger-tsv';
 import { loadCatalog, lookupByName } from '../catalog-lookup';
@@ -56,7 +57,4 @@ async function main(): Promise<void> {
   process.stdout.write(traceText(traceRecords(designations, terms, readIdentity(identityPath), stages)));
 }
 
-main().catch((err: unknown) => {
-  console.error(err instanceof Error ? err.message : err);
-  process.exit(1);
-});
+runStep(main);
