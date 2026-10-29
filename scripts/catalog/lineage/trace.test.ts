@@ -34,11 +34,11 @@ const MEMBERSHIP = [
 
 const identity = [...identityRows(IDENTITY, 'fixture/identity.tsv')];
 const stages = [{ stage: 'membership', rows: [...lineageRows(MEMBERSHIP, 'fixture/membership.tsv')] }];
-/** SID 7's canonical key is HD 5; record 0, "Fixture Star" or "Yunü", is the
+/** SID 7's canonical key is HD 5; record 0, "Fixture Star", "Yunü" or "Yunu", is the
  *  record on HD 5; records 1 and 2 are case-only designation twins; records 3
  *  and 4 both display "54 Leo". */
 const NAMES = new Map([
-  ['Fixture Star', [0]], ['Yunü', [0]], ['a Car', [1]], ['A Car', [2]], ['54 Leo', [3, 4]],
+  ['Fixture Star', [0]], ['Yunü', [0]], ['Yunu', [0]], ['a Car', [1]], ['A Car', [2]], ['54 Leo', [3, 4]],
 ]);
 const DESIGNATIONS = [['hd:5', 'gaia_dr3:222'], ['hd:9'], ['hd:10'], ['hd:11'], ['hd:12']];
 const LOOKUPS: TraceLookups = {
@@ -68,6 +68,7 @@ describe('matchName', () => {
     expect(matchName(NAMES, 'A Car')).toEqual({ kind: 'found', i: 2 });
     expect(matchName(NAMES, 'FIXTURE STAR')).toEqual({ kind: 'found', i: 0 });
     expect(matchName(NAMES, 'yunu')).toEqual({ kind: 'found', i: 0 });
+    expect(matchName(NAMES, 'YUNU')).toEqual({ kind: 'found', i: 0 });
     expect(matchName(NAMES, 'Nobody')).toEqual({ kind: 'missing' });
   });
 
