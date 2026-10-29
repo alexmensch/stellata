@@ -92,13 +92,13 @@ scripts/catalog/
                                   checks pass. On a SID error it lands them
                                   with no checks and then fails
                                   ([SID allocation](#sid-allocation)).
-  catalog-inputs.ts (+ test)      catalogInputPaths — every file the build
-                                  reads, which its content-hash stamp keys:
-                                  the import closure plus sibling snapshots
-                                  (../util/import-closure-pure.ts, the rule
-                                  CI's cache key shares) and every declared
-                                  source and artifact that closure reaches
-                                  (../util/sources/), less the build's own
+  catalog-inputs.test.ts          Pins stepInputPaths('build:catalog')
+                                  (../util/step-inputs.ts) — every file the
+                                  build reads, which its content-hash stamp
+                                  keys: the import closure plus sibling
+                                  snapshots (the rule CI's cache key shares)
+                                  and every declared source and artifact that
+                                  closure reads, less the build's own
                                   outputs.
   catalog-outputs.ts (+ test)     CATALOG_OUTPUTS — every file the build
                                   writes, as its emitArtifacts declaration

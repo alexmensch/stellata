@@ -68,6 +68,11 @@ label-drops.tsv          Regular git. The /docs/catalog-driver.md#62-label-parit
                          flamsteed_unattested (119) · hd_unattested (1).
 ```
 
+The three ledgers above that `build:membership` writes, and
+`../classic-ids/label_flips.tsv`, are views of the stage's lineage
+([The membership stage](/scripts/catalog/lineage/README.md#the-membership-stage)):
+no code writes their rows except by generating them from it.
+
 `data/membership/*.tsv` is a blanket LFS rule, so the small files carry their
 own `!filter` lines in `.gitattributes` — a review queue on LFS shows a
 reviewer an oid instead of the rows. Any further small file here needs one too.

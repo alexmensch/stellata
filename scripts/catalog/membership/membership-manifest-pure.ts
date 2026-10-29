@@ -9,7 +9,9 @@ import {
   BRIGHT_TIER_MAG_CEILING,
   type ClassicIdOverlay,
 } from '../classic-ids/classic-id-overlay-pure';
-import type { BindingEvidence, GateReason } from './binding/binding-gate-pure';
+import type {
+  BindingEvidence, GateReason, SimbadWdsXidIndex, WdsComponentAttribution,
+} from './binding/binding-gate-pure';
 import {
   BINDING_SOURCES,
   bindingCandidates,
@@ -25,7 +27,6 @@ import {
 import {
   mergeClassicIdLabels,
   spineLabelMergeRecord,
-  type LabelFlip,
   type LabelMergeCounts,
   type LabelMergeRecord,
   type LabelOverrides,
@@ -34,9 +35,20 @@ import { parkedRecordKey } from '../distance/parallax/parked-ledger';
 import { intCell, readTable } from '../../util/tsv/table-pure';
 import { nullableCell } from '../../util/tsv/artifact-pure';
 import { applyCellSets, evidenceOf } from '../../util/tsv/cell-corrections-pure';
-import { ADDITION_REASONS, COMPONENT_REASON_PREFIX, type AdditionLedgerRow, type AdditionReason } from './ledger-rows-pure';
-import { BINDING_REVIEW_KEY_COLUMNS, BINDING_REVIEW_VERDICTS, bindingReviewKey, type BindingReviewRow, type BindingReviewVerdict } from './ledger-rows-pure';
-import { LABEL_DROP_REASONS, type LabelDropReason, type LabelDropRow } from './ledger-rows-pure';
+import { ADDITION_REASONS, type AdditionReason } from './ledger-rows-pure';
+import { BINDING_REVIEW_KEY_COLUMNS, BINDING_REVIEW_VERDICTS, bindingReviewKey, type BindingReviewVerdict } from './ledger-rows-pure';
+import { LABEL_DROP_REASONS, type LabelDropReason } from './ledger-rows-pure';
+import type { IdentityRow } from '../lineage/identity-pure';
+import type { LineageRow } from '../lineage/lineage-row-pure';
+import {
+  membershipLedgers,
+  membershipLineageRow,
+  type AdditionBindingOutcome,
+  type BindingReviewCells,
+  type KeyedOutcome,
+  type MembershipLedgers,
+  type MembershipOutcome,
+} from './membership-lineage-pure';
 import { spineDesignations, type SpineRow } from '../spine/inherited-spine-pure';
 import {
   ATHYG_HD_LINK_FLOOR,
@@ -166,6 +178,17 @@ export interface SpineFold {
   survivorKept: number;
 }
 
+/** The text form of each record's origin SourceRowRef (../lineage/README.md#identity--the-origin-source-row),
+ *  built by the caller, which holds the declarations. */
+export interface OriginKeys {
+  /** By the row's index in the committed spine. */
+  spine(index: number): string;
+  iv25(tyc: string): string;
+  i239(hip: number): string;
+  cns5(id: number): string;
+  gaia(sourceId: string): string;
+}
+
 /** The spine as the manifest reads it: AT-HYG's merge decisions with the ones
  *  review found wrong corrected, and the rows it carried twice folded onto
  *  their survivor. The spine file itself is frozen (`../spine/README.md`), so a
@@ -178,7 +201,7 @@ export interface SpineFold {
  *  rather than quietly shrinking the catalogue. */
 export function applySpineCorrections(
   spine: readonly SpineRow[], corrections: readonly SpineCorrectionRow[],
-): { corrected: SpineRow[]; kept: SpineRow[]; folds: SpineFold[] } {
+): { corrected: SpineRow[]; kept: SpineRow[]; keptSpineIndex: number[]; folds: SpineFold[] } {
   const byKey = new Map<string, number>();
   spine.forEach((row, i) => byKey.set(bindingReviewKey(row), i));
   const resolve = (key: string, what: string): number => {
@@ -220,16 +243,18 @@ export function applySpineCorrections(
   }
 
   const kept: SpineRow[] = [];
+  const keptSpineIndex: number[] = [];
   const keptIndex = new Map<number, number>();
   rows.forEach((row, i) => {
     if (foldedTo.has(i)) return;
     keptIndex.set(i, kept.length);
     kept.push(row);
+    keptSpineIndex.push(i);
   });
   const folds = [...foldedTo].map(([foldedRow, survivorRow]) => ({
     foldedRow, survivorRow, survivorKept: keptIndex.get(survivorRow)!,
   }));
-  return { corrected: rows, kept, folds };
+  return { corrected: rows, kept, keptSpineIndex, folds };
 }
 
 /** One queue row: what the derivation reached, with everything
@@ -258,6 +283,7 @@ export interface MembershipInput {
   /** Whether the pulled astrometry gives this source a parallax — what decides
    *  which of two groups contesting a designation ships (README.md#the-additions). */
   publishesGaiaParallax: (sourceId: string) => boolean;
+  keys: OriginKeys;
 }
 
 export interface MembershipCounts extends LabelMergeCounts {
@@ -352,14 +378,10 @@ export interface MembershipCounts extends LabelMergeCounts {
   spineBrightRowsWithoutOverlayEntry: number;
 }
 
-export interface MembershipResult {
+export interface MembershipResult extends MembershipLedgers {
   rows: ManifestRecord[];
-  ledger: AdditionLedgerRow[];
-  bindingReview: BindingReviewRow[];
-  labelDrops: LabelDropRow[];
-  /** The spine-side label merge's review queue, written to `label_flips.tsv`:
-   *  every departure from the spine's own label cells. */
-  flips: LabelFlip[];
+  lineage: LineageRow[];
+  identity: IdentityRow[];
   counts: MembershipCounts;
 }
 
@@ -539,17 +561,22 @@ function magCell(value: number | null): string {
   return value === null ? '' : value.toFixed(3);
 }
 
-function bindingReviewRow(
-  row: SpineRow, b: SpineBinding, verdict: BindingReviewVerdict, tables: PrimaryTables,
-): BindingReviewRow {
-  const derived = b.derived!;
-  const gate = b.gate!;
+/** Sol derives nothing, so its cells past the spine's own are empty. */
+function bindingReviewCells(row: SpineRow, b: SpineBinding, tables: PrimaryTables): BindingReviewCells {
+  const spine = { tyc: row.tyc, hip: row.hip, hd: row.hd, hr: row.hr, gl: row.gl };
+  if (b.derived === null || b.gate === null) {
+    return {
+      ...spine, derived_source_id: '', derived_via: '', candidates: '', rejected: '',
+      v_mag: '', v_via: '', derived_g: '', derived_simbad: '',
+    };
+  }
+  const derived = b.derived;
+  const gate = b.gate;
   const gOf = (id: string | null): string => magCell(id === null ? null : gate.evidence.gMagOf(id));
   const xidsOf = (id: string | null): string => xidsCell(id === null ? undefined : tables.simbadBySourceId.get(id));
   const candidates = derived.ranked.flatMap((c) => c.via.map((v) => `${v}:${c.sourceId}`));
   return {
-    tyc: row.tyc, hip: row.hip, hd: row.hd, hr: row.hr, gl: row.gl,
-    verdict,
+    ...spine,
     derived_source_id: derived.sourceId ?? '',
     derived_via: derived.via.join('+'),
     candidates: joinValues(candidates),
@@ -559,6 +586,51 @@ function bindingReviewRow(
     derived_g: gOf(derived.sourceId),
     derived_simbad: xidsOf(derived.sourceId),
   };
+}
+
+function wdsLetters(attributions: readonly WdsComponentAttribution[] | undefined): string {
+  return joinValues((attributions ?? []).map((a) => `${a.wdsId}:${a.component}`));
+}
+
+function spineBindingOutcome(
+  row: SpineRow, b: SpineBinding, tables: PrimaryTables, xids: SimbadWdsXidIndex | null,
+): MembershipOutcome {
+  const sourceId = b.derived?.sourceId ?? null;
+  const letters = {
+    sourceLetters: sourceId === null ? '' : wdsLetters(xids?.bySource.get(sourceId)),
+    hipLetters: wdsLetters(xids?.byHip.get(intCell(row.hip) ?? -1)),
+  };
+  if (b.outcome === 'contested' || b.outcome === 'collision') {
+    return { kind: 'spine-binding-queued', outcome: b.outcome, review: bindingReviewCells(row, b, tables), ...letters };
+  }
+  return {
+    kind: 'spine-binding',
+    outcome: b.outcome === 'bound' && b.derived?.rescued ? 'rescued' : b.outcome,
+    sourceId: sourceId ?? '',
+    via: b.derived?.via.join('+') ?? '',
+    ...letters,
+  };
+}
+
+/** The candidates a derivation weighed and did not take: each gate refusal,
+ *  and each runner-up that passed. */
+function refusedCandidates(key: string, d: DerivedBinding): KeyedOutcome[] {
+  const refused = d.rejected.map((r): KeyedOutcome => ({
+    key,
+    outcome: { kind: 'candidate-refused', refusal: r.reason, sourceId: r.sourceId, via: r.via.join('+') },
+  }));
+  const runnersUp = passingRunnersUp(d).map((c): KeyedOutcome => ({
+    key,
+    outcome: { kind: 'candidate-refused', refusal: 'runner-up', sourceId: c.sourceId, via: c.via.join('+') },
+  }));
+  return [...refused, ...runnersUp];
+}
+
+function additionBindingOutcome(g: AdditionGroup): AdditionBindingOutcome {
+  if (g.derived.sourceId === null) return g.derived.ranked.length > 0 ? 'refused' : 'no-candidate';
+  if (g.sourceOnSpine) return 'on-spine';
+  if (g.source === null) return 'shared';
+  return g.derived.rescued ? 'rescued' : 'bound';
 }
 
 /** See binding/README.md. */
@@ -601,7 +673,7 @@ function settleBinding(
  *  needs: the HD drop runs first because IV/27A can publish a Flamsteed number
  *  against an HD no HD primary attests. */
 function dropUnattestedLabels(
-  row: ManifestCells, tables: PrimaryTables, idx: PrimaryIndex, into: LabelDropRow[],
+  row: ManifestCells, tables: PrimaryTables, idx: PrimaryIndex, key: string, into: KeyedOutcome[],
 ): RowAttestation {
   const dropped: Array<{ cell: 'hd' | 'flam'; value: string; reason: LabelDropReason }> = [];
   const hds = [row.hd, ...splitValues(row.hd_alt)].filter((h) => h !== '');
@@ -620,10 +692,7 @@ function dropUnattestedLabels(
     attestation = attestSpineRow(row, tables, idx);
   }
   for (const d of dropped) {
-    into.push({
-      tyc: row.tyc, hip: row.hip, hd: row.hd, gl: row.gl, gaia_source_id: row.gaia_source_id,
-      cell: d.cell, value: d.value, reason: d.reason,
-    });
+    into.push({ key, outcome: { kind: 'label-drop', reason: d.reason, cell: d.cell, value: d.value } });
   }
   return attestation;
 }
@@ -773,6 +842,26 @@ interface AdditionGroup {
   sourceOnSpine: boolean;
   sourceGateRefused: boolean;
   routeSourceDisagree: boolean;
+  /** The anchor item's source row — IV/25, else I/239, else CNS5 — with the
+   *  other items' rows as evidence. */
+  origin: string;
+  members: string[];
+}
+
+const ORIGIN_LADDER = ['hd', 'hip', 'cns5'] as const;
+
+function originRank(item: AdditionCohorts): number {
+  const rank = ORIGIN_LADDER.findIndex((c) => item[c] !== null);
+  if (rank < 0) throw new Error('addition item holds no cohort row');
+  return rank;
+}
+
+function itemOrigin(item: AdditionCohorts, keys: OriginKeys): string {
+  switch (ORIGIN_LADDER[originRank(item)]) {
+    case 'hd': return keys.iv25(item.hd!.tyc);
+    case 'hip': return keys.i239(item.hip!.hip);
+    case 'cns5': return keys.cns5(item.cns5!.cns5);
+  }
 }
 
 function soleItem<K extends keyof AdditionCohorts>(
@@ -825,6 +914,7 @@ function additionGroup(
   derived: DerivedBinding,
   claims: Claims,
   sharedSources: ReadonlySet<string>,
+  keys: OriginKeys,
 ): AdditionGroup {
   // One item per cohort is what the grouping rules produce and what admission
   // reads; a second would leave a primary's row in no manifest row and on no
@@ -846,7 +936,10 @@ function additionGroup(
   const source = winner !== null && !sourceOnSpine && !sharedSources.has(winner) ? winner : null;
   const tycSource = candidateVia(derived, 'tyc');
   const hipSource = candidateVia(derived, 'hip');
+  const anchor = items.reduce((a, b) => (originRank(b) < originRank(a) ? b : a));
   return {
+    origin: itemOrigin(anchor, keys),
+    members: items.filter((i) => i !== anchor).map((i) => itemOrigin(i, keys)).sort(),
     hd, hip: soleItem(items, 'hip'), cns5,
     rawGl: cns5Gl(cns5),
     tyc: hd?.tyc ?? '',
@@ -886,10 +979,11 @@ function compareAdditionGroupCells(a: AdditionGroup, b: AdditionGroup): number {
 }
 
 interface Admission {
-  row: ManifestCells | null;
-  /** The admitted row's record, for the claim set — null on a component row. */
-  record: LabelMergeRecord | null;
-  ledger: AdditionLedgerRow;
+  verdict:
+    /** `record` is the admitted row's, for the claim set. */
+    | { kind: 'admitted'; reason: AdditionReason; row: ManifestCells; record: LabelMergeRecord }
+    /** Keyed on the cells it arrived with, since it becomes no row. */
+    | { kind: 'component'; designation: string; cells: IdentityCells };
   /** Designations the guard withheld. Every one on a component row; on an
    *  admitted row it is a designation the primaries publish for this star that
    *  the record ships without, so the count is pinned. */
@@ -939,16 +1033,17 @@ function admitGroup(
     // Ledgered under the designations it arrived with; the first blocked one
     // in ladder order names the record it resolves onto.
     return {
-      row: null,
-      record: null,
       blocked,
-      ledger: {
-        tyc,
-        hip: nullableCell(hipItem?.hip ?? null),
-        hd: nullableCell(hdItem === null ? null : Math.min(...hdItem.hds)),
-        gl: rawGl ?? '',
-        gaia_source_id: '',
-        reason: `${COMPONENT_REASON_PREFIX}${blocked.sort(compareDesignations)[0]}`,
+      verdict: {
+        kind: 'component',
+        designation: blocked.sort(compareDesignations)[0],
+        cells: {
+          tyc,
+          hip: nullableCell(hipItem?.hip ?? null),
+          hd: nullableCell(hdItem === null ? null : Math.min(...hdItem.hds)),
+          gl: rawGl ?? '',
+          gaia_source_id: '',
+        },
       },
     };
   }
@@ -961,13 +1056,15 @@ function admitGroup(
     hdAlt: hds.slice(1), hrAlt: hrs.slice(1),
   };
   const row = manifestRowFromRecord({ tyc, bayer: '', proper: '' }, record, group.binding);
+  return { blocked, verdict: { kind: 'admitted', reason, row, record } };
+}
+
+type IdentityCells = Pick<IdentityRow, 'tyc' | 'hip' | 'hd' | 'gl' | 'gaia_source_id'>;
+
+function identityOf(key: string, cells: IdentityCells, designations: readonly string[]): IdentityRow {
   return {
-    row,
-    record,
-    blocked,
-    ledger: {
-      tyc, hip: row.hip, hd: row.hd, gl: row.gl, gaia_source_id: row.gaia_source_id, reason,
-    },
+    key, tyc: cells.tyc, hip: cells.hip, hd: cells.hd, gl: cells.gl,
+    gaia_source_id: cells.gaia_source_id, designations,
   };
 }
 
@@ -979,7 +1076,9 @@ export function buildMembership(input: MembershipInput): MembershipResult {
     corrections,
   } = input;
   const idx = indexPrimaries(tables);
-  const { corrected, kept, folds } = applySpineCorrections(spine, corrections);
+  const { keys } = input;
+  const { corrected, kept, keptSpineIndex, folds } = applySpineCorrections(spine, corrections);
+  const spineKey = (keptRow: number): string => keys.spine(keptSpineIndex[keptRow]);
   const spineCellsCorrected = Object.fromEntries(
     SPINE_CORRECTION_CELLS.map((c) => [c, corrections.filter(
       (r) => r.op === 'set' && r.cell === c,
@@ -992,23 +1091,22 @@ export function buildMembership(input: MembershipInput): MembershipResult {
   const unattestedByCell = Object.fromEntries(
     CLASSICAL_CELLS.map((c) => [c, 0]),
   ) as Record<ClassicalCell, number>;
-  const bindingReview: BindingReviewRow[] = [];
-  const labelDrops: LabelDropRow[] = [];
+  const outcomes: KeyedOutcome[] = [];
+  const identity: IdentityRow[] = [];
   const rows: ManifestCells[] = [];
-  const attest = (row: ManifestCells, a?: RowAttestation): void => {
+  const rowKeys: string[] = [];
+  const attest = (key: string, row: ManifestCells, a?: RowAttestation): void => {
     const { routes, unattested } = routesCell(a ?? attestSpineRow(row, tables, idx));
     row.routes = routes;
     for (const cell of unattested) unattestedByCell[cell]++;
     bindingByClass[row.binding as BindingClass]++;
     rows.push(row);
+    rowKeys.push(key);
   };
 
   const derivationOutcome = Object.fromEntries(
     BINDING_OUTCOMES.map((c) => [c, 0]),
   ) as Record<BindingOutcome, number>;
-  const bindingReviewByVerdict = Object.fromEntries(
-    BINDING_REVIEW_VERDICTS.map((v) => [v, 0]),
-  ) as Record<BindingReviewVerdict, number>;
   const bindingDispositions = Object.fromEntries(
     BINDING_DISPOSITIONS.map((d) => [d, 0]),
   ) as Record<BindingDisposition, number>;
@@ -1027,25 +1125,23 @@ export function buildMembership(input: MembershipInput): MembershipResult {
   const spineBindings = deriveSpineBindings(kept, derive);
   const settled = spineBindings.map((b, i) => {
     const spineRow = kept[i];
+    const origin = spineKey(i);
     derivationOutcome[b.outcome]++;
+    outcomes.push(
+      { key: origin, outcome: { kind: 'admit-spine' } },
+      { key: origin, outcome: spineBindingOutcome(spineRow, b, tables, evidence.wdsXids) },
+    );
     let value: string | null = null;
     let binding: BindingClass = 'none';
     if (b.derived !== null) {
       const d = b.derived;
+      outcomes.push(...refusedCandidates(origin, d));
       for (const r of d.rejected) derivedRejected[r.reason]++;
       derivedWeighedNoGMag += d.weighedNoGMag;
       derivedWeighedNullGMag += d.weighedNullGMag;
       if (!d.gateable && d.ranked.length > 0) derivedUngateable++;
       const key = bindingReviewKey(spineRow);
       const disposition = dispositions.get(key);
-      const verdict: BindingReviewVerdict | null =
-        (BINDING_REVIEW_VERDICTS as readonly string[]).includes(b.outcome)
-          ? b.outcome as BindingReviewVerdict
-          : disposition !== undefined ? 'disposed' : null;
-      if (verdict !== null) {
-        bindingReviewByVerdict[verdict]++;
-        bindingReview.push(bindingReviewRow(spineRow, b, verdict, tables));
-      }
       const s = settleBinding(b, disposition, evidence);
       value = s.value;
       binding = s.binding;
@@ -1053,6 +1149,14 @@ export function buildMembership(input: MembershipInput): MembershipResult {
         bindingDispositions[dispositionOf(disposition)]++;
         if (s.asserted) dispositionAsserted++;
         applied.add(key);
+        outcomes.push({
+          key: origin,
+          outcome: {
+            kind: 'disposition', outcome: dispositionOf(disposition),
+            keep: disposition.keep_source_id, basis: disposition.basis,
+            review: bindingReviewCells(spineRow, b, tables),
+          },
+        });
       }
       if (value !== null && value === d.sourceId) {
         derivedVia[d.via[0]]++;
@@ -1103,12 +1207,24 @@ export function buildMembership(input: MembershipInput): MembershipResult {
     }
     const row = manifestRowFromRecord(kept[i], record, settled[i].binding);
     spineManifestRows.push(row);
-    attest(row, dropUnattestedLabels(row, tables, idx, labelDrops));
+    attest(spineKey(i), row, dropUnattestedLabels(row, tables, idx, spineKey(i), outcomes));
   });
+  const keyBySource = new Map<string, string>();
+  records.forEach((r, i) => {
+    if (r.gaiaSourceId !== null) keyBySource.set(r.gaiaSourceId, spineKey(i));
+  });
+  for (const { sourceId, ...flip } of merge.flips) {
+    const key = keyBySource.get(sourceId);
+    if (key === undefined) throw new Error(`label merge flipped ${flip.field} on ${sourceId}, which no spine record binds`);
+    outcomes.push({ key, outcome: { kind: 'label-flip', flip } });
+  }
   // A fold claims two spine rows are one star, so the survivor has to end up
   // answering to everything the folded row did — otherwise the fold is a
   // silent record drop rather than a merge.
-  for (const { foldedRow, survivorKept } of folds) {
+  for (const { foldedRow, survivorRow, survivorKept } of folds) {
+    const folded = corrected[foldedRow];
+    outcomes.push({ key: keys.spine(foldedRow), outcome: { kind: 'fold', survivor: keys.spine(survivorRow) } });
+    identity.push(identityOf(keys.spine(foldedRow), { ...folded, gaia_source_id: '' }, spineDesignations(folded)));
     const survivorHolds = new Set(manifestDesignations(toRecord(spineManifestRows[survivorKept])));
     const lost = spineDesignations(corrected[foldedRow]).filter((d) => !survivorHolds.has(d));
     if (lost.length > 0) {
@@ -1135,10 +1251,9 @@ export function buildMembership(input: MembershipInput): MembershipResult {
   }
   const sharedSources = new Set([...sourceGroups].filter(([, n]) => n > 1).map(([s]) => s));
   const groups = derivedGroups
-    .map((g) => additionGroup(g.items, g.derived, claims, sharedSources))
+    .map((g) => additionGroup(g.items, g.derived, claims, sharedSources, keys))
     .sort(additionGroupOrder(input.publishesGaiaParallax));
 
-  const ledger: AdditionLedgerRow[] = [];
   const additionsByReason = Object.fromEntries(
     ADDITION_REASONS.map((r) => [r, 0]),
   ) as Record<AdditionReason, number>;
@@ -1165,24 +1280,39 @@ export function buildMembership(input: MembershipInput): MembershipResult {
   for (const g of groups) {
     const a = admitGroup(g, claims, index);
     if (g.source !== null && passingRunnersUp(g.derived).length > 0) additionContested++;
-    if (a.row === null && g.derived.sourceId !== null && !ownCandidates.has(g.derived.sourceId)) {
+    const component = a.verdict.kind === 'component';
+    if (component && g.derived.sourceId !== null && !ownCandidates.has(g.derived.sourceId)) {
       ownCandidates.set(g.derived.sourceId, 'component');
     }
-    noteUnshipped(g.derived, a.row === null ? null : g.source);
+    noteUnshipped(g.derived, component ? null : g.source);
     if (g.sourceOnSpine) additionSourceOnSpine++;
     if (g.sourceGateRefused) additionSourceGateRefused++;
     if (g.routeSourceDisagree) additionRouteSourceDisagree++;
-    ledger.push(a.ledger);
-    if (a.row === null || a.record === null) {
+    outcomes.push(
+      { key: g.origin, outcome: {
+        kind: 'addition-binding', outcome: additionBindingOutcome(g),
+        sourceId: g.derived.sourceId ?? '', via: g.derived.via.join('+'),
+      } },
+      ...refusedCandidates(g.origin, g.derived),
+    );
+    if (a.verdict.kind === 'component') {
       componentRows++;
+      outcomes.push({
+        key: g.origin,
+        outcome: { kind: 'component', designation: a.verdict.designation, members: g.members },
+      });
+      identity.push(identityOf(g.origin, a.verdict.cells, [...a.blocked].sort(compareDesignations)));
       continue;
     }
-    additionsByReason[a.ledger.reason as AdditionReason]++;
+    outcomes.push({
+      key: g.origin, outcome: { kind: 'admit-addition', reason: a.verdict.reason, members: g.members },
+    });
+    additionsByReason[a.verdict.reason]++;
     if (a.blocked.length > 0) additionsWithBlockedDesignation++;
-    const designations = manifestDesignations(toRecord(a.row));
+    const designations = manifestDesignations(toRecord(a.verdict.row));
     if (designations.length === 1 && designations[0].startsWith('gaia_dr3:')) additionGaiaKeyedOnly++;
-    claimRecord(claims, a.record);
-    attest(a.row);
+    claimRecord(claims, a.verdict.record);
+    attest(g.origin, a.verdict.row);
   }
 
   const primariesRows = rows.length;
@@ -1201,9 +1331,18 @@ export function buildMembership(input: MembershipInput): MembershipResult {
     const row = magnitudeTermRow(sourceId);
     bindingByClass[row.binding as BindingClass]++;
     rows.push(row);
+    rowKeys.push(keys.gaia(sourceId));
+    outcomes.push({ key: keys.gaia(sourceId), outcome: { kind: 'admit-magnitude' } });
   }
 
-  const sorted = sortManifestRecords(rows.map(toRecord));
+  const typed = rows.map(toRecord);
+  typed.forEach((r, i) => identity.push(identityOf(rowKeys[i], rows[i], manifestDesignations(r))));
+  const lineage = outcomes.map(membershipLineageRow);
+  const ledgers = membershipLedgers(lineage, new Map(identity.map((r) => [r.key, r])));
+  const bindingReviewByVerdict = Object.fromEntries(BINDING_REVIEW_VERDICTS.map(
+    (v) => [v, ledgers.bindingReview.filter((r) => r.verdict === v).length],
+  )) as Record<BindingReviewVerdict, number>;
+  const sorted = sortManifestRecords(typed);
   const owners = new Map<string, number>();
   for (const row of sorted) {
     for (const d of new Set(manifestDesignations(row))) owners.set(d, (owners.get(d) ?? 0) + 1);
@@ -1222,7 +1361,7 @@ export function buildMembership(input: MembershipInput): MembershipResult {
     additionsByReason,
     componentRows,
     bindingByClass,
-    bindingReviewRows: bindingReview.length,
+    bindingReviewRows: ledgers.bindingReview.length,
     bindingReviewByVerdict,
     bindingDispositions,
     derivationOutcome,
@@ -1234,7 +1373,7 @@ export function buildMembership(input: MembershipInput): MembershipResult {
     derivedWeighedNoGMag,
     derivedWeighedNullGMag,
     labelDropsByReason: Object.fromEntries(LABEL_DROP_REASONS.map(
-      (reason) => [reason, labelDrops.filter((d) => d.reason === reason).length],
+      (reason) => [reason, ledgers.labelDrops.filter((d) => d.reason === reason).length],
     )) as Record<LabelDropReason, number>,
     unattestedByCell,
     additionSourceOnSpine,
@@ -1252,7 +1391,7 @@ export function buildMembership(input: MembershipInput): MembershipResult {
     spineBrightRows,
     spineBrightRowsWithoutOverlayEntry,
   };
-  return { rows: sorted, ledger, bindingReview, labelDrops, flips: merge.flips, counts };
+  return { rows: sorted, ...ledgers, lineage, identity, counts };
 }
 
 // ---- the parity gate's matcher -----------------------------------------------

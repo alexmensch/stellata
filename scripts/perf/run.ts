@@ -13,8 +13,9 @@ import {
 } from '../../src/client/debug/frame-cost/frame-cost-pure';
 import { ArgError, parseRunArgs, usage, type RunArgs } from './args';
 import {
-  REPO_ROOT, gitMeta, packageVersion, printAgainstPin, readJsonFlag, writePinFile,
+  REPO_ROOT, gitMeta, printAgainstPin, readJsonFlag, writePinFile,
 } from './checkout';
+import { packageVersion } from '../util/git-provenance';
 import { diffRuns } from './diff/diff-pure';
 import { computeClock, type DwellSummary } from './dwell/dwell-pure';
 import {

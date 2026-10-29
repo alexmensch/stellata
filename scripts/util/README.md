@@ -84,6 +84,18 @@ same thing — single-use helpers stay with their consumer.
   CI's catalogue cache key ([The catalogue build cache](../ci/README.md#the-catalogue-build-cache)), so the two
   cannot disagree on what the build reads. `trackedFiles()` is the listing the
   stamp passes as `files`.
+- `git-provenance.ts` — what a build or instrument records about its
+  checkout: `packageVersion`, `headState` (HEAD and whether the tree is
+  dirty) and `mergeBaseWithMain` (null with no `origin/main` or in a shallow
+  clone), and `fileAtMergeBase`, a file as the merge-base holds it — `absent`
+  when it is new on the branch, kept apart from `no-merge-base`. The lineage
+  header, perf's `gitMeta` and the two merge-base guards read it.
+- `step-inputs.ts` — `stepInputPaths(script)`, every file a `package.json`
+  step reads: the closure of each `tsx` entry it chains, the closure's
+  siblings, and every declaration the closure reads (`sources/`). The
+  catalogue stamp and `build:local-group`'s up-to-date gate both key on it;
+  each step's own suite pins its set
+  (`../catalog/catalog-inputs.test.ts`, `../local-group/local-group-inputs.test.ts`).
 - `tsv/` — the one TSV reader (`readTable`, typed columns, cells that keep
   empty and malformed apart) and `defineArtifact`, the codec of every table
   this repo writes. Own README.

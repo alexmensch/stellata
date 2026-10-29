@@ -19,3 +19,9 @@ export const INHERITED_SPINE = defineArtifact({
   },
   encode: (row) => row,
 });
+
+/** The physical line a decoded row sits on: the codec is exact, so line 1 is
+ *  the header and no comment or blank line shifts a data row. */
+export function spineLine(index: number): number {
+  return index + 2;
+}

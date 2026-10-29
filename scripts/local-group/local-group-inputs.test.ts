@@ -5,13 +5,13 @@ import { describe, expect, it } from 'vitest';
 import { entryClosure, packageScripts } from '../util/import-closure';
 import { tsxEntries } from '../util/import-closure-pure';
 import { REPO_ROOT } from '../util/paths';
-import { localGroupInputPaths } from './local-group-inputs';
+import { stepInputPaths } from '../util/step-inputs';
 
 const abs = (path: string): string => resolve(REPO_ROOT, path);
 
-const inputs = new Set(await localGroupInputPaths());
+const inputs = new Set(await stepInputPaths('build:local-group'));
 
-describe('localGroupInputPaths', () => {
+describe('stepInputPaths(build:local-group)', () => {
   it('keys every module both chained entries import', async () => {
     const closure = await entryClosure(tsxEntries(packageScripts(), 'build:local-group'));
     expect([...closure].filter((m) => !inputs.has(abs(m)))).toEqual([]);

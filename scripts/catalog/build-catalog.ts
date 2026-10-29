@@ -143,7 +143,7 @@ import {
 } from '../sid/sid-pure';
 import { loadRegistry } from '../sid/registry-io';
 import { loadStoredEdges } from '../sid/stored-edges';
-import { catalogInputPaths } from './catalog-inputs';
+import { stepInputPaths } from '../util/step-inputs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -187,7 +187,7 @@ async function main() {
   // unchanged (the snapshot assert/refresh is unreachable otherwise).
   const forceRebuild =
     process.env.UPDATE_BUILD_COUNTS === '1' || process.env.UPDATE_DISTANCE_OUTLIERS === '1';
-  const inputHashesAtStart = fileHashes(await catalogInputPaths());
+  const inputHashesAtStart = fileHashes(await stepInputPaths('build:catalog'));
   if (!forceRebuild && stampIsCurrent(CATALOG_STAMP, inputHashesAtStart)) {
     console.log('catalog.bin is up to date with its inputs; skipping rebuild.');
     return;

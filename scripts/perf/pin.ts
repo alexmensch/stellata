@@ -5,8 +5,9 @@ import { existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { ArgError, parsePinArgs, pinUsage, type PinArgs } from './args';
 import {
-  REPO_ROOT, packageVersion, printAgainstPin, readJsonFlag, writePinFile,
+  REPO_ROOT, printAgainstPin, readJsonFlag, writePinFile,
 } from './checkout';
+import { packageVersion } from '../util/git-provenance';
 import {
   acceptedMarks, assertPinFile, pinFromRuns, pinPathFor, pinWriteRefusal,
   type PinDiff, type RunSource,

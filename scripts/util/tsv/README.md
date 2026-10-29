@@ -2,11 +2,16 @@
 
 Every tab-separated table a TypeScript build step reads goes through this
 folder: an external input through `readTable`, a file this repo writes itself
-through its `defineArtifact` codec. One place stands outside it, named so a
-second is a finding rather than precedent: the WGSN tables
+through its `defineArtifact` codec. Two places stand outside it, named so a
+third is a finding rather than precedent. The WGSN tables
 (`../../catalog/naming/wgsn-parse-pure.ts`) are comma-separated CSV, not TSV,
 so that module splits their lines itself — and parses each cell through this
-folder's strict cell parsers.
+folder's strict cell parsers. Record lineage's stage and identity files
+(`../../catalog/lineage/lineage-row-pure.ts`, `identity-pure.ts`) are
+gzipped build artifacts, one per stage, read from whichever directory a
+diff or `trace` names; an artifact codec declares one fixed file, and that
+declaration is what a step's input set is derived from, so they write their
+own lines and read them through `readTable`.
 
 ## Files in this area
 

@@ -7,7 +7,14 @@ import { resolve } from 'node:path';
 import { REPO_ROOT as ROOT } from '../../util/paths';
 import { emitArtifacts, runStep } from '../../util/emit-artifacts';
 import { artifactRows, readArtifact } from '../../util/sources/source';
-import { MEMBERSHIP_OUTPUTS } from './membership-manifest-outputs';
+import { MEMBERSHIP_LINEAGE, MEMBERSHIP_OUTPUTS } from './membership-manifest-outputs';
+import { identityText } from '../lineage/identity-pure';
+import { LINEAGE_LAYOUT, readIdentity, stageFile } from '../lineage/lineage-io';
+import { stageLineageText } from '../lineage/lineage-row-pure';
+import { stageLineage } from '../lineage/stage-lineage';
+import {
+  MEMBERSHIP_CODES, MEMBERSHIP_LINEAGE_BUDGET, multiplesComponentJoin,
+} from './membership-lineage-pure';
 import { snapshotCheck } from '../../util/snapshot-check';
 import { compareCountSnapshot } from '../build-counts';
 import { loadBindingEvidence, loadHipVMag } from './binding/binding-evidence';
@@ -29,6 +36,7 @@ import {
 import { readMagnitudeTerm } from './magnitude-term/magnitude-term';
 import { MAGNITUDE_FLOOR_V } from './magnitude-term/magnitude-term-pure';
 import { INHERITED_SPINE } from '../spine/inherited-spine-tsv';
+import { ORIGIN_KEYS } from './origin-keys';
 import { loadPrimaryTables } from '../spine/primaries-tables';
 import {
   MEMBERSHIP_EXPECTED_FILE,
@@ -72,6 +80,7 @@ function reportLabelCoverage(c: MembershipCounts): void {
 
 async function main(): Promise<void> {
   const spine = readArtifact(INHERITED_SPINE);
+  const multiples = readMultiplesTsv();
   const tables = await loadPrimaryTables(spine.map((r) => r.tyc).filter((t) => t !== ''));
   const { evidence, gaiaAstrometry } = loadBindingEvidence(
     printedVLookups(loadHipVMag(), tables.tycho2, tables.gliese),
@@ -81,7 +90,7 @@ async function main(): Promise<void> {
     tables,
     overlay: overlayMap(artifactRows(CLASSIC_ID_OVERLAY)),
     overrides: CLASSIC_ID_OVERRIDES.read(),
-    siblingRenderedSourceIds: sourceIdsWithSiblingComponent(readMultiplesTsv()),
+    siblingRenderedSourceIds: sourceIdsWithSiblingComponent(multiples),
     evidence,
     dispositions: BINDING_REVIEW_DISPOSITIONS.read(),
     corrections: SPINE_CORRECTIONS.read(),
@@ -92,6 +101,7 @@ async function main(): Promise<void> {
       const row = gaiaAstrometry.get(sourceId);
       return row !== undefined && gaiaHas5pSolution(row);
     },
+    keys: ORIGIN_KEYS,
   });
 
   const c = result.counts;
@@ -138,6 +148,29 @@ async function main(): Promise<void> {
   );
   reportLabelCoverage(c);
 
+  const lineage = await stageLineage({
+    layout: LINEAGE_LAYOUT,
+    spec: MEMBERSHIP_LINEAGE,
+    script: 'build:membership',
+    diffed: 'membership',
+    rows: result.lineage,
+    render: (sorted) => ({
+      membership: stageLineageText(MEMBERSHIP_CODES, sorted),
+      identity: identityText(result.identity),
+    }),
+    joins: (baselineDir) => {
+      const baseline = readIdentity(stageFile(baselineDir, 'identity'));
+      const identity = new Map([...baseline, ...result.identity].map((r) => [r.key, r]));
+      return [multiplesComponentJoin(identity, multiples)];
+    },
+    budget: MEMBERSHIP_LINEAGE_BUDGET,
+    argv: process.argv.slice(2),
+  });
+  if (lineage.changes !== null) {
+    const kinds = ['added', 'removed', 'changed'] as const;
+    console.log(`lineage diff: ${kinds.map((k) => `${lineage.changes!.filter((x) => x.kind === k).length} ${k}`).join(', ')} keys`);
+  }
+
   emitArtifacts({
     outputs: MEMBERSHIP_OUTPUTS,
     files: {
@@ -146,8 +179,10 @@ async function main(): Promise<void> {
       additions: ADDITIONS_LEDGER.serialize(result.ledger),
       bindingReview: BINDING_REVIEW.serialize(result.bindingReview),
       labelDrops: LABEL_DROPS.serialize(result.labelDrops),
+      ...lineage.files,
     },
-    checks: [snapshotCheck<MembershipCounts>({
+    members: lineage.members,
+    checks: [...lineage.checks, snapshotCheck<MembershipCounts>({
       envVar: 'UPDATE_BUILD_COUNTS',
       snapshotPath: resolve(ROOT, MEMBERSHIP_EXPECTED_FILE),
       actual: c,
