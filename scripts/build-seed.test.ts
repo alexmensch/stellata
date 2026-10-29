@@ -1,4 +1,4 @@
-// build-seed.sh against a stub checkout whose build:stamped is a sleep that flags any overlap.
+// build-seed.sh against a stub checkout whose build:seed-steps is a sleep that flags any overlap.
 import { spawn, spawnSync } from 'node:child_process';
 import { copyFileSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -26,7 +26,7 @@ beforeEach(() => {
   mkdirSync(join(dir, 'scripts'));
   copyFileSync(join(__dirname, 'build-seed.sh'), join(dir, 'scripts', 'build-seed.sh'));
   writeFileSync(join(dir, 'stub.sh'), STUB);
-  writeFileSync(join(dir, 'package.json'), JSON.stringify({ scripts: { 'build:stamped': 'sh stub.sh' } }));
+  writeFileSync(join(dir, 'package.json'), JSON.stringify({ scripts: { 'build:seed-steps': 'sh stub.sh' } }));
 });
 
 afterEach(() => rmSync(dir, { recursive: true, force: true }));

@@ -57,7 +57,8 @@ New worktrees are seeded from the main checkout's `public/` and `build/`
 artifacts ([Building in a worktree](/scripts/README.md#building-in-a-worktree)); a stamp that
 disagrees with the worktree's inputs rebuilds that step. Rebuilding main
 right after the pull keeps those stamps matching, so the next worktree starts
-without a cold catalogue build.
+without a cold catalogue build, and gives it the merge-base lineage baseline
+its membership change report diffs against.
 
 Run it from the main checkout with Bash `run_in_background: true`, after
 every `pr-cleanup` step has finished:
@@ -66,7 +67,7 @@ every `pr-cleanup` step has finished:
 pnpm run build:seed
 ```
 
-`build:seed` builds only the stamped steps worktrees are seeded from, and
+`build:seed` builds only the steps worktrees are seeded from, and
 stops a build another landing already started in the main checkout, so
 concurrent `/pr-cleanup` runs never build side by side ([Seeding builds](/scripts/README.md#seeding-builds--buildseed)).
 

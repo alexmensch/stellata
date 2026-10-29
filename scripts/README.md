@@ -134,7 +134,9 @@ whatever it was built from. The one other kind allowed is a diff baseline
 that no step reads to decide whether to rebuild and that records what it was
 built from — `build/lineage/`, whose header the lineage diff checks against
 the merge-base ([Run-to-run diff](catalog/lineage/README.md#run-to-run-diff)).
-A worktree made any other way
+Every listed file is an output of a step `build:seed` runs
+([Seeding builds](#seeding-builds--buildseed)), so refreshing the main
+checkout's seed is that one command. A worktree made any other way
 (`git worktree add`) builds from scratch.
 
 The private paper-store link is not in that list — the harness's copy skips
@@ -161,9 +163,11 @@ built, so the next build there sees them rewritten and rebuilds.
 
 ## Seeding builds — `build:seed`
 
-`pnpm run build:seed` (`build-seed.sh`) runs `build:stamped` — exactly the
-steps whose outputs seed a new worktree ([Building in a worktree](#building-in-a-worktree)) — with one
-build per checkout. Each run registers `build/build-seed/<start ns>.<pid>`
+`pnpm run build:seed` (`build-seed.sh`) runs `build:seed-steps` — exactly the
+steps whose outputs seed a new worktree ([Building in a worktree](#building-in-a-worktree)): `build:stamped`
+with `build:membership` before `build:catalog`, which reads the manifest it
+writes, so the main checkout always holds the lineage baseline a worktree
+diffs against — with one build per checkout. Each run registers `build/build-seed/<start ns>.<pid>`
 before looking at the others, then stops every older live run and waits for it
 to exit, or exits at once if a newer one is registered; so the newest run
 builds and no two ever build at the same time, however many start together. A
@@ -172,7 +176,14 @@ stopped run takes its build's whole process group down (TERM, then KILL after
 `scripts/build-seed.test.ts` pins all of this. The superseded run exits 0 with
 `superseded by a newer build:seed`; any other exit is the build's own status.
 Nothing is forced — the stamped step that was interrupted has no stamp and
-reruns, every step that finished skips ([Preprocessor idempotency](#preprocessor-idempotency)). The
+reruns, every step that finished skips ([Preprocessor idempotency](#preprocessor-idempotency)).
+`build:membership` has no stamp, so it reruns every time (about 20 s); its
+outputs land all or none (`emitArtifacts`), so an interrupted run leaves the
+previous set whole. On a clean main it rewrites the committed
+`data/membership/` and `label_flips.tsv` byte-identically, since CI fails on
+any diff there; on a dirty main its lineage header records the edits and a
+branch's diff refuses that baseline
+([Run-to-run diff](catalog/lineage/README.md#run-to-run-diff)). The
 mtime-gated steps and the client are never run, so none is ever interrupted
 mid-write. Only `build:seed` runs take part: a plain `pnpm run build` or
 `pnpm run dev` in the same checkout is neither stopped nor seen.
