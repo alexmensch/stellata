@@ -1308,34 +1308,24 @@ export function matchSpineToManifest(
   manifestRows: readonly ManifestRecord[],
   storedEdges: readonly SameasEdge[],
 ): SpineMatch {
-  const { classes: uf, kept } = sameAsClasses(manifestRows.map(manifestDesignations), storedEdges);
-  const rowByDesignation = new Map<string, number>();
-  kept.forEach((ds, i) => {
-    for (const d of ds) rowByDesignation.set(d, i);
-  });
-  const endpoints = new Set(storedEdges.flatMap((e) => [e.a, e.b]));
-  const rowsByRoot = new Map<string, Set<number>>();
-  for (const [d, i] of rowByDesignation) {
-    const root = uf.find(d);
-    const set = rowsByRoot.get(root) ?? new Set<number>();
-    set.add(i);
-    rowsByRoot.set(root, set);
-  }
+  const { classes, objectsByClass } = sameAsClasses(
+    manifestRows.map(manifestDesignations),
+    storedEdges,
+  );
   const manifestIndex: (number | null)[] = [];
   const unmatched: number[] = [];
   const multiple: number[] = [];
   const reached = new Set<number>();
   spineDesignations.forEach((set, s) => {
-    const key = [...set].sort(compareDesignations)
-      .find((d) => rowByDesignation.has(d) || endpoints.has(d));
-    const hits = key === undefined ? new Set<number>() : rowsByRoot.get(uf.find(key)) ?? new Set<number>();
-    if (hits.size === 1) {
+    const key = [...set].sort(compareDesignations).find((d) => classes.has(d));
+    const hits = key === undefined ? [] : objectsByClass.get(classes.find(key)) ?? [];
+    if (hits.length === 1) {
       const [i] = hits;
       manifestIndex.push(i);
       reached.add(i);
     } else {
       manifestIndex.push(null);
-      (hits.size === 0 ? unmatched : multiple).push(s);
+      (hits.length === 0 ? unmatched : multiple).push(s);
     }
   });
   const unreached = manifestRows.map((_, i) => i).filter((i) => !reached.has(i));

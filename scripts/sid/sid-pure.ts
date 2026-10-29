@@ -557,6 +557,10 @@ export class UnionFind {
     if (!this.parent.has(x)) this.parent.set(x, x);
   }
 
+  has(x: string): boolean {
+    return this.parent.has(x);
+  }
+
   nodes(): IterableIterator<string> {
     return this.parent.keys();
   }
@@ -602,6 +606,9 @@ export interface SameAsClasses {
   /** Per object, its designations less the ambiguous ones. */
   kept: string[][];
   ambiguous: AmbiguousDesignation[];
+  /** Class root → the objects in it; an object with no kept designation is
+   *  in none. */
+  objectsByClass: Map<string, number[]>;
 }
 
 /** The same-as graph over each object's designations plus the stored edges.
@@ -638,7 +645,15 @@ export function sameAsClasses(
     classes.add(edge.b);
     classes.union(edge.a, edge.b);
   }
-  return { classes, kept, ambiguous };
+  const objectsByClass = new Map<string, number[]>();
+  kept.forEach((ds, i) => {
+    if (ds.length === 0) return;
+    const root = classes.find(ds[0]);
+    const list = objectsByClass.get(root);
+    if (list) list.push(i);
+    else objectsByClass.set(root, [i]);
+  });
+  return { classes, kept, ambiguous, objectsByClass };
 }
 
 export function allocate(input: AllocateInput): AllocateResult {
@@ -649,7 +664,7 @@ export function allocate(input: AllocateInput): AllocateResult {
     for (const d of obj.designations) parseDesignation(d);
   }
 
-  const { classes: uf, kept, ambiguous } = sameAsClasses(
+  const { classes: uf, kept, ambiguous, objectsByClass } = sameAsClasses(
     objects.map((o) => o.designations),
     storedEdges,
   );
@@ -673,17 +688,8 @@ export function allocate(input: AllocateInput): AllocateResult {
     else membersByRoot.set(root, [node]);
   }
 
-  const objectRootIndices = new Map<string, number[]>();
-  objects.forEach((_, i) => {
-    if (kept[i].length === 0) return;
-    const root = uf.find(kept[i][0]);
-    const list = objectRootIndices.get(root);
-    if (list) list.push(i);
-    else objectRootIndices.set(root, [i]);
-  });
-
   for (const [root, rows] of rowsByRoot) {
-    if (!objectRootIndices.has(root)) continue;
+    if (!objectsByClass.has(root)) continue;
     const active = rows.filter((r) => !retiredBySid.has(r.sid));
     if (active.length > 1) {
       errors.push(
@@ -704,7 +710,7 @@ export function allocate(input: AllocateInput): AllocateResult {
   const orphaned = new Map<string, string[]>();
   for (const row of ledger) {
     if (retiredBySid.has(row.sid)) continue;
-    if (objectRootIndices.has(uf.find(row.canonicalKey))) continue;
+    if (objectsByClass.has(uf.find(row.canonicalKey))) continue;
     const ns = parseDesignation(row.canonicalKey).ns;
     const list = orphaned.get(ns);
     if (list) list.push(row.canonicalKey);
@@ -751,7 +757,7 @@ export function allocate(input: AllocateInput): AllocateResult {
   });
 
   const mergedClasses: { sid: number; objects: number[] }[] = [];
-  for (const [root, indices] of objectRootIndices) {
+  for (const [root, indices] of objectsByClass) {
     if (indices.length > 1) {
       mergedClasses.push({ sid: sidByRoot.get(root) ?? 0, objects: indices });
     }
