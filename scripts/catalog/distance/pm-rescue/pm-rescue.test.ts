@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 
 import { resolvePmRescue, VELOCITY_VIA_BY_PM_RESCUE } from './pm-rescue';
 import type { CitedProperMotion } from '../../cited-proper-motion';
+import { gaiaAstrometryRow } from '../astrometry-fixture';
 import { TYCHO2_MEAN_EPOCH, type Tycho2Row } from '../../tycho2-parse';
 
 const GAIA_DR2 = '2018yCat.1345....0G';
@@ -28,12 +29,13 @@ function cited(
 }
 
 const NOTHING = { tycho2: null, cns5: null, simbad: null };
+const TWO_P = gaiaAstrometryRow({ parallaxMas: null, pmraMasyr: null, pmdecMasyr: null });
 
 describe('resolvePmRescue', () => {
   it('prefers Tycho-2, the one tier that predates Gaia', () => {
     const res = resolvePmRescue(
       { tycho2: tycho2Row(), cns5: cited(), simbad: cited() },
-      true,
+      TWO_P,
     );
     expect(res.via).toBe('tycho2');
     expect(res.pmRaMasyr).toBe(-453.7);
@@ -43,7 +45,7 @@ describe('resolvePmRescue', () => {
   it('takes Tycho-2 on a 2p row without consulting any bibcode', () => {
     // Tycho-2 carries no per-value citation, so a Gaia release cannot be
     // hiding behind one — the skip rule has nothing to check here.
-    expect(resolvePmRescue({ ...NOTHING, tycho2: tycho2Row() }, true).via).toBe('tycho2');
+    expect(resolvePmRescue({ ...NOTHING, tycho2: tycho2Row() }, TWO_P).via).toBe('tycho2');
   });
 
   it('falls past Tycho-2 where the row has no mean solution', () => {
@@ -53,7 +55,7 @@ describe('resolvePmRescue', () => {
         cns5: null,
         simbad: cited(),
       },
-      false,
+      null,
     );
     expect(res.via).toBe('simbad');
   });
@@ -61,7 +63,7 @@ describe('resolvePmRescue', () => {
   it('puts CNS5 above the second-order SIMBAD index', () => {
     const res = resolvePmRescue(
       { tycho2: null, cns5: cited({ pmRaMasyr: 50 }), simbad: cited() },
-      true,
+      TWO_P,
     );
     expect(res.via).toBe('cns5');
     expect(res.pmRaMasyr).toBe(50);
@@ -70,7 +72,7 @@ describe('resolvePmRescue', () => {
   it('skips a Gaia-bibcoded PM on a 2p row rather than laundering it back', () => {
     const res = resolvePmRescue(
       { ...NOTHING, simbad: cited({ bibcode: GAIA_DR2 }) },
-      true,
+      TWO_P,
     );
     expect(res.via).toBe('gaia_bibcode_skipped');
     expect(res.pmRaMasyr).toBeNull();
@@ -80,7 +82,7 @@ describe('resolvePmRescue', () => {
   it('skips CNS5 on a 2p row too — 87% of its PM is Gaia republished', () => {
     const res = resolvePmRescue(
       { ...NOTHING, cns5: cited({ bibcode: GAIA_EDR3 }) },
-      true,
+      TWO_P,
     );
     expect(res.via).toBe('gaia_bibcode_skipped');
   });
@@ -90,7 +92,7 @@ describe('resolvePmRescue', () => {
     // distrust and the citation is ordinary.
     const res = resolvePmRescue(
       { ...NOTHING, simbad: cited({ bibcode: GAIA_EDR3 }) },
-      false,
+      null,
     );
     expect(res.via).toBe('simbad');
     expect(res.pmRaMasyr).toBe(2314.8);
@@ -103,28 +105,28 @@ describe('resolvePmRescue', () => {
         cns5: cited({ bibcode: GAIA_EDR3 }),
         simbad: cited({ bibcode: FABRICIUS }),
       },
-      true,
+      TWO_P,
     );
     expect(res.via).toBe('simbad');
   });
 
   it('separates "refused" from "absent" so the residual reads honestly', () => {
-    expect(resolvePmRescue(NOTHING, true).via).toBe('none');
-    expect(resolvePmRescue({ ...NOTHING, cns5: cited({ bibcode: GAIA_DR2 }) }, true).via)
+    expect(resolvePmRescue(NOTHING, TWO_P).via).toBe('none');
+    expect(resolvePmRescue({ ...NOTHING, cns5: cited({ bibcode: GAIA_DR2 }) }, TWO_P).via)
       .toBe('gaia_bibcode_skipped');
   });
 
   it('carries a genuine zero PM through rather than routing on truthiness', () => {
     const tycho = resolvePmRescue(
       { ...NOTHING, tycho2: tycho2Row({ pmRaMasyr: 0, pmDecMasyr: 0 }) },
-      true,
+      TWO_P,
     );
     expect(tycho.via).toBe('tycho2');
     expect(tycho.pmRaMasyr).toBe(0);
 
     const simbad = resolvePmRescue(
       { ...NOTHING, simbad: cited({ pmRaMasyr: 0, pmDecMasyr: 0 }) },
-      true,
+      TWO_P,
     );
     expect(simbad.via).toBe('simbad');
     expect(simbad.pmRaMasyr).toBe(0);

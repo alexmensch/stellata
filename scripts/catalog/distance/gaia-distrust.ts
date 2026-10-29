@@ -68,16 +68,22 @@ const GAIA_RELEASE_REFUSED: ReadonlySet<RefusedPublication> = new Set(['gaia_rel
 const NOTHING_REFUSED: ReadonlySet<RefusedPublication> = new Set();
 
 /** What the record's own Gaia fit refuses: its release, when the fit is 2p. */
-export function gaiaRefusals(gaiaIs2p: boolean): ReadonlySet<RefusedPublication> {
-  return gaiaIs2p ? GAIA_RELEASE_REFUSED : NOTHING_REFUSED;
+export function gaiaRefusals(
+  gaia: GaiaAstrometryCatalogRow | null,
+): ReadonlySet<RefusedPublication> {
+  return gaiaRowIs2p(gaia) ? GAIA_RELEASE_REFUSED : NOTHING_REFUSED;
 }
 
-/** A courier may not re-serve a value attributed to a publication a tier above
- *  it already refused — the one rule behind every skip
+/** The refused publication a bibcode cites, if any. A courier may not re-serve
+ *  a value attributed to a publication a tier above it already refused — the
+ *  one rule behind every skip
  *  (parallax/README.md#the-skip-rules--one-principle-two-publications). */
-export function refusedBy(bibcode: string, refused: ReadonlySet<RefusedPublication>): boolean {
+export function refusingPublication(
+  bibcode: string,
+  refused: ReadonlySet<RefusedPublication>,
+): RefusedPublication | null {
   for (const publication of refused) {
-    if (CITES[publication](bibcode)) return true;
+    if (CITES[publication](bibcode)) return publication;
   }
-  return false;
+  return null;
 }

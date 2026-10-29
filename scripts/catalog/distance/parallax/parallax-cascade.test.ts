@@ -1,11 +1,13 @@
 import { describe, it, expect } from 'vitest';
 
 import {
+  isLowPrecisionParallax,
   resolveParallax,
   DIST_VIA_VALUES,
   DIST_VIA_COUNT_KEY,
   PARALLAX_SN_FLOOR,
   PARALLAX_LOW_PRECISION_SN,
+  type ParallaxResolution,
   type ParallaxSources,
 } from './parallax-cascade';
 import { gaiaAstrometryRow } from '../astrometry-fixture';
@@ -41,6 +43,12 @@ const cited = (
 ): CitedParallax => ({ mas, errMas, bibcode });
 const simbad = (mas: number, bibcode: string): CitedParallax => cited(mas, bibcode);
 
+const plxMas = (res: ParallaxResolution): number | undefined =>
+  res.via === 'none' || res.via === 'curated' ? undefined : res.value.mas;
+const refusedMas = (res: ParallaxResolution): number[] => res.refusals.map((r) => r.mas);
+const lowPrecision = (res: ParallaxResolution): boolean =>
+  res.via !== 'none' && res.via !== 'curated' && isLowPrecisionParallax(res.value);
+
 describe('parallax-cascade / tier order', () => {
   it('takes the record\'s own Gaia 5p parallax ahead of every other tier', () => {
     const res = resolveParallax({
@@ -50,15 +58,15 @@ describe('parallax-cascade / tier order', () => {
       cns5: cited(20, LITERATURE, null),
       gliese: gliese(30),
       simbad: simbad(50, LITERATURE),
-    }, false, false);
+    }, false);
     expect(res.via).toBe('gaia_dr3_inversion');
-    expect(res.parallax?.mas).toBe(40);
+    expect(plxMas(res)).toBe(40);
   });
 
   it('mirrors the direction cascade: HIP2 only where Gaia states no parallax, '
     + 'never over a converged fit', () => {
     const twoP = gaiaAstrometryRow({ parallaxMas: null, parallaxErrorMas: null });
-    expect(resolveParallax({ ...NONE, gaia: twoP, hip2: hip2(10, 0.5) }, true, false).via)
+    expect(resolveParallax({ ...NONE, gaia: twoP, hip2: hip2(10, 0.5) }, false).via)
       .toBe('hip2_parallax');
   });
 
@@ -71,20 +79,20 @@ describe('parallax-cascade / tier order', () => {
       [{ pairMember: sibling(2.47) }, 'pair_member_parallax'],
     ];
     for (const [src, via] of order) {
-      expect(resolveParallax({ ...NONE, ...src }, false, false).via).toBe(via);
+      expect(resolveParallax({ ...NONE, ...src }, false).via).toBe(via);
     }
   });
 
   it('routes Sol to the curated tier — no identifier reaches it and its '
     + 'distance is zero rather than a parallax', () => {
-    const res = resolveParallax(NONE, false, true);
+    const res = resolveParallax(NONE, true);
     expect(res.via).toBe('curated');
-    expect(res.parallax).toBeNull();
+    expect(res.via === 'curated' && res.value).toBeNull();
   });
 
   it('ignores a non-positive parallax rather than inverting it', () => {
-    expect(resolveParallax({ ...NONE, hip2: hip2(-1.2, 0.5) }, false, false).via).toBe('none');
-    expect(resolveParallax({ ...NONE, hip2: hip2(0, 0.5) }, false, false).via).toBe('none');
+    expect(resolveParallax({ ...NONE, hip2: hip2(-1.2, 0.5) }, false).via).toBe('none');
+    expect(resolveParallax({ ...NONE, hip2: hip2(0, 0.5) }, false).via).toBe('none');
   });
 });
 
@@ -93,34 +101,34 @@ describe('parallax-cascade / the precision floor', () => {
     + 'unbounded, not merely imprecise', () => {
     // HIP 77442: 0.04 ± 0.36 mas, S/N 0.11. Inverted it reads 25,000 pc for a
     // V 5.89 naked-eye star, which is the catastrophe the floor exists for.
-    const res = resolveParallax({ ...NONE, hip2: hip2(0.04, 0.36) }, false, false);
+    const res = resolveParallax({ ...NONE, hip2: hip2(0.04, 0.36) }, false);
     expect(res.via).toBe('none');
-    expect(res.refusedPlxMas).toEqual([0.04]);
+    expect(refusedMas(res)).toEqual([0.04]);
   });
 
   it('admits a parallax fractionally above the floor — HIP 37 at S/N 1.03 '
     + 'ships flagged rather than dropping, and the boundary is exclusive', () => {
-    const res = resolveParallax({ ...NONE, hip2: hip2(2.62, 2.55) }, false, false);
+    const res = resolveParallax({ ...NONE, hip2: hip2(2.62, 2.55) }, false);
     expect(res.via).toBe('hip2_parallax');
-    expect(res.lowPrecision).toBe(true);
+    expect(lowPrecision(res)).toBe(true);
   });
 
   it('admits a parallax above the floor but below the 20% bound, and flags it', () => {
-    const res = resolveParallax({ ...NONE, hip2: hip2(10, 4) }, false, false);
+    const res = resolveParallax({ ...NONE, hip2: hip2(10, 4) }, false);
     expect(res.via).toBe('hip2_parallax');
-    expect(res.lowPrecision).toBe(true);
+    expect(lowPrecision(res)).toBe(true);
   });
 
   it('does not flag a parallax at or above the 20% bound', () => {
-    expect(resolveParallax({ ...NONE, hip2: hip2(10, 2) }, false, false).lowPrecision)
+    expect(lowPrecision(resolveParallax({ ...NONE, hip2: hip2(10, 2) }, false)))
       .toBe(false);
   });
 
   it('admits a parallax whose error is unpublished — an absent error bar is '
     + 'not evidence the value is bad', () => {
-    const res = resolveParallax({ ...NONE, hip2: hip2(10, null) }, false, false);
+    const res = resolveParallax({ ...NONE, hip2: hip2(10, null) }, false);
     expect(res.via).toBe('hip2_parallax');
-    expect(res.lowPrecision).toBe(false);
+    expect(lowPrecision(res)).toBe(false);
   });
 
   it('the floor sits below the low-precision bound, so the flagged band is '
@@ -143,13 +151,13 @@ describe('parallax-cascade / the precision floor', () => {
       [{ gliese: gliese(0.5, false) }, 'gliese photometric', 0.5],
     ];
     for (const [src, tier, mas] of subFloor) {
-      const res = resolveParallax({ ...NONE, ...src }, false, false);
+      const res = resolveParallax({ ...NONE, ...src }, false);
       expect(res.via, tier).toBe('none');
-      expect(res.parallax, tier).toBeNull();
+      expect(res.via === 'none', tier).toBe(true);
       // A non-empty list is what picks refused_no_defensible_parallax over
       // no_parallax_published on the record-parity ledger (/docs/catalog-driver.md#61-record-parity) the parity gate subtracts,
       // and the values are what companion promotion matches a pair row against.
-      expect(res.refusedPlxMas, tier).toEqual([mas]);
+      expect(refusedMas(res), tier).toEqual([mas]);
     }
   });
 
@@ -158,9 +166,9 @@ describe('parallax-cascade / the precision floor', () => {
     const res = resolveParallax({
       ...NONE,
       gaia: gaiaAstrometryRow({ parallaxMas: 0.04, parallaxErrorMas: 0.36 }),
-    }, false, false);
+    }, false);
     expect(res.via).toBe('gaia_dr3_inversion');
-    expect(res.refusedPlxMas).toEqual([]);
+    expect(refusedMas(res)).toEqual([]);
   });
 
   it('falls THROUGH a sub-floor tier to the next one that clears the floor', () => {
@@ -168,10 +176,10 @@ describe('parallax-cascade / the precision floor', () => {
       ...NONE,
       cns5: cited(0.05, LITERATURE, 0.5),
       gliese: gliese(30),
-    }, false, false);
+    }, false);
     expect(res.via).toBe('gliese_plx');
-    expect(res.parallax?.mas).toBe(30);
-    expect(res.refusedPlxMas).toEqual([]);
+    expect(plxMas(res)).toBe(30);
+    expect(res.refusals).toEqual([{ tier: 'cns5_plx', reason: 'below_sn_floor', mas: 0.05 }]);
   });
 
   it('admits a sub-floor-looking Gliese parallax whose error is unpublished, '
@@ -180,9 +188,9 @@ describe('parallax-cascade / the precision floor', () => {
       name: 'Gl 423', comp: 'A', vMag: null, bMinusV: null, spectral: null, hd: null,
       parallax: { mas: 0.5, errMas: null, trigonometric: true },
     };
-    const res = resolveParallax({ ...NONE, gliese: noError }, false, false);
+    const res = resolveParallax({ ...NONE, gliese: noError }, false);
     expect(res.via).toBe('gliese_plx');
-    expect(res.refusedPlxMas).toEqual([]);
+    expect(refusedMas(res)).toEqual([]);
   });
 });
 
@@ -194,18 +202,20 @@ describe('parallax-cascade / the Gaia-bibcode skip rule', () => {
       gaia: twoP,
       cns5: cited(114.49, GAIA_DR2, null),
       simbad: simbad(114.5, GAIA_DR2),
-    }, true, false);
+    }, false);
     expect(res.via).toBe('none');
-    expect(res.refusedPlxMas).toEqual([114.49, 114.5]);
+    expect(refusedMas(res)).toEqual([114.49, 114.5]);
   });
 
   it('catches the release paper as well as the VizieR table — CNS5 cites one '
     + 'form and SIMBAD the other', () => {
     const res = resolveParallax({
       ...NONE,
+      gaia: gaiaAstrometryRow({ parallaxMas: null, parallaxErrorMas: null }),
       cns5: cited(114.49, GAIA_DR2_PAPER, null),
-    }, true, false);
+    }, false);
     expect(res.via).toBe('none');
+    expect(res.refusals).toEqual([{ tier: 'cns5_plx', reason: 'gaia_release', mas: 114.49 }]);
   });
 
   it('keeps a Gaia citation where no Gaia solution stands behind the row — '
@@ -213,7 +223,7 @@ describe('parallax-cascade / the Gaia-bibcode skip rule', () => {
     const res = resolveParallax({
       ...NONE,
       cns5: cited(114.49, GAIA_DR2, null),
-    }, false, false);
+    }, false);
     expect(res.via).toBe('cns5_plx');
   });
 
@@ -224,17 +234,18 @@ describe('parallax-cascade / the Gaia-bibcode skip rule', () => {
       gaia: gaiaAstrometryRow({ parallaxMas: null, parallaxErrorMas: null }),
       cns5: cited(114.49, GAIA_DR2, null),
       gliese: gliese(115.0),
-    }, true, false);
+    }, false);
     expect(res.via).toBe('gliese_plx');
-    expect(res.parallax?.mas).toBe(115.0);
+    expect(plxMas(res)).toBe(115.0);
   });
 
   it('does not refuse a DR1/TGAS citation — a joint Gaia+Tycho solution is a '
     + 'different measurement, not the same fit returning', () => {
     const res = resolveParallax({
       ...NONE,
+      gaia: gaiaAstrometryRow({ parallaxMas: null, parallaxErrorMas: null }),
       simbad: simbad(7.2, '2016A&A...595A...2G'),
-    }, true, false);
+    }, false);
     expect(res.via).toBe('simbad_plx');
   });
 });
@@ -252,9 +263,9 @@ describe('parallax-cascade / V/70A\'s two tiers straddle SIMBAD', () => {
       ...NONE,
       gliese: gliese(115.0, true),
       simbad: simbad(29.9357, SIMBAD_EDR3),
-    }, false, false);
+    }, false);
     expect(res.via).toBe('gliese_plx');
-    expect(res.parallax?.mas).toBe(115.0);
+    expect(plxMas(res)).toBe(115.0);
   });
 
   // Gl 92.1 / HD 14039: V/70A prints 41.0 +/- 6.0 under n_plx='r', which
@@ -266,9 +277,9 @@ describe('parallax-cascade / V/70A\'s two tiers straddle SIMBAD', () => {
       ...NONE,
       gliese: gliese(41.0, false),
       simbad: simbad(29.9357, SIMBAD_EDR3),
-    }, false, false);
+    }, false);
     expect(res.via).toBe('simbad_plx');
-    expect(1000 / (res.parallax?.mas as number)).toBeCloseTo(33.405, 3);
+    expect(1000 / (plxMas(res) as number)).toBeCloseTo(33.405, 3);
   });
 
   // xi UMa (Gl 423 A/B, V 4.33/4.80): Gaia fitted position only, HIP 55203 is
@@ -283,13 +294,13 @@ describe('parallax-cascade / V/70A\'s two tiers straddle SIMBAD', () => {
       cns5: cited(114.49, GAIA_DR2, null),
       simbad: simbad(114.4867, GAIA_DR2),
       gliese: gliese(96.0, false),
-    }, true, false);
+    }, false);
     expect(res.via).toBe('gliese_photometric_plx');
-    expect(res.parallax?.mas).toBe(96.0);
+    expect(plxMas(res)).toBe(96.0);
   });
 
   it('parks a row whose only V/70A parallax is photometric and absent', () => {
-    const res = resolveParallax({ ...NONE, gliese: gliese(null, false) }, false, false);
+    const res = resolveParallax({ ...NONE, gliese: gliese(null, false) }, false);
     expect(res.via).toBe('none');
   });
 
@@ -301,7 +312,7 @@ describe('parallax-cascade / V/70A\'s two tiers straddle SIMBAD', () => {
       ...NONE,
       gliese: gliese(96.0, false),
       pairMember: sibling(2.4744),
-    }, false, false);
+    }, false);
     expect(res.via).toBe('pair_member_parallax');
   });
 });
@@ -313,14 +324,17 @@ describe('parallax-cascade / the van Leeuwen laundering rule', () => {
       ...NONE,
       hip2: hip2(0.04, 0.36),
       simbad: simbad(0.04, VAN_LEEUWEN),
-    }, false, false);
+    }, false);
     expect(res.via).toBe('none');
-    expect(res.refusedPlxMas).toEqual([0.04, 0.04]);
+    expect(res.refusals).toEqual([
+      { tier: 'hip2_parallax', reason: 'below_sn_floor', mas: 0.04 },
+      { tier: 'simbad_plx', reason: 'hipparcos2', mas: 0.04 },
+    ]);
   });
 
   it('keeps a van Leeuwen citation where the floor never fired — the rule is '
     + 'about re-serving a refusal, not about the publication', () => {
-    const res = resolveParallax({ ...NONE, simbad: simbad(7.61, VAN_LEEUWEN) }, false, false);
+    const res = resolveParallax({ ...NONE, simbad: simbad(7.61, VAN_LEEUWEN) }, false);
     expect(res.via).toBe('simbad_plx');
   });
 
@@ -329,9 +343,9 @@ describe('parallax-cascade / the van Leeuwen laundering rule', () => {
       ...NONE,
       hip2: hip2(0.04, 0.36),
       simbad: simbad(24.7, LITERATURE),
-    }, false, false);
+    }, false);
     expect(res.via).toBe('simbad_plx');
-    expect(res.parallax?.mas).toBe(24.7);
+    expect(plxMas(res)).toBe(24.7);
   });
 });
 
@@ -339,42 +353,40 @@ describe('parallax-cascade / the bound-sibling tier', () => {
   it('places a record no owned tier reached on its sibling\'s clean fit — this '
     + 'is what keeps sigma Orionis', () => {
     const res = resolveParallax(
-      { ...NONE, gaia: gaiaAstrometryRow({ parallaxMas: null }), pairMember: sibling(2.4744) },
-      true, false,
-    );
+      { ...NONE, gaia: gaiaAstrometryRow({ parallaxMas: null }), pairMember: sibling(2.4744) }, false);
     expect(res.via).toBe('pair_member_parallax');
-    expect(1000 / (res.parallax?.mas as number)).toBeCloseTo(404.14, 2);
-    expect(res.refusedPlxMas).toEqual([]);
+    expect(1000 / (plxMas(res) as number)).toBeCloseTo(404.14, 2);
+    expect(refusedMas(res)).toEqual([]);
   });
 
   it('lends a neighbour\'s measurement only after every tier stating the '
     + 'record\'s OWN has been asked', () => {
     const res = resolveParallax(
-      { ...NONE, simbad: simbad(50, LITERATURE), pairMember: sibling(2.47) },
-      false, false,
-    );
+      { ...NONE, simbad: simbad(50, LITERATURE), pairMember: sibling(2.47) }, false);
     expect(res.via).toBe('simbad_plx');
   });
 
-  it('rescues a row a skip rule refused, and stops calling it refused', () => {
+  it('rescues a row a skip rule refused, and still names the refused tier — '
+    + 'its lineage must say what it passed over', () => {
     const res = resolveParallax({
       ...NONE,
       gaia: gaiaAstrometryRow({ parallaxMas: null }),
       simbad: simbad(3.04, GAIA_DR2),
       pairMember: sibling(2.4744),
-    }, true, false);
+    }, false);
     expect(res.via).toBe('pair_member_parallax');
-    expect(res.refusedPlxMas).toEqual([]);
+    expect(res.refusals).toEqual([{ tier: 'simbad_plx', reason: 'gaia_release', mas: 3.04 }]);
   });
 });
 
 describe('parallax-cascade / the residual', () => {
   it('separates a row nothing measured from one whose value was refused', () => {
-    expect(resolveParallax(NONE, false, false)).toMatchObject({
-      via: 'none', refusedPlxMas: [],
+    expect(resolveParallax(NONE, false)).toMatchObject({
+      via: 'none', refusals: [],
     });
-    expect(resolveParallax({ ...NONE, hip2: hip2(1, 5) }, false, false)).toMatchObject({
-      via: 'none', refusedPlxMas: [1],
+    expect(resolveParallax({ ...NONE, hip2: hip2(1, 5) }, false)).toMatchObject({
+      via: 'none',
+      refusals: [{ tier: 'hip2_parallax', reason: 'below_sn_floor', mas: 1 }],
     });
   });
 
@@ -384,7 +396,7 @@ describe('parallax-cascade / the residual', () => {
     expect(vias.has('bailer_jones')).toBe(true);
     expect(vias.has('lmc_kinematic')).toBe(true);
     for (const src of [NONE, { ...NONE, hip2: hip2(10, 0.1) }]) {
-      const via = resolveParallax(src, false, false).via;
+      const via = resolveParallax(src, false).via;
       expect(via).not.toBe('bailer_jones');
       expect(via).not.toBe('lmc_kinematic');
     }

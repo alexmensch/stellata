@@ -6,7 +6,7 @@ import {
   gaiaRowIs2p,
   isGaiaCatalogueBibcode,
   gaiaRefusals,
-  refusedBy,
+  refusingPublication,
 } from './gaia-distrust';
 
 describe('gaiaHas5pSolution', () => {
@@ -51,24 +51,29 @@ describe('isGaiaCatalogueBibcode', () => {
   });
 });
 
-describe('refusedBy', () => {
+describe('refusingPublication', () => {
   const GAIA_DR2 = '2018yCat.1345....0G';
   const VAN_LEEUWEN_2007 = '2007A&A...474..653V';
   const LITERATURE = '2006AstL...32..759G';
 
   it('refuses a Gaia release only where the record\'s own fit is 2p', () => {
-    expect(refusedBy(GAIA_DR2, gaiaRefusals(true))).toBe(true);
-    expect(refusedBy(GAIA_DR2, gaiaRefusals(false))).toBe(false);
+    const twoP = gaiaAstrometryRow({ parallaxMas: null });
+    expect(refusingPublication(GAIA_DR2, gaiaRefusals(twoP))).toBe('gaia_release');
+    expect(refusingPublication(GAIA_DR2, gaiaRefusals(gaiaAstrometryRow({ parallaxMas: 50 }))))
+      .toBeNull();
+    expect(refusingPublication(GAIA_DR2, gaiaRefusals(null))).toBeNull();
   });
 
   // HIP 37 is the shape: HIP2 states 2.62 ± 2.55 mas, the floor refuses it, and
   // a courier citing van Leeuwen 2007 would serve 2.62 back without the error.
   it('refuses van Leeuwen 2007 only once a tier above refused HIP2', () => {
-    expect(refusedBy(VAN_LEEUWEN_2007, new Set(['hipparcos2']))).toBe(true);
-    expect(refusedBy(VAN_LEEUWEN_2007, gaiaRefusals(true))).toBe(false);
+    expect(refusingPublication(VAN_LEEUWEN_2007, new Set(['hipparcos2']))).toBe('hipparcos2');
+    expect(refusingPublication(
+      VAN_LEEUWEN_2007, gaiaRefusals(gaiaAstrometryRow({ parallaxMas: null })),
+    )).toBeNull();
   });
 
   it('never refuses the literature', () => {
-    expect(refusedBy(LITERATURE, new Set(['gaia_release', 'hipparcos2']))).toBe(false);
+    expect(refusingPublication(LITERATURE, new Set(['gaia_release', 'hipparcos2']))).toBeNull();
   });
 });

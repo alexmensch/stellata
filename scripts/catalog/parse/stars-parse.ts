@@ -41,8 +41,8 @@ import {
   type VelocityVia,
 } from '../distance/direction-cascade';
 import { lookupCns5Astrometry } from '../classic-ids/classic-ids-parse';
-import { gaiaRowIs2p } from '../distance/gaia-distrust';
 import {
+  isLowPrecisionParallax,
   resolveParallax,
   DIST_VIA_VALUES,
   type DistVia,
@@ -470,14 +470,14 @@ export function readStars(
           pairMemberParallax, gaiaSourceId, hip,
         ),
       },
-      gaiaRowIs2p(gaiaRow),
       isSol,
     );
     // Not a `dropped` gate: a park is a deliberate record-parity ledger entry (/docs/catalog-driver.md#61-record-parity).
     if (plxRes.via === 'none') {
-      park(plxRes.refusedPlxMas.length > 0
+      const refusedPlxMas = plxRes.refusals.map((r) => r.mas);
+      park(refusedPlxMas.length > 0
         ? 'refused_no_defensible_parallax'
-        : 'no_parallax_published', plxRes.refusedPlxMas);
+        : 'no_parallax_published', refusedPlxMas);
       continue;
     }
 
@@ -525,7 +525,7 @@ export function readStars(
             cns5: lookupCns5Astrometry(directions.cns5, simbadKeys.gl)?.pm ?? null,
             simbad: simbadRow?.astrometry?.pm ?? null,
           },
-          gaiaRowIs2p(gaiaRow),
+          gaiaRow,
         )
       : null;
     const velVia = pmRescue === null
@@ -541,7 +541,8 @@ export function readStars(
     // B-J's Galactic-density prior tail (~10–40 kpc). A null parallax here is
     // the curated exit (Sol, distance zero by construction); `none` returned
     // above.
-    const plxDistPc = plxRes.parallax === null ? null : 1000 / plxRes.parallax.mas;
+    const measuredPlx = plxRes.via === 'curated' ? null : plxRes.value;
+    const plxDistPc = measuredPlx === null ? null : 1000 / measuredPlx.mas;
     let dist = plxDistPc ?? 0;
     let distVia: DistVia = plxRes.via;
     const bjEligibleRow = isBailerJonesEligible(gaiaSourceId, plxRes.via);
@@ -563,7 +564,7 @@ export function readStars(
     if (isInLmcCone(raHours, dirRes.srcDecDeg)) {
       lmcCandidates++;
       const lmc = applyLmcKinematicOverride(
-        raHours, dirRes.srcDecDeg, pmRaMasyr, pmDecMasyr, plxRes.parallax,
+        raHours, dirRes.srcDecDeg, pmRaMasyr, pmDecMasyr, measuredPlx,
       );
       if (lmc.kind === 'snap') {
         lmcOverriddenByDistVia[distVia]++;
@@ -588,7 +589,9 @@ export function readStars(
     // supersedes the inversion its posterior is what handles a
     // low-S/N parallax, so flagging those rows would report a bias the record
     // does not carry. The LMC snap replaces the distance outright.
-    if (plxRes.lowPrecision && distVia === plxRes.via) distLowPrecisionParallax++;
+    if (measuredPlx !== null && isLowPrecisionParallax(measuredPlx) && distVia === plxRes.via) {
+      distLowPrecisionParallax++;
+    }
     directionVia[dirRes.via]++;
     if (dirRes.via === 'tycho2' && tycho2Row !== null) {
       if (tycho2Row.fromIcrs) directionTycho2FromIcrs++;
