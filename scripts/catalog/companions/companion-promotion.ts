@@ -1866,7 +1866,11 @@ export function promoteCompanions(
   existingStars: Star[],
   inputs: PromotionInputs,
 ): { newStars: Star[]; stats: PromotionStats; groups: Map<string, PairCursor>; rows: PromotedRow[] } {
-  const promoted: PromotedRow[] = [];
+  const promoted = new Map<MultiplesTsvRow, PromotedRow>();
+  const record = (r: PromotedRow): void => {
+    if (promoted.has(r.row)) throw new Error(`promotion decided ${r.row.systemId}/${r.row.comp} twice`);
+    promoted.set(r.row, r);
+  };
   const post = emptyPostPassStats();
   const existing = buildExistingIndexes(existingStars);
   const groups = groupBySystem(multiplesRows);
@@ -1942,7 +1946,7 @@ export function promoteCompanions(
     if (anchor === null) return null;
     const outcome = promoteCursorPrimary(anchor.primary, anchor.system, state);
     const systemKey = anchor.system.star.originKey;
-    promoted.push({ row: anchor.primary, via: 'escape', outcome, anchor: systemKey, systemAnchor: systemKey });
+    record({ row: anchor.primary, via: 'escape', outcome, anchor: systemKey, systemAnchor: systemKey });
     escaped.add(anchor.primary);
     return placedRecordIdx(outcome);
   };
@@ -1952,7 +1956,7 @@ export function promoteCompanions(
     // pair; their primary slot is empty. Skip — promoting them without
     // pair geometry needs a different rule than this path.
     if (cursor.primary === null) {
-      for (const row of cursor.secondaries) promoted.push(unpaired(row));
+      for (const row of cursor.secondaries) record(unpaired(row));
       continue;
     }
 
@@ -2014,7 +2018,7 @@ export function promoteCompanions(
     const systemAnchorKey = cursorRoot !== null
       ? wdsRootAnchors.get(cursorRoot)?.star.originKey ?? null : null;
     if (!escaped.has(cursor.primary)) {
-      promoted.push({
+      record({
         row: cursor.primary, via: 'primary', outcome: { kind: 'not-applicable' },
         anchor: anchorKey, systemAnchor: systemAnchorKey,
       });
@@ -2032,7 +2036,7 @@ export function promoteCompanions(
     );
     for (const row of cursor.secondaries) {
       if (row.orbitRole !== 'secondary') {
-        promoted.push(unpaired(row));
+        record(unpaired(row));
         continue;
       }
       // WDS compound-secondary guard. "BC" / "AB" / "ABC" represent
@@ -2044,7 +2048,7 @@ export function promoteCompanions(
       const wdsRoot = wdsRootOf(row.systemId);
       if (wdsRoot !== null
           && isUnresolvedCompound(row.comp, wdsRoot, singleLettersByRoot)) {
-        promoted.push(decided(row, { kind: 'dropped', reason: 'compound-comp' }));
+        record(decided(row, { kind: 'dropped', reason: 'compound-comp' }));
         continue;
       }
       const canonicalComp = canonicalCompLetter(
@@ -2052,7 +2056,7 @@ export function promoteCompanions(
       );
       const resolved = resolvePosition(row, cursor.primary, anchor);
       if (resolved === 'beyond-tidal') {
-        promoted.push(decided(row, { kind: 'dropped', reason: 'beyond-tidal-limit' }));
+        record(decided(row, { kind: 'dropped', reason: 'beyond-tidal-limit' }));
         continue;
       }
       const position = resolved;
@@ -2071,7 +2075,7 @@ export function promoteCompanions(
         },
         state,
       );
-      promoted.push(decided(row, outcome));
+      record(decided(row, outcome));
       const promotedIdx = placedRecordIdx(outcome);
       // A promoted secondary is authoritative for its token — it resolves
       // through the inherited-id escape onto its own record, so it
@@ -2396,7 +2400,12 @@ export function promoteCompanions(
     );
     post.blendDimmedAnchors++;
   }
-  return { newStars, stats: { ...foldRowOutcomes(promoted), ...post }, groups, rows: promoted };
+  const rows = multiplesRows.map((row) => {
+    const r = promoted.get(row);
+    if (r === undefined) throw new Error(`promotion recorded no outcome for ${row.systemId}/${row.comp}`);
+    return r;
+  });
+  return { newStars, stats: { ...foldRowOutcomes(rows), ...post }, groups, rows };
 }
 
 function lookupPromoted(
