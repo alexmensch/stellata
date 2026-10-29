@@ -96,7 +96,7 @@ export function promotionLineageRow(r: PromotedRow, recordKey: (idx: number) => 
         via,
         record: recordKey(o.idx),
         desig_con_from_anchor: flag(o.desigConFromAnchor),
-        ...(o.recuration === null ? {} : { recurated: o.recuration.brightness }),
+        ...(o.recurated === null ? {} : { recurated: o.recurated }),
       });
     case 'minted':
       return row('minted', {

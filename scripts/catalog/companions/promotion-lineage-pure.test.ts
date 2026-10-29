@@ -27,7 +27,7 @@ describe('promotionLineageRow', () => {
       { kind: 'dropped', reason: 'compound-comp' },
       { kind: 'dropped', reason: 'parked-record', parked: 'spine:2', viaGaia5p: true, ownedFit: false },
       { kind: 'adopted', idx: 3, via: 'earlier-mint' },
-      { kind: 'adopted', idx: 4, via: 'own-hip', desigConFromAnchor: true, recuration: null },
+      { kind: 'adopted', idx: 4, via: 'own-hip', desigConFromAnchor: true, recurated: null },
       { kind: 'minted', idx: 5, synthetic: true, brightness: own, constellationSplit: false },
       { kind: 'repositioned', idx: 6, brightness: own },
       { kind: 'primary-unresolved' },
@@ -50,7 +50,7 @@ describe('promotionLineageRow', () => {
   it('names an adopted record by its origin key and the re-curation it took', () => {
     const r = promotionLineageRow(promoted({
       kind: 'adopted', idx: 4, via: 'own-id', desigConFromAnchor: false,
-      recuration: { brightness: 'wds_mag', first: false },
+      recurated: 'wds_mag',
     }), recordKey);
     expect(paramsOf(r)).toEqual({
       via: 'secondary', record: 'spine:4', desig_con_from_anchor: 'false', recurated: 'wds_mag',

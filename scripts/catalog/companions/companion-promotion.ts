@@ -196,7 +196,7 @@ export type RowOutcome =
     idx: number;
     via: 'own-id' | 'own-hip' | 'sameas-bridge';
     desigConFromAnchor: boolean;
-    recuration: Recuration | null;
+    recurated: RecuratedBrightness | null;
   }
   | {
     kind: 'minted';
@@ -214,11 +214,6 @@ export interface MintedBrightness {
   spectMsFromOwnAbsmag: boolean;
 }
 
-/** `first` is false when an earlier row already re-curated the member. */
-export interface Recuration {
-  brightness: RecuratedBrightness;
-  first: boolean;
-}
 
 /** See ../lineage/README.md#the-promotion-stage. */
 export interface PromotedRow {
@@ -536,6 +531,9 @@ export function foldRowOutcomes(rows: readonly PromotedRow[]): RowOutcomeStats {
     if (b.source === 'inherited_twin') stats.absmagInheritedTwinOrbital++;
     if (b.spectMsFromOwnAbsmag) stats.spectMsFromOwnAbsmag++;
   };
+  const recuratedMembers = Object.fromEntries(
+    RECURATED_BRIGHTNESS.map((b) => [b, new Set<number>()]),
+  ) as Record<RecuratedBrightness, Set<number>>;
   for (const { via, outcome: o } of rows) {
     if (via === 'secondary') stats.pairRowsScanned++;
     switch (o.kind) {
@@ -564,7 +562,7 @@ export function foldRowOutcomes(rows: readonly PromotedRow[]): RowOutcomeStats {
         if (o.via === 'earlier-mint') break;
         if (o.via === 'sameas-bridge') stats.existingViaSameasBridge++;
         if (o.desigConFromAnchor) stats.existingDesigConFromAnchor++;
-        if (o.recuration?.first) stats.existingMemberRecurated[o.recuration.brightness]++;
+        if (o.recurated !== null) recuratedMembers[o.recurated].add(o.idx);
         break;
       case 'minted':
         stats.promoted++;
@@ -585,6 +583,7 @@ export function foldRowOutcomes(rows: readonly PromotedRow[]): RowOutcomeStats {
       }
     }
   }
+  for (const b of RECURATED_BRIGHTNESS) stats.existingMemberRecurated[b] = recuratedMembers[b].size;
   return stats;
 }
 
@@ -1468,9 +1467,9 @@ function recurateExistingMember(
   ctx: PromoteRowContext,
   state: PromotionState,
   memberIdx: number,
-): Recuration | null {
+): RecuratedBrightness | null {
   const prior = state.recuratedMembers.get(memberIdx);
-  if (prior !== undefined) return { brightness: prior, first: false };
+  if (prior !== undefined) return prior;
   const { row, anchorPrimaryRow, anchorStar, systemAnchorStar, position,
           isPairRowPrimary } = ctx;
   if (isPairRowPrimary || position === null) return null;
@@ -1516,7 +1515,7 @@ function recurateExistingMember(
   }
   member.physicalRadius = physicalRadius(member.absmag, spectral);
   state.recuratedMembers.set(memberIdx, brightness);
-  return { brightness, first: true };
+  return brightness;
 }
 
 /** Every route by which a pair row resolves to a record the catalogue
@@ -1530,9 +1529,9 @@ function adoptExistingMember(
   const desigConFromAnchor = inheritAnchorDesignationCon(
     state.existingStars[memberIdx], ctx.anchorStar ?? ctx.systemAnchorStar,
   );
-  const recuration = recurateExistingMember(ctx, state, memberIdx);
-  registerExistingMemberForAnchorDim(ctx, state, memberIdx, recuration?.brightness ?? null);
-  return { kind: 'adopted', idx: memberIdx, via, desigConFromAnchor, recuration };
+  const recurated = recurateExistingMember(ctx, state, memberIdx);
+  registerExistingMemberForAnchorDim(ctx, state, memberIdx, recurated);
+  return { kind: 'adopted', idx: memberIdx, via, desigConFromAnchor, recurated };
 }
 
 /** A record a pair row resolves to displays a name composed off the anchor

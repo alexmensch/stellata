@@ -3371,11 +3371,11 @@ describe('foldRowOutcomes', () => {
     { kind: 'adopted', idx: 1, via: 'earlier-mint' },
     {
       kind: 'adopted', idx: 2, via: 'sameas-bridge', desigConFromAnchor: true,
-      recuration: { brightness: 'wds_mag', first: true },
+      recurated: 'wds_mag',
     },
     {
       kind: 'adopted', idx: 2, via: 'own-id', desigConFromAnchor: false,
-      recuration: { brightness: 'wds_mag', first: false },
+      recurated: 'wds_mag',
     },
     { kind: 'minted', idx: 3, synthetic: true, brightness: own, constellationSplit: true },
     {
