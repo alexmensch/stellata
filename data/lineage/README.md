@@ -9,9 +9,10 @@ folder holds only the list every row's `code` must be on.
 ```
 reason-codes.tsv   Regular git. One row per code: code, stage, effect
                    (retire · park · merge · none), status (live · retired ·
-                   historical), retired_in, first_version — the package
-                   version of the tree that first generated the code — and
-                   the one-line description public SID pages show.
+                   historical), retired_in, first_version — the release
+                   current when the code was added, so 7.1.6 reads "added
+                   after 7.1.6 shipped" — and the one-line description
+                   public SID pages show.
 ```
 
 Two suites in `scripts/catalog/lineage/reason-codes.test.ts` hold it: it

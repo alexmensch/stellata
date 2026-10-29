@@ -172,8 +172,10 @@ one text; `evidence` is its references' text forms joined by `|`.
   Python test checks that every outcome value it can emit maps to a row.
 - An entry carries the code, its stage, its declared effect (removal and
   re-bind codes: retire, park or merge; `none` for every other code), a
-  one-line description, the version that first shipped it — the package
-  version of the tree that first generated it — and its status — `live`, `retired` (with
+  one-line description, `first_version` — the release current when the code
+  was added (the tree's package version; a lineage-only PR bumps none, so
+  `7.1.6` reads "added after 7.1.6 shipped") — and its status — `live`,
+  `retired` (with
   the version that retired it) or `historical`, declared beside the code as
   a closed union. Historical codes carry legacy causes and are never mapped
   onto live ones.
