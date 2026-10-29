@@ -36,6 +36,7 @@
     "audit:spine-associations": "tsx scripts/catalog/spine/association-audit.ts",
     "build:membership": "tsx scripts/catalog/membership/build-membership-manifest.ts",
     "lineage:codes": "tsx scripts/catalog/lineage/generate-reason-codes.ts",
+    "trace": "tsx scripts/catalog/lineage/trace.ts",
     "refresh:iau-wgsn": "python3 scripts/refresh/refresh-iau-wgsn.py",
     "sid:allocate": "tsx scripts/sid/allocate.ts",
     "sid:check": "tsx scripts/sid/allocate.ts --check",

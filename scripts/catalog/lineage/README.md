@@ -32,6 +32,8 @@ scripts/catalog/lineage/
   generate-reason-codes.ts       codec; `pnpm run lineage:codes`.
   reason-codes.test.ts           The list equals its generation, and is
                                  append-only against the merge-base.
+  trace.ts, trace-pure.ts        `pnpm run trace` (#trace).
+    (+ test)
   stage-lineage.ts               stageLineage: one stage's files, header,
                                  baseline verdict, diff and budget check,
                                  ready for the stage's emitArtifacts call.
@@ -261,19 +263,30 @@ non-empty diff puts that diff's summary in its PR body.
 
 ## Trace
 
-`pnpm run trace <name | designation | sid | gaia id>`:
+`pnpm run trace <name | designation | sid | gaia id> [--dir <dir>]`
+(`trace.ts`, over `trace-pure.ts`; `--dir` reads another lineage directory,
+`build/lineage/` by default). `parseTraceQuery` tells the four apart: ten or
+more bare digits, or `gaia_dr3:<id>`, is a Gaia id (a SID never runs that
+long); fewer, or `sid:<n>`, a SID; `ns:key` a designation; anything else a
+name.
 
-1. A name resolves to designations through `catalog-lookup.ts`'s
-   `lookupByName`; designations normalise through `sid-pure.ts`'s
-   namespaces; a SID resolves through the ledger.
+1. A name resolves to its record's `hip:` and `gaia_dr3:` designations
+   through `catalog-lookup.ts`'s `lookupByName`, so it needs a built
+   catalogue; designations follow `sid-pure.ts`'s grammar; a SID resolves
+   to its canonical key through the ledger.
 2. Find the origin keys whose identity rows carry that designation. Parked
    and dropped records have lineage rows too, so they are found. Also find
    every row that names it in `params` or `evidence` — a source a gate
    weighed and refused, or only cited, sits on no identity row. A full scan
-   of the stage files, a few seconds, so no index is kept.
+   of the stage files, about two seconds today, so no index is kept.
 3. Widen to the same-as class, and to retired SIDs and their successors,
-   through allocation's rows.
-4. Print every stage's rows for those keys in stage order.
+   through allocation's rows — once allocation is a lineage stage.
+4. Print every stage's rows for those keys in stage order
+   (`LINEAGE_STAGES`).
+
+`trace.test.ts` runs the command over a small committed fixture: it finds a
+record the catalogue parks and the record that refused a source no identity
+row carries.
 
 ## Cross-stage joins
 

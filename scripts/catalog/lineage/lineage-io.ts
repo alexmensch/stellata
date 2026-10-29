@@ -11,6 +11,7 @@ import type { ArtifactContents, OutputFamily } from '../../util/emit-artifacts';
 import { PACKAGE_JSON, REPO_ROOT } from '../../util/paths';
 import { stepInputPaths } from '../../util/step-inputs';
 import { escapeRegExp } from '../../util/escape-regexp';
+import { identityRows, type IdentityRow } from './identity-pure';
 import { lineageRows, type LineageRow } from './lineage-row-pure';
 import { headerText, parseHeader, type StageHeader } from './lineage-header-pure';
 
@@ -110,6 +111,10 @@ export function gzipText(text: string): Uint8Array {
 
 export function readLineage(path: string): LineageRow[] {
   return [...lineageRows(gunzipSync(readFileSync(path)).toString('utf8'), path)];
+}
+
+export function readIdentity(path: string): IdentityRow[] {
+  return [...identityRows(gunzipSync(readFileSync(path)).toString('utf8'), path)];
 }
 
 export function readStageHeader(dir: string, stage: string): StageHeader | null {
