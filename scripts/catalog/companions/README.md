@@ -83,7 +83,10 @@ a third via real Gaia/HIP keys, two-thirds via synthetic identifiers
 
 Each pair row's decision is a `RowOutcome`: dropped with its reason, adopted
 onto a record already held (its own id or HIP, a same-as bridge, or an
-earlier mint this build), minted, or an AT-HYG double repositioned onto it.
+earlier mint this build), minted, or an AT-HYG double repositioned onto it;
+a pair's primary is `not-applicable` when it anchors its pair and
+`primary-unresolved` when it resolves to no record, as is any row in no pair
+`not-applicable`.
 Every per-row `PromotionStats` counter folds from those (`foldRowOutcomes`);
 the post-passes below act on records, not rows, and keep their own counters.
 

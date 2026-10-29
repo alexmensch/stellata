@@ -49,4 +49,5 @@ promotion.dropped.no-position	promotion	retire	live		7.1.6	The row has neither a
 promotion.dropped.parked-record	promotion	park	live		7.1.6	The distance the row states is a parallax a tier above refused, so promoting it would ship the parked record.
 promotion.minted	promotion	none	live		7.1.6	The row becomes a new catalogue record.
 promotion.not-applicable	promotion	none	live		7.1.6	Promotion decides nothing for the row: a pair's primary that anchors it, or a row in no pair.
+promotion.primary-unresolved	promotion	none	live		7.1.6	A pair's primary resolves to no catalogue record and no escape places it, so its pair runs with no anchor.
 promotion.repositioned	promotion	merge	live		7.1.6	An AT-HYG record sitting on the anchor under the anchor's name plus this letter is the component, and moves to the row's position.

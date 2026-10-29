@@ -1188,11 +1188,15 @@ describe('promoteCompanions rows', () => {
       x_pc: 40, y_pc: 0.01, z_pc: 0, distPc: 40,
     });
     const standalone = multiplesRow({ systemId: '00002+0002', comp: 'A', orbitRole: 'standalone' });
-    const { rows } = promoteCompanions([primary, secondary, standalone], [anchor], inputs());
+    const unresolved = multiplesRow({
+      systemId: '00003+0003-AB', comp: 'A', orbitRole: 'primary', gaiaSourceId: '999',
+    });
+    const { rows } = promoteCompanions([primary, secondary, standalone, unresolved], [anchor], inputs());
     expect(rows.map((r) => [r.row.comp, r.via, r.outcome.kind, r.anchor, r.systemAnchor])).toEqual([
       ['A', 'primary', 'not-applicable', 'spine:7', 'spine:7'],
       ['B', 'secondary', 'minted', 'spine:7', 'spine:7'],
       ['A', 'unpaired', 'not-applicable', null, null],
+      ['A', 'primary', 'primary-unresolved', null, null],
     ]);
   });
 });
@@ -3383,6 +3387,7 @@ describe('foldRowOutcomes', () => {
       ...outcomes.map((outcome) => ({ row, via: 'secondary' as const, outcome, ...unanchored })),
       { row, via: 'escape', outcome: { kind: 'dropped', reason: 'collocated-primary' }, ...unanchored },
       { row, via: 'primary', outcome: { kind: 'not-applicable' }, ...unanchored },
+      { row, via: 'primary', outcome: { kind: 'primary-unresolved' }, ...unanchored },
     ]);
     expect(stats).toEqual({
       pairRowsScanned: 14,

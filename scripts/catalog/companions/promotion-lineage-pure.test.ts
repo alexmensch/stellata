@@ -30,6 +30,7 @@ describe('promotionLineageRow', () => {
       { kind: 'adopted', idx: 4, via: 'own-hip', desigConFromAnchor: true, recuration: null },
       { kind: 'minted', idx: 5, synthetic: true, brightness: own, constellationSplit: false },
       { kind: 'repositioned', idx: 6, brightness: own },
+      { kind: 'primary-unresolved' },
       { kind: 'not-applicable' },
     ];
     const rows = outcomes.map((o) => promotionLineageRow(promoted(o), recordKey));
@@ -40,6 +41,7 @@ describe('promotionLineageRow', () => {
       'promotion.adopted.own-hip',
       'promotion.minted',
       'promotion.repositioned',
+      'promotion.primary-unresolved',
       'promotion.not-applicable',
     ]);
     expect(() => stageLineageText(PROMOTION_CODES, [...rows].sort(compareLineageRows))).not.toThrow();

@@ -32,6 +32,7 @@ export const PROMOTION_CODES = stageCodes(PROMOTION_STAGE, {
   'adopted.earlier-mint': live('An earlier row of this build already minted the record this row names.', 'merge'),
   minted: live('The row becomes a new catalogue record.'),
   repositioned: live('An AT-HYG record sitting on the anchor under the anchor\'s name plus this letter is the component, and moves to the row\'s position.', 'merge'),
+  'primary-unresolved': live('A pair\'s primary resolves to no catalogue record and no escape places it, so its pair runs with no anchor.'),
   'not-applicable': live('Promotion decides nothing for the row: a pair\'s primary that anchors it, or a row in no pair.'),
 });
 
@@ -91,6 +92,8 @@ export function promotionLineageRow(r: PromotedRow, recordKey: (idx: number) => 
       });
     case 'repositioned':
       return row('repositioned', { via, ...brightness(o.brightness), record: recordKey(o.idx) });
+    case 'primary-unresolved':
+      return row('primary-unresolved', { via });
     case 'not-applicable':
       return row('not-applicable', { via });
     default: {

@@ -205,6 +205,7 @@ export type RowOutcome =
     constellationSplit: boolean;
   }
   | { kind: 'repositioned'; idx: number; brightness: MintedBrightness }
+  | { kind: 'primary-unresolved' }
   | { kind: 'not-applicable' };
 
 export interface MintedBrightness {
@@ -566,6 +567,7 @@ export function foldRowOutcomes(rows: readonly PromotedRow[]): RowOutcomeStats {
         stats.repositionedCollocatedDouble++;
         countBrightness(o.brightness);
         break;
+      case 'primary-unresolved':
       case 'not-applicable':
         break;
       default: {
@@ -2019,7 +2021,9 @@ export function promoteCompanions(
       ? wdsRootAnchors.get(cursorRoot)?.star.originKey ?? null : null;
     if (!escaped.has(cursor.primary)) {
       record({
-        row: cursor.primary, via: 'primary', outcome: { kind: 'not-applicable' },
+        row: cursor.primary,
+        via: 'primary',
+        outcome: { kind: primaryCatalogIdx === null ? 'primary-unresolved' : 'not-applicable' },
         anchor: anchorKey, systemAnchor: systemAnchorKey,
       });
     }
