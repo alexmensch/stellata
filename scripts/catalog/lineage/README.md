@@ -217,14 +217,14 @@ build's lineage.
 `build/lineage/<stage>.tsv.gz`: gzip level 1, sorted by key, every record at
 every stage, no reduced-detail mode.
 
-Measured once (2026-10-21, a throwaway probe; the pinned budget supersedes
-it) on 1M synthetic rows of this shape: 67 MB plain, 13.6 MB compressed
-in 0.2 s per stage — about 200 MB and a few seconds for fifteen stages. With
-`build/lineage.previous/` a checkout holds about twice that, and each new
-worktree copies one more build's worth in. The
-bulk is Gaia ids, which no format compresses much: Parquet with zstd came to
-11.5 MB in 1.2 s, not worth six times the write cost and the loss of
-`zgrep`.
+A design-time probe on 1M synthetic rows (2026-10-21) chose the format: the
+bulk is Gaia ids, which no format compresses much, and Parquet with zstd
+came out about 15% smaller at five to nine times the write cost and the
+loss of `zgrep`. Its per-stage size is not a sizing figure: plan a new
+stage from the measured budget below, and every build prints its own
+(`<stage> lineage: N bytes gzipped`). With `build/lineage.previous/` a
+checkout holds about twice the current build, and each new worktree copies
+one build's worth in.
 
 The real stages' write time and disk are pinned as a budget: each stage
 passes `stageLineage` (`stage-lineage.ts`) a `LineageBudget`, and a run over
