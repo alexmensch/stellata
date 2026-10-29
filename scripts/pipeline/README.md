@@ -258,7 +258,10 @@ Hand-kept lists become derivations over the table:
 - `tests/artifact-freshness.test.ts` iterates every stamp in `build/stamps/`
   and `data/stamps/`.
 - `.worktreeinclude` may list only the `build` steps' stamped outputs, their
-  stamp files and `build/lineage/`; a test checks it against the table.
+  stamp files and `build/lineage/`. `worktree-seed.test.ts` checks it against
+  the outputs of `build:seed-steps`, read from a test-side table of TypeScript
+  declarations and the Python steps' `--outputs`; with `steps.ts` it reads
+  the step table instead.
 - `tests/bundle-content.test.ts` reads the mirror steps' declarations.
 - `resolved-hole-table.ts`'s record count is tested against
   `build-catalog-expected.json`'s `recordCount`.

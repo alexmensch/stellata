@@ -136,7 +136,10 @@ built from — `build/lineage/`, whose header the lineage diff checks against
 the merge-base ([Run-to-run diff](catalog/lineage/README.md#run-to-run-diff)).
 Every listed file is an output of a step `build:seed` runs
 ([Seeding builds](#seeding-builds--buildseed)), so refreshing the main
-checkout's seed is that one command. A worktree made any other way
+checkout's seed is that one command. `worktree-seed.test.ts` holds each
+pattern to a declared output or stamp of one of those steps: a TypeScript
+step's `declareOutputs` constant, a Python step's answer to `--outputs`. A
+worktree made any other way
 (`git worktree add`) builds from scratch.
 
 The private paper-store link is not in that list — the harness's copy skips
