@@ -1296,10 +1296,8 @@ export interface SpineMatch {
   unreached: number[];
 }
 
-/** Resolve every spine row through the manifest's designation classes the way
- *  `sid:allocate` resolves a record: the same-as graph over each manifest row's
- *  designations plus the stored bridges, a designation on more than one
- *  manifest row dropped first (/docs/sid.md#41-same-as-equivalence-graph), and the row keyed on its
+/** Resolve every spine row through `sameAsClasses` over the manifest's
+ *  designations, the classes `sid:allocate` builds, keying the row on its
  *  first ladder-ranked designation the graph knows — its canonical key. A
  *  lower-ranked designation the label merge moved to a sibling therefore does
  *  not split the match: the SID never rode on it. */
