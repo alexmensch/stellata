@@ -83,8 +83,8 @@ describe('diffLineage', () => {
 });
 
 describe('judgeBaseline', () => {
-  const header = (commit: string): StageHeader => ({
-    stage: 'demo', version: '1.0.0', commit, inputHash: 'h', files: ['demo.tsv.gz'],
+  const header = (commit: string, dirty = false): StageHeader => ({
+    stage: 'demo', version: '1.0.0', commit, dirty, inputHash: 'h', files: ['demo.tsv.gz'],
   });
 
   it('diffs a baseline built at the merge-base, and nothing when there is none', () => {
@@ -101,5 +101,12 @@ describe('judgeBaseline', () => {
       .toEqual({ kind: 'diff', why: 'accepted' });
     expect(judgeBaseline({ kind: 'against', dir: '/elsewhere' }, null, false))
       .toEqual({ kind: 'diff', why: 'against' });
+  });
+
+  it('refuses a baseline built over uncommitted edits, even at the merge-base', () => {
+    const dirty = judgeBaseline({ kind: 'checkout', header: header('abc', true) }, 'abc', false);
+    expect(dirty.kind === 'refused' && dirty.message).toMatch(/built at abc with uncommitted edits/);
+    expect(judgeBaseline({ kind: 'checkout', header: header('abc', true) }, 'abc', true))
+      .toEqual({ kind: 'diff', why: 'accepted' });
   });
 });

@@ -5,6 +5,8 @@ export interface StageHeader {
   /** package.json's version: the build version the README keeps off every row. */
   readonly version: string;
   readonly commit: string;
+  /** Uncommitted edits: `commit` then does not say what the files were built from. */
+  readonly dirty: boolean;
   /** sha1 over the stage's input-file hashes. */
   readonly inputHash: string;
   readonly files: readonly string[];
@@ -20,6 +22,7 @@ export function parseHeader(text: string, file: string): StageHeader {
   for (const field of strings) {
     if (typeof h[field] !== 'string' || h[field] === '') throw new Error(`${file}: header has no ${field}`);
   }
+  if (typeof h.dirty !== 'boolean') throw new Error(`${file}: header has no dirty flag`);
   if (!Array.isArray(h.files) || h.files.some((f) => typeof f !== 'string')) {
     throw new Error(`${file}: header has no file list`);
   }
@@ -45,11 +48,13 @@ export function judgeBaseline(
   if (source.kind === 'absent') return { kind: 'none' };
   if (source.kind === 'against') return { kind: 'diff', why: 'against' };
   const { header } = source;
-  if (header !== null && mergeBase !== null && header.commit === mergeBase) {
+  if (header !== null && !header.dirty && mergeBase !== null && header.commit === mergeBase) {
     return { kind: 'diff', why: 'merge-base' };
   }
   if (acceptAny) return { kind: 'diff', why: 'accepted' };
-  const built = header === null ? 'a baseline with no header' : `a baseline built at ${header.commit}`;
+  const built = header === null
+    ? 'a baseline with no header'
+    : `a baseline built at ${header.commit}${header.dirty ? ' with uncommitted edits' : ''}`;
   const base = mergeBase === null ? 'no merge-base with origin/main' : `the merge-base ${mergeBase}`;
   return {
     kind: 'refused',

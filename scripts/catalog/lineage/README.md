@@ -241,10 +241,12 @@ copies untouched.
 A fresh worktree is seeded with the main checkout's last `build/lineage/`
 (`.worktreeinclude`), which may come from an older commit. So each stage
 writes a header beside its files, `<stage>.header.json`, recording the
-build version, the commit and the content hash of the inputs the stage was
-built from (`stepInputPaths`, `../../util/step-inputs.ts`); a header per
+build version, the commit, whether the tree had uncommitted edits, and the
+content hash of the inputs the stage was built from (`stepInputPaths`, `../../util/step-inputs.ts`); a header per
 stage is what lets one stage rotate without rewriting another's. The diff
-refuses a baseline whose commit is not the branch's merge-base with main
+refuses a baseline whose commit is not the branch's merge-base with main, or
+that was built over uncommitted edits — its commit then names code it was
+not built from
 (`judgeBaseline`, `lineage-header-pure.ts`). The refusal names the
 baseline's commit and how to get a matching one; `--any-baseline` accepts it
 anyway, and `--against <dir>` diffs against that directory instead. A

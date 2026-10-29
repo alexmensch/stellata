@@ -20,7 +20,7 @@ let dir: string;
 let layout: LineageLayout;
 
 const header = (commit: string): StageHeader => ({
-  stage: 'demo', version: '1.0.0', commit, inputHash: 'h', files: ['demo.tsv.gz', 'identity.tsv.gz'],
+  stage: 'demo', version: '1.0.0', commit, dirty: false, inputHash: 'h', files: ['demo.tsv.gz', 'identity.tsv.gz'],
 });
 
 function text(source: string): string {

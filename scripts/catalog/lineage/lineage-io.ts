@@ -133,7 +133,7 @@ export async function stageHeader<F extends string>(
   return {
     stage: spec.stage,
     version: packageVersion(),
-    commit: headState().commit,
+    ...headState(),
     inputHash: createHash('sha1').update(JSON.stringify(hashes)).digest('hex'),
     files: spec.files.map(fileName),
   };
