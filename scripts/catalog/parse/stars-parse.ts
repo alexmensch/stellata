@@ -497,8 +497,12 @@ export function readStars(
       tycho2: simbadKeys.tyc === null ? [] : [simbadKeys.tyc],
       gliese: simbadKeys.gl === null ? [] : [simbadKeys.gl],
     }, printedVLookup);
-    const vRes = resolveVMagnitude(gaiaRow, printed, isSol ? SOL_APPARENT_V_MAGNITUDE : null);
-    if (vRes.v === null) {
+    const vRes = resolveVMagnitude({
+      photometry: gaiaRow,
+      printed,
+      curatedV: isSol ? SOL_APPARENT_V_MAGNITUDE : null,
+    });
+    if (vRes.via === 'none') {
       park('no_v_magnitude');
       continue;
     }
@@ -615,7 +619,7 @@ export function readStars(
     // modulus is undefined and takes SOL_ABSOLUTE_V_MAGNITUDE instead.
     let absmag = isSol
       ? SOL_ABSOLUTE_V_MAGNITUDE
-      : apparentToAbsoluteMagnitude(vRes.v, dist);
+      : apparentToAbsoluteMagnitude(vRes.value, dist);
 
     // Must follow the PM rescue: the position advances on the motion the row
     // ends up carrying, which is the rescue's wherever the tier states none.

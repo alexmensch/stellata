@@ -12,8 +12,9 @@ scripts/catalog/photometry/
   gaia-photometry-pure.ts        The GaiaPhotometry band bundle, the
     (+ test)                     saturation bound, calibratedPhotometry
                                  (the validity gate both relations share),
-                                 and the ascending-powers polynomial
-                                 evaluator. Pure.
+                                 `GatedValue` — a relation's value or the
+                                 gate that refused it — and the
+                                 ascending-powers polynomial evaluator. Pure.
   v-magnitude-pure.ts (+ test)   Riello 2021 (/data/papers/index.md#riello2021)
                                  G−V relation, the gated
                                  transform over it, the V cascade, which
@@ -97,10 +98,12 @@ Per-tier routing, pinned in build-counts: `gaia_riello` **<!-- count:build-catal
 `printed_hip` **<!-- count:build-catalog/vPrintedHip -->1,417<!-- /count -->** · `tycho2` **<!-- count:build-catalog/vTycho2 -->189<!-- /count -->** · `gliese` **<!-- count:build-catalog/vGliese -->20<!-- /count -->** · `curated`
 **<!-- count:build-catalog/vCurated -->1<!-- /count -->**, residual `none` **<!-- count:build-catalog/vNone -->0<!-- /count -->**.
 
-`resolveVMagnitude` returns the value **and** the tier that produced it, so
-`vVia` routing counts are pinned in build-counts the same way the direction
-cascade pins `directionVia`. The tier also rides on the record, because it
-answers a question no consumer can answer from the magnitude alone.
+`resolveVMagnitude` returns the shared cascade shape (`../cascade-result.ts`):
+the value **and** the tier that produced it, so `vVia` routing counts are
+pinned in build-counts the same way the direction cascade pins `directionVia`,
+and on any result the Riello transform's refusal of the row's Gaia photometry
+(`uncalibrated` or `colour_out_of_range`). The tier also rides on the record,
+because it answers a question no consumer can answer from the magnitude alone.
 
 **There is no SIMBAD tier**, though [§ 5](/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers) projected
 one. Gliese reaches every row Tycho-2 misses, and for the handful that would

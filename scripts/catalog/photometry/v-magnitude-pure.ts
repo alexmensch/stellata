@@ -5,7 +5,10 @@ import {
   calibratedPhotometry,
   polynomial,
   type GaiaPhotometry,
+  type GatedValue,
+  type PhotometryRefusal,
 } from './gaia-photometry-pure';
+import type { CascadeResult, UniformValues } from '../cascade-result';
 import { lookupGliese, type GlieseIndex } from '../gliese-parse';
 import { printedByHip } from './hip-photometry-parse';
 import type { Tycho2Row } from '../tycho2-parse';
@@ -49,10 +52,21 @@ export function isPrintedVVia(via: string | null): via is PrintedVVia {
 export const V_VIA_VALUES = ['gaia_riello', ...PRINTED_V_TIERS, 'curated', 'none'] as const;
 export type VVia = (typeof V_VIA_VALUES)[number];
 
-export interface VMagnitudeResolution {
-  /** Johnson V, or null when no tier could supply one. */
-  v: number | null;
-  via: VVia;
+/** The Riello relation refusing the row's Gaia photometry. */
+export interface VMagnitudeRefusal {
+  tier: 'gaia_riello';
+  reason: PhotometryRefusal;
+}
+
+/** Johnson V. `none` is a row no tier lights — a /docs/catalog-driver.md#61-record-parity park. */
+export type VMagnitudeResolution = CascadeResult<UniformValues<VVia, number>, VMagnitudeRefusal>;
+
+export interface VMagnitudeSources {
+  photometry: GaiaPhotometry | null;
+  printed: PrintedV | null;
+  /** Sol only: it carries no identifier any tier above can key on, and V is a
+   *  membership gate. See `SOL_APPARENT_V_MAGNITUDE`. */
+  curatedV: number | null;
 }
 
 /** `G − V` from the Riello cubic — the algebra alone, ungated. Callers want
@@ -61,15 +75,17 @@ export function rielloGMinusV(bpMinusRp: number): number {
   return polynomial(RIELLO_G_MINUS_V_COEFFS, bpMinusRp);
 }
 
-/** Johnson V transformed from a Gaia photometry row, or null when the Riello
- *  relation does not apply to it: a band missing or non-finite, G below the
- *  saturation bound, or the colour outside the published range. */
-export function rielloVMagnitude(photometry: GaiaPhotometry | null): number | null {
+/** Johnson V transformed from a Gaia photometry row, or the gate that refused
+ *  it: a band missing or non-finite, or G below the saturation bound
+ *  (`uncalibrated`), or the colour outside the published range. */
+export function rielloVMagnitude(photometry: GaiaPhotometry): GatedValue {
   const calibrated = calibratedPhotometry(photometry);
-  if (calibrated === null) return null;
+  if (calibrated === null) return { kind: 'refused', reason: 'uncalibrated' };
   const { gMag, bpMinusRp } = calibrated;
-  if (bpMinusRp < RIELLO_BP_RP_MIN || bpMinusRp > RIELLO_BP_RP_MAX) return null;
-  return gMag - rielloGMinusV(bpMinusRp);
+  if (bpMinusRp < RIELLO_BP_RP_MIN || bpMinusRp > RIELLO_BP_RP_MAX) {
+    return { kind: 'refused', reason: 'colour_out_of_range' };
+  }
+  return { kind: 'value', value: gMag - rielloGMinusV(bpMinusRp) };
 }
 
 export interface Tycho2VResolution {
@@ -186,23 +202,23 @@ export function printedV(keys: PrintedVKeys, lookups: PrintedVLookups): PrintedV
  *  tier is a condition rather than a magnitude cut, and why there is no SIMBAD
  *  tier — in README.md#the-v-cascade. */
 export function resolveVMagnitude(
-  photometry: GaiaPhotometry | null,
-  printed: PrintedV | null,
-  curatedV: number | null = null,
+  { photometry, printed, curatedV }: VMagnitudeSources,
 ): VMagnitudeResolution {
-  const transformed = rielloVMagnitude(photometry);
-  if (transformed !== null) {
-    return { v: transformed, via: 'gaia_riello' };
+  const refusals: VMagnitudeRefusal[] = [];
+  if (photometry !== null) {
+    const transformed = rielloVMagnitude(photometry);
+    if (transformed.kind === 'value') {
+      return { via: 'gaia_riello', value: transformed.value, refusals };
+    }
+    refusals.push({ tier: 'gaia_riello', reason: transformed.reason });
   }
   if (printed !== null) {
-    return { v: printed.vMag, via: printed.vVia };
+    return { via: printed.vVia, value: printed.vMag, refusals };
   }
-  // Sol only: it carries no identifier any tier above can key on, and V is a
-  // membership gate. See `SOL_APPARENT_V_MAGNITUDE`.
   if (curatedV !== null && Number.isFinite(curatedV)) {
-    return { v: curatedV, via: 'curated' };
+    return { via: 'curated', value: curatedV, refusals };
   }
-  return { v: null, via: 'none' };
+  return { via: 'none', refusals };
 }
 
 /** Whether a V from this tier is the whole SYSTEM's blended magnitude — every

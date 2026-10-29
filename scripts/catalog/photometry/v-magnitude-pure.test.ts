@@ -17,8 +17,13 @@ import {
   printedVLookups,
   tycho2VMagnitude,
   vTierIsSystemBlend,
+  type PrintedV,
 } from './v-magnitude-pure';
-import { GAIA_PHOTOMETRY_SATURATION_G } from './gaia-photometry-pure';
+import {
+  GAIA_PHOTOMETRY_SATURATION_G,
+  gatedValueOrNull,
+  type GaiaPhotometry,
+} from './gaia-photometry-pure';
 import { photometry, printedVOf } from './photometry-fixture';
 
 describe('Riello 2021 G−V relation', () => {
@@ -64,70 +69,79 @@ describe('Riello 2021 G−V relation', () => {
 });
 
 describe('rielloVMagnitude', () => {
+  const UNCALIBRATED = { kind: 'refused', reason: 'uncalibrated' };
+  const OUT_OF_RANGE = { kind: 'refused', reason: 'colour_out_of_range' };
+
   it('transforms a well-measured unsaturated source inside the colour range', () => {
     // G = 10, BP-RP = 0.8: the gate's own inputs, so the returned V proves the
     // transform ran on the values the gate accepted rather than a re-derivation.
-    expect(rielloVMagnitude(photometry())).toBeCloseTo(10 - rielloGMinusV(0.8), 12);
+    expect(gatedValueOrNull(rielloVMagnitude(photometry())))
+      .toBeCloseTo(10 - rielloGMinusV(0.8), 12);
   });
 
   it('rejects a missing band', () => {
-    expect(rielloVMagnitude(photometry({ bpMag: null }))).toBeNull();
-    expect(rielloVMagnitude(photometry({ rpMag: null }))).toBeNull();
-    expect(rielloVMagnitude(photometry({ gMag: null }))).toBeNull();
+    expect(rielloVMagnitude(photometry({ bpMag: null }))).toEqual(UNCALIBRATED);
+    expect(rielloVMagnitude(photometry({ rpMag: null }))).toEqual(UNCALIBRATED);
+    expect(rielloVMagnitude(photometry({ gMag: null }))).toEqual(UNCALIBRATED);
   });
 
   it('rejects a non-finite band rather than returning NaN', () => {
-    expect(rielloVMagnitude(photometry({ gMag: Number.NaN }))).toBeNull();
-    expect(rielloVMagnitude(photometry({ bpMag: Number.POSITIVE_INFINITY }))).toBeNull();
+    expect(rielloVMagnitude(photometry({ gMag: Number.NaN }))).toEqual(UNCALIBRATED);
+    expect(rielloVMagnitude(photometry({ bpMag: Number.POSITIVE_INFINITY }))).toEqual(UNCALIBRATED);
   });
 
   it('rejects a source Gaia saturates, accepting exactly at the bound', () => {
     expect(rielloVMagnitude(photometry({ gMag: GAIA_PHOTOMETRY_SATURATION_G - 0.01 })))
-      .toBeNull();
-    expect(rielloVMagnitude(photometry({ gMag: GAIA_PHOTOMETRY_SATURATION_G })))
-      .not.toBeNull();
+      .toEqual(UNCALIBRATED);
+    expect(rielloVMagnitude(photometry({ gMag: GAIA_PHOTOMETRY_SATURATION_G })).kind)
+      .toBe('value');
   });
 
   it('rejects colours outside the published range at both ends', () => {
-    expect(rielloVMagnitude(photometry({ bpMag: 10, rpMag: 10.6 }))).toBeNull();
-    expect(rielloVMagnitude(photometry({ bpMag: 16, rpMag: 10.9 }))).toBeNull();
-    expect(rielloVMagnitude(photometry({ bpMag: 10, rpMag: 10.5 }))).not.toBeNull();
-    expect(rielloVMagnitude(photometry({ bpMag: 15.5, rpMag: 10.5 }))).not.toBeNull();
-  });
-
-  it('rejects a null photometry row outright', () => {
-    expect(rielloVMagnitude(null)).toBeNull();
+    expect(rielloVMagnitude(photometry({ bpMag: 10, rpMag: 10.6 }))).toEqual(OUT_OF_RANGE);
+    expect(rielloVMagnitude(photometry({ bpMag: 16, rpMag: 10.9 }))).toEqual(OUT_OF_RANGE);
+    expect(rielloVMagnitude(photometry({ bpMag: 10, rpMag: 10.5 })).kind).toBe('value');
+    expect(rielloVMagnitude(photometry({ bpMag: 15.5, rpMag: 10.5 })).kind).toBe('value');
   });
 });
 
 describe('resolveVMagnitude cascade', () => {
   const PRINTED_HIP = { vVia: 'printed_hip', vMag: 2.5, key: 1 } as const;
+  const resolve = (
+    p: GaiaPhotometry | null, printed: PrintedV | null, curatedV: number | null = null,
+  ) => resolveVMagnitude({ photometry: p, printed, curatedV });
 
   it('transforms Gaia photometry when the relation applies', () => {
-    const r = resolveVMagnitude(photometry({ gMag: 10, bpMag: 10.5, rpMag: 9.7 }), PRINTED_HIP);
+    const r = resolve(photometry({ gMag: 10, bpMag: 10.5, rpMag: 9.7 }), PRINTED_HIP);
     expect(r.via).toBe('gaia_riello');
-    expect(r.v).toBeCloseTo(10 - rielloGMinusV(0.8), 12);
+    expect(r.via === 'none' ? null : r.value).toBeCloseTo(10 - rielloGMinusV(0.8), 12);
   });
 
   // The bright rescue tier: Gaia saturates, so the printed V wins even though a
-  // full photometry row exists.
+  // full photometry row exists — and the result names the refused transform.
   it('falls to the printed V when Gaia saturates the source', () => {
-    expect(resolveVMagnitude(photometry({ gMag: 2.1 }), PRINTED_HIP))
-      .toEqual({ v: 2.5, via: 'printed_hip' });
+    expect(resolve(photometry({ gMag: 2.1 }), PRINTED_HIP)).toEqual({
+      via: 'printed_hip', value: 2.5,
+      refusals: [{ tier: 'gaia_riello', reason: 'uncalibrated' }],
+    });
   });
 
   it('falls to the printed V when a band is missing', () => {
-    expect(resolveVMagnitude(photometry({ bpMag: null }), { vVia: 'gliese', vMag: 11.7, key: '914' }))
-      .toEqual({ v: 11.7, via: 'gliese' });
+    expect(resolve(photometry({ bpMag: null }), { vVia: 'gliese', vMag: 11.7, key: '914' }))
+      .toEqual({
+        via: 'gliese', value: 11.7,
+        refusals: [{ tier: 'gaia_riello', reason: 'uncalibrated' }],
+      });
   });
 
   it('takes the curated value only where nothing else answers', () => {
-    expect(resolveVMagnitude(null, null, -26.74)).toEqual({ v: -26.74, via: 'curated' });
-    expect(resolveVMagnitude(null, PRINTED_HIP, -26.74)).toEqual({ v: 2.5, via: 'printed_hip' });
+    expect(resolve(null, null, -26.74)).toEqual({ via: 'curated', value: -26.74, refusals: [] });
+    expect(resolve(null, PRINTED_HIP, -26.74))
+      .toEqual({ via: 'printed_hip', value: 2.5, refusals: [] });
   });
 
   it('reports no tier when every source is absent', () => {
-    expect(resolveVMagnitude(null, null)).toEqual({ v: null, via: 'none' });
+    expect(resolve(null, null)).toEqual({ via: 'none', refusals: [] });
   });
 });
 
