@@ -4,11 +4,11 @@
 // no UPDATE_* escape hatch — a prefix rewrite requires editing this test
 // in the same PR with explicit user sign-off.
 
-import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
-import { relative, resolve } from 'node:path';
+import { relative } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
+import { fileAtMergeBase } from '../scripts/util/git-provenance';
 import { REPO_ROOT } from '../scripts/util/paths';
 import { artifactText, isReadable } from '../scripts/util/sources/source';
 import { ALLOCATE_OUTPUTS } from '../scripts/sid/allocate-outputs';
@@ -28,21 +28,9 @@ import {
 
 const available = isReadable(LEDGER);
 
-function git(...args: string[]): string {
-  return execFileSync('git', args, {
-    cwd: REPO_ROOT,
-    encoding: 'utf-8',
-    stdio: ['ignore', 'pipe', 'pipe'],
-  }).trim();
-}
-
 function baseHead(): LedgerHead | null {
-  try {
-    const mergeBase = git('merge-base', 'HEAD', 'origin/main');
-    return JSON.parse(git('show', `${mergeBase}:${relative(REPO_ROOT, ALLOCATE_OUTPUTS.files.head)}`)) as LedgerHead;
-  } catch {
-    return null;
-  }
+  const base = fileAtMergeBase(relative(REPO_ROOT, ALLOCATE_OUTPUTS.files.head));
+  return base.kind === 'present' ? JSON.parse(base.text) as LedgerHead : null;
 }
 
 describe.skipIf(!available)('sid ledger guard', () => {

@@ -87,7 +87,9 @@ same thing — single-use helpers stay with their consumer.
 - `git-provenance.ts` — what a build or instrument records about its
   checkout: `packageVersion`, `headState` (HEAD and whether the tree is
   dirty) and `mergeBaseWithMain` (null with no `origin/main` or in a shallow
-  clone). The lineage header and perf's `gitMeta` both read it.
+  clone), and `fileAtMergeBase`, a file as the merge-base holds it — `absent`
+  when it is new on the branch, kept apart from `no-merge-base`. The lineage
+  header, perf's `gitMeta` and the two merge-base guards read it.
 - `step-inputs.ts` — `stepInputPaths(script)`, every file a `package.json`
   step reads: the closure of each `tsx` entry it chains, the closure's
   siblings, and every declaration the closure reads (`sources/`). The

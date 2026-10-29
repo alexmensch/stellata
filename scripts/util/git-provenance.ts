@@ -31,3 +31,24 @@ export function mergeBaseWithMain(commit = 'HEAD'): string | null {
     return null;
   }
 }
+
+export type MergeBaseFile =
+  | { readonly kind: 'present'; readonly text: string }
+  | { readonly kind: 'absent' }
+  | { readonly kind: 'no-merge-base' };
+
+/** A repo-relative file as the merge-base with main holds it. `absent` is a
+ *  real answer — the file is new on this branch — never a failed git. */
+export function fileAtMergeBase(path: string): MergeBaseFile {
+  const base = mergeBaseWithMain();
+  if (base === null) return { kind: 'no-merge-base' };
+  try {
+    git('cat-file', '-e', `${base}:${path}`);
+  } catch {
+    return { kind: 'absent' };
+  }
+  return {
+    kind: 'present',
+    text: execFileSync('git', ['show', `${base}:${path}`], { cwd: REPO_ROOT, encoding: 'utf-8' }),
+  };
+}

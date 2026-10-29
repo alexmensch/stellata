@@ -1,11 +1,8 @@
-import { execFileSync } from 'node:child_process';
-
 import { describe, expect, it } from 'vitest';
 
-import { REPO_ROOT } from '../../util/paths';
 import { artifactText, readArtifact } from '../../util/sources/source';
 import { describeCommittedRoundTrip, firstDifferingLine } from '../../util/tsv/committed-round-trip';
-import { packageVersion } from '../../util/git-provenance';
+import { fileAtMergeBase, packageVersion } from '../../util/git-provenance';
 import { LINEAGE_STAGES } from './lineage-stages';
 import { appendOnlyViolations, reasonCodeList, type ReasonCodeEntry } from './reason-code-list-pure';
 import { LIVE, stageCodes } from './reason-codes-pure';
@@ -13,16 +10,12 @@ import { REASON_CODES } from './reason-codes-tsv';
 
 describeCommittedRoundTrip(REASON_CODES);
 
+/** A list new on this branch has an empty base; only a checkout with no
+ *  merge-base to read has none. */
 function mergeBaseList(): ReasonCodeEntry[] | null {
-  try {
-    const git = (...args: string[]) => execFileSync('git', args, {
-      cwd: REPO_ROOT, encoding: 'utf-8', stdio: ['ignore', 'pipe', 'pipe'],
-    });
-    const base = git('merge-base', 'HEAD', 'origin/main').trim();
-    return REASON_CODES.parse(git('show', `${base}:${REASON_CODES.file}`));
-  } catch {
-    return null;
-  }
+  const base = fileAtMergeBase(REASON_CODES.file);
+  if (base.kind === 'no-merge-base') return null;
+  return base.kind === 'absent' ? [] : REASON_CODES.parse(base.text);
 }
 
 describe('the committed reason-code list', () => {
@@ -38,7 +31,7 @@ describe('the committed reason-code list', () => {
   it('is append-only against its merge-base copy', ({ skip }) => {
     const base = mergeBaseList();
     if (base === null) {
-      skip('no merge-base copy (the list\'s first PR, a shallow clone, or no origin/main)');
+      skip('no merge-base to read (a shallow clone, or no origin/main)');
       return;
     }
     expect(appendOnlyViolations(base, readArtifact(REASON_CODES))).toEqual([]);
