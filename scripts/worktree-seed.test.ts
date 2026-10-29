@@ -56,10 +56,13 @@ function uncovered(patterns: readonly string[], steps: readonly string[]): strin
   return patterns.filter((pattern) => !outputs.some((o) => covers(o, pattern)));
 }
 
-const SEED_STEPS = scriptParts(scripts, 'build:seed-steps').map((part) => {
-  if (part.kind !== 'pnpm') throw new Error('build:seed-steps chains only pnpm run targets');
-  return part.script;
-});
+function stepsOf(target: string): string[] {
+  const parts = scriptParts(scripts, target);
+  if (!parts.every((part) => part.kind === 'pnpm')) return [target];
+  return [...new Set(parts.flatMap((part) => stepsOf(part.script)))];
+}
+
+const SEED_STEPS = stepsOf('build:seed-steps');
 
 const PATTERNS = readFileSync(resolve(REPO_ROOT, '.worktreeinclude'), 'utf8')
   .split('\n').map((line) => line.trim()).filter((line) => line !== '' && !line.startsWith('#'));
