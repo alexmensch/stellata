@@ -6,9 +6,9 @@ session that adds or edits a hook here is governed by it from the next call.
 Each hook reads its payload as JSON on stdin. The five guards are PreToolUse /
 SessionStart hooks answering with a `permissionDecision`; paper-store-link
 answers nothing and acts only on the filesystem. The review
-design-pass reminder and the skill guard (an edit to a stylesheet or code
-file is denied until `cube-css` / `code-craft` is invoked) live at user
-level, in the code-standards bundle (`~/.claude/hooks/code-standards/`).
+design-pass reminder and the skill guard live at user level, in the
+code-standards bundle (`~/.claude/hooks/code-standards/`; rules and
+rationale in its `hooks/README.md`, section Skill guard).
 
 ## Files in this area
 
