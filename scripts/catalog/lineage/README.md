@@ -19,31 +19,35 @@ them (stellata-hhaw.45.23).
 ```
 scripts/catalog/lineage/
   lineage-row-pure.ts            The envelope, its one comparator
-  reason-codes-pure.ts           (compareLineageRows), the TSV text form, and
+                                 (compareLineageRows), the TSV text form, and
                                  stageLineageText — the writer, which refuses
-                                 a code the stage does not declare.
-                                 stageCodes declares a stage's codes.
+                                 a code the stage does not declare or rows
+                                 out of order.
+  reason-codes-pure.ts           stageCodes: a stage's codes with their
+                                 effect and status.
   lineage-diff-pure.ts           diffLineage, the merge-join; stageDiffText,
                                  the diff file.
-  lineage-header-pure.ts         StageHeader and judgeBaseline.
+  lineage-header-pure.ts         StageHeader; planBaseline and judgeBaseline,
+                                 which baseline a build diffs against.
   identity-pure.ts               The identity row and its file; refuses two
                                  records on one key.
   lineage-stages.ts              LINEAGE_STAGES, every stage's codes in
                                  pipeline order.
-  reason-code-list-pure.ts       reasonCodeList, the generated list;
-  reason-codes-tsv.ts            appendOnlyViolations; REASON_CODES, its
-  generate-reason-codes.ts       codec; `pnpm run lineage:codes`.
+  reason-code-list-pure.ts       reasonCodeList, the generated list, and
+                                 appendOnlyViolations.
+  reason-codes-tsv.ts            REASON_CODES, the list's codec.
+  generate-reason-codes.ts       `pnpm run lineage:codes`.
   reason-codes.test.ts           The list equals its generation, and is
                                  append-only against the merge-base.
-  trace.ts, trace-pure.ts        `pnpm run trace` (#trace).
-    (+ test)
+  trace-pure.ts (+ test)         The query parse and the record search.
+  trace.ts                       `pnpm run trace` (#trace).
   stage-lineage.ts               stageLineage: one stage's files, header,
-                                 baseline verdict, diff and budget check,
+                                 baseline plan, diff and budget check,
                                  ready for the stage's emitArtifacts call.
   lineage-io.ts                  The on-disk layout (build/lineage/,
                                  lineage.previous/, lineage-diff/), the
-                                 rotation and a stage's emission, gzip, git
-                                 provenance and the header's input hash.
+                                 baseline members and a stage's emission,
+                                 gzip, and the header with its input hash.
   lineage-core-pure.test.ts      Order, writer refusal, diff, baseline verdict.
   lineage-rotation.test.ts       Rotation over a scratch build/: a failed or
                                  absent emission moves nothing, another
