@@ -56,6 +56,12 @@ function uncovered(patterns: readonly string[], steps: readonly string[]): strin
   return patterns.filter((pattern) => !outputs.some((o) => covers(o, pattern)));
 }
 
+function unlisted(patterns: readonly string[], steps: readonly string[]): string[] {
+  const globs = patterns.map(globRegExp);
+  return steps.flatMap((step) => stepOutputs(step).files)
+    .filter((file) => /^(public|build)\//.test(file) && !globs.some((glob) => glob.test(file)));
+}
+
 function stepsOf(target: string): string[] {
   const parts = scriptParts(scripts, target);
   if (!parts.every((part) => part.kind === 'pnpm')) return [target];
@@ -70,6 +76,10 @@ const PATTERNS = readFileSync(resolve(REPO_ROOT, '.worktreeinclude'), 'utf8')
 describe('.worktreeinclude', () => {
   it('lists only outputs and stamps of the steps build:seed runs', () => {
     expect(uncovered(PATTERNS, SEED_STEPS)).toEqual([]);
+  }, 60_000);
+
+  it('lists every gitignored output file and stamp of those steps', () => {
+    expect(unlisted(PATTERNS, SEED_STEPS)).toEqual([]);
   }, 60_000);
 
   it('loses the lineage baseline without build:membership', () => {
