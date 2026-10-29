@@ -9,9 +9,10 @@ supply a PM alongside their own position are [Direction resolution](../README.md
 
 ```
 scripts/catalog/distance/pm-rescue/
-  pm-rescue.ts (+ test)   The cascade, its route enum, and the map crediting
-                          each route to the `velocityVia` bucket for the
-                          catalogue it reached. Imports `refusingPublication` from
+  pm-rescue.ts (+ test)   The cascade, its tier enum, the outcome partition
+                          the counts pin, and the map crediting each tier to
+                          the `velocityVia` bucket for the catalogue it
+                          reached. Imports `refusingPublication` from
                           ../gaia-distrust — the same rule the rv and
                           parallax cascades' skips call.
 ```
@@ -41,7 +42,11 @@ Do not read that 1,537 against Tycho-2's **1,537 `pflag='X'` rows**
 (`data/tycho2/README.md`): the two counts matching to the digit is a coincidence
 of unrelated catalogues.
 
-Routing, pinned in `../../build-catalog-expected.json` as `pmRescue*`:
+Routing, pinned in `../../build-catalog-expected.json` as `pmRescue*`. The
+cascade returns the shared shape (`../../cascade-result.ts`), so a skipped
+candidate is a refusal on the result, not a tier: `pmRescueOutcome` splits the
+`none` residual into `gaia_bibcode_skipped` (something was refused) and `none`
+(nothing reached it).
 
 | Route | Key | Rows |
 |---|---|---|

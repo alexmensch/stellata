@@ -60,9 +60,10 @@ import {
 } from '../distance/parallax/pair-member-parallax';
 import {
   resolvePmRescue,
-  PM_RESCUE_VIA_VALUES,
+  PM_RESCUE_OUTCOMES,
+  pmRescueOutcome,
   VELOCITY_VIA_BY_PM_RESCUE,
-  type PmRescueVia,
+  type PmRescueOutcome,
 } from '../distance/pm-rescue/pm-rescue';
 import {
   radialTermExceedsCeiling,
@@ -335,7 +336,7 @@ export function readStars(
     directionTycho2FromIcrs: number;    // tycho2-tier rows placed at the J2000 cell, no mean solution
     directionTycho2Photocentre: number; // tycho2-tier rows whose mean solution is a double's photocentre
     velocityVia: Record<VelocityVia, number>;   // per-tier space-motion PM-source routing
-    pmRescueVia: Record<PmRescueVia, number>;   // rescue-cascade routing over the rows the direction tier left without a PM
+    pmRescueOutcome: Record<PmRescueOutcome, number>;   // rescue-cascade routing over the rows the direction tier left without a PM
     velocityClamped: number;       // rows whose artifact velocity exceeded the sanity ceiling → zeroed
     velocityClampedSample: string[]; // per-clamped-star "id: speed @ dist" for build-log review
     velocityAboveEscape: number;   // kept rows above the Galactic escape velocity (tracked ratchet)
@@ -376,7 +377,7 @@ export function readStars(
   const directionVia = emptyTallyPartition(DIRECTION_VIA_VALUES);
   const vVia = emptyTallyPartition(V_VIA_VALUES);
   const velocityVia = emptyTallyPartition(VELOCITY_VIA_VALUES);
-  const pmRescueVia = emptyTallyPartition(PM_RESCUE_VIA_VALUES);
+  const pmRescueOutcomes = emptyTallyPartition(PM_RESCUE_OUTCOMES);
   const rvVia = emptyTallyPartition(RV_VIA_VALUES);
   const rvGaiaErrorBand = emptyTallyPartition(RV_ERROR_BANDS);
   let rvGaiaErrorMaxKmS = 0;
@@ -525,20 +526,19 @@ export function readStars(
     // solution — the tangential term re-keys on the record's own designations
     // rather than shipping static. See ../distance/README.md#the-proper-motion-rescue-cascade.
     const pmRescue = !isSol && dirRes.velVia === 'zero'
-      ? resolvePmRescue(
-          {
-            tycho2: tycho2Row,
-            cns5: lookupCns5Astrometry(directions.cns5, simbadKeys.gl)?.pm ?? null,
-            simbad: simbadRow?.astrometry?.pm ?? null,
-          },
-          gaiaRow,
-        )
+      ? resolvePmRescue({
+          tycho2: tycho2Row,
+          cns5: lookupCns5Astrometry(directions.cns5, simbadKeys.gl)?.pm ?? null,
+          simbad: simbadRow?.astrometry?.pm ?? null,
+          gaia: gaiaRow,
+        })
       : null;
     const velVia = pmRescue === null
       ? dirRes.velVia
       : VELOCITY_VIA_BY_PM_RESCUE[pmRescue.via];
-    const pmRaMasyr = pmRescue === null ? dirRes.srcPmraMasyr : pmRescue.pmRaMasyr;
-    const pmDecMasyr = pmRescue === null ? dirRes.srcPmdecMasyr : pmRescue.pmDecMasyr;
+    const rescuedPm = pmRescue === null || pmRescue.via === 'none' ? null : pmRescue.value;
+    const pmRaMasyr = pmRescue === null ? dirRes.srcPmraMasyr : rescuedPm?.pmRaMasyr ?? null;
+    const pmDecMasyr = pmRescue === null ? dirRes.srcPmdecMasyr : rescuedPm?.pmDecMasyr ?? null;
 
     // Bailer-Jones 2021 (/data/papers/index.md#bailerjones2021)
     // supersedes the raw inversion wherever the parallax the
@@ -603,7 +603,7 @@ export function readStars(
       if (tycho2Row.fromIcrs) directionTycho2FromIcrs++;
       if (tycho2Row.isPhotocentre) directionTycho2Photocentre++;
     }
-    if (pmRescue !== null) pmRescueVia[pmRescue.via]++;
+    if (pmRescue !== null) pmRescueOutcomes[pmRescueOutcome(pmRescue)]++;
     vVia[vRes.via]++;
     if (vRes.via === 'tycho2' && printed?.vVia === 'tycho2' && printed.outsideRange) {
       vTycho2OutsideBtVtRange++;
@@ -792,7 +792,7 @@ export function readStars(
       directionVia,
       vVia,
       velocityVia,
-      pmRescueVia,
+      pmRescueOutcome: pmRescueOutcomes,
       velocityClamped,
       velocityClampedSample,
       velocityAboveEscape,

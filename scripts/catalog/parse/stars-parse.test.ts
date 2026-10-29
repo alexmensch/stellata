@@ -371,7 +371,7 @@ describe('readStars PM rescue', () => {
     // The position still comes from the Gaia anchor — only the motion is
     // re-keyed.
     expect(stats.directionVia.gaia_5p).toBe(1);
-    expect(stats.pmRescueVia.tycho2).toBe(1);
+    expect(stats.pmRescueOutcome.tycho2).toBe(1);
     expect(stats.velocityVia.tycho2_pm).toBe(1);
     expect(stats.velocityVia.zero).toBe(0);
     expect(speed(stars[0])).toBeGreaterThan(0);
@@ -389,7 +389,7 @@ describe('readStars PM rescue', () => {
         ),
       },
     );
-    expect(stats.pmRescueVia.none).toBe(1);
+    expect(stats.pmRescueOutcome.none).toBe(1);
     expect(stats.velocityVia.zero).toBe(1);
     expect(speed(stars[0])).toBe(0);
   });
@@ -410,7 +410,7 @@ describe('readStars PM rescue', () => {
     expect(stats.velocityVia.gaia_pm).toBe(1);
     // Every rescue bucket empty: a 5p row must not reach the cascade at all,
     // or Tycho-2's blend motion would displace Gaia's own converged fit.
-    expect(Object.values(stats.pmRescueVia).every((n) => n === 0)).toBe(true);
+    expect(Object.values(stats.pmRescueOutcome).every((n) => n === 0)).toBe(true);
   });
 
   it("refuses a Gaia-bibcoded motion on the record's OWN 2p solution", () => {
@@ -427,7 +427,7 @@ describe('readStars PM rescue', () => {
         }),
       },
     );
-    expect(stats.pmRescueVia.gaia_bibcode_skipped).toBe(1);
+    expect(stats.pmRescueOutcome.gaia_bibcode_skipped).toBe(1);
     expect(speed(stars[0])).toBe(0);
   });
 
@@ -448,7 +448,7 @@ describe('readStars PM rescue', () => {
       },
     );
     expect(stats.directionVia.tycho2).toBe(1);
-    expect(stats.pmRescueVia.cns5).toBe(1);
+    expect(stats.pmRescueOutcome.cns5).toBe(1);
     expect(stats.velocityVia.cns5_pm).toBe(1);
     expect(speed(stars[0])).toBeGreaterThan(0);
   });
@@ -517,7 +517,7 @@ describe('readStars advances the position on a rescued PM', () => {
     const { stars, stats } = built();
     expect(stars).toHaveLength(1);
     expect(stats.directionVia.tycho2).toBe(1);
-    expect(stats.pmRescueVia.simbad).toBe(1);
+    expect(stats.pmRescueOutcome.simbad).toBe(1);
     expect(stats.velocityVia.simbad_pm).toBe(1);
   });
 

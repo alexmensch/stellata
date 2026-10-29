@@ -483,7 +483,7 @@ async function main() {
       `simbad_pm ${vv.simbad_pm}, zero ${vv.zero} ` +
       `(clamped ${stats.velocityClamped}); rv applied ${stats.rvApplied}`,
   );
-  const pmr = stats.pmRescueVia;
+  const pmr = stats.pmRescueOutcome;
   console.log(
     `  PM rescue (direction tier carries none): tycho2 ${pmr.tycho2}, ` +
       `cns5 ${pmr.cns5}, simbad ${pmr.simbad}, ` +
@@ -565,7 +565,7 @@ async function main() {
   counts.velocityCns5Pm = vv.cns5_pm;
   counts.velocitySimbadPm = vv.simbad_pm;
   counts.velocityZero = vv.zero;
-  const pr = stats.pmRescueVia;
+  const pr = stats.pmRescueOutcome;
   counts.pmRescueTycho2 = pr.tycho2;
   counts.pmRescueCns5 = pr.cns5;
   counts.pmRescueSimbad = pr.simbad;
