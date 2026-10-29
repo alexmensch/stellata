@@ -138,7 +138,10 @@ scripts/catalog/
                                   name table AND the composed display labels,
                                   so a corpus row may name a star by the
                                   designation it displays (`naming/README.md`).
-                                  That match is exact; `nameTable` hands
+                                  That match is exact and refuses a name
+                                  two records answer to (`54 Leo`, a HIP
+                                  primary and a Gaia-only companion);
+                                  `nameTable` hands
                                   trace the same table for its folded one
                                   (lineage/README.md#trace).
   build-counts.ts (+ test)        Per-strategy / per-tier count snapshot

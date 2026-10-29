@@ -1,13 +1,13 @@
 import { describe, it, expect } from 'vitest';
 
 import type { Catalog, CatalogRecord } from './catalog-lookup';
-import { lookupByHd, lookupByRef } from './catalog-lookup';
+import { lookupByHd, lookupByName, lookupByRef } from './catalog-lookup';
 import type { SearchEntry } from './record/catalog-pure';
 import { parseRef } from './parse/corpus-tsv';
 
-function stubCatalog(searchIndex?: readonly SearchEntry[]): Catalog {
+function stubCatalog(searchIndex?: readonly SearchEntry[], names: readonly (string | null)[] = []): Catalog {
   const record = (i: number) =>
-    ({ i, hip: null, gaiaSourceId: null, name: null }) as CatalogRecord;
+    ({ i, hip: null, gaiaSourceId: null, name: names[i] ?? null }) as CatalogRecord;
   return {
     header: {} as Catalog['header'],
     count: 4,
@@ -57,5 +57,16 @@ describe('lookupByHd', () => {
     const ref = parseRef('hd:49619', 'row', 'ref');
     expect(ref).toEqual({ kind: 'hd', value: '49619' });
     expect(lookupByRef(stubCatalog(INDEX), ref)?.i).toBe(0);
+  });
+});
+
+describe('lookupByName', () => {
+  it('finds the one record a name reaches', () => {
+    expect(lookupByName(stubCatalog(INDEX, ['Algol', '54 Leo', '54 Leo']), 'Algol')?.i).toBe(0);
+  });
+
+  it('refuses a name two records answer to, naming both', () => {
+    expect(() => lookupByName(stubCatalog(INDEX, ['Algol', '54 Leo', '54 Leo']), '54 Leo'))
+      .toThrow(/"54 Leo" reaches records 1, 2/);
   });
 });

@@ -200,8 +200,7 @@ interface CatalogIndexes {
   /** Every string a record DISPLAYS: the name table, plus — where the
    *  search index was loaded — the labels the display-name composer builds
    *  from the wire, which is where a Bayer / Flamsteed / component
-   *  designation lives (`naming/README.md`). Every record a string reaches,
-   *  name-table entries first, so the name table wins a tie at `[0]`. */
+   *  designation lives (`naming/README.md`), to every record it reaches. */
   byName: Map<string, number[]>;
   /** The composed display label per record index — the reverse of the
    *  designation half of `byName`. Empty without the search index. */
@@ -276,9 +275,13 @@ export function nameTable(catalog: Catalog): ReadonlyMap<string, readonly number
 /** Throws rather than answering null when a name misses and the catalog was
  *  loaded without its search index: the name table holds only the NAME
  *  tiers, so a corpus row naming a star by its DESIGNATION would read as
- *  "no such record" and silently stop testing anything. */
+ *  "no such record" and silently stop testing anything. Throws, too, on a
+ *  name two records answer to, rather than binding either. */
 export function lookupByName(catalog: Catalog, name: string): CatalogRecord | null {
   const records = getIndexes(catalog).byName.get(name);
+  if (records !== undefined && records.length > 1) {
+    throw new Error(`name: record ref "${name}" reaches records ${records.join(', ')} — name it by a designation`);
+  }
   if (records !== undefined) return catalog.record(records[0]);
   if (catalog.searchIndex === undefined) {
     throw new Error(
