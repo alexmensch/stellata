@@ -395,8 +395,8 @@ sign-off; the owner gave it on 2026-10-21 by choosing this migration.
 pair's primary that anchors its pair, and a row in no pair, are
 `promotion.not-applicable`; a primary that resolves to no record, leaving
 its pair anchor-less, is `promotion.primary-unresolved`. Each row cites as evidence the record its pair
-resolved to and its WDS root's anchor; an adopted or repositioned row names
-the record it became in `params.record`. Both are origin keys: every record
+resolved to and its WDS root's anchor; every merge-effect row names the
+record it merges into in `params.record`. Both are origin keys: every record
 carries its own from the manifest's `origin_key` column
 (`../membership/README.md#columns`), so these are joins on the origin key.
 

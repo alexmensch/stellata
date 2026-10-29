@@ -45,6 +45,7 @@ type Brightness = { absmag_source: MintedBrightness['source']; spect_ms_from_own
 /** Each code's params, declared once beside the codes. */
 type ParamsOf<B extends Branch> =
   B extends 'dropped.parked-record' ? Via & { via_gaia_5p: Flag; owned_fit: Flag }
+  : B extends 'dropped.anchor-is-component' ? Via & { record: string }
   : B extends 'adopted.earlier-mint' ? Via & { record: string }
   : B extends `adopted.${string}` ? Via & { record: string; desig_con_from_anchor: Flag; recurated?: string }
   : B extends 'minted' ? Via & Brightness & { synthetic: Flag; constellation_split: Flag }
@@ -76,6 +77,9 @@ export function promotionLineageRow(r: PromotedRow, recordKey: (idx: number) => 
     case 'dropped':
       if (o.reason === 'parked-record') {
         return row('dropped.parked-record', { via, via_gaia_5p: flag(o.viaGaia5p), owned_fit: flag(o.ownedFit) });
+      }
+      if (o.reason === 'anchor-is-component') {
+        return row('dropped.anchor-is-component', { via, record: recordKey(o.idx) });
       }
       return row(`dropped.${o.reason}`, { via });
     case 'adopted':

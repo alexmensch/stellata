@@ -3361,7 +3361,7 @@ describe('foldRowOutcomes', () => {
     { kind: 'dropped', reason: 'beyond-tidal-limit' },
     { kind: 'dropped', reason: 'collocated-primary' },
     { kind: 'dropped', reason: 'no-identifier' },
-    { kind: 'dropped', reason: 'anchor-is-component' },
+    { kind: 'dropped', reason: 'anchor-is-component', idx: 0 },
     { kind: 'dropped', reason: 'no-position' },
     { kind: 'dropped', reason: 'no-absmag' },
     { kind: 'dropped', reason: 'parked-record', viaGaia5p: true, ownedFit: false },

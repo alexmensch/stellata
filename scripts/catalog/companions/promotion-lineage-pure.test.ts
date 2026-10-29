@@ -57,6 +57,12 @@ describe('promotionLineageRow', () => {
     });
   });
 
+  it('names the record a merge-effect drop merges into', () => {
+    const r = promotionLineageRow(promoted({ kind: 'dropped', reason: 'anchor-is-component', idx: 7 }), recordKey);
+    expect(r.code).toBe('promotion.dropped.anchor-is-component');
+    expect(paramsOf(r)).toEqual({ via: 'secondary', record: 'spine:7' });
+  });
+
   it('cites the anchor and a distinct system anchor, never the row itself', () => {
     const cite = (anchors: Partial<PromotedRow>): readonly string[] => promotionLineageRow(
       promoted({ kind: 'not-applicable' }, anchors), recordKey,

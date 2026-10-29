@@ -186,8 +186,9 @@ export type RowOutcome =
   | {
     kind: 'dropped';
     reason: 'compound-comp' | 'beyond-tidal-limit' | 'collocated-primary'
-      | 'no-identifier' | 'anchor-is-component' | 'no-position' | 'no-absmag';
+      | 'no-identifier' | 'no-position' | 'no-absmag';
   }
+  | { kind: 'dropped'; reason: 'anchor-is-component'; idx: number }
   | { kind: 'dropped'; reason: 'parked-record'; viaGaia5p: boolean; ownedFit: boolean }
   | { kind: 'adopted'; idx: number; via: 'earlier-mint' }
   | {
@@ -1614,9 +1615,9 @@ function promoteRow(
     // its own copy. The authority's component attribution is the independent
     // witness — where it already letters the anchor record as THIS component,
     // that record IS the component.
-    if (inheritedIdCollision && anchorStar !== null
+    if (inheritedIdCollision && anchorCatalogIdx !== null && anchorStar !== null
         && anchorStar.bayerComponent === canonicalComp) {
-      return { kind: 'dropped', reason: 'anchor-is-component' };
+      return { kind: 'dropped', reason: 'anchor-is-component', idx: anchorCatalogIdx };
     }
     // A row whose own gaia missed the index can still BE an existing
     // AT-HYG record: the G−V magnitude gate scrubs a source from the
