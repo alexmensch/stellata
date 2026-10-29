@@ -119,7 +119,7 @@ export interface SpectralValue {
 /** A typed row a tier reached and did not take: a SIMBAD row stating another
  *  star's Gaia id, or a type string the classifier cannot parse. */
 export type SpectralRefusal =
-  CascadeRefusal<'simbad' | 'gspspec', 'gaia_id_contradicts' | 'unclassifiable'>;
+  CascadeRefusal<'curated' | 'simbad' | 'gspspec', 'gaia_id_contradicts' | 'unclassifiable'>;
 
 export type SpectralResolution = CascadeResult<
   {
@@ -173,9 +173,10 @@ export function resolveSpectralInfo(
   const hip = simbadHipKey(keys.hip);
   if (hip !== null) {
     const curated = CURATED_SPTYPE_BY_HIP.get(hip);
-    const info = curated ? classifyFromSimbad(curated) : null;
-    if (curated && info) {
-      return { via: 'curated', value: { info, spectDisplay: curated }, refusals };
+    if (curated !== undefined) {
+      const info = classifyFromSimbad(curated);
+      if (info) return { via: 'curated', value: { info, spectDisplay: curated }, refusals };
+      refusals.push({ tier: 'curated', reason: 'unclassifiable' });
     }
   }
   const hit = walkSimbadNamespaces(simbad, keys, (row) => {

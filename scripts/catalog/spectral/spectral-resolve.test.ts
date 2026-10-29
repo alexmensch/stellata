@@ -1,6 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import type { ApsisRow, SimbadRecordKeys } from '../record/catalog-pure';
+import { classifyFromSimbad } from './spectral-classify';
 import {
+  CURATED_SPTYPE_BY_HIP,
   type SimbadSpectralIndex,
   type SimbadSpectralRow,
   parseSimbadSptypeTsv,
@@ -166,6 +168,12 @@ describe('resolveSpectralInfo — tier priority', () => {
     const out = flatSp(keys(GAIA_ID, HIP), simbad, apsis);
     expect(out.source).toBe('gspspec');
     expect(out.info.classIdx).toBe(3); // F
+  });
+
+  it('every curated sp_type classifies', () => {
+    for (const [hip, spType] of CURATED_SPTYPE_BY_HIP) {
+      expect(classifyFromSimbad(spType), `HIP ${hip}`).not.toBeNull();
+    }
   });
 
   it('tier 6: none when every upstream tier misses', () => {
