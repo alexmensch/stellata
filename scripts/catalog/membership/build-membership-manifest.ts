@@ -48,7 +48,7 @@ import { BINDING_REVIEW } from './binding-review-tsv';
 import { LABEL_DROPS } from './label-drops-tsv';
 import { MEMBERSHIP_MANIFEST } from './membership-manifest-tsv';
 import { BINDING_REVIEW_DISPOSITIONS } from './binding-review-dispositions-source';
-import { SPINE_CORRECTIONS } from './spine-corrections-source';
+import { SPINE_CORRECTIONS } from './spine-corrections/spine-corrections-source';
 
 
 /** Per-identifier overlay coverage over the membership term, as a ratio of the

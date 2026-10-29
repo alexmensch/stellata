@@ -16,11 +16,11 @@ import {
   manifestKey,
   matchSpineToManifest,
   parseBindingDispositionsTsv,
-  parseSpineCorrectionsTsv,
-  SPINE_CORRECTION_COLUMNS,
   type BindingDispositionRow,
-  type SpineCorrectionRow,
 } from './membership-manifest-pure';
+import {
+  parseSpineCorrectionsTsv, SPINE_CORRECTION_COLUMNS, type SpineCorrectionRow,
+} from './spine-corrections/spine-corrections-pure';
 import { ADDITIONS_LEDGER } from './additions-ledger-tsv';
 import { ADDITION_REASONS, COMPONENT_REASON_PREFIX } from './ledger-rows-pure';
 import { BINDING_REVIEW } from './binding-review-tsv';

@@ -29,13 +29,12 @@ import {
 } from '../spine/inherited-spine-pure';
 import { INHERITED_SPINE } from '../spine/inherited-spine-tsv';
 import { BINDING_REVIEW_DISPOSITIONS } from './binding-review-dispositions-source';
-import { SPINE_CORRECTIONS } from './spine-corrections-source';
+import { applySpineCorrections, type SpineFold } from './spine-corrections/spine-corrections-pure';
+import { SPINE_CORRECTIONS } from './spine-corrections/spine-corrections-source';
 import {
   MEMBERSHIP_EXPECTED_FILE,
-  applySpineCorrections,
   manifestKey,
   matchSpineToManifest,
-  type SpineFold,
   type MembershipCounts,
   type SpineMatch,
 } from './membership-manifest-pure';
