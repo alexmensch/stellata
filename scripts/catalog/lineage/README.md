@@ -328,7 +328,9 @@ keyed outcome per decision — admission, fold, component, the spine
 derivation's verdict with every candidate it refused, a disposition, an
 addition's binding, each label flip and label drop — and
 `membershipLineageRow` is the one serialiser, its `switch` exhaustive so a
-new variant without a row fails typecheck. Every record gets an admission
+new variant without a row fails typecheck. `ParamsOf` declares each code's
+params beside the codes; the writer and the views both read through it, so
+a renamed key fails typecheck on both sides. Every record gets an admission
 row. `membershipLedgers` generates the four ledgers from those rows and the
 identity rows alone, byte-identical to the files they replaced as writers.
 

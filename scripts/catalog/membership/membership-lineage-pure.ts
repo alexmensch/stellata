@@ -152,22 +152,43 @@ export interface KeyedOutcome {
 
 type Branch = Parameters<typeof MEMBERSHIP_CODES.code>[0];
 
-function row(
-  key: string, branch: Branch, params: LineageParams = {}, evidence: readonly string[] = [],
+type Letters = { source_letters: string; hip_letters: string };
+type Candidate = { source_id: string; via: string };
+
+/** Each code's params, the one declaration its writer and its views share. */
+type ParamsOf<B extends Branch> =
+  B extends 'component' ? { designation: string }
+  : B extends `binding.${QueuedBindingOutcome}` ? BindingReviewCells & Letters
+  : B extends `binding.${SettledBindingOutcome}` ? { derived_source_id: string; derived_via: string } & Letters
+  : B extends (typeof REFUSAL_BRANCHES)[CandidateRefusal] ? Candidate
+  : B extends `disposition.${DispositionOutcome}` ? BindingReviewCells & { keep_source_id: string; basis: string }
+  : B extends `addition-binding.${AdditionBindingOutcome}` ? Candidate
+  : B extends `label-drop.${string}` ? { cell: string; value: string }
+  : B extends `label.${LabelDisposition}` ? Pick<LabelFlip, 'field' | 'label' | 'spine' | 'overlay' | 'applied'>
+  : Record<string, never>;
+
+function row<B extends Branch>(
+  key: string, branch: B, params: ParamsOf<B>, evidence: readonly string[] = [],
   role: LineageRow['role'] = 'outcome',
 ): LineageRow {
   return {
-    stage: MEMBERSHIP_STAGE, key, role, code: MEMBERSHIP_CODES.code(branch), params: paramsText(params), evidence,
+    stage: MEMBERSHIP_STAGE, key, role, code: MEMBERSHIP_CODES.code(branch),
+    params: paramsText(params as LineageParams), evidence,
   };
+}
+
+function paramsAs<B extends Branch>(r: LineageRow, branch: B): ParamsOf<B> {
+  if (r.code !== MEMBERSHIP_CODES.code(branch)) throw new Error(`${r.key}: ${r.code} read as ${branch}`);
+  return paramsOf(r) as ParamsOf<B>;
 }
 
 export function membershipLineageRow({ key, outcome: o }: KeyedOutcome): LineageRow {
   switch (o.kind) {
-    case 'admit-spine': return row(key, 'admit.spine');
+    case 'admit-spine': return row(key, 'admit.spine', {});
     case 'fold': return row(key, 'fold', {}, [o.survivor]);
     case 'admit-addition': return row(key, ADDITION_BRANCHES[o.reason], {}, o.members);
     case 'component': return row(key, 'component', { designation: o.designation }, o.members);
-    case 'admit-magnitude': return row(key, 'admit.magnitude');
+    case 'admit-magnitude': return row(key, 'admit.magnitude', {});
     case 'spine-binding':
       return row(key, `binding.${o.outcome}`, {
         derived_source_id: o.sourceId, derived_via: o.via, source_letters: o.sourceLetters, hip_letters: o.hipLetters,
@@ -196,9 +217,13 @@ export function membershipLineageRow({ key, outcome: o }: KeyedOutcome): Lineage
   }
 }
 
-function invert<V extends string, B extends string>(table: Record<V, B>): Map<string, V> {
-  return new Map(Object.entries<B>(table).map(([v, b]) => [MEMBERSHIP_CODES.code(b as Branch), v as V]));
+function invert<V extends string, B extends Branch>(table: Record<V, B>): Map<string, [V, B]> {
+  return new Map(Object.entries<B>(table).map(([v, b]) => [MEMBERSHIP_CODES.code(b), [v as V, b]]));
 }
+
+const byCode = <V extends string, B extends Branch>(values: readonly V[], branch: (v: V) => B): Map<string, [V, B]> => (
+  new Map(values.map((v) => [MEMBERSHIP_CODES.code(branch(v)), [v, branch(v)]]))
+);
 
 export interface MembershipLedgers {
   ledger: AdditionLedgerRow[];
@@ -213,8 +238,8 @@ export function membershipLedgers(
   const additionReasons = invert(ADDITION_BRANCHES);
   const dropReasons = invert(LABEL_DROP_BRANCHES);
   const flipDispositions = invert(LABEL_BRANCHES);
-  const queued = new Map(QUEUED_BINDING_OUTCOMES.map((o) => [MEMBERSHIP_CODES.code(`binding.${o}`), o]));
-  const disposed = new Set(BINDING_DISPOSITION_OUTCOMES.map((d) => MEMBERSHIP_CODES.code(`disposition.${d}`)));
+  const queued = byCode(QUEUED_BINDING_OUTCOMES, (o) => `binding.${o}` as const);
+  const disposed = byCode(BINDING_DISPOSITION_OUTCOMES, (d) => `disposition.${d}` as const);
   const of = (key: string): IdentityRow => {
     const id = identity.get(key);
     if (id === undefined) throw new Error(`membership lineage: ${key} has no identity row`);
@@ -225,31 +250,32 @@ export function membershipLedgers(
   });
 
   const out: MembershipLedgers = { ledger: [], bindingReview: [], labelDrops: [], flips: [] };
-  const review = new Map<string, { verdict: BindingReviewVerdict; params: LineageParams }>();
+  const review = new Map<string, BindingReviewRow>();
+  const reviewRow = (verdict: BindingReviewVerdict, cells: BindingReviewCells): BindingReviewRow => (
+    Object.fromEntries(BINDING_REVIEW_COLUMNS.map((c) => [c, c === 'verdict' ? verdict : cells[c]])) as BindingReviewRow
+  );
   for (const r of rows) {
-    const p = paramsOf(r);
     const addition = additionReasons.get(r.code);
-    if (addition !== undefined) out.ledger.push({ ...tuple(of(r.key)), reason: addition });
+    const drop = dropReasons.get(r.code);
+    const flip = flipDispositions.get(r.code);
+    const queue = queued.get(r.code);
+    const disposal = disposed.get(r.code);
+    if (addition !== undefined) out.ledger.push({ ...tuple(of(r.key)), reason: addition[0] });
     else if (r.code === MEMBERSHIP_CODES.code('component')) {
-      out.ledger.push({ ...tuple(of(r.key)), reason: `${COMPONENT_REASON_PREFIX}${p.designation}` });
-    } else if (dropReasons.has(r.code)) {
-      out.labelDrops.push({ ...tuple(of(r.key)), cell: p.cell, value: p.value, reason: dropReasons.get(r.code)! });
-    } else if (flipDispositions.has(r.code)) {
-      out.flips.push({
-        sourceId: of(r.key).gaia_source_id, label: p.label, field: p.field as LabelFlip['field'],
-        spine: p.spine, overlay: p.overlay, applied: p.applied, disposition: flipDispositions.get(r.code)!,
-      });
-    } else if (queued.has(r.code)) {
-      review.set(r.key, { verdict: queued.get(r.code)!, params: p });
-    } else if (disposed.has(r.code) && !review.has(r.key)) {
-      review.set(r.key, { verdict: 'disposed', params: p });
+      const { designation } = paramsAs(r, 'component');
+      out.ledger.push({ ...tuple(of(r.key)), reason: `${COMPONENT_REASON_PREFIX}${designation}` });
+    } else if (drop !== undefined) {
+      const { cell, value } = paramsAs(r, drop[1]);
+      out.labelDrops.push({ ...tuple(of(r.key)), cell, value, reason: drop[0] });
+    } else if (flip !== undefined) {
+      out.flips.push({ sourceId: of(r.key).gaia_source_id, ...paramsAs(r, flip[1]), disposition: flip[0] });
+    } else if (queue !== undefined) {
+      review.set(r.key, reviewRow(queue[0], paramsAs(r, queue[1])));
+    } else if (disposal !== undefined && !review.has(r.key)) {
+      review.set(r.key, reviewRow('disposed', paramsAs(r, disposal[1])));
     }
   }
-  for (const { verdict, params } of review.values()) {
-    out.bindingReview.push(Object.fromEntries(
-      BINDING_REVIEW_COLUMNS.map((c) => [c, c === 'verdict' ? verdict : params[c]]),
-    ) as BindingReviewRow);
-  }
+  out.bindingReview.push(...review.values());
   return out;
 }
 
