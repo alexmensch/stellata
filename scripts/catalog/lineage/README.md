@@ -241,8 +241,10 @@ passes `stageLineage` (`stage-lineage.ts`) a `LineageBudget`, and a run over
 it fails its emission. Membership, measured 2026-10-29 on the full tree:
 1,355,182 rows (128 MB plain, 15.1 MB gzipped) plus 976,040 identity rows
 (85 MB, 22.3 MB), 37.4 MB together. The timed window is everything lineage
-adds to the build — the header's input hash, the diff, rendering and gzip:
-about 5.7 s with a diff against a full baseline, 1.7 s without one.
+adds to the build — the diff, rendering and gzip: about 5.8 s with a diff
+against a full baseline. The header's input hash is not in it: a stage hands
+`stageLineage` the input hashes its step already computed (`build:catalog`'s
+are its stamp's), so a build hashes its inputs once.
 A spine derivation's row carries only its winner, route and component
 letters; the binding-review columns ride the rows the queue lists — a
 contested or collision verdict and a disposition — since the candidates and
@@ -250,7 +252,7 @@ refusals are rows of their own. `MEMBERSHIP_LINEAGE_BUDGET` pins 41 MB and
 15 s — the time ceiling sits well above the measurement because CI runners
 write slower than a workstation. Promotion, measured the same day: <!-- count:build-binaries/multiples_rows_emitted -->47,018<!-- /count --> rows, one
 per `multiples.tsv` row, plus an identity row per minted companion, 0.70 MB
-gzipped in 0.7 s without a diff; `PROMOTION_LINEAGE_BUDGET` pins 0.8 MB and
+gzipped in 0.3 s without a diff; `PROMOTION_LINEAGE_BUDGET` pins 0.8 MB and
 5 s.
 
 The committed form of lineage is `data/sid/events.tsv` plus the ledger views

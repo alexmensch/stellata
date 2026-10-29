@@ -5,7 +5,9 @@
 import { resolve } from 'node:path';
 
 import { REPO_ROOT as ROOT } from '../../util/paths';
+import { fileHashes } from '../../util/build-stamp';
 import { emitArtifacts, runStep } from '../../util/emit-artifacts';
+import { stepInputPaths } from '../../util/step-inputs';
 import { artifactRows, readArtifact } from '../../util/sources/source';
 import { MEMBERSHIP_OUTPUTS } from './membership-manifest-outputs';
 import { identityText } from '../lineage/identity-pure';
@@ -151,7 +153,7 @@ async function main(): Promise<void> {
   const lineage = await stageLineage({
     layout: LINEAGE_LAYOUT,
     spec: MEMBERSHIP_LINEAGE,
-    script: 'build:membership',
+    inputs: fileHashes(await stepInputPaths('build:membership')),
     diffed: 'membership',
     rows: result.lineage,
     render: (sorted) => ({

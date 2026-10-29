@@ -5,11 +5,10 @@ import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { gunzipSync, gzipSync } from 'node:zlib';
 
-import { fileHashes } from '../../util/build-stamp';
+import type { FileHashes } from '../../util/build-stamp';
 import type { ArtifactContents, OutputFamily } from '../../util/emit-artifacts';
 import { headState, packageVersion } from '../../util/git-provenance';
 import { REPO_ROOT } from '../../util/paths';
-import { stepInputPaths } from '../../util/step-inputs';
 import { escapeRegExp } from '../../util/escape-regexp';
 import { identityRows, type IdentityRow } from './identity-pure';
 import { lineageRows, type LineageRow } from './lineage-row-pure';
@@ -136,15 +135,14 @@ export function stageFile(dir: string, stem: string): string {
   return resolve(dir, fileName(stem));
 }
 
-export async function stageHeader<F extends string>(
-  spec: StageLineageSpec<F>, script: string,
-): Promise<StageHeader> {
-  const hashes = fileHashes(await stepInputPaths(script));
+export function stageHeader<F extends string>(
+  spec: StageLineageSpec<F>, inputs: FileHashes,
+): StageHeader {
   return {
     stage: spec.stage,
     version: packageVersion(),
     ...headState(),
-    inputHash: createHash('sha1').update(JSON.stringify(hashes)).digest('hex'),
+    inputHash: createHash('sha1').update(JSON.stringify(inputs)).digest('hex'),
     files: spec.files.map(fileName),
   };
 }

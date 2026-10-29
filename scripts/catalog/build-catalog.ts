@@ -1237,7 +1237,7 @@ async function main() {
   const lineage = await stageLineage({
     layout: LINEAGE_LAYOUT,
     spec: PROMOTION_LINEAGE,
-    script: 'build:catalog',
+    inputs: inputHashesAtStart,
     diffed: 'promotion',
     rows: promotionLineage,
     render: (sorted) => ({
