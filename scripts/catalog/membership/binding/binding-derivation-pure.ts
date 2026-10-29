@@ -141,6 +141,8 @@ export interface DerivedBinding {
   sourceId: string | null;
   via: BindingSource[];
   binding: DerivedBindingClass;
+  /** The winner is the component witness's, every candidate having refused. */
+  rescued: boolean;
   ranked: RankedCandidate[];
   rejected: RejectedCandidate[];
   /** The row carries a printed V, so the magnitude gate could weigh its
@@ -212,19 +214,22 @@ export function deriveBinding(
   // The component witness rescues a row the sibling gate left unbound; it never
   // outranks a candidate that passes on its own — see README.md. A sibling
   // rejection is one the magnitude gate already passed.
+  let rescued = false;
   if (winner === null && gate.tycWitness !== null) {
     const named = rejected.findIndex((r) => r.reason === 'sibling'
       && r.sourceId === gate.tycWitness
       && !isSiblingLetterAttribution(r.sourceId, gate.hip, evidence.wdsXids, true));
     if (named >= 0) {
-      const [rescued] = rejected.splice(named, 1);
-      winner = { sourceId: rescued.sourceId, via: rescued.via };
+      const [witnessed] = rejected.splice(named, 1);
+      winner = { sourceId: witnessed.sourceId, via: witnessed.via };
+      rescued = true;
     }
   }
   return {
     sourceId: winner?.sourceId ?? null,
     via: winner?.via ?? [],
     binding: bindingClassOf(winner?.via ?? []),
+    rescued,
     ranked, rejected, gateable, weighedNoGMag, weighedNullGMag,
   };
 }
