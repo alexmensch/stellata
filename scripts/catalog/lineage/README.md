@@ -220,7 +220,9 @@ The real stages' write time and disk are pinned as a budget: each stage
 passes `stageLineage` (`stage-lineage.ts`) a `LineageBudget`, and a run over
 it fails its emission. Membership, measured 2026-10-29 on the full tree:
 1,355,182 rows (128 MB plain, 15.1 MB gzipped) plus 976,040 identity rows
-(85 MB, 22.3 MB), 37.4 MB together, rendered and compressed in about 1.7 s.
+(85 MB, 22.3 MB), 37.4 MB together. The timed window is everything lineage
+adds to the build — the header's input hash, the diff, rendering and gzip:
+about 4.3 s with a diff against a full baseline, 1.7 s without one.
 A spine derivation's row carries only its winner, route and component
 letters; the binding-review columns ride the rows the queue lists — a
 contested or collision verdict and a disposition — since the candidates and

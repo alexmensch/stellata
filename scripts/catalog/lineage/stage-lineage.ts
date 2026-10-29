@@ -57,6 +57,7 @@ function baselineSource<F extends string>(run: StageLineageRun<F>): BaselineSour
 export async function stageLineage<F extends string>(
   run: StageLineageRun<F>,
 ): Promise<StageLineageEmission<F>> {
+  const started = performance.now();
   const source = baselineSource(run);
   const verdict = judgeBaseline(source, mergeBaseWithMain(), run.argv.includes(ACCEPT_ANY_BASELINE_FLAG));
   const sorted = [...run.rows].sort(compareLineageRows);
@@ -71,7 +72,6 @@ export async function stageLineage<F extends string>(
   }
 
   const header = await stageHeader(run.spec, run.script);
-  const started = performance.now();
   const texts = run.render(sorted);
   const diff = changes === null ? null : stageDiffText(changes, run.joins);
   const { files, members } = stageEmission(run.layout, run.spec, texts, header, diff);
@@ -79,7 +79,7 @@ export async function stageLineage<F extends string>(
   const gzipBytes = run.spec.files.reduce(
     (n, f) => n + (files[`lineage:${f}` as StageOutputKey<F>] as Uint8Array).byteLength, 0,
   );
-  const measured = `${run.spec.stage} lineage: ${gzipBytes} bytes gzipped, written in ${writeMs.toFixed(0)} ms`;
+  const measured = `${run.spec.stage} lineage: ${gzipBytes} bytes gzipped; header, diff and write took ${writeMs.toFixed(0)} ms`;
   const over = gzipBytes > run.budget.gzipBytes || writeMs > run.budget.writeMs;
   const checks: Check[] = [over
     ? {
