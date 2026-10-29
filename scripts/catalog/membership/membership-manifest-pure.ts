@@ -9,7 +9,9 @@ import {
   BRIGHT_TIER_MAG_CEILING,
   type ClassicIdOverlay,
 } from '../classic-ids/classic-id-overlay-pure';
-import type { BindingEvidence, GateReason, WdsComponentAttribution } from './binding/binding-gate-pure';
+import type {
+  BindingEvidence, GateReason, SimbadWdsXidIndex, WdsComponentAttribution,
+} from './binding/binding-gate-pure';
 import {
   BINDING_SOURCES,
   bindingCandidates,
@@ -45,7 +47,7 @@ import {
   type BindingReviewCells,
   type KeyedOutcome,
   type MembershipLedgers,
-  type SpineBindingOutcome,
+  type MembershipOutcome,
 } from './membership-lineage-pure';
 import { spineDesignations, type SpineRow } from '../spine/inherited-spine-pure';
 import {
@@ -590,8 +592,24 @@ function wdsLetters(attributions: readonly WdsComponentAttribution[] | undefined
   return joinValues((attributions ?? []).map((a) => `${a.wdsId}:${a.component}`));
 }
 
-function spineBindingOutcome(b: SpineBinding): SpineBindingOutcome {
-  return b.outcome === 'bound' && b.derived?.rescued ? 'rescued' : b.outcome;
+function spineBindingOutcome(
+  row: SpineRow, b: SpineBinding, tables: PrimaryTables, xids: SimbadWdsXidIndex | null,
+): MembershipOutcome {
+  const sourceId = b.derived?.sourceId ?? null;
+  const letters = {
+    sourceLetters: sourceId === null ? '' : wdsLetters(xids?.bySource.get(sourceId)),
+    hipLetters: wdsLetters(xids?.byHip.get(intCell(row.hip) ?? -1)),
+  };
+  if (b.outcome === 'contested' || b.outcome === 'collision') {
+    return { kind: 'spine-binding-queued', outcome: b.outcome, review: bindingReviewCells(row, b, tables), ...letters };
+  }
+  return {
+    kind: 'spine-binding',
+    outcome: b.outcome === 'bound' && b.derived?.rescued ? 'rescued' : b.outcome,
+    sourceId: sourceId ?? '',
+    via: b.derived?.via.join('+') ?? '',
+    ...letters,
+  };
 }
 
 /** The candidates a derivation weighed and did not take: each gate refusal,
@@ -1100,17 +1118,10 @@ export function buildMembership(input: MembershipInput): MembershipResult {
     const spineRow = kept[i];
     const origin = spineKey(i);
     derivationOutcome[b.outcome]++;
-    outcomes.push({ key: origin, outcome: { kind: 'admit-spine' } }, {
-      key: origin,
-      outcome: {
-        kind: 'spine-binding',
-        outcome: spineBindingOutcome(b),
-        review: bindingReviewCells(spineRow, b, tables),
-        sourceLetters: b.derived?.sourceId == null
-          ? '' : wdsLetters(evidence.wdsXids?.bySource.get(b.derived.sourceId)),
-        hipLetters: wdsLetters(evidence.wdsXids?.byHip.get(intCell(spineRow.hip) ?? -1)),
-      },
-    });
+    outcomes.push(
+      { key: origin, outcome: { kind: 'admit-spine' } },
+      { key: origin, outcome: spineBindingOutcome(spineRow, b, tables, evidence.wdsXids) },
+    );
     let value: string | null = null;
     let binding: BindingClass = 'none';
     if (b.derived !== null) {
@@ -1134,6 +1145,7 @@ export function buildMembership(input: MembershipInput): MembershipResult {
           outcome: {
             kind: 'disposition', outcome: dispositionOf(disposition),
             keep: disposition.keep_source_id, basis: disposition.basis,
+            review: bindingReviewCells(spineRow, b, tables),
           },
         });
       }

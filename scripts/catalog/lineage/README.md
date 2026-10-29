@@ -219,12 +219,14 @@ bulk is Gaia ids, which no format compresses much: Parquet with zstd came to
 The real stages' write time and disk are pinned as a budget: each stage
 passes `stageLineage` (`stage-lineage.ts`) a `LineageBudget`, and a run over
 it fails its emission. Membership, measured 2026-10-29 on the full tree:
-1,355,182 rows (203 MB plain, 30.2 MB gzipped) plus 976,040 identity rows
-(85 MB, 22.3 MB), 52.4 MB together, rendered and compressed in about 1.9 s.
-That is four times the probe's per-stage figure: the spine derivation's row
-carries the binding-review columns its view needs, on every spine record.
-`MEMBERSHIP_LINEAGE_BUDGET` pins 58 MB and 15 s — the time ceiling sits well
-above the measurement because CI runners write slower than a workstation.
+1,355,182 rows (128 MB plain, 15.1 MB gzipped) plus 976,040 identity rows
+(85 MB, 22.3 MB), 37.4 MB together, rendered and compressed in about 1.7 s.
+A spine derivation's row carries only its winner, route and component
+letters; the binding-review columns ride the rows the queue lists — a
+contested or collision verdict and a disposition — since the candidates and
+refusals are rows of their own. `MEMBERSHIP_LINEAGE_BUDGET` pins 41 MB and
+15 s — the time ceiling sits well above the measurement because CI runners
+write slower than a workstation.
 
 The committed form of lineage is `data/sid/events.tsv` plus the ledger views
 below; the derivation itself is a build artifact, regenerated every build.

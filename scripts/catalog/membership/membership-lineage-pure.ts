@@ -14,7 +14,7 @@ import {
 
 export const MEMBERSHIP_STAGE = 'membership';
 
-export const MEMBERSHIP_LINEAGE_BUDGET = { gzipBytes: 58_000_000, writeMs: 15_000 };
+export const MEMBERSHIP_LINEAGE_BUDGET = { gzipBytes: 41_000_000, writeMs: 15_000 };
 
 const live = (description: string, effect: CodeDeclaration['effect'] = 'none'): CodeDeclaration => (
   { description, effect, status: LIVE }
@@ -27,8 +27,10 @@ const ADDITION_BRANCHES = {
   'admitted:cns5_census': 'admit.cns5-census',
 } as const satisfies Record<AdditionReason, string>;
 
-export const SPINE_BINDING_OUTCOMES = ['bound', 'rescued', 'contested', 'refused', 'collision', 'sol'] as const;
-export type SpineBindingOutcome = (typeof SPINE_BINDING_OUTCOMES)[number];
+export const QUEUED_BINDING_OUTCOMES = ['contested', 'collision'] as const;
+export type QueuedBindingOutcome = (typeof QUEUED_BINDING_OUTCOMES)[number];
+export const SETTLED_BINDING_OUTCOMES = ['bound', 'rescued', 'refused', 'sol'] as const;
+export type SettledBindingOutcome = (typeof SETTLED_BINDING_OUTCOMES)[number];
 
 export const ADDITION_BINDING_OUTCOMES = [
   'bound', 'rescued', 'on-spine', 'shared', 'refused', 'no-candidate',
@@ -93,7 +95,6 @@ const LABEL_BRANCHES = Object.fromEntries(
   LABEL_DISPOSITIONS.map((d) => [d, `label.${d}`]),
 ) as Record<LabelDisposition, `label.${LabelDisposition}`>;
 
-/** The binding-review columns a binding row carries, the verdict aside. */
 export type BindingReviewCells = Omit<BindingReviewRow, 'verdict'>;
 
 export type MembershipOutcome =
@@ -104,7 +105,15 @@ export type MembershipOutcome =
   | { readonly kind: 'admit-magnitude' }
   | {
     readonly kind: 'spine-binding';
-    readonly outcome: SpineBindingOutcome;
+    readonly outcome: SettledBindingOutcome;
+    readonly sourceId: string;
+    readonly via: string;
+    readonly sourceLetters: string;
+    readonly hipLetters: string;
+  }
+  | {
+    readonly kind: 'spine-binding-queued';
+    readonly outcome: QueuedBindingOutcome;
     readonly review: BindingReviewCells;
     readonly sourceLetters: string;
     readonly hipLetters: string;
@@ -120,6 +129,7 @@ export type MembershipOutcome =
     readonly outcome: DispositionOutcome;
     readonly keep: string;
     readonly basis: string;
+    readonly review: BindingReviewCells;
   }
   | {
     readonly kind: 'addition-binding';
@@ -160,12 +170,16 @@ export function membershipLineageRow({ key, outcome: o }: KeyedOutcome): Lineage
     case 'admit-magnitude': return row(key, 'admit.magnitude');
     case 'spine-binding':
       return row(key, `binding.${o.outcome}`, {
+        derived_source_id: o.sourceId, derived_via: o.via, source_letters: o.sourceLetters, hip_letters: o.hipLetters,
+      });
+    case 'spine-binding-queued':
+      return row(key, `binding.${o.outcome}`, {
         ...o.review, source_letters: o.sourceLetters, hip_letters: o.hipLetters,
       });
     case 'candidate-refused':
       return row(key, REFUSAL_BRANCHES[o.refusal], { source_id: o.sourceId, via: o.via }, [], 'refused');
     case 'disposition':
-      return row(key, `disposition.${o.outcome}`, { keep_source_id: o.keep, basis: o.basis });
+      return row(key, `disposition.${o.outcome}`, { ...o.review, keep_source_id: o.keep, basis: o.basis });
     case 'addition-binding':
       return row(key, `addition-binding.${o.outcome}`, { source_id: o.sourceId, via: o.via });
     case 'label-flip':
@@ -199,8 +213,7 @@ export function membershipLedgers(
   const additionReasons = invert(ADDITION_BRANCHES);
   const dropReasons = invert(LABEL_DROP_BRANCHES);
   const flipDispositions = invert(LABEL_BRANCHES);
-  const spineBinding = new Set(SPINE_BINDING_OUTCOMES.map((o) => MEMBERSHIP_CODES.code(`binding.${o}`)));
-  const queued = new Set([MEMBERSHIP_CODES.code('binding.contested'), MEMBERSHIP_CODES.code('binding.collision')]);
+  const queued = new Map(QUEUED_BINDING_OUTCOMES.map((o) => [MEMBERSHIP_CODES.code(`binding.${o}`), o]));
   const disposed = new Set(BINDING_DISPOSITION_OUTCOMES.map((d) => MEMBERSHIP_CODES.code(`disposition.${d}`)));
   const of = (key: string): IdentityRow => {
     const id = identity.get(key);
@@ -212,8 +225,7 @@ export function membershipLedgers(
   });
 
   const out: MembershipLedgers = { ledger: [], bindingReview: [], labelDrops: [], flips: [] };
-  const bindingRows = new Map<string, LineageRow>();
-  const disposedKeys = new Set<string>();
+  const review = new Map<string, { verdict: BindingReviewVerdict; params: LineageParams }>();
   for (const r of rows) {
     const p = paramsOf(r);
     const addition = additionReasons.get(r.code);
@@ -227,18 +239,15 @@ export function membershipLedgers(
         sourceId: of(r.key).gaia_source_id, label: p.label, field: p.field as LabelFlip['field'],
         spine: p.spine, overlay: p.overlay, applied: p.applied, disposition: flipDispositions.get(r.code)!,
       });
-    } else if (spineBinding.has(r.code)) {
-      bindingRows.set(r.key, r);
-    } else if (disposed.has(r.code)) disposedKeys.add(r.key);
+    } else if (queued.has(r.code)) {
+      review.set(r.key, { verdict: queued.get(r.code)!, params: p });
+    } else if (disposed.has(r.code) && !review.has(r.key)) {
+      review.set(r.key, { verdict: 'disposed', params: p });
+    }
   }
-  for (const [key, r] of bindingRows) {
-    const verdict: BindingReviewVerdict | null = queued.has(r.code)
-      ? r.code.slice(r.code.lastIndexOf('.') + 1) as BindingReviewVerdict
-      : disposedKeys.has(key) ? 'disposed' : null;
-    if (verdict === null) continue;
-    const p = paramsOf(r);
+  for (const { verdict, params } of review.values()) {
     out.bindingReview.push(Object.fromEntries(
-      BINDING_REVIEW_COLUMNS.map((c) => [c, c === 'verdict' ? verdict : p[c]]),
+      BINDING_REVIEW_COLUMNS.map((c) => [c, c === 'verdict' ? verdict : params[c]]),
     ) as BindingReviewRow);
   }
   return out;
