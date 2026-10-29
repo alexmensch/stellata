@@ -14,17 +14,17 @@ import {
   ciIsObserved,
 } from './colour-index-pure';
 import { RIELLO_BP_RP_MIN, rielloGMinusV } from './v-magnitude-pure';
-import {
-  GAIA_PHOTOMETRY_SATURATION_G,
-  gatedValueOrNull,
-  type GaiaPhotometry,
-} from './gaia-photometry-pure';
-import type { GspcColour } from './gspc-parse';
+import { GAIA_PHOTOMETRY_SATURATION_G, type GatedValue } from './gaia-photometry-pure';
 import { atColour, photometry } from './photometry-fixture';
 
-const bv = (p: GaiaPhotometry): number | null => gatedValueOrNull(gaiaBMinusV(p));
-const gspcBv = (p: GaiaPhotometry | null, g: GspcColour | null): number | null =>
-  g === null ? null : gatedValueOrNull(gspcBMinusV(p, g));
+const UNCALIBRATED = { kind: 'refused', reason: 'uncalibrated' } as const;
+const OUT_OF_RANGE = { kind: 'refused', reason: 'colour_out_of_range' } as const;
+
+/** The value of a gate expected to pass; a refusal fails the test. */
+function valueOf(gated: GatedValue): number {
+  if (gated.kind === 'refused') throw new Error(`refused: ${gated.reason}`);
+  return gated.value;
+}
 
 describe('Gaia DR3 Table 5.9 G−B relation', () => {
   // The literals ARE the assertion: these are the published values, so the
@@ -56,7 +56,7 @@ describe('Gaia DR3 Table 5.9 G−B relation', () => {
 describe('gaiaBMinusV', () => {
   it('is the difference of the two Table 5.9 relations', () => {
     const x = 0.8;
-    expect(bv(atColour(x))).toBeCloseTo(rielloGMinusV(x) - gaiaGMinusB(x), 12);
+    expect(valueOf(gaiaBMinusV(atColour(x)))).toBeCloseTo(rielloGMinusV(x) - gaiaGMinusB(x), 12);
   });
 
   // Solar BP−RP is 0.82 (Casagrande 2018
@@ -64,42 +64,44 @@ describe('gaiaBMinusV', () => {
   // 0.65, so this pins both the sign of the difference and the ~0.05 mag
   // offset the |Δci| distribution in README.md#the-ci-cascade reports.
   it('lands near the solar B−V at the solar colour', () => {
-    const solar = bv(atColour(0.82))!;
+    const solar = valueOf(gaiaBMinusV(atColour(0.82)));
     expect(solar).toBeGreaterThan(0.55);
     expect(solar).toBeLessThan(0.65);
   });
 
   it('reddens monotonically across the accepted range', () => {
-    const blue = bv(atColour(0.0))!;
-    const mid = bv(atColour(0.9))!;
-    const red = bv(atColour(1.7))!;
+    const blue = valueOf(gaiaBMinusV(atColour(0.0)));
+    const mid = valueOf(gaiaBMinusV(atColour(0.9)));
+    const red = valueOf(gaiaBMinusV(atColour(1.7)));
     expect(blue).toBeLessThan(mid);
     expect(mid).toBeLessThan(red);
   });
 
   it('stops at the giant-only bound rather than the relation’s stated max', () => {
-    expect(bv(atColour(GAIA_G_MINUS_B_GIANT_ONLY_BP_RP))).not.toBeNull();
-    expect(bv(atColour(GAIA_G_MINUS_B_GIANT_ONLY_BP_RP + 0.001))).toBeNull();
-    expect(bv(atColour(GAIA_G_MINUS_B_BP_RP_MAX - 0.5))).toBeNull();
+    expect(gaiaBMinusV(atColour(GAIA_G_MINUS_B_GIANT_ONLY_BP_RP)).kind).toBe('value');
+    expect(gaiaBMinusV(atColour(GAIA_G_MINUS_B_GIANT_ONLY_BP_RP + 0.001))).toEqual(OUT_OF_RANGE);
+    expect(gaiaBMinusV(atColour(GAIA_G_MINUS_B_BP_RP_MAX - 0.5))).toEqual(OUT_OF_RANGE);
   });
 
   // Both relations state the same blue end, so the difference has one bound —
   // asserting they agree is what would catch a revision moving only one.
   it('rejects colours below the blue bound the two relations share', () => {
     expect(GAIA_G_MINUS_B_BP_RP_MIN).toBe(RIELLO_BP_RP_MIN);
-    expect(bv(atColour(RIELLO_BP_RP_MIN))).not.toBeNull();
-    expect(bv(atColour(RIELLO_BP_RP_MIN - 0.001))).toBeNull();
+    expect(gaiaBMinusV(atColour(RIELLO_BP_RP_MIN)).kind).toBe('value');
+    expect(gaiaBMinusV(atColour(RIELLO_BP_RP_MIN - 0.001))).toEqual(OUT_OF_RANGE);
   });
 
-  it('rejects a saturated source, a missing band and a null row', () => {
-    expect(bv(photometry({ gMag: GAIA_PHOTOMETRY_SATURATION_G - 0.1 }))).toBeNull();
-    expect(bv(photometry({ bpMag: null }))).toBeNull();
+  it('refuses a saturated source and a missing band as uncalibrated', () => {
+    expect(gaiaBMinusV(photometry({ gMag: GAIA_PHOTOMETRY_SATURATION_G - 0.1 })))
+      .toEqual(UNCALIBRATED);
+    expect(gaiaBMinusV(photometry({ bpMag: null }))).toEqual(UNCALIBRATED);
   });
 });
 
 describe('gspcBMinusV', () => {
   const synthetic = (bMinusV: number, inValidatedRange = false) =>
     ({ bMinusV, inValidatedRange });
+  const value = (bMinusV: number) => ({ kind: 'value', value: bMinusV });
 
   it('carries the measured colour bound, which is NOT the archive flag bound', () => {
     // 3.0 is where |Δ| against printed I/239 B−V breaks (0.043 → 0.135); the
@@ -109,30 +111,29 @@ describe('gspcBMinusV', () => {
   });
 
   it('takes the synthetic colour up to the bound and drops it past', () => {
-    expect(gspcBv(atColour(2.9), synthetic(2.1))).toBe(2.1);
-    expect(gspcBv(atColour(GSPC_BP_RP_MAX), synthetic(2.1))).toBe(2.1);
-    expect(gspcBv(atColour(3.01), synthetic(2.1))).toBeNull();
+    expect(gspcBMinusV(atColour(2.9), synthetic(2.1))).toEqual(value(2.1));
+    expect(gspcBMinusV(atColour(GSPC_BP_RP_MAX), synthetic(2.1))).toEqual(value(2.1));
+    expect(gspcBMinusV(atColour(3.01), synthetic(2.1))).toEqual(OUT_OF_RANGE);
   });
 
   it('ignores the archive flag in both directions', () => {
-    expect(gspcBv(atColour(2.0), synthetic(1.6, false))).toBe(1.6);
-    expect(gspcBv(atColour(3.5), synthetic(1.6, true))).toBeNull();
+    expect(gspcBMinusV(atColour(2.0), synthetic(1.6, false))).toEqual(value(1.6));
+    expect(gspcBMinusV(atColour(3.5), synthetic(1.6, true))).toEqual(OUT_OF_RANGE);
   });
 
   it('keeps a colour blue of the flag box, which is bounded on one side only', () => {
     // The nine catalogue rows blue of −0.5 all reach printed first, so a blue
     // gate would only ever cost a measured colour — README.md#why-the-gspc-tier-does-not-gate-on-the-flag.
-    expect(gspcBv(atColour(-1.0), synthetic(-0.33))).toBe(-0.33);
+    expect(gspcBMinusV(atColour(-1.0), synthetic(-0.33))).toEqual(value(-0.33));
   });
 
-  it('drops a saturated source — its BP/RP spectrum came off the same CCDs', () => {
+  it('refuses a saturated source — its BP/RP spectrum came off the same CCDs', () => {
     const saturated = photometry({ gMag: GAIA_PHOTOMETRY_SATURATION_G - 0.1 });
-    expect(gspcBv(saturated, synthetic(2.0))).toBeNull();
+    expect(gspcBMinusV(saturated, synthetic(2.0))).toEqual(UNCALIBRATED);
   });
 
-  it('is null without a colour to bound-check, or without a GSPC row', () => {
-    expect(gspcBv(null, synthetic(2.0))).toBeNull();
-    expect(gspcBv(atColour(2.0), null)).toBeNull();
+  it('refuses a GSPC row with no broadband colour to bound-check it against', () => {
+    expect(gspcBMinusV(null, synthetic(2.0))).toEqual(UNCALIBRATED);
   });
 });
 
@@ -149,7 +150,7 @@ describe('resolveColourIndex cascade', () => {
   it('takes the Gaia relation when it applies, marked observed', () => {
     const r = resolveColourIndex(sources({ photometry: atColour(0.8) }));
     expect(r).toEqual({ via: 'gaia_relation', value: expect.any(Number), refusals: [] });
-    expect(r).toMatchObject({ value: (gaiaBMinusV(atColour(0.8)) as { value: number }).value });
+    expect(r).toMatchObject({ value: valueOf(gaiaBMinusV(atColour(0.8))) });
     expect(ciIsObserved(r.via)).toBe(true);
   });
 
