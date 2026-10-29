@@ -110,6 +110,10 @@ export interface LoadCatalogOptions {
 
 interface ConstellationEntry { code: string }
 
+export type SearchableCatalog = Catalog & { readonly searchIndex: readonly SearchEntry[] };
+
+export function loadCatalog(opts: LoadCatalogOptions & { withSearchIndex: true }): Promise<SearchableCatalog>;
+export function loadCatalog(opts?: LoadCatalogOptions): Promise<Catalog>;
 export async function loadCatalog(opts: LoadCatalogOptions = {}): Promise<Catalog> {
   const manifestPath = opts.catalogManifestPath ?? DEFAULT_CATALOG_MANIFEST;
   const conPath = opts.constellationsJsonPath ?? DEFAULT_CONSTELLATIONS_JSON;
