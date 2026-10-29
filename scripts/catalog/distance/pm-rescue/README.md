@@ -22,7 +22,10 @@ scripts/catalog/distance/pm-rescue/
 `resolvePmRescue` fires only where the winning direction tier's own solution
 carries no PM. The motion it supplies then carries **both** terms: the velocity,
 and the tier's position forward to the scene epoch ([The rescued motion
-advances the position too](#the-rescued-motion-advances-the-position-too)). It reaches **39** rows in two shapes:
+advances the position too](#the-rescued-motion-advances-the-position-too)). Its routing today is the pinned table below;
+the cohort figures in this section and the worked cases further down were
+measured on the build before the V ≤ 11 magnitude term, when it reached **39**
+rows in two shapes:
 
 - **36** resolve to a Gaia row with a 2p (position-only) solution and have no
   HIP2 cover, so they take the `gaia_5p` route's PM-less anchor.
@@ -50,21 +53,22 @@ candidate is a refusal on the result, not a tier: `pmRescueOutcome` splits the
 
 | Route | Key | Rows |
 |---|---|---|
-| `tycho2` | the record's own TYC | **5** |
-| `cns5` | its own GJ, non-Gaia citation only | **5** |
-| `simbad` | bibcoded `pmra`/`pmdec`, non-Gaia citation only | **14** |
-| `gaia_bibcode_skipped` | — | **13** |
-| `none` | — | **2** |
+| `tycho2` | the record's own TYC | **<!-- count:build-catalog/pmRescueTycho2 -->71<!-- /count -->** |
+| `cns5` | its own GJ, non-Gaia citation only | **<!-- count:build-catalog/pmRescueCns5 -->22<!-- /count -->** |
+| `simbad` | bibcoded `pmra`/`pmdec`, non-Gaia citation only | **<!-- count:build-catalog/pmRescueSimbad -->22<!-- /count -->** |
+| `gaia_bibcode_skipped` | — | **<!-- count:build-catalog/pmRescueGaiaBibcodeSkipped -->17<!-- /count -->** |
+| `none` | — | **<!-- count:build-catalog/pmRescueNone -->81<!-- /count -->** |
 
 The order is the direction cascade's own designation-joined order, so a
 first-order catalogue always outranks the second-order index.
 
 **`velocityVia` credits the catalogue, not the route to it.** A row's PM came
 from Tycho-2 whether the direction tier or this cascade found it, so
-`velocityTycho2Pm` reads **43** — the direction tier's 38 plus this cascade's
-5 — against a `directionTycho2` of 41, and the two counts answer different
-questions. `velocityZero` is **22**: Sol, the 6 rows the sanity ceiling
-clamped, and the 15 this cascade leaves.
+`velocityTycho2Pm` (**<!-- count:build-catalog/velocityTycho2Pm -->143<!-- /count -->**) counts the direction tier's own Tycho-2 motions
+plus this cascade's `tycho2` row above, against a `directionTycho2` of
+**<!-- count:build-catalog/directionTycho2 -->80<!-- /count -->**, and the two counts answer different questions. `velocityZero`
+(**<!-- count:build-catalog/velocityZero -->105<!-- /count -->**) is Sol, the **<!-- count:build-catalog/velocityClamped -->6<!-- /count -->** rows the sanity ceiling clamped, and the
+rows this cascade leaves without a motion.
 
 **Neither join widens, and that is measured rather than argued.** A 2p row is
 a close pair by construction, so this cohort is exactly where
@@ -174,20 +178,21 @@ Gaia reduction can hide behind its citation.
 there is no Gaia fit at all there is no blend to distrust and a Gaia bibcode is
 an ordinary citation; all 3 Tycho-2-shaped rows route `simbad` on an
 EDR3-cited PM for exactly that reason. This mirrors the rv cascade, which
-keeps 363 ordinary Gaia citations while skipping 309 on blended rows.
+keeps **<!-- count:build-catalog/rvSimbadGaiaBibcode -->5,545<!-- /count -->** ordinary Gaia citations while skipping **<!-- count:build-catalog/rvGaiaBibcodeSkipped -->1,062<!-- /count -->** on blended rows.
 
-**The cost is 13 rows that stay static, concentrated where it hurts most**:
+**The cost is the `gaia_bibcode_skipped` rows, which stay static, concentrated
+where it hurts most** (13 before the magnitude term):
 Gl 1245A at 4.72 pc and Gl 791.2 at 8.76 pc are the two nearest, and zero is
 not a better estimate than the value refused. The rule is preferred anyway for
 the reason the rv cascade gives ([The Gaia-bibcode skip rule](../radial-velocity/README.md#the-gaia-bibcode-skip-rule))
 — a value this build cannot defend does not become
 defensible by arriving through an index — and [§ 5](/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers)'s residual policy is explicit
 that a residual is enumerated rather than silently absorbed. Admitting a
-Gaia-bibcoded PM only where nothing else reaches the row would rescue all 13
-and is one condition; it is not taken because it would key on what our pull
+Gaia-bibcoded PM only where nothing else reaches the row would rescue all of
+them and is one condition; it is not taken because it would key on what our pull
 happens to hold rather than on the star.
 
-The **2** `none` rows (GJ 3536, GJ 3673) had nothing to refuse: no owned source
+The pre-magnitude-term build's **2** `none` rows (GJ 3536, GJ 3673) had nothing to refuse: no owned source
 reaches them at all.
 
 ## What the cohort's worked cases ship
