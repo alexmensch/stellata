@@ -540,9 +540,9 @@ export function readStars(
     const velVia = pmRescue === null
       ? dirRes.velVia
       : VELOCITY_VIA_BY_PM_RESCUE[pmRescue.via];
-    const rescuedPm = pmRescue === null || pmRescue.via === 'none' ? null : pmRescue.value;
-    const pmRaMasyr = pmRescue === null ? dirRes.srcPmraMasyr : rescuedPm?.pmRaMasyr ?? null;
-    const pmDecMasyr = pmRescue === null ? dirRes.srcPmdecMasyr : rescuedPm?.pmDecMasyr ?? null;
+    const { pmRaMasyr, pmDecMasyr } = pmRescue === null
+      ? { pmRaMasyr: dirRes.srcPmraMasyr, pmDecMasyr: dirRes.srcPmdecMasyr }
+      : pmRescue.via === 'none' ? { pmRaMasyr: null, pmDecMasyr: null } : pmRescue.value;
 
     // Bailer-Jones 2021 (/data/papers/index.md#bailerjones2021)
     // supersedes the raw inversion wherever the parallax the
