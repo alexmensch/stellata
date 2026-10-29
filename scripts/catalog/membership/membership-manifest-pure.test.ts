@@ -19,7 +19,6 @@ import {
   parseSpineCorrectionsTsv,
   SPINE_CORRECTION_COLUMNS,
   type BindingDispositionRow,
-  type OriginKeys,
   type SpineCorrectionRow,
 } from './membership-manifest-pure';
 import { ADDITIONS_LEDGER } from './additions-ledger-tsv';
@@ -38,16 +37,10 @@ import { parkedRecordKey } from '../distance/parallax/parked-ledger';
 import { diffLineage, stageDiffText } from '../lineage/lineage-diff-pure';
 import { compareLineageRows, paramsOf, type LineageRow } from '../lineage/lineage-row-pure';
 import { MEMBERSHIP_CODES } from './membership-lineage-pure';
+import { ORIGIN_KEYS } from './origin-keys';
 
 const FROM = { file: 'fixture.tsv', hint: 'h' };
 
-const FIXTURE_KEYS: OriginKeys = {
-  spine: (index) => `spine:${index + 2}`,
-  iv25: (tyc) => `iv25:${tyc}`,
-  i239: (hip) => `i239:${hip}`,
-  cns5: (id) => `cns5:${id}`,
-  gaia: (sourceId) => `gaia-dr3:${sourceId}`,
-};
 
 function spineRow(cells: Partial<SpineRow>): SpineRow {
   const out = {} as SpineRow;
@@ -204,7 +197,7 @@ const input = {
   corrections: [] as SpineCorrectionRow[],
   magnitudeTerm: null,
   publishesGaiaParallax: (_sourceId: string) => true,
-  keys: FIXTURE_KEYS,
+  keys: ORIGIN_KEYS,
 };
 function withTables(t: PrimaryTables) {
   return { ...input, tables: t, evidence: gateEvidence(t) };

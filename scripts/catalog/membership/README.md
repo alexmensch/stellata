@@ -40,6 +40,9 @@ scripts/catalog/membership/
                                   queue's carries the key a disposition joins
                                   on; the additions ledger's, the
                                   /docs/catalog-driver.md#61-record-parity reason codes.
+  origin-keys.ts                  ORIGIN_KEYS: each record's origin key,
+                                  built from the declarations it is founded
+                                  on; the build and the unit suite share it.
   membership-lineage-pure.ts      This stage's lineage: reason codes, the
                                   outcome union and its serialiser, and the
                                   four ledgers as views of it
