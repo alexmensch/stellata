@@ -3,13 +3,13 @@ import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 import { REPO_ROOT } from '../util/paths';
-import { catalogInputPaths } from './catalog-inputs';
+import { stepInputPaths } from '../util/step-inputs';
 
 const abs = (path: string): string => resolve(REPO_ROOT, path);
 
-const inputs = new Set(await catalogInputPaths());
+const inputs = new Set(await stepInputPaths('build:catalog'));
 
-describe('catalogInputPaths', () => {
+describe('stepInputPaths(build:catalog)', () => {
   it('keys the src/client and scripts/colour modules the build imports', () => {
     expect(inputs).toContain(abs('src/client/star-pipeline/extinction/dust-raymarch-pure.ts'));
     expect(inputs).toContain(abs('scripts/colour/blackbody-lut-pure.ts'));

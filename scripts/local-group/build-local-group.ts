@@ -7,7 +7,7 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { emitArtifacts, runStep, sweepStaged } from '../util/emit-artifacts';
-import { localGroupInputPaths } from './local-group-inputs';
+import { stepInputPaths } from '../util/step-inputs';
 import { LOCAL_GROUP_OUTPUTS } from './local-group-outputs';
 import { LG_ALIASES, LG_OVERRIDES, LVDB } from './local-group-source';
 import {
@@ -82,7 +82,7 @@ function toJsonObject(o: LgObject) {
 async function isUpToDate(): Promise<boolean> {
   if (!existsSync(OUT)) return false;
   const outMtime = statSync(OUT).mtimeMs;
-  for (const src of await localGroupInputPaths()) {
+  for (const src of await stepInputPaths('build:local-group')) {
     if (!existsSync(src)) return false;
     if (statSync(src).mtimeMs > outMtime) return false;
   }

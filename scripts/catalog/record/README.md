@@ -332,7 +332,7 @@ check-or-rewrite side is `snapshotCheck` in `../../util/snapshot-check.ts`.
 `UPDATE_BUILD_COUNTS=1` / `UPDATE_DISTANCE_OUTLIERS=1` force a rebuild even
 when the sources are unchanged, so an up-to-date tree can still refresh a
 snapshot. The stamp's code inputs are the build's import closure plus the
-non-code files beside it (`../catalog-inputs.ts`), so editing any module the
+non-code files beside it (`../../util/step-inputs.ts`), so editing any module the
 build imports — `src/client/` ones included — or either snapshot invalidates
 the artifact.
 
