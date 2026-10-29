@@ -41,6 +41,7 @@ import {
   type VelocityVia,
 } from '../distance/direction-cascade';
 import { lookupCns5Astrometry } from '../classic-ids/classic-ids-parse';
+import { isGaiaCatalogueBibcode } from '../distance/gaia-distrust';
 import {
   isLowPrecisionParallax,
   resolveParallax,
@@ -421,15 +422,20 @@ export function readStars(
       gl: row.gl,
     };
     const simbadRow = lookupSimbadValues(simbadValues, simbadKeys);
-    const rvRes = resolveRadialVelocity(gaiaRow, simbadRow?.rv ?? null);
+    const rvRes = resolveRadialVelocity({ gaia: gaiaRow, simbad: simbadRow?.rv ?? null });
+    const resolvedRvKmS = rvRes.via === 'none' ? null : rvRes.value.kmS;
     // A radial term past the sanity ceiling on its own is rejected here rather
     // than left to the whole-vector clamp below, which would drop the row's
     // measured proper motion with it.
-    const rvRejected = radialTermExceedsCeiling(rvRes.rvKmS);
-    const rvKmS = rvRejected ? null : rvRes.rvKmS;
+    const rvRejected = radialTermExceedsCeiling(resolvedRvKmS);
+    const rvKmS = rvRejected ? null : resolvedRvKmS;
     rvVia[rvRes.via]++;
-    if (rvRes.gaiaBibcodeCited) rvSimbadGaiaBibcode++;
-    if (rvRes.gaiaBibcodeSkipped) rvGaiaBibcodeSkipped++;
+    // A Gaia citation on a shipped value is ordinary — the row is not the blend
+    // the skip rule refuses.
+    if (rvRes.via === 'simbad' && isGaiaCatalogueBibcode(rvRes.value.bibcode)) {
+      rvSimbadGaiaBibcode++;
+    }
+    if (rvRes.refusals.some((r) => r.tier === 'simbad')) rvGaiaBibcodeSkipped++;
     if (rvRes.via === 'gaia_dr3' && gaiaRow !== null) {
       const rvErr = gaiaRow.radialVelocityErrorKmS;
       rvGaiaErrorBand[rvErrorBand(rvErr)]++;
@@ -637,7 +643,7 @@ export function readStars(
     if (rvRejected) {
       rvRadialRejected++;
       rvRadialRejectedSample.push(
-        `${idLabel()}: ${rvRes.rvKmS?.toFixed(1)} km/s @ ${dist.toFixed(1)} pc`,
+        `${idLabel()}: ${resolvedRvKmS?.toFixed(1)} km/s @ ${dist.toFixed(1)} pc`,
       );
     }
     if (speedPcYr > VELOCITY_SANITY_CEILING_PC_YR) {

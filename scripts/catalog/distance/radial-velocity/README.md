@@ -30,6 +30,12 @@ Gaia DR3 radial_velocity   the RVS median, on a row with a 5p solution
   → zero radial term
 ```
 
+It returns the shared cascade shape (`../../cascade-result.ts`), `none` being
+the zero radial term. Each gate below records a refusal on whichever variant
+the row ends on: `no_5p_solution` where the 5p gate withheld a Gaia rv, and
+the refused publication where the skip rule rejected a SIMBAD value —
+`rvGaiaBibcodeSkipped` counts the second.
+
 The spine's printed `rv` cell is **not** a tier and is no longer read: it is
 an AT-HYG transcription we cannot re-pull, so [§ 5](/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers)
 retires it. Its 871 `rv_src=OTHER` cells were unattributable even by that

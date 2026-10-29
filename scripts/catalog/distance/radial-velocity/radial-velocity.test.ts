@@ -6,7 +6,8 @@ import {
   resolveRadialVelocity,
   rvErrorBand,
 } from './radial-velocity';
-import { VELOCITY_SANITY_CEILING_KM_S } from '../direction-cascade';
+import { VELOCITY_SANITY_CEILING_KM_S, type GaiaAstrometryCatalogRow } from '../direction-cascade';
+import type { SimbadRadialVelocity } from '../../simbad/simbad-values-parse';
 
 describe('resolveRadialVelocity cascade', () => {
   // The published shape: an rv always arrives with its own error.
@@ -20,54 +21,53 @@ describe('resolveRadialVelocity cascade', () => {
   const GAIA_DR2 = '2018yCat.1345....0G';
   const GAIA_DR3 = '2022yCat.1355....0G';
   const simbadRv = (kmS: number, bibcode = LITERATURE) => ({ kmS, bibcode });
-  const gaia = (rvKmS: number) => ({
-    rvKmS, via: 'gaia_dr3' as const, bibcode: null,
-    gaiaBibcodeCited: false, gaiaBibcodeSkipped: false,
-  });
-  const simbad = (rvKmS: number, bibcode = LITERATURE, gaiaBibcodeCited = false) => ({
-    rvKmS, via: 'simbad' as const, bibcode, gaiaBibcodeCited, gaiaBibcodeSkipped: false,
-  });
-  const NONE = {
-    rvKmS: null, via: 'none' as const, bibcode: null,
-    gaiaBibcodeCited: false, gaiaBibcodeSkipped: false,
-  };
+  const resolve = (
+    gaia: GaiaAstrometryCatalogRow | null, simbad: SimbadRadialVelocity | null,
+  ) => resolveRadialVelocity({ gaia, simbad });
+  const NO_5P = { tier: 'gaia_dr3', reason: 'no_5p_solution' } as const;
+  const SKIPPED = { tier: 'simbad', reason: 'gaia_release' } as const;
+  const gaia = (kmS: number) => ({ via: 'gaia_dr3', value: { kmS }, refusals: [] });
+  const simbad = (
+    kmS: number, bibcode = LITERATURE, refusals: readonly object[] = [],
+  ) => ({ via: 'simbad', value: { kmS, bibcode }, refusals });
+  const NONE = { via: 'none', refusals: [] };
 
   it('takes Gaia DR3 radial_velocity when RVS reached the source', () => {
-    expect(resolveRadialVelocity(withRv(-110.51), simbadRv(22.4))).toEqual(gaia(-110.51));
+    expect(resolve(withRv(-110.51), simbadRv(22.4))).toEqual(gaia(-110.51));
   });
 
   // RVS is magnitude-limited, so the SIMBAD tier is not a degraded copy of the
   // Gaia tier — it is the only velocity most of this cohort has.
   it('falls to the SIMBAD tier when Gaia carries no RV', () => {
-    expect(resolveRadialVelocity(withRv(null), simbadRv(22.4))).toEqual(simbad(22.4));
+    expect(resolve(withRv(null), simbadRv(22.4))).toEqual(simbad(22.4));
   });
 
   it('falls to the SIMBAD tier when there is no Gaia row at all', () => {
-    expect(resolveRadialVelocity(null, simbadRv(22.4))).toEqual(simbad(22.4));
+    expect(resolve(null, simbadRv(22.4))).toEqual(simbad(22.4));
   });
 
   // ξ UMa's shape: a 2p row whose RVS median is the pair's, 11 km/s from the
   // systemic value. RVS reads the window the astrometric fit failed on.
   it('refuses the Gaia tier on a 2p row, taking the SIMBAD value', () => {
     const twoP = gaiaAstrometryRow({ ipdFracMultiPeak: 24, radialVelocityKmS: -26.78 });
-    expect(resolveRadialVelocity(twoP, simbadRv(-15.9))).toEqual(simbad(-15.9));
+    expect(resolve(twoP, simbadRv(-15.9))).toEqual(simbad(-15.9, LITERATURE, [NO_5P]));
   });
 
   // The skip rule: the withheld Gaia value coming back under a Gaia bibcode
   // is the same measurement, so the row falls to zero rather than launder it.
   it('skips a Gaia-bibcoded SIMBAD value where its own gate withheld the Gaia rv', () => {
     const twoP = gaiaAstrometryRow({ ipdFracMultiPeak: 24, radialVelocityKmS: -26.78 });
-    expect(resolveRadialVelocity(twoP, simbadRv(-26.78, GAIA_DR3)))
-      .toEqual({ ...NONE, gaiaBibcodeSkipped: true });
+    expect(resolve(twoP, simbadRv(-26.78, GAIA_DR3)))
+      .toEqual({ ...NONE, refusals: [NO_5P, SKIPPED] });
   });
 
   // Nothing was withheld on a row Gaia never measured, so a Gaia catalogue
   // bibcode there is an ordinary citation, and the shipped value says so.
   it('keeps a Gaia-bibcoded SIMBAD value where Gaia published no rv', () => {
-    expect(resolveRadialVelocity(withRv(null), simbadRv(22.4, GAIA_DR3)))
-      .toEqual(simbad(22.4, GAIA_DR3, true));
-    expect(resolveRadialVelocity(null, simbadRv(22.4, GAIA_DR3)))
-      .toEqual(simbad(22.4, GAIA_DR3, true));
+    expect(resolve(withRv(null), simbadRv(22.4, GAIA_DR3)))
+      .toEqual(simbad(22.4, GAIA_DR3));
+    expect(resolve(null, simbadRv(22.4, GAIA_DR3)))
+      .toEqual(simbad(22.4, GAIA_DR3));
   });
 
   // The rule turns on the blend, not on holding the competing value: a 2p row
@@ -76,8 +76,8 @@ describe('resolveRadialVelocity cascade', () => {
   // 102 rows of this build, all DR2.
   it('skips a Gaia-bibcoded value on a 2p row even with no Gaia rv to compare', () => {
     const twoPNoRv = gaiaAstrometryRow({ ipdFracMultiPeak: 24, radialVelocityKmS: null });
-    expect(resolveRadialVelocity(twoPNoRv, simbadRv(-15.9, GAIA_DR2)))
-      .toEqual({ ...NONE, gaiaBibcodeSkipped: true });
+    expect(resolve(twoPNoRv, simbadRv(-15.9, GAIA_DR2)))
+      .toEqual({ ...NONE, refusals: [SKIPPED] });
   });
 
   // ...and the literature value on that same row is untouched: the rule is
@@ -85,12 +85,12 @@ describe('resolveRadialVelocity cascade', () => {
   // every velocity.
   it('keeps a literature value on a 2p row Gaia published no rv for', () => {
     const twoPNoRv = gaiaAstrometryRow({ ipdFracMultiPeak: 24, radialVelocityKmS: null });
-    expect(resolveRadialVelocity(twoPNoRv, simbadRv(-15.9))).toEqual(simbad(-15.9));
+    expect(resolve(twoPNoRv, simbadRv(-15.9))).toEqual(simbad(-15.9));
   });
 
   it('reports no tier when a 2p row is all the rv there is', () => {
-    expect(resolveRadialVelocity(gaiaAstrometryRow({ radialVelocityKmS: -26.78 }), null))
-      .toEqual(NONE);
+    expect(resolve(gaiaAstrometryRow({ radialVelocityKmS: -26.78 }), null))
+      .toEqual({ ...NONE, refusals: [NO_5P] });
   });
 
   // DR3 is taken as published: a large stated uncertainty is banded and
@@ -99,16 +99,16 @@ describe('resolveRadialVelocity cascade', () => {
     const noisy = gaiaAstrometryRow({
       parallaxMas: 5, radialVelocityKmS: -80.3, radialVelocityErrorKmS: 39.9,
     });
-    expect(resolveRadialVelocity(noisy, simbadRv(-15.9))).toEqual(gaia(-80.3));
+    expect(resolve(noisy, simbadRv(-15.9))).toEqual(gaia(-80.3));
   });
 
   it('keeps a genuine zero rather than falling through it', () => {
-    expect(resolveRadialVelocity(withRv(0), simbadRv(22.4))).toEqual(gaia(0));
-    expect(resolveRadialVelocity(null, simbadRv(0))).toEqual(simbad(0));
+    expect(resolve(withRv(0), simbadRv(22.4))).toEqual(gaia(0));
+    expect(resolve(null, simbadRv(0))).toEqual(simbad(0));
   });
 
   it('reports no tier when neither source carries one', () => {
-    expect(resolveRadialVelocity(null, null)).toEqual(NONE);
+    expect(resolve(null, null)).toEqual(NONE);
   });
 
   // EZ Aqr's value: a published 6,824.7 km/s at 3.4 pc. Rejecting the term on
