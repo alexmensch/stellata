@@ -848,10 +848,20 @@ interface AdditionGroup {
   members: string[];
 }
 
+const ORIGIN_LADDER = ['hd', 'hip', 'cns5'] as const;
+
+function originRank(item: AdditionCohorts): number {
+  const rank = ORIGIN_LADDER.findIndex((c) => item[c] !== null);
+  if (rank < 0) throw new Error('addition item holds no cohort row');
+  return rank;
+}
+
 function itemOrigin(item: AdditionCohorts, keys: OriginKeys): string {
-  if (item.hd !== null) return keys.iv25(item.hd.tyc);
-  if (item.hip !== null) return keys.i239(item.hip.hip);
-  return keys.cns5(item.cns5!.cns5);
+  switch (ORIGIN_LADDER[originRank(item)]) {
+    case 'hd': return keys.iv25(item.hd!.tyc);
+    case 'hip': return keys.i239(item.hip!.hip);
+    case 'cns5': return keys.cns5(item.cns5!.cns5);
+  }
 }
 
 function soleItem<K extends keyof AdditionCohorts>(
@@ -926,8 +936,7 @@ function additionGroup(
   const source = winner !== null && !sourceOnSpine && !sharedSources.has(winner) ? winner : null;
   const tycSource = candidateVia(derived, 'tyc');
   const hipSource = candidateVia(derived, 'hip');
-  const anchor = ['hd', 'hip', 'cns5'].map((c) => items.find((i) => i[c as keyof AdditionCohorts] !== null))
-    .find((i) => i !== undefined)!;
+  const anchor = items.reduce((a, b) => (originRank(b) < originRank(a) ? b : a));
   return {
     origin: itemOrigin(anchor, keys),
     members: items.filter((i) => i !== anchor).map((i) => itemOrigin(i, keys)).sort(),
