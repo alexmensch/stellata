@@ -685,7 +685,6 @@ async function main() {
       `no-position=${ps.droppedNoPosition}, ` +
       `beyond-tidal=${ps.droppedBeyondTidalLimit}, ` +
       `no-absmag=${ps.droppedNoAbsmag}, ` +
-      `no-primary=${ps.droppedNoPrimary}, ` +
       `compound-comp=${ps.droppedCompoundComp}, ` +
       `collocated-primary=${ps.droppedCollocatedPrimary}, ` +
       `anchor-is-component=${ps.anchorIsComponent}); ` +

@@ -6,6 +6,7 @@ import {
   componentDepth,
   composeSyntheticId,
   emptyParkedRefusals,
+  foldRowOutcomes,
   GAIA_BLEND_MAX_SEP_ARCSEC,
   PRINTED_BLEND_MAX_SEP_ARCSEC,
   hasRenderableOrbit,
@@ -18,9 +19,11 @@ import {
   projectFromSepPa,
   parkedRefusals,
   promoteCompanions,
+  type MintedBrightness,
   type MultiplesTsvRow,
   type PromotionInputs,
   type PromotionStats,
+  type RowOutcome,
 } from './companion-promotion';
 import {
   FLAG_BINARY_COMPANION_ONLY,
@@ -3321,5 +3324,68 @@ describe('an existing member whose own 5p solution Gaia rejects', () => {
     const { newStars, stats } = promoteCompanions(rows, [anchor], inputs());
     expect(stats.existingViaSameasBridge).toBe(0);
     expect(newStars).toHaveLength(1);
+  });
+});
+
+describe('foldRowOutcomes', () => {
+  const row = multiplesRow();
+  const own: MintedBrightness = { source: 'own', spectMsFromOwnAbsmag: true };
+  const outcomes: RowOutcome[] = [
+    { kind: 'dropped', reason: 'compound-comp' },
+    { kind: 'dropped', reason: 'beyond-tidal-limit' },
+    { kind: 'dropped', reason: 'collocated-primary' },
+    { kind: 'dropped', reason: 'no-identifier' },
+    { kind: 'dropped', reason: 'anchor-is-component' },
+    { kind: 'dropped', reason: 'no-position' },
+    { kind: 'dropped', reason: 'no-absmag' },
+    { kind: 'dropped', reason: 'parked-record', viaGaia5p: true, ownedFit: false },
+    { kind: 'adopted', idx: 1, via: 'earlier-mint' },
+    {
+      kind: 'adopted', idx: 2, via: 'sameas-bridge', desigConFromAnchor: true,
+      recuration: { brightness: 'wds_mag', first: true },
+    },
+    {
+      kind: 'adopted', idx: 2, via: 'own-id', desigConFromAnchor: false,
+      recuration: { brightness: 'wds_mag', first: false },
+    },
+    { kind: 'minted', idx: 3, synthetic: true, brightness: own, constellationSplit: true },
+    {
+      kind: 'minted', idx: 4, synthetic: false,
+      brightness: { source: 'spectral', spectMsFromOwnAbsmag: false }, constellationSplit: false,
+    },
+    { kind: 'repositioned', idx: 5, brightness: { source: 'inherited_twin', spectMsFromOwnAbsmag: false } },
+  ];
+
+  it('counts each per-row counter from its variant, and scans only secondaries', () => {
+    const stats = foldRowOutcomes([
+      ...outcomes.map((outcome) => ({ row, via: 'secondary' as const, outcome })),
+      { row, via: 'escape', outcome: { kind: 'dropped', reason: 'collocated-primary' } },
+    ]);
+    expect(stats).toEqual({
+      pairRowsScanned: 14,
+      alreadyInCatalog: 3,
+      promoted: 2,
+      promotedSynthetic: 1,
+      droppedNoIdentifier: 1,
+      droppedNoPosition: 1,
+      droppedBeyondTidalLimit: 1,
+      droppedNoAbsmag: 1,
+      absmagSpectralDerived: 1,
+      spectMsFromOwnAbsmag: 1,
+      absmagWdsMagDerived: 0,
+      absmagAnchorCollocated: 0,
+      absmagInheritedTwinOrbital: 1,
+      repositionedCollocatedDouble: 1,
+      droppedCompoundComp: 1,
+      droppedCollocatedPrimary: 2,
+      anchorIsComponent: 1,
+      constellationSplitFromAnchor: 1,
+      existingDesigConFromAnchor: 1,
+      existingMemberRecurated: { dmag_imputed: 0, wds_mag: 1, spectral: 0, held: 0 },
+      existingViaSameasBridge: 1,
+      droppedParkedRecord: 1,
+      droppedParkedRecordViaGaia5p: 1,
+      droppedParkedRecordOwnedFit: 0,
+    });
   });
 });

@@ -77,6 +77,12 @@ into the current build
 a third via real Gaia/HIP keys, two-thirds via synthetic identifiers
 (see the identifier gate below).
 
+Each pair row's decision is a `RowOutcome`: dropped with its reason, adopted
+onto a record already held (its own id or HIP, a same-as bridge, or an
+earlier mint this build), minted, or an AT-HYG double repositioned onto it.
+Every per-row `PromotionStats` counter folds from those (`foldRowOutcomes`);
+the post-passes below act on records, not rows, and keep their own counters.
+
 Per-row gates and resolution:
 
 - **WDS unresolved-compound guard.** Secondary rows whose `comp` letter
