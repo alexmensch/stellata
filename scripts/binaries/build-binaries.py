@@ -19,8 +19,8 @@ sys.path.insert(0, str(SCRIPT.parents[2]))
 
 from scripts.refresh.refresh_lib import assert_row_count  # noqa: E402
 from scripts.util.build_stamp import (  # noqa: E402
-    clear_stamp, file_hashes, imported_script_modules, stamp_is_current, stamp_path,
-    write_stamp,
+    clear_stamp, file_hashes, imported_script_modules, outputs_json, stamp_is_current,
+    stamp_path, write_stamp,
 )
 from scripts.util.paths import REPO_ROOT  # noqa: E402
 
@@ -167,6 +167,7 @@ ATHYG_GAIA_COVERAGE_BOUNDS = (0.90, 1.00)
 
 
 MULTIPLES_STAMP = stamp_path("multiples")
+OUTPUTS = (OUT_MULTIPLES, OUT_ASTROMETRY_REQUEST, OUT_BINDING_VERDICTS)
 
 
 def _iter_input_paths() -> Iterator[Path]:
@@ -694,10 +695,7 @@ def run(force: bool) -> int:
         "Stage 7 complete. data/binaries/multiples.tsv ready for "
         "build-runtime-binaries.py."
     )
-    write_stamp(
-        MULTIPLES_STAMP, inputs,
-        [OUT_MULTIPLES, OUT_ASTROMETRY_REQUEST, OUT_BINDING_VERDICTS],
-    )
+    write_stamp(MULTIPLES_STAMP, inputs, OUTPUTS)
     return 0
 
 
@@ -707,7 +705,14 @@ def main() -> int:
         "--force", action="store_true",
         help="ignore input-hash check and reload all inputs",
     )
+    p.add_argument(
+        "--outputs", action="store_true",
+        help="print the step's outputs and stamp as JSON, build nothing",
+    )
     args = p.parse_args()
+    if args.outputs:
+        print(outputs_json(OUTPUTS, MULTIPLES_STAMP))
+        return 0
     return run(force=args.force)
 
 

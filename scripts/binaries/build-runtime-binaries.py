@@ -18,8 +18,8 @@ SCRIPT = Path(__file__).resolve()
 sys.path.insert(0, str(SCRIPT.parents[2]))
 
 from scripts.util.build_stamp import (  # noqa: E402
-    clear_stamp, file_hashes, imported_script_modules, stamp_is_current, stamp_path,
-    write_stamp,
+    clear_stamp, file_hashes, imported_script_modules, outputs_json, stamp_is_current,
+    stamp_path, write_stamp,
 )
 from scripts.util.astronomy_constants import J2000_JD  # noqa: E402
 from scripts.binaries.component_tokens import (  # noqa: E402
@@ -40,6 +40,7 @@ SRC_ROW_INDEX_MAP = ROOT / "build" / "catalog-row-index-map.json"
 OUT_BIN = ROOT / "public" / "binaries.bin"
 EXPECTED_COUNTS = SCRIPT.parent / "build-runtime-binaries-expected.json"
 BINARIES_BIN_STAMP = stamp_path("binaries-bin")
+OUTPUTS = (OUT_BIN,)
 
 
 # ─── Binary format ──────────────────────────────────────────────────
@@ -714,7 +715,7 @@ def run(force: bool) -> int:
         refresh_command=f"{UPDATE_COUNTS_ENV_VAR}=1 pnpm run build:binaries-runtime",
     ):
         return 1
-    write_stamp(BINARIES_BIN_STAMP, inputs, [OUT_BIN])
+    write_stamp(BINARIES_BIN_STAMP, inputs, OUTPUTS)
     return 0
 
 
@@ -769,7 +770,14 @@ def main() -> int:
         "--force", action="store_true",
         help="ignore input-hash check and rebuild",
     )
+    p.add_argument(
+        "--outputs", action="store_true",
+        help="print the step's outputs and stamp as JSON, build nothing",
+    )
     args = p.parse_args()
+    if args.outputs:
+        print(outputs_json(OUTPUTS, BINARIES_BIN_STAMP))
+        return 0
     return run(force=args.force)
 
 

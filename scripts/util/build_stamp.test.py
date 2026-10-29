@@ -12,11 +12,13 @@ import unittest
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+from scripts.util.paths import REPO_ROOT  # noqa: E402
 from scripts.util.build_stamp import (  # noqa: E402
     changed_since,
     clear_stamp,
     file_hashes,
     imported_script_modules,
+    outputs_json,
     read_stamp,
     stamp_is_current,
     write_stamp,
@@ -107,6 +109,15 @@ class BuildStampTests(unittest.TestCase):
         self.assertIn("paths.py", names)
         self.assertNotIn("build_stamp.test.py", names)
         self.assertNotIn("component_tokens.py", names)
+
+    def test_outputs_json_is_repo_relative(self) -> None:
+        self.assertEqual(
+            json.loads(outputs_json(
+                [REPO_ROOT / "public" / "a.bin", REPO_ROOT / "build" / "b.tsv"],
+                REPO_ROOT / "build" / "stamps" / "step.json",
+            )),
+            {"outputs": ["public/a.bin", "build/b.tsv"], "stamp": "build/stamps/step.json"},
+        )
 
     def test_clear_stamp(self) -> None:
         self.write()

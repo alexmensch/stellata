@@ -68,7 +68,9 @@ same thing — single-use helpers stay with their consumer.
   the same JSON shape, which `tests/artifact-freshness.test.ts` reads from the
   TS side. Its `imported_script_modules()` is those steps' code inputs: every
   `scripts/` module the process has imported, so the import statements are
-  the only list. Both pinned by co-located tests
+  the only list. Its `outputs_json` is both steps' `--outputs` answer — their
+  output tuple and stamp, repo-relative — which `../worktree-seed.test.ts`
+  reads. Both pinned by co-located tests
   (`python3 scripts/util/build_stamp.test.py`).
 - `import-closure.ts` / `import-closure-pure.ts` (+ test) — a TypeScript
   build's code inputs. `entryClosure(entries)` is every module the given
