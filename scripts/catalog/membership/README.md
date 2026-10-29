@@ -352,10 +352,11 @@ arithmetic and label-flips replay:
   folds of [Correcting a merge decision](#correcting-a-merge-decision) as the only exception, whose count is
   pinned and whose every pair is checked, so a second row landing on someone
   else's record still fails.
-  `matchSpineToManifest` resolves it the way `sid:allocate` resolves a record:
-  the same-as graph over the manifest's designations plus
-  `data/sid/sameas-overrides.tsv`, ambiguous designations dropped, the row
-  keyed on its first ladder-ranked designation the graph knows. A lower-ranked
+  `matchSpineToManifest` resolves it through the classes `sid:allocate`
+  resolves a record by — `sameAsClasses` (`../../sid/sid-pure.ts`) over the
+  manifest's designations plus `data/sid/sameas-overrides.tsv`, ambiguous
+  designations dropped — the row keyed on its first ladder-ranked
+  designation the graph knows. A lower-ranked
   designation the merge moved to a sibling does not split the match, because
   the SID never rode on it — which `../classic-ids/parity-ledger.test.ts` pins
   from the other side. **10** `hd` / `hr` cells move that way today; the figure

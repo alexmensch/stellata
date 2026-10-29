@@ -9,8 +9,10 @@ model, canonical-key ladder, allocation, CI guard, DR procedure — is
 
 ```
 sid-pure.ts               Pure algebra: designation grammar (/docs/sid.md#3-designation-namespaces),
-                          canonical-key ladder (/docs/sid.md#42-canonical-key--stability-first), same-as classes +
-                          allocation (/docs/sid.md#41-same-as-equivalence-graph, /docs/sid.md#44-allocation), per-record designation
+                          canonical-key ladder (/docs/sid.md#42-canonical-key--stability-first), same-as classes
+                          (sameAsClasses, the one class build: allocate
+                          and the membership parity matcher both call
+                          it) + allocation (/docs/sid.md#41-same-as-equivalence-graph, /docs/sid.md#44-allocation), per-record designation
                           extraction (starDesignations) + read-only
                           resolution (resolveSids, mint = error),
                           parsers for every registry file, each taking
@@ -162,7 +164,9 @@ catalogue granularity, not one physical object. Assigning it to either
 record would freeze an arbitrary claim into the append-only ledger;
 unioning through it would fuse two distinct objects' identities. So it
 is excluded from the same-as graph entirely — it can neither key a
-ledger row nor merge classes. Every affected record keys off its own
+ledger row nor merge classes. A stored edge (`sameas-overrides.tsv`,
+`bridges/`) naming one would put it back, so `sameAsClasses` throws on it
+and every allocation and resolution fails. Every affected record keys off its own
 unique HIP/Gaia id; a record whose ONLY designation is ambiguous would
 hard-fail allocation as keyless (zero such records today).
 

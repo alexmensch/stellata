@@ -73,6 +73,7 @@ import type { SimbadXids } from '../spectral/spectral-resolve';
 import {
   UnionFind,
   compareDesignations,
+  sameAsClasses,
   type SameasEdge,
 } from '../../sid/sid-pure';
 import {
@@ -1295,10 +1296,8 @@ export interface SpineMatch {
   unreached: number[];
 }
 
-/** Resolve every spine row through the manifest's designation classes the way
- *  `sid:allocate` resolves a record: the same-as graph over each manifest row's
- *  designations plus the stored bridges, a designation on more than one
- *  manifest row dropped first (/docs/sid.md#41-same-as-equivalence-graph), and the row keyed on its
+/** Resolve every spine row through `sameAsClasses` over the manifest's
+ *  designations, the classes `sid:allocate` builds, keying the row on its
  *  first ladder-ranked designation the graph knows — its canonical key. A
  *  lower-ranked designation the label merge moved to a sibling therefore does
  *  not split the match: the SID never rode on it. */
@@ -1307,51 +1306,24 @@ export function matchSpineToManifest(
   manifestRows: readonly ManifestRecord[],
   storedEdges: readonly SameasEdge[],
 ): SpineMatch {
-  const owners = new Map<string, number>();
-  const manifestSets = manifestRows.map(manifestDesignations);
-  for (const set of manifestSets) {
-    for (const d of new Set(set)) owners.set(d, (owners.get(d) ?? 0) + 1);
-  }
-  const uf = new UnionFind();
-  const rowByDesignation = new Map<string, number>();
-  manifestSets.forEach((set, i) => {
-    const kept = set.filter((d) => owners.get(d) === 1);
-    for (const d of kept) {
-      uf.add(d);
-      rowByDesignation.set(d, i);
-    }
-    for (let k = 1; k < kept.length; k++) uf.union(kept[0], kept[k]);
-  });
-  const endpoints = new Set<string>();
-  for (const e of storedEdges) {
-    uf.add(e.a);
-    uf.add(e.b);
-    uf.union(e.a, e.b);
-    endpoints.add(e.a);
-    endpoints.add(e.b);
-  }
-  const rowsByRoot = new Map<string, Set<number>>();
-  for (const [d, i] of rowByDesignation) {
-    const root = uf.find(d);
-    const set = rowsByRoot.get(root) ?? new Set<number>();
-    set.add(i);
-    rowsByRoot.set(root, set);
-  }
+  const { classes, objectsByClass } = sameAsClasses(
+    manifestRows.map(manifestDesignations),
+    storedEdges,
+  );
   const manifestIndex: (number | null)[] = [];
   const unmatched: number[] = [];
   const multiple: number[] = [];
   const reached = new Set<number>();
   spineDesignations.forEach((set, s) => {
-    const key = [...set].sort(compareDesignations)
-      .find((d) => rowByDesignation.has(d) || endpoints.has(d));
-    const hits = key === undefined ? new Set<number>() : rowsByRoot.get(uf.find(key)) ?? new Set<number>();
-    if (hits.size === 1) {
+    const key = [...set].sort(compareDesignations).find((d) => classes.has(d));
+    const hits = key === undefined ? [] : objectsByClass.get(classes.find(key)) ?? [];
+    if (hits.length === 1) {
       const [i] = hits;
       manifestIndex.push(i);
       reached.add(i);
     } else {
       manifestIndex.push(null);
-      (hits.size === 0 ? unmatched : multiple).push(s);
+      (hits.length === 0 ? unmatched : multiple).push(s);
     }
   });
   const unreached = manifestRows.map((_, i) => i).filter((i) => !reached.has(i));

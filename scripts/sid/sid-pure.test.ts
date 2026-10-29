@@ -11,7 +11,7 @@ import {
   compareDesignations,
   computeLedgerHead,
   syntheticGaiaBridges,
-  dropAmbiguousDesignations,
+  sameAsClasses,
   isValidDesignation,
   namespaceRank,
   parseDesignation,
@@ -316,7 +316,7 @@ describe('head snapshot + append-only', () => {
   });
 });
 
-describe('ambiguous-designation drop', () => {
+describe('sameAsClasses', () => {
   const star = (label: string, ...designations: string[]): SidObject => ({
     designations,
     kind: 'star',
@@ -324,17 +324,26 @@ describe('ambiguous-designation drop', () => {
   });
 
   it('drops a designation carried by two objects; both keep their own', () => {
-    const { kept, ambiguous } = dropAmbiguousDesignations([
-      star('a', 'hip:1', 'hd:100'),
-      star('b', 'hip:2', 'hd:100'),
-    ]);
+    const { kept, ambiguous, classes } = sameAsClasses([['hip:1', 'hd:100'], ['hip:2', 'hd:100']], []);
     expect(ambiguous).toEqual([{ designation: 'hd:100', objects: [0, 1] }]);
     expect(kept).toEqual([['hip:1'], ['hip:2']]);
+    expect(classes.find('hip:1')).not.toBe(classes.find('hip:2'));
+  });
+
+  it('a stored edge joins two objects into one class', () => {
+    const { classes } = sameAsClasses([['hip:1'], ['gaia_dr3:9']], [{ a: 'hip:1', b: 'gaia_dr3:9' }]);
+    expect(classes.find('hip:1')).toBe(classes.find('gaia_dr3:9'));
+  });
+
+  it('refuses a stored edge naming a designation two objects carry', () => {
+    expect(() =>
+      sameAsClasses([['hip:1', 'hd:100'], ['hip:2', 'hd:100']], [{ a: 'hd:100', b: 'gaia_dr3:9' }]),
+    ).toThrow('hd:100 = gaia_dr3:9');
   });
 
   it('an object whose only designation is ambiguous becomes keyless', () => {
     const objects = [star('a', 'hip:1', 'hd:100'), star('b', 'hd:100')];
-    const { kept } = dropAmbiguousDesignations(objects);
+    const { kept } = sameAsClasses(objects.map((o) => o.designations), []);
     expect(kept[1]).toEqual([]);
     const result = allocate({
       objects,
