@@ -119,17 +119,67 @@ describe('traceRecords over the fixture lineage', () => {
   });
 });
 
+const MINTED = '6000000000000000001';
+
+/** A system anchored on HD 5's record: its AB pair's rows, and a CD sub-pair
+ *  whose primary is a record of its own (spine:9) under the same system
+ *  anchor. Another system's row cites spine:99 only. */
+const PROMOTION = [
+  'stage\tkey\trole\tcode\tparams\tevidence',
+  'promotion\tmultiples:S-AB/A\toutcome\tpromotion.not-applicable\t{"via":"primary"}\tspine:3',
+  'promotion\tmultiples:S-AB/B\toutcome\tpromotion.minted\t{"via":"secondary"}\tspine:3',
+  'promotion\tmultiples:S-CD/C\toutcome\tpromotion.not-applicable\t{"via":"primary"}\tspine:9|spine:3',
+  'promotion\tmultiples:S-CD/D\toutcome\tpromotion.adopted.earlier-mint\t{"record":"spine:9","via":"secondary"}\tspine:9|spine:3',
+  'promotion\tmultiples:T-AB/B\toutcome\tpromotion.minted\t{"via":"secondary"}\tspine:99',
+].join('\n') + '\n';
+
+const PROMOTION_IDENTITY = [
+  'key\ttyc\thip\thd\tgl\tgaia_source_id\tdesignations',
+  `multiples:S-AB/B\t\t\t\t\t${MINTED}\tsynth:S-B|gaia_dr3:${MINTED}`,
+].join('\n') + '\n';
+
+describe('traceRecords over a promoted system', () => {
+  const withPromotion = [
+    ...stages, { stage: 'promotion', rows: [...lineageRows(PROMOTION, 'fixture/promotion.tsv')] },
+  ];
+  const promotionIdentity = [...identityRows(PROMOTION_IDENTITY, 'fixture/promotion.identity.tsv')];
+  const traceSystem = (query: string) => {
+    const { designations, terms } = queryTerms(parseTraceQuery(query), LOOKUPS);
+    return traceRecords(designations, terms, [...identity, ...promotionIdentity], withPromotion);
+  };
+
+  it('finds every component row that cites the anchor\'s record, its own pair or as system anchor', () => {
+    expect(traceSystem('hd:5').map((r) => r.key)).toEqual([
+      'multiples:S-AB/A', 'multiples:S-AB/B', 'multiples:S-CD/C', 'multiples:S-CD/D', 'spine:3', 'spine:4',
+    ]);
+  });
+
+  it('finds a minted companion through the identity row promotion writes for it', () => {
+    const [minted] = traceSystem(MINTED);
+    expect(minted.key).toBe('multiples:S-AB/B');
+    expect(minted.rows.map((r) => r.code)).toEqual(['promotion.minted']);
+  });
+});
+
 describe('pnpm run trace', () => {
   const dir = mkdtempSync(join(tmpdir(), 'lineage-trace-'));
   writeFileSync(stageFile(dir, 'identity'), gzipText(IDENTITY));
   writeFileSync(stageFile(dir, 'membership'), gzipText(MEMBERSHIP));
+  writeFileSync(stageFile(dir, 'promotion'), gzipText(PROMOTION));
+  writeFileSync(stageFile(dir, 'promotion.identity'), gzipText(PROMOTION_IDENTITY));
   afterAll(() => rmSync(dir, { recursive: true, force: true }));
+  const run = (query: string): string => execFileSync(
+    'pnpm', ['exec', 'tsx', 'scripts/catalog/lineage/trace.ts', query, '--dir', dir],
+    { cwd: REPO_ROOT, encoding: 'utf-8' },
+  );
 
   it('prints every stage\'s rows for the record a Gaia id names', () => {
-    const out = execFileSync('pnpm', ['exec', 'tsx', 'scripts/catalog/lineage/trace.ts', REFUSED_ONLY, '--dir', dir], {
-      cwd: REPO_ROOT, encoding: 'utf-8',
-    });
+    const out = run(REFUSED_ONLY);
     expect(out.split('\n')[0]).toBe('spine:3');
     expect(out).toMatch(/refused  membership\.binding\.gate-mag/);
+  });
+
+  it('reads the promotion stage and its identity file', () => {
+    expect(run(MINTED).split('\n')[0]).toBe('multiples:S-AB/B');
   });
 });

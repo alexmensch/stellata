@@ -316,16 +316,20 @@ name.
 2. Find the origin keys whose identity rows carry that designation. Parked
    and dropped records have lineage rows too, so they are found. Also find
    every row that names it in `params` or `evidence` — a source a gate
-   weighed and refused, or only cited, sits on no identity row. A full scan
-   of the stage files, about two seconds today, so no index is kept.
+   weighed and refused, or only cited, sits on no identity row — and every
+   row that cites one of those identity-row records by origin key, as a
+   companion's promotion row cites its anchor. Identity rows come from every
+   stage that writes them (`StageLineageSpec.identity`). A full scan of the
+   stage files, about two seconds today, so no index is kept.
 3. Widen to the same-as class, and to retired SIDs and their successors,
    through allocation's rows — once allocation is a lineage stage.
 4. Print every stage's rows for those keys in stage order
    (`LINEAGE_STAGES`).
 
 `trace.test.ts` runs the command over a small committed fixture: it finds a
-record the catalogue parks and the record that refused a source no identity
-row carries.
+record the catalogue parks, the record that refused a source no identity
+row carries, and every component row of a promoted system from its anchor's
+designation.
 
 ## Cross-stage joins
 
