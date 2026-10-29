@@ -5,6 +5,7 @@ import { existsSync } from 'node:fs';
 import { runStep } from '../../util/emit-artifacts';
 import { readArtifact } from '../../util/sources/source';
 import { LEDGER } from '../../sid/ledger-tsv';
+import { catalogRecordDesignations } from '../../sid/catalog-designations';
 import { loadCatalog, lookupByName, type Catalog } from '../catalog-lookup';
 import { LINEAGE_LAYOUT, readIdentity, readLineage, stageFile } from './lineage-io';
 import { LINEAGE_STAGES } from './lineage-stages';
@@ -19,11 +20,9 @@ function lookups(catalog: Catalog | null): TraceLookups {
       if (catalog === null) throw new Error('a name query needs the built catalogue');
       const record = lookupByName(catalog, name);
       if (record === null) return null;
-      const gaia = record.gaiaSourceId === null ? null : String(record.gaiaSourceId);
-      return [
-        ...(record.hip === null ? [] : [`hip:${record.hip}`]),
-        ...(gaia === null ? [] : [`gaia_dr3:${gaia}`]),
-      ];
+      if (catalog.searchIndex === undefined) throw new Error('a name query needs the search index');
+      const all = catalogRecordDesignations(catalog, catalog.searchIndex, {});
+      return all.find((r) => r.i === record.i)?.designations ?? null;
     },
   };
 }

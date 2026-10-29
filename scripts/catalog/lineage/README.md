@@ -296,10 +296,10 @@ more bare digits, or `gaia_dr3:<id>`, is a Gaia id (a SID never runs that
 long); fewer, or `sid:<n>`, a SID; `ns:key` a designation; anything else a
 name.
 
-1. A name resolves to its record's `hip:` and `gaia_dr3:` designations
-   through `catalog-lookup.ts`'s `lookupByName`, so it needs a built
-   catalogue; designations follow `sid-pure.ts`'s grammar; a SID resolves
-   to its canonical key through the ledger.
+1. A name resolves through `catalog-lookup.ts`'s `lookupByName` to its
+   record's full designation set (`catalogRecordDesignations`, `../../sid/`),
+   so it needs a built catalogue; designations follow `sid-pure.ts`'s grammar;
+   a SID resolves to its canonical key through the ledger.
 2. Find the origin keys whose identity rows carry that designation. Parked
    and dropped records have lineage rows too, so they are found. Also find
    every row that names it in `params` or `evidence` — a source a gate
