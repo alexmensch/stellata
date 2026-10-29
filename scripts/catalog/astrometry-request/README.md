@@ -148,7 +148,7 @@ bindings. Both read 0 today. The pull holds 383,055 rows against the request's
 than candidates — the two DR2 ids of `data/athyg/stale_gaia_source_ids.tsv` SIMBAD
 holds no DR3 successor for ([Six source_ids DR3 does not publish](../spine/README.md#six-source_ids-dr3-does-not-publish)).
 One pulled row is no longer requested: HD 2094 B's source, which only the
-spine's uncorrected TYC reached ([Correcting a merge decision](../membership/README.md#correcting-a-merge-decision)) and which ships as
+spine's uncorrected TYC reached ([Correcting a merge decision](../membership/spine-corrections/README.md#correcting-a-merge-decision)) and which ships as
 a magnitude-term row on the magnitude pull's own astrometry. The next re-pull
 drops it.
 What no request can fix is `gateSkippedNullGMag` (<!-- count:classic-id-overlay/gateSkippedNullGMag -->112<!-- /count -->) and

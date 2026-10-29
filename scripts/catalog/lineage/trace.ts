@@ -7,6 +7,7 @@ import { readArtifact } from '../../util/sources/source';
 import { LEDGER } from '../../sid/ledger-tsv';
 import { catalogRecordDesignations } from '../../sid/catalog-designations';
 import { loadCatalog, nameTable, type SearchableCatalog } from '../catalog-lookup';
+import { MEMBERSHIP_LINEAGE } from '../membership/membership-lineage-pure';
 import { LINEAGE_LAYOUT, readIdentity, readLineage, stageFile } from './lineage-io';
 import { LINEAGE_STAGES } from './lineage-stages';
 import { parseTraceQuery, queryTerms, traceRecords, traceText, type TraceLookups } from './trace-pure';
@@ -38,15 +39,20 @@ async function main(): Promise<void> {
   if (query === '' || dir === undefined) {
     throw new Error(`usage: pnpm run trace <name | designation | sid | gaia id> [${DIR_FLAG} <dir>]`);
   }
-  const identityPath = stageFile(dir, 'identity');
-  if (!existsSync(identityPath)) throw new Error(`no lineage at ${dir}: run \`pnpm run build:membership\``);
+  if (!existsSync(stageFile(dir, MEMBERSHIP_LINEAGE.stage))) {
+    throw new Error(`no lineage at ${dir}: run \`pnpm run build:membership\``);
+  }
+  const identity = LINEAGE_STAGES
+    .flatMap(({ spec }) => (spec.identity === undefined ? [] : [stageFile(dir, spec.identity)]))
+    .filter((path) => existsSync(path))
+    .flatMap((path) => readIdentity(path));
   const q = parseTraceQuery(query);
   const catalog = q.kind === 'name' ? await loadCatalog({ withSearchIndex: true }) : null;
   const { designations, terms } = queryTerms(q, lookups(catalog));
   const stages = LINEAGE_STAGES
-    .filter((s) => existsSync(stageFile(dir, s.stage)))
-    .map((s) => ({ stage: s.stage, rows: readLineage(stageFile(dir, s.stage)) }));
-  process.stdout.write(traceText(traceRecords(designations, terms, readIdentity(identityPath), stages)));
+    .filter(({ spec }) => existsSync(stageFile(dir, spec.stage)))
+    .map(({ spec }) => ({ stage: spec.stage, rows: readLineage(stageFile(dir, spec.stage)) }));
+  process.stdout.write(traceText(traceRecords(designations, terms, identity, stages)));
 }
 
 runStep(main);

@@ -13,7 +13,7 @@ import { REASON_CODES, REASON_CODES_FILE } from './reason-codes-tsv';
 const OUTPUTS = declareOutputs({ codes: resolve(REPO_ROOT, REASON_CODES_FILE) });
 
 function main(): void {
-  const entries = reasonCodeList(LINEAGE_STAGES, readArtifact(REASON_CODES), packageVersion());
+  const entries = reasonCodeList(LINEAGE_STAGES.map((s) => s.codes), readArtifact(REASON_CODES), packageVersion());
   emitArtifacts({ outputs: OUTPUTS, files: { codes: REASON_CODES.serialize(entries) } });
   console.log(`wrote ${entries.length} codes to ${REASON_CODES_FILE}`);
 }

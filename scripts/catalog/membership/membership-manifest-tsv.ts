@@ -12,7 +12,7 @@ export const MANIFEST_VALUE_SEPARATOR = '|';
 
 export const MANIFEST_COLUMNS = [
   'tyc', 'hip', 'hd', 'hd_alt', 'hr', 'hr_alt', 'gl', 'flam', 'bayer', 'proper',
-  'gaia_source_id', 'binding', 'routes', 'term',
+  'gaia_source_id', 'binding', 'routes', 'term', 'origin_key',
 ] as const;
 export type ManifestColumn = (typeof MANIFEST_COLUMNS)[number];
 
@@ -48,6 +48,8 @@ export interface ManifestRecord {
   binding: BindingClass;
   routes: string;
   term: MembershipTerm;
+  /** The record's lineage origin key (../lineage/README.md#identity--the-origin-source-row). */
+  originKey: string;
   isSol: boolean;
 }
 
@@ -87,6 +89,7 @@ export function manifestRecord(
     binding: oneOf('binding', BINDING_CLASSES),
     routes: cell('routes'),
     term: oneOf('term', MEMBERSHIP_TERMS),
+    originKey: cell('origin_key') || fail('origin_key is empty'),
     isSol: proper === SOL_PROPER_NAME,
   };
 }
@@ -139,5 +142,6 @@ export const MEMBERSHIP_MANIFEST = defineArtifact({
     binding: r.binding,
     routes: r.routes,
     term: r.term,
+    origin_key: r.originKey,
   }),
 });

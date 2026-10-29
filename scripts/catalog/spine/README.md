@@ -22,7 +22,7 @@ it and the order they leave in: [§ 3.2](/docs/catalog-driver.md#32-retiring-the
 
 **The file is frozen, so a merge decision review finds wrong is corrected in
 `data/membership/spine-corrections.tsv`** — a committed, evidenced row the
-manifest applies — never by an edit here ([Correcting a merge decision](../membership/README.md#correcting-a-merge-decision)).
+manifest applies — never by an edit here ([Correcting a merge decision](../membership/spine-corrections/README.md#correcting-a-merge-decision)).
 
 **Nothing regenerates it.** The one-shot generator
 retired with the driver swap: it ran `readStars` over the AT-HYG CSV, and that

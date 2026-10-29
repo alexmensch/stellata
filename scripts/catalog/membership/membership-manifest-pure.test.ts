@@ -16,11 +16,9 @@ import {
   manifestKey,
   matchSpineToManifest,
   parseBindingDispositionsTsv,
-  parseSpineCorrectionsTsv,
-  SPINE_CORRECTION_COLUMNS,
   type BindingDispositionRow,
-  type SpineCorrectionRow,
 } from './membership-manifest-pure';
+import type { SpineCorrectionRow } from './spine-corrections/spine-corrections-pure';
 import { ADDITIONS_LEDGER } from './additions-ledger-tsv';
 import { ADDITION_REASONS, COMPONENT_REASON_PREFIX } from './ledger-rows-pure';
 import { BINDING_REVIEW } from './binding-review-tsv';
@@ -49,7 +47,7 @@ function spineRow(cells: Partial<SpineRow>): SpineRow {
 }
 
 function manifestRow(cells: Partial<Record<ManifestColumn, string>>): ManifestRecord {
-  const defaults: Partial<Record<ManifestColumn, string>> = { binding: 'none', term: 'primaries' };
+  const defaults: Partial<Record<ManifestColumn, string>> = { binding: 'none', term: 'primaries', origin_key: 'spine:1' };
   return manifestRecord((c) => cells[c] ?? defaults[c] ?? '', (m) => { throw new Error(m); });
 }
 
@@ -535,24 +533,6 @@ describe('spine corrections', () => {
     })).toThrow(/matches no spine row/);
   });
 
-  // A label the CDS join got wrong belongs in classic_id_overrides.tsv, where
-  // the merge can see it; this file may not reach around the merge.
-  it('parses only tyc as a set cell', () => {
-    const tsv = [
-      SPINE_CORRECTION_COLUMNS.join('\t'),
-      ['1-2-1', '', '5', '', 'set', 'hd', '6', 'because'].join('\t'),
-    ].join('\n') + '\n';
-    expect(() => parseSpineCorrectionsTsv(tsv, FROM)).toThrow(/set may write tyc/);
-  });
-
-  it('refuses a correction that states no evidence', () => {
-    const tsv = [
-      SPINE_CORRECTION_COLUMNS.join('\t'),
-      ['1-2-1', '', '5', '', 'set', 'tyc', '1-9-1', ''].join('\t'),
-    ].join('\n') + '\n';
-    expect(() => parseSpineCorrectionsTsv(tsv, FROM)).toThrow(/states no evidence/);
-  });
-
   it('refuses a set writing the value the spine already states', () => {
     expect(() => buildMembership({
       ...input,
@@ -581,15 +561,9 @@ describe('spine corrections', () => {
     })).toThrow(/a fold target is itself folded/);
   });
 
-  // Sol is the one spine row whose four key cells are all empty, so a blank key
-  // RESOLVES — to the Sun — rather than failing to match. Do not read this
-  // guard as redundant with 'matches no spine row'.
-  it('refuses a correction naming no key cell, which would resolve to Sol', () => {
-    const tsv = [
-      SPINE_CORRECTION_COLUMNS.join('\t'),
-      ['', '', '', '', 'set', 'tyc', '1-9-1', 'because'].join('\t'),
-    ].join('\n') + '\n';
-    expect(() => parseSpineCorrectionsTsv(tsv, FROM)).toThrow(/every key cell is empty/);
+  // What makes spine-corrections' empty-key refusal necessary: the empty key
+  // resolves, to the Sun, rather than failing to match.
+  it('keys Sol on the empty key', () => {
     expect(bindingReviewKey(spine[0])).toBe(bindingReviewKey({
       tyc: '', hip: '', hd: '', gl: '',
     }));

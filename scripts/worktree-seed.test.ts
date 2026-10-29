@@ -93,7 +93,9 @@ describe('.worktreeinclude', () => {
     expect(unlisted(PATTERNS, SEED_STEPS)).toEqual([]);
   }, 60_000);
 
-  it('loses the lineage baseline without build:membership', () => {
-    expect(uncovered(PATTERNS, SEED_STEPS.filter((step) => step !== 'build:membership'))).toEqual(['build/lineage/*']);
+  it('loses membership\'s lineage baseline without build:membership', () => {
+    const others = new Set(SEED_STEPS.filter((step) => step !== 'build:membership').flatMap((step) => stepOutputs(step).files));
+    expect(stepOutputs('build:membership').files.filter((f) => f.startsWith('build/lineage/') && !others.has(f)))
+      .toEqual(['build/lineage/membership.tsv.gz', 'build/lineage/identity.tsv.gz', 'build/lineage/membership.header.json']);
   }, 60_000);
 });

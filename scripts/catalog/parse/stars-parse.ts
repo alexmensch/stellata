@@ -216,6 +216,9 @@ export interface Star {
    *  ../companions/README.md#companion-promotion-from-databinariesmultiplestsv
    *  `data/binaries/multiples.tsv`. */
   syntheticId: string | null;
+  /** Build-time-only lineage origin key
+   *  (../lineage/README.md#identity--the-origin-source-row). */
+  originKey: string;
 }
 
 /** The one gate a manifest row can still fail that is NOT a record-parity park (/docs/catalog-driver.md#61-record-parity), and
@@ -449,6 +452,7 @@ export function readStars(
         gaiaSourceId,
         reason,
         refusedPlxMas,
+        originKey: row.originKey,
       });
       parkedVia[reason]++;
     };
@@ -756,6 +760,7 @@ export function readStars(
       distVia,
       vVia: vRes.via,
       syntheticId: null,
+      originKey: row.originKey,
     });
   }
 

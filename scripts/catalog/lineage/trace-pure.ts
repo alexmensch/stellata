@@ -121,9 +121,10 @@ export function traceRecords(
 ): TracedRecord[] {
   const wanted = new Set(designations);
   const termSet = new Set([...terms, ...designations]);
-  const keys = new Set(identity.filter((r) => r.designations.some((d) => wanted.has(d))).map((r) => r.key));
+  const named = new Set(identity.filter((r) => r.designations.some((d) => wanted.has(d))).map((r) => r.key));
+  const keys = new Set(named);
   for (const { rows } of stages) {
-    for (const row of rows) if (names(row, termSet)) keys.add(row.key);
+    for (const row of rows) if (names(row, termSet) || names(row, named)) keys.add(row.key);
   }
   const byKey = new Map(identity.map((r) => [r.key, r]));
   return [...keys].sort(compareUtf8).map((key) => ({

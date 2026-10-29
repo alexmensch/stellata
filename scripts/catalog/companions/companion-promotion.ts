@@ -30,6 +30,7 @@ import {
 } from '../photometry/v-magnitude-pure';
 import { MULTIPLES_TSV, type MultiplesRecord, type PhotometryVia } from '../../binaries/multiples-tsv';
 import { readArtifact } from '../../util/sources/source';
+import { sourceRowRef, sourceRowRefText } from '../../util/sources/row-ref-pure';
 import { emptyTallyPartition } from '../../util/tally';
 import { ARCSEC_TO_RAD } from '../../../src/client/util/astronomy-constants';
 import { equatorialTangentBasisAt } from '../../../src/client/util/equatorial-basis';
@@ -72,7 +73,11 @@ export const PER_COMPONENT_SPECT_VIA: ReadonlySet<string> = new Set([
  *  + orbit-relation-cache finite-elements gate): BinaryOrbitField
  *  animates the pair only when P, T, e, a, ω, q are all present.
  *  i and Ω are optional (Tier-2 galactic-plane fallback). */
-export function hasRenderableOrbit(row: MultiplesTsvRow): boolean {
+export type RenderableOrbitRow = MultiplesTsvRow & {
+  pDays: number; tJd: number; e: number; aAU: number; omegaRad: number; q: number;
+};
+
+export function hasRenderableOrbit(row: MultiplesTsvRow): row is RenderableOrbitRow {
   return row.pDays !== null && row.tJd !== null && row.e !== null
     && row.aAU !== null && row.omegaRad !== null && row.q !== null;
 }
@@ -175,7 +180,53 @@ function projectionBeyondTidalLimit(
 
 // ---- Promotion --------------------------------------------------------
 
-export interface PromotionStats {
+/** One pair row's promotion decision. Every per-row PromotionStats counter
+ *  folds from these ({@link foldRowOutcomes}). */
+export type RowOutcome =
+  | {
+    kind: 'dropped';
+    reason: 'compound-comp' | 'beyond-tidal-limit' | 'collocated-primary'
+      | 'no-identifier' | 'no-position' | 'no-absmag';
+  }
+  | { kind: 'dropped'; reason: 'anchor-is-component'; idx: number }
+  | { kind: 'dropped'; reason: 'parked-record'; parked: string; viaGaia5p: boolean; ownedFit: boolean }
+  | { kind: 'adopted'; idx: number; via: 'earlier-mint' }
+  | {
+    kind: 'adopted';
+    idx: number;
+    via: 'own-id' | 'own-hip' | 'sameas-bridge';
+    desigConFromAnchor: boolean;
+    recurated: RecuratedBrightness | null;
+  }
+  | {
+    kind: 'minted';
+    idx: number;
+    synthetic: boolean;
+    brightness: MintedBrightness;
+    constellationSplit: boolean;
+  }
+  | { kind: 'repositioned'; idx: number; brightness: MintedBrightness }
+  | { kind: 'primary-unresolved' }
+  | { kind: 'not-applicable' };
+
+export interface MintedBrightness {
+  source: CompanionAbsmagSource;
+  spectMsFromOwnAbsmag: boolean;
+}
+
+
+/** See ../lineage/README.md#the-promotion-stage. */
+export interface PromotedRow {
+  row: MultiplesTsvRow;
+  via: 'secondary' | 'escape' | 'primary' | 'unpaired';
+  outcome: RowOutcome;
+  anchor: string | null;
+  systemAnchor: string | null;
+}
+
+export type PromotionStats = RowOutcomeStats & PostPassStats;
+
+export interface RowOutcomeStats {
   /** Pair rows scanned (excludes standalone-orbit-role rows). */
   pairRowsScanned: number;
   /** Rows whose identifier already resolves to an existing catalog row. */
@@ -193,8 +244,6 @@ export interface PromotionStats {
    *  OPTICAL_DOUBLE_MIN_SEP_PC — a line-of-sight optical double Stage 5's
    *  parallax gate cannot reach, the secondary having no parallax. */
   droppedBeyondTidalLimit: number;
-  /** Dropped because primary's catalog row wasn't found (orphaned pair). */
-  droppedNoPrimary: number;
   /** Dropped because no honest absmag path existed: own photometry
    *  missing or inherited, no Δmag, no per-component spectral type,
    *  and no renderable orbit forcing the record to survive. */
@@ -243,6 +292,44 @@ export interface PromotionStats {
    *  A row carries B's HD / HIP / Gaia cells). A ratchet-down metric: each one
    *  is a mis-keyed multiples.tsv row upstream. */
   anchorIsComponent: number;
+  /** Promoted companions whose own positional constellation differs from
+   *  their anchor's — a pair wide enough to straddle an IAU boundary. */
+  constellationSplitFromAnchor: number;
+  /** Records already in the catalogue that a pair row resolved to, and that
+   *  took the anchor's designation constellation because they carried none of
+   *  their own. See {@link inheritAnchorDesignationCon}. */
+  existingDesigConFromAnchor: number;
+  /** Per brightness source. See README.md#re-curation-of-an-already-in-catalog-member.
+   * */
+  existingMemberRecurated: Record<RecuratedBrightness, number>;
+  /** Ratchets DOWN. See README.md#same-as-bridge-to-an-already-admitted-source.
+   * */
+  existingViaSameasBridge: number;
+  /** Pair rows refused because the distance they state IS a parallax a tier
+   *  above refused — mostly the parked primary's siblings, which inherit its
+   *  blended source_id or HIP along with its distance, rather than the parked
+   *  record itself. See {@link refusalStated}, which owns what the
+   *  match is on and why sharing the id is not enough. Without this the parked
+   *  list names rows that ship anyway. */
+  droppedParkedRecord: number;
+  /** Of those, the rows whose `astrometry_via` is `gaia_5p`. A route alone is
+   *  not an owned fit — the count below is what says so — but it is the figure
+   *  `../distance/parallax/README.md#companion-promotion-may-not-walk-a-refused-measurement-back-in`
+   * argues from. */
+  droppedParkedRecordViaGaia5p: number;
+  /** Of those, the rows carrying an INDEPENDENT per-component fit
+   *  ({@link hasIndependentFitRoute}: an owned identifier on a per-component
+   *  route, not the primary's re-anchored). The route rather than the
+   *  placement, because the measurement is what refusing withholds and a row
+   *  can carry one with no xyz of its own. **Pinned at zero, and that pin is
+   *  the refusal's whole warrant** — a non-zero entry means the gate withholds
+   *  a measurement of the component's own rather than declining to launder a
+   *  refused one, and the argument for it inverts. */
+  droppedParkedRecordOwnedFit: number;
+}
+
+/** The post-passes' counters, which act on records rather than rows. */
+export interface PostPassStats {
   /** Sub-resolution inner-pair secondaries re-collocated onto their true
    *  parent component in the post-pass. Their cursor primary's blended
    *  identifier baked them on a sibling (Castor Bb on A); this moves them
@@ -288,40 +375,6 @@ export interface PromotionStats {
    *  magnitude by more than the input's error scale — the anchor matches
    *  neither "alone" nor any blend, so the fit's pick carries no information. */
   blendDimMembersMisfit: number;
-  /** Promoted companions whose own positional constellation differs from
-   *  their anchor's — a pair wide enough to straddle an IAU boundary. */
-  constellationSplitFromAnchor: number;
-  /** Records already in the catalogue that a pair row resolved to, and that
-   *  took the anchor's designation constellation because they carried none of
-   *  their own. See {@link inheritAnchorDesignationCon}. */
-  existingDesigConFromAnchor: number;
-  /** Per brightness source. See README.md#re-curation-of-an-already-in-catalog-member.
-   * */
-  existingMemberRecurated: Record<RecuratedBrightness, number>;
-  /** Ratchets DOWN. See README.md#same-as-bridge-to-an-already-admitted-source.
-   * */
-  existingViaSameasBridge: number;
-  /** Pair rows refused because the distance they state IS a parallax a tier
-   *  above refused — mostly the parked primary's siblings, which inherit its
-   *  blended source_id or HIP along with its distance, rather than the parked
-   *  record itself. See {@link statesRefusedParallax}, which owns what the
-   *  match is on and why sharing the id is not enough. Without this the parked
-   *  list names rows that ship anyway. */
-  droppedParkedRecord: number;
-  /** Of those, the rows whose `astrometry_via` is `gaia_5p`. A route alone is
-   *  not an owned fit — the count below is what says so — but it is the figure
-   *  `../distance/parallax/README.md#companion-promotion-may-not-walk-a-refused-measurement-back-in`
-   * argues from. */
-  droppedParkedRecordViaGaia5p: number;
-  /** Of those, the rows carrying an INDEPENDENT per-component fit
-   *  ({@link hasIndependentFitRoute}: an owned identifier on a per-component
-   *  route, not the primary's re-anchored). The route rather than the
-   *  placement, because the measurement is what refusing withholds and a row
-   *  can carry one with no xyz of its own. **Pinned at zero, and that pin is
-   *  the refusal's whole warrant** — a non-zero entry means the gate withholds
-   *  a measurement of the component's own rather than declining to launder a
-   *  refused one, and the argument for it inverts. */
-  droppedParkedRecordOwnedFit: number;
 }
 
 /** The parallaxes a tier REFUSED, indexed by the two identifiers a pair row
@@ -333,7 +386,7 @@ export interface PromotionStats {
  *  Stage 2/3 bind one blended source to every component row of a sub-arcsec
  *  pair, so the parked primary's id sits on its siblings' rows as well — and
  *  those rows state the same refused distance, which is what
- *  {@link statesRefusedParallax} then checks. The SID ledger records every row
+ *  {@link refusalStated} then checks. The SID ledger records every row
  *  this refuses as a presence event naming DR4 as the reinstating event, never
  *  a dissolution: the pair is unchanged.
  *
@@ -342,8 +395,14 @@ export interface PromotionStats {
  *  carrying; a `no_v_magnitude` row was placed and not lit, a `no_position` row
  *  lit and not placed, and neither had a parallax refused either. */
 export interface ParkedRefusals {
-  gaia: ReadonlyMap<string, readonly number[]>;
-  hip: ReadonlyMap<number, readonly number[]>;
+  gaia: ReadonlyMap<string, readonly RefusedParallax[]>;
+  hip: ReadonlyMap<number, readonly RefusedParallax[]>;
+}
+
+/** One refused parallax, mas, and the origin key of the record it parked. */
+export interface RefusedParallax {
+  mas: number;
+  parked: string;
 }
 
 export function emptyParkedRefusals(): ParkedRefusals {
@@ -356,19 +415,21 @@ export function parkedRefusals(
     hip: number | null;
     reason: ParkedReason;
     refusedPlxMas: readonly number[];
+    originKey: string;
   }[],
 ): ParkedRefusals {
-  const gaia = new Map<string, number[]>();
-  const hip = new Map<number, number[]>();
-  const add = <K>(index: Map<K, number[]>, key: K, mas: readonly number[]) => {
+  const gaia = new Map<string, RefusedParallax[]>();
+  const hip = new Map<number, RefusedParallax[]>();
+  const add = <K>(index: Map<K, RefusedParallax[]>, key: K, refused: readonly RefusedParallax[]) => {
     const held = index.get(key);
-    if (held === undefined) index.set(key, [...mas]);
-    else held.push(...mas);
+    if (held === undefined) index.set(key, [...refused]);
+    else held.push(...refused);
   };
   for (const p of parked) {
     if (p.reason !== 'refused_no_defensible_parallax') continue;
-    if (p.gaiaSourceId !== null) add(gaia, p.gaiaSourceId, p.refusedPlxMas);
-    if (p.hip !== null && p.hip > 0) add(hip, p.hip, p.refusedPlxMas);
+    const refused = p.refusedPlxMas.map((mas) => ({ mas, parked: p.originKey }));
+    if (p.gaiaSourceId !== null) add(gaia, p.gaiaSourceId, refused);
+    if (p.hip !== null && p.hip > 0) add(hip, p.hip, refused);
   }
   return { gaia, hip };
 }
@@ -392,8 +453,8 @@ export function parkedRefusals(
  *  refusal promote. Re-measure if a refused row's pair ever lands there. */
 export const REFUSED_PARALLAX_MATCH_REL_TOL = 1e-5;
 
-/** Whether promoting this pair row would re-serve a parallax a tier above
- *  refused — the courier the per-field skip rules (/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers) exist to close.
+/** The parked record whose refused parallax this pair row would re-serve, by
+ *  origin key, or null — the courier the per-field skip rules (/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers) exist to close.
  *
  *  **The match is on the measurement, never on the identifier alone.**
  *  multiples.tsv states a distance for every component, and for a row carrying
@@ -406,24 +467,38 @@ export const REFUSED_PARALLAX_MATCH_REL_TOL = 1e-5;
  *  Rasalgethi's own HIP2 distance and 9% off the refused 100.89 pc. Refusing
  *  them on the shared id stranded three components of a system whose primary
  *  ships, which is what this predicate exists to stop. */
-export function statesRefusedParallax(
+export function refusalStated(
   refusals: ParkedRefusals,
   row: {
     gaiaSourceId: string | null; hip: number | null; distPc: number | null;
   },
-): boolean {
-  if (row.distPc === null || row.distPc <= 0) return false;
+): string | null {
+  if (row.distPc === null || row.distPc <= 0) return null;
   const refused = [
     ...(row.gaiaSourceId !== null
       ? refusals.gaia.get(row.gaiaSourceId) ?? [] : []),
     ...(row.hip !== null && row.hip > 0 ? refusals.hip.get(row.hip) ?? [] : []),
   ];
-  return refused.some((mas) => Math.abs(1000 / mas - row.distPc!)
-    <= REFUSED_PARALLAX_MATCH_REL_TOL * row.distPc!);
+  return refused.find(({ mas }) => Math.abs(1000 / mas - row.distPc!)
+    <= REFUSED_PARALLAX_MATCH_REL_TOL * row.distPc!)?.parked ?? null;
 }
 
-export function emptyPromotionStats(): PromotionStats {
+function emptyPostPassStats(): PostPassStats {
   return {
+    repositionedInnerToParent: 0,
+    blendSplitRecords: 0,
+    blendDimmedAnchors: 0,
+    blendDimSkipped: 0,
+    blendDimMembersUnfit: 0,
+    blendDimMembersOutside: 0,
+    blendDimGaiaResolved: 0,
+    blendDimMembersBeyondSeparation: 0,
+    blendDimMembersMisfit: 0,
+  };
+}
+
+export function foldRowOutcomes(rows: readonly PromotedRow[]): RowOutcomeStats {
+  const stats: RowOutcomeStats = {
     pairRowsScanned: 0,
     alreadyInCatalog: 0,
     promoted: 0,
@@ -431,7 +506,6 @@ export function emptyPromotionStats(): PromotionStats {
     droppedNoIdentifier: 0,
     droppedNoPosition: 0,
     droppedBeyondTidalLimit: 0,
-    droppedNoPrimary: 0,
     droppedNoAbsmag: 0,
     absmagSpectralDerived: 0,
     spectMsFromOwnAbsmag: 0,
@@ -442,15 +516,6 @@ export function emptyPromotionStats(): PromotionStats {
     droppedCompoundComp: 0,
     droppedCollocatedPrimary: 0,
     anchorIsComponent: 0,
-    repositionedInnerToParent: 0,
-    blendSplitRecords: 0,
-    blendDimmedAnchors: 0,
-    blendDimSkipped: 0,
-    blendDimMembersUnfit: 0,
-    blendDimMembersOutside: 0,
-    blendDimGaiaResolved: 0,
-    blendDimMembersBeyondSeparation: 0,
-    blendDimMembersMisfit: 0,
     constellationSplitFromAnchor: 0,
     existingDesigConFromAnchor: 0,
     existingMemberRecurated: emptyTallyPartition(RECURATED_BRIGHTNESS),
@@ -459,6 +524,67 @@ export function emptyPromotionStats(): PromotionStats {
     droppedParkedRecordViaGaia5p: 0,
     droppedParkedRecordOwnedFit: 0,
   };
+  const countBrightness = (b: MintedBrightness): void => {
+    if (b.source === 'spectral') stats.absmagSpectralDerived++;
+    if (b.source === 'wds_mag') stats.absmagWdsMagDerived++;
+    if (b.source === 'anchor_collocated') stats.absmagAnchorCollocated++;
+    if (b.source === 'inherited_twin') stats.absmagInheritedTwinOrbital++;
+    if (b.spectMsFromOwnAbsmag) stats.spectMsFromOwnAbsmag++;
+  };
+  const recuratedMembers = Object.fromEntries(
+    RECURATED_BRIGHTNESS.map((b) => [b, new Set<number>()]),
+  ) as Record<RecuratedBrightness, Set<number>>;
+  for (const { via, outcome: o } of rows) {
+    if (via === 'secondary') stats.pairRowsScanned++;
+    switch (o.kind) {
+      case 'dropped':
+        switch (o.reason) {
+          case 'compound-comp': stats.droppedCompoundComp++; break;
+          case 'beyond-tidal-limit': stats.droppedBeyondTidalLimit++; break;
+          case 'collocated-primary': stats.droppedCollocatedPrimary++; break;
+          case 'no-identifier': stats.droppedNoIdentifier++; break;
+          case 'anchor-is-component': stats.anchorIsComponent++; break;
+          case 'no-position': stats.droppedNoPosition++; break;
+          case 'no-absmag': stats.droppedNoAbsmag++; break;
+          case 'parked-record':
+            stats.droppedParkedRecord++;
+            if (o.viaGaia5p) stats.droppedParkedRecordViaGaia5p++;
+            if (o.ownedFit) stats.droppedParkedRecordOwnedFit++;
+            break;
+          default: {
+            const unhandled: never = o;
+            throw new Error(`unhandled drop ${JSON.stringify(unhandled)}`);
+          }
+        }
+        break;
+      case 'adopted':
+        stats.alreadyInCatalog++;
+        if (o.via === 'earlier-mint') break;
+        if (o.via === 'sameas-bridge') stats.existingViaSameasBridge++;
+        if (o.desigConFromAnchor) stats.existingDesigConFromAnchor++;
+        if (o.recurated !== null) recuratedMembers[o.recurated].add(o.idx);
+        break;
+      case 'minted':
+        stats.promoted++;
+        if (o.synthetic) stats.promotedSynthetic++;
+        if (o.constellationSplit) stats.constellationSplitFromAnchor++;
+        countBrightness(o.brightness);
+        break;
+      case 'repositioned':
+        stats.repositionedCollocatedDouble++;
+        countBrightness(o.brightness);
+        break;
+      case 'primary-unresolved':
+      case 'not-applicable':
+        break;
+      default: {
+        const unhandled: never = o;
+        throw new Error(`unhandled row outcome ${JSON.stringify(unhandled)}`);
+      }
+    }
+  }
+  for (const b of RECURATED_BRIGHTNESS) stats.existingMemberRecurated[b] = recuratedMembers[b].size;
+  return stats;
 }
 
 /** See ./README.md#companion-promotion-from-databinariesmultiplestsv `data/binaries/multiples.tsv`
@@ -1189,6 +1315,7 @@ interface PromotionState {
   existingStarsLength: number;
   newStars: Star[];
   readonly conAssignment: ConstellationAssignment;
+  readonly dustGrid: DustGrid;
   promotedByGaia: Map<string, number>;
   promotedByHip: Map<number, number>;
   promotedBySynth: Map<string, number>;
@@ -1260,8 +1387,7 @@ function registerExistingMemberForAnchorDim(
   ctx: PromoteRowContext,
   state: PromotionState,
   memberIdx: number,
-  dustGrid: DustGrid | null,
-  recurated: RecuratedBrightness | null = null,
+  recurated: RecuratedBrightness | null,
 ): void {
   const { row, anchorPrimaryRow, anchorStar, anchorCatalogIdx } = ctx;
   if (recurated === 'spectral') return;
@@ -1289,7 +1415,7 @@ function registerExistingMemberForAnchorDim(
     // separation, so the fit and the separation bound can both judge it.
     structural: false,
     ...anchorDimGeometry(row, anchorPrimaryRow),
-    av: dustGrid ? avSolToStar(dustGrid, member.x, member.y, member.z) : 0,
+    av: avSolToStar(state.dustGrid, member.x, member.y, member.z),
   });
 }
 
@@ -1340,8 +1466,6 @@ function starDistPc(s: { x: number; y: number; z: number }): number {
 function recurateExistingMember(
   ctx: PromoteRowContext,
   state: PromotionState,
-  stats: PromotionStats,
-  dustGrid: DustGrid | null,
   memberIdx: number,
 ): RecuratedBrightness | null {
   const prior = state.recuratedMembers.get(memberIdx);
@@ -1358,7 +1482,7 @@ function recurateExistingMember(
   if (!ownFitFailsAnchorGrade(member, state.gaiaAstrometry)) return null;
 
   const avAt = (s: { x: number; y: number; z: number }): number =>
-    dustGrid ? avSolToStar(dustGrid, s.x, s.y, s.z) : 0;
+    avSolToStar(state.dustGrid, s.x, s.y, s.z);
   const dOld = starDistPc(member);
   const avOld = avAt(member);
   const dNew = starDistPc(position);
@@ -1391,7 +1515,6 @@ function recurateExistingMember(
   }
   member.physicalRadius = physicalRadius(member.absmag, spectral);
   state.recuratedMembers.set(memberIdx, brightness);
-  stats.existingMemberRecurated[brightness]++;
   return brightness;
 }
 
@@ -1400,16 +1523,15 @@ function recurateExistingMember(
 function adoptExistingMember(
   ctx: PromoteRowContext,
   state: PromotionState,
-  stats: PromotionStats,
-  dustGrid: DustGrid | null,
   memberIdx: number,
-): void {
-  stats.alreadyInCatalog++;
-  inheritAnchorDesignationCon(
-    state.existingStars[memberIdx], ctx.anchorStar ?? ctx.systemAnchorStar, stats,
+  via: 'own-id' | 'own-hip' | 'sameas-bridge',
+): RowOutcome {
+  const desigConFromAnchor = inheritAnchorDesignationCon(
+    state.existingStars[memberIdx], ctx.anchorStar ?? ctx.systemAnchorStar,
   );
-  const recurated = recurateExistingMember(ctx, state, stats, dustGrid, memberIdx);
-  registerExistingMemberForAnchorDim(ctx, state, memberIdx, dustGrid, recurated);
+  const recurated = recurateExistingMember(ctx, state, memberIdx);
+  registerExistingMemberForAnchorDim(ctx, state, memberIdx, recurated);
+  return { kind: 'adopted', idx: memberIdx, via, desigConFromAnchor, recurated };
 }
 
 /** A record a pair row resolves to displays a name composed off the anchor
@@ -1422,34 +1544,28 @@ function adoptExistingMember(
 function inheritAnchorDesignationCon(
   member: Star,
   anchor: Star | null,
-  stats: PromotionStats,
-): void {
+): boolean {
   if (anchor === null
       || member.desigConIndex !== NO_CONSTELLATION_INDEX
       || anchor.desigConIndex === NO_CONSTELLATION_INDEX) {
-    return;
+    return false;
   }
   member.desigConIndex = anchor.desigConIndex;
-  stats.existingDesigConFromAnchor++;
+  return true;
 }
 
-/** Returns the absolute catalog index of the new record, or null when a gate
- *  drops the row, incrementing the matching stats counter as it does. Shared
- *  by the secondary loop and the pair-row-primary escape; only the position
- *  and anchor sources differ between them. */
+/** Shared by the secondary loop and the pair-row-primary escape; only the
+ *  position and anchor sources differ between them. */
 function promoteRow(
   ctx: PromoteRowContext,
   state: PromotionState,
-  stats: PromotionStats,
-  dustGrid: DustGrid | null,
-): number | null {
+): RowOutcome {
   const { row, anchorPrimaryRow, anchorStar, systemAnchorStar, anchorCatalogIdx,
           position, canonicalComp, isPairRowPrimary } = ctx;
   const synthId = composeSyntheticId(row.systemId, canonicalComp);
   const rowHasOwnHip = row.hip !== null && row.hip > 0;
   if (row.gaiaSourceId === null && !rowHasOwnHip && synthId === null) {
-    stats.droppedNoIdentifier++;
-    return null;
+    return { kind: 'dropped', reason: 'no-identifier' };
   }
   // Gaia inheritance gate. Gaia resolves only the blended photocentre
   // of sub-arcsec pairs, so Stage 2/3 bind the SAME source_id to both
@@ -1499,18 +1615,16 @@ function promoteRow(
       && anchorCatalogIdx !== null
       && existingIdx === anchorCatalogIdx;
     if (existingIdx !== null && !inheritedIdCollision) {
-      adoptExistingMember(ctx, state, stats, dustGrid, existingIdx);
-      return null;
+      return adoptExistingMember(ctx, state, existingIdx, 'own-id');
     }
     // A pair whose two ends resolve to ONE record has no second star to mint;
     // minting would bake a twin of the anchor and animate the orbit against
     // its own copy. The authority's component attribution is the independent
     // witness — where it already letters the anchor record as THIS component,
     // that record IS the component.
-    if (inheritedIdCollision && anchorStar !== null
+    if (inheritedIdCollision && anchorCatalogIdx !== null && anchorStar !== null
         && anchorStar.bayerComponent === canonicalComp) {
-      stats.anchorIsComponent++;
-      return null;
+      return { kind: 'dropped', reason: 'anchor-is-component', idx: anchorCatalogIdx };
     }
     // A row whose own gaia missed the index can still BE an existing
     // AT-HYG record: the G−V magnitude gate scrubs a source from the
@@ -1523,19 +1637,18 @@ function promoteRow(
     if (existingIdx === null && row.gaiaSourceId !== null && rowHasOwnHip) {
       const hipHit = state.existing.byHip.get(row.hip as number);
       if (hipHit !== undefined && hipHit !== anchorCatalogIdx) {
-        adoptExistingMember(ctx, state, stats, dustGrid, hipHit);
-        return null;
+        return adoptExistingMember(ctx, state, hipHit, 'own-hip');
       }
     }
   }
-  if (companionGaia && state.promotedByGaia.has(companionGaia)) {
-    stats.alreadyInCatalog++;
-    return null;
+  const mintedOnGaia = companionGaia ? state.promotedByGaia.get(companionGaia) : undefined;
+  if (mintedOnGaia !== undefined) {
+    return { kind: 'adopted', idx: mintedOnGaia, via: 'earlier-mint' };
   }
-  if (rowHasOwnHip && companionGaia === null
-      && state.promotedByHip.has(row.hip as number)) {
-    stats.alreadyInCatalog++;
-    return null;
+  const mintedOnHip = rowHasOwnHip && companionGaia === null
+    ? state.promotedByHip.get(row.hip as number) : undefined;
+  if (mintedOnHip !== undefined) {
+    return { kind: 'adopted', idx: mintedOnHip, via: 'earlier-mint' };
   }
   // Runs BEFORE the inheritance gates below, which is what gives it reach:
   // Stage 2/3 bind one blended source to every component of a sub-arcsec pair,
@@ -1543,40 +1656,38 @@ function promoteRow(
   // not the parked record arriving twice. Strip the ids first and such a sibling
   // would mint a synth record at the refused distance instead, with no id left
   // to recognise it by.
-  if (statesRefusedParallax(state.parked, row)) {
-    stats.droppedParkedRecord++;
-    if (row.astrometryVia === 'gaia_5p') stats.droppedParkedRecordViaGaia5p++;
-    if (hasIndependentFitRoute(
-      row, anchorPrimaryRow.gaiaSourceId, anchorPrimaryRow.hip,
-    )) {
-      stats.droppedParkedRecordOwnedFit++;
-    }
-    return null;
+  const parked = refusalStated(state.parked, row);
+  if (parked !== null) {
+    return {
+      kind: 'dropped',
+      reason: 'parked-record',
+      parked,
+      viaGaia5p: row.astrometryVia === 'gaia_5p',
+      ownedFit: hasIndependentFitRoute(
+        row, anchorPrimaryRow.gaiaSourceId, anchorPrimaryRow.hip,
+      ),
+    };
   }
 
   const companionHip = inheritedHip ? null : row.hip;
   const usesSynth = companionGaia === null && companionHip === null;
   if (usesSynth) {
     if (synthId === null) {
-      stats.droppedNoIdentifier++;
-      return null;
+      return { kind: 'dropped', reason: 'no-identifier' };
     }
-    if (state.promotedBySynth.has(synthId)) {
-      stats.alreadyInCatalog++;
-      return null;
+    const mintedOnSynth = state.promotedBySynth.get(synthId);
+    if (mintedOnSynth !== undefined) {
+      return { kind: 'adopted', idx: mintedOnSynth, via: 'earlier-mint' };
     }
     const bridged = state.synthGaiaBridges.get(synthId);
     const bridgedIdx = bridged === undefined
       ? undefined : state.existing.byGaia.get(bridged);
     if (bridgedIdx !== undefined) {
-      stats.existingViaSameasBridge++;
-      adoptExistingMember(ctx, state, stats, dustGrid, bridgedIdx);
-      return null;
+      return adoptExistingMember(ctx, state, bridgedIdx, 'sameas-bridge');
     }
   }
   if (position === null) {
-    stats.droppedNoPosition++;
-    return null;
+    return { kind: 'dropped', reason: 'no-position' };
   }
   let spectral = resolveCompanionSpectral(row);
   const imputed = imputeCompanionAbsmag(
@@ -1584,24 +1695,19 @@ function promoteRow(
     isPairRowPrimary && idsInheritedFromAnchor,
   );
   if (imputed === null) {
-    stats.droppedNoAbsmag++;
-    return null;
+    return { kind: 'dropped', reason: 'no-absmag' };
   }
   let absmag = imputed.absmag;
-  if (imputed.source === 'spectral') stats.absmagSpectralDerived++;
-  if (imputed.source === 'wds_mag') stats.absmagWdsMagDerived++;
-  if (imputed.source === 'anchor_collocated') stats.absmagAnchorCollocated++;
-  if (imputed.source === 'inherited_twin') stats.absmagInheritedTwinOrbital++;
   // Runs before the MS re-derivation below, whose MV_MS_TABLE calibration
   // is intrinsic M_V.
-  const av = dustGrid
-    ? avSolToStar(dustGrid, position.x, position.y, position.z) : 0;
+  const av = avSolToStar(state.dustGrid, position.x, position.y, position.z);
   absmag = deExtinctCompanionAbsmag(imputed, av);
-  if (!PER_COMPONENT_SPECT_VIA.has(row.spectVia)
-      && OWN_BRIGHTNESS_ABSMAG_SOURCES.has(imputed.source)) {
+  const spectMsFromOwnAbsmag = !PER_COMPONENT_SPECT_VIA.has(row.spectVia)
+    && OWN_BRIGHTNESS_ABSMAG_SOURCES.has(imputed.source);
+  if (spectMsFromOwnAbsmag) {
     spectral = { info: spectralFromAbsmag(absmag), display: null };
-    stats.spectMsFromOwnAbsmag++;
   }
+  const brightness: MintedBrightness = { source: imputed.source, spectMsFromOwnAbsmag };
   let ci = imputeCompanionCi(row, spectral.info);
   // The row's own observed ci embeds A_V too; a derived ci (Ballesteros 2012
   // (/data/papers/index.md#ballesteros2012) / solar fallback) is already
@@ -1646,8 +1752,7 @@ function promoteRow(
         }
         if (companionGaia) state.promotedByGaia.set(companionGaia, dupIdx);
         if (companionHip !== null) state.promotedByHip.set(companionHip, dupIdx);
-        stats.repositionedCollocatedDouble++;
-        return dupIdx;
+        return { kind: 'repositioned', idx: dupIdx, brightness };
       }
     }
   }
@@ -1656,9 +1761,6 @@ function promoteRow(
 
   const conIndex = state.conAssignment.indexAt(position.x, position.y, position.z);
   const desigConIndex = inheritAnchor?.desigConIndex ?? NO_CONSTELLATION_INDEX;
-  if (inheritAnchor !== null && conIndex !== inheritAnchor.conIndex) {
-    stats.constellationSplitFromAnchor++;
-  }
 
   state.newStars.push({
     x: position.x, y: position.y, z: position.z,
@@ -1710,9 +1812,9 @@ function promoteRow(
     distVia: inheritAnchor?.distVia ?? null,
     vVia: null,
     syntheticId: usesSynth ? synthId : null,
+    originKey: sourceRowRefText(sourceRowRef(MULTIPLES_TSV, row)),
   });
   const newIdx = state.existingStarsLength + state.newStars.length - 1;
-  stats.promoted++;
   // Flux conservation: a member whose light is embedded in whatever
   // catalogue tier gave the anchor its V must dim the anchor or the
   // system double-counts it. Blend membership is structural for
@@ -1751,25 +1853,37 @@ function promoteRow(
     if (bucket) bucket.push(cand);
     else state.gaiaPhotometryByBackingSource.set(row.gaiaSourceId, [cand]);
   }
-  if (usesSynth) {
-    stats.promotedSynthetic++;
-    state.promotedBySynth.set(synthId as string, newIdx);
-  }
+  if (usesSynth) state.promotedBySynth.set(synthId as string, newIdx);
   if (companionGaia) state.promotedByGaia.set(companionGaia, newIdx);
   if (companionHip !== null) state.promotedByHip.set(companionHip, newIdx);
-  return newIdx;
+  return {
+    kind: 'minted',
+    idx: newIdx,
+    synthetic: usesSynth,
+    brightness,
+    constellationSplit: inheritAnchor !== null && conIndex !== inheritAnchor.conIndex,
+  };
+}
+
+export interface PromotionInputs {
+  conAssignment: ConstellationAssignment;
+  dustGrid: DustGrid;
+  parked: ParkedRefusals;
+  gaiaAstrometry: Map<string, GaiaAstrometryCatalogRow>;
+  synthGaiaBridges: Map<string, string>;
 }
 
 export function promoteCompanions(
   multiplesRows: MultiplesTsvRow[],
   existingStars: Star[],
-  conAssignment: ConstellationAssignment,
-  dustGrid: DustGrid | null = null,
-  parked: ParkedRefusals = emptyParkedRefusals(),
-  gaiaAstrometry: Map<string, GaiaAstrometryCatalogRow> = new Map(),
-  synthGaiaBridges: Map<string, string> = new Map(),
-): { newStars: Star[]; stats: PromotionStats; groups: Map<string, PairCursor> } {
-  const stats = emptyPromotionStats();
+  inputs: PromotionInputs,
+): { newStars: Star[]; stats: PromotionStats; groups: Map<string, PairCursor>; rows: PromotedRow[] } {
+  const promoted = new Map<MultiplesTsvRow, PromotedRow>();
+  const record = (r: PromotedRow): void => {
+    if (promoted.has(r.row)) throw new Error(`promotion decided ${r.row.systemId}/${r.row.comp} twice`);
+    promoted.set(r.row, r);
+  };
+  const post = emptyPostPassStats();
   const existing = buildExistingIndexes(existingStars);
   const groups = groupBySystem(multiplesRows);
   const wdsRootAnchors = buildWdsRootAnchors(groups, existing, existingStars);
@@ -1783,20 +1897,17 @@ export function promoteCompanions(
   // promoted record (40 Eri B promoted in the BC group, then anchored
   // as a parent in the BD/BE groups).
   const state: PromotionState = {
+    ...inputs,
     existing,
-    parked,
     existingStars,
     existingStarsLength: existingStars.length,
     newStars,
-    conAssignment,
     promotedByGaia: new Map(),
     promotedByHip: new Map(),
     promotedBySynth: new Map(),
     gaiaPhotometryByBackingSource: new Map(),
     anchorDimCandidates: [],
     existingDimMembers: new Set(),
-    gaiaAstrometry,
-    synthGaiaBridges,
     recuratedMembers: new Map(),
   };
   const getStarAt = (idx: number): Star =>
@@ -1821,12 +1932,12 @@ export function promoteCompanions(
   // (Composition with binary orbital motion).
   interface SystemicGroup {
     anchorIdx: number | null;
-    pairs: { pIdx: number; sIdx: number; q: number | null }[];
+    pairs: { pIdx: number; sIdx: number; q: number }[];
   }
   const systemicGroups = new Map<string, SystemicGroup>();
   const recordOrbitPair = (
     root: string, anchorIdx: number | null,
-    pIdx: number, sIdx: number, q: number | null,
+    pIdx: number, sIdx: number, q: number,
   ): void => {
     let g = systemicGroups.get(root);
     if (g === undefined) {
@@ -1837,11 +1948,29 @@ export function promoteCompanions(
     g.pairs.push({ pIdx, sIdx, q });
   };
 
+  const keyAt = (idx: number | null): string | null => (idx === null ? null : getStarAt(idx).originKey);
+  const unpaired = (row: MultiplesTsvRow): PromotedRow => (
+    { row, via: 'unpaired', outcome: { kind: 'not-applicable' }, anchor: null, systemAnchor: null }
+  );
+  const escaped = new Set<MultiplesTsvRow>();
+  const escapeCursorPrimary = (cursor: PairCursor): number | null => {
+    const anchor = escapeAnchorOf(cursor, wdsRootAnchors);
+    if (anchor === null) return null;
+    const outcome = promoteCursorPrimary(anchor.primary, anchor.system, state);
+    const systemKey = anchor.system.star.originKey;
+    record({ row: anchor.primary, via: 'escape', outcome, anchor: systemKey, systemAnchor: systemKey });
+    escaped.add(anchor.primary);
+    return placedRecordIdx(outcome);
+  };
+
   for (const cursor of groups.values()) {
     // Standalone rows are augmentation entries that aren't sides of a WDS
     // pair; their primary slot is empty. Skip — promoting them without
     // pair geometry needs a different rule than this path.
-    if (cursor.primary === null) continue;
+    if (cursor.primary === null) {
+      for (const row of cursor.secondaries) record(unpaired(row));
+      continue;
+    }
 
     // Existing records first, then previously-promoted ones — 40 Eri B is
     // promoted in the BC group and reused as the anchor for BD.
@@ -1869,13 +1998,11 @@ export function promoteCompanions(
       const synthKey = composeSyntheticId(
         cursor.primary.systemId, cursor.primary.comp,
       );
-      const escaped =
+      const escapedIdx =
         (synthKey !== null ? state.promotedBySynth.get(synthKey) : undefined)
-        ?? tryPromoteCursorPrimary(
-          cursor, wdsRootAnchors, state, stats, dustGrid,
-        );
-      if (escaped !== null && escaped !== undefined) {
-        primaryCatalogIdx = escaped;
+        ?? escapeCursorPrimary(cursor);
+      if (escapedIdx !== null && escapedIdx !== undefined) {
+        primaryCatalogIdx = escapedIdx;
       }
     }
     if (primaryCatalogIdx === null) {
@@ -1885,9 +2012,7 @@ export function promoteCompanions(
       // Pair-row-primary escape: promote it as a companion of the WDS-root
       // system anchor. 40 Eri B is the canonical case — a primary in BC/BD/BE
       // but never a secondary of A, so the secondary loop never reaches it.
-      primaryCatalogIdx = tryPromoteCursorPrimary(
-        cursor, wdsRootAnchors, state, stats, dustGrid,
-      );
+      primaryCatalogIdx = escapeCursorPrimary(cursor);
     }
     const anchor: ProjectionAnchor | null = primaryCatalogIdx !== null
       ? {
@@ -1901,6 +2026,17 @@ export function promoteCompanions(
       : null;
 
     const cursorRoot = wdsRootOf(cursor.primary.systemId);
+    const anchorKey = keyAt(primaryCatalogIdx);
+    const systemAnchorKey = cursorRoot !== null
+      ? wdsRootAnchors.get(cursorRoot)?.star.originKey ?? null : null;
+    if (!escaped.has(cursor.primary)) {
+      record({
+        row: cursor.primary,
+        via: 'primary',
+        outcome: { kind: primaryCatalogIdx === null ? 'primary-unresolved' : 'not-applicable' },
+        anchor: anchorKey, systemAnchor: systemAnchorKey,
+      });
+    }
     const primaryKey = compKey(cursorRoot, cursor.primary.comp);
     // Don't let a blended primary (its id resolves onto a sibling)
     // overwrite a correct entry a prior pair recorded for this token.
@@ -1909,9 +2045,14 @@ export function promoteCompanions(
       componentIndex.set(primaryKey, primaryCatalogIdx);
     }
 
+    const decided = (row: MultiplesTsvRow, outcome: RowOutcome): PromotedRow => (
+      { row, via: 'secondary', outcome, anchor: anchorKey, systemAnchor: systemAnchorKey }
+    );
     for (const row of cursor.secondaries) {
-      if (row.orbitRole !== 'secondary') continue;
-      stats.pairRowsScanned++;
+      if (row.orbitRole !== 'secondary') {
+        record(unpaired(row));
+        continue;
+      }
       // WDS compound-secondary guard. "BC" / "AB" / "ABC" represent
       // unresolved aggregates of two-or-more components, not single
       // stars; promoting them would double-count the resolved
@@ -1921,7 +2062,7 @@ export function promoteCompanions(
       const wdsRoot = wdsRootOf(row.systemId);
       if (wdsRoot !== null
           && isUnresolvedCompound(row.comp, wdsRoot, singleLettersByRoot)) {
-        stats.droppedCompoundComp++;
+        record(decided(row, { kind: 'dropped', reason: 'compound-comp' }));
         continue;
       }
       const canonicalComp = canonicalCompLetter(
@@ -1929,11 +2070,11 @@ export function promoteCompanions(
       );
       const resolved = resolvePosition(row, cursor.primary, anchor);
       if (resolved === 'beyond-tidal') {
-        stats.droppedBeyondTidalLimit++;
+        record(decided(row, { kind: 'dropped', reason: 'beyond-tidal-limit' }));
         continue;
       }
       const position = resolved;
-      const promotedIdx = promoteRow(
+      const outcome = promoteRow(
         {
           row,
           anchorPrimaryRow: cursor.primary,
@@ -1946,8 +2087,10 @@ export function promoteCompanions(
           canonicalComp,
           isPairRowPrimary: false,
         },
-        state, stats, dustGrid,
+        state,
       );
+      record(decided(row, outcome));
+      const promotedIdx = placedRecordIdx(outcome);
       // A promoted secondary is authoritative for its token — it resolves
       // through the inherited-id escape onto its own record, so it
       // overwrites any blended-primary entry a sibling pair left behind.
@@ -2023,7 +2166,7 @@ export function promoteCompanions(
       secStar.vx = parentStar.vx;
       secStar.vy = parentStar.vy;
       secStar.vz = parentStar.vz;
-      stats.repositionedInnerToParent++;
+      post.repositionedInnerToParent++;
     }
   }
 
@@ -2044,7 +2187,7 @@ export function promoteCompanions(
       const { pIdx, sIdx, q } = g.pairs[0];
       const p = getStarAt(pIdx);
       const s = getStarAt(sIdx);
-      const w = Math.max(0, Math.min(1, q ?? 0.5));
+      const w = Math.max(0, Math.min(1, q));
       const vx = (1 - w) * p.vx + w * s.vx;
       const vy = (1 - w) * p.vy + w * s.vy;
       const vz = (1 - w) * p.vz + w * s.vz;
@@ -2079,7 +2222,7 @@ export function promoteCompanions(
     for (const { star, spectral } of bucket) {
       star.absmag += splitMag;
       star.physicalRadius = physicalRadius(star.absmag, spectral);
-      stats.blendSplitRecords++;
+      post.blendSplitRecords++;
     }
   }
 
@@ -2159,10 +2302,10 @@ export function promoteCompanions(
       if (anchorMagIsSystemBlend && c.structural) {
         structural.push(c);
       } else if (!anchorMagIsSystemBlend && c.member.gaiaSourceId !== null) {
-        stats.blendDimGaiaResolved++;
+        post.blendDimGaiaResolved++;
       } else if (!c.structural
           && !withinBlendSeparation(c.sepArcsec, maxSepArcsec)) {
-        stats.blendDimMembersBeyondSeparation++;
+        post.blendDimMembersBeyondSeparation++;
       } else {
         fitted.push(c);
       }
@@ -2170,10 +2313,10 @@ export function promoteCompanions(
     let chosen: AnchorDimCandidate[] = [];
     if (fitted.length > 0) {
       const participants = fitted.filter((c) => obsMag(c) !== null);
-      stats.blendDimMembersUnfit += fitted.length - participants.length;
+      post.blendDimMembersUnfit += fitted.length - participants.length;
       if (anchorAloneMag === null || mObs === null || participants.length === 0
           || participants.length > ANCHOR_DIM_MAX_FIT_MEMBERS) {
-        stats.blendDimMembersUnfit += participants.length;
+        post.blendDimMembersUnfit += participants.length;
       } else {
         const baseFlux = Math.pow(10, -0.4 * anchorAloneMag)
           + structural.reduce((f, c) => {
@@ -2197,9 +2340,9 @@ export function promoteCompanions(
         // class (the Sirius Δmag≈10 shape).
         const bestErr = Math.min(...errs);
         if (bestErr > ANCHOR_DIM_MAX_FIT_RESIDUAL_MAG) {
-          stats.blendDimMembersMisfit += participants.length;
+          post.blendDimMembersMisfit += participants.length;
         } else if (errs[0] - bestErr < ANCHOR_DIM_DECISIVE_MAG) {
-          stats.blendDimMembersOutside += participants.length;
+          post.blendDimMembersOutside += participants.length;
         } else {
           let bestMask = 0;
           let bestBits = Infinity;
@@ -2215,7 +2358,7 @@ export function promoteCompanions(
             }
           }
           chosen = participants.filter((_, i) => (bestMask & (1 << i)) !== 0);
-          stats.blendDimMembersOutside += participants.length - chosen.length;
+          post.blendDimMembersOutside += participants.length - chosen.length;
         }
       }
     }
@@ -2223,7 +2366,7 @@ export function promoteCompanions(
     const applied = [...structural, ...chosen];
     if (applied.length === 0) continue;
     if (mObs === null) {
-      stats.blendDimMembersUnfit += applied.length;
+      post.blendDimMembersUnfit += applied.length;
       continue;
     }
     // Conservation is an OBSERVED-frame statement: the catalogue measured one
@@ -2245,7 +2388,7 @@ export function promoteCompanions(
       }
       if (memberMObs === null
           || !(memberMObs > mObs + ANCHOR_DIM_MIN_DELTA_MAG)) {
-        stats.blendDimSkipped++;
+        post.blendDimSkipped++;
         continue;
       }
       ownFlux += Math.pow(10, -0.4 * memberMObs);
@@ -2254,7 +2397,7 @@ export function promoteCompanions(
     if (relatives.length === 0 && appliedIndependents === 0) continue;
     const residualFlux = Math.pow(10, -0.4 * mObs) - ownFlux;
     if (!(residualFlux > 0)) {
-      stats.blendDimSkipped += appliedIndependents;
+      post.blendDimSkipped += appliedIndependents;
       continue;
     }
     const relSum = relatives.reduce((s, r) => s + Math.pow(10, -0.4 * r.delta), 0);
@@ -2269,9 +2412,14 @@ export function promoteCompanions(
     anchor.physicalRadius = physicalRadius(
       anchor.absmag, recordSpectralInfo(anchor),
     );
-    stats.blendDimmedAnchors++;
+    post.blendDimmedAnchors++;
   }
-  return { newStars, stats, groups };
+  const rows = multiplesRows.map((row) => {
+    const r = promoted.get(row);
+    if (r === undefined) throw new Error(`promotion recorded no outcome for ${row.systemId}/${row.comp}`);
+    return r;
+  });
+  return { newStars, stats: { ...foldRowOutcomes(rows), ...post }, groups, rows };
 }
 
 function lookupPromoted(
@@ -2289,23 +2437,33 @@ function lookupPromoted(
   return null;
 }
 
-function tryPromoteCursorPrimary(
+interface EscapeAnchor {
+  primary: MultiplesTsvRow;
+  system: SystemAnchor;
+}
+
+function escapeAnchorOf(
   cursor: PairCursor,
   wdsRootAnchors: Map<string, SystemAnchor>,
-  state: PromotionState,
-  stats: PromotionStats,
-  dustGrid: DustGrid | null,
-): number | null {
+): EscapeAnchor | null {
   const primary = cursor.primary;
   if (primary === null) return null;
   // No own-identifier requirement: an id-less row mints an addressable
   // synth-<wds>-<comp> slot like any identifier-less secondary, and the gates
-  // below are position and brightness rather than identity.
+  // in promoteCursorPrimary are position and brightness rather than identity.
   const wdsRoot = wdsRootOf(primary.systemId);
   if (wdsRoot === null) return null;
-  const anchor = wdsRootAnchors.get(wdsRoot);
-  if (!anchor) return null;
-  if (anchor.primaryRow === primary) return null;  // would self-promote
+  const system = wdsRootAnchors.get(wdsRoot);
+  if (!system) return null;
+  if (system.primaryRow === primary) return null;  // would self-promote
+  return { primary, system };
+}
+
+function promoteCursorPrimary(
+  primary: MultiplesTsvRow,
+  anchor: SystemAnchor,
+  state: PromotionState,
+): RowOutcome {
   // Neither route available → drop. Collocating at the anchor would bake a
   // false coincident star inside the anchor's disc: this escape fires only for
   // cursor primaries that never appear as a secondary of the anchor, so no
@@ -2320,8 +2478,7 @@ function tryPromoteCursorPrimary(
     if (projectionBeyondTidalLimit(
       anchor.star.x, anchor.star.y, anchor.star.z, offset.sepArcsec,
     )) {
-      stats.droppedBeyondTidalLimit++;
-      return null;
+      return { kind: 'dropped', reason: 'beyond-tidal-limit' };
     }
     position = projectFromSepPa(
       anchor.star.x, anchor.star.y, anchor.star.z,
@@ -2329,8 +2486,7 @@ function tryPromoteCursorPrimary(
     );
   }
   if (position === null) {
-    stats.droppedCollocatedPrimary++;
-    return null;
+    return { kind: 'dropped', reason: 'collocated-primary' };
   }
   return promoteRow(
     {
@@ -2343,6 +2499,11 @@ function tryPromoteCursorPrimary(
       canonicalComp: primary.comp,
       isPairRowPrimary: true,
     },
-    state, stats, dustGrid,
+    state,
   );
+}
+
+/** The record a row placed: a mint, or an AT-HYG double moved onto the row. */
+function placedRecordIdx(outcome: RowOutcome): number | null {
+  return outcome.kind === 'minted' || outcome.kind === 'repositioned' ? outcome.idx : null;
 }

@@ -33,7 +33,7 @@ type ManifestRow = Partial<Record<ManifestColumn, string>>;
 // Emitted through the shipped codec, so a column added or renamed in
 // MANIFEST_COLUMNS fails here rather than silently shifting every cell.
 function manifestRows(rows: readonly ManifestRow[]): ManifestRecord[] {
-  const defaults: ManifestRow = { binding: 'none', term: 'primaries' };
+  const defaults: ManifestRow = { binding: 'none', term: 'primaries', origin_key: 'spine:1' };
   return MEMBERSHIP_MANIFEST.parse(MEMBERSHIP_MANIFEST.serialize(rows.map((row) => manifestRecord(
     (c) => row[c] ?? defaults[c] ?? '', (m) => { throw new Error(m); },
   ))));
@@ -201,7 +201,7 @@ describe('readStars manifest labels', () => {
     expect(stars).toHaveLength(0);
     expect(stats.parked).toEqual([{
       tyc: ORIGIN_TYC, hip: null, hd: 55, gl: ORIGIN_GL, gaiaSourceId: null,
-      reason: 'no_v_magnitude', refusedPlxMas: [],
+      reason: 'no_v_magnitude', refusedPlxMas: [], originKey: 'spine:1',
     }]);
     expect(stats.parkedVia.no_v_magnitude).toBe(1);
     expect(stats.distVia.gliese_plx).toBe(0);
@@ -222,7 +222,7 @@ describe('readStars manifest labels', () => {
     expect(stars).toHaveLength(0);
     expect(stats.parked).toEqual([{
       tyc: null, hip: 4242, hd: null, gl: ORIGIN_GL, gaiaSourceId: null,
-      reason: 'no_position', refusedPlxMas: [],
+      reason: 'no_position', refusedPlxMas: [], originKey: 'spine:1',
     }]);
     expect(stats.parkedVia.no_position).toBe(1);
   });

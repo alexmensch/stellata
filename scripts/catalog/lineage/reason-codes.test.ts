@@ -22,7 +22,7 @@ describe('the committed reason-code list', () => {
   it('is what every stage\'s declarations generate', () => {
     const committed = artifactText(REASON_CODES);
     const generated = REASON_CODES.serialize(
-      reasonCodeList(LINEAGE_STAGES, readArtifact(REASON_CODES), packageVersion()),
+      reasonCodeList(LINEAGE_STAGES.map((s) => s.codes), readArtifact(REASON_CODES), packageVersion()),
     );
     const diff = firstDifferingLine(committed, generated);
     expect(diff, 'run `pnpm run lineage:codes`').toBeNull();

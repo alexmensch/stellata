@@ -5,15 +5,17 @@
 import { resolve } from 'node:path';
 
 import { REPO_ROOT as ROOT } from '../../util/paths';
+import { fileHashes } from '../../util/build-stamp';
 import { emitArtifacts, runStep } from '../../util/emit-artifacts';
+import { stepInputPaths } from '../../util/step-inputs';
 import { artifactRows, readArtifact } from '../../util/sources/source';
-import { MEMBERSHIP_LINEAGE, MEMBERSHIP_OUTPUTS } from './membership-manifest-outputs';
+import { MEMBERSHIP_OUTPUTS } from './membership-manifest-outputs';
 import { identityText } from '../lineage/identity-pure';
 import { LINEAGE_LAYOUT, readIdentity, stageFile } from '../lineage/lineage-io';
 import { stageLineageText } from '../lineage/lineage-row-pure';
 import { stageLineage } from '../lineage/stage-lineage';
 import {
-  MEMBERSHIP_CODES, MEMBERSHIP_LINEAGE_BUDGET, multiplesComponentJoin,
+  MEMBERSHIP_CODES, MEMBERSHIP_LINEAGE_BUDGET, multiplesComponentJoin, MEMBERSHIP_LINEAGE,
 } from './membership-lineage-pure';
 import { snapshotCheck } from '../../util/snapshot-check';
 import { compareCountSnapshot } from '../build-counts';
@@ -48,7 +50,7 @@ import { BINDING_REVIEW } from './binding-review-tsv';
 import { LABEL_DROPS } from './label-drops-tsv';
 import { MEMBERSHIP_MANIFEST } from './membership-manifest-tsv';
 import { BINDING_REVIEW_DISPOSITIONS } from './binding-review-dispositions-source';
-import { SPINE_CORRECTIONS } from './spine-corrections-source';
+import { SPINE_CORRECTIONS } from './spine-corrections/spine-corrections-source';
 
 
 /** Per-identifier overlay coverage over the membership term, as a ratio of the
@@ -151,7 +153,7 @@ async function main(): Promise<void> {
   const lineage = await stageLineage({
     layout: LINEAGE_LAYOUT,
     spec: MEMBERSHIP_LINEAGE,
-    script: 'build:membership',
+    inputs: fileHashes(await stepInputPaths('build:membership')),
     diffed: 'membership',
     rows: result.lineage,
     render: (sorted) => ({

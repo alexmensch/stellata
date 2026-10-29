@@ -34,7 +34,7 @@ import {
 import { parkedRecordKey } from '../distance/parallax/parked-ledger';
 import { intCell, readTable } from '../../util/tsv/table-pure';
 import { nullableCell } from '../../util/tsv/artifact-pure';
-import { applyCellSets, evidenceOf } from '../../util/tsv/cell-corrections-pure';
+import { evidenceOf } from '../../util/tsv/cell-corrections-pure';
 import { ADDITION_REASONS, type AdditionReason } from './ledger-rows-pure';
 import { BINDING_REVIEW_KEY_COLUMNS, BINDING_REVIEW_VERDICTS, bindingReviewKey, type BindingReviewVerdict } from './ledger-rows-pure';
 import { LABEL_DROP_REASONS, type LabelDropReason } from './ledger-rows-pure';
@@ -50,6 +50,10 @@ import {
   type MembershipOutcome,
 } from './membership-lineage-pure';
 import { spineDesignations, type SpineRow } from '../spine/inherited-spine-pure';
+import {
+  applySpineCorrections, SPINE_CORRECTION_CELLS, SPINE_CORRECTIONS_NAME,
+  type SpineCorrectionCell, type SpineCorrectionRow,
+} from './spine-corrections/spine-corrections-pure';
 import {
   ATHYG_HD_LINK_FLOOR,
   CLASSICAL_CELLS,
@@ -92,8 +96,8 @@ export const MEMBERSHIP_EXPECTED_FILE =
   'scripts/catalog/membership/membership-manifest-expected.json';
 
 /** A manifest row as the generator assembles it, cell by cell, before
- *  `manifestRecord` types it. */
-type ManifestCells = Record<ManifestColumn, string>;
+ *  `manifestRecord` types it with its origin key. */
+type ManifestCells = Record<Exclude<ManifestColumn, 'origin_key'>, string>;
 
 /** See binding/README.md. */
 export const BINDING_OUTCOMES = [
@@ -129,55 +133,6 @@ export function dispositionOf(d: BindingDispositionRow): BindingDisposition {
   return 'other';
 }
 
-/** The corrections file as its own messages name it. */
-const SPINE_CORRECTIONS_NAME = 'spine-corrections.tsv';
-export const SPINE_CORRECTION_COLUMNS = [
-  ...BINDING_REVIEW_KEY_COLUMNS, 'op', 'cell', 'value', 'evidence',
-] as const;
-/** `set` replaces one cell; `fold` says the row is another spine row's
- *  duplicate and `value` is that row's key. */
-export const SPINE_CORRECTION_OPS = ['set', 'fold'] as const;
-export type SpineCorrectionOp = (typeof SPINE_CORRECTION_OPS)[number];
-/** `tyc` alone — a curated exception to a LABEL belongs in
- *  `classic_id_overrides.tsv`, where the merge can see it. */
-export const SPINE_CORRECTION_CELLS = ['tyc'] as const;
-export type SpineCorrectionCell = (typeof SPINE_CORRECTION_CELLS)[number];
-export type SpineCorrectionRow = Record<
-  (typeof SPINE_CORRECTION_COLUMNS)[number], string
-> & { op: SpineCorrectionOp };
-
-export function parseSpineCorrectionsTsv(text: string, from: Declared): SpineCorrectionRow[] {
-  const out: SpineCorrectionRow[] = [];
-  for (const row of readTable({ ...from, columns: SPINE_CORRECTION_COLUMNS, comments: true }, text)) {
-    const cells = row.cells();
-    const op = row.oneOf('op', SPINE_CORRECTION_OPS);
-    if (op === 'set' && !(SPINE_CORRECTION_CELLS as readonly string[]).includes(cells.cell)) {
-      row.fail(
-        `set may write ${SPINE_CORRECTION_CELLS.join(', ')}, not "${cells.cell}" — `
-          + 'a label exception belongs in classic_id_overrides.tsv',
-      );
-    }
-    if (BINDING_REVIEW_KEY_COLUMNS.every((c) => cells[c].trim() === '')) {
-      row.fail(
-        "row names no spine row — every key cell is empty, and the empty key is Sol's own, "
-          + 'so a blank one corrects the Sun',
-      );
-    }
-    evidenceOf(row, 'evidence', bindingReviewKey(cells));
-    out.push({ ...cells, op });
-  }
-  return out;
-}
-
-/** One fold, in both index spaces: the two rows' positions in the committed
- *  spine, and the survivor's position among the rows that stay. The gate reads
- *  the first pair (it walks the file), the generator the first and third. */
-export interface SpineFold {
-  foldedRow: number;
-  survivorRow: number;
-  survivorKept: number;
-}
-
 /** The text form of each record's origin SourceRowRef (../lineage/README.md#identity--the-origin-source-row),
  *  built by the caller, which holds the declarations. */
 export interface OriginKeys {
@@ -187,74 +142,6 @@ export interface OriginKeys {
   i239(hip: number): string;
   cns5(id: number): string;
   gaia(sourceId: string): string;
-}
-
-/** The spine as the manifest reads it: AT-HYG's merge decisions with the ones
- *  review found wrong corrected, and the rows it carried twice folded onto
- *  their survivor. The spine file itself is frozen (`../spine/README.md`), so a
- *  correction is a committed, evidenced row here rather than an edit there.
- *
- *  `corrected` is every spine row with its cells fixed, in file order — the
- *  keys a disposition now joins on. `kept` drops the folded ones.
- *  `buildMembership` holds every folded row's designations against the
- *  surviving manifest row afterwards, so a fold that loses a designation fails
- *  rather than quietly shrinking the catalogue. */
-export function applySpineCorrections(
-  spine: readonly SpineRow[], corrections: readonly SpineCorrectionRow[],
-): { corrected: SpineRow[]; kept: SpineRow[]; keptSpineIndex: number[]; folds: SpineFold[] } {
-  const byKey = new Map<string, number>();
-  spine.forEach((row, i) => byKey.set(bindingReviewKey(row), i));
-  const resolve = (key: string, what: string): number => {
-    const i = byKey.get(key);
-    if (i === undefined) {
-      throw new Error(`${SPINE_CORRECTIONS_NAME}: ${what} "${key}" matches no spine row`);
-    }
-    return i;
-  };
-
-  const rows = applyCellSets<SpineRow, SpineCorrectionCell>(
-    spine,
-    corrections.filter((c) => c.op === 'set')
-      .map((c) => ({ key: bindingReviewKey(c), cell: c.cell as SpineCorrectionCell, value: c.value })),
-    {
-      file: SPINE_CORRECTIONS_NAME,
-      target: 'spine',
-      keyOf: bindingReviewKey,
-      get: (row, cell) => row[cell],
-      with: (row, cell, value) => ({ ...row, [cell]: value }),
-    },
-  );
-  const foldedTo = new Map<number, number>();
-  for (const c of corrections) {
-    if (c.op !== 'fold') continue;
-    const i = resolve(bindingReviewKey(c), 'row');
-    const survivor = resolve(c.value, 'fold target');
-    if (survivor === i) {
-      throw new Error(`${SPINE_CORRECTIONS_NAME}: row ${bindingReviewKey(c)} folds onto itself`);
-    }
-    foldedTo.set(i, survivor);
-  }
-  for (const survivor of foldedTo.values()) {
-    if (foldedTo.has(survivor)) {
-      throw new Error(
-        `${SPINE_CORRECTIONS_NAME}: a fold target is itself folded — fold both onto the survivor`,
-      );
-    }
-  }
-
-  const kept: SpineRow[] = [];
-  const keptSpineIndex: number[] = [];
-  const keptIndex = new Map<number, number>();
-  rows.forEach((row, i) => {
-    if (foldedTo.has(i)) return;
-    keptIndex.set(i, kept.length);
-    kept.push(row);
-    keptSpineIndex.push(i);
-  });
-  const folds = [...foldedTo].map(([foldedRow, survivorRow]) => ({
-    foldedRow, survivorRow, survivorKept: keptIndex.get(survivorRow)!,
-  }));
-  return { corrected: rows, kept, keptSpineIndex, folds };
 }
 
 /** One queue row: what the derivation reached, with everything
@@ -276,7 +163,7 @@ export interface MembershipInput {
    *  `bindingReviewKey`. */
   dispositions: ReadonlyMap<string, BindingDispositionRow>;
   /** The committed corrections to AT-HYG's merge decisions
-   *  (README.md#correcting-a-merge-decision). */
+   *  (spine-corrections/README.md). */
   corrections: readonly SpineCorrectionRow[];
   /** `magnitude-term/README.md#the-union-dedupes-on-the-derived-binding`. */
   magnitudeTerm: MagnitudeTermSelection | null;
@@ -709,8 +596,8 @@ function routesCell(a: RowAttestation): {
   return { routes: joinValues(routes), unattested: a.unattested };
 }
 
-function toRecord(cells: ManifestCells): ManifestRecord {
-  return manifestRecord((c) => cells[c], (m) => {
+function toRecord(cells: ManifestCells, originKey: string): ManifestRecord {
+  return manifestRecord((c) => (c === 'origin_key' ? originKey : cells[c]), (m) => {
     throw new Error(`manifest row ${parkedRecordKey(cells)}: ${m}`);
   });
 }
@@ -1093,15 +980,13 @@ export function buildMembership(input: MembershipInput): MembershipResult {
   ) as Record<ClassicalCell, number>;
   const outcomes: KeyedOutcome[] = [];
   const identity: IdentityRow[] = [];
-  const rows: ManifestCells[] = [];
-  const rowKeys: string[] = [];
+  const rows: { cells: ManifestCells; key: string }[] = [];
   const attest = (key: string, row: ManifestCells, a?: RowAttestation): void => {
     const { routes, unattested } = routesCell(a ?? attestSpineRow(row, tables, idx));
     row.routes = routes;
     for (const cell of unattested) unattestedByCell[cell]++;
     bindingByClass[row.binding as BindingClass]++;
-    rows.push(row);
-    rowKeys.push(key);
+    rows.push({ cells: row, key });
   };
 
   const derivationOutcome = Object.fromEntries(
@@ -1225,7 +1110,9 @@ export function buildMembership(input: MembershipInput): MembershipResult {
     const folded = corrected[foldedRow];
     outcomes.push({ key: keys.spine(foldedRow), outcome: { kind: 'fold', survivor: keys.spine(survivorRow) } });
     identity.push(identityOf(keys.spine(foldedRow), { ...folded, gaia_source_id: '' }, spineDesignations(folded)));
-    const survivorHolds = new Set(manifestDesignations(toRecord(spineManifestRows[survivorKept])));
+    const survivorHolds = new Set(manifestDesignations(
+      toRecord(spineManifestRows[survivorKept], spineKey(survivorKept)),
+    ));
     const lost = spineDesignations(corrected[foldedRow]).filter((d) => !survivorHolds.has(d));
     if (lost.length > 0) {
       throw new Error(
@@ -1309,7 +1196,7 @@ export function buildMembership(input: MembershipInput): MembershipResult {
     });
     additionsByReason[a.verdict.reason]++;
     if (a.blocked.length > 0) additionsWithBlockedDesignation++;
-    const designations = manifestDesignations(toRecord(a.verdict.row));
+    const designations = manifestDesignations(toRecord(a.verdict.row, g.origin));
     if (designations.length === 1 && designations[0].startsWith('gaia_dr3:')) additionGaiaKeyedOnly++;
     claimRecord(claims, a.verdict.record);
     attest(g.origin, a.verdict.row);
@@ -1317,7 +1204,7 @@ export function buildMembership(input: MembershipInput): MembershipResult {
 
   const primariesRows = rows.length;
   const boundSourceIds = new Set(
-    rows.map((r) => r.gaia_source_id).filter((s) => s !== ''),
+    rows.map((r) => r.cells.gaia_source_id).filter((s) => s !== ''),
   );
   const magnitudeRowsOwnCandidate = Object.fromEntries(
     OWN_CANDIDATE_REASONS.map((r) => [r, 0]),
@@ -1330,13 +1217,12 @@ export function buildMembership(input: MembershipInput): MembershipResult {
     if (own !== undefined) magnitudeRowsOwnCandidate[own]++;
     const row = magnitudeTermRow(sourceId);
     bindingByClass[row.binding as BindingClass]++;
-    rows.push(row);
-    rowKeys.push(keys.gaia(sourceId));
+    rows.push({ cells: row, key: keys.gaia(sourceId) });
     outcomes.push({ key: keys.gaia(sourceId), outcome: { kind: 'admit-magnitude' } });
   }
 
-  const typed = rows.map(toRecord);
-  typed.forEach((r, i) => identity.push(identityOf(rowKeys[i], rows[i], manifestDesignations(r))));
+  const typed = rows.map(({ cells, key }) => toRecord(cells, key));
+  typed.forEach((r, i) => identity.push(identityOf(r.originKey, rows[i].cells, manifestDesignations(r))));
   const lineage = outcomes.map(membershipLineageRow);
   const ledgers = membershipLedgers(lineage, new Map(identity.map((r) => [r.key, r])));
   const bindingReviewByVerdict = Object.fromEntries(BINDING_REVIEW_VERDICTS.map(

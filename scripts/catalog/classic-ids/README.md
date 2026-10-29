@@ -251,7 +251,7 @@ two stars' distances, and each removing one row of
 `applyCrossIndexCorrections` hard-fails on a correction that would do nothing
 (the `hd` states no designation) or would orphan one (`belongs_to` does not
 state the identical cells), because a curated file that silently does nothing
-is worse than none — the same discipline [Correcting a merge decision](../membership/README.md#correcting-a-merge-decision)
+is worse than none — the same discipline [Correcting a merge decision](../membership/spine-corrections/README.md#correcting-a-merge-decision)
 states for spine corrections.
 
 **A mechanical discriminator was measured and NOT adopted.** Of the 185 groups,

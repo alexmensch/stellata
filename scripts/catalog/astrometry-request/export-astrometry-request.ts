@@ -15,12 +15,10 @@ import {
   derivationCandidateSourceIds,
   indexSimbadSources,
 } from '../membership/binding/binding-derivation-pure';
-import {
-  additionItemCells,
-  applySpineCorrections,
-} from '../membership/membership-manifest-pure';
+import { additionItemCells } from '../membership/membership-manifest-pure';
 import { MEMBERSHIP_MANIFEST } from '../membership/membership-manifest-tsv';
-import { SPINE_CORRECTIONS } from '../membership/spine-corrections-source';
+import { applySpineCorrections } from '../membership/spine-corrections/spine-corrections-pure';
+import { SPINE_CORRECTIONS } from '../membership/spine-corrections/spine-corrections-source';
 import { printedVLookups } from '../photometry/v-magnitude-pure';
 import { INHERITED_SPINE } from '../spine/inherited-spine-tsv';
 import { indexCns5 } from '../spine/primaries-audit-pure';

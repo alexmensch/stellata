@@ -38,6 +38,10 @@ scripts/catalog/companions/
                                   Stage 6 reached either from no measured
                                   geometry, the two coincide, or the row is
                                   the chaining letter itself.
+  promotion-lineage-pure.ts       Promotion as a lineage stage: its reason
+    (+ test)                      codes, the serialiser over RowOutcome, and
+                                  the identity rows of the records it mints
+                                  (../lineage/README.md#the-promotion-stage).
   overlap-gate-pure.ts (+ test)   physicalOverlaps: record pairs closer than
                                   the sum of their radii, less those an orbit
                                   chain separates. See Overlap gate below.
@@ -76,6 +80,15 @@ into the current build
 (Sirius B, Achird B, Porrima B, Fomalhaut C, Algol Ab, …) — about
 a third via real Gaia/HIP keys, two-thirds via synthetic identifiers
 (see the identifier gate below).
+
+Each pair row's decision is a `RowOutcome`: dropped with its reason, adopted
+onto a record already held (its own id or HIP, a same-as bridge, or an
+earlier mint this build), minted, or an AT-HYG double repositioned onto it;
+a pair's primary is `not-applicable` when it anchors its pair and
+`primary-unresolved` when it resolves to no record, as is any row in no pair
+`not-applicable`.
+Every per-row `PromotionStats` counter folds from those (`foldRowOutcomes`);
+the post-passes below act on records, not rows, and keep their own counters.
 
 Per-row gates and resolution:
 
@@ -171,8 +184,9 @@ Per-row gates and resolution:
   `applyStarNames` runs before promotion, which is what puts `bayerComponent`
   on the record in time.
 - <a id="refused-parallax-refusal"></a>**Refused-parallax refusal.** A row never promotes when the distance it STATES
-  is a parallax a tier above refused — `statesRefusedParallax` matches the cell
-  against every refused value indexed under the row's ids. Sharing the id is not
+  is a parallax a tier above refused — `refusalStated` matches the cell
+  against every refused value indexed under the row's ids, and returns the
+  parked record's origin key, which the row's lineage cites. Sharing the id is not
   enough: Stage 2/3 bind one blended source to every component of a sub-arcsec
   pair, so a parked primary's id reaches siblings stating the ANCHOR's distance
   (α Her's B, Ba, Bb) as well as siblings re-serving the refusal (WDS
@@ -527,6 +541,7 @@ holds its star unlinked — placing it would mint a twin of that record.
 | `physicalRadius` | per-component | Stefan-Boltzmann from the per-component absmag + Teff. |
 | `flags` | per-component | `FLAG_BINARY_COMPANION_ONLY` (+ `_SYNTHETIC`). |
 | `syntheticId` | per-component | `synth-<wds_id>-<comp>` when no own id survives the gates. |
+| `originKey` | per-component | the row's own `multiples.tsv` key, `multiples:<system_id>/<comp>` ([Identity](../lineage/README.md#identity--the-origin-source-row)). Build-time only. |
 | `companionIdx` | post-pass | set by geometric binary inference ([Geometric binary inference](../multiplicity/README.md#geometric-binary-inference)). |
 | `period`, `amplitude`, `varType`, `gcvsName` | unset | companion variability isn't tracked at promotion. |
 | `hd`, `hr`, `flam`, `bayer`, `gl`, `tyc` | unset | not carried on multiples.tsv rows. `hdAlt`/`hrAlt` are empty for a different reason — deliberately not inherited: an anchor's alternative HD is often the pair's OTHER component number, which makes handing it to this record tempting and wrong. The overlay asserts both numbers against one Gaia source and names no component, so attributing one here would invent evidence (`../classic-ids/label-merge/README.md`). |

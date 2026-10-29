@@ -3,6 +3,7 @@
 import { existsSync } from 'node:fs';
 import { performance } from 'node:perf_hooks';
 
+import type { FileHashes } from '../../util/build-stamp';
 import type { ArtifactContents, Check } from '../../util/emit-artifacts';
 import { mergeBaseWithMain } from '../../util/git-provenance';
 import { diffLineage, stageDiffText, type DiffJoin, type KeyChange } from './lineage-diff-pure';
@@ -24,8 +25,9 @@ export interface LineageBudget {
 export interface StageLineageRun<F extends string> {
   readonly layout: LineageLayout;
   readonly spec: StageLineageSpec<F>;
-  /** The package.json script the stage runs as. */
-  readonly script: string;
+  /** The content hashes of the step's inputs (`stepInputPaths`), as the step
+   *  already computed them for its stamp or its own use. */
+  readonly inputs: FileHashes;
   /** The stage's own file: the one its diff reads. */
   readonly diffed: F;
   readonly rows: readonly LineageRow[];
@@ -78,7 +80,7 @@ export async function stageLineage<F extends string>(
     console.log(`lineage: no ${run.spec.stage} baseline in this checkout, so no diff`);
   }
 
-  const header = await stageHeader(run.spec, run.script);
+  const header = stageHeader(run.spec, run.inputs);
   const texts = run.render(sorted);
   const diff = changes === null ? null : stageDiffText(changes, joins);
   const { files, members } = stageEmission(run.layout, run.spec, texts, header, diff, plan.rotate);

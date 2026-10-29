@@ -12,7 +12,8 @@ outcome arrays, so a snapshot and lineage are two projections of one value
 and neither is kept in step with the other. Membership is part-way there:
 its review-queue and label-drop counts fold from the outcomes, while the
 derivation, admission and component counters are still kept by hand beside
-them (stellata-hhaw.45.23).
+them (stellata-hhaw.45.23). Promotion's per-row counters all fold from its
+outcomes; its post-passes act on records and keep their own.
 
 ## Files in this area
 
@@ -31,8 +32,9 @@ scripts/catalog/lineage/
                                  which baseline a build diffs against.
   identity-pure.ts               The identity row and its file; refuses two
                                  records on one key.
-  lineage-stages.ts              LINEAGE_STAGES, every stage's codes in
-                                 pipeline order.
+  lineage-stages.ts              LINEAGE_STAGES, every stage's codes and
+                                 files in pipeline order: the one list the
+                                 code generator and trace read.
   reason-code-list-pure.ts       reasonCodeList, the generated list, and
                                  appendOnlyViolations.
   reason-codes-tsv.ts            REASON_CODES, the list's codec.
@@ -239,14 +241,19 @@ passes `stageLineage` (`stage-lineage.ts`) a `LineageBudget`, and a run over
 it fails its emission. Membership, measured 2026-10-29 on the full tree:
 1,355,182 rows (128 MB plain, 15.1 MB gzipped) plus 976,040 identity rows
 (85 MB, 22.3 MB), 37.4 MB together. The timed window is everything lineage
-adds to the build — the header's input hash, the diff, rendering and gzip:
-about 5.7 s with a diff against a full baseline, 1.7 s without one.
+adds to the build — the diff, rendering and gzip: about 5.8 s with a diff
+against a full baseline. The header's input hash is not in it: a stage hands
+`stageLineage` the input hashes its step already computed (`build:catalog`'s
+are its stamp's), so a build hashes its inputs once.
 A spine derivation's row carries only its winner, route and component
 letters; the binding-review columns ride the rows the queue lists — a
 contested or collision verdict and a disposition — since the candidates and
 refusals are rows of their own. `MEMBERSHIP_LINEAGE_BUDGET` pins 41 MB and
 15 s — the time ceiling sits well above the measurement because CI runners
-write slower than a workstation.
+write slower than a workstation. Promotion, measured the same day: <!-- count:build-binaries/multiples_rows_emitted -->47,018<!-- /count --> rows, one
+per `multiples.tsv` row, plus an identity row per minted companion, 0.70 MB
+gzipped in 0.3 s without a diff; `PROMOTION_LINEAGE_BUDGET` pins 0.8 MB and
+5 s.
 
 The committed form of lineage is `data/sid/events.tsv` plus the ledger views
 below; the derivation itself is a build artifact, regenerated every build.
@@ -312,16 +319,20 @@ name.
 2. Find the origin keys whose identity rows carry that designation. Parked
    and dropped records have lineage rows too, so they are found. Also find
    every row that names it in `params` or `evidence` — a source a gate
-   weighed and refused, or only cited, sits on no identity row. A full scan
-   of the stage files, about two seconds today, so no index is kept.
+   weighed and refused, or only cited, sits on no identity row — and every
+   row that cites one of those identity-row records by origin key, as a
+   companion's promotion row cites its anchor. Identity rows come from every
+   stage that writes them (`StageLineageSpec.identity`). A full scan of the
+   stage files, about two seconds today, so no index is kept.
 3. Widen to the same-as class, and to retired SIDs and their successors,
    through allocation's rows — once allocation is a lineage stage.
 4. Print every stage's rows for those keys in stage order
    (`LINEAGE_STAGES`).
 
 `trace.test.ts` runs the command over a small committed fixture: it finds a
-record the catalogue parks and the record that refused a source no identity
-row carries.
+record the catalogue parks, the record that refused a source no identity
+row carries, and every component row of a promoted system from its anchor's
+designation.
 
 ## Cross-stage joins
 
@@ -376,3 +387,22 @@ in that PR. Retired state is still decided by counting retire against
 reinstate rows per SID. The migration needs the one-time edit to the ledger
 guard that `docs/sid.md` [§ 4.5](/docs/sid.md#45-ci-guard) reserves for owner
 sign-off; the owner gave it on 2026-10-21 by choosing this migration.
+
+## The promotion stage
+
+`build:catalog`'s companion promotion is the second stage
+(`../companions/promotion-lineage-pure.ts`). `promoteCompanions` returns one
+`PromotedRow` per `multiples.tsv` row, keyed on that row
+(`multiples:<system_id>/<comp>`), and `promotionLineageRow` serialises its
+`RowOutcome` (`../companions/README.md`) through an exhaustive `switch`. A
+pair's primary that anchors its pair, and a row in no pair, are
+`promotion.not-applicable`; a primary that resolves to no record, leaving
+its pair anchor-less, is `promotion.primary-unresolved`. Each row cites as evidence the record its pair
+resolved to and its WDS root's anchor; every merge-effect row names the
+record it merges into in `params.record`. Both are origin keys: every record
+carries its own from the manifest's `origin_key` column
+(`../membership/README.md#columns`), so these are joins on the origin key.
+
+A minted companion is founded on its row, so promotion writes its identity
+row (`promotion.identity.tsv.gz`, named by `StageLineageSpec.identity`);
+every other record's is membership's.

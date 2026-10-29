@@ -3,6 +3,7 @@
 import { LABEL_DISPOSITIONS, type LabelDisposition, type LabelFlip } from '../classic-ids/label-merge/label-merge-pure';
 import type { IdentityRow } from '../lineage/identity-pure';
 import type { DiffJoin } from '../lineage/lineage-diff-pure';
+import type { StageLineageSpec } from '../lineage/lineage-io';
 import { paramsOf, paramsText, type LineageParams, type LineageRow } from '../lineage/lineage-row-pure';
 import { LIVE, stageCodes, type CodeDeclaration } from '../lineage/reason-codes-pure';
 import type { GateReason } from './binding/binding-gate-pure';
@@ -13,6 +14,12 @@ import {
 } from './ledger-rows-pure';
 
 export const MEMBERSHIP_STAGE = 'membership';
+
+export const MEMBERSHIP_LINEAGE: StageLineageSpec<'membership' | 'identity'> = {
+  stage: MEMBERSHIP_STAGE,
+  files: ['membership', 'identity'],
+  identity: 'identity',
+};
 
 export const MEMBERSHIP_LINEAGE_BUDGET = { gzipBytes: 41_000_000, writeMs: 15_000 };
 
