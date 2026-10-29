@@ -35,6 +35,9 @@ import {
   type ManifestRecord,
 } from './membership-manifest-tsv';
 import { parkedRecordKey } from '../distance/parallax/parked-ledger';
+import { diffLineage, stageDiffText } from '../lineage/lineage-diff-pure';
+import { compareLineageRows, paramsOf, type LineageRow } from '../lineage/lineage-row-pure';
+import { MEMBERSHIP_CODES } from './membership-lineage-pure';
 
 const FROM = { file: 'fixture.tsv', hint: 'h' };
 
@@ -922,5 +925,52 @@ describe('matchSpineToManifest', () => {
 
   it('reports the manifest rows no spine row reaches', () => {
     expect(match.unreached).toEqual([4, 5, 6]);
+  });
+});
+
+describe('membership lineage', () => {
+  const xids = {
+    bySource: new Map([
+      ['222', [{ wdsId: 'W1', component: 'A' }]],
+      ['2223', [{ wdsId: 'W1', component: 'B' }]],
+    ]),
+    byHip: new Map(),
+    primarySourceLetterByWds: new Map([['W1', 'A']]),
+  };
+  const withXids = (t: PrimaryTables) => ({
+    ...input,
+    tables: t,
+    evidence: bindingEvidence(
+      new Map([['777', 14.0]]), xids, printedVLookups(new Map(), t.tycho2, t.gliese), null,
+    ),
+  });
+  const sorted = (rows: readonly LineageRow[]) => [...rows].sort(compareLineageRows);
+
+  it('writes an admission row for every record, folded and component ones included', () => {
+    const admitted = new Set(result.lineage
+      .filter((r) => /\.(admit\.[a-z0-9-]+|component|fold)$/.test(r.code)).map((r) => r.key));
+    expect(new Set(result.identity.map((r) => r.key))).toEqual(admitted);
+    expect(result.lineage.every((r) => MEMBERSHIP_CODES.has(r.code))).toBe(true);
+  });
+
+  it('shows a row re-bound onto a companion, with its component letters and code', () => {
+    const before = buildMembership(withXids(tables));
+    const simbad = new Map([...tables.simbadBySourceId, ['2223', { hip: null, tyc: '1-2-1', gj: null }]]);
+    simbad.set('222', { hip: null, tyc: '9-9-8', gj: null });
+    const after = buildMembership(withXids({ ...tables, simbadBySourceId: simbad }));
+    const changes = diffLineage(sorted(before.lineage), sorted(after.lineage));
+    const rebound = changes.find((c) => c.key === 'spine:4')!;
+    expect(rebound.kind).toBe('changed');
+    const binding = (rows: readonly LineageRow[]) => rows.find((r) => r.code === 'membership.binding.bound')!;
+    expect(paramsOf(binding(rebound.removed)))
+      .toMatchObject({ derived_source_id: '222', source_letters: 'W1:A' });
+    expect(paramsOf(binding(rebound.added)))
+      .toMatchObject({ derived_source_id: '2223', source_letters: 'W1:B' });
+    expect(stageDiffText(changes))
+      .toMatch(/changed\t\+\tmembership\tspine:4\toutcome\tmembership\.binding\.bound\t.*"source_letters":"W1:B"/);
+  });
+
+  it('writes an empty diff when nothing changed', () => {
+    expect(diffLineage(sorted(result.lineage), sorted(buildMembership(input).lineage))).toEqual([]);
   });
 });

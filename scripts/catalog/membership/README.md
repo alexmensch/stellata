@@ -60,13 +60,17 @@ scripts/catalog/membership/
                                   multiples.tsv and the review dispositions,
                                   and emits data/membership/ plus the label
                                   merge's queue
-                                  (data/classic-ids/label_flips.tsv) through
-                                  emitArtifacts: all five land, or none
+                                  (data/classic-ids/label_flips.tsv) and its
+                                  lineage, baseline rotation and change
+                                  report (build/lineage-diff/membership.tsv)
+                                  through emitArtifacts: all land, or none
                                   does, and only once
-                                  membership-manifest-expected.json passes.
-  membership-manifest-outputs.ts  MEMBERSHIP_OUTPUTS — the five files the
+                                  membership-manifest-expected.json and the
+                                  lineage budget pass.
+  membership-manifest-outputs.ts  MEMBERSHIP_OUTPUTS — every file the
                                   generator writes, as its emitArtifacts
-                                  declaration (../../util/README.md).
+                                  declaration (../../util/README.md), and
+                                  MEMBERSHIP_LINEAGE, its lineage files.
                                   Side-effect free.
   committed-artifacts.test.ts     Each of the four codecs above round-trips
                                   its committed file byte for byte.

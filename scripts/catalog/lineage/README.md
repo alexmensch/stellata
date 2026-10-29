@@ -25,6 +25,9 @@ scripts/catalog/lineage/
   lineage-header-pure.ts         StageHeader and judgeBaseline.
   identity-pure.ts               The identity row and its file; refuses two
                                  records on one key.
+  stage-lineage.ts               stageLineage: one stage's files, header,
+                                 baseline verdict, diff and budget check,
+                                 ready for the stage's emitArtifacts call.
   lineage-io.ts                  The on-disk layout (build/lineage/,
                                  lineage.previous/, lineage-diff/), the
                                  rotation and a stage's emission, gzip, git
@@ -198,7 +201,16 @@ in 0.2 s per stage — about 200 MB and a few seconds for fifteen stages. With
 worktree copies one more build's worth in. The
 bulk is Gaia ids, which no format compresses much: Parquet with zstd came to
 11.5 MB in 1.2 s, not worth six times the write cost and the loss of
-`zgrep`. The real stages' write time and disk are pinned as a budget.
+`zgrep`.
+
+The real stages' write time and disk are pinned as a budget: each stage
+passes `stageLineage` (`stage-lineage.ts`) a `LineageBudget`, and a run over
+it fails its emission. Membership, measured 2026-10-29 on the full tree:
+1,355,182 rows (203 MB plain, 30.2 MB gzipped) plus 976,040 identity rows
+(85 MB, 22.3 MB), 52.4 MB together, rendered and compressed in about 1.9 s.
+That is four times the probe's per-stage figure: the spine derivation's row
+carries the binding-review columns its view needs, on every spine record.
+`MEMBERSHIP_LINEAGE_BUDGET` pins 58 MB and 4 s.
 
 The committed form of lineage is `data/sid/events.tsv` plus the ledger views
 below; the derivation itself is a build artifact, regenerated every build.

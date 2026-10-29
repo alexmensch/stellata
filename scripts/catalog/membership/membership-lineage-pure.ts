@@ -2,6 +2,7 @@
 
 import { LABEL_DISPOSITIONS, type LabelDisposition, type LabelFlip } from '../classic-ids/label-merge/label-merge-pure';
 import type { IdentityRow } from '../lineage/identity-pure';
+import type { DiffJoin } from '../lineage/lineage-diff-pure';
 import { paramsOf, paramsText, type LineageParams, type LineageRow } from '../lineage/lineage-row-pure';
 import { LIVE, stageCodes, type CodeDeclaration } from '../lineage/reason-codes-pure';
 import type { GateReason } from './binding/binding-gate-pure';
@@ -12,6 +13,8 @@ import {
 } from './ledger-rows-pure';
 
 export const MEMBERSHIP_STAGE = 'membership';
+
+export const MEMBERSHIP_LINEAGE_BUDGET = { gzipBytes: 58_000_000, writeMs: 4_000 };
 
 const live = (description: string, effect: CodeDeclaration['effect'] = 'none'): CodeDeclaration => (
   { description, effect, status: LIVE }
@@ -239,4 +242,32 @@ export function membershipLedgers(
     ) as BindingReviewRow);
   }
   return out;
+}
+
+export interface MultiplesComponent {
+  readonly systemId: string;
+  readonly comp: string;
+  readonly hip: number | null;
+}
+
+/** The change report's `multiples` column: the multiples.tsv components the
+ *  record's HIP names, read off its columns until binaries' Binding
+ *  provenance carries the join. */
+export function multiplesComponentJoin(
+  identity: ReadonlyMap<string, IdentityRow>, multiples: readonly MultiplesComponent[],
+): DiffJoin {
+  const byHip = new Map<string, string[]>();
+  for (const m of multiples) {
+    if (m.hip === null) continue;
+    const list = byHip.get(String(m.hip)) ?? [];
+    list.push(`${m.systemId}/${m.comp}`);
+    byHip.set(String(m.hip), list);
+  }
+  return {
+    name: 'multiples',
+    of: (key) => {
+      const hip = identity.get(key)?.hip ?? '';
+      return hip === '' ? '' : (byHip.get(hip) ?? []).join('|');
+    },
+  };
 }
