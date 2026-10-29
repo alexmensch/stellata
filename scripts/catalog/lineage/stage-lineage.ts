@@ -31,7 +31,8 @@ export interface StageLineageRun<F extends string> {
   readonly rows: readonly LineageRow[];
   /** Handed `rows` in lineage order. */
   readonly render: (sorted: readonly LineageRow[]) => Readonly<Record<F, string>>;
-  readonly joins: readonly DiffJoin[];
+  /** Built only when a diff runs, from the baseline directory it reads. */
+  readonly joins: (baselineDir: string) => readonly DiffJoin[];
   readonly budget: LineageBudget;
   readonly argv: readonly string[];
 }
@@ -66,9 +67,11 @@ export async function stageLineage<F extends string>(
   const { verdict } = plan;
   const sorted = [...run.rows].sort(compareLineageRows);
   let changes: KeyChange[] | null = null;
+  let joins: readonly DiffJoin[] = [];
   if (plan.from !== null) {
     const dir = source.kind === 'against' ? source.dir : run.layout[plan.from === 'previous' ? 'previous' : 'current'];
     changes = diffLineage(readLineage(stageFile(dir, run.diffed)), sorted);
+    joins = run.joins(dir);
   } else if (verdict.kind === 'refused') {
     console.log(verdict.message);
   } else {
@@ -77,7 +80,7 @@ export async function stageLineage<F extends string>(
 
   const header = await stageHeader(run.spec, run.script);
   const texts = run.render(sorted);
-  const diff = changes === null ? null : stageDiffText(changes, run.joins);
+  const diff = changes === null ? null : stageDiffText(changes, joins);
   const { files, members } = stageEmission(run.layout, run.spec, texts, header, diff, plan.rotate);
   const writeMs = performance.now() - started;
   const gzipBytes = run.spec.files.reduce(

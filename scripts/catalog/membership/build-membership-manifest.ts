@@ -9,7 +9,7 @@ import { emitArtifacts, runStep } from '../../util/emit-artifacts';
 import { artifactRows, readArtifact } from '../../util/sources/source';
 import { MEMBERSHIP_LINEAGE, MEMBERSHIP_OUTPUTS } from './membership-manifest-outputs';
 import { identityText } from '../lineage/identity-pure';
-import { LINEAGE_LAYOUT } from '../lineage/lineage-io';
+import { LINEAGE_LAYOUT, readIdentity, stageFile } from '../lineage/lineage-io';
 import { stageLineageText } from '../lineage/lineage-row-pure';
 import { stageLineage } from '../lineage/stage-lineage';
 import {
@@ -158,7 +158,11 @@ async function main(): Promise<void> {
       membership: stageLineageText(MEMBERSHIP_CODES, sorted),
       identity: identityText(result.identity),
     }),
-    joins: [multiplesComponentJoin(new Map(result.identity.map((r) => [r.key, r])), multiples)],
+    joins: (baselineDir) => {
+      const baseline = readIdentity(stageFile(baselineDir, 'identity'));
+      const identity = new Map([...baseline, ...result.identity].map((r) => [r.key, r]));
+      return [multiplesComponentJoin(identity, multiples)];
+    },
     budget: MEMBERSHIP_LINEAGE_BUDGET,
     argv: process.argv.slice(2),
   });
