@@ -2,8 +2,13 @@
 
 import type { DistVia } from '../parallax/parallax-cascade';
 import { parallaxSignalToNoise, type MeasuredParallax } from '../../cited-parallax';
-import { sourceRowRef, type SourceRowRef } from '../../../util/sources/row-ref-pure';
-import { BAILER_JONES } from './bailer-jones-source';
+import { sourceRowRef, type RowKeyed, type SourceRowRef } from '../../../util/sources/row-ref-pure';
+
+/** Bailer-Jones posteriors by Gaia DR3 source_id, with the declaration their rows cite. */
+export interface BailerJonesIndex {
+  readonly source: RowKeyed<string>;
+  readonly distPc: ReadonlyMap<string, number>;
+}
 
 /** Whether a record is eligible for the Bailer-Jones override: it resolves to a
  *  Gaia DR3 source_id AND the parallax its own cascade settled on is Gaia's.
@@ -33,11 +38,11 @@ export function isBailerJonesEligible(
  *  the direction resolved independently by the direction cascade. */
 export function applyBailerJonesOverride(
   gaiaSourceId: string | null,
-  bjMap: Map<string, number>,
+  bailerJones: BailerJonesIndex,
 ): { distPc: number; ref: SourceRowRef<string> } | null {
   if (!gaiaSourceId) return null;
-  const distPc = bjMap.get(gaiaSourceId);
-  return distPc === undefined ? null : { distPc, ref: sourceRowRef(BAILER_JONES, gaiaSourceId) };
+  const distPc = bailerJones.distPc.get(gaiaSourceId);
+  return distPc === undefined ? null : { distPc, ref: sourceRowRef(bailerJones.source, gaiaSourceId) };
 }
 
 // ---- LMC kinematic distance override -------------------------------------

@@ -41,7 +41,7 @@ describe('applyBailerJonesOverride', () => {
     { label: 'HIP 46144', ra: 9.41038175, dec:  62.43823034, mag: 10.14, sourceId: '1040043514891491968', preOverrideDist:  9189.7878, bjDist: 7515.496 },
     { label: 'HIP 23785', ra: 5.11164486, dec: -50.94139857, mag:  8.39, sourceId: '4773096563064098432', preOverrideDist:    93.1801, bjDist:   92.871 },
   ];
-  const bjMap = new Map(FIVE_HIPS.map((f) => [f.sourceId, f.bjDist] as const));
+  const bjMap = { source: BAILER_JONES, distPc: new Map(FIVE_HIPS.map((f) => [f.sourceId, f.bjDist] as const)) };
 
   it('returns null when source_id is missing or absent from the map', () => {
     expect(applyBailerJonesOverride(null, bjMap)).toBeNull();
@@ -310,7 +310,7 @@ describe('applyLmcKinematicOverride', () => {
     // LMC_KIN runs after and clobbers it.
     const f = LMC_HITS[0]; // HD 268749
     const sourceId = 'fake-lmc-source-id';
-    const bjMap = new Map([[sourceId, 8000]]); // arbitrary B-J posterior ≠ LMC distance
+    const bjMap = { source: BAILER_JONES, distPc: new Map([[sourceId, 8000]]) }; // arbitrary B-J posterior ≠ LMC distance
     const bj = applyBailerJonesOverride(sourceId, bjMap);
     expect(bj?.distPc).toBe(8000);
     const lmc = applyLmcKinematicOverride(f.ra, f.dec, f.pmRa, f.pmDec, null);

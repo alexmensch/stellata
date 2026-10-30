@@ -119,6 +119,7 @@ import {
   applyLmcKinematicOverride,
   isBailerJonesEligible,
   isInLmcCone,
+  type BailerJonesIndex,
 } from '../distance/refinement/distance-overrides-pure';
 
 // A row still farther than this after every override fails the walk. Every
@@ -241,7 +242,7 @@ export interface Star {
  *  needs and the rest degrade to empty. */
 export interface ReadStarsOptions {
   conAssignment: ConstellationAssignment;
-  bjMap?: Map<string, number>;
+  bailerJones?: BailerJonesIndex;
   simbadSpectral?: SimbadSpectralIndex;
   /** Bibcoded SIMBAD values over the per-field value cohort (/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers) — the rv cascade's bottom
    *  tier. Absent leaves its rows on a zero radial term. */
@@ -273,7 +274,7 @@ export function readStars(
   manifest: Iterable<ManifestRecord>,
   {
     conAssignment,
-    bjMap = new Map(),
+    bailerJones,
     simbadSpectral = emptySimbadSpectralIndex(),
     simbadValues = emptySimbadValueIndex(),
     apsisMap = new Map(),
@@ -543,17 +544,17 @@ export function readStars(
     let distVia: DistVia = plxRes.via;
     const bjEligibleRow = isBailerJonesEligible(gaiaSourceId, plxRes.via);
     if (bjEligibleRow) bjEligible++;
-    let bailerJones: BailerJonesStep = { kind: 'not-applied' };
-    if (bjEligibleRow && bjMap.size > 0) {
-      const ovr = applyBailerJonesOverride(gaiaSourceId, bjMap);
+    let bjStep: BailerJonesStep = { kind: 'not-applied' };
+    if (bjEligibleRow && bailerJones !== undefined) {
+      const ovr = applyBailerJonesOverride(gaiaSourceId, bailerJones);
       if (ovr !== null) {
         dist = ovr.distPc;
         distVia = 'bailer_jones';
         bjOverridden++;
-        bailerJones = { kind: 'override', ref: ovr.ref };
+        bjStep = { kind: 'override', ref: ovr.ref };
       } else {
         bjEligibleNotPulled++;
-        bailerJones = { kind: 'absent' };
+        bjStep = { kind: 'absent' };
       }
     }
 
@@ -776,7 +777,7 @@ export function readStars(
       parallax: plxRes,
       direction,
       pmRescue,
-      bailerJones,
+      bailerJones: bjStep,
       lmc: lmcStep,
       rv: rvRejected && rvRes.via !== 'none' ? { kind: 'rejected', rv: rvRes } : { kind: 'kept', rv: rvRes },
       velocityClamped: velClamped,

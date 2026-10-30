@@ -77,7 +77,9 @@ function timed<T>(label: string, read: () => T, size: (value: T) => string): T {
 export async function loadReadStarsInputs(): Promise<ReadStarsInputs> {
   const entries = (m: { size: number }) => `${m.size} entries`;
 
-  const bjMap = timed('Parsing Bailer-Jones DR3 distance posteriors', () => BAILER_JONES.read(), entries);
+  const bailerJones = timed(
+    'Parsing Bailer-Jones DR3 distance posteriors', () => BAILER_JONES.read(), (b) => entries(b.distPc),
+  );
   const apsisMap = timed('Parsing Gaia DR3 Apsis astrophysical parameters', () => GAIA_APSIS.read(), entries);
   const gspcMap = timed('Parsing Gaia DR3 synthetic photometry', () => GAIA_GSPC.read(), entries);
   const simbadSpectral = timed(
@@ -140,7 +142,7 @@ export async function loadReadStarsInputs(): Promise<ReadStarsInputs> {
   );
 
   const sizes: ReadStarsInputSizes = {
-    bjEntries: bjMap.size,
+    bjEntries: bailerJones.distPc.size,
     apsisEntries: apsisMap.size,
     gspcEntries: gspcMap.size,
     simbadSptypeEntries: simbadSpectral.bySourceId.size,
@@ -161,7 +163,7 @@ export async function loadReadStarsInputs(): Promise<ReadStarsInputs> {
   };
 
   return {
-    bjMap, apsisMap, gspcMap, simbadSpectral, simbadValues, directions,
+    bailerJones, apsisMap, gspcMap, simbadSpectral, simbadValues, directions,
     hipVMag, hipBv, gliese, pairMemberParallax, dustGrid, conAssignment, sizes,
   };
 }

@@ -38,7 +38,7 @@ diagram below is the build-side view:
 [ Layer 1: Bailer-Jones DR3 override ]   only where the cascade resolved
    │                                       gaia_dr3_inversion (its posterior
    │                                       treats that measurement)
-   │                                       AND bjMap has the source_id
+   │                                       AND B-J has the source_id
    ▼
 [ Layer 2: LMC kinematic override    ]   only inside 15° LMC cone
    │                                       AND |Δμ_α*|, |Δμ_δ| ≤ 0.5 mas/yr
@@ -120,8 +120,10 @@ inversion for the Bayesian posteriors published by
 The pipeline:
 
 1. Load `data/bailer-jones/bailer-jones-dr3.tsv` through `BAILER_JONES`
-   (`bailer-jones-source.ts`) into a `Map<source_id, distance_pc>` keyed
-   by Gaia DR3 `source_id`, kept as a **string** for the reason
+   (`bailer-jones-source.ts`) into a `BailerJonesIndex`: a
+   `Map<source_id, distance_pc>` beside the declaration its rows cite
+   (`i352:<source_id>`), keyed by Gaia DR3 `source_id`, kept as a
+   **string** for the reason
    `data/bailer-jones/README.md` gives. Photogeometric
    `r_med_photogeo` is preferred; `r_med_geo` is the fallback when
    photogeo is absent.

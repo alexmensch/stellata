@@ -431,7 +431,7 @@ async function main() {
 
   const inputs = await loadReadStarsInputs();
   const {
-    bjMap, apsisMap, simbadSpectral, directions,
+    bailerJones, apsisMap, simbadSpectral, directions,
     dustGrid, conAssignment, sizes,
   } = inputs;
   Object.assign(counts, sizes);
@@ -673,7 +673,7 @@ async function main() {
   const coherence = applySystemDistanceCoherence(multiplesRows, stars, {
     gaiaAstrometry: directions.gaiaAstrometry,
     hip2: directions.hip2,
-    bjMap,
+    bjMap: bailerJones.distPc,
   });
   console.log(
     `  system distance coherence: ${coherence.membersRepositioned} ` +
