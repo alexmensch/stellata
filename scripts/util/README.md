@@ -232,8 +232,10 @@ catalogue job's `ubuntu-latest` runner gives Node 24 a V8 heap of about
 4 GiB, and a step whose live data nears that fails there with `JavaScript
 heap out of memory` while passing locally. So a heavy step judges itself
 against the runner, not the machine it runs on. `CI_HEAP_LIMIT_BYTES`
-(`heap-budget-pure.ts`) is the runner's limit, read off that job's OOM log;
-`CI_HEAP_HEADROOM` is the share a step may use.
+(`heap-budget-pure.ts`) is the runner's limit, V8's 4,096 MiB old-space
+default there (its OOM log reports 4,104.1 MiB committed, as "MB");
+`CI_HEAP_HEADROOM` is the share a step may use. Figures print in MiB, the
+unit V8's own log uses.
 
 The measure is **live** heap — what a full (mark-compact) collection leaves
 — because that is what runs out: garbage a roomier machine has not yet

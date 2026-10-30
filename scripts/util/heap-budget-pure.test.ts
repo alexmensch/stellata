@@ -19,6 +19,9 @@ describe('heapBudgetCheck', () => {
     expect(heapBudgetCheck('build:demo', budget).kind).toBe('pass');
     const over = heapBudgetCheck('build:demo', budget + 1);
     expect(over.kind).toBe('fail');
-    expect(over.kind === 'fail' && over.message).toMatch(/^build:demo peak live heap: .* CI would run out of heap/);
+    expect(over.kind === 'fail' && over.message).toBe(
+      'build:demo peak live heap: 3482 MiB, budget 3482 MiB (0.85 of the CI runner\'s 4096 MiB): '
+      + 'CI would run out of heap. See /scripts/util/README.md#ci-heap-budget.',
+    );
   });
 });
