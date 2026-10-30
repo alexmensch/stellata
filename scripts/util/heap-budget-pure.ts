@@ -23,7 +23,20 @@ export function peakLiveHeap(samples: readonly GcSample[], usedNow: number): num
 
 const mib = (bytes: number): string => `${(bytes / 2 ** 20).toFixed(0)} MiB`;
 
-export function heapBudgetCheck(step: string, peak: number): Check {
+/** The Node major a step runs under, and the one `.nvmrc` pins for CI. */
+export interface NodeRuntime {
+  readonly running: number;
+  readonly pinned: number;
+}
+
+export function heapBudgetCheck(step: string, peak: number, node: NodeRuntime): Check {
+  if (node.running !== node.pinned) {
+    return {
+      kind: 'fail',
+      message: `${step} ran under Node ${node.running}, but CI runs Node ${node.pinned} (.nvmrc), whose heap differs: `
+        + 'run it under the pinned Node to judge it. See /scripts/util/README.md#ci-heap-budget.',
+    };
+  }
   const budget = CI_HEAP_LIMIT_BYTES * CI_HEAP_HEADROOM;
   const measured = `${step} peak live heap: ${mib(peak)}, budget ${mib(budget)} (${CI_HEAP_HEADROOM} of the CI runner's ${mib(CI_HEAP_LIMIT_BYTES)})`;
   return peak > budget
