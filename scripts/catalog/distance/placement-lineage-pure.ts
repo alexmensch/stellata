@@ -8,7 +8,8 @@ import type { DirectionResolution, DirectionVia } from './direction-cascade';
 import type { RefusedPublication } from './gaia-distrust';
 import type { ParallaxResolution, ParallaxTier } from './parallax/parallax-cascade';
 import {
-  PARKED_REASONS, type ParkedIdentifiers, type ParkedLedgerEntry, type ParkedReason, type ParkedRecord,
+  PARKED_REASONS, parkedIdentifiersOf, parkedLedgerCells,
+  type ParkedIdentifiers, type ParkedLedgerCells, type ParkedLedgerEntry, type ParkedReason, type ParkedRecord,
 } from './parallax/parked-ledger';
 import type { PmRescueResolution, PmRescueVia } from './pm-rescue/pm-rescue';
 import type { RadialVelocityResolution, RvVia } from './radial-velocity/radial-velocity';
@@ -141,13 +142,12 @@ export const PLACEMENT_CODES = stageCodes(PLACEMENT_STAGE, {
 type Branch = Parameters<typeof PLACEMENT_CODES.code>[0];
 
 type Tier = { tier: string };
-type ParkCells = { tyc: string; hip: string; hd: string; gl: string; gaia_source_id: string };
 
 /** Each code's params, declared once beside the codes. */
 type ParamsOf<B extends Branch> =
   B extends `${string}.refused.${string}` ? Tier
   : B extends 'rv.rejected-above-ceiling' ? Tier
-  : B extends `park.${string}` ? ParkCells
+  : B extends `park.${string}` ? ParkedLedgerCells
   : Record<string, never>;
 
 /** The distance layers above the parallax a placed record was given. */
@@ -215,10 +215,6 @@ export function parkReason(p: ParkedPlacement): ParkedReason {
   }
 }
 
-function cellText(v: string | number | null): string {
-  return v === null ? '' : String(v);
-}
-
 /** Every row a Placement serialises to; the `switch` is exhaustive, so a new
  *  variant without rows fails typecheck. */
 export function placementLineageRows(p: Placement): LineageRow[] {
@@ -249,13 +245,8 @@ export function placementLineageRows(p: Placement): LineageRow[] {
     const outcome: DirectionOutcome = res.via === 'gaia_5p' && gaia2p ? 'gaia_2p' : res.via;
     row('outcome', DIRECTION_BRANCHES[outcome], none, res.evidence);
   };
-  const park = (q: ParkedPlacement): void => row('outcome', PARK_BRANCHES[parkReason(q)], {
-    tyc: cellText(q.ids.tyc),
-    hip: cellText(q.ids.hip),
-    hd: cellText(q.ids.hd),
-    gl: cellText(q.ids.gl),
-    gaia_source_id: cellText(q.ids.gaiaSourceId),
-  }, []);
+  const park = (q: ParkedPlacement): void =>
+    row('outcome', PARK_BRANCHES[parkReason(q)], parkedLedgerCells(q.ids), []);
 
   switch (p.kind) {
     case 'parked-parallax':
@@ -305,12 +296,7 @@ export function parkedLedgerView(rows: readonly LineageRow[]): ParkedLedgerEntry
   return rows.flatMap((r) => {
     const reason = REASON_BY_PARK_CODE.get(r.code);
     if (reason === undefined) return [];
-    const c = paramsOf(r) as ParkCells;
-    const int = (s: string): number | null => (s === '' ? null : Number(s));
-    const text = (s: string): string | null => (s === '' ? null : s);
-    return [{
-      tyc: text(c.tyc), hip: int(c.hip), hd: int(c.hd), gl: text(c.gl), gaiaSourceId: text(c.gaia_source_id), reason,
-    }];
+    return [{ ...parkedIdentifiersOf(paramsOf(r) as ParkedLedgerCells), reason }];
   });
 }
 

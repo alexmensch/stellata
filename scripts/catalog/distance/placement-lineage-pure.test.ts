@@ -177,4 +177,15 @@ describe('parkedLedgerView', () => {
     }));
     expect(parkedLedgerView(rows)).toEqual(entries);
   });
+
+  it('refuses a malformed identifier cell rather than reading it as a number', () => {
+    const [row] = placementLineageRows({
+      kind: 'parked-no-v',
+      key: 'spine:1',
+      ids: { tyc: null, hip: 7, hd: null, gl: null, gaiaSourceId: null },
+      parallax: { via: 'gaia_dr3_inversion', value: { mas: 2, errMas: 0.1 }, evidence: [GAIA], refusals: [] },
+    }).filter((r) => r.code === 'placement.park.no-v-magnitude');
+    expect(() => parkedLedgerView([{ ...row, params: row.params.replace('"7"', '"7x"') }]))
+      .toThrow('"7x" is not an integer');
+  });
 });

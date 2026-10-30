@@ -1,8 +1,9 @@
 // The record-parity dropped list's committed codec, beside the additions ledger it is the counterpart to.
 
-import { defineArtifact, nullableCell } from '../../../util/tsv/artifact-pure';
+import { defineArtifact } from '../../../util/tsv/artifact-pure';
 import {
-  PARKED_REASONS, parkedRecordKey, type ParkedLedgerEntry, type ParkedReason,
+  PARKED_REASONS, parkedIdentifiersOf, parkedLedgerCells, parkedRecordKey,
+  type ParkedLedgerEntry, type ParkedReason,
 } from './parked-ledger';
 
 /** Sorted on the whole row, not on `tyc` alone: a park with no TYC would tie
@@ -13,21 +14,16 @@ export const PARKED_LEDGER = defineArtifact({
   hint: 'Re-run `pnpm run build:catalog`.',
   order: 'by-line',
   decode: (row): ParkedLedgerEntry => ({
-    tyc: row.text('tyc'),
-    hip: row.int('hip'),
-    hd: row.int('hd'),
-    gl: row.text('gl'),
-    gaiaSourceId: row.sourceId('gaia_source_id'),
+    ...parkedIdentifiersOf({
+      tyc: row.raw('tyc'),
+      hip: row.raw('hip'),
+      hd: row.raw('hd'),
+      gl: row.raw('gl'),
+      gaia_source_id: row.raw('gaia_source_id'),
+    }),
     reason: row.oneOf('reason', PARKED_REASONS),
   }),
-  encode: (e: ParkedLedgerEntry) => ({
-    tyc: nullableCell(e.tyc),
-    hip: nullableCell(e.hip),
-    hd: nullableCell(e.hd),
-    gl: nullableCell(e.gl),
-    gaia_source_id: nullableCell(e.gaiaSourceId),
-    reason: e.reason,
-  }),
+  encode: (e: ParkedLedgerEntry) => ({ ...parkedLedgerCells(e), reason: e.reason }),
 });
 
 export interface ParkedLedgerRow {

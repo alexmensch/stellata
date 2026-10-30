@@ -2,6 +2,9 @@
 // identifier key the parity gate matches it on.
 // See README.md#why-the-residual-drops-rather-than-degrading.
 
+import { nullableCell } from '../../../util/tsv/artifact-pure';
+import { intCell, sourceIdCell, textCell } from '../../../util/tsv/table-pure';
+
 /** The closed enum record parity (/docs/catalog-driver.md#61-record-parity) requires, for this membership event.
  *  `refused_no_defensible_parallax` is a row whose only measurement a skip rule
  *  refused; `no_parallax_published` is a row nothing ever measured. The two
@@ -44,6 +47,30 @@ export interface ParkedLedgerEntry {
 
 /** The five identifier cells a park is keyed on, without its reason. */
 export type ParkedIdentifiers = Omit<ParkedLedgerEntry, 'reason'>;
+
+/** The five cells' text, as the ledger and a placement park row both write them. */
+export function parkedLedgerCells(ids: ParkedIdentifiers) {
+  return {
+    tyc: nullableCell(ids.tyc),
+    hip: nullableCell(ids.hip),
+    hd: nullableCell(ids.hd),
+    gl: nullableCell(ids.gl),
+    gaia_source_id: nullableCell(ids.gaiaSourceId),
+  };
+}
+
+export type ParkedLedgerCells = ReturnType<typeof parkedLedgerCells>;
+
+/** Throws on a malformed cell, as the ledger's own read does. */
+export function parkedIdentifiersOf(cells: ParkedLedgerCells): ParkedIdentifiers {
+  return {
+    tyc: textCell(cells.tyc),
+    hip: intCell(cells.hip),
+    hd: intCell(cells.hd),
+    gl: textCell(cells.gl),
+    gaiaSourceId: sourceIdCell(cells.gaia_source_id),
+  };
+}
 
 export interface ParkedRecord extends ParkedLedgerEntry {
   /** Build-time only — no ledger column carries it. Every parallax a skip rule
