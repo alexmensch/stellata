@@ -10,8 +10,9 @@ export function watchHeap(step: string): { check(): Check } {
   profiler.start();
   return {
     check() {
+      const usedNow = getHeapStatistics().used_heap_size;
       const samples = profiler.stop()?.statistics ?? [];
-      return heapBudgetCheck(step, peakLiveHeap(samples, getHeapStatistics().used_heap_size));
+      return heapBudgetCheck(step, peakLiveHeap(samples, usedNow));
     },
   };
 }
