@@ -89,8 +89,10 @@ scripts/catalog/
                                   emits the chunked binary, manifests,
                                   both committed ledgers and placement's and
                                   promotion's lineage through emitArtifacts
-                                  once its two snapshot checks and both
-                                  lineage budgets pass. On a SID error it lands them
+                                  once its two snapshot checks, both
+                                  lineage budgets and the CI heap budget
+                                  (../util/README.md#ci-heap-budget) pass.
+                                  On a SID error it lands them
                                   with no checks and then fails
                                   ([SID allocation](#sid-allocation)).
   catalog-inputs.test.ts          Pins stepInputPaths('build:catalog')

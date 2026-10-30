@@ -146,6 +146,7 @@ import {
   emitArtifacts, runStep, sweepStaged, type ArtifactContents, type Check,
 } from '../util/emit-artifacts';
 import { snapshotCheck } from '../util/snapshot-check';
+import { watchHeap } from '../util/heap-budget';
 import {
   resolveSids, sidSuccessorPairs, starDesignations, syntheticGaiaBridges,
   type SidObject,
@@ -206,6 +207,7 @@ function simbadSourcedDistancesTsv(stars: readonly Star[]): string {
 }
 
 async function main() {
+  const heap = watchHeap('build:catalog');
   sweepStaged(CATALOG_OUTPUTS);
   // The UPDATE_* snapshot-refresh flags rewrite artifacts written at the end
   // of a full build, so they must force one even when the sources are
@@ -1301,6 +1303,7 @@ async function main() {
     members,
     checks: [
       ...placementEmission.checks, ...lineage.checks, buildCountsCheck(counts), distanceOutliersCheck(stars),
+      heap.check(),
     ],
     stamp: { path: CATALOG_STAMP, inputs: inputHashesAtStart },
   });

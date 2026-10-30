@@ -7,6 +7,7 @@ import { resolve } from 'node:path';
 import { REPO_ROOT as ROOT } from '../../util/paths';
 import { fileHashes } from '../../util/build-stamp';
 import { emitArtifacts, runStep } from '../../util/emit-artifacts';
+import { watchHeap } from '../../util/heap-budget';
 import { stepInputPaths } from '../../util/step-inputs';
 import { artifactRows, readArtifact } from '../../util/sources/source';
 import { MEMBERSHIP_OUTPUTS } from './membership-manifest-outputs';
@@ -81,6 +82,7 @@ function reportLabelCoverage(c: MembershipCounts): void {
 }
 
 async function main(): Promise<void> {
+  const heap = watchHeap('build:membership');
   const spine = readArtifact(INHERITED_SPINE);
   const multiples = readMultiplesTsv();
   const tables = await loadPrimaryTables(spine.map((r) => r.tyc).filter((t) => t !== ''));
@@ -184,7 +186,7 @@ async function main(): Promise<void> {
       ...lineage.files,
     },
     members: lineage.members,
-    checks: [...lineage.checks, snapshotCheck<MembershipCounts>({
+    checks: [...lineage.checks, heap.check(), snapshotCheck<MembershipCounts>({
       envVar: 'UPDATE_BUILD_COUNTS',
       snapshotPath: resolve(ROOT, MEMBERSHIP_EXPECTED_FILE),
       actual: c,

@@ -66,8 +66,9 @@ scripts/catalog/membership/
                                   report (build/lineage-diff/membership.tsv)
                                   through emitArtifacts: all land, or none
                                   does, and only once
-                                  membership-manifest-expected.json and the
-                                  lineage budget pass.
+                                  membership-manifest-expected.json, the
+                                  lineage budget and the CI heap budget
+                                  (../../util/README.md#ci-heap-budget) pass.
   membership-manifest-outputs.ts  MEMBERSHIP_OUTPUTS — every file the
                                   generator writes, as its emitArtifacts
                                   declaration (../../util/README.md), and
