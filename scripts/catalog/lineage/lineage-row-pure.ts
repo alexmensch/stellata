@@ -58,10 +58,14 @@ export function compareLineageRows(a: LineageRow, b: LineageRow): number {
     || compareUtf8(a.evidence.join(EVIDENCE_SEPARATOR), b.evidence.join(EVIDENCE_SEPARATOR));
 }
 
+/** A tab sorts below every character a cell may hold, so a line's byte order
+ *  is compareLineageRows order and lines sort as plain strings (compareUtf8). */
 export function encodeLineageLine(row: LineageRow): string {
   const cells = [row.stage, row.key, row.role, row.code, row.params, row.evidence.join(EVIDENCE_SEPARATOR)];
   for (const cell of cells) {
-    if (/[\t\n\r]/.test(cell)) throw new Error(`lineage row ${row.key}: cell "${cell}" contains a TSV delimiter`);
+    if (/[\x00-\x08\t\n\r]/.test(cell)) {
+      throw new Error(`lineage row ${row.key}: cell "${cell}" contains a TSV delimiter or a control character below tab`);
+    }
   }
   for (const ref of row.evidence) {
     if (ref.includes(EVIDENCE_SEPARATOR)) throw new Error(`lineage row ${row.key}: evidence "${ref}" contains "|"`);
@@ -95,37 +99,67 @@ export function utf8Lines(header: string, lines: Iterable<string>, batch = ENCOD
   return Buffer.concat(parts);
 }
 
+/** The row's line, refused when the stage does not write it or does not declare its code. */
+export function stageLineageLine(codes: StageCodes<string>, row: LineageRow): string {
+  if (row.stage !== codes.stage) {
+    throw new Error(`lineage: a row of stage ${row.stage} in the ${codes.stage} file (key ${row.key})`);
+  }
+  if (!codes.has(row.code)) {
+    throw new Error(`lineage: ${row.code} is not a declared ${codes.stage} code (key ${row.key})`);
+  }
+  return encodeLineageLine(row);
+}
+
 /** `rows` arrive sorted by compareLineageRows: a stage sorts once, for its
  *  diff and its file both. */
 export function stageLineageText(codes: StageCodes<string>, rows: readonly LineageRow[]): Uint8Array {
   assertLineageOrder(rows, `the ${codes.stage} file`);
-  for (const row of rows) {
-    if (row.stage !== codes.stage) {
-      throw new Error(`lineage: a row of stage ${row.stage} in the ${codes.stage} file (key ${row.key})`);
-    }
-    if (!codes.has(row.code)) {
-      throw new Error(`lineage: ${row.code} is not a declared ${codes.stage} code (key ${row.key})`);
+  return utf8Lines(LINEAGE_COLUMNS.join('\t'), rows.map((row) => stageLineageLine(codes, row)));
+}
+
+/** `lines` are stageLineageLine's output, sorted by compareUtf8. */
+export function stageLineageLinesText(stage: string, lines: readonly string[]): Uint8Array {
+  for (let i = 1; i < lines.length; i++) {
+    if (compareUtf8(lines[i - 1], lines[i]) > 0) {
+      throw new Error(`lineage: the ${stage} file is not in lineage order at key ${lineageLineKey(lines[i])}`);
     }
   }
-  return utf8Lines(LINEAGE_COLUMNS.join('\t'), (function* () {
-    for (const row of rows) yield encodeLineageLine(row);
-  })());
+  return utf8Lines(LINEAGE_COLUMNS.join('\t'), lines);
+}
+
+/** The `key` cell, the second. */
+export function lineageLineKey(line: string): string {
+  const start = line.indexOf('\t') + 1;
+  return line.slice(start, line.indexOf('\t', start));
+}
+
+export function decodeLineageLine(line: string): LineageRow {
+  const cells = line.split('\t');
+  if (cells.length !== LINEAGE_COLUMNS.length) {
+    throw new Error(`lineage line has ${cells.length} cells, expected ${LINEAGE_COLUMNS.length}: ${line}`);
+  }
+  const [stage, key, role, code, params, evidence] = cells;
+  if (!(LINEAGE_ROLES as readonly string[]).includes(role)) {
+    throw new Error(`lineage line ${key}: role "${role}" is not one of ${LINEAGE_ROLES.join(', ')}`);
+  }
+  return {
+    stage, key, role: role as LineageRole, code, params,
+    evidence: evidence === '' ? [] : evidence.split(EVIDENCE_SEPARATOR),
+  };
+}
+
+export function* decodeLineageLines(lines: Iterable<string>): Generator<LineageRow> {
+  for (const line of lines) yield decodeLineageLine(line);
 }
 
 function lineageSpec(file: string): TableSpec<(typeof LINEAGE_COLUMNS)[number]> {
   return { file, columns: LINEAGE_COLUMNS, hint: 'Rebuild the stage that writes it.', exact: true };
 }
 
-export function* lineageRows(text: string | Uint8Array, file: string): Generator<LineageRow> {
-  for (const row of readTable(lineageSpec(file), text)) {
-    const evidence = row.raw('evidence');
-    yield {
-      stage: row.raw('stage'),
-      key: row.raw('key'),
-      role: row.oneOf('role', LINEAGE_ROLES),
-      code: row.raw('code'),
-      params: row.raw('params'),
-      evidence: evidence === '' ? [] : evidence.split(EVIDENCE_SEPARATOR),
-    };
-  }
+export function* lineageLines(text: string | Uint8Array, file: string): Generator<string> {
+  for (const row of readTable(lineageSpec(file), text)) yield row.rawLine;
+}
+
+export function lineageRows(text: string | Uint8Array, file: string): Generator<LineageRow> {
+  return decodeLineageLines(lineageLines(text, file));
 }

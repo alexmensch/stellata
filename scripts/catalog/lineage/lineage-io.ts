@@ -11,7 +11,7 @@ import { headState, packageVersion } from '../../util/git-provenance';
 import { REPO_ROOT } from '../../util/paths';
 import { escapeRegExp } from '../../util/escape-regexp';
 import { identityRows, type IdentityRow } from './identity-pure';
-import { lineageRows, type LineageRow } from './lineage-row-pure';
+import { lineageLines, lineageRows, type LineageRow } from './lineage-row-pure';
 import { headerText, parseHeader, type HeaderRead, type StageHeader } from './lineage-header-pure';
 
 export interface LineageLayout {
@@ -121,6 +121,11 @@ export function readLineage(path: string): LineageRow[] {
 /** A stage file's rows one at a time, for a reader that need not hold them all. */
 export function streamLineage(path: string): Generator<LineageRow> {
   return lineageRows(gunzipSync(readFileSync(path)), path);
+}
+
+/** streamLineage, each row left as its line. */
+export function streamLineageLines(path: string): Generator<string> {
+  return lineageLines(gunzipSync(readFileSync(path)), path);
 }
 
 export function readIdentity(path: string): IdentityRow[] {

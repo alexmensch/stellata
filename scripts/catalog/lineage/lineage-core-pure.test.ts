@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
-import { diffLineage, stageDiffText } from './lineage-diff-pure';
+import { LINE_FORM, diffLineage, diffLineageAs, stageDiffText, stageDiffTextAs } from './lineage-diff-pure';
 import { judgeBaseline, planBaseline, type StageHeader } from './lineage-header-pure';
 import {
-  compareLineageRows, compareUtf8, lineageRows, paramsOf, paramsText, stageLineageText,
-  type LineageRow,
+  compareLineageRows, compareUtf8, decodeLineageLine, encodeLineageLine, lineageLines, lineageRows,
+  paramsOf, paramsText, stageLineageLine, stageLineageLinesText, stageLineageText, type LineageRow,
 } from './lineage-row-pure';
 import { LIVE, stageCodes } from './reason-codes-pure';
 
@@ -87,6 +87,41 @@ describe('diffLineage', () => {
 
   it('refuses an input out of lineage order', () => {
     expect(() => diffLineage([row('spine:3'), row('spine:2')], [])).toThrow(/not in lineage order/);
+  });
+});
+
+describe('the line form', () => {
+  const rows = [
+    row('spine:10'), row('spine:1'), row('spine:1', 'demo.gate.refused'),
+    row('spine:1', 'demo.kept', { source: 'a' }), row('gaia-dr3:4295806720123456789'),
+    { ...row('spine:1'), evidence: ['tyc:1', 'tyc:1-2'] }, { ...row('spine:1'), evidence: ['tyc:1-2'] },
+    row('spine:\u{1F600}'), row('spine:\uFFFD'),
+  ];
+
+  it('sorts lines by bytes into compareLineageRows order, and writes the row form\'s bytes', () => {
+    const lines = rows.map((r) => stageLineageLine(CODES, r)).sort(compareUtf8);
+    const sorted = [...rows].sort(compareLineageRows);
+    expect(lines).toEqual(sorted.map(encodeLineageLine));
+    expect(stageLineageLinesText('demo', lines)).toEqual(stageLineageText(CODES, sorted));
+    expect([...lineageLines(stageLineageLinesText('demo', lines), 'fixture/demo.tsv')]).toEqual(lines);
+    expect(lines.map(decodeLineageLine)).toEqual(sorted);
+  });
+
+  it('refuses lines out of order, and a cell holding a character below tab', () => {
+    expect(() => stageLineageLinesText('demo', [row('spine:3'), row('spine:2')].map(encodeLineageLine)))
+      .toThrow(/demo file is not in lineage order at key spine:2/);
+    expect(() => encodeLineageLine(row('spine:\u0001'))).toThrow(/control character below tab/);
+  });
+
+  it('diffs as the row form does', () => {
+    const before = [row('spine:2'), row('spine:4', 'demo.kept', { source: '1' })].sort(compareLineageRows);
+    const after = [row('spine:4', 'demo.kept', { source: '2' }), row('spine:5')].sort(compareLineageRows);
+    const lineChanges = diffLineageAs(LINE_FORM, before.map(encodeLineageLine), after.map(encodeLineageLine));
+    const rowChanges = diffLineage(before, after);
+    expect(lineChanges).toEqual(rowChanges.map((c) => ({
+      ...c, removed: c.removed.map(encodeLineageLine), added: c.added.map(encodeLineageLine),
+    })));
+    expect(stageDiffTextAs(LINE_FORM, lineChanges)).toEqual(stageDiffText(rowChanges));
   });
 });
 
