@@ -77,7 +77,9 @@ function timed<T>(label: string, read: () => T, size: (value: T) => string): T {
 export async function loadReadStarsInputs(): Promise<ReadStarsInputs> {
   const entries = (m: { size: number }) => `${m.size} entries`;
 
-  const bjMap = timed('Parsing Bailer-Jones DR3 distance posteriors', () => BAILER_JONES.read(), entries);
+  const bailerJones = timed(
+    'Parsing Bailer-Jones DR3 distance posteriors', () => BAILER_JONES.read(), (b) => entries(b.distPc),
+  );
   const apsisMap = timed('Parsing Gaia DR3 Apsis astrophysical parameters', () => GAIA_APSIS.read(), entries);
   const gspcMap = timed('Parsing Gaia DR3 synthetic photometry', () => GAIA_GSPC.read(), entries);
   const simbadSpectral = timed(
@@ -92,7 +94,7 @@ export async function loadReadStarsInputs(): Promise<ReadStarsInputs> {
       'Parsing Gaia DR3 5p astrometry (full catalog)', () => GAIA_ASTROMETRY.read(), entries,
     ),
     hip2: timed('Parsing HIP2 van Leeuwen astrometry', () => HIP2.read().astrometry, entries),
-    nssSourceIds: timed(
+    nss: timed(
       'Parsing Gaia DR3 NSS two-body source_ids', () => GAIA_NSS.read(), (s) => `${s.size} source_ids`,
     ),
     tycho2: timed('Parsing Tycho-2 astrometry and BT/VT photometry', () => TYCHO2.read(), entries),
@@ -140,7 +142,7 @@ export async function loadReadStarsInputs(): Promise<ReadStarsInputs> {
   );
 
   const sizes: ReadStarsInputSizes = {
-    bjEntries: bjMap.size,
+    bjEntries: bailerJones.distPc.size,
     apsisEntries: apsisMap.size,
     gspcEntries: gspcMap.size,
     simbadSptypeEntries: simbadSpectral.bySourceId.size,
@@ -149,7 +151,7 @@ export async function loadReadStarsInputs(): Promise<ReadStarsInputs> {
     hip2Entries: directions.hip2.size,
     hipVMagEntries: hipVMag.size,
     hipBvEntries: hipBv.size,
-    nssSourceIdEntries: directions.nssSourceIds.size,
+    nssSourceIdEntries: directions.nss.size,
     tycho2Entries: directions.tycho2.size,
     cns5AstrometryEntries: directions.cns5.size,
     glieseEntries: gliese.rowCount,
@@ -161,7 +163,7 @@ export async function loadReadStarsInputs(): Promise<ReadStarsInputs> {
   };
 
   return {
-    bjMap, apsisMap, gspcMap, simbadSpectral, simbadValues, directions,
+    bailerJones, apsisMap, gspcMap, simbadSpectral, simbadValues, directions,
     hipVMag, hipBv, gliese, pairMemberParallax, dustGrid, conAssignment, sizes,
   };
 }

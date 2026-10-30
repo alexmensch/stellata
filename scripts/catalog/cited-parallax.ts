@@ -1,6 +1,8 @@
 // The parallax-with-error shape every source and the distance cascade share
 // with its S/N, and the cited form the second-order pulls and skip rules read.
 
+import type { AnySourceRowRef } from '../util/sources/row-ref-pure';
+
 /** `errMas` is admitted separately because the cascade's precision floor reads
  *  it and not every source publishes one. */
 export interface MeasuredParallax {
@@ -19,6 +21,7 @@ export function parallaxSignalToNoise(
  *  index that found it. */
 export interface CitedParallax extends MeasuredParallax {
   bibcode: string;
+  ref: AnySourceRowRef;
 }
 
 /** The only constructor, so no consumer can reach a parallax it may not weigh:
@@ -28,6 +31,7 @@ export function citedParallax(
   mas: number | null,
   errMas: number | null,
   bibcode: string | null,
+  ref: AnySourceRowRef,
 ): CitedParallax | null {
-  return mas !== null && bibcode !== null ? { mas, errMas, bibcode } : null;
+  return mas !== null && bibcode !== null ? { mas, errMas, bibcode, ref } : null;
 }

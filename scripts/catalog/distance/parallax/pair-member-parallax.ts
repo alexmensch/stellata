@@ -8,10 +8,12 @@ import { wdsRootOf } from '../../companions/companion-promotion';
 import { isCoherenceAnchorGrade } from '../../multiplicity/anchor-grade-pure';
 import { belowParallaxSnFloor } from './parallax-cascade';
 import { parallaxSignalToNoise, type MeasuredParallax } from '../../cited-parallax';
+import type { SourceRowRef } from '../../../util/sources/row-ref-pure';
 
 /** One sibling's parallax, with the DR3 source it was measured on. */
 export interface SiblingParallax extends MeasuredParallax {
   sourceId: string;
+  ref: SourceRowRef<string>;
 }
 
 /** Why a pair-row source the dedup admitted is not a candidate. These four
@@ -132,6 +134,7 @@ export function buildPairMemberParallaxIndex(
       sourceId: row.gaiaSourceId,
       mas: g.parallaxMas,
       errMas: g.parallaxErrorMas,
+      ref: g.ref,
     };
     // Below the floor the inversion is undefined, so such a sibling anchors
     // nothing — the same bar, from the same predicate, the HIP2 tier applies to

@@ -69,7 +69,6 @@ export interface BuildCounts {
    *  multiples.tsv member row — multiplicityStatus =
    *  MULTIPLICITY_UNRESOLVED (spectroscopic binaries, 64 Vir class). */
   multiplicityUnresolved: number;
-  droppedTooFar: number;
   /** Total entries in the Bailer-Jones 2021
    *  (/data/papers/index.md#bailerjones2021) DR3 distance TSV (parsed map
    *  size). */
@@ -512,9 +511,10 @@ export interface BuildCounts {
   parkedNoVMagnitude: number;
   parkedNoPosition: number;
   /** Direction cascade: rows whose sky direction came from a clean
-   *  Gaia DR3 5p solution (includes the handful of 2p position-only
-   *  fall-through rows with no HIP2 cover). */
+   *  Gaia DR3 5p solution. */
   directionGaia5p: number;
+  /** Direction cascade: Gaia 2p position-only rows with no HIP2 cover. */
+  directionGaia2p: number;
   /** Direction cascade: Gaia rows with an NSS orbit AND an unreliable
    *  5p fit — same Gaia values, tagged for provenance parity with
    *  scripts/binaries/stage3_astrometry.py. */
@@ -583,7 +583,7 @@ export interface BuildCounts {
   vNone: number;
   /** Space-motion velocity: rows whose tangential velocity came from
    *  Gaia DR3 5p PM (the dominant set; tracks directionGaia5p +
-   *  directionGaiaNssSystemic minus PM-less 2p rows). */
+   *  directionGaiaNssSystemic). */
   velocityGaiaPm: number;
   /** Space-motion velocity: rows whose PM came from HIP2 (the
    *  hip2_saturated + hip2_pm_discrepant tiers with a usable HIP2 PM). */

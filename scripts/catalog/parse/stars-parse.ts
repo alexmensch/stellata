@@ -54,9 +54,16 @@ import {
 } from '../distance/parallax/parallax-cascade';
 import {
   PARKED_REASONS,
+  type ParkedIdentifiers,
   type ParkedReason,
   type ParkedRecord,
 } from '../distance/parallax/parked-ledger';
+import {
+  parkedRecord,
+  type BailerJonesStep,
+  type LmcStep,
+  type Placement,
+} from '../distance/placement-lineage-pure';
 import {
   emptyPairMemberParallaxIndex,
   lookupPairMemberParallax,
@@ -112,15 +119,13 @@ import {
   applyLmcKinematicOverride,
   isBailerJonesEligible,
   isInLmcCone,
+  type BailerJonesIndex,
 } from '../distance/refinement/distance-overrides-pure';
 
-// Drop stars farther than this from Sol. The catalogue carries a handful of
-// extragalactic stragglers (LMC supergiants pre-override, plus a few
-// distant outliers) that the renderer's float32 origin can't keep
-// stable; the LMC override snaps those back inside the cutoff before
-// it fires. Every kinematic-override target distance must stay below
-// this cut or its population is silently dropped here —
-// distance/refinement/distance-overrides-pure.test.ts pins LMC_DISTANCE_PC < MAX_DIST_PC.
+// A row still farther than this after every override fails the walk. Every
+// kinematic-override target distance must stay below it or its population
+// fails here — distance/refinement/distance-overrides-pure.test.ts pins
+// LMC_DISTANCE_PC < MAX_DIST_PC.
 export const MAX_DIST_PC = 50_000;
 
 export interface Star {
@@ -228,12 +233,6 @@ export interface Star {
   originKey: string;
 }
 
-/** The one gate a manifest row can still fail that is NOT a record-parity park (/docs/catalog-driver.md#61-record-parity), and
- *  pinned at 0 in build-catalog-expected.json for that reason. */
-export interface ReadStarsDrops {
-  tooFar: number;
-}
-
 /** Every reference table a readStars walk consumes, as one bundle.
  *
  *  `loadReadStarsInputs` assembles the production set and satisfies this whole
@@ -243,7 +242,7 @@ export interface ReadStarsDrops {
  *  needs and the rest degrade to empty. */
 export interface ReadStarsOptions {
   conAssignment: ConstellationAssignment;
-  bjMap?: Map<string, number>;
+  bailerJones?: BailerJonesIndex;
   simbadSpectral?: SimbadSpectralIndex;
   /** Bibcoded SIMBAD values over the per-field value cohort (/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers) — the rv cascade's bottom
    *  tier. Absent leaves its rows on a zero radial term. */
@@ -275,7 +274,7 @@ export function readStars(
   manifest: Iterable<ManifestRecord>,
   {
     conAssignment,
-    bjMap = new Map(),
+    bailerJones,
     simbadSpectral = emptySimbadSpectralIndex(),
     simbadValues = emptySimbadValueIndex(),
     apsisMap = new Map(),
@@ -283,7 +282,7 @@ export function readStars(
     directions = {
       gaiaAstrometry: new Map(),
       hip2: new Map(),
-      nssSourceIds: new Set(),
+      nss: new Map(),
       tycho2: new Map(),
       cns5: new Map(),
     },
@@ -293,11 +292,13 @@ export function readStars(
     pairMemberParallax = emptyPairMemberParallaxIndex(),
     dustGrid = null,
   }: ReadStarsOptions,
+  /** Handed each manifest row's Placement, in walk order: what placement
+   *  lineage serialises. The walk keeps none of them. */
+  onPlacement: (placement: Placement) => void,
 ): {
   stars: Star[];
   stats: {
     total: number;
-    dropped: ReadStarsDrops;
     /** Rows carrying a source_id whose parallax cascade resolved
      *  `gaia_dr3_inversion` — the tier B-J publishes a posterior over. */
     bjEligible: number;
@@ -363,10 +364,8 @@ export function readStars(
   const rows = manifest;
 
   const stars: Star[] = [];
-  const dropped: ReadStarsDrops = { tooFar: 0 };
   let total = 0;
   const parked: ParkedRecord[] = [];
-  const parkedVia = emptyTallyPartition(PARKED_REASONS);
   let bjEligible = 0;
   let distLowPrecisionParallax = 0;
   let bjOverridden = 0;
@@ -401,8 +400,9 @@ export function readStars(
   const spectralVia = emptyTallyPartition(SPECTRAL_VIA_VALUES);
 
   const printedVLookup = printedVLookups(hipVMag, directions.tycho2, gliese);
-  for (const row of rows) {
-    total++;
+  // Every exit returns its row's Placement, so the compiler refuses one that
+  // would drop a record from lineage.
+  const walk = (row: ManifestRecord): { placement: Placement; star: Star | null } => {
     const { hip, gaiaSourceId, isSol } = row;
     // Read off the manifest column, never re-derived: the binding is the one
     // the manifest justified (/docs/catalog-driver.md#31-retiring-the-spine--the-membership-rule-measured-against-the-primaries), and re-deciding
@@ -445,21 +445,8 @@ export function readStars(
       ? directions.tycho2.get(simbadKeys.tyc) ?? null
       : null;
     const glieseRow = lookupGliese(gliese, simbadKeys.gl);
-    const park = (
-      reason: ParkedReason, refusedPlxMas: readonly number[] = [],
-    ): void => {
-      parked.push({
-        tyc: simbadKeys.tyc,
-        hip,
-        hd: row.hd,
-        gl: simbadKeys.gl,
-        gaiaSourceId,
-        reason,
-        refusedPlxMas,
-        originKey: row.originKey,
-      });
-      parkedVia[reason]++;
-    };
+    const key = row.originKey;
+    const ids: ParkedIdentifiers = { tyc: simbadKeys.tyc, hip, hd: row.hd, gl: simbadKeys.gl, gaiaSourceId };
 
     // Every distance inverts a parallax this build pulled itself. See
     // ../distance/parallax/README.md.
@@ -478,11 +465,7 @@ export function readStars(
     );
     // Not a `dropped` gate: a park is a deliberate record-parity ledger entry (/docs/catalog-driver.md#61-record-parity).
     if (plxRes.via === 'none') {
-      const refusedPlxMas = plxRes.refusals.map((r) => r.mas);
-      park(refusedPlxMas.length > 0
-        ? 'refused_no_defensible_parallax'
-        : 'no_parallax_published', refusedPlxMas);
-      continue;
+      return { placement: { kind: 'parked-parallax', key, ids, parallax: plxRes }, star: null };
     }
 
     // V through the Riello 2021 (/data/papers/index.md#riello2021)
@@ -500,8 +483,7 @@ export function readStars(
       curatedV: isSol ? SOL_APPARENT_V_MAGNITUDE : null,
     });
     if (vRes.via === 'none') {
-      park('no_v_magnitude');
-      continue;
+      return { placement: { kind: 'parked-no-v', key, ids, parallax: plxRes }, star: null };
     }
 
     // Astrometric solution through the Gaia 5p → HIP2 → Tycho-2 → CNS5 →
@@ -518,8 +500,7 @@ export function readStars(
     // reaches — the SIMBAD values cohort is still keyed on the spine and holds
     // no row for them.
     if (direction.via === 'none') {
-      park('no_position');
-      continue;
+      return { placement: { kind: 'parked-no-position', key, ids, parallax: plxRes, direction }, star: null };
     }
     const dirRes = direction.value;
 
@@ -555,25 +536,30 @@ export function readStars(
     let distVia: DistVia = plxRes.via;
     const bjEligibleRow = isBailerJonesEligible(gaiaSourceId, plxRes.via);
     if (bjEligibleRow) bjEligible++;
-    if (bjEligibleRow && bjMap.size > 0) {
-      const ovr = applyBailerJonesOverride(gaiaSourceId, bjMap);
+    let bjStep: BailerJonesStep = { kind: 'not-applied' };
+    if (bjEligibleRow && bailerJones !== undefined) {
+      const ovr = applyBailerJonesOverride(gaiaSourceId, bailerJones);
       if (ovr !== null) {
-        dist = ovr;
+        dist = ovr.distPc;
         distVia = 'bailer_jones';
         bjOverridden++;
+        bjStep = { kind: 'override', ref: ovr.ref };
       } else {
         bjEligibleNotPulled++;
+        bjStep = { kind: 'absent' };
       }
     }
 
     // Runs AFTER B-J so the LMC snap overrides B-J's mis-anchored value on the
     // same rows.
     const raHours = dirRes.srcRaDeg / 15;
+    let lmcStep: LmcStep = 'not_member';
     if (isInLmcCone(raHours, dirRes.srcDecDeg)) {
       lmcCandidates++;
       const lmc = applyLmcKinematicOverride(
         raHours, dirRes.srcDecDeg, pmRaMasyr, pmDecMasyr, measuredPlx,
       );
+      lmcStep = lmc.kind;
       if (lmc.kind === 'snap') {
         lmcOverriddenByDistVia[distVia]++;
         dist = lmc.distPc;
@@ -585,8 +571,11 @@ export function readStars(
     }
 
     if (dist > MAX_DIST_PC) {
-      dropped.tooFar++;
-      continue;
+      throw new Error(
+        `readStars: ${row.originKey} settles at ${dist.toFixed(0)} pc via ${distVia}, past ` +
+        `MAX_DIST_PC (${MAX_DIST_PC}) — a reference table disagrees with the tiers above it ` +
+        '(../distance/refinement/README.md#layer-3--max_dist_pc-bounded-scope-cutoff).',
+      );
     }
 
     // Tallies run once the row is known to ship, so every partition below
@@ -733,7 +722,7 @@ export function readStars(
     if (isSol) flags |= FLAG_IS_SOL;
     if (bayer) flags |= FLAG_HAS_BAYER;
 
-    stars.push({
+    const star: Star = {
       x, y, z,
       vx: vel.x, vy: vel.y, vz: vel.z,
       absmag, ci,
@@ -773,14 +762,39 @@ export function readStars(
       vVia: vRes.via,
       syntheticId: null,
       originKey: row.originKey,
-    });
+    };
+    return {
+      placement: {
+        kind: 'placed',
+        key,
+        parallax: plxRes,
+        direction,
+        pmRescue,
+        bailerJones: bjStep,
+        lmc: lmcStep,
+        rv: rvRejected && rvRes.via !== 'none' ? { kind: 'rejected', rv: rvRes } : { kind: 'kept', rv: rvRes },
+        velocityClamped: velClamped,
+      },
+      star,
+    };
+  };
+
+  for (const row of rows) {
+    total++;
+    const { placement, star } = walk(row);
+    onPlacement(placement);
+    const park = parkedRecord(placement);
+    if (park !== null) parked.push(park);
+    if (star !== null) stars.push(star);
   }
+
+  const parkedVia = emptyTallyPartition(PARKED_REASONS);
+  for (const p of parked) parkedVia[p.reason]++;
 
   return {
     stars,
     stats: {
       total,
-      dropped,
       bjEligible,
       bjOverridden,
       bjEligibleNotPulled,

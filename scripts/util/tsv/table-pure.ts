@@ -268,21 +268,42 @@ export function tableLineReader<C extends string>(
   }, { finish });
 }
 
-/** Every data row of `text`, walked rather than split: several inputs run to
- *  tens of megabytes. */
+const NEWLINE = 0x0a;
+
+/** UTF-8 bytes are decoded this much at a time, cut at a line end. */
+export const TABLE_BYTE_CHUNK = 64 << 20;
+
+function* utf8Chunks(bytes: Uint8Array, spec: TableSpec<string>, chunk: number): Generator<string> {
+  const decoder = new TextDecoder();
+  for (let start = 0; start < bytes.length;) {
+    let end = Math.min(start + chunk, bytes.length);
+    if (end < bytes.length) {
+      end = bytes.lastIndexOf(NEWLINE, end - 1) + 1;
+      if (end <= start) throw new Error(`${spec.file}: a line runs past ${chunk} bytes. ${spec.hint}`);
+    }
+    yield decoder.decode(bytes.subarray(start, end));
+    start = end;
+  }
+}
+
+/** Every data row, walked rather than split. README.md#reading-a-table. */
 export function* readTable<C extends string>(
   spec: TableSpec<C>,
-  text: string,
+  input: string | Uint8Array,
+  chunk = TABLE_BYTE_CHUNK,
 ): Generator<TableRow<C>> {
   const { parse, finish } = lineParser(spec);
-  for (let start = 0; start < text.length;) {
-    const end = text.indexOf('\n', start);
-    if (end === -1 && spec.exact) throw new Error(`${spec.file}: missing final newline. ${spec.hint}`);
-    const stop = end === -1 ? text.length : end;
-    const line = text.slice(start, stop);
-    const row = parse(!spec.exact && line.endsWith('\r') ? line.slice(0, -1) : line);
-    if (row !== null) yield row;
-    start = stop + 1;
+  const texts = typeof input === 'string' ? [input] : utf8Chunks(input, spec, chunk);
+  for (const text of texts) {
+    for (let start = 0; start < text.length;) {
+      const end = text.indexOf('\n', start);
+      if (end === -1 && spec.exact) throw new Error(`${spec.file}: missing final newline. ${spec.hint}`);
+      const stop = end === -1 ? text.length : end;
+      const line = text.slice(start, stop);
+      const row = parse(!spec.exact && line.endsWith('\r') ? line.slice(0, -1) : line);
+      if (row !== null) yield row;
+      start = stop + 1;
+    }
   }
   finish();
 }

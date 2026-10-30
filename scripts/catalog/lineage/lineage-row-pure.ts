@@ -1,4 +1,4 @@
-// The lineage envelope every stage writes, its one sort order, and its TSV text form. See README.md#row-contract.
+// The lineage envelope every stage writes, its TSV line, and the one sort order over lines. See README.md#row-contract.
 
 import { readTable, type TableSpec } from '../../util/tsv/table-pure';
 import type { StageCodes } from './reason-codes-pure';
@@ -21,6 +21,11 @@ export interface LineageRow {
   /** SourceRowRef text forms, never the origin row itself. */
   readonly evidence: readonly string[];
 }
+
+declare const LINEAGE_LINE: unique symbol;
+
+/** A row as its TSV line, made only by stageLineageLine or read from a stage file. */
+export type LineageLine = string & { readonly [LINEAGE_LINE]: true };
 
 const EVIDENCE_SEPARATOR = '|';
 
@@ -50,18 +55,13 @@ export function compareUtf8(a: string, b: string): number {
   return a.length === b.length ? 0 : a.length < b.length ? -1 : 1;
 }
 
-export function compareLineageRows(a: LineageRow, b: LineageRow): number {
-  return compareUtf8(a.key, b.key)
-    || compareUtf8(a.role, b.role)
-    || compareUtf8(a.code, b.code)
-    || compareUtf8(a.params, b.params)
-    || compareUtf8(a.evidence.join(EVIDENCE_SEPARATOR), b.evidence.join(EVIDENCE_SEPARATOR));
-}
-
+/** See README.md#sourcerowref for why the control characters below tab are refused. */
 export function encodeLineageLine(row: LineageRow): string {
   const cells = [row.stage, row.key, row.role, row.code, row.params, row.evidence.join(EVIDENCE_SEPARATOR)];
   for (const cell of cells) {
-    if (/[\t\n\r]/.test(cell)) throw new Error(`lineage row ${row.key}: cell "${cell}" contains a TSV delimiter`);
+    if (/[\x00-\x08\t\n\r]/.test(cell)) {
+      throw new Error(`lineage row ${row.key}: cell "${cell}" contains a TSV delimiter or a control character below tab`);
+    }
   }
   for (const ref of row.evidence) {
     if (ref.includes(EVIDENCE_SEPARATOR)) throw new Error(`lineage row ${row.key}: evidence "${ref}" contains "|"`);
@@ -69,44 +69,93 @@ export function encodeLineageLine(row: LineageRow): string {
   return cells.join('\t');
 }
 
-export function assertLineageOrder(rows: readonly LineageRow[], what: string): void {
-  for (let i = 1; i < rows.length; i++) {
-    if (compareLineageRows(rows[i - 1], rows[i]) > 0) {
-      throw new Error(`lineage: ${what} is not in lineage order at key ${rows[i].key}`);
-    }
+/** The row's line, refused when the stage does not write it or does not declare its code. */
+export function stageLineageLine(codes: StageCodes<string>, row: LineageRow): LineageLine {
+  if (row.stage !== codes.stage) {
+    throw new Error(`lineage: a row of stage ${row.stage} in the ${codes.stage} file (key ${row.key})`);
   }
+  if (!codes.has(row.code)) {
+    throw new Error(`lineage: ${row.code} is not a declared ${codes.stage} code (key ${row.key})`);
+  }
+  return encodeLineageLine(row) as LineageLine;
 }
 
-/** `rows` arrive sorted by compareLineageRows: a stage sorts once, for its
- *  diff and its file both. */
-export function stageLineageText(codes: StageCodes<string>, rows: readonly LineageRow[]): string {
-  assertLineageOrder(rows, `the ${codes.stage} file`);
-  for (const row of rows) {
-    if (row.stage !== codes.stage) {
-      throw new Error(`lineage: a row of stage ${row.stage} in the ${codes.stage} file (key ${row.key})`);
+export function sortLineageLines(lines: readonly LineageLine[]): LineageLine[] {
+  return [...lines].sort(compareUtf8);
+}
+
+export const ENCODE_BATCH = 100_000;
+
+/** See README.md#storage-and-cost. */
+export function utf8Lines(header: string, lines: Iterable<string>, batch = ENCODE_BATCH): Uint8Array {
+  const parts: Buffer[] = [Buffer.from(`${header}\n`)];
+  let pending: string[] = [];
+  const flush = (): void => {
+    if (pending.length > 0) parts.push(Buffer.from(`${pending.join('\n')}\n`));
+    pending = [];
+  };
+  for (const line of lines) {
+    pending.push(line);
+    if (pending.length === batch) flush();
+  }
+  flush();
+  return Buffer.concat(parts);
+}
+
+/** `lines` arrive sorted: a stage sorts once, for its diff and its file both. */
+export function stageLineageText(codes: StageCodes<string>, lines: readonly LineageLine[]): Uint8Array {
+  const prefix = `${codes.stage}\t`;
+  for (let i = 0; i < lines.length; i++) {
+    if (!lines[i].startsWith(prefix)) {
+      throw new Error(`lineage: a line of another stage in the ${codes.stage} file (key ${lineageLineKey(lines[i])})`);
     }
-    if (!codes.has(row.code)) {
-      throw new Error(`lineage: ${row.code} is not a declared ${codes.stage} code (key ${row.key})`);
+    if (i > 0 && compareUtf8(lines[i - 1], lines[i]) > 0) {
+      throw new Error(`lineage: the ${codes.stage} file is not in lineage order at key ${lineageLineKey(lines[i])}`);
     }
   }
-  const lines = rows.map(encodeLineageLine);
-  return `${[LINEAGE_COLUMNS.join('\t'), ...lines].join('\n')}\n`;
+  return utf8Lines(LINEAGE_COLUMNS.join('\t'), lines);
+}
+
+function lineCell(line: LineageLine, column: (typeof LINEAGE_COLUMNS)[number]): string {
+  let start = 0;
+  for (let i = LINEAGE_COLUMNS.indexOf(column); i > 0; i--) start = line.indexOf('\t', start) + 1;
+  const end = line.indexOf('\t', start);
+  return line.slice(start, end === -1 ? line.length : end);
+}
+
+export function lineageLineKey(line: LineageLine): string {
+  return lineCell(line, 'key');
+}
+
+export function lineageLineCode(line: LineageLine): string {
+  return lineCell(line, 'code');
+}
+
+function rowOfCells(cells: readonly string[], where: string): LineageRow {
+  const [stage, key, role, code, params, evidence] = cells;
+  if (!(LINEAGE_ROLES as readonly string[]).includes(role)) {
+    throw new Error(`${where}: role "${role}" is not one of ${LINEAGE_ROLES.join(', ')}`);
+  }
+  return {
+    stage, key, role: role as LineageRole, code, params,
+    evidence: evidence === '' ? [] : evidence.split(EVIDENCE_SEPARATOR),
+  };
+}
+
+export function decodeLineageLine(line: LineageLine): LineageRow {
+  return rowOfCells(line.split('\t'), `lineage line ${lineageLineKey(line)}`);
 }
 
 function lineageSpec(file: string): TableSpec<(typeof LINEAGE_COLUMNS)[number]> {
   return { file, columns: LINEAGE_COLUMNS, hint: 'Rebuild the stage that writes it.', exact: true };
 }
 
-export function* lineageRows(text: string, file: string): Generator<LineageRow> {
+export function* lineageLines(text: string | Uint8Array, file: string): Generator<LineageLine> {
+  for (const row of readTable(lineageSpec(file), text)) yield row.rawLine as LineageLine;
+}
+
+export function* lineageRows(text: string | Uint8Array, file: string): Generator<LineageRow> {
   for (const row of readTable(lineageSpec(file), text)) {
-    const evidence = row.raw('evidence');
-    yield {
-      stage: row.raw('stage'),
-      key: row.raw('key'),
-      role: row.oneOf('role', LINEAGE_ROLES),
-      code: row.raw('code'),
-      params: row.raw('params'),
-      evidence: evidence === '' ? [] : evidence.split(EVIDENCE_SEPARATOR),
-    };
+    yield rowOfCells(LINEAGE_COLUMNS.map((c) => row.raw(c)), `${file}:${row.line}`);
   }
 }

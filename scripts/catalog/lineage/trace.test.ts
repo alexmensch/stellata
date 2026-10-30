@@ -32,6 +32,18 @@ const MEMBERSHIP = [
   'membership\tspine:4\toutcome\tmembership.fold\t\tspine:3',
 ].join('\n') + '\n';
 
+/** spine:3's placement: Gaia's fit passed over for Hipparcos-2's on its proper
+ *  motion; the magnitude-term star parks, unlit. */
+const PLACEMENT = [
+  'stage\tkey\trole\tcode\tparams\tevidence',
+  `placement\tgaia-dr3:${PARKED}\toutcome\tplacement.parallax.gaia-dr3-inversion\t\t`,
+  `placement\tgaia-dr3:${PARKED}\toutcome\tplacement.park.no-v-magnitude\t{"tyc":"","hip":"","hd":"","gl":"","gaia_source_id":"${PARKED}"}\t`,
+  'placement\tspine:3\toutcome\tplacement.direction.hip2-pm-discrepant\t\ti311:37',
+  'placement\tspine:3\toutcome\tplacement.parallax.gaia-dr3-inversion\t\tgaia-dr3-astrometry:222',
+  'placement\tspine:3\toutcome\tplacement.rv.none\t\t',
+  'placement\tspine:3\trefused\tplacement.direction.refused.pm-disagrees-with-hip2\t{"tier":"gaia_5p"}\tgaia-dr3-astrometry:222',
+].join('\n') + '\n';
+
 const identity = [...identityRows(IDENTITY, 'fixture/identity.tsv')];
 const stages = [{ stage: 'membership', rows: [...lineageRows(MEMBERSHIP, 'fixture/membership.tsv')] }];
 /** SID 7's canonical key is HD 5; record 0, "Fixture Star", "Yunü" or "Yunu", is the
@@ -165,6 +177,7 @@ describe('pnpm run trace', () => {
   const dir = mkdtempSync(join(tmpdir(), 'lineage-trace-'));
   writeFileSync(stageFile(dir, 'identity'), gzipText(IDENTITY));
   writeFileSync(stageFile(dir, 'membership'), gzipText(MEMBERSHIP));
+  writeFileSync(stageFile(dir, 'placement'), gzipText(PLACEMENT));
   writeFileSync(stageFile(dir, 'promotion'), gzipText(PROMOTION));
   writeFileSync(stageFile(dir, 'promotion.identity'), gzipText(PROMOTION_IDENTITY));
   afterAll(() => rmSync(dir, { recursive: true, force: true }));
@@ -177,6 +190,13 @@ describe('pnpm run trace', () => {
     const out = run(REFUSED_ONLY);
     expect(out.split('\n')[0]).toBe('spine:3');
     expect(out).toMatch(/refused  membership\.binding\.gate-mag/);
+  });
+
+  it('prints a record\'s placement chain after its membership rows, refused tiers included', () => {
+    const out = run('hd:5');
+    expect(out).toMatch(/membership\.admit\.spine[\s\S]*placement\.direction\.hip2-pm-discrepant/);
+    expect(out).toMatch(/refused  placement\.direction\.refused\.pm-disagrees-with-hip2/);
+    expect(out).toMatch(/placement\.parallax\.gaia-dr3-inversion/);
   });
 
   it('reads the promotion stage and its identity file', () => {

@@ -31,18 +31,23 @@ export function stageCodes<B extends string>(
   stage: string, declarations: Record<B, CodeDeclaration>,
 ): StageCodes<B> {
   if (!NAME.test(stage) || stage.includes('.')) throw new Error(`lineage stage "${stage}" is not a lowercase word`);
-  const full = new Set<string>();
+  const full = new Map<string, string>();
   for (const [branch, d] of Object.entries<CodeDeclaration>(declarations)) {
     if (!NAME.test(branch)) throw new Error(`${stage}: code branch "${branch}" is not lowercase dotted words`);
     if (d.description.trim() === '' || /[\t\n\r]/.test(d.description)) {
       throw new Error(`${stage}.${branch}: a code needs a one-line description`);
     }
-    full.add(`${stage}.${branch}`);
+    full.set(branch, `${stage}.${branch}`);
   }
+  const codes = new Set(full.values());
   return {
     stage,
     declarations,
-    code: (branch) => `${stage}.${branch}`,
-    has: (code) => full.has(code),
+    code: (branch) => {
+      const code = full.get(branch);
+      if (code === undefined) throw new Error(`${stage}: "${branch}" is not a declared code branch`);
+      return code;
+    },
+    has: (code) => codes.has(code),
   };
 }

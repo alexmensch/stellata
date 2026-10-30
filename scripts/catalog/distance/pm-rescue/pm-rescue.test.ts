@@ -10,6 +10,9 @@ import {
 import type { CitedProperMotion } from '../../cited-proper-motion';
 import { gaiaAstrometryRow } from '../astrometry-fixture';
 import { TYCHO2_MEAN_EPOCH, type Tycho2Row } from '../../tycho2-parse';
+import { TYCHO2 } from '../../tycho2-source';
+import { SIMBAD_VALUES } from '../../simbad/simbad-values-source';
+import { sourceRowRef } from '../../../util/sources/row-ref-pure';
 
 const GAIA_DR2 = '2018yCat.1345....0G';
 const GAIA_EDR3 = '2020yCat.1350....0G';
@@ -18,12 +21,14 @@ const GAIA_EDR3 = '2020yCat.1350....0G';
 // the shipped cohort's SIMBAD tier actually leans on.
 const UCAC4 = '2012yCat.1322....0Z';
 const FABRICIUS = '2002A&A...384..180F';
+const CITED_REF = sourceRowRef(SIMBAD_VALUES, 1);
 
 function tycho2Row(overrides: Partial<Tycho2Row> = {}): Tycho2Row {
   return {
     raDeg: 10, decDeg: 20, epoch: TYCHO2_MEAN_EPOCH,
     pmRaMasyr: -453.7, pmDecMasyr: -591.4,
     btMag: 5, vtMag: 4.5, fromIcrs: false, isPhotocentre: false, hip: null,
+    ref: sourceRowRef(TYCHO2, '1-1-1'),
     ...overrides,
   };
 }
@@ -31,7 +36,11 @@ function tycho2Row(overrides: Partial<Tycho2Row> = {}): Tycho2Row {
 function cited(
   overrides: Partial<CitedProperMotion> = {},
 ): CitedProperMotion {
-  return { pmRaMasyr: 2314.8, pmDecMasyr: 2295.3, bibcode: UCAC4, ...overrides };
+  return {
+    pmRaMasyr: 2314.8, pmDecMasyr: 2295.3, bibcode: UCAC4,
+    ref: CITED_REF,
+    ...overrides,
+  };
 }
 
 const TWO_P = gaiaAstrometryRow({ parallaxMas: null, pmraMasyr: null, pmdecMasyr: null });
@@ -75,7 +84,7 @@ describe('resolvePmRescue', () => {
   it('skips a Gaia-bibcoded PM on a 2p row rather than laundering it back', () => {
     const res = resolvePmRescue({ ...NOTHING, simbad: cited({ bibcode: GAIA_DR2 }) });
     expect(res).toEqual({
-      via: 'none', refusals: [{ tier: 'simbad', reason: 'gaia_release' }],
+      via: 'none', refusals: [{ tier: 'simbad', reason: 'gaia_release', ref: CITED_REF }],
     });
     expect(pmRescueOutcome(res)).toBe('gaia_bibcode_skipped');
   });
@@ -101,7 +110,7 @@ describe('resolvePmRescue', () => {
       simbad: cited({ bibcode: FABRICIUS }),
     });
     expect(res.via).toBe('simbad');
-    expect(res.refusals).toEqual([{ tier: 'cns5', reason: 'gaia_release' }]);
+    expect(res.refusals).toEqual([{ tier: 'cns5', reason: 'gaia_release', ref: CITED_REF }]);
     expect(pmRescueOutcome(res)).toBe('simbad');
   });
 

@@ -3,8 +3,8 @@ import { describe, expect, it } from 'vitest';
 import { diffLineage, stageDiffText } from './lineage-diff-pure';
 import { judgeBaseline, planBaseline, type StageHeader } from './lineage-header-pure';
 import {
-  compareLineageRows, compareUtf8, lineageRows, paramsOf, paramsText, stageLineageText,
-  type LineageRow,
+  compareUtf8, decodeLineageLine, encodeLineageLine, lineageLineKey, lineageLines, lineageRows, paramsOf,
+  paramsText, sortLineageLines, stageLineageLine, stageLineageText, type LineageLine, type LineageRow,
 } from './lineage-row-pure';
 import { LIVE, stageCodes } from './reason-codes-pure';
 
@@ -17,45 +17,70 @@ function row(key: string, code = 'demo.kept', params: Record<string, string> = {
   return { stage: 'demo', key, role: 'outcome', code, params: paramsText(params), evidence: [] };
 }
 
+const line = (r: LineageRow): LineageLine => stageLineageLine(CODES, r);
+
 describe('the lineage order', () => {
   it('sorts Gaia ids above 2^53 by bytes, never numerically, the same in writer and diff', () => {
     const mixed = [
       row('spine:10'), row('gaia-dr3:9'), row('multiples:00057+4549/B'),
       row('gaia-dr3:4295806720123456789'), row('spine:2'), row('gaia-dr3:18014398509481985'),
-    ];
-    const keys = (rows: readonly LineageRow[]): string[] => rows.map((r) => r.key);
-    const sorted = [...mixed].sort(compareLineageRows);
-    const written = [...lineageRows(stageLineageText(CODES, sorted), 'fixture/demo.tsv')];
-    expect(keys(written)).toEqual([
+    ].map(line);
+    const sorted = sortLineageLines(mixed);
+    const written = [...lineageLines(stageLineageText(CODES, sorted), 'fixture/demo.tsv')];
+    expect(written.map(lineageLineKey)).toEqual([
       'gaia-dr3:18014398509481985', 'gaia-dr3:4295806720123456789', 'gaia-dr3:9',
       'multiples:00057+4549/B', 'spine:10', 'spine:2',
     ]);
-    expect(diffLineage(written, written)).toEqual([]);
+    expect(diffLineage(written, sorted)).toEqual([]);
+    expect(diffLineage(written.values(), sorted)).toEqual([]);
   });
 
-  it('the writer refuses rows out of lineage order, as the diff does', () => {
-    expect(() => stageLineageText(CODES, [row('spine:3'), row('spine:2')])).toThrow(/not in lineage order/);
+  it('sorts a key\'s lines by role, code, params, then evidence, a shorter cell first', () => {
+    const lines = [
+      { ...row('spine:1'), evidence: ['tyc:1-2'] }, row('spine:10'),
+      { ...row('spine:1'), evidence: ['tyc:1', 'tyc:1-2'] }, row('spine:1', 'demo.kept', { source: 'a' }),
+      row('spine:1', 'demo.gate.refused'), { ...row('spine:1'), role: 'refused' as const }, row('spine:1'),
+    ].map(line);
+    expect(sortLineageLines(lines).map(decodeLineageLine)).toEqual([
+      row('spine:1', 'demo.gate.refused'), row('spine:1'), { ...row('spine:1'), evidence: ['tyc:1-2'] },
+      { ...row('spine:1'), evidence: ['tyc:1', 'tyc:1-2'] }, row('spine:1', 'demo.kept', { source: 'a' }),
+      { ...row('spine:1'), role: 'refused' }, row('spine:10'),
+    ]);
+  });
+
+  it('the writer refuses lines out of lineage order, as the diff does', () => {
+    const outOfOrder = [line(row('spine:3')), line(row('spine:2'))];
+    expect(() => stageLineageText(CODES, outOfOrder)).toThrow(/demo file is not in lineage order at key spine:2/);
+    expect(() => diffLineage(outOfOrder, [])).toThrow(/not in lineage order/);
   });
 
   it('orders by code point, so an astral character sorts after U+FFFD', () => {
     expect(compareUtf8('\u{1F600}', '�')).toBe(1);
     expect(compareUtf8('a', 'ab')).toBe(-1);
     expect(compareUtf8('b', 'a')).toBe(1);
+    expect(sortLineageLines([row('spine:\u{1F600}'), row('spine:�')].map(line)).map(lineageLineKey))
+      .toEqual(['spine:�', 'spine:\u{1F600}']);
   });
 
-  it('round-trips params through their canonical text', () => {
-    const r = row('spine:2', 'demo.kept', { source: '42', via: 'tyc' });
-    expect(paramsOf([...lineageRows(stageLineageText(CODES, [r]), 'fixture/demo.tsv')][0]))
+  it('round-trips params through their canonical text, read as rows or as lines', () => {
+    const text = stageLineageText(CODES, [line(row('spine:2', 'demo.kept', { source: '42', via: 'tyc' }))]);
+    expect(paramsOf([...lineageRows(text, 'fixture/demo.tsv')][0])).toEqual({ source: '42', via: 'tyc' });
+    expect(paramsOf(decodeLineageLine([...lineageLines(text, 'fixture/demo.tsv')][0])))
       .toEqual({ source: '42', via: 'tyc' });
   });
 });
 
 describe('the writer', () => {
   it('refuses a code the stage does not declare, and another stage\'s row', () => {
-    expect(() => stageLineageText(CODES, [row('spine:2', 'demo.unrecorded')]))
-      .toThrow(/demo.unrecorded is not a declared demo code/);
-    expect(() => stageLineageText(CODES, [{ ...row('spine:2'), stage: 'other' }]))
-      .toThrow(/a row of stage other in the demo file/);
+    expect(() => line(row('spine:2', 'demo.unrecorded'))).toThrow(/demo.unrecorded is not a declared demo code/);
+    expect(() => line({ ...row('spine:2'), stage: 'other' })).toThrow(/a row of stage other in the demo file/);
+  });
+
+  it('refuses another stage\'s line, and a cell holding a character below tab', () => {
+    const otherCodes = stageCodes('other', { kept: { description: 'kept', effect: 'none', status: LIVE } });
+    const other = stageLineageLine(otherCodes, { ...row('spine:2'), stage: 'other', code: 'other.kept' });
+    expect(() => stageLineageText(CODES, [other])).toThrow(/a line of another stage in the demo file/);
+    expect(() => encodeLineageLine(row('spine:\u0001'))).toThrow(/control character below tab/);
   });
 
   it('refuses an undeclarable code name', () => {
@@ -65,24 +90,24 @@ describe('the writer', () => {
 });
 
 describe('diffLineage', () => {
-  it('reports added, removed and changed keys, a changed key by its differing rows only', () => {
-    const before = [row('spine:2'), row('spine:3'), row('spine:4', 'demo.kept', { source: '1' })]
-      .sort(compareLineageRows);
-    const after = [
-      row('spine:3'), row('spine:4', 'demo.kept', { source: '2' }), row('spine:5'),
-    ].sort(compareLineageRows);
+  it('reports added, removed and changed keys, a changed key by its differing lines only', () => {
+    const before = sortLineageLines(
+      [row('spine:2'), row('spine:3'), row('spine:4', 'demo.kept', { source: '1' })].map(line),
+    );
+    const after = sortLineageLines(
+      [row('spine:3'), row('spine:4', 'demo.kept', { source: '2' }), row('spine:5')].map(line),
+    );
     const changes = diffLineage(before, after);
     expect(changes.map((c) => [c.kind, c.key])).toEqual([
       ['removed', 'spine:2'], ['changed', 'spine:4'], ['added', 'spine:5'],
     ]);
-    expect(changes[1].removed.map(paramsOf)).toEqual([{ source: '1' }]);
-    expect(changes[1].added.map(paramsOf)).toEqual([{ source: '2' }]);
-    expect(stageDiffText(changes, [{ name: 'note', of: (k) => `n:${k}` }]).split('\n')[2])
+    expect(changes[1].removed.map((l) => paramsOf(decodeLineageLine(l)))).toEqual([{ source: '1' }]);
+    expect(changes[1].added.map((l) => paramsOf(decodeLineageLine(l)))).toEqual([{ source: '2' }]);
+    const note = [{ name: 'note', of: (k: string) => `n:${k}` }];
+    const text = Buffer.from(stageDiffText(changes, note)).toString('utf8');
+    expect(text.split('\n')[2])
       .toBe('changed\t-\tdemo\tspine:4\toutcome\tdemo.kept\t{"source":"1"}\t\tn:spine:4');
-  });
-
-  it('refuses an input out of lineage order', () => {
-    expect(() => diffLineage([row('spine:3'), row('spine:2')], [])).toThrow(/not in lineage order/);
+    expect(Buffer.from(stageDiffText(changes, note, 1)).toString('utf8')).toBe(text);
   });
 });
 

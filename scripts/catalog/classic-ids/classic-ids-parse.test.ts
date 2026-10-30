@@ -10,6 +10,8 @@ import {
   parseTyc2HdTsv,
 } from './classic-ids-parse';
 import { cns5Astrometry, cns5Row } from './cns5-fixture';
+import { CNS5 as CNS5_SOURCE } from './cns5-source';
+import { sourceRowRef } from '../../util/sources/row-ref-pure';
 
 const FROM = { file: 'fixture.tsv', hint: 'h' };
 
@@ -38,6 +40,8 @@ const CNS5 = [
   '0\tSun\t\t\t\t\t\t\t\t\t\t\t\t\t',
   '3592\t552\t\t\t\t217.4\t-62.6\t2016.0\t100\t1.5\t\t-10\t20\t',
 ].join('\n');
+
+const CNS5_ROW_0_REF = sourceRowRef(CNS5_SOURCE, 3591);
 
 describe('classic-ids-parse / parseTyc2HdTsv', () => {
   it('composes the unpadded tyc key the Gaia cross-walk uses', () => {
@@ -135,22 +139,22 @@ describe('classic-ids-parse / parseBsc5Tsv', () => {
 
 describe('classic-ids-parse / parseCns5Tsv', () => {
   it('keeps the EDR3 source_id as a decimal string past 2^53', () => {
-    const rows = parseCns5Tsv(CNS5, FROM);
+    const rows = parseCns5Tsv(CNS5, CNS5_SOURCE);
     expect(rows[0].gaiaSourceId).toBe('5853498713190525696');
     expect(rows[0].gjComp).toBe('C');
   });
 
   it('keeps non-numeric GJ designations (CNS5 0 is "Sun") with a null source', () => {
-    const rows = parseCns5Tsv(CNS5, FROM);
+    const rows = parseCns5Tsv(CNS5, CNS5_SOURCE);
     expect(rows[1].gj).toBe('Sun');
     expect(rows[1].gaiaSourceId).toBeNull();
     expect(rows[1].hip).toBeNull();
   });
 
   it('carries the PM bibcode, and drops an unbibcoded motion whole', () => {
-    const rows = parseCns5Tsv(CNS5, FROM);
+    const rows = parseCns5Tsv(CNS5, CNS5_SOURCE);
     expect(rows[0].astrometry?.pm).toEqual({
-      pmRaMasyr: -3781.74, pmDecMasyr: 769.47, bibcode: '2020yCat.1350....0G',
+      pmRaMasyr: -3781.74, pmDecMasyr: 769.47, bibcode: '2020yCat.1350....0G', ref: CNS5_ROW_0_REF,
     });
     // The position survives the drop; only the motion needed the citation.
     expect(rows[2].astrometry?.raDeg).toBe(217.4);
@@ -159,9 +163,9 @@ describe('classic-ids-parse / parseCns5Tsv', () => {
 
   it('drops an unbibcoded PARALLAX whole too — the distance cascade\'s skip '
     + 'rules read that bibcode, so a value without one cannot be weighed', () => {
-    const rows = parseCns5Tsv(CNS5, FROM);
+    const rows = parseCns5Tsv(CNS5, CNS5_SOURCE);
     expect(rows[0].astrometry?.parallax).toEqual({
-      mas: 768.07, errMas: 0.05, bibcode: '2020yCat.1350....0G',
+      mas: 768.07, errMas: 0.05, bibcode: '2020yCat.1350....0G', ref: CNS5_ROW_0_REF,
     });
     // Row 3 states plx_mas=100 and no citation: the whole quantity goes.
     expect(rows[2].astrometry?.parallax).toBeNull();
@@ -172,7 +176,7 @@ describe('classic-ids-parse / parseCns5Tsv', () => {
   // only one whose signal-to-noise was structurally unknowable, so no cns5 row
   // could ever be counted low-precision.
   it('carries the parallax error CNS5 publishes, so the floor can read it', () => {
-    const errs = parseCns5Tsv(CNS5, FROM)
+    const errs = parseCns5Tsv(CNS5, CNS5_SOURCE)
       .map((r) => r.astrometry?.parallax?.errMas)
       .filter((e) => e !== undefined);
     expect(errs).toEqual([0.05]);

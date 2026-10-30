@@ -3,6 +3,7 @@ import { describe, it, expect } from 'vitest';
 import {
   TYCHO2_ICRS_EPOCH, TYCHO2_MEAN_EPOCH, parseTycho2Tsvs, tycho2Key,
 } from './tycho2-parse';
+import { TYCHO2 } from './tycho2-source';
 
 const MAIN_HEADER = [
   'tyc1', 'tyc2', 'tyc3', 'pflag', 'ra_mdeg', 'de_mdeg', 'ep_ra', 'ep_de',
@@ -52,7 +53,7 @@ describe('parseTycho2Tsvs', () => {
   // asserts they are NOT read as the position's epoch: they date the
   // observations, and the mean position they produced is stated at J2000.
   it('states the mean position at J2000, not at the observation epochs', () => {
-    const index = parseTycho2Tsvs(main(mainRow()), suppl());
+    const index = parseTycho2Tsvs(main(mainRow()), suppl(), TYCHO2);
     const r = index.get('1-1-1')!;
     expect(r.raDeg).toBe(33.5);
     expect(r.decDeg).toBe(12.25);
@@ -70,7 +71,7 @@ describe('parseTycho2Tsvs', () => {
   it('falls a mean-solution-less row back to its observed cell at J1991.25', () => {
     const index = parseTycho2Tsvs(
       main(mainRow({ pflag: 'X', mean: ['', '', '', ''], pm: ['', ''] })),
-      suppl(),
+      suppl(), TYCHO2,
     );
     const r = index.get('1-1-1')!;
     expect(r.raDeg).toBe(33.6);
@@ -87,7 +88,7 @@ describe('parseTycho2Tsvs', () => {
   it('prefers the mean position without consulting the epoch columns', () => {
     const index = parseTycho2Tsvs(
       main(mainRow({ mean: ['33.5', '12.25', '', ''] })),
-      suppl(),
+      suppl(), TYCHO2,
     );
     const r = index.get('1-1-1')!;
     expect(r.fromIcrs).toBe(false);
@@ -98,7 +99,7 @@ describe('parseTycho2Tsvs', () => {
   it('reads the supplement only where the main table has no row', () => {
     const index = parseTycho2Tsvs(
       main(mainRow({ tyc: ['1', '1', '1'] })),
-      suppl(supplRow(['1', '1', '1']), supplRow(['2', '2', '1'])),
+      suppl(supplRow(['1', '1', '1']), supplRow(['2', '2', '1'])), TYCHO2,
     );
     // The main row wins the shared identifier: it has a mean solution and a PM
     // where 1,404 supplement rows carry no PM at all.
@@ -114,7 +115,7 @@ describe('parseTycho2Tsvs', () => {
 
   it("keeps a supplement row's absent PM null", () => {
     const index = parseTycho2Tsvs(
-      main(), suppl(supplRow(['3', '3', '1'], 'T', ['', ''])),
+      main(), suppl(supplRow(['3', '3', '1'], 'T', ['', ''])), TYCHO2,
     );
     const r = index.get('3-3-1')!;
     expect(r.pmRaMasyr).toBeNull();
@@ -125,7 +126,7 @@ describe('parseTycho2Tsvs', () => {
   // pflag='P' means the mean solution is the light-centre of a double
   // Tycho-2 never split, so both cascades reading the row need to know.
   it("marks a pflag='P' mean solution as a photocentre", () => {
-    const index = parseTycho2Tsvs(main(mainRow({ pflag: 'P' })), suppl());
+    const index = parseTycho2Tsvs(main(mainRow({ pflag: 'P' })), suppl(), TYCHO2);
     const r = index.get('1-1-1')!;
     expect(r.isPhotocentre).toBe(true);
     expect(r.fromIcrs).toBe(false);
@@ -133,7 +134,7 @@ describe('parseTycho2Tsvs', () => {
 
   it('drops a row carrying no position at all', () => {
     const index = parseTycho2Tsvs(
-      main(mainRow({ mean: ['', '', '', ''], icrs: ['', ''] })), suppl(),
+      main(mainRow({ mean: ['', '', '', ''], icrs: ['', ''] })), suppl(), TYCHO2,
     );
     expect(index.size).toBe(0);
   });
@@ -141,7 +142,7 @@ describe('parseTycho2Tsvs', () => {
   it("carries Tycho-2's own hip cross-index off both tables", () => {
     const index = parseTycho2Tsvs(
       main(mainRow({ hip: '10' }), mainRow({ tyc: ['1', '2', '1'] })),
-      suppl(supplRow(['2', '1', '1'], 'H', ['5', '-5'], '20')),
+      suppl(supplRow(['2', '1', '1'], 'H', ['5', '-5'], '20')), TYCHO2,
     );
     expect(index.get('1-1-1')?.hip).toBe(10);
     expect(index.get('1-2-1')?.hip).toBeNull();

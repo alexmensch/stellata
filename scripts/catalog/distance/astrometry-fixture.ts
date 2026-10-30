@@ -1,6 +1,8 @@
 // Test-only builder for GaiaAstrometryCatalogRow. See README.md.
 
+import { sourceRowRef } from '../../util/sources/row-ref-pure';
 import type { GaiaAstrometryCatalogRow } from './direction-cascade';
+import { GAIA_ASTROMETRY } from './gaia-astrometry-source';
 
 /** A row with every optional column absent, so a suite states only the columns
  *  its assertion turns on. Parallax is one of them, which makes the default a
@@ -24,6 +26,7 @@ export function gaiaAstrometryRow(
     rpMag: null,
     radialVelocityKmS: null,
     radialVelocityErrorKmS: null,
+    ref: sourceRowRef(GAIA_ASTROMETRY, '0'),
     ...overrides,
   };
 }

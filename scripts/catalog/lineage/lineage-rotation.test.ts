@@ -10,7 +10,7 @@ import {
   baselineMembers, lineageLayout, readLineage, stageEmission, stageFamilies, stageFile,
   stageOutputFiles, type LineageLayout,
 } from './lineage-io';
-import { paramsText, stageLineageText } from './lineage-row-pure';
+import { paramsText, stageLineageLine, stageLineageText } from './lineage-row-pure';
 import { LIVE, stageCodes } from './reason-codes-pure';
 
 const SPEC = { stage: 'demo', files: ['demo', 'identity'] as const };
@@ -23,13 +23,13 @@ const header = (commit: string): StageHeader => ({
   stage: 'demo', version: '1.0.0', commit, dirty: false, inputHash: 'h', files: ['demo.tsv.gz', 'identity.tsv.gz'],
 });
 
-function text(source: string): string {
-  return stageLineageText(CODES, [{
+function text(source: string): Uint8Array {
+  return stageLineageText(CODES, [stageLineageLine(CODES, {
     stage: 'demo', key: 'spine:2', role: 'outcome', code: 'demo.kept', params: paramsText({ source }), evidence: [],
-  }]);
+  })]);
 }
 
-function run(source: string, opts: { fail?: boolean; diff?: string | null; rotate?: boolean } = {}): void {
+function run(source: string, opts: { fail?: boolean; diff?: Uint8Array | null; rotate?: boolean } = {}): void {
   const outputs = declareOutputs(stageOutputFiles(layout, SPEC), stageFamilies(layout, SPEC));
   const { files, members } = stageEmission(
     layout, SPEC, { demo: text(source), identity: text(`id-${source}`) }, header(source), opts.diff ?? null,
@@ -72,7 +72,7 @@ describe('stage rotation', () => {
     run('one');
     expect(readdirSync(layout.previous).sort()).toEqual(['placement.header.json', 'placement.tsv.gz']);
     const first = readFileSync(stageFile(layout.current, 'demo'));
-    run('two', { diff: 'change\n' });
+    run('two', { diff: Buffer.from('change\n') });
     expect(readFileSync(stageFile(layout.previous, 'demo'))).toEqual(first);
     expect(readLineage(stageFile(layout.current, 'demo'))[0].params).toBe('{"source":"two"}');
     expect(readFileSync(resolve(layout.previous, 'demo.header.json'), 'utf8')).toMatch(/"commit": "one"/);
@@ -94,7 +94,7 @@ describe('stage rotation', () => {
   });
 
   it('a run with no diff deletes the stale one', () => {
-    run('one', { diff: 'change\n' });
+    run('one', { diff: Buffer.from('change\n') });
     run('two');
     expect(readdirSync(layout.diff)).toEqual([]);
   });

@@ -15,6 +15,11 @@ import { TYCHO2_ICRS_EPOCH } from '../tycho2-parse';
 import { emptySimbadValueIndex, type SimbadValueIndex } from '../simbad/simbad-values-parse';
 import { unitVectorFromRaDec, type UnitVector } from '../../../src/client/util/equatorial-basis';
 import type { GlieseIndex } from '../gliese-parse';
+import { GLIESE } from '../gliese-source';
+import { TYCHO2 } from '../tycho2-source';
+import { CNS5 } from '../classic-ids/cns5-source';
+import { SIMBAD_VALUES } from '../simbad/simbad-values-source';
+import { sourceRowRef } from '../../util/sources/row-ref-pure';
 import {
   MEMBERSHIP_MANIFEST,
   manifestRecord,
@@ -23,7 +28,12 @@ import {
 } from '../membership/membership-manifest-tsv';
 import { CONSTELLATIONS, createConstellationAssignment, iauEdgeRecords } from './constellations/constellations';
 import { STELLARIUM } from './constellations/stellarium-source';
-import { readStars } from './stars-parse';
+import type { Placement } from '../distance/placement-lineage-pure';
+import { MAX_DIST_PC, readStars } from './stars-parse';
+
+const readStarsDiscarding = (
+  manifest: Parameters<typeof readStars>[0], options: Parameters<typeof readStars>[1],
+): ReturnType<typeof readStars> => readStars(manifest, options, () => {});
 
 const CON_ASSIGNMENT = createConstellationAssignment(iauEdgeRecords(STELLARIUM.read()));
 const conIndexOf = (code: string): number =>
@@ -59,6 +69,7 @@ function glieseParallaxes(
       name: `Gl ${r.gl}`, comp: '',
       vMag: null, bMinusV: null, spectral: null, hd: null,
       parallax: { mas: 1000 / r.distPc, errMas: 0.001, trigonometric: true },
+      ref: sourceRowRef(GLIESE, r.gl),
     }])),
     rowCount: rows.length,
   };
@@ -71,7 +82,7 @@ function tycho2Sources(
   return {
     gaiaAstrometry: new Map(),
     hip2: new Map(),
-    nssSourceIds: new Set(),
+    nss: new Map(),
     cns5: new Map(),
     tycho2: new Map(rows.map((r) => [r.tyc, {
       raDeg: r.raDeg, decDeg: r.decDeg,
@@ -79,6 +90,7 @@ function tycho2Sources(
       pmRaMasyr: 0, pmDecMasyr: 0,
       btMag: r.vMag, vtMag: r.vMag,
       fromIcrs: false, isPhotocentre: false, hip: null,
+      ref: sourceRowRef(TYCHO2, r.tyc),
     }])),
     ...overrides,
   };
@@ -108,7 +120,7 @@ describe('readStars build-time de-extinction of ci', () => {
     const grid = uniformDustGrid();
     // The observed colour arrives through the printed I/239 tier — the one
     // measured colour a row with no Gaia source can reach.
-    const { stars } = readStars(
+    const { stars } = readStarsDiscarding(
       manifestRows([
         { ...AT_ORIGIN_SIGHTLINE, proper: 'BlankCi' },
         { ...AT_ORIGIN_SIGHTLINE, proper: 'ObservedCi', hip: '11111' },
@@ -155,7 +167,7 @@ describe('readStars Gaia source_id', () => {
         gMag: 20.95,
       })],
     ]);
-    const { stars } = readStars(
+    const { stars } = readStarsDiscarding(
       manifestRows([{
         ...AT_ORIGIN_SIGHTLINE, gaia_source_id: sourceId,
       }]),
@@ -176,7 +188,7 @@ describe('readStars Gaia source_id', () => {
 
 describe('readStars manifest labels', () => {
   it('carries the alias lists and the cascade diagnostics onto the record', () => {
-    const { stars } = readStars(
+    const { stars } = readStarsDiscarding(
       manifestRows([{
         ...AT_ORIGIN_SIGHTLINE, hd: '100', hd_alt: '101|102', hr: '7', hr_alt: '8',
       }]),
@@ -195,7 +207,7 @@ describe('readStars manifest labels', () => {
   });
 
   it('parks a row no V tier lights, under its own record-parity reason', () => {
-    const { stars, stats } = readStars(
+    const { stars, stats } = readStarsDiscarding(
       manifestRows([{ ...AT_ORIGIN_SIGHTLINE, hd: '55' }]),
       {
         conAssignment: CON_ASSIGNMENT,
@@ -215,7 +227,7 @@ describe('readStars manifest labels', () => {
   // The shipped cohort's shape: a HIP-only addition a bound sibling's parallax
   // places and printed HIP photometry lights, which no positional tier reaches.
   it('parks a row placed and lit but that no direction tier states', () => {
-    const { stars, stats } = readStars(
+    const { stars, stats } = readStarsDiscarding(
       manifestRows([{ hip: '4242', gl: ORIGIN_GL }]),
       {
         conAssignment: CON_ASSIGNMENT,
@@ -236,6 +248,7 @@ describe('readStars manifest labels', () => {
   // cascades — which is what lets every cascade partition sum to the record
   // count, as claimed in ./README.md#per-row-pipeline.
   it('counts a park in the park partition alone', () => {
+    const placements: Placement[] = [];
     const { stars, stats } = readStars(
       manifestRows([
         { ...AT_ORIGIN_SIGHTLINE, hd: '55' },
@@ -247,6 +260,7 @@ describe('readStars manifest labels', () => {
         gliese: glieseParallaxes([{ gl: ORIGIN_GL, distPc: 100 }]),
         hipVMag: new Map([[4242, 7.5]]),
       },
+      (p) => placements.push(p),
     );
     expect(stars).toHaveLength(0);
     const sum = (p: Record<string, number>): number =>
@@ -255,6 +269,19 @@ describe('readStars manifest labels', () => {
     expect(sum(stats.distVia)).toBe(stars.length);
     expect(sum(stats.vVia)).toBe(stars.length);
     expect(sum(stats.directionVia)).toBe(stars.length);
+    expect(placements.map((p) => p.kind)).toEqual(['parked-no-v', 'parked-no-position']);
+    expect(placements).toHaveLength(stats.total);
+  });
+
+  it('fails the walk on a row the overrides leave past MAX_DIST_PC, naming it', () => {
+    expect(() => readStarsDiscarding(
+      manifestRows([{ ...AT_ORIGIN_SIGHTLINE, origin_key: 'spine:77' }]),
+      {
+        conAssignment: CON_ASSIGNMENT,
+        directions: AT_ORIGIN_DIRECTIONS(),
+        gliese: glieseParallaxes([{ gl: ORIGIN_GL, distPc: MAX_DIST_PC + 1 }]),
+      },
+    )).toThrow(/spine:77 .* via gliese_plx, past MAX_DIST_PC/);
   });
 });
 
@@ -277,7 +304,7 @@ describe('readStars constellation assignment', () => {
   ]);
 
   it('resolves byte 34 positionally', () => {
-    const { stars } = readStars(
+    const { stars } = readStarsDiscarding(
       manifestRows([RHO_AQL]),
       { conAssignment: CON_ASSIGNMENT, directions: RHO_AQL_DIRECTIONS(), gliese: RHO_AQL_GLIESE() },
     );
@@ -290,7 +317,7 @@ describe('readStars constellation assignment', () => {
     // `con` column, and nothing replaces it here. The IV/27A, WGSN and GCVS
     // passes downstream are the only sources, and this row reaches none of
     // them in a bare walk, so its aliases fall back to the positional index.
-    const { stars } = readStars(
+    const { stars } = readStarsDiscarding(
       manifestRows([RHO_AQL, { ...AT_ORIGIN_SIGHTLINE, proper: 'Anon' }]),
       { conAssignment: CON_ASSIGNMENT, directions: RHO_AQL_DIRECTIONS(), gliese: RHO_AQL_GLIESE() },
     );
@@ -299,7 +326,7 @@ describe('readStars constellation assignment', () => {
   });
 
   it('leaves Sol unclassified — the origin has no sky direction', () => {
-    const { stars } = readStars(
+    const { stars } = readStarsDiscarding(
       manifestRows([{ proper: 'Sol' }]),
       { conAssignment: CON_ASSIGNMENT },
     );
@@ -331,6 +358,7 @@ describe('readStars PM rescue', () => {
   // no motion — the shipped cohort's dominant shape.
   const TYCHO2_PM = { pmRaMasyr: -453.7, pmDecMasyr: -591.4 };
   const GAIA_EDR3 = '2020yCat.1350....0G';
+  const CNS5_REF = sourceRowRef(CNS5, 1);
 
   const MANIFEST_ROW: ManifestRow = {
     tyc: RESCUE_TYC, gl: RESCUE_GL, proper: 'Rescued',
@@ -346,13 +374,14 @@ describe('readStars PM rescue', () => {
     return {
       gaiaAstrometry: new Map(),
       hip2: new Map(),
-      nssSourceIds: new Set(),
+      nss: new Map(),
       cns5: new Map(),
       tycho2: new Map([[RESCUE_TYC, {
         raDeg: 0, decDeg: 0,
         epoch: CATALOG_SCENE_EPOCH,
         pmRaMasyr: pm.pmRaMasyr, pmDecMasyr: pm.pmDecMasyr,
         btMag: 10, vtMag: 10, fromIcrs: false, isPhotocentre: false, hip: null,
+        ref: sourceRowRef(TYCHO2, RESCUE_TYC),
       }]]),
       ...overrides,
     };
@@ -365,7 +394,7 @@ describe('readStars PM rescue', () => {
     Math.hypot(s.vx, s.vy, s.vz);
 
   it('rescues a 2p row off its own TYC, and credits Tycho-2 not the tier', () => {
-    const { stars, stats } = readStars(
+    const { stars, stats } = readStarsDiscarding(
       manifestRows([{ ...MANIFEST_ROW, gaia_source_id: SOURCE_ID }]),
       {
         conAssignment: CON_ASSIGNMENT,
@@ -375,7 +404,7 @@ describe('readStars PM rescue', () => {
     );
     // The position still comes from the Gaia anchor — only the motion is
     // re-keyed.
-    expect(stats.directionVia.gaia_5p).toBe(1);
+    expect(stats.directionVia.gaia_2p).toBe(1);
     expect(stats.pmRescueOutcome.tycho2).toBe(1);
     expect(stats.velocityVia.tycho2_pm).toBe(1);
     expect(stats.velocityVia.zero).toBe(0);
@@ -383,7 +412,7 @@ describe('readStars PM rescue', () => {
   });
 
   it('ships static where the cascade reaches nothing — the control', () => {
-    const { stars, stats } = readStars(
+    const { stars, stats } = readStarsDiscarding(
       manifestRows([{ ...MANIFEST_ROW, gaia_source_id: SOURCE_ID }]),
       {
         conAssignment: CON_ASSIGNMENT,
@@ -400,7 +429,7 @@ describe('readStars PM rescue', () => {
   });
 
   it('never enters the cascade where the tier states its own motion', () => {
-    const { stats } = readStars(
+    const { stats } = readStarsDiscarding(
       manifestRows([{ ...MANIFEST_ROW, gaia_source_id: SOURCE_ID }]),
       {
         conAssignment: CON_ASSIGNMENT,
@@ -419,7 +448,7 @@ describe('readStars PM rescue', () => {
   });
 
   it("refuses a Gaia-bibcoded motion on the record's OWN 2p solution", () => {
-    const { stars, stats } = readStars(
+    const { stars, stats } = readStarsDiscarding(
       manifestRows([{ ...MANIFEST_ROW, gaia_source_id: SOURCE_ID, gl: GJ }]),
       {
         conAssignment: CON_ASSIGNMENT,
@@ -427,7 +456,7 @@ describe('readStars PM rescue', () => {
         directions: sources({ pmRaMasyr: null, pmDecMasyr: null }, {
           gaiaAstrometry: gaiaRow(),
           cns5: new Map([['423A', cns5Astrometry({
-            pm: { pmRaMasyr: 50, pmDecMasyr: -20, bibcode: GAIA_EDR3 },
+            pm: { pmRaMasyr: 50, pmDecMasyr: -20, bibcode: GAIA_EDR3, ref: CNS5_REF },
           })]]),
         }),
       },
@@ -440,14 +469,14 @@ describe('readStars PM rescue', () => {
     // Identical to the case above but for the absent Gaia row, which is the
     // whole of the difference: with no fit to distrust the citation is
     // ordinary. Inverting the predicate would strip the motion from these.
-    const { stars, stats } = readStars(
+    const { stars, stats } = readStarsDiscarding(
       manifestRows([{ ...MANIFEST_ROW, gl: GJ }]),
       {
         conAssignment: CON_ASSIGNMENT,
         gliese: PARALLAXES,
         directions: sources({ pmRaMasyr: null, pmDecMasyr: null }, {
           cns5: new Map([['423A', cns5Astrometry({
-            pm: { pmRaMasyr: 50, pmDecMasyr: -20, bibcode: GAIA_EDR3 },
+            pm: { pmRaMasyr: 50, pmDecMasyr: -20, bibcode: GAIA_EDR3, ref: CNS5_REF },
           })]]),
         }),
       },
@@ -479,6 +508,8 @@ describe('readStars advances the position on a rescued PM', () => {
     Math.acos(Math.max(-1, Math.min(1, a.x * b.x + a.y * b.y + a.z * b.z)))
     * ((180 * 3600) / Math.PI);
 
+  const SIMBAD_REF = sourceRowRef(SIMBAD_VALUES, 1);
+
   const simbadPmOnly = (): SimbadValueIndex => ({
     ...emptySimbadValueIndex(),
     rowCount: 1,
@@ -491,12 +522,14 @@ describe('readStars advances the position on a rescued PM', () => {
         pm: {
           pmRaMasyr: RESCUED_PMRA, pmDecMasyr: RESCUED_PMDEC,
           bibcode: '2020yCat.1350....0G',
+          ref: SIMBAD_REF,
         },
+        ref: SIMBAD_REF,
       },
     }]]),
   });
 
-  const built = (): ReturnType<typeof readStars> => readStars(
+  const built = (): ReturnType<typeof readStars> => readStarsDiscarding(
     manifestRows([{ tyc: NO_MEAN_TYC, gl: NO_MEAN_GL }]),
     {
       conAssignment: CON_ASSIGNMENT,
@@ -505,7 +538,7 @@ describe('readStars advances the position on a rescued PM', () => {
       directions: {
         gaiaAstrometry: new Map(),
         hip2: new Map(),
-        nssSourceIds: new Set(),
+        nss: new Map(),
         cns5: new Map(),
         tycho2: new Map([[NO_MEAN_TYC, {
           raDeg: OBSERVED_RA, decDeg: OBSERVED_DEC,
@@ -513,6 +546,7 @@ describe('readStars advances the position on a rescued PM', () => {
           pmRaMasyr: null, pmDecMasyr: null,
           btMag: 10.0, vtMag: 10.0,
           fromIcrs: true, isPhotocentre: false, hip: null,
+          ref: sourceRowRef(TYCHO2, NO_MEAN_TYC),
         }]]),
       },
     },

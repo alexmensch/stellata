@@ -198,8 +198,8 @@ replaces it for Gaia-measured stars; stars in the direction of the Large
 Magellanic Cloud that also share its motion are snapped to its precisely
 known distance of 49.6 kpc (from eclipsing binaries,
 [Pietrzyński 2019](/data/papers/index.md#pietrzynski2019) — parallax is
-useless that far out); and anything still beyond 50 kpc is out of scope
-and dropped. Because intrinsic brightness is derived from the final
+useless that far out); and anything still beyond 50 kpc is out of scope,
+so the build refuses it. Because intrinsic brightness is derived from the final
 distance rather than tabulated, a star moved to a new distance is lit
 correctly for it by construction.
 

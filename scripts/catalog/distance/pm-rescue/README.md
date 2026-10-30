@@ -28,7 +28,7 @@ measured on the build before the V ≤ 11 magnitude term, when it reached **39**
 rows in two shapes:
 
 - **36** resolve to a Gaia row with a 2p (position-only) solution and have no
-  HIP2 cover, so they take the `gaia_5p` route's PM-less anchor.
+  HIP2 cover, so they take the `gaia_2p` route's PM-less anchor.
 - **3** are Tycho-2 rows with no mean solution (`pflag='X'`, plus one
   supplement `flag='T'`), whose PM cells are empty.
 

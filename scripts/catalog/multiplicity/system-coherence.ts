@@ -52,7 +52,7 @@ export interface CoherenceSources {
   /** Bailer-Jones 2021 (/data/papers/index.md#bailerjones2021)
    *  source_id (decimal string) → distance; only membership is consulted for
    *  the tier pick. */
-  bjMap: Map<string, number>;
+  bjMap: ReadonlyMap<string, number>;
 }
 
 const COMPONENT_TOKEN_RE = /^[A-Z][a-z]?\d?$/;

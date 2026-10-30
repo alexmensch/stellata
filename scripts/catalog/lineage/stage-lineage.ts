@@ -11,10 +11,10 @@ import {
   ACCEPT_ANY_BASELINE_FLAG, AGAINST_FLAG, planBaseline, type BaselineSource,
 } from './lineage-header-pure';
 import {
-  readLineage, readStageHeader, stageEmission, stageFile, stageHeader,
+  readStageHeader, stageEmission, stageFile, stageHeader, streamLineage,
   type LineageLayout, type StageLineageSpec, type StageOutputKey,
 } from './lineage-io';
-import { compareLineageRows, type LineageRow } from './lineage-row-pure';
+import { sortLineageLines, type LineageLine } from './lineage-row-pure';
 
 /** The stage's measured cost, pinned so lineage cannot quietly grow. */
 export interface LineageBudget {
@@ -22,31 +22,32 @@ export interface LineageBudget {
   readonly writeMs: number;
 }
 
-export interface StageLineageRun<F extends string> {
+export interface StageLineageRun<F extends string, S extends string> {
   readonly layout: LineageLayout;
-  readonly spec: StageLineageSpec<F>;
+  readonly spec: StageLineageSpec<F, S>;
   /** The content hashes of the step's inputs (`stepInputPaths`), as the step
    *  already computed them for its stamp or its own use. */
   readonly inputs: FileHashes;
   /** The stage's own file: the one its diff reads. */
   readonly diffed: F;
-  readonly rows: readonly LineageRow[];
-  /** Handed `rows` in lineage order. */
-  readonly render: (sorted: readonly LineageRow[]) => Readonly<Record<F, string>>;
+  /** Each row's `stageLineageLine`, in any order. */
+  readonly lines: readonly LineageLine[];
+  /** Handed `lines` in lineage order. */
+  readonly render: (sorted: readonly LineageLine[]) => Readonly<Record<F, string | Uint8Array>>;
   /** Built only when a diff runs, from the baseline directory it reads. */
   readonly joins: (baselineDir: string) => readonly DiffJoin[];
   readonly budget: LineageBudget;
   readonly argv: readonly string[];
 }
 
-export interface StageLineageEmission<F extends string> {
-  readonly files: Record<StageOutputKey<F>, ArtifactContents>;
+export interface StageLineageEmission<F extends string, S extends string> {
+  readonly files: Record<StageOutputKey<F, S>, ArtifactContents>;
   readonly members: Map<string, ArtifactContents>;
   readonly checks: Check[];
   readonly changes: readonly KeyChange[] | null;
 }
 
-function baselineSource<F extends string>(run: StageLineageRun<F>): BaselineSource {
+function baselineSource<F extends string, S extends string>(run: StageLineageRun<F, S>): BaselineSource {
   const at = run.argv.indexOf(AGAINST_FLAG);
   if (at >= 0) {
     const dir = run.argv[at + 1];
@@ -57,9 +58,9 @@ function baselineSource<F extends string>(run: StageLineageRun<F>): BaselineSour
   return { kind: 'checkout', header: readStageHeader(run.layout.current, run.spec.stage) };
 }
 
-export async function stageLineage<F extends string>(
-  run: StageLineageRun<F>,
-): Promise<StageLineageEmission<F>> {
+export async function stageLineage<F extends string, S extends string>(
+  run: StageLineageRun<F, S>,
+): Promise<StageLineageEmission<F, S>> {
   const started = performance.now();
   const source = baselineSource(run);
   const plan = planBaseline(
@@ -67,12 +68,12 @@ export async function stageLineage<F extends string>(
     run.argv.includes(ACCEPT_ANY_BASELINE_FLAG),
   );
   const { verdict } = plan;
-  const sorted = [...run.rows].sort(compareLineageRows);
+  const sorted = sortLineageLines(run.lines);
   let changes: KeyChange[] | null = null;
   let joins: readonly DiffJoin[] = [];
   if (plan.from !== null) {
     const dir = source.kind === 'against' ? source.dir : run.layout[plan.from === 'previous' ? 'previous' : 'current'];
-    changes = diffLineage(readLineage(stageFile(dir, run.diffed)), sorted);
+    changes = diffLineage(streamLineage(stageFile(dir, run.diffed)), sorted);
     joins = run.joins(dir);
   } else if (verdict.kind === 'refused') {
     console.log(verdict.message);
@@ -86,7 +87,7 @@ export async function stageLineage<F extends string>(
   const { files, members } = stageEmission(run.layout, run.spec, texts, header, diff, plan.rotate);
   const writeMs = performance.now() - started;
   const gzipBytes = run.spec.files.reduce(
-    (n, f) => n + (files[`lineage:${f}` as StageOutputKey<F>] as Uint8Array).byteLength, 0,
+    (n, f) => n + (files[`lineage:${f}` as StageOutputKey<F, S>] as Uint8Array).byteLength, 0,
   );
   const measured = `${run.spec.stage} lineage: ${gzipBytes} bytes gzipped; header, diff and write took ${writeMs.toFixed(0)} ms`;
   const over = gzipBytes > run.budget.gzipBytes || writeMs > run.budget.writeMs;

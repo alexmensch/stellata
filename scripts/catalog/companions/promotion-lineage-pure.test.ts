@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { compareLineageRows, paramsOf, stageLineageText } from '../lineage/lineage-row-pure';
+import { paramsOf, sortLineageLines, stageLineageLine, stageLineageText } from '../lineage/lineage-row-pure';
 import { makeStar } from '../parse/star-fixture';
 import type { PromotedRow, RowOutcome } from './companion-promotion';
 import { multiplesRow } from './multiples-fixture';
@@ -44,7 +44,8 @@ describe('promotionLineageRow', () => {
       'promotion.primary-unresolved',
       'promotion.not-applicable',
     ]);
-    expect(() => stageLineageText(PROMOTION_CODES, [...rows].sort(compareLineageRows))).not.toThrow();
+    const lines = sortLineageLines(rows.map((r) => stageLineageLine(PROMOTION_CODES, r)));
+    expect(() => stageLineageText(PROMOTION_CODES, lines)).not.toThrow();
   });
 
   it('names an adopted record by its origin key and the re-curation it took', () => {

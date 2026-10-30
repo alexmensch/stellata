@@ -10,6 +10,9 @@ import type { PrimaryTables } from '../spine/primaries-audit-pure';
 import { printedVLookups } from '../photometry/v-magnitude-pure';
 import { bindingEvidence } from './binding/binding-gate-pure';
 import type { Tycho2Row } from '../tycho2-parse';
+import { TYCHO2 } from '../tycho2-source';
+import { GLIESE } from '../gliese-source';
+import { sourceRowRef } from '../../util/sources/row-ref-pure';
 import {
   additionItemCells,
   buildMembership,
@@ -33,7 +36,9 @@ import {
 } from './membership-manifest-tsv';
 import { parkedRecordKey } from '../distance/parallax/parked-ledger';
 import { diffLineage, stageDiffText } from '../lineage/lineage-diff-pure';
-import { compareLineageRows, paramsOf, type LineageRow } from '../lineage/lineage-row-pure';
+import {
+  decodeLineageLine, paramsOf, sortLineageLines, stageLineageLine, type LineageLine, type LineageRow,
+} from '../lineage/lineage-row-pure';
 import { MEMBERSHIP_CODES } from './membership-lineage-pure';
 import { ORIGIN_KEYS } from './origin-keys';
 
@@ -55,6 +60,7 @@ function tycho2(vtMag: number, hip: number | null = null): Tycho2Row {
   return {
     raDeg: 0, decDeg: 0, epoch: 2000, pmRaMasyr: null, pmDecMasyr: null,
     btMag: null, vtMag, fromIcrs: false, isPhotocentre: false, hip,
+    ref: sourceRowRef(TYCHO2, '1-1-1'),
   };
 }
 
@@ -134,7 +140,7 @@ const tables: PrimaryTables = {
     { cns5: 4, gj: '10002', gjComp: null, gaiaSourceId: null, hip: null, astrometry: null },
     { cns5: 0, gj: 'Sun', gjComp: null, gaiaSourceId: null, hip: null, astrometry: null },
   ],
-  gliese: parseGlieseTsv(GLIESE_TSV, FROM),
+  gliese: parseGlieseTsv(GLIESE_TSV, GLIESE),
   hipI239: new Set([10, 20, 30, 40, 50, 70]),
   hdI239: new Set<number>(),
   i239HipHd: new Map<number, number>(),
@@ -911,7 +917,7 @@ describe('membership lineage', () => {
       new Map([['777', 14.0]]), xids, printedVLookups(new Map(), t.tycho2, t.gliese), null,
     ),
   });
-  const sorted = (rows: readonly LineageRow[]) => [...rows].sort(compareLineageRows);
+  const sorted = (rows: readonly LineageRow[]) => sortLineageLines(rows.map((r) => stageLineageLine(MEMBERSHIP_CODES, r)));
 
   it('writes an admission row for every record, folded and component ones included', () => {
     const admitted = new Set(result.lineage
@@ -928,12 +934,13 @@ describe('membership lineage', () => {
     const changes = diffLineage(sorted(before.lineage), sorted(after.lineage));
     const rebound = changes.find((c) => c.key === 'spine:4')!;
     expect(rebound.kind).toBe('changed');
-    const binding = (rows: readonly LineageRow[]) => rows.find((r) => r.code === 'membership.binding.bound')!;
+    const binding = (lines: readonly LineageLine[]) =>
+      lines.map(decodeLineageLine).find((r) => r.code === 'membership.binding.bound')!;
     expect(paramsOf(binding(rebound.removed)))
       .toMatchObject({ derived_source_id: '222', source_letters: 'W1:A' });
     expect(paramsOf(binding(rebound.added)))
       .toMatchObject({ derived_source_id: '2223', source_letters: 'W1:B' });
-    expect(stageDiffText(changes))
+    expect(Buffer.from(stageDiffText(changes)).toString('utf8'))
       .toMatch(/changed\t\+\tmembership\tspine:4\toutcome\tmembership\.binding\.bound\t.*"source_letters":"W1:B"/);
   });
 

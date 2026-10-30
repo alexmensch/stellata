@@ -82,12 +82,13 @@ manifest row leaves without a record in one of two ways
 ([Per-row pipeline](/scripts/catalog/parse/README.md#per-row-pipeline)):
 
 1. **A park**, ledgered in `data/membership/parked-ledger.tsv` — the parallax
-   cascade reaches no owned measurement, or the V cascade reaches no
-   magnitude. A record needs both a place and a brightness, and [§ 6.1](catalog-driver.md#61-record-parity) requires
+   cascade reaches no owned measurement, the V cascade reaches no magnitude,
+   or no direction tier states a position. A record needs a place and a
+   brightness, and [§ 6.1](catalog-driver.md#61-record-parity) requires
    every such row be named rather than counted.
-2. **A drop**, pinned at zero — no direction tier resolves, or the row is
-   past `dist > 50,000 pc` after every override. Both mean a reference table
-   disagreeing with the tiers above it, never a membership decision.
+2. **A failed build** — the row is past `dist > 50,000 pc` after every
+   override. That means a reference table disagreeing with the tiers above
+   it, never a membership decision, so the walk throws naming the row.
 
 That distance cutoff is a **bounded-scope statement about which populations
 the model represents**, not a primary include/exclude filter. It is positioned
@@ -129,8 +130,8 @@ on every AT-HYG row before the bounded-scope cutoff above fires:
    membership: a star whose own parallax sits more than 10σ above the
    LMC's ~0.02 mas is a foreground star sharing the Cloud's apparent
    motion, and keeps its own distance.
-3. **Bounded-scope cutoff** at 50,000 pc — drops rows still beyond LMC
-   depth as unmodelled extragalactic per the framing above.
+3. **Bounded-scope cutoff** at 50,000 pc — a row still beyond LMC depth is
+   unmodelled extragalactic per the framing above, and fails the build.
 
 Ordering is non-commutative. [Bailer-Jones 2021](/data/papers/index.md#bailerjones2021) runs first because its
 posterior is well-calibrated everywhere the Galactic-density prior is

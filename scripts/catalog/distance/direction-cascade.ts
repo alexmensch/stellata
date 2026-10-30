@@ -14,11 +14,14 @@ import type { SimbadRecordKeys } from '../record/catalog-pure';
 import type { Tycho2Row } from '../tycho2-parse';
 import type { Declared } from '../../util/sources/source';
 import {
+  sourceRowRef, type AnySourceRowRef, type RowKeyed, type SourceRowRef,
+} from '../../util/sources/row-ref-pure';
+import {
   lookupCns5Astrometry,
   type Cns5Astrometry,
 } from '../classic-ids/classic-ids-parse';
 import type { SimbadAstrometry } from '../simbad/simbad-values-parse';
-import type { CascadeRefusal, CascadeResult, UniformValues } from '../cascade-result';
+import type { CitedCascadeResult, CitedRefusal, UniformValues } from '../cascade-result';
 
 export const GAIA_DR3_REF_EPOCH = 2016.0;
 export const HIP2_REF_EPOCH = 1991.25;
@@ -66,6 +69,9 @@ export interface GaiaAstrometryCatalogRow {
   /** DR3 `radial_velocity_error` (km/s) — the uncertainty on that median.
    *  Non-null wherever `radial_velocity` is, in the published catalogue. */
   radialVelocityErrorKmS: number | null;
+  /** The row of whichever Gaia file supplied it: the catalogue table, or the
+   *  magnitude pull for a source only that term admitted. */
+  ref: SourceRowRef<string>;
 }
 
 /** van Leeuwen 2007 (/data/papers/index.md#vanleeuwen2007) reduction row from
@@ -78,6 +84,7 @@ export interface Hip2AstrometryRow {
   plxErrorMas: number | null;
   pmRaMasyr: number | null;
   pmDeMasyr: number | null;
+  ref: SourceRowRef<number>;
 }
 
 /** The reference datasets this cascade routes between. It is not their only
@@ -89,7 +96,8 @@ export interface Hip2AstrometryRow {
 export interface DirectionSources {
   gaiaAstrometry: Map<string, GaiaAstrometryCatalogRow>;
   hip2: Map<number, Hip2AstrometryRow>;
-  nssSourceIds: Set<string>;
+  /** Every source with an NSS two-body orbit, to its row. */
+  nss: ReadonlyMap<string, SourceRowRef<string>>;
   tycho2: Map<string, Tycho2Row>;
   cns5: Map<string, Cns5Astrometry>;
 }
@@ -109,6 +117,7 @@ export interface DirectionInputs extends SimbadRecordKeys {
 
 export const DIRECTION_VIA_VALUES = [
   'gaia_5p',
+  'gaia_2p',
   'gaia_nss_systemic',
   'hip2_saturated',
   'hip2_pm_discrepant',
@@ -153,10 +162,10 @@ export interface DirectionSolution {
 
 /** A Gaia 5p solution passed over: its PM disagrees with HIP2's (orbit
  *  corruption), or the fit is 2p and HIP2 covers the star. */
-export type DirectionRefusal = CascadeRefusal<'gaia_5p', 'pm_disagrees_with_hip2' | 'no_5p_solution'>;
+export type DirectionRefusal = CitedRefusal<'gaia_5p', 'pm_disagrees_with_hip2' | 'no_5p_solution'>;
 
 /** `none` is a record no tier states a position for — a /docs/catalog-driver.md#61-record-parity park. */
-export type DirectionResolution = CascadeResult<
+export type DirectionResolution = CitedCascadeResult<
   UniformValues<DirectionVia, DirectionSolution>,
   DirectionRefusal
 >;
@@ -324,8 +333,9 @@ export function resolveDirection(
     : undefined;
   const hip2 = hip !== null ? sources.hip2.get(hip) : undefined;
   const refusals: DirectionRefusal[] = [];
-  const hit = (via: DirectionVia, value: DirectionSolution): DirectionResolution =>
-    ({ via, value, refusals });
+  const hit = (
+    via: DirectionVia, value: DirectionSolution, evidence: readonly AnySourceRowRef[],
+  ): DirectionResolution => ({ via, value, evidence, refusals });
 
   const gaiaSolution = (g: GaiaAstrometryCatalogRow): DirectionSolution => ({
     srcRaDeg: g.raDeg, srcDecDeg: g.decDeg,
@@ -341,29 +351,26 @@ export function resolveDirection(
   });
 
   if (gaia !== undefined && gaiaHas5pSolution(gaia)) {
-    if (
-      sourceId !== null
-      && sources.nssSourceIds.has(sourceId)
-      && gaia5pUnreliable(gaia)
-    ) {
-      return hit('gaia_nss_systemic', gaiaSolution(gaia));
+    const nss = sourceId !== null ? sources.nss.get(sourceId) : undefined;
+    if (nss !== undefined && gaia5pUnreliable(gaia)) {
+      return hit('gaia_nss_systemic', gaiaSolution(gaia), [gaia.ref, nss]);
     }
     if (hip2 !== undefined && hip2PmDisagrees(gaia, hip2)) {
-      refusals.push({ tier: 'gaia_5p', reason: 'pm_disagrees_with_hip2' });
-      return hit('hip2_pm_discrepant', hip2Solution(hip2));
+      refusals.push({ tier: 'gaia_5p', reason: 'pm_disagrees_with_hip2', ref: gaia.ref });
+      return hit('hip2_pm_discrepant', hip2Solution(hip2), [hip2.ref]);
     }
-    return hit('gaia_5p', gaiaSolution(gaia));
+    return hit('gaia_5p', gaiaSolution(gaia), [gaia.ref]);
   }
 
   if (hip2 !== undefined) {
-    if (gaia !== undefined) refusals.push({ tier: 'gaia_5p', reason: 'no_5p_solution' });
-    return hit('hip2_saturated', hip2Solution(hip2));
+    if (gaia !== undefined) refusals.push({ tier: 'gaia_5p', reason: 'no_5p_solution', ref: gaia.ref });
+    return hit('hip2_saturated', hip2Solution(hip2), [hip2.ref]);
   }
 
   // 2p (position-only) Gaia row with no HIP2 cover: keep the Gaia
   // positional anchor, unpropagated when PM is absent — mirrors
   // stage3's gaia_5p fall-through.
-  if (gaia !== undefined) return hit('gaia_5p', gaiaSolution(gaia));
+  if (gaia !== undefined) return hit('gaia_2p', gaiaSolution(gaia), [gaia.ref]);
 
   // Designation-joined tiers, for the rows Gaia and HIP2 both miss. Each
   // joins on the record's OWN identifier — a value join, never positional —
@@ -376,7 +383,7 @@ export function resolveDirection(
       srcEpoch: tycho2.epoch,
       srcPmraMasyr: tycho2.pmRaMasyr, srcPmdecMasyr: tycho2.pmDecMasyr,
       velVia: pmVelVia(tycho2.pmRaMasyr, tycho2.pmDecMasyr, 'tycho2_pm'),
-    });
+    }, [tycho2.ref]);
   }
 
   const cns5 = lookupCns5Astrometry(sources.cns5, gl);
@@ -389,7 +396,7 @@ export function resolveDirection(
       velVia: pmVelVia(
         cns5.pm?.pmRaMasyr ?? null, cns5.pm?.pmDecMasyr ?? null, 'cns5_pm',
       ),
-    });
+    }, [cns5.ref]);
   }
 
   if (simbad !== null) {
@@ -401,7 +408,7 @@ export function resolveDirection(
       velVia: pmVelVia(
         simbad.pm?.pmRaMasyr ?? null, simbad.pm?.pmDecMasyr ?? null, 'simbad_pm',
       ),
-    });
+    }, [simbad.ref]);
   }
 
   // The vector is arbitrary and unobservable: Sol's distance is zero, so the
@@ -412,7 +419,7 @@ export function resolveDirection(
       srcEpoch: CATALOG_SCENE_EPOCH,
       srcPmraMasyr: null, srcPmdecMasyr: null,
       velVia: 'zero',
-    });
+    }, []);
   }
 
   return { via: 'none', refusals };
@@ -433,6 +440,7 @@ type AstrometryRow = TableRow<(typeof ASTROMETRY_COLUMNS)[number]>;
 function foldAstrometryRow(
   row: AstrometryRow,
   out: Map<string, GaiaAstrometryCatalogRow>,
+  from: RowKeyed<string>,
   keep?: ReadonlySet<string>,
 ): void {
   const sourceId = row.sourceId('source_id');
@@ -455,6 +463,7 @@ function foldAstrometryRow(
     rpMag: row.float('phot_rp_mean_mag'),
     radialVelocityKmS: row.float('radial_velocity'),
     radialVelocityErrorKmS: row.float('radial_velocity_error'),
+    ref: sourceRowRef(from, sourceId),
   });
 }
 
@@ -462,7 +471,7 @@ function foldAstrometryRow(
  *  as the whole-text parse does. `keep` filters to a subset without holding
  *  the table. */
 export function gaiaAstrometryAccumulator(
-  from: Declared,
+  from: Declared & RowKeyed<string>,
   keep?: ReadonlySet<string>,
 ): {
   line: (raw: string) => void;
@@ -471,17 +480,17 @@ export function gaiaAstrometryAccumulator(
   const out = new Map<string, GaiaAstrometryCatalogRow>();
   const spec = { ...from, columns: ASTROMETRY_COLUMNS };
   return {
-    line: tableLineReader(spec, (row) => foldAstrometryRow(row, out, keep)),
+    line: tableLineReader(spec, (row) => foldAstrometryRow(row, out, from, keep)),
     result: () => out,
   };
 }
 
 export function parseGaiaAstrometryCatalogTsv(
   text: string,
-  from: Declared,
+  from: Declared & RowKeyed<string>,
 ): Map<string, GaiaAstrometryCatalogRow> {
   const out = new Map<string, GaiaAstrometryCatalogRow>();
-  for (const row of readTable({ ...from, columns: ASTROMETRY_COLUMNS }, text)) foldAstrometryRow(row, out);
+  for (const row of readTable({ ...from, columns: ASTROMETRY_COLUMNS }, text)) foldAstrometryRow(row, out, from);
   return out;
 }
 
@@ -494,7 +503,7 @@ export interface Hip2Table {
   hips: Set<number>;
 }
 
-export function parseHip2Tsv(text: string, from: Declared): Hip2Table {
+export function parseHip2Tsv(text: string, from: Declared & RowKeyed<number>): Hip2Table {
   const out = new Map<number, Hip2AstrometryRow>();
   const hips = new Set<number>();
   for (const row of readTable({ ...from, columns: HIP2_COLUMNS }, text)) {
@@ -511,6 +520,7 @@ export function parseHip2Tsv(text: string, from: Declared): Hip2Table {
       plxErrorMas: row.float('e_plx'),
       pmRaMasyr: row.float('pm_ra'),
       pmDeMasyr: row.float('pm_de'),
+      ref: sourceRowRef(from, hip),
     });
   }
   return { astrometry: out, hips };
@@ -518,14 +528,14 @@ export function parseHip2Tsv(text: string, from: Declared): Hip2Table {
 
 const GAIA_NSS_COLUMNS = ['source_id'] as const;
 
-/** Extract the set of Gaia DR3 source_ids carrying an NSS two-body
- *  orbit from `data/gaia/gaia_dr3_nss_two_body.tsv`. Only the first
- *  column is read — membership is the only signal the cascade needs. */
-export function parseNssSourceIdSet(text: string, from: Declared): Set<string> {
-  const out = new Set<string>();
+/** Only the first column is read — membership is the only signal the cascade needs. */
+export function parseNssIndex(
+  text: string, from: Declared & RowKeyed<string>,
+): Map<string, SourceRowRef<string>> {
+  const out = new Map<string, SourceRowRef<string>>();
   for (const row of readTable({ ...from, columns: GAIA_NSS_COLUMNS }, text)) {
     const sourceId = row.sourceId('source_id');
-    if (sourceId !== null) out.add(sourceId);
+    if (sourceId !== null) out.set(sourceId, sourceRowRef(from, sourceId));
   }
   return out;
 }

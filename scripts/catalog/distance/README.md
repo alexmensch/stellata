@@ -72,6 +72,12 @@ scripts/catalog/distance/
                                   folders build these rows, and the point
                                   is that a column added to the interface
                                   lands in one place.
+  placement-lineage-pure.ts       Placement as a lineage stage: its codes,
+    (+ test)                      the Placement each manifest row's walk
+                                  hands on, its one serialiser (rows, or
+                                  their lines), and the parked ledger as a
+                                  view of its park rows
+                                  (#placement-lineage).
   dust/                           Build-time de-extinction against the
                                   dust grid of Edenhofer 2024
                                   (/data/papers/index.md#edenhofer2024), and
@@ -90,7 +96,8 @@ same trust cascade the binaries pipeline implements in
 
 | Route | Gate | Rows |
 | --- | --- | --- |
-| `gaia_5p` | Default: the row resolves to a source_id with a 5p row (`data/gaia/gaia_dr3_astrometry_catalog.tsv`, J2016.0) and non-null parallax. Also the fall-through for 2p position-only rows with no HIP2 cover. | ~<!-- count:build-catalog/directionGaia5p k4 -->930.2k<!-- /count --> |
+| `gaia_5p` | Default: the row resolves to a source_id with a 5p row (`data/gaia/gaia_dr3_astrometry_catalog.tsv`, J2016.0) and non-null parallax. | ~<!-- count:build-catalog/directionGaia5p k4 -->930k<!-- /count --> |
+| `gaia_2p` | The fall-through for a 2p position-only Gaia row with no HIP2 cover: the Gaia position, no proper motion of its own. | <!-- count:build-catalog/directionGaia2p -->204<!-- /count --> |
 | `gaia_nss_systemic` | Source has an NSS two-body orbit AND the 5p fit is flagged unreliable (RUWE / ipd). Same Gaia row values — DR3 refits `gaia_source` to the centre of mass for NSS sources — the tag carries provenance parity with Stage 3. | ~<!-- count:build-catalog/directionGaiaNssSystemic k3 -->32.1k<!-- /count --> |
 | `hip2_saturated` | No usable Gaia parallax (no source_id, no 5p row, or parallax NULL) and HIP2 covers the HIP. The Gaia-saturated bright set: Sirius, Vega, α Cen, Capella, … (J1991.25). | ~<!-- count:build-catalog/directionHip2Saturated k2 -->2.3k<!-- /count --> |
 | `hip2_pm_discrepant` | Gaia 5p present but Gaia-vs-HIP2 PM disagrees by > 50 mas/yr on either axis — orbit-corrupted 5p PM; HIP2's long baseline is closer to systemic. Unlike Stage 3 there is no ρ ≤ 5″ companion gate (no per-row WDS context at catalog build); the PM discrepancy alone routes. | ~<!-- count:build-catalog/directionHip2PmDiscrepant -->148<!-- /count --> |
@@ -133,7 +140,7 @@ cascade passes over is a refusal on the result: `pm_disagrees_with_hip2` on a
 
 | Tier | Epoch of the position it reads |
 |---|---|
-| `gaia_5p` / `gaia_nss_systemic` | J2016.0 — a zero-Δt no-op |
+| `gaia_5p` / `gaia_2p` / `gaia_nss_systemic` | J2016.0 — a zero-Δt no-op |
 | `hip2_*` | J1991.25 |
 | `tycho2` | J2000 — **measured**: over the 1,145 mean-solution rows with a Gaia-grade SIMBAD place above 100 mas/yr, propagating from J2000 lands a median 0.061″ from it against 1.817″ propagating from `ep_ra`/`ep_de`, whose 1967.77–1991.74 spread is the size of the error that buys |
 | `tycho2`, `pflag='X'` rows | J1991.25 — no mean solution exists, so the observed `ra_icrs` is the only position the row has. Their PM comes from `pm-rescue/` instead, and advances this position like any other. <!-- count:build-catalog/directionTycho2FromIcrs -->8<!-- /count --> of the <!-- count:build-catalog/directionTycho2 -->80<!-- /count -->, pinned `directionTycho2FromIcrs` |
@@ -214,3 +221,29 @@ source should supply the position too](pm-rescue/README.md#whether-the-rescuing-
 `velocityVia` credits the catalogue rather than the route to it, so
 `velocityTycho2Pm` **43** counts this cascade's 5 rows alongside the
 direction tier's 38.
+
+## Placement lineage
+
+`build:catalog`'s record walk is the second stage of the
+[lineage](../lineage/README.md) contract (`placement-lineage-pure.ts`).
+`readStars` hands on one `Placement` per manifest row, keyed on its origin key: each step the walk
+ran, in walk order, up to the park that stopped it or the record it shipped.
+`placementLineageRows` serialises it through an exhaustive `switch`, and
+`placementLineageLines` turns those rows into the lines the build keeps
+([Storage and cost](../lineage/README.md#storage-and-cost)):
+
+- every step writes its outcome code and its refused candidates, the
+  candidate's tier in `params`; a refusal code names the rule, never the tier;
+- parallax and direction always, then the park for a parked row; a placed
+  row adds the PM rescue where it ran, Bailer-Jones and the LMC snap where
+  they fired, and its radial velocity;
+- each row cites, as evidence, the source rows its cascade read
+  (`CitedCascadeResult`, `../cascade-result.ts`), and no measured value;
+- the four park codes declare effect `park`, so a SID the build stops
+  producing stays in the ledger, absent.
+
+A park row carries the manifest's five identifier cells in `params`, since
+those cells are the parked ledger's key and the parity gate's join, and
+`parkedLedgerView` generates `data/membership/parked-ledger.tsv` from the
+park rows alone, decoding only the lines whose code is a park code. Placement
+founds no record, so it writes no identity rows.

@@ -81,7 +81,7 @@ import {
 } from './companions/promotion-lineage-pure';
 import { identityText } from './lineage/identity-pure';
 import { LINEAGE_LAYOUT } from './lineage/lineage-io';
-import { stageLineageText } from './lineage/lineage-row-pure';
+import { stageLineageLine, stageLineageText, type LineageLine } from './lineage/lineage-row-pure';
 import { stageLineage } from './lineage/stage-lineage';
 import {
   buildCatalogRowIndexMap,
@@ -109,13 +109,15 @@ import {
   loadStarNamingInputs,
 } from './naming/apply-star-names';
 import { assignDisplayNames } from './naming/display-names';
-import { readStars, type Star } from './parse/stars-parse';
+import { readStars, type ReadStarsOptions, type Star } from './parse/stars-parse';
 import {
   PARKED_COUNT_KEY,
   PARKED_REASONS,
-  type ParkedRecord,
 } from './distance/parallax/parked-ledger';
 import { PARKED_LEDGER } from './distance/parallax/parked-ledger-tsv';
+import {
+  PLACEMENT_CODES, PLACEMENT_LINEAGE, PLACEMENT_LINEAGE_BUDGET, parkedLedgerView, placementLineageLines,
+} from './distance/placement-lineage-pure';
 import {
   SIMBAD_SOURCED_DISTANCES_FILE,
   SIMBAD_SOURCED_DISTANCES,
@@ -131,7 +133,7 @@ import { MEMBERSHIP_MANIFEST } from './membership/membership-manifest-tsv';
 import { artifactRows } from '../util/sources/source';
 import { REPO_ROOT as ROOT } from '../util/paths';
 import {
-  clearStamp, fileHashes, stampIsCurrent,
+  clearStamp, fileHashes, stampIsCurrent, type FileHashes,
 } from '../util/build-stamp';
 import {
   DEFAULT_CATALOG_MANIFEST as OUT_MANIFEST, DEFAULT_CONSTELLATIONS_JSON as OUT_CON,
@@ -144,6 +146,7 @@ import {
   emitArtifacts, runStep, sweepStaged, type ArtifactContents, type Check,
 } from '../util/emit-artifacts';
 import { snapshotCheck } from '../util/snapshot-check';
+import { watchHeap } from '../util/heap-budget';
 import {
   resolveSids, sidSuccessorPairs, starDesignations, syntheticGaiaBridges,
   type SidObject,
@@ -161,12 +164,30 @@ const EXPECTED_OUTLIERS = resolve(
   'distance/refinement/build-distance-outliers-expected.json',
 );
 
-/** The record-parity dropped list (/docs/catalog-driver.md#61-record-parity). A record that reaches no owned parallax cannot be
- *  placed, so it does not ship — and unlike the low-precision rows, which stay
- *  in the catalogue and are recomputable from it, nothing else records that
- *  these existed. Committed so the set is diffable: a refresh that moves it is
- *  a membership change, and Gaia DR4 should empty most of it. */
-function parkedRecordsTsv(parked: readonly ParkedRecord[]): string {
+// A function of its own so the placement lines are unreachable once it returns:
+// inlined into main, they outlive the walk and the build runs out of heap.
+async function walkManifest(inputs: ReadStarsOptions, inputHashes: FileHashes) {
+  const lines: LineageLine[] = [];
+  const { stars, stats } = readStars(artifactRows(MEMBERSHIP_MANIFEST), inputs, (placement) => {
+    for (const line of placementLineageLines(placement)) lines.push(line);
+  });
+  const parkedLedger = parkedLedgerTsv(lines);
+  const placementEmission = await stageLineage({
+    layout: LINEAGE_LAYOUT,
+    spec: PLACEMENT_LINEAGE,
+    inputs: inputHashes,
+    diffed: 'placement',
+    lines,
+    render: (sorted) => ({ placement: stageLineageText(PLACEMENT_CODES, sorted) }),
+    joins: () => [],
+    budget: PLACEMENT_LINEAGE_BUDGET,
+    argv: process.argv.slice(2),
+  });
+  return { stars, stats, parkedLedger, placementEmission };
+}
+
+function parkedLedgerTsv(placementLines: readonly LineageLine[]): string {
+  const parked = parkedLedgerView(placementLines);
   console.log(`  parked (record parity): ${parked.length} → ${PARKED_LEDGER.file}`);
   return PARKED_LEDGER.serialize(parked);
 }
@@ -186,6 +207,7 @@ function simbadSourcedDistancesTsv(stars: readonly Star[]): string {
 }
 
 async function main() {
+  const heap = watchHeap('build:catalog');
   sweepStaged(CATALOG_OUTPUTS);
   // The UPDATE_* snapshot-refresh flags rewrite artifacts written at the end
   // of a full build, so they must force one even when the sources are
@@ -258,7 +280,6 @@ async function main() {
     namingDuplicateRecords: 0,
     desigConFromCrossIndex: 0,
     crossIndexUnknownCst: 0,
-    droppedTooFar: 0,
     bjEntries: 0,
     bjEligible: 0,
     bjOverridden: 0,
@@ -371,6 +392,7 @@ async function main() {
     parkedNoVMagnitude: 0,
     parkedNoPosition: 0,
     directionGaia5p: 0,
+    directionGaia2p: 0,
     directionGaiaNssSystemic: 0,
     directionHip2Saturated: 0,
     directionHip2PmDiscrepant: 0,
@@ -413,17 +435,16 @@ async function main() {
 
   const inputs = await loadReadStarsInputs();
   const {
-    bjMap, apsisMap, simbadSpectral, directions,
+    bailerJones, apsisMap, simbadSpectral, directions,
     dustGrid, conAssignment, sizes,
   } = inputs;
   Object.assign(counts, sizes);
 
   console.log(`Reading ${MEMBERSHIP_MANIFEST.file}...`);
   const t0 = Date.now();
-  const { stars, stats } = readStars(artifactRows(MEMBERSHIP_MANIFEST), inputs);
+  const { stars, stats, parkedLedger, placementEmission } = await walkManifest(inputs, inputHashesAtStart);
   console.log(`  parsed ${stats.total} rows in ${Date.now() - t0}ms`);
   console.log(`  kept ${stars.length} stars; parked ${stats.parked.length}`);
-  console.log(`  dropped:`, stats.dropped);
   if (stats.bjEligible > 0) {
     const pct = ((stats.bjOverridden / stats.bjEligible) * 100).toFixed(1);
     console.log(
@@ -527,11 +548,9 @@ async function main() {
       + ' (ship, biased inversion — revisit at Gaia DR4)',
     );
   }
-  const parkedLedger = parkedRecordsTsv(stats.parked);
   const simbadSourcedDistances = simbadSourcedDistancesTsv(stars);
   // recordCount is the final post-promotion count; populated after the
   // companion-promotion pass below.
-  counts.droppedTooFar = stats.dropped.tooFar;
   counts.bjEligible = stats.bjEligible;
   counts.bjOverridden = stats.bjOverridden;
   counts.bjEligibleNotPulled = stats.bjEligibleNotPulled;
@@ -543,6 +562,7 @@ async function main() {
   counts.lmcParallaxRefusedByDistVia = stats.lmcParallaxRefusedByDistVia;
   counts.lmcOverriddenByDistVia = stats.lmcOverriddenByDistVia;
   counts.directionGaia5p = dv.gaia_5p;
+  counts.directionGaia2p = dv.gaia_2p;
   counts.directionGaiaNssSystemic = dv.gaia_nss_systemic;
   counts.directionHip2Saturated = dv.hip2_saturated;
   counts.directionHip2PmDiscrepant = dv.hip2_pm_discrepant;
@@ -657,7 +677,7 @@ async function main() {
   const coherence = applySystemDistanceCoherence(multiplesRows, stars, {
     gaiaAstrometry: directions.gaiaAstrometry,
     hip2: directions.hip2,
-    bjMap,
+    bjMap: bailerJones.distPc,
   });
   console.log(
     `  system distance coherence: ${coherence.membersRepositioned} ` +
@@ -1239,7 +1259,7 @@ async function main() {
     spec: PROMOTION_LINEAGE,
     inputs: inputHashesAtStart,
     diffed: 'promotion',
-    rows: promotionLineage,
+    lines: promotionLineage.map((row) => stageLineageLine(PROMOTION_CODES, row)),
     render: (sorted) => ({
       promotion: stageLineageText(PROMOTION_CODES, sorted),
       'promotion.identity': identityText(promotionIdentity),
@@ -1256,9 +1276,10 @@ async function main() {
     rowIndexMap: rowIndexMapJson,
     parkedLedger,
     simbadSourcedDistances,
+    ...placementEmission.files,
     ...lineage.files,
   };
-  const members = new Map([...chunks, ...lineage.members]);
+  const members = new Map([...chunks, ...placementEmission.members, ...lineage.members]);
   const sidResolved = recordSids.reduce((n, sid) => (sid !== 0 ? n + 1 : n), 0);
   console.log(`SID: ${sidResolved} / ${stars.length} records resolved to a ledger SID`);
   if (sidResolution.errors.length > 0) {
@@ -1280,7 +1301,10 @@ async function main() {
     outputs: CATALOG_OUTPUTS,
     files,
     members,
-    checks: [...lineage.checks, buildCountsCheck(counts), distanceOutliersCheck(stars)],
+    checks: [
+      ...placementEmission.checks, ...lineage.checks, buildCountsCheck(counts), distanceOutliersCheck(stars),
+      heap.check(),
+    ],
     stamp: { path: CATALOG_STAMP, inputs: inputHashesAtStart },
   });
 }

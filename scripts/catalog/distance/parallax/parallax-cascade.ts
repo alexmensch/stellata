@@ -6,7 +6,8 @@ import { gaiaRefusals, refusedPublicationCited, type RefusedPublication } from '
 import type { GaiaAstrometryCatalogRow, Hip2AstrometryRow } from '../direction-cascade';
 import { parallaxSignalToNoise } from '../../cited-parallax';
 import type { CitedParallax, MeasuredParallax } from '../../cited-parallax';
-import type { CascadeRefusal, CascadeResult } from '../../cascade-result';
+import type { CitedCascadeResult, CitedRefusal } from '../../cascade-result';
+import type { AnySourceRowRef } from '../../../util/sources/row-ref-pure';
 import type { SiblingParallax } from './pair-member-parallax';
 import type { GlieseRow } from '../../gliese-parse';
 
@@ -87,11 +88,11 @@ export type ParallaxTier = Exclude<DistVia, 'bailer_jones' | 'lmc_kinematic' | '
  *  two apart — and `mas` is what companion promotion matches a pair row's
  *  stated distance against (`../../companions/README.md#refused-parallax-refusal`). */
 export type ParallaxRefusal =
-  CascadeRefusal<ParallaxTier, 'below_sn_floor' | RefusedPublication> & { readonly mas: number };
+  CitedRefusal<ParallaxTier, 'below_sn_floor' | RefusedPublication> & { readonly mas: number };
 
 /** `mas` always > 0. Sol's curated exit carries none: its distance is zero by
  *  construction. */
-export type ParallaxResolution = CascadeResult<
+export type ParallaxResolution = CitedCascadeResult<
   Record<Exclude<ParallaxTier, 'curated'>, MeasuredParallax> & { curated: null },
   ParallaxRefusal
 >;
@@ -140,16 +141,16 @@ export function resolveParallax(
   const refusals: ParallaxRefusal[] = [];
   const refused = new Set<RefusedPublication>(gaiaRefusals(gaia));
   const hit = (
-    via: Exclude<ParallaxTier, 'curated'>, value: MeasuredParallax,
-  ): ParallaxResolution => ({ via, value, refusals });
+    via: Exclude<ParallaxTier, 'curated'>, value: MeasuredParallax, ref: AnySourceRowRef,
+  ): ParallaxResolution => ({ via, value, evidence: [ref], refusals });
 
   const courier = (
     via: 'cns5_plx' | 'simbad_plx', p: CitedParallax | null,
   ): ParallaxResolution | null => {
     if (p === null || !usable(p.mas)) return null;
     const publication = refusedPublicationCited(p.bibcode, refused);
-    if (publication === null && !belowParallaxSnFloor(p.mas, p.errMas)) return hit(via, p);
-    refusals.push({ tier: via, reason: publication ?? 'below_sn_floor', mas: p.mas });
+    if (publication === null && !belowParallaxSnFloor(p.mas, p.errMas)) return hit(via, p, p.ref);
+    refusals.push({ tier: via, reason: publication ?? 'below_sn_floor', mas: p.mas, ref: p.ref });
     return null;
   };
 
@@ -158,27 +159,28 @@ export function resolveParallax(
   const glieseHit = (
     trigonometric: boolean, via: 'gliese_plx' | 'gliese_photometric_plx',
   ): ParallaxResolution | null => {
-    const p = gliese?.parallax ?? null;
+    if (gliese === null) return null;
+    const p = gliese.parallax;
     if (p === null || p.trigonometric !== trigonometric || !usable(p.mas)) {
       return null;
     }
     if (belowParallaxSnFloor(p.mas, p.errMas)) {
-      refusals.push({ tier: via, reason: 'below_sn_floor', mas: p.mas });
+      refusals.push({ tier: via, reason: 'below_sn_floor', mas: p.mas, ref: gliese.ref });
       return null;
     }
-    return hit(via, p);
+    return hit(via, p, gliese.ref);
   };
 
   if (gaia !== null && usable(gaia.parallaxMas)) {
-    return hit('gaia_dr3_inversion', { mas: gaia.parallaxMas, errMas: gaia.parallaxErrorMas });
+    return hit('gaia_dr3_inversion', { mas: gaia.parallaxMas, errMas: gaia.parallaxErrorMas }, gaia.ref);
   }
 
   if (hip2 !== null && usable(hip2.plxMas)) {
     if (!belowParallaxSnFloor(hip2.plxMas, hip2.plxErrorMas)) {
-      return hit('hip2_parallax', { mas: hip2.plxMas, errMas: hip2.plxErrorMas });
+      return hit('hip2_parallax', { mas: hip2.plxMas, errMas: hip2.plxErrorMas }, hip2.ref);
     }
     refused.add('hipparcos2');
-    refusals.push({ tier: 'hip2_parallax', reason: 'below_sn_floor', mas: hip2.plxMas });
+    refusals.push({ tier: 'hip2_parallax', reason: 'below_sn_floor', mas: hip2.plxMas, ref: hip2.ref });
   }
 
   const fromCns5 = courier('cns5_plx', cns5);
@@ -196,7 +198,7 @@ export function resolveParallax(
   // catalogue-wide, reaching one tier further down. Below the second-order
   // indices because it lends a neighbour's measurement rather than serving this
   // star's own.
-  if (pairMember !== null) return hit('pair_member_parallax', pairMember);
+  if (pairMember !== null) return hit('pair_member_parallax', pairMember, pairMember.ref);
 
   // V/70A's photometric and spectroscopic parallaxes: a distance from colour and
   // spectral type, which is circular for a build that then derives the record's
@@ -211,7 +213,7 @@ export function resolveParallax(
 
   // Sol's distance is zero rather than a parallax — the same curated exit the
   // direction and V cascades take.
-  if (isSol) return { via: 'curated', value: null, refusals };
+  if (isSol) return { via: 'curated', value: null, evidence: [], refusals };
 
   return { via: 'none', refusals };
 }

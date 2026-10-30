@@ -87,10 +87,12 @@ scripts/catalog/
                                   catalogue, runs the per-row pipeline and
                                   each cross-match pass in order, then
                                   emits the chunked binary, manifests,
-                                  both committed ledgers and promotion's
-                                  lineage through emitArtifacts once its two
-                                  snapshot checks and the lineage budget
-                                  pass. On a SID error it lands them
+                                  both committed ledgers and placement's and
+                                  promotion's lineage through emitArtifacts
+                                  once its two snapshot checks, both
+                                  lineage budgets and the CI heap budget
+                                  (../util/README.md#ci-heap-budget) pass.
+                                  On a SID error it lands them
                                   with no checks and then fails
                                   ([SID allocation](#sid-allocation)).
   catalog-inputs.test.ts          Pins stepInputPaths('build:catalog')
@@ -105,7 +107,8 @@ scripts/catalog/
                                   writes, as its emitArtifacts declaration
                                   (../util/README.md): the public/ sidecars,
                                   the row-index map, the two committed
-                                  ledgers, promotion's lineage files, and
+                                  ledgers, placement's and promotion's
+                                  lineage files, and
                                   the transport chunks and the lineage
                                   baseline and diff as families. Side-effect free, so a reader can
                                   import the declaration without running
@@ -117,6 +120,10 @@ scripts/catalog/
                                   `CascadeRefusal` (tier + coded reason, the
                                   tier checked against the cascade's own) —
                                   what the stage lineage projects.
+                                  `CitedCascadeResult` adds the source rows
+                                  the answer rests on (`evidence`) and the
+                                  row each `CitedRefusal` refused (`ref`):
+                                  the four placement cascades return it.
   cited-proper-motion.ts (+ test) `CitedProperMotion` and `CitedParallax`,
   cited-parallax.ts               with their only constructors: a value is
                                   admitted only with the bibcode that sourced

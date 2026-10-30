@@ -38,13 +38,13 @@ diagram below is the build-side view:
 [ Layer 1: Bailer-Jones DR3 override ]   only where the cascade resolved
    │                                       gaia_dr3_inversion (its posterior
    │                                       treats that measurement)
-   │                                       AND bjMap has the source_id
+   │                                       AND B-J has the source_id
    ▼
 [ Layer 2: LMC kinematic override    ]   only inside 15° LMC cone
    │                                       AND |Δμ_α*|, |Δμ_δ| ≤ 0.5 mas/yr
    │                                       AND own parallax ≤ 10σ above LMC's
    ▼
-[ Layer 3: MAX_DIST_PC = 50,000 gate ]   drops anything still beyond LMC
+[ Layer 3: MAX_DIST_PC = 50,000 gate ]   fails on anything still beyond LMC
    │
    ▼
 dist × cascade direction (../README.md#direction-resolution) → `public/catalog.bin` xyz
@@ -120,8 +120,10 @@ inversion for the Bayesian posteriors published by
 The pipeline:
 
 1. Load `data/bailer-jones/bailer-jones-dr3.tsv` through `BAILER_JONES`
-   (`bailer-jones-source.ts`) into a `Map<source_id, distance_pc>` keyed
-   by Gaia DR3 `source_id`, kept as a **string** for the reason
+   (`bailer-jones-source.ts`) into a `BailerJonesIndex`: a
+   `Map<source_id, distance_pc>` beside the declaration its rows cite
+   (`i352:<source_id>`), keyed by Gaia DR3 `source_id`, kept as a
+   **string** for the reason
    `data/bailer-jones/README.md` gives. Photogeometric
    `r_med_photogeo` is preferred; `r_med_geo` is the fallback when
    photogeo is absent.
@@ -223,8 +225,9 @@ constants and the override math.
 
 ## Layer 3 — MAX_DIST_PC bounded-scope cutoff
 
-`MAX_DIST_PC = 50_000` (exported from `stars-parse.ts`) drops any row
-whose final distance still exceeds 50 kpc after Layers 1 and 2. This
+`MAX_DIST_PC = 50_000` (exported from `stars-parse.ts`) fails the walk on
+any row whose final distance still exceeds 50 kpc after Layers 1 and 2,
+naming it. This
 is **not** a noise filter — it's a statement about which populations
 the model currently represents (Sol out to and including the LMC).
 The cutoff bumps in sync with each new modelled population the
@@ -233,8 +236,8 @@ supergiant layers would extend it). See [Stellar catalog ingestion](/docs/scienc
 for the framing rationale.
 
 Every kinematic-override target distance must satisfy
-`dist < MAX_DIST_PC` or its entire population is silently dropped at
-this cut; `distance-overrides-pure.test.ts` pins `LMC_DISTANCE_PC <
+`dist < MAX_DIST_PC` or its entire population fails the build at this
+cut; `distance-overrides-pure.test.ts` pins `LMC_DISTANCE_PC <
 MAX_DIST_PC` (406 pc of margin today). A future SMC layer (~62 kpc) must raise the
 cutoff in the same change.
 

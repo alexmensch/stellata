@@ -11,6 +11,8 @@ import type {
   Hip2AstrometryRow,
 } from '../distance/direction-cascade';
 import { gaiaAstrometryRow } from '../distance/astrometry-fixture';
+import { HIP2 } from '../distance/hip2-source';
+import { sourceRowRef } from '../../util/sources/row-ref-pure';
 import type { MultiplesTsvRow } from '../companions/companion-promotion';
 import { multiplesRow } from '../companions/multiples-fixture';
 
@@ -44,6 +46,7 @@ function hip2Row(overrides: Partial<Hip2AstrometryRow>): Hip2AstrometryRow {
   return {
     raDeg: 0, decDeg: 0, plxMas: 10, plxErrorMas: 0.5,
     pmRaMasyr: 0, pmDeMasyr: 0,
+    ref: sourceRowRef(HIP2, 1),
     ...overrides,
   };
 }

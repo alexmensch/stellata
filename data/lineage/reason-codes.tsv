@@ -35,6 +35,48 @@ membership.label.overlay-wins	membership	none	live		7.1.6	The overlay and the sp
 membership.label.override-spine	membership	none	live		7.1.6	A curated override keeps the spine's designation over the overlay's.
 membership.label.override-value	membership	none	live		7.1.6	A curated override sets the designation.
 membership.label.suppressed-collision	membership	none	live		7.1.6	The overlay's designation already names another record, so it is not added.
+placement.direction.cns5	placement	none	live		7.1.6	The record's own GJ in CNS5, which no tier above reaches.
+placement.direction.curated	placement	none	live		7.1.6	Sol: the direction is arbitrary at distance zero.
+placement.direction.gaia-2p	placement	none	live		7.1.6	The record's own Gaia DR3 position-only solution, which no Hipparcos-2 row covers.
+placement.direction.gaia-5p	placement	none	live		7.1.6	The record's own Gaia DR3 five-parameter solution.
+placement.direction.gaia-nss-systemic	placement	none	live		7.1.6	The record's Gaia DR3 solution, refitted to the centre of mass: an NSS two-body orbit and an unreliable five-parameter fit.
+placement.direction.hip2-pm-discrepant	placement	none	live		7.1.6	Hipparcos-2, where the Gaia proper motion disagrees with it by more than 50 mas/yr.
+placement.direction.hip2-saturated	placement	none	live		7.1.6	Hipparcos-2, where Gaia states no usable parallax for the record.
+placement.direction.refused.no-5p-solution	placement	none	live		7.1.6	The Gaia solution is position-only and Hipparcos-2 covers the star.
+placement.direction.refused.pm-disagrees-with-hip2	placement	none	live		7.1.6	The Gaia solution's proper motion disagrees with Hipparcos-2's by more than 50 mas/yr, the mark of an orbit-corrupted fit.
+placement.direction.simbad	placement	none	live		7.1.6	SIMBAD's bibcoded coordinates, the bottom tier.
+placement.direction.tycho2	placement	none	live		7.1.6	The record's own TYC in Tycho-2, which neither Gaia nor Hipparcos-2 reaches.
+placement.distance.bailer-jones	placement	none	live		7.1.6	The posterior distance of Bailer-Jones 2021 (/data/papers/index.md#bailerjones2021) replaces the inverted Gaia DR3 parallax.
+placement.distance.bailer-jones-absent	placement	none	live		7.1.6	The inverted Gaia DR3 parallax is eligible for a Bailer-Jones posterior that the committed pull lacks.
+placement.distance.lmc-kinematic	placement	none	live		7.1.6	Inside the LMC cone and sharing its proper motion, the record snaps to the LMC distance.
+placement.distance.lmc-refused-by-own-parallax	placement	none	live		7.1.6	The LMC snap is refused: the record's own parallax is more than 10 sigma above the LMC's.
+placement.parallax.cns5-plx	placement	none	live		7.1.6	The record's own GJ in CNS5, cited to a publication no tier above refused, above the S/N floor.
+placement.parallax.curated	placement	none	live		7.1.6	Sol: distance zero by construction.
+placement.parallax.gaia-dr3-inversion	placement	none	live		7.1.6	The record's own Gaia DR3 five-parameter parallax.
+placement.parallax.gliese-photometric-plx	placement	none	live		7.1.6	V/70A's photometric or spectroscopic parallax estimate, the bottom tier: nothing measured reaches the record.
+placement.parallax.gliese-plx	placement	none	live		7.1.6	The record's own GJ in V/70A, where the catalogue states its parallax is trigonometric.
+placement.parallax.hip2-parallax	placement	none	live		7.1.6	The record's own HIP in Hipparcos-2, van Leeuwen 2007 (/data/papers/index.md#vanleeuwen2007), above the S/N floor.
+placement.parallax.pair-member-parallax	placement	none	live		7.1.6	A bound sibling's anchor-grade Gaia DR3 parallax, lent because no measurement of the record itself survived.
+placement.parallax.refused.below-sn-floor	placement	none	live		7.1.6	A tier's parallax is below S/N 1, indistinguishable from zero, so its inverse is undefined.
+placement.parallax.refused.gaia-release	placement	none	live		7.1.6	A courier's parallax cites a Gaia release on a record whose own Gaia fit is position-only, so it is the withdrawn fit returning.
+placement.parallax.refused.hipparcos2	placement	none	live		7.1.6	A courier's parallax cites Hipparcos-2 on a record whose Hipparcos-2 parallax the S/N floor refused.
+placement.parallax.simbad-plx	placement	none	live		7.1.6	SIMBAD's bibcoded parallax, cited to a publication no tier above refused, above the S/N floor.
+placement.park.no-parallax-published	placement	park	live		7.1.6	No parallax tier reaches the record, so it cannot be placed.
+placement.park.no-position	placement	park	live		7.1.6	No direction tier states where the record is on the sky.
+placement.park.no-v-magnitude	placement	park	live		7.1.6	No V tier lights the record, so it has no brightness.
+placement.park.refused-no-defensible-parallax	placement	park	live		7.1.6	Every parallax reaching the record was refused, so it cannot be placed.
+placement.pm-rescue.cns5	placement	none	live		7.1.6	The direction tier states no proper motion; the record's own GJ in CNS5 supplies one.
+placement.pm-rescue.none	placement	none	live		7.1.6	The direction tier states no proper motion and no rescue tier supplies one, so the record ships static.
+placement.pm-rescue.refused.gaia-release	placement	none	live		7.1.6	A courier's proper motion cites a Gaia release on a record whose own Gaia fit is position-only.
+placement.pm-rescue.simbad	placement	none	live		7.1.6	The direction tier states no proper motion; SIMBAD's bibcoded one supplies it.
+placement.pm-rescue.tycho2	placement	none	live		7.1.6	The direction tier states no proper motion; the record's own TYC in Tycho-2 supplies one.
+placement.rv.gaia-dr3	placement	none	live		7.1.6	Gaia DR3's RVS radial velocity on a record with a five-parameter solution.
+placement.rv.none	placement	none	live		7.1.6	No tier states a radial velocity, so the radial term is zero.
+placement.rv.refused.gaia-release	placement	none	live		7.1.6	SIMBAD's radial velocity cites a Gaia release on a record whose own Gaia fit is position-only.
+placement.rv.refused.no-5p-solution	placement	none	live		7.1.6	Gaia's RVS velocity on a position-only solution, whose spectrum is a blend.
+placement.rv.rejected-above-ceiling	placement	none	live		7.1.6	The radial velocity a tier supplied exceeds the sanity ceiling on its own, so the radial term is dropped.
+placement.rv.simbad	placement	none	live		7.1.6	SIMBAD's bibcoded radial velocity.
+placement.velocity.clamped	placement	none	live		7.1.6	The space velocity exceeds the sanity ceiling, so it is zeroed.
 promotion.adopted.earlier-mint	promotion	merge	live		7.1.6	An earlier row of this build already minted the record this row names.
 promotion.adopted.own-hip	promotion	merge	live		7.1.6	The row's Gaia source names no record, but its own HIP names one other than the anchor, which is the component.
 promotion.adopted.own-id	promotion	merge	live		7.1.6	The row's own Gaia source or HIP names a record already in the catalogue, which is the component.

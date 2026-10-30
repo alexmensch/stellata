@@ -15,7 +15,7 @@ import {
 
 export const MEMBERSHIP_STAGE = 'membership';
 
-export const MEMBERSHIP_LINEAGE: StageLineageSpec<'membership' | 'identity'> = {
+export const MEMBERSHIP_LINEAGE: StageLineageSpec<'membership' | 'identity', 'membership'> = {
   stage: MEMBERSHIP_STAGE,
   files: ['membership', 'identity'],
   identity: 'identity',

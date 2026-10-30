@@ -44,9 +44,10 @@ const sigmaOri = (gaia: Map<string, GaiaAstrometryCatalogRow>) =>
 
 describe('pair-member-parallax / the sibling a member borrows from', () => {
   it('lends the clean sibling fit to the member Gaia fitted no parallax for', () => {
-    const index = sigmaOri(new Map([[SIBLING_SOURCE, clean()]]));
+    const sibling = clean();
+    const index = sigmaOri(new Map([[SIBLING_SOURCE, sibling]]));
     expect(lookupPairMemberParallax(index, BLEND_SOURCE, 26549)).toEqual({
-      sourceId: SIBLING_SOURCE, mas: SIBLING_PLX, errMas: SIBLING_ERR,
+      sourceId: SIBLING_SOURCE, mas: SIBLING_PLX, errMas: SIBLING_ERR, ref: sibling.ref,
     });
     // 1000 / 2.4744 = 404.1 pc, against the 328.9 the S/N floor refused.
     expect(1000 / SIBLING_PLX).toBeCloseTo(404.14, 2);

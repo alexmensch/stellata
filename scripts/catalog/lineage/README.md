@@ -19,15 +19,16 @@ outcomes; its post-passes act on records and keep their own.
 
 ```
 scripts/catalog/lineage/
-  lineage-row-pure.ts            The envelope, its one comparator
-                                 (compareLineageRows), the TSV text form, and
-                                 stageLineageText — the writer, which refuses
-                                 a code the stage does not declare or rows
-                                 out of order.
+  lineage-row-pure.ts            The envelope and LineageLine, its TSV line:
+                                 stageLineageLine, the one encoder, which
+                                 refuses a code the stage does not declare;
+                                 sortLineageLines, the one order; and
+                                 stageLineageText, the writer, which refuses
+                                 another stage's line or lines out of order.
   reason-codes-pure.ts           stageCodes: a stage's codes with their
                                  effect and status.
-  lineage-diff-pure.ts           diffLineage, the merge-join; stageDiffText,
-                                 the diff file.
+  lineage-diff-pure.ts           diffLineage, the merge-join of two stage
+                                 files' lines; stageDiffText, the diff file.
   lineage-header-pure.ts         StageHeader; planBaseline and judgeBaseline,
                                  which baseline a build diffs against.
   identity-pure.ts               The identity row and its file; refuses two
@@ -154,10 +155,13 @@ citations by licence is the release design's question, and the filter would
 be a join on `source`.
 
 Its text form is `<source>:<row>`. Every lineage file sorts by the byte
-order of that text form, then `role`, `code`, `params`, through one
-comparator the writer and the diff both import (`compareLineageRows`,
-`lineage-row-pure.ts`) — never a numeric sort, so
-Gaia ids above 2^53 order the same everywhere. A key's rows diff as a set:
+order of that text form, then `role`, `code`, `params`, `evidence`. A stage
+hands its rows over as lines (`LineageLine`, made only by `stageLineageLine`
+or read from a stage file), and a tab sorts below every character a cell may
+hold — `encodeLineageLine` refuses the control characters below it — so
+sorting a stage's lines by their UTF-8 bytes (`sortLineageLines`) is that
+order, and the writer and the diff check the same one — never a numeric
+sort, so Gaia ids above 2^53 order the same everywhere. A key's rows diff as a set:
 changed means the set of rows under one key differs. `params` is empty or a
 JSON object whose keys keep the stage's declared order, so one payload has
 one text; `evidence` is its references' text forms joined by `|`.
@@ -253,7 +257,19 @@ refusals are rows of their own. `MEMBERSHIP_LINEAGE_BUDGET` pins 41 MB and
 write slower than a workstation. Promotion, measured the same day: <!-- count:build-binaries/multiples_rows_emitted -->47,018<!-- /count --> rows, one
 per `multiples.tsv` row, plus an identity row per minted companion, 0.70 MB
 gzipped in 0.3 s without a diff; `PROMOTION_LINEAGE_BUDGET` pins 0.8 MB and
-5 s.
+5 s. Placement, measured 2026-10-30: 3,872,657 rows (349 MB plain, 31.0 MB
+gzipped) in 3.2 s without a diff and 8.1 s with one against a full
+baseline; `PLACEMENT_LINEAGE_BUDGET` pins 34 MB and 30 s. A file that size outruns
+V8's longest string, so stage files and diffs are written and read as UTF-8
+bytes in chunks, and the diff walks the baseline a key at a time
+(`streamLineage`) rather than holding it.
+
+A stage that size cannot hold its rows as objects either: 3.9 million
+`LineageRow`s, beside the `Placement`s they came from, are about 1.7 GB of
+heap. So a stage hands `stageLineage` lines, never rows, and placement
+serialises each record to its lines inside the walk, keeping only the
+strings; the diff reads the baseline as lines too, and only a reader that
+needs fields (trace, a ledger view) decodes them.
 
 The committed form of lineage is `data/sid/events.tsv` plus the ledger views
 below; the derivation itself is a build artifact, regenerated every build.
@@ -361,7 +377,8 @@ still regenerated and diffed by CI, so a PR diff keeps showing the change:
 
 `binding-review.tsv` and `rejected_bindings.tsv` are then two filters over
 one row type. Each view moves when its writing stage gains lineage; the
-first four are views now ([The membership stage](#the-membership-stage)).
+first four are views now ([The membership stage](#the-membership-stage)),
+and so is `parked-ledger.tsv` ([Placement lineage](../distance/README.md#placement-lineage)).
 
 ## The membership stage
 
@@ -388,9 +405,14 @@ reinstate rows per SID. The migration needs the one-time edit to the ledger
 guard that `docs/sid.md` [§ 4.5](/docs/sid.md#45-ci-guard) reserves for owner
 sign-off; the owner gave it on 2026-10-21 by choosing this migration.
 
+## The placement stage
+
+`build:catalog`'s record walk is the second stage; its contract lives beside
+its module, in [Placement lineage](../distance/README.md#placement-lineage).
+
 ## The promotion stage
 
-`build:catalog`'s companion promotion is the second stage
+`build:catalog`'s companion promotion is the third stage
 (`../companions/promotion-lineage-pure.ts`). `promoteCompanions` returns one
 `PromotedRow` per `multiples.tsv` row, keyed on that row
 (`multiples:<system_id>/<comp>`), and `promotionLineageRow` serialises its

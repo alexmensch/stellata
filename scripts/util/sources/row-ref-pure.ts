@@ -27,6 +27,9 @@ export interface SourceRowRef<K> {
   readonly row: K;
 }
 
+/** A row of any declared source, for a list citing several. */
+export type AnySourceRowRef = SourceRowRef<unknown>;
+
 export function sourceRowRef<K>(source: RowKeyed<K>, row: K): SourceRowRef<K> {
   return { source, row };
 }

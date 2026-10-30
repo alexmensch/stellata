@@ -3,6 +3,7 @@
 // /docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers.
 
 import type { Declared } from '../util/sources/source';
+import { sourceRowRef, type RowKeyed, type SourceRowRef } from '../util/sources/row-ref-pure';
 import { readTable } from '../util/tsv/table-pure';
 import { normaliseGjKey } from './record/catalog-pure';
 import type { MeasuredParallax } from './cited-parallax';
@@ -34,6 +35,7 @@ export interface GlieseRow {
   parallax: GlieseParallax | null;
   /** V/70A's own `HD` column — the GJ↔HD link the association audit joins on. */
   hd: number | null;
+  ref: SourceRowRef<string>;
 }
 
 export interface GlieseIndex {
@@ -64,7 +66,7 @@ function catalogueKey(name: string, comp: string): string | null {
  *  `AB` answers to `165A`) and the bare number. Derived keys never displace an
  *  exact one, so `Gl 559 A` keeps `559A` even though a hypothetical `AB` row
  *  would alias onto it. */
-export function parseGlieseTsv(text: string, from: Declared): GlieseIndex {
+export function parseGlieseTsv(text: string, from: Declared & RowKeyed<string>): GlieseIndex {
   const index = emptyGlieseIndex();
   const parsed: Array<{ key: string; row: GlieseRow }> = [];
 
@@ -89,6 +91,7 @@ export function parseGlieseTsv(text: string, from: Declared): GlieseIndex {
         trigonometric: row.text('n_plx') === null,
       },
       hd: row.int('hd'),
+      ref: sourceRowRef(from, key),
     };
     if (index.byKey.has(key)) row.fail(`two rows keyed ${key}`);
     index.byKey.set(key, entry);
