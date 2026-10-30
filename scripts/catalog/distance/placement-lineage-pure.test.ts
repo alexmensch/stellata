@@ -78,7 +78,7 @@ describe('placementLineageRows', () => {
     const [row] = placementLineageRows({
       kind: 'parked-no-v',
       key,
-      entry: { tyc: null, hip: null, hd: null, gl: null, gaiaSourceId: SOURCE, reason: 'no_v_magnitude' },
+      ids: { tyc: null, hip: null, hd: null, gl: null, gaiaSourceId: SOURCE },
       parallax: { via: 'gaia_dr3_inversion', value: { mas: 2, errMas: 0.1 }, evidence: [own], refusals: [] },
     });
     expect(row.evidence).toEqual([]);
@@ -133,7 +133,7 @@ describe('placementLineageRows', () => {
     expect(codes({
       kind: 'parked-no-position',
       key: 'spine:3',
-      entry: { tyc: null, hip: 88759, hd: null, gl: null, gaiaSourceId: null, reason: 'no_position' },
+      ids: { tyc: null, hip: 88759, hd: null, gl: null, gaiaSourceId: null },
       parallax: { via: 'pair_member_parallax', value: { mas: 2, errMas: 0.1 }, evidence: [GAIA], refusals: [] },
       direction: { via: 'none', refusals: [] },
     })).toEqual([
@@ -143,7 +143,7 @@ describe('placementLineageRows', () => {
     expect(codes({
       kind: 'parked-parallax',
       key: 'spine:4',
-      entry: { tyc: null, hip: 37, hd: null, gl: null, gaiaSourceId: null, reason: 'refused_no_defensible_parallax' },
+      ids: { tyc: null, hip: 37, hd: null, gl: null, gaiaSourceId: null },
       parallax: {
         via: 'none',
         refusals: [{ tier: 'hip2_parallax', reason: 'below_sn_floor', mas: 2.62, ref: HIP }],
@@ -167,11 +167,11 @@ describe('parkedLedgerView', () => {
       { tyc: '1-2-1', hip: 7, hd: 55, gl: 'Gl 1', gaiaSourceId: SOURCE, reason: 'no_v_magnitude' },
       { tyc: null, hip: null, hd: null, gl: null, gaiaSourceId: SOURCE, reason: 'no_parallax_published' },
     ];
-    const rows = entries.flatMap((entry, i) => placementLineageRows({
-      kind: entry.reason === 'no_v_magnitude' ? 'parked-no-v' : 'parked-parallax',
+    const rows = entries.flatMap(({ reason, ...ids }, i) => placementLineageRows({
+      kind: reason === 'no_v_magnitude' ? 'parked-no-v' : 'parked-parallax',
       key: `spine:${i}`,
-      entry,
-      parallax: entry.reason === 'no_v_magnitude'
+      ids,
+      parallax: reason === 'no_v_magnitude'
         ? { via: 'gaia_dr3_inversion', value: { mas: 2, errMas: 0.1 }, evidence: [GAIA], refusals: [] }
         : { via: 'none', refusals: [] },
     }));

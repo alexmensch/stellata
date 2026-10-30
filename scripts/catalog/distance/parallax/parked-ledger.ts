@@ -42,6 +42,9 @@ export interface ParkedLedgerEntry {
   reason: ParkedReason;
 }
 
+/** The five identifier cells a park is keyed on, without its reason. */
+export type ParkedIdentifiers = Omit<ParkedLedgerEntry, 'reason'>;
+
 export interface ParkedRecord extends ParkedLedgerEntry {
   /** Build-time only — no ledger column carries it. Every parallax a skip rule
    *  refused on this row, mas, which is what companion promotion needs to tell a

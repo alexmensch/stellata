@@ -7,7 +7,9 @@ import { sourceRowRefText, type AnySourceRowRef } from '../../util/sources/row-r
 import type { DirectionResolution, DirectionVia } from './direction-cascade';
 import type { RefusedPublication } from './gaia-distrust';
 import type { ParallaxResolution, ParallaxTier } from './parallax/parallax-cascade';
-import { PARKED_REASONS, type ParkedLedgerEntry, type ParkedReason, type ParkedRecord } from './parallax/parked-ledger';
+import {
+  PARKED_REASONS, type ParkedIdentifiers, type ParkedLedgerEntry, type ParkedReason, type ParkedRecord,
+} from './parallax/parked-ledger';
 import type { PmRescueResolution, PmRescueVia } from './pm-rescue/pm-rescue';
 import type { RadialVelocityResolution, RvVia } from './radial-velocity/radial-velocity';
 
@@ -162,19 +164,19 @@ export type Placement =
   | {
     readonly kind: 'parked-parallax';
     readonly key: string;
-    readonly entry: ParkedLedgerEntry;
+    readonly ids: ParkedIdentifiers;
     readonly parallax: ParallaxResolution;
   }
   | {
     readonly kind: 'parked-no-v';
     readonly key: string;
-    readonly entry: ParkedLedgerEntry;
+    readonly ids: ParkedIdentifiers;
     readonly parallax: ParallaxResolution;
   }
   | {
     readonly kind: 'parked-no-position';
     readonly key: string;
-    readonly entry: ParkedLedgerEntry;
+    readonly ids: ParkedIdentifiers;
     readonly parallax: ParallaxResolution;
     readonly direction: DirectionResolution;
   }
@@ -194,6 +196,24 @@ export type Placement =
     readonly rvRejected: boolean;
     readonly velocityClamped: boolean;
   };
+
+export type ParkedPlacement = Exclude<Placement, { kind: 'placed' }>;
+
+/** The park reason, read off which step stopped the walk: the one place it is decided. */
+export function parkReason(p: ParkedPlacement): ParkedReason {
+  switch (p.kind) {
+    case 'parked-parallax':
+      return p.parallax.refusals.length > 0 ? 'refused_no_defensible_parallax' : 'no_parallax_published';
+    case 'parked-no-v':
+      return 'no_v_magnitude';
+    case 'parked-no-position':
+      return 'no_position';
+    default: {
+      const unmapped: never = p;
+      throw new Error(`park with no reason: ${JSON.stringify(unmapped)}`);
+    }
+  }
+}
 
 function cellText(v: string | number | null): string {
   return v === null ? '' : String(v);
@@ -229,24 +249,24 @@ export function placementLineageRows(p: Placement): LineageRow[] {
     const outcome: DirectionOutcome = res.via === 'gaia_5p' && gaia2p ? 'gaia_2p' : res.via;
     row('outcome', DIRECTION_BRANCHES[outcome], none, res.evidence);
   };
-  const park = (entry: ParkedLedgerEntry): void => row('outcome', PARK_BRANCHES[entry.reason], {
-    tyc: cellText(entry.tyc),
-    hip: cellText(entry.hip),
-    hd: cellText(entry.hd),
-    gl: cellText(entry.gl),
-    gaia_source_id: cellText(entry.gaiaSourceId),
+  const park = (q: ParkedPlacement): void => row('outcome', PARK_BRANCHES[parkReason(q)], {
+    tyc: cellText(q.ids.tyc),
+    hip: cellText(q.ids.hip),
+    hd: cellText(q.ids.hd),
+    gl: cellText(q.ids.gl),
+    gaia_source_id: cellText(q.ids.gaiaSourceId),
   }, []);
 
   switch (p.kind) {
     case 'parked-parallax':
     case 'parked-no-v':
       parallax(p.parallax);
-      park(p.entry);
+      park(p);
       return out;
     case 'parked-no-position':
       parallax(p.parallax);
       direction(p.direction, false);
-      park(p.entry);
+      park(p);
       return out;
     case 'placed': {
       parallax(p.parallax);
@@ -300,6 +320,6 @@ export function parkedRecords(placements: readonly Placement[]): ParkedRecord[] 
   return placements.flatMap((p) => {
     if (p.kind === 'placed') return [];
     const refusedPlxMas = p.kind === 'parked-parallax' ? p.parallax.refusals.map((r) => r.mas) : [];
-    return [{ ...p.entry, refusedPlxMas, originKey: p.key }];
+    return [{ ...p.ids, reason: parkReason(p), refusedPlxMas, originKey: p.key }];
   });
 }

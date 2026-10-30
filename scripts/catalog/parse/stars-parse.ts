@@ -54,7 +54,7 @@ import {
 } from '../distance/parallax/parallax-cascade';
 import {
   PARKED_REASONS,
-  type ParkedLedgerEntry,
+  type ParkedIdentifiers,
   type ParkedReason,
   type ParkedRecord,
 } from '../distance/parallax/parked-ledger';
@@ -443,9 +443,7 @@ export function readStars(
       : null;
     const glieseRow = lookupGliese(gliese, simbadKeys.gl);
     const key = row.originKey;
-    const parkedEntry = (reason: ParkedReason): ParkedLedgerEntry => ({
-      tyc: simbadKeys.tyc, hip, hd: row.hd, gl: simbadKeys.gl, gaiaSourceId, reason,
-    });
+    const ids: ParkedIdentifiers = { tyc: simbadKeys.tyc, hip, hd: row.hd, gl: simbadKeys.gl, gaiaSourceId };
 
     // Every distance inverts a parallax this build pulled itself. See
     // ../distance/parallax/README.md.
@@ -467,9 +465,7 @@ export function readStars(
       placements.push({
         kind: 'parked-parallax',
         key,
-        entry: parkedEntry(plxRes.refusals.length > 0
-          ? 'refused_no_defensible_parallax'
-          : 'no_parallax_published'),
+        ids,
         parallax: plxRes,
       });
       continue;
@@ -490,7 +486,7 @@ export function readStars(
       curatedV: isSol ? SOL_APPARENT_V_MAGNITUDE : null,
     });
     if (vRes.via === 'none') {
-      placements.push({ kind: 'parked-no-v', key, entry: parkedEntry('no_v_magnitude'), parallax: plxRes });
+      placements.push({ kind: 'parked-no-v', key, ids, parallax: plxRes });
       continue;
     }
 
@@ -509,7 +505,7 @@ export function readStars(
     // no row for them.
     if (direction.via === 'none') {
       placements.push({
-        kind: 'parked-no-position', key, entry: parkedEntry('no_position'), parallax: plxRes, direction,
+        kind: 'parked-no-position', key, ids, parallax: plxRes, direction,
       });
       continue;
     }
