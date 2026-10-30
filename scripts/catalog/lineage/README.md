@@ -23,11 +23,13 @@ scripts/catalog/lineage/
                                  (compareLineageRows), the TSV text form, and
                                  stageLineageText — the writer, which refuses
                                  a code the stage does not declare or rows
-                                 out of order.
+                                 out of order; stageLineageLine and
+                                 stageLineageLinesText, the same over lines.
   reason-codes-pure.ts           stageCodes: a stage's codes with their
                                  effect and status.
   lineage-diff-pure.ts           diffLineage, the merge-join; stageDiffText,
-                                 the diff file.
+                                 the diff file; each over rows or, through
+                                 LINE_FORM, lines.
   lineage-header-pure.ts         StageHeader; planBaseline and judgeBaseline,
                                  which baseline a build diffs against.
   identity-pure.ts               The identity row and its file; refuses two
@@ -47,7 +49,8 @@ scripts/catalog/lineage/
   trace.test.ts                  Both, the command over a committed fixture.
   stage-lineage.ts               stageLineage: one stage's files, header,
                                  baseline plan, diff and budget check,
-                                 ready for the stage's emitArtifacts call.
+                                 ready for the stage's emitArtifacts call;
+                                 stageLineageLines, the same from lines.
   lineage-io.ts                  The on-disk layout (build/lineage/,
                                  lineage.previous/, lineage-diff/), the
                                  baseline members and a stage's emission,
@@ -254,12 +257,21 @@ write slower than a workstation. Promotion, measured the same day: <!-- count:bu
 per `multiples.tsv` row, plus an identity row per minted companion, 0.70 MB
 gzipped in 0.3 s without a diff; `PROMOTION_LINEAGE_BUDGET` pins 0.8 MB and
 5 s. Placement, measured 2026-10-30: 3,872,657 rows (349 MB plain, 31.0 MB
-gzipped) in 5.3 s without a diff and 10.9 s with one against a full
-baseline, the whole build peaking at 6.0 GB resident;
-`PLACEMENT_LINEAGE_BUDGET` pins 34 MB and 30 s. A file that size outruns
+gzipped) in 3.2 s without a diff and 8.1 s with one against a full
+baseline; `PLACEMENT_LINEAGE_BUDGET` pins 34 MB and 30 s. A file that size outruns
 V8's longest string, so stage files and diffs are written and read as UTF-8
 bytes in chunks, and the diff walks the baseline a key at a time
 (`streamLineage`) rather than holding it.
+
+A stage that size cannot hold its rows as objects either: 3.9 million
+`LineageRow`s, beside the `Placement`s they came from, are about 1.7 GB of
+heap, which put `build:catalog` past CI's V8 limit. Placement therefore
+serialises each record's rows to lines inside the walk and keeps only the
+strings (`stageLineageLines`). A tab sorts below every character a cell may
+hold — `encodeLineageLine` refuses the control characters below it — so a
+line's byte order is `compareLineageRows` order, and the lines sort, diff and
+write as plain strings; the diff reads the baseline as lines too
+(`streamLineageLines`). Membership and promotion keep the row form.
 
 The committed form of lineage is `data/sid/events.tsv` plus the ledger views
 below; the derivation itself is a build artifact, regenerated every build.
@@ -397,26 +409,8 @@ sign-off; the owner gave it on 2026-10-21 by choosing this migration.
 
 ## The placement stage
 
-`build:catalog`'s record walk is the second stage
-(`../distance/placement-lineage-pure.ts`). `readStars` returns one
-`Placement` per manifest row, keyed on its origin key: each step the walk
-ran, in walk order, up to the park that stopped it or the record it shipped.
-`placementLineageRows` serialises it through an exhaustive `switch`:
-
-- every step writes its outcome code and its refused candidates, the
-  candidate's tier in `params`; a refusal code names the rule, never the tier;
-- parallax and direction always, then the park for a parked row; a placed
-  row adds the PM rescue where it ran, Bailer-Jones and the LMC snap where
-  they fired, and its radial velocity;
-- each row cites, as evidence, the source rows its cascade read
-  (`CitedCascadeResult`, `../cascade-result.ts`), and no measured value;
-- the four park codes declare effect `park`, so a SID the build stops
-  producing stays in the ledger, absent.
-
-A park row carries the manifest's five identifier cells in `params`, since
-those cells are the parked ledger's key and the parity gate's join, and
-`parkedLedgerView` generates `data/membership/parked-ledger.tsv` from the
-park rows alone. Placement founds no record, so it writes no identity rows.
+`build:catalog`'s record walk is the second stage; its contract lives beside
+its module, in [Placement lineage](../distance/README.md#placement-lineage).
 
 ## The promotion stage
 

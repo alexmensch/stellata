@@ -74,9 +74,10 @@ scripts/catalog/distance/
                                   lands in one place.
   placement-lineage-pure.ts       Placement as a lineage stage: its codes,
     (+ test)                      the Placement each manifest row's walk
-                                  returns, its one serialiser, and the parked
-                                  ledger as a view of its park rows
-                                  (../lineage/README.md#the-placement-stage).
+                                  hands on, its one serialiser (rows, or
+                                  their lines), and the parked ledger as a
+                                  view of its park rows
+                                  (#placement-lineage).
   dust/                           Build-time de-extinction against the
                                   dust grid of Edenhofer 2024
                                   (/data/papers/index.md#edenhofer2024), and
@@ -220,3 +221,29 @@ source should supply the position too](pm-rescue/README.md#whether-the-rescuing-
 `velocityVia` credits the catalogue rather than the route to it, so
 `velocityTycho2Pm` **43** counts this cascade's 5 rows alongside the
 direction tier's 38.
+
+## Placement lineage
+
+`build:catalog`'s record walk is the second stage of the
+[lineage](../lineage/README.md) contract (`placement-lineage-pure.ts`).
+`readStars` hands on one `Placement` per manifest row, keyed on its origin key: each step the walk
+ran, in walk order, up to the park that stopped it or the record it shipped.
+`placementLineageRows` serialises it through an exhaustive `switch`, and
+`placementLineageLines` turns those rows into the lines the build keeps
+([Storage and cost](../lineage/README.md#storage-and-cost)):
+
+- every step writes its outcome code and its refused candidates, the
+  candidate's tier in `params`; a refusal code names the rule, never the tier;
+- parallax and direction always, then the park for a parked row; a placed
+  row adds the PM rescue where it ran, Bailer-Jones and the LMC snap where
+  they fired, and its radial velocity;
+- each row cites, as evidence, the source rows its cascade read
+  (`CitedCascadeResult`, `../cascade-result.ts`), and no measured value;
+- the four park codes declare effect `park`, so a SID the build stops
+  producing stays in the ledger, absent.
+
+A park row carries the manifest's five identifier cells in `params`, since
+those cells are the parked ledger's key and the parity gate's join, and
+`parkedLedgerView` generates `data/membership/parked-ledger.tsv` from the
+park rows alone, decoded one at a time from the stage's lines. Placement
+founds no record, so it writes no identity rows.

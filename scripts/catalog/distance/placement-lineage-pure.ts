@@ -1,7 +1,9 @@
-// Placement as a lineage stage: its reason codes, the one serialiser over each record's Placement, and parked-ledger.tsv as a view. See ../lineage/README.md#the-placement-stage.
+// Placement as a lineage stage: its reason codes, the one serialiser over each record's Placement, and parked-ledger.tsv as a view. See README.md#placement-lineage.
 
 import type { StageLineageSpec } from '../lineage/lineage-io';
-import { paramsOf, paramsText, type LineageParams, type LineageRow } from '../lineage/lineage-row-pure';
+import {
+  paramsOf, paramsText, stageLineageLine, type LineageParams, type LineageRow,
+} from '../lineage/lineage-row-pure';
 import { LIVE, stageCodes, type CodeDeclaration } from '../lineage/reason-codes-pure';
 import { sourceRowRefText, type AnySourceRowRef } from '../../util/sources/row-ref-pure';
 import type { DirectionResolution, DirectionVia } from './direction-cascade';
@@ -287,25 +289,27 @@ export function placementLineageRows(p: Placement): LineageRow[] {
   }
 }
 
+/** A record's rows as lines, so the walk holds strings rather than its Placements. */
+export function placementLineageLines(p: Placement): string[] {
+  return placementLineageRows(p).map((row) => stageLineageLine(PLACEMENT_CODES, row));
+}
+
 const REASON_BY_PARK_CODE = new Map<string, ParkedReason>(
   PARKED_REASONS.map((r) => [PLACEMENT_CODES.code(PARK_BRANCHES[r]), r]),
 );
 
 /** `data/membership/parked-ledger.tsv`, generated from the stage's park rows alone. */
-export function parkedLedgerView(rows: readonly LineageRow[]): ParkedLedgerEntry[] {
-  return rows.flatMap((r) => {
+export function parkedLedgerView(rows: Iterable<LineageRow>): ParkedLedgerEntry[] {
+  const entries: ParkedLedgerEntry[] = [];
+  for (const r of rows) {
     const reason = REASON_BY_PARK_CODE.get(r.code);
-    if (reason === undefined) return [];
-    return [{ ...parkedIdentifiersOf(paramsOf(r) as ParkedLedgerCells), reason }];
-  });
+    if (reason !== undefined) entries.push({ ...parkedIdentifiersOf(paramsOf(r) as ParkedLedgerCells), reason });
+  }
+  return entries;
 }
 
-/** The parked records companion promotion and the park counts read, each with
- *  every parallax a skip rule refused on it. */
-export function parkedRecords(placements: readonly Placement[]): ParkedRecord[] {
-  return placements.flatMap((p) => {
-    if (p.kind === 'placed') return [];
-    const refusedPlxMas = p.kind === 'parked-parallax' ? p.parallax.refusals.map((r) => r.mas) : [];
-    return [{ ...p.ids, reason: parkReason(p), refusedPlxMas, originKey: p.key }];
-  });
+export function parkedRecord(p: Placement): ParkedRecord | null {
+  if (p.kind === 'placed') return null;
+  const refusedPlxMas = p.kind === 'parked-parallax' ? p.parallax.refusals.map((r) => r.mas) : [];
+  return { ...p.ids, reason: parkReason(p), refusedPlxMas, originKey: p.key };
 }

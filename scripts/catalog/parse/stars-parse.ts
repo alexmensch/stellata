@@ -59,7 +59,7 @@ import {
   type ParkedRecord,
 } from '../distance/parallax/parked-ledger';
 import {
-  parkedRecords,
+  parkedRecord,
   type BailerJonesStep,
   type LmcStep,
   type Placement,
@@ -292,10 +292,11 @@ export function readStars(
     pairMemberParallax = emptyPairMemberParallaxIndex(),
     dustGrid = null,
   }: ReadStarsOptions,
+  /** Handed each manifest row's Placement, in walk order: what placement
+   *  lineage serialises. The walk keeps none of them. */
+  onPlacement: (placement: Placement) => void,
 ): {
   stars: Star[];
-  /** One per manifest row, in walk order: what placement lineage serialises. */
-  placements: Placement[];
   stats: {
     total: number;
     /** Rows carrying a source_id whose parallax cascade resolved
@@ -364,7 +365,7 @@ export function readStars(
 
   const stars: Star[] = [];
   let total = 0;
-  const placements: Placement[] = [];
+  const parked: ParkedRecord[] = [];
   let bjEligible = 0;
   let distLowPrecisionParallax = 0;
   let bjOverridden = 0;
@@ -781,17 +782,17 @@ export function readStars(
   for (const row of rows) {
     total++;
     const { placement, star } = walk(row);
-    placements.push(placement);
+    onPlacement(placement);
+    const park = parkedRecord(placement);
+    if (park !== null) parked.push(park);
     if (star !== null) stars.push(star);
   }
 
-  const parked = parkedRecords(placements);
   const parkedVia = emptyTallyPartition(PARKED_REASONS);
   for (const p of parked) parkedVia[p.reason]++;
 
   return {
     stars,
-    placements,
     stats: {
       total,
       bjEligible,
