@@ -11,8 +11,9 @@ export function watchHeap(step: string): { check(): Check } {
   return {
     check() {
       const usedNow = getHeapStatistics().used_heap_size;
-      const samples = profiler.stop()?.statistics ?? [];
-      return heapBudgetCheck(step, peakLiveHeap(samples, usedNow));
+      const profile = profiler.stop();
+      if (profile === undefined) throw new Error(`${step}: the heap profiler recorded nothing to judge`);
+      return heapBudgetCheck(step, peakLiveHeap(profile.statistics, usedNow));
     },
   };
 }
