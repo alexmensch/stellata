@@ -35,7 +35,6 @@ describe('placementLineageRows', () => {
         evidence: [HIP],
         refusals: [{ tier: 'gaia_5p', reason: 'pm_disagrees_with_hip2', ref: GAIA }],
       },
-      gaia2p: false,
       pmRescue: null,
       bailerJones: { kind: 'override', ref: BJ },
       lmc: 'not_member',
@@ -86,22 +85,21 @@ describe('placementLineageRows', () => {
     expect(row.evidence).toEqual([]);
   });
 
-  it('splits the gaia_5p route\'s position-only branch by its own code', () => {
-    const placed = (gaia2p: boolean): Placement => ({
+  it('codes the position-only Gaia route apart from the five-parameter one', () => {
+    const placed = (via: 'gaia_5p' | 'gaia_2p'): Placement => ({
       kind: 'placed',
       key: 'spine:1',
       parallax: { via: 'pair_member_parallax', value: { mas: 2, errMas: 0.1 }, evidence: [GAIA], refusals: [] },
-      direction: { via: 'gaia_5p', value: SOLUTION, evidence: [GAIA], refusals: [] },
-      gaia2p,
+      direction: { via, value: SOLUTION, evidence: [GAIA], refusals: [] },
       pmRescue: { via: 'none', refusals: [] },
       bailerJones: { kind: 'not-applied' },
       lmc: 'not_member',
       rv: { kind: 'kept', rv: { via: 'none', refusals: [] } },
       velocityClamped: false,
     });
-    expect(codes(placed(true))).toContain('outcome placement.direction.gaia-2p');
-    expect(codes(placed(false))).toContain('outcome placement.direction.gaia-5p');
-    expect(codes(placed(true))).toContain('outcome placement.pm-rescue.none');
+    expect(codes(placed('gaia_2p'))).toContain('outcome placement.direction.gaia-2p');
+    expect(codes(placed('gaia_5p'))).toContain('outcome placement.direction.gaia-5p');
+    expect(codes(placed('gaia_2p'))).toContain('outcome placement.pm-rescue.none');
   });
 
   it('writes a rejected radial term as its own outcome, and the steps that only fire when they do', () => {
@@ -110,7 +108,6 @@ describe('placementLineageRows', () => {
       key: 'spine:2',
       parallax: { via: 'curated', value: null, evidence: [], refusals: [] },
       direction: { via: 'curated', value: SOLUTION, evidence: [], refusals: [] },
-      gaia2p: false,
       pmRescue: null,
       bailerJones: { kind: 'absent' },
       lmc: 'parallax_rules_out',

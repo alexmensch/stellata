@@ -395,7 +395,7 @@ describe('readStars PM rescue', () => {
     );
     // The position still comes from the Gaia anchor — only the motion is
     // re-keyed.
-    expect(stats.directionVia.gaia_5p).toBe(1);
+    expect(stats.directionVia.gaia_2p).toBe(1);
     expect(stats.pmRescueOutcome.tycho2).toBe(1);
     expect(stats.velocityVia.tycho2_pm).toBe(1);
     expect(stats.velocityVia.zero).toBe(0);

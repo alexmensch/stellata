@@ -45,7 +45,7 @@ import {
   type VelocityVia,
 } from '../distance/direction-cascade';
 import { lookupCns5Astrometry } from '../classic-ids/classic-ids-parse';
-import { gaiaRowIs2p, isGaiaCatalogueBibcode } from '../distance/gaia-distrust';
+import { isGaiaCatalogueBibcode } from '../distance/gaia-distrust';
 import {
   isLowPrecisionParallax,
   resolveParallax,
@@ -775,7 +775,6 @@ export function readStars(
       key,
       parallax: plxRes,
       direction,
-      gaia2p: gaiaRowIs2p(gaiaRow),
       pmRescue,
       bailerJones,
       lmc: lmcStep,

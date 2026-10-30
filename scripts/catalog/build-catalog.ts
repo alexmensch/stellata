@@ -388,6 +388,7 @@ async function main() {
     parkedNoVMagnitude: 0,
     parkedNoPosition: 0,
     directionGaia5p: 0,
+    directionGaia2p: 0,
     directionGaiaNssSystemic: 0,
     directionHip2Saturated: 0,
     directionHip2PmDiscrepant: 0,
@@ -557,6 +558,7 @@ async function main() {
   counts.lmcParallaxRefusedByDistVia = stats.lmcParallaxRefusedByDistVia;
   counts.lmcOverriddenByDistVia = stats.lmcOverriddenByDistVia;
   counts.directionGaia5p = dv.gaia_5p;
+  counts.directionGaia2p = dv.gaia_2p;
   counts.directionGaiaNssSystemic = dv.gaia_nss_systemic;
   counts.directionHip2Saturated = dv.hip2_saturated;
   counts.directionHip2PmDiscrepant = dv.hip2_pm_discrepant;

@@ -183,6 +183,7 @@ function baseCounts(): BuildCounts {
     parkedNoVMagnitude: 0,
     parkedNoPosition: 0,
     directionGaia5p: 300000,
+    directionGaia2p: 200,
     directionGaiaNssSystemic: 10000,
     directionHip2Saturated: 2500,
     directionHip2PmDiscrepant: 146,

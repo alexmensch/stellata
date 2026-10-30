@@ -95,7 +95,8 @@ same trust cascade the binaries pipeline implements in
 
 | Route | Gate | Rows |
 | --- | --- | --- |
-| `gaia_5p` | Default: the row resolves to a source_id with a 5p row (`data/gaia/gaia_dr3_astrometry_catalog.tsv`, J2016.0) and non-null parallax. Also the fall-through for 2p position-only rows with no HIP2 cover. | ~<!-- count:build-catalog/directionGaia5p k4 -->930.2k<!-- /count --> |
+| `gaia_5p` | Default: the row resolves to a source_id with a 5p row (`data/gaia/gaia_dr3_astrometry_catalog.tsv`, J2016.0) and non-null parallax. | ~<!-- count:build-catalog/directionGaia5p k4 -->930k<!-- /count --> |
+| `gaia_2p` | The fall-through for a 2p position-only Gaia row with no HIP2 cover: the Gaia position, no proper motion of its own. | <!-- count:build-catalog/directionGaia2p -->204<!-- /count --> |
 | `gaia_nss_systemic` | Source has an NSS two-body orbit AND the 5p fit is flagged unreliable (RUWE / ipd). Same Gaia row values — DR3 refits `gaia_source` to the centre of mass for NSS sources — the tag carries provenance parity with Stage 3. | ~<!-- count:build-catalog/directionGaiaNssSystemic k3 -->32.1k<!-- /count --> |
 | `hip2_saturated` | No usable Gaia parallax (no source_id, no 5p row, or parallax NULL) and HIP2 covers the HIP. The Gaia-saturated bright set: Sirius, Vega, α Cen, Capella, … (J1991.25). | ~<!-- count:build-catalog/directionHip2Saturated k2 -->2.3k<!-- /count --> |
 | `hip2_pm_discrepant` | Gaia 5p present but Gaia-vs-HIP2 PM disagrees by > 50 mas/yr on either axis — orbit-corrupted 5p PM; HIP2's long baseline is closer to systemic. Unlike Stage 3 there is no ρ ≤ 5″ companion gate (no per-row WDS context at catalog build); the PM discrepancy alone routes. | ~<!-- count:build-catalog/directionHip2PmDiscrepant -->148<!-- /count --> |
@@ -138,7 +139,7 @@ cascade passes over is a refusal on the result: `pm_disagrees_with_hip2` on a
 
 | Tier | Epoch of the position it reads |
 |---|---|
-| `gaia_5p` / `gaia_nss_systemic` | J2016.0 — a zero-Δt no-op |
+| `gaia_5p` / `gaia_2p` / `gaia_nss_systemic` | J2016.0 — a zero-Δt no-op |
 | `hip2_*` | J1991.25 |
 | `tycho2` | J2000 — **measured**: over the 1,145 mean-solution rows with a Gaia-grade SIMBAD place above 100 mas/yr, propagating from J2000 lands a median 0.061″ from it against 1.817″ propagating from `ep_ra`/`ep_de`, whose 1967.77–1991.74 spread is the size of the error that buys |
 | `tycho2`, `pflag='X'` rows | J1991.25 — no mean solution exists, so the observed `ra_icrs` is the only position the row has. Their PM comes from `pm-rescue/` instead, and advances this position like any other. <!-- count:build-catalog/directionTycho2FromIcrs -->8<!-- /count --> of the <!-- count:build-catalog/directionTycho2 -->80<!-- /count -->, pinned `directionTycho2FromIcrs` |

@@ -117,6 +117,7 @@ export interface DirectionInputs extends SimbadRecordKeys {
 
 export const DIRECTION_VIA_VALUES = [
   'gaia_5p',
+  'gaia_2p',
   'gaia_nss_systemic',
   'hip2_saturated',
   'hip2_pm_discrepant',
@@ -369,7 +370,7 @@ export function resolveDirection(
   // 2p (position-only) Gaia row with no HIP2 cover: keep the Gaia
   // positional anchor, unpropagated when PM is absent — mirrors
   // stage3's gaia_5p fall-through.
-  if (gaia !== undefined) return hit('gaia_5p', gaiaSolution(gaia), [gaia.ref]);
+  if (gaia !== undefined) return hit('gaia_2p', gaiaSolution(gaia), [gaia.ref]);
 
   // Designation-joined tiers, for the rows Gaia and HIP2 both miss. Each
   // joins on the record's OWN identifier — a value join, never positional —

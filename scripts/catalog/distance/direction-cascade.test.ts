@@ -355,12 +355,12 @@ describe('direction-cascade / resolveDirection routing', () => {
     expect(resolveDirection(inputs(), sources())).toEqual({ via: 'none', refusals: [] });
   });
 
-  it('2p Gaia row without HIP2 falls through to gaia_5p, unpropagated when PM is null', () => {
+  it('2p Gaia row without HIP2 falls through to gaia_2p, unpropagated when PM is null', () => {
     const g = gaiaRow({ parallaxMas: null, pmraMasyr: null, pmdecMasyr: null });
     const res = solve(inputs({ sourceId: SID }), sources({
       gaiaAstrometry: new Map([[SID, g]]),
     }));
-    expect(res?.via).toBe('gaia_5p');
+    expect(res?.via).toBe('gaia_2p');
     expect(angSepArcsec(dirOf(res!), unitVectorFromRaDec(g.raDeg, g.decDeg))).toBe(0);
   });
 
@@ -473,6 +473,7 @@ describe('direction-cascade / resolveDirection routing', () => {
   it('DIRECTION_VIA_VALUES covers every emitted tag', () => {
     expect(DIRECTION_VIA_VALUES).toEqual([
       'gaia_5p',
+      'gaia_2p',
       'gaia_nss_systemic',
       'hip2_saturated',
       'hip2_pm_discrepant',

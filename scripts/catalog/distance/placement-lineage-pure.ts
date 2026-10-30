@@ -45,7 +45,7 @@ const PARALLAX_REFUSAL_BRANCHES = {
   hipparcos2: 'parallax.refused.hipparcos2',
 } as const satisfies Record<ParallaxRefusalReason, string>;
 
-type DirectionOutcome = Exclude<DirectionVia, 'none'> | 'gaia_2p';
+type DirectionOutcome = Exclude<DirectionVia, 'none'>;
 const DIRECTION_BRANCHES = {
   gaia_5p: 'direction.gaia-5p',
   gaia_2p: 'direction.gaia-2p',
@@ -190,9 +190,6 @@ export type Placement =
     readonly key: string;
     readonly parallax: ParallaxResolution;
     readonly direction: DirectionResolution;
-    /** Whether the record's own Gaia fit is position-only, which splits the
-     *  `gaia_5p` route's two branches. */
-    readonly gaia2p: boolean;
     /** Null where the direction tier stated its own proper motion. */
     readonly pmRescue: PmRescueResolution | null;
     readonly bailerJones: BailerJonesStep;
@@ -243,11 +240,9 @@ export function placementLineageRows(p: Placement): LineageRow[] {
     for (const r of res.refusals) refused(PARALLAX_REFUSAL_BRANCHES[r.reason], r);
     if (res.via !== 'none') row('outcome', PARALLAX_BRANCHES[res.via], none, res.evidence);
   };
-  const direction = (res: DirectionResolution, gaia2p: boolean): void => {
+  const direction = (res: DirectionResolution): void => {
     for (const r of res.refusals) refused(DIRECTION_REFUSAL_BRANCHES[r.reason], r);
-    if (res.via === 'none') return;
-    const outcome: DirectionOutcome = res.via === 'gaia_5p' && gaia2p ? 'gaia_2p' : res.via;
-    row('outcome', DIRECTION_BRANCHES[outcome], none, res.evidence);
+    if (res.via !== 'none') row('outcome', DIRECTION_BRANCHES[res.via], none, res.evidence);
   };
   const park = (q: ParkedPlacement): void =>
     row('outcome', PARK_BRANCHES[parkReason(q)], parkedLedgerCells(q.ids), []);
@@ -260,12 +255,12 @@ export function placementLineageRows(p: Placement): LineageRow[] {
       return out;
     case 'parked-no-position':
       parallax(p.parallax);
-      direction(p.direction, false);
+      direction(p.direction);
       park(p);
       return out;
     case 'placed': {
       parallax(p.parallax);
-      direction(p.direction, p.gaia2p);
+      direction(p.direction);
       if (p.pmRescue !== null) {
         for (const r of p.pmRescue.refusals) refused(PM_RESCUE_REFUSAL_BRANCHES[r.reason], r);
         row('outcome', PM_RESCUE_BRANCHES[p.pmRescue.via], none,
