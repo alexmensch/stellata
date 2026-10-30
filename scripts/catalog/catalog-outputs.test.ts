@@ -21,10 +21,11 @@ describe('CATALOG_OUTPUTS', () => {
     expect(CATALOG_OUTPUTS.families.map((f) => repoRelative(f.dir))).toEqual([
       'public', 'build/lineage.previous', 'build/lineage-diff', 'build/lineage.previous', 'build/lineage-diff',
     ]);
-    const placementFamilies = CATALOG_OUTPUTS.families.slice(1, 3);
-    expect(placementFamilies.map((f) => f.member.test('placement.tsv.gz') || f.member.test('placement.tsv')))
-      .toEqual([true, true]);
-    expect(placementFamilies.some((f) => f.member.test('promotion.tsv.gz'))).toBe(false);
+    const families = (name: string) => CATALOG_OUTPUTS.families
+      .filter((f) => f.member.test(name)).map((f) => repoRelative(f.dir));
+    expect(families('placement.tsv.gz')).toEqual(['build/lineage.previous']);
+    expect(families('placement.tsv')).toEqual(['build/lineage-diff']);
+    expect(families('promotion.tsv.gz')).toEqual(['build/lineage.previous']);
     const [chunks] = CATALOG_OUTPUTS.families;
     expect(repoRelative(chunks.dir)).toBe('public');
     expect(chunks.member.test(catalogChunkFilename(12))).toBe(true);
