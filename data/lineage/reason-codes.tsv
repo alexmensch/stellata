@@ -46,7 +46,7 @@ placement.direction.refused.no-5p-solution	placement	none	live		7.1.6	The Gaia s
 placement.direction.refused.pm-disagrees-with-hip2	placement	none	live		7.1.6	The Gaia solution's proper motion disagrees with Hipparcos-2's by more than 50 mas/yr, the mark of an orbit-corrupted fit.
 placement.direction.simbad	placement	none	live		7.1.6	SIMBAD's bibcoded coordinates, the bottom tier.
 placement.direction.tycho2	placement	none	live		7.1.6	The record's own TYC in Tycho-2, which neither Gaia nor Hipparcos-2 reaches.
-placement.distance.bailer-jones	placement	none	live		7.1.6	The Bailer-Jones 2021 posterior distance replaces the inverted Gaia DR3 parallax.
+placement.distance.bailer-jones	placement	none	live		7.1.6	The posterior distance of Bailer-Jones 2021 (/data/papers/index.md#bailerjones2021) replaces the inverted Gaia DR3 parallax.
 placement.distance.bailer-jones-absent	placement	none	live		7.1.6	The inverted Gaia DR3 parallax is eligible for a Bailer-Jones posterior that the committed pull lacks.
 placement.distance.lmc-kinematic	placement	none	live		7.1.6	Inside the LMC cone and sharing its proper motion, the record snaps to the LMC distance.
 placement.distance.lmc-refused-by-own-parallax	placement	none	live		7.1.6	The LMC snap is refused: the record's own parallax is more than 10 sigma above the LMC's.
@@ -55,7 +55,7 @@ placement.parallax.curated	placement	none	live		7.1.6	Sol: distance zero by cons
 placement.parallax.gaia-dr3-inversion	placement	none	live		7.1.6	The record's own Gaia DR3 five-parameter parallax.
 placement.parallax.gliese-photometric-plx	placement	none	live		7.1.6	V/70A's photometric or spectroscopic parallax estimate, the bottom tier: nothing measured reaches the record.
 placement.parallax.gliese-plx	placement	none	live		7.1.6	The record's own GJ in V/70A, where the catalogue states its parallax is trigonometric.
-placement.parallax.hip2-parallax	placement	none	live		7.1.6	The record's own HIP in Hipparcos-2 (van Leeuwen 2007), above the S/N floor.
+placement.parallax.hip2-parallax	placement	none	live		7.1.6	The record's own HIP in Hipparcos-2, van Leeuwen 2007 (/data/papers/index.md#vanleeuwen2007), above the S/N floor.
 placement.parallax.pair-member-parallax	placement	none	live		7.1.6	A bound sibling's anchor-grade Gaia DR3 parallax, lent because no measurement of the record itself survived.
 placement.parallax.refused.below-sn-floor	placement	none	live		7.1.6	A tier's parallax is below S/N 1, indistinguishable from zero, so its inverse is undefined.
 placement.parallax.refused.gaia-release	placement	none	live		7.1.6	A courier's parallax cites a Gaia release on a record whose own Gaia fit is position-only, so it is the withdrawn fit returning.

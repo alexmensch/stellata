@@ -96,7 +96,7 @@ const PARK = 'park';
 
 export const PLACEMENT_CODES = stageCodes(PLACEMENT_STAGE, {
   'parallax.gaia-dr3-inversion': live('The record\'s own Gaia DR3 five-parameter parallax.'),
-  'parallax.hip2-parallax': live('The record\'s own HIP in Hipparcos-2 (van Leeuwen 2007), above the S/N floor.'),
+  'parallax.hip2-parallax': live('The record\'s own HIP in Hipparcos-2, van Leeuwen 2007 (/data/papers/index.md#vanleeuwen2007), above the S/N floor.'),
   'parallax.cns5-plx': live('The record\'s own GJ in CNS5, cited to a publication no tier above refused, above the S/N floor.'),
   'parallax.gliese-plx': live('The record\'s own GJ in V/70A, where the catalogue states its parallax is trigonometric.'),
   'parallax.simbad-plx': live('SIMBAD\'s bibcoded parallax, cited to a publication no tier above refused, above the S/N floor.'),
@@ -128,7 +128,7 @@ export const PLACEMENT_CODES = stageCodes(PLACEMENT_STAGE, {
   'rv.rejected-above-ceiling': live('The radial velocity a tier supplied exceeds the sanity ceiling on its own, so the radial term is dropped.'),
   'rv.refused.no-5p-solution': live('Gaia\'s RVS velocity on a position-only solution, whose spectrum is a blend.'),
   'rv.refused.gaia-release': live('SIMBAD\'s radial velocity cites a Gaia release on a record whose own Gaia fit is position-only.'),
-  'distance.bailer-jones': live('The Bailer-Jones 2021 posterior distance replaces the inverted Gaia DR3 parallax.'),
+  'distance.bailer-jones': live('The posterior distance of Bailer-Jones 2021 (/data/papers/index.md#bailerjones2021) replaces the inverted Gaia DR3 parallax.'),
   'distance.bailer-jones-absent': live('The inverted Gaia DR3 parallax is eligible for a Bailer-Jones posterior that the committed pull lacks.'),
   'distance.lmc-kinematic': live('Inside the LMC cone and sharing its proper motion, the record snaps to the LMC distance.'),
   'distance.lmc-refused-by-own-parallax': live('The LMC snap is refused: the record\'s own parallax is more than 10 sigma above the LMC\'s.'),
