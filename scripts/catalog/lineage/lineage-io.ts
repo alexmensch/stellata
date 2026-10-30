@@ -31,14 +31,15 @@ export function lineageLayout(buildDir: string): LineageLayout {
 export const LINEAGE_LAYOUT = lineageLayout(resolve(REPO_ROOT, 'build'));
 
 /** A stage's files by stem: `<stem>.tsv.gz` each, one `<stage>.header.json`. */
-export interface StageLineageSpec<F extends string> {
-  readonly stage: string;
+export interface StageLineageSpec<F extends string, S extends string = string> {
+  readonly stage: S;
   readonly files: readonly F[];
   /** The stem holding identity rows for the records the stage founds. */
   readonly identity?: F;
 }
 
-export type StageOutputKey<F extends string> = `lineage:${F}` | 'lineage:header';
+/** Keyed by stage as well as stem, so two stages can share one emitArtifacts call. */
+export type StageOutputKey<F extends string, S extends string = string> = `lineage:${F}` | `lineage:${S}.header`;
 
 const fileName = (stem: string): string => `${stem}.tsv.gz`;
 const headerName = (stage: string): string => `${stage}.header.json`;
@@ -48,13 +49,13 @@ function stageNames<F extends string>(spec: StageLineageSpec<F>): string[] {
 }
 
 /** The stage's current files, as `declareOutputs` keys. */
-export function stageOutputFiles<F extends string>(
-  layout: LineageLayout, spec: StageLineageSpec<F>,
-): Record<StageOutputKey<F>, string> {
+export function stageOutputFiles<F extends string, S extends string>(
+  layout: LineageLayout, spec: StageLineageSpec<F, S>,
+): Record<StageOutputKey<F, S>, string> {
   const files = Object.fromEntries(
     spec.files.map((f) => [`lineage:${f}`, resolve(layout.current, fileName(f))]),
-  ) as Record<StageOutputKey<F>, string>;
-  files['lineage:header'] = resolve(layout.current, headerName(spec.stage));
+  ) as Record<StageOutputKey<F, S>, string>;
+  files[`lineage:${spec.stage}.header`] = resolve(layout.current, headerName(spec.stage));
   return files;
 }
 
@@ -92,18 +93,18 @@ export function baselineMembers<F extends string>(
   return members;
 }
 
-export function stageEmission<F extends string>(
+export function stageEmission<F extends string, S extends string>(
   layout: LineageLayout,
-  spec: StageLineageSpec<F>,
+  spec: StageLineageSpec<F, S>,
   texts: Readonly<Record<F, string>>,
   header: StageHeader,
   diff: string | null,
   rotate: boolean,
-): { files: Record<StageOutputKey<F>, ArtifactContents>; members: Map<string, ArtifactContents> } {
+): { files: Record<StageOutputKey<F, S>, ArtifactContents>; members: Map<string, ArtifactContents> } {
   const files = Object.fromEntries(
     spec.files.map((f) => [`lineage:${f}`, gzipText(texts[f])]),
-  ) as Record<StageOutputKey<F>, ArtifactContents>;
-  files['lineage:header'] = headerText(header);
+  ) as Record<StageOutputKey<F, S>, ArtifactContents>;
+  files[`lineage:${spec.stage}.header`] = headerText(header);
   const members = new Map<string, ArtifactContents>(baselineMembers(layout, spec, rotate));
   if (diff !== null) members.set(resolve(layout.diff, stageDiffName(spec.stage)), diff);
   return { files, members };

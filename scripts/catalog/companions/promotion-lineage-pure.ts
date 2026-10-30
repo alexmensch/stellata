@@ -12,7 +12,7 @@ import type { MintedBrightness, MultiplesTsvRow, PromotedRow, RowOutcome } from 
 
 export const PROMOTION_STAGE = 'promotion';
 
-export const PROMOTION_LINEAGE: StageLineageSpec<'promotion' | 'promotion.identity'> = {
+export const PROMOTION_LINEAGE: StageLineageSpec<'promotion' | 'promotion.identity', 'promotion'> = {
   stage: PROMOTION_STAGE,
   files: ['promotion', 'promotion.identity'],
   identity: 'promotion.identity',

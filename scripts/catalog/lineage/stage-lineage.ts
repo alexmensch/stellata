@@ -22,9 +22,9 @@ export interface LineageBudget {
   readonly writeMs: number;
 }
 
-export interface StageLineageRun<F extends string> {
+export interface StageLineageRun<F extends string, S extends string> {
   readonly layout: LineageLayout;
-  readonly spec: StageLineageSpec<F>;
+  readonly spec: StageLineageSpec<F, S>;
   /** The content hashes of the step's inputs (`stepInputPaths`), as the step
    *  already computed them for its stamp or its own use. */
   readonly inputs: FileHashes;
@@ -39,14 +39,14 @@ export interface StageLineageRun<F extends string> {
   readonly argv: readonly string[];
 }
 
-export interface StageLineageEmission<F extends string> {
-  readonly files: Record<StageOutputKey<F>, ArtifactContents>;
+export interface StageLineageEmission<F extends string, S extends string> {
+  readonly files: Record<StageOutputKey<F, S>, ArtifactContents>;
   readonly members: Map<string, ArtifactContents>;
   readonly checks: Check[];
   readonly changes: readonly KeyChange[] | null;
 }
 
-function baselineSource<F extends string>(run: StageLineageRun<F>): BaselineSource {
+function baselineSource<F extends string, S extends string>(run: StageLineageRun<F, S>): BaselineSource {
   const at = run.argv.indexOf(AGAINST_FLAG);
   if (at >= 0) {
     const dir = run.argv[at + 1];
@@ -57,9 +57,9 @@ function baselineSource<F extends string>(run: StageLineageRun<F>): BaselineSour
   return { kind: 'checkout', header: readStageHeader(run.layout.current, run.spec.stage) };
 }
 
-export async function stageLineage<F extends string>(
-  run: StageLineageRun<F>,
-): Promise<StageLineageEmission<F>> {
+export async function stageLineage<F extends string, S extends string>(
+  run: StageLineageRun<F, S>,
+): Promise<StageLineageEmission<F, S>> {
   const started = performance.now();
   const source = baselineSource(run);
   const plan = planBaseline(
@@ -86,7 +86,7 @@ export async function stageLineage<F extends string>(
   const { files, members } = stageEmission(run.layout, run.spec, texts, header, diff, plan.rotate);
   const writeMs = performance.now() - started;
   const gzipBytes = run.spec.files.reduce(
-    (n, f) => n + (files[`lineage:${f}` as StageOutputKey<F>] as Uint8Array).byteLength, 0,
+    (n, f) => n + (files[`lineage:${f}` as StageOutputKey<F, S>] as Uint8Array).byteLength, 0,
   );
   const measured = `${run.spec.stage} lineage: ${gzipBytes} bytes gzipped; header, diff and write took ${writeMs.toFixed(0)} ms`;
   const over = gzipBytes > run.budget.gzipBytes || writeMs > run.budget.writeMs;
