@@ -3,6 +3,7 @@
 // See data/tycho2/README.md.
 
 import type { Declared } from '../util/sources/source';
+import { sourceRowRef, type RowKeyed, type SourceRowRef } from '../util/sources/row-ref-pure';
 import { readTable } from '../util/tsv/table-pure';
 
 /** `pflag='P'` on the main table: the mean solution is an unresolved double's
@@ -56,6 +57,7 @@ export interface Tycho2Row {
    *  cascades reading the row need it: the direction tier counts it, and a V
    *  from it is a system blend. */
   isPhotocentre: boolean;
+  ref: SourceRowRef<string>;
   /** The HIP number Tycho-2 itself names for this entry, its own cross-index
    *  to I/239 rather than a walk's verdict. */
   hip: number | null;
@@ -92,6 +94,7 @@ function icrsPosition(
 export function parseTycho2Tsvs(
   main: { text: string; from: Declared },
   suppl1: { text: string; from: Declared },
+  source: RowKeyed<string>,
 ): Map<string, Tycho2Row> {
   const out = new Map<string, Tycho2Row>();
 
@@ -102,7 +105,8 @@ export function parseTycho2Tsvs(
       row.float('ra_icrs'), row.float('de_icrs'),
     );
     if (position === null) continue;
-    out.set(tycho2Key(row.raw('tyc1'), row.raw('tyc2'), row.raw('tyc3')), {
+    const key = tycho2Key(row.raw('tyc1'), row.raw('tyc2'), row.raw('tyc3'));
+    out.set(key, {
       ...position,
       pmRaMasyr: row.float('pm_ra'),
       pmDecMasyr: row.float('pm_de'),
@@ -110,6 +114,7 @@ export function parseTycho2Tsvs(
       vtMag: row.float('vt_mag'),
       isPhotocentre: row.text('pflag') === MAIN_PFLAG_PHOTOCENTRE,
       hip: row.int('hip'),
+      ref: sourceRowRef(source, key),
     });
   }
 
@@ -130,6 +135,7 @@ export function parseTycho2Tsvs(
       vtMag: row.float('vt_mag'),
       isPhotocentre: false,
       hip: row.int('hip'),
+      ref: sourceRowRef(source, key),
     });
   }
 

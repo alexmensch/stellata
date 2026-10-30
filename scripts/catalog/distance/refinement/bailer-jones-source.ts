@@ -31,5 +31,6 @@ export function parseBailerJonesTsv(text: string, from: Declared): Map<string, n
 export const BAILER_JONES = defineSource({
   file: 'data/bailer-jones/bailer-jones-dr3.tsv',
   hint: 'Re-run `pnpm run refresh:bailer-jones`.',
+  rowKey: { id: 'i352', text: (sourceId: string) => sourceId },
   parse: (input) => parseBailerJonesTsv(input.text(), input),
 });

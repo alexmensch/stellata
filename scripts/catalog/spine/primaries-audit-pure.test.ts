@@ -2,6 +2,9 @@ import { describe, expect, it } from 'vitest';
 
 import { parseGlieseTsv } from '../gliese-parse';
 import type { Tycho2Row } from '../tycho2-parse';
+import { TYCHO2 } from '../tycho2-source';
+import { GLIESE } from '../gliese-source';
+import { sourceRowRef } from '../../util/sources/row-ref-pure';
 import { SPINE_COLUMNS, type SpineRow } from './inherited-spine-pure';
 import {
   ATHYG_HD_LINK_FLOOR,
@@ -19,8 +22,6 @@ import {
   type PrimaryTables,
 } from './primaries-audit-pure';
 
-const FROM = { file: 'fixture.tsv', hint: 'h' };
-
 function row(cells: Partial<SpineRow>): SpineRow {
   const out = {} as SpineRow;
   for (const c of SPINE_COLUMNS) out[c] = cells[c] ?? '';
@@ -31,6 +32,7 @@ function tycho2(vtMag: number, hip: number | null = null): Tycho2Row {
   return {
     raDeg: 0, decDeg: 0, epoch: 2000, pmRaMasyr: null, pmDecMasyr: null,
     btMag: null, vtMag, fromIcrs: false, isPhotocentre: false, hip,
+    ref: sourceRowRef(TYCHO2, '1-1-1'),
   };
 }
 
@@ -62,7 +64,7 @@ const tables: PrimaryTables = {
     { cns5: 3, gj: '9140', gjComp: null, gaiaSourceId: '9140000', hip: null, astrometry: null },
     { cns5: 0, gj: 'Sun', gjComp: null, gaiaSourceId: null, hip: null, astrometry: null },
   ],
-  gliese: parseGlieseTsv(GLIESE_TSV, FROM),
+  gliese: parseGlieseTsv(GLIESE_TSV, GLIESE),
   hipI239: new Set([10, 20, 70890]),
   hdI239: new Set([330122]),
   i239HipHd: new Map([[70890, 330122]]),

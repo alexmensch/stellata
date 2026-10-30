@@ -1,6 +1,7 @@
 // Parsers for the frozen CDS classic-designation tables under
 // data/classic-ids/. See /data/classic-ids/README.md#provenance.
 import type { Declared } from '../../util/sources/source';
+import { sourceRowRef, type RowKeyed } from '../../util/sources/row-ref-pure';
 import { readTable } from '../../util/tsv/table-pure';
 import { normaliseGjKey } from '../record/catalog-pure';
 import { citedParallax, type CitedParallax } from '../cited-parallax';
@@ -201,7 +202,7 @@ const CNS5_COLUMNS = [
     'pm_ra', 'pm_de', 'pm_bibcode',
   ] as const;
 
-export function parseCns5Tsv(text: string, from: Declared): Cns5Row[] {
+export function parseCns5Tsv(text: string, from: Declared & RowKeyed<number>): Cns5Row[] {
   const out: Cns5Row[] = [];
   for (const row of readTable({ ...from, columns: CNS5_COLUMNS }, text)) {
     const cns5 = row.int('cns5');
@@ -211,6 +212,7 @@ export function parseCns5Tsv(text: string, from: Declared): Cns5Row[] {
     const raDeg = row.float('ra_deg');
     const decDeg = row.float('de_deg');
     const posEpoch = row.float('pos_epoch');
+    const ref = sourceRowRef(from, cns5);
     out.push({
       cns5,
       gj,
@@ -224,11 +226,13 @@ export function parseCns5Tsv(text: string, from: Declared): Cns5Row[] {
               row.float('plx_mas'),
               row.float('e_plx_mas'),
               row.text('plx_bibcode'),
+              ref,
             ),
             pm: citedProperMotion(
               row.float('pm_ra'),
               row.float('pm_de'),
               row.text('pm_bibcode'),
+              ref,
             ),
           }
         : null,

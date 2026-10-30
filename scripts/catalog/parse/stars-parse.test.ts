@@ -15,6 +15,11 @@ import { TYCHO2_ICRS_EPOCH } from '../tycho2-parse';
 import { emptySimbadValueIndex, type SimbadValueIndex } from '../simbad/simbad-values-parse';
 import { unitVectorFromRaDec, type UnitVector } from '../../../src/client/util/equatorial-basis';
 import type { GlieseIndex } from '../gliese-parse';
+import { GLIESE } from '../gliese-source';
+import { TYCHO2 } from '../tycho2-source';
+import { CNS5 } from '../classic-ids/cns5-source';
+import { SIMBAD_VALUES } from '../simbad/simbad-values-source';
+import { sourceRowRef } from '../../util/sources/row-ref-pure';
 import {
   MEMBERSHIP_MANIFEST,
   manifestRecord,
@@ -59,6 +64,7 @@ function glieseParallaxes(
       name: `Gl ${r.gl}`, comp: '',
       vMag: null, bMinusV: null, spectral: null, hd: null,
       parallax: { mas: 1000 / r.distPc, errMas: 0.001, trigonometric: true },
+      ref: sourceRowRef(GLIESE, r.gl),
     }])),
     rowCount: rows.length,
   };
@@ -71,7 +77,7 @@ function tycho2Sources(
   return {
     gaiaAstrometry: new Map(),
     hip2: new Map(),
-    nssSourceIds: new Set(),
+    nss: new Map(),
     cns5: new Map(),
     tycho2: new Map(rows.map((r) => [r.tyc, {
       raDeg: r.raDeg, decDeg: r.decDeg,
@@ -79,6 +85,7 @@ function tycho2Sources(
       pmRaMasyr: 0, pmDecMasyr: 0,
       btMag: r.vMag, vtMag: r.vMag,
       fromIcrs: false, isPhotocentre: false, hip: null,
+      ref: sourceRowRef(TYCHO2, r.tyc),
     }])),
     ...overrides,
   };
@@ -342,6 +349,7 @@ describe('readStars PM rescue', () => {
   // no motion — the shipped cohort's dominant shape.
   const TYCHO2_PM = { pmRaMasyr: -453.7, pmDecMasyr: -591.4 };
   const GAIA_EDR3 = '2020yCat.1350....0G';
+  const CNS5_REF = sourceRowRef(CNS5, 1);
 
   const MANIFEST_ROW: ManifestRow = {
     tyc: RESCUE_TYC, gl: RESCUE_GL, proper: 'Rescued',
@@ -357,13 +365,14 @@ describe('readStars PM rescue', () => {
     return {
       gaiaAstrometry: new Map(),
       hip2: new Map(),
-      nssSourceIds: new Set(),
+      nss: new Map(),
       cns5: new Map(),
       tycho2: new Map([[RESCUE_TYC, {
         raDeg: 0, decDeg: 0,
         epoch: CATALOG_SCENE_EPOCH,
         pmRaMasyr: pm.pmRaMasyr, pmDecMasyr: pm.pmDecMasyr,
         btMag: 10, vtMag: 10, fromIcrs: false, isPhotocentre: false, hip: null,
+        ref: sourceRowRef(TYCHO2, RESCUE_TYC),
       }]]),
       ...overrides,
     };
@@ -438,7 +447,7 @@ describe('readStars PM rescue', () => {
         directions: sources({ pmRaMasyr: null, pmDecMasyr: null }, {
           gaiaAstrometry: gaiaRow(),
           cns5: new Map([['423A', cns5Astrometry({
-            pm: { pmRaMasyr: 50, pmDecMasyr: -20, bibcode: GAIA_EDR3 },
+            pm: { pmRaMasyr: 50, pmDecMasyr: -20, bibcode: GAIA_EDR3, ref: CNS5_REF },
           })]]),
         }),
       },
@@ -458,7 +467,7 @@ describe('readStars PM rescue', () => {
         gliese: PARALLAXES,
         directions: sources({ pmRaMasyr: null, pmDecMasyr: null }, {
           cns5: new Map([['423A', cns5Astrometry({
-            pm: { pmRaMasyr: 50, pmDecMasyr: -20, bibcode: GAIA_EDR3 },
+            pm: { pmRaMasyr: 50, pmDecMasyr: -20, bibcode: GAIA_EDR3, ref: CNS5_REF },
           })]]),
         }),
       },
@@ -490,6 +499,8 @@ describe('readStars advances the position on a rescued PM', () => {
     Math.acos(Math.max(-1, Math.min(1, a.x * b.x + a.y * b.y + a.z * b.z)))
     * ((180 * 3600) / Math.PI);
 
+  const SIMBAD_REF = sourceRowRef(SIMBAD_VALUES, 1);
+
   const simbadPmOnly = (): SimbadValueIndex => ({
     ...emptySimbadValueIndex(),
     rowCount: 1,
@@ -502,7 +513,9 @@ describe('readStars advances the position on a rescued PM', () => {
         pm: {
           pmRaMasyr: RESCUED_PMRA, pmDecMasyr: RESCUED_PMDEC,
           bibcode: '2020yCat.1350....0G',
+          ref: SIMBAD_REF,
         },
+        ref: SIMBAD_REF,
       },
     }]]),
   });
@@ -516,7 +529,7 @@ describe('readStars advances the position on a rescued PM', () => {
       directions: {
         gaiaAstrometry: new Map(),
         hip2: new Map(),
-        nssSourceIds: new Set(),
+        nss: new Map(),
         cns5: new Map(),
         tycho2: new Map([[NO_MEAN_TYC, {
           raDeg: OBSERVED_RA, decDeg: OBSERVED_DEC,
@@ -524,6 +537,7 @@ describe('readStars advances the position on a rescued PM', () => {
           pmRaMasyr: null, pmDecMasyr: null,
           btMag: 10.0, vtMag: 10.0,
           fromIcrs: true, isPhotocentre: false, hip: null,
+          ref: sourceRowRef(TYCHO2, NO_MEAN_TYC),
         }]]),
       },
     },

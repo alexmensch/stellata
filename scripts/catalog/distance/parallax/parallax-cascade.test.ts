@@ -14,24 +14,35 @@ import { gaiaAstrometryRow } from '../astrometry-fixture';
 import type { CitedParallax } from '../../cited-parallax';
 import type { SiblingParallax } from './pair-member-parallax';
 import type { GlieseRow } from '../../gliese-parse';
+import { GLIESE } from '../../gliese-source';
+import { CNS5 } from '../../classic-ids/cns5-source';
+import { SIMBAD_VALUES } from '../../simbad/simbad-values-source';
+import { HIP2 } from '../hip2-source';
+import { sourceRowRef, type AnySourceRowRef } from '../../../util/sources/row-ref-pure';
 
 const GAIA_DR2 = '2018yCat.1345....0G';
 const GAIA_DR2_PAPER = '2018A&A...616A...1G';
 const VAN_LEEUWEN = '2007A&A...474..653V';
 const LITERATURE = '2014ApJ...784..156D';
 
+const HIP2_REF = sourceRowRef(HIP2, 1);
+const GLIESE_REF = sourceRowRef(GLIESE, '423');
+const CNS5_REF = sourceRowRef(CNS5, 1);
+const SIMBAD_REF = sourceRowRef(SIMBAD_VALUES, 1);
+
 const NONE: ParallaxSources = {
   gaia: null, hip2: null, cns5: null, gliese: null, simbad: null, pairMember: null,
 };
 
 const hip2 = (plxMas: number, plxErrorMas: number | null) => ({
-  raDeg: 0, decDeg: 0, plxMas, plxErrorMas, pmRaMasyr: null, pmDeMasyr: null,
+  raDeg: 0, decDeg: 0, plxMas, plxErrorMas, pmRaMasyr: null, pmDeMasyr: null, ref: HIP2_REF,
 });
 const gliese = (plxMas: number | null, trigonometric = true): GlieseRow => ({
   name: 'Gl 423', comp: 'A', vMag: null, bMinusV: null, spectral: null, hd: null,
   parallax: plxMas === null
     ? null
     : { mas: plxMas, errMas: 1.0, trigonometric },
+  ref: GLIESE_REF,
 });
 // One builder for both bibcoded tiers — CNS5 and SIMBAD carry the same
 // CitedParallax shape.
@@ -39,9 +50,9 @@ const sibling = (mas: number): SiblingParallax => ({
   sourceId: '3216486478101982592', mas, errMas: 0.0622,
 });
 const cited = (
-  mas: number, bibcode: string, errMas: number | null = 0.1,
-): CitedParallax => ({ mas, errMas, bibcode });
-const simbad = (mas: number, bibcode: string): CitedParallax => cited(mas, bibcode);
+  mas: number, bibcode: string, errMas: number | null = 0.1, ref: AnySourceRowRef = CNS5_REF,
+): CitedParallax => ({ mas, errMas, bibcode, ref });
+const simbad = (mas: number, bibcode: string): CitedParallax => cited(mas, bibcode, undefined, SIMBAD_REF);
 
 const plxMas = (res: ParallaxResolution): number | undefined =>
   res.via === 'none' || res.via === 'curated' ? undefined : res.value.mas;
@@ -187,6 +198,7 @@ describe('parallax-cascade / the precision floor', () => {
     const noError: GlieseRow = {
       name: 'Gl 423', comp: 'A', vMag: null, bMinusV: null, spectral: null, hd: null,
       parallax: { mas: 0.5, errMas: null, trigonometric: true },
+      ref: GLIESE_REF,
     };
     const res = resolveParallax({ ...NONE, gliese: noError }, false);
     expect(res.via).toBe('gliese_plx');

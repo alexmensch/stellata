@@ -8,6 +8,10 @@ import {
 } from './radial-velocity';
 import { VELOCITY_SANITY_CEILING_KM_S, type GaiaAstrometryCatalogRow } from '../direction-cascade';
 import type { SimbadRadialVelocity } from '../../simbad/simbad-values-parse';
+import { SIMBAD_VALUES } from '../../simbad/simbad-values-source';
+import { sourceRowRef } from '../../../util/sources/row-ref-pure';
+
+const SIMBAD_REF = sourceRowRef(SIMBAD_VALUES, 1);
 
 describe('resolveRadialVelocity cascade', () => {
   // The published shape: an rv always arrives with its own error.
@@ -20,7 +24,7 @@ describe('resolveRadialVelocity cascade', () => {
   const LITERATURE = '2006AstL...32..759G';
   const GAIA_DR2 = '2018yCat.1345....0G';
   const GAIA_DR3 = '2022yCat.1355....0G';
-  const simbadRv = (kmS: number, bibcode = LITERATURE) => ({ kmS, bibcode });
+  const simbadRv = (kmS: number, bibcode = LITERATURE) => ({ kmS, bibcode, ref: SIMBAD_REF });
   const resolve = (
     gaia: GaiaAstrometryCatalogRow | null, simbad: SimbadRadialVelocity | null,
   ) => resolveRadialVelocity({ gaia, simbad });
@@ -29,7 +33,7 @@ describe('resolveRadialVelocity cascade', () => {
   const gaia = (kmS: number) => ({ via: 'gaia_dr3', value: { kmS }, refusals: [] });
   const simbad = (
     kmS: number, bibcode = LITERATURE, refusals: readonly object[] = [],
-  ) => ({ via: 'simbad', value: { kmS, bibcode }, refusals });
+  ) => ({ via: 'simbad', value: { kmS, bibcode, ref: SIMBAD_REF }, refusals });
   const NONE = { via: 'none', refusals: [] };
 
   it('takes Gaia DR3 radial_velocity when RVS reached the source', () => {

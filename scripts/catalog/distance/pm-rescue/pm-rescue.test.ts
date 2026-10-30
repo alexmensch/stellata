@@ -10,6 +10,9 @@ import {
 import type { CitedProperMotion } from '../../cited-proper-motion';
 import { gaiaAstrometryRow } from '../astrometry-fixture';
 import { TYCHO2_MEAN_EPOCH, type Tycho2Row } from '../../tycho2-parse';
+import { TYCHO2 } from '../../tycho2-source';
+import { SIMBAD_VALUES } from '../../simbad/simbad-values-source';
+import { sourceRowRef } from '../../../util/sources/row-ref-pure';
 
 const GAIA_DR2 = '2018yCat.1345....0G';
 const GAIA_EDR3 = '2020yCat.1350....0G';
@@ -24,6 +27,7 @@ function tycho2Row(overrides: Partial<Tycho2Row> = {}): Tycho2Row {
     raDeg: 10, decDeg: 20, epoch: TYCHO2_MEAN_EPOCH,
     pmRaMasyr: -453.7, pmDecMasyr: -591.4,
     btMag: 5, vtMag: 4.5, fromIcrs: false, isPhotocentre: false, hip: null,
+    ref: sourceRowRef(TYCHO2, '1-1-1'),
     ...overrides,
   };
 }
@@ -31,7 +35,11 @@ function tycho2Row(overrides: Partial<Tycho2Row> = {}): Tycho2Row {
 function cited(
   overrides: Partial<CitedProperMotion> = {},
 ): CitedProperMotion {
-  return { pmRaMasyr: 2314.8, pmDecMasyr: 2295.3, bibcode: UCAC4, ...overrides };
+  return {
+    pmRaMasyr: 2314.8, pmDecMasyr: 2295.3, bibcode: UCAC4,
+    ref: sourceRowRef(SIMBAD_VALUES, 1),
+    ...overrides,
+  };
 }
 
 const TWO_P = gaiaAstrometryRow({ parallaxMas: null, pmraMasyr: null, pmdecMasyr: null });

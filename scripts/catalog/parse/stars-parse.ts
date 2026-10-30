@@ -274,7 +274,7 @@ export function readStars(
     directions = {
       gaiaAstrometry: new Map(),
       hip2: new Map(),
-      nssSourceIds: new Set(),
+      nss: new Map(),
       tycho2: new Map(),
       cns5: new Map(),
     },

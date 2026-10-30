@@ -10,6 +10,9 @@ import type { PrimaryTables } from '../spine/primaries-audit-pure';
 import { printedVLookups } from '../photometry/v-magnitude-pure';
 import { bindingEvidence } from './binding/binding-gate-pure';
 import type { Tycho2Row } from '../tycho2-parse';
+import { TYCHO2 } from '../tycho2-source';
+import { GLIESE } from '../gliese-source';
+import { sourceRowRef } from '../../util/sources/row-ref-pure';
 import {
   additionItemCells,
   buildMembership,
@@ -55,6 +58,7 @@ function tycho2(vtMag: number, hip: number | null = null): Tycho2Row {
   return {
     raDeg: 0, decDeg: 0, epoch: 2000, pmRaMasyr: null, pmDecMasyr: null,
     btMag: null, vtMag, fromIcrs: false, isPhotocentre: false, hip,
+    ref: sourceRowRef(TYCHO2, '1-1-1'),
   };
 }
 
@@ -134,7 +138,7 @@ const tables: PrimaryTables = {
     { cns5: 4, gj: '10002', gjComp: null, gaiaSourceId: null, hip: null, astrometry: null },
     { cns5: 0, gj: 'Sun', gjComp: null, gaiaSourceId: null, hip: null, astrometry: null },
   ],
-  gliese: parseGlieseTsv(GLIESE_TSV, FROM),
+  gliese: parseGlieseTsv(GLIESE_TSV, GLIESE),
   hipI239: new Set([10, 20, 30, 40, 50, 70]),
   hdI239: new Set<number>(),
   i239HipHd: new Map<number, number>(),

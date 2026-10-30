@@ -16,7 +16,7 @@ import {
   gaiaAstrometryAccumulator,
   parseGaiaAstrometryCatalogTsv,
   parseHip2Tsv,
-  parseNssSourceIdSet,
+  parseNssIndex,
   resolveDirection,
   velocityPcPerYr,
   type DirectionInputs,
@@ -30,6 +30,13 @@ import {
   TYCHO2_ICRS_EPOCH, TYCHO2_MEAN_EPOCH, type Tycho2Row,
 } from '../tycho2-parse';
 import { gaiaAstrometryRow } from './astrometry-fixture';
+import { GAIA_ASTROMETRY } from './gaia-astrometry-source';
+import { GAIA_NSS } from './gaia-nss-source';
+import { HIP2 } from './hip2-source';
+import { TYCHO2 } from '../tycho2-source';
+import { SIMBAD_VALUES } from '../simbad/simbad-values-source';
+import { MAGNITUDE_PULL } from '../membership/magnitude-term/magnitude-pull-source';
+import { sourceRowRef, type SourceRowRef } from '../../util/sources/row-ref-pure';
 import { cns5Astrometry } from '../classic-ids/cns5-fixture';
 import {
   equatorialTangentBasis,
@@ -37,7 +44,10 @@ import {
   type UnitVector,
 } from '../../../src/client/util/equatorial-basis';
 
-const FROM = { file: 'fixture.tsv', hint: 'h' };
+const SIMBAD_REF = sourceRowRef(SIMBAD_VALUES, 1);
+
+const nssIndex = (sourceId: string): Map<string, SourceRowRef<string>> =>
+  new Map([[sourceId, sourceRowRef(GAIA_NSS, sourceId)]]);
 
 const ARCSEC_PER_RAD = (180 * 3600) / Math.PI;
 
@@ -76,6 +86,7 @@ function hip2Row(overrides: Partial<Hip2AstrometryRow> = {}): Hip2AstrometryRow 
     raDeg: 100.001, decDeg: 20.001,
     plxMas: 50, plxErrorMas: null,
     pmRaMasyr: 10, pmDeMasyr: -10,
+    ref: sourceRowRef(HIP2, 42),
     ...overrides,
   };
 }
@@ -89,6 +100,7 @@ function tycho2Row(overrides: Partial<Tycho2Row> = {}): Tycho2Row {
     pmRaMasyr: 10, pmDecMasyr: -10,
     btMag: 9.5, vtMag: 8.9,
     fromIcrs: false, isPhotocentre: false, hip: null,
+    ref: sourceRowRef(TYCHO2, TYC),
     ...overrides,
   };
 }
@@ -97,7 +109,7 @@ function sources(overrides: Partial<DirectionSources> = {}): DirectionSources {
   return {
     gaiaAstrometry: new Map(),
     hip2: new Map(),
-    nssSourceIds: new Set(),
+    nss: new Map(),
     tycho2: new Map(),
     cns5: new Map(),
     ...overrides,
@@ -262,7 +274,7 @@ describe('direction-cascade / resolveDirection routing', () => {
     const g = gaiaRow({ ruwe: 2.0 });
     const res = solve(inputs({ sourceId: SID }), sources({
       gaiaAstrometry: new Map([[SID, g]]),
-      nssSourceIds: new Set([SID]),
+      nss: nssIndex(SID),
     }));
     expect(res?.via).toBe('gaia_nss_systemic');
     const gaia5p = solve(inputs({ sourceId: SID }), sources({
@@ -274,7 +286,7 @@ describe('direction-cascade / resolveDirection routing', () => {
   it('NSS membership alone (clean 5p) stays gaia_5p', () => {
     const res = solve(inputs({ sourceId: SID }), sources({
       gaiaAstrometry: new Map([[SID, gaiaRow()]]),
-      nssSourceIds: new Set([SID]),
+      nss: nssIndex(SID),
     }));
     expect(res?.via).toBe('gaia_5p');
   });
@@ -303,7 +315,7 @@ describe('direction-cascade / resolveDirection routing', () => {
     const res = solve(inputs({ sourceId: SID, hip: 42 }), sources({
       gaiaAstrometry: new Map([[SID, gaiaRow({ ruwe: 2.0 })]]),
       hip2: new Map([[42, hip2Row({ pmRaMasyr: 500 })]]),
-      nssSourceIds: new Set([SID]),
+      nss: nssIndex(SID),
     }));
     expect(res?.via).toBe('gaia_nss_systemic');
   });
@@ -419,7 +431,8 @@ describe('direction-cascade / resolveDirection routing', () => {
   it('SIMBAD is the bottom tier and propagates from J2000', () => {
     const simbad = {
       raDeg: 120, decDeg: 40, cooBibcode: '2020yCat.1350....0G',
-      pm: { pmRaMasyr: 200, pmDecMasyr: -100, bibcode: '2020yCat.1350....0G' },
+      pm: { pmRaMasyr: 200, pmDecMasyr: -100, bibcode: '2020yCat.1350....0G', ref: SIMBAD_REF },
+      ref: SIMBAD_REF,
     };
     const res = solve(inputs({ simbad }), sources())!;
     expect(res.via).toBe('simbad');
@@ -436,7 +449,7 @@ describe('direction-cascade / resolveDirection routing', () => {
   it('a SIMBAD row with a position but no PM keeps the position, zero tangential', () => {
     const res = solve(inputs({
       simbad: {
-        raDeg: 120, decDeg: 40, cooBibcode: '2020yCat.1350....0G', pm: null,
+        raDeg: 120, decDeg: 40, cooBibcode: '2020yCat.1350....0G', pm: null, ref: SIMBAD_REF,
       },
     }), sources())!;
     expect(res.via).toBe('simbad');
@@ -477,7 +490,7 @@ describe('direction-cascade / TSV parsers', () => {
       '456\t200.0\t\t30.0\t\t\t\t\t\t\t\t2016.0\t\t\t9.0\t\t\t\t',
       '',
     ].join('\n');
-    const map = parseGaiaAstrometryCatalogTsv(tsv, FROM);
+    const map = parseGaiaAstrometryCatalogTsv(tsv, GAIA_ASTROMETRY);
     expect(map.size).toBe(2);
     expect(map.get('123')).toEqual({
       raDeg: 100.5, decDeg: -20.25,
@@ -487,6 +500,7 @@ describe('direction-cascade / TSV parsers', () => {
       gMag: 8.0, bpMag: 8.6, rpMag: 7.3,
       radialVelocityKmS: -110.51,
       radialVelocityErrorKmS: 0.22,
+      ref: sourceRowRef(GAIA_ASTROMETRY, '123'),
     });
     expect(map.get('456')).toEqual({
       raDeg: 200.0, decDeg: 30.0,
@@ -496,11 +510,12 @@ describe('direction-cascade / TSV parsers', () => {
       gMag: 9.0, bpMag: null, rpMag: null,
       radialVelocityKmS: null,
       radialVelocityErrorKmS: null,
+      ref: sourceRowRef(GAIA_ASTROMETRY, '456'),
     });
   });
 
   it('parseGaiaAstrometryCatalogTsv throws on a missing column', () => {
-    expect(() => parseGaiaAstrometryCatalogTsv('source_id\tra\tdec\n', FROM)).toThrow(/missing required columns/);
+    expect(() => parseGaiaAstrometryCatalogTsv('source_id\tra\tdec\n', GAIA_ASTROMETRY)).toThrow(/missing required columns/);
   });
 
   it('gaiaAstrometryAccumulator keeps only the requested sources', () => {
@@ -509,7 +524,7 @@ describe('direction-cascade / TSV parsers', () => {
       '123\t100.5\t0.1\t-20.25\t0.1\t50.0\t0.1\t10.5\t0.1\t-3.5\t0.1\t2016.0\t1.2\t0\t8.0\t8.6\t7.3\t-110.51\t0.22',
       '456\t200.0\t\t30.0\t\t\t\t\t\t\t\t2016.0\t\t\t9.0\t\t\t\t',
     ];
-    const acc = gaiaAstrometryAccumulator({ file: 'pull', hint: 'hint' }, new Set(['456']));
+    const acc = gaiaAstrometryAccumulator(MAGNITUDE_PULL, new Set(['456']));
     for (const line of lines) acc.line(line);
     const map = acc.result();
     expect([...map.keys()]).toEqual(['456']);
@@ -517,7 +532,7 @@ describe('direction-cascade / TSV parsers', () => {
   });
 
   it('gaiaAstrometryAccumulator resolves source_id by name, not by position', () => {
-    const acc = gaiaAstrometryAccumulator({ file: 'pull', hint: 'hint' }, new Set(['123']));
+    const acc = gaiaAstrometryAccumulator(MAGNITUDE_PULL, new Set(['123']));
     acc.line('ra\tsource_id\tra_error\tdec\tdec_error\tparallax\tparallax_error\tpmra\tpmra_error\tpmdec\tpmdec_error\tref_epoch\truwe\tipd_frac_multi_peak\tphot_g_mean_mag\tphot_bp_mean_mag\tphot_rp_mean_mag\tradial_velocity\tradial_velocity_error');
     acc.line('100.5\t123\t0.1\t-20.25\t0.1\t50.0\t0.1\t10.5\t0.1\t-3.5\t0.1\t2016.0\t1.2\t0\t8.0\t8.6\t7.3\t-110.51\t0.22');
     expect(acc.result().get('123')?.raDeg).toBe(100.5);
@@ -529,12 +544,13 @@ describe('direction-cascade / TSV parsers', () => {
       '32349\t101.28854105\t-16.71314306\t379.21\t1.58\t-546.01\t-1223.07\t1.33\t1.24\t0.99\t100',
       '\t\t\t\t\t\t\t\t\t\t',
     ].join('\n');
-    const map = parseHip2Tsv(tsv, FROM).astrometry;
+    const map = parseHip2Tsv(tsv, HIP2).astrometry;
     expect(map.size).toBe(1);
     expect(map.get(32349)).toEqual({
       raDeg: 101.28854105, decDeg: -16.71314306,
       plxMas: 379.21, plxErrorMas: 1.58,
       pmRaMasyr: -546.01, pmDeMasyr: -1223.07,
+      ref: sourceRowRef(HIP2, 32349),
     });
   });
 
@@ -544,22 +560,22 @@ describe('direction-cascade / TSV parsers', () => {
       '32349\t101.2\t-16.7\t379.21\t1.58\t-546.01\t-1223.07',
       '7\t\t\t\t\t\t',
     ].join('\n');
-    const { astrometry, hips } = parseHip2Tsv(tsv, FROM);
+    const { astrometry, hips } = parseHip2Tsv(tsv, HIP2);
     expect([...astrometry.keys()]).toEqual([32349]);
     expect([...hips]).toEqual([32349, 7]);
   });
 
-  it('parseNssSourceIdSet collects the source_id column', () => {
+  it('parseNssIndex collects the source_id column', () => {
     const tsv = [
       'source_id\tnss_solution_type\tperiod',
       '111\tOrbital\t500',
       '111\tSB1\t500',
       '222\tEclipsingBinary\t3',
     ].join('\n');
-    const set = parseNssSourceIdSet(tsv, FROM);
-    expect(set.size).toBe(2);
-    expect(set.has('111')).toBe(true);
-    expect(set.has('222')).toBe(true);
+    const index = parseNssIndex(tsv, GAIA_NSS);
+    expect(index.size).toBe(2);
+    expect(index.get('111')).toEqual(sourceRowRef(GAIA_NSS, '111'));
+    expect(index.has('222')).toBe(true);
   });
 });
 
@@ -654,7 +670,7 @@ describe('resolveDirection velocity solution', () => {
   it('carries the Gaia solution + gaia_pm velVia on the gaia_5p tier', () => {
     const sources: DirectionSources = {
       gaiaAstrometry: new Map([['1', gaiaRow]]),
-      hip2: new Map(), nssSourceIds: new Set(),
+      hip2: new Map(), nss: new Map(),
       tycho2: new Map(), cns5: new Map(),
     };
     const r = solve(inputs({ sourceId: '1' }), sources)!;
@@ -670,7 +686,7 @@ describe('resolveDirection velocity solution', () => {
     };
     const sources: DirectionSources = {
       gaiaAstrometry: new Map([['1', twoP]]),
-      hip2: new Map(), nssSourceIds: new Set(),
+      hip2: new Map(), nss: new Map(),
       tycho2: new Map(), cns5: new Map(),
     };
     const r = solve(inputs({ sourceId: '1' }), sources)!;
@@ -679,7 +695,7 @@ describe('resolveDirection velocity solution', () => {
 
   it('the Tycho-2 tier carries its own solution + tycho2_pm velVia', () => {
     const sources: DirectionSources = {
-      gaiaAstrometry: new Map(), hip2: new Map(), nssSourceIds: new Set(),
+      gaiaAstrometry: new Map(), hip2: new Map(), nss: new Map(),
       tycho2: new Map([[TYC, tycho2Row({ pmRaMasyr: 12, pmDecMasyr: -8 })]]),
       cns5: new Map(),
     };

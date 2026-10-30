@@ -124,6 +124,14 @@ or a wrongly typed row. Every declaration also carries a type-only brand
 `{file, rowKey}` stand-in does not compile either
 (`row-ref-pure.test.ts`). Keyed today: the spine (`spine:<line>`),
 `multiples.tsv` (`multiples:<system_id>/<comp>`), the magnitude pull
-(`gaia-dr3:<source_id>`), and the three tables an addition group is
+(`gaia-dr3:<source_id>`), the three tables an addition group is
 founded on — IV/25 (`iv25:<tyc>`), I/239 (`i239:<hip>`) and CNS5
-(`cns5:<cns5 id>`). Its text form is `<id>:<row>`.
+(`cns5:<cns5 id>`) — and the tables placement cites: the Gaia DR3
+astrometry catalogue (`gaia-dr3-astrometry:<source_id>`) and NSS two-body
+table (`gaia-dr3-nss:<source_id>`), HIP2 (`i311:<hip>`), Tycho-2
+(`i259:<tyc>`), V/70A (`v70a:<number+comp>`), SIMBAD's values pull
+(`simbad:<simbad_oid>`) and Bailer-Jones 2021 (`i352:<source_id>`). Its text
+form is `<id>:<row>`. A parser of a keyed table takes the declaration itself
+as its `from` and stamps each row with its `SourceRowRef`; the declaration
+passes itself in, with the parse's return type stated so the
+self-reference type-checks.

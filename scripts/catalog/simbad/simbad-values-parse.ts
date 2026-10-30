@@ -2,6 +2,7 @@
 // bibcoded bottom tier of the value cascades in /docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers.
 
 import type { Declared } from '../../util/sources/source';
+import { sourceRowRef, type RowKeyed, type SourceRowRef } from '../../util/sources/row-ref-pure';
 import { readTable, type TableRow } from '../../util/tsv/table-pure';
 import {
   emptySimbadNamespaceIndex,
@@ -14,7 +15,7 @@ import { citedParallax, type CitedParallax } from '../cited-parallax';
 import { citedProperMotion, type CitedProperMotion } from '../cited-proper-motion';
 
 const SIMBAD_VALUES_COLUMNS = [
-    'rvz_radvel', 'rvz_type', 'rvz_bibcode',
+    'simbad_oid', 'rvz_radvel', 'rvz_type', 'rvz_bibcode',
     'ra', 'dec', 'coo_bibcode', 'pmra', 'pmdec', 'pm_bibcode',
     'plx_value', 'plx_err', 'plx_bibcode',
     'hip', 'source_id', 'tyc', 'gj',
@@ -27,6 +28,7 @@ type ValuesRow = TableRow<(typeof SIMBAD_VALUES_COLUMNS)[number]>;
 export interface SimbadRadialVelocity {
   kmS: number;
   bibcode: string;
+  ref: SourceRowRef<number>;
 }
 
 /** One SIMBAD row's position and proper motion, each with the bibcode that is
@@ -38,6 +40,7 @@ export interface SimbadAstrometry {
   decDeg: number;
   cooBibcode: string;
   pm: CitedProperMotion | null;
+  ref: SourceRowRef<number>;
 }
 
 export interface SimbadValueRow {
@@ -68,12 +71,12 @@ export function emptySimbadValueIndex(): SimbadValueIndex {
  *  reads 243,879 km/s. An unbibcoded value cannot arrive (the pull drops the
  *  whole quantity at write time), so the bibcode check here guards a
  *  re-pulled file rather than this one. */
-function parseRv(row: ValuesRow): SimbadRadialVelocity | null {
+function parseRv(row: ValuesRow, ref: SourceRowRef<number>): SimbadRadialVelocity | null {
   if (row.text('rvz_type') !== 'v') return null;
   const kmS = row.float('rvz_radvel');
   const bibcode = row.text('rvz_bibcode');
   if (kmS === null || bibcode === null) return null;
-  return { kmS, bibcode };
+  return { kmS, bibcode, ref };
 }
 
 /** A position is consumable only with the bibcode that sourced it — the
@@ -86,7 +89,7 @@ function parseRv(row: ValuesRow): SimbadRadialVelocity | null {
  *  position but no motion is a real shape (the tier keeps the position and
  *  takes a zero tangential term). A PM missing its own bibcode is dropped the
  *  same way, leaving the position standing. */
-function parseAstrometry(row: ValuesRow): SimbadAstrometry | null {
+function parseAstrometry(row: ValuesRow, ref: SourceRowRef<number>): SimbadAstrometry | null {
   const raDeg = row.float('ra');
   const decDeg = row.float('dec');
   const cooBibcode = row.text('coo_bibcode');
@@ -97,7 +100,9 @@ function parseAstrometry(row: ValuesRow): SimbadAstrometry | null {
       row.float('pmra'),
       row.float('pmdec'),
       row.text('pm_bibcode'),
+      ref,
     ),
+    ref,
   };
 }
 
@@ -105,9 +110,11 @@ function parseAstrometry(row: ValuesRow): SimbadAstrometry | null {
  *  in any namespace collides in the committed file, so a duplicate is an
  *  upstream schema change and throws rather than silently overwriting a
  *  binding the cascade would then read off the wrong star. */
-export function parseSimbadValuesTsv(text: string, from: Declared): SimbadValueIndex {
+export function parseSimbadValuesTsv(text: string, from: Declared & RowKeyed<number>): SimbadValueIndex {
   const index = emptySimbadValueIndex();
   for (const row of readTable({ ...from, columns: SIMBAD_VALUES_COLUMNS }, text)) {
+    const oid = row.int('simbad_oid') ?? row.fail('a row with no simbad_oid');
+    const ref = sourceRowRef(from, oid);
     const keys: SimbadRecordKeys = {
       sourceId: row.sourceId('source_id'),
       hip: row.int('hip'),
@@ -115,13 +122,14 @@ export function parseSimbadValuesTsv(text: string, from: Declared): SimbadValueI
       gl: row.text('gj'),
     };
     const value: SimbadValueRow = {
-      rv: parseRv(row),
+      rv: parseRv(row, ref),
       parallax: citedParallax(
         row.float('plx_value'),
         row.float('plx_err'),
         row.text('plx_bibcode'),
+        ref,
       ),
-      astrometry: parseAstrometry(row),
+      astrometry: parseAstrometry(row, ref),
     };
     indexSimbadRow(index, keys, value, (namespace, key) =>
       row.fail(`two rows keyed ${namespace}=${key}`));
