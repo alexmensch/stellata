@@ -19,17 +19,16 @@ outcomes; its post-passes act on records and keep their own.
 
 ```
 scripts/catalog/lineage/
-  lineage-row-pure.ts            The envelope, its one comparator
-                                 (compareLineageRows), the TSV text form, and
-                                 stageLineageText — the writer, which refuses
-                                 a code the stage does not declare or rows
-                                 out of order; stageLineageLine and
-                                 stageLineageLinesText, the same over lines.
+  lineage-row-pure.ts            The envelope and LineageLine, its TSV line:
+                                 stageLineageLine, the one encoder, which
+                                 refuses a code the stage does not declare;
+                                 sortLineageLines, the one order; and
+                                 stageLineageText, the writer, which refuses
+                                 another stage's line or lines out of order.
   reason-codes-pure.ts           stageCodes: a stage's codes with their
                                  effect and status.
-  lineage-diff-pure.ts           diffLineage, the merge-join; stageDiffText,
-                                 the diff file; each over rows or, through
-                                 LINE_FORM, lines.
+  lineage-diff-pure.ts           diffLineage, the merge-join of two stage
+                                 files' lines; stageDiffText, the diff file.
   lineage-header-pure.ts         StageHeader; planBaseline and judgeBaseline,
                                  which baseline a build diffs against.
   identity-pure.ts               The identity row and its file; refuses two
@@ -49,8 +48,7 @@ scripts/catalog/lineage/
   trace.test.ts                  Both, the command over a committed fixture.
   stage-lineage.ts               stageLineage: one stage's files, header,
                                  baseline plan, diff and budget check,
-                                 ready for the stage's emitArtifacts call;
-                                 stageLineageLines, the same from lines.
+                                 ready for the stage's emitArtifacts call.
   lineage-io.ts                  The on-disk layout (build/lineage/,
                                  lineage.previous/, lineage-diff/), the
                                  baseline members and a stage's emission,
@@ -157,10 +155,13 @@ citations by licence is the release design's question, and the filter would
 be a join on `source`.
 
 Its text form is `<source>:<row>`. Every lineage file sorts by the byte
-order of that text form, then `role`, `code`, `params`, through one
-comparator the writer and the diff both import (`compareLineageRows`,
-`lineage-row-pure.ts`) — never a numeric sort, so
-Gaia ids above 2^53 order the same everywhere. A key's rows diff as a set:
+order of that text form, then `role`, `code`, `params`, `evidence`. A stage
+hands its rows over as lines (`LineageLine`, made only by `stageLineageLine`
+or read from a stage file), and a tab sorts below every character a cell may
+hold — `encodeLineageLine` refuses the control characters below it — so
+sorting a stage's lines by their UTF-8 bytes (`sortLineageLines`) is that
+order, and the writer and the diff check the same one — never a numeric
+sort, so Gaia ids above 2^53 order the same everywhere. A key's rows diff as a set:
 changed means the set of rows under one key differs. `params` is empty or a
 JSON object whose keys keep the stage's declared order, so one payload has
 one text; `evidence` is its references' text forms joined by `|`.
@@ -265,13 +266,10 @@ bytes in chunks, and the diff walks the baseline a key at a time
 
 A stage that size cannot hold its rows as objects either: 3.9 million
 `LineageRow`s, beside the `Placement`s they came from, are about 1.7 GB of
-heap, which put `build:catalog` past CI's V8 limit. Placement therefore
-serialises each record's rows to lines inside the walk and keeps only the
-strings (`stageLineageLines`). A tab sorts below every character a cell may
-hold — `encodeLineageLine` refuses the control characters below it — so a
-line's byte order is `compareLineageRows` order, and the lines sort, diff and
-write as plain strings; the diff reads the baseline as lines too
-(`streamLineageLines`). Membership and promotion keep the row form.
+heap. So a stage hands `stageLineage` lines, never rows, and placement
+serialises each record to its lines inside the walk, keeping only the
+strings; the diff reads the baseline as lines too, and only a reader that
+needs fields (trace, a ledger view) decodes them.
 
 The committed form of lineage is `data/sid/events.tsv` plus the ledger views
 below; the derivation itself is a build artifact, regenerated every build.

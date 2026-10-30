@@ -2,7 +2,8 @@
 
 import type { StageLineageSpec } from '../lineage/lineage-io';
 import {
-  paramsOf, paramsText, stageLineageLine, type LineageParams, type LineageRow,
+  decodeLineageLine, lineageLineCode, paramsOf, paramsText, stageLineageLine,
+  type LineageLine, type LineageParams, type LineageRow,
 } from '../lineage/lineage-row-pure';
 import { LIVE, stageCodes, type CodeDeclaration } from '../lineage/reason-codes-pure';
 import { sourceRowRefText, type AnySourceRowRef } from '../../util/sources/row-ref-pure';
@@ -290,7 +291,7 @@ export function placementLineageRows(p: Placement): LineageRow[] {
 }
 
 /** A record's rows as lines, so the walk holds strings rather than its Placements. */
-export function placementLineageLines(p: Placement): string[] {
+export function placementLineageLines(p: Placement): LineageLine[] {
   return placementLineageRows(p).map((row) => stageLineageLine(PLACEMENT_CODES, row));
 }
 
@@ -299,11 +300,12 @@ const REASON_BY_PARK_CODE = new Map<string, ParkedReason>(
 );
 
 /** `data/membership/parked-ledger.tsv`, generated from the stage's park rows alone. */
-export function parkedLedgerView(rows: Iterable<LineageRow>): ParkedLedgerEntry[] {
+export function parkedLedgerView(lines: Iterable<LineageLine>): ParkedLedgerEntry[] {
   const entries: ParkedLedgerEntry[] = [];
-  for (const r of rows) {
-    const reason = REASON_BY_PARK_CODE.get(r.code);
-    if (reason !== undefined) entries.push({ ...parkedIdentifiersOf(paramsOf(r) as ParkedLedgerCells), reason });
+  for (const line of lines) {
+    const reason = REASON_BY_PARK_CODE.get(lineageLineCode(line));
+    if (reason === undefined) continue;
+    entries.push({ ...parkedIdentifiersOf(paramsOf(decodeLineageLine(line)) as ParkedLedgerCells), reason });
   }
   return entries;
 }

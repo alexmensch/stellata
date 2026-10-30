@@ -13,7 +13,7 @@ import { artifactRows, readArtifact } from '../../util/sources/source';
 import { MEMBERSHIP_OUTPUTS } from './membership-manifest-outputs';
 import { identityText } from '../lineage/identity-pure';
 import { LINEAGE_LAYOUT, readIdentity, stageFile } from '../lineage/lineage-io';
-import { stageLineageText } from '../lineage/lineage-row-pure';
+import { stageLineageLine, stageLineageText } from '../lineage/lineage-row-pure';
 import { stageLineage } from '../lineage/stage-lineage';
 import {
   MEMBERSHIP_CODES, MEMBERSHIP_LINEAGE_BUDGET, multiplesComponentJoin, MEMBERSHIP_LINEAGE,
@@ -157,7 +157,7 @@ async function main(): Promise<void> {
     spec: MEMBERSHIP_LINEAGE,
     inputs: fileHashes(await stepInputPaths('build:membership')),
     diffed: 'membership',
-    rows: result.lineage,
+    lines: result.lineage.map((row) => stageLineageLine(MEMBERSHIP_CODES, row)),
     render: (sorted) => ({
       membership: stageLineageText(MEMBERSHIP_CODES, sorted),
       identity: identityText(result.identity),

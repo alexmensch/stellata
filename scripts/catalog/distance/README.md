@@ -245,5 +245,5 @@ ran, in walk order, up to the park that stopped it or the record it shipped.
 A park row carries the manifest's five identifier cells in `params`, since
 those cells are the parked ledger's key and the parity gate's join, and
 `parkedLedgerView` generates `data/membership/parked-ledger.tsv` from the
-park rows alone, decoded one at a time from the stage's lines. Placement
+park rows alone, decoding only the lines whose code is a park code. Placement
 founds no record, so it writes no identity rows.

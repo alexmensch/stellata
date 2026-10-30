@@ -10,7 +10,7 @@ import {
   baselineMembers, lineageLayout, readLineage, stageEmission, stageFamilies, stageFile,
   stageOutputFiles, type LineageLayout,
 } from './lineage-io';
-import { paramsText, stageLineageText } from './lineage-row-pure';
+import { paramsText, stageLineageLine, stageLineageText } from './lineage-row-pure';
 import { LIVE, stageCodes } from './reason-codes-pure';
 
 const SPEC = { stage: 'demo', files: ['demo', 'identity'] as const };
@@ -24,9 +24,9 @@ const header = (commit: string): StageHeader => ({
 });
 
 function text(source: string): Uint8Array {
-  return stageLineageText(CODES, [{
+  return stageLineageText(CODES, [stageLineageLine(CODES, {
     stage: 'demo', key: 'spine:2', role: 'outcome', code: 'demo.kept', params: paramsText({ source }), evidence: [],
-  }]);
+  })]);
 }
 
 function run(source: string, opts: { fail?: boolean; diff?: Uint8Array | null; rotate?: boolean } = {}): void {

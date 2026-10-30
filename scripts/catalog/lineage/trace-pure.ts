@@ -3,7 +3,7 @@
 import { isValidDesignation } from '../../sid/sid-pure';
 import { foldNameKey } from '../naming/wgsn-normalise-pure';
 import type { IdentityRow } from './identity-pure';
-import { compareLineageRows, compareUtf8, type LineageRow } from './lineage-row-pure';
+import { compareUtf8, type LineageRow } from './lineage-row-pure';
 
 /** Gaia DR3 source_ids run to 10 digits and more; a SID never does. */
 const GAIA_ID = /^[0-9]{10,}$/;
@@ -130,7 +130,7 @@ export function traceRecords(
   return [...keys].sort(compareUtf8).map((key) => ({
     key,
     identity: byKey.get(key) ?? null,
-    rows: stages.flatMap(({ rows }) => rows.filter((r) => r.key === key).sort(compareLineageRows)),
+    rows: stages.flatMap(({ rows }) => rows.filter((r) => r.key === key)),
   }));
 }
 

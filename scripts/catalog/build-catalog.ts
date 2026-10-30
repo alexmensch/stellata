@@ -81,8 +81,8 @@ import {
 } from './companions/promotion-lineage-pure';
 import { identityText } from './lineage/identity-pure';
 import { LINEAGE_LAYOUT } from './lineage/lineage-io';
-import { decodeLineageLines, stageLineageLinesText, stageLineageText } from './lineage/lineage-row-pure';
-import { stageLineage, stageLineageLines } from './lineage/stage-lineage';
+import { stageLineageLine, stageLineageText, type LineageLine } from './lineage/lineage-row-pure';
+import { stageLineage } from './lineage/stage-lineage';
 import {
   buildCatalogRowIndexMap,
   buildComponentDesignations,
@@ -116,7 +116,7 @@ import {
 } from './distance/parallax/parked-ledger';
 import { PARKED_LEDGER } from './distance/parallax/parked-ledger-tsv';
 import {
-  PLACEMENT_LINEAGE, PLACEMENT_LINEAGE_BUDGET, PLACEMENT_STAGE, parkedLedgerView, placementLineageLines,
+  PLACEMENT_CODES, PLACEMENT_LINEAGE, PLACEMENT_LINEAGE_BUDGET, parkedLedgerView, placementLineageLines,
 } from './distance/placement-lineage-pure';
 import {
   SIMBAD_SOURCED_DISTANCES_FILE,
@@ -167,18 +167,18 @@ const EXPECTED_OUTLIERS = resolve(
 // A function of its own so the placement lines are unreachable once it returns:
 // inlined into main, they outlive the walk and the build runs out of heap.
 async function walkManifest(inputs: ReadStarsOptions, inputHashes: FileHashes) {
-  const lines: string[] = [];
+  const lines: LineageLine[] = [];
   const { stars, stats } = readStars(artifactRows(MEMBERSHIP_MANIFEST), inputs, (placement) => {
     for (const line of placementLineageLines(placement)) lines.push(line);
   });
   const parkedLedger = parkedLedgerTsv(lines);
-  const placementEmission = await stageLineageLines({
+  const placementEmission = await stageLineage({
     layout: LINEAGE_LAYOUT,
     spec: PLACEMENT_LINEAGE,
     inputs: inputHashes,
     diffed: 'placement',
     lines,
-    render: (sorted) => ({ placement: stageLineageLinesText(PLACEMENT_STAGE, sorted) }),
+    render: (sorted) => ({ placement: stageLineageText(PLACEMENT_CODES, sorted) }),
     joins: () => [],
     budget: PLACEMENT_LINEAGE_BUDGET,
     argv: process.argv.slice(2),
@@ -186,8 +186,8 @@ async function walkManifest(inputs: ReadStarsOptions, inputHashes: FileHashes) {
   return { stars, stats, parkedLedger, placementEmission };
 }
 
-function parkedLedgerTsv(placementLines: readonly string[]): string {
-  const parked = parkedLedgerView(decodeLineageLines(placementLines));
+function parkedLedgerTsv(placementLines: readonly LineageLine[]): string {
+  const parked = parkedLedgerView(placementLines);
   console.log(`  parked (record parity): ${parked.length} → ${PARKED_LEDGER.file}`);
   return PARKED_LEDGER.serialize(parked);
 }
@@ -1259,7 +1259,7 @@ async function main() {
     spec: PROMOTION_LINEAGE,
     inputs: inputHashesAtStart,
     diffed: 'promotion',
-    rows: promotionLineage,
+    lines: promotionLineage.map((row) => stageLineageLine(PROMOTION_CODES, row)),
     render: (sorted) => ({
       promotion: stageLineageText(PROMOTION_CODES, sorted),
       'promotion.identity': identityText(promotionIdentity),

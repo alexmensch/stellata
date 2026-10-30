@@ -36,7 +36,9 @@ import {
 } from './membership-manifest-tsv';
 import { parkedRecordKey } from '../distance/parallax/parked-ledger';
 import { diffLineage, stageDiffText } from '../lineage/lineage-diff-pure';
-import { compareLineageRows, paramsOf, type LineageRow } from '../lineage/lineage-row-pure';
+import {
+  decodeLineageLine, paramsOf, sortLineageLines, stageLineageLine, type LineageLine, type LineageRow,
+} from '../lineage/lineage-row-pure';
 import { MEMBERSHIP_CODES } from './membership-lineage-pure';
 import { ORIGIN_KEYS } from './origin-keys';
 
@@ -915,7 +917,7 @@ describe('membership lineage', () => {
       new Map([['777', 14.0]]), xids, printedVLookups(new Map(), t.tycho2, t.gliese), null,
     ),
   });
-  const sorted = (rows: readonly LineageRow[]) => [...rows].sort(compareLineageRows);
+  const sorted = (rows: readonly LineageRow[]) => sortLineageLines(rows.map((r) => stageLineageLine(MEMBERSHIP_CODES, r)));
 
   it('writes an admission row for every record, folded and component ones included', () => {
     const admitted = new Set(result.lineage
@@ -932,7 +934,8 @@ describe('membership lineage', () => {
     const changes = diffLineage(sorted(before.lineage), sorted(after.lineage));
     const rebound = changes.find((c) => c.key === 'spine:4')!;
     expect(rebound.kind).toBe('changed');
-    const binding = (rows: readonly LineageRow[]) => rows.find((r) => r.code === 'membership.binding.bound')!;
+    const binding = (lines: readonly LineageLine[]) =>
+      lines.map(decodeLineageLine).find((r) => r.code === 'membership.binding.bound')!;
     expect(paramsOf(binding(rebound.removed)))
       .toMatchObject({ derived_source_id: '222', source_letters: 'W1:A' });
     expect(paramsOf(binding(rebound.added)))

@@ -6,7 +6,7 @@ import { GAIA_ASTROMETRY } from './gaia-astrometry-source';
 import { HIP2 } from './hip2-source';
 import { BAILER_JONES } from './refinement/bailer-jones-source';
 import { SIMBAD_VALUES } from '../simbad/simbad-values-source';
-import { decodeLineageLines, encodeLineageLine } from '../lineage/lineage-row-pure';
+import { encodeLineageLine, stageLineageLine } from '../lineage/lineage-row-pure';
 import type { DirectionSolution } from './direction-cascade';
 import type { ParkedLedgerEntry } from './parallax/parked-ledger';
 import {
@@ -174,11 +174,9 @@ describe('parkedLedgerView', () => {
         ? { via: 'gaia_dr3_inversion', value: { mas: 2, errMas: 0.1 }, evidence: [GAIA], refusals: [] }
         : { via: 'none', refusals: [] },
     }));
-    const rows = placements.flatMap(placementLineageRows);
-    expect(parkedLedgerView(rows)).toEqual(entries);
     const lines = placements.flatMap(placementLineageLines);
-    expect(lines).toEqual(rows.map(encodeLineageLine));
-    expect(parkedLedgerView(decodeLineageLines(lines))).toEqual(entries);
+    expect(lines).toEqual(placements.flatMap(placementLineageRows).map(encodeLineageLine));
+    expect(parkedLedgerView(lines)).toEqual(entries);
   });
 
   it('refuses a malformed identifier cell rather than reading it as a number', () => {
@@ -188,7 +186,7 @@ describe('parkedLedgerView', () => {
       ids: { tyc: null, hip: 7, hd: null, gl: null, gaiaSourceId: null },
       parallax: { via: 'gaia_dr3_inversion', value: { mas: 2, errMas: 0.1 }, evidence: [GAIA], refusals: [] },
     }).filter((r) => r.code === 'placement.park.no-v-magnitude');
-    expect(() => parkedLedgerView([{ ...row, params: row.params.replace('"7"', '"7x"') }]))
+    expect(() => parkedLedgerView([stageLineageLine(PLACEMENT_CODES, { ...row, params: row.params.replace('"7"', '"7x"') })]))
       .toThrow('"7x" is not an integer');
   });
 });
