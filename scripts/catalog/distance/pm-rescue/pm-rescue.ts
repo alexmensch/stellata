@@ -2,11 +2,11 @@
 // → CNS5 by GJ → bibcoded SIMBAD, with the Gaia-bibcode skip rule. See
 // README.md.
 
-import { gaiaRefusals, refusedPublicationCited, type RefusedPublication } from '../gaia-distrust';
+import { gaiaRefusals, refusedPublicationCited } from '../gaia-distrust';
 import type { GaiaAstrometryCatalogRow, VelocityVia } from '../direction-cascade';
 import type { Tycho2Row } from '../../tycho2-parse';
 import type { CitedProperMotion } from '../../cited-proper-motion';
-import type { CascadeRefusal, CascadeResult, UniformValues } from '../../cascade-result';
+import type { CitedCascadeResult, CitedRefusal, UniformValues } from '../../cascade-result';
 
 export const PM_RESCUE_VIA_VALUES = [
   'tycho2',
@@ -39,10 +39,10 @@ export interface PmRescueSources {
 }
 
 /** A courier's PM the Gaia-bibcode skip rule rejected. */
-export type PmRescueRefusal = CascadeRefusal<'cns5' | 'simbad', RefusedPublication>;
+export type PmRescueRefusal = CitedRefusal<'cns5' | 'simbad', 'gaia_release'>;
 
 /** mas/yr, μ_α* cos δ-applied. */
-export type PmRescueResolution = CascadeResult<
+export type PmRescueResolution = CitedCascadeResult<
   UniformValues<PmRescueVia, { pmRaMasyr: number; pmDecMasyr: number }>,
   PmRescueRefusal
 >;
@@ -86,6 +86,7 @@ export function resolvePmRescue(
     return {
       via: 'tycho2',
       value: { pmRaMasyr: tycho2.pmRaMasyr, pmDecMasyr: tycho2.pmDecMasyr },
+      evidence: [tycho2.ref],
       refusals,
     };
   }
@@ -94,12 +95,13 @@ export function resolvePmRescue(
     if (cited === null) continue;
     const publication = refusedPublicationCited(cited.bibcode, refused);
     if (publication !== null) {
-      refusals.push({ tier: via, reason: publication });
+      refusals.push({ tier: via, reason: publication, ref: cited.ref });
       continue;
     }
     return {
       via,
       value: { pmRaMasyr: cited.pmRaMasyr, pmDecMasyr: cited.pmDecMasyr },
+      evidence: [cited.ref],
       refusals,
     };
   }

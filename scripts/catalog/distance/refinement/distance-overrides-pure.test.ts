@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
+import { sourceRowRef } from '../../../util/sources/row-ref-pure';
+import { BAILER_JONES } from './bailer-jones-source';
 import { DIST_VIA_VALUES } from '../parallax/parallax-cascade';
 import { MAX_DIST_PC } from '../../parse/stars-parse';
 import {
@@ -51,7 +53,7 @@ describe('applyBailerJonesOverride', () => {
     for (const f of FIVE_HIPS) {
       const out = applyBailerJonesOverride(f.sourceId, bjMap);
       expect(out, f.label).not.toBeNull();
-      expect(out, f.label).toBe(f.bjDist);
+      expect(out, f.label).toEqual({ distPc: f.bjDist, ref: sourceRowRef(BAILER_JONES, f.sourceId) });
     }
   });
 
@@ -62,7 +64,7 @@ describe('applyBailerJonesOverride', () => {
     // and HIP 46144's pullback is asserted separately below.
     for (const label of ['HIP 22365', 'HIP 25733', 'HIP 38430']) {
       const f = FIVE_HIPS.find((x) => x.label === label)!;
-      const out = applyBailerJonesOverride(f.sourceId, bjMap)!;
+      const out = applyBailerJonesOverride(f.sourceId, bjMap)!.distPc;
       const drop = (f.preOverrideDist - out) / f.preOverrideDist;
       expect(drop, `${label} drop ratio`).toBeGreaterThan(0.25);
     }
@@ -70,7 +72,7 @@ describe('applyBailerJonesOverride', () => {
 
   it('HIP 46144 pulls back ~18% (lower-S/N outlier)', () => {
     const f = FIVE_HIPS.find((x) => x.label === 'HIP 46144')!;
-    const out = applyBailerJonesOverride(f.sourceId, bjMap)!;
+    const out = applyBailerJonesOverride(f.sourceId, bjMap)!.distPc;
     const drop = (f.preOverrideDist - out) / f.preOverrideDist;
     expect(drop).toBeGreaterThan(0.15);
     expect(drop).toBeLessThan(0.20);
@@ -78,7 +80,7 @@ describe('applyBailerJonesOverride', () => {
 
   it('leaves the well-measured F-dwarf HIP 23785 within 5%', () => {
     const f = FIVE_HIPS.find((x) => x.label === 'HIP 23785')!;
-    const out = applyBailerJonesOverride(f.sourceId, bjMap)!;
+    const out = applyBailerJonesOverride(f.sourceId, bjMap)!.distPc;
     expect(Math.abs(f.preOverrideDist - out) / f.preOverrideDist).toBeLessThan(0.05);
   });
 
@@ -310,7 +312,7 @@ describe('applyLmcKinematicOverride', () => {
     const sourceId = 'fake-lmc-source-id';
     const bjMap = new Map([[sourceId, 8000]]); // arbitrary B-J posterior ≠ LMC distance
     const bj = applyBailerJonesOverride(sourceId, bjMap);
-    expect(bj).toBe(8000);
+    expect(bj?.distPc).toBe(8000);
     const lmc = applyLmcKinematicOverride(f.ra, f.dec, f.pmRa, f.pmDec, null);
     expect(lmc).toEqual(SNAP);
   });

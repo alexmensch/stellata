@@ -17,6 +17,7 @@ export function cns5Astrometry(
     posEpoch: 2000.0,
     parallax: { mas: 100, errMas: 0.5, bibcode: '2020yCat.1350....0G', ref: REF },
     pm: { pmRaMasyr: 50, pmDecMasyr: -20, bibcode: '2012yCat.1322....0Z', ref: REF },
+    ref: REF,
     ...overrides,
   };
 }

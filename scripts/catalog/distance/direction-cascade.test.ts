@@ -341,10 +341,12 @@ describe('direction-cascade / resolveDirection routing', () => {
         gaiaAstrometry: new Map(gaia === null ? [] : [[SID, gaia]]),
         hip2: new Map([[42, hip2]]),
       })).refusals;
-    expect(refusalsOf(gaiaRow(), hip2Row({ pmRaMasyr: 10 + HIP2_PM_DELTA_THRESHOLD_MASYR + 1 })))
-      .toEqual([{ tier: 'gaia_5p', reason: 'pm_disagrees_with_hip2' }]);
-    expect(refusalsOf(gaiaRow({ parallaxMas: null })))
-      .toEqual([{ tier: 'gaia_5p', reason: 'no_5p_solution' }]);
+    const clean = gaiaRow();
+    expect(refusalsOf(clean, hip2Row({ pmRaMasyr: 10 + HIP2_PM_DELTA_THRESHOLD_MASYR + 1 })))
+      .toEqual([{ tier: 'gaia_5p', reason: 'pm_disagrees_with_hip2', ref: clean.ref }]);
+    const twoP = gaiaRow({ parallaxMas: null });
+    expect(refusalsOf(twoP))
+      .toEqual([{ tier: 'gaia_5p', reason: 'no_5p_solution', ref: twoP.ref }]);
     expect(refusalsOf(null)).toEqual([]);
     expect(refusalsOf(gaiaRow())).toEqual([]);
   });

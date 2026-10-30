@@ -117,6 +117,10 @@ scripts/catalog/
                                   `CascadeRefusal` (tier + coded reason, the
                                   tier checked against the cascade's own) —
                                   what the stage lineage projects.
+                                  `CitedCascadeResult` adds the source rows
+                                  the answer rests on (`evidence`) and the
+                                  row each `CitedRefusal` refused (`ref`):
+                                  the four placement cascades return it.
   cited-proper-motion.ts (+ test) `CitedProperMotion` and `CitedParallax`,
   cited-parallax.ts               with their only constructors: a value is
                                   admitted only with the bibcode that sourced

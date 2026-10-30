@@ -547,7 +547,7 @@ export function readStars(
     if (bjEligibleRow && bjMap.size > 0) {
       const ovr = applyBailerJonesOverride(gaiaSourceId, bjMap);
       if (ovr !== null) {
-        dist = ovr;
+        dist = ovr.distPc;
         distVia = 'bailer_jones';
         bjOverridden++;
       } else {

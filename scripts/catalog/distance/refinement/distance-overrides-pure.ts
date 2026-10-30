@@ -2,6 +2,8 @@
 
 import type { DistVia } from '../parallax/parallax-cascade';
 import { parallaxSignalToNoise, type MeasuredParallax } from '../../cited-parallax';
+import { sourceRowRef, type SourceRowRef } from '../../../util/sources/row-ref-pure';
+import { BAILER_JONES } from './bailer-jones-source';
 
 /** Whether a record is eligible for the Bailer-Jones override: it resolves to a
  *  Gaia DR3 source_id AND the parallax its own cascade settled on is Gaia's.
@@ -32,9 +34,10 @@ export function isBailerJonesEligible(
 export function applyBailerJonesOverride(
   gaiaSourceId: string | null,
   bjMap: Map<string, number>,
-): number | null {
+): { distPc: number; ref: SourceRowRef<string> } | null {
   if (!gaiaSourceId) return null;
-  return bjMap.get(gaiaSourceId) ?? null;
+  const distPc = bjMap.get(gaiaSourceId);
+  return distPc === undefined ? null : { distPc, ref: sourceRowRef(BAILER_JONES, gaiaSourceId) };
 }
 
 // ---- LMC kinematic distance override -------------------------------------

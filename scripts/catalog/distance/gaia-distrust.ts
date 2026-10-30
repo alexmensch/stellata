@@ -64,13 +64,13 @@ const CITES: Record<RefusedPublication, (bibcode: string) => boolean> = {
   hipparcos2: isHipparcos2Bibcode,
 };
 
-const GAIA_RELEASE_REFUSED: ReadonlySet<RefusedPublication> = new Set(['gaia_release']);
-const NOTHING_REFUSED: ReadonlySet<RefusedPublication> = new Set();
+const GAIA_RELEASE_REFUSED: ReadonlySet<'gaia_release'> = new Set(['gaia_release']);
+const NOTHING_REFUSED: ReadonlySet<never> = new Set();
 
 /** What the record's own Gaia fit refuses: its release, when the fit is 2p. */
 export function gaiaRefusals(
   gaia: GaiaAstrometryCatalogRow | null,
-): ReadonlySet<RefusedPublication> {
+): ReadonlySet<'gaia_release'> {
   return gaiaRowIs2p(gaia) ? GAIA_RELEASE_REFUSED : NOTHING_REFUSED;
 }
 
@@ -78,10 +78,10 @@ export function gaiaRefusals(
  *  a value attributed to a publication a tier above it already refused — the
  *  one rule behind every skip
  *  (parallax/README.md#the-skip-rules--one-principle-two-publications). */
-export function refusedPublicationCited(
+export function refusedPublicationCited<P extends RefusedPublication>(
   bibcode: string,
-  refused: ReadonlySet<RefusedPublication>,
-): RefusedPublication | null {
+  refused: ReadonlySet<P>,
+): P | null {
   for (const publication of refused) {
     if (CITES[publication](bibcode)) return publication;
   }

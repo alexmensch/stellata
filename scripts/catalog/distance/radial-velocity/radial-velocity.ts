@@ -9,10 +9,9 @@ import {
   gaiaHas5pSolution,
   gaiaRefusals,
   refusedPublicationCited,
-  type RefusedPublication,
 } from '../gaia-distrust';
 import type { SimbadRadialVelocity } from '../../simbad/simbad-values-parse';
-import type { CascadeRefusal, CascadeResult } from '../../cascade-result';
+import type { CitedCascadeResult, CitedRefusal } from '../../cascade-result';
 
 // Which source supplied the radial term of the space-motion velocity. Pinned
 // per-tier in build-counts alongside `velocityVia`, which covers the
@@ -70,11 +69,11 @@ export type RvTier = Exclude<RvVia, 'none'>;
 
 /** A Gaia rv on a row with no 5p solution, or a SIMBAD value the
  *  Gaia-bibcode skip rule rejected. */
-export type RadialVelocityRefusal = CascadeRefusal<RvTier, 'no_5p_solution' | RefusedPublication>;
+export type RadialVelocityRefusal = CitedRefusal<RvTier, 'no_5p_solution' | 'gaia_release'>;
 
 /** The Gaia tier's citation is the release itself, so only SIMBAD's value
  *  carries a bibcode. `none` is a zero radial term. */
-export type RadialVelocityResolution = CascadeResult<
+export type RadialVelocityResolution = CitedCascadeResult<
   { gaia_dr3: { kmS: number }; simbad: SimbadRadialVelocity },
   RadialVelocityRefusal
 >;
@@ -105,14 +104,14 @@ export function resolveRadialVelocity(
   const refusals: RadialVelocityRefusal[] = [];
   if (gaia !== null && gaia.radialVelocityKmS !== null) {
     if (gaiaHas5pSolution(gaia)) {
-      return { via: 'gaia_dr3', value: { kmS: gaia.radialVelocityKmS }, refusals };
+      return { via: 'gaia_dr3', value: { kmS: gaia.radialVelocityKmS }, evidence: [gaia.ref], refusals };
     }
-    refusals.push({ tier: 'gaia_dr3', reason: 'no_5p_solution' });
+    refusals.push({ tier: 'gaia_dr3', reason: 'no_5p_solution', ref: gaia.ref });
   }
   if (simbad !== null) {
     const publication = refusedPublicationCited(simbad.bibcode, gaiaRefusals(gaia));
-    if (publication === null) return { via: 'simbad', value: simbad, refusals };
-    refusals.push({ tier: 'simbad', reason: publication });
+    if (publication === null) return { via: 'simbad', value: simbad, evidence: [simbad.ref], refusals };
+    refusals.push({ tier: 'simbad', reason: publication, ref: simbad.ref });
   }
   return { via: 'none', refusals };
 }

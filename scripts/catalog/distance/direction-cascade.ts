@@ -13,13 +13,15 @@ import { gaiaHas5pSolution } from './gaia-distrust';
 import type { SimbadRecordKeys } from '../record/catalog-pure';
 import type { Tycho2Row } from '../tycho2-parse';
 import type { Declared } from '../../util/sources/source';
-import { sourceRowRef, type RowKeyed, type SourceRowRef } from '../../util/sources/row-ref-pure';
+import {
+  sourceRowRef, type AnySourceRowRef, type RowKeyed, type SourceRowRef,
+} from '../../util/sources/row-ref-pure';
 import {
   lookupCns5Astrometry,
   type Cns5Astrometry,
 } from '../classic-ids/classic-ids-parse';
 import type { SimbadAstrometry } from '../simbad/simbad-values-parse';
-import type { CascadeRefusal, CascadeResult, UniformValues } from '../cascade-result';
+import type { CitedCascadeResult, CitedRefusal, UniformValues } from '../cascade-result';
 
 export const GAIA_DR3_REF_EPOCH = 2016.0;
 export const HIP2_REF_EPOCH = 1991.25;
@@ -159,10 +161,10 @@ export interface DirectionSolution {
 
 /** A Gaia 5p solution passed over: its PM disagrees with HIP2's (orbit
  *  corruption), or the fit is 2p and HIP2 covers the star. */
-export type DirectionRefusal = CascadeRefusal<'gaia_5p', 'pm_disagrees_with_hip2' | 'no_5p_solution'>;
+export type DirectionRefusal = CitedRefusal<'gaia_5p', 'pm_disagrees_with_hip2' | 'no_5p_solution'>;
 
 /** `none` is a record no tier states a position for — a /docs/catalog-driver.md#61-record-parity park. */
-export type DirectionResolution = CascadeResult<
+export type DirectionResolution = CitedCascadeResult<
   UniformValues<DirectionVia, DirectionSolution>,
   DirectionRefusal
 >;
@@ -330,8 +332,9 @@ export function resolveDirection(
     : undefined;
   const hip2 = hip !== null ? sources.hip2.get(hip) : undefined;
   const refusals: DirectionRefusal[] = [];
-  const hit = (via: DirectionVia, value: DirectionSolution): DirectionResolution =>
-    ({ via, value, refusals });
+  const hit = (
+    via: DirectionVia, value: DirectionSolution, evidence: readonly AnySourceRowRef[],
+  ): DirectionResolution => ({ via, value, evidence, refusals });
 
   const gaiaSolution = (g: GaiaAstrometryCatalogRow): DirectionSolution => ({
     srcRaDeg: g.raDeg, srcDecDeg: g.decDeg,
@@ -347,29 +350,26 @@ export function resolveDirection(
   });
 
   if (gaia !== undefined && gaiaHas5pSolution(gaia)) {
-    if (
-      sourceId !== null
-      && sources.nss.has(sourceId)
-      && gaia5pUnreliable(gaia)
-    ) {
-      return hit('gaia_nss_systemic', gaiaSolution(gaia));
+    const nss = sourceId !== null ? sources.nss.get(sourceId) : undefined;
+    if (nss !== undefined && gaia5pUnreliable(gaia)) {
+      return hit('gaia_nss_systemic', gaiaSolution(gaia), [gaia.ref, nss]);
     }
     if (hip2 !== undefined && hip2PmDisagrees(gaia, hip2)) {
-      refusals.push({ tier: 'gaia_5p', reason: 'pm_disagrees_with_hip2' });
-      return hit('hip2_pm_discrepant', hip2Solution(hip2));
+      refusals.push({ tier: 'gaia_5p', reason: 'pm_disagrees_with_hip2', ref: gaia.ref });
+      return hit('hip2_pm_discrepant', hip2Solution(hip2), [hip2.ref]);
     }
-    return hit('gaia_5p', gaiaSolution(gaia));
+    return hit('gaia_5p', gaiaSolution(gaia), [gaia.ref]);
   }
 
   if (hip2 !== undefined) {
-    if (gaia !== undefined) refusals.push({ tier: 'gaia_5p', reason: 'no_5p_solution' });
-    return hit('hip2_saturated', hip2Solution(hip2));
+    if (gaia !== undefined) refusals.push({ tier: 'gaia_5p', reason: 'no_5p_solution', ref: gaia.ref });
+    return hit('hip2_saturated', hip2Solution(hip2), [hip2.ref]);
   }
 
   // 2p (position-only) Gaia row with no HIP2 cover: keep the Gaia
   // positional anchor, unpropagated when PM is absent — mirrors
   // stage3's gaia_5p fall-through.
-  if (gaia !== undefined) return hit('gaia_5p', gaiaSolution(gaia));
+  if (gaia !== undefined) return hit('gaia_5p', gaiaSolution(gaia), [gaia.ref]);
 
   // Designation-joined tiers, for the rows Gaia and HIP2 both miss. Each
   // joins on the record's OWN identifier — a value join, never positional —
@@ -382,7 +382,7 @@ export function resolveDirection(
       srcEpoch: tycho2.epoch,
       srcPmraMasyr: tycho2.pmRaMasyr, srcPmdecMasyr: tycho2.pmDecMasyr,
       velVia: pmVelVia(tycho2.pmRaMasyr, tycho2.pmDecMasyr, 'tycho2_pm'),
-    });
+    }, [tycho2.ref]);
   }
 
   const cns5 = lookupCns5Astrometry(sources.cns5, gl);
@@ -395,7 +395,7 @@ export function resolveDirection(
       velVia: pmVelVia(
         cns5.pm?.pmRaMasyr ?? null, cns5.pm?.pmDecMasyr ?? null, 'cns5_pm',
       ),
-    });
+    }, [cns5.ref]);
   }
 
   if (simbad !== null) {
@@ -407,7 +407,7 @@ export function resolveDirection(
       velVia: pmVelVia(
         simbad.pm?.pmRaMasyr ?? null, simbad.pm?.pmDecMasyr ?? null, 'simbad_pm',
       ),
-    });
+    }, [simbad.ref]);
   }
 
   // The vector is arbitrary and unobservable: Sol's distance is zero, so the
@@ -418,7 +418,7 @@ export function resolveDirection(
       srcEpoch: CATALOG_SCENE_EPOCH,
       srcPmraMasyr: null, srcPmdecMasyr: null,
       velVia: 'zero',
-    });
+    }, []);
   }
 
   return { via: 'none', refusals };

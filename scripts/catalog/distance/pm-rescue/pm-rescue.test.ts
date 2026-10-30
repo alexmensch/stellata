@@ -21,6 +21,7 @@ const GAIA_EDR3 = '2020yCat.1350....0G';
 // the shipped cohort's SIMBAD tier actually leans on.
 const UCAC4 = '2012yCat.1322....0Z';
 const FABRICIUS = '2002A&A...384..180F';
+const CITED_REF = sourceRowRef(SIMBAD_VALUES, 1);
 
 function tycho2Row(overrides: Partial<Tycho2Row> = {}): Tycho2Row {
   return {
@@ -37,7 +38,7 @@ function cited(
 ): CitedProperMotion {
   return {
     pmRaMasyr: 2314.8, pmDecMasyr: 2295.3, bibcode: UCAC4,
-    ref: sourceRowRef(SIMBAD_VALUES, 1),
+    ref: CITED_REF,
     ...overrides,
   };
 }
@@ -83,7 +84,7 @@ describe('resolvePmRescue', () => {
   it('skips a Gaia-bibcoded PM on a 2p row rather than laundering it back', () => {
     const res = resolvePmRescue({ ...NOTHING, simbad: cited({ bibcode: GAIA_DR2 }) });
     expect(res).toEqual({
-      via: 'none', refusals: [{ tier: 'simbad', reason: 'gaia_release' }],
+      via: 'none', refusals: [{ tier: 'simbad', reason: 'gaia_release', ref: CITED_REF }],
     });
     expect(pmRescueOutcome(res)).toBe('gaia_bibcode_skipped');
   });
@@ -109,7 +110,7 @@ describe('resolvePmRescue', () => {
       simbad: cited({ bibcode: FABRICIUS }),
     });
     expect(res.via).toBe('simbad');
-    expect(res.refusals).toEqual([{ tier: 'cns5', reason: 'gaia_release' }]);
+    expect(res.refusals).toEqual([{ tier: 'cns5', reason: 'gaia_release', ref: CITED_REF }]);
     expect(pmRescueOutcome(res)).toBe('simbad');
   });
 

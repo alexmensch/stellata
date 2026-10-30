@@ -47,7 +47,7 @@ const gliese = (plxMas: number | null, trigonometric = true): GlieseRow => ({
 // One builder for both bibcoded tiers — CNS5 and SIMBAD carry the same
 // CitedParallax shape.
 const sibling = (mas: number): SiblingParallax => ({
-  sourceId: '3216486478101982592', mas, errMas: 0.0622,
+  sourceId: '3216486478101982592', mas, errMas: 0.0622, ref: gaiaAstrometryRow().ref,
 });
 const cited = (
   mas: number, bibcode: string, errMas: number | null = 0.1, ref: AnySourceRowRef = CNS5_REF,
@@ -190,7 +190,7 @@ describe('parallax-cascade / the precision floor', () => {
     }, false);
     expect(res.via).toBe('gliese_plx');
     expect(plxMas(res)).toBe(30);
-    expect(res.refusals).toEqual([{ tier: 'cns5_plx', reason: 'below_sn_floor', mas: 0.05 }]);
+    expect(res.refusals).toEqual([{ tier: 'cns5_plx', reason: 'below_sn_floor', mas: 0.05, ref: CNS5_REF }]);
   });
 
   it('admits a sub-floor-looking Gliese parallax whose error is unpublished, '
@@ -227,7 +227,7 @@ describe('parallax-cascade / the Gaia-bibcode skip rule', () => {
       cns5: cited(114.49, GAIA_DR2_PAPER, null),
     }, false);
     expect(res.via).toBe('none');
-    expect(res.refusals).toEqual([{ tier: 'cns5_plx', reason: 'gaia_release', mas: 114.49 }]);
+    expect(res.refusals).toEqual([{ tier: 'cns5_plx', reason: 'gaia_release', mas: 114.49, ref: CNS5_REF }]);
   });
 
   it('keeps a Gaia citation where no Gaia solution stands behind the row — '
@@ -339,8 +339,8 @@ describe('parallax-cascade / the van Leeuwen laundering rule', () => {
     }, false);
     expect(res.via).toBe('none');
     expect(res.refusals).toEqual([
-      { tier: 'hip2_parallax', reason: 'below_sn_floor', mas: 0.04 },
-      { tier: 'simbad_plx', reason: 'hipparcos2', mas: 0.04 },
+      { tier: 'hip2_parallax', reason: 'below_sn_floor', mas: 0.04, ref: HIP2_REF },
+      { tier: 'simbad_plx', reason: 'hipparcos2', mas: 0.04, ref: SIMBAD_REF },
     ]);
   });
 
@@ -387,7 +387,7 @@ describe('parallax-cascade / the bound-sibling tier', () => {
       pairMember: sibling(2.4744),
     }, false);
     expect(res.via).toBe('pair_member_parallax');
-    expect(res.refusals).toEqual([{ tier: 'simbad_plx', reason: 'gaia_release', mas: 3.04 }]);
+    expect(res.refusals).toEqual([{ tier: 'simbad_plx', reason: 'gaia_release', mas: 3.04, ref: SIMBAD_REF }]);
   });
 });
 
