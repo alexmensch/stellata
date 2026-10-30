@@ -23,9 +23,9 @@ export function peakLiveHeap(samples: readonly GcSample[], usedNow: number): num
 
 const mb = (bytes: number): string => `${(bytes / 1e6).toFixed(0)} MB`;
 
-export function heapBudgetCheck(step: string, peak: number, limit = CI_HEAP_LIMIT_BYTES): Check {
-  const budget = limit * CI_HEAP_HEADROOM;
-  const measured = `${step} peak live heap: ${mb(peak)}, budget ${mb(budget)} (${CI_HEAP_HEADROOM} of the CI runner's ${mb(limit)})`;
+export function heapBudgetCheck(step: string, peak: number): Check {
+  const budget = CI_HEAP_LIMIT_BYTES * CI_HEAP_HEADROOM;
+  const measured = `${step} peak live heap: ${mb(peak)}, budget ${mb(budget)} (${CI_HEAP_HEADROOM} of the CI runner's ${mb(CI_HEAP_LIMIT_BYTES)})`;
   return peak > budget
     ? { kind: 'fail', message: `${measured}: CI would run out of heap. See /scripts/util/README.md#ci-heap-budget.` }
     : { kind: 'pass', report: measured };
