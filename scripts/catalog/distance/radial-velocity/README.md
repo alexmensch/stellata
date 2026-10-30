@@ -13,8 +13,8 @@ scripts/catalog/distance/radial-velocity/
   radial-velocity.ts (+ test)   The cascade, the error banding, and the
                                 ceiling test that rejects a nonphysical radial
                                 term on its own. Imports `gaiaHas5pSolution`,
-                                `gaiaRowIs2p`, `isGaiaCatalogueBibcode` and
-                                `refusedBy` from ../gaia-distrust and the sanity ceiling from
+                                `gaiaRefusals` and `refusedPublicationCited` from
+                                ../gaia-distrust and the sanity ceiling from
                                 ../direction-cascade, so the radial and
                                 tangential terms distrust a row for the same
                                 reason and by the same predicates.
@@ -29,6 +29,12 @@ Gaia DR3 radial_velocity   the RVS median, on a row with a 5p solution
   → SIMBAD rvz_radvel      bibcoded, over the /docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers value cohort
   → zero radial term
 ```
+
+It returns the shared cascade shape (`../../cascade-result.ts`), `none` being
+the zero radial term. Each gate below records a refusal on whichever variant
+the row ends on: `no_5p_solution` where the 5p gate withheld a Gaia rv, and
+the refused publication where the skip rule rejected a SIMBAD value —
+`rvGaiaBibcodeSkipped` counts the second.
 
 The spine's printed `rv` cell is **not** a tier and is no longer read: it is
 an AT-HYG transcription we cannot re-pull, so [§ 5](/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers)
@@ -69,10 +75,12 @@ The gate above refuses a 2p row's spectrum for a physical reason, and SIMBAD
 serves Gaia's own reduction of that same spectrum back under a Gaia catalogue
 bibcode — so on **every** 2p row, the SIMBAD tier **skips** candidates whose
 `rvz_bibcode` names a Gaia release (`isGaiaCatalogueBibcode`), falling to zero
-rather than laundering the distrusted value in. It fires on **307** rows.
+rather than laundering the distrusted value in. It fires on **<!-- count:build-catalog/rvGaiaBibcodeSkipped -->1,062<!-- /count -->** rows
+(`rvGaiaBibcodeSkipped`); the breakdowns below were measured on the build
+before the V ≤ 11 magnitude term, when it fired on 307.
 
 **It turns on the blend, not on holding the competing value.** 205 of the 307
-are rows where our own pull carries the Gaia rv the gate withheld; the other
+were rows where our own pull carries the Gaia rv the gate withheld; the other
 **102** are 2p rows Gaia published no rv for at all, where there is nothing to
 compare against but the spectrum is exactly as unseparated. Keying on the
 withheld value instead would have left those 102 shipping a DR2 velocity of
@@ -96,9 +104,10 @@ instrument and literature is an independent measurement, which is why the
 rule keys on the bibcode rather than on agreement.
 
 **A row with no 2p blend behind it is a different case**, and a Gaia catalogue
-bibcode there is an ordinary citation rather than laundering: **363** shipped
-rows carry one — **278 DR2 and 85 DR3** — and the skip rule leaves them alone.
-Every one of the 85 is a record the spine carries no `gaia_source_id` for, so
+bibcode there is an ordinary citation rather than laundering: **<!-- count:build-catalog/rvSimbadGaiaBibcode -->5,545<!-- /count -->** shipped
+rows carry one (`rvSimbadGaiaBibcode`) and the skip rule leaves them alone.
+Before the magnitude term they were 363 — 278 DR2 and 85 DR3 — and every one
+of the 85 was a record the spine carried no `gaia_source_id` for, so
 there is no Gaia solution to distrust at all: SIMBAD resolved the object to a
 Gaia source this build cannot key, and that DR3 velocity reaches the record
 only through the citation. `rvSimbad`, `rvSimbadGaiaBibcode` and

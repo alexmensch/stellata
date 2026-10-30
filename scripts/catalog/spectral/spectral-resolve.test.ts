@@ -1,9 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import type { ApsisRow, SimbadRecordKeys } from '../record/catalog-pure';
+import { classifyFromSimbad } from './spectral-classify';
 import {
-  SPECTRAL_UNKNOWN,
-} from './spectral-classify';
-import {
+  CURATED_SPTYPE_BY_HIP,
   type SimbadSpectralIndex,
   type SimbadSpectralRow,
   parseSimbadSptypeTsv,
@@ -11,6 +10,18 @@ import {
 } from './spectral-resolve';
 
 const FROM = { file: 'fixture.tsv', hint: 'h' };
+
+/** A resolution expected to land on a tier, flattened; `none` fails the test. */
+const flatSp = (...args: Parameters<typeof resolveSpectralInfo>) => {
+  const r = resolveSpectralInfo(...args);
+  if (r.via === 'none') throw new Error('resolved to none');
+  return {
+    source: r.via,
+    info: r.value.info,
+    spectDisplay: r.value.spectDisplay,
+    simbadKey: r.via === 'simbad' ? r.value.namespace : undefined,
+  };
+};
 
 describe('resolveSpectralInfo — tier priority', () => {
   const GAIA_ID = '1234567890';
@@ -44,7 +55,7 @@ describe('resolveSpectralInfo — tier priority', () => {
     // nor source_id, so without the curated tier the record is
     // spectral-unknown and the radius chain inflates ~3×.
     const simbad = idx([], [[36850, row('K0III', 'C', '**')]]);
-    const out = resolveSpectralInfo(keys(null, 36850), simbad, new Map());
+    const out = flatSp(keys(null, 36850), simbad, new Map());
     expect(out.source).toBe('curated');
     expect(out.info.classIdx).toBe(2); // A
     expect(out.info.lumClass).toBe(3); // IV
@@ -56,7 +67,7 @@ describe('resolveSpectralInfo — tier priority', () => {
     const apsis = new Map<string, ApsisRow>([
       [GAIA_ID, { ...APSIS_NONE, spectraltypeEsphs: 'G' }],
     ]);
-    const out = resolveSpectralInfo(keys(GAIA_ID, HIP), simbad, apsis);
+    const out = flatSp(keys(GAIA_ID, HIP), simbad, apsis);
     expect(out.source).toBe('simbad');
     expect(out.info.classIdx).toBe(2); // A
     expect(out.info.subclass).toBe(6);
@@ -66,7 +77,7 @@ describe('resolveSpectralInfo — tier priority', () => {
 
   it('tier 2: SIMBAD-by-HIP rescues a Gaia-saturated star (no source_id)', () => {
     const simbad = idx([], [[HIP, row('B8V', 'C', 'SB*')]]);
-    const out = resolveSpectralInfo(keys(null, HIP), simbad, new Map());
+    const out = flatSp(keys(null, HIP), simbad, new Map());
     expect(out.source).toBe('simbad');
     expect(out.info.classIdx).toBe(1); // B
     expect(out.info.subclass).toBe(8);
@@ -79,7 +90,7 @@ describe('resolveSpectralInfo — tier priority', () => {
     const apsis = new Map<string, ApsisRow>([
       [GAIA_ID, { ...APSIS_NONE, spectraltypeEsphs: 'K' }],
     ]);
-    const out = resolveSpectralInfo(keys(GAIA_ID, HIP), simbad, apsis);
+    const out = flatSp(keys(GAIA_ID, HIP), simbad, apsis);
     expect(out.source).toBe('simbad');
     expect(out.info.classIdx).toBe(2); // A, not K
     expect(out.info.lumClass).toBe(3); // IV
@@ -87,7 +98,7 @@ describe('resolveSpectralInfo — tier priority', () => {
 
   it('tier 3: SIMBAD-by-TYC reaches an object SIMBAD holds no Gaia id for', () => {
     const simbad = idx([], [], [['1234-5678-1', row('K2III', 'C', '*')]]);
-    const out = resolveSpectralInfo(keys(GAIA_ID, HIP, '1234-5678-1', null), simbad, new Map());
+    const out = flatSp(keys(GAIA_ID, HIP, '1234-5678-1', null), simbad, new Map());
     expect(out.source).toBe('simbad');
     expect(out.simbadKey).toBe('tyc');
     expect(out.info.classIdx).toBe(5); // K
@@ -99,13 +110,13 @@ describe('resolveSpectralInfo — tier priority', () => {
       [GAIA_ID, { ...APSIS_NONE, spectraltypeEsphs: 'F' }],
     ]);
     const tycOnly = idx([], [], [['1-2-1', row('M4V', 'C', '*')]]);
-    expect(resolveSpectralInfo(keys(GAIA_ID, null, '1-2-1', null), tycOnly, apsis).info.classIdx)
+    expect(flatSp(keys(GAIA_ID, null, '1-2-1', null), tycOnly, apsis).info.classIdx)
       .toBe(6); // M, not F
     const both = idx(
       [[GAIA_ID, row('A0V', 'C', '*', GAIA_ID)]], [],
       [['1-2-1', row('M4V', 'C', '*')]],
     );
-    const out = resolveSpectralInfo(keys(GAIA_ID, null, '1-2-1', null), both, apsis);
+    const out = flatSp(keys(GAIA_ID, null, '1-2-1', null), both, apsis);
     expect(out.simbadKey).toBe('source_id');
     expect(out.info.classIdx).toBe(2); // A
   });
@@ -113,7 +124,7 @@ describe('resolveSpectralInfo — tier priority', () => {
   it('tier 4: SIMBAD-by-GJ, matched on the folded key not the raw cell', () => {
     const simbad = idx([], [], [], [['165A', row('M2V', 'C', '*')]]);
     for (const spelling of ['Gl 165A', 'GJ 165A', '165 A']) {
-      const out = resolveSpectralInfo(keys(null, null, null, spelling), simbad, new Map());
+      const out = flatSp(keys(null, null, null, spelling), simbad, new Map());
       expect(out.simbadKey, spelling).toBe('gj');
       expect(out.info.classIdx).toBe(6); // M
     }
@@ -129,21 +140,21 @@ describe('resolveSpectralInfo — tier priority', () => {
     const key = (
       sid: string | null, hip: number | null, tyc: string | null, gl: string | null,
     ): string | undefined =>
-      resolveSpectralInfo(keys(sid, hip, tyc, gl), simbad, new Map()).simbadKey;
+      flatSp(keys(sid, hip, tyc, gl), simbad, new Map()).simbadKey;
     expect(key(GAIA_ID, HIP, '1-2-1', 'Gl 165A')).toBe('source_id');
     expect(key(null, HIP, '1-2-1', 'Gl 165A')).toBe('hip');
     // GJ names the component, TYC the Tycho entry — the system on a close
     // pair — so a record holding both takes the component type, not the blend.
     expect(key(null, null, '1-2-1', 'Gl 165A')).toBe('gj');
     expect(key(null, null, '1-2-1', null)).toBe('tyc');
-    expect(key(null, null, null, null)).toBeUndefined();
+    expect(resolveSpectralInfo(keys(null, null, null, null), simbad, new Map()).via).toBe('none');
   });
 
   it('tier 5: GSP-Spec when SIMBAD is absent or unparseable', () => {
     const apsis = new Map<string, ApsisRow>([
       [GAIA_ID, { ...APSIS_NONE, spectraltypeEsphs: 'K' }],
     ]);
-    const out = resolveSpectralInfo(keys(GAIA_ID, HIP), idx(), apsis);
+    const out = flatSp(keys(GAIA_ID, HIP), idx(), apsis);
     expect(out.source).toBe('gspspec');
     expect(out.info.classIdx).toBe(5); // K
     expect(out.spectDisplay).toBe('K');
@@ -154,23 +165,40 @@ describe('resolveSpectralInfo — tier priority', () => {
     const apsis = new Map<string, ApsisRow>([
       [GAIA_ID, { ...APSIS_NONE, spectraltypeEsphs: 'F' }],
     ]);
-    const out = resolveSpectralInfo(keys(GAIA_ID, HIP), simbad, apsis);
+    const out = flatSp(keys(GAIA_ID, HIP), simbad, apsis);
     expect(out.source).toBe('gspspec');
     expect(out.info.classIdx).toBe(3); // F
   });
 
-  it('tier 6: SPECTRAL_UNKNOWN fallback when every upstream tier misses', () => {
-    const out = resolveSpectralInfo(keys(GAIA_ID, HIP), idx(), new Map());
-    expect(out.source).toBe('fallback');
-    expect(out.info).toBe(SPECTRAL_UNKNOWN);
-    expect(out.spectDisplay).toBeNull();
+  it('every curated sp_type classifies', () => {
+    for (const [hip, spType] of CURATED_SPTYPE_BY_HIP) {
+      expect(classifyFromSimbad(spType), `HIP ${hip}`).not.toBeNull();
+    }
   });
 
-  it('tier 6: no source_id and no HIP falls straight through to fallback', () => {
+  it('tier 6: none when every upstream tier misses', () => {
+    expect(resolveSpectralInfo(keys(GAIA_ID, HIP), idx(), new Map()))
+      .toEqual({ via: 'none', refusals: [] });
+  });
+
+  it('names each typed row it reached and could not take', () => {
+    const apsis = new Map<string, ApsisRow>([
+      [GAIA_ID, { ...APSIS_NONE, spectraltypeEsphs: 'not-a-letter' }],
+    ]);
+    const simbad = idx([], [[HIP, row('B2V', 'C', '*', '999888777')]]);
+    expect(resolveSpectralInfo(keys(GAIA_ID, HIP), simbad, apsis)).toEqual({
+      via: 'none',
+      refusals: [
+        { tier: 'simbad', reason: 'gaia_id_contradicts' },
+        { tier: 'gspspec', reason: 'unclassifiable' },
+      ],
+    });
+  });
+
+  it('tier 6: no source_id and no HIP falls straight through to none', () => {
     const simbad = idx([['9999', row('A0V', 'C', 'PM*', '9999')]]);
-    const out = resolveSpectralInfo(keys(null, null), simbad, new Map());
-    expect(out.source).toBe('fallback');
-    expect(out.info).toBe(SPECTRAL_UNKNOWN);
+    expect(resolveSpectralInfo(keys(null, null), simbad, new Map()))
+      .toEqual({ via: 'none', refusals: [] });
   });
 
   it('a designation tier row naming another Gaia source does not match', () => {
@@ -181,7 +209,7 @@ describe('resolveSpectralInfo — tier priority', () => {
       [GAIA_ID, { ...APSIS_NONE, spectraltypeEsphs: 'K' }],
     ]);
     const simbad = idx([], [[HIP, row('B2V', 'C', '*', '999888777')]]);
-    const out = resolveSpectralInfo(keys(GAIA_ID, HIP), simbad, apsis);
+    const out = flatSp(keys(GAIA_ID, HIP), simbad, apsis);
     expect(out.source).toBe('gspspec');
     expect(out.info.classIdx).toBe(5); // K from GSP-Spec, not B from the HIP row
   });
@@ -191,7 +219,7 @@ describe('resolveSpectralInfo — tier priority', () => {
       [], [[HIP, row('B2V', 'C', '*', '999888777')]],
       [['1-2-1', row('M4V', 'C', '*')]],
     );
-    const out = resolveSpectralInfo(keys(GAIA_ID, HIP, '1-2-1', null), simbad, new Map());
+    const out = flatSp(keys(GAIA_ID, HIP, '1-2-1', null), simbad, new Map());
     expect(out.simbadKey).toBe('tyc');
     expect(out.info.classIdx).toBe(6); // M
   });
@@ -200,14 +228,14 @@ describe('resolveSpectralInfo — tier priority', () => {
     // The tier-2 population proper: Algol, Vega and ~700 more, whose SIMBAD
     // object carries a valid MK type and no source_id whatsoever.
     const simbad = idx([], [[HIP, row('B8V', 'C', 'SB*')]]);
-    const out = resolveSpectralInfo(keys(GAIA_ID, HIP), simbad, new Map());
+    const out = flatSp(keys(GAIA_ID, HIP), simbad, new Map());
     expect(out.simbadKey).toBe('hip');
     expect(out.info.classIdx).toBe(1); // B
   });
 
   it('a record with no Gaia id of its own has nothing to contradict with', () => {
     const simbad = idx([], [[HIP, row('B8V', 'C', '*', '999888777')]]);
-    const out = resolveSpectralInfo(keys(null, HIP), simbad, new Map());
+    const out = flatSp(keys(null, HIP), simbad, new Map());
     expect(out.simbadKey).toBe('hip');
     expect(out.info.classIdx).toBe(1); // B
   });

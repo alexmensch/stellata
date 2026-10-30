@@ -32,6 +32,15 @@ export function calibratedPhotometry(
   return { gMag, bpMinusRp: bpMag - rpMag };
 }
 
+/** Why a relation does not apply to a row's photometry: it fails
+ *  `calibratedPhotometry`, or its colour sits outside the relation's range. */
+export type PhotometryRefusal = 'uncalibrated' | 'colour_out_of_range';
+
+/** A relation's answer for one row: its value, or the gate that refused it. */
+export type GatedValue =
+  | { kind: 'value'; value: number }
+  | { kind: 'refused'; reason: PhotometryRefusal };
+
 /** Evaluate a coefficient list in ascending powers of `x` (Horner). */
 export function polynomial(coeffs: readonly number[], x: number): number {
   let acc = 0;

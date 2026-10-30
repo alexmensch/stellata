@@ -110,6 +110,13 @@ scripts/catalog/
                                   baseline and diff as families. Side-effect free, so a reader can
                                   import the declaration without running
                                   the build.
+  cascade-result.ts               `CascadeResult`, the one shape every
+                                  per-field cascade returns: the tier that
+                                  answered with its value, or `none`, and on
+                                  both the candidates it refused, each a
+                                  `CascadeRefusal` (tier + coded reason, the
+                                  tier checked against the cascade's own) —
+                                  what the stage lineage projects.
   cited-proper-motion.ts (+ test) `CitedProperMotion` and `CitedParallax`,
   cited-parallax.ts               with their only constructors: a value is
                                   admitted only with the bibcode that sourced

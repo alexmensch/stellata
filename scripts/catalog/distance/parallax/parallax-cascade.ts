@@ -2,10 +2,11 @@
 // Gliese V/70A → bibcoded SIMBAD → curated, with the two skip rules. See
 // README.md.
 
-import { gaiaRefusals, refusedBy, type RefusedPublication } from '../gaia-distrust';
+import { gaiaRefusals, refusedPublicationCited, type RefusedPublication } from '../gaia-distrust';
 import type { GaiaAstrometryCatalogRow, Hip2AstrometryRow } from '../direction-cascade';
 import { parallaxSignalToNoise } from '../../cited-parallax';
 import type { CitedParallax, MeasuredParallax } from '../../cited-parallax';
+import type { CascadeRefusal, CascadeResult } from '../../cascade-result';
 import type { SiblingParallax } from './pair-member-parallax';
 import type { GlieseRow } from '../../gliese-parse';
 
@@ -75,21 +76,31 @@ export interface ParallaxSources {
   pairMember: SiblingParallax | null;
 }
 
-export interface ParallaxResolution {
-  /** `mas` always > 0. Null on `curated` (Sol, distance zero by construction)
-   *  and on `none`, which is a membership event rather than a value. */
-  parallax: MeasuredParallax | null;
-  via: DistVia;
-  /** The tier's parallax is real but its fractional error exceeds
-   *  `PARALLAX_LOW_PRECISION_SN`, so the inverted distance is biased. */
-  lowPrecision: boolean;
-  /** Every parallax a skip rule or the S/N floor refused, mas. Non-empty
-   *  distinguishes a row nothing measured from one whose only measurement this
-   *  build will not stand behind — the residual policy (/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers) requires the two be
-   *  counted apart. The values themselves are what companion promotion matches
-   *  a pair row's stated distance against
-   *  (`../../companions/README.md#refused-parallax-refusal`). */
-  refusedPlxMas: readonly number[];
+/** The tiers `resolveParallax` answers on: every `DistVia` but the two override
+ *  layers and the residual. */
+export type ParallaxTier = Exclude<DistVia, 'bailer_jones' | 'lmc_kinematic' | 'none'>;
+
+/** A tier's parallax the floor or a skip rule refused. On a `none` result the
+ *  refusals are what distinguish a row nothing measured from one whose only
+ *  measurement this build will not stand behind — the residual policy
+ *  (/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers) counts the
+ *  two apart — and `mas` is what companion promotion matches a pair row's
+ *  stated distance against (`../../companions/README.md#refused-parallax-refusal`). */
+export type ParallaxRefusal =
+  CascadeRefusal<ParallaxTier, 'below_sn_floor' | RefusedPublication> & { readonly mas: number };
+
+/** `mas` always > 0. Sol's curated exit carries none: its distance is zero by
+ *  construction. */
+export type ParallaxResolution = CascadeResult<
+  Record<Exclude<ParallaxTier, 'curated'>, MeasuredParallax> & { curated: null },
+  ParallaxRefusal
+>;
+
+/** The parallax is real but its fractional error exceeds
+ *  `PARALLAX_LOW_PRECISION_SN`, so the inverted distance is biased. */
+export function isLowPrecisionParallax(parallax: MeasuredParallax): boolean {
+  const sn = parallaxSignalToNoise(parallax.mas, parallax.errMas);
+  return sn !== null && sn < PARALLAX_LOW_PRECISION_SN;
 }
 
 function usable(plx: number | null): plx is number {
@@ -124,68 +135,60 @@ export function belowParallaxSnFloor(plx: number, err: number | null): boolean {
  *  posterior that exists for it. */
 export function resolveParallax(
   { gaia, hip2, cns5, gliese, simbad, pairMember }: ParallaxSources,
-  gaiaIs2p: boolean,
   isSol: boolean,
 ): ParallaxResolution {
-  const hit = (parallax: MeasuredParallax, via: DistVia): ParallaxResolution => {
-    const sn = parallaxSignalToNoise(parallax.mas, parallax.errMas);
-    return {
-      parallax,
-      via,
-      lowPrecision: sn !== null && sn < PARALLAX_LOW_PRECISION_SN,
-      refusedPlxMas: [],
-    };
-  };
+  const refusals: ParallaxRefusal[] = [];
+  const refused = new Set<RefusedPublication>(gaiaRefusals(gaia));
+  const hit = (
+    via: Exclude<ParallaxTier, 'curated'>, value: MeasuredParallax,
+  ): ParallaxResolution => ({ via, value, refusals });
 
-  const refusedPlxMas: number[] = [];
-  const refused = new Set<RefusedPublication>(gaiaRefusals(gaiaIs2p));
+  const courier = (
+    via: 'cns5_plx' | 'simbad_plx', p: CitedParallax | null,
+  ): ParallaxResolution | null => {
+    if (p === null || !usable(p.mas)) return null;
+    const publication = refusedPublicationCited(p.bibcode, refused);
+    if (publication === null && !belowParallaxSnFloor(p.mas, p.errMas)) return hit(via, p);
+    refusals.push({ tier: via, reason: publication ?? 'below_sn_floor', mas: p.mas });
+    return null;
+  };
 
   /** V/70A's two tiers differ only in which kind of parallax they take, so one
    *  form serves both and the cascade order below states the ranking. */
   const glieseHit = (
-    trigonometric: boolean, via: DistVia,
+    trigonometric: boolean, via: 'gliese_plx' | 'gliese_photometric_plx',
   ): ParallaxResolution | null => {
     const p = gliese?.parallax ?? null;
     if (p === null || p.trigonometric !== trigonometric || !usable(p.mas)) {
       return null;
     }
     if (belowParallaxSnFloor(p.mas, p.errMas)) {
-      refusedPlxMas.push(p.mas);
+      refusals.push({ tier: via, reason: 'below_sn_floor', mas: p.mas });
       return null;
     }
-    return hit(p, via);
+    return hit(via, p);
   };
 
   if (gaia !== null && usable(gaia.parallaxMas)) {
-    return hit(
-      { mas: gaia.parallaxMas, errMas: gaia.parallaxErrorMas }, 'gaia_dr3_inversion',
-    );
+    return hit('gaia_dr3_inversion', { mas: gaia.parallaxMas, errMas: gaia.parallaxErrorMas });
   }
 
   if (hip2 !== null && usable(hip2.plxMas)) {
     if (!belowParallaxSnFloor(hip2.plxMas, hip2.plxErrorMas)) {
-      return hit({ mas: hip2.plxMas, errMas: hip2.plxErrorMas }, 'hip2_parallax');
+      return hit('hip2_parallax', { mas: hip2.plxMas, errMas: hip2.plxErrorMas });
     }
     refused.add('hipparcos2');
-    refusedPlxMas.push(hip2.plxMas);
+    refusals.push({ tier: 'hip2_parallax', reason: 'below_sn_floor', mas: hip2.plxMas });
   }
 
-  if (cns5 !== null && usable(cns5.mas)) {
-    if (!refusedBy(cns5.bibcode, refused) && !belowParallaxSnFloor(cns5.mas, cns5.errMas)) {
-      return hit(cns5, 'cns5_plx');
-    }
-    refusedPlxMas.push(cns5.mas);
-  }
+  const fromCns5 = courier('cns5_plx', cns5);
+  if (fromCns5 !== null) return fromCns5;
 
   const trigonometric = glieseHit(true, 'gliese_plx');
   if (trigonometric !== null) return trigonometric;
 
-  if (simbad !== null && usable(simbad.mas)) {
-    if (!refusedBy(simbad.bibcode, refused) && !belowParallaxSnFloor(simbad.mas, simbad.errMas)) {
-      return hit(simbad, 'simbad_plx');
-    }
-    refusedPlxMas.push(simbad.mas);
-  }
+  const fromSimbad = courier('simbad_plx', simbad);
+  if (fromSimbad !== null) return fromSimbad;
 
   // A bound pair's components share a distance to a part in a million, so a
   // sibling's clean fit places this record where nothing measured on the record
@@ -193,9 +196,7 @@ export function resolveParallax(
   // catalogue-wide, reaching one tier further down. Below the second-order
   // indices because it lends a neighbour's measurement rather than serving this
   // star's own.
-  if (pairMember !== null) {
-    return hit(pairMember, 'pair_member_parallax');
-  }
+  if (pairMember !== null) return hit('pair_member_parallax', pairMember);
 
   // V/70A's photometric and spectroscopic parallaxes: a distance from colour and
   // spectral type, which is circular for a build that then derives the record's
@@ -210,9 +211,7 @@ export function resolveParallax(
 
   // Sol's distance is zero rather than a parallax — the same curated exit the
   // direction and V cascades take.
-  if (isSol) {
-    return { parallax: null, via: 'curated', lowPrecision: false, refusedPlxMas: [] };
-  }
+  if (isSol) return { via: 'curated', value: null, refusals };
 
-  return { parallax: null, via: 'none', lowPrecision: false, refusedPlxMas };
+  return { via: 'none', refusals };
 }

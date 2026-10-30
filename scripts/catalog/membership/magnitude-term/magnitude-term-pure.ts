@@ -29,9 +29,10 @@ export function magnitudeVerdict(
   photometry: GaiaPhotometry | null,
   floorV: number,
 ): MagnitudeVerdict {
+  if (photometry === null) return 'no_v';
   const v = rielloVMagnitude(photometry);
-  if (v === null) return 'no_v';
-  return v <= floorV ? 'kept' : 'above_floor';
+  if (v.kind === 'refused') return 'no_v';
+  return v.value <= floorV ? 'kept' : 'above_floor';
 }
 
 export type MagnitudeTermCounts = Record<MagnitudeVerdict | 'rows', number>;

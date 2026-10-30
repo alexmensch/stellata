@@ -37,7 +37,7 @@ scripts/catalog/distance/
   gaia-distrust.ts (+ test)       `gaiaHas5pSolution`, `gaiaRowIs2p` and
                                   `isGaiaCatalogueBibcode` — one predicate per
                                   way this build refuses a Gaia value on a
-                                  blended row — and `refusedBy`, the one skip
+                                  blended row — and `refusedPublicationCited`, the one skip
                                   rule every courier tier calls (parallax, PM
                                   rescue, rv). Both terms of the velocity
                                   import them, so the radial and the tangential
@@ -45,7 +45,9 @@ scripts/catalog/distance/
                                   release is one edit. `gaiaRowIs2p` is the
                                   condition both skip rules gate on, and reads
                                   a record with no Gaia row as NOT 2p — there
-                                  is no fit behind it to distrust.
+                                  is no fit behind it to distrust. Cascades
+                                  hand `gaiaRefusals` the Gaia row itself, so
+                                  2p is derived there and nowhere else.
   parallax/                       The measured parallax every distance inverts
                                   — the cascade, its two precision constants,
                                   the bound-sibling index, and the two ledgers
@@ -123,6 +125,11 @@ the rescue cascade's. Only the caller knows which won, so a cascade that
 returned a direction would be returning one advanced on a motion the row may
 not keep. That single call site is what keeps the position and the velocity
 reading one motion ([The proper-motion rescue cascade](#the-proper-motion-rescue-cascade)).
+
+It returns the shared cascade shape (`../cascade-result.ts`): the tier and its
+`DirectionSolution`, or `none` — the `no_position` park. A Gaia solution the
+cascade passes over is a refusal on the result: `pm_disagrees_with_hip2` on a
+`hip2_pm_discrepant` row, `no_5p_solution` on a 2p row HIP2 covers.
 
 | Tier | Epoch of the position it reads |
 |---|---|

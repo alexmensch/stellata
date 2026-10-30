@@ -474,7 +474,7 @@ async function main() {
     `  ci cascade: gaia_relation ${cv.gaia_relation}, ` +
       `printed_hip_bv ${cv.printed_hip_bv}, gspc ${cv.gspc} ` +
       `(${stats.ciGspcValidatedRange} flagged in-range), ` +
-      `spectral_derived ${cv.spectral_derived}, solar_fallback ${cv.solar_fallback}`,
+      `spectral_derived ${cv.spectral_derived}, solar_fallback ${cv.none}`,
   );
   const vv = stats.velocityVia;
   console.log(
@@ -483,7 +483,7 @@ async function main() {
       `simbad_pm ${vv.simbad_pm}, zero ${vv.zero} ` +
       `(clamped ${stats.velocityClamped}); rv applied ${stats.rvApplied}`,
   );
-  const pmr = stats.pmRescueVia;
+  const pmr = stats.pmRescueOutcome;
   console.log(
     `  PM rescue (direction tier carries none): tycho2 ${pmr.tycho2}, ` +
       `cns5 ${pmr.cns5}, simbad ${pmr.simbad}, ` +
@@ -565,7 +565,7 @@ async function main() {
   counts.velocityCns5Pm = vv.cns5_pm;
   counts.velocitySimbadPm = vv.simbad_pm;
   counts.velocityZero = vv.zero;
-  const pr = stats.pmRescueVia;
+  const pr = stats.pmRescueOutcome;
   counts.pmRescueTycho2 = pr.tycho2;
   counts.pmRescueCns5 = pr.cns5;
   counts.pmRescueSimbad = pr.simbad;
@@ -582,22 +582,22 @@ async function main() {
   counts.rvRadialRejected = stats.rvRadialRejected;
   counts.rvGaiaErrorBands = stats.rvGaiaErrorBand;
   counts.rvGaiaErrorMaxKmS = stats.rvGaiaErrorMaxKmS;
-  counts.spectralByCurated = stats.spectralByCurated;
-  counts.spectralBySimbad = stats.spectralBySimbad;
+  counts.spectralByCurated = stats.spectralVia.curated;
+  counts.spectralBySimbad = stats.spectralVia.simbad;
   counts.spectralSimbadBySourceId = stats.spectralSimbadKey.source_id;
   counts.spectralSimbadByHip = stats.spectralSimbadKey.hip;
   counts.spectralSimbadByTyc = stats.spectralSimbadKey.tyc;
   counts.spectralSimbadByGj = stats.spectralSimbadKey.gj;
   const partitionError = spectralSimbadPartitionError(counts);
   if (partitionError !== null) throw new Error(partitionError);
-  counts.spectralByGspspec = stats.spectralByGspspec;
-  counts.spectralFallback = stats.spectralFallback;
+  counts.spectralByGspspec = stats.spectralVia.gspspec;
+  counts.spectralFallback = stats.spectralVia.none;
   counts.ciGaiaRelation = stats.ciVia.gaia_relation;
   counts.ciPrintedHipBv = stats.ciVia.printed_hip_bv;
   counts.ciGspc = stats.ciVia.gspc;
   counts.ciGspcValidatedRange = stats.ciGspcValidatedRange;
   counts.ciSpectralDerived = stats.ciVia.spectral_derived;
-  counts.ciSolarFallback = stats.ciVia.solar_fallback;
+  counts.ciSolarFallback = stats.ciVia.none;
 
   // The labels are the manifest's (/docs/catalog-driver.md#31-retiring-the-spine--the-membership-rule-measured-against-the-primaries); what the
   // classic-ID tables still supply per record is IV/27A's constellation for
@@ -633,16 +633,16 @@ async function main() {
       `${namingCounts.namingAliasRecords} records`,
   );
 
-  const simbadPct = ((stats.spectralBySimbad / stars.length) * 100).toFixed(1);
-  const gspspecPct = ((stats.spectralByGspspec / stars.length) * 100).toFixed(1);
-  const fallbackPct = ((stats.spectralFallback / stars.length) * 100).toFixed(1);
+  const simbadPct = ((stats.spectralVia.simbad / stars.length) * 100).toFixed(1);
+  const gspspecPct = ((stats.spectralVia.gspspec / stars.length) * 100).toFixed(1);
+  const fallbackPct = ((stats.spectralVia.none / stars.length) * 100).toFixed(1);
   console.log(
-    `  spectral classification: curated ${stats.spectralByCurated}, ` +
-      `SIMBAD ${stats.spectralBySimbad} (${simbadPct}%; by source_id ` +
+    `  spectral classification: curated ${stats.spectralVia.curated}, ` +
+      `SIMBAD ${stats.spectralVia.simbad} (${simbadPct}%; by source_id ` +
       `${stats.spectralSimbadKey.source_id}, HIP ${stats.spectralSimbadKey.hip}, ` +
       `TYC ${stats.spectralSimbadKey.tyc}, GJ ${stats.spectralSimbadKey.gj}), ` +
-      `GSP-Spec ${stats.spectralByGspspec} (${gspspecPct}%), ` +
-      `unknown ${stats.spectralFallback} (${fallbackPct}%)`,
+      `GSP-Spec ${stats.spectralVia.gspspec} (${gspspecPct}%), ` +
+      `unknown ${stats.spectralVia.none} (${fallbackPct}%)`,
   );
 
   // Companion promotion — read data/binaries/multiples.tsv and add

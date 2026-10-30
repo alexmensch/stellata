@@ -105,12 +105,19 @@ priority chain:
    `data/gaia/gaia_dr3_apsis.tsv`, keyed by source_id). Letter-only enum;
    `classifyFromGspspec` maps each letter to its `classIdx` with neutral
    subclass=5 / lumClass=255.
-6. **`SPECTRAL_UNKNOWN` fallback** — `classIdx=UNKNOWN_CLASS_IDX` (8) /
-   `lumClass=255` for rows no upstream covers.
+6. **`none`** — no upstream covers the row, and the walk renders it as
+   `SPECTRAL_UNKNOWN`: `classIdx=UNKNOWN_CLASS_IDX` (8) / `lumClass=255`.
+
+`resolveSpectralInfo` returns the shared cascade shape (`../cascade-result.ts`)
+over `SPECTRAL_VIA_VALUES` — `curated`, `simbad` (with the namespace that found
+it), `gspspec`, `none` — the tuple the walk tallies `spectralBy*` over. A typed
+row it reaches and does not take is a refusal on the result:
+`gaia_id_contradicts` ([below](#a-stated-gaia-id-the-record-contradicts-ends-the-walk))
+or `unclassifiable`.
 
 AT-HYG's contaminated `spect` cell is no longer consulted for
-classification (build-counts over the walked records: ~91.3% SIMBAD /
-~8.3% ESP-ELS / ~0.4% fallback); it is still used as a
+classification (build-counts over the walked records: SIMBAD
+**<!-- count:build-catalog/spectralBySimbad -->341,203<!-- /count -->** / ESP-ELS **<!-- count:build-catalog/spectralByGspspec -->617,169<!-- /count -->** / `none` **<!-- count:build-catalog/spectralFallback -->6,628<!-- /count -->**); it is still used as a
 last-resort hover-display fallback when both upstream sources are blank.
 
 `physicalRadius` then computes R/R☉ via Stefan–Boltzmann:

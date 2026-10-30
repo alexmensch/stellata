@@ -7,12 +7,12 @@ import {
 } from '../direction-cascade';
 import {
   gaiaHas5pSolution,
-  gaiaRowIs2p,
-  isGaiaCatalogueBibcode,
   gaiaRefusals,
-  refusedBy,
+  refusedPublicationCited,
+  type RefusedPublication,
 } from '../gaia-distrust';
 import type { SimbadRadialVelocity } from '../../simbad/simbad-values-parse';
+import type { CascadeRefusal, CascadeResult } from '../../cascade-result';
 
 // Which source supplied the radial term of the space-motion velocity. Pinned
 // per-tier in build-counts alongside `velocityVia`, which covers the
@@ -66,18 +66,22 @@ export function radialTermExceedsCeiling(rvKmS: number | null): boolean {
   return rvKmS !== null && Math.abs(rvKmS) > VELOCITY_SANITY_CEILING_KM_S;
 }
 
-export interface RadialVelocityResolution {
-  /** km/s, or null when no tier carries one — the radial term is then zero. */
-  rvKmS: number | null;
-  via: RvVia;
-  /** The bibcode the shipped value cites. Set on the `simbad` tier only —
-   *  the Gaia tier's citation is the release itself. */
-  bibcode: string | null;
-  /** The shipped value cites a Gaia release. Sibling of the field below: this
-   *  row is not the blend the skip rule refuses, so the citation is ordinary. */
-  gaiaBibcodeCited: boolean;
-  /** A SIMBAD value the Gaia-bibcode skip rule rejected on this row. */
-  gaiaBibcodeSkipped: boolean;
+export type RvTier = Exclude<RvVia, 'none'>;
+
+/** A Gaia rv on a row with no 5p solution, or a SIMBAD value the
+ *  Gaia-bibcode skip rule rejected. */
+export type RadialVelocityRefusal = CascadeRefusal<RvTier, 'no_5p_solution' | RefusedPublication>;
+
+/** The Gaia tier's citation is the release itself, so only SIMBAD's value
+ *  carries a bibcode. `none` is a zero radial term. */
+export type RadialVelocityResolution = CascadeResult<
+  { gaia_dr3: { kmS: number }; simbad: SimbadRadialVelocity },
+  RadialVelocityRefusal
+>;
+
+export interface RadialVelocitySources {
+  gaia: GaiaAstrometryCatalogRow | null;
+  simbad: SimbadRadialVelocity | null;
 }
 
 /** Radial velocity through the cascade: Gaia DR3 `radial_velocity` on a 5p
@@ -96,25 +100,19 @@ export interface RadialVelocityResolution {
  *  to SIMBAD. It turns on the blend, not on whether our own pull happens to
  *  hold the competing Gaia value. See README.md#the-gaia-bibcode-skip-rule. */
 export function resolveRadialVelocity(
-  gaia: GaiaAstrometryCatalogRow | null,
-  simbad: SimbadRadialVelocity | null,
+  { gaia, simbad }: RadialVelocitySources,
 ): RadialVelocityResolution {
-  const none: RadialVelocityResolution = {
-    rvKmS: null, via: 'none', bibcode: null,
-    gaiaBibcodeCited: false, gaiaBibcodeSkipped: false,
-  };
-  if (gaia !== null && gaiaHas5pSolution(gaia) && gaia.radialVelocityKmS !== null) {
-    return { ...none, rvKmS: gaia.radialVelocityKmS, via: 'gaia_dr3' };
-  }
-  if (simbad !== null
-      && refusedBy(simbad.bibcode, gaiaRefusals(gaiaRowIs2p(gaia)))) {
-    return { ...none, gaiaBibcodeSkipped: true };
+  const refusals: RadialVelocityRefusal[] = [];
+  if (gaia !== null && gaia.radialVelocityKmS !== null) {
+    if (gaiaHas5pSolution(gaia)) {
+      return { via: 'gaia_dr3', value: { kmS: gaia.radialVelocityKmS }, refusals };
+    }
+    refusals.push({ tier: 'gaia_dr3', reason: 'no_5p_solution' });
   }
   if (simbad !== null) {
-    return {
-      ...none, rvKmS: simbad.kmS, via: 'simbad', bibcode: simbad.bibcode,
-      gaiaBibcodeCited: isGaiaCatalogueBibcode(simbad.bibcode),
-    };
+    const publication = refusedPublicationCited(simbad.bibcode, gaiaRefusals(gaia));
+    if (publication === null) return { via: 'simbad', value: simbad, refusals };
+    refusals.push({ tier: 'simbad', reason: publication });
   }
-  return none;
+  return { via: 'none', refusals };
 }

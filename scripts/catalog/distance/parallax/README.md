@@ -14,7 +14,7 @@ that sit *above* this cascade; this file owns which parallax they override.
 scripts/catalog/distance/parallax/
   parallax-cascade.ts (+ test)  The cascade, its tier enum, the two precision
                                 constants, and the `DistVia → BuildCounts` key
-                                map. Its skip rules are `refusedBy` from
+                                map. Its skip rules are `refusedPublicationCited` from
                                 ../gaia-distrust, fed the publications the
                                 tiers above refused.
   pair-member-parallax.ts       The `pair_member_parallax` index: multiples.tsv
@@ -39,7 +39,11 @@ scripts/catalog/distance/parallax/
 ## The cascade
 
 `resolveParallax` runs per row inside `readStars`, and `dist = 1000 / plx`
-unless an override layer replaces it. Counts pin as `dist*`.
+unless an override layer replaces it. Counts pin as `dist*`. It returns the
+shared cascade shape (`../../cascade-result.ts`): the tier and its parallax, or
+`none`, and on either every parallax the floor or a skip rule refused, with
+the tier and the reason. A `none` with refusals parks as
+`refused_no_defensible_parallax`; one without, `no_parallax_published`.
 
 | Tier | Key | Rows |
 |---|---|---|
@@ -217,7 +221,7 @@ parallax cascade is where the general shape became visible.
   records matching to the digit. HIP 37 is the shape: HIP2 states 2.62 ± 2.55
   mas, SIMBAD serves 2.62.
 
-Both rules are one call, `refusedBy`, at every courier tier — CNS5 as well as
+Both rules are one call, `refusedPublicationCited`, at every courier tier — CNS5 as well as
 SIMBAD, so CNS5's 192 van Leeuwen-cited parallaxes are held to the second rule
 too. None of them reaches a record whose HIP2 the floor refused, so the CNS5
 arm refuses nothing on today's inputs.

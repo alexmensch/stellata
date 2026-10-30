@@ -159,7 +159,7 @@ counts rather than at zero: `parked*` per reason, from `PARKED_COUNT_KEY`.
 2. **Direction resolution** (`resolveDirection` in `direction-cascade.ts`)
    selects the tier's solution. See [Direction resolution](../distance/README.md#direction-resolution).
    Every solution propagates rather than shipping its source's own
-   epoch, so a row no tier reaches resolves to null and **parks** as
+   epoch, so a row no tier reaches resolves to `none` and **parks** as
    `no_position`: a distance with no direction has nothing to multiply. **One
    row**, HIP 88759 — a HIP-only addition a bound sibling's parallax placed and
    printed HIP photometry lit, for which SIMBAD resolves no object at all, so
@@ -190,11 +190,11 @@ counts rather than at zero: `parked*` per reason, from `PARKED_COUNT_KEY`.
    it). See `../spectral/README.md`.
 8. **B−V** (`resolveColourIndex`) — the Gaia relation, else printed
    `I/239` B−V, else Gaia's synthetic B−V, else the intrinsic
-   spectral-class colour, else solar. See
-   [The ci cascade](../photometry/README.md#the-ci-cascade). Its `isObserved` verdict is
-   what decides whether de-extinction de-reddens the value, so the two
-   measured tiers and the two derived ones part company here rather than at
-   the dust integral.
+   spectral-class colour, else `none`, which bakes solar. See
+   [The ci cascade](../photometry/README.md#the-ci-cascade). `ciIsObserved` on
+   the tier is what decides whether de-extinction de-reddens the value, so the
+   three measured tiers and the two intrinsic outcomes part company here
+   rather than at the dust integral.
 9. **Physical radius** (`physicalRadius`). Stefan-Boltzmann from absmag
    and the resolved Teff — the measured Apsis Teff (gspphot → gspspec
    via `resolveApsisTeff`, 2–60 kK sanity window) when present, else

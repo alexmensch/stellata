@@ -18,6 +18,7 @@ import {
   type Cns5Astrometry,
 } from '../classic-ids/classic-ids-parse';
 import type { SimbadAstrometry } from '../simbad/simbad-values-parse';
+import type { CascadeRefusal, CascadeResult, UniformValues } from '../cascade-result';
 
 export const GAIA_DR3_REF_EPOCH = 2016.0;
 export const HIP2_REF_EPOCH = 1991.25;
@@ -84,12 +85,7 @@ export interface Hip2AstrometryRow {
  *  transform and the rv the radial term takes, and `tycho2` the BT/VT the V
  *  cascade reduces — so a column added for one cascade arrives for all of
  *  them, and the bundle is named for the cascade that ROUTES on it rather than
- *  for sole ownership.
- *
- *  Empty maps/sets degrade gracefully: a row whose every tier is absent
- *  resolves to null, which the walk counts as `spineDroppedNoDirection` —
- *  pinned at 0, so the drift fails the build by name rather than dropping a
- *  record quietly. */
+ *  for sole ownership. */
 export interface DirectionSources {
   gaiaAstrometry: Map<string, GaiaAstrometryCatalogRow>;
   hip2: Map<number, Hip2AstrometryRow>;
@@ -147,7 +143,6 @@ export type VelocityVia = (typeof VELOCITY_VIA_VALUES)[number];
  *  to `directionOnPm` for the position and to `velocityPcPerYr` alongside the
  *  final stack distance + RV, both on whichever motion the row ends up with. */
 export interface DirectionSolution {
-  via: DirectionVia;
   srcRaDeg: number;
   srcDecDeg: number;
   srcEpoch: number;
@@ -155,6 +150,16 @@ export interface DirectionSolution {
   srcPmdecMasyr: number | null;
   velVia: VelocityVia;
 }
+
+/** A Gaia 5p solution passed over: its PM disagrees with HIP2's (orbit
+ *  corruption), or the fit is 2p and HIP2 covers the star. */
+export type DirectionRefusal = CascadeRefusal<'gaia_5p', 'pm_disagrees_with_hip2' | 'no_5p_solution'>;
+
+/** `none` is a record no tier states a position for — a /docs/catalog-driver.md#61-record-parity park. */
+export type DirectionResolution = CascadeResult<
+  UniformValues<DirectionVia, DirectionSolution>,
+  DirectionRefusal
+>;
 
 /** Sky direction at `toEpoch` for a source measured at `fromEpoch` —
  *  RV-free linear space-motion form (accuracy budget + the
@@ -306,28 +311,29 @@ function pmVelVia(
  *  The solution is NOT advanced here — `directionOnPm` is, once, at the caller,
  *  because the winning motion may be `pm-rescue/`'s rather than this tier's.
  *
- *  Returns null only when no tier reaches the row at all. That is a record
- *  with no owned direction, which `/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers` makes a /docs/catalog-driver.md#6-parity--the-gate-on-any-membership-change
- *  membership event rather than a silent keep — the walk counts it as
- *  `spineDroppedNoDirection`, pinned at 0. */
+ *  `none` only when no tier reaches the row at all. That is a record with no
+ *  owned direction, which `/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers` makes a /docs/catalog-driver.md#6-parity--the-gate-on-any-membership-change
+ *  membership event rather than a silent keep — the walk parks it as
+ *  `no_position`. */
 export function resolveDirection(
   { sourceId, hip, tyc, gl, simbad, isSol }: DirectionInputs,
   sources: DirectionSources,
-): DirectionSolution | null {
+): DirectionResolution {
   const gaia = sourceId !== null
     ? sources.gaiaAstrometry.get(sourceId)
     : undefined;
   const hip2 = hip !== null ? sources.hip2.get(hip) : undefined;
+  const refusals: DirectionRefusal[] = [];
+  const hit = (via: DirectionVia, value: DirectionSolution): DirectionResolution =>
+    ({ via, value, refusals });
 
-  const gaiaSolution = (via: DirectionVia, g: GaiaAstrometryCatalogRow): DirectionSolution => ({
-    via,
+  const gaiaSolution = (g: GaiaAstrometryCatalogRow): DirectionSolution => ({
     srcRaDeg: g.raDeg, srcDecDeg: g.decDeg,
     srcEpoch: GAIA_DR3_REF_EPOCH,
     srcPmraMasyr: g.pmraMasyr, srcPmdecMasyr: g.pmdecMasyr,
     velVia: pmVelVia(g.pmraMasyr, g.pmdecMasyr, 'gaia_pm'),
   });
-  const hip2Solution = (via: DirectionVia, h: Hip2AstrometryRow): DirectionSolution => ({
-    via,
+  const hip2Solution = (h: Hip2AstrometryRow): DirectionSolution => ({
     srcRaDeg: h.raDeg, srcDecDeg: h.decDeg,
     srcEpoch: HIP2_REF_EPOCH,
     srcPmraMasyr: h.pmRaMasyr, srcPmdecMasyr: h.pmDeMasyr,
@@ -340,20 +346,24 @@ export function resolveDirection(
       && sources.nssSourceIds.has(sourceId)
       && gaia5pUnreliable(gaia)
     ) {
-      return gaiaSolution('gaia_nss_systemic', gaia);
+      return hit('gaia_nss_systemic', gaiaSolution(gaia));
     }
     if (hip2 !== undefined && hip2PmDisagrees(gaia, hip2)) {
-      return hip2Solution('hip2_pm_discrepant', hip2);
+      refusals.push({ tier: 'gaia_5p', reason: 'pm_disagrees_with_hip2' });
+      return hit('hip2_pm_discrepant', hip2Solution(hip2));
     }
-    return gaiaSolution('gaia_5p', gaia);
+    return hit('gaia_5p', gaiaSolution(gaia));
   }
 
-  if (hip2 !== undefined) return hip2Solution('hip2_saturated', hip2);
+  if (hip2 !== undefined) {
+    if (gaia !== undefined) refusals.push({ tier: 'gaia_5p', reason: 'no_5p_solution' });
+    return hit('hip2_saturated', hip2Solution(hip2));
+  }
 
   // 2p (position-only) Gaia row with no HIP2 cover: keep the Gaia
   // positional anchor, unpropagated when PM is absent — mirrors
   // stage3's gaia_5p fall-through.
-  if (gaia !== undefined) return gaiaSolution('gaia_5p', gaia);
+  if (gaia !== undefined) return hit('gaia_5p', gaiaSolution(gaia));
 
   // Designation-joined tiers, for the rows Gaia and HIP2 both miss. Each
   // joins on the record's OWN identifier — a value join, never positional —
@@ -361,19 +371,17 @@ export function resolveDirection(
   // the proper motion that carries it forward wherever its solution has one.
   const tycho2 = tyc !== null ? sources.tycho2.get(tyc) : undefined;
   if (tycho2 !== undefined) {
-    return {
-      via: 'tycho2',
+    return hit('tycho2', {
       srcRaDeg: tycho2.raDeg, srcDecDeg: tycho2.decDeg,
       srcEpoch: tycho2.epoch,
       srcPmraMasyr: tycho2.pmRaMasyr, srcPmdecMasyr: tycho2.pmDecMasyr,
       velVia: pmVelVia(tycho2.pmRaMasyr, tycho2.pmDecMasyr, 'tycho2_pm'),
-    };
+    });
   }
 
   const cns5 = lookupCns5Astrometry(sources.cns5, gl);
   if (cns5 !== null) {
-    return {
-      via: 'cns5',
+    return hit('cns5', {
       srcRaDeg: cns5.raDeg, srcDecDeg: cns5.decDeg,
       srcEpoch: cns5.posEpoch,
       srcPmraMasyr: cns5.pm?.pmRaMasyr ?? null,
@@ -381,12 +389,11 @@ export function resolveDirection(
       velVia: pmVelVia(
         cns5.pm?.pmRaMasyr ?? null, cns5.pm?.pmDecMasyr ?? null, 'cns5_pm',
       ),
-    };
+    });
   }
 
   if (simbad !== null) {
-    return {
-      via: 'simbad',
+    return hit('simbad', {
       srcRaDeg: simbad.raDeg, srcDecDeg: simbad.decDeg,
       srcEpoch: SIMBAD_REF_EPOCH,
       srcPmraMasyr: simbad.pm?.pmRaMasyr ?? null,
@@ -394,22 +401,21 @@ export function resolveDirection(
       velVia: pmVelVia(
         simbad.pm?.pmRaMasyr ?? null, simbad.pm?.pmDecMasyr ?? null, 'simbad_pm',
       ),
-    };
+    });
   }
 
   // The vector is arbitrary and unobservable: Sol's distance is zero, so the
   // walk multiplies it to the origin whatever it points at.
   if (isSol) {
-    return {
-      via: 'curated',
+    return hit('curated', {
       srcRaDeg: 0, srcDecDeg: 0,
       srcEpoch: CATALOG_SCENE_EPOCH,
       srcPmraMasyr: null, srcPmdecMasyr: null,
       velVia: 'zero',
-    };
+    });
   }
 
-  return null;
+  return { via: 'none', refusals };
 }
 
 // ---- TSV parsers ----------------------------------------------------------
