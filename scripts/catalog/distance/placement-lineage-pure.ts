@@ -5,7 +5,6 @@ import { paramsOf, paramsText, type LineageParams, type LineageRow } from '../li
 import { LIVE, stageCodes, type CodeDeclaration } from '../lineage/reason-codes-pure';
 import { sourceRowRefText, type AnySourceRowRef } from '../../util/sources/row-ref-pure';
 import type { DirectionResolution, DirectionVia } from './direction-cascade';
-import type { RefusedPublication } from './gaia-distrust';
 import type { ParallaxResolution, ParallaxTier } from './parallax/parallax-cascade';
 import {
   PARKED_REASONS, parkedIdentifiersOf, parkedLedgerCells,
@@ -13,6 +12,7 @@ import {
 } from './parallax/parked-ledger';
 import type { PmRescueResolution, PmRescueVia } from './pm-rescue/pm-rescue';
 import type { RadialVelocityResolution, RvVia } from './radial-velocity/radial-velocity';
+import type { LmcKinematicVerdict } from './refinement/distance-overrides-pure';
 
 export const PLACEMENT_STAGE = 'placement';
 
@@ -38,7 +38,7 @@ const PARALLAX_BRANCHES = {
   curated: 'parallax.curated',
 } as const satisfies Record<ParallaxTier, string>;
 
-type ParallaxRefusalReason = 'below_sn_floor' | RefusedPublication;
+type ParallaxRefusalReason = ParallaxResolution['refusals'][number]['reason'];
 const PARALLAX_REFUSAL_BRANCHES = {
   below_sn_floor: 'parallax.refused.below-sn-floor',
   gaia_release: 'parallax.refused.gaia-release',
@@ -156,7 +156,7 @@ export type BailerJonesStep =
   | { readonly kind: 'absent' }
   | { readonly kind: 'not-applied' };
 
-export type LmcStep = 'snap' | 'parallax_rules_out' | 'not_member';
+export type LmcStep = LmcKinematicVerdict['kind'];
 
 /** One manifest row's placement: each step the walk ran, in walk order, up to
  *  the park that stopped it or the record it shipped. */
