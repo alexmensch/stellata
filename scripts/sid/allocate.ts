@@ -11,15 +11,12 @@ import { ALLOCATE_OUTPUTS } from './allocate-outputs';
 import { LEDGER, ledgerFile } from './ledger-tsv';
 import { builtObjects } from './built-objects';
 import { SIBLING_NAMESPACES } from './sibling-artifacts';
-import { REINSTATEMENTS, RETIREMENTS } from './registry-source';
-import { loadStoredEdges } from './stored-edges';
+import { EVENTS, eventsFile } from './events-tsv';
+import { loadRegistry } from './registry-io';
 import {
   allocate,
   computeLedgerHead,
   parseDesignation,
-  validateLedger,
-  validateReinstatements,
-  validateRetirements,
 } from './sid-pure';
 
 const { ledger: LEDGER_PATH, head: HEAD_PATH } = ALLOCATE_OUTPUTS.files;
@@ -56,8 +53,8 @@ function synthChurnReport(orphanKeys: string[], currentSynthKeys: string[]): str
   lines.push(
     '  Resolve each by hand (/docs/sid.md#5-synthetic-key-churn-wds-re-subdivision): a bridge line in',
     '  data/sid/sameas-overrides.tsv for a re-lettered component, or a',
-    '  retirements.tsv row for a component that genuinely dissolved',
-    '  (reinstatements.tsv resumes the sid if it later reappears).',
+    '  retire event in events.tsv for a component that genuinely dissolved',
+    '  (a reinstate event resumes the sid if it later reappears).',
   );
   return lines.join('\n');
 }
@@ -65,25 +62,11 @@ function synthChurnReport(orphanKeys: string[], currentSynthKeys: string[]): str
 async function main(): Promise<void> {
   const checkOnly = process.argv.includes('--check');
   const { objects, starCount } = await builtObjects();
-  const storedEdges = loadStoredEdges();
 
-  const ledger = ledgerFile(artifactText(LEDGER)).rows;
-  const retirementsFile = RETIREMENTS.read();
-  const reinstatementsFile = REINSTATEMENTS.read();
-  const retirements = retirementsFile.rows;
-  const reinstatements = reinstatementsFile.rows;
-  const structural = [
-    ...validateLedger(ledger),
-    ...validateRetirements(retirements, ledger, reinstatements),
-    ...validateReinstatements(reinstatements, ledger, retirements),
-  ];
-  if (structural.length > 0) {
-    console.error(`sid:allocate: committed registry is invalid:\n  ${structural.join('\n  ')}`);
-    process.exit(1);
-  }
+  const { ledger, events, storedEdges } = loadRegistry();
 
   const today = new Date().toISOString().slice(0, 10);
-  const result = allocate({ objects, storedEdges, ledger, retirements, reinstatements, today });
+  const result = allocate({ objects, storedEdges, ledger, events, today });
 
   for (const { designation, objects: idxs } of result.ambiguous) {
     console.log(
@@ -182,7 +165,7 @@ async function main(): Promise<void> {
     appendFileSync(LEDGER_PATH, appended);
   }
 
-  const head = computeLedgerHead(ledgerFile(artifactText(LEDGER)), retirementsFile, reinstatementsFile);
+  const head = computeLedgerHead(ledgerFile(artifactText(LEDGER)), eventsFile(artifactText(EVENTS)));
   const headJson = `${JSON.stringify(head, null, 2)}\n`;
   if (!existsSync(HEAD_PATH) || readFileSync(HEAD_PATH, 'utf-8') !== headJson) {
     writeFileSync(HEAD_PATH, headJson);

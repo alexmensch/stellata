@@ -182,17 +182,23 @@ sid	canonical_key	kind	first_seen
   artifact carries the sid, [§ 8](#8-runtime-resolver-b4)).
 - `first_seen` — ISO date of the allocation batch; frozen thereafter.
 
-`data/sid/retirements.tsv` (append-only, same guard): retired SIDs
-are recorded, never deleted from the ledger, never reused.
+`data/sid/events.tsv` (append-only, same guard) records every
+identity event a SID goes through; retired SIDs are never deleted from
+the ledger and never reused.
 
 ```
-sid	retired	reason	successor_sid
+sid	date	event	code	params	successor	build_version
 ```
 
-`successor_sid` is set for merges so a retired SID arriving
-on the wire can still resolve; empty for objects that genuinely left
-the model (a parked SID resolves to nothing and wire consumers skip
-it gracefully).
+`event` is `mint`, `retire`, `reinstate` or `merge`; `code` is a reason
+code from the generated list (`data/lineage/reason-codes.tsv`) whose
+declared effect matches the event, and `params` its per-row detail.
+`successor` is set on a merge only, so a merged SID arriving on the
+wire can still resolve; a retired SID with none resolves to nothing and
+wire consumers skip it gracefully. Rows from before allocation wrote
+this file carry `historical` codes (`allocation.legacy.*`), one per
+legacy cause, never mapped onto live ones
+([SID events](/scripts/catalog/lineage/README.md#sid-events)).
 
 **Two kinds of merge, and they pick different survivors.** A merge
 under [§ 6.1](#61-procedure) reconciles Gaia ids across a data release, and its
@@ -226,34 +232,24 @@ duplicate the derivation cannot dissolve on its own, because the twin
 holds the very source the survivor would otherwise derive (VV Lyn,
 SID 324680 → 324702).
 
-`data/sid/reinstatements.tsv` (append-only, same guard) is the
-reverse operation for a retired object that reappears — a pipeline
-refinement restores an honestly-derived record for a component an
-earlier gate had dropped, or a retirement proves to have been a
-presence fluctuation misfiled as an identity event:
+A `reinstate` is the reverse operation for a retired object that
+reappears — a pipeline refinement restores an honestly-derived record
+for a component an earlier gate had dropped, or a retirement proves to
+have been a presence fluctuation misfiled as an identity event.
 
-```
-sid	reinstated	reason
-```
-
-A sid's effective state is decided by **counting**: retired iff it
-has strictly more retirement rows than reinstatement rows. Counting
-is order-independent across the two append-only files, so
-retire → reinstate → re-retire cycles need no cross-file ordering;
-structural validation enforces `#reinstate ≤ #retire` and
-`#retire ≤ #reinstate + 1` per sid. A reinstated object resumes its
+A sid's effective state is decided by **counting**: out of service iff
+it has strictly more `retire` and `merge` events than `reinstate`
+events. Structural validation walks the file in order and refuses a
+removal of a SID already out or a reinstate of one in service. A
+reinstated object resumes its
 **original sid** — old wire refs resolve again — which is the whole
 point of reinstating rather than minting: identity is continuous
 across a presence gap. Never reinstate a sid whose object came back
 under a *different* identity; that is a bridge/merge ([§ 5](#5-synthetic-key-churn-wds-re-subdivision), [§ 6.1](#61-procedure)).
 
-Settled 2026-10-21: both files migrate into an allocation-written
-`data/sid/events.tsv` under historical reason codes, with this counting
-rule carried over ([SID events](/scripts/catalog/lineage/README.md#sid-events)).
-
 `data/sid/ledger-head.json` (regular git, tiny) pins the frozen
 state: `{ "rows": N, "max_sid": M, "sha256": "…" }` for the ledger
-and the same triple for retirements and reinstatements. It is
+and the same triple for events. It is
 rewritten mechanically by the allocation tool on every append.
 
 ### 4.4 Allocation
@@ -307,9 +303,9 @@ snapshot gate but deliberately stricter:
    regular git, so no LFS smudge is needed — then assert the working
    ledger's first `base.rows` lines hash to `base.sha256`
    (prefix-frozen ⇒ no row was edited, deleted, or reordered) and
-   every appended ledger row has `sid > base.max_sid`. Retirements get
+   every appended ledger row has `sid > base.max_sid`. Events get
    the same prefix-frozen check but no sid-monotonicity — a new
-   retirement may legitimately retire an old sid.
+   event may legitimately name an old sid.
 3. There is **no `UPDATE_*` escape hatch** for the frozen prefix.
    Appends need no override (always legal); a prefix rewrite is a
    never-event that requires editing the guard test itself in the

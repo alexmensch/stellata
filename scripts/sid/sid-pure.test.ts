@@ -2,8 +2,6 @@ import { describe, expect, it } from 'vitest';
 
 import {
   LEDGER_HEADER,
-  REINSTATEMENTS_HEADER,
-  RETIREMENTS_HEADER,
   SAMEAS_HEADER,
   allocate,
   canonicalKeyOf,
@@ -15,21 +13,16 @@ import {
   isValidDesignation,
   namespaceRank,
   parseDesignation,
-  effectiveRetirements,
-  reinstatementsFile,
-  retirementsFile,
   parseSameasTsv,
   parseSolObjectsTsv,
   resolveSids,
-  sidSuccessorPairs,
   starDesignations,
   validateLedger,
-  validateReinstatements,
-  validateRetirements,
   type LedgerRow,
-  type RetirementRow,
   type SidObject,
 } from './sid-pure';
+import { EVENT_COLUMNS, type EventRow } from './events-pure';
+import { eventsFile } from './events-tsv';
 import { LEDGER, ledgerFile } from './ledger-tsv';
 
 describe('designation grammar', () => {
@@ -95,8 +88,10 @@ describe('canonical-key ladder', () => {
 });
 
 const T = { file: 't.tsv', hint: 'h' };
-const retirementsRows = (text: string) => retirementsFile(text, T).rows;
-const reinstatementsRows = (text: string) => reinstatementsFile(text, T).rows;
+const EVENTS_HEADER = EVENT_COLUMNS.join('\t');
+const ev = (sid: number, event: EventRow['event'], successor: number | null = null): EventRow => (
+  { sid, date: '2026-07-09', event, code: 'c', params: '', successor, buildVersion: '7.1.6' }
+);
 
 describe('TSV codecs', () => {
   const ledgerText = `${LEDGER_HEADER}\n1\thip:32349\tstar\t2026-07-10\n2\tcloud:orion-a\tcloud\t2026-07-10\n`;
@@ -117,16 +112,6 @@ describe('TSV codecs', () => {
     expect(() => LEDGER.parse(`${LEDGER_HEADER}\n+1\thip:1\tstar\t2026-07-10\n`)).toThrow(/sid: "\+1" is not an identifier/);
     expect(() => LEDGER.parse(`${LEDGER_HEADER}\n1\thip:1\tstar\n`)).toThrow(/expected 4/);
     expect(() => LEDGER.parse(`${LEDGER_HEADER}\n1\thip:1\tcomet\t2026-07-10\n`)).toThrow(/kind/);
-    expect(() => retirementsRows(`${RETIREMENTS_HEADER}\n5\t2026-07-10\tx\t03a\n`))
-      .toThrow(/successor_sid/);
-  });
-
-  it('parses retirements with and without successor', () => {
-    const rows = retirementsRows(
-      `${RETIREMENTS_HEADER}\n5\t2026-07-10\tmerged into 3\t3\n7\t2026-07-10\tdissolved\t\n`,
-    );
-    expect(rows[0].successorSid).toBe(3);
-    expect(rows[1].successorSid).toBeNull();
   });
 
   it('parses same-as edges and validates both designations', () => {
@@ -145,11 +130,12 @@ describe('TSV codecs', () => {
   });
 
   it('every registry file refuses CR line endings, a missing final newline, a blank line and a foreign header', () => {
-    const ok = `${RETIREMENTS_HEADER}\n5\t2026-07-10\tx\t\n`;
-    expect(retirementsRows(ok)).toHaveLength(1);
-    expect(() => retirementsRows(ok.replace(/\n/g, '\r\n'))).toThrow(/CR line ending/);
-    expect(() => retirementsRows(ok.slice(0, -1))).toThrow(/missing final newline/);
-    expect(() => retirementsRows(`${RETIREMENTS_HEADER}\n\n5\t2026-07-10\tx\t\n`)).toThrow(/:2: blank line/);
+    const line = '5\t2026-07-10\tretire\tc\t\t\t7.1.6';
+    const ok = `${EVENTS_HEADER}\n${line}\n`;
+    expect(eventsFile(ok).rows).toHaveLength(1);
+    expect(() => eventsFile(ok.replace(/\n/g, '\r\n'))).toThrow(/CR line ending/);
+    expect(() => eventsFile(ok.slice(0, -1))).toThrow(/missing final newline/);
+    expect(() => eventsFile(`${EVENTS_HEADER}\n\n${line}\n`)).toThrow(/:2: blank line/);
     expect(() => LEDGER.parse(`${LEDGER_HEADER}\n1\thip:1\tstar\t2026-07-10`)).toThrow(/missing final newline/);
     expect(() => parseSolObjectsTsv('kind\tkey\n', T)).toThrow(/header mismatch/);
   });
@@ -189,110 +175,36 @@ describe('structural validation', () => {
     );
   });
 
-  it('validates retirements against the ledger', () => {
-    const ledger = [row(1, 'hip:1'), row(2, 'hd:2')];
-    const ret = (sid: number, successorSid: number | null): RetirementRow => ({
-      sid,
-      retired: '2026-07-10',
-      reason: 'merged',
-      successorSid,
-    });
-    expect(validateRetirements([ret(1, 2)], ledger)).toEqual([]);
-    expect(validateRetirements([ret(3, null)], ledger)[0]).toMatch(/not in ledger/);
-    expect(validateRetirements([ret(1, null), ret(1, 2)], ledger)[0]).toMatch(/duplicate/);
-    expect(validateRetirements([ret(1, 1)], ledger)[0]).toMatch(/successor is itself/);
-    expect(validateRetirements([{ ...ret(1, null), reason: ' ' }], ledger)[0]).toMatch(
-      /empty reason/,
-    );
-    // A second retirement is legal once a reinstatement cancelled the first.
-    expect(
-      validateRetirements([ret(1, null), ret(1, 2)], ledger, [
-        { sid: 1, reinstated: '2026-07-11', reason: 'came back' },
-      ]),
-    ).toEqual([]);
-  });
-
-  it('validates reinstatements against the ledger and retirements', () => {
-    const ledger = [row(1, 'hip:1'), row(2, 'hd:2')];
-    const retirements: RetirementRow[] = [
-      { sid: 1, retired: '2026-07-10', reason: 'parked', successorSid: null },
-    ];
-    const rein = (sid: number) => ({ sid, reinstated: '2026-07-12', reason: 'came back' });
-    expect(validateReinstatements([rein(1)], ledger, retirements)).toEqual([]);
-    expect(validateReinstatements([rein(3)], ledger, retirements)[0]).toMatch(/not in ledger/);
-    expect(validateReinstatements([rein(2)], ledger, retirements)[0]).toMatch(
-      /nothing to reinstate/,
-    );
-    expect(validateReinstatements([rein(1), rein(1)], ledger, retirements)[0]).toMatch(
-      /nothing to reinstate/,
-    );
-    expect(
-      validateReinstatements([{ ...rein(1), reason: '' }], ledger, retirements)[0],
-    ).toMatch(/empty reason/);
-  });
-});
-
-describe('sidSuccessorPairs', () => {
-  const ret = (sid: number, successorSid: number | null, retired = '2026-07-10'): RetirementRow =>
-    ({ sid, retired, reason: 'merged', successorSid });
-  const rein = (sid: number) => ({ sid, reinstated: '2026-07-11', reason: 'came back' });
-
-  it('emits only successor-bearing retirements, sorted by sid', () => {
-    expect(sidSuccessorPairs([ret(5, 2), ret(3, null), ret(1, 4)], [])).toEqual([
-      [1, 4],
-      [5, 2],
-    ]);
-  });
-
-  it('drops a retirement cancelled by a reinstatement', () => {
-    expect(sidSuccessorPairs([ret(1, 2)], [rein(1)])).toEqual([]);
-  });
-
-  it('uses the last retirement row of a retire → reinstate → re-retire cycle', () => {
-    expect(sidSuccessorPairs([ret(1, 2), ret(1, 3, '2026-07-12')], [rein(1)])).toEqual([
-      [1, 3],
-    ]);
-  });
 });
 
 describe('head snapshot + append-only', () => {
-  const noReinstatements = reinstatementsFile(`${REINSTATEMENTS_HEADER}\n`, T);
   const ledgerText = `${LEDGER_HEADER}\n1\thip:1\tstar\t2026-07-10\n2\thd:2\tstar\t2026-07-10\n`;
-  const emptyRetirements = `${RETIREMENTS_HEADER}\n`;
+  const noEvents = eventsFile(`${EVENTS_HEADER}\n`);
 
-  it('computes the head triple for all three files', () => {
-    const head = computeLedgerHead(ledgerFile(ledgerText), retirementsFile(emptyRetirements, T), noReinstatements);
+  it('computes the head triple for both files', () => {
+    const head = computeLedgerHead(ledgerFile(ledgerText), noEvents);
     expect(head.ledger.rows).toBe(2);
     expect(head.ledger.max_sid).toBe(2);
-    expect(head.retirements).toEqual({
+    expect(head.events).toEqual({
       rows: 0,
       max_sid: 0,
       sha256: 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
     });
-    expect(head.reinstatements).toEqual(head.retirements);
-    const withRein = computeLedgerHead(
-      ledgerFile(ledgerText), retirementsFile(emptyRetirements, T),
-      reinstatementsFile(`${REINSTATEMENTS_HEADER}\n1\t2026-07-12\tcame back\n`, T),
+    const withEvent = computeLedgerHead(
+      ledgerFile(ledgerText), eventsFile(`${EVENTS_HEADER}\n1\t2026-07-12\tretire\tc\t\t\t7.1.6\n`),
     );
-    expect(withRein.reinstatements!.rows).toBe(1);
-    expect(withRein.reinstatements!.max_sid).toBe(1);
-  });
-
-  it('parses reinstatement rows', () => {
-    const rows = reinstatementsRows(
-      `${REINSTATEMENTS_HEADER}\n5\t2026-07-12\tobject reappeared\n`,
-    );
-    expect(rows).toEqual([{ sid: 5, reinstated: '2026-07-12', reason: 'object reappeared' }]);
+    expect(withEvent.events!.rows).toBe(1);
+    expect(withEvent.events!.max_sid).toBe(1);
   });
 
   it('accepts pure appends with ascending sids', () => {
-    const base = computeLedgerHead(ledgerFile(ledgerText), retirementsFile(emptyRetirements, T), noReinstatements).ledger;
+    const base = computeLedgerHead(ledgerFile(ledgerText), noEvents).ledger;
     const lines = ['1\thip:1\tstar\t2026-07-10', '2\thd:2\tstar\t2026-07-10', '3\tgl:Gl_1\tstar\t2026-07-11'];
     expect(checkAppendOnly(base, lines, 'ledger.tsv', { newSidsPastBaseMax: true })).toEqual([]);
   });
 
   it('rejects prefix edits, deletions, and sid counter rollback', () => {
-    const base = computeLedgerHead(ledgerFile(ledgerText), retirementsFile(emptyRetirements, T), noReinstatements).ledger;
+    const base = computeLedgerHead(ledgerFile(ledgerText), noEvents).ledger;
     const edited = ['1\thip:1\tstar\t2026-07-10', '2\thd:999\tstar\t2026-07-10'];
     expect(checkAppendOnly(base, edited, 'ledger.tsv', { newSidsPastBaseMax: true })[0]).toMatch(
       /frozen prefix/,
@@ -306,13 +218,11 @@ describe('head snapshot + append-only', () => {
     );
   });
 
-  it('allows a new retirement of an old sid (no sid-monotonicity there)', () => {
-    const retText = `${RETIREMENTS_HEADER}\n9\t2026-07-10\tmerged\t3\n`;
-    const base = computeLedgerHead(ledgerFile(ledgerText), retirementsFile(retText, T), noReinstatements).retirements;
-    const lines = ['9\t2026-07-10\tmerged\t3', '2\t2026-07-11\tdissolved\t'];
-    expect(checkAppendOnly(base, lines, 'retirements.tsv', { newSidsPastBaseMax: false })).toEqual(
-      [],
-    );
+  it('allows a new event on an old sid (no sid-monotonicity there)', () => {
+    const line = '9\t2026-07-10\tmerge\tc\t\t3\t7.1.6';
+    const base = computeLedgerHead(ledgerFile(ledgerText), eventsFile(`${EVENTS_HEADER}\n${line}\n`)).events!;
+    const lines = [line, '2\t2026-07-11\tretire\tc\t\t\t7.1.6'];
+    expect(checkAppendOnly(base, lines, 'events.tsv', { newSidsPastBaseMax: false })).toEqual([]);
   });
 });
 
@@ -349,7 +259,7 @@ describe('sameAsClasses', () => {
       objects,
       storedEdges: [],
       ledger: [],
-      retirements: [],
+      events: [],
       today: '2026-07-10',
     });
     expect(result.keyless).toEqual([1]);
@@ -369,7 +279,7 @@ describe('allocation', () => {
   ];
 
   it('mints in object order with ladder canonical keys and kinds', () => {
-    const r = allocate({ objects, storedEdges: [], ledger: [], retirements: [], today });
+    const r = allocate({ objects, storedEdges: [], ledger: [], events: [], today });
     expect(r.errors).toEqual([]);
     expect(r.minted.map((m) => [m.sid, m.canonicalKey, m.kind])).toEqual([
       [1, 'sol:sun', 'star'],
@@ -385,12 +295,12 @@ describe('allocation', () => {
   });
 
   it('is idempotent: a second run resolves everything and mints nothing', () => {
-    const first = allocate({ objects, storedEdges: [], ledger: [], retirements: [], today });
+    const first = allocate({ objects, storedEdges: [], ledger: [], events: [], today });
     const second = allocate({
       objects,
       storedEdges: [],
       ledger: first.minted,
-      retirements: [],
+      events: [],
       today: '2026-08-01',
     });
     expect(second.minted).toEqual([]);
@@ -412,7 +322,7 @@ describe('allocation', () => {
       ],
       storedEdges: [],
       ledger,
-      retirements: [],
+      events: [],
       today,
     });
     expect(r.minted).toEqual([]);
@@ -438,7 +348,7 @@ describe('allocation', () => {
       }],
       storedEdges: [],
       ledger,
-      retirements: [],
+      events: [],
       today,
     });
     expect(r.errors).toEqual([]);
@@ -454,7 +364,7 @@ describe('allocation', () => {
       objects: [{ designations: ['synth:04357+1010-Aa1,2'], kind: 'star', label: 'record 0' }],
       storedEdges: [{ a: 'synth:04357+1010-Aa,Ab', b: 'synth:04357+1010-Aa1,2' }],
       ledger,
-      retirements: [],
+      events: [],
       today,
     });
     expect(r.minted).toEqual([]);
@@ -470,7 +380,7 @@ describe('allocation', () => {
       objects: [{ designations: ['synth:04357+1010-Aa1,2'], kind: 'star', label: 'record 0' }],
       storedEdges: [],
       ledger,
-      retirements: [],
+      events: [],
       today,
     });
     expect(r.orphaned.get('synth')).toEqual(['synth:04357+1010-Aa,Ab']);
@@ -485,7 +395,7 @@ describe('allocation', () => {
       objects: [],
       storedEdges: [],
       ledger,
-      retirements: [{ sid: 1, retired: '2026-07-09', reason: 'dissolved', successorSid: null }],
+      events: [ev(1, 'retire')],
       today,
     });
     expect(r.orphaned.size).toBe(0);
@@ -500,13 +410,13 @@ describe('allocation', () => {
       objects: [{ designations: ['hip:1', 'hd:2'], kind: 'star', label: 'record 0' }],
       storedEdges: [],
       ledger,
-      retirements: [],
+      events: [],
       today,
     });
     expect(r.errors[0]).toMatch(/2 active sids/);
   });
 
-  it('resolves to the survivor when the merge is recorded as a retirement', () => {
+  it('resolves to the survivor when the merge is recorded as an event', () => {
     const ledger: LedgerRow[] = [
       { sid: 1, canonicalKey: 'hip:1', kind: 'star', firstSeen: '2026-07-01' },
       { sid: 2, canonicalKey: 'hd:2', kind: 'star', firstSeen: '2026-07-01' },
@@ -515,7 +425,7 @@ describe('allocation', () => {
       objects: [{ designations: ['hip:1', 'hd:2'], kind: 'star', label: 'record 0' }],
       storedEdges: [],
       ledger,
-      retirements: [{ sid: 2, retired: '2026-07-09', reason: 'merged into 1', successorSid: 1 }],
+      events: [ev(2, 'merge', 1)],
       today,
     });
     expect(r.errors).toEqual([]);
@@ -530,7 +440,7 @@ describe('allocation', () => {
       objects: [{ designations: ['hip:1'], kind: 'star', label: 'record 0' }],
       storedEdges: [],
       ledger,
-      retirements: [{ sid: 1, retired: '2026-07-09', reason: 'parked', successorSid: null }],
+      events: [ev(1, 'retire')],
       today,
     });
     expect(r.errors[0]).toMatch(/retired object reappeared/);
@@ -544,23 +454,12 @@ describe('allocation', () => {
       objects: [{ designations: ['hip:1'], kind: 'star', label: 'record 0' }],
       storedEdges: [],
       ledger,
-      retirements: [{ sid: 1, retired: '2026-07-09', reason: 'parked', successorSid: null }],
-      reinstatements: [{ sid: 1, reinstated: '2026-07-12', reason: 'object reappeared' }],
+      events: [ev(1, 'retire'), ev(1, 'reinstate')],
       today,
     });
     expect(r.errors).toEqual([]);
     expect(r.objectSids).toEqual([1]);
     expect(r.minted).toEqual([]);
-  });
-
-  it('a re-retired sid (retire, reinstate, retire) reads as retired', () => {
-    const retirements = [
-      { sid: 1, retired: '2026-07-09', reason: 'parked', successorSid: null },
-      { sid: 1, retired: '2026-07-13', reason: 're-parked', successorSid: null },
-    ];
-    const reinstatements = [{ sid: 1, reinstated: '2026-07-12', reason: 'came back' }];
-    expect(effectiveRetirements(retirements, reinstatements).get(1)?.reason).toBe('re-parked');
-    expect(effectiveRetirements(retirements.slice(0, 1), reinstatements).size).toBe(0);
   });
 
   it('errors on a kind conflict with the frozen ledger row', () => {
@@ -571,7 +470,7 @@ describe('allocation', () => {
       objects: [{ designations: ['cloud:orion-a'], kind: 'galaxy', label: 'lg orion-a' }],
       storedEdges: [],
       ledger,
-      retirements: [],
+      events: [],
       today,
     });
     expect(r.errors[0]).toMatch(/kind "galaxy" conflicts/);
@@ -585,7 +484,7 @@ describe('allocation', () => {
       ],
       storedEdges: [{ a: 'hip:1', b: 'gaia_dr3:5' }],
       ledger: [],
-      retirements: [],
+      events: [],
       today,
     });
     expect(r.minted).toHaveLength(1);
@@ -674,7 +573,7 @@ describe('resolveSids', () => {
       ],
       storedEdges: [],
       ledger,
-      retirements: [],
+      events: [],
     });
     expect(r.errors).toEqual([]);
     expect(r.objectSids).toEqual([1, 2]);
@@ -688,7 +587,7 @@ describe('resolveSids', () => {
       ],
       storedEdges: [],
       ledger,
-      retirements: [],
+      events: [],
     });
     expect(r.errors).toHaveLength(1);
     expect(r.errors[0]).toMatch(/record 42: unallocated/);
@@ -700,7 +599,7 @@ describe('resolveSids', () => {
       objects: [{ designations: ['cloud:orion-molecular'], kind: 'cloud', label: 'renamed' }],
       storedEdges: [{ a: 'cloud:orion-a', b: 'cloud:orion-molecular' }],
       ledger,
-      retirements: [],
+      events: [],
     });
     expect(r.errors).toEqual([]);
     expect(r.objectSids).toEqual([2]);

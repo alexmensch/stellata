@@ -8,9 +8,9 @@ import { LINEAGE_STAGES } from '../catalog/lineage/lineage-stages';
 import { LIVE, codeEffects, stageCodes } from '../catalog/lineage/reason-codes-pure';
 import { artifactText, isReadable } from '../util/sources/source';
 import { BUILT_OBJECT_INPUTS, builtObjects } from './built-objects';
+import { EVENTS, eventsFile } from './events-tsv';
 import { LEDGER, ledgerFile } from './ledger-tsv';
 import { orphanCauses } from './orphan-causes-pure';
-import { REINSTATEMENTS, RETIREMENTS } from './registry-source';
 import { allocate } from './sid-pure';
 import { SIBLING_NAMESPACES } from './sibling-artifacts';
 import { loadStoredEdges } from './stored-edges';
@@ -67,8 +67,7 @@ describe.skipIf(!built)('every orphaned ledger SID has a recorded cause', () => 
       objects,
       storedEdges: loadStoredEdges(),
       ledger: ledgerFile(artifactText(LEDGER)).rows,
-      retirements: RETIREMENTS.read().rows,
-      reinstatements: REINSTATEMENTS.read().rows,
+      events: eventsFile(artifactText(EVENTS)).rows,
       today: '2000-01-01',
     });
     expect(result.errors).toEqual([]);

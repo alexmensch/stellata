@@ -2,36 +2,28 @@
 
 import { readArtifact } from '../util/sources/source';
 import { LEDGER } from './ledger-tsv';
-import { REINSTATEMENTS, RETIREMENTS } from './registry-source';
-import {
-  validateLedger,
-  validateReinstatements,
-  validateRetirements,
-  type LedgerRow,
-  type ReinstatementRow,
-  type RetirementRow,
-  type SameasEdge,
-} from './sid-pure';
+import { validateEvents, type EventRow } from './events-pure';
+import { EVENTS } from './events-tsv';
+import { REASON_CODES } from '../catalog/lineage/reason-codes-tsv';
+import { validateLedger, type LedgerRow, type SameasEdge } from './sid-pure';
 import { loadStoredEdges } from './stored-edges';
 
 export interface Registry {
   ledger: LedgerRow[];
-  retirements: RetirementRow[];
-  reinstatements: ReinstatementRow[];
+  events: EventRow[];
   storedEdges: SameasEdge[];
 }
 
 export function loadRegistry(): Registry {
   const ledger = readArtifact(LEDGER);
-  const retirements = RETIREMENTS.read().rows;
-  const reinstatements = REINSTATEMENTS.read().rows;
+  const events = readArtifact(EVENTS);
+  const codes = new Set(readArtifact(REASON_CODES).map((e) => e.code));
   const errors = [
     ...validateLedger(ledger),
-    ...validateRetirements(retirements, ledger, reinstatements),
-    ...validateReinstatements(reinstatements, ledger, retirements),
+    ...validateEvents(events, ledger.length, (code) => codes.has(code)),
   ];
   if (errors.length > 0) {
     throw new Error(`SID registry is structurally invalid:\n  ${errors.join('\n  ')}`);
   }
-  return { ledger, retirements, reinstatements, storedEdges: loadStoredEdges() };
+  return { ledger, events, storedEdges: loadStoredEdges() };
 }
