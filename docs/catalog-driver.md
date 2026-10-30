@@ -356,7 +356,7 @@ zero retirements, zero reinstatements; deriving the binding then retired
 **8** Gaia-keyed ledger rows with a successor each — AT-HYG had carried the
 Gaia source as a row of its own beside the HIP record it belongs to, and the
 derived binding joins the two classes, which is a merge under [§ 7](#7-identity-and-ordering-rules)
-(`data/sid/retirements.tsv`).
+(`merge` events in `data/sid/events.tsv`).
 
 **The replacement parity gate.** The spine could not be regenerated ([§ 3](#3-the-inherited-spine))
 because it snapshots a build that no longer exists; the primaries-derived
@@ -1038,8 +1038,8 @@ Applications of `docs/sid.md` (which remains the authority):
 
 - **Presence ≠ identity.** A record a membership change stops
   producing is a presence event: its ledger row goes unreferenced —
-  no retirement ([§ 4.4](/docs/sid.md#44-allocation)). Retirements/reinstatements are
-  written only for identity events (a duplicate pair collapsing onto
+  no retirement ([§ 4.4](/docs/sid.md#44-allocation)). `retire`, `merge` and
+  `reinstate` events (`data/sid/events.tsv`) are written only for identity events (a duplicate pair collapsing onto
   one Gaia source is a merge; a class split follows the split rule),
   enumerated off the parity ledger.
 - **SID stability through membership changes.** Allocation resolves by
@@ -1066,7 +1066,7 @@ Applications of `docs/sid.md` (which remains the authority):
   calibration.
 - A deeper magnitude pull re-runs [§ 6](#6-parity--the-gate-on-any-membership-change) in additive mode **on identity**:
   every existing SID survives, a component the deeper catalogue resolves
-  retires only through a row in `data/sid/retirements.tsv`, and no object
+  retires only through a `retire` or `merge` event in `data/sid/events.tsv`, and no object
   is drawn twice. **Field values on existing records may move**: companion
   promotion, anchor-flux conservation and system distance coherence read
   the record set rather than the manifest, so a deeper catalogue

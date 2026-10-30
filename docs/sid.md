@@ -347,7 +347,7 @@ comp letters / sep / PA. Resolution is human, one line each in
 
 - **Bridge** — `synth:04357+1010-Aa,Ab` = `synth:04357+1010-Aa1,2`
   (same physical object, re-lettered), or
-- **Retirement** — appended to `retirements.tsv` when the component
+- **Retirement** — a `retire` event in `events.tsv` when the component
   genuinely dissolved (e.g. an unresolved aggregate that stopped
   being promoted).
 
@@ -390,7 +390,7 @@ running them is a refresh-time task alongside
 | **carried 1:1** | exactly one candidate within `ACCEPT_MAS = 400` | append bridge edge `gaia_dr3:X = gaia_dr4:Y` to `bridges/` |
 | **contested** | ≥2 candidates within 400 mas | manual review queue; resolve to bridge / split |
 | **split** | one old id accepted by ≥2 new ids | SID survives on the photometrically dominant component (smallest \|Δmag\|; tie → smallest angular distance); siblings mint new SIDs |
-| **merge** | ≥2 old ledger-bearing ids map to one new id | survivor = lowest (oldest) SID; others retired with `successor_sid` = survivor. Scoped to the Gaia ids this procedure reconciles — a pipeline-found merge between a Gaia-keyed and a classically-keyed class keeps the classical one instead ([§ 4.3](#43-ledger--datasidledgertsv)) |
+| **merge** | ≥2 old ledger-bearing ids map to one new id | survivor = lowest (oldest) SID; others get a `merge` event with `successor` = survivor. Scoped to the Gaia ids this procedure reconciles — a pipeline-found merge between a Gaia-keyed and a classically-keyed class keeps the classical one instead ([§ 4.3](#43-ledger--datasidledgertsv)) |
 | **dropped** | no candidate within 400 mas | review (PM-propagation flag, Δmag, sky region); unrecoverable → **parked**: ledger row kept, no bridge, resolves to nothing until a future designation re-links it |
 
 4. Additionally flag accepted matches with `|Δmag| > 1` for review
@@ -508,8 +508,9 @@ One global resolver built at boot from whatever artifacts attach:
   `unknown` once every domain has settled and disclaimed it.
 - **Successor following ([§ 9.4](#94-migration-semantics--exact-table)'s last row):** resolution first
   canonicalises through the retired-sid → successor-sid map, derived
-  at catalog build time from `retirements.tsv` net of
-  `reinstatements.tsv` (`sidSuccessorPairs` in `scripts/sid/sid-pure.ts`)
+  at catalog build time from `events.tsv` — each still-retired SID whose
+  last removal is a `merge` maps to its `successor`
+  (`sidSuccessorPairs` in `scripts/sid/events-pure.ts`)
   and shipped as the catalog manifest's `sidSuccessors` side-field —
   so a merge-retired SID arriving on the wire resolves to its
   survivor with no extra fetch.
@@ -576,7 +577,7 @@ What a v4 link meets on a receiver:
 | v1 / v2 / v3 blob | version byte 1–3 | unsupported version → first-load view, param stripped ([§ 9.3](#93-pre-sid-formats-are-retired)). |
 | v4 blob, decoder from an older deploy | version byte = 4 | unknown version → `decodeBlob` throws → first-load view, param stripped. Unavoidable on a SCHEMA_VERSION bump; single-deploy site makes the overlap window short. |
 | unknown high mask bits in a v4 blob | — | ignored (forward tolerance for future append-only fields). |
-| retired/parked SID arriving in v4 | LEB128 | `retirements.successor_sid` set → resolve to successor; else unresolved → deferred intent that expires ([§ 8](#8-runtime-resolver-b4)): the field degrades, the rest of the state applies. |
+| retired/parked SID arriving in v4 | LEB128 | `merge` event's `successor` set → resolve to successor; else unresolved → deferred intent that expires ([§ 8](#8-runtime-resolver-b4)): the field degrades, the rest of the state applies. |
 
 ## 10. Adding a future object type — the recipe
 
@@ -605,7 +606,7 @@ migration**.
 ## 11. Acceptance traceability
 
 - **B1 registry substrate** (`stellata-efju.2`): same-as graph +
-  boundary [§ 4.1](#41-same-as-equivalence-graph); canonical ladder [§ 4.2](#42-canonical-key--stability-first); ledger + retirements +
+  boundary [§ 4.1](#41-same-as-equivalence-graph); canonical ladder [§ 4.2](#42-canonical-key--stability-first); ledger + events +
   head files [§ 4.3](#43-ledger--datasidledgertsv); allocation tool [§ 4.4](#44-allocation); CI guard [§ 4.5](#45-ci-guard); synth
   churn detection [§ 5](#5-synthetic-key-churn-wds-re-subdivision); DR-reconciliation classifier + risk-set
   exporter [§ 6.1](#61-procedure)/6.2.

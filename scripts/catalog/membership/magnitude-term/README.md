@@ -142,7 +142,7 @@ not already holding a record: `already-in-catalog` rises 1,668 → 3,324 as the
 deep population turns out to *contain* stars the build used to promote under a
 synthetic id. A deeper floor converts promoted companions into ordinary records
 rather than adding to them. Two of those synthetic classes then match only
-retired sids and need `../../../../data/sid/reinstatements.tsv` rows, and seven
+retired sids and need `reinstate` events in `../../../../data/sid/events.tsv`, and seven
 rows reach the record only through a stored same-as edge
 ([Same-as bridge to an already-admitted source](../../companions/README.md#same-as-bridge-to-an-already-admitted-source)).
 
@@ -191,7 +191,8 @@ and moves **about 3,000 of the 388,071 records that were already there** —
 `multiplicityStatus` 1,139, `lumClass` 1,102, `spectClass` 591, the display
 name 3, one `gaiaSourceId`. Some are large: sid 1406 moves about 46 pc.
 
-**Nothing drops** because the five retirements below are DECLARED, so the
+**Nothing drops** because the five retirements below are DECLARED
+(`data/sid/events.tsv`), so the
 same-tree floor-off baseline honours them too — all five sids are absent from
 both builds. An undeclared drop would still fail.
 
@@ -211,7 +212,7 @@ Two identity consequences, both handled in `data/sid/`:
 - **Two retired components reappear** — `19059+3502 B` and `00392+6207 C` —
   because the floor admits each pair's anchor, so the id-less pair-row primary
   has something to promote against again. Both resume their original sid
-  through `data/sid/reinstatements.tsv`.
+  through a `reinstate` event in `data/sid/events.tsv`.
 
 **No object is drawn twice.** sid 232194, `synth:20450+1244-B`, was: its
 same-as bridge names a Gaia source the deep population admits as its own

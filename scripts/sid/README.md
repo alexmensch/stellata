@@ -199,13 +199,10 @@ A Stage-5 filter change that mass-drops optical pairs orphans every
 synth key those pairs minted; the reported "candidates" are then
 surviving siblings with *different letters* — different physical
 stars, never bridge targets. (The reverse — a pipeline refinement
-re-promotes a component whose sid was retired — is a reinstatement
-row in `data/sid/reinstatements.tsv`, [§ 4.3](/docs/sid.md#43-ledger--datasidledgertsv).) Resolve as
-successor-less retirements:
-map each orphan key to its sid through `ledger.tsv`, append
-`sid<TAB>date<TAB>reason<TAB>` rows to `retirements.tsv` (script the
-mapping; one shared reason string per cause), re-run `sid:allocate`,
-then `pnpm run build:catalog`. Before writing, verify attribution: the
+re-promotes a component whose sid was retired — is a `reinstate`
+event in `data/sid/events.tsv`, [§ 4.3](/docs/sid.md#43-ledger--datasidledgertsv).) Resolve as
+successor-less retirements: each orphan's sid gets a `retire` event in
+`data/sid/events.tsv`. Before writing, verify attribution: the
 Stage-7 count diff must conserve the donor tier's population into the
 new verdicts, or some orphans belong to a different change. CI's
 `sid:check` keeps main permanently consistent, so on an up-to-date

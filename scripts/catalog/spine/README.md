@@ -344,8 +344,8 @@ unless another home is named; the committed gates are
   carries its own |Δci| measurement ([The ci cascade](../photometry/README.md#the-ci-cascade))
   and its own per-tier routing pins.
 - **Identity events — five bridges, zero ledger writes.** The swap
-  appended nothing to `data/sid/ledger.tsv`, `retirements.tsv` or
-  `reinstatements.tsv`; there were no presence events (membership is
+  appended nothing to `data/sid/ledger.tsv` and recorded no `retire`,
+  `merge` or `reinstate` event; there were no presence events (membership is
   1:1 with the prior build) and no merges or splits. The complete
   identity surface is the five CNS5 Gliese renumberings, bridged in
   `data/sid/sameas-overrides.tsv` — `parity-ledger.test.ts` pins that
@@ -393,7 +393,7 @@ Pins: `derivationOutcome`, `derivedVia` and the review counts in
   presence events; the SIDs hold. **Eight identity events**: AT-HYG carried
   eight Gaia sources as rows of their own beside the HIP record each belongs
   to, and the derived binding joins the classes — the Gaia-keyed twin retires
-  with the HIP SID as successor (`data/sid/retirements.tsv`, the same shape as
+  with the HIP SID as successor (a `merge` event in `data/sid/events.tsv`, the same shape as
   the three sibling-letter merges before it). One `synth:` key re-letters
   (HD 98278's collocated B and C pair rows promote as one record under B,
   bridged in `data/sid/sameas-overrides.tsv`) and one promoted companion mints

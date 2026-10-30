@@ -135,8 +135,8 @@ measurement, over two directories of built artifacts (`catalog-manifest.json`
 + its chunks); `--current` defaults to `public/`.
 
 **It fails on two things only**: a baseline sid the current build lacks, and a
-sid two current records carry. A retirement declared in
-`data/sid/retirements.tsv` is honoured by a same-tree baseline too, so it never
+sid two current records carry. A retirement declared as a
+`retire` or `merge` event in `data/sid/events.tsv` is honoured by a same-tree baseline too, so it never
 reads as a drop; an undeclared one does. **Field deltas on a shared sid are
 reported, never failed** — companion promotion, anchor-flux conservation and
 system distance coherence read the record set, so a deeper catalogue

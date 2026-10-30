@@ -261,7 +261,7 @@ Per-row gates and resolution:
   addressable `synth-<wds_id>-<comp>` key exactly like an
   identifier-less secondary. The honesty gates are position and
   brightness, not identity; a reappearing previously-retired component
-  is reconciled in the SID ledger via `data/sid/reinstatements.tsv`
+  is reconciled in the SID ledger by a `reinstate` event in `data/sid/events.tsv`
   ([§ 4.3](/docs/sid.md#43-ledger--datasidledgertsv)), never by dropping the star. Position resolves
   in preference order: (1) the row's own
   per-component astrometry when Stage 3 supplied a real independent fit
