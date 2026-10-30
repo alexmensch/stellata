@@ -8,21 +8,21 @@ import { readFileSync } from 'node:fs';
 import { relative } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
+import { REASON_CODES } from '../scripts/catalog/lineage/reason-codes-tsv';
 import { fileAtMergeBase } from '../scripts/util/git-provenance';
 import { REPO_ROOT } from '../scripts/util/paths';
-import { artifactText, isReadable } from '../scripts/util/sources/source';
+import { artifactText, isReadable, readArtifact } from '../scripts/util/sources/source';
 import { ALLOCATE_OUTPUTS } from '../scripts/sid/allocate-outputs';
+import { retiredSids, sidSuccessorPairs, validateEvents } from '../scripts/sid/events-pure';
+import { EVENTS, eventsFile } from '../scripts/sid/events-tsv';
 import { LEDGER, ledgerFile } from '../scripts/sid/ledger-tsv';
 import { SHELL_OBJECTS, SOL_OBJECTS } from '../scripts/sid/object-mints-source';
-import { REINSTATEMENTS, RETIREMENTS } from '../scripts/sid/registry-source';
 import { SAMEAS_BRIDGES, SAMEAS_OVERRIDES } from '../scripts/sid/sameas-source';
 import {
   EMPTY_HEAD_TRIPLE,
   checkAppendOnly,
   computeLedgerHead,
   validateLedger,
-  validateReinstatements,
-  validateRetirements,
   type LedgerHead,
 } from '../scripts/sid/sid-pure';
 
@@ -35,16 +35,27 @@ function baseHead(): LedgerHead | null {
 
 describe.skipIf(!available)('sid ledger guard', () => {
   const ledger = () => ledgerFile(artifactText(LEDGER));
-  const retirements = () => RETIREMENTS.read();
-  const reinstatements = () => REINSTATEMENTS.read();
+  const events = () => eventsFile(artifactText(EVENTS));
 
-  it('ledger, retirements, and reinstatements are structurally valid', () => {
+  it('ledger and events are structurally valid', () => {
     const rows = ledger().rows;
-    const retired = retirements().rows;
-    const reinstated = reinstatements().rows;
+    const codes = new Set(readArtifact(REASON_CODES).map((e) => e.code));
     expect(validateLedger(rows)).toEqual([]);
-    expect(validateRetirements(retired, rows, reinstated)).toEqual([]);
-    expect(validateReinstatements(reinstated, rows, retired)).toEqual([]);
+    expect(validateEvents(events().rows, rows.length, (code) => codes.has(code))).toEqual([]);
+  });
+
+  it('every event code declares the effect its event has', () => {
+    const effect = new Map(readArtifact(REASON_CODES).map((e) => [e.code, e.effect]));
+    const want = { mint: 'none', reinstate: 'none', retire: 'retire', merge: 'merge' } as const;
+    const wrong = events().rows.filter((e) => effect.get(e.code) !== want[e.event]);
+    expect(wrong.map((e) => `${e.event} of sid ${e.sid}: ${e.code}`)).toEqual([]);
+  });
+
+  it('retired state carries over from the migrated retirement files', () => {
+    const rows = events().rows;
+    expect(retiredSids(rows).size).toBe(3645);
+    expect(sidSuccessorPairs(rows).length).toBe(3400);
+    expect(new Set(rows.filter((e) => e.event === 'reinstate').map((e) => e.sid)).size).toBe(17);
   });
 
   it('stored same-as edges and the mint lists parse under the designation grammar', () => {
@@ -56,7 +67,7 @@ describe.skipIf(!available)('sid ledger guard', () => {
 
   it('ledger-head.json exactly matches a recomputation over the working files', () => {
     const head = JSON.parse(readFileSync(ALLOCATE_OUTPUTS.files.head, 'utf-8')) as LedgerHead;
-    expect(head).toEqual(computeLedgerHead(ledger(), retirements(), reinstatements()));
+    expect(head).toEqual(computeLedgerHead(ledger(), events()));
   });
 
   it('the frozen prefix is append-only against the merge-base head', ({ skip }) => {
@@ -65,25 +76,15 @@ describe.skipIf(!available)('sid ledger guard', () => {
       skip('no merge-base ledger-head.json (first PR, shallow clone, or no origin/main)');
       return;
     }
-    const ledgerLines = ledger().lines;
-    const retirementLines = retirements().lines;
     expect(
-      checkAppendOnly(base.ledger, ledgerLines, 'ledger.tsv', { newSidsPastBaseMax: true }),
+      checkAppendOnly(base.ledger, ledger().lines, 'ledger.tsv', { newSidsPastBaseMax: true }),
     ).toEqual([]);
+    // A head written before events.tsv existed freezes zero rows: the one
+    // migration of retirements.tsv and reinstatements.tsv appends them all.
     expect(
-      checkAppendOnly(base.retirements, retirementLines, 'retirements.tsv', {
+      checkAppendOnly(base.events ?? EMPTY_HEAD_TRIPLE, events().lines, 'events.tsv', {
         newSidsPastBaseMax: false,
       }),
-    ).toEqual([]);
-    const reinstatementLines = reinstatements().lines;
-    // Heads written before reinstatements.tsv existed freeze zero rows.
-    expect(
-      checkAppendOnly(
-        base.reinstatements ?? EMPTY_HEAD_TRIPLE,
-        reinstatementLines,
-        'reinstatements.tsv',
-        { newSidsPastBaseMax: false },
-      ),
     ).toEqual([]);
   });
 });

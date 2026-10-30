@@ -28,14 +28,13 @@ function stamped(name: string): string {
     process.exit(1);
   }
 
-  const { ledger, retirements, reinstatements, storedEdges } = loadRegistry();
+  const { ledger, events, storedEdges } = loadRegistry();
   const objects = siblingArtifactObjects(spec, items);
   const { objectSids, errors } = resolveSids({
     objects,
     storedEdges,
     ledger,
-    retirements,
-    reinstatements,
+    events,
   });
   if (errors.length > 0) {
     console.error(

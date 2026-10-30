@@ -5,7 +5,7 @@ import { basename, extname, join, relative } from 'node:path';
 import GithubSlugger from 'github-slugger';
 import { Lexer, type Token, walkTokens } from 'marked';
 import { gitFiles, lfsTracked, presentFiles } from '../scripts/util/git-files';
-import { RETIREMENTS } from '../scripts/sid/registry-source';
+import { EVENTS } from '../scripts/sid/events-tsv';
 
 export interface DocPointer {
   citedPath: string;
@@ -68,7 +68,7 @@ export function resolveDocPath(citedPath: string, fromDir: string, root: string)
 export const SCANNED_KINDS = ['.ts', '.md', '.py', '.sh', '.css', '.yml', '.html', '.json', '.tsv', '.gitignore'];
 const UNSCANNED = [
   // Prefix-frozen by tests/sid-ledger-guard.test.ts: its rows cannot be rewritten.
-  RETIREMENTS.file,
+  EVENTS.file,
 ];
 export const kindOf = (name: string): string => extname(name) || basename(name);
 

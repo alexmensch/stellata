@@ -31,8 +31,16 @@ ledger-tsv.ts (+ test)    LEDGER — ledger.tsv's artifact codec, plus
                           registry file reads a sid as TableRow.id
                           (../util/tsv/README.md). The test round-trips
                           the committed ledger byte for byte.
-registry-source.ts        RETIREMENTS, REINSTATEMENTS — the hand-appended
-                          registry files, declared (../util/sources/).
+events-pure.ts (+ test)   events.tsv's row shape, validateEvents, and the
+                          retired-state count (retiredSids,
+                          sidSuccessorPairs): out of service iff more
+                          retire + merge events than reinstates.
+events-tsv.ts (+ test)    EVENTS — events.tsv's artifact codec, plus
+                          eventsFile; the test round-trips the committed
+                          file.
+allocation-lineage-pure.ts  Allocation as a lineage stage: its reason
+                          codes, including the historical legacy.* codes
+                          the migrated retirement rows carry.
 sameas-source.ts          SAMEAS_OVERRIDES and SAMEAS_BRIDGES: the curated
                           edges, and data/sid/bridges/ as a folder source
                           whose *.tsv files are its members, so a new
@@ -46,21 +54,20 @@ stored-edges.ts           loadStoredEdges: overrides plus bridges, the
 catalog-designations.ts   Designation set per BUILT catalog record, from
                           catalog.bin + the two public/ sidecars (README.md#designation-extraction--where-each-namespace-comes-from). Shared by allocate and
                           the inherited spine's parity gate.
-registry-io.ts            loadRegistry: the ledger, retirements,
-                          reinstatements and stored edges, structurally
-                          validated, for a read-only consumer. Every file
+registry-io.ts            loadRegistry: the ledger, events and stored
+                          edges, structurally validated (every event code
+                          in the generated list), for a read-only consumer. Every file
                           is required; a suite that may meet an LFS-stub
                           ledger gates on isReadable(LEDGER) itself.
                           Shared by build-catalog and the stamp.
 allocate-outputs.ts       ALLOCATE_OUTPUTS: what sid:allocate writes, the
-                          ledger and ledger-head.json, declared;
+                          ledger, events and ledger-head.json, declared;
                           tests/step-outputs.test.ts holds it.
 allocate.ts               pnpm run sid:allocate — the ONLY writer of
                           ledger.tsv, appending each mint as one
                           LEDGER.encodeLine line and never rewriting a
-                          committed one (+ ledger-head.json). The ledger,
-                          retirements and reinstatements are required
-                          inputs. Reads the BUILT artifacts:
+                          committed one (+ ledger-head.json). The ledger
+                          and events are required inputs. Reads the BUILT artifacts:
                           catalog manifest/chunks, search-index.json,
                           catalog-row-index-map.json, clouds.json,
                           local-group.json, data/sid/sol-objects.tsv,

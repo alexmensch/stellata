@@ -7,5 +7,6 @@ import { REPO_ROOT } from '../util/paths';
 
 export const ALLOCATE_OUTPUTS = declareOutputs({
   ledger: resolve(REPO_ROOT, 'data/sid/ledger.tsv'),
+  events: resolve(REPO_ROOT, 'data/sid/events.tsv'),
   head: resolve(REPO_ROOT, 'data/sid/ledger-head.json'),
 });

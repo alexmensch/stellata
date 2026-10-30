@@ -397,13 +397,13 @@ identity rows alone, byte-identical to the files they replaced as writers.
 Curated human input stays hand-written and is read by the build or its
 tests: `binding-review-dispositions.tsv`, `spine-corrections.tsv`,
 `hd_hip_route_disagreements_review.tsv`, `classic_id_overrides.tsv`,
-`sameas-overrides.tsv`. `data/sid/ledger.tsv` keeps its own contract;
-`retirements.tsv` and `reinstatements.tsv` migrate into `events.tsv` under
-historical codes, one per distinct legacy cause, and both files are deleted
-in that PR. Retired state is still decided by counting retire against
-reinstate rows per SID. The migration needs the one-time edit to the ledger
-guard that `docs/sid.md` [§ 4.5](/docs/sid.md#45-ci-guard) reserves for owner
-sign-off; the owner gave it on 2026-10-21 by choosing this migration.
+`sameas-overrides.tsv`. `data/sid/ledger.tsv` keeps its own contract.
+`data/sid/events.tsv` holds every row of the two retirement files it
+replaced, each under a `historical` code (`allocation.legacy.*`, declared in
+`../../sid/allocation-lineage-pure.ts`), one per distinct legacy cause, its
+row-specific text in `params.reason` where it is not the code's own
+description. Retired state is decided by counting retire and merge events
+against reinstates per SID, as it was over the two files.
 
 ## The placement stage
 

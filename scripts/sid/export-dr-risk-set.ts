@@ -7,12 +7,13 @@ import { emitArtifacts, runStep } from '../util/emit-artifacts';
 import { DR_RISK_SET_OUTPUTS } from './dr-risk-set-outputs';
 import { LEDGER } from './ledger-tsv';
 import { readArtifact } from '../util/sources/source';
-import { REINSTATEMENTS, RETIREMENTS } from './registry-source';
-import { effectiveRetirements, parseDesignation } from './sid-pure';
+import { retiredSids } from './events-pure';
+import { EVENTS } from './events-tsv';
+import { parseDesignation } from './sid-pure';
 
 function main(): void {
   const ledger = readArtifact(LEDGER);
-  const retired = effectiveRetirements(RETIREMENTS.read().rows, REINSTATEMENTS.read().rows);
+  const retired = retiredSids(readArtifact(EVENTS));
   const ids = new Set<string>();
   for (const row of ledger) {
     if (retired.has(row.sid)) continue;

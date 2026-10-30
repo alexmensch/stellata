@@ -148,9 +148,9 @@ import {
 import { snapshotCheck } from '../util/snapshot-check';
 import { watchHeap } from '../util/heap-budget';
 import {
-  resolveSids, sidSuccessorPairs, starDesignations, syntheticGaiaBridges,
-  type SidObject,
+  resolveSids, starDesignations, syntheticGaiaBridges, type SidObject,
 } from '../sid/sid-pure';
+import { sidSuccessorPairs } from '../sid/events-pure';
 import { loadRegistry } from '../sid/registry-io';
 import { loadStoredEdges } from '../sid/stored-edges';
 import { stepInputPaths } from '../util/step-inputs';
@@ -952,8 +952,7 @@ async function main() {
     objects: sidObjects,
     storedEdges: registry.storedEdges,
     ledger: registry.ledger,
-    retirements: registry.retirements,
-    reinstatements: registry.reinstatements,
+    events: registry.events,
   });
   const recordSids = sidResolution.objectSids;
 
@@ -1143,7 +1142,7 @@ async function main() {
     return `${i} ${n} records to V ${sortedKey[n - 1]?.toFixed(2) ?? '—'}`;
   });
   console.log(`  transport chunks — ${chunkRows.join(' · ')}`);
-  const sidSuccessors = sidSuccessorPairs(registry.retirements, registry.reinstatements);
+  const sidSuccessors = sidSuccessorPairs(registry.events);
   const manifest: CatalogManifest = {
     chunkBytes,
     totalBytes: totalLength,
