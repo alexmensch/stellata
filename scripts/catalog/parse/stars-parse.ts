@@ -45,7 +45,7 @@ import {
   type VelocityVia,
 } from '../distance/direction-cascade';
 import { lookupCns5Astrometry } from '../classic-ids/classic-ids-parse';
-import { isGaiaCatalogueBibcode } from '../distance/gaia-distrust';
+import { gaiaRowIs2p, isGaiaCatalogueBibcode } from '../distance/gaia-distrust';
 import {
   isLowPrecisionParallax,
   resolveParallax,
@@ -54,9 +54,16 @@ import {
 } from '../distance/parallax/parallax-cascade';
 import {
   PARKED_REASONS,
+  type ParkedLedgerEntry,
   type ParkedReason,
   type ParkedRecord,
 } from '../distance/parallax/parked-ledger';
+import {
+  parkedRecords,
+  type BailerJonesStep,
+  type LmcStep,
+  type Placement,
+} from '../distance/placement-lineage-pure';
 import {
   emptyPairMemberParallaxIndex,
   lookupPairMemberParallax,
@@ -286,6 +293,8 @@ export function readStars(
   }: ReadStarsOptions,
 ): {
   stars: Star[];
+  /** One per manifest row, in walk order: what placement lineage serialises. */
+  placements: Placement[];
   stats: {
     total: number;
     /** Rows carrying a source_id whose parallax cascade resolved
@@ -354,8 +363,7 @@ export function readStars(
 
   const stars: Star[] = [];
   let total = 0;
-  const parked: ParkedRecord[] = [];
-  const parkedVia = emptyTallyPartition(PARKED_REASONS);
+  const placements: Placement[] = [];
   let bjEligible = 0;
   let distLowPrecisionParallax = 0;
   let bjOverridden = 0;
@@ -434,21 +442,10 @@ export function readStars(
       ? directions.tycho2.get(simbadKeys.tyc) ?? null
       : null;
     const glieseRow = lookupGliese(gliese, simbadKeys.gl);
-    const park = (
-      reason: ParkedReason, refusedPlxMas: readonly number[] = [],
-    ): void => {
-      parked.push({
-        tyc: simbadKeys.tyc,
-        hip,
-        hd: row.hd,
-        gl: simbadKeys.gl,
-        gaiaSourceId,
-        reason,
-        refusedPlxMas,
-        originKey: row.originKey,
-      });
-      parkedVia[reason]++;
-    };
+    const key = row.originKey;
+    const parkedEntry = (reason: ParkedReason): ParkedLedgerEntry => ({
+      tyc: simbadKeys.tyc, hip, hd: row.hd, gl: simbadKeys.gl, gaiaSourceId, reason,
+    });
 
     // Every distance inverts a parallax this build pulled itself. See
     // ../distance/parallax/README.md.
@@ -467,10 +464,14 @@ export function readStars(
     );
     // Not a `dropped` gate: a park is a deliberate record-parity ledger entry (/docs/catalog-driver.md#61-record-parity).
     if (plxRes.via === 'none') {
-      const refusedPlxMas = plxRes.refusals.map((r) => r.mas);
-      park(refusedPlxMas.length > 0
-        ? 'refused_no_defensible_parallax'
-        : 'no_parallax_published', refusedPlxMas);
+      placements.push({
+        kind: 'parked-parallax',
+        key,
+        entry: parkedEntry(plxRes.refusals.length > 0
+          ? 'refused_no_defensible_parallax'
+          : 'no_parallax_published'),
+        parallax: plxRes,
+      });
       continue;
     }
 
@@ -489,7 +490,7 @@ export function readStars(
       curatedV: isSol ? SOL_APPARENT_V_MAGNITUDE : null,
     });
     if (vRes.via === 'none') {
-      park('no_v_magnitude');
+      placements.push({ kind: 'parked-no-v', key, entry: parkedEntry('no_v_magnitude'), parallax: plxRes });
       continue;
     }
 
@@ -507,7 +508,9 @@ export function readStars(
     // reaches — the SIMBAD values cohort is still keyed on the spine and holds
     // no row for them.
     if (direction.via === 'none') {
-      park('no_position');
+      placements.push({
+        kind: 'parked-no-position', key, entry: parkedEntry('no_position'), parallax: plxRes, direction,
+      });
       continue;
     }
     const dirRes = direction.value;
@@ -544,25 +547,30 @@ export function readStars(
     let distVia: DistVia = plxRes.via;
     const bjEligibleRow = isBailerJonesEligible(gaiaSourceId, plxRes.via);
     if (bjEligibleRow) bjEligible++;
+    let bailerJones: BailerJonesStep = { kind: 'not-applied' };
     if (bjEligibleRow && bjMap.size > 0) {
       const ovr = applyBailerJonesOverride(gaiaSourceId, bjMap);
       if (ovr !== null) {
         dist = ovr.distPc;
         distVia = 'bailer_jones';
         bjOverridden++;
+        bailerJones = { kind: 'override', ref: ovr.ref };
       } else {
         bjEligibleNotPulled++;
+        bailerJones = { kind: 'absent' };
       }
     }
 
     // Runs AFTER B-J so the LMC snap overrides B-J's mis-anchored value on the
     // same rows.
     const raHours = dirRes.srcRaDeg / 15;
+    let lmcStep: LmcStep = 'not_member';
     if (isInLmcCone(raHours, dirRes.srcDecDeg)) {
       lmcCandidates++;
       const lmc = applyLmcKinematicOverride(
         raHours, dirRes.srcDecDeg, pmRaMasyr, pmDecMasyr, measuredPlx,
       );
+      lmcStep = lmc.kind;
       if (lmc.kind === 'snap') {
         lmcOverriddenByDistVia[distVia]++;
         dist = lmc.distPc;
@@ -766,10 +774,28 @@ export function readStars(
       syntheticId: null,
       originKey: row.originKey,
     });
+    placements.push({
+      kind: 'placed',
+      key,
+      parallax: plxRes,
+      direction,
+      gaia2p: gaiaRowIs2p(gaiaRow),
+      pmRescue,
+      bailerJones,
+      lmc: lmcStep,
+      rv: rvRes,
+      rvRejected,
+      velocityClamped: velClamped,
+    });
   }
+
+  const parked = parkedRecords(placements);
+  const parkedVia = emptyTallyPartition(PARKED_REASONS);
+  for (const p of parked) parkedVia[p.reason]++;
 
   return {
     stars,
+    placements,
     stats: {
       total,
       bjEligible,

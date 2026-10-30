@@ -253,7 +253,10 @@ refusals are rows of their own. `MEMBERSHIP_LINEAGE_BUDGET` pins 41 MB and
 write slower than a workstation. Promotion, measured the same day: <!-- count:build-binaries/multiples_rows_emitted -->47,018<!-- /count --> rows, one
 per `multiples.tsv` row, plus an identity row per minted companion, 0.70 MB
 gzipped in 0.3 s without a diff; `PROMOTION_LINEAGE_BUDGET` pins 0.8 MB and
-5 s.
+5 s. Placement, measured 2026-10-30: 3,872,657 rows (349 MB plain, 31.0 MB
+gzipped) in 5.3 s without a diff; `PLACEMENT_LINEAGE_BUDGET` pins 34 MB and
+15 s. A file that size outruns V8's longest string, so stage files are
+written and read as UTF-8 bytes in chunks, never as one string.
 
 The committed form of lineage is `data/sid/events.tsv` plus the ledger views
 below; the derivation itself is a build artifact, regenerated every build.
@@ -361,7 +364,8 @@ still regenerated and diffed by CI, so a PR diff keeps showing the change:
 
 `binding-review.tsv` and `rejected_bindings.tsv` are then two filters over
 one row type. Each view moves when its writing stage gains lineage; the
-first four are views now ([The membership stage](#the-membership-stage)).
+first four are views now ([The membership stage](#the-membership-stage)),
+and so is `parked-ledger.tsv` ([The placement stage](#the-placement-stage)).
 
 ## The membership stage
 
@@ -388,9 +392,32 @@ reinstate rows per SID. The migration needs the one-time edit to the ledger
 guard that `docs/sid.md` [§ 4.5](/docs/sid.md#45-ci-guard) reserves for owner
 sign-off; the owner gave it on 2026-10-21 by choosing this migration.
 
+## The placement stage
+
+`build:catalog`'s record walk is the second stage
+(`../distance/placement-lineage-pure.ts`). `readStars` returns one
+`Placement` per manifest row, keyed on its origin key: each step the walk
+ran, in walk order, up to the park that stopped it or the record it shipped.
+`placementLineageRows` serialises it through an exhaustive `switch`:
+
+- every step writes its outcome code and its refused candidates, the
+  candidate's tier in `params`; a refusal code names the rule, never the tier;
+- parallax and direction always, then the park for a parked row; a placed
+  row adds the PM rescue where it ran, Bailer-Jones and the LMC snap where
+  they fired, and its radial velocity;
+- each row cites, as evidence, the source rows its cascade read
+  (`CitedCascadeResult`, `../cascade-result.ts`), and no measured value;
+- the four park codes declare effect `park`, so a SID the build stops
+  producing stays in the ledger, absent.
+
+A park row carries the manifest's five identifier cells in `params`, since
+those cells are the parked ledger's key and the parity gate's join, and
+`parkedLedgerView` generates `data/membership/parked-ledger.tsv` from the
+park rows alone. Placement founds no record, so it writes no identity rows.
+
 ## The promotion stage
 
-`build:catalog`'s companion promotion is the second stage
+`build:catalog`'s companion promotion is the third stage
 (`../companions/promotion-lineage-pure.ts`). `promoteCompanions` returns one
 `PromotedRow` per `multiples.tsv` row, keyed on that row
 (`multiples:<system_id>/<comp>`), and `promotionLineageRow` serialises its

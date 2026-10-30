@@ -72,6 +72,11 @@ scripts/catalog/distance/
                                   folders build these rows, and the point
                                   is that a column added to the interface
                                   lands in one place.
+  placement-lineage-pure.ts       Placement as a lineage stage: its codes,
+    (+ test)                      the Placement each manifest row's walk
+                                  returns, its one serialiser, and the parked
+                                  ledger as a view of its park rows
+                                  (../lineage/README.md#the-placement-stage).
   dust/                           Build-time de-extinction against the
                                   dust grid of Edenhofer 2024
                                   (/data/papers/index.md#edenhofer2024), and

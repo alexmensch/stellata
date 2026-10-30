@@ -32,7 +32,9 @@ scripts/catalog/distance/parallax/
                                 gate matches it on.
   parked-ledger-tsv.ts          Its codec (PARKED_LEDGER), apart so a module
                                 needing only the enum reaches no file. The
-                                producer is build-catalog.ts, the consumer
+                                rows are a view of placement lineage's park
+                                rows (../placement-lineage-pure.ts), the
+                                consumer
                                 ../../membership/membership-manifest-gate.test.ts.
 ```
 

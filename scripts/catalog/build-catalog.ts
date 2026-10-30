@@ -81,7 +81,7 @@ import {
 } from './companions/promotion-lineage-pure';
 import { identityText } from './lineage/identity-pure';
 import { LINEAGE_LAYOUT } from './lineage/lineage-io';
-import { stageLineageText } from './lineage/lineage-row-pure';
+import { stageLineageText, type LineageRow } from './lineage/lineage-row-pure';
 import { stageLineage } from './lineage/stage-lineage';
 import {
   buildCatalogRowIndexMap,
@@ -109,13 +109,15 @@ import {
   loadStarNamingInputs,
 } from './naming/apply-star-names';
 import { assignDisplayNames } from './naming/display-names';
-import { readStars, type Star } from './parse/stars-parse';
+import { readStars, type ReadStarsOptions, type Star } from './parse/stars-parse';
 import {
   PARKED_COUNT_KEY,
   PARKED_REASONS,
-  type ParkedRecord,
 } from './distance/parallax/parked-ledger';
 import { PARKED_LEDGER } from './distance/parallax/parked-ledger-tsv';
+import {
+  PLACEMENT_CODES, PLACEMENT_LINEAGE, PLACEMENT_LINEAGE_BUDGET, parkedLedgerView, placementLineageRows,
+} from './distance/placement-lineage-pure';
 import {
   SIMBAD_SOURCED_DISTANCES_FILE,
   SIMBAD_SOURCED_DISTANCES,
@@ -131,7 +133,7 @@ import { MEMBERSHIP_MANIFEST } from './membership/membership-manifest-tsv';
 import { artifactRows } from '../util/sources/source';
 import { REPO_ROOT as ROOT } from '../util/paths';
 import {
-  clearStamp, fileHashes, stampIsCurrent,
+  clearStamp, fileHashes, stampIsCurrent, type FileHashes,
 } from '../util/build-stamp';
 import {
   DEFAULT_CATALOG_MANIFEST as OUT_MANIFEST, DEFAULT_CONSTELLATIONS_JSON as OUT_CON,
@@ -166,7 +168,28 @@ const EXPECTED_OUTLIERS = resolve(
  *  in the catalogue and are recomputable from it, nothing else records that
  *  these existed. Committed so the set is diffable: a refresh that moves it is
  *  a membership change, and Gaia DR4 should empty most of it. */
-function parkedRecordsTsv(parked: readonly ParkedRecord[]): string {
+// A function of its own so the placement rows are unreachable once it returns:
+// inlined into main, they outlive the walk and the build runs out of heap.
+async function walkManifest(inputs: ReadStarsOptions, inputHashes: FileHashes) {
+  const { stars, placements, stats } = readStars(artifactRows(MEMBERSHIP_MANIFEST), inputs);
+  const rows = placements.flatMap(placementLineageRows);
+  const parkedLedger = parkedLedgerTsv(rows);
+  const placementEmission = await stageLineage({
+    layout: LINEAGE_LAYOUT,
+    spec: PLACEMENT_LINEAGE,
+    inputs: inputHashes,
+    diffed: 'placement',
+    rows,
+    render: (sorted) => ({ placement: stageLineageText(PLACEMENT_CODES, sorted) }),
+    joins: () => [],
+    budget: PLACEMENT_LINEAGE_BUDGET,
+    argv: process.argv.slice(2),
+  });
+  return { stars, stats, parkedLedger, placementEmission };
+}
+
+function parkedLedgerTsv(placementRows: readonly LineageRow[]): string {
+  const parked = parkedLedgerView(placementRows);
   console.log(`  parked (record parity): ${parked.length} → ${PARKED_LEDGER.file}`);
   return PARKED_LEDGER.serialize(parked);
 }
@@ -419,7 +442,7 @@ async function main() {
 
   console.log(`Reading ${MEMBERSHIP_MANIFEST.file}...`);
   const t0 = Date.now();
-  const { stars, stats } = readStars(artifactRows(MEMBERSHIP_MANIFEST), inputs);
+  const { stars, stats, parkedLedger, placementEmission } = await walkManifest(inputs, inputHashesAtStart);
   console.log(`  parsed ${stats.total} rows in ${Date.now() - t0}ms`);
   console.log(`  kept ${stars.length} stars; parked ${stats.parked.length}`);
   if (stats.bjEligible > 0) {
@@ -525,7 +548,6 @@ async function main() {
       + ' (ship, biased inversion — revisit at Gaia DR4)',
     );
   }
-  const parkedLedger = parkedRecordsTsv(stats.parked);
   const simbadSourcedDistances = simbadSourcedDistancesTsv(stars);
   // recordCount is the final post-promotion count; populated after the
   // companion-promotion pass below.
@@ -1253,9 +1275,10 @@ async function main() {
     rowIndexMap: rowIndexMapJson,
     parkedLedger,
     simbadSourcedDistances,
+    ...placementEmission.files,
     ...lineage.files,
   };
-  const members = new Map([...chunks, ...lineage.members]);
+  const members = new Map([...chunks, ...placementEmission.members, ...lineage.members]);
   const sidResolved = recordSids.reduce((n, sid) => (sid !== 0 ? n + 1 : n), 0);
   console.log(`SID: ${sidResolved} / ${stars.length} records resolved to a ledger SID`);
   if (sidResolution.errors.length > 0) {
@@ -1277,7 +1300,9 @@ async function main() {
     outputs: CATALOG_OUTPUTS,
     files,
     members,
-    checks: [...lineage.checks, buildCountsCheck(counts), distanceOutliersCheck(stars)],
+    checks: [
+      ...placementEmission.checks, ...lineage.checks, buildCountsCheck(counts), distanceOutliersCheck(stars),
+    ],
     stamp: { path: CATALOG_STAMP, inputs: inputHashesAtStart },
   });
 }

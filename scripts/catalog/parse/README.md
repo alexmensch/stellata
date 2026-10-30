@@ -215,7 +215,10 @@ post-build distance-regression check has the input to measure drift against.
 Both are null on Sol, which sits at distance zero by construction, and on
 records minted rather than walked. `originKey` is build-time-only too: the
 row's `origin_key`, which a later stage's lineage cites the record by
-([Identity](../lineage/README.md#identity--the-origin-source-row)).
+([Identity](../lineage/README.md#identity--the-origin-source-row)). Beside
+the records the walk returns one `Placement` per manifest row, parked or
+shipped — what [placement lineage](../lineage/README.md#the-placement-stage)
+serialises and the park counts fold from.
 
 The manifest carries no `x0/y0/z0`, and AT-HYG's was never consumed: it is a
 mixed-epoch merge artifact, tabulated at ~3 dp (a 206 AU grid) and internally
