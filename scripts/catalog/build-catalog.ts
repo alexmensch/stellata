@@ -163,11 +163,6 @@ const EXPECTED_OUTLIERS = resolve(
   'distance/refinement/build-distance-outliers-expected.json',
 );
 
-/** The record-parity dropped list (/docs/catalog-driver.md#61-record-parity). A record that reaches no owned parallax cannot be
- *  placed, so it does not ship — and unlike the low-precision rows, which stay
- *  in the catalogue and are recomputable from it, nothing else records that
- *  these existed. Committed so the set is diffable: a refresh that moves it is
- *  a membership change, and Gaia DR4 should empty most of it. */
 // A function of its own so the placement rows are unreachable once it returns:
 // inlined into main, they outlive the walk and the build runs out of heap.
 async function walkManifest(inputs: ReadStarsOptions, inputHashes: FileHashes) {
