@@ -1,7 +1,7 @@
 // The run-to-run diff: a merge-join of two key-sorted lineage files, and its TSV form. See README.md#run-to-run-diff.
 
 import {
-  LINEAGE_COLUMNS, assertLineageOrder, compareUtf8, encodeLineageLine, type LineageRow,
+  LINEAGE_COLUMNS, compareLineageRows, compareUtf8, encodeLineageLine, utf8Lines, type LineageRow,
 } from './lineage-row-pure';
 
 export type KeyChangeKind = 'added' | 'removed' | 'changed';
@@ -15,41 +15,48 @@ export interface KeyChange {
   readonly added: readonly LineageRow[];
 }
 
-function keyGroups(rows: readonly LineageRow[], side: string): LineageRow[][] {
-  assertLineageOrder(rows, `the diff's ${side} file`);
-  const groups: LineageRow[][] = [];
-  for (let i = 0; i < rows.length; i++) {
-    if (i > 0 && rows[i - 1].key === rows[i].key) groups[groups.length - 1].push(rows[i]);
-    else groups.push([rows[i]]);
+function* keyGroups(rows: Iterable<LineageRow>, side: string): Generator<LineageRow[]> {
+  let group: LineageRow[] = [];
+  let prev: LineageRow | null = null;
+  for (const row of rows) {
+    if (prev !== null && compareLineageRows(prev, row) > 0) {
+      throw new Error(`lineage: the diff's ${side} file is not in lineage order at key ${row.key}`);
+    }
+    if (prev !== null && prev.key !== row.key) {
+      yield group;
+      group = [];
+    }
+    group.push(row);
+    prev = row;
   }
-  return groups;
+  if (group.length > 0) yield group;
 }
 
 /** A key's rows diff as a set: changed means the set under one key differs. */
-export function diffLineage(baseline: readonly LineageRow[], current: readonly LineageRow[]): KeyChange[] {
+export function diffLineage(baseline: Iterable<LineageRow>, current: Iterable<LineageRow>): KeyChange[] {
   const before = keyGroups(baseline, 'baseline');
   const after = keyGroups(current, 'current');
   const changes: KeyChange[] = [];
-  let i = 0;
-  let j = 0;
-  while (i < before.length || j < after.length) {
-    const order = i === before.length ? 1 : j === after.length ? -1 : compareUtf8(before[i][0].key, after[j][0].key);
-    if (order < 0) {
-      changes.push({ kind: 'removed', key: before[i][0].key, removed: before[i], added: [] });
-      i++;
-    } else if (order > 0) {
-      changes.push({ kind: 'added', key: after[j][0].key, removed: [], added: after[j] });
-      j++;
-    } else {
-      const was = new Set(before[i].map(encodeLineageLine));
-      const now = new Set(after[j].map(encodeLineageLine));
-      const removed = before[i].filter((r) => !now.has(encodeLineageLine(r)));
-      const added = after[j].filter((r) => !was.has(encodeLineageLine(r)));
+  let b = before.next();
+  let a = after.next();
+  while (!b.done || !a.done) {
+    const order = b.done ? 1 : a.done ? -1 : compareUtf8(b.value[0].key, a.value[0].key);
+    if (order < 0 && !b.done) {
+      changes.push({ kind: 'removed', key: b.value[0].key, removed: b.value, added: [] });
+      b = before.next();
+    } else if (order > 0 && !a.done) {
+      changes.push({ kind: 'added', key: a.value[0].key, removed: [], added: a.value });
+      a = after.next();
+    } else if (!b.done && !a.done) {
+      const was = new Set(b.value.map(encodeLineageLine));
+      const now = new Set(a.value.map(encodeLineageLine));
+      const removed = b.value.filter((r) => !now.has(encodeLineageLine(r)));
+      const added = a.value.filter((r) => !was.has(encodeLineageLine(r)));
       if (removed.length > 0 || added.length > 0) {
-        changes.push({ kind: 'changed', key: before[i][0].key, removed, added });
+        changes.push({ kind: 'changed', key: b.value[0].key, removed, added });
       }
-      i++;
-      j++;
+      b = before.next();
+      a = after.next();
     }
   }
   return changes;
@@ -65,15 +72,15 @@ export const DIFF_COLUMNS = ['change', 'side', ...LINEAGE_COLUMNS] as const;
 
 /** One line per row that differs, `-` from the baseline and `+` from the
  *  current build, under its key's change kind. */
-export function stageDiffText(changes: readonly KeyChange[], joins: readonly DiffJoin[] = []): string {
-  const lines = [[...DIFF_COLUMNS, ...joins.map((j) => j.name)].join('\t')];
-  for (const change of changes) {
-    const joined = joins.map((j) => j.of(change.key));
-    for (const [side, rows] of [['-', change.removed], ['+', change.added]] as const) {
-      for (const row of rows) {
-        lines.push([change.kind, side, encodeLineageLine(row), ...joined].join('\t'));
+export function stageDiffText(
+  changes: readonly KeyChange[], joins: readonly DiffJoin[] = [], batch?: number,
+): Uint8Array {
+  return utf8Lines([...DIFF_COLUMNS, ...joins.map((j) => j.name)].join('\t'), (function* () {
+    for (const change of changes) {
+      const joined = joins.map((j) => j.of(change.key));
+      for (const [side, rows] of [['-', change.removed], ['+', change.added]] as const) {
+        for (const row of rows) yield [change.kind, side, encodeLineageLine(row), ...joined].join('\t');
       }
     }
-  }
-  return `${lines.join('\n')}\n`;
+  })(), batch);
 }

@@ -937,7 +937,7 @@ describe('membership lineage', () => {
       .toMatchObject({ derived_source_id: '222', source_letters: 'W1:A' });
     expect(paramsOf(binding(rebound.added)))
       .toMatchObject({ derived_source_id: '2223', source_letters: 'W1:B' });
-    expect(stageDiffText(changes))
+    expect(Buffer.from(stageDiffText(changes)).toString('utf8'))
       .toMatch(/changed\t\+\tmembership\tspine:4\toutcome\tmembership\.binding\.bound\t.*"source_letters":"W1:B"/);
   });
 

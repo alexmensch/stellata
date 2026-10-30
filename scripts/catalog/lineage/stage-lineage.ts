@@ -11,7 +11,7 @@ import {
   ACCEPT_ANY_BASELINE_FLAG, AGAINST_FLAG, planBaseline, type BaselineSource,
 } from './lineage-header-pure';
 import {
-  readLineage, readStageHeader, stageEmission, stageFile, stageHeader,
+  readStageHeader, stageEmission, stageFile, stageHeader, streamLineage,
   type LineageLayout, type StageLineageSpec, type StageOutputKey,
 } from './lineage-io';
 import { compareLineageRows, type LineageRow } from './lineage-row-pure';
@@ -72,7 +72,7 @@ export async function stageLineage<F extends string, S extends string>(
   let joins: readonly DiffJoin[] = [];
   if (plan.from !== null) {
     const dir = source.kind === 'against' ? source.dir : run.layout[plan.from === 'previous' ? 'previous' : 'current'];
-    changes = diffLineage(readLineage(stageFile(dir, run.diffed)), sorted);
+    changes = diffLineage(streamLineage(stageFile(dir, run.diffed)), sorted);
     joins = run.joins(dir);
   } else if (verdict.kind === 'refused') {
     console.log(verdict.message);

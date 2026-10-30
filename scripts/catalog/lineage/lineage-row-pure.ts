@@ -77,11 +77,26 @@ export function assertLineageOrder(rows: readonly LineageRow[], what: string): v
   }
 }
 
-const ENCODE_BATCH = 100_000;
+export const ENCODE_BATCH = 100_000;
+
+/** See README.md#storage-and-cost. */
+export function utf8Lines(header: string, lines: Iterable<string>, batch = ENCODE_BATCH): Uint8Array {
+  const parts: Buffer[] = [Buffer.from(`${header}\n`)];
+  let pending: string[] = [];
+  const flush = (): void => {
+    if (pending.length > 0) parts.push(Buffer.from(`${pending.join('\n')}\n`));
+    pending = [];
+  };
+  for (const line of lines) {
+    pending.push(line);
+    if (pending.length === batch) flush();
+  }
+  flush();
+  return Buffer.concat(parts);
+}
 
 /** `rows` arrive sorted by compareLineageRows: a stage sorts once, for its
- *  diff and its file both. UTF-8 bytes, encoded in batches, since a stage
- *  file can outrun V8's longest string. */
+ *  diff and its file both. */
 export function stageLineageText(codes: StageCodes<string>, rows: readonly LineageRow[]): Uint8Array {
   assertLineageOrder(rows, `the ${codes.stage} file`);
   for (const row of rows) {
@@ -92,12 +107,9 @@ export function stageLineageText(codes: StageCodes<string>, rows: readonly Linea
       throw new Error(`lineage: ${row.code} is not a declared ${codes.stage} code (key ${row.key})`);
     }
   }
-  const parts: Buffer[] = [Buffer.from(`${LINEAGE_COLUMNS.join('\t')}\n`)];
-  for (let i = 0; i < rows.length; i += ENCODE_BATCH) {
-    const lines = rows.slice(i, i + ENCODE_BATCH).map(encodeLineageLine);
-    parts.push(Buffer.from(`${lines.join('\n')}\n`));
-  }
-  return Buffer.concat(parts);
+  return utf8Lines(LINEAGE_COLUMNS.join('\t'), (function* () {
+    for (const row of rows) yield encodeLineageLine(row);
+  })());
 }
 
 function lineageSpec(file: string): TableSpec<(typeof LINEAGE_COLUMNS)[number]> {

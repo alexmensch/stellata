@@ -254,9 +254,12 @@ write slower than a workstation. Promotion, measured the same day: <!-- count:bu
 per `multiples.tsv` row, plus an identity row per minted companion, 0.70 MB
 gzipped in 0.3 s without a diff; `PROMOTION_LINEAGE_BUDGET` pins 0.8 MB and
 5 s. Placement, measured 2026-10-30: 3,872,657 rows (349 MB plain, 31.0 MB
-gzipped) in 5.3 s without a diff; `PLACEMENT_LINEAGE_BUDGET` pins 34 MB and
-15 s. A file that size outruns V8's longest string, so stage files are
-written and read as UTF-8 bytes in chunks, never as one string.
+gzipped) in 5.3 s without a diff and 10.9 s with one against a full
+baseline, the whole build peaking at 6.0 GB resident;
+`PLACEMENT_LINEAGE_BUDGET` pins 34 MB and 30 s. A file that size outruns
+V8's longest string, so stage files and diffs are written and read as UTF-8
+bytes in chunks, and the diff walks the baseline a key at a time
+(`streamLineage`) rather than holding it.
 
 The committed form of lineage is `data/sid/events.tsv` plus the ledger views
 below; the derivation itself is a build artifact, regenerated every build.

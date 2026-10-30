@@ -31,6 +31,7 @@ describe('the lineage order', () => {
       'multiples:00057+4549/B', 'spine:10', 'spine:2',
     ]);
     expect(diffLineage(written, written)).toEqual([]);
+    expect(diffLineage(written.values(), written)).toEqual([]);
   });
 
   it('the writer refuses rows out of lineage order, as the diff does', () => {
@@ -77,8 +78,11 @@ describe('diffLineage', () => {
     ]);
     expect(changes[1].removed.map(paramsOf)).toEqual([{ source: '1' }]);
     expect(changes[1].added.map(paramsOf)).toEqual([{ source: '2' }]);
-    expect(stageDiffText(changes, [{ name: 'note', of: (k) => `n:${k}` }]).split('\n')[2])
+    const note = [{ name: 'note', of: (k: string) => `n:${k}` }];
+    const text = Buffer.from(stageDiffText(changes, note)).toString('utf8');
+    expect(text.split('\n')[2])
       .toBe('changed\t-\tdemo\tspine:4\toutcome\tdemo.kept\t{"source":"1"}\t\tn:spine:4');
+    expect(Buffer.from(stageDiffText(changes, note, 1)).toString('utf8')).toBe(text);
   });
 
   it('refuses an input out of lineage order', () => {

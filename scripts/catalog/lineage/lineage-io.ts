@@ -98,7 +98,7 @@ export function stageEmission<F extends string, S extends string>(
   spec: StageLineageSpec<F, S>,
   texts: Readonly<Record<F, string | Uint8Array>>,
   header: StageHeader,
-  diff: string | null,
+  diff: Uint8Array | null,
   rotate: boolean,
 ): { files: Record<StageOutputKey<F, S>, ArtifactContents>; members: Map<string, ArtifactContents> } {
   const files = Object.fromEntries(
@@ -115,7 +115,12 @@ export function gzipText(text: string | Uint8Array): Uint8Array {
 }
 
 export function readLineage(path: string): LineageRow[] {
-  return [...lineageRows(gunzipSync(readFileSync(path)), path)];
+  return [...streamLineage(path)];
+}
+
+/** A stage file's rows one at a time, for a reader that need not hold them all. */
+export function streamLineage(path: string): Generator<LineageRow> {
+  return lineageRows(gunzipSync(readFileSync(path)), path);
 }
 
 export function readIdentity(path: string): IdentityRow[] {

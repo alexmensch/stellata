@@ -21,7 +21,7 @@ export const PLACEMENT_LINEAGE: StageLineageSpec<'placement', 'placement'> = {
   files: ['placement'],
 };
 
-export const PLACEMENT_LINEAGE_BUDGET = { gzipBytes: 34_000_000, writeMs: 15_000 };
+export const PLACEMENT_LINEAGE_BUDGET = { gzipBytes: 34_000_000, writeMs: 30_000 };
 
 const live = (description: string, effect: CodeDeclaration['effect'] = 'none'): CodeDeclaration => (
   { description, effect, status: LIVE }

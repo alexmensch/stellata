@@ -166,8 +166,7 @@ const EXPECTED_OUTLIERS = resolve(
 // A function of its own so the placement rows are unreachable once it returns:
 // inlined into main, they outlive the walk and the build runs out of heap.
 async function walkManifest(inputs: ReadStarsOptions, inputHashes: FileHashes) {
-  const { stars, placements, stats } = readStars(artifactRows(MEMBERSHIP_MANIFEST), inputs);
-  const rows = placements.flatMap(placementLineageRows);
+  const { stars, stats, rows } = walkRows(inputs);
   const parkedLedger = parkedLedgerTsv(rows);
   const placementEmission = await stageLineage({
     layout: LINEAGE_LAYOUT,
@@ -181,6 +180,11 @@ async function walkManifest(inputs: ReadStarsOptions, inputHashes: FileHashes) {
     argv: process.argv.slice(2),
   });
   return { stars, stats, parkedLedger, placementEmission };
+}
+
+function walkRows(inputs: ReadStarsOptions) {
+  const { stars, placements, stats } = readStars(artifactRows(MEMBERSHIP_MANIFEST), inputs);
+  return { stars, stats, rows: placements.flatMap(placementLineageRows) };
 }
 
 function parkedLedgerTsv(placementRows: readonly LineageRow[]): string {
