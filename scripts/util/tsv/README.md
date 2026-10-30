@@ -35,7 +35,9 @@ scripts/util/tsv/
 
 ## Reading a table
 
-`readTable(spec, text)` yields one `TableRow` per data row;
+`readTable(spec, text)` yields one `TableRow` per data row; handed UTF-8
+bytes instead, it decodes them a chunk at a time (`TABLE_BYTE_CHUNK`, cut at
+a line end), so a file larger than V8's longest string still reads;
 `tableLineReader(spec, onRow)` is the same walk fed a line at a time, for a
 table too large to hold as one string
 ([Streaming a committed table](../../catalog/parse/README.md#streaming-a-committed-table)).

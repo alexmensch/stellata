@@ -77,9 +77,12 @@ export function assertLineageOrder(rows: readonly LineageRow[], what: string): v
   }
 }
 
+const ENCODE_BATCH = 100_000;
+
 /** `rows` arrive sorted by compareLineageRows: a stage sorts once, for its
- *  diff and its file both. */
-export function stageLineageText(codes: StageCodes<string>, rows: readonly LineageRow[]): string {
+ *  diff and its file both. UTF-8 bytes, encoded in batches, since a stage
+ *  file can outrun V8's longest string. */
+export function stageLineageText(codes: StageCodes<string>, rows: readonly LineageRow[]): Uint8Array {
   assertLineageOrder(rows, `the ${codes.stage} file`);
   for (const row of rows) {
     if (row.stage !== codes.stage) {
@@ -89,15 +92,19 @@ export function stageLineageText(codes: StageCodes<string>, rows: readonly Linea
       throw new Error(`lineage: ${row.code} is not a declared ${codes.stage} code (key ${row.key})`);
     }
   }
-  const lines = rows.map(encodeLineageLine);
-  return `${[LINEAGE_COLUMNS.join('\t'), ...lines].join('\n')}\n`;
+  const parts: Buffer[] = [Buffer.from(`${LINEAGE_COLUMNS.join('\t')}\n`)];
+  for (let i = 0; i < rows.length; i += ENCODE_BATCH) {
+    const lines = rows.slice(i, i + ENCODE_BATCH).map(encodeLineageLine);
+    parts.push(Buffer.from(`${lines.join('\n')}\n`));
+  }
+  return Buffer.concat(parts);
 }
 
 function lineageSpec(file: string): TableSpec<(typeof LINEAGE_COLUMNS)[number]> {
   return { file, columns: LINEAGE_COLUMNS, hint: 'Rebuild the stage that writes it.', exact: true };
 }
 
-export function* lineageRows(text: string, file: string): Generator<LineageRow> {
+export function* lineageRows(text: string | Uint8Array, file: string): Generator<LineageRow> {
   for (const row of readTable(lineageSpec(file), text)) {
     const evidence = row.raw('evidence');
     yield {

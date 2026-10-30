@@ -32,7 +32,7 @@ export interface StageLineageRun<F extends string, S extends string> {
   readonly diffed: F;
   readonly rows: readonly LineageRow[];
   /** Handed `rows` in lineage order. */
-  readonly render: (sorted: readonly LineageRow[]) => Readonly<Record<F, string>>;
+  readonly render: (sorted: readonly LineageRow[]) => Readonly<Record<F, string | Uint8Array>>;
   /** Built only when a diff runs, from the baseline directory it reads. */
   readonly joins: (baselineDir: string) => readonly DiffJoin[];
   readonly budget: LineageBudget;

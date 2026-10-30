@@ -23,7 +23,7 @@ const header = (commit: string): StageHeader => ({
   stage: 'demo', version: '1.0.0', commit, dirty: false, inputHash: 'h', files: ['demo.tsv.gz', 'identity.tsv.gz'],
 });
 
-function text(source: string): string {
+function text(source: string): Uint8Array {
   return stageLineageText(CODES, [{
     stage: 'demo', key: 'spine:2', role: 'outcome', code: 'demo.kept', params: paramsText({ source }), evidence: [],
   }]);

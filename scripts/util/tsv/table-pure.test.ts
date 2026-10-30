@@ -57,6 +57,16 @@ describe('readTable', () => {
     expect(rows.map((r) => [r.text('id'), r.float('v'), r.line])).toEqual([['A', 2.5, 2], ['B', null, 4]]);
   });
 
+  it('reads UTF-8 bytes chunk by chunk, cutting only at line ends', () => {
+    const text = 'id\tv\nÅ\t1\nB\t2\nC\t3\n';
+    const bytes = new TextEncoder().encode(text);
+    const read = (chunk: number) => [...readTable({ ...SPEC, exact: true }, bytes, chunk)]
+      .map((r) => [r.text('id'), r.int('v'), r.line]);
+    expect(read(6)).toEqual([['Å', 1, 2], ['B', 2, 3], ['C', 3, 4]]);
+    expect(read(6)).toEqual([...readTable(SPEC, text)].map((r) => [r.text('id'), r.int('v'), r.line]));
+    expect(() => read(3)).toThrow('fixture/t.tsv: a line runs past 3 bytes. Re-run x.');
+  });
+
   it('reads a cell past the end of a short row as empty', () => {
     const [row] = readTable(SPEC, 'id\tv\nA\n');
     expect(row.raw('v')).toBe('');

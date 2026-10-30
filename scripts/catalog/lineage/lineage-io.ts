@@ -96,7 +96,7 @@ export function baselineMembers<F extends string>(
 export function stageEmission<F extends string, S extends string>(
   layout: LineageLayout,
   spec: StageLineageSpec<F, S>,
-  texts: Readonly<Record<F, string>>,
+  texts: Readonly<Record<F, string | Uint8Array>>,
   header: StageHeader,
   diff: string | null,
   rotate: boolean,
@@ -110,12 +110,12 @@ export function stageEmission<F extends string, S extends string>(
   return { files, members };
 }
 
-export function gzipText(text: string): Uint8Array {
+export function gzipText(text: string | Uint8Array): Uint8Array {
   return gzipSync(text, { level: 1 });
 }
 
 export function readLineage(path: string): LineageRow[] {
-  return [...lineageRows(gunzipSync(readFileSync(path)).toString('utf8'), path)];
+  return [...lineageRows(gunzipSync(readFileSync(path)), path)];
 }
 
 export function readIdentity(path: string): IdentityRow[] {
