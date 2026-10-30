@@ -23,7 +23,7 @@ import {
 } from '../membership/membership-manifest-tsv';
 import { CONSTELLATIONS, createConstellationAssignment, iauEdgeRecords } from './constellations/constellations';
 import { STELLARIUM } from './constellations/stellarium-source';
-import { readStars } from './stars-parse';
+import { MAX_DIST_PC, readStars } from './stars-parse';
 
 const CON_ASSIGNMENT = createConstellationAssignment(iauEdgeRecords(STELLARIUM.read()));
 const conIndexOf = (code: string): number =>
@@ -255,6 +255,17 @@ describe('readStars manifest labels', () => {
     expect(sum(stats.distVia)).toBe(stars.length);
     expect(sum(stats.vVia)).toBe(stars.length);
     expect(sum(stats.directionVia)).toBe(stars.length);
+  });
+
+  it('fails the walk on a row the overrides leave past MAX_DIST_PC, naming it', () => {
+    expect(() => readStars(
+      manifestRows([{ ...AT_ORIGIN_SIGHTLINE, origin_key: 'spine:77' }]),
+      {
+        conAssignment: CON_ASSIGNMENT,
+        directions: AT_ORIGIN_DIRECTIONS(),
+        gliese: glieseParallaxes([{ gl: ORIGIN_GL, distPc: MAX_DIST_PC + 1 }]),
+      },
+    )).toThrow(/spine:77 .* via gliese_plx, past MAX_DIST_PC/);
   });
 });
 

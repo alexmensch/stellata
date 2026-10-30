@@ -137,14 +137,13 @@ Each manifest row walks through, inside `readStars`. The row arrives with its
 labels already FINAL, so no label merge runs here (`../classic-ids/README.md`
 label-merge/README.md).
 
-**Two rows leave without a record, and the difference is what the count means.**
-A **park** (steps 0, 1 and 2) is a membership decision: the row reaches no
-parallax, no V, or no position, so the [§ 6.1](/docs/catalog-driver.md#61-record-parity) ledger records it leaving and
-`data/membership/parked-ledger.tsv` names it. A **drop** (step 5) is a
-reference table disagreeing with the tiers above it — never a membership
-decision — so it is pinned at <!-- count:build-catalog/droppedTooFar -->0<!-- /count --> in `../build-catalog-expected.json` and a
-non-zero entry fails the build. Parks are pinned too, but at their measured
-counts rather than at zero: `parked*` per reason, from `PARKED_COUNT_KEY`.
+**A row leaves without a record only by parking.** A **park** (steps 0, 1
+and 2) is a membership decision: the row reaches no parallax, no V, or no
+position, so the [§ 6.1](/docs/catalog-driver.md#61-record-parity) ledger records it leaving and
+`data/membership/parked-ledger.tsv` names it. Parks are pinned at their
+measured counts: `parked*` per reason, from `PARKED_COUNT_KEY`. A row past
+the step-5 cutoff is a reference table disagreeing with the tiers above it —
+never a membership decision — so the walk throws, naming the row.
 
 0. **Parallax resolution** (`resolveParallax` in `../distance/parallax/`).
    Every tier is a catalogue this build pulled itself. A row no tier reaches
@@ -177,9 +176,8 @@ counts rather than at zero: `parked*` per reason, from `PARKED_COUNT_KEY`.
    direction tier's own place, the motion steps 2–3 settled, and step 0's
    parallax with its error. See
    [Multi-layer distance refinement](../distance/refinement/README.md#multi-layer-distance-refinement).
-5. **`MAX_DIST_PC = 50_000` bounded-scope cutoff** (`stars-parse.ts`).
-   **Drops** rows still beyond LMC depth after every override —
-   `droppedTooFar`.
+5. **`MAX_DIST_PC = 50_000` bounded-scope cutoff** (`stars-parse.ts`). A
+   row still beyond LMC depth after every override **fails the walk**.
 6. **absmag** — `apparentToAbsoluteMagnitude` on step 1's V and the distance
    the whole override stack settled; **position** — `directionOnPm` advances
    the step-2 solution to the scene epoch on the motion the row ends up

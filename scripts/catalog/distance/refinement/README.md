@@ -44,7 +44,7 @@ diagram below is the build-side view:
    │                                       AND |Δμ_α*|, |Δμ_δ| ≤ 0.5 mas/yr
    │                                       AND own parallax ≤ 10σ above LMC's
    ▼
-[ Layer 3: MAX_DIST_PC = 50,000 gate ]   drops anything still beyond LMC
+[ Layer 3: MAX_DIST_PC = 50,000 gate ]   fails on anything still beyond LMC
    │
    ▼
 dist × cascade direction (../README.md#direction-resolution) → `public/catalog.bin` xyz
@@ -223,8 +223,9 @@ constants and the override math.
 
 ## Layer 3 — MAX_DIST_PC bounded-scope cutoff
 
-`MAX_DIST_PC = 50_000` (exported from `stars-parse.ts`) drops any row
-whose final distance still exceeds 50 kpc after Layers 1 and 2. This
+`MAX_DIST_PC = 50_000` (exported from `stars-parse.ts`) fails the walk on
+any row whose final distance still exceeds 50 kpc after Layers 1 and 2,
+naming it. This
 is **not** a noise filter — it's a statement about which populations
 the model currently represents (Sol out to and including the LMC).
 The cutoff bumps in sync with each new modelled population the
@@ -233,8 +234,8 @@ supergiant layers would extend it). See [Stellar catalog ingestion](/docs/scienc
 for the framing rationale.
 
 Every kinematic-override target distance must satisfy
-`dist < MAX_DIST_PC` or its entire population is silently dropped at
-this cut; `distance-overrides-pure.test.ts` pins `LMC_DISTANCE_PC <
+`dist < MAX_DIST_PC` or its entire population fails the build at this
+cut; `distance-overrides-pure.test.ts` pins `LMC_DISTANCE_PC <
 MAX_DIST_PC` (406 pc of margin today). A future SMC layer (~62 kpc) must raise the
 cutoff in the same change.
 

@@ -258,7 +258,6 @@ async function main() {
     namingDuplicateRecords: 0,
     desigConFromCrossIndex: 0,
     crossIndexUnknownCst: 0,
-    droppedTooFar: 0,
     bjEntries: 0,
     bjEligible: 0,
     bjOverridden: 0,
@@ -423,7 +422,6 @@ async function main() {
   const { stars, stats } = readStars(artifactRows(MEMBERSHIP_MANIFEST), inputs);
   console.log(`  parsed ${stats.total} rows in ${Date.now() - t0}ms`);
   console.log(`  kept ${stars.length} stars; parked ${stats.parked.length}`);
-  console.log(`  dropped:`, stats.dropped);
   if (stats.bjEligible > 0) {
     const pct = ((stats.bjOverridden / stats.bjEligible) * 100).toFixed(1);
     console.log(
@@ -531,7 +529,6 @@ async function main() {
   const simbadSourcedDistances = simbadSourcedDistancesTsv(stars);
   // recordCount is the final post-promotion count; populated after the
   // companion-promotion pass below.
-  counts.droppedTooFar = stats.dropped.tooFar;
   counts.bjEligible = stats.bjEligible;
   counts.bjOverridden = stats.bjOverridden;
   counts.bjEligibleNotPulled = stats.bjEligibleNotPulled;

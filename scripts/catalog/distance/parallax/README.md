@@ -189,8 +189,8 @@ and SIMBAD's 53 sub-floor rows barely reachable on a tier only 116 records took.
 **Rebasing the value cohort onto the membership manifest made that tier serve
 4,067 records, and 8 of those 53 became reachable**: parallaxes of S/N
 0.01–0.33, each indistinguishable from zero, inverting to 54,000–714,000 pc.
-They left the walk through `readStars`'s `MAX_DIST_PC` exit — the one gate that
-is not a [§ 6.1](/docs/catalog-driver.md#61-record-parity) park, pinned at zero — so eight manifest rows neither shipped
+They landed past `readStars`'s `MAX_DIST_PC` cutoff — the one exit that
+is not a [§ 6.1](/docs/catalog-driver.md#61-record-parity) park, and which now fails the walk — so eight manifest rows neither shipped
 nor parked. Extending the floor, which this paragraph already named as the
 available override, is what closed it; the refused rows park
 `refused_no_defensible_parallax` like any other. CNS5 and Gliese still lose
@@ -289,11 +289,11 @@ alongside the two parallax reasons — a single enumerated file per membership
 event is what [§ 6.1](/docs/catalog-driver.md#61-record-parity)'s no-silent-drops rule can be gated on. The `reason` column
 says which.
 
-**A park is a ledger entry, never a walk-gate drop.** `droppedTooFar` — the one
-`dropped*` count left — stays pinned at zero: a non-zero entry means a
-refreshed reference table disagreeing with the tiers above it, which is a
-different and unintended event. Parks are pinned at their measured counts
-instead, one `parked*` key per reason (`PARKED_COUNT_KEY`), enumerated in
+**A park is a ledger entry, never a walk-gate drop.** The walk's one other
+exit, the `MAX_DIST_PC` cutoff, throws: a row past it means a refreshed
+reference table disagreeing with the tiers above it, which is a different and
+unintended event. Parks are pinned at their measured counts, one `parked*`
+key per reason (`PARKED_COUNT_KEY`), enumerated in
 `parked-ledger.tsv` and gated by
 `../../membership/membership-manifest-gate.test.ts`, which subtracts the ledger
 from the manifest by key before comparing designation multisets.

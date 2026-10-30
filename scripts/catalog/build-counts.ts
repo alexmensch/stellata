@@ -69,7 +69,6 @@ export interface BuildCounts {
    *  multiples.tsv member row — multiplicityStatus =
    *  MULTIPLICITY_UNRESOLVED (spectroscopic binaries, 64 Vir class). */
   multiplicityUnresolved: number;
-  droppedTooFar: number;
   /** Total entries in the Bailer-Jones 2021
    *  (/data/papers/index.md#bailerjones2021) DR3 distance TSV (parsed map
    *  size). */

@@ -114,13 +114,10 @@ import {
   isInLmcCone,
 } from '../distance/refinement/distance-overrides-pure';
 
-// Drop stars farther than this from Sol. The catalogue carries a handful of
-// extragalactic stragglers (LMC supergiants pre-override, plus a few
-// distant outliers) that the renderer's float32 origin can't keep
-// stable; the LMC override snaps those back inside the cutoff before
-// it fires. Every kinematic-override target distance must stay below
-// this cut or its population is silently dropped here —
-// distance/refinement/distance-overrides-pure.test.ts pins LMC_DISTANCE_PC < MAX_DIST_PC.
+// A row still farther than this after every override fails the walk. Every
+// kinematic-override target distance must stay below it or its population
+// fails here — distance/refinement/distance-overrides-pure.test.ts pins
+// LMC_DISTANCE_PC < MAX_DIST_PC.
 export const MAX_DIST_PC = 50_000;
 
 export interface Star {
@@ -228,12 +225,6 @@ export interface Star {
   originKey: string;
 }
 
-/** The one gate a manifest row can still fail that is NOT a record-parity park (/docs/catalog-driver.md#61-record-parity), and
- *  pinned at 0 in build-catalog-expected.json for that reason. */
-export interface ReadStarsDrops {
-  tooFar: number;
-}
-
 /** Every reference table a readStars walk consumes, as one bundle.
  *
  *  `loadReadStarsInputs` assembles the production set and satisfies this whole
@@ -297,7 +288,6 @@ export function readStars(
   stars: Star[];
   stats: {
     total: number;
-    dropped: ReadStarsDrops;
     /** Rows carrying a source_id whose parallax cascade resolved
      *  `gaia_dr3_inversion` — the tier B-J publishes a posterior over. */
     bjEligible: number;
@@ -363,7 +353,6 @@ export function readStars(
   const rows = manifest;
 
   const stars: Star[] = [];
-  const dropped: ReadStarsDrops = { tooFar: 0 };
   let total = 0;
   const parked: ParkedRecord[] = [];
   const parkedVia = emptyTallyPartition(PARKED_REASONS);
@@ -585,8 +574,11 @@ export function readStars(
     }
 
     if (dist > MAX_DIST_PC) {
-      dropped.tooFar++;
-      continue;
+      throw new Error(
+        `readStars: ${row.originKey} settles at ${dist.toFixed(0)} pc via ${distVia}, past ` +
+        `MAX_DIST_PC (${MAX_DIST_PC}) — a reference table disagrees with the tiers above it ` +
+        '(../distance/refinement/README.md#layer-3--max_dist_pc-bounded-scope-cutoff).',
+      );
     }
 
     // Tallies run once the row is known to ship, so every partition below
@@ -780,7 +772,6 @@ export function readStars(
     stars,
     stats: {
       total,
-      dropped,
       bjEligible,
       bjOverridden,
       bjEligibleNotPulled,

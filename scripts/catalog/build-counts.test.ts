@@ -44,7 +44,6 @@ function baseCounts(): BuildCounts {
     componentDesignations: 16000,
     desigConFromCrossIndex: 3180,
     crossIndexUnknownCst: 0,
-    droppedTooFar: 0,
     bjEntries: 310000,
     bjEligible: 305000,
     bjOverridden: 304000,
