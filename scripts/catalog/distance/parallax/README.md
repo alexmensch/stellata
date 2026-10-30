@@ -381,4 +381,4 @@ sibling reaching them would ship as `synth-01425+5000-B` at exactly the
 distance the cascade threw out, with no id left to recognise it by. Each such
 row is a **presence event** in the SID ledger naming DR4 as the reinstating
 event, never a dissolution: the pair is unchanged, only its placement is
-unavailable (`data/sid/retirements.tsv`).
+unavailable (a `retire` event in `data/sid/events.tsv`).

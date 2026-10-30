@@ -34,13 +34,13 @@ client may ever attach (`star`, `planet`, `cloud`, `lg`, `shell`,
 
 `resolve(sid)` first canonicalises through the **successor map**
 (retired sid → successor sid, [§ 9.4](/docs/sid.md#94-migration-semantics--exact-table)) — built at catalog
-build time from `retirements.tsv` net of `reinstatements.tsv`, shipped
-as the catalog manifest's `sidSuccessors` side-field, and passed to
-the constructor. Chains are followed to their live end (a corrupt
-cycle resolves `unknown`); a retired sid never appears in any artifact
-(CI-guarded), so canonicalising before the domain walk is lossless.
-The map is empty until a merge-type retirement ships (all committed
-retirements today are successor-less). It then returns:
+build time from the `merge` events in `data/sid/events.tsv` (each
+still-retired sid whose last removal is a merge maps to its
+`successor`), shipped as the catalog manifest's `sidSuccessors`
+side-field, and passed to the constructor. Chains are followed to their
+live end (a corrupt cycle resolves `unknown`); a retired sid never
+appears in any artifact (CI-guarded), so canonicalising before the
+domain walk is lossless. It then returns:
 
 - `{ status: 'resolved', kind, localIndex }` — an attached domain
   claims the sid. Domains are consulted in roster order, so `star`
