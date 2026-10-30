@@ -399,8 +399,9 @@ export function readStars(
   const spectralVia = emptyTallyPartition(SPECTRAL_VIA_VALUES);
 
   const printedVLookup = printedVLookups(hipVMag, directions.tycho2, gliese);
-  for (const row of rows) {
-    total++;
+  // Every exit returns its row's Placement, so the compiler refuses one that
+  // would drop a record from lineage.
+  const walk = (row: ManifestRecord): { placement: Placement; star: Star | null } => {
     const { hip, gaiaSourceId, isSol } = row;
     // Read off the manifest column, never re-derived: the binding is the one
     // the manifest justified (/docs/catalog-driver.md#31-retiring-the-spine--the-membership-rule-measured-against-the-primaries), and re-deciding
@@ -463,13 +464,7 @@ export function readStars(
     );
     // Not a `dropped` gate: a park is a deliberate record-parity ledger entry (/docs/catalog-driver.md#61-record-parity).
     if (plxRes.via === 'none') {
-      placements.push({
-        kind: 'parked-parallax',
-        key,
-        ids,
-        parallax: plxRes,
-      });
-      continue;
+      return { placement: { kind: 'parked-parallax', key, ids, parallax: plxRes }, star: null };
     }
 
     // V through the Riello 2021 (/data/papers/index.md#riello2021)
@@ -487,8 +482,7 @@ export function readStars(
       curatedV: isSol ? SOL_APPARENT_V_MAGNITUDE : null,
     });
     if (vRes.via === 'none') {
-      placements.push({ kind: 'parked-no-v', key, ids, parallax: plxRes });
-      continue;
+      return { placement: { kind: 'parked-no-v', key, ids, parallax: plxRes }, star: null };
     }
 
     // Astrometric solution through the Gaia 5p → HIP2 → Tycho-2 → CNS5 →
@@ -505,10 +499,7 @@ export function readStars(
     // reaches — the SIMBAD values cohort is still keyed on the spine and holds
     // no row for them.
     if (direction.via === 'none') {
-      placements.push({
-        kind: 'parked-no-position', key, ids, parallax: plxRes, direction,
-      });
-      continue;
+      return { placement: { kind: 'parked-no-position', key, ids, parallax: plxRes, direction }, star: null };
     }
     const dirRes = direction.value;
 
@@ -730,7 +721,7 @@ export function readStars(
     if (isSol) flags |= FLAG_IS_SOL;
     if (bayer) flags |= FLAG_HAS_BAYER;
 
-    stars.push({
+    const star: Star = {
       x, y, z,
       vx: vel.x, vy: vel.y, vz: vel.z,
       absmag, ci,
@@ -770,18 +761,28 @@ export function readStars(
       vVia: vRes.via,
       syntheticId: null,
       originKey: row.originKey,
-    });
-    placements.push({
-      kind: 'placed',
-      key,
-      parallax: plxRes,
-      direction,
-      pmRescue,
-      bailerJones: bjStep,
-      lmc: lmcStep,
-      rv: rvRejected && rvRes.via !== 'none' ? { kind: 'rejected', rv: rvRes } : { kind: 'kept', rv: rvRes },
-      velocityClamped: velClamped,
-    });
+    };
+    return {
+      placement: {
+        kind: 'placed',
+        key,
+        parallax: plxRes,
+        direction,
+        pmRescue,
+        bailerJones: bjStep,
+        lmc: lmcStep,
+        rv: rvRejected && rvRes.via !== 'none' ? { kind: 'rejected', rv: rvRes } : { kind: 'kept', rv: rvRes },
+        velocityClamped: velClamped,
+      },
+      star,
+    };
+  };
+
+  for (const row of rows) {
+    total++;
+    const { placement, star } = walk(row);
+    placements.push(placement);
+    if (star !== null) stars.push(star);
   }
 
   const parked = parkedRecords(placements);

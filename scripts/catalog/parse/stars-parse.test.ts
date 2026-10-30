@@ -243,7 +243,7 @@ describe('readStars manifest labels', () => {
   // cascades — which is what lets every cascade partition sum to the record
   // count, as claimed in ./README.md#per-row-pipeline.
   it('counts a park in the park partition alone', () => {
-    const { stars, stats } = readStars(
+    const { stars, placements, stats } = readStars(
       manifestRows([
         { ...AT_ORIGIN_SIGHTLINE, hd: '55' },
         { hip: '4242', gl: ORIGIN_GL },
@@ -262,6 +262,8 @@ describe('readStars manifest labels', () => {
     expect(sum(stats.distVia)).toBe(stars.length);
     expect(sum(stats.vVia)).toBe(stars.length);
     expect(sum(stats.directionVia)).toBe(stars.length);
+    expect(placements.map((p) => p.kind)).toEqual(['parked-no-v', 'parked-no-position']);
+    expect(placements).toHaveLength(stats.total);
   });
 
   it('fails the walk on a row the overrides leave past MAX_DIST_PC, naming it', () => {
