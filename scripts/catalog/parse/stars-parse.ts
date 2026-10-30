@@ -779,8 +779,7 @@ export function readStars(
       pmRescue,
       bailerJones,
       lmc: lmcStep,
-      rv: rvRes,
-      rvRejected,
+      rv: rvRejected && rvRes.via !== 'none' ? { kind: 'rejected', rv: rvRes } : { kind: 'kept', rv: rvRes },
       velocityClamped: velClamped,
     });
   }

@@ -40,12 +40,14 @@ describe('placementLineageRows', () => {
       bailerJones: { kind: 'override', ref: BJ },
       lmc: 'not_member',
       rv: {
-        via: 'simbad',
-        value: { kmS: 12, bibcode: '1953GCRV..C......0W', ref: SIMBAD },
-        evidence: [SIMBAD],
-        refusals: [],
+        kind: 'kept',
+        rv: {
+          via: 'simbad',
+          value: { kmS: 12, bibcode: '1953GCRV..C......0W', ref: SIMBAD },
+          evidence: [SIMBAD],
+          refusals: [],
+        },
       },
-      rvRejected: false,
       velocityClamped: false,
     };
     expect(placementLineageRows(p)).toEqual([
@@ -94,8 +96,7 @@ describe('placementLineageRows', () => {
       pmRescue: { via: 'none', refusals: [] },
       bailerJones: { kind: 'not-applied' },
       lmc: 'not_member',
-      rv: { via: 'none', refusals: [] },
-      rvRejected: false,
+      rv: { kind: 'kept', rv: { via: 'none', refusals: [] } },
       velocityClamped: false,
     });
     expect(codes(placed(true))).toContain('outcome placement.direction.gaia-2p');
@@ -114,9 +115,9 @@ describe('placementLineageRows', () => {
       bailerJones: { kind: 'absent' },
       lmc: 'parallax_rules_out',
       rv: {
-        via: 'simbad', value: { kmS: 6824.7, bibcode: 'x', ref: SIMBAD }, evidence: [SIMBAD], refusals: [],
+        kind: 'rejected',
+        rv: { via: 'simbad', value: { kmS: 6824.7, bibcode: 'x', ref: SIMBAD }, evidence: [SIMBAD], refusals: [] },
       },
-      rvRejected: true,
       velocityClamped: true,
     };
     expect(codes(p)).toEqual([

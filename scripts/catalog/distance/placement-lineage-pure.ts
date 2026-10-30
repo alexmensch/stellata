@@ -158,6 +158,11 @@ export type BailerJonesStep =
 
 export type LmcStep = LmcKinematicVerdict['kind'];
 
+/** A radial velocity the cascade answered may still be rejected past the sanity ceiling. */
+export type RvStep =
+  | { readonly kind: 'kept'; readonly rv: RadialVelocityResolution }
+  | { readonly kind: 'rejected'; readonly rv: Exclude<RadialVelocityResolution, { via: 'none' }> };
+
 /** One manifest row's placement: each step the walk ran, in walk order, up to
  *  the park that stopped it or the record it shipped. */
 export type Placement =
@@ -192,8 +197,7 @@ export type Placement =
     readonly pmRescue: PmRescueResolution | null;
     readonly bailerJones: BailerJonesStep;
     readonly lmc: LmcStep;
-    readonly rv: RadialVelocityResolution;
-    readonly rvRejected: boolean;
+    readonly rv: RvStep;
     readonly velocityClamped: boolean;
   };
 
@@ -271,11 +275,12 @@ export function placementLineageRows(p: Placement): LineageRow[] {
       if (p.bailerJones.kind === 'absent') row('outcome', 'distance.bailer-jones-absent', none, []);
       if (p.lmc === 'snap') row('outcome', 'distance.lmc-kinematic', none, []);
       if (p.lmc === 'parallax_rules_out') row('refused', 'distance.lmc-refused-by-own-parallax', none, []);
-      for (const r of p.rv.refusals) refused(RV_REFUSAL_BRANCHES[r.reason], r);
-      if (p.rvRejected && p.rv.via !== 'none') {
-        row('outcome', 'rv.rejected-above-ceiling', { tier: p.rv.via }, p.rv.evidence);
+      const { rv } = p.rv;
+      for (const r of rv.refusals) refused(RV_REFUSAL_BRANCHES[r.reason], r);
+      if (p.rv.kind === 'rejected') {
+        row('outcome', 'rv.rejected-above-ceiling', { tier: p.rv.rv.via }, p.rv.rv.evidence);
       } else {
-        row('outcome', RV_BRANCHES[p.rv.via], none, p.rv.via === 'none' ? [] : p.rv.evidence);
+        row('outcome', RV_BRANCHES[rv.via], none, rv.via === 'none' ? [] : rv.evidence);
       }
       if (p.velocityClamped) row('outcome', 'velocity.clamped', none, []);
       return out;
