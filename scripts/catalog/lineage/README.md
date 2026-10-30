@@ -380,7 +380,7 @@ still regenerated and diffed by CI, so a PR diff keeps showing the change:
 `binding-review.tsv` and `rejected_bindings.tsv` are then two filters over
 one row type. Each view moves when its writing stage gains lineage; the
 first four are views now ([The membership stage](#the-membership-stage)),
-and so is `parked-ledger.tsv` ([The placement stage](#the-placement-stage)).
+and so is `parked-ledger.tsv` ([Placement lineage](../distance/README.md#placement-lineage)).
 
 ## The membership stage
 
