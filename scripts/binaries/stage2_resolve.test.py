@@ -8,6 +8,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from types import SimpleNamespace
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from scripts.binaries.indices import (  # noqa: E402
@@ -1386,24 +1387,50 @@ class AstrometryRequestTests(unittest.TestCase):
                 gaia_source_id=None, resolve_via="unresolved",
             ),
         ]
+        no_rejects = SimpleNamespace(xwalk_mag_rejected=[], athyg_gaia_mag_rejected=[])
         with tempfile.TemporaryDirectory() as td:
             p = Path(td) / "request.tsv"
-            n = write_astrometry_request(comps, p)
+            n = write_astrometry_request(
+                comps, p, indices=no_rejects, binding_verdicts=[],
+            )
             body = p.read_text().splitlines()
         self.assertEqual(n, 2)
         # Header + sorted unique ids; unresolved row contributes nothing.
         self.assertEqual(body, ["gaia_source_id", "111", "222"])
 
-        # Magnitude-gate-rejected candidates stay in the request: the
-        # gate can only keep rejecting a binding whose G is in the pull.
+    def test_every_gate_candidate_stays_in_the_request(self) -> None:
+        comps = [
+            ResolvedComponent(
+                wds_id="X", discoverer="D", component="A", is_primary=True,
+                gaia_source_id=111, resolve_via="orb6_hip",
+            ),
+        ]
+        indices = SimpleNamespace(
+            xwalk_mag_rejected=[(1, 333), (2, 111)],
+            athyg_gaia_mag_rejected=[(None, 444)],
+        )
+        verdicts = [
+            BindingVerdict(
+                wds_id="X", shape=BINDING_SHAPE_LETTER_SOURCES,
+                verdict=BINDING_VERDICT_UNBOUND_AMBIGUOUS, contested="A",
+                reference_token=None, reference_source=None, winner=None,
+                candidates=[
+                    BindingCandidate(
+                        label="555", tokens=["A"], source_id=555,
+                        err_arcsec=math.inf, predicted_sep_arcsec=0.0,
+                    ),
+                ],
+                unbind=[("A", 555)],
+            ),
+        ]
         with tempfile.TemporaryDirectory() as td:
             p = Path(td) / "request.tsv"
             n = write_astrometry_request(
-                comps, p, rejected_source_ids=[333, 111],
+                comps, p, indices=indices, binding_verdicts=verdicts,
             )
             body = p.read_text().splitlines()
-        self.assertEqual(n, 3)
-        self.assertEqual(body, ["gaia_source_id", "111", "222", "333"])
+        self.assertEqual(n, 4)
+        self.assertEqual(body, ["gaia_source_id", "111", "333", "444", "555"])
 
     def test_binding_audit_sources_cover_kept_and_unbound_candidates(self) -> None:
         def cand(src: int) -> BindingCandidate:
