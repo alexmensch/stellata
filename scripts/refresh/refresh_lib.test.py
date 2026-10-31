@@ -632,6 +632,23 @@ class TapClientTests(unittest.TestCase):
         # esa is retried max_attempts (2) times before fallback
         self.assertEqual(calls, ["esa", "esa", "cds"])
 
+    def test_answering_backend_is_tried_first_next_time(self) -> None:
+        calls: list[str] = []
+        def esa(_q: str) -> None:
+            calls.append("esa")
+            raise rl.TransientError("503")
+        def cds(_q: str) -> str:
+            calls.append("cds")
+            return "cds-result"
+        client = rl.TapClient(
+            [rl.TapBackend("esa", esa), rl.TapBackend("cds", cds)],
+            retry_kwargs={**self._silent_retry(), "max_attempts": 2},
+        )
+        client.run("SELECT 1")
+        client.run("SELECT 2")
+        self.assertEqual(calls, ["esa", "esa", "cds", "cds"])
+        self.assertEqual([b.name for b in client.backends], ["cds", "esa"])
+
     def test_raises_when_all_backends_transient(self) -> None:
         def esa(_q: str) -> None:
             raise rl.TransientError("esa down")

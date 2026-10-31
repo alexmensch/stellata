@@ -268,6 +268,10 @@ identical `gaiadr3.*` schema. The ESA archive's ASYNC path intermittently
 nothing reaches Gaia any other way: the async client is gone, and with
 it the `astroquery` dependency.
 
+A `TapClient` moves whichever backend answered to the front, so a mirror
+that is down costs its retry schedule (about 5 min of connect timeouts)
+once per run, not once per batch.
+
 `TapClient` takes `backends=` as a required argument — there is no
 default list, because which service can serve a query is a property of
 the table. CDS VizieR doesn't host `gaiadr3.*`, so an ESA→CDS fallback

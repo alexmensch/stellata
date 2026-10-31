@@ -576,7 +576,9 @@ class TapClient:
     """Backend-agnostic TAP client with auto-fallback.
 
     Tries each backend in order on every query; falls back to the next on a
-    transient (network-level or 5xx) error. Non-transient errors (e.g.
+    transient (network-level or 5xx) error. The backend that answers moves
+    to the front, so a primary that is down costs its retry schedule once
+    per client, not once per batch. Non-transient errors (e.g.
     ADQL syntax) raise from the first backend that returns them — both
     backends share the same ADQL grammar so a syntax error fails the
     same way on either.
@@ -601,13 +603,17 @@ class TapClient:
 
     def run(self, query: str) -> Any:
         last_transient: BaseException | None = None
-        for backend in self.backends:
+        for backend in list(self.backends):
             try:
-                return retry(lambda b=backend: b.run(query), **self.retry_kwargs)
+                result = retry(lambda b=backend: b.run(query), **self.retry_kwargs)
             except Exception as exc:
                 if not is_transient_http_error(exc):
                     raise
                 last_transient = exc
+                continue
+            self.backends.remove(backend)
+            self.backends.insert(0, backend)
+            return result
         assert last_transient is not None  # at least one backend, all transient
         raise last_transient
 
