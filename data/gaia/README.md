@@ -12,7 +12,7 @@ membership's second term.
 gaia_dr3_hip_xmatch.tsv                ~3.7 MB, LFS. HIP → DR3 source_id.
 gaia_dr3_tyc_xmatch.tsv                ~106 MB, LFS. Tycho-2 → DR3 source_id.
 gaia_dr3_astrometry.tsv                ~1.2 MB, LFS. 5p astrometry for the
-                                       resolved source_ids Stage 2 requests.
+                                       binaries request below.
 gaia_dr3_astrometry_catalog.tsv        ~58 MB, LFS. 5p astrometry +
                                        radial_velocity{,_error} for every
                                        catalog source_id, both binding gates'
@@ -43,7 +43,8 @@ gaia_dr3_gspc.tsv                      ~31 MB, LFS. Johnson-Kron-Cousins B and
                                        cascade's tier below the Table-5.9
                                        relation.
 gaia_astrometry_source_id_request.tsv  ~440 KB, LFS. Stage 2 → Stage 3 deduped
-                                       source_id request list (build-binaries.py output).
+                                       source_id request list (build-binaries.py output;
+                                       write_astrometry_request owns its contents).
 gaia_catalog_source_id_request.tsv     ~7.2 MB, LFS. Full-catalog deduped
                                        source_id request list — the membership
                                        manifest's gaia_source_id column over its
