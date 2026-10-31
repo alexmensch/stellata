@@ -1,10 +1,10 @@
 {
   "gaia_resolve_rate": {
-    "value": 0.455433,
+    "value": 0.455444,
     "tolerance": 0.2
   },
   "optical_rejected_rate": {
-    "value": 0.381637,
+    "value": 0.381615,
     "tolerance": 0.2
   },
   "nss_orbit_rate": {
@@ -12,7 +12,7 @@
     "tolerance": 0.2
   },
   "hip2_fallback_rate": {
-    "value": 0.034619,
+    "value": 0.034565,
     "tolerance": 0.2
   }
 }
