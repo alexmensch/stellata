@@ -17,12 +17,17 @@ simbad_values.tsv          ~18 MB, LFS. 74,446 rows. Bibcoded rv,
                            parallax, PM, coordinates and B/V fluxes for
                            the /docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers value cohort — see README.md#the-values-pull.
 simbad_wds_xids.tsv        ~1.2 MB, LFS. Per-WDS-component (Gaia DR3,
-                           HIP) curated cross-IDs.
+                           HIP) curated cross-IDs: the 2026-07-11 pull plus
+                           the HAT-P-7 A/C rows of the 2026-10-31 run. A
+                           full re-pull also moves the ~59 lost / 55 added /
+                           73 changed rows stellata-hooj.30 tracks (44 Gaia
+                           sources leave multiples.tsv, mu Cas A-E among
+                           them); land it only with those resolved.
 simbad_tyc_hd.tsv          ~11 MB, LFS. 332,320 rows. SIMBAD's own HD
                            attribution per Tycho-2 entry, keyed on TYC —
                            see README.md#the-tyc--hd-pull.
-wds_xids_overrides.tsv     ~1.5 KB, regular git. Hand-curated WDS-J
-                           coalesce overrides for Sirius B-shaped cases.
+wds_xids_overrides.tsv     ~1.5 KB, regular git. Hand-curated SIMBAD oids
+                           for components no WDS-J ident or alias reaches.
 ```
 
 ## The values pull
