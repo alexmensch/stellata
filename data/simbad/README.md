@@ -148,7 +148,9 @@ what a consumer may conclude from these tables; this one owns what they are.
 - **Citation**: [Wenger 2000](/data/papers/index.md#wenger2000). SIMBAD is
   maintained by CDS Strasbourg.
 - **TAP endpoint**:
-  https://simbad.cds.unistra.fr/simbad/sim-tap.
+  https://simbad.cds.unistra.fr/simbad/sim-tap, with the Harvard CfA
+  mirror https://simbad.cfa.harvard.edu/simbad/sim-tap as fallback
+  (`refresh_lib.simbad_client`).
 - **Licence**: SIMBAD content is publicly accessible per CDS policy
   (academic / non-commercial); cite the
   [Wenger 2000](/data/papers/index.md#wenger2000) paper.
@@ -158,11 +160,14 @@ what a consumer may conclude from these tables; this one owns what they are.
   ([`classifyFromSimbad`](../../scripts/catalog/spectral/spectral-classify.ts))
   is
   a strict MK walker.
-- **`wds_xids_overrides.tsv`** is the manual escape hatch for the
-  Sirius-B-shaped systems where SIMBAD collapses multiple WDS-J
-  variants onto one Gaia source; the override coalesce is applied
-  inside
+- **`wds_xids_overrides.tsv`** is the manual escape hatch for a component
+  whose SIMBAD object carries no `WDS J<id><comp>` ident and no HD / CCDM /
+  HIP alias the Phase A.6 cascade can reach — HAT-P-7 A and C, whose WDS
+  idents SIMBAD dropped and which carry no HD or HIP. Each row pins an oid
+  with its reason; the override is applied inside
   [`scripts/refresh/wds_xids_overrides.py`](../../scripts/refresh/README.md).
+  An oid letter need not match the WDS letter: SIMBAD names HAT-P-7 C
+  `BD+47 2846B`.
 
 ## Request sets come off the membership term
 

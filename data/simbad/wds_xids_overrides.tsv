@@ -6,7 +6,7 @@
 # file exists for residual cases the cascade can't resolve — e.g.
 # systems where SIMBAD has the per-component oid but doesn't carry any
 # of the cascade's catalog aliases (HD, CCDM-J, HIP) under a recognisable
-# `<id><comp>` form. Empty unless such a case is discovered.
+# `<id><comp>` form.
 #
 # Schema (4 tab-separated columns):
 #   wds_id        — WDS positional anchor as parsed by parse_wds_summ
@@ -24,3 +24,5 @@
 # non-blank, non-comment line is the header.
 
 wds_id	component	simbad_oid	reason
+19290+4758	A	232913	HAT-P-7 (BD+47 2846, Gaia DR3 2129256395211984000). SIMBAD carries no WDS J19290+4758 ident any more (checked 2026-10-31) and the star has no HD/HIP for the cascade.
+19290+4758	C	8043003	HAT-P-7 C: SIMBAD names it BD+47 2846B ("HAT-P-7 East", Gaia DR3 2129256395213382272), lettered B in the BD sense; WDS AC at PA 90 deg, 3.9 arcsec. No WDS ident any more (checked 2026-10-31).
