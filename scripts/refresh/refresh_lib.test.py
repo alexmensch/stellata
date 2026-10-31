@@ -684,11 +684,11 @@ class TapClientTests(unittest.TestCase):
         # The factories must return valid TapBackend instances without
         # importing pyvo at module load time.
         cds = rl.cds_backend()
-        simbad = rl.simbad_backend()
+        simbad = rl.simbad_backend("SIMBAD-x", base_url="https://example.invalid/tap")
         self.assertIsInstance(cds, rl.TapBackend)
         self.assertIsInstance(simbad, rl.TapBackend)
         self.assertEqual(cds.name, "CDS")
-        self.assertEqual(simbad.name, "SIMBAD-CDS")
+        self.assertEqual(simbad.name, "SIMBAD-x")
 
     def test_simbad_client_composes_cds_primary_then_harvard_fallback(self) -> None:
         self.assertEqual(

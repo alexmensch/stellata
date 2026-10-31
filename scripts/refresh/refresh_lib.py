@@ -659,9 +659,7 @@ def cds_backend() -> TapBackend:
     return TapBackend(name="CDS", run=_cds_run)
 
 
-def simbad_backend(
-    name: str = "SIMBAD-CDS", *, base_url: str = SIMBAD_CDS_TAP_URL
-) -> TapBackend:
+def simbad_backend(name: str, *, base_url: str) -> TapBackend:
     """SIMBAD TAP backend (basic, ident, allfluxes, otypedef, mes*
     tables). `base_url` selects the CDS primary or the Harvard CfA mirror
     (`SIMBAD_HARVARD_TAP_URL`), which serves the same database, oids
