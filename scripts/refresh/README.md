@@ -218,6 +218,9 @@ request-set union, the space-padded ident join, its compose gates and the
 row-count / spot-row bands against an in-memory TAP backend. Run it with
 `python3 scripts/refresh/refresh-simbad-tyc-hd.test.py`.
 
+Non-network dependency: `refresh-simbad-wds-xids.test.py` covers Phase B's
+cross-ID parse (Gaia DR3, per-component HIP, and the oids the JOIN misses).
+
 Non-network dependency: `refresh-gaia-magnitude.test.py` covers the slice
 partition (shared edge literals, the open bright end, the floor as the last
 edge, near-equal populations), the per-slice ADQL shape, and both gates
