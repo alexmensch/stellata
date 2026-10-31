@@ -348,19 +348,16 @@ spot-check rows.
 
 `TSV_COLUMNS` there is the one place the schema is stated, so **a column
 added to it lands in both scopes** — but only in whichever output is
-actually re-pulled. `radial_velocity` was added for the catalog scope's
-rv cascade; the binaries-scope `gaia_dr3_astrometry.tsv` gains the column
-on its next refresh and nothing reads rv from it meanwhile. Editing the
-module also invalidates both outputs' `is_up_to_date` check (it folds this
-file's mtime), which is what makes the next binaries refresh pick it up
-rather than skip.
+actually re-pulled. Editing the module also invalidates both outputs'
+`is_up_to_date` check (it folds this file's mtime), so the next refresh of
+either scope re-pulls rather than skips.
 
-**`radial_velocity_error` landed in the catalog scope on the 2026-08-12
-refresh**, and `parseGaiaAstrometryCatalogTsv` now requires it. Its consumer
-is the build-counts ratchet, not a filter — the cascade takes DR3's value
-whatever error it states (`../catalog/distance/radial-velocity/README.md`).
-The binaries-scope `gaia_dr3_astrometry.tsv` still predates the column, on the
-same terms as `radial_velocity` above.
+Both scopes carry `radial_velocity` and `radial_velocity_error`. The catalog
+scope's rv cascade reads them, and `parseGaiaAstrometryCatalogTsv` requires
+the error column; its consumer is the build-counts ratchet, not a filter —
+the cascade takes DR3's value whatever error it states
+(`../catalog/distance/radial-velocity/README.md`). Nothing reads rv from the
+binaries-scope `gaia_dr3_astrometry.tsv`.
 
 See [Catalogue refresh policy](/RELEASING.md#catalogue-refresh-policy) for the cadence
 (event-driven, not scheduled) and the version-bump policy for a
