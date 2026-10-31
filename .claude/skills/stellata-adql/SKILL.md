@@ -15,7 +15,7 @@ Plumbing reference: [Gaia TAP](/scripts/refresh/README.md#gaia-tap-synchronous-e
 ## Reach the services through `refresh_lib`, never a bare POST
 
 `rl.gaia_sync_client(maxrec)` for `gaiadr3.*`, `rl.cds_backend()` for VizieR-only
-tables, `rl.simbad_backend()` for SIMBAD. They carry retry, mirror fallback,
+tables, `rl.simbad_client()` for SIMBAD. They carry retry, mirror fallback,
 overflow detection and the error-body lift below. An ad-hoc probe gets them by
 adding `scripts/refresh` to `sys.path` and importing `refresh_lib` — that is
 cheaper than re-deriving any of it, and it means a probe that works becomes a

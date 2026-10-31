@@ -246,7 +246,7 @@ def main() -> None:
             f"{SRC_OVERRIDES.relative_to(ROOT)}"
         )
 
-    client = rl.TapClient(backends=[rl.simbad_backend()])
+    client = rl.simbad_client()
 
     # WDS-ident → component-tuple map: lets the final join be O(1) regardless
     # of SIMBAD's response order. ``all_idents`` is sorted so batch contents

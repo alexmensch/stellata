@@ -681,17 +681,31 @@ class TapClientTests(unittest.TestCase):
             rl.TapClient([])
 
     def test_public_backend_factories(self) -> None:
-        # Single-backend scripts (e.g. refresh-bailer-jones.py for VizieR-only
-        # tables, refresh-simbad-sample.py for SIMBAD's divergent dialect)
-        # pass `backends=[rl.<x>_backend()]` to TapClient. The factories must
-        # return valid TapBackend instances without importing pyvo at module
-        # load time.
+        # The factories must return valid TapBackend instances without
+        # importing pyvo at module load time.
         cds = rl.cds_backend()
         simbad = rl.simbad_backend()
         self.assertIsInstance(cds, rl.TapBackend)
         self.assertIsInstance(simbad, rl.TapBackend)
         self.assertEqual(cds.name, "CDS")
-        self.assertEqual(simbad.name, "SIMBAD")
+        self.assertEqual(simbad.name, "SIMBAD-CDS")
+
+    def test_simbad_client_composes_cds_primary_then_harvard_fallback(self) -> None:
+        self.assertEqual(
+            [b.name for b in rl.simbad_client().backends],
+            ["SIMBAD-CDS", "SIMBAD-Harvard"],
+        )
+
+    def test_simbad_backend_queries_its_own_mirror(self) -> None:
+        seen: list[str] = []
+        original = rl._simbad_run
+        rl._simbad_run = lambda base_url, _q: seen.append(base_url)
+        try:
+            for backend in rl.simbad_client().backends:
+                backend.run("SELECT 1")
+        finally:
+            rl._simbad_run = original
+        self.assertEqual(seen, [rl.SIMBAD_CDS_TAP_URL, rl.SIMBAD_HARVARD_TAP_URL])
 
     def test_backends_is_required(self) -> None:
         # No default list: which service can serve a query is a property of

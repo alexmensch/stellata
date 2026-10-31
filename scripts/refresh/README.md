@@ -278,7 +278,9 @@ the table. CDS VizieR doesn't host `gaiadr3.*`, so an ESA→CDS fallback
 would fail with a misleading "table not found";
 `refresh-hipparcos2.py` goes the other way and passes
 `backends=[cds_backend()]` because `I/311/hip2` is VizieR-only. SIMBAD
-gets `[simbad_backend()]` for its divergent dialect. Check ESA's
+gets `simbad_client()` for its divergent dialect — CDS primary, the
+Harvard CfA mirror as fallback, both serving the same database and oids.
+Check ESA's
 `external.*` schema before concluding a catalogue is VizieR-only:
 [Bailer-Jones 2021](/data/papers/index.md#bailerjones2021) is on
 both, and `refresh-bailer-jones.py` takes the ESA copy through

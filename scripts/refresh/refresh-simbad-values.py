@@ -85,7 +85,7 @@ def main() -> None:
         return
 
     start = time.time()
-    client = rl.TapClient(backends=[rl.simbad_backend()])
+    client = rl.simbad_client()
 
     print("\n=== Phase A: collect SIMBAD oid request set ===")
     oids = collect_oid_requests(client)
