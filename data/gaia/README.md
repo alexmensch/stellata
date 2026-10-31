@@ -17,7 +17,7 @@ gaia_dr3_astrometry_catalog.tsv        ~58 MB, LFS. 5p astrometry +
                                        radial_velocity{,_error} for every
                                        catalog source_id, both binding gates'
                                        candidates and the bound-pair
-                                       siblings (383,055 rows) — tier 1 of
+                                       siblings (383,056 rows) — tier 1 of
                                        the direction, rv, V and ci cascades,
                                        the G evidence the overlay gate and the
                                        membership derivation weigh, and the
@@ -33,13 +33,13 @@ gaia_dr3_magnitude_pull.tsv            ~200 MB, LFS. Every gaia_source row at
 gaia_dr3_nss_two_body.tsv              ~90 MB, LFS. NSS two-body orbits.
 gaia_dr3_apsis.tsv                     ~70 MB, LFS. gspphot ∪ gspspec
                                        Teff/logg/[M/H]/A0 + spectraltype_esphs,
-                                       over the deep population (1,284,982).
+                                       over the deep population (1,284,983).
 gaia_dr3_gspc.tsv                      ~31 MB, LFS. Johnson-Kron-Cousins B and
                                        V synthesised from each source's BP/RP
                                        spectrum, + fluxes, flux errors and the
                                        per-band validated-range flag. 346,758
                                        rows, pulled against the catalog request
-                                       at 383,057 ids — the ci
+                                       at 383,058 ids — the ci
                                        cascade's tier below the Table-5.9
                                        relation.
 gaia_astrometry_source_id_request.tsv  ~440 KB, LFS. Stage 2 → Stage 3 deduped
@@ -51,7 +51,7 @@ gaia_catalog_source_id_request.tsv     ~7.2 MB, LFS. Full-catalog deduped
                                        binding gate's candidates UNION the
                                        membership derivation's candidates UNION
                                        the kept-physical multiples.tsv pair
-                                       members, 383,056 ids
+                                       members, 383,058 ids
                                        (scripts/catalog/astrometry-request/).
 gaia_dr2_neighbourhood_request.tsv     ~100 KB, LFS. DR3 source_ids of the
                                        Gaia-only catalog stars (no HIP/HD/HR/GJ)

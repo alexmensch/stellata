@@ -2,7 +2,7 @@
 
 The source_id list the Gaia 5p pull is made against. `pnpm run
 build:astrometry-request` emits `data/gaia/gaia_catalog_source_id_request.tsv`
-— **383,056** ids, the union of four contributions the table's four
+— **383,058** ids, the union of four contributions the table's four
 consumers need ([The request is a union](#the-request-is-a-union-and-why-that-is-not-a-compromise)). Not a network pull and not on the
 `build:catalog` path: this is **input preparation** for `scripts/refresh/`,
 which is why it sits beside the record build rather than inside it
@@ -70,7 +70,7 @@ different sets, so the request is the union of all four:
 | the manifest's `gaia_source_id` column, primaries rows | 374,932 | the record build: direction / rv / V / ci cascades |
 | `../classic-ids/`' binding-gate candidates | 354,987, +1,118 beyond the manifest | the gate's `phot_g_mean_mag` evidence |
 | `../membership/`' binding-derivation candidates | 375,976, +199 beyond the two above | the derivation's `phot_g_mean_mag` evidence — every source any primaries row could be bound to: the corrected spine's rows, and every addition item `additionItemCells` enumerates, admitted or not |
-| `multiples.tsv`' kept-physical pair members | 16,108, +6,807 beyond the three above | the parallax cascade's `pair_member_parallax` tier |
+| `multiples.tsv`' kept-physical pair members | 16,110, +6,809 beyond the three above | the parallax cascade's `pair_member_parallax` tier |
 
 `build:astrometry-request` prints every figure in this table — each
 contribution's own size and its increment over the ones above it — so all four
@@ -143,8 +143,8 @@ archive returns no row for lands the gate right back in pass-by-default, which
 is why `gateSkippedNoGMag` and `derivedWeighedNoGMag` are pinned at **0**: each
 counts candidates that reached its gate with no row in the pull, so a request
 that quietly stops covering them fails a snapshot instead of silently accepting
-bindings. Both read 0 today. The pull holds 383,055 rows against the request's
-383,056: 2 requested ids have no row, and both are reviewed bindings rather
+bindings. Both read 0 today. The pull holds 383,056 rows against the request's
+383,058: 2 requested ids have no row, and both are reviewed bindings rather
 than candidates — the two DR2 ids of `data/athyg/stale_gaia_source_ids.tsv` SIMBAD
 holds no DR3 successor for ([Six source_ids DR3 does not publish](../spine/README.md#six-source_ids-dr3-does-not-publish)).
 One pulled row is no longer requested: HD 2094 B's source, which only the
