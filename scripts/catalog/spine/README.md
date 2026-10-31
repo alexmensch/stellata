@@ -157,8 +157,11 @@ consequence of the V-tier move: three records ship as unsplit blends.
 ## Six source_ids DR3 does not publish
 
 Six rows carry a Gaia **DR2** id in the column the pipeline reads as DR3,
-so the 5p pull has no row for them however the request is composed. They
-are enumerated with their DR3 status in
+so no DR3 5p table has a row for them however the request is composed. The
+guard reads "published" as a row in either 5p pull: the catalogue pull is
+request-scoped and its request omits magnitude-term rows, whose row is the
+magnitude pull's, so the catalogue pull alone would flag a published spine
+cell the manifest re-sourced to the magnitude term. They are enumerated with their DR3 status in
 `data/athyg/stale_gaia_source_ids.tsv` (`STALE_GAIA_SOURCE_IDS`,
 `stale-gaia-source-ids-source.ts`), and three assertions here keep that
 queue honest: it is exactly the spine's unpublished source_ids, every one
