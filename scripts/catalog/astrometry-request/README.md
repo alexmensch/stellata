@@ -147,10 +147,10 @@ bindings. Both read 0 today. The pull holds 383,056 rows against the request's
 383,058: 2 requested ids have no row, and both are reviewed bindings rather
 than candidates — the two DR2 ids of `data/athyg/stale_gaia_source_ids.tsv` SIMBAD
 holds no DR3 successor for ([Six source_ids DR3 does not publish](../spine/README.md#six-source_ids-dr3-does-not-publish)).
-One pulled row is no longer requested: HD 2094 B's source, which only the
-spine's uncorrected TYC reached ([Correcting a merge decision](../membership/spine-corrections/README.md#correcting-a-merge-decision)) and which ships as
-a magnitude-term row on the magnitude pull's own astrometry. The next re-pull
-drops it.
+HD 2094 B's source, which only the spine's uncorrected TYC reached
+([Correcting a merge decision](../membership/spine-corrections/README.md#correcting-a-merge-decision)), is not requested and has no row here: it ships as a
+magnitude-term row on the magnitude pull's own astrometry, which is why the
+spine guard reads both pulls ([Six source_ids DR3 does not publish](../spine/README.md#six-source_ids-dr3-does-not-publish)).
 What no request can fix is `gateSkippedNullGMag` (<!-- count:classic-id-overlay/gateSkippedNullGMag -->112<!-- /count -->) and
 `derivedWeighedNullGMag` (<!-- count:membership-manifest/derivedWeighedNullGMag -->77<!-- /count -->): sources Gaia has a row for and publishes no
 `phot_g_mean_mag` for, which stay unvettable at any request size.
