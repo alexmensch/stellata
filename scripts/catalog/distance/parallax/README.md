@@ -126,8 +126,8 @@ which moves with every membership change and so cannot be quoted. Over the
 
 | Count | Today | Why it is not a candidate |
 |---|---|---|
-| `pairMemberParallaxEntries` | **<!-- count:build-catalog/pairMemberParallaxEntries -->8,268<!-- /count -->** | kept: anchor-grade, above the floor |
-| `pairMemberSiblingNotAnchorGrade` | <!-- count:build-catalog/pairMemberSiblingNotAnchorGrade -->6,683<!-- /count --> | RUWE, a blended image, or a saturated G — `isCoherenceAnchorGrade` |
+| `pairMemberParallaxEntries` | **<!-- count:build-catalog/pairMemberParallaxEntries -->8,269<!-- /count -->** | kept: anchor-grade, above the floor |
+| `pairMemberSiblingNotAnchorGrade` | <!-- count:build-catalog/pairMemberSiblingNotAnchorGrade -->6,684<!-- /count --> | RUWE, a blended image, or a saturated G — `isCoherenceAnchorGrade` |
 | `pairMemberSiblingNoParallax` | <!-- count:build-catalog/pairMemberSiblingNoParallax -->1,174<!-- /count --> | Gaia has the source and published none |
 | `pairMemberSiblingBelowSnFloor` | <!-- count:build-catalog/pairMemberSiblingBelowSnFloor -->1<!-- /count --> | anchor-grade, inversion undefined |
 | `pairMemberSiblingNoAstrometryRow` | **<!-- count:build-catalog/pairMemberSiblingNoAstrometryRow -->0<!-- /count -->** | the pull carries no row for the source at all |
