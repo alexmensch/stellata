@@ -1526,18 +1526,19 @@ def write_astrometry_request(
 ) -> int:
     """Emit the deduped union of every Gaia source_id Stage 2 resolved,
     across every tier in ``RESOLVE_VIA_VALUES``, plus
-    ``rejected_source_ids`` — the magnitude-gate-rejected binding
-    candidates (``indices.xwalk_mag_rejected`` /
-    ``athyg_gaia_mag_rejected``).
+    ``rejected_source_ids`` — every source a Stage-2 gate weighed and may
+    have refused: the magnitude gate's candidates
+    (``indices.xwalk_mag_rejected`` / ``athyg_gaia_mag_rejected``) and the
+    binding audit's (``binding_audit_source_ids``).
 
     ``scripts/refresh/refresh-gaia-astrometry.py`` reads this file to
-    drive its ADQL ``WHERE source_id IN (...)`` query. Rejected
-    candidates MUST stay in the request: the gate can only reject a
-    binding whose G is in the pull, so a request built from
-    post-rejection resolutions alone starves the next pull of exactly
+    drive its ADQL ``WHERE source_id IN (...)`` query. Refused
+    candidates MUST stay in the request: a gate can only refuse a
+    binding whose astrometry is in the pull, so a request built from
+    post-refusal resolutions alone starves the next pull of exactly
     the rows the gate needs and the bad binding silently returns on the
     following build (α Cen B oscillated onto its G=20.9 background
-    source this way).
+    source this way, and 20450+1244 A/B through the audit).
     """
     ids = sorted(
         {c.gaia_source_id for c in components if c.gaia_source_id is not None}
@@ -2352,6 +2353,11 @@ def binding_integrity_counts(verdicts: list[BindingVerdict]) -> dict[str, int]:
             counts["binding_conflicts_letter_sources"] += 1
         counts[_VERDICT_COUNT_KEY[v.verdict]] += 1
     return counts
+
+
+def binding_audit_source_ids(verdicts: list[BindingVerdict]) -> set[int]:
+    """Every Gaia source the binding audit weighed, kept or unbound."""
+    return {c.source_id for v in verdicts for c in v.candidates}
 
 
 BINDING_VERDICT_TSV_COLUMNS: tuple[str, ...] = (

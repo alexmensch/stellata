@@ -37,7 +37,9 @@ from scripts.binaries.stage2_resolve import (  # noqa: E402
     _bfs_offset,
     _cluster_tokens,
     _propagate_position,
+    BindingCandidate,
     audit_binding_integrity,
+    binding_audit_source_ids,
     binding_integrity_counts,
     build_athyg_position_grid,
     build_system_letter_positions,
@@ -1402,6 +1404,28 @@ class AstrometryRequestTests(unittest.TestCase):
             body = p.read_text().splitlines()
         self.assertEqual(n, 3)
         self.assertEqual(body, ["gaia_source_id", "111", "222", "333"])
+
+    def test_binding_audit_sources_cover_kept_and_unbound_candidates(self) -> None:
+        def cand(src: int) -> BindingCandidate:
+            return BindingCandidate(
+                label=str(src), tokens=["A"], source_id=src,
+                err_arcsec=math.inf, predicted_sep_arcsec=0.0,
+            )
+        verdicts = [
+            BindingVerdict(
+                wds_id="X", shape=BINDING_SHAPE_LETTER_SOURCES,
+                verdict=BINDING_VERDICT_UNBOUND_AMBIGUOUS, contested="A",
+                reference_token=None, reference_source=None, winner=None,
+                candidates=[cand(444), cand(555)], unbind=[("A", 444), ("A", 555)],
+            ),
+            BindingVerdict(
+                wds_id="Y", shape=BINDING_SHAPE_SOURCE_LETTERS,
+                verdict=BINDING_VERDICT_GEOMETRIC, contested="666",
+                reference_token="A", reference_source=777, winner=cand(666),
+                candidates=[cand(666)],
+            ),
+        ]
+        self.assertEqual(binding_audit_source_ids(verdicts), {444, 555, 666})
 
 
 class ResolveViaCanonicalKeysTests(unittest.TestCase):

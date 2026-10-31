@@ -341,7 +341,11 @@ sibling BC). Verdicts are counted (Stage-7 `binding_conflicts_*` /
 `arbitrated_geometric` / `arbitrated_unbound_ambiguous` /
 `arbitration_skipped_no_reference` / `arbitration_skipped_photocentre_blend`)
 and written to `build/binding-integrity-verdicts.tsv` (gitignored
-audit surface). This is what re-homes the ~7 duplicate-relation
+audit surface). Every source the audit weighed stays in the Gaia
+astrometry request (`binding_audit_source_ids`), kept or unbound: the
+audit can only unbind a source whose astrometry is in the pull, so
+dropping its losers from the request re-binds them on the next refresh.
+This is what re-homes the ~7 duplicate-relation
 mis-associations the writer previously collapsed; a source cannot be
 two stars at measured different separations.
 

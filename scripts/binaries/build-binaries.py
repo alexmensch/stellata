@@ -80,6 +80,7 @@ from scripts.binaries.stage2_resolve import (  # noqa: E402
     RESOLVE_VIA_VALUES,
     ResolvedComponent,
     audit_binding_integrity,
+    binding_audit_source_ids,
     binding_integrity_counts,
     iter_decomposing_pair_components,
     rescue_blank_components_pairs,
@@ -536,6 +537,7 @@ def run(force: bool) -> int:
         rejected_source_ids=(
             [src for _, src in indices.xwalk_mag_rejected]
             + [src for _, src in indices.athyg_gaia_mag_rejected]
+            + sorted(binding_audit_source_ids(binding_verdicts))
         ),
     )
     log(
