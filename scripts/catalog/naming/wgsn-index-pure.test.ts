@@ -175,7 +175,10 @@ describe('manifestNaming', () => {
   const manifestRow = (over: Partial<ManifestNamingRow>): ManifestNamingRow => ({
     proper: null, bayer: null, hip: null, hd: null, isSol: false, ...over,
   });
-  const names = [{ name: 'Vega', aliases: [] }, { name: 'Unurgunite', aliases: ['Nganurganity'] }];
+  const approved = buildWgsnIndex(
+    WGSN_NAMES.parse(`${NAMES_HEADER}Vega\t\t91262\t\t7001\t172167\t\t0.03\tnec\t1\nUnurgunite\tNganurganity\t\t\t\t50\t\t\tnec\t2\n`),
+    [],
+  ).approvedNameKeys;
   const rows = [
     manifestRow({ proper: 'Vega', bayer: 'Alp', hip: 91262, hd: 172167 }),
     manifestRow({ proper: 'Nganurganity', hd: 50 }),
@@ -186,7 +189,7 @@ describe('manifestNaming', () => {
 
   it('matches aliases, skips Sol, and counts Bayer rows the table reaches', () => {
     const result = manifestNaming(
-      rows, names, [bayer({ hip: 91262 })], [{ proper: 'Ross 248', hip: null, hd: null }],
+      rows, approved, [bayer({ hip: 91262 })], [{ proper: 'Ross 248', hip: null, hd: null }],
     );
     expect(result).toEqual({
       counts: {
@@ -203,7 +206,7 @@ describe('manifestNaming', () => {
 
   it('names an undisposed residual and a disposition the authority now covers', () => {
     const { missing, stale } = manifestNaming(
-      rows, names, [], [{ proper: 'Vega', hip: 91262, hd: 172167 }],
+      rows, approved, [], [{ proper: 'Vega', hip: 91262, hd: 172167 }],
     );
     expect({ missing, stale }).toEqual({
       missing: [membershipProperKey('Ross 248', null, null)],

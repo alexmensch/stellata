@@ -13,6 +13,7 @@ import { PROPER_DISPOSITIONS } from '../naming/proper-dispositions-source';
 import { WGSN_DESIGNATIONS } from '../naming/wgsn-designations-tsv';
 import { WGSN_NAMES } from '../naming/wgsn-names-tsv';
 import {
+  buildWgsnIndex,
   manifestNaming,
   type ManifestNamingCounts,
   type ManifestNamingRow,
@@ -222,8 +223,10 @@ describe.skipIf(!inputsReadable)('membership manifest ↔ inherited spine', () =
   // (/docs/star-naming.md#2-authority--one-source-approves-names-everything-else-compiles-them)
   // is held here.
   describe('↔ the naming authority', () => {
+    const designations = readArtifact(WGSN_DESIGNATIONS);
+    const { approvedNameKeys } = buildWgsnIndex(readArtifact(WGSN_NAMES), designations);
     const naming = (rows: Iterable<ManifestNamingRow>) => manifestNaming(
-      rows, readArtifact(WGSN_NAMES), readArtifact(WGSN_DESIGNATIONS), PROPER_DISPOSITIONS.read(),
+      rows, approvedNameKeys, designations, PROPER_DISPOSITIONS.read(),
     );
 
     it('disposes exactly the manifest propers no WGSN name matches', () => {

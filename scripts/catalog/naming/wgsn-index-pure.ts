@@ -272,11 +272,10 @@ export interface ManifestNamingCounts {
 /** README.md#the-residual-gate. */
 export function manifestNaming(
   rows: Iterable<ManifestNamingRow>,
-  names: readonly Pick<WgsnNameRow, 'name' | 'aliases'>[],
+  approvedNameKeys: WgsnIndex['approvedNameKeys'],
   designations: DesignationRow[],
   disposed: readonly Pick<ProperDispositionRow, 'proper' | 'hip' | 'hd'>[],
 ): { counts: ManifestNamingCounts; missing: string[]; stale: string[] } {
-  const nameKeys = new Set(names.flatMap((n) => [n.name, ...n.aliases].map(foldNameKey)));
   const reached = bayerKeySets(designations);
   const propers = new Map<string, string>();
   let bayerRows = 0;
@@ -287,7 +286,7 @@ export function manifestNaming(
     bayerRows++;
     if (reached.reaches(r.hip, r.hd)) bayerRowsCovered++;
   }
-  const unmatched = new Set([...propers].filter(([, p]) => !nameKeys.has(foldNameKey(p))).map(([k]) => k));
+  const unmatched = new Set([...propers].filter(([, p]) => !approvedNameKeys.has(foldNameKey(p))).map(([k]) => k));
   return {
     counts: {
       membershipPropers: propers.size,
