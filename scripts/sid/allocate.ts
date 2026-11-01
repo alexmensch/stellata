@@ -3,22 +3,13 @@
 // `pnpm run sid:check` (--check): read-only CI mode — /docs/sid.md#45-ci-guard.
 
 import { appendFileSync, existsSync, readFileSync, writeFileSync } from 'node:fs';
-import { resolve } from 'node:path';
 
-import {
-  DEFAULT_ROW_INDEX_MAP,
-  DEFAULT_SEARCH_INDEX,
-  loadCatalog,
-} from '../catalog/catalog-lookup';
-import { FLAG_IS_SOL, type SearchEntry } from '../catalog/record/catalog-pure';
-import { catalogRecordDesignations } from './catalog-designations';
-import { REPO_ROOT as ROOT } from '../util/paths';
 import { artifactText } from '../util/sources/source';
 import { readTable } from '../util/tsv/table-pure';
 import { MULTIPLES_TSV } from '../binaries/multiples-tsv';
 import { ALLOCATE_OUTPUTS } from './allocate-outputs';
 import { LEDGER, ledgerFile } from './ledger-tsv';
-import { SHELL_OBJECTS, SOL_OBJECTS } from './object-mints-source';
+import { builtObjects } from './built-objects';
 import { REINSTATEMENTS, RETIREMENTS } from './registry-source';
 import { loadStoredEdges } from './stored-edges';
 import {
@@ -28,73 +19,9 @@ import {
   validateLedger,
   validateReinstatements,
   validateRetirements,
-  type SidObject,
 } from './sid-pure';
-import { SIBLING_ARTIFACTS, siblingArtifactObjects, type SiblingItem } from './sibling-artifacts';
 
-const PUBLIC_DIR = resolve(ROOT, 'public');
 const { ledger: LEDGER_PATH, head: HEAD_PATH } = ALLOCATE_OUTPUTS.files;
-
-function requireFile(path: string, hint: string): string {
-  if (!existsSync(path)) {
-    console.error(`sid:allocate: missing ${path}\n  ${hint}`);
-    process.exit(1);
-  }
-  return readFileSync(path, 'utf-8');
-}
-
-async function collectObjects(): Promise<{ objects: SidObject[]; starCount: number }> {
-  const catalog = await loadCatalog();
-  const searchIndex = JSON.parse(
-    requireFile(DEFAULT_SEARCH_INDEX, 'run pnpm run build:catalog'),
-  ) as SearchEntry[];
-  const rowIndexMap = JSON.parse(
-    requireFile(DEFAULT_ROW_INDEX_MAP, 'run pnpm run build:catalog'),
-  ) as { bySynth: Record<string, number> };
-
-  const objects: SidObject[] = [];
-  let solRecords = 0;
-  for (const r of catalogRecordDesignations(catalog, searchIndex, rowIndexMap.bySynth)) {
-    if (r.flags & FLAG_IS_SOL) solRecords++;
-    objects.push({
-      designations: r.designations,
-      kind: 'star',
-      label: `record ${r.i}${r.name ? ` (${r.name})` : ''}`,
-    });
-  }
-  if (solRecords !== 1) {
-    console.error(`sid:allocate: expected exactly 1 FLAG_IS_SOL record, found ${solRecords}`);
-    process.exit(1);
-  }
-  const starCount = objects.length;
-
-  for (const spec of Object.values(SIBLING_ARTIFACTS)) {
-    const payload = JSON.parse(
-      requireFile(resolve(PUBLIC_DIR, spec.file), `run ${spec.buildHint}`),
-    ) as Record<string, SiblingItem[]>;
-    objects.push(...siblingArtifactObjects(spec, payload[spec.arrayKey]));
-  }
-
-  const solRows = SOL_OBJECTS.read();
-  const sun = solRows.find((r) => r.key === 'sun');
-  if (!sun || sun.kind !== 'star') {
-    console.error(`sid:allocate: sol-objects.tsv must carry "sun" with kind star`);
-    process.exit(1);
-  }
-  for (const row of solRows) {
-    // sol:sun rides the FLAG_IS_SOL catalog record — the same-as edge of
-    // /docs/sid.md#7-storage--sid-in-every-artifact — so it must not surface as a second object here.
-    if (row.key === 'sun') continue;
-    objects.push({ designations: [`sol:${row.key}`], kind: row.kind, label: `sol ${row.key}` });
-  }
-
-  const shellRows = SHELL_OBJECTS.read();
-  for (const row of shellRows) {
-    objects.push({ designations: [`shell:${row.key}`], kind: row.kind, label: `shell ${row.key}` });
-  }
-
-  return { objects, starCount };
-}
 
 function synthChurnReport(orphanKeys: string[], currentSynthKeys: string[]): string {
   interface PairRow {
@@ -136,7 +63,7 @@ function synthChurnReport(orphanKeys: string[], currentSynthKeys: string[]): str
 
 async function main(): Promise<void> {
   const checkOnly = process.argv.includes('--check');
-  const { objects, starCount } = await collectObjects();
+  const { objects, starCount } = await builtObjects();
   const storedEdges = loadStoredEdges();
 
   const ledger = ledgerFile(artifactText(LEDGER)).rows;
