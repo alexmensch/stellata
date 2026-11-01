@@ -52,6 +52,20 @@ registry-io.ts            loadRegistry: the ledger, retirements,
                           is required; a suite that may meet an LFS-stub
                           ledger gates on isReadable(LEDGER) itself.
                           Shared by build-catalog and the stamp.
+built-objects.ts          builtObjects: every SidObject of the built
+                          artifacts in allocation order (catalog records,
+                          clouds.json, local-group.json, the sol and shell
+                          lists), and BUILT_OBJECT_INPUTS, the built files
+                          it reads.
+orphan-causes-pure.ts     orphanCauses: each orphaned ledger key joined,
+  (+ test)                through every identity row carrying it, to the
+                          retire / park / merge outcomes recorded under
+                          those origin keys
+                          (/scripts/catalog/lineage/README.md#sid-events).
+                          The test runs it over the built artifacts and
+                          build/lineage/ and pins the star, sol and shell
+                          orphans no decision explains at 0; the sibling
+                          namespaces (cloud:, lg:) write no lineage.
 allocate-outputs.ts       ALLOCATE_OUTPUTS: what sid:allocate writes, the
                           ledger and ledger-head.json, declared;
                           tests/step-outputs.test.ts holds it.
@@ -60,11 +74,8 @@ allocate.ts               pnpm run sid:allocate — the ONLY writer of
                           LEDGER.encodeLine line and never rewriting a
                           committed one (+ ledger-head.json). The ledger,
                           retirements and reinstatements are required
-                          inputs. Reads the BUILT artifacts:
-                          catalog manifest/chunks, search-index.json,
-                          catalog-row-index-map.json, clouds.json,
-                          local-group.json, data/sid/sol-objects.tsv,
-                          data/sid/shell-objects.tsv.
+                          inputs. Reads the BUILT artifacts through
+                          builtObjects.
                           Run build:catalog / build:clouds /
                           build:local-group first.
                           pnpm run sid:check (--check) — read-only CI
@@ -119,7 +130,9 @@ sibling-stamp-outputs.ts  SID_STAMP_OUTPUTS: the sibling artifacts sid:stamp
 sibling-artifacts.ts      SIBLING_ARTIFACTS spec (file / arrayKey / ns /
                           kind per sibling) + siblingArtifactObjects, shared
                           by allocate (minting) and the stamp (resolving) so
-                          the namespace→kind mapping is defined once.
+                          the namespace→kind mapping is defined once;
+                          SIBLING_NAMESPACES, their namespaces, for
+                          allocate's slug warnings and the orphan test.
 ```
 
 The append-only CI guard is `tests/sid-ledger-guard.test.ts` (repo-meta:

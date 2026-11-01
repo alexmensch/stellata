@@ -207,7 +207,8 @@ export type RowOutcome =
   }
   | { kind: 'repositioned'; idx: number; brightness: MintedBrightness }
   | { kind: 'primary-unresolved' }
-  | { kind: 'not-applicable' };
+  | { kind: 'unpaired' }
+  | { kind: 'pair-anchor' };
 
 export interface MintedBrightness {
   source: CompanionAbsmagSource;
@@ -575,7 +576,8 @@ export function foldRowOutcomes(rows: readonly PromotedRow[]): RowOutcomeStats {
         countBrightness(o.brightness);
         break;
       case 'primary-unresolved':
-      case 'not-applicable':
+      case 'unpaired':
+      case 'pair-anchor':
         break;
       default: {
         const unhandled: never = o;
@@ -1950,7 +1952,7 @@ export function promoteCompanions(
 
   const keyAt = (idx: number | null): string | null => (idx === null ? null : getStarAt(idx).originKey);
   const unpaired = (row: MultiplesTsvRow): PromotedRow => (
-    { row, via: 'unpaired', outcome: { kind: 'not-applicable' }, anchor: null, systemAnchor: null }
+    { row, via: 'unpaired', outcome: { kind: 'unpaired' }, anchor: null, systemAnchor: null }
   );
   const escaped = new Set<MultiplesTsvRow>();
   const escapeCursorPrimary = (cursor: PairCursor): number | null => {
@@ -2033,7 +2035,7 @@ export function promoteCompanions(
       record({
         row: cursor.primary,
         via: 'primary',
-        outcome: { kind: primaryCatalogIdx === null ? 'primary-unresolved' : 'not-applicable' },
+        outcome: { kind: primaryCatalogIdx === null ? 'primary-unresolved' : 'pair-anchor' },
         anchor: anchorKey, systemAnchor: systemAnchorKey,
       });
     }

@@ -33,6 +33,8 @@ export const SIBLING_ARTIFACTS: Record<string, SiblingArtifactSpec> = {
   },
 };
 
+export const SIBLING_NAMESPACES: ReadonlySet<string> = new Set(Object.values(SIBLING_ARTIFACTS).map((s) => s.ns));
+
 export interface SiblingItem {
   id: string;
   name?: string;
