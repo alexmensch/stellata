@@ -103,8 +103,9 @@ this row, never re-deriving them — except where the deciding stage's input
 cells ARE the ledger's key: `binding-review.tsv` keys on the spine cells
 the derivation weighed, which its curated dispositions join on, so those
 ride the binding row's `params`. A parked or dropped record never gets an
-index or a SID: both columns are a tagged variant, a value or `none` with
-the reason code that removed the record, never an empty cell.
+index or a SID: it has no `allocation.identity` row, and a SID it once held
+is carried by allocation's parked, retired or merged row under the deciding
+origin, with that decision's code as `cause`.
 
 The manifest's five-cell tuple (`tyc`/`hip`/`hd`/`gl`/`gaia_source_id`) is
 not the key: it changes exactly when a binding or label decision changes, so
