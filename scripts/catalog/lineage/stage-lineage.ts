@@ -88,11 +88,12 @@ export async function stageLineage<F extends string, S extends string>(
   const texts = run.render(sorted);
   const diff = changes === null ? null : stageDiffText(changes, joins);
   const { files, members } = stageEmission(run.layout, run.spec, texts, header, diff, plan.rotate);
+  const invariantChecks = invariantViolations(run.invariants, sorted).map(invariantCheck);
   const writeMs = performance.now() - started;
   const gzipBytes = run.spec.files.reduce(
     (n, f) => n + (files[`lineage:${f}` as StageOutputKey<F, S>] as Uint8Array).byteLength, 0,
   );
-  const measured = `${run.spec.stage} lineage: ${gzipBytes} bytes gzipped; header, diff and write took ${writeMs.toFixed(0)} ms`;
+  const measured = `${run.spec.stage} lineage: ${gzipBytes} bytes gzipped; header, diff, write and invariants took ${writeMs.toFixed(0)} ms`;
   const over = gzipBytes > run.budget.gzipBytes || writeMs > run.budget.writeMs;
   const checks: Check[] = [over
     ? {
@@ -100,6 +101,6 @@ export async function stageLineage<F extends string, S extends string>(
       message: `${measured}, over its budget of ${run.budget.gzipBytes} bytes / ${run.budget.writeMs} ms`,
     }
     : { kind: 'pass', report: measured },
-    ...invariantViolations(run.invariants, run.lines).map(invariantCheck)];
+    ...invariantChecks];
   return { files, members, checks, changes };
 }
