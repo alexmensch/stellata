@@ -4,7 +4,7 @@ import type { StageLineageSpec } from '../catalog/lineage/lineage-io';
 import { compareUtf8, paramsText, type LineageParams, type LineageRow } from '../catalog/lineage/lineage-row-pure';
 import { LIVE, stageCodes, type CodeDeclaration, type CodeEffect } from '../catalog/lineage/reason-codes-pure';
 import { readTable, type TableSpec } from '../util/tsv/table-pure';
-import type { Allocation, SidObject } from './allocate-pure';
+import type { Allocation, ObjectOutcome, SidObject } from './allocate-pure';
 
 export const ALLOCATION_STAGE = 'allocation';
 
@@ -115,9 +115,9 @@ export interface AllocationIdentityRow {
 }
 
 export function allocationIdentityRows(
-  objects: readonly SidObject[], objectSids: readonly number[],
+  objects: readonly SidObject[], outcomes: readonly ObjectOutcome[],
 ): AllocationIdentityRow[] {
-  return objects.flatMap((obj, i) => (obj.admission.origin === null ? [] : [{ key: obj.admission.origin, sid: objectSids[i] }]));
+  return objects.flatMap((obj, i) => (obj.admission.origin === null ? [] : [{ key: obj.admission.origin, sid: outcomes[i].sid }]));
 }
 
 export function allocationIdentityText(rows: readonly AllocationIdentityRow[]): string {

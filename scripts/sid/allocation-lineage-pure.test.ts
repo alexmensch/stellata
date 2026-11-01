@@ -44,7 +44,7 @@ describe('allocation lineage', () => {
   });
 
   it('round-trips its identity file, key to SID, skipping objects with no origin', () => {
-    const rows = allocationIdentityRows(objects, allocation.objectSids);
+    const rows = allocationIdentityRows(objects, allocation.outcomes);
     const text = allocationIdentityText(rows);
     expect(text).toBe('key\tsid\nsol-objects:pluto\t4\nspine:1\t1\n');
     expect([...allocationIdentity(text, 'fixture')]).toEqual([{ key: 'sol-objects:pluto', sid: 4 }, { key: 'spine:1', sid: 1 }]);

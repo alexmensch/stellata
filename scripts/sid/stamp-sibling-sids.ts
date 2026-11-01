@@ -58,7 +58,7 @@ function main(): void {
     }
     minted.push(...allocation.minted);
     events.push(...allocation.events);
-    items.forEach((o, i) => { (o as { sid?: number }).sid = allocation.objectSids[i]; });
+    items.forEach((o, i) => { (o as { sid?: number }).sid = allocation.outcomes[i].sid; });
     console.log(`sid:stamp: ${items.length} ${spec.ns} SIDs stamped into ${spec.file} (${allocation.minted.length} minted)`);
     stamped[name] = `${JSON.stringify(payload)}\n`;
   }

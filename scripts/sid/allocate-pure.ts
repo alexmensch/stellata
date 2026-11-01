@@ -68,8 +68,8 @@ export type Allocation =
   | { readonly kind: 'failed'; readonly errors: readonly string[]; readonly ambiguous: readonly AmbiguousDesignation[] }
   | {
     readonly kind: 'allocated';
+    /** Per object, in input order. */
     readonly outcomes: readonly ObjectOutcome[];
-    readonly objectSids: readonly number[];
     readonly removals: readonly SidRemoval[];
     readonly minted: readonly LedgerRow[];
     /** Removals in ledger order, then mints and reinstates in object order. */
@@ -211,15 +211,14 @@ export function allocate(input: AllocateInput, upstream: Upstream): Allocation {
 
   const kindBySid = new Map<number, SidKind>([...ledger, ...minted].map((r) => [r.sid, r.kind]));
   const sidByOrigin = new Map<string, number>();
-  const objectSids = objects.map((obj, i) => {
-    if (kept[i].length === 0) return 0;
-    const outcome = outcomeByRoot.get(uf.find(kept[i][0]));
-    if (outcome === undefined) return 0;
+  const objectOutcomes = objects.map((obj, i): ObjectOutcome | undefined => {
+    const outcome = kept[i].length === 0 ? undefined : outcomeByRoot.get(uf.find(kept[i][0]));
+    if (outcome === undefined) return undefined;
     if (kindBySid.get(outcome.sid) !== obj.kind) {
       errors.push(`${obj.label}: kind "${obj.kind}" conflicts with sid ${outcome.sid}'s ledger kind "${kindBySid.get(outcome.sid)}"`);
     }
     if (obj.admission.origin !== null) sidByOrigin.set(obj.admission.origin, outcome.sid);
-    return outcome.sid;
+    return outcome;
   });
   const sidOfOrigin = (origin: string): number | undefined => sidByOrigin.get(origin);
 
@@ -249,6 +248,10 @@ export function allocate(input: AllocateInput, upstream: Upstream): Allocation {
   }
 
   if (errors.length > 0) return { kind: 'failed', errors, ambiguous };
+  const outcomes = objectOutcomes.map((o, i) => {
+    if (o === undefined) throw new Error(`${objects[i].label}: no outcome and no error recorded for it`);
+    return o;
+  });
 
   const event = (sid: number, kind: EventRow['event'], code: string, origin: string | null, successor: number | null = null): EventRow => ({
     sid, date: input.date, event: kind, code,
@@ -263,7 +266,6 @@ export function allocate(input: AllocateInput, upstream: Upstream): Allocation {
       if (r.kind === 'retired') return [event(r.sid, 'retire', r.decision.code, r.decision.origin)];
       return [];
     });
-  const outcomes = objects.map((_, i) => outcomeByRoot.get(uf.find(kept[i][0]))!);
   const announced = new Set<number>();
   outcomes.forEach((o, i) => {
     if (o.kind === 'resolved' || announced.has(o.sid)) return;
@@ -275,5 +277,5 @@ export function allocate(input: AllocateInput, upstream: Upstream): Allocation {
     .filter(([, indices]) => indices.length > 1)
     .map(([root, indices]) => ({ sid: outcomeByRoot.get(root)!.sid, objects: indices }));
 
-  return { kind: 'allocated', outcomes, objectSids, removals, minted, events, ambiguous, mergedClasses };
+  return { kind: 'allocated', outcomes, removals, minted, events, ambiguous, mergedClasses };
 }

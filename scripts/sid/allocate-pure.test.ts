@@ -72,7 +72,7 @@ describe('allocate: resolution and minting', () => {
       [5, 'cloud:orion-a', 'cloud', date],
       [6, 'sol:pluto', 'planet', date],
     ]);
-    expect(a.objectSids).toEqual([1, 2, 3, 4, 5, 6]);
+    expect(a.outcomes.map((o) => o.sid)).toEqual([1, 2, 3, 4, 5, 6]);
     expect(a.events.map((e) => [e.sid, e.event, e.code, e.params, e.buildVersion])).toEqual([
       [1, 'mint', ADMIT, '{"key":"spine:1"}', version],
       [2, 'mint', ADMIT, '{"key":"spine:2"}', version],
@@ -89,7 +89,7 @@ describe('allocate: resolution and minting', () => {
     const second = allocated(run({ objects, scope: ALL, ledger: [...first.minted] }, up));
     expect(second.minted).toEqual([]);
     expect(second.events).toEqual([]);
-    expect(second.objectSids).toEqual(first.objectSids);
+    expect(second.outcomes.map((o) => o.sid)).toEqual(first.outcomes.map((o) => o.sid));
     expect(second.outcomes.every((o) => o.kind === 'resolved')).toBe(true);
     expect(up.asked).toEqual([]);
   });
@@ -105,7 +105,7 @@ describe('allocate: resolution and minting', () => {
       objects: [star('spine:1', 'hip:7', 'gaia_dr3:594599568167552')],
       ledger: [row(1, 'gaia_dr3:594599568167552')],
     }));
-    expect(a.objectSids).toEqual([1]);
+    expect(a.outcomes.map((o) => o.sid)).toEqual([1]);
     expect(a.outcomes).toEqual([{ kind: 'resolved', sid: 1, via: 'gaia_dr3:594599568167552' }]);
   });
 
@@ -118,7 +118,7 @@ describe('allocate: resolution and minting', () => {
       gl: null, gaiaSourceId: null, syntheticId: null,
     });
     const a = allocated(run({ objects: [star('spine:1', ...designations)], ledger: [row(1, 'hd:281098')] }));
-    expect(a.objectSids).toEqual([1]);
+    expect(a.outcomes.map((o) => o.sid)).toEqual([1]);
   });
 
   it('a stored edge resolves a re-lettered synth key to its frozen sid', () => {
@@ -127,7 +127,7 @@ describe('allocate: resolution and minting', () => {
       storedEdges: [{ a: 'synth:04357+1010-Aa,Ab', b: 'synth:04357+1010-Aa1,2' }],
       ledger: [row(1, 'synth:04357+1010-Aa,Ab')],
     }));
-    expect(a.objectSids).toEqual([1]);
+    expect(a.outcomes.map((o) => o.sid)).toEqual([1]);
   });
 
   it('reports classes merged across objects by stored edges', () => {
@@ -137,7 +137,7 @@ describe('allocate: resolution and minting', () => {
     }, upstream({}, { 'spine:1': ADMIT, 'magnitude:5': ADMIT })));
     expect(a.minted.map((m) => m.canonicalKey)).toEqual(['hip:1']);
     expect(a.mergedClasses).toEqual([{ sid: 1, objects: [0, 1] }]);
-    expect(a.objectSids).toEqual([1, 1]);
+    expect(a.outcomes.map((o) => o.sid)).toEqual([1, 1]);
   });
 
   it('errors on a kind conflict with the frozen ledger row', () => {
@@ -244,7 +244,7 @@ describe('allocate: two active SIDs in one class', () => {
     const a = allocated(run({ objects, ledger }, upstream({
       'gaia_dr3:2': { decisions: [decision('magnitude:2', 'membership.fold', 'merge', 'spine:1')], seenBy: ['membership'] },
     })));
-    expect(a.objectSids).toEqual([1]);
+    expect(a.outcomes.map((o) => o.sid)).toEqual([1]);
     expect(a.events.map((e) => [e.sid, e.event, e.successor])).toEqual([[2, 'merge', 1]]);
   });
 
@@ -256,7 +256,7 @@ describe('allocate: two active SIDs in one class', () => {
 
   it('a recorded merge event resolves to the survivor with no new event', () => {
     const a = allocated(run({ objects, ledger, events: [ev(2, 'merge', 1)] }));
-    expect(a.objectSids).toEqual([1]);
+    expect(a.outcomes.map((o) => o.sid)).toEqual([1]);
     expect(a.events).toEqual([]);
   });
 });
@@ -266,7 +266,7 @@ describe('allocate: a retired class reappears', () => {
 
   it('reinstates the original SID under the code of the decision that admitted it', () => {
     const a = allocated(run({ objects: [star('spine:1', 'hip:1')], ledger, events: [ev(1, 'retire')] }, upstream({}, { 'spine:1': ADMIT })));
-    expect(a.objectSids).toEqual([1]);
+    expect(a.outcomes.map((o) => o.sid)).toEqual([1]);
     expect(a.minted).toEqual([]);
     expect(a.events.map((e) => [e.sid, e.event, e.code])).toEqual([[1, 'reinstate', ADMIT]]);
   });

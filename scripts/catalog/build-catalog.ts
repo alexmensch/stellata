@@ -965,7 +965,7 @@ async function main() {
   for (const { designation, objects } of allocation.ambiguous) {
     console.log(`ambiguous (dropped): ${designation} names ${objects.length} objects — ${objects.map((i) => sidObjects[i].label).join(' | ')}`);
   }
-  const recordSids = allocation.objectSids.slice(0, stars.length);
+  const recordSids = allocation.outcomes.slice(0, stars.length).map((o) => o.sid);
   const removedBy = (kind: string): number => allocation.removals.filter((r) => r.kind === kind).length;
   console.log(
     `SID allocation: ${sidObjects.length} objects, ${allocation.minted.length} minted, `
@@ -1293,7 +1293,7 @@ async function main() {
     lines: allocationLineageRows(sidObjects, allocation).map((row) => stageLineageLine(ALLOCATION_CODES, row)),
     render: (sorted) => ({
       allocation: stageLineageText(ALLOCATION_CODES, sorted),
-      'allocation.identity': allocationIdentityText(allocationIdentityRows(sidObjects, allocation.objectSids)),
+      'allocation.identity': allocationIdentityText(allocationIdentityRows(sidObjects, allocation.outcomes)),
     }),
     joins: () => [],
     budget: ALLOCATION_LINEAGE_BUDGET,
