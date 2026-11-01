@@ -10,8 +10,10 @@ import re
 import sys
 from pathlib import Path
 
-import cloud_model
-from cloud_model import (
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+
+import cloud_model  # noqa: E402
+from cloud_model import (  # noqa: E402
     AV_PER_NH_PC,
     AV_TARGET_BY_CLASS,
     DUST_GRID_HALF_EXTENT_PC,

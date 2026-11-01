@@ -30,6 +30,9 @@ build scripts, tests, and shader uniforms.
   [Willmer 2018](/data/papers/index.md#willmer2018) Table 3, and nothing records where 4.83 comes
   from: which value to adopt is an open decision (stellata-uadc.69.21, under
   the stellata-uadc.69 epic).
+- `baker-constants.ts` — the typed view of `data/schema/constants.json`,
+  the facts the Python asset bakers share with TypeScript, and the only
+  module that imports that file (`data/schema/README.md`).
 - `ulp.ts` (+ test) — `ulpsBetween(a, b)`, the distance between two
   float64s in representable steps. The unit that separates a value which
   will not converge (a handful of ULP, re-derived each frame from inputs

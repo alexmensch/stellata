@@ -8,6 +8,8 @@ import math
 from dataclasses import dataclass
 from pathlib import Path
 
+from scripts.util.baker_constants import CONSTANTS
+
 ROOT = Path(__file__).resolve().parent.parent.parent
 SRC_2021_T1 = ROOT / 'data' / 'molecular-clouds' / 'zucker2021-table1.dat'
 SRC_2021_T2 = ROOT / 'data' / 'molecular-clouds' / 'zucker2021-table2.dat'
@@ -142,12 +144,11 @@ NOISE_MODEL = {
     'interp': 'quintic',
 }
 
-# IAU/Hipparcos J2000 galactic-frame definition (must match
-# src/client/galactic/galactic-coords.ts so all coordinate transforms agree).
-ALPHA_GC = math.radians(266.4051)
-DELTA_GC = math.radians(-28.93617)
-ALPHA_NGP = math.radians(192.85948)
-DELTA_NGP = math.radians(27.12825)
+_FRAME = CONSTANTS['galacticFrame']
+ALPHA_GC = math.radians(_FRAME['centreRaDeg'])
+DELTA_GC = math.radians(_FRAME['centreDecDeg'])
+ALPHA_NGP = math.radians(_FRAME['northPoleRaDeg'])
+DELTA_NGP = math.radians(_FRAME['northPoleDecDeg'])
 
 
 def normalise(v: tuple[float, float, float]) -> tuple[float, float, float]:

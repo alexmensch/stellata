@@ -1,13 +1,12 @@
 import * as THREE from 'three';
 
-// J2000 ICRS coordinates of the galactic-frame axes:
-//  - Galactic Centre (l=0, b=0): RA=266.4051°, Dec=−28.93617°
-// - North Galactic Pole (b=+90°): RA=192.85948°, Dec=27.12825°
-// Values from the IAU/Hipparcos definition of the J2000 galactic frame.
-const ALPHA_GC = (266.4051 * Math.PI) / 180;
-const DELTA_GC = (-28.93617 * Math.PI) / 180;
-const ALPHA_NGP = (192.85948 * Math.PI) / 180;
-const DELTA_NGP = (27.12825 * Math.PI) / 180;
+import { GALACTIC_FRAME } from '../util/baker-constants';
+
+const DEG = Math.PI / 180;
+const ALPHA_GC = GALACTIC_FRAME.centreRaDeg * DEG;
+const DELTA_GC = GALACTIC_FRAME.centreDecDeg * DEG;
+const ALPHA_NGP = GALACTIC_FRAME.northPoleRaDeg * DEG;
+const DELTA_NGP = GALACTIC_FRAME.northPoleDecDeg * DEG;
 
 // Distance from Sol to the galactic centre. R₀ = 8.122 kpc per GRAVITY 2018
 // (/data/papers/index.md#gravity2018), adopted here so the Milky Way analytic background can reuse this

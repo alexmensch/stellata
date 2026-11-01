@@ -38,6 +38,7 @@ this file carries only the cross-folder policies.
 | [`textures/`](textures/README.md) | Planet surface/cloud equirect maps + Saturn-ring radial profile (frozen sources + built artifacts). |
 | [`papers/`](papers/README.md) | Citation audit — every paper the tree cites, its identifiers, and the checksum of the private PDF copy it is verified against (the PDFs themselves are never committed). |
 | [`sid/`](sid/README.md) | Stellata ID registry — append-only SID ledger + stored same-as edges (NOT external data; see docs/sid.md). |
+| [`schema/`](schema/README.md) | `constants.json`, the one spelling of every fact the Python asset bakers share with TypeScript (NOT external data). |
 
 ## Frozen external data
 

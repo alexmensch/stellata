@@ -31,6 +31,9 @@ same thing — single-use helpers stay with their consumer.
   build scripts share with the client runtime. Keep value-by-value in
   sync with the TS canonical; `tests/astronomy-constants-sync.test.ts`
   pins equality.
+- `baker_constants.py` — `CONSTANTS`, `data/schema/constants.json` loaded
+  once: the facts the Python asset bakers share with TypeScript
+  (`data/schema/README.md`).
 - `paths.py` — `REPO_ROOT`, the repo-root `Path` every top-level
   Python build/refresh script under `scripts/binaries/` and
   `scripts/refresh/` imports instead of independently walking

@@ -44,7 +44,8 @@ Local Group wireframes + per-galaxy labels are a separate layer; see
 **Shared module** `galactic-coords.ts` exports `GAL_TO_ICRS` (Matrix4)
 and `GALACTIC_CENTRE_PC` (Vector3 at R₀ = 8.122 kpc), built from the
 J2000 IAU galactic-pole and galactic-centre angles with explicit
-re-orthogonalisation. The Milky Way volumetric layer reuses these
+re-orthogonalisation. The angles live in `data/schema/constants.json`
+(`galacticFrame`), which the Python cloud model reads too. The Milky Way volumetric layer reuses these
 constants directly — keep the module minimal and stable.
 
 **Galactic disc outline** (`galactic-disc.ts`) — *on in dark mode at
