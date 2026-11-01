@@ -9,7 +9,8 @@ allocation, CI guard, Gaia DR reconciliation, v4 wire — in
 
 Unlike every sibling `data/` folder, this is **not** frozen external
 data: the ledger is Stellata's own identity contract. It grows by
-append only (`pnpm run sid:allocate`, the sole writer) and its frozen
+append only (SID allocation in `pnpm run build:catalog` and the clouds and
+Local Group stamps, its only writers) and its frozen
 prefix is CI-guarded — see [§ 4.5](/docs/sid.md#45-ci-guard) for what the guard
 enforces and why there is no `UPDATE_*` escape hatch.
 
@@ -28,7 +29,7 @@ events.tsv              sid → date → event (mint | retire | reinstate |
 ledger-head.json        { rows, max_sid, sha256 } snapshot of the
                         ledger / events frozen state; regular git so the CI guard can read
                         the merge-base version without LFS. Rewritten
-                        mechanically by sid:allocate.
+                        mechanically by every allocation.
                         The sha256 covers the data lines only (each
                         LF-terminated); the header line is pinned
                         structurally by the guard instead.

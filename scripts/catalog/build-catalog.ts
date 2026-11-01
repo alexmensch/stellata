@@ -81,7 +81,10 @@ import {
 } from './companions/promotion-lineage-pure';
 import { identityText } from './lineage/identity-pure';
 import { LINEAGE_LAYOUT } from './lineage/lineage-io';
-import { stageLineageLine, stageLineageText, type LineageLine } from './lineage/lineage-row-pure';
+import {
+  lineageLineCode, stageLineageLine, stageLineageText, type LineageLine,
+} from './lineage/lineage-row-pure';
+import { codeEffects } from './lineage/reason-codes-pure';
 import { stageLineage } from './lineage/stage-lineage';
 import {
   buildCatalogRowIndexMap,
@@ -147,12 +150,18 @@ import {
 } from '../util/emit-artifacts';
 import { snapshotCheck } from '../util/snapshot-check';
 import { watchHeap } from '../util/heap-budget';
-import {
-  resolveSids, starDesignations, syntheticGaiaBridges, type SidObject,
-} from '../sid/sid-pure';
+import { syntheticGaiaBridges } from '../sid/sid-pure';
 import { sidSuccessorPairs } from '../sid/events-pure';
-import { loadRegistry } from '../sid/registry-io';
+import { allocate } from '../sid/allocate-pure';
+import {
+  ALLOCATION_CODES, ALLOCATION_LINEAGE, ALLOCATION_LINEAGE_BUDGET,
+  allocationIdentityRows, allocationIdentityText, allocationLineageRows,
+} from '../sid/allocation-lineage-pure';
+import { catalogSidObjects, inCatalogScope } from '../sid/catalog-objects';
+import { catalogUpstream } from '../sid/catalog-upstream';
+import { loadRegistry, registryTexts } from '../sid/registry-io';
 import { loadStoredEdges } from '../sid/stored-edges';
+import { packageVersion } from '../util/git-provenance';
 import { stepInputPaths } from '../util/step-inputs';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -179,6 +188,7 @@ async function walkManifest(inputs: ReadStarsOptions, inputHashes: FileHashes) {
     for (const line of placementLineageLines(placement)) lines.push(line);
   });
   const parkedLedger = parkedLedgerTsv(lines);
+  const placementRemovals = lines.filter((line) => PLACEMENT_EFFECTS.get(lineageLineCode(line)) !== 'none');
   const placementEmission = await stageLineage({
     layout: LINEAGE_LAYOUT,
     spec: PLACEMENT_LINEAGE,
@@ -190,8 +200,10 @@ async function walkManifest(inputs: ReadStarsOptions, inputHashes: FileHashes) {
     budget: PLACEMENT_LINEAGE_BUDGET,
     argv: process.argv.slice(2),
   });
-  return { stars, stats, parkedLedger, placementEmission, manifestFounded };
+  return { stars, stats, parkedLedger, placementEmission, manifestFounded, placementRemovals };
 }
+
+const PLACEMENT_EFFECTS = codeEffects([PLACEMENT_CODES]);
 
 function parkedLedgerTsv(placementLines: readonly LineageLine[]): string {
   const parked = parkedLedgerView(placementLines);
@@ -449,7 +461,9 @@ async function main() {
 
   console.log(`Reading ${MEMBERSHIP_MANIFEST.file}...`);
   const t0 = Date.now();
-  const { stars, stats, parkedLedger, placementEmission, manifestFounded } = await walkManifest(inputs, inputHashesAtStart);
+  const {
+    stars, stats, parkedLedger, placementEmission, manifestFounded, placementRemovals,
+  } = await walkManifest(inputs, inputHashesAtStart);
   console.log(`  parsed ${stats.total} rows in ${Date.now() - t0}ms`);
   console.log(`  kept ${stars.length} stars; parked ${stats.parked.length}`);
   if (stats.bjEligible > 0) {
@@ -710,6 +724,7 @@ async function main() {
   });
   for (const ns of newStars) stars.push(ns);
   const { lineage: promotionLineageRows, identity: promotionIdentity } = promotionLineage(promotedRows, stars, manifestFounded);
+  const promotionLines = promotionLineageRows.map((row) => stageLineageLine(PROMOTION_CODES, row));
   console.log(
     `  scanned ${ps.pairRowsScanned} pair rows; promoted ${ps.promoted} ` +
       `(${ps.promotedSynthetic} via synthetic ID); ` +
@@ -933,34 +948,31 @@ async function main() {
       `${counts.multiplicityUnresolved} unresolved (SIMBAD '**', nothing resolved)`,
   );
 
-  // Resolve every record to its frozen Stellata ID from the committed
-  // ledger. The build never mints — sid:allocate is the sole writer
-  // (/docs/sid.md#44-allocation). Unallocated records get NO_SID and hard-fail the
-  // build after the artifact lands, so sid:allocate can still consume it
-  // (/scripts/catalog/README.md#sid-allocation).
   const registry = loadRegistry();
-  const sidObjects: SidObject[] = stars.map((s, i) => ({
-    designations: starDesignations({
-      isSol: (s.flags & FLAG_IS_SOL) !== 0,
-      hip: s.hip,
-      hd: s.hd,
-      hr: s.hr,
-      hdAlt: s.hdAlt,
-      hrAlt: s.hrAlt,
-      gl: s.gl,
-      gaiaSourceId: s.gaiaSourceId,
-      syntheticId: s.syntheticId,
-    }),
-    kind: 'star',
-    label: `record ${i}${s.proper ? ` (${s.proper})` : ''}`,
-  }));
-  const sidResolution = resolveSids({
+  const sidObjects = catalogSidObjects(stars);
+  const allocation = allocate({
     objects: sidObjects,
     storedEdges: registry.storedEdges,
     ledger: registry.ledger,
     events: registry.events,
-  });
-  const recordSids = sidResolution.objectSids;
+    scope: inCatalogScope,
+    date: new Date().toISOString().slice(0, 10),
+    version: packageVersion(),
+  }, catalogUpstream({ placementRemovals, promotion: promotionLines, promotionIdentity }));
+  if (allocation.kind === 'failed') {
+    throw new Error(`SID allocation failed for ${allocation.errors.length} object(s):\n  ${allocation.errors.join('\n  ')}`);
+  }
+  for (const { designation, objects } of allocation.ambiguous) {
+    console.log(`ambiguous (dropped): ${designation} names ${objects.length} objects — ${objects.map((i) => sidObjects[i].label).join(' | ')}`);
+  }
+  const recordSids = allocation.objectSids.slice(0, stars.length);
+  const removedBy = (kind: string): number => allocation.removals.filter((r) => r.kind === kind).length;
+  console.log(
+    `SID allocation: ${sidObjects.length} objects, ${allocation.minted.length} minted, `
+      + `${allocation.outcomes.filter((o) => o.kind === 'reinstated').length} reinstated; `
+      + `${removedBy('parked')} parked, ${removedBy('retired')} retired, ${removedBy('merged')} merged; `
+      + `${allocation.events.length} new event(s)`,
+  );
 
   // Naming ladder, composition half. Runs here because it needs every
   // record final: the promoted companions exist, indices are sorted, each
@@ -1148,7 +1160,7 @@ async function main() {
     return `${i} ${n} records to V ${sortedKey[n - 1]?.toFixed(2) ?? '—'}`;
   });
   console.log(`  transport chunks — ${chunkRows.join(' · ')}`);
-  const sidSuccessors = sidSuccessorPairs(registry.events);
+  const sidSuccessors = sidSuccessorPairs([...registry.events, ...allocation.events]);
   const manifest: CatalogManifest = {
     chunkBytes,
     totalBytes: totalLength,
@@ -1264,13 +1276,27 @@ async function main() {
     spec: PROMOTION_LINEAGE,
     inputs: inputHashesAtStart,
     diffed: 'promotion',
-    lines: promotionLineageRows.map((row) => stageLineageLine(PROMOTION_CODES, row)),
+    lines: promotionLines,
     render: (sorted) => ({
       promotion: stageLineageText(PROMOTION_CODES, sorted),
       'promotion.identity': identityText(promotionIdentity),
     }),
     joins: () => [],
     budget: PROMOTION_LINEAGE_BUDGET,
+    argv: process.argv.slice(2),
+  });
+  const allocationLineage = await stageLineage({
+    layout: LINEAGE_LAYOUT,
+    spec: ALLOCATION_LINEAGE,
+    inputs: inputHashesAtStart,
+    diffed: 'allocation',
+    lines: allocationLineageRows(sidObjects, allocation).map((row) => stageLineageLine(ALLOCATION_CODES, row)),
+    render: (sorted) => ({
+      allocation: stageLineageText(ALLOCATION_CODES, sorted),
+      'allocation.identity': allocationIdentityText(allocationIdentityRows(sidObjects, allocation.objectSids)),
+    }),
+    joins: () => [],
+    budget: ALLOCATION_LINEAGE_BUDGET,
     argv: process.argv.slice(2),
   });
   const files = {
@@ -1283,31 +1309,20 @@ async function main() {
     simbadSourcedDistances,
     ...placementEmission.files,
     ...lineage.files,
+    ...allocationLineage.files,
+    ...registryTexts(allocation.minted, allocation.events),
   };
-  const members = new Map([...chunks, ...placementEmission.members, ...lineage.members]);
-  const sidResolved = recordSids.reduce((n, sid) => (sid !== 0 ? n + 1 : n), 0);
-  console.log(`SID: ${sidResolved} / ${stars.length} records resolved to a ledger SID`);
-  if (sidResolution.errors.length > 0) {
-    const preview = sidResolution.errors.slice(0, 10);
-    emitArtifacts({ outputs: CATALOG_OUTPUTS, files, members });
-    console.error(
-      `\nSID resolution failed for ${sidResolution.errors.length} record(s):\n  ` +
-        preview.join('\n  ') +
-        (sidResolution.errors.length > preview.length
-          ? `\n  … and ${sidResolution.errors.length - preview.length} more`
-          : '') +
-        `\ncatalog.bin was written with NO_SID placeholders so the ledger can be ` +
-        `updated.\nRun \`pnpm run sid:allocate\` to mint the missing SIDs, then rebuild.`,
-    );
-    process.exit(1);
-  }
+  const members = new Map([
+    ...chunks, ...placementEmission.members, ...lineage.members, ...allocationLineage.members,
+  ]);
 
   emitArtifacts({
     outputs: CATALOG_OUTPUTS,
     files,
     members,
     checks: [
-      ...placementEmission.checks, ...lineage.checks, buildCountsCheck(counts), distanceOutliersCheck(stars),
+      ...placementEmission.checks, ...lineage.checks, ...allocationLineage.checks,
+      buildCountsCheck(counts), distanceOutliersCheck(stars),
       heap.check(),
     ],
     stamp: { path: CATALOG_STAMP, inputs: inputHashesAtStart },

@@ -9,8 +9,9 @@ import { starDesignations, type LedgerRow } from './sid-pure';
 
 const date = '2026-11-01';
 const version = '7.1.8';
-const STARS = new Set(['sol', 'hip', 'hd', 'hr', 'gl', 'gaia_dr3', 'synth']);
-const ALL = new Set([...STARS, 'cloud', 'lg', 'shell']);
+const STAR_NS = new Set(['sol', 'hip', 'hd', 'hr', 'gl', 'gaia_dr3', 'synth']);
+const STARS = (ns: string): boolean => STAR_NS.has(ns);
+const ALL = (): boolean => true;
 
 const ev = (sid: number, event: EventRow['event'], successor: number | null = null): EventRow => (
   { sid, date: '2026-07-09', event, code: 'c', params: '', successor, buildVersion: '7.1.6' }

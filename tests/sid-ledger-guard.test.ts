@@ -12,7 +12,7 @@ import { REASON_CODES } from '../scripts/catalog/lineage/reason-codes-tsv';
 import { fileAtMergeBase } from '../scripts/util/git-provenance';
 import { REPO_ROOT } from '../scripts/util/paths';
 import { artifactText, isReadable, readArtifact } from '../scripts/util/sources/source';
-import { ALLOCATE_OUTPUTS } from '../scripts/sid/allocate-outputs';
+import { REGISTRY_FILES } from '../scripts/sid/registry-outputs';
 import { retiredSids, sidSuccessorPairs, validateEvents } from '../scripts/sid/events-pure';
 import { EVENTS, eventsFile } from '../scripts/sid/events-tsv';
 import { LEDGER, ledgerFile } from '../scripts/sid/ledger-tsv';
@@ -29,7 +29,7 @@ import {
 const available = isReadable(LEDGER);
 
 function baseHead(): LedgerHead | null {
-  const base = fileAtMergeBase(relative(REPO_ROOT, ALLOCATE_OUTPUTS.files.head));
+  const base = fileAtMergeBase(relative(REPO_ROOT, REGISTRY_FILES.sidHead));
   return base.kind === 'present' ? JSON.parse(base.text) as LedgerHead : null;
 }
 
@@ -66,7 +66,7 @@ describe.skipIf(!available)('sid ledger guard', () => {
   });
 
   it('ledger-head.json exactly matches a recomputation over the working files', () => {
-    const head = JSON.parse(readFileSync(ALLOCATE_OUTPUTS.files.head, 'utf-8')) as LedgerHead;
+    const head = JSON.parse(readFileSync(REGISTRY_FILES.sidHead, 'utf-8')) as LedgerHead;
     expect(head).toEqual(computeLedgerHead(ledger(), events()));
   });
 

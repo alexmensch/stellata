@@ -87,7 +87,7 @@ that module is imported only by code that reads (or, for an artifact, writes)
 the file through it. Import reachability then equals reading, which is what
 lets a step's data inputs be derived from its closure.
 `tests/source-declarations.test.ts` holds every TypeScript pipeline step to
-it — the `build:*` and `fetch:*` targets plus `sid:allocate` and
+it — the `build:*` and `fetch:*` targets plus `sid:stamp` and
 `sid:risk-set`, the step kinds in
 [Step kinds](../../pipeline/README.md#step-kinds), over the closure of every
 `tsx` entry a chained script runs (`build:local-group`, `build:clouds`'s

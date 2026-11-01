@@ -112,7 +112,7 @@ a re-bind would diff as one record deleted and another added. The SID is not
 the key either: mints and merges are what the diff exists to show.
 
 A new Gaia data release changes magnitude-term origin keys. That is a real
-identity change and travels as SID merge and retire events (below), not as
+identity change and travels as SID merge and retire events ([SID events](#sid-events)), not as
 re-keyed lineage.
 
 ## Row contract
@@ -200,33 +200,9 @@ one text; `evidence` is its references' text forms joined by `|`.
 
 ## SID events
 
-SID allocation is a lineage stage. Per object it records resolved (through
-which designation), minted, merged (into which SID, survivor by
-`docs/sid.md` [§ 4.3](/docs/sid.md#43-ledger--datasidledgertsv)) or orphaned. An orphan inherits its cause from
-the upstream decision that removed or re-bound its record, joined on the
-origin key.
-
-Allocation is the sole writer of `data/sid/events.tsv`, apart from the
-one-time migration of the legacy retirement files
-([below](#committed-ledgers-become-views)) — `sid`, date, event
-(`mint`|`retire`|`reinstate`|`merge`), code, params, successor, build
-version — append-only and guarded like the ledger. Events follow from the
-declared effect of the upstream code:
-
-| Cause | Event |
-|---|---|
-| a new object | `mint`, coded by the route that admitted the record |
-| upstream effect `retire` | `retire` |
-| upstream effect `merge` | `merge`, with the successor SID |
-| upstream effect `park` | none: the SID stays in the ledger, absent from this build ([§ 4.4](/docs/sid.md#44-allocation)) |
-| a retired class reappears | `reinstate` |
-
-Fail closed: an orphan whose cause has no code, or whose upstream decision
-is not in that build's lineage, fails `sid:allocate` and `sid:check`; the
-join itself is `orphanCauses` (`../../sid/orphan-causes-pure.ts`), whose
-test holds a full build at zero unexplained orphans. CI checks every event row's
-code is in the list, declares that effect, and matches a decision in the
-build's lineage.
+SID allocation is the fourth stage, run inside `build:catalog` and the
+clouds and Local Group stamps. Its rows, its events and its fail-closed
+rule live beside its modules, in [SID events](/scripts/sid/README.md#sid-events).
 
 ## Storage and cost
 
@@ -257,9 +233,12 @@ contested or collision verdict and a disposition — since the candidates and
 refusals are rows of their own. `MEMBERSHIP_LINEAGE_BUDGET` pins 41 MB and
 15 s — the time ceiling sits well above the measurement because CI runners
 write slower than a workstation. Promotion, measured 2026-11-01: <!-- count:build-binaries/multiples_rows_emitted -->47,021<!-- /count --> rows, one
-per `multiples.tsv` row, plus 20,359 identity rows (<!-- count:build-catalog/companionPromoted -->14,676<!-- /count --> minted companions,
-5,683 retired or parked rows), 0.81 MB gzipped in 0.2 s with a diff;
-`PROMOTION_LINEAGE_BUDGET` pins 0.93 MB and 5 s. Placement, measured 2026-10-30: 3,872,657 rows (349 MB plain, 31.0 MB
+per `multiples.tsv` row, plus 31,908 identity rows (<!-- count:build-catalog/companionPromoted -->14,676<!-- /count --> minted companions,
+17,232 rows it retires, parks or merges), 0.95 MB gzipped in 0.2 s;
+`PROMOTION_LINEAGE_BUDGET` pins 1.04 MB and 5 s. Allocation, measured
+2026-11-01: 980,151 rows (979,712 objects plus 439 parked SIDs, 62.6 MB plain)
+and 979,712 identity rows (29.1 MB), 17.6 MB gzipped in 4.7 s without a diff;
+`ALLOCATION_LINEAGE_BUDGET` pins 19.3 MB and 15 s. Placement, measured 2026-10-30: 3,872,657 rows (349 MB plain, 31.0 MB
 gzipped) in 3.2 s without a diff and 8.1 s with one against a full
 baseline; `PLACEMENT_LINEAGE_BUDGET` pins 34 MB and 30 s. A file that size outruns
 V8's longest string, so stage files and diffs are written and read as UTF-8
@@ -286,8 +265,8 @@ Otherwise the stage's current `<stage>.tsv.gz` replaces
 `build/lineage.previous/<stage>.tsv.gz` in the same emitArtifacts commit
 that renames the stage's new file into place, and the build diffs against
 that last build if it is the merge-base's. A stage that fails, is skipped by
-its content-hash stamp, or does not run (a standalone `build:membership`, a
-separate `sid:allocate`) leaves both its copies untouched.
+its content-hash stamp, or does not run (a standalone `build:membership`)
+leaves both its copies untouched.
 
 A fresh worktree is seeded with the main checkout's last `build/lineage/`
 (`.worktreeinclude`), which may come from an older commit. So each stage
@@ -342,8 +321,9 @@ name.
    companion's promotion row cites its anchor. Identity rows come from every
    stage that writes them (`StageLineageSpec.identity`). A full scan of the
    stage files, about two seconds today, so no index is kept.
-3. Widen to the same-as class, and to retired SIDs and their successors,
-   through allocation's rows — once allocation is a lineage stage.
+3. Widen through allocation's rows: a SID query also finds the origin keys
+   allocation filed it under — the record it resolved to, or the decision
+   that retired, parked or merged it — and a merged SID's successor.
 4. Print every stage's rows for those keys in stage order
    (`LINEAGE_STAGES`).
 

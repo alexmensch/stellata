@@ -1,4 +1,4 @@
-// SID allocation as a lineage stage: its reason codes, live and historical, the one serialiser over its outcomes, and its key -> SID identity file. See ../catalog/lineage/README.md#sid-events.
+// SID allocation as a lineage stage: its reason codes, live and historical, the one serialiser over its outcomes, and its key -> SID identity file. See README.md#sid-events.
 
 import type { StageLineageSpec } from '../catalog/lineage/lineage-io';
 import { compareUtf8, paramsText, type LineageParams, type LineageRow } from '../catalog/lineage/lineage-row-pure';
@@ -12,6 +12,8 @@ export const ALLOCATION_LINEAGE: StageLineageSpec<'allocation' | 'allocation.ide
   stage: ALLOCATION_STAGE,
   files: ['allocation', 'allocation.identity'],
 };
+
+export const ALLOCATION_LINEAGE_BUDGET = { gzipBytes: 19_300_000, writeMs: 15_000 };
 
 const live = (effect: CodeEffect, description: string): CodeDeclaration => ({ description, effect, status: LIVE });
 
@@ -66,9 +68,9 @@ export const ALLOCATION_CODES = stageCodes(ALLOCATION_STAGE, {
 type Branch = Parameters<typeof ALLOCATION_CODES.code>[0];
 
 type ParamsOf<B extends Branch> =
-  B extends 'resolved' ? { sid: string; via: string }
-  : B extends 'minted' ? { sid: string; canonical_key: string; route: string }
-  : B extends 'reinstated' ? { sid: string; route: string }
+  B extends 'resolved' ? { via?: string }
+  : B extends 'minted' ? { canonical_key: string; route: string }
+  : B extends 'reinstated' ? { route: string }
   : B extends 'merged' ? { sid: string; canonical_key: string; cause: string; successor: string }
   : B extends 'retired' | 'parked' ? { sid: string; canonical_key: string; cause: string }
   : never;
@@ -78,7 +80,7 @@ const lineageRow = <B extends Branch>(key: string, branch: B, params: ParamsOf<B
   params: paramsText(params as LineageParams), evidence: [],
 });
 
-/** One row per object with an origin key, under it, and one per SID that left the build, under the origin of the decision that settled it. */
+/** One row per object with an origin key, under it, and one per SID that left the build, under the origin of the decision that settled it. An object's SID rides allocation.identity, not its row; `via` appears only when the object reached its ledger key through a designation it does not carry itself. */
 export function allocationLineageRows(
   objects: readonly SidObject[], allocation: Extract<Allocation, { kind: 'allocated' }>,
 ): LineageRow[] {
@@ -86,11 +88,10 @@ export function allocationLineageRows(
     const key = obj.admission.origin;
     if (key === null) return [];
     const o = allocation.outcomes[i];
-    const sid = String(o.sid);
     switch (o.kind) {
-      case 'resolved': return [lineageRow(key, 'resolved', { sid, via: o.via })];
-      case 'minted': return [lineageRow(key, 'minted', { sid, canonical_key: o.canonicalKey, route: o.code })];
-      case 'reinstated': return [lineageRow(key, 'reinstated', { sid, route: o.code })];
+      case 'resolved': return [lineageRow(key, 'resolved', obj.designations.includes(o.via) ? {} : { via: o.via })];
+      case 'minted': return [lineageRow(key, 'minted', { canonical_key: o.canonicalKey, route: o.code })];
+      case 'reinstated': return [lineageRow(key, 'reinstated', { route: o.code })];
       default: {
         const unmapped: never = o;
         throw new Error(`allocation outcome with no row mapping: ${JSON.stringify(unmapped)}`);

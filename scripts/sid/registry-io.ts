@@ -1,11 +1,12 @@
-// The committed SID registry, read and structurally validated for a read-only consumer.
+// The committed SID registry: read and structurally validated, and its files rewritten with an allocation's appends.
 
-import { readArtifact } from '../util/sources/source';
-import { LEDGER } from './ledger-tsv';
+import { artifactText, readArtifact } from '../util/sources/source';
+import { LEDGER, ledgerFile } from './ledger-tsv';
 import { validateEvents, type EventRow } from './events-pure';
-import { EVENTS } from './events-tsv';
+import { EVENTS, eventsFile } from './events-tsv';
 import { REASON_CODES } from '../catalog/lineage/reason-codes-tsv';
-import { validateLedger, type LedgerRow, type SameasEdge } from './sid-pure';
+import type { REGISTRY_FILES } from './registry-outputs';
+import { computeLedgerHead, validateLedger, type LedgerRow, type SameasEdge } from './sid-pure';
 import { loadStoredEdges } from './stored-edges';
 
 export interface Registry {
@@ -26,4 +27,14 @@ export function loadRegistry(): Registry {
     throw new Error(`SID registry is structurally invalid:\n  ${errors.join('\n  ')}`);
   }
   return { ledger, events, storedEdges: loadStoredEdges() };
+}
+
+/** The ledger and events with the allocation's rows appended, never a committed line rewritten, and the head recomputed over both. */
+export function registryTexts(
+  minted: readonly LedgerRow[], events: readonly EventRow[],
+): Record<keyof typeof REGISTRY_FILES, string> {
+  const sidLedger = artifactText(LEDGER) + minted.map((r) => `${LEDGER.encodeLine(r)}\n`).join('');
+  const sidEvents = artifactText(EVENTS) + events.map((e) => `${EVENTS.encodeLine(e)}\n`).join('');
+  const head = computeLedgerHead(ledgerFile(sidLedger), eventsFile(sidEvents));
+  return { sidLedger, sidEvents, sidHead: `${JSON.stringify(head, null, 2)}\n` };
 }

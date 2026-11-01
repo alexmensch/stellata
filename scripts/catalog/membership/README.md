@@ -315,7 +315,7 @@ HIP 93538 without HD 176555, each held by a spine record. The record ships; only
 
 No admitted row keys on a Gaia id alone (`additionGaiaKeyedOnly`), and no
 designation one carries sits on a second row (`sharedDesignations`, <!-- count:membership-manifest/sharedDesignations -->68<!-- /count -->, every
-one a spine-side `hd:` or `hr:` pair), so `sid:allocate` mints every addition under `hd:` /
+one a spine-side `hd:` or `hr:` pair), so SID allocation mints every addition under `hd:` /
 `hip:` / `gl:`. The two counts answer only together: the first says the row has
 a classical designation, the second that the designation is its own.
 
@@ -353,7 +353,7 @@ arithmetic and label-flips replay:
   folds of [Correcting a merge decision](#correcting-a-merge-decision) as the only exception, whose count is
   pinned and whose every pair is checked, so a second row landing on someone
   else's record still fails.
-  `matchSpineToManifest` resolves it through the classes `sid:allocate`
+  `matchSpineToManifest` resolves it through the classes SID allocation
   resolves a record by — `sameAsClasses` (`../../sid/sid-pure.ts`) over the
   manifest's designations plus `data/sid/sameas-overrides.tsv`, ambiguous
   designations dropped — the row keyed on its first ladder-ranked

@@ -33,7 +33,6 @@ Vite (`build:client`, `build:site`) is not a step. `pnpm run build` and
 | `build` | yes | `build/stamps/<step>.json` (gitignored) | an input or an output hash moved | the catalogue chain, the four generators, binaries, clouds, local-group, the mirrors |
 | `pull` | never | `data/stamps/<step>.json` (committed) | its request rows, a data input, its query or an output hash moved | every `refresh:*`, both `fetch:*`, the two `dustmaps` datasets |
 | `bake` | never | `data/stamps/<step>.json` (committed) | an input or an output hash moved | dust, local-bubble, cloud-surfaces, textures, icons, og |
-| `allocate` | never | the SID ledger itself | `allocate.ts --check` finds a record to mint or an orphaned synthetic key | `sid:allocate` |
 
 A step the runner never runs is a **manual** step. When one is stale, the
 runner skips every step that reads its outputs (transitively), still builds
@@ -41,16 +40,12 @@ everything else, then exits non-zero naming each stale step's command. So
 `pnpm run dev` does not start and CI fails, while unrelated layers still
 rebuild.
 
-`allocate` is gated on a predicate rather than a hash because its input is
-the whole built catalogue: a hash would call it stale after every catalogue
-change, whether or not a new record needs an SID. A predicate keeps no
-record, so `allocate` is the one manual step with no `data/stamps/` file.
-The predicate is `allocate.ts --check`'s own walk, the one owner of SID
-health: `build:catalog` lands its artifacts and stamp with a record lacking an
-SID rather than failing, and the allocate check then stops the run with one
-message per cause — `pnpm run sid:allocate` for a record to mint, the same-as
-bridge or retirement for an orphaned synthetic key. Minting an SID stays a
-deliberate act; a branch build never appends to the ledger.
+SID allocation is not a step of its own: `build:catalog` and the clouds and
+Local Group stamps each allocate their namespaces in-process and append to
+`data/sid/`, and a failed allocation fails that `build` step
+([SID allocation](../catalog/README.md#sid-allocation)). That makes the
+registry files the one output two steps declare (`build:catalog`, `sid:stamp`), against the one-writer
+load-time rule below; reconciling the two is open (stellata-hhaw.45.11.8).
 
 ## The step table — `steps.ts`
 
@@ -248,7 +243,7 @@ that writes it. Measured 2026-10-27.
 | `simbad_sptype` → `build:binaries` → `multiples.tsv` → `build:membership` → manifest → `simbad_sptype` | Broken. Binaries reads only the WDS leg, which the manifest never moves; that leg becomes its own pull and file. |
 | manifest ↔ `simbad_sptype` (the derivation's fourth binding source) | Kept. The request genuinely depends on the binding outcome. The stale-pull stop is its convergence check; re-pulling reopens the review queue, as `refresh/README.md` says. The same file also reaches the astrometry request (its derivation candidates), so manifest → `simbad_sptype` → request → astrometry pull → `build:membership` is a second path through this loop, covered by the same stop. |
 | `build:binaries` ↔ its own astrometry request | Kept, same check. The request keeps rejected candidates, so it grows rather than oscillates. |
-| `build:catalog` → `sid:allocate` → ledger → `build:catalog` | The `allocate` step kind. |
+| `build:catalog` reads the SID ledger and events it appends to | Kept: an append-only file whose committed prefix the step only reads; its stamp records the post-append hash, so the next run rebuilds once and appends nothing. |
 | `build:naming-parity` reads its own `naming-parity.tsv` | Carries frozen columns forward deliberately; not a pipeline step. |
 
 ## Derived checks
@@ -295,15 +290,13 @@ Hand-kept lists become derivations over the table:
 - **Q2, wrong states.** Fresh, stale, failed and skipped-behind-a-stale-or-
   failed-step are the variants of one verdict union the runner matches on
   exhaustively; a missing stamp reads as stale, never fresh.
-  `allocate`'s verdict is a value the runner matches on, not an exit code.
 - **Q3, when it is true.** A stamp is written only after the step's checks
   pass and its outputs land (`emitArtifacts`); the lock is taken before the
   stamp is read.
 - **Q6, the force.** One table absorbs 3 stamped steps, 2 emitters, 6
   mirrors, 3 CI-only generators and 1 that runs nowhere, 24 pulls (19
   `refresh:*` targets, 3 untargeted scripts, 2 `fetch:*`; 25 after the
-  `simbad_sptype` split, plus the two `dustmaps` datasets), 6 bakers and the
-  allocator.
+  `simbad_sptype` split, plus the two `dustmaps` datasets) and 6 bakers.
   Step kinds exist because two runner behaviours (run it; check it and stop)
   each hold several cases today.
 - **Q7, copies.** The two stamp helpers stay one per language with one JSON

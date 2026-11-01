@@ -6,7 +6,7 @@ import { createHash } from 'node:crypto';
 
 import type { Declared } from '../util/sources/source';
 import { readTable, type TableRow, type TableSpec } from '../util/tsv/table-pure';
-import { retiredSids, type EventRow } from './events-pure';
+import type { EventRow } from './events-pure';
 import {
   decodeLedgerRow, LEDGER_COLUMNS, SID_KINDS, type LedgerRow, type SidKind,
 } from './ledger-pure';
@@ -78,7 +78,7 @@ export interface StarDesignationFields {
    *  (`/scripts/catalog/classic-ids/label-merge/README.md#an-alias-stops-at-the-blend`)
    * —
    *  which is why both key the same-as class. Required, not optional: this
-   *  extractor has to derive one designation set for `sid:allocate` and the
+   *  extractor has to derive one designation set for SID allocation and the
    *  spine parity gate alike, and an omitted field is exactly the silent
    *  divergence `catalog-designations.ts` exists to prevent. */
   hdAlt: readonly number[];
@@ -90,12 +90,7 @@ export interface StarDesignationFields {
   syntheticId: string | null;
 }
 
-/** External designations for one catalog star. The single extractor:
- *  `sid:allocate` reaches it through `catalog-designations.ts` (over the
- *  built artifacts), `build-catalog` for its in-record resolution (over
- *  in-memory records), and the spine, label-merge and membership-manifest
- *  modules for the set a row stands in for — so none of them can derive a
- *  different class from the same record. */
+/** External designations for one catalog star: the one extractor (README.md#designation-extraction--where-each-namespace-comes-from). */
 export function starDesignations(f: StarDesignationFields): string[] {
   const d: string[] = [];
   if (f.isSol) d.push('sol:sun');
@@ -398,38 +393,9 @@ export class UnionFind {
   }
 }
 
-export interface SidObject {
-  designations: string[];
-  kind: SidKind;
-  label: string;
-}
-
-export interface AllocateInput {
-  objects: SidObject[];
-  storedEdges: SameasEdge[];
-  ledger: LedgerRow[];
-  events: EventRow[];
-  today: string;
-}
-
 export interface AmbiguousDesignation {
   designation: string;
   objects: number[];
-}
-
-export interface AllocateResult {
-  errors: string[];
-  keyless: number[];
-  /** Non-retired ledger canonical keys whose class contains no current
-   *  object, grouped by namespace. */
-  orphaned: Map<string, string[]>;
-  minted: LedgerRow[];
-  /** Per input object: the sid its class resolved or minted to. */
-  objectSids: number[];
-  resolvedExisting: number;
-  ambiguous: AmbiguousDesignation[];
-  /** Classes covering >1 object (stored-edge merges). */
-  mergedClasses: { sid: number; objects: number[] }[];
 }
 
 export interface SameAsClasses {
@@ -494,157 +460,4 @@ export function sameAsClasses(
     else objectsByClass.set(root, [i]);
   });
   return { classes, kept, ambiguous, objectsByClass };
-}
-
-export function allocate(input: AllocateInput): AllocateResult {
-  const { objects, storedEdges, ledger, events, today } = input;
-  const errors: string[] = [];
-
-  for (const obj of objects) {
-    for (const d of obj.designations) parseDesignation(d);
-  }
-
-  const { classes: uf, kept, ambiguous, objectsByClass } = sameAsClasses(
-    objects.map((o) => o.designations),
-    storedEdges,
-  );
-  const keyless = kept.flatMap((ds, i) => (ds.length === 0 ? [i] : []));
-  for (const row of ledger) uf.add(row.canonicalKey);
-
-  const retiredBySid = retiredSids(events);
-  const rowsByRoot = new Map<string, LedgerRow[]>();
-  for (const row of ledger) {
-    const root = uf.find(row.canonicalKey);
-    const list = rowsByRoot.get(root);
-    if (list) list.push(row);
-    else rowsByRoot.set(root, [row]);
-  }
-
-  const membersByRoot = new Map<string, string[]>();
-  for (const node of uf.nodes()) {
-    const root = uf.find(node);
-    const list = membersByRoot.get(root);
-    if (list) list.push(node);
-    else membersByRoot.set(root, [node]);
-  }
-
-  for (const [root, rows] of rowsByRoot) {
-    if (!objectsByClass.has(root)) continue;
-    const active = rows.filter((r) => !retiredBySid.has(r.sid));
-    if (active.length > 1) {
-      errors.push(
-        `class {${membersByRoot.get(root)!.join(', ')}} spans ${active.length} active sids ` +
-          `(${active.map((r) => `${r.sid}=${r.canonicalKey}`).join(', ')}) — resolve the ` +
-          `merge first: a merge event in events.tsv for all but one`,
-      );
-    } else if (active.length === 0) {
-      errors.push(
-        `class {${membersByRoot.get(root)!.join(', ')}} matches only retired sids ` +
-          `(${rows.map((r) => r.sid).join(', ')}) — a retired object reappeared; ` +
-          `append a reinstate event to data/sid/events.tsv (the object resumes its ` +
-          `original sid) or bridge/merge if its identity changed (/docs/sid.md#43-ledger--datasidledgertsv)`,
-      );
-    }
-  }
-
-  const orphaned = new Map<string, string[]>();
-  for (const row of ledger) {
-    if (retiredBySid.has(row.sid)) continue;
-    if (objectsByClass.has(uf.find(row.canonicalKey))) continue;
-    const ns = parseDesignation(row.canonicalKey).ns;
-    const list = orphaned.get(ns);
-    if (list) list.push(row.canonicalKey);
-    else orphaned.set(ns, [row.canonicalKey]);
-  }
-
-  const minted: LedgerRow[] = [];
-  const objectSids = new Array<number>(objects.length).fill(0);
-  const sidByRoot = new Map<string, number>();
-  const kindBySid = new Map<number, SidKind>(ledger.map((r) => [r.sid, r.kind]));
-  let resolvedExisting = 0;
-  let nextSid = ledger.reduce((max, r) => Math.max(max, r.sid), 0) + 1;
-
-  objects.forEach((obj, i) => {
-    if (kept[i].length === 0) return;
-    const root = uf.find(kept[i][0]);
-    let sid = sidByRoot.get(root);
-    if (sid === undefined) {
-      const active = (rowsByRoot.get(root) ?? []).filter((r) => !retiredBySid.has(r.sid));
-      if (active.length === 1) {
-        sid = active[0].sid;
-        resolvedExisting++;
-      } else if (active.length === 0 && (rowsByRoot.get(root) ?? []).length === 0) {
-        sid = nextSid++;
-        minted.push({
-          sid,
-          canonicalKey: canonicalKeyOf(membersByRoot.get(root)!),
-          kind: obj.kind,
-          firstSeen: today,
-        });
-        kindBySid.set(sid, obj.kind);
-      } else {
-        return; // merge/retirement conflict already reported in errors
-      }
-      sidByRoot.set(root, sid);
-    }
-    if (kindBySid.get(sid) !== obj.kind) {
-      errors.push(
-        `${obj.label}: kind "${obj.kind}" conflicts with sid ${sid}'s ledger kind ` +
-          `"${kindBySid.get(sid)}"`,
-      );
-    }
-    objectSids[i] = sid;
-  });
-
-  const mergedClasses: { sid: number; objects: number[] }[] = [];
-  for (const [root, indices] of objectsByClass) {
-    if (indices.length > 1) {
-      mergedClasses.push({ sid: sidByRoot.get(root) ?? 0, objects: indices });
-    }
-  }
-
-  return {
-    errors,
-    keyless,
-    orphaned,
-    minted,
-    objectSids,
-    resolvedExisting,
-    ambiguous,
-    mergedClasses,
-  };
-}
-
-export interface SidResolution {
-  /** Per input object, its resolved ledger sid — 0 (NO_SID) whenever the
-   *  object is unresolved (keyless, would-mint, or a merge/kind conflict). */
-  objectSids: number[];
-  /** Non-empty iff any object is unallocated / keyless / conflicting. The
-   *  caller must run `pnpm run sid:allocate` to reconcile before shipping. */
-  errors: string[];
-}
-
-/** resolveSids resolves against the frozen ledger without minting, so it
- *  needs everything allocate does except the mint date. */
-export type ResolveInput = Omit<AllocateInput, 'today'>;
-
-/** Read-only allocation: resolve every object to its EXISTING ledger sid,
- *  treating any object that would mint a new row (or is keyless / conflicts)
- *  as an error and leaving its sid at 0 (NO_SID). This is the resolver the
- *  artifact emitters use — the build never mints; `sid:allocate` is the sole
- *  ledger writer (/docs/sid.md#44-allocation). */
-export function resolveSids(input: ResolveInput): SidResolution {
-  const result = allocate({ ...input, today: '' });
-  const mintedSids = new Set(result.minted.map((r) => r.sid));
-  const errors = [...result.errors];
-  for (const i of result.keyless) {
-    errors.push(`${input.objects[i].label}: no usable designation (keyless)`);
-  }
-  input.objects.forEach((obj, i) => {
-    if (mintedSids.has(result.objectSids[i])) {
-      errors.push(`${obj.label}: unallocated (${obj.designations.join(', ')})`);
-      result.objectSids[i] = 0;
-    }
-  });
-  return { objectSids: result.objectSids, errors };
 }

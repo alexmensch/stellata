@@ -1,11 +1,13 @@
-// Stamp frozen Stellata IDs onto clouds.json / local-group.json from the
-// committed ledger, after their emitters run. See /scripts/sid/README.md#sibling-artifact-stamping.
+// `pnpm run sid:stamp`. See /scripts/sid/README.md#sibling-artifact-stamping.
 
 import { existsSync, readFileSync } from 'node:fs';
 
 import { emitArtifacts, runStep } from '../util/emit-artifacts';
-import { resolveSids } from './sid-pure';
-import { loadRegistry } from './registry-io';
+import { packageVersion } from '../util/git-provenance';
+import { allocate, type Upstream } from './allocate-pure';
+import type { EventRow } from './events-pure';
+import { loadRegistry, registryTexts } from './registry-io';
+import type { LedgerRow } from './sid-pure';
 import {
   SIBLING_ARTIFACTS,
   siblingArtifactObjects,
@@ -13,65 +15,58 @@ import {
 } from './sibling-artifacts';
 import { SID_STAMP_OUTPUTS } from './sibling-stamp-outputs';
 
-
-function stamped(name: string): string {
-  const spec = SIBLING_ARTIFACTS[name];
-  const path = SID_STAMP_OUTPUTS.files[name];
-  if (!existsSync(path)) {
-    console.error(`sid:stamp: missing ${path}\n  run ${spec.buildHint} first`);
-    process.exit(1);
-  }
-  const payload = JSON.parse(readFileSync(path, 'utf-8')) as Record<string, unknown>;
-  const items = payload[spec.arrayKey] as SiblingItem[] | undefined;
-  if (!Array.isArray(items)) {
-    console.error(`sid:stamp: ${spec.file} has no "${spec.arrayKey}" array`);
-    process.exit(1);
-  }
-
-  const { ledger, events, storedEdges } = loadRegistry();
-  const objects = siblingArtifactObjects(spec, items);
-  const { objectSids, errors } = resolveSids({
-    objects,
-    storedEdges,
-    ledger,
-    events,
-  });
-  if (errors.length > 0) {
-    console.error(
-      `sid:stamp: ${errors.length} ${spec.ns} object(s) failed resolution:\n  ` +
-        errors.join('\n  ') +
-        `\nA renamed slug needs a bridge in data/sid/sameas-overrides.tsv; a new ` +
-        `object needs \`pnpm run sid:allocate\`.`,
-    );
-    process.exit(1);
-  }
-
-  items.forEach((o, i) => {
-    (o as { sid?: number }).sid = objectSids[i];
-  });
-  console.log(`sid:stamp: ${items.length} ${spec.ns} SIDs stamped into ${spec.file}`);
-  return JSON.stringify(payload) + '\n';
-}
+const NO_LINEAGE: Upstream = { causes: () => new Map(), admissions: () => new Map() };
 
 function main(): void {
   const targets = process.argv.slice(2);
   if (targets.length === 0) {
-    console.error(`usage: stamp-sibling-sids.ts <${Object.keys(SIBLING_ARTIFACTS).join('|')}|all> ...`);
-    process.exit(1);
+    throw new Error(`usage: stamp-sibling-sids.ts <${Object.keys(SIBLING_ARTIFACTS).join('|')}|all> ...`);
   }
   const names = targets.includes('all') ? Object.keys(SIBLING_ARTIFACTS) : targets;
   for (const t of names) {
     if (!SIBLING_ARTIFACTS[t]) {
-      console.error(
-        `sid:stamp: unknown target "${t}" (expected ${Object.keys(SIBLING_ARTIFACTS).join(', ')})`,
-      );
-      process.exit(1);
+      throw new Error(`sid:stamp: unknown target "${t}" (expected ${Object.keys(SIBLING_ARTIFACTS).join(', ')})`);
     }
   }
+
+  const registry = loadRegistry();
+  const minted: LedgerRow[] = [];
+  const events: EventRow[] = [];
+  const stamped: Record<string, string> = {};
+  for (const name of names) {
+    const spec = SIBLING_ARTIFACTS[name];
+    const path = SID_STAMP_OUTPUTS.files[name];
+    if (!existsSync(path)) throw new Error(`sid:stamp: missing ${path}\n  run ${spec.buildHint} first`);
+    const payload = JSON.parse(readFileSync(path, 'utf-8')) as Record<string, unknown>;
+    const items = payload[spec.arrayKey] as SiblingItem[] | undefined;
+    if (!Array.isArray(items)) throw new Error(`sid:stamp: ${spec.file} has no "${spec.arrayKey}" array`);
+
+    const allocation = allocate({
+      objects: siblingArtifactObjects(spec, items),
+      storedEdges: registry.storedEdges,
+      ledger: [...registry.ledger, ...minted],
+      events: [...registry.events, ...events],
+      scope: (ns) => ns === spec.ns,
+      date: new Date().toISOString().slice(0, 10),
+      version: packageVersion(),
+    }, NO_LINEAGE);
+    if (allocation.kind === 'failed') {
+      throw new Error(
+        `sid:stamp: ${spec.ns} allocation failed:\n  ${allocation.errors.join('\n  ')}\n`
+          + 'A renamed slug needs a bridge in data/sid/sameas-overrides.tsv.',
+      );
+    }
+    minted.push(...allocation.minted);
+    events.push(...allocation.events);
+    items.forEach((o, i) => { (o as { sid?: number }).sid = allocation.objectSids[i]; });
+    console.log(`sid:stamp: ${items.length} ${spec.ns} SIDs stamped into ${spec.file} (${allocation.minted.length} minted)`);
+    stamped[name] = `${JSON.stringify(payload)}\n`;
+  }
+
   emitArtifacts({
     outputs: SID_STAMP_OUTPUTS,
-    only: names,
-    files: Object.fromEntries(names.map((n) => [n, stamped(n)])),
+    only: [...names, 'sidLedger', 'sidEvents', 'sidHead'],
+    files: { ...stamped, ...registryTexts(minted, events) },
   });
 }
 

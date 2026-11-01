@@ -7,7 +7,7 @@ import { registryFile, type RegistryFile } from './sid-pure';
 export const LEDGER = defineArtifact({
   file: 'data/sid/ledger.tsv',
   columns: LEDGER_COLUMNS,
-  hint: 'It grows only through `pnpm run sid:allocate`.',
+  hint: 'It grows only through SID allocation in `pnpm run build:catalog`.',
   order: 'as-given',
   decode: decodeLedgerRow,
   encode: encodeLedgerRow,

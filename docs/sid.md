@@ -198,7 +198,7 @@ wire can still resolve; a retired SID with none resolves to nothing and
 wire consumers skip it gracefully. Rows from before allocation wrote
 this file carry `historical` codes (`allocation.legacy.*`), one per
 legacy cause, never mapped onto live ones
-([SID events](/scripts/catalog/lineage/README.md#sid-events)).
+([SID events](/scripts/sid/README.md#sid-events)).
 
 **Two kinds of merge, and they pick different survivors.** A merge
 under [§ 6.1](#61-procedure) reconciles Gaia ids across a data release, and its
@@ -250,41 +250,47 @@ under a *different* identity; that is a bridge/merge ([§ 5](#5-synthetic-key-ch
 `data/sid/ledger-head.json` (regular git, tiny) pins the frozen
 state: `{ "rows": N, "max_sid": M, "sha256": "…" }` for the ledger
 and the same triple for events. It is
-rewritten mechanically by the allocation tool on every append.
+rewritten mechanically by every allocation.
 
 ### 4.4 Allocation
 
-`pnpm run sid:allocate` (B1, `scripts/sid/`) is the **only** writer of
-ledger rows:
+Allocation (`allocate`, `scripts/sid/allocate-pure.ts`) is the **only**
+writer of ledger rows and events, and the catalogue build is the minting
+step: `build:catalog` allocates its records and the sol and shell lists
+in-process before it emits, and the clouds and Local Group stamps allocate
+the `cloud:` and `lg:` namespaces the same way. Each caller allocates only
+its own namespaces:
 
-1. Build the same-as graph (recomputed edges + stored edges) over all
-   current build artifacts (catalog record set, clouds.json,
-   local-group.json, sol list).
+1. Build the same-as graph (recomputed edges + stored edges) over the
+   caller's objects.
 2. Resolve every equivalence class against the ledger: a class
    matches if **any** of its designations is, or same-as-reaches, an
    existing canonical key.
 3. Unmatched classes mint new rows: next sid, canonical key by [§ 4.2](#42-canonical-key--stability-first),
-   today's date. Within one batch, mint order is deterministic:
-   catalog record order (bright-first — commonly shared objects get
-   short LEB128 encodings), then clouds.json order, then
-   local-group.json order, then the sol list.
-4. Rewrite `ledger-head.json`.
+   the build's date, and a `mint` event coded by the lineage decision
+   that admitted the record. Within one batch, mint order is
+   deterministic: catalog record order (bright-first — commonly shared
+   objects get short LEB128 encodings), then the sol and shell lists;
+   each stamp mints in its artifact's order.
+4. Settle every SID in the caller's namespaces that no object keeps any
+   more, by the upstream lineage decision on its record
+   ([SID events](/scripts/sid/README.md#sid-events)).
+5. Land the appended ledger, events and `ledger-head.json` with the
+   step's other outputs.
 
-The catalogue build itself **never mints**: `build-catalog.ts` (B2)
-resolves each record to its SID via the ledger and **hard-fails** on
-any unallocated object, with instructions to run `sid:allocate`.
-Same for the clouds / local-group / sol emitters (B3). This keeps
-`pnpm run build` deterministic and network-free, and makes every
-allocation an explicit, reviewable diff.
+A failed allocation — an orphan no decision explains, a new object no
+stage admits — fails the step before anything lands. Builds stay
+deterministic and network-free, and every allocation is a reviewable diff
+in the PR that causes it.
 
-An object that disappears from a build (catalogue cut, WDS row
-dropped) keeps its ledger row — the sid is simply absent from the
-artifacts. If it returns later it resolves to the same SID. Explicit
-retirement ([§ 4.3](#43-ledger--datasidledgertsv)) is reserved for identity-level events (merges,
-dissolved synthetic components), not presence fluctuations. A sid
-retired in error — or whose object a later pipeline refinement
-honestly restores — is reinstated ([§ 4.3](#43-ledger--datasidledgertsv)), never re-minted: the
-allocation hard-error on a reappeared retired class is the prompt.
+An object that disappears from a build because a stage **parks** it
+(catalogue cut, unplaceable distance) keeps its ledger row with no event
+— the sid is simply absent from the artifacts, and if the object returns
+it resolves to the same SID. A park outranks a retire on the same SID.
+Retirement ([§ 4.3](#43-ledger--datasidledgertsv)) follows only from a stage decision with a retire
+or merge effect, an identity-level event. A retired class that reappears
+is reinstated ([§ 4.3](#43-ledger--datasidledgertsv)) under the code of the decision that admitted
+it, never re-minted.
 
 ### 4.5 CI guard
 
@@ -318,16 +324,15 @@ and full history (`.github/workflows/test.yml`; LFS objects come from the
 shared Actions cache, `.github/actions/lfs-cache`), where a skip fails the
 step; in the bare `test` job it sees an LFS pointer stub and self-skips.
 
-The guard protects the ledger *file*; `pnpm run sid:check` (its own CI
-check, against the built artifacts) protects its *consistency with the build*: a
-read-only allocation walk that fails on any would-mint object or
-orphaned synth key. The [§ 4.4](#44-allocation) build hard-fail already blocks
-unallocated objects from shipping; the check closes the other
-direction — an object-set change (a Stage-5 filter dropping pairs, a
-WDS re-lettering) cannot land without its allocation, retirement, or
-bridge in the same PR, so main's ledger ⟷ artifact state is always
-clean and any churn a working branch surfaces is attributable to that
-branch alone.
+The guard protects the ledger *file*; CI protects its *consistency with
+the build* by diffing it: the catalogue stage fails when `build:catalog`
+appends a row or event the PR did not commit, and a `git diff
+--exit-code -- data/sid` after `build:layers` does the same for the
+stamps. An object-set change (a Stage-5 filter dropping pairs, a WDS
+re-lettering) therefore cannot land without its allocation, its coded
+removal or its bridge in the same PR, so main's ledger ⟷ artifact state
+is always clean and any churn a working branch surfaces is attributable
+to that branch alone.
 
 ## 5. Synthetic-key churn (WDS re-subdivision)
 
@@ -336,20 +341,20 @@ a `synth:<wds>-<comp>` designation can vanish from one WDS drop to
 the next while the physical object persists. This is an active
 failure mode, not a hypothetical.
 
-**Ownership pin:** all synth-SID reconciliation lives in the
-allocation tool (`scripts/sid/`); the binaries pipeline stays
-sid-free. On `sid:allocate` (and the B2 build assert), a ledger row
-whose canonical `synth:` key is absent from the current build's synth
-set **hard-fails** with a candidate report: the orphaned key, every
-current synth key under the same WDS root, and each candidate's
-comp letters / sep / PA. Resolution is human, one line each in
-`sameas-overrides.tsv`:
+**Ownership pin:** all synth-SID reconciliation lives in allocation
+(`scripts/sid/`); the binaries pipeline stays sid-free. A ledger row
+whose canonical `synth:` key is absent from the build is settled by
+promotion's decision on the `multiples.tsv` row that would carry that
+key: a component promotion drops retires under that row's code. A key
+whose row left `multiples.tsv` altogether has no decision, so the build
+**fails closed**, and resolution is one of:
 
-- **Bridge** — `synth:04357+1010-Aa,Ab` = `synth:04357+1010-Aa1,2`
-  (same physical object, re-lettered), or
-- **Retirement** — a `retire` event in `events.tsv` when the component
-  genuinely dissolved (e.g. an unresolved aggregate that stopped
-  being promoted).
+- **Bridge** — one line in `sameas-overrides.tsv`,
+  `synth:04357+1010-Aa,Ab` = `synth:04357+1010-Aa1,2` (same physical
+  object, re-lettered), or
+- **A coded decision** in the stage that dropped the component, when it
+  genuinely dissolved (e.g. an unresolved aggregate that stopped being
+  promoted) — the `retire` event then follows from it.
 
 The guard ([§ 4.5](#45-ci-guard)) plus this fail-closed detection means a WDS refresh
 can never silently re-point a synth-keyed SID at a different star.
@@ -593,9 +598,10 @@ migration**.
 2. **Add same-as edges** for cross-catalogue aliases — derived from
    the source's cross-ID columns where possible (recomputed), curated
    lines in `sameas-overrides.tsv` where not.
-3. **Extend the allocation tool's input walk** to the new artifact
-   and run `pnpm run sid:allocate` — new classes append to the ledger;
-   the CI guard enforces append-only automatically.
+3. **Allocate the new artifact's objects** in the step that emits it,
+   over its own namespace, with an `allocation.mint.*` code for its
+   admission — new classes append to the ledger in that build; the CI
+   guard enforces append-only automatically.
 4. **Carry `sid` in the artifact** (in-record field, like
    clouds/LG/catalog) and register a resolver domain on attach
    ([§ 8](#8-runtime-resolver-b4)) — deferred resolution then covers late/optional loading for
@@ -611,7 +617,7 @@ migration**.
   churn detection [§ 5](#5-synthetic-key-churn-wds-re-subdivision); DR-reconciliation classifier + risk-set
   exporter [§ 6.1](#61-procedure)/6.2.
 - **B2 catalog sid field** (`stellata-efju.3`): [§ 7](#7-storage--sid-in-every-artifact) catalog.bin +
-  build hard-fail [§ 4.4](#44-allocation).
+  in-build allocation [§ 4.4](#44-allocation).
 - **B3 sibling artifacts** (`stellata-efju.4`): [§ 7](#7-storage--sid-in-every-artifact) clouds / LG /
   sol-objects + `SOL_OBJECT_SIDS` pin test.
 - **B4 runtime resolver** (`stellata-efju.5`): [§ 7](#7-storage--sid-in-every-artifact) loader domain + [§ 8](#8-runtime-resolver-b4)

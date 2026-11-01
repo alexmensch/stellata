@@ -20,7 +20,7 @@ const allocation = allocate({
     { sid: 2, canonicalKey: 'gaia_dr3:2', kind: 'star', firstSeen: '2026-07-01' },
   ],
   events: [],
-  scope: new Set(['hip', 'gaia_dr3', 'sol', 'cloud']),
+  scope: () => true,
   date: '2026-11-01',
   version: '7.1.8',
 }, {
@@ -36,8 +36,8 @@ describe('allocation lineage', () => {
   it('writes a row per keyed object and per settled SID, each a declared code', () => {
     const rows = allocationLineageRows(objects, allocation);
     expect(rows.map((r) => [r.key, r.code, r.params])).toEqual([
-      ['spine:1', 'allocation.resolved', '{"sid":"1","via":"hip:1"}'],
-      ['sol-objects:pluto', 'allocation.minted', '{"sid":"4","canonical_key":"sol:pluto","route":"allocation.mint.sol-list"}'],
+      ['spine:1', 'allocation.resolved', ''],
+      ['sol-objects:pluto', 'allocation.minted', '{"canonical_key":"sol:pluto","route":"allocation.mint.sol-list"}'],
       ['spine:7', 'allocation.parked', '{"sid":"2","canonical_key":"gaia_dr3:2","cause":"placement.park.no-position"}'],
     ]);
     for (const r of rows) stageLineageLine(ALLOCATION_CODES, r);

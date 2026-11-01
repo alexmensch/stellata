@@ -320,7 +320,7 @@ unless another home is named; the committed gates are
   63,676 more — and quoting it invites a later reader to take it for the
   count before some other change. `../build-catalog-expected.json` is
   always the live one. Membership was exactly the
-  spine, every walk gate read 0, and `sid:check` resolved every
+  spine, every walk gate read 0, and SID allocation resolved every
   record with zero mints — so the [§ 6.1](/docs/catalog-driver.md#61-record-parity) dropped list was empty and its
   reason enum had no rows. The only per-record routing deltas are the
   four-record set enumerated above. The value-half children have since
@@ -425,4 +425,4 @@ Pins: `derivationOutcome`, `derivedVia` and the review counts in
   Gaia tier on fit quality; that is `stellata-3bsf.49`'s question, with these
   rows as its corpus.
 - **The review queue is disposed** — 54 rows, [The spine side](/scripts/catalog/membership/README.md#the-spine-side) of
-  `../membership/README.md` — and `sid:check` is clean.
+  `../membership/README.md` — and SID allocation writes no event.

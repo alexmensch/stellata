@@ -3,7 +3,6 @@ import { describe, expect, it } from 'vitest';
 import {
   LEDGER_HEADER,
   SAMEAS_HEADER,
-  allocate,
   canonicalKeyOf,
   checkAppendOnly,
   compareDesignations,
@@ -15,13 +14,11 @@ import {
   parseDesignation,
   parseSameasTsv,
   parseSolObjectsTsv,
-  resolveSids,
   starDesignations,
   validateLedger,
   type LedgerRow,
-  type SidObject,
 } from './sid-pure';
-import { EVENT_COLUMNS, type EventRow } from './events-pure';
+import { EVENT_COLUMNS } from './events-pure';
 import { eventsFile } from './events-tsv';
 import { LEDGER, ledgerFile } from './ledger-tsv';
 
@@ -89,10 +86,6 @@ describe('canonical-key ladder', () => {
 
 const T = { file: 't.tsv', hint: 'h' };
 const EVENTS_HEADER = EVENT_COLUMNS.join('\t');
-const ev = (sid: number, event: EventRow['event'], successor: number | null = null): EventRow => (
-  { sid, date: '2026-07-09', event, code: 'c', params: '', successor, buildVersion: '7.1.6' }
-);
-
 describe('TSV codecs', () => {
   const ledgerText = `${LEDGER_HEADER}\n1\thip:32349\tstar\t2026-07-10\n2\tcloud:orion-a\tcloud\t2026-07-10\n`;
 
@@ -227,12 +220,6 @@ describe('head snapshot + append-only', () => {
 });
 
 describe('sameAsClasses', () => {
-  const star = (label: string, ...designations: string[]): SidObject => ({
-    designations,
-    kind: 'star',
-    label,
-  });
-
   it('drops a designation carried by two objects; both keep their own', () => {
     const { kept, ambiguous, classes } = sameAsClasses([['hip:1', 'hd:100'], ['hip:2', 'hd:100']], []);
     expect(ambiguous).toEqual([{ designation: 'hd:100', objects: [0, 1] }]);
@@ -251,246 +238,10 @@ describe('sameAsClasses', () => {
     ).toThrow('hd:100 = gaia_dr3:9');
   });
 
-  it('an object whose only designation is ambiguous becomes keyless', () => {
-    const objects = [star('a', 'hip:1', 'hd:100'), star('b', 'hd:100')];
-    const { kept } = sameAsClasses(objects.map((o) => o.designations), []);
+  it('an object whose only designation is ambiguous keeps none', () => {
+    const { kept, objectsByClass } = sameAsClasses([['hip:1', 'hd:100'], ['hd:100']], []);
     expect(kept[1]).toEqual([]);
-    const result = allocate({
-      objects,
-      storedEdges: [],
-      ledger: [],
-      events: [],
-      today: '2026-07-10',
-    });
-    expect(result.keyless).toEqual([1]);
-  });
-});
-
-describe('allocation', () => {
-  const today = '2026-07-10';
-  const objects: SidObject[] = [
-    { designations: ['sol:sun', 'hd:1'], kind: 'star', label: 'record 0 (Sol)' },
-    { designations: ['hip:32349', 'hd:48915', 'gaia_dr3:9'], kind: 'star', label: 'record 1' },
-    { designations: ['gaia_dr3:594599568167552'], kind: 'star', label: 'record 2' },
-    { designations: ['synth:04357+1010-Aa,Ab'], kind: 'star', label: 'record 3' },
-    { designations: ['cloud:orion-a'], kind: 'cloud', label: 'cloud Orion A' },
-    { designations: ['lg:lmc'], kind: 'galaxy', label: 'local-group LMC' },
-    { designations: ['sol:pluto'], kind: 'planet', label: 'sol pluto' },
-  ];
-
-  it('mints in object order with ladder canonical keys and kinds', () => {
-    const r = allocate({ objects, storedEdges: [], ledger: [], events: [], today });
-    expect(r.errors).toEqual([]);
-    expect(r.minted.map((m) => [m.sid, m.canonicalKey, m.kind])).toEqual([
-      [1, 'sol:sun', 'star'],
-      [2, 'hip:32349', 'star'],
-      [3, 'gaia_dr3:594599568167552', 'star'],
-      [4, 'synth:04357+1010-Aa,Ab', 'star'],
-      [5, 'cloud:orion-a', 'cloud'],
-      [6, 'lg:lmc', 'galaxy'],
-      [7, 'sol:pluto', 'planet'],
-    ]);
-    expect(r.objectSids).toEqual([1, 2, 3, 4, 5, 6, 7]);
-    expect(r.minted.every((m) => m.firstSeen === today)).toBe(true);
-  });
-
-  it('is idempotent: a second run resolves everything and mints nothing', () => {
-    const first = allocate({ objects, storedEdges: [], ledger: [], events: [], today });
-    const second = allocate({
-      objects,
-      storedEdges: [],
-      ledger: first.minted,
-      events: [],
-      today: '2026-08-01',
-    });
-    expect(second.minted).toEqual([]);
-    expect(second.resolvedExisting).toBe(7);
-    expect(second.objectSids).toEqual(first.objectSids);
-  });
-
-  it('never re-keys: a later-acquired stronger designation joins the class', () => {
-    const ledger: LedgerRow[] = [
-      { sid: 1, canonicalKey: 'gaia_dr3:594599568167552', kind: 'star', firstSeen: '2026-07-01' },
-    ];
-    const r = allocate({
-      objects: [
-        {
-          designations: ['hip:7', 'gaia_dr3:594599568167552'],
-          kind: 'star',
-          label: 'record 0',
-        },
-      ],
-      storedEdges: [],
-      ledger,
-      events: [],
-      today,
-    });
-    expect(r.minted).toEqual([]);
-    expect(r.objectSids).toEqual([1]);
-  });
-
-  // The 3 HIP-less records whose overlay cell holds a LOWER second HD than the
-  // one they display. The alternative sorts ahead of the stored key, so this is
-  // the shape that would re-key if the ledger row were recomputed rather than
-  // read — it joins the class instead, and the sid does not move.
-  it('a lower alternative HD joins the class without moving the stored key', () => {
-    const ledger: LedgerRow[] = [
-      { sid: 1, canonicalKey: 'hd:281098', kind: 'star', firstSeen: '2026-07-01' },
-    ];
-    const r = allocate({
-      objects: [{
-        designations: starDesignations({
-          isSol: false, hip: null, hd: 281098, hr: null, hdAlt: [35908], hrAlt: [],
-          gl: null, gaiaSourceId: null, syntheticId: null,
-        }),
-        kind: 'star',
-        label: 'record 0 (HD 281098)',
-      }],
-      storedEdges: [],
-      ledger,
-      events: [],
-      today,
-    });
-    expect(r.errors).toEqual([]);
-    expect(r.minted).toEqual([]);
-    expect(r.objectSids).toEqual([1]);
-  });
-
-  it('a stored edge resolves a re-lettered synth key to its frozen sid', () => {
-    const ledger: LedgerRow[] = [
-      { sid: 1, canonicalKey: 'synth:04357+1010-Aa,Ab', kind: 'star', firstSeen: '2026-07-01' },
-    ];
-    const r = allocate({
-      objects: [{ designations: ['synth:04357+1010-Aa1,2'], kind: 'star', label: 'record 0' }],
-      storedEdges: [{ a: 'synth:04357+1010-Aa,Ab', b: 'synth:04357+1010-Aa1,2' }],
-      ledger,
-      events: [],
-      today,
-    });
-    expect(r.minted).toEqual([]);
-    expect(r.objectSids).toEqual([1]);
-    expect(r.orphaned.size).toBe(0);
-  });
-
-  it('reports an orphaned synth ledger key when no bridge covers it', () => {
-    const ledger: LedgerRow[] = [
-      { sid: 1, canonicalKey: 'synth:04357+1010-Aa,Ab', kind: 'star', firstSeen: '2026-07-01' },
-    ];
-    const r = allocate({
-      objects: [{ designations: ['synth:04357+1010-Aa1,2'], kind: 'star', label: 'record 0' }],
-      storedEdges: [],
-      ledger,
-      events: [],
-      today,
-    });
-    expect(r.orphaned.get('synth')).toEqual(['synth:04357+1010-Aa,Ab']);
-    expect(r.minted).toHaveLength(1);
-  });
-
-  it('a retired synth key is not an orphan (dissolved component)', () => {
-    const ledger: LedgerRow[] = [
-      { sid: 1, canonicalKey: 'synth:04357+1010-Aa,Ab', kind: 'star', firstSeen: '2026-07-01' },
-    ];
-    const r = allocate({
-      objects: [],
-      storedEdges: [],
-      ledger,
-      events: [ev(1, 'retire')],
-      today,
-    });
-    expect(r.orphaned.size).toBe(0);
-  });
-
-  it('errors when a class spans two active sids (unresolved merge)', () => {
-    const ledger: LedgerRow[] = [
-      { sid: 1, canonicalKey: 'hip:1', kind: 'star', firstSeen: '2026-07-01' },
-      { sid: 2, canonicalKey: 'hd:2', kind: 'star', firstSeen: '2026-07-01' },
-    ];
-    const r = allocate({
-      objects: [{ designations: ['hip:1', 'hd:2'], kind: 'star', label: 'record 0' }],
-      storedEdges: [],
-      ledger,
-      events: [],
-      today,
-    });
-    expect(r.errors[0]).toMatch(/2 active sids/);
-  });
-
-  it('resolves to the survivor when the merge is recorded as an event', () => {
-    const ledger: LedgerRow[] = [
-      { sid: 1, canonicalKey: 'hip:1', kind: 'star', firstSeen: '2026-07-01' },
-      { sid: 2, canonicalKey: 'hd:2', kind: 'star', firstSeen: '2026-07-01' },
-    ];
-    const r = allocate({
-      objects: [{ designations: ['hip:1', 'hd:2'], kind: 'star', label: 'record 0' }],
-      storedEdges: [],
-      ledger,
-      events: [ev(2, 'merge', 1)],
-      today,
-    });
-    expect(r.errors).toEqual([]);
-    expect(r.objectSids).toEqual([1]);
-  });
-
-  it('errors when a retired object reappears with no active sid', () => {
-    const ledger: LedgerRow[] = [
-      { sid: 1, canonicalKey: 'hip:1', kind: 'star', firstSeen: '2026-07-01' },
-    ];
-    const r = allocate({
-      objects: [{ designations: ['hip:1'], kind: 'star', label: 'record 0' }],
-      storedEdges: [],
-      ledger,
-      events: [ev(1, 'retire')],
-      today,
-    });
-    expect(r.errors[0]).toMatch(/retired object reappeared/);
-  });
-
-  it('a reinstated sid resolves the reappeared object to its original sid', () => {
-    const ledger: LedgerRow[] = [
-      { sid: 1, canonicalKey: 'hip:1', kind: 'star', firstSeen: '2026-07-01' },
-    ];
-    const r = allocate({
-      objects: [{ designations: ['hip:1'], kind: 'star', label: 'record 0' }],
-      storedEdges: [],
-      ledger,
-      events: [ev(1, 'retire'), ev(1, 'reinstate')],
-      today,
-    });
-    expect(r.errors).toEqual([]);
-    expect(r.objectSids).toEqual([1]);
-    expect(r.minted).toEqual([]);
-  });
-
-  it('errors on a kind conflict with the frozen ledger row', () => {
-    const ledger: LedgerRow[] = [
-      { sid: 1, canonicalKey: 'cloud:orion-a', kind: 'cloud', firstSeen: '2026-07-01' },
-    ];
-    const r = allocate({
-      objects: [{ designations: ['cloud:orion-a'], kind: 'galaxy', label: 'lg orion-a' }],
-      storedEdges: [],
-      ledger,
-      events: [],
-      today,
-    });
-    expect(r.errors[0]).toMatch(/kind "galaxy" conflicts/);
-  });
-
-  it('reports classes merged across objects by stored edges', () => {
-    const r = allocate({
-      objects: [
-        { designations: ['hip:1'], kind: 'star', label: 'record 0' },
-        { designations: ['gaia_dr3:5'], kind: 'star', label: 'record 1' },
-      ],
-      storedEdges: [{ a: 'hip:1', b: 'gaia_dr3:5' }],
-      ledger: [],
-      events: [],
-      today,
-    });
-    expect(r.minted).toHaveLength(1);
-    expect(r.minted[0].canonicalKey).toBe('hip:1');
-    expect(r.mergedClasses).toEqual([{ sid: 1, objects: [0, 1] }]);
-    expect(r.objectSids).toEqual([1, 1]);
+    expect([...objectsByClass.values()]).toEqual([[0]]);
   });
 });
 
@@ -556,53 +307,6 @@ describe('starDesignations', () => {
         gaiaSourceId: null, syntheticId: '01234+5678-Ab',
       }),
     ).toThrow(/synth-/);
-  });
-});
-
-describe('resolveSids', () => {
-  const ledger: LedgerRow[] = [
-    { sid: 1, canonicalKey: 'hip:1', kind: 'star', firstSeen: '2026-01-01' },
-    { sid: 2, canonicalKey: 'cloud:orion-a', kind: 'cloud', firstSeen: '2026-01-01' },
-  ];
-
-  it('resolves existing objects and never mints', () => {
-    const r = resolveSids({
-      objects: [
-        { designations: ['hip:1', 'gaia_dr3:9'], kind: 'star', label: 'star' },
-        { designations: ['cloud:orion-a'], kind: 'cloud', label: 'orion' },
-      ],
-      storedEdges: [],
-      ledger,
-      events: [],
-    });
-    expect(r.errors).toEqual([]);
-    expect(r.objectSids).toEqual([1, 2]);
-  });
-
-  it('flags an unallocated object (one that would mint) as an error and leaves its sid at NO_SID', () => {
-    const r = resolveSids({
-      objects: [
-        { designations: ['hip:1'], kind: 'star', label: 'existing' },
-        { designations: ['hip:99'], kind: 'star', label: 'record 42' },
-      ],
-      storedEdges: [],
-      ledger,
-      events: [],
-    });
-    expect(r.errors).toHaveLength(1);
-    expect(r.errors[0]).toMatch(/record 42: unallocated/);
-    expect(r.objectSids).toEqual([1, 0]);
-  });
-
-  it('resolves via a stored slug-rename bridge to the frozen canonical key', () => {
-    const r = resolveSids({
-      objects: [{ designations: ['cloud:orion-molecular'], kind: 'cloud', label: 'renamed' }],
-      storedEdges: [{ a: 'cloud:orion-a', b: 'cloud:orion-molecular' }],
-      ledger,
-      events: [],
-    });
-    expect(r.errors).toEqual([]);
-    expect(r.objectSids).toEqual([2]);
   });
 });
 

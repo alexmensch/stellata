@@ -771,7 +771,7 @@ describe('buildMembership — the additions', () => {
     const ids = result.rows.map((r) => r.gaiaSourceId).filter((s) => s !== null);
     expect(new Set(ids).size).toBe(ids.length);
     // Never the Gaia id alone: a group with no classical designation left is
-    // ledgered, not admitted, so `sid:allocate` keys every mint hd / hip / gl.
+    // ledgered, not admitted, so SID allocation keys every mint hd / hip / gl.
     for (const row of result.rows) {
       expect(manifestDesignations(row).filter((d) => !d.startsWith('gaia_dr3:')).length)
         .toBeGreaterThan(0);

@@ -1049,8 +1049,8 @@ Applications of `docs/sid.md` (which remains the authority):
 - **URL refs must be SID-encoded before any membership or ordering
   change.** Index-encoded star refs break under re-sorting alone —
   field re-derivation reshuffles record order even when membership is
-  unchanged. The `sid:check` CI gate then ties ledger ⟷ artifact
-  consistency into the same PR as the change.
+  unchanged. CI's diff gate on the SID registry the build writes then
+  ties ledger ⟷ artifact consistency into the same PR as the change.
 
 ## 8. Gaia DR transitions — what re-pulls and what never does
 

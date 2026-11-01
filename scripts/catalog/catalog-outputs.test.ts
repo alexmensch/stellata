@@ -20,6 +20,7 @@ describe('CATALOG_OUTPUTS', () => {
   it('declares the transport chunks as one family in public/, beside each lineage stage\'s baseline and diff', () => {
     expect(CATALOG_OUTPUTS.families.map((f) => repoRelative(f.dir))).toEqual([
       'public', 'build/lineage.previous', 'build/lineage-diff', 'build/lineage.previous', 'build/lineage-diff',
+      'build/lineage.previous', 'build/lineage-diff',
     ]);
     const families = (name: string) => CATALOG_OUTPUTS.families
       .filter((f) => f.member.test(name)).map((f) => repoRelative(f.dir));

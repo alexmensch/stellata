@@ -116,7 +116,10 @@ fan-out of jobs beyond the bare checks:
   restores from a content-keyed cache when no input changed; key, cached
   set and the one way to get a stale hit: `scripts/ci/README.md`. The
   checks:
-  - `SID ledger–artifact consistency` — `pnpm run sid:check`.
+  - `SID registry committed` — `git diff --exit-code -- data/sid` after
+    `build:layers`: a mint or event the clouds or Local Group stamp
+    appended that the PR did not commit. The catalogue stage's own diff
+    gate covers `build:catalog`'s.
   - `Full vitest, smudged and built` — `pnpm test` again, now with LFS
     content and every built artifact present, so each suite that
     self-skips in the bare `test` job runs here: the known-stars corpus,

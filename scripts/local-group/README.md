@@ -40,10 +40,10 @@ within `MAX_DISTANCE_PC` of Sol. Output schema is documented at the
 
 Each object also carries a `sid` (frozen Stellata ID, [§ 7](/docs/sid.md#7-storage--sid-in-every-artifact)),
 stamped after this script by `scripts/sid/stamp-sibling-sids.ts` (the tail
-of `pnpm run build:local-group`) — it resolves each `lg:<id>` slug against
-the committed ledger; this build never touches the ledger. A new slug
-hard-fails the stamp until `pnpm run sid:allocate` mints it; a rename needs
-a `data/sid/sameas-overrides.tsv` bridge. See [Sibling-artifact stamping](/scripts/sid/README.md#sibling-artifact-stamping).
+of `pnpm run build:local-group`) — it allocates each `lg:<id>` slug against
+the committed ledger; this build never touches the ledger. A new slug mints
+there under `allocation.mint.local-group`; a vanished slug fails the stamp,
+and a rename needs a `data/sid/sameas-overrides.tsv` bridge. See [Sibling-artifact stamping](/scripts/sid/README.md#sibling-artifact-stamping).
 
 Idempotent — exits early if `public/local-group.json` is newer than
 every input `stepInputPaths` derives: the import closure of both

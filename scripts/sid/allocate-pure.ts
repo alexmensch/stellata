@@ -48,8 +48,8 @@ export interface AllocateInput {
   readonly storedEdges: readonly SameasEdge[];
   readonly ledger: readonly LedgerRow[];
   readonly events: readonly EventRow[];
-  /** The ledger namespaces this caller allocates: only a SID keyed in one of them can leave its build. */
-  readonly scope: ReadonlySet<string>;
+  /** Whether this caller allocates a ledger namespace: only a SID keyed in one can leave its build. */
+  readonly scope: (ns: string) => boolean;
   readonly date: string;
   readonly version: string;
 }
@@ -172,7 +172,7 @@ export function allocate(input: AllocateInput, upstream: Upstream): Allocation {
 
   const orphans = ledger.filter((row) => !retired.has(row.sid)
     && !objectsByClass.has(uf.find(row.canonicalKey))
-    && scope.has(parseDesignation(row.canonicalKey).ns));
+    && scope(parseDesignation(row.canonicalKey).ns));
   const losers = [...pendingByRoot.values()].flatMap((p) => (p.kind === 'resolved' ? p.losers : []));
   const causes = orphans.length + losers.length === 0
     ? new Map<string, Causes>()

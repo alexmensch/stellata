@@ -38,8 +38,6 @@
     "lineage:codes": "tsx scripts/catalog/lineage/generate-reason-codes.ts",
     "trace": "tsx scripts/catalog/lineage/trace.ts",
     "refresh:iau-wgsn": "python3 scripts/refresh/refresh-iau-wgsn.py",
-    "sid:allocate": "tsx scripts/sid/allocate.ts",
-    "sid:check": "tsx scripts/sid/allocate.ts --check",
     "sid:stamp": "tsx scripts/sid/stamp-sibling-sids.ts all",
     "sid:risk-set": "tsx scripts/sid/export-dr-risk-set.ts",
     "sid:dr-reconcile": "tsx scripts/sid/dr-reconcile.ts",

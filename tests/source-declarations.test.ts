@@ -28,7 +28,7 @@ const isTs = (path: string): boolean => path.endsWith('.ts') && !path.endsWith('
 const DECLARATION_FACTORIES = ['scripts/util/mirror-to-public.ts'];
 
 const scripts = packageScripts();
-const MANUAL_TS_STEPS = ['sid:allocate', 'sid:risk-set'];
+const MANUAL_TS_STEPS = ['sid:stamp', 'sid:risk-set'];
 /** Targets named like steps that are not pipeline steps (Vite is not a step; the seed wrapper runs steps). */
 const NOT_STEPS = ['build:client', 'build:site', 'build:seed'];
 const STEP_NAMED = Object.keys(scripts)
@@ -41,7 +41,7 @@ describe('source declarations', () => {
   it('resolves every step-named script into steps it can check', () => {
     const unresolved = STEP_NAMED.filter((name) => scriptParts(scripts, name).some((p) => p.kind === 'other'));
     expect(unresolved).toEqual([]);
-    expect(TS_STEPS).toEqual(expect.arrayContaining(['build:catalog', 'build:local-group', 'build:clouds', 'sid:allocate']));
+    expect(TS_STEPS).toEqual(expect.arrayContaining(['build:catalog', 'build:local-group', 'build:clouds', 'sid:stamp']));
   });
 
   it.each(TS_STEPS)('%s reads every source and artifact its import closure reaches', async (step) => {

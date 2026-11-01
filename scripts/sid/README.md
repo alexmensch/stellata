@@ -10,11 +10,10 @@ model, canonical-key ladder, allocation, CI guard, DR procedure — is
 ```
 sid-pure.ts               Pure algebra: designation grammar (/docs/sid.md#3-designation-namespaces),
                           canonical-key ladder (/docs/sid.md#42-canonical-key--stability-first), same-as classes
-                          (sameAsClasses, the one class build: allocate
+                          (sameAsClasses, the one class build: allocation
                           and the membership parity matcher both call
-                          it) + allocation (/docs/sid.md#41-same-as-equivalence-graph, /docs/sid.md#44-allocation), per-record designation
-                          extraction (starDesignations) + read-only
-                          resolution (resolveSids, mint = error),
+                          it, /docs/sid.md#41-same-as-equivalence-graph), per-record designation
+                          extraction (starDesignations),
                           parsers for every registry file, each taking
                           the declared file it reads (readTable in
                           exact mode, which also owns the LF / final-
@@ -38,59 +37,64 @@ events-pure.ts (+ test)   events.tsv's row shape, validateEvents, and the
 events-tsv.ts (+ test)    EVENTS — events.tsv's artifact codec, plus
                           eventsFile; the test round-trips the committed
                           file.
+allocate-pure.ts (+ test) allocate: every object resolved, minted or
+                          reinstated, and every SID no object keeps
+                          settled by the upstream decision that removed
+                          it (/docs/sid.md#44-allocation). Asks the
+                          lineage through Upstream's two batched lookups,
+                          so an unchanged tree asks nothing. A park
+                          outranks a retire; an orphan no decision
+                          explains, a merge mixed with another removal
+                          and a new object no stage admits each fail
+                          closed. A failed allocation is its own variant.
 allocation-lineage-pure.ts  Allocation as a lineage stage: its reason
-                          codes, including the historical legacy.* codes
-                          the migrated retirement rows carry.
+  (+ test)                codes (live, plus the historical legacy.*
+                          codes the migrated retirement rows carry), the
+                          one serialiser over its outcomes, and
+                          allocation.identity (key -> SID), its own codec.
+lineage-upstream-pure.ts  lineageCauses: each ledger key joined, through
+  (+ test)                every identity row carrying it, to the retire /
+                          park / merge outcomes recorded under those
+                          origin keys, with the stages that hold such a
+                          row; lineageAdmissions: each origin's admitting
+                          code ([SID events](#sid-events)).
+catalog-upstream.ts       catalogUpstream: build:catalog's Upstream, over
+                          membership's lineage files from the last
+                          build:membership and placement's and
+                          promotion's from this build.
+catalog-objects.ts        catalogSidObjects: build:catalog's objects in
+                          allocation order (its records, then the sol and
+                          shell lists), and inCatalogScope, every
+                          namespace but the sibling artifacts'.
 sameas-source.ts          SAMEAS_OVERRIDES and SAMEAS_BRIDGES: the curated
                           edges, and data/sid/bridges/ as a folder source
                           whose *.tsv files are its members, so a new
                           bridge changes a reader's input set.
 object-mints-source.ts    SOL_OBJECTS, SHELL_OBJECTS — the sol: / shell:
-                          mint lists, declared.
+                          mint lists, declared and keyed on their rows'
+                          key cell, which is each object's origin.
 stored-edges.ts           loadStoredEdges: overrides plus bridges, the
                           stored half of the same-as graph. Its own module,
                           so a reader of edges alone reaches no other
                           registry file.
 catalog-designations.ts   Designation set per BUILT catalog record, from
-                          catalog.bin + the two public/ sidecars (README.md#designation-extraction--where-each-namespace-comes-from). Shared by allocate and
+                          catalog.bin + the two public/ sidecars (README.md#designation-extraction--where-each-namespace-comes-from). Shared by trace and
                           the inherited spine's parity gate.
 registry-io.ts            loadRegistry: the ledger, events and stored
                           edges, structurally validated (every event code
-                          in the generated list), for a read-only consumer. Every file
-                          is required; a suite that may meet an LFS-stub
-                          ledger gates on isReadable(LEDGER) itself.
-                          Shared by build-catalog and the stamp.
-built-objects.ts          builtObjects: every SidObject of the built
-                          artifacts in allocation order (catalog records,
-                          clouds.json, local-group.json, the sol and shell
-                          lists), and BUILT_OBJECT_INPUTS, the built files
-                          it reads.
-orphan-causes-pure.ts     orphanCauses: each orphaned ledger key joined,
-  (+ test)                through every identity row carrying it, to the
-                          retire / park / merge outcomes recorded under
-                          those origin keys
-                          (/scripts/catalog/lineage/README.md#sid-events).
-                          The test runs it over the built artifacts and
-                          build/lineage/ and pins the star, sol and shell
-                          orphans no decision explains at 0; the sibling
-                          namespaces (cloud:, lg:) write no lineage.
-allocate-outputs.ts       ALLOCATE_OUTPUTS: what sid:allocate writes, the
-                          ledger, events and ledger-head.json, declared;
-                          tests/step-outputs.test.ts holds it.
-allocate.ts               pnpm run sid:allocate — the ONLY writer of
-                          ledger.tsv, appending each mint as one
-                          LEDGER.encodeLine line and never rewriting a
-                          committed one (+ ledger-head.json). The ledger
-                          and events are required inputs. Reads the BUILT
-                          artifacts through builtObjects.
-                          Run build:catalog / build:clouds /
-                          build:local-group first.
-                          pnpm run sid:check (--check) — read-only CI
-                          mode: same walk, zero writes; would-mint
-                          objects and orphaned synth keys both fail.
-                          Runs as its own CI check against the built
-                          artifacts, making ledger ⟷ build consistency
-                          a per-PR invariant.
+                          in the generated list). Every file is required;
+                          a suite that may meet an LFS-stub ledger gates
+                          on isReadable(LEDGER) itself. registryTexts:
+                          the ledger and events with an allocation's rows
+                          appended as LEDGER / EVENTS.encodeLine lines,
+                          never a committed line rewritten, and
+                          ledger-head.json recomputed. Shared by
+                          build-catalog and the stamp.
+registry-outputs.ts       REGISTRY_FILES: the ledger, events and
+                          ledger-head.json, keyed for the output
+                          declaration of each allocating step
+                          (build:catalog, sid:stamp); the one shared
+                          writer set tests/step-outputs.test.ts allows.
 export-dr-risk-set.ts     pnpm run sid:risk-set — source_ids of the
                           non-retired gaia_*-keyed ledger rows, written
                           as the next DR transition's neighbourhood-pull
@@ -123,23 +127,25 @@ dr-reconcile.ts           pnpm run sid:dr-reconcile — churn report for a
 dr-reconcile-pure.ts      Pure classifier + request/neighbourhood TSV
                           readers. ACCEPT_MAS / MAG_REVIEW_DELTA live
                           here.
-stamp-sibling-sids.ts     Stamps the frozen sid onto clouds.json /
+stamp-sibling-sids.ts     Allocates the cloud: / lg: namespaces and stamps
+                          each object's sid onto clouds.json /
                           local-group.json after their emitters run — the
                           tail of build:clouds / build:local-group (also
-                          pnpm run sid:stamp). Every named target resolves
-                          before one emitArtifacts call lands them all.
-                          See README.md#sibling-artifact-stamping.
+                          pnpm run sid:stamp). Every named target allocates
+                          before one emitArtifacts call lands them and the
+                          registry. See README.md#sibling-artifact-stamping.
 sibling-stamp-outputs.ts  SID_STAMP_OUTPUTS: the sibling artifacts sid:stamp
-                          rewrites in place, as its emitArtifacts declaration
-                          (../util/README.md). Side-effect free. The same
-                          paths are their emitters' outputs too; the stamp
-                          is an in-place transform after them.
+                          rewrites in place plus REGISTRY_FILES, as its
+                          emitArtifacts declaration (../util/README.md).
+                          Side-effect free. The artifact paths are their
+                          emitters' outputs too; the stamp is an in-place
+                          transform after them.
 sibling-artifacts.ts      SIBLING_ARTIFACTS spec (file / arrayKey / ns /
-                          kind per sibling) + siblingArtifactObjects, shared
-                          by allocate (minting) and the stamp (resolving) so
-                          the namespace→kind mapping is defined once;
-                          SIBLING_NAMESPACES, their namespaces, for
-                          allocate's slug warnings and the orphan test.
+                          kind / mint code per sibling) +
+                          siblingArtifactObjects, so the namespace→kind
+                          mapping is defined once; SIBLING_NAMESPACES,
+                          their namespaces, which build:catalog's
+                          allocation leaves to the stamps.
 ```
 
 The append-only CI guard is `tests/sid-ledger-guard.test.ts` (repo-meta:
@@ -153,12 +159,60 @@ and `lfsContentReadable`) live in `scripts/util/paths.ts`, not here — see
 that folder's README for why; a suite gating on a declared file takes
 `isReadable(declared)` (`scripts/util/sources/`).
 
+## SID events
+
+SID allocation is a lineage stage (`allocation-lineage-pure.ts`),
+run in-process by `build:catalog` over the records, sol and shell objects
+and by the clouds and Local Group stamps over their own namespaces. Per
+object it records `allocation.resolved` (with `via`, the ledger key, only when
+the object reached it through a designation it does not carry),
+`allocation.minted` or `allocation.reinstated` (with the admitting code),
+keyed on the object's origin; per SID no object keeps,
+`allocation.retired`, `.parked` or `.merged`, keyed on the origin of the
+upstream decision that settled it, with that code as `cause`. Its identity
+file `allocation.identity.tsv.gz` maps each origin key to its SID. The stamps
+write events but no lineage rows yet (stellata-hhaw.45.32.12).
+
+An orphan inherits its cause from the upstream decisions on its record,
+joined on the origin key (`lineageCauses`, `lineage-upstream-pure.ts`):
+every identity row carrying the SID's canonical key, then every outcome row
+under those origins whose code removes or re-binds.
+
+Its rows follow the lineage row contract
+([Row contract](/scripts/catalog/lineage/README.md#row-contract)): one per
+object with an origin key, under that key, and one per SID that left the
+build under its deciding origin.
+
+Allocation is the sole writer of `data/sid/events.tsv`, apart from the
+one-time migration of the legacy retirement files
+([Committed ledgers become views](/scripts/catalog/lineage/README.md#committed-ledgers-become-views)) — `sid`, date, event
+(`mint`|`retire`|`reinstate`|`merge`), code, params (`{"key": <origin>}`,
+the decision's or the admitted record's), successor, build version —
+append-only and guarded like the ledger. Events follow from the declared
+effect of the upstream code:
+
+| Cause | Event |
+|---|---|
+| a new object | `mint`, coded by the decision that admitted the record (`membership.admit.*`, `promotion.minted`, or allocation's own `allocation.mint.*` for the sol, shell, cloud and Local Group lists) |
+| upstream effect `retire` | `retire` |
+| upstream effect `merge` | `merge`, with the SID of the record the decision names (`params.record`, else its single evidence ref) |
+| upstream effect `park` | none: the SID stays in the ledger, absent from this build ([§ 4.4](/docs/sid.md#44-allocation)) |
+| park and retire together | none: a park outranks a retire, so the SID stays live while any stage only parks its record |
+| a retired class reappears | `reinstate`, coded like a mint |
+
+Fail closed, naming the stages that hold the record: an orphan with no
+retire, park or merge decision; a merge mixed with any other removal, or
+whose target carries no SID; a new or reappearing object no stage admits.
+`tests/sid-ledger-guard.test.ts` checks every event row's code is in the
+list and declares that effect.
+
 ## Designation extraction — where each namespace comes from
 
 `catalogRecordDesignations` (`catalog-designations.ts`) owns the catalog
-half of this, so `sid:allocate` and
+half of this over the built artifacts, so trace and
 `scripts/catalog/membership/membership-manifest-gate.test.ts` cannot derive
-different sets from the same artifacts.
+different sets from them; build:catalog's allocation calls the same
+`starDesignations` over its in-memory records.
 
 Per catalog record: `hip:` + `gaia_dr3:` from the record fields,
 `hd:`/`hr:`/`gl:` from its `search-index.json` entry — plus a second `hd:` or
@@ -190,49 +244,45 @@ and every allocation and resolution fails. Every affected record keys off its ow
 unique HIP/Gaia id; a record whose ONLY designation is ambiguous would
 hard-fail allocation as keyless (zero such records today).
 
-Re-derive the count rather than trusting this line — `sid:check` prints one
-line per dropped designation, and the total moves with membership:
-
-```bash
-pnpm run sid:check | grep -c '^ambiguous (dropped)'
-```
+Re-derive the count rather than trusting this line — a catalogue build prints
+one `ambiguous (dropped)` line per dropped designation, and the total moves
+with membership.
 
 ## Ownership pin — synth churn resolves here
 
 All synth-key reconciliation (WDS re-lettering, [§ 5](/docs/sid.md#5-synthetic-key-churn-wds-re-subdivision)) lives
-in this folder's allocation flow; the binaries pipeline stays
-sid-free. `sid:allocate` hard-fails on a ledger `synth:` key absent
-from the current build, printing sibling candidates (comp/sep/PA from
-`data/binaries/multiples.tsv`); resolution is a human bridge line in
-`data/sid/sameas-overrides.tsv` or a retirement. Missing `cloud:`/`lg:`
-slugs only warn — but a slug RENAME still needs a bridge, or the old
-sid parks and the new slug mints a fresh identity.
+in this folder's allocation; the binaries pipeline stays sid-free. A
+ledger `synth:` key absent from the build is settled like any other
+orphan: promotion's identity rows carry the synthetic key of every row it
+removes or merges, so a companion promotion dropped retires (or parks, or
+merges) under that row's code. A key whose row left `multiples.tsv`
+altogether has no decision, so the build fails closed: a re-lettered
+component needs a bridge line in `data/sid/sameas-overrides.tsv`, and a
+component that genuinely dissolved needs a coded decision in the stage
+that drops it. A vanished `cloud:`/`lg:` slug fails its stamp the same
+way — a slug RENAME needs a bridge.
 
 A Stage-5 filter change that mass-drops optical pairs orphans every
-synth key those pairs minted; the reported "candidates" are then
-surviving siblings with *different letters* — different physical
-stars, never bridge targets. (The reverse — a pipeline refinement
-re-promotes a component whose sid was retired — is a `reinstate`
-event in `data/sid/events.tsv`, [§ 4.3](/docs/sid.md#43-ledger--datasidledgertsv).) Resolve as
-successor-less retirements: each orphan's sid gets a `retire` event in
-`data/sid/events.tsv`. Before writing, verify attribution: the
-Stage-7 count diff must conserve the donor tier's population into the
-new verdicts, or some orphans belong to a different change. CI's
-`sid:check` keeps main permanently consistent, so on an up-to-date
-branch every orphan/mint is attributable to the current change —
-the count-diff check then just confirms it.
+synth key those pairs minted, and each retires under promotion's code
+for its row. (The reverse — a pipeline refinement re-promotes a
+component whose sid was retired — is a `reinstate` event carrying the
+admitting code, [§ 4.3](/docs/sid.md#43-ledger--datasidledgertsv).) Allocation writes those events in the same build,
+so the PR's `data/sid/events.tsv` diff is the review surface: CI's
+catalogue stage fails on any event the PR did not commit, so main stays
+consistent and every event on an up-to-date branch is the current
+change's.
 
 ## Sibling-artifact stamping
 
 `clouds.json` and `local-group.json` carry an in-record `sid` ([§ 7](/docs/sid.md#7-storage--sid-in-every-artifact)).
-Because `build-clouds.py` is Python, resolution is NOT duplicated into
+Because `build-clouds.py` is Python, allocation is NOT duplicated into
 either emitter — `stamp-sibling-sids.ts` post-processes the built artifact,
-resolving each object's `cloud:<id>` / `lg:<id>` through the shared
-`resolveSids` and writing the frozen sid in. It runs as the tail of
-`pnpm run build:clouds` and `pnpm run build:local-group` (and `pnpm run
-sid:stamp` does both). Like the catalog build it is a pure consumer: an
-unallocated slug hard-fails with instructions to run `sid:allocate` (new
-object) or add a `sameas-overrides.tsv` bridge (renamed slug). The catalog's
-stellar sids are written in-record at build time instead
-([SID allocation](/scripts/catalog/README.md#sid-allocation)); the Sol system's are pinned
+allocating each object's `cloud:<id>` / `lg:<id>` over that namespace alone
+and writing the sid in. It runs as the tail of `pnpm run build:clouds` and
+`pnpm run build:local-group` (and `pnpm run sid:stamp` does both). A new
+slug mints under `allocation.mint.cloud` / `.local-group` and appends to
+the registry; neither emitter writes lineage, so a vanished slug has no
+decision and fails the stamp (a renamed slug needs a
+`sameas-overrides.tsv` bridge). The catalog's stellar sids are allocated
+in-record at build time instead ([SID allocation](/scripts/catalog/README.md#sid-allocation)); the Sol system's are pinned
 client-side in `src/client/solar-system/sol-object-sids.ts`.

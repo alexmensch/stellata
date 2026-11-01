@@ -18,7 +18,7 @@ export const PROMOTION_LINEAGE: StageLineageSpec<'promotion' | 'promotion.identi
   identity: 'promotion.identity',
 };
 
-export const PROMOTION_LINEAGE_BUDGET = { gzipBytes: 930_000, writeMs: 5_000 };
+export const PROMOTION_LINEAGE_BUDGET = { gzipBytes: 1_040_000, writeMs: 5_000 };
 
 const live = (description: string, effect: CodeDeclaration['effect'] = 'none'): CodeDeclaration => (
   { description, effect, status: LIVE }
