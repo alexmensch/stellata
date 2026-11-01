@@ -200,6 +200,13 @@ describe('allocate: SIDs that leave the build', () => {
     expect(a.events.map((e) => [e.sid, e.event, e.code, e.successor])).toEqual([[2, 'merge', 'membership.fold', 1]]);
   });
 
+  it('lists the keys no decision explains on the failure, for the synth candidate report', () => {
+    const a = run({ objects: live, ledger: [...ledger, row(3, 'synth:04357+1010-B')] }, upstream({
+      'gaia_dr3:2': { decisions: [decision('spine:7', 'placement.park.no-position', 'park')], seenBy: ['membership'] },
+    }));
+    expect(a.kind === 'failed' && a.unexplained).toEqual(['synth:04357+1010-B']);
+  });
+
   it('fails closed on an orphan no decision explains, naming the stage that holds its record', () => {
     expect(failed(run({ objects: live, ledger }, upstream({ 'gaia_dr3:2': { decisions: [], seenBy: ['promotion'] } })))).toEqual([
       'sid 2 (gaia_dr3:2) left the build: promotion holds its record with no retire, park or merge decision',

@@ -65,7 +65,13 @@ export type SidRemoval =
   | { readonly kind: 'parked'; readonly sid: number; readonly canonicalKey: string; readonly decision: Decision };
 
 export type Allocation =
-  | { readonly kind: 'failed'; readonly errors: readonly string[]; readonly ambiguous: readonly AmbiguousDesignation[] }
+  | {
+    readonly kind: 'failed';
+    readonly errors: readonly string[];
+    /** Canonical keys of the SIDs that left the build with no decision on any record carrying them. */
+    readonly unexplained: readonly string[];
+    readonly ambiguous: readonly AmbiguousDesignation[];
+  }
   | {
     readonly kind: 'allocated';
     /** Per object, in input order. */
@@ -238,6 +244,9 @@ export function allocate(input: AllocateInput, upstream: Upstream): Allocation {
     }
     removals.push({ kind: 'merged', sid: loser.sid, canonicalKey: loser.canonicalKey, into: survivor.sid, decision: settled.decision });
   }
+  const unexplained = orphans
+    .filter((row) => !ambiguous.some((a) => a.designation === row.canonicalKey) && causesOf(row.canonicalKey).decisions.length === 0)
+    .map((row) => row.canonicalKey);
   const ambiguousCarriers = new Map(ambiguous.map((a) => [a.designation, a.objects.length]));
   for (const row of orphans) {
     const carriers = ambiguousCarriers.get(row.canonicalKey);
@@ -251,7 +260,7 @@ export function allocate(input: AllocateInput, upstream: Upstream): Allocation {
     removals.push(settled.kind === 'merged' ? { ...base, kind: 'merged', into: settled.into } : { ...base, kind: settled.kind });
   }
 
-  if (errors.length > 0) return { kind: 'failed', errors, ambiguous };
+  if (errors.length > 0) return { kind: 'failed', errors, unexplained, ambiguous };
   const outcomes = objectOutcomes.map((o, i) => {
     if (o === undefined) throw new Error(`${objects[i].label}: no outcome and no error recorded for it`);
     return o;

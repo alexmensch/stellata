@@ -60,6 +60,12 @@ lineage-upstream-pure.ts  lineageCauses: each ledger key joined, through
                           origin keys, with the stages that hold such a
                           row; lineageAdmissions: each origin's admitting
                           code ([SID events](#sid-events)).
+synth-churn-pure.ts       synthChurnReport: for each synth key that left
+  (+ test)                the build with no decision (Allocation's
+                          failed.unexplained), every live synth key under
+                          the same WDS root with its multiples.tsv comp,
+                          separation and position angle; build:catalog
+                          prints it with the failure.
 catalog-upstream.ts       catalogUpstream: build:catalog's Upstream, over
                           membership's lineage files from the last
                           build:membership and placement's and
@@ -258,7 +264,8 @@ ledger `synth:` key absent from the build is settled like any other
 orphan: promotion's identity rows carry the synthetic key of every row it
 removes or merges, so a companion promotion dropped retires (or parks, or
 merges) under that row's code. A key whose row left `multiples.tsv`
-altogether has no decision, so the build fails closed: a re-lettered
+altogether has no decision, so the build fails closed, printing the live
+synth keys under the same WDS root with their geometry: a re-lettered
 component needs a bridge line in `data/sid/sameas-overrides.tsv`, and a
 component that genuinely dissolved needs a coded decision in the stage
 that drops it. A vanished `cloud:`/`lg:` slug fails its stamp the same

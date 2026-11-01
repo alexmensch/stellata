@@ -159,6 +159,7 @@ import {
 } from '../sid/allocation-lineage-pure';
 import { catalogSidObjects, inCatalogScope } from '../sid/catalog-objects';
 import { catalogUpstream } from '../sid/catalog-upstream';
+import { synthChurnReport } from '../sid/synth-churn-pure';
 import { allocationRun, loadRegistry, registryTexts } from '../sid/registry-io';
 import { loadStoredEdges } from '../sid/stored-edges';
 import { stepInputPaths } from '../util/step-inputs';
@@ -958,7 +959,12 @@ async function main() {
     ...allocationRun(),
   }, catalogUpstream({ placementRemovals, promotion: promotionLines, promotionIdentity }));
   if (allocation.kind === 'failed') {
-    throw new Error(`SID allocation failed for ${allocation.errors.length} object(s):\n  ${allocation.errors.join('\n  ')}`);
+    const synthOrphans = allocation.unexplained.flatMap((k) => (k.startsWith('synth:') ? [k.slice('synth:'.length)] : []));
+    const liveSynth = sidObjects.flatMap((o) => o.designations.flatMap((d) => (d.startsWith('synth:') ? [d.slice('synth:'.length)] : [])));
+    throw new Error(
+      `SID allocation failed for ${allocation.errors.length} object(s):\n  ${allocation.errors.join('\n  ')}`
+        + (synthOrphans.length === 0 ? '' : `\n${synthChurnReport(synthOrphans, liveSynth, multiplesRows)}`),
+    );
   }
   for (const { designation, objects } of allocation.ambiguous) {
     console.log(`ambiguous (dropped): ${designation} names ${objects.length} objects — ${objects.map((i) => sidObjects[i].label).join(' | ')}`);
