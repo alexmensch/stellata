@@ -85,7 +85,7 @@ a third via real Gaia/HIP keys, two-thirds via synthetic identifiers
 Each pair row's decision is a `RowOutcome`: dropped with its reason, adopted
 onto a record already held (its own id or HIP, a same-as bridge, or an
 earlier mint this build), minted, or an AT-HYG double repositioned onto it;
-a pair's primary is `not-applicable` when it anchors its pair and
+a pair's primary is `pair-anchor` when it anchors its pair and
 `primary-unresolved` when it resolves to no record, and a row in no pair is
 `unpaired`. The last two park
 ([The promotion stage](../lineage/README.md#the-promotion-stage)).

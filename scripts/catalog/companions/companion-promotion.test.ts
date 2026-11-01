@@ -1193,7 +1193,7 @@ describe('promoteCompanions rows', () => {
     });
     const { rows } = promoteCompanions([primary, secondary, standalone, unresolved], [anchor], inputs());
     expect(rows.map((r) => [r.row.comp, r.via, r.outcome.kind, r.anchor, r.systemAnchor])).toEqual([
-      ['A', 'primary', 'not-applicable', 'spine:7', 'spine:7'],
+      ['A', 'primary', 'pair-anchor', 'spine:7', 'spine:7'],
       ['B', 'secondary', 'minted', 'spine:7', 'spine:7'],
       ['A', 'unpaired', 'unpaired', null, null],
       ['A', 'primary', 'primary-unresolved', null, null],
@@ -3389,7 +3389,7 @@ describe('foldRowOutcomes', () => {
     const stats = foldRowOutcomes([
       ...outcomes.map((outcome) => ({ row, via: 'secondary' as const, outcome, ...unanchored })),
       { row, via: 'escape', outcome: { kind: 'dropped', reason: 'collocated-primary' }, ...unanchored },
-      { row, via: 'primary', outcome: { kind: 'not-applicable' }, ...unanchored },
+      { row, via: 'primary', outcome: { kind: 'pair-anchor' }, ...unanchored },
       { row, via: 'primary', outcome: { kind: 'primary-unresolved' }, ...unanchored },
     ]);
     expect(stats).toEqual({

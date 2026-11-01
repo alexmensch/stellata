@@ -18,7 +18,7 @@ const own = { source: 'own', spectMsFromOwnAbsmag: false } as const;
 describe('promotionLineageRow', () => {
   it('keys the row on its multiples.tsv row', () => {
     expect(promotionOriginKey(row)).toBe('multiples:22266-1645-AB/B');
-    expect(promotionLineageRow(promoted({ kind: 'not-applicable' }), recordKey).key)
+    expect(promotionLineageRow(promoted({ kind: 'pair-anchor' }), recordKey).key)
       .toBe('multiples:22266-1645-AB/B');
   });
 
@@ -32,7 +32,7 @@ describe('promotionLineageRow', () => {
       { kind: 'repositioned', idx: 6, brightness: own },
       { kind: 'primary-unresolved' },
       { kind: 'unpaired' },
-      { kind: 'not-applicable' },
+      { kind: 'pair-anchor' },
     ];
     const rows = outcomes.map((o) => promotionLineageRow(promoted(o), recordKey));
     expect(rows.map((r) => r.code)).toEqual([
@@ -75,7 +75,7 @@ describe('promotionLineageRow', () => {
 
   it('cites the anchor and a distinct system anchor, never the row itself', () => {
     const cite = (anchors: Partial<PromotedRow>): readonly string[] => promotionLineageRow(
-      promoted({ kind: 'not-applicable' }, anchors), recordKey,
+      promoted({ kind: 'pair-anchor' }, anchors), recordKey,
     ).evidence;
     expect(cite({})).toEqual(['spine:7']);
     expect(cite({ anchor: 'gaia-dr3:9', systemAnchor: 'spine:7' })).toEqual(['gaia-dr3:9', 'spine:7']);
@@ -97,7 +97,7 @@ describe('promotionLineage identity', () => {
     const { identity } = promotionLineage([
       promoted({ kind: 'minted', idx: 1, synthetic: false, brightness: own, constellationSplit: false }),
       promoted({ kind: 'adopted', idx: 0, via: 'earlier-mint' }),
-      promoted({ kind: 'not-applicable' }),
+      promoted({ kind: 'pair-anchor' }),
     ], stars, new Set());
     expect(identity).toEqual([{
       key: 'multiples:22266-1645-AB/B', tyc: '', hip: '', hd: '', gl: '',

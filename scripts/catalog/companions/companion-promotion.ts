@@ -208,7 +208,7 @@ export type RowOutcome =
   | { kind: 'repositioned'; idx: number; brightness: MintedBrightness }
   | { kind: 'primary-unresolved' }
   | { kind: 'unpaired' }
-  | { kind: 'not-applicable' };
+  | { kind: 'pair-anchor' };
 
 export interface MintedBrightness {
   source: CompanionAbsmagSource;
@@ -577,7 +577,7 @@ export function foldRowOutcomes(rows: readonly PromotedRow[]): RowOutcomeStats {
         break;
       case 'primary-unresolved':
       case 'unpaired':
-      case 'not-applicable':
+      case 'pair-anchor':
         break;
       default: {
         const unhandled: never = o;
@@ -2035,7 +2035,7 @@ export function promoteCompanions(
       record({
         row: cursor.primary,
         via: 'primary',
-        outcome: { kind: primaryCatalogIdx === null ? 'primary-unresolved' : 'not-applicable' },
+        outcome: { kind: primaryCatalogIdx === null ? 'primary-unresolved' : 'pair-anchor' },
         anchor: anchorKey, systemAnchor: systemAnchorKey,
       });
     }

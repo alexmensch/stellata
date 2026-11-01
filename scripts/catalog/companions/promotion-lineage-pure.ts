@@ -121,7 +121,7 @@ export function promotionLineageRow(r: PromotedRow, recordKey: (idx: number) => 
       return row('parked.primary-unresolved', { via });
     case 'unpaired':
       return row('parked.unpaired', { via });
-    case 'not-applicable':
+    case 'pair-anchor':
       return row('not-applicable.pair-anchor', { via });
     default: {
       const unmapped: never = o;
