@@ -1142,17 +1142,16 @@ export function buildMembership(input: MembershipInput): MembershipResult {
     }
   }
   const sharedSources = new Set([...sourceGroups].filter(([, n]) => n > 1).map(([s]) => s));
-  const built = derivedGroups.map((g) => additionGroup(g.items, g.derived, claims, sharedSources, keys));
-  derivedGroups.forEach(({ items: groupItems, derived }, i) => {
-    const { origin } = built[i];
+  const groups = derivedGroups.map(({ items: groupItems, derived }) => {
+    const group = additionGroup(groupItems, derived, claims, sharedSources, keys);
     const weighedBy = groupItems.map((item) => {
       const at = itemOrigin(item, keys);
-      return { d: item.derived, cites: at === origin ? [] : [at] };
+      return { d: item.derived, cites: at === group.origin ? [] : [at] };
     });
     if (groupItems.length > 1) weighedBy.push({ d: derived, cites: [] });
-    outcomes.push(...unweighedCandidates(origin, weighedBy));
-  });
-  const groups = [...built].sort(additionGroupOrder(input.publishesGaiaParallax));
+    outcomes.push(...unweighedCandidates(group.origin, weighedBy));
+    return group;
+  }).sort(additionGroupOrder(input.publishesGaiaParallax));
 
   const additionsByReason = Object.fromEntries(
     ADDITION_REASONS.map((r) => [r, 0]),
