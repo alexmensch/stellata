@@ -768,6 +768,29 @@ describe('buildMembership — the additions', () => {
     expect(named.filter(of5151).map((r) => r.key)).toEqual(['iv25:5-6-1']);
   });
 
+  it('cites the non-anchor item whose own derivation weighed the unpulled source', () => {
+    const t = {
+      ...tables,
+      iv25: [...tables.iv25, { tyc: '5-6-1', hd: 501, nHd: 1, nTyc: 1 }],
+      hipI239: new Set([...tables.hipI239, 61]),
+      tycho2: new Map([...tables.tycho2, ['5-6-1', { ...tycho2(9), btMag: 9.2 }]]),
+      simbadBySourceId: new Map([...tables.simbadBySourceId, ['5151', { hip: 61, tyc: '5-6-1', gj: null }]]),
+    };
+    const oneStar = buildMembership({ ...withTables(t), evidence: gateEvidence(t, undefined, new Map([[61, 9.0]])) });
+    const rows = oneStar.lineage
+      .filter((r) => r.code === 'membership.binding.unweighed-no-pulled-row' && paramsOf(r).source_id === '5151');
+    expect(rows.map((r) => [r.key, r.evidence])).toEqual([['iv25:5-6-1', ['i239:61']]]);
+  });
+
+  it('writes the spine derivation\'s unpulled candidate, and the invariant names its record', () => {
+    const spineRows = result.lineage.filter((r) => r.code === 'membership.binding.unweighed-no-pulled-row'
+      && r.key.startsWith('spine:'));
+    expect(spineRows.map((r) => [r.key, paramsOf(r).source_id])).toEqual([['spine:6', '333']]);
+    const lines = result.lineage.map((r) => stageLineageLine(MEMBERSHIP_CODES, r));
+    const named = invariantViolations(MEMBERSHIP_INVARIANTS, lines).flatMap((v) => v.rows);
+    expect(named.map((r) => r.key)).toContain('spine:6');
+  });
+
   it('counts an admitted addition whose winner has a passing runner-up as contested', () => {
     const twoSources = buildMembership({
       ...withTables({
