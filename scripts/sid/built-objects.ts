@@ -5,6 +5,7 @@ import { resolve } from 'node:path';
 
 import {
   DEFAULT_CATALOG_MANIFEST,
+  DEFAULT_CONSTELLATIONS_JSON,
   DEFAULT_ROW_INDEX_MAP,
   DEFAULT_SEARCH_INDEX,
   loadCatalog,
@@ -22,9 +23,10 @@ const SIBLING_PATHS = Object.values(SIBLING_ARTIFACTS).map((spec) => ({
   spec, path: resolve(REPO_ROOT, 'public', spec.file),
 }));
 
-/** Every built file `builtObjects` reads. */
+/** The built files `builtObjects` reads at fixed paths; the catalogue chunks it also reads are the ones the manifest names. */
 export const BUILT_OBJECT_INPUTS: readonly string[] = [
-  DEFAULT_CATALOG_MANIFEST, DEFAULT_SEARCH_INDEX, DEFAULT_ROW_INDEX_MAP, ...SIBLING_PATHS.map((s) => s.path),
+  DEFAULT_CATALOG_MANIFEST, DEFAULT_CONSTELLATIONS_JSON, DEFAULT_SEARCH_INDEX, DEFAULT_ROW_INDEX_MAP,
+  ...SIBLING_PATHS.map((s) => s.path),
 ];
 
 export interface BuiltObjects {
