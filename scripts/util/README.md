@@ -145,10 +145,11 @@ same thing — single-use helpers stay with their consumer.
   path. A `refresh` check
   (a snapshot under its update flag) stages its own baseline with the outputs.
   `stamp`, when given, is written last over exactly the emitted files, so a
-  stamp's outputs and the declaration cannot disagree. A refreshed snapshot
-  is usually one of the stamp's inputs too (the `*-expected.json` beside the
-  build's modules), so its input hash is re-read after the refresh lands; the
-  next run then skips instead of rebuilding for its own refresh.
+  stamp's outputs and the declaration cannot disagree. A file the step both
+  reads and writes — a refreshed snapshot (the `*-expected.json` beside the
+  build's modules), or the SID ledger and events `build:catalog` appends to —
+  has its input hash re-read after it lands; the next run then skips instead
+  of rebuilding for its own write.
   `emitEach(outputs, keys, produce)` is the per-target form, for steps whose
   files are each read on their own (the two Horizons fetchers): every target
   that produces and passes its checks lands by itself, a failing one is

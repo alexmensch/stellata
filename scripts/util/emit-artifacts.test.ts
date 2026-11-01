@@ -139,6 +139,17 @@ describe('emitArtifacts', () => {
     expect(stampIsCurrent(stampFile, fileHashes([snapshot]))).toBe(true);
   });
 
+  it('records an output the step also reads at its written hash, so an unchanged re-run is skipped', () => {
+    const stampFile = join(dir, 'stamps', 'step.json');
+    emitArtifacts({
+      outputs: both(),
+      files: files(),
+      stamp: { path: stampFile, inputs: fileHashes([a]) },
+    });
+    expect(readFileSync(a, 'utf8')).toBe('new a');
+    expect(stampIsCurrent(stampFile, fileHashes([a]))).toBe(true);
+  });
+
   it('emitEach lands every target that verifies and refuses the rest, after trying all', async () => {
     mkdirSync(join(dir, 'out'));
     writeFileSync(b, 'old b');
