@@ -23,9 +23,11 @@ function lookups(catalog: SearchableCatalog | null): TraceLookups {
     if (catalog === null) throw new Error('a name query needs the built catalogue');
     return catalog;
   };
+  let keys: Map<number, string> | null = null;
+  let retired: Map<number, { successor: number | null }> | null = null;
   return {
-    canonicalKey: (sid) => readArtifact(LEDGER).find((r) => r.sid === sid)?.canonicalKey ?? null,
-    successor: (sid) => retiredSids(readArtifact(EVENTS)).get(sid)?.successor ?? null,
+    canonicalKey: (sid) => (keys ??= new Map(readArtifact(LEDGER).map((r) => [r.sid, r.canonicalKey]))).get(sid) ?? null,
+    successor: (sid) => (retired ??= retiredSids(readArtifact(EVENTS))).get(sid)?.successor ?? null,
     names: () => nameTable(need()),
     designations: (i) => {
       const named = need();

@@ -1,6 +1,6 @@
 // trace: a query to the origin keys it names, and every stage's rows for them in stage order. See README.md#trace.
 
-import { ALLOCATION_STAGE, type AllocationIdentityRow } from '../../sid/allocation-lineage-pure';
+import { ALLOCATION_CODES, type AllocationIdentityRow } from '../../sid/allocation-lineage-pure';
 import { isValidDesignation } from '../../sid/sid-pure';
 import { foldNameKey } from '../naming/wgsn-normalise-pure';
 import type { IdentityRow } from './identity-pure';
@@ -124,9 +124,11 @@ function names(row: LineageRow, terms: ReadonlySet<string>): boolean {
   return false;
 }
 
+const SETTLING = new Set((['merged', 'retired', 'parked'] as const).map((b) => ALLOCATION_CODES.code(b)));
+
 /** An allocation row names a SID it settled or merged into. */
 function settles(row: LineageRow, sids: ReadonlySet<string>): boolean {
-  if (row.stage !== ALLOCATION_STAGE || row.params === '') return false;
+  if (!SETTLING.has(row.code)) return false;
   const { sid, successor } = JSON.parse(row.params) as { sid?: string; successor?: string };
   return (sid !== undefined && sids.has(sid)) || (successor !== undefined && sids.has(successor));
 }
