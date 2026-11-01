@@ -191,8 +191,8 @@ placement's and promotion's from this run.
 New ledger rows and events land with the rest of the outputs
 (`registryTexts`), and allocation's lineage beside the other stages'. A
 failed allocation — an orphan no decision explains, a new record no stage
-admits — throws before anything is staged, so nothing lands and no
-placeholder SID exists. `scripts/sid/README.md` carries the review side.
+admits — throws before anything is staged, so nothing lands.
+`scripts/sid/README.md` carries the review side.
 
 The runtime reader (`catalog-loader.ts`) decodes the column into
 `Catalog.sid`, the star domain of the runtime SID resolver
