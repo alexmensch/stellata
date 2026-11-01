@@ -138,9 +138,9 @@ const MINTED = '6000000000000000001';
  *  anchor. Another system's row cites spine:99 only. */
 const PROMOTION = [
   'stage\tkey\trole\tcode\tparams\tevidence',
-  'promotion\tmultiples:S-AB/A\toutcome\tpromotion.not-applicable\t{"via":"primary"}\tspine:3',
+  'promotion\tmultiples:S-AB/A\toutcome\tpromotion.not-applicable.pair-anchor\t{"via":"primary"}\tspine:3',
   'promotion\tmultiples:S-AB/B\toutcome\tpromotion.minted\t{"via":"secondary"}\tspine:3',
-  'promotion\tmultiples:S-CD/C\toutcome\tpromotion.not-applicable\t{"via":"primary"}\tspine:9|spine:3',
+  'promotion\tmultiples:S-CD/C\toutcome\tpromotion.not-applicable.pair-anchor\t{"via":"primary"}\tspine:9|spine:3',
   'promotion\tmultiples:S-CD/D\toutcome\tpromotion.adopted.earlier-mint\t{"record":"spine:9","via":"secondary"}\tspine:9|spine:3',
   'promotion\tmultiples:T-AB/B\toutcome\tpromotion.minted\t{"via":"secondary"}\tspine:99',
 ].join('\n') + '\n';
