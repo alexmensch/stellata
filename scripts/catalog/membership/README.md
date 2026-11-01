@@ -39,7 +39,9 @@ scripts/catalog/membership/
                                   rules reach no ledger file. The review
                                   queue's carries the key a disposition joins
                                   on; the additions ledger's, the
-                                  /docs/catalog-driver.md#61-record-parity reason codes.
+                                  /docs/catalog-driver.md#61-record-parity reason codes. Also the
+                                  own-candidate reasons, which the generator
+                                  and its lineage both read.
   origin-keys.ts                  ORIGIN_KEYS: each record's origin key,
                                   built from the declarations it is founded
                                   on; the build and the unit suite share it.
@@ -67,7 +69,9 @@ scripts/catalog/membership/
                                   through emitArtifacts: all land, or none
                                   does, and only once
                                   membership-manifest-expected.json, the
-                                  lineage budget and the CI heap budget
+                                  lineage budget, the lineage invariants
+                                  (../lineage/README.md#invariants) and the
+                                  CI heap budget
                                   (../../util/README.md#ci-heap-budget) pass.
   membership-manifest-outputs.ts  MEMBERSHIP_OUTPUTS — every file the
                                   generator writes, as its emitArtifacts
@@ -341,7 +345,15 @@ row's own TYC names the source where Tycho-2's best-neighbour walk reaches
 nothing. A winner a spine record already holds, or that two groups reach,
 leaves the cell empty, as a spine collision does. `magnitudeRowsOwnCandidate`
 counts the magnitude rows that are still some primaries row's unshipped
-candidate, by why it was not shipped.
+candidate, by why it was not shipped. Each such row's `admit.magnitude`
+lineage row carries the reason as `own_candidate` and cites the proposing
+row's origin, and `MEMBERSHIP_INVARIANTS` fails the build on any reason
+outside `ALLOWED_OWN_CANDIDATE_REASONS`
+([Invariants](../lineage/README.md#invariants)). `runner_up` and `component`
+are allowed because most of their rows are a resolved pair's second star; the
+defects inside them — a star drawn twice, a designation on the wrong
+component, an unrelated star ledgered as a component, a pair's light counted
+twice — each carry their own fix and check.
 
 ## The parity gate
 

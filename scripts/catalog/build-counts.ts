@@ -83,14 +83,10 @@ export interface BuildCounts {
   /** bjEligible rows whose source_id was also in the B-J catalogue —
    *  the count actually overridden. Coverage = bjOverridden / bjEligible. */
   bjOverridden: number;
-  /** The shortfall between those two, **pinned at zero** — the pull-staleness
-   *  gate. distance/refinement/README.md#scope-derived-pulls--why-the-zero-pin-is-here owns the rule and
-   *  why the numerator above cannot serve as one. */
-  bjEligibleNotPulled: number;
   /** Records carrying a source_id the committed Apsis / GSPC pull holds no row
-   *  for. Pinned on the same terms as `bjEligibleNotPulled`, at the reviewed
-   *  residual rather than zero: Gaia genuinely publishes no parameters for
-   *  part of the catalogue, so what is gated is the shortfall MOVING. */
+   *  for. Pinned at the reviewed residual rather than zero: Gaia genuinely
+   *  publishes no parameters for part of the catalogue, so what is gated is the
+   *  shortfall MOVING (../refresh/README.md#the-staleness-gate--pin-the-shortfall-never-the-numerator). */
   apsisSourcesUnpulled: number;
   gspcSourcesUnpulled: number;
   /** Rows whose resolved direction falls inside the LMC sky cone — the
@@ -461,13 +457,11 @@ export interface BuildCounts {
   /** Anchor-grade sibling parallaxes indexed off the kept-physical pair rows
    *  of multiples.tsv — the `pair_member_parallax` tier's reach. */
   pairMemberParallaxEntries: number;
-  /** Why the rest of those pair-row sources are not candidates. These four
+  /** Why the rest of those pair-row sources are not candidates. These three
    *  plus `pairMemberParallaxEntries` are every source the index's per-root
-   *  dedup admits, so the tier's reach is a partition rather than prose
-   *  (`distance/parallax/README.md#the-tiers-reach-is-bounded-by-measurement-quality-not-by-our-request`).
-   * `pairMemberSiblingNoAstrometryRow` is the one that
-   *  says the astrometry request under-covers its pair-row half. */
-  pairMemberSiblingNoAstrometryRow: number;
+   *  dedup admits, since a source the pull lacks fails the build, so the
+   *  tier's reach is a partition rather than prose
+   *  (`distance/parallax/README.md#the-tiers-reach-is-bounded-by-measurement-quality-not-by-our-request`). */
   pairMemberSiblingNoParallax: number;
   pairMemberSiblingNotAnchorGrade: number;
   pairMemberSiblingBelowSnFloor: number;

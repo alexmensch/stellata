@@ -16,7 +16,7 @@ import { LINEAGE_LAYOUT, readIdentity, stageFile } from '../lineage/lineage-io';
 import { stageLineageLine, stageLineageText } from '../lineage/lineage-row-pure';
 import { stageLineage } from '../lineage/stage-lineage';
 import {
-  MEMBERSHIP_CODES, MEMBERSHIP_LINEAGE_BUDGET, multiplesComponentJoin, MEMBERSHIP_LINEAGE,
+  MEMBERSHIP_CODES, MEMBERSHIP_INVARIANTS, MEMBERSHIP_LINEAGE_BUDGET, multiplesComponentJoin, MEMBERSHIP_LINEAGE,
 } from './membership-lineage-pure';
 import { snapshotCheck } from '../../util/snapshot-check';
 import { compareCountSnapshot } from '../build-counts';
@@ -129,7 +129,6 @@ async function main(): Promise<void> {
       `via ${tally(c.derivedVia)}, consensus ${c.derivedConsensus}, asserted by review ${c.dispositionAsserted}; ` +
       `gate refused ${tally(c.derivedRejected)}; ` +
       `${c.derivedUngateable} rows have a candidate and no printed V; ` +
-      `${c.derivedWeighedNoGMag} candidates weighed with no pulled row (must be 0), ` +
       `${c.derivedWeighedNullGMag} on a row with no published G`,
   );
   console.log(
@@ -168,6 +167,7 @@ async function main(): Promise<void> {
       return [multiplesComponentJoin(identity, multiples)];
     },
     budget: MEMBERSHIP_LINEAGE_BUDGET,
+    invariants: MEMBERSHIP_INVARIANTS,
     argv: process.argv.slice(2),
   });
   if (lineage.changes !== null) {

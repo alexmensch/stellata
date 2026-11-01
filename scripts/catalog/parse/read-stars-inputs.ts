@@ -20,7 +20,7 @@ import { cns5AstrometryByGj } from '../classic-ids/classic-ids-parse';
 import { createConstellationAssignment, iauEdgeRecords } from './constellations/constellations';
 import { STELLARIUM } from './constellations/stellarium-source';
 import { readMultiplesTsv } from '../companions/companion-promotion';
-import { buildPairMemberParallaxIndex } from '../distance/parallax/pair-member-parallax';
+import { buildPairMemberParallaxIndex, unpulledSiblingsMessage } from '../distance/parallax/pair-member-parallax';
 import {
   readMagnitudeTermAstrometry,
   readMagnitudeTermSourceIds,
@@ -46,7 +46,6 @@ export type ReadStarsInputSizes = Pick<
   | 'cns5AstrometryEntries'
   | 'glieseEntries'
   | 'pairMemberParallaxEntries'
-  | 'pairMemberSiblingNoAstrometryRow'
   | 'pairMemberSiblingNoParallax'
   | 'pairMemberSiblingNotAnchorGrade'
   | 'pairMemberSiblingBelowSnFloor'
@@ -123,11 +122,11 @@ export async function loadReadStarsInputs(): Promise<ReadStarsInputs> {
     'Indexing bound-pair sibling parallaxes',
     () => buildPairMemberParallaxIndex(readMultiplesTsv(), directions.gaiaAstrometry),
     ({ entryCount, refused }) => `${entryCount} anchor-grade siblings; refused `
-      + `no-astrometry-row ${refused.noAstrometryRow}, `
       + `no-parallax ${refused.noParallax}, `
       + `not-anchor-grade ${refused.notAnchorGrade}, `
       + `below-sn-floor ${refused.belowSnFloor}`,
   );
+  if (pairMemberParallax.unpulled.length > 0) throw new Error(unpulledSiblingsMessage(pairMemberParallax.unpulled));
 
   const dustGrid = timed(
     'Loading dust grid for build-time de-extinction',
@@ -156,7 +155,6 @@ export async function loadReadStarsInputs(): Promise<ReadStarsInputs> {
     cns5AstrometryEntries: directions.cns5.size,
     glieseEntries: gliese.rowCount,
     pairMemberParallaxEntries: pairMemberParallax.entryCount,
-    pairMemberSiblingNoAstrometryRow: pairMemberParallax.refused.noAstrometryRow,
     pairMemberSiblingNoParallax: pairMemberParallax.refused.noParallax,
     pairMemberSiblingNotAnchorGrade: pairMemberParallax.refused.notAnchorGrade,
     pairMemberSiblingBelowSnFloor: pairMemberParallax.refused.belowSnFloor,

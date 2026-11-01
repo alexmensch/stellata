@@ -3,6 +3,7 @@
 import { LABEL_DISPOSITIONS, type LabelDisposition, type LabelFlip } from '../classic-ids/label-merge/label-merge-pure';
 import type { IdentityRow } from '../lineage/identity-pure';
 import type { DiffJoin } from '../lineage/lineage-diff-pure';
+import { lineageInvariant, NO_EXCEPTIONS, type LineageInvariant } from '../lineage/lineage-invariant-pure';
 import type { StageLineageSpec } from '../lineage/lineage-io';
 import { paramsOf, paramsText, type LineageParams, type LineageRow } from '../lineage/lineage-row-pure';
 import { LIVE, stageCodes, type CodeDeclaration } from '../lineage/reason-codes-pure';
@@ -10,7 +11,7 @@ import type { GateReason } from './binding/binding-gate-pure';
 import {
   BINDING_REVIEW_COLUMNS, COMPONENT_REASON_PREFIX,
   type AdditionLedgerRow, type AdditionReason, type BindingReviewRow, type BindingReviewVerdict,
-  type LabelDropReason, type LabelDropRow,
+  type LabelDropReason, type LabelDropRow, type OwnCandidate, type OwnCandidateReason,
 } from './ledger-rows-pure';
 
 export const MEMBERSHIP_STAGE = 'membership';
@@ -77,6 +78,7 @@ export const MEMBERSHIP_CODES = stageCodes(MEMBERSHIP_STAGE, {
   'binding.gate-mag': live('A binding candidate refused because its Gaia G is more than a magnitude fainter than the record\'s printed V.'),
   'binding.gate-sibling': live('A binding candidate refused because SIMBAD gives that Gaia source to a different component of the record\'s system.'),
   'binding.runner-up': live('A binding candidate that passed both gates but lost to a higher-ranked one.'),
+  'binding.unweighed-no-pulled-row': live('A binding candidate the magnitude gate passed unweighed, because the astrometry pull holds no row for it.'),
   'disposition.derived': live('A committed review disposition confirms the derived Gaia source.'),
   'disposition.other': live('A committed review disposition binds a Gaia source other than the derived one, on its stated evidence.'),
   'disposition.none': live('A committed review disposition leaves the record unbound.'),
@@ -109,7 +111,7 @@ export type MembershipOutcome =
   | { readonly kind: 'fold'; readonly survivor: string }
   | { readonly kind: 'admit-addition'; readonly reason: AdditionReason; readonly members: readonly string[] }
   | { readonly kind: 'component'; readonly designation: string; readonly members: readonly string[] }
-  | { readonly kind: 'admit-magnitude' }
+  | { readonly kind: 'admit-magnitude'; readonly ownCandidate: OwnCandidate | null }
   | {
     readonly kind: 'spine-binding';
     readonly outcome: SettledBindingOutcome;
@@ -130,6 +132,12 @@ export type MembershipOutcome =
     readonly refusal: CandidateRefusal;
     readonly sourceId: string;
     readonly via: string;
+  }
+  | {
+    readonly kind: 'candidate-unweighed';
+    readonly sourceId: string;
+    readonly via: string;
+    readonly items: readonly string[];
   }
   | {
     readonly kind: 'disposition';
@@ -171,14 +179,38 @@ type Candidate = { source_id: string; via: string };
 /** Each code's params, the one declaration its writer and its views share. */
 type ParamsOf<B extends Branch> =
   B extends 'component' ? { designation: string }
+  : B extends 'admit.magnitude' ? { own_candidate?: OwnCandidateReason }
   : B extends `binding.${QueuedBindingOutcome}` ? BindingReviewCells & Letters
   : B extends `binding.${SettledBindingOutcome}` ? { derived_source_id: string; derived_via: string } & Letters
-  : B extends (typeof REFUSAL_BRANCHES)[CandidateRefusal] ? Candidate
+  : B extends (typeof REFUSAL_BRANCHES)[CandidateRefusal] | 'binding.unweighed-no-pulled-row' ? Candidate
   : B extends `disposition.${DispositionOutcome}` ? BindingReviewCells & { keep_source_id: string; basis: string }
   : B extends `addition-binding.${AdditionBindingOutcome}` ? Candidate
   : B extends `label-drop.${string}` ? { cell: string; value: string }
   : B extends `label.${LabelDisposition}` ? Pick<LabelFlip, 'field' | 'label' | 'spine' | 'overlay' | 'applied'>
   : Record<string, never>;
+
+export const ALLOWED_OWN_CANDIDATE_REASONS: ReadonlySet<OwnCandidateReason> = new Set<OwnCandidateReason>([
+  'refused_mag', 'refused_sibling', 'runner_up', 'component',
+]);
+
+function membershipInvariant<B extends Branch>(
+  branch: B, holds: string, allows: (params: ParamsOf<B>) => boolean,
+): LineageInvariant {
+  return lineageInvariant(MEMBERSHIP_CODES, branch, holds, (p) => allows(p as ParamsOf<B>));
+}
+
+export const MEMBERSHIP_INVARIANTS: readonly LineageInvariant[] = [
+  membershipInvariant(
+    'admit.magnitude',
+    `no magnitude-term record is a primaries row's unshipped candidate except as ${[...ALLOWED_OWN_CANDIDATE_REASONS].join(', ')}`,
+    (p) => p.own_candidate === undefined || ALLOWED_OWN_CANDIDATE_REASONS.has(p.own_candidate),
+  ),
+  membershipInvariant(
+    'binding.unweighed-no-pulled-row',
+    'every binding candidate is weighed on a row the astrometry pull carries (binding/README.md#the-candidates-have-to-be-in-the-astrometry-pull)',
+    NO_EXCEPTIONS,
+  ),
+];
 
 function row<B extends Branch>(
   key: string, branch: B, params: ParamsOf<B>, evidence: readonly string[] = [],
@@ -201,7 +233,10 @@ export function membershipLineageRow({ key, outcome: o }: KeyedOutcome): Lineage
     case 'fold': return row(key, 'fold', {}, [o.survivor]);
     case 'admit-addition': return row(key, ADDITION_BRANCHES[o.reason], {}, o.members);
     case 'component': return row(key, 'component', { designation: o.designation }, o.members);
-    case 'admit-magnitude': return row(key, 'admit.magnitude', {});
+    case 'admit-magnitude':
+      return o.ownCandidate === null
+        ? row(key, 'admit.magnitude', {})
+        : row(key, 'admit.magnitude', { own_candidate: o.ownCandidate.reason }, [o.ownCandidate.of]);
     case 'spine-binding':
       return row(key, `binding.${o.outcome}`, {
         derived_source_id: o.sourceId, derived_via: o.via, source_letters: o.sourceLetters, hip_letters: o.hipLetters,
@@ -212,6 +247,8 @@ export function membershipLineageRow({ key, outcome: o }: KeyedOutcome): Lineage
       });
     case 'candidate-refused':
       return row(key, REFUSAL_BRANCHES[o.refusal], { source_id: o.sourceId, via: o.via }, [], 'refused');
+    case 'candidate-unweighed':
+      return row(key, 'binding.unweighed-no-pulled-row', { source_id: o.sourceId, via: o.via }, o.items);
     case 'disposition':
       return row(key, `disposition.${o.outcome}`, { ...o.review, keep_source_id: o.keep, basis: o.basis });
     case 'addition-binding':

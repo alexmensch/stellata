@@ -130,16 +130,18 @@ which moves with every membership change and so cannot be quoted. Over the
 | `pairMemberSiblingNotAnchorGrade` | <!-- count:build-catalog/pairMemberSiblingNotAnchorGrade -->6,684<!-- /count --> | RUWE, a blended image, or a saturated G — `isCoherenceAnchorGrade` |
 | `pairMemberSiblingNoParallax` | <!-- count:build-catalog/pairMemberSiblingNoParallax -->1,174<!-- /count --> | Gaia has the source and published none |
 | `pairMemberSiblingBelowSnFloor` | <!-- count:build-catalog/pairMemberSiblingBelowSnFloor -->1<!-- /count --> | anchor-grade, inversion undefined |
-| `pairMemberSiblingNoAstrometryRow` | **<!-- count:build-catalog/pairMemberSiblingNoAstrometryRow -->0<!-- /count -->** | the pull carries no row for the source at all |
+| `unpulled` | **none**: the build fails, naming each source and its `multiples.tsv` row | the pull carries no row for the source at all |
 
 The five are a partition, so the table sums to the dedup's input and a new
 refusal path has to be classified before it can hide in prose. That input
 exceeds the request's own id count ([The request is a union](../../astrometry-request/README.md#the-request-is-a-union-and-why-that-is-not-a-compromise))
 because the dedup is per ROOT: a source under two WDS
-roots is a candidate for each, and counted once for each. **The zero is the
+roots is a candidate for each, and counted once for each. **`unpulled` is the
 gated one**: it is the astrometry request under-covering the pair-row half of
-its union, the one cause a re-pull can fix, and the reason the tier reaches what
-it does. `notAnchorGrade` dominating is the finding — four in five of the 7,858
+its union, the one cause a re-pull can fix, so `buildPairMemberParallaxIndex`
+lists those sources and `loadReadStarsInputs` fails the build on any, before
+the walk (`unpulledSiblingsMessage`). It is a check on an input index rather
+than on a record, so it sits beside lineage, not in it. `notAnchorGrade` dominating is the finding — four in five of the 7,858
 refusals are on fit quality, not on coverage.
 
 **The live tier size is `distPairMemberParallax`**

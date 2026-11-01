@@ -303,15 +303,6 @@ export function readStars(
      *  `gaia_dr3_inversion` — the tier B-J publishes a posterior over. */
     bjEligible: number;
     bjOverridden: number;          // bjEligible rows that hit a B-J entry
-    /** Eligible rows the committed B-J table holds no row for. **Pinned at
-     *  zero**: an eligible row has its own DR3 parallax, so B-J publishes a
-     *  posterior for it and an absence is this pull's request set having
-     *  drifted from the manifest's binding column — never the publication.
-     *  Such a row silently keeps the naive 1/π inversion, which is exactly
-     *  what the posterior exists to moderate. `bjOverridden` cannot catch it:
-     *  when the column gains sources the pull was never asked for, that
-     *  numerator stops growing, and "stopped growing" reads as no change. */
-    bjEligibleNotPulled: number;
     /** The record-parity dropped list (/docs/catalog-driver.md#61-record-parity) — enumerated, because these rows leave the
      *  catalogue and nothing else records that they existed. */
     parked: ParkedRecord[];
@@ -369,7 +360,6 @@ export function readStars(
   let bjEligible = 0;
   let distLowPrecisionParallax = 0;
   let bjOverridden = 0;
-  let bjEligibleNotPulled = 0;
   let lmcCandidates = 0;
   let lmcOverridden = 0;
   const lmcParallaxRefusedByDistVia = emptyTallyPartition(DIST_VIA_VALUES);
@@ -545,7 +535,6 @@ export function readStars(
         bjOverridden++;
         bjStep = { kind: 'override', ref: ovr.ref };
       } else {
-        bjEligibleNotPulled++;
         bjStep = { kind: 'absent' };
       }
     }
@@ -797,7 +786,6 @@ export function readStars(
       total,
       bjEligible,
       bjOverridden,
-      bjEligibleNotPulled,
       parked,
       parkedVia,
       distLowPrecisionParallax,

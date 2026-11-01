@@ -38,6 +38,7 @@ import { evidenceOf } from '../../util/tsv/cell-corrections-pure';
 import { ADDITION_REASONS, type AdditionReason } from './ledger-rows-pure';
 import { BINDING_REVIEW_KEY_COLUMNS, BINDING_REVIEW_VERDICTS, bindingReviewKey, type BindingReviewVerdict } from './ledger-rows-pure';
 import { LABEL_DROP_REASONS, type LabelDropReason } from './ledger-rows-pure';
+import { OWN_CANDIDATE_REASONS, type OwnCandidate, type OwnCandidateReason } from './ledger-rows-pure';
 import type { IdentityRow } from '../lineage/identity-pure';
 import type { LineageRow } from '../lineage/lineage-row-pure';
 import {
@@ -206,10 +207,6 @@ export interface MembershipCounts extends LabelMergeCounts {
   derivedRejected: Record<GateReason, number>;
   /** Spine rows with a candidate and no printed V to weigh it against. */
   derivedUngateable: number;
-  /** Candidates weighed with no row in the astrometry pull. Pinned at zero —
-   *  a missing G is a pass, so this is the request under-covering the
-   *  derivation, and the fixable half of the two no-G counts. */
-  derivedWeighedNoGMag: number;
   /** Candidates weighed on a pulled row publishing no G — unweighable by any
    *  request. */
   derivedWeighedNullGMag: number;
@@ -224,10 +221,6 @@ export interface MembershipCounts extends LabelMergeCounts {
   additionSourceGateRefused: number;
   /** Derived sources two or more addition groups reach; no group takes one. */
   additionSourceShared: number;
-  /** Addition candidates weighed with no row in the astrometry pull — the
-   *  `derivedWeighedNoGMag` pin, over every derivation the additions run: each
-   *  item's, which decides the grouping, and each merged group's. */
-  additionWeighedNoGMag: number;
   /** Addition groups whose winner has a gate-passing runner-up. */
   additionContested: number;
   /** Admitted rows whose only designation is the Gaia id — the mints
@@ -387,11 +380,6 @@ function bindingOutcome(derived: DerivedBinding, withheld: boolean): BindingOutc
   return passingRunnersUp(derived).length > 0 ? 'contested' : 'bound';
 }
 
-export const OWN_CANDIDATE_REASONS = [
-  'refused_mag', 'refused_sibling', 'withheld', 'runner_up', 'component',
-] as const;
-export type OwnCandidateReason = (typeof OWN_CANDIDATE_REASONS)[number];
-
 /** Every candidate a row's derivation proposed other than the value it ships,
  *  with why it was not shipped. */
 function unshippedCandidates(
@@ -512,6 +500,24 @@ function refusedCandidates(key: string, d: DerivedBinding): KeyedOutcome[] {
     outcome: { kind: 'candidate-refused', refusal: 'runner-up', sourceId: c.sourceId, via: c.via.join('+') },
   }));
   return [...refused, ...runnersUp];
+}
+
+/** One row per source a record's derivations weighed with no pulled row, citing
+ *  the non-anchor addition items whose own derivation weighed it. */
+function unweighedCandidates(
+  key: string, weighedBy: readonly { d: DerivedBinding; cites: readonly string[] }[],
+): KeyedOutcome[] {
+  const bySource = new Map<string, { via: string; items: Set<string> }>();
+  for (const { d, cites } of weighedBy) {
+    for (const c of d.unweighedNoPulledRow) {
+      const entry = bySource.get(c.sourceId) ?? { via: c.via.join('+'), items: new Set<string>() };
+      for (const at of cites) entry.items.add(at);
+      bySource.set(c.sourceId, entry);
+    }
+  }
+  return [...bySource].map(([sourceId, { via, items }]): KeyedOutcome => ({
+    key, outcome: { kind: 'candidate-unweighed', sourceId, via, items: [...items].sort() },
+  }));
 }
 
 function additionBindingOutcome(g: AdditionGroup): AdditionBindingOutcome {
@@ -1003,7 +1009,6 @@ export function buildMembership(input: MembershipInput): MembershipResult {
   let derivedConsensus = 0;
   let dispositionAsserted = 0;
   let derivedUngateable = 0;
-  let derivedWeighedNoGMag = 0;
   let derivedWeighedNullGMag = 0;
   const applied = new Set<string>();
 
@@ -1021,9 +1026,8 @@ export function buildMembership(input: MembershipInput): MembershipResult {
     let binding: BindingClass = 'none';
     if (b.derived !== null) {
       const d = b.derived;
-      outcomes.push(...refusedCandidates(origin, d));
+      outcomes.push(...refusedCandidates(origin, d), ...unweighedCandidates(origin, [{ d, cites: [] }]));
       for (const r of d.rejected) derivedRejected[r.reason]++;
-      derivedWeighedNoGMag += d.weighedNoGMag;
       derivedWeighedNullGMag += d.weighedNullGMag;
       if (!d.gateable && d.ranked.length > 0) derivedUngateable++;
       const key = bindingReviewKey(spineRow);
@@ -1138,9 +1142,16 @@ export function buildMembership(input: MembershipInput): MembershipResult {
     }
   }
   const sharedSources = new Set([...sourceGroups].filter(([, n]) => n > 1).map(([s]) => s));
-  const groups = derivedGroups
-    .map((g) => additionGroup(g.items, g.derived, claims, sharedSources, keys))
-    .sort(additionGroupOrder(input.publishesGaiaParallax));
+  const groups = derivedGroups.map(({ items: groupItems, derived }) => {
+    const group = additionGroup(groupItems, derived, claims, sharedSources, keys);
+    const weighedBy = groupItems.map((item) => {
+      const at = itemOrigin(item, keys);
+      return { d: item.derived, cites: at === group.origin ? [] : [at] };
+    });
+    if (groupItems.length > 1) weighedBy.push({ d: derived, cites: [] });
+    outcomes.push(...unweighedCandidates(group.origin, weighedBy));
+    return group;
+  }).sort(additionGroupOrder(input.publishesGaiaParallax));
 
   const additionsByReason = Object.fromEntries(
     ADDITION_REASONS.map((r) => [r, 0]),
@@ -1151,28 +1162,24 @@ export function buildMembership(input: MembershipInput): MembershipResult {
   let additionRouteSourceDisagree = 0;
   let additionGaiaKeyedOnly = 0;
   let additionsWithBlockedDesignation = 0;
-  const additionWeighedNoGMag = [
-    ...items.map((i) => i.derived),
-    ...derivedGroups.filter((g) => g.items.length > 1).map((g) => g.derived),
-  ].reduce((n, d) => n + d.weighedNoGMag, 0);
   let additionContested = 0;
-  const ownCandidates = new Map<string, OwnCandidateReason>();
-  const noteUnshipped = (d: DerivedBinding, shipped: string | null): void => {
+  const ownCandidates = new Map<string, OwnCandidate>();
+  const noteUnshipped = (of: string, d: DerivedBinding, shipped: string | null): void => {
     for (const [id, reason] of unshippedCandidates(d, shipped)) {
-      if (!ownCandidates.has(id)) ownCandidates.set(id, reason);
+      if (!ownCandidates.has(id)) ownCandidates.set(id, { reason, of });
     }
   };
   spineBindings.forEach((b, i) => {
-    if (b.derived !== null) noteUnshipped(b.derived, settled[i].value);
+    if (b.derived !== null) noteUnshipped(spineKey(i), b.derived, settled[i].value);
   });
   for (const g of groups) {
     const a = admitGroup(g, claims, index);
     if (g.source !== null && passingRunnersUp(g.derived).length > 0) additionContested++;
     const component = a.verdict.kind === 'component';
     if (component && g.derived.sourceId !== null && !ownCandidates.has(g.derived.sourceId)) {
-      ownCandidates.set(g.derived.sourceId, 'component');
+      ownCandidates.set(g.derived.sourceId, { reason: 'component', of: g.origin });
     }
-    noteUnshipped(g.derived, component ? null : g.source);
+    noteUnshipped(g.origin, g.derived, component ? null : g.source);
     if (g.sourceOnSpine) additionSourceOnSpine++;
     if (g.sourceGateRefused) additionSourceGateRefused++;
     if (g.routeSourceDisagree) additionRouteSourceDisagree++;
@@ -1214,12 +1221,12 @@ export function buildMembership(input: MembershipInput): MembershipResult {
     input.magnitudeTerm?.keptSourceIds ?? new Set(),
     boundSourceIds,
   )) {
-    const own = ownCandidates.get(sourceId);
-    if (own !== undefined) magnitudeRowsOwnCandidate[own]++;
+    const own = ownCandidates.get(sourceId) ?? null;
+    if (own !== null) magnitudeRowsOwnCandidate[own.reason]++;
     const row = magnitudeTermRow(sourceId);
     bindingByClass[row.binding as BindingClass]++;
     rows.push({ cells: row, key: keys.gaia(sourceId) });
-    outcomes.push({ key: keys.gaia(sourceId), outcome: { kind: 'admit-magnitude' } });
+    outcomes.push({ key: keys.gaia(sourceId), outcome: { kind: 'admit-magnitude', ownCandidate: own } });
   }
 
   const typed = rows.map(({ cells, key }) => toRecord(cells, key));
@@ -1257,7 +1264,6 @@ export function buildMembership(input: MembershipInput): MembershipResult {
     dispositionAsserted,
     derivedRejected,
     derivedUngateable,
-    derivedWeighedNoGMag,
     derivedWeighedNullGMag,
     labelDropsByReason: Object.fromEntries(LABEL_DROP_REASONS.map(
       (reason) => [reason, ledgers.labelDrops.filter((d) => d.reason === reason).length],
@@ -1266,7 +1272,6 @@ export function buildMembership(input: MembershipInput): MembershipResult {
     additionSourceOnSpine,
     additionSourceGateRefused,
     additionSourceShared: sharedSources.size,
-    additionWeighedNoGMag,
     additionContested,
     additionGaiaKeyedOnly,
     additionRouteSourceDisagree,

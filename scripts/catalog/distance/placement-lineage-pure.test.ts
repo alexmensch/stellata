@@ -9,8 +9,10 @@ import { SIMBAD_VALUES } from '../simbad/simbad-values-source';
 import { encodeLineageLine, stageLineageLine } from '../lineage/lineage-row-pure';
 import type { DirectionSolution } from './direction-cascade';
 import type { ParkedLedgerEntry } from './parallax/parked-ledger';
+import { invariantCheck, invariantViolations } from '../lineage/lineage-invariant-pure';
 import {
-  PLACEMENT_CODES, parkedLedgerView, placementLineageLines, placementLineageRows, type Placement,
+  PLACEMENT_CODES, PLACEMENT_INVARIANTS, parkedLedgerView, placementLineageLines, placementLineageRows,
+  type BailerJonesStep, type Placement,
 } from './placement-lineage-pure';
 
 const SOURCE = '2000000000000000001';
@@ -188,5 +190,31 @@ describe('parkedLedgerView', () => {
     }).filter((r) => r.code === 'placement.park.no-v-magnitude');
     expect(() => parkedLedgerView([stageLineageLine(PLACEMENT_CODES, { ...row, params: row.params.replace('"7"', '"7x"') })]))
       .toThrow('"7x" is not an integer');
+  });
+});
+
+describe('PLACEMENT_INVARIANTS', () => {
+  const placed = (key: string, bailerJones: BailerJonesStep): Placement => ({
+    kind: 'placed',
+    key,
+    parallax: { via: 'gaia_dr3_inversion', value: { mas: 2, errMas: 0.1 }, evidence: [GAIA], refusals: [] },
+    direction: { via: 'gaia_5p', value: SOLUTION, evidence: [GAIA], refusals: [] },
+    pmRescue: null,
+    bailerJones,
+    lmc: 'not_member',
+    rv: { kind: 'kept', rv: { via: 'none', refusals: [] } },
+    velocityClamped: false,
+  });
+
+  it('names the record whose Bailer-Jones posterior the pull lacks, and passes one it covers', () => {
+    const lines = [
+      ...placementLineageLines(placed('spine:4', { kind: 'override', ref: BJ })),
+      ...placementLineageLines(placed('spine:5', { kind: 'absent' })),
+    ];
+    const [bj] = invariantViolations(PLACEMENT_INVARIANTS, lines);
+    expect(bj.rows.map((r) => r.key)).toEqual(['spine:5']);
+    const check = invariantCheck(bj);
+    expect(check.kind).toBe('fail');
+    expect(check.kind === 'fail' && check.message).toContain('spine:5\tplacement.distance.bailer-jones-absent');
   });
 });

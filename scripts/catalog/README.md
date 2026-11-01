@@ -92,7 +92,9 @@ scripts/catalog/
                                   and placement's, promotion's and
                                   allocation's lineage through emitArtifacts
                                   once its two snapshot checks, the three
-                                  lineage budgets and the CI heap budget
+                                  lineage budgets, placement's lineage
+                                  invariants (lineage/README.md#invariants)
+                                  and the CI heap budget
                                   (../util/README.md#ci-heap-budget) pass.
                                   A failed allocation throws before
                                   anything is staged

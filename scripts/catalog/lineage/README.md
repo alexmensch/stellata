@@ -47,8 +47,11 @@ scripts/catalog/lineage/
   trace.ts                       `pnpm run trace` (#trace).
   trace.test.ts                  Both, the command over a committed fixture.
   stage-lineage.ts               stageLineage: one stage's files, header,
-                                 baseline plan, diff and budget check,
-                                 ready for the stage's emitArtifacts call.
+                                 baseline plan, diff, budget and invariant
+                                 checks, ready for the stage's emitArtifacts
+                                 call.
+  lineage-invariant-pure.ts      LineageInvariant and its check (#invariants).
+    (+ test)
   lineage-io.ts                  The on-disk layout (build/lineage/,
                                  lineage.previous/, lineage-diff/), the
                                  baseline members and a stage's emission,
@@ -199,6 +202,23 @@ one text; `evidence` is its references' text forms joined by `|`.
   orphans a SID through it; an `*.unrecorded` code would be written into
   append-only `events.tsv` for good.
 
+## Invariants
+
+A tripwire is an invariant over a stage's own lines, never a pinned count: a
+count says a number moved, a query names the rows that moved it. Each
+`LineageInvariant` (`lineage-invariant-pure.ts`) names one code that must not
+appear, what holds while it does not, and its allowed exceptions as a
+predicate over the row's `params` (`NO_EXCEPTIONS` for a zero-pin). A stage
+declares its invariants beside its codes and hands them to `stageLineage`,
+which checks every line before emission: a violation is a failed check, so
+nothing lands, and the message lists the offending rows' keys and params.
+Placement's (`PLACEMENT_INVARIANTS`): no `distance.bailer-jones-absent` row.
+Membership's (`MEMBERSHIP_INVARIANTS`): no `admit.magnitude` row whose
+`own_candidate` is outside `ALLOWED_OWN_CANDIDATE_REASONS`
+([The additions](../membership/README.md#the-additions)), and no
+`binding.unweighed-no-pulled-row` row
+([The candidates have to be in the astrometry pull](../membership/binding/README.md#the-candidates-have-to-be-in-the-astrometry-pull)).
+
 ## SID events
 
 SID allocation is the fourth stage, run inside `build:catalog` and the
@@ -224,7 +244,7 @@ passes `stageLineage` (`stage-lineage.ts`) a `LineageBudget`, and a run over
 it fails its emission. Membership, measured 2026-10-29 on the full tree:
 1,355,182 rows (128 MB plain, 15.1 MB gzipped) plus 976,040 identity rows
 (85 MB, 22.3 MB), 37.4 MB together. The timed window is everything lineage
-adds to the build — the diff, rendering and gzip: about 5.8 s with a diff
+adds to the build — the diff, rendering, gzip and invariants: about 5.8 s with a diff
 against a full baseline. The header's input hash is not in it: a stage hands
 `stageLineage` the input hashes its step already computed (`build:catalog`'s
 are its stamp's), so a build hashes its inputs once.

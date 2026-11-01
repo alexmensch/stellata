@@ -36,8 +36,9 @@ covers it. A record placed by Hipparcos, CNS5, Gliese, SIMBAD or a bound
 sibling is excluded deliberately: regressing a non-Gaia parallax onto B-J's
 Galactic-density prior discards a measurement for one computed from a
 different, worse one. Coverage pins as `bjOverridden / bjEligible` in
-`scripts/catalog/build-catalog-expected.json`, and the **shortfall between
-them pins at zero** (`bjEligibleNotPulled`): an eligible record has its own
+`scripts/catalog/build-catalog-expected.json`, and **an eligible record the
+table lacks fails the build**, named by placement lineage's
+`placement.distance.bailer-jones-absent` invariant: an eligible record has its own
 DR3 parallax, so this publication covers it, and an absence means this pull's
 scope — [Refresh](#refresh) below — has moved since the table was pulled. See
 [Multi-layer distance refinement](/scripts/catalog/distance/refinement/README.md#multi-layer-distance-refinement) and

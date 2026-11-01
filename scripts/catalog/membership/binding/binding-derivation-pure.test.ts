@@ -157,7 +157,7 @@ describe('deriveBinding', () => {
     const gate = rowGateEvidence({ tyc: '', hip: '50', gl: '' }, evidence, simbad);
     const d = deriveBinding(candidates({ hip: '501' }), gate);
     expect(d.rejected.map((r) => r.reason)).toEqual(['sibling']);
-    expect(d.weighedNoGMag).toBe(1);
+    expect(d.unweighedNoPulledRow.map((c) => c.sourceId)).toEqual(['501']);
   });
 
   it('derives a refusal where every candidate is rejected, and where there is none', () => {
@@ -173,9 +173,9 @@ describe('deriveBinding', () => {
   it('counts candidates it weighed without a G, by cause, and passes them', () => {
     const gate = rowGateEvidence({ tyc: '', hip: '50', gl: '' }, evidence, simbad);
     expect(deriveBinding(candidates({ tyc: 'unpulled' }), gate))
-      .toMatchObject({ sourceId: 'unpulled', weighedNoGMag: 1, weighedNullGMag: 0 });
+      .toMatchObject({ sourceId: 'unpulled', unweighedNoPulledRow: [{ sourceId: 'unpulled' }], weighedNullGMag: 0 });
     expect(deriveBinding(candidates({ tyc: 'nullg' }), gate))
-      .toMatchObject({ sourceId: 'nullg', weighedNoGMag: 0, weighedNullGMag: 1 });
+      .toMatchObject({ sourceId: 'nullg', unweighedNoPulledRow: [], weighedNullGMag: 1 });
   });
 
   // Gl 864 is the shape: the winner's rival was the TYC walk's neighbour at
@@ -242,7 +242,7 @@ describe('deriveBinding', () => {
     const gate = rowGateEvidence({ tyc: '1-1-1', hip: '', gl: '' }, evidence, simbad);
     expect(gate.printedV).toBeNull();
     expect(deriveBinding(candidates({ tyc: 'a' }), gate))
-      .toMatchObject({ sourceId: 'a', gateable: false, weighedNoGMag: 0 });
+      .toMatchObject({ sourceId: 'a', gateable: false, unweighedNoPulledRow: [] });
   });
 
   // The printed tiers in the V cascade's order: Hipparcos on the row's HIP,

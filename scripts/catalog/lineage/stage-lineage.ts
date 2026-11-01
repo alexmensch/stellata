@@ -14,6 +14,7 @@ import {
   readStageHeader, stageEmission, stageFile, stageHeader, streamLineage,
   type LineageLayout, type StageLineageSpec, type StageOutputKey,
 } from './lineage-io';
+import { invariantCheck, invariantViolations, type LineageInvariant } from './lineage-invariant-pure';
 import { sortLineageLines, type LineageLine } from './lineage-row-pure';
 
 /** The stage's measured cost, pinned so lineage cannot quietly grow. */
@@ -37,6 +38,8 @@ export interface StageLineageRun<F extends string, S extends string> {
   /** Built only when a diff runs, from the baseline directory it reads. */
   readonly joins: (baselineDir: string) => readonly DiffJoin[];
   readonly budget: LineageBudget;
+  /** Checked over `lines`; a violation fails the emission. */
+  readonly invariants: readonly LineageInvariant[];
   readonly argv: readonly string[];
 }
 
@@ -85,17 +88,19 @@ export async function stageLineage<F extends string, S extends string>(
   const texts = run.render(sorted);
   const diff = changes === null ? null : stageDiffText(changes, joins);
   const { files, members } = stageEmission(run.layout, run.spec, texts, header, diff, plan.rotate);
+  const invariantChecks = invariantViolations(run.invariants, sorted).map(invariantCheck);
   const writeMs = performance.now() - started;
   const gzipBytes = run.spec.files.reduce(
     (n, f) => n + (files[`lineage:${f}` as StageOutputKey<F, S>] as Uint8Array).byteLength, 0,
   );
-  const measured = `${run.spec.stage} lineage: ${gzipBytes} bytes gzipped; header, diff and write took ${writeMs.toFixed(0)} ms`;
+  const measured = `${run.spec.stage} lineage: ${gzipBytes} bytes gzipped; header, diff, write and invariants took ${writeMs.toFixed(0)} ms`;
   const over = gzipBytes > run.budget.gzipBytes || writeMs > run.budget.writeMs;
   const checks: Check[] = [over
     ? {
       kind: 'fail',
       message: `${measured}, over its budget of ${run.budget.gzipBytes} bytes / ${run.budget.writeMs} ms`,
     }
-    : { kind: 'pass', report: measured }];
+    : { kind: 'pass', report: measured },
+    ...invariantChecks];
   return { files, members, checks, changes };
 }

@@ -4,6 +4,7 @@ import {
   buildPairMemberParallaxIndex,
   lookupPairMemberParallax,
   pairMemberSourceIds,
+  unpulledSiblingsMessage,
 } from './pair-member-parallax';
 import { PARALLAX_SN_FLOOR } from './parallax-cascade';
 import { gaiaAstrometryRow } from '../astrometry-fixture';
@@ -87,29 +88,24 @@ describe('pair-member-parallax / the coherence anchor gate', () => {
   }
 
   // The tier's reach is stated as a partition, so every refusal path lands in
-  // exactly one bucket and the four sum with `entryCount` to the dedup's input
-  // — two sources here, the blend and the sibling. A path summing nowhere
-  // would leave the README's table quietly short. The kept row is in the table
-  // because `entryCount` is the fifth term, not a spectator to the other four.
+  // exactly one bucket and the three sum with `entryCount` and `unpulled` to
+  // the dedup's input — two sources here, the blend and the sibling. A path
+  // summing nowhere would leave the README's table quietly short.
   const attributed: [string, Partial<GaiaAstrometryCatalogRow> | null, number, {
-    noAstrometryRow: number; noParallax: number;
-    notAnchorGrade: number; belowSnFloor: number;
-  }][] = [
-    ['a clean sibling', {}, 1,
-      { noAstrometryRow: 0, noParallax: 1, notAnchorGrade: 0, belowSnFloor: 0 }],
+    noParallax: number; notAnchorGrade: number; belowSnFloor: number;
+  }, number][] = [
+    ['a clean sibling', {}, 1, { noParallax: 1, notAnchorGrade: 0, belowSnFloor: 0 }, 0],
     ['a RUWE the fit does not stand behind', { ruwe: 1.5 }, 0,
-      { noAstrometryRow: 0, noParallax: 1, notAnchorGrade: 1, belowSnFloor: 0 }],
+      { noParallax: 1, notAnchorGrade: 1, belowSnFloor: 0 }, 0],
     ['a parallax Gaia never published', { parallaxMas: null }, 0,
-      { noAstrometryRow: 0, noParallax: 2, notAnchorGrade: 0, belowSnFloor: 0 }],
+      { noParallax: 2, notAnchorGrade: 0, belowSnFloor: 0 }, 0],
     // The anchor gate weighs the fit, not the S/N, so a parallax
     // indistinguishable from zero clears it and the floor is what refuses.
     ['a parallax indistinguishable from zero', { parallaxErrorMas: SIBLING_PLX * 2 }, 0,
-      { noAstrometryRow: 0, noParallax: 1, notAnchorGrade: 0, belowSnFloor: 1 }],
-    // The one refusal a re-pull can fix, which is why the build pins it at 0.
-    ['no astrometry row at all', null, 0,
-      { noAstrometryRow: 2, noParallax: 0, notAnchorGrade: 0, belowSnFloor: 0 }],
+      { noParallax: 1, notAnchorGrade: 0, belowSnFloor: 1 }, 0],
+    ['no astrometry row at all', null, 0, { noParallax: 0, notAnchorGrade: 0, belowSnFloor: 0 }, 2],
   ];
-  for (const [label, overrides, kept, expected] of attributed) {
+  for (const [label, overrides, kept, expected, unpulledCount] of attributed) {
     it(`attributes ${label} to one bucket, and the five still partition`, () => {
       // σ Ori's blend publishes no parallax of its own, so wherever the pull
       // holds a row for it at all it lands in `noParallax`.
@@ -118,13 +114,20 @@ describe('pair-member-parallax / the coherence anchor gate', () => {
           [BLEND_SOURCE, clean({ parallaxMas: null })],
           [SIBLING_SOURCE, clean(overrides)],
         ]);
-      const { refused, entryCount } = sigmaOri(gaia);
+      const { refused, entryCount, unpulled } = sigmaOri(gaia);
       expect(entryCount).toBe(kept);
       expect(refused).toEqual(expected);
+      expect(unpulled).toHaveLength(unpulledCount);
       const total = Object.values(refused).reduce((a, b) => a + b, 0);
-      expect(total + entryCount).toBe(2);
+      expect(total + entryCount + unpulled.length).toBe(2);
     });
   }
+
+  it('names each pair-row source the pull lacks, with its multiples row', () => {
+    const { unpulled } = sigmaOri(new Map([[BLEND_SOURCE, clean({ parallaxMas: null })]]));
+    expect(unpulled).toEqual([{ sourceId: SIBLING_SOURCE, systemId: `${ROOT}-AB,D`, comp: 'D' }]);
+    expect(unpulledSiblingsMessage(unpulled)).toContain(`${SIBLING_SOURCE}\tmultiples:${ROOT}-AB,D/D`);
+  });
 
   it('admits a sibling exactly AT the floor, as the record\'s own parallax is', () => {
     const atFloor = clean({ parallaxErrorMas: SIBLING_PLX / PARALLAX_SN_FLOOR });

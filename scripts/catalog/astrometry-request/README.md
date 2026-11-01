@@ -85,8 +85,8 @@ outcome — nor off its identifier cells, since which addition items admission
 turns into rows is an output of the build this request feeds.
 `additionItemCells` reads them off the primaries and the corrected spine
 instead, the same enumeration `buildMembership` derives. Requesting them all, whatever a row ends up bound to, is what lets
-the generator's `derivedWeighedNoGMag` pin at zero the same way the overlay's
-`gateSkippedNoGMag` does; the reviewed bindings a disposition keeps
+the generator fail on any candidate it weighs with no pulled row, as the
+overlay's `gateSkippedNoGMag` pins at zero; the reviewed bindings a disposition keeps
 against every source are in the manifest column and so requested by the first
 contribution.
 
@@ -94,9 +94,9 @@ contribution.
 by a consumer being added without the request following. A bound pair's member
 is routinely not a manifest row (a component Gaia resolved that no primary
 indexes), and the tier lends that member's parallax to the sibling Gaia fitted
-none for. Its coverage now has a zero-pin of its own,
-`pairMemberSiblingNoAstrometryRow` — the sibling sources this pull holds no row
-for, which is the only reason the tier misses one that a re-pull can fix
+none for. Its coverage now fails the build on its own: a sibling source this
+pull holds no row for is named with its `multiples.tsv` row, and it is the
+only reason the tier misses one that a re-pull can fix
 ([The tier's reach is bounded by measurement quality](../distance/parallax/README.md#the-tiers-reach-is-bounded-by-measurement-quality-not-by-our-request)).
 Every other refusal there is a measurement, and
 `pairMemberSiblingNotAnchorGrade` — the anchor gate on fit quality alone —
@@ -140,10 +140,12 @@ row with no Hipparcos V at all.
 
 **Requesting a candidate is not the same as pulling one.** A requested id the
 archive returns no row for lands the gate right back in pass-by-default, which
-is why `gateSkippedNoGMag` and `derivedWeighedNoGMag` are pinned at **0**: each
-counts candidates that reached its gate with no row in the pull, so a request
-that quietly stops covering them fails a snapshot instead of silently accepting
-bindings. Both read 0 today. The pull holds 383,056 rows against the request's
+is why both gates fail on a candidate that reaches them with no row in the
+pull, so a request that quietly stops covering them fails the build instead of
+silently accepting bindings: the overlay through `gateSkippedNoGMag`, pinned at
+**0**, and the derivation through membership lineage's
+`binding.unweighed-no-pulled-row` invariant, which names each record and
+source ([Invariants](../lineage/README.md#invariants)). Neither fires today. The pull holds 383,056 rows against the request's
 383,058: 2 requested ids have no row, and both are reviewed bindings rather
 than candidates — the two DR2 ids of `data/athyg/stale_gaia_source_ids.tsv` SIMBAD
 holds no DR3 successor for ([Six source_ids DR3 does not publish](../spine/README.md#six-source_ids-dr3-does-not-publish)).

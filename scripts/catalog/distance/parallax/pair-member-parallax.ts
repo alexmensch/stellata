@@ -9,6 +9,7 @@ import { isCoherenceAnchorGrade } from '../../multiplicity/anchor-grade-pure';
 import { belowParallaxSnFloor } from './parallax-cascade';
 import { parallaxSignalToNoise, type MeasuredParallax } from '../../cited-parallax';
 import type { SourceRowRef } from '../../../util/sources/row-ref-pure';
+import { listedRows } from '../../lineage/lineage-invariant-pure';
 
 /** One sibling's parallax, with the DR3 source it was measured on. */
 export interface SiblingParallax extends MeasuredParallax {
@@ -16,13 +17,10 @@ export interface SiblingParallax extends MeasuredParallax {
   ref: SourceRowRef<string>;
 }
 
-/** Why a pair-row source the dedup admitted is not a candidate. These four
- *  plus `entryCount` are a partition of every deduped source: a refusal path
- *  added without a bucket breaks it silently. */
+/** Why a pair-row source the pull holds a row for is not a candidate. These
+ *  three, `entryCount` and `unpulled` are a partition of every deduped source:
+ *  a refusal path added without a bucket breaks it silently. */
 export interface PairMemberSiblingRefusals {
-  /** The request under-covering the pair-row half of its union — the one
-   *  refusal here a re-pull can fix, which is why it is pinned at zero. */
-  noAstrometryRow: number;
   /** Gaia has the source and published no parallax for it. */
   noParallax: number;
   /** A parallax the coherence anchor gate refuses: RUWE, a blended image, or a
@@ -42,6 +40,23 @@ export interface PairMemberParallaxIndex {
   /** Anchor-grade siblings indexed, for the build-count pin. */
   entryCount: number;
   refused: PairMemberSiblingRefusals;
+  /** Pair-row sources the astrometry pull holds no row for: the request
+   *  under-covering its pair-row half, which fails the build (README.md#the-tiers-reach-is-bounded-by-measurement-quality-not-by-our-request). */
+  unpulled: UnpulledSibling[];
+}
+
+export interface UnpulledSibling {
+  readonly sourceId: string;
+  readonly systemId: string;
+  readonly comp: string;
+}
+
+export function unpulledSiblingsMessage(unpulled: readonly UnpulledSibling[]): string {
+  return [
+    `${unpulled.length} bound-pair sources have no row in the Gaia astrometry pull; `
+      + 'rebuild the astrometry request and re-pull (scripts/catalog/astrometry-request/README.md):',
+    ...listedRows(unpulled.map((u) => `${u.sourceId}\tmultiples:${u.systemId}/${u.comp}`)),
+  ].join('\n');
 }
 
 export function emptyPairMemberParallaxIndex(): PairMemberParallaxIndex {
@@ -50,9 +65,8 @@ export function emptyPairMemberParallaxIndex(): PairMemberParallaxIndex {
     rootByHip: new Map(),
     candidatesByRoot: new Map(),
     entryCount: 0,
-    refused: {
-      noAstrometryRow: 0, noParallax: 0, notAnchorGrade: 0, belowSnFloor: 0,
-    },
+    refused: { noParallax: 0, notAnchorGrade: 0, belowSnFloor: 0 },
+    unpulled: [],
   };
 }
 
@@ -115,7 +129,7 @@ export function buildPairMemberParallaxIndex(
     seen.add(row.gaiaSourceId);
     const g = gaiaAstrometry.get(row.gaiaSourceId);
     if (g === undefined) {
-      index.refused.noAstrometryRow++;
+      index.unpulled.push({ sourceId: row.gaiaSourceId, systemId: row.systemId, comp: row.comp });
       continue;
     }
     // `isCoherenceAnchorGrade` requires a positive parallax, so the null check

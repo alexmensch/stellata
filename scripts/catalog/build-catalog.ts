@@ -119,7 +119,7 @@ import {
 } from './distance/parallax/parked-ledger';
 import { PARKED_LEDGER } from './distance/parallax/parked-ledger-tsv';
 import {
-  PLACEMENT_CODES, PLACEMENT_LINEAGE, PLACEMENT_LINEAGE_BUDGET, parkedLedgerView, placementLineageLines,
+  PLACEMENT_CODES, PLACEMENT_INVARIANTS, PLACEMENT_LINEAGE, PLACEMENT_LINEAGE_BUDGET, parkedLedgerView, placementLineageLines,
 } from './distance/placement-lineage-pure';
 import {
   SIMBAD_SOURCED_DISTANCES_FILE,
@@ -198,6 +198,7 @@ async function walkManifest(inputs: ReadStarsOptions, inputHashes: FileHashes) {
     render: (sorted) => ({ placement: stageLineageText(PLACEMENT_CODES, sorted) }),
     joins: () => [],
     budget: PLACEMENT_LINEAGE_BUDGET,
+    invariants: PLACEMENT_INVARIANTS,
     argv: process.argv.slice(2),
   });
   return { stars, stats, parkedLedger, placementEmission, manifestFounded, placementRemovals };
@@ -302,7 +303,6 @@ async function main() {
     bjEntries: 0,
     bjEligible: 0,
     bjOverridden: 0,
-    bjEligibleNotPulled: 0,
     apsisSourcesUnpulled: 0,
     gspcSourcesUnpulled: 0,
     lmcCandidates: 0,
@@ -390,7 +390,6 @@ async function main() {
     cns5AstrometryEntries: 0,
     glieseEntries: 0,
     pairMemberParallaxEntries: 0,
-    pairMemberSiblingNoAstrometryRow: 0,
     pairMemberSiblingNoParallax: 0,
     pairMemberSiblingNotAnchorGrade: 0,
     pairMemberSiblingBelowSnFloor: 0,
@@ -472,13 +471,6 @@ async function main() {
       `  Bailer-Jones override: ${stats.bjOverridden} / ${stats.bjEligible} ` +
         `Gaia-inverse-distance stars (${pct}%)`,
     );
-    if (stats.bjEligibleNotPulled > 0) {
-      console.log(
-        `  WARNING: ${stats.bjEligibleNotPulled} eligible stars have no Bailer-Jones row — `
-          + 're-run `pnpm run refresh:bailer-jones`; its request set is the manifest '
-          + 'binding column and has drifted from it',
-      );
-    }
   }
   if (stats.lmcCandidates > 0) {
     const pct = ((stats.lmcOverridden / stats.lmcCandidates) * 100).toFixed(1);
@@ -574,7 +566,6 @@ async function main() {
   // companion-promotion pass below.
   counts.bjEligible = stats.bjEligible;
   counts.bjOverridden = stats.bjOverridden;
-  counts.bjEligibleNotPulled = stats.bjEligibleNotPulled;
   counts.distLowPrecisionParallax = stats.distLowPrecisionParallax;
   for (const r of PARKED_REASONS) counts[PARKED_COUNT_KEY[r]] = stats.parkedVia[r];
   for (const v of DIST_VIA_VALUES) counts[DIST_VIA_COUNT_KEY[v]] = stats.distVia[v];
@@ -1287,6 +1278,7 @@ async function main() {
     }),
     joins: () => [],
     budget: PROMOTION_LINEAGE_BUDGET,
+    invariants: [],
     argv: process.argv.slice(2),
   });
   const allocationLineage = await stageLineage({
@@ -1301,6 +1293,7 @@ async function main() {
     }),
     joins: () => [],
     budget: ALLOCATION_LINEAGE_BUDGET,
+    invariants: [],
     argv: process.argv.slice(2),
   });
   const files = {

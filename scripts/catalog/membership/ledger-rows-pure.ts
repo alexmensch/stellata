@@ -1,4 +1,4 @@
-// The three membership ledgers' row shapes. See README.md#files-in-this-area.
+// The membership ledgers' row shapes and the closed sets the generator and its lineage share. See README.md#files-in-this-area.
 
 /** The record-parity reason enum (/docs/catalog-driver.md#61-record-parity) for records the primaries admit that the spine lacked. */
 export const ADDITION_REASONS = [
@@ -15,7 +15,18 @@ export type AdditionReason = (typeof ADDITION_REASONS)[number];
  *  designation. */
 export const COMPONENT_REASON_PREFIX = 'component:';
 
-export const LEDGER_COLUMNS = ['tyc', 'hip', 'hd', 'gl', 'gaia_source_id', 'reason'] as const;
+export const OWN_CANDIDATE_REASONS = [
+  'refused_mag', 'refused_sibling', 'withheld', 'runner_up', 'component',
+] as const;
+export type OwnCandidateReason = (typeof OWN_CANDIDATE_REASONS)[number];
+
+/** A primaries row's unshipped candidate: why it was not shipped, and the origin key of the row that proposed it. */
+export interface OwnCandidate {
+  readonly reason: OwnCandidateReason;
+  readonly of: string;
+}
+
+export const LEDGER_COLUMNS =['tyc', 'hip', 'hd', 'gl', 'gaia_source_id', 'reason'] as const;
 export type AdditionLedgerRow = Record<(typeof LEDGER_COLUMNS)[number], string>;
 
 export const BINDING_REVIEW_VERDICTS = ['contested', 'collision', 'disposed'] as const;

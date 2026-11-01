@@ -10,7 +10,9 @@ import {
   baselineMembers, lineageLayout, readLineage, stageEmission, stageFamilies, stageFile,
   stageOutputFiles, type LineageLayout,
 } from './lineage-io';
+import { lineageInvariant, NO_EXCEPTIONS } from './lineage-invariant-pure';
 import { paramsText, stageLineageLine, stageLineageText } from './lineage-row-pure';
+import { stageLineage } from './stage-lineage';
 import { LIVE, stageCodes } from './reason-codes-pure';
 
 const SPEC = { stage: 'demo', files: ['demo', 'identity'] as const };
@@ -104,6 +106,28 @@ describe('stage rotation', () => {
     run('two');
     const before = snapshot();
     expect(() => run('three', { fail: true })).toThrow(EmissionRefused);
+    expect(snapshot()).toEqual(before);
+  });
+
+  it('a broken invariant fails the stage\'s emission, so nothing lands', async () => {
+    run('one');
+    const before = snapshot();
+    const line = stageLineageLine(CODES, {
+      stage: 'demo', key: 'spine:9', role: 'outcome', code: 'demo.kept', params: '', evidence: [],
+    });
+    const emission = await stageLineage({
+      layout, spec: SPEC, inputs: {}, diffed: 'demo', lines: [line],
+      render: (sorted) => ({ demo: stageLineageText(CODES, sorted), identity: stageLineageText(CODES, sorted) }),
+      joins: () => [],
+      budget: { gzipBytes: 1e9, writeMs: 1e9 },
+      invariants: [lineageInvariant(CODES, 'kept', 'nothing is kept', NO_EXCEPTIONS)],
+      argv: [],
+    });
+    const failed = emission.checks.filter((c) => c.kind === 'fail');
+    expect(failed.map((c) => c.kind === 'fail' && c.message.split('\n')[1])).toEqual(['  spine:9\tdemo.kept\t']);
+    const outputs = declareOutputs(stageOutputFiles(layout, SPEC), stageFamilies(layout, SPEC));
+    expect(() => emitArtifacts({ outputs, files: emission.files, members: emission.members, checks: emission.checks }))
+      .toThrow(EmissionRefused);
     expect(snapshot()).toEqual(before);
   });
 
