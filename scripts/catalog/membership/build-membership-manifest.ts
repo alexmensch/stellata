@@ -129,7 +129,6 @@ async function main(): Promise<void> {
       `via ${tally(c.derivedVia)}, consensus ${c.derivedConsensus}, asserted by review ${c.dispositionAsserted}; ` +
       `gate refused ${tally(c.derivedRejected)}; ` +
       `${c.derivedUngateable} rows have a candidate and no printed V; ` +
-      `${c.derivedWeighedNoGMag} candidates weighed with no pulled row (must be 0), ` +
       `${c.derivedWeighedNullGMag} on a row with no published G`,
   );
   console.log(

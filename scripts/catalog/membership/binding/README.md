@@ -145,9 +145,12 @@ walk order.
 
 A missing G is a pass at
 the gate, so `derivationCandidateSourceIds` feeds every source any row could be
-bound to into `../../astrometry-request/` and `derivedWeighedNoGMag` is pinned at
-**<!-- count:membership-manifest/derivedWeighedNoGMag -->0<!-- /count -->** — a candidate weighed with no pulled row is the request under-covering
-the derivation. `derivedWeighedNullGMag` (<!-- count:membership-manifest/derivedWeighedNullGMag -->77<!-- /count -->) is Gaia publishing no G for a
+bound to into `../../astrometry-request/`, and a candidate weighed with no
+pulled row — the request under-covering the derivation — fails the build: each
+derivation hands its `unweighedNoPulledRow` to membership lineage as a
+`binding.unweighed-no-pulled-row` row, one per record and source, citing the
+addition items whose own derivation weighed it, and `MEMBERSHIP_INVARIANTS`
+forbids the code ([Invariants](../../lineage/README.md#invariants)). `derivedWeighedNullGMag` (<!-- count:membership-manifest/derivedWeighedNullGMag -->77<!-- /count -->) is Gaia publishing no G for a
 source it has a row for, which no request can supply.
 
 ## A Gaia id for a bright star is an identity statement, not a data source

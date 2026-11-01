@@ -397,7 +397,7 @@ describe('buildMembership — the spine side', () => {
       .toMatchObject({ gaiaSourceId: '6062', binding: 'crosswalk_gated' });
     expect(gated.counts.derivedRejected).toEqual({ mag: 1, sibling: 0 });
     expect(gated.counts.derivedVia.hip).toBe(2);
-    expect(gated.counts.derivedWeighedNoGMag).toBe(0);
+    expect(gated.lineage.filter((r) => r.code === 'membership.binding.unweighed-no-pulled-row' && r.key.startsWith('spine:'))).toEqual([]);
   });
 
   // The merge keys on the binding the derivation settled, so a fill takes the
@@ -719,7 +719,8 @@ describe('buildMembership — the additions', () => {
     expect(magnitude.map((r) => [r.key, paramsOf(r).own_candidate, r.evidence.length]))
       .toEqual([['gaia-dr3:777', 'refused_mag', 1]]);
     const lines = viaSimbad.lineage.map((r) => stageLineageLine(MEMBERSHIP_CODES, r));
-    expect(invariantViolations(MEMBERSHIP_INVARIANTS, lines).flatMap((v) => v.rows)).toEqual([]);
+    const [own] = invariantViolations(MEMBERSHIP_INVARIANTS, lines);
+    expect(own.rows).toEqual([]);
   });
 
   it('fails the own-candidate invariant on a reason it does not allow, naming the row', () => {
@@ -747,7 +748,7 @@ describe('buildMembership — the additions', () => {
 
   // The TYC item and the merged group each weigh 5151 against Tycho-2's V with
   // no pulled row; the HIP item has no printed V to weigh it against.
-  it('counts an unpulled candidate in the item derivations that group, not only the group\'s', () => {
+  it('names an unpulled candidate the item and group derivations weigh, once per record, and fails on it', () => {
     const oneStar = buildMembership({
       ...withTables({
         ...tables,
@@ -757,7 +758,14 @@ describe('buildMembership — the additions', () => {
         simbadBySourceId: new Map([...tables.simbadBySourceId, ['5151', { hip: 61, tyc: '5-6-1', gj: null }]]),
       }),
     });
-    expect(oneStar.counts.additionWeighedNoGMag - result.counts.additionWeighedNoGMag).toBe(2);
+    const unweighed = (r: LineageRow): boolean => r.code === 'membership.binding.unweighed-no-pulled-row';
+    const of5151 = (r: LineageRow): boolean => unweighed(r) && paramsOf(r).source_id === '5151';
+    expect(result.lineage.filter(of5151)).toEqual([]);
+    const rows = oneStar.lineage.filter(of5151);
+    expect(rows.map((r) => [r.key, paramsOf(r).source_id, r.evidence])).toEqual([['iv25:5-6-1', '5151', []]]);
+    const lines = oneStar.lineage.map((r) => stageLineageLine(MEMBERSHIP_CODES, r));
+    const named = invariantViolations(MEMBERSHIP_INVARIANTS, lines).flatMap((v) => v.rows);
+    expect(named.filter(of5151).map((r) => r.key)).toEqual(['iv25:5-6-1']);
   });
 
   it('counts an admitted addition whose winner has a passing runner-up as contested', () => {

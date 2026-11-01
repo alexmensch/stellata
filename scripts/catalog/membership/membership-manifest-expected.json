@@ -129,7 +129,6 @@
     "sibling": 116
   },
   "derivedUngateable": 7,
-  "derivedWeighedNoGMag": 0,
   "derivedWeighedNullGMag": 77,
   "labelDropsByReason": {
     "flamsteed_unattested": 119,
@@ -147,7 +146,6 @@
   "additionSourceOnSpine": 133,
   "additionSourceGateRefused": 170,
   "additionSourceShared": 0,
-  "additionWeighedNoGMag": 0,
   "additionContested": 6,
   "additionGaiaKeyedOnly": 0,
   "additionRouteSourceDisagree": 3,

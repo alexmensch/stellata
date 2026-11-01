@@ -61,6 +61,7 @@ membership.binding.refused	membership	none	live		7.1.6	No Gaia source survives t
 membership.binding.rescued	membership	none	live		7.1.6	Every candidate failed a gate, and SIMBAD files the record's own TYC under the one the sibling gate refused, so that one binds.
 membership.binding.runner-up	membership	none	live		7.1.6	A binding candidate that passed both gates but lost to a higher-ranked one.
 membership.binding.sol	membership	none	live		7.1.6	The Sun takes no Gaia binding.
+membership.binding.unweighed-no-pulled-row	membership	none	live		7.1.8	A binding candidate the magnitude gate passed unweighed, because the astrometry pull holds no row for it.
 membership.component	membership	none	live		7.1.6	Every designation the primaries give this star already names another record, so it is ledgered onto that record instead of admitted.
 membership.disposition.derived	membership	none	live		7.1.6	A committed review disposition confirms the derived Gaia source.
 membership.disposition.none	membership	none	live		7.1.6	A committed review disposition leaves the record unbound.

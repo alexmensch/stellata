@@ -215,7 +215,9 @@ nothing lands, and the message lists the offending rows' keys and params.
 Placement's (`PLACEMENT_INVARIANTS`): no `distance.bailer-jones-absent` row.
 Membership's (`MEMBERSHIP_INVARIANTS`): no `admit.magnitude` row whose
 `own_candidate` is outside `ALLOWED_OWN_CANDIDATE_REASONS`
-([The additions](../membership/README.md#the-additions)).
+([The additions](../membership/README.md#the-additions)), and no
+`binding.unweighed-no-pulled-row` row
+([The candidates have to be in the astrometry pull](../membership/binding/README.md#the-candidates-have-to-be-in-the-astrometry-pull)).
 
 ## SID events
 

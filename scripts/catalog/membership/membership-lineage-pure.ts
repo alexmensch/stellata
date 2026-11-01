@@ -3,7 +3,7 @@
 import { LABEL_DISPOSITIONS, type LabelDisposition, type LabelFlip } from '../classic-ids/label-merge/label-merge-pure';
 import type { IdentityRow } from '../lineage/identity-pure';
 import type { DiffJoin } from '../lineage/lineage-diff-pure';
-import { lineageInvariant, type LineageInvariant } from '../lineage/lineage-invariant-pure';
+import { lineageInvariant, NO_EXCEPTIONS, type LineageInvariant } from '../lineage/lineage-invariant-pure';
 import type { StageLineageSpec } from '../lineage/lineage-io';
 import { paramsOf, paramsText, type LineageParams, type LineageRow } from '../lineage/lineage-row-pure';
 import { LIVE, stageCodes, type CodeDeclaration } from '../lineage/reason-codes-pure';
@@ -79,6 +79,7 @@ export const MEMBERSHIP_CODES = stageCodes(MEMBERSHIP_STAGE, {
   'binding.gate-mag': live('A binding candidate refused because its Gaia G is more than a magnitude fainter than the record\'s printed V.'),
   'binding.gate-sibling': live('A binding candidate refused because SIMBAD gives that Gaia source to a different component of the record\'s system.'),
   'binding.runner-up': live('A binding candidate that passed both gates but lost to a higher-ranked one.'),
+  'binding.unweighed-no-pulled-row': live('A binding candidate the magnitude gate passed unweighed, because the astrometry pull holds no row for it.'),
   'disposition.derived': live('A committed review disposition confirms the derived Gaia source.'),
   'disposition.other': live('A committed review disposition binds a Gaia source other than the derived one, on its stated evidence.'),
   'disposition.none': live('A committed review disposition leaves the record unbound.'),
@@ -134,6 +135,12 @@ export type MembershipOutcome =
     readonly via: string;
   }
   | {
+    readonly kind: 'candidate-unweighed';
+    readonly sourceId: string;
+    readonly via: string;
+    readonly items: readonly string[];
+  }
+  | {
     readonly kind: 'disposition';
     readonly outcome: DispositionOutcome;
     readonly keep: string;
@@ -176,7 +183,7 @@ type ParamsOf<B extends Branch> =
   : B extends 'admit.magnitude' ? { own_candidate?: OwnCandidateReason }
   : B extends `binding.${QueuedBindingOutcome}` ? BindingReviewCells & Letters
   : B extends `binding.${SettledBindingOutcome}` ? { derived_source_id: string; derived_via: string } & Letters
-  : B extends (typeof REFUSAL_BRANCHES)[CandidateRefusal] ? Candidate
+  : B extends (typeof REFUSAL_BRANCHES)[CandidateRefusal] | 'binding.unweighed-no-pulled-row' ? Candidate
   : B extends `disposition.${DispositionOutcome}` ? BindingReviewCells & { keep_source_id: string; basis: string }
   : B extends `addition-binding.${AdditionBindingOutcome}` ? Candidate
   : B extends `label-drop.${string}` ? { cell: string; value: string }
@@ -192,6 +199,11 @@ export const MEMBERSHIP_INVARIANTS: readonly LineageInvariant[] = [
     MEMBERSHIP_CODES, 'admit.magnitude',
     `no magnitude-term record is a primaries row's unshipped candidate except as ${[...ALLOWED_OWN_CANDIDATE_REASONS].join(', ')}`,
     (p) => p.own_candidate === undefined || ALLOWED_OWN_CANDIDATE_REASONS.has(p.own_candidate),
+  ),
+  lineageInvariant(
+    MEMBERSHIP_CODES, 'binding.unweighed-no-pulled-row',
+    'every binding candidate is weighed on a row the astrometry pull carries (binding/README.md#the-candidates-have-to-be-in-the-astrometry-pull)',
+    NO_EXCEPTIONS,
   ),
 ];
 
@@ -230,6 +242,8 @@ export function membershipLineageRow({ key, outcome: o }: KeyedOutcome): Lineage
       });
     case 'candidate-refused':
       return row(key, REFUSAL_BRANCHES[o.refusal], { source_id: o.sourceId, via: o.via }, [], 'refused');
+    case 'candidate-unweighed':
+      return row(key, 'binding.unweighed-no-pulled-row', { source_id: o.sourceId, via: o.via }, o.items);
     case 'disposition':
       return row(key, `disposition.${o.outcome}`, { ...o.review, keep_source_id: o.keep, basis: o.basis });
     case 'addition-binding':

@@ -148,9 +148,9 @@ export interface DerivedBinding {
   /** The row carries a printed V, so the magnitude gate could weigh its
    *  candidates. */
   gateable: boolean;
-  /** Candidates weighed with no row in the astrometry pull — the request
-   *  under-covering the derivation; pinned at zero. */
-  weighedNoGMag: number;
+  /** Candidates weighed with no row in the astrometry pull: the request
+   *  under-covering the derivation (README.md#the-candidates-have-to-be-in-the-astrometry-pull). */
+  unweighedNoPulledRow: RankedCandidate[];
   /** Candidates weighed on a pulled row publishing no `phot_g_mean_mag`. */
   weighedNullGMag: number;
 }
@@ -196,14 +196,14 @@ export function deriveBinding(
   const ranked = rankCandidates(candidates);
   const rejected: RejectedCandidate[] = [];
   const gateable = gate.printedV !== null;
-  let weighedNoGMag = 0;
+  const unweighedNoPulledRow: RankedCandidate[] = [];
   let weighedNullGMag = 0;
   let winner: RankedCandidate | null = null;
   const { evidence } = gate;
   for (const candidate of ranked) {
     const verdict = weighBinding(candidate.sourceId, gate, evidence);
     if (verdict.magnitude === 'null_g') weighedNullGMag++;
-    if (verdict.magnitude === 'no_pulled_row') weighedNoGMag++;
+    if (verdict.magnitude === 'no_pulled_row') unweighedNoPulledRow.push(candidate);
     const reason = rejectionOf(verdict);
     if (reason !== null) {
       rejected.push({ ...candidate, reason });
@@ -230,7 +230,7 @@ export function deriveBinding(
     via: winner?.via ?? [],
     binding: bindingClassOf(winner?.via ?? []),
     rescued,
-    ranked, rejected, gateable, weighedNoGMag, weighedNullGMag,
+    ranked, rejected, gateable, unweighedNoPulledRow, weighedNullGMag,
   };
 }
 
