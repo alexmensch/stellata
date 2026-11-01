@@ -2,9 +2,9 @@
 
 import { packageVersion } from '../util/git-provenance';
 import { artifactText, readArtifact } from '../util/sources/source';
-import { LEDGER, ledgerFile } from './ledger-tsv';
+import { LEDGER } from './ledger-tsv';
 import { validateEvents, type EventRow } from './events-pure';
-import { EVENTS, eventsFile } from './events-tsv';
+import { EVENTS } from './events-tsv';
 import { REASON_CODES } from '../catalog/lineage/reason-codes-tsv';
 import type { REGISTRY_FILES } from './registry-outputs';
 import { computeLedgerHead, validateLedger, type LedgerRow, type SameasEdge } from './sid-pure';
@@ -41,6 +41,6 @@ export function registryTexts(
 ): Record<keyof typeof REGISTRY_FILES, string> {
   const sidLedger = artifactText(LEDGER) + minted.map((r) => `${LEDGER.encodeLine(r)}\n`).join('');
   const sidEvents = artifactText(EVENTS) + events.map((e) => `${EVENTS.encodeLine(e)}\n`).join('');
-  const head = computeLedgerHead(ledgerFile(sidLedger), eventsFile(sidEvents));
+  const head = computeLedgerHead(sidLedger, sidEvents);
   return { sidLedger, sidEvents, sidHead: `${JSON.stringify(head, null, 2)}\n` };
 }

@@ -7,6 +7,7 @@ import {
   checkAppendOnly,
   compareDesignations,
   computeLedgerHead,
+  sha256OfDataLines,
   syntheticGaiaBridges,
   sameAsClasses,
   isValidDesignation,
@@ -172,10 +173,10 @@ describe('structural validation', () => {
 
 describe('head snapshot + append-only', () => {
   const ledgerText = `${LEDGER_HEADER}\n1\thip:1\tstar\t2026-07-10\n2\thd:2\tstar\t2026-07-10\n`;
-  const noEvents = eventsFile(`${EVENTS_HEADER}\n`);
+  const noEvents = `${EVENTS_HEADER}\n`;
 
   it('computes the head triple for both files', () => {
-    const head = computeLedgerHead(ledgerFile(ledgerText), noEvents);
+    const head = computeLedgerHead(ledgerText, noEvents);
     expect(head.ledger.rows).toBe(2);
     expect(head.ledger.max_sid).toBe(2);
     expect(head.events).toEqual({
@@ -183,21 +184,27 @@ describe('head snapshot + append-only', () => {
       max_sid: 0,
       sha256: 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
     });
-    const withEvent = computeLedgerHead(
-      ledgerFile(ledgerText), eventsFile(`${EVENTS_HEADER}\n1\t2026-07-12\tretire\tc\t\t\t7.1.6\n`),
-    );
+    const withEvent = computeLedgerHead(ledgerText, `${EVENTS_HEADER}\n1\t2026-07-12\tretire\tc\t\t\t7.1.6\n`);
     expect(withEvent.events!.rows).toBe(1);
     expect(withEvent.events!.max_sid).toBe(1);
   });
 
+  it('hashes the same data lines the append-only check hashes', () => {
+    expect(computeLedgerHead(ledgerText, noEvents).ledger).toEqual({
+      rows: 2,
+      max_sid: 2,
+      sha256: sha256OfDataLines(ledgerFile(ledgerText).lines),
+    });
+  });
+
   it('accepts pure appends with ascending sids', () => {
-    const base = computeLedgerHead(ledgerFile(ledgerText), noEvents).ledger;
+    const base = computeLedgerHead(ledgerText, noEvents).ledger;
     const lines = ['1\thip:1\tstar\t2026-07-10', '2\thd:2\tstar\t2026-07-10', '3\tgl:Gl_1\tstar\t2026-07-11'];
     expect(checkAppendOnly(base, lines, 'ledger.tsv', { newSidsPastBaseMax: true })).toEqual([]);
   });
 
   it('rejects prefix edits, deletions, and sid counter rollback', () => {
-    const base = computeLedgerHead(ledgerFile(ledgerText), noEvents).ledger;
+    const base = computeLedgerHead(ledgerText, noEvents).ledger;
     const edited = ['1\thip:1\tstar\t2026-07-10', '2\thd:999\tstar\t2026-07-10'];
     expect(checkAppendOnly(base, edited, 'ledger.tsv', { newSidsPastBaseMax: true })[0]).toMatch(
       /frozen prefix/,
@@ -213,7 +220,7 @@ describe('head snapshot + append-only', () => {
 
   it('allows a new event on an old sid (no sid-monotonicity there)', () => {
     const line = '9\t2026-07-10\tmerge\tc\t\t3\t7.1.6';
-    const base = computeLedgerHead(ledgerFile(ledgerText), eventsFile(`${EVENTS_HEADER}\n${line}\n`)).events!;
+    const base = computeLedgerHead(ledgerText, `${EVENTS_HEADER}\n${line}\n`).events!;
     const lines = [line, '2\t2026-07-11\tretire\tc\t\t\t7.1.6'];
     expect(checkAppendOnly(base, lines, 'events.tsv', { newSidsPastBaseMax: false })).toEqual([]);
   });

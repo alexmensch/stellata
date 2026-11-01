@@ -6,7 +6,6 @@ import { createHash } from 'node:crypto';
 
 import type { Declared } from '../util/sources/source';
 import { readTable, type TableRow, type TableSpec } from '../util/tsv/table-pure';
-import type { EventRow } from './events-pure';
 import {
   decodeLedgerRow, LEDGER_COLUMNS, SID_KINDS, type LedgerRow, type SidKind,
 } from './ledger-pure';
@@ -294,19 +293,22 @@ export function sha256OfDataLines(dataLines: string[]): string {
   return h.digest('hex');
 }
 
-function headTriple(file: RegistryFile<{ sid: number }>): HeadTriple {
-  return {
-    rows: file.rows.length,
-    max_sid: file.rows.reduce((max, row) => Math.max(max, row.sid), 0),
-    sha256: sha256OfDataLines(file.lines),
-  };
+/** Over the file's text, read straight off its lines (sid first) so the
+ *  984k-row ledger is never decoded: valid only for a text the registry
+ *  codec already accepted, whose data lines each end in LF. */
+function headTriple(text: string): HeadTriple {
+  const body = text.slice(text.indexOf('\n') + 1);
+  let rows = 0;
+  let max = 0;
+  for (let at = 0; at < body.length; at = body.indexOf('\n', at) + 1) {
+    max = Math.max(max, Number(body.slice(at, body.indexOf('\t', at))));
+    rows++;
+  }
+  return { rows, max_sid: max, sha256: createHash('sha256').update(body, 'utf-8').digest('hex') };
 }
 
-export function computeLedgerHead(
-  ledger: RegistryFile<LedgerRow>,
-  events: RegistryFile<EventRow>,
-): LedgerHead {
-  return { ledger: headTriple(ledger), events: headTriple(events) };
+export function computeLedgerHead(ledgerText: string, eventsText: string): LedgerHead {
+  return { ledger: headTriple(ledgerText), events: headTriple(eventsText) };
 }
 
 export const EMPTY_HEAD_TRIPLE: HeadTriple = {

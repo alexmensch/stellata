@@ -67,7 +67,7 @@ describe.skipIf(!available)('sid ledger guard', () => {
 
   it('ledger-head.json exactly matches a recomputation over the working files', () => {
     const head = JSON.parse(readFileSync(REGISTRY_FILES.sidHead, 'utf-8')) as LedgerHead;
-    expect(head).toEqual(computeLedgerHead(ledger(), events()));
+    expect(head).toEqual(computeLedgerHead(artifactText(LEDGER), artifactText(EVENTS)));
   });
 
   it('the frozen prefix is append-only against the merge-base head', ({ skip }) => {
