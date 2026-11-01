@@ -12,6 +12,7 @@ import { LEDGER, ledgerFile } from './ledger-tsv';
 import { orphanCauses } from './orphan-causes-pure';
 import { REINSTATEMENTS, RETIREMENTS } from './registry-source';
 import { allocate } from './sid-pure';
+import { SIBLING_NAMESPACES } from './sibling-artifacts';
 import { loadStoredEdges } from './stored-edges';
 
 const CODES = stageCodes('fixture', {
@@ -59,8 +60,6 @@ const STAGE_FILES = LINEAGE_STAGES.map(({ spec }) => stageFile(LINEAGE_LAYOUT.cu
 const built = [...BUILT_OBJECT_INPUTS, ...IDENTITY_FILES, ...STAGE_FILES].every(existsSync)
   && isReadable(LEDGER);
 
-const CLASS_NAMESPACES_WITHOUT_LINEAGE = new Set(['cloud', 'lg']);
-
 describe.skipIf(!built)('every orphaned ledger SID has a recorded cause', () => {
   it('leaves no star, sol or shell orphan unexplained', async () => {
     const { objects } = await builtObjects();
@@ -74,7 +73,7 @@ describe.skipIf(!built)('every orphaned ledger SID has a recorded cause', () => 
     });
     expect(result.errors).toEqual([]);
     const orphans = [...result.orphaned]
-      .filter(([ns]) => !CLASS_NAMESPACES_WITHOUT_LINEAGE.has(ns))
+      .filter(([ns]) => !SIBLING_NAMESPACES.has(ns))
       .flatMap(([, keys]) => keys);
     const causes = orphanCauses(
       orphans,

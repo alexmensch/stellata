@@ -64,8 +64,8 @@ orphan-causes-pure.ts     orphanCauses: each orphaned ledger key joined,
                           (/scripts/catalog/lineage/README.md#sid-events).
                           The test runs it over the built artifacts and
                           build/lineage/ and pins the star, sol and shell
-                          orphans no decision explains at 0; cloud: and
-                          lg: write no lineage.
+                          orphans no decision explains at 0; the sibling
+                          namespaces (cloud:, lg:) write no lineage.
 allocate-outputs.ts       ALLOCATE_OUTPUTS: what sid:allocate writes, the
                           ledger and ledger-head.json, declared;
                           tests/step-outputs.test.ts holds it.
@@ -130,7 +130,9 @@ sibling-stamp-outputs.ts  SID_STAMP_OUTPUTS: the sibling artifacts sid:stamp
 sibling-artifacts.ts      SIBLING_ARTIFACTS spec (file / arrayKey / ns /
                           kind per sibling) + siblingArtifactObjects, shared
                           by allocate (minting) and the stamp (resolving) so
-                          the namespace→kind mapping is defined once.
+                          the namespace→kind mapping is defined once;
+                          SIBLING_NAMESPACES, their namespaces, for
+                          allocate's slug warnings and the orphan test.
 ```
 
 The append-only CI guard is `tests/sid-ledger-guard.test.ts` (repo-meta:

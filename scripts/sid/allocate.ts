@@ -10,6 +10,7 @@ import { MULTIPLES_TSV } from '../binaries/multiples-tsv';
 import { ALLOCATE_OUTPUTS } from './allocate-outputs';
 import { LEDGER, ledgerFile } from './ledger-tsv';
 import { builtObjects } from './built-objects';
+import { SIBLING_NAMESPACES } from './sibling-artifacts';
 import { REINSTATEMENTS, RETIREMENTS } from './registry-source';
 import { loadStoredEdges } from './stored-edges';
 import {
@@ -135,7 +136,7 @@ async function main(): Promise<void> {
   }
   if (fatal) process.exit(1);
 
-  for (const ns of ['cloud', 'lg']) {
+  for (const ns of SIBLING_NAMESPACES) {
     const keys = result.orphaned.get(ns) ?? [];
     if (keys.length > 0) {
       console.warn(
