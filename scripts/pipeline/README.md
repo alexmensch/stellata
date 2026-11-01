@@ -41,11 +41,13 @@ everything else, then exits non-zero naming each stale step's command. So
 rebuild.
 
 SID allocation is not a step of its own: `build:catalog` and the clouds and
-Local Group stamps each allocate their namespaces in-process and append to
-`data/sid/`, and a failed allocation fails that `build` step
-([SID allocation](../catalog/README.md#sid-allocation)). That makes the
-registry files the one output two steps declare (`build:catalog`, `sid:stamp`), against the one-writer
-load-time rule below; reconciling the two is open (stellata-hhaw.45.11.8).
+Local Group stamps each allocate their namespaces in-process, and a failed
+allocation fails that `build` step
+([SID allocation](../catalog/README.md#sid-allocation)). Each appends to its
+own registry partition under `data/sid/`, so every registry file has one
+writer; each reads every partition's ledger, since SIDs are one sequence
+across them ([Registry partitions](../sid/README.md#registry-partitions)).
+That read is the registry loop below.
 
 ## The step table — `steps.ts`
 
@@ -111,7 +113,8 @@ The runner rejects the table, before running anything, when:
 
 - two steps declare the same output path (one writer per file, no
   exceptions);
-- the derived order among `build` steps has a cycle;
+- the derived order among `build` steps has a cycle, other than through
+  the SID registry ledgers (next paragraph);
 - a `build` step's declared output is a symlink on disk (the "never symlink
   `public/`" rule becomes this check);
 - a step's outputs module imports anything beyond `util/emit-artifacts`,
@@ -131,6 +134,18 @@ runner lists at load. In a kept loop the reader builds first and the pull's
 check then stops the run; the reader's stamp already holds the old pull
 output's hash, so it rebuilds once the pull is re-run. The cycle check
 therefore never sees a loop through a manual step.
+
+The registry loop is the one kept loop among `build` steps: `build:catalog`
+and `sid:stamp` each read the other's ledger partition. The edges dropped
+are exactly those whose file is a `data/sid/` registry ledger read by
+another allocating step, named in the table as such rather than inferred,
+and a test holds the dropped set to that; any other cycle still rejects
+the table. Neither step's order matters: both only append past the
+union's highest SID, and the locks serialise them, since each holds a
+shared lock on the other while it runs. A loop is the one place two runs
+can each hold a lock the other wants, so a step takes its locks in
+step-name order, its own among them. A run that mints in one stales
+the other once, and that rebuild appends nothing.
 
 ## Freshness — one mechanism
 
@@ -231,7 +246,7 @@ write more than one file (classic-ids four, Tycho-2 two).
 
 ## Loops through committed files
 
-Nine places where a file feeds, directly or through other files, the step
+Ten places where a file feeds, directly or through other files, the step
 that writes it. Measured 2026-10-27.
 
 | Loop | Disposition |
@@ -244,6 +259,7 @@ that writes it. Measured 2026-10-27.
 | manifest ↔ `simbad_sptype` (the derivation's fourth binding source) | Kept. The request genuinely depends on the binding outcome. The stale-pull stop is its convergence check; re-pulling reopens the review queue, as `refresh/README.md` says. The same file also reaches the astrometry request (its derivation candidates), so manifest → `simbad_sptype` → request → astrometry pull → `build:membership` is a second path through this loop, covered by the same stop. |
 | `build:binaries` ↔ its own astrometry request | Kept, same check. The request keeps rejected candidates, so it grows rather than oscillates. |
 | `build:catalog` reads the SID ledger and events it appends to | Kept: an append-only file whose committed prefix the step only reads; its stamp records the post-append hash, so the next run rebuilds once and appends nothing. |
+| `build:catalog` ↔ `sid:stamp` through each other's SID ledger partition | Kept, the registry loop above: each reads the union for the next SID and appends only to its own partition. |
 | `build:naming-parity` reads its own `naming-parity.tsv` | Carries frozen columns forward deliberately; not a pipeline step. |
 
 ## Derived checks
