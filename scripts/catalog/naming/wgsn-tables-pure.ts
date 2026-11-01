@@ -1,9 +1,9 @@
-// Row shaping and the two joins behind build-wgsn-tables.ts: the IV/27A
-// Bayer union, and the naming-authority disposition set comparison (/docs/star-naming.md#2-authority--one-source-approves-names-everything-else-compiles-them). See README.md.
+// The WGSN tables' row shaping and joins. See README.md.
 
 import type { CrossIndexRow } from '../classic-ids/classic-ids-parse';
-import { normaliseIv27aBayer, type NormalisedCell } from './wgsn-normalise-pure';
+import { foldNameKey, normaliseIv27aBayer, type NormalisedCell } from './wgsn-normalise-pure';
 import type { WgsnRow } from './wgsn-parse-pure';
+import type { ProperDispositionRow, WgsnNameRow } from './wgsn-index-pure';
 
 export const DESIGNATION_KINDS = ['bayer', 'flamsteed', 'gould'] as const;
 export const DESIGNATION_SOURCES = ['nec', 'faints', 'iv27a'] as const;
@@ -126,6 +126,56 @@ export function diffDispositions(
   return {
     missing: [...unmatched].filter((k) => !disposed.has(k)),
     stale: [...disposed].filter((k) => !unmatched.has(k)),
+  };
+}
+
+export interface ManifestNamingRow {
+  proper: string | null;
+  bayer: string | null;
+  hip: number | null;
+  hd: number | null;
+  isSol: boolean;
+}
+
+export interface ManifestNamingCounts {
+  membershipPropers: number;
+  membershipProperMatched: number;
+  membershipProperResiduals: number;
+  membershipBayerRows: number;
+  membershipBayerRowsCovered: number;
+}
+
+/** README.md#the-residual-gate. */
+export function manifestNaming(
+  rows: Iterable<ManifestNamingRow>,
+  names: readonly Pick<WgsnNameRow, 'name' | 'aliases'>[],
+  designations: DesignationRow[],
+  disposed: readonly Pick<ProperDispositionRow, 'proper' | 'hip' | 'hd'>[],
+): { counts: ManifestNamingCounts; missing: string[]; stale: string[] } {
+  const nameKeys = new Set(names.flatMap((n) => [n.name, ...n.aliases].map(foldNameKey)));
+  const reached = bayerKeySets(designations);
+  const propers = new Map<string, string>();
+  let bayerRows = 0;
+  let bayerRowsCovered = 0;
+  for (const r of rows) {
+    if (r.proper !== null && !r.isSol) propers.set(membershipProperKey(r.proper, r.hip, r.hd), r.proper);
+    if (r.bayer === null) continue;
+    bayerRows++;
+    if (reached.reaches(r.hip, r.hd)) bayerRowsCovered++;
+  }
+  const unmatched = new Set([...propers].filter(([, p]) => !nameKeys.has(foldNameKey(p))).map(([k]) => k));
+  return {
+    counts: {
+      membershipPropers: propers.size,
+      membershipProperMatched: propers.size - unmatched.size,
+      membershipProperResiduals: unmatched.size,
+      membershipBayerRows: bayerRows,
+      membershipBayerRowsCovered: bayerRowsCovered,
+    },
+    ...diffDispositions(
+      unmatched,
+      new Set(disposed.map((d) => membershipProperKey(d.proper, d.hip, d.hd))),
+    ),
   };
 }
 

@@ -7,6 +7,16 @@ import { resolve } from 'node:path';
 import { beforeAll, describe, expect, it } from 'vitest';
 
 import { REPO_ROOT, lfsContentReadable } from '../../util/paths';
+import { readArtifact } from '../../util/sources/source';
+import { compareCountSnapshot } from '../build-counts';
+import { PROPER_DISPOSITIONS } from '../naming/proper-dispositions-source';
+import { WGSN_DESIGNATIONS } from '../naming/wgsn-designations-tsv';
+import { WGSN_NAMES } from '../naming/wgsn-names-tsv';
+import {
+  manifestNaming,
+  type ManifestNamingCounts,
+  type ManifestNamingRow,
+} from '../naming/wgsn-tables-pure';
 import { SAMEAS_OVERRIDES } from '../../sid/sameas-source';
 import { catalogRecordDesignations } from '../../sid/catalog-designations';
 import {
@@ -66,6 +76,8 @@ const built = [DEFAULT_CATALOG_MANIFEST, DEFAULT_SEARCH_INDEX, DEFAULT_ROW_INDEX
 const expected = JSON.parse(
   readFileSync(resolve(REPO_ROOT, MEMBERSHIP_EXPECTED_FILE), 'utf-8'),
 ) as MembershipCounts;
+
+const NAMING_EXPECTED_FILE = 'scripts/catalog/naming/manifest-naming-expected.json';
 
 function tally(sets: Iterable<readonly string[]>): Map<string, number> {
   const counts = new Map<string, number>();
@@ -204,6 +216,35 @@ describe.skipIf(!inputsReadable)('membership manifest ↔ inherited spine', () =
       .map(manifestKey);
     expect(unrequested.slice(0, 20)).toEqual([]);
     expect(unrequested).toHaveLength(0);
+  });
+
+  // build:wgsn reads no manifest, so the naming authority's residual
+  // (/docs/star-naming.md#2-authority--one-source-approves-names-everything-else-compiles-them)
+  // is held here.
+  describe('↔ the naming authority', () => {
+    const naming = (rows: Iterable<ManifestNamingRow>) => manifestNaming(
+      rows, readArtifact(WGSN_NAMES), readArtifact(WGSN_DESIGNATIONS), PROPER_DISPOSITIONS.read(),
+    );
+
+    it('disposes exactly the manifest propers no WGSN name matches', () => {
+      const { missing, stale } = naming(manifest);
+      expect({ missing, stale }).toEqual({ missing: [], stale: [] });
+    });
+
+    it('fails on a manifest proper WGSN does not name and the file does not dispose', () => {
+      const seeded: ManifestNamingRow = {
+        proper: 'Nonesuch', bayer: null, hip: null, hd: 999_999, isSol: false,
+      };
+      expect(naming([...manifest, seeded]).missing).toEqual(['Nonesuch||999999']);
+    });
+
+    it('matches the pinned naming counts', () => {
+      const pinned = JSON.parse(
+        readFileSync(resolve(REPO_ROOT, NAMING_EXPECTED_FILE), 'utf-8'),
+      ) as ManifestNamingCounts;
+      const { drifted, report } = compareCountSnapshot(pinned, naming(manifest).counts);
+      expect(drifted, report).toBe(false);
+    });
   });
 
   it('ends no gl cell on a null marker or other punctuation', () => {

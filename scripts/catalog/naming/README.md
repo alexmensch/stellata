@@ -52,7 +52,8 @@ scripts/catalog/naming/
                                 the diacritic fold used for name matching.
   wgsn-tables-pure.ts (+ test)  Row shaping and the two joins: the IV/27A
                                 Bayer union, the /docs/star-naming.md#2-authority--one-source-approves-names-everything-else-compiles-them disposition set
-                                comparison, the key sets both sides of the
+                                comparison (`manifestNaming`, the residual
+                                gate below), the key sets both sides of the
                                 union share, and the total sort order the
                                 committed table's byte-for-byte CI diff
                                 rests on. `membershipProperKey` is the one
@@ -71,6 +72,10 @@ scripts/catalog/naming/
                                 (../../util/README.md). Side-effect free.
   wgsn-expected.json            Pinned count snapshot
                                 (UPDATE_BUILD_COUNTS=1 refreshes).
+  manifest-naming-expected.json The manifest's naming figures — the residual
+                                gate's and the Bayer coverage — pinned by
+                                ../membership/membership-manifest-gate.test.ts,
+                                which computes them; edit by hand.
   wgsn-index-pure.ts (+ test)   The record-side join: the disposition
                                 file's reader (readTable — it is
                                 hand-curated), the keyed index, the three
@@ -145,18 +150,24 @@ refresh that changes either fact.
 ## The residual gate
 
 [§ 2](/docs/star-naming.md#2-authority--one-source-approves-names-everything-else-compiles-them)'s residual, enforced: every manifest `proper` must either match a WGSN name key
-(diacritic-folded, post multi-name-split — <!-- count:wgsn/membershipProperMatched -->445<!-- /count --> of <!-- count:wgsn/membershipPropers -->491<!-- /count --> do) or appear in
-the hand-curated `data/iau-wgsn/athyg_proper_dispositions.tsv` (<!-- count:wgsn/membershipProperResiduals -->46<!-- /count --> rows).
+(diacritic-folded, post multi-name-split — <!-- count:manifest-naming/membershipProperMatched -->445<!-- /count --> of <!-- count:manifest-naming/membershipPropers -->491<!-- /count --> do) or appear in
+the hand-curated `data/iau-wgsn/athyg_proper_dispositions.tsv` (<!-- count:manifest-naming/membershipProperResiduals -->46<!-- /count --> rows).
 The key is `proper|hip|hd` on the manifest's FINAL cells, so a disposition
 keyed on a label the classic-ID merge flipped is a stale disposition.
-The build hard-fails on exact set inequality in either direction — the
-route-disagreements review-join discipline — so a WGSN refresh that
-approves a disposed name surfaces as a *stale disposition* failure, and
-the fix is a data-row deletion, never a code edit.
+`manifestNaming` (`wgsn-tables-pure.ts`) fails on exact set inequality in
+either direction — the route-disagreements review-join discipline — so a
+WGSN refresh that approves a disposed name surfaces as a *stale
+disposition* failure, and the fix is a data-row deletion, never a code
+edit. It runs in `../membership/membership-manifest-gate.test.ts` over the
+committed tables, never in `build:wgsn`: a step that read the manifest
+would close a loop through `build:membership`
+([Loops through committed files](../../pipeline/README.md#loops-through-committed-files)).
+The gate's figures and the coverage below are pinned in
+`manifest-naming-expected.json`.
 
 ## Measured coverage
 
-Of the manifest's <!-- count:wgsn/membershipBayerRows -->1,522<!-- /count --> Bayer-bearing rows, the unioned table reaches <!-- count:wgsn/membershipBayerRowsCovered -->1,520<!-- /count -->
+Of the manifest's <!-- count:manifest-naming/membershipBayerRows -->1,522<!-- /count --> Bayer-bearing rows, the unioned table reaches <!-- count:manifest-naming/membershipBayerRowsCovered -->1,520<!-- /count -->
 by HD or HIP. The 2 uncovered are close-pair component rows whose Bayer
 belongs to the sibling record (ξ UMa B / HD 98230, and HD 79096's Pi-1
 cell): both drop their own Bayer (`namingBayerDropped`) and take their

@@ -30,11 +30,11 @@ athyg_proper_dispositions.tsv  Hand-curated. The /docs/star-naming.md#2-authorit
                                `proper` no WGSN name matches, classified
                                (discovery-designation / component-letter /
                                gould / catalogue / latin-bayer /
-                               unattributed). build:wgsn hard-fails unless
-                               this file enumerates exactly the unmatched
-                               set — a later IAU approval moves a name by
-                               data refresh + row deletion, never a code
-                               edit.
+                               unattributed). The membership gate test
+                               fails unless this file enumerates exactly
+                               the unmatched set — a later IAU approval
+                               moves a name by data refresh + row deletion,
+                               never a code edit.
 wgsn_faints_corrections.tsv    Hand-curated. wgsnFaints.csv cells that are
                                not what their column says, set right before
                                the parse reads them: wgsn_id, column, value,
@@ -99,9 +99,11 @@ the per-class counts, `wgsn-expected.json` pins them:
 `scripts/catalog/naming/build-wgsn-tables.ts` (`pnpm run build:wgsn`)
 reads the two frozen files, `wgsn_faints_corrections.tsv`, plus `data/classic-ids/cross_index.tsv` (the
 IV/27A Bayer tail, through `CROSS_INDEX` so its curated corrections
-apply) and `data/membership/membership-manifest.tsv` (the [§ 2](/docs/star-naming.md#2-authority--one-source-approves-names-everything-else-compiles-them) residual
-verification), and writes the two derived tables. CI re-runs the build
-and fails on any diff, so artifact and code land together.
+apply), and writes the two derived tables. CI re-runs the build and fails
+on any diff, so artifact and code land together. The [§ 2](/docs/star-naming.md#2-authority--one-source-approves-names-everything-else-compiles-them) residual
+verification reads the derived tables, `athyg_proper_dispositions.tsv` and
+the membership manifest in `scripts/catalog/membership/membership-manifest-gate.test.ts`
+([The residual gate](/scripts/catalog/naming/README.md#the-residual-gate)).
 
 `build-catalog.ts` reads the derived tables through
 `scripts/catalog/naming/apply-star-names.ts`, which writes each record's
@@ -114,5 +116,6 @@ constellation. The display-name composer renders from those
 `pnpm run refresh:iau-wgsn` (schema, row-band, named-count and spot-row
 gates; atomic replace), then `pnpm run build:wgsn` and commit both. The
 WGSN publishes updates roughly annually; a refresh that adds an approved
-name for a disposed AT-HYG proper will fail `build:wgsn` with a stale
-disposition row — delete the row, the name now routes via the authority.
+name for a disposed AT-HYG proper fails the membership gate test with a
+stale disposition row — delete the row, the name now routes via the
+authority.
