@@ -10,7 +10,7 @@ import {
 
 const row = multiplesRow({ systemId: '22266-1645-AB', comp: 'B' });
 const promoted = (outcome: RowOutcome, anchors: Partial<PromotedRow> = {}): PromotedRow => (
-  { row, via: 'secondary', outcome, anchor: 'spine:7', systemAnchor: 'spine:7', ...anchors }
+  { row, via: 'secondary', outcome, anchor: 'spine:7', systemAnchor: 'spine:7', synthKey: null, ...anchors }
 );
 const recordKey = (idx: number): string => `spine:${idx}`;
 const own = { source: 'own', spectMsFromOwnAbsmag: false } as const;
@@ -109,7 +109,7 @@ describe('promotionLineage identity', () => {
   it('keys a parked or retired row on the identifier cells it arrived with, and skips one with none', () => {
     const standalone = multiplesRow({ systemId: '19082+3829-_C', comp: 'C', hip: 42, gaiaSourceId: '2099222754064121216' });
     const { identity } = promotionLineage([
-      { row: standalone, via: 'unpaired', outcome: { kind: 'unpaired' }, anchor: null, systemAnchor: null },
+      { row: standalone, via: 'unpaired', outcome: { kind: 'unpaired' }, anchor: null, systemAnchor: null, synthKey: null },
       promoted({ kind: 'dropped', reason: 'no-absmag' }),
     ], stars, new Set());
     expect(identity).toEqual([
@@ -120,10 +120,24 @@ describe('promotionLineage identity', () => {
     ]);
   });
 
+  it('keys a removed or merged row on the synthetic key a mint from it would carry, and a kept row on nothing', () => {
+    const { identity } = promotionLineage([
+      promoted({ kind: 'dropped', reason: 'no-absmag' }, { synthKey: 'synth-22266-1645-B' }),
+      promoted({ kind: 'adopted', idx: 1, via: 'sameas-bridge', desigConFromAnchor: false, recurated: null }, {
+        row: multiplesRow({ systemId: '22266-1645-AC', comp: 'C' }), synthKey: 'synth-22266-1645-C',
+      }),
+      promoted({ kind: 'pair-anchor' }, { row: multiplesRow({ systemId: '22266-1645-AD', comp: 'A' }), synthKey: 'synth-22266-1645-A' }),
+    ], stars, new Set());
+    expect(identity.map((r) => [r.key, r.designations])).toEqual([
+      ['multiples:22266-1645-AB/B', ['synth:22266-1645-B']],
+      ['multiples:22266-1645-AC/C', ['synth:22266-1645-C']],
+    ]);
+  });
+
   it('keys a removed row on no designation membership or a mint of this stage already founds', () => {
     const unpaired = (comp: string, cells: { hip?: number; gaiaSourceId?: string }): PromotedRow => ({
       row: multiplesRow({ systemId: '21050+1243-_X', comp, ...cells }),
-      via: 'unpaired', outcome: { kind: 'unpaired' }, anchor: null, systemAnchor: null,
+      via: 'unpaired', outcome: { kind: 'unpaired' }, anchor: null, systemAnchor: null, synthKey: null,
     });
     const { identity } = promotionLineage([
       promoted({ kind: 'minted', idx: 1, synthetic: false, brightness: own, constellationSplit: false }),

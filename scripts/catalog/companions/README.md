@@ -41,7 +41,7 @@ scripts/catalog/companions/
   promotion-lineage-pure.ts       Promotion as a lineage stage: its reason
     (+ test)                      codes, the serialiser over RowOutcome, and
                                   the identity rows of the records it mints
-                                  and the rows it removes
+                                  and the rows it removes or merges
                                   (../lineage/README.md#the-promotion-stage).
   overlap-gate-pure.ts (+ test)   physicalOverlaps: record pairs closer than
                                   the sum of their radii, less those an orbit

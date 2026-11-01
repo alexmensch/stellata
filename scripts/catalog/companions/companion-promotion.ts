@@ -223,6 +223,8 @@ export interface PromotedRow {
   outcome: RowOutcome;
   anchor: string | null;
   systemAnchor: string | null;
+  /** The synthetic key a mint from this row would carry, whether or not it minted. */
+  synthKey: string | null;
 }
 
 export type PromotionStats = RowOutcomeStats & PostPassStats;
@@ -1952,7 +1954,10 @@ export function promoteCompanions(
 
   const keyAt = (idx: number | null): string | null => (idx === null ? null : getStarAt(idx).originKey);
   const unpaired = (row: MultiplesTsvRow): PromotedRow => (
-    { row, via: 'unpaired', outcome: { kind: 'unpaired' }, anchor: null, systemAnchor: null }
+    {
+      row, via: 'unpaired', outcome: { kind: 'unpaired' }, anchor: null, systemAnchor: null,
+      synthKey: composeSyntheticId(row.systemId, row.comp),
+    }
   );
   const escaped = new Set<MultiplesTsvRow>();
   const escapeCursorPrimary = (cursor: PairCursor): number | null => {
@@ -1960,7 +1965,10 @@ export function promoteCompanions(
     if (anchor === null) return null;
     const outcome = promoteCursorPrimary(anchor.primary, anchor.system, state);
     const systemKey = anchor.system.star.originKey;
-    record({ row: anchor.primary, via: 'escape', outcome, anchor: systemKey, systemAnchor: systemKey });
+    record({
+      row: anchor.primary, via: 'escape', outcome, anchor: systemKey, systemAnchor: systemKey,
+      synthKey: composeSyntheticId(anchor.primary.systemId, anchor.primary.comp),
+    });
     escaped.add(anchor.primary);
     return placedRecordIdx(outcome);
   };
@@ -2037,6 +2045,7 @@ export function promoteCompanions(
         via: 'primary',
         outcome: { kind: primaryCatalogIdx === null ? 'primary-unresolved' : 'pair-anchor' },
         anchor: anchorKey, systemAnchor: systemAnchorKey,
+        synthKey: composeSyntheticId(cursor.primary.systemId, cursor.primary.comp),
       });
     }
     const primaryKey = compKey(cursorRoot, cursor.primary.comp);
@@ -2047,9 +2056,10 @@ export function promoteCompanions(
       componentIndex.set(primaryKey, primaryCatalogIdx);
     }
 
-    const decided = (row: MultiplesTsvRow, outcome: RowOutcome): PromotedRow => (
-      { row, via: 'secondary', outcome, anchor: anchorKey, systemAnchor: systemAnchorKey }
-    );
+    const decided = (row: MultiplesTsvRow, outcome: RowOutcome): PromotedRow => ({
+      row, via: 'secondary', outcome, anchor: anchorKey, systemAnchor: systemAnchorKey,
+      synthKey: composeSyntheticId(row.systemId, canonicalCompLetter(cursor.primary?.comp ?? '', row.comp)),
+    });
     for (const row of cursor.secondaries) {
       if (row.orbitRole !== 'secondary') {
         record(unpaired(row));

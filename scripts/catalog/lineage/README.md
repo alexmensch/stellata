@@ -431,8 +431,9 @@ carries its own from the manifest's `origin_key` column
 
 A minted companion is founded on its row, so promotion writes its identity
 row (`promotion.identity.tsv.gz`, named by `StageLineageSpec.identity`). So
-does every row whose code retires or parks, keyed on the `hip` and
-`gaia_source_id` cells it arrived with less any designation a membership
+does every row whose code retires, parks or merges, keyed on the `hip` and
+`gaia_source_id` cells it arrived with and the synthetic key a mint from it
+would carry (`PromotedRow.synthKey`), less any designation a membership
 manifest record or one of promotion's own mints already carries, so an
 orphaned SID keyed on one of them joins to that row's cause and never to a
 row that merely cites another stage's star. Every other record's is
