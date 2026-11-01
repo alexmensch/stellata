@@ -149,7 +149,7 @@ export function emitArtifacts<K extends string>(
   }
   for (const r of refreshes) console.log(`Updated ${r.path}`);
   if (stamp) {
-    writeStamp(stamp.path, rehashRefreshed(stamp.inputs, refreshes), [...files.keys()]);
+    writeStamp(stamp.path, rehashWritten(stamp.inputs, [...files.keys(), ...refreshes.map((r) => r.path)]), [...files.keys()]);
   }
 }
 
@@ -180,11 +180,9 @@ export function runStep(main: () => void | Promise<void>): void {
   });
 }
 
-/** A refreshed snapshot that the step also reads would otherwise leave the
- *  stamp holding its pre-refresh hash and force the next run to rebuild. */
-function rehashRefreshed(inputs: FileHashes, refreshes: readonly { path: string }[]): FileHashes {
-  const refreshed = fileHashes(refreshes.map((r) => resolve(r.path)));
+function rehashWritten(inputs: FileHashes, written: readonly string[]): FileHashes {
+  const rewritten = fileHashes(written.map((p) => resolve(p)));
   return Object.fromEntries(
-    Object.entries(inputs).map(([p, h]) => [p, p in refreshed ? refreshed[p] : h]),
+    Object.entries(inputs).map(([p, h]) => [p, p in rewritten ? rewritten[p] : h]),
   );
 }

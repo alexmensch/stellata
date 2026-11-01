@@ -1,8 +1,10 @@
 // Canonical specs for the sibling artifacts (clouds.json, local-group.json)
-// that carry an in-record sid, shared by sid:allocate and the stamp. See
+// that carry an in-record sid, allocated by the stamp. See
 // /scripts/sid/README.md#sibling-artifact-stamping.
 
-import type { SidKind, SidObject } from './sid-pure';
+import type { SidObject } from './allocate-pure';
+import { ALLOCATION_CODES } from './allocation-lineage-pure';
+import type { SidKind } from './sid-pure';
 
 export interface SiblingArtifactSpec {
   /** public/ filename. */
@@ -14,6 +16,8 @@ export interface SiblingArtifactSpec {
   kind: SidKind;
   /** pnpm script that emits `file`. */
   buildHint: string;
+  /** The allocation code a new object of this artifact mints under. */
+  mintCode: string;
 }
 
 export const SIBLING_ARTIFACTS: Record<string, SiblingArtifactSpec> = {
@@ -23,6 +27,7 @@ export const SIBLING_ARTIFACTS: Record<string, SiblingArtifactSpec> = {
     ns: 'cloud',
     kind: 'cloud',
     buildHint: 'pnpm run build:clouds',
+    mintCode: ALLOCATION_CODES.code('mint.cloud'),
   },
   'local-group': {
     file: 'local-group.json',
@@ -30,6 +35,7 @@ export const SIBLING_ARTIFACTS: Record<string, SiblingArtifactSpec> = {
     ns: 'lg',
     kind: 'galaxy',
     buildHint: 'pnpm run build:local-group',
+    mintCode: ALLOCATION_CODES.code('mint.local-group'),
   },
 };
 
@@ -40,13 +46,12 @@ export interface SiblingItem {
   name?: string;
 }
 
-/** The SidObjects one sibling artifact's records resolve through — the single
- *  definition shared by sid:allocate (minting) and the stamp (resolving), so
- *  both derive an identical namespace + kind per record. */
+/** The SidObjects one sibling artifact's records allocate as. */
 export function siblingArtifactObjects(spec: SiblingArtifactSpec, items: SiblingItem[]): SidObject[] {
   return items.map((o) => ({
     designations: [`${spec.ns}:${o.id}`],
     kind: spec.kind,
     label: `${spec.ns} ${o.name ?? o.id}`,
+    admission: { kind: 'declared', code: spec.mintCode, origin: null },
   }));
 }

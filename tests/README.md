@@ -178,7 +178,7 @@ sid-ledger-guard.test.ts Append-only CI guard for data/sid/ (/docs/sid.md#45-ci-
                          full vitest and locally.
 source-declarations.test.ts
                          Every TypeScript pipeline step's (build:*,
-                         fetch:*, sid:allocate, sid:risk-set; every tsx
+                         fetch:*, sid:stamp, sid:risk-set; every tsx
                          entry of a chained script, and a step-named script
                          it cannot classify fails) import closure reads
                          each declared source and artifact it reaches
@@ -336,7 +336,7 @@ a scanned extension (or a scanned name, for `.gitignore`), symlinks
 excluded (`CLAUDE.md` would double `AGENTS.md`). Files Git LFS stores
 are out — the pulled survey tables, about 1 GB — so a hand-written
 comment in one (`data/classic-ids/cross_index_corrections.tsv`) is
-unchecked. `data/sid/retirements.tsv` is out because the sid ledger
+unchecked. `data/sid/events.tsv` is out because the sid ledger
 guard freezes its existing rows. Tracking puts `.claude/skills` in; `.gitignore` keeps
 `worktrees/` out, so no folder list exists to drift. Untracked files
 count, so a new doc is checked before its first `git add` — and a local

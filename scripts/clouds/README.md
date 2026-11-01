@@ -61,10 +61,10 @@ One entry per cloud:
 | `embedded` | Embedded-star/cavity list — currently empty (the cross-match + cavity carve are tracked, not yet shipped). |
 
 `sid` is stamped after this script runs by `scripts/sid/stamp-sibling-sids.ts`
-(the tail of `pnpm run build:clouds`), resolving each `cloud:<id>` slug against
-the committed ledger — this Python build never touches the ledger. A new cloud
-slug hard-fails the stamp until `pnpm run sid:allocate` mints it; a rename needs
-a `data/sid/sameas-overrides.tsv` bridge. See [Sibling-artifact stamping](/scripts/sid/README.md#sibling-artifact-stamping).
+(the tail of `pnpm run build:clouds`), allocating each `cloud:<id>` slug
+against the committed ledger — this Python build never touches the ledger. A
+new cloud slug mints there under `allocation.mint.cloud`; a vanished slug fails
+the stamp, and a rename needs a `data/sid/sameas-overrides.tsv` bridge. See [Sibling-artifact stamping](/scripts/sid/README.md#sibling-artifact-stamping).
 
 ## Merge logic
 

@@ -1,5 +1,5 @@
 // Pure algebra for the SID registry: designation grammar, canonical-key
-// ladder, same-as classes, allocation, ledger/retirements codecs, and the
+// ladder, same-as classes, the registry codecs, and the
 // head-snapshot + append-only checks. Contracts in /docs/sid.md#3-designation-namespaces through /docs/sid.md#5-synthetic-key-churn-wds-re-subdivision.
 
 import { createHash } from 'node:crypto';
@@ -77,7 +77,7 @@ export interface StarDesignationFields {
    *  (`/scripts/catalog/classic-ids/label-merge/README.md#an-alias-stops-at-the-blend`)
    * —
    *  which is why both key the same-as class. Required, not optional: this
-   *  extractor has to derive one designation set for `sid:allocate` and the
+   *  extractor has to derive one designation set for SID allocation and the
    *  spine parity gate alike, and an omitted field is exactly the silent
    *  divergence `catalog-designations.ts` exists to prevent. */
   hdAlt: readonly number[];
@@ -89,12 +89,7 @@ export interface StarDesignationFields {
   syntheticId: string | null;
 }
 
-/** External designations for one catalog star. The single extractor:
- *  `sid:allocate` reaches it through `catalog-designations.ts` (over the
- *  built artifacts), `build-catalog` for its in-record resolution (over
- *  in-memory records), and the spine, label-merge and membership-manifest
- *  modules for the set a row stands in for — so none of them can derive a
- *  different class from the same record. */
+/** External designations for one catalog star: the one extractor (README.md#designation-extraction--where-each-namespace-comes-from). */
 export function starDesignations(f: StarDesignationFields): string[] {
   const d: string[] = [];
   if (f.isSol) d.push('sol:sun');
@@ -171,34 +166,17 @@ export function canonicalKeyOf(designations: Iterable<string>): string {
   return best;
 }
 
-// ---- Ledger / retirements codecs (/docs/sid.md#43-ledger--datasidledgertsv) ---------------------
+// ---- Ledger / registry codecs (/docs/sid.md#43-ledger--datasidledgertsv) ---------------------
 
 export { SID_KINDS, type LedgerRow, type SidKind };
 
-const RETIREMENTS_COLUMNS = ['sid', 'retired', 'reason', 'successor_sid'] as const;
-const REINSTATEMENTS_COLUMNS = ['sid', 'reinstated', 'reason'] as const;
 const SAMEAS_COLUMNS = ['a', 'b', 'note'] as const;
 const OBJECT_MINT_COLUMNS = ['key', 'kind'] as const;
 
 export const LEDGER_HEADER = LEDGER_COLUMNS.join('\t');
-export const RETIREMENTS_HEADER = RETIREMENTS_COLUMNS.join('\t');
-export const REINSTATEMENTS_HEADER = REINSTATEMENTS_COLUMNS.join('\t');
 export const SAMEAS_HEADER = SAMEAS_COLUMNS.join('\t');
 export const SOL_OBJECTS_HEADER = OBJECT_MINT_COLUMNS.join('\t');
 export const SHELL_OBJECTS_HEADER = OBJECT_MINT_COLUMNS.join('\t');
-
-export interface RetirementRow {
-  sid: number;
-  retired: string;
-  reason: string;
-  successorSid: number | null;
-}
-
-export interface ReinstatementRow {
-  sid: number;
-  reinstated: string;
-  reason: string;
-}
 
 export interface SameasEdge {
   a: string;
@@ -223,70 +201,6 @@ export function registryFile<C extends string, R>(
 ): RegistryFile<R> {
   const rows = registryRows(spec, text);
   return { rows: rows.map(decode), lines: rows.map((row) => row.rawLine) };
-}
-
-function retirementRow(row: TableRow<(typeof RETIREMENTS_COLUMNS)[number]>): RetirementRow {
-  return {
-    sid: row.requiredId('sid'),
-    retired: row.raw('retired'),
-    reason: row.raw('reason'),
-    successorSid: row.id('successor_sid'),
-  };
-}
-
-function reinstatementRow(row: TableRow<(typeof REINSTATEMENTS_COLUMNS)[number]>): ReinstatementRow {
-  return {
-    sid: row.requiredId('sid'),
-    reinstated: row.raw('reinstated'),
-    reason: row.raw('reason'),
-  };
-}
-
-export function retirementsFile(text: string, from: Declared): RegistryFile<RetirementRow> {
-  return registryFile({ ...from, columns: RETIREMENTS_COLUMNS }, retirementRow, text);
-}
-
-export function reinstatementsFile(text: string, from: Declared): RegistryFile<ReinstatementRow> {
-  return registryFile({ ...from, columns: REINSTATEMENTS_COLUMNS }, reinstatementRow, text);
-}
-
-/** Effective retirement state (/docs/sid.md#43-ledger--datasidledgertsv): a sid is retired iff
- *  it has strictly more retirement rows than reinstatement rows. Counting
- *  is order-independent across the two append-only files, so a
- *  retire → reinstate → re-retire cycle needs no cross-file ordering.
- *  The Map value is the LAST retirement row (its successor_sid wins). */
-export function effectiveRetirements(
-  retirements: RetirementRow[],
-  reinstatements: ReinstatementRow[],
-): Map<number, RetirementRow> {
-  const retireCount = new Map<number, number>();
-  const lastRow = new Map<number, RetirementRow>();
-  for (const r of retirements) {
-    retireCount.set(r.sid, (retireCount.get(r.sid) ?? 0) + 1);
-    lastRow.set(r.sid, r);
-  }
-  for (const r of reinstatements) {
-    retireCount.set(r.sid, (retireCount.get(r.sid) ?? 0) - 1);
-  }
-  const out = new Map<number, RetirementRow>();
-  for (const [sid, count] of retireCount) {
-    if (count > 0) out.set(sid, lastRow.get(sid)!);
-  }
-  return out;
-}
-
-/** Retired-sid → successor-sid pairs for the runtime resolver's
- *  successor-following (/docs/sid.md#94-migration-semantics--exact-table), sorted by retired sid.
- *  Only effectively-retired sids with a successor appear. */
-export function sidSuccessorPairs(
-  retirements: RetirementRow[],
-  reinstatements: ReinstatementRow[],
-): [number, number][] {
-  const pairs: [number, number][] = [];
-  for (const [sid, row] of effectiveRetirements(retirements, reinstatements)) {
-    if (row.successorSid !== null) pairs.push([sid, row.successorSid]);
-  }
-  return pairs.sort((a, b) => a[0] - b[0]);
 }
 
 /** `from` is the file read: the curated overrides or one bridges/ file. */
@@ -355,86 +269,6 @@ export function validateLedger(rows: LedgerRow[]): string[] {
   return errors;
 }
 
-export function validateRetirements(
-  rows: RetirementRow[],
-  ledgerRows: LedgerRow[],
-  reinstatements: ReinstatementRow[] = [],
-): string[] {
-  const errors: string[] = [];
-  const maxSid = ledgerRows.length;
-  const reinstateCount = new Map<number, number>();
-  for (const r of reinstatements) {
-    reinstateCount.set(r.sid, (reinstateCount.get(r.sid) ?? 0) + 1);
-  }
-  const retireCount = new Map<number, number>();
-  for (const row of rows) {
-    if (row.sid < 1 || row.sid > maxSid) {
-      errors.push(`retirement of sid ${row.sid}: sid not in ledger`);
-    }
-    retireCount.set(row.sid, (retireCount.get(row.sid) ?? 0) + 1);
-    if (!ISO_DATE_RE.test(row.retired)) {
-      errors.push(`retirement of sid ${row.sid}: bad retired date "${row.retired}"`);
-    }
-    if (row.reason.trim().length === 0) {
-      errors.push(`retirement of sid ${row.sid}: empty reason`);
-    }
-    if (row.successorSid !== null) {
-      if (row.successorSid === row.sid) {
-        errors.push(`retirement of sid ${row.sid}: successor is itself`);
-      } else if (row.successorSid < 1 || row.successorSid > maxSid) {
-        errors.push(`retirement of sid ${row.sid}: successor ${row.successorSid} not in ledger`);
-      }
-    }
-  }
-  // A sid may be retired again only after a reinstatement cancelled the
-  // prior retirement: #retire ≤ #reinstate + 1.
-  for (const [sid, count] of retireCount) {
-    if (count > (reinstateCount.get(sid) ?? 0) + 1) {
-      errors.push(
-        `retirement of sid ${sid}: ${count} retirement rows exceed ` +
-          `${reinstateCount.get(sid) ?? 0} reinstatement(s) + 1 — duplicate retirement`,
-      );
-    }
-  }
-  return errors;
-}
-
-export function validateReinstatements(
-  rows: ReinstatementRow[],
-  ledgerRows: LedgerRow[],
-  retirements: RetirementRow[],
-): string[] {
-  const errors: string[] = [];
-  const maxSid = ledgerRows.length;
-  const retireCount = new Map<number, number>();
-  for (const r of retirements) {
-    retireCount.set(r.sid, (retireCount.get(r.sid) ?? 0) + 1);
-  }
-  const reinstateCount = new Map<number, number>();
-  for (const row of rows) {
-    if (row.sid < 1 || row.sid > maxSid) {
-      errors.push(`reinstatement of sid ${row.sid}: sid not in ledger`);
-    }
-    reinstateCount.set(row.sid, (reinstateCount.get(row.sid) ?? 0) + 1);
-    if (!ISO_DATE_RE.test(row.reinstated)) {
-      errors.push(`reinstatement of sid ${row.sid}: bad reinstated date "${row.reinstated}"`);
-    }
-    if (row.reason.trim().length === 0) {
-      errors.push(`reinstatement of sid ${row.sid}: empty reason`);
-    }
-  }
-  // A reinstatement must cancel an existing retirement: #reinstate ≤ #retire.
-  for (const [sid, count] of reinstateCount) {
-    if (count > (retireCount.get(sid) ?? 0)) {
-      errors.push(
-        `reinstatement of sid ${sid}: ${count} reinstatement rows exceed ` +
-          `${retireCount.get(sid) ?? 0} retirement(s) — nothing to reinstate`,
-      );
-    }
-  }
-  return errors;
-}
-
 // ---- Head snapshot + append-only check ----
 // /docs/sid.md#43-ledger--datasidledgertsv, /docs/sid.md#45-ci-guard
 
@@ -446,10 +280,9 @@ export interface HeadTriple {
 
 export interface LedgerHead {
   ledger: HeadTriple;
-  retirements: HeadTriple;
-  /** Absent from heads written before the reinstatements file existed —
-   *  readers treat absence as a zero-row frozen base. */
-  reinstatements?: HeadTriple;
+  /** Absent from heads written before events.tsv existed — readers treat
+   *  absence as a zero-row frozen base. */
+  events?: HeadTriple;
 }
 
 /** Hash of the data lines, each LF-terminated; the header line is pinned by
@@ -460,28 +293,24 @@ export function sha256OfDataLines(dataLines: string[]): string {
   return h.digest('hex');
 }
 
-function headTriple(file: RegistryFile<{ sid: number }>): HeadTriple {
-  return {
-    rows: file.rows.length,
-    max_sid: file.rows.reduce((max, row) => Math.max(max, row.sid), 0),
-    sha256: sha256OfDataLines(file.lines),
-  };
+/** Over the file's text, read straight off its lines (sid first) so the
+ *  984k-row ledger is never decoded: valid only for a text the registry
+ *  codec already accepted, whose data lines each end in LF. */
+function headTriple(text: string): HeadTriple {
+  const body = text.slice(text.indexOf('\n') + 1);
+  let rows = 0;
+  let max = 0;
+  for (let at = 0; at < body.length; at = body.indexOf('\n', at) + 1) {
+    max = Math.max(max, Number(body.slice(at, body.indexOf('\t', at))));
+    rows++;
+  }
+  return { rows, max_sid: max, sha256: createHash('sha256').update(body, 'utf-8').digest('hex') };
 }
 
-export function computeLedgerHead(
-  ledger: RegistryFile<LedgerRow>,
-  retirements: RegistryFile<RetirementRow>,
-  reinstatements: RegistryFile<ReinstatementRow>,
-): LedgerHead {
-  return {
-    ledger: headTriple(ledger),
-    retirements: headTriple(retirements),
-    reinstatements: headTriple(reinstatements),
-  };
+export function computeLedgerHead(ledgerText: string, eventsText: string): LedgerHead {
+  return { ledger: headTriple(ledgerText), events: headTriple(eventsText) };
 }
 
-/** Zero-row frozen base for heads written before reinstatements.tsv
- *  existed: everything in the working file is an append. */
 export const EMPTY_HEAD_TRIPLE: HeadTriple = {
   rows: 0,
   max_sid: 0,
@@ -566,39 +395,9 @@ export class UnionFind {
   }
 }
 
-export interface SidObject {
-  designations: string[];
-  kind: SidKind;
-  label: string;
-}
-
-export interface AllocateInput {
-  objects: SidObject[];
-  storedEdges: SameasEdge[];
-  ledger: LedgerRow[];
-  retirements: RetirementRow[];
-  reinstatements?: ReinstatementRow[];
-  today: string;
-}
-
 export interface AmbiguousDesignation {
   designation: string;
   objects: number[];
-}
-
-export interface AllocateResult {
-  errors: string[];
-  keyless: number[];
-  /** Non-retired ledger canonical keys whose class contains no current
-   *  object, grouped by namespace. */
-  orphaned: Map<string, string[]>;
-  minted: LedgerRow[];
-  /** Per input object: the sid its class resolved or minted to. */
-  objectSids: number[];
-  resolvedExisting: number;
-  ambiguous: AmbiguousDesignation[];
-  /** Classes covering >1 object (stored-edge merges). */
-  mergedClasses: { sid: number; objects: number[] }[];
 }
 
 export interface SameAsClasses {
@@ -663,157 +462,4 @@ export function sameAsClasses(
     else objectsByClass.set(root, [i]);
   });
   return { classes, kept, ambiguous, objectsByClass };
-}
-
-export function allocate(input: AllocateInput): AllocateResult {
-  const { objects, storedEdges, ledger, retirements, reinstatements = [], today } = input;
-  const errors: string[] = [];
-
-  for (const obj of objects) {
-    for (const d of obj.designations) parseDesignation(d);
-  }
-
-  const { classes: uf, kept, ambiguous, objectsByClass } = sameAsClasses(
-    objects.map((o) => o.designations),
-    storedEdges,
-  );
-  const keyless = kept.flatMap((ds, i) => (ds.length === 0 ? [i] : []));
-  for (const row of ledger) uf.add(row.canonicalKey);
-
-  const retiredBySid = effectiveRetirements(retirements, reinstatements);
-  const rowsByRoot = new Map<string, LedgerRow[]>();
-  for (const row of ledger) {
-    const root = uf.find(row.canonicalKey);
-    const list = rowsByRoot.get(root);
-    if (list) list.push(row);
-    else rowsByRoot.set(root, [row]);
-  }
-
-  const membersByRoot = new Map<string, string[]>();
-  for (const node of uf.nodes()) {
-    const root = uf.find(node);
-    const list = membersByRoot.get(root);
-    if (list) list.push(node);
-    else membersByRoot.set(root, [node]);
-  }
-
-  for (const [root, rows] of rowsByRoot) {
-    if (!objectsByClass.has(root)) continue;
-    const active = rows.filter((r) => !retiredBySid.has(r.sid));
-    if (active.length > 1) {
-      errors.push(
-        `class {${membersByRoot.get(root)!.join(', ')}} spans ${active.length} active sids ` +
-          `(${active.map((r) => `${r.sid}=${r.canonicalKey}`).join(', ')}) — resolve the ` +
-          `merge first: retire all but one with successor_sid in retirements.tsv`,
-      );
-    } else if (active.length === 0) {
-      errors.push(
-        `class {${membersByRoot.get(root)!.join(', ')}} matches only retired sids ` +
-          `(${rows.map((r) => r.sid).join(', ')}) — a retired object reappeared; ` +
-          `append a data/sid/reinstatements.tsv row (the object resumes its ` +
-          `original sid) or bridge/merge if its identity changed (/docs/sid.md#43-ledger--datasidledgertsv)`,
-      );
-    }
-  }
-
-  const orphaned = new Map<string, string[]>();
-  for (const row of ledger) {
-    if (retiredBySid.has(row.sid)) continue;
-    if (objectsByClass.has(uf.find(row.canonicalKey))) continue;
-    const ns = parseDesignation(row.canonicalKey).ns;
-    const list = orphaned.get(ns);
-    if (list) list.push(row.canonicalKey);
-    else orphaned.set(ns, [row.canonicalKey]);
-  }
-
-  const minted: LedgerRow[] = [];
-  const objectSids = new Array<number>(objects.length).fill(0);
-  const sidByRoot = new Map<string, number>();
-  const kindBySid = new Map<number, SidKind>(ledger.map((r) => [r.sid, r.kind]));
-  let resolvedExisting = 0;
-  let nextSid = ledger.reduce((max, r) => Math.max(max, r.sid), 0) + 1;
-
-  objects.forEach((obj, i) => {
-    if (kept[i].length === 0) return;
-    const root = uf.find(kept[i][0]);
-    let sid = sidByRoot.get(root);
-    if (sid === undefined) {
-      const active = (rowsByRoot.get(root) ?? []).filter((r) => !retiredBySid.has(r.sid));
-      if (active.length === 1) {
-        sid = active[0].sid;
-        resolvedExisting++;
-      } else if (active.length === 0 && (rowsByRoot.get(root) ?? []).length === 0) {
-        sid = nextSid++;
-        minted.push({
-          sid,
-          canonicalKey: canonicalKeyOf(membersByRoot.get(root)!),
-          kind: obj.kind,
-          firstSeen: today,
-        });
-        kindBySid.set(sid, obj.kind);
-      } else {
-        return; // merge/retirement conflict already reported in errors
-      }
-      sidByRoot.set(root, sid);
-    }
-    if (kindBySid.get(sid) !== obj.kind) {
-      errors.push(
-        `${obj.label}: kind "${obj.kind}" conflicts with sid ${sid}'s ledger kind ` +
-          `"${kindBySid.get(sid)}"`,
-      );
-    }
-    objectSids[i] = sid;
-  });
-
-  const mergedClasses: { sid: number; objects: number[] }[] = [];
-  for (const [root, indices] of objectsByClass) {
-    if (indices.length > 1) {
-      mergedClasses.push({ sid: sidByRoot.get(root) ?? 0, objects: indices });
-    }
-  }
-
-  return {
-    errors,
-    keyless,
-    orphaned,
-    minted,
-    objectSids,
-    resolvedExisting,
-    ambiguous,
-    mergedClasses,
-  };
-}
-
-export interface SidResolution {
-  /** Per input object, its resolved ledger sid — 0 (NO_SID) whenever the
-   *  object is unresolved (keyless, would-mint, or a merge/kind conflict). */
-  objectSids: number[];
-  /** Non-empty iff any object is unallocated / keyless / conflicting. The
-   *  caller must run `pnpm run sid:allocate` to reconcile before shipping. */
-  errors: string[];
-}
-
-/** resolveSids resolves against the frozen ledger without minting, so it
- *  needs everything allocate does except the mint date. */
-export type ResolveInput = Omit<AllocateInput, 'today'>;
-
-/** Read-only allocation: resolve every object to its EXISTING ledger sid,
- *  treating any object that would mint a new row (or is keyless / conflicts)
- *  as an error and leaving its sid at 0 (NO_SID). This is the resolver the
- *  artifact emitters use — the build never mints; `sid:allocate` is the sole
- *  ledger writer (/docs/sid.md#44-allocation). */
-export function resolveSids(input: ResolveInput): SidResolution {
-  const result = allocate({ ...input, today: '' });
-  const mintedSids = new Set(result.minted.map((r) => r.sid));
-  const errors = [...result.errors];
-  for (const i of result.keyless) {
-    errors.push(`${input.objects[i].label}: no usable designation (keyless)`);
-  }
-  input.objects.forEach((obj, i) => {
-    if (mintedSids.has(result.objectSids[i])) {
-      errors.push(`${obj.label}: unallocated (${obj.designations.join(', ')})`);
-      result.objectSids[i] = 0;
-    }
-  });
-  return { objectSids: result.objectSids, errors };
 }

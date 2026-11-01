@@ -9,7 +9,8 @@ allocation, CI guard, Gaia DR reconciliation, v4 wire — in
 
 Unlike every sibling `data/` folder, this is **not** frozen external
 data: the ledger is Stellata's own identity contract. It grows by
-append only (`pnpm run sid:allocate`, the sole writer) and its frozen
+append only (SID allocation in `pnpm run build:catalog` and the clouds and
+Local Group stamps, its only writers) and its frozen
 prefix is CI-guarded — see [§ 4.5](/docs/sid.md#45-ci-guard) for what the guard
 enforces and why there is no `UPDATE_*` escape hatch.
 
@@ -18,17 +19,17 @@ enforces and why there is no `UPDATE_*` escape hatch.
 ```
 ledger.tsv              sid → canonical_key → kind → first_seen.
                         Append-only, sorted by sid, LFS.
-retirements.tsv         sid → retired → reason → successor_sid.
-                        Append-only; retired sids are never reused.
-reinstatements.tsv      sid → reinstated → reason. Append-only; each
-                        row cancels one retirement of that sid
+events.tsv              sid → date → event (mint | retire | reinstate |
+                        merge) → code → params → successor →
+                        build_version. Append-only; written by
+                        allocation alone. Retired sids are never reused;
+                        a reinstate cancels one retire or merge
                         (/docs/sid.md#43-ledger--datasidledgertsv counting semantics), so a
                         reappeared object resumes its original sid.
 ledger-head.json        { rows, max_sid, sha256 } snapshot of the
-                        ledger / retirements / reinstatements frozen
-                        state; regular git so the CI guard can read
+                        ledger / events frozen state; regular git so the CI guard can read
                         the merge-base version without LFS. Rewritten
-                        mechanically by sid:allocate.
+                        mechanically by every allocation.
                         The sha256 covers the data lines only (each
                         LF-terminated); the header line is pinned
                         structurally by the guard instead.

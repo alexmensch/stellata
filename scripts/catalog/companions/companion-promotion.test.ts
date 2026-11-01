@@ -3358,7 +3358,7 @@ describe('an existing member whose own 5p solution Gaia rejects', () => {
 describe('foldRowOutcomes', () => {
   const row = multiplesRow();
   const own: MintedBrightness = { source: 'own', spectMsFromOwnAbsmag: true };
-  const unanchored = { anchor: null, systemAnchor: null };
+  const unanchored = { anchor: null, systemAnchor: null, synthKey: null };
   const outcomes: RowOutcome[] = [
     { kind: 'dropped', reason: 'compound-comp' },
     { kind: 'dropped', reason: 'beyond-tidal-limit' },

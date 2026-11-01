@@ -223,6 +223,8 @@ export interface PromotedRow {
   outcome: RowOutcome;
   anchor: string | null;
   systemAnchor: string | null;
+  /** The synthetic key a mint from this row would carry, whether or not it minted. */
+  synthKey: string | null;
 }
 
 export type PromotionStats = RowOutcomeStats & PostPassStats;
@@ -1301,9 +1303,11 @@ interface PromoteRowContext {
    *  for pair-row primaries). Null signals the position couldn't be
    *  resolved — drop with droppedNoPosition. */
   position: CompanionPlacement | null;
-  /** Canonical comp letter for the row — drives the synthetic ID and,
-   *  post-sort, the composer's component letter. */
+  /** Canonical comp letter for the row — the composer's component letter post-sort. */
   canonicalComp: string;
+  /** `composeSyntheticId` of the row over `canonicalComp`: the key a mint
+   *  carries, and the one its PromotedRow records. */
+  synthKey: string | null;
   /** True when this row is a pair-row-primary escape (the cursor primary
    *  itself, promoted as a companion of the WDS-root anchor); drives
    *  anchorDmagApplies=false in imputeCompanionAbsmag. */
@@ -1563,8 +1567,7 @@ function promoteRow(
   state: PromotionState,
 ): RowOutcome {
   const { row, anchorPrimaryRow, anchorStar, systemAnchorStar, anchorCatalogIdx,
-          position, canonicalComp, isPairRowPrimary } = ctx;
-  const synthId = composeSyntheticId(row.systemId, canonicalComp);
+          position, canonicalComp, isPairRowPrimary, synthKey: synthId } = ctx;
   const rowHasOwnHip = row.hip !== null && row.hip > 0;
   if (row.gaiaSourceId === null && !rowHasOwnHip && synthId === null) {
     return { kind: 'dropped', reason: 'no-identifier' };
@@ -1952,15 +1955,19 @@ export function promoteCompanions(
 
   const keyAt = (idx: number | null): string | null => (idx === null ? null : getStarAt(idx).originKey);
   const unpaired = (row: MultiplesTsvRow): PromotedRow => (
-    { row, via: 'unpaired', outcome: { kind: 'unpaired' }, anchor: null, systemAnchor: null }
+    {
+      row, via: 'unpaired', outcome: { kind: 'unpaired' }, anchor: null, systemAnchor: null,
+      synthKey: composeSyntheticId(row.systemId, row.comp),
+    }
   );
   const escaped = new Set<MultiplesTsvRow>();
   const escapeCursorPrimary = (cursor: PairCursor): number | null => {
     const anchor = escapeAnchorOf(cursor, wdsRootAnchors);
     if (anchor === null) return null;
-    const outcome = promoteCursorPrimary(anchor.primary, anchor.system, state);
+    const synthKey = composeSyntheticId(anchor.primary.systemId, anchor.primary.comp);
+    const outcome = promoteCursorPrimary(anchor.primary, anchor.system, synthKey, state);
     const systemKey = anchor.system.star.originKey;
-    record({ row: anchor.primary, via: 'escape', outcome, anchor: systemKey, systemAnchor: systemKey });
+    record({ row: anchor.primary, via: 'escape', outcome, anchor: systemKey, systemAnchor: systemKey, synthKey });
     escaped.add(anchor.primary);
     return placedRecordIdx(outcome);
   };
@@ -1977,6 +1984,7 @@ export function promoteCompanions(
     // Existing records first, then previously-promoted ones — 40 Eri B is
     // promoted in the BC group and reused as the anchor for BD.
     let primaryCatalogIdx = findExistingPrimary(cursor.primary, existing, existingStars);
+    const primarySynthKey = composeSyntheticId(cursor.primary.systemId, cursor.primary.comp);
     const rootAnchorEntry = wdsRootOf(cursor.primary.systemId) !== null
       ? wdsRootAnchors.get(wdsRootOf(cursor.primary.systemId) as string)
       : undefined;
@@ -1997,11 +2005,8 @@ export function promoteCompanions(
       // hit so the cursor still runs against the blend record as before.
       // Sub-letter primaries (Castor Ca) are excluded: the inner-pair
       // post-pass + writer parent override own that re-homing.
-      const synthKey = composeSyntheticId(
-        cursor.primary.systemId, cursor.primary.comp,
-      );
       const escapedIdx =
-        (synthKey !== null ? state.promotedBySynth.get(synthKey) : undefined)
+        (primarySynthKey !== null ? state.promotedBySynth.get(primarySynthKey) : undefined)
         ?? escapeCursorPrimary(cursor);
       if (escapedIdx !== null && escapedIdx !== undefined) {
         primaryCatalogIdx = escapedIdx;
@@ -2037,6 +2042,7 @@ export function promoteCompanions(
         via: 'primary',
         outcome: { kind: primaryCatalogIdx === null ? 'primary-unresolved' : 'pair-anchor' },
         anchor: anchorKey, systemAnchor: systemAnchorKey,
+        synthKey: primarySynthKey,
       });
     }
     const primaryKey = compKey(cursorRoot, cursor.primary.comp);
@@ -2047,14 +2053,16 @@ export function promoteCompanions(
       componentIndex.set(primaryKey, primaryCatalogIdx);
     }
 
-    const decided = (row: MultiplesTsvRow, outcome: RowOutcome): PromotedRow => (
-      { row, via: 'secondary', outcome, anchor: anchorKey, systemAnchor: systemAnchorKey }
-    );
     for (const row of cursor.secondaries) {
       if (row.orbitRole !== 'secondary') {
         record(unpaired(row));
         continue;
       }
+      const canonicalComp = canonicalCompLetter(cursor.primary.comp, row.comp);
+      const synthKey = composeSyntheticId(row.systemId, canonicalComp);
+      const decided = (outcome: RowOutcome): PromotedRow => ({
+        row, via: 'secondary', outcome, anchor: anchorKey, systemAnchor: systemAnchorKey, synthKey,
+      });
       // WDS compound-secondary guard. "BC" / "AB" / "ABC" represent
       // unresolved aggregates of two-or-more components, not single
       // stars; promoting them would double-count the resolved
@@ -2064,15 +2072,12 @@ export function promoteCompanions(
       const wdsRoot = wdsRootOf(row.systemId);
       if (wdsRoot !== null
           && isUnresolvedCompound(row.comp, wdsRoot, singleLettersByRoot)) {
-        record(decided(row, { kind: 'dropped', reason: 'compound-comp' }));
+        record(decided({ kind: 'dropped', reason: 'compound-comp' }));
         continue;
       }
-      const canonicalComp = canonicalCompLetter(
-        cursor.primary?.comp ?? '', row.comp,
-      );
       const resolved = resolvePosition(row, cursor.primary, anchor);
       if (resolved === 'beyond-tidal') {
-        record(decided(row, { kind: 'dropped', reason: 'beyond-tidal-limit' }));
+        record(decided({ kind: 'dropped', reason: 'beyond-tidal-limit' }));
         continue;
       }
       const position = resolved;
@@ -2087,11 +2092,12 @@ export function promoteCompanions(
           anchorCatalogIdx: primaryCatalogIdx,
           position,
           canonicalComp,
+          synthKey,
           isPairRowPrimary: false,
         },
         state,
       );
-      record(decided(row, outcome));
+      record(decided(outcome));
       const promotedIdx = placedRecordIdx(outcome);
       // A promoted secondary is authoritative for its token — it resolves
       // through the inherited-id escape onto its own record, so it
@@ -2464,6 +2470,7 @@ function escapeAnchorOf(
 function promoteCursorPrimary(
   primary: MultiplesTsvRow,
   anchor: SystemAnchor,
+  synthKey: string | null,
   state: PromotionState,
 ): RowOutcome {
   // Neither route available → drop. Collocating at the anchor would bake a
@@ -2499,6 +2506,7 @@ function promoteCursorPrimary(
       anchorCatalogIdx: anchor.catalogIdx,
       position,
       canonicalComp: primary.comp,
+      synthKey,
       isPairRowPrimary: true,
     },
     state,

@@ -231,7 +231,7 @@ export interface MembershipCounts extends LabelMergeCounts {
   /** Addition groups whose winner has a gate-passing runner-up. */
   additionContested: number;
   /** Admitted rows whose only designation is the Gaia id — the mints
-   *  `sid:allocate` would key `gaia_dr3:`. Zero by construction, since a group
+   *  SID allocation would key `gaia_dr3:`. Zero by construction, since a group
    *  with no classical designation left is ledgered rather than admitted; the
    *  pin is the tripwire on an admission branch that stops holding that. It
    *  says what it says only alongside `sharedDesignations` — a designation two
@@ -1297,7 +1297,7 @@ export interface SpineMatch {
 }
 
 /** Resolve every spine row through `sameAsClasses` over the manifest's
- *  designations, the classes `sid:allocate` builds, keying the row on its
+ *  designations, the classes SID allocation builds, keying the row on its
  *  first ladder-ranked designation the graph knows — its canonical key. A
  *  lower-ranked designation the label merge moved to a sibling therefore does
  *  not split the match: the SID never rode on it. */

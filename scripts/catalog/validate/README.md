@@ -135,8 +135,8 @@ measurement, over two directories of built artifacts (`catalog-manifest.json`
 + its chunks); `--current` defaults to `public/`.
 
 **It fails on two things only**: a baseline sid the current build lacks, and a
-sid two current records carry. A retirement declared in
-`data/sid/retirements.tsv` is honoured by a same-tree baseline too, so it never
+sid two current records carry. A retirement declared as a
+`retire` or `merge` event in `data/sid/events.tsv` is honoured by a same-tree baseline too, so it never
 reads as a drop; an undeclared one does. **Field deltas on a shared sid are
 reported, never failed** — companion promotion, anchor-flux conservation and
 system distance coherence read the record set, so a deeper catalogue
@@ -152,7 +152,7 @@ compares as the companion's **sid**, and `nameOffset` as the resolved **name**.
 A sid on two records is one object drawn twice — skipped by the field
 comparison, since which of the two it would land on is arbitrary, and a
 failure when the current build carries it. `NO_SID` records are
-counted, never keyed, so the gate is meaningful against a pre-mint build.
+counted, never keyed, so the gate is meaningful against an old baseline.
 
 ## Adding to the known-stars corpus
 

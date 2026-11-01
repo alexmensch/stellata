@@ -18,7 +18,7 @@ export const PROMOTION_LINEAGE: StageLineageSpec<'promotion' | 'promotion.identi
   identity: 'promotion.identity',
 };
 
-export const PROMOTION_LINEAGE_BUDGET = { gzipBytes: 930_000, writeMs: 5_000 };
+export const PROMOTION_LINEAGE_BUDGET = { gzipBytes: 1_040_000, writeMs: 5_000 };
 
 const live = (description: string, effect: CodeDeclaration['effect'] = 'none'): CodeDeclaration => (
   { description, effect, status: LIVE }
@@ -135,7 +135,7 @@ export interface PromotionLineage {
   readonly identity: IdentityRow[];
 }
 
-/** Each row's lineage row; and one identity row per record promotion mints, and one per row it removes (a retire or park outcome) keyed on the HIP and Gaia cells it arrived with, less any designation `founded` (membership's records) or a mint of this stage already carries. */
+/** Each row's lineage row; and one identity row per record promotion mints, and one per row it removes or merges (a retire, park or merge outcome) keyed on the HIP and Gaia cells it arrived with and the synthetic key a mint from it would carry, less any designation `founded` (membership's records) or a mint of this stage already carries. */
 export function promotionLineage(
   rows: readonly PromotedRow[], stars: readonly Star[], founded: ReadonlySet<string>,
 ): PromotionLineage {
@@ -146,9 +146,9 @@ export function promotionLineage(
   const claimed = new Set([...founded, ...minted.flatMap((m) => m.designations)]);
   const removed = rows.flatMap((r, i): IdentityRow[] => {
     const effect = PROMOTION_EFFECTS.get(lineage[i].code);
-    if (effect !== 'retire' && effect !== 'park') return [];
+    if (effect === undefined || effect === 'none') return [];
     const designations = starDesignations({
-      isSol: false, hip: r.row.hip, hd: null, hdAlt: [], hr: null, hrAlt: [], gl: null, syntheticId: null,
+      isSol: false, hip: r.row.hip, hd: null, hdAlt: [], hr: null, hrAlt: [], gl: null, syntheticId: r.synthKey,
       gaiaSourceId: r.row.gaiaSourceId,
     }).filter((d) => !claimed.has(d));
     if (designations.length === 0) return [];

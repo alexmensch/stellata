@@ -135,8 +135,8 @@ jobs:
           key: ${{ steps.catalog-key.outputs.key }}
       - if: steps.catalog-cache.outputs.cache-hit == 'true'
         run: tar -xf "$RUNNER_TEMP/catalog-build.tar"
-      # build:catalog hard-fails on any record the SID ledger doesn't cover
-      # (the mint side of ledger consistency; the drop side is sid:check).
+      # build:catalog allocates SIDs; the stage's diff gate fails on any
+      # ledger or events row the PR did not commit.
       - if: steps.catalog-cache.outputs.cache-hit != 'true'
         run: pnpm exec tsx scripts/ci/catalog-stage.ts run
       # On a fresh checkout the stage's untracked files under public/ and
@@ -151,13 +151,12 @@ jobs:
           key: ${{ steps.catalog-key.outputs.key }}
       - id: built
         run: pnpm run build:layers
-      # Ledger ↔ artifact consistency, drop side (/docs/sid.md#45-ci-guard):
-      # read-only allocation walk over the built artifacts; fails on any
-      # would-mint object or orphaned synth key, so an object-set change
-      # can't land without its allocation / retirement / bridge.
-      - name: SID ledger–artifact consistency
+      # The clouds and Local Group stamps allocate their own namespaces
+      # (/docs/sid.md#45-ci-guard): a mint or event they append that the PR
+      # did not commit fails here.
+      - name: SID registry committed
         if: ${{ !cancelled() && steps.built.outcome == 'success' }}
-        run: pnpm run sid:check
+        run: git diff --exit-code -- data/sid
       # see /scripts/ci/README.md#vitest-with-every-input
       - name: Full vitest, smudged and built
         if: ${{ !cancelled() && steps.built.outcome == 'success' }}

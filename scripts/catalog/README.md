@@ -86,14 +86,16 @@ scripts/catalog/
   build-catalog.ts                Orchestrator. Reads every reference
                                   catalogue, runs the per-row pipeline and
                                   each cross-match pass in order, then
+                                  allocates every record's SID, then
                                   emits the chunked binary, manifests,
-                                  both committed ledgers and placement's and
-                                  promotion's lineage through emitArtifacts
-                                  once its two snapshot checks, both
+                                  both committed ledgers, the SID registry
+                                  and placement's, promotion's and
+                                  allocation's lineage through emitArtifacts
+                                  once its two snapshot checks, the three
                                   lineage budgets and the CI heap budget
                                   (../util/README.md#ci-heap-budget) pass.
-                                  On a SID error it lands them
-                                  with no checks and then fails
+                                  A failed allocation throws before
+                                  anything is staged
                                   ([SID allocation](#sid-allocation)).
   catalog-inputs.test.ts          Pins stepInputPaths('build:catalog')
                                   (../util/step-inputs.ts) — every file the
@@ -107,8 +109,10 @@ scripts/catalog/
                                   writes, as its emitArtifacts declaration
                                   (../util/README.md): the public/ sidecars,
                                   the row-index map, the two committed
-                                  ledgers, placement's and promotion's
-                                  lineage files, and
+                                  ledgers, the SID registry files
+                                  (REGISTRY_FILES), placement's,
+                                  promotion's and allocation's lineage
+                                  files, and
                                   the transport chunks and the lineage
                                   baseline and diff as families. Side-effect free, so a reader can
                                   import the declaration without running
@@ -149,7 +153,7 @@ scripts/catalog/
                                   V cascade, trigonometric tier of parallax.
   catalog-lookup.ts (+ test)      Reads a built catalog back (loadCatalog) — the
                                   shared reader for verify-catalog, the frozen
-                                  corpora, validate-simbad-sample, sid:allocate.
+                                  corpora, validate-simbad-sample, trace.
                                   A `name:` record ref resolves through the
                                   name table AND the composed display labels,
                                   so a corpus row may name a star by the
@@ -171,18 +175,24 @@ scripts/catalog/
 
 ## SID allocation
 
-Each record's `sid` (byte 80) is its frozen Stellata ID resolved from the
-committed ledger (`data/sid/`, docs/sid.md). The build is a pure
-**consumer**: `starDesignations` (in `scripts/sid/sid-pure.ts` — the same
-extractor `sid:allocate` uses, so both derive an identical class per record)
-builds each record's designation set, and `resolveSids` maps it to the
-existing ledger sid. The build **never mints** — `sid:allocate` is the sole
-ledger writer ([§ 4.4](/docs/sid.md#44-allocation)).
+Each record's `sid` (byte 80) is its Stellata ID, and this build is the
+step that allocates it ([§ 4.4](/docs/sid.md#44-allocation)). After the record sort and before the
+display names (which key on SIDs), `catalogSidObjects`
+(`scripts/sid/catalog-objects.ts`) builds every record's designation set
+with `starDesignations` and appends the sol and shell lists; `allocate`
+(`scripts/sid/allocate-pure.ts`) resolves each against the committed
+ledger, mints what is new under the code of the lineage decision that
+admitted it, and settles every SID no record keeps by its upstream
+decision ([SID events](../sid/README.md#sid-events)). Membership's lineage
+comes from the last `build:membership` (`build/lineage/`, declared in
+`membership/membership-lineage-source.ts`, so this build keys on it);
+placement's and promotion's from this run.
 
-A record set that changes (a new manifest, new companions) therefore needs a
-build → `sid:allocate` → build cycle: the first build writes `NO_SID` for
-anything the ledger lacks so the artifact still lands, then hard-fails
-listing it. `scripts/sid/README.md` carries the mint and its review.
+New ledger rows and events land with the rest of the outputs
+(`registryTexts`), and allocation's lineage beside the other stages'. A
+failed allocation — an orphan no decision explains, a new record no stage
+admits — throws before anything is staged, so nothing lands.
+`scripts/sid/README.md` carries the review side.
 
 The runtime reader (`catalog-loader.ts`) decodes the column into
 `Catalog.sid`, the star domain of the runtime SID resolver

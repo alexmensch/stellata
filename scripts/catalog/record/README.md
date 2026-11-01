@@ -173,10 +173,10 @@ for its coverage and the runtime colour-LUT re-key it enables.
   - 72–75 `float32`      **logg_gspspec** (log cgs); NaN = absent.
   - 76–79 `float32`      **mh_gspspec** ([M/H] dex); NaN = absent.
   - 80–83 `uint32`       **sid** — Stellata ID ([§ 7](/docs/sid.md#7-storage--sid-in-every-artifact)), the frozen
-                          per-object wire identity. `0` (`NO_SID`) only in the
-                          unallocated-bootstrap path ([SID allocation](/scripts/catalog/README.md#sid-allocation)) before
-                          the build hard-fails. Every shipped record is
-                          nonzero.
+                          per-object wire identity. Every shipped record is
+                          nonzero: a failed allocation lands nothing
+                          ([SID allocation](/scripts/catalog/README.md#sid-allocation)); `0`
+                          (`NO_SID`) is reserved as the none sentinel.
   - 84–87 `float32`      **vx** — space-motion velocity x (pc/yr, equatorial
                           Cartesian, Sol at origin). See
                           [Space-motion velocity](../parse/README.md#space-motion-velocity).
@@ -302,9 +302,9 @@ handful of round trips and is the wrong side of that deal.
 
 The manifest also carries
 the optional `sidSuccessors` side-field (retired sid → successor sid
-pairs, [§ 9.4](/docs/sid.md#94-migration-semantics--exact-table), derived from `data/sid/retirements.tsv` net
-of reinstatements) so the runtime SID resolver can follow merge-type
-retirements without an extra fetch; omitted while empty.
+pairs, [§ 9.4](/docs/sid.md#94-migration-semantics--exact-table), derived from the `merge` events in `data/sid/events.tsv` by
+`sidSuccessorPairs`) so the runtime SID resolver can follow merges
+without an extra fetch; omitted while empty.
 
 The chunk-plan / filename / assembly helpers (`planCatalogChunks`,
 `catalogChunkFilename` and the `CATALOG_CHUNK_FILENAME` pattern it matches,

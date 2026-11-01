@@ -19,7 +19,7 @@ export const CATALOG_STAGE: readonly StageStep[] = [
   { script: 'build:membership', pinned: ['data/membership/', 'data/classic-ids/label_flips.tsv'] },
   // Without this pin the parked ledger's row content is unchecked: the count snapshot
   // pins only its length, so a build parking a different star for the same total lands.
-  { script: 'build:catalog', pinned: ['data/membership/parked-ledger.tsv', 'data/athyg/simbad_sourced_distances.tsv'] },
+  { script: 'build:catalog', pinned: ['data/membership/parked-ledger.tsv', 'data/athyg/simbad_sourced_distances.tsv', 'data/sid/'] },
 ];
 
 export const CATALOG_CACHE_KEY_PREFIX = 'catalog-build';

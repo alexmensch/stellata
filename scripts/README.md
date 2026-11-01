@@ -44,11 +44,11 @@ cross-script policy and pointers.
   + GitHub release per
   version bump in a pushed range (a merged stack is one push carrying
   several). Not part of `pnpm run build`.
-- `sid/` — SID registry tools: `sid:allocate` (the only writer of
-  `data/sid/ledger.tsv`), DR-churn risk-set export, DR reconciliation
-  classifier, and `sid:stamp` (stamps sids onto clouds.json /
-  local-group.json). The catalog build resolves stellar sids in-record
-  from the ledger. See `docs/sid.md`.
+- `sid/` — SID registry tools: the allocation `build:catalog` runs over its
+  records (the writer of `data/sid/ledger.tsv` and `events.tsv`, with the
+  clouds and Local Group stamps), DR-churn risk-set export, DR
+  reconciliation classifier, and `sid:stamp` (allocates and stamps sids onto
+  clouds.json / local-group.json). See `docs/sid.md`.
 - `perf/` — the human-armed headless perf runner (`pnpm run perf`):
   drives `debug.priceFrame()` in Playwright Chromium at the canon
   vantages and prints the differential table. Clocks only, never a

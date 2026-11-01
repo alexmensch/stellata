@@ -13,8 +13,8 @@ import { LUT_OUTPUTS } from '../scripts/colour/blackbody-lut-outputs';
 import { ELEMENT_TABLE_OUTPUTS } from '../scripts/ephemerides/planet-element-outputs';
 import { LOCAL_GROUP_OUTPUTS } from '../scripts/local-group/local-group-outputs';
 import { PROBE_OUTPUTS } from '../scripts/probes/probe-trajectory-outputs';
-import { ALLOCATE_OUTPUTS } from '../scripts/sid/allocate-outputs';
 import { DR_RECONCILE_OUTPUTS } from '../scripts/sid/dr-reconcile-outputs';
+import { REGISTRY_FILES } from '../scripts/sid/registry-outputs';
 import { DR2_NEIGHBOURHOOD, DR2_NEIGHBOURHOOD_REQUEST } from '../scripts/sid/dr2-neighbourhood-source';
 import { DR_RISK_SET_OUTPUTS } from '../scripts/sid/dr-risk-set-outputs';
 import { SID_STAMP_OUTPUTS } from '../scripts/sid/sibling-stamp-outputs';
@@ -31,7 +31,6 @@ const STEPS: Record<string, DeclaredOutputs> = {
   'build:local-group': LOCAL_GROUP_OUTPUTS,
   'build:lut': LUT_OUTPUTS,
   'sid:stamp': SID_STAMP_OUTPUTS,
-  'sid:allocate': ALLOCATE_OUTPUTS,
   'sid:risk-set': DR_RISK_SET_OUTPUTS,
   'sid:dr-reconcile': DR_RECONCILE_OUTPUTS,
   'fetch:probes': PROBE_OUTPUTS,
@@ -49,7 +48,7 @@ describe('step output declarations', () => {
     }
   });
 
-  it('give each path one producer, sid:stamp rewriting local-group.json in place excepted', () => {
+  it('give each path one producer, sid:stamp rewriting local-group.json in place and every allocating step appending to the SID registry excepted', () => {
     const producers = new Map<string, string[]>();
     for (const [step, outputs] of Object.entries(STEPS)) {
       for (const p of Object.values(outputs.files)) {
@@ -57,7 +56,10 @@ describe('step output declarations', () => {
       }
     }
     const shared = [...producers].filter(([, steps]) => steps.length > 1);
-    expect(shared).toEqual([['public/local-group.json', ['build:local-group', 'sid:stamp']]]);
+    expect(shared).toEqual([
+      ...Object.values(REGISTRY_FILES).map((p) => [relative(REPO_ROOT, p), ['build:catalog', 'sid:stamp']]),
+      ['public/local-group.json', ['build:local-group', 'sid:stamp']],
+    ]);
   });
 
   it('never cover the frozen DR2 dry-run pair, as a file or inside a family', () => {

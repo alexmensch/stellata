@@ -1,5 +1,6 @@
 // trace: a query to the origin keys it names, and every stage's rows for them in stage order. See README.md#trace.
 
+import { ALLOCATION_CODES, type AllocationIdentityRow } from '../../sid/allocation-lineage-pure';
 import { isValidDesignation } from '../../sid/sid-pure';
 import { foldNameKey } from '../naming/wgsn-normalise-pure';
 import type { IdentityRow } from './identity-pure';
@@ -28,6 +29,8 @@ export function parseTraceQuery(text: string): TraceQuery {
 export interface TraceLookups {
   /** The ledger's canonical key for a SID, or null for one it lacks. */
   canonicalKey(sid: number): string | null;
+  /** The SID a merged SID now resolves to, or null for one in service or retired with none. */
+  successor(sid: number): number | null;
   /** Every name and composed label a built record displays, to the records it reaches. */
   names(): ReadonlyMap<string, readonly number[]>;
   /** A built record's full designation set. */
@@ -54,19 +57,26 @@ export function matchName(names: ReadonlyMap<string, readonly number[]>, name: s
 
 const GAIA_DESIGNATION = /^gaia_dr3:([0-9]+)$/;
 
-/** The designations a query names, and the bare Gaia ids among them, which
- *  also find a row that only weighed or cited the source. */
+/** The designations a query names, the bare Gaia ids among them, which
+ *  also find a row that only weighed or cited the source, and for a SID
+ *  query the SID with every successor it was merged into. */
 export function queryTerms(
   q: TraceQuery, lookups: TraceLookups,
-): { designations: string[]; terms: string[] } {
+): { designations: string[]; terms: string[]; sids: number[] } {
   let designations: readonly string[];
+  const sids: number[] = [];
   switch (q.kind) {
     case 'designation': designations = [q.designation]; break;
     case 'gaia': designations = [`gaia_dr3:${q.sourceId}`]; break;
     case 'sid': {
-      const key = lookups.canonicalKey(q.sid);
-      if (key === null) throw new Error(`SID ${q.sid} is not in the ledger`);
-      designations = [key];
+      for (let sid: number | null = q.sid; sid !== null && !sids.includes(sid); sid = lookups.successor(sid)) {
+        sids.push(sid);
+      }
+      designations = sids.map((sid) => {
+        const key = lookups.canonicalKey(sid);
+        if (key === null) throw new Error(`SID ${sid} is not in the ledger`);
+        return key;
+      });
       break;
     }
     case 'name': {
@@ -87,6 +97,7 @@ export function queryTerms(
   return {
     designations: [...designations],
     terms: designations.flatMap((d) => GAIA_DESIGNATION.exec(d)?.[1] ?? []),
+    sids,
   };
 }
 
@@ -113,18 +124,34 @@ function names(row: LineageRow, terms: ReadonlySet<string>): boolean {
   return false;
 }
 
+const SETTLING = new Set((['merged', 'retired', 'parked'] as const).map((b) => ALLOCATION_CODES.code(b)));
+
+/** An allocation row names a SID it settled or merged into. */
+function settles(row: LineageRow, sids: ReadonlySet<string>): boolean {
+  if (!SETTLING.has(row.code)) return false;
+  const { sid, successor } = JSON.parse(row.params) as { sid?: string; successor?: string };
+  return (sid !== undefined && sids.has(sid)) || (successor !== undefined && sids.has(successor));
+}
+
 export function traceRecords(
-  designations: readonly string[],
-  terms: readonly string[],
+  query: { readonly designations: readonly string[]; readonly terms: readonly string[]; readonly sids: readonly number[] },
   identity: readonly IdentityRow[],
+  allocationIdentity: readonly AllocationIdentityRow[],
   stages: readonly StageRows[],
 ): TracedRecord[] {
-  const wanted = new Set(designations);
-  const termSet = new Set([...terms, ...designations]);
-  const named = new Set(identity.filter((r) => r.designations.some((d) => wanted.has(d))).map((r) => r.key));
+  const wanted = new Set(query.designations);
+  const termSet = new Set([...query.terms, ...query.designations]);
+  const sidSet = new Set(query.sids);
+  const sidText = new Set(query.sids.map(String));
+  const named = new Set([
+    ...identity.filter((r) => r.designations.some((d) => wanted.has(d))).map((r) => r.key),
+    ...allocationIdentity.filter((r) => sidSet.has(r.sid)).map((r) => r.key),
+  ]);
   const keys = new Set(named);
   for (const { rows } of stages) {
-    for (const row of rows) if (names(row, termSet) || names(row, named)) keys.add(row.key);
+    for (const row of rows) {
+      if (names(row, termSet) || names(row, named) || settles(row, sidText)) keys.add(row.key);
+    }
   }
   const byKey = new Map(identity.map((r) => [r.key, r]));
   return [...keys].sort(compareUtf8).map((key) => ({

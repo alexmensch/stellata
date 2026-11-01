@@ -102,7 +102,7 @@ An alias also clears [The collision guard](#the-collision-guard)'s rule, which t
 cannot apply — aliases are not display cells, so its tally never sees them.
 Those are withheld to `extra-dropped`; 0 fire today, measured and guarded.
 
-The **<!-- count:membership-manifest/sharedDesignations -->68<!-- /count -->** ambiguous designations `sid:allocate` drops are spine-side component
+The **<!-- count:membership-manifest/sharedDesignations -->68<!-- /count -->** ambiguous designations SID allocation drops are spine-side component
 pairs, unrelated to this list ([Ambiguous designations](../../../sid/README.md#ambiguous-designations-are-dropped-not-assigned)).
 No carried alias is among them, and none keys a ledger row, so
 the additions cannot fuse two same-as classes or move a canonical key.

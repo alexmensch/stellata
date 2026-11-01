@@ -14,6 +14,8 @@ import { PLACEMENT_LINEAGE } from './distance/placement-lineage-pure';
 import { LINEAGE_LAYOUT, stageFamilies, stageOutputFiles } from './lineage/lineage-io';
 import { SIMBAD_SOURCED_DISTANCES_FILE } from './distance/parallax/simbad-sourced-ledger-tsv';
 import { CATALOG_CHUNK_FILENAME } from './record/catalog-pure';
+import { ALLOCATION_LINEAGE } from '../sid/allocation-lineage-pure';
+import { REGISTRY_FILES } from '../sid/registry-outputs';
 
 export const CATALOG_CHUNK_DIR = dirname(DEFAULT_CATALOG_MANIFEST);
 export const OUT_BOUNDARIES = resolve(REPO_ROOT, 'public/constellation-boundaries.json');
@@ -29,11 +31,14 @@ export const CATALOG_OUTPUTS = declareOutputs(
     simbadSourcedDistances: resolve(REPO_ROOT, SIMBAD_SOURCED_DISTANCES_FILE),
     ...stageOutputFiles(LINEAGE_LAYOUT, PLACEMENT_LINEAGE),
     ...stageOutputFiles(LINEAGE_LAYOUT, PROMOTION_LINEAGE),
+    ...stageOutputFiles(LINEAGE_LAYOUT, ALLOCATION_LINEAGE),
+    ...REGISTRY_FILES,
   },
   [
     { dir: CATALOG_CHUNK_DIR, member: CATALOG_CHUNK_FILENAME },
     ...stageFamilies(LINEAGE_LAYOUT, PLACEMENT_LINEAGE),
     ...stageFamilies(LINEAGE_LAYOUT, PROMOTION_LINEAGE),
+    ...stageFamilies(LINEAGE_LAYOUT, ALLOCATION_LINEAGE),
   ],
 );
 

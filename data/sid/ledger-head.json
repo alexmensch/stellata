@@ -4,14 +4,9 @@
     "max_sid": 984015,
     "sha256": "509d429fcb100a14b9bec97bde995549f878adf0f3f0e191f3a76c57f6fccccd"
   },
-  "retirements": {
-    "rows": 3663,
+  "events": {
+    "rows": 3681,
     "max_sid": 983901,
-    "sha256": "5c60206910089839f20396cec41392ca1cd7bb9742da19a6569c0fed95140e62"
-  },
-  "reinstatements": {
-    "rows": 18,
-    "max_sid": 330229,
-    "sha256": "c223cbf27fb206b483482ab4b0bf5e1724a057d999a7e74b9858b3a2fd35e9f5"
+    "sha256": "040b6618c2395087cd0445a57ef80bf2cdd0c5cc697d506c8397f8b46824b959"
   }
 }
