@@ -98,7 +98,7 @@ describe('promotionLineage identity', () => {
       promoted({ kind: 'minted', idx: 1, synthetic: false, brightness: own, constellationSplit: false }),
       promoted({ kind: 'adopted', idx: 0, via: 'earlier-mint' }),
       promoted({ kind: 'not-applicable' }),
-    ], stars);
+    ], stars, new Set());
     expect(identity).toEqual([{
       key: 'multiples:22266-1645-AB/B', tyc: '', hip: '', hd: '', gl: '',
       gaia_source_id: '2595463996992115840',
@@ -111,12 +111,29 @@ describe('promotionLineage identity', () => {
     const { identity } = promotionLineage([
       { row: standalone, via: 'unpaired', outcome: { kind: 'unpaired' }, anchor: null, systemAnchor: null },
       promoted({ kind: 'dropped', reason: 'no-absmag' }),
-    ], stars);
+    ], stars, new Set());
     expect(identity).toEqual([
       {
         key: 'multiples:19082+3829-_C/C', tyc: '', hip: '42', hd: '', gl: '',
         gaia_source_id: '2099222754064121216', designations: ['hip:42', 'gaia_dr3:2099222754064121216'],
       },
+    ]);
+  });
+
+  it('keys a removed row on no designation membership or a mint of this stage already founds', () => {
+    const unpaired = (comp: string, cells: { hip?: number; gaiaSourceId?: string }): PromotedRow => ({
+      row: multiplesRow({ systemId: '21050+1243-_X', comp, ...cells }),
+      via: 'unpaired', outcome: { kind: 'unpaired' }, anchor: null, systemAnchor: null,
+    });
+    const { identity } = promotionLineage([
+      promoted({ kind: 'minted', idx: 1, synthetic: false, brightness: own, constellationSplit: false }),
+      unpaired('A', { hip: 104066 }),
+      unpaired('B', { gaiaSourceId: '2595463996992115840' }),
+      unpaired('C', { hip: 104066, gaiaSourceId: '77' }),
+    ], stars, new Set(['hip:104066']));
+    expect(identity.map((r) => [r.key, r.hip, r.gaia_source_id, r.designations])).toEqual([
+      ['multiples:22266-1645-AB/B', '', '2595463996992115840', ['synth:22266-1645-B', 'gaia_dr3:2595463996992115840']],
+      ['multiples:21050+1243-_X/C', '', '77', ['gaia_dr3:77']],
     ]);
   });
 });

@@ -257,9 +257,9 @@ contested or collision verdict and a disposition — since the candidates and
 refusals are rows of their own. `MEMBERSHIP_LINEAGE_BUDGET` pins 41 MB and
 15 s — the time ceiling sits well above the measurement because CI runners
 write slower than a workstation. Promotion, measured 2026-11-01: <!-- count:build-binaries/multiples_rows_emitted -->47,021<!-- /count --> rows, one
-per `multiples.tsv` row, plus 25,127 identity rows (each minted companion,
-and each retired or parked row carrying an id), 0.92 MB gzipped in 0.2 s with
-a diff; `PROMOTION_LINEAGE_BUDGET` pins 1.05 MB and 5 s. Placement, measured 2026-10-30: 3,872,657 rows (349 MB plain, 31.0 MB
+per `multiples.tsv` row, plus 20,359 identity rows (<!-- count:build-catalog/companionPromoted -->14,676<!-- /count --> minted companions,
+5,683 retired or parked rows), 0.81 MB gzipped in 0.2 s with a diff;
+`PROMOTION_LINEAGE_BUDGET` pins 0.93 MB and 5 s. Placement, measured 2026-10-30: 3,872,657 rows (349 MB plain, 31.0 MB
 gzipped) in 3.2 s without a diff and 8.1 s with one against a full
 baseline; `PLACEMENT_LINEAGE_BUDGET` pins 34 MB and 30 s. A file that size outruns
 V8's longest string, so stage files and diffs are written and read as UTF-8
@@ -432,5 +432,8 @@ carries its own from the manifest's `origin_key` column
 A minted companion is founded on its row, so promotion writes its identity
 row (`promotion.identity.tsv.gz`, named by `StageLineageSpec.identity`). So
 does every row whose code retires or parks, keyed on the `hip` and
-`gaia_source_id` cells it arrived with, so an orphaned SID keyed on one of
-them joins to that row's cause. Every other record's is membership's.
+`gaia_source_id` cells it arrived with less any designation a membership
+manifest record or one of promotion's own mints already carries, so an
+orphaned SID keyed on one of them joins to that row's cause and never to a
+row that merely cites another stage's star. Every other record's is
+membership's.

@@ -129,7 +129,7 @@ import { GCVS, GCVS_CROSSID } from './parse/gcvs/gcvs-source';
 import { HIP_CCDM } from './multiplicity/hip-ccdm-source';
 import { NAME_OVERRIDES } from './naming/name-overrides-source';
 import { SIMBAD_SAMPLE } from './validate/simbad-sample-source';
-import { MEMBERSHIP_MANIFEST } from './membership/membership-manifest-tsv';
+import { MEMBERSHIP_MANIFEST, manifestDesignations } from './membership/membership-manifest-tsv';
 import { artifactRows } from '../util/sources/source';
 import { REPO_ROOT as ROOT } from '../util/paths';
 import {
@@ -168,7 +168,14 @@ const EXPECTED_OUTLIERS = resolve(
 // inlined into main, they outlive the walk and the build runs out of heap.
 async function walkManifest(inputs: ReadStarsOptions, inputHashes: FileHashes) {
   const lines: LineageLine[] = [];
-  const { stars, stats } = readStars(artifactRows(MEMBERSHIP_MANIFEST), inputs, (placement) => {
+  const manifestFounded = new Set<string>();
+  const manifest = function* () {
+    for (const r of artifactRows(MEMBERSHIP_MANIFEST)) {
+      for (const d of manifestDesignations(r)) manifestFounded.add(d);
+      yield r;
+    }
+  };
+  const { stars, stats } = readStars(manifest(), inputs, (placement) => {
     for (const line of placementLineageLines(placement)) lines.push(line);
   });
   const parkedLedger = parkedLedgerTsv(lines);
@@ -183,7 +190,7 @@ async function walkManifest(inputs: ReadStarsOptions, inputHashes: FileHashes) {
     budget: PLACEMENT_LINEAGE_BUDGET,
     argv: process.argv.slice(2),
   });
-  return { stars, stats, parkedLedger, placementEmission };
+  return { stars, stats, parkedLedger, placementEmission, manifestFounded };
 }
 
 function parkedLedgerTsv(placementLines: readonly LineageLine[]): string {
@@ -442,7 +449,7 @@ async function main() {
 
   console.log(`Reading ${MEMBERSHIP_MANIFEST.file}...`);
   const t0 = Date.now();
-  const { stars, stats, parkedLedger, placementEmission } = await walkManifest(inputs, inputHashesAtStart);
+  const { stars, stats, parkedLedger, placementEmission, manifestFounded } = await walkManifest(inputs, inputHashesAtStart);
   console.log(`  parsed ${stats.total} rows in ${Date.now() - t0}ms`);
   console.log(`  kept ${stars.length} stars; parked ${stats.parked.length}`);
   if (stats.bjEligible > 0) {
@@ -702,7 +709,7 @@ async function main() {
     gaiaAstrometry: directions.gaiaAstrometry, synthGaiaBridges,
   });
   for (const ns of newStars) stars.push(ns);
-  const { lineage: promotionLineageRows, identity: promotionIdentity } = promotionLineage(promotedRows, stars);
+  const { lineage: promotionLineageRows, identity: promotionIdentity } = promotionLineage(promotedRows, stars, manifestFounded);
   console.log(
     `  scanned ${ps.pairRowsScanned} pair rows; promoted ${ps.promoted} ` +
       `(${ps.promotedSynthetic} via synthetic ID); ` +

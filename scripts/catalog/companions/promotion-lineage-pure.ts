@@ -18,7 +18,7 @@ export const PROMOTION_LINEAGE: StageLineageSpec<'promotion' | 'promotion.identi
   identity: 'promotion.identity',
 };
 
-export const PROMOTION_LINEAGE_BUDGET = { gzipBytes: 1_050_000, writeMs: 5_000 };
+export const PROMOTION_LINEAGE_BUDGET = { gzipBytes: 930_000, writeMs: 5_000 };
 
 const live = (description: string, effect: CodeDeclaration['effect'] = 'none'): CodeDeclaration => (
   { description, effect, status: LIVE }
@@ -135,29 +135,31 @@ export interface PromotionLineage {
   readonly identity: IdentityRow[];
 }
 
-/** Each row's lineage row; and one identity row per record promotion mints, and one per row it removes (a retire or park outcome) that arrived with a HIP or Gaia cell, keyed on those cells; every other record's is membership's. */
-export function promotionLineage(rows: readonly PromotedRow[], stars: readonly Star[]): PromotionLineage {
+/** Each row's lineage row; and one identity row per record promotion mints, and one per row it removes (a retire or park outcome) keyed on the HIP and Gaia cells it arrived with, less any designation `founded` (membership's records) or a mint of this stage already carries. */
+export function promotionLineage(
+  rows: readonly PromotedRow[], stars: readonly Star[], founded: ReadonlySet<string>,
+): PromotionLineage {
   const recordKey = (idx: number): string => stars[idx].originKey;
-  const lineage: LineageRow[] = [];
-  const identity: IdentityRow[] = [];
-  for (const r of rows) {
-    const line = promotionLineageRow(r, recordKey);
-    lineage.push(line);
-    const o = r.outcome;
-    if (o.kind === 'minted') {
-      const s = stars[o.idx];
-      identity.push(identityRow(s.originKey, s.hip, s.gaiaSourceId, starDesignations({ ...s, isSol: false })));
-      continue;
-    }
-    const effect = PROMOTION_EFFECTS.get(line.code);
-    if (effect !== 'retire' && effect !== 'park') continue;
-    const { hip, gaiaSourceId } = r.row;
-    if (hip === null && gaiaSourceId === null) continue;
-    identity.push(identityRow(promotionOriginKey(r.row), hip, gaiaSourceId, starDesignations({
-      isSol: false, hip, hd: null, hdAlt: [], hr: null, hrAlt: [], gl: null, syntheticId: null, gaiaSourceId,
-    })));
-  }
-  return { lineage, identity };
+  const lineage = rows.map((r) => promotionLineageRow(r, recordKey));
+  const minted = rows.flatMap(({ outcome: o }) => (o.kind === 'minted' ? [stars[o.idx]] : []))
+    .map((s) => identityRow(s.originKey, s.hip, s.gaiaSourceId, starDesignations({ ...s, isSol: false })));
+  const claimed = new Set([...founded, ...minted.flatMap((m) => m.designations)]);
+  const removed = rows.flatMap((r, i): IdentityRow[] => {
+    const effect = PROMOTION_EFFECTS.get(lineage[i].code);
+    if (effect !== 'retire' && effect !== 'park') return [];
+    const designations = starDesignations({
+      isSol: false, hip: r.row.hip, hd: null, hdAlt: [], hr: null, hrAlt: [], gl: null, syntheticId: null,
+      gaiaSourceId: r.row.gaiaSourceId,
+    }).filter((d) => !claimed.has(d));
+    if (designations.length === 0) return [];
+    const kept = <T>(value: T | null, ns: string): T | null => (
+      value !== null && designations.includes(`${ns}:${value}`) ? value : null
+    );
+    return [identityRow(
+      promotionOriginKey(r.row), kept(r.row.hip, 'hip'), kept(r.row.gaiaSourceId, 'gaia_dr3'), designations,
+    )];
+  });
+  return { lineage, identity: [...minted, ...removed] };
 }
 
 function identityRow(
