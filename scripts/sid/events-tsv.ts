@@ -2,17 +2,26 @@
 
 import { defineArtifact } from '../util/tsv/artifact-pure';
 import { decodeEventRow, encodeEventRow, EVENT_COLUMNS, type EventRow } from './events-pure';
+import { registryPaths } from './registry-outputs';
+import { REGISTRY_PARTITIONS, registryHint } from './registry-partitions-pure';
 import { registryFile, type RegistryFile } from './sid-pure';
 
-export const EVENTS = defineArtifact({
-  file: 'data/sid/events.tsv',
-  columns: EVENT_COLUMNS,
-  hint: 'It grows only through SID allocation in `pnpm run build:catalog`.',
-  order: 'as-given',
-  decode: decodeEventRow,
-  encode: encodeEventRow,
-});
+function eventsArtifact(partition: string) {
+  return defineArtifact({
+    file: registryPaths(partition).events,
+    columns: EVENT_COLUMNS,
+    hint: registryHint(partition),
+    order: 'as-given',
+    decode: decodeEventRow,
+    encode: encodeEventRow,
+  });
+}
 
-export function eventsFile(text: string): RegistryFile<EventRow> {
-  return registryFile(EVENTS.table, EVENTS.decode, text);
+export const EVENTS: Readonly<Record<string, ReturnType<typeof eventsArtifact>>> = Object.fromEntries(
+  REGISTRY_PARTITIONS.map((p) => [p, eventsArtifact(p)]),
+);
+
+export function eventsFile(partition: string, text: string): RegistryFile<EventRow> {
+  const { table, decode } = EVENTS[partition];
+  return registryFile(table, decode, text);
 }

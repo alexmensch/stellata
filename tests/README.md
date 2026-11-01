@@ -336,8 +336,8 @@ a scanned extension (or a scanned name, for `.gitignore`), symlinks
 excluded (`CLAUDE.md` would double `AGENTS.md`). Files Git LFS stores
 are out — the pulled survey tables, about 1 GB — so a hand-written
 comment in one (`data/classic-ids/cross_index_corrections.tsv`) is
-unchecked. `data/sid/events.tsv` is out because the sid ledger
-guard freezes its existing rows. Tracking puts `.claude/skills` in; `.gitignore` keeps
+unchecked. The sid registry's ledgers and events files are out because
+the sid ledger guard freezes their existing rows. Tracking puts `.claude/skills` in; `.gitignore` keeps
 `worktrees/` out, so no folder list exists to drift. Untracked files
 count, so a new doc is checked before its first `git add` — and a local
 draft with a broken pointer fails the suite here while CI never sees

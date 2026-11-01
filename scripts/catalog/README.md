@@ -111,8 +111,8 @@ scripts/catalog/
                                   writes, as its emitArtifacts declaration
                                   (../util/README.md): the public/ sidecars,
                                   the row-index map, the two committed
-                                  ledgers, the SID registry files
-                                  (REGISTRY_FILES), placement's,
+                                  ledgers, the catalogue's SID registry
+                                  partition (registryFiles), placement's,
                                   promotion's and allocation's lineage
                                   files, and
                                   the transport chunks and the lineage
@@ -183,15 +183,16 @@ display names (which key on SIDs), `catalogSidObjects`
 (`scripts/sid/catalog-objects.ts`) builds every record's designation set
 with `starDesignations` and appends the sol and shell lists; `allocate`
 (`scripts/sid/allocate-pure.ts`) resolves each against the committed
-ledger, mints what is new under the code of the lineage decision that
+ledger, mints what is new — past the highest SID in any registry partition,
+the clouds' and Local Group's included — under the code of the lineage decision that
 admitted it, and settles every SID no record keeps by its upstream
 decision ([SID events](../sid/README.md#sid-events)). Membership's lineage
 comes from the last `build:membership` (`build/lineage/`, declared in
 `membership/membership-lineage-source.ts`, so this build keys on it);
 placement's and promotion's from this run.
 
-New ledger rows and events land with the rest of the outputs
-(`registryTexts`), and allocation's lineage beside the other stages'. A
+New ledger rows and events land in the catalogue's partition with the rest
+of the outputs (`registryTexts`), and allocation's lineage beside the other stages'. A
 failed allocation — an orphan no decision explains, a new record no stage
 admits — throws before anything is staged, so nothing lands.
 `scripts/sid/README.md` carries the review side.

@@ -45,8 +45,9 @@ cross-script policy and pointers.
   version bump in a pushed range (a merged stack is one push carrying
   several). Not part of `pnpm run build`.
 - `sid/` — SID registry tools: the allocation `build:catalog` runs over its
-  records (the writer of `data/sid/ledger.tsv` and `events.tsv`, with the
-  clouds and Local Group stamps), DR-churn risk-set export, DR
+  records (the writer of the catalogue's registry partition,
+  `data/sid/ledger.tsv` and `events.tsv`; the clouds and Local Group stamps
+  write their own), DR-churn risk-set export, DR
   reconciliation classifier, and `sid:stamp` (allocates and stamps sids onto
   clouds.json / local-group.json). See `docs/sid.md`.
 - `perf/` — the human-armed headless perf runner (`pnpm run perf`):

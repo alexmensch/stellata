@@ -176,7 +176,7 @@ sid	canonical_key	kind	first_seen
 ```
 
 - `sid` — uint32, dense, strictly ascending, never reused.
-- `canonical_key` — [§ 4.2](#42-canonical-key--stability-first); unique across the file.
+- `canonical_key` — [§ 4.2](#42-canonical-key--stability-first); unique across the registry.
 - `kind` — `star | cloud | galaxy | planet` (extensible enum; the
   runtime does NOT read this — kind at runtime comes from which
   artifact carries the sid, [§ 8](#8-runtime-resolver-b4)).
@@ -252,6 +252,14 @@ state: `{ "rows": N, "max_sid": M, "sha256": "…" }` for the ledger
 and the same triple for events. It is
 rewritten mechanically by every allocation.
 
+The registry is **partitioned by allocating step**: `ledger.tsv`,
+`events.tsv` and `ledger-head.json` hold the catalogue's namespaces,
+and each sibling namespace (`cloud:`, `lg:`) has its own `ledger-<ns>.tsv`,
+`events-<ns>.tsv` and `ledger-head-<ns>.json`, written by its stamp alone.
+"Dense" and "unique" above hold over the union of the ledgers, which is
+the one sequence every allocation mints past
+([Registry partitions](/scripts/sid/README.md#registry-partitions)).
+
 ### 4.4 Allocation
 
 Allocation (`allocate`, `scripts/sid/allocate-pure.ts`) is the **only**
@@ -266,7 +274,8 @@ its own namespaces:
 2. Resolve every equivalence class against the ledger: a class
    matches if **any** of its designations is, or same-as-reaches, an
    existing canonical key.
-3. Unmatched classes mint new rows: next sid, canonical key by [§ 4.2](#42-canonical-key--stability-first),
+3. Unmatched classes mint new rows: next sid past the highest in any
+   partition, canonical key by [§ 4.2](#42-canonical-key--stability-first),
    the build's date, and a `mint` event coded by the lineage decision
    that admitted the record. Within one batch, mint order is
    deterministic: catalog record order (bright-first — commonly shared
@@ -275,8 +284,8 @@ its own namespaces:
 4. Settle every SID in the caller's namespaces that no object keeps any
    more, by the upstream lineage decision on its record
    ([SID events](/scripts/sid/README.md#sid-events)).
-5. Land the appended ledger, events and `ledger-head.json` with the
-   step's other outputs.
+5. Land the caller's partition — its appended ledger, events and head —
+   with the step's other outputs.
 
 A failed allocation — an orphan no decision explains, a new object no
 stage admits — fails the step before anything lands. Builds stay
@@ -297,17 +306,24 @@ it, never re-minted.
 `tests/sid-ledger-guard.test.ts` (B1), modelled on the build-counts
 snapshot gate but deliberately stricter:
 
-1. **Structural** (always runs): sids unique, strictly ascending,
+1. **Structural** (always runs): over the union of the partitions'
+   ledgers, sids unique, strictly ascending,
    dense from 1 through max; canonical keys unique and
    grammar-valid ([§ 3](#3-designation-namespaces)); kind in enum; sid 0 absent;
-   `ledger-head.json` exactly matches a recomputation over the
+   each ledger ascending and keyed only in its own partition's
+   namespaces, each events file naming only its own sids; every
+   partition's head exactly matches a recomputation over its
    working files.
 2. **Append-only** (runs when a git base is resolvable, i.e. CI's
    `build-catalog` and any local checkout with `origin/main`; skips
    otherwise): read the *base* head file
    via `git show <merge-base>:data/sid/ledger-head.json` — it is
-   regular git, so no LFS smudge is needed — then assert the working
-   ledger's first `base.rows` lines hash to `base.sha256`
+   regular git, so no LFS smudge is needed (likewise each sibling
+   partition's head) — then assert each partition's working ledger's
+   first `base.rows` lines hash to `base.sha256` (a partition with no
+   base head freezes none; a base with no sibling head at all
+   predates the partitions, and its catalogue head is checked against
+   the sid-ordered union instead)
    (prefix-frozen ⇒ no row was edited, deleted, or reordered) and
    every appended ledger row has `sid > base.max_sid`. Events get
    the same prefix-frozen check but no sid-monotonicity — a new

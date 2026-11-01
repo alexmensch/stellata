@@ -4,8 +4,8 @@ import { existsSync, readFileSync } from 'node:fs';
 
 import { emitArtifacts, runStep } from '../util/emit-artifacts';
 import { allocate, type Upstream } from './allocate-pure';
-import type { EventRow } from './events-pure';
 import { allocationRun, loadRegistry, registryTexts } from './registry-io';
+import { inPartition } from './registry-partitions-pure';
 import type { LedgerRow } from './sid-pure';
 import {
   SIBLING_ARTIFACTS,
@@ -30,8 +30,8 @@ function main(): void {
 
   const registry = loadRegistry();
   const minted: LedgerRow[] = [];
-  const events: EventRow[] = [];
   const stamped: Record<string, string> = {};
+  const registryWrites: Record<string, string> = {};
   for (const name of names) {
     const spec = SIBLING_ARTIFACTS[name];
     const path = SID_STAMP_OUTPUTS.files[name];
@@ -44,8 +44,8 @@ function main(): void {
       objects: siblingArtifactObjects(spec, items),
       storedEdges: registry.storedEdges,
       ledger: [...registry.ledger, ...minted],
-      events: [...registry.events, ...events],
-      scope: (ns) => ns === spec.ns,
+      events: registry.events[spec.ns],
+      scope: inPartition(spec.ns),
       ...allocationRun(),
     }, NO_LINEAGE);
     if (allocation.kind === 'failed') {
@@ -55,7 +55,7 @@ function main(): void {
       );
     }
     minted.push(...allocation.minted);
-    events.push(...allocation.events);
+    Object.assign(registryWrites, registryTexts(spec.ns, allocation.minted, allocation.events));
     items.forEach((o, i) => { (o as { sid?: number }).sid = allocation.outcomes[i].sid; });
     console.log(`sid:stamp: ${items.length} ${spec.ns} SIDs stamped into ${spec.file} (${allocation.minted.length} minted)`);
     stamped[name] = `${JSON.stringify(payload)}\n`;
@@ -63,8 +63,8 @@ function main(): void {
 
   emitArtifacts({
     outputs: SID_STAMP_OUTPUTS,
-    only: [...names, 'sidLedger', 'sidEvents', 'sidHead'],
-    files: { ...stamped, ...registryTexts(minted, events) },
+    only: [...names, ...Object.keys(registryWrites)],
+    files: { ...stamped, ...registryWrites },
   });
 }
 

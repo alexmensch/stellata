@@ -21,7 +21,10 @@ import {
 } from './sid-pure';
 import { EVENT_COLUMNS } from './events-pure';
 import { eventsFile } from './events-tsv';
-import { LEDGER, ledgerFile } from './ledger-tsv';
+import { LEDGERS, ledgerFile } from './ledger-tsv';
+import { CATALOG_PARTITION } from './registry-partitions-pure';
+
+const LEDGER = LEDGERS[CATALOG_PARTITION];
 
 describe('designation grammar', () => {
   it('accepts namespace:key with no whitespace', () => {
@@ -126,16 +129,16 @@ describe('TSV codecs', () => {
   it('every registry file refuses CR line endings, a missing final newline, a blank line and a foreign header', () => {
     const line = '5\t2026-07-10\tretire\tc\t\t\t7.1.6';
     const ok = `${EVENTS_HEADER}\n${line}\n`;
-    expect(eventsFile(ok).rows).toHaveLength(1);
-    expect(() => eventsFile(ok.replace(/\n/g, '\r\n'))).toThrow(/CR line ending/);
-    expect(() => eventsFile(ok.slice(0, -1))).toThrow(/missing final newline/);
-    expect(() => eventsFile(`${EVENTS_HEADER}\n\n${line}\n`)).toThrow(/:2: blank line/);
+    expect(eventsFile(CATALOG_PARTITION, ok).rows).toHaveLength(1);
+    expect(() => eventsFile(CATALOG_PARTITION, ok.replace(/\n/g, '\r\n'))).toThrow(/CR line ending/);
+    expect(() => eventsFile(CATALOG_PARTITION, ok.slice(0, -1))).toThrow(/missing final newline/);
+    expect(() => eventsFile(CATALOG_PARTITION, `${EVENTS_HEADER}\n\n${line}\n`)).toThrow(/:2: blank line/);
     expect(() => LEDGER.parse(`${LEDGER_HEADER}\n1\thip:1\tstar\t2026-07-10`)).toThrow(/missing final newline/);
     expect(() => parseSolObjectsTsv('kind\tkey\n', T)).toThrow(/header mismatch/);
   });
 
   it('a registry file carries each data row as written', () => {
-    expect(ledgerFile(`${LEDGER_HEADER}\n1\thip:1\tstar\t2026-07-10\n`).lines)
+    expect(ledgerFile(CATALOG_PARTITION, `${LEDGER_HEADER}\n1\thip:1\tstar\t2026-07-10\n`).lines)
       .toEqual(['1\thip:1\tstar\t2026-07-10']);
   });
 });
@@ -193,7 +196,7 @@ describe('head snapshot + append-only', () => {
     expect(computeLedgerHead(ledgerText, noEvents).ledger).toEqual({
       rows: 2,
       max_sid: 2,
-      sha256: sha256OfDataLines(ledgerFile(ledgerText).lines),
+      sha256: sha256OfDataLines(ledgerFile(CATALOG_PARTITION, ledgerText).lines),
     });
   });
 

@@ -52,14 +52,16 @@ function removes(e: EventRow): boolean {
 const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const VERSION_RE = /^\d+\.\d+\.\d+$/;
 
-/** `maxSid` is the ledger's; `isCode` answers whether the generated reason-code list holds a code. */
-export function validateEvents(rows: readonly EventRow[], maxSid: number, isCode: (code: string) => boolean): string[] {
+/** `inLedger` answers for the ledger the events belong to; `isCode` whether the generated reason-code list holds a code. */
+export function validateEvents(
+  rows: readonly EventRow[], inLedger: (sid: number) => boolean, isCode: (code: string) => boolean,
+): string[] {
   const errors: string[] = [];
   const out = new Map<number, number>();
   const mints = new Set<number>();
   for (const e of rows) {
     const at = `${e.event} of sid ${e.sid}`;
-    if (e.sid < 1 || e.sid > maxSid) errors.push(`${at}: sid not in ledger`);
+    if (!inLedger(e.sid)) errors.push(`${at}: sid not in ledger`);
     if (!ISO_DATE_RE.test(e.date)) errors.push(`${at}: bad date "${e.date}"`);
     if (!VERSION_RE.test(e.buildVersion)) errors.push(`${at}: bad build version "${e.buildVersion}"`);
     if (!isCode(e.code)) errors.push(`${at}: code "${e.code}" is not in the reason-code list`);
@@ -67,7 +69,7 @@ export function validateEvents(rows: readonly EventRow[], maxSid: number, isCode
     if (e.event === 'merge') {
       if (e.successor === null) errors.push(`${at}: a merge names its successor`);
       else if (e.successor === e.sid) errors.push(`${at}: successor is itself`);
-      else if (e.successor < 1 || e.successor > maxSid) errors.push(`${at}: successor ${e.successor} not in ledger`);
+      else if (!inLedger(e.successor)) errors.push(`${at}: successor ${e.successor} not in ledger`);
     } else if (e.successor !== null) {
       errors.push(`${at}: only a merge names a successor`);
     }

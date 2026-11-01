@@ -157,7 +157,8 @@ import {
   ALLOCATION_CODES, ALLOCATION_LINEAGE, ALLOCATION_LINEAGE_BUDGET,
   allocationIdentityRows, allocationIdentityText, allocationLineageRows,
 } from '../sid/allocation-lineage-pure';
-import { catalogSidObjects, inCatalogScope } from '../sid/catalog-objects';
+import { catalogSidObjects } from '../sid/catalog-objects';
+import { CATALOG_PARTITION, inPartition } from '../sid/registry-partitions-pure';
 import { catalogUpstream } from '../sid/catalog-upstream';
 import { synthChurnReport } from '../sid/synth-churn-pure';
 import { allocationRun, loadRegistry, registryTexts } from '../sid/registry-io';
@@ -945,8 +946,8 @@ async function main() {
     objects: sidObjects,
     storedEdges: registry.storedEdges,
     ledger: registry.ledger,
-    events: registry.events,
-    scope: inCatalogScope,
+    events: registry.events[CATALOG_PARTITION],
+    scope: inPartition(CATALOG_PARTITION),
     ...allocationRun(),
   }, catalogUpstream({ placementRemovals, promotion: promotionLines, promotionIdentity }));
   if (allocation.kind === 'failed') {
@@ -1155,7 +1156,7 @@ async function main() {
     return `${i} ${n} records to V ${sortedKey[n - 1]?.toFixed(2) ?? '—'}`;
   });
   console.log(`  transport chunks — ${chunkRows.join(' · ')}`);
-  const sidSuccessors = sidSuccessorPairs([...registry.events, ...allocation.events]);
+  const sidSuccessors = sidSuccessorPairs([...Object.values(registry.events).flat(), ...allocation.events]);
   const manifest: CatalogManifest = {
     chunkBytes,
     totalBytes: totalLength,
@@ -1307,7 +1308,7 @@ async function main() {
     ...placementEmission.files,
     ...lineage.files,
     ...allocationLineage.files,
-    ...registryTexts(allocation.minted, allocation.events),
+    ...registryTexts(CATALOG_PARTITION, allocation.minted, allocation.events),
   };
   const members = new Map([
     ...chunks, ...placementEmission.members, ...lineage.members, ...allocationLineage.members,

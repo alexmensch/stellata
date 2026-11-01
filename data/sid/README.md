@@ -9,16 +9,22 @@ allocation, CI guard, Gaia DR reconciliation, v4 wire — in
 
 Unlike every sibling `data/` folder, this is **not** frozen external
 data: the ledger is Stellata's own identity contract. It grows by
-append only (SID allocation in `pnpm run build:catalog` and the clouds and
-Local Group stamps, its only writers) and its frozen
+append only and its frozen
 prefix is CI-guarded — see [§ 4.5](/docs/sid.md#45-ci-guard) for what the guard
 enforces and why there is no `UPDATE_*` escape hatch.
 
 ## Files
 
+The ledger, events and head come in one set per allocating step
+([Registry partitions](../../scripts/sid/README.md#registry-partitions)):
+the unsuffixed set is `pnpm run build:catalog`'s (every namespace but
+`cloud:` and `lg:`), and `-cloud` / `-lg` are the clouds and Local Group
+stamps'. SIDs are one dense sequence across all three.
+
 ```
 ledger.tsv              sid → canonical_key → kind → first_seen.
-                        Append-only, sorted by sid, LFS.
+                        Append-only, sorted by sid, LFS. The -cloud /
+                        -lg ledgers are small and regular git.
 events.tsv              sid → date → event (mint | retire | reinstate |
                         merge) → code → params → successor →
                         build_version. Append-only; written by

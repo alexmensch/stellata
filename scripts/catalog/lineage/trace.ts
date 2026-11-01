@@ -5,7 +5,7 @@ import { gunzipSync } from 'node:zlib';
 
 import { runStep } from '../../util/emit-artifacts';
 import { readArtifact } from '../../util/sources/source';
-import { LEDGER } from '../../sid/ledger-tsv';
+import { LEDGERS } from '../../sid/ledger-tsv';
 import { EVENTS } from '../../sid/events-tsv';
 import { retiredSids } from '../../sid/events-pure';
 import { allocationIdentity } from '../../sid/allocation-lineage-pure';
@@ -26,8 +26,8 @@ function lookups(catalog: SearchableCatalog | null): TraceLookups {
   let keys: Map<number, string> | null = null;
   let retired: Map<number, { successor: number | null }> | null = null;
   return {
-    canonicalKey: (sid) => (keys ??= new Map(readArtifact(LEDGER).map((r) => [r.sid, r.canonicalKey]))).get(sid) ?? null,
-    successor: (sid) => (retired ??= retiredSids(readArtifact(EVENTS))).get(sid)?.successor ?? null,
+    canonicalKey: (sid) => (keys ??= new Map(Object.values(LEDGERS).flatMap((a) => readArtifact(a)).map((r) => [r.sid, r.canonicalKey]))).get(sid) ?? null,
+    successor: (sid) => (retired ??= retiredSids(Object.values(EVENTS).flatMap((a) => readArtifact(a)))).get(sid)?.successor ?? null,
     names: () => nameTable(need()),
     designations: (i) => {
       const named = need();
