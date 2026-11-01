@@ -42,7 +42,9 @@ allocate-pure.ts (+ test) allocate: every object resolved, minted or
                           settled by the upstream decision that removed
                           it (/docs/sid.md#44-allocation). Asks the
                           lineage through Upstream's two batched lookups,
-                          so an unchanged tree asks nothing. A park
+                          for orphans and merge-losing class-mates only
+                          (every build asks about the parked SIDs) and
+                          for new or reappearing objects. A park
                           outranks a retire; an orphan no decision
                           explains, a merge mixed with another removal
                           and a new object no stage admits each fail

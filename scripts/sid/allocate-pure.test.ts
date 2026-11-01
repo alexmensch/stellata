@@ -83,7 +83,7 @@ describe('allocate: resolution and minting', () => {
     ]);
   });
 
-  it('an unchanged tree allocates with zero events and asks the lineage nothing', () => {
+  it('an unchanged tree with no orphan allocates with zero events and asks the lineage nothing', () => {
     const first = allocated(run({ objects, scope: ALL }, upstream({}, admissions)));
     const up = upstream();
     const second = allocated(run({ objects, scope: ALL, ledger: [...first.minted] }, up));
@@ -169,12 +169,14 @@ describe('allocate: SIDs that leave the build', () => {
     expect(up.asked).toEqual([['gaia_dr3:2']]);
   });
 
-  it('a park writes no event: the SID stays live, absent from this build', () => {
-    const a = allocated(run({ objects: live, ledger }, upstream({
+  it('a park writes no event: the SID stays live, absent from this build, and is asked about on every run', () => {
+    const up = upstream({
       'gaia_dr3:2': { decisions: [decision('spine:7', 'placement.park.no-position', 'park')], seenBy: ['membership'] },
-    })));
+    });
+    const a = allocated(run({ objects: live, ledger }, up));
     expect(a.events).toEqual([]);
     expect(a.removals.map((r) => r.kind)).toEqual(['parked']);
+    expect(up.asked).toEqual([['gaia_dr3:2']]);
   });
 
   it('a park beats a retire on the same SID', () => {
