@@ -109,14 +109,16 @@ per-table schema validation and row bounds — source detail in
 **No refresh script reads `data/athyg/`** — neither AT-HYG's own CSV
 (`athyg_33_classic_ids.csv`) nor the inherited spine.
 Every catalog-scoped request set
-traces to `data/membership/membership-manifest.tsv` — the membership term
-([§ 3.1](/docs/catalog-driver.md#31-retiring-the-spine--the-membership-rule-measured-against-the-primaries)) — by one of two routes: directly, through
+traces to the membership term
+([§ 3.1](/docs/catalog-driver.md#31-retiring-the-spine--the-membership-rule-measured-against-the-primaries)) by one of two routes: directly off
+`data/membership/membership-manifest.tsv`, through
 `refresh_lib.read_membership_source_ids` / `iter_membership_rows` (the
-SIMBAD pulls), or through the request file `export-astrometry-request.ts`
-builds from the candidates the manifest's derivation weighs plus the review
-dispositions' kept ids (astrometry-catalog, GSPC,
+SIMBAD pulls), or off the committed inputs `build:membership` derives the
+manifest from, through the request file `export-astrometry-request.ts`
+builds (astrometry-catalog, GSPC,
 [Bailer-Jones 2021](/data/papers/index.md#bailerjones2021), Apsis —
-see `read_source_id_request` below).
+see `read_source_id_request` below), whose coverage of the manifest's
+bindings the membership gate test holds.
 `refresh_lib.MEMBERSHIP_MANIFEST` is the one statement of where that table
 lives, and `refresh_lib.TYC2_HD_CROSS_INDEX` the same for IV/25; a script
 naming either path itself has drifted from it. The two pulls scoped to Tycho
