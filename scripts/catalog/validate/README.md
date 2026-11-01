@@ -152,7 +152,7 @@ compares as the companion's **sid**, and `nameOffset` as the resolved **name**.
 A sid on two records is one object drawn twice — skipped by the field
 comparison, since which of the two it would land on is arbitrary, and a
 failure when the current build carries it. `NO_SID` records are
-counted, never keyed, so the gate is meaningful against a pre-mint build.
+counted, never keyed, so the gate is meaningful against an old baseline.
 
 ## Adding to the known-stars corpus
 
