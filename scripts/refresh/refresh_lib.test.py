@@ -632,6 +632,23 @@ class TapClientTests(unittest.TestCase):
         # esa is retried max_attempts (2) times before fallback
         self.assertEqual(calls, ["esa", "esa", "cds"])
 
+    def test_answering_backend_is_tried_first_next_time(self) -> None:
+        calls: list[str] = []
+        def esa(_q: str) -> None:
+            calls.append("esa")
+            raise rl.TransientError("503")
+        def cds(_q: str) -> str:
+            calls.append("cds")
+            return "cds-result"
+        client = rl.TapClient(
+            [rl.TapBackend("esa", esa), rl.TapBackend("cds", cds)],
+            retry_kwargs={**self._silent_retry(), "max_attempts": 2},
+        )
+        client.run("SELECT 1")
+        client.run("SELECT 2")
+        self.assertEqual(calls, ["esa", "esa", "cds", "cds"])
+        self.assertEqual([b.name for b in client.backends], ["cds", "esa"])
+
     def test_raises_when_all_backends_transient(self) -> None:
         def esa(_q: str) -> None:
             raise rl.TransientError("esa down")
@@ -664,17 +681,31 @@ class TapClientTests(unittest.TestCase):
             rl.TapClient([])
 
     def test_public_backend_factories(self) -> None:
-        # Single-backend scripts (e.g. refresh-bailer-jones.py for VizieR-only
-        # tables, refresh-simbad-sample.py for SIMBAD's divergent dialect)
-        # pass `backends=[rl.<x>_backend()]` to TapClient. The factories must
-        # return valid TapBackend instances without importing pyvo at module
-        # load time.
+        # The factories must return valid TapBackend instances without
+        # importing pyvo at module load time.
         cds = rl.cds_backend()
-        simbad = rl.simbad_backend()
+        simbad = rl.simbad_backend("SIMBAD-x", base_url="https://example.invalid/tap")
         self.assertIsInstance(cds, rl.TapBackend)
         self.assertIsInstance(simbad, rl.TapBackend)
         self.assertEqual(cds.name, "CDS")
-        self.assertEqual(simbad.name, "SIMBAD")
+        self.assertEqual(simbad.name, "SIMBAD-x")
+
+    def test_simbad_client_composes_cds_primary_then_harvard_fallback(self) -> None:
+        self.assertEqual(
+            [b.name for b in rl.simbad_client().backends],
+            ["SIMBAD-CDS", "SIMBAD-Harvard"],
+        )
+
+    def test_simbad_backend_queries_its_own_mirror(self) -> None:
+        seen: list[str] = []
+        original = rl._simbad_run
+        rl._simbad_run = lambda base_url, _q: seen.append(base_url)
+        try:
+            for backend in rl.simbad_client().backends:
+                backend.run("SELECT 1")
+        finally:
+            rl._simbad_run = original
+        self.assertEqual(seen, [rl.SIMBAD_CDS_TAP_URL, rl.SIMBAD_HARVARD_TAP_URL])
 
     def test_backends_is_required(self) -> None:
         # No default list: which service can serve a query is a property of

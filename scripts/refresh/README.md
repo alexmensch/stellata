@@ -74,9 +74,9 @@ write the worktree's `data/`.
 | `refresh:gaia-hip` | `refresh-gaia-hip-xmatch.py` | `data/gaia/gaia_dr3_hip_xmatch.tsv` | HIP → Gaia DR3 source_id cross-walk from `hipparcos2_best_neighbour`. |
 | `refresh:gaia-tyc` | `refresh-gaia-tyc-xmatch.py` | `data/gaia/gaia_dr3_tyc_xmatch.tsv` | Tycho-2 → Gaia DR3 cross-walk from `tycho2tdsc_merge_best_neighbour`. |
 | `refresh:gaia-nss` | `refresh-gaia-nss.py` | `data/gaia/gaia_dr3_nss_two_body.tsv` | Gaia DR3 `nss_two_body_orbit` (binary orbits Gaia detected astrometrically). |
-| `refresh:gaia-astrometry` | `refresh-gaia-astrometry.py` | `data/gaia/gaia_dr3_astrometry.tsv` | Gaia DR3 5-parameter astrometry for exactly the source_ids `build-binaries.py` Stage 2 resolved (reads `data/gaia/gaia_astrometry_source_id_request.tsv` as input). Run AFTER `refresh:gaia-hip` + `refresh:gaia-tyc` + a fresh `pnpm run build:binaries`. |
+| `refresh:gaia-astrometry` | `refresh-gaia-astrometry.py` | `data/gaia/gaia_dr3_astrometry.tsv` | Gaia DR3 5-parameter astrometry for the binaries request (`data/gaia/gaia_astrometry_source_id_request.tsv`): the source_ids Stage 2 resolved plus every candidate a Stage-2 gate weighed — `write_astrometry_request` owns the list. Run AFTER `refresh:gaia-hip` + `refresh:gaia-tyc` + a fresh `pnpm run build:binaries`. |
 | `build:astrometry-request` | `scripts/catalog/astrometry-request/export-astrometry-request.ts` | `data/gaia/gaia_catalog_source_id_request.tsv` | Full-catalog deduped Gaia DR3 source_id request list — the manifest's `gaia_source_id` column (the same binding the record build reads) UNION the classic-ID binding gate's candidate sources UNION the membership derivation's candidate sources UNION `multiples.tsv`'s kept-physical pair members. Not a network pull. Reads the manifest, the spine and both Gaia cross-walks, so it still runs AFTER `refresh:gaia-hip` / `refresh:gaia-tyc`. |
-| `refresh:gaia-astrometry-catalog` | `refresh-gaia-astrometry-catalog.py` | `data/gaia/gaia_dr3_astrometry_catalog.tsv` | Gaia DR3 5p astrometry + `radial_velocity` for every catalog source_id (383,056) — tier 1 of the direction, rv, V and ci cascades. Same schema/query as `refresh:gaia-astrometry`; reads `gaia_catalog_source_id_request.tsv`. Run AFTER `build:astrometry-request`. |
+| `refresh:gaia-astrometry-catalog` | `refresh-gaia-astrometry-catalog.py` | `data/gaia/gaia_dr3_astrometry_catalog.tsv` | Gaia DR3 5p astrometry + `radial_velocity` for every catalog source_id ([the request](../catalog/astrometry-request/README.md)) — tier 1 of the direction, rv, V and ci cascades. Same schema/query as `refresh:gaia-astrometry`; reads `gaia_catalog_source_id_request.tsv`. Run AFTER `build:astrometry-request`. |
 | `refresh:gaia-magnitude` | `refresh-gaia-magnitude.py` | `data/gaia/gaia_dr3_magnitude_pull.tsv` | Every `gaiadr3.gaia_source` row at `G ≤ 11` (<!-- count:membership-manifest/magnitudeTerm.rows -->1,247,240<!-- /count -->) — membership's magnitude term ([§ 1](/docs/catalog-driver.md#1-the-driver-model)), on `gaia_astrometry_pull.TSV_COLUMNS`. The one Gaia pull with **no request set**: its selection is the magnitude bound, so it reads nothing under `data/` and has no ordering constraint. Floor rationale — why `G ≤ 11` needs no margin over `V ≤ 11` — [Why the floor carries no margin](/data/gaia/README.md#why-the-floor-carries-no-margin). |
 | `refresh:gaia-apsis` | `refresh-gaia-apsis.py` | `data/gaia/gaia_dr3_apsis.tsv` | Gaia DR3 `astrophysical_parameters` (gspphot ∪ gspspec) — Teff / log g / [M/H] / A0 + the ESP-ELS `spectraltype_esphs` enum. Scoped to the deep population (`magnitude/README.md`), so it runs AFTER `build:astrometry-request`. |
 | `refresh:gaia-gspc` | `refresh-gaia-gspc.py` | `data/gaia/gaia_dr3_gspc.tsv` | Gaia DR3 `synthetic_photometry_gspc` — Johnson-Kron-Cousins B/V synthesised per source from its BP/RP spectrum, with fluxes and the per-band validated-range flag. Reads `gaia_catalog_source_id_request.tsv`, so it runs AFTER `build:astrometry-request`. Flag polarity and the S/N > 30 cut this table already applies — [The GSPC validated-range flag](/data/gaia/README.md#the-gspc-validated-range-flag--1-means-in-range). |
@@ -218,6 +218,9 @@ request-set union, the space-padded ident join, its compose gates and the
 row-count / spot-row bands against an in-memory TAP backend. Run it with
 `python3 scripts/refresh/refresh-simbad-tyc-hd.test.py`.
 
+Non-network dependency: `refresh-simbad-wds-xids.test.py` covers Phase B's
+cross-ID parse (Gaia DR3, per-component HIP, and the oids the JOIN misses).
+
 Non-network dependency: `refresh-gaia-magnitude.test.py` covers the slice
 partition (shared edge literals, the open bright end, the floor as the last
 edge, near-equal populations), the per-slice ADQL shape, and both gates
@@ -268,13 +271,19 @@ identical `gaiadr3.*` schema. The ESA archive's ASYNC path intermittently
 nothing reaches Gaia any other way: the async client is gone, and with
 it the `astroquery` dependency.
 
+A `TapClient` moves whichever backend answered to the front, so a mirror
+that is down costs its retry schedule (about 5 min of connect timeouts)
+once per run, not once per batch.
+
 `TapClient` takes `backends=` as a required argument — there is no
 default list, because which service can serve a query is a property of
 the table. CDS VizieR doesn't host `gaiadr3.*`, so an ESA→CDS fallback
 would fail with a misleading "table not found";
 `refresh-hipparcos2.py` goes the other way and passes
 `backends=[cds_backend()]` because `I/311/hip2` is VizieR-only. SIMBAD
-gets `[simbad_backend()]` for its divergent dialect. Check ESA's
+gets `simbad_client()` for its divergent dialect — CDS primary, the
+Harvard CfA mirror as fallback, both serving the same database and oids.
+Check ESA's
 `external.*` schema before concluding a catalogue is VizieR-only:
 [Bailer-Jones 2021](/data/papers/index.md#bailerjones2021) is on
 both, and `refresh-bailer-jones.py` takes the ESA copy through
@@ -339,19 +348,16 @@ spot-check rows.
 
 `TSV_COLUMNS` there is the one place the schema is stated, so **a column
 added to it lands in both scopes** — but only in whichever output is
-actually re-pulled. `radial_velocity` was added for the catalog scope's
-rv cascade; the binaries-scope `gaia_dr3_astrometry.tsv` gains the column
-on its next refresh and nothing reads rv from it meanwhile. Editing the
-module also invalidates both outputs' `is_up_to_date` check (it folds this
-file's mtime), which is what makes the next binaries refresh pick it up
-rather than skip.
+actually re-pulled. Editing the module also invalidates both outputs'
+`is_up_to_date` check (it folds this file's mtime), so the next refresh of
+either scope re-pulls rather than skips.
 
-**`radial_velocity_error` landed in the catalog scope on the 2026-08-12
-refresh**, and `parseGaiaAstrometryCatalogTsv` now requires it. Its consumer
-is the build-counts ratchet, not a filter — the cascade takes DR3's value
-whatever error it states (`../catalog/distance/radial-velocity/README.md`).
-The binaries-scope `gaia_dr3_astrometry.tsv` still predates the column, on the
-same terms as `radial_velocity` above.
+Both scopes carry `radial_velocity` and `radial_velocity_error`. The catalog
+scope's rv cascade reads them, and `parseGaiaAstrometryCatalogTsv` requires
+the error column; its consumer is the build-counts ratchet, not a filter —
+the cascade takes DR3's value whatever error it states
+(`../catalog/distance/radial-velocity/README.md`). Nothing reads rv from the
+binaries-scope `gaia_dr3_astrometry.tsv`.
 
 See [Catalogue refresh policy](/RELEASING.md#catalogue-refresh-policy) for the cadence
 (event-driven, not scheduled) and the version-bump policy for a

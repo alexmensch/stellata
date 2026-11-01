@@ -9,6 +9,7 @@ import { beforeAll, describe, expect, it } from 'vitest';
 
 import { compareCountSnapshot } from '../build-counts';
 import { GAIA_ASTROMETRY } from '../distance/gaia-astrometry-source';
+import { MAGNITUDE_PULL } from '../membership/magnitude-term/magnitude-pull-source';
 import { SIMBAD_VALUES } from '../simbad/simbad-values-source';
 import { REPO_ROOT, isLfsPointer } from '../../util/paths';
 import { isReadable, openDeclared, type Declared } from '../../util/sources/source';
@@ -94,9 +95,10 @@ describe.skipIf(!available)('committed inherited spine', () => {
   });
 });
 
-// Needs the 5p pull and the SIMBAD values pull as well as the spine, so it
-// gates on all three rather than reusing the block above.
-const staleInputs: readonly Declared[] = [INHERITED_SPINE, GAIA_ASTROMETRY, SIMBAD_VALUES];
+// Why both 5p pulls: README.md#six-source_ids-dr3-does-not-publish.
+const staleInputs: readonly Declared[] = [
+  INHERITED_SPINE, GAIA_ASTROMETRY, MAGNITUDE_PULL, SIMBAD_VALUES,
+];
 
 describe.skipIf(!staleInputs.every(isReadable))(
   'spine source_ids Gaia DR3 publishes no row for',
@@ -107,7 +109,10 @@ describe.skipIf(!staleInputs.every(isReadable))(
 
     beforeAll(() => {
       queue = STALE_GAIA_SOURCE_IDS.read();
-      published = new Set(keyColumn(GAIA_ASTROMETRY, 'source_id'));
+      published = new Set([
+        ...keyColumn(GAIA_ASTROMETRY, 'source_id'),
+        ...keyColumn(MAGNITUDE_PULL, 'source_id'),
+      ]);
       reachedOids = new Set(keyColumn(SIMBAD_VALUES, 'simbad_oid'));
     });
 

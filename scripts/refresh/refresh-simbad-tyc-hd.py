@@ -131,7 +131,7 @@ def main() -> None:
     tycs = read_tyc_request()
     print(f"request set: {len(tycs):,} Tycho ids (IV/25 union the manifest)")
 
-    client = rl.TapClient(backends=[rl.simbad_backend()])
+    client = rl.simbad_client()
 
     oid_by_tyc = query.resolve_oids_by_prefix(client, tycs, TYC)
     print(

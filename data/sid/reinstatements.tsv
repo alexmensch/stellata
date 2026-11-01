@@ -16,3 +16,4 @@ sid	reinstated	reason
 330160	2026-10-24	31 Cyg H promotes again: Stage 6 links its Aa anchor to A at the Aa+Ab photocentre, so the A-branch offset reaches H (102.1 arcsec / 139.35 deg)
 330179	2026-10-24	15 Mon J promotes again: Stage 6 links its Aa anchor to A at the Aa+Ab photocentre, so the A-branch offset reaches J (142.9 arcsec / 143.0 deg)
 330229	2026-10-24	Matar H promotes again: Stage 6 links its Aa anchor to A at the Aa+Ab photocentre, so the A-branch offset reaches H (80.1 arcsec / 149.0 deg)
+316154	2026-10-31	22012+2650 B promotes again: its blend-mate's Gaia source is now in the binaries astrometry request (binding-audit candidates stay requested), so the AB pair emits on gaia_5p and promotion mints synth:22012+2650-B again

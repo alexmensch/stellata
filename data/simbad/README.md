@@ -17,12 +17,17 @@ simbad_values.tsv          ~18 MB, LFS. 74,446 rows. Bibcoded rv,
                            parallax, PM, coordinates and B/V fluxes for
                            the /docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers value cohort — see README.md#the-values-pull.
 simbad_wds_xids.tsv        ~1.2 MB, LFS. Per-WDS-component (Gaia DR3,
-                           HIP) curated cross-IDs.
+                           HIP) curated cross-IDs: the 2026-07-11 pull plus
+                           the HAT-P-7 A/C rows of the 2026-10-31 run. A
+                           full re-pull also moves the ~59 lost / 55 added /
+                           73 changed rows stellata-hooj.30 tracks (44 Gaia
+                           sources leave multiples.tsv, mu Cas A-E among
+                           them); land it only with those resolved.
 simbad_tyc_hd.tsv          ~11 MB, LFS. 332,320 rows. SIMBAD's own HD
                            attribution per Tycho-2 entry, keyed on TYC —
                            see README.md#the-tyc--hd-pull.
-wds_xids_overrides.tsv     ~1.5 KB, regular git. Hand-curated WDS-J
-                           coalesce overrides for Sirius B-shaped cases.
+wds_xids_overrides.tsv     ~1.5 KB, regular git. Hand-curated SIMBAD oids
+                           for components no WDS-J ident or alias reaches.
 ```
 
 ## The values pull
@@ -148,7 +153,9 @@ what a consumer may conclude from these tables; this one owns what they are.
 - **Citation**: [Wenger 2000](/data/papers/index.md#wenger2000). SIMBAD is
   maintained by CDS Strasbourg.
 - **TAP endpoint**:
-  https://simbad.cds.unistra.fr/simbad/sim-tap.
+  https://simbad.cds.unistra.fr/simbad/sim-tap, with the Harvard CfA
+  mirror https://simbad.cfa.harvard.edu/simbad/sim-tap as fallback
+  (`refresh_lib.simbad_client`).
 - **Licence**: SIMBAD content is publicly accessible per CDS policy
   (academic / non-commercial); cite the
   [Wenger 2000](/data/papers/index.md#wenger2000) paper.
@@ -158,11 +165,14 @@ what a consumer may conclude from these tables; this one owns what they are.
   ([`classifyFromSimbad`](../../scripts/catalog/spectral/spectral-classify.ts))
   is
   a strict MK walker.
-- **`wds_xids_overrides.tsv`** is the manual escape hatch for the
-  Sirius-B-shaped systems where SIMBAD collapses multiple WDS-J
-  variants onto one Gaia source; the override coalesce is applied
-  inside
+- **`wds_xids_overrides.tsv`** is the manual escape hatch for a component
+  whose SIMBAD object carries no `WDS J<id><comp>` ident and no HD / CCDM /
+  HIP alias the Phase A.6 cascade can reach — HAT-P-7 A and C, whose WDS
+  idents SIMBAD dropped and which carry no HD or HIP. Each row pins an oid
+  with its reason; the override is applied inside
   [`scripts/refresh/wds_xids_overrides.py`](../../scripts/refresh/README.md).
+  An oid letter need not match the WDS letter: SIMBAD names HAT-P-7 C
+  `BD+47 2846B`.
 
 ## Request sets come off the membership term
 

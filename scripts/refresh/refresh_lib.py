@@ -576,7 +576,9 @@ class TapClient:
     """Backend-agnostic TAP client with auto-fallback.
 
     Tries each backend in order on every query; falls back to the next on a
-    transient (network-level or 5xx) error. Non-transient errors (e.g.
+    transient (network-level or 5xx) error. The backend that answers moves
+    to the front, so a primary that is down costs its retry schedule once
+    per client, not once per batch. Non-transient errors (e.g.
     ADQL syntax) raise from the first backend that returns them — both
     backends share the same ADQL grammar so a syntax error fails the
     same way on either.
@@ -585,7 +587,7 @@ class TapClient:
     serve a query is a property of the table, not of TAP, so picking for
     the caller only ever picks wrong: Gaia-keyed pulls want
     `gaia_sync_client()`, VizieR-only tables want `[cds_backend()]`, and
-    SIMBAD's divergent dialect wants `[simbad_backend()]`.
+    SIMBAD's divergent dialect wants `simbad_client()`.
     """
 
     def __init__(
@@ -601,19 +603,24 @@ class TapClient:
 
     def run(self, query: str) -> Any:
         last_transient: BaseException | None = None
-        for backend in self.backends:
+        for backend in list(self.backends):
             try:
-                return retry(lambda b=backend: b.run(query), **self.retry_kwargs)
+                result = retry(lambda b=backend: b.run(query), **self.retry_kwargs)
             except Exception as exc:
                 if not is_transient_http_error(exc):
                     raise
                 last_transient = exc
+                continue
+            self.backends.remove(backend)
+            self.backends.insert(0, backend)
+            return result
         assert last_transient is not None  # at least one backend, all transient
         raise last_transient
 
 
 CDS_TAP_URL = "https://tapvizier.u-strasbg.fr/TAPVizieR/tap"
-SIMBAD_TAP_URL = "https://simbad.cds.unistra.fr/simbad/sim-tap"
+SIMBAD_CDS_TAP_URL = "https://simbad.cds.unistra.fr/simbad/sim-tap"
+SIMBAD_HARVARD_TAP_URL = "https://simbad.cfa.harvard.edu/simbad/sim-tap"
 
 # Synchronous Gaia DR3 TAP endpoints — the only way this lib reaches Gaia.
 # The ESA archive's ASYNC path intermittently 500s on result retrieval
@@ -636,9 +643,9 @@ def _cds_run(query: str) -> Any:
     return service.search(query).to_table()
 
 
-def _simbad_run(query: str) -> Any:
+def _simbad_run(base_url: str, query: str) -> Any:
     import pyvo
-    service = pyvo.dal.TAPService(SIMBAD_TAP_URL)
+    service = pyvo.dal.TAPService(base_url)
     return service.search(query).to_table()
 
 
@@ -652,14 +659,25 @@ def cds_backend() -> TapBackend:
     return TapBackend(name="CDS", run=_cds_run)
 
 
-def simbad_backend() -> TapBackend:
+def simbad_backend(name: str, *, base_url: str) -> TapBackend:
     """SIMBAD TAP backend (basic, ident, allfluxes, otypedef, mes*
-    tables). Used by refresh-simbad-sample.py as a single-backend override
-    — SIMBAD speaks its own dialect (LIKE forbidden on basic.otype; MOD()
-    available but `%` operator is not) and is not interchangeable with
-    ESA or CDS for these tables, so callers pass `backends=[simbad_backend()]`
-    explicitly rather than relying on the default fallback list."""
-    return TapBackend(name="SIMBAD", run=_simbad_run)
+    tables). `base_url` selects the CDS primary or the Harvard CfA mirror
+    (`SIMBAD_HARVARD_TAP_URL`), which serves the same database, oids
+    included."""
+    return TapBackend(name=name, run=lambda q: _simbad_run(base_url, q))
+
+
+def simbad_client() -> TapClient:
+    """TapClient over SIMBAD: CDS primary → Harvard CfA mirror fallback.
+    SIMBAD speaks its own dialect (LIKE forbidden on basic.otype; MOD()
+    available but `%` operator is not), so it never shares a client with
+    ESA or VizieR."""
+    return TapClient(
+        backends=[
+            simbad_backend("SIMBAD-CDS", base_url=SIMBAD_CDS_TAP_URL),
+            simbad_backend("SIMBAD-Harvard", base_url=SIMBAD_HARVARD_TAP_URL),
+        ]
+    )
 
 
 def _iter_votable_infos(votable: Any) -> Iterable[Any]:

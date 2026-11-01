@@ -37,5 +37,4 @@ scripts/catalog/membership/magnitude-term/README.md	594,998	other-count
 scripts/perf/synthetic-catalog/README.md	312k	other-count
 scripts/perf/synthetic-catalog/README.md	388k	other-count
 scripts/perf/synthetic-catalog/README.md	890k	other-count
-scripts/refresh/README.md	383,056	other-count
 src/client/typeahead/README.md	300k	other-count

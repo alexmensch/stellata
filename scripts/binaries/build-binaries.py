@@ -533,10 +533,7 @@ def run(force: bool) -> int:
 
     n_requested = write_astrometry_request(
         components, OUT_ASTROMETRY_REQUEST,
-        rejected_source_ids=(
-            [src for _, src in indices.xwalk_mag_rejected]
-            + [src for _, src in indices.athyg_gaia_mag_rejected]
-        ),
+        indices=indices, binding_verdicts=binding_verdicts,
     )
     log(
         f"wrote {OUT_ASTROMETRY_REQUEST.relative_to(ROOT)} with "

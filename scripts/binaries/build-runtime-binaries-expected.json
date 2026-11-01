@@ -1,6 +1,6 @@
 {
-  "pairs_total": 18668,
-  "pairs_emitted": 14450,
+  "pairs_total": 18670,
+  "pairs_emitted": 14452,
   "pairs_dropped_primary_unresolved": 3036,
   "pairs_dropped_secondary_unresolved": 760,
   "pairs_dropped_degenerate_idx": 417,

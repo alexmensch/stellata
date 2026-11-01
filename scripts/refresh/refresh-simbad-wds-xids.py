@@ -201,11 +201,8 @@ def query_xrefs_batch(
             if parsed is not None:
                 _kind, hip, suffix = parsed
                 hip_aliases.setdefault(oid, []).append((hip, suffix))
-        elif id_str.startswith(GAIA_DR3.prefix):
-            try:
-                rec["gaia"] = int(id_str[GAIA_DR3.prefix_len:])
-            except ValueError:
-                pass
+        elif (gaia := GAIA_DR3.parse_suffix(id_str)) is not None:
+            rec["gaia"] = gaia
     for oid, aliases in hip_aliases.items():
         out[oid]["hip"] = resolve_hip_from_aliases(
             aliases, components_by_oid.get(oid, set())
@@ -246,7 +243,7 @@ def main() -> None:
             f"{SRC_OVERRIDES.relative_to(ROOT)}"
         )
 
-    client = rl.TapClient(backends=[rl.simbad_backend()])
+    client = rl.simbad_client()
 
     # WDS-ident → component-tuple map: lets the final join be O(1) regardless
     # of SIMBAD's response order. ``all_idents`` is sorted so batch contents

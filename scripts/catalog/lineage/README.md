@@ -254,7 +254,7 @@ letters; the binding-review columns ride the rows the queue lists — a
 contested or collision verdict and a disposition — since the candidates and
 refusals are rows of their own. `MEMBERSHIP_LINEAGE_BUDGET` pins 41 MB and
 15 s — the time ceiling sits well above the measurement because CI runners
-write slower than a workstation. Promotion, measured the same day: <!-- count:build-binaries/multiples_rows_emitted -->47,018<!-- /count --> rows, one
+write slower than a workstation. Promotion, measured the same day: <!-- count:build-binaries/multiples_rows_emitted -->47,021<!-- /count --> rows, one
 per `multiples.tsv` row, plus an identity row per minted companion, 0.70 MB
 gzipped in 0.3 s without a diff; `PROMOTION_LINEAGE_BUDGET` pins 0.8 MB and
 5 s. Placement, measured 2026-10-30: 3,872,657 rows (349 MB plain, 31.0 MB

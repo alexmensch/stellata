@@ -314,7 +314,7 @@ def main() -> None:
         print(f"{OUT.relative_to(ROOT)} up to date — skipping (use --force to rebuild)")
         return
 
-    client = rl.TapClient(backends=[rl.simbad_backend()])
+    client = rl.simbad_client()
 
     print("enumerating SIMBAD star otype codes from otypedef…")
     star_otypes_inlist = fetch_star_otype_inlist(client)
