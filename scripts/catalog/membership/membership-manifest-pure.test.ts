@@ -14,13 +14,15 @@ import { TYCHO2 } from '../tycho2-source';
 import { GLIESE } from '../gliese-source';
 import { sourceRowRef } from '../../util/sources/row-ref-pure';
 import {
-  additionItemCells,
   buildMembership,
   manifestKey,
   matchSpineToManifest,
+} from './membership-manifest-pure';
+import {
   parseBindingDispositionsTsv,
   type BindingDispositionRow,
-} from './membership-manifest-pure';
+} from './binding-review-dispositions-pure';
+import { additionItemCells } from './addition-items-pure';
 import type { SpineCorrectionRow } from './spine-corrections/spine-corrections-pure';
 import { ADDITIONS_LEDGER } from './additions-ledger-tsv';
 import { ADDITION_REASONS, COMPONENT_REASON_PREFIX } from './ledger-rows-pure';

@@ -15,7 +15,7 @@ import {
   derivationCandidateSourceIds,
   indexSimbadSources,
 } from '../membership/binding/binding-derivation-pure';
-import { additionItemCells } from '../membership/membership-manifest-pure';
+import { additionItemCells } from '../membership/addition-items-pure';
 import { MEMBERSHIP_MANIFEST } from '../membership/membership-manifest-tsv';
 import { applySpineCorrections } from '../membership/spine-corrections/spine-corrections-pure';
 import { SPINE_CORRECTIONS } from '../membership/spine-corrections/spine-corrections-source';

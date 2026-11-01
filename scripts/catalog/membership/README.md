@@ -51,9 +51,17 @@ scripts/catalog/membership/
                                   (../lineage/README.md#the-membership-stage).
   membership-manifest-pure.ts     Row assembly (spine side, additions), the
     (+ test)                      review queue and the dispositions settling
-                                  it, the admission rule, the label drops, the
-                                  dispositions' reader, and the spine ↔
-                                  manifest matcher the gate runs. Pure.
+                                  it, the admission rule, the label drops, and
+                                  the spine ↔ manifest matcher the gate runs.
+                                  Pure.
+  addition-items-pure.ts          The additions' items, one per primary row
+                                  the spine lacks, and the cells each derives
+                                  from. Apart from the generator module so
+                                  build:astrometry-request enumerates them
+                                  without reaching the manifest's declaration
+                                  (../../util/sources/README.md#reached-means-read).
+  binding-review-dispositions-    The dispositions' columns, closed bases and
+    pure.ts                       reader, on the same terms.
   binding-review-dispositions-    BINDING_REVIEW_DISPOSITIONS, the curated
     source.ts                     dispositions' declaration
                                   (../../util/sources/).
