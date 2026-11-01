@@ -457,13 +457,11 @@ export interface BuildCounts {
   /** Anchor-grade sibling parallaxes indexed off the kept-physical pair rows
    *  of multiples.tsv — the `pair_member_parallax` tier's reach. */
   pairMemberParallaxEntries: number;
-  /** Why the rest of those pair-row sources are not candidates. These four
+  /** Why the rest of those pair-row sources are not candidates. These three
    *  plus `pairMemberParallaxEntries` are every source the index's per-root
-   *  dedup admits, so the tier's reach is a partition rather than prose
-   *  (`distance/parallax/README.md#the-tiers-reach-is-bounded-by-measurement-quality-not-by-our-request`).
-   * `pairMemberSiblingNoAstrometryRow` is the one that
-   *  says the astrometry request under-covers its pair-row half. */
-  pairMemberSiblingNoAstrometryRow: number;
+   *  dedup admits, since a source the pull lacks fails the build, so the
+   *  tier's reach is a partition rather than prose
+   *  (`distance/parallax/README.md#the-tiers-reach-is-bounded-by-measurement-quality-not-by-our-request`). */
   pairMemberSiblingNoParallax: number;
   pairMemberSiblingNotAnchorGrade: number;
   pairMemberSiblingBelowSnFloor: number;

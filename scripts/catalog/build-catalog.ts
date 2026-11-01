@@ -390,7 +390,6 @@ async function main() {
     cns5AstrometryEntries: 0,
     glieseEntries: 0,
     pairMemberParallaxEntries: 0,
-    pairMemberSiblingNoAstrometryRow: 0,
     pairMemberSiblingNoParallax: 0,
     pairMemberSiblingNotAnchorGrade: 0,
     pairMemberSiblingBelowSnFloor: 0,

@@ -94,9 +94,9 @@ contribution.
 by a consumer being added without the request following. A bound pair's member
 is routinely not a manifest row (a component Gaia resolved that no primary
 indexes), and the tier lends that member's parallax to the sibling Gaia fitted
-none for. Its coverage now has a zero-pin of its own,
-`pairMemberSiblingNoAstrometryRow` — the sibling sources this pull holds no row
-for, which is the only reason the tier misses one that a re-pull can fix
+none for. Its coverage now fails the build on its own: a sibling source this
+pull holds no row for is named with its `multiples.tsv` row, and it is the
+only reason the tier misses one that a re-pull can fix
 ([The tier's reach is bounded by measurement quality](../distance/parallax/README.md#the-tiers-reach-is-bounded-by-measurement-quality-not-by-our-request)).
 Every other refusal there is a measurement, and
 `pairMemberSiblingNotAnchorGrade` — the anchor gate on fit quality alone —

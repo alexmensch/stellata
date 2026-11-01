@@ -161,7 +161,6 @@ function baseCounts(): BuildCounts {
     cns5AstrometryEntries: 5900,
     glieseEntries: 3803,
     pairMemberParallaxEntries: 0,
-    pairMemberSiblingNoAstrometryRow: 0,
     pairMemberSiblingNoParallax: 0,
     pairMemberSiblingNotAnchorGrade: 0,
     pairMemberSiblingBelowSnFloor: 0,
