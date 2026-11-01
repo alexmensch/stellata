@@ -75,8 +75,6 @@ export type Allocation =
     /** Removals in ledger order, then mints and reinstates in object order. */
     readonly events: readonly EventRow[];
     readonly ambiguous: readonly AmbiguousDesignation[];
-    /** Classes covering more than one object (stored-edge merges). */
-    readonly mergedClasses: readonly { sid: number; objects: readonly number[] }[];
   };
 
 const CLASSICAL = new Set(['sol', 'hip', 'hd', 'hr', 'gl']);
@@ -273,9 +271,5 @@ export function allocate(input: AllocateInput, upstream: Upstream): Allocation {
     events.push(event(o.sid, o.kind === 'minted' ? 'mint' : 'reinstate', o.code, objects[i].admission.origin));
   });
 
-  const mergedClasses = [...objectsByClass]
-    .filter(([, indices]) => indices.length > 1)
-    .map(([root, indices]) => ({ sid: outcomeByRoot.get(root)!.sid, objects: indices }));
-
-  return { kind: 'allocated', outcomes, removals, minted, events, ambiguous, mergedClasses };
+  return { kind: 'allocated', outcomes, removals, minted, events, ambiguous };
 }

@@ -130,13 +130,12 @@ describe('allocate: resolution and minting', () => {
     expect(a.outcomes.map((o) => o.sid)).toEqual([1]);
   });
 
-  it('reports classes merged across objects by stored edges', () => {
+  it('a stored edge puts two objects in one class, under one SID', () => {
     const a = allocated(run({
       objects: [star('spine:1', 'hip:1'), star('magnitude:5', 'gaia_dr3:5')],
       storedEdges: [{ a: 'hip:1', b: 'gaia_dr3:5' }],
     }, upstream({}, { 'spine:1': ADMIT, 'magnitude:5': ADMIT })));
     expect(a.minted.map((m) => m.canonicalKey)).toEqual(['hip:1']);
-    expect(a.mergedClasses).toEqual([{ sid: 1, objects: [0, 1] }]);
     expect(a.outcomes.map((o) => o.sid)).toEqual([1, 1]);
   });
 
