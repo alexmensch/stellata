@@ -61,6 +61,10 @@ tuning.
 
 ## Output format (`cloud-surfaces.bin`, magic `CSUR`, v2)
 
+Magic and version come from `data/schema/constants.json`
+(`artifacts.cloudSurfaces`), which the client loader checks against too;
+a format change bumps the version there.
+
 - Header (16 B): `CSUR` · uint32 version · uint32 cloudCount ·
   uint32 reserved.
 - Directory (cloudCount × 44 B): uint32 sid · uint32 vertexCount ·

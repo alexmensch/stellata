@@ -9,7 +9,7 @@ import { fileURLToPath } from 'node:url';
 import { describe, it, expect } from 'vitest';
 
 import { DUST_GRID } from '../catalog/distance/dust/dust-grid-source';
-import { AV_PER_EZGR } from '../../src/client/util/baker-constants';
+import { AV_PER_EZGR, DUST_MANIFEST_SCHEMA } from '../../src/client/util/baker-constants';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const MANIFEST = resolve(ROOT, DUST_GRID.file);
@@ -39,7 +39,7 @@ const manifest = JSON.parse(readFileSync(MANIFEST, 'utf-8')) as Manifest;
 
 describe('dust manifest.json encode contract', () => {
   it('pins the fixed encode window', () => {
-    expect(manifest.version).toBe(2);
+    expect(manifest.version).toBe(DUST_MANIFEST_SCHEMA.version);
     expect(manifest.format).toBe('u8-log-window');
     expect(manifest.synthetic).toBe(false);
     expect(manifest.densityMin).toBe(1e-7);

@@ -6,6 +6,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, it, expect } from 'vitest';
+import { CLOUDS_JSON_SCHEMA } from '../../src/client/util/baker-constants';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const CLOUDS_JSON = resolve(ROOT, 'public', 'clouds.json');
@@ -61,8 +62,8 @@ describe.skipIf(!existsSync(CLOUDS_JSON))('clouds.json v3', () => {
       })
     : null!;
 
-  it('carries version 3 and the full cloud set', () => {
-    expect(payload.version).toBe(3);
+  it('carries the shared schema version and the full cloud set', () => {
+    expect(payload.version).toBe(CLOUDS_JSON_SCHEMA.version);
     expect(payload.count).toBe(96);
     expect(payload.clouds).toHaveLength(96);
   });

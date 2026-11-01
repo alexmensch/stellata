@@ -13,6 +13,7 @@ import { fakeShellMaterials } from './shell-materials-mock';
 import { SHELL_OBJECT_SIDS } from './shell-object-sids';
 import { createShellKindModule } from './shell-module';
 import { sidsOf } from '../util/sid-resolver/sid-domain-fixture';
+import { LOCAL_BUBBLE_SCHEMA, writeBinaryHeader } from '../util/baker-constants';
 
 /** Minimal LBUB buffer: an octahedron of wall vertices around a
  *  centroid at (50, 0, 0), 100 pc out along each axis. */
@@ -29,7 +30,7 @@ function makeLocalBubbleBin(): ArrayBuffer {
   const indices = [0, 2, 4, 1, 3, 5];
   const buf = new ArrayBuffer(32 + verts.length * 4 + indices.length * 4);
   const view = new DataView(buf);
-  view.setUint32(0, 0x4c425542, false);
+  writeBinaryHeader(view, LOCAL_BUBBLE_SCHEMA);
   view.setUint32(8, verts.length / 3, true);
   view.setUint32(12, indices.length, true);
   view.setFloat32(16, centroid[0], true);

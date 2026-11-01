@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 
+import { CLOUDS_JSON_SCHEMA } from '../util/baker-constants';
 import { sidColumnError } from '../util/sid-resolver';
 
 export type CloudSource = 'Z2021T1' | 'Z2020';
@@ -103,8 +104,8 @@ export async function loadClouds(url: string): Promise<CloudCatalog | null> {
   }
   if (!res.ok) return null;
   const raw = (await res.json()) as RawCatalog;
-  if (raw.version !== 3) {
-    console.warn(`clouds.json version ${raw.version} unsupported`);
+  if (raw.version !== CLOUDS_JSON_SCHEMA.version) {
+    console.warn(`clouds.json version ${raw.version} unsupported (expected ${CLOUDS_JSON_SCHEMA.version})`);
     return null;
   }
   const sidErr = sidColumnError(raw.clouds.map((c) => c.sid));

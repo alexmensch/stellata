@@ -1,7 +1,8 @@
 // Parses public/local-bubble.bin (magic LBUB) into a shell mesh.
 // See src/client/local-bubble/README.md.
 
-const MAGIC = 0x4c425542; // 'LBUB' big-endian read of bytes L,B,U,B
+import { LOCAL_BUBBLE_SCHEMA, checkBinaryHeader } from '../util/baker-constants';
+
 const HEADER_BYTES = 32;
 
 export interface LocalBubbleMesh {
@@ -17,18 +18,14 @@ export interface LocalBubbleMesh {
   extentPc: number;
 }
 
-/** Parse the `LBUB` buffer. Throws on a bad magic or a size that doesn't
+/** Parse the `LBUB` buffer. Throws on a bad magic or version, or a size that doesn't
  *  match the declared vertex/index counts (a truncated or wrong file).
  *  Header bytes 16–27 carry the build's volume centroid — the label
  *  anchors to the silhouette instead, but the focus target uses it as the
  *  shell center. */
 export function parseLocalBubble(buffer: ArrayBuffer): LocalBubbleMesh {
   const view = new DataView(buffer);
-  // Magic is the ASCII bytes L,B,U,B in file order; read big-endian so
-  // the constant reads the same way.
-  if (view.getUint32(0, false) !== MAGIC) {
-    throw new Error('local-bubble.bin: bad magic (expected LBUB)');
-  }
+  checkBinaryHeader(view, LOCAL_BUBBLE_SCHEMA, 'local-bubble.bin');
   const vertexCount = view.getUint32(8, true);
   const indexCount = view.getUint32(12, true);
   const posBytes = vertexCount * 3 * 4;

@@ -3,6 +3,7 @@
 // through the voxel uploader. See src/client/loaders/README.md.
 
 import type * as THREE from 'three';
+import { DUST_MANIFEST_SCHEMA } from '../util/baker-constants';
 import type { StellataRenderer } from '../webgpu/seam';
 import {
   createVoxelChunkUploader,
@@ -178,6 +179,9 @@ export async function loadDustManifest(baseUrl: string): Promise<DustManifest | 
 export function dustManifestError(raw: unknown): string | null {
   if (typeof raw !== 'object' || raw === null) return 'is not an object';
   const m = raw as Record<string, unknown>;
+  if (m.version !== DUST_MANIFEST_SCHEMA.version) {
+    return `has version ${String(m.version)} (expected ${DUST_MANIFEST_SCHEMA.version})`;
+  }
   const finite = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
   const positiveInt = (v: unknown) => Number.isInteger(v) && (v as number) > 0;
   if (!positiveInt(m.gridSize) || !positiveInt(m.chunkSize)) return 'has no positive gridSize / chunkSize';

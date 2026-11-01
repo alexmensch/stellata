@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { CLOUDS_JSON_SCHEMA } from '../util/baker-constants';
 import { loadClouds } from './cloud-loader';
 
 interface RawTestCloud {
@@ -65,15 +66,15 @@ describe('loadClouds', () => {
   });
 
   it('returns null on unsupported version (forward-compat guard)', async () => {
-    mockFetch({ version: 4, count: 0, clouds: [] } satisfies Raw);
+    mockFetch({ version: CLOUDS_JSON_SCHEMA.version + 1, count: 0, clouds: [] } satisfies Raw);
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
     expect(await loadClouds('/clouds.json')).toBeNull();
     warn.mockRestore();
   });
 
-  it('parses a v3 catalog including the presence-model fields + aliases', async () => {
+  it('parses a catalog including the presence-model fields + aliases', async () => {
     mockFetch({
-      version: 3,
+      version: CLOUDS_JSON_SCHEMA.version,
       count: 1,
       clouds: [{ ...baseCloud, mass: 32122, aliases: ['Messier 42', 'NGC 1976'] }],
     } satisfies Raw);
@@ -98,7 +99,7 @@ describe('loadClouds', () => {
   });
 
   it('maps a missing mass to null and absent aliases to undefined', async () => {
-    mockFetch({ version: 3, count: 1, clouds: [baseCloud] } satisfies Raw);
+    mockFetch({ version: CLOUDS_JSON_SCHEMA.version, count: 1, clouds: [baseCloud] } satisfies Raw);
     const out = await loadClouds('/clouds.json');
     expect(out!.clouds[0].massMsun).toBeNull();
     expect(out!.clouds[0].aliases).toBeUndefined();
@@ -106,7 +107,7 @@ describe('loadClouds', () => {
 
   it('returns null when any cloud is missing its sid (pre-stamp artifact)', async () => {
     const { sid: _sid, ...noSid } = baseCloud;
-    mockFetch({ version: 3, count: 1, clouds: [noSid] } satisfies Raw);
+    mockFetch({ version: CLOUDS_JSON_SCHEMA.version, count: 1, clouds: [noSid] } satisfies Raw);
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
     expect(await loadClouds('/clouds.json')).toBeNull();
     expect(warn).toHaveBeenCalledWith(
@@ -117,7 +118,7 @@ describe('loadClouds', () => {
 
   it('returns null on a duplicate sid', async () => {
     mockFetch({
-      version: 3,
+      version: CLOUDS_JSON_SCHEMA.version,
       count: 2,
       clouds: [baseCloud, { ...baseCloud, id: 'orion-b' }],
     } satisfies Raw);

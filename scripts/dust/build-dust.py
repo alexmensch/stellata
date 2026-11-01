@@ -340,7 +340,7 @@ def write_chunks(encoded: np.ndarray, out_dir: Path) -> list[dict]:
 def build_manifest(chunks: list[dict], *, synthetic: bool, density_max: float,
                    zucker: dict | None) -> dict:
     manifest = {
-        "version": 2,
+        "version": CONSTANTS["artifacts"]["dustManifest"]["version"],
         "format": "u8-log-window",
         "synthetic": synthetic,
         "gridSize": GRID_SIZE,

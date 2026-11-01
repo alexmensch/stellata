@@ -32,7 +32,9 @@ build scripts, tests, and shader uniforms.
   the stellata-uadc.69 epic).
 - `baker-constants.ts` — the typed view of `data/schema/constants.json`,
   the facts the Python asset bakers share with TypeScript, and the only
-  module that imports that file (`data/schema/README.md`).
+  module that imports that file (`data/schema/README.md`). Also
+  `checkBinaryHeader` / `writeBinaryHeader`, the magic-and-version gate
+  every baker-written binary's loader opens with, and its fixture twin.
 - `ulp.ts` (+ test) — `ulpsBetween(a, b)`, the distance between two
   float64s in representable steps. The unit that separates a value which
   will not converge (a handful of ULP, re-derived each frame from inputs

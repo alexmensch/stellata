@@ -36,7 +36,9 @@ scripts and source files. Run via `pnpm run build:clouds`.
 
 ## Output schema
 
-`{version: 3, count, noiseModel, clouds[]}` — `noiseModel` carries
+`{version: 3, count, noiseModel, clouds[]}` — the version is
+`artifacts.clouds` in `data/schema/constants.json`, which the client loader
+gates on too. `noiseModel` carries
 the substructure noise-ladder constants ([§ 5.2](/docs/science-molecular-clouds.md#52-the-multiplicative-field);
 build-side only — the client no longer reads them, see [§ 5](/docs/science-molecular-clouds.md#5-substructure-noise-build-side-spec)).
 One entry per cloud:

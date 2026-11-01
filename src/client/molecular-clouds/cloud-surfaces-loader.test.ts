@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import { CLOUD_SURFACES_SCHEMA, writeBinaryHeader } from '../util/baker-constants';
 import { parseCloudSurfaces } from './cloud-surfaces-loader';
 
 interface TestEntry {
@@ -14,14 +15,14 @@ interface TestEntry {
   };
 }
 
-/** Assemble a CSUR v2 buffer from sid-keyed meshes (mirrors the writer
+/** Assemble a CSUR buffer from sid-keyed meshes (mirrors the writer
  *  in scripts/cloud-surfaces/build-cloud-surfaces.py). */
-function makeBuffer(entries: TestEntry[], version = 2): ArrayBuffer {
+function makeBuffer(entries: TestEntry[], version = CLOUD_SURFACES_SCHEMA.version): ArrayBuffer {
   const blobBytes = entries.reduce(
     (a, e) => a + e.positions.length * 4 + e.indices.length * 4 + e.brick.data.length, 0);
   const buf = new ArrayBuffer(16 + entries.length * 44 + blobBytes);
   const view = new DataView(buf);
-  view.setUint32(0, 0x43535552, false); // 'CSUR'
+  writeBinaryHeader(view, CLOUD_SURFACES_SCHEMA);
   view.setUint32(4, version, true);
   view.setUint32(8, entries.length, true);
   let off = 16;
@@ -99,8 +100,9 @@ describe('parseCloudSurfaces', () => {
     expect(() => parseCloudSurfaces(buf)).toThrow(/bad magic/);
   });
 
-  it('throws on an unsupported version (a stale v1 binary must not half-parse)', () => {
-    expect(() => parseCloudSurfaces(makeBuffer([tri], 1))).toThrow(/unsupported version/);
+  it('throws on a version other than the shared schema (a stale binary must not half-parse)', () => {
+    expect(() => parseCloudSurfaces(makeBuffer([tri], CLOUD_SURFACES_SCHEMA.version - 1)))
+      .toThrow(/unsupported version/);
   });
 
   it('throws on a truncated buffer', () => {

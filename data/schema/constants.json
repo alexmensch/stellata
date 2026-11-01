@@ -8,5 +8,11 @@
   "extinction": {
     "avPerEzgr": 2.742,
     "avPerNhPc": 0.00165
+  },
+  "artifacts": {
+    "clouds": { "version": 3 },
+    "dustManifest": { "version": 2 },
+    "cloudSurfaces": { "magic": "CSUR", "version": 2 },
+    "localBubble": { "magic": "LBUB", "version": 1 }
   }
 }

@@ -2,7 +2,8 @@
 // density bricks traced from the Edenhofer 2024 (/data/papers/index.md#edenhofer2024)
 // dust field, keyed by cloud sid. Format: scripts/cloud-surfaces/README.md.
 
-const MAGIC = 0x43535552; // 'CSUR' big-endian read of bytes C,S,U,R
+import { CLOUD_SURFACES_SCHEMA, checkBinaryHeader } from '../util/baker-constants';
+
 const HEADER_BYTES = 16;
 const DIR_ENTRY_BYTES = 44;
 
@@ -33,13 +34,7 @@ export interface CloudSurface {
  *  magic, version, or a size that doesn't match the directory sums. */
 export function parseCloudSurfaces(buffer: ArrayBuffer): Map<number, CloudSurface> {
   const view = new DataView(buffer);
-  if (view.getUint32(0, false) !== MAGIC) {
-    throw new Error('cloud-surfaces.bin: bad magic (expected CSUR)');
-  }
-  const version = view.getUint32(4, true);
-  if (version !== 2) {
-    throw new Error(`cloud-surfaces.bin: unsupported version ${version}`);
-  }
+  checkBinaryHeader(view, CLOUD_SURFACES_SCHEMA, 'cloud-surfaces.bin');
   const cloudCount = view.getUint32(8, true);
   const dirBytes = cloudCount * DIR_ENTRY_BYTES;
   let blobBytes = 0;

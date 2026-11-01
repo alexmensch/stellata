@@ -3,7 +3,7 @@ import {
   DustField, dustManifestError, loadDustManifest, type DustChunkMeta, type DustManifest,
 } from './dust-loader';
 import { webGpuRendererMock } from './dust-renderer-mock';
-import { AV_PER_EZGR } from '../util/baker-constants';
+import { AV_PER_EZGR, DUST_MANIFEST_SCHEMA } from '../util/baker-constants';
 
 const GRID = 8;
 const CHUNK = 4;
@@ -20,7 +20,7 @@ const chunk = (
 
 function manifest(chunks: DustChunkMeta[]): DustManifest {
   return {
-    version: 1,
+    version: DUST_MANIFEST_SCHEMA.version,
     format: 'u8',
     synthetic: false,
     gridSize: GRID,
@@ -59,7 +59,8 @@ describe('loadDustManifest', () => {
   it('warns and returns null on a manifest a DustField cannot be built from', async () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
     const cases: [unknown, string][] = [
-      [[], 'no positive gridSize'],
+      [[], 'has version undefined'],
+      [{ ...manifest([]), gridSize: 0 }, 'no positive gridSize'],
       [{ ...manifest([]), chunkSize: 3 }, 'does not divide gridSize'],
       [{ ...manifest([]), boundsPc: [1250] }, 'boundsPc'],
       [{ ...manifest([]), densityMin: 0 }, '0 < densityMin < densityMax'],
@@ -85,6 +86,11 @@ describe('loadDustManifest', () => {
 describe('dustManifestError', () => {
   it('accepts the fixture every DustField suite here builds from', () => {
     expect(dustManifestError(manifest([chunk(0, 0, 0, [0, 0, 0])]))).toBe(null);
+  });
+
+  it('refuses a version other than the shared schema', () => {
+    const stale = { ...manifest([chunk(0, 0, 0, [0, 0, 0])]), version: DUST_MANIFEST_SCHEMA.version - 1 };
+    expect(dustManifestError(stale)).toMatch(/has version/);
   });
 });
 

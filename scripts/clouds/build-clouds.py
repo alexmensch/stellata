@@ -13,6 +13,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 import cloud_model  # noqa: E402
+from scripts.util.baker_constants import CONSTANTS  # noqa: E402
 from cloud_model import (  # noqa: E402
     AV_PER_NH_PC,
     AV_TARGET_BY_CLASS,
@@ -369,7 +370,7 @@ def main() -> None:
 
     OUT.parent.mkdir(parents=True, exist_ok=True)
     payload = {
-        'version': 3,
+        'version': CONSTANTS['artifacts']['clouds']['version'],
         'count': len(clouds),
         'noiseModel': NOISE_MODEL,
         'clouds': clouds,

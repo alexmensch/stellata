@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { LOCAL_BUBBLE_SCHEMA, writeBinaryHeader } from '../util/baker-constants';
 import { parseLocalBubble } from './local-bubble-loader';
 
 function buildBuffer(
@@ -9,11 +10,7 @@ function buildBuffer(
   const vertexCount = positions.length / 3;
   const buf = new ArrayBuffer(32 + positions.length * 4 + indices.length * 4);
   const view = new DataView(buf);
-  view.setUint8(0, 0x4c); // L
-  view.setUint8(1, 0x42); // B
-  view.setUint8(2, 0x55); // U
-  view.setUint8(3, 0x42); // B
-  view.setUint32(4, 1, true); // version
+  writeBinaryHeader(view, LOCAL_BUBBLE_SCHEMA);
   view.setUint32(8, vertexCount, true);
   view.setUint32(12, indices.length, true);
   view.setFloat32(16, centroid[0], true);
@@ -45,6 +42,12 @@ describe('parseLocalBubble', () => {
     const buf = buildBuffer([0, 0, 0], [], [0, 0, 0]);
     new DataView(buf).setUint8(0, 0x58); // corrupt L -> X
     expect(() => parseLocalBubble(buf)).toThrow(/magic/);
+  });
+
+  it('rejects a version other than the shared schema', () => {
+    const buf = buildBuffer([0, 0, 0], [], [0, 0, 0]);
+    new DataView(buf).setUint32(4, LOCAL_BUBBLE_SCHEMA.version + 1, true);
+    expect(() => parseLocalBubble(buf)).toThrow(/unsupported version/);
   });
 
   it('rejects a size mismatch', () => {

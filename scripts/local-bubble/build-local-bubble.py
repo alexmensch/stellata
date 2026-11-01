@@ -16,14 +16,18 @@ from astropy.io import fits
 import astropy.units as u
 
 REPO = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(REPO))
+from scripts.util.baker_constants import CONSTANTS  # noqa: E402
+
 FITS_PATH = REPO / "data" / "local-bubble" / "zucker2022-inner-surface.fits"
 # Committed product (LFS), like the dust grid — sync-local-bubble.ts copies
 # it to public/ at build time so deploy needs no astro-Python.
 OUT_PATH = REPO / "data" / "local-bubble" / "local-bubble.bin"
 DUST_DIR = REPO / "data" / "dust"
 
-MAGIC = b"LBUB"
-VERSION = 1
+_SCHEMA = CONSTANTS["artifacts"]["localBubble"]
+MAGIC = _SCHEMA["magic"].encode("ascii")
+VERSION = _SCHEMA["version"]
 
 
 def load_wall_radii(column: str) -> tuple[np.ndarray, int]:
