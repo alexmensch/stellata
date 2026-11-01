@@ -159,9 +159,8 @@ import {
 } from '../sid/allocation-lineage-pure';
 import { catalogSidObjects, inCatalogScope } from '../sid/catalog-objects';
 import { catalogUpstream } from '../sid/catalog-upstream';
-import { loadRegistry, registryTexts } from '../sid/registry-io';
+import { allocationRun, loadRegistry, registryTexts } from '../sid/registry-io';
 import { loadStoredEdges } from '../sid/stored-edges';
-import { packageVersion } from '../util/git-provenance';
 import { stepInputPaths } from '../util/step-inputs';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -956,8 +955,7 @@ async function main() {
     ledger: registry.ledger,
     events: registry.events,
     scope: inCatalogScope,
-    date: new Date().toISOString().slice(0, 10),
-    version: packageVersion(),
+    ...allocationRun(),
   }, catalogUpstream({ placementRemovals, promotion: promotionLines, promotionIdentity }));
   if (allocation.kind === 'failed') {
     throw new Error(`SID allocation failed for ${allocation.errors.length} object(s):\n  ${allocation.errors.join('\n  ')}`);

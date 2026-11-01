@@ -1,5 +1,6 @@
 // The committed SID registry: read and structurally validated, and its files rewritten with an allocation's appends.
 
+import { packageVersion } from '../util/git-provenance';
 import { artifactText, readArtifact } from '../util/sources/source';
 import { LEDGER, ledgerFile } from './ledger-tsv';
 import { validateEvents, type EventRow } from './events-pure';
@@ -27,6 +28,11 @@ export function loadRegistry(): Registry {
     throw new Error(`SID registry is structurally invalid:\n  ${errors.join('\n  ')}`);
   }
   return { ledger, events, storedEdges: loadStoredEdges() };
+}
+
+/** The date and build version this run's mints and events carry. */
+export function allocationRun(): { date: string; version: string } {
+  return { date: new Date().toISOString().slice(0, 10), version: packageVersion() };
 }
 
 /** The ledger and events with the allocation's rows appended, never a committed line rewritten, and the head recomputed over both. */

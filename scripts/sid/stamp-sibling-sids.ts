@@ -3,10 +3,9 @@
 import { existsSync, readFileSync } from 'node:fs';
 
 import { emitArtifacts, runStep } from '../util/emit-artifacts';
-import { packageVersion } from '../util/git-provenance';
 import { allocate, type Upstream } from './allocate-pure';
 import type { EventRow } from './events-pure';
-import { loadRegistry, registryTexts } from './registry-io';
+import { allocationRun, loadRegistry, registryTexts } from './registry-io';
 import type { LedgerRow } from './sid-pure';
 import {
   SIBLING_ARTIFACTS,
@@ -47,8 +46,7 @@ function main(): void {
       ledger: [...registry.ledger, ...minted],
       events: [...registry.events, ...events],
       scope: (ns) => ns === spec.ns,
-      date: new Date().toISOString().slice(0, 10),
-      version: packageVersion(),
+      ...allocationRun(),
     }, NO_LINEAGE);
     if (allocation.kind === 'failed') {
       throw new Error(
