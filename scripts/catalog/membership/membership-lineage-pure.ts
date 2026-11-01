@@ -159,6 +159,12 @@ export interface KeyedOutcome {
 
 type Branch = Parameters<typeof MEMBERSHIP_CODES.code>[0];
 
+/** The codes of the rows that admit a record into the manifest: what a new SID's mint event carries. */
+export const MEMBERSHIP_ADMISSION_CODES: ReadonlySet<string> = new Set(
+  (['admit.spine', 'admit.magnitude', ...Object.values(ADDITION_BRANCHES)] as const satisfies readonly Branch[])
+    .map((b) => MEMBERSHIP_CODES.code(b)),
+);
+
 type Letters = { source_letters: string; hip_letters: string };
 type Candidate = { source_id: string; via: string };
 
