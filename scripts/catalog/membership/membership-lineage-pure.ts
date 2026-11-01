@@ -189,18 +189,24 @@ type ParamsOf<B extends Branch> =
   : B extends `label.${LabelDisposition}` ? Pick<LabelFlip, 'field' | 'label' | 'spine' | 'overlay' | 'applied'>
   : Record<string, never>;
 
-export const ALLOWED_OWN_CANDIDATE_REASONS: ReadonlySet<string> = new Set<OwnCandidateReason>([
+export const ALLOWED_OWN_CANDIDATE_REASONS: ReadonlySet<OwnCandidateReason> = new Set<OwnCandidateReason>([
   'refused_mag', 'refused_sibling', 'runner_up', 'component',
 ]);
 
+function membershipInvariant<B extends Branch>(
+  branch: B, holds: string, allows: (params: ParamsOf<B>) => boolean,
+): LineageInvariant {
+  return lineageInvariant(MEMBERSHIP_CODES, branch, holds, (p) => allows(p as ParamsOf<B>));
+}
+
 export const MEMBERSHIP_INVARIANTS: readonly LineageInvariant[] = [
-  lineageInvariant(
-    MEMBERSHIP_CODES, 'admit.magnitude',
+  membershipInvariant(
+    'admit.magnitude',
     `no magnitude-term record is a primaries row's unshipped candidate except as ${[...ALLOWED_OWN_CANDIDATE_REASONS].join(', ')}`,
     (p) => p.own_candidate === undefined || ALLOWED_OWN_CANDIDATE_REASONS.has(p.own_candidate),
   ),
-  lineageInvariant(
-    MEMBERSHIP_CODES, 'binding.unweighed-no-pulled-row',
+  membershipInvariant(
+    'binding.unweighed-no-pulled-row',
     'every binding candidate is weighed on a row the astrometry pull carries (binding/README.md#the-candidates-have-to-be-in-the-astrometry-pull)',
     NO_EXCEPTIONS,
   ),
