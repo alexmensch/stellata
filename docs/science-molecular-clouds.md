@@ -67,10 +67,10 @@ The units chain, end to end:
 | Quantity | Value | Source |
 | --- | --- | --- |
 | Voxel unit | E_ZGR pc⁻¹ ([Zhang 2023](/data/papers/index.md#zhang2023) extinction density) | [Edenhofer 2024](/data/papers/index.md#edenhofer2024) |
-| A_V per E_ZGR | 2.742 | manifest `avPerDensityPerPc`; read off a ZGR23 extinction-curve table at ≈ 544 nm, not from [Zhang 2023](/data/papers/index.md#zhang2023)'s text; [Edenhofer 2024](/data/papers/index.md#edenhofer2024) multiply by 2.8 — an open decision (`stellata-uadc.69.24`) |
+| A_V per E_ZGR | 2.742 | `data/schema/constants.json` `extinction.avPerEzgr`, copied into the dust manifest's `avPerDensityPerPc`; read off a ZGR23 extinction-curve table (Zenodo 10.5281/zenodo.7811871; the paper names 10.5281/zenodo.7692680 as its electronic table), not from [Zhang 2023](/data/papers/index.md#zhang2023)'s text: A_λ/E_ZGR = 2.78 at 540 nm, 2.73 at 545 nm, so 2.742 is λ ≈ 544 nm, inside the V-band effective wavelength; [Edenhofer 2024](/data/papers/index.md#edenhofer2024) multiply by 2.8 — an open decision (`stellata-uadc.69.24`) |
 | N_H per A_V | 1.87×10²¹ cm⁻² mag⁻¹ | [Bohlin 1978](/data/papers/index.md#bohlin1978) (N_H/E(B−V) = 5.8×10²¹, R_V = 3.1) |
 | 1 cm⁻³ · pc | 3.086×10¹⁸ cm⁻² | definition |
-| A_V rate for n_H [cm⁻³] | 1.65×10⁻³ · n_H mag pc⁻¹ | product of the above |
+| A_V rate for n_H [cm⁻³] | 1.65×10⁻³ · n_H mag pc⁻¹ | product of the above; `extinction.avPerNhPc` |
 | ρ_ZGR for n_H [cm⁻³] | 6.02×10⁻⁴ · n_H E_ZGR pc⁻¹ | ÷ 2.742 |
 | A_K / A_V | 0.117 | [Cardelli 1989](/data/papers/index.md#cardelli1989) eq. 2 evaluated at 2.159 µm (2MASS Ks), R_V = 3.1 — not Table 3's K row, 0.114 |
 

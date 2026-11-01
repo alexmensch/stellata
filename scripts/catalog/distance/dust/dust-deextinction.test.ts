@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { assembleDustGrid, type DustManifest } from './dust-deextinction';
+import { AV_PER_EZGR } from '../../../../src/client/util/baker-constants';
 
 // 2³ grid split into 1³ chunks (8 chunks) so the chunk-placement mapping
 // is exercised: each chunk carries a single voxel whose value encodes its
@@ -24,7 +25,7 @@ function fixture(): { manifest: DustManifest; files: Map<string, Uint8Array> } {
     voxelSizePc: 100,
     densityMin: 1e-3,
     densityMax: 0.1,
-    avPerDensityPerPc: 2.742,
+    avPerDensityPerPc: AV_PER_EZGR,
     chunks,
   };
   return { manifest, files };
@@ -36,7 +37,7 @@ describe('assembleDustGrid', () => {
     const grid = assembleDustGrid(manifest, (f) => files.get(f)!);
     expect(grid.gridSize).toBe(2);
     expect(grid.boundsHalfPc).toBe(100);
-    expect(grid.avPerDensityPc).toBe(2.742);
+    expect(grid.avPerDensityPc).toBe(AV_PER_EZGR);
     expect(grid.logRatio).toBeCloseTo(Math.log(0.1 / 1e-3), 12);
     // Each voxel at global (gx=ix, gy=iy, gz=iz) must carry its chunk value.
     for (let ix = 0; ix < 2; ix++) {

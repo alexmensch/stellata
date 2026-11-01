@@ -3,6 +3,7 @@ import {
   DustField, dustManifestError, loadDustManifest, type DustChunkMeta, type DustManifest,
 } from './dust-loader';
 import { webGpuRendererMock } from './dust-renderer-mock';
+import { AV_PER_EZGR } from '../util/baker-constants';
 
 const GRID = 8;
 const CHUNK = 4;
@@ -30,7 +31,7 @@ function manifest(chunks: DustChunkMeta[]): DustManifest {
     voxelSizePc: 1,
     densityMin: 1e-7,
     densityMax: 1e-3,
-    avPerDensityPerPc: 2.742,
+    avPerDensityPerPc: AV_PER_EZGR,
     chunks,
   };
 }

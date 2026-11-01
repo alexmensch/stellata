@@ -18,7 +18,6 @@ import {
   BULGE_DENSITY0,
   BULGE_TINT_RGB,
   BULGE_VOLUME_INTEGRAL,
-  DEFAULT_DUST_AV_PER_DENSITY_PC,
   DEFAULT_EXTINCTION_STRENGTH,
   DISC_COLOR_RGB,
   DISC_DENSITY0,
@@ -42,6 +41,7 @@ import {
   sightlineSurfaceBrightness,
 } from './column/milkyway-column-pure';
 import { R0_PC } from '../galactic/galactic-coords';
+import { AV_PER_EZGR } from '../util/baker-constants';
 import { ABSOLUTE_MAGNITUDE_DISTANCE_PC } from '../hdr/emission/density0-solver-pure';
 import { LG_OVERRIDES } from '../../../scripts/local-group/local-group-source';
 import {
@@ -528,7 +528,7 @@ describe('MilkyWay analytical dust', () => {
 
   // The normalisation divides by this constant, and attachDust overwrites
   // the *uniform* from the loaded manifest while leaving the *norm* derived
-  // from the copy here. Disagree and the shipped rate is silently
+  // from the shared constant. Disagree and the shipped rate is silently
   // LOCAL_DUST_RATE_MAG_PER_KPC x (manifest / this), not the stated 1.0.
   it('derives the norm at the A_V rate the shipped dust field carries', () => {
     const manifest = JSON.parse(
@@ -537,7 +537,7 @@ describe('MilkyWay analytical dust', () => {
         'utf-8',
       ),
     ) as { avPerDensityPerPc: number };
-    expect(DEFAULT_DUST_AV_PER_DENSITY_PC).toBe(manifest.avPerDensityPerPc);
+    expect(AV_PER_EZGR).toBe(manifest.avPerDensityPerPc);
   });
 });
 

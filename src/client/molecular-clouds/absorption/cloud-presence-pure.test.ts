@@ -1,7 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
   TAU_PER_AV,
-  AV_RATE_PER_NH,
   cloudModelDensity,
   absorptionAlpha,
 } from './cloud-presence-pure';
@@ -39,8 +38,7 @@ describe('absorptionAlpha', () => {
   it('is zero for a clean sightline', () => {
     expect(absorptionAlpha(0)).toBe(0);
   });
-  it('uses τ = 0.921·A_V and the calibrated A_V rate', () => {
+  it('uses τ = 0.921·A_V', () => {
     expect(TAU_PER_AV).toBe(0.921);
-    expect(AV_RATE_PER_NH).toBe(1.65e-3);
   });
 });

@@ -7,6 +7,7 @@ import {
   sightlineColumn,
   type Vec3,
 } from '../../../src/client/milkyway/column/milkyway-column-pure';
+import { AV_PER_EZGR } from '../../../src/client/util/baker-constants';
 
 const GRID = 32;
 const PARAMS: DustParams = {
@@ -15,7 +16,7 @@ const PARAMS: DustParams = {
   voxelPc: (2 * 1250) / GRID,
   densityMin: 1e-7,
   logRatio: Math.log(0.2 / 1e-7),
-  avPerDensityPerPc: 2.742,
+  avPerDensityPerPc: AV_PER_EZGR,
 };
 /** Code 0 decodes to the noise floor, so the measured tier contributes nothing
  *  and the analytic one is the whole cascade. */

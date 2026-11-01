@@ -4,5 +4,9 @@
     "centreDecDeg": -28.93617,
     "northPoleRaDeg": 192.85948,
     "northPoleDecDeg": 27.12825
+  },
+  "extinction": {
+    "avPerEzgr": 2.742,
+    "avPerNhPc": 0.00165
   }
 }

@@ -9,12 +9,13 @@ import {
 import {
   FIXED_MARCH_TAPS, fp32March, percentile, strideSample, summarise, unclippedFixedMarch,
 } from './march-taps-pure';
+import { AV_PER_EZGR } from '../../../src/client/util/baker-constants';
 
 const P: DustDecodeParams = {
   boundsPc: 1250,
   densityMin: 1e-7,
   logRatio: Math.log(0.2 / 1e-7),
-  avPerDensityPc: 2.742,
+  avPerDensityPc: AV_PER_EZGR,
 };
 
 describe('percentile / summarise', () => {

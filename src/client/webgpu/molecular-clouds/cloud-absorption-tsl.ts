@@ -12,9 +12,10 @@ import {
 import { NodeMaterial } from 'three/webgpu';
 import { DITHER_SEED_OFFSET } from '../../hdr/tonemap/tonemap-pure';
 import {
-  ALPHA_CAP, AV_PER_DENSITY, AV_RATE_PER_NH, AV_SATURATED, ENVELOPE_TAPER_FRAC,
+  ALPHA_CAP, AV_SATURATED, ENVELOPE_TAPER_FRAC,
   MARCH_MIN_CHORD_T, MARCH_MIN_STEPS, TAU_PER_AV,
 } from '../../molecular-clouds/absorption/cloud-presence-pure';
+import { AV_PER_EZGR, AV_PER_NH_PC } from '../../util/baker-constants';
 import { finishMrtMaterial, type MrtEmitterMaterial } from '../hdr/mrt-material';
 import { interleavedGradientNoiseTsl, lsbDitherTsl } from '../tsl/jitter-tsl';
 import type { SharedUniformNodes } from '../tsl/shared-uniform-nodes';
@@ -90,7 +91,7 @@ export function buildCloudAbsorptionMaterial(
           const off = field.uCenterFromAabb.add(field.uRotMat.mul(pu.mul(c.uAxes)));
           const d = field.uBrick.sample(off.mul(field.uUvwScale).add(field.uUvwBias)).r
             .mul(field.uDensityMax);
-          av.addAssign(d.mul(AV_PER_DENSITY).mul(stepPc));
+          av.addAssign(d.mul(AV_PER_EZGR).mul(stepPc));
         } else {
           const uu = length(pu).toVar();
           const env = float(1.0).sub(
@@ -99,7 +100,7 @@ export function buildCloudAbsorptionMaterial(
           If(env.greaterThan(0.0), () => {
             const q = uu.mul(c.uAxes.z).div(c.uRflat).toVar();
             const density = pow(
-              q.mul(q).add(1.0), c.uP.mul(-0.5)).mul(c.uN0Cal).mul(AV_RATE_PER_NH);
+              q.mul(q).add(1.0), c.uP.mul(-0.5)).mul(c.uN0Cal).mul(AV_PER_NH_PC);
             av.addAssign(density.mul(env).mul(stepPc));
           });
         }

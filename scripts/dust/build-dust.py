@@ -18,6 +18,7 @@ ROOT = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "scripts" / "clouds"))
 import cloud_model  # noqa: E402
+from scripts.util.baker_constants import CONSTANTS  # noqa: E402
 
 # Canonical grid params — changing any of these is a format version bump.
 GRID_SIZE = 512
@@ -25,6 +26,7 @@ CHUNK_SIZE = 128
 CHUNKS_PER_AXIS = GRID_SIZE // CHUNK_SIZE   # 4
 BOUNDS_PC = cloud_model.DUST_GRID_HALF_EXTENT_PC  # half-extent; full cube is 2*bounds
 VOXEL_SIZE_PC = 2.0 * BOUNDS_PC / GRID_SIZE  # ≈ 4.883
+AV_PER_EZGR = CONSTANTS["extinction"]["avPerEzgr"]
 
 # Encoding params. DENSITY_MIN is fixed below the real-data noise floor;
 # DENSITY_MAX is a fixed ceiling covering the raw Edenhofer 2024
@@ -41,7 +43,7 @@ DENSITY_MAX_SYNTHETIC = 0.1
 DENSITY_MAX_REAL = 0.2
 DENSITY_MAX_HEADROOM = 1.2
 
-# A_V-per-E_ZGR conversion (cloud_model.ZGR_TO_AV) is applied at runtime in
+# A_V-per-E_ZGR conversion (AV_PER_EZGR) is applied at runtime in
 # the shader / manifest, never baked into the stored density.
 # Sanity check: Aquila Rift at ~200 pc, peak density ~0.05 E_ZGR/pc,
 # sightline 200 pc → 10 E_ZGR → 27 mag A_V peak-through-the-densest-filament
@@ -151,7 +153,7 @@ def _peak_column_av(voxels: np.ndarray, cloud, rot: np.ndarray,
                      * (f[..., 1] if dy else 1 - f[..., 1])
                      * (f[..., 2] if dz else 1 - f[..., 2]))
                 acc += w * voxels[i0[..., 0] + dx, i0[..., 1] + dy, i0[..., 2] + dz]
-    cols = np.trapezoid(acc, t, axis=-1) * cloud_model.ZGR_TO_AV
+    cols = np.trapezoid(acc, t, axis=-1) * AV_PER_EZGR
     return float(cols.max())
 
 
@@ -352,7 +354,7 @@ def build_manifest(chunks: list[dict], *, synthetic: bool, density_max: float,
         "densityMin": DENSITY_MIN,
         "densityMax": density_max,
         "encoding": "uint8: 255 * (log10(clamp(d,dmin,dmax)) - log10(dmin)) / log10(dmax/dmin)",
-        "avPerDensityPerPc": cloud_model.ZGR_TO_AV,
+        "avPerDensityPerPc": AV_PER_EZGR,
         "chunks": chunks,
     }
     if zucker is not None:

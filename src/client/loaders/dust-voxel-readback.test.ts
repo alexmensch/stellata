@@ -9,6 +9,7 @@ import {
   type VerifiableDustField,
 } from './dust-voxel-readback';
 import { webGpuRendererMock, type VoxelSource } from './dust-renderer-mock';
+import { AV_PER_EZGR } from '../util/baker-constants';
 
 const CHUNK = 4;
 const GRID = 8;
@@ -63,7 +64,7 @@ function dustField(chunks: DustChunkMeta[]): VerifiableDustField {
     voxelSizePc: 1,
     densityMin: 1e-7,
     densityMax: 1e-3,
-    avPerDensityPerPc: 2.742,
+    avPerDensityPerPc: AV_PER_EZGR,
     chunks,
   };
   return { texture: createVoxelTexture(GRID, null), manifest, baseUrl: '/dust/' };

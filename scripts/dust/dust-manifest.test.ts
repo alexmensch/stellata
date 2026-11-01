@@ -9,6 +9,7 @@ import { fileURLToPath } from 'node:url';
 import { describe, it, expect } from 'vitest';
 
 import { DUST_GRID } from '../catalog/distance/dust/dust-grid-source';
+import { AV_PER_EZGR } from '../../src/client/util/baker-constants';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const MANIFEST = resolve(ROOT, DUST_GRID.file);
@@ -43,7 +44,7 @@ describe('dust manifest.json encode contract', () => {
     expect(manifest.synthetic).toBe(false);
     expect(manifest.densityMin).toBe(1e-7);
     expect(manifest.densityMax).toBe(0.2);
-    expect(manifest.avPerDensityPerPc).toBe(2.742);
+    expect(manifest.avPerDensityPerPc).toBe(AV_PER_EZGR);
     expect(manifest.chunks).toHaveLength(64);
   });
 

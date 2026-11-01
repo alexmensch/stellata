@@ -27,3 +27,4 @@ baker; this file holds what both sides need *before* any artifact exists.
 | Key | What | TS readers | Python readers |
 |---|---|---|---|
 | `galacticFrame` | J2000 IAU galactic centre and north pole, ICRS degrees | `galactic/galactic-coords.ts` | `scripts/clouds/cloud_model.py` |
+| `extinction` | `avPerEzgr`, A_V per unit Edenhofer dust density; `avPerNhPc`, A_V per pc per n_H cm⁻³ ([§ 2](/docs/science-molecular-clouds.md#2-extinction-physics-and-the-units-chain)) | cloud absorption graph, Milky Way column, shared-uniforms seed | `cloud_model.py`, `build-dust.py` (which writes `avPerEzgr` into the dust manifest) |

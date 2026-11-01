@@ -17,26 +17,15 @@ SRC_2021_T3 = ROOT / 'data' / 'molecular-clouds' / 'zucker2021-table3.dat'
 
 # Units chain (/docs/science-molecular-clouds.md#2-extinction-physics-and-the-units-chain): every layer works in
 # extinction rate; n_H [cm^-3] converts through these.
-AV_PER_NH_PC = 1.65e-3      # mag A_V per pc per (n_H cm^-3)
+AV_PER_NH_PC = CONSTANTS['extinction']['avPerNhPc']  # mag A_V per pc per (n_H cm^-3)
 ZGR_PER_NH = 6.02e-4        # E_ZGR per pc per (n_H cm^-3)
 # Cardelli 1989 (/data/papers/index.md#cardelli1989) eq. 2 evaluated at
 # 2.159 µm (2MASS Ks), R_V = 3.1 — not its Table 3 K row, which gives 0.114.
 AK_OVER_AV = 0.117
 
-# Zhang 2023 (/data/papers/index.md#zhang2023) "E" unit → V-band
-# extinction: A_V = ZGR_TO_AV * E_ZGR. Edenhofer 2024
-# (/data/papers/index.md#edenhofer2024) densities are E_ZGR/pc, so a path
-# integral times this yields A_V. The factor is not in Zhang 2023's text: it
-# is read off a ZGR23 extinction-curve table (Zenodo 10.5281/zenodo.7811871;
-# the paper names 10.5281/zenodo.7692680 as its electronic table), which gives
-# A_λ/E_ZGR = 2.78 at 540 nm, 2.73 at 545 nm; 2.742 is λ ≈ 544 nm, inside the
-# V-band effective wavelength. Edenhofer 2024 multiply by 2.8. Which factor
-# and record to use is open
-# (/docs/science-molecular-clouds.md#2-extinction-physics-and-the-units-chain).
-# Agrees with the n_H chain (AV_PER_NH_PC / ZGR_PER_NH = 2.741)
-# to <0.1%. Applied at runtime in the shader / dust manifest, never baked into
-# the stored density — retuning needs no re-encode.
-ZGR_TO_AV = 2.742
+# A_V per E_ZGR: provenance and the open choice of factor are
+# /docs/science-molecular-clouds.md#2-extinction-physics-and-the-units-chain.
+ZGR_TO_AV = CONSTANTS['extinction']['avPerEzgr']
 
 # Mass integral M/Msun = MSUN_PER_NH_PC3 * ∫ n dV  (n in cm^-3, V in pc^3),
 # mu = 1.37 per H nucleon.

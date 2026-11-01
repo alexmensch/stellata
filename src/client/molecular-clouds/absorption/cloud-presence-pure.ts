@@ -5,19 +5,12 @@
 /** τ_V = 0.921 · A_V (A_V = 1.086 τ_V). */
 export const TAU_PER_AV = 0.921;
 
-/** A_V rate [mag/pc] per n_H [cm⁻³] (/docs/science-molecular-clouds.md#2-extinction-physics-and-the-units-chain). */
-export const AV_RATE_PER_NH = 1.65e-3;
-
 /** Opacity ceiling: the densest core never fully blacks out the
  *  background behind it. */
 export const ALPHA_CAP = 0.95;
 
 /** A_V column past which the cap has long saturated, so the march stops. */
 export const AV_SATURATED = 6.0;
-
-/** A_V per E_ZGR — the dust manifest's avPerDensityPerPc. Traced clouds
- *  only; the analytic tier goes through AV_RATE_PER_NH instead. */
-export const AV_PER_DENSITY = 2.742;
 
 /** A fraction of `uEnv`. */
 export const ENVELOPE_TAPER_FRAC = 0.85;
