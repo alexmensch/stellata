@@ -16,7 +16,7 @@ import {
   manifestNaming,
   type ManifestNamingCounts,
   type ManifestNamingRow,
-} from '../naming/wgsn-tables-pure';
+} from '../naming/wgsn-index-pure';
 import { SAMEAS_OVERRIDES } from '../../sid/sameas-source';
 import { catalogRecordDesignations } from '../../sid/catalog-designations';
 import {

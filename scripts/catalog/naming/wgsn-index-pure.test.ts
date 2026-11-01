@@ -2,10 +2,14 @@ import { describe, expect, it } from 'vitest';
 
 import {
   buildWgsnIndex,
+  diffDispositions,
+  manifestNaming,
+  membershipProperKey,
   parseProperDispositions,
   pickBayerRow,
   pickNameRow,
   routeDisposedProper,
+  type ManifestNamingRow,
 } from './wgsn-index-pure';
 import { WGSN_NAMES } from './wgsn-names-tsv';
 import type { DesignationRow } from './wgsn-tables-pure';
@@ -134,5 +138,76 @@ describe('disposition routing', () => {
   it('routes an undisposed proper nowhere — the authority names it', () => {
     expect(routeDisposedProper('Sirius', undefined))
       .toEqual({ eponym: null, alias: null });
+  });
+});
+
+describe('the naming-authority disposition gate', () => {
+  const disposed = new Set([
+    membershipProperKey("Kapteyn's Star", 24186, 33793),
+    membershipProperKey('Ross 248', null, null),
+    membershipProperKey('p Eridani', null, 10361),
+  ]);
+
+  it('keys an absent number as an empty slot', () => {
+    expect(membershipProperKey('p Eridani', null, 10361)).toBe('p Eridani||10361');
+  });
+
+  it('fails an unmatched proper missing from the file, and a stale row', () => {
+    const unmatched = new Set([
+      membershipProperKey('Ross 248', null, null),
+      membershipProperKey('Vega', 91262, 172167),
+    ]);
+    expect(diffDispositions(unmatched, disposed)).toEqual({
+      missing: [membershipProperKey('Vega', 91262, 172167)],
+      stale: [
+        membershipProperKey("Kapteyn's Star", 24186, 33793),
+        membershipProperKey('p Eridani', null, 10361),
+      ],
+    });
+  });
+
+  it('passes on exact set equality', () => {
+    expect(diffDispositions(disposed, new Set(disposed))).toEqual({ missing: [], stale: [] });
+  });
+});
+
+describe('manifestNaming', () => {
+  const manifestRow = (over: Partial<ManifestNamingRow>): ManifestNamingRow => ({
+    proper: null, bayer: null, hip: null, hd: null, isSol: false, ...over,
+  });
+  const names = [{ name: 'Vega', aliases: [] }, { name: 'Unurgunite', aliases: ['Nganurganity'] }];
+  const rows = [
+    manifestRow({ proper: 'Vega', bayer: 'Alp', hip: 91262, hd: 172167 }),
+    manifestRow({ proper: 'Nganurganity', hd: 50 }),
+    manifestRow({ proper: 'Sol', isSol: true }),
+    manifestRow({ proper: 'Ross 248' }),
+    manifestRow({ bayer: 'Bet', hd: 7 }),
+  ];
+
+  it('matches aliases, skips Sol, and counts Bayer rows the table reaches', () => {
+    const result = manifestNaming(
+      rows, names, [bayer({ hip: 91262 })], [{ proper: 'Ross 248', hip: null, hd: null }],
+    );
+    expect(result).toEqual({
+      counts: {
+        membershipPropers: 3,
+        membershipProperMatched: 2,
+        membershipProperResiduals: 1,
+        membershipBayerRows: 2,
+        membershipBayerRowsCovered: 1,
+      },
+      missing: [],
+      stale: [],
+    });
+  });
+
+  it('names an undisposed residual and a disposition the authority now covers', () => {
+    const { missing, stale } = manifestNaming(
+      rows, names, [], [{ proper: 'Vega', hip: 91262, hd: 172167 }],
+    );
+    expect({ missing, stale }).toEqual({
+      missing: [membershipProperKey('Ross 248', null, null)],
+      stale: [membershipProperKey('Vega', 91262, 172167)],
+    });
   });
 });

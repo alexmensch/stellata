@@ -4,7 +4,7 @@
 
 import { GREEK_GLYPHS } from './greek-forms';
 import { foldNameKey } from './wgsn-normalise-pure';
-import type { DesignationRow } from './wgsn-tables-pure';
+import { bayerKeySets, type DesignationRow } from './wgsn-tables-pure';
 import type { WgsnRow } from './wgsn-parse-pure';
 import type { Declared } from '../../util/sources/source';
 import { readTable } from '../../util/tsv/table-pure';
@@ -227,4 +227,78 @@ export function routeDisposedProper(
     return { eponym: null, alias: proper };
   }
   return { eponym: null, alias: null };
+}
+
+/** Manifest propers and disposition rows meet on this key, so both sides
+ *  build it here — a format that drifts turns the naming-authority gate (/docs/star-naming.md#2-authority--one-source-approves-names-everything-else-compiles-them) into a
+ *  comparison of two disjoint sets that both look populated. */
+export function membershipProperKey(
+  proper: string,
+  hip: number | null,
+  hd: number | null,
+): string {
+  return [proper, hip ?? '', hd ?? ''].join('|');
+}
+
+/** The naming-authority gate (/docs/star-naming.md#2-authority--one-source-approves-names-everything-else-compiles-them) is exact set equality in both directions: an unmatched
+ *  proper missing from the file, or a disposition the authority now covers,
+ *  both fail the build. */
+export function diffDispositions(
+  unmatched: Set<string>,
+  disposed: Set<string>,
+): { missing: string[]; stale: string[] } {
+  return {
+    missing: [...unmatched].filter((k) => !disposed.has(k)),
+    stale: [...disposed].filter((k) => !unmatched.has(k)),
+  };
+}
+
+export interface ManifestNamingRow {
+  proper: string | null;
+  bayer: string | null;
+  hip: number | null;
+  hd: number | null;
+  isSol: boolean;
+}
+
+export interface ManifestNamingCounts {
+  membershipPropers: number;
+  membershipProperMatched: number;
+  membershipProperResiduals: number;
+  membershipBayerRows: number;
+  membershipBayerRowsCovered: number;
+}
+
+/** README.md#the-residual-gate. */
+export function manifestNaming(
+  rows: Iterable<ManifestNamingRow>,
+  names: readonly Pick<WgsnNameRow, 'name' | 'aliases'>[],
+  designations: DesignationRow[],
+  disposed: readonly Pick<ProperDispositionRow, 'proper' | 'hip' | 'hd'>[],
+): { counts: ManifestNamingCounts; missing: string[]; stale: string[] } {
+  const nameKeys = new Set(names.flatMap((n) => [n.name, ...n.aliases].map(foldNameKey)));
+  const reached = bayerKeySets(designations);
+  const propers = new Map<string, string>();
+  let bayerRows = 0;
+  let bayerRowsCovered = 0;
+  for (const r of rows) {
+    if (r.proper !== null && !r.isSol) propers.set(membershipProperKey(r.proper, r.hip, r.hd), r.proper);
+    if (r.bayer === null) continue;
+    bayerRows++;
+    if (reached.reaches(r.hip, r.hd)) bayerRowsCovered++;
+  }
+  const unmatched = new Set([...propers].filter(([, p]) => !nameKeys.has(foldNameKey(p))).map(([k]) => k));
+  return {
+    counts: {
+      membershipPropers: propers.size,
+      membershipProperMatched: propers.size - unmatched.size,
+      membershipProperResiduals: unmatched.size,
+      membershipBayerRows: bayerRows,
+      membershipBayerRowsCovered: bayerRowsCovered,
+    },
+    ...diffDispositions(
+      unmatched,
+      new Set(disposed.map((d) => membershipProperKey(d.proper, d.hip, d.hd))),
+    ),
+  };
 }

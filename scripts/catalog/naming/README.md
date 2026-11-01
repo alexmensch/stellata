@@ -50,14 +50,10 @@ scripts/catalog/naming/
                                 contaminants rejected to the variable
                                 class. Plus the multi-name cell split and
                                 the diacritic fold used for name matching.
-  wgsn-tables-pure.ts (+ test)  Row shaping and the two joins: the IV/27A
-                                Bayer union, the /docs/star-naming.md#2-authority--one-source-approves-names-everything-else-compiles-them disposition set
-                                comparison (`manifestNaming`, the residual
-                                gate below), the key sets both sides of the
-                                union share, and the total sort order the
-                                committed table's byte-for-byte CI diff
-                                rests on. `membershipProperKey` is the one
-                                place the gate's join key is built.
+  wgsn-tables-pure.ts (+ test)  Row shaping, the IV/27A Bayer union, the
+                                key sets both sides of the union share, and
+                                the total sort order the committed table's
+                                byte-for-byte CI diff rests on.
   build-wgsn-tables.ts          Orchestrator: read, normalise, delegate
                                 the joins, and emit the two derived
                                 tables through emitArtifacts once the
@@ -81,6 +77,10 @@ scripts/catalog/naming/
                                 hand-curated), the keyed index, the three
                                 pickers, and the
                                 /docs/star-naming.md#2-authority--one-source-approves-names-everything-else-compiles-them class routing (README.md#the-record-side-join).
+                                Also the residual gate over the committed
+                                tables (`manifestNaming`);
+                                `membershipProperKey` is the one place its
+                                join key is built.
   apply-star-names.ts           I/O + the record pass: loads the committed
                                 tables and writes each record's authority
                                 tiers, aliases and designation
@@ -154,7 +154,7 @@ refresh that changes either fact.
 the hand-curated `data/iau-wgsn/athyg_proper_dispositions.tsv` (<!-- count:manifest-naming/membershipProperResiduals -->46<!-- /count --> rows).
 The key is `proper|hip|hd` on the manifest's FINAL cells, so a disposition
 keyed on a label the classic-ID merge flipped is a stale disposition.
-`manifestNaming` (`wgsn-tables-pure.ts`) fails on exact set inequality in
+`manifestNaming` (`wgsn-index-pure.ts`) fails on exact set inequality in
 either direction — the route-disagreements review-join discipline — so a
 WGSN refresh that approves a disposed name surfaces as a *stale
 disposition* failure, and the fix is a data-row deletion, never a code
