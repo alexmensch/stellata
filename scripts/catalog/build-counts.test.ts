@@ -47,7 +47,6 @@ function baseCounts(): BuildCounts {
     bjEntries: 310000,
     bjEligible: 305000,
     bjOverridden: 304000,
-    bjEligibleNotPulled: 1000,
     apsisSourcesUnpulled: 4000,
     gspcSourcesUnpulled: 30000,
     lmcCandidates: 1200,

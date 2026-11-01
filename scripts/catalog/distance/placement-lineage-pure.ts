@@ -1,5 +1,6 @@
 // Placement as a lineage stage: its reason codes, the one serialiser over each record's Placement, and parked-ledger.tsv as a view. See README.md#placement-lineage.
 
+import { lineageInvariant, NO_EXCEPTIONS, type LineageInvariant } from '../lineage/lineage-invariant-pure';
 import type { StageLineageSpec } from '../lineage/lineage-io';
 import {
   decodeLineageLine, lineageLineCode, paramsOf, paramsText, stageLineageLine,
@@ -143,6 +144,14 @@ export const PLACEMENT_CODES = stageCodes(PLACEMENT_STAGE, {
 });
 
 type Branch = Parameters<typeof PLACEMENT_CODES.code>[0];
+
+export const PLACEMENT_INVARIANTS: readonly LineageInvariant[] = [
+  lineageInvariant(
+    PLACEMENT_CODES, 'distance.bailer-jones-absent',
+    'every record Bailer-Jones is eligible for has a posterior in the committed pull (refinement/README.md#scope-derived-pulls--why-the-zero-pin-is-here)',
+    NO_EXCEPTIONS,
+  ),
+];
 
 type Tier = { tier: string };
 

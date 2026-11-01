@@ -168,6 +168,7 @@ async function main(): Promise<void> {
       return [multiplesComponentJoin(identity, multiples)];
     },
     budget: MEMBERSHIP_LINEAGE_BUDGET,
+    invariants: [],
     argv: process.argv.slice(2),
   });
   if (lineage.changes !== null) {

@@ -136,8 +136,10 @@ The pipeline:
 3. On a hit, `applyBailerJonesOverride` returns
    `{ dist, absmag }` with `absmag = mag − 5·log₁₀(dist / 10)`.
 4. Coverage is `bjOverridden / bjEligible`, printed per build and pinned
-   in `../../build-catalog-expected.json`, and the **shortfall between the two
-   is pinned at zero** as `bjEligibleNotPulled` — [Scope-derived pulls](#scope-derived-pulls--why-the-zero-pin-is-here)
+   in `../../build-catalog-expected.json`. An eligible row with no posterior
+   writes `placement.distance.bailer-jones-absent`, and placement's invariant
+   fails the build on any such row, naming it
+   ([Invariants](../../lineage/README.md#invariants)) — [Scope-derived pulls](#scope-derived-pulls--why-the-zero-pin-is-here)
    below.
 5. The override also rescues stars the Layer 3 cap would otherwise drop:
    catastrophic-parallax-inversion supergiants whose Bayesian

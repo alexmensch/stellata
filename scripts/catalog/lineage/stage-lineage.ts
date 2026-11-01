@@ -14,6 +14,7 @@ import {
   readStageHeader, stageEmission, stageFile, stageHeader, streamLineage,
   type LineageLayout, type StageLineageSpec, type StageOutputKey,
 } from './lineage-io';
+import { invariantCheck, invariantViolations, type LineageInvariant } from './lineage-invariant-pure';
 import { sortLineageLines, type LineageLine } from './lineage-row-pure';
 
 /** The stage's measured cost, pinned so lineage cannot quietly grow. */
@@ -37,6 +38,8 @@ export interface StageLineageRun<F extends string, S extends string> {
   /** Built only when a diff runs, from the baseline directory it reads. */
   readonly joins: (baselineDir: string) => readonly DiffJoin[];
   readonly budget: LineageBudget;
+  /** Checked over `lines`; a violation fails the emission. */
+  readonly invariants: readonly LineageInvariant[];
   readonly argv: readonly string[];
 }
 
@@ -96,6 +99,7 @@ export async function stageLineage<F extends string, S extends string>(
       kind: 'fail',
       message: `${measured}, over its budget of ${run.budget.gzipBytes} bytes / ${run.budget.writeMs} ms`,
     }
-    : { kind: 'pass', report: measured }];
+    : { kind: 'pass', report: measured },
+    ...invariantViolations(run.invariants, run.lines).map(invariantCheck)];
   return { files, members, checks, changes };
 }

@@ -265,8 +265,9 @@ Hand-kept lists become derivations over the table:
 
 - **Bootstrap.** One commit writes `data/stamps/<step>.json` for every pull
   and baker from today's request files, data inputs and the query text in
-  today's code, adopting today's committed outputs as fresh. The zero-pinned
-  shortfall counts vouch for Bailer-Jones (`bjEligibleNotPulled`) and the
+  today's code, adopting today's committed outputs as fresh. Placement's
+  Bailer-Jones invariant (`placement.distance.bailer-jones-absent`) and the
+  zero-pinned shortfall counts vouch for Bailer-Jones and the
   astrometry catalogue's gate candidates (`gateSkippedNoGMag`,
   `derivedWeighedNoGMag`); Apsis and GSPC carry residual pins, which cannot
   show a stale request, and the SIMBAD, Tycho-2, binaries-astrometry and DR2

@@ -47,8 +47,11 @@ scripts/catalog/lineage/
   trace.ts                       `pnpm run trace` (#trace).
   trace.test.ts                  Both, the command over a committed fixture.
   stage-lineage.ts               stageLineage: one stage's files, header,
-                                 baseline plan, diff and budget check,
-                                 ready for the stage's emitArtifacts call.
+                                 baseline plan, diff, budget and invariant
+                                 checks, ready for the stage's emitArtifacts
+                                 call.
+  lineage-invariant-pure.ts      LineageInvariant and its check (#invariants).
+    (+ test)
   lineage-io.ts                  The on-disk layout (build/lineage/,
                                  lineage.previous/, lineage-diff/), the
                                  baseline members and a stage's emission,
@@ -198,6 +201,18 @@ one text; `evidence` is its references' text forms joined by `|`.
 - No placeholder codes. A stage gets its real codes before any change
   orphans a SID through it; an `*.unrecorded` code would be written into
   append-only `events.tsv` for good.
+
+## Invariants
+
+A tripwire is an invariant over a stage's own lines, never a pinned count: a
+count says a number moved, a query names the rows that moved it. Each
+`LineageInvariant` (`lineage-invariant-pure.ts`) names one code that must not
+appear, what holds while it does not, and its allowed exceptions as a
+predicate over the row's `params` (`NO_EXCEPTIONS` for a zero-pin). A stage
+declares its invariants beside its codes and hands them to `stageLineage`,
+which checks every line before emission: a violation is a failed check, so
+nothing lands, and the message lists the offending rows' keys and params.
+Placement's (`PLACEMENT_INVARIANTS`): no `distance.bailer-jones-absent` row.
 
 ## SID events
 
