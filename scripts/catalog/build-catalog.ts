@@ -77,7 +77,7 @@ import {
   RECURATED_BRIGHTNESS,
 } from './companions/companion-promotion';
 import {
-  PROMOTION_CODES, PROMOTION_LINEAGE, PROMOTION_LINEAGE_BUDGET, promotionIdentityRows, promotionLineageRow,
+  PROMOTION_CODES, PROMOTION_LINEAGE, PROMOTION_LINEAGE_BUDGET, promotionLineage,
 } from './companions/promotion-lineage-pure';
 import { identityText } from './lineage/identity-pure';
 import { LINEAGE_LAYOUT } from './lineage/lineage-io';
@@ -702,8 +702,7 @@ async function main() {
     gaiaAstrometry: directions.gaiaAstrometry, synthGaiaBridges,
   });
   for (const ns of newStars) stars.push(ns);
-  const promotionLineage = promotedRows.map((r) => promotionLineageRow(r, (idx) => stars[idx].originKey));
-  const promotionIdentity = promotionIdentityRows(promotedRows, stars);
+  const { lineage: promotionLineageRows, identity: promotionIdentity } = promotionLineage(promotedRows, stars);
   console.log(
     `  scanned ${ps.pairRowsScanned} pair rows; promoted ${ps.promoted} ` +
       `(${ps.promotedSynthetic} via synthetic ID); ` +
@@ -1259,7 +1258,7 @@ async function main() {
     spec: PROMOTION_LINEAGE,
     inputs: inputHashesAtStart,
     diffed: 'promotion',
-    lines: promotionLineage.map((row) => stageLineageLine(PROMOTION_CODES, row)),
+    lines: promotionLineageRows.map((row) => stageLineageLine(PROMOTION_CODES, row)),
     render: (sorted) => ({
       promotion: stageLineageText(PROMOTION_CODES, sorted),
       'promotion.identity': identityText(promotionIdentity),

@@ -130,23 +130,34 @@ export function promotionLineageRow(r: PromotedRow, recordKey: (idx: number) => 
   }
 }
 
-/** One identity row per record promotion mints, and one per row it removes (a retire or park outcome) that arrived with a HIP or Gaia cell, keyed on those cells; every other record's is membership's. */
-export function promotionIdentityRows(rows: readonly PromotedRow[], stars: readonly Star[]): IdentityRow[] {
+export interface PromotionLineage {
+  readonly lineage: LineageRow[];
+  readonly identity: IdentityRow[];
+}
+
+/** Each row's lineage row; and one identity row per record promotion mints, and one per row it removes (a retire or park outcome) that arrived with a HIP or Gaia cell, keyed on those cells; every other record's is membership's. */
+export function promotionLineage(rows: readonly PromotedRow[], stars: readonly Star[]): PromotionLineage {
   const recordKey = (idx: number): string => stars[idx].originKey;
-  return rows.flatMap((r): IdentityRow[] => {
+  const lineage: LineageRow[] = [];
+  const identity: IdentityRow[] = [];
+  for (const r of rows) {
+    const line = promotionLineageRow(r, recordKey);
+    lineage.push(line);
     const o = r.outcome;
     if (o.kind === 'minted') {
       const s = stars[o.idx];
-      return [identityRow(s.originKey, s.hip, s.gaiaSourceId, starDesignations({ ...s, isSol: false }))];
+      identity.push(identityRow(s.originKey, s.hip, s.gaiaSourceId, starDesignations({ ...s, isSol: false })));
+      continue;
     }
-    const effect = PROMOTION_EFFECTS.get(promotionLineageRow(r, recordKey).code);
-    if (effect !== 'retire' && effect !== 'park') return [];
+    const effect = PROMOTION_EFFECTS.get(line.code);
+    if (effect !== 'retire' && effect !== 'park') continue;
     const { hip, gaiaSourceId } = r.row;
-    if (hip === null && gaiaSourceId === null) return [];
-    return [identityRow(promotionOriginKey(r.row), hip, gaiaSourceId, starDesignations({
+    if (hip === null && gaiaSourceId === null) continue;
+    identity.push(identityRow(promotionOriginKey(r.row), hip, gaiaSourceId, starDesignations({
       isSol: false, hip, hd: null, hdAlt: [], hr: null, hrAlt: [], gl: null, syntheticId: null, gaiaSourceId,
-    }))];
-  });
+    })));
+  }
+  return { lineage, identity };
 }
 
 function identityRow(

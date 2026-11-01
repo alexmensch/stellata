@@ -5,7 +5,7 @@ import { makeStar } from '../parse/star-fixture';
 import type { PromotedRow, RowOutcome } from './companion-promotion';
 import { multiplesRow } from './multiples-fixture';
 import {
-  PROMOTION_CODES, promotionIdentityRows, promotionLineageRow, promotionOriginKey,
+  PROMOTION_CODES, promotionLineage, promotionLineageRow, promotionOriginKey,
 } from './promotion-lineage-pure';
 
 const row = multiplesRow({ systemId: '22266-1645-AB', comp: 'B' });
@@ -84,7 +84,7 @@ describe('promotionLineageRow', () => {
   });
 });
 
-describe('promotionIdentityRows', () => {
+describe('promotionLineage identity', () => {
   const stars = [
     makeStar(),
     makeStar({
@@ -94,7 +94,7 @@ describe('promotionIdentityRows', () => {
   ];
 
   it('writes one identity row per minted record, and none for a merge or no-effect outcome', () => {
-    const identity = promotionIdentityRows([
+    const { identity } = promotionLineage([
       promoted({ kind: 'minted', idx: 1, synthetic: false, brightness: own, constellationSplit: false }),
       promoted({ kind: 'adopted', idx: 0, via: 'earlier-mint' }),
       promoted({ kind: 'not-applicable' }),
@@ -108,7 +108,7 @@ describe('promotionIdentityRows', () => {
 
   it('keys a parked or retired row on the identifier cells it arrived with, and skips one with none', () => {
     const standalone = multiplesRow({ systemId: '19082+3829-_C', comp: 'C', hip: 42, gaiaSourceId: '2099222754064121216' });
-    const identity = promotionIdentityRows([
+    const { identity } = promotionLineage([
       { row: standalone, via: 'unpaired', outcome: { kind: 'unpaired' }, anchor: null, systemAnchor: null },
       promoted({ kind: 'dropped', reason: 'no-absmag' }),
     ], stars);
