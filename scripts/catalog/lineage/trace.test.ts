@@ -53,15 +53,14 @@ const NAMES = new Map([
   ['Fixture Star', [0]], ['Yunü', [0]], ['Yunu', [0]], ['a Car', [1]], ['A Car', [2]], ['54 Leo', [3, 4]],
 ]);
 const DESIGNATIONS = [['hd:5', 'gaia_dr3:222'], ['hd:9'], ['hd:10'], ['hd:11'], ['hd:12']];
+const CANONICAL = new Map([[7, 'hd:5'], [9, 'gaia_dr3:333'], [11, `gaia_dr3:${PARKED}`]]);
 const LOOKUPS: TraceLookups = {
-  canonicalKey: (sid) => (sid === 7 ? 'hd:5' : null),
+  canonicalKey: (sid) => CANONICAL.get(sid) ?? null,
+  successor: (sid) => (sid === 9 ? 7 : null),
   names: () => NAMES,
   designations: (i) => DESIGNATIONS[i],
 };
-const trace = (query: string) => {
-  const { designations, terms } = queryTerms(parseTraceQuery(query), LOOKUPS);
-  return traceRecords(designations, terms, identity, stages);
-};
+const trace = (query: string) => traceRecords(queryTerms(parseTraceQuery(query), LOOKUPS), identity, [], stages);
 
 describe('parseTraceQuery', () => {
   it('reads a Gaia id, a SID, a designation and a name apart', () => {
@@ -155,10 +154,9 @@ describe('traceRecords over a promoted system', () => {
     ...stages, { stage: 'promotion', rows: [...lineageRows(PROMOTION, 'fixture/promotion.tsv')] },
   ];
   const promotionIdentity = [...identityRows(PROMOTION_IDENTITY, 'fixture/promotion.identity.tsv')];
-  const traceSystem = (query: string) => {
-    const { designations, terms } = queryTerms(parseTraceQuery(query), LOOKUPS);
-    return traceRecords(designations, terms, [...identity, ...promotionIdentity], withPromotion);
-  };
+  const traceSystem = (query: string) => traceRecords(
+    queryTerms(parseTraceQuery(query), LOOKUPS), [...identity, ...promotionIdentity], [], withPromotion,
+  );
 
   it('finds every component row that cites the anchor\'s record, its own pair or as system anchor', () => {
     expect(traceSystem('hd:5').map((r) => r.key)).toEqual([
@@ -170,6 +168,31 @@ describe('traceRecords over a promoted system', () => {
     const [minted] = traceSystem(MINTED);
     expect(minted.key).toBe('multiples:S-AB/B');
     expect(minted.rows.map((r) => r.code)).toEqual(['promotion.minted']);
+  });
+});
+
+/** SID 9 (gaia_dr3:333) merged into 7 by spine:4's fold; SID 11 parks with the magnitude-term star. */
+const ALLOCATION = [
+  'stage\tkey\trole\tcode\tparams\tevidence',
+  `allocation\tgaia-dr3:${PARKED}\toutcome\tallocation.parked\t{"sid":"11","canonical_key":"gaia_dr3:${PARKED}","cause":"placement.park.no-v-magnitude"}\t`,
+  'allocation\tspine:3\toutcome\tallocation.resolved\t\t',
+  'allocation\tspine:4\toutcome\tallocation.merged\t{"sid":"9","canonical_key":"gaia_dr3:333","cause":"membership.fold","successor":"7"}\t',
+].join('\n') + '\n';
+
+describe('traceRecords through allocation', () => {
+  const withAllocation = [...stages, { stage: 'allocation', rows: [...lineageRows(ALLOCATION, 'fixture/allocation.tsv')] }];
+  const traceSid = (query: string) => traceRecords(
+    queryTerms(parseTraceQuery(query), LOOKUPS), identity, [{ key: 'spine:3', sid: 7 }], withAllocation,
+  );
+
+  it('follows a merged SID to the decision that merged it and on to its successor\'s record', () => {
+    expect(traceSid('sid:9').map((r) => r.key)).toEqual(['spine:3', 'spine:4']);
+  });
+
+  it('finds a parked SID under the origin of the decision that parked it', () => {
+    const [parked] = traceSid('sid:11');
+    expect(parked.key).toBe(`gaia-dr3:${PARKED}`);
+    expect(parked.rows.map((r) => r.code)).toContain('allocation.parked');
   });
 });
 

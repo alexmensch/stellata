@@ -1,10 +1,14 @@
 // `pnpm run trace <name | designation | sid | gaia id> [--dir <lineage dir>]` — every stage's lineage rows for the records it names. See README.md#trace.
 
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
+import { gunzipSync } from 'node:zlib';
 
 import { runStep } from '../../util/emit-artifacts';
 import { readArtifact } from '../../util/sources/source';
 import { LEDGER } from '../../sid/ledger-tsv';
+import { EVENTS } from '../../sid/events-tsv';
+import { retiredSids } from '../../sid/events-pure';
+import { allocationIdentity } from '../../sid/allocation-lineage-pure';
 import { catalogRecordDesignations } from '../../sid/catalog-designations';
 import { loadCatalog, nameTable, type SearchableCatalog } from '../catalog-lookup';
 import { MEMBERSHIP_LINEAGE } from '../membership/membership-lineage-pure';
@@ -21,6 +25,7 @@ function lookups(catalog: SearchableCatalog | null): TraceLookups {
   };
   return {
     canonicalKey: (sid) => readArtifact(LEDGER).find((r) => r.sid === sid)?.canonicalKey ?? null,
+    successor: (sid) => retiredSids(readArtifact(EVENTS)).get(sid)?.successor ?? null,
     names: () => nameTable(need()),
     designations: (i) => {
       const named = need();
@@ -48,11 +53,15 @@ async function main(): Promise<void> {
     .flatMap((path) => readIdentity(path));
   const q = parseTraceQuery(query);
   const catalog = q.kind === 'name' ? await loadCatalog({ withSearchIndex: true }) : null;
-  const { designations, terms } = queryTerms(q, lookups(catalog));
+  const terms = queryTerms(q, lookups(catalog));
+  const allocationIdentityPath = stageFile(dir, 'allocation.identity');
+  const sidsOf = existsSync(allocationIdentityPath)
+    ? [...allocationIdentity(gunzipSync(readFileSync(allocationIdentityPath)).toString('utf8'), allocationIdentityPath)]
+    : [];
   const stages = LINEAGE_STAGES
     .filter(({ spec }) => existsSync(stageFile(dir, spec.stage)))
     .map(({ spec }) => ({ stage: spec.stage, rows: readLineage(stageFile(dir, spec.stage)) }));
-  process.stdout.write(traceText(traceRecords(designations, terms, identity, stages)));
+  process.stdout.write(traceText(traceRecords(terms, identity, sidsOf, stages)));
 }
 
 runStep(main);
