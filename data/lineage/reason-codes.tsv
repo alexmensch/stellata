@@ -90,6 +90,9 @@ promotion.dropped.no-identifier	promotion	retire	live		7.1.6	The row has no Gaia
 promotion.dropped.no-position	promotion	retire	live		7.1.6	The row has neither an independent fit nor a measured separation and position angle off its anchor.
 promotion.dropped.parked-record	promotion	park	live		7.1.6	The distance the row states is a parallax a tier above refused, so promoting it would ship the parked record.
 promotion.minted	promotion	none	live		7.1.6	The row becomes a new catalogue record.
-promotion.not-applicable	promotion	none	live		7.1.6	Promotion decides nothing for the row: a pair's primary that anchors it, or a row in no pair.
-promotion.primary-unresolved	promotion	none	live		7.1.6	A pair's primary resolves to no catalogue record and no escape places it, so its pair runs with no anchor.
+promotion.not-applicable	promotion	none	retired	7.1.8	7.1.6	Promotion decides nothing for the row: a pair's primary that anchors it, or a row in no pair.
+promotion.not-applicable.pair-anchor	promotion	none	live		7.1.8	Promotion decides nothing for the row: it is a pair's primary that anchors the pair.
+promotion.parked.primary-unresolved	promotion	park	live		7.1.8	A pair's primary resolves to no catalogue record and no escape places it, so it ships no record of its own and its pair runs with no anchor.
+promotion.parked.unpaired	promotion	park	live		7.1.8	The row is in no pair, so promotion has no geometry to place it with and ships no record for it.
+promotion.primary-unresolved	promotion	none	retired	7.1.8	7.1.6	A pair's primary resolves to no catalogue record and no escape places it, so its pair runs with no anchor.
 promotion.repositioned	promotion	merge	live		7.1.6	An AT-HYG record sitting on the anchor under the anchor's name plus this letter is the component, and moves to the row's position.

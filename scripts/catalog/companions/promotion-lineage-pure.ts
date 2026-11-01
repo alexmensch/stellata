@@ -1,4 +1,4 @@
-// Companion promotion as a lineage stage: its reason codes, the one serialiser over RowOutcome, and the identity rows of the records it mints. See ../lineage/README.md#the-promotion-stage.
+// Companion promotion as a lineage stage: its reason codes, the one serialiser over RowOutcome, and the identity rows of the records it mints and the rows it removes. See ../lineage/README.md#the-promotion-stage.
 
 import { MULTIPLES_TSV } from '../../binaries/multiples-tsv';
 import { starDesignations } from '../../sid/sid-pure';
@@ -6,7 +6,7 @@ import { sourceRowRef, sourceRowRefText } from '../../util/sources/row-ref-pure'
 import type { IdentityRow } from '../lineage/identity-pure';
 import type { StageLineageSpec } from '../lineage/lineage-io';
 import { paramsText, type LineageParams, type LineageRow } from '../lineage/lineage-row-pure';
-import { LIVE, stageCodes, type CodeDeclaration } from '../lineage/reason-codes-pure';
+import { LIVE, codeEffects, stageCodes, type CodeDeclaration, type CodeStatus } from '../lineage/reason-codes-pure';
 import type { Star } from '../parse/stars-parse';
 import type { MintedBrightness, MultiplesTsvRow, PromotedRow, RowOutcome } from './companion-promotion';
 
@@ -18,11 +18,13 @@ export const PROMOTION_LINEAGE: StageLineageSpec<'promotion' | 'promotion.identi
   identity: 'promotion.identity',
 };
 
-export const PROMOTION_LINEAGE_BUDGET = { gzipBytes: 800_000, writeMs: 5_000 };
+export const PROMOTION_LINEAGE_BUDGET = { gzipBytes: 1_050_000, writeMs: 5_000 };
 
 const live = (description: string, effect: CodeDeclaration['effect'] = 'none'): CodeDeclaration => (
   { description, effect, status: LIVE }
 );
+
+const RETIRED_7_1_8: CodeStatus = { kind: 'retired', retiredIn: '7.1.8' };
 
 export const PROMOTION_CODES = stageCodes(PROMOTION_STAGE, {
   'dropped.compound-comp': live('The row\'s component letter is an unresolved aggregate of components that have rows of their own, so it is not one star.', 'retire'),
@@ -39,11 +41,22 @@ export const PROMOTION_CODES = stageCodes(PROMOTION_STAGE, {
   'adopted.earlier-mint': live('An earlier row of this build already minted the record this row names.', 'merge'),
   minted: live('The row becomes a new catalogue record.'),
   repositioned: live('An AT-HYG record sitting on the anchor under the anchor\'s name plus this letter is the component, and moves to the row\'s position.', 'merge'),
-  'primary-unresolved': live('A pair\'s primary resolves to no catalogue record and no escape places it, so its pair runs with no anchor.'),
-  'not-applicable': live('Promotion decides nothing for the row: a pair\'s primary that anchors it, or a row in no pair.'),
+  'primary-unresolved': {
+    description: 'A pair\'s primary resolves to no catalogue record and no escape places it, so its pair runs with no anchor.',
+    effect: 'none', status: RETIRED_7_1_8,
+  },
+  'not-applicable': {
+    description: 'Promotion decides nothing for the row: a pair\'s primary that anchors it, or a row in no pair.',
+    effect: 'none', status: RETIRED_7_1_8,
+  },
+  'parked.primary-unresolved': live('A pair\'s primary resolves to no catalogue record and no escape places it, so it ships no record of its own and its pair runs with no anchor.', 'park'),
+  'parked.unpaired': live('The row is in no pair, so promotion has no geometry to place it with and ships no record for it.', 'park'),
+  'not-applicable.pair-anchor': live('Promotion decides nothing for the row: it is a pair\'s primary that anchors the pair.'),
 });
 
 type Branch = Parameters<typeof PROMOTION_CODES.code>[0];
+
+const PROMOTION_EFFECTS = codeEffects([PROMOTION_CODES]);
 
 type Flag = 'true' | 'false';
 type Via = { via: PromotedRow['via'] };
@@ -105,9 +118,11 @@ export function promotionLineageRow(r: PromotedRow, recordKey: (idx: number) => 
     case 'repositioned':
       return row('repositioned', { via, ...brightness(o.brightness), record: recordKey(o.idx) });
     case 'primary-unresolved':
-      return row('primary-unresolved', { via });
+      return row('parked.primary-unresolved', { via });
+    case 'unpaired':
+      return row('parked.unpaired', { via });
     case 'not-applicable':
-      return row('not-applicable', { via });
+      return row('not-applicable.pair-anchor', { via });
     default: {
       const unmapped: never = o;
       throw new Error(`promotion outcome with no row mapping: ${JSON.stringify(unmapped)}`);
@@ -115,19 +130,29 @@ export function promotionLineageRow(r: PromotedRow, recordKey: (idx: number) => 
   }
 }
 
-/** One identity row per record promotion mints; every other record's is membership's. */
+/** One identity row per record promotion mints, and one per row it removes (a retire or park outcome) that arrived with a HIP or Gaia cell, keyed on those cells; every other record's is membership's. */
 export function promotionIdentityRows(rows: readonly PromotedRow[], stars: readonly Star[]): IdentityRow[] {
-  return rows.flatMap(({ outcome: o }) => {
-    if (o.kind !== 'minted') return [];
-    const s = stars[o.idx];
-    return [{
-      key: s.originKey,
-      tyc: '',
-      hip: s.hip === null ? '' : String(s.hip),
-      hd: '',
-      gl: '',
-      gaia_source_id: s.gaiaSourceId ?? '',
-      designations: starDesignations({ ...s, isSol: false }),
-    }];
+  const recordKey = (idx: number): string => stars[idx].originKey;
+  return rows.flatMap((r): IdentityRow[] => {
+    const o = r.outcome;
+    if (o.kind === 'minted') {
+      const s = stars[o.idx];
+      return [identityRow(s.originKey, s.hip, s.gaiaSourceId, starDesignations({ ...s, isSol: false }))];
+    }
+    const effect = PROMOTION_EFFECTS.get(promotionLineageRow(r, recordKey).code);
+    if (effect !== 'retire' && effect !== 'park') return [];
+    const { hip, gaiaSourceId } = r.row;
+    if (hip === null && gaiaSourceId === null) return [];
+    return [identityRow(promotionOriginKey(r.row), hip, gaiaSourceId, starDesignations({
+      isSol: false, hip, hd: null, hdAlt: [], hr: null, hrAlt: [], gl: null, syntheticId: null, gaiaSourceId,
+    }))];
   });
+}
+
+function identityRow(
+  key: string, hip: number | null, gaiaSourceId: string | null, designations: string[],
+): IdentityRow {
+  return {
+    key, tyc: '', hip: hip === null ? '' : String(hip), hd: '', gl: '', gaia_source_id: gaiaSourceId ?? '', designations,
+  };
 }

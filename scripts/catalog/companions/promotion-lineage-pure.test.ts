@@ -31,6 +31,7 @@ describe('promotionLineageRow', () => {
       { kind: 'minted', idx: 5, synthetic: true, brightness: own, constellationSplit: false },
       { kind: 'repositioned', idx: 6, brightness: own },
       { kind: 'primary-unresolved' },
+      { kind: 'unpaired' },
       { kind: 'not-applicable' },
     ];
     const rows = outcomes.map((o) => promotionLineageRow(promoted(o), recordKey));
@@ -41,8 +42,9 @@ describe('promotionLineageRow', () => {
       'promotion.adopted.own-hip',
       'promotion.minted',
       'promotion.repositioned',
-      'promotion.primary-unresolved',
-      'promotion.not-applicable',
+      'promotion.parked.primary-unresolved',
+      'promotion.parked.unpaired',
+      'promotion.not-applicable.pair-anchor',
     ]);
     const lines = sortLineageLines(rows.map((r) => stageLineageLine(PROMOTION_CODES, r)));
     expect(() => stageLineageText(PROMOTION_CODES, lines)).not.toThrow();
@@ -83,22 +85,38 @@ describe('promotionLineageRow', () => {
 });
 
 describe('promotionIdentityRows', () => {
-  it('writes one identity row per minted record, and none for any other outcome', () => {
-    const stars = [
-      makeStar(),
-      makeStar({
-        originKey: 'multiples:22266-1645-AB/B', hip: null, gaiaSourceId: '2595463996992115840',
-        syntheticId: 'synth-22266-1645-B',
-      }),
-    ];
+  const stars = [
+    makeStar(),
+    makeStar({
+      originKey: 'multiples:22266-1645-AB/B', hip: null, gaiaSourceId: '2595463996992115840',
+      syntheticId: 'synth-22266-1645-B',
+    }),
+  ];
+
+  it('writes one identity row per minted record, and none for a merge or no-effect outcome', () => {
     const identity = promotionIdentityRows([
       promoted({ kind: 'minted', idx: 1, synthetic: false, brightness: own, constellationSplit: false }),
       promoted({ kind: 'adopted', idx: 0, via: 'earlier-mint' }),
+      promoted({ kind: 'not-applicable' }),
     ], stars);
     expect(identity).toEqual([{
       key: 'multiples:22266-1645-AB/B', tyc: '', hip: '', hd: '', gl: '',
       gaia_source_id: '2595463996992115840',
       designations: ['synth:22266-1645-B', 'gaia_dr3:2595463996992115840'],
     }]);
+  });
+
+  it('keys a parked or retired row on the identifier cells it arrived with, and skips one with none', () => {
+    const standalone = multiplesRow({ systemId: '19082+3829-_C', comp: 'C', hip: 42, gaiaSourceId: '2099222754064121216' });
+    const identity = promotionIdentityRows([
+      { row: standalone, via: 'unpaired', outcome: { kind: 'unpaired' }, anchor: null, systemAnchor: null },
+      promoted({ kind: 'dropped', reason: 'no-absmag' }),
+    ], stars);
+    expect(identity).toEqual([
+      {
+        key: 'multiples:19082+3829-_C/C', tyc: '', hip: '42', hd: '', gl: '',
+        gaia_source_id: '2099222754064121216', designations: ['hip:42', 'gaia_dr3:2099222754064121216'],
+      },
+    ]);
   });
 });

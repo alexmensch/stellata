@@ -1195,7 +1195,7 @@ describe('promoteCompanions rows', () => {
     expect(rows.map((r) => [r.row.comp, r.via, r.outcome.kind, r.anchor, r.systemAnchor])).toEqual([
       ['A', 'primary', 'not-applicable', 'spine:7', 'spine:7'],
       ['B', 'secondary', 'minted', 'spine:7', 'spine:7'],
-      ['A', 'unpaired', 'not-applicable', null, null],
+      ['A', 'unpaired', 'unpaired', null, null],
       ['A', 'primary', 'primary-unresolved', null, null],
     ]);
   });

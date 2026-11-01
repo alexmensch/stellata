@@ -51,3 +51,8 @@ export function stageCodes<B extends string>(
     has: (code) => codes.has(code),
   };
 }
+
+export function codeEffects(stages: readonly StageCodes<string>[]): ReadonlyMap<string, CodeEffect> {
+  return new Map(stages.flatMap((codes) => Object.entries(codes.declarations)
+    .map(([branch, d]) => [codes.code(branch), d.effect] as const)));
+}

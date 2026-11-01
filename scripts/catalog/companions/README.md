@@ -41,6 +41,7 @@ scripts/catalog/companions/
   promotion-lineage-pure.ts       Promotion as a lineage stage: its reason
     (+ test)                      codes, the serialiser over RowOutcome, and
                                   the identity rows of the records it mints
+                                  and the rows it removes
                                   (../lineage/README.md#the-promotion-stage).
   overlap-gate-pure.ts (+ test)   physicalOverlaps: record pairs closer than
                                   the sum of their radii, less those an orbit
@@ -85,8 +86,9 @@ Each pair row's decision is a `RowOutcome`: dropped with its reason, adopted
 onto a record already held (its own id or HIP, a same-as bridge, or an
 earlier mint this build), minted, or an AT-HYG double repositioned onto it;
 a pair's primary is `not-applicable` when it anchors its pair and
-`primary-unresolved` when it resolves to no record, as is any row in no pair
-`not-applicable`.
+`primary-unresolved` when it resolves to no record, and a row in no pair is
+`unpaired`. The last two park
+([The promotion stage](../lineage/README.md#the-promotion-stage)).
 Every per-row `PromotionStats` counter folds from those (`foldRowOutcomes`);
 the post-passes below act on records, not rows, and keep their own counters.
 

@@ -207,6 +207,7 @@ export type RowOutcome =
   }
   | { kind: 'repositioned'; idx: number; brightness: MintedBrightness }
   | { kind: 'primary-unresolved' }
+  | { kind: 'unpaired' }
   | { kind: 'not-applicable' };
 
 export interface MintedBrightness {
@@ -575,6 +576,7 @@ export function foldRowOutcomes(rows: readonly PromotedRow[]): RowOutcomeStats {
         countBrightness(o.brightness);
         break;
       case 'primary-unresolved':
+      case 'unpaired':
       case 'not-applicable':
         break;
       default: {
@@ -1950,7 +1952,7 @@ export function promoteCompanions(
 
   const keyAt = (idx: number | null): string | null => (idx === null ? null : getStarAt(idx).originKey);
   const unpaired = (row: MultiplesTsvRow): PromotedRow => (
-    { row, via: 'unpaired', outcome: { kind: 'not-applicable' }, anchor: null, systemAnchor: null }
+    { row, via: 'unpaired', outcome: { kind: 'unpaired' }, anchor: null, systemAnchor: null }
   );
   const escaped = new Set<MultiplesTsvRow>();
   const escapeCursorPrimary = (cursor: PairCursor): number | null => {

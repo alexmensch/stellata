@@ -134,8 +134,8 @@ Every stage writes the same envelope:
 - A refused alternative is a row of its own, never a nested list, so a
   choice diffs line by line.
 - A stage writes a row for every record. A stage that can leave a record
-  untouched gives it `<stage>.not-applicable`, a variant of its outcome
-  union; a stage that decides every record it sees — membership admits,
+  untouched gives it a `<stage>.not-applicable` code, a variant of its
+  outcome union; a stage that decides every record it sees — membership admits,
   folds or ledgers each one — has no such variant, since a code nothing
   emits is a placeholder. A missing row then always means the record left
   that stage, never a silent pass-through; identical-code rows cost almost
@@ -254,10 +254,10 @@ letters; the binding-review columns ride the rows the queue lists — a
 contested or collision verdict and a disposition — since the candidates and
 refusals are rows of their own. `MEMBERSHIP_LINEAGE_BUDGET` pins 41 MB and
 15 s — the time ceiling sits well above the measurement because CI runners
-write slower than a workstation. Promotion, measured the same day: <!-- count:build-binaries/multiples_rows_emitted -->47,021<!-- /count --> rows, one
-per `multiples.tsv` row, plus an identity row per minted companion, 0.70 MB
-gzipped in 0.3 s without a diff; `PROMOTION_LINEAGE_BUDGET` pins 0.8 MB and
-5 s. Placement, measured 2026-10-30: 3,872,657 rows (349 MB plain, 31.0 MB
+write slower than a workstation. Promotion, measured 2026-11-01: <!-- count:build-binaries/multiples_rows_emitted -->47,021<!-- /count --> rows, one
+per `multiples.tsv` row, plus 25,127 identity rows (each minted companion,
+and each retired or parked row carrying an id), 0.92 MB gzipped in 0.2 s with
+a diff; `PROMOTION_LINEAGE_BUDGET` pins 1.05 MB and 5 s. Placement, measured 2026-10-30: 3,872,657 rows (349 MB plain, 31.0 MB
 gzipped) in 3.2 s without a diff and 8.1 s with one against a full
 baseline; `PLACEMENT_LINEAGE_BUDGET` pins 34 MB and 30 s. A file that size outruns
 V8's longest string, so stage files and diffs are written and read as UTF-8
@@ -417,14 +417,18 @@ its module, in [Placement lineage](../distance/README.md#placement-lineage).
 `PromotedRow` per `multiples.tsv` row, keyed on that row
 (`multiples:<system_id>/<comp>`), and `promotionLineageRow` serialises its
 `RowOutcome` (`../companions/README.md`) through an exhaustive `switch`. A
-pair's primary that anchors its pair, and a row in no pair, are
-`promotion.not-applicable`; a primary that resolves to no record, leaving
-its pair anchor-less, is `promotion.primary-unresolved`. Each row cites as evidence the record its pair
+pair's primary that anchors its pair is `promotion.not-applicable.pair-anchor`.
+A row in no pair is `promotion.parked.unpaired`, and a primary that resolves
+to no record, leaving its pair anchor-less, `promotion.parked.primary-unresolved`:
+both park, since promotion ships no record for the star the row names, so a
+SID keyed on its identifiers stays in the ledger with that cause. Each row cites as evidence the record its pair
 resolved to and its WDS root's anchor; every merge-effect row names the
 record it merges into in `params.record`. Both are origin keys: every record
 carries its own from the manifest's `origin_key` column
 (`../membership/README.md#columns`), so these are joins on the origin key.
 
 A minted companion is founded on its row, so promotion writes its identity
-row (`promotion.identity.tsv.gz`, named by `StageLineageSpec.identity`);
-every other record's is membership's.
+row (`promotion.identity.tsv.gz`, named by `StageLineageSpec.identity`). So
+does every row whose code retires or parks, keyed on the `hip` and
+`gaia_source_id` cells it arrived with, so an orphaned SID keyed on one of
+them joins to that row's cause. Every other record's is membership's.
