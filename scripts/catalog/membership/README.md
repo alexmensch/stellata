@@ -341,7 +341,15 @@ row's own TYC names the source where Tycho-2's best-neighbour walk reaches
 nothing. A winner a spine record already holds, or that two groups reach,
 leaves the cell empty, as a spine collision does. `magnitudeRowsOwnCandidate`
 counts the magnitude rows that are still some primaries row's unshipped
-candidate, by why it was not shipped.
+candidate, by why it was not shipped. Each such row's `admit.magnitude`
+lineage row carries the reason as `own_candidate` and cites the proposing
+row's origin, and `MEMBERSHIP_INVARIANTS` fails the build on any reason
+outside `ALLOWED_OWN_CANDIDATE_REASONS`
+([Invariants](../lineage/README.md#invariants)). `runner_up` and `component`
+are allowed because most of their rows are a resolved pair's second star; the
+defects inside them — a star drawn twice, a designation on the wrong
+component, an unrelated star ledgered as a component, a pair's light counted
+twice — each carry their own fix and check.
 
 ## The parity gate
 

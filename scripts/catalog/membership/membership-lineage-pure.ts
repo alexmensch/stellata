@@ -3,6 +3,7 @@
 import { LABEL_DISPOSITIONS, type LabelDisposition, type LabelFlip } from '../classic-ids/label-merge/label-merge-pure';
 import type { IdentityRow } from '../lineage/identity-pure';
 import type { DiffJoin } from '../lineage/lineage-diff-pure';
+import { lineageInvariant, type LineageInvariant } from '../lineage/lineage-invariant-pure';
 import type { StageLineageSpec } from '../lineage/lineage-io';
 import { paramsOf, paramsText, type LineageParams, type LineageRow } from '../lineage/lineage-row-pure';
 import { LIVE, stageCodes, type CodeDeclaration } from '../lineage/reason-codes-pure';
@@ -12,6 +13,7 @@ import {
   type AdditionLedgerRow, type AdditionReason, type BindingReviewRow, type BindingReviewVerdict,
   type LabelDropReason, type LabelDropRow,
 } from './ledger-rows-pure';
+import type { OwnCandidate, OwnCandidateReason } from './membership-manifest-pure';
 
 export const MEMBERSHIP_STAGE = 'membership';
 
@@ -109,7 +111,7 @@ export type MembershipOutcome =
   | { readonly kind: 'fold'; readonly survivor: string }
   | { readonly kind: 'admit-addition'; readonly reason: AdditionReason; readonly members: readonly string[] }
   | { readonly kind: 'component'; readonly designation: string; readonly members: readonly string[] }
-  | { readonly kind: 'admit-magnitude' }
+  | { readonly kind: 'admit-magnitude'; readonly ownCandidate: OwnCandidate | null }
   | {
     readonly kind: 'spine-binding';
     readonly outcome: SettledBindingOutcome;
@@ -171,6 +173,7 @@ type Candidate = { source_id: string; via: string };
 /** Each code's params, the one declaration its writer and its views share. */
 type ParamsOf<B extends Branch> =
   B extends 'component' ? { designation: string }
+  : B extends 'admit.magnitude' ? { own_candidate?: OwnCandidateReason }
   : B extends `binding.${QueuedBindingOutcome}` ? BindingReviewCells & Letters
   : B extends `binding.${SettledBindingOutcome}` ? { derived_source_id: string; derived_via: string } & Letters
   : B extends (typeof REFUSAL_BRANCHES)[CandidateRefusal] ? Candidate
@@ -179,6 +182,18 @@ type ParamsOf<B extends Branch> =
   : B extends `label-drop.${string}` ? { cell: string; value: string }
   : B extends `label.${LabelDisposition}` ? Pick<LabelFlip, 'field' | 'label' | 'spine' | 'overlay' | 'applied'>
   : Record<string, never>;
+
+export const ALLOWED_OWN_CANDIDATE_REASONS: ReadonlySet<string> = new Set<OwnCandidateReason>([
+  'refused_mag', 'refused_sibling', 'runner_up', 'component',
+]);
+
+export const MEMBERSHIP_INVARIANTS: readonly LineageInvariant[] = [
+  lineageInvariant(
+    MEMBERSHIP_CODES, 'admit.magnitude',
+    `no magnitude-term record is a primaries row's unshipped candidate except as ${[...ALLOWED_OWN_CANDIDATE_REASONS].join(', ')}`,
+    (p) => p.own_candidate === undefined || ALLOWED_OWN_CANDIDATE_REASONS.has(p.own_candidate),
+  ),
+];
 
 function row<B extends Branch>(
   key: string, branch: B, params: ParamsOf<B>, evidence: readonly string[] = [],
@@ -201,7 +216,10 @@ export function membershipLineageRow({ key, outcome: o }: KeyedOutcome): Lineage
     case 'fold': return row(key, 'fold', {}, [o.survivor]);
     case 'admit-addition': return row(key, ADDITION_BRANCHES[o.reason], {}, o.members);
     case 'component': return row(key, 'component', { designation: o.designation }, o.members);
-    case 'admit-magnitude': return row(key, 'admit.magnitude', {});
+    case 'admit-magnitude':
+      return o.ownCandidate === null
+        ? row(key, 'admit.magnitude', {})
+        : row(key, 'admit.magnitude', { own_candidate: o.ownCandidate.reason }, [o.ownCandidate.of]);
     case 'spine-binding':
       return row(key, `binding.${o.outcome}`, {
         derived_source_id: o.sourceId, derived_via: o.via, source_letters: o.sourceLetters, hip_letters: o.hipLetters,

@@ -392,6 +392,12 @@ export const OWN_CANDIDATE_REASONS = [
 ] as const;
 export type OwnCandidateReason = (typeof OWN_CANDIDATE_REASONS)[number];
 
+/** A primaries row's unshipped candidate: why it was not shipped, and the origin key of the row that proposed it. */
+export interface OwnCandidate {
+  readonly reason: OwnCandidateReason;
+  readonly of: string;
+}
+
 /** Every candidate a row's derivation proposed other than the value it ships,
  *  with why it was not shipped. */
 function unshippedCandidates(
@@ -1156,23 +1162,23 @@ export function buildMembership(input: MembershipInput): MembershipResult {
     ...derivedGroups.filter((g) => g.items.length > 1).map((g) => g.derived),
   ].reduce((n, d) => n + d.weighedNoGMag, 0);
   let additionContested = 0;
-  const ownCandidates = new Map<string, OwnCandidateReason>();
-  const noteUnshipped = (d: DerivedBinding, shipped: string | null): void => {
+  const ownCandidates = new Map<string, OwnCandidate>();
+  const noteUnshipped = (of: string, d: DerivedBinding, shipped: string | null): void => {
     for (const [id, reason] of unshippedCandidates(d, shipped)) {
-      if (!ownCandidates.has(id)) ownCandidates.set(id, reason);
+      if (!ownCandidates.has(id)) ownCandidates.set(id, { reason, of });
     }
   };
   spineBindings.forEach((b, i) => {
-    if (b.derived !== null) noteUnshipped(b.derived, settled[i].value);
+    if (b.derived !== null) noteUnshipped(spineKey(i), b.derived, settled[i].value);
   });
   for (const g of groups) {
     const a = admitGroup(g, claims, index);
     if (g.source !== null && passingRunnersUp(g.derived).length > 0) additionContested++;
     const component = a.verdict.kind === 'component';
     if (component && g.derived.sourceId !== null && !ownCandidates.has(g.derived.sourceId)) {
-      ownCandidates.set(g.derived.sourceId, 'component');
+      ownCandidates.set(g.derived.sourceId, { reason: 'component', of: g.origin });
     }
-    noteUnshipped(g.derived, component ? null : g.source);
+    noteUnshipped(g.origin, g.derived, component ? null : g.source);
     if (g.sourceOnSpine) additionSourceOnSpine++;
     if (g.sourceGateRefused) additionSourceGateRefused++;
     if (g.routeSourceDisagree) additionRouteSourceDisagree++;
@@ -1214,12 +1220,12 @@ export function buildMembership(input: MembershipInput): MembershipResult {
     input.magnitudeTerm?.keptSourceIds ?? new Set(),
     boundSourceIds,
   )) {
-    const own = ownCandidates.get(sourceId);
-    if (own !== undefined) magnitudeRowsOwnCandidate[own]++;
+    const own = ownCandidates.get(sourceId) ?? null;
+    if (own !== null) magnitudeRowsOwnCandidate[own.reason]++;
     const row = magnitudeTermRow(sourceId);
     bindingByClass[row.binding as BindingClass]++;
     rows.push({ cells: row, key: keys.gaia(sourceId) });
-    outcomes.push({ key: keys.gaia(sourceId), outcome: { kind: 'admit-magnitude' } });
+    outcomes.push({ key: keys.gaia(sourceId), outcome: { kind: 'admit-magnitude', ownCandidate: own } });
   }
 
   const typed = rows.map(({ cells, key }) => toRecord(cells, key));

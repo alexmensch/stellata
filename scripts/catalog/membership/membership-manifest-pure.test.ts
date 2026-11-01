@@ -39,7 +39,8 @@ import { diffLineage, stageDiffText } from '../lineage/lineage-diff-pure';
 import {
   decodeLineageLine, paramsOf, sortLineageLines, stageLineageLine, type LineageLine, type LineageRow,
 } from '../lineage/lineage-row-pure';
-import { MEMBERSHIP_CODES } from './membership-lineage-pure';
+import { invariantViolations } from '../lineage/lineage-invariant-pure';
+import { MEMBERSHIP_CODES, MEMBERSHIP_INVARIANTS, membershipLineageRow } from './membership-lineage-pure';
 import { ORIGIN_KEYS } from './origin-keys';
 
 const FROM = { file: 'fixture.tsv', hint: 'h' };
@@ -714,6 +715,19 @@ describe('buildMembership — the additions', () => {
     expect(viaSimbad.counts.magnitudeRows).toBe(1);
     expect(viaSimbad.counts.magnitudeRowsOwnCandidate)
       .toEqual({ refused_mag: 1, refused_sibling: 0, withheld: 0, runner_up: 0, component: 0 });
+    const magnitude = viaSimbad.lineage.filter((r) => r.code === 'membership.admit.magnitude');
+    expect(magnitude.map((r) => [r.key, paramsOf(r).own_candidate, r.evidence.length]))
+      .toEqual([['gaia-dr3:777', 'refused_mag', 1]]);
+    const lines = viaSimbad.lineage.map((r) => stageLineageLine(MEMBERSHIP_CODES, r));
+    expect(invariantViolations(MEMBERSHIP_INVARIANTS, lines).flatMap((v) => v.rows)).toEqual([]);
+  });
+
+  it('fails the own-candidate invariant on a reason it does not allow, naming the row', () => {
+    const seeded = stageLineageLine(MEMBERSHIP_CODES, membershipLineageRow({
+      key: 'gaia-dr3:42', outcome: { kind: 'admit-magnitude', ownCandidate: { reason: 'withheld', of: 'spine:7' } },
+    }));
+    const [own] = invariantViolations(MEMBERSHIP_INVARIANTS, [seeded]);
+    expect(own.rows.map((r) => [r.key, r.evidence])).toEqual([['gaia-dr3:42', ['spine:7']]]);
   });
 
   it('groups a HIP item with the TYC item whose derived source it shares', () => {
