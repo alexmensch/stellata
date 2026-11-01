@@ -10,7 +10,7 @@
     "avPerNhPc": 0.00165
   },
   "artifacts": {
-    "clouds": { "version": 3 },
+    "clouds": { "version": 4 },
     "dustManifest": { "version": 2 },
     "cloudSurfaces": { "magic": "CSUR", "version": 2 },
     "localBubble": { "magic": "LBUB", "version": 1 }

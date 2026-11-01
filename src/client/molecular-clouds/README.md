@@ -43,7 +43,8 @@ reaches nothing and its A/B would price zero.
 
 The cloud kind module (`cloud-module.ts`) owns the runtime lifecycle:
 its `load` fetches `public/clouds.json` via `cloud-loader.ts`
-(version gate: `CLOUDS_JSON_SCHEMA`, from `data/schema/constants.json`; the client reads the geometry + density-model fields
+(version gate: `CLOUDS_JSON_SCHEMA`, from `data/schema/constants.json`; the client reads the geometry + density-model fields, the catalogue's
+`envelopeFadeStart` taper (refused outside (0, 1)),
 + the curated `aliases` and ignores the build-side `noiseModel` block and
 the `count` header, since `clouds.length` is the count) and
 `public/cloud-surfaces.bin` via `cloud-surfaces-loader.ts` (sid-keyed

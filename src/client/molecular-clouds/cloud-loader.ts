@@ -59,6 +59,8 @@ export interface Cloud {
 
 export interface CloudCatalog {
   clouds: Cloud[];
+  /** See scripts/clouds/README.md#output-schema. */
+  envelopeFadeStart: number;
 }
 
 interface RawCloud {
@@ -86,6 +88,7 @@ interface RawCloud {
 interface RawCatalog {
   version: number;
   count: number;
+  envelopeFadeStart: number;
   clouds: RawCloud[];
 }
 
@@ -106,6 +109,11 @@ export async function loadClouds(url: string): Promise<CloudCatalog | null> {
   const raw = (await res.json()) as RawCatalog;
   if (raw.version !== CLOUDS_JSON_SCHEMA.version) {
     console.warn(`clouds.json version ${raw.version} unsupported (expected ${CLOUDS_JSON_SCHEMA.version})`);
+    return null;
+  }
+  const fade = raw.envelopeFadeStart;
+  if (!(typeof fade === 'number' && fade > 0 && fade < 1)) {
+    console.warn(`clouds.json envelopeFadeStart ${String(fade)} is not in (0, 1)`);
     return null;
   }
   const sidErr = sidColumnError(raw.clouds.map((c) => c.sid));
@@ -134,5 +142,5 @@ export async function loadClouds(url: string): Promise<CloudCatalog | null> {
     inGrid: c.inGrid,
     embedded: c.embedded,
   }));
-  return { clouds };
+  return { clouds, envelopeFadeStart: fade };
 }

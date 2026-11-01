@@ -74,6 +74,7 @@ const RIM_RENDER_ORDER = -1;
 export class MolecularClouds {
   readonly group: THREE.Group;
   readonly clouds: Cloud[];
+  private readonly envelopeFadeStart: number;
   private absorptionGroup: THREE.Group;
   private rimGroup: THREE.Group;
   private absorptionSurfaces: EmitterMaterial[] = [];
@@ -126,6 +127,7 @@ export class MolecularClouds {
   ) {
     this.materials = materials;
     this.clouds = catalog.clouds;
+    this.envelopeFadeStart = catalog.envelopeFadeStart;
     this.group = new THREE.Group();
     // Groups keep renderOrder 0: a non-zero Group.renderOrder becomes the
     // three.js groupOrder, which outranks per-mesh renderOrder in the
@@ -499,6 +501,7 @@ export class MolecularClouds {
       // data out to u = 1.05); the analytic path clips to the mass-budget
       // envelope where its model density ends.
       uEnv: surface ? BRICK_ENVELOPE : cloud.uEnv,
+      envelopeFadeStart: this.envelopeFadeStart,
       invQuat: new THREE.Matrix3().setFromMatrix4(
         new THREE.Matrix4().makeRotationFromQuaternion(cloud.quat.clone().conjugate()),
       ),

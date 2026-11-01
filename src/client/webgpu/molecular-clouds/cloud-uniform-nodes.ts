@@ -34,6 +34,7 @@ export function cloudAbsorptionUniformNodes(spec: CloudAbsorptionSpec) {
     uRflat: uniform(spec.rflatPc),
     uP: uniform(spec.p),
     uUEnv: uniform(spec.uEnv),
+    uEnvFadeStart: uniform(spec.envelopeFadeStart),
     uInvQuat: uniform(spec.invQuat.clone()),
     // Float: the march clamps in float and truncates once for the loop
     // bound, so an int node here would be converted straight back.

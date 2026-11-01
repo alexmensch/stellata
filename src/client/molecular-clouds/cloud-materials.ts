@@ -36,6 +36,9 @@ export interface CloudAbsorptionSpec {
   /** The brick's taper edge on the traced tier, the analytic mass-budget
    *  envelope otherwise — the layer has already decided which. */
   uEnv: number;
+  /** Fraction of `uEnv` the analytic tier's taper starts at, from the
+   *  catalogue. */
+  envelopeFadeStart: number;
   /** Renderer frame → cloud-local frame rotation. */
   invQuat: THREE.Matrix3;
   /** The dev-console step ceiling at construction. */

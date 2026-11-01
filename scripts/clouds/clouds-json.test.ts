@@ -1,4 +1,4 @@
-// Pins the clouds.json v3 payload: density-model fields, class defaults,
+// Pins the clouds.json payload: density-model fields, class defaults,
 // noiseModel constants, and the alias / canonical-name table. Self-skips
 // when the artifact isn't built.
 
@@ -56,6 +56,7 @@ describe.skipIf(!existsSync(CLOUDS_JSON))('clouds.json v3', () => {
   const payload = existsSync(CLOUDS_JSON)
     ? (JSON.parse(readFileSync(CLOUDS_JSON, 'utf-8')) as {
         version: number;
+        envelopeFadeStart: number;
         count: number;
         noiseModel: Record<string, unknown>;
         clouds: CloudV2[];
@@ -66,6 +67,10 @@ describe.skipIf(!existsSync(CLOUDS_JSON))('clouds.json v3', () => {
     expect(payload.version).toBe(CLOUDS_JSON_SCHEMA.version);
     expect(payload.count).toBe(96);
     expect(payload.clouds).toHaveLength(96);
+  });
+
+  it('carries the taper the density model was calibrated with', () => {
+    expect(payload.envelopeFadeStart).toBe(0.85);
   });
 
   it('pins the noiseModel constants the presence shader consumes', () => {

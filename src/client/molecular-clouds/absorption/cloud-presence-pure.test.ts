@@ -4,27 +4,28 @@ import {
   cloudModelDensity,
   absorptionAlpha,
 } from './cloud-presence-pure';
+import { MOCK_ENVELOPE_FADE_START } from '../cloud-mock';
 
 describe('cloudModelDensity', () => {
   // Taurus (clouds.json v3): n0Cal 355.55, rflat 1.2, p 1.2, uEnv 1, sMin 9.5.
   it('equals n0Cal at the centroid', () => {
-    expect(cloudModelDensity(0, 9.5, 355.55, 1.2, 1.2, 1)).toBe(355.55);
+    expect(cloudModelDensity(0, 9.5, 355.55, 1.2, 1.2, 1, MOCK_ENVELOPE_FADE_START)).toBe(355.55);
   });
 
   it('pins the Taurus mid-profile value (u = 0.5 → r_eff = 4.75 pc)', () => {
-    const n = cloudModelDensity(0.5, 9.5, 355.55, 1.2, 1.2, 1);
+    const n = cloudModelDensity(0.5, 9.5, 355.55, 1.2, 1.2, 1, MOCK_ENVELOPE_FADE_START);
     // (1 + (4.75/1.2)²)^(−0.6) × 355.55
     expect(n).toBeCloseTo(65.7301, 4);
   });
 
   it('reaches exactly zero at the envelope edge and beyond', () => {
-    expect(cloudModelDensity(1, 9.5, 355.55, 1.2, 1.2, 1)).toBe(0);
-    expect(cloudModelDensity(1.5, 9.5, 355.55, 1.2, 1.2, 1)).toBe(0);
+    expect(cloudModelDensity(1, 9.5, 355.55, 1.2, 1.2, 1, MOCK_ENVELOPE_FADE_START)).toBe(0);
+    expect(cloudModelDensity(1.5, 9.5, 355.55, 1.2, 1.2, 1, MOCK_ENVELOPE_FADE_START)).toBe(0);
   });
 
   it('tightened envelope (uEnv < 1) cuts the profile early', () => {
-    expect(cloudModelDensity(0.5, 10, 100, 5, 2, 0.49)).toBe(0);
-    expect(cloudModelDensity(0.3, 10, 100, 5, 2, 0.49)).toBeGreaterThan(0);
+    expect(cloudModelDensity(0.5, 10, 100, 5, 2, 0.49, MOCK_ENVELOPE_FADE_START)).toBe(0);
+    expect(cloudModelDensity(0.3, 10, 100, 5, 2, 0.49, MOCK_ENVELOPE_FADE_START)).toBeGreaterThan(0);
   });
 });
 

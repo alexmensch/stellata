@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { CLOUDS_JSON_SCHEMA } from '../util/baker-constants';
+import { MOCK_ENVELOPE_FADE_START } from './cloud-mock';
 import { loadClouds } from './cloud-loader';
 
 interface RawTestCloud {
@@ -27,6 +28,7 @@ interface RawTestCloud {
 interface Raw {
   version: number;
   count: number;
+  envelopeFadeStart: number;
   clouds: RawTestCloud[];
 }
 
@@ -66,7 +68,7 @@ describe('loadClouds', () => {
   });
 
   it('returns null on unsupported version (forward-compat guard)', async () => {
-    mockFetch({ version: CLOUDS_JSON_SCHEMA.version + 1, count: 0, clouds: [] } satisfies Raw);
+    mockFetch({ version: CLOUDS_JSON_SCHEMA.version + 1, envelopeFadeStart: MOCK_ENVELOPE_FADE_START, count: 0, clouds: [] } satisfies Raw);
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
     expect(await loadClouds('/clouds.json')).toBeNull();
     warn.mockRestore();
@@ -75,6 +77,7 @@ describe('loadClouds', () => {
   it('parses a catalog including the presence-model fields + aliases', async () => {
     mockFetch({
       version: CLOUDS_JSON_SCHEMA.version,
+      envelopeFadeStart: MOCK_ENVELOPE_FADE_START,
       count: 1,
       clouds: [{ ...baseCloud, mass: 32122, aliases: ['Messier 42', 'NGC 1976'] }],
     } satisfies Raw);
@@ -98,8 +101,27 @@ describe('loadClouds', () => {
     expect(c.embedded).toEqual([]);
   });
 
+  it('returns null when the envelope taper is missing or outside (0, 1)', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    for (const envelopeFadeStart of [0, 1, Number.NaN]) {
+      mockFetch({
+        version: CLOUDS_JSON_SCHEMA.version, envelopeFadeStart, count: 1, clouds: [baseCloud],
+      } satisfies Raw);
+      expect(await loadClouds('/clouds.json')).toBeNull();
+    }
+    warn.mockRestore();
+  });
+
+  it('carries the catalogue taper through', async () => {
+    mockFetch({
+      version: CLOUDS_JSON_SCHEMA.version, envelopeFadeStart: 0.8, count: 1, clouds: [baseCloud],
+    } satisfies Raw);
+    expect((await loadClouds('/clouds.json'))!.envelopeFadeStart).toBe(0.8);
+  });
+
   it('maps a missing mass to null and absent aliases to undefined', async () => {
-    mockFetch({ version: CLOUDS_JSON_SCHEMA.version, count: 1, clouds: [baseCloud] } satisfies Raw);
+    mockFetch({ version: CLOUDS_JSON_SCHEMA.version,
+      envelopeFadeStart: MOCK_ENVELOPE_FADE_START, count: 1, clouds: [baseCloud] } satisfies Raw);
     const out = await loadClouds('/clouds.json');
     expect(out!.clouds[0].massMsun).toBeNull();
     expect(out!.clouds[0].aliases).toBeUndefined();
@@ -107,7 +129,8 @@ describe('loadClouds', () => {
 
   it('returns null when any cloud is missing its sid (pre-stamp artifact)', async () => {
     const { sid: _sid, ...noSid } = baseCloud;
-    mockFetch({ version: CLOUDS_JSON_SCHEMA.version, count: 1, clouds: [noSid] } satisfies Raw);
+    mockFetch({ version: CLOUDS_JSON_SCHEMA.version,
+      envelopeFadeStart: MOCK_ENVELOPE_FADE_START, count: 1, clouds: [noSid] } satisfies Raw);
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
     expect(await loadClouds('/clouds.json')).toBeNull();
     expect(warn).toHaveBeenCalledWith(
@@ -119,6 +142,7 @@ describe('loadClouds', () => {
   it('returns null on a duplicate sid', async () => {
     mockFetch({
       version: CLOUDS_JSON_SCHEMA.version,
+      envelopeFadeStart: MOCK_ENVELOPE_FADE_START,
       count: 2,
       clouds: [baseCloud, { ...baseCloud, id: 'orion-b' }],
     } satisfies Raw);

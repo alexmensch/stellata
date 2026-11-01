@@ -12,7 +12,7 @@ import {
 import { NodeMaterial } from 'three/webgpu';
 import { DITHER_SEED_OFFSET } from '../../hdr/tonemap/tonemap-pure';
 import {
-  ALPHA_CAP, AV_SATURATED, ENVELOPE_TAPER_FRAC,
+  ALPHA_CAP, AV_SATURATED,
   MARCH_MIN_CHORD_T, MARCH_MIN_STEPS, TAU_PER_AV,
 } from '../../molecular-clouds/absorption/cloud-presence-pure';
 import { AV_PER_EZGR, AV_PER_NH_PC } from '../../util/baker-constants';
@@ -95,7 +95,7 @@ export function buildCloudAbsorptionMaterial(
         } else {
           const uu = length(pu).toVar();
           const env = float(1.0).sub(
-            smoothstep(c.uUEnv.mul(ENVELOPE_TAPER_FRAC), c.uUEnv, uu)).toVar();
+            smoothstep(c.uUEnv.mul(c.uEnvFadeStart), c.uUEnv, uu)).toVar();
           // A branch rather than `Continue` — README.md#three-wgsl-rules-this-march-lives-under.
           If(env.greaterThan(0.0), () => {
             const q = uu.mul(c.uAxes.z).div(c.uRflat).toVar();

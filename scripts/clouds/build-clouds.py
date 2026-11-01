@@ -372,6 +372,7 @@ def main() -> None:
     payload = {
         'version': CONSTANTS['artifacts']['clouds']['version'],
         'count': len(clouds),
+        'envelopeFadeStart': cloud_model.ENVELOPE_FADE_START,
         'noiseModel': NOISE_MODEL,
         'clouds': clouds,
     }

@@ -11,12 +11,14 @@ annotates the same cloud's silhouette is annotation and lives in the parent
 
 - `cloud-presence-pure.ts` (+ test) — the CPU mirror of the math (Plummer
   density, absorption alpha) plus the constants the march reads:
-  `TAU_PER_AV`, `ALPHA_CAP`, `AV_SATURATED`, `ENVELOPE_TAPER_FRAC`,
+  `TAU_PER_AV`, `ALPHA_CAP`, `AV_SATURATED`,
   `MARCH_MIN_STEPS`, `MARCH_MIN_CHORD_T`. Vitest-pinned, and imported by
   the graph (`../../webgpu/molecular-clouds/cloud-absorption-tsl.ts`), so
   neither can drift from the other. The two unit conversions the build
   calibrated against — `AV_PER_NH_PC` and `AV_PER_EZGR` — come from
-  `../../util/baker-constants.ts`, shared with `scripts/clouds/cloud_model.py`. The **dither** is owned by
+  `../../util/baker-constants.ts`, shared with `scripts/clouds/cloud_model.py`.
+  The analytic tier's taper start is the catalogue's `envelopeFadeStart`
+  (`clouds.json`), carried on each `CloudAbsorptionSpec`. The **dither** is owned by
   `../../hdr/tonemap/tonemap-pure.ts` and read from there.
 
 The materials that consume these — the seam, the per-cloud

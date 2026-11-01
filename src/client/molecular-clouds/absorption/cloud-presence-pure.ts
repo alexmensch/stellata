@@ -12,9 +12,6 @@ export const ALPHA_CAP = 0.95;
 /** A_V column past which the cap has long saturated, so the march stops. */
 export const AV_SATURATED = 6.0;
 
-/** A fraction of `uEnv`. */
-export const ENVELOPE_TAPER_FRAC = 0.85;
-
 /** Step floor for the screen-adaptive budget: below this the jittered
  *  lattice reads as banding rather than grain. */
 export const MARCH_MIN_STEPS = 4;
@@ -40,8 +37,9 @@ export function cloudModelDensity(
   rflatPc: number,
   p: number,
   uEnv: number,
+  envelopeFadeStart: number,
 ): number {
-  const envelope = 1 - smoothstep(ENVELOPE_TAPER_FRAC * uEnv, uEnv, u);
+  const envelope = 1 - smoothstep(envelopeFadeStart * uEnv, uEnv, u);
   if (envelope <= 0) return 0;
   const q = (u * sMinPc) / rflatPc;
   return n0Cal * (1 + q * q) ** (-p / 2) * envelope;
