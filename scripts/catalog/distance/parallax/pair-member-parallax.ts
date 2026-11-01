@@ -9,6 +9,7 @@ import { isCoherenceAnchorGrade } from '../../multiplicity/anchor-grade-pure';
 import { belowParallaxSnFloor } from './parallax-cascade';
 import { parallaxSignalToNoise, type MeasuredParallax } from '../../cited-parallax';
 import type { SourceRowRef } from '../../../util/sources/row-ref-pure';
+import { listedRows } from '../../lineage/lineage-invariant-pure';
 
 /** One sibling's parallax, with the DR3 source it was measured on. */
 export interface SiblingParallax extends MeasuredParallax {
@@ -50,15 +51,11 @@ export interface UnpulledSibling {
   readonly comp: string;
 }
 
-export const UNPULLED_LISTED = 20;
-
 export function unpulledSiblingsMessage(unpulled: readonly UnpulledSibling[]): string {
-  const listed = unpulled.slice(0, UNPULLED_LISTED).map((u) => `  ${u.sourceId}\tmultiples:${u.systemId}/${u.comp}`);
-  const more = unpulled.length > UNPULLED_LISTED ? [`  … and ${unpulled.length - UNPULLED_LISTED} more`] : [];
   return [
     `${unpulled.length} bound-pair sources have no row in the Gaia astrometry pull; `
       + 'rebuild the astrometry request and re-pull (scripts/catalog/astrometry-request/README.md):',
-    ...listed, ...more,
+    ...listedRows(unpulled.map((u) => `${u.sourceId}\tmultiples:${u.systemId}/${u.comp}`)),
   ].join('\n');
 }
 

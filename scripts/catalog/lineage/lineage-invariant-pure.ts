@@ -46,16 +46,18 @@ export function invariantViolations(
 
 export const VIOLATIONS_LISTED = 20;
 
+export function listedRows(lines: readonly string[]): string[] {
+  const more = lines.length > VIOLATIONS_LISTED ? [`  … and ${lines.length - VIOLATIONS_LISTED} more`] : [];
+  return [...lines.slice(0, VIOLATIONS_LISTED).map((l) => `  ${l}`), ...more];
+}
+
 export function invariantCheck(v: InvariantViolations): Check {
   if (v.rows.length === 0) return { kind: 'pass', report: `invariant holds: ${v.invariant.holds}` };
-  const listed = v.rows.slice(0, VIOLATIONS_LISTED)
-    .map((r) => `  ${r.key}\t${r.code}\t${r.params}`);
-  const more = v.rows.length > VIOLATIONS_LISTED ? [`  … and ${v.rows.length - VIOLATIONS_LISTED} more`] : [];
   return {
     kind: 'fail',
     message: [
       `invariant broken by ${v.rows.length} ${v.invariant.code} rows: ${v.invariant.holds}`,
-      ...listed, ...more,
+      ...listedRows(v.rows.map((r) => `${r.key}\t${r.code}\t${r.params}`)),
     ].join('\n'),
   };
 }
