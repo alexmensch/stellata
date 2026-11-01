@@ -195,6 +195,6 @@ async function main(): Promise<void> {
 }
 
 main().catch((err) => {
-  console.error(err);
+  console.error(`sid:allocate: ${err instanceof Error ? err.message : String(err)}`);
   process.exit(1);
 });
