@@ -38,6 +38,7 @@ import { evidenceOf } from '../../util/tsv/cell-corrections-pure';
 import { ADDITION_REASONS, type AdditionReason } from './ledger-rows-pure';
 import { BINDING_REVIEW_KEY_COLUMNS, BINDING_REVIEW_VERDICTS, bindingReviewKey, type BindingReviewVerdict } from './ledger-rows-pure';
 import { LABEL_DROP_REASONS, type LabelDropReason } from './ledger-rows-pure';
+import { OWN_CANDIDATE_REASONS, type OwnCandidate, type OwnCandidateReason } from './ledger-rows-pure';
 import type { IdentityRow } from '../lineage/identity-pure';
 import type { LineageRow } from '../lineage/lineage-row-pure';
 import {
@@ -377,17 +378,6 @@ function bindingOutcome(derived: DerivedBinding, withheld: boolean): BindingOutc
   if (withheld) return 'collision';
   if (derived.sourceId === null) return 'refused';
   return passingRunnersUp(derived).length > 0 ? 'contested' : 'bound';
-}
-
-export const OWN_CANDIDATE_REASONS = [
-  'refused_mag', 'refused_sibling', 'withheld', 'runner_up', 'component',
-] as const;
-export type OwnCandidateReason = (typeof OWN_CANDIDATE_REASONS)[number];
-
-/** A primaries row's unshipped candidate: why it was not shipped, and the origin key of the row that proposed it. */
-export interface OwnCandidate {
-  readonly reason: OwnCandidateReason;
-  readonly of: string;
 }
 
 /** Every candidate a row's derivation proposed other than the value it ships,

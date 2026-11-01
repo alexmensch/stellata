@@ -39,7 +39,9 @@ scripts/catalog/membership/
                                   rules reach no ledger file. The review
                                   queue's carries the key a disposition joins
                                   on; the additions ledger's, the
-                                  /docs/catalog-driver.md#61-record-parity reason codes.
+                                  /docs/catalog-driver.md#61-record-parity reason codes. Also the
+                                  own-candidate reasons, which the generator
+                                  and its lineage both read.
   origin-keys.ts                  ORIGIN_KEYS: each record's origin key,
                                   built from the declarations it is founded
                                   on; the build and the unit suite share it.

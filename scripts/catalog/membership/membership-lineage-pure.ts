@@ -11,9 +11,8 @@ import type { GateReason } from './binding/binding-gate-pure';
 import {
   BINDING_REVIEW_COLUMNS, COMPONENT_REASON_PREFIX,
   type AdditionLedgerRow, type AdditionReason, type BindingReviewRow, type BindingReviewVerdict,
-  type LabelDropReason, type LabelDropRow,
+  type LabelDropReason, type LabelDropRow, type OwnCandidate, type OwnCandidateReason,
 } from './ledger-rows-pure';
-import type { OwnCandidate, OwnCandidateReason } from './membership-manifest-pure';
 
 export const MEMBERSHIP_STAGE = 'membership';
 
