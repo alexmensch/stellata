@@ -28,6 +28,7 @@ import {
   type SpineRow,
 } from '../spine/inherited-spine-pure';
 import { INHERITED_SPINE } from '../spine/inherited-spine-tsv';
+import { ASTROMETRY_REQUEST_OUTPUTS } from '../astrometry-request/astrometry-request-outputs';
 import { BINDING_REVIEW_DISPOSITIONS } from './binding-review-dispositions-source';
 import { applySpineCorrections, type SpineFold } from './spine-corrections/spine-corrections-pure';
 import { SPINE_CORRECTIONS } from './spine-corrections/spine-corrections-source';
@@ -53,6 +54,7 @@ import {
 const SPINE_PATH = resolve(REPO_ROOT, INHERITED_SPINE.file);
 const MANIFEST_PATH = resolve(REPO_ROOT, MEMBERSHIP_MANIFEST_FILE);
 const LEDGER_PATH = resolve(REPO_ROOT, ADDITIONS_LEDGER_FILE);
+const REQUEST_PATH = ASTROMETRY_REQUEST_OUTPUTS.files.request;
 
 const queue = BINDING_REVIEW.parse(readFileSync(resolve(REPO_ROOT, BINDING_REVIEW_FILE), 'utf-8'));
 const dispositions = BINDING_REVIEW_DISPOSITIONS.read();
@@ -191,6 +193,17 @@ describe.skipIf(!inputsReadable)('membership manifest ↔ inherited spine', () =
     expect(new Set(ids).size).toBe(ids.length);
     expect(manifest.filter((r) => manifestDesignations(r).length === 0)).toEqual([]);
     expect(manifest.filter((r) => manifestDesignations(r).includes('sol:sun'))).toHaveLength(1);
+  });
+
+  // build:astrometry-request reads no manifest, so nothing in its construction
+  // says a binding's source was requested; this is what does.
+  it.skipIf(!lfsContentReadable(REQUEST_PATH))('requests every primaries row\'s source', () => {
+    const requested = new Set(readFileSync(REQUEST_PATH, 'utf-8').trimEnd().split('\n').slice(1));
+    const unrequested = manifest
+      .filter((r) => r.term === 'primaries' && r.gaiaSourceId !== null && !requested.has(r.gaiaSourceId))
+      .map(manifestKey);
+    expect(unrequested.slice(0, 20)).toEqual([]);
+    expect(unrequested).toHaveLength(0);
   });
 
   it('ends no gl cell on a null marker or other punctuation', () => {

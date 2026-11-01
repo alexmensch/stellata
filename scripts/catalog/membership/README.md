@@ -399,6 +399,9 @@ arithmetic and label-flips replay:
   each mints on a classical key rather than falling through to its Gaia id.
   The <!-- count:membership-manifest/sharedDesignations -->68<!-- /count --> designations two rows do share are the spine's own — pinned, so a
   label change that makes a sixty-ninth fails here.
+- **The astrometry request covers every binding**: each `term = primaries`
+  row's `gaia_source_id` is requested, by measurement now the request reads no
+  manifest ([covered by measurement](../astrometry-request/README.md#the-record-builds-sources-are-covered-by-measurement)).
 - **(iii)** the built catalogue's designation multiset equals the manifest's
   over the records the build produces — **every manifest row less the [§ 6.1](/docs/catalog-driver.md#61-record-parity)
   parks**, with no exclusions. The three the gate used to carry (spine-origin

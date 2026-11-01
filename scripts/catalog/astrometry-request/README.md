@@ -12,11 +12,11 @@ which is why it sits beside the record build rather than inside it
 
 ```
 scripts/catalog/astrometry-request/
-  export-astrometry-request.ts    The generator. Streams the membership
-                                  manifest through its codec for the
-                                  membership half, adds both gates' candidates
-                                  and the bound-pair siblings, sorts, and
+  export-astrometry-request.ts    The generator. Unions both gates'
+                                  candidates, the bound-pair siblings and the
+                                  review dispositions' kept ids, sorts, and
                                   emits the request through emitArtifacts.
+                                  Reads no build:membership output.
   astrometry-request-outputs.ts   ASTROMETRY_REQUEST_OUTPUTS — the request
                                   file as the generator's emitArtifacts
                                   declaration (../../util/README.md).
@@ -28,12 +28,12 @@ scripts/catalog/astrometry-request/
                                   scripts/sid/export-dr-risk-set.ts.
 ```
 
-Each non-membership contribution lives with the consumer that defines it, not
-here
-— this folder decides what to *request*, not what a route may propose:
+Each contribution lives with the consumer that defines it, not here — this
+folder decides what to *request*, not what a route may propose:
 `magnitudeWeighableSourceIds` in `../classic-ids/classic-id-overlay-pure.ts`,
 `derivationCandidateSourceIds` in `../membership/binding/binding-derivation-pure.ts`,
-and `pairMemberSourceIds` in `../distance/parallax/pair-member-parallax.ts`.
+`pairMemberSourceIds` in `../distance/parallax/pair-member-parallax.ts`, and
+`data/membership/binding-review-dispositions.tsv` itself for the kept ids.
 
 **source_ids exceed 2^53.** A lexicographic sort misorders unequal-length
 ids and a `Number` sort collides them, so `BigInt` is the only correct
@@ -42,23 +42,24 @@ comparator — and it is what matches the ordering
 codec that orders by source_id shares the one comparator,
 `compareSourceIds` (`../../util/tsv/table-pure.ts`).
 
-## Request and record build name the same set by construction
+## The record build's sources are covered by measurement
 
-**374,932 source_ids** over the 376,909 `term = primaries` manifest rows; the
-<!-- count:membership-manifest/bindingByClass.none -->1,977<!-- /count --> rows carrying none are the no-Gaia tier. The `term = magnitude` rows are
-not requested: their astrometry is the magnitude pull's own
+The request reads no `build:membership` output, so nothing in its construction
+makes it cover the manifest's bindings: reading the manifest would close a loop
+through the astrometry pull back into `build:membership`
+([Loops through committed files](../../pipeline/README.md#loops-through-committed-files)).
+The derivation's candidates cover every binding it can reach, since a binding
+is one of its candidates; what they leave out is a reviewed id no committed
+source proposes
+(<!-- count:membership-manifest/dispositionAsserted -->36<!-- /count --> today), which is why the dispositions file is the fourth
+contribution. `membership-manifest-gate.test.ts` asserts the result: every
+`term = primaries` manifest row's `gaia_source_id` is in the request.
+
+The <!-- count:membership-manifest/bindingByClass.none -->1,977<!-- /count --> primaries rows carrying none are the no-Gaia tier. The
+`term = magnitude` rows are not requested: their astrometry is the magnitude
+pull's own
 ([The astrometry comes with it](../membership/magnitude-term/README.md#the-astrometry-comes-with-it)),
-and requesting them would re-pull <!-- count:membership-manifest/magnitudeRows -->598,664<!-- /count --> rows that file already holds. The row total is pinned as `rows` in
-`../membership/membership-manifest-expected.json`; the split is a walk over
-`data/membership/membership-manifest.tsv`'s own `gaia_source_id` column, and
-every id in it is distinct.
-
-Reading the column is what makes the two agree — `readStars` reads the same
-cell, and the binding it carries was derived once, in the generator, through
-the G−V / sibling-letter gates ([Both gates weigh every candidate](../membership/binding/README.md#both-gates-weigh-every-candidate)).
-The
-derivation's own candidates are the third contribution below,
-so the pull carries a G for every source it might bind before it binds one.
+and requesting them would re-pull <!-- count:membership-manifest/magnitudeRows -->598,664<!-- /count --> rows that file already holds.
 
 ## The request is a union, and why that is not a compromise
 
@@ -67,10 +68,10 @@ different sets, so the request is the union of all four:
 
 | Contribution | Ids | Consumer |
 |---|---|---|
-| the manifest's `gaia_source_id` column, primaries rows | 374,932 | the record build: direction / rv / V / ci cascades |
-| `../classic-ids/`' binding-gate candidates | 354,987, +1,118 beyond the manifest | the gate's `phot_g_mean_mag` evidence |
-| `../membership/`' binding-derivation candidates | 375,976, +199 beyond the two above | the derivation's `phot_g_mean_mag` evidence — every source any primaries row could be bound to: the corrected spine's rows, and every addition item `additionItemCells` enumerates, admitted or not |
-| `multiples.tsv`' kept-physical pair members | 16,110, +6,809 beyond the three above | the parallax cascade's `pair_member_parallax` tier |
+| `../classic-ids/`' binding-gate candidates | 354,987 | the gate's `phot_g_mean_mag` evidence |
+| `../membership/`' binding-derivation candidates | 375,976, +21,231 beyond the gate's | the derivation's `phot_g_mean_mag` evidence — every source any primaries row could be bound to: the corrected spine's rows, and every addition item `additionItemCells` enumerates, admitted or not |
+| `multiples.tsv`' kept-physical pair members | 16,110, +6,810 beyond the two above | the parallax cascade's `pair_member_parallax` tier |
+| `binding-review-dispositions.tsv`' `keep_source_id` column | 53, +30 beyond the three above | the record build: a reviewed binding's direction / rv / V / ci cascades |
 
 `build:astrometry-request` prints every figure in this table — each
 contribution's own size and its increment over the ones above it — so all four
@@ -78,7 +79,7 @@ rows and the union total re-derive together in one local run. Correct them
 from that run and never one cell from another source: the increments are what
 make the four sum to the total above.
 
-**The derivation's contribution is the second one's shape again, on the record
+**The derivation's contribution is the gate's shape again, on the record
 side**: the manifest generator weighs candidates before it writes a binding,
 so the candidates cannot be read off the manifest column — the column is the
 outcome — nor off its identifier cells, since which addition items admission
@@ -86,11 +87,10 @@ turns into rows is an output of the build this request feeds.
 `additionItemCells` reads them off the primaries and the corrected spine
 instead, the same enumeration `buildMembership` derives. Requesting them all, whatever a row ends up bound to, is what lets
 the generator fail on any candidate it weighs with no pulled row, as the
-overlay's `gateSkippedNoGMag` pins at zero; the reviewed bindings a disposition keeps
-against every source are in the manifest column and so requested by the first
-contribution.
+overlay's `gateSkippedNoGMag` pins at zero. A disposition can keep an id no
+candidate walk reaches, so the kept ids are requested on their own.
 
-**The pair-member one is the same shape as the second**, and arrived the same way —
+**The pair-member one is the same shape as the gate's**, and arrived the same way —
 by a consumer being added without the request following. A bound pair's member
 is routinely not a manifest row (a component Gaia resolved that no primary
 indexes), and the tier lends that member's parallax to the sibling Gaia fitted
@@ -108,7 +108,7 @@ so keying the request on it would leave the two defining each other and the set
 unstable under any cascade change (`pairMemberSourceIds` says so at the
 definition).
 
-**The second one is not optional, and a membership-only request silently
+**The gate's one is not optional, and a membership-only request silently
 breaks the gate.** The gate vets a *candidate* — whatever source a cross-walk
 names for a designation — and the whole reason it exists is that a
 candidate is frequently NOT the star, so candidates are routinely not

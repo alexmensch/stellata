@@ -46,13 +46,12 @@ gaia_astrometry_source_id_request.tsv  ~440 KB, LFS. Stage 2 → Stage 3 deduped
                                        source_id request list (build-binaries.py output;
                                        write_astrometry_request owns its contents).
 gaia_catalog_source_id_request.tsv     ~7.2 MB, LFS. Full-catalog deduped
-                                       source_id request list — the membership
-                                       manifest's gaia_source_id column over its
-                                       primaries rows UNION the classic-ID
+                                       source_id request list — the classic-ID
                                        binding gate's candidates UNION the
                                        membership derivation's candidates UNION
                                        the kept-physical multiples.tsv pair
-                                       members, 383,058 ids
+                                       members UNION the binding review
+                                       dispositions' kept ids, 383,058 ids
                                        (scripts/catalog/astrometry-request/).
 gaia_dr2_neighbourhood_request.tsv     ~100 KB, LFS. DR3 source_ids of the
                                        Gaia-only catalog stars (no HIP/HD/HR/GJ)
@@ -307,8 +306,8 @@ re-deriving:
   ([Both gates weigh every candidate](/scripts/catalog/membership/binding/README.md#both-gates-weigh-every-candidate))
   — the
   membership generator and the classic-ID overlay build are the cross-walks'
-  two resolution consumers, and the astrometry request reads the manifest
-  column plus both of their candidate sets
+  two resolution consumers, and the astrometry request reads both of their
+  candidate sets plus the review dispositions' kept ids
   (`scripts/catalog/astrometry-request/README.md`). Also: Apsis
   Teff/logg/[M/H]/A0 + GSP-Spec
   `spectraltype_esphs` for the six-tier spectral resolver;
@@ -346,9 +345,8 @@ it has the same ordering constraint:
   so it must run **after** a fresh `pnpm run build:binaries`.
 - `refresh:gaia-astrometry-catalog` reads
   `gaia_catalog_source_id_request.tsv`, so it must run **after**
-  `pnpm run build:astrometry-request` — which reads the membership manifest
-  plus both cross-walks, so it runs after `refresh:gaia-hip` /
-  `refresh:gaia-tyc`.
+  `pnpm run build:astrometry-request` — which reads both cross-walks, so it
+  runs after `refresh:gaia-hip` / `refresh:gaia-tyc`.
 - `refresh:gaia-dr2-neighbourhood` reads
   `gaia_dr2_neighbourhood_request.tsv`, a frozen snapshot of the
   Gaia-only risk set derived from a built `public/catalog.bin` +

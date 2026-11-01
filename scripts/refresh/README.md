@@ -112,8 +112,9 @@ Every catalog-scoped request set
 traces to `data/membership/membership-manifest.tsv` — the membership term
 ([§ 3.1](/docs/catalog-driver.md#31-retiring-the-spine--the-membership-rule-measured-against-the-primaries)) — by one of two routes: directly, through
 `refresh_lib.read_membership_source_ids` / `iter_membership_rows` (the
-SIMBAD pulls), or through a request file `export-astrometry-request.ts`
-exported off the same manifest column (astrometry-catalog, GSPC,
+SIMBAD pulls), or through the request file `export-astrometry-request.ts`
+builds from the candidates the manifest's derivation weighs plus the review
+dispositions' kept ids (astrometry-catalog, GSPC,
 [Bailer-Jones 2021](/data/papers/index.md#bailerjones2021), Apsis —
 see `read_source_id_request` below).
 `refresh_lib.MEMBERSHIP_MANIFEST` is the one statement of where that table
@@ -128,9 +129,11 @@ The manifest's `gaia_source_id` is the binding the manifest **justified**, its
 `binding` cell saying on what basis, so a request derived from it and the
 record build name the same sources by construction — `readStars` reads the
 same cell. A raw cross-walk value is the ungated one, which is why a walk over
-one over-pulls rows that never became records — the failure
-[Request and record build name the same set](/scripts/catalog/astrometry-request/README.md#request-and-record-build-name-the-same-set-by-construction)
-diagnoses at length.
+one over-pulls rows that never became records. The astrometry request walks
+candidates on purpose, since both binding gates need a G for every source they
+weigh, and covers the manifest's bindings by measurement rather than
+construction
+([The record build's sources are covered by measurement](/scripts/catalog/astrometry-request/README.md#the-record-builds-sources-are-covered-by-measurement)).
 
 **A rebased request set does not rewrite its output.** The rebase changes
 what the *next* run asks for; the committed TSV keeps whatever the previous
