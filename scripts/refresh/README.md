@@ -160,24 +160,29 @@ edit and it is no help here: nothing is stale in the *build*, the *data* is.
 column gains sources the pull was never asked for, the numerator simply
 stops growing. "Stopped growing" is the most invisible diff a snapshot can
 carry: it reads as no change, and `UPDATE_BUILD_COUNTS` writes it back
-without comment. The shortfall is the number that moves loudly, so the
-shortfall is what is pinned:
+without comment. The shortfall is what moves loudly, so the shortfall is what
+is gated — where it must be zero, by a check that fails the build and names
+each missing row (a lineage invariant, [Invariants](/scripts/catalog/lineage/README.md#invariants), or an
+input-index check like the bound-pair siblings'); only a residual shortfall
+stays a pinned count:
 
-| Count | Pin | What a move means |
+| Shortfall | Gate | What a move means |
 |---|---|---|
 | `placement.distance.bailer-jones-absent` rows | **none**: a lineage invariant fails the build naming each one ([Invariants](/scripts/catalog/lineage/README.md#invariants)) | an eligible row has its own DR3 parallax, so [Bailer-Jones 2021](/data/papers/index.md#bailerjones2021) publishes a posterior for it; an absence is only ever this request set drifting |
 | `apsisSourcesUnpulled` | reviewed residual | **<!-- count:build-catalog/apsisSourcesUnpulled -->485<!-- /count -->**, down from 5,126 when the request was manifest-keyed and 5,076 of it was promoted companions — RECORDS but not manifest rows, so unrequestable at any magnitude. The union reaches all but <!-- count:build-catalog/apsisSourcesUnpulled -->485<!-- /count --> of them; that remainder plus genuine upstream absence is what the pin now holds |
 | `gspcSourcesUnpulled` | reviewed residual | Gaia genuinely lacks parameters for part of the catalogue; its request is the exported union, which does cover pair members |
 | `gateSkippedNoGMag` · `membership.binding.unweighed-no-pulled-row` rows | **0** · **none**, a lineage invariant | the original instance of this rule, on the two binding gates ([The request is a union](/scripts/catalog/astrometry-request/README.md#the-request-is-a-union-and-why-that-is-not-a-compromise)) |
 
-Adding a per-source consumer therefore means adding its shortfall count in
-the same change. The cost is one hash lookup per record, so it scales with
+Adding a per-source consumer therefore means adding its shortfall gate in
+the same change: a lineage invariant on the code its consumer writes for a
+missing row, or a pinned count only where Gaia genuinely publishes nothing for
+part of the set. The cost is one hash lookup per record, so it scales with
 the catalogue rather than with the pull.
 
-**A shortfall pinned at a residual hides what a zero pin would have shown.**
+**A shortfall pinned at a residual hides what a zero gate would have shown.**
 A consumer that runs over RECORDS is under-covered by a request derived from
 manifest rows by exactly the promoted companions — they carry a Gaia id and
-are never in the manifest's column — and only a zero pin makes that visible.
+are never in the manifest's column — and only a zero gate makes that visible.
 A residual that stays put reads as upstream absence however much of it is the
 request set not asking.
 
