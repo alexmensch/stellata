@@ -222,7 +222,9 @@ declared effect of the upstream code:
 | a retired class reappears | `reinstate` |
 
 Fail closed: an orphan whose cause has no code, or whose upstream decision
-is not in that build's lineage, fails `sid:allocate` and `sid:check`. CI checks every event row's
+is not in that build's lineage, fails `sid:allocate` and `sid:check`; the
+join itself is `orphanCauses` (`../../sid/orphan-causes-pure.ts`), whose
+test holds a full build at zero unexplained orphans. CI checks every event row's
 code is in the list, declares that effect, and matches a decision in the
 build's lineage.
 

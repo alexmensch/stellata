@@ -57,6 +57,15 @@ built-objects.ts          builtObjects: every SidObject of the built
                           clouds.json, local-group.json, the sol and shell
                           lists), and BUILT_OBJECT_INPUTS, the built files
                           it reads.
+orphan-causes-pure.ts     orphanCauses: each orphaned ledger key joined,
+  (+ test)                through every identity row carrying it, to the
+                          retire / park / merge outcomes recorded under
+                          those origin keys
+                          (/scripts/catalog/lineage/README.md#sid-events).
+                          The test runs it over the built artifacts and
+                          build/lineage/ and pins the star, sol and shell
+                          orphans no decision explains at 0; cloud: and
+                          lg: write no lineage.
 allocate-outputs.ts       ALLOCATE_OUTPUTS: what sid:allocate writes, the
                           ledger and ledger-head.json, declared;
                           tests/step-outputs.test.ts holds it.
