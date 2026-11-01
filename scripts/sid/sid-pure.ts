@@ -1,5 +1,5 @@
 // Pure algebra for the SID registry: designation grammar, canonical-key
-// ladder, same-as classes, allocation, the registry codecs, and the
+// ladder, same-as classes, the registry codecs, and the
 // head-snapshot + append-only checks. Contracts in /docs/sid.md#3-designation-namespaces through /docs/sid.md#5-synthetic-key-churn-wds-re-subdivision.
 
 import { createHash } from 'node:crypto';
