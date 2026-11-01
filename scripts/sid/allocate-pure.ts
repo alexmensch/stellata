@@ -238,7 +238,13 @@ export function allocate(input: AllocateInput, upstream: Upstream): Allocation {
     }
     removals.push({ kind: 'merged', sid: loser.sid, canonicalKey: loser.canonicalKey, into: survivor.sid, decision: settled.decision });
   }
+  const ambiguousCarriers = new Map(ambiguous.map((a) => [a.designation, a.objects.length]));
   for (const row of orphans) {
+    const carriers = ambiguousCarriers.get(row.canonicalKey);
+    if (carriers !== undefined) {
+      errors.push(`sid ${row.sid} (${row.canonicalKey}) left the build: ${carriers} objects now carry its key, so it names none of them; a bridge in sameas-overrides.tsv to the one it was must say which`);
+      continue;
+    }
     const settled = settle(row, 'left the build');
     if (settled.kind === 'refused') continue;
     const base = { sid: row.sid, canonicalKey: row.canonicalKey, decision: settled.decision };

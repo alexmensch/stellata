@@ -223,6 +223,16 @@ describe('allocate: SIDs that leave the build', () => {
     expect(errors[0]).toMatch(/reach no single SID/);
   });
 
+  it('names the ambiguity when an orphan\'s key is now carried by two objects', () => {
+    const errors = failed(run({
+      objects: [star('spine:1', 'hip:1', 'hd:9'), star('spine:3', 'hip:3', 'hd:9')],
+      ledger: [row(1, 'hip:1'), row(2, 'hd:9'), row(3, 'hip:3')],
+    }));
+    expect(errors).toEqual([
+      'sid 2 (hd:9) left the build: 2 objects now carry its key, so it names none of them; a bridge in sameas-overrides.tsv to the one it was must say which',
+    ]);
+  });
+
   it('only a SID keyed in the caller\'s scope can leave its build', () => {
     const a = allocated(run({ objects: live, ledger: [...ledger, row(3, 'cloud:gone', 'cloud')] }, upstream({
       'gaia_dr3:2': { decisions: [decision('spine:7', 'placement.park.no-position', 'park')], seenBy: ['membership'] },
