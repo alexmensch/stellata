@@ -1,20 +1,35 @@
-// SID allocation as a lineage stage: its reason codes, live and historical. See ../catalog/lineage/README.md#sid-events.
+// SID allocation as a lineage stage: its reason codes, live and historical, the one serialiser over its outcomes, and its key -> SID identity file. See ../catalog/lineage/README.md#sid-events.
 
 import type { StageLineageSpec } from '../catalog/lineage/lineage-io';
-import { stageCodes, type CodeDeclaration, type CodeEffect } from '../catalog/lineage/reason-codes-pure';
+import { compareUtf8, paramsText, type LineageParams, type LineageRow } from '../catalog/lineage/lineage-row-pure';
+import { LIVE, stageCodes, type CodeDeclaration, type CodeEffect } from '../catalog/lineage/reason-codes-pure';
+import { readTable, type TableSpec } from '../util/tsv/table-pure';
+import type { Allocation, SidObject } from './allocate-pure';
 
 export const ALLOCATION_STAGE = 'allocation';
 
-export const ALLOCATION_LINEAGE: StageLineageSpec<'allocation', 'allocation'> = {
+export const ALLOCATION_LINEAGE: StageLineageSpec<'allocation' | 'allocation.identity', 'allocation'> = {
   stage: ALLOCATION_STAGE,
-  files: ['allocation'],
+  files: ['allocation', 'allocation.identity'],
 };
+
+const live = (effect: CodeEffect, description: string): CodeDeclaration => ({ description, effect, status: LIVE });
 
 const historical = (effect: CodeEffect, description: string): CodeDeclaration => (
   { description, effect, status: { kind: 'historical' } }
 );
 
 export const ALLOCATION_CODES = stageCodes(ALLOCATION_STAGE, {
+  resolved: live('none', 'The object\'s same-as class reaches one SID in service, which it keeps.'),
+  minted: live('none', 'The object\'s same-as class reaches no ledger row, so it takes the next SID under its canonical key.'),
+  reinstated: live('none', 'The object\'s same-as class reaches only one retired SID, which returns to service.'),
+  merged: live('merge', 'A SID no object keeps any more merges into the SID of the record its upstream decision names.'),
+  retired: live('retire', 'A SID no object keeps any more leaves service under its upstream decision\'s code.'),
+  parked: live('park', 'A SID no object keeps any more stays in service, absent from this build, under its upstream decision\'s code.'),
+  'mint.sol-list': live('none', 'The object is a row of data/sid/sol-objects.tsv.'),
+  'mint.shell-list': live('none', 'The object is a row of data/sid/shell-objects.tsv.'),
+  'mint.cloud': live('none', 'The object is a cloud clouds.json carries.'),
+  'mint.local-group': live('none', 'The object is a galaxy local-group.json carries.'),
   'legacy.optical-cpm-test': historical('retire', 'optical companion rejected by the Stage 5 WDS epoch-baseline CPM test (background star, not a physical companion)'),
   'legacy.component-dissolved': historical('retire', 'A component the July 2026 re-pulls and promotion gates stopped emitting or promoting (re-paired, subsumed into an unpromoted aggregate, or its system no longer emitted), leaving no successor key.'),
   'legacy.component-parked': historical('retire', 'A component whose record left the build while SIMBAD xids still name its own Gaia source: a presence gap filed as a retirement.'),
@@ -47,3 +62,75 @@ export const ALLOCATION_CODES = stageCodes(ALLOCATION_STAGE, {
   'legacy.photocentre-link-restored': historical('none', 'A component that promotes again once Stage 6 links its Aa anchor to A at the Aa+Ab photocentre, so the A-branch offset reaches it.'),
   'legacy.astrometry-request-restored': historical('none', 'A component that promotes again once its blend-mate\'s Gaia source is in the binaries astrometry request, so its pair emits on gaia_5p.'),
 });
+
+type Branch = Parameters<typeof ALLOCATION_CODES.code>[0];
+
+type ParamsOf<B extends Branch> =
+  B extends 'resolved' ? { sid: string; via: string }
+  : B extends 'minted' ? { sid: string; canonical_key: string; route: string }
+  : B extends 'reinstated' ? { sid: string; route: string }
+  : B extends 'merged' ? { sid: string; canonical_key: string; cause: string; successor: string }
+  : B extends 'retired' | 'parked' ? { sid: string; canonical_key: string; cause: string }
+  : never;
+
+const lineageRow = <B extends Branch>(key: string, branch: B, params: ParamsOf<B>): LineageRow => ({
+  stage: ALLOCATION_STAGE, key, role: 'outcome', code: ALLOCATION_CODES.code(branch),
+  params: paramsText(params as LineageParams), evidence: [],
+});
+
+/** One row per object with an origin key, under it, and one per SID that left the build, under the origin of the decision that settled it. */
+export function allocationLineageRows(
+  objects: readonly SidObject[], allocation: Extract<Allocation, { kind: 'allocated' }>,
+): LineageRow[] {
+  const rows = objects.flatMap((obj, i): LineageRow[] => {
+    const key = obj.admission.origin;
+    if (key === null) return [];
+    const o = allocation.outcomes[i];
+    const sid = String(o.sid);
+    switch (o.kind) {
+      case 'resolved': return [lineageRow(key, 'resolved', { sid, via: o.via })];
+      case 'minted': return [lineageRow(key, 'minted', { sid, canonical_key: o.canonicalKey, route: o.code })];
+      case 'reinstated': return [lineageRow(key, 'reinstated', { sid, route: o.code })];
+      default: {
+        const unmapped: never = o;
+        throw new Error(`allocation outcome with no row mapping: ${JSON.stringify(unmapped)}`);
+      }
+    }
+  });
+  for (const r of allocation.removals) {
+    const base = { sid: String(r.sid), canonical_key: r.canonicalKey, cause: r.decision.code };
+    rows.push(r.kind === 'merged'
+      ? lineageRow(r.decision.origin, 'merged', { ...base, successor: String(r.into) })
+      : lineageRow(r.decision.origin, r.kind, base));
+  }
+  return rows;
+}
+
+export const ALLOCATION_IDENTITY_COLUMNS = ['key', 'sid'] as const;
+
+export interface AllocationIdentityRow {
+  readonly key: string;
+  readonly sid: number;
+}
+
+export function allocationIdentityRows(
+  objects: readonly SidObject[], objectSids: readonly number[],
+): AllocationIdentityRow[] {
+  return objects.flatMap((obj, i) => (obj.admission.origin === null ? [] : [{ key: obj.admission.origin, sid: objectSids[i] }]));
+}
+
+export function allocationIdentityText(rows: readonly AllocationIdentityRow[]): string {
+  const sorted = [...rows].sort((a, b) => compareUtf8(a.key, b.key));
+  for (let i = 1; i < sorted.length; i++) {
+    if (sorted[i].key === sorted[i - 1].key) throw new Error(`allocation identity: two objects keyed ${sorted[i].key}`);
+  }
+  return `${[ALLOCATION_IDENTITY_COLUMNS.join('\t'), ...sorted.map((r) => `${r.key}\t${r.sid}`)].join('\n')}\n`;
+}
+
+function identitySpec(file: string): TableSpec<(typeof ALLOCATION_IDENTITY_COLUMNS)[number]> {
+  return { file, columns: ALLOCATION_IDENTITY_COLUMNS, hint: 'Rebuild the catalogue.', exact: true };
+}
+
+export function* allocationIdentity(text: string, file: string): Generator<AllocationIdentityRow> {
+  for (const row of readTable(identitySpec(file), text)) yield { key: row.raw('key'), sid: row.requiredId('sid') };
+}

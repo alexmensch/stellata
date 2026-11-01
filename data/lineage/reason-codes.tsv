@@ -30,6 +30,16 @@ allocation.legacy.sibling-letter-twin	allocation	merge	historical		7.1.8	A Gaia-
 allocation.legacy.synth-duplicate-of-named-star	allocation	merge	historical		7.1.8	A synthetic component a curated identification (ORB6 or a SIMBAD xid) names as a first-class catalogue star, bridged in sameas-overrides.tsv.
 allocation.legacy.unnamed-gaia-twin	allocation	merge	historical		7.1.8	unnamed Gaia-only twin of a named record: the V <= 11 magnitude term re-admitted a source the named record failed to bind (an addition with no SIMBAD route, or a component the sibling gate refused on a shared HIP); the named record now binds that source, so the sid merges into the named record’s and old refs follow the successor
 allocation.legacy.xid-loss-twin	allocation	merge	historical		7.1.8	A synthetic component minted after its pair rows lost their SIMBAD id, while the same star had already shipped on its own Gaia source; a same-as edge joins them and the gaia_dr3 key outranks synth on the canonical-key ladder.
+allocation.merged	allocation	merge	live		7.1.8	A SID no object keeps any more merges into the SID of the record its upstream decision names.
+allocation.mint.cloud	allocation	none	live		7.1.8	The object is a cloud clouds.json carries.
+allocation.mint.local-group	allocation	none	live		7.1.8	The object is a galaxy local-group.json carries.
+allocation.mint.shell-list	allocation	none	live		7.1.8	The object is a row of data/sid/shell-objects.tsv.
+allocation.mint.sol-list	allocation	none	live		7.1.8	The object is a row of data/sid/sol-objects.tsv.
+allocation.minted	allocation	none	live		7.1.8	The object's same-as class reaches no ledger row, so it takes the next SID under its canonical key.
+allocation.parked	allocation	park	live		7.1.8	A SID no object keeps any more stays in service, absent from this build, under its upstream decision's code.
+allocation.reinstated	allocation	none	live		7.1.8	The object's same-as class reaches only one retired SID, which returns to service.
+allocation.resolved	allocation	none	live		7.1.8	The object's same-as class reaches one SID in service, which it keeps.
+allocation.retired	allocation	retire	live		7.1.8	A SID no object keeps any more leaves service under its upstream decision's code.
 membership.addition-binding.bound	membership	none	live		7.1.6	The admitted star's own Gaia source survives both gates and is no other record's.
 membership.addition-binding.no-candidate	membership	none	live		7.1.6	No catalogue proposes a Gaia source for the admitted star.
 membership.addition-binding.on-spine	membership	none	live		7.1.6	The admitted star's Gaia source is a spine record's, so the star ships unbound.
