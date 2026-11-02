@@ -1,4 +1,4 @@
-// Every declareOutputs constant under scripts/ belongs to a step on the table, a writer excluded by name, or a step still to move. See scripts/pipeline/README.md#the-model.
+// Every declareOutputs constant under scripts/ belongs to a step on the table, a writer excluded by name, or a step still to move. See ../scripts/pipeline/README.md#the-model.
 
 import { readFileSync } from 'node:fs';
 import { relative } from 'node:path';
