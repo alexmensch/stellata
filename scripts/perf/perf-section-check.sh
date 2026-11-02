@@ -46,7 +46,7 @@ done < "$files_file"
 # — and it moves how many instanced quads every star pass draws, which is the
 # most direct frame-cost change the repo can make. The count comes off
 # scripts/catalog/build-catalog-expected.json, which cannot move without a
-# deliberate UPDATE_BUILD_COUNTS refresh, so it is the membership term's own
+# deliberate UPDATE_SNAPSHOTS refresh, so it is the membership term's own
 # committed record. Unreadable on either side leaves the check silent: the
 # comparison-time refusal (pins/README.md#record-count) is the backstop.
 membership=''

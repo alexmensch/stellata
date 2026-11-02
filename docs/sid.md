@@ -332,7 +332,7 @@ snapshot gate but deliberately stricter:
    Appends need no override (always legal); a prefix rewrite is a
    never-event that requires editing the guard test itself in the
    same PR with explicit user sign-off. This is intentionally heavier
-   than `UPDATE_BUILD_COUNTS=1` — build counts describe a build,
+   than `UPDATE_SNAPSHOTS=1` — build counts describe a build,
    the ledger IS the identity contract.
 
 The guard runs in `build-catalog`'s full vitest, with real LFS content

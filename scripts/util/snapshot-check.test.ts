@@ -3,15 +3,14 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import { snapshotCheck, type SnapshotCheckSpec } from './snapshot-check';
-
-const ENV = 'SNAPSHOT_ASSERT_TEST_UPDATE';
+import { UPDATE_SNAPSHOTS_ENV as ENV, snapshotCheck, type SnapshotCheckSpec } from './snapshot-check';
 
 describe('snapshotCheck', () => {
   let dir: string;
   let path: string;
 
   beforeEach(() => {
+    delete process.env[ENV];
     dir = mkdtempSync(join(tmpdir(), 'snapshot-check-'));
     path = join(dir, 'expected.json');
   });
@@ -23,7 +22,6 @@ describe('snapshotCheck', () => {
 
   function spec(actual: { n: number }): SnapshotCheckSpec<{ n: number }> {
     return {
-      envVar: ENV,
       snapshotPath: path,
       actual,
       compare: (e, a) => ({ drifted: e.n !== a.n, report: `${e.n} vs ${a.n}` }),

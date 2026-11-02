@@ -114,7 +114,7 @@ cache. Helpers: `util/build-stamp.ts`,
 
 An unchanged input invalidates nothing, so a rebuilt `multiples.tsv` with
 identical content leaves the catalogue skipped. Forcing a rebuild: `--force`
-on either Python step, `UPDATE_BUILD_COUNTS=1` on `build:catalog`, or delete
+on either Python step, `UPDATE_SNAPSHOTS=1` on `build:catalog`, or delete
 the stamp.
 
 `build:clouds`, `build:local-group` and the `*-sync` mirrors — together

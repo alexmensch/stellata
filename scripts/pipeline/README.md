@@ -236,9 +236,10 @@ write more than one file (classic-ids four, Tycho-2 two).
   or `dev` beside a seed run can no longer interleave with it.
 - **`--force`** reaches every `build` step the run selects, uniformly. It
   never runs a manual step.
-- **`--update-snapshots`** is the one way a count snapshot is rewritten. It
-  replaces `UPDATE_BUILD_COUNTS` and `UPDATE_DISTANCE_OUTLIERS`, and the
-  Python steps honour it too. A forced rebuild therefore still checks counts.
+- **`--update-snapshots`** is the one way a count snapshot is rewritten: it
+  sets `UPDATE_SNAPSHOTS=1` for each step it runs, the one variable
+  `snapshotCheck` and `snapshot_assert.py` read. A forced rebuild therefore
+  still checks counts.
 - **`--verify-committed`** forces each selected step, then fails on any diff
   in its declared outputs that git tracks (`git ls-files` over the declared
   paths decides which are committed; the declaration carries no committed

@@ -178,13 +178,14 @@ same thing — single-use helpers stay with their consumer.
   `build:membership` carry it.
 - `snapshot-check.ts` — `snapshotCheck(spec)`: a build script's computed
   snapshot against its committed JSON, answered as an `emitArtifacts`
-  check — `pass`, `fail`, or `refresh` (the rewritten JSON) when the spec's
-  env var is `1`. It writes nothing itself. A missing snapshot fails too: a
-  deleted `*-expected.json` must fail, not re-baseline itself, so the env var
-  is the only way any snapshot is written, a new one included. Used by `build-catalog.ts` (build counts
-  under `UPDATE_BUILD_COUNTS`, distance outliers under
-  `UPDATE_DISTANCE_OUTLIERS`) and the classic-ID overlay, membership and
-  WGSN builds (`UPDATE_BUILD_COUNTS`). The count snapshots all pass
+  check — `pass`, `fail`, or `refresh` (the rewritten JSON) when
+  `UPDATE_SNAPSHOTS` (`UPDATE_SNAPSHOTS_ENV`) is `1`, the variable the
+  runner's `--update-snapshots` sets. It writes nothing itself. A missing
+  snapshot fails too: a deleted `*-expected.json` must fail, not re-baseline
+  itself, so the variable is the only way any snapshot is written, a new one
+  included. One variable refreshes every snapshot a run reaches. Used by
+  `build-catalog.ts` (build counts and distance outliers) and the classic-ID
+  overlay, membership and WGSN builds. The count snapshots all pass
   `compareCountSnapshot` (`catalog/build-counts.ts`) as the compare.
   `snapshot-check.test.ts` pins pass, drift, missing and refresh.
 - `snapshot_assert.py` — the Python sibling, for the two binaries steps
@@ -193,7 +194,7 @@ same thing — single-use helpers stay with their consumer.
   primitives). A leaf on purpose: `build_stamp.py` hashes every module a
   step imports, so the runtime step reaching this through `stage7_counts`
   would restamp `binaries.bin` on every pipeline-stage edit. Same rule
-  on a missing snapshot: it fails, and only `UPDATE_BUILD_COUNTS=1`
+  on a missing snapshot: it fails, and only `UPDATE_SNAPSHOTS=1`
   writes one. Returns a bool where the TS sibling returns an `emitArtifacts` check, since the Python
   drivers own their exit.
   Pinned by `snapshot_assert.test.py`.

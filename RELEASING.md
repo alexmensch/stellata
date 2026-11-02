@@ -438,7 +438,7 @@ Required equally when the diff **moves catalogue membership by more than
 1 %**, whatever it touches — `recordCount` in
 `scripts/catalog/build-catalog-expected.json`, base against head, which is
 the membership term's own committed record and cannot move without a
-deliberate `UPDATE_BUILD_COUNTS` refresh. A membership change lands in
+deliberate `UPDATE_SNAPSHOTS` refresh. A membership change lands in
 `scripts/` and `public/`, so no path rule above reaches it, yet it moves
 how many instanced quads every star pass draws. Under 1 % the trigger
 stands down, because 1 % is ~3,900 records against a measured 0.39–0.59 ms

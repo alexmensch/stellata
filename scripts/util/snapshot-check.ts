@@ -3,9 +3,11 @@ import { existsSync, readFileSync } from 'node:fs';
 
 import type { Check } from './emit-artifacts';
 
+/** Set to '1' to rewrite every snapshot instead of asserting against it; the
+ *  runner's `--update-snapshots` sets it for each step it runs. */
+export const UPDATE_SNAPSHOTS_ENV = 'UPDATE_SNAPSHOTS';
+
 export interface SnapshotCheckSpec<T> {
-  /** Set to '1' to rewrite the snapshot instead of asserting against it. */
-  envVar: string;
   snapshotPath: string;
   actual: T;
   compare: (expected: T, actual: T) => { drifted: boolean; report: string };
@@ -22,7 +24,7 @@ export function snapshotCheck<T>(opts: SnapshotCheckSpec<T>): Check {
     ? (JSON.parse(readFileSync(opts.snapshotPath, 'utf8')) as T)
     : null;
 
-  if (process.env[opts.envVar] === '1') {
+  if (process.env[UPDATE_SNAPSHOTS_ENV] === '1') {
     const toWrite = expected !== null && opts.refreshTransform
       ? opts.refreshTransform(expected, opts.actual)
       : opts.actual;

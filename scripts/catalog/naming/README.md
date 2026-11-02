@@ -67,7 +67,7 @@ scripts/catalog/naming/
                                 build:wgsn's emitArtifacts declaration
                                 (../../util/README.md). Side-effect free.
   wgsn-expected.json            Pinned count snapshot
-                                (UPDATE_BUILD_COUNTS=1 refreshes).
+                                (UPDATE_SNAPSHOTS=1 refreshes).
   manifest-naming-expected.json The manifest's naming figures — the residual
                                 gate's and the Bayer coverage — pinned by
                                 ../membership/membership-manifest-gate.test.ts,

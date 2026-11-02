@@ -251,7 +251,7 @@ astronomer-relevant summary:
    `build-binaries-expected.json`; per-strategy rates gate
    `build-binaries-rates-expected.json`. A regression in either
    surfaces in the build log as a per-key diff and refuses to
-   advance. Refreshes are explicit (`UPDATE_BUILD_COUNTS=1`); silent
+   advance. Refreshes are explicit (`UPDATE_SNAPSHOTS=1`); silent
    drift is impossible.
 
 **Layer 4 — validation harness.** Three tiers covered in

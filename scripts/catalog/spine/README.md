@@ -188,7 +188,7 @@ Determinism itself was verified at authoring time by generating twice and
 comparing bytes.
 
 The byte pin lives in the **test source**, not in
-`inherited-spine-expected.json`: `UPDATE_BUILD_COUNTS=1` rewrites that
+`inherited-spine-expected.json`: `UPDATE_SNAPSHOTS=1` rewrites that
 snapshot, so a regeneration would otherwise refresh its own guard. Editing
 the two literals is what unfreezes the spine, and it shows up in review as
 a diff in a test rather than in a 40 MB LFS blob.

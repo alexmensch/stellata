@@ -11,7 +11,7 @@ from typing import Any, Callable
 
 from scripts.util.paths import REPO_ROOT
 
-UPDATE_COUNTS_ENV_VAR = "UPDATE_BUILD_COUNTS"
+UPDATE_SNAPSHOTS_ENV_VAR = "UPDATE_SNAPSHOTS"
 
 
 @dataclass
@@ -101,14 +101,14 @@ def assert_or_update_snapshot(
     render: Callable[[list[SnapshotDiff]], str],
 ) -> bool:
     """True on a full match; False on drift or a missing snapshot, after
-    printing ``refresh_command``. Under ``UPDATE_BUILD_COUNTS=1`` writes
+    printing ``refresh_command``. Under ``UPDATE_SNAPSHOTS=1`` writes
     ``build_payload(actual, expected_path)`` instead and returns True."""
     try:
         shown = expected_path.relative_to(REPO_ROOT)
     except ValueError:
         shown = expected_path
 
-    if os.environ.get(UPDATE_COUNTS_ENV_VAR) == "1":
+    if os.environ.get(UPDATE_SNAPSHOTS_ENV_VAR) == "1":
         expected_path.write_text(json.dumps(build_payload(actual, expected_path), indent=2) + "\n")
         print(f"[{label}] Updated {shown}")
         return True

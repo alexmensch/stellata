@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Stage 7 — write the build-counts and per-strategy-rates snapshot JSONs.
-Refresh with ``UPDATE_BUILD_COUNTS=1``.
+Refresh with ``UPDATE_SNAPSHOTS=1``.
 """
 
 from __future__ import annotations
@@ -35,7 +35,7 @@ from .stage6_multiples import (
     SPECT_VIA_VALUES, MultiplesRow,
 )
 from scripts.util.snapshot_assert import (
-    UPDATE_COUNTS_ENV_VAR,
+    UPDATE_SNAPSHOTS_ENV_VAR,
     SnapshotDiff,
     assert_or_update_snapshot,
     compare_snapshot,
@@ -43,7 +43,7 @@ from scripts.util.snapshot_assert import (
 )
 
 LABEL = "build-binaries"
-REFRESH_COMMAND = f"{UPDATE_COUNTS_ENV_VAR}=1 pnpm run build:binaries"
+REFRESH_COMMAND = f"{UPDATE_SNAPSHOTS_ENV_VAR}=1 pnpm run build:binaries"
 
 # ─── Stage 7: build-time stats ───────────────────────────────────────
 

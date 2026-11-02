@@ -164,7 +164,7 @@ edit and it is no help here: nothing is stale in the *build*, the *data* is.
 `bjOverridden`, `apsisMatched` — cannot serve as the gate, because when the
 column gains sources the pull was never asked for, the numerator simply
 stops growing. "Stopped growing" is the most invisible diff a snapshot can
-carry: it reads as no change, and `UPDATE_BUILD_COUNTS` writes it back
+carry: it reads as no change, and `UPDATE_SNAPSHOTS` writes it back
 without comment. The shortfall is what moves loudly, so the shortfall is what
 is gated — where it must be zero, by a check that fails the build and names
 each missing row (a lineage invariant, [Invariants](/scripts/catalog/lineage/README.md#invariants), or an
@@ -405,7 +405,7 @@ catalogue inconsistent. Order matters:
 4. **Re-run `pnpm run build:binaries`** then **`pnpm run build:catalog`**.
    Both build steps reassert against their snapshots; the count diffs
    are the first place to look for regressions.
-5. **`UPDATE_BUILD_COUNTS=1` then `UPDATE_DISTANCE_OUTLIERS=1`** to
+5. **`UPDATE_SNAPSHOTS=1 pnpm run build:catalog`** to
    refresh both snapshots once the new build is reviewed. Re-edit the
    `reason` strings on the distance-outliers snapshot for any new
    outliers.
