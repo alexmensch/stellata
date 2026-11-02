@@ -210,6 +210,16 @@ class RecorderTests(unittest.TestCase):
         _, record = self.run_step()
         self.assertEqual(self.rel(record["writes"]), ["ledger.tsv", "out.bin"])
 
+    def test_ignores_modules_and_files_under_a_virtualenv(self) -> None:
+        lib = self.root / ".venv" / "lib"
+        lib.mkdir(parents=True)
+        (lib / "thirdparty.py").write_text("VALUE = 2\n")
+        (self.root / "step.py").write_text(
+            f"import sys\nsys.path.insert(0, {str(lib)!r})\nimport thirdparty\n"
+        )
+        _, record = self.run_step()
+        self.assertEqual(self.rel(record["reads"]), ["step.py"])
+
     def test_passes_the_step_exit_status_through_and_still_records(self) -> None:
         status, record = self.run_step(3)
         self.assertEqual(status, 3)

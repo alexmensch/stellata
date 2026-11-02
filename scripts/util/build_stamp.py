@@ -103,6 +103,7 @@ def listing_hash(names: Iterable[str]) -> str:
 
 
 _WRITE_MODE_CHARS = frozenset("wax+")
+_UNRECORDED_PARTS = frozenset({"__pycache__", ".venv"})
 _WRITE_FLAGS = os.O_WRONLY | os.O_RDWR | os.O_APPEND | os.O_CREAT | os.O_TRUNC
 
 
@@ -137,7 +138,7 @@ class _Recorder:
         if not isinstance(raw, (str, os.PathLike)):
             return None
         path = Path(os.path.abspath(raw))
-        if path == self.record or "__pycache__" in path.parts or not path.is_relative_to(self.root):
+        if path == self.record or _UNRECORDED_PARTS & set(path.parts) or not path.is_relative_to(self.root):
             return None
         return path
 
