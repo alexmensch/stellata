@@ -89,10 +89,14 @@ identity) and every bake that reads it.
 
 ```
 pnpm run refresh:edenhofer2024-main             # download + record the map
-python3 scripts/dust/build-dust.py                # resample real map
-python3 scripts/dust/build-dust.py --synthetic    # fake pattern for dev
-python3 scripts/dust/build-dust.py --flavor less_data_but_2kpc  # extended-range run
+pnpm run build:dust                               # resample real map, record data/stamps/build-dust.json
+pnpm run build:dust --synthetic                   # fake pattern for dev
+pnpm run build:dust --flavor less_data_but_2kpc   # extended-range run
 ```
+
+A run with arguments writes no record, so its outputs read stale until a
+plain `pnpm run build:dust`
+([Recording a manual step](../pipeline/README.md#recording-a-manual-step--recordts)).
 
 Real mode needs `pip install -r scripts/requirements-dust.txt` and the
 pulled map (~3.2 GB); a re-encode (e.g. a `DENSITY_MAX` change) reuses the
