@@ -9,8 +9,7 @@ import {
 } from './staged-write';
 
 /** Outputs whose member set is whatever one run emits: members a run does not
- *  emit are deleted once the new set has landed. An unstamped family's members
- *  stay out of the step's stamp, so a checkout lacking them is not stale. */
+ *  emit are deleted once the new set has landed. */
 export interface OutputFamily {
   readonly dir: string;
   readonly member: RegExp;
