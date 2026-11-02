@@ -79,6 +79,11 @@ reads. So each `defineSource` / `defineArtifact` lives in a leaf module that
 only code reading that file through its typed reader imports, and a test over
 each step's closure holds every reached source to a call of its reader.
 
+The runner starts a Python step as `run_python_step.py <root> <record> <entry>`,
+which runs the entry under `build_stamp.record_run`
+([util/README.md](../util/README.md)); the step needs no code of its own to be
+recorded.
+
 **A recorded input set is sound for code and data alike.** A Python step
 that starts reading a new module or file does so because some file it
 already read changed, and that change makes it stale. Two reads open no file,
@@ -89,9 +94,9 @@ so they need their own record:
   as an input keyed by the directory, hashed over its sorted names, so a file
   added to a scanned folder stales the step.
 - **Existence probes** (`Path.exists()`, `os.path.exists`) raise no audit
-  event. A Python step probes existence only through the stamp helper, which
-  records the probe; a test over the Python step modules fails on any other
-  probe.
+  event. A Python step probes existence only through `build_stamp.probe`,
+  which records the probe; a test over the Python step modules fails on any
+  other probe.
 
 **A Python step's declarations cannot drift silently.** The audit hook also
 records what the process writes: the target of every `os.rename` /

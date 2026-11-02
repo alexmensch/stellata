@@ -72,6 +72,16 @@ same thing — single-use helpers stay with their consumer.
   output tuple and stamp, repo-relative — which `../worktree-seed.test.ts`
   reads. Both pinned by co-located tests
   (`python3 scripts/util/build_stamp.test.py`).
+  `record_run` is how the runner runs a Python step
+  (`../pipeline/run_python_step.py`): Python's audit hook records, under a
+  root, every file the process opens for reading, hashed at its first read
+  (a file the step wrote before reading it is not an input), every
+  directory it lists (`listing_hash`, over the sorted names; the import
+  system's own scans of `sys.path` are not listings), and every file it
+  writes — a rename's target, not its temp file, and not a scratch file it
+  deleted — plus each loaded module, into a JSON record the runner turns
+  into the step's stamp. An existence check opens nothing, so a step probes
+  through `probe(path)`, which records the answer.
 - `import-closure.ts` / `import-closure-pure.ts` (+ test) — a TypeScript
   build's code inputs. `entryClosure(entries)` is every module the given
   entry files import, read from an esbuild metafile, so a new import joins
