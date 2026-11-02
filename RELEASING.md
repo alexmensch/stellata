@@ -556,11 +556,12 @@ action. Archiving starts at v3.44.2, the release that minted both DOIs.
 
 ## Catalogue refresh policy
 
-External catalogues (AT-HYG, Gaia DR3 cross-walks + 5p astrometry +
+External catalogues (Gaia DR3 cross-walks + 5p astrometry +
 NSS + Apsis, [Bailer-Jones 2021](/data/papers/index.md#bailerjones2021) DR3,
 Hipparcos-2 [van Leeuwen 2007](/data/papers/index.md#vanleeuwen2007), SIMBAD pulls)
 are refreshed by manual `pnpm run refresh:*` invocations, **not** by
-`pnpm run build` or the deploy workflow. The build reads the committed
+`pnpm run build` or the deploy workflow; AT-HYG is a dropped-in file with no
+refresh script. The build reads the committed
 files under `data/<source>/` and never hits the network — see
 [Frozen external data](data/README.md#frozen-external-data) for the rationale.
 
@@ -569,16 +570,19 @@ upstream catalogue release:
 
 - **Gaia DR transition** (DR3 → DR4 expected late 2026) — the largest
   refresh. Re-run every `refresh-gaia-*.py` script + `refresh-bailer-
-  jones.py` in lockstep with the AT-HYG drop that re-keys to the new
-  source_ids. Tier-A `known-stars.tsv` rows may need per-row source_id
-  updates against the DR3↔DR4 cross-walk.
+  jones.py` in the recipe's dependency order; no refresh reads AT-HYG, so
+  none waits on an AT-HYG drop. Tier-A `known-stars.tsv` rows may need
+  per-row source_id updates against the DR3↔DR4 cross-walk.
 - **AT-HYG point release** — drop the new
-  `data/athyg/athyg_3X_classic_ids.csv` in, rebuild, refresh the
-  source_id-keyed side-files if AT-HYG's gaia coverage changed.
-- **Bailer-Jones republication** — drop the new
-  `bailer-jones-drN.tsv` in, rebuild. Runs independently of any other
-  refresh; the override gate (`dist_src ∈ {G_R3, G_R2}`) is
-  unchanged.
+  `data/athyg/athyg_3X_classic_ids.csv` in and re-run
+  `pnpm run build:binaries`, its one consumer. Membership and
+  `build:catalog` read neither it nor the frozen spine, so no request set
+  or side-file moves with it.
+- **Bailer-Jones republication** — re-run `pnpm run refresh:bailer-jones`
+  against the republished ESA table (`TABLE` in `refresh-bailer-jones.py`),
+  then rebuild. Runs independently of any other refresh; the override still
+  fires only on records the parallax cascade placed by `gaia_dr3_inversion`
+  ([Consumed by](data/bailer-jones/README.md#consumed-by)).
 - **SIMBAD / Hipparcos-2** — refresh on demand; both are rolling
   catalogues and a sample-time anchor is fine for the validation tier.
 
