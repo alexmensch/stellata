@@ -7,8 +7,6 @@ import {
   type Vec3,
 } from '../../../../src/astro-core/extinction/dust-raymarch-pure';
 
-export { R_V } from '../../../../src/astro-core/extinction/dust-raymarch-pure';
-
 /** In-memory decode of the dust artifact `dust-loader.ts` streams at
  *  runtime. `data` is the flat gridSize³ grid of encoded uint8 voxels,
  *  x-fastest: `idx = (z·gridSize + y)·gridSize + x`. */

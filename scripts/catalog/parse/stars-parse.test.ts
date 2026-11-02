@@ -2,7 +2,8 @@ import { describe, it, expect } from 'vitest';
 
 import { NO_CONSTELLATION_INDEX, SOLAR_BV_FALLBACK } from '../../../src/catalog-format/record/catalog-pure';
 import { SPECTRAL_UNKNOWN } from '../../../src/catalog-format/spectral/spectral-classify';
-import { avSolToStar, R_V, type DustGrid } from '../distance/dust/dust-deextinction-pure';
+import { avSolToStar, type DustGrid } from '../distance/dust/dust-deextinction-pure';
+import { R_V } from '../../../src/astro-core/extinction/dust-raymarch-pure';
 import {
   CATALOG_SCENE_EPOCH,
   directionAtEpoch,

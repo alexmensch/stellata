@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { makeFrameExposure } from '../../scene/frame-ctx-mock';
-import type { LgEmission, LgObject } from '../local-group-loader';
+import type { LgObject } from '../local-group-loader';
+import type { LgEmission } from '../../../catalog-format/local-group/local-group-schema';
 import {
   buildEmissionInstanceData,
   cpuDensityAt,

@@ -2,7 +2,7 @@
 // the bound the brightness skip reads (/docs/science-hdr-pipeline.md#35-skipping-a-diffuse-emitter-the-display-cannot-show--the-share-bound).
 
 import { footprintAlong, footprintRadiusPc } from '../../../astro-core/emission/emission-pure';
-import type { LgEmission } from '../local-group-loader';
+import type { LgEmission } from '../../../catalog-format/local-group/local-group-schema';
 import {
   EMISSION_S_MIN_PC,
   EMISSION_UNIT_BALL_SLACK,

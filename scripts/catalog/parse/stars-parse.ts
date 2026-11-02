@@ -15,6 +15,8 @@ import {
   type ApsisRow,
   type SimbadNamespace,
   type SimbadRecordKeys,
+  DIST_VIA_VALUES,
+  type DistVia,
 } from '../../../src/catalog-format/record/catalog-pure';
 import { classifyFromSimbad, SPECTRAL_UNKNOWN } from '../../../src/catalog-format/spectral/spectral-classify';
 import {
@@ -47,7 +49,6 @@ import {
 import { lookupCns5Astrometry } from '../classic-ids/classic-ids-parse';
 import { isGaiaCatalogueBibcode } from '../distance/gaia-distrust';
 import { isLowPrecisionParallax, resolveParallax } from '../distance/parallax/parallax-cascade';
-import { DIST_VIA_VALUES, type DistVia } from '../../../src/catalog-format/record/catalog-pure';
 import {
   PARKED_REASONS,
   type ParkedIdentifiers,
@@ -81,7 +82,8 @@ import {
   type RvVia,
   type RvErrorBand,
 } from '../distance/radial-velocity/radial-velocity';
-import { R_V, avSolToStar, type DustGrid } from '../distance/dust/dust-deextinction-pure';
+import { avSolToStar, type DustGrid } from '../distance/dust/dust-deextinction-pure';
+import { R_V } from '../../../src/astro-core/extinction/dust-raymarch-pure';
 import {
   emptySimbadValueIndex,
   lookupSimbadValues,

@@ -15,7 +15,8 @@ import {
   discColourIndex,
 } from '../../../astro-core/emission/population-colour-pure';
 import { linearSrgbFromColourIndex } from '../../../astro-core/colour/blackbody-lut-pure';
-import type { LgEmission, LgObject } from '../local-group-loader';
+import type { LgObject } from '../local-group-loader';
+import type { LgEmission } from '../../../catalog-format/local-group/local-group-schema';
 
 /**
  * Intrinsic integrated (B−V)₀ of M31, Tempel 2011
