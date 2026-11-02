@@ -103,7 +103,8 @@ so they need their own record:
 **A Python step's declarations cannot drift silently.** The audit hook also
 records what the process writes: the target of every `os.rename` /
 `os.replace` (so a temp-then-rename write counts as its target, not its temp
-file) and every path opened for writing, less the step's own stamp. A count
+file) and every path opened for writing. A step on the runner writes no stamp
+of its own: the runner writes it, so a stamp write is an undeclared one. A count
 snapshot the step rewrites under `--update-snapshots` is named in its own
 table field, never an output and never an ordering edge. After a Python step runs,
 the runner fails the run when a recorded write is not a declared output, or

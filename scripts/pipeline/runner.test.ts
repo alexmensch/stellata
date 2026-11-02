@@ -282,6 +282,14 @@ os.replace(tmp, ${JSON.stringify(at(out))})
     expect((await run(steps, ['p'])).kinds).toEqual({ p: 'built' });
   });
 
+  it('fails a run that writes its own stamp, which only the runner writes', async () => {
+    write('p.in', 'x');
+    const stamp = pipelineDirs(root).buildStamp('p');
+    const body = `${rename('p.out')}\nPath(${JSON.stringify(stamp)}).parent.mkdir(parents=True, exist_ok=True)\nPath(${JSON.stringify(stamp)}).write_text("{}")`;
+    const result = await run([pyStep('p', 'p.out', body)], ['p']);
+    expect(result.verdicts.get('p')).toEqual({ kind: 'failed', reason: `p wrote ${stamp}, which it does not declare` });
+  });
+
   it('fails a run that writes a file it does not declare', async () => {
     write('p.in', 'x');
     const body = `${rename('p.out')}\nPath(${JSON.stringify(at('stray.txt'))}).write_text("s")`;
