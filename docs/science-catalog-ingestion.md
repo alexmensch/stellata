@@ -165,8 +165,9 @@ onto the likelihood (well-measured stars don't move); at low S/N it
 collapses onto the prior (catastrophic outliers get pulled back to
 plausible disc distances). This is the principled fix and we apply it where
 the underlying distance actually is a Gaia inverse-parallax estimate
-— i.e. AT-HYG rows whose `dist_src` is `G_R3` or `G_R2`. For those
-rows we take the [Bailer-Jones 2021](/data/papers/index.md#bailerjones2021) distance (photogeometric `r_med_photogeo`
+— i.e. records the parallax cascade placed by their own DR3 parallax
+(`gaia_dr3_inversion`; [Consumed by](/data/bailer-jones/README.md#consumed-by)
+owns the gate). For those records we take the [Bailer-Jones 2021](/data/papers/index.md#bailerjones2021) distance (photogeometric `r_med_photogeo`
 preferred, geometric `r_med_geo` as fallback when photogeo is absent);
 position follows as the direction-cascade unit vector × the new distance
 ([Driver astrometry](#driver-astrometry--at-hyg-precision-findings-and-the-direct-sourcing-decision)). Brightness needs no separate correction here:
