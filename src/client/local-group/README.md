@@ -53,7 +53,7 @@ The lg kind module (`lg-module.ts`) owns the runtime lifecycle: its
 emission layer pair at the kind's roster position. Each object carries
 a frozen Stellata ID (`sid`, [§ 7](/docs/sid.md#7-storage--sid-in-every-artifact)); the loader rejects the
 artifact (warn + null) when the version mismatches or any sid is
-missing or duplicated — a stale or pre-stamp `local-group.json` needs
+missing or duplicated — a stale or sid-less `local-group.json` needs
 `pnpm run build:local-group`. The `lg` SID domain is the module's
 `sidDomain()` leg, attached by main.ts's roster loop (see
 `../util/sid-resolver/README.md`).
