@@ -55,9 +55,12 @@ python3 -m venv .venv
 ```
 
 After that, prefix every `python3` invocation with `.venv/bin/`, or
-shell-activate via `source .venv/bin/activate`. The pnpm targets below
-call bare `python3` — activate the venv (or alias `python3` to the
-venv binary) in the shell that runs them.
+shell-activate via `source .venv/bin/activate`. Every pnpm target below
+runs its script through `scripts/pipeline/record.ts`, which starts bare
+`python3` — activate the venv (or alias `python3` to the venv binary) in the
+shell that runs them. `record.ts` skips a pull whose `data/stamps/` record is
+still fresh (`--force` re-pulls) and rewrites the record after every run
+([Recording a manual step](../pipeline/README.md#recording-a-manual-step--recordts)).
 
 **`.venv` is gitignored, so a git worktree has none** — a refresh run from
 one dies on `ModuleNotFoundError: astropy` after resolving its paths
@@ -94,9 +97,10 @@ write the worktree's `data/`.
 | `refresh:edenhofer2024-main` / `-2kpc` | `refresh-edenhofer2024-{main,2kpc}.py` | `data/dust/edenhofer2024-{main,2kpc}.json` | The [Edenhofer 2024](/data/papers/index.md#edenhofer2024) dust map's two variants into `dustmaps`' cache, each recorded as a committed identity file the bakes read — [The Edenhofer 2024 pulls](/scripts/dust/README.md#the-edenhofer-2024-pulls). |
 | `validate:simbad` | `scripts/catalog/validate/validate-simbad-sample.ts` | (report only) | Tier C — cross-check `public/catalog.bin` against the committed SIMBAD sample. The build-time subset of the same check is `distance-regression-check.ts`, gated on `build-distance-outliers-expected.json`. |
 
-`refresh-simbad-sptype.py`, `refresh-simbad-wds-xids.py`, and
-`refresh-msc.py` don't yet have dedicated pnpm targets — invoke
-directly with `python3 scripts/refresh/<script>.py`. The SIMBAD
+`refresh:simbad-sptype`, `refresh:simbad-wds-xids` and `refresh:msc` run
+`refresh-simbad-sptype.py`, `refresh-simbad-wds-xids.py` and
+`refresh-msc.py` (outputs `data/simbad/simbad_sptype.tsv`,
+`data/simbad/simbad_wds_xids.tsv`, `data/msc/msc_*.tsv`). The SIMBAD
 scripts share `scripts/refresh/simbad/` plumbing (`specs.py`,
 `inputs.py`, `request.py`, `query.py`, `union.py`, `coverage.py`,
 `tsv.py`) so adding new SIMBAD-anchored pulls reuses the entire stack —

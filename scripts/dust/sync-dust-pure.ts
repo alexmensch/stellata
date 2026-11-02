@@ -3,7 +3,7 @@
 // public bundle otherwise).
 
 const ALLOWED_EXACT = new Set(['manifest.json']);
-const CHUNK_PATTERN = /^chunk_\d+_\d+_\d+\.bin$/;
+export const CHUNK_PATTERN = /^chunk_\d+_\d+_\d+\.bin$/;
 
 export function isDustPublicAsset(name: string): boolean {
   return ALLOWED_EXACT.has(name) || CHUNK_PATTERN.test(name);

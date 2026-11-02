@@ -2,9 +2,11 @@
 
 One model of the build pipeline: a typed table of steps, a runner that orders
 and gates them, and the content stamp as the only freshness test. This README
-is the design; [Files](#files) maps it onto the code. The runner is proven on
-fixture tables; `steps.ts` holds no step yet, and every step still runs through
-its own `package.json` target until it moves onto the table.
+is the design; [Files](#files) maps it onto the code. `steps.ts` holds every
+pull and bake (`MANUAL_STEPS`, each run by hand through `record.ts`); a
+`build` step still runs through its own `package.json` target until it moves
+onto the table, and the two Horizons fetchers join once their outputs modules
+pass the load-time import rule.
 
 ## The model
 
@@ -386,7 +388,11 @@ Hand-kept lists become derivations over the table:
   stamp keys are relative to it, and a step's build stamp (through
   `stampPath`), manual record, run record and lock folder sit under it.
   `run.ts` passes the repo root; tests pass a temporary folder.
-- `run.ts` / `steps.ts` — the command line and the table it runs.
+- `run.ts` / `steps.ts` (+ test) — the command line and the table it runs.
+  The test holds the table to the load-time rules, every manual step's
+  `package.json` target to `tsx scripts/pipeline/record.ts <name>`, and every
+  pull's `--describe` to running under `python3 -I -S` (skipped while the
+  manifest is an unsmudged LFS pointer).
 - `record.ts` / `record-step.ts` (+ test) — [Recording a manual
   step](#recording-a-manual-step--recordts): `recordStep` and the
   `RecordOutcome` union (`fresh`, `recorded`, `failed`).
