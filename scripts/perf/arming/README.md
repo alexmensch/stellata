@@ -18,6 +18,8 @@ scripts/perf/arming/
                             run.ts and the tests, so no second copy of the
                             marker name or the hour can drift from the hook.
   await-go.sh (+ test)      The arm poller the agent runs in the background.
+  busy-sessions.sh (+ test) Which `claude agents --json` rows are busy in this
+                            repo — the filter await-go's warning reads.
 ```
 
 `scripts/hooks/perf-guard.sh` is the gate itself and lives with the other
@@ -78,6 +80,17 @@ The deny reason carries these four steps verbatim:
    timeout.
 3. Proceed only when it reports the marker.
 4. Never create the marker.
+
+When the marker arrives, `await-go.sh` also lists every other Claude session
+whose `status` is `busy` and whose `cwd` is the main checkout or anything
+under it (worktrees included), excluding its own ancestor processes — the
+requesting session. Any hit, or a `claude agents --json` that fails, prints a
+`WARNING` on stderr and turns the ARMED line into "ask Alex before
+launching": the run would likely be discarded under foreground load, and
+whether to launch anyway is Alex's call. The arm is not spent by waiting —
+only `run.ts` consumes it. This catches uncoordinated sessions; a live
+`pickup-epic` run is paused through its coordinator instead
+([stellata-perf protocol](/.claude/skills/stellata-perf/SKILL.md#protocol--announce--arm--run-one-run-per-arm)).
 
 `run.ts` consumes the marker before the browser launches: absent → exit 3;
 stale → deleted, exit 3; fresh → deleted, then launch. One arm is one launch

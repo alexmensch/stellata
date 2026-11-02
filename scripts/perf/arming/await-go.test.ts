@@ -1,8 +1,8 @@
 // Behavioural guard for await-go.sh: reports a fresh marker once, ignores a
-// stale one, and gives up at the timeout.
+// stale one, gives up at the timeout, and warns about busy sessions.
 
 import { execFileSync, spawn } from 'node:child_process';
-import { mkdtempSync, realpathSync, rmSync, utimesSync, writeFileSync } from 'node:fs';
+import { chmodSync, mkdirSync, mkdtempSync, realpathSync, rmSync, utimesSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
@@ -11,18 +11,34 @@ import { PERF_GO_MAX_AGE_S } from './perf-go-lib';
 const SCRIPT = resolve(__dirname, 'await-go.sh');
 
 let repo: string;
+let bin: string;
 
 interface Exit { code: number | null; stdout: string; stderr: string }
 
 function run(env: Record<string, string>): Promise<Exit> {
   return new Promise((done) => {
-    const child = spawn('bash', [SCRIPT], { cwd: repo, env: { ...process.env, ...env } });
+    const child = spawn('bash', [SCRIPT], {
+      cwd: repo,
+      env: { ...process.env, PATH: `${bin}:${process.env.PATH}`, ...env },
+    });
     let stdout = '';
     let stderr = '';
     child.stdout.on('data', (d: Buffer) => { stdout += d.toString(); });
     child.stderr.on('data', (d: Buffer) => { stderr += d.toString(); });
     child.on('close', (code) => done({ code, stdout, stderr }));
   });
+}
+
+function fakeClaude(script: string): void {
+  const path = join(bin, 'claude');
+  writeFileSync(path, `#!/usr/bin/env bash\n${script}\n`);
+  chmodSync(path, 0o755);
+}
+
+function sessions(rows: { pid: number; name: string; cwd: string; status: string }[]): void {
+  const fixture = join(bin, 'agents.json');
+  writeFileSync(fixture, JSON.stringify(rows));
+  fakeClaude(`cat '${fixture}'`);
 }
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -39,6 +55,9 @@ function arm(ageS = 0): void {
 beforeEach(() => {
   repo = realpathSync(mkdtempSync(join(tmpdir(), 'await-go-repo-')));
   execFileSync('git', ['init', '-q', '-b', 'main'], { cwd: repo, stdio: 'ignore' });
+  bin = join(repo, '.fake-bin');
+  mkdirSync(bin);
+  sessions([]);
 });
 
 afterEach(() => {
@@ -68,5 +87,37 @@ describe('await-go', () => {
     arm(PERF_GO_MAX_AGE_S + 60);
     const r = await run({ PERF_GO_POLL_S: '0.2', PERF_GO_TIMEOUT_S: '1' });
     expect(r.code).toBe(1);
+  }, 15_000);
+
+  it('warns on stderr and holds the launch when another session is busy in the repo', async () => {
+    sessions([
+      { pid: 999_999, name: 'pickup-x', cwd: join(repo, '.claude/worktrees/x'), status: 'busy' },
+      { pid: 999_998, name: 'elsewhere', cwd: '/not/this/repo', status: 'busy' },
+    ]);
+    arm();
+    const r = await run({ PERF_GO_POLL_S: '0.2', PERF_GO_TIMEOUT_S: '10' });
+    expect(r.code).toBe(0);
+    expect(r.stdout.trim().split('\n')).toHaveLength(1);
+    expect(r.stdout).toMatch(/ARMED.*Ask Alex/);
+    expect(r.stderr).toMatch(/WARNING.*busy/);
+    expect(r.stderr).toContain('pickup-x');
+    expect(r.stderr).not.toContain('elsewhere');
+  }, 15_000);
+
+  it('does not count its own session as busy', async () => {
+    sessions([{ pid: process.pid, name: 'self', cwd: repo, status: 'busy' }]);
+    arm();
+    const r = await run({ PERF_GO_POLL_S: '0.2', PERF_GO_TIMEOUT_S: '10' });
+    expect(r.stdout).toMatch(/Launch the runner now/);
+    expect(r.stderr).toBe('');
+  }, 15_000);
+
+  it('warns that the check was skipped when the session list cannot be read', async () => {
+    fakeClaude('exit 1');
+    arm();
+    const r = await run({ PERF_GO_POLL_S: '0.2', PERF_GO_TIMEOUT_S: '10' });
+    expect(r.code).toBe(0);
+    expect(r.stderr).toMatch(/check skipped/);
+    expect(r.stdout).toMatch(/Ask Alex/);
   }, 15_000);
 });
