@@ -9,6 +9,7 @@ import { fileHashes } from '../util/build-stamp';
 import { REPO_ROOT } from '../util/paths';
 import { pullQueryHash } from './freshness';
 import { loadTable, type Loaded } from './load-table';
+import { pipelineDirs } from './pipeline-dirs';
 import { runSteps, type Verdict } from './runner';
 import type { StepEntry, StepTable } from './step-table-pure';
 
@@ -71,7 +72,7 @@ if sys.argv[1:] == ["--describe"]:
 }
 
 function writeManualStamp(name: string, out: string, request: string, queryText: string): void {
-  write(`data/stamps/${name}.json`, JSON.stringify({
+  write(relative(root, join(pipelineDirs(root).manualStamps, `${name}.json`)), JSON.stringify({
     inputs: fileHashes([at(request)]),
     outputs: fileHashes([at(out)]),
     query: pullQueryHash({ query: queryText, services: ['esa', 'ari'] }),
