@@ -9,7 +9,9 @@ import { allocationRun, loadRegistry, registryTexts } from './registry-io';
 import { inPartition } from './registry-partitions-pure';
 import type { LedgerRow } from './sid-pure';
 import {
+  isSiblingName,
   SIBLING_ARTIFACTS,
+  SIBLING_NAMES,
   siblingArtifactObjects,
   type SiblingItem,
 } from './sibling-artifacts';
@@ -20,14 +22,12 @@ const NO_LINEAGE: Upstream = { causes: () => new Map(), admissions: () => new Ma
 function main(): void {
   const targets = process.argv.slice(2);
   if (targets.length === 0) {
-    throw new Error(`usage: stamp-sibling-sids.ts <${Object.keys(SIBLING_ARTIFACTS).join('|')}|all> ...`);
+    throw new Error(`usage: stamp-sibling-sids.ts <${SIBLING_NAMES.join('|')}|all> ...`);
   }
-  const names = targets.includes('all') ? Object.keys(SIBLING_ARTIFACTS) : targets;
-  for (const t of names) {
-    if (!SIBLING_ARTIFACTS[t]) {
-      throw new Error(`sid:stamp: unknown target "${t}" (expected ${Object.keys(SIBLING_ARTIFACTS).join(', ')})`);
-    }
-  }
+  const names = targets.includes('all') ? SIBLING_NAMES : targets.map((t) => {
+    if (!isSiblingName(t)) throw new Error(`sid:stamp: unknown target "${t}" (expected ${SIBLING_NAMES.join(', ')})`);
+    return t;
+  });
 
   const registry = loadRegistry();
   const minted: LedgerRow[] = [];

@@ -90,7 +90,8 @@ catalog-designations.ts   Designation set per BUILT catalog record, from
 registry-partitions-pure.ts  The partitions (REGISTRY_PARTITIONS),
                           partitionOf / inPartition (a namespace's
                           owner, and the scope its allocation runs
-                          under), and each partition's emit keys.
+                          under), and each partition's emit keys, all
+                          typed by RegistryPartition.
 registry-pure.ts (+ test) unionLedger / unionLedgerLines: every
                           partition as one sid sequence; validateRegistry:
                           that union dense and unique, each ledger
@@ -162,9 +163,10 @@ sibling-stamp-outputs.ts  SID_STAMP_OUTPUTS: the sibling artifacts sid:stamp
 sibling-artifacts.ts      SIBLING_ARTIFACTS spec (file / arrayKey / ns /
                           kind / mint code per sibling) +
                           siblingArtifactObjects, so the namespace→kind
-                          mapping is defined once; SIBLING_NAMESPACES,
-                          their namespaces, each its own registry
-                          partition.
+                          mapping is defined once; SIBLING_NAMES and
+                          SIBLING_NAMESPACES with their type guards, so a
+                          sibling or partition name is a literal type;
+                          each namespace is its own registry partition.
 ```
 
 The append-only CI guard is `tests/sid-ledger-guard.test.ts` (repo-meta:

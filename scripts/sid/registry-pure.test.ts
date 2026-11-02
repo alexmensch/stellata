@@ -32,6 +32,11 @@ describe('registry partitions', () => {
     const paths = REGISTRY_PARTITIONS.flatMap((p) => Object.values(registryPaths(p)));
     expect(new Set(paths).size).toBe(REGISTRY_PARTITIONS.length * 3);
   });
+
+  it('refuse, at compile time, a partition no step allocates', () => {
+    // @ts-expect-error 'clouds' is the sibling's name, not its namespace
+    expect(() => registryPaths('clouds')).not.toThrow();
+  });
 });
 
 describe('unionLedger', () => {

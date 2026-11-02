@@ -20,7 +20,7 @@ export interface SiblingArtifactSpec {
   mintCode: string;
 }
 
-export const SIBLING_ARTIFACTS: Record<string, SiblingArtifactSpec> = {
+export const SIBLING_ARTIFACTS = {
   clouds: {
     file: 'clouds.json',
     arrayKey: 'clouds',
@@ -37,9 +37,21 @@ export const SIBLING_ARTIFACTS: Record<string, SiblingArtifactSpec> = {
     buildHint: 'pnpm run build:local-group',
     mintCode: ALLOCATION_CODES.code('mint.local-group'),
   },
-};
+} as const satisfies Record<string, SiblingArtifactSpec>;
 
-export const SIBLING_NAMESPACES: ReadonlySet<string> = new Set(Object.values(SIBLING_ARTIFACTS).map((s) => s.ns));
+export type SiblingName = keyof typeof SIBLING_ARTIFACTS;
+export type SiblingNamespace = (typeof SIBLING_ARTIFACTS)[SiblingName]['ns'];
+
+export const SIBLING_NAMES = Object.keys(SIBLING_ARTIFACTS) as SiblingName[];
+export const SIBLING_NAMESPACES: readonly SiblingNamespace[] = SIBLING_NAMES.map((name) => SIBLING_ARTIFACTS[name].ns);
+
+export function isSiblingName(name: string): name is SiblingName {
+  return Object.hasOwn(SIBLING_ARTIFACTS, name);
+}
+
+export function isSiblingNamespace(ns: string): ns is SiblingNamespace {
+  return (SIBLING_NAMESPACES as readonly string[]).includes(ns);
+}
 
 export interface SiblingItem {
   id: string;

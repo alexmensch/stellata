@@ -6,7 +6,7 @@ import { LEDGERS } from './ledger-tsv';
 import type { EventRow } from './events-pure';
 import { EVENTS } from './events-tsv';
 import { REASON_CODES } from '../catalog/lineage/reason-codes-tsv';
-import { REGISTRY_PARTITIONS, registryKeys } from './registry-partitions-pure';
+import { REGISTRY_PARTITIONS, registryKeys, type RegistryKey, type RegistryPartition } from './registry-partitions-pure';
 import { unionLedger, validateRegistry } from './registry-pure';
 import { computeLedgerHead, type LedgerRow, type SameasEdge } from './sid-pure';
 import { loadStoredEdges } from './stored-edges';
@@ -43,9 +43,9 @@ export function allocationRun(): { date: string; version: string } {
 }
 
 /** One partition's ledger and events with the allocation's rows appended, never a committed line rewritten, and its head recomputed over both. */
-export function registryTexts(
-  partition: string, minted: readonly LedgerRow[], events: readonly EventRow[],
-): Record<string, string> {
+export function registryTexts<P extends RegistryPartition>(
+  partition: P, minted: readonly LedgerRow[], events: readonly EventRow[],
+): Record<RegistryKey<P>, string> {
   const ledgerArtifact = LEDGERS[partition];
   const eventsArtifact = EVENTS[partition];
   const ledger = artifactText(ledgerArtifact) + minted.map((r) => `${ledgerArtifact.encodeLine(r)}\n`).join('');
@@ -55,5 +55,5 @@ export function registryTexts(
     [keys.ledger]: ledger,
     [keys.events]: eventsText,
     [keys.head]: `${JSON.stringify(computeLedgerHead(ledger, eventsText), null, 2)}\n`,
-  };
+  } as Record<RegistryKey<P>, string>;
 }

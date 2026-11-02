@@ -1,11 +1,11 @@
 // The registry across its partitions: their ledgers as one SID sequence, and structural validation of the whole. See README.md#registry-partitions.
 
 import { validateEvents, type EventRow } from './events-pure';
-import { inPartition } from './registry-partitions-pure';
+import { inPartition, type RegistryPartition } from './registry-partitions-pure';
 import { isValidDesignation, parseDesignation, validateLedger, type LedgerRow } from './sid-pure';
 
 export interface PartitionRows {
-  partition: string;
+  partition: RegistryPartition;
   ledger: readonly LedgerRow[];
   events: readonly EventRow[];
 }

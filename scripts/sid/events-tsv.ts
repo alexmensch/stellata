@@ -3,10 +3,10 @@
 import { defineArtifact } from '../util/tsv/artifact-pure';
 import { decodeEventRow, encodeEventRow, EVENT_COLUMNS, type EventRow } from './events-pure';
 import { registryPaths } from './registry-outputs';
-import { REGISTRY_PARTITIONS, registryHint } from './registry-partitions-pure';
+import { REGISTRY_PARTITIONS, registryHint, type RegistryPartition } from './registry-partitions-pure';
 import { registryFile, type RegistryFile } from './sid-pure';
 
-function eventsArtifact(partition: string) {
+function eventsArtifact(partition: RegistryPartition) {
   return defineArtifact({
     file: registryPaths(partition).events,
     columns: EVENT_COLUMNS,
@@ -17,11 +17,11 @@ function eventsArtifact(partition: string) {
   });
 }
 
-export const EVENTS: Readonly<Record<string, ReturnType<typeof eventsArtifact>>> = Object.fromEntries(
+export const EVENTS = Object.fromEntries(
   REGISTRY_PARTITIONS.map((p) => [p, eventsArtifact(p)]),
-);
+) as Readonly<Record<RegistryPartition, ReturnType<typeof eventsArtifact>>>;
 
-export function eventsFile(partition: string, text: string): RegistryFile<EventRow> {
+export function eventsFile(partition: RegistryPartition, text: string): RegistryFile<EventRow> {
   const { table, decode } = EVENTS[partition];
   return registryFile(table, decode, text);
 }

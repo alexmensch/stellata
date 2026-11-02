@@ -3,10 +3,12 @@
 import { resolve } from 'node:path';
 
 import { REPO_ROOT } from '../util/paths';
-import { CATALOG_PARTITION, registryKeys, type RegistryFileSet } from './registry-partitions-pure';
+import {
+  CATALOG_PARTITION, registryKeys, type RegistryFileSet, type RegistryKey, type RegistryPartition,
+} from './registry-partitions-pure';
 
 /** Repo-relative. */
-export function registryPaths(partition: string): RegistryFileSet {
+export function registryPaths(partition: RegistryPartition): RegistryFileSet {
   const suffix = partition === CATALOG_PARTITION ? '' : `-${partition}`;
   return {
     ledger: `data/sid/ledger${suffix}.tsv`,
@@ -15,12 +17,12 @@ export function registryPaths(partition: string): RegistryFileSet {
   };
 }
 
-export function registryFiles(partition: string): Record<string, string> {
+export function registryFiles<P extends RegistryPartition>(partition: P): Record<RegistryKey<P>, string> {
   const paths = registryPaths(partition);
   const keys = registryKeys(partition);
   return {
     [keys.ledger]: resolve(REPO_ROOT, paths.ledger),
     [keys.events]: resolve(REPO_ROOT, paths.events),
     [keys.head]: resolve(REPO_ROOT, paths.head),
-  };
+  } as Record<RegistryKey<P>, string>;
 }

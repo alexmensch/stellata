@@ -3,10 +3,10 @@
 import { defineArtifact } from '../util/tsv/artifact-pure';
 import { decodeLedgerRow, encodeLedgerRow, LEDGER_COLUMNS, type LedgerRow } from './ledger-pure';
 import { registryPaths } from './registry-outputs';
-import { REGISTRY_PARTITIONS, registryHint } from './registry-partitions-pure';
+import { REGISTRY_PARTITIONS, registryHint, type RegistryPartition } from './registry-partitions-pure';
 import { registryFile, type RegistryFile } from './sid-pure';
 
-function ledgerArtifact(partition: string) {
+function ledgerArtifact(partition: RegistryPartition) {
   return defineArtifact({
     file: registryPaths(partition).ledger,
     columns: LEDGER_COLUMNS,
@@ -17,11 +17,11 @@ function ledgerArtifact(partition: string) {
   });
 }
 
-export const LEDGERS: Readonly<Record<string, ReturnType<typeof ledgerArtifact>>> = Object.fromEntries(
+export const LEDGERS = Object.fromEntries(
   REGISTRY_PARTITIONS.map((p) => [p, ledgerArtifact(p)]),
-);
+) as Readonly<Record<RegistryPartition, ReturnType<typeof ledgerArtifact>>>;
 
-export function ledgerFile(partition: string, text: string): RegistryFile<LedgerRow> {
+export function ledgerFile(partition: RegistryPartition, text: string): RegistryFile<LedgerRow> {
   const { table, decode } = LEDGERS[partition];
   return registryFile(table, decode, text);
 }
