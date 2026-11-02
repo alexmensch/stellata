@@ -62,7 +62,7 @@ import {
   soleItem,
   type AdditionCohortItem,
   type AdditionCohorts,
-} from './addition-items-pure';
+} from './additions/addition-items-pure';
 import {
   applySpineCorrections, SPINE_CORRECTION_CELLS, SPINE_CORRECTIONS_NAME,
   type SpineCorrectionCell, type SpineCorrectionRow,
@@ -152,7 +152,7 @@ export interface MembershipInput {
   /** `magnitude-term/README.md#the-union-dedupes-on-the-derived-binding`. */
   magnitudeTerm: MagnitudeTermSelection | null;
   /** Whether the pulled astrometry gives this source a parallax — what decides
-   *  which of two groups contesting a designation ships (README.md#the-additions). */
+   *  which of two groups contesting a designation ships (additions/README.md). */
   publishesGaiaParallax: (sourceId: string) => boolean;
   keys: OriginKeys;
 }
@@ -165,7 +165,7 @@ export interface MembershipCounts extends LabelMergeCounts {
    *  while the floor is null. */
   magnitudeTerm: MagnitudeTermCounts;
   magnitudeRows: number;
-  /** README.md#the-additions. */
+  /** additions/README.md. */
   magnitudeRowsOwnCandidate: Record<OwnCandidateReason, number>;
   additionsByReason: Record<AdditionReason, number>;
   /** Groups a primary admits that resolve onto an existing record instead. */

@@ -15,7 +15,7 @@ import {
   indexSimbadSources,
 } from '../membership/binding/binding-derivation-pure';
 import { BINDING_REVIEW_DISPOSITIONS } from '../membership/binding-review-dispositions-source';
-import { additionItemCells } from '../membership/addition-items-pure';
+import { additionItemCells } from '../membership/additions/addition-items-pure';
 import { applySpineCorrections } from '../membership/spine-corrections/spine-corrections-pure';
 import { SPINE_CORRECTIONS } from '../membership/spine-corrections/spine-corrections-source';
 import { printedVLookups } from '../photometry/v-magnitude-pure';

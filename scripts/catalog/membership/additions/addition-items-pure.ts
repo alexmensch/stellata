@@ -1,8 +1,8 @@
-// The additions' items and their binding cells. See README.md#the-additions.
+// The additions' items and their binding cells. See README.md.
 
-import type { Cns5Row } from '../classic-ids/classic-ids-parse';
-import type { BindingCells } from './binding/binding-derivation-pure';
-import type { SpineRow } from '../spine/inherited-spine-pure';
+import type { Cns5Row } from '../../classic-ids/classic-ids-parse';
+import type { BindingCells } from '../binding/binding-derivation-pure';
+import type { SpineRow } from '../../spine/inherited-spine-pure';
 import {
   findAdditions,
   indexPrimaries,
@@ -11,7 +11,7 @@ import {
   type HipAddition,
   type PrimaryIndex,
   type PrimaryTables,
-} from '../spine/primaries-audit-pure';
+} from '../../spine/primaries-audit-pure';
 
 export type AdditionCohorts = { hd: HdAddition | null; hip: HipAddition | null; cns5: Cns5Row | null };
 
@@ -55,7 +55,7 @@ export function additionCohortItems(
   ];
 }
 
-/** ../astrometry-request/README.md#the-request-is-a-union-and-why-that-is-not-a-compromise. */
+/** ../../astrometry-request/README.md#the-request-is-a-union-and-why-that-is-not-a-compromise. */
 export function additionItemCells(
   tables: PrimaryTables, kept: readonly SpineRow[],
 ): BindingCells[] {

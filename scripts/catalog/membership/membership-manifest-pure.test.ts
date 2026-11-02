@@ -22,7 +22,7 @@ import {
   parseBindingDispositionsTsv,
   type BindingDispositionRow,
 } from './binding-review-dispositions-pure';
-import { additionItemCells } from './addition-items-pure';
+import { additionItemCells } from './additions/addition-items-pure';
 import type { SpineCorrectionRow } from './spine-corrections/spine-corrections-pure';
 import { ADDITIONS_LEDGER } from './additions-ledger-tsv';
 import { ADDITION_REASONS, COMPONENT_REASON_PREFIX } from './ledger-rows-pure';
