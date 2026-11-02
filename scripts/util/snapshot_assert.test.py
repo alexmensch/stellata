@@ -20,7 +20,7 @@ from scripts.util.snapshot_assert import (  # noqa: E402
 
 LABEL = "test"
 REFRESH = "UPDATE_SNAPSHOTS=1 pnpm run build:test"
-KW = {"label": LABEL, "refresh_command": REFRESH}
+KW = {"label": LABEL, "script": "build:test"}
 
 
 class CompareBuildCountsTests(unittest.TestCase):

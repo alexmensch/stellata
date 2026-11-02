@@ -1329,7 +1329,7 @@ function buildCountsCheck(actual: BuildCounts): Check {
     actual,
     compare: compareCountSnapshot,
     failureLabel: 'build-catalog count',
-    refreshCommand: 'UPDATE_SNAPSHOTS=1 pnpm run build:catalog',
+    script: 'build:catalog',
   });
 }
 
@@ -1354,7 +1354,7 @@ function distanceOutliersCheck(stars: readonly Star[]): Check {
       };
     },
     failureLabel: 'distance-regression',
-    refreshCommand: 'UPDATE_SNAPSHOTS=1 pnpm run build:catalog',
+    script: 'build:catalog',
   });
 }
 

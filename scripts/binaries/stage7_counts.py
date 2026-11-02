@@ -35,7 +35,6 @@ from .stage6_multiples import (
     SPECT_VIA_VALUES, MultiplesRow,
 )
 from scripts.util.snapshot_assert import (
-    UPDATE_SNAPSHOTS_ENV_VAR,
     SnapshotDiff,
     assert_or_update_snapshot,
     compare_snapshot,
@@ -43,7 +42,7 @@ from scripts.util.snapshot_assert import (
 )
 
 LABEL = "build-binaries"
-REFRESH_COMMAND = f"{UPDATE_SNAPSHOTS_ENV_VAR}=1 pnpm run build:binaries"
+SNAPSHOT_SCRIPT = "build:binaries"
 
 # ─── Stage 7: build-time stats ───────────────────────────────────────
 
@@ -315,7 +314,7 @@ def assert_or_update_rates(
     return assert_or_update_snapshot(
         actual, expected_path,
         label=LABEL,
-        refresh_command=REFRESH_COMMAND,
+        script=SNAPSHOT_SCRIPT,
         build_payload=_rates_snapshot_payload,
         compare=compare_build_rates,
         render=format_rate_diff,

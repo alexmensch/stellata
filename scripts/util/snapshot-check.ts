@@ -7,6 +7,8 @@ import type { Check } from './emit-artifacts';
  *  runner's `--update-snapshots` sets it for each step it runs. */
 export const UPDATE_SNAPSHOTS_ENV = 'UPDATE_SNAPSHOTS';
 
+const refreshCommand = (script: string): string => `${UPDATE_SNAPSHOTS_ENV}=1 pnpm run ${script}`;
+
 export interface SnapshotCheckSpec<T> {
   snapshotPath: string;
   actual: T;
@@ -15,7 +17,8 @@ export interface SnapshotCheckSpec<T> {
    *  refresh (curated `reason` strings survive a regenerate). */
   refreshTransform?: (expected: T, actual: T) => T;
   failureLabel: string;
-  refreshCommand: string;
+  /** The `package.json` script the refresh message names. */
+  script: string;
 }
 
 /** A missing snapshot fails: only the env var writes one. */
@@ -35,7 +38,7 @@ export function snapshotCheck<T>(opts: SnapshotCheckSpec<T>): Check {
     return {
       kind: 'fail',
       message: `\n${opts.failureLabel} snapshot ${opts.snapshotPath} is missing. To write it:\n`
-        + `  ${opts.refreshCommand}`,
+        + `  ${refreshCommand(opts.script)}`,
     };
   }
 
@@ -45,7 +48,7 @@ export function snapshotCheck<T>(opts: SnapshotCheckSpec<T>): Check {
         kind: 'fail',
         report,
         message: `\n${opts.failureLabel} assertion failed. If the change is intentional,\n`
-          + `refresh the snapshot with: ${opts.refreshCommand}`,
+          + `refresh the snapshot with: ${refreshCommand(opts.script)}`,
       }
     : { kind: 'pass', report };
 }

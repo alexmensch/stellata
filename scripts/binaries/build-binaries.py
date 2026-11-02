@@ -116,7 +116,7 @@ from scripts.binaries.stage6_multiples import (  # noqa: E402
 )
 from scripts.binaries.stage7_counts import (  # noqa: E402
     LABEL,
-    REFRESH_COMMAND,
+    SNAPSHOT_SCRIPT,
     assert_or_update_rates,
     build_binaries_counts,
     build_binaries_rates,
@@ -681,7 +681,7 @@ def run(force: bool) -> int:
         ),
     )
     counts_match = assert_or_update_counts(
-        counts, EXPECTED_COUNTS, label=LABEL, refresh_command=REFRESH_COMMAND,
+        counts, EXPECTED_COUNTS, label=LABEL, script=SNAPSHOT_SCRIPT,
     )
     rates = build_binaries_rates(counts)
     rates_match = assert_or_update_rates(rates, EXPECTED_RATES)

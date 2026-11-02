@@ -191,7 +191,7 @@ async function main(): Promise<void> {
       actual: c,
       compare: compareCountSnapshot,
       failureLabel: 'membership-manifest count',
-      refreshCommand: 'UPDATE_SNAPSHOTS=1 pnpm run build:membership',
+      script: 'build:membership',
     })],
   });
   for (const f of Object.values(MEMBERSHIP_OUTPUTS.files)) console.log(`wrote ${f}`);

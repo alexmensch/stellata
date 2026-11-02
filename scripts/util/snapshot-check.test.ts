@@ -26,7 +26,7 @@ describe('snapshotCheck', () => {
       actual,
       compare: (e, a) => ({ drifted: e.n !== a.n, report: `${e.n} vs ${a.n}` }),
       failureLabel: 'test',
-      refreshCommand: `${ENV}=1 build`,
+      script: 'build',
     };
   }
 
@@ -39,7 +39,7 @@ describe('snapshotCheck', () => {
     writeFileSync(path, JSON.stringify({ n: 1 }));
     const check = snapshotCheck(spec({ n: 2 }));
     expect(check.kind).toBe('fail');
-    expect(check.kind === 'fail' && check.message).toContain(`${ENV}=1 build`);
+    expect(check.kind === 'fail' && check.message).toContain(`${ENV}=1 pnpm run build`);
   });
 
   it('fails on a missing snapshot without the update flag', () => {

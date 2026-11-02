@@ -142,7 +142,7 @@ async function main(): Promise<void> {
       actual: counts,
       compare: compareCountSnapshot,
       failureLabel: 'WGSN table counts',
-      refreshCommand: 'UPDATE_SNAPSHOTS=1 pnpm run build:wgsn',
+      script: 'build:wgsn',
     })],
   });
   console.log(`wgsn_names.tsv: ${nameRows.length} rows`);

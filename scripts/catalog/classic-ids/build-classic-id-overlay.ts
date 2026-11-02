@@ -80,7 +80,7 @@ async function main(): Promise<void> {
       actual: joinCounts,
       compare: compareCountSnapshot,
       failureLabel: 'classic-id-overlay count',
-      refreshCommand: 'UPDATE_SNAPSHOTS=1 pnpm run build:classic-ids',
+      script: 'build:classic-ids',
     })],
   });
   console.log(`wrote ${OUT_OVERLAY}`);
