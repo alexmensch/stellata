@@ -26,12 +26,12 @@ import {
   vectorParams,
 } from './horizons-client';
 import type { HorizonsVectorsHeader } from './horizons-vectors';
-import { PROBE_MISSIONS, type ProbeMission } from './probe-roster';
+import { PROBE_MISSIONS, type ProbeMission } from '../../src/catalog-format/probes/probe-roster';
 import { PROBE_OUTPUTS } from './probe-trajectory-outputs';
 import {
   PROBE_SAMPLE_COLUMNS,
   type ProbeTrajectoryFile,
-} from './probe-trajectory-schema';
+} from '../../src/catalog-format/probes/probe-trajectory-schema';
 
 
 /** Last epoch the JPL spacecraft SPKs cover; all five reach it. */

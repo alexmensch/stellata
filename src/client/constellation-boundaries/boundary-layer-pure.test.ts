@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type {
   BoundaryFadeTableWire,
   BoundarySegmentWire,
-} from '../../../scripts/catalog/boundaries/boundaries-artifact-pure';
+} from '../../catalog-format/boundaries/boundaries-artifact-pure';
 import { solFrameFadeFactor } from '../galactic/galactic-fade';
 import {
   FADE_END_MISPLACED_PCT,

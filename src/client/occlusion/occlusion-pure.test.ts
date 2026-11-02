@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { sphereHidesPoint } from './occlusion-pure';
-import { AU_PC, KM_PC, R_SUN_PC } from '../util/astronomy-constants';
+import { AU_PC, KM_PC, R_SUN_PC } from '../../astro-core/astronomy-constants';
 
 const EARTH_R = 6371 * KM_PC;
 

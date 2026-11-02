@@ -7,7 +7,8 @@ import { afterAll, describe, expect, it } from 'vitest';
 
 import { REPO_ROOT } from '../../util/paths';
 import { identityRows } from './identity-pure';
-import { gzipText, stageFile } from './lineage-io';
+import { gzipText } from './lineage-io';
+import { stageFile } from './lineage-layout-pure';
 import { lineageRows } from './lineage-row-pure';
 import { matchName, parseTraceQuery, queryTerms, traceRecords, traceText, type TraceLookups } from './trace-pure';
 

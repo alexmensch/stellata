@@ -9,10 +9,10 @@ import {
   type PlanetSystem,
   type PlanetType,
 } from '../planet-system';
-import { AU_PC, J2000_OBLIQUITY_RAD } from '../../util/astronomy-constants';
+import { AU_PC, J2000_OBLIQUITY_RAD } from '../../../astro-core/astronomy-constants';
 import type { OrbitOrientationRad } from './ephemeris';
-import { GALACTIC_NORTH_POLE_ICRS } from '../../galactic/galactic-coords';
-import { wrapAngle } from '../../util/angles';
+import { GALACTIC_NORTH_POLE_ICRS } from '../../../astro-core/galactic-coords';
+import { wrapAngle } from '../../../astro-core/angles';
 import { mark as perfMark, measure as perfMeasure } from '../../debug/perf-hud';
 import type {
   ChromeLineMaterial, ChromeLineMaterials,

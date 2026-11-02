@@ -18,7 +18,7 @@ spectral-format.ts        formatSpectral(raw, spectClass, lumClass,
                           from the shipped numeric class bytes, with
                           white-dwarf / Wolf-Rayet / carbon overrides.
                           This is a runtime mini-formatter — the full
-                          parser in scripts/catalog/record/catalog-pure.ts is
+                          parser in src/catalog-format/record/catalog-pure.ts is
                           BUILD-only.
 physical-format.ts        Radii (stars "X R☉" — catalog physicalRadius
                           is already solar radii; planets "X R⊕ (km)"),
@@ -35,7 +35,7 @@ velocity-format.ts        spaceVelocity(vx, vy, vz) → { kms, lDeg,
                           pc/yr heliocentric space motion + galactic
                           ℓ/b of the velocity VECTOR (its instantaneous
                           heading, via ICRS_TO_GAL_M3 from
-                          ../galactic/galactic-coords.ts). The
+                          /src/astro-core/galactic-coords.ts). The
                           formatter puts the heading on its own line
                           (consumers use white-space: pre-line).
 probe-format.ts           Deep-space-probe mission stats:

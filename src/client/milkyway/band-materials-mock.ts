@@ -9,7 +9,7 @@ import {
   type BandMaterials,
   type BandSharedSlots,
 } from './band-materials';
-import { makeResolvedHoleTexture } from './calibration/resolved-hole-texture';
+import { makeResolvedHoleTexture } from './resolved-hole-texture';
 
 /** A shared-slot record whose every slot holds `fill` in its own value
  *  kind. Typed as `BandSharedSlots`, so a slot added to the group fails

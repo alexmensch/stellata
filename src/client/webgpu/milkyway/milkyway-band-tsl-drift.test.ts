@@ -6,10 +6,10 @@ import { readTslSource } from '../tsl/tsl-source-fixture';
 import { describe, expect, it } from 'vitest';
 import {
   FOREGROUND_DUST_STEPS, MAG_PER_TAU, S_MIN_PC, STEPS, UNIT_BALL_SLACK,
-} from '../../milkyway/column/milkyway-column-pure';
+} from '../../../astro-core/milkyway/column/milkyway-column-pure';
 import {
   RESOLVED_HOLE_GRID_HALF_PC,
-} from '../../milkyway/calibration/resolved-fraction-pure';
+} from '../../../astro-core/milkyway/calibration/resolved-fraction-pure';
 import { literalDriftOffenders, type PinnedConstant } from '../tsl/literal-drift-pure';
 
 const src = readTslSource(new URL('./milkyway-band-tsl.ts', import.meta.url));
@@ -37,11 +37,11 @@ describe('the TSL band reads the mirror its bound is taken from', () => {
   }
 
   it('takes them from milkyway-column-pure and the hole layout from its wrapper', () => {
-    expect(src).toMatch(/from '\.\.\/\.\.\/milkyway\/column\/milkyway-column-pure'/);
-    expect(src).toMatch(/from '\.\.\/\.\.\/milkyway\/calibration\/resolved-fraction-pure'/);
+    expect(src).toMatch(/from '\.\.\/\.\.\/\.\.\/astro-core\/milkyway\/column\/milkyway-column-pure'/);
+    expect(src).toMatch(/from '\.\.\/\.\.\/\.\.\/astro-core\/milkyway\/calibration\/resolved-fraction-pure'/);
   });
 
-  // ../../milkyway/calibration/README.md#the-table-is-a-3d-grid-not-a-uniform-array.
+  // ../../../astro-core/milkyway/calibration/README.md#the-table-is-a-3d-grid-not-a-uniform-array.
   it('fetches the hole at level 0', () => {
     expect(src).toContain('.level(int(0))');
   });

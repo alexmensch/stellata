@@ -7,15 +7,19 @@ import contextlib
 import io
 import sys
 import tempfile
+import os
 import unittest
+import unittest.mock
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from scripts.util.snapshot_assert import (  # noqa: E402
+    PIPELINE_STEP_ENV_VAR,
     UPDATE_SNAPSHOTS_ENV_VAR,
     assert_or_update_counts,
     compare_build_counts,
     format_count_diff,
+    refresh_command,
 )
 
 LABEL = "test"
@@ -52,6 +56,17 @@ class FormatCountDiffTests(unittest.TestCase):
         self.assertIn("2 of 2 counts differ", out)
         self.assertIn("expected 1, missing in actual", out)
         self.assertIn("new key, got 2 (no snapshot)", out)
+
+
+class RefreshCommandTests(unittest.TestCase):
+    def test_names_the_runner_flag_under_the_runner(self) -> None:
+        with unittest.mock.patch.dict(os.environ, {PIPELINE_STEP_ENV_VAR: "build:test"}):
+            self.assertEqual(refresh_command("build:test"), "pnpm run build:test --update-snapshots")
+
+    def test_names_the_variable_when_run_directly(self) -> None:
+        with unittest.mock.patch.dict(os.environ, {}, clear=False):
+            os.environ.pop(PIPELINE_STEP_ENV_VAR, None)
+            self.assertEqual(refresh_command("build:test"), REFRESH)
 
 
 class AssertOrUpdateCountsTests(unittest.TestCase):

@@ -2,20 +2,22 @@
 
 One model of the build pipeline: a typed table of steps, a runner that orders
 and gates them, and the content stamp as the only freshness test. This README
-is the design; [Files](#files) maps it onto the code. `steps.ts` holds every
-pull and bake (`MANUAL_STEPS`, each run by hand through `record.ts`); a
-`build` step still runs through its own `package.json` target until it moves
-onto the table, and the two Horizons fetchers join once their outputs modules
-pass the load-time import rule.
+is the design; [Files](#files) maps it onto the code. `steps.ts` holds the
+catalogue chain's `build` steps (`steps.test.ts` pins their order and edges)
+and every pull and bake (`MANUAL_STEPS`, each run by hand through
+`record.ts`); every other `build` step still runs through its own
+`package.json` target until it moves onto the table, and the two Horizons
+fetchers join once their outputs modules pass the load-time import rule.
 
 ## The model
 
 Every producer of a file under `data/`, `public/` or `build/` that the build
 or a pull depends on is a **step**. Report, draft and on-demand writers
-(`sid:dr-reconcile`, `sid:risk-set`, `identity:snapshot`) are excluded by
-name, and a test
-holds every `declareOutputs` constant under `scripts/` to an entry in
-`steps.ts` or that list.
+(`sid:dr-reconcile`, `sid:risk-set`, `identity:snapshot`, and the hand-run
+`build:lut` and `build:naming-parity`) are excluded by name, and
+`tests/step-coverage.test.ts` holds every `declareOutputs` constant under
+`scripts/` to an entry in `steps.ts`, that list, or a not-yet-migrated list
+of steps a later item moves.
 
 A step's outputs are declared once, its inputs are derived, and the order of
 steps follows from which step reads which file. The runner runs the steps it
@@ -61,10 +63,12 @@ which is what the stop message prints and what runs it by hand, so the three
 pulls with no target before (`refresh-simbad-sptype.py`,
 `refresh-simbad-wds-xids.py`, `refresh-msc.py`) gain one. A TypeScript manual
 step (the two Horizons fetchers) names its `declareOutputs` constant as a
-TypeScript build does; a Python one lists its files, plus any families. `package.json`
-keeps one-line targets that call the runner (`build:data` →
-`run.ts data`); it no longer names step entry files, so
-`import-closure-pure.ts`'s `tsxEntry` reads `steps.ts` instead.
+TypeScript build does; a Python one lists its files, plus any families.
+`package.json` keeps one-line targets that call the runner (`build:catalog` →
+`run.ts build:catalog`, `build:stamped` and `build:seed-steps` → `run.ts
+data`, every build step on the table) or `record.ts` (every manual step), and
+never names a table step's entry file; `util/step-inputs.ts`'s `stepEntries`
+reads it from `steps.ts`.
 
 What each step **declares** and what the runner **derives**:
 
@@ -131,10 +135,11 @@ The runner rejects the table, before running anything, when:
   `public/`" rule becomes this check);
 - a step's outputs module imports anything beyond `util/emit-artifacts`,
   `util/paths` and `*-pure` modules, checked over its import closure. That is
-  what makes it side-effect-free to import, which no check can test directly;
-  each `*_OUTPUTS` constant moves to such a sibling module, and a path
-  constant it needs moves into one (`catalog-outputs.ts` imports the parked
-  and SIMBAD-sourced ledger paths from their non-pure modules today).
+  what makes it side-effect-free to import, which no check can test directly.
+  The walk passes through `*-outputs`, `*-source` and `*-tsv` modules too,
+  checking their imports in turn: they are the only modules
+  `tests/source-declarations.test.ts` lets spell a `data/` path, so a path an
+  outputs module needs lives in one of them.
 
 A manual step sits in the derived order like any other: it is checked once
 the `build` steps that write its inputs have run, so a pull is judged against
@@ -227,7 +232,7 @@ write more than one file (classic-ids four, Tycho-2 two).
 
 `run.ts <target…> [--force] [--update-snapshots] [--verify-committed]`
 
-A target is a step name. `--verify-committed` is CI's slice of the runner and
+A target is a step name, or `data` for every build step on the table. `--verify-committed` is CI's slice of the runner and
 lands with it; `run.ts` rejects it until then.
 
 1. Load and validate the table.
@@ -257,9 +262,11 @@ lands with it; `run.ts` rejects it until then.
 - **`--force`** reaches every `build` step the run selects, uniformly. It
   never runs a manual step.
 - **`--update-snapshots`** is the one way a count snapshot is rewritten: it
-  sets `UPDATE_SNAPSHOTS=1` for each step it runs, the one variable
+  reruns each named target even when fresh (not the fresh steps upstream),
+  and sets `UPDATE_SNAPSHOTS=1` for each step it runs, the one variable
   `snapshotCheck` and `snapshot_assert.py` read. A forced rebuild therefore
-  still checks counts.
+  still checks counts. Every step it runs also gets `PIPELINE_STEP` set to
+  its name, so a drift message names this flag rather than the variable.
 - **`--verify-committed`** forces each selected step, then fails on any diff
   in its declared outputs that git tracks (`git ls-files` over the declared
   paths decides which are committed; the declaration carries no committed
@@ -318,9 +325,8 @@ Hand-kept lists become derivations over the table:
 - `.worktreeinclude` may list only the `build` steps' stamped outputs, their
   stamp files and `build/lineage/`, and must list every stamped output and
   stamped family under `public/` or `build/`. `worktree-seed.test.ts` checks it against
-  the outputs of `build:seed-steps`, read from a test-side table of TypeScript
-  declarations and the Python steps' `--outputs`; with `steps.ts` it reads
-  the step table instead.
+  the outputs and stamps of the steps `build:seed-steps` selects, read from
+  the loaded step table.
 - `tests/bundle-content.test.ts` reads the mirror steps' declarations.
 - `resolved-hole-table.ts`'s record count is tested against
   `build-catalog-expected.json`'s `recordCount`.
@@ -349,7 +355,8 @@ Hand-kept lists become derivations over the table:
 
 - `step-table-pure.ts` (+ test) — the table's types (`StepEntry`, one
   variant per kind and language), the load-time rules that need no disk
-  (one writer per output, files against families included; a build-step
+  (one writer per output, files against families included, and two families
+  in one folder only when both list names and none is shared; a build-step
   cycle; an `after` naming no step), and `deriveGraph`: read edges, the
   registry edges set aside, a manual step's back edges kept as loops, and
   the run order (table order breaks ties). `selectSteps` is a target plus

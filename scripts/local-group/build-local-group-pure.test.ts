@@ -18,7 +18,6 @@ import {
   projectedSemiMajorPc,
   renderedWireframeAxes,
   raDecDistanceToIcrs,
-  type LgEmission,
   roundN,
   roundSig,
   skyBasis,
@@ -26,12 +25,15 @@ import {
   DISC_ENV_SCALE_LENGTHS,
   DISC_ZD_SHELL_DIVISOR,
   DISPLAY_NAME_OVERRIDES,
-  MAX_DISTANCE_PC,
   SERSIC_N_FALLBACK,
   type LvdbRow,
   type OverrideRow,
 } from './build-local-group-pure';
-import { fluxNumber } from '../../src/client/hdr/emission/density0-solver-pure';
+import {
+  type LgEmission,
+  MAX_DISTANCE_PC,
+} from '../../src/catalog-format/local-group/local-group-schema';
+import { fluxNumber } from '../../src/astro-core/emission/density0-solver-pure';
 import { u99 } from './emission-geometry-pure';
 
 const SOL_AXIS_X: [number, number, number] = [1, 0, 0];
@@ -381,7 +383,7 @@ describe('displayName overrides + default type suffix', () => {
       'WLM',
     ]);
   });
-  it('mergeRowAndOverride emits the display name on the LgObject (override path)', () => {
+  it('mergeRowAndOverride emits the display name on the LgObjectRow (override path)', () => {
     const row: LvdbRow = {
       key: 'lmc',
       name: 'LMC',
@@ -400,7 +402,7 @@ describe('displayName overrides + default type suffix', () => {
     const out = mergeRowAndOverride(row, override)!;
     expect(out.name).toBe('Large Magellanic Cloud');
   });
-  it('mergeRowAndOverride emits the suffixed display name on the LgObject (LVDB-default path)', () => {
+  it('mergeRowAndOverride emits the suffixed display name on the LgObjectRow (LVDB-default path)', () => {
     const row: LvdbRow = {
       key: 'sculptor_1',
       name: 'Sculptor',
@@ -458,7 +460,7 @@ describe('buildStandaloneOverride', () => {
     bulgeRePc: 1000,
     bulgeN: 2.2,
   };
-  it('synthesises a full LgObject from override-only fields', () => {
+  it('synthesises a full LgObjectRow from override-only fields', () => {
     const out = buildStandaloneOverride(m31)!;
     expect(out).not.toBeNull();
     expect(out.id).toBe('m31');
@@ -727,7 +729,7 @@ describe('renderedWireframeAxes — silhouette vs emission envelope', () => {
     // Only half the invariant: the shipped uMax is max(u₉₉(n), shell/R_e),
     // so what an observer sees is uMax·R_e over the half-light shell. The
     // ratio for a real object is pinned in
-    // local-group-emission-calibration.test.ts, which has the catalogue.
+    // /tests/integration/local-group-emission-calibration.test.ts, which has the catalogue.
     expect(roundN(u99(1), 3)).toBe(4.557);
   });
 });

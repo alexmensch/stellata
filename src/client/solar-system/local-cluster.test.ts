@@ -7,7 +7,7 @@ import type { PlanetMeshLayer } from './planets/planet-mesh-layer';
 import type { ProbeField } from './probes/probe-field';
 import type { ProbePathLayer } from './probes/probe-path-layer';
 import { OccluderSet } from '../occlusion/occluder-set';
-import { AU_PC, KM_PC } from '../util/astronomy-constants';
+import { AU_PC, KM_PC } from '../../astro-core/astronomy-constants';
 import { SOL_PLANETS } from './planet-system';
 import { polarRadiusRatio } from './planets/spheroid-pure';
 import { SolarSystemCluster } from './local-cluster';

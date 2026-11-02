@@ -9,12 +9,16 @@ elements are moved into the modal on open and restored on close).
 
 Three leaves sit below `search.ts` so the star kind module's provider
 chain can import them without a cycle through `search.ts` →
-`kind-modules.ts`, and so the build's naming parity gate can import the
-corpus builder without pulling THREE in. `search.ts` re-exports all
-three, so either import path stays valid.
+`kind-modules.ts`. Two of them — the designation list and the corpus
+builder — are shared with the build's naming parity gate, so they live in
+[`/src/catalog-format/naming/`](/src/catalog-format/naming/README.md).
+`search.ts` re-exports all three, so either import path stays valid, and
+narrows the corpus's entry type to the viewer's focus kinds
+(`FuzzyEntry` = the corpus row over `TargetKind`).
 
-- `star-designations.ts` — the per-entry designation list
-  (`starDesignations`) plus the wire adapter onto the composer.
+- `/src/catalog-format/naming/star-designations.ts` — the per-entry
+  designation list (`starDesignations`) plus the wire adapter onto the
+  composer.
 - `star-name-tables.ts` — the per-catalog derived maps
   (`buildSpectralMap`, `buildBayerMap`, `composedLabelsOf`) plus
   `buildStarLabels`, which merges the composed tier under the name table.
@@ -28,8 +32,8 @@ three, so either import path stays valid.
   copies the worker's Bayer map into the one chart mode bound against in
   wave 1 — swapping either strands its consumer on the empty map for the
   session.
-- `search-corpus.ts` — the fuzzy corpus and the exact-match identifier
-  maps (`buildSearchIndex` and the label builders).
+- `/src/catalog-format/naming/search-corpus.ts` — the fuzzy corpus and the
+  exact-match identifier maps (`buildSearchIndex` and the label builders).
 - `search-index-payload.ts` — every catalogue-wide derivation of the search
   index, in ONE composer pass. [The search-index worker](#the-search-index-worker).
 - `search-index-worker.ts` / `search-index-host.ts` — that pass, off the
@@ -105,7 +109,7 @@ here, if one is ever needed, is deriving `spectral` and `bayer` main-side
 letter as a glyph with its index alongside (`b` / `bx`), and every label —
 display and search alike — is rendered from that structure by the one pure
 composer the record build wrote it with
-([Two callers, one composer](/scripts/catalog/naming/README.md#two-callers-one-composer)). So the
+([Two callers, one composer](/src/catalog-format/naming/README.md#two-callers-one-composer)). So the
 label tier is a single pass of that composer over the corpus rather
 than a per-entry fallback chain: two of the ladder's rules are relational
 (a component borrows its system's base, and a letter is appended only
@@ -113,12 +117,12 @@ where a sibling OWNS the same designation), which no per-entry
 function can answer. `catalog.bin`'s name table supplies the NAME tiers,
 and the composer supplies everything below them.
 
-`search-corpus.ts` builds what `search.ts` ranks with: fuse.js over name +
+`/src/catalog-format/naming/search-corpus.ts` builds what `search.ts` ranks with: fuse.js over name +
 constellation + Bayer designation. Every constellation-relative *designation* — Bayer,
 Flamsteed, GCVS, the component aliases below — resolves through
 `designationConIndex(entry.dc, entry.c)`, never `entry.c` alone: byte 34
 is where the star *is*, `dc` is what its name is *named for*, and the two
-diverge on a small minority of entries — [Search index](/scripts/catalog/record/README.md#search-index-publicsearch-indexjson)
+diverge on a small minority of entries — [Search index](/src/catalog-format/record/README.md#search-index-publicsearch-indexjson)
 owns that count (`designationConMismatch`), and restating it
 here only drifts, since every added record can move it. The
 dropdown's context line is the reverse — positional `c`, so a row reads
@@ -247,13 +251,13 @@ The numeric-ID maps echo the matched identifier in the dropdown
 *against*, so its row reads as the bare identifier the user typed.
 
 All four identifier maps — `hipMap`, `hdMap`, `hrMap`, `glMap` — are built by
-`buildAliasedIdIndex` (`scripts/catalog/record/catalog-pure.ts`) rather than inline.
+`buildAliasedIdIndex` (`src/catalog-format/record/catalog-pure.ts`) rather than inline.
 `hdMap` / `hrMap` are many-keys-to-one-record rather than 1:1:
 numbers records DISPLAY are laid down first, then the `hda` / `hra` aliases,
 first write winning. That one rule settles two collisions — 57 HD and 11 HR
 numbers are displayed by two records each (a component pair sharing one
 catalogue number), and entries arrive apparent-brightest-first
-([Record order](/scripts/catalog/record/README.md#record-order)), so an ambiguous number
+([Record order](/src/catalog-format/record/README.md#record-order)), so an ambiguous number
 resolves to the record that LOOKS brighter — which is the one a reader typing
 the number is generally after; and an alias never displaces a record that
 displays that number outright. The other two carry no aliases and still take

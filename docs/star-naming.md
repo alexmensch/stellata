@@ -24,7 +24,7 @@ composer** from the star's structured designation set:
 display(star) = render(highest tier the star carries) [+ component letter]
 ```
 
-The composer (`scripts/catalog/naming/star-naming-pure.ts`) is imported by
+The composer (`src/catalog-format/naming/star-naming-pure.ts`) is imported by
 the build — which fills `catalog.bin`'s name table with the NAME tiers —
 and by the runtime, which renders every designation below them from the
 same function. **No caller composes a display string of its own.** That
@@ -36,7 +36,7 @@ Two of the composer's rules are RELATIONAL, so it is a collection pass
 rather than a per-star function: a component with no designation of its
 own takes its WDS root anchor's base, and a component letter is appended
 only where a sibling OWNS the same designation.
-[Two callers, one composer](/scripts/catalog/naming/README.md#two-callers-one-composer) carries the
+[Two callers, one composer](/src/catalog-format/naming/README.md#two-callers-one-composer) carries the
 implementation's own statement of all three rules.
 
 ## 2. Authority — one source approves names; everything else compiles them

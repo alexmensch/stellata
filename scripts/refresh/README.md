@@ -414,7 +414,7 @@ catalogue inconsistent. Order matters:
    then **`pnpm run build:catalog`**.
    Both build steps reassert against their snapshots; the count diffs
    are the first place to look for regressions.
-5. **`UPDATE_SNAPSHOTS=1 pnpm run build:catalog`** to
+5. **`pnpm run build:catalog --update-snapshots`** to
    refresh both snapshots once the new build is reviewed. Re-edit the
    `reason` strings on the distance-outliers snapshot for any new
    outliers.

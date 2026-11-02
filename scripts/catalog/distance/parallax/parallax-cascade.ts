@@ -9,26 +9,8 @@ import type { CitedParallax, MeasuredParallax } from '../../cited-parallax';
 import type { CitedCascadeResult, CitedRefusal } from '../../cascade-result';
 import type { AnySourceRowRef } from '../../../util/sources/row-ref-pure';
 import type { SiblingParallax } from './pair-member-parallax';
-import type { GlieseRow } from '../../gliese-parse';
-
-// The two override layers sit above the cascade rather than inside it — each
-// replaces the inverted distance wholesale, so they are outcomes of the routing
-// and not parallax tiers. `resolveParallax` never returns either.
-export const DIST_VIA_VALUES = [
-  'bailer_jones',
-  'lmc_kinematic',
-  'gaia_dr3_inversion',
-  'hip2_parallax',
-  'cns5_plx',
-  'gliese_plx',
-  'simbad_plx',
-  'pair_member_parallax',
-  'gliese_photometric_plx',
-  'curated',
-  'none',
-] as const;
-
-export type DistVia = (typeof DIST_VIA_VALUES)[number];
+import type { GlieseRow } from '../../gliese-parse-pure';
+import type { DistVia } from '../../../../src/catalog-format/record/catalog-pure';
 
 /** The `BuildCounts` field each tier reports into. Declared beside the enum so
  *  adding a tier fails to compile until it is pinned, rather than shipping a

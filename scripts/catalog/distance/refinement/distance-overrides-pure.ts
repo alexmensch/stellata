@@ -1,6 +1,6 @@
 // The distance-override layers: Bailer-Jones eligibility and lookup, and the LMC kinematic snap. See README.md.
 
-import type { DistVia } from '../parallax/parallax-cascade';
+import type { DistVia } from '../../../../src/catalog-format/record/catalog-pure';
 import { parallaxSignalToNoise, type MeasuredParallax } from '../../cited-parallax';
 import { sourceRowRef, type RowKeyed, type SourceRowRef } from '../../../util/sources/row-ref-pure';
 

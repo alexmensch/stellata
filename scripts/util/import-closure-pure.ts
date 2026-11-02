@@ -25,16 +25,6 @@ export function scriptParts(scripts: Readonly<Record<string, string>>, name: str
   return script.split('&&').map(part);
 }
 
-/** The entry of a script that is exactly `tsx <file>.ts`: one module keys the whole step. */
-export function tsxEntry(scripts: Readonly<Record<string, string>>, name: string): string {
-  const parts = scriptParts(scripts, name);
-  const [only] = parts;
-  if (parts.length !== 1 || only.kind !== 'tsx' || only.args.length > 0) {
-    throw new Error(`package.json script ${name} must be exactly "tsx <file>.ts", got ${JSON.stringify(scripts[name])}`);
-  }
-  return only.entry;
-}
-
 /** Every `tsx` entry a script runs, chained ones included. */
 export function tsxEntries(scripts: Readonly<Record<string, string>>, name: string): string[] {
   return scriptParts(scripts, name).flatMap((p) => (p.kind === 'tsx' ? [p.entry] : []));

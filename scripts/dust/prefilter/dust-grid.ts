@@ -3,12 +3,12 @@
 import * as THREE from 'three';
 import { DUST_GRID } from '../../catalog/distance/dust/dust-grid-source';
 import type { DustGrid } from '../../catalog/distance/dust/dust-deextinction-pure';
-import { GAL_TO_ICRS, R0_PC } from '../../../src/client/galactic/galactic-coords';
+import { GAL_TO_ICRS, R0_PC } from '../../../src/astro-core/galactic-coords';
 import {
   ANALYTICAL_DUST_NORM_PER_PC,
   ANALYTICAL_DUST_SCALE_HEIGHT_PC,
   ANALYTICAL_DUST_SCALE_LENGTH_PC,
-} from '../../../src/client/milkyway/column/milkyway-column-pure';
+} from '../../../src/astro-core/milkyway/column/milkyway-column-pure';
 
 export interface DustParams {
   readonly gridSize: number;

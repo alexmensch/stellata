@@ -3,9 +3,9 @@
 
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import { AU_PC } from '../../util/astronomy-constants';
+import { AU_PC } from '../../../astro-core/astronomy-constants';
 import { tToJdUt } from '../time/time';
-import type { ProbeTrajectoryFile } from '../../../../scripts/probes/probe-trajectory-schema';
+import type { ProbeTrajectoryFile } from '../../../catalog-format/probes/probe-trajectory-schema';
 import { PROBE_MARKER_PX, ProbeField } from './probe-field';
 import { ProbePathLayer } from './probe-path-layer';
 import type { ScreenMetricUniforms } from '../../util/orbit-line';

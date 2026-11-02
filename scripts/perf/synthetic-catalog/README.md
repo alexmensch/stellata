@@ -20,7 +20,7 @@ scripts/perf/synthetic-catalog/
 ## THIS ARTIFACT IS NOT A BUILD OUTPUT
 
 It **violates the brightest-first record sort** that
-`scripts/catalog/record/README.md` states as the on-disk contract: synthetic
+`src/catalog-format/record/README.md` states as the on-disk contract: synthetic
 records append after the real ones rather than merging into the absmag order.
 That is deliberate. Record indices are addressed from outside the binary —
 `companionIdx`, `binaries.bin` relation indices, and
@@ -63,7 +63,7 @@ the answer — a wide field toward the galactic centre, which is what the canon
 `mw120` and `mw50` vantages already look at.
 
 So positions are drawn against the band's **own** density profile, imported
-from `src/client/milkyway/column/milkyway-column-pure.ts` rather than restated:
+from `src/astro-core/milkyway/column/milkyway-column-pure.ts` rather than restated:
 `discDensity + bulgeDensity`, each clamped to its proxy ellipsoid because the
 profiles do not stop there on their own — at render time the shader's
 ray-sphere intersection is what bounds them.
@@ -115,7 +115,7 @@ stars' share back out, but it is measured on the real catalogue
 drawn twice — once as a point, once in the band. Even on the real catalogue,
 band plus catalogue reads 23.42 mag/arcsec² at the pole against
 [Leinert 1998](/data/papers/index.md#leinert1998)'s 23.83
-([Two checks](/src/client/milkyway/calibration/README.md#two-checks-and-both-disagree-by-the-same-sign-and-order)).
+([Two checks](/src/astro-core/milkyway/calibration/README.md#two-checks-and-both-disagree-by-the-same-sign-and-order)).
 Deepening the catalogue widens that gap, and nothing rendered self-corrects.
 
 This reaches the measurement, not just the look. A brighter sky pulls exposure

@@ -398,7 +398,7 @@ class GcvsRow:
 
     Only the fields Stage 5 (intrinsic-variability cross-match) actually
     needs are pinned here; type / period / amplitude parsing live in
-    ``scripts/catalog/record/catalog-pure.ts`` for the TS-side consumer and need not be
+    ``src/catalog-format/record/catalog-pure.ts`` for the TS-side consumer and need not be
     duplicated for Stage 1's load-and-count.
     """
 

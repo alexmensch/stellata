@@ -6,34 +6,37 @@ import {
   FLAG_BINARY_COMPANION_ONLY,
   FLAG_BINARY_COMPANION_SYNTHETIC,
   NO_CONSTELLATION_INDEX,
+} from '../../../src/catalog-format/record/catalog-pure';
+import {
   OPTICAL_DOUBLE_MIN_SEP_PC,
   absoluteToApparentMagnitude,
   apparentToAbsoluteMagnitude,
-} from '../record/catalog-pure';
+} from '../record/record-build-pure';
 import {
   SPECTRAL_UNKNOWN,
   type SpectralInfo,
   classifyFromSimbad,
   resolveSpectDisplay,
-} from '../spectral/spectral-classify';
-import type { ParkedReason } from '../distance/parallax/parked-ledger';
+} from '../../../src/catalog-format/spectral/spectral-classify';
+import type { ParkedReason } from '../distance/parallax/parked-ledger-pure';
 import {
   absmagFromSpectral,
   physicalRadius,
   spectralClassCi,
   spectralFromAbsmag,
-} from '../spectral/physical-radius';
-import { R_V, avSolToStar, type DustGrid } from '../distance/dust/dust-deextinction-pure';
+} from '../../../src/catalog-format/spectral/physical-radius';
+import { avSolToStar, type DustGrid } from '../distance/dust/dust-deextinction-pure';
+import { R_V } from '../../../src/astro-core/extinction/dust-raymarch-pure';
 import {
   RIELLO_G_MINUS_V_SIGMA,
   vTierIsSystemBlend,
 } from '../photometry/v-magnitude-pure';
 import { MULTIPLES_TSV, type MultiplesRecord, type PhotometryVia } from '../../binaries/multiples-tsv';
 import { readArtifact } from '../../util/sources/source';
-import { sourceRowRef, sourceRowRefText } from '../../util/sources/row-ref-pure';
-import { emptyTallyPartition } from '../../util/tally';
-import { ARCSEC_TO_RAD } from '../../../src/client/util/astronomy-constants';
-import { equatorialTangentBasisAt } from '../../../src/client/util/equatorial-basis';
+import { promotionOriginKey } from './promotion-lineage-pure';
+import { emptyTallyPartition } from '../../util/tally-pure';
+import { ARCSEC_TO_RAD } from '../../../src/astro-core/astronomy-constants';
+import { equatorialTangentBasisAt } from '../../../src/astro-core/equatorial-basis';
 import type { ConstellationAssignment } from '../parse/constellations/constellations';
 import type { Star } from '../parse/stars-parse';
 import type { GaiaAstrometryCatalogRow } from '../distance/direction-cascade';
@@ -1817,7 +1820,7 @@ function promoteRow(
     distVia: inheritAnchor?.distVia ?? null,
     vVia: null,
     syntheticId: usesSynth ? synthId : null,
-    originKey: sourceRowRefText(sourceRowRef(MULTIPLES_TSV, row)),
+    originKey: promotionOriginKey(row),
   });
   const newIdx = state.existingStarsLength + state.newStars.length - 1;
   // Flux conservation: a member whose light is embedded in whatever

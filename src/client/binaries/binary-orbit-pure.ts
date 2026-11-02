@@ -3,10 +3,10 @@
 // /src/client/binaries/README.md#tier-mapping.
 
 import * as THREE from 'three';
-import { AU_PC } from '../util/astronomy-constants';
-import { solveKepler } from '../util/kepler-solver';
-import { equatorialTangentBasisAt } from '../util/equatorial-basis';
-import { GAL_TO_ICRS } from '../galactic/galactic-coords';
+import { AU_PC } from '../../astro-core/astronomy-constants';
+import { solveKepler } from '../../astro-core/kepler-solver';
+import { equatorialTangentBasisAt } from '../../astro-core/equatorial-basis';
+import { GAL_TO_ICRS } from '../../astro-core/galactic-coords';
 
 export interface Vec3 { x: number; y: number; z: number; }
 

@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
 import { OccluderSet } from './occluder-set';
-import { AU_PC, KM_PC } from '../util/astronomy-constants';
+import { AU_PC, KM_PC } from '../../astro-core/astronomy-constants';
 
 const EARTH_R = 6371 * KM_PC;
 const MOON_A = 384400 * KM_PC;

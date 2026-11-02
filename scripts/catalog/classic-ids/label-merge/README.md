@@ -280,7 +280,7 @@ GJ 4378 the letter is contested (SIMBAD and `multiples.tsv` both root the star
 as WDS J23573-1259**A**); precedence takes CNS5's B, and `stellata-3bsf.47`
 adjudicates.
 
-`normaliseGjKey` (`../../record/catalog-pure.ts`) is where the `.0` is collapsed once,
+`normaliseGjKey` (`../../record/record-build-pure.ts`) is where the `.0` is collapsed once,
 for this comparison and for the joins that key off the same cells
 ([The GJ fold stops at the component](../README.md#the-gj-fold-stops-at-the-component)). `glieseNumber` states
 the same rule for the label side, where the component letter it strips is

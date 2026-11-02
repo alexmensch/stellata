@@ -8,7 +8,7 @@ import {
 } from 'three/tsl';
 import { NodeMaterial } from 'three/webgpu';
 import type { Node } from 'three/webgpu';
-import { SOFT_TAPER_MARGIN_MAG } from '../../solar-system/perceptual-magnitude';
+import { SOFT_TAPER_MARGIN_MAG } from '../../../astro-core/perceptual-magnitude';
 import { kernelFluxPeakTsl, maskedStatisticTexelTsl, pointSourcePeakTsl } from '../emission-tsl';
 import type { EmitterGateNodes } from '../hdr/emitter-gates';
 import { finishMrtMaterial, type MrtEmitterMaterial } from '../hdr/mrt-material';

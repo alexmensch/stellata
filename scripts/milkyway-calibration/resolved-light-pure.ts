@@ -1,16 +1,16 @@
 // Cap sums, hole cells and the table they become. Pure. README.md.
 
-import { apparentMagnitude } from '../../src/client/solar-system/perceptual-magnitude';
+import { apparentMagnitude } from '../../src/astro-core/perceptual-magnitude';
 import {
   ABSOLUTE_MAGNITUDE_DISTANCE_PC,
   fluxNumber,
-} from '../../src/client/hdr/emission/density0-solver-pure';
+} from '../../src/astro-core/emission/density0-solver-pure';
 import {
   SOL_GALACTOCENTRIC_PC,
   type Vec3,
   bulgeDensity,
   discDensity,
-} from '../../src/client/milkyway/column/milkyway-column-pure';
+} from '../../src/astro-core/milkyway/column/milkyway-column-pure';
 import {
   RESOLVED_HOLE_BANDS,
   RESOLVED_HOLE_DEX_PER_SHELL,
@@ -20,8 +20,8 @@ import {
   resolvedHoleIndex,
   resolvedHoleShellEdgesPc,
   resolvedLightFraction,
-} from '../../src/client/milkyway/calibration/resolved-fraction-pure';
-import { ARCSEC_TO_RAD } from '../../src/client/util/astronomy-constants';
+} from '../../src/astro-core/milkyway/calibration/resolved-fraction-pure';
+import { ARCSEC_TO_RAD } from '../../src/astro-core/astronomy-constants';
 
 /** Parallel columns off a built catalogue, Sol at the origin, ICRS axes. */
 export interface StarColumns {

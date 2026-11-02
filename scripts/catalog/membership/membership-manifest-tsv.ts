@@ -2,7 +2,7 @@
 
 import { defineArtifact, nullableCell } from '../../util/tsv/artifact-pure';
 import { compareSourceIds, idCell, idListCell, sourceIdCell } from '../../util/tsv/table-pure';
-import { SOL_PROPER_NAME } from '../record/catalog-pure';
+import { SOL_PROPER_NAME } from '../../../src/catalog-format/record/catalog-pure';
 import { canonicalKeyOf, compareDesignations, starDesignations } from '../../sid/sid-pure';
 
 export const MEMBERSHIP_MANIFEST_FILE = 'data/membership/membership-manifest.tsv';

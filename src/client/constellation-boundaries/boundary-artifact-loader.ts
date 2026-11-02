@@ -4,12 +4,12 @@
 import {
   validateRegionGridWire,
   type BoundaryArtifact,
-} from '../../../scripts/catalog/boundaries/boundaries-artifact-pure';
+} from '../../catalog-format/boundaries/boundaries-artifact-pure';
 import {
   FADE_END_MISPLACED_PCT,
   FADE_START_MISPLACED_PCT,
 } from './boundary-layer-pure';
-import { FULL_SPHERE_SQUARE_DEG, IAU_REGION_COUNT } from './iau-geometry/iau-boundaries-pure';
+import { FULL_SPHERE_SQUARE_DEG, IAU_REGION_COUNT } from '../../astro-core/iau-geometry/iau-boundaries-pure';
 
 /** Slack on the sphere-closure check. Each of the 89 areas is quantised to
  *  `AREA_DECIMALS = 2`, so the sum carries at most 89 × 0.005 of rounding. */
@@ -22,7 +22,7 @@ const AREA_CLOSURE_TOLERANCE_SQUARE_DEG = 1;
  * `frame` is the load-bearing check: the arcs are *drawn* at equinox B1875
  * but the directions are *emitted* in ICRS, and B1875 directions rendered as
  * if they were ICRS resolve to a plausible-looking sky sitting ~1.4° off
- * every star (iau-geometry/README.md#b1875).
+ * every star (/src/astro-core/iau-geometry/README.md#b1875).
  */
 export function validateBoundaryArtifact(raw: unknown): BoundaryArtifact {
   const artifact = raw as BoundaryArtifact;

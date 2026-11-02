@@ -67,7 +67,7 @@ frozen truth rows for regression tests. No overlap with this folder.
 
 `columns` names the row layout; the TypeScript contract is
 `PlanetElementTableFile` in
-`../../scripts/ephemerides/planet-element-schema.ts`, imported by both the
+`../../src/catalog-format/ephemerides/planet-element-schema.ts`, imported by both the
 emitter and the runtime table.
 
 - **No epoch column.** `samples[i]` is at `jd0 + i * stepDays`, Julian Date

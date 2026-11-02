@@ -23,7 +23,7 @@ scripts/catalog/validate/
   known-stars.test.ts             Tier-A corpus: named stars pinned against
   known-stars.tsv                 public/catalog.bin, plus the exact-set
   system-pair-topology.tsv        pair-topology fixture.
-  sky-position.test.ts            Sky-position corpus (RA/Dec per named
+  /tests/integration/sky-position.test.ts            Sky-position corpus (RA/Dec per named
   sky-position-corpus.tsv         star) against the built catalog. Rows
                                   address records through the shared
                                   `parseRef` scheme, and its HD 14039 row is
@@ -66,7 +66,7 @@ Three tiers, all snapshot-pinned:
   the runtime loader and asserts every row matches within tolerance.
   Adding a row → see [Adding to the known-stars corpus](#adding-to-the-known-stars-corpus) below.
   The sky-position corpus (`sky-position-corpus.tsv` +
-  `sky-position.test.ts`, [Direction resolution](../distance/README.md#direction-resolution)) is the companion
+  `/tests/integration/sky-position.test.ts`, [Direction resolution](../distance/README.md#direction-resolution)) is the companion
   Tier A harness for single-star angular placement.
 - **Tier A — system pair topology.**
   `scripts/catalog/validate/system-pair-topology.tsv` (driven by the same
@@ -81,7 +81,7 @@ Three tiers, all snapshot-pinned:
   rows are exempt from the exact-set check.
 - **Tier A — multi-star geometry corpus.**
   `scripts/catalog/companions/multi-star-regression.tsv` +
-  `multi-star-regression.test.ts` pin per-PAIR geometry against
+  `/tests/integration/multi-star-regression.test.ts` pin per-PAIR geometry against
   external truth (WDS sep+PA at the published epoch, ORB6 periods):
   catalog.bin tangential separation + PA between the two component
   records, the multiples.tsv geometry columns, the binaries.bin
@@ -146,7 +146,7 @@ population is the signal.
 
 **Keyed on `sid`, never on record index.** Records sort by apparent V from Sol,
 so any membership change re-sorts the whole array and every existing record's
-index moves ([Record order](../record/README.md#record-order)). An index diff would report
+index moves ([Record order](../../../src/catalog-format/record/README.md#record-order)). An index diff would report
 the whole catalogue. The two derived fields follow the same rule: `companion`
 compares as the companion's **sid**, and `nameOffset` as the resolved **name**.
 A sid on two records is one object drawn twice — skipped by the field

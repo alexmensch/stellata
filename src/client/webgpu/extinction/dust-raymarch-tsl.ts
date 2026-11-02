@@ -9,7 +9,7 @@ import type { Data3DTexture } from 'three';
 import type { Node } from 'three/webgpu';
 import {
   DUST_TAPS_MAX, DUST_TAPS_MIN, DUST_TAP_PC, SLAB_PARALLEL_EPS_PC,
-} from '../../star-pipeline/extinction/dust-raymarch-pure';
+} from '../../../astro-core/extinction/dust-raymarch-pure';
 import type { SharedUniformNodes } from '../tsl/shared-uniform-nodes';
 
 type NF = Node<'float'>;

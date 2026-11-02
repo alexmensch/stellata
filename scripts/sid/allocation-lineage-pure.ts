@@ -1,6 +1,6 @@
 // SID allocation as a lineage stage: its reason codes, live and historical, the one serialiser over its outcomes, and its key -> SID identity file. See README.md#sid-events.
 
-import type { StageLineageSpec } from '../catalog/lineage/lineage-io';
+import type { StageLineageSpec } from '../catalog/lineage/lineage-layout-pure';
 import { compareUtf8, paramsText, type LineageParams, type LineageRow } from '../catalog/lineage/lineage-row-pure';
 import { LIVE, stageCodes, type CodeDeclaration, type CodeEffect } from '../catalog/lineage/reason-codes-pure';
 import { readTable, type TableSpec } from '../util/tsv/table-pure';

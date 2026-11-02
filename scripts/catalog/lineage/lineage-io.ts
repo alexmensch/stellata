@@ -1,4 +1,4 @@
-// A stage's lineage on disk: where its files live, the rotation into the baseline, gzip, git provenance. See README.md#run-to-run-diff.
+// A stage's lineage on disk: the rotation into the baseline, gzip, git provenance. See README.md#run-to-run-diff.
 
 import { createHash } from 'node:crypto';
 import { existsSync, readFileSync } from 'node:fs';
@@ -6,77 +6,15 @@ import { resolve } from 'node:path';
 import { gunzipSync, gzipSync } from 'node:zlib';
 
 import type { FileHashes } from '../../util/build-stamp';
-import type { ArtifactContents, OutputFamily } from '../../util/emit-artifacts';
+import type { ArtifactContents } from '../../util/emit-artifacts';
 import { headState, packageVersion } from '../../util/git-provenance';
-import { REPO_ROOT } from '../../util/paths';
-import { escapeRegExp } from '../../util/escape-regexp';
 import { identityRows, type IdentityRow } from './identity-pure';
 import { lineageLines, lineageRows, type LineageLine, type LineageRow } from './lineage-row-pure';
 import { headerText, parseHeader, type HeaderRead, type StageHeader } from './lineage-header-pure';
-
-export interface LineageLayout {
-  readonly current: string;
-  readonly previous: string;
-  readonly diff: string;
-}
-
-export function lineageLayout(buildDir: string): LineageLayout {
-  return {
-    current: resolve(buildDir, 'lineage'),
-    previous: resolve(buildDir, 'lineage.previous'),
-    diff: resolve(buildDir, 'lineage-diff'),
-  };
-}
-
-export const LINEAGE_LAYOUT = lineageLayout(resolve(REPO_ROOT, 'build'));
-
-/** A stage's files by stem: `<stem>.tsv.gz` each, one `<stage>.header.json`. */
-export interface StageLineageSpec<F extends string, S extends string = string> {
-  readonly stage: S;
-  readonly files: readonly F[];
-  /** The stem holding identity rows for the records the stage founds. */
-  readonly identity?: F;
-}
-
-/** Keyed by stage as well as stem, so two stages can share one emitArtifacts call. */
-export type StageOutputKey<F extends string, S extends string = string> = `lineage:${F}` | `lineage:${S}.header`;
-
-const fileName = (stem: string): string => `${stem}.tsv.gz`;
-const headerName = (stage: string): string => `${stage}.header.json`;
-
-function stageNames<F extends string>(spec: StageLineageSpec<F>): string[] {
-  return [...spec.files.map(fileName), headerName(spec.stage)];
-}
-
-/** The stage's current files, as `declareOutputs` keys. */
-export function stageOutputFiles<F extends string, S extends string>(
-  layout: LineageLayout, spec: StageLineageSpec<F, S>,
-): Record<StageOutputKey<F, S>, string> {
-  const files = Object.fromEntries(
-    spec.files.map((f) => [`lineage:${f}`, resolve(layout.current, fileName(f))]),
-  ) as Record<StageOutputKey<F, S>, string>;
-  files[`lineage:${spec.stage}.header`] = resolve(layout.current, headerName(spec.stage));
-  return files;
-}
-
-function exactly(names: readonly string[]): RegExp {
-  return new RegExp(`^(?:${names.map(escapeRegExp).join('|')})$`);
-}
-
-/** The baseline copies and the stage diff: emitted when they exist, deleted
- *  when a run does not emit them, and no other stage's file ever matches. */
-export function stageFamilies<F extends string>(
-  layout: LineageLayout, spec: StageLineageSpec<F>,
-): OutputFamily[] {
-  return [
-    { dir: layout.previous, member: exactly(stageNames(spec)), stamped: false },
-    { dir: layout.diff, member: exactly([stageDiffName(spec.stage)]), stamped: false },
-  ];
-}
-
-export function stageDiffName(stage: string): string {
-  return `${stage}.tsv`;
-}
+import {
+  stageDiffName, stageFileName, stageHeaderName, stageNames,
+  type LineageLayout, type StageLineageSpec, type StageOutputKey,
+} from './lineage-layout-pure';
 
 /** The baseline as it lands in the same emission as the stage's new files:
  *  the current files, read now, when it rotates; the pinned merge-base copy,
@@ -128,17 +66,13 @@ export function readIdentity(path: string): IdentityRow[] {
 }
 
 export function readStageHeader(dir: string, stage: string): HeaderRead {
-  const path = resolve(dir, headerName(stage));
+  const path = resolve(dir, stageHeaderName(stage));
   if (!existsSync(path)) return { kind: 'missing' };
   try {
     return { kind: 'read', header: parseHeader(readFileSync(path, 'utf8'), path) };
   } catch (err) {
     return { kind: 'unreadable', reason: err instanceof Error ? err.message : String(err) };
   }
-}
-
-export function stageFile(dir: string, stem: string): string {
-  return resolve(dir, fileName(stem));
 }
 
 export function stageHeader<F extends string>(
@@ -149,6 +83,6 @@ export function stageHeader<F extends string>(
     version: packageVersion(),
     ...headState(),
     inputHash: createHash('sha1').update(JSON.stringify(inputs)).digest('hex'),
-    files: spec.files.map(fileName),
+    files: spec.files.map(stageFileName),
   };
 }

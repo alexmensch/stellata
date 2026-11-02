@@ -30,20 +30,21 @@ import {
   FLAG_BINARY_COMPANION_SYNTHETIC,
   NO_CONSTELLATION_INDEX,
   SOLAR_BV_FALLBACK,
-} from '../record/catalog-pure';
+} from '../../../src/catalog-format/record/catalog-pure';
 import {
   SPECTRAL_UNKNOWN,
   classifyFromSimbad,
-} from '../spectral/spectral-classify';
+} from '../../../src/catalog-format/spectral/spectral-classify';
 import { CONSTELLATIONS, createConstellationAssignment, iauEdgeRecords } from '../parse/constellations/constellations';
 import { STELLARIUM } from '../parse/constellations/stellarium-source';
-import { R_V, avSolToStar, type DustGrid } from '../distance/dust/dust-deextinction-pure';
+import { avSolToStar, type DustGrid } from '../distance/dust/dust-deextinction-pure';
+import { R_V } from '../../../src/astro-core/extinction/dust-raymarch-pure';
 import type { Star } from '../parse/stars-parse';
 import { makeStar as makeStarWithDefaults } from '../parse/star-fixture';
 import { multiplesRow } from './multiples-fixture';
 import { MULTIPLES_COLUMNS } from '../../binaries/multiples-tsv';
 import { gaiaAstrometryRow } from '../distance/astrometry-fixture';
-import { AU_PER_PC } from '../../../src/client/util/astronomy-constants';
+import { AU_PER_PC } from '../../../src/astro-core/astronomy-constants';
 
 // The real IAU decomposition, not a stub: the fixtures below carry real
 // coordinates, so a positional assertion (Sirius B in Canis Major) is a

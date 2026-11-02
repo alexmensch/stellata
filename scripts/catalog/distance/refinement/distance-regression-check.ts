@@ -4,7 +4,7 @@
 
 import type { SimbadSampleRow } from '../../validate/simbad-sample-parse';
 import type { Star } from '../../parse/stars-parse';
-import type { DistVia } from '../parallax/parallax-cascade';
+import type { DistVia } from '../../../../src/catalog-format/record/catalog-pure';
 
 // Only an override layer moves a record off its own inversion. Bailer-Jones
 // legitimately re-anchors the low-S/N tail of Gaia parallaxes, so that tier

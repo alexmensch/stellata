@@ -1,13 +1,13 @@
 // The band's brightest rendered sightline from a camera position — the
 // bound the brightness skip reads (/docs/science-hdr-pipeline.md#35-skipping-a-diffuse-emitter-the-display-cannot-show--the-share-bound).
 
-import { GALACTIC_CENTRE_PC, ICRS_TO_GAL_M3, R0_PC } from '../galactic/galactic-coords';
-import { SB_ZERO_POINT } from '../hdr/emission/emission-pure';
+import { GALACTIC_CENTRE_PC, ICRS_TO_GAL_M3, R0_PC } from '../../astro-core/galactic-coords';
+import { SB_ZERO_POINT } from '../../astro-core/emission/emission-pure';
 import {
   DISC_RADIUS_PC,
   type Vec3,
   sightlineSurfaceBrightness,
-} from './column/milkyway-column-pure';
+} from '../../astro-core/milkyway/column/milkyway-column-pure';
 
 const REFERENCE_STEPS = 4096;
 

@@ -9,9 +9,6 @@ import { relative, resolve } from 'node:path';
 import { REPO_ROOT } from './paths';
 import { discardStaged, landStaged, writeStaged } from './staged-write';
 
-const STAMP_FOLDER = 'build/stamps';
-export const STAMP_DIR = resolve(REPO_ROOT, STAMP_FOLDER);
-
 /** Repo-relative path → sha1 of its content, or null when the file is absent. */
 export type FileHashes = Readonly<Record<string, string | null>>;
 
@@ -27,13 +24,6 @@ export interface Stamp {
   readonly inputs: FileHashes;
   readonly outputs: FileHashes;
   readonly recorded?: RecordedReads;
-}
-
-/** A step's name as a file name, for its stamp and its lock. */
-export const stepFileName = (name: string): string => name.replaceAll(':', '-');
-
-export function stampPath(name: string, root: string = REPO_ROOT): string {
-  return resolve(root, STAMP_FOLDER, `${stepFileName(name)}.json`);
 }
 
 const HASH_CHUNK_BYTES = 1 << 22;
@@ -100,22 +90,10 @@ export function recordedChanges({ listings, probes }: RecordedReads, root: strin
   ];
 }
 
-function sameHashes(a: FileHashes, b: FileHashes): boolean {
-  const keys = Object.keys(a);
-  return keys.length === Object.keys(b).length && keys.every((k) => a[k] === b[k]);
-}
-
 /** Recorded paths whose content on disk no longer matches the recorded hash. */
 export function changedSince(recorded: FileHashes, root: string = REPO_ROOT): string[] {
   const current = fileHashes(Object.keys(recorded).map((p) => resolve(root, p)), root);
   return Object.keys(recorded).filter((p) => current[p] !== recorded[p]);
-}
-
-export function stampIsCurrent(stamp: string, inputs: FileHashes): boolean {
-  const recorded = readStamp(stamp);
-  return recorded !== null
-    && sameHashes(recorded.inputs, inputs)
-    && changedSince(recorded.outputs).length === 0;
 }
 
 /** Must run before a build writes any output, so a build that dies midway

@@ -3,7 +3,7 @@
 import { spawn } from 'node:child_process';
 import { resolve } from 'node:path';
 
-import { stepFileName } from '../util/build-stamp';
+import { stepFileName } from '../util/stamp-path-pure';
 import { REPO_ROOT } from '../util/paths';
 import { isBuild, writersOf, type ResolvedStep, type StepGraph } from './step-table-pure';
 

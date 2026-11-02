@@ -39,6 +39,8 @@ scripts/catalog/lineage/
   reason-code-list-pure.ts       reasonCodeList, the generated list, and
                                  appendOnlyViolations.
   reason-codes-tsv.ts            REASON_CODES, the list's codec.
+  reason-codes-outputs.ts        REASON_CODES_OUTPUTS, the generator's
+                                 output declaration.
   generate-reason-codes.ts       `pnpm run lineage:codes`.
   reason-codes.test.ts           The list equals its generation, and is
                                  append-only against the merge-base.
@@ -52,9 +54,11 @@ scripts/catalog/lineage/
                                  call.
   lineage-invariant-pure.ts      LineageInvariant and its check (#invariants).
     (+ test)
-  lineage-io.ts                  The on-disk layout (build/lineage/,
-                                 lineage.previous/, lineage-diff/), the
-                                 baseline members and a stage's emission,
+  lineage-layout-pure.ts         The on-disk layout (build/lineage/,
+                                 lineage.previous/, lineage-diff/), each
+                                 stage's file names, and their output
+                                 declarations: what an outputs module imports.
+  lineage-io.ts                  The baseline members and a stage's emission,
                                  gzip, and the header with its input hash.
   lineage-core-pure.test.ts      Order, writer refusal, diff, baseline verdict.
   lineage-rotation.test.ts       Rotation over a scratch build/: a failed or

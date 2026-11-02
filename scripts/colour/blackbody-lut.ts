@@ -21,7 +21,7 @@ import {
   ballesterosTeff,
   blackbodyToLinearSrgb,
   bvAtIndex,
-} from './blackbody-lut-pure';
+} from '../../src/astro-core/colour/blackbody-lut-pure';
 
 export { BV_MAX, BV_MIN, LUT_SIZE, ballesterosTeff, bvAtIndex };
 

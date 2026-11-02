@@ -85,6 +85,10 @@ scripts/binaries/
                                   Its rowKey cites a row by
                                   (system_id, comp) for lineage
                                   (../util/sources/README.md#sourcerowref).
+  multiples-row-key-pure.ts       MULTIPLES_ROW_KEY, that rowKey, for code
+                                  that cites a row without reading the file
+                                  (promotion's origin keys), so it never
+                                  reaches the codec.
   anchor_offsets.py               compute_anchor_offsets: each component's
                                   offset from its system's anchor letter,
                                   with the sub-letter photocentre link.
@@ -127,7 +131,7 @@ scripts/binaries/
                                   duplicates across them.
   __init__.py                     Package marker (see above).
   *-expected.json                 Snapshot pins refreshed with
-                                  UPDATE_SNAPSHOTS=1: build-binaries
+                                  --update-snapshots: build-binaries
                                   (per-strategy / per-tier counts),
                                   build-binaries-rates (per-strategy rates —
                                   catches population-mix shifts that don't move
@@ -528,7 +532,7 @@ in `ORBIT_VIA_VALUES`, in priority order:
 | `orb6` | ORB6 visual orbit with grade ∈ {1, 2, 3, 4, 5} (definitive → indeterminate). Best grade wins; ref-year secondary tiebreak. ORB6's `a` is the genuine relative A–B orbit, so this route outranks `gaia_nss`, where no solution type yields a relative semi-major axis (see the photocentre note below — Stage 6 estimates one for the non-visual routes). |
 | `gaia_nss` | A component has an `nss_two_body_orbit` row, its pair partner is NOT a different resolved source (a distinct-source partner means the orbit is interior to the carrying component — subdivide.py re-homes it on a synthesized inner pair), the orbit is in Gaia's astrometric-detectability regime: `period < 3 yr` (`NSS_PERIOD_THRESHOLD_DAYS = 1095.75`) OR apparent photocentre semi-major axis `a0 < 1″` (`NSS_SEPARATION_THRESHOLD_MAS = 1000`), AND the pair's WDS separation isn't far too wide to be that orbit (`_nss_separation_consistent`). 95.8% of DR3 NSS rows pass the period gate; the few longer-period rows are picked up by the sub-arcsec branch. |
 | `orb6_spectroscopic` | ORB6 grade ∈ {7, 8, 9} — non-visual fits: 8 = interferometric-visibilities-only, 9 = astrometric / spectroscopic per orb6text.html; grade 7 is undocumented there but the file's grade-7 rows are photometric / eclipsing orbits (YY Gem, EQ Tau, BX And) with real fitted elements. |
-| `msc` | MSC compiled orbit, **sub-resolution pairs only** (WDS ρ = 0 or unmeasured). MSC compiles from the same primary sources the routes above curate, so it ranks below all of them; the sub-resolution gate keeps measured WDS placements from acquiring a compiled orbit that would widen the baked-vs-R(epoch) ratchet in `multi-star-regression.test.ts`, and makes the route safe for Stage 6's Kepler a-estimation (an estimate can only add motion). The spectroscopic-subsystem rows the route exists for (AR Cas Aa,Ab, ν Sco Aa1,Aa2) live on subdivide.py-synthesized pairs, ρ = 0 by construction. MSC `t0` is a Besselian year when the period unit is years and JD−2400000 when it is days (Tokovinin 2018, /data/papers/index.md#tokovinin2018); `msc_T0_jd` disambiguates by magnitude instead of reading the period unit, same window validation as `_orb6_T0_jd`. Maps to `regime` 3. |
+| `msc` | MSC compiled orbit, **sub-resolution pairs only** (WDS ρ = 0 or unmeasured). MSC compiles from the same primary sources the routes above curate, so it ranks below all of them; the sub-resolution gate keeps measured WDS placements from acquiring a compiled orbit that would widen the baked-vs-R(epoch) ratchet in `/tests/integration/multi-star-regression.test.ts`, and makes the route safe for Stage 6's Kepler a-estimation (an estimate can only add motion). The spectroscopic-subsystem rows the route exists for (AR Cas Aa,Ab, ν Sco Aa1,Aa2) live on subdivide.py-synthesized pairs, ρ = 0 by construction. MSC `t0` is a Besselian year when the period unit is years and JD−2400000 when it is days (Tokovinin 2018, /data/papers/index.md#tokovinin2018); `msc_T0_jd` disambiguates by magnitude instead of reading the period unit, same window validation as `_orb6_T0_jd`. Maps to `regime` 3. |
 | `none` | Visual-only pair with no orbital information on file. |
 
 An NSS orbit is keyed to a Gaia **source**, not a WDS pair, so it can
@@ -815,7 +819,7 @@ Three system-level mechanisms run at emit time:
   those pairs are sub-resolution, so an estimate can only add motion,
   never contradict a measured WDS placement; estimating for visual
   pairs would widen the baked-vs-R(epoch) disagreement ratchet in
-  `multi-star-regression.test.ts`): `q` ←
+  `/tests/integration/multi-star-regression.test.ts`): `q` ←
   `UNKNOWN_COMPANION_MASS_RATIO_Q` (⅓ — companion at half the
   primary's mass) when no catalog value and no spectral estimate
   exists; `ω` ← π/2 (`CIRCULAR_ORBIT_OMEGA_RAD`) when the fit is
@@ -883,4 +887,4 @@ asserts against on every run:
   HIP2 fallback share, …). Catches a regression that shifts the
   population mix without shifting absolute count totals.
 
-Refresh both via `UPDATE_SNAPSHOTS=1 pnpm run build:binaries`.
+Refresh both via `pnpm run build:binaries --update-snapshots`.

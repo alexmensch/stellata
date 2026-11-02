@@ -270,7 +270,7 @@ a value the paper's tag list does not include.
 Stellata pulls all seven Apsis floats plus the ESP-ELS spectral-type
 enum per Gaia DR3 source_id into `data/gaia/gaia_dr3_apsis.tsv` and
 writes them per record into the binary at offsets 52–79 (see
-[Binary catalog format](/scripts/catalog/record/README.md#binary-catalog-format-publiccatalogbini--manifest)). Coverage: ~99.6% of
+[Binary catalog format](/src/catalog-format/record/README.md#binary-catalog-format-publiccatalogbini--manifest)). Coverage: ~99.6% of
 AT-HYG rows that resolve to a Gaia DR3 source_id match an Apsis row;
 ~85% have a non-null T_eff in at least one of gspphot or gspspec. That
 last number is the population the renderer's colour LUT path can re-

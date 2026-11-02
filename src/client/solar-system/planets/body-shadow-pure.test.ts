@@ -3,7 +3,7 @@ import { casterShadowFactor, MAX_SHADOW_CASTERS } from './body-shadow-pure';
 import { getPlanetPositions, resetPositionCache } from '../ephemerides/ephemeris';
 import { earthMoonSplit, MOON_ELEMENTS, moonOffsetEcliptic } from '../ephemerides/moon-ephemeris';
 import { eclipseDimFromOffsets } from '../../binaries/eclipse/eclipse-photometry-pure';
-import { KM_PC, R_SUN_PC } from '../../util/astronomy-constants';
+import { KM_PC, R_SUN_PC } from '../../../astro-core/astronomy-constants';
 import { julianEpochYearToT } from '../time/time';
 
 const J2000_UNIX = 946728000;

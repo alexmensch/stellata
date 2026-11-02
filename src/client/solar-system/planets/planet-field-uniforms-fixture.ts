@@ -6,7 +6,8 @@ import type {
   PerceptualDiscUniforms,
 } from '../../star-pipeline/perceptual-disc/perceptual-disc-uniforms';
 import { makeHdrEmitterUniforms, type HdrEmitterUniforms } from '../../hdr/hdr-emitter-uniforms';
-import { DEFAULT_FILTER, instrumentLimitMag } from '../../filters/filter-state';
+import { DEFAULT_FILTER } from '../../filters/filter-state';
+import { instrumentLimitMag } from '../../../astro-core/instruments';
 import { cullMagFor } from '../../hdr/exposure/exposure-epoch';
 
 export interface PlanetFieldUniformOptions {

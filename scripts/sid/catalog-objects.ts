@@ -1,6 +1,6 @@
 // The SID objects build:catalog allocates, in allocation order: its records, then the sol and shell lists.
 
-import { FLAG_IS_SOL } from '../catalog/record/catalog-pure';
+import { FLAG_IS_SOL } from '../../src/catalog-format/record/catalog-pure';
 import type { Star } from '../catalog/parse/stars-parse';
 import { sourceRowRef, sourceRowRefText } from '../util/sources/row-ref-pure';
 import type { SidObject } from './allocate-pure';

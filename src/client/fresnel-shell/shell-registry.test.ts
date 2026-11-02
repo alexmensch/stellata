@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import { AU_PC } from '../util/astronomy-constants';
+import { AU_PC } from '../../astro-core/astronomy-constants';
 import { ShellRegistry, type ShellInstance } from './shell-registry';
 
 function makeShell(extentPc: number): ShellInstance {

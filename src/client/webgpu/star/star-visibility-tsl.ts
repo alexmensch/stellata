@@ -4,7 +4,7 @@
 
 import { Fn, float, log, uint } from 'three/tsl';
 import type { Node } from 'three/webgpu';
-import { SOFT_TAPER_MARGIN_MAG } from '../../solar-system/perceptual-magnitude';
+import { SOFT_TAPER_MARGIN_MAG } from '../../../astro-core/perceptual-magnitude';
 import { STAR_PASS_GLOW, type StarPass } from '../../star-pipeline/star-pass';
 import type { SharedUniformNodes } from '../tsl/shared-uniform-nodes';
 import type { StarTables } from './star-tables';

@@ -1,6 +1,6 @@
 // See ./README.md#the-search-index-worker.
 
-import type { SearchEntry } from '../../../scripts/catalog/record/catalog-pure';
+import type { SearchEntry } from '../../catalog-format/record/catalog-pure';
 import {
   buildSearchIndexPayload,
   type ConstellationName,

@@ -27,7 +27,7 @@ POLE_CUTOFF_DEG = 85.0
 # for reduce_dem.py; the rest drive every build. Two fields name the thing
 # they are NOT: `map_center_lon` is the COLOUR map's centre rather than the
 # DEM's, and `radius_km` is the radius the body is DRAWN at rather than the
-# DEM's georeferencing radius. dem-relief.test.ts pins both against the
+# DEM's georeferencing radius. /tests/integration/dem-relief.test.ts pins both against the
 # runtime tables.
 DEM_BODIES = {
     "moon": {

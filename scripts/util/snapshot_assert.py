@@ -12,9 +12,12 @@ from typing import Any, Callable
 from scripts.util.paths import REPO_ROOT
 
 UPDATE_SNAPSHOTS_ENV_VAR = "UPDATE_SNAPSHOTS"
+PIPELINE_STEP_ENV_VAR = "PIPELINE_STEP"
 
 
 def refresh_command(script: str) -> str:
+    if PIPELINE_STEP_ENV_VAR in os.environ:
+        return f"pnpm run {script} --update-snapshots"
     return f"{UPDATE_SNAPSHOTS_ENV_VAR}=1 pnpm run {script}"
 
 

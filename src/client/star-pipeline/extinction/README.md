@@ -40,13 +40,11 @@ src/client/star-pipeline/extinction/
                                   arrays + its console line — the WebGPU
                                   kernel's parity check reads through it
                                   (../../webgpu/extinction/README.md#the-prepass-kernel).
-  dust-raymarch-pure.ts (+ test)  CPU mirror of the march — the segment–cube
-                                  clip, the tap rule, the decode, the midpoint
-                                  sum — and the E(B−V) = A_V / R_V reddening.
-                                  The TSL march imports its constants; the
-                                  build's integral imports its clip; the
-                                  runtime never calls it.
 ```
+
+The march's CPU mirror is `/src/astro-core/extinction/dust-raymarch-pure.ts`,
+shared with the build's de-extinction; this README stays the authority for
+what it mirrors ([The march](#the-march)).
 
 ## The attachment
 
@@ -217,8 +215,8 @@ the intrinsic magnitude selects stars the frame drew black
 **Reading the texel is the point** — the alternative, a CPU march, needs
 the ~128 MiB voxel grid that `../../loaders/dust-loader.ts` uploads and
 drops, and would be a second implementation of the integral free to
-drift from this one. `dust-raymarch-pure.ts` stays test-only for exactly
-that reason.
+drift from this one. The runtime never calls the CPU mirror
+(`/src/astro-core/extinction/dust-raymarch-pure.ts`) for exactly that reason.
 
 Two constraints on any new caller:
 

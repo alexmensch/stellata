@@ -7,7 +7,7 @@ import {
   readCatalogHeader,
   recordsOffset,
   type RecordSpan,
-} from '../../../scripts/catalog/record/catalog-pure';
+} from '../../catalog-format/record/catalog-pure';
 import { baseStar, buildCatalog } from './catalog-fixture';
 import {
   replyAsWorker,

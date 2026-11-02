@@ -1,12 +1,14 @@
 // Fetches the nine planet element tables from public/ephemerides/ and installs
 // them into the ephemeris. See README.md#horizons-element-tables.
 
-import { ELEMENT_TARGETS } from '../../../../scripts/ephemerides/planet-element-roster';
-import { planetElementFilename } from '../../../../scripts/ephemerides/sync-ephemerides-pure';
-import type { PlanetElementTableFile } from '../../../../scripts/ephemerides/planet-element-schema';
-import { buildElementTable, type PlanetElementTable } from './element-table';
+import {
+  ELEMENT_TARGETS,
+  type PlanetName,
+} from '../../../catalog-format/ephemerides/planet-element-roster';
+import { planetElementFilename } from '../../../catalog-format/ephemerides/sync-ephemerides-pure';
+import type { PlanetElementTableFile } from '../../../catalog-format/ephemerides/planet-element-schema';
+import { buildElementTable, type PlanetElementTable } from '../../../catalog-format/ephemerides/element-table';
 import { installPlanetElementTables } from './ephemeris';
-import type { PlanetName } from './ephemeris';
 
 /**
  * Load every table whose artifact is present and install it. A missing or

@@ -1,20 +1,20 @@
 import { describe, expect, it } from 'vitest';
 import { angularToPx } from '../../camera/controls/star-geometry';
 import { PLANET_PARK_FILL_FRACTION } from '../../camera/controls/star-physics';
-import { ARCSEC_TO_RAD } from '../../util/astronomy-constants';
+import { ARCSEC_TO_RAD } from '../../../astro-core/astronomy-constants';
 import {
   SB_ZERO_POINT,
   luminanceForMagnitude,
   pixelSolidAngleArcsec2,
   surfaceBrightnessLuminance,
-} from '../emission/emission-pure';
+} from '../../../astro-core/emission/emission-pure';
 import { EV_MAX_STOPS, exposureForMagLimit, MAG_PER_STOP } from './exposure-epoch';
 import {
   SOL_GALACTOCENTRIC_PC,
   galacticDirection,
   sightlineSurfaceBrightness,
-} from '../../milkyway/column/milkyway-column-pure';
-import { tonemapWhitePoint } from '../tonemap/tonemap-pure';
+} from '../../../astro-core/milkyway/column/milkyway-column-pure';
+import { tonemapWhitePoint } from '../../../astro-core/tonemap/tonemap-pure';
 import {
   ADAPT_DISPLAY_FLOOR_DM,
   ADAPT_DOT_COVERAGE,

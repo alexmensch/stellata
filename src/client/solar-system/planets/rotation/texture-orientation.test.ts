@@ -18,7 +18,7 @@ import {
   type RotationElements,
 } from './rotation-elements-pure';
 import { jdUtToT } from '../../time/time';
-import { KM_PC } from '../../../util/astronomy-constants';
+import { KM_PC } from '../../../../astro-core/astronomy-constants';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const TRUTH_TSV = resolve(__dirname, '../../../../../data/horizons/sub-observer-truth.tsv');

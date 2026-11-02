@@ -7,7 +7,13 @@ import type { Check } from './emit-artifacts';
  *  runner's `--update-snapshots` sets it for each step it runs. */
 export const UPDATE_SNAPSHOTS_ENV = 'UPDATE_SNAPSHOTS';
 
-const refreshCommand = (script: string): string => `${UPDATE_SNAPSHOTS_ENV}=1 pnpm run ${script}`;
+/** The runner sets it to the name of each step it runs, and drops an
+ *  inherited UPDATE_SNAPSHOTS, so such a step refreshes through the flag. */
+export const PIPELINE_STEP_ENV = 'PIPELINE_STEP';
+
+const refreshCommand = (script: string): string => (process.env[PIPELINE_STEP_ENV] === undefined
+  ? `${UPDATE_SNAPSHOTS_ENV}=1 pnpm run ${script}`
+  : `pnpm run ${script} --update-snapshots`);
 
 export interface SnapshotCheckSpec<T> {
   snapshotPath: string;

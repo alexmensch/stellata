@@ -3,7 +3,7 @@
 import { resolve } from 'node:path';
 
 import { registryFiles } from '../sid/registry-outputs';
-import { SIBLING_ARTIFACTS } from '../sid/sibling-artifacts';
+import { SIBLING_ARTIFACTS } from '../sid/sibling-artifacts-pure';
 import { declareOutputs } from '../util/emit-artifacts';
 import { REPO_ROOT } from '../util/paths';
 

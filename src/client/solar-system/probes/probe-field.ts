@@ -19,7 +19,7 @@ import {
   type CadenceReport,
 } from '../../render-gate/cadence/clock-cadence-pure';
 import type { CadenceCtx } from '../../scene/scene-layer';
-import { angleBetweenRad } from '../../util/angles';
+import { angleBetweenRad } from '../../../astro-core/angles';
 
 /** Marker edge length in CSS pixels, and the basis for any hit radius over
  *  it. Fixed at every range: a metre-scale probe has no angular diameter to

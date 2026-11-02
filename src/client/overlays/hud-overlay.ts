@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { GALACTIC_CENTRE_PC } from '../galactic/galactic-coords';
+import { GALACTIC_CENTRE_PC } from '../../astro-core/galactic-coords';
 import { fmtDistAuto } from '../ui/distance-util';
 import {
   buildArrowSvgPath,

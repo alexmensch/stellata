@@ -6,7 +6,7 @@ import {
   FLAG_BINARY_PRIMARY,
   NO_CONSTELLATION_INDEX,
   VAR_TYPE_ECLIPSING,
-} from '../../../../scripts/catalog/record/catalog-pure';
+} from '../../../catalog-format/record/catalog-pure';
 import { makeEmptyCatalog } from '../../loaders/catalog-mock';
 import {
   buildChartCatalogTables,
@@ -22,7 +22,7 @@ import {
 } from './chart-labels';
 import type { Stellata } from '../../stellata';
 import { chartDiscPxForAppMag } from '../chart-disc-pure';
-import { instrumentLimitMag } from '../../filters/filter-state';
+import { instrumentLimitMag } from '../../../astro-core/instruments';
 import type { ChartModeContext } from '../chart-mode';
 import { assumeComplete, type CompleteCatalog } from '../../loaders/catalog-loader';
 import { LateCell } from '../../util/late/late';

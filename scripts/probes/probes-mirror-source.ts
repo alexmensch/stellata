@@ -1,7 +1,7 @@
 // The probe trajectories the mirror serves, declared.
 
 import { mirrorSource } from '../util/mirror-to-public';
-import { isProbePublicAsset } from './sync-probes-pure';
+import { isProbePublicAsset } from '../../src/catalog-format/probes/sync-probes-pure';
 
 export const PROBES_MIRROR = mirrorSource({
   dir: 'data/probes',

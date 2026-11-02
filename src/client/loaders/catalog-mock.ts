@@ -1,7 +1,7 @@
 // Test-only Catalog factory. Defaults: physicalRadius=1 Rsol,
 // companion=-1, lumClass=255 (unknown), Apsis fields=NaN (NO_APSIS).
 
-import { APSIS_FIELDS, type ApsisField } from '../../../scripts/catalog/record/catalog-pure';
+import { APSIS_FIELDS, type ApsisField } from '../../catalog-format/record/catalog-pure';
 import { buildPulsationParams } from '../star-pipeline/pulsation/pulsation-params-pure';
 import { LateCell } from '../util/late/late';
 import { assumeComplete, type Catalog, type CompleteCatalog } from './catalog-loader';

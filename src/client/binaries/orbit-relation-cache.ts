@@ -2,7 +2,7 @@
 // (orbit perturbation + eclipse photometry). See
 // /src/client/binaries/README.md#tier-mapping.
 
-import { J2000_JD } from '../util/astronomy-constants';
+import { J2000_JD } from '../../astro-core/astronomy-constants';
 import {
   evaluateOrbitOffsetPc,
   orbitNormalSky,
@@ -11,7 +11,7 @@ import {
   type Vec3,
 } from './binary-orbit-pure';
 import { innermostRelationOf } from './focal-chain';
-import { GALACTIC_NORTH_POLE_ICRS } from '../galactic/galactic-coords';
+import { GALACTIC_NORTH_POLE_ICRS } from '../../astro-core/galactic-coords';
 import {
   FLAG_HAS_ORBIT,
   FLAG_HAS_INCLINATION,

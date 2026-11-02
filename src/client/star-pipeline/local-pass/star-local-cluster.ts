@@ -13,7 +13,7 @@ import type { LocalCluster } from '../../local-depth/local-depth-pass';
 import type { MemberSphere } from '../../local-depth/bracket/slice-pure';
 import type { Catalog } from '../../loaders/catalog-loader';
 import type { OccluderSet } from '../../occlusion/occluder-set';
-import { MIN_PHYSICAL_RADIUS_R_SUN, R_SUN_PC } from '../../util/astronomy-constants';
+import { MIN_PHYSICAL_RADIUS_R_SUN, R_SUN_PC } from '../../../astro-core/astronomy-constants';
 import type { Late } from '../../util/late/late';
 import { MIRROR_CAPACITY, type StarMirror } from './star-mirror-slots';
 import { isResolvedDiscStar } from './star-local-cluster-pure';

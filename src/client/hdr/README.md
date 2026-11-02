@@ -28,14 +28,6 @@ src/client/hdr/
                              every one of them goes through, and what may
                              write the statistic, in what unit — its own
                              README.
-  tonemap/                   The operator: the CPU mirror + exact
-                             inverse, where the shared graph and the
-                             fullscreen resolve live, and the two shape knobs — its own
-                             README (tonemap/README.md#operator).
-  emission/                  The unit an emitting layer writes in:
-                             magnitude → luminance, the point-source peak
-                             rule, the two solid angles and the footprint
-                             softening — its own README (emission/README.md#unit--what-an-emitting-layer-writes).
   summation/                 Attachment 2's convolution over the eye's
                              summation patch, which the resolve composites
                              — its own README (README.md#pass-ordering--one-target-two-passes-into-it).
@@ -48,9 +40,13 @@ src/client/hdr/
                              the inverse — its own README (README.md#chrome--non-physical-layers-keep-their-authored-look).
 ```
 
+The operator's CPU mirror (`/src/astro-core/tonemap/`) and the emission
+unit (`/src/astro-core/emission/`) are shared with the build pipeline, so
+they live in astro-core; each has its own README.
+
 ## Unit — what an emitting layer writes
 
-`emission/README.md` is the contract: the magnitude → luminance rule, the
+`/src/astro-core/emission/README.md` is the contract: the magnitude → luminance rule, the
 point-source peak, the extended-source surface-brightness gain and the
 two solid angles it can run on. What belongs *here* is the plumbing that
 carries those numbers to every layer.
@@ -72,7 +68,7 @@ every resize has to reach it; the integration shell's
 invariant — matching the point-source rule exactly, since a resolved
 disc's `r_phys_px` grows as FOV shrinks. The *display* path does not
 follow it: the eye's summation area is angular, so a diffuse source holds
-its level at any plate scale ([Extended sources](emission/README.md#extended-sources--two-solid-angles-one-write-tail)). The
+its level at any plate scale ([Extended sources](../../astro-core/emission/README.md#extended-sources--two-solid-angles-one-write-tail)). The
 statistic keeps the quadratic fall; an unresolved point keeps its peak at
 any FOV.
 
@@ -181,7 +177,7 @@ why the laziness below is load-bearing rather than tidy.
 
 The transfer function itself — the faint-end toe, the extended Reinhard,
 the constants table, the exactly-invertible round trip chrome depends on,
-and the two shape knobs — is **`tonemap/README.md`**, along with where the shared graph, the
+and the two shape knobs — is **`/src/astro-core/tonemap/README.md`**, along with where the shared graph, the
 resolve and the CPU mirror live.
 
 ## Chrome — non-physical layers keep their authored look
@@ -229,7 +225,7 @@ extinction prepass ([The prepass cache](../star-pipeline/extinction/README.md#th
 `L`, same operator, same exposure, and the **peak matches exactly**. A
 *diffuse* source is not: there is no attachment 2 and no pass to convolve
 it, so the extended-source anchor is gone entirely and both volumetric
-emitters revert to the pixel solid angle ([Extended sources](emission/README.md#extended-sources--two-solid-angles-one-write-tail)),
+emitters revert to the pixel solid angle ([Extended sources](../../astro-core/emission/README.md#extended-sources--two-solid-angles-one-write-tail)),
 which puts the band and the Local Group **several
 magnitudes faint**. So it is not a comparison path for the colour frame:
 parking one here would compare against a differently-calibrated scene.
@@ -272,7 +268,7 @@ to be a deliberate edit.
 
 The target's own levers. The operator's — `setTonemapEnabled` and the two
 shape knobs, plus what pass-through does and does not reproduce — are
-[Operator knobs](tonemap/README.md#operator-knobs).
+[Operator knobs](../../astro-core/tonemap/README.md#operator-knobs).
 
 - `stellata.hdr.setStatisticWritesEnabled(false)` — masks attachment 1 out of
   every emitter draw while the clear keeps writing it, so the statistic reads
@@ -303,7 +299,7 @@ includes the summation downsample and the convolution's taps, since
 ## Not here yet
 
 `DR_MAG` and the desaturation strength are on the panel as well as the
-dev console ([Operator knobs](tonemap/README.md#operator-knobs)); `L_THRESH` and the
+dev console ([Operator knobs](../../astro-core/tonemap/README.md#operator-knobs)); `L_THRESH` and the
 extended-source threshold
 appear there as **readouts, never sliders** — `L_THRESH` is the unit's own
 anchor, so a slider on it would move every layer's calibration with it
@@ -316,6 +312,6 @@ panorama, and the faint end belongs to the two thresholds and the toe.
 
 No emitter is outside the scale, and both volumetric emitters share one
 zero point (`SB_ZERO_POINT`) and one ρ₀ solve
-([Solving ρ₀](emission/README.md#solving-ρ--a-published-magnitude-into-an-emitters-density)). The band is anchored on the Galaxy's
+([Solving ρ₀](../../astro-core/emission/README.md#solving-ρ--a-published-magnitude-into-an-emitters-density)). The band is anchored on the Galaxy's
 integrated M_V now; where that leaves it against the sightline photometry
-is [Two checks](../milkyway/calibration/README.md#two-checks-and-both-disagree-by-the-same-sign-and-order).
+is [Two checks](../../astro-core/milkyway/calibration/README.md#two-checks-and-both-disagree-by-the-same-sign-and-order).

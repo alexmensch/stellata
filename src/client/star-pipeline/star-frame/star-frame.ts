@@ -13,7 +13,7 @@ import {
   maxSpeedPcPerYr,
 } from '../../loaders/epoch-advance-pure';
 import { T_CLAMP_MAX_S, T_CLAMP_MIN_S, tToJdUt } from '../../solar-system/time/time';
-import { MIN_PHYSICAL_RADIUS_R_SUN, R_SUN_PC } from '../../util/astronomy-constants';
+import { MIN_PHYSICAL_RADIUS_R_SUN, R_SUN_PC } from '../../../astro-core/astronomy-constants';
 import { peakAmplitudeFactor } from '../../camera/controls/star-geometry';
 import { bestApsisTeff } from '../star-color-routing-pure';
 import { discWindowPc, RESOLVED_DISC_MIN_PX } from '../local-pass/star-local-cluster-pure';

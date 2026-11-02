@@ -11,17 +11,17 @@ import {
   EXPECTED_FRAME_ECLIPTIC,
   parseHorizonsVectors,
 } from '../probes/horizons-vectors';
-import { orbitalStateToCartesian } from '../../src/client/util/kepler-solver';
+import { orbitalStateToCartesian } from '../../src/astro-core/kepler-solver';
 import {
   buildElementTable,
   elementTableSampleAt,
-} from '../../src/client/solar-system/ephemerides/element-table';
+} from '../../src/catalog-format/ephemerides/element-table';
 import {
   equinoctialFromAngles,
   equinoctialToClassical,
   makeClassical,
   makeEquinoctial,
-} from '../../src/client/solar-system/ephemerides/equinoctial-pure';
+} from '../../src/astro-core/equinoctial-pure';
 
 import { parseHorizonsElements, type ElementRow } from './horizons-elements';
 import { unwrapMeanLongitude } from './element-unwrap-pure';
@@ -32,11 +32,11 @@ import {
   TABLE_JD_START,
   tableEpochs,
   type PlanetElementTarget,
-} from './planet-element-roster';
+} from '../../src/catalog-format/ephemerides/planet-element-roster';
 import {
   ELEMENT_COLUMNS,
   type PlanetElementTableFile,
-} from './planet-element-schema';
+} from '../../src/catalog-format/ephemerides/planet-element-schema';
 import { ELEMENT_TABLE_OUTPUTS } from './planet-element-outputs';
 
 
