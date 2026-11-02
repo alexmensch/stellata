@@ -48,7 +48,7 @@ function stepOutputs(step: string): StepOutputs {
   const { outputs, stamp } = declared;
   return {
     files: [...Object.values<string>(outputs.files), ...(stamp === undefined ? [] : [stamp])].map(rel),
-    families: outputs.families.map((f) => ({ ...f, dir: rel(f.dir) })),
+    families: outputs.families.filter((f) => f.stamped).map((f) => ({ ...f, dir: rel(f.dir) })),
   };
 }
 
@@ -75,7 +75,7 @@ function unlisted(patterns: readonly string[], steps: readonly string[]): string
   const files = outputs.flatMap((o) => o.files)
     .filter((file) => SEEDABLE.test(file) && !globs.some((glob) => glob.test(file)));
   const families = outputs.flatMap((o) => o.families)
-    .filter((f) => f.stamped && SEEDABLE.test(`${f.dir}/`)
+    .filter((f) => SEEDABLE.test(`${f.dir}/`)
       && !patterns.some((pattern) => covers({ files: [], families: [f] }, pattern)))
     .map((f) => `${f.dir}/${f.member.source}`);
   return [...files, ...families];
