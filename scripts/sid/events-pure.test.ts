@@ -7,49 +7,50 @@ const ev = (sid: number, event: EventRow['event'], successor: number | null = nu
   { sid, date, event, code: 'c', params: '', successor, buildVersion: '7.1.6' }
 );
 const isCode = (code: string): boolean => code === 'c';
+const inLedger = (sid: number): boolean => sid === 1 || sid === 2;
 
 describe('events codec', () => {
   it('round-trips a merge and a retire', () => {
     const rows = [ev(5, 'merge', 3), { ...ev(7, 'retire'), params: '{"reason":"x"}' }];
-    const text = EVENTS.serialize(rows);
+    const text = EVENTS.catalog.serialize(rows);
     expect(text.split('\n')[0]).toBe(EVENT_COLUMNS.join('\t'));
-    expect(EVENTS.parse(text)).toEqual(rows);
+    expect(EVENTS.catalog.parse(text)).toEqual(rows);
   });
 
   it('refuses an unknown event and a padded successor', () => {
     const head = EVENT_COLUMNS.join('\t');
-    expect(() => EVENTS.parse(`${head}\n5\t2026-07-10\tpark\tc\t\t\t7.1.6\n`)).toThrow(/event/);
-    expect(() => EVENTS.parse(`${head}\n5\t2026-07-10\tmerge\tc\t\t03\t7.1.6\n`)).toThrow(/successor/);
+    expect(() => EVENTS.catalog.parse(`${head}\n5\t2026-07-10\tpark\tc\t\t\t7.1.6\n`)).toThrow(/event/);
+    expect(() => EVENTS.catalog.parse(`${head}\n5\t2026-07-10\tmerge\tc\t\t03\t7.1.6\n`)).toThrow(/successor/);
   });
 });
 
 describe('validateEvents', () => {
   it('passes a retire → reinstate → merge cycle', () => {
-    expect(validateEvents([ev(1, 'retire'), ev(1, 'reinstate'), ev(1, 'merge', 2)], 2, isCode)).toEqual([]);
+    expect(validateEvents([ev(1, 'retire'), ev(1, 'reinstate'), ev(1, 'merge', 2)], inLedger, isCode)).toEqual([]);
   });
 
   it('refuses a sid or successor outside the ledger, and a self-merge', () => {
-    expect(validateEvents([ev(3, 'retire')], 2, isCode)[0]).toMatch(/sid not in ledger/);
-    expect(validateEvents([ev(1, 'merge', 3)], 2, isCode)[0]).toMatch(/successor 3 not in ledger/);
-    expect(validateEvents([ev(1, 'merge', 1)], 2, isCode)[0]).toMatch(/successor is itself/);
+    expect(validateEvents([ev(3, 'retire')], inLedger, isCode)[0]).toMatch(/sid not in ledger/);
+    expect(validateEvents([ev(1, 'merge', 3)], inLedger, isCode)[0]).toMatch(/successor 3 not in ledger/);
+    expect(validateEvents([ev(1, 'merge', 1)], inLedger, isCode)[0]).toMatch(/successor is itself/);
   });
 
   it('a merge names its successor and nothing else does', () => {
-    expect(validateEvents([ev(1, 'merge')], 2, isCode)[0]).toMatch(/names its successor/);
-    expect(validateEvents([ev(1, 'retire', 2)], 2, isCode)[0]).toMatch(/only a merge/);
+    expect(validateEvents([ev(1, 'merge')], inLedger, isCode)[0]).toMatch(/names its successor/);
+    expect(validateEvents([ev(1, 'retire', 2)], inLedger, isCode)[0]).toMatch(/only a merge/);
   });
 
   it('refuses an unlisted code, a bad date, a bad version and non-object params', () => {
-    expect(validateEvents([{ ...ev(1, 'retire'), code: 'x' }], 2, isCode)[0]).toMatch(/not in the reason-code list/);
-    expect(validateEvents([ev(1, 'retire', null, 'July')], 2, isCode)[0]).toMatch(/bad date/);
-    expect(validateEvents([{ ...ev(1, 'retire'), buildVersion: 'v7' }], 2, isCode)[0]).toMatch(/bad build version/);
-    expect(validateEvents([{ ...ev(1, 'retire'), params: '[1]' }], 2, isCode)[0]).toMatch(/params/);
+    expect(validateEvents([{ ...ev(1, 'retire'), code: 'x' }], inLedger, isCode)[0]).toMatch(/not in the reason-code list/);
+    expect(validateEvents([ev(1, 'retire', null, 'July')], inLedger, isCode)[0]).toMatch(/bad date/);
+    expect(validateEvents([{ ...ev(1, 'retire'), buildVersion: 'v7' }], inLedger, isCode)[0]).toMatch(/bad build version/);
+    expect(validateEvents([{ ...ev(1, 'retire'), params: '[1]' }], inLedger, isCode)[0]).toMatch(/params/);
   });
 
   it('refuses taking a sid out twice, reinstating one in service, and a second mint', () => {
-    expect(validateEvents([ev(1, 'retire'), ev(1, 'merge', 2)], 2, isCode)[0]).toMatch(/already out/);
-    expect(validateEvents([ev(1, 'reinstate')], 2, isCode)[0]).toMatch(/reinstated while in service/);
-    expect(validateEvents([ev(1, 'mint'), ev(1, 'mint')], 2, isCode)[0]).toMatch(/minted twice/);
+    expect(validateEvents([ev(1, 'retire'), ev(1, 'merge', 2)], inLedger, isCode)[0]).toMatch(/already out/);
+    expect(validateEvents([ev(1, 'reinstate')], inLedger, isCode)[0]).toMatch(/reinstated while in service/);
+    expect(validateEvents([ev(1, 'mint'), ev(1, 'mint')], inLedger, isCode)[0]).toMatch(/minted twice/);
   });
 });
 

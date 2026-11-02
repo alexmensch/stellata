@@ -6,6 +6,7 @@ import GithubSlugger from 'github-slugger';
 import { Lexer, type Token, walkTokens } from 'marked';
 import { gitFiles, lfsTracked, presentFiles } from '../scripts/util/git-files';
 import { EVENTS } from '../scripts/sid/events-tsv';
+import { LEDGERS } from '../scripts/sid/ledger-tsv';
 
 export interface DocPointer {
   citedPath: string;
@@ -67,8 +68,8 @@ export function resolveDocPath(citedPath: string, fromDir: string, root: string)
 
 export const SCANNED_KINDS = ['.ts', '.md', '.py', '.sh', '.css', '.yml', '.html', '.json', '.tsv', '.gitignore'];
 const UNSCANNED = [
-  // Prefix-frozen by tests/sid-ledger-guard.test.ts: its rows cannot be rewritten.
-  EVENTS.file,
+  // Prefix-frozen by tests/sid-ledger-guard.test.ts: their rows cannot be rewritten.
+  ...[...Object.values(LEDGERS), ...Object.values(EVENTS)].map((a) => a.file),
 ];
 export const kindOf = (name: string): string => extname(name) || basename(name);
 

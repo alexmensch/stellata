@@ -157,7 +157,8 @@ import {
   ALLOCATION_CODES, ALLOCATION_LINEAGE, ALLOCATION_LINEAGE_BUDGET,
   allocationIdentityRows, allocationIdentityText, allocationLineageRows,
 } from '../sid/allocation-lineage-pure';
-import { catalogSidObjects, inCatalogScope } from '../sid/catalog-objects';
+import { catalogSidObjects } from '../sid/catalog-objects';
+import { CATALOG_PARTITION, inPartition } from '../sid/registry-partitions-pure';
 import { catalogUpstream } from '../sid/catalog-upstream';
 import { synthChurnReport } from '../sid/synth-churn-pure';
 import { allocationRun, loadRegistry, registryTexts } from '../sid/registry-io';
@@ -946,7 +947,7 @@ async function main() {
     storedEdges: registry.storedEdges,
     ledger: registry.ledger,
     events: registry.events,
-    scope: inCatalogScope,
+    scope: inPartition(CATALOG_PARTITION),
     ...allocationRun(),
   }, catalogUpstream({ placementRemovals, promotion: promotionLines, promotionIdentity }));
   if (allocation.kind === 'failed') {
@@ -1307,7 +1308,7 @@ async function main() {
     ...placementEmission.files,
     ...lineage.files,
     ...allocationLineage.files,
-    ...registryTexts(allocation.minted, allocation.events),
+    ...registryTexts(CATALOG_PARTITION, allocation.minted, allocation.events),
   };
   const members = new Map([
     ...chunks, ...placementEmission.members, ...lineage.members, ...allocationLineage.members,

@@ -1,4 +1,4 @@
-// Codec for data/membership/additions-ledger.tsv. See README.md#the-additions.
+// Codec for data/membership/additions-ledger.tsv. See additions/README.md.
 
 import { isValidDesignation } from '../../sid/sid-pure';
 import { defineArtifact } from '../../util/tsv/artifact-pure';

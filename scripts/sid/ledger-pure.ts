@@ -1,4 +1,4 @@
-// ledger.tsv's row shape and cell encoding, apart from its declaration. See README.md (ledger-tsv.ts).
+// A registry ledger's row shape and cell encoding, apart from its declarations. See README.md (ledger-tsv.ts).
 
 import type { TableRow } from '../util/tsv/table-pure';
 

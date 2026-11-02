@@ -6,9 +6,12 @@ import { emitArtifacts, runStep } from '../util/emit-artifacts';
 import { allocate, type Upstream } from './allocate-pure';
 import type { EventRow } from './events-pure';
 import { allocationRun, loadRegistry, registryTexts } from './registry-io';
+import { inPartition } from './registry-partitions-pure';
 import type { LedgerRow } from './sid-pure';
 import {
+  isSiblingName,
   SIBLING_ARTIFACTS,
+  SIBLING_NAMES,
   siblingArtifactObjects,
   type SiblingItem,
 } from './sibling-artifacts';
@@ -19,19 +22,18 @@ const NO_LINEAGE: Upstream = { causes: () => new Map(), admissions: () => new Ma
 function main(): void {
   const targets = process.argv.slice(2);
   if (targets.length === 0) {
-    throw new Error(`usage: stamp-sibling-sids.ts <${Object.keys(SIBLING_ARTIFACTS).join('|')}|all> ...`);
+    throw new Error(`usage: stamp-sibling-sids.ts <${SIBLING_NAMES.join('|')}|all> ...`);
   }
-  const names = targets.includes('all') ? Object.keys(SIBLING_ARTIFACTS) : targets;
-  for (const t of names) {
-    if (!SIBLING_ARTIFACTS[t]) {
-      throw new Error(`sid:stamp: unknown target "${t}" (expected ${Object.keys(SIBLING_ARTIFACTS).join(', ')})`);
-    }
-  }
+  const names = targets.includes('all') ? SIBLING_NAMES : targets.map((t) => {
+    if (!isSiblingName(t)) throw new Error(`sid:stamp: unknown target "${t}" (expected ${SIBLING_NAMES.join(', ')})`);
+    return t;
+  });
 
   const registry = loadRegistry();
   const minted: LedgerRow[] = [];
   const events: EventRow[] = [];
   const stamped: Record<string, string> = {};
+  const registryWrites: Record<string, string> = {};
   for (const name of names) {
     const spec = SIBLING_ARTIFACTS[name];
     const path = SID_STAMP_OUTPUTS.files[name];
@@ -45,7 +47,7 @@ function main(): void {
       storedEdges: registry.storedEdges,
       ledger: [...registry.ledger, ...minted],
       events: [...registry.events, ...events],
-      scope: (ns) => ns === spec.ns,
+      scope: inPartition(spec.ns),
       ...allocationRun(),
     }, NO_LINEAGE);
     if (allocation.kind === 'failed') {
@@ -56,6 +58,7 @@ function main(): void {
     }
     minted.push(...allocation.minted);
     events.push(...allocation.events);
+    Object.assign(registryWrites, registryTexts(spec.ns, allocation.minted, allocation.events));
     items.forEach((o, i) => { (o as { sid?: number }).sid = allocation.outcomes[i].sid; });
     console.log(`sid:stamp: ${items.length} ${spec.ns} SIDs stamped into ${spec.file} (${allocation.minted.length} minted)`);
     stamped[name] = `${JSON.stringify(payload)}\n`;
@@ -63,8 +66,8 @@ function main(): void {
 
   emitArtifacts({
     outputs: SID_STAMP_OUTPUTS,
-    only: [...names, 'sidLedger', 'sidEvents', 'sidHead'],
-    files: { ...stamped, ...registryTexts(minted, events) },
+    only: [...names, ...Object.keys(registryWrites)],
+    files: { ...stamped, ...registryWrites },
   });
 }
 

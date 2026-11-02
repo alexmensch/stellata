@@ -75,7 +75,7 @@ write the worktree's `data/`.
 | `refresh:gaia-tyc` | `refresh-gaia-tyc-xmatch.py` | `data/gaia/gaia_dr3_tyc_xmatch.tsv` | Tycho-2 → Gaia DR3 cross-walk from `tycho2tdsc_merge_best_neighbour`. |
 | `refresh:gaia-nss` | `refresh-gaia-nss.py` | `data/gaia/gaia_dr3_nss_two_body.tsv` | Gaia DR3 `nss_two_body_orbit` (binary orbits Gaia detected astrometrically). |
 | `refresh:gaia-astrometry` | `refresh-gaia-astrometry.py` | `data/gaia/gaia_dr3_astrometry.tsv` | Gaia DR3 5-parameter astrometry for the binaries request (`data/gaia/gaia_astrometry_source_id_request.tsv`): the source_ids Stage 2 resolved plus every candidate a Stage-2 gate weighed — `write_astrometry_request` owns the list. Run AFTER `refresh:gaia-hip` + `refresh:gaia-tyc` + a fresh `pnpm run build:binaries`. |
-| `build:astrometry-request` | `scripts/catalog/astrometry-request/export-astrometry-request.ts` | `data/gaia/gaia_catalog_source_id_request.tsv` | Full-catalog deduped Gaia DR3 source_id request list — the manifest's `gaia_source_id` column (the same binding the record build reads) UNION the classic-ID binding gate's candidate sources UNION the membership derivation's candidate sources UNION `multiples.tsv`'s kept-physical pair members. Not a network pull. Reads the manifest, the spine and both Gaia cross-walks, so it still runs AFTER `refresh:gaia-hip` / `refresh:gaia-tyc`. |
+| `build:astrometry-request` | `scripts/catalog/astrometry-request/export-astrometry-request.ts` | `data/gaia/gaia_catalog_source_id_request.tsv` | Full-catalog deduped Gaia DR3 source_id request list — the union of four contributions ([The request is a union](../catalog/astrometry-request/README.md#the-request-is-a-union-and-why-that-is-not-a-compromise)). Not a network pull. Reads both Gaia cross-walks, so it runs AFTER `refresh:gaia-hip` / `refresh:gaia-tyc`. |
 | `refresh:gaia-astrometry-catalog` | `refresh-gaia-astrometry-catalog.py` | `data/gaia/gaia_dr3_astrometry_catalog.tsv` | Gaia DR3 5p astrometry + `radial_velocity` for every catalog source_id ([the request](../catalog/astrometry-request/README.md)) — tier 1 of the direction, rv, V and ci cascades. Same schema/query as `refresh:gaia-astrometry`; reads `gaia_catalog_source_id_request.tsv`. Run AFTER `build:astrometry-request`. |
 | `refresh:gaia-magnitude` | `refresh-gaia-magnitude.py` | `data/gaia/gaia_dr3_magnitude_pull.tsv` | Every `gaiadr3.gaia_source` row at `G ≤ 11` (<!-- count:membership-manifest/magnitudeTerm.rows -->1,247,240<!-- /count -->) — membership's magnitude term ([§ 1](/docs/catalog-driver.md#1-the-driver-model)), on `gaia_astrometry_pull.TSV_COLUMNS`. The one Gaia pull with **no request set**: its selection is the magnitude bound, so it reads nothing under `data/` and has no ordering constraint. Floor rationale — why `G ≤ 11` needs no margin over `V ≤ 11` — [Why the floor carries no margin](/data/gaia/README.md#why-the-floor-carries-no-margin). |
 | `refresh:gaia-apsis` | `refresh-gaia-apsis.py` | `data/gaia/gaia_dr3_apsis.tsv` | Gaia DR3 `astrophysical_parameters` (gspphot ∪ gspspec) — Teff / log g / [M/H] / A0 + the ESP-ELS `spectraltype_esphs` enum. Scoped to the deep population (`magnitude/README.md`), so it runs AFTER `build:astrometry-request`. |
@@ -109,13 +109,16 @@ per-table schema validation and row bounds — source detail in
 **No refresh script reads `data/athyg/`** — neither AT-HYG's own CSV
 (`athyg_33_classic_ids.csv`) nor the inherited spine.
 Every catalog-scoped request set
-traces to `data/membership/membership-manifest.tsv` — the membership term
-([§ 3.1](/docs/catalog-driver.md#31-retiring-the-spine--the-membership-rule-measured-against-the-primaries)) — by one of two routes: directly, through
+traces to the membership term
+([§ 3.1](/docs/catalog-driver.md#31-retiring-the-spine--the-membership-rule-measured-against-the-primaries)) by one of two routes: directly off
+`data/membership/membership-manifest.tsv`, through
 `refresh_lib.read_membership_source_ids` / `iter_membership_rows` (the
-SIMBAD pulls), or through a request file `export-astrometry-request.ts`
-exported off the same manifest column (astrometry-catalog, GSPC,
+SIMBAD pulls), or off the committed inputs `build:membership` derives the
+manifest from, through the request file `export-astrometry-request.ts`
+builds (astrometry-catalog, GSPC,
 [Bailer-Jones 2021](/data/papers/index.md#bailerjones2021), Apsis —
-see `read_source_id_request` below).
+see `read_source_id_request` below), whose coverage of the manifest's
+bindings the membership gate test holds.
 `refresh_lib.MEMBERSHIP_MANIFEST` is the one statement of where that table
 lives, and `refresh_lib.TYC2_HD_CROSS_INDEX` the same for IV/25; a script
 naming either path itself has drifted from it. The two pulls scoped to Tycho
@@ -128,9 +131,11 @@ The manifest's `gaia_source_id` is the binding the manifest **justified**, its
 `binding` cell saying on what basis, so a request derived from it and the
 record build name the same sources by construction — `readStars` reads the
 same cell. A raw cross-walk value is the ungated one, which is why a walk over
-one over-pulls rows that never became records — the failure
-[Request and record build name the same set](/scripts/catalog/astrometry-request/README.md#request-and-record-build-name-the-same-set-by-construction)
-diagnoses at length.
+one over-pulls rows that never became records. The astrometry request walks
+candidates on purpose, since both binding gates need a G for every source they
+weigh, and covers the manifest's bindings by measurement rather than
+construction
+([The record build's sources are covered by measurement](/scripts/catalog/astrometry-request/README.md#the-record-builds-sources-are-covered-by-measurement)).
 
 **A rebased request set does not rewrite its output.** The rebase changes
 what the *next* run asks for; the committed TSV keeps whatever the previous
@@ -389,11 +394,10 @@ catalogue inconsistent. Order matters:
    range, so it neither reads nor bridges a DR3 id.
    Each commits its TSV under `data/gaia/` or `data/bailer-jones/`.
    Then regenerate the full-catalog astrometry (two stages, in this
-   order): `pnpm run build:astrometry-request` (the manifest's
-   `gaia_source_id` column plus both binding gates' candidates and the
-   bound-pair siblings, so it runs after both cross-walk refreshes), then
+   order): `pnpm run build:astrometry-request` (it reads both cross-walks,
+   so it runs after both refreshes), then
    `pnpm run refresh:gaia-astrometry-catalog`. Under a DR transition the
-   manifest's `gaia_dr3:` ids bridge through [§ 6](/docs/sid.md#6-gaia-data-release-reconciliation) first —
+   request's `gaia_dr3:` ids bridge through [§ 6](/docs/sid.md#6-gaia-data-release-reconciliation) first —
    requesting DR3 ids against a DR4 table returns nothing.
 3. **Refresh HIP2 + SIMBAD if upstream republished** — these are
    keyed on HIP / SIMBAD `oid` respectively, so they don't change

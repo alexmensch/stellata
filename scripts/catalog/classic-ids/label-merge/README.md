@@ -130,7 +130,7 @@ folder attributes a withheld number to a promoted companion. Measured over the
   number to** — TYC 2013-959-2, 103-2864-2, 1065-3144-2, 4522-1564-2 and
   8707-1990-2. Every one of those five, plus TYC 1655-484-2, is **already a
   manifest row carrying the withheld HD as its display cell**
-  ([The additions](../../membership/README.md#the-additions)). Handing the number to a
+  ([The additions](../../membership/additions/README.md#grouping-and-admission)). Handing the number to a
   promoted companion as well would put two claimants on a designation an
   existing row keys, which is what admission's collision guard and
   [§ 4.1](/docs/sid.md#41-same-as-equivalence-graph) refuse.
@@ -209,7 +209,7 @@ consumer reads it ([One designation, two HD numbers](../README.md#one-designatio
 **Correcting a crossed cell frees the neighbour's number, and the freed number
 is not guaranteed a record.** It reaches whatever the primaries admit for it,
 and admission is not a promise of a record
-([Admission is not a promise of a record](../../membership/README.md#admission-is-not-a-promise-of-a-record)). Five
+([Admission is not a promise of a record](../../membership/additions/README.md#admission-is-not-a-promise-of-a-record)). Five
 of the eight freed an HD the primaries then admitted as a row of its own; three
 of those five build a record and two park `no_parallax_published`. So the
 number ships nowhere, where before the correction it shipped on the WRONG star:

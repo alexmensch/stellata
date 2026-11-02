@@ -30,7 +30,6 @@ src/client/util/README.md	983,068	history
 src/client/webgpu/extinction/README.md	388,071	history
 src/client/webgpu/extinction/dispatch-order/README.md	983,068	history
 data/simbad/README.md	376,932	other-count
-scripts/catalog/astrometry-request/README.md	374,932	other-count
 scripts/catalog/membership/magnitude-term/README.md	973,596	other-count
 scripts/catalog/membership/magnitude-term/README.md	595,002	other-count
 scripts/catalog/membership/magnitude-term/README.md	594,998	other-count
