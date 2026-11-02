@@ -36,10 +36,12 @@ marker_rule="Only Alex creates ${marker}, and it authorises exactly one launch �
 Naming the marker for another reason? A commit message or PR body goes through 'git commit -F <file>' / 'gh pr create --body-file <file>' (the route a worktree session already uses); searching the tree goes through the Grep tool."
 
 protocol="The perf runner is human-armed — scripts/perf/arming/README.md. The protocol, verbatim:
-  1. Announce what you want to measure and why, with the exact command.
-  2. Start the poller in the background: bash scripts/perf/arming/await-go.sh  (Bash run_in_background).
-  3. Proceed only when it reports the marker.
-  4. Never create the marker. Alex arms a run with: touch ${marker}
+  1. A pickup-epic coordinator is live (bd list --has-metadata-key coordinator --json, that name live in ListAgents)?
+     Send it GPU_REQUEST and wait for GPU_GRANTED; send GPU_DONE after the last run — .claude/skills/stellata-perf/SKILL.md.
+  2. Announce what you want to measure and why, with the exact command.
+  3. Start the poller in the background: bash scripts/perf/arming/await-go.sh  (Bash run_in_background).
+  4. Proceed only when it reports the marker, and only on Alex's answer if it warns about busy sessions.
+  5. Never create the marker. Alex arms a run with: touch ${marker}
      One arm authorises exactly one launch; the runner deletes the marker before the browser starts."
 
 case "$tool" in
