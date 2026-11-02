@@ -13,7 +13,7 @@ never drift.
 ## Files
 
 ```
-src/client/hdr/tonemap/
+src/astro-core/tonemap/
   tonemap-pure.ts (+ test)   CPU mirror of the operator plus its exact
                              inverse. Vitest-pinned against the design
                              doc's worked values. Also the codebase's

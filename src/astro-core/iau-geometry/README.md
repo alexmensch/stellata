@@ -13,7 +13,7 @@ all derived from, and the external checks that corroborate it.
 ## Files in this area
 
 ```
-src/client/constellation-boundaries/iau-geometry/
+src/astro-core/iau-geometry/
   iau-boundaries-pure.ts          Edge parsing, the cell decomposition
     (+ test)                      (README.md#cell-decomposition--the-self-validating-invariant), point lookup,
                                   nearest-edge distance (README.md#nearest-edge-distance), the ICRS polyline resampling

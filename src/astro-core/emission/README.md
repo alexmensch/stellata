@@ -6,7 +6,7 @@ target's lifecycle, pass ordering and the operator; this folder owns the
 into it. [§ 1](/docs/science-hdr-pipeline.md#1-the-unit--threshold-anchored-display-luminance) is the design gate.
 
 ```
-src/client/hdr/emission/
+src/astro-core/emission/
   density0-solver-pure.ts    The ρ₀ solve both volumetric emitters share:
     (+ test)                 flux number, Gauss–Legendre quadrature over a
                              truncated ellipsoid, ρ₀ = d²·F/G
