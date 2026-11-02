@@ -2,7 +2,7 @@ import {
   existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync,
 } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { basename, join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { fileHashes, readStamp, stampIsCurrent } from './build-stamp';
@@ -140,7 +140,9 @@ describe('emitArtifacts', () => {
       stamp: { path: stampFile, inputs: {} },
     });
     expect(readFileSync(join(baseline, 'p'), 'utf8')).toBe('p');
-    expect(Object.keys(readStamp(stampFile)?.outputs ?? {}).map((p) => p.replace(/^.*\//, '')).sort()).toEqual(['a.txt', 'k']);
+    const recorded = readStamp(stampFile);
+    expect(recorded).not.toBeNull();
+    expect(Object.keys(recorded!.outputs).map((p) => basename(p)).sort()).toEqual(['a.txt', 'k']);
     rmSync(baseline, { recursive: true });
     expect(stampIsCurrent(stampFile, {})).toBe(true);
   });
