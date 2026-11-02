@@ -398,8 +398,9 @@ Hand-kept lists become derivations over the table:
   declaration a `data/` path may be spelled.
   The test holds the table to the load-time rules, every manual step's
   `package.json` target to `tsx scripts/pipeline/record.ts <name>`, and every
-  pull's `--describe` to running under `python3 -I -S` (skipped while the
-  manifest is an unsmudged LFS pointer).
+  pull's and describing bake's `--describe` to running under `python3 -I -S`
+  (skipped while the manifest is an unsmudged LFS pointer, or before
+  `build:clouds` has written `public/clouds.json`).
 - `record.ts` / `record-step.ts` (+ test) — [Recording a manual
   step](#recording-a-manual-step--recordts): `recordStep` and the
   `RecordOutcome` union (`fresh`, `recorded`, `failed`).

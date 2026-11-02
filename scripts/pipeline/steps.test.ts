@@ -1,3 +1,4 @@
+import { existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
@@ -27,11 +28,19 @@ describe('the step table', () => {
     );
   });
 
-  it.skipIf(!lfsContentReadable(MANIFEST))('describes every pull under python3 -I -S with no network call', () => {
+  it.skipIf(!lfsContentReadable(MANIFEST))('describes every pull under python3 -I -S', () => {
     const tree = pipelineTree(REPO_ROOT);
-    const pulls = MANUAL_STEPS.filter((s) => s.kind === 'pull' && describesItself(s));
-    for (const step of pulls) {
+    for (const step of MANUAL_STEPS.filter((s) => s.kind === 'pull')) {
       expect(describeStep(step, tree), step.name).toMatchObject({ kind: 'pull', query: expect.any(String) });
     }
   }, 60_000);
+
+  it.skipIf(!existsSync(resolve(REPO_ROOT, 'public/clouds.json')))('describes every describing bake under python3 -I -S', () => {
+    const tree = pipelineTree(REPO_ROOT);
+    const bakes = MANUAL_STEPS.filter((s) => s.kind === 'bake' && describesItself(s));
+    expect(bakes.map((s) => s.name)).toEqual(['build:cloud-surfaces']);
+    for (const step of bakes) {
+      expect(describeStep(step, tree), step.name).toMatchObject({ kind: 'bake', request: expect.any(Array) });
+    }
+  });
 });
