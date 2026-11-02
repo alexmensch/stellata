@@ -1,6 +1,8 @@
 # Distance validation
 
-Post-build cross-check of `public/catalog.bin` against
+Cross-check of the
+[Bailer-Jones 2021](/data/papers/index.md#bailerjones2021) distances the
+catalog build ships, read from their input TSV, against
 [Vaidman 2025](/data/papers/index.md#vaidman2025) BA-supergiant
 distance recalculation
 (`data/distance-validation/vaidman-2025-supergiants.tsv`). Reports
