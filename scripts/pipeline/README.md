@@ -313,6 +313,12 @@ Hand-kept lists become derivations over the table:
   everything upstream, kept loops included; `writersOf` names the steps a
   step takes shared locks on.
 - `run_python_step.py` — a Python step's command line under the recorder.
+- `locks.ts` (+ test) / `lock_holder.py` — `holdLocks` starts a
+  `lock_holder.py` child that takes each `flock` (Node has none) in
+  step-name order and holds them until its stdin closes, so the locks go
+  when the run exits however it exits. `lockSpecs` is that order. A lock
+  file is `build/locks/<step>`, `:` written `-` (`stepFileName`, shared with
+  the stamp's name).
 
 ## Design pass
 

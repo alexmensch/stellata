@@ -1,0 +1,48 @@
+// A step's locks, held by a lock_holder.py child for as long as the step runs. See README.md#the-runner--runts.
+
+import { spawn } from 'node:child_process';
+import { once } from 'node:events';
+import { resolve } from 'node:path';
+
+import { REPO_ROOT } from '../util/paths';
+import { stepFileName } from './step-table-pure';
+
+const HOLDER = resolve(REPO_ROOT, 'scripts/pipeline/lock_holder.py');
+const WAIT_NOTICE_MS = 1000;
+
+export interface StepLocks {
+  readonly own: string;
+  readonly shared: readonly string[];
+}
+
+/** Every lock in step-name order, so two runs inside a loop cannot each hold
+ *  one the other wants. */
+export function lockSpecs({ own, shared }: StepLocks): string[] {
+  const names = [...new Set([own, ...shared])].sort();
+  return names.map((n) => `${n === own ? 'ex' : 'sh'}:${stepFileName(n)}`);
+}
+
+export type Release = () => Promise<void>;
+
+export async function holdLocks(lockDir: string, locks: StepLocks, onWait: () => void): Promise<Release> {
+  const child = spawn('python3', [HOLDER, lockDir, ...lockSpecs(locks)], { stdio: ['pipe', 'pipe', 'inherit'] });
+  const notice = setTimeout(onWait, WAIT_NOTICE_MS);
+  try {
+    await new Promise<void>((done, fail) => {
+      let out = '';
+      child.stdout.on('data', (chunk: Buffer) => {
+        out += chunk.toString();
+        if (out.includes('locked\n')) done();
+      });
+      child.once('exit', (code) => fail(new Error(`lock holder for ${locks.own} exited with ${code}`)));
+      child.once('error', fail);
+    });
+  } finally {
+    clearTimeout(notice);
+  }
+  return async () => {
+    const exited = once(child, 'exit');
+    child.stdin.end();
+    await exited;
+  };
+}

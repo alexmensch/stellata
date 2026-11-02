@@ -87,6 +87,9 @@ export type Derived =
 
 export const isBuild = (step: StepEntry): step is BuildStep => step.kind === 'build';
 
+/** A step's name as a file name, for its stamp and its lock. */
+export const stepFileName = (name: string): string => name.replaceAll(':', '-');
+
 export function claims(outputs: OutputClaims, path: string): boolean {
   return outputs.files.includes(path)
     || outputs.families.some((f) => dirname(path) === f.dir && f.member.test(basename(path)));
