@@ -1,0 +1,12 @@
+{
+  "inputs": {
+    "data/gaia/gaia_catalog_source_id_request.tsv": "58d08db948e98c660e7abffc6b5e4dfeb5cdf671"
+  },
+  "outputs": {
+    "data/gaia/gaia_dr3_apsis.tsv": "6ecf0d3b7b1ee13ce9665df66b6fe8eaa3ed2d66"
+  },
+  "query": "9a2ee6745a019049636bbe0d2a11eef71206f8b5",
+  "answeredBy": [],
+  "release": "Gaia DR3",
+  "requestFrom": []
+}

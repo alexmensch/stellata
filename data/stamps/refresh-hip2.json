@@ -1,0 +1,10 @@
+{
+  "inputs": {},
+  "outputs": {
+    "data/hipparcos/hip2_van_leeuwen.tsv": "841445b6b5cbeb1eaf873fe0bfae0437948ff049"
+  },
+  "query": "a32b4596223761adb6a0ee55b03e151fecb1a75b",
+  "answeredBy": [],
+  "release": "VizieR I/311/hip2",
+  "requestFrom": []
+}

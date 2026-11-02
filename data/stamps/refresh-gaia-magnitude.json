@@ -1,0 +1,10 @@
+{
+  "inputs": {},
+  "outputs": {
+    "data/gaia/gaia_dr3_magnitude_pull.tsv": "cfd3b261fe0e21c26c187bd56e648c1a5adc7458"
+  },
+  "query": "8053846b8db6bbca8bb2d6b2d4625215199eafb2",
+  "answeredBy": [],
+  "release": "Gaia DR3",
+  "requestFrom": []
+}

@@ -1,0 +1,12 @@
+{
+  "inputs": {
+    "data/gaia/gaia_catalog_source_id_request.tsv": "58d08db948e98c660e7abffc6b5e4dfeb5cdf671"
+  },
+  "outputs": {
+    "data/bailer-jones/bailer-jones-dr3.tsv": "237ac2f45154fb031d08243c8fea264fb4378c47"
+  },
+  "query": "787f9c03bc3ecd7ef0e7dc2c62b990eb326cfe65",
+  "answeredBy": [],
+  "release": "Bailer-Jones 2021 (Gaia EDR3)",
+  "requestFrom": []
+}
