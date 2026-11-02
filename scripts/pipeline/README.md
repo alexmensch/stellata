@@ -321,7 +321,9 @@ Hand-kept lists become derivations over the table:
 - `locks.ts` (+ test) / `lock_holder.py` — `holdLocks` starts a
   `lock_holder.py` child that takes each `flock` (Node has none) in
   step-name order and holds them until its stdin closes, so the locks go
-  when the run exits however it exits. `lockSpecs` is that order. A lock
+  when the run exits however it exits. A holder that dies while its step
+  runs has lost the locks with it, so the runner fails that step. `lockSpecs`
+  is that order. A lock
   file is `build/locks/<step>`, `:` written `-` (`util/build-stamp.ts`'s
   `stepFileName`, which names the step's stamp too).
 - `load-table.ts` — `loadTable`: checks every TypeScript outputs module's

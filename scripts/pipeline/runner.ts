@@ -97,15 +97,16 @@ class Run {
       return fresh.kind === 'fresh' ? fresh : { kind: 'stale', command: step.command, changed: fresh.changed };
     }
     const shared = writersOf(this.graph, step.name).filter((w) => isBuild(this.loaded.steps.get(w)!.step));
-    const release = await holdLocks(this.dirs.locks, { own: step.name, shared }, () => {
+    const held = await holdLocks(this.dirs.locks, { own: step.name, shared }, () => {
       this.options.log(`… ${step.name} waits for another run's lock`);
     });
     try {
-      return await this.build(resolved, step);
+      const verdict = await this.build(resolved, step);
+      return held.died() ? { kind: 'failed', reason: 'its lock holder died while it ran' } : verdict;
     } catch (err) {
       return { kind: 'failed', reason: err instanceof Error ? err.message : String(err) };
     } finally {
-      await release();
+      await held.release();
     }
   }
 

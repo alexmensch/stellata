@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import { holdLocks, lockSpecs, type Release } from './locks';
+import { holdLocks, lockSpecs, type HeldLocks } from './locks';
 
 describe('lockSpecs', () => {
   it('takes its own lock exclusive and the others shared, all in step-name order', () => {
@@ -23,15 +23,15 @@ describe('holdLocks', () => {
   beforeEach(() => { dir = mkdtempSync(join(tmpdir(), 'locks-')); });
   afterEach(() => rmSync(dir, { recursive: true, force: true }));
 
-  async function race(first: Promise<Release>, second: () => Promise<Release>, holdMs: number): Promise<string[]> {
+  async function race(first: Promise<HeldLocks>, second: () => Promise<HeldLocks>, holdMs: number): Promise<string[]> {
     const events: string[] = [];
-    const releaseFirst = await first;
+    const held = await first;
     events.push('first acquired');
-    const pending = second().then((release) => { events.push('second acquired'); return release; });
+    const pending = second().then((h) => { events.push('second acquired'); return h; });
     await new Promise((r) => setTimeout(r, holdMs));
     events.push('first releasing');
-    await releaseFirst();
-    await (await pending)();
+    await held.release();
+    await (await pending).release();
     return events;
   }
 
@@ -63,12 +63,22 @@ describe('holdLocks', () => {
   });
 
   it('tells the caller when it has to wait', async () => {
-    const release = await holdLocks(dir, { own: 'a', shared: [] }, quiet);
+    const first = await holdLocks(dir, { own: 'a', shared: [] }, quiet);
     let waited = false;
     const second = holdLocks(dir, { own: 'a', shared: [] }, () => { waited = true; });
     await new Promise((r) => setTimeout(r, 1300));
-    await release();
-    await (await second)();
+    await first.release();
+    await (await second).release();
     expect(waited).toBe(true);
+  });
+
+  it('reports a holder killed mid-step, still releases, and frees the lock', async () => {
+    const held = await holdLocks(dir, { own: 'a', shared: [] }, quiet);
+    process.kill(held.pid, 'SIGKILL');
+    const next = await holdLocks(dir, { own: 'a', shared: [] }, quiet);
+    expect(held.died()).toBe(true);
+    await held.release();
+    await next.release();
+    expect(next.died()).toBe(false);
   });
 });
