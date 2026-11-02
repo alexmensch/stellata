@@ -11,11 +11,11 @@ from typing import Any
 REPO = Path(__file__).resolve().parents[2]
 CLOUDS_JSON = REPO / "public" / "clouds.json"
 
-GEOMETRY_FIELDS = ("id", "center", "axes", "quat", "inGrid")
+GEOMETRY_FIELDS = ("id", "sid", "center", "axes", "quat", "inGrid")
 
 
 def geometry_lines(catalog: dict[str, Any]) -> list[str]:
-    """One line per cloud: the fields the trace reads, in clouds.json order."""
+    """One line per cloud: the fields the trace reads or writes, in clouds.json order."""
     return [
         json.dumps({field: cloud[field] for field in GEOMETRY_FIELDS}, sort_keys=True)
         for cloud in catalog["clouds"]

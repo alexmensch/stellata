@@ -40,9 +40,10 @@ The bake is a manual step ([Step kinds](/scripts/pipeline/README.md#step-kinds))
 `pnpm run build:cloud-surfaces` runs it through `record.ts`, which writes
 `data/stamps/build-cloud-surfaces.json`. It reads `public/clouds.json` only
 for the geometry it traces, so its record holds the hash of that projection
-(`cloud_geometry.py`: each cloud's `id`, `center`, `axes`, `quat` and
-`inGrid`), never of the file: an SID or name change leaves the bake fresh, a
-geometry change stops the build naming this command. `build-cloud-surfaces.py
+(`cloud_geometry.py`: each cloud's `id`, `sid`, `center`, `axes`, `quat`
+and `inGrid`), never of the file: a name change leaves the bake fresh; a
+geometry change, or an SID change (the bake keys each entry by `sid`), stops
+the build naming this command. `build-cloud-surfaces.py
 --describe` prints the projection with the standard library alone, which is
 why the numpy body lives in `trace_surfaces.py`. Its other inputs are the
 two Edenhofer identity files and its own code, recorded as it runs.

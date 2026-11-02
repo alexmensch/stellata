@@ -4,6 +4,7 @@ record hashes."""
 
 from __future__ import annotations
 
+import re
 import sys
 import unittest
 from pathlib import Path
@@ -16,12 +17,17 @@ CLOUD = {"id": "orion-a", "sid": 7, "name": "Orion A", "center": [1, 2, 3], "axe
 
 
 class GeometryLinesTests(unittest.TestCase):
-    def test_a_sid_or_name_change_leaves_the_projection_unchanged(self) -> None:
-        renamed = {**CLOUD, "sid": 8, "name": "Orion A cloud"}
+    def test_a_name_change_leaves_the_projection_unchanged(self) -> None:
+        renamed = {**CLOUD, "name": "Orion A cloud"}
         self.assertEqual(g.geometry_lines({"clouds": [CLOUD]}), g.geometry_lines({"clouds": [renamed]}))
 
+    def test_projects_every_cloud_field_the_trace_uses_beyond_its_log_lines(self) -> None:
+        trace = (Path(__file__).resolve().parent / "trace_surfaces.py").read_text()
+        used = set(re.findall(r'\b(?:c|cloud)\[["\']([A-Za-z]+)["\']\]', trace))
+        self.assertEqual(used - set(g.GEOMETRY_FIELDS), {"name"})
+
     def test_every_field_the_trace_reads_moves_it(self) -> None:
-        for field, moved in [("center", [1, 2, 4]), ("axes", [4, 5, 7]), ("quat", [0, 0, 1, 0]), ("inGrid", False), ("id", "orion-b")]:
+        for field, moved in [("center", [1, 2, 4]), ("axes", [4, 5, 7]), ("quat", [0, 0, 1, 0]), ("inGrid", False), ("id", "orion-b"), ("sid", 8)]:
             with self.subTest(field=field):
                 self.assertNotEqual(
                     g.geometry_lines({"clouds": [CLOUD]}),

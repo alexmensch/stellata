@@ -198,10 +198,10 @@ so the pull is judged against the manifest this run rebuilt, and is never
 hashed itself.
 
 A bake follows the same rule. `cloud-surfaces` reads `public/clouds.json`
-only for the geometry it traces (positions and extents), so its record holds
-the hash of that projection: an SID or name change in `clouds.json` leaves it
-fresh, a geometry change stops the build. The bake record is the only owner
-of that fact.
+only for the geometry it traces (positions and extents) and the SID it keys
+each surface by, so its record holds the hash of that projection: a name
+change in `clouds.json` leaves it fresh, a geometry or SID change stops the
+build. The bake record is the only owner of that fact.
 
 An **external dataset** a baker reads from outside the repo is a pull of its
 own, whose query is the dataset's identity and version: the Edenhofer 2023
