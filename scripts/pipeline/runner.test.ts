@@ -278,8 +278,19 @@ os.replace(tmp, ${JSON.stringify(at(out))})
     write('p.in', 'x');
     const steps = [pyStep('p', 'p.out', listing)];
     await run(steps, ['p']);
+    expect((await run(steps, ['p'])).kinds).toEqual({ p: 'fresh' });
     write('folder/two', '');
     expect((await run(steps, ['p'])).kinds).toEqual({ p: 'built' });
+  });
+
+  it('stales a step when a path it probed appears', async () => {
+    write('p.in', 'x');
+    const body = `${rename('p.out')}\nfrom scripts.util.build_stamp import probe\nprobe(Path(${JSON.stringify(at('maybe.txt'))}))`;
+    const steps = [pyStep('p', 'p.out', body)];
+    await run(steps, ['p']);
+    expect((await run(steps, ['p'])).kinds).toEqual({ p: 'fresh' });
+    write('maybe.txt', '');
+    expect((await run(steps, ['p'])).verdicts.get('p')).toEqual({ kind: 'built' });
   });
 
   it('fails a run that writes its own stamp, which only the runner writes', async () => {
