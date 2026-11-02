@@ -127,7 +127,7 @@ scripts/binaries/
                                   duplicates across them.
   __init__.py                     Package marker (see above).
   *-expected.json                 Snapshot pins refreshed with
-                                  UPDATE_BUILD_COUNTS=1: build-binaries
+                                  UPDATE_SNAPSHOTS=1: build-binaries
                                   (per-strategy / per-tier counts),
                                   build-binaries-rates (per-strategy rates —
                                   catches population-mix shifts that don't move
@@ -188,7 +188,7 @@ directly for per-component sanity checks (SIMBAD spectral type,
 absmag-from-Δmag).
 
 Build-time statistics for every phase land in snapshot JSONs, each
-gating the next build via an `UPDATE_BUILD_COUNTS=1` refresh.
+gating the next build via an `UPDATE_SNAPSHOTS=1` refresh.
 
 
 ## Stage 2 — WDS component → Gaia DR3 source_id
@@ -883,4 +883,4 @@ asserts against on every run:
   HIP2 fallback share, …). Catches a regression that shifts the
   population mix without shifting absolute count totals.
 
-Refresh both via `UPDATE_BUILD_COUNTS=1 pnpm run build:binaries`.
+Refresh both via `UPDATE_SNAPSHOTS=1 pnpm run build:binaries`.

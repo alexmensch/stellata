@@ -30,7 +30,6 @@ from scripts.binaries.component_tokens import (  # noqa: E402
 )
 from scripts.util.paths import REPO_ROOT  # noqa: E402
 from scripts.util.snapshot_assert import (  # noqa: E402
-    UPDATE_COUNTS_ENV_VAR,
     assert_or_update_counts,
 )
 
@@ -712,7 +711,7 @@ def run(force: bool) -> int:
     if not assert_or_update_counts(
         stats_to_counts(stats), EXPECTED_COUNTS,
         label="build-runtime-binaries",
-        refresh_command=f"{UPDATE_COUNTS_ENV_VAR}=1 pnpm run build:binaries-runtime",
+        script="build:binaries-runtime",
     ):
         return 1
     write_stamp(BINARIES_BIN_STAMP, inputs, OUTPUTS)

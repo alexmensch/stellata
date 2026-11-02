@@ -15,6 +15,7 @@ const OUT_OF_PIPELINE = /^scripts\/(perf|release|hooks|ci)\//;
 const DATA_PATH_SPELLERS = [
   'scripts/catalog/catalog-inputs.test.ts',
   'scripts/local-group/local-group-inputs.test.ts',
+  'scripts/pipeline/pipeline-tree.ts',
   'tests/citation-index.test.ts',
   'tests/doc-pointer-resolution.test.ts',
   'tests/paper-store-link.test.ts',

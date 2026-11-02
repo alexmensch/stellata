@@ -12,15 +12,15 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from scripts.util.snapshot_assert import (  # noqa: E402
-    UPDATE_COUNTS_ENV_VAR,
+    UPDATE_SNAPSHOTS_ENV_VAR,
     assert_or_update_counts,
     compare_build_counts,
     format_count_diff,
 )
 
 LABEL = "test"
-REFRESH = "UPDATE_BUILD_COUNTS=1 pnpm run build:test"
-KW = {"label": LABEL, "refresh_command": REFRESH}
+REFRESH = "UPDATE_SNAPSHOTS=1 pnpm run build:test"
+KW = {"label": LABEL, "script": "build:test"}
 
 
 class CompareBuildCountsTests(unittest.TestCase):
@@ -72,10 +72,10 @@ class AssertOrUpdateCountsTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as td:
             p = Path(td) / "snapshot.json"
             try:
-                _os.environ[UPDATE_COUNTS_ENV_VAR] = "1"
+                _os.environ[UPDATE_SNAPSHOTS_ENV_VAR] = "1"
                 ok = assert_or_update_counts({"x": 1, "y": 2}, p, **KW)
             finally:
-                _os.environ.pop(UPDATE_COUNTS_ENV_VAR, None)
+                _os.environ.pop(UPDATE_SNAPSHOTS_ENV_VAR, None)
             self.assertTrue(ok)
             written = _json.loads(p.read_text())
         self.assertEqual(written, {"x": 1, "y": 2})
@@ -106,10 +106,10 @@ class AssertOrUpdateCountsTests(unittest.TestCase):
             p = Path(td) / "snapshot.json"
             p.write_text('{"x": 1}\n')
             try:
-                _os.environ[UPDATE_COUNTS_ENV_VAR] = "1"
+                _os.environ[UPDATE_SNAPSHOTS_ENV_VAR] = "1"
                 ok = assert_or_update_counts({"x": 2}, p, **KW)
             finally:
-                _os.environ.pop(UPDATE_COUNTS_ENV_VAR, None)
+                _os.environ.pop(UPDATE_SNAPSHOTS_ENV_VAR, None)
             self.assertTrue(ok)
             written = _json.loads(p.read_text())
         self.assertEqual(written, {"x": 2})

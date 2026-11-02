@@ -54,7 +54,8 @@ same thing — single-use helpers stay with their consumer.
   **No data paths live here**: each is a declaration (`sources/`).
 - `build-stamp.ts` / `build_stamp.py` — the content-hash skip gate
   ([Preprocessor idempotency](../README.md#preprocessor-idempotency)): `fileHashes` maps each file's
-  repo-relative path to its sha1, `null` when absent, so an input's arrival is
+  repo-relative path (relative to a passed root, the runner's tree) to its
+  sha1, `null` when absent, so an input's arrival is
   a change too. A stamp (`build/stamps/<step>.json`) records two such maps:
   the inputs, hashed *before* the build, and every output the build wrote,
   hashed after it. `stampIsCurrent` compares the inputs against the caller's
@@ -72,9 +73,26 @@ same thing — single-use helpers stay with their consumer.
   output tuple and stamp, repo-relative — which `../worktree-seed.test.ts`
   reads. Both pinned by co-located tests
   (`python3 scripts/util/build_stamp.test.py`).
+  `stampPath(name, root)` is `build/stamps/<name>.json` with `:` written `-`
+  (`stepFileName`; `stamp_path` matches).
+  A stamp the runner writes for a Python step also carries `recorded`: the
+  folders it listed (`listingHash`, the same formula on both sides) and the
+  paths it probed, which `recordedChanges` re-checks.
+  `record_run` is how the runner runs a Python step
+  (`../pipeline/run_python_step.py`): Python's audit hook records, under a
+  root, every file the process opens for reading, hashed at its first read
+  (a file the step wrote before reading it is not an input), every
+  directory it lists (`listing_hash`, over the sorted names; the import
+  system's own scans of `sys.path` are not listings), and every file it
+  writes — a rename's target, not its temp file, and not a scratch file it
+  deleted — plus each loaded module, nothing under `.venv` or
+  `__pycache__` included, into a JSON record the runner turns
+  into the step's stamp. An existence check opens nothing, so a step probes
+  through `probe(path)`, which records the answer.
 - `import-closure.ts` / `import-closure-pure.ts` (+ test) — a TypeScript
   build's code inputs. `entryClosure(entries)` is every module the given
-  entry files import, read from an esbuild metafile, so a new import joins
+  entry files import, read from an esbuild metafile (`entryMetafile`, which
+  the runner also reads for an outputs module's imports), so a new import joins
   without anyone listing it; `scriptClosure(names)` is that over the named
   `package.json` scripts, each held by `tsxEntry` to exactly `tsx <file>.ts`,
   so `package.json` is the one place an entry is named and no half of a
@@ -92,9 +110,12 @@ same thing — single-use helpers stay with their consumer.
   clone), and `fileAtMergeBase`, a file as the merge-base holds it — `absent`
   when it is new on the branch, kept apart from `no-merge-base`. The lineage
   header, perf's `gitMeta` and the two merge-base guards read it.
-- `step-inputs.ts` — `stepInputPaths(script)`, every file a `package.json`
-  step reads: the closure of each `tsx` entry it chains, the closure's
-  siblings, and every declaration the closure reads (`sources/`). The
+- `step-inputs.ts` — `entryInputPaths(entries)`, every file a TypeScript
+  step reads: the closure of its entry files, the closure's siblings, and
+  every declaration the closure reads (`sources/`); the runner derives each
+  TypeScript step's inputs with it ([The step table](../pipeline/README.md#the-step-table--stepsts)).
+  `stepInputPaths(script)` is the same over each `tsx` entry a `package.json`
+  script chains. The
   catalogue stamp and `build:local-group`'s up-to-date gate both key on it;
   each step's own suite pins its set
   (`../catalog/catalog-inputs.test.ts`, `../local-group/local-group-inputs.test.ts`).
@@ -138,11 +159,12 @@ same thing — single-use helpers stay with their consumer.
   missing or extra key is a compile error. Family members (a directory plus a
   name pattern — the catalogue's transport chunks) arrive separately in
   `members`, by path, and must match a declared family. Family members a run
-  does not emit are deleted once the new set has landed. A step that can be
-  told to do only some targets (`fetch:ephemerides saturn`), or that leaves a
-  SID registry partition alone when its allocation appended nothing
-  (`build:local-group`, `sid:stamp`), still passes its one full declaration,
-  plus `only`: the run must
+  does not emit are deleted once the new set has landed; `familyMembers` is
+  the one listing of a family on disk, which the runner stamps from too. A
+  step that can be told to do only some targets (`fetch:ephemerides saturn`),
+  or that leaves a SID registry partition alone when its allocation appended
+  nothing (`build:local-group`, `sid:stamp`), still passes its one full
+  declaration, plus `only`: the run must
   emit exactly those keys, and the leftover sweep still covers every declared
   path. A `refresh` check
   (a snapshot under its update flag) stages its own baseline with the outputs.
@@ -167,13 +189,14 @@ same thing — single-use helpers stay with their consumer.
   `build:membership` carry it.
 - `snapshot-check.ts` — `snapshotCheck(spec)`: a build script's computed
   snapshot against its committed JSON, answered as an `emitArtifacts`
-  check — `pass`, `fail`, or `refresh` (the rewritten JSON) when the spec's
-  env var is `1`. It writes nothing itself. A missing snapshot fails too: a
-  deleted `*-expected.json` must fail, not re-baseline itself, so the env var
-  is the only way any snapshot is written, a new one included. Used by `build-catalog.ts` (build counts
-  under `UPDATE_BUILD_COUNTS`, distance outliers under
-  `UPDATE_DISTANCE_OUTLIERS`) and the classic-ID overlay, membership and
-  WGSN builds (`UPDATE_BUILD_COUNTS`). The count snapshots all pass
+  check — `pass`, `fail`, or `refresh` (the rewritten JSON) when
+  `UPDATE_SNAPSHOTS` (`UPDATE_SNAPSHOTS_ENV`) is `1`, the variable the
+  runner's `--update-snapshots` sets. It writes nothing itself. A missing
+  snapshot fails too: a deleted `*-expected.json` must fail, not re-baseline
+  itself, so the variable is the only way any snapshot is written, a new one
+  included. One variable refreshes every snapshot a run reaches. Used by
+  `build-catalog.ts` (build counts and distance outliers) and the classic-ID
+  overlay, membership and WGSN builds. The count snapshots all pass
   `compareCountSnapshot` (`catalog/build-counts.ts`) as the compare.
   `snapshot-check.test.ts` pins pass, drift, missing and refresh.
 - `snapshot_assert.py` — the Python sibling, for the two binaries steps
@@ -182,7 +205,7 @@ same thing — single-use helpers stay with their consumer.
   primitives). A leaf on purpose: `build_stamp.py` hashes every module a
   step imports, so the runtime step reaching this through `stage7_counts`
   would restamp `binaries.bin` on every pipeline-stage edit. Same rule
-  on a missing snapshot: it fails, and only `UPDATE_BUILD_COUNTS=1`
+  on a missing snapshot: it fails, and only `UPDATE_SNAPSHOTS=1`
   writes one. Returns a bool where the TS sibling returns an `emitArtifacts` check, since the Python
   drivers own their exit.
   Pinned by `snapshot_assert.test.py`.
