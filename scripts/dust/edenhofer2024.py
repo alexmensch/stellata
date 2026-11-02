@@ -93,17 +93,20 @@ def _md5(path: Path) -> str:
 
 
 def pull(variant: str) -> None:
-    """Download the variant into dustmaps' data directory, check its md5 is
-    the identity's, then write the identity file."""
+    """Download the variant into dustmaps' data directory unless it is already
+    there and intact, check its md5 is the identity's, then write the
+    identity file. Zenodo is reported as answering only when it was asked."""
     sys.path.insert(0, str(REPO_ROOT))
     import dustmaps.edenhofer2023
 
     from scripts.util.build_stamp import report_service
 
     spec = VARIANTS[variant]
-    dustmaps.edenhofer2023.fetch(fetch_2kpc=variant == "2kpc")
-    report_service(SERVICE)
     downloaded = cached_file(variant)
+    cached = downloaded.exists() and _md5(downloaded) == spec["md5"]
+    dustmaps.edenhofer2023.fetch(fetch_2kpc=variant == "2kpc")
+    if not cached:
+        report_service(SERVICE)
     if _md5(downloaded) != spec["md5"]:
         sys.exit(f"{downloaded} is not md5 {spec['md5']}: dustmaps fetched another dataset than VARIANTS names.")
     out = identity_path(variant)
