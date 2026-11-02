@@ -30,16 +30,29 @@ const NOT_YET_MIGRATED: Readonly<Record<Ref, string>> = {
 
 const DECLARATION = /^(export )?const (\w+) = declareOutputs\(/gm;
 
-function declaredConstants(): { ref: Ref; exported: boolean }[] {
-  const found: { ref: Ref; exported: boolean }[] = [];
+const CALL = /\bdeclareOutputs\(/g;
+const DEFINITION = 'scripts/util/emit-artifacts.ts';
+
+interface Scan {
+  readonly constants: readonly { ref: Ref; exported: boolean }[];
+  readonly unparsed: readonly string[];
+}
+
+function scan(): Scan {
+  const constants: { ref: Ref; exported: boolean }[] = [];
+  const unparsed: string[] = [];
   for (const file of walkFiles(`${REPO_ROOT}/scripts`, { include: isProductionTs })) {
     const module = relative(REPO_ROOT, file);
-    for (const m of readFileSync(file, 'utf8').matchAll(DECLARATION)) {
-      found.push({ ref: `${module}#${m[2]}`, exported: m[1] !== undefined });
-    }
+    if (module === DEFINITION) continue;
+    const text = readFileSync(file, 'utf8');
+    const matches = [...text.matchAll(DECLARATION)];
+    if (matches.length !== [...text.matchAll(CALL)].length) unparsed.push(module);
+    for (const m of matches) constants.push({ ref: `${module}#${m[2]}`, exported: m[1] !== undefined });
   }
-  return found;
+  return { constants, unparsed };
 }
+
+const declaredConstants = (): Scan['constants'] => scan().constants;
 
 const tableRefs = new Set<Ref>(STEPS.steps.flatMap((s) => (
   s.kind === 'build' && s.language === 'ts' ? [`${s.outputs.module}#${s.outputs.name}` as Ref] : []
@@ -48,6 +61,7 @@ const excludedRefs = new Set<Ref>(Object.values(EXCLUDED).flat());
 
 describe('declareOutputs coverage', () => {
   it('finds every constant, each exported so the table can name it', () => {
+    expect(scan().unparsed).toEqual([]);
     const found = declaredConstants();
     expect(found.length).toBeGreaterThan(tableRefs.size);
     expect(found.filter((c) => !c.exported).map((c) => c.ref)).toEqual([]);
