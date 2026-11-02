@@ -30,7 +30,7 @@ const RUN_PYTHON_STEP = resolve(REPO_ROOT, 'scripts/pipeline/run_python_step.py'
 export type Verdict =
   | { readonly kind: 'fresh' }
   | { readonly kind: 'built' }
-  | { readonly kind: 'stale'; readonly command: string; readonly changed: readonly string[] }
+  | { readonly kind: 'stale'; readonly changed: readonly string[] }
   | { readonly kind: 'failed'; readonly reason: string }
   | { readonly kind: 'skipped'; readonly behind: string };
 
@@ -95,8 +95,7 @@ class Run {
     });
     if (!isBuild(step)) {
       try {
-        const fresh = manualFreshness(step, resolved.outputs, this.tree);
-        return fresh.kind === 'fresh' ? fresh : { kind: 'stale', command: step.command, changed: fresh.changed };
+        return manualFreshness(step, resolved.outputs, this.tree);
       } finally {
         await held.release();
       }
@@ -155,7 +154,7 @@ function describeVerdict(name: string, verdict: Verdict): string {
   switch (verdict.kind) {
     case 'fresh': return `· ${name} fresh`;
     case 'built': return `✓ ${name} built`;
-    case 'stale': return `✗ ${name} stale (${verdict.changed.join(', ')}): run pnpm run ${verdict.command}`;
+    case 'stale': return `✗ ${name} stale (${verdict.changed.join(', ')}): run pnpm run ${name}`;
     case 'failed': return `✗ ${name} failed: ${verdict.reason}`;
     case 'skipped': return `– ${name} skipped behind ${verdict.behind}`;
   }

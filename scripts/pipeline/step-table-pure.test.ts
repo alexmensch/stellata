@@ -23,7 +23,7 @@ function py(name: string, outputs: string[], after: string[]): ResolvedStep {
 
 function pull(name: string, outputs: string[], reads: string[]): ResolvedStep {
   return {
-    step: { name, kind: 'pull', language: 'python', entry: `/r/${name}.py`, outputs, command: `refresh:${name}` },
+    step: { name, kind: 'pull', language: 'python', entry: `/r/${name}.py`, outputs },
     outputs: { files: outputs, families: [] },
     reads,
   };

@@ -68,7 +68,7 @@ if sys.argv[1:] == ["--describe"]:
 `);
   write(out, 'pulled');
   writeManualStamp(name, out, request, queryText);
-  return { name, kind: 'pull', language: 'python', entry: at(`steps/${name}.py`), outputs: [at(out)], command: `refresh:${name}` };
+  return { name, kind: 'pull', language: 'python', entry: at(`steps/${name}.py`), outputs: [at(out)] };
 }
 
 function writeManualStamp(name: string, out: string, request: string, queryText: string): void {
@@ -89,7 +89,7 @@ if sys.argv[1:] == ["--describe"]:
     print(json.dumps({"query": "SELECT *", "services": ["esa"], "request": lines}))
 `);
   write(out, 'pulled');
-  return { name, kind: 'pull', language: 'python', entry: at(`steps/${name}.py`), outputs: [at(out)], command: `refresh:${name}` };
+  return { name, kind: 'pull', language: 'python', entry: at(`steps/${name}.py`), outputs: [at(out)] };
 }
 
 function writeDerivedStamp(name: string, out: string, manifest: string, request: string[]): void {
@@ -222,7 +222,7 @@ describe('runSteps — manual steps', () => {
     write('req.tsv', 'r2');
     const result = await run(steps, ['reader', 'other']);
     expect(result.kinds).toEqual({ astro: 'stale', reader: 'skipped', other: 'fresh' });
-    expect(result.lines).toContain('✗ astro stale (req.tsv): run pnpm run refresh:astro');
+    expect(result.lines).toContain('✗ astro stale (req.tsv): run pnpm run astro');
     expect(result.status).toBe(1);
   });
 
@@ -266,8 +266,29 @@ describe('runSteps — manual steps', () => {
     write('req.tsv', 'r1');
     const steps = [pullStep('astro', 'astro.tsv', 'req.tsv')];
     const stampFile = pipelineTree(root).manualStamp('astro');
-    writeFileSync(stampFile, JSON.stringify({ ...JSON.parse(readFileSync(stampFile, 'utf8')), answeredBy: 'ari', release: 'DR3' }));
+    writeFileSync(stampFile, JSON.stringify({ ...JSON.parse(readFileSync(stampFile, 'utf8')), answeredBy: ['ari'], release: 'DR3' }));
     expect((await run(steps, ['astro'])).kinds).toEqual({ astro: 'fresh' });
+  });
+
+  it('stales a describing bake only when the projection of the file it reads moves', async () => {
+    write('steps/bake.py', `
+import json, sys
+from pathlib import Path
+if sys.argv[1:] == ["--describe"]:
+    shape = json.loads(Path(${JSON.stringify(at('clouds.json'))}).read_text())["shape"]
+    print(json.dumps({"request": [shape], "requestFrom": ["clouds.json"]}))
+`);
+    write('surfaces.bin', 'baked');
+    write('clouds.json', '{"shape": "ellipse", "sid": 1}');
+    const step: StepEntry = { name: 'bake', kind: 'bake', describes: true, language: 'python', entry: at('steps/bake.py'), outputs: [at('surfaces.bin')] };
+    write(relative(root, pipelineTree(root).manualStamp('bake')), JSON.stringify({
+      inputs: {}, outputs: fileHashes([at('surfaces.bin')], root), request: requestHash(['ellipse']), requestFrom: ['clouds.json'],
+    }));
+    expect((await run([step], ['bake'])).kinds).toEqual({ bake: 'fresh' });
+    write('clouds.json', '{"shape": "ellipse", "sid": 2}');
+    expect((await run([step], ['bake'])).kinds).toEqual({ bake: 'fresh' });
+    write('clouds.json', '{"shape": "torus", "sid": 2}');
+    expect((await run([step], ['bake'])).verdicts.get('bake')).toEqual({ kind: 'stale', changed: ['(request)'] });
   });
 
   it('never runs a manual step under --force', async () => {

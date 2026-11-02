@@ -31,13 +31,27 @@ export interface PythonBuildStep extends StepBase {
   readonly snapshots: readonly string[];
 }
 
-export interface ManualStep extends StepBase {
-  readonly kind: 'pull' | 'bake';
+/** A pull always describes itself; a bake does only when it reads a file
+ *  through a projection of it (`--describe` prints the projection). */
+type ManualKind =
+  | { readonly kind: 'pull' }
+  | { readonly kind: 'bake'; readonly describes: boolean };
+
+export type PythonManualStep = StepBase & ManualKind & {
   readonly language: 'python';
   readonly outputs: readonly string[];
-  /** The `package.json` script the stop message prints. */
-  readonly command: string;
-}
+  readonly families?: readonly OutputFamily[];
+};
+
+export type TsManualStep = StepBase & ManualKind & {
+  readonly language: 'ts';
+  readonly outputs: OutputsRef;
+};
+
+/** Named for its `package.json` script, which runs it through `record.ts`. */
+export type ManualStep = PythonManualStep | TsManualStep;
+
+export const describesItself = (step: ManualStep): boolean => step.kind === 'pull' || step.describes;
 
 export type BuildStep = TsBuildStep | PythonBuildStep;
 export type StepEntry = BuildStep | ManualStep;

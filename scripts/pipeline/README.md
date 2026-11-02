@@ -53,11 +53,13 @@ That read is the registry loop below.
 
 ## The step table — `steps.ts`
 
-One entry per step: `name`, `kind`, `entry` (the file the step runs) and,
-for a manual step, `command` (what the stop message prints). A command is
-always a `package.json` script, checked by a test, so the three pulls with no
-target today (`refresh-simbad-sptype.py`, `refresh-simbad-wds-xids.py`,
-`refresh-msc.py`) gain one. `package.json`
+One entry per step: `name`, `kind`, `language`, `entry` (the file the step
+runs) and its outputs. A manual step is named for its `package.json` script,
+which is what the stop message prints and what runs it by hand, so the three
+pulls with no target before (`refresh-simbad-sptype.py`,
+`refresh-simbad-wds-xids.py`, `refresh-msc.py`) gain one. A TypeScript manual
+step (the two Horizons fetchers) names its `declareOutputs` constant as a
+TypeScript build does; a Python one lists its files, plus any families. `package.json`
 keeps one-line targets that call the runner (`build:data` →
 `run.ts data`); it no longer names step entry files, so
 `import-closure-pure.ts`'s `tsxEntry` reads `steps.ts` instead.
@@ -341,14 +343,16 @@ Hand-kept lists become derivations over the table:
   each manual step's record for its inputs, then `deriveGraph`. A
   TypeScript step's inputs come from the injected `deriveInputs`;
   `run.ts` passes `util/step-inputs.ts`'s `entryInputPaths`.
-- `freshness.ts` — the one stamp test per kind: a TypeScript build's inputs
-  derived now, a Python build's recorded inputs, listings and probes
-  re-hashed, a manual step's committed record plus, for a pull, its
-  `--describe` (`describePull`, run under `python3 -I -S`) hashed as
-  `pullQueryHash` (query text and service list) and `requestHash` (the
-  derived request list). Every kind is also stale when a recorded output
-  moved or a declared output is missing from the record. Writers of a pull's
-  record use the same two hash functions.
+- `freshness.ts` (+ test) — the one stamp test per kind: a TypeScript
+  build's inputs derived now, a Python build's recorded inputs, listings and
+  probes re-hashed, a manual step's committed record plus, for a step that
+  describes itself (every pull, and a bake that reads a projection), its
+  `--describe` (`describeStep`: `python3 -I -S`, or `tsx` for a TypeScript
+  step), parsed into a `Description` and hashed as `pullQueryHash` (query text
+  and service list) and `requestHash` (the derived request list). Every kind
+  is also stale when a recorded output moved or a declared output is missing
+  from the record. `writeManualRecord` is `readManualRecord`'s encoder, the
+  one writer of `data/stamps/`.
 - `python-run-pure.ts` (tested through `runner.test.ts`) — `recordProblems`: a
   write outside the declared outputs and snapshots, or a read, listing or
   probe of another step's output with no path from that step in the graph.

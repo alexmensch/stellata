@@ -3,46 +3,52 @@
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { existsSync } from 'node:fs';
+import { resolve } from 'node:path';
 
 import {
   asStamp, changedSince, readStamp, readStampJson, recordedChanges, type FileHashes, type Stamp,
 } from '../util/build-stamp';
+import { REPO_ROOT } from '../util/paths';
+import { landStaged, writeStaged } from '../util/staged-write';
 import type { PipelineTree } from './pipeline-tree';
-import type { ManualStep, OutputClaims } from './step-table-pure';
+import { describesItself, type ManualStep, type OutputClaims } from './step-table-pure';
 
 export type Freshness =
   | { readonly kind: 'fresh' }
   | { readonly kind: 'stale'; readonly changed: readonly string[] };
 
-/** A manual step's committed record, by the step's kind. A pull's `requestFrom`
- *  files order it after their writers but count only through `request`. */
+interface Projected {
+  readonly request?: string;
+  readonly requestFrom: readonly string[];
+}
+
+/** A manual step's committed record, by the step's kind. */
 export type ManualRecord =
-  | { readonly kind: 'bake'; readonly stamp: Stamp }
-  | {
+  | ({ readonly kind: 'bake'; readonly stamp: Stamp } & Projected)
+  | ({
     readonly kind: 'pull';
     readonly stamp: Stamp;
     readonly query: string;
-    readonly request?: string;
-    readonly requestFrom: readonly string[];
-    readonly answeredBy?: string;
+    readonly answeredBy: readonly string[];
     readonly release?: string;
-  };
+  } & Projected);
 
 export type ManualRead =
   | { readonly kind: 'absent' }
   | { readonly kind: 'unreadable' }
   | { readonly kind: 'read'; readonly record: ManualRecord };
 
-/** What a pull prints under `--describe`, with no network call. */
-export interface PullDescription {
-  readonly query: string;
-  readonly services: readonly string[];
-  readonly request?: readonly string[];
-}
+/** What a manual step prints under `--describe`, with no network call. A bake
+ *  prints only its projection. */
+export type Description =
+  | { readonly kind: 'pull'; readonly query: string; readonly services: readonly string[]; readonly release?: string; readonly request?: readonly string[]; readonly requestFrom: readonly string[] }
+  | { readonly kind: 'bake'; readonly request?: readonly string[]; readonly requestFrom: readonly string[] };
 
 const sha1 = (text: string): string => createHash('sha1').update(text).digest('hex');
 
-export const pullQueryHash = ({ query, services }: PullDescription): string => sha1(JSON.stringify([query, services]));
+export const pullQueryHash = ({ query, services }: { readonly query: string; readonly services: readonly string[] }): string => (
+  sha1(JSON.stringify([query, services]))
+);
 export const requestHash = (request: readonly string[]): string => sha1(request.join('\n'));
 
 function verdict(changed: readonly string[]): Freshness {
@@ -70,34 +76,55 @@ export function recordedFreshness(stampFile: string, outputs: OutputClaims, tree
   return verdict([...changedSince(stamp.inputs, tree.root), ...stampChanges(stamp, outputs, tree)]);
 }
 
+const isStrings = (value: unknown): value is string[] => Array.isArray(value) && value.every((v) => typeof v === 'string');
 const optionalString = (value: unknown): string | undefined => (typeof value === 'string' ? value : undefined);
 
 export function readManualRecord(step: ManualStep, stampFile: string): ManualRead {
   const json = readStampJson(stampFile);
   if (json === null) return { kind: existsSync(stampFile) ? 'unreadable' : 'absent' };
   const stamp = asStamp(json);
-  if (stamp === null) return { kind: 'unreadable' };
-  if (step.kind === 'bake') return { kind: 'read', record: { kind: 'bake', stamp } };
-  const { query, requestFrom = [] } = json;
-  if (typeof query !== 'string' || !Array.isArray(requestFrom)) return { kind: 'unreadable' };
+  const { requestFrom = [], answeredBy = [] } = json;
+  if (stamp === null || !isStrings(requestFrom)) return { kind: 'unreadable' };
+  const projected = { request: optionalString(json.request), requestFrom };
+  if (step.kind === 'bake') return { kind: 'read', record: { kind: 'bake', stamp, ...projected } };
+  if (typeof json.query !== 'string' || !isStrings(answeredBy)) return { kind: 'unreadable' };
   return {
     kind: 'read',
-    record: {
-      kind: 'pull',
-      stamp,
-      query,
-      request: optionalString(json.request),
-      requestFrom: requestFrom.map(String),
-      answeredBy: optionalString(json.answeredBy),
-      release: optionalString(json.release),
-    },
+    record: { kind: 'pull', stamp, query: json.query, answeredBy, release: optionalString(json.release), ...projected },
   };
 }
 
-export function describePull(entry: string): PullDescription {
-  const run = spawnSync('python3', ['-I', '-S', entry, '--describe'], { encoding: 'utf8' });
-  if (run.status !== 0) throw new Error(`${entry} --describe exited ${run.status}: ${run.stderr.trim()}`);
-  return JSON.parse(run.stdout) as PullDescription;
+/** The committed form `readManualRecord` reads back; landed by rename, so a
+ *  record on disk is whole or absent. */
+export function writeManualRecord(stampFile: string, record: ManualRecord): void {
+  const { kind: _, stamp, ...fields } = record;
+  writeStaged(stampFile, `${JSON.stringify({ ...stamp, ...fields }, null, 2)}\n`);
+  landStaged(stampFile);
+}
+
+function parseDescription(step: ManualStep, text: string): Description {
+  const json = JSON.parse(text) as Record<string, unknown>;
+  const { request, requestFrom = [] } = json;
+  if ((request !== undefined && !isStrings(request)) || !isStrings(requestFrom)) {
+    throw new Error(`${step.name} --describe: request and requestFrom must be string lists`);
+  }
+  if (step.kind === 'bake') return { kind: 'bake', request, requestFrom };
+  const { query, services } = json;
+  if (typeof query !== 'string' || !isStrings(services) || services.length === 0) {
+    throw new Error(`${step.name} --describe: a pull states its query and at least one service`);
+  }
+  return { kind: 'pull', query, services, release: optionalString(json.release), request, requestFrom };
+}
+
+const TSX = resolve(REPO_ROOT, 'node_modules/.bin/tsx');
+
+/** Python describes under `-I -S`, so its describe path imports the standard library only. */
+export function describeStep(step: ManualStep, tree: PipelineTree): Description {
+  const entry = tree.abs(step.entry);
+  const [command, args] = step.language === 'python' ? ['python3', ['-I', '-S', entry]] : [TSX, [entry]];
+  const run = spawnSync(command, [...args, '--describe'], { encoding: 'utf8' });
+  if (run.status !== 0) throw new Error(`${step.entry} --describe exited ${run.status}: ${run.stderr.trim()}`);
+  return parseDescription(step, run.stdout);
 }
 
 export function manualFreshness(step: ManualStep, outputs: OutputClaims, tree: PipelineTree): Freshness {
@@ -105,9 +132,9 @@ export function manualFreshness(step: ManualStep, outputs: OutputClaims, tree: P
   if (read.kind !== 'read') return { kind: 'stale', changed: [`(${read.kind === 'absent' ? 'no' : 'unreadable'} stamp)`] };
   const { record } = read;
   const changed = [...changedSince(record.stamp.inputs, tree.root), ...stampChanges(record.stamp, outputs, tree)];
-  if (record.kind === 'pull') {
-    const now = describePull(tree.abs(step.entry));
-    if (pullQueryHash(now) !== record.query) changed.push('(query)');
+  if (describesItself(step)) {
+    const now = describeStep(step, tree);
+    if (now.kind === 'pull' && record.kind === 'pull' && pullQueryHash(now) !== record.query) changed.push('(query)');
     if ((now.request ? requestHash(now.request) : undefined) !== record.request) changed.push('(request)');
   }
   return verdict(changed);

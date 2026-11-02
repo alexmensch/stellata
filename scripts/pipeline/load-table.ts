@@ -55,7 +55,10 @@ function isDeclaredOutputs(value: unknown): value is DeclaredOutputs {
 }
 
 async function outputClaims(step: StepEntry, tree: PipelineTree): Promise<OutputClaims> {
-  if (step.kind !== 'build' || step.language !== 'ts') return { files: step.outputs.map(tree.abs), families: [] };
+  if (step.language === 'python') {
+    const families = step.kind === 'build' ? [] : (step.families ?? []).map((f) => ({ ...f, dir: tree.abs(f.dir) }));
+    return { files: step.outputs.map(tree.abs), families };
+  }
   const ref = step.outputs;
   const declared = (await import(tree.abs(ref.module)) as Record<string, unknown>)[ref.name];
   if (!isDeclaredOutputs(declared)) throw new Error(`${ref.module} exports no declareOutputs constant ${ref.name}`);
@@ -88,7 +91,7 @@ async function readsOf(step: StepEntry, tree: PipelineTree, options: LoadOptions
 
 export async function loadTable(table: StepTable, options: LoadOptions): Promise<Loaded> {
   const tree = pipelineTree(options.root);
-  const refs = table.steps.flatMap((s) => (s.kind === 'build' && s.language === 'ts' ? [s.outputs] : []));
+  const refs = table.steps.flatMap((s) => (s.language === 'ts' ? [s.outputs] : []));
   const impure = await impureOutputsModules(refs, tree);
   if (impure.length > 0) return { kind: 'rejected', problems: impure };
 
