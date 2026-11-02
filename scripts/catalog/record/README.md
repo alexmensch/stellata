@@ -324,14 +324,14 @@ xrefs, binary inference output, CCDM doubles, name-table entries,
 search-index entries, etc.) against
 `scripts/catalog/build-catalog-expected.json` before any output lands. A
 deliberate change refreshes the snapshot with
-`UPDATE_SNAPSHOTS=1 pnpm run build:catalog`; an unintended drift
+`pnpm run build:catalog --update-snapshots`; an unintended drift
 exits non-zero with a per-key diff and leaves `public/`, `build/` and the
 committed ledgers as they were. `scripts/catalog/build-counts.ts` carries
 the pure comparator + formatter and has its own vitest coverage; the
 check-or-rewrite side is `snapshotCheck` in `../../util/snapshot-check.ts`.
-`UPDATE_SNAPSHOTS=1` forces a rebuild even
-when the sources are unchanged, so an up-to-date tree can still refresh a
-snapshot. The stamp's code inputs are the build's import closure plus the
+A fresh catalogue is skipped, so an up-to-date tree refreshes with
+`--force --update-snapshots`; `--force` reaches every step upstream too.
+The stamp's code inputs are the build's import closure plus the
 non-code files beside it (`../../util/step-inputs.ts`), so editing any module the
 build imports — `src/client/` ones included — or either snapshot invalidates
 the artifact.

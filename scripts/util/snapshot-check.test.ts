@@ -3,7 +3,9 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import { UPDATE_SNAPSHOTS_ENV as ENV, snapshotCheck, type SnapshotCheckSpec } from './snapshot-check';
+import {
+  PIPELINE_STEP_ENV, UPDATE_SNAPSHOTS_ENV as ENV, snapshotCheck, type SnapshotCheckSpec,
+} from './snapshot-check';
 
 describe('snapshotCheck', () => {
   let dir: string;
@@ -40,6 +42,17 @@ describe('snapshotCheck', () => {
     const check = snapshotCheck(spec({ n: 2 }));
     expect(check.kind).toBe('fail');
     expect(check.kind === 'fail' && check.message).toContain(`${ENV}=1 pnpm run build`);
+  });
+
+  it('names the runner flag when the runner runs the step, since it drops the inherited variable', () => {
+    writeFileSync(path, JSON.stringify({ n: 1 }));
+    process.env[PIPELINE_STEP_ENV] = 'build';
+    try {
+      const check = snapshotCheck(spec({ n: 2 }));
+      expect(check.kind === 'fail' && check.message).toContain('pnpm run build --update-snapshots');
+    } finally {
+      delete process.env[PIPELINE_STEP_ENV];
+    }
   });
 
   it('fails on a missing snapshot without the update flag', () => {

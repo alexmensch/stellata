@@ -70,7 +70,7 @@ scripts/catalog/naming/
                                 constellation table, which an outputs module
                                 may not. Side-effect free.
   wgsn-expected.json            Pinned count snapshot
-                                (UPDATE_SNAPSHOTS=1 refreshes).
+                                (--update-snapshots refreshes).
   manifest-naming-expected.json The manifest's naming figures — the residual
                                 gate's and the Bayer coverage — pinned by
                                 ../membership/membership-manifest-gate.test.ts,

@@ -187,7 +187,11 @@ same thing — single-use helpers stay with their consumer.
   runner's `--update-snapshots` sets. It writes nothing itself. A missing
   snapshot fails too: a deleted `*-expected.json` must fail, not re-baseline
   itself, so the variable is the only way any snapshot is written, a new one
-  included. One variable refreshes every snapshot a run reaches. Used by
+  included. One variable refreshes every snapshot a run reaches. A drift
+  message names the refresh command: `pnpm run <step> --update-snapshots`
+  when `PIPELINE_STEP` is set (the runner sets it to each step it runs, and
+  drops an inherited `UPDATE_SNAPSHOTS`), the variable form otherwise;
+  `snapshot_assert.py` does the same. Used by
   `build-catalog.ts` (build counts and distance outliers) and the classic-ID
   overlay, membership and WGSN builds. The count snapshots all pass
   `compareCountSnapshot` (`catalog/build-counts.ts`) as the compare.

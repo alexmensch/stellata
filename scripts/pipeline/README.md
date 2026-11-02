@@ -255,7 +255,8 @@ lands with it; `run.ts` rejects it until then.
 - **`--update-snapshots`** is the one way a count snapshot is rewritten: it
   sets `UPDATE_SNAPSHOTS=1` for each step it runs, the one variable
   `snapshotCheck` and `snapshot_assert.py` read. A forced rebuild therefore
-  still checks counts.
+  still checks counts. Every step it runs also gets `PIPELINE_STEP` set to
+  its name, so a drift message names this flag rather than the variable.
 - **`--verify-committed`** forces each selected step, then fails on any diff
   in its declared outputs that git tracks (`git ls-files` over the declared
   paths decides which are committed; the declaration carries no committed

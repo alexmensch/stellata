@@ -129,7 +129,7 @@ scripts/catalog/classic-ids/
                                   one (label-merge/README.md#what-a-freed-number-costs).
   classic-id-overlay-expected.json
                                   Pinned count snapshot. Refresh with
-                                  UPDATE_SNAPSHOTS=1.
+                                  --update-snapshots.
 ```
 
 ## Join routes

@@ -10,7 +10,7 @@ import {
 } from '../util/build-stamp';
 import { stampedMembers } from '../util/emit-artifacts';
 import { REPO_ROOT } from '../util/paths';
-import { UPDATE_SNAPSHOTS_ENV } from '../util/snapshot-check';
+import { PIPELINE_STEP_ENV, UPDATE_SNAPSHOTS_ENV } from '../util/snapshot-check';
 import {
   derivedFreshness, manualFreshness, recordedFreshness,
   type Freshness,
@@ -121,7 +121,7 @@ class Run {
     if (freshness.kind === 'fresh' && !this.options.force) return freshness;
 
     clearStamp(stampFile);
-    const env = { ...process.env };
+    const env: NodeJS.ProcessEnv = { ...process.env, [PIPELINE_STEP_ENV]: step.name };
     if (this.options.updateSnapshots) env[UPDATE_SNAPSHOTS_ENV] = '1';
     else delete env[UPDATE_SNAPSHOTS_ENV];
     const entry = tree.abs(step.entry);

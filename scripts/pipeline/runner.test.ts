@@ -47,7 +47,7 @@ if (existsSync(${JSON.stringify(at(`fail-${name}`))})) process.exit(3);
 const body = ${JSON.stringify(inputs.map(at))}.map((p) => readFileSync(p, 'utf8')).join('+');
 Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ${sleepMs});
 writeFileSync(${JSON.stringify(at(out))}, ${JSON.stringify(name)} + '(' + body + ')' + (process.env.UPDATE_SNAPSHOTS ?? ''));
-appendFileSync(${JSON.stringify(log())}, ${JSON.stringify(name)} + '\\n');
+appendFileSync(${JSON.stringify(log())}, (process.env.PIPELINE_STEP ?? '(unnamed)') + '\\n');
 `);
   write(`steps/${name}-outputs.ts`, `
 import { declareOutputs } from ${JSON.stringify(EMIT_ARTIFACTS)};
@@ -187,6 +187,12 @@ export const OUT = declareOutputs({ out: ${JSON.stringify(at('f.out'))} }, [
     await run(steps, ['b']);
     expect((await run(steps, ['b'], { force: true })).kinds).toEqual({ a: 'built', b: 'built' });
     expect(builds()).toEqual(['a', 'b', 'a', 'b']);
+  });
+
+  it('names each step it runs in PIPELINE_STEP', async () => {
+    write('a.in', 'x');
+    await run([tsStep('a', 'a.out', ['a.in']), tsStep('b', 'b.out', ['a.out'])], ['b']);
+    expect(builds()).toEqual(['a', 'b']);
   });
 
   it('--update-snapshots sets UPDATE_SNAPSHOTS for each step it runs', async () => {

@@ -131,7 +131,7 @@ scripts/binaries/
                                   duplicates across them.
   __init__.py                     Package marker (see above).
   *-expected.json                 Snapshot pins refreshed with
-                                  UPDATE_SNAPSHOTS=1: build-binaries
+                                  --update-snapshots: build-binaries
                                   (per-strategy / per-tier counts),
                                   build-binaries-rates (per-strategy rates —
                                   catches population-mix shifts that don't move
@@ -887,4 +887,4 @@ asserts against on every run:
   HIP2 fallback share, …). Catches a regression that shifts the
   population mix without shifting absolute count totals.
 
-Refresh both via `UPDATE_SNAPSHOTS=1 pnpm run build:binaries`.
+Refresh both via `pnpm run build:binaries --update-snapshots` (with `--force` when the step is fresh).
