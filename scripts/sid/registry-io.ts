@@ -7,7 +7,7 @@ import type { EventRow } from './events-pure';
 import { EVENTS } from './events-tsv';
 import { REASON_CODES } from '../catalog/lineage/reason-codes-tsv';
 import { REGISTRY_PARTITIONS, registryKeys, type RegistryKey, type RegistryPartition } from './registry-partitions-pure';
-import { unionLedger, validateRegistry } from './registry-pure';
+import { unionLedger, validateRegistry, type PartitionRows } from './registry-pure';
 import { computeLedgerHead, type LedgerRow, type SameasEdge } from './sid-pure';
 import { loadStoredEdges } from './stored-edges';
 
@@ -19,22 +19,31 @@ export interface Registry {
   storedEdges: SameasEdge[];
 }
 
+type RegistryUnion = Pick<Registry, 'ledger' | 'events'>;
+
+const readPartitions = (): PartitionRows[] => REGISTRY_PARTITIONS.map((partition) => ({
+  partition,
+  ledger: readArtifact(LEDGERS[partition]),
+  events: readArtifact(EVENTS[partition]),
+}));
+
+const unionOf = (parts: readonly PartitionRows[]): RegistryUnion => (
+  { ledger: unionLedger(parts), events: parts.flatMap((p) => p.events) }
+);
+
+/** Every partition's ledger rows and events, unvalidated: for a reader that only looks SIDs up. */
+export function readRegistryUnion(): RegistryUnion {
+  return unionOf(readPartitions());
+}
+
 export function loadRegistry(): Registry {
-  const parts = REGISTRY_PARTITIONS.map((partition) => ({
-    partition,
-    ledger: readArtifact(LEDGERS[partition]),
-    events: readArtifact(EVENTS[partition]),
-  }));
+  const parts = readPartitions();
   const codes = new Set(readArtifact(REASON_CODES).map((e) => e.code));
   const errors = validateRegistry(parts, (code) => codes.has(code));
   if (errors.length > 0) {
     throw new Error(`SID registry is structurally invalid:\n  ${errors.join('\n  ')}`);
   }
-  return {
-    ledger: unionLedger(parts),
-    events: parts.flatMap((p) => p.events),
-    storedEdges: loadStoredEdges(),
-  };
+  return { ...unionOf(parts), storedEdges: loadStoredEdges() };
 }
 
 /** The date and build version this run's mints and events carry. */
