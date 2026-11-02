@@ -22,7 +22,7 @@ import { DEFAULT_CATALOG_MANIFEST } from '../scripts/catalog/catalog-paths-pure'
 import { MULTIPLES_TSV } from '../scripts/binaries/multiples-tsv';
 
 const BINARIES_BIN = resolve(REPO_ROOT, 'public/binaries.bin');
-const BINARIES_BIN_STAMP = stampPath('binaries-bin');
+const BINARIES_BIN_STAMP = stampPath('build:binaries-runtime');
 const REBUILD = 'pnpm run build:binaries-runtime';
 
 const catalogBuilt = existsSync(DEFAULT_CATALOG_MANIFEST);

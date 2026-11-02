@@ -3,7 +3,6 @@
 import { existsSync, readdirSync, rmSync } from 'node:fs';
 import { basename, dirname, resolve } from 'node:path';
 
-import { fileHashes, writeStamp, type FileHashes } from './build-stamp';
 import {
   STAGING_SUFFIX, discardStaged, landStaged, writeStaged,
 } from './staged-write';
@@ -52,8 +51,6 @@ interface EmissionBase<K extends string> {
   /** Family members, keyed by absolute path. */
   readonly members?: ReadonlyMap<string, ArtifactContents>;
   readonly checks?: readonly Check[];
-  /** Written last, over exactly the emitted files. */
-  readonly stamp?: { readonly path: string; readonly inputs: FileHashes };
 }
 
 export interface Emission<K extends string> extends EmissionBase<K> {
@@ -127,7 +124,7 @@ export function emitArtifacts<K extends string, E extends K>(emission: NarrowedE
 export function emitArtifacts<K extends string>(
   emission: Emission<K> | NarrowedEmission<K, K>,
 ): void {
-  const { outputs, checks = [], stamp } = emission;
+  const { outputs, checks = [] } = emission;
   const keyed = Object.entries<ArtifactContents>(emission.files);
   const members = [...(emission.members ?? new Map())].map(([p, c]) => [resolve(p), c] as const);
   const expected = 'only' in emission ? emission.only : Object.keys(outputs.files);
@@ -163,13 +160,6 @@ export function emitArtifacts<K extends string>(
     }
   }
   for (const r of refreshes) console.log(`Updated ${r.path}`);
-  if (stamp) {
-    writeStamp(
-      stamp.path,
-      rehashWritten(stamp.inputs, [...files.keys(), ...refreshes.map((r) => r.path)]),
-      [...declared.map(([p]) => p), ...stampedMembers(outputs.families)],
-    );
-  }
 }
 
 export async function emitEach<K extends string>(
@@ -197,11 +187,4 @@ export function runStep(main: () => void | Promise<void>): void {
     console.error(err instanceof EmissionRefused ? err.message : err);
     process.exit(1);
   });
-}
-
-function rehashWritten(inputs: FileHashes, written: readonly string[]): FileHashes {
-  const rewritten = fileHashes(written.map((p) => resolve(p)));
-  return Object.fromEntries(
-    Object.entries(inputs).map(([p, h]) => [p, p in rewritten ? rewritten[p] : h]),
-  );
 }

@@ -53,8 +53,11 @@ these inputs.
 ## The catalogue build cache
 
 `test.yml`'s `build-catalog` job runs `CATALOG_STAGE` — `build:classic-ids`,
-`build:wgsn`, `build:membership` and `build:catalog`, each followed by its
-regenerate-and-diff gate:
+`build:wgsn`, `build:membership` and `build:catalog`, each run through the
+step table's runner and followed by its regenerate-and-diff gate. The runner
+also runs whatever is upstream of each, so `build:binaries` runs ahead of
+`build:membership` and `lineage:codes` ahead of `build:catalog`, and it writes
+every step's stamp, which the cached set carries to `build:layers`:
 about five minutes, most of it `build:catalog`. The stage is a pure function
 of committed files, so on a pull request whose key matches a saved build the
 job restores that build's outputs and skips the stage — gates included,
@@ -76,8 +79,8 @@ the Node version:
 (`withVersionlessPackageJson`): a digest of every other field stands in for
 its blob id. Most pull requests bump the version, so keying it would miss
 main's build on every first run. No stage step reads the version, and `run`
-starts each step's `tsx` entry directly rather than through `pnpm run`, so
-`npm_package_version` never reaches its environment.
+starts each step as `tsx scripts/pipeline/run.ts <step>` rather than through
+`pnpm run`, so `npm_package_version` never reaches its environment.
 
 The stage reads nothing outside that set. **A new read outside it is the one
 way to get a stale hit:** a build that reads a file by path from a folder

@@ -4,23 +4,17 @@ pair for the runtime layer. See /scripts/binaries/README.md#files-in-this-area."
 
 from __future__ import annotations
 
-import argparse
 import json
 import struct
 import sys
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterator
 
 SCRIPT = Path(__file__).resolve()
 # Direct execution puts this folder on sys.path, not the repo root;
 # add the root so the absolute ``scripts.*`` imports below resolve.
 sys.path.insert(0, str(SCRIPT.parents[2]))
 
-from scripts.util.build_stamp import (  # noqa: E402
-    clear_stamp, file_hashes, imported_script_modules, outputs_json, stamp_is_current,
-    stamp_path, write_stamp,
-)
 from scripts.util.astronomy_constants import J2000_JD  # noqa: E402
 from scripts.binaries.component_tokens import (  # noqa: E402
     compound_contains,
@@ -38,8 +32,6 @@ SRC_MULTIPLES = ROOT / "data" / "binaries" / "multiples.tsv"
 SRC_ROW_INDEX_MAP = ROOT / "build" / "catalog-row-index-map.json"
 OUT_BIN = ROOT / "public" / "binaries.bin"
 EXPECTED_COUNTS = SCRIPT.parent / "build-runtime-binaries-expected.json"
-BINARIES_BIN_STAMP = stamp_path("binaries-bin")
-OUTPUTS = (OUT_BIN,)
 
 
 # ─── Binary format ──────────────────────────────────────────────────
@@ -682,31 +674,7 @@ def log(msg: str) -> None:
     print(f"[build-runtime-binaries] {msg}")
 
 
-def _iter_input_paths() -> Iterator[Path]:
-    yield from imported_script_modules()
-    yield SRC_MULTIPLES
-    yield SRC_ROW_INDEX_MAP
-
-
-def run(force: bool) -> int:
-    if not SRC_MULTIPLES.exists():
-        log(f"missing {SRC_MULTIPLES.relative_to(ROOT)} — run pnpm run build:binaries first")
-        return 1
-    if not SRC_ROW_INDEX_MAP.exists():
-        log(
-            f"missing {SRC_ROW_INDEX_MAP.relative_to(ROOT)} — run "
-            "pnpm run build:catalog first",
-        )
-        return 1
-    inputs = file_hashes(_iter_input_paths())
-    if not force and stamp_is_current(BINARIES_BIN_STAMP, inputs):
-        log(
-            f"{OUT_BIN.relative_to(ROOT)} up to date — skipping "
-            "(use --force to rebuild)"
-        )
-        return 0
-    clear_stamp(BINARIES_BIN_STAMP)
-
+def run() -> int:
     stats = encode(SRC_MULTIPLES, SRC_ROW_INDEX_MAP, OUT_BIN)
     if not assert_or_update_counts(
         stats_to_counts(stats), EXPECTED_COUNTS,
@@ -714,7 +682,6 @@ def run(force: bool) -> int:
         script="build:binaries-runtime",
     ):
         return 1
-    write_stamp(BINARIES_BIN_STAMP, inputs, OUTPUTS)
     return 0
 
 
@@ -763,22 +730,5 @@ def encode(multiples: Path, row_index_map: Path, out_bin: Path) -> WriteStats:
     return stats
 
 
-def main() -> int:
-    p = argparse.ArgumentParser(description=__doc__)
-    p.add_argument(
-        "--force", action="store_true",
-        help="ignore input-hash check and rebuild",
-    )
-    p.add_argument(
-        "--outputs", action="store_true",
-        help="print the step's outputs and stamp as JSON, build nothing",
-    )
-    args = p.parse_args()
-    if args.outputs:
-        print(outputs_json(OUTPUTS, BINARIES_BIN_STAMP))
-        return 0
-    return run(force=args.force)
-
-
 if __name__ == "__main__":
-    sys.exit(main())
+    sys.exit(run())

@@ -2,14 +2,23 @@
 
 import { resolve } from 'node:path';
 
+import { STEPS } from '../pipeline/steps';
 import { closureWithSiblings, tsxEntries } from './import-closure-pure';
 import { entryClosure, packageScripts, trackedFiles } from './import-closure';
 import { REPO_ROOT } from './paths';
 import { declaredFiles, declaredInputs, isRead } from './sources/declared-inputs';
 
-/** Absolute paths, over every tsx entry the package.json script chains. */
-export async function stepInputPaths(script: string): Promise<string[]> {
-  return entryInputPaths(tsxEntries(packageScripts(), script));
+/** Repo-relative: a table step's TypeScript entry, or every tsx entry an
+ *  off-table package.json script chains. */
+export function stepEntries(name: string): string[] {
+  const step = STEPS.steps.find((s) => s.name === name);
+  if (step === undefined) return tsxEntries(packageScripts(), name);
+  return step.kind === 'build' && step.language === 'ts' ? [step.entry] : [];
+}
+
+/** Absolute paths. */
+export async function stepInputPaths(name: string): Promise<string[]> {
+  return entryInputPaths(stepEntries(name));
 }
 
 /** Absolute paths, over the given entry files. */

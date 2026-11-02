@@ -90,22 +90,10 @@ export function recordedChanges({ listings, probes }: RecordedReads, root: strin
   ];
 }
 
-function sameHashes(a: FileHashes, b: FileHashes): boolean {
-  const keys = Object.keys(a);
-  return keys.length === Object.keys(b).length && keys.every((k) => a[k] === b[k]);
-}
-
 /** Recorded paths whose content on disk no longer matches the recorded hash. */
 export function changedSince(recorded: FileHashes, root: string = REPO_ROOT): string[] {
   const current = fileHashes(Object.keys(recorded).map((p) => resolve(root, p)), root);
   return Object.keys(recorded).filter((p) => current[p] !== recorded[p]);
-}
-
-export function stampIsCurrent(stamp: string, inputs: FileHashes): boolean {
-  const recorded = readStamp(stamp);
-  return recorded !== null
-    && sameHashes(recorded.inputs, inputs)
-    && changedSince(recorded.outputs).length === 0;
 }
 
 /** Must run before a build writes any output, so a build that dies midway

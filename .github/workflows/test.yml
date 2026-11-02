@@ -80,7 +80,7 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version-file: .python-version
-      - run: python3 scripts/binaries/build-binaries.py --force
+      - run: python3 scripts/binaries/build-binaries.py
       - run: |
           git diff --exit-code -- data/binaries/multiples.tsv \
             data/gaia/gaia_astrometry_source_id_request.tsv || {

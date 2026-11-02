@@ -4,7 +4,6 @@ import { dirname, resolve } from 'node:path';
 
 import { declareOutputs } from '../util/emit-artifacts';
 import { REPO_ROOT } from '../util/paths';
-import { stampPath } from '../util/stamp-path-pure';
 import {
   DEFAULT_CATALOG_MANIFEST, DEFAULT_CONSTELLATIONS_JSON, DEFAULT_ROW_INDEX_MAP, DEFAULT_SEARCH_INDEX,
 } from './catalog-paths-pure';
@@ -42,5 +41,3 @@ export const CATALOG_OUTPUTS = declareOutputs(
     ...stageFamilies(LINEAGE_LAYOUT, ALLOCATION_LINEAGE),
   ],
 );
-
-export const CATALOG_STAMP = stampPath('catalog');

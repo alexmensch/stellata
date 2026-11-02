@@ -59,9 +59,10 @@ for a manual step, `command` (what the stop message prints). A command is
 always a `package.json` script, checked by a test, so the three pulls with no
 target today (`refresh-simbad-sptype.py`, `refresh-simbad-wds-xids.py`,
 `refresh-msc.py`) gain one. `package.json`
-keeps one-line targets that call the runner (`build:data` →
-`run.ts data`); it no longer names step entry files, so
-`import-closure-pure.ts`'s `tsxEntry` reads `steps.ts` instead.
+keeps one-line targets that call the runner (`build:catalog` →
+`run.ts build:catalog`, `build:stamped` → `run.ts build:binaries-runtime
+build:astrometry-request`) and never names a table step's entry file;
+`util/step-inputs.ts`'s `stepEntries` reads it from `steps.ts`.
 
 What each step **declares** and what the runner **derives**:
 
@@ -291,9 +292,8 @@ Hand-kept lists become derivations over the table:
 - `.worktreeinclude` may list only the `build` steps' stamped outputs, their
   stamp files and `build/lineage/`, and must list every stamped output and
   stamped family under `public/` or `build/`. `worktree-seed.test.ts` checks it against
-  the outputs of `build:seed-steps`, read from a test-side table of TypeScript
-  declarations and the Python steps' `--outputs`; with `steps.ts` it reads
-  the step table instead.
+  the outputs and stamps of the steps `build:seed-steps` selects, read from
+  the loaded step table.
 - `tests/bundle-content.test.ts` reads the mirror steps' declarations.
 - `resolved-hole-table.ts`'s record count is tested against
   `build-catalog-expected.json`'s `recordCount`.
