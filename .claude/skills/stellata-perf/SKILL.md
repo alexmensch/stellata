@@ -57,7 +57,7 @@ Alex's arm and 25 minutes to re-read a number the pin already holds.
 **Before step 1, ask any live coordinator for the GPU.** A `pickup-epic` run
 keeps workers building and testing, and only its coordinator can pause them.
 `pickup-epic`'s coordinator field names it, and its liveness rule decides
-whether it is live (§ The coordinator field there); the `beads` skill's
+whether it is live (its "The coordinator field" section); the `beads` skill's
 "find the coordinator field" row is the lookup. Live → send it `GPU_REQUEST`,
 wait for `GPU_GRANTED`, and send `GPU_DONE` once the last run you plan has
 exited — the message kinds and who sends which are
