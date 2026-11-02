@@ -72,6 +72,9 @@ same thing — single-use helpers stay with their consumer.
   output tuple and stamp, repo-relative — which `../worktree-seed.test.ts`
   reads. Both pinned by co-located tests
   (`python3 scripts/util/build_stamp.test.py`).
+  A stamp the runner writes for a Python step also carries `recorded`: the
+  folders it listed (`listingHash`, the same formula on both sides) and the
+  paths it probed, which `recordedChanges` re-checks.
   `record_run` is how the runner runs a Python step
   (`../pipeline/run_python_step.py`): Python's audit hook records, under a
   root, every file the process opens for reading, hashed at its first read
@@ -84,7 +87,8 @@ same thing — single-use helpers stay with their consumer.
   through `probe(path)`, which records the answer.
 - `import-closure.ts` / `import-closure-pure.ts` (+ test) — a TypeScript
   build's code inputs. `entryClosure(entries)` is every module the given
-  entry files import, read from an esbuild metafile, so a new import joins
+  entry files import, read from an esbuild metafile (`entryMetafile`, which
+  the runner also reads for an outputs module's imports), so a new import joins
   without anyone listing it; `scriptClosure(names)` is that over the named
   `package.json` scripts, each held by `tsxEntry` to exactly `tsx <file>.ts`,
   so `package.json` is the one place an entry is named and no half of a

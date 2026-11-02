@@ -2,7 +2,7 @@
 
 import { createHash } from 'node:crypto';
 import {
-  closeSync, existsSync, openSync, readFileSync, readSync, rmSync,
+  closeSync, existsSync, openSync, readFileSync, readSync, readdirSync, rmSync, statSync,
 } from 'node:fs';
 import { relative, resolve } from 'node:path';
 
@@ -14,9 +14,18 @@ export const STAMP_DIR = resolve(REPO_ROOT, 'build/stamps');
 /** Repo-relative path → sha1 of its content, or null when the file is absent. */
 export type FileHashes = Readonly<Record<string, string | null>>;
 
+/** What a recorded (Python) step listed and probed, beside the files it read. */
+export interface RecordedReads {
+  /** Repo-relative directory → `listingHash` of its names, or null when absent. */
+  readonly listings: Readonly<Record<string, string | null>>;
+  /** Repo-relative path → whether it existed. */
+  readonly probes: Readonly<Record<string, boolean>>;
+}
+
 export interface Stamp {
   readonly inputs: FileHashes;
   readonly outputs: FileHashes;
+  readonly recorded?: RecordedReads;
 }
 
 export function stampPath(name: string): string {
@@ -54,7 +63,27 @@ export function readStamp(stamp: string): Stamp | null {
   } catch {
     return null;
   }
-  return parsed.inputs && parsed.outputs ? { inputs: parsed.inputs, outputs: parsed.outputs } : null;
+  if (!parsed.inputs || !parsed.outputs) return null;
+  return parsed.recorded
+    ? { inputs: parsed.inputs, outputs: parsed.outputs, recorded: parsed.recorded }
+    : { inputs: parsed.inputs, outputs: parsed.outputs };
+}
+
+/** A directory listing's hash over its sorted names. Same formula as build_stamp.py. */
+export function listingHash(names: readonly string[]): string {
+  return createHash('sha1').update([...names].sort().join('\n')).digest('hex');
+}
+
+function currentListing(dir: string): string | null {
+  return existsSync(dir) && statSync(dir).isDirectory() ? listingHash(readdirSync(dir)) : null;
+}
+
+/** Recorded listings and probes whose answer on disk has moved. */
+export function recordedChanges({ listings, probes }: RecordedReads): string[] {
+  return [
+    ...Object.keys(listings).filter((d) => currentListing(resolve(REPO_ROOT, d)) !== listings[d]).map((d) => `${d}/`),
+    ...Object.keys(probes).filter((p) => existsSync(resolve(REPO_ROOT, p)) !== probes[p]),
+  ];
 }
 
 function sameHashes(a: FileHashes, b: FileHashes): boolean {
@@ -82,12 +111,18 @@ export function clearStamp(stamp: string): void {
   discardStaged(stamp);
 }
 
-export function writeStamp(stamp: string, inputs: FileHashes, outputs: readonly string[]): void {
+export function writeStamp(
+  stamp: string,
+  inputs: FileHashes,
+  outputs: readonly string[],
+  recorded?: RecordedReads,
+): void {
   const outputHashes = fileHashes(outputs);
   const missing = Object.keys(outputHashes).filter((p) => outputHashes[p] === null);
   if (outputs.length === 0 || missing.length > 0) {
     throw new Error(`writeStamp(${stamp}): outputs missing or none given: ${missing.join(', ')}`);
   }
-  writeStaged(stamp, `${JSON.stringify({ inputs, outputs: outputHashes }, null, 2)}\n`);
+  const record: Stamp = recorded ? { inputs, outputs: outputHashes, recorded } : { inputs, outputs: outputHashes };
+  writeStaged(stamp, `${JSON.stringify(record, null, 2)}\n`);
   landStaged(stamp);
 }

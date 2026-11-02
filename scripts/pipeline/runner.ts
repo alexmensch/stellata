@@ -1,0 +1,179 @@
+// Walks the selected steps in order: lock, check, run or skip, stamp. See README.md#the-runner--runts.
+
+import { spawn } from 'node:child_process';
+import { once } from 'node:events';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
+import { relative, resolve } from 'node:path';
+
+import {
+  clearStamp, fileHashes, writeStamp, type FileHashes,
+} from '../util/build-stamp';
+import { REPO_ROOT } from '../util/paths';
+import { UPDATE_SNAPSHOTS_ENV } from '../util/snapshot-check';
+import {
+  derivedFreshness, describePull, manualFreshness, recordedFreshness,
+  type Freshness, type PullDescription,
+} from './freshness';
+import type { Loaded } from './load-table';
+import { holdLocks } from './locks';
+import { pipelineDirs } from './pipeline-dirs';
+import { recordProblems, type RunRecord } from './python-run-pure';
+import {
+  isBuild, selectSteps, stepFileName, writersOf,
+  type BuildStep, type ResolvedStep, type StepGraph,
+} from './step-table-pure';
+
+const TSX = resolve(REPO_ROOT, 'node_modules/.bin/tsx');
+const RUN_PYTHON_STEP = resolve(REPO_ROOT, 'scripts/pipeline/run_python_step.py');
+
+export type Verdict =
+  | { readonly kind: 'fresh' }
+  | { readonly kind: 'built' }
+  | { readonly kind: 'stale'; readonly command: string; readonly changed: readonly string[] }
+  | { readonly kind: 'failed'; readonly reason: string }
+  | { readonly kind: 'skipped'; readonly behind: string };
+
+export interface RunOptions {
+  readonly root: string;
+  readonly targets: readonly string[];
+  readonly force: boolean;
+  readonly updateSnapshots: boolean;
+  readonly log: (line: string) => void;
+  readonly describe?: (entry: string) => PullDescription;
+}
+
+type Loads = Extract<Loaded, { kind: 'loaded' }>;
+
+const blocks = (v: Verdict): boolean => v.kind === 'stale' || v.kind === 'failed' || v.kind === 'skipped';
+const repoRelative = (path: string): string => relative(REPO_ROOT, path);
+
+function outputFiles(step: ResolvedStep): string[] {
+  const members = step.outputs.families.flatMap((f) => (existsSync(f.dir)
+    ? readdirSync(f.dir).filter((n) => f.member.test(n)).map((n) => resolve(f.dir, n))
+    : []));
+  return [...step.outputs.files, ...members];
+}
+
+function rehashed(inputs: FileHashes, paths: readonly string[] | 'all'): FileHashes {
+  const keys = paths === 'all' ? Object.keys(inputs) : paths.map(repoRelative).filter((k) => k in inputs);
+  return { ...inputs, ...fileHashes(keys.map((k) => resolve(REPO_ROOT, k))) };
+}
+
+async function exec(command: string, args: readonly string[], env: NodeJS.ProcessEnv): Promise<number | null> {
+  const child = spawn(command, args, { stdio: 'inherit', env });
+  const [code] = await once(child, 'exit') as [number | null];
+  return code;
+}
+
+class Run {
+  private readonly dirs;
+  private readonly verdicts = new Map<string, Verdict>();
+
+  constructor(private readonly loaded: Loads, private readonly options: RunOptions) {
+    this.dirs = pipelineDirs(options.root);
+  }
+
+  private get graph(): StepGraph { return this.loaded.graph; }
+
+  private stampFile(name: string): string {
+    return resolve(this.dirs.buildStamps, `${stepFileName(name)}.json`);
+  }
+
+  private blocker(name: string): string | null {
+    const upstream = this.graph.edges.filter((e) => e.to === name).map((e) => e.from);
+    return upstream.find((u) => { const v = this.verdicts.get(u); return v !== undefined && blocks(v); }) ?? null;
+  }
+
+  async walk(): Promise<ReadonlyMap<string, Verdict>> {
+    for (const name of selectSteps(this.graph, this.options.targets)) {
+      const behind = this.blocker(name);
+      const resolved = this.loaded.steps.get(name)!;
+      const verdict: Verdict = behind !== null ? { kind: 'skipped', behind } : await this.visit(resolved);
+      this.verdicts.set(name, verdict);
+      this.options.log(describeVerdict(name, verdict));
+    }
+    return this.verdicts;
+  }
+
+  private async visit(resolved: ResolvedStep): Promise<Verdict> {
+    const { step } = resolved;
+    if (!isBuild(step)) {
+      const stampFile = resolve(this.dirs.manualStamps, `${stepFileName(step.name)}.json`);
+      const fresh = manualFreshness(step, stampFile, resolved.outputs, this.options.describe ?? describePull);
+      return fresh.kind === 'fresh' ? fresh : { kind: 'stale', command: step.command, changed: fresh.changed };
+    }
+    const shared = writersOf(this.graph, step.name).filter((w) => isBuild(this.loaded.steps.get(w)!.step));
+    const release = await holdLocks(this.dirs.locks, { own: step.name, shared }, () => {
+      this.options.log(`… ${step.name} waits for another run's lock`);
+    });
+    try {
+      return await this.build(resolved, step);
+    } catch (err) {
+      return { kind: 'failed', reason: err instanceof Error ? err.message : String(err) };
+    } finally {
+      await release();
+    }
+  }
+
+  private async build(resolved: ResolvedStep, step: BuildStep): Promise<Verdict> {
+    const stampFile = this.stampFile(step.name);
+    const inputs = step.language === 'ts' ? fileHashes([...resolved.reads]) : {};
+    const freshness: Freshness = step.language === 'ts'
+      ? derivedFreshness(stampFile, resolved.outputs, inputs)
+      : recordedFreshness(stampFile, resolved.outputs);
+    if (freshness.kind === 'fresh' && !this.options.force) return freshness;
+
+    clearStamp(stampFile);
+    const env = { ...process.env };
+    if (this.options.updateSnapshots) env[UPDATE_SNAPSHOTS_ENV] = '1';
+    else delete env[UPDATE_SNAPSHOTS_ENV];
+    const entry = resolve(REPO_ROOT, step.entry);
+    if (step.language === 'ts') {
+      const code = await exec(TSX, [entry], env);
+      if (code !== 0) return { kind: 'failed', reason: `exited ${code}` };
+      return this.land(stampFile, resolved, rehashed(inputs, this.options.updateSnapshots ? 'all' : resolved.outputs.files));
+    }
+    const record = resolve(this.dirs.records, `${stepFileName(step.name)}.json`);
+    const code = await exec('python3', [RUN_PYTHON_STEP, this.options.root, record, entry], env);
+    if (code !== 0) return { kind: 'failed', reason: `exited ${code}` };
+    const run = JSON.parse(readFileSync(record, 'utf8')) as RunRecord;
+    const snapshots = step.snapshots.map((p) => resolve(REPO_ROOT, p));
+    const problems = recordProblems(resolved, snapshots, run, this.loaded.steps.values(), this.graph);
+    if (problems.length > 0) return { kind: 'failed', reason: problems.join('; ') };
+    const read = Object.fromEntries(Object.entries(run.reads).map(([p, h]) => [repoRelative(p), h]));
+    return this.land(stampFile, resolved, rehashed(read, run.writes), {
+      listings: Object.fromEntries(Object.entries(run.listings).map(([p, h]) => [repoRelative(p), h])),
+      probes: Object.fromEntries(Object.entries(run.probes).map(([p, e]) => [repoRelative(p), e])),
+    });
+  }
+
+  private land(stampFile: string, resolved: ResolvedStep, inputs: FileHashes, recorded?: Parameters<typeof writeStamp>[3]): Verdict {
+    const missing = resolved.outputs.files.filter((p) => !existsSync(p));
+    if (missing.length > 0) return { kind: 'failed', reason: `declared outputs not written: ${missing.map(repoRelative).join(', ')}` };
+    writeStamp(stampFile, inputs, outputFiles(resolved), recorded);
+    return { kind: 'built' };
+  }
+}
+
+export function describeVerdict(name: string, verdict: Verdict): string {
+  switch (verdict.kind) {
+    case 'fresh': return `· ${name} fresh`;
+    case 'built': return `✓ ${name} built`;
+    case 'stale': return `✗ ${name} stale (${verdict.changed.join(', ')}): run pnpm run ${verdict.command}`;
+    case 'failed': return `✗ ${name} failed: ${verdict.reason}`;
+    case 'skipped': return `– ${name} skipped behind ${verdict.behind}`;
+  }
+}
+
+export function keptLoopLines(graph: StepGraph): string[] {
+  return graph.keptLoops.map((e) => `kept loop: ${e.from} → ${e.to} through ${e.files.map(repoRelative).join(', ')}`);
+}
+
+export async function runSteps(loaded: Loads, options: RunOptions): Promise<{ verdicts: ReadonlyMap<string, Verdict>; status: number }> {
+  const unknown = options.targets.filter((t) => !loaded.steps.has(t));
+  if (unknown.length > 0) throw new Error(`no step named ${unknown.join(', ')}`);
+  for (const line of keptLoopLines(loaded.graph)) options.log(line);
+  const verdicts = await new Run(loaded, options).walk();
+  const status = [...verdicts.values()].some((v) => v.kind === 'stale' || v.kind === 'failed') ? 1 : 0;
+  return { verdicts, status };
+}

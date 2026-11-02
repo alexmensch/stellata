@@ -2,7 +2,9 @@
 
 One model of the build pipeline: a typed table of steps, a runner that orders
 and gates them, and the content stamp as the only freshness test. This README
-is the design; `steps.ts` and `run.ts` land in this folder to implement it.
+is the design; [Files](#files) maps it onto the code. The runner is proven on
+fixture tables; `steps.ts` holds no step yet, and every step still runs through
+its own `package.json` target until it moves onto the table.
 
 ## The model
 
@@ -319,6 +321,32 @@ Hand-kept lists become derivations over the table:
   when the run exits however it exits. `lockSpecs` is that order. A lock
   file is `build/locks/<step>`, `:` written `-` (`stepFileName`, shared with
   the stamp's name).
+- `load-table.ts` — `loadTable`: checks every TypeScript outputs module's
+  imports before importing any, imports the `declareOutputs` constants, rejects a build output
+  through a symlink (the path or any folder above it, up to the root), reads
+  each manual step's record for its inputs, then `deriveGraph`. A
+  TypeScript step's inputs come from the injected `deriveInputs`;
+  `run.ts` passes `util/step-inputs.ts`'s `entryInputPaths`.
+- `freshness.ts` — the one stamp test per kind: a TypeScript build's inputs
+  derived now, a Python build's recorded inputs, listings and probes
+  re-hashed, a manual step's committed record plus, for a pull, its
+  `--describe` (`describePull`, run under `python3 -I -S`) hashed as
+  `pullQueryHash` (query text and service list) and `requestHash` (the
+  derived request list). Every kind is also stale when a recorded output
+  moved or a declared output is missing from the record. Writers of a pull's
+  record use the same two hash functions.
+- `python-run-pure.ts` (tested through `runner.test.ts`) — `recordProblems`: a
+  write outside the declared outputs and snapshots, or a read of another
+  step's output with no path from that step in the graph.
+- `runner.ts` (+ test) — `runSteps`: the walk of [The runner](#the-runner--runts)
+  over a loaded table, the `Verdict` union (`fresh`, `built`, `stale`,
+  `failed`, `skipped`) matched exhaustively, and the exit status. The runner
+  writes every build stamp itself once a step exits 0 and its declared
+  outputs exist: inputs hashed before the run, those it also wrote (and,
+  under `--update-snapshots`, all of a TypeScript step's) re-hashed after.
+  `pipeline-dirs.ts` places its stamps, locks and run records under a root,
+  which tests point at a temporary folder.
+- `run.ts` / `steps.ts` — the command line and the table it runs.
 
 ## Design pass
 

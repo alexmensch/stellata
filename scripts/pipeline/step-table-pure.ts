@@ -134,7 +134,7 @@ function readEdges(steps: readonly ResolvedStep[]): { edges: Edge[]; problems: s
   return { edges, problems };
 }
 
-function reaches(edges: readonly Edge[], from: string, to: string): boolean {
+export function reaches(edges: readonly Edge[], from: string, to: string): boolean {
   const seen = new Set<string>();
   const stack = [from];
   while (stack.length > 0) {
