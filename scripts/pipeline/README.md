@@ -5,9 +5,9 @@ and gates them, and the content stamp as the only freshness test. This README
 is the design; [Files](#files) maps it onto the code. `steps.ts` holds the
 catalogue chain's `build` steps (`steps.test.ts` pins their order and edges)
 and every pull and bake (`MANUAL_STEPS`, each run by hand through
-`record.ts`); every other `build` step still runs through its own
-`package.json` target until it moves onto the table, and the two Horizons
-fetchers join once their outputs modules pass the load-time import rule.
+`record.ts`, the two Horizons fetchers among them); every other `build` step
+still runs through its own `package.json` target until it moves onto the
+table.
 
 ## The model
 
@@ -37,7 +37,7 @@ Vite (`build:client`, `build:site`) is not a step. `pnpm run build` and
 | Kind | Runner runs it? | Record | Stale when | Today |
 |---|---|---|---|---|
 | `build` | yes | `build/stamps/<step>.json` (gitignored) | an input or an output hash moved | the catalogue chain, the four generators, binaries, clouds, local-group, the mirrors |
-| `pull` | never | `data/stamps/<step>.json` (committed) | its request rows, a data input, its query or an output hash moved | every `refresh:*` (the two Edenhofer variants among them); both `fetch:*` once their outputs modules load |
+| `pull` | never | `data/stamps/<step>.json` (committed) | its request rows, a data input, its query or an output hash moved | every `refresh:*` (the two Edenhofer variants among them); both `fetch:*` |
 | `bake` | never | `data/stamps/<step>.json` (committed) | an input or an output hash moved | dust, local-bubble, cloud-surfaces, textures, icons, og |
 
 A step the runner never runs is a **manual** step. When one is stale, the
@@ -435,9 +435,9 @@ Hand-kept lists become derivations over the table:
   pass and its outputs land (`emitArtifacts`); the lock is taken before the
   stamp is read.
 - **Q6, the force.** One table absorbs 3 stamped steps, 2 emitters, 6
-  mirrors, 3 CI-only generators and 1 that runs nowhere, 26 pulls (the 24
-  `refresh:*` in `MANUAL_STEPS`, two of them the Edenhofer variants, plus the
-  2 `fetch:*`) and 6 bakes; recount with
+  mirrors, 3 CI-only generators and 1 that runs nowhere, 26 pulls (24
+  `refresh:*`, two of them the Edenhofer variants, and 2 `fetch:*`, all in
+  `MANUAL_STEPS`) and 6 bakes; recount with
   `MANUAL_STEPS.filter((s) => s.kind === 'pull').length`.
   Step kinds exist because two runner behaviours (run it; check it and stop)
   each hold several cases today.

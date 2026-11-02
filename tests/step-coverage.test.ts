@@ -24,8 +24,6 @@ const EXCLUDED: Readonly<Record<string, readonly Ref[]>> = {
 const NOT_YET_MIGRATED: Readonly<Record<Ref, string>> = {
   'scripts/local-group/local-group-outputs.ts#LOCAL_GROUP_OUTPUTS': 'build:local-group',
   'scripts/sid/sibling-stamp-outputs.ts#SID_STAMP_OUTPUTS': 'sid:stamp',
-  'scripts/probes/probe-trajectory-outputs.ts#PROBE_OUTPUTS': 'fetch:probes',
-  'scripts/ephemerides/planet-element-outputs.ts#ELEMENT_TABLE_OUTPUTS': 'fetch:ephemerides',
 };
 
 const DECLARATION = /^(export )?const (\w+) = declareOutputs\(/gm;
@@ -55,7 +53,7 @@ function scan(): Scan {
 const declaredConstants = (): Scan['constants'] => scan().constants;
 
 const tableRefs = new Set<Ref>(STEPS.steps.flatMap((s) => (
-  s.kind === 'build' && s.language === 'ts' ? [`${s.outputs.module}#${s.outputs.name}` as Ref] : []
+  s.language === 'ts' ? [`${s.outputs.module}#${s.outputs.name}` as Ref] : []
 )));
 const excludedRefs = new Set<Ref>(Object.values(EXCLUDED).flat());
 
