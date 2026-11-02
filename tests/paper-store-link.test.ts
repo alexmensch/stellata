@@ -1,7 +1,7 @@
 // Behavioural test for scripts/hooks/paper-store-link.sh over a throwaway repo
 // with real linked worktrees.
 
-import { execFileSync, spawn, spawnSync } from 'node:child_process';
+import { execFileSync, spawnSync } from 'node:child_process';
 import {
   chmodSync, existsSync, lstatSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, readlinkSync, realpathSync,
   rmSync, symlinkSync, writeFileSync,
@@ -19,24 +19,31 @@ let main: string;
 const git = (cwd: string, ...args: string[]) =>
   execFileSync('git', args, { cwd, encoding: 'utf-8', stdio: ['ignore', 'pipe', 'pipe'] });
 
-function run(projectDir = main): { status: number | null; stderr: string } {
+function run(projectDir = main, pathPrefix?: string): { status: number | null; stderr: string } {
   const { status, stderr } = spawnSync('bash', [HOOK], {
     input: JSON.stringify({ hook_event_name: 'SessionStart' }),
-    env: { ...process.env, CLAUDE_PROJECT_DIR: projectDir },
+    env: {
+      ...process.env,
+      CLAUDE_PROJECT_DIR: projectDir,
+      ...(pathPrefix ? { PATH: `${pathPrefix}:${process.env.PATH}` } : {}),
+    },
     encoding: 'utf-8',
   });
   return { status, stderr };
 }
 
-function runAsync(projectDir = main): Promise<number | null> {
-  return new Promise((done) => {
-    const child = spawn('bash', [HOOK], {
-      env: { ...process.env, CLAUDE_PROJECT_DIR: projectDir },
-      stdio: ['pipe', 'ignore', 'ignore'],
-    });
-    child.on('close', done);
-    child.stdin.end(JSON.stringify({ hook_event_name: 'SessionStart' }));
-  });
+function lnThatLosesTheRace(): string {
+  const bin = join(root, 'bin');
+  mkdirSync(bin);
+  writeFileSync(join(bin, 'ln'), [
+    '#!/bin/bash',
+    'dest="${!#}"; n=$(($# - 1)); target="${!n}"',
+    '/bin/ln -s "$target" "$dest" 2>/dev/null',
+    'exec /bin/ln "$@"',
+    '',
+  ].join('\n'));
+  chmodSync(join(bin, 'ln'), 0o755);
+  return bin;
 }
 
 function addWorktree(name: string): string {
@@ -120,7 +127,7 @@ describe('paper-store-link', () => {
     expect(lstatSync(join(wt, LINK)).isFile()).toBe(true);
   });
 
-  it('never writes into the store through a link that already points at it', () => {
+  it('leaves a link already at the store in place, store listing unchanged', () => {
     const wt = addWorktree('wt1');
     symlinkSync(join(root, 'store-a'), join(wt, LINK));
     run();
@@ -128,7 +135,7 @@ describe('paper-store-link', () => {
     expect(linkOf(wt)).toBe(join(root, 'store-a'));
   });
 
-  it('replaces a link to another store without writing into either store', () => {
+  it('repoints a link to another store, both store listings unchanged', () => {
     const wt = addWorktree('wt1');
     symlinkSync(join(root, 'store-b'), join(wt, LINK));
     run();
@@ -137,11 +144,11 @@ describe('paper-store-link', () => {
     expect(linkOf(wt)).toBe(join(root, 'store-a'));
   });
 
-  it('leaves the store empty when many sweeps race over fresh worktrees', async () => {
-    const wts = Array.from({ length: 8 }, (_, i) => addWorktree(`wt${i}`));
-    await Promise.all(Array.from({ length: 16 }, () => runAsync()));
+  it('never writes into the store when a concurrent sweep links the worktree between check and ln', () => {
+    const wt = addWorktree('wt1');
+    run(main, lnThatLosesTheRace());
     expect(readdirSync(join(root, 'store-a'))).toEqual([]);
-    for (const wt of wts) expect(linkOf(wt)).toBe(join(root, 'store-a'));
+    expect(linkOf(wt)).toBe(join(root, 'store-a'));
   });
 
   it('every ln -s in scripts/hooks/ carries -n, so none follows an existing directory link', () => {
