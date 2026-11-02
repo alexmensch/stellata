@@ -5,9 +5,9 @@
 import {
   segmentCubeOverlap,
   type Vec3,
-} from '../../../../src/client/star-pipeline/extinction/dust-raymarch-pure';
+} from '../../../../src/astro-core/extinction/dust-raymarch-pure';
 
-export { R_V } from '../../../../src/client/star-pipeline/extinction/dust-raymarch-pure';
+export { R_V } from '../../../../src/astro-core/extinction/dust-raymarch-pure';
 
 /** In-memory decode of the dust artifact `dust-loader.ts` streams at
  *  runtime. `data` is the flat gridSize³ grid of encoded uint8 voxels,

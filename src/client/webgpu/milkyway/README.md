@@ -33,7 +33,7 @@ src/client/webgpu/milkyway/
 ## The bound is taken off the mirror, so this march has to match it
 
 `MilkyWay.peakSurfaceBrightnessBound` is computed from
-`../../milkyway/column/milkyway-column-pure.ts` and decides whether the band draws
+`../../../astro-core/milkyway/column/milkyway-column-pure.ts` and decides whether the band draws
 at all ([The brightest rendered sightline](../../milkyway/README.md#the-brightest-rendered-sightline)), so a
 march here that has drifted from that mirror yields a bound on a picture
 nobody is looking at — and the failure is silent,
@@ -45,7 +45,7 @@ coordinates by (`RESOLVED_HOLE_SHELLS` / `_LOG_DISTANCE0` /
 `_DEX_PER_SHELL` / `_MIN_DISTANCE_PC`) to the mirror's constants by
 import, plus the explicit `.level(int(0))` on the hole fetch, which keeps
 the sampler's derivatives out of the march
-([The table is a 3D grid](../../milkyway/calibration/README.md#the-table-is-a-3d-grid-not-a-uniform-array)). The profile and dust parameters need no entry there: they arrive
+([The table is a 3D grid](../../../astro-core/milkyway/calibration/README.md#the-table-is-a-3d-grid-not-a-uniform-array)). The profile and dust parameters need no entry there: they arrive
 as uniform nodes that `seedBandSharedSlots` alone writes ([Seeding,
 because a node starts on its declared default](#seeding-because-a-node-starts-on-its-declared-default)). The hole grid crosses as
 a `texture3D()` node over the `Data3DTexture` the seed and the debug lever
@@ -131,4 +131,4 @@ one.
 The band marches the **analytic** dust slab; the measured-dust cascade —
 the per-cloud tiering and the voxel-grid read — is `stellata-ty4.5`'s,
 and the prefilter mechanism behind it is still behind a design gate
-([Dust](../../milkyway/column/README.md#dust--the-analytic-tier-and-what-composes-with-it)).
+([Dust](../../../astro-core/milkyway/column/README.md#dust--the-analytic-tier-and-what-composes-with-it)).

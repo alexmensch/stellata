@@ -3,7 +3,7 @@
 
 import type {
   IauConstellationLookup,
-} from '../../../src/client/constellation-boundaries/iau-geometry/iau-boundaries-pure';
+} from '../../../src/astro-core/iau-geometry/iau-boundaries-pure';
 import { raDecFromUnitVector } from '../../../src/astro-core/equatorial-basis';
 import { absoluteToApparentMagnitude } from '../record/catalog-pure';
 import {

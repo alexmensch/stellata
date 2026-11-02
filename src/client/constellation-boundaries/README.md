@@ -13,13 +13,12 @@ enters into it.
 The geometry those arcs and regions are *derived* from — edge parsing,
 the cell decomposition, nearest-edge distance, the label-anchor
 derivation, and the external checks on all of it — is
-`iau-geometry/README.md`.
+`/src/astro-core/iau-geometry/README.md`, shared with the build pipeline.
 
 ## Files in this area
 
 ```
 src/client/constellation-boundaries/
-  iau-geometry/                   The pure B1875 geometry, its own README.
   constellation-boundaries.ts     ConstellationBoundaries — the shell's
     (+ test)                      `constellationBoundaries` namespace
                                   (README.md#the-owner).
@@ -38,7 +37,7 @@ src/client/constellation-boundaries/
 
 ## How each consumer gets this
 
-**The edge set is Node-side only** (`iau-geometry/README.md`), so every
+**The edge set is Node-side only** (`/src/astro-core/iau-geometry/README.md`), so every
 runtime consumer reads the built artifact, never the edges:
 
 - **Star assignment** runs at **build time**, through
@@ -101,7 +100,7 @@ stars don't, and why every answer is Sol-frame: [Constellation row](../focus-car
 
 One per region, so **Serpens carries two** — the derivation, the
 published-area agreement, and the assertion that every anchor lands
-inside the region it names are [Label anchors](iau-geometry/README.md#label-anchors).
+inside the region it names are [Label anchors](../../astro-core/iau-geometry/README.md#label-anchors).
 Anchors arrive in ICRS off the artifact and are baked to
 `SPHERE_RADIUS_PC` at attach, exactly as the arcs are, so a label rides
 the block it names from any camera position. The chart writes the Latin
@@ -195,7 +194,7 @@ quantile numbers live in [Fade table](/scripts/catalog/boundaries/README.md#fade
 <a id="validated-at-load-but-never-fatal"></a>**Validated at load, but never fatal.** `validateBoundaryArtifact` rejects
 anything but `frame: "ICRS"`, because B1875 directions rendered as if they
 were ICRS produce a plausible-looking sky sitting ~1.4° off every star —
-the failure mode [B1875](iau-geometry/README.md#b1875) describes, and one
+the failure mode [B1875](../../astro-core/iau-geometry/README.md#b1875) describes, and one
 no spot check catches. It also
 pins the fade table's shape: ascending `magLimits` (the bracketing walks
 forwards), one offset row per magnitude row, and every row exactly as wide

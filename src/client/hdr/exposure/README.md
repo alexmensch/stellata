@@ -88,7 +88,7 @@ the point.** It is the offset between two *thresholds* — the point-source
 `skyBackgroundMagArcsec2` (`../../filters/filter-state.ts`
 `extendedThresholdSbFor`) — and adaptation and the trim move both together,
 so only an instrument change may write it. The derivation is
-[Extended sources](../emission/README.md#extended-sources--two-solid-angles-one-write-tail); the convolution it gains into is
+[Extended sources](../../../astro-core/emission/README.md#extended-sources--two-solid-angles-one-write-tail); the convolution it gains into is
 `../summation/README.md`.
 
 **There is no `uThresholdMag` analogue on the extended side.** The

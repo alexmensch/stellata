@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   createIauConstellationLookup,
   parseIauEdges,
-} from '../../../src/client/constellation-boundaries/iau-geometry/iau-boundaries-pure';
+} from '../../../src/astro-core/iau-geometry/iau-boundaries-pure';
 import { iauEdgeRecords } from '../parse/constellations/constellations';
 import { STELLARIUM } from '../parse/constellations/stellarium-source';
 import {

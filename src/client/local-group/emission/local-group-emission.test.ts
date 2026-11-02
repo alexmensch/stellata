@@ -31,13 +31,13 @@ import {
 } from './local-group-emission-pure';
 import { LocalGroupEmission } from './local-group-emission';
 import { LG_OVERRIDES } from '../../../../scripts/local-group/local-group-source';
-import { SB_ZERO_POINT, lumaNormalisedTint } from '../../hdr/emission/emission-pure';
+import { SB_ZERO_POINT, lumaNormalisedTint } from '../../../astro-core/emission/emission-pure';
 import {
   OLD_SPHEROID_COLOR_RGB,
   OLD_SPHEROID_COLOUR_INDEX_BV,
   combinedColourIndex,
-} from '../../hdr/emission/population-colour-pure';
-import { relativeLuminance } from '../../hdr/tonemap/tonemap-pure';
+} from '../../../astro-core/emission/population-colour-pure';
+import { relativeLuminance } from '../../../astro-core/tonemap/tonemap-pure';
 import { fakeLgEmissionMaterials } from './lg-emission-materials-mock';
 
 const SMC_EMISSION: LgEmission = {
@@ -316,7 +316,7 @@ describe('population tints', () => {
   // Peak-normalised chromaticities, so neither authored triplet has unit
   // luminance and both would dim their own family without the
   // normalisation. The spheroid's own loss is the shared population
-  // constant's, pinned in ../../hdr/emission/population-colour-pure.test.ts;
+  // constant's, pinned in ../../../astro-core/emission/population-colour-pure.test.ts;
   // what this layer owns is its disc seed and the ordering between them.
   it('pins what the disc tint would cost unnormalised', () => {
     const lost = (rgb: readonly [number, number, number]) =>

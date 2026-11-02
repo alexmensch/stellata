@@ -8,7 +8,7 @@ import {
   ANALYTICAL_DUST_NORM_PER_PC,
   ANALYTICAL_DUST_SCALE_HEIGHT_PC,
   ANALYTICAL_DUST_SCALE_LENGTH_PC,
-} from '../../../src/client/milkyway/column/milkyway-column-pure';
+} from '../../../src/astro-core/milkyway/column/milkyway-column-pure';
 
 export interface DustParams {
   readonly gridSize: number;

@@ -5,8 +5,8 @@ import * as THREE from 'three';
 import { FrameFrustum } from './contribution/frame-frustum';
 import type { CadenceCtx, FrameCtx } from './scene-layer';
 import type { FrameExposure } from '../hdr/exposure/visibility/emitter-visibility-pure';
-import { pixelSolidAngleArcsec2 } from '../hdr/emission/emission-pure';
-import { tonemapWhitePoint } from '../hdr/tonemap/tonemap-pure';
+import { pixelSolidAngleArcsec2 } from '../../astro-core/emission/emission-pure';
+import { tonemapWhitePoint } from '../../astro-core/tonemap/tonemap-pure';
 import {
   exposureForMagLimit,
   summationSolidAngleFor,

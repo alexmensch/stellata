@@ -20,7 +20,7 @@ export interface Instrument {
    *  derived per frame by `starPxSizes`. */
   kDensity: number;
   /** Magnitude window the footprint curve grows across. NOT display
-   *  dynamic range — that is the tone-map's `DR_MAG` (`../hdr/tonemap/README.md#operator`).
+   *  dynamic range — that is the tone-map's `DR_MAG` (`../../astro-core/tonemap/README.md#operator`).
    * */
   sizeSpan: number;
   /** Doubles as the extended-source detection threshold

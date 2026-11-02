@@ -13,7 +13,7 @@ import {
   bulgeDensity,
   discDensity,
   dustTauVPerPc,
-} from '../../../src/client/milkyway/column/milkyway-column-pure';
+} from '../../../src/astro-core/milkyway/column/milkyway-column-pure';
 
 export type Vec3 = readonly [number, number, number];
 

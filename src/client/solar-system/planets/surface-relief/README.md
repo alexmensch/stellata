@@ -274,7 +274,7 @@ planes topped out at 0.101 and sat fifty times under it at p99.
 
 ### What the exposure has to be for it to show
 
-The faint-end toe ([Operator](../../../hdr/tonemap/README.md#operator)) crushes anything more
+The faint-end toe ([Operator](../../../../astro-core/tonemap/README.md#operator)) crushes anything more
 than `TOE_BLACK_MAG` = 1.5 mag under `L_THRESH` to black, and it measures that
 against the GLOBAL threshold rather than against the lit ground beside it. So
 "will this shadow show" is a question about the lit surface's own level, not

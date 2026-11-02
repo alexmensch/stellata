@@ -22,7 +22,7 @@ import {
 import {
   footprintRadiusPc,
   pixelSolidAngleArcsec2,
-} from '../../hdr/emission/emission-pure';
+} from '../../../astro-core/emission/emission-pure';
 import {
   summationDownsample,
   summationMean,
@@ -35,7 +35,7 @@ import {
 import { angularToPx } from '../../camera/controls/star-geometry';
 import { FOV_MAX_DEG, FOV_MIN_DEG } from '../../camera/timing';
 import { ARCSEC_TO_RAD } from '../../../astro-core/astronomy-constants';
-import { displayLevel, tonemapWhitePoint } from '../../hdr/tonemap/tonemap-pure';
+import { displayLevel, tonemapWhitePoint } from '../../../astro-core/tonemap/tonemap-pure';
 
 const CALIBRATION_TOLERANCE_MAG = 0.1;
 /** Steps per line-of-sight column integration. The Sérsic centre is a cusp
@@ -549,7 +549,7 @@ describe('M31 surface-brightness profile vs published photometry', () => {
   });
 
   // Why this layer does NOT take the Milky Way band's rod-summation display
-  // gain (`../../hdr/emission/README.md#extended-sources--two-solid-angles-one-write-tail`). That gain multiplies a
+  // gain (`../../../astro-core/emission/README.md#extended-sources--two-solid-angles-one-write-tail`). That gain multiplies a
   // surface brightness by the eye's summation solid angle, which is the
   // flux in that patch only for a source uniform across it. M31's bulge
   // R_e is 4.4 arcmin against a 13.0 arcmin summation disc, so assuming
@@ -788,7 +788,7 @@ describe('M31 surface-brightness profile vs published photometry', () => {
     // What a viewer actually sees, in 8-bit levels at the base epoch and the
     // reference viewport — the distribution half of the acceptance, and the
     // half the *against convolve-then-gain* block above cannot show. A
-    // threshold star lands on 38.25 (../../hdr/tonemap/tonemap-pure.ts), so M31 reads
+    // threshold star lands on 38.25 (../../../astro-core/tonemap/tonemap-pure.ts), so M31 reads
     // brighter than one out to ~15 arcmin — the core and inner disc the
     // naked eye actually gets. The outer rows sit under the extended
     // threshold, so the faint-end toe compresses them: the 40-arcmin

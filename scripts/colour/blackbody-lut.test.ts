@@ -8,14 +8,14 @@ import {
   bvAtIndex,
   sampleLut,
 } from './blackbody-lut';
-import { linearSrgbFromColourIndex } from './blackbody-lut-pure';
+import { linearSrgbFromColourIndex } from '../../src/astro-core/colour/blackbody-lut-pure';
 import {
   LUT_BYTES,
   LUT_SIZE as CONSUMER_LUT_SIZE,
   BV_MIN as CONSUMER_BV_MIN,
   BV_MAX as CONSUMER_BV_MAX,
 } from '../../src/client/star-pipeline/blackbody-lut-data';
-import { srgbEncode } from '../../src/client/hdr/tonemap/tonemap-pure';
+import { srgbEncode } from '../../src/astro-core/tonemap/tonemap-pure';
 
 // The table stores linear light; the Python reference values every pin
 // below was derived from are display-encoded. Encoding on read keeps the

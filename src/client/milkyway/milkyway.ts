@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { GAL_TO_ICRS, GALACTIC_CENTRE_PC } from '../../astro-core/galactic-coords';
-import { SB_ZERO_POINT, lumaNormalisedTint } from '../hdr/emission/emission-pure';
+import { SB_ZERO_POINT, lumaNormalisedTint } from '../../astro-core/emission/emission-pure';
 import type { EmitterMaterial } from '../scene/emitter-material';
 import {
   type BandMaterials, type BandSharedSlots,
@@ -9,8 +9,8 @@ import type { DustField } from '../loaders/dust-loader';
 import {
   clampResolvedHoleStrength,
   resolvedHoleCatalogueMismatch,
-} from './calibration/resolved-fraction-pure';
-import { writeResolvedHoleTexture } from './calibration/resolved-hole-texture';
+} from '../../astro-core/milkyway/calibration/resolved-fraction-pure';
+import { writeResolvedHoleTexture } from './resolved-hole-texture';
 import {
   BandPeakCache,
   galactocentricPc,
@@ -41,7 +41,7 @@ import {
   SOL_GALACTOCENTRIC_PC,
   galacticDirection,
   sightlineColumn,
-} from './column/milkyway-column-pure';
+} from '../../astro-core/milkyway/column/milkyway-column-pure';
 
 // Bounded volumetric raymarch through proxy meshes (disc + oblate
 // bulge), AdditiveBlending. See src/client/milkyway/README.md.
@@ -59,7 +59,7 @@ export const GC_SIGHTLINE_COLUMN = sightlineColumn(
 
 /** Surface brightness the Galactic-centre sightline resolves to, a
  *  **check** rather than the calibration it used to be — see
- *  ./calibration/README.md for what replaced it and why 20.0 was wrong
+ *  /src/astro-core/milkyway/calibration/README.md for what replaced it and why 20.0 was wrong
  *  by ~3 mag. Pinned against the resolved-star-corrected residual. */
 export const GC_SIGHTLINE_MAG_ARCSEC2 =
   SB_ZERO_POINT - 2.5 * Math.log10(GC_SIGHTLINE_COLUMN);
@@ -303,7 +303,7 @@ export class MilkyWay {
     (c.tint.value as THREE.Color).copy(tintColor(r, g, b));
   }
 
-  /** Shipped default is `REDDENING_RGB` (0.76, 1.0, 1.35); Cardelli 1989 (/data/papers/index.md#cardelli1989) gives (0.751, 1.0, 1.337), and which to ship is open (column/README.md#dust--the-analytic-tier-and-what-composes-with-it). Larger spread reddens harder. */
+  /** Shipped default is `REDDENING_RGB` (0.76, 1.0, 1.35); Cardelli 1989 (/data/papers/index.md#cardelli1989) gives (0.751, 1.0, 1.337), and which to ship is open (/src/astro-core/milkyway/column/README.md#dust--the-analytic-tier-and-what-composes-with-it). Larger spread reddens harder. */
   setReddeningRGB(r: number, g: number, b: number) {
     (this.shared.uReddeningRGB.value as THREE.Vector3).set(r, g, b);
   }

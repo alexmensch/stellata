@@ -5,8 +5,8 @@
 import * as THREE from 'three';
 import { angularToPx } from '../camera/controls/star-geometry';
 import { DEFAULT_FOV } from '../filters/filter-state';
-import { HIGHLIGHT_DESAT, tonemapWhitePoint } from './tonemap/tonemap-pure';
-import { pixelSolidAngleArcsec2 } from './emission/emission-pure';
+import { HIGHLIGHT_DESAT, tonemapWhitePoint } from '../../astro-core/tonemap/tonemap-pure';
+import { pixelSolidAngleArcsec2 } from '../../astro-core/emission/emission-pure';
 import { BASE_EPOCH_EXPOSURE, DEFAULT_SUMMATION_ARCSEC2 } from './exposure/exposure-epoch';
 
 /** `uHdrTarget` is the branch: 0 means the fragment lands straight on the

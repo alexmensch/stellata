@@ -9,8 +9,26 @@ photometric models both the build pipeline (`scripts/`) and the viewer
 frame have one definition the catalogue build and the shader uniforms both
 read, and what lets the tree lift into its own workspace package unchanged.
 
+## Subfolders
+
+Each has its own README.
+
+- `colour/` — the B–V → Teff → linear-sRGB blackbody chain.
+- `emission/` — the luminance unit every emitter writes: magnitude →
+  luminance, the point-source peak, the two solid angles, the population
+  colours and the ρ₀ solve.
+- `extinction/` — the CPU mirror of the per-star dust march.
+- `iau-geometry/` — the IAU constellation boundaries at B1875: edges,
+  cells, nearest-edge distance, label anchors.
+- `milkyway/` — the band's column model and its photometric calibration.
+- `tonemap/` — the display operator's CPU mirror and exact inverse.
+
 ## Files
 
+- `equinoctial-pure.ts` (+ test) — the non-singular equinoctial element
+  representation and the classical round trip; the Horizons element fetch
+  and the viewer's planet ephemeris both express their elements in it
+  ([Equinoctial elements](/src/client/solar-system/ephemerides/README.md#equinoctial-elements)).
 - `angles.ts` (+ test) — `wrapAngle(a)` / `wrapDegrees(d)`, the signed
   wraps onto (−π, π] and (−180, 180]. Both reduce by one `floor`, not by
   a while-loop: Earth's spin accumulates ~6.6e8 degrees at the model
@@ -85,7 +103,7 @@ read, and what lets the tree lift into its own workspace package unchanged.
     `besselianEpochToJd` supplies `B1875_JD`, the equinox the IAU
     constellation boundaries are drawn at — the θ sign and the epoch are
     both silent-failure modes, documented in
-    [B1875](/src/client/constellation-boundaries/iau-geometry/README.md#b1875). Cubic
+    [B1875](/src/astro-core/iau-geometry/README.md#b1875). Cubic
     polynomials: right for the 125 years back to B1875, arcminutes off at
     the model clock's bounds.
   - **[Vondrák 2011](/data/papers/index.md#vondrak2011)** — `longTermEclipticPole` /

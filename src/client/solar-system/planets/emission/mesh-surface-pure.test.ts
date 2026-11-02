@@ -10,7 +10,7 @@ import {
   bodySurfaceBrightnessMagArcsec2,
   planetApparentMagnitude,
 } from '../../../../astro-core/perceptual-magnitude';
-import { LUMA_CEIL, pointSourcePeakLuminance, surfaceBrightnessLuminance } from '../../../hdr/emission/emission-pure';
+import { LUMA_CEIL, pointSourcePeakLuminance, surfaceBrightnessLuminance } from '../../../../astro-core/emission/emission-pure';
 import { BASE_EPOCH_EXPOSURE } from '../../../hdr/exposure/exposure-epoch';
 import { ARCSEC_TO_RAD, AU_PC, KM_PC, SUN_ABSMAG_V } from '../../../../astro-core/astronomy-constants';
 

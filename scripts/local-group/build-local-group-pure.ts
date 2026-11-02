@@ -5,7 +5,7 @@
 import {
   fluxNumber,
   solveDensity0,
-} from '../../src/client/hdr/emission/density0-solver-pure';
+} from '../../src/astro-core/emission/density0-solver-pure';
 import {
   bnCoeff,
   discGeometryIntegral,

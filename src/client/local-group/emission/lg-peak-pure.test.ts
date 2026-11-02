@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { pixelSolidAngleArcsec2 } from '../../hdr/emission/emission-pure';
+import { pixelSolidAngleArcsec2 } from '../../../astro-core/emission/emission-pure';
 import { angularToPx } from '../../camera/controls/star-geometry';
 import {
   columnSurfaceBrightness,

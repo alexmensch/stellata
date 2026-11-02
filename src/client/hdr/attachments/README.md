@@ -84,7 +84,7 @@ resolved surface in exactly the sense the pin means:
 The emission unit already draws that line generically —
 `peak_L = L(m) / max(1, π·r_phys_px²)`, so below 1 px the whole flux lands
 on the peak and above it the emission IS true surface brightness
-([Unit](../emission/README.md#unit--what-an-emitting-layer-writes)). A texel counted as coverage without light
+([Unit](../../../astro-core/emission/README.md#unit--what-an-emitting-layer-writes)). A texel counted as coverage without light
 in R pulls `D` down and over-exposes the surface the pin holds; light in R
 without coverage leaves it alone. The night side is the dark case big
 enough to matter — geometric coverage would halve `D` at full phase and gut

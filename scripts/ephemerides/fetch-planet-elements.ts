@@ -19,7 +19,7 @@ import {
   equinoctialToClassical,
   makeClassical,
   makeEquinoctial,
-} from '../../src/client/solar-system/ephemerides/equinoctial-pure';
+} from '../../src/astro-core/equinoctial-pure';
 
 import { parseHorizonsElements, type ElementRow } from './horizons-elements';
 import { unwrapMeanLongitude } from './element-unwrap-pure';

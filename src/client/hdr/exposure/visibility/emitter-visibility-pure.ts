@@ -5,8 +5,8 @@
 import {
   pointSourcePeakLuminance,
   surfaceBrightnessLuminance,
-} from '../../emission/emission-pure';
-import { displayLevel } from '../../tonemap/tonemap-pure';
+} from '../../../../astro-core/emission/emission-pure';
+import { displayLevel } from '../../../../astro-core/tonemap/tonemap-pure';
 import { SOFT_TAPER_MARGIN_MAG } from '../../../../astro-core/perceptual-magnitude';
 import { CADENCE_JND_MAG } from '../../../render-gate/cadence/clock-cadence-pure';
 import {

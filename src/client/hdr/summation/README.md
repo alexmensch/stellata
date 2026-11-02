@@ -2,7 +2,7 @@
 
 The eye does not detect an extended source pixel by pixel: rods sum over a
 critical area, so threshold for anything larger than that area is a
-**surface brightness** ([Extended sources](../emission/README.md#extended-sources--two-solid-angles-one-write-tail)). Turning
+**surface brightness** ([Extended sources](../../../astro-core/emission/README.md#extended-sources--two-solid-angles-one-write-tail)). Turning
 that into a display level means averaging the emission over the summation
 patch and gaining by the patch area — and the average is what this folder
 owns. [§ 1](/docs/science-hdr-pipeline.md#1-the-unit--threshold-anchored-display-luminance) is the design gate.
@@ -90,7 +90,7 @@ one category deliberately left out — [Known residuals](../attachments/README.m
 same `Ω_sum`-gained value the band used to write into attachment 0, so the
 convolution is a plain mean of it. A mean over a *uniform* field returns
 that field exactly, which is why the band's shipped display table from Sol
-([The gradient this produces](../../milkyway/calibration/README.md#the-gradient-this-produces-and-what-it-reads-on-screen)) is preserved by
+([The gradient this produces](../../../astro-core/milkyway/calibration/README.md#the-gradient-this-produces-and-what-it-reads-on-screen)) is preserved by
 construction rather than to some tolerance. Carrying un-gained flux instead
 would put the band's texels at ~4e-8 — fp16 subnormal range, and quantised
 to nothing.
@@ -138,7 +138,7 @@ pixel ratio and that outlives the pass) — so a zoom never reallocates.
 A convolution can only average what the rasteriser sampled. A raymarch
 point-samples its profile at the pixel centre, so an aliased Sérsic cusp
 survives the convolution intact — which is why the footprint softening in
-[Footprint](../emission/README.md#footprint--a-fragment-carries-a-pixel-not-a-point) is a prerequisite for this pass rather
+[Footprint](../../../astro-core/emission/README.md#footprint--a-fragment-carries-a-pixel-not-a-point) is a prerequisite for this pass rather
 than an independent nicety. With it, the residual at M31's nucleus is
 0.01–0.15 mag across the whole FOV range; without it, 1.4–3.1 mag.
 

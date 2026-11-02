@@ -138,7 +138,7 @@ Three stop responding at a hard threshold:
   floor, so tiering's bound implies this one.
 - **The peak** — `pointSourcePeakTsl`'s `max(1, π·r²)` saturates at
   or below `POINT_SOURCE_FLAT_PEAK_DIAMETER_PX` = 2/√π
-  ([Unit](../../hdr/emission/README.md#unit--what-an-emitting-layer-writes)), where pinning the radius to 0
+  ([Unit](../../../astro-core/emission/README.md#unit--what-an-emitting-layer-writes)), where pinning the radius to 0
   changes the peak by nothing at all.
 
 The fourth has **no plateau**: `physRatio` is also a varying, and

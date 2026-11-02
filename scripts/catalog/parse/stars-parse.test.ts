@@ -288,7 +288,7 @@ describe('readStars manifest labels', () => {
 describe('readStars constellation assignment', () => {
   // ra=20h14m16.6s / dec=+15°11'51" — ρ Aql, whose 1992 boundary crossing by
   // proper motion is the whole reason the two constellations are separate
-  // fields. See /src/client/constellation-boundaries/iau-geometry/README.md#ρ-aquilae.
+  // fields. See /src/astro-core/iau-geometry/README.md#ρ-aquilae.
   const RHO_AQL: ManifestRow = {
     bayer: 'Rho', flam: '67', hip: '99742', hd: '192425', hr: '7724',
     tyc: RHO_AQL_TYC, gl: RHO_AQL_GL,

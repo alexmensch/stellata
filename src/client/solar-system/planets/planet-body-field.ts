@@ -60,7 +60,7 @@ import {
 } from '../../binaries/eclipse/eclipse-photometry-pure';
 import { ECLIPSE_DIM_TAU_S } from '../../binaries/binary-tuning';
 import { umbralDepthFromOffsets, umbralGlow } from './eclipses/umbral-glow-pure';
-import { relativeLuminance } from '../../hdr/tonemap/tonemap-pure';
+import { relativeLuminance } from '../../../astro-core/tonemap/tonemap-pure';
 import { mark as perfMark, measure as perfMeasure } from '../../debug/perf-hud';
 
 /** Screen separation below which a body reads as one point with its

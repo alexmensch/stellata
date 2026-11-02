@@ -13,7 +13,7 @@ import {
   ConstellationBoundaries,
   type ConstellationBoundariesDeps,
 } from './constellation-boundaries';
-import { createIauConstellationLookup } from './iau-geometry/iau-boundaries-pure';
+import { createIauConstellationLookup } from '../../astro-core/iau-geometry/iau-boundaries-pure';
 
 // Bright stars sit 1–64 pc from their walls, the V 5 population 0.01–0.64 pc,
 // so the fade window is [1, 4] pc at limit 0 and [0.02, 0.07] pc from limit 5.

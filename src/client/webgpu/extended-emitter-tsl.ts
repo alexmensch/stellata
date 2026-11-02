@@ -1,10 +1,10 @@
 // TSL mirror of the stellata_extended_emitter chunk: the write tail every
 // extended-source emitter shares — column → gain → all three attachments,
-// and the inline operator off-target. ../hdr/emission/README.md#unit--what-an-emitting-layer-writes.
+// and the inline operator off-target. ../../astro-core/emission/README.md#unit--what-an-emitting-layer-writes.
 
 import { Fn, If, dot, vec3, vec4 } from 'three/tsl';
 import type { Node } from 'three/webgpu';
-import { LUMA_WEIGHTS } from '../hdr/tonemap/tonemap-pure';
+import { LUMA_WEIGHTS } from '../../astro-core/tonemap/tonemap-pure';
 import type { EmitterOutputs } from './hdr/mrt-material';
 import {
   exposedLuminanceTsl, statisticTexelTsl, surfaceBrightnessLuminanceTsl,

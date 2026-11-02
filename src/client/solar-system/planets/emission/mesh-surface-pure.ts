@@ -3,7 +3,7 @@
 // body's true flux. See README.md#physical-luminance-emission--into-the-scene-wide-hdr-unit.
 
 import { ARCSEC_TO_RAD } from '../../../../astro-core/astronomy-constants';
-import { luminanceForMagnitude, surfaceBrightnessLuminance } from '../../../hdr/emission/emission-pure';
+import { luminanceForMagnitude, surfaceBrightnessLuminance } from '../../../../astro-core/emission/emission-pure';
 import type { AtmoDiscMeans } from '../../atmosphere/atmosphere-scattering-pure';
 import { bodySurfaceBrightnessMagArcsec2, hostIrradianceMagnitude } from '../../../../astro-core/perceptual-magnitude';
 
@@ -42,7 +42,7 @@ export function lambertLimbDiscMean(limbFloor: number, limbExp: number): number 
  *
  *  `E · Ω_px`: the host's irradiance at the body on the luminance scale,
  *  times the solid angle one pixel subtends. Ω_px is why zooming dims an
- *  extended source (`../../../hdr/emission/README.md#unit--what-an-emitting-layer-writes`) — the same
+ *  extended source (`../../../../astro-core/emission/README.md#unit--what-an-emitting-layer-writes`) — the same
  *  factor that
  *  dims a resolved disc's peak under the point-source rule, which is what
  *  keeps mesh and glare continuous at any FOV. At unit exposure — README.md#unit-exposure. */

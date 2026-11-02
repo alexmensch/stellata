@@ -4,8 +4,8 @@ import {
   GLOW_COLLAPSE_STACK_MARGIN,
   glowCollapseHalfStepL,
 } from './glow-collapse-pure';
-import { displayLevel, tonemapWhitePoint } from '../../hdr/tonemap/tonemap-pure';
-import { pointSourcePeakLuminance } from '../../hdr/emission/emission-pure';
+import { displayLevel, tonemapWhitePoint } from '../../../astro-core/tonemap/tonemap-pure';
+import { pointSourcePeakLuminance } from '../../../astro-core/emission/emission-pure';
 import {
   EV_MAX_STOPS, sceneExposure, thresholdMagFor,
 } from '../../hdr/exposure/exposure-epoch';

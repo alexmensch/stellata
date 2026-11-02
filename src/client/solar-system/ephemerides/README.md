@@ -25,9 +25,6 @@ src/client/solar-system/ephemerides/
                                   in M, plus the frozen Horizons tables
                                   where they reach. Heliocentric ecliptic
                                   parsecs out.
-  equinoctial-pure.ts (+ test)    The non-singular element representation
-                                  every source is expressed in, and the
-                                  blend. See README.md#equinoctial-elements.
   element-table.ts (+ test)       One planet's uniform-cadence table of
                                   equinoctial elements + the Catmull–Rom
                                   sampler. See README.md#horizons-element-tables.
@@ -152,7 +149,8 @@ monotone ramp between them.
 
 ## Equinoctial elements
 
-`equinoctial-pure.ts` is the representation both sources are expressed
+`/src/astro-core/equinoctial-pure.ts` (shared with the Horizons fetch) is
+the representation both sources are expressed
 in: `h/k` = `e·(sin ϖ, cos ϖ)`, `p/q` = `tan(i/2)·(sin Ω, cos Ω)`, and
 the mean longitude λ = M + ϖ.
 

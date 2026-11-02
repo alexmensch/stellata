@@ -1,7 +1,7 @@
 // Stefan-Boltzmann radius chain: effective temperature and bolometric
 // correction by class, and the absolute-magnitude inverse. See README.md.
 
-import { ballesterosBvFromTeff } from '../../colour/blackbody-lut-pure';
+import { ballesterosBvFromTeff } from '../../../src/astro-core/colour/blackbody-lut-pure';
 import { SOLAR_BV_FALLBACK, type ApsisRow } from '../record/catalog-pure';
 import {
   SPECTRAL_UNKNOWN,

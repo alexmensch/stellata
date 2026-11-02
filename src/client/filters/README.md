@@ -56,7 +56,7 @@ brightness**, read through `extendedThresholdSbFor` — the sibling of
 `instrumentLimitMag`, and here rather than in `hdr/` for the same reason
 that one is: an extended source is detected as a contrast against the sky
 it sits in, so the background level *is* where its threshold sits
-([Extended sources](../hdr/emission/README.md#extended-sources--two-solid-angles-one-write-tail)). Its only consumer is
+([Extended sources](../../astro-core/emission/README.md#extended-sources--two-solid-angles-one-write-tail)). Its only consumer is
 `../hdr/exposure/exposure-epoch.ts` `summationSolidAngleFor`, which pairs
 it with `m_lim`. It has yet to land as an additive floor on `L`, which is
 the other half of the axis. `passband` still has no consumer.
@@ -91,7 +91,7 @@ carried brightness any more. `sizeMin`/`sizeMax` were K's pixel projection
 at the current viewport, so authoring them contradicted the `TARGET_PX`
 invariant above; and "Dynamic range" was never display dynamic range but
 the magnitude *window* of the footprint curve, colliding by name with the
-tone-map's `DR_MAG`, which is the real lever ([Operator](../hdr/tonemap/README.md#operator)).
+tone-map's `DR_MAG`, which is the real lever ([Operator](../../astro-core/tonemap/README.md#operator)).
 
 **The multiplier stayed where those two went, because it is
 adaptation-neutral.** The exposure statistic divides a point source's flux

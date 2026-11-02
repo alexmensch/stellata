@@ -13,7 +13,7 @@ import {
   makeClassical,
   makeEquinoctial,
   type EquinoctialElements,
-} from './equinoctial-pure';
+} from '../../../astro-core/equinoctial-pure';
 
 const DEG = Math.PI / 180;
 const DAYS_PER_JULIAN_CENTURY = 36525;

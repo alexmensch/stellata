@@ -10,7 +10,7 @@ import {
   summationRadiusPx,
   summationWeight,
 } from './summation-pure';
-import { pixelSolidAngleArcsec2, surfaceBrightnessLuminance } from '../emission/emission-pure';
+import { pixelSolidAngleArcsec2, surfaceBrightnessLuminance } from '../../../astro-core/emission/emission-pure';
 import {
   BASE_EPOCH_EXPOSURE,
   DEFAULT_SUMMATION_ARCSEC2,
@@ -138,7 +138,7 @@ describe('the kernel weights', () => {
   // Every disc kernel of the same radius is the same operator whatever the
   // plate scale, so the mean of a UNIFORM field must be that field exactly.
   // This is not a tolerance: it is the identity the band's shipped display
-  // table from Sol rests on (../../milkyway/calibration/README.md#the-gradient-this-produces-and-what-it-reads-on-screen),
+  // table from Sol rests on (../../../astro-core/milkyway/calibration/README.md#the-gradient-this-produces-and-what-it-reads-on-screen),
   // and it holds at every factor because
   // normalising by the summed weight is scale-free.
   it('returns a uniform field untouched at every reachable radius', () => {
@@ -184,7 +184,7 @@ describe('one anchor for both volumetric emitters', () => {
     // reach the same attachment-2 value, so the same mean and the same level.
     expect(summationMean(() => level(22), 3)).toBeCloseTo(level(22), 15);
     // And the anchor is the threshold itself: 22.0 is where an extended
-    // source lands on L_THRESH (../emission/README.md#extended-sources--two-solid-angles-one-write-tail).
+    // source lands on L_THRESH (../../../astro-core/emission/README.md#extended-sources--two-solid-angles-one-write-tail).
     expect(level(22)).toBeCloseTo(0.02, 4);
   });
 

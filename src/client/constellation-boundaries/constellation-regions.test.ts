@@ -10,7 +10,7 @@ import { SPHERE_RADIUS_PC } from '../galactic/coord-spheres/coord-sphere';
 import { unitVectorFromRaDec } from '../../astro-core/equatorial-basis';
 import { validateBoundaryArtifact } from './boundary-artifact-loader';
 import { createConstellationRegions } from './constellation-regions';
-import { IAU_REGION_COUNT, createIauConstellationLookup } from './iau-geometry/iau-boundaries-pure';
+import { IAU_REGION_COUNT, createIauConstellationLookup } from '../../astro-core/iau-geometry/iau-boundaries-pure';
 
 const lookup = createIauConstellationLookup(iauEdgeRecords(STELLARIUM.read()));
 // The artifact the browser actually reads, built the way build:catalog builds

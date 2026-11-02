@@ -7,14 +7,14 @@ import {
   luminanceForMagnitude,
   pixelSolidAngleArcsec2,
   surfaceBrightnessLuminance,
-} from '../emission/emission-pure';
+} from '../../../astro-core/emission/emission-pure';
 import { EV_MAX_STOPS, exposureForMagLimit, MAG_PER_STOP } from './exposure-epoch';
 import {
   SOL_GALACTOCENTRIC_PC,
   galacticDirection,
   sightlineSurfaceBrightness,
-} from '../../milkyway/column/milkyway-column-pure';
-import { tonemapWhitePoint } from '../tonemap/tonemap-pure';
+} from '../../../astro-core/milkyway/column/milkyway-column-pure';
+import { tonemapWhitePoint } from '../../../astro-core/tonemap/tonemap-pure';
 import {
   ADAPT_DISPLAY_FLOOR_DM,
   ADAPT_DOT_COVERAGE,

@@ -64,7 +64,7 @@ Mercury is any cadence over 44 days — and the cadences below are 50.
 
 The other five columns need no unwrapping at all, because the wire format
 carries **equinoctial** rather than classical elements (see
-`src/client/solar-system/ephemerides/equinoctial-pure.ts`): eccentricity
+`src/astro-core/equinoctial-pure.ts`): eccentricity
 rides with perihelion in `h`/`k` and inclination rides with the node in
 `p`/`q`, so neither pair goes singular. That is not a nicety — the
 Earth/Moon barycentre's osculating inclination to the ecliptic of J2000

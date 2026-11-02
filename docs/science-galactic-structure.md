@@ -64,7 +64,7 @@ on its own, and it is what makes the scalar volume integral below the
 luminance integral. The emission column then converts to a V surface brightness
 and, through the scene-wide HDR unit, to per-pixel luminance — the same
 exposure the discrete star catalog emits against. See
-`src/client/milkyway/calibration/README.md` for the calibrated values and
+`src/astro-core/milkyway/calibration/README.md` for the calibrated values and
 that conversion, and `src/client/milkyway/README.md` for the full
 coordinate-handling chain.
 
@@ -83,7 +83,7 @@ Dividing through leaves only the RATIO of the two Υ\*_V — 3.15 from a
 [Bruzual 2003](/data/papers/index.md#bruzual2003) Chabrier SSP at Z = 0.02, 10 Gyr, against
 [Flynn 2006](/data/papers/index.md#flynn2006)'s
 measured 1.5 for the local disc column. There is no free parameter left;
-[The light ratio](/src/client/milkyway/calibration/README.md#the-light-ratio--bt-in-the-solve-is-not-the-published-number) carries the
+[The light ratio](/src/astro-core/milkyway/calibration/README.md#the-light-ratio--bt-in-the-solve-is-not-the-published-number) carries the
 closed form and the metallicity brackets.
 
 **The band marches the model minus the stars the catalogue draws.** The
@@ -92,7 +92,7 @@ field draws the resolved ones itself, so a band marching the whole
 emissivity counts them twice. The band therefore multiplies the emissivity
 at each step by one minus the catalogue's measured share of the model's
 light there — a table over distance from Sol and |sin b|, read off the
-built catalogue ([The resolution hole](/src/client/milkyway/calibration/README.md#the-resolution-hole--the-band-marches-the-model-minus-the-drawn-stars)).
+built catalogue ([The resolution hole](/src/astro-core/milkyway/calibration/README.md#the-resolution-hole--the-band-marches-the-model-minus-the-drawn-stars)).
 At V ≤ 11 the hole removes **0.35 %** of the model's
 light over the tabulated volume — 1.03× the catalogue's own light there,
 the shell average being blind to structure in longitude — while the
@@ -131,7 +131,7 @@ floor, and the residual anchor re-run there would put the Galaxy a
 magnitude *fainter* than M31. A vertical-profile change cannot substitute
 — the pole column and the integrated total are both vertical integrals,
 and adding the thick disc moved their ratio by 0.09 mag.
-[Two checks](/src/client/milkyway/calibration/README.md#two-checks-and-both-disagree-by-the-same-sign-and-order) carries the
+[Two checks](/src/astro-core/milkyway/calibration/README.md#two-checks-and-both-disagree-by-the-same-sign-and-order) carries the
 numbers and the pins.
 
 ## Interstellar dust extinction

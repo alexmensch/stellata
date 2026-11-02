@@ -8,13 +8,13 @@ import {
   footprintRadiusPc,
   lumaNormalisedTint,
   softenRadius,
-} from '../../hdr/emission/emission-pure';
+} from '../../../astro-core/emission/emission-pure';
 import {
   OLD_SPHEROID_COLOR_RGB,
   OLD_SPHEROID_COLOUR_INDEX_BV,
   discColourIndex,
-} from '../../hdr/emission/population-colour-pure';
-import { linearSrgbFromColourIndex } from '../../../../scripts/colour/blackbody-lut-pure';
+} from '../../../astro-core/emission/population-colour-pure';
+import { linearSrgbFromColourIndex } from '../../../astro-core/colour/blackbody-lut-pure';
 import type { LgEmission, LgObject } from '../local-group-loader';
 
 /**
@@ -305,7 +305,7 @@ export function cpuSersicNu(u: number, invN: number, bn: number, pn: number): nu
  *  unit-ball frame.
  *
  *  `footprintPc` smooths the profile over one pixel's transverse footprint
- *  (`../../hdr/emission/emission-pure.ts` `footprintRadiusPc`); `zFootprintPc` is its
+ *  (`../../../astro-core/emission/emission-pure.ts` `footprintRadiusPc`); `zFootprintPc` is its
  *  share along the disc normal, which the caller projects. Both default to 0
  *  — the shipped shader always passes a footprint, but a flux integral over
  *  solid angle has no plate scale to derive one from. */

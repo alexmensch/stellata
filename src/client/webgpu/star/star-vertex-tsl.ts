@@ -11,7 +11,7 @@ import type { Node } from 'three/webgpu';
 import type * as THREE from 'three';
 import {
   BALLESTEROS_BV_SCALE, BALLESTEROS_DISC_K2, BALLESTEROS_QUAD_LINEAR, BALLESTEROS_T0,
-} from '../../../../scripts/colour/blackbody-lut-pure';
+} from '../../../astro-core/colour/blackbody-lut-pure';
 import { BV_MAX, BV_MIN } from '../../star-pipeline/blackbody-lut';
 import { GLOW_COLLAPSE_FLOOR_L } from '../../star-pipeline/collapse/glow-collapse-pure';
 import {
@@ -21,7 +21,7 @@ import {
   STAR_PASS_CORE_MASK, STAR_PASS_GLOW, type StarPass,
 } from '../../star-pipeline/star-pass';
 import { SOFT_TAPER_MARGIN_MAG } from '../../../astro-core/perceptual-magnitude';
-import { R_V } from '../../star-pipeline/extinction/dust-raymarch-pure';
+import { R_V } from '../../../astro-core/extinction/dust-raymarch-pure';
 import { kernelFluxPeakTsl, pointSourcePeakTsl } from '../emission-tsl';
 import { dustRaymarchAvTsl, type DustTextureNode } from '../extinction/dust-raymarch-tsl';
 import type { AvStorageNode } from '../extinction/extinction-nodes';

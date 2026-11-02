@@ -10,7 +10,7 @@ import {
   type ConstellationRegionGrid,
   type IauBoundaryEdges,
   type RegionLabelAnchor,
-} from '../../../src/client/constellation-boundaries/iau-geometry/iau-boundaries-pure';
+} from '../../../src/astro-core/iau-geometry/iau-boundaries-pure';
 
 /** Decimals kept per direction component. One unit in the last place is
  *  1e-7 rad ≈ 0.02″ of sky, two orders under the arcsecond the round-trip

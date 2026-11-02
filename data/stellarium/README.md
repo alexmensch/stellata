@@ -62,4 +62,4 @@ preferred over RA/Dec positional matching.
 The boundary side has the equivalent guard built into its own
 decomposition: the edge set must resolve to exactly 89 uniquely named
 regions or the walk throws. See that folder's README [Cell
-decomposition](/src/client/constellation-boundaries/iau-geometry/README.md#cell-decomposition--the-self-validating-invariant).
+decomposition](/src/astro-core/iau-geometry/README.md#cell-decomposition--the-self-validating-invariant).

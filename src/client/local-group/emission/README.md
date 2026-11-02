@@ -100,7 +100,7 @@ shader — and no per-frame update at all.
 ## Zero free parameters — the emission scale is derived
 
 The layer emits into the scene-wide HDR unit
-([Unit](../../hdr/emission/README.md#unit--what-an-emitting-layer-writes)), exactly as the Milky Way band
+([Unit](../../../astro-core/emission/README.md#unit--what-an-emitting-layer-writes)), exactly as the Milky Way band
 does. **The zero point is derived, not tuned.** The solver normalises
 `density0` against zero-point-free flux `F = 10^(−0.4·m_V)`, and
 Φ = ∫∫ρ/s² dV = ∫(∫ρ ds) dΩ — so a raymarched column *is* flux per
@@ -115,9 +115,9 @@ m_px = S − 2.5·log10(Ω_px)
 Feeding `m_px` back through `L = uExposure · 10^(−0.4·m_px)` collapses to
 one scalar gain (`stellataSurfaceBrightnessLuminance`), so the
 population tint rides through untouched. `SB_ZERO_POINT` lives in
-`../../hdr/emission/emission-pure.ts` — it is the emission unit's
+`../../../astro-core/emission/emission-pure.ts` — it is the emission unit's
 constant, not this layer's, and the Milky Way band takes the same one
-(`../../milkyway/calibration/README.md`). The graph imports it, so the
+(`../../../astro-core/milkyway/calibration/README.md`). The graph imports it, so the
 two cannot drift.
 
 **The same extended-source anchor the band takes, and it took a convolution
@@ -137,7 +137,7 @@ pinned in the *against convolve-then-gain* case of
 **Two consequences worth having before touching the raymarch.** The
 convolution can only average what the rasteriser sampled, so the profile is
 smoothed over one pixel's transverse footprint as it is marched
-([Footprint](../../hdr/emission/README.md#footprint--a-fragment-carries-a-pixel-not-a-point)) — without that the Sérsic cusp
+([Footprint](../../../astro-core/emission/README.md#footprint--a-fragment-carries-a-pixel-not-a-point)) — without that the Sérsic cusp
 survives the convolution intact, which is the whole 3.95 mag. And M31 is now
 **FOV-invariant** like the band: its display level carries no plate scale at
 all, where it used to dim quadratically while the band held. The nucleus
@@ -165,7 +165,7 @@ alone, so it would land twice.
 ## Population tints — two family seeds, both derived
 
 **The tint is luma-normalised** (`lumaNormalisedTint`,
-`../../hdr/emission/emission-pure.ts`) so it carries hue only. The shader
+`../../../astro-core/emission/emission-pure.ts`) so it carries hue only. The shader
 multiplies the scalar column per channel while the solver normalised that
 column against total flux — an un-normalised tint dims the object by its
 own relative luminance, 0.23 mag for the spheroid seed and 0.18 for the
@@ -175,7 +175,7 @@ scalar column — so it agrees with the shader only while that holds; the
 normalisation is an invariant, not a style choice.
 
 Each seed is a (B−V) through the star field's own colour chain
-([Population colours](../../milkyway/calibration/README.md#population-colours--the-discs-is-solved-not-cited)), no longer
+([Population colours](../../../astro-core/milkyway/calibration/README.md#population-colours--the-discs-is-solved-not-cited)), no longer
 the Milky Way's palette by import:
 
 | family | (B−V) | source |
@@ -321,7 +321,7 @@ fighting it. Through the summation patch, at the base epoch and a
 50° / 900 px viewport, the profile reads **120 / 64 / 28 / 1** of 255 at
 0 / 10 / 20 / 40 arcmin — a threshold star is 38.25, so M31 stays brighter
 than one out to ~15 arcmin, and the operator's faint-end toe
-([Operator](../../hdr/tonemap/README.md#operator)) takes the sub-threshold outer envelope
+([Operator](../../../astro-core/tonemap/README.md#operator)) takes the sub-threshold outer envelope
 to the dither floor. A bright core trailing off over most of a degree,
 which is what the naked eye gets, and pinned.
 

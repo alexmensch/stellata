@@ -19,16 +19,16 @@ import {
   type Vec3,
   galacticDirection,
   sightlineColumn,
-} from '../../src/client/milkyway/column/milkyway-column-pure';
-import { SB_ZERO_POINT } from '../../src/client/hdr/emission/emission-pure';
+} from '../../src/astro-core/milkyway/column/milkyway-column-pure';
+import { SB_ZERO_POINT } from '../../src/astro-core/emission/emission-pure';
 import {
   RESOLVED_HOLE_BANDS,
   RESOLVED_HOLE_SHELLS,
   type ResolvedHoleTable,
   resolvedHoleIndex,
   resolvedHoleGridOf,
-} from '../../src/client/milkyway/calibration/resolved-fraction-pure';
-import { RESOLVED_HOLE_CATALOGUE_RECORDS } from '../../src/client/milkyway/calibration/resolved-hole-table';
+} from '../../src/astro-core/milkyway/calibration/resolved-fraction-pure';
+import { RESOLVED_HOLE_CATALOGUE_RECORDS } from '../../src/astro-core/milkyway/calibration/resolved-hole-table';
 import {
   type CapSurfaceBrightness,
   MIN_STARS_PER_CELL,
@@ -43,7 +43,7 @@ import {
   shellTotals,
 } from './resolved-light-pure';
 
-const TABLE_MODULE = 'src/client/milkyway/calibration/resolved-hole-table.ts';
+const TABLE_MODULE = 'src/astro-core/milkyway/calibration/resolved-hole-table.ts';
 
 async function loadColumns(manifestPath: string): Promise<StarColumns> {
   const buffer = await readCatalogBuffer(manifestPath);

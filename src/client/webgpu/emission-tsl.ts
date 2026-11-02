@@ -1,11 +1,11 @@
 // TSL mirrors of stellata_hdr_emission's point-source peak, flux-peak
 // and statistic-texel rules, over emission-pure's constants. Contracts:
-// ../hdr/emission/README.md#unit--what-an-emitting-layer-writes ../hdr/attachments/README.md#the-unit.
+// ../../astro-core/emission/README.md#unit--what-an-emitting-layer-writes ../hdr/attachments/README.md#the-unit.
 
 import { Fn, clamp, dot, float, log2, max, min, pow, sqrt, vec3, vec4 } from 'three/tsl';
 import type { Node } from 'three/webgpu';
 import { ARCSEC_TO_RAD } from '../../astro-core/astronomy-constants';
-import { FOOTPRINT_SQRT12, LUMA_CEIL, MAG_PER_STOP } from '../hdr/emission/emission-pure';
+import { FOOTPRINT_SQRT12, LUMA_CEIL, MAG_PER_STOP } from '../../astro-core/emission/emission-pure';
 
 type NF = Node<'float'>;
 type N3 = Node<'vec3'>;
@@ -21,7 +21,7 @@ export const luminanceForMagTsl = /* @__PURE__ */ Fn(
  * **Unclamped by contract** — being a single scalar is what lets a layer
  * apply it to a coloured column without touching chromaticity, so the
  * CALLER clamps the product rather than the factor
- * (`../hdr/emission/README.md#unit--what-an-emitting-layer-writes`).
+ * (`../../astro-core/emission/README.md#unit--what-an-emitting-layer-writes`).
  */
 export const surfaceBrightnessLuminanceTsl = /* @__PURE__ */ Fn(
   ([exposure, magPerArcsec2, omegaArcsec2]: [NF, NF, NF]) =>

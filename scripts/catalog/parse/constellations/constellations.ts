@@ -5,7 +5,7 @@ import {
   constellationKey,
   createIauConstellationLookup,
   type IauConstellationLookup,
-} from '../../../../src/client/constellation-boundaries/iau-geometry/iau-boundaries-pure';
+} from '../../../../src/astro-core/iau-geometry/iau-boundaries-pure';
 import { raDecFromUnitVector } from '../../../../src/astro-core/equatorial-basis';
 
 /** The parsed Stellarium modern sky-culture JSON (stellarium-source.ts). */
@@ -131,7 +131,7 @@ const IAU_EDGES_SOURCE = 'https://pbarbier.com/constellations/edges_18.txt';
 // The `edges` block of Stellarium's modern sky culture: the 781 IAU
 // (Delporte 1930 (/data/papers/index.md#delporte1930)) boundary segments at
 // equinox B1875, parsed by
-// `src/client/constellation-boundaries/iau-geometry/iau-boundaries-pure.ts`.
+// `src/astro-core/iau-geometry/iau-boundaries-pure.ts`.
 export function iauEdgeRecords(raw: StellariumSkyCulture): string[] {
   const edges: unknown = raw.edges;
   if (!Array.isArray(edges) || edges.length === 0) {

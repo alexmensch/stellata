@@ -3,7 +3,7 @@
 What the star catalogue already draws, measured off the built `catalog.bin`
 against the Milky Way band model, and written into the band's calibration as
 one generated module. The band then marches the model **minus** that light,
-so the sky never carries a star twice ([The resolution hole](/src/client/milkyway/calibration/README.md#the-resolution-hole--the-band-marches-the-model-minus-the-drawn-stars)).
+so the sky never carries a star twice ([The resolution hole](/src/astro-core/milkyway/calibration/README.md#the-resolution-hole--the-band-marches-the-model-minus-the-drawn-stars)).
 
 ```bash
 pnpm run measure:band-resolved              # needs a built public/catalog.bin, ~2 s
@@ -15,7 +15,7 @@ scripts/milkyway-calibration/
   measure-resolved-light.ts   Entry point. Reads the four record columns the
                               measurement needs (xyz, absmag), prints every
                               figure, and writes
-                              src/client/milkyway/calibration/resolved-hole-table.ts.
+                              src/astro-core/milkyway/calibration/resolved-hole-table.ts.
   resolved-light-pure.ts      The cap sums, the (shell × latitude band) cells,
     (+ test)                  the table they become, and the light the table
                               removes. Pure.
@@ -79,7 +79,7 @@ the pole cap inside about a tenth of a magnitude, and the whole-model share
 has to stay well under a hundredth. The centre's hole column is NOT a
 tolerance — dust-free, the GC's total and unresolved columns differ by a
 hundredth of a magnitude, so their difference amplifies any error some
-fiftyfold ([The resolution hole](/src/client/milkyway/calibration/README.md#the-resolution-hole--the-band-marches-the-model-minus-the-drawn-stars)).
+fiftyfold ([The resolution hole](/src/astro-core/milkyway/calibration/README.md#the-resolution-hole--the-band-marches-the-model-minus-the-drawn-stars)).
 
 It does **not** re-pin anything. Every consumer test (`milkyway.test.ts`,
 `band-peak-pure.test.ts`, `diffuse-reference.test.ts`,

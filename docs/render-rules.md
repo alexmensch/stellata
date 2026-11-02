@@ -101,7 +101,7 @@ band keyed on where Sol is:
    `emitterPutsInkOnScreen`, i.e. its peak surface brightness is more
    than `TOE_BLACK_MAG` past the live extended threshold
    (`extendedThresholdSbTsl`, 22.0 mag/arcsec² at the shipped
-   instrument, [Extended sources](/src/client/hdr/emission/README.md#extended-sources--two-solid-angles-one-write-tail)). Skipping an
+   instrument, [Extended sources](/src/astro-core/emission/README.md#extended-sources--two-solid-angles-one-write-tail)). Skipping an
    emitter on this test removes its share from the exposure statistic,
    which eases the cut, which brings the emitter back — so the skip is
    admissible only under two rules: the emitter must be invisible at the

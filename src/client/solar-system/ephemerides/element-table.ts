@@ -5,7 +5,7 @@ import {
   ELEMENT_STRIDE,
   type PlanetElementTableFile,
 } from '../../../../scripts/ephemerides/planet-element-schema';
-import type { EquinoctialElements } from './equinoctial-pure';
+import type { EquinoctialElements } from '../../../astro-core/equinoctial-pure';
 
 export interface PlanetElementTable {
   readonly id: string;

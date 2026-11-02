@@ -4,7 +4,7 @@
 import {
   FULL_SPHERE_SQUARE_DEG,
   IAU_REGION_COUNT,
-} from '../../../src/client/constellation-boundaries/iau-geometry/iau-boundaries-pure';
+} from '../../../src/astro-core/iau-geometry/iau-boundaries-pure';
 import type { BoundaryArtifact } from './boundaries-artifact-pure';
 
 /** Shape only — synthetic region codes and a 2 × 2 grid. Anything reading the

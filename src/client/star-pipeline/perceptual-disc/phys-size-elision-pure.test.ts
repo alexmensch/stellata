@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   POINT_SOURCE_FLAT_PEAK_DIAMETER_PX, pointSourcePeakLuminance,
-} from '../../hdr/emission/emission-pure';
+} from '../../../astro-core/emission/emission-pure';
 import {
   DEFAULT_INSTRUMENT, INSTRUMENTS, STAR_RENDER_DEFAULTS, starPxSizes,
 } from '../../filters/filter-state';

@@ -7,7 +7,7 @@
  *  longitude λ in degrees. Angles are folded into the equinoctial pairs and λ
  *  runs unwrapped precisely so linear interpolation between adjacent samples
  *  never crosses a branch cut — see
- *  `src/client/solar-system/ephemerides/equinoctial-pure.ts`. */
+ *  `src/astro-core/equinoctial-pure.ts`. */
 export const ELEMENT_COLUMNS = ['a', 'h', 'k', 'p', 'q', 'lambda'] as const;
 
 export const ELEMENT_STRIDE = ELEMENT_COLUMNS.length;

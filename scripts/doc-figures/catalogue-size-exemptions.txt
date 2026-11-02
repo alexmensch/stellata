@@ -9,7 +9,7 @@ docs/pipeline-flowchart.md	310,939	stale
 docs/pipeline-flowchart.md	313,257	stale
 docs/science-galactic-structure.md	390k	stale
 scripts/catalog/boundaries/README.md	390k	stale
-src/client/milkyway/calibration/README.md	979,659	stale
+src/astro-core/milkyway/calibration/README.md	979,659	stale
 src/client/webgpu/extinction/README.md	983,068	stale
 src/client/webgpu/extinction/README.md	983,296	stale
 src/client/webgpu/star/README.md	388,071	stale
@@ -25,7 +25,7 @@ scripts/perf/pins/README.md	329,657	history
 src/client/debug/frame-cost/passes/README.md	388,071	history
 src/client/debug/memory/README.md	329,657	history
 src/client/loaders/README.md	388,071	history
-src/client/milkyway/calibration/README.md	388k	history
+src/astro-core/milkyway/calibration/README.md	388k	history
 src/client/util/README.md	983,068	history
 src/client/webgpu/extinction/README.md	388,071	history
 src/client/webgpu/extinction/dispatch-order/README.md	983,068	history

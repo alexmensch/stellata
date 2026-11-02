@@ -33,7 +33,7 @@ import {
   reliefHorizonUniform,
 } from './surface-relief/surface-relief-pure';
 import type { HdrEmitterUniforms } from '../../hdr/hdr-emitter-uniforms';
-import { relativeLuminance } from '../../hdr/tonemap/tonemap-pure';
+import { relativeLuminance } from '../../../astro-core/tonemap/tonemap-pure';
 import {
   phaseAngleFor,
   phaseAngleFromLegs,

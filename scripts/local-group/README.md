@@ -11,7 +11,7 @@ three inputs (`../util/sources/`), `local-group-parse.ts` holds their
 parsers, and `local-group-inputs.test.ts` pins the up-to-date gate's
 input set, `stepInputPaths('build:local-group')` (`../util/step-inputs.ts`). The quadrature and the ρ₀ solve
 itself are shared with the Milky Way band and live in
-`src/client/hdr/emission/density0-solver-pure.ts` — a build script
+`src/astro-core/emission/density0-solver-pure.ts` — a build script
 importing from the client is the established direction, and the reverse
 is not. All vitest-pinned in `*.test.ts`.
 
@@ -174,7 +174,7 @@ consumes raw numbers and never re-derives photometry.
   (`integrateOverEllipsoid`, Gauss–Legendre in unit-ball coordinates) for
   every profile; the analytic incomplete-gamma closed forms exist only as
   vitest cross-pins. `emission-geometry-pure.ts` supplies the shapes,
-  [Solving ρ₀](/src/client/hdr/emission/README.md#solving-ρ--a-published-magnitude-into-an-emitters-density) owns the solve.
+  [Solving ρ₀](/src/astro-core/emission/README.md#solving-ρ--a-published-magnitude-into-an-emitters-density) owns the solve.
 - **M31 bulge contract:** the bulge is its own spheroid component —
   density0 solves over the bulge's u ≤ uMax sphere via the same
   Sérsic geometry integral as every spheroid, and the renderer packs

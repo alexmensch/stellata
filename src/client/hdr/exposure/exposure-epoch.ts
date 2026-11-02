@@ -9,8 +9,8 @@ import {
   instrumentLimitMag,
 } from '../../filters/filter-state';
 import { SOFT_TAPER_MARGIN_MAG } from '../../../astro-core/perceptual-magnitude';
-import { MAG_PER_STOP, rodSummationSolidAngleArcsec2 } from '../emission/emission-pure';
-import { L_THRESH } from '../tonemap/tonemap-pure';
+import { MAG_PER_STOP, rodSummationSolidAngleArcsec2 } from '../../../astro-core/emission/emission-pure';
+import { L_THRESH } from '../../../astro-core/tonemap/tonemap-pure';
 
 export { MAG_PER_STOP };
 

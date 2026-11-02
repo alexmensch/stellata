@@ -18,14 +18,19 @@ disables. Hidden in chart mode.
   `BandMaterials` contract, the `BandSharedSlots` group both components
   hold by reference, and the seeder that starts it ([The material seam](#the-material-seam)).
   The graph is `../webgpu/milkyway/milkyway-band-tsl.ts`.
-- `column/` — the density / dust profiles and population tints the shader
-  receives as uniforms, plus a CPU mirror of its raymarch. Its own README.
+- `/src/astro-core/milkyway/column/` — the density / dust profiles and
+  population tints the shader receives as uniforms, plus a CPU mirror of
+  its raymarch. Shared with the dust bakers; its own README.
 - `band-peak-pure.ts` (+ test) — the brightest sightline the band renders
   from a camera position, as a bound ([The brightest rendered sightline](#the-brightest-rendered-sightline)).
-- `calibration/` — the published photometry the solve runs on (M_V, B/T,
+- `/src/astro-core/milkyway/calibration/` — the published photometry the solve runs on (M_V, B/T,
   the two components' B−V), the light ratio and the disc colour derived
   from it, the resolution hole the march multiplies the emissivity by, and
-  the two sightline checks it is graded against. Its own README.
+  the two sightline checks it is graded against. Shared with
+  `scripts/milkyway-calibration/`; its own README.
+- `resolved-hole-texture.ts` (+ test) — the `Data3DTexture` the
+  resolution-hole voxels go into and its filter pair
+  ([The resolution hole](/src/astro-core/milkyway/calibration/README.md#the-resolution-hole--the-band-marches-the-model-minus-the-drawn-stars)).
 - `milkyway-tuning.ts` — Milky Way section of the debug panel
   (surface-brightness anchor, density, extinction, reddening RGB
   sliders).
@@ -71,11 +76,11 @@ and the path length varies with view direction on its own.
 ## Density, tints and dust
 
 The disc and bulge profiles, their population tints and the analytic dust
-slab live with the column model: `column/README.md`.
+slab live with the column model: `/src/astro-core/milkyway/column/README.md`.
 
 ## Surface-brightness emission
 
-The band emits into the scene-wide HDR unit ([Unit](../hdr/emission/README.md#unit--what-an-emitting-layer-writes)).
+The band emits into the scene-wide HDR unit ([Unit](../../astro-core/emission/README.md#unit--what-an-emitting-layer-writes)).
 `colorAccum` is the raymarch's emission column in "density × pc ×
 colour" units; `uGlowMagOffset` carries `SB_ZERO_POINT`, the **V surface
 brightness a unit column carries**, so the sightline reads
@@ -93,7 +98,7 @@ which is why the line-of-sight hue the raymarch built survives untouched.
 the magnitude means the same thing it does for a star.
 
 **`Ω` is the eye's rod summation area, not the pixel's**
-(`uOmegaSummationArcsec2`; [Extended sources](../hdr/emission/README.md#extended-sources--two-solid-angles-one-write-tail)). An
+(`uOmegaSummationArcsec2`; [Extended sources](../../astro-core/emission/README.md#extended-sources--two-solid-angles-one-write-tail)). An
 extended source's threshold is a surface brightness, and the summation
 area is fixed in angle — so the band holds its display level at every FOV
 and viewport, where the pixel solid angle would have dimmed it
@@ -289,7 +294,7 @@ the resolved stars' light twice, 1 the shipped table.
 Two are not knobs despite the slider: `setGlowMagOffset` desynchronises the
 band from the Local Group layer (both read the one zero point), and
 `setExtinctionStrength` at anything but 1.0 contradicts the dust anchor
-([Dust](column/README.md#dust--the-analytic-tier-and-what-composes-with-it)). A third is now a *third* kind of thing: the colour pickers
+([Dust](../../astro-core/milkyway/column/README.md#dust--the-analytic-tier-and-what-composes-with-it)). A third is now a *third* kind of thing: the colour pickers
 luma-normalise on write, so a hue edit cannot move flux at emission — but
 both shipped hues are solved from published photometry, and an edit still
-moves the extincted plane ([Population tints carry hue, never flux](column/README.md#population-tints-carry-hue-never-flux)).
+moves the extincted plane ([Population tints carry hue, never flux](../../astro-core/milkyway/column/README.md#population-tints-carry-hue-never-flux)).
