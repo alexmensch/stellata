@@ -389,6 +389,9 @@ Hand-kept lists become derivations over the table:
   `stampPath`), manual record, run record and lock folder sit under it.
   `run.ts` passes the repo root; tests pass a temporary folder.
 - `run.ts` / `steps.ts` (+ test) — the command line and the table it runs.
+  `manual-step-outputs.ts` holds `MANUAL_STEPS`, every pull and bake with
+  the files it writes, as an outputs module: the one place outside a
+  declaration a `data/` path may be spelled.
   The test holds the table to the load-time rules, every manual step's
   `package.json` target to `tsx scripts/pipeline/record.ts <name>`, and every
   pull's `--describe` to running under `python3 -I -S` (skipped while the

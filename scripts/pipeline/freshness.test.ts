@@ -1,6 +1,6 @@
 import { mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { describeStep, readManualRecord, writeManualRecord, type ManualRecord } from './freshness';
@@ -19,10 +19,10 @@ describe('writeManualRecord', () => {
   it.each<[ManualStep, ManualRecord]>([
     [pull, { kind: 'pull', stamp, query: 'q', answeredBy: ['ESA-sync', 'ARI-sync'], release: 'Gaia DR3', request: 'r', requestFrom: ['m.tsv'] }],
     [pull, { kind: 'pull', stamp, query: 'q', answeredBy: [], requestFrom: [] }],
-    [bake, { kind: 'bake', stamp, request: 'g', requestFrom: ['public/clouds.json'] }],
+    [bake, { kind: 'bake', stamp, request: 'g', requestFrom: ['clouds.json'] }],
   ])('writes what readManualRecord reads back (%#)', (step, record) => {
-    const file = join(root, 'data/stamps/x.json');
-    mkdirSync(join(root, 'data/stamps'), { recursive: true });
+    const file = pipelineTree(root).manualStamp(step.name);
+    mkdirSync(dirname(file), { recursive: true });
     writeManualRecord(file, record);
     expect(readManualRecord(step, file)).toEqual({ kind: 'read', record });
   });

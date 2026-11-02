@@ -7,9 +7,11 @@ import { describeStep } from './freshness';
 import { loadTable } from './load-table';
 import { pipelineTree } from './pipeline-tree';
 import { describesItself, isBuild } from './step-table-pure';
-import { MANUAL_STEPS, STEPS } from './steps';
+import { MANUAL_STEPS } from './manual-step-outputs';
+import { STEPS } from './steps';
+import { MEMBERSHIP_MANIFEST_FILE } from '../catalog/membership/membership-manifest-tsv';
 
-const MANIFEST = resolve(REPO_ROOT, 'data/membership/membership-manifest.tsv');
+const MANIFEST = resolve(REPO_ROOT, MEMBERSHIP_MANIFEST_FILE);
 
 describe('the step table', () => {
   it('loads: one writer per file, no build-step cycle', async () => {
