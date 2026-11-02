@@ -89,7 +89,7 @@ write the worktree's `data/`.
 | `refresh:tycho2` | `refresh-tycho2.py` | `data/tycho2/{tycho2_main,tycho2_suppl1}.tsv` | Tycho-2 (`I/259` `tyc2` + `suppl_1`) mean positions with per-star mean epochs, PM, BT/VT — filtered to the TYCs the manifest and IV/25 mention. Range-batched over TYC1 and filtered locally; VizieR can express no server-side filter on the full identifier ([Why the pull is range-batched](/data/tycho2/README.md#why-the-pull-is-range-batched-rather-than-key-filtered)). |
 | `refresh:gliese` | `refresh-gliese.py` | `data/gliese/gliese_v70a.tsv` | [Gliese 1991](/data/papers/index.md#gliese1991) third catalogue of nearby stars (`V/70A`, whole table) — printed Johnson V + B−V, spectral type, parallax and rv, plus the B1950 position, proper motion and cross-names the binding review measures against. The V cascade's tier under Tycho-2, and the first-order source behind every `mag_src=GJ` cell (`data/gliese/README.md`). |
 | `refresh:simbad` | `refresh-simbad-sample.py` | `data/simbad/simbad_sample.tsv` | Stratified random 50k SIMBAD sample (validation corpus). |
-| `refresh:simbad-values` | `refresh-simbad-values.py` | `data/simbad/simbad_values.tsv` | Bibcoded rv / parallax / PM / coordinates + B/V fluxes for the [§ 5](/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers) value cohort — the manifest rows a SIMBAD value tier can reach. Cohort predicate and coverage: [The values pull](/data/simbad/README.md#the-values-pull). |
+| `refresh:simbad-values` | `refresh-simbad-values.py` | `data/simbad/simbad_values.tsv` | Bibcoded rv / parallax / PM / coordinates + B/V fluxes for the [§ 5](/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers) value cohort — the manifest rows a SIMBAD value tier can reach. Cohort predicate and coverage: [The values pull](/data/simbad/README.md#the-values-pull). The cohort drops rows `gaia_dr3_astrometry_catalog.tsv` already completes, so it runs AFTER `refresh:gaia-astrometry-catalog`. |
 | `refresh:simbad-tyc-hd` | `refresh-simbad-tyc-hd.py` | `data/simbad/simbad_tyc_hd.tsv` | SIMBAD's own HD identification per Tycho-2 entry, keyed on TYC — the witness independent of IV/25 that a close pair's crossed HD cells need ([The TYC → HD pull](/data/simbad/README.md#the-tyc--hd-pull)). Request set is `refresh_lib.read_mentioned_tycs` — IV/25's Tycho ids union the manifest's — shared with `refresh:tycho2` rather than restated, so both cover the same entries by construction. Composes the `simbad/` plumbing and states no ADQL of its own. |
 | `validate:simbad` | `scripts/catalog/validate/validate-simbad-sample.ts` | (report only) | Tier C — cross-check `public/catalog.bin` against the committed SIMBAD sample. The build-time subset of the same check is `distance-regression-check.ts`, gated on `build-distance-outliers-expected.json`. |
 
@@ -384,21 +384,27 @@ catalogue inconsistent. Order matters:
    ([Consumed by](/data/athyg/README.md#consumed-by)), which step 4 re-runs. Membership is
    the primaries-derived manifest and `build:catalog` reads neither this file
    nor the frozen spine, so the swap moves no record.
-2. **Refresh the Gaia DR4-keyed side-files** in any order — they're
-   independent pulls keyed on the deduped source_id list:
-   `refresh-gaia-hip-xmatch.py`, `refresh-gaia-tyc-xmatch.py`,
-   `refresh-gaia-astrometry.py`, `refresh-gaia-nss.py`,
-   `refresh-gaia-apsis.py`, `refresh-bailer-jones.py`.
-   `refresh-gaia-magnitude.py` goes here too and is the one with no
-   ordering constraint at all — it asks the new release for a magnitude
-   range, so it neither reads nor bridges a DR3 id.
-   Each commits its TSV under `data/gaia/` or `data/bailer-jones/`.
-   Then regenerate the full-catalog astrometry (two stages, in this
-   order): `pnpm run build:astrometry-request` (it reads both cross-walks,
-   so it runs after both refreshes), then
-   `pnpm run refresh:gaia-astrometry-catalog`. Under a DR transition the
-   request's `gaia_dr3:` ids bridge through [§ 6](/docs/sid.md#6-gaia-data-release-reconciliation) first —
-   requesting DR3 ids against a DR4 table returns nothing.
+2. **Refresh the Gaia DR4-keyed side-files** in the order the
+   [Per-script targets](#per-script-targets) table's prerequisites set —
+   three tiers:
+   - **No prerequisite:** `refresh-gaia-hip-xmatch.py`,
+     `refresh-gaia-tyc-xmatch.py`, `refresh-gaia-nss.py` (whole tables) and
+     `refresh-gaia-magnitude.py`, which asks the new release for a magnitude
+     range, so it neither reads nor bridges a DR3 id.
+   - **After both cross-walks**, two independent chains:
+     `pnpm run build:binaries` then `refresh-gaia-astrometry.py` (it reads
+     the request Stage 2 writes); and `pnpm run build:astrometry-request`
+     then `refresh:gaia-astrometry-catalog`, `refresh-gaia-apsis.py`,
+     `refresh-gaia-gspc.py` and `refresh-bailer-jones.py`, which all read
+     that request. Under a DR transition the request's `gaia_dr3:` ids
+     bridge through [§ 6](/docs/sid.md#6-gaia-data-release-reconciliation)
+     first — requesting DR3 ids against a DR4 table returns nothing.
+   - **After `refresh:gaia-astrometry-catalog`:** `refresh:simbad-values`,
+     whose value cohort excludes the rows that table already completes, so
+     a new astrometry table moves its request set.
+
+   Each commits its TSV under `data/gaia/`, `data/bailer-jones/` or
+   `data/simbad/`.
 3. **Refresh HIP2 + SIMBAD if upstream republished** — these are
    keyed on HIP / SIMBAD `oid` respectively, so they don't change
    under a Gaia DR transition unless their own pipeline updated.
