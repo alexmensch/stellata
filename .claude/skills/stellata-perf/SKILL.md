@@ -56,13 +56,13 @@ Alex's arm and 25 minutes to re-read a number the pin already holds.
 
 **Before step 1, ask any live coordinator for the GPU.** A `pickup-epic` run
 keeps workers building and testing, and only its coordinator can pause them.
-`bd list --has-metadata-key coordinator --json` lists the epics whose
-coordinator has marked its run live; `.metadata.coordinator` is that
-session's name. If the name is live in `ListAgents`, send it `GPU_REQUEST`,
+`pickup-epic`'s coordinator field names it:
+`bd list --has-metadata-key coordinator --json`, and `.metadata.coordinator`
+is the session name. If the name is live in `ListAgents`, send it `GPU_REQUEST`,
 wait for `GPU_GRANTED`, and send `GPU_DONE` once the last run you plan has
 exited — the message kinds and who sends which are
 [the GPU table](/.claude/skills/stellata-pickup-epic/SKILL.md#the-gpu-is-one-resource-for-the-whole-machine).
-No marker, or a name no live session carries → proceed. A worker in that run
+No field set, or a name no live session carries → proceed. A worker in that run
 already follows the table; this is for every other session.
 
 1. Say what you want to measure and why, with the exact command you will

@@ -1,6 +1,6 @@
 ---
 name: stellata-pickup-epic
-description: Stellata's extension of the user-level `pickup-epic` skill, for the coordinator and for every `pickup-task` worker it launches — the GPU pause protocol (a worker, or any session that finds the coordinator's marker, pauses the whole pipeline for a perf run so the machine is idle), `build:seed` as the post-landing step, and what a stellata `SMOKE:` line names. `pickup-epic` and coordinated `pickup-task` load it in stellata; load it directly only if one of them is already in context without it.
+description: Stellata's extension of the user-level `pickup-epic` skill, for the coordinator and for every `pickup-task` worker it launches — the GPU pause protocol (a worker, or any session that finds the coordinator's field, pauses the whole pipeline for a perf run so the machine is idle), `build:seed` as the post-landing step, and what a stellata `SMOKE:` line names. `pickup-epic` and coordinated `pickup-task` load it in stellata; load it directly only if one of them is already in context without it.
 ---
 
 # Coordinating a stellata epic
@@ -17,8 +17,12 @@ spread and walks the baseline, so the run is discarded
 ([stellata-perf protocol, step 5](/.claude/skills/stellata-perf/SKILL.md#protocol--announce--arm--run-one-run-per-arm)). A
 run happens only with every other session paused, and the pause starts
 before the arm so the owner can arm the moment they are asked. The requester
-is any session that wants a run — a worker, or a session outside the run
-that found the coordinator through its marker below.
+is any session that wants a run: a worker, or a session outside the run
+that found the coordinator through `pickup-epic`'s coordinator field (in bd,
+the epic's `coordinator` metadata key;
+[stellata-perf protocol](/.claude/skills/stellata-perf/SKILL.md#protocol--announce--arm--run-one-run-per-arm)).
+`await-go.sh` reads the same field to leave the coordinator out of its
+busy-session warning, so keep it current.
 
 | Kind | From → to | Send when |
 | --- | --- | --- |
@@ -28,13 +32,6 @@ that found the coordinator through its marker below.
 | `GPU_GRANTED` | coordinator → requester | every other worker has replied `PAUSED` or is idle, and no `build:seed` is running |
 | `GPU_DONE` | requester → coordinator | the runner has exited, whatever its result |
 | `RESUME` | coordinator → every paused worker | on `GPU_DONE` |
-
-**Coordinator marker.** While its run is live, the coordinator keeps its
-session name in its epic's metadata: `bd update <epic> --set-metadata
-coordinator=<name>` at launch and on resume, `bd update <epic>
---unset-metadata coordinator` when the run finishes or is stopped. A
-session outside the run finds it with `bd list --has-metadata-key
-coordinator --json` ([stellata-perf protocol](/.claude/skills/stellata-perf/SKILL.md#protocol--announce--arm--run-one-run-per-arm)).
 
 **Coordinator.** Serve a `GPU_REQUEST` from any session the same way, worker
 or not. On a `GPU_REQUEST`, hold every launch and every local
