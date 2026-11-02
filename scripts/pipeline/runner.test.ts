@@ -346,7 +346,21 @@ export const OUT = declareOutputs({ out: STAMP_DIR });
     const loaded = await load([step]);
     expect(loaded).toEqual({
       kind: 'rejected',
-      problems: [`outputs module ${relative(REPO_ROOT, at('steps/a-outputs.ts'))} imports scripts/util/build-stamp.ts, beyond util/emit-artifacts, util/paths and *-pure modules`],
+      problems: [`outputs module ${relative(REPO_ROOT, at('steps/a-outputs.ts'))} reaches scripts/util/build-stamp.ts, beyond util/emit-artifacts, util/paths and *-pure modules`],
+    });
+  });
+
+  it('rejects an outputs module that reaches an impure module through a pure one', async () => {
+    const step = tsStep('a', 'a.out');
+    write('steps/paths-pure.ts', `export { STAMP_DIR } from ${JSON.stringify(join(REPO_ROOT, 'scripts/util/build-stamp'))};\n`);
+    write('steps/a-outputs.ts', `
+import { declareOutputs } from ${JSON.stringify(EMIT_ARTIFACTS)};
+import { STAMP_DIR } from './paths-pure';
+export const OUT = declareOutputs({ out: STAMP_DIR });
+`);
+    expect(await load([step])).toEqual({
+      kind: 'rejected',
+      problems: [`outputs module ${relative(REPO_ROOT, at('steps/a-outputs.ts'))} reaches scripts/util/build-stamp.ts, beyond util/emit-artifacts, util/paths and *-pure modules`],
     });
   });
 

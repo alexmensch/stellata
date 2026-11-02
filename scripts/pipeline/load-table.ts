@@ -13,9 +13,8 @@ import {
   type OutputClaims, type OutputsRef, type ResolvedStep, type StepEntry, type StepGraph, type StepTable,
 } from './step-table-pure';
 
-const OUTPUTS_MODULE_MAY_IMPORT = (module: string): boolean => module === 'scripts/util/emit-artifacts.ts'
-  || module === 'scripts/util/paths.ts'
-  || /-pure\.ts$/.test(module);
+const OUTPUTS_MODULE_LEAVES = new Set(['scripts/util/emit-artifacts.ts', 'scripts/util/paths.ts']);
+const isPure = (module: string): boolean => /-pure\.ts$/.test(module);
 
 export type Loaded =
   | { readonly kind: 'loaded'; readonly steps: ReadonlyMap<string, ResolvedStep>; readonly graph: StepGraph }
@@ -34,10 +33,20 @@ const repoPath = (path: string): string => resolve(REPO_ROOT, path);
 async function impureOutputsModules(refs: readonly OutputsRef[]): Promise<string[]> {
   if (refs.length === 0) return [];
   const { inputs } = await entryMetafile(refs.map((r) => repoPath(r.module)));
-  const modules = Object.keys(inputs).filter((m) => refs.some((r) => repoPath(r.module) === repoPath(m)));
-  return modules.flatMap((module) => inputs[module].imports
-    .filter((i) => !i.external && !OUTPUTS_MODULE_MAY_IMPORT(i.path))
-    .map((i) => `outputs module ${module} imports ${i.path}, beyond util/emit-artifacts, util/paths and *-pure modules`));
+  const internal = (module: string): string[] => inputs[module].imports.filter((i) => !i.external).map((i) => i.path);
+  const problems: string[] = [];
+  for (const module of Object.keys(inputs).filter((m) => refs.some((r) => repoPath(r.module) === repoPath(m)))) {
+    const seen = new Set<string>();
+    const stack = internal(module);
+    while (stack.length > 0) {
+      const at = stack.pop()!;
+      if (seen.has(at) || OUTPUTS_MODULE_LEAVES.has(at)) continue;
+      seen.add(at);
+      if (isPure(at)) stack.push(...internal(at));
+      else problems.push(`outputs module ${module} reaches ${at}, beyond util/emit-artifacts, util/paths and *-pure modules`);
+    }
+  }
+  return problems;
 }
 
 function isDeclaredOutputs(value: unknown): value is DeclaredOutputs {
