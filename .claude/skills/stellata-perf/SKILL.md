@@ -54,6 +54,17 @@ Alex's arm and 25 minutes to re-read a number the pin already holds.
 
 ## Protocol — announce → arm → run, one run per arm
 
+**Before step 1, ask any live coordinator for the GPU.** A `pickup-epic` run
+keeps workers building and testing, and only its coordinator can pause them.
+`bd list --has-metadata-key coordinator --json` lists the epics whose
+coordinator has marked its run live; `.metadata.coordinator` is that
+session's name. If the name is live in `ListAgents`, send it `GPU_REQUEST`,
+wait for `GPU_GRANTED`, and send `GPU_DONE` once the last run you plan has
+exited — the message kinds and who sends which are
+[the GPU table](/.claude/skills/stellata-pickup-epic/SKILL.md#the-gpu-is-one-resource-for-the-whole-machine).
+No marker, or a name no live session carries → proceed. A worker in that run
+already follows the table; this is for every other session.
+
 1. Say what you want to measure and why, with the exact command you will
    run, and name the worktree whose dev server the run needs — assuming
    port 5173 unless Alex has named another.
@@ -62,7 +73,10 @@ Alex's arm and 25 minutes to re-read a number the pin already holds.
    line when a fresh marker exists. The poll and the runner both resolve the
    marker at the top level of the checkout they are launched from — from a
    worktree, the worktree root, not the main checkout — so the announcement
-   names which root to arm.
+   names which root to arm. When the marker arrives it also warns on stderr
+   about any other Claude session busy in this repo, coordinated or not —
+   relay the warning and launch only on Alex's answer
+   ([The protocol](/scripts/perf/arming/README.md#the-protocol)).
 3. When it reports ARMED, **launch the runner as a background process too —
    Bash `run_in_background`, always, whatever the mode.** A foreground Bash
    call is capped at 10 minutes and the harness kills it there; every mode
