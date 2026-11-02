@@ -40,6 +40,7 @@ import {
 } from '../spine/inherited-spine-pure';
 import { INHERITED_SPINE } from '../spine/inherited-spine-tsv';
 import { ASTROMETRY_REQUEST_OUTPUTS } from '../astrometry-request/astrometry-request-outputs';
+import { parseSourceIdRequest } from '../astrometry-request/export-astrometry-request-pure';
 import { BINDING_REVIEW_DISPOSITIONS } from './binding-review-dispositions-source';
 import { applySpineCorrections, type SpineFold } from './spine-corrections/spine-corrections-pure';
 import { SPINE_CORRECTIONS } from './spine-corrections/spine-corrections-source';
@@ -211,7 +212,7 @@ describe.skipIf(!inputsReadable)('membership manifest ↔ inherited spine', () =
   // build:astrometry-request reads no manifest, so nothing in its construction
   // says a binding's source was requested; this is what does.
   it.skipIf(!lfsContentReadable(REQUEST_PATH))('requests every primaries row\'s source', () => {
-    const requested = new Set(readFileSync(REQUEST_PATH, 'utf-8').trimEnd().split('\n').slice(1));
+    const requested = parseSourceIdRequest(readFileSync(REQUEST_PATH, 'utf-8'));
     const unrequested = manifest
       .filter((r) => r.term === 'primaries' && r.gaiaSourceId !== null && !requested.has(r.gaiaSourceId))
       .map(manifestKey);

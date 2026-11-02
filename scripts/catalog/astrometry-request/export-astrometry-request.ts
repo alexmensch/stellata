@@ -2,7 +2,7 @@
 // request. See README.md.
 
 import { ASTROMETRY_REQUEST_OUTPUTS } from './astrometry-request-outputs';
-import { sortSourceIdsNumeric } from './export-astrometry-request-pure';
+import { serialiseSourceIdRequest } from './export-astrometry-request-pure';
 import {
   joinOverlayCandidates,
   magnitudeWeighableSourceIds,
@@ -70,10 +70,9 @@ async function main(): Promise<void> {
   );
   for (const id of reviewed) ids.add(id);
 
-  const sorted = sortSourceIdsNumeric(ids);
   emitArtifacts({
     outputs: ASTROMETRY_REQUEST_OUTPUTS,
-    files: { request: `gaia_source_id\n${sorted.join('\n')}\n` },
+    files: { request: serialiseSourceIdRequest(ids) },
   });
   console.log(`classic-ID gate candidates: ${candidates.size}`);
   console.log(
@@ -86,9 +85,9 @@ async function main(): Promise<void> {
   );
   console.log(
     `reviewed bindings kept: ${reviewed.size} ` +
-      `(+${sorted.length - afterSiblings} beyond the three above)`,
+      `(+${ids.size - afterSiblings} beyond the three above)`,
   );
-  console.log(`wrote ${OUT} (${sorted.length} source_ids)`);
+  console.log(`wrote ${OUT} (${ids.size} source_ids)`);
 }
 
 runStep(main);

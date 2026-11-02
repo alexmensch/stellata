@@ -8,3 +8,19 @@ import { compareSourceIds } from '../../util/tsv/table-pure';
 export function sortSourceIdsNumeric(ids: Iterable<string>): string[] {
   return [...ids].sort(compareSourceIds);
 }
+
+const REQUEST_HEADER = 'gaia_source_id';
+
+/** A source_id request file: the header line, then one id per line in
+ *  numeric order. */
+export function serialiseSourceIdRequest(ids: Iterable<string>): string {
+  return `${REQUEST_HEADER}\n${sortSourceIdsNumeric(ids).map((id) => `${id}\n`).join('')}`;
+}
+
+export function parseSourceIdRequest(text: string): Set<string> {
+  const [header, ...ids] = text.trimEnd().split('\n');
+  if (header !== REQUEST_HEADER) {
+    throw new Error(`source_id request header is ${JSON.stringify(header)}, expected ${REQUEST_HEADER}`);
+  }
+  return new Set(ids);
+}

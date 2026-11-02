@@ -1,5 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { sortSourceIdsNumeric } from './export-astrometry-request-pure';
+import {
+  parseSourceIdRequest,
+  serialiseSourceIdRequest,
+  sortSourceIdsNumeric,
+} from './export-astrometry-request-pure';
 
 describe('export-astrometry-request-pure / sortSourceIdsNumeric', () => {
   it('orders numerically, not lexicographically, across the 2^53 boundary', () => {
@@ -26,5 +30,22 @@ describe('export-astrometry-request-pure / sortSourceIdsNumeric', () => {
 
   it('returns [] for empty input', () => {
     expect(sortSourceIdsNumeric([])).toEqual([]);
+  });
+});
+
+describe('the source_id request file', () => {
+  it('round-trips, numerically ordered under its header', () => {
+    const text = serialiseSourceIdRequest(new Set(['30', '2', '4472832130942575872']));
+    expect(text).toBe('gaia_source_id\n2\n30\n4472832130942575872\n');
+    expect(parseSourceIdRequest(text)).toEqual(new Set(['2', '30', '4472832130942575872']));
+  });
+
+  it('writes a header-only file for no ids, and reads it back empty', () => {
+    expect(serialiseSourceIdRequest([])).toBe('gaia_source_id\n');
+    expect(parseSourceIdRequest('gaia_source_id\n')).toEqual(new Set());
+  });
+
+  it('refuses a file whose first line is not the header', () => {
+    expect(() => parseSourceIdRequest('2\n30\n')).toThrow(/header/);
   });
 });

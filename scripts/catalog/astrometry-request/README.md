@@ -22,10 +22,14 @@ scripts/catalog/astrometry-request/
                                   declaration (../../util/README.md).
                                   Side-effect free.
   export-astrometry-request-pure.ts
-    (+ test)                      sortSourceIdsNumeric — the request's sort,
-                                  over ../../util/tsv/'s compareSourceIds.
-                                  Also imported by
-                                  scripts/sid/export-dr-risk-set.ts.
+    (+ test)                      The source_id request file's format:
+                                  serialiseSourceIdRequest (header, then ids
+                                  in sortSourceIdsNumeric's order, over
+                                  ../../util/tsv/'s compareSourceIds) and
+                                  parseSourceIdRequest, which checks the
+                                  header. Also used by
+                                  scripts/sid/export-dr-risk-set.ts and the
+                                  membership gate test.
 ```
 
 Each contribution lives with the consumer that defines it, not here — this
