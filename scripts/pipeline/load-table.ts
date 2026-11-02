@@ -92,15 +92,14 @@ export async function loadTable(table: StepTable, options: LoadOptions): Promise
   const impure = await impureOutputsModules(refs, tree);
   if (impure.length > 0) return { kind: 'rejected', problems: impure };
 
-  const resolved: ResolvedStep[] = [];
-  const problems: string[] = [];
-  for (const step of table.steps) {
-    const outputs = await outputClaims(step, tree);
-    if (step.kind === 'build') {
-      problems.push(...symlinkedOutputs(options.root, outputs).map((p) => `${step.name} declares an output through a symlink: ${p}`));
-    }
-    resolved.push({ step, outputs, reads: await readsOf(step, tree, options) });
-  }
+  const resolved: ResolvedStep[] = await Promise.all(table.steps.map(async (step) => ({
+    step,
+    outputs: await outputClaims(step, tree),
+    reads: await readsOf(step, tree, options),
+  })));
+  const problems = resolved.flatMap(({ step, outputs }) => (step.kind === 'build'
+    ? symlinkedOutputs(options.root, outputs).map((p) => `${step.name} declares an output through a symlink: ${p}`)
+    : []));
   if (problems.length > 0) return { kind: 'rejected', problems };
 
   const derived = deriveGraph(resolved, table.registryFiles.map(tree.abs));
