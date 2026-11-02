@@ -1,9 +1,7 @@
 // The step table's types, its load-time rules and the order derived from it. See README.md.
 
-import { basename, dirname } from 'node:path';
-
 import { stepFileName } from '../util/build-stamp';
-import type { OutputFamily } from '../util/emit-artifacts';
+import { isFamilyMember, type OutputFamily } from '../util/emit-artifacts';
 
 /** A `declareOutputs` constant, named by module and export so the module can be
  *  checked side-effect-free before it is imported. */
@@ -87,7 +85,7 @@ export const isBuild = (step: StepEntry): step is BuildStep => step.kind === 'bu
 
 export function claims(outputs: OutputClaims, path: string): boolean {
   return outputs.files.includes(path)
-    || outputs.families.some((f) => dirname(path) === f.dir && f.member.test(basename(path)));
+    || outputs.families.some((f) => isFamilyMember(f, path));
 }
 
 export function outputConflicts(steps: readonly ResolvedStep[]): string[] {

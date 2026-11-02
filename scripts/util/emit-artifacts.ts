@@ -89,8 +89,12 @@ function assertDeclared(
   }
 }
 
+export function isFamilyMember(family: OutputFamily, path: string): boolean {
+  return dirname(path) === family.dir && family.member.test(basename(path));
+}
+
 function familyOf(outputs: DeclaredOutputs, path: string): OutputFamily | undefined {
-  return outputs.families.find((f) => dirname(path) === f.dir && f.member.test(basename(path)));
+  return outputs.families.find((f) => isFamilyMember(f, path));
 }
 
 function familyEntries(family: OutputFamily): string[] {
