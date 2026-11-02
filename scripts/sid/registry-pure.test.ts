@@ -88,6 +88,12 @@ describe('validateRegistry', () => {
     crossed[1] = { ...crossed[1], events: [retire(1)] };
     expect(validateRegistry(crossed, isCode)).toEqual(['cloud events: retire of sid 1: sid not in ledger']);
   });
+
+  it('refuses a merge whose successor sits in another partition', () => {
+    const merged = parts();
+    merged[0] = { ...merged[0], events: [{ ...retire(1), event: 'merge', successor: 2 }] };
+    expect(validateRegistry(merged, isCode)).toEqual(['catalog events: merge of sid 1: successor 2 not in ledger']);
+  });
 });
 
 describe('registryAppendOnly', () => {

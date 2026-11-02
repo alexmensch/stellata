@@ -311,7 +311,7 @@ snapshot gate but deliberately stricter:
    dense from 1 through max; canonical keys unique and
    grammar-valid ([§ 3](#3-designation-namespaces)); kind in enum; sid 0 absent;
    each ledger ascending and keyed only in its own partition's
-   namespaces, each events file naming only its own sids; every
+   namespaces, each events file naming only its own sids (a merge's successor included, so a merge never crosses partitions); every
    partition's head exactly matches a recomputation over its
    working files.
 2. **Append-only** (runs when a git base is resolvable, i.e. CI's
