@@ -1,7 +1,7 @@
 // Runtime probe trajectory: a parsed wire file plus the position/velocity
 // sampler every probe consumer reads. See README.md#sampler.
 
-import { PROBE_SAMPLE_STRIDE, type ProbeTrajectoryFile } from '../../../../scripts/probes/probe-trajectory-schema';
+import { PROBE_SAMPLE_STRIDE, type ProbeTrajectoryFile } from '../../../catalog-format/probes/probe-trajectory-schema';
 import { AU_PC } from '../../../astro-core/astronomy-constants';
 import { jdTdbToT } from '../time/time';
 

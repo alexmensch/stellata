@@ -21,3 +21,11 @@ Each has its own README.
   the search corpus built from the same strings.
 - `spectral/` — the Morgan-Keenan parser and the Stefan-Boltzmann radius
   chain.
+- `boundaries/` — the `constellation-boundaries.json` wire shape, its
+  quantisation and fade statistics.
+- `ephemerides/` — the planet element tables: roster, wire schema,
+  sampler, public file names.
+- `probes/` — the probe trajectories: roster, wire schema, public file
+  names.
+- `local-group/` — the parts of `local-group.json` the viewer reads: the
+  distance envelope and the emission block.

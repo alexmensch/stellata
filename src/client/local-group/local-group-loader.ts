@@ -1,12 +1,12 @@
 import * as THREE from 'three';
 
-import type { LgEmission } from '../../../scripts/local-group/build-local-group-pure';
+import type { LgEmission } from '../../catalog-format/local-group/local-group-schema';
 import { viewingDistanceForExtent } from '../camera/focus/focus-transition';
 import { sidColumnError } from '../util/sid-resolver';
 
 export type LgKind = 'disc' | 'ellipsoid';
 export type LgSource = 'LVDB' | 'OVERRIDE';
-export type { LgEmission, SersicParams } from '../../../scripts/local-group/build-local-group-pure';
+export type { LgEmission, SersicParams } from '../../catalog-format/local-group/local-group-schema';
 
 export interface LgObject {
   name: string;

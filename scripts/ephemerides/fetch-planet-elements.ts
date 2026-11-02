@@ -13,7 +13,7 @@ import { orbitalStateToCartesian } from '../../src/astro-core/kepler-solver';
 import {
   buildElementTable,
   elementTableSampleAt,
-} from '../../src/client/solar-system/ephemerides/element-table';
+} from '../../src/catalog-format/ephemerides/element-table';
 import {
   equinoctialFromAngles,
   equinoctialToClassical,
@@ -28,11 +28,11 @@ import {
   POSITION_TOLERANCE_AU,
   tableEpochs,
   type PlanetElementTarget,
-} from './planet-element-roster';
+} from '../../src/catalog-format/ephemerides/planet-element-roster';
 import {
   ELEMENT_COLUMNS,
   type PlanetElementTableFile,
-} from './planet-element-schema';
+} from '../../src/catalog-format/ephemerides/planet-element-schema';
 import { ELEMENT_TABLE_OUTPUTS } from './planet-element-outputs';
 
 

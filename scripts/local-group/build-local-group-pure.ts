@@ -13,23 +13,13 @@ import {
   sersicGeometryIntegral,
   u99,
 } from './emission-geometry-pure';
+import {
+  MAX_DISTANCE_PC,
+  type LgEmission,
+  type SersicParams,
+} from '../../src/catalog-format/local-group/local-group-schema';
 
-/** Max heliocentric distance (parsecs) we render. 2 Mpc covers the
- *  canonical Local Group: M31 + M33 + their satellite subgroup, plus
- *  Sextans A/B and a handful of outer-band dwarfs that bleed past the
- *  ~1.5 Mpc IAU-style boundary. Beyond 2 Mpc we'd be picking up the
- *  IC 342 / Maffei groups — a separate decision.
- *
- *  Single source of truth — `CAMERA_FAR_PC` below derives from it, and
- *  the runtime camera envelope in `src/client/stellata.ts` imports both,
- *  so the build filter and the camera can never drift. */
-export const MAX_DISTANCE_PC = 2_000_000;
 
-/** Far plane for the runtime camera, paired with `MAX_DISTANCE_PC`.
- *  Sits 1 Mpc past `controls.maxDistance` (= `MAX_DISTANCE_PC`) so M31 /
- *  M33 + outer dwarfs render with comfort headroom when the camera
- *  reaches the maxDistance shell. */
-export const CAMERA_FAR_PC = MAX_DISTANCE_PC + 1_000_000;
 
 export type LgKind = 'disc' | 'ellipsoid';
 
@@ -96,32 +86,6 @@ export interface LvdbRow {
   /** Measured Sérsic index, or null (n = 1 fallback applies). */
   nSersic: number | null;
 }
-
-/** Solved Sérsic component — shared by the spheroid family and the
- *  M31 bulge (DRY at schema level). Axes in parsecs; density0 in the
- *  zero-point-free flux-number units the ρ₀ solve works in. */
-export interface SersicParams {
-  reffAxesPc: [number, number, number];
-  n: number;
-  bn: number;
-  pn: number;
-  uMax: number;
-  density0: number;
-}
-
-export type LgEmission =
-  | ({ family: 'sersic'; mV: number; color?: string } & SersicParams)
-  | {
-      family: 'disc';
-      mV: number;
-      color?: string;
-      rdPc: number;
-      zdPc: number;
-      rEnvPc: number;
-      zEnvPc: number;
-      density0: number;
-      bulge?: SersicParams;
-    };
 
 /** Search crosswalk + morphological type row from aliases.tsv. */
 export interface AliasRow {

@@ -1,11 +1,11 @@
 // Runtime side of data/ephemerides/{planet}.json: a uniform-cadence table of
-// equinoctial elements plus its interpolating sampler. See README.md#horizons-element-tables.
+// equinoctial elements plus its interpolating sampler. See /src/client/solar-system/ephemerides/README.md#horizons-element-tables.
 
 import {
   ELEMENT_STRIDE,
   type PlanetElementTableFile,
-} from '../../../../scripts/ephemerides/planet-element-schema';
-import type { EquinoctialElements } from '../../../astro-core/equinoctial-pure';
+} from './planet-element-schema';
+import type { EquinoctialElements } from '../../astro-core/equinoctial-pure';
 
 export interface PlanetElementTable {
   readonly id: string;
@@ -92,7 +92,7 @@ function splineColumn(
  * control points by offset. Cubic rather than linear because the residual
  * scales as step⁴ instead of step²: at equal accuracy the outer-planet tables
  * are several times coarser, which is the whole artifact-size budget
- * (`../../../../data/ephemerides/README.md#accuracy`).
+ * (`../../../data/ephemerides/README.md#accuracy`).
  *
  * In the first and last interval the missing outer control point is
  * **extrapolated** (`2·p1 − p2`), not clamped to the endpoint. Clamping halves

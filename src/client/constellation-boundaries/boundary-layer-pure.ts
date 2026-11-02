@@ -5,7 +5,7 @@
 import type {
   BoundaryFadeTableWire,
   BoundarySegmentWire,
-} from '../../../scripts/catalog/boundaries/boundaries-artifact-pure';
+} from '../../catalog-format/boundaries/boundaries-artifact-pure';
 import type { SolFrameFadeWindow } from '../galactic/galactic-fade';
 
 /** Both must be columns of the artifact's own `quantilePcts` — the loader

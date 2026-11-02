@@ -3,9 +3,9 @@ import { describe, expect, it } from 'vitest';
 import {
   createIauConstellationLookup,
   parseIauEdges,
-} from '../../../src/astro-core/iau-geometry/iau-boundaries-pure';
-import { iauEdgeRecords } from '../parse/constellations/constellations';
-import { STELLARIUM } from '../parse/constellations/stellarium-source';
+} from '../../astro-core/iau-geometry/iau-boundaries-pure';
+import { iauEdgeRecords } from '../../../scripts/catalog/parse/constellations/constellations';
+import { STELLARIUM } from '../../../scripts/catalog/parse/constellations/stellarium-source';
 import {
   DIRECTION_DECIMALS,
   FADE_MIN_SAMPLES,

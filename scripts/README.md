@@ -14,7 +14,7 @@ cross-script policy and pointers.
   under Cloudflare Workers' 25 MiB limit; see [Binary catalog format](../src/catalog-format/record/README.md#binary-catalog-format-publiccatalogbini--manifest).
   Also emits
   `public/constellation-boundaries.json` (IAU boundary arcs precessed to
-  ICRS + the fade-quantile table; `catalog/boundaries/README.md`).
+  ICRS + the fade-quantile table; `/src/catalog-format/boundaries/README.md`).
 - `binaries/` — binary-system pipeline → `data/binaries/multiples.tsv`
   (two rows per physical pair, with sep+PA+epoch+Δmag columns) and
   `public/binaries.bin` (runtime artifact, one record per pair, for

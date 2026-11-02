@@ -3,8 +3,8 @@
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
-import { PROBE_MISSIONS } from '../../../../scripts/probes/probe-roster';
-import type { ProbeTrajectoryFile } from '../../../../scripts/probes/probe-trajectory-schema';
+import { PROBE_MISSIONS } from '../../../catalog-format/probes/probe-roster';
+import type { ProbeTrajectoryFile } from '../../../catalog-format/probes/probe-trajectory-schema';
 import { PROBE_ORBIT_FLOOR_PC, PROBE_PARK_DIST_PC } from './probe-focus-geometry';
 import type { KindContext } from '../../kinds/kind-module';
 import { makeKindContext } from '../../kinds/kind-context-mock';

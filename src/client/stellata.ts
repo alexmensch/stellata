@@ -7,7 +7,8 @@ import { createPlanetSystemMembership } from './solar-system/planet-system-membe
 import { SystemMembershipRegistry } from './system-membership/system-membership';
 import { galacticDiscSceneLayer } from './galactic/galactic-disc';
 import { CoordSpheres } from './galactic/coord-spheres/coord-spheres';
-import { MAX_DISTANCE_PC, CAMERA_FAR_PC } from '../../scripts/local-group/build-local-group-pure';
+import { CAMERA_FAR_PC, BOOT_CAMERA_POS_PC, CAMERA_NEAR_PC } from './camera/timing';
+import { MAX_DISTANCE_PC } from '../catalog-format/local-group/local-group-schema';
 import type { OrbitFramePort } from './attitude/attitude-pure';
 import { focusFrameInputs } from './attitude/focus-frame';
 import { HudOverlay, hudElementsById } from './overlays/hud-overlay';
@@ -61,7 +62,6 @@ import { OccluderSet } from './occlusion/occluder-set';
 import type { PickVisibility } from './hover/hover-pick-disambiguator';
 import { SolarSystemWiring } from './solar-system/solar-system-wiring';
 import { VirtualClock } from './solar-system/time/time';
-import { BOOT_CAMERA_POS_PC, CAMERA_NEAR_PC } from './camera/timing';
 import { EventBus } from './util/event-bus';
 import { fanOut } from './util/fan-out';
 import {
@@ -90,7 +90,7 @@ import { ExtinctionAttachment } from './star-pipeline/extinction/extinction-atta
 import { BinariesAttachment } from './binaries/binaries-attachment';
 import { ConstellationFigure } from './constellation-figure/constellation-figure';
 import { ConstellationBoundaries } from './constellation-boundaries/constellation-boundaries';
-import type { BoundaryArtifact } from '../../scripts/catalog/boundaries/boundaries-artifact-pure';
+import type { BoundaryArtifact } from '../catalog-format/boundaries/boundaries-artifact-pure';
 
 export interface StellataOptions {
   canvas: HTMLCanvasElement;

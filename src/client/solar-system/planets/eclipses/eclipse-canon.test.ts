@@ -11,13 +11,13 @@ import {
   lunarEclipseAt,
   solarEclipseAt,
 } from './eclipse-circumstances';
+import { installPlanetElementTables } from '../../ephemerides/ephemeris';
 import {
-  installPlanetElementTables,
   type PlanetName,
-} from '../../ephemerides/ephemeris';
-import { buildElementTable, type PlanetElementTable } from '../../ephemerides/element-table';
-import { ELEMENT_TARGETS } from '../../../../../scripts/ephemerides/planet-element-roster';
-import type { PlanetElementTableFile } from '../../../../../scripts/ephemerides/planet-element-schema';
+  ELEMENT_TARGETS,
+} from '../../../../catalog-format/ephemerides/planet-element-roster';
+import { buildElementTable, type PlanetElementTable } from '../../../../catalog-format/ephemerides/element-table';
+import type { PlanetElementTableFile } from '../../../../catalog-format/ephemerides/planet-element-schema';
 import { jdTdbToT } from '../../time/time';
 import { deltaTSeconds } from '../../time/delta-t-pure';
 import { J2000_JD } from '../../../../astro-core/astronomy-constants';

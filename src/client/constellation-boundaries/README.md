@@ -51,7 +51,7 @@ runtime consumer reads the built artifact, never the edges:
   ([Label anchors](#label-anchors)), and the resolved cell grid ([Runtime membership](#runtime-membership)).
   `buildBoundaryArtifact` takes the whole lookup, not just its edges, so
   all three come from **one** decomposition: the same one byte 34 was
-  assigned from. `scripts/catalog/boundaries/README.md` owns the wire.
+  assigned from. `src/catalog-format/boundaries/README.md` owns the wire.
 
 ## The owner
 
@@ -189,7 +189,7 @@ The resulting window is sub-parsec to a few parsecs, so the arcs vanish
 well before the camera reaches α Cen — pinned in the layer test. That is
 the correct outcome, not a limitation: from another star, Earth's
 constellation boundaries do not describe the sky. The derivation and the
-quantile numbers live in [Fade table](/scripts/catalog/boundaries/README.md#fade-table).
+quantile numbers live in [Fade table](/src/catalog-format/boundaries/README.md#fade-table).
 
 <a id="validated-at-load-but-never-fatal"></a>**Validated at load, but never fatal.** `validateBoundaryArtifact` rejects
 anything but `frame: "ICRS"`, because B1875 directions rendered as if they

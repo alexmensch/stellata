@@ -2,8 +2,12 @@
 // window every table spans. Authoring source for data/ephemerides/; editing a
 // cadence needs a re-run of `fetch:ephemerides`.
 
-import { DAYS_PER_JULIAN_YEAR, J2000_JD } from '../../src/astro-core/astronomy-constants';
-import type { PlanetName } from '../../src/client/solar-system/ephemerides/ephemeris';
+import { DAYS_PER_JULIAN_YEAR, J2000_JD } from '../../astro-core/astronomy-constants';
+
+export type PlanetName =
+  | 'mercury' | 'venus' | 'earth' | 'mars'
+  | 'jupiter' | 'saturn' | 'uranus' | 'neptune'
+  | 'pluto';
 
 const jdOfJulianYear = (year: number): number =>
   J2000_JD + (year - 2000) * DAYS_PER_JULIAN_YEAR;
@@ -31,7 +35,7 @@ export interface PlanetElementTarget {
   /** Uniform sample spacing, days. Every value divides the window exactly, so
    *  the last sample lands on `TABLE_JD_END` rather than past it. Measured
    *  per planet by `fetch:ephemerides`' off-grid verification pass — see
-   *  README.md#cadence. */
+   *  /scripts/ephemerides/README.md#cadence. */
   stepDays: number;
 }
 

@@ -4,7 +4,7 @@
 import {
   validateRegionGridWire,
   type BoundaryArtifact,
-} from '../../../scripts/catalog/boundaries/boundaries-artifact-pure';
+} from '../../catalog-format/boundaries/boundaries-artifact-pure';
 import {
   FADE_END_MISPLACED_PCT,
   FADE_START_MISPLACED_PCT,

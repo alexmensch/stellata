@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   buildBoundaryArtifact,
   type BoundaryArtifact,
-} from '../../../scripts/catalog/boundaries/boundaries-artifact-pure';
+} from '../../catalog-format/boundaries/boundaries-artifact-pure';
 import { CONSTELLATIONS, iauEdgeRecords } from '../../../scripts/catalog/parse/constellations/constellations';
 import { STELLARIUM } from '../../../scripts/catalog/parse/constellations/stellarium-source';
 import { fakeChromeLineMaterials } from '../chrome-lines/chrome-lines-mock';

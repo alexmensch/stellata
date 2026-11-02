@@ -292,4 +292,4 @@ straight line nor a great circle, so a two-endpoint parallel draws a chord
 cutting over a degree inside the true boundary. Meridians are great
 circles and would survive two endpoints; they subdivide anyway for one
 code path. The wire format, the quantisation, and the fade table are
-`../../../scripts/catalog/boundaries/README.md`.
+`../../catalog-format/boundaries/README.md`.

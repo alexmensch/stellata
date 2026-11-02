@@ -7,15 +7,17 @@ import { readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import * as THREE from 'three';
-import { ELEMENT_TARGETS } from '../../../../scripts/ephemerides/planet-element-roster';
-import type { PlanetElementTableFile } from '../../../../scripts/ephemerides/planet-element-schema';
+import {
+  ELEMENT_TARGETS,
+  type PlanetName,
+} from '../../../catalog-format/ephemerides/planet-element-roster';
+import type { PlanetElementTableFile } from '../../../catalog-format/ephemerides/planet-element-schema';
 import { AU_PER_PC, LIGHT_TIME_PER_AU_S } from '../../../astro-core/astronomy-constants';
-import { buildElementTable, type PlanetElementTable } from './element-table';
+import { buildElementTable, type PlanetElementTable } from '../../../catalog-format/ephemerides/element-table';
 import {
   getPlanetPositions,
   installPlanetElementTables,
   resetPositionCache,
-  type PlanetName,
   type Vec3,
 } from './ephemeris';
 import { MOON_ELEMENTS, earthMoonSplit, moonOffsetEcliptic } from './moon-ephemeris';

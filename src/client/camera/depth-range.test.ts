@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
-import { CAMERA_NEAR_PC, FOV_MAX_DEG } from './timing';
-import { CAMERA_FAR_PC, MAX_DISTANCE_PC } from '../../../scripts/local-group/build-local-group-pure';
+import { CAMERA_NEAR_PC, FOV_MAX_DEG, CAMERA_FAR_PC } from './timing';
+import { MAX_DISTANCE_PC } from '../../catalog-format/local-group/local-group-schema';
 import { GLOBAL_MIN_DIST_PC } from './focus/focus-controller';
 import {
   fovMinorRad,

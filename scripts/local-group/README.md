@@ -11,9 +11,11 @@ three inputs (`../util/sources/`), `local-group-parse.ts` holds their
 parsers, and `local-group-inputs.test.ts` pins the up-to-date gate's
 input set, `stepInputPaths('build:local-group')` (`../util/step-inputs.ts`). The quadrature and the ρ₀ solve
 itself are shared with the Milky Way band and live in
-`src/astro-core/emission/density0-solver-pure.ts` — a build script
-importing from the client is the established direction, and the reverse
-is not. All vitest-pinned in `*.test.ts`.
+`src/astro-core/emission/density0-solver-pure.ts`. The distance envelope
+and the emission block's types are what the viewer reads, so they live in
+[`/src/catalog-format/local-group/`](/src/catalog-format/local-group/README.md)
+(the `MAX_DISTANCE_PC` filter is documented there). All vitest-pinned in
+`*.test.ts`.
 
 The TSV parser handles both LVDB-merge and standalone-position
 override rows; optional emission columns are resolved by header name.
@@ -36,7 +38,8 @@ Emits `public/local-group.json` and the `lg` SID registry partition through
 one `emitArtifacts` call (`../util/README.md`; the declaration is
 `local-group-outputs.ts`), with one entry per renderable object
 within `MAX_DISTANCE_PC` of Sol. Output schema is documented at the
-`LgObject` type in `build-local-group-pure.ts`; the client loader at
+`LgObject` type in `build-local-group-pure.ts` (its emission block in
+`local-group-schema.ts`); the client loader at
 `src/client/local-group/local-group-loader.ts` mirrors it 1:1.
 
 Each object also carries a `sid` (frozen Stellata ID, [§ 7](/docs/sid.md#7-storage--sid-in-every-artifact)),
@@ -192,19 +195,6 @@ M31 (disc + bulge) / Fornax against the committed data, plus the
 ⟨μ⟩_e ↔ `surface_brightness_rhalf` definitional consistency sweep. A
 catalogue refresh that shifts photometry moves those pins —
 re-derive, don't loosen.
-
-## MAX_DISTANCE_PC
-
-`build-local-group-pure.ts` exports `MAX_DISTANCE_PC = 2_000_000` —
-the heliocentric envelope the build filter applies. 2 Mpc covers the
-canonical Local Group (M31 + M33 + their satellites, plus the outer
-dIrrs out to ~1.4 Mpc) with comfort headroom past the ~1.5 Mpc
-IAU-style boundary; beyond 2 Mpc we'd be picking up the
-IC 342 / Maffei groups — a separate decision. The constant is
-shared: the runtime camera envelope (`stellata.ts` —
-`controls.maxDistance = 2 Mpc`, PerspectiveCamera far = 3 Mpc) is
-paired with this filter so a fully zoomed-out view shows the entire
-rendered catalogue.
 
 ## Orientation specs
 

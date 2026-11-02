@@ -4,7 +4,7 @@ import { SOL_OBJECTS } from '../../../scripts/sid/object-mints-source';
 import { LEDGERS } from '../../../scripts/sid/ledger-tsv';
 import { CATALOG_PARTITION } from '../../../scripts/sid/registry-partitions-pure';
 import { loadRegistry } from '../../../scripts/sid/registry-io';
-import { PROBE_MISSIONS } from '../../../scripts/probes/probe-roster';
+import { PROBE_MISSIONS } from '../../catalog-format/probes/probe-roster';
 import { SOL_BODIES } from './planet-system';
 import { SOL_OBJECT_SIDS } from './sol-object-sids';
 import { isReadable } from '../../../scripts/util/sources/source';

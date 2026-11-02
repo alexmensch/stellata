@@ -25,11 +25,10 @@ src/client/solar-system/ephemerides/
                                   in M, plus the frozen Horizons tables
                                   where they reach. Heliocentric ecliptic
                                   parsecs out.
-  element-table.ts (+ test)       One planet's uniform-cadence table of
-                                  equinoctial elements + the Catmull–Rom
-                                  sampler. See README.md#horizons-element-tables.
   element-table-loader.ts         Parallel fetch of the nine tables from
-                                  public/ephemerides/. A missing file
+                                  public/ephemerides/, decoded by the
+                                  shared sampler
+                                  (/src/catalog-format/ephemerides/element-table.ts). A missing file
                                   drops that planet onto Standish; it is
                                   never an error.
   moon-ephemeris.ts (+ test)      MOON_ELEMENTS — J2000 osculating orbital
@@ -131,7 +130,7 @@ the measured per-planet accuracy are in
   cadence is uniform, so there is no search and no cursor to invalidate
   when a scrub jumps decades between frames. The reasons for cubic over
   linear and for extrapolating the boundary control point are measured
-  and live in `element-table.ts`.
+  and live in `/src/catalog-format/ephemerides/element-table.ts`.
 
 ### The seam
 

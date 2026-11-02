@@ -3,9 +3,9 @@ import { describe, it, expect } from 'vitest';
 import {
   ELEMENT_COLUMNS,
   type PlanetElementTableFile,
-} from '../../../../scripts/ephemerides/planet-element-schema';
+} from './planet-element-schema';
 import { buildElementTable, elementTableSampleAt } from './element-table';
-import { makeEquinoctial } from '../../../astro-core/equinoctial-pure';
+import { makeEquinoctial } from '../../astro-core/equinoctial-pure';
 
 /** λ advances by a whole 205° per step — the column that exposed the clamped
  *  end tangent — while the rest drift slowly. */

@@ -5,7 +5,8 @@
 import { AU_PC, DAYS_PER_JULIAN_YEAR, J2000_JD } from '../../../astro-core/astronomy-constants';
 import { orbitalStateToCartesian, solveKepler } from '../../../astro-core/kepler-solver';
 import { tToJdTdb } from '../time/time';
-import { elementTableSampleAt, type PlanetElementTable } from './element-table';
+import { elementTableSampleAt, type PlanetElementTable } from '../../../catalog-format/ephemerides/element-table';
+import type { PlanetName } from '../../../catalog-format/ephemerides/planet-element-roster';
 import {
   blendEquinoctialInto,
   equinoctialFromAngles,
@@ -139,11 +140,6 @@ const ELEMENTS: ElementSet[] = [
     b: -0.01262724, c: 0, s: 0, f: 0,
   },
 ];
-
-export type PlanetName =
-  | 'mercury' | 'venus' | 'earth' | 'mars'
-  | 'jupiter' | 'saturn' | 'uranus' | 'neptune'
-  | 'pluto';
 
 export const PLANET_ORDER: readonly PlanetName[] = [
   'mercury', 'venus', 'earth', 'mars',

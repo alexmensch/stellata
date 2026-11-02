@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { CAMERA_FAR_PC } from '../../../../scripts/local-group/build-local-group-pure';
-import { CAMERA_NEAR_PC, FOV_MIN_DEG } from '../../camera/timing';
+import { CAMERA_FAR_PC, CAMERA_NEAR_PC, FOV_MIN_DEG } from '../../camera/timing';
 import { AU_KM, AU_PC, KM_PC } from '../../../astro-core/astronomy-constants';
 import {
   computeBracket,

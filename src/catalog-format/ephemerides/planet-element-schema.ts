@@ -1,6 +1,6 @@
 // Wire contract for data/ephemerides/{planet}.json — shared by the emitter
 // (fetch-planet-elements.ts) and the runtime table in
-// src/client/solar-system/ephemerides/element-table.ts.
+// src/catalog-format/ephemerides/element-table.ts.
 
 /** Column order of every row in `PlanetElementTableFile.samples`:
  *  `a` in AU, the four dimensionless equinoctial components, and the mean

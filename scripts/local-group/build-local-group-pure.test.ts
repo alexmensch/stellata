@@ -18,7 +18,6 @@ import {
   projectedSemiMajorPc,
   renderedWireframeAxes,
   raDecDistanceToIcrs,
-  type LgEmission,
   roundN,
   roundSig,
   skyBasis,
@@ -26,11 +25,14 @@ import {
   DISC_ENV_SCALE_LENGTHS,
   DISC_ZD_SHELL_DIVISOR,
   DISPLAY_NAME_OVERRIDES,
-  MAX_DISTANCE_PC,
   SERSIC_N_FALLBACK,
   type LvdbRow,
   type OverrideRow,
 } from './build-local-group-pure';
+import {
+  type LgEmission,
+  MAX_DISTANCE_PC,
+} from '../../src/catalog-format/local-group/local-group-schema';
 import { fluxNumber } from '../../src/astro-core/emission/density0-solver-pure';
 import { u99 } from './emission-geometry-pure';
 

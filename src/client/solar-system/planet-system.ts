@@ -9,9 +9,9 @@ import {
   getPlanetPositions,
   PLANET_ORDER,
   type OrbitOrientationRad,
-  type PlanetName,
   type Vec3,
 } from './ephemerides/ephemeris';
+import { type PlanetName } from '../../catalog-format/ephemerides/planet-element-roster';
 import {
   earthMoonSplit,
   keplerMoonAnglesAt,

@@ -19,10 +19,12 @@ import {
   mergeRowAndOverride,
   roundN,
   roundSig,
-  type LgEmission,
   type LgObject,
-  type SersicParams,
 } from './build-local-group-pure';
+import {
+  type LgEmission,
+  type SersicParams,
+} from '../../src/catalog-format/local-group/local-group-schema';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);

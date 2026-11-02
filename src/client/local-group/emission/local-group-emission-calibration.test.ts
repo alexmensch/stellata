@@ -3,10 +3,8 @@
 // physical prediction from any camera position to ±0.1 mag. See README.
 
 import { describe, expect, it } from 'vitest';
-import {
-  MAX_DISTANCE_PC,
-  roundN,
-} from '../../../../scripts/local-group/build-local-group-pure';
+import { roundN } from '../../../../scripts/local-group/build-local-group-pure';
+import { MAX_DISTANCE_PC } from '../../../catalog-format/local-group/local-group-schema';
 import { ALL_OBJECTS, type BuildLgObject, buildObject } from './lg-catalog-fixture';
 import {
   columnSurfaceBrightness,

@@ -12,7 +12,7 @@ import {
   misplacementOffsetPc,
   type BoundaryArtifact,
   type FadeSample,
-} from './boundaries-artifact-pure';
+} from '../../../src/catalog-format/boundaries/boundaries-artifact-pure';
 
 /** The per-record inputs the fade table needs: where the star is and how
  *  bright it looks from Sol. */
