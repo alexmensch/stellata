@@ -70,8 +70,6 @@ describe('the detector itself', () => {
     expect(violationsInSource("import type { BuildLgObject } from './lg-catalog-fixture';")).toEqual([]);
     expect(violationsInSource("import { Scene } from 'three';")).toEqual([]);
     expect(violationsInSource("import { cpuDensityAt } from './local-group-emission-pure';")).toEqual([]);
-    // A *-pure module under scripts/ is shared build-and-browser code by
-    // design and carries no builtin of its own.
     expect(violationsInSource("import { starName } from '../../../src/catalog-format/naming/star-naming-pure';"))
       .toEqual([]);
   });

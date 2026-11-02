@@ -137,6 +137,10 @@ node-import-boundary.test.ts
                          crosses, since it erases before the bundler
                          runs. README.md#node-import-boundary below carries the
                          one limit it cannot see.
+pipeline-viewer-boundary.test.ts
+                         One-way imports between scripts/ (the pipeline),
+                         src/client/ (the viewer) and the two trees they
+                         share. README.md#pipeline-viewer-boundary below.
 page-teardown-contract.test.ts
                          Source scans behind util/page-teardown.ts's
                          contract (/src/client/util/README.md): no `window`
@@ -449,10 +453,33 @@ flake that trains readers to re-run.
 
 ## Node import boundary
 
-`node-import-boundary.test.ts` scans **direct** import specifiers only, which
-is the one thing it cannot see: a browser module importing a `scripts/` module
-that itself reaches for `node:fs` crosses the boundary transitively and the
-scan reads both as clean. Sharing a `*-pure` module with the build tree is the
-established pattern here — `star-naming-pure`, `catalog-pure`,
-`blackbody-lut-pure` — and stays legal precisely because such a module holds no
-builtin of its own. Keep it that way: the suffix is the contract.
+`node-import-boundary.test.ts` scans **direct** import specifiers under
+`src/client/` only, which is the one thing it cannot see: a browser module
+importing a shared-tree module (`src/catalog-format/`, `src/astro-core/`) that
+itself reaches for `node:fs` crosses the boundary transitively and the scan
+reads both as clean. The shared trees stay legal for the browser precisely
+because they hold no builtin of their own. Keep it that way.
+
+## Pipeline-viewer boundary
+
+`pipeline-viewer-boundary.test.ts` classifies every non-test, non-fixture
+module under `src/` and `scripts/` into a tree and holds each import to its
+direction:
+
+| tree | root | may import |
+| --- | --- | --- |
+| shared physics | `src/astro-core/` | itself |
+| format | `src/catalog-format/` | itself, astro-core |
+| viewer | `src/client/` | itself, format, astro-core, the rest of `src/` |
+| pipeline | `scripts/` | itself, format, astro-core, the rest of `src/` |
+| tooling | `scripts/perf/`, `scripts/release/` | anything |
+
+Type-only imports count: a workspace package needs the dependency whether or
+not the import survives erasure, and the trees are laid out so each lifts into
+one unchanged. Tests and `*-fixture.ts` support are not scanned. The two
+tooling roots drive or check the built viewer — the perf runner its frame-cost
+instrument, the release check its share-URL grammar — so they read it by
+design; the suite fails if either stops, so an unused exemption cannot
+linger. A new fact both sides need goes into the format tree (a wire shape,
+a file name, a rule over record fields) or astro-core (physics), never into
+the side that happens to compute it first.
