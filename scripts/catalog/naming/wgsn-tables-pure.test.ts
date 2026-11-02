@@ -7,9 +7,7 @@ import {
   bayerKeySets,
   designationFromCell,
   compareDesignationRows,
-  diffDispositions,
   duplicateDesignationRows,
-  membershipProperKey,
   unionIv27aBayer,
   type DesignationRow,
 } from './wgsn-tables-pure';
@@ -97,36 +95,6 @@ describe('unionIv27aBayer', () => {
     ]);
     expect(u).toMatchObject({ cells: 3, variableRejected: 2, unparsed: 1 });
     expect(u.added).toEqual([]);
-  });
-});
-
-describe('the naming-authority disposition gate', () => {
-  const disposed = new Set([
-    membershipProperKey("Kapteyn's Star", 24186, 33793),
-    membershipProperKey('Ross 248', null, null),
-    membershipProperKey('p Eridani', null, 10361),
-  ]);
-
-  it('keys an absent number as an empty slot', () => {
-    expect(membershipProperKey('p Eridani', null, 10361)).toBe('p Eridani||10361');
-  });
-
-  it('fails an unmatched proper missing from the file, and a stale row', () => {
-    const unmatched = new Set([
-      membershipProperKey('Ross 248', null, null),
-      membershipProperKey('Vega', 91262, 172167),
-    ]);
-    expect(diffDispositions(unmatched, disposed)).toEqual({
-      missing: [membershipProperKey('Vega', 91262, 172167)],
-      stale: [
-        membershipProperKey("Kapteyn's Star", 24186, 33793),
-        membershipProperKey('p Eridani', null, 10361),
-      ],
-    });
-  });
-
-  it('passes on exact set equality', () => {
-    expect(diffDispositions(disposed, new Set(disposed))).toEqual({ missing: [], stale: [] });
   });
 });
 

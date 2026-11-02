@@ -1,12 +1,8 @@
-// Builds the keyed WGSN name + designation tables from the frozen IAU
-// files, unions the IV/27A Bayer tail, verifies the AT-HYG proper
-// dispositions, and pins the counts. `pnpm run build:wgsn`. See README.md.
+// `pnpm run build:wgsn`: the keyed WGSN tables. See README.md.
 
 import { resolve } from 'node:path';
 
 import { CROSS_INDEX } from '../classic-ids/cross-index-source';
-import { MEMBERSHIP_MANIFEST } from '../membership/membership-manifest-tsv';
-import { artifactRows } from '../../util/sources/source';
 import { REPO_ROOT } from '../../util/paths';
 import { emitArtifacts, runStep } from '../../util/emit-artifacts';
 import { snapshotCheck } from '../../util/snapshot-check';
@@ -19,16 +15,12 @@ import {
   splitNameCell,
 } from './wgsn-normalise-pure';
 import {
-  bayerKeySets,
   designationFromCell,
-  diffDispositions,
   duplicateDesignationRows,
-  membershipProperKey,
   unionIv27aBayer,
   type DesignationRow,
 } from './wgsn-tables-pure';
 import type { WgsnNameRow } from './wgsn-index-pure';
-import { PROPER_DISPOSITIONS } from './proper-dispositions-source';
 import { WGSN_DESIGNATIONS } from './wgsn-designations-tsv';
 import { WGSN_NAMES } from './wgsn-names-tsv';
 import { WGSN_OUTPUTS } from './wgsn-tables-outputs';
@@ -62,29 +54,6 @@ export interface WgsnCounts {
   designationsKeyless: number;
   designationDuplicateRows: number;
   nameDuplicateRows: number;
-  membershipPropers: number;
-  membershipProperMatched: number;
-  membershipProperResiduals: number;
-  membershipBayerRows: number;
-  membershipBayerRowsCovered: number;
-}
-
-interface MembershipNaming {
-  /** proper-row key ("<proper>|<hip>|<hd>") → the raw proper string. */
-  propers: Map<string, string>;
-  bayerKeys: { hip: number | null; hd: number | null }[];
-}
-
-function readManifest(): MembershipNaming {
-  const propers = new Map<string, string>();
-  const bayerKeys: { hip: number | null; hd: number | null }[] = [];
-  for (const r of artifactRows(MEMBERSHIP_MANIFEST)) {
-    if (r.proper !== null && !r.isSol) {
-      propers.set(membershipProperKey(r.proper, r.hip, r.hd), r.proper);
-    }
-    if (r.bayer !== null) bayerKeys.push({ hip: r.hip, hd: r.hd });
-  }
-  return { propers, bayerKeys };
 }
 
 async function main(): Promise<void> {
@@ -131,35 +100,6 @@ async function main(): Promise<void> {
   const iv27a = unionIv27aBayer(designations, CROSS_INDEX.read());
   designations.push(...iv27a.added);
 
-  const membership = readManifest();
-  const unmatched = new Set<string>();
-  let matched = 0;
-  for (const [key, proper] of membership.propers) {
-    if (nameKeys.has(foldNameKey(proper))) matched++;
-    else unmatched.add(key);
-  }
-  const { missing, stale } = diffDispositions(
-    unmatched,
-    new Set(PROPER_DISPOSITIONS.read()
-      .map((d) => membershipProperKey(d.proper, d.hip, d.hd))),
-  );
-  if (missing.length > 0 || stale.length > 0) {
-    for (const k of missing) console.error(`undisposed membership proper: ${k}`);
-    for (const k of stale) {
-      console.error(`stale disposition (now matches WGSN or left the manifest): ${k}`);
-    }
-    console.error(
-      '\ndata/iau-wgsn/athyg_proper_dispositions.tsv must enumerate exactly '
-      + 'the manifest propers no WGSN name matches (/docs/star-naming.md#2-authority--one-source-approves-names-everything-else-compiles-them).',
-    );
-    process.exit(1);
-  }
-
-  const unioned = bayerKeySets(designations);
-  const membershipBayerRowsCovered = membership.bayerKeys.filter(
-    (k) => unioned.reaches(k.hip, k.hd),
-  ).length;
-
   const counts: WgsnCounts = {
     necRows: nec.length,
     faintsRows: faints.length,
@@ -189,11 +129,6 @@ async function main(): Promise<void> {
     ).length,
     designationDuplicateRows: duplicateDesignationRows(designations),
     nameDuplicateRows: nameRowKeys.length - new Set(nameRowKeys).size,
-    membershipPropers: membership.propers.size,
-    membershipProperMatched: matched,
-    membershipProperResiduals: unmatched.size,
-    membershipBayerRows: membership.bayerKeys.length,
-    membershipBayerRowsCovered,
   };
 
   emitArtifacts({

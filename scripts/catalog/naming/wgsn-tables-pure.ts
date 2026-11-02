@@ -1,5 +1,4 @@
-// Row shaping and the two joins behind build-wgsn-tables.ts: the IV/27A
-// Bayer union, and the naming-authority disposition set comparison (/docs/star-naming.md#2-authority--one-source-approves-names-everything-else-compiles-them). See README.md.
+// The WGSN tables' row shaping and the IV/27A Bayer union. See README.md.
 
 import type { CrossIndexRow } from '../classic-ids/classic-ids-parse';
 import { normaliseIv27aBayer, type NormalisedCell } from './wgsn-normalise-pure';
@@ -103,30 +102,6 @@ export function unionIv27aBayer(
     ));
   }
   return union;
-}
-
-/** Manifest propers and disposition rows meet on this key, so both sides
- *  build it here — a format that drifts turns the naming-authority gate (/docs/star-naming.md#2-authority--one-source-approves-names-everything-else-compiles-them) into a
- *  comparison of two disjoint sets that both look populated. */
-export function membershipProperKey(
-  proper: string,
-  hip: number | null,
-  hd: number | null,
-): string {
-  return [proper, hip ?? '', hd ?? ''].join('|');
-}
-
-/** The naming-authority gate (/docs/star-naming.md#2-authority--one-source-approves-names-everything-else-compiles-them) is exact set equality in both directions: an unmatched
- *  proper missing from the file, or a disposition the authority now covers,
- *  both fail the build. */
-export function diffDispositions(
-  unmatched: Set<string>,
-  disposed: Set<string>,
-): { missing: string[]; stale: string[] } {
-  return {
-    missing: [...unmatched].filter((k) => !disposed.has(k)),
-    stale: [...disposed].filter((k) => !unmatched.has(k)),
-  };
 }
 
 /** Every field participates: a comparator that ties leaves the committed

@@ -56,7 +56,7 @@ implementation's own statement of all three rules.
 The IAU list is the only source with an approval process. It is also the
 **only in-tree source of Unicode Greek designations**: it ships
 `α Andromedae`, `ϕ Cassiopeiae`, `β 1 Tucanae` directly, covering **1,494 of
-our <!-- count:wgsn/membershipBayerRows -->1,522<!-- /count --> Bayer records** and 2,372 of <!-- count:inherited-spine/nonEmpty.flam -->2,724<!-- /count --> Flamsteed ones. Stellarium's
+our <!-- count:manifest-naming/membershipBayerRows -->1,522<!-- /count --> Bayer records** and 2,372 of <!-- count:inherited-spine/nonEmpty.flam -->2,724<!-- /count --> Flamsteed ones. Stellarium's
 skyculture file, which `stellata-wgp3`'s description named as the glyph
 source, contains **zero Greek glyphs** — only constellation lines and folk
 names.
@@ -83,7 +83,7 @@ Diacritic-folded, over `data/athyg/inherited-spine.tsv`:
 
 | Class | Count | Disposition |
 |---|---|---|
-| IAU-approved | **<!-- count:wgsn/membershipProperMatched -->445<!-- /count -->** | name tier, unchanged. 442 match a name cell outright; 3 sit inside a multi-name cell (`Nganurganity / Unurgunite`, `Yunü (Yunu)`, `Bake-eo (or Bake Eo)`) and are only found once [§ 4](#4-canonical-designation-forms)'s normaliser splits it |
+| IAU-approved | **<!-- count:manifest-naming/membershipProperMatched -->445<!-- /count -->** | name tier, unchanged. 442 match a name cell outright; 3 sit inside a multi-name cell (`Nganurganity / Unurgunite`, `Yunü (Yunu)`, `Bake-eo (or Bake Eo)`) and are only found once [§ 4](#4-canonical-designation-forms)'s normaliser splits it |
 | discovery / eponymous designation | 21 | designation tier (`Ross 128`, `Kapteyn's Star`, `Lacaille 9352`, `Lalande 21185`, `Kruger 60`, `Struve 2398 A`) |
 | IAU name + AT-HYG component letter | 8 | alias only (`Acrab B`, `Cor Caroli B`, `Revati B`, …) |
 | Gould designation | 3 | designation tier (`268 G. Cet`) |
