@@ -185,7 +185,10 @@ reads only to work out what to ask for counts through the request it yields,
 not its bytes: the SIMBAD pulls read the whole manifest to derive their keys,
 so the record holds the hash of the derived request list, and an edit that
 leaves the list unchanged leaves the pull fresh. The list is computed with no
-network call, under `--describe`.
+network call, under `--describe`. Such a file is named in the record's
+`requestFrom`, never in its inputs: it orders the pull after the file's writer,
+so the pull is judged against the manifest this run rebuilt, and is never
+hashed itself.
 
 A bake follows the same rule. `cloud-surfaces` reads `public/clouds.json`
 only for the geometry it traces (positions and extents), so its record holds

@@ -7,7 +7,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { fileHashes } from '../util/build-stamp';
 import { REPO_ROOT } from '../util/paths';
-import { pullQueryHash } from './freshness';
+import { pullQueryHash, requestHash } from './freshness';
 import { loadTable, type Loaded } from './load-table';
 import { pipelineDirs } from './pipeline-dirs';
 import { runSteps, type Verdict } from './runner';
@@ -76,6 +76,29 @@ function writeManualStamp(name: string, out: string, request: string, queryText:
     inputs: fileHashes([at(request)]),
     outputs: fileHashes([at(out)]),
     query: pullQueryHash({ query: queryText, services: ['esa', 'ari'] }),
+  }));
+}
+
+/** A Python pull that reads `manifest` only to derive its request: its distinct lines. */
+function derivedPullStep(name: string, out: string, manifest: string): StepEntry {
+  write(`steps/${name}.py`, `
+import json, sys
+from pathlib import Path
+if sys.argv[1:] == ["--describe"]:
+    lines = sorted({l for l in Path(${JSON.stringify(at(manifest))}).read_text().splitlines() if l})
+    print(json.dumps({"query": "SELECT *", "services": ["esa"], "request": lines}))
+`);
+  write(out, 'pulled');
+  return { name, kind: 'pull', language: 'python', entry: at(`steps/${name}.py`), outputs: [at(out)], command: `refresh:${name}` };
+}
+
+function writeDerivedStamp(name: string, out: string, manifest: string, request: string[]): void {
+  write(relative(root, pipelineDirs(root).manualStamp(name)), JSON.stringify({
+    inputs: {},
+    outputs: fileHashes([at(out)]),
+    query: pullQueryHash({ query: 'SELECT *', services: ['esa'] }),
+    request: requestHash(request),
+    requestFrom: [relative(REPO_ROOT, at(manifest))],
   }));
 }
 
@@ -196,6 +219,32 @@ describe('runSteps — manual steps', () => {
     const steps = [pullStep('astro', 'astro.tsv', 'req.tsv')];
     write('query-astro.txt', 'SELECT ra, dec');
     expect((await run(steps, ['astro'])).verdicts.get('astro')).toMatchObject({ kind: 'stale', changed: ['(query)'] });
+  });
+
+  it('counts a file read only to derive the request through the request, and orders the pull after its writer', async () => {
+    write('ids.in', 'b\na');
+    const steps = [
+      derivedPullStep('sptype', 'sptype.tsv', 'manifest.txt'),
+      tsStep('membership', 'manifest.txt', ['ids.in']),
+    ];
+    writeDerivedStamp('sptype', 'sptype.tsv', 'manifest.txt', ['a', 'b', 'membership(b']);
+    const first = await run(steps, ['sptype']);
+    expect([...first.verdicts.keys()]).toEqual(['membership', 'sptype']);
+    expect(first.kinds).toEqual({ membership: 'built', sptype: 'stale' });
+    writeDerivedStamp('sptype', 'sptype.tsv', 'manifest.txt', ['a)', 'membership(b']);
+    expect((await run(steps, ['sptype'])).kinds).toEqual({ membership: 'fresh', sptype: 'fresh' });
+    write('ids.in', 'b\na)\na');
+    expect((await run(steps, ['sptype'])).kinds).toEqual({ membership: 'built', sptype: 'fresh' });
+    write('ids.in', 'b\nc');
+    expect((await run(steps, ['sptype'])).verdicts.get('sptype')).toMatchObject({ kind: 'stale', changed: ['(request)'] });
+  });
+
+  it('records the answering service without comparing it', async () => {
+    write('req.tsv', 'r1');
+    const steps = [pullStep('astro', 'astro.tsv', 'req.tsv')];
+    const stampFile = pipelineDirs(root).manualStamp('astro');
+    writeFileSync(stampFile, JSON.stringify({ ...JSON.parse(readFileSync(stampFile, 'utf8')), answeredBy: 'ari', release: 'DR3' }));
+    expect((await run(steps, ['astro'])).kinds).toEqual({ astro: 'fresh' });
   });
 
   it('never runs a manual step under --force', async () => {

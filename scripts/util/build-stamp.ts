@@ -60,13 +60,22 @@ export function fileHashes(paths: readonly string[]): FileHashes {
 
 /** Absent, unparseable and pre-outputs stamps all read as null: no stamp to trust. */
 export function readStamp(stamp: string): Stamp | null {
+  const parsed = readStampJson(stamp);
+  return parsed === null ? null : asStamp(parsed);
+}
+
+/** The stamp file's JSON, or null when absent or unparseable. */
+export function readStampJson(stamp: string): Readonly<Record<string, unknown>> | null {
   if (!existsSync(stamp)) return null;
-  let parsed: Partial<Stamp>;
   try {
-    parsed = JSON.parse(readFileSync(stamp, 'utf8')) as Partial<Stamp>;
+    return JSON.parse(readFileSync(stamp, 'utf8')) as Record<string, unknown>;
   } catch {
     return null;
   }
+}
+
+export function asStamp(json: Readonly<Record<string, unknown>>): Stamp | null {
+  const parsed = json as Partial<Stamp>;
   if (!parsed.inputs || !parsed.outputs) return null;
   return parsed.recorded
     ? { inputs: parsed.inputs, outputs: parsed.outputs, recorded: parsed.recorded }

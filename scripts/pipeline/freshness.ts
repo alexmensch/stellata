@@ -2,11 +2,11 @@
 
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync } from 'node:fs';
 import { relative, resolve } from 'node:path';
 
 import {
-  changedSince, readStamp, recordedChanges, type FileHashes, type Stamp,
+  asStamp, changedSince, readStamp, readStampJson, recordedChanges, type FileHashes, type Stamp,
 } from '../util/build-stamp';
 import { REPO_ROOT } from '../util/paths';
 import type { ManualStep, OutputClaims } from './step-table-pure';
@@ -15,13 +15,24 @@ export type Freshness =
   | { readonly kind: 'fresh' }
   | { readonly kind: 'stale'; readonly changed: readonly string[] };
 
-/** A manual step's committed record; a pull's adds its query and derived request. */
-export interface ManualStamp extends Stamp {
-  readonly query?: string;
-  readonly request?: string;
-  readonly answeredBy?: string;
-  readonly release?: string;
-}
+/** A manual step's committed record, by the step's kind. A pull's `requestFrom`
+ *  files order it after their writers but count only through `request`. */
+export type ManualRecord =
+  | { readonly kind: 'bake'; readonly stamp: Stamp }
+  | {
+    readonly kind: 'pull';
+    readonly stamp: Stamp;
+    readonly query: string;
+    readonly request?: string;
+    readonly requestFrom: readonly string[];
+    readonly answeredBy?: string;
+    readonly release?: string;
+  };
+
+export type ManualRead =
+  | { readonly kind: 'absent' }
+  | { readonly kind: 'unreadable' }
+  | { readonly kind: 'read'; readonly record: ManualRecord };
 
 /** What a pull prints under `--describe`, with no network call. */
 export interface PullDescription {
@@ -64,11 +75,28 @@ export function recordedFreshness(stampFile: string, outputs: OutputClaims): Fre
   return verdict([...changedSince(stamp.inputs), ...stampChanges(stamp, outputs)]);
 }
 
-export function readManualStamp(stampFile: string): ManualStamp | null {
-  const stamp = readStamp(stampFile);
-  if (stamp === null) return null;
-  const { query, request, answeredBy, release } = JSON.parse(readFileSync(stampFile, 'utf8')) as ManualStamp;
-  return { ...stamp, query, request, answeredBy, release };
+const optionalString = (value: unknown): string | undefined => (typeof value === 'string' ? value : undefined);
+
+export function readManualRecord(step: ManualStep, stampFile: string): ManualRead {
+  const json = readStampJson(stampFile);
+  if (json === null) return { kind: existsSync(stampFile) ? 'unreadable' : 'absent' };
+  const stamp = asStamp(json);
+  if (stamp === null) return { kind: 'unreadable' };
+  if (step.kind === 'bake') return { kind: 'read', record: { kind: 'bake', stamp } };
+  const { query, requestFrom = [] } = json;
+  if (typeof query !== 'string' || !Array.isArray(requestFrom)) return { kind: 'unreadable' };
+  return {
+    kind: 'read',
+    record: {
+      kind: 'pull',
+      stamp,
+      query,
+      request: optionalString(json.request),
+      requestFrom: requestFrom.map(String),
+      answeredBy: optionalString(json.answeredBy),
+      release: optionalString(json.release),
+    },
+  };
 }
 
 export function describePull(entry: string): PullDescription {
@@ -83,14 +111,14 @@ export function manualFreshness(
   outputs: OutputClaims,
   describe: (entry: string) => PullDescription,
 ): Freshness {
-  if (!existsSync(stampFile)) return { kind: 'stale', changed: ['(no stamp)'] };
-  const stamp = readManualStamp(stampFile);
-  if (stamp === null) return { kind: 'stale', changed: ['(unreadable stamp)'] };
-  const changed = [...changedSince(stamp.inputs), ...stampChanges(stamp, outputs)];
-  if (step.kind === 'pull') {
+  const read = readManualRecord(step, stampFile);
+  if (read.kind !== 'read') return { kind: 'stale', changed: [`(${read.kind === 'absent' ? 'no' : 'unreadable'} stamp)`] };
+  const { record } = read;
+  const changed = [...changedSince(record.stamp.inputs), ...stampChanges(record.stamp, outputs)];
+  if (record.kind === 'pull') {
     const now = describe(resolve(REPO_ROOT, step.entry));
-    if (pullQueryHash(now) !== stamp.query) changed.push('(query)');
-    if ((now.request ? requestHash(now.request) : undefined) !== stamp.request) changed.push('(request)');
+    if (pullQueryHash(now) !== record.query) changed.push('(query)');
+    if ((now.request ? requestHash(now.request) : undefined) !== record.request) changed.push('(request)');
   }
   return verdict(changed);
 }

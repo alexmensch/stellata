@@ -3,10 +3,10 @@
 import { lstatSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 
-import { readStamp } from '../util/build-stamp';
 import type { DeclaredOutputs } from '../util/emit-artifacts';
 import { entryMetafile } from '../util/import-closure';
 import { REPO_ROOT } from '../util/paths';
+import { readManualRecord } from './freshness';
 import { pipelineDirs } from './pipeline-dirs';
 import {
   deriveGraph,
@@ -68,8 +68,10 @@ function symlinkedOutputs(root: string, outputs: OutputClaims): string[] {
 
 async function readsOf(step: StepEntry, root: string, options: LoadOptions): Promise<readonly string[]> {
   if (step.kind !== 'build') {
-    const stamp = readStamp(pipelineDirs(root).manualStamp(step.name));
-    return stamp ? Object.keys(stamp.inputs).map(repoPath) : [];
+    const read = readManualRecord(step, pipelineDirs(root).manualStamp(step.name));
+    if (read.kind !== 'read') return [];
+    const { record } = read;
+    return [...Object.keys(record.stamp.inputs), ...(record.kind === 'pull' ? record.requestFrom : [])].map(repoPath);
   }
   return step.language === 'ts' ? options.deriveInputs(repoPath(step.entry)) : [];
 }
