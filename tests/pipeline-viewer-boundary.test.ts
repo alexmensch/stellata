@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { dirname, join, relative, resolve, sep } from 'node:path';
 import { walkFiles } from './walk-files';
+import { importSpecifiers, isShippedSource } from './import-specifiers';
 
 const ROOT = resolve(__dirname, '..');
 
@@ -36,18 +37,8 @@ function treeOf(repoPath: string): Tree {
   return best ? best[1] : 'other';
 }
 
-const IMPORT_RES = [
-  /(?:^|\n)\s*(?:import|export)\s+(?:type\s+)?[^;'"]*?from\s*['"]([^'"]+)['"]/g,
-  /(?:^|\n)\s*import\s*['"]([^'"]+)['"]/g,
-  /import\s*\(\s*['"]([^'"]+)['"]\s*\)/g,
-];
-
 function relativeSpecifiers(src: string): string[] {
-  const out: string[] = [];
-  for (const re of IMPORT_RES) {
-    for (const [, spec] of src.matchAll(re)) if (spec.startsWith('.')) out.push(spec);
-  }
-  return out;
+  return importSpecifiers(src).map((i) => i.spec).filter((spec) => spec.startsWith('.'));
 }
 
 function importTargets(repoPath: string, src: string): string[] {
@@ -63,11 +54,8 @@ function violations(repoPath: string, src: string): string[] {
     .map((target) => `${repoPath} (${from}) imports ${target} (${treeOf(target)})`);
 }
 
-const isScannedSource = (p: string) =>
-  /\.m?ts$/.test(p) && !/\.test\.m?ts$/.test(p) && !p.endsWith('.d.ts') && !p.endsWith('-fixture.ts');
-
 const scanned = (dir: string) =>
-  [...walkFiles(join(ROOT, dir), { include: isScannedSource, skipDir: (n) => n === 'node_modules' })]
+  [...walkFiles(join(ROOT, dir), { include: isShippedSource, skipDir: (n) => n === 'node_modules' })]
     .map((p) => relative(ROOT, p));
 
 describe('pipeline/viewer boundary', () => {

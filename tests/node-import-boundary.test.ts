@@ -5,43 +5,31 @@ import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { join, relative, resolve } from 'node:path';
 import { walkFiles } from './walk-files';
+import { importSpecifiers, isShippedSource } from './import-specifiers';
 
 const ROOT = resolve(__dirname, '..');
 const CLIENT = join(ROOT, 'src', 'client');
 
-const STATIC_IMPORT_RE = /(?:^|\n)\s*(?:import|export)\s+(type\s+)?[^;'"]*?from\s*['"]([^'"]+)['"]/g;
-const BARE_IMPORT_RE = /(?:^|\n)\s*import\s*['"]([^'"]+)['"]/g;
-const DYNAMIC_IMPORT_RE = /import\s*\(\s*['"]([^'"]+)['"]\s*\)/g;
-
-// A fixture is test-only support that happens not to be a test itself, so it
-// reads data/ off the filesystem like one. The suffix is the whole marker —
-// nothing under src/client/ may import a module carrying it.
-const isFixture = (p: string) => p.endsWith('-fixture.ts');
-const isBrowserSource = (p: string) =>
-  p.endsWith('.ts') && !p.endsWith('.test.ts') && !p.endsWith('.d.ts') && !isFixture(p);
-
 const isNodeBuiltin = (spec: string) => spec.startsWith('node:');
+// Nothing under src/client/ may import a module carrying the fixture suffix.
 const isFixtureRef = (spec: string) => /-fixture$/.test(spec);
 
 function violationsInSource(src: string): string[] {
   const out: string[] = [];
-  const flag = (spec: string, kind: string, typeOnly = false): void => {
+  for (const { spec, kind, typeOnly } of importSpecifiers(src)) {
     // A type-only import is erased before the bundler sees it, so it costs
     // the browser nothing and is how the fixture's row type crosses.
-    if (typeOnly) return;
+    if (typeOnly) continue;
     if (isNodeBuiltin(spec)) out.push(`${kind} of ${spec}`);
     else if (isFixtureRef(spec)) out.push(`${kind} of ${spec} (test fixture)`);
-  };
-  for (const [, typeOnly, spec] of src.matchAll(STATIC_IMPORT_RE)) flag(spec, 'value import', !!typeOnly);
-  for (const [, spec] of src.matchAll(BARE_IMPORT_RE)) flag(spec, 'side-effect import');
-  for (const [, spec] of src.matchAll(DYNAMIC_IMPORT_RE)) flag(spec, 'dynamic import');
+  }
   return out;
 }
 
 describe('node import boundary', () => {
   it('no browser module under src/client/ reaches node: or a fixture', () => {
     const offenders: string[] = [];
-    for (const p of walkFiles(CLIENT, { include: isBrowserSource })) {
+    for (const p of walkFiles(CLIENT, { include: isShippedSource })) {
       for (const v of violationsInSource(readFileSync(p, 'utf8'))) {
         offenders.push(`${relative(ROOT, p)}: ${v}`);
       }

@@ -283,6 +283,11 @@ doc-pointer-pure.ts      Not a test — extraction, anchor collection, path
 git-fixture.ts           Not a test — `gitIn` and `commitFile`, a throwaway
                          repo's git runner and one-file commit, for suites
                          that drive a script over real history.
+import-specifiers.ts     Not a test — `importSpecifiers` (every specifier,
+                         its form, and whether it is type-only) and
+                         `isShippedSource` (not a test, `.d.ts` or
+                         `*-fixture.ts`), shared by node-import-boundary
+                         and pipeline-viewer-boundary.
 walk-files.ts            Not a test — file enumeration the scanners above
                          share. `walkFiles` is a recursive walk taking
                          `include` / `skipDir` predicates, and follows
