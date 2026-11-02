@@ -7,6 +7,8 @@ import { afterAll, describe, expect, it } from 'vitest';
 import { declareOutputs } from '../util/emit-artifacts';
 
 import { artifactText, isReadable, readArtifact } from '../util/sources/source';
+import { retiredSids } from './events-pure';
+import { EVENTS } from './events-tsv';
 import { LEDGERS } from './ledger-tsv';
 import { CATALOG_PARTITION, registryKeys } from './registry-partitions-pure';
 import { allocateSibling, emitSibling } from './sibling-allocation';
@@ -14,14 +16,18 @@ import { SIBLING_ARTIFACTS } from './sibling-artifacts';
 
 const spec = SIBLING_ARTIFACTS['local-group'];
 const keys = registryKeys(spec.ns);
-const committed = isReadable(LEDGERS[CATALOG_PARTITION])
-  ? readArtifact(LEDGERS.lg).map((r) => ({ id: r.canonicalKey.slice(`${spec.ns}:`.length) }))
+const liveRows = isReadable(LEDGERS[CATALOG_PARTITION])
+  ? (() => {
+    const retired = retiredSids(readArtifact(EVENTS.lg));
+    return readArtifact(LEDGERS.lg).filter((r) => !retired.has(r.sid));
+  })()
   : [];
+const committed = liveRows.map((r) => ({ id: r.canonicalKey.slice(`${spec.ns}:`.length) }));
 
 describe.skipIf(committed.length === 0)('allocateSibling over the committed registry', () => {
   it('resolves every committed slug to its SID and rewrites no registry file', () => {
     const allocation = allocateSibling(spec, committed);
-    expect(allocation.sids).toEqual(readArtifact(LEDGERS.lg).map((r) => r.sid));
+    expect(allocation.sids).toEqual(liveRows.map((r) => r.sid));
     expect(allocation.minted).toBe(0);
     expect(allocation.registry).toBeNull();
   });
