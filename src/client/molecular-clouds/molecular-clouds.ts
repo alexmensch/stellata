@@ -44,10 +44,6 @@ const INK_ALPHA_DEFAULT = 0.95;
 const LABEL_SAMPLE_TARGET = 32;
 const GOLDEN_ANGLE = 2.399963229728653;
 
-// Field-mode march clip: the brick carries real density out to the
-// build's envelope taper edge (u = 1.05, scripts/cloud-surfaces/), so
-// the ray clips there rather than at the analytic mass-budget uEnv.
-const BRICK_ENVELOPE = 1.05;
 
 const ABSORPTION_RENDER_ORDER = -2;
 // Rim shells draw with the reference wireframes at −1 — annotation
@@ -497,10 +493,7 @@ export class MolecularClouds {
       n0Cal: cloud.n0Cal,
       rflatPc: cloud.rflatPc,
       p: cloud.p,
-      // Field mode marches the brick's full taper edge (density is real
-      // data out to u = 1.05); the analytic path clips to the mass-budget
-      // envelope where its model density ends.
-      uEnv: surface ? BRICK_ENVELOPE : cloud.uEnv,
+      uEnv: surface ? surface.brick.envelopeU : cloud.uEnv,
       envelopeFadeStart: this.envelopeFadeStart,
       invQuat: new THREE.Matrix3().setFromMatrix4(
         new THREE.Matrix4().makeRotationFromQuaternion(cloud.quat.clone().conjugate()),

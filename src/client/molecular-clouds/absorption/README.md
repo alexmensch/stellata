@@ -36,7 +36,8 @@ capped at 0.95.
 
 **Traced clouds march the per-cloud [Edenhofer 2024](/data/papers/index.md#edenhofer2024) density brick** (a builder
 branch, [The material seam](../README.md#the-material-seam); a linear-u8 `Data3DTexture` from `cloud-surfaces.bin`,
-`A_V = 2.742·∫E dl`, clip at the brick's u = 1.05 taper edge) — the same
+`A_V = 2.742·∫E dl`, clip at the taper edge the artifact's header records,
+u = 1.05 today) — the same
 volume the rim isosurface was traced from, so the shadow matches the
 silhouette 1:1 and the dimming matches per-star extinction physics. Fallback
 clouds march the calibrated Plummer profile, clipped at the mass-budget

@@ -59,14 +59,17 @@ tuning.
    so the runtime absorption raymarch integrates the exact field the
    isosurface was traced from (shadow ↔ silhouette 1:1).
 
-## Output format (`cloud-surfaces.bin`, magic `CSUR`, v2)
+## Output format (`cloud-surfaces.bin`, magic `CSUR`, v3)
 
 Magic and version come from `data/schema/constants.json`
 (`artifacts.cloudSurfaces`), which the client loader checks against too;
 a format change bumps the version there.
 
 - Header (16 B): `CSUR` · uint32 version · uint32 cloudCount ·
-  uint32 reserved.
+  float32 envelope — `ENVELOPE_HI`, the ellipsoidal radius u where the
+  step-2 taper has taken every brick's density to zero. The client marches
+  each traced cloud out to it, so it is written here rather than restated
+  there.
 - Directory (cloudCount × 44 B): uint32 sid · uint32 vertexCount ·
   uint32 indexCount (u32s, = 3 × triangles) · uint32×3 brick dims ·
   float32×3 brick aabbMin (ICRS pc, texel (0,0,0)'s sample position) ·

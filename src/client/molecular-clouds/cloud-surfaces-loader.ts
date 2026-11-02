@@ -19,6 +19,8 @@ export interface CloudBrick {
   stepPc: number;
   /** Density (E_ZGR pc⁻¹) that encodes to 255 — linear decode. */
   densityMax: number;
+  /** The header's envelope (scripts/cloud-surfaces/README.md#output-format-cloud-surfacesbin-magic-csur-v3). */
+  envelopeU: number;
   data: Uint8Array<ArrayBuffer>;
 }
 
@@ -36,6 +38,10 @@ export function parseCloudSurfaces(buffer: ArrayBuffer): Map<number, CloudSurfac
   const view = new DataView(buffer);
   checkBinaryHeader(view, CLOUD_SURFACES_SCHEMA, 'cloud-surfaces.bin');
   const cloudCount = view.getUint32(8, true);
+  const envelopeU = view.getFloat32(12, true);
+  if (!(envelopeU > 0)) {
+    throw new Error(`cloud-surfaces.bin: envelope ${envelopeU} is not positive`);
+  }
   const dirBytes = cloudCount * DIR_ENTRY_BYTES;
   let blobBytes = 0;
   for (let i = 0; i < cloudCount; i++) {
@@ -78,7 +84,7 @@ export function parseCloudSurfaces(buffer: ArrayBuffer): Map<number, CloudSurfac
     surfaces.set(sid, {
       positions,
       indices,
-      brick: { dims, aabbMinAbs, stepPc, densityMax, data },
+      brick: { dims, aabbMinAbs, stepPc, densityMax, envelopeU, data },
     });
   }
   return surfaces;

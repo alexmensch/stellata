@@ -305,7 +305,7 @@ def main() -> None:
     OUT_PATH.parent.mkdir(parents=True, exist_ok=True)
     with open(OUT_PATH, "wb") as f:
         f.write(MAGIC)
-        f.write(struct.pack("<III", VERSION, len(entries), 0))
+        f.write(struct.pack("<IIf", VERSION, len(entries), ENVELOPE_HI))
         for sid, positions, indices, brick in entries:
             data, dims, bmin, bstep, dmax = brick
             f.write(struct.pack("<III", sid, len(positions), len(indices)))

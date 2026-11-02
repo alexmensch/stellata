@@ -17,7 +17,9 @@ interface TestEntry {
 
 /** Assemble a CSUR buffer from sid-keyed meshes (mirrors the writer
  *  in scripts/cloud-surfaces/build-cloud-surfaces.py). */
-function makeBuffer(entries: TestEntry[], version = CLOUD_SURFACES_SCHEMA.version): ArrayBuffer {
+function makeBuffer(
+  entries: TestEntry[], version = CLOUD_SURFACES_SCHEMA.version, envelopeU = 1.05,
+): ArrayBuffer {
   const blobBytes = entries.reduce(
     (a, e) => a + e.positions.length * 4 + e.indices.length * 4 + e.brick.data.length, 0);
   const buf = new ArrayBuffer(16 + entries.length * 44 + blobBytes);
@@ -25,6 +27,7 @@ function makeBuffer(entries: TestEntry[], version = CLOUD_SURFACES_SCHEMA.versio
   writeBinaryHeader(view, CLOUD_SURFACES_SCHEMA);
   view.setUint32(4, version, true);
   view.setUint32(8, entries.length, true);
+  view.setFloat32(12, envelopeU, true);
   let off = 16;
   for (const e of entries) {
     view.setUint32(off, e.sid, true);
@@ -83,6 +86,7 @@ describe('parseCloudSurfaces', () => {
     expect(a.brick.aabbMinAbs).toEqual([-5, -5, -5]);
     expect(a.brick.stepPc).toBe(5);
     expect(a.brick.densityMax).toBeCloseTo(0.05, 7);
+    expect(a.brick.envelopeU).toBeCloseTo(1.05, 6);
     expect(Array.from(a.brick.data)).toEqual([255, 128]);
     const b = out.get(327401)!;
     expect(b.positions).toHaveLength(12);
@@ -103,6 +107,17 @@ describe('parseCloudSurfaces', () => {
   it('throws on a version other than the shared schema (a stale binary must not half-parse)', () => {
     expect(() => parseCloudSurfaces(makeBuffer([tri], CLOUD_SURFACES_SCHEMA.version - 1)))
       .toThrow(/unsupported version/);
+  });
+
+  it('carries the header envelope on every brick', () => {
+    const out = parseCloudSurfaces(makeBuffer([tri, quad], undefined, 1.2));
+    expect([...out.values()].map((s) => s.brick.envelopeU)).toEqual([
+      Math.fround(1.2), Math.fround(1.2),
+    ]);
+  });
+
+  it('throws on a non-positive envelope', () => {
+    expect(() => parseCloudSurfaces(makeBuffer([tri], undefined, 0))).toThrow(/envelope/);
   });
 
   it('throws on a truncated buffer', () => {

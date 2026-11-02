@@ -12,7 +12,7 @@
   "artifacts": {
     "clouds": { "version": 4 },
     "dustManifest": { "version": 2 },
-    "cloudSurfaces": { "magic": "CSUR", "version": 2 },
+    "cloudSurfaces": { "magic": "CSUR", "version": 3 },
     "localBubble": { "magic": "LBUB", "version": 1 }
   }
 }
