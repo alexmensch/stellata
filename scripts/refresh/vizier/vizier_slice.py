@@ -86,7 +86,7 @@ def pull_slices(
             )
         slices = [s for s in slices if s.name == only]
 
-    tap = client if client is not None else rl.TapClient(backends=[rl.cds_backend()])
+    tap = client if client is not None else rl.cds_client()
     all_sources = [*sources, _MODULE_PATH]
     for sl in slices:
         _pull_one(

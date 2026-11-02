@@ -84,7 +84,7 @@ def main() -> None:
         print(f"{OUT.relative_to(ROOT)} up to date — skipping (use --force to rebuild)")
         return
 
-    client = rl.TapClient(backends=[rl.cds_backend()])
+    client = rl.cds_client()
     print('querying CDS TAP — "I/311/hip2" (whole catalogue, ~118 k rows) …')
     t0 = time.time()
     table = client.run(ADQL)

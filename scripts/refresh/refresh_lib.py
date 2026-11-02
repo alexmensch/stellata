@@ -623,7 +623,7 @@ class TapClient:
     `backends` is required — there is no default list. Which service can
     serve a query is a property of the table, not of TAP, so picking for
     the caller only ever picks wrong: Gaia-keyed pulls want
-    `gaia_sync_client()`, VizieR-only tables want `[cds_backend()]`, and
+    `gaia_sync_client()`, VizieR-only tables want `cds_client()`, and
     SIMBAD's divergent dialect wants `simbad_client()`.
     """
 
@@ -700,6 +700,11 @@ def cds_backend() -> TapBackend:
     there as `external.gaiaedr3_distance`, and only that copy can be bounded
     by magnitude."""
     return TapBackend(name="CDS", run=_cds_run)
+
+
+def cds_client() -> TapClient:
+    """TapClient over CDS VizieR alone: no mirror serves VizieR's table ids."""
+    return TapClient(backends=[cds_backend()])
 
 
 def simbad_backend(name: str, *, base_url: str) -> TapBackend:

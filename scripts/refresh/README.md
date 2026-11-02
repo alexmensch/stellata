@@ -291,8 +291,8 @@ list, the one a pull's `--describe` states.
 default list, because which service can serve a query is a property of
 the table. CDS VizieR doesn't host `gaiadr3.*`, so an ESA→CDS fallback
 would fail with a misleading "table not found";
-`refresh-hipparcos2.py` goes the other way and passes
-`backends=[cds_backend()]` because `I/311/hip2` is VizieR-only. SIMBAD
+`refresh-hipparcos2.py` goes the other way and uses
+`cds_client()` (CDS alone) because `I/311/hip2` is VizieR-only. SIMBAD
 gets `simbad_client()` for its divergent dialect — CDS primary, the
 Harvard CfA mirror as fallback, both serving the same database and oids.
 Check ESA's

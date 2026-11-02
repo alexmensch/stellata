@@ -332,7 +332,7 @@ def main() -> None:
         f"(manifest {len(membership_tycs)} ∪ IV/25 {len(wanted) - len(membership_tycs)} new)"
     )
 
-    client = rl.TapClient(backends=[rl.cds_backend()])
+    client = rl.cds_client()
     kept = [pull_table(spec, client, wanted) for spec in TABLES]
     assert_membership_covered(membership_tycs, set().union(*kept))
     for spec, rows in zip(TABLES, kept):

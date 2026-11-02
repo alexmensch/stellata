@@ -151,7 +151,7 @@ def main() -> None:
         )
         return
 
-    client = rl.TapClient(backends=[rl.cds_backend()])
+    client = rl.cds_client()
     for spec in TABLES:
         print(f'querying CDS TAP — "{spec.vizier_table}" …')
         t0 = time.time()
