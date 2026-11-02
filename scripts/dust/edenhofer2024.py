@@ -1,6 +1,6 @@
-"""The Edenhofer 2024 dust map as two pulled datasets: each variant's identity,
-the committed file recording it, and the read every bake makes of it. See
-README.md#the-edenhofer-2024-pulls."""
+"""The Edenhofer 2024 (/data/papers/index.md#edenhofer2024) dust map as two pulled datasets: each
+variant's identity, the committed file recording it, and the read every bake
+makes of it. See README.md#the-edenhofer-2024-pulls."""
 
 from __future__ import annotations
 
@@ -35,7 +35,7 @@ FLAVOR_VARIANT = {spec["flavor"]: variant for variant, spec in VARIANTS.items()}
 
 def identity(variant: str) -> dict[str, Any]:
     return {
-        "dataset": "Edenhofer et al. 2024, 3D dust map (dustmaps edenhofer2023)",
+        "dataset": "Edenhofer 2024 (/data/papers/index.md#edenhofer2024) 3D dust map, dustmaps edenhofer2023",
         "doi": DOI,
         "variant": variant,
         **VARIANTS[variant],

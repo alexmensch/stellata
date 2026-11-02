@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
-"""Pull the Edenhofer 2024 dust map's main variant and record its identity in
-data/dust/edenhofer2024-main.json. See scripts/dust/README.md."""
+"""Pull the Edenhofer 2024 (/data/papers/index.md#edenhofer2024) dust map's main variant and
+record its identity in data/dust/edenhofer2024-main.json. See
+scripts/dust/README.md."""
 
 import sys
 from pathlib import Path
