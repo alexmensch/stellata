@@ -75,7 +75,7 @@ function assertDeclared(
   const undeclared = [
     ...expected.filter((k) => !(k in outputs.files)),
     ...keys.filter((k) => !(k in outputs.files)),
-    ...members.filter((p) => familyOf(outputs, p) === undefined),
+    ...members.filter((p) => !outputs.families.some((f) => isFamilyMember(f, p))),
   ];
   const unemitted = expected.filter((k) => !keys.includes(k));
   const unasked = keys.filter((k) => k in outputs.files && !expected.includes(k));
@@ -93,10 +93,6 @@ export function isFamilyMember(family: OutputFamily, path: string): boolean {
   return dirname(path) === family.dir && family.member.test(basename(path));
 }
 
-function familyOf(outputs: DeclaredOutputs, path: string): OutputFamily | undefined {
-  return outputs.families.find((f) => isFamilyMember(f, path));
-}
-
 function familyEntries(family: OutputFamily): string[] {
   return existsSync(family.dir) ? readdirSync(family.dir) : [];
 }
@@ -104,6 +100,11 @@ function familyEntries(family: OutputFamily): string[] {
 /** The family's members on disk, absolute. */
 export function familyMembers(family: OutputFamily): string[] {
   return familyEntries(family).filter((name) => family.member.test(name)).map((name) => resolve(family.dir, name));
+}
+
+/** The members on disk of the families a stamp records. */
+export function stampedMembers(families: readonly OutputFamily[]): string[] {
+  return families.filter((f) => f.stamped).flatMap(familyMembers);
 }
 
 export function sweepStaged(outputs: DeclaredOutputs, extra: readonly string[] = []): void {
@@ -127,10 +128,8 @@ export function emitArtifacts<K extends string>(
   const members = [...(emission.members ?? new Map())].map(([p, c]) => [resolve(p), c] as const);
   const expected = 'only' in emission ? emission.only : Object.keys(outputs.files);
   assertDeclared(outputs, expected, keyed.map(([k]) => k), members.map(([p]) => p));
-  const files = new Map<string, ArtifactContents>([
-    ...keyed.map(([k, c]) => [outputs.files[k as K], c] as const),
-    ...members,
-  ]);
+  const declared = keyed.map(([k, c]) => [outputs.files[k as K], c] as const);
+  const files = new Map<string, ArtifactContents>([...declared, ...members]);
 
   for (const check of checks) {
     if (check.kind !== 'refresh' && check.report) console.log(check.report);
@@ -164,7 +163,7 @@ export function emitArtifacts<K extends string>(
     writeStamp(
       stamp.path,
       rehashWritten(stamp.inputs, [...files.keys(), ...refreshes.map((r) => r.path)]),
-      [...files.keys()].filter((p) => familyOf(outputs, p)?.stamped !== false),
+      [...declared.map(([p]) => p), ...stampedMembers(outputs.families)],
     );
   }
 }

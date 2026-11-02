@@ -171,7 +171,8 @@ same thing — single-use helpers stay with their consumer.
   `stamp`, when given, is written last over exactly the emitted files, so a
   stamp's outputs and the declaration cannot disagree — less the members of a
   family declared `stamped: false` (the lineage baseline and diff, which no
-  worktree seed carries), and the runner stamps by the same flag. A file the step both
+  worktree seed carries). `stampedMembers` is the one listing of the members
+  a stamp records, which the runner stamps from too. A file the step both
   reads and writes — a refreshed snapshot (the `*-expected.json` beside the
   build's modules), or the SID ledger and events `build:catalog` appends to —
   has its input hash re-read after it lands; the next run then skips instead
