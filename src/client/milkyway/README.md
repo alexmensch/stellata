@@ -34,7 +34,7 @@ disables. Hidden in chart mode.
 - `milkyway-tuning.ts` — Milky Way section of the debug panel
   (surface-brightness anchor, density, extinction, reddening RGB
   sliders).
-- `milkyway.test.ts` — the component specs the layer states, the
+- `/tests/integration/milkyway.test.ts` — the component specs the layer states, the
   calibration pins and the brightness verdict.
 
 `GAL_TO_ICRS` / `GALACTIC_CENTRE_PC` live in `/src/astro-core/galactic-coords.ts`,

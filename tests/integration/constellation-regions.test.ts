@@ -3,14 +3,14 @@ import { describe, expect, it } from 'vitest';
 import {
   buildBoundaryArtifact,
   type BoundaryArtifact,
-} from '../../catalog-format/boundaries/boundaries-artifact-pure';
-import { CONSTELLATIONS, iauEdgeRecords } from '../../../scripts/catalog/parse/constellations/constellations';
-import { STELLARIUM } from '../../../scripts/catalog/parse/constellations/stellarium-source';
-import { SPHERE_RADIUS_PC } from '../galactic/coord-spheres/coord-sphere';
-import { unitVectorFromRaDec } from '../../astro-core/equatorial-basis';
-import { validateBoundaryArtifact } from './boundary-artifact-loader';
-import { createConstellationRegions } from './constellation-regions';
-import { IAU_REGION_COUNT, createIauConstellationLookup } from '../../astro-core/iau-geometry/iau-boundaries-pure';
+} from '../../src/catalog-format/boundaries/boundaries-artifact-pure';
+import { CONSTELLATIONS, iauEdgeRecords } from '../../scripts/catalog/parse/constellations/constellations';
+import { STELLARIUM } from '../../scripts/catalog/parse/constellations/stellarium-source';
+import { SPHERE_RADIUS_PC } from '../../src/client/galactic/coord-spheres/coord-sphere';
+import { unitVectorFromRaDec } from '../../src/astro-core/equatorial-basis';
+import { validateBoundaryArtifact } from '../../src/client/constellation-boundaries/boundary-artifact-loader';
+import { createConstellationRegions } from '../../src/client/constellation-boundaries/constellation-regions';
+import { IAU_REGION_COUNT, createIauConstellationLookup } from '../../src/astro-core/iau-geometry/iau-boundaries-pure';
 
 const lookup = createIauConstellationLookup(iauEdgeRecords(STELLARIUM.read()));
 // The artifact the browser actually reads, built the way build:catalog builds

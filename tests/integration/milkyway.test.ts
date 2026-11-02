@@ -2,13 +2,13 @@ import { describe, expect, it, vi } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import * as THREE from 'three';
-import { makeFrameExposure } from '../scene/frame-ctx-mock';
+import { makeFrameExposure } from '../../src/client/scene/frame-ctx-mock';
 import {
   GC_SIGHTLINE_COLUMN,
   GC_SIGHTLINE_MAG_ARCSEC2,
   MilkyWay,
-} from './milkyway';
-import { RESOLVED_HOLE_CATALOGUE_RECORDS } from '../../astro-core/milkyway/calibration/resolved-hole-table';
+} from '../../src/client/milkyway/milkyway';
+import { RESOLVED_HOLE_CATALOGUE_RECORDS } from '../../src/astro-core/milkyway/calibration/resolved-hole-table';
 import {
   BULGE_COLOR_RGB,
   BULGE_COMPONENT,
@@ -40,13 +40,13 @@ import {
   galacticDirection,
   sightlineColumn,
   sightlineSurfaceBrightness,
-} from '../../astro-core/milkyway/column/milkyway-column-pure';
-import { R0_PC } from '../../astro-core/galactic-coords';
+} from '../../src/astro-core/milkyway/column/milkyway-column-pure';
+import { R0_PC } from '../../src/astro-core/galactic-coords';
 import {
   ABSOLUTE_MAGNITUDE_DISTANCE_PC,
   fluxNumber,
-} from '../../astro-core/emission/density0-solver-pure';
-import { LG_OVERRIDES } from '../../../scripts/local-group/local-group-source';
+} from '../../src/astro-core/emission/density0-solver-pure';
+import { LG_OVERRIDES } from '../../scripts/local-group/local-group-source';
 import {
   BULGE_COLOUR_INDEX_BV,
   BULGE_TO_TOTAL_LIGHT_V,
@@ -55,43 +55,43 @@ import {
   LEINERT_TOTAL_STARLIGHT_MAG_ARCSEC2,
   NGP_DIFFUSE_RESIDUAL_MAG_ARCSEC2,
   RESOLVED_CATALOGUE_MAG_ARCSEC2,
-} from '../../astro-core/milkyway/calibration/diffuse-reference';
+} from '../../src/astro-core/milkyway/calibration/diffuse-reference';
 import {
   SHIPPED_RESOLVED_HOLE,
   unresolvedHoleVoxels,
-} from '../../astro-core/milkyway/calibration/resolved-fraction-pure';
-import { buildHoleCells, holeLight } from '../../../scripts/milkyway-calibration/resolved-light-pure';
-import { linearSrgbFromColourIndex } from '../../astro-core/colour/blackbody-lut-pure';
-import { fakeBandMaterials } from './band-materials-mock';
-import { expectSlotsServedBy } from '../scene/emitter-material-mock';
-import { makeHdrEmitterUniforms } from '../hdr/hdr-emitter-uniforms';
-import { buildSharedUniforms } from '../frame/shared-uniforms';
-import { buildSharedUniformNodes } from '../webgpu/tsl/shared-uniform-nodes';
-import { makeTslBandMaterials } from '../webgpu/milkyway/tsl-band-materials';
+} from '../../src/astro-core/milkyway/calibration/resolved-fraction-pure';
+import { buildHoleCells, holeLight } from '../../scripts/milkyway-calibration/resolved-light-pure';
+import { linearSrgbFromColourIndex } from '../../src/astro-core/colour/blackbody-lut-pure';
+import { fakeBandMaterials } from '../../src/client/milkyway/band-materials-mock';
+import { expectSlotsServedBy } from '../../src/client/scene/emitter-material-mock';
+import { makeHdrEmitterUniforms } from '../../src/client/hdr/hdr-emitter-uniforms';
+import { buildSharedUniforms } from '../../src/client/frame/shared-uniforms';
+import { buildSharedUniformNodes } from '../../src/client/webgpu/tsl/shared-uniform-nodes';
+import { makeTslBandMaterials } from '../../src/client/webgpu/milkyway/tsl-band-materials';
 import {
   DEFAULT_INSTRUMENT,
   extendedThresholdSbFor,
   instrumentLimitMag,
   DEFAULT_SUMMATION_ARCSEC2,
-} from '../../astro-core/instruments';
+} from '../../src/astro-core/instruments';
 import {
   SB_ZERO_POINT,
   extendedThresholdSbFromSolidAngle,
   lumaNormalisedTint,
   pixelSolidAngleArcsec2,
   surfaceBrightnessLuminance,
-} from '../../astro-core/emission/emission-pure';
-import { BASE_EPOCH_EXPOSURE } from '../hdr/exposure/exposure-epoch';
-import { L_ADAPT } from '../hdr/exposure/scene-adaptation-pure';
-import { angularToPx } from '../camera/controls/star-geometry';
-import { FOV_MAX_DEG, FOV_MIN_DEG } from '../camera/timing';
+} from '../../src/astro-core/emission/emission-pure';
+import { BASE_EPOCH_EXPOSURE } from '../../src/client/hdr/exposure/exposure-epoch';
+import { L_ADAPT } from '../../src/client/hdr/exposure/scene-adaptation-pure';
+import { angularToPx } from '../../src/client/camera/controls/star-geometry';
+import { FOV_MAX_DEG, FOV_MIN_DEG } from '../../src/client/camera/timing';
 import {
   L_THRESH,
   type Rgb,
   displayLevel as displayTransfer,
   relativeLuminance,
   tonemapWhitePoint,
-} from '../../astro-core/tonemap/tonemap-pure';
+} from '../../src/astro-core/tonemap/tonemap-pure';
 
 function build(catalogRecords = RESOLVED_HOLE_CATALOGUE_RECORDS) {
   const materials = fakeBandMaterials();
@@ -183,7 +183,7 @@ describe('MilkyWay population tints', () => {
   // flux split by their DIFFERENCE, which is the figure pinned here. The
   // eyeballed palette this replaced carried 0.390 mag of it (/src/astro-core/milkyway/column/README.md#population-tints-carry-hue-never-flux).
   // The bulge's own 0.2277 is the shared population
-  // constant's, pinned in ../../astro-core/emission/population-colour-pure.test.ts.
+  // constant's, pinned in ../../src/astro-core/emission/population-colour-pure.test.ts.
   it('pins what the authored palette would cost unnormalised', () => {
     const lost = (rgb: Rgb) => -2.5 * Math.log10(relativeLuminance(rgb));
     expect(lost(DISC_COLOR_RGB)).toBeCloseTo(0.137, 4);
@@ -533,7 +533,7 @@ describe('MilkyWay analytical dust', () => {
   it('derives the norm at the A_V rate the shipped dust field carries', () => {
     const manifest = JSON.parse(
       readFileSync(
-        fileURLToPath(new URL('../../../data/dust/manifest.json', import.meta.url)),
+        fileURLToPath(new URL('../../data/dust/manifest.json', import.meta.url)),
         'utf-8',
       ),
     ) as { avPerDensityPerPc: number };
@@ -708,7 +708,7 @@ describe('MilkyWay surface-brightness calibration', () => {
   // resolved-surface pin, and its own level sits 3.8 stops under the
   // perception branch's anchor. The margin is measured on the Ω_px value the
   // statistic actually carries, not on the 12x-larger level the band
-  // displays at (../hdr/attachments/README.md#the-unit).
+  // displays at (../../src/client/hdr/attachments/README.md#the-unit).
   it('writes a statistic the adaptation cut cannot act on', () => {
     const statisticL = surfaceBrightnessLuminance(
       BASE_EPOCH_EXPOSURE,
@@ -819,7 +819,7 @@ describe('isDrawn is the whole conjunction, not the user toggle', () => {
   });
 
   // Chart mode hides the two meshes and leaves the group enabled, so that the
-  // isobar treatment has somewhere to draw (README.md#chart-mode--warp).
+  // isobar treatment has somewhere to draw (/src/client/milkyway/README.md#chart-mode--warp).
   // The band is the one layer of the three whose chart gate is therefore NOT
   // behind `group.visible`, and reading the group alone would price it.
   it('does not draw in chart mode, where the group stays visible', () => {

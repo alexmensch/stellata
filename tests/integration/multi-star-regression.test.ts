@@ -18,43 +18,43 @@ import {
   displayLabel,
   lookupByName,
   lookupByRef,
-} from '../catalog-lookup';
-import { parseRef, type RecordRef } from '../parse/corpus-tsv';
-import { floatCell } from '../../util/tsv/table-pure';
+} from '../../scripts/catalog/catalog-lookup';
+import { parseRef, type RecordRef } from '../../scripts/catalog/parse/corpus-tsv';
+import { floatCell } from '../../scripts/util/tsv/table-pure';
 import {
   KM_S_TO_PC_YR,
   VELOCITY_SANITY_CEILING_PC_YR,
-} from '../distance/direction-cascade';
-import { equatorialTangentBasisAt } from '../../../src/astro-core/equatorial-basis';
+} from '../../scripts/catalog/distance/direction-cascade';
+import { equatorialTangentBasisAt } from '../../src/astro-core/equatorial-basis';
 import {
   FLAG_BINARY_COMPANION_ONLY,
   FLAG_BINARY_PRIMARY,
   VAR_TYPE_ECLIPSING,
-} from '../../../src/catalog-format/record/catalog-pure';
+} from '../../src/catalog-format/record/catalog-pure';
 import {
   FLAG_HAS_ORBIT,
   FLAG_HAS_INCLINATION,
   parseBinaries,
   type BinariesData,
   type BinaryRelation,
-} from '../../../src/client/binaries/binaries-loader';
+} from '../../src/client/binaries/binaries-loader';
 import * as THREE from 'three';
 import {
   buildOrbitRelationCaches,
   evaluateOrbitRelationDeltaPc,
   relationToElements,
-} from '../../../src/client/binaries/orbit-relation-cache';
-import { evaluateOrbitSkyAU } from '../../../src/client/binaries/binary-orbit-pure';
-import { BinaryOrbitField } from '../../../src/client/binaries/binary-orbit-field';
-import { AU_PC, AU_PER_PC } from '../../../src/astro-core/astronomy-constants';
-import { readMultiplesTsv, wdsRootOf } from './companion-promotion';
-import { MULTIPLES_TSV, MULTIPLES_TSV_PATH } from '../../binaries/multiples-tsv';
-import { NAMING_DUPLICATES } from '../naming/naming-duplicates-tsv';
-import { REPO_ROOT } from '../../util/paths';
-import { DEFAULT_ROW_INDEX_MAP } from '../catalog-lookup';
+} from '../../src/client/binaries/orbit-relation-cache';
+import { evaluateOrbitSkyAU } from '../../src/client/binaries/binary-orbit-pure';
+import { BinaryOrbitField } from '../../src/client/binaries/binary-orbit-field';
+import { AU_PC, AU_PER_PC } from '../../src/astro-core/astronomy-constants';
+import { readMultiplesTsv, wdsRootOf } from '../../scripts/catalog/companions/companion-promotion';
+import { MULTIPLES_TSV, MULTIPLES_TSV_PATH } from '../../scripts/binaries/multiples-tsv';
+import { NAMING_DUPLICATES } from '../../scripts/catalog/naming/naming-duplicates-tsv';
+import { REPO_ROOT } from '../../scripts/util/paths';
+import { DEFAULT_ROW_INDEX_MAP } from '../../scripts/catalog/catalog-lookup';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const CORPUS_TSV = resolve(__dirname, 'multi-star-regression.tsv');
+const CORPUS_TSV = resolve(__dirname, '../../scripts/catalog/companions/multi-star-regression.tsv');
 const BINARIES_BIN = resolve(REPO_ROOT, 'public/binaries.bin');
 
 // Same fixture gate as known-stars.test.ts, plus binaries.bin (also
@@ -634,7 +634,7 @@ describe.runIf(FIXTURES_READY)('component display-name uniqueness', () => {
     // stars — either way a data finding upstream, never a renderer
     // concession (/docs/star-naming.md#8-parity--the-gate-on-any-naming-change). The catalog-WIDE residual,
     // where two catalogue entries claim one designation across roots, is
-    // enumerated in ../naming/naming-duplicates.tsv.
+    // enumerated in ../../scripts/catalog/naming/naming-duplicates.tsv.
     const offenders: string[] = [];
     for (const [root, idxs] of buildWdsRootToIndices()) {
       const byLabel = new Map<string, Set<number>>();

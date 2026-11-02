@@ -1,4 +1,4 @@
-// binaries.bin golden: the runtime encoder on a committed fixture, byte for byte. See README.md.
+// binaries.bin golden: the runtime encoder on a committed fixture, byte for byte. See /scripts/binaries/golden/README.md.
 
 import { execFileSync } from 'node:child_process';
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
@@ -8,8 +8,8 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import {
   HEADER_SIZE, RECORD_LAYOUT, RECORD_SIZE, parseBinaries,
-} from '../../../src/client/binaries/binaries-loader';
-import { REPO_ROOT } from '../../util/paths';
+} from '../../src/client/binaries/binaries-loader';
+import { REPO_ROOT } from '../../scripts/util/paths';
 
 const HERE = resolve(REPO_ROOT, 'scripts/binaries/golden');
 const FIXTURE_MULTIPLES = join(HERE, 'fixture-multiples.tsv');

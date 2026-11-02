@@ -222,7 +222,7 @@ naked-eye M31 is a smudge, which a gain cannot reproduce.
   The flux-conservation form of the first: at its central surface brightness
   (15.30) one patch would claim 1.10 mag, **2.34 mag more than the whole
   galaxy's 3.44**. All of it pinned in
-  `local-group-emission-calibration.test.ts`.
+  `/tests/integration/local-group-emission-calibration.test.ts`.
 - **The seam was visible from Sol at the default view, not only from
   outside.** M31 sits at b = −21.6°, where the band's own diffuse component
   is 24.20 mag/arcsec² and renders 8.6/255 — while an M31 isophote at that

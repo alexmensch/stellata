@@ -88,7 +88,7 @@ The Milky Way's raymarch attenuates per channel inside the same loop
 transmits more of its own light through the same dust: every dust-free
 column is bit-identical under any hue, and every extincted one is not.
 0.012 mag toward the Galactic centre for a disc 0.3 mag bluer in B−V,
-pinned in `../../client/milkyway/milkyway.test.ts`. Real A_V is nearly
+pinned in `../../../tests/integration/milkyway.test.ts`. Real A_V is nearly
 source-independent, so treat the coupling as an artefact of a three-channel
 extinction model rather than a physical prediction — it is small, it is in
 the right direction, and it means a palette edit is not free.
@@ -232,7 +232,7 @@ one pixel's span at that distance, matched on the **second moment** of a
 square footprint, which is the order `softenRadiusTsl`'s Plummer form
 corrects to. No free parameter, and it tracks the exact area average to
 0.1 mag across the whole 10°–120° FOV range
-(`../../client/local-group/emission/local-group-emission-calibration.test.ts`).
+(`../../../tests/integration/local-group-emission-calibration.test.ts`).
 
 Two things it must get right, both measured:
 

@@ -11,18 +11,18 @@ import {
   DEFAULT_CATALOG_MANIFEST,
   DEFAULT_CONSTELLATIONS_JSON,
   readCatalogBuffer,
-} from '../../../../scripts/catalog/catalog-lookup';
-import buildCatalogExpected from '../../../../scripts/catalog/build-catalog-expected.json';
-import { peakAmplitudeFactor } from '../../camera/controls/star-geometry';
-import { STAR_RENDER_DEFAULTS, starPxSizes } from '../../filters/filter-state';
-import { DEFAULT_INSTRUMENT } from '../../../astro-core/instruments';
-import { parseBinary, type Catalog } from '../../loaders/catalog-loader';
-import { MIN_PHYSICAL_RADIUS_R_SUN, R_SUN_PC } from '../../../astro-core/astronomy-constants';
-import { discWindowPc } from '../local-pass/star-local-cluster-pure';
-import { perceptualDiscExponent } from './perceptual-disc-pure';
-import { DISC_EXPONENT_TOLERANCE, physSizeElisionBoundPx } from './phys-size-elision-pure';
+} from '../../scripts/catalog/catalog-lookup';
+import buildCatalogExpected from '../../scripts/catalog/build-catalog-expected.json';
+import { peakAmplitudeFactor } from '../../src/client/camera/controls/star-geometry';
+import { STAR_RENDER_DEFAULTS, starPxSizes } from '../../src/client/filters/filter-state';
+import { DEFAULT_INSTRUMENT } from '../../src/astro-core/instruments';
+import { parseBinary, type Catalog } from '../../src/client/loaders/catalog-loader';
+import { MIN_PHYSICAL_RADIUS_R_SUN, R_SUN_PC } from '../../src/astro-core/astronomy-constants';
+import { discWindowPc } from '../../src/client/star-pipeline/local-pass/star-local-cluster-pure';
+import { perceptualDiscExponent } from '../../src/client/star-pipeline/perceptual-disc/perceptual-disc-pure';
+import { DISC_EXPONENT_TOLERANCE, physSizeElisionBoundPx } from '../../src/client/star-pipeline/perceptual-disc/phys-size-elision-pure';
 
-const ROOT = resolve(__dirname, '../../../..');
+const ROOT = resolve(__dirname, '../..');
 const skip = !existsSync(resolve(ROOT, 'public/catalog-manifest.json'));
 
 const FOV_DEG = 50;

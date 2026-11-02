@@ -35,7 +35,7 @@ always the truer target (Castor Ca inside the outer pair,
 
 The duplication is deliberate and load-bearing: the wings set has to
 match what `binaries.bin` actually renders, and the two are computed by
-different languages in different processes. `multi-star-regression.test.ts`
+different languages in different processes. `/tests/integration/multi-star-regression.test.ts`
 pins the correspondence against the real artifact, so drift on either
 side fails.
 

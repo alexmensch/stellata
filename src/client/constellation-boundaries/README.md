@@ -90,7 +90,7 @@ caller wants both.
 only unrounded numbers in the artifact.** `constellationEdgeCodeAt`
 bisects them, so a rounded bound is a moved wall and the runtime would
 answer a different constellation from byte 34 near one — pinned across a
-sphere-wide sampling grid in `constellation-regions.test.ts`, and
+sphere-wide sampling grid in `/tests/integration/constellation-regions.test.ts`, and
 rejected at load unless both bound arrays ascend.
 
 Which kinds route through `constellationOf` ([The owner](#the-owner)), why

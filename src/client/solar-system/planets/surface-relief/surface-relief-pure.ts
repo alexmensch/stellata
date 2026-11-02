@@ -8,7 +8,7 @@ export const RELIEF_POLE_EPS = 1e-6;
 
 /** Azimuths a horizon map stores, and the full-scale of the sine it encodes —
  *  `HORIZON_AZIMUTHS` / `HORIZON_SIN_RANGE` in `scripts/textures/horizon_map.py`,
- *  which `horizon-map.test.ts` pins these against. */
+ *  which `/tests/integration/horizon-map.test.ts` pins these against. */
 export const HORIZON_AZIMUTHS = 8;
 export const HORIZON_SIN_RANGE = 0.4;
 
@@ -20,7 +20,7 @@ export const decodeSin = (raw: number): number =>
 /** Full-scale of the sky view factor the `<body>-skyview.webp` map encodes —
  *  `SKY_VIEW_RANGE` in `scripts/textures/sky_view.py` and
  *  `STELLATA_SKY_VIEW_RANGE` in the mesh shader, both pinned against this by
- *  `sky-view.test.ts`. */
+ *  `/tests/integration/sky-view.test.ts`. */
 export const SKY_VIEW_RANGE = 0.25;
 
 /** One raw sky-view channel in [0, 1] back to the terrain view factor it
@@ -30,7 +30,7 @@ export const decodeSkyView = (raw: number): number => raw * SKY_VIEW_RANGE;
 
 /** Each relief body's DEM elevation span in metres, `[lowest, highest]` above
  *  the reference sphere it is drawn at — `DEM_BODIES[…].span_m` in
- *  `scripts/textures/dem_relief.py`, which `dem-relief.test.ts` pins these
+ *  `scripts/textures/dem_relief.py`, which `/tests/integration/dem-relief.test.ts` pins these
  *  against. Keyed by the body's lowercased name, like the texture map. */
 export const RELIEF_ELEV_SPAN_M: Readonly<
   Record<string, readonly [number, number]>

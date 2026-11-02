@@ -1,15 +1,15 @@
 // The shipped Local Group catalogue assembled from data/ the way
 // build-local-group.ts does, for the emission suites (no public/ artifact).
 
-import { LG_OVERRIDES, LVDB } from '../../../../scripts/local-group/local-group-source';
+import { LG_OVERRIDES, LVDB } from '../../scripts/local-group/local-group-source';
 import {
   buildStandaloneOverride,
   filterForRendering,
   mergeRowAndOverride,
-} from '../../../../scripts/local-group/build-local-group-pure';
+} from '../../scripts/local-group/build-local-group-pure';
 import {
   type LgObjectRow as BuildLgObject,
-} from '../../../catalog-format/local-group/local-group-schema';
+} from '../../src/catalog-format/local-group/local-group-schema';
 
 export type { BuildLgObject };
 

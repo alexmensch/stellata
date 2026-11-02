@@ -1,10 +1,10 @@
 // Calibration acceptance: each LG object's integrated apparent V mag,
 // through the shader's exact raymarch scheme (CPU mirror), matches the
-// physical prediction from any camera position to ±0.1 mag. See README.
+// physical prediction from any camera position to ±0.1 mag. See /src/client/local-group/emission/README.md.
 
 import { describe, expect, it } from 'vitest';
-import { roundN } from '../../../../scripts/local-group/build-local-group-pure';
-import { MAX_DISTANCE_PC } from '../../../catalog-format/local-group/local-group-schema';
+import { roundN } from '../../scripts/local-group/build-local-group-pure';
+import { MAX_DISTANCE_PC } from '../../src/catalog-format/local-group/local-group-schema';
 import { ALL_OBJECTS, type BuildLgObject, buildObject } from './lg-catalog-fixture';
 import {
   columnSurfaceBrightness,
@@ -16,22 +16,22 @@ import {
   quatUnrotate,
   subPixelExpansion,
   type EmissionComponent,
-} from './local-group-emission-pure';
+} from '../../src/client/local-group/emission/local-group-emission-pure';
 import {
   footprintRadiusPc,
   pixelSolidAngleArcsec2,
-} from '../../../astro-core/emission/emission-pure';
+} from '../../src/astro-core/emission/emission-pure';
 import {
   summationDownsample,
   summationMean,
   summationRadiusPx,
-} from '../../hdr/summation/summation-pure';
-import { BASE_EPOCH_EXPOSURE } from '../../hdr/exposure/exposure-epoch';
-import { DEFAULT_SUMMATION_ARCSEC2 } from '../../../astro-core/instruments';
-import { angularToPx } from '../../camera/controls/star-geometry';
-import { FOV_MAX_DEG, FOV_MIN_DEG } from '../../camera/timing';
-import { ARCSEC_TO_RAD } from '../../../astro-core/astronomy-constants';
-import { displayLevel, tonemapWhitePoint } from '../../../astro-core/tonemap/tonemap-pure';
+} from '../../src/client/hdr/summation/summation-pure';
+import { BASE_EPOCH_EXPOSURE } from '../../src/client/hdr/exposure/exposure-epoch';
+import { DEFAULT_SUMMATION_ARCSEC2 } from '../../src/astro-core/instruments';
+import { angularToPx } from '../../src/client/camera/controls/star-geometry';
+import { FOV_MAX_DEG, FOV_MIN_DEG } from '../../src/client/camera/timing';
+import { ARCSEC_TO_RAD } from '../../src/astro-core/astronomy-constants';
+import { displayLevel, tonemapWhitePoint } from '../../src/astro-core/tonemap/tonemap-pure';
 
 const CALIBRATION_TOLERANCE_MAG = 0.1;
 /** Steps per line-of-sight column integration. The Sérsic centre is a cusp
@@ -545,7 +545,7 @@ describe('M31 surface-brightness profile vs published photometry', () => {
   });
 
   // Why this layer does NOT take the Milky Way band's rod-summation display
-  // gain (`../../../astro-core/emission/README.md#extended-sources--two-solid-angles-one-write-tail`). That gain multiplies a
+  // gain (`../../src/astro-core/emission/README.md#extended-sources--two-solid-angles-one-write-tail`). That gain multiplies a
   // surface brightness by the eye's summation solid angle, which is the
   // flux in that patch only for a source uniform across it. M31's bulge
   // R_e is 4.4 arcmin against a 13.0 arcmin summation disc, so assuming
@@ -686,7 +686,7 @@ describe('M31 surface-brightness profile vs published photometry', () => {
 
     // What the shipped pass actually delivers: the softened profile a
     // fragment writes, box-averaged by the downsample factor, convolved with
-    // the flat summation disc — every stage of `../../hdr/summation/README.md`
+    // the flat summation disc — every stage of `../../src/client/hdr/summation/README.md`
     // run on the CPU against the same ideal. `10^(−0.4·S̄)·Ω_sum` is the patch
     // flux, so `patchFlux / Ω_sum` is the mean the convolution should return
     // and the Ω_sum gain cancels out of the comparison.
@@ -784,7 +784,7 @@ describe('M31 surface-brightness profile vs published photometry', () => {
     // What a viewer actually sees, in 8-bit levels at the base epoch and the
     // reference viewport — the distribution half of the acceptance, and the
     // half the *against convolve-then-gain* block above cannot show. A
-    // threshold star lands on 38.25 (../../../astro-core/tonemap/tonemap-pure.ts), so M31 reads
+    // threshold star lands on 38.25 (../../src/astro-core/tonemap/tonemap-pure.ts), so M31 reads
     // brighter than one out to ~15 arcmin — the core and inner disc the
     // naked eye actually gets. The outer rows sit under the extended
     // threshold, so the faint-end toe compresses them: the 40-arcmin

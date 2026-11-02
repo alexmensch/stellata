@@ -5,8 +5,8 @@ import { describe, expect, it } from 'vitest';
 
 import { SOL_BODIES } from '../../src/client/solar-system/planet-system';
 import { RELIEF_ELEV_SPAN_M } from '../../src/client/solar-system/planets/surface-relief/surface-relief-pure';
-import { lfsContentReadable } from '../util/paths';
-import { webpSize } from './image-header-pure';
+import { lfsContentReadable } from '../../scripts/util/paths';
+import { webpSize } from '../../scripts/textures/image-header-pure';
 
 // dem_relief.py cannot import these tables, so it keeps its own copies of the
 // map centre and radius; this pins them back against the originals, along with
@@ -26,7 +26,7 @@ const manifest: Record<string, ReliefRow> = JSON.parse(
   readFileSync(resolve(RELIEF, 'relief.json'), 'utf-8'),
 );
 
-const pySource = readFileSync(resolve(__dirname, 'dem_relief.py'), 'utf-8');
+const pySource = readFileSync(resolve(__dirname, '../../scripts/textures/dem_relief.py'), 'utf-8');
 
 interface DemSpec {
   src: string;

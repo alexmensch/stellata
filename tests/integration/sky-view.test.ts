@@ -8,8 +8,8 @@ import {
   SKY_VIEW_RANGE,
   decodeSkyView,
 } from '../../src/client/solar-system/planets/surface-relief/surface-relief-pure';
-import { lfsContentReadable } from '../util/paths';
-import { webpSize } from './image-header-pure';
+import { lfsContentReadable } from '../../scripts/util/paths';
+import { webpSize } from '../../scripts/textures/image-header-pure';
 
 // sky_view.py cannot import the runtime tables, so this pins its encoding
 // range against the shader that decodes it, and both against the shipped
@@ -21,8 +21,8 @@ const MESH_SHADER = resolve(
   __dirname,
   '../../src/client/webgpu/solar-system/planet-mesh-tsl.ts',
 );
-const pySource = readFileSync(resolve(__dirname, 'sky_view.py'), 'utf-8');
-const horizonSource = readFileSync(resolve(__dirname, 'horizon_map.py'), 'utf-8');
+const pySource = readFileSync(resolve(__dirname, '../../scripts/textures/sky_view.py'), 'utf-8');
+const horizonSource = readFileSync(resolve(__dirname, '../../scripts/textures/horizon_map.py'), 'utf-8');
 const layer = readFileSync(
   resolve(
     __dirname,

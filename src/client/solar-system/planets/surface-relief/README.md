@@ -145,7 +145,7 @@ terminator passes, whichever way the ground faces. Before the horizon maps
 land (they are a separate fetch on the same lane) `dayside` carries a
 per-body gate standing in for them, derived from the DEM elevation span
 (`reliefHorizonSines`; the span is the build's own, pinned by
-`scripts/textures/dem-relief.test.ts`) — full out to a summit's bound over
+`tests/integration/dem-relief.test.ts`) — full out to a summit's bound over
 ground at the reference sphere, nothing past that same summit over terrain at
 the span's floor, tapering between:
 

@@ -40,14 +40,14 @@ AZIMUTH_REF = 48
 
 # Mirrors of the mesh shader's own shading constants — LIMB_FLOOR / LIMB_EXP in
 # src/client/solar-system/planets/emission/mesh-surface-pure.ts and the
-# airless terminator's floor on the softness half-width. horizon-map.test.ts
+# airless terminator's floor on the softness half-width. /tests/integration/horizon-map.test.ts
 # pins these against the originals.
 LIMB_FLOOR = 0.45
 LIMB_EXP = 0.5
 TERM_SOFTNESS_FLOOR = 1e-4
 # Geometric albedo per relief body — Planet.albedo / SolMoon.albedo in
 # src/client/solar-system/planet-system.ts, the reflectance the interreflected
-# term pays a second time. horizon-map.test.ts pins these against the originals.
+# term pays a second time. /tests/integration/horizon-map.test.ts pins these against the originals.
 ALBEDO = {"moon": 0.12, "mercury": 0.142, "mars": 0.170, "earth": 0.434}
 
 

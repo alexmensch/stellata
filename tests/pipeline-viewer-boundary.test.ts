@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { dirname, join, relative, resolve } from 'node:path';
 import { walkFiles } from './walk-files';
-import { importSpecifiers, isShippedSource } from './import-specifiers';
+import { importSpecifiers, isTypeScript } from './import-specifiers';
 import { TREE_ROOTS, treeOf, type Tree } from './source-trees';
 
 const ROOT = resolve(__dirname, '..');
@@ -14,6 +14,7 @@ const MAY_IMPORT: Record<Tree, ReadonlySet<Tree> | 'anything'> = {
   viewer: new Set(['viewer', 'catalog-format', 'astro-core', 'other']),
   pipeline: new Set(['pipeline', 'catalog-format', 'astro-core', 'other']),
   tooling: 'anything',
+  integration: 'anything',
   other: 'anything',
 };
 
@@ -35,7 +36,7 @@ function violations(repoPath: string, src: string): string[] {
 }
 
 const scanned = (dir: string) =>
-  [...walkFiles(join(ROOT, dir), { include: isShippedSource, skipDir: (n) => n === 'node_modules' })]
+  [...walkFiles(join(ROOT, dir), { include: isTypeScript, skipDir: (n) => n === 'node_modules' })]
     .map((p) => relative(ROOT, p));
 
 describe('pipeline/viewer boundary', () => {
@@ -72,6 +73,7 @@ describe('the detector itself', () => {
     expect(treeOf('src/client/stellata.ts')).toBe('viewer');
     expect(treeOf('scripts/catalog/build-catalog.ts')).toBe('pipeline');
     expect(treeOf('scripts/perf/run.ts')).toBe('tooling');
+    expect(treeOf('tests/integration/milkyway.test.ts')).toBe('integration');
     expect(treeOf('src/worker.ts')).toBe('other');
   });
 
@@ -85,6 +87,8 @@ describe('the detector itself', () => {
     expect(v('src/client/a.ts', "import { A } from '../../scripts/b';")).toBe(1);
     expect(v('src/catalog-format/a.ts', "import { A } from '../client/b';")).toBe(1);
     expect(v('src/astro-core/a.ts', "import { A } from '../catalog-format/b';")).toBe(1);
+    expect(v('src/client/a.test.ts', "import { A } from '../../scripts/b';")).toBe(1);
+    expect(v('src/client/a.test.ts', "import { A } from '../../tests/integration/b-fixture';")).toBe(1);
   });
 
   it('leaves the allowed directions and npm packages alone', () => {
@@ -95,5 +99,6 @@ describe('the detector itself', () => {
     expect(v('src/catalog-format/a.ts', "import { A } from '../astro-core/b';")).toBe(0);
     expect(v('src/astro-core/a.ts', "import * as THREE from 'three';")).toBe(0);
     expect(v('scripts/perf/a.ts', "import { A } from '../../src/client/b';")).toBe(0);
+    expect(v('tests/integration/a.test.ts', "import { A } from '../../scripts/b';")).toBe(0);
   });
 });

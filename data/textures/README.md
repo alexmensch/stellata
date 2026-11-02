@@ -59,7 +59,7 @@ gitignored mirror.
   transparency inverted), Uranus **41,600 → 51,300 km**, Neptune
   **40,900 → 63,100 km**. Each span must match the body's `rings`
   entry in `src/client/solar-system/planet-system.ts` —
-  `scripts/textures/ring-strips.test.ts` pins the parity.
+  `tests/integration/ring-strips.test.ts` pins the parity.
 
 ## Surface relief and cast shadows
 
@@ -240,7 +240,7 @@ is not changes hue the moment its texture lands — which reads as a texture bug
 not as a stale constant.
 
 The **eight calibrated moons are pinned to their own target** by
-`scripts/textures/texture-colours.test.ts`, at each body's existing relative
+`tests/integration/texture-colours.test.ts`, at each body's existing relative
 luminance so only hue moved. Titan was the worst offender at 16 % off its
 measured chromaticity, which is the same hand-picked orange the retired tint
 applied; Io, Europa, Callisto and Rhea were 7–9 % off.

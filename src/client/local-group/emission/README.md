@@ -23,13 +23,13 @@ are no Deep-field emission knobs ([Zero free parameters](#zero-free-parameters--
   the constants it marches on.
 - `lg-emission-materials.ts` (+ test, + mock) — the material seam: the
   neutral `LgEmissionMaterials` contract ([The material seam](#the-material-seam)).
-- `local-group-emission.test.ts` — wiring, instance packing, the shader
+- `/tests/integration/local-group-emission.test.ts` — wiring, instance packing, the shader
   mirror, the tint derivation.
-- `local-group-emission-calibration.test.ts` — the epic's acceptance
+- `/tests/integration/local-group-emission-calibration.test.ts` — the epic's acceptance
   test ([Zero free parameters](#zero-free-parameters--the-emission-scale-is-derived)).
 - `lg-peak-pure.ts` (+ test) — the brightest pixel the glow renders from a
   camera position, as a bound ([The brightest rendered pixel](#the-brightest-rendered-pixel)).
-- `lg-catalog-fixture.ts` — the shipped catalogue assembled from `data/` for
+- `/tests/integration/lg-catalog-fixture.ts` — the shipped catalogue assembled from `data/` for
   the suites above, since a worktree carries no `public/` artifact. It reads
   `node:fs` and `scripts/`, so it is the one module here no browser code may
   import; the `-fixture` suffix is what marks that.
@@ -132,7 +132,7 @@ used to carry (the pixel solid angle passed to both of
 nucleus it was avoiding. Both figures, the 3.6′ crossover between them, the
 rejected `fwidth(S)` cap and the residuals the shipped pass leaves are all
 pinned in the *against convolve-then-gain* case of
-`local-group-emission-calibration.test.ts`.
+`/tests/integration/local-group-emission-calibration.test.ts`.
 
 **Two consequences worth having before touching the raymarch.** The
 convolution can only average what the rasteriser sampled, so the profile is
@@ -222,7 +222,7 @@ under a pixel from Sol (median mesh radius 3.4 px), and zooming to 5°
 leaves none. The floor earns its keep from the far half of the envelope —
 59 of 123 at 1 Mpc out and **82 at the 2 Mpc camera limit**, which is
 also where an object losing its flux would be least recoverable. All
-three counts are pinned in `local-group-emission-calibration.test.ts`,
+three counts are pinned in `/tests/integration/local-group-emission-calibration.test.ts`,
 alongside the flux-invariance check that integrates the expanded profile
 through the same raymarch rather than restating the algebra
 (`expandComponent` is the vertex stage's CPU twin — keep them in

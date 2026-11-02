@@ -713,7 +713,7 @@ nearest-voxel decode, `A_V = 2.742 · ∫E dl`. Slab columns: the profile above 
 the shipped normalisation. Cascade march: the CPU mirror in
 `milkyway-column-pure.ts`, per-channel, with the measured field replacing the
 slab inside coverage and sub-sampled at ≤ 10 pc within each log step; it
-reproduces every pinned row in `milkyway.test.ts` to under 0.001 mag before
+reproduces every pinned row in `/tests/integration/milkyway.test.ts` to under 0.001 mag before
 the source is swapped. Cloud geometry and brick steps: `public/clouds.json`
 and `data/molecular-clouds/cloud-surfaces.bin`.
 

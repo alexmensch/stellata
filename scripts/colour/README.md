@@ -6,7 +6,7 @@
 Output: `src/client/star-pipeline/blackbody-lut-data.ts` (committed;
 AUTO-GENERATED — `pnpm run build:lut` to regenerate on drift), written
 through `emitArtifacts` (`../util/README.md`), declared in `blackbody-lut-outputs.ts`.
-Byte-signature pinned by `blackbody-lut.test.ts`.
+Byte-signature pinned by `/tests/integration/blackbody-lut.test.ts`.
 
 ## Linear storage, peak-normalised
 
@@ -25,7 +25,7 @@ well — the smallest component anywhere in the table is 0.189 (red end),
 so uint8 costs at most 0.91%.
 
 **The table and the unquantised chain are pinned equal, not assumed.**
-`blackbody-lut.test.ts` sweeps the whole B–V range and holds
+`/tests/integration/blackbody-lut.test.ts` sweeps the whole B–V range and holds
 `linearSrgbFromColourIndex` against `sampleLut` to **0.669 / 255** worst
 case — under one quantisation step, so a layer that takes the chain
 unquantised and a star that samples the table cannot silently diverge.

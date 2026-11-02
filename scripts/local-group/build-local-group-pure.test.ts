@@ -729,7 +729,7 @@ describe('renderedWireframeAxes — silhouette vs emission envelope', () => {
     // Only half the invariant: the shipped uMax is max(u₉₉(n), shell/R_e),
     // so what an observer sees is uMax·R_e over the half-light shell. The
     // ratio for a real object is pinned in
-    // local-group-emission-calibration.test.ts, which has the catalogue.
+    // /tests/integration/local-group-emission-calibration.test.ts, which has the catalogue.
     expect(roundN(u99(1), 3)).toBe(4.557);
   });
 });

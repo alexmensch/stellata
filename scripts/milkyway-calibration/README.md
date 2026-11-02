@@ -81,7 +81,7 @@ tolerance — dust-free, the GC's total and unresolved columns differ by a
 hundredth of a magnitude, so their difference amplifies any error some
 fiftyfold ([The resolution hole](/src/astro-core/milkyway/calibration/README.md#the-resolution-hole--the-band-marches-the-model-minus-the-drawn-stars)).
 
-It does **not** re-pin anything. Every consumer test (`milkyway.test.ts`,
+It does **not** re-pin anything. Every consumer test (`/tests/integration/milkyway.test.ts`,
 `band-peak-pure.test.ts`, `diffuse-reference.test.ts`,
 `scene-adaptation-pure.test.ts`, `march-plan.test.ts`) pins the sightline
 table the shipped hole produces, and moves when the table does. Run the

@@ -2,7 +2,7 @@
 // See /tests/README.md#pipeline-viewer-boundary.
 import { sep } from 'node:path';
 
-export type Tree = 'astro-core' | 'catalog-format' | 'viewer' | 'pipeline' | 'tooling' | 'other';
+export type Tree = 'astro-core' | 'catalog-format' | 'viewer' | 'pipeline' | 'tooling' | 'integration' | 'other';
 
 // Longest prefix wins, so the tooling roots carve out of scripts/.
 export const TREE_ROOTS: ReadonlyArray<readonly [string, Tree]> = [
@@ -12,6 +12,7 @@ export const TREE_ROOTS: ReadonlyArray<readonly [string, Tree]> = [
   ['scripts/perf/', 'tooling'],
   ['scripts/release/', 'tooling'],
   ['scripts/', 'pipeline'],
+  ['tests/integration/', 'integration'],
 ];
 
 /** The trees the browser bundle is built from. */

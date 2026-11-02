@@ -70,7 +70,7 @@ describe('blackbodyToLinearSrgb', () => {
 // The seam the volumetric layers take instead of the table. Its agreement
 // with the quantised table is what makes "a component's hue and a star's
 // are the same function of B-V" true rather than asserted, and that half
-// is pinned in blackbody-lut.test.ts, where the table lives.
+// is pinned in /tests/integration/blackbody-lut.test.ts, where the table lives.
 describe('linearSrgbFromColourIndex', () => {
   it('is the chain composed, not a second implementation of it', () => {
     for (const bv of [-0.3, 0.0, 0.65, 0.9574, 1.5, 1.9]) {

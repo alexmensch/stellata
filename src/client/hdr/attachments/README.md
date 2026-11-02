@@ -129,7 +129,7 @@ sees from the band's brightest sightline at the base epoch is
 `L` = 1.657e-3 — **3.5 stops under `L_ADAPT`**, so no cut can originate
 here (the 0.02 the band *displays* at never reaches this channel, which is
 the point), and it writes no mask, so it can never reach the pin at all.
-Pinned in `milkyway.test.ts`.
+Pinned in `/tests/integration/milkyway.test.ts`.
 
 **A point source's does not.** Its R divides the display kernel by the
 kernel's own area integral, `Φ(n)·D²`, where Φ is

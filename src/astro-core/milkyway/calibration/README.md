@@ -5,7 +5,7 @@ ratio and the two population colours derived from them, and the two
 sightline checks the result is graded by. The solve itself —
 `DISC_DENSITY0` / `BULGE_DENSITY0` — lives in `../column/milkyway-column-pure.ts`
 beside the shape integrals it divides by, and its pins live in
-`../../../client/milkyway/milkyway.test.ts`; everything about *what goes in* and *how well it
+`../../../../tests/integration/milkyway.test.ts`; everything about *what goes in* and *how well it
 comes out* is here.
 
 ## Files
@@ -75,7 +75,7 @@ Three properties a change here must keep:
 zero point *through* the shipped extinction, so the photometric scale swung
 2.7 mag across the dust knob — including at the poles, where there is no
 dust. Emissivity is intrinsic and `GALAXY_TOTAL_ABSMAG_V` is itself
-internal-extinction-corrected; `../../../client/milkyway/milkyway.test.ts` pins the independence.
+internal-extinction-corrected; `../../../../tests/integration/milkyway.test.ts` pins the independence.
 
 ## The light ratio — B/T in the solve is not the published number
 
@@ -128,7 +128,7 @@ Where it shows is the face-on external view, which the camera can reach
 ([Camera-anywhere, any-epoch](/AGENTS.md#camera-anywhere-any-epoch--a-mental-model-rule)): the centre pixel goes from
 48 % bulge to **31 %**, and the integrated bulge/disc luminance ratio from
 0.176 to **0.0840**. That contrast is what makes the model read as an Sbc
-rather than an S0, and it is pinned in `../../../client/milkyway/milkyway.test.ts` alongside the
+rather than an S0, and it is pinned in `../../../../tests/integration/milkyway.test.ts` alongside the
 edge-on case — where the bulge sits behind the full midplane dust column
 and carries 5.0e−5 of the centre pixel, exactly as a real edge-on spiral
 does in V.
@@ -328,7 +328,7 @@ is NaN.
 
 ## Two checks, and both disagree by the same sign and order
 
-Neither is an anchor. Both are pinned in `../../../client/milkyway/milkyway.test.ts`, with the
+Neither is an anchor. Both are pinned in `../../../../tests/integration/milkyway.test.ts`, with the
 hole in the model column.
 
 | check | published | model | model is |
@@ -384,7 +384,7 @@ graded on the pre-hole table).
 Levels are of 255 at the base epoch, no EV trim, no viewport — the
 summation area is fixed in angle. A threshold star also lands on 38.25, so
 `/255` doubles as "against a just-visible star". All pinned in
-`../../../client/milkyway/milkyway.test.ts`.
+`../../../../tests/integration/milkyway.test.ts`.
 
 **`Δ` is `S − S_lim`** against the 22.0 extended threshold, a plain
 subtraction. Don't restate it as a ratio of the levels: those are

@@ -246,7 +246,7 @@ Flamsteed form ships as an alias rather than going unsearchable.
   records, 74 fallbacks.
 - **`naming-duplicates.tsv`** — every display label two or more records
   compose, with its claimants. A RATCHET: each row is a curation finding
-  upstream, and `../companions/multi-star-regression.test.ts` additionally
+  upstream, and `../../../tests/integration/multi-star-regression.test.ts` additionally
   refuses any within-one-WDS-root duplicate this file does not enumerate.
 
 The gate is stated over strings with EXTERNAL provenance — every name the

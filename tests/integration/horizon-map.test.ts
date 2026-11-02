@@ -14,8 +14,8 @@ import {
   LIMB_EXP,
   LIMB_FLOOR,
 } from '../../src/client/solar-system/planets/emission/mesh-surface-pure';
-import { lfsContentReadable } from '../util/paths';
-import { webpSize } from './image-header-pure';
+import { lfsContentReadable } from '../../scripts/util/paths';
+import { webpSize } from '../../scripts/textures/image-header-pure';
 
 // horizon_map.py cannot import the runtime tables, so this pins its constants
 // back against the shader's mirror of them, and both against the shipped
@@ -27,8 +27,8 @@ const MESH_SHADER = resolve(
   __dirname,
   '../../src/client/webgpu/solar-system/planet-mesh-tsl.ts',
 );
-const pySource = readFileSync(resolve(__dirname, 'horizon_map.py'), 'utf-8');
-const buildSource = readFileSync(resolve(__dirname, 'build-textures.py'), 'utf-8');
+const pySource = readFileSync(resolve(__dirname, '../../scripts/textures/horizon_map.py'), 'utf-8');
+const buildSource = readFileSync(resolve(__dirname, '../../scripts/textures/build-textures.py'), 'utf-8');
 
 interface HorizonRow {
   width: number;
@@ -48,7 +48,7 @@ const pyNumber = (name: string): number => {
   return Number(m![1]);
 };
 
-const demSource = readFileSync(resolve(__dirname, 'dem_relief.py'), 'utf-8');
+const demSource = readFileSync(resolve(__dirname, '../../scripts/textures/dem_relief.py'), 'utf-8');
 
 /** The output grid is exactly half the body's DEM width, and that is a
  *  physical identity rather than two independent constants: the observer's
@@ -226,7 +226,7 @@ describe('horizon maps', () => {
     // needs a flux renormalisation (../../src/client/solar-system/planets/
     // emission/README.md). Its own copies of the limb constants drifting from
     // the shader's would answer that question about a different body.
-    const measure = readFileSync(resolve(__dirname, 'measure_relief_lighting.py'), 'utf-8');
+    const measure = readFileSync(resolve(__dirname, '../../scripts/textures/measure_relief_lighting.py'), 'utf-8');
     expect(measure).toContain(`LIMB_FLOOR = ${LIMB_FLOOR}`);
     expect(measure).toContain(`LIMB_EXP = ${LIMB_EXP}`);
     // The third mirrored constant is a shader literal rather than a TS export,
@@ -241,7 +241,7 @@ describe('horizon maps', () => {
     // The fourth column of the phase table is the only place the fill term's
     // flux is measured, and it scales linearly with this number — a stale copy
     // would answer the renormalisation question about a different body.
-    const measure = readFileSync(resolve(__dirname, 'measure_relief_lighting.py'), 'utf-8');
+    const measure = readFileSync(resolve(__dirname, '../../scripts/textures/measure_relief_lighting.py'), 'utf-8');
     const row = measure.match(/^ALBEDO = \{(.+)\}$/m);
     expect(row, 'ALBEDO').not.toBeNull();
     const mirrored = Object.fromEntries(

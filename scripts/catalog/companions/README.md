@@ -53,7 +53,7 @@ scripts/catalog/companions/
                                   describe in it, so this suite silently ran
                                   a second time inside the multiplicity and
                                   record-index suites.
-  multi-star-regression.test.ts   Frozen corpus pinning promoted-companion
+  /tests/integration/multi-star-regression.test.ts   Frozen corpus pinning promoted-companion
   multi-star-regression.tsv       records against the built catalog and the
                                   real binaries.bin — catches drift on
                                   either side of the wings correspondence.
@@ -255,7 +255,7 @@ Per-row gates and resolution:
   (`build-runtime-binaries.py`'s `override_inner_primary_indices`);
   counted by `repositionedInnerToParent`. Rendering is unaffected either
   way (elements-alone R(t)), but a consistent bake keeps the
-  baked-vs-elements ratchet in `multi-star-regression.test.ts` honest.
+  baked-vs-elements ratchet in `/tests/integration/multi-star-regression.test.ts` honest.
 - **Position for pair-row primaries.** When the cursor primary itself
   needs promotion (40 Eri B — primary in BC/BD/BE, never a secondary
   of A), no identifier is required: an id-less row (Rigel B, Acrux B —
@@ -564,4 +564,4 @@ The letter and the anchor a record composes against are
 [Component-letter search designations](record-index/README.md#component-letter-search-designations); the
 duplicate labels that survive the ladder are data findings, enumerated in
 `../naming/naming-duplicates.tsv` and ratcheted by
-`multi-star-regression.test.ts`.
+`/tests/integration/multi-star-regression.test.ts`.

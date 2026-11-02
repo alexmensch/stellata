@@ -63,7 +63,7 @@ export function buildCatalogRowIndexMap(
 /** gaia → hip → synth catalog-row resolution — the TS twin of
  *  build-runtime-binaries.py's `resolve_idx`. Kept faithful so the winged
  *  set matches binaries.bin's rendered pairs; the invariant is pinned by
- *  multi-star-regression.test.ts against the real artifacts. */
+ *  /tests/integration/multi-star-regression.test.ts against the real artifacts. */
 function resolveMultiplesIdx(
   gaia: string | null,
   hip: number | null,

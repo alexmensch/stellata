@@ -26,5 +26,7 @@ export function importSpecifiers(src: string): ImportSpecifier[] {
 // reads data/ off the filesystem like one; the suffix is the whole marker.
 export const isFixture = (p: string) => p.endsWith('-fixture.ts');
 
+export const isTypeScript = (p: string) => /\.m?ts$/.test(p) && !p.endsWith('.d.ts');
+
 export const isShippedSource = (p: string) =>
-  /\.m?ts$/.test(p) && !/\.test\.m?ts$/.test(p) && !p.endsWith('.d.ts') && !isFixture(p);
+  isTypeScript(p) && !/\.test\.m?ts$/.test(p) && !isFixture(p);

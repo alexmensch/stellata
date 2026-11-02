@@ -14,7 +14,7 @@ import { SOL_PLANETS } from '../../src/client/solar-system/planet-system';
 const STRIP_W = 2048;
 
 function pySpans(): Record<string, [number, number]> {
-  const src = readFileSync(resolve(__dirname, 'build-textures.py'), 'utf-8');
+  const src = readFileSync(resolve(__dirname, '../../scripts/textures/build-textures.py'), 'utf-8');
   const out: Record<string, [number, number]> = {};
   for (const m of src.matchAll(
     /"([a-z]+)": \{\s*"src": "[^"]+",\s*"span_km": \(([\d.]+), ([\d.]+)\)/g,

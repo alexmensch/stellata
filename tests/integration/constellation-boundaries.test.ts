@@ -3,17 +3,17 @@ import { describe, expect, it } from 'vitest';
 import {
   buildBoundaryArtifact,
   type BoundaryArtifact,
-} from '../../catalog-format/boundaries/boundaries-artifact-pure';
-import { CONSTELLATIONS, iauEdgeRecords } from '../../../scripts/catalog/parse/constellations/constellations';
-import { STELLARIUM } from '../../../scripts/catalog/parse/constellations/stellarium-source';
-import { fakeChromeLineMaterials } from '../chrome-lines/chrome-lines-mock';
-import { makeFrameCtx } from '../scene/frame-ctx-mock';
-import { unitVectorFromRaDec } from '../../astro-core/equatorial-basis';
+} from '../../src/catalog-format/boundaries/boundaries-artifact-pure';
+import { CONSTELLATIONS, iauEdgeRecords } from '../../scripts/catalog/parse/constellations/constellations';
+import { STELLARIUM } from '../../scripts/catalog/parse/constellations/stellarium-source';
+import { fakeChromeLineMaterials } from '../../src/client/chrome-lines/chrome-lines-mock';
+import { makeFrameCtx } from '../../src/client/scene/frame-ctx-mock';
+import { unitVectorFromRaDec } from '../../src/astro-core/equatorial-basis';
 import {
   ConstellationBoundaries,
   type ConstellationBoundariesDeps,
-} from './constellation-boundaries';
-import { createIauConstellationLookup } from '../../astro-core/iau-geometry/iau-boundaries-pure';
+} from '../../src/client/constellation-boundaries/constellation-boundaries';
+import { createIauConstellationLookup } from '../../src/astro-core/iau-geometry/iau-boundaries-pure';
 
 // Bright stars sit 1–64 pc from their walls, the V 5 population 0.01–0.64 pc,
 // so the fade window is [1, 4] pc at limit 0 and [0.02, 0.07] pc from limit 5.

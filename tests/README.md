@@ -137,6 +137,8 @@ node-import-boundary.test.ts
                          crosses, since it erases before the bundler
                          runs. README.md#node-import-boundary below carries the
                          one limit it cannot see.
+integration/             Tests that read the pipeline and the viewer
+                         together. Own README.
 pipeline-viewer-boundary.test.ts
                          One-way imports between scripts/ (the pipeline),
                          src/client/ (the viewer) and the two trees they
@@ -446,7 +448,7 @@ trains readers to re-run rather than read failures.
 The timeout is a hang detector, not a perf gate — `slowTestThreshold`
 is what surfaces slowness. Raise a test's own `{ timeout }` for a
 deliberate outlier rather than lifting the global.
-`local-group-emission-calibration.test.ts` is the standing example: its
+`/tests/integration/local-group-emission-calibration.test.ts` is the standing example: its
 three brute-force tests run 1.6 s / 3.6 s / 6.5 s solo and each carries
 `{ timeout: 120_000 }`.
 
@@ -480,10 +482,14 @@ direction:
 | viewer | `src/client/` | itself, format, astro-core, the rest of `src/` |
 | pipeline | `scripts/` | itself, format, astro-core, the rest of `src/` |
 | tooling | `scripts/perf/`, `scripts/release/` | anything |
+| integration | `tests/integration/` | anything |
 
 Type-only imports count: a workspace package needs the dependency whether or
 not the import survives erasure, and the trees are laid out so each lifts into
-one unchanged. Tests and `*-fixture.ts` support are not scanned. The two
+one unchanged. Tests and `*-fixture.ts` support are held to the same
+directions, so no package would dev-depend on its consumer; a test that has
+to read both sides lives in `integration/` (its own README), which nothing
+else may import. The two
 tooling roots drive or check the built viewer — the perf runner its frame-cost
 instrument, the release check its share-URL grammar — so they read it by
 design; the suite fails if either stops, so an unused exemption cannot

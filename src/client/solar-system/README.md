@@ -91,7 +91,7 @@ satisfies:
   index-calibrated moons take theirs from the same measured target their
   texture is calibrated to, at their own unchanged luminance
   ([Colour fidelity](/data/textures/README.md#colour-fidelity--index-anchored-calibration); pinned by
-  `scripts/textures/texture-colours.test.ts`). Every other row is still
+  `tests/integration/texture-colours.test.ts`). Every other row is still
   hand-picked. Optional `parentName` marks a body that
   orbits a planet rather than the host star (a moon); optional
   `gravParamGM` (km³/s²) is carried by moon parents so a moon's period
@@ -162,7 +162,7 @@ domains: `planet` (moons reuse the `planet` kind — a moon is a
 planet-domain object under the resolver) and `probe` (`kind=probe` in
 the ledger, keyed on the mission roster id). The values are frozen
 ledger sids minted from `data/sid/sol-objects.tsv`;
-`sol-object-sids.test.ts` imports the ledger and asserts each entry
+`/tests/integration/sol-object-sids.test.ts` imports the ledger and asserts each entry
 matches (tests import, never redefine), covers exactly the mint list,
 pins a sid for every `SOL_BODIES` runtime body and every
 `PROBE_MISSIONS` entry, and asserts the probe rows carry ledger kind

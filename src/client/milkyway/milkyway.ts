@@ -50,7 +50,7 @@ import {
 
 /** Luminance-weighted emission column the Galactic-centre sightline
  *  (l = 0, b = 0) integrates to, from the CPU mirror of the shader's
- *  raymarch. Pinned in ./milkyway.test.ts so a profile or quadrature
+ *  raymarch. Pinned in ../../../tests/integration/milkyway.test.ts so a profile or quadrature
  *  change is visible. */
 export const GC_SIGHTLINE_COLUMN = sightlineColumn(
   SOL_GALACTOCENTRIC_PC,

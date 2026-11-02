@@ -7,7 +7,7 @@ import {
   buildLut,
   bvAtIndex,
   sampleLut,
-} from './blackbody-lut';
+} from '../../scripts/colour/blackbody-lut';
 import { linearSrgbFromColourIndex } from '../../src/astro-core/colour/blackbody-lut-pure';
 import {
   LUT_BYTES,

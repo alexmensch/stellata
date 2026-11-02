@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import { makeFrameExposure } from '../../scene/frame-ctx-mock';
-import type { LgObject } from '../local-group-loader';
-import type { LgEmission } from '../../../catalog-format/local-group/local-group-schema';
+import { makeFrameExposure } from '../../src/client/scene/frame-ctx-mock';
+import type { LgObject } from '../../src/client/local-group/local-group-loader';
+import type { LgEmission } from '../../src/catalog-format/local-group/local-group-schema';
 import {
   buildEmissionInstanceData,
   cpuDensityAt,
@@ -29,17 +29,17 @@ import {
   SPHEROID_COLOR_RGB,
   type DiscComponent,
   type SersicComponent,
-} from './local-group-emission-pure';
-import { LocalGroupEmission } from './local-group-emission';
-import { LG_OVERRIDES } from '../../../../scripts/local-group/local-group-source';
-import { SB_ZERO_POINT, lumaNormalisedTint } from '../../../astro-core/emission/emission-pure';
+} from '../../src/client/local-group/emission/local-group-emission-pure';
+import { LocalGroupEmission } from '../../src/client/local-group/emission/local-group-emission';
+import { LG_OVERRIDES } from '../../scripts/local-group/local-group-source';
+import { SB_ZERO_POINT, lumaNormalisedTint } from '../../src/astro-core/emission/emission-pure';
 import {
   OLD_SPHEROID_COLOR_RGB,
   OLD_SPHEROID_COLOUR_INDEX_BV,
   combinedColourIndex,
-} from '../../../astro-core/emission/population-colour-pure';
-import { relativeLuminance } from '../../../astro-core/tonemap/tonemap-pure';
-import { fakeLgEmissionMaterials } from './lg-emission-materials-mock';
+} from '../../src/astro-core/emission/population-colour-pure';
+import { relativeLuminance } from '../../src/astro-core/tonemap/tonemap-pure';
+import { fakeLgEmissionMaterials } from '../../src/client/local-group/emission/lg-emission-materials-mock';
 
 const SMC_EMISSION: LgEmission = {
   family: 'sersic',
@@ -317,7 +317,7 @@ describe('population tints', () => {
   // Peak-normalised chromaticities, so neither authored triplet has unit
   // luminance and both would dim their own family without the
   // normalisation. The spheroid's own loss is the shared population
-  // constant's, pinned in ../../../astro-core/emission/population-colour-pure.test.ts;
+  // constant's, pinned in ../../src/astro-core/emission/population-colour-pure.test.ts;
   // what this layer owns is its disc seed and the ordering between them.
   it('pins what the disc tint would cost unnormalised', () => {
     const lost = (rgb: readonly [number, number, number]) =>

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { pixelSolidAngleArcsec2 } from '../../../astro-core/emission/emission-pure';
-import { angularToPx } from '../../camera/controls/star-geometry';
+import { pixelSolidAngleArcsec2 } from '../../src/astro-core/emission/emission-pure';
+import { angularToPx } from '../../src/client/camera/controls/star-geometry';
 import {
   columnSurfaceBrightness,
   cpuRaymarchColumn,
@@ -8,7 +8,7 @@ import {
   expandComponent,
   quatRotate,
   quatUnrotate,
-} from './local-group-emission-pure';
+} from '../../src/client/local-group/emission/local-group-emission-pure';
 import {
   LG_PEAK_JITTER_PHASES,
   LG_PEAK_RECOMPUTE_PC,
@@ -18,7 +18,7 @@ import {
   componentPeakColumn,
   lgPeakSurfaceBrightness,
   objectPeakSurfaceBrightness,
-} from './lg-peak-pure';
+} from '../../src/client/local-group/emission/lg-peak-pure';
 import { ALL_OBJECTS, type BuildLgObject, buildObject } from './lg-catalog-fixture';
 
 type Vec3 = readonly [number, number, number];

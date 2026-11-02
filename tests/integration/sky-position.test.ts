@@ -13,16 +13,16 @@ import {
   type CatalogRecord,
   loadCatalog,
   lookupByRef,
-} from '../catalog-lookup';
-import { parseRef, type RecordRef } from '../parse/corpus-tsv';
-import { unitVectorFromRaDec, type UnitVector } from '../../../src/astro-core/equatorial-basis';
+} from '../../scripts/catalog/catalog-lookup';
+import { parseRef, type RecordRef } from '../../scripts/catalog/parse/corpus-tsv';
+import { unitVectorFromRaDec, type UnitVector } from '../../src/astro-core/equatorial-basis';
 import {
   CATALOG_SCENE_EPOCH_JYR,
   advancePositionsToEpoch,
-} from '../../../src/client/loaders/epoch-advance-pure';
+} from '../../src/client/loaders/epoch-advance-pure';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const CORPUS_TSV = resolve(__dirname, 'sky-position-corpus.tsv');
+const CORPUS_TSV = resolve(__dirname, '../../scripts/catalog/validate/sky-position-corpus.tsv');
 
 // Same skip-with-hint contract as known-stars.test.ts: plain `pnpm test`
 // in CI has no catalog.bin; the Tier-A corpus CI job runs the suite

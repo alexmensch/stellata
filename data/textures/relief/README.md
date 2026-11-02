@@ -37,7 +37,7 @@ owns the derivation and the per-body contract.
 - **Registered to the body's COLOUR map, not to its DEM.** The
   MESSENGER Mercury DEM is centred on 180°E while PIA15063 is centred
   on 0°, so the build rolls it; `dem_relief.py` carries both centres
-  per body and `dem-relief.test.ts` pins the target against the
+  per body and `/tests/integration/dem-relief.test.ts` pins the target against the
   runtime's `mapCenterLonDeg`. This is the failure with no other
   symptom — a mis-rolled map shades real terrain in the wrong place
   and everything else about the render looks fine.
@@ -60,7 +60,7 @@ owns the derivation and the per-body contract.
   [Surface relief](/src/client/solar-system/planets/README.md#surface-relief).
 - Measured area-weighted tilt off the local vertical, over the same
   ±85° window, ships in `relief.json` and is pinned by
-  `dem-relief.test.ts`: median / p90 of **3.27° / 11.66°** (Moon),
+  `/tests/integration/dem-relief.test.ts`: median / p90 of **3.27° / 11.66°** (Moon),
   **1.14° / 3.94°** (Mercury), **0.44° / 2.58°** (Mars), **0.0° / 0.52°**
   (Earth, all-texel — see the Earth note below for why that row is not
   comparable). The ordering Moon ≫ Mercury > Mars holds at every map
@@ -227,7 +227,7 @@ the derivation, on the same four bodies and the same frozen DEMs.
   summit over deepest floor) the elevation angle *peaks* exactly there and
   every gentler pair peaks earlier, so nothing past it can win. It is the
   same quantity as the renderer's fallback limb bound, and
-  `horizon-map.test.ts` pins the identity.
+  `/tests/integration/horizon-map.test.ts` pins the identity.
 - **The march starts two output texels out and steps at the DEM's own
   resolution from there** — two independent parameters, and only the first
   moved. `HORIZON_MARCH_START_TEXELS` sets the near bound: 10.7 km on the Moon,
