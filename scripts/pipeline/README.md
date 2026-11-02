@@ -359,7 +359,8 @@ Hand-kept lists become derivations over the table:
   step-name order and holds them until its stdin closes, so the locks go
   when the run exits however it exits. A holder that dies while its step
   runs has lost the locks with it, so the runner fails that step. `lockSpecs`
-  is that order. A lock
+  is that order; `holdStepLocks` takes a step's locks within a loaded table,
+  for the runner and `record.ts` alike. A lock
   file is `build/locks/<step>`, `:` written `-` (`util/build-stamp.ts`'s
   `stepFileName`, which names the step's stamp too).
 - `load-table.ts` — `loadTable`: checks every TypeScript outputs module's

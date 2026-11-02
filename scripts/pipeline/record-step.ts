@@ -9,12 +9,12 @@ import {
   type Description, type ManualRecord,
 } from './freshness';
 import type { Loaded } from './load-table';
-import { holdLocks } from './locks';
+import { holdStepLocks } from './locks';
 import { pipelineTree, type PipelineTree } from './pipeline-tree';
 import { exec, runRecorded, TSX } from './processes';
 import { undeclaredWrites, type RunRecord } from './python-run-pure';
 import {
-  claims, describesItself, isBuild, writersOf,
+  claims, describesItself, isBuild,
   type ManualStep, type ResolvedStep,
 } from './step-table-pure';
 
@@ -112,10 +112,7 @@ export async function recordStep(loaded: Loads, options: RecordOptions): Promise
   if (isBuild(step)) throw new Error(`${step.name} is a build step: run it with run.ts`);
   const manual = { ...resolved, step };
   const tree = pipelineTree(options.root);
-  const shared = writersOf(loaded.graph, step.name).filter((w) => isBuild(loaded.steps.get(w)!.step));
-  const held = await holdLocks(tree.locks, { step: step.name, exclusive: true, shared }, () => {
-    options.log(`… ${step.name} waits for another run's lock`);
-  });
+  const held = await holdStepLocks(tree.locks, loaded, step.name, true, options.log);
   try {
     const partial = options.args.length > 0;
     if (!partial && !options.force && manualFreshness(step, resolved.outputs, tree).kind === 'fresh') return { kind: 'fresh' };

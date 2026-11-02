@@ -11,12 +11,12 @@ import {
   type Freshness,
 } from './freshness';
 import type { Loaded } from './load-table';
-import { holdLocks } from './locks';
+import { holdStepLocks } from './locks';
 import { pipelineTree, type PipelineTree } from './pipeline-tree';
 import { exec, runRecorded, TSX } from './processes';
 import { recordProblems } from './python-run-pure';
 import {
-  isBuild, selectSteps, writersOf,
+  isBuild, selectSteps,
   type BuildStep, type ResolvedStep, type StepGraph,
 } from './step-table-pure';
 
@@ -72,10 +72,7 @@ class Run {
 
   private async visit(resolved: ResolvedStep): Promise<Verdict> {
     const { step } = resolved;
-    const shared = writersOf(this.graph, step.name).filter((w) => isBuild(this.loaded.steps.get(w)!.step));
-    const held = await holdLocks(this.tree.locks, { step: step.name, exclusive: isBuild(step), shared }, () => {
-      this.options.log(`… ${step.name} waits for another run's lock`);
-    });
+    const held = await holdStepLocks(this.tree.locks, this.loaded, step.name, isBuild(step), this.options.log);
     if (!isBuild(step)) {
       try {
         return manualFreshness(step, resolved.outputs, this.tree);
