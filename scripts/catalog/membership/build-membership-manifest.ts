@@ -187,12 +187,11 @@ async function main(): Promise<void> {
     },
     members: lineage.members,
     checks: [...lineage.checks, heap.check(), snapshotCheck<MembershipCounts>({
-      envVar: 'UPDATE_BUILD_COUNTS',
       snapshotPath: resolve(ROOT, MEMBERSHIP_EXPECTED_FILE),
       actual: c,
       compare: compareCountSnapshot,
       failureLabel: 'membership-manifest count',
-      refreshCommand: 'UPDATE_BUILD_COUNTS=1 pnpm run build:membership',
+      script: 'build:membership',
     })],
   });
   for (const f of Object.values(MEMBERSHIP_OUTPUTS.files)) console.log(`wrote ${f}`);

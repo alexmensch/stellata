@@ -29,7 +29,7 @@ from scripts.binaries.stage7_counts import (  # noqa: E402
     build_binaries_rates,
     compare_build_rates,
 )
-from scripts.util.snapshot_assert import UPDATE_COUNTS_ENV_VAR  # noqa: E402
+from scripts.util.snapshot_assert import UPDATE_SNAPSHOTS_ENV_VAR  # noqa: E402
 from scripts.binaries.pipeline_test_fixtures import (  # noqa: E402
     _component_astrometry,
     _resolved,
@@ -163,10 +163,10 @@ class AssertOrUpdateRatesTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as td:
             p = Path(td) / "rates.json"
             try:
-                _os.environ[UPDATE_COUNTS_ENV_VAR] = "1"
+                _os.environ[UPDATE_SNAPSHOTS_ENV_VAR] = "1"
                 ok = assert_or_update_rates({"r": 0.42}, p)
             finally:
-                _os.environ.pop(UPDATE_COUNTS_ENV_VAR, None)
+                _os.environ.pop(UPDATE_SNAPSHOTS_ENV_VAR, None)
             self.assertTrue(ok)
             written = _json.loads(p.read_text())
         self.assertEqual(written["r"]["value"], 0.42)
@@ -179,10 +179,10 @@ class AssertOrUpdateRatesTests(unittest.TestCase):
             p = Path(td) / "rates.json"
             p.write_text(_json.dumps({"r": {"value": 0.30, "tolerance": 0.05}}))
             try:
-                _os.environ[UPDATE_COUNTS_ENV_VAR] = "1"
+                _os.environ[UPDATE_SNAPSHOTS_ENV_VAR] = "1"
                 ok = assert_or_update_rates({"r": 0.42}, p)
             finally:
-                _os.environ.pop(UPDATE_COUNTS_ENV_VAR, None)
+                _os.environ.pop(UPDATE_SNAPSHOTS_ENV_VAR, None)
             self.assertTrue(ok)
             written = _json.loads(p.read_text())
         self.assertEqual(written["r"]["value"], 0.42)

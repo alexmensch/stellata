@@ -263,7 +263,7 @@ sweeps the catalogue and emits two snapshot sections into
 
 Both sections carry hand-edited `reason` strings ("LMC kinematic snap
 legitimate", "ρ Cas yellow hypergiant — SIMBAD's 1/π is the noisy
-Hipparcos value") that survive `UPDATE_DISTANCE_OUTLIERS=1` refreshes
+Hipparcos value") that survive `UPDATE_SNAPSHOTS=1` refreshes
 via `mergeReasonsFromSnapshot`. A new outlier fails the build until
 the snapshot is refreshed and a rationale is filled in; a removed or
 changed outlier likewise.

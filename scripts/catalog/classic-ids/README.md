@@ -129,8 +129,7 @@ scripts/catalog/classic-ids/
                                   one (label-merge/README.md#what-a-freed-number-costs).
   classic-id-overlay-expected.json
                                   Pinned count snapshot. Refresh with
-                                  UPDATE_BUILD_COUNTS=1 (same env var
-                                  build-catalog.ts uses).
+                                  UPDATE_SNAPSHOTS=1.
 ```
 
 ## Join routes
@@ -313,7 +312,7 @@ constellation out of the designation string and loses only its expanded alias
 ## Counts and the parity measurement
 
 `classic-id-overlay-expected.json` pins the counts through the same
-`compareCountSnapshot` / `UPDATE_BUILD_COUNTS` machinery
+`compareCountSnapshot` / `UPDATE_SNAPSHOTS` machinery
 `build-catalog.ts` uses (`snapshotCheck` in
 `../../util/snapshot-check.ts`). Three groups:
 

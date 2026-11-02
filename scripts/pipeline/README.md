@@ -2,7 +2,9 @@
 
 One model of the build pipeline: a typed table of steps, a runner that orders
 and gates them, and the content stamp as the only freshness test. This README
-is the design; `steps.ts` and `run.ts` land in this folder to implement it.
+is the design; [Files](#files) maps it onto the code. The runner is proven on
+fixture tables; `steps.ts` holds no step yet, and every step still runs through
+its own `package.json` target until it moves onto the table.
 
 ## The model
 
@@ -79,24 +81,32 @@ reads. So each `defineSource` / `defineArtifact` lives in a leaf module that
 only code reading that file through its typed reader imports, and a test over
 each step's closure holds every reached source to a call of its reader.
 
+The runner starts a Python step as `run_python_step.py <root> <record> <entry>`,
+which runs the entry under `build_stamp.record_run`
+([util/README.md](../util/README.md)); the step needs no code of its own to be
+recorded.
+
 **A recorded input set is sound for code and data alike.** A Python step
 that starts reading a new module or file does so because some file it
-already read changed, and that change makes it stale. Two reads open no file,
-so they need their own record:
+already read changed, and that change makes it stale. That holds only for
+reads Python's audit hook sees, so a Python step reads repo files only through
+Python's own file calls: a subprocess or a C extension that opens a file itself
+raises no event. Two reads open no file, so they need their own record:
 
 - **Directory listings** (`os.listdir`, `os.scandir`, `glob.glob`, which
   `iterdir` and `Path.glob` go through) are audit events too; each is recorded
   as an input keyed by the directory, hashed over its sorted names, so a file
   added to a scanned folder stales the step.
 - **Existence probes** (`Path.exists()`, `os.path.exists`) raise no audit
-  event. A Python step probes existence only through the stamp helper, which
-  records the probe; a test over the Python step modules fails on any other
-  probe.
+  event. A Python step probes existence only through `build_stamp.probe`,
+  which records the probe; a test over the Python step modules fails on any
+  other probe.
 
 **A Python step's declarations cannot drift silently.** The audit hook also
 records what the process writes: the target of every `os.rename` /
 `os.replace` (so a temp-then-rename write counts as its target, not its temp
-file) and every path opened for writing, less the step's own stamp. A count
+file) and every path opened for writing. A step on the runner writes no stamp
+of its own: the runner writes it, so a stamp write is an undeclared one. A count
 snapshot the step rewrites under `--update-snapshots` is named in its own
 table field, never an output and never an ordering edge. After a Python step runs,
 the runner fails the run when a recorded write is not a declared output, or
@@ -178,7 +188,10 @@ reads only to work out what to ask for counts through the request it yields,
 not its bytes: the SIMBAD pulls read the whole manifest to derive their keys,
 so the record holds the hash of the derived request list, and an edit that
 leaves the list unchanged leaves the pull fresh. The list is computed with no
-network call, under `--describe`.
+network call, under `--describe`. Such a file is named in the record's
+`requestFrom`, never in its inputs: it orders the pull after the file's writer,
+so the pull is judged against the manifest this run rebuilt, and is never
+hashed itself.
 
 A bake follows the same rule. `cloud-surfaces` reads `public/clouds.json`
 only for the geometry it traces (positions and extents), so its record holds
@@ -208,6 +221,9 @@ write more than one file (classic-ids four, Tycho-2 two).
 
 `run.ts <target…> [--force] [--update-snapshots] [--verify-committed]`
 
+A target is a step name. `--verify-committed` is CI's slice of the runner and
+lands with it; `run.ts` rejects it until then.
+
 1. Load and validate the table.
 2. Walk the steps the targets reach, in derived order.
    - A `build` step whose inputs include the output of a stale manual step or
@@ -226,14 +242,17 @@ write more than one file (classic-ids four, Tycho-2 two).
   running step holds its own lock exclusive and a shared lock on each step
   that writes its inputs, so two runs of one step serialise, and a reader in
   one run never sees a half-replaced set (the catalogue's chunks renamed one
-  by one) from a writer in another. `build-seed.sh` keeps only its
+  by one) from a writer in another. A manual step's check holds the same
+  shared locks, so a pull is never judged against a request mid-replace.
+  `build-seed.sh` keeps only its
   newest-run-wins rule and relies on the locks for the rest, so a plain build
   or `dev` beside a seed run can no longer interleave with it.
 - **`--force`** reaches every `build` step the run selects, uniformly. It
   never runs a manual step.
-- **`--update-snapshots`** is the one way a count snapshot is rewritten. It
-  replaces `UPDATE_BUILD_COUNTS` and `UPDATE_DISTANCE_OUTLIERS`, and the
-  Python steps honour it too. A forced rebuild therefore still checks counts.
+- **`--update-snapshots`** is the one way a count snapshot is rewritten: it
+  sets `UPDATE_SNAPSHOTS=1` for each step it runs, the one variable
+  `snapshotCheck` and `snapshot_assert.py` read. A forced rebuild therefore
+  still checks counts.
 - **`--verify-committed`** forces each selected step, then fails on any diff
   in its declared outputs that git tracks (`git ls-files` over the declared
   paths decides which are committed; the declaration carries no committed
@@ -295,6 +314,54 @@ Hand-kept lists become derivations over the table:
   to TypeScript, so it reaches the runner as a TypeScript step), then CI's
   `--verify-committed`, then the derived checks. The four loop breaks ship
   with the slice that moves their step.
+
+## Files
+
+- `step-table-pure.ts` (+ test) — the table's types (`StepEntry`, one
+  variant per kind and language), the load-time rules that need no disk
+  (one writer per output, files against families included; a build-step
+  cycle; an `after` naming no step), and `deriveGraph`: read edges, the
+  registry edges set aside, a manual step's back edges kept as loops, and
+  the run order (table order breaks ties). `selectSteps` is a target plus
+  everything upstream, kept loops included; `writersOf` names the steps a
+  step takes shared locks on.
+- `run_python_step.py` — a Python step's command line under the recorder.
+- `locks.ts` (+ test) / `lock_holder.py` — `holdLocks` starts a
+  `lock_holder.py` child that takes each `flock` (Node has none) in
+  step-name order and holds them until its stdin closes, so the locks go
+  when the run exits however it exits. A holder that dies while its step
+  runs has lost the locks with it, so the runner fails that step. `lockSpecs`
+  is that order. A lock
+  file is `build/locks/<step>`, `:` written `-` (`util/build-stamp.ts`'s
+  `stepFileName`, which names the step's stamp too).
+- `load-table.ts` — `loadTable`: checks every TypeScript outputs module's
+  imports before importing any, imports the `declareOutputs` constants, rejects a build output
+  through a symlink (the path or any folder above it, up to the root), reads
+  each manual step's record for its inputs, then `deriveGraph`. A
+  TypeScript step's inputs come from the injected `deriveInputs`;
+  `run.ts` passes `util/step-inputs.ts`'s `entryInputPaths`.
+- `freshness.ts` — the one stamp test per kind: a TypeScript build's inputs
+  derived now, a Python build's recorded inputs, listings and probes
+  re-hashed, a manual step's committed record plus, for a pull, its
+  `--describe` (`describePull`, run under `python3 -I -S`) hashed as
+  `pullQueryHash` (query text and service list) and `requestHash` (the
+  derived request list). Every kind is also stale when a recorded output
+  moved or a declared output is missing from the record. Writers of a pull's
+  record use the same two hash functions.
+- `python-run-pure.ts` (tested through `runner.test.ts`) — `recordProblems`: a
+  write outside the declared outputs and snapshots, or a read, listing or
+  probe of another step's output with no path from that step in the graph.
+- `runner.ts` (+ test) — `runSteps`: the walk of [The runner](#the-runner--runts)
+  over a loaded table, the `Verdict` union (`fresh`, `built`, `stale`,
+  `failed`, `skipped`) matched exhaustively, and the exit status. The runner
+  writes every build stamp itself once a step exits 0 and its declared
+  outputs exist: inputs hashed before the run, those it also wrote (and,
+  under `--update-snapshots`, all of a TypeScript step's) re-hashed after.
+  `pipeline-tree.ts` is the run's one root: table paths resolve against it,
+  stamp keys are relative to it, and a step's build stamp (through
+  `stampPath`), manual record, run record and lock folder sit under it.
+  `run.ts` passes the repo root; tests pass a temporary folder.
+- `run.ts` / `steps.ts` — the command line and the table it runs.
 
 ## Design pass
 
