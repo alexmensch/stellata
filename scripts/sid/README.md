@@ -115,6 +115,13 @@ registry-io.ts            loadRegistry: every partition plus the stored
                           appended as encodeLine lines, never a committed
                           line rewritten, and its head recomputed. Shared
                           by build-catalog and the stamp.
+registry-step-inputs.test.ts
+                          Every allocating step (build:catalog,
+                          build:local-group, sid:stamp) has every
+                          partition's ledger and events in its
+                          stepInputPaths, read through the LEDGERS /
+                          EVENTS declaration maps
+                          (../util/sources/README.md#reached-means-read).
 registry-outputs.ts       registryPaths(partition), the one place a
                           registry path is spelled, and
                           registryFiles(partition): its three files, keyed

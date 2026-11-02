@@ -98,7 +98,12 @@ declaration by the calls in the closure's other modules: `read` (a source's
 `encodeLine`), `both`, or `unused`. A step's data inputs are the `read` and
 `both` ones (`isRead`), so a step never depends on its own output and an
 artifact it reads and rewrites stays an input; the test fails any step with
-an `unused` one. Across `scripts/`, `src/`, `tests/` and the `vite*.ts`
+an `unused` one. An exported record whose values are all declarations
+(the SID registry's `LEDGERS` and `EVENTS`, one artifact per partition) is a
+**declaration map**: each entry is reported as `NAME.key`, and a read through
+the record (`readArtifact(LEDGERS[partition])`) reads every entry, since its
+step readers walk every partition. `scripts/sid/registry-step-inputs.test.ts`
+pins that each allocating step keys all six registry files. Across `scripts/`, `src/`, `tests/` and the `vite*.ts`
 configs — test code included — it also fails on a `data/` path literal
 outside a declaring or `*-outputs.ts` module: a test names a data file through
 its declaration (`X.file`, `isReadable(X)`, `X.read()`). The test's named
