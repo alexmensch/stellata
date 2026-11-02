@@ -50,8 +50,16 @@ def command(variant: str) -> str:
     return f"pnpm run refresh:edenhofer2024-{variant}"
 
 
+def cached_file(variant: str) -> Path:
+    """Where dustmaps keeps the variant's file, outside the repo."""
+    from dustmaps.std_paths import data_dir
+
+    return Path(data_dir()) / DUSTMAPS_SUBDIR / VARIANTS[variant]["file"]
+
+
 def require(flavor: str) -> dict[str, Any]:
-    """The committed identity of the dataset a bake reads for `flavor`."""
+    """The committed identity of the dataset a bake reads for `flavor`, once
+    the file dustmaps will serve is checked to be that dataset."""
     variant = FLAVOR_VARIANT[flavor]
     path = identity_path(variant)
     if not path.exists():
@@ -62,6 +70,9 @@ def require(flavor: str) -> dict[str, Any]:
             f"{path.relative_to(REPO_ROOT)} names a different dataset than "
             f"this code reads — run `{command(variant)}`."
         )
+    cached = cached_file(variant)
+    if not cached.exists() or _md5(cached) != VARIANTS[variant]["md5"]:
+        sys.exit(f"{cached} is missing or not the recorded dataset — run `{command(variant)}`.")
     return recorded
 
 
@@ -86,14 +97,13 @@ def pull(variant: str) -> None:
     the identity's, then write the identity file."""
     sys.path.insert(0, str(REPO_ROOT))
     import dustmaps.edenhofer2023
-    from dustmaps.std_paths import data_dir
 
     from scripts.util.build_stamp import report_service
 
     spec = VARIANTS[variant]
     dustmaps.edenhofer2023.fetch(fetch_2kpc=variant == "2kpc")
     report_service(SERVICE)
-    downloaded = Path(data_dir()) / DUSTMAPS_SUBDIR / spec["file"]
+    downloaded = cached_file(variant)
     if _md5(downloaded) != spec["md5"]:
         sys.exit(f"{downloaded} is not md5 {spec['md5']}: dustmaps fetched another dataset than VARIANTS names.")
     out = identity_path(variant)

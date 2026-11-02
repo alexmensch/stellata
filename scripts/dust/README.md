@@ -79,7 +79,8 @@ checks its md5 against the identity `VARIANTS` states, and writes that
 identity to `data/dust/edenhofer2024-<variant>.json`. A bake reads the
 identity file through `edenhofer2024.require(flavor)` before touching the
 map, which orders it after its pull, and fails naming the pull when the
-file is missing or names another dataset. The dust bake reads `main`;
+identity file is missing or names another dataset, or when dustmaps' cached
+file is missing or fails the md5 (a checkout where the pull never ran). The dust bake reads `main`;
 cloud-surfaces reads `main` and `2kpc`. A new upstream version is an edit
 to `VARIANTS`, which stales both the pull (its `--describe` prints the
 identity) and every bake that reads it.

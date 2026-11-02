@@ -31,7 +31,13 @@ class RequireTests(unittest.TestCase):
         return mock.patch.multiple(
             e, REPO_ROOT=root,
             identity_path=lambda variant: root / f"edenhofer2024-{variant}.json",
+            cached_file=lambda variant: root / "cache" / e.VARIANTS[variant]["file"],
+            _md5=lambda path: path.read_text(),
         )
+
+    def _cache(self, root: Path, variant: str, md5: str) -> None:
+        (root / "cache").mkdir(exist_ok=True)
+        (root / "cache" / e.VARIANTS[variant]["file"]).write_text(md5)
 
     def test_names_the_pull_when_the_identity_is_missing(self) -> None:
         with tempfile.TemporaryDirectory() as d, self._at(Path(d)):
@@ -44,9 +50,23 @@ class RequireTests(unittest.TestCase):
             with self.assertRaisesRegex(SystemExit, "different dataset"):
                 e.require("main")
 
-    def test_returns_a_matching_identity(self) -> None:
+    def test_names_the_pull_when_the_cached_map_is_absent(self) -> None:
         with tempfile.TemporaryDirectory() as d, self._at(Path(d)):
             (Path(d) / "edenhofer2024-main.json").write_text(json.dumps(e.identity("main")))
+            with self.assertRaisesRegex(SystemExit, "refresh:edenhofer2024-main"):
+                e.require("main")
+
+    def test_refuses_a_cached_map_that_is_another_dataset(self) -> None:
+        with tempfile.TemporaryDirectory() as d, self._at(Path(d)):
+            (Path(d) / "edenhofer2024-main.json").write_text(json.dumps(e.identity("main")))
+            self._cache(Path(d), "main", "0" * 32)
+            with self.assertRaisesRegex(SystemExit, "not the recorded dataset"):
+                e.require("main")
+
+    def test_returns_a_matching_identity_over_a_matching_cache(self) -> None:
+        with tempfile.TemporaryDirectory() as d, self._at(Path(d)):
+            (Path(d) / "edenhofer2024-main.json").write_text(json.dumps(e.identity("main")))
+            self._cache(Path(d), "main", e.VARIANTS["main"]["md5"])
             self.assertEqual(e.require("main"), e.identity("main"))
 
 
