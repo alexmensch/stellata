@@ -573,7 +573,9 @@ upstream catalogue release:
   jones.py` in the order of [Refreshing data when DR4 / new AT-HYG lands](scripts/refresh/README.md#refreshing-data-when-dr4--new-at-hyg-lands). Tier-A `known-stars.tsv` rows may need
   per-row source_id updates against the DR3↔DR4 cross-walk.
 - **AT-HYG point release** — drop the new
-  `data/athyg/athyg_3X_classic_ids.csv` in and re-run
+  `data/athyg/athyg_3X_classic_ids.csv` in, re-point the two filename pins
+  (`ATHYG_CLASSIC_IDS` in `scripts/catalog/spine/athyg-classic-ids-source.ts`,
+  `SRC_ATHYG` in `scripts/binaries/build-binaries.py`) and re-run
   `pnpm run build:binaries`, its one build consumer
   ([Consumed by](data/athyg/README.md#consumed-by) lists every reader).
   `build:catalog` reads neither it nor the frozen spine.
