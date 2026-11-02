@@ -6,9 +6,9 @@ import { existsSync, statSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { allocateSibling, siblingEmission } from '../sid/sibling-allocation';
+import { allocateSibling, emitSibling } from '../sid/sibling-allocation';
 import { SIBLING_ARTIFACTS } from '../sid/sibling-artifacts';
-import { emitArtifacts, runStep, sweepStaged } from '../util/emit-artifacts';
+import { runStep, sweepStaged } from '../util/emit-artifacts';
 import { stepInputPaths } from '../util/step-inputs';
 import { LOCAL_GROUP_OUTPUTS } from './local-group-outputs';
 import { LG_ALIASES, LG_OVERRIDES, LVDB } from './local-group-source';
@@ -182,10 +182,7 @@ async function main(): Promise<void> {
     count: objects.length,
     objects: objects.map((o, i) => ({ ...toJsonObject(o), sid: allocation.sids[i] })),
   };
-  emitArtifacts({
-    outputs: LOCAL_GROUP_OUTPUTS,
-    ...siblingEmission({ localGroup: JSON.stringify(payload, null, 0) + '\n' }, allocation),
-  });
+  emitSibling(LOCAL_GROUP_OUTPUTS, { localGroup: JSON.stringify(payload, null, 0) + '\n' }, allocation);
 
   console.log(
     `wrote ${OUT.replace(ROOT + '/', '')} ` +

@@ -156,10 +156,10 @@ sibling-allocation.ts     allocateSibling: one sibling namespace allocated
   (+ test)                over the registry, giving each record's sid and
                           the partition's files only when the allocation
                           appended, so a run that mints nothing rewrites
-                          no registry file; siblingEmission, those files
-                          beside the artifact as one emitArtifacts
-                          emission. Called by build:local-group and the
-                          clouds stamp.
+                          no registry file (null otherwise, never a
+                          partial set); emitSibling, the artifact plus
+                          those files in one emitArtifacts call. Called by
+                          build:local-group and the clouds stamp.
 stamp-sibling-sids.ts     pnpm run sid:stamp, the tail of build:clouds:
                           allocates the cloud: namespace and stamps each
                           cloud's sid onto clouds.json after the Python

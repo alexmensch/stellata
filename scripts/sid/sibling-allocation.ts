@@ -1,5 +1,6 @@
 // One sibling artifact's namespace allocated over the committed registry: each record's SID and its partition's registry files. See README.md#sibling-artifact-stamping.
 
+import { emitArtifacts, type DeclaredOutputs } from '../util/emit-artifacts';
 import { allocate, type Upstream } from './allocate-pure';
 import { allocationRun, loadRegistry, registryTexts } from './registry-io';
 import { inPartition, type RegistryKey } from './registry-partitions-pure';
@@ -11,8 +12,8 @@ export interface SiblingAllocation<N extends SiblingNamespace> {
   /** Parallel to the items allocated. */
   readonly sids: readonly number[];
   readonly minted: number;
-  /** The partition's files, present only when the allocation appended a row, so a run that mints nothing rewrites no registry file. */
-  readonly registry: Partial<Record<RegistryKey<N>, string>>;
+  /** The partition's files, or null when the allocation appended nothing, so such a run rewrites no registry file. */
+  readonly registry: Readonly<Record<RegistryKey<N>, string>> | null;
 }
 
 export function allocateSibling<N extends SiblingNamespace>(
@@ -38,14 +39,17 @@ export function allocateSibling<N extends SiblingNamespace>(
   return {
     sids: allocation.outcomes.map((o) => o.sid),
     minted: allocation.minted.length,
-    registry: appended ? registryTexts(spec.ns, allocation.minted, allocation.events) : {},
+    registry: appended ? registryTexts(spec.ns, allocation.minted, allocation.events) : null,
   };
 }
 
-/** An emitArtifacts emission of the artifact plus whichever registry files the allocation produced. */
-export function siblingEmission<K extends string, N extends SiblingNamespace>(
-  artifact: Record<K, string>, allocation: SiblingAllocation<N>,
-): { only: (K | RegistryKey<N>)[]; files: Record<K | RegistryKey<N>, string> } {
-  const files = { ...artifact, ...allocation.registry } as Record<K | RegistryKey<N>, string>;
-  return { only: Object.keys(files) as (K | RegistryKey<N>)[], files };
+/** Lands the artifact, and the registry partition when the allocation appended, in one emitArtifacts call. */
+export function emitSibling<K extends string, N extends SiblingNamespace>(
+  outputs: DeclaredOutputs<K | RegistryKey<N>>, artifact: Readonly<Record<K, string>>, allocation: SiblingAllocation<N>,
+): void {
+  if (allocation.registry === null) {
+    emitArtifacts<K | RegistryKey<N>, K>({ outputs, only: Object.keys(artifact) as K[], files: artifact });
+  } else {
+    emitArtifacts<K | RegistryKey<N>>({ outputs, files: { ...artifact, ...allocation.registry } });
+  }
 }

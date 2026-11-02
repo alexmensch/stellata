@@ -1,9 +1,15 @@
-import { describe, expect, it } from 'vitest';
+import { mkdtempSync, readdirSync, readFileSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+
+import { afterAll, describe, expect, it } from 'vitest';
+
+import { declareOutputs } from '../util/emit-artifacts';
 
 import { artifactText, isReadable, readArtifact } from '../util/sources/source';
 import { LEDGERS } from './ledger-tsv';
 import { CATALOG_PARTITION, registryKeys } from './registry-partitions-pure';
-import { allocateSibling, siblingEmission } from './sibling-allocation';
+import { allocateSibling, emitSibling } from './sibling-allocation';
 import { SIBLING_ARTIFACTS } from './sibling-artifacts';
 
 const spec = SIBLING_ARTIFACTS['local-group'];
@@ -17,15 +23,15 @@ describe.skipIf(committed.length === 0)('allocateSibling over the committed regi
     const allocation = allocateSibling(spec, committed);
     expect(allocation.sids).toEqual(readArtifact(LEDGERS.lg).map((r) => r.sid));
     expect(allocation.minted).toBe(0);
-    expect(allocation.registry).toEqual({});
+    expect(allocation.registry).toBeNull();
   });
 
   it('mints a new slug past the union and returns all three partition files', () => {
     const allocation = allocateSibling(spec, [...committed, { id: 'probe-new-slug' }]);
     expect(allocation.minted).toBe(1);
-    expect(Object.keys(allocation.registry).sort()).toEqual([keys.events, keys.head, keys.ledger].sort());
-    expect(allocation.registry[keys.ledger]!.startsWith(artifactText(LEDGERS.lg))).toBe(true);
-    expect(allocation.registry[keys.ledger]).toContain('\tlg:probe-new-slug\tgalaxy\t');
+    expect(Object.keys(allocation.registry!).sort()).toEqual([keys.events, keys.head, keys.ledger].sort());
+    expect(allocation.registry![keys.ledger].startsWith(artifactText(LEDGERS.lg))).toBe(true);
+    expect(allocation.registry![keys.ledger]).toContain('\tlg:probe-new-slug\tgalaxy\t');
   });
 
   it('fails closed on a vanished slug, naming the bridge remedy', () => {
@@ -33,16 +39,26 @@ describe.skipIf(committed.length === 0)('allocateSibling over the committed regi
   });
 });
 
-describe('siblingEmission', () => {
-  it('emits only the artifact when the allocation appended nothing', () => {
-    const emission = siblingEmission({ localGroup: 'x' }, { sids: [], minted: 0, registry: {} });
-    expect(emission).toEqual({ only: ['localGroup'], files: { localGroup: 'x' } });
+describe('emitSibling', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'emit-sibling-'));
+  afterAll(() => rmSync(dir, { recursive: true, force: true }));
+  const outputs = declareOutputs({
+    localGroup: join(dir, 'local-group.json'),
+    [keys.ledger]: join(dir, 'ledger-lg.tsv'),
+    [keys.events]: join(dir, 'events-lg.tsv'),
+    [keys.head]: join(dir, 'ledger-head-lg.json'),
+  });
+  const landed = (): string[] => readdirSync(dir).sort();
+
+  it('lands only the artifact when the allocation appended nothing', () => {
+    emitSibling(outputs, { localGroup: 'x' }, { sids: [], minted: 0, registry: null });
+    expect(landed()).toEqual(['local-group.json']);
   });
 
-  it('emits the artifact and every registry file the allocation produced', () => {
+  it('lands the artifact and all three partition files when it appended', () => {
     const registry = { [keys.ledger]: 'l', [keys.events]: 'e', [keys.head]: 'h' };
-    const emission = siblingEmission({ localGroup: 'x' }, { sids: [], minted: 1, registry });
-    expect(emission.only.sort()).toEqual(['localGroup', keys.events, keys.head, keys.ledger].sort());
-    expect(emission.files).toEqual({ localGroup: 'x', ...registry });
+    emitSibling(outputs, { localGroup: 'y' }, { sids: [], minted: 1, registry });
+    expect(landed()).toEqual(['events-lg.tsv', 'ledger-head-lg.json', 'ledger-lg.tsv', 'local-group.json']);
+    expect(readFileSync(join(dir, 'ledger-lg.tsv'), 'utf8')).toBe('l');
   });
 });

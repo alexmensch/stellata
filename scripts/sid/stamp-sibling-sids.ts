@@ -2,8 +2,8 @@
 
 import { existsSync, readFileSync } from 'node:fs';
 
-import { emitArtifacts, runStep } from '../util/emit-artifacts';
-import { allocateSibling, siblingEmission } from './sibling-allocation';
+import { runStep } from '../util/emit-artifacts';
+import { allocateSibling, emitSibling } from './sibling-allocation';
 import { SIBLING_ARTIFACTS, type SiblingItem } from './sibling-artifacts';
 import { SID_STAMP_OUTPUTS } from './sibling-stamp-outputs';
 
@@ -19,7 +19,7 @@ function main(): void {
   items.forEach((o, i) => { (o as { sid?: number }).sid = allocation.sids[i]; });
   console.log(`sid:stamp: ${items.length} ${spec.ns} SIDs stamped into ${spec.file} (${allocation.minted} minted)`);
 
-  emitArtifacts({ outputs: SID_STAMP_OUTPUTS, ...siblingEmission({ clouds: `${JSON.stringify(payload)}\n` }, allocation) });
+  emitSibling(SID_STAMP_OUTPUTS, { clouds: `${JSON.stringify(payload)}\n` }, allocation);
 }
 
 runStep(main);
