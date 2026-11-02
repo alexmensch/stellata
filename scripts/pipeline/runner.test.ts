@@ -358,6 +358,8 @@ os.replace(tmp, ${JSON.stringify(at(out))})
 });
 
 describe('loadTable', () => {
+  const reachesBuildStamp = (): string => `outputs module ${relative(REPO_ROOT, at('steps/a-outputs.ts'))} reaches scripts/util/build-stamp.ts, beyond util/emit-artifacts, util/paths and *-pure, *-outputs, *-source and *-tsv modules`;
+
   it('rejects an outputs module that imports beyond emit-artifacts, paths and pure modules, before importing it', async () => {
     const step = tsStep('a', 'a.out');
     write('steps/a-outputs.ts', `
@@ -367,24 +369,33 @@ writeSideEffect();
 export const OUT = declareOutputs({ out: hashFile.name });
 `);
     const loaded = await load([step]);
-    expect(loaded).toEqual({
-      kind: 'rejected',
-      problems: [`outputs module ${relative(REPO_ROOT, at('steps/a-outputs.ts'))} reaches scripts/util/build-stamp.ts, beyond util/emit-artifacts, util/paths and *-pure modules`],
-    });
+    expect(loaded).toEqual({ kind: 'rejected', problems: [reachesBuildStamp()] });
   });
 
-  it('rejects an outputs module that reaches an impure module through a pure one', async () => {
-    const step = tsStep('a', 'a.out');
-    write('steps/paths-pure.ts', `export { hashFile } from ${JSON.stringify(join(REPO_ROOT, 'scripts/util/build-stamp'))};\n`);
-    write('steps/a-outputs.ts', `
+  it.each(['paths-pure', 'more-outputs', 'table-tsv', 'table-source'])(
+    'rejects an outputs module that reaches an impure module through %s.ts',
+    async (via) => {
+      const step = tsStep('a', 'a.out');
+      write(`steps/${via}.ts`, `export { hashFile } from ${JSON.stringify(join(REPO_ROOT, 'scripts/util/build-stamp'))};\n`);
+      write('steps/a-outputs.ts', `
 import { declareOutputs } from ${JSON.stringify(EMIT_ARTIFACTS)};
-import { hashFile } from './paths-pure';
+import { hashFile } from './${via}';
 export const OUT = declareOutputs({ out: hashFile.name });
 `);
-    expect(await load([step])).toEqual({
-      kind: 'rejected',
-      problems: [`outputs module ${relative(REPO_ROOT, at('steps/a-outputs.ts'))} reaches scripts/util/build-stamp.ts, beyond util/emit-artifacts, util/paths and *-pure modules`],
-    });
+      expect(await load([step])).toEqual({ kind: 'rejected', problems: [reachesBuildStamp()] });
+    },
+  );
+
+  it.each(['more-outputs', 'table-tsv', 'table-source'])('accepts an outputs module importing a clean %s.ts', async (via) => {
+    const step = tsStep('a', 'a.out');
+    write(`steps/${via}.ts`, `export const NAME = 'a.out';\n`);
+    write('steps/a-outputs.ts', `
+import { resolve } from 'node:path';
+import { declareOutputs } from ${JSON.stringify(EMIT_ARTIFACTS)};
+import { NAME } from './${via}';
+export const OUT = declareOutputs({ out: resolve(${JSON.stringify(at('.'))}, NAME) });
+`);
+    expect((await load([step])).kind).toBe('loaded');
   });
 
   it('rejects a build step whose declared output lies through a symlink', async () => {
