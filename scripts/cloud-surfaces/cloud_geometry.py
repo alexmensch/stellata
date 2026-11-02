@@ -1,6 +1,6 @@
 """The part of public/clouds.json the bake traces, as the request its record
 hashes: stdlib only, so --describe runs under python3 -I -S. See
-scripts/cloud-surfaces/README.md#what-stales-the-bake."""
+README.md#what-stales-the-bake."""
 
 from __future__ import annotations
 

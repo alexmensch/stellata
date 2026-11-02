@@ -1,6 +1,6 @@
 """The Edenhofer 2024 dust map as two pulled datasets: each variant's identity,
 the committed file recording it, and the read every bake makes of it. See
-scripts/dust/README.md#the-edenhofer-2024-pulls."""
+README.md#the-edenhofer-2024-pulls."""
 
 from __future__ import annotations
 

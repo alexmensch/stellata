@@ -1,4 +1,4 @@
-// Runs one manual step by hand and writes its committed record. See README.md#recording-a-manual-step.
+// Runs one manual step by hand and writes its committed record. See README.md#recording-a-manual-step--recordts.
 
 import { spawnSync } from 'node:child_process';
 import { existsSync } from 'node:fs';

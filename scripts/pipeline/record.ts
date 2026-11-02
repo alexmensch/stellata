@@ -1,4 +1,4 @@
-// record.ts <manual step> [--force] [args…]: every pull and bake's package.json target. See README.md#recording-a-manual-step.
+// record.ts <manual step> [--force] [args…]: every pull and bake's package.json target. See README.md#recording-a-manual-step--recordts.
 
 import { REPO_ROOT } from '../util/paths';
 import { entryInputPaths } from '../util/step-inputs';
