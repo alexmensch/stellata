@@ -6,6 +6,9 @@ samples and renders `public/constellation-boundaries.json`. Called from
 the result with its other outputs. The wire shape, the quantisation and the
 fade statistics it fills are the artifact's contract with the viewer:
 [`/src/catalog-format/boundaries/`](/src/catalog-format/boundaries/README.md).
+`boundaries-region-grid.test.ts` round-trips the real region grid —
+decomposed from the edge set `../parse/constellations/` parses — through
+that contract's run-length codec.
 
 ## Cost
 

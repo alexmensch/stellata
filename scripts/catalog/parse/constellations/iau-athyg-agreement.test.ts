@@ -1,18 +1,18 @@
 // Catalogue-wide cross-check of the IAU-positional assignment against AT-HYG's
-// own editorial `con` column. See README.md#agreement-with-at-hyg.
+// own editorial `con` column. See /src/astro-core/iau-geometry/README.md#agreement-with-at-hyg.
 
 import { createReadStream } from 'node:fs';
 import { resolve } from 'node:path';
 import { parse } from 'csv-parse';
 import { beforeAll, describe, expect, it } from 'vitest';
 
-import { iauEdgeRecords } from '../../../scripts/catalog/parse/constellations/constellations';
-import { STELLARIUM } from '../../../scripts/catalog/parse/constellations/stellarium-source';
-import { ATHYG_CLASSIC_IDS } from '../../../scripts/catalog/spine/athyg-classic-ids-source';
-import { REPO_ROOT } from '../../../scripts/util/paths';
-import { isReadable } from '../../../scripts/util/sources/source';
-import { RA_HOURS_TO_DEG } from '../astronomy-constants';
-import { createIauConstellationLookup } from './iau-boundaries-pure';
+import { iauEdgeRecords } from './constellations';
+import { STELLARIUM } from './stellarium-source';
+import { ATHYG_CLASSIC_IDS } from '../../spine/athyg-classic-ids-source';
+import { REPO_ROOT } from '../../../util/paths';
+import { isReadable } from '../../../util/sources/source';
+import { RA_HOURS_TO_DEG } from '../../../../src/astro-core/astronomy-constants';
+import { createIauConstellationLookup } from '../../../../src/astro-core/iau-geometry/iau-boundaries-pure';
 
 const ATHYG_CSV = resolve(REPO_ROOT, ATHYG_CLASSIC_IDS.file);
 
@@ -77,7 +77,7 @@ describe.skipIf(!available)('IAU-positional assignment vs the AT-HYG con column'
   // editorial cell has no nomenclature to answer to. This one carries a
   // designation, so making conIndex positional would silently rewrite its
   // search aliases — which is why the designation constellation is carried
-  // separately. See README.md#ρ-aquilae.
+  // separately. See /src/astro-core/iau-geometry/README.md#ρ-aquilae.
   it('leaves rho Aql as the only designated star it moves', () => {
     const designated = disagreements.filter((d) => d.designation.length > 0);
     expect(designated).toEqual([

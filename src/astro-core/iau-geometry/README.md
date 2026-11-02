@@ -15,14 +15,18 @@ all derived from, and the external checks that corroborate it.
 ```
 src/astro-core/iau-geometry/
   iau-boundaries-pure.ts          Edge parsing, the cell decomposition
-    (+ test)                      (README.md#cell-decomposition--the-self-validating-invariant), point lookup,
+                                  (README.md#cell-decomposition--the-self-validating-invariant), point lookup,
                                   nearest-edge distance (README.md#nearest-edge-distance), the ICRS polyline resampling
                                   (README.md#icrs-polylines), the per-region label
                                   anchors (README.md#label-anchors), and
                                   createIauConstellationLookup.
-  iau-athyg-agreement.test.ts     Catalogue-wide cross-check against AT-HYG's
-                                  editorial con column (README.md#agreement-with-at-hyg).
 ```
+
+Its tests run the geometry over the real IAU edge set, which the pipeline
+parses from the Stellarium sky culture, so they sit beside that parser in
+`/scripts/catalog/parse/constellations/`: `iau-boundaries-pure.test.ts`
+(every pin below) and `iau-athyg-agreement.test.ts`
+([Agreement with AT-HYG](#agreement-with-at-hyg)).
 
 **Use `createIauConstellationLookup(records)`, not the pieces.** It parses,
 decomposes, and binds the B1875 rotation, so its `edgeCodeAt` / `keyAt` /

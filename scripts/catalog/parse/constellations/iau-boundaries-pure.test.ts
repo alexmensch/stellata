@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
-import { CON_INDEX, iauEdgeRecords } from '../../../scripts/catalog/parse/constellations/constellations';
-import { STELLARIUM } from '../../../scripts/catalog/parse/constellations/stellarium-source';
-import { raDecFromUnitVector } from '../equatorial-basis';
-import { B1875_JD, precessRaDec, precessionRotationFromJ2000 } from '../precession';
+import { CON_INDEX, iauEdgeRecords } from './constellations';
+import { STELLARIUM } from './stellarium-source';
+import { raDecFromUnitVector } from '../../../../src/astro-core/equatorial-basis';
+import { B1875_JD, precessRaDec, precessionRotationFromJ2000 } from '../../../../src/astro-core/precession';
 import {
   FULL_SPHERE_SQUARE_DEG,
   IAU_REGION_COUNT,
@@ -16,7 +16,7 @@ import {
   createIauConstellationLookup,
   createNearestEdgeIndex,
   parseIauEdges,
-} from './iau-boundaries-pure';
+} from '../../../../src/astro-core/iau-geometry/iau-boundaries-pure';
 
 const records = iauEdgeRecords(STELLARIUM.read());
 const lookup = createIauConstellationLookup(records);
@@ -176,7 +176,7 @@ describe('named-star assignment', () => {
   // ρ Aquilae is the documented boundary-crossing case and the reason the
   // designation constellation has to be carried separately from the
   // positional one: IAU nomenclature keeps it in Aquila, its position is in
-  // Delphinus. See README.md#ρ-aquilae.
+  // Delphinus. See /src/astro-core/iau-geometry/README.md#ρ-aquilae.
   it('places rho Aql (HIP 99742) in Delphinus, not Aquila', () => {
     const rhoAql = { raDeg: 303.5692452, decDeg: 15.19760993 };
     expect(lookup.edgeCodeAt(rhoAql)).toBe('DEL');

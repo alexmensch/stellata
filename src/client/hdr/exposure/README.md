@@ -13,6 +13,9 @@ there. This README carries the implementation contract.
 
 ```
 src/client/hdr/exposure/
+  emission-at-exposure.test.ts
+                             The emission unit (/src/astro-core/emission/)
+                             read at the base exposure and plate scale.
   exposure-epoch.ts          The model as pure functions: instrument
     (+ test)                 limit → uExposure, the EV-trim constants,
                              and the threshold / cull / draw-cutoff

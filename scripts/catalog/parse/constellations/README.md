@@ -16,6 +16,9 @@ scripts/catalog/parse/constellations/
                                   the boundary lookup to the table's indices.
   stellarium-source.ts            STELLARIUM, the sky culture's declaration
                                   (../../../util/sources/).
+  iau-boundaries-pure.test.ts     /src/astro-core/iau-geometry/'s pins, run
+  iau-athyg-agreement.test.ts     over the real edge set this folder parses
+                                  (/src/astro-core/iau-geometry/README.md).
 ```
 
 ## Positional constellation membership

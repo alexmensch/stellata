@@ -12,6 +12,9 @@ src/astro-core/emission/
                              truncated ellipsoid, ρ₀ = d²·F/G
                              (README.md#solving-ρ--a-published-magnitude-into-an-emitters-density).
   emission-pure.ts (+ test)  CPU mirror, plus both solid-angle derivations
+                             (its cases at the viewer's base exposure and
+                             plate scale are
+                             /src/client/hdr/exposure/emission-at-exposure.test.ts)
                              and their inverses, LUMA_CEIL,
                              POINT_SOURCE_FLAT_PEAK_DIAMETER_PX
                              (README.md#unit--what-an-emitting-layer-writes), SB_ZERO_POINT
