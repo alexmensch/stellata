@@ -22,31 +22,28 @@ own_pids() {
   done
 }
 
-# Prints the warning and returns 0 when the owner has something to decide.
-warn_busy() {
-  local common root agents busy
-  common="$(git rev-parse --path-format=absolute --git-common-dir)"
-  root="$(dirname "$common")"
-  if ! agents="$(claude agents --json 2>/dev/null)"; then
-    echo "perf-go: WARNING — could not list Claude sessions (claude agents --json failed); busy-session check skipped." >&2
-    return 0
-  fi
+busy_sessions() {
+  local root agents
+  root="$(dirname "$(git rev-parse --path-format=absolute --git-common-dir)")"
+  agents="$(claude agents --json 2>/dev/null)" || return 1
   # shellcheck disable=SC2046
-  busy="$(printf '%s' "$agents" | bash "$here/busy-sessions.sh" "$root" $(own_pids))"
-  [ -n "$busy" ] || return 1
-  {
-    echo "perf-go: WARNING — other Claude sessions are busy in this repo; a run now is likely discarded:"
-    printf '%s\n' "$busy" | sed 's/^/  /'
-  } >&2
+  printf '%s' "$agents" | bash "$here/busy-sessions.sh" "$root" $(own_pids) || true
 }
 
 while :; do
   if [ -f "$marker" ] && age="$(perf_go_age_s "$marker")" && [ "$age" -le "$PERF_GO_MAX_AGE_S" ]; then
-    if warn_busy; then
-      echo "perf-go: ARMED — ${marker} (${age} s old). Ask Alex about the warning above before launching; the arm holds until the marker ages out."
+    if ! busy="$(busy_sessions)"; then
+      echo "perf-go: WARNING — could not list Claude sessions (claude agents --json failed); busy-session check skipped." >&2
+    elif [ -n "$busy" ]; then
+      {
+        echo "perf-go: WARNING — other Claude sessions are busy in this repo; a run now is likely discarded:"
+        printf '%s\n' "$busy" | sed 's/^/  /'
+      } >&2
     else
       echo "perf-go: ARMED — ${marker} (${age} s old). Launch the runner now; one arm authorises one launch."
+      exit 0
     fi
+    echo "perf-go: ARMED — ${marker} (${age} s old). Ask Alex about the warning above before launching; the arm holds until the marker ages out."
     exit 0
   fi
   if [ $(( $(date +%s) - started )) -ge "$timeout_s" ]; then
