@@ -2,46 +2,23 @@
 // perturbation and the horizon lookup on it — CPU mirrors of
 // ../../../webgpu/solar-system/planet-mesh-tsl.ts — plus the limb bound that stands in while loading.
 
+import {
+  HORIZON_AZIMUTHS, HORIZON_SIN_RANGE, SKY_VIEW_RANGE,
+} from '../../../util/baker-constants';
+
 /** Below this the east direction is numerically undefined and the
  *  perturbation is dropped — mirrors the guard in the mesh graph. */
 export const RELIEF_POLE_EPS = 1e-6;
-
-/** Azimuths a horizon map stores, and the full-scale of the sine it encodes —
- *  `HORIZON_AZIMUTHS` / `HORIZON_SIN_RANGE` in `scripts/textures/horizon_map.py`,
- *  which `horizon-map.test.ts` pins these against. */
-export const HORIZON_AZIMUTHS = 8;
-export const HORIZON_SIN_RANGE = 0.4;
 
 /** One raw channel in [0, 1] back to the skyline sine it encodes — the inverse
  *  of `encode_horizon`, shared by every reading of a horizon texel. */
 export const decodeSin = (raw: number): number =>
   (raw * 2 - 1) * HORIZON_SIN_RANGE;
 
-/** Full-scale of the sky view factor the `<body>-skyview.webp` map encodes —
- *  `SKY_VIEW_RANGE` in `scripts/textures/sky_view.py` and
- *  `STELLATA_SKY_VIEW_RANGE` in the mesh shader, both pinned against this by
- *  `sky-view.test.ts`. */
-export const SKY_VIEW_RANGE = 0.25;
-
 /** One raw sky-view channel in [0, 1] back to the terrain view factor it
  *  encodes — the inverse of `encode_sky_view`, and the mirror of the shipped
  *  path `terrainViewFactor` below is only the fallback for. */
 export const decodeSkyView = (raw: number): number => raw * SKY_VIEW_RANGE;
-
-/** Each relief body's DEM elevation span in metres, `[lowest, highest]` above
- *  the reference sphere it is drawn at — `DEM_BODIES[…].span_m` in
- *  `scripts/textures/dem_relief.py`, which `dem-relief.test.ts` pins these
- *  against. Keyed by the body's lowercased name, like the texture map. */
-export const RELIEF_ELEV_SPAN_M: Readonly<
-  Record<string, readonly [number, number]>
-> = {
-  moon: [-9110, 10760],
-  mercury: [-5380, 4480],
-  mars: [-8200, 21230],
-  // Earth's floor is the SEA surface, not the seabed — its DEM is clamped to
-  // >= 0 at the reduction, because over water that is what is visible.
-  earth: [0, 8354],
-};
 
 const limbSin = (groundRadiusM: number, summitRadiusM: number): number =>
   Math.sqrt(Math.max(0, 1 - (groundRadiusM / summitRadiusM) ** 2));

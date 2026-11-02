@@ -57,9 +57,9 @@ gitignored mirror.
   from the body's centre across the strip span (left → right edge):
   Saturn **74,510 → 140,390 km** (the Jónsson profile span, source
   transparency inverted), Uranus **41,600 → 51,300 km**, Neptune
-  **40,900 → 63,100 km**. Each span must match the body's `rings`
-  entry in `src/client/solar-system/planet-system.ts` —
-  `scripts/textures/ring-strips.test.ts` pins the parity.
+  **40,900 → 63,100 km**. Uranus's and Neptune's spans are
+  `ringSpans` in `data/schema/constants.json`, which the build and
+  `planet-system.ts`'s `rings` entries both read.
 
 ## Surface relief and cast shadows
 

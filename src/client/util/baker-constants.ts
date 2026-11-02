@@ -16,6 +16,46 @@ export const AV_PER_EZGR: number = constants.extinction.avPerEzgr;
 /** A_V rate [mag/pc] per hydrogen number density n_H [cm⁻³]. */
 export const AV_PER_NH_PC: number = constants.extinction.avPerNhPc;
 
+/** Limb-darkening floor and exponent — `mix(LIMB_FLOOR, 1, μ^LIMB_EXP)` — and
+ *  the floor on the terminator-softness width. */
+export const LIMB_FLOOR: number = constants.planetShading.limbFloor;
+export const LIMB_EXP: number = constants.planetShading.limbExp;
+export const TERM_SOFTNESS_FLOOR: number = constants.planetShading.termSoftnessFloor;
+
+/** Azimuths a horizon map stores, and the full-scale of the sine it encodes. */
+export const HORIZON_AZIMUTHS: number = constants.surfaceRelief.horizonAzimuths;
+export const HORIZON_SIN_RANGE: number = constants.surfaceRelief.horizonSinRange;
+/** Full-scale of the sky view factor a `<body>-skyview.webp` map encodes. */
+export const SKY_VIEW_RANGE: number = constants.surfaceRelief.skyViewRange;
+
+export interface ReliefBody {
+  readonly radiusKm: number;
+  readonly albedo: number;
+  readonly mapCenterLonDeg: number;
+  /** `[lowest, highest]` metres above the reference sphere. */
+  readonly elevSpanM: readonly [number, number];
+}
+
+const span = (pair: readonly number[]): readonly [number, number] => {
+  if (pair.length !== 2) throw new Error(`elevSpanM needs two values, got ${pair.length}`);
+  return [pair[0], pair[1]];
+};
+
+/** The bodies shipping DEM-derived relief, keyed by lowercased name. */
+export const RELIEF_BODIES: Readonly<Record<string, ReliefBody>> = Object.fromEntries(
+  Object.entries(constants.surfaceRelief.bodies).map(([name, b]) => [
+    name, { ...b, elevSpanM: span(b.elevSpanM) },
+  ]),
+);
+
+export interface RingSpan {
+  readonly innerRadiusKm: number;
+  readonly outerRadiusKm: number;
+}
+
+/** The ring annuli the texture build draws strips for, keyed by lowercased name. */
+export const RING_SPANS: Readonly<Record<string, RingSpan>> = constants.ringSpans;
+
 export interface JsonArtifactSchema {
   readonly version: number;
 }

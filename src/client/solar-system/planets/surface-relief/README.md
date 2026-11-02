@@ -26,7 +26,8 @@ Moon, Mercury, Mars and Earth ship a DEM-derived tangent-space normal map
 of horizon maps (`<body>-horizon-{a,b}.webp`, [Cast shadows](/data/textures/relief/README.md#cast-shadows--dem-derived-horizon-maps) there), all
 lazy-loaded on the same `TEXTURE_PREFETCH_PX` approach lane as the colour
 map. Three planes for four of ~30 bodies, so the fetch is gated on
-`RELIEF_ELEV_SPAN_M` — `reliefSpanOf` in `../planet-mesh-layer.ts` is the one
+`RELIEF_BODIES` (`data/schema/constants.json`, shared with the texture
+build) — `reliefSpanOf` in `../planet-mesh-layer.ts` is the one
 lookup, shared with the fallback limb bound, because "does this body ship
 relief" and "how far past the terminator may it light" are one question. The
 SHADER still branches on nothing: a body that somehow arrives without the
@@ -144,8 +145,8 @@ at zero elevation the sun goes under the horizon the instant the geometric
 terminator passes, whichever way the ground faces. Before the horizon maps
 land (they are a separate fetch on the same lane) `dayside` carries a
 per-body gate standing in for them, derived from the DEM elevation span
-(`reliefHorizonSines`; the span is the build's own, pinned by
-`scripts/textures/dem-relief.test.ts`) — full out to a summit's bound over
+(`reliefHorizonSines`; the span is the one the build reduces against, read
+from the same `data/schema/constants.json` entry) — full out to a summit's bound over
 ground at the reference sphere, nothing past that same summit over terrain at
 the span's floor, tapering between:
 
@@ -237,9 +238,9 @@ It is added to `col`, never folded into `dayside`. Folding it in would put it
 inside the direct term, and `dayside` is what the coverage mask below is cut
 from. Both readings of `F` are mirrored in `surface-relief-pure.ts` —
 `decodeSkyView` for the shipped map, `terrainViewFactor` for the fallback the
-next section describes — and `SKY_VIEW_RANGE` lives there too, so the shader
-and `sky_view.py` are both pinned against one owner rather than against each
-other. The clamp inside `terrainViewFactor` is source-pinned against the
+next section describes. `SKY_VIEW_RANGE` is `data/schema/constants.json`'s, so
+the shader and `sky_view.py` read one value rather than being pinned
+against each other. The clamp inside `terrainViewFactor` is source-pinned against the
 shader's own graph, because a `max()` dropped there alone would brighten
 every plain with nothing in the TS suite noticing.
 

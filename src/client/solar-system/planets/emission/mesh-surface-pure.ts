@@ -3,16 +3,11 @@
 // body's true flux. See README.md#physical-luminance-emission--into-the-scene-wide-hdr-unit.
 
 import { ARCSEC_TO_RAD } from '../../../util/astronomy-constants';
+import { LIMB_EXP, LIMB_FLOOR } from '../../../util/baker-constants';
 import { luminanceForMagnitude, surfaceBrightnessLuminance } from '../../../hdr/emission/emission-pure';
 import type { AtmoDiscMeans } from '../../atmosphere/atmosphere-scattering-pure';
 import { bodySurfaceBrightnessMagArcsec2, hostIrradianceMagnitude } from '../../perceptual-magnitude';
 
-/** Limb-darkening floor and exponent — `mix(LIMB_FLOOR, 1, μ^LIMB_EXP)`.
- *  Mirrored as literals in `../../../webgpu/solar-system/planet-mesh-tsl.ts`; the drift test pins
- *  them. Atmospheric bodies substitute a floor of 1 (no limb term: the
- *  scattering governs their limb). */
-export const LIMB_FLOOR = 0.45;
-export const LIMB_EXP = 0.5;
 
 /**
  * Disc-average of `μ · mix(limbFloor, 1, μ^limbExp)` at full phase, where

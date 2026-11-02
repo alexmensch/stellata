@@ -10,7 +10,9 @@ from pathlib import Path
 import numpy as np
 from PIL import Image
 
-from dem_relief import DEM_BODIES, POLE_CUTOFF_DEG, read_frozen_dem, surface_normals
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+
+from dem_relief import DEM_BODIES, POLE_CUTOFF_DEG, read_frozen_dem, surface_normals  # noqa: E402
 from horizon_map import (
     HORIZON_AZIMUTHS,
     azimuth_lerp,
@@ -38,17 +40,12 @@ AZIMUTH_CANDIDATES = (4, 8, 16)
 # read against the same angles.
 AZIMUTH_REF = 48
 
-# Mirrors of the mesh shader's own shading constants — LIMB_FLOOR / LIMB_EXP in
-# src/client/solar-system/planets/emission/mesh-surface-pure.ts and the
-# airless terminator's floor on the softness half-width. horizon-map.test.ts
-# pins these against the originals.
-LIMB_FLOOR = 0.45
-LIMB_EXP = 0.5
-TERM_SOFTNESS_FLOOR = 1e-4
-# Geometric albedo per relief body — Planet.albedo / SolMoon.albedo in
-# src/client/solar-system/planet-system.ts, the reflectance the interreflected
-# term pays a second time. horizon-map.test.ts pins these against the originals.
-ALBEDO = {"moon": 0.12, "mercury": 0.142, "mars": 0.170, "earth": 0.434}
+# The mesh shader's own shading constants, and the geometric albedo the
+# interreflected term pays a second time.
+LIMB_FLOOR = CONSTANTS["planetShading"]["limbFloor"]
+LIMB_EXP = CONSTANTS["planetShading"]["limbExp"]
+TERM_SOFTNESS_FLOOR = CONSTANTS["planetShading"]["termSoftnessFloor"]
+ALBEDO = {name: b["albedo"] for name, b in CONSTANTS["surfaceRelief"]["bodies"].items()}
 
 
 def _smoothstep(a, b, x):

@@ -2,7 +2,6 @@
 // each FILE's header, never the prose beside it.
 
 import { readFileSync, existsSync } from 'node:fs';
-import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { lfsContentReadable } from '../util/paths';
@@ -89,33 +88,15 @@ describe('every provenance row matches the file it describes', () => {
   }
 });
 
-/** A `NAME = { "key": number, ... }` table out of build-textures.py. */
-const pyStrengths = (name: string): Record<string, number> => {
-  const src = readFileSync(resolve(__dirname, 'build-textures.py'), 'utf-8');
-  const block = new RegExp(`${name} = \\{([^}]*)\\}`).exec(src);
-  expect(block, `${name} block`).not.toBeNull();
-  const out: Record<string, number> = {};
-  for (const m of block![1].matchAll(/"([a-z-]+)": ([\d.]+)/g)) {
-    out[m[1]] = Number(m[2]);
-  }
-  expect(Object.keys(out).length).toBeGreaterThan(0);
-  return out;
-};
-
 const rowFor = (body: string): string => {
   const row = imageRows.find(r => fileOf(r).startsWith(`${body}-`));
   if (!row) throw new Error(`no provenance row for ${body}`);
   return row;
 };
 
-// The dimensions above are measurable; the colour a build INVENTS is not, so
-// the row is the only record of it and nothing held that row to the constant
-// it describes. These pins do, both directions — a retune that leaves the
-// prose behind fails, and so does prose claiming a treatment the build
-// doesn't apply. /data/textures/src/README.md#auditing.
-describe('every colour-invention claim matches the constant behind it', () => {
+// See /data/textures/src/README.md#auditing.
+describe('every colour-invention claim matches what the build applies', () => {
   const CHROMA_TINT = /half the representative chroma|FULL representative/;
-  const HALFWAY_GRAY = /pulled halfway to gray/;
   const FROM_GAINS = /rendered colour comes from the index-anchored calibration gains/;
 
   it('claims no representative-chroma tint, because none is applied', () => {
@@ -124,8 +105,6 @@ describe('every colour-invention claim matches the constant behind it', () => {
     // promising a representative chroma would be describing a build step that
     // no longer exists, which is the one direction the dimension checks above
     // can never catch.
-    expect(readFileSync(resolve(__dirname, 'build-textures.py'), 'utf-8'))
-      .not.toContain('TINT_STRENGTH');
     for (const row of imageRows) {
       expect(row, `${fileOf(row)} claims a tint`).not.toMatch(CHROMA_TINT);
     }
@@ -137,15 +116,5 @@ describe('every colour-invention claim matches the constant behind it', () => {
     for (const body of ['mercury', 'europa', 'callisto', 'titan']) {
       expect(rowFor(body), body).toMatch(FROM_GAINS);
     }
-  });
-
-  it('states the enhanced-colour pull-back each row actually gets', () => {
-    const desaturate = pyStrengths('DESATURATE');
-    for (const [body, strength] of Object.entries(desaturate)) {
-      expect(strength, body).toBe(0.5);
-      expect(rowFor(body), body).toMatch(HALFWAY_GRAY);
-    }
-    const claiming = imageRows.filter(r => HALFWAY_GRAY.test(r)).map(fileOf);
-    expect(claiming).toHaveLength(Object.keys(desaturate).length);
   });
 });

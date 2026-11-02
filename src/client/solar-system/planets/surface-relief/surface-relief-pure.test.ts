@@ -6,9 +6,9 @@ import { SOL_BODIES } from '../../planet-system';
 import { texelBytes } from '../../../util/texture-bytes-pure';
 import { readTslSource } from '../../../webgpu/tsl/tsl-source-fixture';
 import {
-  HORIZON_AZIMUTHS,
-  HORIZON_SIN_RANGE,
-  RELIEF_ELEV_SPAN_M,
+  HORIZON_AZIMUTHS, HORIZON_SIN_RANGE, RELIEF_BODIES,
+} from '../../../util/baker-constants';
+import {
   RELIEF_POLE_EPS,
   horizonSin,
   reliefHorizonSines,
@@ -181,8 +181,8 @@ describe('the layer gates every relief fetch on the span table', () => {
   );
 
   it('looks the table up in exactly one place', () => {
-    expect(layer.match(/RELIEF_ELEV_SPAN_M\[/g)).toHaveLength(1);
-    expect(layer).toContain('RELIEF_ELEV_SPAN_M[textureKey(planet.name)] ?? null');
+    expect(layer.match(/RELIEF_BODIES\[/g)).toHaveLength(1);
+    expect(layer).toContain('RELIEF_BODIES[textureKey(planet.name)]?.elevSpanM ?? null');
   });
 
   // All four planes ride the one span gate. They are three fetch statements
@@ -261,7 +261,7 @@ describe('the terrain view factor', () => {
   it('counts a skyline below the local horizontal as sky, not terrain', () => {
     // Open ground reads the body's own limb bound on every azimuth — negative.
     // Squaring it unclamped would light every plain like a crater floor.
-    const [, none] = reliefHorizonSines(RELIEF_ELEV_SPAN_M.moon, 1737.4);
+    const [, none] = reliefHorizonSines(RELIEF_BODIES.moon.elevSpanM, 1737.4);
     expect(none).toBeGreaterThan(0);
     expect(terrainViewFactor(all(-none))).toBe(0);
   });
@@ -406,10 +406,10 @@ const degOf = (sin: number): number => (Math.asin(sin) * 180) / Math.PI;
 const bodyOf = (name: string) =>
   SOL_BODIES.find((b) => b.name.toLowerCase() === name)!;
 const boundsOf = (name: string) =>
-  reliefHorizonSines(RELIEF_ELEV_SPAN_M[name], bodyOf(name).radiusKm);
+  reliefHorizonSines(RELIEF_BODIES[name].elevSpanM, bodyOf(name).radiusKm);
 /** What the shader is actually handed — the pair above, band-width guarded. */
 const uniformOf = (name: string) =>
-  reliefHorizonUniform(RELIEF_ELEV_SPAN_M[name], bodyOf(name).radiusKm);
+  reliefHorizonUniform(RELIEF_BODIES[name].elevSpanM, bodyOf(name).radiusKm);
 
 describe('the limb bound on how far relief may light', () => {
   it('gives each body a bound off its own DEM span and radius', () => {
@@ -425,7 +425,7 @@ describe('the limb bound on how far relief may light', () => {
       // renders with is widened at the uniform instead — see below.
       earth: [2.9325, 2.9325],
     };
-    expect(Object.keys(pins).sort()).toEqual(Object.keys(RELIEF_ELEV_SPAN_M).sort());
+    expect(Object.keys(pins).sort()).toEqual(Object.keys(RELIEF_BODIES).sort());
     for (const [name, [full, none]] of Object.entries(pins)) {
       const [fullSin, noneSin] = boundsOf(name);
       expect(degOf(fullSin), `${name} full`).toBeCloseTo(full, 2);
@@ -439,7 +439,7 @@ describe('the limb bound on how far relief may light', () => {
     // The guard lives on the uniform rather than on the geometry, so
     // `reliefHorizonSines().none` stays exactly sin(search_arc) — the identity
     // the horizon precompute is pinned against.
-    for (const name of Object.keys(RELIEF_ELEV_SPAN_M)) {
+    for (const name of Object.keys(RELIEF_BODIES)) {
       const [fullSin, noneSin] = uniformOf(name);
       expect(noneSin, `${name}`).toBeGreaterThan(fullSin);
     }
@@ -451,7 +451,7 @@ describe('the limb bound on how far relief may light', () => {
     // The gate multiplies `dayside` whole, so it has to be saturated across the
     // terminator band or it would dim light relief never added — including the
     // by-eye softness widening an atmospheric body carries.
-    for (const name of Object.keys(RELIEF_ELEV_SPAN_M)) {
+    for (const name of Object.keys(RELIEF_BODIES)) {
       const [fullSin] = boundsOf(name);
       expect(fullSin, `${name} vs its softness band`).toBeGreaterThan(
         bodyOf(name).terminatorSoftness ?? 0,

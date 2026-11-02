@@ -6,6 +6,8 @@ DEM -> tangent-space normal-map derivation (rationale in
 import numpy as np
 from PIL import Image
 
+from scripts.util.baker_constants import CONSTANTS
+
 # The frozen reductions store metres above the body's reference sphere as
 # uint16 biased by this, so a signed elevation survives a format every tool
 # reads back identically.
@@ -23,13 +25,13 @@ DEM_TARGET_W = 4096
 POLE_CUTOFF_DEG = 85.0
 
 # Per-body relief contract (/data/textures/relief/README.md#surface-relief--dem-derived-normal-maps).
-# `dtype`/`scale`/`offset`/`span_m`/`nodata` decode the DOWNLOADED original
-# for reduce_dem.py; the rest drive every build. Two fields name the thing
-# they are NOT: `map_center_lon` is the COLOUR map's centre rather than the
-# DEM's, and `radius_km` is the radius the body is DRAWN at rather than the
-# DEM's georeferencing radius. dem-relief.test.ts pins both against the
-# runtime tables.
-DEM_BODIES = {
+# `dtype`/`scale`/`offset`/`nodata` decode the DOWNLOADED original for
+# reduce_dem.py; the rest drive every build. `span_m`, `map_center_lon` and
+# `radius_km` come from the shared constants (`with_shared_facts` below).
+# Two of those name the thing they are NOT: `map_center_lon` is the COLOUR
+# map's centre rather than the DEM's, and `radius_km` is the radius the body
+# is DRAWN at rather than the DEM's georeferencing radius.
+_DEM_SOURCES = {
     "moon": {
         "src": "moon-dem-svs.tif",
         "dtype": "<u2",
@@ -38,35 +40,26 @@ DEM_BODIES = {
         # slope and puts the highest summit at +31 km.
         "scale": 0.5,
         "offset": -10000.0,
-        "span_m": (-9110, 10760),
         # Unsigned samples with no sentinel value — this product is gap-free,
         # so there is nothing for reduce_dem.py to check.
         "nodata": None,
         "dem_center_lon": 0,
-        "map_center_lon": 0,
-        "radius_km": 1737.4,
     },
     "mercury": {
         "src": "mercury-dem-messenger.tif",
         "dtype": "<i2",
         "scale": 0.5,
         "offset": 0.0,
-        "span_m": (-5380, 4480),
         "nodata": -32768,
         "dem_center_lon": 180,
-        "map_center_lon": 0,
-        "radius_km": 2440,
     },
     "mars": {
         "src": "mars-dem-mola.tif",
         "dtype": "<i2",
         "scale": 1.0,
         "offset": 0.0,
-        "span_m": (-8200, 21230),
         "nodata": -32768,
         "dem_center_lon": 0,
-        "map_center_lon": 0,
-        "radius_km": 3390,
     },
     "earth": {
         "src": "earth-dem-etopo.tif",
@@ -76,10 +69,8 @@ DEM_BODIES = {
         "dtype": "<f4",
         "scale": 1.0,
         "offset": 0.0,
-        # SHIPPED span, after the clamp below. The renderer fences relief
-        # lighting on this, and no ground sits under the sea surface.
-        "span_m": (0, 8354),
-        # Asserted against the decoded ORIGINAL, before the clamp. Everest
+        # The shared span is the SHIPPED one, after the clamp below; this one is
+        # asserted against the decoded ORIGINAL, before the clamp. Everest
         # reads 8354 rather than 8849 because a 30 arc-second cell averages
         # over ~900 m of ground.
         "raw_span_m": (-10776, 8354),
@@ -92,11 +83,26 @@ DEM_BODIES = {
         # average dragged negative.
         "clamp_min_m": 0.0,
         "dem_center_lon": 0,
-        "map_center_lon": 0,
-        "radius_km": 6371,
         "target_w": 8192,
     },
 }
+
+
+def with_shared_facts(sources: dict) -> dict:
+    bodies = CONSTANTS["surfaceRelief"]["bodies"]
+    assert sources.keys() == bodies.keys(), (sources.keys(), bodies.keys())
+    return {
+        name: {
+            **spec,
+            "span_m": tuple(bodies[name]["elevSpanM"]),
+            "map_center_lon": bodies[name]["mapCenterLonDeg"],
+            "radius_km": bodies[name]["radiusKm"],
+        }
+        for name, spec in sources.items()
+    }
+
+
+DEM_BODIES = with_shared_facts(_DEM_SOURCES)
 
 
 def dem_target_w(spec: dict) -> int:

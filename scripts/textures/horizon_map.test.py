@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
-"""Stdlib-unittest pins for horizon_map.py: the spherical elevation-angle
-geometry, azimuth registration, the limb identity and the encoding round-trip.
-Run directly: python3 horizon_map.test.py (needs NumPy)."""
+"""Stdlib-unittest pins for the relief half of the texture build: the spherical
+elevation-angle geometry, the grids and march bounds, registration and the
+encodings. Run directly: python3 horizon_map.test.py (needs NumPy)."""
 
 from __future__ import annotations
 
+import json
 import math
 import sys
 import unittest
@@ -13,9 +14,16 @@ from pathlib import Path
 import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from dem_relief import DEM_BODIES  # noqa: E402
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+from dem_relief import (  # noqa: E402
+    DEM_BODIES,
+    DEM_TARGET_W,
+    dem_target_w,
+    surface_normals,
+)
 from horizon_map import (  # noqa: E402
     HORIZON_AZIMUTHS,
+    HORIZON_DEM_RATIO,
     HORIZON_MARCH_START_TEXELS,
     HORIZON_SIN_RANGE,
     decode_horizon_sin,
@@ -25,6 +33,7 @@ from horizon_map import (  # noqa: E402
     march_start,
     search_arc,
 )
+from sky_view import near_bound, sky_view_target_w  # noqa: E402
 
 # Narrow enough to run in a second. The output width is the DEM width in every
 # case below, so registration is read exactly rather than through box_reduce.
@@ -227,6 +236,91 @@ class EncodingTests(unittest.TestCase):
         planes = self.planes_of(steep)
         got = decode_horizon_sin(planes, np.ones((1, 1)), np.zeros((1, 1)))
         self.assertAlmostEqual(float(got[0, 0]), HORIZON_SIN_RANGE, places=6)
+
+
+RELIEF_MANIFEST = Path(__file__).resolve().parents[2] / "data" / "textures" / "relief" / "relief.json"
+
+
+class GridTests(unittest.TestCase):
+    """Every relief map's width follows from its body's DEM width, so a body that
+    widens its DEM without its maps fails here rather than silently biasing its
+    skyline (/data/textures/relief/README.md#cast-shadows--dem-derived-horizon-maps)."""
+
+    def test_the_horizon_grid_is_half_the_dem(self) -> None:
+        self.assertEqual(HORIZON_DEM_RATIO, 2)
+        for name, spec in DEM_BODIES.items():
+            self.assertEqual(horizon_target_w(spec) * 2, dem_target_w(spec), msg=name)
+
+    def test_the_sky_view_shares_the_horizon_grid(self) -> None:
+        for name, spec in DEM_BODIES.items():
+            self.assertEqual(sky_view_target_w(spec), horizon_target_w(spec), msg=name)
+
+    def test_only_earth_overrides_the_default_dem_width(self) -> None:
+        widths = {name: dem_target_w(spec) for name, spec in DEM_BODIES.items()}
+        self.assertEqual(widths, {
+            "moon": DEM_TARGET_W, "mercury": DEM_TARGET_W, "mars": DEM_TARGET_W, "earth": 8192,
+        })
+
+    def test_the_manifest_records_the_widths_the_specs_declare(self) -> None:
+        manifest = json.loads(RELIEF_MANIFEST.read_text())
+        self.assertEqual(sorted(manifest), sorted(DEM_BODIES))
+        for name, spec in DEM_BODIES.items():
+            row = manifest[name]
+            self.assertEqual(row["width"], dem_target_w(spec), msg=name)
+            self.assertEqual(row["horizon"]["width"], horizon_target_w(spec), msg=name)
+            self.assertEqual(row["skyView"]["width"], sky_view_target_w(spec), msg=name)
+
+
+class MarchBoundTests(unittest.TestCase):
+    def test_every_body_starts_past_a_colour_map_texel(self) -> None:
+        """Set in output texels, so the kilometres differ per body; Earth's pair
+        is twice as wide, so two of its texels are a smaller angle on a larger
+        body."""
+        km = {
+            name: round(march_start(horizon_target_w(spec)) * spec["radius_km"], 1)
+            for name, spec in DEM_BODIES.items()
+        }
+        self.assertEqual(km, {"moon": 10.7, "mercury": 15.0, "mars": 20.8, "earth": 19.5})
+
+    def test_the_sky_view_marches_from_one_dem_texel(self) -> None:
+        """Inside the near field the shadow march skips: sky occlusion has no
+        renderability requirement, and that arc is where a crater floor loses
+        most of its sky."""
+        for name, spec in DEM_BODIES.items():
+            w = dem_target_w(spec)
+            self.assertAlmostEqual(near_bound(w), 2 * math.pi / w, places=15, msg=name)
+            self.assertLess(near_bound(w), march_start(horizon_target_w(spec)), msg=name)
+
+
+class RegistrationTests(unittest.TestCase):
+    def test_mercury_is_the_body_whose_dem_needs_the_roll(self) -> None:
+        offsets = {
+            name: spec["dem_center_lon"] - spec["map_center_lon"]
+            for name, spec in DEM_BODIES.items()
+        }
+        self.assertEqual(offsets, {"moon": 0, "mercury": 180, "mars": 0, "earth": 0})
+
+    def test_horizons_register_to_the_colour_map_not_the_dem(self) -> None:
+        """A DEM centred half a turn from its colour map must give the same
+        skyline as one already rolled onto it."""
+        elev = np.zeros((H, W), np.float32)
+        elev[H // 2 - 1 : H // 2 + 2, W // 4] = 20000.0
+        offset = {**MOON, "dem_center_lon": 180, "map_center_lon": 0}
+        rolled = np.roll(elev, W // 2, axis=1)
+        np.testing.assert_array_equal(
+            horizon_angles(elev, offset, 8, W), horizon_angles(rolled, MOON, 8, W)
+        )
+
+
+class NormalMapTests(unittest.TestCase):
+    def test_the_unused_third_channel_encodes_plus_one(self) -> None:
+        """Blue carries no signal but is still read: a consumer that samples all
+        three and skips the sqrt(1 - x² - y²) reconstruction gets a shallow
+        normal from 255 and an INVERTED one from 0."""
+        elev = np.random.default_rng(1).normal(0, 500, (H, W)).astype(np.float32)
+        rgb, _ = surface_normals(elev, MOON)
+        self.assertTrue(np.all(rgb[..., 2] == 255))
+        self.assertGreater(int(np.ptp(rgb[..., 0])), 0)
 
 
 if __name__ == "__main__":
