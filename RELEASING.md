@@ -570,8 +570,7 @@ upstream catalogue release:
 
 - **Gaia DR transition** (DR3 → DR4 expected late 2026) — the largest
   refresh. Re-run every `refresh-gaia-*.py` script + `refresh-bailer-
-  jones.py` in the recipe's dependency order; no refresh reads AT-HYG, so
-  none waits on an AT-HYG drop. Tier-A `known-stars.tsv` rows may need
+  jones.py` in the order of [Refreshing data when DR4 / new AT-HYG lands](scripts/refresh/README.md#refreshing-data-when-dr4--new-at-hyg-lands). Tier-A `known-stars.tsv` rows may need
   per-row source_id updates against the DR3↔DR4 cross-walk.
 - **AT-HYG point release** — drop the new
   `data/athyg/athyg_3X_classic_ids.csv` in and re-run
