@@ -14,7 +14,6 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "util"))
 
 import refresh_lib as rl  # noqa: E402
 from paths import REPO_ROOT  # noqa: E402
-import simbad  # noqa: E402
 from simbad import coverage, inputs, query, request, tsv  # noqa: E402
 from simbad.specs import (  # noqa: E402
     BASIC_BIBCODED_GROUPS, COO_BIBCODE, COO_QUAL, DEC, FluxBand, GAIA_DR3, GJ,
@@ -77,13 +76,6 @@ def collect_oid_requests(client: rl.TapClient) -> list[int]:
 
 
 def main() -> None:
-    force = "--force" in sys.argv
-
-    sources = [MEMBERSHIP, GAIA_ASTROMETRY, Path(__file__), *simbad.source_files()]
-    if not force and rl.is_up_to_date(OUT, sources):
-        print(f"{OUT.relative_to(ROOT)} up to date — skipping (use --force to rebuild)")
-        return
-
     start = time.time()
     client = rl.simbad_client()
 
@@ -149,5 +141,16 @@ def main() -> None:
     )
 
 
+def describe() -> dict:
+    keys = inputs.membership_request_keys(
+        MEMBERSHIP, inputs.simbad_value_cohort(inputs.gaia_complete_source_ids(GAIA_ASTROMETRY)),
+    )
+    return query.describe_pull(
+        basic=BASIC_COLUMNS, idents=IDENT_LOOKUPS, fluxes=FLUX_BANDS,
+        request=keys.request_lines(),
+        request_from=[MEMBERSHIP, GAIA_ASTROMETRY],
+    )
+
+
 if __name__ == "__main__":
-    main()
+    rl.pull_main(main, describe)

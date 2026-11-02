@@ -63,6 +63,29 @@ XREF_SCHEMA: dict[str, type | tuple[type, ...]] = {
 }
 
 
+IDENT_BY_WDS_ADQL = "SELECT id, oidref FROM ident WHERE id IN ({inlist}) ORDER BY id"
+PRIMARY_ALIASES_ADQL = (
+    "SELECT oidref, id FROM ident "
+    "WHERE oidref IN ({inlist}) "
+    f"AND (id LIKE '{HIP.like_pattern}' OR id LIKE 'HD %') "
+    "ORDER BY oidref, id"
+)
+# Alias every selected column so ORDER BY can reference unqualified
+# names — SIMBAD's ADQL parser rejects qualified `b.oid` / `i.id`
+# inside ORDER BY ("Encountered '.'"), same gotcha refresh-simbad-
+# sample.py documents.
+XREFS_ADQL = (
+    "SELECT b.oid AS oid, b.main_id AS main_id, i.id AS id "
+    "FROM basic AS b "
+    "JOIN ident AS i ON i.oidref = b.oid "
+    "WHERE b.oid IN ({inlist}) "
+    f"AND (i.id LIKE '{HIP.like_pattern}' OR i.id LIKE '{GAIA_DR3.like_pattern}') "
+    "ORDER BY oid, id"
+)
+JOIN_MISSED_ADQL = "SELECT oid, main_id FROM basic WHERE oid IN ({inlist})"
+QUERIES = (IDENT_BY_WDS_ADQL, PRIMARY_ALIASES_ADQL, XREFS_ADQL, JOIN_MISSED_ADQL)
+
+
 def collect_unique_components() -> list[tuple[str, str]]:
     """Read SRC_WDS_SUMM via the pipeline's own parse_wds_summ +
     split_components, return the deduped sorted list of (wds_id, component)
@@ -98,11 +121,7 @@ def query_ident_batch(
     ``-``, ``J``, ``space``, and a component letter — none need escaping
     inside the IN-clause's single-quoted strings."""
     inlist = ",".join(f"'{i}'" for i in wds_idents)
-    return client.run(
-        "SELECT id, oidref FROM ident "
-        f"WHERE id IN ({inlist}) "
-        "ORDER BY id"
-    )
+    return client.run(IDENT_BY_WDS_ADQL.format(inlist=inlist))
 
 
 def pull_primary_aliases(
@@ -126,12 +145,7 @@ def pull_primary_aliases(
     for offset in range(0, len(primary_oids), IDENT_BATCH):
         batch = primary_oids[offset : offset + IDENT_BATCH]
         inlist = ",".join(str(o) for o in batch)
-        table = client.run(
-            "SELECT oidref, id FROM ident "
-            f"WHERE oidref IN ({inlist}) "
-            f"AND (id LIKE '{HIP.like_pattern}' OR id LIKE 'HD %') "
-            "ORDER BY oidref, id"
-        )
+        table = client.run(PRIMARY_ALIASES_ADQL.format(inlist=inlist))
         for row in table:
             oid = int(row["oidref"])
             parsed = parse_hd_or_hip_from_ident(
@@ -173,19 +187,7 @@ def query_xrefs_batch(
     """
     if not oids:
         return {}
-    inlist = ",".join(str(o) for o in oids)
-    # Alias every selected column so ORDER BY can reference unqualified
-    # names — SIMBAD's ADQL parser rejects qualified `b.oid` / `i.id`
-    # inside ORDER BY ("Encountered '.'"), same gotcha refresh-simbad-
-    # sample.py documents.
-    table = client.run(
-        "SELECT b.oid AS oid, b.main_id AS main_id, i.id AS id "
-        "FROM basic AS b "
-        "JOIN ident AS i ON i.oidref = b.oid "
-        f"WHERE b.oid IN ({inlist}) "
-        f"AND (i.id LIKE '{HIP.like_pattern}' OR i.id LIKE '{GAIA_DR3.like_pattern}') "
-        "ORDER BY oid, id"
-    )
+    table = client.run(XREFS_ADQL.format(inlist=",".join(str(o) for o in oids)))
     out: dict[int, dict[str, Any]] = {}
     hip_aliases: dict[int, list[tuple[int, str]]] = {}
     for row in table:
@@ -210,9 +212,7 @@ def query_xrefs_batch(
     missing = sorted(o for o in oids if o not in out)
     if missing:
         miss_inlist = ",".join(str(o) for o in missing)
-        for row in client.run(
-            f"SELECT oid, main_id FROM basic WHERE oid IN ({miss_inlist})"
-        ):
+        for row in client.run(JOIN_MISSED_ADQL.format(inlist=miss_inlist)):
             oid = int(row["oid"])
             out[oid] = {
                 "main_id": str(rl.coerce_masked(row["main_id"]) or ""),
@@ -223,15 +223,6 @@ def query_xrefs_batch(
 
 
 def main() -> None:
-    force = "--force" in sys.argv
-    if not force and rl.is_up_to_date(
-        OUT, [Path(__file__), SRC_WDS_SUMM, SRC_OVERRIDES]
-    ):
-        print(
-            f"{OUT.relative_to(ROOT)} up to date — skipping (use --force to rebuild)"
-        )
-        return
-
     components = collect_unique_components()
     print(f"collected {len(components):,} unique (wds_id, component) tuples")
 
@@ -428,5 +419,9 @@ def main() -> None:
     )
 
 
+def describe() -> dict:
+    return rl.description("\n".join(QUERIES), rl.simbad_client().services)
+
+
 if __name__ == "__main__":
-    main()
+    rl.pull_main(main, describe)

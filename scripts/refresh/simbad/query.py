@@ -91,6 +91,30 @@ def build_ident_select(lookups: Sequence[IdentLookup], oid_inlist: str) -> str:
     )
 
 
+def describe_pull(
+    *,
+    basic: Sequence[ColumnSpec] = (),
+    idents: Sequence[IdentLookup] = (),
+    fluxes: Sequence[FluxBand] = (),
+    request: Sequence[str],
+    request_from: Sequence[Path],
+) -> dict[str, Any]:
+    """A SIMBAD pull's --describe: the ident resolve and each phase's ADQL
+    with the batch left as {inlist}. SIMBAD is a living database with no
+    release, so none is stated."""
+    queries = [build_resolve_select("{inlist}")]
+    if basic:
+        queries.append(build_basic_select(basic, "{inlist}"))
+    if idents:
+        queries.append(build_ident_select(idents, "{inlist}"))
+    if fluxes:
+        queries.append(build_flux_select(fluxes, "{inlist}"))
+    return rl.description(
+        "\n".join(queries), rl.simbad_client().services,
+        request=request, request_from=request_from,
+    )
+
+
 def build_basic_schema(columns: Sequence[ColumnSpec]) -> dict[str, type]:
     """Schema dict consumed by rl.validate_schema on the first batch."""
     return {c.alias: c.dtype for c in columns}

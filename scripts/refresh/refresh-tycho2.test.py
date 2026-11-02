@@ -220,31 +220,26 @@ class WriteTable(unittest.TestCase):
 
 
 class MainEntry(unittest.TestCase):
-    """`main()` is the one path the unit tests above never enter, so a module
-    constant it alone names can be renamed out from under it and still ship
-    green. Driving the up-to-date short-circuit resolves every one of them."""
+    """`main()` and `describe()` are the paths the unit tests above never
+    enter, so a module constant only they name can be renamed out from under
+    them and still ship green. An empty request set reaches main's first exit
+    and describe's whole body, which resolves every one of them."""
 
-    def test_reaches_its_short_circuit_naming_only_defined_constants(self):
+    def test_reaches_both_entry_points_naming_only_defined_constants(self):
         with tempfile.TemporaryDirectory() as tmp:
-            root = Path(tmp)
-            out_dir = root / "data" / "tycho2"
-            out_dir.mkdir(parents=True)
+            root = Path(tmp).resolve()
             manifest = root / "membership-manifest.tsv"
             manifest.write_text("tyc\n")
             tyc2_hd = root / "tyc2_hd.tsv"
             tyc2_hd.write_text("tyc1\ttyc2\ttyc3\n")
-            tables = tuple(
-                replace(spec, output=out_dir / f"{i}.tsv")
-                for i, spec in enumerate(t2.TABLES)
-            )
-            for spec in tables:
-                spec.output.write_text("")
 
-            with mock.patch.multiple(
-                t2, ROOT=root, OUT_DIR=out_dir, MEMBERSHIP=manifest,
-                TYC2_HD=tyc2_hd, TABLES=tables,
-            ), mock.patch.object(sys, "argv", ["refresh-tycho2.py"]):
-                t2.main()
+            with mock.patch.multiple(t2, ROOT=root, MEMBERSHIP=manifest, TYC2_HD=tyc2_hd), \
+                    mock.patch.object(t2.rl, "REPO_ROOT", root):
+                with self.assertRaisesRegex(SystemExit, "request set is empty"):
+                    t2.main()
+                described = t2.describe()
+            self.assertEqual(described["request"], [])
+            self.assertEqual(described["services"], ["CDS"])
 
 
 class MembershipCoverage(unittest.TestCase):
