@@ -73,10 +73,9 @@ A `defineArtifact` is both the writer's output and the readers' source, so
 **Reachable must mean read.** A source reached through the closure but never
 opened is not harmless: besides a spurious rebuild it adds a false ordering
 edge, which can make a false cycle or skip a step behind a stale pull it never
-reads. So
-each `defineSource` / `defineArtifact` lives in a leaf module that only code
-reading that file through its typed reader imports, and a test over each
-step's closure holds every reached source to a call of its reader.
+reads. So each `defineSource` / `defineArtifact` lives in a leaf module that
+only code reading that file through its typed reader imports, and a test over
+each step's closure holds every reached source to a call of its reader.
 
 **A recorded input set is sound for code and data alike.** A Python step
 that starts reading a new module or file does so because some file it
