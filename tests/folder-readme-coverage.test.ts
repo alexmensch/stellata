@@ -2,39 +2,11 @@
 // README.md is a bug — see /AGENTS.md#folder-readmes--read-before-you-touch-the-folder-update-at-commit.
 
 import { describe, it } from 'vitest';
-import { readdirSync, statSync, existsSync } from 'node:fs';
+import { existsSync } from 'node:fs';
 import { join, relative, resolve } from 'node:path';
+import { readmeTreeFolders } from './readme-trees';
 
 const ROOT = resolve(__dirname, '..');
-const SCAN_DIRS = ['src', 'scripts', 'data', 'docs'];
-
-const EXCLUDED_DIRS = new Set([
-  'node_modules', '.git', 'dist', '.vite', '.wrangler', 'public',
-  '__pycache__', '.beads', '.claude', '.venv', 'coverage',
-  'screenshots',
-]);
-
-/** A batched refresh's resume cache (`<output>.tsv.ckpt/`, gitignored, removed
- *  once every batch lands — /scripts/refresh/README.md#resuming-a-long-pull).
- *  It exists for hours during a normal pull, so matching it by name would mean
- *  this suite fails for anyone who runs the tests meanwhile. */
-const EXCLUDED_SUFFIXES = ['.ckpt'];
-
-// see /data/papers/README.md#the-pdfs-are-private
-const EXCLUDED_PATHS = new Set(['data/papers/pdf']);
-
-function collectFolders(dir: string, out: string[]): void {
-  out.push(dir);
-  for (const entry of readdirSync(dir)) {
-    if (EXCLUDED_DIRS.has(entry)) continue;
-    if (EXCLUDED_SUFFIXES.some((s) => entry.endsWith(s))) continue;
-    const full = join(dir, entry);
-    if (EXCLUDED_PATHS.has(relative(ROOT, full))) continue;
-    if (statSync(full).isDirectory()) {
-      collectFolders(full, out);
-    }
-  }
-}
 
 function failureMessage(missing: string[]): string {
   return [
@@ -66,13 +38,7 @@ function failureMessage(missing: string[]): string {
 
 describe('folder README coverage', () => {
   it('every folder under src/, scripts/, data/, docs/ has a README.md', () => {
-    const folders: string[] = [];
-    for (const scan of SCAN_DIRS) {
-      const full = resolve(ROOT, scan);
-      if (!existsSync(full)) continue;
-      collectFolders(full, folders);
-    }
-    const missing = folders
+    const missing = readmeTreeFolders(ROOT)
       .filter((f) => !existsSync(join(f, 'README.md')))
       .map((f) => relative(ROOT, f))
       .sort();
