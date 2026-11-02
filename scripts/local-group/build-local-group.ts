@@ -6,13 +6,14 @@ import { existsSync, statSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { emitArtifacts, runStep, sweepStaged } from '../util/emit-artifacts';
+import { allocateSibling, emitSibling } from '../sid/sibling-allocation';
+import { SIBLING_ARTIFACTS } from '../sid/sibling-artifacts';
+import { runStep, sweepStaged } from '../util/emit-artifacts';
 import { stepInputPaths } from '../util/step-inputs';
 import { LOCAL_GROUP_OUTPUTS } from './local-group-outputs';
 import { LG_ALIASES, LG_OVERRIDES, LVDB } from './local-group-source';
 import {
   applyAliasMeta,
-  buildOrientationQuat,
   buildStandaloneOverride,
   filterForRendering,
   mergeRowAndOverride,
@@ -175,26 +176,22 @@ async function main(): Promise<void> {
   // byte-identical artifacts.
   objects.sort((a, b) => a.name.localeCompare(b.name, 'en', { sensitivity: 'base' }));
 
+  const allocation = allocateSibling(SIBLING_ARTIFACTS['local-group'], objects);
   const payload = {
     version: 2,
     count: objects.length,
-    objects: objects.map(toJsonObject),
+    objects: objects.map((o, i) => ({ ...toJsonObject(o), sid: allocation.sids[i] })),
   };
-  emitArtifacts({
-    outputs: LOCAL_GROUP_OUTPUTS,
-    files: { localGroup: JSON.stringify(payload, null, 0) + '\n' },
-  });
+  emitSibling(LOCAL_GROUP_OUTPUTS, { localGroup: JSON.stringify(payload, null, 0) + '\n' }, allocation);
 
   console.log(
     `wrote ${OUT.replace(ROOT + '/', '')} ` +
     `(${objects.length} objects: ${overrideHits} LVDB+override, ` +
     `${lvdbDefaultHits} LVDB-only, ${standaloneHits} standalone override; ` +
     `${skippedNoStructure} LVDB rows skipped — no structural data; ` +
-    `${skippedOutOfRange} standalone overrides skipped — past MAX_DISTANCE_PC)`,
+    `${skippedOutOfRange} standalone overrides skipped — past MAX_DISTANCE_PC; ` +
+    `${allocation.minted} lg SIDs minted)`,
   );
-  // Reference the unused symbol so the import survives tree-shaking
-  // analysis in the test path that imports this file for the parsers.
-  void buildOrientationQuat;
 }
 
 // Run as a script. ESM doesn't have require.main; gate on the entry-point

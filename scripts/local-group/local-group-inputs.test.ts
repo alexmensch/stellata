@@ -12,12 +12,13 @@ const abs = (path: string): string => resolve(REPO_ROOT, path);
 const inputs = new Set(await stepInputPaths('build:local-group'));
 
 describe('stepInputPaths(build:local-group)', () => {
-  it('keys every module both chained entries import', async () => {
+  it('keys every module its entry imports', async () => {
     const closure = await entryClosure(tsxEntries(packageScripts(), 'build:local-group'));
     expect([...closure].filter((m) => !inputs.has(abs(m)))).toEqual([]);
     expect(inputs).toContain(abs('scripts/local-group/local-group-parse.ts'));
     expect(inputs).toContain(abs('scripts/local-group/local-group-source.ts'));
-    expect(inputs).toContain(abs('scripts/sid/stamp-sibling-sids.ts'));
+    expect(inputs).toContain(abs('scripts/sid/sibling-allocation.ts'));
+    expect(inputs).not.toContain(abs('scripts/sid/stamp-sibling-sids.ts'));
   });
 
   it('keys the three declared inputs', () => {

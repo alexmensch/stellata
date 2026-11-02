@@ -46,10 +46,10 @@ cross-script policy and pointers.
   several). Not part of `pnpm run build`.
 - `sid/` — SID registry tools: the allocation `build:catalog` runs over its
   records (the writer of the catalogue's registry partition,
-  `data/sid/ledger.tsv` and `events.tsv`; the clouds and Local Group stamps
-  write their own), DR-churn risk-set export, DR
+  `data/sid/ledger.tsv` and `events.tsv`; `build:local-group` and the
+  clouds stamp write their own), DR-churn risk-set export, DR
   reconciliation classifier, and `sid:stamp` (allocates and stamps sids onto
-  clouds.json / local-group.json). See `docs/sid.md`.
+  clouds.json). See `docs/sid.md`.
 - `perf/` — the human-armed headless perf runner (`pnpm run perf`):
   drives `debug.priceFrame()` in Playwright Chromium at the canon
   vantages and prints the differential table. Clocks only, never a

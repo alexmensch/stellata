@@ -42,8 +42,8 @@ everything else, then exits non-zero naming each stale step's command. So
 `pnpm run dev` does not start and CI fails, while unrelated layers still
 rebuild.
 
-SID allocation is not a step of its own: `build:catalog` and the clouds and
-Local Group stamps each allocate their namespaces in-process, and a failed
+SID allocation is not a step of its own: `build:catalog`, `build:local-group`
+and the clouds stamp (`sid:stamp`) each allocate their namespaces in-process, and a failed
 allocation fails that `build` step
 ([SID allocation](../catalog/README.md#sid-allocation)). Each appends to its
 own registry partition under `data/sid/`, so every registry file has one
@@ -143,18 +143,18 @@ check then stops the run; the reader's stamp already holds the old pull
 output's hash, so it rebuilds once the pull is re-run. The cycle check
 therefore never sees a loop through a manual step.
 
-The registry loop is the one kept loop among `build` steps: `build:catalog`
-and `sid:stamp` each read every registry partition, the other's and their
-own. The edges dropped are exactly those whose file is a `data/sid/`
+The registry loop is the one kept loop among `build` steps: `build:catalog`,
+`sid:stamp` and `build:local-group` each read every registry partition, the
+others' and their own. The edges dropped are exactly those whose file is a `data/sid/`
 registry partition file (ledger or events) read by an allocating step, its
 own partition included, named in the table as such rather than inferred,
 and a test holds the dropped set to that; any other cycle still rejects
-the table. Neither step's order matters: both only append past the
+the table. No step's order among them matters: each only appends past the
 union's highest SID, and the locks serialise them, since each holds a
-shared lock on the other while it runs. A loop is the one place two runs
+shared lock on the others while it runs. A loop is the one place two runs
 can each hold a lock the other wants, so a step takes its locks in
 step-name order, its own among them. A run that mints in one stales
-the other once, and that rebuild appends nothing.
+the others once, and that rebuild appends nothing.
 
 ## Freshness — one mechanism
 
@@ -277,7 +277,7 @@ that writes it. Measured 2026-10-27.
 | manifest ↔ `simbad_sptype` (the derivation's fourth binding source) | Kept. The request genuinely depends on the binding outcome. The stale-pull stop is its convergence check; re-pulling reopens the review queue, as `refresh/README.md` says. The same file also reaches the astrometry request (its derivation candidates), so manifest → `simbad_sptype` → request → astrometry pull → `build:membership` is a second path through this loop, covered by the same stop. |
 | `build:binaries` ↔ its own astrometry request | Kept, same check. The request keeps rejected candidates, so it grows rather than oscillates. |
 | `build:catalog` reads the SID ledger and events it appends to | Kept: an append-only file whose committed prefix the step only reads; its stamp records the post-append hash, so the next run rebuilds once and appends nothing. |
-| `build:catalog` ↔ `sid:stamp` through each other's registry partition (ledger and events) | Kept, the registry loop above, which also covers the row before: each reads the union for the next SID and the retired state, and appends only to its own partition. |
+| `build:catalog` ↔ `sid:stamp` ↔ `build:local-group` through each other's registry partition (ledger and events) | Kept, the registry loop above, which also covers the row before: each reads the union for the next SID and the retired state, and appends only to its own partition. |
 | `build:naming-parity` reads its own `naming-parity.tsv` | Carries frozen columns forward deliberately; not a pipeline step. |
 
 ## Derived checks
@@ -309,8 +309,8 @@ Hand-kept lists become derivations over the table:
   record takes its inputs from today's hand list; its next run replaces them
   with the recorded set.
 - **Order.** Runner core, then the stamped steps and the four generators, then
-  the mtime steps and mirrors (after clouds and local-group set SIDs in their
-  own records, so no step rewrites another's output, and after clouds' port
+  the mtime steps and mirrors (after clouds sets SIDs in its own record, as
+  local-group does, so no step rewrites another's output, and after clouds' port
   to TypeScript, so it reaches the runner as a TypeScript step), then CI's
   `--verify-committed`, then the derived checks. The four loop breaks ship
   with the slice that moves their step.
