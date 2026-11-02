@@ -197,7 +197,7 @@ one partition per sibling namespace (`ledger-cloud.tsv`,
 
 SIDs remain one dense sequence across all of them: every allocation mints
 past the highest SID in the **union** of the ledgers, so each allocating
-step reads every partition's ledger and writes only its own.
+step reads every partition's ledger and events and writes only its own.
 `validateRegistry` holds the union dense and unique; the guard checks each
 partition append-only against its own merge-base head, or the sid-ordered
 union against the catalogue head when the base predates the partitions.
