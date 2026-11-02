@@ -291,8 +291,7 @@ checkout the session is in, and reaches worktrees made by hand with
   `<store>/<basename>` inside the private store — which is what two sessions
   sweeping at once do, since both see no link and the second `ln` meets the
   first one's. `tests/paper-store-link.test.ts` reproduces that interleaving
-  with an `ln` on `PATH` that plants the link just before the real one runs,
-  and fails any `ln -s` under `scripts/hooks/` that lacks `-n`.
+  with an `ln` on `PATH` that plants the link just before the real one runs.
 - **Fails open**, like prime-guard: any error exits 0 silently, since a
   missing link is a test failure, not a reason to stop a session.
 - **Two events.** SessionStart covers a session opened in an existing

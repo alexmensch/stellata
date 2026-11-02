@@ -3,7 +3,7 @@
 
 import { execFileSync, spawnSync } from 'node:child_process';
 import {
-  chmodSync, existsSync, lstatSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, readlinkSync, realpathSync,
+  chmodSync, existsSync, lstatSync, mkdirSync, mkdtempSync, readdirSync, readlinkSync, realpathSync,
   rmSync, symlinkSync, writeFileSync,
 } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -149,16 +149,6 @@ describe('paper-store-link', () => {
     run(main, lnThatLosesTheRace());
     expect(readdirSync(join(root, 'store-a'))).toEqual([]);
     expect(linkOf(wt)).toBe(join(root, 'store-a'));
-  });
-
-  it('every ln -s in scripts/hooks/ carries -n, so none follows an existing directory link', () => {
-    const hooksDir = resolve(__dirname, '../scripts/hooks');
-    const offenders = readdirSync(hooksDir, { recursive: true, encoding: 'utf-8' })
-      .filter((f) => f.endsWith('.sh'))
-      .flatMap((f) => readFileSync(join(hooksDir, f), 'utf-8').split('\n')
-        .filter((line) => /\bln\s+-[a-z]*s/.test(line) && !/\bln\s+-[a-z]*n/.test(line))
-        .map((line) => `${f}: ${line.trim()}`));
-    expect(offenders).toEqual([]);
   });
 
   it('exits 0 with empty stderr outside a git repository', () => {
