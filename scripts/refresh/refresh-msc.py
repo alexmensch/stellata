@@ -139,18 +139,6 @@ SPOT_ORBIT_TOL = 0.01
 
 
 def main() -> None:
-    force = "--force" in sys.argv
-
-    outputs = [t.output for t in TABLES]
-    if not force and all(
-        rl.is_up_to_date(out, [Path(__file__)]) for out in outputs
-    ):
-        print(
-            f"{OUT_DIR.relative_to(ROOT)}/*.tsv up to date — skipping "
-            "(use --force to rebuild)"
-        )
-        return
-
     client = rl.cds_client()
     for spec in TABLES:
         print(f'querying CDS TAP — "{spec.vizier_table}" …')
@@ -200,5 +188,13 @@ def main() -> None:
         print(f"wrote {spec.output.relative_to(ROOT)} ({written} rows)")
 
 
+def describe() -> dict:
+    return rl.description(
+        "\n".join(t.adql for t in TABLES),
+        rl.cds_client().services,
+        release=", ".join(f"VizieR {t.vizier_table}" for t in TABLES),
+    )
+
+
 if __name__ == "__main__":
-    main()
+    rl.pull_main(main, describe)

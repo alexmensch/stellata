@@ -677,6 +677,8 @@ GAIA_ARI_SYNC_TAP_URL = "https://gaia.ari.uni-heidelberg.de/tap"
 # has to fit the smaller of the two, since either mirror may serve it.
 GAIA_SYNC_MAX_ROWS = 3_000_000
 
+GAIA_DR3_RELEASE = "Gaia DR3"
+
 GAIA_SYNC_RETRY_KWARGS: Mapping[str, Any] = {"max_attempts": 5, "base_delay_s": 2.0}
 
 
