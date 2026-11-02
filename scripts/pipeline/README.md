@@ -136,12 +136,13 @@ The runner rejects the table, before running anything, when:
 - a `build` step's declared output is a symlink on disk (the "never symlink
   `public/`" rule becomes this check);
 - a step's outputs module imports anything beyond `util/emit-artifacts`,
-  `util/paths` and `*-pure` modules, checked over its import closure. That is
-  what makes it side-effect-free to import, which no check can test directly.
-  The walk passes through `*-outputs`, `*-source` and `*-tsv` modules too,
-  checking their imports in turn: they are the only modules
-  `tests/source-declarations.test.ts` lets spell a `data/` path, so a path an
-  outputs module needs lives in one of them.
+  `util/paths`, `*-pure` modules and the two boundary trees
+  (`src/catalog-format/**`, `src/astro-core/**`), checked over its import
+  closure. That is what makes it side-effect-free to import, which no check
+  can test directly. The walk passes through `*-outputs`, `*-source` and
+  `*-tsv` modules too, checking their imports in turn: they are the only
+  modules `tests/source-declarations.test.ts` lets spell a `data/` path, so a
+  path an outputs module needs lives in one of them.
 
 A manual step sits in the derived order like any other: it is checked once
 the `build` steps that write its inputs have run, so a pull is judged against

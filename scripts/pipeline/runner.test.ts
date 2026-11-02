@@ -424,7 +424,7 @@ os.replace(tmp, ${JSON.stringify(at(out))})
 });
 
 describe('loadTable', () => {
-  const reachesBuildStamp = (): string => `outputs module ${relative(REPO_ROOT, at('steps/a-outputs.ts'))} reaches scripts/util/build-stamp.ts, beyond util/emit-artifacts, util/paths and *-pure, *-outputs, *-source and *-tsv modules`;
+  const reachesBuildStamp = (): string => `outputs module ${relative(REPO_ROOT, at('steps/a-outputs.ts'))} reaches scripts/util/build-stamp.ts, beyond util/emit-artifacts, util/paths, src/catalog-format, src/astro-core and *-pure, *-outputs, *-source and *-tsv modules`;
 
   it('rejects an outputs module that imports beyond emit-artifacts, paths and pure modules, before importing it', async () => {
     const step = tsStep('a', 'a.out');
@@ -462,6 +462,33 @@ import { NAME } from './${via}';
 export const OUT = declareOutputs({ out: resolve(${JSON.stringify(at('.'))}, NAME) });
 `);
     expect((await load([step])).kind).toBe('loaded');
+  });
+
+  it.each(['src/catalog-format/probes/probe-roster', 'src/astro-core/angles'])(
+    'accepts an outputs module importing the boundary tree module %s.ts',
+    async (module) => {
+      const step = tsStep('a', 'a.out');
+      write('steps/a-outputs.ts', `
+import ${JSON.stringify(join(REPO_ROOT, module))};
+import { declareOutputs } from ${JSON.stringify(EMIT_ARTIFACTS)};
+export const OUT = declareOutputs({ out: ${JSON.stringify(at('a.out'))} });
+`);
+      expect((await load([step])).kind).toBe('loaded');
+    },
+  );
+
+  it('walks a boundary tree only at the repo root, never a folder of the same name elsewhere', async () => {
+    const step = tsStep('a', 'a.out');
+    write('src/catalog-format/leak.ts', `export { hashFile } from ${JSON.stringify(join(REPO_ROOT, 'scripts/util/build-stamp'))};\n`);
+    write('steps/a-outputs.ts', `
+import { declareOutputs } from ${JSON.stringify(EMIT_ARTIFACTS)};
+import { hashFile } from ${JSON.stringify(at('src/catalog-format/leak'))};
+export const OUT = declareOutputs({ out: hashFile.name });
+`);
+    const loaded = await load([step]);
+    expect(loaded.kind === 'rejected' ? loaded.problems : []).toEqual([
+      expect.stringContaining(`reaches ${relative(REPO_ROOT, at('src/catalog-format/leak.ts'))}`),
+    ]);
   });
 
   it('rejects a build step whose declared output lies through a symlink', async () => {

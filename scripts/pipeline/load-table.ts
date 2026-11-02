@@ -14,7 +14,9 @@ import {
 } from './step-table-pure';
 
 const OUTPUTS_MODULE_LEAVES = new Set(['scripts/util/emit-artifacts.ts', 'scripts/util/paths.ts']);
-const isWalkable = (module: string): boolean => /-(pure|outputs|source|tsv)\.ts$/.test(module);
+const BOUNDARY_TREES = ['src/catalog-format/', 'src/astro-core/'];
+const isWalkable = (module: string): boolean => /-(pure|outputs|source|tsv)\.ts$/.test(module)
+  || BOUNDARY_TREES.some((tree) => module.startsWith(tree));
 
 export type Loaded =
   | { readonly kind: 'loaded'; readonly steps: ReadonlyMap<string, ResolvedStep>; readonly graph: StepGraph }
@@ -44,7 +46,7 @@ async function impureOutputsModules(refs: readonly OutputsRef[], tree: PipelineT
       if (seen.has(at) || OUTPUTS_MODULE_LEAVES.has(at)) continue;
       seen.add(at);
       if (isWalkable(at)) stack.push(...internal(at));
-      else problems.push(`outputs module ${module} reaches ${at}, beyond util/emit-artifacts, util/paths and *-pure, *-outputs, *-source and *-tsv modules`);
+      else problems.push(`outputs module ${module} reaches ${at}, beyond util/emit-artifacts, util/paths, src/catalog-format, src/astro-core and *-pure, *-outputs, *-source and *-tsv modules`);
     }
   }
   return problems;
