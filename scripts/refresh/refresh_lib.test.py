@@ -542,62 +542,6 @@ class SchemaTests(unittest.TestCase):
         rl.validate_schema(table, {"tyc_object": str, "tyc_unicode": str})
 
 
-# ─── is_up_to_date ────────────────────────────────────────────────────
-
-class IdempotencyTests(unittest.TestCase):
-    def setUp(self) -> None:
-        self.dir = tempfile.TemporaryDirectory()
-        self.path = Path(self.dir.name)
-        self.addCleanup(self.dir.cleanup)
-
-    def _touch(self, name: str, mtime: float | None = None) -> Path:
-        p = self.path / name
-        p.write_text("x")
-        if mtime is not None:
-            import os
-            os.utime(p, (mtime, mtime))
-        return p
-
-    def test_false_when_output_missing(self) -> None:
-        src = self._touch("src.py", mtime=1000.0)
-        self.assertFalse(rl.is_up_to_date(self.path / "missing.tsv", [src]))
-
-    def test_true_when_output_newer(self) -> None:
-        # Output mtime must clear refresh_lib's own mtime since it's auto-
-        # included in the comparison — use future-from-now anchors so the
-        # test is invariant to when refresh_lib was last edited.
-        lib_mtime = rl._LIB_PATH.stat().st_mtime
-        src = self._touch("src.py", mtime=lib_mtime - 100.0)
-        out = self._touch("out.tsv", mtime=lib_mtime + 100.0)
-        self.assertTrue(rl.is_up_to_date(out, [src]))
-
-    def test_false_when_source_newer(self) -> None:
-        lib_mtime = rl._LIB_PATH.stat().st_mtime
-        out = self._touch("out.tsv", mtime=lib_mtime + 100.0)
-        src = self._touch("src.py", mtime=lib_mtime + 200.0)
-        self.assertFalse(rl.is_up_to_date(out, [src]))
-
-    def test_false_when_source_missing(self) -> None:
-        lib_mtime = rl._LIB_PATH.stat().st_mtime
-        out = self._touch("out.tsv", mtime=lib_mtime + 100.0)
-        self.assertFalse(rl.is_up_to_date(out, [self.path / "missing.py"]))
-
-    def test_false_when_refresh_lib_newer_than_output(self) -> None:
-        # is_up_to_date folds refresh_lib's own mtime into the comparison so
-        # a bug fix in write_tsv / coerce_masked / _dtype_matches invalidates
-        # every cached TSV without requiring each caller to pass
-        # Path(refresh_lib.__file__) explicitly.
-        import os
-        out = self._touch("out.tsv", mtime=1000.0)
-        src = self._touch("src.py", mtime=500.0)
-        # Backdate the output below refresh_lib's mtime — the auto-inclusion
-        # should make is_up_to_date return False even though the caller's
-        # explicit `sources` list is older than the output.
-        lib_mtime = rl._LIB_PATH.stat().st_mtime
-        os.utime(out, (lib_mtime - 1.0, lib_mtime - 1.0))
-        self.assertFalse(rl.is_up_to_date(out, [src]))
-
-
 # ─── TapClient ────────────────────────────────────────────────────────
 
 class TapClientTests(unittest.TestCase):
@@ -1058,9 +1002,6 @@ class WriteTsvTests(unittest.TestCase):
         self.assertTrue(target.exists())
 
     def test_mid_write_failure_leaves_existing_output_intact(self) -> None:
-        # A coerce raising / KeyboardInterrupt / OOM mid-row used to leave a
-        # partially-written TSV whose mtime was newer than the source, so
-        # the next is_up_to_date returned True against silently broken data.
         # The atomic write contract: the committed output is either the
         # last good version or absent, never half-written.
         self.path.write_text("OLD\nrow1\trow2\n")
@@ -1075,8 +1016,8 @@ class WriteTsvTests(unittest.TestCase):
         with self.assertRaises(RuntimeError):
             rl.write_tsv(explode(), columns=["a", "b"], output=self.path)
         self.assertEqual(self.path.read_text(), original)
-        # The .tmp sibling must be cleaned up; otherwise a future
-        # is_up_to_date probe (or an `ls data/` audit) sees stale partial.
+        # The .tmp sibling must be cleaned up, or an `ls data/` audit sees
+        # a stale partial.
         self.assertFalse(
             self.path.with_suffix(self.path.suffix + ".tmp").exists()
         )

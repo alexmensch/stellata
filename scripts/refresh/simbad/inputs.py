@@ -53,9 +53,10 @@ class MembershipRequestKeys:
         """Every key this partition asks SIMBAD under, one line each: the
         projection of the manifest a pull's request hash covers."""
         lines = [
-            f"{GAIA_DR3.tsv_name}:{sid} " + " ".join(
-                f"{name}:{key}" for name, key in sorted(self.designations_by_source_id.get(sid, {}).items())
-            )
+            " ".join([f"{GAIA_DR3.tsv_name}:{sid}", *(
+                f"{name}:{key}"
+                for name, key in sorted(self.designations_by_source_id.get(sid, {}).items())
+            )])
             for sid in self.source_ids
         ]
         for name, keys in self.by_namespace.items():

@@ -539,6 +539,26 @@ class MembershipRequestKeysTests(unittest.TestCase):
         )
         self.assertEqual(keys.tycs, ["9-9-1"])
 
+    def test_request_lines_name_every_key_a_row_is_asked_under(self):
+        path = self._manifest([
+            {"gaia_source_id": "1", "hip": "5", "tyc": "1-2-1", "gl": "GJ 9", "proper": "A"},
+            {"gaia_source_id": "2", "proper": "B"},
+            {"tyc": "9-9-1"},
+            {"hip": "7"},
+        ])
+        lines = inputs.membership_request_keys(path).request_lines()
+        self.assertEqual(lines, [
+            "source_id:1 gj:9 hip:5 tyc:1-2-1", "source_id:2", "hip:7", "tyc:9-9-1",
+        ])
+
+    def test_request_lines_ignore_a_column_no_key_reads(self):
+        before = self._manifest([{"gaia_source_id": "1", "hip": "5", "proper": "A"}])
+        after = self._manifest([{"gaia_source_id": "1", "hip": "5", "proper": "B"}])
+        self.assertEqual(
+            inputs.membership_request_keys(before).request_lines(),
+            inputs.membership_request_keys(after).request_lines(),
+        )
+
     def test_row_filter_narrows_the_widening_map_too(self):
         path = self._manifest([
             {"gaia_source_id": "1", "binding": "crosswalk_gated", "tyc": "1-2-1"},
@@ -676,18 +696,6 @@ class CoverageTests(unittest.TestCase):
             "sp_type coverage", 0.50, 0.50,
             script="refresh-simbad-sptype", diagnosis="the shape drifted",
         )
-
-
-class SourceFilesTests(unittest.TestCase):
-
-    def test_lists_every_module_and_no_test_file(self):
-        names = {p.name for p in simbad.source_files()}
-        self.assertLessEqual(
-            {"__init__.py", "specs.py", "inputs.py", "request.py",
-             "query.py", "coverage.py", "tsv.py"},
-            names,
-        )
-        self.assertNotIn("simbad.test.py", names)
 
 
 class IterWdsXidsOidsTests(unittest.TestCase):

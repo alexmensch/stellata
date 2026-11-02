@@ -18,8 +18,8 @@ around. Adding `radial_velocity` to the 5p schema, re-slicing a VizieR table
 for one more column, widening a request set, re-stratifying the SIMBAD sample
 — all are in-session work. Never scope a design down, defer a field, or hand a
 pull back to the user on the assumption that a network fetch is out of reach;
-the cost is the pull's wall-clock time, and `--force` / the `.ckpt` resume path
-([Resuming a long pull](#resuming-a-long-pull)) bound the retry risk.
+the cost is the pull's wall-clock time, and the `.ckpt` resume path
+([Resuming a long pull](#resuming-a-long-pull)) bounds the retry risk.
 
 **None of these is a reason to defer a pull to its own PR**, and each has been
 used as one: the artifact is tens of MB and tracked in LFS; the re-pull moves
@@ -140,8 +140,10 @@ construction
 **A rebased request set does not rewrite its output.** The rebase changes
 what the *next* run asks for; the committed TSV keeps whatever the previous
 run pulled until that run happens — the same terms as `radial_velocity`
-above. Editing `refresh_lib.py` or a `simbad/*.py` module invalidates
-`is_up_to_date`, so the next invocation re-pulls rather than skips.
+above. A rebase that changes the keys a pull asks under changes its
+`--describe` request, so the pull's `data/stamps/` record reads stale and the
+build stops naming its refresh; a plumbing edit alone does not
+([Freshness](../pipeline/README.md#freshness--one-mechanism)).
 
 [Bailer-Jones 2021](/data/papers/index.md#bailerjones2021) and Apsis
 add a second, magnitude-bounded leg on top of that request —
@@ -360,9 +362,8 @@ spot-check rows.
 
 `TSV_COLUMNS` there is the one place the schema is stated, so **a column
 added to it lands in both scopes** — but only in whichever output is
-actually re-pulled. Editing the module also invalidates both outputs'
-`is_up_to_date` check (it folds this file's mtime), so the next refresh of
-either scope re-pulls rather than skips.
+actually re-pulled. The column list is part of both scopes' query, so an
+added column stales both records and the build names both refreshes.
 
 Both scopes carry `radial_velocity` and `radial_velocity_error`. The catalog
 scope's rv cascade reads them, and `parseGaiaAstrometryCatalogTsv` requires

@@ -25,34 +25,6 @@ T = TypeVar("T")
 R = TypeVar("R")
 
 
-# ─── Idempotency ──────────────────────────────────────────────────────
-
-_LIB_PATH = Path(__file__).resolve()
-
-
-def is_up_to_date(output: Path, sources: Iterable[Path]) -> bool:
-    """True iff `output` exists and is newer than every path in `sources`
-    AND newer than refresh_lib.py itself.
-
-    Callers pass the refresh script's `Path(__file__)` plus any data
-    inputs; refresh_lib's own mtime is folded in automatically so a fix
-    to `coerce_masked`, `write_tsv`, `_dtype_matches`, or the atomic-
-    rename plumbing invalidates every cached output without each caller
-    having to list `Path(refresh_lib.__file__)` explicitly. A missing
-    source is treated as stale rather than ignored — refusing to skip
-    is safer than silently keeping a possibly-out-of-date output.
-    """
-    if not output.exists():
-        return False
-    out_mtime = output.stat().st_mtime
-    if _LIB_PATH.stat().st_mtime > out_mtime:
-        return False
-    for src in sources:
-        if not src.exists() or src.stat().st_mtime > out_mtime:
-            return False
-    return True
-
-
 # ─── Describe ─────────────────────────────────────────────────────────
 
 
@@ -1149,8 +1121,7 @@ def write_tsv_lines(
     swaps in via ``os.replace`` once the stream completes. Any mid-stream
     failure (disk full, KeyboardInterrupt, masked-cell coerce raising, OOM
     on a large batch) leaves the committed output untouched — never
-    half-written — and the ``.tmp`` sibling is cleaned up so a future
-    ``is_up_to_date`` check can't be fooled by a stale partial. POSIX
+    half-written — and the ``.tmp`` sibling is cleaned up. POSIX
     ``rename(2)`` guarantees the swap is atomic on the same filesystem,
     which the sibling-path layout ensures.
     """
