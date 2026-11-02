@@ -29,10 +29,11 @@ rather than shipping it.
   `<body>-normal.webp` and paired half-width
   `<body>-horizon-{a,b}.webp` relief maps for the four bodies with a
   usable global DEM — Earth at double the rest). Manual, infrequent
-  (`pnpm run build:textures`); needs Pillow + NumPy. Idempotent via
-  mtime, per artifact, against its own sources and the helper module
-  it derives from — only this script gates everything, so editing the
-  relief leg does not rewrite the colour maps or the ring strips.
+  (`pnpm run build:textures`); needs Pillow + NumPy. A manual bake step
+  ([Step kinds](/scripts/pipeline/README.md#step-kinds)): `record.ts` skips
+  it while its `data/stamps/` record is fresh, and a stale one rebuilds
+  every artifact, since the record is only sound when each run reads
+  every input.
   Uranus is deliberately absent from
   `BODIES` (2f6.6 design record: texture-less by design — its ring
   strip is separate). `ring-strips.test.ts` pins `RING_TABLES` spans

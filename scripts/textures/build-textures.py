@@ -31,12 +31,6 @@ LADDER_MODULE = (
     ROOT / "src" / "client" / "solar-system" / "planets" / "textures"
     / "texture-ladder-generated.ts"
 )
-SCRIPT = Path(__file__)
-CALIB_SCRIPT = SCRIPT.parent / "texture_calibration.py"
-RELIEF_SCRIPT = SCRIPT.parent / "dem_relief.py"
-HORIZON_SCRIPT = SCRIPT.parent / "horizon_map.py"
-SKY_VIEW_SCRIPT = SCRIPT.parent / "sky_view.py"
-LADDER_SCRIPT = SCRIPT.parent / "texture_ladder.py"
 
 JPEG_QUALITY = 82
 
@@ -134,16 +128,6 @@ RING_TABLES = {
 }
 
 
-def up_to_date(out_path: Path, *inputs: Path) -> bool:
-    """Stale unless `out_path` postdates every input. Callers pass the helper
-    modules their own artifact derives from — only SCRIPT is global, so
-    editing one leg of the build does not rewrite the others' outputs."""
-    if not out_path.exists():
-        return False
-    out_mtime = out_path.stat().st_mtime
-    return all(out_mtime >= p.stat().st_mtime for p in (*inputs, SCRIPT))
-
-
 def fill_gap(im: Image.Image, threshold: int) -> Image.Image:
     """Replace no-data (near-black) pixels with the mean colour of the
     imaged pixels, feathered across the boundary so the fill reads as
@@ -169,10 +153,6 @@ def build_body(name: str, src_name: str, manifest: dict, ladder: dict) -> None:
     with Image.open(src_path) as probe:
         rungs = rungs_for(probe.width)
     outs = [OUT / f"{name}-{w}.jpg" for w in rungs]
-    if all(up_to_date(p, src_path, CALIB_SCRIPT, LADDER_SCRIPT) for p in outs):
-        print(f"  {name}: up to date ({len(rungs)} rungs)")
-        ladder[name] = ladder_row(name, rungs)
-        return
     im = Image.open(src_path)
     # Every treatment runs ONCE, at the top rung, and the narrower rungs are
     # resampled from the result. Treating each rung separately would let the
@@ -238,12 +218,9 @@ def build_normal_map(name: str, relief: dict) -> None:
         f"{name}'s colour map is mirrored at build but its DEM is not — "
         "the two would disagree about which way is east"
     )
-    if up_to_date(out_path, src_path, RELIEF_SCRIPT):
-        print(f"  {name}-normal: up to date")
-        return
     rgb, stats = surface_normals(read_frozen_dem(src_path), spec)
-    # Merge, never replace: the two halves of a body's relief row are written by
-    # separate up-to-date gates, so either can be skipped while the other runs.
+    # Merge, never replace: the normal, horizon and sky-view legs each write
+    # their own part of a body's relief row.
     relief.setdefault(name, {}).update(stats)
     # Lossless: WebP q98 errs 1.6 deg of normal angle against a 2.7 deg median
     # tilt on the Moon, which is most of the signal
@@ -261,9 +238,6 @@ def build_horizon_map(name: str, relief: dict) -> None:
     spec = DEM_BODIES[name]
     src_path = SRC / spec["src"]
     outs = [RELIEF / f"{name}-horizon-{half}.webp" for half in "ab"]
-    if all(up_to_date(p, src_path, HORIZON_SCRIPT, RELIEF_SCRIPT) for p in outs):
-        print(f"  {name}-horizon: up to date")
-        return
     first, second, stats = horizon_maps(read_frozen_dem(src_path), spec)
     relief.setdefault(name, {})["horizon"] = stats
     for plane, out_path in zip((first, second), outs):
@@ -284,9 +258,6 @@ def build_sky_view(name: str, relief: dict) -> None:
     spec = DEM_BODIES[name]
     src_path = SRC / spec["src"]
     out_path = RELIEF / f"{name}-skyview.webp"
-    if up_to_date(out_path, src_path, SKY_VIEW_SCRIPT, HORIZON_SCRIPT, RELIEF_SCRIPT):
-        print(f"  {name}-skyview: up to date")
-        return
     raw, stats = sky_view_factor(read_frozen_dem(src_path), spec)
     relief.setdefault(name, {})["skyView"] = stats
     # One channel, and grayscale WebP writes it as three identical ones — the
@@ -331,9 +302,6 @@ def build_saturn_rings() -> None:
     color_path = SRC / RINGS_COLOR
     trans_path = SRC / RINGS_TRANSPARENCY
     out_path = OUT / "saturn-rings.png"
-    if up_to_date(out_path, color_path, trans_path):
-        print("  saturn-rings: up to date")
-        return
     color = [[float(v) for v in line.split()] for line in color_path.read_text().split("\n") if line.strip()]
     trans = [[float(line)] for line in trans_path.read_text().split("\n") if line.strip()]
     assert len(color) == len(trans), (len(color), len(trans))
@@ -362,9 +330,6 @@ def parse_ring_table(path: Path) -> list[tuple[float, float, float]]:
 def build_ring_table(body: str, spec: dict) -> None:
     src_path = SRC / spec["src"]
     out_path = OUT / f"{body}-rings.png"
-    if up_to_date(out_path, src_path):
-        print(f"  {body}-rings: up to date")
-        return
     rings = parse_ring_table(src_path)
     lo, hi = spec["span_km"]
     texel = (hi - lo) / RINGS_W
