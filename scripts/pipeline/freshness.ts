@@ -3,12 +3,11 @@
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { existsSync } from 'node:fs';
-import { relative, resolve } from 'node:path';
 
 import {
   asStamp, changedSince, readStamp, readStampJson, recordedChanges, type FileHashes, type Stamp,
 } from '../util/build-stamp';
-import { REPO_ROOT } from '../util/paths';
+import type { PipelineTree } from './pipeline-tree';
 import type { ManualStep, OutputClaims } from './step-table-pure';
 
 export type Freshness =
@@ -50,29 +49,25 @@ function verdict(changed: readonly string[]): Freshness {
   return changed.length === 0 ? { kind: 'fresh' } : { kind: 'stale', changed };
 }
 
-function declaredUnrecorded(outputs: OutputClaims, recorded: FileHashes): string[] {
-  return outputs.files.map((p) => relative(REPO_ROOT, p)).filter((p) => !(p in recorded));
-}
-
-function stampChanges(stamp: Stamp, outputs: OutputClaims): string[] {
+function stampChanges(stamp: Stamp, outputs: OutputClaims, tree: PipelineTree): string[] {
   return [
-    ...changedSince(stamp.outputs),
-    ...declaredUnrecorded(outputs, stamp.outputs),
-    ...(stamp.recorded ? recordedChanges(stamp.recorded) : []),
+    ...changedSince(stamp.outputs, tree.root),
+    ...outputs.files.map(tree.rel).filter((p) => !(p in stamp.outputs)),
+    ...(stamp.recorded ? recordedChanges(stamp.recorded, tree.root) : []),
   ];
 }
 
-export function derivedFreshness(stampFile: string, outputs: OutputClaims, inputs: FileHashes): Freshness {
+export function derivedFreshness(stampFile: string, outputs: OutputClaims, inputs: FileHashes, tree: PipelineTree): Freshness {
   const stamp = readStamp(stampFile);
   if (stamp === null) return { kind: 'stale', changed: ['(no stamp)'] };
   const keys = new Set([...Object.keys(inputs), ...Object.keys(stamp.inputs)]);
-  return verdict([...[...keys].filter((k) => inputs[k] !== stamp.inputs[k]), ...stampChanges(stamp, outputs)]);
+  return verdict([...[...keys].filter((k) => inputs[k] !== stamp.inputs[k]), ...stampChanges(stamp, outputs, tree)]);
 }
 
-export function recordedFreshness(stampFile: string, outputs: OutputClaims): Freshness {
+export function recordedFreshness(stampFile: string, outputs: OutputClaims, tree: PipelineTree): Freshness {
   const stamp = readStamp(stampFile);
   if (stamp === null) return { kind: 'stale', changed: ['(no stamp)'] };
-  return verdict([...changedSince(stamp.inputs), ...stampChanges(stamp, outputs)]);
+  return verdict([...changedSince(stamp.inputs, tree.root), ...stampChanges(stamp, outputs, tree)]);
 }
 
 const optionalString = (value: unknown): string | undefined => (typeof value === 'string' ? value : undefined);
@@ -105,17 +100,13 @@ export function describePull(entry: string): PullDescription {
   return JSON.parse(run.stdout) as PullDescription;
 }
 
-export function manualFreshness(
-  step: ManualStep,
-  stampFile: string,
-  outputs: OutputClaims,
-): Freshness {
-  const read = readManualRecord(step, stampFile);
+export function manualFreshness(step: ManualStep, outputs: OutputClaims, tree: PipelineTree): Freshness {
+  const read = readManualRecord(step, tree.manualStamp(step.name));
   if (read.kind !== 'read') return { kind: 'stale', changed: [`(${read.kind === 'absent' ? 'no' : 'unreadable'} stamp)`] };
   const { record } = read;
-  const changed = [...changedSince(record.stamp.inputs), ...stampChanges(record.stamp, outputs)];
+  const changed = [...changedSince(record.stamp.inputs, tree.root), ...stampChanges(record.stamp, outputs, tree)];
   if (record.kind === 'pull') {
-    const now = describePull(resolve(REPO_ROOT, step.entry));
+    const now = describePull(tree.abs(step.entry));
     if (pullQueryHash(now) !== record.query) changed.push('(query)');
     if ((now.request ? requestHash(now.request) : undefined) !== record.request) changed.push('(request)');
   }

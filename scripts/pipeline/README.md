@@ -350,9 +350,10 @@ Hand-kept lists become derivations over the table:
   writes every build stamp itself once a step exits 0 and its declared
   outputs exist: inputs hashed before the run, those it also wrote (and,
   under `--update-snapshots`, all of a TypeScript step's) re-hashed after.
-  `pipeline-dirs.ts` is the one place a step's build stamp (through
-  `stampPath`), manual record, run record and lock folder are named under a
-  root, which tests point at a temporary folder.
+  `pipeline-tree.ts` is the run's one root: table paths resolve against it,
+  stamp keys are relative to it, and a step's build stamp (through
+  `stampPath`), manual record, run record and lock folder sit under it.
+  `run.ts` passes the repo root; tests pass a temporary folder.
 - `run.ts` / `steps.ts` — the command line and the table it runs.
 
 ## Design pass

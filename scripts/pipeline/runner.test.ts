@@ -9,7 +9,7 @@ import { fileHashes } from '../util/build-stamp';
 import { REPO_ROOT } from '../util/paths';
 import { pullQueryHash, requestHash } from './freshness';
 import { loadTable, type Loaded } from './load-table';
-import { pipelineDirs } from './pipeline-dirs';
+import { pipelineTree } from './pipeline-tree';
 import { runSteps, type Verdict } from './runner';
 import type { StepEntry, StepTable } from './step-table-pure';
 
@@ -72,9 +72,9 @@ if sys.argv[1:] == ["--describe"]:
 }
 
 function writeManualStamp(name: string, out: string, request: string, queryText: string): void {
-  write(relative(root, pipelineDirs(root).manualStamp(name)), JSON.stringify({
-    inputs: fileHashes([at(request)]),
-    outputs: fileHashes([at(out)]),
+  write(relative(root, pipelineTree(root).manualStamp(name)), JSON.stringify({
+    inputs: fileHashes([at(request)], root),
+    outputs: fileHashes([at(out)], root),
     query: pullQueryHash({ query: queryText, services: ['esa', 'ari'] }),
   }));
 }
@@ -93,12 +93,12 @@ if sys.argv[1:] == ["--describe"]:
 }
 
 function writeDerivedStamp(name: string, out: string, manifest: string, request: string[]): void {
-  write(relative(root, pipelineDirs(root).manualStamp(name)), JSON.stringify({
+  write(relative(root, pipelineTree(root).manualStamp(name)), JSON.stringify({
     inputs: {},
-    outputs: fileHashes([at(out)]),
+    outputs: fileHashes([at(out)], root),
     query: pullQueryHash({ query: 'SELECT *', services: ['esa'] }),
     request: requestHash(request),
-    requestFrom: [relative(REPO_ROOT, at(manifest))],
+    requestFrom: [manifest],
   }));
 }
 
@@ -199,7 +199,7 @@ describe('runSteps — manual steps', () => {
     write('req.tsv', 'r2');
     const result = await run(steps, ['reader', 'other']);
     expect(result.kinds).toEqual({ astro: 'stale', reader: 'skipped', other: 'fresh' });
-    expect(result.lines).toContain(`✗ astro stale (${relative(REPO_ROOT, at('req.tsv'))}): run pnpm run refresh:astro`);
+    expect(result.lines).toContain('✗ astro stale (req.tsv): run pnpm run refresh:astro');
     expect(result.status).toBe(1);
   });
 
@@ -242,7 +242,7 @@ describe('runSteps — manual steps', () => {
   it('records the answering service without comparing it', async () => {
     write('req.tsv', 'r1');
     const steps = [pullStep('astro', 'astro.tsv', 'req.tsv')];
-    const stampFile = pipelineDirs(root).manualStamp('astro');
+    const stampFile = pipelineTree(root).manualStamp('astro');
     writeFileSync(stampFile, JSON.stringify({ ...JSON.parse(readFileSync(stampFile, 'utf8')), answeredBy: 'ari', release: 'DR3' }));
     expect((await run(steps, ['astro'])).kinds).toEqual({ astro: 'fresh' });
   });
@@ -295,7 +295,7 @@ os.replace(tmp, ${JSON.stringify(at(out))})
 
   it('fails a run that writes its own stamp, which only the runner writes', async () => {
     write('p.in', 'x');
-    const stamp = pipelineDirs(root).buildStamp('p');
+    const stamp = pipelineTree(root).buildStamp('p');
     const body = `${rename('p.out')}\nPath(${JSON.stringify(stamp)}).parent.mkdir(parents=True, exist_ok=True)\nPath(${JSON.stringify(stamp)}).write_text("{}")`;
     const result = await run([pyStep('p', 'p.out', body)], ['p']);
     expect(result.verdicts.get('p')).toEqual({ kind: 'failed', reason: `p wrote ${stamp}, which it does not declare` });

@@ -50,10 +50,11 @@ export function hashFile(path: string): string {
   return hash.digest('hex');
 }
 
-export function fileHashes(paths: readonly string[]): FileHashes {
+/** Keyed relative to `root`. */
+export function fileHashes(paths: readonly string[], root: string = REPO_ROOT): FileHashes {
   const hashes: Record<string, string | null> = {};
   for (const p of [...new Set(paths)].sort()) {
-    hashes[relative(REPO_ROOT, p)] = existsSync(p) ? hashFile(p) : null;
+    hashes[relative(root, p)] = existsSync(p) ? hashFile(p) : null;
   }
   return hashes;
 }
@@ -92,10 +93,10 @@ function currentListing(dir: string): string | null {
 }
 
 /** Recorded listings and probes whose answer on disk has moved. */
-export function recordedChanges({ listings, probes }: RecordedReads): string[] {
+export function recordedChanges({ listings, probes }: RecordedReads, root: string = REPO_ROOT): string[] {
   return [
-    ...Object.keys(listings).filter((d) => currentListing(resolve(REPO_ROOT, d)) !== listings[d]).map((d) => `${d}/`),
-    ...Object.keys(probes).filter((p) => existsSync(resolve(REPO_ROOT, p)) !== probes[p]),
+    ...Object.keys(listings).filter((d) => currentListing(resolve(root, d)) !== listings[d]).map((d) => `${d}/`),
+    ...Object.keys(probes).filter((p) => existsSync(resolve(root, p)) !== probes[p]),
   ];
 }
 
@@ -105,8 +106,8 @@ function sameHashes(a: FileHashes, b: FileHashes): boolean {
 }
 
 /** Recorded paths whose content on disk no longer matches the recorded hash. */
-export function changedSince(recorded: FileHashes): string[] {
-  const current = fileHashes(Object.keys(recorded).map((p) => resolve(REPO_ROOT, p)));
+export function changedSince(recorded: FileHashes, root: string = REPO_ROOT): string[] {
+  const current = fileHashes(Object.keys(recorded).map((p) => resolve(root, p)), root);
   return Object.keys(recorded).filter((p) => current[p] !== recorded[p]);
 }
 
@@ -128,9 +129,9 @@ export function writeStamp(
   stamp: string,
   inputs: FileHashes,
   outputs: readonly string[],
-  recorded?: RecordedReads,
+  { recorded, root = REPO_ROOT }: { readonly recorded?: RecordedReads; readonly root?: string } = {},
 ): void {
-  const outputHashes = fileHashes(outputs);
+  const outputHashes = fileHashes(outputs, root);
   const missing = Object.keys(outputHashes).filter((p) => outputHashes[p] === null);
   if (outputs.length === 0 || missing.length > 0) {
     throw new Error(`writeStamp(${stamp}): outputs missing or none given: ${missing.join(', ')}`);

@@ -54,7 +54,8 @@ same thing — single-use helpers stay with their consumer.
   **No data paths live here**: each is a declaration (`sources/`).
 - `build-stamp.ts` / `build_stamp.py` — the content-hash skip gate
   ([Preprocessor idempotency](../README.md#preprocessor-idempotency)): `fileHashes` maps each file's
-  repo-relative path to its sha1, `null` when absent, so an input's arrival is
+  repo-relative path (relative to a passed root, the runner's tree) to its
+  sha1, `null` when absent, so an input's arrival is
   a change too. A stamp (`build/stamps/<step>.json`) records two such maps:
   the inputs, hashed *before* the build, and every output the build wrote,
   hashed after it. `stampIsCurrent` compares the inputs against the caller's
