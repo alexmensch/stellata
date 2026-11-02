@@ -56,7 +56,7 @@ describe('deriveGraph', () => {
   });
 
   it('matches a read against a declared output family', () => {
-    const a: ResolvedStep = { ...ts('a', []), outputs: { files: [], families: [{ dir: '/r/pub', member: /^chunk-\d+$/ }] } };
+    const a: ResolvedStep = { ...ts('a', []), outputs: { files: [], families: [{ dir: '/r/pub', member: /^chunk-\d+$/, stamped: true }] } };
     const g = ordered(deriveGraph([ts('b', ['/r/b'], ['/r/pub/chunk-3']), a], []));
     expect(g.order).toEqual(['a', 'b']);
   });
@@ -67,7 +67,7 @@ describe('deriveGraph', () => {
   });
 
   it('rejects a file one step declares inside another step\'s output family', () => {
-    const a: ResolvedStep = { ...ts('a', []), outputs: { files: [], families: [{ dir: '/r/pub', member: /^c\.\d$/ }] } };
+    const a: ResolvedStep = { ...ts('a', []), outputs: { files: [], families: [{ dir: '/r/pub', member: /^c\.\d$/, stamped: true }] } };
     expect(problems(deriveGraph([a, ts('b', ['/r/pub/c.1'])], [])))
       .toEqual(['/r/pub/c.1 is declared by both a and b']);
   });

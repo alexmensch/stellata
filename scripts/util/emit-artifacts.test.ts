@@ -2,7 +2,7 @@ import {
   existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync,
 } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { basename, join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { fileHashes, readStamp, stampIsCurrent } from './build-stamp';
@@ -70,7 +70,7 @@ describe('emitArtifacts', () => {
 
   it('refuses an undeclared file and a declared one left out, before writing', () => {
     const stray = join(dir, 'stray.txt');
-    const chunks = declareOutputs({ a }, [{ dir, member: /^chunk-\d+$/ }]);
+    const chunks = declareOutputs({ a }, [{ dir, member: /^chunk-\d+$/, stamped: true }]);
     expect(() => emitArtifacts({ outputs: chunks, files: { a: 'x' }, members: new Map([[stray, 'x']]) }))
       .toThrow(/undeclared: .*stray\.txt/);
     // @ts-expect-error the compiler refuses a declared key left out
@@ -100,7 +100,7 @@ describe('emitArtifacts', () => {
     mkdirSync(chunks);
     for (const n of ['chunk-0', 'chunk-1', 'chunk-2', 'README']) writeFileSync(join(chunks, n), 'old');
     emitArtifacts({
-      outputs: declareOutputs({}, [{ dir: chunks, member: /^chunk-\d+$/ }]),
+      outputs: declareOutputs({}, [{ dir: chunks, member: /^chunk-\d+$/, stamped: true }]),
       files: {},
       members: new Map([[join(chunks, 'chunk-0'), 'fresh 0'], [join(chunks, 'chunk-1'), 'fresh 1']]),
     });
@@ -124,6 +124,27 @@ describe('emitArtifacts', () => {
     expect(recorded).toHaveLength(2);
     expect(recorded[0]).toMatch(/a\.txt$/);
     expect(recorded[1]).toMatch(/out\/b\.txt$/);
+  });
+
+  it('lands an unstamped family\'s members but keeps them out of the stamp, so their absence is not stale', () => {
+    const baseline = join(dir, 'baseline');
+    const kept = join(dir, 'kept');
+    const stampFile = join(dir, 'stamps', 'step.json');
+    emitArtifacts({
+      outputs: declareOutputs({ a }, [
+        { dir: kept, member: /^k$/, stamped: true },
+        { dir: baseline, member: /^p$/, stamped: false },
+      ]),
+      files: { a: 'new a' },
+      members: new Map([[join(kept, 'k'), 'k'], [join(baseline, 'p'), 'p']]),
+      stamp: { path: stampFile, inputs: {} },
+    });
+    expect(readFileSync(join(baseline, 'p'), 'utf8')).toBe('p');
+    const recorded = readStamp(stampFile);
+    expect(recorded).not.toBeNull();
+    expect(Object.keys(recorded!.outputs).map((p) => basename(p)).sort()).toEqual(['a.txt', 'k']);
+    rmSync(baseline, { recursive: true });
+    expect(stampIsCurrent(stampFile, {})).toBe(true);
   });
 
   it('records a refreshed snapshot the step reads at its new hash, so the stamp stays current', () => {
@@ -167,7 +188,7 @@ describe('emitArtifacts', () => {
     writeFileSync(join(chunks, `chunk-3${STAGING_SUFFIX}`), 'stale');
     writeFileSync(join(chunks, `README${STAGING_SUFFIX}`), 'not a member');
     emitArtifacts({
-      outputs: declareOutputs({}, [{ dir: chunks, member: /^chunk-\d+$/ }]),
+      outputs: declareOutputs({}, [{ dir: chunks, member: /^chunk-\d+$/, stamped: true }]),
       files: {},
       members: new Map([[join(chunks, 'chunk-0'), 'fresh 0']]),
     });

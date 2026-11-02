@@ -17,7 +17,7 @@ describe('CATALOG_OUTPUTS', () => {
     ]));
   });
 
-  it('declares the transport chunks as one family in public/, beside each lineage stage\'s baseline and diff', () => {
+  it('declares the transport chunks as one stamped family in public/, beside each lineage stage\'s unstamped baseline and diff', () => {
     expect(CATALOG_OUTPUTS.families.map((f) => repoRelative(f.dir))).toEqual([
       'public', 'build/lineage.previous', 'build/lineage-diff', 'build/lineage.previous', 'build/lineage-diff',
       'build/lineage.previous', 'build/lineage-diff',
@@ -27,8 +27,10 @@ describe('CATALOG_OUTPUTS', () => {
     expect(families('placement.tsv.gz')).toEqual(['build/lineage.previous']);
     expect(families('placement.tsv')).toEqual(['build/lineage-diff']);
     expect(families('promotion.tsv.gz')).toEqual(['build/lineage.previous']);
-    const [chunks] = CATALOG_OUTPUTS.families;
+    const [chunks, ...lineage] = CATALOG_OUTPUTS.families;
     expect(repoRelative(chunks.dir)).toBe('public');
+    expect(chunks.stamped).toBe(true);
+    expect(lineage.map((f) => f.stamped)).toEqual(lineage.map(() => false));
     expect(chunks.member.test(catalogChunkFilename(12))).toBe(true);
     expect(chunks.member.test('catalog-manifest.json')).toBe(false);
   });
