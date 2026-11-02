@@ -64,11 +64,12 @@ still fresh (`--force` re-pulls) and rewrites the record after every run
 
 **`.venv` is gitignored, so a git worktree has none** — a refresh run from
 one dies on `ModuleNotFoundError: astropy` after resolving its paths
-perfectly well, which reads like a code fault and is not one. Point the
-absolute path at the main checkout's venv
-(`<main-checkout>/.venv/bin/python scripts/refresh/<script>.py`); the
-scripts resolve `REPO_ROOT` from their own location, so they still read and
-write the worktree's `data/`.
+perfectly well, which reads like a code fault and is not one. Put the main
+checkout's venv first on `PATH` and run the target
+(`PATH=<main-checkout>/.venv/bin:$PATH pnpm run refresh:<x>`): `record.ts`
+starts bare `python3`, and the scripts resolve `REPO_ROOT` from their own
+location, so they still read and write the worktree's `data/`. Running the
+script directly writes no record, so the build then stops on that pull.
 
 ### Per-script targets
 
