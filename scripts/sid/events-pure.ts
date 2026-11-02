@@ -1,4 +1,4 @@
-// events.tsv's row shape, cell encoding, structural checks and the retired-state count. See /docs/sid.md#43-ledger--datasidledgertsv.
+// A registry events file's row shape, cell encoding, structural checks and the retired-state count. See /docs/sid.md#43-ledger--datasidledgertsv.
 
 import type { TableRow } from '../util/tsv/table-pure';
 

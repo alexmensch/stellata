@@ -23,14 +23,14 @@ sid-pure.ts               Pure algebra: designation grammar (/docs/sid.md#3-desi
                           Imports no declaration, so its many importers
                           reach no registry file through it. Tests import
                           its constants — never redefine them.
-ledger-pure.ts            ledger.tsv's row shape, SID_KINDS and cell
-                          encoding, apart from its declaration.
+ledger-pure.ts            A registry ledger's row shape, SID_KINDS and cell
+                          encoding, apart from its declarations.
 ledger-tsv.ts (+ test)    LEDGERS — each partition's ledger codec, plus
                           ledgerFile. Every
                           registry file reads a sid as TableRow.id
                           (../util/tsv/README.md). The test round-trips
                           every committed ledger byte for byte.
-events-pure.ts (+ test)   events.tsv's row shape, validateEvents, and the
+events-pure.ts (+ test)   An events file's row shape, validateEvents, and the
                           retired-state count (retiredSids,
                           sidSuccessorPairs): out of service iff more
                           retire + merge events than reinstates.
@@ -107,6 +107,8 @@ registry-io.ts            loadRegistry: every partition plus the stored
                           Every file is required; a suite that may meet
                           an LFS-stub ledger gates on
                           isReadable(LEDGERS.catalog) itself.
+                          readRegistryUnion: the same rows unvalidated,
+                          for lookup-only readers (trace).
                           registryTexts(partition, …): that partition's
                           ledger and events with an allocation's rows
                           appended as encodeLine lines, never a committed
