@@ -17,7 +17,10 @@ export const STEPS: StepTable = {
         'data/gaia/gaia_astrometry_source_id_request.tsv',
         'build/binding-integrity-verdicts.tsv',
       ],
-      after: [],
+      after: [
+        'refresh:gaia-astrometry', 'refresh:gaia-hip', 'refresh:gaia-nss', 'refresh:gaia-tyc',
+        'refresh:hip2', 'refresh:msc', 'refresh:simbad-sptype', 'refresh:simbad-wds-xids',
+      ],
       snapshots: ['scripts/binaries/build-binaries-expected.json', 'scripts/binaries/build-binaries-rates-expected.json'],
     },
     {
