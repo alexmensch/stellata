@@ -48,7 +48,7 @@ function stepOutputs(step: string): StepOutputs {
   const { outputs, stamp } = declared;
   return {
     files: [...Object.values<string>(outputs.files), ...(stamp === undefined ? [] : [stamp])].map(rel),
-    families: outputs.families.map((f) => ({ dir: rel(f.dir), member: f.member })),
+    families: outputs.families.map((f) => ({ ...f, dir: rel(f.dir) })),
   };
 }
 
@@ -67,10 +67,18 @@ function uncovered(patterns: readonly string[], steps: readonly string[]): strin
   return patterns.filter((pattern) => !outputs.some((o) => covers(o, pattern)));
 }
 
+const SEEDABLE = /^(public|build)\//;
+
 function unlisted(patterns: readonly string[], steps: readonly string[]): string[] {
   const globs = patterns.map(globRegExp);
-  return steps.flatMap((step) => stepOutputs(step).files)
-    .filter((file) => /^(public|build)\//.test(file) && !globs.some((glob) => glob.test(file)));
+  const outputs = steps.map(stepOutputs);
+  const files = outputs.flatMap((o) => o.files)
+    .filter((file) => SEEDABLE.test(file) && !globs.some((glob) => glob.test(file)));
+  const families = outputs.flatMap((o) => o.families)
+    .filter((f) => f.stamped && SEEDABLE.test(`${f.dir}/`)
+      && !patterns.some((pattern) => covers({ files: [], families: [f] }, pattern)))
+    .map((f) => `${f.dir}/${f.member.source}`);
+  return [...files, ...families];
 }
 
 function stepsOf(target: string): string[] {
@@ -89,7 +97,7 @@ describe('.worktreeinclude', () => {
     expect(uncovered(PATTERNS, SEED_STEPS)).toEqual([]);
   }, 60_000);
 
-  it('lists every gitignored output file and stamp of those steps', () => {
+  it('lists every gitignored output file, stamped output family and stamp of those steps', () => {
     expect(unlisted(PATTERNS, SEED_STEPS)).toEqual([]);
   }, 60_000);
 
