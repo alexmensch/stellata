@@ -444,5 +444,5 @@ a pin run reads `steady`.
   unexamined regression cannot quietly become the pinned value.
 
 The slug is the chip plus the WebGPU architecture from the adapter probe
-(`apple-m4-metal-3`); two machines with the same silicon share a pin, which
+(`apple-m6-metal-3`); two machines with the same silicon share a pin, which
 is the same rule `--baseline` applies to its adapter string.

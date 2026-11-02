@@ -1,9 +1,9 @@
 {
   "schema": "stellata-perf/pin-3",
-  "adapterSlug": "apple-m4-metal-3",
+  "adapterSlug": "apple-m6-metal-3",
   "adapter": {
     "webgl": {
-      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M4, Unspecified Version)",
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M6, Unspecified Version)",
       "vendor": "Google Inc. (Apple)",
       "timerQuery": true
     },
@@ -17,15 +17,15 @@
     }
   },
   "git": {
-    "commit": "fdb3a0bfad99424555af107717d3599aeebb4c28",
+    "commit": "8043e87ea64dbd7fd98d2cae3c0d0c8c1446e66f",
     "dirty": true,
-    "mainCommit": "d76f8a69f4c7968eb8c0aef1d9729c04e925949a",
-    "mainReachable": false
+    "mainCommit": "8043e87ea64dbd7fd98d2cae3c0d0c8c1446e66f",
+    "mainReachable": true
   },
-  "version": "6.0.5",
-  "takenAt": "2026-09-29T21:41:47.874Z",
+  "version": "7.1.8",
+  "takenAt": "2026-11-02T09:33:47.861Z",
   "sourceRuns": [
-    ".perf-runs/2026-09-29/pr650-tier2-b.json"
+    ".perf-runs/2026-11-02/8cg-49-38-m6-pin-2.json"
   ],
   "rows": [
     {
@@ -33,7 +33,7 @@
       "name": "mw120",
       "backend": "webgpu",
       "bufferMpx": 4.096,
-      "recordCount": 979659,
+      "recordCount": 979678,
       "position": 1,
       "idleRafMs": 16.699999999999818,
       "readbackPerFrame": 0.25,
@@ -42,41 +42,41 @@
       "method": "raf-delta",
       "wall": {
         "p50": 16.69999999999891,
-        "p90": 17.200000000000728,
+        "p90": 17.100000000002183,
         "iqrMs": 0.10000000000218279,
         "samples": 960,
         "stateGuard": "steady",
         "vsyncClamped": true
       },
       "gpu": {
-        "p50": 20.061819,
-        "p90": 20.169108,
-        "iqrMs": 0.14962299999999829,
-        "samples": 478,
+        "p50": 19.393287,
+        "p90": 20.694685999999997,
+        "iqrMs": 0.9724450000000004,
+        "samples": 516,
         "stateGuard": "steady"
       },
       "gpuFloor": {
-        "p10": 19.861695
+        "p10": 18.811046
       },
       "gpuClasses": null,
       "compute": {
-        "p50": 0.598782,
-        "p90": 0.854112,
-        "iqrMs": 0.142123,
-        "samples": 478,
+        "p50": 0.700906,
+        "p90": 0.826613,
+        "iqrMs": 0.09853999999999996,
+        "samples": 516,
         "stateGuard": "steady"
       },
       "computeFloor": {
-        "p10": 0.585283
+        "p10": 0.558574
       },
-      "sourceRun": ".perf-runs/2026-09-29/pr650-tier2-b.json"
+      "sourceRun": ".perf-runs/2026-11-02/8cg-49-38-m6-pin-2.json"
     },
     {
       "key": "sol|webgpu",
       "name": "sol",
       "backend": "webgpu",
       "bufferMpx": 4.096,
-      "recordCount": 979659,
+      "recordCount": 979678,
       "position": 2,
       "idleRafMs": 16.69999999999891,
       "readbackPerFrame": 0.25,
@@ -85,41 +85,41 @@
       "method": "raf-delta",
       "wall": {
         "p50": 16.69999999999891,
-        "p90": 16.799999999999272,
+        "p90": 17.099999999998545,
         "iqrMs": 0.10000000000218279,
         "samples": 960,
         "stateGuard": "steady",
         "vsyncClamped": true
       },
       "gpu": {
-        "p50": 11.122955000000001,
-        "p90": 11.677948,
-        "iqrMs": 0.7634040000000013,
-        "samples": 565,
+        "p50": 10.683795,
+        "p90": 11.406909,
+        "iqrMs": 0.5286989999999996,
+        "samples": 719,
         "stateGuard": "steady"
       },
       "gpuFloor": {
-        "p10": 10.271842
+        "p10": 9.943725
       },
       "gpuClasses": null,
       "compute": {
-        "p50": 0.984818,
-        "p90": 1.163942,
-        "iqrMs": 0.30557899999999993,
-        "samples": 565,
+        "p50": 1.190524,
+        "p90": 1.430437,
+        "iqrMs": 0.314578,
+        "samples": 719,
         "stateGuard": "steady"
       },
       "computeFloor": {
-        "p10": 0.641449
+        "p10": 0.577949
       },
-      "sourceRun": ".perf-runs/2026-09-29/pr650-tier2-b.json"
+      "sourceRun": ".perf-runs/2026-11-02/8cg-49-38-m6-pin-2.json"
     },
     {
       "key": "earth|webgpu",
       "name": "earth",
       "backend": "webgpu",
       "bufferMpx": 4.096,
-      "recordCount": 979659,
+      "recordCount": 979678,
       "position": 3,
       "idleRafMs": 16.69999999999891,
       "readbackPerFrame": 0.25,
@@ -128,53 +128,53 @@
       "method": "raf-delta",
       "wall": {
         "p50": 16.69999999999891,
-        "p90": 17.299999999999272,
-        "iqrMs": 0.10000000000218279,
+        "p90": 17.799999999999272,
+        "iqrMs": 0.2000000000007276,
         "samples": 960,
         "stateGuard": "steady",
         "vsyncClamped": true
       },
       "gpu": {
-        "p50": 12.427019,
-        "p90": 71.607534,
-        "iqrMs": 56.22722600000001,
-        "samples": 859,
+        "p50": 12.109485,
+        "p90": 68.817992,
+        "iqrMs": 49.500201000000004,
+        "samples": 710,
         "stateGuard": "steady"
       },
       "gpuFloor": {
-        "p10": 12.102022999999999
+        "p10": 10.886668
       },
       "gpuClasses": {
-        "cutMs": 38.228793,
+        "cutMs": 36.5702955,
         "plain": {
-          "p50": 12.329353000000001,
-          "iqrMs": 0.31941100000000056,
-          "samples": 631
+          "p50": 11.556198,
+          "iqrMs": 1.1803559999999997,
+          "samples": 531
         },
         "dear": {
-          "p50": 71.270704,
-          "iqrMs": 1.6649770000000217,
-          "samples": 228
+          "p50": 68.00638,
+          "iqrMs": 5.611958999999985,
+          "samples": 179
         }
       },
       "compute": {
-        "p50": 0.915736,
-        "p90": 1.130275,
-        "iqrMs": 0.17108,
-        "samples": 859,
+        "p50": 1.151524,
+        "p90": 1.397771,
+        "iqrMs": 0.3202449999999999,
+        "samples": 710,
         "stateGuard": "steady"
       },
       "computeFloor": {
-        "p10": 0.784988
+        "p10": 0.580241
       },
-      "sourceRun": ".perf-runs/2026-09-29/pr650-tier2-b.json"
+      "sourceRun": ".perf-runs/2026-11-02/8cg-49-38-m6-pin-2.json"
     },
     {
       "key": "mw50|webgpu",
       "name": "mw50",
       "backend": "webgpu",
       "bufferMpx": 4.096,
-      "recordCount": 979659,
+      "recordCount": 979678,
       "position": 4,
       "idleRafMs": 16.699999999999818,
       "readbackPerFrame": 0.25,
@@ -182,42 +182,42 @@
       "frames": 960,
       "method": "raf-delta",
       "wall": {
-        "p50": 16.700000000000728,
-        "p90": 33.39999999999782,
-        "iqrMs": 15.799999999999272,
+        "p50": 16.69999999999891,
+        "p90": 18.099999999998545,
+        "iqrMs": 0.3000000000029104,
         "samples": 960,
         "stateGuard": "steady",
-        "vsyncClamped": false
+        "vsyncClamped": true
       },
       "gpu": {
-        "p50": 30.54845,
-        "p90": 30.578575,
-        "iqrMs": 0.03237399999999724,
-        "samples": 192,
+        "p50": 21.046596,
+        "p90": 21.333757,
+        "iqrMs": 1.259481000000001,
+        "samples": 551,
         "stateGuard": "steady"
       },
       "gpuFloor": {
-        "p10": 30.519199999999998
+        "p10": 19.000543999999998
       },
       "gpuClasses": null,
       "compute": {
-        "p50": 0.661781,
-        "p90": 0.682282,
-        "iqrMs": 0.030498000000000025,
-        "samples": 192,
+        "p50": 0.554866,
+        "p90": 0.728613,
+        "iqrMs": 0.19633,
+        "samples": 551,
         "stateGuard": "steady"
       },
       "computeFloor": {
-        "p10": 0.634658
+        "p10": 0.414244
       },
-      "sourceRun": ".perf-runs/2026-09-29/pr650-tier2-b.json"
+      "sourceRun": ".perf-runs/2026-11-02/8cg-49-38-m6-pin-2.json"
     },
     {
       "key": "lg|webgpu",
       "name": "lg",
       "backend": "webgpu",
       "bufferMpx": 4.096,
-      "recordCount": 979659,
+      "recordCount": 979678,
       "position": 5,
       "idleRafMs": 16.699999999999818,
       "readbackPerFrame": 0.25,
@@ -227,33 +227,33 @@
       "wall": {
         "p50": 16.69999999999891,
         "p90": 18,
-        "iqrMs": 0.9000000000014552,
+        "iqrMs": 0.5999999999985448,
         "samples": 960,
         "stateGuard": "steady",
         "vsyncClamped": true
       },
       "gpu": {
-        "p50": 9.537187999999999,
-        "p90": 10.509882,
-        "iqrMs": 0.6029510000000009,
-        "samples": 764,
+        "p50": 10.502673,
+        "p90": 11.109623000000001,
+        "iqrMs": 1.5142690000000005,
+        "samples": 901,
         "stateGuard": "steady"
       },
       "gpuFloor": {
-        "p10": 9.300273
+        "p10": 7.870170999999999
       },
       "gpuClasses": null,
       "compute": {
-        "p50": 1.201732,
-        "p90": 1.433853,
-        "iqrMs": 0.20362100000000005,
-        "samples": 764,
+        "p50": 1.387646,
+        "p90": 1.524476,
+        "iqrMs": 0.15941300000000003,
+        "samples": 901,
         "stateGuard": "steady"
       },
       "computeFloor": {
-        "p10": 1.085067
+        "p10": 1.109941
       },
-      "sourceRun": ".perf-runs/2026-09-29/pr650-tier2-b.json"
+      "sourceRun": ".perf-runs/2026-11-02/8cg-49-38-m6-pin-2.json"
     }
   ],
   "accepted": {}
