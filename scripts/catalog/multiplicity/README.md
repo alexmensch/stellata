@@ -13,8 +13,8 @@ see `../companions/README.md`.
 scripts/catalog/multiplicity/
   hip-ccdm-source.ts              HIP_CCDM, the I/239 CCDM slice declared
                                   (../../util/sources/).
-  visual-doubles.ts (+ test)      inferBinaries (geometric pair cells) +
-                                  the CCDM cross-match and the tiered
+  visual-doubles.ts (+ test)      The CCDM cross-match: parseHipCcdm,
+                                  KNOWN_VISUAL_DOUBLES and the tiered
                                   optical-double suppression cascade.
   system-coherence.ts (+ test)    Post-pass forcing one distance per
                                   physical system, so a pair never
@@ -56,7 +56,8 @@ surface consuming it is tracked separately (stellata-lo5.10).
 
 ## Geometric binary inference
 
-`inferBinaries` in `build-catalog.ts` runs after the record sort so record
+`inferBinaries` in `../record/catalog-pure.ts`, called from
+`build-catalog.ts`, runs after the record sort so record
 indices are final. Spatial grid keyed at `BINARY_MAX_SEP_PC = 0.005 pc`
 (≈1030 AU) using a three-axis hash; for each star, check own cell + 26
 neighbours and record the nearest neighbour within the threshold.
@@ -92,7 +93,7 @@ changes. The geometric pass reaches only what fits its `0.005 pc` cell;
 the CCDM pass pulls in the wider systems where the primary has a HIP —
 Sirius, Mizar, Castor, α Cen, Polaris, Albireo, γ And, ε Lyr, etc.
 
-`parseHipCcdm` in `build-catalog.ts` reads `data/hipparcos/hip_ccdm.tsv`, a
+`parseHipCcdm` in `visual-doubles.ts` reads `data/hipparcos/hip_ccdm.tsv`, a
 three-column slice of the **Hipparcos main catalogue** (VizieR
 `I/239/hip_main`). The `CCDM` column on each Hipparcos row carries
 the cross-reference into the Catalog of the Components of Double
@@ -123,7 +124,7 @@ A handful of canonical visual doubles fall through the gate
 because Hipparcos modelled them as single stars (`Ncomp=1`,
 blank `MultFlag`) — typically wide pairs where the secondary is
 faint or angularly outside what Hipparcos resolved.
-**`KNOWN_VISUAL_DOUBLES`** in `build-catalog.ts` recovers them
+**`KNOWN_VISUAL_DOUBLES`** in `visual-doubles.ts` recovers them
 unconditionally. The structure is a list of `{components, reason}`
 systems — each entry is one physical system whose `components`
 array is the HIPs known to belong to it (one or more) plus a

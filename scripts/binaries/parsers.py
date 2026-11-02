@@ -1,7 +1,5 @@
 #!/usr/bin/env python3
-"""Stage 1 parsers + Row dataclasses for the reference catalogs.
-Per-row dirty data drops just that row; a missing required column is fatal.
-"""
+"""Stage 1 parsers + Row dataclasses for the reference catalogs."""
 
 from __future__ import annotations
 

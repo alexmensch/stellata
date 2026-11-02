@@ -27,7 +27,7 @@ export const SOLAR_BV_FALLBACK = 0.65;
  *  names the Tycho-2 entry, which for a close pair is the system. Where both
  *  reach a row the component-naming one wins, so a system blend never displaces
  *  a component value. This deliberately no longer mirrors the request order
- *  `spine_request_keys` composes with — see `../spectral/README.md#the-ladder-is-ordered-by-what-an-identifier-names`
+ *  `WIDENING_LADDER` (`scripts/refresh/simbad/specs.py`) sets — see `../spectral/README.md#the-ladder-is-ordered-by-what-an-identifier-names`
  * for why the pull's order is the
  *  load-bearing one. */
 export const SIMBAD_NAMESPACE_VALUES = ['source_id', 'hip', 'gj', 'tyc'] as const;
