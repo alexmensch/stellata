@@ -153,6 +153,6 @@ brightness**, read through `extendedThresholdSbFor` — the sibling of
 that one is: an extended source is detected as a contrast against the sky
 it sits in, so the background level *is* where its threshold sits
 ([Extended sources](emission/README.md#extended-sources--two-solid-angles-one-write-tail)). Its only consumer is
-`summationSolidAngleFor`, which pairs it with `m_lim`; the viewer's
-`ExposureController` writes the result to `uOmegaSummationArcsec2`. It has yet to land as an additive floor on `L`, which is
+`summationSolidAngleFor`, which pairs it with `m_lim`. It has yet to land
+as an additive floor on `L`, which is
 the other half of the axis. `passband` still has no consumer.

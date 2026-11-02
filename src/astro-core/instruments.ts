@@ -72,9 +72,9 @@ export function extendedThresholdSbFor(name: InstrumentName): number {
   return INSTRUMENTS[name].skyBackgroundMagArcsec2;
 }
 
-/** `uOmegaSummationArcsec2` for an instrument — the summation area implied
- *  by pairing its extended-source threshold (`extendedThresholdSbFor`) with
- *  its point-source limit. Static in the exposure state: adaptation and the
+/** The summation area implied by pairing an instrument's extended-source
+ *  threshold (`extendedThresholdSbFor`) with its point-source limit. Static
+ *  in the exposure state: adaptation and the
  *  trim move both thresholds together, so their offset is the instrument's
  *  alone. Why that threshold is the sky background:
  *  `/docs/science-hdr-pipeline.md#1-the-unit--threshold-anchored-display-luminance` (*Extended sources*). */
@@ -85,6 +85,4 @@ export function summationSolidAngleFor(name: InstrumentName): number {
   );
 }
 
-/** Seed for `uOmegaSummationArcsec2`; `ExposureController` owns every
- *  later write, as it does for `uExposure`. */
 export const DEFAULT_SUMMATION_ARCSEC2 = summationSolidAngleFor(DEFAULT_INSTRUMENT);
