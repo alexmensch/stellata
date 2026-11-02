@@ -138,7 +138,7 @@ export function parseSimbadValuesTsv(text: string, from: Declared & RowKeyed<num
   return index;
 }
 
-/** The record's SIMBAD row over the namespaces `resolve_spine_keys` composed
+/** The record's SIMBAD row over the namespaces `membership_request_keys` composed
  *  the request from, source_id → HIP → TYC → GJ. A widened row is readable
  *  not because the two ladders share an order but because its emitted row
  *  carries the asking designation in the namespace that bound it, so this
