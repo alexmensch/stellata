@@ -71,7 +71,6 @@ describe('the cloud absorption surface', () => {
     const spec = absorptionSpec(null);
     const u = materials().absorption(spec).uniforms;
     expect(u.uUEnv.value).toBe(spec.uEnv);
-    expect(u.uEnvFadeStart.value).toBe(spec.envelopeFadeStart);
     expect(u.uN0Cal.value).toBe(spec.n0Cal);
     expect(u.uRflat.value).toBe(spec.rflatPc);
     expect(u.uP.value).toBe(spec.p);

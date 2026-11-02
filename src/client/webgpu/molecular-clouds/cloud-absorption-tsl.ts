@@ -25,6 +25,7 @@ export function buildCloudAbsorptionMaterial(
   u: SharedUniformNodes,
   c: CloudAbsorptionNodes,
   field: CloudFieldNodes | null,
+  envelopeFadeStart: number,
 ): MrtEmitterMaterial {
   const material = new NodeMaterial();
   material.name = field === null ? 'cloud-absorption-tsl' : 'cloud-absorption-field-tsl';
@@ -95,7 +96,7 @@ export function buildCloudAbsorptionMaterial(
         } else {
           const uu = length(pu).toVar();
           const env = float(1.0).sub(
-            smoothstep(c.uUEnv.mul(c.uEnvFadeStart), c.uUEnv, uu)).toVar();
+            smoothstep(c.uUEnv.mul(envelopeFadeStart), c.uUEnv, uu)).toVar();
           // A branch rather than `Continue` — README.md#three-wgsl-rules-this-march-lives-under.
           If(env.greaterThan(0.0), () => {
             const q = uu.mul(c.uAxes.z).div(c.uRflat).toVar();
