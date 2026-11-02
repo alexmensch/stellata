@@ -32,7 +32,7 @@ Sources under `data/molecular-clouds/`:
   (joined on the raw cloud name).
 
 Idempotent — exits early if `public/clouds.json` is newer than the
-scripts and source files. Run via `pnpm run build:clouds`.
+scripts, the source files and `data/schema/constants.json`. Run via `pnpm run build:clouds`.
 
 ## Output schema
 

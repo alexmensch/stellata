@@ -21,6 +21,8 @@ baker; this file holds what both sides need *before* any artifact exists.
 3. Read it in Python from `CONSTANTS`. A Python entry point puts the repo
    root on `sys.path` so `scripts.util` imports.
 4. Delete the old copies on both sides in the same commit.
+5. A Python builder with an up-to-date gate lists `CONSTANTS_PATH` among
+   the gate's inputs, so editing a value it reads rebuilds its output.
 
 ## Blocks
 

@@ -13,7 +13,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 import cloud_model  # noqa: E402
-from scripts.util.baker_constants import CONSTANTS  # noqa: E402
+from scripts.util.baker_constants import CONSTANTS, CONSTANTS_PATH  # noqa: E402
 from cloud_model import (  # noqa: E402
     AV_PER_NH_PC,
     AV_TARGET_BY_CLASS,
@@ -323,7 +323,7 @@ def is_up_to_date() -> bool:
         return False
     out_mtime = OUT.stat().st_mtime
     sources = (SRC_2020, SRC_2021, cloud_model.SRC_2021_T2, SRC_2021_T3,
-               Path(__file__), Path(cloud_model.__file__))
+               Path(__file__), Path(cloud_model.__file__), CONSTANTS_PATH)
     for src in sources:
         if src.stat().st_mtime > out_mtime:
             return False

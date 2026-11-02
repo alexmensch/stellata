@@ -20,7 +20,7 @@ from texture_calibration import (
     sphere_mean_linear,
 )
 from texture_ladder import rungs_for  # noqa: E402
-from scripts.util.baker_constants import CONSTANTS  # noqa: E402
+from scripts.util.baker_constants import CONSTANTS, CONSTANTS_PATH  # noqa: E402
 
 # Frozen, license-vetted sources — the Mars mosaic alone is 21k x 10k.
 Image.MAX_IMAGE_PIXELS = None
@@ -249,7 +249,7 @@ def build_normal_map(name: str, relief: dict) -> None:
         f"{name}'s colour map is mirrored at build but its DEM is not — "
         "the two would disagree about which way is east"
     )
-    if up_to_date(out_path, src_path, RELIEF_SCRIPT):
+    if up_to_date(out_path, src_path, RELIEF_SCRIPT, CONSTANTS_PATH):
         print(f"  {name}-normal: up to date")
         return
     rgb, stats = surface_normals(read_frozen_dem(src_path), spec)
@@ -270,7 +270,7 @@ def build_horizon_map(name: str, relief: dict) -> None:
     spec = DEM_BODIES[name]
     src_path = SRC / spec["src"]
     outs = [RELIEF / f"{name}-horizon-{half}.webp" for half in "ab"]
-    if all(up_to_date(p, src_path, HORIZON_SCRIPT, RELIEF_SCRIPT) for p in outs):
+    if all(up_to_date(p, src_path, HORIZON_SCRIPT, RELIEF_SCRIPT, CONSTANTS_PATH) for p in outs):
         print(f"  {name}-horizon: up to date")
         return
     first, second, stats = horizon_maps(read_frozen_dem(src_path), spec)
@@ -289,7 +289,9 @@ def build_sky_view(name: str, relief: dict) -> None:
     spec = DEM_BODIES[name]
     src_path = SRC / spec["src"]
     out_path = RELIEF / f"{name}-skyview.webp"
-    if up_to_date(out_path, src_path, SKY_VIEW_SCRIPT, HORIZON_SCRIPT, RELIEF_SCRIPT):
+    if up_to_date(
+        out_path, src_path, SKY_VIEW_SCRIPT, HORIZON_SCRIPT, RELIEF_SCRIPT, CONSTANTS_PATH
+    ):
         print(f"  {name}-skyview: up to date")
         return
     raw, stats = sky_view_factor(read_frozen_dem(src_path), spec)
@@ -367,7 +369,7 @@ def parse_ring_table(path: Path) -> list[tuple[float, float, float]]:
 def build_ring_table(body: str, spec: dict) -> None:
     src_path = SRC / spec["src"]
     out_path = OUT / f"{body}-rings.png"
-    if up_to_date(out_path, src_path):
+    if up_to_date(out_path, src_path, CONSTANTS_PATH):
         print(f"  {body}-rings: up to date")
         return
     rings = parse_ring_table(src_path)

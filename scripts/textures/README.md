@@ -34,8 +34,9 @@ rather than shipping it.
   `<body>-horizon-{a,b}.webp` relief maps for the four bodies with a
   usable global DEM — Earth at double the rest). Manual, infrequent
   (`pnpm run build:textures`); needs Pillow + NumPy. Idempotent via
-  mtime, per artifact, against its own sources and the helper module
-  it derives from — only this script gates everything, so editing the
+  mtime, per artifact, against its own sources, the helper module
+  it derives from and, for the relief maps and ring strips,
+  `data/schema/constants.json` — only this script gates everything, so editing the
   relief leg does not rewrite the colour maps or the ring strips.
   Uranus is deliberately absent from
   `BODIES` (2f6.6 design record: texture-less by design — its ring
