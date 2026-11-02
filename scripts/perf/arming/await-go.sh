@@ -21,7 +21,7 @@ exclusions() {
     printf '%s\0%s\0' --pid "$p"
     p="$(ps -o ppid= -p "$p" 2>/dev/null | tr -d ' ')" || break
   done
-  bd list --has-metadata-key coordinator --json 2>/dev/null \
+  bd list --has-metadata-key coordinator --json --limit 0 2>/dev/null \
     | jq -r '.[].metadata.coordinator // empty' 2>/dev/null \
     | while IFS= read -r name; do printf '%s\0%s\0' --name "$name"; done
 }
