@@ -134,13 +134,15 @@ RUN_PYTHON_STEP = REPO_ROOT / "scripts" / "pipeline" / "run_python_step.py"
 FIXTURE_STEP = """
 import os, sys
 from pathlib import Path
-from scripts.util.build_stamp import probe
+from scripts.util.build_stamp import probe, report_service
 import helper
 here = Path(__file__).parent
 (here / "input.tsv").read_text()
 os.listdir(here / "folder")
 probe(here / "maybe.txt")
 probe(here / "present.txt")
+for name in ("ESA-sync", "ARI-sync", "ESA-sync"):
+    report_service(name)
 tmp = here / "out.bin.tmp"
 tmp.write_text("built")
 os.replace(tmp, here / "out.bin")
@@ -205,6 +207,10 @@ class RecorderTests(unittest.TestCase):
             str(self.root / "maybe.txt"): False,
             str(self.root / "present.txt"): True,
         })
+
+    def test_records_each_answering_service_once_in_first_answer_order(self) -> None:
+        _, record = self.run_step()
+        self.assertEqual(record["services"], ["ESA-sync", "ARI-sync"])
 
     def test_a_temp_then_rename_write_counts_as_its_target_and_a_deleted_scratch_file_not_at_all(self) -> None:
         _, record = self.run_step()

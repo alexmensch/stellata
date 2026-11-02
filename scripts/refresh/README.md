@@ -283,7 +283,9 @@ it the `astroquery` dependency.
 
 A `TapClient` moves whichever backend answered to the front, so a mirror
 that is down costs its retry schedule (about 5 min of connect timeouts)
-once per run, not once per batch.
+once per run, not once per batch. It reports each answering backend through
+`build_stamp.report_service`, and `client.services` is its declared service
+list, the one a pull's `--describe` states.
 
 `TapClient` takes `backends=` as a required argument — there is no
 default list, because which service can serve a query is a property of

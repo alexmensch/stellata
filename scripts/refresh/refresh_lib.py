@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import csv
 import hashlib
+import json
 import os
 import random
 import re
@@ -15,8 +16,10 @@ from pathlib import Path
 from typing import Any, Callable, Iterable, Iterator, Mapping, Sequence, TypeVar
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "util"))
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from paths import REPO_ROOT  # noqa: E402
+from scripts.util.build_stamp import report_service  # noqa: E402
 
 T = TypeVar("T")
 R = TypeVar("R")
@@ -48,6 +51,40 @@ def is_up_to_date(output: Path, sources: Iterable[Path]) -> bool:
         if not src.exists() or src.stat().st_mtime > out_mtime:
             return False
     return True
+
+
+# ─── Describe ─────────────────────────────────────────────────────────
+
+
+def description(
+    query: str,
+    services: Sequence[str],
+    *,
+    release: str | None = None,
+    request: Iterable[str] | None = None,
+    request_from: Iterable[Path] = (),
+) -> dict[str, Any]:
+    """What a pull prints under --describe: freshness.ts parses this shape.
+    `query` excludes batch values; `request` is the list a pull derives from
+    the `request_from` files, which then count only through it."""
+    described: dict[str, Any] = {"query": query, "services": list(services)}
+    if release is not None:
+        described["release"] = release
+    if request is not None:
+        described["request"] = list(request)
+    from_paths = [Path(p).resolve().relative_to(REPO_ROOT).as_posix() for p in request_from]
+    if from_paths:
+        described["requestFrom"] = from_paths
+    return described
+
+
+def pull_main(run: Callable[[], object], describe: Callable[[], Mapping[str, Any]]) -> None:
+    """A pull's entry point: `--describe` prints its description with no
+    network call and no import beyond the standard library; otherwise it pulls."""
+    if sys.argv[1:] == ["--describe"]:
+        print(json.dumps(describe()))
+        return
+    sys.exit(run())
 
 
 # ─── AT-HYG ingest conventions ────────────────────────────────────────
@@ -601,6 +638,11 @@ class TapClient:
             raise ValueError("TapClient requires at least one backend")
         self.retry_kwargs = dict(retry_kwargs or {})
 
+    @property
+    def services(self) -> list[str]:
+        """The backends' names in the order tried: a pull's declared service list."""
+        return [b.name for b in self.backends]
+
     def run(self, query: str) -> Any:
         last_transient: BaseException | None = None
         for backend in list(self.backends):
@@ -613,6 +655,7 @@ class TapClient:
                 continue
             self.backends.remove(backend)
             self.backends.insert(0, backend)
+            report_service(backend.name)
             return result
         assert last_transient is not None  # at least one backend, all transient
         raise last_transient

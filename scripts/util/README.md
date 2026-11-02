@@ -88,7 +88,10 @@ same thing — single-use helpers stay with their consumer.
   deleted — plus each loaded module, nothing under `.venv` or
   `__pycache__` included, into a JSON record the runner turns
   into the step's stamp. An existence check opens nothing, so a step probes
-  through `probe(path)`, which records the answer.
+  through `probe(path)`, which records the answer. `report_service(name)`
+  records which network service answered, once each in first-answer order
+  (`refresh_lib.TapClient` calls it); `record.ts` copies the list into a
+  pull's committed record as `answeredBy`.
 - `import-closure.ts` / `import-closure-pure.ts` (+ test) — a TypeScript
   build's code inputs. `entryClosure(entries)` is every module the given
   entry files import, read from an esbuild metafile (`entryMetafile`, which
