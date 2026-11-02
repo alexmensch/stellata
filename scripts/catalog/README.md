@@ -153,7 +153,8 @@ scripts/catalog/
                                   time (data/tycho2/README.md). Feeds the
                                   direction, PM-rescue and V cascades.
   gliese-source.ts                GLIESE, V/70A's declaration.
-  gliese-parse-pure.ts (+ test)        data/gliese/ keyed on the bare Gliese
+  gliese-parse-pure.ts            data/gliese/ keyed on the bare Gliese
+    (+ test)
                                   number + component, so the catalogue's four
                                   name prefixes and a record's `gl` cell meet
                                   (data/gliese/README.md). Bottom tier of the

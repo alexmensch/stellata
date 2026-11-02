@@ -27,7 +27,8 @@ scripts/catalog/distance/parallax/
                                 (SIMBAD_SOURCED_DISTANCES). Written by
                                 build-catalog.ts, read by
                                 ../../validate/validate-simbad-sample.ts.
-  parked-ledger-pure.ts (+ test)     The /docs/catalog-driver.md#61-record-parity dropped list's closed
+  parked-ledger-pure.ts         The /docs/catalog-driver.md#61-record-parity dropped list's closed
+    (+ test)
                                 reason enum and the identifier key the parity
                                 gate matches it on.
   parked-ledger-tsv.ts          Its codec (PARKED_LEDGER), apart so a module
