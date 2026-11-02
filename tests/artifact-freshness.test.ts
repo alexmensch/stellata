@@ -16,8 +16,9 @@ import { describe, it, expect } from 'vitest';
 
 import { REPO_ROOT } from '../scripts/util/paths';
 import { isReadable } from '../scripts/util/sources/source';
-import { changedSince, readStamp, stampPath } from '../scripts/util/build-stamp';
-import { DEFAULT_CATALOG_MANIFEST } from '../scripts/catalog/catalog-lookup';
+import { changedSince, readStamp } from '../scripts/util/build-stamp';
+import { stampPath } from '../scripts/util/stamp-path-pure';
+import { DEFAULT_CATALOG_MANIFEST } from '../scripts/catalog/catalog-paths-pure';
 import { MULTIPLES_TSV } from '../scripts/binaries/multiples-tsv';
 
 const BINARIES_BIN = resolve(REPO_ROOT, 'public/binaries.bin');

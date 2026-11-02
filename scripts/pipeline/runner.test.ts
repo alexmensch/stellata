@@ -362,9 +362,9 @@ describe('loadTable', () => {
     const step = tsStep('a', 'a.out');
     write('steps/a-outputs.ts', `
 import { declareOutputs } from ${JSON.stringify(EMIT_ARTIFACTS)};
-import { STAMP_DIR } from ${JSON.stringify(join(REPO_ROOT, 'scripts/util/build-stamp'))};
+import { hashFile } from ${JSON.stringify(join(REPO_ROOT, 'scripts/util/build-stamp'))};
 writeSideEffect();
-export const OUT = declareOutputs({ out: STAMP_DIR });
+export const OUT = declareOutputs({ out: hashFile.name });
 `);
     const loaded = await load([step]);
     expect(loaded).toEqual({
@@ -375,11 +375,11 @@ export const OUT = declareOutputs({ out: STAMP_DIR });
 
   it('rejects an outputs module that reaches an impure module through a pure one', async () => {
     const step = tsStep('a', 'a.out');
-    write('steps/paths-pure.ts', `export { STAMP_DIR } from ${JSON.stringify(join(REPO_ROOT, 'scripts/util/build-stamp'))};\n`);
+    write('steps/paths-pure.ts', `export { hashFile } from ${JSON.stringify(join(REPO_ROOT, 'scripts/util/build-stamp'))};\n`);
     write('steps/a-outputs.ts', `
 import { declareOutputs } from ${JSON.stringify(EMIT_ARTIFACTS)};
-import { STAMP_DIR } from './paths-pure';
-export const OUT = declareOutputs({ out: STAMP_DIR });
+import { hashFile } from './paths-pure';
+export const OUT = declareOutputs({ out: hashFile.name });
 `);
     expect(await load([step])).toEqual({
       kind: 'rejected',

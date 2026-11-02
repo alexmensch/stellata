@@ -50,7 +50,7 @@ scripts/catalog/classic-ids/
                                   curated IV/27A corrections and their
                                   application. The gate's
                                   HIP → printed-V slice is
-                                  ../photometry/hip-photometry-parse.ts, shared
+                                  ../photometry/hip-photometry-parse-pure.ts, shared
                                   with the V cascade's bright tier. CNS5's row
                                   also carries the astrometry half of the
                                   slice, which `cns5AstrometryByGj` keys on the

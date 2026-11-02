@@ -7,13 +7,8 @@ import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parse } from 'csv-parse/sync';
 import { describe, it, beforeAll, expect } from 'vitest';
-import {
-  DEFAULT_CATALOG_MANIFEST,
-  type Catalog,
-  type CatalogRecord,
-  loadCatalog,
-  lookupByRef,
-} from '../catalog-lookup';
+import { type Catalog, type CatalogRecord, loadCatalog, lookupByRef } from '../catalog-lookup';
+import { DEFAULT_CATALOG_MANIFEST } from '../catalog-paths-pure';
 import { parseRef, type RecordRef } from '../parse/corpus-tsv';
 import { unitVectorFromRaDec, type UnitVector } from '../../../src/client/util/equatorial-basis';
 import {

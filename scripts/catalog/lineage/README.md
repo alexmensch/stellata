@@ -52,9 +52,11 @@ scripts/catalog/lineage/
                                  call.
   lineage-invariant-pure.ts      LineageInvariant and its check (#invariants).
     (+ test)
-  lineage-io.ts                  The on-disk layout (build/lineage/,
-                                 lineage.previous/, lineage-diff/), the
-                                 baseline members and a stage's emission,
+  lineage-layout-pure.ts         The on-disk layout (build/lineage/,
+                                 lineage.previous/, lineage-diff/), each
+                                 stage's file names, and their output
+                                 declarations: what an outputs module imports.
+  lineage-io.ts                  The baseline members and a stage's emission,
                                  gzip, and the header with its input hash.
   lineage-core-pure.test.ts      Order, writer refusal, diff, baseline verdict.
   lineage-rotation.test.ts       Rotation over a scratch build/: a failed or

@@ -80,7 +80,7 @@ import {
   PROMOTION_CODES, PROMOTION_LINEAGE, PROMOTION_LINEAGE_BUDGET, promotionLineage,
 } from './companions/promotion-lineage-pure';
 import { identityText } from './lineage/identity-pure';
-import { LINEAGE_LAYOUT } from './lineage/lineage-io';
+import { LINEAGE_LAYOUT } from './lineage/lineage-layout-pure';
 import {
   lineageLineCode, stageLineageLine, stageLineageText, type LineageLine,
 } from './lineage/lineage-row-pure';
@@ -102,7 +102,7 @@ import {
   GALACTIC_ESCAPE_VELOCITY_KM_S,
 } from './distance/direction-cascade';
 import { RV_ERROR_BANDS } from './distance/radial-velocity/radial-velocity';
-import { emptyTallyPartition } from '../util/tally';
+import { emptyTallyPartition } from '../util/tally-pure';
 import {
   applyDesignationConstellations,
   loadDesignationConstellationInputs,
@@ -116,7 +116,7 @@ import { readStars, type ReadStarsOptions, type Star } from './parse/stars-parse
 import {
   PARKED_COUNT_KEY,
   PARKED_REASONS,
-} from './distance/parallax/parked-ledger';
+} from './distance/parallax/parked-ledger-pure';
 import { PARKED_LEDGER } from './distance/parallax/parked-ledger-tsv';
 import {
   PLACEMENT_CODES, PLACEMENT_INVARIANTS, PLACEMENT_LINEAGE, PLACEMENT_LINEAGE_BUDGET, parkedLedgerView, placementLineageLines,
@@ -141,7 +141,7 @@ import {
 import {
   DEFAULT_CATALOG_MANIFEST as OUT_MANIFEST, DEFAULT_CONSTELLATIONS_JSON as OUT_CON,
   DEFAULT_ROW_INDEX_MAP, DEFAULT_SEARCH_INDEX as OUT_SEARCH,
-} from './catalog-lookup';
+} from './catalog-paths-pure';
 import {
   CATALOG_CHUNK_DIR, CATALOG_OUTPUTS, CATALOG_STAMP, OUT_BOUNDARIES,
 } from './catalog-outputs';

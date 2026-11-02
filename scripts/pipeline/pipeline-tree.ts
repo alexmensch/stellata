@@ -2,7 +2,7 @@
 
 import { relative, resolve } from 'node:path';
 
-import { stampPath, stepFileName } from '../util/build-stamp';
+import { stampPath, stepFileName } from '../util/stamp-path-pure';
 
 export interface PipelineTree {
   readonly root: string;

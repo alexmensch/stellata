@@ -12,7 +12,7 @@ import { EVENTS } from './events-tsv';
 import { LEDGERS } from './ledger-tsv';
 import { CATALOG_PARTITION, registryKeys } from './registry-partitions-pure';
 import { allocateSibling, emitSibling } from './sibling-allocation';
-import { SIBLING_ARTIFACTS } from './sibling-artifacts';
+import { SIBLING_ARTIFACTS } from './sibling-artifacts-pure';
 
 const spec = SIBLING_ARTIFACTS['local-group'];
 const keys = registryKeys(spec.ns);

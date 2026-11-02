@@ -8,7 +8,7 @@ import {
   type BindingEvidence,
   type GateReason,
 } from '../membership/binding/binding-gate-pure';
-import { emptyTallyPartition } from '../../util/tally';
+import { emptyTallyPartition } from '../../util/tally-pure';
 import {
   PRINTED_V_TIERS,
   printedV,

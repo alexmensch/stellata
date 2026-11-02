@@ -1,7 +1,7 @@
 // Placement as a lineage stage: its reason codes, the one serialiser over each record's Placement, and parked-ledger.tsv as a view. See README.md#placement-lineage.
 
 import { lineageInvariant, NO_EXCEPTIONS, type LineageInvariant } from '../lineage/lineage-invariant-pure';
-import type { StageLineageSpec } from '../lineage/lineage-io';
+import type { StageLineageSpec } from '../lineage/lineage-layout-pure';
 import {
   decodeLineageLine, lineageLineCode, paramsOf, paramsText, stageLineageLine,
   type LineageLine, type LineageParams, type LineageRow,
@@ -13,7 +13,7 @@ import type { ParallaxResolution, ParallaxTier } from './parallax/parallax-casca
 import {
   PARKED_REASONS, parkedIdentifiersOf, parkedLedgerCells,
   type ParkedIdentifiers, type ParkedLedgerCells, type ParkedLedgerEntry, type ParkedReason, type ParkedRecord,
-} from './parallax/parked-ledger';
+} from './parallax/parked-ledger-pure';
 import type { PmRescueResolution, PmRescueVia } from './pm-rescue/pm-rescue';
 import type { RadialVelocityResolution, RvVia } from './radial-velocity/radial-velocity';
 import type { LmcKinematicVerdict } from './refinement/distance-overrides-pure';

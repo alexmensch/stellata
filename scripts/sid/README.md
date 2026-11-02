@@ -175,7 +175,7 @@ sibling-stamp-outputs.ts  SID_STAMP_OUTPUTS: clouds.json, which sid:stamp
                           rewrites in place, plus the cloud partition's
                           registry files, as its emitArtifacts declaration
                           (../util/README.md). Side-effect free.
-sibling-artifacts.ts      SIBLING_ARTIFACTS spec (file / arrayKey / ns /
+sibling-artifacts-pure.ts      SIBLING_ARTIFACTS spec (file / arrayKey / ns /
                           kind / mint code per sibling) +
                           siblingArtifactObjects, so the namespace→kind
                           mapping is defined once; SIBLING_NAMESPACES with

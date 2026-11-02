@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 
-import { emptyGlieseIndex, lookupGliese, parseGlieseTsv } from './gliese-parse';
+import { emptyGlieseIndex, lookupGliese, parseGlieseTsv } from './gliese-parse-pure';
 import { GLIESE } from './gliese-source';
 
 const HEADER = ['name', 'comp', 'vmag', 'n_vmag', 'r_vmag', 'bv', 'n_bv',

@@ -3,7 +3,7 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
-import { DEFAULT_ROW_INDEX_MAP } from '../../catalog/catalog-lookup';
+import { DEFAULT_ROW_INDEX_MAP } from '../../catalog/catalog-paths-pure';
 import { MULTIPLES_TSV } from '../multiples-tsv';
 import { readArtifact } from '../../util/sources/source';
 import { REPO_ROOT } from '../../util/paths';

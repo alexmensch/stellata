@@ -9,9 +9,6 @@ import { relative, resolve } from 'node:path';
 import { REPO_ROOT } from './paths';
 import { discardStaged, landStaged, writeStaged } from './staged-write';
 
-const STAMP_FOLDER = 'build/stamps';
-export const STAMP_DIR = resolve(REPO_ROOT, STAMP_FOLDER);
-
 /** Repo-relative path → sha1 of its content, or null when the file is absent. */
 export type FileHashes = Readonly<Record<string, string | null>>;
 
@@ -27,13 +24,6 @@ export interface Stamp {
   readonly inputs: FileHashes;
   readonly outputs: FileHashes;
   readonly recorded?: RecordedReads;
-}
-
-/** A step's name as a file name, for its stamp and its lock. */
-export const stepFileName = (name: string): string => name.replaceAll(':', '-');
-
-export function stampPath(name: string, root: string = REPO_ROOT): string {
-  return resolve(root, STAMP_FOLDER, `${stepFileName(name)}.json`);
 }
 
 const HASH_CHUNK_BYTES = 1 << 22;

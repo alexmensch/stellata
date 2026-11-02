@@ -1,6 +1,6 @@
 // The SID registry's partitions: one ledger / events / head file set per allocating step, the namespaces each owns, and the keys its files emit under. See README.md#registry-partitions.
 
-import { isSiblingNamespace, SIBLING_NAMESPACES, siblingOf, type SiblingNamespace } from './sibling-artifacts';
+import { isSiblingNamespace, SIBLING_NAMESPACES, siblingOf, type SiblingNamespace } from './sibling-artifacts-pure';
 
 export const CATALOG_PARTITION = 'catalog';
 

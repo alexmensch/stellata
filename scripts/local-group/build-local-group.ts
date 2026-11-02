@@ -7,7 +7,7 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { allocateSibling, emitSibling } from '../sid/sibling-allocation';
-import { SIBLING_ARTIFACTS } from '../sid/sibling-artifacts';
+import { SIBLING_ARTIFACTS } from '../sid/sibling-artifacts-pure';
 import { runStep, sweepStaged } from '../util/emit-artifacts';
 import { stepInputPaths } from '../util/step-inputs';
 import { LOCAL_GROUP_OUTPUTS } from './local-group-outputs';

@@ -3,7 +3,8 @@
 
 import { describe, expect, it } from 'vitest';
 import { existsSync } from 'node:fs';
-import { DEFAULT_CATALOG_MANIFEST, loadCatalog } from '../scripts/catalog/catalog-lookup';
+import { loadCatalog } from '../scripts/catalog/catalog-lookup';
+import { DEFAULT_CATALOG_MANIFEST } from '../scripts/catalog/catalog-paths-pure';
 import {
   CADENCE_CAP_SIM_S,
   pulsationCadenceBudgetS,

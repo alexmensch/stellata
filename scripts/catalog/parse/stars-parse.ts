@@ -57,7 +57,7 @@ import {
   type ParkedIdentifiers,
   type ParkedReason,
   type ParkedRecord,
-} from '../distance/parallax/parked-ledger';
+} from '../distance/parallax/parked-ledger-pure';
 import {
   parkedRecord,
   type BailerJonesStep,
@@ -102,7 +102,7 @@ import {
   emptyGlieseIndex,
   lookupGliese,
   type GlieseIndex,
-} from '../gliese-parse';
+} from '../gliese-parse-pure';
 import {
   ciIsObserved,
   resolveColourIndex,
@@ -110,8 +110,8 @@ import {
   type CiVia,
 } from '../photometry/colour-index-pure';
 import type { GspcColour } from '../photometry/gspc-parse';
-import { printedByHip } from '../photometry/hip-photometry-parse';
-import { emptyTallyPartition } from '../../util/tally';
+import { printedByHip } from '../photometry/hip-photometry-parse-pure';
+import { emptyTallyPartition } from '../../util/tally-pure';
 import type { ManifestRecord } from '../membership/membership-manifest-tsv';
 import { type ConstellationAssignment } from './constellations/constellations';
 import {

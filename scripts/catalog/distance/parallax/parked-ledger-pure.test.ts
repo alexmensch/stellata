@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 
 import { describeCommittedRoundTrip } from '../../../util/tsv/committed-round-trip';
 
-import { PARKED_REASONS, parkedRecordKey, type ParkedRecord } from './parked-ledger';
+import { PARKED_REASONS, parkedRecordKey, type ParkedRecord } from './parked-ledger-pure';
 import { PARKED_LEDGER, parseParkedRecordsTsv } from './parked-ledger-tsv';
 
 const SIGMA_ORI: ParkedRecord = {

@@ -2,17 +2,17 @@
 
 import { dirname, resolve } from 'node:path';
 
-import { stampPath } from '../util/build-stamp';
 import { declareOutputs } from '../util/emit-artifacts';
 import { REPO_ROOT } from '../util/paths';
+import { stampPath } from '../util/stamp-path-pure';
 import {
   DEFAULT_CATALOG_MANIFEST, DEFAULT_CONSTELLATIONS_JSON, DEFAULT_ROW_INDEX_MAP, DEFAULT_SEARCH_INDEX,
-} from './catalog-lookup';
+} from './catalog-paths-pure';
 import { PROMOTION_LINEAGE } from './companions/promotion-lineage-pure';
 import { PARKED_LEDGER } from './distance/parallax/parked-ledger-tsv';
-import { PLACEMENT_LINEAGE } from './distance/placement-lineage-pure';
-import { LINEAGE_LAYOUT, stageFamilies, stageOutputFiles } from './lineage/lineage-io';
 import { SIMBAD_SOURCED_DISTANCES_FILE } from './distance/parallax/simbad-sourced-ledger-tsv';
+import { PLACEMENT_LINEAGE } from './distance/placement-lineage-pure';
+import { LINEAGE_LAYOUT, stageFamilies, stageOutputFiles } from './lineage/lineage-layout-pure';
 import { CATALOG_CHUNK_FILENAME } from './record/catalog-pure';
 import { ALLOCATION_LINEAGE } from '../sid/allocation-lineage-pure';
 import { registryFiles } from '../sid/registry-outputs';

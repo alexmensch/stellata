@@ -9,7 +9,7 @@ import type { CitedParallax, MeasuredParallax } from '../../cited-parallax';
 import type { CitedCascadeResult, CitedRefusal } from '../../cascade-result';
 import type { AnySourceRowRef } from '../../../util/sources/row-ref-pure';
 import type { SiblingParallax } from './pair-member-parallax';
-import type { GlieseRow } from '../../gliese-parse';
+import type { GlieseRow } from '../../gliese-parse-pure';
 
 // The two override layers sit above the cascade rather than inside it — each
 // replaces the inverted distance wholesale, so they are outcomes of the routing

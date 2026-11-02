@@ -16,7 +16,7 @@ import {
   classifyFromSimbad,
   resolveSpectDisplay,
 } from '../spectral/spectral-classify';
-import type { ParkedReason } from '../distance/parallax/parked-ledger';
+import type { ParkedReason } from '../distance/parallax/parked-ledger-pure';
 import {
   absmagFromSpectral,
   physicalRadius,
@@ -31,7 +31,7 @@ import {
 import { MULTIPLES_TSV, type MultiplesRecord, type PhotometryVia } from '../../binaries/multiples-tsv';
 import { readArtifact } from '../../util/sources/source';
 import { sourceRowRef, sourceRowRefText } from '../../util/sources/row-ref-pure';
-import { emptyTallyPartition } from '../../util/tally';
+import { emptyTallyPartition } from '../../util/tally-pure';
 import { ARCSEC_TO_RAD } from '../../../src/client/util/astronomy-constants';
 import { equatorialTangentBasisAt } from '../../../src/client/util/equatorial-basis';
 import type { ConstellationAssignment } from '../parse/constellations/constellations';

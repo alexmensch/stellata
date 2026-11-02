@@ -73,8 +73,9 @@ same thing — single-use helpers stay with their consumer.
   output tuple and stamp, repo-relative — which `../worktree-seed.test.ts`
   reads. Both pinned by co-located tests
   (`python3 scripts/util/build_stamp.test.py`).
-  `stampPath(name, root)` is `build/stamps/<name>.json` with `:` written `-`
-  (`stepFileName`; `stamp_path` matches).
+  `stamp-path-pure.ts` names the files: `stampPath(name, root)` is
+  `build/stamps/<name>.json` with `:` written `-` (`stepFileName`, which names
+  a step's lock too; `stamp_path` matches).
   A stamp the runner writes for a Python step also carries `recorded`: the
   folders it listed (`listingHash`, the same formula on both sides) and the
   paths it probed, which `recordedChanges` re-checks.
@@ -125,13 +126,13 @@ same thing — single-use helpers stay with their consumer.
 - `output-identity.ts` (+ `output-identity-pure.ts`, its diff and test) —
   `pnpm run identity:snapshot` / `identity:diff`, the byte-identity check in
   [Proving a restructuring byte-identical](#proving-a-restructuring-byte-identical).
-- `tally.ts` — `emptyTallyPartition(values)`, the zeroed per-bucket
+- `tally-pure.ts` — `emptyTallyPartition(values)`, the zeroed per-bucket
   counting record every routing cascade in the catalog build tallies
   into (direction, velocity, V, distance). Buckets are derived from
   the string-literal tuple that DEFINES each tier set, so a new tier
   cannot tally onto an absent key — `undefined + 1` is NaN, which
   reaches the pinned count snapshot as a hole instead of a drift
-  failure. `tally.test.ts` pins all four cascades' key coverage.
+  failure. `tally-pure.test.ts` pins all four cascades' key coverage.
 - `staged-write.ts` — the one stage-then-rename: `writeStaged` writes
   `<path>.staged` beside its target (same filesystem, so the rename is
   atomic), `landStaged` renames it over the target, and `discardStaged` removes
