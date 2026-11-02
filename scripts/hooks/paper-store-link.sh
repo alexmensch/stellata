@@ -23,10 +23,9 @@ printf '%s\n' "$worktrees" | tail -n +2 | while IFS= read -r wt; do
   dest="$wt/$LINK"
   if [ -L "$dest" ]; then
     [ "$(readlink "$dest")" = "$target" ] && continue
-    rm -f "$dest" 2>/dev/null || continue
   elif [ -e "$dest" ]; then
     continue
   fi
-  ln -s "$target" "$dest" 2>/dev/null
+  ln -sfn "$target" "$dest" 2>/dev/null
 done
 exit 0

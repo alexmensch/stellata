@@ -17,9 +17,9 @@ const DATA_PATH_SPELLERS = [
   'scripts/local-group/local-group-inputs.test.ts',
   'tests/citation-index.test.ts',
   'tests/doc-pointer-resolution.test.ts',
-  'tests/folder-readme-coverage.test.ts',
   'tests/paper-store-link.test.ts',
-  'tests/readme-size.test.ts',
+  'tests/readme-trees.test.ts',
+  'tests/readme-trees.ts',
 ];
 
 const isTs = (path: string): boolean => path.endsWith('.ts') && !path.endsWith('.d.ts');

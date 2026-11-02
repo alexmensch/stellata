@@ -83,6 +83,13 @@ doc-pointer-resolution.test.ts
 folder-readme-coverage.test.ts
                          The "every folder under src/, scripts/, data/,
                          docs/ has a README.md" invariant (/AGENTS.md#folder-readmes--read-before-you-touch-the-folder-update-at-commit).
+readme-trees.ts          Not a test — `readmeTreeFolders`, the folder list
+                         the folder-README suites scan: real directories
+                         under src/, scripts/, data/, docs/, minus build
+                         and cache dirs. Never follows a symlink, so the
+                         private paper store (data/papers/pdf) and
+                         anything inside it stay out of the walk.
+                         Pinned by readme-trees.test.ts.
 integration-shell-ratchet.test.ts
                          stellata.ts is wiring only (/AGENTS.md#folder--module-conventions--where-new-code-lands).
                          Every `Stellata` field is on COMPOSITION; a
