@@ -242,7 +242,9 @@ lands with it; `run.ts` rejects it until then.
   running step holds its own lock exclusive and a shared lock on each step
   that writes its inputs, so two runs of one step serialise, and a reader in
   one run never sees a half-replaced set (the catalogue's chunks renamed one
-  by one) from a writer in another. `build-seed.sh` keeps only its
+  by one) from a writer in another. A manual step's check holds the same
+  shared locks, so a pull is never judged against a request mid-replace.
+  `build-seed.sh` keeps only its
   newest-run-wins rule and relies on the locks for the rest, so a plain build
   or `dev` beside a seed run can no longer interleave with it.
 - **`--force`** reaches every `build` step the run selects, uniformly. It

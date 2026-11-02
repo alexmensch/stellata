@@ -89,14 +89,18 @@ class Run {
 
   private async visit(resolved: ResolvedStep): Promise<Verdict> {
     const { step } = resolved;
-    if (!isBuild(step)) {
-      const fresh = manualFreshness(step, resolved.outputs, this.tree);
-      return fresh.kind === 'fresh' ? fresh : { kind: 'stale', command: step.command, changed: fresh.changed };
-    }
     const shared = writersOf(this.graph, step.name).filter((w) => isBuild(this.loaded.steps.get(w)!.step));
-    const held = await holdLocks(this.tree.locks, { own: step.name, shared }, () => {
+    const held = await holdLocks(this.tree.locks, { step: step.name, exclusive: isBuild(step), shared }, () => {
       this.options.log(`… ${step.name} waits for another run's lock`);
     });
+    if (!isBuild(step)) {
+      try {
+        const fresh = manualFreshness(step, resolved.outputs, this.tree);
+        return fresh.kind === 'fresh' ? fresh : { kind: 'stale', command: step.command, changed: fresh.changed };
+      } finally {
+        await held.release();
+      }
+    }
     try {
       const verdict = await this.build(resolved, step);
       return held.died() ? { kind: 'failed', reason: 'its lock holder died while it ran' } : verdict;
