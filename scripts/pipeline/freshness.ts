@@ -121,12 +121,17 @@ function parseDescription(step: ManualStep, text: string): Description {
   return { kind: 'pull', query, services, release: optionalString(json.release), request, requestFrom };
 }
 
+/** A SIMBAD pull's request lists every manifest key: tens of MB, far past spawnSync's 1 MiB default. */
+const DESCRIBE_MAX_BYTES = 1 << 30;
+
 /** Python describes under `-I -S`, so its describe path imports the standard library only. */
 export function describeStep(step: ManualStep, tree: PipelineTree): Description {
   const entry = tree.abs(step.entry);
   const [command, args] = step.language === 'python' ? ['python3', ['-I', '-S', entry]] : [TSX, [entry]];
-  const run = spawnSync(command, [...args, '--describe'], { encoding: 'utf8' });
-  if (run.status !== 0) throw new Error(`${step.entry} --describe exited ${run.status}: ${run.stderr.trim()}`);
+  const run = spawnSync(command, [...args, '--describe'], { encoding: 'utf8', maxBuffer: DESCRIBE_MAX_BYTES });
+  if (run.status !== 0) {
+    throw new Error(`${step.entry} --describe exited ${run.status ?? run.signal}: ${run.error?.message ?? run.stderr.trim()}`);
+  }
   return parseDescription(step, run.stdout);
 }
 
