@@ -5,8 +5,6 @@ import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import {
-  buildHipToIndex,
-  inferBinaries,
   FLAG_IS_SOL,
   FLAG_BINARY_PRIMARY,
   VAR_TYPE_ECLIPSING,
@@ -22,7 +20,6 @@ import {
   MULTIPLICITY_SINGLE,
   MULTIPLICITY_RESOLVED,
   MULTIPLICITY_UNRESOLVED,
-  SIMBAD_OTYPE_MULTIPLE,
   APSIS_FIELDS,
   type ApsisField,
   writeStarRecord,
@@ -35,7 +32,9 @@ import {
   buildSearchEntry,
   type SearchEntry,
   type CatalogManifest,
-} from './record/catalog-pure';
+  DIST_VIA_VALUES,
+} from '../../src/catalog-format/record/catalog-pure';
+import { buildHipToIndex, inferBinaries, SIMBAD_OTYPE_MULTIPLE } from './record/record-build-pure';
 import { apparentVFromSol } from './record/record-order-pure';
 import { avSolToStar } from './distance/dust/dust-deextinction-pure';
 import {
@@ -48,10 +47,7 @@ import {
   spectralSimbadPartitionError,
   type BuildCounts,
 } from './build-counts';
-import {
-  DIST_VIA_VALUES,
-  DIST_VIA_COUNT_KEY,
-} from './distance/parallax/parallax-cascade';
+import { DIST_VIA_COUNT_KEY } from './distance/parallax/parallax-cascade';
 import {
   buildRegressionReport,
   compareRegressionReports,
@@ -772,13 +768,13 @@ async function main() {
 
   // Sort by apparent V from Sol ascending (brightest-looking first), so any
   // prefix of the record array is a usable sky and the transport chunks can
-  // stream one (record/README.md#record-order). Record indices are final
+  // stream one (/src/catalog-format/record/README.md#record-order). Record indices are final
   // after this point.
   const sortKey = new Float64Array(stars.length);
   for (let i = 0; i < stars.length; i++) {
     const s = stars[i];
     const v = apparentVFromSol(s, dustGrid ? avSolToStar(dustGrid, s.x, s.y, s.z) : 0);
-    // On the key, before the sort — record/README.md#record-order.
+    // On the key, before the sort — /src/catalog-format/record/README.md#record-order.
     if (!Number.isFinite(v)) {
       throw new Error(`Record ${i} has a non-finite apparent V sort key: ${v}`);
     }
@@ -1032,7 +1028,7 @@ async function main() {
   const bytes = new Uint8Array(out);
 
   // Header, then the name table, then the records — the order the first
-  // transport chunk needs to decode standalone (`record/README.md#on-disk-transport-chunking`).
+  // transport chunk needs to decode standalone (`/src/catalog-format/record/README.md#on-disk-transport-chunking`).
   writeCatalogHeader(view, {
     count: stars.length,
     nameTableOffset: HEADER_SIZE,
@@ -1135,7 +1131,7 @@ async function main() {
     chunkBytes, 1, HEADER_SIZE + nameTableLength, stars.length,
   );
   assertFigureVerticesInFirstChunk(figureLines, counts.recordsInFirstChunk);
-  // record/README.md#on-disk-transport-chunking is measured from this line.
+  // /src/catalog-format/record/README.md#on-disk-transport-chunking is measured from this line.
   const sortedKey = order.map((i) => sortKey[i]);
   const chunkRows = chunkBytes.map((_, i) => {
     const n = recordsInChunkPrefix(

@@ -4,19 +4,19 @@
 import {
   FLAG_BINARY_COMPANION_SYNTHETIC,
   NO_CONSTELLATION_INDEX,
-} from '../../../scripts/catalog/record/catalog-pure';
+} from '../../catalog-format/record/catalog-pure';
 import {
   UNKNOWN_CLASS_IDX,
   classifyFromSimbad,
-} from '../../../scripts/catalog/spectral/spectral-classify';
+} from '../../catalog-format/spectral/spectral-classify';
 import {
   tempKelvin,
-} from '../../../scripts/catalog/spectral/physical-radius';
+} from '../../catalog-format/spectral/physical-radius';
 import { isDecodedRecord, type Catalog } from '../loaders/catalog-loader';
 import type { BinariesData } from '../binaries/binaries-loader';
 import type { LateState } from '../util/late/late';
 import type { SearchEntry } from '../typeahead/search';
-import { starDesignations } from '../typeahead/star-designations';
+import { starDesignations } from '../../catalog-format/naming/star-designations';
 import { fmtDistAuto } from '../ui/distance-util';
 import { formatSpectral, spectralLine } from '../format/spectral-format';
 import {

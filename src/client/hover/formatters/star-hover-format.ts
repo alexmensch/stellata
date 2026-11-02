@@ -5,7 +5,7 @@
 import {
   FLAG_BINARY_COMPANION_SYNTHETIC,
   NO_CONSTELLATION_INDEX,
-} from '../../../../scripts/catalog/record/catalog-pure';
+} from '../../../catalog-format/record/catalog-pure';
 import { fmtDistAuto } from '../../ui/distance-util';
 import { formatSpectral, spectralLine } from '../../format/spectral-format';
 import { formatVariability } from '../../format/physical-format';

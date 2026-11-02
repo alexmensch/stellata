@@ -8,7 +8,7 @@ import {
   VAR_TYPE_MIRA,
   readCatalogHeader,
   recordsOffset,
-} from '../../../scripts/catalog/record/catalog-pure';
+} from '../../catalog-format/record/catalog-pure';
 import {
   PULSATION_PARAMS_BY_TYPE,
   PULSATION_PARAMS_DEFAULT,

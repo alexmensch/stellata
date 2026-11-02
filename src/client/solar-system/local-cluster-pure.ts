@@ -1,7 +1,7 @@
 // Pure decision helpers for SolarSystemCluster: local-depth-pass
 // activation + the orbit-ring bounding-sphere extent. Vitest-pinned.
 
-import { AU_PC } from '../util/astronomy-constants';
+import { AU_PC } from '../../astro-core/astronomy-constants';
 
 /** Fraction past the outermost apoapsis the ring-extent bounding sphere
  *  reaches, so the slice bracket comfortably contains the drawn arcs. */

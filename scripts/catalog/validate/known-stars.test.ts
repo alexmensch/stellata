@@ -22,12 +22,12 @@ import {
   VAR_TYPE_CEPHEID,
   VAR_TYPE_RR_LYRAE,
   VAR_TYPE_DSCT,
-} from '../record/catalog-pure';
+} from '../../../src/catalog-format/record/catalog-pure';
 import {
   SPECTRAL_UNKNOWN,
   type SpectralInfo,
   classifyFromSimbad,
-} from '../spectral/spectral-classify';
+} from '../../../src/catalog-format/spectral/spectral-classify';
 import { type Catalog, type CatalogRecord, distancePc, loadCatalog, lookupByHip, lookupByGaiaSourceId, displayLabel, lookupByName, lookupByRef } from '../catalog-lookup';
 import { DEFAULT_CATALOG_MANIFEST } from '../catalog-paths-pure';
 import {
@@ -35,7 +35,7 @@ import {
   type RecordRef,
 } from '../parse/corpus-tsv';
 import { floatCell, intCell, textCell } from '../../util/tsv/table-pure';
-import { AU_PER_PC } from '../../../src/client/util/astronomy-constants';
+import { AU_PER_PC } from '../../../src/astro-core/astronomy-constants';
 import { MULTIPLES_TSV, MULTIPLES_TSV_PATH } from '../../binaries/multiples-tsv';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));

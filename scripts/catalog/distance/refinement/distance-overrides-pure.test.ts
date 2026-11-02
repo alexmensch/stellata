@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { sourceRowRef } from '../../../util/sources/row-ref-pure';
 import { BAILER_JONES } from './bailer-jones-source';
-import { DIST_VIA_VALUES } from '../parallax/parallax-cascade';
+import { DIST_VIA_VALUES } from '../../../../src/catalog-format/record/catalog-pure';
 import { MAX_DIST_PC } from '../../parse/stars-parse';
 import {
   applyBailerJonesOverride,

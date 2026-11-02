@@ -7,6 +7,11 @@ import {
   formatMiB,
   judgeAssetSizes,
 } from './asset-size-pure';
+import {
+  CATALOG_CHUNK_TARGET_BYTES,
+  CATALOG_FIRST_CHUNK_TARGET_BYTES,
+  planCatalogChunks,
+} from '../../src/catalog-format/record/catalog-pure';
 
 describe('judgeAssetSizes', () => {
   it('pins the Workers ceiling at 25 MiB', () => {
@@ -58,5 +63,26 @@ describe('judgeAssetSizes', () => {
 describe('formatMiB', () => {
   it('prints one decimal place', () => {
     expect(formatMiB(Math.round(28.4 * MiB))).toBe('28.4 MiB');
+  });
+});
+
+describe('the catalogue transport plan against the Workers budget', () => {
+  it('the chunk target sits under the Workers per-asset ceiling', () => {
+    expect(CATALOG_CHUNK_TARGET_BYTES).toBeLessThan(WORKERS_MAX_ASSET_BYTES);
+  });
+
+  it('no chunk ever exceeds the target, at any catalogue size', () => {
+    // A plan that doubled past the target would break deploy rather than
+    // fail a test, so the doubling is asserted clamped rather than trusted.
+    for (const totalMiB of [37, 94, 235, 4096]) {
+      const plan = planCatalogChunks(totalMiB * MiB);
+      expect(Math.max(...plan), `${totalMiB} MiB`).toBe(CATALOG_CHUNK_TARGET_BYTES);
+      expect(plan.reduce((a, b) => a + b, 0)).toBe(totalMiB * MiB);
+    }
+  });
+
+  it('the first chunk is the first-paint payload, not the transport ceiling', () => {
+    expect(CATALOG_FIRST_CHUNK_TARGET_BYTES).toBeLessThan(CATALOG_CHUNK_TARGET_BYTES);
+    expect(planCatalogChunks(100 * MiB)[0]).toBe(CATALOG_FIRST_CHUNK_TARGET_BYTES);
   });
 });

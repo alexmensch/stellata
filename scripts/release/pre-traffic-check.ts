@@ -3,7 +3,7 @@
 import { resolve } from 'node:path';
 import { setTimeout as sleep } from 'node:timers/promises';
 
-import { catalogChunkFilename } from '../catalog/record/catalog-pure.ts';
+import { catalogChunkFilename } from '../../src/catalog-format/record/catalog-pure.ts';
 import { appVersion } from '../site/site-metrics.ts';
 import { APP_PATH } from '../../src/client/util/url-state/share-path-pure.ts';
 import { ROUTING_CASES, documentIdentifiers } from '../../src/routing-cases-fixture.ts';

@@ -2,11 +2,11 @@
 // long-term precession frames and the Earth rotation angle rather than
 // from a linear IAU row. See README.md#earth-is-not-a-linear-row.
 
-import { ARCSEC_TO_RAD, J2000_JD } from '../../../util/astronomy-constants';
+import { ARCSEC_TO_RAD, J2000_JD } from '../../../../astro-core/astronomy-constants';
 import {
   longTermEquatorPole,
   longTermEquinox,
-} from '../../../util/precession';
+} from '../../../../astro-core/precession';
 import { tToJdUt, tToJdTdb } from '../../time/time';
 
 const DEG = Math.PI / 180;

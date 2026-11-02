@@ -6,7 +6,7 @@ import {
   recordsInChunkPrefix,
   type CatalogManifest,
   type RecordSpan,
-} from '../../../scripts/catalog/record/catalog-pure';
+} from '../../catalog-format/record/catalog-pure';
 
 export interface ChunkFetchDeps {
   /** Directory the chunk files are siblings of the manifest in. */

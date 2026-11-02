@@ -8,7 +8,7 @@ import {
   CONSTELLATION_GENITIVES,
   foldCurlyGreek,
   GREEK_GLYPHS,
-} from './greek-forms';
+} from '../../../src/catalog-format/naming/greek-forms';
 
 export interface BayerDesignation {
   /** The Unicode glyph for Greek, the bare letter for Latin (`p`, `L`). */

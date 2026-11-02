@@ -135,5 +135,5 @@ the seven-stage pipeline + per-stage modules.
   `public/binaries.bin` for the per-frame
   [`src/client/binaries/`](../../src/client/binaries/README.md) layer).
 - `scripts/catalog/validate/known-stars.test.ts` +
-  `multi-star-regression.test.ts` (Tier A validation harnesses).
+  `/tests/integration/multi-star-regression.test.ts` (Tier A validation harnesses).
 - Ad-hoc debugging of cross-match decisions.

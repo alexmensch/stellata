@@ -1,8 +1,9 @@
 import { describe, it, expect } from 'vitest';
 
-import { NO_CONSTELLATION_INDEX, SOLAR_BV_FALLBACK } from '../record/catalog-pure';
-import { SPECTRAL_UNKNOWN } from '../spectral/spectral-classify';
-import { avSolToStar, R_V, type DustGrid } from '../distance/dust/dust-deextinction-pure';
+import { NO_CONSTELLATION_INDEX, SOLAR_BV_FALLBACK } from '../../../src/catalog-format/record/catalog-pure';
+import { SPECTRAL_UNKNOWN } from '../../../src/catalog-format/spectral/spectral-classify';
+import { avSolToStar, type DustGrid } from '../distance/dust/dust-deextinction-pure';
+import { R_V } from '../../../src/astro-core/extinction/dust-raymarch-pure';
 import {
   CATALOG_SCENE_EPOCH,
   directionAtEpoch,
@@ -13,7 +14,7 @@ import { gaiaAstrometryRow } from '../distance/astrometry-fixture';
 import { cns5Astrometry } from '../classic-ids/cns5-fixture';
 import { TYCHO2_ICRS_EPOCH } from '../tycho2-parse';
 import { emptySimbadValueIndex, type SimbadValueIndex } from '../simbad/simbad-values-parse';
-import { unitVectorFromRaDec, type UnitVector } from '../../../src/client/util/equatorial-basis';
+import { unitVectorFromRaDec, type UnitVector } from '../../../src/astro-core/equatorial-basis';
 import type { GlieseIndex } from '../gliese-parse-pure';
 import { GLIESE } from '../gliese-source';
 import { TYCHO2 } from '../tycho2-source';
@@ -288,7 +289,7 @@ describe('readStars manifest labels', () => {
 describe('readStars constellation assignment', () => {
   // ra=20h14m16.6s / dec=+15°11'51" — ρ Aql, whose 1992 boundary crossing by
   // proper motion is the whole reason the two constellations are separate
-  // fields. See /src/client/constellation-boundaries/iau-geometry/README.md#ρ-aquilae.
+  // fields. See /src/astro-core/iau-geometry/README.md#ρ-aquilae.
   const RHO_AQL: ManifestRow = {
     bayer: 'Rho', flam: '67', hip: '99742', hd: '192425', hr: '7724',
     tyc: RHO_AQL_TYC, gl: RHO_AQL_GL,

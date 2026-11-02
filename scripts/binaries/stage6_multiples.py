@@ -494,7 +494,7 @@ GAIA_G_MINUS_V_COLOR_RANGE: tuple[float, float] = (-0.5, 5.0)
 # Feeds the catalogue's Ballesteros 2012 (/data/papers/index.md#ballesteros2012)
 # B−V↔Teff convention so the
 # recovered ci lands on the same colour manifold every other star uses
-# (ballesteros_bv_from_teff mirrors scripts/colour/blackbody-lut-pure.ts).
+# (ballesteros_bv_from_teff mirrors src/astro-core/colour/blackbody-lut-pure.ts).
 GAIA_BPRP_TEFF_COEFFS: tuple[float, ...] = (
     9453.14, -6859.40, 3542.16, -1053.09, 165.635, -10.5672,
 )
@@ -520,7 +520,7 @@ def ballesteros_bv_from_teff(teff: float) -> float:
     """Analytic inverse of Ballesteros 2012 (/data/papers/index.md#ballesteros2012)
     eq. 14 (Teff K → Johnson B−V); the inversion is this project's algebra.
     Python mirror of ``ballesterosBvFromTeff`` in
-    scripts/colour/blackbody-lut-pure.ts — keep the two in sync (pinned
+    src/astro-core/colour/blackbody-lut-pure.ts — keep the two in sync (pinned
     by the Stage-6 unit test against the solar value)."""
     k = teff / 4600.0
     disc = math.sqrt(4.0 + 1.1664 * k * k)

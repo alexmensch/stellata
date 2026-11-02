@@ -8,14 +8,15 @@ import {
   footprintRadiusPc,
   lumaNormalisedTint,
   softenRadius,
-} from '../../hdr/emission/emission-pure';
+} from '../../../astro-core/emission/emission-pure';
 import {
   OLD_SPHEROID_COLOR_RGB,
   OLD_SPHEROID_COLOUR_INDEX_BV,
   discColourIndex,
-} from '../../hdr/emission/population-colour-pure';
-import { linearSrgbFromColourIndex } from '../../../../scripts/colour/blackbody-lut-pure';
-import type { LgEmission, LgObject } from '../local-group-loader';
+} from '../../../astro-core/emission/population-colour-pure';
+import { linearSrgbFromColourIndex } from '../../../astro-core/colour/blackbody-lut-pure';
+import type { LgObject } from '../local-group-loader';
+import type { LgEmission } from '../../../catalog-format/local-group/local-group-schema';
 
 /**
  * Intrinsic integrated (B−V)₀ of M31, Tempel 2011
@@ -25,7 +26,7 @@ export const M31_TOTAL_COLOUR_INDEX_BV = 0.86;
 
 /**
  * The **same** `bulge_to_total` the emission solver splits M31's flux by
- * (`data/local-group/overrides.tsv`, pinned in `local-group-emission.test.ts`).
+ * (`data/local-group/overrides.tsv`, pinned in `/tests/integration/local-group-emission.test.ts`).
  * 0.31 has no recorded source: Courteau 2011 (/data/papers/index.md#courteau2011)
  * Sect. 7 give 0.29 for their 2D bulge + disc fit, a Spitzer/IRAC 3.6 µm light
  * fraction, here applied in V. Which value to ship is open
@@ -305,7 +306,7 @@ export function cpuSersicNu(u: number, invN: number, bn: number, pn: number): nu
  *  unit-ball frame.
  *
  *  `footprintPc` smooths the profile over one pixel's transverse footprint
- *  (`../../hdr/emission/emission-pure.ts` `footprintRadiusPc`); `zFootprintPc` is its
+ *  (`../../../astro-core/emission/emission-pure.ts` `footprintRadiusPc`); `zFootprintPc` is its
  *  share along the disc normal, which the caller projects. Both default to 0
  *  — the shipped shader always passes a footprint, but a flux integral over
  *  solid angle has no plate scale to derive one from. */

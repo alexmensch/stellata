@@ -6,7 +6,7 @@ import {
   decodeRecordColumn,
   readCatalogHeader,
   wholeRecordSpan,
-} from '../catalog/record/catalog-pure';
+} from '../../src/catalog-format/record/catalog-pure';
 import { readCatalogBuffer } from '../catalog/catalog-lookup';
 import { DEFAULT_CATALOG_MANIFEST } from '../catalog/catalog-paths-pure';
 import { REPO_ROOT } from '../util/paths';
@@ -14,22 +14,22 @@ import {
   GALACTIC_CENTRE_PC,
   GALACTIC_NORTH_POLE_ICRS,
   ICRS_TO_GAL_M3,
-} from '../../src/client/galactic/galactic-coords';
+} from '../../src/astro-core/galactic-coords';
 import {
   SOL_GALACTOCENTRIC_PC,
   type Vec3,
   galacticDirection,
   sightlineColumn,
-} from '../../src/client/milkyway/column/milkyway-column-pure';
-import { SB_ZERO_POINT } from '../../src/client/hdr/emission/emission-pure';
+} from '../../src/astro-core/milkyway/column/milkyway-column-pure';
+import { SB_ZERO_POINT } from '../../src/astro-core/emission/emission-pure';
 import {
   RESOLVED_HOLE_BANDS,
   RESOLVED_HOLE_SHELLS,
   type ResolvedHoleTable,
   resolvedHoleIndex,
   resolvedHoleGridOf,
-} from '../../src/client/milkyway/calibration/resolved-fraction-pure';
-import { RESOLVED_HOLE_CATALOGUE_RECORDS } from '../../src/client/milkyway/calibration/resolved-hole-table';
+} from '../../src/astro-core/milkyway/calibration/resolved-fraction-pure';
+import { RESOLVED_HOLE_CATALOGUE_RECORDS } from '../../src/astro-core/milkyway/calibration/resolved-hole-table';
 import {
   type CapSurfaceBrightness,
   MIN_STARS_PER_CELL,
@@ -44,7 +44,7 @@ import {
   shellTotals,
 } from './resolved-light-pure';
 
-const TABLE_MODULE = 'src/client/milkyway/calibration/resolved-hole-table.ts';
+const TABLE_MODULE = 'src/astro-core/milkyway/calibration/resolved-hole-table.ts';
 
 async function loadColumns(manifestPath: string): Promise<StarColumns> {
   const buffer = await readCatalogBuffer(manifestPath);

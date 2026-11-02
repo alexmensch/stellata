@@ -88,7 +88,7 @@ linear toe, so solving `../webgpu/tonemap-tsl.ts`'s actual encode for linear
 tells a correctly behaving display that it is wrong.
 
 So `srgbMatchCode()` derives the reference patch from `srgbEncode` itself
-(`../hdr/tonemap/tonemap-pure.ts`, the CPU mirror of the shipped chunk) rather
+(`../../astro-core/tonemap/tonemap-pure.ts`, the CPU mirror of the shipped chunk) rather
 than restating a power-law approximation of it. Change the output
 transfer and the calibration target follows; there is no second constant
 to keep in step. `GAMMA_STOPS` stays as a *scale* for reading how far a

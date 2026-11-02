@@ -2,11 +2,11 @@
 // label, spectral designation, Bayer parts. Leaf module — the star kind
 // module builds these at load without a cycle through search.ts.
 
-import { type SearchEntry } from '../../../scripts/catalog/record/catalog-pure';
+import { type SearchEntry } from '../../catalog-format/record/catalog-pure';
 import {
   displayNamesFromSearchIndex,
   superscript,
-} from '../../../scripts/catalog/naming/star-naming-pure';
+} from '../../catalog-format/naming/star-naming-pure';
 import type { Catalog } from '../loaders/catalog-loader';
 
 /** The composer's output reduced to the label tier alone — what crosses
@@ -40,7 +40,7 @@ export function buildStarLabels(
 
 /** The name-table half of the label ladder, which is available from the
  *  catalogue's FIRST chunk — the table precedes the records on the wire for
- *  exactly this reason (`/scripts/catalog/record/README.md#record-order`).
+ *  exactly this reason (`/src/catalog-format/record/README.md#record-order`).
  *  Seeded per landing chunk so a named star carries its name the moment it
  *  is drawn, rather than showing a bare SID until the search index lands
  *  and supplies the composed-designation half. */

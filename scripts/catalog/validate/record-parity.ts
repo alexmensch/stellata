@@ -4,7 +4,7 @@
 import { resolve } from 'node:path';
 import { readCatalogBuffer } from '../catalog-lookup';
 import { DEFAULT_CATALOG_MANIFEST } from '../catalog-paths-pure';
-import { CATALOG_MANIFEST_FILENAME } from '../record/catalog-pure';
+import { CATALOG_MANIFEST_FILENAME } from '../../../src/catalog-format/record/catalog-pure';
 import { compareRecordParity, formatParityReport, parityHolds } from './record-parity-pure';
 
 function argValue(name: string): string | null {

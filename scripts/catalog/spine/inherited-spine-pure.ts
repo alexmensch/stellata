@@ -1,7 +1,7 @@
 // Column layout, codec, and count tally for data/athyg/inherited-spine.tsv.
 // The contract is /docs/catalog-driver.md#3-the-inherited-spine; see README.md.
 
-import { SOL_PROPER_NAME } from '../record/catalog-pure';
+import { SOL_PROPER_NAME } from '../../../src/catalog-format/record/catalog-pure';
 import { starDesignations } from '../../sid/sid-pure';
 import { nullableCell } from '../../util/tsv/artifact-pure';
 import { idCell } from '../../util/tsv/table-pure';

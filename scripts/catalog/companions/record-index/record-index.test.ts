@@ -5,7 +5,7 @@ import { DEFAULT_ROW_INDEX_MAP } from '../../catalog-paths-pure';
 import { loadStoredEdges } from '../../../sid/stored-edges';
 import { syntheticGaiaBridges } from '../../../sid/sid-pure';
 
-import { FLAG_BINARY_PRIMARY } from '../../record/catalog-pure';
+import { FLAG_BINARY_PRIMARY } from '../../../../src/catalog-format/record/catalog-pure';
 import { makeStar as makeStarWithDefaults } from '../../parse/star-fixture';
 import type { Star } from '../../parse/stars-parse';
 import type { MultiplesTsvRow } from '../companion-promotion';

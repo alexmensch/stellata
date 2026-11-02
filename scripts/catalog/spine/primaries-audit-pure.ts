@@ -2,7 +2,8 @@
 // AT-HYG merged: per-row designation attestation, source_id reproduction from
 // the raw cross-walks, and the records the primaries admit that the spine lacks.
 
-import { SOL_PROPER_NAME, normaliseGjKey } from '../record/catalog-pure';
+import { SOL_PROPER_NAME } from '../../../src/catalog-format/record/catalog-pure';
+import { normaliseGjKey } from '../record/record-build-pure';
 import type {
   Bsc5Row,
   Cns5Row,

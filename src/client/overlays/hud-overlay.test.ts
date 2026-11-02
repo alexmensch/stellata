@@ -9,12 +9,12 @@ import {
   type ArrowState,
   type HudElements,
 } from './hud-overlay';
-import { GALACTIC_CENTRE_PC } from '../galactic/galactic-coords';
+import { GALACTIC_CENTRE_PC } from '../../astro-core/galactic-coords';
 import { discCoverageAlpha } from './arrow-fade';
 import { ARROW_PIXEL_LENGTH } from './arrow-path';
 import { FOCUS_RING_RADIUS_PX } from './focus-ring-overlay';
 import { fmtDistAuto } from '../ui/distance-util';
-import { AU_PC } from '../util/astronomy-constants';
+import { AU_PC } from '../../astro-core/astronomy-constants';
 
 function makeFadeEls() {
   const style = {} as Record<string, string>;

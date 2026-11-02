@@ -9,7 +9,7 @@ import {
   writeCatalogHeader,
   writeStarRecord,
   type ApsisField,
-} from '../record/catalog-pure';
+} from '../../../src/catalog-format/record/catalog-pure';
 import { compareRecordParity, parityHolds } from './record-parity-pure';
 
 interface Star {

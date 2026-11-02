@@ -11,9 +11,9 @@ import {
   peakAmplitudeFactor as peakAmplitudeFactorPrim,
 } from './star-geometry';
 import { parkDistance } from '../focus/focus-transition';
-import { R_SUN_PC, MIN_PHYSICAL_RADIUS_R_SUN } from '../../util/astronomy-constants';
+import { R_SUN_PC, MIN_PHYSICAL_RADIUS_R_SUN } from '../../../astro-core/astronomy-constants';
 import { DCAM_LOG_FLOOR_PC } from '../timing';
-import { apparentMagnitude } from '../../solar-system/perceptual-magnitude';
+import { apparentMagnitude } from '../../../astro-core/perceptual-magnitude';
 import {
   perceptualAppSizePx,
   perceptualDmEff,
@@ -291,7 +291,7 @@ export function renderedSizeComponents(
   const radiusFactor = pulsationRadiusFactor(catalog.pulsRho[idx], phase);
 
   // Same perceptualDmEff soft-knee + √Δm curve as ../../webgpu/star/star-vertex-tsl.ts — the
-  // shared CPU mirrors in solar-system/perceptual-magnitude.ts. A local
+  // shared CPU mirrors in src/astro-core/perceptual-magnitude.ts. A local
   // reimplementation here previously hard-clamped brightness at sizeMax
   // and undersized the focus ring / pick radius on the brightest stars.
   const appSize = appSizePxForMag(appMag, filter, u.uSizeKnee.value);

@@ -119,7 +119,7 @@ RINGS_W = 2048
 # opacity (derivation + 8-bit floor analysis in
 # /data/textures/README.md#ring-strips--true-opacity-and-the-8-bit-floor). span_km MUST match the
 # body's `rings` entry in src/client/solar-system/planet-system.ts —
-# scripts/textures/ring-strips.test.ts pins the parity.
+# tests/integration/ring-strips.test.ts pins the parity.
 RING_TABLES = {
     "uranus": {
         "src": "rings-uranus.tsv",

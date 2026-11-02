@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { AU_PC } from '../util/astronomy-constants';
+import { AU_PC } from '../../astro-core/astronomy-constants';
 import {
   isHostLocallyActive,
   moonRingExtentsPc,

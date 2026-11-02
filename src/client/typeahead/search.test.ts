@@ -17,8 +17,8 @@ import {
   type FuzzyEntry,
   type SearchEntry,
 } from './search';
-import { displayNamesFromSearchIndex } from '../../../scripts/catalog/naming/star-naming-pure';
-import type { SearchIndex as SearchIndexLike } from './search-corpus';
+import { displayNamesFromSearchIndex } from '../../catalog-format/naming/star-naming-pure';
+import type { SearchIndex as SearchIndexLike } from '../../catalog-format/naming/search-corpus';
 import { makeEmptyCatalog } from '../loaders/catalog-mock';
 import { assumeComplete, type Catalog } from '../loaders/catalog-loader';
 import { KIND_ROSTER, type KindModules } from '../kinds/kind-modules';

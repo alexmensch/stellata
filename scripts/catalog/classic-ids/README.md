@@ -234,7 +234,7 @@ Bayer and 110 Flamsteed** designation groups, and nearly all of them are a
 close pair whose components the survey photographed separately. That is not a
 defect: the naming ladder appends the component letter, so 40 Eri B, χ Aql B
 and β Lyr B compose distinct labels from their primaries'
-([Two callers, one composer](../naming/README.md#two-callers-one-composer)).
+([Two callers, one composer](/src/catalog-format/naming/README.md#two-callers-one-composer)).
 
 The defect is the pair IV/27A joins that is **not one system**, where no
 component letter exists to tell the two apart and both records compose the

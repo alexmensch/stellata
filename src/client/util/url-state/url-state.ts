@@ -22,7 +22,7 @@ import { APP_PATH, buildSharePath, pickShareBlob } from './share-path-pure';
 import {
   divergesFromDefault, orbitRadius, poseChanged, type Vec3Like,
 } from './pose-change/pose-change-pure';
-import { GALACTIC_NORTH_POLE_ICRS } from '../../galactic/galactic-coords';
+import { GALACTIC_NORTH_POLE_ICRS } from '../../../astro-core/galactic-coords';
 import { ORB_LEVEL_UP, holdOrbitPose, wirePose } from './orbit-pose/orbit-pose';
 import type {
   CoordSphereFrame,

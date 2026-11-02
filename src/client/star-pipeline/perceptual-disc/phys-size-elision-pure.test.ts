@@ -1,10 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
   POINT_SOURCE_FLAT_PEAK_DIAMETER_PX, pointSourcePeakLuminance,
-} from '../../hdr/emission/emission-pure';
-import {
-  DEFAULT_INSTRUMENT, INSTRUMENTS, STAR_RENDER_DEFAULTS, starPxSizes,
-} from '../../filters/filter-state';
+} from '../../../astro-core/emission/emission-pure';
+import { STAR_RENDER_DEFAULTS, starPxSizes } from '../../filters/filter-state';
+import { DEFAULT_INSTRUMENT, INSTRUMENTS } from '../../../astro-core/instruments';
 import { PHYS_RATIO_THRESHOLD } from '../local-pass/star-local-cluster-pure';
 import { perceptualAppSizePx, perceptualDiscExponent, perceptualDmEff } from './perceptual-disc-pure';
 import { DISC_EXPONENT_TOLERANCE, physSizeElisionBoundPx } from './phys-size-elision-pure';

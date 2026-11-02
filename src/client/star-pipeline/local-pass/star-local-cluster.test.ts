@@ -7,7 +7,7 @@ import type { BinaryOrbitPathLayer } from '../../binaries/orbit-paths/binary-orb
 import type { RenderedSizeComponents } from '../../camera/controls/star-physics';
 import type { MemberSphere } from '../../local-depth/bracket/slice-pure';
 import { OccluderSet } from '../../occlusion/occluder-set';
-import { MIN_PHYSICAL_RADIUS_R_SUN, R_SUN_PC } from '../../util/astronomy-constants';
+import { MIN_PHYSICAL_RADIUS_R_SUN, R_SUN_PC } from '../../../astro-core/astronomy-constants';
 import { LateCell } from '../../util/late/late';
 import { MIRROR_CAPACITY, type StarMirror } from './star-mirror-slots';
 import { StarLocalCluster } from './star-local-cluster';

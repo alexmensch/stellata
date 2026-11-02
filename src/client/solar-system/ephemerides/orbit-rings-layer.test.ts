@@ -18,8 +18,8 @@ import {
   writeRingVerts,
 } from './orbit-rings-layer';
 import { LINE_ANCHOR_MAX_DRIFT_PC, ORBIT_LINE_SEGMENTS } from '../../util/orbit-line';
-import { AU_KM, AU_PC, KM_PC } from '../../util/astronomy-constants';
-import { GALACTIC_NORTH_POLE_ICRS } from '../../galactic/galactic-coords';
+import { AU_KM, AU_PC, KM_PC } from '../../../astro-core/astronomy-constants';
+import { GALACTIC_NORTH_POLE_ICRS } from '../../../astro-core/galactic-coords';
 import { getPlanetPositions, PLANET_ORDER } from './ephemeris';
 import { MOON_ELEMENTS, moonOffsetEcliptic } from './moon-ephemeris';
 import { T_CLAMP_MAX_S, T_CLAMP_MIN_S } from '../time/time';

@@ -12,7 +12,7 @@ import {
   MOCK_VIEWPORT_W,
 } from '../../kinds/kind-context-mock';
 import { buildSharedUniforms } from '../../frame/shared-uniforms';
-import { R_SUN_PC } from '../../util/astronomy-constants';
+import { R_SUN_PC } from '../../../astro-core/astronomy-constants';
 import { getPlanetSystem, SOL_BODIES } from '../planet-system';
 import { SOL_OBJECT_SIDS } from '../sol-object-sids';
 import { createPlanetKindModule, type PlanetKindModule } from './planet-module';

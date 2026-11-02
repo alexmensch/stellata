@@ -24,8 +24,8 @@ import {
   type CatalogHeaderFields,
   type CatalogManifest,
   type SearchEntry,
-} from './record/catalog-pure';
-import { displayNamesFromSearchIndex } from './naming/star-naming-pure';
+} from '../../src/catalog-format/record/catalog-pure';
+import { displayNamesFromSearchIndex } from '../../src/catalog-format/naming/star-naming-pure';
 import type { RecordRef } from './parse/corpus-tsv';
 import { DEFAULT_CATALOG_MANIFEST, DEFAULT_CONSTELLATIONS_JSON, DEFAULT_SEARCH_INDEX } from './catalog-paths-pure';
 

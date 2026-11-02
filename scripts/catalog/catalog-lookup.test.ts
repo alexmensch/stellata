@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 
 import type { Catalog, CatalogRecord } from './catalog-lookup';
 import { lookupByHd, lookupByName, lookupByRef } from './catalog-lookup';
-import type { SearchEntry } from './record/catalog-pure';
+import type { SearchEntry } from '../../src/catalog-format/record/catalog-pure';
 import { parseRef } from './parse/corpus-tsv';
 
 function stubCatalog(searchIndex?: readonly SearchEntry[], names: readonly (string | null)[] = []): Catalog {

@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
-import { VAR_TYPE_ECLIPSING } from '../../../scripts/catalog/record/catalog-pure';
+import { VAR_TYPE_ECLIPSING } from '../../catalog-format/record/catalog-pure';
 import type { BinariesData } from '../binaries/binaries-loader';
 import type { BinaryOrbitPathLayer } from '../binaries/orbit-paths/binary-orbit-path-layer';
 import { chartDiscPxForAppMag } from '../chart-mode/chart-disc-pure';

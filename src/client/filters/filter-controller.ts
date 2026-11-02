@@ -8,7 +8,6 @@ import {
   arcsecPerPx,
   DEFAULT_FILTER,
   type FilterState,
-  type InstrumentName,
   sizeSpanOf,
   starExaggerationK,
   starPxSizes,
@@ -17,6 +16,7 @@ import {
   getStarKMultiplier as readStarKMultiplier,
   setStarKMultiplier as patchStarKMultiplier,
 } from './filter-state';
+import { type InstrumentName } from '../../astro-core/instruments';
 import type { DetailLevel, RenderStyle } from '../scene/declutter/scene-elements';
 import type { SceneDeclutter } from '../scene/declutter/scene-declutter';
 

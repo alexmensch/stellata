@@ -7,7 +7,7 @@ import { resolve } from 'node:path';
 import { describe, it, expect } from 'vitest';
 import {
   classifyFromSimbad,
-} from '../spectral/spectral-classify';
+} from '../../../src/catalog-format/spectral/spectral-classify';
 import { REPO_ROOT } from '../../util/paths';
 
 // The parse surface both sides document handling: plain MK across every

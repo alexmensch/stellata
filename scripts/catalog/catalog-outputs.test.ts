@@ -6,7 +6,7 @@ import { REPO_ROOT } from '../util/paths';
 import { CATALOG_OUTPUTS } from './catalog-outputs';
 import { PARKED_LEDGER } from './distance/parallax/parked-ledger-tsv';
 import { SIMBAD_SOURCED_DISTANCES } from './distance/parallax/simbad-sourced-ledger-tsv';
-import { catalogChunkFilename } from './record/catalog-pure';
+import { catalogChunkFilename } from '../../src/catalog-format/record/catalog-pure';
 
 const repoRelative = (p: string) => relative(REPO_ROOT, p);
 

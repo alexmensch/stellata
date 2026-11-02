@@ -1,12 +1,12 @@
 import { describe, it, expect } from 'vitest';
 import {
-  R_V,
   sampleDensityAt,
   sampleEncodedAt,
   avAlongSegment,
   avSolToStar,
   type DustGrid,
 } from './dust-deextinction-pure';
+import { R_V } from '../../../../src/astro-core/extinction/dust-raymarch-pure';
 
 // densityMax = densityMin · exp(logRatio); byte 255 decodes to densityMax,
 // byte 0 to densityMin.

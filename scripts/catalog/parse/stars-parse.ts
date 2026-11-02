@@ -3,20 +3,24 @@
 // builder step. See scripts/catalog/README.md.
 
 import {
-  apparentToAbsoluteMagnitude,
   SOL_ABSOLUTE_V_MAGNITUDE,
   SOL_APPARENT_V_MAGNITUDE,
   FLAG_HAS_NAME,
   FLAG_IS_SOL,
   FLAG_HAS_BAYER,
   NO_CONSTELLATION_INDEX,
-  SIMBAD_NAMESPACE_VALUES,
   SOLAR_BV_FALLBACK,
   type ApsisRow,
+  DIST_VIA_VALUES,
+  type DistVia,
+} from '../../../src/catalog-format/record/catalog-pure';
+import {
+  apparentToAbsoluteMagnitude,
+  SIMBAD_NAMESPACE_VALUES,
   type SimbadNamespace,
   type SimbadRecordKeys,
-} from '../record/catalog-pure';
-import { classifyFromSimbad, SPECTRAL_UNKNOWN } from '../spectral/spectral-classify';
+} from '../record/record-build-pure';
+import { classifyFromSimbad, SPECTRAL_UNKNOWN } from '../../../src/catalog-format/spectral/spectral-classify';
 import {
   type SimbadSpectralIndex,
   type SpectralResolution,
@@ -30,7 +34,7 @@ import {
   resolveApsisTeff,
   spectralClassCi,
   spectralClassColorIsDerivable,
-} from '../spectral/physical-radius';
+} from '../../../src/catalog-format/spectral/physical-radius';
 import {
   resolveDirection,
   directionOnPm,
@@ -46,12 +50,7 @@ import {
 } from '../distance/direction-cascade';
 import { lookupCns5Astrometry } from '../classic-ids/classic-ids-parse';
 import { isGaiaCatalogueBibcode } from '../distance/gaia-distrust';
-import {
-  isLowPrecisionParallax,
-  resolveParallax,
-  DIST_VIA_VALUES,
-  type DistVia,
-} from '../distance/parallax/parallax-cascade';
+import { isLowPrecisionParallax, resolveParallax } from '../distance/parallax/parallax-cascade';
 import {
   PARKED_REASONS,
   type ParkedIdentifiers,
@@ -85,7 +84,8 @@ import {
   type RvVia,
   type RvErrorBand,
 } from '../distance/radial-velocity/radial-velocity';
-import { R_V, avSolToStar, type DustGrid } from '../distance/dust/dust-deextinction-pure';
+import { avSolToStar, type DustGrid } from '../distance/dust/dust-deextinction-pure';
+import { R_V } from '../../../src/astro-core/extinction/dust-raymarch-pure';
 import {
   emptySimbadValueIndex,
   lookupSimbadValues,

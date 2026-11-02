@@ -16,7 +16,7 @@ import type {
 } from '../../kinds/kind-module';
 import type { SceneLayer } from '../../scene/scene-layer';
 import type { WebGpuPlanetGlare } from '../../webgpu/seam';
-import { KM_PC } from '../../util/astronomy-constants';
+import { KM_PC } from '../../../astro-core/astronomy-constants';
 import { loadPlanetElementTables } from '../ephemerides/element-table-loader';
 import {
   orbitDescriptorFor,

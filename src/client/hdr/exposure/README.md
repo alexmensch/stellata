@@ -13,6 +13,9 @@ there. This README carries the implementation contract.
 
 ```
 src/client/hdr/exposure/
+  emission-at-exposure.test.ts
+                             The emission unit (/src/astro-core/emission/)
+                             read at the base exposure and plate scale.
   exposure-epoch.ts          The model as pure functions: instrument
     (+ test)                 limit → uExposure, the EV-trim constants,
                              and the threshold / cull / draw-cutoff
@@ -85,10 +88,10 @@ function of filter state alone.
 **`uOmegaSummationArcsec2` is static in the exposure state, and that is
 the point.** It is the offset between two *thresholds* — the point-source
 `m_lim` and the extended-source `S_lim`, which is the instrument's
-`skyBackgroundMagArcsec2` (`../../filters/filter-state.ts`
+`skyBackgroundMagArcsec2` (`/src/astro-core/instruments.ts`
 `extendedThresholdSbFor`) — and adaptation and the trim move both together,
 so only an instrument change may write it. The derivation is
-[Extended sources](../emission/README.md#extended-sources--two-solid-angles-one-write-tail); the convolution it gains into is
+[Extended sources](../../../astro-core/emission/README.md#extended-sources--two-solid-angles-one-write-tail); the convolution it gains into is
 `../summation/README.md`.
 
 **There is no `uThresholdMag` analogue on the extended side.** The

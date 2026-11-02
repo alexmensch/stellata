@@ -148,7 +148,7 @@ render), `setMonochrome`, `dispose`.
 
 ## Physical-luminance emission
 
-Stars emit into the scene-wide HDR unit ([Unit](../hdr/emission/README.md#unit--what-an-emitting-layer-writes)).
+Stars emit into the scene-wide HDR unit ([Unit](../../astro-core/emission/README.md#unit--what-an-emitting-layer-writes)).
 Brightness is the **peak** of the profile, `vPeakL`, computed per
 instance in the vertex shader from the star's apparent magnitude:
 
@@ -164,7 +164,7 @@ stops being a calibration knob**, trading only legibility against how
 crowded a dense field looks.
 
 The radius argument is the **unclamped** `physSize` in **CSS** pixels;
-[Unit](../hdr/emission/README.md#unit--what-an-emitting-layer-writes) has why, and it applies whichever term wins
+[Unit](../../astro-core/emission/README.md#unit--what-an-emitting-layer-writes) has why, and it applies whichever term wins
 `max(appSize, physSize)` so nothing pops at the disc/glow split.
 
 Two consequences specific to this pipeline:
@@ -209,7 +209,7 @@ Runtime colour is **two-tier** — `iTeffApsis > 0 ? Ballesteros(iTeffApsis)
 : iCi` ([Ballesteros 2012](/data/papers/index.md#ballesteros2012)) in `../webgpu/star/star-vertex-tsl.ts` — where `iCi` is the build-time-baked
 intrinsic B–V (observed AT-HYG cell, or the spectral-class colour
 `spectralClassCi` bakes in
-`scripts/catalog/spectral/physical-radius.ts`).
+`src/catalog-format/spectral/physical-radius.ts`).
 `bestApsisTeff` decides which Apsis Teff feeds `iTeffApsis`.
 `extinction/` reddens whichever tier wins.
 

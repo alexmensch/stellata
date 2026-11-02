@@ -5,9 +5,9 @@ import { readFileSync } from 'node:fs';
 
 import { emitArtifacts, runStep } from '../../util/emit-artifacts';
 import { DEFAULT_CONSTELLATIONS_JSON, DEFAULT_ROW_INDEX_MAP, DEFAULT_SEARCH_INDEX } from '../catalog-paths-pure';
-import type { SearchEntry } from '../record/catalog-pure';
-import { buildSearchIndex, normalizeGlKey } from '../../../src/client/typeahead/search-corpus';
-import { displayNamesFromSearchIndex } from './star-naming-pure';
+import type { SearchEntry } from '../../../src/catalog-format/record/catalog-pure';
+import { buildSearchIndex, normalizeGlKey } from '../../../src/catalog-format/naming/search-corpus';
+import { displayNamesFromSearchIndex } from '../../../src/catalog-format/naming/star-naming-pure';
 import { readTable } from '../../util/tsv/table-pure';
 import { readArtifact } from '../../util/sources/source';
 import {

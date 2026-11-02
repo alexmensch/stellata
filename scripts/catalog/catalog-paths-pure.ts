@@ -3,7 +3,7 @@
 import { resolve } from 'node:path';
 
 import { REPO_ROOT } from '../util/paths';
-import { CATALOG_MANIFEST_FILENAME } from './record/catalog-pure';
+import { CATALOG_MANIFEST_FILENAME } from '../../src/catalog-format/record/catalog-pure';
 
 export const DEFAULT_CATALOG_MANIFEST = resolve(REPO_ROOT, 'public', CATALOG_MANIFEST_FILENAME);
 export const DEFAULT_CONSTELLATIONS_JSON = resolve(REPO_ROOT, 'public/constellations.json');

@@ -6,7 +6,7 @@ import { describe, expect, it } from 'vitest';
 
 import { BUILD_COUNTS_EXPECTED_FILE, type BuildCounts } from '../build-counts';
 import { DEFAULT_SEARCH_INDEX } from '../catalog-paths-pure';
-import type { SearchEntry } from '../record/catalog-pure';
+import type { SearchEntry } from '../../../src/catalog-format/record/catalog-pure';
 import { CON_INDEX } from '../parse/constellations/constellations';
 import { REPO_ROOT } from '../../util/paths';
 

@@ -1,6 +1,6 @@
 /** Physical record overlaps: README.md#overlap-gate. */
 
-import { R_SUN_PC } from '../../../src/client/util/astronomy-constants';
+import { R_SUN_PC } from '../../../src/astro-core/astronomy-constants';
 
 export interface OverlapRecord {
   x: number;

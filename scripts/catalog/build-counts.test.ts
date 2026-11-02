@@ -10,7 +10,7 @@ import {
   type BuildCounts,
 } from './build-counts';
 import { RECURATED_BRIGHTNESS } from './companions/companion-promotion';
-import { DIST_VIA_VALUES } from './distance/parallax/parallax-cascade';
+import { DIST_VIA_VALUES } from '../../src/catalog-format/record/catalog-pure';
 
 function baseCounts(): BuildCounts {
   return {

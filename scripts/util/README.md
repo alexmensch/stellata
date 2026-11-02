@@ -26,7 +26,7 @@ same thing — single-use helpers stay with their consumer.
   CodeQL's `js/incomplete-sanitization` flags.
 
 - `astronomy_constants.py` — Python mirror of
-  `src/client/util/astronomy-constants.ts`. `J2000_JD`,
+  `src/astro-core/astronomy-constants.ts`. `J2000_JD`,
   `DAYS_PER_JULIAN_YEAR`, and any future physics constants Python-side
   build scripts share with the client runtime. Keep value-by-value in
   sync with the TS canonical; `tests/astronomy-constants-sync.test.ts`
