@@ -224,6 +224,10 @@ site-dev-routing.test.ts The dev server's routing table held against the
                          gets the homepage, everything else 404s. Pairs
                          with src/worker.test.ts, which pins the same
                          table on the production side.
+step-coverage.test.ts    Every declareOutputs constant under scripts/ is a
+                         steps.ts entry's, a writer excluded by name, or
+                         on the not-yet-migrated list of steps a later
+                         item moves (scripts/pipeline/README.md#the-model).
 step-outputs.test.ts     Imports every TS pipeline step's emitArtifacts
                          declaration (the *-outputs.ts modules), so one
                          that runs its step on import fails here; pins
