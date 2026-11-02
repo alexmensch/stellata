@@ -89,6 +89,7 @@ readme-trees.ts          Not a test — `readmeTreeFolders`, the folder list
                          and cache dirs. Never follows a symlink, so the
                          private paper store (data/papers/pdf) and
                          anything inside it stay out of the walk.
+                         Pinned by readme-trees.test.ts.
 integration-shell-ratchet.test.ts
                          stellata.ts is wiring only (/AGENTS.md#folder--module-conventions--where-new-code-lands).
                          Every `Stellata` field is on COMPOSITION; a
