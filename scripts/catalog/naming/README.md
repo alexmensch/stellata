@@ -58,9 +58,12 @@ scripts/catalog/naming/
                                 compareDesignationRows.
   wgsn-tables-outputs.ts        WGSN_OUTPUTS — the two derived tables as
                                 build:wgsn's emitArtifacts declaration
-                                (../../util/README.md). Side-effect free.
+                                (../../util/README.md), and their paths,
+                                which the codecs import: a codec reaches the
+                                constellation table, which an outputs module
+                                may not. Side-effect free.
   wgsn-expected.json            Pinned count snapshot
-                                (UPDATE_SNAPSHOTS=1 refreshes).
+                                (--update-snapshots refreshes).
   manifest-naming-expected.json The manifest's naming figures — the residual
                                 gate's and the Bayer coverage — pinned by
                                 ../membership/membership-manifest-gate.test.ts,

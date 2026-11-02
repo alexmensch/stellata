@@ -12,7 +12,8 @@ import { stepInputPaths } from '../../util/step-inputs';
 import { artifactRows, readArtifact } from '../../util/sources/source';
 import { MEMBERSHIP_OUTPUTS } from './membership-manifest-outputs';
 import { identityText } from '../lineage/identity-pure';
-import { LINEAGE_LAYOUT, readIdentity, stageFile } from '../lineage/lineage-io';
+import { readIdentity } from '../lineage/lineage-io';
+import { LINEAGE_LAYOUT, stageFile } from '../lineage/lineage-layout-pure';
 import { stageLineageLine, stageLineageText } from '../lineage/lineage-row-pure';
 import { stageLineage } from '../lineage/stage-lineage';
 import {

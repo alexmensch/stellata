@@ -13,7 +13,7 @@ import { DIST_VIA_VALUES } from '../../../../src/catalog-format/record/catalog-p
 import { gaiaAstrometryRow } from '../astrometry-fixture';
 import type { CitedParallax } from '../../cited-parallax';
 import type { SiblingParallax } from './pair-member-parallax';
-import type { GlieseRow } from '../../gliese-parse';
+import type { GlieseRow } from '../../gliese-parse-pure';
 import { GLIESE } from '../../gliese-source';
 import { CNS5 } from '../../classic-ids/cns5-source';
 import { SIMBAD_VALUES } from '../../simbad/simbad-values-source';

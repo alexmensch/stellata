@@ -7,18 +7,8 @@ import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parse } from 'csv-parse/sync';
 import { describe, it, beforeAll, expect } from 'vitest';
-import {
-  DEFAULT_CATALOG_MANIFEST,
-  type Catalog,
-  type CatalogRecord,
-  distancePc,
-  loadCatalog,
-  lookupByGaiaSourceId,
-  lookupByHip,
-  displayLabel,
-  lookupByName,
-  lookupByRef,
-} from '../../scripts/catalog/catalog-lookup';
+import { type Catalog, type CatalogRecord, distancePc, loadCatalog, lookupByGaiaSourceId, lookupByHip, displayLabel, lookupByName, lookupByRef } from '../../scripts/catalog/catalog-lookup';
+import { DEFAULT_CATALOG_MANIFEST } from '../../scripts/catalog/catalog-paths-pure';
 import { parseRef, type RecordRef } from '../../scripts/catalog/parse/corpus-tsv';
 import { floatCell } from '../../scripts/util/tsv/table-pure';
 import {
@@ -51,7 +41,7 @@ import { readMultiplesTsv, wdsRootOf } from '../../scripts/catalog/companions/co
 import { MULTIPLES_TSV, MULTIPLES_TSV_PATH } from '../../scripts/binaries/multiples-tsv';
 import { NAMING_DUPLICATES } from '../../scripts/catalog/naming/naming-duplicates-tsv';
 import { REPO_ROOT } from '../../scripts/util/paths';
-import { DEFAULT_ROW_INDEX_MAP } from '../../scripts/catalog/catalog-lookup';
+import { DEFAULT_ROW_INDEX_MAP } from '../../scripts/catalog/catalog-paths-pure';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const CORPUS_TSV = resolve(__dirname, '../../scripts/catalog/companions/multi-star-regression.tsv');

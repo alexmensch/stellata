@@ -1,7 +1,7 @@
 // Which of a spine row's identifiers the primaries' own cross-references link
 // to one another, and which only AT-HYG associates. See README.md#the-association-audit.
 
-import { lookupGliese } from '../gliese-parse';
+import { lookupGliese } from '../gliese-parse-pure';
 import { normaliseGjKey } from '../record/record-build-pure';
 import type { SpineRow } from './inherited-spine-pure';
 import {

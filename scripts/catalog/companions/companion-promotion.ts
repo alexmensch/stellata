@@ -18,7 +18,7 @@ import {
   classifyFromSimbad,
   resolveSpectDisplay,
 } from '../../../src/catalog-format/spectral/spectral-classify';
-import type { ParkedReason } from '../distance/parallax/parked-ledger';
+import type { ParkedReason } from '../distance/parallax/parked-ledger-pure';
 import {
   absmagFromSpectral,
   physicalRadius,
@@ -33,8 +33,8 @@ import {
 } from '../photometry/v-magnitude-pure';
 import { MULTIPLES_TSV, type MultiplesRecord, type PhotometryVia } from '../../binaries/multiples-tsv';
 import { readArtifact } from '../../util/sources/source';
-import { sourceRowRef, sourceRowRefText } from '../../util/sources/row-ref-pure';
-import { emptyTallyPartition } from '../../util/tally';
+import { promotionOriginKey } from './promotion-lineage-pure';
+import { emptyTallyPartition } from '../../util/tally-pure';
 import { ARCSEC_TO_RAD } from '../../../src/astro-core/astronomy-constants';
 import { equatorialTangentBasisAt } from '../../../src/astro-core/equatorial-basis';
 import type { ConstellationAssignment } from '../parse/constellations/constellations';
@@ -1820,7 +1820,7 @@ function promoteRow(
     distVia: inheritAnchor?.distVia ?? null,
     vVia: null,
     syntheticId: usesSynth ? synthId : null,
-    originKey: sourceRowRefText(sourceRowRef(MULTIPLES_TSV, row)),
+    originKey: promotionOriginKey(row),
   });
   const newIdx = state.existingStarsLength + state.newStars.length - 1;
   // Flux conservation: a member whose light is embedded in whatever

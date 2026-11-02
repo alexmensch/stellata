@@ -6,10 +6,8 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { declareOutputs, emitArtifacts, EmissionRefused } from '../../util/emit-artifacts';
 import type { StageHeader } from './lineage-header-pure';
-import {
-  baselineMembers, lineageLayout, readLineage, stageEmission, stageFamilies, stageFile,
-  stageOutputFiles, type LineageLayout,
-} from './lineage-io';
+import { baselineMembers, readLineage, stageEmission } from './lineage-io';
+import { lineageLayout, stageFamilies, stageFile, stageOutputFiles, type LineageLayout } from './lineage-layout-pure';
 import { lineageInvariant, NO_EXCEPTIONS } from './lineage-invariant-pure';
 import { paramsText, stageLineageLine, stageLineageText } from './lineage-row-pure';
 import { stageLineage } from './stage-lineage';

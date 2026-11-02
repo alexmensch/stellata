@@ -76,7 +76,7 @@ import {
   PROMOTION_CODES, PROMOTION_LINEAGE, PROMOTION_LINEAGE_BUDGET, promotionLineage,
 } from './companions/promotion-lineage-pure';
 import { identityText } from './lineage/identity-pure';
-import { LINEAGE_LAYOUT } from './lineage/lineage-io';
+import { LINEAGE_LAYOUT } from './lineage/lineage-layout-pure';
 import {
   lineageLineCode, stageLineageLine, stageLineageText, type LineageLine,
 } from './lineage/lineage-row-pure';
@@ -98,7 +98,7 @@ import {
   GALACTIC_ESCAPE_VELOCITY_KM_S,
 } from './distance/direction-cascade';
 import { RV_ERROR_BANDS } from './distance/radial-velocity/radial-velocity';
-import { emptyTallyPartition } from '../util/tally';
+import { emptyTallyPartition } from '../util/tally-pure';
 import {
   applyDesignationConstellations,
   loadDesignationConstellationInputs,
@@ -112,7 +112,7 @@ import { readStars, type ReadStarsOptions, type Star } from './parse/stars-parse
 import {
   PARKED_COUNT_KEY,
   PARKED_REASONS,
-} from './distance/parallax/parked-ledger';
+} from './distance/parallax/parked-ledger-pure';
 import { PARKED_LEDGER } from './distance/parallax/parked-ledger-tsv';
 import {
   PLACEMENT_CODES, PLACEMENT_INVARIANTS, PLACEMENT_LINEAGE, PLACEMENT_LINEAGE_BUDGET, parkedLedgerView, placementLineageLines,
@@ -131,20 +131,18 @@ import { SIMBAD_SAMPLE } from './validate/simbad-sample-source';
 import { MEMBERSHIP_MANIFEST, manifestDesignations } from './membership/membership-manifest-tsv';
 import { artifactRows } from '../util/sources/source';
 import { REPO_ROOT as ROOT } from '../util/paths';
-import {
-  clearStamp, fileHashes, stampIsCurrent, type FileHashes,
-} from '../util/build-stamp';
+import { fileHashes, type FileHashes } from '../util/build-stamp';
 import {
   DEFAULT_CATALOG_MANIFEST as OUT_MANIFEST, DEFAULT_CONSTELLATIONS_JSON as OUT_CON,
   DEFAULT_ROW_INDEX_MAP, DEFAULT_SEARCH_INDEX as OUT_SEARCH,
-} from './catalog-lookup';
+} from './catalog-paths-pure';
 import {
-  CATALOG_CHUNK_DIR, CATALOG_OUTPUTS, CATALOG_STAMP, OUT_BOUNDARIES,
+  CATALOG_CHUNK_DIR, CATALOG_OUTPUTS, OUT_BOUNDARIES,
 } from './catalog-outputs';
 import {
   emitArtifacts, runStep, sweepStaged, type ArtifactContents, type Check,
 } from '../util/emit-artifacts';
-import { UPDATE_SNAPSHOTS_ENV, snapshotCheck } from '../util/snapshot-check';
+import { snapshotCheck } from '../util/snapshot-check';
 import { watchHeap } from '../util/heap-budget';
 import { syntheticGaiaBridges } from '../sid/sid-pure';
 import { sidSuccessorPairs } from '../sid/events-pure';
@@ -226,13 +224,7 @@ function simbadSourcedDistancesTsv(stars: readonly Star[]): string {
 async function main() {
   const heap = watchHeap('build:catalog');
   sweepStaged(CATALOG_OUTPUTS);
-  const forceRebuild = process.env[UPDATE_SNAPSHOTS_ENV] === '1';
   const inputHashesAtStart = fileHashes(await stepInputPaths('build:catalog'));
-  if (!forceRebuild && stampIsCurrent(CATALOG_STAMP, inputHashesAtStart)) {
-    console.log('catalog.bin is up to date with its inputs; skipping rebuild.');
-    return;
-  }
-  clearStamp(CATALOG_STAMP);
 
   // Accumulator for the headline counts asserted against
   // scripts/catalog/build-catalog-expected.json at the end of the
@@ -1315,7 +1307,6 @@ async function main() {
       buildCountsCheck(counts), distanceOutliersCheck(stars),
       heap.check(),
     ],
-    stamp: { path: CATALOG_STAMP, inputs: inputHashesAtStart },
   });
 }
 

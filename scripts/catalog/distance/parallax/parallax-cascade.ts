@@ -9,7 +9,7 @@ import type { CitedParallax, MeasuredParallax } from '../../cited-parallax';
 import type { CitedCascadeResult, CitedRefusal } from '../../cascade-result';
 import type { AnySourceRowRef } from '../../../util/sources/row-ref-pure';
 import type { SiblingParallax } from './pair-member-parallax';
-import type { GlieseRow } from '../../gliese-parse';
+import type { GlieseRow } from '../../gliese-parse-pure';
 import type { DistVia } from '../../../../src/catalog-format/record/catalog-pure';
 
 /** The `BuildCounts` field each tier reports into. Declared beside the enum so

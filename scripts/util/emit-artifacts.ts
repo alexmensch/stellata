@@ -3,7 +3,6 @@
 import { existsSync, readdirSync, rmSync } from 'node:fs';
 import { basename, dirname, resolve } from 'node:path';
 
-import { fileHashes, writeStamp, type FileHashes } from './build-stamp';
 import {
   STAGING_SUFFIX, discardStaged, landStaged, writeStaged,
 } from './staged-write';
@@ -12,8 +11,13 @@ import {
  *  emit are deleted once the new set has landed. */
 export interface OutputFamily {
   readonly dir: string;
-  readonly member: RegExp;
+  /** A pattern over member names, or every name a member may have. */
+  readonly member: RegExp | readonly string[];
   readonly stamped: boolean;
+}
+
+export function isMemberName(family: OutputFamily, name: string): boolean {
+  return family.member instanceof RegExp ? family.member.test(name) : family.member.includes(name);
 }
 
 export interface DeclaredOutputs<K extends string = string> {
@@ -47,8 +51,6 @@ interface EmissionBase<K extends string> {
   /** Family members, keyed by absolute path. */
   readonly members?: ReadonlyMap<string, ArtifactContents>;
   readonly checks?: readonly Check[];
-  /** Written last, over exactly the emitted files. */
-  readonly stamp?: { readonly path: string; readonly inputs: FileHashes };
 }
 
 export interface Emission<K extends string> extends EmissionBase<K> {
@@ -89,7 +91,7 @@ function assertDeclared(
 }
 
 export function isFamilyMember(family: OutputFamily, path: string): boolean {
-  return dirname(path) === family.dir && family.member.test(basename(path));
+  return dirname(path) === family.dir && isMemberName(family, basename(path));
 }
 
 function familyEntries(family: OutputFamily): string[] {
@@ -98,7 +100,7 @@ function familyEntries(family: OutputFamily): string[] {
 
 /** The family's members on disk, absolute. */
 export function familyMembers(family: OutputFamily): string[] {
-  return familyEntries(family).filter((name) => family.member.test(name)).map((name) => resolve(family.dir, name));
+  return familyEntries(family).filter((name) => isMemberName(family, name)).map((name) => resolve(family.dir, name));
 }
 
 /** The members on disk of the families a stamp records. */
@@ -110,7 +112,7 @@ export function sweepStaged(outputs: DeclaredOutputs, extra: readonly string[] =
   for (const p of [...Object.values<string>(outputs.files), ...extra]) discardStaged(p);
   for (const family of outputs.families) {
     for (const name of familyEntries(family)) {
-      if (name.endsWith(STAGING_SUFFIX) && family.member.test(name.slice(0, -STAGING_SUFFIX.length))) {
+      if (name.endsWith(STAGING_SUFFIX) && isMemberName(family, name.slice(0, -STAGING_SUFFIX.length))) {
         rmSync(resolve(family.dir, name), { force: true });
       }
     }
@@ -122,7 +124,7 @@ export function emitArtifacts<K extends string, E extends K>(emission: NarrowedE
 export function emitArtifacts<K extends string>(
   emission: Emission<K> | NarrowedEmission<K, K>,
 ): void {
-  const { outputs, checks = [], stamp } = emission;
+  const { outputs, checks = [] } = emission;
   const keyed = Object.entries<ArtifactContents>(emission.files);
   const members = [...(emission.members ?? new Map())].map(([p, c]) => [resolve(p), c] as const);
   const expected = 'only' in emission ? emission.only : Object.keys(outputs.files);
@@ -158,13 +160,6 @@ export function emitArtifacts<K extends string>(
     }
   }
   for (const r of refreshes) console.log(`Updated ${r.path}`);
-  if (stamp) {
-    writeStamp(
-      stamp.path,
-      rehashWritten(stamp.inputs, [...files.keys(), ...refreshes.map((r) => r.path)]),
-      [...declared.map(([p]) => p), ...stampedMembers(outputs.families)],
-    );
-  }
 }
 
 export async function emitEach<K extends string>(
@@ -192,11 +187,4 @@ export function runStep(main: () => void | Promise<void>): void {
     console.error(err instanceof EmissionRefused ? err.message : err);
     process.exit(1);
   });
-}
-
-function rehashWritten(inputs: FileHashes, written: readonly string[]): FileHashes {
-  const rewritten = fileHashes(written.map((p) => resolve(p)));
-  return Object.fromEntries(
-    Object.entries(inputs).map(([p, h]) => [p, p in rewritten ? rewritten[p] : h]),
-  );
 }

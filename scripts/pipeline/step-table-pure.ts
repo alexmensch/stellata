@@ -1,7 +1,7 @@
 // The step table's types, its load-time rules and the order derived from it. See README.md.
 
-import { stepFileName } from '../util/build-stamp';
-import { isFamilyMember, type OutputFamily } from '../util/emit-artifacts';
+import { stepFileName } from '../util/stamp-path-pure';
+import { isFamilyMember, isMemberName, type OutputFamily } from '../util/emit-artifacts';
 
 /** A `declareOutputs` constant, named by module and export so the module can be
  *  checked side-effect-free before it is imported. */
@@ -88,6 +88,13 @@ export function claims(outputs: OutputClaims, path: string): boolean {
     || outputs.families.some((f) => isFamilyMember(f, path));
 }
 
+function familiesOverlap(f: OutputFamily, g: OutputFamily): boolean {
+  if (f.dir !== g.dir) return false;
+  if (!(f.member instanceof RegExp)) return f.member.some((name) => isMemberName(g, name));
+  if (!(g.member instanceof RegExp)) return g.member.some((name) => isMemberName(f, name));
+  return true;
+}
+
 export function outputConflicts(steps: readonly ResolvedStep[]): string[] {
   const problems: string[] = [];
   for (const [i, a] of steps.entries()) {
@@ -95,7 +102,7 @@ export function outputConflicts(steps: readonly ResolvedStep[]): string[] {
       const shared = [
         ...a.outputs.files.filter((p) => claims(b.outputs, p)),
         ...b.outputs.files.filter((p) => !a.outputs.files.includes(p) && claims(a.outputs, p)),
-        ...a.outputs.families.filter((f) => b.outputs.families.some((g) => g.dir === f.dir)).map((f) => `${f.dir}/*`),
+        ...a.outputs.families.filter((f) => b.outputs.families.some((g) => familiesOverlap(f, g))).map((f) => `${f.dir}/*`),
       ];
       for (const path of shared) {
         problems.push(`${path} is declared by both ${a.step.name} and ${b.step.name}`);
@@ -214,6 +221,13 @@ export function deriveGraph(steps: readonly ResolvedStep[], registryFiles: reado
     else edges.push(e);
   }
   return { kind: 'ordered', graph: { order: topological(names, edges), edges, keptLoops, registryEdges } };
+}
+
+/** The target naming every build step on the table. */
+export const ALL_BUILD_STEPS = 'data';
+
+export function expandTargets(steps: readonly StepEntry[], targets: readonly string[]): string[] {
+  return [...new Set(targets.flatMap((t) => (t === ALL_BUILD_STEPS ? steps.filter(isBuild).map((s) => s.name) : [t])))];
 }
 
 export function selectSteps(graph: StepGraph, targets: readonly string[]): string[] {

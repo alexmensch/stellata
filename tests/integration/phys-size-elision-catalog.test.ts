@@ -7,11 +7,8 @@ import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { beforeAll, describe, expect, it } from 'vitest';
 
-import {
-  DEFAULT_CATALOG_MANIFEST,
-  DEFAULT_CONSTELLATIONS_JSON,
-  readCatalogBuffer,
-} from '../../scripts/catalog/catalog-lookup';
+import { readCatalogBuffer } from '../../scripts/catalog/catalog-lookup';
+import { DEFAULT_CATALOG_MANIFEST, DEFAULT_CONSTELLATIONS_JSON } from '../../scripts/catalog/catalog-paths-pure';
 import buildCatalogExpected from '../../scripts/catalog/build-catalog-expected.json';
 import { peakAmplitudeFactor } from '../../src/client/camera/controls/star-geometry';
 import { STAR_RENDER_DEFAULTS, starPxSizes } from '../../src/client/filters/filter-state';

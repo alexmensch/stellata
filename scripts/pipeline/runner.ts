@@ -10,7 +10,7 @@ import {
 } from '../util/build-stamp';
 import { stampedMembers } from '../util/emit-artifacts';
 import { REPO_ROOT } from '../util/paths';
-import { UPDATE_SNAPSHOTS_ENV } from '../util/snapshot-check';
+import { PIPELINE_STEP_ENV, UPDATE_SNAPSHOTS_ENV } from '../util/snapshot-check';
 import {
   derivedFreshness, manualFreshness, recordedFreshness,
   type Freshness,
@@ -71,6 +71,10 @@ class Run {
 
   private get graph(): StepGraph { return this.loaded.graph; }
 
+  private forced(name: string): boolean {
+    return this.options.force || (this.options.updateSnapshots && this.options.targets.includes(name));
+  }
+
   private blocker(name: string): string | null {
     const upstream = this.graph.edges.filter((e) => e.to === name).map((e) => e.from);
     return upstream.find((u) => { const v = this.verdicts.get(u); return v !== undefined && blocks(v); }) ?? null;
@@ -118,10 +122,10 @@ class Run {
     const freshness: Freshness = step.language === 'ts'
       ? derivedFreshness(stampFile, resolved.outputs, inputs, tree)
       : recordedFreshness(stampFile, resolved.outputs, tree);
-    if (freshness.kind === 'fresh' && !this.options.force) return freshness;
+    if (freshness.kind === 'fresh' && !this.forced(step.name)) return freshness;
 
     clearStamp(stampFile);
-    const env = { ...process.env };
+    const env: NodeJS.ProcessEnv = { ...process.env, [PIPELINE_STEP_ENV]: step.name };
     if (this.options.updateSnapshots) env[UPDATE_SNAPSHOTS_ENV] = '1';
     else delete env[UPDATE_SNAPSHOTS_ENV];
     const entry = tree.abs(step.entry);

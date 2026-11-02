@@ -6,7 +6,12 @@ public/search-index.json
 public/binaries.bin
 build/catalog-row-index-map.json
 build/binding-integrity-verdicts.tsv
-build/stamps/multiples.json
-build/stamps/catalog.json
-build/stamps/binaries-bin.json
+build/stamps/build-binaries.json
+build/stamps/lineage-codes.json
+build/stamps/build-classic-ids.json
+build/stamps/build-wgsn.json
+build/stamps/build-astrometry-request.json
+build/stamps/build-membership.json
+build/stamps/build-catalog.json
+build/stamps/build-binaries-runtime.json
 build/lineage/*

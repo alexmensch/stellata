@@ -1,6 +1,7 @@
 import { relative } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
+import { isMemberName } from '../util/emit-artifacts';
 import { REPO_ROOT } from '../util/paths';
 import { CATALOG_OUTPUTS } from './catalog-outputs';
 import { PARKED_LEDGER } from './distance/parallax/parked-ledger-tsv';
@@ -23,7 +24,7 @@ describe('CATALOG_OUTPUTS', () => {
       'build/lineage.previous', 'build/lineage-diff',
     ]);
     const families = (name: string) => CATALOG_OUTPUTS.families
-      .filter((f) => f.member.test(name)).map((f) => repoRelative(f.dir));
+      .filter((f) => isMemberName(f, name)).map((f) => repoRelative(f.dir));
     expect(families('placement.tsv.gz')).toEqual(['build/lineage.previous']);
     expect(families('placement.tsv')).toEqual(['build/lineage-diff']);
     expect(families('promotion.tsv.gz')).toEqual(['build/lineage.previous']);
@@ -31,7 +32,7 @@ describe('CATALOG_OUTPUTS', () => {
     expect(repoRelative(chunks.dir)).toBe('public');
     expect(chunks.stamped).toBe(true);
     expect(lineage.map((f) => f.stamped)).toEqual(lineage.map(() => false));
-    expect(chunks.member.test(catalogChunkFilename(12))).toBe(true);
-    expect(chunks.member.test('catalog-manifest.json')).toBe(false);
+    expect(isMemberName(chunks, catalogChunkFilename(12))).toBe(true);
+    expect(isMemberName(chunks, 'catalog-manifest.json')).toBe(false);
   });
 });

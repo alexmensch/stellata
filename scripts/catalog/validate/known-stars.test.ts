@@ -28,18 +28,8 @@ import {
   type SpectralInfo,
   classifyFromSimbad,
 } from '../../../src/catalog-format/spectral/spectral-classify';
-import {
-  DEFAULT_CATALOG_MANIFEST,
-  type Catalog,
-  type CatalogRecord,
-  distancePc,
-  loadCatalog,
-  lookupByHip,
-  lookupByGaiaSourceId,
-  displayLabel,
-  lookupByName,
-  lookupByRef,
-} from '../catalog-lookup';
+import { type Catalog, type CatalogRecord, distancePc, loadCatalog, lookupByHip, lookupByGaiaSourceId, displayLabel, lookupByName, lookupByRef } from '../catalog-lookup';
+import { DEFAULT_CATALOG_MANIFEST } from '../catalog-paths-pure';
 import {
   parseOptionalRef,
   type RecordRef,

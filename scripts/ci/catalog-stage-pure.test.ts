@@ -1,9 +1,9 @@
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
-import { tsxEntry } from '../util/import-closure-pure';
+import { stepEntries } from '../util/step-inputs';
 import { PACKAGE_JSON, REPO_ROOT } from '../util/paths';
 import {
   CATALOG_CACHE_KEY_PREFIX,
@@ -101,10 +101,8 @@ describe('withVersionlessPackageJson', () => {
 });
 
 describe('CATALOG_STAGE', () => {
-  const { scripts } = JSON.parse(readFileSync(resolve(REPO_ROOT, PACKAGE_JSON), 'utf-8'));
-
-  it('names only single-entry tsx scripts, so every step is keyed', () => {
-    for (const { script } of CATALOG_STAGE) expect(() => tsxEntry(scripts, script)).not.toThrow();
+  it('names only TypeScript steps on the table, so every step is keyed by its entry', () => {
+    for (const { script } of CATALOG_STAGE) expect(stepEntries(script), script).toHaveLength(1);
   });
 
   it('pins only paths that exist', () => {

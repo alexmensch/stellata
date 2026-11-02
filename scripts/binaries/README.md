@@ -85,6 +85,10 @@ scripts/binaries/
                                   Its rowKey cites a row by
                                   (system_id, comp) for lineage
                                   (../util/sources/README.md#sourcerowref).
+  multiples-row-key-pure.ts       MULTIPLES_ROW_KEY, that rowKey, for code
+                                  that cites a row without reading the file
+                                  (promotion's origin keys), so it never
+                                  reaches the codec.
   anchor_offsets.py               compute_anchor_offsets: each component's
                                   offset from its system's anchor letter,
                                   with the sub-letter photocentre link.
@@ -127,7 +131,7 @@ scripts/binaries/
                                   duplicates across them.
   __init__.py                     Package marker (see above).
   *-expected.json                 Snapshot pins refreshed with
-                                  UPDATE_SNAPSHOTS=1: build-binaries
+                                  --update-snapshots: build-binaries
                                   (per-strategy / per-tier counts),
                                   build-binaries-rates (per-strategy rates —
                                   catches population-mix shifts that don't move
@@ -883,4 +887,4 @@ asserts against on every run:
   HIP2 fallback share, …). Catches a regression that shifts the
   population mix without shifting absolute count totals.
 
-Refresh both via `UPDATE_SNAPSHOTS=1 pnpm run build:binaries`.
+Refresh both via `pnpm run build:binaries --update-snapshots`.

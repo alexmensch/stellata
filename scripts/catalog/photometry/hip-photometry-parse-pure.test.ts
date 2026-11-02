@@ -1,10 +1,10 @@
 import { describe, it, expect } from 'vitest';
 
-import { parseHipPhotometryTsv, printedByHip } from './hip-photometry-parse';
+import { parseHipPhotometryTsv, printedByHip } from './hip-photometry-parse-pure';
 
 const FROM = { file: 'fixture.tsv', hint: 'h' };
 
-describe('hip-photometry-parse / parseHipPhotometryTsv', () => {
+describe('hip-photometry-parse-pure / parseHipPhotometryTsv', () => {
   const HIP_PHOTOMETRY = [
     'hip\tvmag\tbv\thd',
     '32349\t-1.440\t0.009\t48915',

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
-  deriveGraph, selectSteps, writersOf,
+  ALL_BUILD_STEPS, deriveGraph, expandTargets, selectSteps, writersOf,
   type Derived, type ResolvedStep, type StepGraph,
 } from './step-table-pure';
 
@@ -72,6 +72,23 @@ describe('deriveGraph', () => {
       .toEqual(['/r/pub/c.1 is declared by both a and b']);
   });
 
+  const family = (name: string, member: RegExp | readonly string[]): ResolvedStep => (
+    { ...ts(name, []), outputs: { files: [], families: [{ dir: '/r/base', member, stamped: false }] } }
+  );
+
+  it('accepts two name-list families in one folder whose names are disjoint', () => {
+    expect(deriveGraph([family('a', ['a.tsv.gz']), family('b', ['b.tsv.gz'])], []).kind).toBe('ordered');
+  });
+
+  it.each([
+    ['two name lists sharing a name', ['x', 'a.tsv.gz'], ['a.tsv.gz']],
+    ['a name list and a pattern that matches one of its names', ['a.tsv.gz'], /\.tsv\.gz$/],
+    ['two patterns in one folder', /^a/, /^b/],
+  ])('rejects %s', (_, left, right) => {
+    expect(problems(deriveGraph([family('a', left), family('b', right)], [])))
+      .toEqual(['/r/base/* is declared by both a and b']);
+  });
+
   it('rejects a cycle among build steps, naming it', () => {
     const d = deriveGraph([ts('a', ['/r/a'], ['/r/b']), ts('b', ['/r/b'], ['/r/a'])], []);
     expect(problems(d)).toEqual(['the build steps form a cycle: a → b → a']);
@@ -119,6 +136,14 @@ describe('deriveGraph', () => {
     const g = ordered(deriveGraph([p, membership], []));
     expect(g.keptLoops).toEqual([{ from: 'simbad-sptype', to: 'build:membership', files: ['/r/sptype.tsv'] }]);
     expect(g.order).toEqual(['build:membership', 'simbad-sptype']);
+  });
+});
+
+describe('expandTargets', () => {
+  it('reads the whole-table target as every build step, in table order, once', () => {
+    const steps = [ts('a', ['/r/a']), ts('b', ['/r/b'])].map((s) => s.step);
+    expect(expandTargets(steps, [ALL_BUILD_STEPS, 'b'])).toEqual(['a', 'b']);
+    expect(expandTargets(steps, ['b'])).toEqual(['b']);
   });
 });
 

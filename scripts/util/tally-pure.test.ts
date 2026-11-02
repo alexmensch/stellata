@@ -6,7 +6,7 @@ import {
 } from '../catalog/distance/direction-cascade';
 import { DIST_VIA_VALUES } from '../../src/catalog-format/record/catalog-pure';
 import { V_VIA_VALUES } from '../catalog/photometry/v-magnitude-pure';
-import { emptyTallyPartition } from './tally';
+import { emptyTallyPartition } from './tally-pure';
 
 describe('util/tally / emptyTallyPartition', () => {
   it('zeroes one bucket per declared value', () => {

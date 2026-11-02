@@ -4,7 +4,7 @@ import { existsSync, readFileSync } from 'node:fs';
 
 import { runStep } from '../util/emit-artifacts';
 import { allocateSibling, emitSibling } from './sibling-allocation';
-import { SIBLING_ARTIFACTS, type SiblingItem } from './sibling-artifacts';
+import { SIBLING_ARTIFACTS, type SiblingItem } from './sibling-artifacts-pure';
 import { SID_STAMP_OUTPUTS } from './sibling-stamp-outputs';
 
 function main(): void {

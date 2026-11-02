@@ -1,7 +1,7 @@
 import { beforeAll, describe, it, expect } from 'vitest';
 import { existsSync, readFileSync } from 'node:fs';
 
-import { DEFAULT_ROW_INDEX_MAP } from '../../catalog-lookup';
+import { DEFAULT_ROW_INDEX_MAP } from '../../catalog-paths-pure';
 import { loadStoredEdges } from '../../../sid/stored-edges';
 import { syntheticGaiaBridges } from '../../../sid/sid-pure';
 

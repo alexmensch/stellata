@@ -34,7 +34,7 @@ import {
   type LabelMergeRecord,
   type LabelOverrides,
 } from '../classic-ids/label-merge/label-merge-pure';
-import { parkedRecordKey } from '../distance/parallax/parked-ledger';
+import { parkedRecordKey } from '../distance/parallax/parked-ledger-pure';
 import { intCell } from '../../util/tsv/table-pure';
 import { nullableCell } from '../../util/tsv/artifact-pure';
 import {

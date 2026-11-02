@@ -120,6 +120,10 @@ scripts/catalog/
                                   two unstamped. Side-effect free, so a reader can
                                   import the declaration without running
                                   the build.
+  catalog-paths-pure.ts           Where the built catalogue's public/ and
+                                  build/ files land (DEFAULT_*): one place
+                                  for the declaration above and every
+                                  reader, catalog-lookup.ts included.
   cascade-result.ts               `CascadeResult`, the one shape every
                                   per-field cascade returns: the tier that
                                   answered with its value, or `none`, and on
@@ -149,7 +153,8 @@ scripts/catalog/
                                   time (data/tycho2/README.md). Feeds the
                                   direction, PM-rescue and V cascades.
   gliese-source.ts                GLIESE, V/70A's declaration.
-  gliese-parse.ts (+ test)        data/gliese/ keyed on the bare Gliese
+  gliese-parse-pure.ts            data/gliese/ keyed on the bare Gliese
+    (+ test)
                                   number + component, so the catalogue's four
                                   name prefixes and a record's `gl` cell meet
                                   (data/gliese/README.md). Bottom tier of the

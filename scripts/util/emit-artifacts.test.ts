@@ -2,10 +2,9 @@ import {
   existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync,
 } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { basename, join } from 'node:path';
+import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { fileHashes, readStamp, stampIsCurrent } from './build-stamp';
 import {
   EmissionRefused, declareOutputs, emitArtifacts, emitEach, type Check,
 } from './emit-artifacts';
@@ -108,67 +107,16 @@ describe('emitArtifacts', () => {
     expect(readFileSync(join(chunks, 'chunk-1'), 'utf8')).toBe('fresh 1');
   });
 
-  it('lands a refreshed baseline with the outputs, and the stamp records only the outputs', () => {
-    const snapshot = join(dir, 'expected.json');
-    const stampFile = join(dir, 'stamps', 'step.json');
-    emitArtifacts({
-      outputs: both(),
-      files: files(),
-      checks: [{ kind: 'refresh', path: snapshot, text: '{"n":2}\n' }],
-      stamp: { path: stampFile, inputs: { 'in.txt': 'abc' } },
-    });
-    expect(readFileSync(snapshot, 'utf8')).toBe('{"n":2}\n');
-    const stamp = readStamp(stampFile);
-    expect(stamp?.inputs).toEqual({ 'in.txt': 'abc' });
-    const recorded = Object.keys(stamp?.outputs ?? {}).sort();
-    expect(recorded).toHaveLength(2);
-    expect(recorded[0]).toMatch(/a\.txt$/);
-    expect(recorded[1]).toMatch(/out\/b\.txt$/);
-  });
-
-  it('lands an unstamped family\'s members but keeps them out of the stamp, so their absence is not stale', () => {
-    const baseline = join(dir, 'baseline');
-    const kept = join(dir, 'kept');
-    const stampFile = join(dir, 'stamps', 'step.json');
-    emitArtifacts({
-      outputs: declareOutputs({ a }, [
-        { dir: kept, member: /^k$/, stamped: true },
-        { dir: baseline, member: /^p$/, stamped: false },
-      ]),
-      files: { a: 'new a' },
-      members: new Map([[join(kept, 'k'), 'k'], [join(baseline, 'p'), 'p']]),
-      stamp: { path: stampFile, inputs: {} },
-    });
-    expect(readFileSync(join(baseline, 'p'), 'utf8')).toBe('p');
-    const recorded = readStamp(stampFile);
-    expect(recorded).not.toBeNull();
-    expect(Object.keys(recorded!.outputs).map((p) => basename(p)).sort()).toEqual(['a.txt', 'k']);
-    rmSync(baseline, { recursive: true });
-    expect(stampIsCurrent(stampFile, {})).toBe(true);
-  });
-
-  it('records a refreshed snapshot the step reads at its new hash, so the stamp stays current', () => {
-    const snapshot = join(dir, 'expected.json');
-    const stampFile = join(dir, 'stamps', 'step.json');
-    writeFileSync(snapshot, '{"n":1}\n');
-    emitArtifacts({
-      outputs: both(),
-      files: files(),
-      checks: [{ kind: 'refresh', path: snapshot, text: '{"n":2}\n' }],
-      stamp: { path: stampFile, inputs: fileHashes([snapshot]) },
-    });
-    expect(stampIsCurrent(stampFile, fileHashes([snapshot]))).toBe(true);
-  });
-
-  it('records an output the step also reads at its written hash, so an unchanged re-run is skipped', () => {
-    const stampFile = join(dir, 'stamps', 'step.json');
-    emitArtifacts({
-      outputs: both(),
-      files: files(),
-      stamp: { path: stampFile, inputs: fileHashes([a]) },
-    });
-    expect(readFileSync(a, 'utf8')).toBe('new a');
-    expect(stampIsCurrent(stampFile, fileHashes([a]))).toBe(true);
+  it('treats a name-list family as exactly those names: a listed one it omits is deleted, anything else is left', () => {
+    const base = join(dir, 'base');
+    mkdirSync(base);
+    writeFileSync(join(base, 'gone'), 'old');
+    writeFileSync(join(base, 'other'), 'not ours');
+    const outputs = declareOutputs({ a }, [{ dir: base, member: ['kept', 'gone'], stamped: false }]);
+    emitArtifacts({ outputs, files: { a: 'new a' }, members: new Map([[join(base, 'kept'), 'k']]) });
+    expect(readdirSync(base).sort()).toEqual(['kept', 'other']);
+    expect(() => emitArtifacts({ outputs, files: { a: 'x' }, members: new Map([[join(base, 'other'), 'o']]) }))
+      .toThrow(/undeclared/);
   });
 
   it('emitEach lands every target that verifies and refuses the rest, after trying all', async () => {

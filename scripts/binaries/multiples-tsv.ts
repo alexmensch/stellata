@@ -4,6 +4,7 @@ import { resolve } from 'node:path';
 
 import { REPO_ROOT } from '../util/paths';
 import { defineArtifact, nullableCell } from '../util/tsv/artifact-pure';
+import { MULTIPLES_ROW_KEY } from './multiples-row-key-pure';
 
 export const MULTIPLES_COLUMNS = [
   'system_id', 'comp', 'hip', 'gaia_source_id', 'hd',
@@ -98,10 +99,7 @@ export const MULTIPLES_TSV = defineArtifact({
   columns: MULTIPLES_COLUMNS,
   hint: 'Re-run `pnpm run build:binaries`.',
   order: 'as-given',
-  rowKey: {
-    id: 'multiples',
-    text: ({ systemId, comp }: Pick<MultiplesRecord, 'systemId' | 'comp'>) => `${systemId}/${comp}`,
-  },
+  rowKey: MULTIPLES_ROW_KEY,
   decode: (row): MultiplesRecord => {
     const regime = row.int('regime') ?? row.fail('regime is empty');
     return {

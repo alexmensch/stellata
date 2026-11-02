@@ -3,7 +3,7 @@
 import { spawn } from 'node:child_process';
 import { resolve } from 'node:path';
 
-import { stepFileName } from '../util/build-stamp';
+import { stepFileName } from '../util/stamp-path-pure';
 import { REPO_ROOT } from '../util/paths';
 
 const HOLDER = resolve(REPO_ROOT, 'scripts/pipeline/lock_holder.py');

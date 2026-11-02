@@ -15,7 +15,7 @@ import { cns5Astrometry } from '../classic-ids/cns5-fixture';
 import { TYCHO2_ICRS_EPOCH } from '../tycho2-parse';
 import { emptySimbadValueIndex, type SimbadValueIndex } from '../simbad/simbad-values-parse';
 import { unitVectorFromRaDec, type UnitVector } from '../../../src/astro-core/equatorial-basis';
-import type { GlieseIndex } from '../gliese-parse';
+import type { GlieseIndex } from '../gliese-parse-pure';
 import { GLIESE } from '../gliese-source';
 import { TYCHO2 } from '../tycho2-source';
 import { CNS5 } from '../classic-ids/cns5-source';

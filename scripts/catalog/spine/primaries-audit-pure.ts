@@ -10,7 +10,7 @@ import type {
   CrossIndexRow,
   Tyc2HdRow,
 } from '../classic-ids/classic-ids-parse';
-import { lookupGliese, type GlieseIndex } from '../gliese-parse';
+import { lookupGliese, type GlieseIndex } from '../gliese-parse-pure';
 import { intCell } from '../../util/tsv/table-pure';
 import type { Tycho2Row } from '../tycho2-parse';
 import type { SimbadXids } from '../spectral/spectral-resolve';

@@ -7,7 +7,8 @@ import {
   readCatalogHeader,
   wholeRecordSpan,
 } from '../../src/catalog-format/record/catalog-pure';
-import { DEFAULT_CATALOG_MANIFEST, readCatalogBuffer } from '../catalog/catalog-lookup';
+import { readCatalogBuffer } from '../catalog/catalog-lookup';
+import { DEFAULT_CATALOG_MANIFEST } from '../catalog/catalog-paths-pure';
 import { REPO_ROOT } from '../util/paths';
 import {
   GALACTIC_CENTRE_PC,

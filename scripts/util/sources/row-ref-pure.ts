@@ -34,6 +34,10 @@ export function sourceRowRef<K>(source: RowKeyed<K>, row: K): SourceRowRef<K> {
   return { source, row };
 }
 
+export function rowKeyText<K>(key: RowKey<K>, row: K): string {
+  return `${key.id}:${key.text(row)}`;
+}
+
 export function sourceRowRefText<K>(ref: SourceRowRef<K>): string {
-  return `${ref.source.rowKey.id}:${ref.source.rowKey.text(ref.row)}`;
+  return rowKeyText(ref.source.rowKey, ref.row);
 }
