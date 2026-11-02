@@ -14,7 +14,6 @@ import { LOCAL_GROUP_OUTPUTS } from './local-group-outputs';
 import { LG_ALIASES, LG_OVERRIDES, LVDB } from './local-group-source';
 import {
   applyAliasMeta,
-  buildOrientationQuat,
   buildStandaloneOverride,
   filterForRendering,
   mergeRowAndOverride,
@@ -196,9 +195,6 @@ async function main(): Promise<void> {
     `${skippedOutOfRange} standalone overrides skipped — past MAX_DISTANCE_PC; ` +
     `${allocation.minted} lg SIDs minted)`,
   );
-  // Reference the unused symbol so the import survives tree-shaking
-  // analysis in the test path that imports this file for the parsers.
-  void buildOrientationQuat;
 }
 
 // Run as a script. ESM doesn't have require.main; gate on the entry-point
