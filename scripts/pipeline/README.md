@@ -319,8 +319,8 @@ Hand-kept lists become derivations over the table:
   `lock_holder.py` child that takes each `flock` (Node has none) in
   step-name order and holds them until its stdin closes, so the locks go
   when the run exits however it exits. `lockSpecs` is that order. A lock
-  file is `build/locks/<step>`, `:` written `-` (`stepFileName`, shared with
-  the stamp's name).
+  file is `build/locks/<step>`, `:` written `-` (`util/build-stamp.ts`'s
+  `stepFileName`, which names the step's stamp too).
 - `load-table.ts` — `loadTable`: checks every TypeScript outputs module's
   imports before importing any, imports the `declareOutputs` constants, rejects a build output
   through a symlink (the path or any folder above it, up to the root), reads
@@ -344,8 +344,9 @@ Hand-kept lists become derivations over the table:
   writes every build stamp itself once a step exits 0 and its declared
   outputs exist: inputs hashed before the run, those it also wrote (and,
   under `--update-snapshots`, all of a TypeScript step's) re-hashed after.
-  `pipeline-dirs.ts` places its stamps, locks and run records under a root,
-  which tests point at a temporary folder.
+  `pipeline-dirs.ts` is the one place a step's build stamp (through
+  `stampPath`), manual record, run record and lock folder are named under a
+  root, which tests point at a temporary folder.
 - `run.ts` / `steps.ts` — the command line and the table it runs.
 
 ## Design pass

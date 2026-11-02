@@ -72,7 +72,7 @@ if sys.argv[1:] == ["--describe"]:
 }
 
 function writeManualStamp(name: string, out: string, request: string, queryText: string): void {
-  write(relative(root, join(pipelineDirs(root).manualStamps, `${name}.json`)), JSON.stringify({
+  write(relative(root, pipelineDirs(root).manualStamp(name)), JSON.stringify({
     inputs: fileHashes([at(request)]),
     outputs: fileHashes([at(out)]),
     query: pullQueryHash({ query: queryText, services: ['esa', 'ari'] }),

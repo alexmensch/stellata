@@ -9,7 +9,7 @@ import { entryMetafile } from '../util/import-closure';
 import { REPO_ROOT } from '../util/paths';
 import { pipelineDirs } from './pipeline-dirs';
 import {
-  deriveGraph, stepFileName,
+  deriveGraph,
   type OutputClaims, type OutputsRef, type ResolvedStep, type StepEntry, type StepGraph, type StepTable,
 } from './step-table-pure';
 
@@ -68,7 +68,7 @@ function symlinkedOutputs(root: string, outputs: OutputClaims): string[] {
 
 async function readsOf(step: StepEntry, root: string, options: LoadOptions): Promise<readonly string[]> {
   if (step.kind !== 'build') {
-    const stamp = readStamp(resolve(pipelineDirs(root).manualStamps, `${stepFileName(step.name)}.json`));
+    const stamp = readStamp(pipelineDirs(root).manualStamp(step.name));
     return stamp ? Object.keys(stamp.inputs).map(repoPath) : [];
   }
   return step.language === 'ts' ? options.deriveInputs(repoPath(step.entry)) : [];

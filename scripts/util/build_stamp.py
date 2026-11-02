@@ -25,7 +25,7 @@ class Stamp(NamedTuple):
 
 
 def stamp_path(name: str) -> Path:
-    return STAMP_DIR / f"{name}.json"
+    return STAMP_DIR / f"{name.replace(':', '-')}.json"
 
 
 def outputs_json(outputs: Iterable[Path], stamp: Path) -> str:

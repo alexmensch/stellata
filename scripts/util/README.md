@@ -72,6 +72,8 @@ same thing — single-use helpers stay with their consumer.
   output tuple and stamp, repo-relative — which `../worktree-seed.test.ts`
   reads. Both pinned by co-located tests
   (`python3 scripts/util/build_stamp.test.py`).
+  `stampPath(name, root)` is `build/stamps/<name>.json` with `:` written `-`
+  (`stepFileName`; `stamp_path` matches).
   A stamp the runner writes for a Python step also carries `recorded`: the
   folders it listed (`listingHash`, the same formula on both sides) and the
   paths it probed, which `recordedChanges` re-checks.

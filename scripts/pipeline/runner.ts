@@ -19,7 +19,7 @@ import { holdLocks } from './locks';
 import { pipelineDirs } from './pipeline-dirs';
 import { recordProblems, type RunRecord } from './python-run-pure';
 import {
-  isBuild, selectSteps, stepFileName, writersOf,
+  isBuild, selectSteps, writersOf,
   type BuildStep, type ResolvedStep, type StepGraph,
 } from './step-table-pure';
 
@@ -75,10 +75,6 @@ class Run {
 
   private get graph(): StepGraph { return this.loaded.graph; }
 
-  private stampFile(name: string): string {
-    return resolve(this.dirs.buildStamps, `${stepFileName(name)}.json`);
-  }
-
   private blocker(name: string): string | null {
     const upstream = this.graph.edges.filter((e) => e.to === name).map((e) => e.from);
     return upstream.find((u) => { const v = this.verdicts.get(u); return v !== undefined && blocks(v); }) ?? null;
@@ -98,7 +94,7 @@ class Run {
   private async visit(resolved: ResolvedStep): Promise<Verdict> {
     const { step } = resolved;
     if (!isBuild(step)) {
-      const stampFile = resolve(this.dirs.manualStamps, `${stepFileName(step.name)}.json`);
+      const stampFile = this.dirs.manualStamp(step.name);
       const fresh = manualFreshness(step, stampFile, resolved.outputs, this.options.describe ?? describePull);
       return fresh.kind === 'fresh' ? fresh : { kind: 'stale', command: step.command, changed: fresh.changed };
     }
@@ -116,7 +112,7 @@ class Run {
   }
 
   private async build(resolved: ResolvedStep, step: BuildStep): Promise<Verdict> {
-    const stampFile = this.stampFile(step.name);
+    const stampFile = this.dirs.buildStamp(step.name);
     const inputs = step.language === 'ts' ? fileHashes([...resolved.reads]) : {};
     const freshness: Freshness = step.language === 'ts'
       ? derivedFreshness(stampFile, resolved.outputs, inputs)
@@ -133,7 +129,7 @@ class Run {
       if (code !== 0) return { kind: 'failed', reason: `exited ${code}` };
       return this.land(stampFile, resolved, rehashed(inputs, this.options.updateSnapshots ? 'all' : resolved.outputs.files));
     }
-    const record = resolve(this.dirs.records, `${stepFileName(step.name)}.json`);
+    const record = this.dirs.record(step.name);
     const code = await exec('python3', [RUN_PYTHON_STEP, this.options.root, record, entry], env);
     if (code !== 0) return { kind: 'failed', reason: `exited ${code}` };
     const run = JSON.parse(readFileSync(record, 'utf8')) as RunRecord;

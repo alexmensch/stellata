@@ -4,8 +4,8 @@ import { spawn } from 'node:child_process';
 import { once } from 'node:events';
 import { resolve } from 'node:path';
 
+import { stepFileName } from '../util/build-stamp';
 import { REPO_ROOT } from '../util/paths';
-import { stepFileName } from './step-table-pure';
 
 const HOLDER = resolve(REPO_ROOT, 'scripts/pipeline/lock_holder.py');
 const WAIT_NOTICE_MS = 1000;
