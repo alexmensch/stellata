@@ -41,9 +41,11 @@ export function recordProblems(
     ...Object.keys(record.listings)
       .map((dir): [string, (w: ResolvedStep) => boolean] => [dir, (w) => listsOutputsOf(w.outputs, dir)]),
   ];
+  const runsAfter = (writer: string): boolean => reaches(graph.edges, writer, name)
+    || graph.keptLoops.some((e) => e.from === writer && e.to === name);
   for (const [path, isWriter] of touched) {
     for (const writer of others.filter(isWriter)) {
-      if (!reaches(graph.edges, writer.step.name, name)) {
+      if (!runsAfter(writer.step.name)) {
         problems.push(`${name} read ${path}, an output of ${writer.step.name}, without running after it`);
       }
     }

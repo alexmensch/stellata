@@ -385,6 +385,28 @@ os.replace(tmp, ${JSON.stringify(at(out))})
     expect(covered.kinds).toEqual({ a: 'fresh', p: 'built' });
   });
 
+  it('counts a pull it runs after as covered when that edge closes a kept loop, and no other step through the loop', async () => {
+    write('req.tsv', 'r');
+    write('down.in', 'x');
+    const body = [
+      `Path(${JSON.stringify(at('astro.tsv'))}).read_text()`,
+      `Path(${JSON.stringify(at('req.tsv'))}).write_text("r")`,
+    ].join('\n');
+    const loop = (extraRead = ''): StepEntry[] => [
+      pyStep('p', 'req.tsv', `${extraRead}${body}`, { after: ['astro'] } as Partial<StepEntry>),
+      pullStep('astro', 'astro.tsv', 'req.tsv'),
+      tsStep('down', 'down.out', ['req.tsv']),
+    ];
+    const kept = await run(loop(), ['p', 'astro']);
+    expect(kept.kinds).toEqual({ p: 'built', astro: 'fresh' });
+
+    write('down.out', 'stale copy');
+    const throughLoop = await run(loop(`Path(${JSON.stringify(at('down.out'))}).read_text()\n`), ['p'], { force: true });
+    expect(throughLoop.verdicts.get('p')).toEqual({
+      kind: 'failed', reason: `p read ${at('down.out')}, an output of down, without running after it`,
+    });
+  });
+
   it.each([
     ['lists', `os.listdir(${JSON.stringify('OUTDIR')})`],
     ['probes', `from scripts.util.build_stamp import probe\nprobe(Path(${JSON.stringify('OUTFILE')}))`],
