@@ -29,7 +29,7 @@ bailer-jones-dr3.tsv   ~95 MB, LFS. Keyed by Gaia DR3 source_id.
 
 `scripts/catalog/build-catalog.ts` via
 `applyBailerJonesOverride` in
-[`scripts/catalog/catalog-pure.ts`](../../scripts/catalog/). Fires only when
+[`scripts/catalog/distance/refinement/distance-overrides-pure.ts`](../../scripts/catalog/distance/refinement/). Fires only when
 the parallax cascade resolved **`gaia_dr3_inversion`** — the record's own DR3
 parallax, which is the measurement this posterior treats — AND the B-J map
 covers it. A record placed by Hipparcos, CNS5, Gliese, SIMBAD or a bound

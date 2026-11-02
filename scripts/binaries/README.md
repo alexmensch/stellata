@@ -154,7 +154,7 @@ Three build steps in order, with `data/binaries/multiples.tsv` and
    standalone rows for SIMBAD-known WDS components the pair walk didn't
    reach. Seven stages, one module per stage. `pnpm run build:binaries`.
 2. **Single-star catalogue build** (`scripts/catalog/build-catalog.ts`).
-   Reads AT-HYG + multiples.tsv + the SIMBAD sp_type / Gaia Apsis /
+   Reads the membership manifest + multiples.tsv + the SIMBAD sp_type / Gaia Apsis /
    [Bailer-Jones 2021](/data/papers/index.md#bailerjones2021) / Gaia
    HIP-xmatch side-files + Stellarium + GCVS + CCDM.
    Emits the chunked v9 `public/catalog.bin.<i>` + manifest,
