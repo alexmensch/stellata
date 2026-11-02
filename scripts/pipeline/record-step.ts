@@ -44,9 +44,8 @@ function ignored(paths: readonly string[], root: string): Set<string> {
   return new Set(run.stdout.split('\n').filter(Boolean));
 }
 
-function inputFilter(resolved: ResolvedStep, described: Description | null, candidates: readonly string[], tree: PipelineTree) {
+function inputFilter(resolved: ResolvedStep, described: Description | null, skip: ReadonlySet<string>, tree: PipelineTree) {
   const projected = new Set((described?.requestFrom ?? []).map(tree.abs));
-  const skip = ignored(candidates, tree.root);
   return (path: string): boolean => !claims(resolved.outputs, path) && !projected.has(path) && !skip.has(path)
     && !(resolved.step.kind === 'pull' && CODE.test(path));
 }
@@ -92,7 +91,7 @@ async function runAndRead(
     const code = await exec(TSX, [entry, ...options.args], process.env);
     if (code !== 0) return `exited ${code}`;
     const derived = await options.deriveInputs(entry);
-    const keep = inputFilter(resolved, described, derived, tree);
+    const keep = inputFilter(resolved, described, ignored(derived, tree.root), tree);
     return { inputs: fileHashes(derived.filter(keep), tree.root), services: [] };
   }
   const recorded = await runRecorded(tree, step.name, entry, options.args, process.env);
@@ -102,7 +101,7 @@ async function runAndRead(
   const scratch = ignored(touched, tree.root);
   const problems = undeclaredWrites(resolved, run.writes.filter((p) => !scratch.has(p)));
   if (problems.length > 0) return problems.join('; ');
-  return recordedReads(run, inputFilter(resolved, described, touched, tree), tree);
+  return recordedReads(run, inputFilter(resolved, described, scratch, tree), tree);
 }
 
 export async function recordStep(loaded: Loads, options: RecordOptions): Promise<RecordOutcome> {
