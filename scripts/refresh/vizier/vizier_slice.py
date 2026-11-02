@@ -14,8 +14,6 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import refresh_lib as rl  # noqa: E402
 
-_MODULE_PATH = Path(__file__).resolve()
-
 
 @dataclass(frozen=True)
 class VizierSlice:
@@ -52,31 +50,33 @@ class VizierSlice:
         return f"{rl.select_columns(self.columns, self.table)} ORDER BY {order}"
 
 
+def describe_slices(slices: Sequence[VizierSlice]) -> dict[str, Any]:
+    """Every slice's ADQL, so a changed column map or table stales the pull."""
+    return rl.description(
+        "\n".join(sl.adql for sl in slices),
+        rl.cds_client().services,
+        release=", ".join(f"VizieR {sl.table}" for sl in slices),
+    )
+
+
 def pull_slices(
     slices: Sequence[VizierSlice],
     *,
     script_name: str,
-    sources: Sequence[Path],
     argv: Sequence[str],
     log: Callable[[str], None] = print,
     client: rl.TapClient | None = None,
 ) -> None:
     """Run every slice in ``slices``, or just the ``--only <name>`` one.
 
-    ``sources`` need not list this module: its own mtime is folded in here
-    the way ``rl.is_up_to_date`` folds in refresh_lib's, so a fix to the
-    slice runner invalidates every caller's output.
-
-    ``--force`` overrides the per-slice mtime skip. Each slice's output is
-    written atomically by ``rl.write_tsv``, so a mid-pull failure on slice
-    3 leaves slices 1–2 committed and slice 3 untouched — re-running
-    resumes at the first stale output.
+    Each slice's output is written atomically by ``rl.write_tsv``, so a
+    mid-pull failure on slice 3 leaves slices 1–2 committed and slice 3
+    untouched.
 
     VizieR's TAP default MAXREC is ~1e9, so whole-table slices need none of
     the MAXREC sizing the Gaia sync endpoints demand (/scripts/refresh/README.md#gaia-tap-synchronous-endpoints-only);
     the row-count gate is what catches an upstream row loss here.
     """
-    force = "--force" in argv
     only = _only_arg(argv)
     if only is not None:
         known = [s.name for s in slices]
@@ -87,11 +87,16 @@ def pull_slices(
         slices = [s for s in slices if s.name == only]
 
     tap = client if client is not None else rl.cds_client()
-    all_sources = [*sources, _MODULE_PATH]
     for sl in slices:
-        _pull_one(
-            sl, tap, script_name=script_name, sources=all_sources, force=force, log=log
-        )
+        _pull_one(sl, tap, script_name=script_name, log=log)
+
+
+def slices_main(slices: Sequence[VizierSlice], script_name: str) -> None:
+    """A slice file's entry point: describe, or pull every slice."""
+    rl.pull_main(
+        lambda: pull_slices(slices, script_name=script_name, argv=sys.argv[1:]),
+        lambda: describe_slices(slices),
+    )
 
 
 def _only_arg(argv: Sequence[str]) -> str | None:
@@ -108,14 +113,9 @@ def _pull_one(
     tap: rl.TapClient,
     *,
     script_name: str,
-    sources: Sequence[Path],
-    force: bool,
     log: Callable[[str], None],
 ) -> None:
     label = f"{script_name}/{sl.name}"
-    if not force and rl.is_up_to_date(sl.output, sources):
-        log(f"{sl.output.name} up to date — skipping (use --force to rebuild)")
-        return
 
     log(f'querying CDS TAP — "{sl.table}" ({len(sl.columns)} columns) …')
     t0 = time.time()
