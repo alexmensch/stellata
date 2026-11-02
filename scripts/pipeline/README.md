@@ -2,9 +2,10 @@
 
 One model of the build pipeline: a typed table of steps, a runner that orders
 and gates them, and the content stamp as the only freshness test. This README
-is the design; [Files](#files) maps it onto the code. The runner is proven on
-fixture tables; `steps.ts` holds no step yet, and every step still runs through
-its own `package.json` target until it moves onto the table.
+is the design; [Files](#files) maps it onto the code. `steps.ts` holds the
+catalogue chain's `build` steps (`steps.test.ts` pins their order and edges);
+every other step still runs through its own `package.json` target until it
+moves onto the table.
 
 ## The model
 
