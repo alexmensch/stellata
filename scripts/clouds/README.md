@@ -62,7 +62,9 @@ One entry per cloud:
 
 `sid` is stamped after this script runs by `scripts/sid/stamp-sibling-sids.ts`
 (the tail of `pnpm run build:clouds`), allocating each `cloud:<id>` slug
-against the committed ledger — this Python build never touches the ledger. A
+against the committed ledger — this Python build never touches the ledger.
+The stamp rewrites `clouds.json` through `emitArtifacts`, so a stamp killed
+mid-write leaves the previous file whole. A
 new cloud slug mints there under `allocation.mint.cloud`; a vanished slug fails
 the stamp, and a rename needs a `data/sid/sameas-overrides.tsv` bridge. See [Sibling-artifact stamping](/scripts/sid/README.md#sibling-artifact-stamping).
 

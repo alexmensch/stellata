@@ -18,7 +18,7 @@ export type DeclaredUse = 'read' | 'written' | 'both' | 'unused';
 export interface DeclaredInput {
   /** Repo-relative path of the declaring module. */
   readonly module: string;
-  /** The exported constant's name. */
+  /** The exported constant's name; `NAME.key` for an entry of a declaration map. */
   readonly name: string;
   readonly value: DeclaredValue;
   readonly use: DeclaredUse;
@@ -28,6 +28,15 @@ function isDeclared(value: unknown): value is DeclaredValue {
   if (typeof value !== 'object' || value === null) return false;
   const { kind } = value as { kind?: unknown };
   return kind === 'source' || kind === 'artifact';
+}
+
+/** An exported declaration, or each entry of an exported record whose values are all declarations, which a read through the record reads as one. */
+function declaredEntries(name: string, value: unknown): [string, DeclaredValue][] {
+  if (isDeclared(value)) return [[name, value]];
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) return [];
+  const entries = Object.entries(value);
+  if (entries.length === 0 || !entries.every(([, v]) => isDeclared(v))) return [];
+  return entries.map(([key, v]) => [`${name}.${key}`, v as DeclaredValue]);
 }
 
 function useOf(name: string, value: DeclaredValue, texts: readonly string[]): DeclaredUse {
@@ -51,8 +60,10 @@ export async function declaredInputs(closure: Iterable<string>): Promise<Declare
   for (const module of modules.filter((m) => DECLARING_MODULE.test(m))) {
     const exports = await import(resolve(REPO_ROOT, module)) as Record<string, unknown>;
     const others = modules.filter((m) => m !== module).map((m) => texts.get(m)!);
-    for (const [name, value] of Object.entries(exports)) {
-      if (isDeclared(value)) out.push({ module, name, value, use: useOf(name, value, others) });
+    for (const [name, exported] of Object.entries(exports)) {
+      for (const [entry, value] of declaredEntries(name, exported)) {
+        out.push({ module, name: entry, value, use: useOf(name, value, others) });
+      }
     }
   }
   return out;

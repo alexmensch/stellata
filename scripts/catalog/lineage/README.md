@@ -221,8 +221,8 @@ Membership's (`MEMBERSHIP_INVARIANTS`): no `admit.magnitude` row whose
 
 ## SID events
 
-SID allocation is the fourth stage, run inside `build:catalog` and the
-clouds and Local Group stamps. Its rows, its events and its fail-closed
+SID allocation is the fourth stage, run inside `build:catalog`,
+`build:local-group` and the clouds stamp. Its rows, its events and its fail-closed
 rule live beside its modules, in [SID events](/scripts/sid/README.md#sid-events).
 
 ## Storage and cost
