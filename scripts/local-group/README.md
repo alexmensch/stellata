@@ -37,10 +37,10 @@ required:
 Emits `public/local-group.json` and the `lg` SID registry partition through
 one `emitArtifacts` call (`../util/README.md`; the declaration is
 `local-group-outputs.ts`), with one entry per renderable object
-within `MAX_DISTANCE_PC` of Sol. Output schema is documented at the
-`LgObject` type in `build-local-group-pure.ts` (its emission block in
-`local-group-schema.ts`); the client loader at
-`src/client/local-group/local-group-loader.ts` mirrors it 1:1.
+within `MAX_DISTANCE_PC` of Sol. The output schema is
+`/src/catalog-format/local-group/local-group-schema.ts` (`LgObjectRow`,
+`LocalGroupFile`), which the client loader at
+`src/client/local-group/local-group-loader.ts` reads too.
 
 Each object also carries a `sid` (frozen Stellata ID, [§ 7](/docs/sid.md#7-storage--sid-in-every-artifact)),
 allocated in-process before the emit (`allocateSibling`,

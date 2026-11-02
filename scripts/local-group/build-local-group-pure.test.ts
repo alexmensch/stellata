@@ -383,7 +383,7 @@ describe('displayName overrides + default type suffix', () => {
       'WLM',
     ]);
   });
-  it('mergeRowAndOverride emits the display name on the LgObject (override path)', () => {
+  it('mergeRowAndOverride emits the display name on the LgObjectRow (override path)', () => {
     const row: LvdbRow = {
       key: 'lmc',
       name: 'LMC',
@@ -402,7 +402,7 @@ describe('displayName overrides + default type suffix', () => {
     const out = mergeRowAndOverride(row, override)!;
     expect(out.name).toBe('Large Magellanic Cloud');
   });
-  it('mergeRowAndOverride emits the suffixed display name on the LgObject (LVDB-default path)', () => {
+  it('mergeRowAndOverride emits the suffixed display name on the LgObjectRow (LVDB-default path)', () => {
     const row: LvdbRow = {
       key: 'sculptor_1',
       name: 'Sculptor',
@@ -460,7 +460,7 @@ describe('buildStandaloneOverride', () => {
     bulgeRePc: 1000,
     bulgeN: 2.2,
   };
-  it('synthesises a full LgObject from override-only fields', () => {
+  it('synthesises a full LgObjectRow from override-only fields', () => {
     const out = buildStandaloneOverride(m31)!;
     expect(out).not.toBeNull();
     expect(out.id).toBe('m31');

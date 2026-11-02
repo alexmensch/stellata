@@ -1,10 +1,13 @@
-# Local Group artifact — what the viewer reads
+# Local Group artifact — the wire contract
 
-`local-group-schema.ts` — the parts of `public/local-group.json` the
-viewer's loader reads from the build's own types: the distance envelope
-and the per-object emission block (`LgEmission`, `SersicParams`). The
-build that writes the file, and the full `LgObject` schema, are
-[`/scripts/local-group/`](/scripts/local-group/README.md).
+`local-group-schema.ts` — `public/local-group.json`'s schema, the one
+statement both sides compile against: the file wrapper (`LocalGroupFile`,
+`LOCAL_GROUP_VERSION`), the object row (`LgObjectRow`, plus the `sid` the
+emit stamps), its `LgKind` / `LgSource` enums, the emission block
+(`LgEmission`, `SersicParams`) and the distance envelope. The build that
+writes the file is [`/scripts/local-group/`](/scripts/local-group/README.md);
+the loader that decodes it into the viewer's `LgObject` is
+`/src/client/local-group/local-group-loader.ts`.
 
 ## MAX_DISTANCE_PC
 

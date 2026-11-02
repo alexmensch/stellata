@@ -6,8 +6,10 @@ import {
   buildStandaloneOverride,
   filterForRendering,
   mergeRowAndOverride,
-  type LgObject as BuildLgObject,
 } from '../../../../scripts/local-group/build-local-group-pure';
+import {
+  type LgObjectRow as BuildLgObject,
+} from '../../../catalog-format/local-group/local-group-schema';
 
 export type { BuildLgObject };
 

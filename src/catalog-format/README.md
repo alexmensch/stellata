@@ -27,5 +27,5 @@ Each has its own README.
   sampler, public file names.
 - `probes/` — the probe trajectories: roster, wire schema, public file
   names.
-- `local-group/` — the parts of `local-group.json` the viewer reads: the
-  distance envelope and the emission block.
+- `local-group/` — the `local-group.json` schema: object row, emission
+  block, version, distance envelope.
