@@ -5,7 +5,7 @@ import type {
   IauConstellationLookup,
 } from '../../../src/astro-core/iau-geometry/iau-boundaries-pure';
 import { raDecFromUnitVector } from '../../../src/astro-core/equatorial-basis';
-import { absoluteToApparentMagnitude } from '../../../src/catalog-format/record/catalog-pure';
+import { absoluteToApparentMagnitude } from '../record/record-build-pure';
 import {
   buildBoundaryArtifact,
   countDirections,

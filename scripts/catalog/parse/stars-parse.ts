@@ -3,21 +3,23 @@
 // builder step. See scripts/catalog/README.md.
 
 import {
-  apparentToAbsoluteMagnitude,
   SOL_ABSOLUTE_V_MAGNITUDE,
   SOL_APPARENT_V_MAGNITUDE,
   FLAG_HAS_NAME,
   FLAG_IS_SOL,
   FLAG_HAS_BAYER,
   NO_CONSTELLATION_INDEX,
-  SIMBAD_NAMESPACE_VALUES,
   SOLAR_BV_FALLBACK,
   type ApsisRow,
-  type SimbadNamespace,
-  type SimbadRecordKeys,
   DIST_VIA_VALUES,
   type DistVia,
 } from '../../../src/catalog-format/record/catalog-pure';
+import {
+  apparentToAbsoluteMagnitude,
+  SIMBAD_NAMESPACE_VALUES,
+  type SimbadNamespace,
+  type SimbadRecordKeys,
+} from '../record/record-build-pure';
 import { classifyFromSimbad, SPECTRAL_UNKNOWN } from '../../../src/catalog-format/spectral/spectral-classify';
 import {
   type SimbadSpectralIndex,

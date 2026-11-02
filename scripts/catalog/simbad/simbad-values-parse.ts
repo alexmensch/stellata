@@ -10,7 +10,7 @@ import {
   walkSimbadNamespaces,
   type SimbadNamespaceIndex,
   type SimbadRecordKeys,
-} from '../../../src/catalog-format/record/catalog-pure';
+} from '../record/record-build-pure';
 import { citedParallax, type CitedParallax } from '../cited-parallax';
 import { citedProperMotion, type CitedProperMotion } from '../cited-proper-motion';
 

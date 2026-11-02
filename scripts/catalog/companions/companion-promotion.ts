@@ -6,10 +6,12 @@ import {
   FLAG_BINARY_COMPANION_ONLY,
   FLAG_BINARY_COMPANION_SYNTHETIC,
   NO_CONSTELLATION_INDEX,
+} from '../../../src/catalog-format/record/catalog-pure';
+import {
   OPTICAL_DOUBLE_MIN_SEP_PC,
   absoluteToApparentMagnitude,
   apparentToAbsoluteMagnitude,
-} from '../../../src/catalog-format/record/catalog-pure';
+} from '../record/record-build-pure';
 import {
   SPECTRAL_UNKNOWN,
   type SpectralInfo,

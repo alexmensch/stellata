@@ -56,7 +56,7 @@ surface consuming it is tracked separately (stellata-lo5.10).
 
 ## Geometric binary inference
 
-`inferBinaries` in `../../../src/catalog-format/record/catalog-pure.ts`, called from
+`inferBinaries` in `../record/record-build-pure.ts`, called from
 `build-catalog.ts`, runs after the record sort so record
 indices are final. Spatial grid keyed at `BINARY_MAX_SEP_PC = 0.005 pc`
 (≈1030 AU) using a three-axis hash; for each star, check own cell + 26
@@ -167,7 +167,7 @@ CCDM+MultFlag=C/G/O still keeps a tail of wide line-of-sight
 optical pairs Gaia can now split in 3D — HIP pairs sharing one
 CCDM identifier that sit hundreds of pc apart along the sightline.
 Flagging their brightest member paints wings on a star with no
-bound companion. `isOpticalDoublePrimary` (`../../../src/catalog-format/record/catalog-pure.ts`)
+bound companion. `isOpticalDoublePrimary` (`../record/record-build-pure.ts`)
 vetoes that flag, but only on **positive** evidence the asserted
 pair is optical, never on mere absence of physical evidence — so a
 noisy parallax can never strip real wings:

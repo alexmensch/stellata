@@ -2,7 +2,7 @@
 // two-source consensus first, each candidate through both binding gates.
 // See README.md.
 
-import { normaliseGjKey } from '../../../../src/catalog-format/record/catalog-pure';
+import { normaliseGjKey } from '../../record/record-build-pure';
 import { printedV } from '../../photometry/v-magnitude-pure';
 import {
   isSiblingLetterAttribution,

@@ -2,7 +2,11 @@
 // the primaries' additions, the two ledgers, the TSV codecs, and the
 // spine ↔ manifest matcher the parity gate runs. Contract: /docs/catalog-driver.md#31-retiring-the-spine--the-membership-rule-measured-against-the-primaries.
 
-import { SOL_APPARENT_V_MAGNITUDE, SOL_PROPER_NAME, normaliseGjKey } from '../../../src/catalog-format/record/catalog-pure';
+import {
+  SOL_APPARENT_V_MAGNITUDE,
+  SOL_PROPER_NAME,
+} from '../../../src/catalog-format/record/catalog-pure';
+import { normaliseGjKey } from '../record/record-build-pure';
 import type { Cns5Row } from '../classic-ids/classic-ids-parse';
 import {
   BRIGHT_TIER_MAG_CEILING,
@@ -33,16 +37,24 @@ import {
 import { parkedRecordKey } from '../distance/parallax/parked-ledger';
 import { intCell } from '../../util/tsv/table-pure';
 import { nullableCell } from '../../util/tsv/artifact-pure';
-import { ADDITION_REASONS, type AdditionReason } from './ledger-rows-pure';
-import { BINDING_REVIEW_VERDICTS, bindingReviewKey, type BindingReviewVerdict } from './ledger-rows-pure';
+import {
+  ADDITION_REASONS,
+  type AdditionReason,
+  BINDING_REVIEW_VERDICTS,
+  bindingReviewKey,
+  type BindingReviewVerdict,
+  LABEL_DROP_REASONS,
+  type LabelDropReason,
+  OWN_CANDIDATE_REASONS,
+  type OwnCandidate,
+  type OwnCandidateReason,
+} from './ledger-rows-pure';
 import {
   BINDING_DISPOSITIONS,
   dispositionOf,
   type BindingDisposition,
   type BindingDispositionRow,
 } from './binding-review-dispositions-pure';
-import { LABEL_DROP_REASONS, type LabelDropReason } from './ledger-rows-pure';
-import { OWN_CANDIDATE_REASONS, type OwnCandidate, type OwnCandidateReason } from './ledger-rows-pure';
 import type { IdentityRow } from '../lineage/identity-pure';
 import type { LineageRow } from '../lineage/lineage-row-pure';
 import {

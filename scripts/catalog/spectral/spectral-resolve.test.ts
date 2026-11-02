@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import type { ApsisRow, SimbadRecordKeys } from '../../../src/catalog-format/record/catalog-pure';
+import type { ApsisRow } from '../../../src/catalog-format/record/catalog-pure';
+import type { SimbadRecordKeys } from '../record/record-build-pure';
 import { classifyFromSimbad } from '../../../src/catalog-format/spectral/spectral-classify';
 import {
   CURATED_SPTYPE_BY_HIP,

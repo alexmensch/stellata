@@ -5,8 +5,6 @@ import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import {
-  buildHipToIndex,
-  inferBinaries,
   FLAG_IS_SOL,
   FLAG_BINARY_PRIMARY,
   VAR_TYPE_ECLIPSING,
@@ -22,7 +20,6 @@ import {
   MULTIPLICITY_SINGLE,
   MULTIPLICITY_RESOLVED,
   MULTIPLICITY_UNRESOLVED,
-  SIMBAD_OTYPE_MULTIPLE,
   APSIS_FIELDS,
   type ApsisField,
   writeStarRecord,
@@ -35,7 +32,9 @@ import {
   buildSearchEntry,
   type SearchEntry,
   type CatalogManifest,
+  DIST_VIA_VALUES,
 } from '../../src/catalog-format/record/catalog-pure';
+import { buildHipToIndex, inferBinaries, SIMBAD_OTYPE_MULTIPLE } from './record/record-build-pure';
 import { apparentVFromSol } from './record/record-order-pure';
 import { avSolToStar } from './distance/dust/dust-deextinction-pure';
 import {
@@ -49,7 +48,6 @@ import {
   type BuildCounts,
 } from './build-counts';
 import { DIST_VIA_COUNT_KEY } from './distance/parallax/parallax-cascade';
-import { DIST_VIA_VALUES } from '../../src/catalog-format/record/catalog-pure';
 import {
   buildRegressionReport,
   compareRegressionReports,

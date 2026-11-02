@@ -3,7 +3,7 @@
 import type { Declared } from '../../util/sources/source';
 import { sourceRowRef, type RowKeyed, type SourceRowRef } from '../../util/sources/row-ref-pure';
 import { readTable } from '../../util/tsv/table-pure';
-import { normaliseGjKey } from '../../../src/catalog-format/record/catalog-pure';
+import { normaliseGjKey } from '../record/record-build-pure';
 import { citedParallax, type CitedParallax } from '../cited-parallax';
 import { citedProperMotion, type CitedProperMotion } from '../cited-proper-motion';
 

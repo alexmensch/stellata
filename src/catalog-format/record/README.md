@@ -13,17 +13,15 @@ viewer's readers all import it, and it imports nothing.
 src/catalog-format/record/
   catalog-pure.ts (+ test)        The v10 binary layout and its codec, the
                                   chunk plan, the SearchEntry wire shape, the
-                                  DistVia enum, the aliased-id index the
-                                  runtime dispatches search on, and the SIMBAD
-                                  namespace ladder both SIMBAD pulls index and
-                                  join through
-                                  (`/scripts/catalog/spectral/README.md#the-ladder-is-ordered-by-what-an-identifier-names`).
-                                  Pure.
+                                  DistVia enum, the record's field
+                                  encodings, and the aliased-id index the
+                                  runtime dispatches search on. Pure.
 ```
 
 The build-side halves stay in `/scripts/catalog/record/`: the record-order
-key (`record-order-pure.ts`, [Record order](#record-order)) and the
-`GAIA_APSIS` source.
+key (`record-order-pure.ts`, [Record order](#record-order)), the `GAIA_APSIS`
+source, and the record logic only the build runs (`record-build-pure.ts`:
+the SIMBAD namespace ladder, GCVS parsing, binary inference).
 
 ## Record order
 

@@ -1,16 +1,16 @@
 // The seven-tier spectral resolver and the SIMBAD sp_type index it walks.
 // See README.md.
 
+import { type ApsisRow } from '../../../src/catalog-format/record/catalog-pure';
 import {
   emptySimbadNamespaceIndex,
   indexSimbadRow,
   simbadHipKey,
   walkSimbadNamespaces,
-  type ApsisRow,
   type SimbadNamespace,
   type SimbadNamespaceIndex,
   type SimbadRecordKeys,
-} from '../../../src/catalog-format/record/catalog-pure';
+} from '../record/record-build-pure';
 import type { Declared } from '../../util/sources/source';
 import { readTable } from '../../util/tsv/table-pure';
 import {
