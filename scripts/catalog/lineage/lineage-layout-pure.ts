@@ -3,7 +3,6 @@
 import { resolve } from 'node:path';
 
 import type { OutputFamily } from '../../util/emit-artifacts';
-import { escapeRegExp } from '../../util/escape-regexp';
 import { REPO_ROOT } from '../../util/paths';
 
 export interface LineageLayout {
@@ -55,18 +54,14 @@ export function stageOutputFiles<F extends string, S extends string>(
   return files;
 }
 
-function exactly(names: readonly string[]): RegExp {
-  return new RegExp(`^(?:${names.map(escapeRegExp).join('|')})$`);
-}
-
 /** The baseline copies and the stage diff: emitted when they exist, deleted
  *  when a run does not emit them, and no other stage's file ever matches. */
 export function stageFamilies<F extends string>(
   layout: LineageLayout, spec: StageLineageSpec<F>,
 ): OutputFamily[] {
   return [
-    { dir: layout.previous, member: exactly(stageNames(spec)), stamped: false },
-    { dir: layout.diff, member: exactly([stageDiffName(spec.stage)]), stamped: false },
+    { dir: layout.previous, member: stageNames(spec), stamped: false },
+    { dir: layout.diff, member: [stageDiffName(spec.stage)], stamped: false },
   ];
 }
 

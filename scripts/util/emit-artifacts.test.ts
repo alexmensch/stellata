@@ -147,6 +147,18 @@ describe('emitArtifacts', () => {
     expect(stampIsCurrent(stampFile, {})).toBe(true);
   });
 
+  it('treats a name-list family as exactly those names: a listed one it omits is deleted, anything else is left', () => {
+    const base = join(dir, 'base');
+    mkdirSync(base);
+    writeFileSync(join(base, 'gone'), 'old');
+    writeFileSync(join(base, 'other'), 'not ours');
+    const outputs = declareOutputs({ a }, [{ dir: base, member: ['kept', 'gone'], stamped: false }]);
+    emitArtifacts({ outputs, files: { a: 'new a' }, members: new Map([[join(base, 'kept'), 'k']]) });
+    expect(readdirSync(base).sort()).toEqual(['kept', 'other']);
+    expect(() => emitArtifacts({ outputs, files: { a: 'x' }, members: new Map([[join(base, 'other'), 'o']]) }))
+      .toThrow(/undeclared/);
+  });
+
   it('records a refreshed snapshot the step reads at its new hash, so the stamp stays current', () => {
     const snapshot = join(dir, 'expected.json');
     const stampFile = join(dir, 'stamps', 'step.json');

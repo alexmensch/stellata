@@ -321,7 +321,8 @@ Hand-kept lists become derivations over the table:
 
 - `step-table-pure.ts` (+ test) — the table's types (`StepEntry`, one
   variant per kind and language), the load-time rules that need no disk
-  (one writer per output, files against families included; a build-step
+  (one writer per output, files against families included, and two families
+  in one folder only when both list names and none is shared; a build-step
   cycle; an `after` naming no step), and `deriveGraph`: read edges, the
   registry edges set aside, a manual step's back edges kept as loops, and
   the run order (table order breaks ties). `selectSteps` is a target plus

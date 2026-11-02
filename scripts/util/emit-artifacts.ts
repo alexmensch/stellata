@@ -12,8 +12,13 @@ import {
  *  emit are deleted once the new set has landed. */
 export interface OutputFamily {
   readonly dir: string;
-  readonly member: RegExp;
+  /** A pattern over member names, or every name a member may have. */
+  readonly member: RegExp | readonly string[];
   readonly stamped: boolean;
+}
+
+export function isMemberName(family: OutputFamily, name: string): boolean {
+  return family.member instanceof RegExp ? family.member.test(name) : family.member.includes(name);
 }
 
 export interface DeclaredOutputs<K extends string = string> {
@@ -89,7 +94,7 @@ function assertDeclared(
 }
 
 export function isFamilyMember(family: OutputFamily, path: string): boolean {
-  return dirname(path) === family.dir && family.member.test(basename(path));
+  return dirname(path) === family.dir && isMemberName(family, basename(path));
 }
 
 function familyEntries(family: OutputFamily): string[] {
@@ -98,7 +103,7 @@ function familyEntries(family: OutputFamily): string[] {
 
 /** The family's members on disk, absolute. */
 export function familyMembers(family: OutputFamily): string[] {
-  return familyEntries(family).filter((name) => family.member.test(name)).map((name) => resolve(family.dir, name));
+  return familyEntries(family).filter((name) => isMemberName(family, name)).map((name) => resolve(family.dir, name));
 }
 
 /** The members on disk of the families a stamp records. */
@@ -110,7 +115,7 @@ export function sweepStaged(outputs: DeclaredOutputs, extra: readonly string[] =
   for (const p of [...Object.values<string>(outputs.files), ...extra]) discardStaged(p);
   for (const family of outputs.families) {
     for (const name of familyEntries(family)) {
-      if (name.endsWith(STAGING_SUFFIX) && family.member.test(name.slice(0, -STAGING_SUFFIX.length))) {
+      if (name.endsWith(STAGING_SUFFIX) && isMemberName(family, name.slice(0, -STAGING_SUFFIX.length))) {
         rmSync(resolve(family.dir, name), { force: true });
       }
     }

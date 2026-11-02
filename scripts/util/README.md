@@ -158,7 +158,9 @@ same thing — single-use helpers stay with their consumer.
   `declareOutputs({key: path, …}, families)` constant, the one place each
   path is written; an emission supplies only contents, keyed the same, so a
   missing or extra key is a compile error. Family members (a directory plus a
-  name pattern — the catalogue's transport chunks) arrive separately in
+  name pattern — the catalogue's transport chunks — or the exact names a
+  member may take, as each lineage stage's baseline does, so stages can share
+  the folder) arrive separately in
   `members`, by path, and must match a declared family. Family members a run
   does not emit are deleted once the new set has landed; `familyMembers` is
   the one listing of a family on disk, which the runner stamps from too. A

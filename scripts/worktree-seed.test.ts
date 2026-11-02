@@ -6,7 +6,7 @@ import { describe, expect, it } from 'vitest';
 
 import { CATALOG_OUTPUTS, CATALOG_STAMP } from './catalog/catalog-outputs';
 import { MEMBERSHIP_OUTPUTS } from './catalog/membership/membership-manifest-outputs';
-import type { DeclaredOutputs, OutputFamily } from './util/emit-artifacts';
+import { isMemberName, type DeclaredOutputs, type OutputFamily } from './util/emit-artifacts';
 import { escapeRegExp } from './util/escape-regexp';
 import { packageScripts } from './util/import-closure';
 import { scriptParts } from './util/import-closure-pure';
@@ -59,7 +59,7 @@ function globRegExp(pattern: string): RegExp {
 function covers(outputs: StepOutputs, pattern: string): boolean {
   const glob = globRegExp(pattern);
   return outputs.files.some((file) => glob.test(file))
-    || outputs.families.some((f) => f.dir === dirname(pattern) && f.member.test(basename(pattern).replaceAll('*', '0')));
+    || outputs.families.some((f) => f.dir === dirname(pattern) && isMemberName(f, basename(pattern).replaceAll('*', '0')));
 }
 
 function uncovered(patterns: readonly string[], steps: readonly string[]): string[] {
@@ -77,7 +77,7 @@ function unlisted(patterns: readonly string[], steps: readonly string[]): string
   const families = outputs.flatMap((o) => o.families)
     .filter((f) => SEEDABLE.test(`${f.dir}/`)
       && !patterns.some((pattern) => covers({ files: [], families: [f] }, pattern)))
-    .map((f) => `${f.dir}/${f.member.source}`);
+    .map((f) => `${f.dir}/${f.member instanceof RegExp ? f.member.source : f.member.join('|')}`);
   return [...files, ...families];
 }
 
