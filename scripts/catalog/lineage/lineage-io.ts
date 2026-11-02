@@ -69,8 +69,8 @@ export function stageFamilies<F extends string>(
   layout: LineageLayout, spec: StageLineageSpec<F>,
 ): OutputFamily[] {
   return [
-    { dir: layout.previous, member: exactly(stageNames(spec)) },
-    { dir: layout.diff, member: exactly([stageDiffName(spec.stage)]) },
+    { dir: layout.previous, member: exactly(stageNames(spec)), stamped: false },
+    { dir: layout.diff, member: exactly([stageDiffName(spec.stage)]), stamped: false },
   ];
 }
 

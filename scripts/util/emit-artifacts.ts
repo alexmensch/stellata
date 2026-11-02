@@ -13,6 +13,7 @@ import {
 export interface OutputFamily {
   readonly dir: string;
   readonly member: RegExp;
+  readonly stamped: boolean;
 }
 
 export interface DeclaredOutputs<K extends string = string> {
@@ -28,7 +29,7 @@ export function declareOutputs<K extends string>(
     files: Object.fromEntries(
       Object.entries<string>(files).map(([k, p]) => [k, resolve(p)]),
     ) as Record<K, string>,
-    families: families.map((f) => ({ dir: resolve(f.dir), member: f.member })),
+    families: families.map((f) => ({ ...f, dir: resolve(f.dir) })),
   };
 }
 
@@ -73,9 +74,7 @@ function assertDeclared(
   const undeclared = [
     ...expected.filter((k) => !(k in outputs.files)),
     ...keys.filter((k) => !(k in outputs.files)),
-    ...members.filter((p) => !outputs.families.some(
-      (f) => dirname(p) === f.dir && f.member.test(basename(p)),
-    )),
+    ...members.filter((p) => !outputs.families.some((f) => isFamilyMember(f, p))),
   ];
   const unemitted = expected.filter((k) => !keys.includes(k));
   const unasked = keys.filter((k) => k in outputs.files && !expected.includes(k));
@@ -89,6 +88,10 @@ function assertDeclared(
   }
 }
 
+export function isFamilyMember(family: OutputFamily, path: string): boolean {
+  return dirname(path) === family.dir && family.member.test(basename(path));
+}
+
 function familyEntries(family: OutputFamily): string[] {
   return existsSync(family.dir) ? readdirSync(family.dir) : [];
 }
@@ -96,6 +99,11 @@ function familyEntries(family: OutputFamily): string[] {
 /** The family's members on disk, absolute. */
 export function familyMembers(family: OutputFamily): string[] {
   return familyEntries(family).filter((name) => family.member.test(name)).map((name) => resolve(family.dir, name));
+}
+
+/** The members on disk of the families a stamp records. */
+export function stampedMembers(families: readonly OutputFamily[]): string[] {
+  return families.filter((f) => f.stamped).flatMap(familyMembers);
 }
 
 export function sweepStaged(outputs: DeclaredOutputs, extra: readonly string[] = []): void {
@@ -119,10 +127,8 @@ export function emitArtifacts<K extends string>(
   const members = [...(emission.members ?? new Map())].map(([p, c]) => [resolve(p), c] as const);
   const expected = 'only' in emission ? emission.only : Object.keys(outputs.files);
   assertDeclared(outputs, expected, keyed.map(([k]) => k), members.map(([p]) => p));
-  const files = new Map<string, ArtifactContents>([
-    ...keyed.map(([k, c]) => [outputs.files[k as K], c] as const),
-    ...members,
-  ]);
+  const declared = keyed.map(([k, c]) => [outputs.files[k as K], c] as const);
+  const files = new Map<string, ArtifactContents>([...declared, ...members]);
 
   for (const check of checks) {
     if (check.kind !== 'refresh' && check.report) console.log(check.report);
@@ -153,7 +159,11 @@ export function emitArtifacts<K extends string>(
   }
   for (const r of refreshes) console.log(`Updated ${r.path}`);
   if (stamp) {
-    writeStamp(stamp.path, rehashWritten(stamp.inputs, [...files.keys(), ...refreshes.map((r) => r.path)]), [...files.keys()]);
+    writeStamp(
+      stamp.path,
+      rehashWritten(stamp.inputs, [...files.keys(), ...refreshes.map((r) => r.path)]),
+      [...declared.map(([p]) => p), ...stampedMembers(outputs.families)],
+    );
   }
 }
 

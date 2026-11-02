@@ -8,7 +8,7 @@ import { resolve } from 'node:path';
 import {
   clearStamp, fileHashes, writeStamp, type FileHashes, type RecordedReads,
 } from '../util/build-stamp';
-import { familyMembers } from '../util/emit-artifacts';
+import { stampedMembers } from '../util/emit-artifacts';
 import { REPO_ROOT } from '../util/paths';
 import { UPDATE_SNAPSHOTS_ENV } from '../util/snapshot-check';
 import {
@@ -47,7 +47,7 @@ type Loads = Extract<Loaded, { kind: 'loaded' }>;
 const blocks = (v: Verdict): boolean => v.kind === 'stale' || v.kind === 'failed' || v.kind === 'skipped';
 
 function outputFiles(step: ResolvedStep): string[] {
-  return [...step.outputs.files, ...step.outputs.families.flatMap(familyMembers)];
+  return [...step.outputs.files, ...stampedMembers(step.outputs.families)];
 }
 
 function rehashed(inputs: FileHashes, paths: readonly string[] | 'all', tree: PipelineTree): FileHashes {

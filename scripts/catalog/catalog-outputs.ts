@@ -36,7 +36,7 @@ export const CATALOG_OUTPUTS = declareOutputs(
     ...registryFiles(CATALOG_PARTITION),
   },
   [
-    { dir: CATALOG_CHUNK_DIR, member: CATALOG_CHUNK_FILENAME },
+    { dir: CATALOG_CHUNK_DIR, member: CATALOG_CHUNK_FILENAME, stamped: true },
     ...stageFamilies(LINEAGE_LAYOUT, PLACEMENT_LINEAGE),
     ...stageFamilies(LINEAGE_LAYOUT, PROMOTION_LINEAGE),
     ...stageFamilies(LINEAGE_LAYOUT, ALLOCATION_LINEAGE),

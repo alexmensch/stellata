@@ -287,7 +287,9 @@ Otherwise the stage's current `<stage>.tsv.gz` replaces
 that renames the stage's new file into place, and the build diffs against
 that last build if it is the merge-base's. A stage that fails, is skipped by
 its content-hash stamp, or does not run (a standalone `build:membership`)
-leaves both its copies untouched.
+leaves both its copies untouched. The baseline and diff families are
+declared unstamped (`stageFamilies`), so a step's stamp never records them
+and a worktree without them is not stale.
 
 A fresh worktree is seeded with the main checkout's last `build/lineage/`
 (`.worktreeinclude`), which may come from an older commit. So each stage

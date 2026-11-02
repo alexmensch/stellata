@@ -1,8 +1,7 @@
 // The step table's types, its load-time rules and the order derived from it. See README.md.
 
-import { basename, dirname } from 'node:path';
-
 import { stepFileName } from '../util/build-stamp';
+import { isFamilyMember, type OutputFamily } from '../util/emit-artifacts';
 
 /** A `declareOutputs` constant, named by module and export so the module can be
  *  checked side-effect-free before it is imported. */
@@ -48,14 +47,9 @@ export interface StepTable {
   readonly registryFiles: readonly string[];
 }
 
-export interface OutputFamilyClaim {
-  readonly dir: string;
-  readonly member: RegExp;
-}
-
 export interface OutputClaims {
   readonly files: readonly string[];
-  readonly families: readonly OutputFamilyClaim[];
+  readonly families: readonly OutputFamily[];
 }
 
 /** A step with every path absolute: its declared outputs and the files it is
@@ -91,7 +85,7 @@ export const isBuild = (step: StepEntry): step is BuildStep => step.kind === 'bu
 
 export function claims(outputs: OutputClaims, path: string): boolean {
   return outputs.files.includes(path)
-    || outputs.families.some((f) => dirname(path) === f.dir && f.member.test(basename(path)));
+    || outputs.families.some((f) => isFamilyMember(f, path));
 }
 
 export function outputConflicts(steps: readonly ResolvedStep[]): string[] {

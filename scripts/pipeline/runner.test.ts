@@ -158,6 +158,29 @@ describe('runSteps — build steps', () => {
     expect((await run(steps, ['a'])).kinds).toEqual({ a: 'built' });
   });
 
+  it('stamps a stamped family\'s members and leaves an unstamped family\'s out', async () => {
+    write('steps/f.ts', `
+import { mkdirSync, writeFileSync } from 'node:fs';
+for (const d of ['pub', 'base']) mkdirSync(${JSON.stringify(root)} + '/' + d, { recursive: true });
+writeFileSync(${JSON.stringify(at('f.out'))}, 'f');
+writeFileSync(${JSON.stringify(at('pub/chunk-0'))}, 'c');
+writeFileSync(${JSON.stringify(at('base/prev'))}, 'p');
+`);
+    write('steps/f-outputs.ts', `
+import { declareOutputs } from ${JSON.stringify(EMIT_ARTIFACTS)};
+export const OUT = declareOutputs({ out: ${JSON.stringify(at('f.out'))} }, [
+  { dir: ${JSON.stringify(at('pub'))}, member: /^chunk-\\d+$/, stamped: true },
+  { dir: ${JSON.stringify(at('base'))}, member: /^prev$/, stamped: false },
+]);
+`);
+    const steps: StepEntry[] = [{ name: 'f', kind: 'build', language: 'ts', entry: at('steps/f.ts'), outputs: { module: at('steps/f-outputs.ts'), name: 'OUT' } }];
+    await run(steps, ['f']);
+    rmSync(at('base/prev'));
+    expect((await run(steps, ['f'])).kinds).toEqual({ f: 'fresh' });
+    rmSync(at('pub/chunk-0'));
+    expect((await run(steps, ['f'])).kinds).toEqual({ f: 'built' });
+  });
+
   it('--force reaches every selected build step', async () => {
     write('a.in', 'x');
     const steps = [tsStep('a', 'a.out', ['a.in']), tsStep('b', 'b.out', ['a.out'])];
