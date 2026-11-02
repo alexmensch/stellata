@@ -85,8 +85,11 @@ same thing — single-use helpers stay with their consumer.
   directory it lists (`listing_hash`, over the sorted names; the import
   system's own scans of `sys.path` are not listings), and every file it
   writes — a rename's target, not its temp file, and not a scratch file it
-  deleted — plus each loaded module, nothing under `.venv` or
-  `__pycache__` included, into a JSON record the runner turns
+  deleted — plus each module the step loaded (not those already loaded
+  when the recording began: the recorder's own `run_python_step.py`,
+  `build_stamp.py` and `paths.py`, so editing the recorder stales no
+  step), nothing under `.venv` or `__pycache__` included, into a JSON
+  record the runner turns
   into the step's stamp. An existence check opens nothing, so a step probes
   through `probe(path)`, which records the answer. `report_service(name)`
   records which network service answered, once each in first-answer order

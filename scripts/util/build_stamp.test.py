@@ -216,6 +216,20 @@ class RecorderTests(unittest.TestCase):
         _, record = self.run_step()
         self.assertEqual(self.rel(record["writes"]), ["ledger.tsv", "out.bin"])
 
+    def test_leaves_out_the_modules_the_recorder_itself_loaded(self) -> None:
+        (self.root / "step.py").write_text("import sys\nimport helper\n")
+        proc = subprocess.run(
+            [sys.executable, "-c",
+             "import sys; from pathlib import Path; sys.path.insert(0, sys.argv[1]);"
+             "import helper; from scripts.util.build_stamp import record_run;"
+             "sys.exit(record_run(Path(sys.argv[1]), Path(sys.argv[2]), Path(sys.argv[3]), []))",
+             str(self.root), str(self.record), str(self.root / "step.py")],
+            capture_output=True, text=True, cwd=REPO_ROOT,
+        )
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        record = json.loads(self.record.read_text())
+        self.assertEqual(self.rel(record["reads"]), ["step.py"])
+
     def test_ignores_modules_and_files_under_a_virtualenv(self) -> None:
         lib = self.root / ".venv" / "lib"
         lib.mkdir(parents=True)
