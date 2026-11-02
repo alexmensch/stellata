@@ -106,6 +106,13 @@ describe('recordStep', () => {
     expect(fresh(step)).toBe('stale');
   });
 
+  it('fails a run whose lock holder died and leaves the record as it was', async () => {
+    write('req.tsv', 'r1\n');
+    const step = pull(`import subprocess\nsubprocess.run(["pkill", "-f", ${JSON.stringify(pipelineTree(root).locks)}])`);
+    expect(await record([step], step.name)).toEqual({ kind: 'failed', reason: 'its lock holder died while it ran' });
+    expect(existsSync(pipelineTree(root).manualStamp(step.name))).toBe(false);
+  });
+
   it('fails a run that writes a file it does not declare and leaves the record as it was', async () => {
     write('req.tsv', 'r1\n');
     const step = pull(`Path(${JSON.stringify(at('stray.tsv'))}).write_text("s")`);

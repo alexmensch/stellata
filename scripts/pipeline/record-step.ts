@@ -126,9 +126,10 @@ export async function recordStep(loaded: Loads, options: RecordOptions): Promise
     const files = stampedOutputs(resolved.outputs);
     const missing = files.filter((p) => !existsSync(p));
     if (missing.length > 0) return { kind: 'failed', reason: `declared outputs not written: ${missing.map(tree.rel).join(', ')}` };
+    if (held.died()) return { kind: 'failed', reason: 'its lock holder died while it ran' };
     const record = manualRecord(step, described, reads, fileHashes(files, tree.root));
     writeManualRecord(tree.manualStamp(step.name), record);
-    return held.died() ? { kind: 'failed', reason: 'its lock holder died while it ran' } : { kind: 'recorded', record };
+    return { kind: 'recorded', record };
   } finally {
     await held.release();
   }
