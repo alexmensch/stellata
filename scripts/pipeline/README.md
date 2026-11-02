@@ -88,8 +88,10 @@ recorded.
 
 **A recorded input set is sound for code and data alike.** A Python step
 that starts reading a new module or file does so because some file it
-already read changed, and that change makes it stale. Two reads open no file,
-so they need their own record:
+already read changed, and that change makes it stale. That holds only for
+reads Python's audit hook sees, so a Python step reads repo files only through
+Python's own file calls: a subprocess or a C extension that opens a file itself
+raises no event. Two reads open no file, so they need their own record:
 
 - **Directory listings** (`os.listdir`, `os.scandir`, `glob.glob`, which
   `iterdir` and `Path.glob` go through) are audit events too; each is recorded
