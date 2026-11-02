@@ -49,6 +49,10 @@ export function isSiblingName(name: string): name is SiblingName {
   return Object.hasOwn(SIBLING_ARTIFACTS, name);
 }
 
+export function siblingOf(ns: SiblingNamespace): SiblingArtifactSpec {
+  return SIBLING_ARTIFACTS[SIBLING_NAMES.find((name) => SIBLING_ARTIFACTS[name].ns === ns)!];
+}
+
 export function isSiblingNamespace(ns: string): ns is SiblingNamespace {
   return (SIBLING_NAMESPACES as readonly string[]).includes(ns);
 }

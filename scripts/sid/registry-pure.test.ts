@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest';
 
 import type { EventRow } from './events-pure';
 import { registryPaths } from './registry-outputs';
-import { CATALOG_PARTITION, partitionOf, REGISTRY_PARTITIONS } from './registry-partitions-pure';
+import { CATALOG_PARTITION, partitionOf, REGISTRY_PARTITIONS, registryHint } from './registry-partitions-pure';
+import { SIBLING_ARTIFACTS } from './sibling-artifacts';
 import { unionLedger, unionLedgerLines, validateRegistry, type PartitionRows } from './registry-pure';
 import type { LedgerRow } from './sid-pure';
 
@@ -31,6 +32,11 @@ describe('registry partitions', () => {
   it('give each partition its own three files', () => {
     const paths = REGISTRY_PARTITIONS.flatMap((p) => Object.values(registryPaths(p)));
     expect(new Set(paths).size).toBe(REGISTRY_PARTITIONS.length * 3);
+  });
+
+  it('name the command that grows each partition, a sibling\'s from its own build hint', () => {
+    expect(registryHint(CATALOG_PARTITION)).toContain('pnpm run build:catalog');
+    expect(registryHint('lg')).toContain(SIBLING_ARTIFACTS['local-group'].buildHint);
   });
 
   it('refuse, at compile time, a partition no step allocates', () => {

@@ -1,6 +1,6 @@
 // The SID registry's partitions: one ledger / events / head file set per allocating step, the namespaces each owns, and the keys its files emit under. See README.md#registry-partitions.
 
-import { isSiblingNamespace, SIBLING_NAMESPACES, type SiblingNamespace } from './sibling-artifacts';
+import { isSiblingNamespace, SIBLING_NAMESPACES, siblingOf, type SiblingNamespace } from './sibling-artifacts';
 
 export const CATALOG_PARTITION = 'catalog';
 
@@ -28,6 +28,6 @@ export function registryKeys<P extends RegistryPartition>(partition: P): { [F in
 }
 
 export function registryHint(partition: RegistryPartition): string {
-  const step = partition === CATALOG_PARTITION ? 'pnpm run build:catalog' : 'pnpm run sid:stamp';
+  const step = partition === CATALOG_PARTITION ? 'pnpm run build:catalog' : siblingOf(partition).buildHint;
   return `It grows only through SID allocation in \`${step}\`.`;
 }
