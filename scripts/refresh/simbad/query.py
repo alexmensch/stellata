@@ -66,6 +66,31 @@ def build_basic_select(columns: Sequence[ColumnSpec], oid_inlist: str) -> str:
     )
 
 
+def build_resolve_select(id_list: str) -> str:
+    """ADQL: the ident rows whose id is one of ``id_list``'s quoted literals."""
+    return f"SELECT oidref, id FROM ident WHERE id IN ({id_list}) ORDER BY oidref, id"
+
+
+def build_flux_select(bands: Sequence[FluxBand], oid_inlist: str) -> str:
+    """ADQL: each oid's ``flux`` rows for ``bands``."""
+    filter_list = ",".join(f"'{b.filter}'" for b in bands)
+    return (
+        f"SELECT oidref, filter, flux, flux_err, bibcode FROM flux "
+        f"WHERE oidref IN ({oid_inlist}) AND filter IN ({filter_list}) "
+        f"ORDER BY oidref, filter"
+    )
+
+
+def build_ident_select(lookups: Sequence[IdentLookup], oid_inlist: str) -> str:
+    """ADQL: each oid's ``ident`` rows under any of ``lookups``' prefixes."""
+    or_clause = " OR ".join(f"id LIKE '{l.like_pattern}'" for l in lookups)
+    return (
+        f"SELECT oidref, id FROM ident "
+        f"WHERE oidref IN ({oid_inlist}) AND ({or_clause}) "
+        f"ORDER BY oidref, id"
+    )
+
+
 def build_basic_schema(columns: Sequence[ColumnSpec]) -> dict[str, type]:
     """Schema dict consumed by rl.validate_schema on the first batch."""
     return {c.alias: c.dtype for c in columns}
@@ -129,8 +154,7 @@ def resolve_oids_by_prefix(
         )
 
     def build_query(batch: Sequence[int | str]) -> str:
-        id_list = ",".join(f"'{lookup.compose(v)}'" for v in batch)
-        return f"SELECT oidref, id FROM ident WHERE id IN ({id_list}) ORDER BY oidref, id"
+        return build_resolve_select(",".join(f"'{lookup.compose(v)}'" for v in batch))
 
     def dispatch(table, out: dict[int | str, int]) -> None:
         for row in table:
@@ -163,15 +187,9 @@ def fetch_flux_bands(
     if not bands:
         return {}
     by_filter = {b.filter: b for b in bands}
-    filter_list = ",".join(f"'{b.filter}'" for b in bands)
 
     def build_query(batch: Sequence[int]) -> str:
-        inlist = ",".join(str(o) for o in batch)
-        return (
-            f"SELECT oidref, filter, flux, flux_err, bibcode FROM flux "
-            f"WHERE oidref IN ({inlist}) AND filter IN ({filter_list}) "
-            f"ORDER BY oidref, filter"
-        )
+        return build_flux_select(bands, ",".join(str(o) for o in batch))
 
     def dispatch(table, out: dict[int, dict[str, Any]]) -> None:
         for row in table:
@@ -210,15 +228,9 @@ def _fetch_idents(
     rare)."""
     if not lookups:
         return {}
-    or_clause = " OR ".join(f"id LIKE '{l.like_pattern}'" for l in lookups)
 
     def build_query(batch: Sequence[int]) -> str:
-        inlist = ",".join(str(o) for o in batch)
-        return (
-            f"SELECT oidref, id FROM ident "
-            f"WHERE oidref IN ({inlist}) AND ({or_clause}) "
-            f"ORDER BY oidref, id"
-        )
+        return build_ident_select(lookups, ",".join(str(o) for o in batch))
 
     def dispatch(table, out: dict[int, dict[str, T]]) -> None:
         for row in table:
