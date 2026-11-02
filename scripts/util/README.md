@@ -139,8 +139,10 @@ same thing — single-use helpers stay with their consumer.
   name pattern — the catalogue's transport chunks) arrive separately in
   `members`, by path, and must match a declared family. Family members a run
   does not emit are deleted once the new set has landed. A step that can be
-  told to do only some targets (`fetch:ephemerides saturn`, `sid:stamp
-  clouds`) still passes its one full declaration, plus `only`: the run must
+  told to do only some targets (`fetch:ephemerides saturn`), or that leaves a
+  SID registry partition alone when its allocation appended nothing
+  (`build:local-group`, `sid:stamp`), still passes its one full declaration,
+  plus `only`: the run must
   emit exactly those keys, and the leftover sweep still covers every declared
   path. A `refresh` check
   (a snapshot under its update flag) stages its own baseline with the outputs.
