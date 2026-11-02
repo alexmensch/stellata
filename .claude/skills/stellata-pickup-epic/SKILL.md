@@ -28,11 +28,11 @@ busy-session warning, so keep it current.
 | --- | --- | --- |
 | `GPU_REQUEST` | requester → coordinator | before step 1 of the perf protocol (the announcement); carry on only with work that starts nothing heavy |
 | `PAUSE` | coordinator → every other worker | on a `GPU_REQUEST` |
-| `HOLD` | coordinator → a landing subagent | on a `GPU_REQUEST`; the hold in `pickup-epic`'s Land step, unchanged |
+| `HOLD` | coordinator → the landing subagent, if one is running | on a `GPU_REQUEST`; the hold in `pickup-epic`'s Land step, unchanged |
 | `PAUSED` | worker → coordinator | its current command has finished and it will start nothing heavier than reading files — no build, test run, `pnpm run perf`, `survivors`, or data pull |
-| `GPU_GRANTED` | coordinator → requester | every other worker has replied `PAUSED` or is idle, a landing subagent has replied to `HOLD`, and no `build:seed` is running |
+| `GPU_GRANTED` | coordinator → requester | every other worker has replied `PAUSED` or is idle, the landing subagent, if one is running, has replied to `HOLD`, and no `build:seed` is running |
 | `GPU_DONE` | requester → coordinator | the runner has exited, whatever its result |
-| `RESUME` | coordinator → every paused worker and held landing subagent | on `GPU_DONE` |
+| `RESUME` | coordinator → every paused worker and the held landing subagent | on `GPU_DONE` |
 
 **Coordinator.** Serve a `GPU_REQUEST` from any session the same way, worker
 or not. On a `GPU_REQUEST`, hold every launch, start no step of
