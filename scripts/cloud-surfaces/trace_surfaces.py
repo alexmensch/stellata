@@ -13,7 +13,8 @@ import numpy as np
 REPO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO / "scripts" / "dust"))
 import edenhofer2024  # noqa: E402
-CLOUDS_JSON = REPO / "public" / "clouds.json"
+from cloud_geometry import CLOUDS_JSON  # noqa: E402
+
 OUT_PATH = REPO / "data" / "molecular-clouds" / "cloud-surfaces.bin"
 
 MAGIC = b"CSUR"
