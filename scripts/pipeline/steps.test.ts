@@ -1,6 +1,6 @@
 // The real step table loads, orders and stales as README.md#the-step-table--stepsts says.
 
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, relative } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
@@ -10,6 +10,7 @@ import { CNS5 as CNS5_SOURCE } from '../catalog/classic-ids/cns5-source';
 import { REASON_CODES_FILE } from '../catalog/lineage/reason-codes-tsv';
 import { MEMBERSHIP_MANIFEST_FILE } from '../catalog/membership/membership-manifest-tsv';
 import { fileHashes } from '../util/build-stamp';
+import { packageScripts } from '../util/import-closure';
 import { REPO_ROOT } from '../util/paths';
 import { stepFileName } from '../util/stamp-path-pure';
 import { entryInputPaths } from '../util/step-inputs';
@@ -50,6 +51,15 @@ describe('the step table', () => {
     ]));
     expect(edgeFiles('lineage:codes', 'build:catalog')).toEqual([REASON_CODES_FILE]);
     expect(edgeFiles('build:binaries', 'build:membership')).toEqual([MULTIPLES_TSV.file]);
+  });
+
+  it('is the one place a table step\'s entry is named: no package.json script or workflow runs one directly', () => {
+    const workflows = join(REPO_ROOT, '.github/workflows');
+    const texts = [
+      ...Object.values(packageScripts()),
+      ...readdirSync(workflows).filter((f) => f.endsWith('.yml')).map((f) => readFileSync(join(workflows, f), 'utf8')),
+    ];
+    expect(STEPS.steps.map((s) => s.entry).filter((entry) => texts.some((text) => text.includes(entry)))).toEqual([]);
   });
 
   it('keeps no loop and sets aside no registry edge while build:catalog is the only allocating step on it', () => {

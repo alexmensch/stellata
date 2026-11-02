@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Stage 7 — write the build-counts and per-strategy-rates snapshot JSONs.
-Refresh with ``UPDATE_SNAPSHOTS=1``.
+Refresh with ``pnpm run build:binaries --update-snapshots``.
 """
 
 from __future__ import annotations
