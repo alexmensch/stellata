@@ -73,8 +73,9 @@ Reading `run.ts`, running the pure tests, `await-go.sh`, and
 
 The deny reason carries these five steps verbatim:
 
-1. A live `pickup-epic` coordinator (`bd list --has-metadata-key coordinator
-   --json`, that name live in `ListAgents`) gets `GPU_REQUEST` first; wait
+1. A live `pickup-epic` coordinator (the `beads` skill's coordinator-field
+   lookup; that name busy, idle or waiting in `ListAgents`) gets
+   `GPU_REQUEST` first; wait
    for `GPU_GRANTED`, and send `GPU_DONE` after the last run
    ([stellata-perf protocol](/.claude/skills/stellata-perf/SKILL.md#protocol--announce--arm--run-one-run-per-arm)).
 2. Announce what is to be measured and why, with the exact command.

@@ -36,7 +36,7 @@ marker_rule="Only Alex creates ${marker}, and it authorises exactly one launch �
 Naming the marker for another reason? A commit message or PR body goes through 'git commit -F <file>' / 'gh pr create --body-file <file>' (the route a worktree session already uses); searching the tree goes through the Grep tool."
 
 protocol="The perf runner is human-armed — scripts/perf/arming/README.md. The protocol, verbatim:
-  1. A pickup-epic coordinator is live (bd list --has-metadata-key coordinator --json, that name live in ListAgents)?
+  1. A pickup-epic coordinator is live (the beads skill's coordinator-field lookup; that name busy, idle or waiting in ListAgents)?
      Send it GPU_REQUEST and wait for GPU_GRANTED; send GPU_DONE after the last run — .claude/skills/stellata-perf/SKILL.md.
   2. Announce what you want to measure and why, with the exact command.
   3. Start the poller in the background: bash scripts/perf/arming/await-go.sh  (Bash run_in_background).
