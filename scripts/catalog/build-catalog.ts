@@ -946,7 +946,7 @@ async function main() {
     objects: sidObjects,
     storedEdges: registry.storedEdges,
     ledger: registry.ledger,
-    events: registry.events[CATALOG_PARTITION],
+    events: registry.events,
     scope: inPartition(CATALOG_PARTITION),
     ...allocationRun(),
   }, catalogUpstream({ placementRemovals, promotion: promotionLines, promotionIdentity }));
@@ -1156,7 +1156,7 @@ async function main() {
     return `${i} ${n} records to V ${sortedKey[n - 1]?.toFixed(2) ?? '—'}`;
   });
   console.log(`  transport chunks — ${chunkRows.join(' · ')}`);
-  const sidSuccessors = sidSuccessorPairs([...Object.values(registry.events).flat(), ...allocation.events]);
+  const sidSuccessors = sidSuccessorPairs([...registry.events, ...allocation.events]);
   const manifest: CatalogManifest = {
     chunkBytes,
     totalBytes: totalLength,

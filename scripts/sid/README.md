@@ -98,7 +98,8 @@ registry-pure.ts (+ test) unionLedger / unionLedgerLines: every
                           each events file naming only its own sids.
 registry-io.ts            loadRegistry: every partition plus the stored
                           edges, validated (every event code in the
-                          generated list), the ledgers as their union.
+                          generated list), the ledgers and the events
+                          each as their union.
                           Every file is required; a suite that may meet
                           an LFS-stub ledger gates on
                           isReadable(LEDGERS.catalog) itself.

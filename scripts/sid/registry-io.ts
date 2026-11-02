@@ -14,7 +14,8 @@ import { loadStoredEdges } from './stored-edges';
 export interface Registry {
   /** Every partition's rows, by sid: the sequence each allocation mints past. */
   ledger: LedgerRow[];
-  events: Readonly<Record<string, EventRow[]>>;
+  /** Every partition's events. */
+  events: EventRow[];
   storedEdges: SameasEdge[];
 }
 
@@ -31,7 +32,7 @@ export function loadRegistry(): Registry {
   }
   return {
     ledger: unionLedger(parts),
-    events: Object.fromEntries(parts.map((p) => [p.partition, p.events])),
+    events: parts.flatMap((p) => p.events),
     storedEdges: loadStoredEdges(),
   };
 }
