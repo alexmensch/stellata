@@ -82,7 +82,12 @@ main's build on every first run. No stage step reads the version, and `run`
 starts each step as `tsx scripts/pipeline/run.ts <step>` rather than through
 `pnpm run`, so `npm_package_version` never reaches its environment.
 
-The stage reads nothing outside that set. **A new read outside it is the one
+The stage reads nothing outside that set, with one exception that holds:
+`build:binaries`, which the runner runs ahead of `build:membership`, is
+Python, and its modules are in no TypeScript closure. Every file of its that a
+stage step reads (`multiples.tsv`) is committed under `data/`, so a code
+change that moves it moves the key, and `build-binaries` fails a PR whose
+committed copy is stale. **A new read outside it is the one
 way to get a stale hit:** a build that reads a file by path from a folder
 holding none of its modules must add that folder to `ALWAYS_KEYED_DIRS`, and
 a step that starts reading `package.json`'s `version` must drop
