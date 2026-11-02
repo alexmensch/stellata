@@ -92,9 +92,12 @@ same thing — single-use helpers stay with their consumer.
   clone), and `fileAtMergeBase`, a file as the merge-base holds it — `absent`
   when it is new on the branch, kept apart from `no-merge-base`. The lineage
   header, perf's `gitMeta` and the two merge-base guards read it.
-- `step-inputs.ts` — `stepInputPaths(script)`, every file a `package.json`
-  step reads: the closure of each `tsx` entry it chains, the closure's
-  siblings, and every declaration the closure reads (`sources/`). The
+- `step-inputs.ts` — `entryInputPaths(entries)`, every file a TypeScript
+  step reads: the closure of its entry files, the closure's siblings, and
+  every declaration the closure reads (`sources/`); the runner derives each
+  TypeScript step's inputs with it ([The step table](../pipeline/README.md#the-step-table--stepsts)).
+  `stepInputPaths(script)` is the same over each `tsx` entry a `package.json`
+  script chains. The
   catalogue stamp and `build:local-group`'s up-to-date gate both key on it;
   each step's own suite pins its set
   (`../catalog/catalog-inputs.test.ts`, `../local-group/local-group-inputs.test.ts`).
