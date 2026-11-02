@@ -5,7 +5,7 @@ import { existsSync } from 'node:fs';
 
 import { fileHashes, type FileHashes, type RecordedReads } from '../util/build-stamp';
 import {
-  describeStep, manualFreshness, pullQueryHash, requestHash, stampedOutputs, writeManualRecord,
+  manualDescription, manualFreshness, pullQueryHash, requestHash, stampedOutputs, writeManualRecord,
   type Description, type ManualRecord,
 } from './freshness';
 import type { Loaded } from './load-table';
@@ -14,7 +14,7 @@ import { pipelineTree, type PipelineTree } from './pipeline-tree';
 import { exec, runRecorded, TSX } from './processes';
 import { undeclaredWrites, type RunRecord } from './python-run-pure';
 import {
-  claims, describesItself, isBuild,
+  claims, isBuild,
   type ManualStep, type ResolvedStep,
 } from './step-table-pure';
 
@@ -115,8 +115,8 @@ export async function recordStep(loaded: Loads, options: RecordOptions): Promise
   const held = await holdStepLocks(tree.locks, loaded, step.name, true, options.log);
   try {
     const partial = options.args.length > 0;
-    if (!partial && !options.force && manualFreshness(step, resolved.outputs, tree).kind === 'fresh') return { kind: 'fresh' };
-    const described = describesItself(step) ? describeStep(step, tree) : null;
+    const described = manualDescription(step, tree);
+    if (!partial && !options.force && manualFreshness(step, resolved.outputs, tree, described).kind === 'fresh') return { kind: 'fresh' };
     const reads = await runAndRead(manual, described, options, tree);
     if (typeof reads === 'string') return { kind: 'failed', reason: reads };
     if (partial) return { kind: 'partial' };

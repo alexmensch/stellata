@@ -6,7 +6,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import { manualFreshness, pullQueryHash, requestHash } from './freshness';
+import { manualDescription, manualFreshness, pullQueryHash, requestHash } from './freshness';
 import { loadTable } from './load-table';
 import { pipelineTree } from './pipeline-tree';
 import { recordStep, type RecordOutcome } from './record-step';
@@ -58,7 +58,10 @@ async function record(steps: StepEntry[], name: string, force = false, args: str
 }
 
 const stamp = (name: string) => JSON.parse(readFileSync(pipelineTree(root).manualStamp(name), 'utf8'));
-const fresh = (step: ManualStep): string => manualFreshness(step, { files: (step.outputs as string[]), families: [] }, pipelineTree(root)).kind;
+const fresh = (step: ManualStep): string => {
+  const tree = pipelineTree(root);
+  return manualFreshness(step, { files: (step.outputs as string[]), families: [] }, tree, manualDescription(step, tree)).kind;
+};
 
 describe('recordStep', () => {
   it('records a pull\'s data inputs, query, answering service and release, never its code or scratch', async () => {

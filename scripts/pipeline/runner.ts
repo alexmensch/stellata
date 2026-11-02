@@ -7,7 +7,7 @@ import {
 } from '../util/build-stamp';
 import { UPDATE_SNAPSHOTS_ENV } from '../util/snapshot-check';
 import {
-  derivedFreshness, manualFreshness, recordedFreshness, stampedOutputs,
+  derivedFreshness, manualDescription, manualFreshness, recordedFreshness, stampedOutputs,
   type Freshness,
 } from './freshness';
 import type { Loaded } from './load-table';
@@ -75,7 +75,7 @@ class Run {
     const held = await holdStepLocks(this.tree.locks, this.loaded, step.name, isBuild(step), this.options.log);
     if (!isBuild(step)) {
       try {
-        return manualFreshness(step, resolved.outputs, this.tree);
+        return manualFreshness(step, resolved.outputs, this.tree, manualDescription(step, this.tree));
       } catch (err) {
         return { kind: 'failed', reason: err instanceof Error ? err.message : String(err) };
       } finally {

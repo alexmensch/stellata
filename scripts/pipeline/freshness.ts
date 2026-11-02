@@ -135,13 +135,16 @@ export function describeStep(step: ManualStep, tree: PipelineTree): Description 
   return parseDescription(step, run.stdout);
 }
 
-export function manualFreshness(step: ManualStep, outputs: OutputClaims, tree: PipelineTree): Freshness {
+export function manualDescription(step: ManualStep, tree: PipelineTree): Description | null {
+  return describesItself(step) ? describeStep(step, tree) : null;
+}
+
+export function manualFreshness(step: ManualStep, outputs: OutputClaims, tree: PipelineTree, now: Description | null): Freshness {
   const read = readManualRecord(step, tree.manualStamp(step.name));
   if (read.kind !== 'read') return { kind: 'stale', changed: [`(${read.kind === 'absent' ? 'no' : 'unreadable'} stamp)`] };
   const { record } = read;
   const changed = [...changedSince(record.stamp.inputs, tree.root), ...stampChanges(record.stamp, outputs, tree)];
-  if (describesItself(step)) {
-    const now = describeStep(step, tree);
+  if (now !== null) {
     if (now.kind === 'pull' && record.kind === 'pull' && pullQueryHash(now) !== record.query) changed.push('(query)');
     if ((now.request ? requestHash(now.request) : undefined) !== record.request) changed.push('(request)');
   }
