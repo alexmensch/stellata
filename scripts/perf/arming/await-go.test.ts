@@ -112,8 +112,11 @@ describe('await-go', () => {
     expect(r.stderr).toBe('');
   }, 15_000);
 
-  it('warns that the check was skipped when the session list cannot be read', async () => {
-    fakeClaude('exit 1');
+  it.each([
+    ['cannot be read', 'exit 1'],
+    ['is not a JSON array', "echo 'not json'"],
+  ])('warns that the check was skipped when the session list %s', async (_, script) => {
+    fakeClaude(script);
     arm();
     const r = await run({ PERF_GO_POLL_S: '0.2', PERF_GO_TIMEOUT_S: '10' });
     expect(r.code).toBe(0);

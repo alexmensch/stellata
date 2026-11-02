@@ -23,17 +23,16 @@ own_pids() {
 }
 
 busy_sessions() {
-  local root agents
+  local root
   root="$(dirname "$(git rev-parse --path-format=absolute --git-common-dir)")"
-  agents="$(claude agents --json 2>/dev/null)" || return 1
   # shellcheck disable=SC2046
-  printf '%s' "$agents" | bash "$here/busy-sessions.sh" "$root" $(own_pids) || true
+  claude agents --json 2>/dev/null | bash "$here/busy-sessions.sh" "$root" $(own_pids) 2>/dev/null
 }
 
 while :; do
   if [ -f "$marker" ] && age="$(perf_go_age_s "$marker")" && [ "$age" -le "$PERF_GO_MAX_AGE_S" ]; then
     if ! busy="$(busy_sessions)"; then
-      echo "perf-go: WARNING — could not list Claude sessions (claude agents --json failed); busy-session check skipped." >&2
+      echo "perf-go: WARNING — could not list or parse Claude sessions (claude agents --json); busy-session check skipped." >&2
     elif [ -n "$busy" ]; then
       {
         echo "perf-go: WARNING — other Claude sessions are busy in this repo; a run now is likely discarded:"
