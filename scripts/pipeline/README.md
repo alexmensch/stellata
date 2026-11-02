@@ -35,7 +35,7 @@ Vite (`build:client`, `build:site`) is not a step. `pnpm run build` and
 | Kind | Runner runs it? | Record | Stale when | Today |
 |---|---|---|---|---|
 | `build` | yes | `build/stamps/<step>.json` (gitignored) | an input or an output hash moved | the catalogue chain, the four generators, binaries, clouds, local-group, the mirrors |
-| `pull` | never | `data/stamps/<step>.json` (committed) | its request rows, a data input, its query or an output hash moved | every `refresh:*`, both `fetch:*`, the two `dustmaps` datasets |
+| `pull` | never | `data/stamps/<step>.json` (committed) | its request rows, a data input, its query or an output hash moved | every `refresh:*` (the two Edenhofer variants among them); both `fetch:*` once their outputs modules load |
 | `bake` | never | `data/stamps/<step>.json` (committed) | an input or an output hash moved | dust, local-bubble, cloud-surfaces, textures, icons, og |
 
 A step the runner never runs is a **manual** step. When one is stale, the
@@ -204,9 +204,11 @@ change in `clouds.json` leaves it fresh, a geometry or SID change stops the
 build. The bake record is the only owner of that fact.
 
 An **external dataset** a baker reads from outside the repo is a pull of its
-own, whose query is the dataset's identity and version: the Edenhofer 2023
-dust map behind `dust` and the Edenhofer 2024 posterior behind
-`cloud-surfaces`, both fetched by the `dustmaps` library into its own cache.
+own, whose query is the dataset's identity and version: the two variants of
+the [Edenhofer 2024](/data/papers/index.md#edenhofer2024) map (one Zenodo
+record), `main` behind `dust` and both behind `cloud-surfaces`, fetched by
+the `dustmaps` library into its own cache
+([The Edenhofer 2024 pulls](../dust/README.md#the-edenhofer-2024-pulls)).
 The audit hook records repo files only, so without that pull a new map
 version would never stale either bake.
 The pull's code is not an input: a refactor of the plumbing, or its port to
@@ -422,9 +424,10 @@ Hand-kept lists become derivations over the table:
   pass and its outputs land (`emitArtifacts`); the lock is taken before the
   stamp is read.
 - **Q6, the force.** One table absorbs 3 stamped steps, 2 emitters, 6
-  mirrors, 3 CI-only generators and 1 that runs nowhere, 24 pulls (19
-  `refresh:*` targets, 3 untargeted scripts, 2 `fetch:*`; 25 after the
-  `simbad_sptype` split, plus the two `dustmaps` datasets) and 6 bakers.
+  mirrors, 3 CI-only generators and 1 that runs nowhere, 26 pulls (the 24
+  `refresh:*` in `MANUAL_STEPS`, two of them the Edenhofer variants, plus the
+  2 `fetch:*`) and 6 bakes; recount with
+  `MANUAL_STEPS.filter((s) => s.kind === 'pull').length`.
   Step kinds exist because two runner behaviours (run it; check it and stop)
   each hold several cases today.
 - **Q7, copies.** The two stamp helpers stay one per language with one JSON
