@@ -400,8 +400,8 @@ arithmetic and label-flips replay:
   The <!-- count:membership-manifest/sharedDesignations -->68<!-- /count --> designations two rows do share are the spine's own — pinned, so a
   label change that makes a sixty-ninth fails here.
 - **The astrometry request covers every binding**: each `term = primaries`
-  row's `gaia_source_id` is requested, by measurement now the request reads no
-  manifest ([covered by measurement](../astrometry-request/README.md#the-record-builds-sources-are-covered-by-measurement)).
+  row's `gaia_source_id` is in the request, which reads no manifest, so this
+  test holds the coverage ([covered by measurement](../astrometry-request/README.md#the-record-builds-sources-are-covered-by-measurement)).
 - **The naming authority's residual**: the manifest propers no WGSN name
   matches are exactly the disposed ones, with the counts pinned in
   `../naming/manifest-naming-expected.json` ([The residual gate](../naming/README.md#the-residual-gate)).
