@@ -19,7 +19,7 @@ export interface CloudBrick {
   stepPc: number;
   /** Density (E_ZGR pc⁻¹) that encodes to 255 — linear decode. */
   densityMax: number;
-  /** The header's envelope (scripts/cloud-surfaces/README.md#output-format-cloud-surfacesbin-magic-csur-v3). */
+  /** The header's envelope (/scripts/cloud-surfaces/README.md#output-format-cloud-surfacesbin-magic-csur-v3). */
   envelopeU: number;
   data: Uint8Array<ArrayBuffer>;
 }

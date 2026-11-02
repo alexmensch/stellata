@@ -59,7 +59,7 @@ export interface Cloud {
 
 export interface CloudCatalog {
   clouds: Cloud[];
-  /** See scripts/clouds/README.md#output-schema. */
+  /** See /scripts/clouds/README.md#output-schema. */
   envelopeFadeStart: number;
 }
 
