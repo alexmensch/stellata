@@ -85,6 +85,10 @@ scripts/binaries/
                                   Its rowKey cites a row by
                                   (system_id, comp) for lineage
                                   (../util/sources/README.md#sourcerowref).
+  multiples-row-key-pure.ts       MULTIPLES_ROW_KEY, that rowKey, for code
+                                  that cites a row without reading the file
+                                  (promotion's origin keys), so it never
+                                  reaches the codec.
   anchor_offsets.py               compute_anchor_offsets: each component's
                                   offset from its system's anchor letter,
                                   with the sub-letter photocentre link.
