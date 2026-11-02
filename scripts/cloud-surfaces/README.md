@@ -1,6 +1,7 @@
 # Cloud surface build
 
-`build-cloud-surfaces.py` traces a per-cloud **isosurface mesh** from the
+`build-cloud-surfaces.py` (the entry; the numpy-bound bake is
+`trace_surfaces.py`) traces a per-cloud **isosurface mesh** from the
 [Edenhofer 2024](/data/papers/index.md#edenhofer2024) dust posterior mean
 for every Zucker cloud → `data/molecular-clouds/cloud-surfaces.bin`, consumed by
 the molecular-cloud rim shells
