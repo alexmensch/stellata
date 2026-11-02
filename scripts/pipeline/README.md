@@ -302,6 +302,18 @@ Hand-kept lists become derivations over the table:
   `--verify-committed`, then the derived checks. The four loop breaks ship
   with the slice that moves their step.
 
+## Files
+
+- `step-table-pure.ts` (+ test) — the table's types (`StepEntry`, one
+  variant per kind and language), the load-time rules that need no disk
+  (one writer per output, files against families included; a build-step
+  cycle; an `after` naming no step), and `deriveGraph`: read edges, the
+  registry edges set aside, a manual step's back edges kept as loops, and
+  the run order (table order breaks ties). `selectSteps` is a target plus
+  everything upstream, kept loops included; `writersOf` names the steps a
+  step takes shared locks on.
+- `run_python_step.py` — a Python step's command line under the recorder.
+
 ## Design pass
 
 - **Q1, one owner per fact.** Step order: the data flow. Outputs: each step's
