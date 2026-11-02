@@ -2,6 +2,8 @@
 
 import { basename, dirname } from 'node:path';
 
+import { stepFileName } from '../util/build-stamp';
+
 /** A `declareOutputs` constant, named by module and export so the module can be
  *  checked side-effect-free before it is imported. */
 export interface OutputsRef {
@@ -190,9 +192,13 @@ function topological(names: readonly string[], edges: readonly Edge[]): string[]
 export function deriveGraph(steps: readonly ResolvedStep[], registryFiles: readonly string[]): Derived {
   const names = steps.map((s) => s.step.name);
   const kindOf = new Map(steps.map((s) => [s.step.name, s.step.kind]));
-  const duplicates = names.filter((n, i) => names.indexOf(n) !== i);
+  const files = names.map(stepFileName);
+  const duplicates = names.filter((_, i) => files.indexOf(files[i]) !== i);
   const { edges: all, problems } = readEdges(steps);
-  problems.unshift(...duplicates.map((n) => `${n} is in the table twice`), ...outputConflicts(steps));
+  problems.unshift(
+    ...duplicates.map((n) => `${n} shares its stamp and lock file ${stepFileName(n)} with an earlier step`),
+    ...outputConflicts(steps),
+  );
 
   const registry = new Set(registryFiles);
   const isRegistryEdge = (e: Edge): boolean => kindOf.get(e.from) === 'build' && kindOf.get(e.to) === 'build'

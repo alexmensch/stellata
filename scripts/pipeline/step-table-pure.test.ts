@@ -77,6 +77,11 @@ describe('deriveGraph', () => {
     expect(problems(d)).toEqual(['the build steps form a cycle: a → b → a']);
   });
 
+  it('rejects two steps whose names give one stamp and lock file', () => {
+    expect(problems(deriveGraph([ts('a:b', ['/r/x']), ts('a-b', ['/r/y'])], [])))
+      .toEqual(['a-b shares its stamp and lock file a-b with an earlier step']);
+  });
+
   it('rejects an after naming no step', () => {
     expect(problems(deriveGraph([py('p', ['/r/p'], ['ghost'])], [])))
       .toEqual(['p runs after ghost, which is not a step']);
