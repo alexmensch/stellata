@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
-  deriveGraph, selectSteps, writersOf,
+  ALL_BUILD_STEPS, deriveGraph, expandTargets, selectSteps, writersOf,
   type Derived, type ResolvedStep, type StepGraph,
 } from './step-table-pure';
 
@@ -136,6 +136,14 @@ describe('deriveGraph', () => {
     const g = ordered(deriveGraph([p, membership], []));
     expect(g.keptLoops).toEqual([{ from: 'simbad-sptype', to: 'build:membership', files: ['/r/sptype.tsv'] }]);
     expect(g.order).toEqual(['build:membership', 'simbad-sptype']);
+  });
+});
+
+describe('expandTargets', () => {
+  it('reads the whole-table target as every build step, in table order, once', () => {
+    const steps = [ts('a', ['/r/a']), ts('b', ['/r/b'])].map((s) => s.step);
+    expect(expandTargets(steps, [ALL_BUILD_STEPS, 'b'])).toEqual(['a', 'b']);
+    expect(expandTargets(steps, ['b'])).toEqual(['b']);
   });
 });
 

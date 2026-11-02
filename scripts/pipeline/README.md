@@ -61,8 +61,9 @@ always a `package.json` script, checked by a test, so the three pulls with no
 target today (`refresh-simbad-sptype.py`, `refresh-simbad-wds-xids.py`,
 `refresh-msc.py`) gain one. `package.json`
 keeps one-line targets that call the runner (`build:catalog` →
-`run.ts build:catalog`, `build:stamped` → `run.ts build:binaries-runtime
-build:astrometry-request`) and never names a table step's entry file;
+`run.ts build:catalog`, `build:stamped` and `build:seed-steps` → `run.ts
+data`, every build step on the table) and never names a table step's entry
+file;
 `util/step-inputs.ts`'s `stepEntries` reads it from `steps.ts`.
 
 What each step **declares** and what the runner **derives**:
@@ -225,7 +226,7 @@ write more than one file (classic-ids four, Tycho-2 two).
 
 `run.ts <target…> [--force] [--update-snapshots] [--verify-committed]`
 
-A target is a step name. `--verify-committed` is CI's slice of the runner and
+A target is a step name, or `data` for every build step on the table. `--verify-committed` is CI's slice of the runner and
 lands with it; `run.ts` rejects it until then.
 
 1. Load and validate the table.

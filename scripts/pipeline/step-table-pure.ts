@@ -223,6 +223,13 @@ export function deriveGraph(steps: readonly ResolvedStep[], registryFiles: reado
   return { kind: 'ordered', graph: { order: topological(names, edges), edges, keptLoops, registryEdges } };
 }
 
+/** The target naming every build step on the table. */
+export const ALL_BUILD_STEPS = 'data';
+
+export function expandTargets(steps: readonly StepEntry[], targets: readonly string[]): string[] {
+  return [...new Set(targets.flatMap((t) => (t === ALL_BUILD_STEPS ? steps.filter(isBuild).map((s) => s.name) : [t])))];
+}
+
 export function selectSteps(graph: StepGraph, targets: readonly string[]): string[] {
   const upstream = [...graph.edges, ...graph.keptLoops];
   const selected = new Set<string>();

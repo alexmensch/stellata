@@ -118,7 +118,7 @@ An unchanged input invalidates nothing, so a rebuilt `multiples.tsv` with
 identical content leaves the catalogue skipped. Forcing a rebuild:
 `run.ts <step> --force`, which reaches every build step the run selects, or
 delete the stamp. `--update-snapshots` rewrites the count snapshots of every
-step it runs. `build:stamped` targets the whole chain; `build:layers` is
+step it runs. `build:stamped` is `run.ts data`, every step on the table; `build:layers` is
 `build:binaries-runtime` and the mtime-gated steps, so a stale catalogue is
 rebuilt before the binaries read its row-index map.
 
@@ -178,9 +178,9 @@ built, so the next build there sees them rewritten and rebuilds.
 
 `pnpm run build:seed` (`build-seed.sh`) runs `build:seed-steps` — exactly the
 steps whose outputs seed a new worktree ([Building in a worktree](#building-in-a-worktree)) — with one
-build per checkout. That is `run.ts build:binaries-runtime`: the runner
-selects every step upstream of it, `build:membership` included, which keeps
-the main checkout holding the lineage baseline a worktree diffs against.
+build per checkout. That is `run.ts data`, every build step on the table,
+`build:membership` included, which keeps the main checkout holding the
+lineage baseline a worktree diffs against.
 Each run registers `build/build-seed/<start ns>.<pid>`
 before looking at the others, then stops every older live run and waits for it
 to exit, or exits at once if a newer one is registered; so the newest run
