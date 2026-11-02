@@ -2,10 +2,15 @@ import { describe, expect, it } from 'vitest';
 
 import type { EventRow } from './events-pure';
 import { registryPaths } from './registry-outputs';
-import { CATALOG_PARTITION, partitionOf, REGISTRY_PARTITIONS, registryHint } from './registry-partitions-pure';
+import {
+  CATALOG_PARTITION, partitionOf, REGISTRY_PARTITIONS, registryHint, type RegistryPartition,
+} from './registry-partitions-pure';
 import { SIBLING_ARTIFACTS } from './sibling-artifacts';
-import { unionLedger, unionLedgerLines, validateRegistry, type PartitionRows } from './registry-pure';
-import type { LedgerRow } from './sid-pure';
+import {
+  registryAppendOnly, unionLedger, unionLedgerLines, validateRegistry, type PartitionLines, type PartitionRows,
+} from './registry-pure';
+import { computeLedgerHead, LEDGER_HEADER, type LedgerHead, type LedgerRow } from './sid-pure';
+import { EVENT_COLUMNS } from './events-pure';
 
 const row = (sid: number, canonicalKey: string, kind: LedgerRow['kind'] = 'star'): LedgerRow => (
   { sid, canonicalKey, kind, firstSeen: '2026-07-10' }
@@ -82,5 +87,43 @@ describe('validateRegistry', () => {
     const crossed = parts();
     crossed[1] = { ...crossed[1], events: [retire(1)] };
     expect(validateRegistry(crossed, isCode)).toEqual(['cloud events: retire of sid 1: sid not in ledger']);
+  });
+});
+
+describe('registryAppendOnly', () => {
+  const text = (header: string, lines: readonly string[]): string => [header, ...lines, ''].join('\n');
+  const head = (ledger: readonly string[], events: readonly string[] = []): LedgerHead => computeLedgerHead(
+    text(LEDGER_HEADER, ledger), text(EVENT_COLUMNS.join('\t'), events),
+  );
+  const line = (sid: number, key: string, kind = 'star'): string => `${sid}\t${key}\t${kind}\t2026-07-10`;
+  const catalog = [line(1, 'hip:1'), line(3, 'hip:3')];
+  const cloud = [line(2, 'cloud:orion-a', 'cloud')];
+  const split = (c = catalog, cl = cloud, lg: string[] = []): PartitionLines[] => [
+    { partition: CATALOG_PARTITION, ledger: c, events: [] },
+    { partition: 'cloud', ledger: cl, events: [] },
+    { partition: 'lg', ledger: lg, events: [] },
+  ];
+  const bases = (entries: [RegistryPartition, LedgerHead][]) => new Map<RegistryPartition, LedgerHead>(entries);
+  const preSplit = bases([[CATALOG_PARTITION, head([line(1, 'hip:1'), ...cloud, line(3, 'hip:3')])]]);
+  const postSplit = bases([[CATALOG_PARTITION, head(catalog)], ['cloud', head(cloud)], ['lg', head([])]]);
+
+  it('is unchecked with no catalogue base head', () => {
+    expect(registryAppendOnly(bases([]), split())).toEqual({ kind: 'unchecked' });
+  });
+
+  it('against a pre-split base, accepts the rows moved byte-identical and refuses a moved row edited', () => {
+    expect(registryAppendOnly(preSplit, split())).toEqual({ kind: 'checked', errors: [] });
+    const edited = registryAppendOnly(preSplit, split(catalog, [line(2, 'cloud:orion-b', 'cloud')]));
+    expect(edited.kind === 'checked' ? edited.errors : []).toEqual([expect.stringMatching(/^ledger union: frozen prefix/)]);
+  });
+
+  it('against a post-split base, refuses a row moved between partitions', () => {
+    const moved = registryAppendOnly(postSplit, split([...catalog, cloud[0]], []));
+    expect(moved.kind === 'checked' ? moved.errors : []).toContainEqual(expect.stringMatching(/^cloud ledger: 0 rows < frozen base 1/));
+  });
+
+  it('freezes nothing in a partition the base has no head for, once the base is split', () => {
+    const noLg = bases([[CATALOG_PARTITION, head(catalog)], ['cloud', head(cloud)]]);
+    expect(registryAppendOnly(noLg, split(catalog, cloud, [line(4, 'lg:m31', 'galaxy')]))).toEqual({ kind: 'checked', errors: [] });
   });
 });

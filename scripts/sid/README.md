@@ -96,7 +96,10 @@ registry-pure.ts (+ test) unionLedger / unionLedgerLines: every
                           partition as one sid sequence; validateRegistry:
                           that union dense and unique, each ledger
                           ascending and keyed only in its own namespaces,
-                          each events file naming only its own sids.
+                          each events file naming only its own sids;
+                          registryAppendOnly: the guard's frozen-prefix
+                          verdict over the merge-base heads, both
+                          regimes (pre-split union, per partition).
 registry-io.ts            loadRegistry: every partition plus the stored
                           edges, validated (every event code in the
                           generated list), the ledgers and the events

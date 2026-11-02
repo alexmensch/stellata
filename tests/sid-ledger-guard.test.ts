@@ -17,19 +17,14 @@ import { EVENTS, eventsFile } from '../scripts/sid/events-tsv';
 import { LEDGERS, ledgerFile } from '../scripts/sid/ledger-tsv';
 import { SHELL_OBJECTS, SOL_OBJECTS } from '../scripts/sid/object-mints-source';
 import { registryPaths } from '../scripts/sid/registry-outputs';
-import { CATALOG_PARTITION, REGISTRY_PARTITIONS } from '../scripts/sid/registry-partitions-pure';
-import { unionLedgerLines, validateRegistry } from '../scripts/sid/registry-pure';
+import { CATALOG_PARTITION, REGISTRY_PARTITIONS, type RegistryPartition } from '../scripts/sid/registry-partitions-pure';
+import { registryAppendOnly, validateRegistry } from '../scripts/sid/registry-pure';
 import { SAMEAS_BRIDGES, SAMEAS_OVERRIDES } from '../scripts/sid/sameas-source';
-import {
-  EMPTY_HEAD_TRIPLE,
-  checkAppendOnly,
-  computeLedgerHead,
-  type LedgerHead,
-} from '../scripts/sid/sid-pure';
+import { computeLedgerHead, type LedgerHead } from '../scripts/sid/sid-pure';
 
 const available = isReadable(LEDGERS[CATALOG_PARTITION]);
 
-function baseHead(partition: string): LedgerHead | null {
+function baseHead(partition: RegistryPartition): LedgerHead | null {
   const base = fileAtMergeBase(registryPaths(partition).head);
   return base.kind === 'present' ? JSON.parse(base.text) as LedgerHead : null;
 }
@@ -77,32 +72,14 @@ describe.skipIf(!available)('sid ledger guard', () => {
   });
 
   it('the frozen prefix is append-only against the merge-base heads', ({ skip }) => {
-    const bases = new Map(REGISTRY_PARTITIONS.map((p) => [p, baseHead(p)]));
-    const catalogBase = bases.get(CATALOG_PARTITION);
-    if (!catalogBase) {
+    const verdict = registryAppendOnly(
+      new Map(REGISTRY_PARTITIONS.map((p) => [p, baseHead(p)])),
+      files().map((f) => ({ partition: f.partition, ledger: f.ledger.lines, events: f.events.lines })),
+    );
+    if (verdict.kind === 'unchecked') {
       skip('no merge-base ledger-head.json (first PR, shallow clone, or no origin/main)');
       return;
     }
-    const current = files();
-    // A base with no sibling head predates the partitions: its one ledger
-    // held every namespace, so the sid-ordered union is what it froze.
-    if (REGISTRY_PARTITIONS.every((p) => p === CATALOG_PARTITION || bases.get(p) === null)) {
-      expect(checkAppendOnly(
-        catalogBase.ledger, unionLedgerLines(current.map((f) => f.ledger.lines)), 'ledger union', { newSidsPastBaseMax: true },
-      )).toEqual([]);
-    } else {
-      for (const f of current) {
-        expect(checkAppendOnly(
-          bases.get(f.partition)?.ledger ?? EMPTY_HEAD_TRIPLE, f.ledger.lines, registryPaths(f.partition).ledger, { newSidsPastBaseMax: true },
-        )).toEqual([]);
-      }
-    }
-    // A head written before events.tsv existed freezes zero rows: the one
-    // migration of retirements.tsv and reinstatements.tsv appends them all.
-    for (const f of current) {
-      expect(checkAppendOnly(
-        bases.get(f.partition)?.events ?? EMPTY_HEAD_TRIPLE, f.events.lines, registryPaths(f.partition).events, { newSidsPastBaseMax: false },
-      )).toEqual([]);
-    }
+    expect(verdict.errors).toEqual([]);
   });
 });
