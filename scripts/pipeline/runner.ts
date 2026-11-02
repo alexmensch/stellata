@@ -2,12 +2,13 @@
 
 import { spawn } from 'node:child_process';
 import { once } from 'node:events';
-import { existsSync, readFileSync, readdirSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { relative, resolve } from 'node:path';
 
 import {
   clearStamp, fileHashes, writeStamp, type FileHashes,
 } from '../util/build-stamp';
+import { familyMembers } from '../util/emit-artifacts';
 import { REPO_ROOT } from '../util/paths';
 import { UPDATE_SNAPSHOTS_ENV } from '../util/snapshot-check';
 import {
@@ -48,10 +49,7 @@ const blocks = (v: Verdict): boolean => v.kind === 'stale' || v.kind === 'failed
 const repoRelative = (path: string): string => relative(REPO_ROOT, path);
 
 function outputFiles(step: ResolvedStep): string[] {
-  const members = step.outputs.families.flatMap((f) => (existsSync(f.dir)
-    ? readdirSync(f.dir).filter((n) => f.member.test(n)).map((n) => resolve(f.dir, n))
-    : []));
-  return [...step.outputs.files, ...members];
+  return [...step.outputs.files, ...step.outputs.families.flatMap(familyMembers)];
 }
 
 function rehashed(inputs: FileHashes, paths: readonly string[] | 'all'): FileHashes {
