@@ -77,11 +77,13 @@ def require(flavor: str) -> dict[str, Any]:
 
 
 def describe(variant: str) -> dict[str, Any]:
-    return {
-        "query": json.dumps(identity(variant), sort_keys=True),
-        "services": [SERVICE],
-        "release": f"Zenodo record {ZENODO_RECORD}",
-    }
+    sys.path.insert(0, str(REPO_ROOT / "scripts" / "refresh"))
+    import refresh_lib as rl
+
+    return rl.description(
+        json.dumps(identity(variant), sort_keys=True), [SERVICE],
+        release=f"Zenodo record {ZENODO_RECORD}",
+    )
 
 
 def _md5(path: Path) -> str:
@@ -117,7 +119,7 @@ def pull(variant: str) -> None:
 
 
 def main(variant: str) -> None:
-    if sys.argv[1:] == ["--describe"]:
-        print(json.dumps(describe(variant)))
-        return
-    pull(variant)
+    sys.path.insert(0, str(REPO_ROOT / "scripts" / "refresh"))
+    import refresh_lib as rl
+
+    rl.pull_main(lambda: pull(variant), lambda: describe(variant))
