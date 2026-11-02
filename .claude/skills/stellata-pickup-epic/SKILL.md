@@ -16,7 +16,7 @@ build, its test suite, `build:seed` in the main checkout — widens the
 spread and walks the baseline, so the run is discarded
 ([stellata-perf protocol, step 5](/.claude/skills/stellata-perf/SKILL.md#protocol--announce--arm--run-one-run-per-arm)). A
 run happens only with every other session paused, and the pause starts
-before the arm so Alex can arm the moment they are asked.
+before the arm so the owner can arm the moment they are asked.
 
 | Kind | From → to | Send when |
 | --- | --- | --- |
@@ -31,7 +31,7 @@ before the arm so Alex can arm the moment they are asked.
 landing step (a landing subagent's gates, `build:seed`); a merge already
 armed on GitHub may complete, but its local steps wait. Record the pause in
 the run state. Tell the user nothing: the requester's announcement is what
-Alex reads. One request is served at a time; a second waits in the run state
+the owner reads. One request is served at a time; a second waits in the run state
 until `GPU_DONE`.
 
 **Worker.** Announce and start `await-go.sh` only after `GPU_GRANTED`. A
@@ -48,8 +48,8 @@ It is heavy: never while a GPU grant is held.
 
 ## The `SMOKE:` line
 
-A change Alex can see — shaders, renderer, UI, a loader, data a layer draws —
-owes a manual smoke in the browser, against the dev server Alex runs on the
+A change the owner can see — shaders, renderer, UI, a loader, data a layer draws —
+owes a manual smoke in the browser, against the dev server the owner runs on the
 branch: named stars to focus, slider values, mode transitions, debug HUDs to
 open, and what each should look like. Tests passing is not that. Pure
 pipeline, data with no drawn effect, docs and CI owe none; say which.
