@@ -27,9 +27,11 @@ pnpm run build:clouds                    # sid-stamped clouds.json first
 ./.venv/bin/python scripts/cloud-surfaces/build-cloud-surfaces.py
 ```
 
-First run downloads the ~3 GB
-[Edenhofer 2024](/data/papers/index.md#edenhofer2024) cube via `dustmaps`
-(same cache as `scripts/dust/`). `--only <cloud-id>` and `--dry-run` help when
+It reads the [Edenhofer 2024](/data/papers/index.md#edenhofer2024) cube
+from `dustmaps`' cache, which the two dataset pulls fill
+([The Edenhofer 2024 pulls](/scripts/dust/README.md#the-edenhofer-2024-pulls)):
+in-grid clouds need `edenhofer2024-main.json`, out-of-grid ones
+`edenhofer2024-2kpc.json`. `--only <cloud-id>` and `--dry-run` help when
 tuning.
 
 ## Pipeline (per cloud)

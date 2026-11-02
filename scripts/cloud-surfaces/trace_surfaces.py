@@ -11,6 +11,8 @@ from pathlib import Path
 import numpy as np
 
 REPO = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(REPO / "scripts" / "dust"))
+import edenhofer2024  # noqa: E402
 CLOUDS_JSON = REPO / "public" / "clouds.json"
 OUT_PATH = REPO / "data" / "molecular-clouds" / "cloud-surfaces.bin"
 
@@ -89,6 +91,7 @@ def quat_to_matrix(q):
 
 
 def load_query(flavor="main"):
+    edenhofer2024.require(flavor)
     from dustmaps.edenhofer2023 import Edenhofer2023Query
     return Edenhofer2023Query(flavor=flavor)
 

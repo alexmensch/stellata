@@ -1,0 +1,8 @@
+{
+  "dataset": "Edenhofer et al. 2024, 3D dust map (dustmaps edenhofer2023)",
+  "doi": "10.5281/zenodo.8187943",
+  "file": "mean_and_std_healpix.fits",
+  "flavor": "main",
+  "md5": "10c823a5fcf81b47b6e15530bcdf54dc",
+  "variant": "main"
+}
