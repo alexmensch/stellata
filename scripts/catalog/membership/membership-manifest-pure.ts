@@ -4,7 +4,6 @@
 
 import { SOL_APPARENT_V_MAGNITUDE, SOL_PROPER_NAME, normaliseGjKey } from '../record/catalog-pure';
 import type { Cns5Row } from '../classic-ids/classic-ids-parse';
-import type { Declared } from '../../util/sources/source';
 import {
   BRIGHT_TIER_MAG_CEILING,
   type ClassicIdOverlay,
@@ -32,11 +31,16 @@ import {
   type LabelOverrides,
 } from '../classic-ids/label-merge/label-merge-pure';
 import { parkedRecordKey } from '../distance/parallax/parked-ledger';
-import { intCell, readTable } from '../../util/tsv/table-pure';
+import { intCell } from '../../util/tsv/table-pure';
 import { nullableCell } from '../../util/tsv/artifact-pure';
-import { evidenceOf } from '../../util/tsv/cell-corrections-pure';
 import { ADDITION_REASONS, type AdditionReason } from './ledger-rows-pure';
-import { BINDING_REVIEW_KEY_COLUMNS, BINDING_REVIEW_VERDICTS, bindingReviewKey, type BindingReviewVerdict } from './ledger-rows-pure';
+import { BINDING_REVIEW_VERDICTS, bindingReviewKey, type BindingReviewVerdict } from './ledger-rows-pure';
+import {
+  BINDING_DISPOSITIONS,
+  dispositionOf,
+  type BindingDisposition,
+  type BindingDispositionRow,
+} from './binding-review-dispositions-pure';
 import { LABEL_DROP_REASONS, type LabelDropReason } from './ledger-rows-pure';
 import { OWN_CANDIDATE_REASONS, type OwnCandidate, type OwnCandidateReason } from './ledger-rows-pure';
 import type { IdentityRow } from '../lineage/identity-pure';
@@ -52,6 +56,14 @@ import {
 } from './membership-lineage-pure';
 import { spineDesignations, type SpineRow } from '../spine/inherited-spine-pure';
 import {
+  additionCells,
+  additionCohortItems,
+  cns5Gl,
+  soleItem,
+  type AdditionCohortItem,
+  type AdditionCohorts,
+} from './additions/addition-items-pure';
+import {
   applySpineCorrections, SPINE_CORRECTION_CELLS, SPINE_CORRECTIONS_NAME,
   type SpineCorrectionCell, type SpineCorrectionRow,
 } from './spine-corrections/spine-corrections-pure';
@@ -60,9 +72,7 @@ import {
   CLASSICAL_CELLS,
   attestHd,
   attestSpineRow,
-  findAdditions,
   indexPrimaries,
-  spineKeys,
   type ClassicalCell,
   type HdAddition,
   type HipAddition,
@@ -107,34 +117,6 @@ export const BINDING_OUTCOMES = [
 ] as const;
 export type BindingOutcome = (typeof BINDING_OUTCOMES)[number];
 
-export const BINDING_DISPOSITION_COLUMNS = [
-  ...BINDING_REVIEW_KEY_COLUMNS, 'derived_source_id',
-  'keep_source_id', 'basis', 'evidence',
-] as const;
-/** Which value a disposition settled on, for the count snapshot. */
-export const BINDING_DISPOSITIONS = ['derived', 'other', 'none'] as const;
-export type BindingDisposition = (typeof BINDING_DISPOSITIONS)[number];
-/** What a disposition rests on: the record's own Tycho-2 position against the
- *  Gaia source; V/70A's position and proper motion against it; SIMBAD's object
- *  under the id in the Gaia DR2 namespace carrying the record's designation;
- *  Gaia's G against the record's printed V on both candidates; a resolved
- *  pair's components bound crosswise, the WDS component letters deciding;
- *  one Gaia source two records reach, held by the one whose light it is. */
-export const BINDING_DISPOSITION_BASES = [
-  'tycho2_position', 'v70a_astrometry', 'simbad_dr2_object',
-  'gaia_photometry', 'pair_component', 'shared_source',
-] as const;
-export type BindingDispositionBasis = (typeof BINDING_DISPOSITION_BASES)[number];
-export type BindingDispositionRow = Record<(typeof BINDING_DISPOSITION_COLUMNS)[number], string> & {
-  basis: BindingDispositionBasis;
-};
-
-export function dispositionOf(d: BindingDispositionRow): BindingDisposition {
-  if (d.keep_source_id === '') return 'none';
-  if (d.keep_source_id === d.derived_source_id) return 'derived';
-  return 'other';
-}
-
 /** The text form of each record's origin SourceRowRef (../lineage/README.md#identity--the-origin-source-row),
  *  built by the caller, which holds the declarations. */
 export interface OriginKeys {
@@ -170,7 +152,7 @@ export interface MembershipInput {
   /** `magnitude-term/README.md#the-union-dedupes-on-the-derived-binding`. */
   magnitudeTerm: MagnitudeTermSelection | null;
   /** Whether the pulled astrometry gives this source a parallax — what decides
-   *  which of two groups contesting a designation ships (README.md#the-additions). */
+   *  which of two groups contesting a designation ships (additions/README.md). */
   publishesGaiaParallax: (sourceId: string) => boolean;
   keys: OriginKeys;
 }
@@ -183,7 +165,7 @@ export interface MembershipCounts extends LabelMergeCounts {
    *  while the floor is null. */
   magnitudeTerm: MagnitudeTermCounts;
   magnitudeRows: number;
-  /** README.md#the-additions. */
+  /** additions/README.md. */
   magnitudeRowsOwnCandidate: Record<OwnCandidateReason, number>;
   additionsByReason: Record<AdditionReason, number>;
   /** Groups a primary admits that resolve onto an existing record instead. */
@@ -281,23 +263,6 @@ function joinValues(values: readonly (string | number)[]): string {
 function splitValues(cell: string): string[] {
   return cell === '' ? [] : cell.split(MANIFEST_VALUE_SEPARATOR);
 }
-
-export function parseBindingDispositionsTsv(
-  text: string,
-  from: Declared,
-): Map<string, BindingDispositionRow> {
-  const out = new Map<string, BindingDispositionRow>();
-  for (const row of readTable({ ...from, columns: BINDING_DISPOSITION_COLUMNS, exact: true }, text)) {
-    const cells = row.cells();
-    const key = bindingReviewKey(cells);
-    for (const column of ['derived_source_id', 'keep_source_id'] as const) row.sourceId(column);
-    if (out.has(key)) row.fail(`duplicate record ${key}`);
-    evidenceOf(row, 'evidence', key);
-    out.set(key, { ...cells, basis: row.oneOf('basis', BINDING_DISPOSITION_BASES) });
-  }
-  return out;
-}
-
 
 /** The identifier tuple a ledger row and a manifest row share — the same five
  *  cells the parked ledger keys on. */
@@ -647,15 +612,10 @@ function magnitudeTermRow(sourceId: string): ManifestCells {
 
 // ---- the additions -----------------------------------------------------------
 
-/** One primary's row the spine lacks, before the cohorts are merged: the same
- *  star reaches this list once per primary that names it. */
-interface AdditionItem extends AdditionCohorts {
-  key: string;
+interface AdditionItem extends AdditionCohortItem {
   /** What this item alone derives — two items deriving one source are one star. */
   derived: DerivedBinding;
 }
-
-type AdditionCohorts = { hd: HdAddition | null; hip: HipAddition | null; cns5: Cns5Row | null };
 
 /** Designation-keyed indexes over the primaries the additions join through. */
 interface AdditionIndex {
@@ -756,47 +716,6 @@ function itemOrigin(item: AdditionCohorts, keys: OriginKeys): string {
     case 'hip': return keys.i239(item.hip!.hip);
     case 'cns5': return keys.cns5(item.cns5!.cns5);
   }
-}
-
-function soleItem<K extends keyof AdditionCohorts>(
-  items: readonly AdditionCohorts[], cohort: K,
-): AdditionCohorts[K] | null {
-  return items.find((i) => i[cohort] !== null)?.[cohort] ?? null;
-}
-
-function cns5Gl(cns5: Cns5Row | null): string | null {
-  return cns5 === null ? null : `GJ ${cns5.gj}${cns5.gjComp ?? ''}`;
-}
-
-/** The cells a group derives its binding from — the same three a spine row's
- *  derivation reads. */
-function additionCells(items: readonly AdditionCohorts[]): BindingCells {
-  const hip = soleItem(items, 'hip');
-  return {
-    tyc: soleItem(items, 'hd')?.tyc ?? '',
-    hip: hip === null ? '' : String(hip.hip),
-    gl: cns5Gl(soleItem(items, 'cns5')) ?? '',
-  };
-}
-
-function additionCohortItems(
-  tables: PrimaryTables, kept: readonly SpineRow[], idx: PrimaryIndex,
-): Array<Omit<AdditionItem, 'derived'>> {
-  const additions = findAdditions(tables, spineKeys(kept), idx);
-  return [
-    ...additions.hd.map((hd) => ({ key: `tyc:${hd.tyc}`, hd, hip: null, cns5: null })),
-    ...additions.hip.map((hip) => ({ key: `hip:${hip.hip}`, hd: null, hip, cns5: null })),
-    ...additions.cns5.newRecords.map((cns5) => ({
-      key: `cns5:${cns5.cns5}`, hd: null, hip: null, cns5,
-    })),
-  ];
-}
-
-/** ../astrometry-request/README.md#the-request-is-a-union-and-why-that-is-not-a-compromise. */
-export function additionItemCells(
-  tables: PrimaryTables, kept: readonly SpineRow[],
-): BindingCells[] {
-  return additionCohortItems(tables, kept, indexPrimaries(tables)).map((i) => additionCells([i]));
 }
 
 function candidateVia(d: DerivedBinding, source: BindingSource): string | null {

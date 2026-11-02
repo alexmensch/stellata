@@ -73,11 +73,9 @@ A `defineArtifact` is both the writer's output and the readers' source, so
 **Reachable must mean read.** A source reached through the closure but never
 opened is not harmless: besides a spurious rebuild it adds a false ordering
 edge, which can make a false cycle or skip a step behind a stale pull it never
-reads. (Today `build:wgsn` reaches the manifest's path through a parse helper
-in the manifest module, and `build:catalog`'s parked-ledger path besides.) So
-each `defineSource` / `defineArtifact` lives in a leaf module that only code
-reading that file through its typed reader imports, and a test over each
-step's closure holds every reached source to a call of its reader.
+reads. So each `defineSource` / `defineArtifact` lives in a leaf module that
+only code reading that file through its typed reader imports, and a test over
+each step's closure holds every reached source to a call of its reader.
 
 **A recorded input set is sound for code and data alike.** A Python step
 that starts reading a new module or file does so because some file it
@@ -236,8 +234,8 @@ that writes it. Measured 2026-10-27.
 
 | Loop | Disposition |
 |---|---|
-| manifest → `build:wgsn` → WGSN tables → `build:membership` | Broken. `build:wgsn` reads the manifest only for its proper-name residual gate and three counts; those move to the membership gate test. Outputs unchanged. |
-| manifest → astrometry request → astrometry pull → `build:membership` | Broken. The request's manifest leg adds exactly 30 ids beyond the candidate legs, all of them `keep_source_id`s in `binding-review-dispositions.tsv`; the request reads that file instead. Request byte-identical. That coverage now holds by measurement, so the membership gate test asserts every manifest `gaia_source_id` is in the request (a test may read the manifest; a step may not). |
+| manifest → `build:wgsn` → WGSN tables → `build:membership` | Broken. The proper-name residual gate and the manifest's naming counts run in the membership gate test over the committed tables; `build:wgsn` reads no manifest. |
+| manifest → astrometry request → astrometry pull → `build:membership` | Broken. The request reads `binding-review-dispositions.tsv`'s `keep_source_id`s in place of the manifest, the only ids the manifest held beyond the candidate legs. Coverage holds by measurement, so the membership gate test asserts every manifest `gaia_source_id` is in the request (a test may read the manifest; a step may not). |
 | … → astrometry pull → `build:classic-ids` → overlay → `build:membership` | Broken by the row above. |
 | manifest → `refresh:tycho2` → Tycho-2 → `build:membership` | Broken. Every manifest TYC is a spine-after-corrections or IV/25 TYC, and the spine adds none beyond the manifest and IV/25; the request keys on those, written as a committed TYC request file by a TypeScript `build` step (the corrected spine is computed only in TypeScript, `applySpineCorrections`) and read by both `refresh:tycho2` and `refresh:simbad-tyc-hd`. Request byte-identical. The pull's own check that every manifest TYC was pulled moves to the membership gate test, so the pull opens no manifest. |
 | `simbad_sptype` → `build:binaries` → `multiples.tsv` → `build:membership` → manifest → `simbad_sptype` | Broken. Binaries reads only the WDS leg, which the manifest never moves; that leg becomes its own pull and file. |

@@ -25,9 +25,9 @@ layout, its codec, the chunk plan and the search-index wire entry — is
   directions of its codec, the record order, the transport chunk plan, and
   the `SearchEntry` wire shape. `catalog-pure.ts` alone, imported by every other subfolder and
   by `src/client/loaders/`, importing back from none of them.
-- `astrometry-request/` — the Gaia 5p pull's source_id list: the manifest's
-  `gaia_source_id` column, both binding gates' candidates (overlay and
-  derivation), and the bound-pair siblings. Input prep, off `build:catalog`.
+- `astrometry-request/` — the Gaia 5p pull's source_id list: both binding
+  gates' candidates (overlay and derivation), the bound-pair siblings and the
+  review dispositions' kept ids. Input prep, off `build:catalog`.
 - `parse/` — the per-row pipeline (`readStars`), reference-catalogue
   parsers and space-motion velocity. Its `gcvs/` subfolder owns the
   variable-star parsing and the variability cross-match; `constellations/`
