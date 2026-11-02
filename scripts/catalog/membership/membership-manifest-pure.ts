@@ -2,7 +2,7 @@
 // the primaries' additions, the two ledgers, the TSV codecs, and the
 // spine ↔ manifest matcher the parity gate runs. Contract: /docs/catalog-driver.md#31-retiring-the-spine--the-membership-rule-measured-against-the-primaries.
 
-import { SOL_APPARENT_V_MAGNITUDE, SOL_PROPER_NAME, normaliseGjKey } from '../record/catalog-pure';
+import { SOL_APPARENT_V_MAGNITUDE, SOL_PROPER_NAME, normaliseGjKey } from '../../../src/catalog-format/record/catalog-pure';
 import type { Cns5Row } from '../classic-ids/classic-ids-parse';
 import {
   BRIGHT_TIER_MAG_CEILING,

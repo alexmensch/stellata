@@ -1,4 +1,4 @@
-import { MiB, WORKERS_MAX_ASSET_BYTES } from '../../release/asset-size-pure';
+import { MiB, WORKERS_MAX_ASSET_BYTES } from '../../../scripts/release/asset-size-pure';
 import { describe, it, expect } from 'vitest';
 import {
   normaliseGjKey,

@@ -20,7 +20,7 @@ docs/sid.md	323,603	history
 scripts/catalog/membership/magnitude-term/README.md	984,957	history
 scripts/catalog/membership/magnitude-term/README.md	983,068	history
 scripts/catalog/membership/magnitude-term/README.md	388,071	history
-scripts/catalog/record/README.md	390k	history
+src/catalog-format/record/README.md	390k	history
 scripts/perf/pins/README.md	329,657	history
 src/client/debug/frame-cost/passes/README.md	388,071	history
 src/client/debug/memory/README.md	329,657	history

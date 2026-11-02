@@ -146,7 +146,7 @@ population is the signal.
 
 **Keyed on `sid`, never on record index.** Records sort by apparent V from Sol,
 so any membership change re-sorts the whole array and every existing record's
-index moves ([Record order](../record/README.md#record-order)). An index diff would report
+index moves ([Record order](../../../src/catalog-format/record/README.md#record-order)). An index diff would report
 the whole catalogue. The two derived fields follow the same rule: `companion`
 compares as the companion's **sid**, and `nameOffset` as the resolved **name**.
 A sid on two records is one object drawn twice — skipped by the field

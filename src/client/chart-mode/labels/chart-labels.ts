@@ -6,7 +6,7 @@ import {
   FLAG_BINARY_PRIMARY,
   NO_CONSTELLATION_INDEX,
   VAR_TYPE_ECLIPSING,
-} from '../../../../scripts/catalog/record/catalog-pure';
+} from '../../../catalog-format/record/catalog-pure';
 import type { CompleteCatalog } from '../../loaders/catalog-loader';
 import type { LateState } from '../../util/late/late';
 import { projectToScreenInto } from '../../overlays/overlay-project';

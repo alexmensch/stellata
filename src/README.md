@@ -28,6 +28,9 @@ Cloudflare Worker entry, browser client, and the public content site.
 - `astro-core/` — shared physics both `client/` and the build pipeline
   (`/scripts/`) import: constants, frames, orbits, photometric models. It
   imports neither of them.
+- `catalog-format/` — what the pipeline writes and `client/` reads: the
+  record layout and codec, artefact schemas, and the naming and spectral
+  rules both apply. `client/` reaches pipeline code only through it.
 - `site/` — the public content pages, the homepage at `/` among them.
   Authored HTML with one progressive-enhancement script, built by `vite.site.config.ts` into
   the same `dist/` **after** the app build, which is the pass that empties

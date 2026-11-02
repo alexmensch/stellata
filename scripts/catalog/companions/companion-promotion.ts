@@ -9,20 +9,20 @@ import {
   OPTICAL_DOUBLE_MIN_SEP_PC,
   absoluteToApparentMagnitude,
   apparentToAbsoluteMagnitude,
-} from '../record/catalog-pure';
+} from '../../../src/catalog-format/record/catalog-pure';
 import {
   SPECTRAL_UNKNOWN,
   type SpectralInfo,
   classifyFromSimbad,
   resolveSpectDisplay,
-} from '../spectral/spectral-classify';
+} from '../../../src/catalog-format/spectral/spectral-classify';
 import type { ParkedReason } from '../distance/parallax/parked-ledger';
 import {
   absmagFromSpectral,
   physicalRadius,
   spectralClassCi,
   spectralFromAbsmag,
-} from '../spectral/physical-radius';
+} from '../../../src/catalog-format/spectral/physical-radius';
 import { R_V, avSolToStar, type DustGrid } from '../distance/dust/dust-deextinction-pure';
 import {
   RIELLO_G_MINUS_V_SIGMA,

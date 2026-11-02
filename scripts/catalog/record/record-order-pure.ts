@@ -1,5 +1,5 @@
 // The key catalog.bin records are sorted on: apparent V from Sol at
-// J2016.0, brightest first. See ./README.md#record-order.
+// J2016.0, brightest first. See ../../../src/catalog-format/record/README.md#record-order.
 
 import { apparentMagnitude } from '../../../src/astro-core/perceptual-magnitude';
 

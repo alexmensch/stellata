@@ -1,18 +1,15 @@
-# Spectral classification and physical radius
+# Spectral resolution
 
-Morgan-Keenan spectral parsing, the seven-tier resolver over SIMBAD's
-`sp_type`, and the Stefan-Boltzmann chain that turns a class plus an absolute
-magnitude into a rendered radius. Extracted from `../record/catalog-pure.ts`, which
-keeps the SIMBAD namespace ladder this folder joins through.
+The seven-tier resolver over SIMBAD's `sp_type` that picks each record's
+Morgan-Keenan class. The MK parser it walks with and the Stefan-Boltzmann
+chain that turns a class plus an absolute magnitude into a rendered radius
+are read by the viewer's focus card too, so they live in
+[`/src/catalog-format/spectral/`](/src/catalog-format/spectral/README.md).
 
 ## Files in this area
 
 ```
 scripts/catalog/spectral/
-  spectral-classify.ts (+ test)   The MK walker over SIMBAD `sp_type`, the
-                                  ESP-ELS letter enum, the `SpectralInfo`
-                                  shape both produce, and the hover-display
-                                  string. No catalogue joins — pure parsing.
   simbad-sptype-source.ts         SIMBAD_SPTYPE, the pull declared
                                   (../../util/sources/). One parse yields the
                                   spectral index and each source_id's
@@ -20,29 +17,14 @@ scripts/catalog/spectral/
                                   derivation and the spine audits read; a
                                   repeated source_id fails it.
   spectral-resolve.ts (+ test)    The seven-tier resolver and the SIMBAD
-                                  sp_type index it walks. The one file here
-                                  that reaches back to `../record/catalog-pure.ts`,
-                                  for the namespace ladder
+                                  sp_type index it walks, through the
+                                  namespace ladder in
+                                  `/src/catalog-format/record/catalog-pure.ts`
                                   (`walkSimbadNamespaces`, `indexSimbadRow`,
                                   `simbadHipKey`) both SIMBAD pulls share.
-  physical-radius.ts (+ test)     Effective temperature and bolometric
-                                  correction by class, the Apsis Teff sanity
-                                  window, `physicalRadius`, and the
-                                  absolute-magnitude inverse used to impute a
-                                  companion's class.
 ```
 
-**Why this is not in `../record/catalog-pure.ts`.** It was, and the folder README
-documenting it was `../parse/README.md` — neither the code's home nor its
-caller's. The topic is self-contained (nine files import it, one of them a
-runtime module), it is the largest single subject in a 2.4k-line module, and a
-session asking "why is this star that size" is better served landing here.
-
-**The one direction of the dependency that matters:** this folder imports from
-`../record/catalog-pure.ts`, never the reverse. `catalog-pure.ts` no longer references
-a spectral symbol at all, so the seam is one-way and a cycle cannot form.
-
-## The resolver and the radius chain
+## The resolver
 
 `resolveSpectralInfo` in `spectral-resolve.ts` resolves
 `{ classIdx, subclass, lumClass, isWhiteDwarf }` per star via a seven-tier
@@ -57,7 +39,7 @@ priority chain:
 1. **SIMBAD `sp_type` by Gaia source_id** (`data/simbad/simbad_sptype.tsv`
    from `scripts/refresh/refresh-simbad-sptype.py`). SIMBAD canonicalises
    sp_type to Morgan-Keenan only — variability annotations live in `otype`,
-   never in sp_type — so the parser (`classifyFromSimbad`) is a strict MK
+   never in sp_type — so the parser (`classifyFromSimbad`, `/src/catalog-format/spectral/spectral-classify.ts`) is a strict MK
    walker covering plain MK (`G2V`, `K0III`, `M1.5Iab-b`), white dwarfs
    (`DA`, `DB2`, `DAH`), subdwarfs (`sdB5`), carbon / Wolf-Rayet (`C5,2e`,
    `WN5`), and Am/Ap composites (`kA5hA8mF1(III)SiEuBa` → metallic-line
@@ -81,7 +63,7 @@ priority chain:
    key](/scripts/refresh/simbad/README.md#the-union-adds-rows-never-a-second-row-under-one-key)). The walk passes over the typeless one on its own: `accept` returns
    null and the ladder keeps going.
 3. **SIMBAD `sp_type` by GJ**, folded through `normaliseGjKey`
-   (`../record/catalog-pure.ts`) so `Gl 165A` / `GJ 165A` / `165 A` meet as one
+   (`../../../src/catalog-format/record/catalog-pure.ts`) so `Gl 165A` / `GJ 165A` / `165 A` meet as one
    key. Above TYC per [The ladder is ordered by what an identifier names](#the-ladder-is-ordered-by-what-an-identifier-names).
 4. **SIMBAD `sp_type` by TYC** — the only namespace that reaches an object
    SIMBAD holds no Gaia id and no HIP for, which is exactly the population
@@ -103,7 +85,7 @@ priority chain:
    used to carry went stale.
 5. **Gaia DR3 ESP-ELS `spectraltype_esphs`** ([Creevey 2023](/data/papers/index.md#creevey2023); a column on
    `data/gaia/gaia_dr3_apsis.tsv`, keyed by source_id). Letter-only enum;
-   `classifyFromGspspec` maps each letter to its `classIdx` with neutral
+   `classifyFromGspspec` (same module) maps each letter to its `classIdx` with neutral
    subclass=5 / lumClass=255.
 6. **`none`** — no upstream covers the row, and the walk renders it as
    `SPECTRAL_UNKNOWN`: `classIdx=UNKNOWN_CLASS_IDX` (8) / `lumClass=255`.
@@ -120,39 +102,8 @@ classification (build-counts over the walked records: SIMBAD
 **<!-- count:build-catalog/spectralBySimbad -->341,203<!-- /count -->** / ESP-ELS **<!-- count:build-catalog/spectralByGspspec -->617,169<!-- /count -->** / `none` **<!-- count:build-catalog/spectralFallback -->6,628<!-- /count -->**); it is still used as a
 last-resort hover-display fallback when both upstream sources are blank.
 
-`physicalRadius` then computes R/R☉ via Stefan–Boltzmann:
-
-```
-T       = Apsis Teff (gspphot → gspspec) when measured, else
-          interp(T_TABLE[classIdx], subclass)
-BC      = interp(BC_TABLE[classIdx], subclass)
-Mbol    = absmag + BC
-L/L☉    = 10^((4.74 − Mbol) / 2.5)
-R/R☉    = sqrt(L/L☉) × (T_sun/T)²
-```
-
-`resolveApsisTeff` supplies the measured Teff (2–60 kK sanity window);
-R ∝ T⁻², so the class-table fallback misized ESP-ELS-tier stars
-(letter-only, subclass defaulted to 5) by up to ~36% and unknown-class
-stars by up to ~2×. Tables are main-sequence values — cooler for
-giants/supergiants in reality — but the Mbol side of the equation
-absorbs the luminosity-class difference, so the end result lands close
-to published radii ([Physical radius](/docs/science-stellar-modelling.md#physical-radius) carries the current
-per-star numbers; `known-stars.test.ts` pins them end-to-end via the
-corpus `primary_radius_rsun` / `primary_ci` columns). Clamped to
-`[0.08, 2500]` so pathological catalog rows don't produce absurd
-sizes. White dwarfs are special-cased to 0.013 R☉ (typical WD radius;
-absmag doesn't translate reliably for them); Wolf-Rayets ride their
-own Teff/BC ramps and ignore Apsis.
-
-### The absolute-magnitude tables
-
-`absmagFromSpectral` reads `MV_MS_TABLE` / `MV_GIANT_TABLE`, credited to
-[Cox 2000](/data/papers/index.md#cox2000) Sect. 15.3 (no copy held). The dwarf
-row departs from the online table of [Mamajek 2022](/data/papers/index.md#mamajek2022):
-of its anchors only M0V (8.80) agrees — A0V ships 0.65 against 0.99, B5V −1.2
-against −0.85, M5V 12.3 against 14.15, M9V 16.0 against 19.40. Which source to
-adopt is an open decision, `stellata-uadc.69.28`.
+The class it resolves feeds the radius chain:
+[The radius chain](/src/catalog-format/spectral/README.md#the-radius-chain).
 
 ### A stated Gaia id the record contradicts ends the walk
 

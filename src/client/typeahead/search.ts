@@ -1,7 +1,7 @@
 import Fuse from 'fuse.js';
 import * as THREE from 'three';
 import type { Stellata } from '../stellata';
-import { isHardTarget, type Target } from '../camera/focus/focus-target';
+import { isHardTarget, type Target, type TargetKind } from '../camera/focus/focus-target';
 import type { CompleteCatalog } from '../loaders/catalog-loader';
 import { displayNameOf, KIND_ROSTER, type KindModules } from '../kinds/kind-modules';
 import { SEARCH_DEBOUNCE_MS, TYPEAHEAD_MAX_RESULTS } from './typeahead-util';
@@ -9,30 +9,32 @@ import { Typeahead, TypeaheadGroup } from './typeahead';
 import {
   NO_CONSTELLATION_INDEX,
   type SearchEntry,
-} from '../../../scripts/catalog/record/catalog-pure';
+} from '../../catalog-format/record/catalog-pure';
 import {
-  buildSearchIndex, GL_QUERY_RE, normalizeGlKey, type SearchIndex,
-} from './search-corpus';
+  buildSearchIndex, GL_QUERY_RE, normalizeGlKey,
+  type FuzzyEntry as CorpusEntry, type SearchIndex as CorpusIndex,
+} from '../../catalog-format/naming/search-corpus';
 
 export type { SearchEntry };
-export type { FuzzyEntry, SearchIndex } from './search-corpus';
+export type FuzzyEntry = CorpusEntry<TargetKind>;
+export type SearchIndex = CorpusIndex<TargetKind>;
 export {
   buildBayerLabels,
   buildComponentLabels,
   buildGcvsLabels,
   buildSearchIndex,
   normalizeGlKey,
-} from './search-corpus';
+} from '../../catalog-format/naming/search-corpus';
 export {
   bayerDesignation,
   gouldDesignation,
   superscript,
-} from '../../../scripts/catalog/naming/star-naming-pure';
+} from '../../catalog-format/naming/star-naming-pure';
 export {
   designationSetOfEntry,
   formatGcvsDesignation,
   starDesignations,
-} from './star-designations';
+} from '../../catalog-format/naming/star-designations';
 export type { BayerInfo } from './star-name-tables';
 export {
   buildBayerMap,
@@ -40,8 +42,6 @@ export {
   buildStarLabels,
   composedLabelsOf,
 } from './star-name-tables';
-
-import type { FuzzyEntry } from './search-corpus';
 
 // Build the shared query runner: direct-lookup maps for numeric IDs, the
 // star fuzzy corpus, kind-module rows via the roster, within-kind dedup.
@@ -58,7 +58,7 @@ export function createSearchRunner(
   // Direct-lookup maps for numeric IDs. Prefix form ("HIP 12345", "HD 128620")
   // dispatches here rather than through the fuzzy index.
   const { fuzzyEntries, hipMap, hdMap, hrMap, glMap, flamMap } =
-    prebuilt ?? buildSearchIndex(raw, catalog.constellations);
+    prebuilt ?? buildSearchIndex<TargetKind>(raw, catalog.constellations);
 
   // Kind-module corpus rows. Each entry's index is its kind's Target idx
   // by the module contract, so a missing artifact leaves an object out

@@ -72,7 +72,7 @@ describe('the detector itself', () => {
     expect(violationsInSource("import { cpuDensityAt } from './local-group-emission-pure';")).toEqual([]);
     // A *-pure module under scripts/ is shared build-and-browser code by
     // design and carries no builtin of its own.
-    expect(violationsInSource("import { starName } from '../../../scripts/catalog/naming/star-naming-pure';"))
+    expect(violationsInSource("import { starName } from '../../../src/catalog-format/naming/star-naming-pure';"))
       .toEqual([]);
   });
 });

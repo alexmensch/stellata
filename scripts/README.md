@@ -11,7 +11,7 @@ cross-script policy and pointers.
   `data/binaries/multiples.tsv` ride catalog.bin as first-class
   records with `FLAG_BINARY_COMPANION_ONLY` set). The chunks are a
   byte-range split of the v9 binary that keeps every deployed asset
-  under Cloudflare Workers' 25 MiB limit; see [Binary catalog format](catalog/record/README.md#binary-catalog-format-publiccatalogbini--manifest).
+  under Cloudflare Workers' 25 MiB limit; see [Binary catalog format](../src/catalog-format/record/README.md#binary-catalog-format-publiccatalogbini--manifest).
   Also emits
   `public/constellation-boundaries.json` (IAU boundary arcs precessed to
   ICRS + the fade-quantile table; `catalog/boundaries/README.md`).

@@ -5,7 +5,7 @@ everything it resolves per star: space-motion velocity and the GCVS
 variability cross-match. Constellation membership and the stick figures are
 `constellations/`. Spectral class and physical radius
 are resolved here but owned by `../spectral/`. The binary record layout these
-fields land in is [Binary catalog format](../record/README.md#binary-catalog-format-publiccatalogbini--manifest); the
+fields land in is [Binary catalog format](../../../src/catalog-format/record/README.md#binary-catalog-format-publiccatalogbini--manifest); the
 membership term
 it walks is `../membership/README.md`.
 

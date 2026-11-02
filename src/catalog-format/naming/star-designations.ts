@@ -6,15 +6,15 @@ import {
   designationConIndex,
   NO_CONSTELLATION_INDEX,
   type SearchEntry,
-} from '../../../scripts/catalog/record/catalog-pure';
-import { ASCII_GREEK } from '../../../scripts/catalog/naming/greek-forms';
+} from '../record/catalog-pure';
+import { ASCII_GREEK } from './greek-forms';
 import {
   bayerDesignation,
   designationSetOfEntry,
   formatGcvsDesignation,
   gouldDesignation,
   superscript,
-} from '../../../scripts/catalog/naming/star-naming-pure';
+} from './star-naming-pure';
 
 export { designationSetOfEntry, formatGcvsDesignation, superscript };
 

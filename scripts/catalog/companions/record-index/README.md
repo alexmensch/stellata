@@ -149,6 +149,6 @@ no primary row — there is no side to anchor the pair on, and taking the first
 row instead would attribute a glyph off a pairing the data never states.
 
 Emitted as the search index's `cl` / `cp` fields —
-[Search index](../../record/README.md#search-index-publicsearch-indexjson), [Star search](/src/client/typeahead/README.md#star-search),
-and [Two callers, one composer](../../naming/README.md#two-callers-one-composer).
+[Search index](../../../../src/catalog-format/record/README.md#search-index-publicsearch-indexjson), [Star search](/src/client/typeahead/README.md#star-search),
+and [Two callers, one composer](/src/catalog-format/naming/README.md#two-callers-one-composer).
 `componentDesignations` pins the total.

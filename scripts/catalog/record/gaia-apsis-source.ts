@@ -2,7 +2,7 @@
 
 import { defineSource, type Declared } from '../../util/sources/source';
 import { readTable } from '../../util/tsv/table-pure';
-import type { ApsisRow } from './catalog-pure';
+import type { ApsisRow } from '../../../src/catalog-format/record/catalog-pure';
 
 const GAIA_APSIS_COLUMNS = [
   'source_id',

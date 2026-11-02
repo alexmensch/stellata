@@ -1,26 +1,21 @@
 // The fuzzy corpus and the exact-match identifier maps behind star search.
-// A leaf module: no THREE, no Stellata, so the build's parity gate can
-// import it. See README.md#star-search.
+// See README.md.
 
 import {
   buildAliasedIdIndex,
   designationConIndex,
   NO_CONSTELLATION_INDEX,
   type SearchEntry,
-} from '../../../scripts/catalog/record/catalog-pure';
-import { GREEK_SPELLINGS } from '../../../scripts/catalog/naming/greek-forms';
+} from '../record/catalog-pure';
+import { GREEK_SPELLINGS } from './greek-forms';
 import {
   bayerDesignation,
   displayNamesFromSearchIndex,
   gouldDesignation,
-} from '../../../scripts/catalog/naming/star-naming-pure';
+} from './star-naming-pure';
 import { formatGcvsDesignation } from './star-designations';
-import type { TargetKind } from '../camera/focus/focus-target';
-
-type EntryKind = TargetKind;
-
-export interface FuzzyEntry {
-  kind: EntryKind;
+export interface FuzzyEntry<Kind extends string = 'star'> {
+  kind: Kind;
   index: number;
   label: string;        // what Fuse matches on
   primary: string;      // shown in dropdown primary line
@@ -135,7 +130,7 @@ export function buildComponentLabels(
 
 /** The constellation a designation on this entry is NAMED for, which is
  *  what every derived label is built against — byte 34 is only where the
- *  star sits (`/scripts/catalog/record/README.md#search-index-publicsearch-indexjson`). Resolved per
+ *  star sits (`/src/catalog-format/record/README.md#search-index-publicsearch-indexjson`). Resolved per
  *  entry, so a component's aliases are built against its ANCHOR's, the
  *  same source the display-name composer takes the base from. */
 function designationCon(
@@ -147,8 +142,8 @@ function designationCon(
   return { code: con?.code ?? '', name: con?.name ?? '' };
 }
 
-export interface SearchIndex {
-  fuzzyEntries: FuzzyEntry[];
+export interface SearchIndex<Kind extends string = 'star'> {
+  fuzzyEntries: FuzzyEntry<Kind>[];
   hipMap: Map<number, number>;
   hdMap: Map<number, number>;
   hrMap: Map<number, number>;
@@ -156,7 +151,7 @@ export interface SearchIndex {
   // Flamsteed keys map to every component sharing that number+constellation,
   // so an exact "61 Cyg" query returns each of A/B/C… rather than collapsing
   // to whichever star was indexed last.
-  flamMap: Map<string, FuzzyEntry[]>;
+  flamMap: Map<string, FuzzyEntry<Kind>[]>;
 }
 
 // Build the direct-lookup maps + the fuzzy-search corpus (star entries only;
@@ -166,12 +161,12 @@ export interface SearchIndex {
 // designation the row shows "ProperName (α¹ Cen)". The Bayer portion keeps
 // its superscript to disambiguate α¹ / α² even though the search labels
 // drop it (see buildBayerLabels).
-export function buildSearchIndex(
+export function buildSearchIndex<Kind extends string = 'star'>(
   raw: SearchEntry[],
   constellations: { code: string; name: string }[],
-  /** `./README.md#the-search-index-worker`. */
+  /** `../../client/typeahead/README.md#the-search-index-worker`. */
   precomposed?: ReturnType<typeof displayNamesFromSearchIndex>,
-): SearchIndex {
+): SearchIndex<Kind | 'star'> {
   const hipMap = buildAliasedIdIndex(raw, (e) => e.hip);
   const hdMap = buildAliasedIdIndex(raw, (e) => e.hd, (e) => e.hda);
   const hrMap = buildAliasedIdIndex(raw, (e) => e.hr, (e) => e.hra);
@@ -179,8 +174,8 @@ export function buildSearchIndex(
     raw,
     (e) => (e.gl !== undefined ? normalizeGlKey(e.gl) || undefined : undefined),
   );
-  const flamMap = new Map<string, FuzzyEntry[]>();
-  const fuzzyEntries: FuzzyEntry[] = [];
+  const flamMap = new Map<string, FuzzyEntry<Kind | 'star'>[]>();
+  const fuzzyEntries: FuzzyEntry<Kind | 'star'>[] = [];
 
   // Component aliases (below) read the system primary's designation by its
   // record index (SearchEntry.cp), so index the corpus up front.
@@ -191,7 +186,7 @@ export function buildSearchIndex(
   // (/docs/star-naming.md#6-rendering--glyphs-everywhere-no-fallback-path).
   const composed = precomposed ?? displayNamesFromSearchIndex(raw, constellations);
 
-  const addFlam = (key: string, e: FuzzyEntry) => {
+  const addFlam = (key: string, e: FuzzyEntry<Kind | 'star'>) => {
     const arr = flamMap.get(key);
     if (arr) arr.push(e);
     else flamMap.set(key, [e]);
@@ -300,7 +295,7 @@ export function buildSearchIndex(
     // findable without echoing the raw query.
     if (entry.f !== undefined && conCode) {
       const desig = `${entry.f} ${conCode}`;
-      const flamEntry: FuzzyEntry = {
+      const flamEntry: FuzzyEntry<Kind | 'star'> = {
         kind: 'star', index: entry.i, label: desig, primary: primary ?? desig, displayCon,
       };
       addFlam(`${entry.f} ${conCode.toLowerCase()}`, flamEntry);

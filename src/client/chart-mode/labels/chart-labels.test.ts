@@ -6,7 +6,7 @@ import {
   FLAG_BINARY_PRIMARY,
   NO_CONSTELLATION_INDEX,
   VAR_TYPE_ECLIPSING,
-} from '../../../../scripts/catalog/record/catalog-pure';
+} from '../../../catalog-format/record/catalog-pure';
 import { makeEmptyCatalog } from '../../loaders/catalog-mock';
 import {
   buildChartCatalogTables,

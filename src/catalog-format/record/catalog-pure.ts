@@ -7,9 +7,25 @@
 // so everything reachable from the config needs them. Only typecheck and
 // vitest cover the rest of scripts/, and neither fails without them: dropping
 // these breaks `vite build` and `pnpm run dev` alone.
-// Type-only: distance/parallax/ reaches back here through its parsers, so a
-// value import would close a cycle. Erased at compile.
-import type { DistVia } from '../distance/parallax/parallax-cascade.ts';
+
+// The two override layers sit above the cascade rather than inside it — each
+// replaces the inverted distance wholesale, so they are outcomes of the routing
+// and not parallax tiers. `resolveParallax` never returns either.
+export const DIST_VIA_VALUES = [
+  'bailer_jones',
+  'lmc_kinematic',
+  'gaia_dr3_inversion',
+  'hip2_parallax',
+  'cns5_plx',
+  'gliese_plx',
+  'simbad_plx',
+  'pair_member_parallax',
+  'gliese_photometric_plx',
+  'curated',
+  'none',
+] as const;
+
+export type DistVia = (typeof DIST_VIA_VALUES)[number];
 
 /** The bottom of every chromaticity cascade: ~0.65 renders a yellow disc
  *  rather than a hot blue or cold red default. */
@@ -27,7 +43,7 @@ export const SOLAR_BV_FALLBACK = 0.65;
  *  names the Tycho-2 entry, which for a close pair is the system. Where both
  *  reach a row the component-naming one wins, so a system blend never displaces
  *  a component value. This deliberately no longer mirrors the request order
- *  `WIDENING_LADDER` (`scripts/refresh/simbad/specs.py`) sets — see `../spectral/README.md#the-ladder-is-ordered-by-what-an-identifier-names`
+ *  `WIDENING_LADDER` (`scripts/refresh/simbad/specs.py`) sets — see `../../../scripts/catalog/spectral/README.md#the-ladder-is-ordered-by-what-an-identifier-names`
  * for why the pull's order is the
  *  load-bearing one. */
 export const SIMBAD_NAMESPACE_VALUES = ['source_id', 'hip', 'gj', 'tyc'] as const;
@@ -419,7 +435,7 @@ export const NO_GAIA_SOURCE_ID = 0n;
 export const NO_APSIS = NaN;
 
 // On-disk transport chunking — the single reassembly contract shared by the
-// writer, client loader, and Node reader. See /scripts/catalog/record/README.md#on-disk-transport-chunking.
+// writer, client loader, and Node reader. See /src/catalog-format/record/README.md#on-disk-transport-chunking.
 
 export const CATALOG_MANIFEST_FILENAME = 'catalog-manifest.json';
 
@@ -908,7 +924,7 @@ export interface SearchEntry {
   // Further HD / HR numbers the record answers to but does not display. HD
   // numbered both components of many close pairs and HR routes through HD, so
   // these two are the identifiers an overlay cell can be ambiguous on
-  // (../classic-ids/label-merge/README.md). Search resolves them; the
+  // (../../../scripts/catalog/classic-ids/label-merge/README.md). Search resolves them; the
   // dropdown label stays the record's own designation.
   hda?: number[];
   hra?: number[];
@@ -976,7 +992,7 @@ export function designationConIndex(
  *  sharing one catalogue number, and `Gl 277A` likewise. And an alias never
  *  displaces a record that displays that number outright, whichever way the
  *  record order happened to place the two.
- *  `../classic-ids/label-merge/README.md#an-alias-stops-at-the-blend`
+ *  `../../../scripts/catalog/classic-ids/label-merge/README.md#an-alias-stops-at-the-blend`
  * is the same rule on the write side;
  *  `cns5AstrometryByGj` is the same two-pass reduction over CNS5's component
  *  letters.
@@ -1061,7 +1077,7 @@ export function buildSearchEntry(
 // ---- Catalog flag bits --------------------------------------------------
 
 // Per-star bitfield stored at RECORD_LAYOUT.flags. Single source of truth
-// for both writers (scripts/catalog/build-catalog, scripts/catalog/record/catalog-pure
+// for both writers (scripts/catalog/build-catalog, src/catalog-format/record/catalog-pure
 // inferBinaries) and readers (catalog-loader, chart-labels,
 // verify-catalog). Adding a bit means adding a name to the FLAGS
 // registry, not sprinkling another magic number — the regression tests
@@ -1076,7 +1092,7 @@ export const FLAGS = {
   binaryCompanionOnly: 0x08,
   binaryPrimary: 0x10,
   /** Companion addressable only via the row-index map's `bySynth`
-   *  table. See ../companions/README.md#companion-promotion-from-databinariesmultiplestsv
+   *  table. See ../../../scripts/catalog/companions/README.md#companion-promotion-from-databinariesmultiplestsv
    *  `data/binaries/multiples.tsv`. */
   binaryCompanionSynthetic: 0x20,
 } as const;

@@ -22,12 +22,12 @@ import {
   VAR_TYPE_CEPHEID,
   VAR_TYPE_RR_LYRAE,
   VAR_TYPE_DSCT,
-} from '../record/catalog-pure';
+} from '../../../src/catalog-format/record/catalog-pure';
 import {
   SPECTRAL_UNKNOWN,
   type SpectralInfo,
   classifyFromSimbad,
-} from '../spectral/spectral-classify';
+} from '../../../src/catalog-format/spectral/spectral-classify';
 import {
   DEFAULT_CATALOG_MANIFEST,
   type Catalog,

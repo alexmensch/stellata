@@ -15,8 +15,8 @@ import {
   type ApsisRow,
   type SimbadNamespace,
   type SimbadRecordKeys,
-} from '../record/catalog-pure';
-import { classifyFromSimbad, SPECTRAL_UNKNOWN } from '../spectral/spectral-classify';
+} from '../../../src/catalog-format/record/catalog-pure';
+import { classifyFromSimbad, SPECTRAL_UNKNOWN } from '../../../src/catalog-format/spectral/spectral-classify';
 import {
   type SimbadSpectralIndex,
   type SpectralResolution,
@@ -30,7 +30,7 @@ import {
   resolveApsisTeff,
   spectralClassCi,
   spectralClassColorIsDerivable,
-} from '../spectral/physical-radius';
+} from '../../../src/catalog-format/spectral/physical-radius';
 import {
   resolveDirection,
   directionOnPm,
@@ -46,12 +46,8 @@ import {
 } from '../distance/direction-cascade';
 import { lookupCns5Astrometry } from '../classic-ids/classic-ids-parse';
 import { isGaiaCatalogueBibcode } from '../distance/gaia-distrust';
-import {
-  isLowPrecisionParallax,
-  resolveParallax,
-  DIST_VIA_VALUES,
-  type DistVia,
-} from '../distance/parallax/parallax-cascade';
+import { isLowPrecisionParallax, resolveParallax } from '../distance/parallax/parallax-cascade';
+import { DIST_VIA_VALUES, type DistVia } from '../../../src/catalog-format/record/catalog-pure';
 import {
   PARKED_REASONS,
   type ParkedIdentifiers,

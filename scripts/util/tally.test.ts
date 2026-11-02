@@ -4,7 +4,7 @@ import {
   DIRECTION_VIA_VALUES,
   VELOCITY_VIA_VALUES,
 } from '../catalog/distance/direction-cascade';
-import { DIST_VIA_VALUES } from '../catalog/distance/parallax/parallax-cascade';
+import { DIST_VIA_VALUES } from '../../src/catalog-format/record/catalog-pure';
 import { V_VIA_VALUES } from '../catalog/photometry/v-magnitude-pure';
 import { emptyTallyPartition } from './tally';
 

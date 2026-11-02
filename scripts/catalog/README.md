@@ -17,7 +17,7 @@ own. Contract: `docs/catalog-driver.md`; term: `membership/README.md`.
 This file owns the **orchestration**: which stage runs when, SID allocation,
 and the Apsis surfacing. The on-disk contract the build writes — the record
 layout, its codec, the chunk plan and the search-index wire entry — is
-`record/README.md`; the per-stage work is in the other subfolders.
+`/src/catalog-format/record/README.md`; the per-stage work is in the other subfolders.
 
 ## Subfolders
 
@@ -44,7 +44,7 @@ layout, its codec, the chunk plan and the search-index wire entry — is
 - `companions/` — promotion of `data/binaries/multiples.tsv` secondaries
   into first-class catalog records. Its `record-index/` subfolder holds
   everything that addresses records *after* the apparent-V sort
-  ([Record order](record/README.md#record-order)): the row-index
+  ([Record order](../../src/catalog-format/record/README.md#record-order)): the row-index
   sidecar, the renderable-companion wings bit, and the component-letter
   designations the display-name composer builds on.
 - `naming/` — the IAU WGSN authority ladder end to end: ingest, the
@@ -210,7 +210,7 @@ decoding it.
 through `GAIA_APSIS` (`record/gaia-apsis-source.ts`) into a `Map<source_id, ApsisRow>`, and
 `build-catalog.ts` writes
 seven `float32` Apsis fields per record into the v6 binary (offsets
-52–79; see [Binary catalog format](record/README.md#binary-catalog-format-publiccatalogbini--manifest) above). Coverage: 98.7% of records
+52–79; see [Binary catalog format](../../src/catalog-format/record/README.md#binary-catalog-format-publiccatalogbini--manifest) above). Coverage: 98.7% of records
 match an Apsis row (<!-- count:build-catalog/apsisMatched -->967,310<!-- /count --> of <!-- count:build-catalog/recordCount -->979,678<!-- /count -->); 88.3% of the catalogue has a
 non-null Teff in either gspphot or gspspec. The remaining ~12%
 (typically faint Tycho-only stars without high-S/N BP/RP photometry,
@@ -228,7 +228,7 @@ consumers:
   `iTeffApsis` attribute, and the lower tiers are baked into `iCi` at
   build: a measured B−V from `photometry/`'s three-tier cascade, or the
   intrinsic spectral-class colour `spectralClassCi`
-  (`spectral/physical-radius.ts`) derives when a no-Apsis star has no
+  (`/src/catalog-format/spectral/physical-radius.ts`) derives when a no-Apsis star has no
   measured B−V but a parseable class (`ciSpectralDerived` in build-counts),
   else the solar fallback.
 - **Spectral classification fall-through** — ESP-ELS's

@@ -12,7 +12,7 @@ import {
   readRecordFieldBig,
   recordsOffset,
   type NumericRecordField,
-} from '../record/catalog-pure';
+} from '../../../src/catalog-format/record/catalog-pure';
 
 const NUMERIC_FIELDS = (Object.keys(RECORD_LAYOUT) as (keyof typeof RECORD_LAYOUT)[])
   .filter((f): f is NumericRecordField =>
@@ -93,7 +93,7 @@ function companionSidOf(cat: CatalogView, off: number): number | null {
 
 /** Every field of every record the two builds share, keyed on sid. Record
  *  INDICES move whenever membership does and are never compared —
- *  `../record/README.md#record-order`. */
+ *  `../../../src/catalog-format/record/README.md#record-order`. */
 export function compareRecordParity(
   baselineBuffer: ArrayBuffer,
   currentBuffer: ArrayBuffer,

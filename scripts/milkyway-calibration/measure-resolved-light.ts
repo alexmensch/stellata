@@ -6,7 +6,7 @@ import {
   decodeRecordColumn,
   readCatalogHeader,
   wholeRecordSpan,
-} from '../catalog/record/catalog-pure';
+} from '../../src/catalog-format/record/catalog-pure';
 import { DEFAULT_CATALOG_MANIFEST, readCatalogBuffer } from '../catalog/catalog-lookup';
 import { REPO_ROOT } from '../util/paths';
 import {

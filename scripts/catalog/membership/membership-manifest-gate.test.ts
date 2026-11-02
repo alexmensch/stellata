@@ -31,7 +31,7 @@ import {
   DEFAULT_SEARCH_INDEX,
   loadCatalog,
 } from '../catalog-lookup';
-import { FLAG_BINARY_COMPANION_ONLY, type SearchEntry } from '../record/catalog-pure';
+import { FLAG_BINARY_COMPANION_ONLY, type SearchEntry } from '../../../src/catalog-format/record/catalog-pure';
 import { parkedRecordKey } from '../distance/parallax/parked-ledger';
 import { PARKED_LEDGER, parseParkedRecordsTsv } from '../distance/parallax/parked-ledger-tsv';
 import {

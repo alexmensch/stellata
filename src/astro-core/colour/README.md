@@ -12,7 +12,7 @@ it, and why it is linear and peak-normalised, is
 [`scripts/colour/`](/scripts/colour/README.md).
 
 Four consumers reach past the table into this module:
-`/scripts/catalog/spectral/physical-radius.ts` for the
+`/src/catalog-format/spectral/physical-radius.ts` for the
 inverse of [Ballesteros 2012](/data/papers/index.md#ballesteros2012) eq. 14,
 and — for their population tints
 ([Population colours](/src/astro-core/milkyway/calibration/README.md#population-colours--the-discs-is-solved-not-cited)) — the

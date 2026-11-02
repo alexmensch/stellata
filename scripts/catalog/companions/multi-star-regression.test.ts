@@ -30,7 +30,7 @@ import {
   FLAG_BINARY_COMPANION_ONLY,
   FLAG_BINARY_PRIMARY,
   VAR_TYPE_ECLIPSING,
-} from '../record/catalog-pure';
+} from '../../../src/catalog-format/record/catalog-pure';
 import {
   FLAG_HAS_ORBIT,
   FLAG_HAS_INCLINATION,

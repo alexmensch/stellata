@@ -6,7 +6,7 @@ import {
   wholeRecordSpan,
   type CatalogManifest,
   type RecordSpan,
-} from '../../../scripts/catalog/record/catalog-pure';
+} from '../../catalog-format/record/catalog-pure';
 import { lateFromPromise, type Late } from '../util/late/late';
 import { chunkRecordSpan, startChunkFetches } from './catalog-progressive';
 import { createCatalogDecoder, decodeInline } from './catalog-decode-host';

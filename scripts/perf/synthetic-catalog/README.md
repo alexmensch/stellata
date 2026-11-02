@@ -20,7 +20,7 @@ scripts/perf/synthetic-catalog/
 ## THIS ARTIFACT IS NOT A BUILD OUTPUT
 
 It **violates the brightest-first record sort** that
-`scripts/catalog/record/README.md` states as the on-disk contract: synthetic
+`src/catalog-format/record/README.md` states as the on-disk contract: synthetic
 records append after the real ones rather than merging into the absmag order.
 That is deliberate. Record indices are addressed from outside the binary —
 `companionIdx`, `binaries.bin` relation indices, and

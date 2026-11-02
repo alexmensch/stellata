@@ -1,7 +1,7 @@
 // Stefan-Boltzmann radius chain: effective temperature and bolometric
 // correction by class, and the absolute-magnitude inverse. See README.md.
 
-import { ballesterosBvFromTeff } from '../../../src/astro-core/colour/blackbody-lut-pure';
+import { ballesterosBvFromTeff } from '../../astro-core/colour/blackbody-lut-pure';
 import { SOLAR_BV_FALLBACK, type ApsisRow } from '../record/catalog-pure';
 import {
   SPECTRAL_UNKNOWN,
@@ -176,7 +176,7 @@ export function physicalRadius(
 // per luminosity class (Cox 2000 (/data/papers/index.md#cox2000) Sect. 15.3).
 // The dwarf row departs from Mamajek 2022 (/data/papers/index.md#mamajek2022)
 // — A0V 0.65 against its 0.99, M5V 12.3 against 14.15 — an open decision
-// (/scripts/catalog/spectral/README.md#the-absolute-magnitude-tables).
+// (README.md#the-absolute-magnitude-tables).
 const MV_MS_TABLE: Record<number, [number, number][]> = {
   0: [[0, -5.8], [5, -5.5], [9, -4.3]],   // O V
   1: [[0, -4.0], [5, -1.2], [9,  0.4]],   // B V

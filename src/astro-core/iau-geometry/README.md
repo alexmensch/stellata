@@ -186,7 +186,7 @@ it in Delphinus. `dc` is sourced from IV/27A's Bayer/Flamsteed cross index
 HD/HIP — a designation is fixed by nomenclature and never migrates with the
 star, so nothing positional may supply it
 ([The designation constellation](/scripts/catalog/classic-ids/README.md#the-designation-constellation)). See
-[Search index](/scripts/catalog/record/README.md#search-index-publicsearch-indexjson) for the wire split.
+[Search index](/src/catalog-format/record/README.md#search-index-publicsearch-indexjson) for the wire split.
 
 ## Agreement with AT-HYG
 

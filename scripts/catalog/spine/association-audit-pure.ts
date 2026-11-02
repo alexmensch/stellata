@@ -2,7 +2,7 @@
 // to one another, and which only AT-HYG associates. See README.md#the-association-audit.
 
 import { lookupGliese } from '../gliese-parse';
-import { normaliseGjKey } from '../record/catalog-pure';
+import { normaliseGjKey } from '../../../src/catalog-format/record/catalog-pure';
 import type { SpineRow } from './inherited-spine-pure';
 import {
   bareGjKey, cns5RowFor, indexCns5, type PrimaryTables,
