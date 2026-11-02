@@ -29,16 +29,24 @@ function run(env: Record<string, string>): Promise<Exit> {
   });
 }
 
-function fakeClaude(script: string): void {
-  const path = join(bin, 'claude');
+function fakeBin(command: 'claude' | 'bd', script: string): void {
+  const path = join(bin, command);
   writeFileSync(path, `#!/usr/bin/env bash\n${script}\n`);
   chmodSync(path, 0o755);
 }
 
+function fakeJson(command: 'claude' | 'bd', value: unknown): void {
+  const fixture = join(bin, `${command}.json`);
+  writeFileSync(fixture, JSON.stringify(value));
+  fakeBin(command, `cat '${fixture}'`);
+}
+
 function sessions(rows: { pid: number; name: string; cwd: string; status: string }[]): void {
-  const fixture = join(bin, 'agents.json');
-  writeFileSync(fixture, JSON.stringify(rows));
-  fakeClaude(`cat '${fixture}'`);
+  fakeJson('claude', rows);
+}
+
+function coordinators(names: string[]): void {
+  fakeJson('bd', names.map((coordinator, i) => ({ id: `epic-${i}`, metadata: { coordinator } })));
 }
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -58,6 +66,7 @@ beforeEach(() => {
   bin = join(repo, '.fake-bin');
   mkdirSync(bin);
   sessions([]);
+  coordinators([]);
 });
 
 afterEach(() => {
@@ -112,11 +121,29 @@ describe('await-go', () => {
     expect(r.stderr).toBe('');
   }, 15_000);
 
+  it('does not count a live pickup-epic coordinator as busy', async () => {
+    sessions([{ pid: 999_999, name: 'epic x', cwd: repo, status: 'busy' }]);
+    coordinators(['epic x']);
+    arm();
+    const r = await run({ PERF_GO_POLL_S: '0.2', PERF_GO_TIMEOUT_S: '10' });
+    expect(r.stdout).toMatch(/Launch the runner now/);
+    expect(r.stderr).toBe('');
+  }, 15_000);
+
+  it('still warns about the coordinator when bd cannot be read', async () => {
+    sessions([{ pid: 999_999, name: 'epic x', cwd: repo, status: 'busy' }]);
+    fakeBin('bd', 'exit 1');
+    arm();
+    const r = await run({ PERF_GO_POLL_S: '0.2', PERF_GO_TIMEOUT_S: '10' });
+    expect(r.stdout).toMatch(/Ask Alex/);
+    expect(r.stderr).toContain('epic x');
+  }, 15_000);
+
   it.each([
     ['cannot be read', 'exit 1'],
     ['is not a JSON array', "echo 'not json'"],
   ])('warns that the check was skipped when the session list %s', async (_, script) => {
-    fakeClaude(script);
+    fakeBin('claude', script);
     arm();
     const r = await run({ PERF_GO_POLL_S: '0.2', PERF_GO_TIMEOUT_S: '10' });
     expect(r.code).toBe(0);

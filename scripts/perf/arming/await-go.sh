@@ -14,19 +14,23 @@ timeout_s="${PERF_GO_TIMEOUT_S:-3600}"
 marker="$(perf_go_marker)" || { echo "perf-go: not inside a git checkout" >&2; exit 1; }
 started="$(date +%s)"
 
-own_pids() {
-  local p=$$
+# A live pickup-epic coordinator reads busy while it only waits on workers.
+exclusions() {
+  local p=$$ name
   while [ -n "$p" ] && [ "$p" -gt 1 ]; do
-    echo "$p"
-    p="$(ps -o ppid= -p "$p" 2>/dev/null | tr -d ' ')" || return 0
+    printf '%s\0%s\0' --pid "$p"
+    p="$(ps -o ppid= -p "$p" 2>/dev/null | tr -d ' ')" || break
   done
+  bd list --has-metadata-key coordinator --json 2>/dev/null \
+    | jq -r '.[].metadata.coordinator // empty' 2>/dev/null \
+    | while IFS= read -r name; do printf '%s\0%s\0' --name "$name"; done
 }
 
 busy_sessions() {
-  local root
+  local root args=() arg
   root="$(dirname "$(git rev-parse --path-format=absolute --git-common-dir)")"
-  # shellcheck disable=SC2046
-  claude agents --json 2>/dev/null | bash "$here/busy-sessions.sh" "$root" $(own_pids) 2>/dev/null
+  while IFS= read -r -d '' arg; do args+=("$arg"); done < <(exclusions || true)
+  claude agents --json 2>/dev/null | bash "$here/busy-sessions.sh" "$root" ${args[@]+"${args[@]}"} 2>/dev/null
 }
 
 while :; do

@@ -9,8 +9,12 @@ const ROOT = '/repo/stellata';
 
 interface Row { pid: number; name?: string; id: string; cwd: string; status: string }
 
-function busy(rows: Row[], exclude: number[] = []): string[] {
-  const out = execFileSync('bash', [SCRIPT, ROOT, ...exclude.map(String)], {
+function busy(rows: Row[], exclude: { pids?: number[]; names?: string[] } = {}): string[] {
+  const args = [
+    ...(exclude.pids ?? []).flatMap((p) => ['--pid', String(p)]),
+    ...(exclude.names ?? []).flatMap((n) => ['--name', n]),
+  ];
+  const out = execFileSync('bash', [SCRIPT, ROOT, ...args], {
     input: JSON.stringify(rows),
     encoding: 'utf8',
   });
@@ -44,8 +48,19 @@ describe('busy-sessions', () => {
     ])).toEqual([]);
   });
 
-  it('excludes the named pids — the requesting session itself', () => {
-    expect(busy([row(7, ROOT), row(8, ROOT)], [7, 99])).toEqual([`id8 — ${ROOT}`]);
+  it('excludes the given pids — the requesting session itself', () => {
+    expect(busy([row(7, ROOT), row(8, ROOT)], { pids: [7, 99] })).toEqual([`id8 — ${ROOT}`]);
+  });
+
+  it('excludes the given session names, spaces included — live coordinators', () => {
+    expect(busy(
+      [row(1, ROOT, 'busy', 'epic coordinator'), row(2, ROOT, 'busy', 'epic')],
+      { names: ['epic coordinator'] },
+    )).toEqual([`epic — ${ROOT}`]);
+  });
+
+  it('refuses an unknown argument', () => {
+    expect(() => execFileSync('bash', [SCRIPT, ROOT, '7'], { input: '[]', stdio: 'pipe' })).toThrow();
   });
 
   it('falls back to the id when a session has no name', () => {

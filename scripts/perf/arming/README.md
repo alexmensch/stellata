@@ -89,7 +89,10 @@ The deny reason carries these five steps verbatim:
 When the marker arrives, `await-go.sh` also lists every other Claude session
 whose `status` is `busy` and whose `cwd` is the main checkout or anything
 under it (worktrees included), excluding its own ancestor processes — the
-requesting session. Any hit, or a session list that cannot be read or parsed
+requesting session — and every live `pickup-epic` coordinator named by an
+epic's `coordinator` metadata key, which reads busy while it only waits on
+its workers (an unreadable `bd` excludes none, so the warning errs loud).
+Any hit, or a session list that cannot be read or parsed
 — a failed check is never read as all-clear — prints a
 `WARNING` on stderr and turns the ARMED line into "ask Alex before
 launching": the run would likely be discarded under foreground load, and
