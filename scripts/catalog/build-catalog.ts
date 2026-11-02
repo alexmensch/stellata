@@ -148,7 +148,7 @@ import {
 import {
   emitArtifacts, runStep, sweepStaged, type ArtifactContents, type Check,
 } from '../util/emit-artifacts';
-import { snapshotCheck } from '../util/snapshot-check';
+import { UPDATE_SNAPSHOTS_ENV, snapshotCheck } from '../util/snapshot-check';
 import { watchHeap } from '../util/heap-budget';
 import { syntheticGaiaBridges } from '../sid/sid-pure';
 import { sidSuccessorPairs } from '../sid/events-pure';
@@ -230,11 +230,7 @@ function simbadSourcedDistancesTsv(stars: readonly Star[]): string {
 async function main() {
   const heap = watchHeap('build:catalog');
   sweepStaged(CATALOG_OUTPUTS);
-  // The UPDATE_* snapshot-refresh flags rewrite artifacts written at the end
-  // of a full build, so they must force one even when the sources are
-  // unchanged (the snapshot assert/refresh is unreachable otherwise).
-  const forceRebuild =
-    process.env.UPDATE_BUILD_COUNTS === '1' || process.env.UPDATE_DISTANCE_OUTLIERS === '1';
+  const forceRebuild = process.env[UPDATE_SNAPSHOTS_ENV] === '1';
   const inputHashesAtStart = fileHashes(await stepInputPaths('build:catalog'));
   if (!forceRebuild && stampIsCurrent(CATALOG_STAMP, inputHashesAtStart)) {
     console.log('catalog.bin is up to date with its inputs; skipping rebuild.');
@@ -1329,12 +1325,11 @@ async function main() {
 
 function buildCountsCheck(actual: BuildCounts): Check {
   return snapshotCheck<BuildCounts>({
-    envVar: 'UPDATE_BUILD_COUNTS',
     snapshotPath: EXPECTED_COUNTS,
     actual,
     compare: compareCountSnapshot,
     failureLabel: 'build-catalog count',
-    refreshCommand: 'UPDATE_BUILD_COUNTS=1 pnpm run build:catalog',
+    script: 'build:catalog',
   });
 }
 
@@ -1348,7 +1343,6 @@ function distanceOutliersCheck(stars: readonly Star[]): Check {
   );
 
   return snapshotCheck<RegressionReport>({
-    envVar: 'UPDATE_DISTANCE_OUTLIERS',
     snapshotPath: EXPECTED_OUTLIERS,
     actual: report,
     refreshTransform: mergeReasonsFromSnapshot,
@@ -1360,7 +1354,7 @@ function distanceOutliersCheck(stars: readonly Star[]): Check {
       };
     },
     failureLabel: 'distance-regression',
-    refreshCommand: 'UPDATE_DISTANCE_OUTLIERS=1 pnpm run build:catalog',
+    script: 'build:catalog',
   });
 }
 

@@ -265,8 +265,8 @@ the one sequence every allocation mints past
 Allocation (`allocate`, `scripts/sid/allocate-pure.ts`) is the **only**
 writer of ledger rows and events, and the catalogue build is the minting
 step: `build:catalog` allocates its records and the sol and shell lists
-in-process before it emits, and the clouds and Local Group stamps allocate
-the `cloud:` and `lg:` namespaces the same way. Each caller allocates only
+in-process before it emits, `build:local-group` allocates the `lg:`
+namespace the same way, and the clouds stamp the `cloud:` namespace. Each caller allocates only
 its own namespaces:
 
 1. Build the same-as graph (recomputed edges + stored edges) over the
@@ -332,7 +332,7 @@ snapshot gate but deliberately stricter:
    Appends need no override (always legal); a prefix rewrite is a
    never-event that requires editing the guard test itself in the
    same PR with explicit user sign-off. This is intentionally heavier
-   than `UPDATE_BUILD_COUNTS=1` — build counts describe a build,
+   than `UPDATE_SNAPSHOTS=1` — build counts describe a build,
    the ledger IS the identity contract.
 
 The guard runs in `build-catalog`'s full vitest, with real LFS content

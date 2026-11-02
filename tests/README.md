@@ -228,8 +228,7 @@ step-outputs.test.ts     Imports every TS pipeline step's emitArtifacts
                          declaration (the *-outputs.ts modules), so one
                          that runs its step on import fails here; pins
                          every declared path inside the repo and one
-                         producer per path, sid:stamp's in-place rewrite
-                         of local-group.json the one exception; no file
+                         producer per path; no file
                          or family may cover the frozen DR2 dry-run pair
                          (scripts/sid/dr2-neighbourhood-source.ts).
 three-version-audit.test.ts

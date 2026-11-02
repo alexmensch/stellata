@@ -93,6 +93,11 @@ function familyEntries(family: OutputFamily): string[] {
   return existsSync(family.dir) ? readdirSync(family.dir) : [];
 }
 
+/** The family's members on disk, absolute. */
+export function familyMembers(family: OutputFamily): string[] {
+  return familyEntries(family).filter((name) => family.member.test(name)).map((name) => resolve(family.dir, name));
+}
+
 export function sweepStaged(outputs: DeclaredOutputs, extra: readonly string[] = []): void {
   for (const p of [...Object.values<string>(outputs.files), ...extra]) discardStaged(p);
   for (const family of outputs.families) {
@@ -142,9 +147,8 @@ export function emitArtifacts<K extends string>(
   for (const path of staged.keys()) landStaged(path);
 
   for (const family of outputs.families) {
-    for (const name of familyEntries(family)) {
-      const path = resolve(family.dir, name);
-      if (family.member.test(name) && !files.has(path)) rmSync(path);
+    for (const path of familyMembers(family)) {
+      if (!files.has(path)) rmSync(path);
     }
   }
   for (const r of refreshes) console.log(`Updated ${r.path}`);

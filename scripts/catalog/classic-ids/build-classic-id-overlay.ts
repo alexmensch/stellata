@@ -76,12 +76,11 @@ async function main(): Promise<void> {
       }))),
     },
     checks: [snapshotCheck<OverlayJoinCounts>({
-      envVar: 'UPDATE_BUILD_COUNTS',
       snapshotPath: EXPECTED_COUNTS,
       actual: joinCounts,
       compare: compareCountSnapshot,
       failureLabel: 'classic-id-overlay count',
-      refreshCommand: 'UPDATE_BUILD_COUNTS=1 pnpm run build:classic-ids',
+      script: 'build:classic-ids',
     })],
   });
   console.log(`wrote ${OUT_OVERLAY}`);

@@ -1,5 +1,5 @@
 // Canonical specs for the sibling artifacts (clouds.json, local-group.json)
-// that carry an in-record sid, allocated by the stamp. See
+// that carry an in-record sid, each namespace its own registry partition. See
 // /scripts/sid/README.md#sibling-artifact-stamping.
 
 import type { SidObject } from './allocate-pure';
@@ -14,7 +14,7 @@ export interface SiblingArtifactSpec {
   /** Designation namespace the ledger keys these objects on (/docs/sid.md#3-designation-namespaces). */
   ns: string;
   kind: SidKind;
-  /** pnpm script that emits `file`. */
+  /** pnpm script that emits `file` and allocates `ns`. */
   buildHint: string;
   /** The allocation code a new object of this artifact mints under. */
   mintCode: string;
@@ -42,12 +42,8 @@ export const SIBLING_ARTIFACTS = {
 export type SiblingName = keyof typeof SIBLING_ARTIFACTS;
 export type SiblingNamespace = (typeof SIBLING_ARTIFACTS)[SiblingName]['ns'];
 
-export const SIBLING_NAMES = Object.keys(SIBLING_ARTIFACTS) as SiblingName[];
+const SIBLING_NAMES = Object.keys(SIBLING_ARTIFACTS) as SiblingName[];
 export const SIBLING_NAMESPACES: readonly SiblingNamespace[] = SIBLING_NAMES.map((name) => SIBLING_ARTIFACTS[name].ns);
-
-export function isSiblingName(name: string): name is SiblingName {
-  return Object.hasOwn(SIBLING_ARTIFACTS, name);
-}
 
 export function siblingOf(ns: SiblingNamespace): SiblingArtifactSpec {
   return SIBLING_ARTIFACTS[SIBLING_NAMES.find((name) => SIBLING_ARTIFACTS[name].ns === ns)!];

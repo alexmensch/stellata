@@ -87,7 +87,7 @@ scripts/catalog/membership/
                                   over the COMMITTED artifacts. LFS-gated.
   membership-manifest-expected.json
                                   Pinned count snapshot. Refresh with
-                                  UPDATE_BUILD_COUNTS=1.
+                                  UPDATE_SNAPSHOTS=1.
   additions/                      The primaries' rows the spine lacks: their
                                   items, grouping, admission and outcomes.
                                   Own README.
