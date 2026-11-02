@@ -1,23 +1,12 @@
 // See /tests/README.md#pipeline-viewer-boundary.
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { dirname, join, relative, resolve, sep } from 'node:path';
+import { dirname, join, relative, resolve } from 'node:path';
 import { walkFiles } from './walk-files';
 import { importSpecifiers, isShippedSource } from './import-specifiers';
+import { TREE_ROOTS, treeOf, type Tree } from './source-trees';
 
 const ROOT = resolve(__dirname, '..');
-
-type Tree = 'astro-core' | 'catalog-format' | 'viewer' | 'pipeline' | 'tooling' | 'other';
-
-// Longest prefix wins, so the tooling roots carve out of scripts/.
-const TREE_ROOTS: ReadonlyArray<readonly [string, Tree]> = [
-  ['src/astro-core/', 'astro-core'],
-  ['src/catalog-format/', 'catalog-format'],
-  ['src/client/', 'viewer'],
-  ['scripts/perf/', 'tooling'],
-  ['scripts/release/', 'tooling'],
-  ['scripts/', 'pipeline'],
-];
 
 const MAY_IMPORT: Record<Tree, ReadonlySet<Tree> | 'anything'> = {
   'astro-core': new Set(['astro-core']),
@@ -27,15 +16,6 @@ const MAY_IMPORT: Record<Tree, ReadonlySet<Tree> | 'anything'> = {
   tooling: 'anything',
   other: 'anything',
 };
-
-function treeOf(repoPath: string): Tree {
-  const p = repoPath.split(sep).join('/');
-  let best: readonly [string, Tree] | undefined;
-  for (const entry of TREE_ROOTS) {
-    if (p.startsWith(entry[0]) && (!best || entry[0].length > best[0].length)) best = entry;
-  }
-  return best ? best[1] : 'other';
-}
 
 function relativeSpecifiers(src: string): string[] {
   return importSpecifiers(src).map((i) => i.spec).filter((spec) => spec.startsWith('.'));

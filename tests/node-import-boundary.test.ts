@@ -1,17 +1,15 @@
-// Bundle boundary for the browser tree: src/client/ ships to a browser, so
-// a node: builtin there is a build break waiting for its first importer —
-// see /tests/README.md#node-import-boundary.
+// See /tests/README.md#node-import-boundary.
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { join, relative, resolve } from 'node:path';
 import { walkFiles } from './walk-files';
 import { importSpecifiers, isShippedSource } from './import-specifiers';
+import { BROWSER_TREES, treeRoots } from './source-trees';
 
 const ROOT = resolve(__dirname, '..');
-const CLIENT = join(ROOT, 'src', 'client');
 
 const isNodeBuiltin = (spec: string) => spec.startsWith('node:');
-// Nothing under src/client/ may import a module carrying the fixture suffix.
+// Nothing in a browser tree may import a module carrying the fixture suffix.
 const isFixtureRef = (spec: string) => /-fixture$/.test(spec);
 
 function violationsInSource(src: string): string[] {
@@ -27,9 +25,10 @@ function violationsInSource(src: string): string[] {
 }
 
 describe('node import boundary', () => {
-  it('no browser module under src/client/ reaches node: or a fixture', () => {
+  it('no module in a browser tree reaches node: or a fixture', () => {
     const offenders: string[] = [];
-    for (const p of walkFiles(CLIENT, { include: isShippedSource })) {
+    const files = treeRoots(BROWSER_TREES).flatMap((root) => [...walkFiles(join(ROOT, root), { include: isShippedSource })]);
+    for (const p of files) {
       for (const v of violationsInSource(readFileSync(p, 'utf8'))) {
         offenders.push(`${relative(ROOT, p)}: ${v}`);
       }
@@ -40,7 +39,7 @@ describe('node import boundary', () => {
   // The boundary is only worth anything while something actually sits on the
   // far side of it; without this the suite passes by scanning nothing.
   it('the fixture it exempts is real and does read the filesystem', () => {
-    const fixture = join(CLIENT, 'webgpu', 'tsl', 'tsl-source-fixture.ts');
+    const fixture = join(ROOT, 'src', 'client', 'webgpu', 'tsl', 'tsl-source-fixture.ts');
     expect(violationsInSource(readFileSync(fixture, 'utf8')).length).toBeGreaterThan(0);
   });
 });
