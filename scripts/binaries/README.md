@@ -887,4 +887,4 @@ asserts against on every run:
   HIP2 fallback share, …). Catches a regression that shifts the
   population mix without shifting absolute count totals.
 
-Refresh both via `pnpm run build:binaries --update-snapshots` (with `--force` when the step is fresh).
+Refresh both via `pnpm run build:binaries --update-snapshots`.

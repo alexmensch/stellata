@@ -14,7 +14,7 @@ detail lives below.
 - [ ] `pnpm run typecheck`
 - [ ] `pnpm test`
 - [ ] Manual smoke in browser
-- [ ] If you touched `scripts/build-catalog.ts` / `scripts/catalog-pure.ts`: `pnpm run build:catalog --force` — the count assertion against `scripts/build-catalog-expected.json` either passes (no change to the manifest) or fails with a diff. Drift the manifest deliberately with `pnpm run build:catalog --force --update-snapshots`.
+- [ ] If you touched `scripts/build-catalog.ts` / `scripts/catalog-pure.ts`: `pnpm run build:catalog --force` — the count assertion against `scripts/build-catalog-expected.json` either passes (no change to the manifest) or fails with a diff. Drift the manifest deliberately with `pnpm run build:catalog --update-snapshots`.
 
 ## Perf
 

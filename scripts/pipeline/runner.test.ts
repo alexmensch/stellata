@@ -195,6 +195,14 @@ export const OUT = declareOutputs({ out: ${JSON.stringify(at('f.out'))} }, [
     expect(builds()).toEqual(['a', 'b']);
   });
 
+  it('--update-snapshots reruns a fresh named target, but not the fresh steps upstream of it', async () => {
+    write('a.in', 'x');
+    const steps = [tsStep('a', 'a.out', ['a.in']), tsStep('b', 'b.out', ['a.out'])];
+    await run(steps, ['b']);
+    expect((await run(steps, ['b'], { updateSnapshots: true })).kinds).toEqual({ a: 'fresh', b: 'built' });
+    expect(read('b.out')).toBe('b(a(x))1');
+  });
+
   it('--update-snapshots sets UPDATE_SNAPSHOTS for each step it runs', async () => {
     write('a.in', 'x');
     await run([tsStep('a', 'a.out', ['a.in'])], ['a'], { force: true, updateSnapshots: true });

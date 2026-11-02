@@ -329,9 +329,8 @@ exits non-zero with a per-key diff and leaves `public/`, `build/` and the
 committed ledgers as they were. `scripts/catalog/build-counts.ts` carries
 the pure comparator + formatter and has its own vitest coverage; the
 check-or-rewrite side is `snapshotCheck` in `../../util/snapshot-check.ts`.
-A fresh catalogue is skipped, so an up-to-date tree refreshes with
-`--force --update-snapshots`; `--force` reaches every step upstream too.
-The stamp's code inputs are the build's import closure plus the
+`--update-snapshots` reruns the step it names even when fresh, so an
+up-to-date tree can still refresh a snapshot. The stamp's code inputs are the build's import closure plus the
 non-code files beside it (`../../util/step-inputs.ts`), so editing any module the
 build imports — `src/client/` ones included — or either snapshot invalidates
 the artifact.

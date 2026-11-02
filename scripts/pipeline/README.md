@@ -255,7 +255,8 @@ lands with it; `run.ts` rejects it until then.
 - **`--force`** reaches every `build` step the run selects, uniformly. It
   never runs a manual step.
 - **`--update-snapshots`** is the one way a count snapshot is rewritten: it
-  sets `UPDATE_SNAPSHOTS=1` for each step it runs, the one variable
+  reruns each named target even when fresh (not the fresh steps upstream),
+  and sets `UPDATE_SNAPSHOTS=1` for each step it runs, the one variable
   `snapshotCheck` and `snapshot_assert.py` read. A forced rebuild therefore
   still checks counts. Every step it runs also gets `PIPELINE_STEP` set to
   its name, so a drift message names this flag rather than the variable.
