@@ -3,6 +3,7 @@
 import { basename, dirname } from 'node:path';
 
 import { stepFileName } from '../util/build-stamp';
+import type { OutputFamily } from '../util/emit-artifacts';
 
 /** A `declareOutputs` constant, named by module and export so the module can be
  *  checked side-effect-free before it is imported. */
@@ -48,14 +49,9 @@ export interface StepTable {
   readonly registryFiles: readonly string[];
 }
 
-export interface OutputFamilyClaim {
-  readonly dir: string;
-  readonly member: RegExp;
-}
-
 export interface OutputClaims {
   readonly files: readonly string[];
-  readonly families: readonly OutputFamilyClaim[];
+  readonly families: readonly OutputFamily[];
 }
 
 /** A step with every path absolute: its declared outputs and the files it is
