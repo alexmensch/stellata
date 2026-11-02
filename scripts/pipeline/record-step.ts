@@ -30,6 +30,7 @@ export interface RecordOptions {
 export type RecordOutcome =
   | { readonly kind: 'fresh' }
   | { readonly kind: 'recorded'; readonly record: ManualRecord }
+  | { readonly kind: 'partial' }
   | { readonly kind: 'failed'; readonly reason: string };
 
 type Loads = Extract<Loaded, { kind: 'loaded' }>;
@@ -116,10 +117,12 @@ export async function recordStep(loaded: Loads, options: RecordOptions): Promise
     options.log(`… ${step.name} waits for another run's lock`);
   });
   try {
-    if (!options.force && manualFreshness(step, resolved.outputs, tree).kind === 'fresh') return { kind: 'fresh' };
+    const partial = options.args.length > 0;
+    if (!partial && !options.force && manualFreshness(step, resolved.outputs, tree).kind === 'fresh') return { kind: 'fresh' };
     const described = describesItself(step) ? describeStep(step, tree) : null;
     const reads = await runAndRead(manual, described, options, tree);
     if (typeof reads === 'string') return { kind: 'failed', reason: reads };
+    if (partial) return { kind: 'partial' };
     const files = stampedOutputs(resolved.outputs);
     const missing = files.filter((p) => !existsSync(p));
     if (missing.length > 0) return { kind: 'failed', reason: `declared outputs not written: ${missing.map(tree.rel).join(', ')}` };

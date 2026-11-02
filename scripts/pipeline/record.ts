@@ -33,6 +33,9 @@ async function main(): Promise<number> {
     case 'recorded':
       console.log(`✓ ${step} recorded`);
       return 0;
+    case 'partial':
+      console.log(`· ${step} ran with arguments, so its record is left as it was: whatever the run moved reads stale`);
+      return 0;
     case 'failed':
       console.error(`✗ ${step} failed: ${outcome.reason}; its record is unchanged`);
       return 1;

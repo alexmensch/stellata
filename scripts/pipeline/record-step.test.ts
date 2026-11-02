@@ -51,10 +51,10 @@ ${body}`);
   return { name: 'refresh:pull', kind: 'pull', language: 'python', entry: at('steps/pull.py'), outputs: [at('pull.tsv')] };
 }
 
-async function record(steps: StepEntry[], name: string, force = false): Promise<RecordOutcome> {
+async function record(steps: StepEntry[], name: string, force = false, args: string[] = []): Promise<RecordOutcome> {
   const loaded = await loadTable({ steps, registryFiles: [] }, { root, deriveInputs: async () => [] });
   if (loaded.kind !== 'loaded') throw new Error(loaded.problems.join('; '));
-  return recordStep(loaded, { root, step: name, force, args: [], deriveInputs: async () => [], log: () => {} });
+  return recordStep(loaded, { root, step: name, force, args, deriveInputs: async () => [], log: () => {} });
 }
 
 const stamp = (name: string) => JSON.parse(readFileSync(pipelineTree(root).manualStamp(name), 'utf8'));
@@ -93,6 +93,16 @@ describe('recordStep', () => {
     expect(fresh(step)).toBe('stale');
     await record([step], step.name);
     write('steps/pull.py', readFileSync(at('steps/pull.py'), 'utf8').replace('"SELECT *"', '"SELECT ra"'));
+    expect(fresh(step)).toBe('stale');
+  });
+
+  it('runs a step given arguments but writes no record, so what the partial run moved reads stale', async () => {
+    write('req.tsv', 'r1\n');
+    const step = pull(`if sys.argv[1:] == ["--only", "x"]:\n    Path(${JSON.stringify(at('pull.tsv'))}).write_text("one slice\\n")`);
+    await record([step], step.name);
+    const before = readFileSync(pipelineTree(root).manualStamp(step.name), 'utf8');
+    expect(await record([step], step.name, false, ['--only', 'x'])).toEqual({ kind: 'partial' });
+    expect(readFileSync(pipelineTree(root).manualStamp(step.name), 'utf8')).toBe(before);
     expect(fresh(step)).toBe('stale');
   });
 
