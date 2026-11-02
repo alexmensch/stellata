@@ -264,6 +264,25 @@ lands with it; `run.ts` rejects it until then.
 - **CI cache key**: the digest of the stage's step input sets, the same
   closure the stamps hash. `keyedPaths` stays CI's own filter over it.
 
+## Recording a manual step — `record.ts`
+
+`record.ts <step> [--force] [args…]` is every pull's and bake's
+`package.json` target, so a hand re-run is what keeps its record fresh. It
+takes the step's lock, and the shared locks on the steps writing its inputs,
+as the runner does; skips a step whose record is fresh unless `--force`;
+describes it; runs it (a Python step under `build_stamp.record_run`, a
+TypeScript one through `tsx`, its inputs derived as a TypeScript build's
+are); then writes `data/stamps/<step>.json` with `writeManualRecord`. Extra
+arguments pass through (`--only <stem>`).
+
+The record counts as read every file the run read, listed or probed, except
+its own outputs, a file named in `requestFrom` (it counts through the
+request), an ignored file (a `.ckpt` batch cache, the dust bake's
+`.voxels.npy`: no other checkout has one), and, for a pull, code. An ignored
+write is scratch; any other write the step does not declare fails the run
+and leaves the record as it was. `answeredBy` is the run record's services,
+in first-answer order; `release` is the description's.
+
 ## Loops through committed files
 
 Ten places where a file feeds, directly or through other files, the step
@@ -367,6 +386,12 @@ Hand-kept lists become derivations over the table:
   `stampPath`), manual record, run record and lock folder sit under it.
   `run.ts` passes the repo root; tests pass a temporary folder.
 - `run.ts` / `steps.ts` — the command line and the table it runs.
+- `record.ts` / `record-step.ts` (+ test) — [Recording a manual
+  step](#recording-a-manual-step--recordts): `recordStep` and the
+  `RecordOutcome` union (`fresh`, `recorded`, `failed`).
+- `processes.ts` — how the runner and `record.ts` start a step: `tsx`, or
+  `runRecorded`, a Python step under the recorder, whose run record is read
+  only when it exits 0.
 
 ## Design pass
 

@@ -1,31 +1,24 @@
 // Walks the selected steps in order: lock, check, run or skip, stamp. See README.md#the-runner--runts.
 
-import { spawn } from 'node:child_process';
-import { once } from 'node:events';
-import { existsSync, readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { existsSync } from 'node:fs';
 
 import {
   clearStamp, fileHashes, writeStamp, type FileHashes, type RecordedReads,
 } from '../util/build-stamp';
-import { stampedMembers } from '../util/emit-artifacts';
-import { REPO_ROOT } from '../util/paths';
 import { UPDATE_SNAPSHOTS_ENV } from '../util/snapshot-check';
 import {
-  derivedFreshness, manualFreshness, recordedFreshness,
+  derivedFreshness, manualFreshness, recordedFreshness, stampedOutputs,
   type Freshness,
 } from './freshness';
 import type { Loaded } from './load-table';
 import { holdLocks } from './locks';
 import { pipelineTree, type PipelineTree } from './pipeline-tree';
-import { recordProblems, type RunRecord } from './python-run-pure';
+import { exec, runRecorded, TSX } from './processes';
+import { recordProblems } from './python-run-pure';
 import {
   isBuild, selectSteps, writersOf,
   type BuildStep, type ResolvedStep, type StepGraph,
 } from './step-table-pure';
-
-const TSX = resolve(REPO_ROOT, 'node_modules/.bin/tsx');
-const RUN_PYTHON_STEP = resolve(REPO_ROOT, 'scripts/pipeline/run_python_step.py');
 
 export type Verdict =
   | { readonly kind: 'fresh' }
@@ -46,19 +39,9 @@ type Loads = Extract<Loaded, { kind: 'loaded' }>;
 
 const blocks = (v: Verdict): boolean => v.kind === 'stale' || v.kind === 'failed' || v.kind === 'skipped';
 
-function outputFiles(step: ResolvedStep): string[] {
-  return [...step.outputs.files, ...stampedMembers(step.outputs.families)];
-}
-
 function rehashed(inputs: FileHashes, paths: readonly string[] | 'all', tree: PipelineTree): FileHashes {
   const keys = paths === 'all' ? Object.keys(inputs) : paths.map(tree.rel).filter((k) => k in inputs);
   return { ...inputs, ...fileHashes(keys.map(tree.abs), tree.root) };
-}
-
-async function exec(command: string, args: readonly string[], env: NodeJS.ProcessEnv): Promise<number | null> {
-  const child = spawn(command, args, { stdio: 'inherit', env });
-  const [code] = await once(child, 'exit') as [number | null];
-  return code;
 }
 
 class Run {
@@ -129,10 +112,9 @@ class Run {
       if (code !== 0) return { kind: 'failed', reason: `exited ${code}` };
       return this.land(stampFile, resolved, rehashed(inputs, this.options.updateSnapshots ? 'all' : resolved.outputs.files, tree));
     }
-    const record = tree.record(step.name);
-    const code = await exec('python3', [RUN_PYTHON_STEP, tree.root, record, entry], env);
-    if (code !== 0) return { kind: 'failed', reason: `exited ${code}` };
-    const run = JSON.parse(readFileSync(record, 'utf8')) as RunRecord;
+    const recorded = await runRecorded(tree, step.name, entry, [], env);
+    if (recorded.kind === 'exited') return { kind: 'failed', reason: `exited ${recorded.code}` };
+    const { run } = recorded;
     const snapshots = step.snapshots.map(tree.abs);
     const problems = recordProblems(resolved, snapshots, run, this.loaded.steps.values(), this.graph);
     if (problems.length > 0) return { kind: 'failed', reason: problems.join('; ') };
@@ -145,7 +127,7 @@ class Run {
   private land(stampFile: string, resolved: ResolvedStep, inputs: FileHashes, recorded?: RecordedReads): Verdict {
     const missing = resolved.outputs.files.filter((p) => !existsSync(p));
     if (missing.length > 0) return { kind: 'failed', reason: `declared outputs not written: ${missing.map(this.tree.rel).join(', ')}` };
-    writeStamp(stampFile, inputs, outputFiles(resolved), { recorded, root: this.tree.root });
+    writeStamp(stampFile, inputs, stampedOutputs(resolved.outputs), { recorded, root: this.tree.root });
     return { kind: 'built' };
   }
 }

@@ -3,12 +3,12 @@
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { existsSync } from 'node:fs';
-import { resolve } from 'node:path';
 
 import {
   asStamp, changedSince, readStamp, readStampJson, recordedChanges, type FileHashes, type Stamp,
 } from '../util/build-stamp';
-import { REPO_ROOT } from '../util/paths';
+import { TSX } from './processes';
+import { stampedMembers } from '../util/emit-artifacts';
 import { landStaged, writeStaged } from '../util/staged-write';
 import type { PipelineTree } from './pipeline-tree';
 import { describesItself, type ManualStep, type OutputClaims } from './step-table-pure';
@@ -50,6 +50,11 @@ export const pullQueryHash = ({ query, services }: { readonly query: string; rea
   sha1(JSON.stringify([query, services]))
 );
 export const requestHash = (request: readonly string[]): string => sha1(request.join('\n'));
+
+/** Every file a step's stamp or record hashes as its output. */
+export function stampedOutputs(outputs: OutputClaims): string[] {
+  return [...outputs.files, ...stampedMembers(outputs.families)];
+}
 
 function verdict(changed: readonly string[]): Freshness {
   return changed.length === 0 ? { kind: 'fresh' } : { kind: 'stale', changed };
@@ -115,8 +120,6 @@ function parseDescription(step: ManualStep, text: string): Description {
   }
   return { kind: 'pull', query, services, release: optionalString(json.release), request, requestFrom };
 }
-
-const TSX = resolve(REPO_ROOT, 'node_modules/.bin/tsx');
 
 /** Python describes under `-I -S`, so its describe path imports the standard library only. */
 export function describeStep(step: ManualStep, tree: PipelineTree): Description {

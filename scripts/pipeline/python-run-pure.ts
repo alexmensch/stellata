@@ -15,7 +15,14 @@ export interface RunRecord {
   readonly reads: Readonly<Record<string, string | null>>;
   readonly listings: Readonly<Record<string, string>>;
   readonly probes: Readonly<Record<string, boolean>>;
+  readonly services: readonly string[];
   readonly writes: readonly string[];
+}
+
+export function undeclaredWrites(self: ResolvedStep, writes: readonly string[], allowed: readonly string[] = []): string[] {
+  return writes
+    .filter((p) => !claims(self.outputs, p) && !allowed.includes(p))
+    .map((p) => `${self.step.name} wrote ${p}, which it does not declare`);
 }
 
 export function recordProblems(
@@ -26,9 +33,7 @@ export function recordProblems(
   graph: StepGraph,
 ): string[] {
   const name = self.step.name;
-  const problems = record.writes
-    .filter((p) => !claims(self.outputs, p) && !snapshots.includes(p))
-    .map((p) => `${name} wrote ${p}, which it does not declare`);
+  const problems = undeclaredWrites(self, record.writes, snapshots);
   const others = [...steps].filter((s) => s.step.name !== name);
   const touched: [string, (writer: ResolvedStep) => boolean][] = [
     ...[...Object.keys(record.reads), ...Object.keys(record.probes)]
