@@ -2,11 +2,12 @@
 
 import { defineArtifact, nullableCell } from '../../util/tsv/artifact-pure';
 import type { WgsnNameRow } from './wgsn-index-pure';
+import { WGSN_NAMES_FILE } from './wgsn-tables-outputs';
 
 const ALIAS_SEPARATOR = '|';
 
 export const WGSN_NAMES = defineArtifact({
-  file: 'data/iau-wgsn/wgsn_names.tsv',
+  file: WGSN_NAMES_FILE,
   columns: [
     'name', 'aliases', 'hip', 'hip_component', 'hr', 'hd', 'hd_component', 'vmag', 'source', 'src_id',
   ] as const,

@@ -39,6 +39,8 @@ scripts/catalog/lineage/
   reason-code-list-pure.ts       reasonCodeList, the generated list, and
                                  appendOnlyViolations.
   reason-codes-tsv.ts            REASON_CODES, the list's codec.
+  reason-codes-outputs.ts        REASON_CODES_OUTPUTS, the generator's
+                                 output declaration.
   generate-reason-codes.ts       `pnpm run lineage:codes`.
   reason-codes.test.ts           The list equals its generation, and is
                                  append-only against the merge-base.
