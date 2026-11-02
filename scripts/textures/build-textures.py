@@ -219,8 +219,7 @@ def build_normal_map(name: str, relief: dict) -> None:
         "the two would disagree about which way is east"
     )
     rgb, stats = surface_normals(read_frozen_dem(src_path), spec)
-    # Merge, never replace: the normal, horizon and sky-view legs each write
-    # their own part of a body's relief row.
+    # Merge, never replace: the horizon and sky-view legs add to this row.
     relief.setdefault(name, {}).update(stats)
     # Lossless: WebP q98 errs 1.6 deg of normal angle against a 2.7 deg median
     # tilt on the Moon, which is most of the signal
@@ -388,25 +387,18 @@ def prune_stale_rungs(ladder: dict) -> None:
 
 def main() -> None:
     print("building planet texture artifacts:")
-    manifest = json.loads(MANIFEST.read_text()) if MANIFEST.exists() else {}
+    manifest: dict = {}
     ladder: dict = {}
     for name, src_name in BODIES.items():
         build_body(name, src_name, manifest, ladder)
-    # Drop rows for bodies no longer built + calibrated, so a removed body
-    # can't leave a stale entry across incremental (up-to-date) runs.
-    calibrated = {name for name in BODIES if name in COLOUR_INDICES}
-    for stale in manifest.keys() - calibrated:
-        del manifest[stale]
     MANIFEST.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n")
     write_ladder_module(ladder)
     prune_stale_rungs(ladder)
-    relief = json.loads(RELIEF_MANIFEST.read_text()) if RELIEF_MANIFEST.exists() else {}
+    relief: dict = {}
     for name in DEM_BODIES:
         build_normal_map(name, relief)
         build_horizon_map(name, relief)
         build_sky_view(name, relief)
-    for stale in relief.keys() - DEM_BODIES.keys():
-        del relief[stale]
     RELIEF_MANIFEST.write_text(json.dumps(relief, indent=2, sort_keys=True) + "\n")
     build_saturn_rings()
     for body, spec in RING_TABLES.items():
