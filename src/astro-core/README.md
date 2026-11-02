@@ -120,3 +120,39 @@ Each has its own README.
   [Vondrák 2011](/data/papers/index.md#vondrak2011) carries its own obliquity constant (84381.406″, IAU 2006) for
   the same reason: it is part of the published series, not a duplicate of
   `J2000_OBLIQUITY_RAD`.
+
+## Instruments — an instrument is one physical number
+
+`instruments.ts` — `InstrumentName`, `INSTRUMENTS`, `DEFAULT_INSTRUMENT`,
+`limitMagForAperture` / `instrumentLimitMag` / `extendedThresholdSbFor`, and
+`summationSolidAngleFor` with its default-instrument value
+`DEFAULT_SUMMATION_ARCSEC2`. The viewer's filter state names an instrument;
+the dust prefilter pins its froxel geometry to the default one's summation
+area, which is why the record is shared.
+
+```
+{ apertureMm, defaultFovDeg, skyBackgroundMagArcsec2, passband }
+   → m_lim = limitMagForAperture(apertureMm)
+```
+
+The unaided eye is `apertureMm` 7 — the dark-adapted pupil the 30″ PSF is
+derived at — giving **`m_lim` 7.8**, a Bortle-1 best case in vacuum for a
+fully night-adapted observer. `m_lim` is **derived, never authored**:
+specifying an aperture gain *and* a magnitude limit states the same fact
+twice, which is what the retired preset table did.
+
+**There is no apparent-magnitude filter, by design.** "Show me fainter
+stars" is a request for a larger aperture — a different instrument — so a
+magnitude control would be a second, contradictory answer to the same
+question. [§ 3.4](/docs/science-hdr-pipeline.md#34-the-instrument-record--aperture-is-the-single-number) carries the record shape
+and the three axes a future instrument needs.
+
+**`skyBackgroundMagArcsec2` is the extended-source threshold surface
+brightness**, read through `extendedThresholdSbFor` — the sibling of
+`instrumentLimitMag`, and on the instrument rather than in the exposure model for the same reason
+that one is: an extended source is detected as a contrast against the sky
+it sits in, so the background level *is* where its threshold sits
+([Extended sources](emission/README.md#extended-sources--two-solid-angles-one-write-tail)). Its only consumer is
+`summationSolidAngleFor`, which pairs it with `m_lim`; the viewer's
+`ExposureController` writes the result to `uOmegaSummationArcsec2`. It has yet to land as an additive floor on `L`, which is
+the other half of the axis. `passband` still has no consumer.

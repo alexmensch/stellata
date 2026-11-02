@@ -85,7 +85,7 @@ function of filter state alone.
 **`uOmegaSummationArcsec2` is static in the exposure state, and that is
 the point.** It is the offset between two *thresholds* — the point-source
 `m_lim` and the extended-source `S_lim`, which is the instrument's
-`skyBackgroundMagArcsec2` (`../../filters/filter-state.ts`
+`skyBackgroundMagArcsec2` (`/src/astro-core/instruments.ts`
 `extendedThresholdSbFor`) — and adaptation and the trim move both together,
 so only an instrument change may write it. The derivation is
 [Extended sources](../../../astro-core/emission/README.md#extended-sources--two-solid-angles-one-write-tail); the convolution it gains into is

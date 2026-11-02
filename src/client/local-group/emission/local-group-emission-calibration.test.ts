@@ -28,10 +28,8 @@ import {
   summationMean,
   summationRadiusPx,
 } from '../../hdr/summation/summation-pure';
-import {
-  BASE_EPOCH_EXPOSURE,
-  DEFAULT_SUMMATION_ARCSEC2,
-} from '../../hdr/exposure/exposure-epoch';
+import { BASE_EPOCH_EXPOSURE } from '../../hdr/exposure/exposure-epoch';
+import { DEFAULT_SUMMATION_ARCSEC2 } from '../../../astro-core/instruments';
 import { angularToPx } from '../../camera/controls/star-geometry';
 import { FOV_MAX_DEG, FOV_MIN_DEG } from '../../camera/timing';
 import { ARCSEC_TO_RAD } from '../../../astro-core/astronomy-constants';

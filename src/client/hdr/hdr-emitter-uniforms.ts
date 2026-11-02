@@ -7,7 +7,8 @@ import { angularToPx } from '../camera/controls/star-geometry';
 import { DEFAULT_FOV } from '../filters/filter-state';
 import { HIGHLIGHT_DESAT, tonemapWhitePoint } from '../../astro-core/tonemap/tonemap-pure';
 import { pixelSolidAngleArcsec2 } from '../../astro-core/emission/emission-pure';
-import { BASE_EPOCH_EXPOSURE, DEFAULT_SUMMATION_ARCSEC2 } from './exposure/exposure-epoch';
+import { BASE_EPOCH_EXPOSURE } from './exposure/exposure-epoch';
+import { DEFAULT_SUMMATION_ARCSEC2 } from '../../astro-core/instruments';
 
 /** `uHdrTarget` is the branch: 0 means the fragment lands straight on the
  *  canvas and the emitter applies the operator itself (README.md#the-inline-operator--chart-modes-path).

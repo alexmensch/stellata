@@ -1,20 +1,21 @@
 # Filters
 
-The filter / instrument / star-render-knob system: `FilterState` and its
-canonical defaults, the instrument record and the limiting magnitude
-derived from its aperture, the plate-scale-derived exaggeration K, the
-star-disc render knobs, and the controller that owns every mutation.
+The filter / star-render-knob system: `FilterState` and its canonical
+defaults, the plate-scale-derived exaggeration K, the star-disc render
+knobs, and the controller that owns every mutation. The instrument record
+the filter state names, and the limiting magnitude derived from its
+aperture, is shared with the build pipeline:
+[Instruments](/src/astro-core/README.md#instruments--an-instrument-is-one-physical-number).
 
 ## Files
 
-- `filter-state.ts` — `FilterState`, `DEFAULT_FILTER`, `InstrumentName`,
-  `INSTRUMENTS`, `limitMagForAperture` / `instrumentLimitMag` /
-  `limitMagOf` / `sizeSpanOf`, `DEFAULT_FOV` (the instrument's own
+- `filter-state.ts` — `FilterState`, `DEFAULT_FILTER`,
+  `limitMagOf` / `sizeSpanOf` (the instrument's limit and footprint window
+  read off filter state), `DEFAULT_FOV` (the instrument's own
   default), `TARGET_PX`, `STAR_PHYSICS_FACTOR`, `ALL_SPECT_MASK`,
   `StarRenderParams`, `STAR_RENDER_DEFAULTS`, the star-K multiplier module
   state, and the pure `arcsecPerPx` / `starExaggerationK` / `starPxSizes`
-  plate-scale chain. Import filter types and instrument constants from
-  here, not from `stellata.ts`.
+  plate-scale chain. Import filter types from here, not from `stellata.ts`.
 - `filter-controller.ts` — `FilterController`. Owns the single live
   `FilterState` instance and every mutation path: `setFilter`,
   `setInstrument`, `recomputeStarPxSizes`, `setCameraFov`,
@@ -31,35 +32,6 @@ star-disc render knobs, and the controller that owns every mutation.
   the debug readout shows both.
 - `filter-controller.test.ts` — instrument/override/clamp semantics
   against stub uniforms + camera.
-
-## An instrument is one physical number
-
-```
-{ apertureMm, defaultFovDeg, skyBackgroundMagArcsec2, passband }
-   → m_lim = limitMagForAperture(apertureMm)
-```
-
-The unaided eye is `apertureMm` 7 — the dark-adapted pupil the 30″ PSF is
-derived at — giving **`m_lim` 7.8**, a Bortle-1 best case in vacuum for a
-fully night-adapted observer. `m_lim` is **derived, never authored**:
-specifying an aperture gain *and* a magnitude limit states the same fact
-twice, which is what the retired preset table did.
-
-**There is no apparent-magnitude filter, by design.** "Show me fainter
-stars" is a request for a larger aperture — a different instrument — so a
-magnitude control would be a second, contradictory answer to the same
-question. [§ 3.4](/docs/science-hdr-pipeline.md#34-the-instrument-record--aperture-is-the-single-number) carries the record shape
-and the three axes a future instrument needs.
-
-**`skyBackgroundMagArcsec2` is the extended-source threshold surface
-brightness**, read through `extendedThresholdSbFor` — the sibling of
-`instrumentLimitMag`, and here rather than in `hdr/` for the same reason
-that one is: an extended source is detected as a contrast against the sky
-it sits in, so the background level *is* where its threshold sits
-([Extended sources](../../astro-core/emission/README.md#extended-sources--two-solid-angles-one-write-tail)). Its only consumer is
-`../hdr/exposure/exposure-epoch.ts` `summationSolidAngleFor`, which pairs
-it with `m_lim`. It has yet to land as an additive floor on `L`, which is
-the other half of the axis. `passband` still has no consumer.
 
 ## Star pixel size is plate-scale-derived
 

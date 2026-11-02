@@ -185,7 +185,7 @@ summation makes its threshold a *surface brightness*, so
 `uOmegaSummationArcsec2` — 4.7863e5 arcsec², a 13.0′ critical diameter —
 which the **display** path substitutes for `Ω_px`. Fixed in angle, so the
 level cannot move with FOV. Derivation, the threshold's identity with the
-instrument's `skyBackgroundMagArcsec2` (`../../client/filters/filter-state.ts`
+instrument's `skyBackgroundMagArcsec2` (`../instruments.ts`
 `extendedThresholdSbFor`), and every rejected alternative:
 [§ 1](/docs/science-hdr-pipeline.md#1-the-unit--threshold-anchored-display-luminance) (*Extended sources*).
 

@@ -7,11 +7,8 @@ import type { CadenceCtx, FrameCtx } from './scene-layer';
 import type { FrameExposure } from '../hdr/exposure/visibility/emitter-visibility-pure';
 import { pixelSolidAngleArcsec2 } from '../../astro-core/emission/emission-pure';
 import { tonemapWhitePoint } from '../../astro-core/tonemap/tonemap-pure';
-import {
-  exposureForMagLimit,
-  summationSolidAngleFor,
-} from '../hdr/exposure/exposure-epoch';
-import { instrumentLimitMag } from '../filters/filter-state';
+import { exposureForMagLimit } from '../hdr/exposure/exposure-epoch';
+import { summationSolidAngleFor, instrumentLimitMag } from '../../astro-core/instruments';
 import { DEFAULT_ADAPTATION_TUNING } from '../hdr/exposure/scene-adaptation-pure';
 
 /** The pinned acceptance plate scale: a 900 CSS-px-tall viewport at the

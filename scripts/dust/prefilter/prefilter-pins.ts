@@ -2,7 +2,7 @@
 // and the display patch both are scored over.
 
 import { ARCSEC_TO_RAD } from '../../../src/astro-core/astronomy-constants';
-import { DEFAULT_SUMMATION_ARCSEC2 } from '../../../src/client/hdr/exposure/exposure-epoch';
+import { DEFAULT_SUMMATION_ARCSEC2 } from '../../../src/astro-core/instruments';
 
 export const ARCMIN_TO_RAD = 60 * ARCSEC_TO_RAD;
 

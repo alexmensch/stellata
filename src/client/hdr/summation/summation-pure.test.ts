@@ -11,10 +11,8 @@ import {
   summationWeight,
 } from './summation-pure';
 import { pixelSolidAngleArcsec2, surfaceBrightnessLuminance } from '../../../astro-core/emission/emission-pure';
-import {
-  BASE_EPOCH_EXPOSURE,
-  DEFAULT_SUMMATION_ARCSEC2,
-} from '../exposure/exposure-epoch';
+import { BASE_EPOCH_EXPOSURE } from '../exposure/exposure-epoch';
+import { DEFAULT_SUMMATION_ARCSEC2 } from '../../../astro-core/instruments';
 import { angularToPx } from '../../camera/controls/star-geometry';
 import { FOV_MAX_DEG, FOV_MIN_DEG } from '../../camera/timing';
 import { ARCSEC_TO_RAD } from '../../../astro-core/astronomy-constants';

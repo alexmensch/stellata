@@ -42,7 +42,10 @@ import {
   sightlineSurfaceBrightness,
 } from '../../astro-core/milkyway/column/milkyway-column-pure';
 import { R0_PC } from '../../astro-core/galactic-coords';
-import { ABSOLUTE_MAGNITUDE_DISTANCE_PC } from '../../astro-core/emission/density0-solver-pure';
+import {
+  ABSOLUTE_MAGNITUDE_DISTANCE_PC,
+  fluxNumber,
+} from '../../astro-core/emission/density0-solver-pure';
 import { LG_OVERRIDES } from '../../../scripts/local-group/local-group-source';
 import {
   BULGE_COLOUR_INDEX_BV,
@@ -58,7 +61,6 @@ import {
   unresolvedHoleVoxels,
 } from '../../astro-core/milkyway/calibration/resolved-fraction-pure';
 import { buildHoleCells, holeLight } from '../../../scripts/milkyway-calibration/resolved-light-pure';
-import { fluxNumber } from '../../astro-core/emission/density0-solver-pure';
 import { linearSrgbFromColourIndex } from '../../astro-core/colour/blackbody-lut-pure';
 import { fakeBandMaterials } from './band-materials-mock';
 import { expectSlotsServedBy } from '../scene/emitter-material-mock';
@@ -70,7 +72,8 @@ import {
   DEFAULT_INSTRUMENT,
   extendedThresholdSbFor,
   instrumentLimitMag,
-} from '../filters/filter-state';
+  DEFAULT_SUMMATION_ARCSEC2,
+} from '../../astro-core/instruments';
 import {
   SB_ZERO_POINT,
   extendedThresholdSbFromSolidAngle,
@@ -78,10 +81,7 @@ import {
   pixelSolidAngleArcsec2,
   surfaceBrightnessLuminance,
 } from '../../astro-core/emission/emission-pure';
-import {
-  BASE_EPOCH_EXPOSURE,
-  DEFAULT_SUMMATION_ARCSEC2,
-} from '../hdr/exposure/exposure-epoch';
+import { BASE_EPOCH_EXPOSURE } from '../hdr/exposure/exposure-epoch';
 import { L_ADAPT } from '../hdr/exposure/scene-adaptation-pure';
 import { angularToPx } from '../camera/controls/star-geometry';
 import { FOV_MAX_DEG, FOV_MIN_DEG } from '../camera/timing';

@@ -30,7 +30,8 @@ import {
   meshFadeFromPhysPx,
 } from './mesh-crossfade';
 import { DIM_FLOOR } from '../../binaries/eclipse/eclipse-photometry-pure';
-import { DEFAULT_FILTER, instrumentLimitMag } from '../../filters/filter-state';
+import { DEFAULT_FILTER } from '../../filters/filter-state';
+import { instrumentLimitMag } from '../../../astro-core/instruments';
 import { cullMagFor, exposureForMagLimit } from '../../hdr/exposure/exposure-epoch';
 import { makePlanetFieldUniforms } from './planet-field-uniforms-fixture';
 

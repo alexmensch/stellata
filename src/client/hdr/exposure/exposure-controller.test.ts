@@ -1,14 +1,12 @@
 import { describe, expect, it, vi } from 'vitest';
-import { DEFAULT_INSTRUMENT, instrumentLimitMag } from '../../filters/filter-state';
+import {
+  DEFAULT_INSTRUMENT,
+  instrumentLimitMag,
+  summationSolidAngleFor,
+} from '../../../astro-core/instruments';
 import { SOFT_TAPER_MARGIN_MAG } from '../../../astro-core/perceptual-magnitude';
 import { ExposureController, type ExposureUniforms } from './exposure-controller';
-import {
-  cullMagFor,
-  EV_MAX_STOPS,
-  MAG_PER_STOP,
-  sceneExposure,
-  summationSolidAngleFor,
-} from './exposure-epoch';
+import { cullMagFor, EV_MAX_STOPS, MAG_PER_STOP, sceneExposure } from './exposure-epoch';
 
 function harness() {
   const uniforms: ExposureUniforms = {

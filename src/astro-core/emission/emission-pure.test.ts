@@ -21,11 +21,8 @@ import {
   relativeLuminance,
   tonemapWhitePoint,
 } from '../tonemap/tonemap-pure';
-import {
-  DEFAULT_FILTER,
-  extendedThresholdSbFor,
-  instrumentLimitMag,
-} from '../../client/filters/filter-state';
+import { DEFAULT_FILTER } from '../../client/filters/filter-state';
+import { extendedThresholdSbFor, instrumentLimitMag } from '../instruments';
 
 const EYE_LIMIT_MAG = instrumentLimitMag(DEFAULT_FILTER.instrument);
 const EXTENDED_THRESHOLD_SB = extendedThresholdSbFor(DEFAULT_FILTER.instrument);

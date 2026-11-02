@@ -2,14 +2,9 @@
 // EV trim collapsed into one scalar, plus the two magnitude bounds the
 // shaders derive from it. See README.md#the-three-terms.
 
-import {
-  DEFAULT_INSTRUMENT,
-  type InstrumentName,
-  extendedThresholdSbFor,
-  instrumentLimitMag,
-} from '../../filters/filter-state';
+import { DEFAULT_INSTRUMENT, instrumentLimitMag } from '../../../astro-core/instruments';
 import { SOFT_TAPER_MARGIN_MAG } from '../../../astro-core/perceptual-magnitude';
-import { MAG_PER_STOP, rodSummationSolidAngleArcsec2 } from '../../../astro-core/emission/emission-pure';
+import { MAG_PER_STOP } from '../../../astro-core/emission/emission-pure';
 import { L_THRESH } from '../../../astro-core/tonemap/tonemap-pure';
 
 export { MAG_PER_STOP };
@@ -84,23 +79,6 @@ export function drawCutoffMag(
   return chart ? limitMag : thresholdMag + SOFT_TAPER_MARGIN_MAG;
 }
 
-/** `uOmegaSummationArcsec2` for an instrument — the summation area implied
- *  by pairing its extended-source threshold (`extendedThresholdSbFor`) with
- *  its point-source limit. Static in the exposure state: adaptation and the
- *  trim move both thresholds together, so their offset is the instrument's
- *  alone. Why that threshold is the sky background:
- *  `/docs/science-hdr-pipeline.md#1-the-unit--threshold-anchored-display-luminance` (*Extended sources*). */
-export function summationSolidAngleFor(name: InstrumentName): number {
-  return rodSummationSolidAngleArcsec2(
-    extendedThresholdSbFor(name),
-    instrumentLimitMag(name),
-  );
-}
-
 /** The default instrument at EV 0 on an unadapted frame — every light
  *  decision in the scene grounds on it. */
 export const BASE_EPOCH_EXPOSURE = sceneExposure(instrumentLimitMag(DEFAULT_INSTRUMENT));
-
-/** Seed for `uOmegaSummationArcsec2`; `ExposureController` owns every
- *  later write, as it does for `uExposure`. */
-export const DEFAULT_SUMMATION_ARCSEC2 = summationSolidAngleFor(DEFAULT_INSTRUMENT);

@@ -14,7 +14,8 @@ import {
 } from '../../../../scripts/catalog/catalog-lookup';
 import buildCatalogExpected from '../../../../scripts/catalog/build-catalog-expected.json';
 import { peakAmplitudeFactor } from '../../camera/controls/star-geometry';
-import { DEFAULT_INSTRUMENT, STAR_RENDER_DEFAULTS, starPxSizes } from '../../filters/filter-state';
+import { STAR_RENDER_DEFAULTS, starPxSizes } from '../../filters/filter-state';
+import { DEFAULT_INSTRUMENT } from '../../../astro-core/instruments';
 import { parseBinary, type Catalog } from '../../loaders/catalog-loader';
 import { MIN_PHYSICAL_RADIUS_R_SUN, R_SUN_PC } from '../../../astro-core/astronomy-constants';
 import { discWindowPc } from '../local-pass/star-local-cluster-pure';
