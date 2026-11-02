@@ -39,7 +39,10 @@ frame/unit facts, and the mission-date caveats live in
   `data/probes/{id}.json` through `emitEach` (`../util/README.md`): each
   probe lands as soon as it verifies, so one that fails to fetch or verify
   is reported and leaves only its own file as it was, and the run exits
-  non-zero naming it.
+  non-zero naming it. `--describe` prints each probe's VECTORS parameters
+  (`horizons-client.ts`' `vectorParams`, the epochs left out), the roster
+  and the stop time: the roster's mission facts are written into each file,
+  so an edit to any of them stales the pull's `data/stamps/` record.
 - `sync-probes.ts` (+ `-pure.ts`, test; `probes-mirror-source.ts` declares
   the folder) — mirrors the committed JSONs
   to `public/probes/` (gitignored) via `scripts/util/mirror-to-public.ts`

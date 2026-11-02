@@ -7,7 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { fileHashes, readStamp, stampIsCurrent } from './build-stamp';
 import {
-  EmissionRefused, declareOutputs, emitArtifacts, emitEach, type Check,
+  EmissionRefused, declareOutputs, emitArtifacts, emitEach, runStep, type Check,
 } from './emit-artifacts';
 import { STAGING_SUFFIX } from './staged-write';
 
@@ -218,5 +218,22 @@ describe('emitArtifacts', () => {
     })).toThrow(EmissionRefused);
     expect(console.log).toHaveBeenCalledWith('counts match');
     expect(console.log).toHaveBeenCalledWith('key x: 1 -> 2');
+  });
+});
+
+describe('runStep', () => {
+  it('prints the description under --describe without running main', () => {
+    const argv = process.argv;
+    const ran = vi.fn();
+    const log = vi.spyOn(console, 'log').mockImplementation(() => {});
+    process.argv = [...argv, '--describe'];
+    try {
+      runStep(ran, () => ({ query: 'Q', services: ['ssd.jpl.nasa.gov'] }));
+    } finally {
+      process.argv = argv;
+      vi.restoreAllMocks();
+    }
+    expect(ran).not.toHaveBeenCalled();
+    expect(JSON.parse(log.mock.calls[0][0] as string)).toEqual({ query: 'Q', services: ['ssd.jpl.nasa.gov'] });
   });
 });

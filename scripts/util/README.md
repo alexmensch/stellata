@@ -187,7 +187,10 @@ same thing — single-use helpers stay with their consumer.
   all have been tried.
   `runStep(main)` is every step's entry point: a refused emission has
   already printed its failed checks, so it exits 1 with one line and no
-  stack; any other error keeps its stack.
+  stack; any other error keeps its stack. A TypeScript pull (the two
+  Horizons fetchers) passes `runStep(main, describe)`, and `--describe`
+  then prints its `PullDescription` instead of running.
+  `horizons-response.ts`' `HORIZONS_SERVICE` is the service both state.
 - `heap-budget.ts` / `heap-budget-pure.ts` (+ test) — `watchHeap(step)`,
   started first thing in a step's `main`, and its `check()`, the step's peak
   live heap against the CI runner's as an `emitArtifacts` check

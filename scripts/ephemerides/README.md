@@ -31,7 +31,10 @@ This folder owns the scripts.
   `data/ephemerides/{id}.json` through `emitEach` (`../util/README.md`): a
   table that misses its accuracy bound never lands, every table that holds
   does, and the run exits non-zero naming the misses. See
-  [Cadence](#cadence).
+  [Cadence](#cadence). `--describe` prints each target's ELEMENTS and
+  truth-VECTORS query over the table window, so a changed id, cadence or
+  window stales its `data/stamps/` record
+  ([Freshness](../pipeline/README.md#freshness--one-mechanism)).
 - `sync-ephemerides.ts` (+ `-pure.ts`, and `ephemerides-mirror-source.ts`
   declaring the folder) — mirrors the committed JSONs to
   `public/ephemerides/` (gitignored) via `../util/mirror-to-public.ts` on
