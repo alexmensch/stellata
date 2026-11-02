@@ -37,7 +37,7 @@ const isBuildStep = (name: string): boolean => isBuild(loaded.steps.get(name)!.s
 describe('the step table', () => {
   it('runs the catalogue chain in its data-flow order', () => {
     expect(loaded.graph.order.filter(isBuildStep)).toEqual([
-      'build:binaries', 'lineage:codes', 'build:wgsn', 'build:astrometry-request', 'build:classic-ids',
+      'lineage:codes', 'build:wgsn', 'build:binaries', 'build:astrometry-request', 'build:classic-ids',
       'build:membership', 'build:catalog', 'build:binaries-runtime',
     ]);
   });
