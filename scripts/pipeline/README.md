@@ -221,6 +221,9 @@ write more than one file (classic-ids four, Tycho-2 two).
 
 `run.ts <target…> [--force] [--update-snapshots] [--verify-committed]`
 
+A target is a step name. `--verify-committed` is CI's slice of the runner and
+lands with it; `run.ts` rejects it until then.
+
 1. Load and validate the table.
 2. Walk the steps the targets reach, in derived order.
    - A `build` step whose inputs include the output of a stale manual step or
