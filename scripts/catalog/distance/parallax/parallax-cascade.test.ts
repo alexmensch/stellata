@@ -3,13 +3,13 @@ import { describe, it, expect } from 'vitest';
 import {
   isLowPrecisionParallax,
   resolveParallax,
-  DIST_VIA_VALUES,
   DIST_VIA_COUNT_KEY,
   PARALLAX_SN_FLOOR,
   PARALLAX_LOW_PRECISION_SN,
   type ParallaxResolution,
   type ParallaxSources,
 } from './parallax-cascade';
+import { DIST_VIA_VALUES } from '../../../../src/catalog-format/record/catalog-pure';
 import { gaiaAstrometryRow } from '../astrometry-fixture';
 import type { CitedParallax } from '../../cited-parallax';
 import type { SiblingParallax } from './pair-member-parallax';

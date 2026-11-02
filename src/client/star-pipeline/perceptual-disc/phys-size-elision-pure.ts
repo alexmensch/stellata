@@ -1,7 +1,7 @@
 // The physSize below which every consumer of it stops responding, and the
 // tolerance the one graceful consumer is held to. README.md#eliding-the-physical-size-branch.
 
-import { POINT_SOURCE_FLAT_PEAK_DIAMETER_PX } from '../../hdr/emission/emission-pure';
+import { POINT_SOURCE_FLAT_PEAK_DIAMETER_PX } from '../../../astro-core/emission/emission-pure';
 import { PHYS_RATIO_THRESHOLD } from '../local-pass/star-local-cluster-pure';
 
 /** Relative movement allowed in the super-Gaussian exponent when `physSize`

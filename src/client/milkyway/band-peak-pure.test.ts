@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { GALACTIC_NORTH_POLE_ICRS } from '../galactic/galactic-coords';
-import { SB_ZERO_POINT } from '../hdr/emission/emission-pure';
+import { GALACTIC_NORTH_POLE_ICRS } from '../../astro-core/galactic-coords';
+import { SB_ZERO_POINT } from '../../astro-core/emission/emission-pure';
 import {
   SOL_GALACTOCENTRIC_PC,
   type Vec3,
   galacticDirection,
   sightlineSurfaceBrightness,
-} from './column/milkyway-column-pure';
+} from '../../astro-core/milkyway/column/milkyway-column-pure';
 import {
   BAND_PEAK_DRIFT_MAG_PER_PC,
   BAND_PEAK_FAN_AZIMUTHS,

@@ -19,7 +19,7 @@ import {
   type OrbitalElements,
 } from '../../binaries/binary-orbit-pure';
 import { innermostRelationOf } from '../../binaries/focal-chain';
-import { GALACTIC_NORTH_POLE_ICRS } from '../../galactic/galactic-coords';
+import { GALACTIC_NORTH_POLE_ICRS } from '../../../astro-core/galactic-coords';
 import { starOrbitNormalIcrs } from '../../binaries/orbit-relation-cache';
 import {
   makeBinaries,

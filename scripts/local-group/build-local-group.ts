@@ -19,10 +19,13 @@ import {
   mergeRowAndOverride,
   roundN,
   roundSig,
-  type LgEmission,
-  type LgObject,
-  type SersicParams,
 } from './build-local-group-pure';
+import {
+  LOCAL_GROUP_VERSION,
+  type LgObjectRow,
+  type LgEmission,
+  type SersicParams,
+} from '../../src/catalog-format/local-group/local-group-schema';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -64,7 +67,7 @@ function emissionToJson(e: LgEmission) {
   };
 }
 
-function toJsonObject(o: LgObject) {
+function toJsonObject(o: LgObjectRow) {
   return {
     name: o.name,
     id: o.id,
@@ -106,7 +109,7 @@ async function main(): Promise<void> {
   const aliasMatched = new Set<string>();
 
   const renderable = filterForRendering(lvdb);
-  const objects: LgObject[] = [];
+  const objects: LgObjectRow[] = [];
   const overrideMatched = new Set<string>();
   let overrideHits = 0;
   let lvdbDefaultHits = 0;
@@ -178,7 +181,7 @@ async function main(): Promise<void> {
 
   const allocation = allocateSibling(SIBLING_ARTIFACTS['local-group'], objects);
   const payload = {
-    version: 2,
+    version: LOCAL_GROUP_VERSION,
     count: objects.length,
     objects: objects.map((o, i) => ({ ...toJsonObject(o), sid: allocation.sids[i] })),
   };

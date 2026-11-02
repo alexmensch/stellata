@@ -12,7 +12,7 @@ import {
 } from '../../solar-system/planets/rings/ring-photometry-pure';
 import {
   DITHER_IGN_DOT, DITHER_IGN_SCALE, LUMA_WEIGHTS,
-} from '../../hdr/tonemap/tonemap-pure';
+} from '../../../astro-core/tonemap/tonemap-pure';
 import {
   literalDriftOffenders, type DriftExemption, type PinnedConstant,
 } from '../tsl/literal-drift-pure';

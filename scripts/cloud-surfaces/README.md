@@ -73,5 +73,5 @@ tuning.
   layout).
 
 Parsed by `src/client/molecular-clouds/cloud-surfaces-loader.ts`
-(sid-keyed map); `cloud-surfaces.test.ts` here pins the committed
+(sid-keyed map); `/tests/integration/cloud-surfaces.test.ts` here pins the committed
 binary against the built `clouds.json` (both self-skip when absent).

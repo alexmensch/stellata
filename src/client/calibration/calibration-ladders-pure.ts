@@ -2,7 +2,7 @@
 // and highlight ladders, the grey wedge, and the gamma match points.
 // See src/client/calibration/README.md.
 
-import { srgbEncode } from '../hdr/tonemap/tonemap-pure';
+import { srgbEncode } from '../../astro-core/tonemap/tonemap-pure';
 
 /** Spaced so each is a visible step at the bottom of the transfer rather
  *  than an even code interval. */

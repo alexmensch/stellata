@@ -2,16 +2,16 @@
 // hosts; gating is via FocusController.getFocusedPlanetSystem(). See
 // /src/client/solar-system/README.md#data-model.
 
-import { AU_KM } from '../util/astronomy-constants';
-import { solveKepler } from '../util/kepler-solver';
+import { AU_KM } from '../../astro-core/astronomy-constants';
+import { solveKepler } from '../../astro-core/kepler-solver';
 import {
   getPlanetOrbitShapes,
   getPlanetPositions,
   PLANET_ORDER,
   type OrbitOrientationRad,
-  type PlanetName,
   type Vec3,
 } from './ephemerides/ephemeris';
+import { type PlanetName } from '../../catalog-format/ephemerides/planet-element-roster';
 import {
   earthMoonSplit,
   keplerMoonAnglesAt,

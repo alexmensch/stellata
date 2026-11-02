@@ -17,7 +17,8 @@ scripts/catalog/distance/dust/
                                   march's `segmentCubeOverlap`; the trilinear
                                   sampler mirroring the GPU read
                                   (`sampleEncodedAt`, decoded by
-                                  `sampleDensityAt`); and the shared `R_V`.
+                                  `sampleDensityAt`). `R_V` is read from
+                                  /src/astro-core/extinction/ directly.
                                   Imported by ../../parse/, ../../companions/
                                   and scripts/dust/march-taps/.
   dust-deextinction.ts (+ test)   `assembleDustGrid` assembles data/dust/

@@ -3,13 +3,13 @@
 // See /src/client/galactic/README.md#coordinate-spheres.
 
 import * as THREE from 'three';
-import { equatorialTangentBasisRad } from '../../util/equatorial-basis';
+import { equatorialTangentBasisRad } from '../../../astro-core/equatorial-basis';
 import type {
   CoordSphereFrame,
   CoordSphereSpec,
   DrawnCoordSphereFrame,
 } from './coord-sphere';
-import { galacticDirToIcrs } from '../galactic-coords';
+import { galacticDirToIcrs } from '../../../astro-core/galactic-coords';
 
 /**
  * Radians in. The identity frame: catalog.bin's Cartesian basis already has x toward

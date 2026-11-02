@@ -1,0 +1,215 @@
+import { describe, expect, it } from 'vitest';
+import {
+  LUMA_CEIL,
+  extendedThresholdSbFromSolidAngle,
+  footprintAlong,
+  footprintRadiusPc,
+  luminanceForMagnitude,
+  pixelSolidAngleArcsec2,
+  pointSourcePeakLuminance,
+  rodSummationSolidAngleArcsec2,
+  softenRadius,
+  surfaceBrightnessLuminance,
+} from '../../../astro-core/emission/emission-pure';
+import { BASE_EPOCH_EXPOSURE } from './exposure-epoch';
+import { angularToPx } from '../../camera/controls/star-geometry';
+import {
+  DR_MAG,
+  L_THRESH,
+  reinhardExtended,
+  tonemapWhitePoint,
+} from '../../../astro-core/tonemap/tonemap-pure';
+import { DEFAULT_INSTRUMENT, extendedThresholdSbFor, instrumentLimitMag } from '../../../astro-core/instruments';
+
+const EYE_LIMIT_MAG = instrumentLimitMag(DEFAULT_INSTRUMENT);
+const EXTENDED_THRESHOLD_SB = extendedThresholdSbFor(DEFAULT_INSTRUMENT);
+const fovYRad = (deg: number) => (deg * Math.PI) / 180;
+
+// The display-luminance range budget (/docs/science-hdr-pipeline.md#1-the-unit--threshold-anchored-display-luminance), at the naked-eye epoch. These are the numbers
+// H7 validates the star field against, so they are pinned rather than
+// bounded.
+
+describe('luminanceForMagnitude at the base epoch', () => {
+  const cases: ReadonlyArray<[string, number, number]> = [
+    ['threshold star', EYE_LIMIT_MAG, 0.02],
+    ['Vega', 0.0, 26.3651],
+    ['Sirius', -1.46, 101.1649],
+  ];
+
+  it.each(cases)('%s (m=%f) → L=%f', (_name, m, expected) => {
+    expect(luminanceForMagnitude(BASE_EPOCH_EXPOSURE, m)).toBeCloseTo(expected, 2);
+  });
+
+  it('sends a source DR_MAG brighter than the limit to full white', () => {
+    const white = luminanceForMagnitude(BASE_EPOCH_EXPOSURE, EYE_LIMIT_MAG - DR_MAG);
+    expect(white).toBeCloseTo(tonemapWhitePoint(), 10);
+    expect(reinhardExtended(white, tonemapWhitePoint())).toBeCloseTo(1, 12);
+  });
+});
+
+describe('pointSourcePeakLuminance', () => {
+  it('gives an unresolved source its whole flux at the peak', () => {
+    for (const r of [0, 0.1, 0.5, 1 / Math.sqrt(Math.PI)]) {
+      expect(pointSourcePeakLuminance(BASE_EPOCH_EXPOSURE, 3, r)).toBeCloseTo(
+        luminanceForMagnitude(BASE_EPOCH_EXPOSURE, 3),
+        12,
+      );
+    }
+  });
+
+  it('falls to surface brightness once the disc resolves', () => {
+    const flux = luminanceForMagnitude(BASE_EPOCH_EXPOSURE, -1);
+    expect(pointSourcePeakLuminance(BASE_EPOCH_EXPOSURE, -1, 10)).toBeCloseTo(
+      flux / (Math.PI * 100),
+      12,
+    );
+  });
+
+  it('is continuous across the unresolved/resolved crossover', () => {
+    const rCrossover = 1 / Math.sqrt(Math.PI);
+    const below = pointSourcePeakLuminance(BASE_EPOCH_EXPOSURE, 2, rCrossover - 1e-9);
+    const above = pointSourcePeakLuminance(BASE_EPOCH_EXPOSURE, 2, rCrossover + 1e-9);
+    expect(above).toBeCloseTo(below, 7);
+  });
+
+  it('dims as the inverse square of the resolved radius', () => {
+    const near = pointSourcePeakLuminance(BASE_EPOCH_EXPOSURE, -5, 20);
+    const far = pointSourcePeakLuminance(BASE_EPOCH_EXPOSURE, -5, 40);
+    expect(near / far).toBeCloseTo(4, 9);
+  });
+
+  it('clamps at LUMA_CEIL — Sol at 1 AU pins to white', () => {
+    expect(pointSourcePeakLuminance(BASE_EPOCH_EXPOSURE, -26.7, 0)).toBe(LUMA_CEIL);
+  });
+
+  it('leaves fp16 headroom above the ceiling for additive accumulation', () => {
+    const FP16_MAX = 65504;
+    expect(FP16_MAX / LUMA_CEIL).toBeGreaterThan(15);
+  });
+});
+
+describe('pixelSolidAngleArcsec2', () => {
+  it('is the square of vertical-FOV arcsec over viewport height', () => {
+    expect(pixelSolidAngleArcsec2(angularToPx(900, fovYRad(50)))).toBeCloseTo(
+      ((50 * 3600) / 900) ** 2,
+      6,
+    );
+  });
+
+  it('shrinks quadratically with FOV — zooming 10x dims an extended source 100x', () => {
+    const wide = pixelSolidAngleArcsec2(angularToPx(900, fovYRad(50)));
+    const zoomed = pixelSolidAngleArcsec2(angularToPx(900, fovYRad(5)));
+    expect(wide / zoomed).toBeCloseTo(100, 6);
+  });
+
+  it('is finite at the zero-FOV singularity a transition can pass through', () => {
+    expect(Number.isFinite(pixelSolidAngleArcsec2(angularToPx(900, 0)))).toBe(true);
+  });
+});
+
+describe('the footprint a raymarch step smooths its profile over', () => {
+  const omega50 = pixelSolidAngleArcsec2(angularToPx(900, fovYRad(50)));
+
+  it('is the pixel span at that distance over sqrt(12)', () => {
+    // 50° / 900 px is 200 arcsec per pixel, so one pixel spans
+    // 200/206265 × 785 kpc ≈ 761 pc at M31 and the footprint is that / √12.
+    const spanPc = (200 / 206264.806) * 785_000;
+    expect(footprintRadiusPc(785_000, omega50)).toBeCloseTo(spanPc / Math.sqrt(12), 1);
+  });
+
+  it('vanishes as the plate scale resolves the profile', () => {
+    const wide = footprintRadiusPc(785_000, omega50);
+    const zoomed = footprintRadiusPc(785_000, pixelSolidAngleArcsec2(angularToPx(900, fovYRad(10))));
+    expect(wide / zoomed).toBeCloseTo(5, 6);
+  });
+
+  it('leaves a radius alone once the footprint is small against it', () => {
+    expect(softenRadius(5_000, 4)).toBeCloseTo(5_000, 2);
+    expect(softenRadius(0, 300)).toBe(300);
+  });
+
+  // The whole reason the axis projection exists: a face-on disc must get NO
+  // vertical softening. The scale height is finer than the footprint at wide
+  // FOV, so softening along the ray would suppress the column rather than
+  // average it — a 2.7 mag error in the direction nothing would flag.
+  it('puts no footprint along an axis the ray runs down', () => {
+    expect(footprintAlong([0, 0, 1], [0, 0, 1])).toBeCloseTo(0, 12);
+    expect(footprintAlong([0, 0, -1], [0, 0, 1])).toBeCloseTo(0, 12);
+  });
+
+  it('puts the whole footprint along an axis the ray runs across', () => {
+    expect(footprintAlong([1, 0, 0], [0, 0, 1])).toBeCloseTo(1, 12);
+    const diagonal = Math.SQRT1_2;
+    expect(footprintAlong([diagonal, 0, diagonal], [0, 0, 1])).toBeCloseTo(diagonal, 12);
+  });
+});
+
+// The display-luminance range-budget row (/docs/science-hdr-pipeline.md#1-the-unit--threshold-anchored-display-luminance) for the Milky Way band: a 20 mag/arcsec²
+// sightline at 94 arcsec/px lands on L ≈ 2.3e-3 at the base epoch.
+describe('surfaceBrightnessLuminance', () => {
+  it('matches the design gate’s MW band-pixel budget row', () => {
+    expect(surfaceBrightnessLuminance(BASE_EPOCH_EXPOSURE, 20, 94 ** 2)).toBeCloseTo(
+      2.3296e-3,
+      6,
+    );
+  });
+
+  it('agrees with the explicit per-pixel magnitude it collapses', () => {
+    const omega = 94 ** 2;
+    const magPx = 20 - 2.5 * Math.log10(omega);
+    expect(surfaceBrightnessLuminance(BASE_EPOCH_EXPOSURE, 20, omega)).toBeCloseTo(
+      luminanceForMagnitude(BASE_EPOCH_EXPOSURE, magPx),
+      12,
+    );
+  });
+
+  it('is linear in pixel solid angle — surface brightness is the invariant', () => {
+    const a = surfaceBrightnessLuminance(BASE_EPOCH_EXPOSURE, 21, 1000);
+    const b = surfaceBrightnessLuminance(BASE_EPOCH_EXPOSURE, 21, 4000);
+    expect(b / a).toBeCloseTo(4, 12);
+  });
+});
+
+// The extended-source half of the threshold anchor. `L_THRESH` is where a
+// POINT source at `m_lim` lands; this is where a large diffuse source at
+// the instrument's own sky background lands, and the two have to be the
+// same display level or the render inverts the eye's ordering.
+describe('rodSummationSolidAngleArcsec2', () => {
+  it('lands an extended source at threshold on L_THRESH exactly', () => {
+    const omega = rodSummationSolidAngleArcsec2(EXTENDED_THRESHOLD_SB, EYE_LIMIT_MAG);
+    expect(
+      surfaceBrightnessLuminance(BASE_EPOCH_EXPOSURE, EXTENDED_THRESHOLD_SB, omega),
+    ).toBeCloseTo(L_THRESH, 12);
+  });
+
+  // The consistency check that makes the pair a summation area rather than
+  // a fudge: 22 mag/arcsec² against m_lim 7.8 implies a 13.0 arcmin critical
+  // diameter, inside the scotopic Ricco range measured at a non-zero
+  // background. /docs/science-hdr-pipeline.md#1-the-unit--threshold-anchored-display-luminance (Extended sources).
+  it('implies a scotopic Ricco critical diameter of 13 arcmin', () => {
+    const omega = rodSummationSolidAngleArcsec2(EXTENDED_THRESHOLD_SB, EYE_LIMIT_MAG);
+    expect(omega).toBeCloseTo(478_630.09, 2);
+    const diameterArcmin = (2 * Math.sqrt(omega / Math.PI)) / 60;
+    expect(diameterArcmin).toBeCloseTo(13.011, 3);
+  });
+
+  it('round-trips through its inverse', () => {
+    for (const [sb, limit] of [[22, 7.8], [18, 7.8], [22, 12.1]] as const) {
+      const omega = rodSummationSolidAngleArcsec2(sb, limit);
+      expect(extendedThresholdSbFromSolidAngle(omega, limit)).toBeCloseTo(sb, 9);
+    }
+  });
+
+  // A deeper aperture raises m_lim, and the summation area falls by exactly
+  // as much — so aperture buys point-source depth without moving where an
+  // extended source's threshold sits. That is the visual-instrument fact
+  // that magnification cannot raise surface brightness.
+  it('cancels an aperture gain, leaving the extended threshold fixed', () => {
+    const deeper = EYE_LIMIT_MAG + 4.3;
+    const omega = rodSummationSolidAngleArcsec2(EXTENDED_THRESHOLD_SB, deeper);
+    const exposure = BASE_EPOCH_EXPOSURE * 10 ** (0.4 * 4.3);
+    expect(
+      surfaceBrightnessLuminance(exposure, EXTENDED_THRESHOLD_SB, omega),
+    ).toBeCloseTo(L_THRESH, 12);
+  });
+});

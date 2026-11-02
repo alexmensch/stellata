@@ -1,5 +1,5 @@
 import type { Stellata } from '../stellata';
-import { AU_PER_PC } from '../util/astronomy-constants';
+import { AU_PER_PC } from '../../astro-core/astronomy-constants';
 import {
   fmtDistAuto,
   niceRound,

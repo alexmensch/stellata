@@ -11,10 +11,10 @@ cross-script policy and pointers.
   `data/binaries/multiples.tsv` ride catalog.bin as first-class
   records with `FLAG_BINARY_COMPANION_ONLY` set). The chunks are a
   byte-range split of the v9 binary that keeps every deployed asset
-  under Cloudflare Workers' 25 MiB limit; see [Binary catalog format](catalog/record/README.md#binary-catalog-format-publiccatalogbini--manifest).
+  under Cloudflare Workers' 25 MiB limit; see [Binary catalog format](../src/catalog-format/record/README.md#binary-catalog-format-publiccatalogbini--manifest).
   Also emits
   `public/constellation-boundaries.json` (IAU boundary arcs precessed to
-  ICRS + the fade-quantile table; `catalog/boundaries/README.md`).
+  ICRS + the fade-quantile table; `/src/catalog-format/boundaries/README.md`).
 - `binaries/` — binary-system pipeline → `data/binaries/multiples.tsv`
   (two rows per physical pair, with sep+PA+epoch+Δmag columns) and
   `public/binaries.bin` (runtime artifact, one record per pair, for
@@ -38,7 +38,7 @@ cross-script policy and pointers.
   (`pnpm run measure:band-resolved`): the
   [Leinert 1998](/data/papers/index.md#leinert1998) cap rows and the
   resolution-hole table, written as one generated module into
-  `src/client/milkyway/calibration/`. Not part of the build.
+  `src/astro-core/milkyway/calibration/`. Not part of the build.
 - `release/` — `deploy.yml`'s release steps: checks each uploaded version
   on its preview URL before it takes traffic, then plans and cuts one tag
   + GitHub release per

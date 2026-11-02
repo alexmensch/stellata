@@ -17,7 +17,7 @@ import {
   ZOOM_FLOOR_FRACTION,
   ORBIT_FLOOR_SURFACE_MARGIN,
 } from './star-physics';
-import { R_SUN_PC, AU_PC, KM_PC } from '../../util/astronomy-constants';
+import { R_SUN_PC, AU_PC, KM_PC } from '../../../astro-core/astronomy-constants';
 import { SOL_BODIES } from '../../solar-system/planet-system';
 import { FOV_MIN_DEG, FOV_MAX_DEG } from '../timing';
 

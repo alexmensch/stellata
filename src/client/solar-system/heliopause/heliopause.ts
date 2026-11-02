@@ -3,7 +3,7 @@
 
 import * as THREE from 'three';
 import type { KindContext } from '../../kinds/kind-module';
-import { AU_PC } from '../../util/astronomy-constants';
+import { AU_PC } from '../../../astro-core/astronomy-constants';
 import { ECLIPTIC_NORTH_POLE_ICRS } from '../ephemerides/orbit-rings-layer';
 import {
   FresnelShell,

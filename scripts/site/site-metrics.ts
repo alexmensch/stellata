@@ -5,7 +5,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { selectAll } from 'hast-util-select';
 
-import { catalogChunkFilename, readCatalogHeader } from '../catalog/record/catalog-pure.ts';
+import { catalogChunkFilename, readCatalogHeader } from '../../src/catalog-format/record/catalog-pure.ts';
 import type { IndexEntry } from '../util/citation-index-pure.ts';
 import { parseHtml } from '../util/parse-html.ts';
 import { PACKAGE_JSON, REPO_ROOT } from '../util/paths.ts';

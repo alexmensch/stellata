@@ -417,7 +417,7 @@ enough to see it.
   against Leinert's b = 30° value), in the same direction, and no
   shape parameter bridges that — [The luminosity solve](docs/science-galactic-structure.md#the-luminosity-solve-and-the-constraint-it-cannot-satisfy)
   argues it out;
-  `src/client/milkyway/calibration/README.md` carries the numbers.
+  `src/astro-core/milkyway/calibration/README.md` carries the numbers.
 
 > **Molecular cloud sources.** [Zucker 2020](/data/papers/index.md#zucker2020) + [Zucker 2021](/data/papers/index.md#zucker2021) cloud
 > distances, 3D skeleton extents (Table 1 bounds each cloud's spine, not

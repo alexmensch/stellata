@@ -8,7 +8,7 @@ import {
   makeSlider,
   setReadoutText,
 } from '../../debug/debug-panel';
-import { extendedThresholdSbFor } from '../../filters/filter-state';
+import { extendedThresholdSbFor } from '../../../astro-core/instruments';
 import {
   type ExposureReadout,
   formatExposureReadout,

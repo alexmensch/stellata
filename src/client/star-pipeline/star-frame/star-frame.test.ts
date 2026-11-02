@@ -3,7 +3,7 @@ import * as THREE from 'three';
 import { makeEmptyCatalog } from '../../loaders/catalog-mock';
 import type { Catalog } from '../../loaders/catalog-loader';
 import { julianEpochYearToT } from '../../solar-system/time/time';
-import { R_SUN_PC } from '../../util/astronomy-constants';
+import { R_SUN_PC } from '../../../astro-core/astronomy-constants';
 import { makeHdrEmitterUniforms } from '../../hdr/hdr-emitter-uniforms';
 import { FloatingOrigin } from '../../frame/floating-origin';
 import { StarFrame } from './star-frame';

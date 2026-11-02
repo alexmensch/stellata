@@ -5,20 +5,13 @@ runtime a Horizons-grade ephemeris across 1900–2100. Data contract,
 provenance, units, and the measured accuracy table live in
 `data/ephemerides/README.md`; the runtime side is
 [Horizons element tables](/src/client/solar-system/ephemerides/README.md#horizons-element-tables).
-This folder owns the scripts.
+This folder owns the scripts. The roster, the wire schema, the table
+sampler and the public file names are shared with the viewer:
+[`/src/catalog-format/ephemerides/`](/src/catalog-format/ephemerides/README.md).
 
 - `planet-element-outputs.ts` — `ELEMENT_TABLE_OUTPUTS`, one
   `data/ephemerides/{id}.json` per target, as `fetch:ephemerides`'
   `emitArtifacts` declaration (`../util/README.md`). Side-effect free.
-- `planet-element-roster.ts` — the nine targets, their sample cadence, and the
-  window every table spans (`TABLE_JD_START` / `TABLE_JD_END`,
-  `POSITION_TOLERANCE_AU`). The authoring source; editing a cadence needs a
-  re-run of `fetch:ephemerides`. `tableEpochs` refuses a cadence that does not
-  divide the window exactly — a truncated last interval would leave the
-  runtime on the [Standish 1992](/data/papers/index.md#standish1992) fallback
-  inside the window the table claims.
-- `planet-element-schema.ts` — `PlanetElementTableFile` + `ELEMENT_COLUMNS`,
-  the wire contract shared by the emitter here and the runtime table.
 - `horizons-elements.ts` — pure parser for a Horizons ELEMENTS text
   response. Sibling of `../probes/horizons-vectors.ts`; both sit on
   `../util/horizons-response.ts`. See [Header pins](#header-pins).
@@ -32,8 +25,8 @@ This folder owns the scripts.
   table that misses its accuracy bound never lands, every table that holds
   does, and the run exits non-zero naming the misses. See
   [Cadence](#cadence).
-- `sync-ephemerides.ts` (+ `-pure.ts`, and `ephemerides-mirror-source.ts`
-  declaring the folder) — mirrors the committed JSONs to
+- `sync-ephemerides.ts` (+ `ephemerides-mirror-source.ts` declaring the
+  folder) — mirrors the committed JSONs to
   `public/ephemerides/` (gitignored) via `../util/mirror-to-public.ts` on
   every `pnpm run dev` / `build`, so CI and deploy never touch the network.
   The allowlist predicate keeps this README out of the deployed bundle;
@@ -64,7 +57,7 @@ Mercury is any cadence over 44 days — and the cadences below are 50.
 
 The other five columns need no unwrapping at all, because the wire format
 carries **equinoctial** rather than classical elements (see
-`src/client/solar-system/ephemerides/equinoctial-pure.ts`): eccentricity
+`src/astro-core/equinoctial-pure.ts`): eccentricity
 rides with perihelion in `h`/`k` and inclination rides with the node in
 `p`/`q`, so neither pair goes singular. That is not a nicety — the
 Earth/Moon barycentre's osculating inclination to the ecliptic of J2000

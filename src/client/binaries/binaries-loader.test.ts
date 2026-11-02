@@ -13,7 +13,7 @@ import {
   FLAG_IS_INNER_OF_HIERARCHY,
   NO_PARENT,
 } from './binaries-loader';
-import { J2000_JD } from '../util/astronomy-constants';
+import { J2000_JD } from '../../astro-core/astronomy-constants';
 
 // Round-trip fixture builder mirroring the Python writer. Keeping the
 // encoder local to the test pins the wire contract without dragging

@@ -22,8 +22,8 @@ import {
   moonOffsetEcliptic,
 } from '../../ephemerides/moon-ephemeris';
 import { jdUtToT, julianEpochYearToT } from '../../time/time';
-import { AU_PER_PC, LIGHT_TIME_PER_AU_S } from '../../../util/astronomy-constants';
-import { wrapDegrees } from '../../../util/angles';
+import { AU_PER_PC, LIGHT_TIME_PER_AU_S } from '../../../../astro-core/astronomy-constants';
+import { wrapDegrees } from '../../../../astro-core/angles';
 import { eclipticToIcrs } from '../../../util/ecliptic-frame';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));

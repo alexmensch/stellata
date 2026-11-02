@@ -1,7 +1,7 @@
 // Deep-space-probe mission stats shared by the hover and focus cards.
 // See ./README.md.
 
-import { AU_PER_PC, KM_PC, LIGHT_TIME_PER_AU_S } from '../util/astronomy-constants';
+import { AU_PER_PC, KM_PC, LIGHT_TIME_PER_AU_S } from '../../astro-core/astronomy-constants';
 
 const SECONDS_PER_HOUR = 3600;
 

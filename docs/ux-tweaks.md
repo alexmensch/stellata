@@ -63,7 +63,7 @@ for the surrounding context.
   Widening the range also widens the derived population cull, since the
   cull bound is the deepest threshold the trim can reach.
 - **Soft-taper width** — `SOFT_TAPER_MARGIN_MAG` (0.5) in
-  `solar-system/perceptual-magnitude.ts`, used by `magOk`
+  `/src/astro-core/perceptual-magnitude.ts`, used by `magOk`
   (`../src/client/webgpu/star/star-vertex-tsl.ts`) and the matching
   `smoothstep(uThresholdMag, uThresholdMag + 0.5, vAppMag)` in the
   fragment shader's glow pass. Wider = softer fade-in at the visibility

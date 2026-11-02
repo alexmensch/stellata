@@ -9,7 +9,7 @@ import { makePlanetFieldUniforms } from './planets/planet-field-uniforms-fixture
 import { SOL_BODIES, getPlanetSystem } from './planet-system';
 import type { Stellata } from '../stellata';
 import { SOL_OBJECT_SIDS } from './sol-object-sids';
-import { AU_PC, KM_PC, R_SUN_PC, SUN_ABSMAG_V } from '../util/astronomy-constants';
+import { AU_PC, KM_PC, R_SUN_PC, SUN_ABSMAG_V } from '../../astro-core/astronomy-constants';
 import { CHOSEN_FIRST_LOAD_AT, CHOSEN_FIRST_LOAD_LINK } from '../util/url-state/golden-links-fixture';
 
 const DEG = Math.PI / 180;

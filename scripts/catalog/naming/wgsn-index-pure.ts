@@ -2,7 +2,7 @@
 // which approved name and which glyph-bearing designations reach it.
 // See README.md#the-record-side-join.
 
-import { GREEK_GLYPHS } from './greek-forms';
+import { GREEK_GLYPHS } from '../../../src/catalog-format/naming/greek-forms';
 import { foldNameKey } from './wgsn-normalise-pure';
 import { bayerKeySets, type DesignationRow } from './wgsn-tables-pure';
 import type { WgsnRow } from './wgsn-parse-pure';

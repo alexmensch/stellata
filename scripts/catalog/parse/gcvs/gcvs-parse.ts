@@ -1,14 +1,16 @@
 // GCVS variable-star catalogue parsing and per-Star cross-match.
 // See README.md.
 import {
+  NO_CONSTELLATION_INDEX,
+  VAR_TYPE_UNKNOWN,
+} from '../../../../src/catalog-format/record/catalog-pure';
+import {
   classifyGcvsVarType,
   isPlanetaryTransitOnly,
   normalizeGcvsName,
-  NO_CONSTELLATION_INDEX,
   parseGcvsNumber,
   splitPipeDelimited,
-  VAR_TYPE_UNKNOWN,
-} from '../../record/catalog-pure';
+} from '../../record/record-build-pure';
 import { CON_INDEX } from '../constellations/constellations';
 import type { Star } from '../stars-parse';
 

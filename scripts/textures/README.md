@@ -35,7 +35,7 @@ rather than shipping it.
   relief leg does not rewrite the colour maps or the ring strips.
   Uranus is deliberately absent from
   `BODIES` (2f6.6 design record: texture-less by design — its ring
-  strip is separate). `ring-strips.test.ts` pins `RING_TABLES` spans
+  strip is separate). `/tests/integration/ring-strips.test.ts` pins `RING_TABLES` spans
   to `SOL_PLANETS` and the strips' 8-bit visibility claims.
 - `dem_relief.py` — surface-relief half of the build (imported by
   it): the `DEM_BODIES` per-body contract and the DEM →
@@ -45,7 +45,7 @@ rather than shipping it.
   radius the body is drawn at, which sets the slope scale, and the
   elevation span, which both decodes the reduction and gives the
   renderer its limb bound on relief lighting.
-  `dem-relief.test.ts` pins all three against `SOL_BODIES` /
+  `/tests/integration/dem-relief.test.ts` pins all three against `SOL_BODIES` /
   `RotationElements.mapCenterLonDeg` /
   `surface-relief-pure.ts:RELIEF_ELEV_SPAN_M`, plus the achieved tilt
   statistics in `data/textures/relief/relief.json`, the shipped maps' own
@@ -57,7 +57,7 @@ rather than shipping it.
   two `<body>-horizon-{a,b}.webp` planes. Owns the exact spherical
   elevation-angle geometry that makes the body's own limb an occluder,
   the search arc that bounds it, and the encoding scale.
-  `horizon-map.test.ts` pins the azimuth count and that scale against
+  `/tests/integration/horizon-map.test.ts` pins the azimuth count and that scale against
   `surface-relief-pure.ts`, the search arc against the renderer's
   fallback limb bound, and the manifest rows against the shipped
   planes' own headers. Rationale:
@@ -69,7 +69,7 @@ rather than shipping it.
   skips for shadowing still blocks sky, so this marches from **one DEM
   texel** where that one starts at two OUTPUT texels. The encoding range
   is NOT its own: `SKY_VIEW_RANGE` is owned by
-  `surface-relief-pure.ts`, and `sky-view.test.ts` pins both this script
+  `surface-relief-pure.ts`, and `/tests/integration/sky-view.test.ts` pins both this script
   and the mesh shader against that one export, plus the grid against the
   horizon pair's, the manifest rows against the shipped maps' own
   headers, and the R8 upload and its fallback in the layer. Rationale:

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { AU_KM, J2000_OBLIQUITY_RAD, KM_PC } from '../../util/astronomy-constants';
+import { AU_KM, J2000_OBLIQUITY_RAD, KM_PC } from '../../../astro-core/astronomy-constants';
 import {
   earthMoonSplit,
   MOON_ELEMENTS,

@@ -3,7 +3,7 @@
 // their own R_pc / dMinFloor inputs so the focus UX stays uniform.
 
 import * as THREE from 'three';
-import { AU_PC } from '../../util/astronomy-constants';
+import { AU_PC } from '../../../astro-core/astronomy-constants';
 import {
   type ArrivalState,
   newArrival,

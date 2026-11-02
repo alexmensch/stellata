@@ -5,7 +5,7 @@ import * as THREE from 'three';
 import type {
   BoundaryArtifact,
   BoundaryFadeTableWire,
-} from '../../../scripts/catalog/boundaries/boundaries-artifact-pure';
+} from '../../catalog-format/boundaries/boundaries-artifact-pure';
 import { CHART_REFERENCE_INK } from '../chart-mode/chart-palette';
 import type {
   ChromeLineMaterial, ChromeLineMaterials, DashedChromeLineStroke,

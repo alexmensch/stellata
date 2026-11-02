@@ -7,10 +7,10 @@ import * as THREE from 'three';
 import {
   decodeRegionGrid,
   type BoundaryArtifact,
-} from '../../../scripts/catalog/boundaries/boundaries-artifact-pure';
+} from '../../catalog-format/boundaries/boundaries-artifact-pure';
 import { SPHERE_RADIUS_PC } from '../galactic/coord-spheres/coord-sphere';
-import { raDecFromUnitVector } from '../util/equatorial-basis';
-import { constellationKey, createGridConstellationLookup } from './iau-geometry/iau-boundaries-pure';
+import { raDecFromUnitVector } from '../../astro-core/equatorial-basis';
+import { constellationKey, createGridConstellationLookup } from '../../astro-core/iau-geometry/iau-boundaries-pure';
 
 export interface ConstellationTableEntry {
   code: string;

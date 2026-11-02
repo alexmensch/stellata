@@ -1,12 +1,14 @@
 import * as THREE from 'three';
 
-import type { LgEmission } from '../../../scripts/local-group/build-local-group-pure';
+import {
+  LOCAL_GROUP_VERSION,
+  type LgEmission,
+  type LgKind,
+  type LgSource,
+  type LocalGroupFile,
+} from '../../catalog-format/local-group/local-group-schema';
 import { viewingDistanceForExtent } from '../camera/focus/focus-transition';
 import { sidColumnError } from '../util/sid-resolver';
-
-export type LgKind = 'disc' | 'ellipsoid';
-export type LgSource = 'LVDB' | 'OVERRIDE';
-export type { LgEmission, SersicParams } from '../../../scripts/local-group/build-local-group-pure';
 
 export interface LgObject {
   name: string;
@@ -57,27 +59,6 @@ export function lgViewingDistancePc(obj: Pick<LgObject, 'axes'>): number {
   return viewingDistanceForExtent(maxSemiAxisPc(obj));
 }
 
-interface RawObject {
-  name: string;
-  id: string;
-  type: string;
-  aliases?: string[];
-  sid: number;
-  center: [number, number, number];
-  kind: LgKind;
-  axes: [number, number, number];
-  quat: [number, number, number, number];
-  source: LgSource;
-  distance: number;
-  emission: LgEmission;
-}
-
-interface RawCatalog {
-  version: number;
-  count: number;
-  objects: RawObject[];
-}
-
 /**
  * Null means "no Local Group layer", never an error — the same contract
  * `loadClouds` uses. A missing file is an ordinary fresh checkout
@@ -91,8 +72,8 @@ export async function loadLocalGroup(url: string): Promise<LgCatalog | null> {
     return null;
   }
   if (!res.ok) return null;
-  const raw = (await res.json()) as RawCatalog;
-  if (raw.version !== 2) {
+  const raw = (await res.json()) as LocalGroupFile;
+  if (raw.version !== LOCAL_GROUP_VERSION) {
     console.warn(`local-group.json version ${raw.version} unsupported`);
     return null;
   }

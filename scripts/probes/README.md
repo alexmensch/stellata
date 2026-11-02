@@ -2,19 +2,13 @@
 
 Fetch + sync for the five Sun-escape probes. Data contract, provenance,
 frame/unit facts, and the mission-date caveats live in
-`data/probes/README.md`; this folder owns the scripts.
+`data/probes/README.md`; this folder owns the scripts. The roster, the
+wire schema and the public file names are shared with the viewer:
+[`/src/catalog-format/probes/`](/src/catalog-format/probes/README.md).
 
 - `probe-trajectory-outputs.ts` — `PROBE_OUTPUTS`, one
   `data/probes/{id}.json` per roster probe, as `fetch:probes`'
   `emitArtifacts` declaration (`../util/README.md`). Side-effect free.
-- `probe-roster.ts` — the five `ProbeMission` rows: Horizons target id,
-  SPK start epoch, launch instant, last contact, focus-card mission
-  line. The authoring source for every hand-curated mission fact;
-  editing one needs a re-run of `fetch:probes` to reach
-  `data/probes/`.
-- `probe-trajectory-schema.ts` — `ProbeTrajectoryFile` +
-  `PROBE_SAMPLE_COLUMNS`, the wire contract shared by the emitter here
-  and the runtime loader in `src/client/solar-system/probes/`.
 - `horizons-vectors.ts` (+ test) — pure parser for a Horizons VECTORS
   text response. Re-reads every header field the query pinned
   (`Reference frame`, `Output units`, `Center body name`) and throws on
@@ -40,8 +34,7 @@ frame/unit facts, and the mission-date caveats live in
   probe lands as soon as it verifies, so one that fails to fetch or verify
   is reported and leaves only its own file as it was, and the run exits
   non-zero naming it.
-- `sync-probes.ts` (+ `-pure.ts`, test; `probes-mirror-source.ts` declares
-  the folder) — mirrors the committed JSONs
+- `sync-probes.ts` (`probes-mirror-source.ts` declares the folder) — mirrors the committed JSONs
   to `public/probes/` (gitignored) via `scripts/util/mirror-to-public.ts`
   on every `pnpm run dev` / `build`, so CI and deploy never touch the
   network. The allowlist predicate keeps this folder's README out of the

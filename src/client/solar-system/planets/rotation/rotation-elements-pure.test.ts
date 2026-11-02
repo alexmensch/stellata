@@ -17,7 +17,7 @@ import { MOON_ELEMENTS, moonOffsetEcliptic } from '../../ephemerides/moon-epheme
 import { ECLIPTIC_NORTH_POLE_ICRS } from '../../ephemerides/orbit-rings-layer';
 import { SOL_MOONS } from '../../planet-system';
 import { jdUtToT, T_CLAMP_MAX_S, T_CLAMP_MIN_S } from '../../time/time';
-import { J2000_JD, J2000_OBLIQUITY_RAD } from '../../../util/astronomy-constants';
+import { J2000_JD, J2000_OBLIQUITY_RAD } from '../../../../astro-core/astronomy-constants';
 
 const T_J2000 = jdUtToT(J2000_JD);
 

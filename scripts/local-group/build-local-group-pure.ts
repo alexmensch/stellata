@@ -5,7 +5,7 @@
 import {
   fluxNumber,
   solveDensity0,
-} from '../../src/client/hdr/emission/density0-solver-pure';
+} from '../../src/astro-core/emission/density0-solver-pure';
 import {
   bnCoeff,
   discGeometryIntegral,
@@ -13,25 +13,15 @@ import {
   sersicGeometryIntegral,
   u99,
 } from './emission-geometry-pure';
+import {
+  MAX_DISTANCE_PC,
+  type LgEmission,
+  type LgKind,
+  type LgObjectRow,
+  type SersicParams,
+} from '../../src/catalog-format/local-group/local-group-schema';
 
-/** Max heliocentric distance (parsecs) we render. 2 Mpc covers the
- *  canonical Local Group: M31 + M33 + their satellite subgroup, plus
- *  Sextans A/B and a handful of outer-band dwarfs that bleed past the
- *  ~1.5 Mpc IAU-style boundary. Beyond 2 Mpc we'd be picking up the
- *  IC 342 / Maffei groups — a separate decision.
- *
- *  Single source of truth — `CAMERA_FAR_PC` below derives from it, and
- *  the runtime camera envelope in `src/client/stellata.ts` imports both,
- *  so the build filter and the camera can never drift. */
-export const MAX_DISTANCE_PC = 2_000_000;
 
-/** Far plane for the runtime camera, paired with `MAX_DISTANCE_PC`.
- *  Sits 1 Mpc past `controls.maxDistance` (= `MAX_DISTANCE_PC`) so M31 /
- *  M33 + outer dwarfs render with comfort headroom when the camera
- *  reaches the maxDistance shell. */
-export const CAMERA_FAR_PC = MAX_DISTANCE_PC + 1_000_000;
-
-export type LgKind = 'disc' | 'ellipsoid';
 
 export type EmissionFamily = 'sersic' | 'disc';
 
@@ -44,7 +34,7 @@ export interface OverrideRow {
   orient: string;
   /** Optional standalone position. Populated only for rows that name
    *  objects not in LVDB (M31, M33). When present, the row builds a
-   *  full LgObject without an LVDB merge; the three values must all be
+   *  full LgObjectRow without an LVDB merge; the three values must all be
    *  set together. When absent, the row supplements an LVDB row whose
    *  position drives the merge. */
   raDeg?: number;
@@ -96,32 +86,6 @@ export interface LvdbRow {
   /** Measured Sérsic index, or null (n = 1 fallback applies). */
   nSersic: number | null;
 }
-
-/** Solved Sérsic component — shared by the spheroid family and the
- *  M31 bulge (DRY at schema level). Axes in parsecs; density0 in the
- *  zero-point-free flux-number units the ρ₀ solve works in. */
-export interface SersicParams {
-  reffAxesPc: [number, number, number];
-  n: number;
-  bn: number;
-  pn: number;
-  uMax: number;
-  density0: number;
-}
-
-export type LgEmission =
-  | ({ family: 'sersic'; mV: number; color?: string } & SersicParams)
-  | {
-      family: 'disc';
-      mV: number;
-      color?: string;
-      rdPc: number;
-      zdPc: number;
-      rEnvPc: number;
-      zEnvPc: number;
-      density0: number;
-      bulge?: SersicParams;
-    };
 
 /** Search crosswalk + morphological type row from aliases.tsv. */
 export interface AliasRow {
@@ -192,27 +156,6 @@ export function orderAliases(
 export function objectTypeFor(displayName: string, curated?: string): string {
   if (curated) return curated;
   return displayName.endsWith(DEFAULT_TYPE_SUFFIX) ? 'Dwarf spheroidal' : 'Dwarf galaxy';
-}
-
-export interface LgObject {
-  name: string;
-  id: string;
-  /** Morphological type for search rows + the focus card. */
-  type: string;
-  /** Extra typeable designations (catalog cross-IDs, common names). */
-  aliases?: string[];
-  /** Heliocentric ICRS position, parsecs. */
-  center: [number, number, number];
-  kind: LgKind;
-  /** Local-frame semi-axes, parsecs. */
-  axes: [number, number, number];
-  /** Rotation from local frame to ICRS as a unit quaternion [x, y, z, w]. */
-  quat: [number, number, number, number];
-  source: 'LVDB' | 'OVERRIDE';
-  /** Heliocentric distance to the centroid in parsecs — precomputed for
-   *  ready-to-display readouts on the runtime side. */
-  distance: number;
-  emission: LgEmission;
 }
 
 /** RA/Dec in degrees; the result is ICRS heliocentric Cartesian, in
@@ -659,7 +602,7 @@ export function renderedWireframeAxes(
   return [emission.rEnvPc, emission.rEnvPc, emission.zEnvPc];
 }
 
-/** Assemble an LgObject from already-resolved fields. Both call sites
+/** Assemble an LgObjectRow from already-resolved fields. Both call sites
  *  (`mergeRowAndOverride` and `buildStandaloneOverride`) arrive at the
  *  same shape after they decide where axes/orient/position come from;
  *  the trailing `kind` derivation, ICRS conversion, quaternion build,
@@ -675,7 +618,7 @@ function buildLgObjectFromOrient(
   orient: Orientation,
   source: 'LVDB' | 'OVERRIDE',
   emission: LgEmission,
-): LgObject {
+): LgObjectRow {
   const kind: LgKind = orient.kind === 'disc' ? 'disc' : 'ellipsoid';
   const center = raDecDistanceToIcrs(raDeg, decDeg, distancePc);
   const quat = buildOrientationQuat(raDeg, decDeg, orient);
@@ -699,7 +642,7 @@ function buildLgObjectFromOrient(
  *  which the caller matches before the display-name rewrite. Type must be
  *  derived before the promotion renames `obj` — the suffix fallback reads
  *  the name it was written for. */
-export function applyAliasMeta(obj: LgObject, meta: AliasRow | undefined): LgObject {
+export function applyAliasMeta(obj: LgObjectRow, meta: AliasRow | undefined): LgObjectRow {
   if (!meta) return obj;
   obj.type = objectTypeFor(obj.name, meta.type);
   const aliases = [...meta.aliases];
@@ -719,7 +662,7 @@ export function applyAliasMeta(obj: LgObject, meta: AliasRow | undefined): LgObj
 export function mergeRowAndOverride(
   row: LvdbRow,
   override: OverrideRow | undefined,
-): LgObject | null {
+): LgObjectRow | null {
   let axes: [number, number, number];
   let orient: Orientation;
   let source: 'LVDB' | 'OVERRIDE';
@@ -757,13 +700,13 @@ export function mergeRowAndOverride(
   );
 }
 
-/** Build a full LgObject from an override row that carries its own
+/** Build a full LgObjectRow from an override row that carries its own
  *  position (raDeg, decDeg, distanceKpc) — used for objects that aren't
  *  in LVDB at all (M31, M33; the LVDB `dwarf_all` table excludes the
  *  three major spirals). The row's distance must be ≤ MAX_DISTANCE_PC.
  *  Returns null if the row falls outside the envelope so the caller can
  *  log it and continue. */
-export function buildStandaloneOverride(ov: OverrideRow): LgObject | null {
+export function buildStandaloneOverride(ov: OverrideRow): LgObjectRow | null {
   if (ov.raDeg === undefined || ov.decDeg === undefined || ov.distanceKpc === undefined) {
     throw new Error(
       `overrides.tsv: '${ov.name}' has no LVDB match and no ra_deg/dec_deg/distance_kpc — cannot build position`,

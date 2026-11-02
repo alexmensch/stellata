@@ -13,7 +13,7 @@ import { PARKED_LEDGER } from './distance/parallax/parked-ledger-tsv';
 import { PLACEMENT_LINEAGE } from './distance/placement-lineage-pure';
 import { LINEAGE_LAYOUT, stageFamilies, stageOutputFiles } from './lineage/lineage-io';
 import { SIMBAD_SOURCED_DISTANCES_FILE } from './distance/parallax/simbad-sourced-ledger-tsv';
-import { CATALOG_CHUNK_FILENAME } from './record/catalog-pure';
+import { CATALOG_CHUNK_FILENAME } from '../../src/catalog-format/record/catalog-pure';
 import { ALLOCATION_LINEAGE } from '../sid/allocation-lineage-pure';
 import { registryFiles } from '../sid/registry-outputs';
 import { CATALOG_PARTITION } from '../sid/registry-partitions-pure';

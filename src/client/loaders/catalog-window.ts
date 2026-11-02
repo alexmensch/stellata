@@ -13,7 +13,7 @@ import {
   type NumericRecordField,
   type RecordColumnSink,
   type RecordSpan,
-} from '../../../scripts/catalog/record/catalog-pure';
+} from '../../catalog-format/record/catalog-pure';
 import { writePulsationParams } from '../star-pipeline/pulsation/pulsation-params-pure';
 
 export interface CatalogWindowColumns {

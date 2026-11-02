@@ -12,9 +12,11 @@ that sit *above* this cascade; this file owns which parallax they override.
 
 ```
 scripts/catalog/distance/parallax/
-  parallax-cascade.ts (+ test)  The cascade, its tier enum, the two precision
-                                constants, and the `DistVia → BuildCounts` key
-                                map. Its skip rules are `refusedPublicationCited` from
+  parallax-cascade.ts (+ test)  The cascade, the two precision constants, and
+                                the `DistVia → BuildCounts` key map. The
+                                `DistVia` enum itself is a record field, so it
+                                is the record module's
+                                (/src/catalog-format/record/catalog-pure.ts). Its skip rules are `refusedPublicationCited` from
                                 ../gaia-distrust, fed the publications the
                                 tiers above refused.
   pair-member-parallax.ts       The `pair_member_parallax` index: multiples.tsv

@@ -209,7 +209,7 @@ accumulate: `lsbDitherTsl` is that composition, and the resolve pass reads
 it through `../tonemap-tsl.ts` rather than keeping a private copy. Its two
 constants — the 8-bit divisor and the `DITHER_SEED_OFFSET` a caller adds
 when it jitters a ray start off the same noise — live with the rest of the
-dither's numbers in `../../hdr/tonemap/tonemap-pure.ts`.
+dither's numbers in `../../../astro-core/tonemap/tonemap-pure.ts`.
 
 **One helper, one hash.** The planet mesh and the atmosphere shell call
 `interleavedGradientNoiseTsl` like every other layer, and

@@ -10,11 +10,12 @@ import {
   type EmitterInkArgs,
   type FrameExposure,
 } from './emitter-visibility-pure';
+import { sceneExposure, thresholdMagFor } from '../exposure-epoch';
 import {
-  sceneExposure,
   summationSolidAngleFor,
-  thresholdMagFor,
-} from '../exposure-epoch';
+  DEFAULT_INSTRUMENT,
+  instrumentLimitMag,
+} from '../../../../astro-core/instruments';
 import {
   adaptationBranches,
   adaptationDm,
@@ -24,12 +25,11 @@ import {
   extendedThresholdSbFromSolidAngle,
   pixelSolidAngleArcsec2,
   surfaceBrightnessLuminance,
-} from '../../emission/emission-pure';
+} from '../../../../astro-core/emission/emission-pure';
 import { makeFrameExposure } from '../../../scene/frame-ctx-mock';
 import { MW_PEAK_SB_DUST_FREE } from '../../../milkyway/band-peak-pure';
-import { DR_MAG, TOE_BLACK_MAG, tonemapWhitePoint } from '../../tonemap/tonemap-pure';
-import { SOFT_TAPER_MARGIN_MAG } from '../../../solar-system/perceptual-magnitude';
-import { DEFAULT_INSTRUMENT, instrumentLimitMag } from '../../../filters/filter-state';
+import { DR_MAG, TOE_BLACK_MAG, tonemapWhitePoint } from '../../../../astro-core/tonemap/tonemap-pure';
+import { SOFT_TAPER_MARGIN_MAG } from '../../../../astro-core/perceptual-magnitude';
 
 const LIMIT = instrumentLimitMag(DEFAULT_INSTRUMENT);
 const WHITE = tonemapWhitePoint(DR_MAG);
@@ -75,7 +75,7 @@ describe('taperFactor', () => {
 });
 
 describe('emitterPeakDisplayLevel', () => {
-  // /src/client/hdr/tonemap/README.md#operator: "L = L_THRESH resolves to 0.15 of full
+  // /src/astro-core/tonemap/README.md#operator: "L = L_THRESH resolves to 0.15 of full
   // scale after encode". A source at the threshold carries exactly
   // L_THRESH by construction, so this pins the whole chain end to end.
   it('puts a threshold source at 0.15 of full scale on an unadapted frame', () => {

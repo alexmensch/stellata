@@ -5,7 +5,7 @@ everything it resolves per star: space-motion velocity and the GCVS
 variability cross-match. Constellation membership and the stick figures are
 `constellations/`. Spectral class and physical radius
 are resolved here but owned by `../spectral/`. The binary record layout these
-fields land in is [Binary catalog format](../record/README.md#binary-catalog-format-publiccatalogbini--manifest); the
+fields land in is [Binary catalog format](../../../src/catalog-format/record/README.md#binary-catalog-format-publiccatalogbini--manifest); the
 membership term
 it walks is `../membership/README.md`.
 
@@ -246,7 +246,7 @@ quantities describing the same object:
 [Why an owned PM on a blended row is admissible at all](../distance/pm-rescue/README.md#why-an-owned-pm-on-a-blended-row-is-admissible-at-all).
 The
 east/north tangent basis is `equatorialTangentBasis`
-(`src/client/util/equatorial-basis.ts`), shared with `directionAtEpoch`,
+(`src/astro-core/equatorial-basis.ts`), shared with `directionAtEpoch`,
 `companion-promotion.ts`'s sep+PA projection, and the runtime's Tier-1
 sky→ICRS orbit projection. μ_α* is cos δ-applied — never divide by cos δ.
 

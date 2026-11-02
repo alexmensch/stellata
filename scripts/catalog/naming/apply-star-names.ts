@@ -3,7 +3,7 @@
 // See README.md#the-record-side-join.
 
 import { readArtifact } from '../../util/sources/source';
-import { FLAG_IS_SOL, NO_CONSTELLATION_INDEX } from '../record/catalog-pure';
+import { FLAG_IS_SOL, NO_CONSTELLATION_INDEX } from '../../../src/catalog-format/record/catalog-pure';
 import { CON_INDEX } from '../parse/constellations/constellations';
 import { foldNameKey } from './wgsn-normalise-pure';
 import {

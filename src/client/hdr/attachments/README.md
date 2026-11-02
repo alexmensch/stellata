@@ -84,7 +84,7 @@ resolved surface in exactly the sense the pin means:
 The emission unit already draws that line generically —
 `peak_L = L(m) / max(1, π·r_phys_px²)`, so below 1 px the whole flux lands
 on the peak and above it the emission IS true surface brightness
-([Unit](../emission/README.md#unit--what-an-emitting-layer-writes)). A texel counted as coverage without light
+([Unit](../../../astro-core/emission/README.md#unit--what-an-emitting-layer-writes)). A texel counted as coverage without light
 in R pulls `D` down and over-exposes the surface the pin holds; light in R
 without coverage leaves it alone. The night side is the dark case big
 enough to matter — geometric coverage would halve `D` at full phase and gut
@@ -129,7 +129,7 @@ sees from the band's brightest sightline at the base epoch is
 `L` = 1.657e-3 — **3.5 stops under `L_ADAPT`**, so no cut can originate
 here (the 0.02 the band *displays* at never reaches this channel, which is
 the point), and it writes no mask, so it can never reach the pin at all.
-Pinned in `milkyway.test.ts`.
+Pinned in `/tests/integration/milkyway.test.ts`.
 
 **A point source's does not.** Its R divides the display kernel by the
 kernel's own area integral, `Φ(n)·D²`, where Φ is
