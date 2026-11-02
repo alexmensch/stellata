@@ -109,14 +109,13 @@ export function manualFreshness(
   step: ManualStep,
   stampFile: string,
   outputs: OutputClaims,
-  describe: (entry: string) => PullDescription,
 ): Freshness {
   const read = readManualRecord(step, stampFile);
   if (read.kind !== 'read') return { kind: 'stale', changed: [`(${read.kind === 'absent' ? 'no' : 'unreadable'} stamp)`] };
   const { record } = read;
   const changed = [...changedSince(record.stamp.inputs), ...stampChanges(record.stamp, outputs)];
   if (record.kind === 'pull') {
-    const now = describe(resolve(REPO_ROOT, step.entry));
+    const now = describePull(resolve(REPO_ROOT, step.entry));
     if (pullQueryHash(now) !== record.query) changed.push('(query)');
     if ((now.request ? requestHash(now.request) : undefined) !== record.request) changed.push('(request)');
   }

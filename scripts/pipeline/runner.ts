@@ -12,8 +12,8 @@ import { familyMembers } from '../util/emit-artifacts';
 import { REPO_ROOT } from '../util/paths';
 import { UPDATE_SNAPSHOTS_ENV } from '../util/snapshot-check';
 import {
-  derivedFreshness, describePull, manualFreshness, recordedFreshness,
-  type Freshness, type PullDescription,
+  derivedFreshness, manualFreshness, recordedFreshness,
+  type Freshness,
 } from './freshness';
 import type { Loaded } from './load-table';
 import { holdLocks } from './locks';
@@ -40,7 +40,6 @@ export interface RunOptions {
   readonly force: boolean;
   readonly updateSnapshots: boolean;
   readonly log: (line: string) => void;
-  readonly describe?: (entry: string) => PullDescription;
 }
 
 type Loads = Extract<Loaded, { kind: 'loaded' }>;
@@ -93,7 +92,7 @@ class Run {
     const { step } = resolved;
     if (!isBuild(step)) {
       const stampFile = this.dirs.manualStamp(step.name);
-      const fresh = manualFreshness(step, stampFile, resolved.outputs, this.options.describe ?? describePull);
+      const fresh = manualFreshness(step, stampFile, resolved.outputs);
       return fresh.kind === 'fresh' ? fresh : { kind: 'stale', command: step.command, changed: fresh.changed };
     }
     const shared = writersOf(this.graph, step.name).filter((w) => isBuild(this.loaded.steps.get(w)!.step));
@@ -150,7 +149,7 @@ class Run {
   }
 }
 
-export function describeVerdict(name: string, verdict: Verdict): string {
+function describeVerdict(name: string, verdict: Verdict): string {
   switch (verdict.kind) {
     case 'fresh': return `· ${name} fresh`;
     case 'built': return `✓ ${name} built`;
@@ -160,7 +159,7 @@ export function describeVerdict(name: string, verdict: Verdict): string {
   }
 }
 
-export function keptLoopLines(graph: StepGraph): string[] {
+function keptLoopLines(graph: StepGraph): string[] {
   return graph.keptLoops.map((e) => `kept loop: ${e.from} → ${e.to} through ${e.files.map(repoRelative).join(', ')}`);
 }
 
