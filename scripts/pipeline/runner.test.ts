@@ -291,6 +291,15 @@ if sys.argv[1:] == ["--describe"]:
     expect((await run([step], ['bake'])).verdicts.get('bake')).toEqual({ kind: 'stale', changed: ['(request)'] });
   });
 
+  it('fails a manual step whose describe cannot run, and skips its readers', async () => {
+    write('req.tsv', 'r1');
+    const pull = pullStep('astro', 'astro.tsv', 'req.tsv');
+    write('steps/astro.py', 'import sys\nsys.exit("the file it projects is missing")\n');
+    const result = await run([pull, tsStep('reader', 'reader.out', ['astro.tsv'])], ['reader']);
+    expect(result.kinds).toEqual({ astro: 'failed', reader: 'skipped' });
+    expect(result.verdicts.get('astro')).toMatchObject({ kind: 'failed', reason: expect.stringContaining('the file it projects is missing') });
+  });
+
   it('never runs a manual step under --force', async () => {
     write('req.tsv', 'r1');
     const steps = [pullStep('astro', 'astro.tsv', 'req.tsv')];

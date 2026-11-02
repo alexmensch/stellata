@@ -79,6 +79,8 @@ class Run {
     if (!isBuild(step)) {
       try {
         return manualFreshness(step, resolved.outputs, this.tree);
+      } catch (err) {
+        return { kind: 'failed', reason: err instanceof Error ? err.message : String(err) };
       } finally {
         await held.release();
       }

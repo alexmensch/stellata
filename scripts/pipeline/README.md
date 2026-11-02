@@ -234,7 +234,8 @@ lands with it; `run.ts` rejects it until then.
    - Any other `build` step: take its lock, then check its stamp, then run or
      skip, then release. Taking the lock before the check is what lets a run
      that waited see the fresh stamp and skip.
-   - A manual step is checked, never run.
+   - A manual step is checked, never run. A check whose `--describe`
+     cannot run (the file it projects is missing) fails the step.
 3. Exit non-zero if any manual step was stale or any step failed, naming each
    stale step's command and each failure.
 
