@@ -341,8 +341,8 @@ Hand-kept lists become derivations over the table:
   moved or a declared output is missing from the record. Writers of a pull's
   record use the same two hash functions.
 - `python-run-pure.ts` (tested through `runner.test.ts`) — `recordProblems`: a
-  write outside the declared outputs and snapshots, or a read of another
-  step's output with no path from that step in the graph.
+  write outside the declared outputs and snapshots, or a read, listing or
+  probe of another step's output with no path from that step in the graph.
 - `runner.ts` (+ test) — `runSteps`: the walk of [The runner](#the-runner--runts)
   over a loaded table, the `Verdict` union (`fresh`, `built`, `stale`,
   `failed`, `skipped`) matched exhaustively, and the exit status. The runner

@@ -298,6 +298,21 @@ os.replace(tmp, ${JSON.stringify(at(out))})
     const covered = await run([tsStep('a', 'a.out', ['a.in']), pyStep('p', 'p.out', body, { after: ['a'] } as Partial<StepEntry>)], ['p']);
     expect(covered.kinds).toEqual({ a: 'fresh', p: 'built' });
   });
+
+  it.each([
+    ['lists', `os.listdir(${JSON.stringify('OUTDIR')})`],
+    ['probes', `from scripts.util.build_stamp import probe\nprobe(Path(${JSON.stringify('OUTFILE')}))`],
+  ])('fails a run that %s another step\'s output without running after it', async (how, probeLine) => {
+    write('a.in', 'x');
+    write('made/a.out', 'stale copy');
+    const line = probeLine.replace('"OUTDIR"', JSON.stringify(at('made'))).replace('"OUTFILE"', JSON.stringify(at('made/a.out')));
+    const body = `${line}\nPath(${JSON.stringify(at('p.out'))}).write_text("p")`;
+    const result = await run([tsStep('a', 'made/a.out', ['a.in']), pyStep('p', 'p.out', body)], ['p', 'a']);
+    expect(result.verdicts.get('p')).toEqual({
+      kind: 'failed',
+      reason: `p read ${at(how === 'lists' ? 'made' : 'made/a.out')}, an output of a, without running after it`,
+    });
+  });
 });
 
 describe('loadTable', () => {
