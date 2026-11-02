@@ -574,9 +574,9 @@ upstream catalogue release:
   per-row source_id updates against the DR3↔DR4 cross-walk.
 - **AT-HYG point release** — drop the new
   `data/athyg/athyg_3X_classic_ids.csv` in and re-run
-  `pnpm run build:binaries`, its one consumer. Membership and
-  `build:catalog` read neither it nor the frozen spine, so no request set
-  or side-file moves with it.
+  `pnpm run build:binaries`, its one build consumer
+  ([Consumed by](data/athyg/README.md#consumed-by) lists every reader).
+  `build:catalog` reads neither it nor the frozen spine.
 - **Bailer-Jones republication** — re-run `pnpm run refresh:bailer-jones`
   against the republished ESA table (`TABLE` in `refresh-bailer-jones.py`),
   then rebuild. Runs independently of any other refresh; the override still
