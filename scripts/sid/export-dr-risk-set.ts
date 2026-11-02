@@ -5,15 +5,16 @@
 import { serialiseSourceIdRequest } from '../catalog/astrometry-request/export-astrometry-request-pure';
 import { emitArtifacts, runStep } from '../util/emit-artifacts';
 import { DR_RISK_SET_OUTPUTS } from './dr-risk-set-outputs';
-import { LEDGER } from './ledger-tsv';
+import { LEDGERS } from './ledger-tsv';
 import { readArtifact } from '../util/sources/source';
 import { retiredSids } from './events-pure';
 import { EVENTS } from './events-tsv';
+import { CATALOG_PARTITION } from './registry-partitions-pure';
 import { parseDesignation } from './sid-pure';
 
 function main(): void {
-  const ledger = readArtifact(LEDGER);
-  const retired = retiredSids(readArtifact(EVENTS));
+  const ledger = readArtifact(LEDGERS[CATALOG_PARTITION]);
+  const retired = retiredSids(readArtifact(EVENTS[CATALOG_PARTITION]));
   const ids = new Set<string>();
   for (const row of ledger) {
     if (retired.has(row.sid)) continue;

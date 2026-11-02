@@ -1,8 +1,8 @@
 {
   "ledger": {
-    "rows": 984015,
+    "rows": 983796,
     "max_sid": 984015,
-    "sha256": "509d429fcb100a14b9bec97bde995549f878adf0f3f0e191f3a76c57f6fccccd"
+    "sha256": "4eb88093ade56a36d11154d629f9ea59ad7ca49e3e2e547bf7a938dab7d9926f"
   },
   "events": {
     "rows": 3681,

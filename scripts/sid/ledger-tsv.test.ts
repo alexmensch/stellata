@@ -1,5 +1,5 @@
 
 import { describeCommittedRoundTrip } from '../util/tsv/committed-round-trip';
-import { LEDGER } from './ledger-tsv';
+import { LEDGERS } from './ledger-tsv';
 
-describeCommittedRoundTrip(LEDGER);
+Object.values(LEDGERS).forEach((ledger) => describeCommittedRoundTrip(ledger));

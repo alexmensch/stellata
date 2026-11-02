@@ -113,7 +113,7 @@ byte is one byte whatever bits are set, so no offset can shift and
 comment: bit 2 (molecular clouds), bit 3 (`showMilkyway`), bit 7
 (`showConstellation`), all three now gated by the declutter floor alone
 (`../../scene/declutter/README.md`). SIDs are frozen forever in
-`data/sid/ledger.tsv`, so a v4 link survives any catalogue rebuild.
+the `data/sid/` ledgers, so a v4 link survives any catalogue rebuild.
 `cam`, `tgt`, `up` and `worldOffset` prefix their payload with a 1-byte
 sub-mask, so only diverging components cost a float32; each narrow
 scalar is 1 byte at its slider's native step.
