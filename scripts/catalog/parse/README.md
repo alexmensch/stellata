@@ -246,7 +246,7 @@ quantities describing the same object:
 [Why an owned PM on a blended row is admissible at all](../distance/pm-rescue/README.md#why-an-owned-pm-on-a-blended-row-is-admissible-at-all).
 The
 east/north tangent basis is `equatorialTangentBasis`
-(`src/client/util/equatorial-basis.ts`), shared with `directionAtEpoch`,
+(`src/astro-core/equatorial-basis.ts`), shared with `directionAtEpoch`,
 `companion-promotion.ts`'s sep+PA projection, and the runtime's Tier-1
 sky→ICRS orbit projection. μ_α* is cos δ-applied — never divide by cos δ.
 

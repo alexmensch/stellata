@@ -11,8 +11,8 @@ import {
   projectGalacticPlaneToICRS,
   type OrbitalElements,
 } from './binary-orbit-pure';
-import { AU_PC, J2000_JD } from '../util/astronomy-constants';
-import { GALACTIC_NORTH_POLE_ICRS } from '../galactic/galactic-coords';
+import { AU_PC, J2000_JD } from '../../astro-core/astronomy-constants';
+import { GALACTIC_NORTH_POLE_ICRS } from '../../astro-core/galactic-coords';
 
 function elt(over: Partial<OrbitalElements>): OrbitalElements {
   return {

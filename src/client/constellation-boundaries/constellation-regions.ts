@@ -9,7 +9,7 @@ import {
   type BoundaryArtifact,
 } from '../../../scripts/catalog/boundaries/boundaries-artifact-pure';
 import { SPHERE_RADIUS_PC } from '../galactic/coord-spheres/coord-sphere';
-import { raDecFromUnitVector } from '../util/equatorial-basis';
+import { raDecFromUnitVector } from '../../astro-core/equatorial-basis';
 import { constellationKey, createGridConstellationLookup } from './iau-geometry/iau-boundaries-pure';
 
 export interface ConstellationTableEntry {

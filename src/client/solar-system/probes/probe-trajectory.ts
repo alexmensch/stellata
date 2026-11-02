@@ -2,7 +2,7 @@
 // sampler every probe consumer reads. See README.md#sampler.
 
 import { PROBE_SAMPLE_STRIDE, type ProbeTrajectoryFile } from '../../../../scripts/probes/probe-trajectory-schema';
-import { AU_PC } from '../../util/astronomy-constants';
+import { AU_PC } from '../../../astro-core/astronomy-constants';
 import { jdTdbToT } from '../time/time';
 
 const SECONDS_PER_DAY = 86400;

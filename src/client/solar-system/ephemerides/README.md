@@ -214,7 +214,7 @@ Frame: the series is referred to the equinox of date, and the model works
 in the J2000 ecliptic. Over the clock's span the equinox sweeps ~42° and
 the ecliptic plane itself moves ~0.5°, so the conversion is a full
 three-angle rotation, not a longitude offset —
-`../../util/precession.ts`'s [Vondrák 2011](/data/papers/index.md#vondrak2011) long-term model supplies it.
+`/src/astro-core/precession.ts`'s [Vondrák 2011](/data/papers/index.md#vondrak2011) long-term model supplies it.
 Nutation is deliberately omitted: mean-of-date → mean-of-J2000 is exactly
 the precession-only chain, and the Sun's position carries no nutation
 either, so the pair stays consistent.

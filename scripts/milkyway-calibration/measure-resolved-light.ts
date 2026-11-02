@@ -13,7 +13,7 @@ import {
   GALACTIC_CENTRE_PC,
   GALACTIC_NORTH_POLE_ICRS,
   ICRS_TO_GAL_M3,
-} from '../../src/client/galactic/galactic-coords';
+} from '../../src/astro-core/galactic-coords';
 import {
   SOL_GALACTOCENTRIC_PC,
   type Vec3,

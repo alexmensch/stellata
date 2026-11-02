@@ -2,7 +2,7 @@
 // ../webgpu/milkyway/milkyway-band-tsl.ts's raymarch. Owns the constants the shader receives as
 // uniforms — README.md#density-profiles calibration/README.md.
 
-import { R0_PC } from '../../galactic/galactic-coords';
+import { R0_PC } from '../../../astro-core/galactic-coords';
 import {
   footprintAlong,
   footprintRadiusPc,

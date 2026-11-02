@@ -3,7 +3,7 @@
 
 import * as THREE from 'three';
 import type { EmitterMaterial } from '../scene/emitter-material';
-import { ICRS_TO_GAL_M3, GALACTIC_CENTRE_PC, R0_PC } from '../galactic/galactic-coords';
+import { ICRS_TO_GAL_M3, GALACTIC_CENTRE_PC, R0_PC } from '../../astro-core/galactic-coords';
 import { SB_ZERO_POINT } from '../hdr/emission/emission-pure';
 import {
   ANALYTICAL_DUST_NORM_PER_PC,

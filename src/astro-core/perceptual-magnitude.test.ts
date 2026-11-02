@@ -5,8 +5,8 @@ import {
   hostIrradianceMagnitude,
   planetApparentMagnitude,
 } from './perceptual-magnitude';
-import { MOON_PHASE, lambertianPhaseFactor, empiricalPhaseFactor } from './phase-function';
-import { ARCSEC_TO_RAD, AU_PC, KM_PC, SUN_ABSMAG_V } from '../util/astronomy-constants';
+import { MOON_PHASE, lambertianPhaseFactor, empiricalPhaseFactor } from '../client/solar-system/phase-function';
+import { ARCSEC_TO_RAD, AU_PC, KM_PC, SUN_ABSMAG_V } from './astronomy-constants';
 
 describe('apparentMagnitude', () => {
   it('returns the absolute magnitude at 10 pc by definition', () => {

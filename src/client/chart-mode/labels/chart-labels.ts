@@ -11,7 +11,7 @@ import type { CompleteCatalog } from '../../loaders/catalog-loader';
 import type { LateState } from '../../util/late/late';
 import { projectToScreenInto } from '../../overlays/overlay-project';
 import { setNumAttr } from '../../overlays/dirty-attr';
-import { apparentMagnitude } from '../../solar-system/perceptual-magnitude';
+import { apparentMagnitude } from '../../../astro-core/perceptual-magnitude';
 import { limitMagOf } from '../../filters/filter-state';
 
 // Chart-mode label engine. Per-frame, projects every candidate

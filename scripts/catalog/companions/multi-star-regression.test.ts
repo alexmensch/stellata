@@ -25,7 +25,7 @@ import {
   KM_S_TO_PC_YR,
   VELOCITY_SANITY_CEILING_PC_YR,
 } from '../distance/direction-cascade';
-import { equatorialTangentBasisAt } from '../../../src/client/util/equatorial-basis';
+import { equatorialTangentBasisAt } from '../../../src/astro-core/equatorial-basis';
 import {
   FLAG_BINARY_COMPANION_ONLY,
   FLAG_BINARY_PRIMARY,
@@ -46,7 +46,7 @@ import {
 } from '../../../src/client/binaries/orbit-relation-cache';
 import { evaluateOrbitSkyAU } from '../../../src/client/binaries/binary-orbit-pure';
 import { BinaryOrbitField } from '../../../src/client/binaries/binary-orbit-field';
-import { AU_PC, AU_PER_PC } from '../../../src/client/util/astronomy-constants';
+import { AU_PC, AU_PER_PC } from '../../../src/astro-core/astronomy-constants';
 import { readMultiplesTsv, wdsRootOf } from './companion-promotion';
 import { MULTIPLES_TSV, MULTIPLES_TSV_PATH } from '../../binaries/multiples-tsv';
 import { NAMING_DUPLICATES } from '../naming/naming-duplicates-tsv';

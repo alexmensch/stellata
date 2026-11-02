@@ -29,7 +29,7 @@ import { tToJdUt } from '../solar-system/time/time';
 import { buildStarLabels, seedStarLabelsFromNames } from '../typeahead/star-name-tables';
 import { loadSearchIndex } from '../typeahead/search-index-host';
 import type { SearchIndexPayload } from '../typeahead/search-index-payload';
-import { MIN_PHYSICAL_RADIUS_R_SUN, R_SUN_PC } from '../util/astronomy-constants';
+import { MIN_PHYSICAL_RADIUS_R_SUN, R_SUN_PC } from '../../astro-core/astronomy-constants';
 import type { Late, LateState } from '../util/late/late';
 import { catalogSidDomain } from '../loaders/catalog-sid-domain';
 

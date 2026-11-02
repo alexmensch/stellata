@@ -18,7 +18,7 @@ import {
   instrumentLimitMag,
   limitMagForAperture,
 } from '../../filters/filter-state';
-import { SOFT_TAPER_MARGIN_MAG } from '../../solar-system/perceptual-magnitude';
+import { SOFT_TAPER_MARGIN_MAG } from '../../../astro-core/perceptual-magnitude';
 
 const EYE_LIMIT_MAG = instrumentLimitMag(DEFAULT_FILTER.instrument);
 

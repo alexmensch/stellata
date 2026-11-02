@@ -7,7 +7,7 @@ import { BinaryOrbitPathLayer, type RelationOffsetSource } from './binary-orbit-
 import { fakeChromeLineMaterials as chromeLines } from '../../chrome-lines/chrome-lines-mock';
 import type { MemberSphere } from '../../local-depth/bracket/slice-pure';
 import { RING_EXTENT_MARGIN } from '../../solar-system/local-cluster-pure';
-import { AU_PC } from '../../util/astronomy-constants';
+import { AU_PC } from '../../../astro-core/astronomy-constants';
 
 // One Kepler pair 0↔1 (q = 0.4, Tier 2 — no inclination flag). Focusing
 // star 0 puts the relation on its chain.

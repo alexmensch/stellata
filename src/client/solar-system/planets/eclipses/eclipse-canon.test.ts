@@ -20,8 +20,8 @@ import { ELEMENT_TARGETS } from '../../../../../scripts/ephemerides/planet-eleme
 import type { PlanetElementTableFile } from '../../../../../scripts/ephemerides/planet-element-schema';
 import { jdTdbToT } from '../../time/time';
 import { deltaTSeconds } from '../../time/delta-t-pure';
-import { J2000_JD } from '../../../util/astronomy-constants';
-import { wrapDegrees } from '../../../util/angles';
+import { J2000_JD } from '../../../../astro-core/astronomy-constants';
+import { wrapDegrees } from '../../../../astro-core/angles';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const CANON_DIR = resolve(__dirname, '../../../../../data/eclipse-canon');

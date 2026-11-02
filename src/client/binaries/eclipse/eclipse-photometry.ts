@@ -17,13 +17,13 @@ import {
   type OrbitRelationCache,
 } from '../orbit-relation-cache';
 import { DirtyItemUploader } from '../../util/attribute-upload';
-import { AU_PC, R_SUN_PC } from '../../util/astronomy-constants';
+import { AU_PC, R_SUN_PC } from '../../../astro-core/astronomy-constants';
 import { tToJdUt } from '../../solar-system/time/time';
 import {
   VISIBILITY_HORIZON_PC,
   ECLIPSE_DIM_TAU_S,
 } from '../binary-tuning';
-import { apparentMagnitude, SOFT_TAPER_MARGIN_MAG } from '../../solar-system/perceptual-magnitude';
+import { apparentMagnitude, SOFT_TAPER_MARGIN_MAG } from '../../../astro-core/perceptual-magnitude';
 import {
   CADENCE_REPORT_STILL,
   fasterRate,

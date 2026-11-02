@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { DEFAULT_INSTRUMENT, instrumentLimitMag } from '../../filters/filter-state';
-import { SOFT_TAPER_MARGIN_MAG } from '../../solar-system/perceptual-magnitude';
+import { SOFT_TAPER_MARGIN_MAG } from '../../../astro-core/perceptual-magnitude';
 import { ExposureController, type ExposureUniforms } from './exposure-controller';
 import {
   cullMagFor,

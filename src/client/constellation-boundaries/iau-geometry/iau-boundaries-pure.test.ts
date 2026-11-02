@@ -2,8 +2,8 @@ import { describe, expect, it } from 'vitest';
 
 import { CON_INDEX, iauEdgeRecords } from '../../../../scripts/catalog/parse/constellations/constellations';
 import { STELLARIUM } from '../../../../scripts/catalog/parse/constellations/stellarium-source';
-import { raDecFromUnitVector } from '../../util/equatorial-basis';
-import { B1875_JD, precessRaDec, precessionRotationFromJ2000 } from '../../util/precession';
+import { raDecFromUnitVector } from '../../../astro-core/equatorial-basis';
+import { B1875_JD, precessRaDec, precessionRotationFromJ2000 } from '../../../astro-core/precession';
 import {
   FULL_SPHERE_SQUARE_DEG,
   IAU_REGION_COUNT,

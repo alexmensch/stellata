@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { angularToPx } from '../../camera/controls/star-geometry';
 import { PLANET_PARK_FILL_FRACTION } from '../../camera/controls/star-physics';
-import { ARCSEC_TO_RAD } from '../../util/astronomy-constants';
+import { ARCSEC_TO_RAD } from '../../../astro-core/astronomy-constants';
 import {
   SB_ZERO_POINT,
   luminanceForMagnitude,

@@ -14,7 +14,7 @@ agents-md-size.test.ts   Size guard for AGENTS.md. Holds the file under
                          symlink to AGENTS.md that keeps Claude Code
                          and every other harness on one file.
 astronomy-constants-sync.test.ts
-                         Parity pin between util/astronomy-constants.ts
+                         Parity pin between astro-core/astronomy-constants.ts
                          and the build-script copy.
 artifact-freshness.test.ts  Built-artifact coherence: fails (not skips)
                          when public/catalog-manifest.json exists but

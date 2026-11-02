@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { GAL_TO_ICRS, GALACTIC_CENTRE_PC } from '../galactic/galactic-coords';
+import { GAL_TO_ICRS, GALACTIC_CENTRE_PC } from '../../astro-core/galactic-coords';
 import { SB_ZERO_POINT, lumaNormalisedTint } from '../hdr/emission/emission-pure';
 import type { EmitterMaterial } from '../scene/emitter-material';
 import {

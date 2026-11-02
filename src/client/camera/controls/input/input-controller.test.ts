@@ -23,7 +23,7 @@ import type { EventBus } from '../../../util/event-bus';
 import { RollController } from './roll-controller';
 import { AIM_DEGENERATE_DIST_PC } from '../aim-controller';
 import { PINCH_NOTCH_GAIN, WHEEL_NOTCH_DELTA_PX } from './pinch-zoom-pure';
-import { GALACTIC_NORTH_POLE_ICRS } from '../../../galactic/galactic-coords';
+import { GALACTIC_NORTH_POLE_ICRS } from '../../../../astro-core/galactic-coords';
 
 
 const star = (idx: number): Target => ({ kind: 'star', idx });

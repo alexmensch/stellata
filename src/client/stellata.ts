@@ -13,7 +13,7 @@ import { focusFrameInputs } from './attitude/focus-frame';
 import { HudOverlay, hudElementsById } from './overlays/hud-overlay';
 import { hudSceneLayer } from './overlays/hud-scene-layer';
 import { ChartLabels } from './chart-mode/labels/chart-labels';
-import { GALACTIC_NORTH_POLE_ICRS } from './galactic/galactic-coords';
+import { GALACTIC_NORTH_POLE_ICRS } from '../astro-core/galactic-coords';
 import { MilkyWay } from './milkyway/milkyway';
 import { ObserveControls } from './camera/observe/observe-controls';
 import { RenderGate } from './render-gate/render-gate';

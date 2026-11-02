@@ -11,10 +11,6 @@ obscuring the local stars.
 
 ```
 src/client/galactic/
-  galactic-coords.ts (+ test)     Shared GAL_TO_ICRS (Matrix4) +
-                                  GALACTIC_CENTRE_PC (Vector3 at R₀ =
-                                  8.122 kpc). Reused by the Milky Way
-                                  volumetric layer (src/client/milkyway/README.md).
   galactic-disc.ts (+ test)       15 kpc midplane ring + ±1800 pc
                                   thickness rings + 5 × 3 kpc bulge
                                   wireframe, on one seam stroke;
@@ -41,11 +37,9 @@ src/client/overlays/                  (full overlay roster in src/client/overlay
 Local Group wireframes + per-galaxy labels are a separate layer; see
 `src/client/local-group/README.md`.
 
-**Shared module** `galactic-coords.ts` exports `GAL_TO_ICRS` (Matrix4)
-and `GALACTIC_CENTRE_PC` (Vector3 at R₀ = 8.122 kpc), built from the
-J2000 IAU galactic-pole and galactic-centre angles with explicit
-re-orthogonalisation. The Milky Way volumetric layer reuses these
-constants directly — keep the module minimal and stable.
+The galactic frame itself — `GAL_TO_ICRS`, `GALACTIC_CENTRE_PC` — is
+shared with the build pipeline, so it lives in
+`/src/astro-core/galactic-coords.ts`.
 
 **Galactic disc outline** (`galactic-disc.ts`) — *on in dark mode at
 detail level ≥ representational, hidden in chart mode*. The declutter

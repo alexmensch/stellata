@@ -45,7 +45,7 @@ import {
   type RecordRef,
 } from '../parse/corpus-tsv';
 import { floatCell, intCell, textCell } from '../../util/tsv/table-pure';
-import { AU_PER_PC } from '../../../src/client/util/astronomy-constants';
+import { AU_PER_PC } from '../../../src/astro-core/astronomy-constants';
 import { MULTIPLES_TSV, MULTIPLES_TSV_PATH } from '../../binaries/multiples-tsv';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));

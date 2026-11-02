@@ -9,7 +9,7 @@ import {
   EXPECTED_FRAME_ECLIPTIC,
   parseHorizonsVectors,
 } from '../probes/horizons-vectors';
-import { orbitalStateToCartesian } from '../../src/client/util/kepler-solver';
+import { orbitalStateToCartesian } from '../../src/astro-core/kepler-solver';
 import {
   buildElementTable,
   elementTableSampleAt,

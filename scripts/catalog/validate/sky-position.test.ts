@@ -15,7 +15,7 @@ import {
   lookupByRef,
 } from '../catalog-lookup';
 import { parseRef, type RecordRef } from '../parse/corpus-tsv';
-import { unitVectorFromRaDec, type UnitVector } from '../../../src/client/util/equatorial-basis';
+import { unitVectorFromRaDec, type UnitVector } from '../../../src/astro-core/equatorial-basis';
 import {
   CATALOG_SCENE_EPOCH_JYR,
   advancePositionsToEpoch,

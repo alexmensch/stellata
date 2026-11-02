@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
 import { NO_INSTANCE } from '../../frame/shared-uniforms';
 import { tToJdUt, VirtualClock } from '../../solar-system/time/time';
-import { J2000_JD } from '../../util/astronomy-constants';
+import { J2000_JD } from '../../../astro-core/astronomy-constants';
 import type { FrameCtx } from '../scene-layer';
 import { FrameLoop, type FrameLoopDeps } from './frame-loop';
 

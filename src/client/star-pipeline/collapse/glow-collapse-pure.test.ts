@@ -10,7 +10,7 @@ import {
   EV_MAX_STOPS, sceneExposure, thresholdMagFor,
 } from '../../hdr/exposure/exposure-epoch';
 import { emitterPutsInkOnScreen, taperFactor } from '../../hdr/exposure/visibility/emitter-visibility-pure';
-import { SOFT_TAPER_MARGIN_MAG } from '../../solar-system/perceptual-magnitude';
+import { SOFT_TAPER_MARGIN_MAG } from '../../../astro-core/perceptual-magnitude';
 
 describe('the collapse floor', () => {
   it('is the operator inverted at half an 8-bit step, margin under it', () => {

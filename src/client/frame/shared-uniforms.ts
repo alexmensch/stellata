@@ -11,7 +11,7 @@ import {
 } from '../filters/filter-state';
 import { cullMagFor } from '../hdr/exposure/exposure-epoch';
 import type { HdrEmitterUniforms } from '../hdr/hdr-emitter-uniforms';
-import { R_SUN_PC } from '../util/astronomy-constants';
+import { R_SUN_PC } from '../../astro-core/astronomy-constants';
 import { makeColorLutTexture } from '../star-pipeline/blackbody-lut';
 import type { PerceptualDiscUniforms } from '../star-pipeline/perceptual-disc/perceptual-disc-uniforms';
 import { MIRROR_CAPACITY } from '../star-pipeline/local-pass/star-mirror-slots';

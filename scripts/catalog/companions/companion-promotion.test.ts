@@ -43,7 +43,7 @@ import { makeStar as makeStarWithDefaults } from '../parse/star-fixture';
 import { multiplesRow } from './multiples-fixture';
 import { MULTIPLES_COLUMNS } from '../../binaries/multiples-tsv';
 import { gaiaAstrometryRow } from '../distance/astrometry-fixture';
-import { AU_PER_PC } from '../../../src/client/util/astronomy-constants';
+import { AU_PER_PC } from '../../../src/astro-core/astronomy-constants';
 
 // The real IAU decomposition, not a stub: the fixtures below carry real
 // coordinates, so a positional assertion (Sirius B in Canis Major) is a

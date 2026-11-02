@@ -28,7 +28,7 @@ import {
 import { makeFrameExposure } from '../../../scene/frame-ctx-mock';
 import { MW_PEAK_SB_DUST_FREE } from '../../../milkyway/band-peak-pure';
 import { DR_MAG, TOE_BLACK_MAG, tonemapWhitePoint } from '../../tonemap/tonemap-pure';
-import { SOFT_TAPER_MARGIN_MAG } from '../../../solar-system/perceptual-magnitude';
+import { SOFT_TAPER_MARGIN_MAG } from '../../../../astro-core/perceptual-magnitude';
 import { DEFAULT_INSTRUMENT, instrumentLimitMag } from '../../../filters/filter-state';
 
 const LIMIT = instrumentLimitMag(DEFAULT_INSTRUMENT);

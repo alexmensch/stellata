@@ -11,7 +11,7 @@ import { STELLARIUM } from '../../../../scripts/catalog/parse/constellations/ste
 import { ATHYG_CLASSIC_IDS } from '../../../../scripts/catalog/spine/athyg-classic-ids-source';
 import { REPO_ROOT } from '../../../../scripts/util/paths';
 import { isReadable } from '../../../../scripts/util/sources/source';
-import { RA_HOURS_TO_DEG } from '../../util/astronomy-constants';
+import { RA_HOURS_TO_DEG } from '../../../astro-core/astronomy-constants';
 import { createIauConstellationLookup } from './iau-boundaries-pure';
 
 const ATHYG_CSV = resolve(REPO_ROOT, ATHYG_CLASSIC_IDS.file);

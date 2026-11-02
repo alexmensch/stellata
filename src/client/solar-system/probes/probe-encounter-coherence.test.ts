@@ -7,7 +7,7 @@ import { readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import * as THREE from 'three';
-import { AU_PER_PC, KM_PC } from '../../util/astronomy-constants';
+import { AU_PER_PC, KM_PC } from '../../../astro-core/astronomy-constants';
 import { ELEMENT_TARGETS } from '../../../../scripts/ephemerides/planet-element-roster';
 import type { PlanetElementTableFile } from '../../../../scripts/ephemerides/planet-element-schema';
 import { buildElementTable, type PlanetElementTable } from '../ephemerides/element-table';

@@ -17,7 +17,7 @@ import {
 } from '../exposure/exposure-epoch';
 import { angularToPx } from '../../camera/controls/star-geometry';
 import { FOV_MAX_DEG, FOV_MIN_DEG } from '../../camera/timing';
-import { ARCSEC_TO_RAD } from '../../util/astronomy-constants';
+import { ARCSEC_TO_RAD } from '../../../astro-core/astronomy-constants';
 
 const omegaPxFor = (fovDeg: number, viewportPx: number) =>
   pixelSolidAngleArcsec2(angularToPx(viewportPx, (fovDeg * Math.PI) / 180));

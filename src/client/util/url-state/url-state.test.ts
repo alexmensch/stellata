@@ -21,7 +21,7 @@ import { HeldOrbitPose } from '../../attitude/orbit-frame/held-pose';
 import { DEFAULT_FILTER, DEFAULT_FOV } from '../../filters/filter-state';
 import { EV_MAX_STOPS, EV_STEP_STOPS } from '../../hdr/exposure/exposure-epoch';
 import { SidResolver, arrayDomain, sidColumnIndex, type DomainFill, type SidDomain } from '../sid-resolver';
-import { GALACTIC_NORTH_POLE_ICRS } from '../../galactic/galactic-coords';
+import { GALACTIC_NORTH_POLE_ICRS } from '../../../astro-core/galactic-coords';
 import * as THREE from 'three';
 import { captureOrbitFrame, poseIntoFrame } from '../../attitude/attitude-pure';
 import { ECLIPTIC_NORTH_POLE_ICRS } from '../../solar-system/ephemerides/orbit-rings-layer';

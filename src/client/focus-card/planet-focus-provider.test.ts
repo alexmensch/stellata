@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { createPlanetFocusProvider } from './planet-focus-provider';
 import { SOL_MOONS, SOL_PLANETS } from '../solar-system/planet-system';
 import type { OrbitDescriptor } from '../solar-system/ephemerides/orbit-descriptor';
-import { AU_PC } from '../util/astronomy-constants';
+import { AU_PC } from '../../astro-core/astronomy-constants';
 import { setUnit } from '../ui/distance-util';
 import type { FocusCardRow } from './focus-card-types';
 

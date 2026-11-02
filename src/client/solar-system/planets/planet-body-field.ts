@@ -20,14 +20,14 @@ import type {
 import type { HdrEmitterUniforms } from '../../hdr/hdr-emitter-uniforms';
 import { chartDiscPxForAppMag } from '../../chart-mode/chart-disc-pure';
 import { NO_INSTANCE } from '../../frame/shared-uniforms';
-import { AU_PC, KM_PC } from '../../util/astronomy-constants';
+import { AU_PC, KM_PC } from '../../../astro-core/astronomy-constants';
 import {
   CADENCE_REPORT_STILL,
   fasterRate,
   type CadenceReport,
 } from '../../render-gate/cadence/clock-cadence-pure';
 import type { CadenceCtx } from '../../scene/scene-layer';
-import { angleBetweenRad } from '../../util/angles';
+import { angleBetweenRad } from '../../../astro-core/angles';
 import { MESH_FADE_MIN_PX } from './mesh-crossfade';
 import {
   orbitPlaneNormalInto,
@@ -36,7 +36,7 @@ import {
   planetLocalPosition,
   solidityForType,
 } from '../ephemerides/orbit-rings-layer';
-import { planetApparentMagnitude } from '../perceptual-magnitude';
+import { planetApparentMagnitude } from '../../../astro-core/perceptual-magnitude';
 import {
   perceptualAppSizePx,
   perceptualDmEff,

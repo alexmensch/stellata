@@ -7,7 +7,7 @@ import {
 import { CONSTELLATIONS, iauEdgeRecords } from '../../../scripts/catalog/parse/constellations/constellations';
 import { STELLARIUM } from '../../../scripts/catalog/parse/constellations/stellarium-source';
 import { SPHERE_RADIUS_PC } from '../galactic/coord-spheres/coord-sphere';
-import { unitVectorFromRaDec } from '../util/equatorial-basis';
+import { unitVectorFromRaDec } from '../../astro-core/equatorial-basis';
 import { validateBoundaryArtifact } from './boundary-artifact-loader';
 import { createConstellationRegions } from './constellation-regions';
 import { IAU_REGION_COUNT, createIauConstellationLookup } from './iau-geometry/iau-boundaries-pure';

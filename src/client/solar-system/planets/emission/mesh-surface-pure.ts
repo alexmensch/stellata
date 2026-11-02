@@ -2,10 +2,10 @@
 // the disc-mean normalisers that make the shaded disc integrate to the
 // body's true flux. See README.md#physical-luminance-emission--into-the-scene-wide-hdr-unit.
 
-import { ARCSEC_TO_RAD } from '../../../util/astronomy-constants';
+import { ARCSEC_TO_RAD } from '../../../../astro-core/astronomy-constants';
 import { luminanceForMagnitude, surfaceBrightnessLuminance } from '../../../hdr/emission/emission-pure';
 import type { AtmoDiscMeans } from '../../atmosphere/atmosphere-scattering-pure';
-import { bodySurfaceBrightnessMagArcsec2, hostIrradianceMagnitude } from '../../perceptual-magnitude';
+import { bodySurfaceBrightnessMagArcsec2, hostIrradianceMagnitude } from '../../../../astro-core/perceptual-magnitude';
 
 /** Limb-darkening floor and exponent — `mix(LIMB_FLOOR, 1, μ^LIMB_EXP)`.
  *  Mirrored as literals in `../../../webgpu/solar-system/planet-mesh-tsl.ts`; the drift test pins

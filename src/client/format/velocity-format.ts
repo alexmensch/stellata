@@ -2,8 +2,8 @@
 // heading of the velocity vector. See ./README.md.
 
 import * as THREE from 'three';
-import { ICRS_TO_GAL_M3 } from '../galactic/galactic-coords';
-import { AU_KM, AU_PER_PC, DAYS_PER_JULIAN_YEAR } from '../util/astronomy-constants';
+import { ICRS_TO_GAL_M3 } from '../../astro-core/galactic-coords';
+import { AU_KM, AU_PER_PC, DAYS_PER_JULIAN_YEAR } from '../../astro-core/astronomy-constants';
 
 /** km/s per pc/yr — the catalog `velocities` unit onto the display unit. */
 export const KMS_PER_PC_YR =

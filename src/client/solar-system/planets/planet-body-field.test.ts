@@ -6,7 +6,7 @@ import {
 } from './planet-body-field';
 import { chartDiscPxForAppMag } from '../../chart-mode/chart-disc-pure';
 import { NO_INSTANCE } from '../../frame/shared-uniforms';
-import { AU_PC, KM_PC, R_SUN_PC } from '../../util/astronomy-constants';
+import { AU_PC, KM_PC, R_SUN_PC } from '../../../astro-core/astronomy-constants';
 import { getPlanetSystem, SOL_BODIES, type PlanetSystem, type Planet } from '../planet-system';
 import {
   MERCURY_PHASE,
@@ -16,7 +16,7 @@ import {
   phaseAngleFor,
   phaseFactorFor,
 } from '../phase-function';
-import { planetApparentMagnitude } from '../perceptual-magnitude';
+import { planetApparentMagnitude } from '../../../astro-core/perceptual-magnitude';
 import {
   SATURN_RING_PHOTOMETRY,
   maxRingSystemFluxFactor,

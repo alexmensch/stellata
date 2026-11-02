@@ -60,15 +60,6 @@ src/client/solar-system/
                                   PlanetBodyField.isCollapsedOntoParent
                                   verdicts. Covers exoplanet hosts as
                                   soon as bk5 attaches them.
-  perceptual-magnitude.ts         Per-body apparent-magnitude model
-                                  (Lambertian + empirical phase factors)
-                                  + the host-irradiance magnitude and the
-                                  mesh's disc surface brightness (see
-                                  planets/README.md#physical-luminance-emission).
-                                  Drives the body field's glare
-                                  sizing/brightness and per-planet label
-                                  gating. Also consumed by ../binaries/
-                                  and ../camera/controls/ for stars.
   phase-function.ts (+ test)      Lambertian + empirical phase
                                   functions + phaseRatioToLambert
                                   (mesh phase scalar). Pure helpers.
@@ -181,7 +172,8 @@ via a same-as edge, so that record's in-record sid and
 
 ## Reflected-light magnitude model
 
-`perceptual-magnitude.ts` + `phase-function.ts` are the CPU side of the
+`/src/astro-core/perceptual-magnitude.ts` (the per-body apparent-magnitude
+model, shared with the build pipeline) + `phase-function.ts` are the CPU side of the
 shared reflected-light model; `webgpu/solar-system/planet-glare-tsl.ts`
 carries the GPU mirror. Both must stay in step — the pure helpers are vitest-pinned
 and the full-Moon calibration (−12.7) anchors the underlying flux.

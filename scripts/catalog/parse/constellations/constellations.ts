@@ -6,7 +6,7 @@ import {
   createIauConstellationLookup,
   type IauConstellationLookup,
 } from '../../../../src/client/constellation-boundaries/iau-geometry/iau-boundaries-pure';
-import { raDecFromUnitVector } from '../../../../src/client/util/equatorial-basis';
+import { raDecFromUnitVector } from '../../../../src/astro-core/equatorial-basis';
 
 /** The parsed Stellarium modern sky-culture JSON (stellarium-source.ts). */
 export interface StellariumSkyCulture {

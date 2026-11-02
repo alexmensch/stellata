@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 
-import { orbitalStateToCartesian } from '../../util/kepler-solver';
+import { orbitalStateToCartesian } from '../../../astro-core/kepler-solver';
 import {
   blendEquinoctialInto,
   equinoctialFromAngles,

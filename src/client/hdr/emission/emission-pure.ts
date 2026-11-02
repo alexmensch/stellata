@@ -2,7 +2,7 @@
 // luminance, and the peak a point source's display kernel carries. CPU
 // mirror of ../../webgpu/emission-tsl.ts — see README.md#unit--what-an-emitting-layer-writes.
 
-import { ARCSEC_TO_RAD } from '../../util/astronomy-constants';
+import { ARCSEC_TO_RAD } from '../../../astro-core/astronomy-constants';
 import { type Rgb, relativeLuminance } from '../tonemap/tonemap-pure';
 
 /** Every emission clamps here before the write. Extended Reinhard maps

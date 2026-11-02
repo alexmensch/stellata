@@ -32,7 +32,7 @@ disables. Hidden in chart mode.
 - `milkyway.test.ts` — the component specs the layer states, the
   calibration pins and the brightness verdict.
 
-`GAL_TO_ICRS` / `GALACTIC_CENTRE_PC` live in `../galactic/galactic-coords.ts`,
+`GAL_TO_ICRS` / `GALACTIC_CENTRE_PC` live in `/src/astro-core/galactic-coords.ts`,
 imported here for the GC-anchored mesh placement.
 
 ## The material seam

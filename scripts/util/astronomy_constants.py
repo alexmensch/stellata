@@ -1,4 +1,4 @@
-"""Python mirror of src/client/util/astronomy-constants.ts.
+"""Python mirror of src/astro-core/astronomy-constants.ts.
 One definition per quantity — drift between this file and the TS
 canonical is a bug. The sibling vitest module also pins these values."""
 

@@ -20,7 +20,7 @@ import {
 import {
   STAR_PASS_CORE_MASK, STAR_PASS_GLOW, type StarPass,
 } from '../../star-pipeline/star-pass';
-import { SOFT_TAPER_MARGIN_MAG } from '../../solar-system/perceptual-magnitude';
+import { SOFT_TAPER_MARGIN_MAG } from '../../../astro-core/perceptual-magnitude';
 import { R_V } from '../../star-pipeline/extinction/dust-raymarch-pure';
 import { kernelFluxPeakTsl, pointSourcePeakTsl } from '../emission-tsl';
 import { dustRaymarchAvTsl, type DustTextureNode } from '../extinction/dust-raymarch-tsl';

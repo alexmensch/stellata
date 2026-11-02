@@ -1,7 +1,7 @@
 // Parses public/binaries.bin into a typed record-set the runtime
 // reads per frame. See /src/client/binaries/README.md#format-contract.
 
-import { J2000_JD } from '../util/astronomy-constants';
+import { J2000_JD } from '../../astro-core/astronomy-constants';
 
 export const MAGIC = 'BIN1';
 export const VERSION = 1;

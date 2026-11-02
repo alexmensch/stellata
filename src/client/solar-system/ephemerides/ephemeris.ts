@@ -2,8 +2,8 @@
 // (Unix-seconds): frozen Horizons element tables where they reach, the Standish 1992
 // (/data/papers/index.md#standish1992) series elsewhere. See README.md#planet-ephemeris.
 
-import { AU_PC, DAYS_PER_JULIAN_YEAR, J2000_JD } from '../../util/astronomy-constants';
-import { orbitalStateToCartesian, solveKepler } from '../../util/kepler-solver';
+import { AU_PC, DAYS_PER_JULIAN_YEAR, J2000_JD } from '../../../astro-core/astronomy-constants';
+import { orbitalStateToCartesian, solveKepler } from '../../../astro-core/kepler-solver';
 import { tToJdTdb } from '../time/time';
 import { elementTableSampleAt, type PlanetElementTable } from './element-table';
 import {

@@ -11,7 +11,7 @@ import {
   moonGeocentricOfDate,
 } from './lunar-theory-pure';
 import { moonGeocentricKmAtJdTt } from './moon-ephemeris';
-import { J2000_JD } from '../../util/astronomy-constants';
+import { J2000_JD } from '../../../astro-core/astronomy-constants';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const TRUTH_TSV = resolve(__dirname, '../../../../data/horizons/moon-vector-truth.tsv');

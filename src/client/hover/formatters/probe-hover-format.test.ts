@@ -1,5 +1,5 @@
 import { describe, expect, it, beforeEach } from 'vitest';
-import { AU_PC, KM_PC } from '../../util/astronomy-constants';
+import { AU_PC, KM_PC } from '../../../astro-core/astronomy-constants';
 import { setUnit } from '../../ui/distance-util';
 import { formatProbeHover, type ProbeHoverFormatContext } from './probe-hover-format';
 

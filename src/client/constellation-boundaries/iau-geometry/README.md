@@ -101,7 +101,7 @@ digit, which splinters 236 RA bounds into 259.
 
 ## B1875
 
-`B1875_JD` (`../../util/precession.ts`) is 2405889.2586 — **1874 Dec
+`B1875_JD` (`/src/astro-core/precession.ts`) is 2405889.2586 — **1874 Dec
 31.76**, by the Besselian epoch formula, not a Julian-year offset from
 J2000. The rotation is the IAU 1976
 ([Lieske 1979](/data/papers/index.md#lieske1979)) composition

@@ -12,7 +12,7 @@ import type { BinariesData } from '../binaries/binaries-loader';
 import { NO_PARENT } from '../binaries/binaries-loader';
 import { makeKindContext } from '../kinds/kind-context-mock';
 import { makeEmptyCatalog, type MockCatalog } from '../loaders/catalog-mock';
-import { MIN_PHYSICAL_RADIUS_R_SUN, R_SUN_PC } from '../util/astronomy-constants';
+import { MIN_PHYSICAL_RADIUS_R_SUN, R_SUN_PC } from '../../astro-core/astronomy-constants';
 import { LateCell } from '../util/late/late';
 import { lateAbsent } from '../util/late/late-fixture';
 import { createStarKindModule, type StarModuleRuntime } from './star-module';

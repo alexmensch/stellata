@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { GAL_TO_ICRS, GALACTIC_CENTRE_PC } from './galactic-coords';
+import { GAL_TO_ICRS, GALACTIC_CENTRE_PC } from '../../astro-core/galactic-coords';
 import { farFieldFadeOpacity } from './galactic-fade';
 import type {
   ChromeLineMaterial, ChromeLineMaterials,

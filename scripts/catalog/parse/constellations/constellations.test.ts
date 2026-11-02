@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { unitVectorFromRaDec } from '../../../../src/client/util/equatorial-basis';
+import { unitVectorFromRaDec } from '../../../../src/astro-core/equatorial-basis';
 import { assertFigureVerticesInFirstChunk, CONSTELLATIONS, createConstellationAssignment, iauEdgeRecords } from './constellations';
 import { STELLARIUM } from './stellarium-source';
 

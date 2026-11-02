@@ -4,7 +4,7 @@
 
 import { Fn, clamp, dot, float, log2, max, min, pow, sqrt, vec3, vec4 } from 'three/tsl';
 import type { Node } from 'three/webgpu';
-import { ARCSEC_TO_RAD } from '../util/astronomy-constants';
+import { ARCSEC_TO_RAD } from '../../astro-core/astronomy-constants';
 import { FOOTPRINT_SQRT12, LUMA_CEIL, MAG_PER_STOP } from '../hdr/emission/emission-pure';
 
 type NF = Node<'float'>;

@@ -31,7 +31,7 @@ export function besselianEpochToJd(besselianYear: number): number {
  *  /data/papers/index.md#delporte1930): 1874 Dec 31.76. Getting this epoch
  *  wrong by months leaves the boundaries looking plausible while flipping
  *  positions that sit within an arcsecond of a wall — see
- *  ../constellation-boundaries/iau-geometry/README.md#ρ-aquilae.
+ *  /src/client/constellation-boundaries/iau-geometry/README.md#ρ-aquilae.
  * */
 export const B1875_JD = besselianEpochToJd(1875);
 

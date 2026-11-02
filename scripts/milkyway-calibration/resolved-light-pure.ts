@@ -1,6 +1,6 @@
 // Cap sums, hole cells and the table they become. Pure. README.md.
 
-import { apparentMagnitude } from '../../src/client/solar-system/perceptual-magnitude';
+import { apparentMagnitude } from '../../src/astro-core/perceptual-magnitude';
 import {
   ABSOLUTE_MAGNITUDE_DISTANCE_PC,
   fluxNumber,
@@ -21,7 +21,7 @@ import {
   resolvedHoleShellEdgesPc,
   resolvedLightFraction,
 } from '../../src/client/milkyway/calibration/resolved-fraction-pure';
-import { ARCSEC_TO_RAD } from '../../src/client/util/astronomy-constants';
+import { ARCSEC_TO_RAD } from '../../src/astro-core/astronomy-constants';
 
 /** Parallel columns off a built catalogue, Sol at the origin, ICRS axes. */
 export interface StarColumns {

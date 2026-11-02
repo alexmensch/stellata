@@ -7,7 +7,7 @@ import {
   surfaceBrightnessLuminance,
 } from '../../emission/emission-pure';
 import { displayLevel } from '../../tonemap/tonemap-pure';
-import { SOFT_TAPER_MARGIN_MAG } from '../../../solar-system/perceptual-magnitude';
+import { SOFT_TAPER_MARGIN_MAG } from '../../../../astro-core/perceptual-magnitude';
 import { CADENCE_JND_MAG } from '../../../render-gate/cadence/clock-cadence-pure';
 import {
   adaptationBranches,

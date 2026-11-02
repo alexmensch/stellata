@@ -2,7 +2,7 @@
 // window every table spans. Authoring source for data/ephemerides/; editing a
 // cadence needs a re-run of `fetch:ephemerides`.
 
-import { DAYS_PER_JULIAN_YEAR, J2000_JD } from '../../src/client/util/astronomy-constants';
+import { DAYS_PER_JULIAN_YEAR, J2000_JD } from '../../src/astro-core/astronomy-constants';
 import type { PlanetName } from '../../src/client/solar-system/ephemerides/ephemeris';
 
 const jdOfJulianYear = (year: number): number =>

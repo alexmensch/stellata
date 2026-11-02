@@ -5,7 +5,7 @@
 import {
   equatorialTangentBasis,
   type UnitVector,
-} from '../../../src/client/util/equatorial-basis';
+} from '../../../src/astro-core/equatorial-basis';
 import {
   readTable, tableLineReader, type TableRow,
 } from '../../util/tsv/table-pure';

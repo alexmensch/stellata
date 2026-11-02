@@ -16,7 +16,7 @@ import buildCatalogExpected from '../../../../scripts/catalog/build-catalog-expe
 import { peakAmplitudeFactor } from '../../camera/controls/star-geometry';
 import { DEFAULT_INSTRUMENT, STAR_RENDER_DEFAULTS, starPxSizes } from '../../filters/filter-state';
 import { parseBinary, type Catalog } from '../../loaders/catalog-loader';
-import { MIN_PHYSICAL_RADIUS_R_SUN, R_SUN_PC } from '../../util/astronomy-constants';
+import { MIN_PHYSICAL_RADIUS_R_SUN, R_SUN_PC } from '../../../astro-core/astronomy-constants';
 import { discWindowPc } from '../local-pass/star-local-cluster-pure';
 import { perceptualDiscExponent } from './perceptual-disc-pure';
 import { DISC_EXPONENT_TOLERANCE, physSizeElisionBoundPx } from './phys-size-elision-pure';

@@ -35,7 +35,7 @@ velocity-format.ts        spaceVelocity(vx, vy, vz) → { kms, lDeg,
                           pc/yr heliocentric space motion + galactic
                           ℓ/b of the velocity VECTOR (its instantaneous
                           heading, via ICRS_TO_GAL_M3 from
-                          ../galactic/galactic-coords.ts). The
+                          /src/astro-core/galactic-coords.ts). The
                           formatter puts the heading on its own line
                           (consumers use white-space: pre-line).
 probe-format.ts           Deep-space-probe mission stats:

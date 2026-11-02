@@ -1,8 +1,8 @@
 // Apparent-magnitude math the star and planet vertex shaders use: the
 // standard formula, the reflected-light model, and the mesh's disc surface
-// brightness. The disc-size kernel is ../star-pipeline/perceptual-disc/perceptual-disc-pure.ts.
+// brightness. The disc-size kernel is /src/client/star-pipeline/perceptual-disc/perceptual-disc-pure.ts.
 
-import { ARCSEC_TO_RAD } from '../util/astronomy-constants';
+import { ARCSEC_TO_RAD } from './astronomy-constants';
 
 // Magnitudes past the just-visible threshold a body still renders: the
 // fragment shaders fade it out over this soft taper rather than
@@ -31,7 +31,7 @@ export function apparentMagnitude(absmag: number, dPc: number): number {
 
 /**
  * Reflected-light apparent magnitude of a planet seen by a viewer. CPU
- * mirror of the integrated formula in ../webgpu/solar-system/planet-glare-tsl.ts.
+ * mirror of the integrated formula in /src/client/webgpu/solar-system/planet-glare-tsl.ts.
  *
  *   m_host_at_planet = M_host + 5·log10(d_hp / 10pc)
  *   m_planet         = m_host_at_planet
@@ -72,7 +72,7 @@ export function hostIrradianceMagnitude(hostAbsmag: number, dHpPc: number): numb
 /**
  * Mean surface brightness of a body's lit disc at full phase, in
  * mag/arcsec² — what the mesh emits through the scene-wide unit
- * (`../hdr/emission/README.md#unit--what-an-emitting-layer-writes`).
+ * (`/src/client/hdr/emission/README.md#unit--what-an-emitting-layer-writes`).
  *
  * Both the body's radius and the viewer distance cancel out of
  * `m_disc + 2.5·log10(Ω_disc)`, leaving host irradiance and geometric

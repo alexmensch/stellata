@@ -12,7 +12,7 @@ import {
   TABLE_JD_START,
 } from '../../../../scripts/ephemerides/planet-element-roster';
 import type { PlanetElementTableFile } from '../../../../scripts/ephemerides/planet-element-schema';
-import { ARCSEC_TO_RAD, AU_KM, AU_PER_PC, DAYS_PER_JULIAN_YEAR } from '../../util/astronomy-constants';
+import { ARCSEC_TO_RAD, AU_KM, AU_PER_PC, DAYS_PER_JULIAN_YEAR } from '../../../astro-core/astronomy-constants';
 import { jdTdbToT } from '../time/time';
 import { buildElementTable, type PlanetElementTable } from './element-table';
 import {

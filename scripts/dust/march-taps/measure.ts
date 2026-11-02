@@ -5,7 +5,7 @@ import { DUST_GRID } from '../../catalog/distance/dust/dust-grid-source';
 import {
   avAlongSegment, sampleEncodedAt, type DustGrid,
 } from '../../catalog/distance/dust/dust-deextinction-pure';
-import { GALACTIC_NORTH_POLE_ICRS } from '../../../src/client/galactic/galactic-coords';
+import { GALACTIC_NORTH_POLE_ICRS } from '../../../src/astro-core/galactic-coords';
 import {
   DUST_TAPS_MAX,
   DUST_TAP_PC,

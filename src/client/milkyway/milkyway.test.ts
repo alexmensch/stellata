@@ -41,7 +41,7 @@ import {
   sightlineColumn,
   sightlineSurfaceBrightness,
 } from './column/milkyway-column-pure';
-import { R0_PC } from '../galactic/galactic-coords';
+import { R0_PC } from '../../astro-core/galactic-coords';
 import { ABSOLUTE_MAGNITUDE_DISTANCE_PC } from '../hdr/emission/density0-solver-pure';
 import { LG_OVERRIDES } from '../../../scripts/local-group/local-group-source';
 import {

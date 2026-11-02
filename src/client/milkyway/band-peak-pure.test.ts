@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { GALACTIC_NORTH_POLE_ICRS } from '../galactic/galactic-coords';
+import { GALACTIC_NORTH_POLE_ICRS } from '../../astro-core/galactic-coords';
 import { SB_ZERO_POINT } from '../hdr/emission/emission-pure';
 import {
   SOL_GALACTOCENTRIC_PC,

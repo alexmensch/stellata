@@ -2,19 +2,19 @@
 // boundary edge set at equinox B1875, its decomposition into named regions,
 // and positional lookup against them. See README.md.
 
-import { RA_HOURS_TO_DEG } from '../../util/astronomy-constants';
+import { RA_HOURS_TO_DEG } from '../../../astro-core/astronomy-constants';
 import {
   raDecFromUnitVector,
   unitVectorFromRaDec,
   type SkyPosition,
   type UnitVector,
-} from '../../util/equatorial-basis';
+} from '../../../astro-core/equatorial-basis';
 import {
   B1875_JD,
   precessRaDec,
   precessionRotationFromJ2000,
   unprecessDirection,
-} from '../../util/precession';
+} from '../../../astro-core/precession';
 
 /** A boundary arc of constant B1875 RA, spanning `decLoDeg` → `decHiDeg`. */
 export interface MeridianEdge {

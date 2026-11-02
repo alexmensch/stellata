@@ -8,7 +8,7 @@ import { farFieldFadeOpacity } from '../galactic/galactic-fade';
 import type { KindContext } from '../kinds/kind-module';
 import type { Stellata } from '../stellata';
 import { createDistanceGatedLabel, labelHostOf } from '../overlays/distance-gated-label';
-import { GAL_TO_ICRS, GALACTIC_CENTRE_PC } from '../galactic/galactic-coords';
+import { GAL_TO_ICRS, GALACTIC_CENTRE_PC } from '../../astro-core/galactic-coords';
 import { MIDPLANE_RADIUS_PC } from '../galactic/galactic-disc';
 import type {
   ChromeLineMaterial, ChromeLineMaterials,

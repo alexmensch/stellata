@@ -9,7 +9,7 @@ import { fileURLToPath } from 'node:url';
 import * as THREE from 'three';
 import { ELEMENT_TARGETS } from '../../../../scripts/ephemerides/planet-element-roster';
 import type { PlanetElementTableFile } from '../../../../scripts/ephemerides/planet-element-schema';
-import { AU_PER_PC, LIGHT_TIME_PER_AU_S } from '../../util/astronomy-constants';
+import { AU_PER_PC, LIGHT_TIME_PER_AU_S } from '../../../astro-core/astronomy-constants';
 import { buildElementTable, type PlanetElementTable } from './element-table';
 import {
   getPlanetPositions,

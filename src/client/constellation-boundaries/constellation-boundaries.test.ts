@@ -8,7 +8,7 @@ import { CONSTELLATIONS, iauEdgeRecords } from '../../../scripts/catalog/parse/c
 import { STELLARIUM } from '../../../scripts/catalog/parse/constellations/stellarium-source';
 import { fakeChromeLineMaterials } from '../chrome-lines/chrome-lines-mock';
 import { makeFrameCtx } from '../scene/frame-ctx-mock';
-import { unitVectorFromRaDec } from '../util/equatorial-basis';
+import { unitVectorFromRaDec } from '../../astro-core/equatorial-basis';
 import {
   ConstellationBoundaries,
   type ConstellationBoundariesDeps,

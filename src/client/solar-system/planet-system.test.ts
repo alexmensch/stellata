@@ -12,7 +12,7 @@ import {
   type PlanetType,
 } from './planet-system';
 import { getPlanetPositions, PLANET_ORDER } from './ephemerides/ephemeris';
-import { AU_KM, KM_PC } from '../util/astronomy-constants';
+import { AU_KM, KM_PC } from '../../astro-core/astronomy-constants';
 import {
   EARTH_PHASE,
   JUPITER_PHASE,

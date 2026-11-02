@@ -13,7 +13,7 @@ import {
 } from '../solar-system/probes/probe-focus-geometry';
 import { DEFAULT_FOV } from '../filters/filter-state';
 import { SOL_BODIES } from '../solar-system/planet-system';
-import { KM_PC } from '../util/astronomy-constants';
+import { KM_PC } from '../../astro-core/astronomy-constants';
 
 // The near/far pair is a configuration invariant, not a formula: it holds
 // because every reachable orbit distance sits inside it. Nothing rendered

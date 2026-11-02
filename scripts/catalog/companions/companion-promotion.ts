@@ -32,8 +32,8 @@ import { MULTIPLES_TSV, type MultiplesRecord, type PhotometryVia } from '../../b
 import { readArtifact } from '../../util/sources/source';
 import { sourceRowRef, sourceRowRefText } from '../../util/sources/row-ref-pure';
 import { emptyTallyPartition } from '../../util/tally';
-import { ARCSEC_TO_RAD } from '../../../src/client/util/astronomy-constants';
-import { equatorialTangentBasisAt } from '../../../src/client/util/equatorial-basis';
+import { ARCSEC_TO_RAD } from '../../../src/astro-core/astronomy-constants';
+import { equatorialTangentBasisAt } from '../../../src/astro-core/equatorial-basis';
 import type { ConstellationAssignment } from '../parse/constellations/constellations';
 import type { Star } from '../parse/stars-parse';
 import type { GaiaAstrometryCatalogRow } from '../distance/direction-cascade';
