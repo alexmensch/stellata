@@ -35,7 +35,9 @@ busy-session warning, so keep it current.
 | `RESUME` | coordinator → every paused worker and held landing subagent | on `GPU_DONE` |
 
 **Coordinator.** Serve a `GPU_REQUEST` from any session the same way, worker
-or not. On a `GPU_REQUEST`, hold every launch and run no `build:seed`.
+or not. On a `GPU_REQUEST`, hold every launch, start no step of
+`pickup-epic`'s Land that has not begun (the sync or the landing subagent),
+and run no `build:seed`.
 Record the pause in the run state. Tell the user nothing: the requester's announcement is what
 the owner reads. One request is served at a time; a second waits in the run state
 until `GPU_DONE`.
