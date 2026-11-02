@@ -30,7 +30,7 @@
     "data/textures/src/titan-iss-p19658.tif": "6605bc2f1938c62d2a9fc9fd0f6861f34b8061cc",
     "data/textures/src/triton-pia18668.jpg": "8523cfd093a9821fd4307cce340507eec7688094",
     "data/textures/src/venus-bjj.jpg": "8cb34eaf4ced0e90c811da1e5984352fdbf25e4d",
-    "scripts/textures/build-textures.py": "fb638507dd7a3198b1a16ef45a3b4ca6966e89a2",
+    "scripts/textures/build-textures.py": "d974c715ac9ca2aeb3f3f2f50ab92d670dda6008",
     "scripts/textures/dem_relief.py": "518a090f48cdbec001f2c9bc28422b9c561b8060",
     "scripts/textures/horizon_map.py": "5e81ed309ae13feff320649eead831d2ca46133f",
     "scripts/textures/sky_view.py": "901969e215a40c39ec73c9f6db990bc8c780068c",
