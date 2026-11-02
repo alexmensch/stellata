@@ -29,7 +29,8 @@ scripts/catalog/astrometry-request/
                                   parseSourceIdRequest, which checks the
                                   header. Also used by
                                   scripts/sid/export-dr-risk-set.ts and the
-                                  membership gate test.
+                                  membership gate test, whose coverage
+                                  filter, unrequestedBindings, lives here.
 ```
 
 Each contribution lives with the consumer that defines it, not here — this

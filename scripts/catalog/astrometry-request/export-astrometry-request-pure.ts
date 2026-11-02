@@ -24,3 +24,13 @@ export function parseSourceIdRequest(text: string): Set<string> {
   }
   return new Set(ids);
 }
+
+/** The primaries rows whose bound source the request leaves out — the
+ *  coverage README.md#the-record-builds-sources-are-covered-by-measurement
+ *  holds at zero. */
+export function unrequestedBindings<R extends { term: string; gaiaSourceId: string | null }>(
+  rows: readonly R[],
+  requested: ReadonlySet<string>,
+): R[] {
+  return rows.filter((r) => r.term === 'primaries' && r.gaiaSourceId !== null && !requested.has(r.gaiaSourceId));
+}

@@ -3,6 +3,7 @@ import {
   parseSourceIdRequest,
   serialiseSourceIdRequest,
   sortSourceIdsNumeric,
+  unrequestedBindings,
 } from './export-astrometry-request-pure';
 
 describe('export-astrometry-request-pure / sortSourceIdsNumeric', () => {
@@ -47,5 +48,17 @@ describe('the source_id request file', () => {
 
   it('refuses a file whose first line is not the header', () => {
     expect(() => parseSourceIdRequest('2\n30\n')).toThrow(/header/);
+  });
+});
+
+describe('unrequestedBindings', () => {
+  it('names a primaries row whose source is unrequested, and nothing else', () => {
+    const rows = [
+      { key: 'requested', term: 'primaries', gaiaSourceId: '1' },
+      { key: 'unrequested', term: 'primaries', gaiaSourceId: '2' },
+      { key: 'magnitude', term: 'magnitude', gaiaSourceId: '3' },
+      { key: 'no-gaia', term: 'primaries', gaiaSourceId: null },
+    ];
+    expect(unrequestedBindings(rows, new Set(['1'])).map((r) => r.key)).toEqual(['unrequested']);
   });
 });
