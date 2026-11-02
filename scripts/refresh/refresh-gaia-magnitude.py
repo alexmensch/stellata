@@ -138,12 +138,6 @@ def pull(
 
 
 def main() -> None:
-    force = "--force" in sys.argv
-    script_path = Path(__file__).resolve()
-    if not force and rl.is_up_to_date(OUT, [script_path, gap.MODULE_PATH, mp.MODULE_PATH]):
-        print(f"{OUT.relative_to(ROOT)} up to date — skipping (use --force to rebuild)")
-        return
-
     print(
         f"pulling gaiadr3.gaia_source at G <= {G_MAG_FLOOR} in {SLICE_COUNT} "
         f"magnitude slices (MAXREC {SYNC_MAXREC:,})"
@@ -188,5 +182,13 @@ def main() -> None:
     )
 
 
+def describe() -> dict:
+    return rl.description(
+        "\n".join(slice_adql(bounds) for bounds in magnitude_slices()),
+        rl.gaia_sync_client(SYNC_MAXREC).services,
+        release=rl.GAIA_DR3_RELEASE,
+    )
+
+
 if __name__ == "__main__":
-    main()
+    rl.pull_main(main, describe)

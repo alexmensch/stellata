@@ -15,9 +15,11 @@ alone), `refresh-bailer-jones.py` and `refresh-gaia-apsis.py` (both legs).
 It imports `refresh_lib` for the TAP client, `run_in_batches` and the
 checkpoint; nothing in `refresh_lib` imports back.
 
-**`is_up_to_date` does not fold this module's mtime in** — it folds
-`refresh_lib`'s. Each caller passes `magnitude_pull.MODULE_PATH` among its
-sources, so an edit to the slicing or either leg re-pulls rather than skips.
+**Every slice is part of the query.** `describe_deep_population` (and
+`refresh-gaia-magnitude.py`'s own describe) prints each slice's ADQL, so a
+moved floor or slice edge stales the pull's record as a changed column list
+does, while an edit to the plumbing alone does not
+([Freshness](../../pipeline/README.md#freshness--one-mechanism)).
 
 ## Slicing a magnitude-bounded pull
 

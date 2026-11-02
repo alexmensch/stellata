@@ -176,12 +176,6 @@ def write_row(row: Any) -> dict[str, Any]:
 
 
 def main() -> None:
-    force = "--force" in sys.argv
-
-    if not force and rl.is_up_to_date(OUT, [Path(__file__), REQUEST, mp.MODULE_PATH]):
-        print(f"{OUT.relative_to(ROOT)} up to date — skipping (use --force to rebuild)")
-        return
-
     lines: dict[int, str] = {}
     spot_ids = {spec["source_id"] for spec in SPOT_CHECKS}
     spot_rows: dict[int, Any] = {}
@@ -276,5 +270,11 @@ def main() -> None:
     )
 
 
+def describe() -> dict:
+    return mp.describe_deep_population(
+        TABLE, TSV_COLUMNS, rl.gaia_sync_client(SYNC_MAXREC), rl.GAIA_DR3_RELEASE
+    )
+
+
 if __name__ == "__main__":
-    main()
+    rl.pull_main(main, describe)
