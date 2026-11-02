@@ -116,7 +116,8 @@ scripts/catalog/
                                   promotion's and allocation's lineage
                                   files, and
                                   the transport chunks and the lineage
-                                  baseline and diff as families. Side-effect free, so a reader can
+                                  baseline and diff as families, the last
+                                  two unstamped. Side-effect free, so a reader can
                                   import the declaration without running
                                   the build.
   cascade-result.ts               `CascadeResult`, the one shape every

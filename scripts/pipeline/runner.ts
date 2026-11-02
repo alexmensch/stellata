@@ -47,7 +47,7 @@ type Loads = Extract<Loaded, { kind: 'loaded' }>;
 const blocks = (v: Verdict): boolean => v.kind === 'stale' || v.kind === 'failed' || v.kind === 'skipped';
 
 function outputFiles(step: ResolvedStep): string[] {
-  return [...step.outputs.files, ...step.outputs.families.flatMap(familyMembers)];
+  return [...step.outputs.files, ...step.outputs.families.filter((f) => f.stamped).flatMap(familyMembers)];
 }
 
 function rehashed(inputs: FileHashes, paths: readonly string[] | 'all', tree: PipelineTree): FileHashes {

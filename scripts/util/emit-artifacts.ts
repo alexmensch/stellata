@@ -9,10 +9,12 @@ import {
 } from './staged-write';
 
 /** Outputs whose member set is whatever one run emits: members a run does not
- *  emit are deleted once the new set has landed. */
+ *  emit are deleted once the new set has landed. An unstamped family's members
+ *  stay out of the step's stamp, so a checkout lacking them is not stale. */
 export interface OutputFamily {
   readonly dir: string;
   readonly member: RegExp;
+  readonly stamped: boolean;
 }
 
 export interface DeclaredOutputs<K extends string = string> {
@@ -28,7 +30,7 @@ export function declareOutputs<K extends string>(
     files: Object.fromEntries(
       Object.entries<string>(files).map(([k, p]) => [k, resolve(p)]),
     ) as Record<K, string>,
-    families: families.map((f) => ({ dir: resolve(f.dir), member: f.member })),
+    families: families.map((f) => ({ ...f, dir: resolve(f.dir) })),
   };
 }
 
@@ -73,9 +75,7 @@ function assertDeclared(
   const undeclared = [
     ...expected.filter((k) => !(k in outputs.files)),
     ...keys.filter((k) => !(k in outputs.files)),
-    ...members.filter((p) => !outputs.families.some(
-      (f) => dirname(p) === f.dir && f.member.test(basename(p)),
-    )),
+    ...members.filter((p) => familyOf(outputs, p) === undefined),
   ];
   const unemitted = expected.filter((k) => !keys.includes(k));
   const unasked = keys.filter((k) => k in outputs.files && !expected.includes(k));
@@ -87,6 +87,10 @@ function assertDeclared(
         + (unemitted.length > 0 ? `; declared, not emitted: ${unemitted.join(', ')}` : ''),
     );
   }
+}
+
+function familyOf(outputs: DeclaredOutputs, path: string): OutputFamily | undefined {
+  return outputs.families.find((f) => dirname(path) === f.dir && f.member.test(basename(path)));
 }
 
 function familyEntries(family: OutputFamily): string[] {
@@ -153,7 +157,11 @@ export function emitArtifacts<K extends string>(
   }
   for (const r of refreshes) console.log(`Updated ${r.path}`);
   if (stamp) {
-    writeStamp(stamp.path, rehashWritten(stamp.inputs, [...files.keys(), ...refreshes.map((r) => r.path)]), [...files.keys()]);
+    writeStamp(
+      stamp.path,
+      rehashWritten(stamp.inputs, [...files.keys(), ...refreshes.map((r) => r.path)]),
+      [...files.keys()].filter((p) => familyOf(outputs, p)?.stamped !== false),
+    );
   }
 }
 

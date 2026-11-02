@@ -106,6 +106,7 @@ every output the stamp recorded still hashes the same. The stamp is cleared
 before the build writes anything and rewritten only once the build's snapshot
 asserts pass, so a failed or interrupted build always reruns. For
 `build:catalog` the stamp's outputs are exactly the set `emitArtifacts` landed
+less the lineage baseline and diff
 ([`util/README.md`](util/README.md)), the committed `parked-ledger.tsv` and
 `simbad_sourced_distances.tsv` included. Hashing the
 ~1.1 GB input set plus ~100 MB of outputs costs about a second on a warm page
@@ -140,10 +141,12 @@ Every listed file is an output of a step `build:seed` runs
 checkout's seed is that one command. `worktree-seed.test.ts` holds each
 pattern to a declared output or stamp of one of those steps — a TypeScript
 step's `declareOutputs` constant, a Python step's answer to `--outputs` — and
-the converse: every such file or stamp under `public/` or `build/` is listed.
-An output family needs no line of its own: the catalogue chunks have one, and
-the lineage baseline copies and diff are never seeded, since a worktree pins
-its own baseline. A worktree made any other way
+the converse: every such file, stamped output family or stamp under `public/`
+or `build/` is listed, so nothing a stamp records can be missing from a fresh
+worktree. The lineage baseline copies and diff are declared unstamped
+(`stamped: false`) and never seeded, since a worktree pins its own baseline; a
+stamp never records them, so their absence leaves the step fresh. A worktree
+made any other way
 (`git worktree add`) builds from scratch.
 
 The private paper-store link is not in that list — the harness's copy skips

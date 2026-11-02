@@ -290,7 +290,9 @@ its content-hash stamp, or does not run (a standalone `build:membership`)
 leaves both its copies untouched.
 
 A fresh worktree is seeded with the main checkout's last `build/lineage/`
-(`.worktreeinclude`), which may come from an older commit. So each stage
+(`.worktreeinclude`), which may come from an older commit. The baseline and
+diff families are declared unstamped (`stageFamilies`), so a step's stamp
+never records them and a worktree without them is not stale. So each stage
 writes a header beside its files, `<stage>.header.json`, recording the
 build version, the commit, whether the tree had uncommitted edits, and the
 content hash of the inputs the stage was built from (`stepInputPaths`, `../../util/step-inputs.ts`); a header per
