@@ -8,7 +8,7 @@ import {
   asStamp, changedSince, readStamp, readStampJson, recordedChanges, type FileHashes, type Stamp,
 } from '../util/build-stamp';
 import { TSX } from './processes';
-import { stampedMembers } from '../util/emit-artifacts';
+import { stampedMembers, type PullDescription } from '../util/emit-artifacts';
 import { landStaged, writeStaged } from '../util/staged-write';
 import type { PipelineTree } from './pipeline-tree';
 import { describesItself, type ManualStep, type OutputClaims } from './step-table-pure';
@@ -40,13 +40,18 @@ export type ManualRead =
 
 /** What a manual step prints under `--describe`, with no network call. A bake
  *  prints only its projection. */
+interface DerivedRequest {
+  readonly request?: readonly string[];
+  readonly requestFrom: readonly string[];
+}
+
 export type Description =
-  | { readonly kind: 'pull'; readonly query: string; readonly services: readonly string[]; readonly release?: string; readonly request?: readonly string[]; readonly requestFrom: readonly string[] }
-  | { readonly kind: 'bake'; readonly request?: readonly string[]; readonly requestFrom: readonly string[] };
+  | ({ readonly kind: 'pull' } & PullDescription & DerivedRequest)
+  | ({ readonly kind: 'bake' } & DerivedRequest);
 
 const sha1 = (text: string): string => createHash('sha1').update(text).digest('hex');
 
-export const pullQueryHash = ({ query, services }: { readonly query: string; readonly services: readonly string[] }): string => (
+export const pullQueryHash = ({ query, services }: PullDescription): string => (
   sha1(JSON.stringify([query, services]))
 );
 export const requestHash = (request: readonly string[]): string => sha1(request.join('\n'));
