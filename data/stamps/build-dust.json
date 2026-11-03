@@ -5,8 +5,8 @@
     "data/molecular-clouds/zucker2021-table2.dat": "aa52a25b254721d09365469bbb35667ca0b0800c",
     "data/molecular-clouds/zucker2021-table3.dat": "99e0b6fdc23a0f2d841e2c55049d6bb82421a03f",
     "scripts/clouds/cloud_model.py": "3cc541a02497feaf8406b0431b6886514646f4a0",
-    "scripts/dust/build-dust.py": "d06621349b552d293c252588c297f34d2f0e7117",
-    "scripts/dust/edenhofer2024.py": "f8e3bbac37be550d345cc86e7db0035833e88315"
+    "scripts/dust/build-dust.py": "523f7e4051802379337115f4ad312095bbb64ee5",
+    "scripts/dust/edenhofer2024.py": "58ba52e2bbaa3aa028fdae9103791badb39bad40"
   },
   "outputs": {
     "data/dust/chunk_0_0_0.bin": "176275b2376e1448381992066544515305a774ca",
