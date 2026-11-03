@@ -63,7 +63,7 @@ def main() -> int:
     parser.add_argument("--skip-public", action="store_true",
                         help="Skip mirroring to public/dust/ (useful for alt output dirs).")
     parser.add_argument("--force-resample", action="store_true",
-                        help="Ignore any cached .voxels.npy and re-run the full resample.")
+                        help="Ignore the cached voxel grid and re-run the full resample.")
     args = parser.parse_args()
 
     args.output.mkdir(parents=True, exist_ok=True)
@@ -79,7 +79,7 @@ def main() -> int:
         # re-encoding after tweaking DENSITY_MAX etc. doesn't require
         # re-running the 10-minute query phase. Delete it manually to force
         # a fresh resample.
-        cache_path = args.output / ".voxels.npy"
+        cache_path = edenhofer2024.voxel_cache_path(args.output, args.flavor)
         if cache_path.exists() and not args.force_resample:
             print(f"Loading cached voxel grid from {cache_path.relative_to(ROOT)}…", file=sys.stderr)
             voxels = np.load(cache_path)
@@ -353,7 +353,7 @@ def build_manifest(chunks: list[dict], *, synthetic: bool, density_max: float,
 def is_runtime_asset(name: str) -> bool:
     """Mirror of the sync-dust-pure.ts allowlist — only runtime assets may
     land in public/dust/ (tests/bundle-content.test.ts guards the built
-    tree against strays like README.md or the .voxels.npy cache)."""
+    tree against strays like README.md or a .voxels-*.npy cache)."""
     return (name == "manifest.json"
             or (name.startswith("chunk_") and name.endswith(".bin")))
 

@@ -54,7 +54,7 @@ docs/validation-residuals.md
 
 # Raw-resample cache for build-dust.py. ~512 MiB float32 grid; lets us
 # re-encode without re-running the 10-minute query phase. Local-only.
-data/dust/.voxels.npy
+data/dust/.voxels*.npy
 
 # Per-batch resume cache written by refresh_lib.BatchCheckpoint. Survives a
 # failed run on purpose so a re-run resumes; deleted once the pull completes.

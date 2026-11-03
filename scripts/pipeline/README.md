@@ -296,7 +296,7 @@ reads stale until a plain run.
 The record counts as read every file the run read, listed or probed, except
 its own outputs, a file named in `requestFrom` (it counts through the
 request), an ignored file (a `.ckpt` batch cache, the dust bake's
-`.voxels.npy`: no other checkout has one), and, for a pull, code. An ignored
+`.voxels-*.npy`: no other checkout has one), and, for a pull, code. An ignored
 write is scratch; any other write the step does not declare fails the run
 and leaves the record as it was. `answeredBy` is the run record's services,
 in first-answer order; `release` is the description's.
