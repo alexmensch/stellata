@@ -16,6 +16,10 @@ import { PUBLIC_FILES } from '../../catalog-format/public-artifacts/public-artif
  *  `AREA_DECIMALS = 2`, so the sum carries at most 89 × 0.005 of rounding. */
 const AREA_CLOSURE_TOLERANCE_SQUARE_DEG = 1;
 
+function artifactError(detail: string): Error {
+  return new Error(`${PUBLIC_FILES.boundaries}: ${detail}`);
+}
+
 /**
  * Narrow a parsed wire object to `BoundaryArtifact`, throwing on anything the
  * layer would otherwise mis-draw in silence.
@@ -25,10 +29,6 @@ const AREA_CLOSURE_TOLERANCE_SQUARE_DEG = 1;
  * if they were ICRS resolve to a plausible-looking sky sitting ~1.4° off
  * every star (/src/astro-core/iau-geometry/README.md#b1875).
  */
-function artifactError(detail: string): Error {
-  return new Error(`${PUBLIC_FILES.boundaries}: ${detail}`);
-}
-
 export function validateBoundaryArtifact(raw: unknown): BoundaryArtifact {
   const artifact = raw as BoundaryArtifact;
   if (artifact?.frame !== 'ICRS') {
