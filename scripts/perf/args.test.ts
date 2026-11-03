@@ -4,7 +4,7 @@ import {
   parsePinArgs, parseRunArgs, parseSurvivorsArgs, pinUsage, usage,
 } from './args';
 import { DEFAULT_SWEEP_SCALES } from './sweep/sweep-pure';
-import { DWELL_READBACK_EVERY_FRAMES } from './dwell/dwell-pure';
+import { DEFAULT_DWELL_PACING, DWELL_READBACK_EVERY_FRAMES } from './dwell/dwell-pure';
 import { BACKENDS, SCENARIO_NAMES } from './scenarios';
 
 describe('parseRunArgs', () => {
@@ -35,6 +35,7 @@ describe('parseRunArgs', () => {
       hash: '',
       frames: ARG_DEFAULTS.frames,
       readbackEvery: [DWELL_READBACK_EVERY_FRAMES],
+      pacing: DEFAULT_DWELL_PACING,
       roundtrip: undefined,
       scales: [...DEFAULT_SWEEP_SCALES],
       json: undefined,
@@ -112,6 +113,11 @@ describe('parseRunArgs', () => {
   it('takes a pass key or the idle control as --roundtrip, in dwell mode', () => {
     expect(parseRunArgs(['--mode', 'dwell', '--roundtrip', 'localDepth']).roundtrip).toBe('localDepth');
     expect(parseRunArgs(['--mode', 'dwell', '--roundtrip', ROUNDTRIP_IDLE]).roundtrip).toBe('idle');
+  });
+
+  it('takes --pacing in dwell and sweep', () => {
+    expect(parseRunArgs(['--mode', 'dwell', '--pacing', 'raf']).pacing).toBe('raf');
+    expect(parseRunArgs(['--mode', 'sweep', '--pacing', 'gpu']).pacing).toBe('gpu');
   });
 
   it('takes --readback-every as whole frames, in dwell and sweep', () => {
@@ -261,6 +267,8 @@ describe('parseRunArgs', () => {
     [['--mode', 'differential', '--readback-every', '4'], /--mode differential, which would ignore it/],
     [['--mode', 'dwell', '--readback-every', '0'], /--readback-every/],
     [['--mode', 'dwell', '--readback-every', '2.5'], /counts frames/],
+    [['--mode', 'differential', '--pacing', 'raf'], /--mode differential, which would ignore it/],
+    [['--mode', 'dwell', '--pacing', 'vsync'], /--pacing must be one of gpu, raf/],
     [['--mode', 'dwell', '--roundtrip', 'localDepht'], /--roundtrip names no such pass/],
     [['--mode', 'differential', '--roundtrip', 'localDepth'], /--mode differential, which would ignore it/],
     [['--mode', 'sweep', '--roundtrip', 'idle'], /--mode sweep, which would ignore it/],
@@ -279,7 +287,7 @@ describe('parseRunArgs', () => {
     for (const flag of [
       '--scenario', '--backend', '--mode', '--passes', '--pre-disable', '--no-park', '--method', '--budget-ms',
       '--dwell-frames', '--warmup-frames', '--settle-frames', '--empty-passes',
-      '--no-interleave', '--readback-every',
+      '--no-interleave', '--readback-every', '--pacing',
       '--headed', '--width', '--height', '--dpr', '--quiet-ms', '--url', '--chrome-arg', '--hash',
       '--frames', '--roundtrip', '--scales', '--json', '--baseline', '--pin', '--against-pin', '--accept', '--cooldown-ms',
     ]) {

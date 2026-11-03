@@ -95,7 +95,7 @@ Every tick schedules exactly one successor, so the loop is one chain of
 ticks whatever the pacing. `setPacing` changes only how the next one is
 scheduled, and the shell exposes the loop as `stellata.frameLoop` for the
 one caller that sets it, the perf runner's dwell
-(`scripts/perf/dwell/README.md`).
+([Pacing](/scripts/perf/dwell/README.md#pacing)).
 
 - **`'raf'`** (the default, and what `dispose` restores) — the next
   tick is the next `requestAnimationFrame`.

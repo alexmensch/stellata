@@ -6,9 +6,10 @@ import { medianStandardErrorMs } from '../../../src/client/debug/frame-cost/fram
 import {
   EMPTY_PASSES_DEFAULT, EMPTY_PASS_KEY,
 } from '../../../src/client/debug/frame-cost/passes/passes-pure';
+import type { FramePacing } from '../../../src/client/scene/frame-loop/frame-loop';
 import {
-  COMPUTE_ROW, classClock, computeClock, floorMove, frameFloor, gatingClock, sampleClasses,
-  spreadMove, type ClassClock, type DwellMetric,
+  COMPUTE_ROW, DWELL_PACINGS, classClock, computeClock, floorMove, frameFloor, gatingClock,
+  sampleClasses, spreadMove, type ClassClock, type DwellMetric,
 } from '../dwell/dwell-pure';
 import type { DwellRecord, PerfFile, ScenarioRecord } from '../schema';
 import type { ScenarioName } from '../scenarios';
@@ -171,6 +172,7 @@ function comparabilityRefusal(a: ScenarioRecord, b: ScenarioRecord): string | nu
     ?? recordCountRefusal(a.recordCount, b.recordCount)
     ?? positionRefusal(a.position, b.position)
     ?? framesRefusal(dwellFrames(a), dwellFrames(b))
+    ?? pacingRefusal(dwellPacing(a), dwellPacing(b))
     ?? preconditionRefusal(a.params, b.params);
 }
 
@@ -277,6 +279,21 @@ export function framesRefusal(
 ): string | null {
   if (a == null || b == null || a === b) return null;
   return `dwell ${a} vs ${b} frames — a median converges with dwell length, so these are two statistics rather than two readings`;
+}
+
+/** Every dwell taken before the lever existed was paced on rAF, so an absent
+ *  pacing is a known one (../dwell/README.md#pacing). */
+const PACING_WHEN_UNRECORDED: FramePacing = 'raf';
+
+export function dwellPacing(record: ScenarioRecord): FramePacing | undefined {
+  const pacing = record.params?.pacing;
+  return DWELL_PACINGS.find((p) => p === pacing);
+}
+
+export function pacingRefusal(a: FramePacing | undefined, b: FramePacing | undefined): string | null {
+  const [pa, pb] = [a ?? PACING_WHEN_UNRECORDED, b ?? PACING_WHEN_UNRECORDED];
+  if (pa === pb) return null;
+  return `paced on ${pa} vs ${pb} — the GPU clock idles down between rAF-paced frames and holds max under GPU pacing, so the same work reads differently`;
 }
 
 /**

@@ -3,10 +3,11 @@
 // /RELEASING.md#perf-pin; mechanics: README.md.
 
 import { medianStandardErrorMs } from '../../../src/client/debug/frame-cost/frame-cost-pure';
+import type { FramePacing } from '../../../src/client/scene/frame-loop/frame-loop';
 import {
-  VERDICT_MARK, band, bufferRefusal, computeFloorMs, dwellFloorMs, dwellFrames, framesRefusal, positionRefusal,
-  preconditionRefusal, readbackRefusal, recordCountRefusal, splitFrameClasses, verdictFor,
-  type DiffRefusal, type Verdict,
+  VERDICT_MARK, band, bufferRefusal, computeFloorMs, dwellFloorMs, dwellFrames, dwellPacing, framesRefusal,
+  pacingRefusal, positionRefusal, preconditionRefusal, readbackRefusal, recordCountRefusal, splitFrameClasses,
+  verdictFor, type DiffRefusal, type Verdict,
 } from '../diff/diff-pure';
 import {
   COMPUTE_ROW, classClock, computeClock, frameFloor, gatingClock, pointMove, sampleClasses,
@@ -99,6 +100,8 @@ export interface PinRow {
    *  (`../diff/diff-pure.ts`). Absent on a pin taken before the field
    *  existed, which declines the guard rather than refusing the row. */
   readonly frames?: number;
+  /** Absent on a pin taken before the field existed: rAF-paced. */
+  readonly pacing?: FramePacing;
   readonly method: string;
   readonly wall: PinClock & { readonly vsyncClamped: boolean };
   /** The frame-sample stream where it was sound; null where it was not. */
@@ -381,6 +384,7 @@ function rowFrom(record: ScenarioRecord, sourceRun: string): PinRow {
     readbackPerFrame: dwell.readbackPerFrame,
     splitFrame: splitFrameClasses(dwell.passCounts),
     frames: dwellFrames(record),
+    pacing: dwellPacing(record),
     method: record.method!,
     wall: { ...clockOf(dwell.stats), vsyncClamped: dwell.stats.vsyncClamped },
     gpu: dwell.gpuStats === null ? null : clockOf(dwell.gpuStats),
@@ -705,6 +709,7 @@ export function compareToPin(pin: PinFile, current: PerfFile): PinDiff {
       ?? recordCountRefusal(pinned.recordCount, record.recordCount)
       ?? positionRefusal(pinned.position, record.position)
       ?? framesRefusal(pinned.frames, dwellFrames(record))
+      ?? pacingRefusal(pinned.pacing, dwellPacing(record))
       // Gated on the pin holding a GPU stream for the row, matching the clock
       // `compareRows` goes on to judge: a pair with none is printed ungated and
       // never marked, so narrowing it would refuse a row nothing reads.

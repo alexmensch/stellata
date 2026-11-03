@@ -9,8 +9,12 @@ import {
   median,
   percentile,
 } from '../../../src/client/debug/frame-cost/frame-cost-pure';
+import type { FramePacing } from '../../../src/client/scene/frame-loop/frame-loop';
 
 export const DEFAULT_DWELL_FRAMES = 240;
+
+export const DWELL_PACINGS = ['gpu', 'raf'] as const satisfies readonly FramePacing[];
+export const DEFAULT_DWELL_PACING: FramePacing = 'gpu';
 
 /**
  * Rendered frames between statistic readbacks for the duration of a dwell,

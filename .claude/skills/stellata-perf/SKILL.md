@@ -178,7 +178,9 @@ Per mode (`scripts/perf/dwell/README.md`, [Sweep mode](/scripts/perf/README.md#s
   the panel's number. Do not quote it; re-measure at a heavier vantage. The
   console line names the cadence the verdict was judged against (headless
   Chromium idles at 60 Hz, like a 60 Hz panel), and the GPU row is never
-  clamped — no compositor pads a hardware timestamp.
+  clamped — no compositor pads a hardware timestamp. Only a `--pacing raf`
+  dwell can clamp: the default GPU pacing schedules frames on the GPU, not
+  the display ([Pacing](/scripts/perf/dwell/README.md#pacing)).
 - **A sweep with any clamped point reads `bound inconclusive`** — say
   inconclusive, don't quote the slope.
 - **`savedMs` going UP is a regression**, not an improvement: the field is

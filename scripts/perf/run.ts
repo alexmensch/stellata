@@ -19,7 +19,7 @@ import { packageVersion } from '../util/git-provenance';
 import { diffRuns } from './diff/diff-pure';
 import { computeClock, type DwellSummary } from './dwell/dwell-pure';
 import {
-  PASS_TOGGLES_MODULE_URL, applyRoundTrip, measureDwell, measureSweep, type Measured,
+  PASS_TOGGLES_MODULE_URL, applyRoundTrip, measureDwell, measureSweep, type DwellPlan, type Measured,
 } from './measure';
 import { PERF_GO_MARKER_NAME, PERF_GO_MAX_AGE_S } from './arming/perf-go-lib';
 import {
@@ -115,12 +115,7 @@ interface ScenarioPlan extends ContextPlan {
 
 /** One dwell's tables and gate line, the same for the first dwell and a
  *  round trip's second. */
-function printDwell(
-  label: string,
-  dwelt: Measured<DwellRecord>,
-  idleRafMs: number | null,
-  readbackEvery: number,
-): void {
+function printDwell(label: string, dwelt: Measured<DwellRecord>, plan: DwellPlan): void {
   const d = dwelt.value;
   if (d === null) return;
   const clocks: (readonly [string, DwellSummary])[] = [[DWELL_METHOD, d.stats]];
@@ -130,9 +125,11 @@ function printDwell(
   console.log(`${label}\n${formatDwellTable(clocks)}`);
   console.log(
     `gpu stream: ${d.gpuNote} · readback ${d.readbackPerFrame.toFixed(3)}/frame ` +
-    `(pinned at one in ${readbackEvery}) · ` +
+    `(pinned at one in ${plan.readbackEvery}) · ` +
     `limit ${d.limitMag.toFixed(3)} mag at dm ${d.dm.toFixed(3)} · ` +
-    `clamp judged against the ${idleRafMs?.toFixed(2) ?? '?'} ms idle cadence`,
+    (plan.pacing === 'raf'
+      ? `paced on rAF, clamp judged against the ${plan.cadenceMs?.toFixed(2) ?? '?'} ms idle cadence`
+      : 'paced on the GPU, so no display clamp applies'),
   );
   if (d.passCounts !== null) {
     console.log(`${formatPassCountTable(d.passCounts.summary)}\npass counts: ${d.passCounts.note}`);
@@ -271,6 +268,7 @@ async function runScenario(browser: Browser, args: RunArgs, plan: ScenarioPlan):
         cadenceMs: record.idleRafMs,
         readbackEvery: plan.readbackEvery,
         forceRecompute: args.forceRecompute,
+        pacing: args.pacing,
       };
       record.method = DWELL_METHOD;
       if (args.mode === 'dwell') {
@@ -279,7 +277,7 @@ async function runScenario(browser: Browser, args: RunArgs, plan: ScenarioPlan):
         record.dwell = dwelt.value;
         printDwell(
           args.roundtrip === undefined ? 'dwell' : 'dwell BEFORE the round trip',
-          dwelt, record.idleRafMs, plan.readbackEvery);
+          dwelt, dwellPlan);
         if (dwelt.failure !== null) {
           record.failed = true;
           record.failure = dwelt.failure;
@@ -292,7 +290,7 @@ async function runScenario(browser: Browser, args: RunArgs, plan: ScenarioPlan):
           );
           const again = await measureDwell(page, dwellPlan);
           record.dwellAfter = again.value;
-          printDwell('dwell AFTER the round trip', again, record.idleRafMs, plan.readbackEvery);
+          printDwell('dwell AFTER the round trip', again, dwellPlan);
           if (again.failure !== null) {
             record.failed = true;
             record.failure = `after the round trip: ${again.failure}`;

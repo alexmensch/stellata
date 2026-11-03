@@ -12,8 +12,9 @@ scripts/perf/dwell/
                             the state guard (quarter medians), the gating
                             clock a row is judged on, the two pass classes a
                             split frame draws, the per-frame WebGPU
-                            pass-count summary, and the pinned readback
-                            cadence with the bound that says it held.
+                            pass-count summary, the pinned readback
+                            cadence with the bound that says it held, and
+                            the pacings a dwell can run under.
 ```
 
 The dwell loop itself is a page function in `../page-protocol.ts`
@@ -21,8 +22,9 @@ The dwell loop itself is a page function in `../page-protocol.ts`
 
 ## What a dwell measures
 
-`--mode dwell` measures the whole frame instead of pricing passes: one rAF
-loop under a render-gate hold, with the simulation clock stopped and the
+`--mode dwell` measures the whole frame instead of pricing passes: one run
+of frames under a render-gate hold, paced on the GPU unless `--pacing raf`
+says otherwise ([Pacing](#pacing)), with the simulation clock stopped and the
 exposure pinned where the warmup left it. Those are the differential's own
 three preconditions
 ([Preconditions](/src/client/debug/frame-cost/README.md#preconditions)) and they hold here
@@ -57,7 +59,7 @@ ascending cadences is a trend and that drift wearing the same shape. The two
 readings at the first cadence bound the second. What the probe is for is
 `stellata-8cg.67.2`.
 
-**rAF wall-clock deltas are the metric.** On a WebGPU boot the frame-sample
+**Wall-clock deltas between frames are the first row.** On a WebGPU boot the frame-sample
 stream is subscribed alongside where `gpuFrameSamplesAreSound()` says the
 adapter resolves believable durations, and reported as a second row
 (`gpu-timestamp`, the render passes) — and the compute stream from the same
@@ -95,6 +97,45 @@ interval, and `isVsyncClamped` is shared with the differential's own
 The console line says which cadence the verdict was judged against. **The GPU
 row is never clamped**: a resolved timestamp is a span the hardware reports,
 and no compositor can pad it.
+
+## Pacing
+
+**A dwell renders frames back to back by default, so the GPU never idles
+and its clock holds max.** `--pacing gpu` sets the app's frame loop to GPU
+pacing for the warmup and the timed frames: the next frame is encoded as
+soon as fewer than two are unfinished on the GPU
+([Pacing](/src/client/scene/frame-loop/README.md#pacing)). The dwell then
+counts a frame per `'frame'` event rather than per rAF callback, and
+restores rAF pacing in the same `finally` as the hold.
+
+**Why: under rAF pacing the GPU reading is work divided by a clock the
+governor chose.** A frame that fits inside the display interval leaves the
+GPU idle for the rest of it, and Apple silicon lowers the clock until the
+frame fills the interval — so a cost that adds work can read as almost
+none. Measured on the M6 (`stellata-8cg.49.42`'s notes,
+`.perf-runs/2026-11-03/8cg-49-42-*`): sol at 11.5 Mpx ran 95.5 % busy at a
+median 1637 MHz and never reached 1735; at 14 Mpx, 99.8 % busy, it held
+1735 throughout. The clock holds max only when the GPU essentially never
+waits, and a viewport sized to fill one interval does that only inside a
+few-percent window of frame cost. Pacing on the GPU holds it at any size.
+
+**Under GPU pacing the wall row is throughput, not a display cadence.** The
+delta between frames is how long the slower of the CPU's encode and the
+GPU's work took, so it cannot sit on a refresh interval and `vsyncClamped`
+is not judged on it. The GPU stream stays the gated clock either way
+([Measurement canon](/docs/render-rules.md#9-measurement-canon)). `method`
+stays `raf-delta`, naming the wall clock; `params.pacing` says what
+scheduled it.
+
+**Two pacings never compare.** `pacingRefusal` refuses a pair, in
+`--baseline` and against the pin alike, and the pin carries the pacing on
+every row. An unrecorded pacing reads as `raf`: every dwell archived before
+the lever existed was paced on rAF, so absence is a known value, not an
+unknown one (`../diff/diff-pure.ts`).
+
+**`--pacing raf` is the old dwell**, kept for a headed run or a machine
+where saturation is not wanted. Everything this README says about vsync
+clamping applies to it alone.
 
 ## The state guard
 

@@ -26,8 +26,9 @@ scripts/perf/pins/
 Per `scenario|backend` the pin holds wall p50 / p90 / iqr / n /
 vsyncClamped, the GPU-stream p50 where it was sound and the compute-stream
 p50 beside it ([The compute row](#the-compute-row)), plus the state-guard verdict, buffer, catalogue record count, the context's
-position in the run, the exposure readback rate the row was taken at and
-whether its frame drew two classes, cadence, adapter probe, commit pair,
+position in the run, the exposure readback rate the row was taken at,
+whether its frame drew two classes, its dwell length and pacing
+([Pacing](../dwell/README.md#pacing)), cadence, adapter probe, commit pair,
 package version and the run file the row came from. **Any refused row
 refuses the whole pin** — failed,
 tainted, not dwell, not `raf-delta`, trending at a *gated* vantage, a round
@@ -292,8 +293,9 @@ preconditions, and `preconditionRefusal` against it is the whole test — one
 implementation, so `--pin` and `--against-pin` refuse the same run for the
 same reason.
 
-**`--force-recompute` is the lever this catches**, being the only one a
-**dwell** carries; the rest are differential-only and a pin is dwell-mode, so
+**`--force-recompute` is the lever this catches**, being the only
+precondition a **dwell** carries (its pacing is a row field, compared like
+its length); the rest are differential-only and a pin is dwell-mode, so
 they could never differ here. A dwell taken under it marches every star every
 frame, which lands on the compute row ([The compute row](#the-compute-row)) against a pinned
 value that is the compaction alone. Read against the pin, that is a large `✗`

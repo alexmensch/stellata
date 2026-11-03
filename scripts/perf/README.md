@@ -142,7 +142,8 @@ pnpm run perf -- [--scenario mw120,sol,earth,mw50,lg | all] [--backend webgpu]
                  [--method timestamp|raf-delta]
                  [--budget-ms N] [--dwell-frames N] [--warmup-frames N] [--settle-frames N] [--no-interleave]
                  [--empty-passes N]
-                 [--frames 240] [--readback-every 4|4,1,2] [--roundtrip <pass>|idle] [--scales 0.5,1,1.5,2]
+                 [--frames 240] [--readback-every 4|4,1,2] [--pacing gpu|raf]
+                 [--roundtrip <pass>|idle] [--scales 0.5,1,1.5,2]
                  [--headed] [--width 1280] [--height 800] [--dpr 2] [--quiet-ms 5000]
                  [--json <path>] [--baseline <path>] [--cooldown-ms 0]
                  [--pin <path> [--accept <scenario>|<backend>[|compute]:<bead>]...] [--against-pin <path>]
@@ -208,7 +209,9 @@ identical on both sides, and which vantages to take it at:
 [The extinction rows](/src/client/debug/frame-cost/passes/README.md#the-extinction-rows).
 
 `--frames` sizes a dwell (dwell and sweep modes); `--scales` is the sweep's
-viewport set.
+viewport set. `--pacing` (dwell and sweep, default `gpu`) is what schedules
+each frame: the GPU having room for it, or rAF
+([Pacing](dwell/README.md#pacing)).
 
 **`--readback-every` pins the dwell's readback duty cycle** — one statistic
 readback per that many rendered frames, held from before the warmup to the
@@ -237,7 +240,8 @@ position.
 `--method` is read by `differential` alone, the pin and both gates read
 dwells, and `pinRefusal` rejects any other method outright — every
 archived pin and baseline was recorded on it, and a table mixing clocks
-compares two instruments.
+compares two instruments. The label names the wall clock, not what paced
+it; that is `params.pacing`, refused on its own ([Pacing](dwell/README.md#pacing)).
 
 **A flag the chosen mode does not read is an error, not a no-op.**
 `--mode dwell --method timestamp` is refused rather than quietly stamping
@@ -340,7 +344,7 @@ Any failure exits 1.
 ## Dwell mode
 
 `--mode dwell` measures the whole frame at a vantage instead of pricing its
-passes, and is what the pin and both gates read. Its metric, the GPU-stream
+passes, and is what the pin and both gates read. Its pacing, its metric, the GPU-stream
 and compute-stream rows beside it, the vsync clamp, the state guard, the pass counters, the
 pinned readback duty cycle and `--roundtrip`: `dwell/README.md`.
 

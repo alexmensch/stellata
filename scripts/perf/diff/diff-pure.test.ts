@@ -3,7 +3,7 @@ import type { PriceFrameRow } from '../../../src/client/debug/frame-cost/frame-c
 import { EMPTY_PASS_KEY } from '../../../src/client/debug/frame-cost/passes/passes-pure';
 import {
   BUFFER_MPX_TOLERANCE, COMPUTE_SCATTER_FLOOR_MS, DWELL_FLOOR_FRACTION, DWELL_FLOOR_MS,
-  READBACK_TOLERANCE, RECORD_COUNT_TOLERANCE, computeFloorMs, diffRuns, dwellFloorMs, framesRefusal,
+  READBACK_TOLERANCE, RECORD_COUNT_TOLERANCE, computeFloorMs, diffRuns, dwellFloorMs, framesRefusal, pacingRefusal,
   positionRefusal, preconditionRefusal, splitFrameClasses, type RunDiff,
 } from './diff-pure';
 import type { DwellSummary } from '../dwell/dwell-pure';
@@ -495,6 +495,17 @@ describe('diffRuns — refusals', () => {
     const counted = withDwell(dwellStats(30), { params: { frames: 960 } });
     const uncounted = withDwell(dwellStats(30), { params: {} });
     expect(diffRuns(counted, uncounted).refusals).toEqual([]);
+  });
+
+  it('refuses two dwells paced differently, reading an unrecorded pacing as rAF', () => {
+    const gpu = withDwell(dwellStats(30), { params: { pacing: 'gpu' } });
+    const raf = withDwell(dwellStats(30), { params: { pacing: 'raf' } });
+    const archived = withDwell(dwellStats(30), { params: {} });
+    expect(diffRuns(gpu, raf).refusals[0].reason).toContain('paced on gpu vs raf');
+    expect(diffRuns(archived, gpu).refusals[0].reason).toContain('paced on raf vs gpu');
+    expect(diffRuns(archived, raf).refusals).toEqual([]);
+    expect(diffRuns(gpu, gpu).refusals).toEqual([]);
+    expect(pacingRefusal(undefined, undefined)).toBeNull();
   });
 
   it('refuses a comparison where either side recorded no record count', () => {

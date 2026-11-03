@@ -378,10 +378,15 @@ at the canonical vantages is what explains a row that moved.
   and how to read a row; `debug/frame-cost/passes/README.md` owns the
   roster).
 - **The whole-frame comparison reads the GPU-stream median, not wall.**
-  Wall time at a canon vantage is quantised to the display's refresh
-  interval: the median sits on a multiple of it whatever the frame costs,
-  so it resolves nothing under one interval and jumps a whole one when it
-  moves. The pin gates on the GPU-stream p50 where the backend supplies
+  Under rAF pacing, wall time at a canon vantage is quantised to the
+  display's refresh interval: the median sits on a multiple of it whatever
+  the frame costs, so it resolves nothing under one interval and jumps a
+  whole one when it moves. Under the dwell's default GPU pacing it is
+  throughput, the slower of CPU encode and GPU work. **The GPU stream is
+  read with the GPU clock held at max** — paced on rAF, an idle GPU's clock
+  falls until the frame fills the interval, and the stream then reads work
+  over a clock the governor chose
+  ([Pacing](/scripts/perf/dwell/README.md#pacing)). The pin gates on the GPU-stream p50 where the backend supplies
   one and records wall beside it ([Perf pin](/RELEASING.md#perf-pin)). This is the
   frame's own span, not a per-pass slot — attribution is still a
   differential.

@@ -831,6 +831,23 @@ describe('the pinned dwell length', () => {
   });
 });
 
+describe('the pinned pacing', () => {
+  const sol = (params: Record<string, unknown>) =>
+    scenario('sol', 'webgpu', dwell(stats(18.7), stats(16.9)), { params });
+
+  it('is carried on every row, off the params the runner stamped', () => {
+    expect(pinOf([sol({ pacing: 'gpu' })]).rows[0].pacing).toBe('gpu');
+  });
+
+  it('refuses a run paced differently, a pin without the field reading as rAF', () => {
+    expect(compareToPin(pinOf([sol({ pacing: 'gpu' })]), file([sol({ pacing: 'raf' })])).refusals[0].reason)
+      .toContain('paced on gpu vs raf');
+    expect(compareToPin(pinOf([sol({})]), file([sol({ pacing: 'gpu' })])).refusals[0].reason)
+      .toContain('paced on raf vs gpu');
+    expect(compareToPin(pinOf([sol({ pacing: 'gpu' })]), file([sol({ pacing: 'gpu' })])).refusals).toEqual([]);
+  });
+});
+
 describe('assertPinFile and the path', () => {
   it('refuses a foreign schema by name', () => {
     expect(() => assertPinFile({ schema: 'stellata-perf/1', run: {} }, 'x.json')).toThrow(PinError);
