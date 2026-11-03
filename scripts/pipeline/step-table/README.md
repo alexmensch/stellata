@@ -56,7 +56,9 @@ raises no event. Two reads open no file, so they need their own record:
   `iterdir` and `Path.glob` go through) are audit events too; each is recorded
   as an input keyed by the directory, hashed over its sorted names less the
   ones git ignores, so a file added to a scanned folder stales the step and a
-  local cache beside it does not.
+  local cache beside it does not. A listed folder git ignores (under
+  `public/` or `build/`, other steps' outputs) is no input at all
+  (`util/build-stamp.ts`'s `listingHashes`).
 - **Existence probes** (`Path.exists()`, `os.path.exists`) raise no audit
   event. A Python step probes existence only through `build_stamp.probe`,
   which records the probe; a test over the Python step modules fails on any

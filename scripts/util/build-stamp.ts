@@ -89,9 +89,13 @@ export function listingHash(dir: string, names: readonly string[], root: string)
   return createHash('sha1').update(kept.sort().join('\n')).digest('hex');
 }
 
-/** Absolute directory → its listed names, as `build_stamp.record_run` writes them, hashed. */
+/** Absolute directory → its listed names, as `build_stamp.record_run` writes them, hashed;
+ *  a git-ignored directory is no input and is dropped. */
 export function listingHashes(listed: Readonly<Record<string, readonly string[]>>, root: string): Record<string, string> {
-  return Object.fromEntries(Object.entries(listed).map(([dir, names]) => [dir, listingHash(dir, names, root)]));
+  const ignoredDirs = ignoredPaths(Object.keys(listed), root);
+  return Object.fromEntries(Object.entries(listed)
+    .filter(([dir]) => !ignoredDirs.has(dir))
+    .map(([dir, names]) => [dir, listingHash(dir, names, root)]));
 }
 
 function currentListing(dir: string, root: string): string | null {
