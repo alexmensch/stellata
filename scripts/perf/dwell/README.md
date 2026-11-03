@@ -144,18 +144,25 @@ A GPU-paced dwell reports the frame's GPU cost and its CPU cost as two
 numbers, and says which of them set the pace, rather than reading one
 frame time that conflates them.
 
-**GPU cost per frame is throughput: `throughputStats`, metric
-`throughput-p50`.** With the GPU never idle and its clock pinned, the wall
-time between frames is the GPU's time per frame at a fixed clock, so it is
-proportional to GPU work: sol at 4.1 / 6.4 / 9.2 Mpx read 4.6 / 7.5 /
-10.3 ms, slope 1.007 against pixels
-(`.perf-runs/2026-11-03/8cg-49-42-gpu-sol-sweep.json`). Two frames in
-flight hand frames back in bursts (mw120 deltas p10 1.6, p50 9.0, p90
-17.8 ms), so the summary is taken over the means of consecutive
-`THROUGHPUT_WINDOW_FRAMES` (8) windows: the median of those is the
-throughput, and their spread and quarters feed the band and the state
-guard unchanged. It counts every frame, readback frames included, so the
-two-class split above does not arise.
+**GPU cost per frame is throughput: the dwell's wall time over its frames,
+metric `throughput-mean`.** With the GPU never idle and its clock pinned,
+the wall time between frames is the GPU's time per frame at a fixed clock,
+so it is proportional to GPU work: sol at 4.1 / 6.4 / 9.2 Mpx read 4.6 /
+7.5 / 10.3 ms, slope 1.007 against pixels
+(`.perf-runs/2026-11-03/8cg-49-42-gpu-sol-sweep.json`). It counts every
+frame, readback frames included, so the two-class split above does not
+arise.
+
+**The mean, not a median.** Two frames in flight hand frames back in
+bursts (mw120 deltas p10 1.6, p50 9.0, p90 17.8 ms), so any per-frame
+median is a statistic of the burst pattern. A median of 8-frame window
+means is too: at mw50 it moved 0.300 ms between two cold runs of
+identical code, where the mean moved 0.105, and across runs 2–4 the mean
+spread 0.014–0.105 ms at every vantage. `throughputStats` summarises those
+`THROUGHPUT_WINDOW_FRAMES` (8) window means for what the mean cannot carry:
+their spread sets the band's sampling term and their quarters the state
+guard. The pin, which keeps no samples, records the mean on its throughput
+clock (`meanMs`).
 
 **The GPU timestamp stream is recorded and not gated under GPU pacing.**
 With two frames in flight, the next frame's passes overlap the current

@@ -500,13 +500,15 @@ describe('diffRuns — refusals', () => {
       const f = withDwell(dwellStats(16.7), { params: { pacing: 'gpu' } }, dwellStats(frameMs * 1.3));
       const d = f.scenarios[0].dwell!;
       return file([{ ...f.scenarios[0], dwell: {
-        ...d, throughputStats: dwellStats(frameMs), cpuMs: [cpuMs], cpuStats: dwellStats(cpuMs),
+        ...d, deltasMs: [frameMs - 1, frameMs + 1], throughputStats: dwellStats(frameMs + 0.4),
+        cpuMs: [cpuMs], cpuStats: dwellStats(cpuMs),
       } }]);
     };
     const diff = diffRuns(paced(5, 2), paced(6, 2));
     expect(diff.refusals).toEqual([]);
     const [frame, cpu] = [diff.rows.find((r) => r.key.endsWith('|dwell'))!, diff.rows.find((r) => r.key.endsWith('|cpu'))!];
-    expect(frame.metric).toBe('throughput-p50');
+    expect(frame.metric).toBe('throughput-mean');
+    expect(frame.baselineMs).toBe(5);
     expect(frame.deltaMs).toBeCloseTo(1, 9);
     expect(cpu.metric).toBe('cpu-p50');
     expect(cpu.deltaMs).toBe(0);

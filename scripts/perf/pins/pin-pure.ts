@@ -11,7 +11,7 @@ import {
 import { computeFloorMs, dwellFloorMs } from '../floors/floors';
 import {
   COMPUTE_ROW, CPU_ROW, classClock, computeClock, cpuBoundRefusal, cpuClock, frameFloor, gatingClock,
-  pointMove, sampleClasses,
+  pointMove, sampleClasses, throughputFrameMs, throughputMs,
   spreadMove, type DwellMetric, type DwellSummary, type FrameFloor, type StateGuard,
 } from '../dwell/dwell-pure';
 import { DWELL_METHOD, contextOrder } from '../run-pure';
@@ -117,8 +117,8 @@ export interface PinRow {
    *  the context. */
   readonly compute?: PinClock | null;
   readonly computeFloor?: FrameFloor | null;
-  /** GPU-paced rows gate on this (../dwell/README.md#cpu-and-gpu-apart). */
-  readonly throughput?: PinClock | null;
+  /** GPU-paced rows gate on its `meanMs` (../dwell/README.md#cpu-and-gpu-apart). */
+  readonly throughput?: (PinClock & { readonly meanMs: number }) | null;
   readonly cpu?: PinClock | null;
   /** The run file this row was summarised from, under `.perf-runs/`. Rows
    *  of one pin may cite different runs of the same commit (`pinFromRuns`). */
@@ -397,7 +397,9 @@ function rowFrom(record: ScenarioRecord, sourceRun: string): PinRow {
     gpuClasses: dwell.gpuStats === null ? null : frameClassesOf(dwell),
     compute: compute === null ? null : clockOf(compute),
     computeFloor: compute === null ? null : frameFloor(dwell.computeMs),
-    throughput: dwell.throughputStats == null ? null : clockOf(dwell.throughputStats),
+    throughput: dwell.throughputStats == null
+      ? null
+      : { ...clockOf(dwell.throughputStats), meanMs: throughputMs(dwell.deltasMs) },
     cpu: cpu === null ? null : clockOf(cpu),
     sourceRun,
   };
@@ -642,17 +644,22 @@ function gatedCompute(clock: PinClock | DwellSummary | null, floor: FrameFloor |
   return { valueMs: floor.p10, standardErrorMs: 0, p10: floor.p10, p90: clock.p90 };
 }
 
+function gatedThroughput(clock: PinClock | DwellSummary, meanMs: number): GatedSide {
+  return { valueMs: meanMs, standardErrorMs: medianStandardErrorMs(clock), p10: null, p90: clock.p90 };
+}
+
 /** Valid only after `pacingRefusal` passed the pair. */
 function frameStreamRow(pinned: PinRow, dwell: DwellRecord): PinVerdictRow {
   if (pinned.pacing === 'gpu') {
     const pinnedThroughput = pinned.throughput ?? null;
+    const currentMs = throughputFrameMs(dwell);
     return streamRow(pinned, {
       key: pinned.key,
-      metric: 'throughput-p50',
+      metric: 'throughput-mean',
       stream: 'GPU',
-      pinned: gatedFrame(pinnedThroughput, null, null),
-      current: gatedFrame(dwell.throughputStats ?? null, null, null),
-      floorMs: dwellFloorMs(pinnedThroughput?.p50 ?? 0),
+      pinned: pinnedThroughput === null ? null : gatedThroughput(pinnedThroughput, pinnedThroughput.meanMs),
+      current: currentMs === undefined ? null : gatedThroughput(dwell.throughputStats!, currentMs),
+      floorMs: dwellFloorMs(pinnedThroughput?.meanMs ?? 0),
       ungatedContext: { metric: 'wall-p50', pinnedMs: pinned.wall.p50, currentMs: dwell.stats.p50 },
     });
   }
@@ -749,8 +756,8 @@ export function compareToPin(pin: PinFile, current: PerfFile): PinDiff {
       ?? positionRefusal(pinned.position, record.position)
       ?? framesRefusal(pinned.frames, dwellFrames(record))
       ?? pacingRefusal(pinned.pacing, dwellPacing(record))
-      ?? cpuBoundRefusal(cpuClock(dwell), dwell.throughputStats)
-      ?? cpuBoundRefusal(pinned.cpu, pinned.throughput)
+      ?? cpuBoundRefusal(cpuClock(dwell)?.p50, throughputFrameMs(dwell))
+      ?? cpuBoundRefusal(pinned.cpu?.p50, pinned.throughput?.meanMs)
       // Gated on the pin holding a GPU stream for the row, matching the clock
       // `compareRows` goes on to judge: a pair with none is printed ungated and
       // never marked, so narrowing it would refuse a row nothing reads.

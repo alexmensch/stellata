@@ -852,16 +852,17 @@ describe('the pinned pacing', () => {
 describe('a GPU-paced pin — throughput, CPU and the bottleneck', () => {
   const paced = (frameMs: number, cpuMs: number) => scenario('sol', 'webgpu', {
     ...dwell(stats(16.7), stats(frameMs * 1.3)),
-    throughputStats: stats(frameMs), cpuMs: [cpuMs], cpuStats: stats(cpuMs),
+    deltasMs: [frameMs - 1, frameMs + 1], throughputStats: stats(frameMs + 0.4), cpuMs: [cpuMs], cpuStats: stats(cpuMs),
   }, { params: { pacing: 'gpu' } });
 
   it('carries both clocks on the row and gates on them', () => {
     const pin = pinOf([paced(5, 2)]);
-    expect(pin.rows[0].throughput?.p50).toBe(5);
+    expect(pin.rows[0].throughput?.meanMs).toBe(5);
     expect(pin.rows[0].cpu?.p50).toBe(2);
     const { rows, refusals } = compareToPin(pin, file([paced(6, 2)]));
     expect(refusals).toEqual([]);
-    expect(rows.map((r) => r.metric)).toEqual(['throughput-p50', 'cpu-p50']);
+    expect(rows.map((r) => r.metric)).toEqual(['throughput-mean', 'cpu-p50']);
+    expect([rows[0].pinnedMs, rows[0].currentMs]).toEqual([5, 6]);
     expect(rows[0].verdict).toBe('dearer');
     expect(rows[1].verdict).toBe('same');
   });

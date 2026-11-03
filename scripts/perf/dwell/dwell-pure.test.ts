@@ -124,28 +124,34 @@ describe('gatingClock — which clock a gate may act on', () => {
   const gpu = summarizeFrameDwell(VSYNC, null)!;
 
   it('is the GPU stream wherever the row has one', () => {
-    expect(gatingClock({ stats: wall, gpuStats: gpu }).clock).toBe(gpu);
-    expect(gatingClock({ stats: wall, gpuStats: gpu }).clock.stateGuard).toBe('steady');
+    expect(gatingClock({ deltasMs: [], stats: wall, gpuStats: gpu }).clock).toBe(gpu);
+    expect(gatingClock({ deltasMs: [], stats: wall, gpuStats: gpu }).clock.stateGuard).toBe('steady');
   });
 
   it('falls back to wall only where there is no GPU stream', () => {
-    expect(gatingClock({ stats: wall, gpuStats: null }).clock).toBe(wall);
-    expect(gatingClock({ stats: wall, gpuStats: null }).clock.stateGuard).toBe('trending');
+    expect(gatingClock({ deltasMs: [], stats: wall, gpuStats: null }).clock).toBe(wall);
+    expect(gatingClock({ deltasMs: [], stats: wall, gpuStats: null }).clock.stateGuard).toBe('trending');
   });
 
   // The metric comes back with the clock so that no caller can name one and
   // read the other: both gates print it, and a table saying gpu-p50 over a
   // wall median is the one error neither of them could detect.
   it('names the clock it returned', () => {
-    expect(gatingClock({ stats: wall, gpuStats: gpu }).metric).toBe('gpu-p50');
-    expect(gatingClock({ stats: wall, gpuStats: null }).metric).toBe('wall-p50');
+    expect(gatingClock({ deltasMs: [], stats: wall, gpuStats: gpu }).metric).toBe('gpu-p50');
+    expect(gatingClock({ deltasMs: [], stats: wall, gpuStats: null }).metric).toBe('wall-p50');
   });
 
-  it('is throughput wherever the dwell was GPU-paced, over the GPU stream', () => {
+  it('is the throughput mean wherever the dwell was GPU-paced, over the GPU stream', () => {
     const throughput = summarizeFrameDwell([5, 5, 5, 5], null)!;
-    const gated = gatingClock({ stats: wall, gpuStats: gpu, throughputStats: throughput });
+    const gated = gatingClock({ deltasMs: [1, 9, 2, 8], stats: wall, gpuStats: gpu, throughputStats: throughput });
     expect(gated.clock).toBe(throughput);
-    expect(gated.metric).toBe('throughput-p50');
+    expect(gated.metric).toBe('throughput-mean');
+    expect(gated.valueMs).toBe(5);
+  });
+
+  it('reads the p50 of every other clock', () => {
+    expect(gatingClock({ deltasMs: [], stats: wall, gpuStats: gpu }).valueMs).toBe(gpu.p50);
+    expect(gatingClock({ deltasMs: [], stats: wall, gpuStats: null }).valueMs).toBe(wall.p50);
   });
 });
 
@@ -158,13 +164,13 @@ describe('throughputSamples — GPU-paced wall deltas, smoothed', () => {
 
 describe('cpuBoundRefusal — the main thread setting the pace', () => {
   it(`refuses where CPU per tick passes ${CPU_BOUND_SHARE} of the frame, and only there`, () => {
-    expect(cpuBoundRefusal({ p50: 8.1 }, { p50: 10 })).toContain('CPU-bound');
-    expect(cpuBoundRefusal({ p50: 8 }, { p50: 10 })).toBeNull();
+    expect(cpuBoundRefusal(8.1, 10)).toContain('CPU-bound');
+    expect(cpuBoundRefusal(8, 10)).toBeNull();
   });
 
   it('declines where either clock is missing', () => {
-    expect(cpuBoundRefusal(null, { p50: 10 })).toBeNull();
-    expect(cpuBoundRefusal({ p50: 9 }, undefined)).toBeNull();
+    expect(cpuBoundRefusal(undefined, 10)).toBeNull();
+    expect(cpuBoundRefusal(9, undefined)).toBeNull();
   });
 });
 

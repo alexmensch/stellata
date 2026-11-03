@@ -292,7 +292,7 @@ same ceiling, and accepted under its own key
 summed, and a compute regression marks whatever the frame row says.
 
 **Which statistic of each stream is the `metric` column's job**, and it is
-not the same at every row. A GPU-paced frame row reads `throughput-p50`
+not the same at every row. A GPU-paced frame row reads `throughput-mean`
 and its main-thread row `cpu-p50`. An rAF-paced frame row reads `gpu-p50`, except where the
 vantage draws two pass classes — `earth` alone — where it reads the plain
 class, `gpu-plain-p50`. A compute row reads `compute-p10`. Both exceptions

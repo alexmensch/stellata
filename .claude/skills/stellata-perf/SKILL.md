@@ -125,7 +125,7 @@ already follows the table; this is for every other session.
   — take the perf pin, cold: one launch, idle between contexts, every
   context state-guarded. `--against-pin <path>` prints the verdicts a
   render-path PR pastes into its `## Perf` section. The `metric` column names
-  the statistic each row was marked on — `throughput-p50` on a GPU-paced
+  the statistic each row was marked on — `throughput-mean` on a GPU-paced
   frame row with `cpu-p50` on its `|cpu` row, `gpu-p50` (or `gpu-plain-p50`
   where the vantage draws two pass classes) on an rAF-paced one, and
   `compute-p10` on the `<scenario>|webgpu|compute` row beside it, and the `spread` column never

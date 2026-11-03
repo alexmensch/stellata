@@ -10,7 +10,7 @@ import type { FramePacing } from '../../../src/client/scene/frame-loop/frame-loo
 import { computeFloorMs, dwellFloorMs } from '../floors/floors';
 import {
   COMPUTE_ROW, CPU_ROW, DWELL_PACINGS, classClock, computeClock, cpuBoundRefusal, cpuClock, floorMove,
-  frameFloor, gatingClock, sampleClasses, spreadMove, type ClassClock, type DwellMetric,
+  frameFloor, gatingClock, sampleClasses, throughputFrameMs, spreadMove, type ClassClock, type DwellMetric,
 } from '../dwell/dwell-pure';
 import type { DwellRecord, PerfFile, ScenarioRecord } from '../schema';
 import type { ScenarioName } from '../scenarios';
@@ -432,8 +432,8 @@ function dwellRows(key: string, a: ScenarioRecord, b: ScenarioRecord): (DiffRow 
   if (da === null || db === null) {
     return [{ key: `${key}|dwell`, reason: 'one run has no dwell record' }];
   }
-  const cpuBound = cpuBoundRefusal(cpuClock(da), da.throughputStats)
-    ?? cpuBoundRefusal(cpuClock(db), db.throughputStats);
+  const cpuBound = cpuBoundRefusal(cpuClock(da)?.p50, throughputFrameMs(da))
+    ?? cpuBoundRefusal(cpuClock(db)?.p50, throughputFrameMs(db));
   if (cpuBound !== null) return [{ key: `${key}|dwell`, reason: cpuBound }];
   const frame = frameRow(key, da, db);
   return 'reason' in frame
@@ -539,21 +539,21 @@ function frameRow(key: string, da: DwellRecord, db: DwellRecord): DiffRow | Diff
         "other's did not, and a plain-class median against a mixture median is two statistics",
     };
   }
-  const deltaMs = jb.clock.p50 - ja.clock.p50;
+  const deltaMs = jb.valueMs - ja.valueMs;
   const bandMs = band(
-    medianStandardErrorMs(ja.clock), medianStandardErrorMs(jb.clock), dwellFloorMs(ja.clock.p50),
+    medianStandardErrorMs(ja.clock), medianStandardErrorMs(jb.clock), dwellFloorMs(ja.valueMs),
   );
   // Off the GPU stream alone. A wall floor is quantised to the refresh
   // interval exactly as its median is, so its p10 is the same value the
   // median already reports and the column would answer nothing.
-  const [fa, fb] = ga.metric === 'wall-p50' || ga.metric === 'throughput-p50'
+  const [fa, fb] = ga.metric === 'wall-p50' || ga.metric === 'throughput-mean'
     ? [null, null]
     : [frameFloor(da.gpuMs), frameFloor(db.gpuMs)];
   return {
     key: `${key}|dwell`,
     metric: ja.metric,
-    baselineMs: ja.clock.p50,
-    currentMs: jb.clock.p50,
+    baselineMs: ja.valueMs,
+    currentMs: jb.valueMs,
     deltaMs,
     floorDeltaMs: floorMove(fa, fb),
     spreadDeltaMs: spreadMove(
@@ -568,14 +568,12 @@ function frameRow(key: string, da: DwellRecord, db: DwellRecord): DiffRow | Diff
  *  `../pins/README.md#the-compute-row` last. */
 function judgedFrameStat(
   dwell: DwellRecord, gating: ReturnType<typeof gatingClock>,
-): { readonly clock: ClassClock; readonly metric: DwellMetric } {
-  if (gating.metric === 'wall-p50' || gating.metric === 'throughput-p50') {
-    return { clock: gating.clock, metric: gating.metric };
-  }
+): { readonly clock: ClassClock; readonly metric: DwellMetric; readonly valueMs: number } {
+  if (gating.metric === 'wall-p50' || gating.metric === 'throughput-mean') return gating;
   const classes = splitFrameClasses(dwell.passCounts) ? sampleClasses(dwell.gpuMs) : null;
-  return classes === null
-    ? { clock: gating.clock, metric: 'gpu-p50' }
-    : { clock: classClock(classes.plain), metric: 'gpu-plain-p50' };
+  if (classes === null) return gating;
+  const plain = classClock(classes.plain);
+  return { clock: plain, metric: 'gpu-plain-p50', valueMs: plain.p50 };
 }
 
 /**

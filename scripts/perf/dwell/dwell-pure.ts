@@ -212,7 +212,7 @@ export function classClock(samples: readonly number[]): ClassClock {
  *  every table, and `gatingClock` returns it alongside the clock itself so no
  *  caller re-derives the choice. */
 export type DwellMetric =
-  'gpu-p50' | 'gpu-plain-p50' | 'wall-p50' | 'throughput-p50' | 'compute-p10' | 'cpu-p50';
+  'gpu-p50' | 'gpu-plain-p50' | 'wall-p50' | 'throughput-mean' | 'compute-p10' | 'cpu-p50';
 
 /** Row-key suffix (`mw120|webgpu|compute`). Its own key, so a mark on the
  *  frame and one on the compute pass are accepted separately. */
@@ -237,6 +237,13 @@ export function cpuClock(dwell: { readonly cpuStats?: DwellSummary | null }): Dw
   return dwell.cpuStats ?? null;
 }
 
+/** Wall time per frame over the whole dwell: README.md#cpu-and-gpu-apart. */
+export function throughputMs(deltasMs: readonly number[]): number {
+  let sum = 0;
+  for (const d of deltasMs) sum += d;
+  return sum / deltasMs.length;
+}
+
 /** README.md#cpu-and-gpu-apart; a partial last window is dropped. */
 export function throughputSamples(deltasMs: readonly number[]): number[] {
   const windows: number[] = [];
@@ -250,18 +257,17 @@ export function throughputSamples(deltasMs: readonly number[]): number[] {
 
 /** Null unless both clocks were recorded and the main thread took more than
  *  `CPU_BOUND_SHARE` of the frame. */
-export function cpuBoundRefusal(
-  cpu: { readonly p50: number } | null | undefined,
-  frame: { readonly p50: number } | null | undefined,
-): string | null {
-  if (cpu == null || frame == null || cpu.p50 <= CPU_BOUND_SHARE * frame.p50) return null;
-  return `CPU-bound: the main thread took ${cpu.p50.toFixed(2)} of a ${frame.p50.toFixed(2)} ms frame, `
+export function cpuBoundRefusal(cpuMs: number | undefined, frameMs: number | undefined): string | null {
+  if (cpuMs === undefined || frameMs === undefined || cpuMs <= CPU_BOUND_SHARE * frameMs) return null;
+  return `CPU-bound: the main thread took ${cpuMs.toFixed(2)} of a ${frameMs.toFixed(2)} ms frame, `
     + `over ${CPU_BOUND_SHARE * 100} %, so the frame time is not GPU work`;
 }
 
 export interface GatingClock {
   readonly clock: DwellSummary;
   readonly metric: DwellMetric;
+  /** What the row is judged on: the clock's p50, or the mean for throughput. */
+  readonly valueMs: number;
 }
 
 /**
@@ -284,15 +290,25 @@ export interface GatingClock {
  * separately from choosing it can disagree with itself and still compile.
  */
 export function gatingClock(dwell: {
+  readonly deltasMs: readonly number[];
   readonly stats: DwellSummary;
   readonly gpuStats: DwellSummary | null;
   readonly throughputStats?: DwellSummary | null;
 }): GatingClock {
   // README.md#cpu-and-gpu-apart — a GPU-paced dwell gates on throughput.
-  if (dwell.throughputStats != null) return { clock: dwell.throughputStats, metric: 'throughput-p50' };
+  if (dwell.throughputStats != null) {
+    return { clock: dwell.throughputStats, metric: 'throughput-mean', valueMs: throughputMs(dwell.deltasMs) };
+  }
   return dwell.gpuStats === null
-    ? { clock: dwell.stats, metric: 'wall-p50' }
-    : { clock: dwell.gpuStats, metric: 'gpu-p50' };
+    ? { clock: dwell.stats, metric: 'wall-p50', valueMs: dwell.stats.p50 }
+    : { clock: dwell.gpuStats, metric: 'gpu-p50', valueMs: dwell.gpuStats.p50 };
+}
+
+/** The frame a CPU-bound test divides by; undefined off GPU pacing. */
+export function throughputFrameMs(
+  dwell: { readonly deltasMs: readonly number[]; readonly throughputStats?: DwellSummary | null },
+): number | undefined {
+  return dwell.throughputStats == null ? undefined : throughputMs(dwell.deltasMs);
 }
 
 /**

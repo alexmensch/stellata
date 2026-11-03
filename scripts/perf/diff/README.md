@@ -59,7 +59,7 @@ calls out a `✗` whose floor did not follow ([Reading](../pins/README.md#readin
 **A dwell row is judged on the clock `gatingClock` names** — throughput on a
 GPU-paced pair ([CPU and GPU, apart](../dwell/README.md#cpu-and-gpu-apart)),
 otherwise the GPU stream where both runs resolved one, wall only where neither
-did — and the metric column says which, `throughput-p50`, `gpu-p50` or
+did — and the metric column says which, `throughput-mean`, `gpu-p50` or
 `wall-p50`, exactly as the pin's does. Every
 test on the row reads that same clock: the clamp, the state guard and the
 band. That is the whole of the rule, and the half worth stating is what it
