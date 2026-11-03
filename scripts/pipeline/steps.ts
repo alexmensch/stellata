@@ -3,7 +3,8 @@
 import { registryPaths } from '../sid/registry-outputs';
 import { REGISTRY_PARTITIONS } from '../sid/registry-partitions-pure';
 import { MANUAL_STEPS } from './manual-step-outputs';
-import { PUBLIC_FILES, publicRepoPath } from '../../src/catalog-format/public-artifacts/public-artifacts';
+import { PUBLIC_FILES } from '../../src/catalog-format/public-artifacts/public-artifacts';
+import { publicRepoPath } from '../util/paths';
 import type { StepTable } from './step-table-pure';
 
 export const STEPS: StepTable = {

@@ -4,9 +4,8 @@ import { readFileSync } from 'node:fs';
 import { relative, resolve } from 'node:path';
 import ts from 'typescript';
 import { isProductionTs, walkFiles } from './walk-files';
-import {
-  DUST_MANIFEST, PUBLIC_DIR, PUBLIC_FILES, PUBLIC_FOLDERS,
-} from '../src/catalog-format/public-artifacts/public-artifacts';
+import { DUST_MANIFEST, PUBLIC_FILES, PUBLIC_FOLDERS } from '../src/catalog-format/public-artifacts/public-artifacts';
+import { PUBLIC_DIR } from '../scripts/util/paths';
 import { CATALOG_MANIFEST_FILENAME } from '../src/catalog-format/record/catalog-pure';
 
 const ROOT = resolve(__dirname, '..');

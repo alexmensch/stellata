@@ -1,6 +1,4 @@
-// The name of every file and folder the build writes under public/ and the viewer fetches. See README.md.
-
-export const PUBLIC_DIR = 'public';
+// The name of every file and folder the build ships and the viewer fetches. See README.md.
 
 export const PUBLIC_FILES = {
   constellations: 'constellations.json',
@@ -21,11 +19,3 @@ export const PUBLIC_FOLDERS = {
 } as const;
 
 export const DUST_MANIFEST = 'manifest.json';
-
-export type PublicFile = (typeof PUBLIC_FILES)[keyof typeof PUBLIC_FILES];
-export type PublicFolder = (typeof PUBLIC_FOLDERS)[keyof typeof PUBLIC_FOLDERS];
-
-/** Repo-relative path of a public artifact, as the step table and the mirrors spell outputs. */
-export function publicRepoPath(name: PublicFile | PublicFolder | `${PublicFolder}/${string}`): string {
-  return `${PUBLIC_DIR}/${name}`;
-}

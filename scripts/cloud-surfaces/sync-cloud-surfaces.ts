@@ -5,8 +5,8 @@ import { mkdirSync, statSync } from 'node:fs';
 import { dirname } from 'node:path';
 
 import { syncFile } from '../util/mirror-to-public';
-import { publicFile } from '../util/paths';
-import { PUBLIC_FILES, publicRepoPath } from '../../src/catalog-format/public-artifacts/public-artifacts';
+import { publicFile, publicRepoPath } from '../util/paths';
+import { PUBLIC_FILES } from '../../src/catalog-format/public-artifacts/public-artifacts';
 import { CLOUD_SURFACES_BIN } from './cloud-surfaces-source';
 
 const DST = publicFile(PUBLIC_FILES.cloudSurfaces);

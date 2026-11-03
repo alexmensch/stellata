@@ -3,7 +3,8 @@
 // per-body maps.
 
 import { mirrorDataFolder } from '../util/mirror-to-public';
-import { PUBLIC_FOLDERS, publicRepoPath } from '../../src/catalog-format/public-artifacts/public-artifacts';
+import { publicRepoPath } from '../util/paths';
+import { PUBLIC_FOLDERS } from '../../src/catalog-format/public-artifacts/public-artifacts';
 
 import { TEXTURES_MIRROR } from './textures-mirror-source';
 
