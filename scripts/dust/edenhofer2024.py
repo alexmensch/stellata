@@ -57,11 +57,6 @@ def cached_file(variant: str) -> Path:
     return Path(data_dir()) / DUSTMAPS_SUBDIR / VARIANTS[variant]["file"]
 
 
-def voxel_cache_path(output_dir: Path, flavor: str) -> Path:
-    variant = FLAVOR_VARIANT[flavor]
-    return output_dir / f".voxels-{variant}-{VARIANTS[variant]['md5']}.npy"
-
-
 def require(flavor: str) -> dict[str, Any]:
     """The committed identity of the dataset a bake reads for `flavor`, once
     the file dustmaps will serve is checked to be that dataset."""
