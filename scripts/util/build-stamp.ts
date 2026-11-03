@@ -82,8 +82,7 @@ export function ignoredPaths(paths: readonly string[], root: string): Set<string
   return new Set(run.stdout.split('\n').filter(Boolean));
 }
 
-/** A directory listing's hash over its sorted names, git-ignored names left out:
- *  scratch such as a local cache exists in one checkout only. */
+/** A directory listing's hash over its sorted names, git-ignored names left out. */
 export function listingHash(dir: string, names: readonly string[], root: string): string {
   const skip = ignoredPaths(names.map((n) => join(dir, n)), root);
   const kept = names.filter((n) => !skip.has(join(dir, n)));
