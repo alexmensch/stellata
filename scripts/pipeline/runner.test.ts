@@ -499,10 +499,28 @@ export const OUT = declareOutputs({ out });
     write('steps/reached.ts', `import { readFileSync } from 'node:fs';\nexport const text = await Promise.resolve(readFileSync.name);\n`);
     const reached = relative(REPO_ROOT, at('steps/reached.ts'));
     const { inputs } = await entryMetafile([at('steps/reached.ts')]);
-    expect(await importTimeProblems([reached], inputs)).toEqual([
+    expect(await importTimeProblems({ checked: [reached], trusted: [] }, inputs)).toEqual([
       `${reached} imports node:fs at table load; only ${[...TABLE_LOAD_BUILTINS].join(' and ')} may be`,
       expect.stringMatching(new RegExp(`^${escapeRegExp(reached)}: .*top-level await`, 'i')),
     ]);
+  });
+
+  it('lets a trusted leaf\'s closure import any built-in, but no package and no top-level await', async () => {
+    write('steps/leaf.ts', `import { readFileSync } from 'node:fs';\nexport { readFileSync };\n`);
+    write('steps/bad-leaf.ts', `import { build } from 'esbuild';\nexport const b = await Promise.resolve(build);\n`);
+    const [leaf, badLeaf] = ['steps/leaf.ts', 'steps/bad-leaf.ts'].map((p) => relative(REPO_ROOT, at(p)));
+    const { inputs } = await entryMetafile([at('steps/leaf.ts'), at('steps/bad-leaf.ts')]);
+    expect(await importTimeProblems({ checked: [], trusted: [leaf, badLeaf] }, inputs)).toEqual([
+      `${badLeaf} imports esbuild at table load; only Node built-ins may be`,
+      expect.stringMatching(new RegExp(`^${escapeRegExp(badLeaf)}: .*top-level await`, 'i')),
+    ]);
+  });
+
+  it('walks into the trusted leaves\' own imports', async () => {
+    const step = tsStep('a', 'a.out');
+    const walk = await walkOutputsModules({ steps: [step], registryFiles: [] }, pipelineTree(root));
+    expect(walk.problems).toEqual([]);
+    expect([...walk.trusted]).toEqual(expect.arrayContaining(['scripts/util/emit-artifacts.ts', 'scripts/util/staged-write.ts']));
   });
 
   it('walks on through a listed legacy module into its own imports', async () => {

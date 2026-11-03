@@ -39,6 +39,7 @@ const codePath = (path: string): string => resolve(REPO_ROOT, path);
 
 export interface OutputsWalk {
   readonly accepted: ReadonlySet<string>;
+  readonly trusted: ReadonlySet<string>;
   readonly problems: readonly string[];
 }
 
@@ -46,10 +47,19 @@ export interface OutputsWalk {
  *  side effects would run them. */
 export async function walkOutputsModules(table: StepTable, tree: PipelineTree): Promise<OutputsWalk> {
   const modules = new Set(table.steps.flatMap((s) => (s.language === 'ts' ? [tree.abs(s.outputs.module)] : [])));
-  if (modules.size === 0) return { accepted: new Set(), problems: [] };
+  if (modules.size === 0) return { accepted: new Set(), trusted: new Set(), problems: [] };
   const { inputs } = await entryMetafile([...modules]);
   const internal = (module: string): string[] => inputs[module].imports.filter((i) => !i.external).map((i) => i.path);
   const accepted = new Set<string>();
+  const trusted = new Set<string>();
+  const trust = (leaf: string): void => {
+    for (const stack = [leaf]; stack.length > 0;) {
+      const at = stack.pop()!;
+      if (trusted.has(at)) continue;
+      trusted.add(at);
+      stack.push(...internal(at));
+    }
+  };
   const problems: string[] = [];
   const roots = Object.keys(inputs).filter((m) => modules.has(codePath(m)));
   for (const module of roots) {
@@ -57,30 +67,37 @@ export async function walkOutputsModules(table: StepTable, tree: PipelineTree): 
     const stack = internal(module);
     while (stack.length > 0) {
       const at = stack.pop()!;
-      if (seen.has(at) || OUTPUTS_MODULE_LEAVES.has(at)) continue;
+      if (seen.has(at)) continue;
       seen.add(at);
-      if (isWalkable(at)) {
+      if (OUTPUTS_MODULE_LEAVES.has(at)) trust(at);
+      else if (isWalkable(at)) {
         accepted.add(at);
         stack.push(...internal(at));
       } else problems.push(`outputs module ${module} reaches ${at}, beyond ${WALKABLE}`);
     }
   }
-  problems.push(...await importTimeProblems([...roots, ...accepted], inputs));
-  return { accepted, problems };
+  problems.push(...await importTimeProblems({ checked: [...roots, ...accepted], trusted: [...trusted] }, inputs));
+  return { accepted, trusted, problems };
 }
 
-/** Why importing each module, repo-relative and keyed in `inputs`, could act: an
- *  external import beyond TABLE_LOAD_BUILTINS, or a top-level await. */
-export async function importTimeProblems(modules: readonly string[], inputs: Metafile['inputs']): Promise<string[]> {
+/** Why importing each module, repo-relative and keyed in `inputs`, could act: a
+ *  top-level await, a package import, or, for a checked module, a built-in beyond
+ *  TABLE_LOAD_BUILTINS. The trusted leaves and their closure may import any built-in. */
+export async function importTimeProblems(
+  modules: { readonly checked: readonly string[]; readonly trusted: readonly string[] },
+  inputs: Metafile['inputs'],
+): Promise<string[]> {
   const problems: string[] = [];
-  for (const module of modules) {
-    for (const { path, external } of inputs[module].imports) {
-      if (external && !TABLE_LOAD_BUILTINS.has(builtinName(path))) {
-        problems.push(`${module} imports ${path} at table load; only ${[...TABLE_LOAD_BUILTINS].join(' and ')} may be`);
+  const scan = (list: readonly string[], allows: (spec: string) => boolean, allowed: string): void => {
+    for (const module of list) {
+      for (const { path, external } of inputs[module].imports) {
+        if (external && !allows(path)) problems.push(`${module} imports ${path} at table load; only ${allowed} may be`);
       }
     }
-  }
-  return [...problems, ...await topLevelAwaits(modules)];
+  };
+  scan(modules.checked, (spec) => TABLE_LOAD_BUILTINS.has(builtinName(spec)), [...TABLE_LOAD_BUILTINS].join(' and '));
+  scan(modules.trusted, isBuiltin, 'Node built-ins');
+  return [...problems, ...await topLevelAwaits([...modules.checked, ...modules.trusted])];
 }
 
 async function topLevelAwaits(modules: readonly string[]): Promise<string[]> {
