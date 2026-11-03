@@ -99,7 +99,9 @@ export async function bootWebGpu(canvas: HTMLCanvasElement): Promise<WebGpuSeam 
   // `setDustTexture` cannot reach one and miss the other.
   const extinctionSlots = new ExtinctionNodes();
   const outOfMemory = watchOutOfMemory(renderer as unknown as ErrorReporter);
-  const scopeDevice = (renderer.backend as unknown as { device: ErrorScopeDevice }).device;
+  const device = (renderer.backend as unknown as {
+    device: ErrorScopeDevice & { queue: { onSubmittedWorkDone(): Promise<void> } };
+  }).device;
   const nodesOrThrow = (caller: string) => {
     if (registry === null) throw new Error(`${caller} before bindSharedUniforms`);
     return registry.nodes;
@@ -135,9 +137,7 @@ export async function bootWebGpu(canvas: HTMLCanvasElement): Promise<WebGpuSeam 
       registry?.sync();
     },
     submittedWorkDone() {
-      return (renderer.backend as unknown as {
-        device: { queue: { onSubmittedWorkDone(): Promise<void> } };
-      }).device.queue.onSubmittedWorkDone();
+      return device.queue.onSubmittedWorkDone();
     },
     startTimestampFrame() {
       (renderer.info as { frame: number }).frame = ++timestampFrame;
@@ -228,7 +228,7 @@ export async function bootWebGpu(canvas: HTMLCanvasElement): Promise<WebGpuSeam 
       return outOfMemory.subscribe(listener);
     },
     uploadTexture(texture: THREE.Texture, settled: (uploaded: boolean) => void) {
-      allocatesWithinMemory(scopeDevice, () => renderer.initTexture(texture)).then(
+      allocatesWithinMemory(device, () => renderer.initTexture(texture)).then(
         settled,
         (err: unknown) => {
           console.error('planet texture upload threw', err);
