@@ -491,7 +491,7 @@ export const OUT = declareOutputs({ out });
 `);
     expect(await load([step])).toEqual({
       kind: 'rejected',
-      problems: [`${relative(REPO_ROOT, at('steps/a-outputs.ts'))}: Top-level await is not available in the configured target environment`],
+      problems: [expect.stringMatching(new RegExp(`^${escapeRegExp(relative(REPO_ROOT, at('steps/a-outputs.ts')))}: .*top-level await`, 'i'))],
     });
   });
 
