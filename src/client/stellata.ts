@@ -160,7 +160,7 @@ export class Stellata {
 
   private readonly layers = new SceneLayerRegistry();
   private readonly frameLoop: FrameLoop;
-  readonly framePacing: Pick<FrameLoop, 'setPacing' | 'onRenderedTick'>;
+  get framePacing(): Pick<FrameLoop, 'setPacing' | 'onRenderedTick'> { return this.frameLoop; }
 
   readonly observe!: ObserveTransition;
   private observeControls!: ObserveControls;
@@ -654,7 +654,6 @@ export class Stellata {
       pxPerRadian: () => this.angularToPx(),
       emitFrame: () => this.bus.emit('frame'),
     });
-    this.framePacing = this.frameLoop;
     this.registerSceneLayers(galacticDiscEntry);
     // A layer that learns its permission only from a push sits at its
     // constructor's guess until this seeds it.
