@@ -57,7 +57,7 @@ describe('the step table', () => {
     const outsideTrees = [...accepted].filter((m) => !SHARED_TREES.has(treeOf(m))).sort();
     expect(outsideTrees).toEqual([...LEGACY_IMPORTABLE].sort());
     expect(LEGACY_IMPORTABLE.size).toBe(38);
-  }, 60_000);
+  });
 
   it('is the one place a table step\'s entry is named: no package.json script or workflow runs one directly', () => {
     const workflows = join(REPO_ROOT, '.github/workflows');
