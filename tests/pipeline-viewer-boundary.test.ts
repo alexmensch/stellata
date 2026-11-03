@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { dirname, join, relative, resolve } from 'node:path';
 import { walkFiles } from './walk-files';
 import { importSpecifiers, isTypeScript } from './import-specifiers';
-import { TREE_ROOTS, treeOf, type Tree } from './source-trees';
+import { TREE_ROOTS, treeOf, type Tree } from '../scripts/util/source-trees';
 
 const ROOT = resolve(__dirname, '..');
 

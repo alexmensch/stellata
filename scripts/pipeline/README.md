@@ -137,7 +137,7 @@ The runner rejects the table, before running anything, when:
   `public/`" rule becomes this check);
 - a step's outputs module imports anything beyond `util/emit-artifacts`,
   `util/paths`, `*-pure` modules and the two boundary trees
-  (`src/catalog-format/**`, `src/astro-core/**`), checked over its import
+  (`src/catalog-format/**`, `src/astro-core/**`, as `util/source-trees.ts` roots them), checked over its import
   closure. That is what makes it side-effect-free to import, which no check
   can test directly. The walk passes through `*-outputs`, `*-source` and
   `*-tsv` modules too, checking their imports in turn: they are the only

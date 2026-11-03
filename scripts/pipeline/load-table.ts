@@ -6,6 +6,7 @@ import { dirname, resolve } from 'node:path';
 import type { DeclaredOutputs } from '../util/emit-artifacts';
 import { entryMetafile } from '../util/import-closure';
 import { REPO_ROOT } from '../util/paths';
+import { treeOf, treeRoots, type Tree } from '../util/source-trees';
 import { readManualRecord } from './freshness';
 import { pipelineTree, type PipelineTree } from './pipeline-tree';
 import {
@@ -14,9 +15,10 @@ import {
 } from './step-table-pure';
 
 const OUTPUTS_MODULE_LEAVES = new Set(['scripts/util/emit-artifacts.ts', 'scripts/util/paths.ts']);
-const BOUNDARY_TREES = ['src/catalog-format/', 'src/astro-core/'];
+const SHARED_TREES: ReadonlySet<Tree> = new Set(['catalog-format', 'astro-core']);
 const isWalkable = (module: string): boolean => /-(pure|outputs|source|tsv)\.ts$/.test(module)
-  || BOUNDARY_TREES.some((tree) => module.startsWith(tree));
+  || SHARED_TREES.has(treeOf(module));
+export const WALKABLE = `util/emit-artifacts, util/paths, ${treeRoots(SHARED_TREES).join(', ')} and *-pure, *-outputs, *-source and *-tsv modules`;
 
 export type Loaded =
   | { readonly kind: 'loaded'; readonly steps: ReadonlyMap<string, ResolvedStep>; readonly graph: StepGraph }
@@ -46,7 +48,7 @@ async function impureOutputsModules(refs: readonly OutputsRef[], tree: PipelineT
       if (seen.has(at) || OUTPUTS_MODULE_LEAVES.has(at)) continue;
       seen.add(at);
       if (isWalkable(at)) stack.push(...internal(at));
-      else problems.push(`outputs module ${module} reaches ${at}, beyond util/emit-artifacts, util/paths, src/catalog-format, src/astro-core and *-pure, *-outputs, *-source and *-tsv modules`);
+      else problems.push(`outputs module ${module} reaches ${at}, beyond ${WALKABLE}`);
     }
   }
   return problems;

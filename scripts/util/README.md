@@ -108,6 +108,10 @@ same thing — single-use helpers stay with their consumer.
   clone), and `fileAtMergeBase`, a file as the merge-base holds it — `absent`
   when it is new on the branch, kept apart from `no-merge-base`. The lineage
   header, perf's `gitMeta` and the two merge-base guards read it.
+- `source-trees.ts` — `TREE_ROOTS` and `treeOf`, which tree a repo path
+  belongs to, and `BROWSER_TREES`: the one list both import-boundary tests
+  (`/tests/README.md#pipeline-viewer-boundary`) and the step table's
+  outputs-module walk ([Load-time rules](../pipeline/README.md#load-time-rules)) read.
 - `step-inputs.ts` — `entryInputPaths(entries)`, every file a TypeScript
   step reads: the closure of its entry files, the closure's siblings, and
   every declaration the closure reads (`sources/`); the runner derives each

@@ -294,9 +294,6 @@ import-specifiers.ts     Not a test — `importSpecifiers` (every specifier,
                          `isShippedSource` (not a test, `.d.ts` or
                          `*-fixture.ts`), shared by node-import-boundary
                          and pipeline-viewer-boundary.
-source-trees.ts          Not a test — `TREE_ROOTS` and `treeOf`, which tree
-                         a repo path belongs to, and `BROWSER_TREES`; the
-                         one list both import-boundary tests read.
 walk-files.ts            Not a test — file enumeration the scanners above
                          share. `walkFiles` is a recursive walk taking
                          `include` / `skipDir` predicates, and follows
@@ -469,7 +466,7 @@ flake that trains readers to re-run.
 
 `node-import-boundary.test.ts` scans **direct** import specifiers in the
 browser trees — `src/client/` and the two shared trees, `BROWSER_TREES` in
-`source-trees.ts` — so a builtin anywhere the bundle reaches is caught where
+`scripts/util/source-trees.ts` — so a builtin anywhere the bundle reaches is caught where
 it is written. What it cannot see is a builtin behind an import from outside
 those trees, which the pipeline-viewer boundary already forbids.
 

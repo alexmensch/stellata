@@ -8,7 +8,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { fileHashes } from '../util/build-stamp';
 import { REPO_ROOT } from '../util/paths';
 import { pullQueryHash, requestHash } from './freshness';
-import { loadTable, type Loaded } from './load-table';
+import { loadTable, WALKABLE, type Loaded } from './load-table';
 import { pipelineTree } from './pipeline-tree';
 import { runSteps, type Verdict } from './runner';
 import type { StepEntry, StepTable } from './step-table-pure';
@@ -424,7 +424,7 @@ os.replace(tmp, ${JSON.stringify(at(out))})
 });
 
 describe('loadTable', () => {
-  const reachesBuildStamp = (): string => `outputs module ${relative(REPO_ROOT, at('steps/a-outputs.ts'))} reaches scripts/util/build-stamp.ts, beyond util/emit-artifacts, util/paths, src/catalog-format, src/astro-core and *-pure, *-outputs, *-source and *-tsv modules`;
+  const reachesBuildStamp = (): string => `outputs module ${relative(REPO_ROOT, at('steps/a-outputs.ts'))} reaches scripts/util/build-stamp.ts, beyond ${WALKABLE}`;
 
   it('rejects an outputs module that imports beyond emit-artifacts, paths and pure modules, before importing it', async () => {
     const step = tsStep('a', 'a.out');
