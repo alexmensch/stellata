@@ -5,7 +5,7 @@ import { resolve } from 'node:path';
 
 import { stepFileName } from '../util/stamp-path-pure';
 import { REPO_ROOT } from '../util/paths';
-import { isBuild, writersOf, type ResolvedStep, type StepGraph } from './step-table-pure';
+import { isBuild, writersOf, type ResolvedStep, type StepGraph } from './step-table/step-table-pure';
 
 const HOLDER = resolve(REPO_ROOT, 'scripts/pipeline/lock_holder.py');
 const WAIT_NOTICE_MS = 1000;

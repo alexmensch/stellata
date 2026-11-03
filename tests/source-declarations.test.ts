@@ -7,7 +7,7 @@ import { describe, expect, it } from 'vitest';
 import { declaredInputs, DECLARING_MODULE } from '../scripts/util/sources/declared-inputs';
 import { entryClosure, packageScripts } from '../scripts/util/import-closure';
 import { scriptParts } from '../scripts/util/import-closure-pure';
-import { STEPS } from '../scripts/pipeline/steps';
+import { STEPS } from '../scripts/pipeline/step-table/steps';
 import { stepEntries } from '../scripts/util/step-inputs';
 import { REPO_ROOT } from '../scripts/util/paths';
 import { isProductionTs, walkFiles } from './walk-files';
@@ -18,7 +18,7 @@ const DATA_PATH_SPELLERS = [
   'scripts/catalog/catalog-inputs.test.ts',
   'scripts/local-group/local-group-inputs.test.ts',
   'scripts/pipeline/pipeline-tree.ts',
-  'scripts/pipeline/steps.ts',
+  'scripts/pipeline/step-table/steps.ts',
   'tests/citation-index.test.ts',
   'tests/doc-pointer-resolution.test.ts',
   'tests/paper-store-link.test.ts',

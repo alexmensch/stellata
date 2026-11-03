@@ -2,7 +2,7 @@
 
 import { resolve } from 'node:path';
 
-import { STEPS } from '../pipeline/steps';
+import { STEPS } from '../pipeline/step-table/steps';
 import { closureWithSiblings, tsxEntries } from './import-closure-pure';
 import { entryClosure, packageScripts, trackedFiles } from './import-closure';
 import { REPO_ROOT } from './paths';

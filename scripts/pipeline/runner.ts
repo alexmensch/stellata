@@ -10,7 +10,7 @@ import {
   derivedFreshness, manualDescription, manualFreshness, recordedFreshness, stampedOutputs,
   type Freshness,
 } from './freshness';
-import type { Loaded } from './load-table';
+import type { Loaded } from './step-table/load-table';
 import { holdStepLocks } from './locks';
 import { pipelineTree, type PipelineTree } from './pipeline-tree';
 import { exec, runRecorded, TSX } from './processes';
@@ -18,7 +18,7 @@ import { recordProblems } from './python-run-pure';
 import {
   isBuild, selectSteps,
   type BuildStep, type ResolvedStep, type StepGraph,
-} from './step-table-pure';
+} from './step-table/step-table-pure';
 
 export type Verdict =
   | { readonly kind: 'fresh' }

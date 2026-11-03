@@ -9,10 +9,10 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { fileHashes } from '../util/build-stamp';
 import { REPO_ROOT } from '../util/paths';
 import { pullQueryHash, requestHash } from './freshness';
-import { loadTable, WALKABLE, type Loaded } from './load-table';
+import { loadTable, WALKABLE, type Loaded } from './step-table/load-table';
 import { pipelineTree } from './pipeline-tree';
 import { runSteps, type Verdict } from './runner';
-import type { StepEntry, StepTable } from './step-table-pure';
+import type { StepEntry, StepTable } from './step-table/step-table-pure';
 
 let root: string;
 let logDir: string;

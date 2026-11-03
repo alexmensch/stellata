@@ -7,7 +7,7 @@ import {
   manualDescription, manualFreshness, pullQueryHash, requestHash, stampedOutputs, writeManualRecord,
   type Description, type ManualRecord,
 } from './freshness';
-import type { Loaded } from './load-table';
+import type { Loaded } from './step-table/load-table';
 import { holdStepLocks } from './locks';
 import { pipelineTree, type PipelineTree } from './pipeline-tree';
 import { exec, runRecorded, TSX } from './processes';
@@ -15,7 +15,7 @@ import { undeclaredWrites, type RunRecord } from './python-run-pure';
 import {
   claims, isBuild,
   type ManualStep, type ResolvedStep,
-} from './step-table-pure';
+} from './step-table/step-table-pure';
 
 export interface RecordOptions {
   readonly root: string;

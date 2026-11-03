@@ -113,11 +113,11 @@ same thing — single-use helpers stay with their consumer.
 - `source-trees.ts` — `TREE_ROOTS` and `treeOf`, which tree a repo path
   belongs to, and `BROWSER_TREES`: the one list both import-boundary tests
   (`/tests/README.md#pipeline-viewer-boundary`) and the step table's
-  outputs-module walk ([Load-time rules](../pipeline/README.md#load-time-rules)) read.
+  outputs-module walk ([Load-time rules](../pipeline/step-table/README.md#load-time-rules)) read.
 - `step-inputs.ts` — `entryInputPaths(entries)`, every file a TypeScript
   step reads: the closure of its entry files, the closure's siblings, and
   every declaration the closure reads (`sources/`); the runner derives each
-  TypeScript step's inputs with it ([The step table](../pipeline/README.md#the-step-table--stepsts)).
+  TypeScript step's inputs with it ([The step table](../pipeline/step-table/README.md#the-step-table--stepsts)).
   `stepEntries(name)` is a step's entry: its `steps.ts` entry when the step is
   on the table (`package.json` then names only `run.ts`), else each `tsx` entry
   its `package.json` script chains; `stepInputPaths(name)` is
