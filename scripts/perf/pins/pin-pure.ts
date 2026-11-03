@@ -10,9 +10,9 @@ import {
 } from '../diff/diff-pure';
 import { computeFloorMs, dwellFloorMs } from '../floors/floors';
 import {
-  COMPUTE_ROW, CPU_ROW, classClock, computeClock, cpuClock, frameFloor, gatingClock, recordedPacing,
+  COMPUTE_ROW, CPU_JUDGEMENT, CPU_ROW, THROUGHPUT_JUDGEMENT, classClock, computeClock, cpuClock, frameFloor, gatingClock, recordedPacing,
   pointMove, sampleClasses, throughputFrameMs, throughputMs,
-  spreadMove, type DwellMetric, type DwellSummary, type FrameFloor, type StateGuard,
+  spreadMove, type DwellMetric, type DwellSummary, type FrameFloor, type GatedSide, type StateGuard,
 } from '../dwell/dwell-pure';
 import { DWELL_METHOD, contextOrder } from '../run-pure';
 import { PERF_SCHEMA, type AdapterProbe, type DwellRecord, type GitProvenance, type PerfFile, type ScenarioRecord } from '../schema';
@@ -555,18 +555,6 @@ function underCeiling(row: PinVerdictRow): PinVerdictRow {
   return { ...row, verdict: 'dearer', note: `${row.metric} over the ${PIN_CEILING_MS} ms ceiling` };
 }
 
-/** One side of one stream, reduced to what a verdict needs. The pin resolves
- *  it from its recorded rows and a run from its raw samples, so `streamRow`
- *  never asks which it was given. */
-interface GatedSide {
-  readonly valueMs: number;
-  /** Zero where the row bands on its floor alone — README.md#the-compute-row.
-   * */
-  readonly standardErrorMs: number;
-  readonly p10: number | null;
-  readonly p90: number | null;
-}
-
 /** One timestamp stream of a context and the two sides to judge it on. */
 interface StreamSpec {
   readonly key: string;
@@ -647,23 +635,20 @@ function gatedCompute(clock: PinClock | DwellSummary | null, floor: FrameFloor |
   return { valueMs: floor.p10, standardErrorMs: 0, p10: floor.p10, p90: clock.p90 };
 }
 
-function gatedThroughput(clock: PinClock | DwellSummary, meanMs: number): GatedSide {
-  return { valueMs: meanMs, standardErrorMs: medianStandardErrorMs(clock), p10: null, p90: clock.p90 };
-}
-
 /** Valid only after `pacingRefusal` passed the pair. */
 function frameStreamRow(pinned: PinRow, dwell: DwellRecord): PinVerdictRow {
   const pacing = recordedPacing(pinned.pacing);
   if (pacing === 'gpu') {
     const pinnedThroughput = pinned.throughput ?? null;
-    const currentMs = throughputFrameMs(dwell, pacing);
+    const pinnedSide = pinnedThroughput === null ? null : THROUGHPUT_JUDGEMENT.side(pinnedThroughput);
+    const meanMs = throughputFrameMs(dwell, pacing)!;
     return streamRow(pinned, {
       key: pinned.key,
-      metric: 'throughput-mean',
+      metric: THROUGHPUT_JUDGEMENT.metric,
       stream: 'GPU',
-      pinned: pinnedThroughput === null ? null : gatedThroughput(pinnedThroughput, pinnedThroughput.meanMs),
-      current: currentMs === undefined ? null : gatedThroughput(dwell.throughputStats!, currentMs),
-      floorMs: dwellFloorMs(pinnedThroughput?.meanMs ?? 0),
+      pinned: pinnedSide,
+      current: THROUGHPUT_JUDGEMENT.side({ ...dwell.throughputStats!, meanMs }),
+      floorMs: pinnedSide === null ? 0 : THROUGHPUT_JUDGEMENT.floorMs(pinnedSide),
       ungatedContext: { metric: 'wall-p50', pinnedMs: pinned.wall.p50, currentMs: dwell.stats.p50 },
     });
   }
@@ -684,25 +669,28 @@ function frameStreamRow(pinned: PinRow, dwell: DwellRecord): PinVerdictRow {
 function cpuStreamRows(pinned: PinRow, dwell: DwellRecord): PinVerdictRow[] {
   const [pinnedCpu, cpu] = [pinned.cpu ?? null, cpuClock(dwell)];
   if (pinnedCpu === null && cpu === null) return [];
+  const pinnedSide = pinnedCpu === null ? null : CPU_JUDGEMENT.side(pinnedCpu);
   return [streamRow(pinned, {
     key: `${pinned.key}|${CPU_ROW}`,
-    metric: 'cpu-p50',
+    metric: CPU_JUDGEMENT.metric,
     stream: 'CPU',
-    pinned: gatedFrame(pinnedCpu, null, null),
-    current: gatedFrame(cpu, null, null),
-    floorMs: dwellFloorMs(pinnedCpu?.p50 ?? 0),
+    pinned: pinnedSide,
+    current: cpu === null ? null : CPU_JUDGEMENT.side(cpu),
+    floorMs: pinnedSide === null ? 0 : CPU_JUDGEMENT.floorMs(pinnedSide),
     ungatedContext: null,
   })];
 }
 
 function compareRows(pinned: PinRow, dwell: DwellRecord): PinVerdictRow[] {
-  const frame = frameStreamRow(pinned, dwell);
-  const cpu = cpuStreamRows(pinned, dwell);
+  return [frameStreamRow(pinned, dwell), ...computeStreamRows(pinned, dwell), ...cpuStreamRows(pinned, dwell)];
+}
+
+function computeStreamRows(pinned: PinRow, dwell: DwellRecord): PinVerdictRow[] {
   const pinnedCompute = pinned.compute ?? null;
   const compute = computeClock(dwell);
-  if (pinnedCompute === null && compute === null) return [frame, ...cpu];
+  if (pinnedCompute === null && compute === null) return [];
   const pinnedComputeFloor = pinned.computeFloor ?? null;
-  return [frame, ...cpu, streamRow(pinned, {
+  return [streamRow(pinned, {
     key: `${pinned.key}|${COMPUTE_ROW}`,
     metric: 'compute-p10',
     stream: 'compute',

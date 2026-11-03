@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { medianStandardErrorMs } from '../../../src/client/debug/frame-cost/frame-cost-pure';
-import { BUFFER_MPX_TOLERANCE, RECORD_COUNT_TOLERANCE } from '../diff/diff-pure';
+import { BUFFER_MPX_TOLERANCE, RECORD_COUNT_TOLERANCE, diffRuns } from '../diff/diff-pure';
 import { computeFloorMs, dwellFloorMs } from '../floors/floors';
 import { frameFloor, type DwellSummary } from '../dwell/dwell-pure';
 import {
@@ -866,6 +866,20 @@ describe('a GPU-paced pin — throughput, CPU and the bottleneck', () => {
     expect([rows[0].pinnedMs, rows[0].currentMs]).toEqual([5, 6]);
     expect(rows[0].verdict).toBe('dearer');
     expect(rows[1].verdict).toBe('same');
+  });
+
+  it('judges the same rows in the same order as --baseline does', () => {
+    const full = (frameMs: number, cpuMs: number): ScenarioRecord => {
+      const s = paced(frameMs, cpuMs);
+      return { ...s, dwell: withCompute(s.dwell!, stats(0.4)) };
+    };
+    const againstPin = compareToPin(pinOf([full(5, 2)]), file([full(6, 2)]));
+    const againstRun = diffRuns(file([full(5, 2)]), file([full(6, 2)]));
+    expect(againstPin.refusals).toEqual([]);
+    expect(againstRun.refusals).toEqual([]);
+    const judged = (rows: readonly { metric: string; bandMs: number }[]) => rows.map((r) => [r.metric, r.bandMs]);
+    expect(judged(againstPin.rows)).toEqual(judged(againstRun.rows));
+    expect(againstPin.rows.map((r) => r.metric)).toEqual(['throughput-mean', 'compute-p10', 'cpu-p50']);
   });
 
   it('refuses a context the main thread paced, in the run and when writing the pin', () => {

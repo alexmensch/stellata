@@ -183,6 +183,11 @@ after the `'frame'` handlers
 recorded under either pacing and banded the way the frame is. Chrome's GPU
 process spends CPU on the same commands and is not in it.
 
+**Both gates judge these two rows through one definition each**,
+`THROUGHPUT_JUDGEMENT` and `CPU_JUDGEMENT`: the value, its standard error
+and its floor. Every context's rows come out frame, compute, CPU, in both
+gates.
+
 **A context whose CPU per tick passes `CPU_BOUND_SHARE` (0.8) of its
 throughput is refused, CPU-bound** (`cpuBoundRefusal` in
 `../diff/diff-pure.ts`, both gates, either side). There the main thread is

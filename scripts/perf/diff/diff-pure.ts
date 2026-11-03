@@ -9,7 +9,7 @@ import {
 import type { FramePacing } from '../../../src/client/scene/frame-loop/frame-loop';
 import { computeFloorMs, dwellFloorMs } from '../floors/floors';
 import {
-  COMPUTE_ROW, CPU_BOUND_SHARE, CPU_ROW, classClock, computeClock, cpuClock, floorMove,
+  COMPUTE_ROW, CPU_BOUND_SHARE, CPU_JUDGEMENT, CPU_ROW, classClock, computeClock, cpuClock, floorMove,
   frameFloor, gatingClock, recordedPacing, sampleClasses, throughputFrameMs, spreadMove, type ClassClock, type DwellMetric,
 } from '../dwell/dwell-pure';
 import type { DwellRecord, PerfFile, ScenarioRecord } from '../schema';
@@ -452,13 +452,14 @@ function cpuRow(key: string, da: DwellRecord, db: DwellRecord): (DiffRow | DiffR
   if (ca === null || cb === null) {
     return [{ key: `${key}|${CPU_ROW}`, reason: 'one run recorded main-thread time for this row and the other did not' }];
   }
-  const deltaMs = cb.p50 - ca.p50;
-  const bandMs = band(medianStandardErrorMs(ca), medianStandardErrorMs(cb), dwellFloorMs(ca.p50));
+  const [sa, sb] = [CPU_JUDGEMENT.side(ca), CPU_JUDGEMENT.side(cb)];
+  const deltaMs = sb.valueMs - sa.valueMs;
+  const bandMs = band(sa.standardErrorMs, sb.standardErrorMs, CPU_JUDGEMENT.floorMs(sa));
   return [{
     key: `${key}|${CPU_ROW}`,
-    metric: 'cpu-p50',
-    baselineMs: ca.p50,
-    currentMs: cb.p50,
+    metric: CPU_JUDGEMENT.metric,
+    baselineMs: sa.valueMs,
+    currentMs: sb.valueMs,
     deltaMs,
     floorDeltaMs: null,
     spreadDeltaMs: null,

@@ -498,6 +498,19 @@ describe('diffRuns — refusals', () => {
     expect(pacingRefusal('raf', 'raf')).toBeNull();
   });
 
+  it('refuses the CPU row alone where one run recorded no main-thread time', () => {
+    const paced = (cpuStats: DwellSummary | null): PerfFile => {
+      const f = withDwell(dwellStats(16.7), { params: { pacing: 'gpu' } }, dwellStats(6.5));
+      const d = f.scenarios[0].dwell!;
+      return file([{ ...f.scenarios[0], dwell: {
+        ...d, deltasMs: [4, 6], throughputStats: dwellStats(5.4), cpuStats,
+      } }]);
+    };
+    const diff = diffRuns(paced(dwellStats(2)), paced(null));
+    expect(diff.refusals.map((r) => r.key)).toEqual([expect.stringMatching(/\|cpu$/)]);
+    expect(diff.rows.map((r) => r.metric)).toEqual(['throughput-mean']);
+  });
+
   it('gates a GPU-paced pair on throughput and adds a CPU row', () => {
     const paced = (frameMs: number, cpuMs: number): PerfFile => {
       const f = withDwell(dwellStats(16.7), { params: { pacing: 'gpu' } }, dwellStats(frameMs * 1.3));

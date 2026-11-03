@@ -7,9 +7,11 @@ import {
   isVsyncClamped,
   lag1Autocorrelation,
   median,
+  medianStandardErrorMs,
   percentile,
 } from '../../../src/client/debug/frame-cost/frame-cost-pure';
 import type { FramePacing } from '../../../src/client/scene/frame-loop/frame-loop';
+import { dwellFloorMs } from '../floors/floors';
 
 export const DEFAULT_DWELL_FRAMES = 240;
 
@@ -314,6 +316,43 @@ function throughputClock(dwell: { readonly throughputStats?: DwellSummary | null
   }
   return dwell.throughputStats;
 }
+
+/** What a clock must carry to be banded on its spread. */
+export interface SpreadClock {
+  readonly p50: number;
+  readonly p90: number;
+  readonly iqrMs: number;
+  readonly samples: number;
+}
+
+/** One side of a gated row, reduced to what a verdict needs. */
+export interface GatedSide {
+  readonly valueMs: number;
+  /** Zero where the row bands on its floor alone. */
+  readonly standardErrorMs: number;
+  readonly p10: number | null;
+  readonly p90: number | null;
+}
+
+/** How one kind of row is judged, read by `--baseline` and `--against-pin`
+ *  alike, so the two gates cannot band it differently. */
+export interface RowJudgement<C> {
+  readonly metric: DwellMetric;
+  side(clock: C): GatedSide;
+  floorMs(baseline: GatedSide): number;
+}
+
+export const CPU_JUDGEMENT: RowJudgement<SpreadClock> = {
+  metric: 'cpu-p50',
+  side: (c) => ({ valueMs: c.p50, standardErrorMs: medianStandardErrorMs(c), p10: null, p90: c.p90 }),
+  floorMs: (baseline) => dwellFloorMs(baseline.valueMs),
+};
+
+export const THROUGHPUT_JUDGEMENT: RowJudgement<SpreadClock & { readonly meanMs: number }> = {
+  metric: 'throughput-mean',
+  side: (c) => ({ valueMs: c.meanMs, standardErrorMs: medianStandardErrorMs(c), p10: null, p90: c.p90 }),
+  floorMs: (baseline) => dwellFloorMs(baseline.valueMs),
+};
 
 /** The frame a CPU-bound test divides by; undefined off GPU pacing. */
 export function throughputFrameMs(
