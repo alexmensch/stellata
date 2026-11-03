@@ -4,7 +4,6 @@
 
 import { existsSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
-import { resolve } from 'node:path';
 import { beforeAll, describe, expect, it } from 'vitest';
 
 import { readCatalogBuffer } from '../../scripts/catalog/catalog-lookup';
@@ -19,8 +18,7 @@ import { discWindowPc } from '../../src/client/star-pipeline/local-pass/star-loc
 import { perceptualDiscExponent } from '../../src/client/star-pipeline/perceptual-disc/perceptual-disc-pure';
 import { DISC_EXPONENT_TOLERANCE, physSizeElisionBoundPx } from '../../src/client/star-pipeline/perceptual-disc/phys-size-elision-pure';
 
-const ROOT = resolve(__dirname, '../..');
-const skip = !existsSync(resolve(ROOT, 'public/catalog-manifest.json'));
+const skip = !existsSync(DEFAULT_CATALOG_MANIFEST);
 
 const FOV_DEG = 50;
 const FOV_Y_RAD = (FOV_DEG * Math.PI) / 180;

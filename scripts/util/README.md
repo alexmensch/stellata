@@ -38,6 +38,10 @@ same thing — single-use helpers stay with their consumer.
 - `paths.ts` — TypeScript sibling of `paths.py`: `REPO_ROOT` for
   `scripts/catalog/*.ts` scripts, and `PACKAGE_JSON`, the manifest's
   repo-relative name, for the readers of its `scripts` table.
+  `PUBLIC_DIR` is Vite's `publicDir`, the folder the build ships;
+  `publicRepoPath(name)` and `publicFile(name)` place a public artifact's
+  name (`/src/catalog-format/public-artifacts/`) in it, repo-relative and
+  absolute.
   `isLfsPointer(text)` recognises a pointer stub from a head string and
   `isLfsPointerFile(path)` probes a file's head for one — the state the
   bare CI test job leaves LFS-tracked inputs in — without reading the

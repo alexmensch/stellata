@@ -12,6 +12,7 @@ import { runStep, sweepStaged } from '../util/emit-artifacts';
 import { stepInputPaths } from '../util/step-inputs';
 import { LOCAL_GROUP_OUTPUTS } from './local-group-outputs';
 import { LG_ALIASES, LG_OVERRIDES, LVDB } from './local-group-source';
+import { PUBLIC_FILES } from '../../src/catalog-format/public-artifacts/public-artifacts';
 import {
   applyAliasMeta,
   buildStandaloneOverride,
@@ -97,7 +98,7 @@ async function main(): Promise<void> {
   sweepStaged(LOCAL_GROUP_OUTPUTS);
   const force = process.argv.includes('--force');
   if (!force && await isUpToDate()) {
-    console.log('local-group.json up to date — skipping (use --force to rebuild)');
+    console.log(`${PUBLIC_FILES.localGroup} up to date — skipping (use --force to rebuild)`);
     return;
   }
 

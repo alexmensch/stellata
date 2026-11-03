@@ -1,6 +1,8 @@
 // Parses public/local-bubble.bin (magic LBUB) into a shell mesh.
 // See src/client/local-bubble/README.md.
 
+import { PUBLIC_FILES } from '../../catalog-format/public-artifacts/public-artifacts';
+
 const MAGIC = 0x4c425542; // 'LBUB' big-endian read of bytes L,B,U,B
 const HEADER_BYTES = 32;
 
@@ -27,14 +29,14 @@ export function parseLocalBubble(buffer: ArrayBuffer): LocalBubbleMesh {
   // Magic is the ASCII bytes L,B,U,B in file order; read big-endian so
   // the constant reads the same way.
   if (view.getUint32(0, false) !== MAGIC) {
-    throw new Error('local-bubble.bin: bad magic (expected LBUB)');
+    throw new Error(`${PUBLIC_FILES.localBubble}: bad magic (expected LBUB)`);
   }
   const vertexCount = view.getUint32(8, true);
   const indexCount = view.getUint32(12, true);
   const posBytes = vertexCount * 3 * 4;
   const idxBytes = indexCount * 4;
   if (buffer.byteLength !== HEADER_BYTES + posBytes + idxBytes) {
-    throw new Error('local-bubble.bin: size mismatch (truncated or corrupt)');
+    throw new Error(`${PUBLIC_FILES.localBubble}: size mismatch (truncated or corrupt)`);
   }
   const centroidAbs: [number, number, number] = [
     view.getFloat32(16, true),

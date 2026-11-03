@@ -2,6 +2,8 @@
 // density bricks traced from the Edenhofer 2024 (/data/papers/index.md#edenhofer2024)
 // dust field, keyed by cloud sid. Format: scripts/cloud-surfaces/README.md.
 
+import { PUBLIC_FILES } from '../../catalog-format/public-artifacts/public-artifacts';
+
 const MAGIC = 0x43535552; // 'CSUR' big-endian read of bytes C,S,U,R
 const HEADER_BYTES = 16;
 const DIR_ENTRY_BYTES = 44;
@@ -34,11 +36,11 @@ export interface CloudSurface {
 export function parseCloudSurfaces(buffer: ArrayBuffer): Map<number, CloudSurface> {
   const view = new DataView(buffer);
   if (view.getUint32(0, false) !== MAGIC) {
-    throw new Error('cloud-surfaces.bin: bad magic (expected CSUR)');
+    throw new Error(`${PUBLIC_FILES.cloudSurfaces}: bad magic (expected CSUR)`);
   }
   const version = view.getUint32(4, true);
   if (version !== 2) {
-    throw new Error(`cloud-surfaces.bin: unsupported version ${version}`);
+    throw new Error(`${PUBLIC_FILES.cloudSurfaces}: unsupported version ${version}`);
   }
   const cloudCount = view.getUint32(8, true);
   const dirBytes = cloudCount * DIR_ENTRY_BYTES;
@@ -50,7 +52,7 @@ export function parseCloudSurfaces(buffer: ArrayBuffer): Map<number, CloudSurfac
         * view.getUint32(off + 20, true);
   }
   if (buffer.byteLength !== HEADER_BYTES + dirBytes + blobBytes) {
-    throw new Error('cloud-surfaces.bin: size mismatch (truncated or corrupt)');
+    throw new Error(`${PUBLIC_FILES.cloudSurfaces}: size mismatch (truncated or corrupt)`);
   }
   const surfaces = new Map<number, CloudSurface>();
   let blobOff = HEADER_BYTES + dirBytes;

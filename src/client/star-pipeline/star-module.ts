@@ -32,6 +32,7 @@ import type { SearchIndexPayload } from '../typeahead/search-index-payload';
 import { MIN_PHYSICAL_RADIUS_R_SUN, R_SUN_PC } from '../../astro-core/astronomy-constants';
 import type { Late, LateState } from '../util/late/late';
 import { catalogSidDomain } from '../loaders/catalog-sid-domain';
+import { PUBLIC_FILES } from '../../catalog-format/public-artifacts/public-artifacts';
 
 export interface StarModuleRuntime {
   /** Local-frame position of star `idx` into `out` (StarFrame). */
@@ -161,15 +162,15 @@ export function createStarKindModule(): StarKindModule {
      *  and feeds only search, chart labels and designations, none of which
      *  is on the first-paint path. Both land under `ready`. */
     async load(baseUrl: string, onProgress?: (p: KindLoadProgress) => void): Promise<void> {
-      const indexBytes = fetch(`${baseUrl}search-index.json`).then((r) => {
-        if (!r.ok) throw new Error(`search-index.json: HTTP ${r.status}`);
+      const indexBytes = fetch(`${baseUrl}${PUBLIC_FILES.searchIndex}`).then((r) => {
+        if (!r.ok) throw new Error(`${PUBLIC_FILES.searchIndex}: HTTP ${r.status}`);
         return r.arrayBuffer();
       });
       // Handled-marker only — README.md, the star-module.ts bullet.
       indexBytes.catch(() => {});
       catalog = await loadCatalog(
         `${baseUrl}${CATALOG_MANIFEST_FILENAME}`,
-        `${baseUrl}constellations.json`,
+        `${baseUrl}${PUBLIC_FILES.constellations}`,
         onProgress,
       );
       shardTable = new StarShardTable([catalogShard(catalog)]);
