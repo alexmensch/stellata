@@ -1,5 +1,6 @@
 // Content-hash freshness stamps for build steps. See scripts/util/README.md.
 
+import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import {
   closeSync, existsSync, openSync, readFileSync, readSync, readdirSync, rmSync, statSync,
@@ -71,6 +72,14 @@ export function asStamp(json: Readonly<Record<string, unknown>>): Stamp | null {
   return parsed.recorded
     ? { inputs: parsed.inputs, outputs: parsed.outputs, recorded: parsed.recorded }
     : { inputs: parsed.inputs, outputs: parsed.outputs };
+}
+
+/** The subset of `paths` git ignores under `root`, each spelled as given. */
+export function ignoredPaths(paths: readonly string[], root: string): Set<string> {
+  if (paths.length === 0) return new Set();
+  const run = spawnSync('git', ['check-ignore', '--stdin'], { cwd: root, input: paths.join('\n'), encoding: 'utf8' });
+  if (run.status !== 0 && run.status !== 1) throw new Error(`git check-ignore exited ${run.status}: ${run.stderr.trim()}`);
+  return new Set(run.stdout.split('\n').filter(Boolean));
 }
 
 /** A directory listing's hash over its sorted names. Same formula as build_stamp.py. */
