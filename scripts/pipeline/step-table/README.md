@@ -141,8 +141,11 @@ the others once, and that rebuild appends nothing.
   each manual step's record for its inputs, then `deriveGraph`. A
   TypeScript step's inputs come from the injected `deriveInputs`;
   `run.ts` passes `util/step-inputs.ts`'s `entryInputPaths`.
-- `steps.ts` (+ test) — the table `run.ts` and `record.ts` load. Its manual
-  steps are `../manual-step-outputs.ts`'s `MANUAL_STEPS`.
+- `manual-step-outputs.ts` — `MANUAL_STEPS`, every pull and bake with the
+  files it writes, as an outputs module: the one place outside a declaration
+  a `data/` path may be spelled.
+- `steps.ts` (+ test) — the table `run.ts` and `record.ts` load, its manual
+  steps `MANUAL_STEPS`.
   The test holds the table to the load-time rules, every manual step's
   `package.json` target to `tsx scripts/pipeline/record.ts <name>`, and every
   pull's and describing bake's `--describe` to running (Python under

@@ -289,9 +289,6 @@ The table's own files are in [step-table/](step-table/README.md#files).
   `stampPath`), manual record, run record and lock folder sit under it.
   `run.ts` passes the repo root; tests pass a temporary folder.
 - `run.ts` — the command line over `step-table/steps.ts`.
-- `manual-step-outputs.ts` — `MANUAL_STEPS`, every pull and bake with the
-  files it writes, as an outputs module: the one place outside a declaration
-  a `data/` path may be spelled.
 - `record.ts` / `record-step.ts` (+ test) — [Recording a manual
   step](#recording-a-manual-step--recordts): `recordStep` and the
   `RecordOutcome` union (`fresh`, `recorded`, `failed`).

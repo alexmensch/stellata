@@ -13,7 +13,7 @@ import { lfsContentReadable, REPO_ROOT } from '../../util/paths';
 import { entryInputPaths } from '../../util/step-inputs';
 import { describeStep } from '../freshness';
 import { loadTable, type Loaded } from './load-table';
-import { MANUAL_STEPS } from '../manual-step-outputs';
+import { MANUAL_STEPS } from './manual-step-outputs';
 import { pipelineTree } from '../pipeline-tree';
 import { describesItself, isBuild, selectSteps } from './step-table-pure';
 import { STEPS } from './steps';

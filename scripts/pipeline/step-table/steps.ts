@@ -2,7 +2,7 @@
 
 import { registryPaths } from '../../sid/registry-outputs';
 import { REGISTRY_PARTITIONS } from '../../sid/registry-partitions-pure';
-import { MANUAL_STEPS } from '../manual-step-outputs';
+import { MANUAL_STEPS } from './manual-step-outputs';
 import type { StepTable } from './step-table-pure';
 
 export const STEPS: StepTable = {
