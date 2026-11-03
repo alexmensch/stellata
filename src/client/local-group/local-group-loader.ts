@@ -9,6 +9,7 @@ import {
 } from '../../catalog-format/local-group/local-group-schema';
 import { viewingDistanceForExtent } from '../camera/focus/focus-transition';
 import { sidColumnError } from '../util/sid-resolver';
+import { PUBLIC_FILES } from '../../catalog-format/public-artifacts/public-artifacts';
 
 export interface LgObject {
   name: string;
@@ -74,12 +75,12 @@ export async function loadLocalGroup(url: string): Promise<LgCatalog | null> {
   if (!res.ok) return null;
   const raw = (await res.json()) as LocalGroupFile;
   if (raw.version !== LOCAL_GROUP_VERSION) {
-    console.warn(`local-group.json version ${raw.version} unsupported`);
+    console.warn(`${PUBLIC_FILES.localGroup} version ${raw.version} unsupported`);
     return null;
   }
   const sidErr = sidColumnError(raw.objects.map((o) => o.sid));
   if (sidErr) {
-    console.warn(`local-group.json ${sidErr} — rebuild with \`pnpm run build:local-group\``);
+    console.warn(`${PUBLIC_FILES.localGroup} ${sidErr} — rebuild with \`pnpm run build:local-group\``);
     return null;
   }
   const objects: LgObject[] = raw.objects.map((o) => ({

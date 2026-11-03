@@ -9,6 +9,7 @@ import {
   createVoxelTexture,
   type VoxelChunkUploader,
 } from './dust-voxel-upload';
+import { DUST_MANIFEST } from '../../catalog-format/public-artifacts/public-artifacts';
 
 export interface DustManifest {
   version: number;
@@ -160,7 +161,7 @@ export class DustField {
 export async function loadDustManifest(baseUrl: string): Promise<DustManifest | null> {
   let raw: unknown;
   try {
-    const res = await fetch(`${baseUrl}manifest.json`);
+    const res = await fetch(`${baseUrl}${DUST_MANIFEST}`);
     if (!res.ok) return null;
     raw = await res.json();
   } catch {
@@ -168,7 +169,7 @@ export async function loadDustManifest(baseUrl: string): Promise<DustManifest | 
   }
   const err = dustManifestError(raw);
   if (err !== null) {
-    console.warn(`dust manifest.json ${err} — rebuild with \`pnpm run build:dust-sync\``);
+    console.warn(`dust ${DUST_MANIFEST} ${err} — rebuild with \`pnpm run build:dust-sync\``);
     return null;
   }
   return raw as DustManifest;

@@ -3,12 +3,12 @@
 // when the artifact isn't built.
 
 import { existsSync, readFileSync } from 'node:fs';
-import { resolve, dirname } from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { describe, it, expect } from 'vitest';
 
-const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
-const CLOUDS_JSON = resolve(ROOT, 'public', 'clouds.json');
+import { PUBLIC_FILES } from '../../src/catalog-format/public-artifacts/public-artifacts';
+import { publicFile } from '../util/paths';
+
+const CLOUDS_JSON = publicFile(PUBLIC_FILES.clouds);
 
 interface CloudV2 {
   name: string;

@@ -1,3 +1,4 @@
+import { execFileSync } from 'node:child_process';
 import {
   existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, symlinkSync, writeFileSync,
 } from 'node:fs';
@@ -6,12 +7,16 @@ import { join, relative } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { fileHashes } from '../util/build-stamp';
+import { escapeRegExp } from '../util/escape-regexp';
+import { entryMetafile } from '../util/import-closure';
 import { REPO_ROOT } from '../util/paths';
 import { pullQueryHash, requestHash } from './freshness';
-import { loadTable, WALKABLE, type Loaded } from './load-table';
+import {
+  importTimeProblems, loadTable, TABLE_LOAD_BUILTINS, WALKABLE, walkOutputsModules, type Loaded,
+} from './step-table/load-table';
 import { pipelineTree } from './pipeline-tree';
 import { runSteps, type Verdict } from './runner';
-import type { StepEntry, StepTable } from './step-table-pure';
+import type { StepEntry, StepTable } from './step-table/step-table-pure';
 
 let root: string;
 let logDir: string;
@@ -21,6 +26,7 @@ const EMIT_ARTIFACTS = join(REPO_ROOT, 'scripts/util/emit-artifacts');
 beforeEach(() => {
   root = realpathSync(mkdtempSync(join(tmpdir(), 'runner-')));
   mkdirSync(join(root, 'steps'));
+  execFileSync('git', ['init', '-q'], { cwd: root });
   logDir = mkdtempSync(join(tmpdir(), 'runner-log-'));
   reads = new Map();
 });
@@ -350,6 +356,32 @@ os.replace(tmp, ${JSON.stringify(at(out))})
     expect((await run(steps, ['p'])).kinds).toEqual({ p: 'built' });
   });
 
+  it('leaves a git-ignored name out of a listing, so a local cache neither stales nor freshens a step', async () => {
+    write('.gitignore', 'folder/.cache*\n');
+    write('folder/one', '');
+    write('folder/.cache-a', '');
+    const listing = `${rename('p.out')}\nos.listdir(${JSON.stringify(at('folder'))})`;
+    write('p.in', 'x');
+    const steps = [pyStep('p', 'p.out', listing)];
+    await run(steps, ['p']);
+    rmSync(at('folder/.cache-a'));
+    write('folder/.cache-b', '');
+    expect((await run(steps, ['p'])).kinds).toEqual({ p: 'fresh' });
+  });
+
+  it('records no input for a listed folder git ignores', async () => {
+    write('.gitignore', 'scratch/\n');
+    write('scratch/one', '');
+    const listing = `${rename('p.out')}\nos.listdir(${JSON.stringify(at('scratch'))})`;
+    write('p.in', 'x');
+    const steps = [pyStep('p', 'p.out', listing)];
+    await run(steps, ['p']);
+    const stamp = JSON.parse(readFileSync(pipelineTree(root).buildStamp('p'), 'utf8'));
+    expect(stamp.recorded.listings).toEqual({});
+    write('scratch/two', '');
+    expect((await run(steps, ['p'])).kinds).toEqual({ p: 'fresh' });
+  });
+
   it('stales a step when a path it probed appears', async () => {
     write('p.in', 'x');
     const body = `${rename('p.out')}\nfrom scripts.util.build_stamp import probe\nprobe(Path(${JSON.stringify(at('maybe.txt'))}))`;
@@ -433,7 +465,7 @@ os.replace(tmp, ${JSON.stringify(at(out))})
 describe('loadTable', () => {
   const reachesBuildStamp = (): string => `outputs module ${relative(REPO_ROOT, at('steps/a-outputs.ts'))} reaches scripts/util/build-stamp.ts, beyond ${WALKABLE}`;
 
-  it('rejects an outputs module that imports beyond emit-artifacts, paths and pure modules, before importing it', async () => {
+  it('rejects an outputs module that imports beyond emit-artifacts, paths and the boundary trees, before importing it', async () => {
     const step = tsStep('a', 'a.out');
     write('steps/a-outputs.ts', `
 import { declareOutputs } from ${JSON.stringify(EMIT_ARTIFACTS)};
@@ -446,29 +478,91 @@ export const OUT = declareOutputs({ out: hashFile.name });
   });
 
   it.each(['paths-pure', 'more-outputs', 'table-tsv', 'table-source'])(
-    'rejects an outputs module that reaches an impure module through %s.ts',
+    'rejects an outputs module importing a clean %s.ts outside the boundary trees: a filename grants nothing',
     async (via) => {
       const step = tsStep('a', 'a.out');
-      write(`steps/${via}.ts`, `export { hashFile } from ${JSON.stringify(join(REPO_ROOT, 'scripts/util/build-stamp'))};\n`);
+      write(`steps/${via}.ts`, `export const NAME = 'a.out';\n`);
       write('steps/a-outputs.ts', `
-import { declareOutputs } from ${JSON.stringify(EMIT_ARTIFACTS)};
-import { hashFile } from './${via}';
-export const OUT = declareOutputs({ out: hashFile.name });
-`);
-      expect(await load([step])).toEqual({ kind: 'rejected', problems: [reachesBuildStamp()] });
-    },
-  );
-
-  it.each(['more-outputs', 'table-tsv', 'table-source'])('accepts an outputs module importing a clean %s.ts', async (via) => {
-    const step = tsStep('a', 'a.out');
-    write(`steps/${via}.ts`, `export const NAME = 'a.out';\n`);
-    write('steps/a-outputs.ts', `
 import { resolve } from 'node:path';
 import { declareOutputs } from ${JSON.stringify(EMIT_ARTIFACTS)};
 import { NAME } from './${via}';
 export const OUT = declareOutputs({ out: resolve(${JSON.stringify(at('.'))}, NAME) });
 `);
-    expect((await load([step])).kind).toBe('loaded');
+      expect(await load([step])).toEqual({
+        kind: 'rejected',
+        problems: [`outputs module ${relative(REPO_ROOT, at('steps/a-outputs.ts'))} reaches ${relative(REPO_ROOT, at(`steps/${via}.ts`))}, beyond ${WALKABLE}`],
+      });
+    },
+  );
+
+  it.each(['node:fs', 'fs', 'node:child_process', 'esbuild'])(
+    'rejects an outputs module importing %s, which could act at import time',
+    async (spec) => {
+      const step = tsStep('a', 'a.out');
+      write('steps/a-outputs.ts', `
+import * as reach from ${JSON.stringify(spec)};
+import { declareOutputs } from ${JSON.stringify(EMIT_ARTIFACTS)};
+export const OUT = declareOutputs({ out: ${JSON.stringify(at('a.out'))} });
+export const keep = reach;
+`);
+      expect(await load([step])).toEqual({
+        kind: 'rejected',
+        problems: [`${relative(REPO_ROOT, at('steps/a-outputs.ts'))} imports ${spec} at table load; only ${[...TABLE_LOAD_BUILTINS].join(' and ')} may be`],
+      });
+    },
+  );
+
+  it('rejects an outputs module that awaits at top level', async () => {
+    const step = tsStep('a', 'a.out');
+    write('steps/a-outputs.ts', `
+import { declareOutputs } from ${JSON.stringify(EMIT_ARTIFACTS)};
+const out = await Promise.resolve(${JSON.stringify(at('a.out'))});
+export const OUT = declareOutputs({ out });
+`);
+    expect(await load([step])).toEqual({
+      kind: 'rejected',
+      problems: [expect.stringMatching(new RegExp(`^${escapeRegExp(relative(REPO_ROOT, at('steps/a-outputs.ts')))}: .*top-level await`, 'i'))],
+    });
+  });
+
+  it('holds a module the walk reaches, not only an outputs module, to the import-time rule', async () => {
+    write('steps/reached.ts', `import { readFileSync } from 'node:fs';\nexport const text = await Promise.resolve(readFileSync.name);\n`);
+    const reached = relative(REPO_ROOT, at('steps/reached.ts'));
+    const { inputs } = await entryMetafile([at('steps/reached.ts')]);
+    expect(await importTimeProblems({ checked: [reached], trusted: [] }, inputs)).toEqual([
+      `${reached} imports node:fs at table load; only ${[...TABLE_LOAD_BUILTINS].join(' and ')} may be`,
+      expect.stringMatching(new RegExp(`^${escapeRegExp(reached)}: .*top-level await`, 'i')),
+    ]);
+  });
+
+  it('lets a trusted leaf\'s closure import any built-in, but no package and no top-level await', async () => {
+    write('steps/leaf.ts', `import { readFileSync } from 'node:fs';\nexport { readFileSync };\n`);
+    write('steps/bad-leaf.ts', `import { build } from 'esbuild';\nexport const b = await Promise.resolve(build);\n`);
+    const [leaf, badLeaf] = ['steps/leaf.ts', 'steps/bad-leaf.ts'].map((p) => relative(REPO_ROOT, at(p)));
+    const { inputs } = await entryMetafile([at('steps/leaf.ts'), at('steps/bad-leaf.ts')]);
+    expect(await importTimeProblems({ checked: [], trusted: [leaf, badLeaf] }, inputs)).toEqual([
+      `${badLeaf} imports esbuild at table load; only Node built-ins may be`,
+      expect.stringMatching(new RegExp(`^${escapeRegExp(badLeaf)}: .*top-level await`, 'i')),
+    ]);
+  });
+
+  it('walks into the trusted leaves\' own imports', async () => {
+    const step = tsStep('a', 'a.out');
+    const walk = await walkOutputsModules({ steps: [step], registryFiles: [] }, pipelineTree(root));
+    expect(walk.problems).toEqual([]);
+    expect([...walk.trusted]).toEqual(expect.arrayContaining(['scripts/util/emit-artifacts.ts', 'scripts/util/staged-write.ts']));
+  });
+
+  it('walks on through a listed legacy module into its own imports', async () => {
+    const step = tsStep('a', 'a.out');
+    write('steps/a-outputs.ts', `
+import ${JSON.stringify(join(REPO_ROOT, 'scripts/sid/registry-outputs'))};
+import { declareOutputs } from ${JSON.stringify(EMIT_ARTIFACTS)};
+export const OUT = declareOutputs({ out: ${JSON.stringify(at('a.out'))} });
+`);
+    const walk = await walkOutputsModules({ steps: [step], registryFiles: [] }, pipelineTree(root));
+    expect(walk.problems).toEqual([]);
+    expect([...walk.accepted]).toEqual(expect.arrayContaining(['scripts/sid/registry-outputs.ts', 'scripts/sid/registry-partitions-pure.ts']));
   });
 
   it.each(['src/catalog-format/probes/probe-roster', 'src/astro-core/angles'])(

@@ -40,12 +40,13 @@ import { AU_PC, AU_PER_PC } from '../../src/astro-core/astronomy-constants';
 import { readMultiplesTsv, wdsRootOf } from '../../scripts/catalog/companions/companion-promotion';
 import { MULTIPLES_TSV, MULTIPLES_TSV_PATH } from '../../scripts/binaries/multiples-tsv';
 import { NAMING_DUPLICATES } from '../../scripts/catalog/naming/naming-duplicates-tsv';
-import { REPO_ROOT } from '../../scripts/util/paths';
+import { REPO_ROOT, publicFile } from '../../scripts/util/paths';
+import { PUBLIC_FILES } from '../../src/catalog-format/public-artifacts/public-artifacts';
 import { DEFAULT_ROW_INDEX_MAP } from '../../scripts/catalog/catalog-paths-pure';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const CORPUS_TSV = resolve(__dirname, '../../scripts/catalog/companions/multi-star-regression.tsv');
-const BINARIES_BIN = resolve(REPO_ROOT, 'public/binaries.bin');
+const BINARIES_BIN = publicFile(PUBLIC_FILES.binaries);
 
 // Same fixture gate as known-stars.test.ts, plus binaries.bin (also
 // generated). CI's plain `pnpm test` job skips; the Tier-A corpus job

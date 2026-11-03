@@ -5,6 +5,7 @@ import { PROBE_MISSIONS } from '../../../catalog-format/probes/probe-roster';
 import { probeTrajectoryFilename } from '../../../catalog-format/probes/sync-probes-pure';
 import type { ProbeTrajectoryFile } from '../../../catalog-format/probes/probe-trajectory-schema';
 import { buildProbeTrajectory, type ProbeTrajectory } from './probe-trajectory';
+import { PUBLIC_FOLDERS } from '../../../catalog-format/public-artifacts/public-artifacts';
 
 /**
  * Load every probe whose artifact is present, in roster order. A missing
@@ -16,7 +17,7 @@ export async function loadProbes(baseUrl: string): Promise<ProbeTrajectory[]> {
   const settled = await Promise.all(
     PROBE_MISSIONS.map(async (mission) => {
       try {
-        const res = await fetch(`${baseUrl}probes/${probeTrajectoryFilename(mission.id)}`);
+        const res = await fetch(`${baseUrl}${PUBLIC_FOLDERS.probes}/${probeTrajectoryFilename(mission.id)}`);
         if (!res.ok) return null;
         return buildProbeTrajectory(await res.json() as ProbeTrajectoryFile);
       } catch {

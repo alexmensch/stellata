@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { describeStep, readManualRecord, writeManualRecord, type ManualRecord } from './freshness';
 import { pipelineTree } from './pipeline-tree';
-import type { ManualStep } from './step-table-pure';
+import type { ManualStep } from './step-table/step-table-pure';
 
 let root: string;
 beforeEach(() => { root = realpathSync(mkdtempSync(join(tmpdir(), 'freshness-'))); });

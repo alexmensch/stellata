@@ -5,7 +5,7 @@ import { dirname, resolve } from 'node:path';
 import { declareOutputs } from '../util/emit-artifacts';
 import { REPO_ROOT } from '../util/paths';
 import {
-  DEFAULT_CATALOG_MANIFEST, DEFAULT_CONSTELLATIONS_JSON, DEFAULT_ROW_INDEX_MAP, DEFAULT_SEARCH_INDEX,
+  DEFAULT_BOUNDARIES, DEFAULT_CATALOG_MANIFEST, DEFAULT_CONSTELLATIONS_JSON, DEFAULT_ROW_INDEX_MAP, DEFAULT_SEARCH_INDEX,
 } from './catalog-paths-pure';
 import { PROMOTION_LINEAGE } from './companions/promotion-lineage-pure';
 import { PARKED_LEDGER } from './distance/parallax/parked-ledger-tsv';
@@ -18,13 +18,12 @@ import { registryFiles } from '../sid/registry-outputs';
 import { CATALOG_PARTITION } from '../sid/registry-partitions-pure';
 
 export const CATALOG_CHUNK_DIR = dirname(DEFAULT_CATALOG_MANIFEST);
-export const OUT_BOUNDARIES = resolve(REPO_ROOT, 'public/constellation-boundaries.json');
 
 export const CATALOG_OUTPUTS = declareOutputs(
   {
     manifest: DEFAULT_CATALOG_MANIFEST,
     constellations: DEFAULT_CONSTELLATIONS_JSON,
-    boundaries: OUT_BOUNDARIES,
+    boundaries: DEFAULT_BOUNDARIES,
     searchIndex: DEFAULT_SEARCH_INDEX,
     rowIndexMap: DEFAULT_ROW_INDEX_MAP,
     parkedLedger: resolve(REPO_ROOT, PARKED_LEDGER.file),

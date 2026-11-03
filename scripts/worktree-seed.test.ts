@@ -3,9 +3,9 @@ import { readFileSync } from 'node:fs';
 import { basename, dirname, relative, resolve } from 'node:path';
 import { beforeAll, describe, expect, it } from 'vitest';
 
-import { loadTable } from './pipeline/load-table';
-import { expandTargets, isBuild, selectSteps } from './pipeline/step-table-pure';
-import { STEPS } from './pipeline/steps';
+import { loadTable } from './pipeline/step-table/load-table';
+import { expandTargets, isBuild, selectSteps } from './pipeline/step-table/step-table-pure';
+import { STEPS } from './pipeline/step-table/steps';
 import { isMemberName, type OutputFamily } from './util/emit-artifacts';
 import { escapeRegExp } from './util/escape-regexp';
 import { packageScripts } from './util/import-closure';

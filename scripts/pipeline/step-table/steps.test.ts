@@ -4,17 +4,20 @@ import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join, relative, resolve } from 'node:path';
 import { beforeAll, describe, expect, it } from 'vitest';
 
-import { MULTIPLES_TSV } from '../binaries/multiples-tsv';
-import { CNS5 as CNS5_SOURCE } from '../catalog/classic-ids/cns5-source';
-import { REASON_CODES_FILE } from '../catalog/lineage/reason-codes-tsv';
-import { MEMBERSHIP_MANIFEST_FILE } from '../catalog/membership/membership-manifest-tsv';
-import { packageScripts } from '../util/import-closure';
-import { lfsContentReadable, REPO_ROOT } from '../util/paths';
-import { entryInputPaths } from '../util/step-inputs';
-import { describeStep } from './freshness';
-import { loadTable, type Loaded } from './load-table';
+import { MULTIPLES_TSV } from '../../binaries/multiples-tsv';
+import { CNS5 as CNS5_SOURCE } from '../../catalog/classic-ids/cns5-source';
+import { REASON_CODES_FILE } from '../../catalog/lineage/reason-codes-tsv';
+import { MEMBERSHIP_MANIFEST_FILE } from '../../catalog/membership/membership-manifest-tsv';
+import { packageScripts } from '../../util/import-closure';
+import { lfsContentReadable, publicFile, REPO_ROOT } from '../../util/paths';
+import { PUBLIC_FILES } from '../../../src/catalog-format/public-artifacts/public-artifacts';
+import { treeOf } from '../../util/source-trees';
+import { entryInputPaths } from '../../util/step-inputs';
+import { describeStep } from '../freshness';
+import { LEGACY_IMPORTABLE } from './legacy-importable';
+import { loadTable, SHARED_TREES, walkOutputsModules, type Loaded } from './load-table';
 import { MANUAL_STEPS } from './manual-step-outputs';
-import { pipelineTree } from './pipeline-tree';
+import { pipelineTree } from '../pipeline-tree';
 import { describesItself, isBuild, selectSteps } from './step-table-pure';
 import { STEPS } from './steps';
 
@@ -48,6 +51,13 @@ describe('the step table', () => {
     ]));
     expect(edgeFiles('lineage:codes', 'build:catalog')).toEqual([REASON_CODES_FILE]);
     expect(edgeFiles('build:binaries', 'build:membership')).toEqual([MULTIPLES_TSV.file]);
+  });
+
+  it('lists as legacy-importable exactly the modules the outputs walk reaches outside the boundary trees, and only shrinks', async () => {
+    const { accepted } = await walkOutputsModules(STEPS, pipelineTree(REPO_ROOT));
+    const outsideTrees = [...accepted].filter((m) => !SHARED_TREES.has(treeOf(m))).sort();
+    expect(outsideTrees).toEqual([...LEGACY_IMPORTABLE].sort());
+    expect(LEGACY_IMPORTABLE.size).toBe(38);
   });
 
   it('is the one place a table step\'s entry is named: no package.json script or workflow runs one directly', () => {
@@ -92,7 +102,7 @@ describe('the step table', () => {
     }
   }, 60_000);
 
-  it.skipIf(!existsSync(resolve(REPO_ROOT, 'public/clouds.json')))('describes every describing bake under python3 -I -S', () => {
+  it.skipIf(!existsSync(publicFile(PUBLIC_FILES.clouds)))('describes every describing bake under python3 -I -S', () => {
     const tree = pipelineTree(REPO_ROOT);
     const bakes = MANUAL_STEPS.filter((s) => s.kind === 'bake' && describesItself(s));
     expect(bakes.map((s) => s.name)).toEqual(['build:cloud-surfaces']);

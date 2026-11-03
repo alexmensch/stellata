@@ -18,6 +18,13 @@ export const REPO_ROOT = resolve(__dirname, '..', '..');
 
 export const PACKAGE_JSON = 'package.json';
 
+export const PUBLIC_DIR = 'public';
+
+/** Repo-relative, the form the step table and the mirrors declare outputs in. */
+export const publicRepoPath = (name: string): string => `${PUBLIC_DIR}/${name}`;
+
+export const publicFile = (name: string): string => resolve(REPO_ROOT, publicRepoPath(name));
+
 const LFS_PROBE_BYTES = 128;
 
 /** Git-LFS pointer stub — the file content is elsewhere; content checks

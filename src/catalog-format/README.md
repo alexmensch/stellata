@@ -29,3 +29,6 @@ Each has its own README.
   names.
 - `local-group/` — the `local-group.json` schema: object row, emission
   block, version, distance envelope.
+- `public-artifacts/` — the name of every other file and folder under
+  `public/` the viewer fetches, imported by the viewer and every TypeScript
+  writer.

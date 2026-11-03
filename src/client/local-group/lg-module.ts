@@ -33,6 +33,7 @@ import {
   type LgCatalog,
 } from './local-group-loader';
 import { arrayDomain } from '../util/sid-resolver';
+import { PUBLIC_FILES } from '../../catalog-format/public-artifacts/public-artifacts';
 
 /** Spellings of a designation a user might type that the catalog doesn't
  *  carry — it emits one conventional form per designation ("M31"), and
@@ -101,7 +102,7 @@ export function createLgKindModule(): LgKindModule {
     setEmissionEnabled: (on) => emission?.setEnabled(on),
 
     async load(baseUrl: string): Promise<void> {
-      catalog = await loadLocalGroup(`${baseUrl}local-group.json`);
+      catalog = await loadLocalGroup(`${baseUrl}${PUBLIC_FILES.localGroup}`);
     },
 
     attach(kindCtx: KindContext): SceneLayer | null {

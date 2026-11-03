@@ -67,6 +67,7 @@ import type { EmitterMaterial } from '../../scene/emitter-material';
 import type { SolarSystemMaterials } from '../materials/solar-system-materials';
 import type { WebGpuSeam } from '../../webgpu/seam';
 import { mark as perfMark, measure as perfMeasure } from '../../debug/perf-hud';
+import { PUBLIC_FOLDERS } from '../../../catalog-format/public-artifacts/public-artifacts';
 
 const Z_AXIS = new THREE.Vector3(0, 0, 1);
 const X_AXIS = new THREE.Vector3(1, 0, 0);
@@ -1114,7 +1115,7 @@ export class PlanetMeshLayer {
     if (this.textures.has(key)) return;
     this.textures.set(key, { state: 'loading' });
     this.loader.load(
-      `${this.textureBaseUrl}textures/${key}.${ext}`,
+      `${this.textureBaseUrl}${PUBLIC_FOLDERS.textures}/${key}.${ext}`,
       (bitmap) => {
         // The colour ladder is clamped before it asks, but the relief and ring
         // maps ship one fixed width each — Earth's normal map is 8192 — so the

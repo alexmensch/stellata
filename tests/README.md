@@ -143,6 +143,10 @@ pipeline-viewer-boundary.test.ts
                          One-way imports between scripts/ (the pipeline),
                          src/client/ (the viewer) and the two trees they
                          share. README.md#pipeline-viewer-boundary below.
+public-artifact-names.test.ts
+                         Each public/ artifact name is spelled in one
+                         TypeScript literal, its owner's.
+                         README.md#public-artifact-names below.
 page-teardown-contract.test.ts
                          Source scans behind util/page-teardown.ts's
                          contract (/src/client/util/README.md): no `window`
@@ -497,3 +501,17 @@ design; the suite fails if either stops, so an unused exemption cannot
 linger. A new fact both sides need goes into the format tree (a wire shape,
 a file name, a rule over record fields) or astro-core (physics), never into
 the side that happens to compute it first.
+
+## Public artifact names
+
+`public-artifact-names.test.ts` parses every production TypeScript module
+under `src/` and `scripts/`, plus `vite.config.ts`, and fails on a string or
+template literal that spells a name outside its owner: the `public` folder
+itself outside `scripts/util/paths.ts`; a name
+`src/catalog-format/public-artifacts/` owns — a `public/` file, a mirrored
+folder as `public/<dir>` or `<dir>/…`, the dust manifest — outside it; or
+the catalogue manifest or a `catalog.bin.<i>` chunk outside
+`src/catalog-format/record/`. Import specifiers are not names. Prose counts:
+a loader's error message interpolates the constant too, so a rename reaches
+it. Tests are not scanned; one that addresses a real artifact imports the
+constant.

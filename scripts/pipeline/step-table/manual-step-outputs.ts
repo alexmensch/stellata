@@ -1,7 +1,9 @@
 // Every pull and bake in the step table, each with the files it writes. See README.md#the-step-table--stepsts.
 
-import { CHUNK_PATTERN } from '../dust/sync-dust-pure';
-import type { OutputFamily } from '../util/emit-artifacts';
+import { CHUNK_PATTERN } from '../../dust/sync-dust-pure';
+import { DUST_MANIFEST, PUBLIC_FILES } from '../../../src/catalog-format/public-artifacts/public-artifacts';
+import type { OutputFamily } from '../../util/emit-artifacts';
+import { publicRepoPath } from '../../util/paths';
 import type { ManualStep } from './step-table-pure';
 
 const pull = (name: string, entry: string, outputs: readonly string[]): ManualStep => ({
@@ -46,11 +48,11 @@ export const MANUAL_STEPS: readonly ManualStep[] = [
   pull('refresh:edenhofer2024-2kpc', 'refresh-edenhofer2024-2kpc.py', ['data/dust/edenhofer2024-2kpc.json']),
   tsPull('fetch:probes', 'scripts/probes/fetch-probe-trajectories.ts', 'scripts/probes/probe-trajectory-outputs.ts', 'PROBE_OUTPUTS'),
   tsPull('fetch:ephemerides', 'scripts/ephemerides/fetch-planet-elements.ts', 'scripts/ephemerides/planet-element-outputs.ts', 'ELEMENT_TABLE_OUTPUTS'),
-  bake('build:dust', 'scripts/dust/build-dust.py', ['data/dust/manifest.json'], {
+  bake('build:dust', 'scripts/dust/build-dust.py', [`data/dust/${DUST_MANIFEST}`], {
     families: [{ dir: 'data/dust', member: CHUNK_PATTERN, stamped: true }],
   }),
-  bake('build:local-bubble', 'scripts/local-bubble/build-local-bubble.py', ['data/local-bubble/local-bubble.bin']),
-  bake('build:cloud-surfaces', 'scripts/cloud-surfaces/build-cloud-surfaces.py', ['data/molecular-clouds/cloud-surfaces.bin'], { describes: true }),
+  bake('build:local-bubble', 'scripts/local-bubble/build-local-bubble.py', [`data/local-bubble/${PUBLIC_FILES.localBubble}`]),
+  bake('build:cloud-surfaces', 'scripts/cloud-surfaces/build-cloud-surfaces.py', [`data/molecular-clouds/${PUBLIC_FILES.cloudSurfaces}`], { describes: true }),
   bake('build:textures', 'scripts/textures/build-textures.py', [
     'data/textures/calibration.json',
     'data/textures/relief/relief.json',
@@ -64,6 +66,6 @@ export const MANUAL_STEPS: readonly ManualStep[] = [
   }),
   bake('build:icons', 'scripts/icons/build-icons.py', [
     'favicon-16.png', 'favicon-32.png', 'favicon-48.png', 'apple-touch-icon.png', 'icon-192.png', 'icon-512.png', 'favicon.ico',
-  ].map((f) => `public/${f}`)),
-  bake('build:og', 'scripts/og/build-og.py', ['public/og-image.jpg']),
+  ].map(publicRepoPath)),
+  bake('build:og', 'scripts/og/build-og.py', [publicRepoPath('og-image.jpg')]),
 ];

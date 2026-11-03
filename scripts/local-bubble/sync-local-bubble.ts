@@ -2,22 +2,23 @@
 // (gitignored) so the build serves it without astro-Python. See the folder README.
 
 import { mkdirSync, statSync } from 'node:fs';
-import { dirname, resolve } from 'node:path';
+import { dirname } from 'node:path';
 
 import { syncFile } from '../util/mirror-to-public';
-import { REPO_ROOT } from '../util/paths';
+import { publicFile, publicRepoPath } from '../util/paths';
+import { PUBLIC_FILES } from '../../src/catalog-format/public-artifacts/public-artifacts';
 import { LOCAL_BUBBLE_BIN } from './local-bubble-source';
 
-const DST = resolve(REPO_ROOT, 'public/local-bubble.bin');
+const DST = publicFile(PUBLIC_FILES.localBubble);
 
 function main(): void {
   const src = LOCAL_BUBBLE_BIN.read();
   mkdirSync(dirname(DST), { recursive: true });
   if (syncFile(src, DST) === 'up-to-date') {
-    console.log('public/local-bubble.bin up to date.');
+    console.log(`${publicRepoPath(PUBLIC_FILES.localBubble)} up to date.`);
     return;
   }
-  console.log(`synced local-bubble.bin (${statSync(DST).size} bytes).`);
+  console.log(`synced ${PUBLIC_FILES.localBubble} (${statSync(DST).size} bytes).`);
 }
 
 main();

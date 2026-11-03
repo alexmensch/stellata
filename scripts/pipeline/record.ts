@@ -2,9 +2,9 @@
 
 import { REPO_ROOT } from '../util/paths';
 import { entryInputPaths } from '../util/step-inputs';
-import { loadTable } from './load-table';
+import { loadTable } from './step-table/load-table';
 import { recordStep } from './record-step';
-import { STEPS } from './steps';
+import { STEPS } from './step-table/steps';
 
 async function main(): Promise<number> {
   const [step, ...rest] = process.argv.slice(2);

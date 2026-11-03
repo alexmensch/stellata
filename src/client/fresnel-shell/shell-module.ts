@@ -30,6 +30,7 @@ import { bestHitBy } from '../hover/hover-pick-disambiguator';
 import { pickShellSilhouette } from './shell-pick';
 import { SHELL_KEYS, ShellRegistry } from './shell-registry';
 import { arrayDomain } from '../util/sid-resolver';
+import { PUBLIC_FILES } from '../../catalog-format/public-artifacts/public-artifacts';
 
 export interface ShellKindModule extends ObjectKindModule<'shell'> {
   /** The per-instance registry — the kind's internal runtime, exposed
@@ -97,9 +98,9 @@ export function createShellKindModule(): ShellKindModule {
       // Never rejects (module contract): a fetch failure or a corrupt
       // buffer (parseLocalBubble throws) degrades to an absent shell.
       try {
-        mesh = await loadLocalBubble(`${baseUrl}local-bubble.bin`);
+        mesh = await loadLocalBubble(`${baseUrl}${PUBLIC_FILES.localBubble}`);
       } catch (err) {
-        console.warn('local-bubble.bin failed to load; shell absent', err);
+        console.warn(`${PUBLIC_FILES.localBubble} failed to load; shell absent`, err);
         mesh = null;
       }
     },
