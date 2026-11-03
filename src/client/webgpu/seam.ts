@@ -88,6 +88,9 @@ export interface WebGpuSeam {
   syncUniformNodes(): void;
   /** Settles once every submit made so far has finished on the GPU. */
   submittedWorkDone(): Promise<void>;
+  /** Every timestamped pass from here until the next call resolves as one
+   *  frame (../debug/gpu-timing/README.md#one-frame-per-tag). */
+  startTimestampFrame(): void;
   /** Requires bindSharedUniforms to have run — the materials take their
    *  slots from the uniform-node mirror. */
   attachStarLayer(

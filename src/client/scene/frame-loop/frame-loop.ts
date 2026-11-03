@@ -35,7 +35,7 @@ export interface FrameLoopDeps {
   scene: THREE.Scene;
   camera: THREE.PerspectiveCamera;
   orbitTarget: THREE.Vector3;
-  webgpu: Pick<WebGpuSeam, 'renderer' | 'timestampsAvailable' | 'syncUniformNodes' | 'submittedWorkDone'>;
+  webgpu: Pick<WebGpuSeam, 'renderer' | 'timestampsAvailable' | 'syncUniformNodes' | 'submittedWorkDone' | 'startTimestampFrame'>;
   hdr: Pick<HdrSeam, 'bind' | 'resolve'>;
   uniforms: SharedUniforms;
   clock: Pick<VirtualClock, 'getT' | 'getRate' | 'inFrame'>;
@@ -161,6 +161,8 @@ export class FrameLoop {
       this.scheduleNext(false);
       return;
     }
+    // README.md#pacing — before the frame's first pass, compute included.
+    if (this.pacing === 'gpu') d.webgpu.startTimestampFrame();
     perfMark('pre-render');
     d.uniforms.uCameraPos.value.copy(d.camera.position);
     d.uniforms.uPinFocusToCenter.value = d.focus.pinnedStar() ?? NO_INSTANCE;

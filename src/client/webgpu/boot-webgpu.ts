@@ -121,6 +121,8 @@ export async function bootWebGpu(canvas: HTMLCanvasElement): Promise<WebGpuSeam 
   // rather than binding dead storage nodes.
   let starTables: StarTables | null = null;
   let starCompaction: StarCompaction | null = null;
+  // ../debug/gpu-timing/README.md#one-frame-per-tag
+  let timestampFrame = 2 ** 40;
   return {
     renderer,
     hdr,
@@ -136,6 +138,9 @@ export async function bootWebGpu(canvas: HTMLCanvasElement): Promise<WebGpuSeam 
       return (renderer.backend as unknown as {
         device: { queue: { onSubmittedWorkDone(): Promise<void> } };
       }).device.queue.onSubmittedWorkDone();
+    },
+    startTimestampFrame() {
+      (renderer.info as { frame: number }).frame = ++timestampFrame;
     },
     solarSystemMaterials(placeholder: THREE.Texture) {
       return makeTslSolarSystemMaterials({

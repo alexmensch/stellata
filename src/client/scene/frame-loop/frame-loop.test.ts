@@ -50,6 +50,7 @@ function harness(overrides: Partial<Knobs> = {}, clock: FrameLoopDeps['clock'] =
     orbitTarget: new THREE.Vector3(),
     webgpu: {
       renderer, timestampsAvailable: false, syncUniformNodes: note('syncUniformNodes'), submittedWorkDone,
+      startTimestampFrame: note('startTimestampFrame'),
     },
     hdr: { bind: note('hdr.bind'), resolve: note('hdr.resolve') },
     uniforms,
@@ -327,6 +328,22 @@ describe('FrameLoop GPU pacing', () => {
     await flushMicrotasks();
     expect(renders(log)).toBe(GPU_FRAMES_IN_FLIGHT + 2);
     expect(scheduled).toHaveLength(0);
+  });
+
+  it('opens a timestamp frame on every rendered tick, ahead of its first GPU work', async () => {
+    const { loop, log } = harness();
+    loop.setPacing('gpu');
+    loop.start();
+    await flushMicrotasks();
+    const opened = log.filter((entry) => entry === 'startTimestampFrame').length;
+    expect(opened).toBe(renders(log));
+    expect(log.indexOf('startTimestampFrame')).toBeLessThan(log.indexOf('extinction.update'));
+  });
+
+  it('leaves the timestamp frame to three under rAF pacing', () => {
+    const { loop, log } = harness();
+    loop.start();
+    expect(log).not.toContain('startTimestampFrame');
   });
 
   it('a refused tick waits for the display, not the GPU', async () => {

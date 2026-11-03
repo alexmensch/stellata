@@ -19,6 +19,7 @@ export function fakeWebGpuSeam(overrides: Partial<WebGpuSeam> = {}): WebGpuSeam 
     bindSharedUniforms: () => refuse('bindSharedUniforms'),
     syncUniformNodes: () => refuse('syncUniformNodes'),
     submittedWorkDone: () => refuse('submittedWorkDone'),
+    startTimestampFrame: () => refuse('startTimestampFrame'),
     attachStarLayer: () => refuse('attachStarLayer'),
     setDustTexture: () => refuse('setDustTexture'),
     onOutOfMemory: () => refuse('onOutOfMemory'),
