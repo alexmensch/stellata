@@ -18,7 +18,9 @@ sampler and the public file names are shared with the viewer:
 - `element-unwrap-pure.ts` (+ test) — `unwrapMeanLongitude`. See
   [Unwrapping the mean longitude](#unwrapping-the-mean-longitude).
 - `fetch-planet-elements.ts` — `pnpm run fetch:ephemerides`, optionally
-  narrowed to one or more planets (`pnpm run fetch:ephemerides saturn`).
+  narrowed to one or more planets (`pnpm run fetch:ephemerides saturn`;
+  a narrowed run writes no record, so the pull reads stale until a plain
+  run — [Recording a manual step](/scripts/pipeline/README.md#recording-a-manual-step--recordts)).
   Manual and infrequent; **not** in the build chain ([Frozen external data](/data/README.md#frozen-external-data)).
   Needs network. Writes
   `data/ephemerides/{id}.json` through `emitEach` (`../util/README.md`): a

@@ -24,7 +24,7 @@ unsmudged LFS pointer. Regenerate offline and commit:
 ```
 ./.venv/bin/pip install -r scripts/cloud-surfaces/requirements.txt
 pnpm run build:clouds                    # sid-stamped clouds.json first
-./.venv/bin/python scripts/cloud-surfaces/build-cloud-surfaces.py
+pnpm run build:cloud-surfaces            # under the venv's python3
 ```
 
 It reads the [Edenhofer 2024](/data/papers/index.md#edenhofer2024) cube
@@ -32,7 +32,8 @@ from `dustmaps`' cache, which the two dataset pulls fill
 ([The Edenhofer 2024 pulls](/scripts/dust/README.md#the-edenhofer-2024-pulls)):
 in-grid clouds need `edenhofer2024-main.json`, out-of-grid ones
 `edenhofer2024-2kpc.json`. `--only <cloud-id>` and `--dry-run` help when
-tuning.
+tuning; a run with arguments writes no record, so it reads stale until a
+plain run ([Recording a manual step](/scripts/pipeline/README.md#recording-a-manual-step--recordts)).
 
 ## What stales the bake
 
