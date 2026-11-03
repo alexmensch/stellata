@@ -15,6 +15,16 @@ export const DEFAULT_DWELL_FRAMES = 240;
 
 export const DWELL_PACINGS = ['gpu', 'raf'] as const satisfies readonly FramePacing[];
 export const DEFAULT_DWELL_PACING: FramePacing = 'gpu';
+/** Every dwell taken before the lever existed was paced on rAF (README.md#pacing). */
+const PACING_WHEN_UNRECORDED: FramePacing = 'raf';
+
+/** The one reading of a recorded pacing, absent included. */
+export function recordedPacing(pacing: unknown): FramePacing {
+  if (pacing === undefined) return PACING_WHEN_UNRECORDED;
+  const known = DWELL_PACINGS.find((p) => p === pacing);
+  if (known === undefined) throw new Error(`unknown dwell pacing '${String(pacing)}'`);
+  return known;
+}
 
 /**
  * Rendered frames between statistic readbacks for the duration of a dwell,
@@ -286,21 +296,33 @@ export function gatingClock(dwell: {
   readonly stats: DwellSummary;
   readonly gpuStats: DwellSummary | null;
   readonly throughputStats?: DwellSummary | null;
-}): GatingClock {
+}, pacing: FramePacing): GatingClock {
   // README.md#cpu-and-gpu-apart — a GPU-paced dwell gates on throughput.
-  if (dwell.throughputStats != null) {
-    return { clock: dwell.throughputStats, metric: 'throughput-mean', valueMs: throughputMs(dwell.deltasMs) };
+  if (pacing === 'gpu') {
+    return { clock: throughputClock(dwell), metric: 'throughput-mean', valueMs: throughputMs(dwell.deltasMs) };
   }
   return dwell.gpuStats === null
     ? { clock: dwell.stats, metric: 'wall-p50', valueMs: dwell.stats.p50 }
     : { clock: dwell.gpuStats, metric: 'gpu-p50', valueMs: dwell.gpuStats.p50 };
 }
 
+/** The runner refuses a GPU-paced dwell too short for one window (`../args.ts`),
+ *  so a missing clock here is a malformed record, not a short dwell. */
+function throughputClock(dwell: { readonly throughputStats?: DwellSummary | null }): DwellSummary {
+  if (dwell.throughputStats == null) {
+    throw new Error('a GPU-paced dwell with no throughput clock — the record is malformed');
+  }
+  return dwell.throughputStats;
+}
+
 /** The frame a CPU-bound test divides by; undefined off GPU pacing. */
 export function throughputFrameMs(
   dwell: { readonly deltasMs: readonly number[]; readonly throughputStats?: DwellSummary | null },
+  pacing: FramePacing,
 ): number | undefined {
-  return dwell.throughputStats == null ? undefined : throughputMs(dwell.deltasMs);
+  if (pacing !== 'gpu') return undefined;
+  throughputClock(dwell);
+  return throughputMs(dwell.deltasMs);
 }
 
 /**

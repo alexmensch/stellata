@@ -4,7 +4,7 @@ import {
   parsePinArgs, parseRunArgs, parseSurvivorsArgs, pinUsage, usage,
 } from './args';
 import { DEFAULT_SWEEP_SCALES } from './sweep/sweep-pure';
-import { DEFAULT_DWELL_PACING, DWELL_READBACK_EVERY_FRAMES } from './dwell/dwell-pure';
+import { DEFAULT_DWELL_PACING, DWELL_READBACK_EVERY_FRAMES, THROUGHPUT_WINDOW_FRAMES } from './dwell/dwell-pure';
 import { BACKENDS, SCENARIO_NAMES } from './scenarios';
 
 describe('parseRunArgs', () => {
@@ -118,6 +118,13 @@ describe('parseRunArgs', () => {
   it('takes --pacing in dwell and sweep', () => {
     expect(parseRunArgs(['--mode', 'dwell', '--pacing', 'raf']).pacing).toBe('raf');
     expect(parseRunArgs(['--mode', 'sweep', '--pacing', 'gpu']).pacing).toBe('gpu');
+  });
+
+  it(`refuses a GPU-paced dwell shorter than one ${THROUGHPUT_WINDOW_FRAMES}-frame throughput window`, () => {
+    const short = String(THROUGHPUT_WINDOW_FRAMES - 1);
+    expect(() => parseRunArgs(['--mode', 'dwell', '--frames', short])).toThrow(ArgError);
+    expect(parseRunArgs(['--mode', 'dwell', '--frames', short, '--pacing', 'raf']).frames)
+      .toBe(THROUGHPUT_WINDOW_FRAMES - 1);
   });
 
   it('takes --readback-every as whole frames, in dwell and sweep', () => {

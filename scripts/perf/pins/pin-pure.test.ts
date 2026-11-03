@@ -833,8 +833,9 @@ describe('the pinned dwell length', () => {
 });
 
 describe('the pinned pacing', () => {
-  const sol = (params: Record<string, unknown>) =>
-    scenario('sol', 'webgpu', dwell(stats(18.7), stats(16.9)), { params });
+  const sol = (params: Record<string, unknown>) => scenario('sol', 'webgpu', {
+    ...dwell(stats(18.7), stats(16.9)), deltasMs: [18.7], throughputStats: stats(18.7),
+  }, { params });
 
   it('is carried on every row, off the params the runner stamped', () => {
     expect(pinOf([sol({ pacing: 'gpu' })]).rows[0].pacing).toBe('gpu');

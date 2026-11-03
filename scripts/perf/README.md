@@ -213,7 +213,8 @@ identical on both sides, and which vantages to take it at:
 `--frames` sizes a dwell (dwell and sweep modes); `--scales` is the sweep's
 viewport set. `--pacing` (dwell and sweep, default `gpu`) is what schedules
 each frame: the GPU having room for it, or rAF
-([Pacing](dwell/README.md#pacing)).
+([Pacing](dwell/README.md#pacing)). Under `gpu`, `--frames` below one
+throughput window (`THROUGHPUT_WINDOW_FRAMES`, 8) is refused.
 
 **`--readback-every` pins the dwell's readback duty cycle** — one statistic
 readback per that many rendered frames, held from before the warmup to the

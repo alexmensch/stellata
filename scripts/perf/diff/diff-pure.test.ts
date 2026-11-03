@@ -485,14 +485,17 @@ describe('diffRuns — refusals', () => {
   });
 
   it('refuses two dwells paced differently, reading an unrecorded pacing as rAF', () => {
-    const gpu = withDwell(dwellStats(30), { params: { pacing: 'gpu' } });
+    const plain = withDwell(dwellStats(30), { params: { pacing: 'gpu' } });
+    const gpu = file([{ ...plain.scenarios[0], dwell: {
+      ...plain.scenarios[0].dwell!, deltasMs: [30], throughputStats: dwellStats(30),
+    } }]);
     const raf = withDwell(dwellStats(30), { params: { pacing: 'raf' } });
     const archived = withDwell(dwellStats(30), { params: {} });
     expect(diffRuns(gpu, raf).refusals[0].reason).toContain('paced on gpu vs raf');
     expect(diffRuns(archived, gpu).refusals[0].reason).toContain('paced on raf vs gpu');
     expect(diffRuns(archived, raf).refusals).toEqual([]);
     expect(diffRuns(gpu, gpu).refusals).toEqual([]);
-    expect(pacingRefusal(undefined, undefined)).toBeNull();
+    expect(pacingRefusal('raf', 'raf')).toBeNull();
   });
 
   it('gates a GPU-paced pair on throughput and adds a CPU row', () => {

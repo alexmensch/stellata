@@ -132,7 +132,9 @@ naming the wall clock; `params.pacing` says what scheduled it.
 `--baseline` and against the pin alike, and the pin carries the pacing on
 every row. An unrecorded pacing reads as `raf`: every dwell archived before
 the lever existed was paced on rAF, so absence is a known value, not an
-unknown one (`../diff/diff-pure.ts`).
+unknown one. `recordedPacing` is the one reading of it, and the recorded
+pacing alone decides which clock a row gates on — never which summaries
+the record happens to carry.
 
 **`--pacing raf` is the old dwell**, kept for a headed run or a machine
 where saturation is not wanted. Everything this README says about vsync
@@ -162,7 +164,9 @@ spread 0.014–0.105 ms at every vantage. `throughputStats` summarises those
 `THROUGHPUT_WINDOW_FRAMES` (8) window means for what the mean cannot carry:
 their spread sets the band's sampling term and their quarters the state
 guard. The pin, which keeps no samples, records the mean on its throughput
-clock (`meanMs`).
+clock (`meanMs`). The runner refuses `--pacing gpu` with fewer frames than
+one window, so a GPU-paced record without `throughputStats` is malformed
+and throws rather than falling back to another clock.
 
 **The GPU timestamp stream is recorded and not gated under GPU pacing.**
 With two frames in flight, the next frame's passes overlap the current

@@ -10,7 +10,7 @@ import {
 } from '../diff/diff-pure';
 import { computeFloorMs, dwellFloorMs } from '../floors/floors';
 import {
-  COMPUTE_ROW, CPU_ROW, classClock, computeClock, cpuClock, frameFloor, gatingClock,
+  COMPUTE_ROW, CPU_ROW, classClock, computeClock, cpuClock, frameFloor, gatingClock, recordedPacing,
   pointMove, sampleClasses, throughputFrameMs, throughputMs,
   spreadMove, type DwellMetric, type DwellSummary, type FrameFloor, type StateGuard,
 } from '../dwell/dwell-pure';
@@ -270,7 +270,7 @@ function rowRefusal(record: ScenarioRecord): string | null {
   const precondition = preconditionRefusal({}, record.params);
   if (precondition !== null) return precondition;
   if (PIN_UNGATED_SCENARIOS[record.name] === undefined
-    && gatingClock(record.dwell).clock.stateGuard === 'trending') {
+    && gatingClock(record.dwell, dwellPacing(record)).clock.stateGuard === 'trending') {
     return 'the dwell trended across its quarters — it straddled a load-state transition';
   }
   return null;
@@ -650,9 +650,10 @@ function gatedThroughput(clock: PinClock | DwellSummary, meanMs: number): GatedS
 
 /** Valid only after `pacingRefusal` passed the pair. */
 function frameStreamRow(pinned: PinRow, dwell: DwellRecord): PinVerdictRow {
-  if (pinned.pacing === 'gpu') {
+  const pacing = recordedPacing(pinned.pacing);
+  if (pacing === 'gpu') {
     const pinnedThroughput = pinned.throughput ?? null;
-    const currentMs = throughputFrameMs(dwell);
+    const currentMs = throughputFrameMs(dwell, pacing);
     return streamRow(pinned, {
       key: pinned.key,
       metric: 'throughput-mean',
@@ -755,8 +756,8 @@ export function compareToPin(pin: PinFile, current: PerfFile): PinDiff {
       ?? recordCountRefusal(pinned.recordCount, record.recordCount)
       ?? positionRefusal(pinned.position, record.position)
       ?? framesRefusal(pinned.frames, dwellFrames(record))
-      ?? pacingRefusal(pinned.pacing, dwellPacing(record))
-      ?? cpuBoundRefusal(cpuClock(dwell)?.p50, throughputFrameMs(dwell))
+      ?? pacingRefusal(recordedPacing(pinned.pacing), dwellPacing(record))
+      ?? cpuBoundRefusal(cpuClock(dwell)?.p50, throughputFrameMs(dwell, dwellPacing(record)))
       ?? cpuBoundRefusal(pinned.cpu?.p50, pinned.throughput?.meanMs)
       // Gated on the pin holding a GPU stream for the row, matching the clock
       // `compareRows` goes on to judge: a pair with none is printed ungated and

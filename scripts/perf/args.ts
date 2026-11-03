@@ -13,6 +13,7 @@ import {
 import type { FramePacing } from '../../src/client/scene/frame-loop/frame-loop';
 import {
   COMPUTE_ROW, DEFAULT_DWELL_FRAMES, DEFAULT_DWELL_PACING, DWELL_PACINGS, DWELL_READBACK_EVERY_FRAMES,
+  THROUGHPUT_WINDOW_FRAMES,
 } from './dwell/dwell-pure';
 import { DEFAULT_SWEEP_SCALES } from './sweep/sweep-pure';
 import { DEFAULT_QUIET_MS } from './settle-pure';
@@ -369,6 +370,14 @@ export function parseRunArgs(argv: readonly string[]): RunArgs {
     }
   }
 
+  const pacing = oneOf('pacing', DWELL_PACINGS);
+  const frames = num('frames');
+  if (pacing === 'gpu' && (mode === 'dwell' || mode === 'sweep') && frames < THROUGHPUT_WINDOW_FRAMES) {
+    throw new ArgError(
+      `--frames ${frames} under GPU pacing: the gated throughput is read in windows of `
+      + `${THROUGHPUT_WINDOW_FRAMES} frames, so a shorter dwell has nothing to gate on`);
+  }
+
   const accept = (values.accept as string[]).map(parseAccept);
   if (str('pin') !== undefined && str('json') === undefined) {
     throw new ArgError('--pin needs --json: the pin cites the run file its rows were summarised from');
@@ -408,9 +417,9 @@ export function parseRunArgs(argv: readonly string[]): RunArgs {
     quietMs: num('quiet-ms'),
     chromeArgs: values['chrome-arg'] as string[],
     hash: (str('hash') ?? '').replace(/^#/, ''),
-    frames: num('frames'),
+    frames,
     readbackEvery,
-    pacing: oneOf('pacing', DWELL_PACINGS),
+    pacing,
     roundtrip,
     scales: numberList('scales'),
     json: str('json'),

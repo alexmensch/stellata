@@ -9,8 +9,8 @@ import {
 import type { FramePacing } from '../../../src/client/scene/frame-loop/frame-loop';
 import { computeFloorMs, dwellFloorMs } from '../floors/floors';
 import {
-  COMPUTE_ROW, CPU_BOUND_SHARE, CPU_ROW, DWELL_PACINGS, classClock, computeClock, cpuClock, floorMove,
-  frameFloor, gatingClock, sampleClasses, throughputFrameMs, spreadMove, type ClassClock, type DwellMetric,
+  COMPUTE_ROW, CPU_BOUND_SHARE, CPU_ROW, classClock, computeClock, cpuClock, floorMove,
+  frameFloor, gatingClock, recordedPacing, sampleClasses, throughputFrameMs, spreadMove, type ClassClock, type DwellMetric,
 } from '../dwell/dwell-pure';
 import type { DwellRecord, PerfFile, ScenarioRecord } from '../schema';
 import type { ScenarioName } from '../scenarios';
@@ -238,17 +238,11 @@ export function framesRefusal(
   return `dwell ${a} vs ${b} frames — a median converges with dwell length, so these are two statistics rather than two readings`;
 }
 
-/** Every dwell taken before the lever existed was paced on rAF, so an absent
- *  pacing is a known one (../dwell/README.md#pacing). */
-const PACING_WHEN_UNRECORDED: FramePacing = 'raf';
-
-export function dwellPacing(record: ScenarioRecord): FramePacing | undefined {
-  const pacing = record.params?.pacing;
-  return DWELL_PACINGS.find((p) => p === pacing);
+export function dwellPacing(record: ScenarioRecord): FramePacing {
+  return recordedPacing(record.params?.pacing);
 }
 
-export function pacingRefusal(a: FramePacing | undefined, b: FramePacing | undefined): string | null {
-  const [pa, pb] = [a ?? PACING_WHEN_UNRECORDED, b ?? PACING_WHEN_UNRECORDED];
+export function pacingRefusal(pa: FramePacing, pb: FramePacing): string | null {
   if (pa === pb) return null;
   return `paced on ${pa} vs ${pb} — the GPU clock idles down between rAF-paced frames and holds max under GPU pacing, so the same work reads differently`;
 }
@@ -440,10 +434,11 @@ function dwellRows(key: string, a: ScenarioRecord, b: ScenarioRecord): (DiffRow 
   if (da === null || db === null) {
     return [{ key: `${key}|dwell`, reason: 'one run has no dwell record' }];
   }
-  const cpuBound = cpuBoundRefusal(cpuClock(da)?.p50, throughputFrameMs(da))
-    ?? cpuBoundRefusal(cpuClock(db)?.p50, throughputFrameMs(db));
+  const pacing = dwellPacing(a);
+  const cpuBound = cpuBoundRefusal(cpuClock(da)?.p50, throughputFrameMs(da, pacing))
+    ?? cpuBoundRefusal(cpuClock(db)?.p50, throughputFrameMs(db, pacing));
   if (cpuBound !== null) return [{ key: `${key}|dwell`, reason: cpuBound }];
-  const frame = frameRow(key, da, db);
+  const frame = frameRow(key, da, db, pacing);
   return 'reason' in frame
     ? [frame]
     : [frame, ...computeRow(key, a.name, da, db), ...cpuRow(key, da, db)];
@@ -507,7 +502,8 @@ function computeRow(
   }];
 }
 
-function frameRow(key: string, da: DwellRecord, db: DwellRecord): DiffRow | DiffRefusal {
+/** Valid only after `pacingRefusal` passed the pair. */
+function frameRow(key: string, da: DwellRecord, db: DwellRecord, pacing: FramePacing): DiffRow | DiffRefusal {
   if ((da.gpuStats === null) !== (db.gpuStats === null)) {
     return {
       key: `${key}|dwell`,
@@ -516,7 +512,7 @@ function frameRow(key: string, da: DwellRecord, db: DwellRecord): DiffRow | Diff
         'median against a wall median is two instruments, the same refusal a differing method gets',
     };
   }
-  const [ga, gb] = [gatingClock(da), gatingClock(db)];
+  const [ga, gb] = [gatingClock(da, pacing), gatingClock(db, pacing)];
   const [ca, cb] = [ga.clock, gb.clock];
   if (ca.vsyncClamped || cb.vsyncClamped) {
     return {
