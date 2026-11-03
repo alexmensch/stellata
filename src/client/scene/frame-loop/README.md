@@ -1,6 +1,7 @@
 # Frame loop — one tick, in order
 
-`FrameLoop` is the `requestAnimationFrame` loop. Each tick runs a fixed
+`FrameLoop` is the app's tick loop, paced on `requestAnimationFrame` unless
+the perf runner says otherwise ([Pacing](#pacing)). Each tick runs a fixed
 sequence of steps owned by other subsystems; what this module owns is the
 **order**, and every step's position in it is a claim about the steps
 around it. The shell constructs it last, after every owner it drives,
@@ -87,6 +88,54 @@ The adaptation measurement is the opposite case and stays **below**: its
 park counts wake probes in rendered frames, and hoisting it above the gate
 would make a parked static view pay a probe every few ticks forever
 ([What a skipped tick must not break](../../render-gate/README.md#what-a-skipped-tick-must-not-break)).
+
+## Pacing
+
+Every tick schedules exactly one successor, so the loop is one chain of
+ticks whatever the pacing. `setPacing` changes only how the next one is
+scheduled. The shell exposes it, with `onRenderedTick` and nothing else
+of the loop, as `stellata.framePacing` for the one caller that sets it,
+the perf runner's dwell
+([Pacing](/scripts/perf/dwell/README.md#pacing)).
+
+- **`'raf'`** (the default, and what `dispose` restores) — the next
+  tick is the next `requestAnimationFrame`.
+- **`'gpu'`** — the next tick runs as soon as fewer than
+  `GPU_FRAMES_IN_FLIGHT` (2) rendered frames are unfinished on the GPU,
+  read off `WebGpuSeam.submittedWorkDone()` after each rendered tick. The
+  CPU encodes frame N+1 while frame N executes, so the GPU never waits on
+  the CPU and never idles while the CPU's share of a frame is the smaller.
+  One in flight would leave the GPU idle for every encode, and on Apple
+  silicon that idle share is what lowers the clock
+  (`stellata-8cg.49.42`'s notes).
+
+**Every rendered tick opens its own timestamp frame**, under either pacing,
+before any pass, compute included; under GPU pacing every tick inside one
+display interval would otherwise resolve as one GPU sample
+([One frame per tag](../../debug/gpu-timing/README.md#one-frame-per-tag)).
+
+**three's own per-frame bookkeeping stays on the display's clock.** Its
+internal rAF loop runs `nodeFrame.update()` and `info.reset()` once per
+display interval whatever the pacing, so under GPU pacing a node updated
+`FRAME`-wise, or a reader of `renderer.info.render`, sees several ticks as
+one frame. Nothing in `src/client` is either today; a node that must
+advance per rendered frame updates from the tick, not from three.
+
+**A tick the gate refuses waits for the display under either pacing.** It
+submitted nothing, so its work-done promise would settle at once and a
+GPU-paced chain of refusals would spin the page without yielding a frame.
+
+## CPU time per tick
+
+`onRenderedTick` hands each subscriber the main-thread time of every
+rendered tick: from the tick's one `performance.now()` read to after the
+`'frame'` handlers, so it covers the fan-out, the encode and submit calls
+and the overlays. A refused tick reports nothing. It is the perf dwell's
+CPU row ([CPU and GPU, apart](/scripts/perf/dwell/README.md#cpu-and-gpu-apart)),
+always on rather than tied to the debug panel the way the perf HUD's
+`frame.total` is, because a dwell refuses to run with the panel open. It
+does not see the CPU time Chrome's GPU process spends on the same
+commands.
 
 ## The frustum
 

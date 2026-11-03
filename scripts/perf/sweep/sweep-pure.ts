@@ -2,6 +2,10 @@
 // its slope says about what the frame is bound by.
 // README.md.
 
+import type { FramePacing } from '../../../src/client/scene/frame-loop/frame-loop';
+import { throughputFrameMs, type DwellMetric } from '../dwell/dwell-pure';
+import type { DwellRecord } from '../schema';
+
 export const DEFAULT_SWEEP_SCALES = [0.5, 1, 1.5, 2] as const;
 
 /** Slope at or above this: the frame tracks pixel count, so it is bound by
@@ -20,7 +24,18 @@ export interface SweepPoint {
    *  for, which is the viewport times dpr squared. */
   readonly px: number;
   readonly ms: number;
+  /** Absent on a sweep taken before pacing was recorded, which read `wall-p50`. */
+  readonly metric?: SweepMetric;
   readonly vsyncClamped: boolean;
+}
+
+export type SweepMetric = Extract<DwellMetric, 'wall-p50' | 'throughput-mean'>;
+
+/** README.md, on a point's frame time. */
+export function sweepReading(dwell: DwellRecord, pacing: FramePacing): { ms: number; metric: SweepMetric } {
+  return pacing === 'gpu'
+    ? { ms: throughputFrameMs(dwell, pacing)!, metric: 'throughput-mean' }
+    : { ms: dwell.stats.p50, metric: 'wall-p50' };
 }
 
 export interface SweepFit {

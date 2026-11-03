@@ -6,6 +6,7 @@ import type {
   PriceFrameOptions, PriceFrameRow,
 } from '../../src/client/debug/frame-cost/frame-cost';
 import type { PassToggle } from '../../src/client/debug/frame-cost/passes/passes';
+import type { FramePacing } from '../../src/client/scene/frame-loop/frame-loop';
 import type { Stellata } from '../../src/client/stellata';
 import { GATE_ELEMENT_ID } from '../../src/client/webgpu/gate/gate-advice-pure';
 import type { PassCounter } from './dwell/dwell-pure';
@@ -243,12 +244,16 @@ export interface DwellParams {
    *  counts the kernel a parked camera skips
    *  (`/src/client/debug/frame-cost/passes/README.md#the-extinction-rows`). */
   readonly forceRecompute: boolean;
+  /** Set on the frame loop from before the warmup until the restore
+   *  (`dwell/README.md#pacing`). */
+  readonly pacing: FramePacing;
 }
 
 export interface DwellRaw {
   readonly deltasMs: number[];
   readonly gpuMs: number[];
   readonly computeMs: number[];
+  readonly cpuMs: number[];
   readonly gpuNote: string;
   readonly passCounts: Record<PassCounter, number[]> | null;
   readonly passNote: string;
@@ -291,6 +296,8 @@ export function runDwell(page: Page, params: DwellParams): Promise<DwellRaw> {
     const s = (window as unknown as PerfWindow).stellata;
     const gpuMs: number[] = [];
     const computeMs: number[] = [];
+    const cpuMs: number[] = [];
+    let offCpu: (() => void) | null = null;
     let stopGpu: (() => void) | null = null;
     let stopCompute: (() => void) | null = null;
     let gpuNote: string;
@@ -307,6 +314,12 @@ export function runDwell(page: Page, params: DwellParams): Promise<DwellRaw> {
     let origSubmit: unknown = null;
     let origRenderPass: unknown = null;
     let origComputePass: unknown = null;
+    // Member-assigned, for the same `__name` reason as the prototype members
+    // below: tsx names an arrow in an object literal too.
+    const pace = {} as { nextFrame: () => Promise<number> };
+    pace.nextFrame = () => new Promise<number>((r) => requestAnimationFrame(r));
+    let frameWaiter: ((now: number) => void) | null = null;
+    let offFrame: (() => void) | null = null;
 
     try {
       const samples = await import(p.samplesModuleUrl) as {
@@ -374,21 +387,31 @@ export function runDwell(page: Page, params: DwellParams): Promise<DwellRaw> {
       // the page has already been running.
       cadence.every = p.readbackEvery;
       s.extinction.setRecomputeForced(p.forceRecompute);
+      if (p.pacing === 'gpu') {
+        offFrame = s.on('frame', () => {
+          const resolve = frameWaiter;
+          frameWaiter = null;
+          resolve?.(performance.now());
+        });
+        pace.nextFrame = () => new Promise<number>((r) => { frameWaiter = r; });
+        s.framePacing.setPacing('gpu');
+      }
       for (let f = 0; f < p.warmupFrames; f++) {
-        await new Promise((r) => requestAnimationFrame(r));
+        await pace.nextFrame();
       }
       s.adaptation.setHeld(true);
       dm = s.adaptation.getDm();
       gpuMs.length = 0;
       computeMs.length = 0;
       const readbacksBefore = s.reduction.readbackRequests;
-      let last = await new Promise<number>((r) => requestAnimationFrame(r));
+      let last = await pace.nextFrame();
+      offCpu = s.framePacing.onRenderedTick((ms) => { cpuMs.push(ms); });
       live.submits = 0;
       live.commandBuffers = 0;
       live.renderPasses = 0;
       live.computePasses = 0;
       for (let f = 0; f < p.frames; f++) {
-        const now = await new Promise<number>((r) => requestAnimationFrame(r));
+        const now = await pace.nextFrame();
         deltasMs.push(now - last);
         last = now;
         perFrame.submits.push(live.submits);
@@ -404,6 +427,9 @@ export function runDwell(page: Page, params: DwellParams): Promise<DwellRaw> {
       effectiveLimitMag = s.exposure.getEffectiveLimitMag();
     } finally {
       rateDuring = clock.getRate();
+      s.framePacing.setPacing('raf');
+      offFrame?.();
+      offCpu?.();
       cadence.every = readbackEveryBefore;
       s.extinction.setRecomputeForced(recomputeForcedBefore);
       stopGpu?.();
@@ -422,6 +448,7 @@ export function runDwell(page: Page, params: DwellParams): Promise<DwellRaw> {
       deltasMs,
       gpuMs,
       computeMs,
+      cpuMs,
       gpuNote,
       passCounts: origSubmit !== null ? perFrame : null,
       passNote,

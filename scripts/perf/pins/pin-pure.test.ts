@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { medianStandardErrorMs } from '../../../src/client/debug/frame-cost/frame-cost-pure';
-import { BUFFER_MPX_TOLERANCE, RECORD_COUNT_TOLERANCE, computeFloorMs, dwellFloorMs } from '../diff/diff-pure';
+import { BUFFER_MPX_TOLERANCE, RECORD_COUNT_TOLERANCE, diffRuns } from '../diff/diff-pure';
+import { computeFloorMs, dwellFloorMs } from '../floors/floors';
 import { frameFloor, type DwellSummary } from '../dwell/dwell-pure';
 import {
   BAND_OVER_FLOOR_FACTOR,
@@ -828,6 +829,62 @@ describe('the pinned dwell length', () => {
     expect(pin.rows[0].frames).toBeUndefined();
     const run = file([scenario('sol', 'webgpu', dwell(stats(18.7), stats(16.9)), { params: { frames: 960 } })]);
     expect(compareToPin(pin, run).refusals).toEqual([]);
+  });
+});
+
+describe('the pinned pacing', () => {
+  const sol = (params: Record<string, unknown>) => scenario('sol', 'webgpu', {
+    ...dwell(stats(18.7), stats(16.9)), deltasMs: [18.7], throughputStats: stats(18.7),
+  }, { params });
+
+  it('is carried on every row, off the params the runner stamped', () => {
+    expect(pinOf([sol({ pacing: 'gpu' })]).rows[0].pacing).toBe('gpu');
+  });
+
+  it('refuses a run paced differently, a pin without the field reading as rAF', () => {
+    expect(compareToPin(pinOf([sol({ pacing: 'gpu' })]), file([sol({ pacing: 'raf' })])).refusals[0].reason)
+      .toContain('paced on gpu vs raf');
+    expect(compareToPin(pinOf([sol({})]), file([sol({ pacing: 'gpu' })])).refusals[0].reason)
+      .toContain('paced on raf vs gpu');
+    expect(compareToPin(pinOf([sol({ pacing: 'gpu' })]), file([sol({ pacing: 'gpu' })])).refusals).toEqual([]);
+  });
+});
+
+describe('a GPU-paced pin — throughput, CPU and the bottleneck', () => {
+  const paced = (frameMs: number, cpuMs: number) => scenario('sol', 'webgpu', {
+    ...dwell(stats(16.7), stats(frameMs * 1.3)),
+    deltasMs: [frameMs - 1, frameMs + 1], throughputStats: stats(frameMs + 0.4), cpuMs: [cpuMs], cpuStats: stats(cpuMs),
+  }, { params: { pacing: 'gpu' } });
+
+  it('carries both clocks on the row and gates on them', () => {
+    const pin = pinOf([paced(5, 2)]);
+    expect(pin.rows[0].throughput?.meanMs).toBe(5);
+    expect(pin.rows[0].cpu?.p50).toBe(2);
+    const { rows, refusals } = compareToPin(pin, file([paced(6, 2)]));
+    expect(refusals).toEqual([]);
+    expect(rows.map((r) => r.metric)).toEqual(['throughput-mean', 'cpu-p50']);
+    expect([rows[0].pinnedMs, rows[0].currentMs]).toEqual([5, 6]);
+    expect(rows[0].verdict).toBe('dearer');
+    expect(rows[1].verdict).toBe('same');
+  });
+
+  it('judges the same rows in the same order as --baseline does', () => {
+    const full = (frameMs: number, cpuMs: number): ScenarioRecord => {
+      const s = paced(frameMs, cpuMs);
+      return { ...s, dwell: withCompute(s.dwell!, stats(0.4)) };
+    };
+    const againstPin = compareToPin(pinOf([full(5, 2)]), file([full(6, 2)]));
+    const againstRun = diffRuns(file([full(5, 2)]), file([full(6, 2)]));
+    expect(againstPin.refusals).toEqual([]);
+    expect(againstRun.refusals).toEqual([]);
+    const judged = (rows: readonly { metric: string; bandMs: number }[]) => rows.map((r) => [r.metric, r.bandMs]);
+    expect(judged(againstPin.rows)).toEqual(judged(againstRun.rows));
+    expect(againstPin.rows.map((r) => r.metric)).toEqual(['throughput-mean', 'compute-p10', 'cpu-p50']);
+  });
+
+  it('refuses a context the main thread paced, in the run and when writing the pin', () => {
+    expect(compareToPin(pinOf([paced(5, 2)]), file([paced(5, 4.5)])).refusals[0].reason).toContain('CPU-bound');
+    expect(pinFromRuns([runOf(file([paced(5, 4.5)]))], SOURCE).refusals[0]).toContain('CPU-bound');
   });
 });
 

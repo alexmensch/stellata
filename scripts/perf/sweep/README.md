@@ -9,7 +9,8 @@ lifecycle, flags and the other modes: `../README.md`.
 
 ```
 scripts/perf/sweep/
-  sweep-pure.ts (+ test)    Measurement order, the log-log fit, fill/vertex
+  sweep-pure.ts (+ test)    What a point reads off its dwell, measurement
+                            order, the log-log fit, fill/vertex
                             classification, and the sweep bracket.
 ```
 
@@ -21,11 +22,18 @@ counts a run is sized by.
 ## Scale 1 is measured first and last
 
 With the requested scales ascending in between: `--scales 0.5,1,1.5,2` →
-`1, 0.5, 1.5, 2, 1`. The spread of those two scale-1 medians is
+`1, 0.5, 1.5, 2, 1`. The spread of those two scale-1 readings is
 `bracketMs`, and it is the floor any slope claim sits on, for the same
 reason the differential brackets each row — an instrument that ramped its
 clocks across the sweep produces a dependence on elapsed time that fits as
 a dependence on area.
+
+**A point's frame time follows the dwell's pacing** (`sweepReading`,
+[Pacing](../dwell/README.md#pacing)): the throughput mean under `gpu`, the
+default, and the wall median under `raf`. Under GPU pacing two frames in
+flight hand frames back in bursts, so the wall median sits 5–10 % under
+the time per frame and is a statistic of the burst pattern. Each point
+names its `metric`; a sweep archived without one read the wall median.
 
 **The viewport moves; dpr does not.** Scaling both would confound area
 with the per-pixel work dpr also multiplies.

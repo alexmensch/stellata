@@ -1,0 +1,156 @@
+{
+  "schema": "stellata-perf/2",
+  "run": {
+    "startedAt": "2026-11-03T19:15:44.233Z",
+    "finishedAt": "2026-11-03T19:16:25.791Z",
+    "url": "http://localhost:5173",
+    "argv": [
+      "--",
+      "--mode",
+      "sweep",
+      "--scenario",
+      "sol",
+      "--scales",
+      "1,1.25,1.5",
+      "--frames",
+      "960",
+      "--json",
+      ".perf-runs/2026-11-03/8cg-49-42-gpu-sol-sweep-2.json"
+    ],
+    "git": {
+      "commit": "27c5690f9c4bf380d8f9ee539d345f4085e6f108",
+      "dirty": false,
+      "mainCommit": "515381d43f5d456f129353516a25736fbe195821",
+      "mainReachable": false
+    },
+    "browser": {
+      "name": "chromium",
+      "version": "151.0.7922.34",
+      "channel": "chromium",
+      "headless": true,
+      "args": [
+        "--ignore-gpu-blocklist",
+        "--enable-unsafe-webgpu"
+      ]
+    },
+    "gpu": {
+      "webgl": {
+        "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M6, Unspecified Version)",
+        "vendor": "Google Inc. (Apple)",
+        "timerQuery": true
+      },
+      "webgpu": {
+        "vendor": "apple",
+        "architecture": "metal-3",
+        "device": "",
+        "description": "",
+        "isFallbackAdapter": false,
+        "timestampsAvailable": true
+      }
+    },
+    "host": {
+      "platform": "darwin",
+      "arch": "arm64"
+    }
+  },
+  "scenarios": [
+    {
+      "name": "sol",
+      "blob": "BIHAgAEH1E6tNQDBsTegUkQ3AmDleDmLoNpB",
+      "backend": {
+        "requested": "webgpu",
+        "actual": "webgpu"
+      },
+      "viewport": {
+        "width": 1280,
+        "height": 800,
+        "dpr": 2
+      },
+      "buffer": {
+        "width": 2560,
+        "height": 1600
+      },
+      "bufferMpx": 4.096,
+      "recordCount": 979678,
+      "position": 1,
+      "mode": "sweep",
+      "method": "raf-delta",
+      "params": {
+        "frames": 960,
+        "warmupFrames": 180,
+        "backend": "webgpu",
+        "cadenceMs": 16.69999999999891,
+        "readbackEvery": 4,
+        "forceRecompute": false,
+        "pacing": "gpu",
+        "scales": [
+          1,
+          1.25,
+          1.5
+        ]
+      },
+      "settleMs": 6586,
+      "idleRafMs": 16.69999999999891,
+      "differential": null,
+      "dwell": null,
+      "dwellAfter": null,
+      "roundtrip": null,
+      "sweep": {
+        "points": [
+          {
+            "scale": 1,
+            "width": 1280,
+            "height": 800,
+            "px": 4096000,
+            "ms": 4.892604166641831,
+            "metric": "throughput-mean",
+            "vsyncClamped": false
+          },
+          {
+            "scale": 1.25,
+            "width": 1600,
+            "height": 1000,
+            "px": 6400000,
+            "ms": 8.315208333358168,
+            "metric": "throughput-mean",
+            "vsyncClamped": false
+          },
+          {
+            "scale": 1.5,
+            "width": 1920,
+            "height": 1200,
+            "px": 9216000,
+            "ms": 11.388645833233992,
+            "metric": "throughput-mean",
+            "vsyncClamped": false
+          },
+          {
+            "scale": 1,
+            "width": 1280,
+            "height": 800,
+            "px": 4096000,
+            "ms": 4.8953125,
+            "metric": "throughput-mean",
+            "vsyncClamped": false
+          }
+        ],
+        "fit": {
+          "slope": 1.0601970079943095,
+          "r2": 0.9941876866754012,
+          "bound": "fill",
+          "fitted": 4
+        },
+        "bracketMs": 0.0027083333581687796
+      },
+      "failed": false,
+      "failure": null,
+      "console": [
+        "[debug] [vite] connecting...",
+        "[debug] [vite] connected.",
+        "[warning] [milkyway] resolved-hole table was measured on 979,659 records but this catalogue loaded 979,678, so the band subtracts resolved light for a population the star field does not draw. Regenerate with: pnpm run measure:band-resolved"
+      ],
+      "pageErrors": [],
+      "tainted": false
+    }
+  ]
+}

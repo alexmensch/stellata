@@ -6,9 +6,11 @@ import { medianStandardErrorMs } from '../../../src/client/debug/frame-cost/fram
 import {
   EMPTY_PASSES_DEFAULT, EMPTY_PASS_KEY,
 } from '../../../src/client/debug/frame-cost/passes/passes-pure';
+import type { FramePacing } from '../../../src/client/scene/frame-loop/frame-loop';
+import { computeFloorMs, dwellFloorMs } from '../floors/floors';
 import {
-  COMPUTE_ROW, classClock, computeClock, floorMove, frameFloor, gatingClock, sampleClasses,
-  spreadMove, type ClassClock, type DwellMetric,
+  COMPUTE_ROW, CPU_BOUND_SHARE, CPU_JUDGEMENT, CPU_ROW, classClock, computeClock, cpuClock, floorMove,
+  frameFloor, gatingClock, recordedPacing, sampleClasses, throughputFrameMs, spreadMove, type ClassClock, type DwellMetric,
 } from '../dwell/dwell-pure';
 import type { DwellRecord, PerfFile, ScenarioRecord } from '../schema';
 import type { ScenarioName } from '../scenarios';
@@ -43,50 +45,6 @@ export const READBACK_TOLERANCE = 0.25;
  *  standard error to count. Two sigma either side, not one: a one-sigma
  *  band calls roughly a third of unchanged rows a regression. */
 export const BAND_SIGMAS = 2;
-
-/** The floor under every whole-frame band, in both gates. Two sigma of the
- *  medians' own scatter describes sampling alone, and a dwell's run
- *  conditions move it further than that: the same vantage read 21.950 and
- *  21.464 ms across two runs of identical code, differing only in where the
- *  context sat in its run. Both forms were derived from the cold-to-cold
- *  spread of two pins on identical code — `../pins/README.md#reading---against-pin`
- *  `--against-pin`.
- *
- *  Here rather than in `pin-pure.ts` because `--baseline` and
- *  `--against-pin` must floor the same row the same way: the tighter of two
- *  gates decides, so a Tier 1 band under the Tier 2 one it feeds marks a
- *  change Tier 2 would call unresolved (`/RELEASING.md#perf-pin`). */
-export const DWELL_FLOOR_MS = 0.25;
-export const DWELL_FLOOR_FRACTION = 0.01;
-
-/** 1.5× each vantage's p10 scatter, rounded up to 0.05 — the derivation and
- *  the measurement are `../pins/README.md#the-compute-row`. */
-export const COMPUTE_SCATTER_FLOOR_MS: Readonly<Record<ScenarioName, number>> = {
-  mw120: 0.05,
-  sol: 0.15,
-  earth: 0.10,
-  mw50: 0.05,
-  lg: 0.45,
-};
-
-function floorFor(floorMs: number, baselineMs: number): number {
-  return Math.max(floorMs, DWELL_FLOOR_FRACTION * baselineMs);
-}
-
-export function dwellFloorMs(baselineMs: number): number {
-  return floorFor(DWELL_FLOOR_MS, baselineMs);
-}
-
-/** Capped at `DWELL_FLOOR_MS`, so a re-floor only ever tightens.
- *
- *
- *  A name off a parsed run or pin need not be one of the canon five — neither
- *  file's assertion checks it — so the lookup falls back rather than banding
- *  the row on a `NaN` every delta marks against. */
-export function computeFloorMs(name: ScenarioName, baselineMs: number): number {
-  const derived: number | undefined = COMPUTE_SCATTER_FLOOR_MS[name];
-  return floorFor(Math.min(derived ?? DWELL_FLOOR_MS, DWELL_FLOOR_MS), baselineMs);
-}
 
 export type Verdict = 'cheaper' | 'dearer' | 'same';
 
@@ -171,6 +129,7 @@ function comparabilityRefusal(a: ScenarioRecord, b: ScenarioRecord): string | nu
     ?? recordCountRefusal(a.recordCount, b.recordCount)
     ?? positionRefusal(a.position, b.position)
     ?? framesRefusal(dwellFrames(a), dwellFrames(b))
+    ?? pacingRefusal(dwellPacing(a), dwellPacing(b))
     ?? preconditionRefusal(a.params, b.params);
 }
 
@@ -277,6 +236,23 @@ export function framesRefusal(
 ): string | null {
   if (a == null || b == null || a === b) return null;
   return `dwell ${a} vs ${b} frames — a median converges with dwell length, so these are two statistics rather than two readings`;
+}
+
+export function dwellPacing(record: ScenarioRecord): FramePacing {
+  return recordedPacing(record.params?.pacing);
+}
+
+export function pacingRefusal(pa: FramePacing, pb: FramePacing): string | null {
+  if (pa === pb) return null;
+  return `paced on ${pa} vs ${pb} — the GPU clock idles down between rAF-paced frames and holds max under GPU pacing, so the same work reads differently`;
+}
+
+/** Null unless both clocks were recorded and the main thread took more than
+ *  `CPU_BOUND_SHARE` of the frame. */
+export function cpuBoundRefusal(cpuMs: number | undefined, frameMs: number | undefined): string | null {
+  if (cpuMs === undefined || frameMs === undefined || cpuMs <= CPU_BOUND_SHARE * frameMs) return null;
+  return `CPU-bound: the main thread took ${cpuMs.toFixed(2)} of a ${frameMs.toFixed(2)} ms frame, `
+    + `over ${CPU_BOUND_SHARE * 100} %, so the frame time is not GPU work`;
 }
 
 /**
@@ -458,8 +434,38 @@ function dwellRows(key: string, a: ScenarioRecord, b: ScenarioRecord): (DiffRow 
   if (da === null || db === null) {
     return [{ key: `${key}|dwell`, reason: 'one run has no dwell record' }];
   }
-  const frame = frameRow(key, da, db);
-  return 'reason' in frame ? [frame] : [frame, ...computeRow(key, a.name, da, db)];
+  const pacing = dwellPacing(a);
+  const cpuBound = cpuBoundRefusal(cpuClock(da)?.p50, throughputFrameMs(da, pacing))
+    ?? cpuBoundRefusal(cpuClock(db)?.p50, throughputFrameMs(db, pacing));
+  if (cpuBound !== null) return [{ key: `${key}|dwell`, reason: cpuBound }];
+  const frame = frameRow(key, da, db, pacing);
+  return 'reason' in frame
+    ? [frame]
+    : [frame, ...computeRow(key, a.name, da, db), ...cpuRow(key, da, db)];
+}
+
+/** The main thread's time per tick, banded as the frame is
+ *  (../dwell/README.md#cpu-and-gpu-apart). */
+function cpuRow(key: string, da: DwellRecord, db: DwellRecord): (DiffRow | DiffRefusal)[] {
+  const [ca, cb] = [cpuClock(da), cpuClock(db)];
+  if (ca === null && cb === null) return [];
+  if (ca === null || cb === null) {
+    return [{ key: `${key}|${CPU_ROW}`, reason: 'one run recorded main-thread time for this row and the other did not' }];
+  }
+  const [sa, sb] = [CPU_JUDGEMENT.side(ca), CPU_JUDGEMENT.side(cb)];
+  const deltaMs = sb.valueMs - sa.valueMs;
+  const bandMs = band(sa.standardErrorMs, sb.standardErrorMs, CPU_JUDGEMENT.floorMs(sa));
+  return [{
+    key: `${key}|${CPU_ROW}`,
+    metric: CPU_JUDGEMENT.metric,
+    baselineMs: sa.valueMs,
+    currentMs: sb.valueMs,
+    deltaMs,
+    floorDeltaMs: null,
+    spreadDeltaMs: null,
+    bandMs,
+    verdict: verdictFor(deltaMs, bandMs),
+  }];
 }
 
 /** README.md, on the compute row; why the p10, `../pins/README.md#the-compute-row`.
@@ -497,7 +503,8 @@ function computeRow(
   }];
 }
 
-function frameRow(key: string, da: DwellRecord, db: DwellRecord): DiffRow | DiffRefusal {
+/** Valid only after `pacingRefusal` passed the pair. */
+function frameRow(key: string, da: DwellRecord, db: DwellRecord, pacing: FramePacing): DiffRow | DiffRefusal {
   if ((da.gpuStats === null) !== (db.gpuStats === null)) {
     return {
       key: `${key}|dwell`,
@@ -506,7 +513,7 @@ function frameRow(key: string, da: DwellRecord, db: DwellRecord): DiffRow | Diff
         'median against a wall median is two instruments, the same refusal a differing method gets',
     };
   }
-  const [ga, gb] = [gatingClock(da), gatingClock(db)];
+  const [ga, gb] = [gatingClock(da, pacing), gatingClock(db, pacing)];
   const [ca, cb] = [ga.clock, gb.clock];
   if (ca.vsyncClamped || cb.vsyncClamped) {
     return {
@@ -537,21 +544,21 @@ function frameRow(key: string, da: DwellRecord, db: DwellRecord): DiffRow | Diff
         "other's did not, and a plain-class median against a mixture median is two statistics",
     };
   }
-  const deltaMs = jb.clock.p50 - ja.clock.p50;
+  const deltaMs = jb.valueMs - ja.valueMs;
   const bandMs = band(
-    medianStandardErrorMs(ja.clock), medianStandardErrorMs(jb.clock), dwellFloorMs(ja.clock.p50),
+    medianStandardErrorMs(ja.clock), medianStandardErrorMs(jb.clock), dwellFloorMs(ja.valueMs),
   );
   // Off the GPU stream alone. A wall floor is quantised to the refresh
   // interval exactly as its median is, so its p10 is the same value the
   // median already reports and the column would answer nothing.
-  const [fa, fb] = ga.metric === 'wall-p50'
+  const [fa, fb] = ga.metric === 'wall-p50' || ga.metric === 'throughput-mean'
     ? [null, null]
     : [frameFloor(da.gpuMs), frameFloor(db.gpuMs)];
   return {
     key: `${key}|dwell`,
     metric: ja.metric,
-    baselineMs: ja.clock.p50,
-    currentMs: jb.clock.p50,
+    baselineMs: ja.valueMs,
+    currentMs: jb.valueMs,
     deltaMs,
     floorDeltaMs: floorMove(fa, fb),
     spreadDeltaMs: spreadMove(
@@ -566,12 +573,12 @@ function frameRow(key: string, da: DwellRecord, db: DwellRecord): DiffRow | Diff
  *  `../pins/README.md#the-compute-row` last. */
 function judgedFrameStat(
   dwell: DwellRecord, gating: ReturnType<typeof gatingClock>,
-): { readonly clock: ClassClock; readonly metric: DwellMetric } {
-  if (gating.metric === 'wall-p50') return { clock: gating.clock, metric: gating.metric };
+): { readonly clock: ClassClock; readonly metric: DwellMetric; readonly valueMs: number } {
+  if (gating.metric === 'wall-p50' || gating.metric === 'throughput-mean') return gating;
   const classes = splitFrameClasses(dwell.passCounts) ? sampleClasses(dwell.gpuMs) : null;
-  return classes === null
-    ? { clock: gating.clock, metric: 'gpu-p50' }
-    : { clock: classClock(classes.plain), metric: 'gpu-plain-p50' };
+  if (classes === null) return gating;
+  const plain = classClock(classes.plain);
+  return { clock: plain, metric: 'gpu-plain-p50', valueMs: plain.p50 };
 }
 
 /**

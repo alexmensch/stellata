@@ -244,14 +244,16 @@ expands mw120, sol, earth, mw50, lg — so the pin run and the Tier 1 run
 share their first two contexts. Reordering either constant re-takes the
 pin (stellata-8cg.49.27).
 
-**Tier 1 reads the GPU-stream p50, the same metric the pin gates on.** Its
-two vantages are exactly the ones a wall-clock row cannot resolve — sol's
+**Tier 1 reads the same metric the pin gates on** — throughput on a
+GPU-paced pin ([CPU and GPU, apart](scripts/perf/dwell/README.md#cpu-and-gpu-apart)),
+the GPU-stream p50 on an rAF-paced one. Its
+two vantages are exactly the ones an rAF-paced wall-clock row cannot resolve — sol's
 wall p50 sits at two refresh intervals and mw120's at one — so a row
 marked on wall would compare two quantised medians and refuse or fabricate
 by turns ([Reading the table](scripts/perf/diff/README.md#reading-the-table)).
 
 **And the same floor**, one implementation in
-`scripts/perf/diff/diff-pure.ts` that both gates apply. Tier 1 may not gate
+`scripts/perf/floors/floors.ts` that both gates apply. Tier 1 may not gate
 tighter than the Tier 2 it feeds, or it marks moves Tier 2 calls
 unresolved — which is what an unfloored band did, two sigma of the
 medians' own scatter being about 0.02 ms at 240 frames on a steady
@@ -290,7 +292,8 @@ same ceiling, and accepted under its own key
 summed, and a compute regression marks whatever the frame row says.
 
 **Which statistic of each stream is the `metric` column's job**, and it is
-not the same at every row. A frame row reads `gpu-p50`, except where the
+not the same at every row. A GPU-paced frame row reads `throughput-mean`
+and its main-thread row `cpu-p50`. An rAF-paced frame row reads `gpu-p50`, except where the
 vantage draws two pass classes — `earth` alone — where it reads the plain
 class, `gpu-plain-p50`. A compute row reads `compute-p10`. Both exceptions
 exist for one reason: a stream holding two populations has a median that

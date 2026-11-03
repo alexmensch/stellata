@@ -4,9 +4,10 @@
 
 import type { Page } from 'playwright';
 import { SETTLE_FRAMES } from '../../src/client/debug/frame-cost/frame-cost-pure';
+import type { FramePacing } from '../../src/client/scene/frame-loop/frame-loop';
 import { ROUNDTRIP_IDLE } from './args';
 import {
-  readbackCadenceHeld, summarizeFrameDwell, summarizePassCounts,
+  readbackCadenceHeld, summarizeFrameDwell, summarizePassCounts, throughputSamples,
 } from './dwell/dwell-pure';
 import {
   awaitSettle,
@@ -18,7 +19,7 @@ import {
 } from './page-protocol';
 import type { Backend } from './scenarios';
 import type { DwellRecord, RoundTripRecord, SweepRecord } from './schema';
-import { fitLogLog, sweepBracketMs, sweepOrder, type SweepPoint } from './sweep/sweep-pure';
+import { fitLogLog, sweepBracketMs, sweepOrder, sweepReading, type SweepPoint } from './sweep/sweep-pure';
 
 /** The dev server's own module URL for the WebGPU sample stream, relative to
  *  the Vite root (`src/client`). It has no window surface, so a dwell reaches
@@ -57,11 +58,14 @@ export interface DwellPlan {
   /** Refill the per-star A_V cache every timed frame
    *  (`/src/client/debug/frame-cost/passes/README.md#the-extinction-rows`). */
   readonly forceRecompute: boolean;
+  readonly pacing: FramePacing;
 }
 
 // The GPU rows pass no cadence: a resolved timestamp span is not wall time,
-// so no compositor can have padded it and `vsyncClamped` cannot apply.
-function toRecord(raw: DwellRaw, cadenceMs: number | null): DwellRecord | null {
+// so no compositor can have padded it and `vsyncClamped` cannot apply. Nor
+// can it to GPU-paced wall deltas, which no display interval schedules.
+function toRecord(raw: DwellRaw, plan: DwellPlan): DwellRecord | null {
+  const cadenceMs = plan.pacing === 'raf' ? plan.cadenceMs : null;
   const stats = summarizeFrameDwell(raw.deltasMs, cadenceMs);
   if (stats === null) return null;
   const counts = raw.passCounts === null ? null : summarizePassCounts(raw.passCounts);
@@ -73,6 +77,11 @@ function toRecord(raw: DwellRaw, cadenceMs: number | null): DwellRecord | null {
     gpuStats: summarizeFrameDwell(raw.gpuMs, null),
     computeMs: raw.computeMs.length > 0 ? raw.computeMs : null,
     computeStats: summarizeFrameDwell(raw.computeMs, null),
+    cpuMs: raw.cpuMs.length > 0 ? raw.cpuMs : null,
+    cpuStats: summarizeFrameDwell(raw.cpuMs, null),
+    throughputStats: plan.pacing === 'gpu'
+      ? summarizeFrameDwell(throughputSamples(raw.deltasMs), null)
+      : null,
     limitMag: raw.effectiveLimitMag,
     dm: raw.dm,
     readbackPerFrame: raw.readbackPerFrame,
@@ -96,8 +105,9 @@ export async function measureDwell(page: Page, plan: DwellPlan): Promise<Measure
     samplesModuleUrl: GPU_SAMPLES_MODULE_URL,
     readbackEvery: plan.readbackEvery,
     forceRecompute: plan.forceRecompute,
+    pacing: plan.pacing,
   });
-  const record = toRecord(raw, plan.cadenceMs);
+  const record = toRecord(raw, plan);
   if (record === null) {
     return { value: null, failure: `no rAF deltas over ${plan.frames} frames` };
   }
@@ -208,7 +218,7 @@ export async function measureSweep(page: Page, plan: SweepPlan): Promise<Measure
       width,
       height,
       px: buffer.width * buffer.height,
-      ms: dwelt.value.stats.p50,
+      ...sweepReading(dwelt.value, plan.pacing),
       vsyncClamped: dwelt.value.stats.vsyncClamped,
     });
   }

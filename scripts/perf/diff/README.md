@@ -7,11 +7,11 @@ is `../pins/README.md`.
 
 ```
 scripts/perf/diff/
-  diff-pure.ts (+ test)   diffRuns, the band and its two floors, and every
-                          refusal that stops an invalid comparison. The
-                          buffer, record-count, position, readback and
-                          precondition refusals are exported because
-                          `--against-pin` applies the same ones.
+  diff-pure.ts (+ test)   diffRuns, the band, and every refusal that stops
+                          an invalid comparison. The buffer, record-count,
+                          position, readback and precondition refusals are
+                          exported because `--against-pin` applies the same
+                          ones. The floors under the band: `../floors/`.
 ```
 
 ## Reading the table
@@ -25,8 +25,7 @@ that and the two `bracketMs` values — the bracket is instrument drift, which
 no amount of sampling reduces. Dwell rows use the median's standard error,
 `1.2533·(iqr/1.349)/√n`, on both sides, floored at the same figure the pin
 uses — `max(0.25 ms, 1 %)` on a frame row, the vantage's own constant on a
-compute row ([Reading](../pins/README.md#reading---against-pin) `--against-pin`, [The compute
-row](/scripts/perf/pins/README.md#the-compute-row)). **The floors are shared deliberately.** Two sigma of the
+compute row ([Band floors](../floors/README.md)). **The floors are shared deliberately.** Two sigma of the
 medians' own scatter describes sampling and nothing else, and a dwell's run
 conditions move it further: at 240 frames on a steady vantage that band
 draws around 0.02 ms, while moving a context's position within its run
@@ -57,9 +56,11 @@ rests on it. What the two tables do differently is only the note: the pin
 calls out a `✗` whose floor did not follow ([Reading](../pins/README.md#reading---against-pin)
 `--against-pin`), and this table has no note column to say it in.
 
-**A dwell row is judged on the clock `gatingClock` names** — the GPU stream
-where both runs resolved one, wall only where neither did — and the metric
-column says which, `gpu-p50` or `wall-p50`, exactly as the pin's does. Every
+**A dwell row is judged on the clock `gatingClock` names** — throughput on a
+GPU-paced pair ([CPU and GPU, apart](../dwell/README.md#cpu-and-gpu-apart)),
+otherwise the GPU stream where both runs resolved one, wall only where neither
+did — and the metric column says which, `throughput-mean`, `gpu-p50` or
+`wall-p50`, exactly as the pin's does. Every
 test on the row reads that same clock: the clamp, the state guard and the
 band. That is the whole of the rule, and the half worth stating is what it
 frees. Wall deltas are quantised to the refresh interval, so at a vantage
@@ -98,6 +99,11 @@ pool was resolved carries no stream, and a run since does; neither side
 prints no compute row at all. A frame row that is refused takes its compute
 row with it.
 
+**The main thread is a third row, keyed `|cpu`**, on `cpu-p50` and banded as
+the frame is. One side alone refuses it the way the compute row does. A
+context CPU-bound on either side is refused whole, before any row: its
+frame time is not GPU work ([CPU and GPU, apart](../dwell/README.md#cpu-and-gpu-apart)).
+
 **A frame row at a vantage drawing two pass classes is judged on the plain
 class**, `gpu-plain-p50`, for the same reason one field over: the mixture's
 median follows the classes' share and its middle-half spread straddles them,
@@ -116,13 +122,14 @@ reaches the diff — [JSON output](../README.md#json-output)); a differing metho
 mode, a buffer more than 1 % apart, a **record count** more than 1 % apart or
 absent on either side (a row priced against a different catalogue is not a
 comparison), a **run position** that differs or is absent on either side
-(below), a **dwell length** that differs (below), a **sweep precondition**
+(below), a **dwell length** that differs (below), a **pacing** that differs
+([Pacing](../dwell/README.md#pacing)), a **sweep precondition**
 that differs (below), a failed or tainted
 scenario, a dwell clamped or trending on its gating clock, a **readback duty
 cycle** over 25 % apart where the frame has two pass classes
 (`../dwell/README.md`), a mismatched GPU stream, a `cadenceBound` row (either
 side), or a row missing from one side refuses that key. The buffer, record
-count, position, readback and precondition refusals are one implementation in
+count, position, length, pacing, readback and precondition refusals are one implementation in
 `diff-pure.ts`, applied by `--against-pin` too: the two gates must refuse the
 same pair for the same reason, or the looser one certifies what the tighter
 one rejects.

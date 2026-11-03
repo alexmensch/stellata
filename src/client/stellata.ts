@@ -160,6 +160,7 @@ export class Stellata {
 
   private readonly layers = new SceneLayerRegistry();
   private readonly frameLoop: FrameLoop;
+  get framePacing(): Pick<FrameLoop, 'setPacing' | 'onRenderedTick'> { return this.frameLoop; }
 
   readonly observe!: ObserveTransition;
   private observeControls!: ObserveControls;

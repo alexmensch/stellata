@@ -125,9 +125,10 @@ already follows the table; this is for every other session.
   — take the perf pin, cold: one launch, idle between contexts, every
   context state-guarded. `--against-pin <path>` prints the verdicts a
   render-path PR pastes into its `## Perf` section. The `metric` column names
-  the statistic each row was marked on — `gpu-p50`, or `gpu-plain-p50` where
-  the vantage draws two pass classes, and `compute-p10` on the
-  `<scenario>|webgpu|compute` row beside it, and the `spread` column never
+  the statistic each row was marked on — `throughput-mean` on a GPU-paced
+  frame row with `cpu-p50` on its `|cpu` row, `gpu-p50` (or `gpu-plain-p50`
+  where the vantage draws two pass classes) on an rAF-paced one, and
+  `compute-p10` on the `<scenario>|webgpu|compute` row beside it, and the `spread` column never
   marks at all. A `✗` exits 1, and so does a refused row — a run whose rows were
   all refused shows a table with no `✗` in it. Taking the pin in the same
   run as `--against-pin` needs `--accept <row>:<bead>` for each `✗` — the
@@ -178,7 +179,9 @@ Per mode (`scripts/perf/dwell/README.md`, [Sweep mode](/scripts/perf/README.md#s
   the panel's number. Do not quote it; re-measure at a heavier vantage. The
   console line names the cadence the verdict was judged against (headless
   Chromium idles at 60 Hz, like a 60 Hz panel), and the GPU row is never
-  clamped — no compositor pads a hardware timestamp.
+  clamped — no compositor pads a hardware timestamp. Only a `--pacing raf`
+  dwell can clamp: the default GPU pacing schedules frames on the GPU, not
+  the display ([Pacing](/scripts/perf/dwell/README.md#pacing)).
 - **A sweep with any clamped point reads `bound inconclusive`** — say
   inconclusive, don't quote the slope.
 - **`savedMs` going UP is a regression**, not an improvement: the field is
