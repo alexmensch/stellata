@@ -121,7 +121,9 @@ the runner fails the run when a recorded write is not a declared output, or
 when a recorded input that another step declares as output is not covered by
 `after` (directly or transitively). A pull named in `after` whose edge closes
 a loop is a kept loop (below) and covers its own outputs only, never a step
-reached through it. The two binaries steps are the only
+reached through it. The converse fails it too: an `after` entry none of
+whose outputs the run read, listed or probed is a false ordering edge
+(Reachable must mean read, above). The two binaries steps are the only
 Python `build` steps on the runner; their TypeScript ports retire both
 declarations.
 
@@ -394,7 +396,8 @@ Hand-kept lists become derivations over the table:
 - `python-run-pure.ts` (tested through `runner.test.ts`) — `recordProblems`: a
   write outside the declared outputs and snapshots, or a read, listing or
   probe of another step's output with no path from that step in the graph
-  and no kept loop from it straight to the reader.
+  and no kept loop from it straight to the reader, or an `after` entry the
+  run touched none of the outputs of.
 - `runner.ts` (+ test) — `runSteps`: the walk of [The runner](#the-runner--runts)
   over a loaded table, the `Verdict` union (`fresh`, `built`, `stale`,
   `failed`, `skipped`) matched exhaustively, and the exit status. The runner

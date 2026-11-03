@@ -385,6 +385,13 @@ os.replace(tmp, ${JSON.stringify(at(out))})
     expect(covered.kinds).toEqual({ a: 'fresh', p: 'built' });
   });
 
+  it('fails a run that names a step in after but reads none of its outputs', async () => {
+    write('a.in', 'x');
+    const body = `Path(${JSON.stringify(at('p.out'))}).write_text("p")`;
+    const result = await run([tsStep('a', 'a.out', ['a.in']), pyStep('p', 'p.out', body, { after: ['a'] } as Partial<StepEntry>)], ['p']);
+    expect(result.verdicts.get('p')).toEqual({ kind: 'failed', reason: 'p runs after a but read none of its outputs' });
+  });
+
   it('counts a pull it runs after as covered when that edge closes a kept loop, and no other step through the loop', async () => {
     write('req.tsv', 'r');
     write('down.in', 'x');

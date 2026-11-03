@@ -50,5 +50,11 @@ export function recordProblems(
       }
     }
   }
+  const after = self.step.kind === 'build' && self.step.language === 'python' ? self.step.after : [];
+  for (const declared of others.filter((s) => after.includes(s.step.name))) {
+    if (!touched.some(([, isWriter]) => isWriter(declared))) {
+      problems.push(`${name} runs after ${declared.step.name} but read none of its outputs`);
+    }
+  }
   return problems;
 }
