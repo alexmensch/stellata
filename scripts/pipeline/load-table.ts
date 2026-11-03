@@ -8,17 +8,17 @@ import { entryMetafile } from '../util/import-closure';
 import { REPO_ROOT } from '../util/paths';
 import { treeOf, treeRoots, type Tree } from '../util/source-trees';
 import { readManualRecord } from './freshness';
+import { LEGACY_IMPORTABLE } from './legacy-importable';
 import { pipelineTree, type PipelineTree } from './pipeline-tree';
 import {
   deriveGraph,
-  type OutputClaims, type OutputsRef, type ResolvedStep, type StepEntry, type StepGraph, type StepTable,
+  type OutputClaims, type ResolvedStep, type StepEntry, type StepGraph, type StepTable,
 } from './step-table-pure';
 
 const OUTPUTS_MODULE_LEAVES = new Set(['scripts/util/emit-artifacts.ts', 'scripts/util/paths.ts']);
-const SHARED_TREES: ReadonlySet<Tree> = new Set(['catalog-format', 'astro-core']);
-const isWalkable = (module: string): boolean => /-(pure|outputs|source|tsv)\.ts$/.test(module)
-  || SHARED_TREES.has(treeOf(module));
-export const WALKABLE = `util/emit-artifacts, util/paths, ${treeRoots(SHARED_TREES).join(', ')} and *-pure, *-outputs, *-source and *-tsv modules`;
+export const SHARED_TREES: ReadonlySet<Tree> = new Set(['catalog-format', 'astro-core']);
+const isWalkable = (module: string): boolean => SHARED_TREES.has(treeOf(module)) || LEGACY_IMPORTABLE.has(module);
+export const WALKABLE = `util/emit-artifacts, util/paths, ${treeRoots(SHARED_TREES).join(', ')} and the modules legacy-importable.ts lists`;
 
 export type Loaded =
   | { readonly kind: 'loaded'; readonly steps: ReadonlyMap<string, ResolvedStep>; readonly graph: StepGraph }
@@ -32,13 +32,19 @@ export interface LoadOptions {
 
 const codePath = (path: string): string => resolve(REPO_ROOT, path);
 
+export interface OutputsWalk {
+  readonly accepted: ReadonlySet<string>;
+  readonly problems: readonly string[];
+}
+
 /** Checked before any outputs module is imported, since importing one with
  *  side effects would run them. */
-async function impureOutputsModules(refs: readonly OutputsRef[], tree: PipelineTree): Promise<string[]> {
-  if (refs.length === 0) return [];
-  const modules = new Set(refs.map((r) => tree.abs(r.module)));
+export async function walkOutputsModules(table: StepTable, tree: PipelineTree): Promise<OutputsWalk> {
+  const modules = new Set(table.steps.flatMap((s) => (s.language === 'ts' ? [tree.abs(s.outputs.module)] : [])));
+  if (modules.size === 0) return { accepted: new Set(), problems: [] };
   const { inputs } = await entryMetafile([...modules]);
   const internal = (module: string): string[] => inputs[module].imports.filter((i) => !i.external).map((i) => i.path);
+  const accepted = new Set<string>();
   const problems: string[] = [];
   for (const module of Object.keys(inputs).filter((m) => modules.has(codePath(m)))) {
     const seen = new Set<string>();
@@ -47,11 +53,13 @@ async function impureOutputsModules(refs: readonly OutputsRef[], tree: PipelineT
       const at = stack.pop()!;
       if (seen.has(at) || OUTPUTS_MODULE_LEAVES.has(at)) continue;
       seen.add(at);
-      if (isWalkable(at)) stack.push(...internal(at));
-      else problems.push(`outputs module ${module} reaches ${at}, beyond ${WALKABLE}`);
+      if (isWalkable(at)) {
+        accepted.add(at);
+        stack.push(...internal(at));
+      } else problems.push(`outputs module ${module} reaches ${at}, beyond ${WALKABLE}`);
     }
   }
-  return problems;
+  return { accepted, problems };
 }
 
 function isDeclaredOutputs(value: unknown): value is DeclaredOutputs {
@@ -95,9 +103,8 @@ async function readsOf(step: StepEntry, tree: PipelineTree, options: LoadOptions
 
 export async function loadTable(table: StepTable, options: LoadOptions): Promise<Loaded> {
   const tree = pipelineTree(options.root);
-  const refs = table.steps.flatMap((s) => (s.language === 'ts' ? [s.outputs] : []));
-  const impure = await impureOutputsModules(refs, tree);
-  if (impure.length > 0) return { kind: 'rejected', problems: impure };
+  const walk = await walkOutputsModules(table, tree);
+  if (walk.problems.length > 0) return { kind: 'rejected', problems: walk.problems };
 
   const resolved: ResolvedStep[] = await Promise.all(table.steps.map(async (step) => ({
     step,

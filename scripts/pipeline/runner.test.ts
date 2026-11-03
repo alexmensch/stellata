@@ -8,7 +8,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { fileHashes } from '../util/build-stamp';
 import { REPO_ROOT } from '../util/paths';
 import { pullQueryHash, requestHash } from './freshness';
-import { loadTable, WALKABLE, type Loaded } from './load-table';
+import { loadTable, WALKABLE, walkOutputsModules, type Loaded } from './load-table';
 import { pipelineTree } from './pipeline-tree';
 import { runSteps, type Verdict } from './runner';
 import type { StepEntry, StepTable } from './step-table-pure';
@@ -446,29 +446,33 @@ export const OUT = declareOutputs({ out: hashFile.name });
   });
 
   it.each(['paths-pure', 'more-outputs', 'table-tsv', 'table-source'])(
-    'rejects an outputs module that reaches an impure module through %s.ts',
+    'rejects an outputs module importing a clean %s.ts outside the boundary trees: a filename grants nothing',
     async (via) => {
       const step = tsStep('a', 'a.out');
-      write(`steps/${via}.ts`, `export { hashFile } from ${JSON.stringify(join(REPO_ROOT, 'scripts/util/build-stamp'))};\n`);
+      write(`steps/${via}.ts`, `export const NAME = 'a.out';\n`);
       write('steps/a-outputs.ts', `
-import { declareOutputs } from ${JSON.stringify(EMIT_ARTIFACTS)};
-import { hashFile } from './${via}';
-export const OUT = declareOutputs({ out: hashFile.name });
-`);
-      expect(await load([step])).toEqual({ kind: 'rejected', problems: [reachesBuildStamp()] });
-    },
-  );
-
-  it.each(['more-outputs', 'table-tsv', 'table-source'])('accepts an outputs module importing a clean %s.ts', async (via) => {
-    const step = tsStep('a', 'a.out');
-    write(`steps/${via}.ts`, `export const NAME = 'a.out';\n`);
-    write('steps/a-outputs.ts', `
 import { resolve } from 'node:path';
 import { declareOutputs } from ${JSON.stringify(EMIT_ARTIFACTS)};
 import { NAME } from './${via}';
 export const OUT = declareOutputs({ out: resolve(${JSON.stringify(at('.'))}, NAME) });
 `);
-    expect((await load([step])).kind).toBe('loaded');
+      expect(await load([step])).toEqual({
+        kind: 'rejected',
+        problems: [`outputs module ${relative(REPO_ROOT, at('steps/a-outputs.ts'))} reaches ${relative(REPO_ROOT, at(`steps/${via}.ts`))}, beyond ${WALKABLE}`],
+      });
+    },
+  );
+
+  it('walks on through a listed legacy module into its own imports', async () => {
+    const step = tsStep('a', 'a.out');
+    write('steps/a-outputs.ts', `
+import ${JSON.stringify(join(REPO_ROOT, 'scripts/sid/registry-outputs'))};
+import { declareOutputs } from ${JSON.stringify(EMIT_ARTIFACTS)};
+export const OUT = declareOutputs({ out: ${JSON.stringify(at('a.out'))} });
+`);
+    const walk = await walkOutputsModules({ steps: [step], registryFiles: [] }, pipelineTree(root));
+    expect(walk.problems).toEqual([]);
+    expect([...walk.accepted]).toEqual(expect.arrayContaining(['scripts/sid/registry-outputs.ts', 'scripts/sid/registry-partitions-pure.ts']));
   });
 
   it.each(['src/catalog-format/probes/probe-roster', 'src/astro-core/angles'])(

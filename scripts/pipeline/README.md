@@ -137,14 +137,12 @@ The runner rejects the table, before running anything, when:
   the SID registry files (next paragraph);
 - a `build` step's declared output is a symlink on disk (the "never symlink
   `public/`" rule becomes this check);
-- a step's outputs module imports anything beyond `util/emit-artifacts`,
-  `util/paths`, `*-pure` modules and the two boundary trees
-  (`src/catalog-format/**`, `src/astro-core/**`, as `util/source-trees.ts` roots them), checked over its import
-  closure. That is what makes it side-effect-free to import, which no check
-  can test directly. The walk passes through `*-outputs`, `*-source` and
-  `*-tsv` modules too, checking their imports in turn: they are the only
-  modules `tests/source-declarations.test.ts` lets spell a `data/` path, so a
-  path an outputs module needs lives in one of them.
+- a step's outputs module reaches, over its import closure, a module beyond
+  `util/emit-artifacts`, `util/paths` and the two boundary trees
+  (`src/catalog-format/**`, `src/astro-core/**`, as `util/source-trees.ts`
+  roots them), other than one `legacy-importable.ts` lists. That list only
+  shrinks: `steps.test.ts` holds it to the modules the walk reaches outside the
+  trees, and a filename suffix grants nothing.
 
 A manual step sits in the derived order like any other: it is checked once
 the `build` steps that write its inputs have run, so a pull is judged against
@@ -377,8 +375,8 @@ Hand-kept lists become derivations over the table:
   for the runner and `record.ts` alike. A lock
   file is `build/locks/<step>`, `:` written `-` (`util/build-stamp.ts`'s
   `stepFileName`, which names the step's stamp too).
-- `load-table.ts` — `loadTable`: checks every TypeScript outputs module's
-  imports before importing any, imports the `declareOutputs` constants, rejects a build output
+- `load-table.ts` / `legacy-importable.ts` — `loadTable`: checks every
+  TypeScript outputs module's imports (`walkOutputsModules`) before importing any, imports the `declareOutputs` constants, rejects a build output
   through a symlink (the path or any folder above it, up to the root), reads
   each manual step's record for its inputs, then `deriveGraph`. A
   TypeScript step's inputs come from the injected `deriveInputs`;
