@@ -394,7 +394,7 @@ export function runDwell(page: Page, params: DwellParams): Promise<DwellRaw> {
           resolve?.(performance.now());
         });
         pace.nextFrame = () => new Promise<number>((r) => { frameWaiter = r; });
-        s.frameLoop.setPacing('gpu');
+        s.framePacing.setPacing('gpu');
       }
       for (let f = 0; f < p.warmupFrames; f++) {
         await pace.nextFrame();
@@ -405,7 +405,7 @@ export function runDwell(page: Page, params: DwellParams): Promise<DwellRaw> {
       computeMs.length = 0;
       const readbacksBefore = s.reduction.readbackRequests;
       let last = await pace.nextFrame();
-      offCpu = s.frameLoop.onRenderedTick((ms) => { cpuMs.push(ms); });
+      offCpu = s.framePacing.onRenderedTick((ms) => { cpuMs.push(ms); });
       live.submits = 0;
       live.commandBuffers = 0;
       live.renderPasses = 0;
@@ -427,7 +427,7 @@ export function runDwell(page: Page, params: DwellParams): Promise<DwellRaw> {
       effectiveLimitMag = s.exposure.getEffectiveLimitMag();
     } finally {
       rateDuring = clock.getRate();
-      s.frameLoop.setPacing('raf');
+      s.framePacing.setPacing('raf');
       offFrame?.();
       offCpu?.();
       cadence.every = readbackEveryBefore;

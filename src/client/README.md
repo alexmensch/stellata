@@ -220,8 +220,8 @@ owners `floatingOrigin` and `starFrame`, plus the
 `debug/frame-cost/README.md`), `sceneGraphs` (read-only handles on every
 scene this boot draws, for the memory inventory —
 `debug/memory/README.md`), `renderGate`
-(`render-gate/README.md`) and `frameLoop`, whose pacing is the perf
-dwell's lever ([Pacing](scene/frame-loop/README.md#pacing)). Callers write
+(`render-gate/README.md`) and `framePacing` (the frame loop's `setPacing`
+and `onRenderedTick` only), the perf dwell's lever ([Pacing](scene/frame-loop/README.md#pacing)). Callers write
 `stellata.filters.setFilter(patch)`; each namespace's own README is the
 reference for what it answers. [Camera mode](camera/README.md#camera-mode-read-on-focus-write-on-observe) covers
 the one split pair (read on `focus`, write on `observe`).

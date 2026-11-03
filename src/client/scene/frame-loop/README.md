@@ -93,8 +93,9 @@ would make a parked static view pay a probe every few ticks forever
 
 Every tick schedules exactly one successor, so the loop is one chain of
 ticks whatever the pacing. `setPacing` changes only how the next one is
-scheduled, and the shell exposes the loop as `stellata.frameLoop` for the
-one caller that sets it, the perf runner's dwell
+scheduled. The shell exposes it, with `onRenderedTick` and nothing else
+of the loop, as `stellata.framePacing` for the one caller that sets it,
+the perf runner's dwell
 ([Pacing](/scripts/perf/dwell/README.md#pacing)).
 
 - **`'raf'`** (the default, and what `dispose` restores) — the next
