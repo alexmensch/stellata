@@ -8,7 +8,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { fileHashes } from '../util/build-stamp';
 import { REPO_ROOT } from '../util/paths';
 import { pullQueryHash, requestHash } from './freshness';
-import { loadTable, WALKABLE, walkOutputsModules, type Loaded } from './load-table';
+import { loadTable, TABLE_LOAD_BUILTINS, WALKABLE, walkOutputsModules, type Loaded } from './load-table';
 import { pipelineTree } from './pipeline-tree';
 import { runSteps, type Verdict } from './runner';
 import type { StepEntry, StepTable } from './step-table-pure';
@@ -462,6 +462,36 @@ export const OUT = declareOutputs({ out: resolve(${JSON.stringify(at('.'))}, NAM
       });
     },
   );
+
+  it.each(['node:fs', 'fs', 'node:child_process', 'esbuild'])(
+    'rejects an outputs module importing %s, which could act at import time',
+    async (spec) => {
+      const step = tsStep('a', 'a.out');
+      write('steps/a-outputs.ts', `
+import * as reach from ${JSON.stringify(spec)};
+import { declareOutputs } from ${JSON.stringify(EMIT_ARTIFACTS)};
+export const OUT = declareOutputs({ out: ${JSON.stringify(at('a.out'))} });
+export const keep = reach;
+`);
+      expect(await load([step])).toEqual({
+        kind: 'rejected',
+        problems: [`${relative(REPO_ROOT, at('steps/a-outputs.ts'))} imports ${spec} at table load; only ${[...TABLE_LOAD_BUILTINS].join(' and ')} may be`],
+      });
+    },
+  );
+
+  it('rejects an outputs module that awaits at top level', async () => {
+    const step = tsStep('a', 'a.out');
+    write('steps/a-outputs.ts', `
+import { declareOutputs } from ${JSON.stringify(EMIT_ARTIFACTS)};
+const out = await Promise.resolve(${JSON.stringify(at('a.out'))});
+export const OUT = declareOutputs({ out });
+`);
+    expect(await load([step])).toEqual({
+      kind: 'rejected',
+      problems: [`${relative(REPO_ROOT, at('steps/a-outputs.ts'))}: Top-level await is not available in the configured target environment`],
+    });
+  });
 
   it('walks on through a listed legacy module into its own imports', async () => {
     const step = tsStep('a', 'a.out');

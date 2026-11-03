@@ -1,7 +1,10 @@
 // Resolves the step table against the disk and rejects it before anything runs. See README.md#load-time-rules.
 
 import { lstatSync } from 'node:fs';
+import { isBuiltin } from 'node:module';
 import { dirname, resolve } from 'node:path';
+
+import { build, type BuildFailure } from 'esbuild';
 
 import type { DeclaredOutputs } from '../util/emit-artifacts';
 import { entryMetafile } from '../util/import-closure';
@@ -19,6 +22,8 @@ const OUTPUTS_MODULE_LEAVES = new Set(['scripts/util/emit-artifacts.ts', 'script
 export const SHARED_TREES: ReadonlySet<Tree> = new Set(['catalog-format', 'astro-core']);
 const isWalkable = (module: string): boolean => SHARED_TREES.has(treeOf(module)) || LEGACY_IMPORTABLE.has(module);
 export const WALKABLE = `util/emit-artifacts, util/paths, ${treeRoots(SHARED_TREES).join(', ')} and the modules legacy-importable.ts lists`;
+export const TABLE_LOAD_BUILTINS: ReadonlySet<string> = new Set(['node:path', 'node:crypto']);
+const builtinName = (spec: string): string => (isBuiltin(spec) && !spec.startsWith('node:') ? `node:${spec}` : spec);
 
 export type Loaded =
   | { readonly kind: 'loaded'; readonly steps: ReadonlyMap<string, ResolvedStep>; readonly graph: StepGraph }
@@ -59,7 +64,35 @@ export async function walkOutputsModules(table: StepTable, tree: PipelineTree): 
       } else problems.push(`outputs module ${module} reaches ${at}, beyond ${WALKABLE}`);
     }
   }
+  const imported = [...Object.keys(inputs).filter((m) => modules.has(codePath(m))), ...accepted];
+  for (const module of imported) {
+    for (const { path, external } of inputs[module].imports) {
+      if (external && !TABLE_LOAD_BUILTINS.has(builtinName(path))) {
+        problems.push(`${module} imports ${path} at table load; only ${[...TABLE_LOAD_BUILTINS].join(' and ')} may be`);
+      }
+    }
+  }
+  problems.push(...await topLevelAwaits(imported));
   return { accepted, problems };
+}
+
+async function topLevelAwaits(modules: readonly string[]): Promise<string[]> {
+  try {
+    await build({
+      entryPoints: modules.map(codePath),
+      absWorkingDir: REPO_ROOT,
+      platform: 'node',
+      format: 'esm',
+      supported: { 'top-level-await': false },
+      write: false,
+      outdir: 'unwritten',
+      logLevel: 'silent',
+    });
+    return [];
+  } catch (error) {
+    if (!(error instanceof Error && 'errors' in error)) throw error;
+    return (error as BuildFailure).errors.map((e) => `${e.location?.file ?? 'a table-load module'}: ${e.text}`);
+  }
 }
 
 function isDeclaredOutputs(value: unknown): value is DeclaredOutputs {
