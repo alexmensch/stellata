@@ -113,6 +113,13 @@ before any pass, compute included; under GPU pacing every tick inside one
 display interval would otherwise resolve as one GPU sample
 ([One frame per tag](../../debug/gpu-timing/README.md#one-frame-per-tag)).
 
+**three's own per-frame bookkeeping stays on the display's clock.** Its
+internal rAF loop runs `nodeFrame.update()` and `info.reset()` once per
+display interval whatever the pacing, so under GPU pacing a node updated
+`FRAME`-wise, or a reader of `renderer.info.render`, sees several ticks as
+one frame. Nothing in `src/client` is either today; a node that must
+advance per rendered frame updates from the tick, not from three.
+
 **A tick the gate refuses waits for the display under either pacing.** It
 submitted nothing, so its work-done promise would settle at once and a
 GPU-paced chain of refusals would spin the page without yielding a frame.
