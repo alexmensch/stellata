@@ -11,9 +11,11 @@ import { MEMBERSHIP_MANIFEST_FILE } from '../../catalog/membership/membership-ma
 import { packageScripts } from '../../util/import-closure';
 import { lfsContentReadable, publicFile, REPO_ROOT } from '../../util/paths';
 import { PUBLIC_FILES } from '../../../src/catalog-format/public-artifacts/public-artifacts';
+import { treeOf } from '../../util/source-trees';
 import { entryInputPaths } from '../../util/step-inputs';
 import { describeStep } from '../freshness';
-import { loadTable, type Loaded } from './load-table';
+import { LEGACY_IMPORTABLE } from './legacy-importable';
+import { loadTable, SHARED_TREES, walkOutputsModules, type Loaded } from './load-table';
 import { MANUAL_STEPS } from './manual-step-outputs';
 import { pipelineTree } from '../pipeline-tree';
 import { describesItself, isBuild, selectSteps } from './step-table-pure';
@@ -49,6 +51,13 @@ describe('the step table', () => {
     ]));
     expect(edgeFiles('lineage:codes', 'build:catalog')).toEqual([REASON_CODES_FILE]);
     expect(edgeFiles('build:binaries', 'build:membership')).toEqual([MULTIPLES_TSV.file]);
+  });
+
+  it('lists as legacy-importable exactly the modules the outputs walk reaches outside the boundary trees, and only shrinks', async () => {
+    const { accepted } = await walkOutputsModules(STEPS, pipelineTree(REPO_ROOT));
+    const outsideTrees = [...accepted].filter((m) => !SHARED_TREES.has(treeOf(m))).sort();
+    expect(outsideTrees).toEqual([...LEGACY_IMPORTABLE].sort());
+    expect(LEGACY_IMPORTABLE.size).toBe(38);
   });
 
   it('is the one place a table step\'s entry is named: no package.json script or workflow runs one directly', () => {
