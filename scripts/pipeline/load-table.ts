@@ -51,7 +51,8 @@ export async function walkOutputsModules(table: StepTable, tree: PipelineTree): 
   const internal = (module: string): string[] => inputs[module].imports.filter((i) => !i.external).map((i) => i.path);
   const accepted = new Set<string>();
   const problems: string[] = [];
-  for (const module of Object.keys(inputs).filter((m) => modules.has(codePath(m)))) {
+  const roots = Object.keys(inputs).filter((m) => modules.has(codePath(m)));
+  for (const module of roots) {
     const seen = new Set<string>();
     const stack = internal(module);
     while (stack.length > 0) {
@@ -64,7 +65,7 @@ export async function walkOutputsModules(table: StepTable, tree: PipelineTree): 
       } else problems.push(`outputs module ${module} reaches ${at}, beyond ${WALKABLE}`);
     }
   }
-  const imported = [...Object.keys(inputs).filter((m) => modules.has(codePath(m))), ...accepted];
+  const imported = [...roots, ...accepted];
   for (const module of imported) {
     for (const { path, external } of inputs[module].imports) {
       if (external && !TABLE_LOAD_BUILTINS.has(builtinName(path))) {
