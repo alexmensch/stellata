@@ -435,7 +435,7 @@ os.replace(tmp, ${JSON.stringify(at(out))})
 describe('loadTable', () => {
   const reachesBuildStamp = (): string => `outputs module ${relative(REPO_ROOT, at('steps/a-outputs.ts'))} reaches scripts/util/build-stamp.ts, beyond ${WALKABLE}`;
 
-  it('rejects an outputs module that imports beyond emit-artifacts, paths and pure modules, before importing it', async () => {
+  it('rejects an outputs module that imports beyond emit-artifacts, paths and the boundary trees, before importing it', async () => {
     const step = tsStep('a', 'a.out');
     write('steps/a-outputs.ts', `
 import { declareOutputs } from ${JSON.stringify(EMIT_ARTIFACTS)};
