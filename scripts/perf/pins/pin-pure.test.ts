@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { medianStandardErrorMs } from '../../../src/client/debug/frame-cost/frame-cost-pure';
-import { BUFFER_MPX_TOLERANCE, RECORD_COUNT_TOLERANCE, computeFloorMs, dwellFloorMs } from '../diff/diff-pure';
+import { BUFFER_MPX_TOLERANCE, RECORD_COUNT_TOLERANCE } from '../diff/diff-pure';
+import { computeFloorMs, dwellFloorMs } from '../floors/floors';
 import { frameFloor, type DwellSummary } from '../dwell/dwell-pure';
 import {
   BAND_OVER_FLOOR_FACTOR,

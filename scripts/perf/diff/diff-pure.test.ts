@@ -2,10 +2,10 @@ import { describe, expect, it } from 'vitest';
 import type { PriceFrameRow } from '../../../src/client/debug/frame-cost/frame-cost-pure';
 import { EMPTY_PASS_KEY } from '../../../src/client/debug/frame-cost/passes/passes-pure';
 import {
-  BUFFER_MPX_TOLERANCE, COMPUTE_SCATTER_FLOOR_MS, DWELL_FLOOR_FRACTION, DWELL_FLOOR_MS,
-  READBACK_TOLERANCE, RECORD_COUNT_TOLERANCE, computeFloorMs, diffRuns, dwellFloorMs, framesRefusal, pacingRefusal,
+  BUFFER_MPX_TOLERANCE, READBACK_TOLERANCE, RECORD_COUNT_TOLERANCE, diffRuns, framesRefusal, pacingRefusal,
   positionRefusal, preconditionRefusal, splitFrameClasses, type RunDiff,
 } from './diff-pure';
+import { DWELL_FLOOR_MS, computeFloorMs, dwellFloorMs } from '../floors/floors';
 import type { DwellSummary } from '../dwell/dwell-pure';
 import { PERF_SCHEMA, type DwellRecord, type PerfFile, type ScenarioRecord } from '../schema';
 import type { ScenarioName } from '../scenarios';
@@ -219,19 +219,6 @@ describe('diffRuns — the noise band', () => {
 });
 
 describe('the whole-frame floor — one number, both gates', () => {
-  it('is 0.25 ms or 1 % of the baseline, whichever is larger', () => {
-    expect(DWELL_FLOOR_MS).toBe(0.25);
-    expect(DWELL_FLOOR_FRACTION).toBe(0.01);
-    expect(dwellFloorMs(10)).toBe(0.25);
-    expect(dwellFloorMs(40)).toBe(0.4);
-  });
-
-  it('binds on the millisecond term at every canon row but mw50, where 1 % is larger', () => {
-    expect(dwellFloorMs(21.8)).toBe(DWELL_FLOOR_MS);
-    expect(dwellFloorMs(16.9)).toBe(DWELL_FLOOR_MS);
-    expect(dwellFloorMs(31.451)).toBe(0.31451);
-  });
-
   // The measured case. 240 frames at a tight iqr put two sigma of the pair's
   // scatter at ~0.02 ms, so an unfloored band marks a 0.15 ms move — and a
   // move that size is what changing a context's POSITION in its run produces
@@ -666,50 +653,6 @@ describe('the compute row', () => {
     );
     expect(diff.rows[1].verdict).toBe('same');
     expect(diff.rows[1].spreadDeltaMs).toBeCloseTo(0.6, 9);
-  });
-
-  it("bands it on the vantage's own floor, not the whole-frame constant", () => {
-    expect(COMPUTE_SCATTER_FLOOR_MS).toEqual({
-      mw120: 0.05, sol: 0.15, earth: 0.10, mw50: 0.05, lg: 0.45,
-    });
-    expect(computeFloorMs('mw120', 0.289)).toBe(0.05);
-    expect(computeFloorMs('mw50', 0.308)).toBe(0.05);
-    expect(computeFloorMs('earth', 0.318)).toBe(0.10);
-  });
-
-  // Every constant is 1.5x its vantage's population span rounded up to 0.05,
-  // measured on the p10 the row is gated on, and a table that does not
-  // re-derive is one a later session re-litigates. lg alone sits on a rung
-  // boundary — 1.5 x 0.267 is 0.4005 — so a population differing by one run
-  // derives 0.40; both cap to 0.25 and neither changes a verdict.
-  it('holds each constant at the derivation the README states', () => {
-    const POPULATION_SPAN_MS = {
-      mw120: 0.023, sol: 0.087, earth: 0.057, mw50: 0.008, lg: 0.267,
-    } as const;
-    for (const [name, span] of Object.entries(POPULATION_SPAN_MS)) {
-      const derived = Number((Math.ceil((1.5 * span) / 0.05) * 0.05).toFixed(2));
-      expect([name, COMPUTE_SCATTER_FLOOR_MS[name as ScenarioName]]).toEqual([name, derived]);
-    }
-  });
-
-  // A pin or run naming a vantage the canon no longer holds reaches this:
-  // neither file's assertion checks the name. Without the fallback the band
-  // is NaN, which no delta compares inside, so every compute row marks.
-  it('falls back to the whole-frame floor for a vantage off the canon', () => {
-    expect(computeFloorMs('mw90' as ScenarioName, 0.3)).toBe(DWELL_FLOOR_MS);
-  });
-
-  // lg's measured scatter is 0.267 ms, whose 1.5x is past the inherited
-  // constant, so the cap binds there and nowhere else. The pin stands lg
-  // down by vantage; --baseline does not, and bands it under its own
-  // scatter as the price — README.md#the-compute-passes-are-a-second-dwell-row-keyed-compute row.
-  it('caps every vantage at the whole-frame floor, so a re-floor only tightens', () => {
-    expect(computeFloorMs('lg', 0.589)).toBe(DWELL_FLOOR_MS);
-    expect(computeFloorMs('sol', 0.446)).toBe(0.15);
-  });
-
-  it('keeps the 1 % term, which binds on a compute row that has run away', () => {
-    expect(computeFloorMs('mw120', 13.17)).toBeCloseTo(0.1317, 9);
   });
 
   // The measured case, both sides from `.perf-runs/2026-09-15/8cg-74-compute-

@@ -7,6 +7,7 @@ import {
   EMPTY_PASSES_DEFAULT, EMPTY_PASS_KEY,
 } from '../../../src/client/debug/frame-cost/passes/passes-pure';
 import type { FramePacing } from '../../../src/client/scene/frame-loop/frame-loop';
+import { computeFloorMs, dwellFloorMs } from '../floors/floors';
 import {
   COMPUTE_ROW, CPU_ROW, DWELL_PACINGS, classClock, computeClock, cpuBoundRefusal, cpuClock, floorMove,
   frameFloor, gatingClock, sampleClasses, spreadMove, type ClassClock, type DwellMetric,
@@ -44,50 +45,6 @@ export const READBACK_TOLERANCE = 0.25;
  *  standard error to count. Two sigma either side, not one: a one-sigma
  *  band calls roughly a third of unchanged rows a regression. */
 export const BAND_SIGMAS = 2;
-
-/** The floor under every whole-frame band, in both gates. Two sigma of the
- *  medians' own scatter describes sampling alone, and a dwell's run
- *  conditions move it further than that: the same vantage read 21.950 and
- *  21.464 ms across two runs of identical code, differing only in where the
- *  context sat in its run. Both forms were derived from the cold-to-cold
- *  spread of two pins on identical code — `../pins/README.md#reading---against-pin`
- *  `--against-pin`.
- *
- *  Here rather than in `pin-pure.ts` because `--baseline` and
- *  `--against-pin` must floor the same row the same way: the tighter of two
- *  gates decides, so a Tier 1 band under the Tier 2 one it feeds marks a
- *  change Tier 2 would call unresolved (`/RELEASING.md#perf-pin`). */
-export const DWELL_FLOOR_MS = 0.25;
-export const DWELL_FLOOR_FRACTION = 0.01;
-
-/** 1.5× each vantage's p10 scatter, rounded up to 0.05 — the derivation and
- *  the measurement are `../pins/README.md#the-compute-row`. */
-export const COMPUTE_SCATTER_FLOOR_MS: Readonly<Record<ScenarioName, number>> = {
-  mw120: 0.05,
-  sol: 0.15,
-  earth: 0.10,
-  mw50: 0.05,
-  lg: 0.45,
-};
-
-function floorFor(floorMs: number, baselineMs: number): number {
-  return Math.max(floorMs, DWELL_FLOOR_FRACTION * baselineMs);
-}
-
-export function dwellFloorMs(baselineMs: number): number {
-  return floorFor(DWELL_FLOOR_MS, baselineMs);
-}
-
-/** Capped at `DWELL_FLOOR_MS`, so a re-floor only ever tightens.
- *
- *
- *  A name off a parsed run or pin need not be one of the canon five — neither
- *  file's assertion checks it — so the lookup falls back rather than banding
- *  the row on a `NaN` every delta marks against. */
-export function computeFloorMs(name: ScenarioName, baselineMs: number): number {
-  const derived: number | undefined = COMPUTE_SCATTER_FLOOR_MS[name];
-  return floorFor(Math.min(derived ?? DWELL_FLOOR_MS, DWELL_FLOOR_MS), baselineMs);
-}
 
 export type Verdict = 'cheaper' | 'dearer' | 'same';
 

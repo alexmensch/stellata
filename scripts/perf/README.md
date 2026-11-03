@@ -72,9 +72,11 @@ scripts/perf/
                             (the check's own file has one open).
   arming/                   The consent gate: marker name and freshness, the
                             arm poller, the protocol. Own README.
-  diff/                     Two runs differenced: the band and its floor, the
-                            verdicts, and the refusals both gates share.
-                            Own README.
+  diff/                     Two runs differenced: the band, the verdicts,
+                            and the refusals both gates share. Own README.
+  floors/                   The floor under every dwell band, one module
+                            for both gates, with its derivations. Own
+                            README.
   dwell/                    Dwell mode: the whole-frame statistics, the
                             state guard, the gating clock, the frame floor
                             both tables print. Own README.
