@@ -66,3 +66,21 @@ append-only and a path quoted in a bead note stays valid.
 That last clause is a promise about a **committed** path. An uncommitted file
 resolves on one machine, and every note quoting it is already broken; check
 with `git ls-files --error-unmatch <path>` before you quote one.
+
+## Clock logs
+
+`<date>/<slug>.powermetrics.txt.gz` is the GPU clock beside a run: `sudo
+powermetrics --samplers gpu_power -i 100`, taken by Alex for the length of
+one or more runs, one sample per 100 ms of active frequency, per-state
+residency, idle share and power. It answers what no run file can — whether
+the governor held the clock, and at what busy share — which is the evidence
+GPU pacing rests on ([Pacing](../scripts/perf/dwell/README.md#pacing)). The
+timestamps have second resolution, so a run is placed by its busy blocks:
+contiguous samples under 50 % idle, each matched to a context by order and
+by the run file's `startedAt` / `finishedAt`.
+
+**Commit it gzipped, the whole log.** The text is mostly repeated headers
+and compresses about 48× (9.5 MB to 0.2 MB), so nothing is trimmed:
+deciding which idle seconds matter is a judgement the next reader cannot
+undo. Read one with `gzcat <path> | less`. Nothing in the tree parses these;
+the runs that cite them say which busy block is which.
