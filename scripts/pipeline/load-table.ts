@@ -4,7 +4,7 @@ import { lstatSync } from 'node:fs';
 import { isBuiltin } from 'node:module';
 import { dirname, resolve } from 'node:path';
 
-import { build, type BuildFailure } from 'esbuild';
+import { build, type BuildFailure, type Metafile } from 'esbuild';
 
 import type { DeclaredOutputs } from '../util/emit-artifacts';
 import { entryMetafile } from '../util/import-closure';
@@ -65,16 +65,22 @@ export async function walkOutputsModules(table: StepTable, tree: PipelineTree): 
       } else problems.push(`outputs module ${module} reaches ${at}, beyond ${WALKABLE}`);
     }
   }
-  const imported = [...roots, ...accepted];
-  for (const module of imported) {
+  problems.push(...await importTimeProblems([...roots, ...accepted], inputs));
+  return { accepted, problems };
+}
+
+/** Why importing each module, repo-relative and keyed in `inputs`, could act: an
+ *  external import beyond TABLE_LOAD_BUILTINS, or a top-level await. */
+export async function importTimeProblems(modules: readonly string[], inputs: Metafile['inputs']): Promise<string[]> {
+  const problems: string[] = [];
+  for (const module of modules) {
     for (const { path, external } of inputs[module].imports) {
       if (external && !TABLE_LOAD_BUILTINS.has(builtinName(path))) {
         problems.push(`${module} imports ${path} at table load; only ${[...TABLE_LOAD_BUILTINS].join(' and ')} may be`);
       }
     }
   }
-  problems.push(...await topLevelAwaits(imported));
-  return { accepted, problems };
+  return [...problems, ...await topLevelAwaits(modules)];
 }
 
 async function topLevelAwaits(modules: readonly string[]): Promise<string[]> {

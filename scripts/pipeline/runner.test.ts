@@ -6,9 +6,11 @@ import { join, relative } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { fileHashes } from '../util/build-stamp';
+import { escapeRegExp } from '../util/escape-regexp';
+import { entryMetafile } from '../util/import-closure';
 import { REPO_ROOT } from '../util/paths';
 import { pullQueryHash, requestHash } from './freshness';
-import { loadTable, TABLE_LOAD_BUILTINS, WALKABLE, walkOutputsModules, type Loaded } from './load-table';
+import { importTimeProblems, loadTable, TABLE_LOAD_BUILTINS, WALKABLE, walkOutputsModules, type Loaded } from './load-table';
 import { pipelineTree } from './pipeline-tree';
 import { runSteps, type Verdict } from './runner';
 import type { StepEntry, StepTable } from './step-table-pure';
@@ -491,6 +493,16 @@ export const OUT = declareOutputs({ out });
       kind: 'rejected',
       problems: [`${relative(REPO_ROOT, at('steps/a-outputs.ts'))}: Top-level await is not available in the configured target environment`],
     });
+  });
+
+  it('holds a module the walk reaches, not only an outputs module, to the import-time rule', async () => {
+    write('steps/reached.ts', `import { readFileSync } from 'node:fs';\nexport const text = await Promise.resolve(readFileSync.name);\n`);
+    const reached = relative(REPO_ROOT, at('steps/reached.ts'));
+    const { inputs } = await entryMetafile([at('steps/reached.ts')]);
+    expect(await importTimeProblems([reached], inputs)).toEqual([
+      `${reached} imports node:fs at table load; only ${[...TABLE_LOAD_BUILTINS].join(' and ')} may be`,
+      expect.stringMatching(new RegExp(`^${escapeRegExp(reached)}: .*top-level await`, 'i')),
+    ]);
   });
 
   it('walks on through a listed legacy module into its own imports', async () => {
