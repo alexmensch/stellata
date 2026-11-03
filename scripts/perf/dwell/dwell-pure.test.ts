@@ -2,9 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   CLASS_GAP_OVER_MEDIAN,
   CLASS_MIN_SHARE,
-  CPU_BOUND_SHARE,
   THROUGHPUT_WINDOW_FRAMES,
-  cpuBoundRefusal,
   throughputSamples,
   DEFAULT_DWELL_FRAMES,
   DWELL_READBACK_EVERY_FRAMES,
@@ -159,18 +157,6 @@ describe('throughputSamples — GPU-paced wall deltas, smoothed', () => {
   it('averages consecutive whole windows and drops a partial last one', () => {
     const bursty = Array.from({ length: 2 * THROUGHPUT_WINDOW_FRAMES + 3 }, (_, i) => (i % 2 === 0 ? 1 : 9));
     expect(throughputSamples(bursty)).toEqual([5, 5]);
-  });
-});
-
-describe('cpuBoundRefusal — the main thread setting the pace', () => {
-  it(`refuses where CPU per tick passes ${CPU_BOUND_SHARE} of the frame, and only there`, () => {
-    expect(cpuBoundRefusal(8.1, 10)).toContain('CPU-bound');
-    expect(cpuBoundRefusal(8, 10)).toBeNull();
-  });
-
-  it('declines where either clock is missing', () => {
-    expect(cpuBoundRefusal(undefined, 10)).toBeNull();
-    expect(cpuBoundRefusal(9, undefined)).toBeNull();
   });
 });
 

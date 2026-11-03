@@ -255,14 +255,6 @@ export function throughputSamples(deltasMs: readonly number[]): number[] {
   return windows;
 }
 
-/** Null unless both clocks were recorded and the main thread took more than
- *  `CPU_BOUND_SHARE` of the frame. */
-export function cpuBoundRefusal(cpuMs: number | undefined, frameMs: number | undefined): string | null {
-  if (cpuMs === undefined || frameMs === undefined || cpuMs <= CPU_BOUND_SHARE * frameMs) return null;
-  return `CPU-bound: the main thread took ${cpuMs.toFixed(2)} of a ${frameMs.toFixed(2)} ms frame, `
-    + `over ${CPU_BOUND_SHARE * 100} %, so the frame time is not GPU work`;
-}
-
 export interface GatingClock {
   readonly clock: DwellSummary;
   readonly metric: DwellMetric;

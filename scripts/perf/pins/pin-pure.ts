@@ -5,12 +5,12 @@
 import { medianStandardErrorMs } from '../../../src/client/debug/frame-cost/frame-cost-pure';
 import type { FramePacing } from '../../../src/client/scene/frame-loop/frame-loop';
 import {
-  VERDICT_MARK, band, bufferRefusal, dwellFrames, dwellPacing, framesRefusal, pacingRefusal, positionRefusal, preconditionRefusal, readbackRefusal, recordCountRefusal, splitFrameClasses,
+  VERDICT_MARK, band, bufferRefusal, cpuBoundRefusal, dwellFrames, dwellPacing, framesRefusal, pacingRefusal, positionRefusal, preconditionRefusal, readbackRefusal, recordCountRefusal, splitFrameClasses,
   verdictFor, type DiffRefusal, type Verdict,
 } from '../diff/diff-pure';
 import { computeFloorMs, dwellFloorMs } from '../floors/floors';
 import {
-  COMPUTE_ROW, CPU_ROW, classClock, computeClock, cpuBoundRefusal, cpuClock, frameFloor, gatingClock,
+  COMPUTE_ROW, CPU_ROW, classClock, computeClock, cpuClock, frameFloor, gatingClock,
   pointMove, sampleClasses, throughputFrameMs, throughputMs,
   spreadMove, type DwellMetric, type DwellSummary, type FrameFloor, type StateGuard,
 } from '../dwell/dwell-pure';

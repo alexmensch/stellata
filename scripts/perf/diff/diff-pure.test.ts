@@ -2,11 +2,11 @@ import { describe, expect, it } from 'vitest';
 import type { PriceFrameRow } from '../../../src/client/debug/frame-cost/frame-cost-pure';
 import { EMPTY_PASS_KEY } from '../../../src/client/debug/frame-cost/passes/passes-pure';
 import {
-  BUFFER_MPX_TOLERANCE, READBACK_TOLERANCE, RECORD_COUNT_TOLERANCE, diffRuns, framesRefusal, pacingRefusal,
+  BUFFER_MPX_TOLERANCE, READBACK_TOLERANCE, RECORD_COUNT_TOLERANCE, cpuBoundRefusal, diffRuns, framesRefusal, pacingRefusal,
   positionRefusal, preconditionRefusal, splitFrameClasses, type RunDiff,
 } from './diff-pure';
 import { DWELL_FLOOR_MS, computeFloorMs, dwellFloorMs } from '../floors/floors';
-import type { DwellSummary } from '../dwell/dwell-pure';
+import { CPU_BOUND_SHARE, type DwellSummary } from '../dwell/dwell-pure';
 import { PERF_SCHEMA, type DwellRecord, type PerfFile, type ScenarioRecord } from '../schema';
 import type { ScenarioName } from '../scenarios';
 
@@ -824,5 +824,17 @@ describe('the exposure readback duty cycle', () => {
     expect(splitFrameClasses(null)).toBe(false);
     expect(splitFrameClasses(FLAT)).toBe(false);
     expect(splitFrameClasses(SPLIT)).toBe(true);
+  });
+});
+
+describe('cpuBoundRefusal — the main thread setting the pace', () => {
+  it(`refuses where CPU per tick passes ${CPU_BOUND_SHARE} of the frame, and only there`, () => {
+    expect(cpuBoundRefusal(8.1, 10)).toContain('CPU-bound');
+    expect(cpuBoundRefusal(8, 10)).toBeNull();
+  });
+
+  it('declines where either clock is missing', () => {
+    expect(cpuBoundRefusal(undefined, 10)).toBeNull();
+    expect(cpuBoundRefusal(9, undefined)).toBeNull();
   });
 });

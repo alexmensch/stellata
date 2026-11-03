@@ -180,11 +180,12 @@ recorded under either pacing and banded the way the frame is. Chrome's GPU
 process spends CPU on the same commands and is not in it.
 
 **A context whose CPU per tick passes `CPU_BOUND_SHARE` (0.8) of its
-throughput is refused, CPU-bound** (`cpuBoundRefusal`, both gates, either
-side). There the main thread is near setting the pace, so the frame time
-is partly CPU and the GPU number is not GPU work. Every canon vantage
-reads 97–100 % GPU-busy today, so the refusal is a guard on a future
-vantage, not a description of a current one.
+throughput is refused, CPU-bound** (`cpuBoundRefusal` in
+`../diff/diff-pure.ts`, both gates, either side). There the main thread is
+near setting the pace, so the frame time is partly CPU and the GPU number
+is not GPU work. Every canon vantage reads 97–100 % GPU-busy today, so
+the refusal is a guard on a future vantage, not a description of a
+current one.
 
 ## The state guard
 

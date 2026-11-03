@@ -9,7 +9,7 @@ import {
 import type { FramePacing } from '../../../src/client/scene/frame-loop/frame-loop';
 import { computeFloorMs, dwellFloorMs } from '../floors/floors';
 import {
-  COMPUTE_ROW, CPU_ROW, DWELL_PACINGS, classClock, computeClock, cpuBoundRefusal, cpuClock, floorMove,
+  COMPUTE_ROW, CPU_BOUND_SHARE, CPU_ROW, DWELL_PACINGS, classClock, computeClock, cpuClock, floorMove,
   frameFloor, gatingClock, sampleClasses, throughputFrameMs, spreadMove, type ClassClock, type DwellMetric,
 } from '../dwell/dwell-pure';
 import type { DwellRecord, PerfFile, ScenarioRecord } from '../schema';
@@ -251,6 +251,14 @@ export function pacingRefusal(a: FramePacing | undefined, b: FramePacing | undef
   const [pa, pb] = [a ?? PACING_WHEN_UNRECORDED, b ?? PACING_WHEN_UNRECORDED];
   if (pa === pb) return null;
   return `paced on ${pa} vs ${pb} — the GPU clock idles down between rAF-paced frames and holds max under GPU pacing, so the same work reads differently`;
+}
+
+/** Null unless both clocks were recorded and the main thread took more than
+ *  `CPU_BOUND_SHARE` of the frame. */
+export function cpuBoundRefusal(cpuMs: number | undefined, frameMs: number | undefined): string | null {
+  if (cpuMs === undefined || frameMs === undefined || cpuMs <= CPU_BOUND_SHARE * frameMs) return null;
+  return `CPU-bound: the main thread took ${cpuMs.toFixed(2)} of a ${frameMs.toFixed(2)} ms frame, `
+    + `over ${CPU_BOUND_SHARE * 100} %, so the frame time is not GPU work`;
 }
 
 /**
