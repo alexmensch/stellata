@@ -149,9 +149,11 @@ frame time that conflates them.
 **GPU cost per frame is throughput: the dwell's wall time over its frames,
 metric `throughput-mean`.** With the GPU never idle and its clock pinned,
 the wall time between frames is the GPU's time per frame at a fixed clock,
-so it is proportional to GPU work: sol at 4.1 / 6.4 / 9.2 Mpx read 4.6 /
-7.5 / 10.3 ms, slope 1.007 against pixels
-(`.perf-runs/2026-11-03/8cg-49-42-gpu-sol-sweep.json`). It counts every
+so it is proportional to GPU work: sol at 4.1 / 6.4 / 9.2 Mpx read wall
+medians of 4.6 / 7.5 / 10.3 ms, slope 1.007 against pixels
+(`.perf-runs/2026-11-03/8cg-49-42-gpu-sol-sweep.json`, taken before sweep
+points read the throughput mean, so these are burst-pattern medians, not
+throughput). It counts every
 frame, readback frames included, so the two-class split above does not
 arise.
 

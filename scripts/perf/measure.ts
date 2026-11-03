@@ -19,7 +19,7 @@ import {
 } from './page-protocol';
 import type { Backend } from './scenarios';
 import type { DwellRecord, RoundTripRecord, SweepRecord } from './schema';
-import { fitLogLog, sweepBracketMs, sweepOrder, type SweepPoint } from './sweep/sweep-pure';
+import { fitLogLog, sweepBracketMs, sweepOrder, sweepReading, type SweepPoint } from './sweep/sweep-pure';
 
 /** The dev server's own module URL for the WebGPU sample stream, relative to
  *  the Vite root (`src/client`). It has no window surface, so a dwell reaches
@@ -218,7 +218,7 @@ export async function measureSweep(page: Page, plan: SweepPlan): Promise<Measure
       width,
       height,
       px: buffer.width * buffer.height,
-      ms: dwelt.value.stats.p50,
+      ...sweepReading(dwelt.value, plan.pacing),
       vsyncClamped: dwelt.value.stats.vsyncClamped,
     });
   }

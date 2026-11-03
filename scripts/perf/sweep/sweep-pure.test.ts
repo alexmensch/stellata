@@ -7,8 +7,11 @@ import {
   fitLogLog,
   sweepBracketMs,
   sweepOrder,
+  sweepReading,
   type SweepPoint,
 } from './sweep-pure';
+import { summarizeFrameDwell } from '../dwell/dwell-pure';
+import type { DwellRecord } from '../schema';
 
 function point(scale: number, px: number, ms: number, vsyncClamped = false): SweepPoint {
   return { scale, width: Math.round(1280 * scale), height: Math.round(800 * scale), px, ms, vsyncClamped };
@@ -115,5 +118,24 @@ describe('sweepBracketMs', () => {
 
   it('is zero when scale 1 was not measured twice', () => {
     expect(sweepBracketMs([point(0.5, 1e6, 10), point(2, 16e6, 160)])).toBe(0);
+  });
+});
+
+describe('sweepReading — what a point reads off its dwell', () => {
+  // Bursty GPU-paced deltas: the wall median (1) is not the time per frame (5).
+  const bursty = [1, 1, 9, 1, 9, 1, 9, 9];
+  const record: DwellRecord = {
+    deltasMs: bursty, gpuMs: null, gpuNote: 'not requested',
+    stats: summarizeFrameDwell(bursty, null)!, gpuStats: null,
+    throughputStats: summarizeFrameDwell([5], null),
+    limitMag: 7.8, dm: 0, readbackPerFrame: 0.25, passCounts: null,
+  };
+
+  it('is the throughput mean under GPU pacing', () => {
+    expect(sweepReading(record, 'gpu')).toEqual({ ms: 5, metric: 'throughput-mean' });
+  });
+
+  it('is the wall median under rAF pacing', () => {
+    expect(sweepReading(record, 'raf')).toEqual({ ms: record.stats.p50, metric: 'wall-p50' });
   });
 });

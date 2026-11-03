@@ -299,7 +299,7 @@ async function runScenario(browser: Browser, args: RunArgs, plan: ScenarioPlan):
             record.failure = `after the round trip: ${again.failure}`;
             console.error(`${name} FAILED: ${record.failure}`);
           } else if (dwelt.value !== null && again.value !== null) {
-            console.log(formatRoundTripLine(args.roundtrip, dwelt.value, again.value));
+            console.log(formatRoundTripLine(args.roundtrip, dwelt.value, again.value, dwellPlan.pacing));
           }
         }
       } else {
