@@ -29,6 +29,14 @@ differing only in where the context sat in its run. Both forms were derived
 from the cold-to-cold spread of two pins on identical code. The millisecond
 term is the larger at every canon frame row but mw50.
 
+**The `|cpu` row's floor is borrowed, not measured.** It reads 1.1–3.4 ms
+in 0.1 ms steps (Chrome's `performance.now()` resolution), so 0.25 ms lets
+a CPU increase of about 23 % at sol and lg pass unmarked. One repeat pair
+with CPU data exists (runs 3 and 4 of `8cg-49-42-gpu-all`, which moved
+0.0–0.1 ms), too few to derive from; `stellata-8cg.49.38` derives the
+row's own floor, in whole 0.1 ms steps, from its pin and Tier 1 runs. No
+pin gates the row until then.
+
 **The frame rows are deliberately NOT re-floored, and the asymmetry is the
 finding.** Their repeat scatter runs *past* the 0.25 they are gated on: of
 the same-tree pairs on disk, 4 of 9 at mw120, 6 of 11 at sol and 3 of 5 at
