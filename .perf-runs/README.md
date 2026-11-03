@@ -79,8 +79,9 @@ timestamps have second resolution, so a run is placed by its busy blocks:
 contiguous samples under 50 % idle, each matched to a context by order and
 by the run file's `startedAt` / `finishedAt`.
 
-**Commit it gzipped, the whole log.** The text is mostly repeated headers
-and compresses about 48× (9.5 MB to 0.2 MB), so nothing is trimmed:
-deciding which idle seconds matter is a judgement the next reader cannot
-undo. Read one with `gzcat <path> | less`. Nothing in the tree parses these;
-the runs that cite them say which busy block is which.
+**Commit it trimmed and gzipped.** Keep the log's header and every sample
+inside the span of a run it covers, `startedAt` − 5 s to `finishedAt` + 5 s
+off that run's file (powermetrics stamps in the same UTC); the rest is the
+machine idling between arms. The text is mostly repeated headers and
+gzips about 48×. Read one with `gzcat <path> | less`. Nothing in the tree
+parses these; the runs that cite them say which busy block is which.
