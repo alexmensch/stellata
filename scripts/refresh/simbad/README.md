@@ -52,8 +52,7 @@ tsv.py       Spec-driven TSV writer — basic columns, then ordered
 simbad.test.py   stdlib unittest pins covering spec definitions,
                  manifest feeders, request composition, the widening
                  veto, query builders, coverage gates and TSV emit.
-__init__.py      Package marker + source_files(), the module list a
-                 shell folds into its is_up_to_date sources.
+__init__.py      Package marker.
 ```
 
 ## The cohort is two questions, and the manifest answers one

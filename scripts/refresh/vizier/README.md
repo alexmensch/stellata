@@ -11,12 +11,14 @@ vizier_slice.test.py   non-network suite, in-memory TAP backend
 
 A `VizierSlice` carries the table id, the VizieR→canonical column map (which
 also fixes the TSV column order), the dtype schema, a row-count band, and
-pinned spot rows; `pull_slices()` executes a list of them, folding its own
-mtime into each slice's idempotency check the way `is_up_to_date` folds in
-`refresh_lib`'s. `refresh-classic-ids.py` (four slices),
-`refresh-hipparcos-vmag.py` (one) and `refresh-gliese.py` (one) are then spec
-files with no query logic of their own — the same split
-`gaia_astrometry_pull.py` uses for the 5p pulls.
+pinned spot rows; `pull_slices()` executes a list of them, and
+`describe_slices()` states every slice's ADQL and table as the pull's
+`--describe`, so a changed column map stales it
+([Freshness](../../pipeline/README.md#freshness--one-mechanism)).
+`slices_main(slices, name)` is a slice file's whole entry point.
+`refresh-classic-ids.py` (four slices), `refresh-hipparcos-vmag.py` (one) and
+`refresh-gliese.py` (one) are then spec files with no query logic of their
+own — the same split `gaia_astrometry_pull.py` uses for the 5p pulls.
 
 **MAXREC is not load-bearing on CDS.** VizieR's TAP default MAXREC is ~1e9,
 so a whole-table slice needs none of the sizing the Gaia sync endpoints demand

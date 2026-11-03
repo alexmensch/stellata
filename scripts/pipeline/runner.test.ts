@@ -8,7 +8,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { fileHashes } from '../util/build-stamp';
 import { REPO_ROOT } from '../util/paths';
 import { pullQueryHash, requestHash } from './freshness';
-import { loadTable, type Loaded } from './load-table';
+import { loadTable, WALKABLE, type Loaded } from './load-table';
 import { pipelineTree } from './pipeline-tree';
 import { runSteps, type Verdict } from './runner';
 import type { StepEntry, StepTable } from './step-table-pure';
@@ -58,7 +58,7 @@ export const OUT = declareOutputs({ out: ${JSON.stringify(at(out))} });
 }
 
 /** A Python pull whose query is the text of query-<name>.txt. */
-function pullStep(name: string, out: string, request: string, queryText = 'SELECT *'): StepEntry {
+function pullStep(name: string, out: string, request: string, queryText = 'SELECT *', reads: string[] = []): StepEntry {
   write(`query-${name}.txt`, queryText);
   write(`steps/${name}.py`, `
 import json, sys
@@ -67,13 +67,13 @@ if sys.argv[1:] == ["--describe"]:
     print(json.dumps({"query": Path(${JSON.stringify(at(`query-${name}.txt`))}).read_text(), "services": ["esa", "ari"]}))
 `);
   write(out, 'pulled');
-  writeManualStamp(name, out, request, queryText);
-  return { name, kind: 'pull', language: 'python', entry: at(`steps/${name}.py`), outputs: [at(out)], command: `refresh:${name}` };
+  writeManualStamp(name, out, [request, ...reads], queryText);
+  return { name, kind: 'pull', language: 'python', entry: at(`steps/${name}.py`), outputs: [at(out)] };
 }
 
-function writeManualStamp(name: string, out: string, request: string, queryText: string): void {
+function writeManualStamp(name: string, out: string, reads: string[], queryText: string): void {
   write(relative(root, pipelineTree(root).manualStamp(name)), JSON.stringify({
-    inputs: fileHashes([at(request)], root),
+    inputs: fileHashes(reads.map(at), root),
     outputs: fileHashes([at(out)], root),
     query: pullQueryHash({ query: queryText, services: ['esa', 'ari'] }),
   }));
@@ -89,7 +89,7 @@ if sys.argv[1:] == ["--describe"]:
     print(json.dumps({"query": "SELECT *", "services": ["esa"], "request": lines}))
 `);
   write(out, 'pulled');
-  return { name, kind: 'pull', language: 'python', entry: at(`steps/${name}.py`), outputs: [at(out)], command: `refresh:${name}` };
+  return { name, kind: 'pull', language: 'python', entry: at(`steps/${name}.py`), outputs: [at(out)] };
 }
 
 function writeDerivedStamp(name: string, out: string, manifest: string, request: string[]): void {
@@ -236,7 +236,7 @@ describe('runSteps — manual steps', () => {
     write('req.tsv', 'r2');
     const result = await run(steps, ['reader', 'other']);
     expect(result.kinds).toEqual({ astro: 'stale', reader: 'skipped', other: 'fresh' });
-    expect(result.lines).toContain('✗ astro stale (req.tsv): run pnpm run refresh:astro');
+    expect(result.lines).toContain('✗ astro stale (req.tsv): run pnpm run astro');
     expect(result.status).toBe(1);
   });
 
@@ -245,7 +245,7 @@ describe('runSteps — manual steps', () => {
     write('req.tsv', 'request(i1)');
     const steps = [tsStep('request', 'req.tsv', ['ids.tsv']), pullStep('astro', 'astro.tsv', 'req.tsv'), tsStep('reader', 'reader.out', ['astro.tsv'])];
     await run(steps, ['reader']);
-    writeManualStamp('astro', 'astro.tsv', 'req.tsv', 'SELECT *');
+    writeManualStamp('astro', 'astro.tsv', ['req.tsv'], 'SELECT *');
     expect((await run(steps, ['reader'])).kinds).toEqual({ request: 'fresh', astro: 'fresh', reader: 'fresh' });
     write('ids.tsv', 'i2');
     expect((await run(steps, ['reader'])).kinds).toEqual({ request: 'built', astro: 'stale', reader: 'skipped' });
@@ -280,8 +280,38 @@ describe('runSteps — manual steps', () => {
     write('req.tsv', 'r1');
     const steps = [pullStep('astro', 'astro.tsv', 'req.tsv')];
     const stampFile = pipelineTree(root).manualStamp('astro');
-    writeFileSync(stampFile, JSON.stringify({ ...JSON.parse(readFileSync(stampFile, 'utf8')), answeredBy: 'ari', release: 'DR3' }));
+    writeFileSync(stampFile, JSON.stringify({ ...JSON.parse(readFileSync(stampFile, 'utf8')), answeredBy: ['ari'], release: 'DR3' }));
     expect((await run(steps, ['astro'])).kinds).toEqual({ astro: 'fresh' });
+  });
+
+  it('stales a describing bake only when the projection of the file it reads moves', async () => {
+    write('steps/bake.py', `
+import json, sys
+from pathlib import Path
+if sys.argv[1:] == ["--describe"]:
+    shape = json.loads(Path(${JSON.stringify(at('clouds.json'))}).read_text())["shape"]
+    print(json.dumps({"request": [shape], "requestFrom": ["clouds.json"]}))
+`);
+    write('surfaces.bin', 'baked');
+    write('clouds.json', '{"shape": "ellipse", "sid": 1}');
+    const step: StepEntry = { name: 'bake', kind: 'bake', describes: true, language: 'python', entry: at('steps/bake.py'), outputs: [at('surfaces.bin')] };
+    write(relative(root, pipelineTree(root).manualStamp('bake')), JSON.stringify({
+      inputs: {}, outputs: fileHashes([at('surfaces.bin')], root), request: requestHash(['ellipse']), requestFrom: ['clouds.json'],
+    }));
+    expect((await run([step], ['bake'])).kinds).toEqual({ bake: 'fresh' });
+    write('clouds.json', '{"shape": "ellipse", "sid": 2}');
+    expect((await run([step], ['bake'])).kinds).toEqual({ bake: 'fresh' });
+    write('clouds.json', '{"shape": "torus", "sid": 2}');
+    expect((await run([step], ['bake'])).verdicts.get('bake')).toEqual({ kind: 'stale', changed: ['(request)'] });
+  });
+
+  it('fails a manual step whose describe cannot run, and skips its readers', async () => {
+    write('req.tsv', 'r1');
+    const pull = pullStep('astro', 'astro.tsv', 'req.tsv');
+    write('steps/astro.py', 'import sys\nsys.exit("the file it projects is missing")\n');
+    const result = await run([pull, tsStep('reader', 'reader.out', ['astro.tsv'])], ['reader']);
+    expect(result.kinds).toEqual({ astro: 'failed', reader: 'skipped' });
+    expect(result.verdicts.get('astro')).toMatchObject({ kind: 'failed', reason: expect.stringContaining('the file it projects is missing') });
   });
 
   it('never runs a manual step under --force', async () => {
@@ -355,6 +385,35 @@ os.replace(tmp, ${JSON.stringify(at(out))})
     expect(covered.kinds).toEqual({ a: 'fresh', p: 'built' });
   });
 
+  it('fails a run that names a step in after but reads none of its outputs', async () => {
+    write('a.in', 'x');
+    const body = `Path(${JSON.stringify(at('p.out'))}).write_text("p")`;
+    const result = await run([tsStep('a', 'a.out', ['a.in']), pyStep('p', 'p.out', body, { after: ['a'] } as Partial<StepEntry>)], ['p']);
+    expect(result.verdicts.get('p')).toEqual({ kind: 'failed', reason: 'p runs after a but read none of its outputs' });
+  });
+
+  it('counts a pull it runs after as covered when that edge closes a kept loop, and no other step through the loop', async () => {
+    write('req.tsv', 'r');
+    write('w.in', 'x');
+    write('w.out', 'w(x)');
+    const body = [
+      `Path(${JSON.stringify(at('astro.tsv'))}).read_text()`,
+      `Path(${JSON.stringify(at('req.tsv'))}).write_text("r")`,
+    ].join('\n');
+    const loop = (extraRead = ''): StepEntry[] => [
+      tsStep('w', 'w.out', ['w.in']),
+      pyStep('p', 'req.tsv', `${extraRead}${body}`, { after: ['astro'] } as Partial<StepEntry>),
+      pullStep('astro', 'astro.tsv', 'req.tsv', 'SELECT *', ['w.out']),
+    ];
+    const kept = await run(loop(), ['p', 'astro']);
+    expect(kept.kinds).toEqual({ w: 'built', p: 'built', astro: 'fresh' });
+
+    const throughLoop = await run(loop(`Path(${JSON.stringify(at('w.out'))}).read_text()\n`), ['p']);
+    expect(throughLoop.verdicts.get('p')).toEqual({
+      kind: 'failed', reason: `p read ${at('w.out')}, an output of w, without running after it`,
+    });
+  });
+
   it.each([
     ['lists', `os.listdir(${JSON.stringify('OUTDIR')})`],
     ['probes', `from scripts.util.build_stamp import probe\nprobe(Path(${JSON.stringify('OUTFILE')}))`],
@@ -372,7 +431,7 @@ os.replace(tmp, ${JSON.stringify(at(out))})
 });
 
 describe('loadTable', () => {
-  const reachesBuildStamp = (): string => `outputs module ${relative(REPO_ROOT, at('steps/a-outputs.ts'))} reaches scripts/util/build-stamp.ts, beyond util/emit-artifacts, util/paths and *-pure, *-outputs, *-source and *-tsv modules`;
+  const reachesBuildStamp = (): string => `outputs module ${relative(REPO_ROOT, at('steps/a-outputs.ts'))} reaches scripts/util/build-stamp.ts, beyond ${WALKABLE}`;
 
   it('rejects an outputs module that imports beyond emit-artifacts, paths and pure modules, before importing it', async () => {
     const step = tsStep('a', 'a.out');
@@ -410,6 +469,33 @@ import { NAME } from './${via}';
 export const OUT = declareOutputs({ out: resolve(${JSON.stringify(at('.'))}, NAME) });
 `);
     expect((await load([step])).kind).toBe('loaded');
+  });
+
+  it.each(['src/catalog-format/probes/probe-roster', 'src/astro-core/angles'])(
+    'accepts an outputs module importing the boundary tree module %s.ts',
+    async (module) => {
+      const step = tsStep('a', 'a.out');
+      write('steps/a-outputs.ts', `
+import ${JSON.stringify(join(REPO_ROOT, module))};
+import { declareOutputs } from ${JSON.stringify(EMIT_ARTIFACTS)};
+export const OUT = declareOutputs({ out: ${JSON.stringify(at('a.out'))} });
+`);
+      expect((await load([step])).kind).toBe('loaded');
+    },
+  );
+
+  it('walks a boundary tree only at the repo root, never a folder of the same name elsewhere', async () => {
+    const step = tsStep('a', 'a.out');
+    write('src/catalog-format/leak.ts', `export { hashFile } from ${JSON.stringify(join(REPO_ROOT, 'scripts/util/build-stamp'))};\n`);
+    write('steps/a-outputs.ts', `
+import { declareOutputs } from ${JSON.stringify(EMIT_ARTIFACTS)};
+import { hashFile } from ${JSON.stringify(at('src/catalog-format/leak'))};
+export const OUT = declareOutputs({ out: hashFile.name });
+`);
+    const loaded = await load([step]);
+    expect(loaded.kind === 'rejected' ? loaded.problems : []).toEqual([
+      expect.stringContaining(`reaches ${relative(REPO_ROOT, at('src/catalog-format/leak.ts'))}`),
+    ]);
   });
 
   it('rejects a build step whose declared output lies through a symlink', async () => {

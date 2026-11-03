@@ -402,6 +402,9 @@ which is exactly what `tests/artifact-freshness.test.ts` fails on.
   [`scripts/refresh/refresh-simbad-values.py`](../../scripts/refresh/README.md).
 - `pnpm run refresh:simbad-tyc-hd` →
   [`scripts/refresh/refresh-simbad-tyc-hd.py`](../../scripts/refresh/README.md).
-- `refresh-simbad-sptype.py` and `refresh-simbad-wds-xids.py` have
-  no pnpm targets; invoke directly. All share the
-  `scripts/refresh/simbad/` plumbing.
+- `pnpm run refresh:simbad-sptype` →
+  [`scripts/refresh/refresh-simbad-sptype.py`](../../scripts/refresh/README.md).
+- `pnpm run refresh:simbad-wds-xids` →
+  [`scripts/refresh/refresh-simbad-wds-xids.py`](../../scripts/refresh/README.md).
+
+All share the `scripts/refresh/simbad/` plumbing.

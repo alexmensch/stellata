@@ -22,13 +22,15 @@ RUN_PYTHON_STEP = REPO_ROOT / "scripts" / "pipeline" / "run_python_step.py"
 FIXTURE_STEP = """
 import os, sys
 from pathlib import Path
-from scripts.util.build_stamp import probe
+from scripts.util.build_stamp import probe, report_service
 import helper
 here = Path(__file__).parent
 (here / "input.tsv").read_text()
 os.listdir(here / "folder")
 probe(here / "maybe.txt")
 probe(here / "present.txt")
+for name in ("ESA-sync", "ARI-sync", "ESA-sync"):
+    report_service(name)
 tmp = here / "out.bin.tmp"
 tmp.write_text("built")
 os.replace(tmp, here / "out.bin")
@@ -94,9 +96,27 @@ class RecorderTests(unittest.TestCase):
             str(self.root / "present.txt"): True,
         })
 
+    def test_records_each_answering_service_once_in_first_answer_order(self) -> None:
+        _, record = self.run_step()
+        self.assertEqual(record["services"], ["ESA-sync", "ARI-sync"])
+
     def test_a_temp_then_rename_write_counts_as_its_target_and_a_deleted_scratch_file_not_at_all(self) -> None:
         _, record = self.run_step()
         self.assertEqual(self.rel(record["writes"]), ["ledger.tsv", "out.bin"])
+
+    def test_leaves_out_the_modules_the_recorder_itself_loaded(self) -> None:
+        (self.root / "step.py").write_text("import sys\nimport helper\n")
+        proc = subprocess.run(
+            [sys.executable, "-c",
+             "import sys; from pathlib import Path; sys.path.insert(0, sys.argv[1]);"
+             "import helper; from scripts.util.build_stamp import record_run;"
+             "sys.exit(record_run(Path(sys.argv[1]), Path(sys.argv[2]), Path(sys.argv[3]), []))",
+             str(self.root), str(self.record), str(self.root / "step.py")],
+            capture_output=True, text=True, cwd=REPO_ROOT,
+        )
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        record = json.loads(self.record.read_text())
+        self.assertEqual(self.rel(record["reads"]), ["step.py"])
 
     def test_ignores_modules_and_files_under_a_virtualenv(self) -> None:
         lib = self.root / ".venv" / "lib"

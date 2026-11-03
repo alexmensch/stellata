@@ -5,6 +5,7 @@ import { resolve } from 'node:path';
 
 import { stepFileName } from '../util/stamp-path-pure';
 import { REPO_ROOT } from '../util/paths';
+import { isBuild, writersOf, type ResolvedStep, type StepGraph } from './step-table-pure';
 
 const HOLDER = resolve(REPO_ROOT, 'scripts/pipeline/lock_holder.py');
 const WAIT_NOTICE_MS = 1000;
@@ -61,4 +62,15 @@ export async function holdLocks(lockDir: string, locks: StepLocks, onWait: () =>
       await exited;
     },
   };
+}
+
+export function holdStepLocks(
+  lockDir: string,
+  table: { readonly graph: StepGraph; readonly steps: ReadonlyMap<string, ResolvedStep> },
+  name: string,
+  exclusive: boolean,
+  log: (line: string) => void,
+): Promise<HeldLocks> {
+  const shared = writersOf(table.graph, name).filter((w) => isBuild(table.steps.get(w)!.step));
+  return holdLocks(lockDir, { step: name, exclusive, shared }, () => log(`… ${name} waits for another run's lock`));
 }

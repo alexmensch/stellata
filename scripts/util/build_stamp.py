@@ -55,6 +55,8 @@ class _Recorder:
         self.probes: dict[str, bool] = {}
         self.opened_for_write: set[str] = set()
         self.renamed: dict[str, str] = {}
+        self.services: list[str] = []
+        self.preloaded = frozenset(sys.modules)
         self._busy = False
 
     def _inside(self, raw: object) -> Optional[Path]:
@@ -110,7 +112,9 @@ class _Recorder:
                 self.listings[str(path)] = listing_hash(os.listdir(path))
 
     def finish(self) -> dict:
-        for module in list(sys.modules.values()):
+        for name, module in list(sys.modules.items()):
+            if name in self.preloaded:
+                continue
             path = self._inside(getattr(module, "__file__", None))
             if path is not None and path.suffix == ".py":
                 self.read(path)
@@ -121,6 +125,7 @@ class _Recorder:
             "reads": self.reads,
             "listings": self.listings,
             "probes": self.probes,
+            "services": self.services,
             "writes": sorted(writes),
         }
 
@@ -138,6 +143,13 @@ def probe(path: Path) -> bool:
         if inside is not None:
             _recorder.probes[str(inside)] = exists
     return exists
+
+
+def report_service(name: str) -> None:
+    """Records that the service `name` answered one of this step's network
+    queries, in first-answer order; outside the runner it records nothing."""
+    if _recorder is not None and name not in _recorder.services:
+        _recorder.services.append(name)
 
 
 def record_run(root: Path, record: Path, entry: Path, args: list[str]) -> int:

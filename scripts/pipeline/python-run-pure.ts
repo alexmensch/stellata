@@ -15,7 +15,14 @@ export interface RunRecord {
   readonly reads: Readonly<Record<string, string | null>>;
   readonly listings: Readonly<Record<string, string>>;
   readonly probes: Readonly<Record<string, boolean>>;
+  readonly services: readonly string[];
   readonly writes: readonly string[];
+}
+
+export function undeclaredWrites(self: ResolvedStep, writes: readonly string[], allowed: readonly string[] = []): string[] {
+  return writes
+    .filter((p) => !claims(self.outputs, p) && !allowed.includes(p))
+    .map((p) => `${self.step.name} wrote ${p}, which it does not declare`);
 }
 
 export function recordProblems(
@@ -26,9 +33,7 @@ export function recordProblems(
   graph: StepGraph,
 ): string[] {
   const name = self.step.name;
-  const problems = record.writes
-    .filter((p) => !claims(self.outputs, p) && !snapshots.includes(p))
-    .map((p) => `${name} wrote ${p}, which it does not declare`);
+  const problems = undeclaredWrites(self, record.writes, snapshots);
   const others = [...steps].filter((s) => s.step.name !== name);
   const touched: [string, (writer: ResolvedStep) => boolean][] = [
     ...[...Object.keys(record.reads), ...Object.keys(record.probes)]
@@ -36,11 +41,19 @@ export function recordProblems(
     ...Object.keys(record.listings)
       .map((dir): [string, (w: ResolvedStep) => boolean] => [dir, (w) => listsOutputsOf(w.outputs, dir)]),
   ];
+  const runsAfter = (writer: string): boolean => reaches(graph.edges, writer, name)
+    || graph.keptLoops.some((e) => e.from === writer && e.to === name);
   for (const [path, isWriter] of touched) {
     for (const writer of others.filter(isWriter)) {
-      if (!reaches(graph.edges, writer.step.name, name)) {
+      if (!runsAfter(writer.step.name)) {
         problems.push(`${name} read ${path}, an output of ${writer.step.name}, without running after it`);
       }
+    }
+  }
+  const after = self.step.kind === 'build' && self.step.language === 'python' ? self.step.after : [];
+  for (const declared of others.filter((s) => after.includes(s.step.name))) {
+    if (!touched.some(([, isWriter]) => isWriter(declared))) {
+      problems.push(`${name} runs after ${declared.step.name} but read none of its outputs`);
     }
   }
   return problems;

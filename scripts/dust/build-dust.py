@@ -17,6 +17,7 @@ import numpy as np
 ROOT = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(ROOT / "scripts" / "clouds"))
 import cloud_model  # noqa: E402
+import edenhofer2024  # noqa: E402
 
 # Canonical grid params — changing any of these is a format version bump.
 GRID_SIZE = 512
@@ -73,6 +74,7 @@ def main() -> int:
         voxels = make_synthetic_grid()
         density_max = DENSITY_MAX_SYNTHETIC
     else:
+        edenhofer2024.require(args.flavor)
         # Cache the raw resampled float32 grid (~512 MiB, gitignored) so
         # re-encoding after tweaking DENSITY_MAX etc. doesn't require
         # re-running the 10-minute query phase. Delete it manually to force
@@ -243,23 +245,12 @@ def resample_edenhofer(*, flavor: str) -> np.ndarray:
     try:
         import astropy.units as u
         from astropy.coordinates import SkyCoord
-        import dustmaps.edenhofer2023
         from dustmaps.edenhofer2023 import Edenhofer2023Query
     except ImportError as e:
         raise SystemExit(
             f"Missing dependency: {e.name}. Install with:\n"
             f"  pip install -r scripts/requirements-dust.txt"
         ) from None
-
-    # Fetch the data if not already present. Respects the user's
-    # dustmaps.config['data_dir'] — set it in ~/.dustmapsrc to relocate.
-    # 'main' flavor is the 3.2 GB mean+std HEALPix file; 2kpc flavor adds
-    # a second file of similar size. We do not download samples (19 GB),
-    # which would only matter for uncertainty propagation.
-    try:
-        dustmaps.edenhofer2023.fetch(fetch_2kpc=(flavor == "less_data_but_2kpc"))
-    except Exception as e:  # pragma: no cover — network / filesystem errors
-        raise SystemExit(f"Failed to fetch Edenhofer map: {e}") from None
 
     query = Edenhofer2023Query(flavor=flavor)
 

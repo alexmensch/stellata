@@ -2,6 +2,7 @@
 
 import { registryPaths } from '../sid/registry-outputs';
 import { REGISTRY_PARTITIONS } from '../sid/registry-partitions-pure';
+import { MANUAL_STEPS } from './manual-step-outputs';
 import type { StepTable } from './step-table-pure';
 
 export const STEPS: StepTable = {
@@ -16,7 +17,10 @@ export const STEPS: StepTable = {
         'data/gaia/gaia_astrometry_source_id_request.tsv',
         'build/binding-integrity-verdicts.tsv',
       ],
-      after: [],
+      after: [
+        'refresh:gaia-astrometry', 'refresh:gaia-hip', 'refresh:gaia-nss', 'refresh:gaia-tyc',
+        'refresh:hip2', 'refresh:msc', 'refresh:simbad-sptype', 'refresh:simbad-wds-xids',
+      ],
       snapshots: ['scripts/binaries/build-binaries-expected.json', 'scripts/binaries/build-binaries-rates-expected.json'],
     },
     {
@@ -70,6 +74,7 @@ export const STEPS: StepTable = {
       after: ['build:binaries', 'build:catalog'],
       snapshots: ['scripts/binaries/build-runtime-binaries-expected.json'],
     },
+    ...MANUAL_STEPS,
   ],
   registryFiles: REGISTRY_PARTITIONS.flatMap((p) => [registryPaths(p).ledger, registryPaths(p).events]),
 };

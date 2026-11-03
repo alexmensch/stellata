@@ -10,8 +10,7 @@ import io
 import os
 import sys
 from pathlib import Path
-
-import requests
+from urllib.parse import urlparse
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "util"))
@@ -60,13 +59,17 @@ FILES = [
 
 
 def fetch(url: str) -> str:
+    import requests
+
     def get() -> str:
         resp = requests.get(url, timeout=60)
         resp.raise_for_status()
         resp.encoding = "utf-8-sig"
         return resp.text
 
-    return rl.retry(get)
+    text = rl.retry(get)
+    rl.report_service(urlparse(url).netloc)
+    return text
 
 
 def validate(spec: dict, text: str) -> None:
@@ -122,5 +125,11 @@ def main() -> None:
     print("Now re-run: pnpm run build:wgsn (and commit both if changed)")
 
 
+def describe() -> dict:
+    """The two files' URLs: plain HTTP, so the URL is the whole query."""
+    urls = [spec["url"] for spec in FILES]
+    return rl.description("\n".join(urls), sorted({urlparse(u).netloc for u in urls}))
+
+
 if __name__ == "__main__":
-    main()
+    rl.pull_main(main, describe)

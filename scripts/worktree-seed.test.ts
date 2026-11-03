@@ -4,7 +4,7 @@ import { basename, dirname, relative, resolve } from 'node:path';
 import { beforeAll, describe, expect, it } from 'vitest';
 
 import { loadTable } from './pipeline/load-table';
-import { expandTargets, selectSteps } from './pipeline/step-table-pure';
+import { expandTargets, isBuild, selectSteps } from './pipeline/step-table-pure';
 import { STEPS } from './pipeline/steps';
 import { isMemberName, type OutputFamily } from './util/emit-artifacts';
 import { escapeRegExp } from './util/escape-regexp';
@@ -31,7 +31,8 @@ beforeAll(async () => {
   const parts = scriptParts(packageScripts(), 'build:seed-steps');
   const targets = parts.flatMap((p) => (p.kind === 'tsx' && p.entry === RUNNER ? p.args : []));
   if (targets.length === 0 || parts.length !== 1) throw new Error('build:seed-steps must be one run.ts call');
-  seedSteps = selectSteps(loaded.graph, expandTargets(STEPS.steps, targets));
+  seedSteps = selectSteps(loaded.graph, expandTargets(STEPS.steps, targets))
+    .filter((name) => isBuild(loaded.steps.get(name)!.step));
   outputsOf = new Map([...loaded.steps].map(([name, { outputs }]) => [name, {
     files: [...outputs.files, stampPath(name)].map(rel),
     families: outputs.families.filter((f) => f.stamped).map((f) => ({ ...f, dir: rel(f.dir) })),

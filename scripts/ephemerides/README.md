@@ -18,13 +18,18 @@ sampler and the public file names are shared with the viewer:
 - `element-unwrap-pure.ts` (+ test) — `unwrapMeanLongitude`. See
   [Unwrapping the mean longitude](#unwrapping-the-mean-longitude).
 - `fetch-planet-elements.ts` — `pnpm run fetch:ephemerides`, optionally
-  narrowed to one or more planets (`pnpm run fetch:ephemerides saturn`).
+  narrowed to one or more planets (`pnpm run fetch:ephemerides saturn`;
+  a narrowed run writes no record, so the pull reads stale until a plain
+  run — [Recording a manual step](/scripts/pipeline/README.md#recording-a-manual-step--recordts)).
   Manual and infrequent; **not** in the build chain ([Frozen external data](/data/README.md#frozen-external-data)).
   Needs network. Writes
   `data/ephemerides/{id}.json` through `emitEach` (`../util/README.md`): a
   table that misses its accuracy bound never lands, every table that holds
   does, and the run exits non-zero naming the misses. See
-  [Cadence](#cadence).
+  [Cadence](#cadence). `--describe` prints each target's ELEMENTS and
+  truth-VECTORS query over the table window, so a changed id, cadence or
+  window stales its `data/stamps/` record
+  ([Freshness](../pipeline/README.md#freshness--one-mechanism)).
 - `sync-ephemerides.ts` (+ `ephemerides-mirror-source.ts` declaring the
   folder) — mirrors the committed JSONs to
   `public/ephemerides/` (gitignored) via `../util/mirror-to-public.ts` on

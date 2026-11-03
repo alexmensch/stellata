@@ -3,6 +3,7 @@
 // per-ephemeris-type parsers sit on top of.
 
 export const HORIZONS_API = 'https://ssd.jpl.nasa.gov/api/horizons.api';
+export const HORIZONS_SERVICE = new URL(HORIZONS_API).host;
 
 /** A `TLIST` longer than this is truncated with no error reported. */
 export const MAX_LIST_EPOCHS = 70;

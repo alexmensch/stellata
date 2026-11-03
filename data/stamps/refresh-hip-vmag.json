@@ -1,0 +1,10 @@
+{
+  "inputs": {},
+  "outputs": {
+    "data/hipparcos/hip_main_vmag.tsv": "02d689361c6eea56369e9f8f696b5c789cdbae10"
+  },
+  "query": "04df0d5c566b10b79bd5649290c95ff69461d539",
+  "answeredBy": [],
+  "release": "VizieR I/239/hip_main",
+  "requestFrom": []
+}

@@ -18,8 +18,8 @@ around. Adding `radial_velocity` to the 5p schema, re-slicing a VizieR table
 for one more column, widening a request set, re-stratifying the SIMBAD sample
 — all are in-session work. Never scope a design down, defer a field, or hand a
 pull back to the user on the assumption that a network fetch is out of reach;
-the cost is the pull's wall-clock time, and `--force` / the `.ckpt` resume path
-([Resuming a long pull](#resuming-a-long-pull)) bound the retry risk.
+the cost is the pull's wall-clock time, and the `.ckpt` resume path
+([Resuming a long pull](#resuming-a-long-pull)) bounds the retry risk.
 
 **None of these is a reason to defer a pull to its own PR**, and each has been
 used as one: the artifact is tens of MB and tracked in LFS; the re-pull moves
@@ -55,17 +55,21 @@ python3 -m venv .venv
 ```
 
 After that, prefix every `python3` invocation with `.venv/bin/`, or
-shell-activate via `source .venv/bin/activate`. The pnpm targets below
-call bare `python3` — activate the venv (or alias `python3` to the
-venv binary) in the shell that runs them.
+shell-activate via `source .venv/bin/activate`. Every pnpm target below
+runs its script through `scripts/pipeline/record.ts`, which starts bare
+`python3` — activate the venv (or alias `python3` to the venv binary) in the
+shell that runs them. `record.ts` skips a pull whose `data/stamps/` record is
+still fresh (`--force` re-pulls) and rewrites the record after every run
+([Recording a manual step](../pipeline/README.md#recording-a-manual-step--recordts)).
 
 **`.venv` is gitignored, so a git worktree has none** — a refresh run from
 one dies on `ModuleNotFoundError: astropy` after resolving its paths
-perfectly well, which reads like a code fault and is not one. Point the
-absolute path at the main checkout's venv
-(`<main-checkout>/.venv/bin/python scripts/refresh/<script>.py`); the
-scripts resolve `REPO_ROOT` from their own location, so they still read and
-write the worktree's `data/`.
+perfectly well, which reads like a code fault and is not one. Put the main
+checkout's venv first on `PATH` and run the target
+(`PATH=<main-checkout>/.venv/bin:$PATH pnpm run refresh:<x>`): `record.ts`
+starts bare `python3`, and the scripts resolve `REPO_ROOT` from their own
+location, so they still read and write the worktree's `data/`. Running the
+script directly writes no record, so the build then stops on that pull.
 
 ### Per-script targets
 
@@ -91,11 +95,13 @@ write the worktree's `data/`.
 | `refresh:simbad` | `refresh-simbad-sample.py` | `data/simbad/simbad_sample.tsv` | Stratified random 50k SIMBAD sample (validation corpus). |
 | `refresh:simbad-values` | `refresh-simbad-values.py` | `data/simbad/simbad_values.tsv` | Bibcoded rv / parallax / PM / coordinates + B/V fluxes for the [§ 5](/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers) value cohort — the manifest rows a SIMBAD value tier can reach. Cohort predicate and coverage: [The values pull](/data/simbad/README.md#the-values-pull). The cohort is manifest rows less those `gaia_dr3_astrometry_catalog.tsv` already completes, and `build:membership` reads that same table, so it runs AFTER `refresh:gaia-astrometry-catalog` and the `build:membership` that follows it. |
 | `refresh:simbad-tyc-hd` | `refresh-simbad-tyc-hd.py` | `data/simbad/simbad_tyc_hd.tsv` | SIMBAD's own HD identification per Tycho-2 entry, keyed on TYC — the witness independent of IV/25 that a close pair's crossed HD cells need ([The TYC → HD pull](/data/simbad/README.md#the-tyc--hd-pull)). Request set is `refresh_lib.read_mentioned_tycs` — IV/25's Tycho ids union the manifest's — shared with `refresh:tycho2` rather than restated, so both cover the same entries by construction. Composes the `simbad/` plumbing and states no ADQL of its own. |
+| `refresh:edenhofer2024-main` / `-2kpc` | `refresh-edenhofer2024-{main,2kpc}.py` | `data/dust/edenhofer2024-{main,2kpc}.json` | The [Edenhofer 2024](/data/papers/index.md#edenhofer2024) dust map's two variants into `dustmaps`' cache, each recorded as a committed identity file the bakes read — [The Edenhofer 2024 pulls](/scripts/dust/README.md#the-edenhofer-2024-pulls). |
 | `validate:simbad` | `scripts/catalog/validate/validate-simbad-sample.ts` | (report only) | Tier C — cross-check `public/catalog.bin` against the committed SIMBAD sample. The build-time subset of the same check is `distance-regression-check.ts`, gated on `build-distance-outliers-expected.json`. |
 
-`refresh-simbad-sptype.py`, `refresh-simbad-wds-xids.py`, and
-`refresh-msc.py` don't yet have dedicated pnpm targets — invoke
-directly with `python3 scripts/refresh/<script>.py`. The SIMBAD
+`refresh:simbad-sptype`, `refresh:simbad-wds-xids` and `refresh:msc` run
+`refresh-simbad-sptype.py`, `refresh-simbad-wds-xids.py` and
+`refresh-msc.py` (outputs `data/simbad/simbad_sptype.tsv`,
+`data/simbad/simbad_wds_xids.tsv`, `data/msc/msc_*.tsv`). The SIMBAD
 scripts share `scripts/refresh/simbad/` plumbing (`specs.py`,
 `inputs.py`, `request.py`, `query.py`, `union.py`, `coverage.py`,
 `tsv.py`) so adding new SIMBAD-anchored pulls reuses the entire stack —
@@ -140,8 +146,10 @@ construction
 **A rebased request set does not rewrite its output.** The rebase changes
 what the *next* run asks for; the committed TSV keeps whatever the previous
 run pulled until that run happens — the same terms as `radial_velocity`
-above. Editing `refresh_lib.py` or a `simbad/*.py` module invalidates
-`is_up_to_date`, so the next invocation re-pulls rather than skips.
+above. A rebase that changes the keys a pull asks under changes its
+`--describe` request, so the pull's `data/stamps/` record reads stale and the
+build stops naming its refresh; a plumbing edit alone does not
+([Freshness](../pipeline/README.md#freshness--one-mechanism)).
 
 [Bailer-Jones 2021](/data/papers/index.md#bailerjones2021) and Apsis
 add a second, magnitude-bounded leg on top of that request —
@@ -283,14 +291,16 @@ it the `astroquery` dependency.
 
 A `TapClient` moves whichever backend answered to the front, so a mirror
 that is down costs its retry schedule (about 5 min of connect timeouts)
-once per run, not once per batch.
+once per run, not once per batch. It reports each answering backend through
+`build_stamp.report_service`, and `client.services` is its declared service
+list, the one a pull's `--describe` states.
 
 `TapClient` takes `backends=` as a required argument — there is no
 default list, because which service can serve a query is a property of
 the table. CDS VizieR doesn't host `gaiadr3.*`, so an ESA→CDS fallback
 would fail with a misleading "table not found";
-`refresh-hipparcos2.py` goes the other way and passes
-`backends=[cds_backend()]` because `I/311/hip2` is VizieR-only. SIMBAD
+`refresh-hipparcos2.py` goes the other way and uses
+`cds_client()` (CDS alone) because `I/311/hip2` is VizieR-only. SIMBAD
 gets `simbad_client()` for its divergent dialect — CDS primary, the
 Harvard CfA mirror as fallback, both serving the same database and oids.
 Check ESA's
@@ -358,9 +368,8 @@ spot-check rows.
 
 `TSV_COLUMNS` there is the one place the schema is stated, so **a column
 added to it lands in both scopes** — but only in whichever output is
-actually re-pulled. Editing the module also invalidates both outputs'
-`is_up_to_date` check (it folds this file's mtime), so the next refresh of
-either scope re-pulls rather than skips.
+actually re-pulled. The column list is part of both scopes' query, so an
+added column stales both records and the build names both refreshes.
 
 Both scopes carry `radial_velocity` and `radial_velocity_error`. The catalog
 scope's rv cascade reads them, and `parseGaiaAstrometryCatalogTsv` requires

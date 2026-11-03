@@ -15,7 +15,7 @@ interface TestEntry {
 }
 
 /** Assemble a CSUR v2 buffer from sid-keyed meshes (mirrors the writer
- *  in scripts/cloud-surfaces/build-cloud-surfaces.py). */
+ *  in scripts/cloud-surfaces/trace_surfaces.py). */
 function makeBuffer(entries: TestEntry[], version = 2): ArrayBuffer {
   const blobBytes = entries.reduce(
     (a, e) => a + e.positions.length * 4 + e.indices.length * 4 + e.brick.data.length, 0);

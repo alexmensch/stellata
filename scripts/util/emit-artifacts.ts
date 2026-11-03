@@ -182,7 +182,19 @@ export async function emitEach<K extends string>(
   }
 }
 
-export function runStep(main: () => void | Promise<void>): void {
+/** A manual step's `--describe` answer: its query, the services it may ask,
+ *  and the upstream release, with no network call (`pipeline/freshness.ts`). */
+export interface PullDescription {
+  readonly query: string;
+  readonly services: readonly string[];
+  readonly release?: string;
+}
+
+export function runStep(main: () => void | Promise<void>, describe?: () => PullDescription): void {
+  if (describe && process.argv.includes('--describe')) {
+    console.log(JSON.stringify(describe()));
+    return;
+  }
   Promise.resolve().then(main).catch((err: unknown) => {
     console.error(err instanceof EmissionRefused ? err.message : err);
     process.exit(1);

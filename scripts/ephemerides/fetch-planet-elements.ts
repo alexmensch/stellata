@@ -2,9 +2,11 @@
 // grid, verifies the reconstruction off-grid, and writes
 // data/ephemerides/{id}.json. See README.md#cadence.
 
-import { emitEach, runStep, type Check } from '../util/emit-artifacts';
+import { emitEach, runStep, type Check, type PullDescription } from '../util/emit-artifacts';
 import { roundSignificant, serializeRowFile } from '../util/frozen-json';
-import { fetchHorizonsText, rangeChunks } from '../util/horizons-response';
+import {
+  fetchHorizonsText, HORIZONS_API, HORIZONS_SERVICE, rangeChunks,
+} from '../util/horizons-response';
 import {
   EXPECTED_FRAME_ECLIPTIC,
   parseHorizonsVectors,
@@ -26,6 +28,8 @@ import { unwrapMeanLongitude } from './element-unwrap-pure';
 import {
   ELEMENT_TARGETS,
   POSITION_TOLERANCE_AU,
+  TABLE_JD_END,
+  TABLE_JD_START,
   tableEpochs,
   type PlanetElementTarget,
 } from '../../src/catalog-format/ephemerides/planet-element-roster';
@@ -224,4 +228,18 @@ async function main(): Promise<void> {
   });
 }
 
-runStep(main);
+function describe(): PullDescription {
+  const windowQuery = (params: URLSearchParams): string => `${HORIZONS_API}?${params}`;
+  return {
+    query: ELEMENT_TARGETS.flatMap((t) => {
+      const intervals = Math.round((TABLE_JD_END - TABLE_JD_START) / t.stepDays);
+      return [
+        windowQuery(elementsParams(t, TABLE_JD_START, TABLE_JD_END, intervals)),
+        windowQuery(vectorsParams(t, TABLE_JD_START, TABLE_JD_END, intervals)),
+      ];
+    }).join('\n'),
+    services: [HORIZONS_SERVICE],
+  };
+}
+
+runStep(main, describe);

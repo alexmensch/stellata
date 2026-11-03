@@ -137,6 +137,15 @@ GAIA_LIKE = "Gaia DR3 %"
 GAIA_PREFIX_LEN = len("Gaia DR3 ")
 
 
+STAR_OTYPES_ADQL = "SELECT otype FROM otypedef WHERE path LIKE '*%'"
+IDENT_ADQL = (
+    "SELECT oidref, id FROM ident "
+    "WHERE oidref IN ({inlist}) "
+    f"AND (id LIKE '{HIP_LIKE}' OR id LIKE '{GAIA_LIKE}') "
+    "ORDER BY oidref, id"
+)
+
+
 def fetch_star_otype_inlist(client: rl.TapClient) -> str:
     """Enumerate all `otype` codes whose otypedef.path begins with `*`,
     return a comma-joined quoted IN-clause string.
@@ -147,7 +156,7 @@ def fetch_star_otype_inlist(client: rl.TapClient) -> str:
     as an explicit IN clause. The set is ~122 codes / ~720 chars — well
     under any TAP body-size limit.
     """
-    table = client.run("SELECT otype FROM otypedef WHERE path LIKE '*%'")
+    table = client.run(STAR_OTYPES_ADQL)
     codes = sorted(str(row["otype"]) for row in table)
     if not codes:
         raise SystemExit(
@@ -157,17 +166,10 @@ def fetch_star_otype_inlist(client: rl.TapClient) -> str:
     return ",".join(f"'{c}'" for c in codes)
 
 
-def fetch_bin_candidates(
-    client: rl.TapClient,
-    bin_: Bin,
-    star_otypes_inlist: str,
-) -> Any:
-    """Return the astropy Table of candidate rows for one bin — every
-    basic+allfluxes row that matches the bin's V-mag range and is in the
-    star-branch of otypedef, optionally pre-filtered server-side by
-    MOD(b.oid, mod_K). Returned shape lets the caller schema-validate
-    before iterating into a Python list for `random.Random.sample`.
-    """
+def bin_candidates_adql(bin_: Bin, star_otypes_inlist: str) -> str:
+    """Every basic+allfluxes row that matches the bin's V-mag range and is
+    in the star-branch of otypedef, optionally pre-filtered server-side by
+    MOD(b.oid, mod_K)."""
     conds = [
         'f."V" IS NOT NULL',
         f'f."V" < {bin_.v_max}',
@@ -182,7 +184,7 @@ def fetch_bin_candidates(
     # Aliasing every selected column lets ORDER BY reference the alias —
     # SIMBAD's ADQL parser rejects qualified names (both `f."V"` and
     # `b.oid`) inside ORDER BY ("Encountered '.'" — live probe 2026-05-18).
-    query = (
+    return (
         "SELECT b.oid AS oid, b.main_id AS main_id, "
         "b.ra AS ra, b.dec AS dec, "
         "b.plx_value AS plx_value, b.plx_err AS plx_err, "
@@ -194,7 +196,16 @@ def fetch_bin_candidates(
         f"WHERE {where} "
         "ORDER BY oid"
     )
-    return client.run(query)
+
+
+def fetch_bin_candidates(
+    client: rl.TapClient,
+    bin_: Bin,
+    star_otypes_inlist: str,
+) -> Any:
+    """The astropy Table of one bin's candidate rows, so the caller can
+    schema-validate before iterating into a list for `random.Random.sample`."""
+    return client.run(bin_candidates_adql(bin_, star_otypes_inlist))
 
 
 def select_sample(rows: list[Any], target: int, rng: random.Random) -> list[Any]:
@@ -220,12 +231,7 @@ def fetch_ident_for_oids(
         batch = oids[offset : offset + IDENT_BATCH]
         inlist = ",".join(str(o) for o in batch)
         t0 = time.time()
-        table = client.run(
-            "SELECT oidref, id FROM ident "
-            f"WHERE oidref IN ({inlist}) "
-            f"AND (id LIKE '{HIP_LIKE}' OR id LIKE '{GAIA_LIKE}') "
-            "ORDER BY oidref, id"
-        )
+        table = client.run(IDENT_ADQL.format(inlist=inlist))
         if batch_idx == 1:
             rl.validate_schema(table, IDENT_SCHEMA, label="SIMBAD ident")
         for row in table:
@@ -309,11 +315,6 @@ def build_output_row(
 
 
 def main() -> None:
-    force = "--force" in sys.argv
-    if not force and rl.is_up_to_date(OUT, [Path(__file__)]):
-        print(f"{OUT.relative_to(ROOT)} up to date — skipping (use --force to rebuild)")
-        return
-
     client = rl.simbad_client()
 
     print("enumerating SIMBAD star otype codes from otypedef…")
@@ -377,5 +378,17 @@ def main() -> None:
     )
 
 
+def describe() -> dict:
+    """Each bin's candidate query and its sampling target under SEED: a new
+    seed or target draws a different sample, so it stales the pull."""
+    bins = [
+        f"{bin_candidates_adql(b, '{otypes}')} -- sample {b.target} at seed {SEED}"
+        for b in BINS
+    ]
+    return rl.description(
+        "\n".join([STAR_OTYPES_ADQL, *bins, IDENT_ADQL]), rl.simbad_client().services,
+    )
+
+
 if __name__ == "__main__":
-    main()
+    rl.pull_main(main, describe)

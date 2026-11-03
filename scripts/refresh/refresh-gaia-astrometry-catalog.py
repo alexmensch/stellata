@@ -13,6 +13,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "util"))
 
 import gaia_astrometry_pull as gap  # noqa: E402
+import refresh_lib as rl  # noqa: E402
 from paths import REPO_ROOT  # noqa: E402
 
 ROOT = REPO_ROOT
@@ -65,11 +66,9 @@ def main() -> None:
         out=OUT,
         spot_checks=SPOT_CHECKS,
         script_name="refresh-gaia-astrometry-catalog",
-        script_path=Path(__file__).resolve(),
         root=ROOT,
-        force="--force" in sys.argv,
     )
 
 
 if __name__ == "__main__":
-    main()
+    rl.pull_main(main, gap.describe)

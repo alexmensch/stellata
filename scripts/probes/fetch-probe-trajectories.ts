@@ -2,7 +2,8 @@
 // adaptive grid and writes data/probes/{id}.json. Manual + infrequent
 // (`pnpm run fetch:probes`); README.md#adaptive-grid.
 
-import { emitEach, runStep } from '../util/emit-artifacts';
+import { emitEach, runStep, type PullDescription } from '../util/emit-artifacts';
+import { HORIZONS_API, HORIZONS_SERVICE } from '../util/horizons-response';
 import { roundSignificant, serializeRowFile } from '../util/frozen-json';
 
 import {
@@ -22,6 +23,7 @@ import {
   MAX_RANGE_ROWS,
   fetchSpanEndpoints,
   fetchVectorRows,
+  vectorParams,
 } from './horizons-client';
 import type { HorizonsVectorsHeader } from './horizons-vectors';
 import { PROBE_MISSIONS, type ProbeMission } from '../../src/catalog-format/probes/probe-roster';
@@ -272,4 +274,15 @@ async function main(): Promise<void> {
   }));
 }
 
-runStep(main);
+function describe(): PullDescription {
+  return {
+    query: JSON.stringify({
+      queries: PROBE_MISSIONS.map((p) => `${HORIZONS_API}?${vectorParams(p.horizonsId)}`),
+      roster: PROBE_MISSIONS,
+      stop: STOP_TIME,
+    }),
+    services: [HORIZONS_SERVICE],
+  };
+}
+
+runStep(main, describe);

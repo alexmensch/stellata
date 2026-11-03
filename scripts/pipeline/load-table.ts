@@ -6,6 +6,7 @@ import { dirname, resolve } from 'node:path';
 import type { DeclaredOutputs } from '../util/emit-artifacts';
 import { entryMetafile } from '../util/import-closure';
 import { REPO_ROOT } from '../util/paths';
+import { treeOf, treeRoots, type Tree } from '../util/source-trees';
 import { readManualRecord } from './freshness';
 import { pipelineTree, type PipelineTree } from './pipeline-tree';
 import {
@@ -14,7 +15,10 @@ import {
 } from './step-table-pure';
 
 const OUTPUTS_MODULE_LEAVES = new Set(['scripts/util/emit-artifacts.ts', 'scripts/util/paths.ts']);
-const isWalkable = (module: string): boolean => /-(pure|outputs|source|tsv)\.ts$/.test(module);
+const SHARED_TREES: ReadonlySet<Tree> = new Set(['catalog-format', 'astro-core']);
+const isWalkable = (module: string): boolean => /-(pure|outputs|source|tsv)\.ts$/.test(module)
+  || SHARED_TREES.has(treeOf(module));
+export const WALKABLE = `util/emit-artifacts, util/paths, ${treeRoots(SHARED_TREES).join(', ')} and *-pure, *-outputs, *-source and *-tsv modules`;
 
 export type Loaded =
   | { readonly kind: 'loaded'; readonly steps: ReadonlyMap<string, ResolvedStep>; readonly graph: StepGraph }
@@ -44,7 +48,7 @@ async function impureOutputsModules(refs: readonly OutputsRef[], tree: PipelineT
       if (seen.has(at) || OUTPUTS_MODULE_LEAVES.has(at)) continue;
       seen.add(at);
       if (isWalkable(at)) stack.push(...internal(at));
-      else problems.push(`outputs module ${module} reaches ${at}, beyond util/emit-artifacts, util/paths and *-pure, *-outputs, *-source and *-tsv modules`);
+      else problems.push(`outputs module ${module} reaches ${at}, beyond ${WALKABLE}`);
     }
   }
   return problems;
@@ -55,7 +59,10 @@ function isDeclaredOutputs(value: unknown): value is DeclaredOutputs {
 }
 
 async function outputClaims(step: StepEntry, tree: PipelineTree): Promise<OutputClaims> {
-  if (step.kind !== 'build' || step.language !== 'ts') return { files: step.outputs.map(tree.abs), families: [] };
+  if (step.language === 'python') {
+    const families = step.kind === 'build' ? [] : (step.families ?? []).map((f) => ({ ...f, dir: tree.abs(f.dir) }));
+    return { files: step.outputs.map(tree.abs), families };
+  }
   const ref = step.outputs;
   const declared = (await import(tree.abs(ref.module)) as Record<string, unknown>)[ref.name];
   if (!isDeclaredOutputs(declared)) throw new Error(`${ref.module} exports no declareOutputs constant ${ref.name}`);
@@ -88,7 +95,7 @@ async function readsOf(step: StepEntry, tree: PipelineTree, options: LoadOptions
 
 export async function loadTable(table: StepTable, options: LoadOptions): Promise<Loaded> {
   const tree = pipelineTree(options.root);
-  const refs = table.steps.flatMap((s) => (s.kind === 'build' && s.language === 'ts' ? [s.outputs] : []));
+  const refs = table.steps.flatMap((s) => (s.language === 'ts' ? [s.outputs] : []));
   const impure = await impureOutputsModules(refs, tree);
   if (impure.length > 0) return { kind: 'rejected', problems: impure };
 

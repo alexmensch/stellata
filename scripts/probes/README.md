@@ -27,13 +27,18 @@ wire schema and the public file names are shared with the viewer:
   diagnostic**, and a `TLIST` at an SPK's last instant is refused
   outright even though a range query stopping there is accepted.
 - `fetch-probe-trajectories.ts` — `pnpm run fetch:probes`, optionally
-  narrowed to one or more probe ids (`pnpm run fetch:probes voyager1`).
+  narrowed to one or more probe ids (`pnpm run fetch:probes voyager1`;
+  a narrowed run writes no record, so the pull reads stale until a plain
+  run — [Recording a manual step](/scripts/pipeline/README.md#recording-a-manual-step--recordts)).
   Manual and infrequent; **not** in the build chain ([Frozen external data](/data/README.md#frozen-external-data)).
   Needs network. Writes
   `data/probes/{id}.json` through `emitEach` (`../util/README.md`): each
   probe lands as soon as it verifies, so one that fails to fetch or verify
   is reported and leaves only its own file as it was, and the run exits
-  non-zero naming it.
+  non-zero naming it. `--describe` prints each probe's VECTORS parameters
+  (`horizons-client.ts`' `vectorParams`, the epochs left out), the roster
+  and the stop time: the roster's mission facts are written into each file,
+  so an edit to any of them stales the pull's `data/stamps/` record.
 - `sync-probes.ts` (`probes-mirror-source.ts` declares the folder) — mirrors the committed JSONs
   to `public/probes/` (gitignored) via `scripts/util/mirror-to-public.ts`
   on every `pnpm run dev` / `build`, so CI and deploy never touch the

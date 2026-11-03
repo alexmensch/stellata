@@ -3,9 +3,11 @@
 One model of the build pipeline: a typed table of steps, a runner that orders
 and gates them, and the content stamp as the only freshness test. This README
 is the design; [Files](#files) maps it onto the code. `steps.ts` holds the
-catalogue chain's `build` steps (`steps.test.ts` pins their order and edges);
-every other step still runs through its own `package.json` target until it
-moves onto the table.
+catalogue chain's `build` steps (`steps.test.ts` pins their order and edges)
+and every pull and bake (`MANUAL_STEPS`, each run by hand through
+`record.ts`, the two Horizons fetchers among them); every other `build` step
+still runs through its own `package.json` target until it moves onto the
+table.
 
 ## The model
 
@@ -35,7 +37,7 @@ Vite (`build:client`, `build:site`) is not a step. `pnpm run build` and
 | Kind | Runner runs it? | Record | Stale when | Today |
 |---|---|---|---|---|
 | `build` | yes | `build/stamps/<step>.json` (gitignored) | an input or an output hash moved | the catalogue chain, the four generators, binaries, clouds, local-group, the mirrors |
-| `pull` | never | `data/stamps/<step>.json` (committed) | its request rows, a data input, its query or an output hash moved | every `refresh:*`, both `fetch:*`, the two `dustmaps` datasets |
+| `pull` | never | `data/stamps/<step>.json` (committed) | its request rows, a data input, its query or an output hash moved | every `refresh:*` (the two Edenhofer variants among them); both `fetch:*` |
 | `bake` | never | `data/stamps/<step>.json` (committed) | an input or an output hash moved | dust, local-bubble, cloud-surfaces, textures, icons, og |
 
 A step the runner never runs is a **manual** step. When one is stale, the
@@ -55,16 +57,18 @@ That read is the registry loop below.
 
 ## The step table — `steps.ts`
 
-One entry per step: `name`, `kind`, `entry` (the file the step runs) and,
-for a manual step, `command` (what the stop message prints). A command is
-always a `package.json` script, checked by a test, so the three pulls with no
-target today (`refresh-simbad-sptype.py`, `refresh-simbad-wds-xids.py`,
-`refresh-msc.py`) gain one. `package.json`
-keeps one-line targets that call the runner (`build:catalog` →
+One entry per step: `name`, `kind`, `language`, `entry` (the file the step
+runs) and its outputs. A manual step is named for its `package.json` script,
+which is what the stop message prints and what runs it by hand, so the three
+pulls with no target before (`refresh-simbad-sptype.py`,
+`refresh-simbad-wds-xids.py`, `refresh-msc.py`) gain one. A TypeScript manual
+step (the two Horizons fetchers) names its `declareOutputs` constant as a
+TypeScript build does; a Python one lists its files, plus any families.
+`package.json` keeps one-line targets that call the runner (`build:catalog` →
 `run.ts build:catalog`, `build:stamped` and `build:seed-steps` → `run.ts
-data`, every build step on the table) and never names a table step's entry
-file;
-`util/step-inputs.ts`'s `stepEntries` reads it from `steps.ts`.
+data`, every build step on the table) or `record.ts` (every manual step), and
+never names a table step's entry file; `util/step-inputs.ts`'s `stepEntries`
+reads it from `steps.ts`.
 
 What each step **declares** and what the runner **derives**:
 
@@ -115,7 +119,11 @@ snapshot the step rewrites under `--update-snapshots` is named in its own
 table field, never an output and never an ordering edge. After a Python step runs,
 the runner fails the run when a recorded write is not a declared output, or
 when a recorded input that another step declares as output is not covered by
-`after` (directly or transitively). The two binaries steps are the only
+`after` (directly or transitively). A pull named in `after` whose edge closes
+a loop is a kept loop (below) and covers its own outputs only, never a step
+reached through it. The converse fails it too: an `after` entry none of
+whose outputs the run read, listed or probed is a false ordering edge
+(Reachable must mean read, above). The two binaries steps are the only
 Python `build` steps on the runner; their TypeScript ports retire both
 declarations.
 
@@ -130,12 +138,13 @@ The runner rejects the table, before running anything, when:
 - a `build` step's declared output is a symlink on disk (the "never symlink
   `public/`" rule becomes this check);
 - a step's outputs module imports anything beyond `util/emit-artifacts`,
-  `util/paths` and `*-pure` modules, checked over its import closure. That is
-  what makes it side-effect-free to import, which no check can test directly.
-  The walk passes through `*-outputs`, `*-source` and `*-tsv` modules too,
-  checking their imports in turn: they are the only modules
-  `tests/source-declarations.test.ts` lets spell a `data/` path, so a path an
-  outputs module needs lives in one of them.
+  `util/paths`, `*-pure` modules and the two boundary trees
+  (`src/catalog-format/**`, `src/astro-core/**`, as `util/source-trees.ts` roots them), checked over its import
+  closure. That is what makes it side-effect-free to import, which no check
+  can test directly. The walk passes through `*-outputs`, `*-source` and
+  `*-tsv` modules too, checking their imports in turn: they are the only
+  modules `tests/source-declarations.test.ts` lets spell a `data/` path, so a
+  path an outputs module needs lives in one of them.
 
 A manual step sits in the derived order like any other: it is checked once
 the `build` steps that write its inputs have run, so a pull is judged against
@@ -199,24 +208,26 @@ so the pull is judged against the manifest this run rebuilt, and is never
 hashed itself.
 
 A bake follows the same rule. `cloud-surfaces` reads `public/clouds.json`
-only for the geometry it traces (positions and extents), so its record holds
-the hash of that projection: an SID or name change in `clouds.json` leaves it
-fresh, a geometry change stops the build. The bake record is the only owner
-of that fact.
+only for the geometry it traces (positions and extents) and the SID it keys
+each surface by, so its record holds the hash of that projection: a name
+change in `clouds.json` leaves it fresh, a geometry or SID change stops the
+build. The bake record is the only owner of that fact.
 
 An **external dataset** a baker reads from outside the repo is a pull of its
-own, whose query is the dataset's identity and version: the Edenhofer 2023
-dust map behind `dust` and the Edenhofer 2024 posterior behind
-`cloud-surfaces`, both fetched by the `dustmaps` library into its own cache.
+own, whose query is the dataset's identity and version: the two variants of
+the [Edenhofer 2024](/data/papers/index.md#edenhofer2024) map (one Zenodo
+record), `main` behind `dust` and both behind `cloud-surfaces`, fetched by
+the `dustmaps` library into its own cache
+([The Edenhofer 2024 pulls](../dust/README.md#the-edenhofer-2024-pulls)).
 The audit hook records repo files only, so without that pull a new map
 version would never stale either bake.
 The pull's code is not an input: a refactor of the plumbing, or its port to
 TypeScript, does not make a pull stale; a changed column list or `WHERE` does.
 Each pull states its query as data, so the runner can hash the current query
-without a network call: a TypeScript pull exports it, and a Python pull prints
-it under `--describe`. The describe path imports the standard library only,
-since every build runs it and a worktree has no refresh virtualenv; a test
-runs each pull's `--describe` under `python3 -I -S`.
+without a network call: every pull prints it under `--describe` (a
+TypeScript pull through `runStep(main, describe)`). A Python pull's describe
+path imports the standard library only, since every build runs it and a
+worktree has no refresh virtualenv (`steps.test.ts`, [Files](#files)).
 
 Manual-step stamps are committed because frozen data needs a committed record
 of what produced it; `build/` is gitignored. One file per step, since several
@@ -237,7 +248,8 @@ lands with it; `run.ts` rejects it until then.
    - Any other `build` step: take its lock, then check its stamp, then run or
      skip, then release. Taking the lock before the check is what lets a run
      that waited see the fresh stamp and skip.
-   - A manual step is checked, never run.
+   - A manual step is checked, never run. A check whose `--describe`
+     cannot run (the file it projects is missing) fails the step.
 3. Exit non-zero if any manual step was stale or any step failed, naming each
    stale step's command and each failure.
 
@@ -269,6 +281,28 @@ lands with it; `run.ts` rejects it until then.
 - **CI cache key**: the digest of the stage's step input sets, the same
   closure the stamps hash. `keyedPaths` stays CI's own filter over it.
 
+## Recording a manual step — `record.ts`
+
+`record.ts <step> [--force] [args…]` is every pull's and bake's
+`package.json` target, so a hand re-run is what keeps its record fresh. It
+takes the step's lock, and the shared locks on the steps writing its inputs,
+as the runner does; skips a step whose record is fresh unless `--force`;
+describes it; runs it (a Python step under `build_stamp.record_run`, a
+TypeScript one through `tsx`, its inputs derived as a TypeScript build's
+are); then writes `data/stamps/<step>.json` with `writeManualRecord`. Extra
+arguments pass through to the step (`--only <stem>`, `--dry-run`,
+`--synthetic`), which then always runs but writes no record: a partial or
+non-standard run cannot vouch for the whole step, so whatever it moved
+reads stale until a plain run.
+
+The record counts as read every file the run read, listed or probed, except
+its own outputs, a file named in `requestFrom` (it counts through the
+request), an ignored file (a `.ckpt` batch cache, the dust bake's
+`.voxels.npy`: no other checkout has one), and, for a pull, code. An ignored
+write is scratch; any other write the step does not declare fails the run
+and leaves the record as it was. `answeredBy` is the run record's services,
+in first-answer order; `release` is the description's.
+
 ## Loops through committed files
 
 Ten places where a file feeds, directly or through other files, the step
@@ -279,8 +313,8 @@ that writes it. Measured 2026-10-27.
 | manifest → `build:wgsn` → WGSN tables → `build:membership` | Broken. The proper-name residual gate and the manifest's naming counts run in the membership gate test over the committed tables; `build:wgsn` reads no manifest. |
 | manifest → astrometry request → astrometry pull → `build:membership` | Broken. The request reads `binding-review-dispositions.tsv`'s `keep_source_id`s in place of the manifest, the only ids the manifest held beyond the candidate legs. Coverage holds by measurement, so the membership gate test asserts every manifest `gaia_source_id` is in the request (a test may read the manifest; a step may not). |
 | … → astrometry pull → `build:classic-ids` → overlay → `build:membership` | Broken by the row above. |
-| manifest → `refresh:tycho2` → Tycho-2 → `build:membership` | Broken. Every manifest TYC is a spine-after-corrections or IV/25 TYC, and the spine adds none beyond the manifest and IV/25; the request keys on those, written as a committed TYC request file by a TypeScript `build` step (the corrected spine is computed only in TypeScript, `applySpineCorrections`) and read by both `refresh:tycho2` and `refresh:simbad-tyc-hd`. Request byte-identical. The pull's own check that every manifest TYC was pulled moves to the membership gate test, so the pull opens no manifest. |
-| `simbad_sptype` → `build:binaries` → `multiples.tsv` → `build:membership` → manifest → `simbad_sptype` | Broken. Binaries reads only the WDS leg, which the manifest never moves; that leg becomes its own pull and file. |
+| manifest → `refresh:tycho2` → Tycho-2 → `build:membership` | Kept until broken: both pulls still key on the manifest. The break: every manifest TYC is a spine-after-corrections or IV/25 TYC, and the spine adds none beyond the manifest and IV/25; the request keys on those, written as a committed TYC request file by a TypeScript `build` step (the corrected spine is computed only in TypeScript, `applySpineCorrections`) and read by both `refresh:tycho2` and `refresh:simbad-tyc-hd`. Request byte-identical. The pull's own check that every manifest TYC was pulled moves to the membership gate test, so the pull opens no manifest. |
+| `simbad_sptype` → `build:binaries` → `multiples.tsv` → `build:membership` → manifest → `simbad_sptype` | Kept until broken: binaries still reads `simbad_sptype.tsv`, so `build:binaries` names `refresh:simbad-sptype` in `after`. The break: binaries reads only the WDS leg, which the manifest never moves, once that leg is its own pull and file. |
 | manifest ↔ `simbad_sptype` (the derivation's fourth binding source) | Kept. The request genuinely depends on the binding outcome. The stale-pull stop is its convergence check; re-pulling reopens the review queue, as `refresh/README.md` says. The same file also reaches the astrometry request (its derivation candidates), so manifest → `simbad_sptype` → request → astrometry pull → `build:membership` is a second path through this loop, covered by the same stop. |
 | `build:binaries` ↔ its own astrometry request | Kept, same check. The request keeps rejected candidates, so it grows rather than oscillates. |
 | `build:catalog` reads the SID ledger and events it appends to | Kept: an append-only file whose committed prefix the step only reads; its stamp records the post-append hash, so the next run rebuilds once and appends nothing. |
@@ -339,7 +373,8 @@ Hand-kept lists become derivations over the table:
   step-name order and holds them until its stdin closes, so the locks go
   when the run exits however it exits. A holder that dies while its step
   runs has lost the locks with it, so the runner fails that step. `lockSpecs`
-  is that order. A lock
+  is that order; `holdStepLocks` takes a step's locks within a loaded table,
+  for the runner and `record.ts` alike. A lock
   file is `build/locks/<step>`, `:` written `-` (`util/build-stamp.ts`'s
   `stepFileName`, which names the step's stamp too).
 - `load-table.ts` — `loadTable`: checks every TypeScript outputs module's
@@ -348,17 +383,21 @@ Hand-kept lists become derivations over the table:
   each manual step's record for its inputs, then `deriveGraph`. A
   TypeScript step's inputs come from the injected `deriveInputs`;
   `run.ts` passes `util/step-inputs.ts`'s `entryInputPaths`.
-- `freshness.ts` — the one stamp test per kind: a TypeScript build's inputs
-  derived now, a Python build's recorded inputs, listings and probes
-  re-hashed, a manual step's committed record plus, for a pull, its
-  `--describe` (`describePull`, run under `python3 -I -S`) hashed as
-  `pullQueryHash` (query text and service list) and `requestHash` (the
-  derived request list). Every kind is also stale when a recorded output
-  moved or a declared output is missing from the record. Writers of a pull's
-  record use the same two hash functions.
+- `freshness.ts` (+ test) — the one stamp test per kind: a TypeScript
+  build's inputs derived now, a Python build's recorded inputs, listings and
+  probes re-hashed, a manual step's committed record plus, for a step that
+  describes itself (every pull, and a bake that reads a projection), its
+  `--describe` (`describeStep`: `python3 -I -S`, or `tsx` for a TypeScript
+  step), parsed into a `Description` and hashed as `pullQueryHash` (query text
+  and service list) and `requestHash` (the derived request list). Every kind
+  is also stale when a recorded output moved or a declared output is missing
+  from the record. `writeManualRecord` is `readManualRecord`'s encoder, the
+  one writer of `data/stamps/`.
 - `python-run-pure.ts` (tested through `runner.test.ts`) — `recordProblems`: a
   write outside the declared outputs and snapshots, or a read, listing or
-  probe of another step's output with no path from that step in the graph.
+  probe of another step's output with no path from that step in the graph
+  and no kept loop from it straight to the reader, or an `after` entry the
+  run touched none of the outputs of.
 - `runner.ts` (+ test) — `runSteps`: the walk of [The runner](#the-runner--runts)
   over a loaded table, the `Verdict` union (`fresh`, `built`, `stale`,
   `failed`, `skipped`) matched exhaustively, and the exit status. The runner
@@ -369,7 +408,22 @@ Hand-kept lists become derivations over the table:
   stamp keys are relative to it, and a step's build stamp (through
   `stampPath`), manual record, run record and lock folder sit under it.
   `run.ts` passes the repo root; tests pass a temporary folder.
-- `run.ts` / `steps.ts` — the command line and the table it runs.
+- `run.ts` / `steps.ts` (+ test) — the command line and the table it runs.
+  `manual-step-outputs.ts` holds `MANUAL_STEPS`, every pull and bake with
+  the files it writes, as an outputs module: the one place outside a
+  declaration a `data/` path may be spelled.
+  The test holds the table to the load-time rules, every manual step's
+  `package.json` target to `tsx scripts/pipeline/record.ts <name>`, and every
+  pull's and describing bake's `--describe` to running (Python under
+  `python3 -I -S`, TypeScript through `tsx`; skipped while the manifest is
+  an unsmudged LFS pointer, or before `build:clouds` has written
+  `public/clouds.json`).
+- `record.ts` / `record-step.ts` (+ test) — [Recording a manual
+  step](#recording-a-manual-step--recordts): `recordStep` and the
+  `RecordOutcome` union (`fresh`, `recorded`, `failed`).
+- `processes.ts` — how the runner and `record.ts` start a step: `tsx`, or
+  `runRecorded`, a Python step under the recorder, whose run record is read
+  only when it exits 0.
 
 ## Design pass
 
@@ -385,9 +439,10 @@ Hand-kept lists become derivations over the table:
   pass and its outputs land (`emitArtifacts`); the lock is taken before the
   stamp is read.
 - **Q6, the force.** One table absorbs 3 stamped steps, 2 emitters, 6
-  mirrors, 3 CI-only generators and 1 that runs nowhere, 24 pulls (19
-  `refresh:*` targets, 3 untargeted scripts, 2 `fetch:*`; 25 after the
-  `simbad_sptype` split, plus the two `dustmaps` datasets) and 6 bakers.
+  mirrors, 3 CI-only generators and 1 that runs nowhere, 26 pulls (24
+  `refresh:*`, two of them the Edenhofer variants, and 2 `fetch:*`, all in
+  `MANUAL_STEPS`) and 6 bakes; recount with
+  `MANUAL_STEPS.filter((s) => s.kind === 'pull').length`.
   Step kinds exist because two runner behaviours (run it; check it and stop)
   each hold several cases today.
 - **Q7, copies.** The two stamp helpers stay one per language with one JSON

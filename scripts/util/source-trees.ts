@@ -1,5 +1,4 @@
-// Which source tree a repo path belongs to, for the import-boundary tests.
-// See /tests/README.md#pipeline-viewer-boundary.
+// Which source tree a repo path belongs to. See README.md.
 import { sep } from 'node:path';
 
 export type Tree = 'astro-core' | 'catalog-format' | 'viewer' | 'pipeline' | 'tooling' | 'integration' | 'other';

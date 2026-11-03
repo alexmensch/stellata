@@ -14,7 +14,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 import refresh_lib as rl  # noqa: E402
 from paths import REPO_ROOT  # noqa: E402
-from simbad import query, source_files  # noqa: E402
+from simbad import query  # noqa: E402
 from simbad.specs import HD, MAIN_ID, OID, TYC  # noqa: E402
 
 ROOT = REPO_ROOT
@@ -113,20 +113,6 @@ def compose_rows(
 
 
 def main() -> None:
-    force = "--force" in sys.argv
-    sources = [
-        Path(__file__),
-        Path(rl.__file__),
-        rl.TYC2_HD_CROSS_INDEX,
-        rl.MEMBERSHIP_MANIFEST,
-        *source_files(),
-    ]
-    if not force and rl.is_up_to_date(OUT, sources):
-        print(
-            f"{OUT.relative_to(ROOT)} up to date — skipping (use --force to rebuild)"
-        )
-        return
-
     start = time.time()
     tycs = read_tyc_request()
     print(f"request set: {len(tycs):,} Tycho ids (IV/25 union the manifest)")
@@ -169,5 +155,13 @@ def main() -> None:
     )
 
 
+def describe() -> dict:
+    return query.describe_pull(
+        basic=BASIC_COLUMNS, idents=[HD],
+        request=read_tyc_request(),
+        request_from=[rl.MEMBERSHIP_MANIFEST, rl.TYC2_HD_CROSS_INDEX],
+    )
+
+
 if __name__ == "__main__":
-    main()
+    rl.pull_main(main, describe)

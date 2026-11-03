@@ -80,10 +80,16 @@ same thing — single-use helpers stay with their consumer.
   directory it lists (`listing_hash`, over the sorted names; the import
   system's own scans of `sys.path` are not listings), and every file it
   writes — a rename's target, not its temp file, and not a scratch file it
-  deleted — plus each loaded module, nothing under `.venv` or
-  `__pycache__` included, into a JSON record the runner turns
+  deleted — plus each module the step loaded (not those already loaded
+  when the recording began: the recorder's own `run_python_step.py`,
+  `build_stamp.py` and `paths.py`, so editing the recorder stales no
+  step), nothing under `.venv` or `__pycache__` included, into a JSON
+  record the runner turns
   into the step's stamp. An existence check opens nothing, so a step probes
-  through `probe(path)`, which records the answer.
+  through `probe(path)`, which records the answer. `report_service(name)`
+  records which network service answered, once each in first-answer order
+  (`refresh_lib.TapClient` calls it); `record.ts` copies the list into a
+  pull's committed record as `answeredBy`.
 - `import-closure.ts` / `import-closure-pure.ts` (+ test) — a TypeScript
   build's code inputs. `entryClosure(entries)` is every module the given
   entry files import, read from an esbuild metafile (`entryMetafile`, which
@@ -102,6 +108,10 @@ same thing — single-use helpers stay with their consumer.
   clone), and `fileAtMergeBase`, a file as the merge-base holds it — `absent`
   when it is new on the branch, kept apart from `no-merge-base`. The lineage
   header, perf's `gitMeta` and the two merge-base guards read it.
+- `source-trees.ts` — `TREE_ROOTS` and `treeOf`, which tree a repo path
+  belongs to, and `BROWSER_TREES`: the one list both import-boundary tests
+  (`/tests/README.md#pipeline-viewer-boundary`) and the step table's
+  outputs-module walk ([Load-time rules](../pipeline/README.md#load-time-rules)) read.
 - `step-inputs.ts` — `entryInputPaths(entries)`, every file a TypeScript
   step reads: the closure of its entry files, the closure's siblings, and
   every declaration the closure reads (`sources/`); the runner derives each
@@ -174,7 +184,10 @@ same thing — single-use helpers stay with their consumer.
   all have been tried.
   `runStep(main)` is every step's entry point: a refused emission has
   already printed its failed checks, so it exits 1 with one line and no
-  stack; any other error keeps its stack.
+  stack; any other error keeps its stack. A TypeScript pull (the two
+  Horizons fetchers) passes `runStep(main, describe)`, and `--describe`
+  then prints its `PullDescription` instead of running.
+  `horizons-response.ts`' `HORIZONS_SERVICE` is the service both state.
 - `heap-budget.ts` / `heap-budget-pure.ts` (+ test) — `watchHeap(step)`,
   started first thing in a step's `main`, and its `check()`, the step's peak
   live heap against the CI runner's as an `emitArtifacts` check
