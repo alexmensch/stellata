@@ -74,7 +74,8 @@ same thing — single-use helpers stay with their consumer.
   folders it listed (`listingHash`, over the sorted names git does not
   ignore, so a local cache in a listed folder reads the same in every
   checkout) and the paths it probed, which `recordedChanges` re-checks.
-  `ignoredPaths` is the one `git check-ignore` call, `record.ts`'s too.
+  `ignoredPaths` is the one `git check-ignore` call, which `listingHash` and
+  `../pipeline/record-step.ts` both make.
   `record_run` is how the runner runs a Python step
   (`../pipeline/run_python_step.py`): Python's audit hook records, under a
   root, every file the process opens for reading, hashed at its first read
