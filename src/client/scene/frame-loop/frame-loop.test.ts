@@ -4,7 +4,7 @@ import { NO_INSTANCE } from '../../frame/shared-uniforms';
 import { tToJdUt, VirtualClock } from '../../solar-system/time/time';
 import { J2000_JD } from '../../../astro-core/astronomy-constants';
 import type { FrameCtx } from '../scene-layer';
-import { FrameLoop, type FrameLoopDeps } from './frame-loop';
+import { FrameLoop, GPU_FRAMES_IN_FLIGHT, type FrameLoopDeps } from './frame-loop';
 
 interface Knobs {
   render: boolean;
@@ -42,11 +42,15 @@ function harness(overrides: Partial<Knobs> = {}, clock: FrameLoopDeps['clock'] =
   const ctxs: FrameCtx[] = [];
   const reads: Record<string, number> = {};
   const renderer = { render: note('render') };
+  const workDone: (() => void)[] = [];
+  const submittedWorkDone = () => new Promise<void>((resolve) => { workDone.push(resolve); });
   const deps = {
     scene,
     camera,
     orbitTarget: new THREE.Vector3(),
-    webgpu: { renderer, timestampsAvailable: false, syncUniformNodes: note('syncUniformNodes') },
+    webgpu: {
+      renderer, timestampsAvailable: false, syncUniformNodes: note('syncUniformNodes'), submittedWorkDone,
+    },
     hdr: { bind: note('hdr.bind'), resolve: note('hdr.resolve') },
     uniforms,
     clock,
@@ -108,7 +112,7 @@ function harness(overrides: Partial<Knobs> = {}, clock: FrameLoopDeps['clock'] =
     emitFrame: () => { log.push('emitFrame'); reads.frameEvent = clock.getT(); },
   } as unknown as FrameLoopDeps;
   const loop = new FrameLoop(deps);
-  return { loop, log, knobs, uniforms, gateInputs, ctxs, scene, deps, reads };
+  return { loop, log, knobs, uniforms, gateInputs, ctxs, scene, deps, reads, workDone };
 }
 
 let scheduled: FrameRequestCallback[] = [];
@@ -283,5 +287,67 @@ describe('FrameLoop dispose', () => {
     runNext();
     expect(log).toEqual([]);
     expect(scheduled).toHaveLength(0);
+  });
+
+  it('a GPU-paced tick waiting on the GPU when disposed renders nothing', async () => {
+    const { loop, log, workDone } = harness();
+    loop.setPacing('gpu');
+    loop.start();
+    await flushMicrotasks();
+    loop.dispose();
+    log.length = 0;
+    workDone.forEach((resolve) => resolve());
+    await flushMicrotasks();
+    expect(log).toEqual([]);
+  });
+});
+
+async function flushMicrotasks(): Promise<void> {
+  for (let i = 0; i < 4; i++) await Promise.resolve();
+}
+
+function renders(log: readonly string[]): number {
+  return log.filter((entry) => entry === 'render').length;
+}
+
+describe('FrameLoop GPU pacing', () => {
+  it(`keeps ${GPU_FRAMES_IN_FLIGHT} frames on the GPU and ticks as the older one finishes`, async () => {
+    const { loop, log, workDone } = harness();
+    loop.setPacing('gpu');
+    loop.start();
+    await flushMicrotasks();
+    expect(renders(log)).toBe(GPU_FRAMES_IN_FLIGHT);
+    expect(scheduled).toHaveLength(0);
+    workDone[0]();
+    await flushMicrotasks();
+    expect(renders(log)).toBe(GPU_FRAMES_IN_FLIGHT + 1);
+    await flushMicrotasks();
+    expect(renders(log)).toBe(GPU_FRAMES_IN_FLIGHT + 1);
+    workDone[1]();
+    await flushMicrotasks();
+    expect(renders(log)).toBe(GPU_FRAMES_IN_FLIGHT + 2);
+    expect(scheduled).toHaveLength(0);
+  });
+
+  it('a refused tick waits for the display, not the GPU', async () => {
+    const { loop, workDone } = harness({ render: false });
+    loop.setPacing('gpu');
+    loop.start();
+    await flushMicrotasks();
+    expect(workDone).toHaveLength(0);
+    expect(scheduled).toHaveLength(1);
+  });
+
+  it('back on rAF pacing, the next tick is the display refresh', async () => {
+    const { loop, log, workDone } = harness();
+    loop.setPacing('gpu');
+    loop.start();
+    await flushMicrotasks();
+    loop.setPacing('raf');
+    workDone[0]();
+    await flushMicrotasks();
+    expect(renders(log)).toBe(GPU_FRAMES_IN_FLIGHT + 1);
+    expect(scheduled).toHaveLength(1);
+    expect(workDone).toHaveLength(GPU_FRAMES_IN_FLIGHT);
   });
 });

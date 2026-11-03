@@ -86,6 +86,8 @@ export interface WebGpuSeam {
    *  called from FrameLoop before the render (tsl/README.md#shared-uniform-nodes).
    * */
   syncUniformNodes(): void;
+  /** Settles once every submit made so far has finished on the GPU. */
+  submittedWorkDone(): Promise<void>;
   /** Requires bindSharedUniforms to have run — the materials take their
    *  slots from the uniform-node mirror. */
   attachStarLayer(

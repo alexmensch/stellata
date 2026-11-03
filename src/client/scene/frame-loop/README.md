@@ -1,6 +1,7 @@
 # Frame loop — one tick, in order
 
-`FrameLoop` is the `requestAnimationFrame` loop. Each tick runs a fixed
+`FrameLoop` is the app's tick loop, paced on `requestAnimationFrame` unless
+the perf runner says otherwise ([Pacing](#pacing)). Each tick runs a fixed
 sequence of steps owned by other subsystems; what this module owns is the
 **order**, and every step's position in it is a claim about the steps
 around it. The shell constructs it last, after every owner it drives,
@@ -87,6 +88,29 @@ The adaptation measurement is the opposite case and stays **below**: its
 park counts wake probes in rendered frames, and hoisting it above the gate
 would make a parked static view pay a probe every few ticks forever
 ([What a skipped tick must not break](../../render-gate/README.md#what-a-skipped-tick-must-not-break)).
+
+## Pacing
+
+Every tick schedules exactly one successor, so the loop is one chain of
+ticks whatever the pacing. `setPacing` changes only how the next one is
+scheduled, and the shell exposes the loop as `stellata.frameLoop` for the
+one caller that sets it, the perf runner's dwell
+(`scripts/perf/dwell/README.md`).
+
+- **`'raf'`** (the default, and what `dispose` restores) — the next
+  tick is the next `requestAnimationFrame`.
+- **`'gpu'`** — the next tick runs as soon as fewer than
+  `GPU_FRAMES_IN_FLIGHT` (2) rendered frames are unfinished on the GPU,
+  read off `WebGpuSeam.submittedWorkDone()` after each rendered tick. The
+  CPU encodes frame N+1 while frame N executes, so the GPU never waits on
+  the CPU and never idles while the CPU's share of a frame is the smaller.
+  One in flight would leave the GPU idle for every encode, and on Apple
+  silicon that idle share is what lowers the clock
+  (`stellata-8cg.49.42`'s notes).
+
+**A tick the gate refuses waits for the display under either pacing.** It
+submitted nothing, so its work-done promise would settle at once and a
+GPU-paced chain of refusals would spin the page without yielding a frame.
 
 ## The frustum
 

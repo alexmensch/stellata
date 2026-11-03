@@ -1,4 +1,4 @@
-// The requestAnimationFrame loop: every step of a tick, in order, above and
+// The frame loop: every step of a tick, in order, above and
 // below the render gate. See README.md.
 
 import * as THREE from 'three';
@@ -35,7 +35,7 @@ export interface FrameLoopDeps {
   scene: THREE.Scene;
   camera: THREE.PerspectiveCamera;
   orbitTarget: THREE.Vector3;
-  webgpu: Pick<WebGpuSeam, 'renderer' | 'timestampsAvailable' | 'syncUniformNodes'>;
+  webgpu: Pick<WebGpuSeam, 'renderer' | 'timestampsAvailable' | 'syncUniformNodes' | 'submittedWorkDone'>;
   hdr: Pick<HdrSeam, 'bind' | 'resolve'>;
   uniforms: SharedUniforms;
   clock: Pick<VirtualClock, 'getT' | 'getRate' | 'inFrame'>;
@@ -57,8 +57,15 @@ export interface FrameLoopDeps {
   emitFrame: () => void;
 }
 
+// README.md#pacing
+export type FramePacing = 'raf' | 'gpu';
+
+export const GPU_FRAMES_IN_FLIGHT = 2;
+
 export class FrameLoop {
   private readonly frameCtx: Mutable<FrameCtx>;
+  private pacing: FramePacing = 'raf';
+  private readonly gpuInFlight: Promise<void>[] = [];
   private readonly epochFollowDelta = new THREE.Vector3();
   private readonly cameraAbs = new THREE.Vector3();
   private realtimeNeeded = false;
@@ -98,10 +105,30 @@ export class FrameLoop {
     this.tick();
   }
 
+  setPacing(pacing: FramePacing): void {
+    this.pacing = pacing;
+    this.gpuInFlight.length = 0;
+  }
+
   dispose(): void {
     this.disposed = true;
     this.realtimeNeeded = false;
+    this.pacing = 'raf';
+    this.gpuInFlight.length = 0;
     this.frameCtx.frustum.invalidate();
+  }
+
+  private scheduleNext(rendered: boolean): void {
+    // README.md#pacing — a refused tick never waits on the GPU.
+    if (this.pacing === 'raf' || !rendered) {
+      requestAnimationFrame(this.tick);
+      return;
+    }
+    this.gpuInFlight.push(this.deps.webgpu.submittedWorkDone());
+    const room = this.gpuInFlight.length < GPU_FRAMES_IN_FLIGHT
+      ? Promise.resolve()
+      : this.gpuInFlight.shift() as Promise<void>;
+    void room.then(this.tick);
   }
 
   private tick = () => {
@@ -131,7 +158,7 @@ export class FrameLoop {
       d.camera, d.orbitTarget, d.origin.worldOffset,
       { continuous, cadenceDue, nowMs },
     )) {
-      requestAnimationFrame(this.tick);
+      this.scheduleNext(false);
       return;
     }
     perfMark('pre-render');
@@ -183,7 +210,7 @@ export class FrameLoop {
     perfMeasure('frame.handlers');
     perfMeasure('frame.total');
     perfFrame();
-    requestAnimationFrame(this.tick);
+    this.scheduleNext(true);
   };
 
   private maybeReAdvanceEpoch(): void {

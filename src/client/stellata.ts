@@ -159,7 +159,7 @@ export class Stellata {
   private bus = new EventBus<StellataEventMap>();
 
   private readonly layers = new SceneLayerRegistry();
-  private readonly frameLoop: FrameLoop;
+  readonly frameLoop: FrameLoop;
 
   readonly observe!: ObserveTransition;
   private observeControls!: ObserveControls;

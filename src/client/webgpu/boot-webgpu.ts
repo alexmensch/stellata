@@ -132,6 +132,11 @@ export async function bootWebGpu(canvas: HTMLCanvasElement): Promise<WebGpuSeam 
     syncUniformNodes() {
       registry?.sync();
     },
+    submittedWorkDone() {
+      return (renderer.backend as unknown as {
+        device: { queue: { onSubmittedWorkDone(): Promise<void> } };
+      }).device.queue.onSubmittedWorkDone();
+    },
     solarSystemMaterials(placeholder: THREE.Texture) {
       return makeTslSolarSystemMaterials({
         nodes: nodesOrThrow('solarSystemMaterials'),

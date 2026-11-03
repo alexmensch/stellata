@@ -1,7 +1,7 @@
 # Render gate — draw only when something changed
 
-`RenderGate` decides, once per `requestAnimationFrame` tick, whether
-the frame loop (`../scene/frame-loop/`) submits the frame. The rAF loop, the camera
+`RenderGate` decides, once per tick, whether
+the frame loop (`../scene/frame-loop/`) submits the frame. The loop, the camera
 controllers, and `controls.update()` run every tick regardless — input
 stays responsive and momentum keeps decaying — but on a skipped tick
 everything from the per-frame uniform writes through the GPU passes and
