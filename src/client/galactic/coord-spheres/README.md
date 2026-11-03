@@ -38,7 +38,7 @@ src/client/galactic/coord-spheres/
 
 One import reaches back into the parent and is genuinely shared rather than
 split-avoidance: `galacticDirToIcrs` / `GALACTIC_NORTH_POLE_ICRS` from
-`../galactic-coords.ts`, which the Milky Way volumetric layer uses too.
+`/src/astro-core/galactic-coords.ts`, which the Milky Way volumetric layer uses too.
 `SPHERE_RADIUS_PC` travels the other way — the
 IAU boundary layer imports it from here
 (`../../constellation-boundaries/README.md`), so every sky-sphere layer sits

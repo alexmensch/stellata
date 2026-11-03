@@ -1,7 +1,7 @@
 import { resolve } from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
 
-import { BINARY_VERSION, HEADER_LAYOUT, HEADER_SIZE, MAGIC } from '../catalog/record/catalog-pure';
+import { BINARY_VERSION, HEADER_LAYOUT, HEADER_SIZE, MAGIC } from '../../src/catalog-format/record/catalog-pure';
 import { ROUTING_CASES, documentIdentifiers, type RoutingCase } from '../../src/routing-cases-fixture';
 import {
   EDGE_HEADERS,

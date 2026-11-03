@@ -1,7 +1,7 @@
 // Gliese & Jahreiss 1991 (V/70A), declared.
 
 import { defineSource } from '../util/sources/source';
-import { parseGlieseTsv, type GlieseIndex } from './gliese-parse';
+import { parseGlieseTsv, type GlieseIndex } from './gliese-parse-pure';
 
 export const GLIESE = defineSource({
   file: 'data/gliese/gliese_v70a.tsv',

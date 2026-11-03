@@ -1,9 +1,9 @@
-// Minimal LgObject for tests that exercise the naming layer, where only
+// Minimal LgObjectRow for tests that exercise the naming layer, where only
 // `name` / `type` / `aliases` are read.
 
-import type { LgObject } from './build-local-group-pure';
+import type { LgObjectRow } from '../../src/catalog-format/local-group/local-group-schema';
 
-export function lgObjectStub(name: string): LgObject {
+export function lgObjectStub(name: string): LgObjectRow {
   return {
     name,
     id: 'x',

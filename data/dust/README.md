@@ -10,6 +10,10 @@ chunk_X_Y_Z.bin   64 voxel chunks, 2 MiB each. LFS. Together: a 512³
                   pc, axes matching catalog.bin.
 manifest.json     grid params + chunk index.
                   ~1 KB, regular git.
+edenhofer2024-main.json, edenhofer2024-2kpc.json
+                  the identity (DOI, file, md5, flavor) of each pulled
+                  upstream variant, written by its refresh pull and read
+                  by the bakes. Regular git.
 ```
 
 ## Provenance
@@ -44,7 +48,7 @@ block records the per-cloud peak-column check against the
 
 ## Refresh
 
-Re-run `scripts/dust/build-dust.py` against an updated upstream
-release — no pnpm target, see
-[`scripts/dust/README.md`](../../scripts/dust/README.md). The build
-does NOT hit the network at run time.
+`pnpm run refresh:edenhofer2024-main` (and `-2kpc` for cloud-surfaces)
+pulls the upstream map and records its identity; the bake then reads it —
+[The Edenhofer 2024 pulls](/scripts/dust/README.md#the-edenhofer-2024-pulls).
+The bake does NOT hit the network.

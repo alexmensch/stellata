@@ -11,7 +11,14 @@ from typing import Any, Callable
 
 from scripts.util.paths import REPO_ROOT
 
-UPDATE_COUNTS_ENV_VAR = "UPDATE_BUILD_COUNTS"
+UPDATE_SNAPSHOTS_ENV_VAR = "UPDATE_SNAPSHOTS"
+PIPELINE_STEP_ENV_VAR = "PIPELINE_STEP"
+
+
+def refresh_command(script: str) -> str:
+    if PIPELINE_STEP_ENV_VAR in os.environ:
+        return f"pnpm run {script} --update-snapshots"
+    return f"{UPDATE_SNAPSHOTS_ENV_VAR}=1 pnpm run {script}"
 
 
 @dataclass
@@ -95,26 +102,26 @@ def assert_or_update_snapshot(
     expected_path: Path,
     *,
     label: str,
-    refresh_command: str,
+    script: str,
     build_payload: Callable[[dict[str, float], Path], dict[str, Any]],
     compare: Callable[[dict[str, Any], dict[str, float]], list[SnapshotDiff]],
     render: Callable[[list[SnapshotDiff]], str],
 ) -> bool:
     """True on a full match; False on drift or a missing snapshot, after
-    printing ``refresh_command``. Under ``UPDATE_BUILD_COUNTS=1`` writes
+    printing how to refresh it through ``script``. Under ``UPDATE_SNAPSHOTS=1`` writes
     ``build_payload(actual, expected_path)`` instead and returns True."""
     try:
         shown = expected_path.relative_to(REPO_ROOT)
     except ValueError:
         shown = expected_path
 
-    if os.environ.get(UPDATE_COUNTS_ENV_VAR) == "1":
+    if os.environ.get(UPDATE_SNAPSHOTS_ENV_VAR) == "1":
         expected_path.write_text(json.dumps(build_payload(actual, expected_path), indent=2) + "\n")
         print(f"[{label}] Updated {shown}")
         return True
 
     if not expected_path.exists():
-        print(f"[{label}] snapshot {shown} is missing. To write it:\n  {refresh_command}")
+        print(f"[{label}] snapshot {shown} is missing. To write it:\n  {refresh_command(script)}")
         return False
 
     expected = json.loads(expected_path.read_text())
@@ -124,7 +131,7 @@ def assert_or_update_snapshot(
         return True
     print(
         f"[{label}] {shown} assertion failed. If the change is intentional, "
-        f"refresh the snapshot with: {refresh_command}"
+        f"refresh the snapshot with: {refresh_command(script)}"
     )
     return False
 
@@ -161,13 +168,13 @@ def format_count_diff(diff: list[SnapshotDiff], label: str) -> str:
 
 
 def assert_or_update_counts(
-    actual: dict[str, int], expected_path: Path, *, label: str, refresh_command: str,
+    actual: dict[str, int], expected_path: Path, *, label: str, script: str,
 ) -> bool:
     """Exact-match snapshot assert/refresh for an int-count JSON."""
     return assert_or_update_snapshot(
         actual, expected_path,
         label=label,
-        refresh_command=refresh_command,
+        script=script,
         build_payload=lambda a, _path: a,
         compare=compare_build_counts,
         render=lambda diff: format_count_diff(diff, label),

@@ -9,8 +9,8 @@ import {
   type PhotometryRefusal,
 } from './gaia-photometry-pure';
 import type { CascadeRefusal, CascadeResult, UniformValues } from '../cascade-result';
-import { lookupGliese, type GlieseIndex } from '../gliese-parse';
-import { printedByHip } from './hip-photometry-parse';
+import { lookupGliese, type GlieseIndex } from '../gliese-parse-pure';
+import { printedByHip } from './hip-photometry-parse-pure';
 import type { Tycho2Row } from '../tycho2-parse';
 
 /** Riello 2021 (/data/papers/index.md#riello2021) App. C,

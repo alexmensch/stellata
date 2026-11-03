@@ -1,6 +1,6 @@
 // See ./README.md#the-catalog-decode-worker.
 
-import type { RecordSpan } from '../../../scripts/catalog/record/catalog-pure';
+import type { RecordSpan } from '../../catalog-format/record/catalog-pure';
 import {
   decodeCatalogWindow,
   recordWindowBytes,

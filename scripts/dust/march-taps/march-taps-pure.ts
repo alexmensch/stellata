@@ -7,7 +7,7 @@ import {
   dustMarchTapCount,
   type DustDecodeParams,
   type Vec3,
-} from '../../../src/client/star-pipeline/extinction/dust-raymarch-pure';
+} from '../../../src/astro-core/extinction/dust-raymarch-pure';
 
 /** The fixed tap count the march spent before the path-length rule, frozen as
  *  the yardstick both this sweep and `../prefilter/cost.ts` quote against.

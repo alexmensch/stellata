@@ -7,7 +7,7 @@ import {
   srgbDecode,
   tonemapWhitePoint,
   type Rgb,
-} from '../tonemap/tonemap-pure';
+} from '../../../astro-core/tonemap/tonemap-pure';
 
 type ChromeVariant = 'builtin' | 'raw';
 

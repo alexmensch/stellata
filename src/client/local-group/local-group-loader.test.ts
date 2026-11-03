@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { loadLocalGroup, type LgEmission } from './local-group-loader';
+import { loadLocalGroup } from './local-group-loader';
+import { type LgEmission } from '../../catalog-format/local-group/local-group-schema';
 
 interface Raw {
   version: number;

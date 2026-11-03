@@ -5,8 +5,8 @@ import { WebGpuSummationPass } from './summation-pass-webgpu';
 import {
   summationDownsample, summationRadiusPx,
 } from '../../hdr/summation/summation-pure';
-import { pixelSolidAngleArcsec2 } from '../../hdr/emission/emission-pure';
-import { DEFAULT_SUMMATION_ARCSEC2 } from '../../hdr/exposure/exposure-epoch';
+import { pixelSolidAngleArcsec2 } from '../../../astro-core/emission/emission-pure';
+import { DEFAULT_SUMMATION_ARCSEC2 } from '../../../astro-core/instruments';
 import { angularToPx } from '../../camera/controls/star-geometry';
 import { FOV_MAX_DEG, FOV_MIN_DEG } from '../../camera/timing';
 

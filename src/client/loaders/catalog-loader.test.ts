@@ -12,7 +12,7 @@ import {
   planCatalogChunks,
   assembleCatalogChunks,
   type CatalogManifest,
-} from '../../../scripts/catalog/record/catalog-pure';
+} from '../../catalog-format/record/catalog-pure';
 import { baseStar, buildCatalog, nameTableOffsets, type StarRecord } from './catalog-fixture';
 import {
   replyAsWorker,

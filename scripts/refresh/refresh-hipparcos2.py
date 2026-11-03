@@ -78,13 +78,7 @@ SPOT_TOL = 0.1
 
 
 def main() -> None:
-    force = "--force" in sys.argv
-
-    if not force and rl.is_up_to_date(OUT, [Path(__file__)]):
-        print(f"{OUT.relative_to(ROOT)} up to date — skipping (use --force to rebuild)")
-        return
-
-    client = rl.TapClient(backends=[rl.cds_backend()])
+    client = rl.cds_client()
     print('querying CDS TAP — "I/311/hip2" (whole catalogue, ~118 k rows) …')
     t0 = time.time()
     table = client.run(ADQL)
@@ -120,5 +114,9 @@ def main() -> None:
     print(f"wrote {OUT.relative_to(ROOT)} ({written} rows)")
 
 
+def describe() -> dict:
+    return rl.description(ADQL, rl.cds_client().services, release="VizieR I/311/hip2")
+
+
 if __name__ == "__main__":
-    main()
+    rl.pull_main(main, describe)

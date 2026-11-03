@@ -3,6 +3,7 @@
 // /src/client/camera/README.md#shared.
 
 import * as THREE from 'three';
+import { MAX_DISTANCE_PC } from '../../catalog-format/local-group/local-group-schema';
 
 // Canonical 2 s duration for non-warp camera lerps — focus-park glide
 // and the aim-animation upper bound. (`WARP_REORIENT_MS` was once part
@@ -47,6 +48,12 @@ export const FOV_MAX_DEG = 120;
 // load-bearing (controls/README.md#camera-near-plane-vs-controls-mindistance)
 // and pinned by depth-range.test.ts.
 export const CAMERA_NEAR_PC = 1e-12;
+
+/** Far plane for the runtime camera, paired with `MAX_DISTANCE_PC`.
+ *  Sits 1 Mpc past `controls.maxDistance` (= `MAX_DISTANCE_PC`) so M31 /
+ *  M33 + outer dwarfs render with comfort headroom when the camera
+ *  reaches the maxDistance shell. */
+export const CAMERA_FAR_PC = MAX_DISTANCE_PC + 1_000_000;
 
 // Camera-distance floor used by sites that need a finite log10(dCam) or
 // atan(R/dCam) at close approach. 1e-30 pc is well below any orbit the

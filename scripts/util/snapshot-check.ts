@@ -3,9 +3,19 @@ import { existsSync, readFileSync } from 'node:fs';
 
 import type { Check } from './emit-artifacts';
 
+/** Set to '1' to rewrite every snapshot instead of asserting against it; the
+ *  runner's `--update-snapshots` sets it for each step it runs. */
+export const UPDATE_SNAPSHOTS_ENV = 'UPDATE_SNAPSHOTS';
+
+/** The runner sets it to the name of each step it runs, and drops an
+ *  inherited UPDATE_SNAPSHOTS, so such a step refreshes through the flag. */
+export const PIPELINE_STEP_ENV = 'PIPELINE_STEP';
+
+const refreshCommand = (script: string): string => (process.env[PIPELINE_STEP_ENV] === undefined
+  ? `${UPDATE_SNAPSHOTS_ENV}=1 pnpm run ${script}`
+  : `pnpm run ${script} --update-snapshots`);
+
 export interface SnapshotCheckSpec<T> {
-  /** Set to '1' to rewrite the snapshot instead of asserting against it. */
-  envVar: string;
   snapshotPath: string;
   actual: T;
   compare: (expected: T, actual: T) => { drifted: boolean; report: string };
@@ -13,7 +23,8 @@ export interface SnapshotCheckSpec<T> {
    *  refresh (curated `reason` strings survive a regenerate). */
   refreshTransform?: (expected: T, actual: T) => T;
   failureLabel: string;
-  refreshCommand: string;
+  /** The `package.json` script the refresh message names. */
+  script: string;
 }
 
 /** A missing snapshot fails: only the env var writes one. */
@@ -22,7 +33,7 @@ export function snapshotCheck<T>(opts: SnapshotCheckSpec<T>): Check {
     ? (JSON.parse(readFileSync(opts.snapshotPath, 'utf8')) as T)
     : null;
 
-  if (process.env[opts.envVar] === '1') {
+  if (process.env[UPDATE_SNAPSHOTS_ENV] === '1') {
     const toWrite = expected !== null && opts.refreshTransform
       ? opts.refreshTransform(expected, opts.actual)
       : opts.actual;
@@ -33,7 +44,7 @@ export function snapshotCheck<T>(opts: SnapshotCheckSpec<T>): Check {
     return {
       kind: 'fail',
       message: `\n${opts.failureLabel} snapshot ${opts.snapshotPath} is missing. To write it:\n`
-        + `  ${opts.refreshCommand}`,
+        + `  ${refreshCommand(opts.script)}`,
     };
   }
 
@@ -43,7 +54,7 @@ export function snapshotCheck<T>(opts: SnapshotCheckSpec<T>): Check {
         kind: 'fail',
         report,
         message: `\n${opts.failureLabel} assertion failed. If the change is intentional,\n`
-          + `refresh the snapshot with: ${opts.refreshCommand}`,
+          + `refresh the snapshot with: ${refreshCommand(opts.script)}`,
       }
     : { kind: 'pass', report };
 }

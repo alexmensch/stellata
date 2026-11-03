@@ -6,7 +6,7 @@ import {
 } from './planet-body-field';
 import { chartDiscPxForAppMag } from '../../chart-mode/chart-disc-pure';
 import { NO_INSTANCE } from '../../frame/shared-uniforms';
-import { AU_PC, KM_PC, R_SUN_PC } from '../../util/astronomy-constants';
+import { AU_PC, KM_PC, R_SUN_PC } from '../../../astro-core/astronomy-constants';
 import { getPlanetSystem, SOL_BODIES, type PlanetSystem, type Planet } from '../planet-system';
 import {
   MERCURY_PHASE,
@@ -16,7 +16,7 @@ import {
   phaseAngleFor,
   phaseFactorFor,
 } from '../phase-function';
-import { planetApparentMagnitude } from '../perceptual-magnitude';
+import { planetApparentMagnitude } from '../../../astro-core/perceptual-magnitude';
 import {
   SATURN_RING_PHOTOMETRY,
   maxRingSystemFluxFactor,
@@ -30,7 +30,8 @@ import {
   meshFadeFromPhysPx,
 } from './mesh-crossfade';
 import { DIM_FLOOR } from '../../binaries/eclipse/eclipse-photometry-pure';
-import { DEFAULT_FILTER, instrumentLimitMag } from '../../filters/filter-state';
+import { DEFAULT_FILTER } from '../../filters/filter-state';
+import { instrumentLimitMag } from '../../../astro-core/instruments';
 import { cullMagFor, exposureForMagLimit } from '../../hdr/exposure/exposure-epoch';
 import { makePlanetFieldUniforms } from './planet-field-uniforms-fixture';
 

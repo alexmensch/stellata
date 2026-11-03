@@ -24,7 +24,7 @@ import { tToJdUt, type VirtualClock } from '../../solar-system/time/time';
 import type { ExtinctionAttachment } from '../../star-pipeline/extinction/extinction-attachment';
 import type { StarFrame } from '../../star-pipeline/star-frame/star-frame';
 import type { StarPipeline } from '../../star-pipeline/star-pipeline';
-import { J2000_JD } from '../../util/astronomy-constants';
+import { J2000_JD } from '../../../astro-core/astronomy-constants';
 import type { Mutable } from '../../util/mutable';
 import type { WebGpuSeam } from '../../webgpu/seam';
 import { FrameFrustum } from '../contribution/frame-frustum';

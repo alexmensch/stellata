@@ -14,12 +14,12 @@ agents-md-size.test.ts   Size guard for AGENTS.md. Holds the file under
                          symlink to AGENTS.md that keeps Claude Code
                          and every other harness on one file.
 astronomy-constants-sync.test.ts
-                         Parity pin between util/astronomy-constants.ts
+                         Parity pin between astro-core/astronomy-constants.ts
                          and the build-script copy.
 artifact-freshness.test.ts  Built-artifact coherence: fails (not skips)
                          when public/catalog-manifest.json exists but
                          public/binaries.bin is missing, or any file its
-                         stamp (build/stamps/binaries-bin.json) records —
+                         stamp (build/stamps/build-binaries-runtime.json) records —
                          input or output — has changed since — the state
                          where the binaries-dependent suites would
                          silently self-skip and "npm test green" means
@@ -129,14 +129,20 @@ late-read-contract-fields.ts
                          Not a test — NULLABLE_FIELDS, the field half's
                          classified list.
 node-import-boundary.test.ts
-                         src/client/ ships to a browser, so no module
-                         there may import a `node:` builtin or a
-                         `*-fixture.ts`. Test-only support that reads
+                         src/client/ and the two shared trees ship to a
+                         browser, so no module there may import a
+                         `node:` builtin or a `*-fixture.ts`. Test-only support that reads
                          data/ off disk takes the `-fixture` suffix and
                          is exempt by it; a type-only import of one still
                          crosses, since it erases before the bundler
                          runs. README.md#node-import-boundary below carries the
                          one limit it cannot see.
+integration/             Tests that read the pipeline and the viewer
+                         together. Own README.
+pipeline-viewer-boundary.test.ts
+                         One-way imports between scripts/ (the pipeline),
+                         src/client/ (the viewer) and the two trees they
+                         share. README.md#pipeline-viewer-boundary below.
 page-teardown-contract.test.ts
                          Source scans behind util/page-teardown.ts's
                          contract (/src/client/util/README.md): no `window`
@@ -224,6 +230,10 @@ site-dev-routing.test.ts The dev server's routing table held against the
                          gets the homepage, everything else 404s. Pairs
                          with src/worker.test.ts, which pins the same
                          table on the production side.
+step-coverage.test.ts    Every declareOutputs constant under scripts/ is a
+                         steps.ts entry's, a writer excluded by name, or
+                         on the not-yet-migrated list of steps a later
+                         item moves (../scripts/pipeline/README.md#the-model).
 step-outputs.test.ts     Imports every TS pipeline step's emitArtifacts
                          declaration (the *-outputs.ts modules), so one
                          that runs its step on import fails here; pins
@@ -279,6 +289,11 @@ doc-pointer-pure.ts      Not a test — extraction, anchor collection, path
 git-fixture.ts           Not a test — `gitIn` and `commitFile`, a throwaway
                          repo's git runner and one-file commit, for suites
                          that drive a script over real history.
+import-specifiers.ts     Not a test — `importSpecifiers` (every specifier,
+                         its form, and whether it is type-only) and
+                         `isShippedSource` (not a test, `.d.ts` or
+                         `*-fixture.ts`), shared by node-import-boundary
+                         and pipeline-viewer-boundary.
 walk-files.ts            Not a test — file enumeration the scanners above
                          share. `walkFiles` is a recursive walk taking
                          `include` / `skipDir` predicates, and follows
@@ -434,7 +449,7 @@ trains readers to re-run rather than read failures.
 The timeout is a hang detector, not a perf gate — `slowTestThreshold`
 is what surfaces slowness. Raise a test's own `{ timeout }` for a
 deliberate outlier rather than lifting the global.
-`local-group-emission-calibration.test.ts` is the standing example: its
+`/tests/integration/local-group-emission-calibration.test.ts` is the standing example: its
 three brute-force tests run 1.6 s / 3.6 s / 6.5 s solo and each carries
 `{ timeout: 120_000 }`.
 
@@ -449,10 +464,36 @@ flake that trains readers to re-run.
 
 ## Node import boundary
 
-`node-import-boundary.test.ts` scans **direct** import specifiers only, which
-is the one thing it cannot see: a browser module importing a `scripts/` module
-that itself reaches for `node:fs` crosses the boundary transitively and the
-scan reads both as clean. Sharing a `*-pure` module with the build tree is the
-established pattern here — `star-naming-pure`, `catalog-pure`,
-`blackbody-lut-pure` — and stays legal precisely because such a module holds no
-builtin of its own. Keep it that way: the suffix is the contract.
+`node-import-boundary.test.ts` scans **direct** import specifiers in the
+browser trees — `src/client/` and the two shared trees, `BROWSER_TREES` in
+`scripts/util/source-trees.ts` — so a builtin anywhere the bundle reaches is caught where
+it is written. What it cannot see is a builtin behind an import from outside
+those trees, which the pipeline-viewer boundary already forbids.
+
+## Pipeline-viewer boundary
+
+`pipeline-viewer-boundary.test.ts` classifies every non-test, non-fixture
+module under `src/` and `scripts/` into a tree and holds each import to its
+direction:
+
+| tree | root | may import |
+| --- | --- | --- |
+| shared physics | `src/astro-core/` | itself |
+| format | `src/catalog-format/` | itself, astro-core |
+| viewer | `src/client/` | itself, format, astro-core, the rest of `src/` |
+| pipeline | `scripts/` | itself, format, astro-core, the rest of `src/` |
+| tooling | `scripts/perf/`, `scripts/release/` | anything |
+| integration | `tests/integration/` | anything |
+
+Type-only imports count: a workspace package needs the dependency whether or
+not the import survives erasure, and the trees are laid out so each lifts into
+one unchanged. Tests and `*-fixture.ts` support are held to the same
+directions, so no package would dev-depend on its consumer; a test that has
+to read both sides lives in `integration/` (its own README), which nothing
+else may import. The two
+tooling roots drive or check the built viewer — the perf runner its frame-cost
+instrument, the release check its share-URL grammar — so they read it by
+design; the suite fails if either stops, so an unused exemption cannot
+linger. A new fact both sides need goes into the format tree (a wire shape,
+a file name, a rule over record fields) or astro-core (physics), never into
+the side that happens to compute it first.

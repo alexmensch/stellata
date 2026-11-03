@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { fmtDist, fmtDistAuto, niceRound, setUnit, getUnit, LY_PER_PC, AU_SWITCH_PC } from './distance-util';
-import { AU_KM, AU_PER_PC } from '../util/astronomy-constants';
+import { AU_KM, AU_PER_PC } from '../../astro-core/astronomy-constants';
 
 // fmtDist reads a module-level current unit; tests reset it explicitly so
 // they're order-independent.

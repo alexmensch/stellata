@@ -1,6 +1,7 @@
 # Cloud surface build
 
-`build-cloud-surfaces.py` traces a per-cloud **isosurface mesh** from the
+`build-cloud-surfaces.py` (the entry; the numpy-bound bake is
+`trace_surfaces.py`) traces a per-cloud **isosurface mesh** from the
 [Edenhofer 2024](/data/papers/index.md#edenhofer2024) dust posterior mean
 for every Zucker cloud → `data/molecular-clouds/cloud-surfaces.bin`, consumed by
 the molecular-cloud rim shells
@@ -23,13 +24,30 @@ unsmudged LFS pointer. Regenerate offline and commit:
 ```
 ./.venv/bin/pip install -r scripts/cloud-surfaces/requirements.txt
 pnpm run build:clouds                    # sid-stamped clouds.json first
-./.venv/bin/python scripts/cloud-surfaces/build-cloud-surfaces.py
+pnpm run build:cloud-surfaces            # under the venv's python3
 ```
 
-First run downloads the ~3 GB
-[Edenhofer 2024](/data/papers/index.md#edenhofer2024) cube via `dustmaps`
-(same cache as `scripts/dust/`). `--only <cloud-id>` and `--dry-run` help when
-tuning.
+It reads the [Edenhofer 2024](/data/papers/index.md#edenhofer2024) cube
+from `dustmaps`' cache, which the two dataset pulls fill
+([The Edenhofer 2024 pulls](/scripts/dust/README.md#the-edenhofer-2024-pulls)):
+in-grid clouds need `edenhofer2024-main.json`, out-of-grid ones
+`edenhofer2024-2kpc.json`. `--only <cloud-id>` and `--dry-run` help when
+tuning; a run with arguments writes no record, so it reads stale until a
+plain run ([Recording a manual step](/scripts/pipeline/README.md#recording-a-manual-step--recordts)).
+
+## What stales the bake
+
+The bake is a manual step ([Step kinds](/scripts/pipeline/README.md#step-kinds)):
+`pnpm run build:cloud-surfaces` runs it through `record.ts`, which writes
+`data/stamps/build-cloud-surfaces.json`. It reads `public/clouds.json` only
+for the geometry it traces, so its record holds the hash of that projection
+(`cloud_geometry.py`: each cloud's `id`, `sid`, `center`, `axes`, `quat`
+and `inGrid`), never of the file: a name change leaves the bake fresh; a
+geometry change, or an SID change (the bake keys each entry by `sid`), stops
+the build naming this command. `build-cloud-surfaces.py
+--describe` prints the projection with the standard library alone, which is
+why the numpy body lives in `trace_surfaces.py`. Its other inputs are the
+two Edenhofer identity files and its own code, recorded as it runs.
 
 ## Pipeline (per cloud)
 
@@ -73,5 +91,5 @@ tuning.
   layout).
 
 Parsed by `src/client/molecular-clouds/cloud-surfaces-loader.ts`
-(sid-keyed map); `cloud-surfaces.test.ts` here pins the committed
+(sid-keyed map); `/tests/integration/cloud-surfaces.test.ts` here pins the committed
 binary against the built `clouds.json` (both self-skip when absent).

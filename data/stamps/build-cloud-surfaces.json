@@ -1,0 +1,17 @@
+{
+  "inputs": {
+    "data/dust/edenhofer2024-2kpc.json": "3ed6b301cbf5eacc2a7b8d393456560d9f0a1bd5",
+    "data/dust/edenhofer2024-main.json": "77b0906cc2a72aaf6e97f189c8e329426122e65d",
+    "scripts/cloud-surfaces/build-cloud-surfaces.py": "4a363c4a8570837ff6aa71504c8821d205c550d2",
+    "scripts/cloud-surfaces/cloud_geometry.py": "1abc5901d03ae7147fb1f54091e29860d9896d66",
+    "scripts/cloud-surfaces/trace_surfaces.py": "67609b5747059f282476cc7c0ef86e47e91272e4",
+    "scripts/dust/edenhofer2024.py": "bf8661c9d1e8c43443eed5d8ba537c5c6976a08f"
+  },
+  "outputs": {
+    "data/molecular-clouds/cloud-surfaces.bin": "c7591f20da45afe4787e9355ed67d52ed2769945"
+  },
+  "request": "9ceb18acc2ea98bca4ce275f3b81332569707d53",
+  "requestFrom": [
+    "public/clouds.json"
+  ]
+}

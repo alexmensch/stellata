@@ -2,7 +2,7 @@ import { readTslSource } from '../../../webgpu/tsl/tsl-source-fixture';
 import { describe, expect, it } from 'vitest';
 
 import { SOL_BODIES } from '../../planet-system';
-import { relativeLuminance } from '../../../hdr/tonemap/tonemap-pure';
+import { relativeLuminance } from '../../../../astro-core/tonemap/tonemap-pure';
 import {
   LIMB_REFRACTION_RAD,
   OZONE_CHAPPUIS_TAU,

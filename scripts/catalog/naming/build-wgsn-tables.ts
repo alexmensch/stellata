@@ -138,12 +138,11 @@ async function main(): Promise<void> {
       designations: WGSN_DESIGNATIONS.serialize(designations),
     },
     checks: [snapshotCheck<WgsnCounts>({
-      envVar: 'UPDATE_BUILD_COUNTS',
       snapshotPath: SNAPSHOT,
       actual: counts,
       compare: compareCountSnapshot,
       failureLabel: 'WGSN table counts',
-      refreshCommand: 'UPDATE_BUILD_COUNTS=1 pnpm run build:wgsn',
+      script: 'build:wgsn',
     })],
   });
   console.log(`wgsn_names.tsv: ${nameRows.length} rows`);

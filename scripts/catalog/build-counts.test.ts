@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { emptyTallyPartition } from '../util/tally';
+import { emptyTallyPartition } from '../util/tally-pure';
 import {
   compareBuildCounts,
   compareCountSnapshot,
@@ -10,7 +10,7 @@ import {
   type BuildCounts,
 } from './build-counts';
 import { RECURATED_BRIGHTNESS } from './companions/companion-promotion';
-import { DIST_VIA_VALUES } from './distance/parallax/parallax-cascade';
+import { DIST_VIA_VALUES } from '../../src/catalog-format/record/catalog-pure';
 
 function baseCounts(): BuildCounts {
   return {

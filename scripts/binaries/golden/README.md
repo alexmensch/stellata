@@ -21,7 +21,7 @@ restructuring of it can prove it writes the same `public/binaries.bin`.
   fixture to it.
 - `binaries.golden.bin` — the encoder's output on the two fixtures:
   54 pairs.
-- `binaries-bin-golden.test.ts` — runs `encode()` through `python3`, pins
+- `/tests/integration/binaries-bin-golden.test.ts` — runs `encode()` through `python3`, pins
   its `WriteStats` (every counter, each nonzero), and compares against the
   golden, naming the first differing record and field; then parses the
   golden with the client loader (`src/client/binaries/binaries-loader.ts`)

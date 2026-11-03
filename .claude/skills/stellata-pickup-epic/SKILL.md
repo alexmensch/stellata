@@ -1,6 +1,6 @@
 ---
 name: stellata-pickup-epic
-description: Stellata's extension of the user-level `pickup-epic` skill, for the coordinator and for every `pickup-task` worker it launches — the GPU pause protocol (a worker that needs a perf run pauses the whole pipeline so the machine is idle), `build:seed` as the post-landing step, and what a stellata `SMOKE:` line names. `pickup-epic` and coordinated `pickup-task` load it in stellata; load it directly only if one of them is already in context without it.
+description: Stellata's extension of the user-level `pickup-epic` skill, for the coordinator and for every `pickup-task` worker it launches — the GPU pause protocol (a worker, or any session that finds the coordinator's field, pauses the whole pipeline for a perf run so the machine is idle), `build:seed` as the post-landing step, and what a stellata `SMOKE:` line names. `pickup-epic` and coordinated `pickup-task` load it in stellata; load it directly only if one of them is already in context without it.
 ---
 
 # Coordinating a stellata epic
@@ -16,21 +16,29 @@ build, its test suite, `build:seed` in the main checkout — widens the
 spread and walks the baseline, so the run is discarded
 ([stellata-perf protocol, step 5](/.claude/skills/stellata-perf/SKILL.md#protocol--announce--arm--run-one-run-per-arm)). A
 run happens only with every other session paused, and the pause starts
-before the arm so the owner can arm the moment they are asked.
+before the arm so the owner can arm the moment they are asked. The requester
+is any session that wants a run: a worker, or a session outside the run
+that found the coordinator through `pickup-epic`'s coordinator field (in bd,
+the epic's `coordinator` metadata key;
+[stellata-perf protocol](/.claude/skills/stellata-perf/SKILL.md#protocol--announce--arm--run-one-run-per-arm)).
+`await-go.sh` reads the same field to leave the coordinator out of its
+busy-session warning, so keep it current.
 
 | Kind | From → to | Send when |
 | --- | --- | --- |
-| `GPU_REQUEST` | worker → coordinator | before step 1 of the perf protocol (the announcement); carry on only with work that starts nothing heavy |
+| `GPU_REQUEST` | requester → coordinator | before step 1 of the perf protocol (the announcement); carry on only with work that starts nothing heavy |
 | `PAUSE` | coordinator → every other worker | on a `GPU_REQUEST` |
+| `HOLD` | coordinator → the landing subagent, if one is running | on a `GPU_REQUEST`; the hold in `pickup-epic`'s Land step, unchanged |
 | `PAUSED` | worker → coordinator | its current command has finished and it will start nothing heavier than reading files — no build, test run, `pnpm run perf`, `survivors`, or data pull |
-| `GPU_GRANTED` | coordinator → requester | every other worker has replied `PAUSED` or is idle, and no `build:seed` is running |
+| `GPU_GRANTED` | coordinator → requester | every other worker has replied `PAUSED` or is idle, the landing subagent, if one is running, has replied to `HOLD`, and no `build:seed` is running |
 | `GPU_DONE` | requester → coordinator | the runner has exited, whatever its result |
-| `RESUME` | coordinator → every paused worker | on `GPU_DONE` |
+| `RESUME` | coordinator → every paused worker and the held landing subagent | on `GPU_DONE` |
 
-**Coordinator.** On a `GPU_REQUEST`, hold every launch and every local
-landing step (a landing subagent's gates, `build:seed`); a merge already
-armed on GitHub may complete, but its local steps wait. Record the pause in
-the run state. Tell the user nothing: the requester's announcement is what
+**Coordinator.** Serve a `GPU_REQUEST` from any session the same way, worker
+or not. On a `GPU_REQUEST`, hold every launch, start no step of
+`pickup-epic`'s Land that has not begun (the sync or the landing subagent),
+and run no `build:seed`.
+Record the pause in the run state. Tell the user nothing: the requester's announcement is what
 the owner reads. One request is served at a time; a second waits in the run state
 until `GPU_DONE`.
 

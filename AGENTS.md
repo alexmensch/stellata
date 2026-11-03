@@ -154,6 +154,8 @@ these rules govern *where* new code goes.
   tests + README. Examples: `solar-system/`, `local-group/`,
   `milkyway/`, `galactic/`, `molecular-clouds/`, `chart-mode/`,
   `star-pipeline/`.
+- **A fact client/ and scripts/ share lands in `src/astro-core/`**
+  (physics) or `src/catalog-format/` (wire shapes, file names).
 - **Cross-cutting plumbing lands in the matching type folder.**
   `overlays/`, `camera/`, `loaders/`, `ui/`, `util/`, `typeahead/`,
   `modals/`, `debug/` — small one-off helpers (texture/buffer
@@ -214,12 +216,10 @@ data/     Reference inputs. Per-source subfolders; LFS coverage
           per-folder via .gitattributes. data/README.md carries the
           frozen-external-data policy + per-source orientation.
 public/   Generated artifacts (gitignored). Built from scripts/+data/.
-src/      Worker entry (worker.ts) + client. src/client/ has one
-          subfolder per subsystem (solar-system/, local-group/, milkyway/,
-          galactic/, molecular-clouds/, chart-mode/, star-pipeline/, hover/,
-          focus-card/, format/, overlays/, camera/, filters/, scene/, poi/,
-          ui/, typeahead/, modals/, debug/, util/, loaders/, binaries/,
-          chrome-lines/, render-gate/, webgpu/) — each with its own README.
+src/      Worker entry (worker.ts); client/, a folder per subsystem;
+          astro-core/ (physics) and catalog-format/ (artefact schemas),
+          shared by client/ and scripts/, imports one way
+          (tests/pipeline-viewer-boundary.test.ts).
 docs/     Genuinely cross-cutting docs that don't belong to one
           folder: authoring-patterns.md, render-rules.md, ux-tweaks.md,
           extragalactic-roadmap.md. New docs default to "find the

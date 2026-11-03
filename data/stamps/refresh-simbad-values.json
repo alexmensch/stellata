@@ -1,0 +1,13 @@
+{
+  "inputs": {},
+  "outputs": {
+    "data/simbad/simbad_values.tsv": "c16d7d1cc0cef87c33784636b20184c8816eb987"
+  },
+  "query": "28951bbde290ea7e900cf1ec6d9102be01b97b13",
+  "answeredBy": [],
+  "request": "ac0191ec2cc60dd81a152b9109878172ba4fbb2d",
+  "requestFrom": [
+    "data/membership/membership-manifest.tsv",
+    "data/gaia/gaia_dr3_astrometry_catalog.tsv"
+  ]
+}

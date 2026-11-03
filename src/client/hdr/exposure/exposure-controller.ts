@@ -4,13 +4,13 @@
 import {
   type InstrumentName,
   instrumentLimitMag,
-} from '../../filters/filter-state';
+  summationSolidAngleFor,
+} from '../../../astro-core/instruments';
 import {
   cullMagFor,
   drawCutoffMag,
   EV_MAX_STOPS,
   sceneExposure,
-  summationSolidAngleFor,
   thresholdMagFor,
 } from './exposure-epoch';
 

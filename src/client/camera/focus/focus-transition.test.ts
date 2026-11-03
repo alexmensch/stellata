@@ -6,7 +6,7 @@ import {
   tickFocusLerp,
   viewingDistanceForExtent,
 } from './focus-transition';
-import { AU_PC, R_SUN_PC } from '../../util/astronomy-constants';
+import { AU_PC, R_SUN_PC } from '../../../astro-core/astronomy-constants';
 import {
   AIM_T_MAX_MS,
   CAMERA_LERP_MS,

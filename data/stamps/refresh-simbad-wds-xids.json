@@ -1,0 +1,12 @@
+{
+  "inputs": {
+    "data/simbad/wds_xids_overrides.tsv": "fe8ee5dde4b619daecfa3c8c0ec9195e8d9e1c7f",
+    "data/wds/wds_summ.txt": "22cd395cb4c9c6fe19bfa22bb4c45fc120ef473d"
+  },
+  "outputs": {
+    "data/simbad/simbad_wds_xids.tsv": "08bd1f5b5f7a101f1f8afc4db02c30579ea17366"
+  },
+  "query": "14e3d73cdf001fe9116cb157c42c5cc194b4783b",
+  "answeredBy": [],
+  "requestFrom": []
+}

@@ -12,7 +12,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "util"))
 
 from paths import REPO_ROOT  # noqa: E402
-from vizier.vizier_slice import VizierSlice, pull_slices  # noqa: E402
+from vizier.vizier_slice import VizierSlice, slices_main  # noqa: E402
 
 HIP_MAIN_VMAG = VizierSlice(
     table="I/239/hip_main",
@@ -32,14 +32,5 @@ HIP_MAIN_VMAG = VizierSlice(
 )
 
 
-def main() -> None:
-    pull_slices(
-        [HIP_MAIN_VMAG],
-        script_name="refresh-hipparcos-vmag",
-        sources=[Path(__file__)],
-        argv=sys.argv[1:],
-    )
-
-
 if __name__ == "__main__":
-    main()
+    slices_main([HIP_MAIN_VMAG], "refresh-hipparcos-vmag")

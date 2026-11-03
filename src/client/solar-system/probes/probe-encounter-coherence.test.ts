@@ -7,20 +7,22 @@ import { readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import * as THREE from 'three';
-import { AU_PER_PC, KM_PC } from '../../util/astronomy-constants';
-import { ELEMENT_TARGETS } from '../../../../scripts/ephemerides/planet-element-roster';
-import type { PlanetElementTableFile } from '../../../../scripts/ephemerides/planet-element-schema';
-import { buildElementTable, type PlanetElementTable } from '../ephemerides/element-table';
+import { AU_PER_PC, KM_PC } from '../../../astro-core/astronomy-constants';
+import {
+  ELEMENT_TARGETS,
+  type PlanetName,
+} from '../../../catalog-format/ephemerides/planet-element-roster';
+import type { PlanetElementTableFile } from '../../../catalog-format/ephemerides/planet-element-schema';
+import { buildElementTable, type PlanetElementTable } from '../../../catalog-format/ephemerides/element-table';
 import {
   getPlanetPositions,
   installPlanetElementTables,
   resetPositionCache,
-  type PlanetName,
 } from '../ephemerides/ephemeris';
 import { ECLIPTIC_NORTH_POLE_ICRS } from '../ephemerides/orbit-rings-layer';
 import { HELIOPAUSE_APEX_SOL_PC } from '../heliopause/heliopause';
-import { probeTrajectoryFilename } from '../../../../scripts/probes/sync-probes-pure';
-import type { ProbeTrajectoryFile } from '../../../../scripts/probes/probe-trajectory-schema';
+import { probeTrajectoryFilename } from '../../../catalog-format/probes/sync-probes-pure';
+import type { ProbeTrajectoryFile } from '../../../catalog-format/probes/probe-trajectory-schema';
 import {
   buildProbeTrajectory,
   probeStateAt,

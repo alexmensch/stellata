@@ -1,7 +1,7 @@
 // See ./README.md#the-search-index-worker.
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { SearchEntry } from '../../../scripts/catalog/record/catalog-pure';
+import type { SearchEntry } from '../../catalog-format/record/catalog-pure';
 import { loadSearchIndex } from './search-index-host';
 import { buildSearchIndexPayload } from './search-index-payload';
 

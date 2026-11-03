@@ -68,15 +68,36 @@ manifest): peak A_V columns through each
 [Leike 2020](/data/papers/index.md#leike2020)-resolution targets,
 pinned in `dust-manifest.test.ts`.
 
+## The Edenhofer 2024 pulls
+
+The map comes from Zenodo record 8187943 through the `dustmaps` package,
+into `dustmaps`' own cache outside the repo, so no bake read of it is a
+repo file the recorder could hash. Each variant the bakes read is therefore
+a pull step of its own (`edenhofer2024.py`, entries
+`../refresh/refresh-edenhofer2024-{main,2kpc}.py`): it downloads the file,
+checks its md5 against the identity `VARIANTS` states, and writes that
+identity to `data/dust/edenhofer2024-<variant>.json`. A bake reads the
+identity file through `edenhofer2024.require(flavor)` before touching the
+map, which orders it after its pull, and fails naming the pull when the
+identity file is missing or names another dataset, or when dustmaps' cached
+file is missing or fails the md5 (a checkout where the pull never ran). The dust bake reads `main`;
+cloud-surfaces reads `main` and `2kpc`. A new upstream version is an edit
+to `VARIANTS`, which stales both the pull (its `--describe` prints the
+identity) and every bake that reads it.
+
 ## Usage
 
 ```
-python3 scripts/dust/build-dust.py                # fetch + resample real map
-python3 scripts/dust/build-dust.py --synthetic    # fake pattern for dev
-python3 scripts/dust/build-dust.py --flavor less_data_but_2kpc  # extended-range run
+pnpm run refresh:edenhofer2024-main             # download + record the map
+pnpm run build:dust                               # resample real map, record data/stamps/build-dust.json
+pnpm run build:dust --synthetic                   # fake pattern for dev
+pnpm run build:dust --flavor less_data_but_2kpc   # extended-range run
 ```
 
-Real mode needs `pip install -r scripts/requirements-dust.txt` and
-downloads ~3.2 GB via `dustmaps` on first run; a re-encode (e.g. a
-`DENSITY_MAX` change) reuses the gitignored `.voxels.npy` cache and
-needs only numpy.
+A run with arguments writes no record, so its outputs read stale until a
+plain `pnpm run build:dust`
+([Recording a manual step](../pipeline/README.md#recording-a-manual-step--recordts)).
+
+Real mode needs `pip install -r scripts/requirements-dust.txt` and the
+pulled map (~3.2 GB); a re-encode (e.g. a `DENSITY_MAX` change) reuses the
+gitignored `.voxels.npy` cache and needs only numpy.

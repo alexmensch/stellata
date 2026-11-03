@@ -222,7 +222,7 @@ naked-eye M31 is a smudge, which a gain cannot reproduce.
   The flux-conservation form of the first: at its central surface brightness
   (15.30) one patch would claim 1.10 mag, **2.34 mag more than the whole
   galaxy's 3.44**. All of it pinned in
-  `local-group-emission-calibration.test.ts`.
+  `/tests/integration/local-group-emission-calibration.test.ts`.
 - **The seam was visible from Sol at the default view, not only from
   outside.** M31 sits at b = −21.6°, where the band's own diffuse component
   is 24.20 mag/arcsec² and renders 8.6/255 — while an M31 isophote at that
@@ -624,14 +624,14 @@ pixels, so a whole-sky star count belongs in it only through the fraction
 of the sphere the frame covers — 10.8% at 50° on a 16:9 viewport, so
 100 000 threshold stars contribute 1.0e-4 rather than 9.6e-4. The band's
 surface brightness is the anticentre-plane figure the Milky Way layer's
-own gradient derives (`src/client/milkyway/calibration/README.md`), not a
+own gradient derives (`src/astro-core/milkyway/calibration/README.md`), not a
 round 22:
 the band is what a frame pointed at it actually contains, and the layer is
 the authority on how bright that is. The test reads it out of the layer
 rather than copying it, because it has moved four times — 22.55 under the
 retired 20.0 anchor, 23.47 once the dust was normalised, 22.06 on the
 luminosity solve, 22.70 once the resolution hole took the catalogue's share
-back out ([The resolution hole](/src/client/milkyway/calibration/README.md#the-resolution-hole--the-band-marches-the-model-minus-the-drawn-stars)).
+back out ([The resolution hole](/src/astro-core/milkyway/calibration/README.md#the-resolution-hole--the-band-marches-the-model-minus-the-drawn-stars)).
 The diffuse field is therefore **Milky-Way-dominated by 5.8×**,
 where the earliest rows had the two within 25% of each other.
 
@@ -1673,7 +1673,7 @@ fullscreen resolve and the inline path can never drift.
   the star pipeline already draws as individual quads, so comparing the
   diffuse layer against it double-counted the star field. Subtract the
   resolved catalogue and the pole was already right, to 0.08 mag.
-  `src/client/milkyway/calibration/README.md` is the authority.
+  `src/astro-core/milkyway/calibration/README.md` is the authority.
 
   What is genuinely left, and it is smaller than this section assumed: a
   shape change does **not** reconcile the two constraints, because the
@@ -1726,7 +1726,7 @@ the model's display anchor average over nearly the same solid angle.
 Levels below are 8-bit sRGB — the panorama is itself a display-referred
 image, which is what the model's pinned levels are. Model rows are the
 band table as it stood before the resolution hole
-([*The gradient*](/src/client/milkyway/calibration/README.md#the-gradient-this-produces-and-what-it-reads-on-screen) carries the
+([*The gradient*](/src/astro-core/milkyway/calibration/README.md#the-gradient-this-produces-and-what-it-reads-on-screen) carries the
 current one), FOV-invariant by construction and computed at `DR_MAG` 7.5
 through the shipped operator (C1 toe → extended Reinhard → sRGB encode);
 the two [Leinert 1998](/data/papers/index.md#leinert1998) columns shift that table's `S` by the disagreements pinned

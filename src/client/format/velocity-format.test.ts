@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import { galacticDirToIcrs } from '../galactic/galactic-coords';
+import { galacticDirToIcrs } from '../../astro-core/galactic-coords';
 import { formatSpaceVelocity, KMS_PER_PC_YR, spaceVelocity } from './velocity-format';
 
 // Build an ICRS velocity whose galactic heading is (l, b) by rotating a

@@ -7,7 +7,7 @@ import {
   type TileReduction,
   weightedMedian,
 } from './reduction/reduction-pure';
-import { tonemapWhitePoint } from '../tonemap/tonemap-pure';
+import { tonemapWhitePoint } from '../../../astro-core/tonemap/tonemap-pure';
 
 /** Display luminance a correctly-exposed sunlit disc reads at —
  *  measured, not chosen: the geometric mean of three independently

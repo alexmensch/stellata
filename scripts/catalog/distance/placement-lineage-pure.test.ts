@@ -8,7 +8,7 @@ import { BAILER_JONES } from './refinement/bailer-jones-source';
 import { SIMBAD_VALUES } from '../simbad/simbad-values-source';
 import { encodeLineageLine, stageLineageLine } from '../lineage/lineage-row-pure';
 import type { DirectionSolution } from './direction-cascade';
-import type { ParkedLedgerEntry } from './parallax/parked-ledger';
+import type { ParkedLedgerEntry } from './parallax/parked-ledger-pure';
 import { invariantCheck, invariantViolations } from '../lineage/lineage-invariant-pure';
 import {
   PLACEMENT_CODES, PLACEMENT_INVARIANTS, parkedLedgerView, placementLineageLines, placementLineageRows,

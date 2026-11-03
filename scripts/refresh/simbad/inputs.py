@@ -13,7 +13,7 @@ import sys
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 import refresh_lib as rl  # noqa: E402
 
-from .specs import GJ, HIP, TYC, WIDENING_LADDER
+from .specs import GAIA_DR3, GJ, HIP, TYC, WIDENING_LADDER
 
 
 TableRow = Mapping[str, str]
@@ -48,6 +48,20 @@ class MembershipRequestKeys:
             len(self.source_ids) + len(self.hips) + len(self.tycs)
             + len(self.gls) + self.keyless
         )
+
+    def request_lines(self) -> list[str]:
+        """Every key this partition asks SIMBAD under, one line each: the
+        projection of the manifest a pull's request hash covers."""
+        lines = [
+            " ".join([f"{GAIA_DR3.tsv_name}:{sid}", *(
+                f"{name}:{key}"
+                for name, key in sorted(self.designations_by_source_id.get(sid, {}).items())
+            )])
+            for sid in self.source_ids
+        ]
+        for name, keys in self.by_namespace.items():
+            lines.extend(f"{name}:{key}" for key in keys)
+        return lines
 
     @property
     def by_namespace(self) -> dict[str, list]:

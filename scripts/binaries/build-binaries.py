@@ -5,11 +5,9 @@ Wires the per-stage modules into ``pnpm run build:binaries``.
 
 from __future__ import annotations
 
-import argparse
 import sys
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterator
 
 SCRIPT = Path(__file__).resolve()
 
@@ -18,10 +16,6 @@ SCRIPT = Path(__file__).resolve()
 sys.path.insert(0, str(SCRIPT.parents[2]))
 
 from scripts.refresh.refresh_lib import assert_row_count  # noqa: E402
-from scripts.util.build_stamp import (  # noqa: E402
-    clear_stamp, file_hashes, imported_script_modules, outputs_json, stamp_is_current,
-    stamp_path, write_stamp,
-)
 from scripts.util.paths import REPO_ROOT  # noqa: E402
 
 ROOT = REPO_ROOT
@@ -116,7 +110,7 @@ from scripts.binaries.stage6_multiples import (  # noqa: E402
 )
 from scripts.binaries.stage7_counts import (  # noqa: E402
     LABEL,
-    REFRESH_COMMAND,
+    SNAPSHOT_SCRIPT,
     assert_or_update_rates,
     build_binaries_counts,
     build_binaries_rates,
@@ -164,33 +158,6 @@ EXPECTED_RATES = SCRIPT.parent / "build-binaries-rates-expected.json"
 # saturated or systems Gaia could not detect). Coverage outside this band
 # signals an input drift worth flagging at build time.
 ATHYG_GAIA_COVERAGE_BOUNDS = (0.90, 1.00)
-
-
-MULTIPLES_STAMP = stamp_path("multiples")
-OUTPUTS = (OUT_MULTIPLES, OUT_ASTROMETRY_REQUEST, OUT_BINDING_VERDICTS)
-
-
-def _iter_input_paths() -> Iterator[Path]:
-    yield from imported_script_modules()
-    yield SRC_WDS_SUMM
-    yield SRC_ORB6
-    yield SRC_ATHYG
-    yield SRC_GCVS
-    yield SRC_GCVS_CROSSID
-    yield SRC_CCDM
-    yield SRC_HIP2
-    yield SRC_GAIA_HIP_XM
-    yield SRC_GAIA_TYC_XM
-    yield SRC_GAIA_NSS
-    yield SRC_GAIA_ASTROMETRY
-    yield SRC_SIMBAD_WDS_XIDS
-    yield SRC_SIMBAD_SPTYPE
-    yield SRC_COMPONENT_SPTYPE_OVERRIDES
-    yield SRC_ORB6_COMPONENT_OVERRIDES
-    yield SRC_ASTROMETRY_EXCLUSIONS
-    yield SRC_MSC_SYSTEMS
-    yield SRC_MSC_ORBITS
-    yield SRC_MSC_COMPONENTS
 
 
 def log(msg: str) -> None:
@@ -497,16 +464,7 @@ def resolve_through_stage2() -> Stage2Resolution:
     )
 
 
-def run(force: bool) -> int:
-    inputs = file_hashes(_iter_input_paths())
-    if not force and stamp_is_current(MULTIPLES_STAMP, inputs):
-        log(
-            f"{OUT_MULTIPLES.relative_to(ROOT)} up to date — skipping "
-            "(use --force to rebuild)"
-        )
-        return 0
-    clear_stamp(MULTIPLES_STAMP)
-
+def run() -> int:
     s2 = resolve_through_stage2()
     wds_pairs = s2.wds_pairs
     orb6 = s2.orb6
@@ -681,7 +639,7 @@ def run(force: bool) -> int:
         ),
     )
     counts_match = assert_or_update_counts(
-        counts, EXPECTED_COUNTS, label=LABEL, refresh_command=REFRESH_COMMAND,
+        counts, EXPECTED_COUNTS, label=LABEL, script=SNAPSHOT_SCRIPT,
     )
     rates = build_binaries_rates(counts)
     rates_match = assert_or_update_rates(rates, EXPECTED_RATES)
@@ -692,26 +650,8 @@ def run(force: bool) -> int:
         "Stage 7 complete. data/binaries/multiples.tsv ready for "
         "build-runtime-binaries.py."
     )
-    write_stamp(MULTIPLES_STAMP, inputs, OUTPUTS)
     return 0
 
 
-def main() -> int:
-    p = argparse.ArgumentParser(description=__doc__)
-    p.add_argument(
-        "--force", action="store_true",
-        help="ignore input-hash check and reload all inputs",
-    )
-    p.add_argument(
-        "--outputs", action="store_true",
-        help="print the step's outputs and stamp as JSON, build nothing",
-    )
-    args = p.parse_args()
-    if args.outputs:
-        print(outputs_json(OUTPUTS, MULTIPLES_STAMP))
-        return 0
-    return run(force=args.force)
-
-
 if __name__ == "__main__":
-    sys.exit(main())
+    sys.exit(run())

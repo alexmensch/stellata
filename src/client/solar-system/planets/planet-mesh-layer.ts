@@ -3,7 +3,7 @@
 
 import * as THREE from 'three';
 import type { MemberSphere } from '../../local-depth/bracket/slice-pure';
-import { KM_PC } from '../../util/astronomy-constants';
+import { KM_PC } from '../../../astro-core/astronomy-constants';
 import { texelBytes } from '../../util/texture-bytes-pure';
 import {
   PLANET_MESH_TEXTURE_SLOTS, textureSlotRecord,
@@ -33,7 +33,7 @@ import {
   reliefHorizonUniform,
 } from './surface-relief/surface-relief-pure';
 import type { HdrEmitterUniforms } from '../../hdr/hdr-emitter-uniforms';
-import { relativeLuminance } from '../../hdr/tonemap/tonemap-pure';
+import { relativeLuminance } from '../../../astro-core/tonemap/tonemap-pure';
 import {
   phaseAngleFor,
   phaseAngleFromLegs,

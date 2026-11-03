@@ -1,7 +1,7 @@
 // Space-motion propagation of catalog positions off their fixed J2016.0
 // baseline to the scene's time base. See /docs/science-catalog-ingestion.md#current-epoch-star-positions--space-motion-propagation-to-t.
 
-import { DAYS_PER_JULIAN_YEAR, J2000_JD } from '../util/astronomy-constants';
+import { DAYS_PER_JULIAN_YEAR, J2000_JD } from '../../astro-core/astronomy-constants';
 
 // catalog.bin positions ship at this fixed scene epoch (Julian year);
 // velocities are pc/yr, so the advance is p(t) = p(J2016) + v·(t − 2016).

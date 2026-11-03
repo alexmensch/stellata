@@ -10,8 +10,8 @@ import { describe, it, expect } from 'vitest';
 import { walkFiles } from './walk-files';
 
 import { isDustPublicAsset } from '../scripts/dust/sync-dust-pure';
-import { isPlanetElementPublicAsset } from '../scripts/ephemerides/sync-ephemerides-pure';
-import { isProbePublicAsset } from '../scripts/probes/sync-probes-pure';
+import { isPlanetElementPublicAsset } from '../src/catalog-format/ephemerides/sync-ephemerides-pure';
+import { isProbePublicAsset } from '../src/catalog-format/probes/sync-probes-pure';
 import { isTexturePublicAsset } from '../scripts/textures/sync-textures-pure';
 import { STAGING_SUFFIX } from '../scripts/util/staged-write';
 

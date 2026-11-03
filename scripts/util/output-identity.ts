@@ -4,7 +4,8 @@ import { execFileSync } from 'node:child_process';
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join, relative, resolve } from 'node:path';
 
-import { STAMP_DIR, fileHashes, readStamp, type FileHashes } from './build-stamp';
+import { fileHashes, readStamp, type FileHashes } from './build-stamp';
+import { STAMP_DIR } from './stamp-path-pure';
 import { diffOutputHashes, formatDifference, isIdentical } from './output-identity-pure';
 import { REPO_ROOT } from './paths';
 

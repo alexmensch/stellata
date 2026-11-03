@@ -22,7 +22,7 @@ doc-figures.ts             loadSnapshots (every *-expected.json, keyed by stem;
                            a repeated stem throws) and docFiles (every *.md).
                            Both take tracked and untracked-but-not-ignored
                            files, so a snapshot just written by
-                           UPDATE_BUILD_COUNTS=1 resolves before its git add,
+                           UPDATE_SNAPSHOTS=1 resolves before its git add,
                            and both list through presentFiles, so a symlink or
                            a deleted, unstaged file is skipped. docFiles takes
                            *.html too (src/client/app/index.html). scanDocFigures
@@ -111,7 +111,7 @@ One value per marker. A figure computed from several values — a difference, a
 sum, a percentage, "X of Y" where Y is not itself pinned — stays prose, and the
 pinned values inside the sentence carry their own markers.
 
-**After regenerating a snapshot** (`UPDATE_BUILD_COUNTS=1`), run
+**After regenerating a snapshot** (`UPDATE_SNAPSHOTS=1`), run
 `pnpm run docs:figures` and commit the doc changes with it. The run prints each
 figure it moved; a moved figure in a sentence whose reasoning depended on the
 old value still needs a reader.

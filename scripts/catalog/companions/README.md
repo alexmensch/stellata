@@ -53,7 +53,7 @@ scripts/catalog/companions/
                                   describe in it, so this suite silently ran
                                   a second time inside the multiplicity and
                                   record-index suites.
-  multi-star-regression.test.ts   Frozen corpus pinning promoted-companion
+  /tests/integration/multi-star-regression.test.ts   Frozen corpus pinning promoted-companion
   multi-star-regression.tsv       records against the built catalog and the
                                   real binaries.bin — catches drift on
                                   either side of the wings correspondence.
@@ -255,7 +255,7 @@ Per-row gates and resolution:
   (`build-runtime-binaries.py`'s `override_inner_primary_indices`);
   counted by `repositionedInnerToParent`. Rendering is unaffected either
   way (elements-alone R(t)), but a consistent bake keeps the
-  baked-vs-elements ratchet in `multi-star-regression.test.ts` honest.
+  baked-vs-elements ratchet in `/tests/integration/multi-star-regression.test.ts` honest.
 - **Position for pair-row primaries.** When the cursor primary itself
   needs promotion (40 Eri B — primary in BC/BD/BE, never a secondary
   of A), no identifier is required: an id-less row (Rigel B, Acrux B —
@@ -532,7 +532,7 @@ holds its star unlinked — placing it would mint a twin of that record.
 | Field(s) | Origin | Source |
 | --- | --- | --- |
 | `conIndex` | per-component | the IAU boundary region the minted position falls in ([Positional constellation membership](../parse/constellations/README.md#positional-constellation-membership)) — so a pair wide enough to straddle a boundary lands its members on the correct sides, and an anchor-less row still resolves. Counted `companionConstellationSplitFromAnchor` where it differs from the anchor's. |
-| `proper` | post-pass | null at mint; the display-name pass writes the NAME tiers alone ([Two callers, one composer](../naming/README.md#two-callers-one-composer)). |
+| `proper` | post-pass | null at mint; the display-name pass writes the NAME tiers alone ([Two callers, one composer](/src/catalog-format/naming/README.md#two-callers-one-composer)). |
 | `desigConIndex` | inherited | anchor's designation index — a composed name ("Xi Boo B") is named for whatever the primary's designation is. Sourced from IV/27A keyed on the anchor's HD/HIP, so a boundary-straddling companion composes against the primary's designation (Fomalhaut C is "α PsA C" though it sits in Aquarius) rather than its own positional index ([The designation constellation](../classic-ids/README.md#the-designation-constellation)). |
 | `vx/vy/vz` | inherited | anchor's systemic velocity — a static companion shears off the primary under the epoch-advance otherwise ([Space-motion velocity](../parse/README.md#space-motion-velocity), Pair coherence). Truly anchor-less escapes fall back to zero. |
 | `x/y/z` | system-derived | anchor ICRS position + WDS (ρ, θ) tangent projection at the anchor's distance. |
@@ -564,4 +564,4 @@ The letter and the anchor a record composes against are
 [Component-letter search designations](record-index/README.md#component-letter-search-designations); the
 duplicate labels that survive the ladder are data findings, enumerated in
 `../naming/naming-duplicates.tsv` and ratcheted by
-`multi-star-regression.test.ts`.
+`/tests/integration/multi-star-regression.test.ts`.

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { J2000_JD } from '../../util/astronomy-constants';
+import { J2000_JD } from '../../../astro-core/astronomy-constants';
 import { deltaTSeconds } from './delta-t-pure';
 import {
   MAX_RATE,

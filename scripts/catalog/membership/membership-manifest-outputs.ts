@@ -7,7 +7,7 @@ import { REPO_ROOT as ROOT } from '../../util/paths';
 import {
   LABEL_FLIPS_FILE,
 } from '../classic-ids/label-merge/label-flips-tsv';
-import { LINEAGE_LAYOUT, stageFamilies, stageOutputFiles } from '../lineage/lineage-io';
+import { LINEAGE_LAYOUT, stageFamilies, stageOutputFiles } from '../lineage/lineage-layout-pure';
 import { ADDITIONS_LEDGER_FILE } from './additions-ledger-tsv';
 import { BINDING_REVIEW_FILE } from './binding-review-tsv';
 import { LABEL_DROPS_FILE } from './label-drops-tsv';

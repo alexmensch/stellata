@@ -8,7 +8,7 @@ import {
   type VarStarData,
   type VarStarXref,
 } from './gcvs-parse';
-import { NO_CONSTELLATION_INDEX, VAR_TYPE_DSCT, VAR_TYPE_MIRA } from '../../record/catalog-pure';
+import { NO_CONSTELLATION_INDEX, VAR_TYPE_DSCT, VAR_TYPE_MIRA } from '../../../../src/catalog-format/record/catalog-pure';
 import { CONSTELLATIONS } from '../constellations/constellations';
 import { makeStar } from '../star-fixture';
 

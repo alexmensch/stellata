@@ -11,8 +11,6 @@ from typing import Any
 
 import refresh_lib as rl
 
-MODULE_PATH = Path(__file__).resolve()
-
 TSV_COLUMNS = [
     "source_id",
     "ra",
@@ -114,6 +112,15 @@ EXPECTED_REF_EPOCH = 2016.0
 REF_EPOCH_TOL = 0.01
 
 
+def sync_client() -> rl.TapClient:
+    return rl.gaia_sync_client(BATCH_SIZE * 2)
+
+
+def describe() -> dict:
+    """Both scopes send the same query; the request file each reads is a data input."""
+    return rl.description(ADQL_TEMPLATE, sync_client().services, release=rl.GAIA_DR3_RELEASE)
+
+
 def query_batch(client: rl.TapClient, ids: list[int]):
     inlist = ",".join(str(i) for i in ids)
     return client.run(ADQL_TEMPLATE.format(inlist=inlist))
@@ -140,20 +147,12 @@ def run_pull(
     out: Path,
     spot_checks: list[dict[str, Any]],
     script_name: str,
-    script_path: Path,
     root: Path,
-    force: bool,
     coverage_min: float = EXPECTED_COVERAGE_MIN,
 ) -> None:
     """Pull 5p astrometry for every source_id in ``request`` and write it
-    to ``out`` in request order. Idempotency folds ``script_path`` (the
-    caller) and this module's own mtime alongside the request file, so a
-    fix here or in either wrapper invalidates a cached output.
+    to ``out`` in request order.
     """
-    if not force and rl.is_up_to_date(out, [script_path, MODULE_PATH, request]):
-        print(f"{out.relative_to(root)} up to date — skipping (use --force to rebuild)")
-        return
-
     if not request.exists():
         raise SystemExit(
             f"{script_name}: request file {request.relative_to(root)} is missing "
@@ -170,7 +169,7 @@ def run_pull(
         f"{BATCH_SIZE} on Gaia TAP (gaiadr3.gaia_source)"
     )
 
-    client = rl.gaia_sync_client(BATCH_SIZE * 2)
+    client = sync_client()
     rows_by_id: dict[int, Any] = {}
 
     def collect(table: Any) -> None:

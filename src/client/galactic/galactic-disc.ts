@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { GAL_TO_ICRS, GALACTIC_CENTRE_PC } from './galactic-coords';
+import { GAL_TO_ICRS, GALACTIC_CENTRE_PC } from '../../astro-core/galactic-coords';
 import { farFieldFadeOpacity } from './galactic-fade';
 import type {
   ChromeLineMaterial, ChromeLineMaterials,
@@ -12,7 +12,7 @@ import {
   BULGE_RADIUS_PC,
   DISC_HALF_THICKNESS_PC,
   DISC_RADIUS_PC,
-} from '../milkyway/column/milkyway-column-pure';
+} from '../../astro-core/milkyway/column/milkyway-column-pure';
 
 // Every extent here is the matching Milky Way proxy-mesh envelope, taken
 // by import rather than restated: the wireframe's job is to outline the

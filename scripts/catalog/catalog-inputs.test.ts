@@ -11,8 +11,8 @@ const inputs = new Set(await stepInputPaths('build:catalog'));
 
 describe('stepInputPaths(build:catalog)', () => {
   it('keys the src/client and scripts/colour modules the build imports', () => {
-    expect(inputs).toContain(abs('src/client/star-pipeline/extinction/dust-raymarch-pure.ts'));
-    expect(inputs).toContain(abs('scripts/colour/blackbody-lut-pure.ts'));
+    expect(inputs).toContain(abs('src/astro-core/extinction/dust-raymarch-pure.ts'));
+    expect(inputs).toContain(abs('src/astro-core/colour/blackbody-lut-pure.ts'));
   });
 
   it('keys the count snapshots the build asserts against', () => {

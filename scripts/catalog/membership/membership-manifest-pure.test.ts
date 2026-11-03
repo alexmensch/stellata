@@ -4,7 +4,7 @@ import {
   type ClassicIdOverlay,
   type OverlayEntry,
 } from '../classic-ids/classic-id-overlay-pure';
-import { parseGlieseTsv } from '../gliese-parse';
+import { parseGlieseTsv } from '../gliese-parse-pure';
 import { SPINE_COLUMNS, spineDesignations, type SpineRow } from '../spine/inherited-spine-pure';
 import type { PrimaryTables } from '../spine/primaries-audit-pure';
 import { printedVLookups } from '../photometry/v-magnitude-pure';
@@ -36,7 +36,7 @@ import {
   type ManifestColumn,
   type ManifestRecord,
 } from './membership-manifest-tsv';
-import { parkedRecordKey } from '../distance/parallax/parked-ledger';
+import { parkedRecordKey } from '../distance/parallax/parked-ledger-pure';
 import { diffLineage, stageDiffText } from '../lineage/lineage-diff-pure';
 import {
   decodeLineageLine, paramsOf, sortLineageLines, stageLineageLine, type LineageLine, type LineageRow,

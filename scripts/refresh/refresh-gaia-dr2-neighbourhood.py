@@ -88,12 +88,6 @@ SPOT_CHECKS: list[dict[str, Any]] = [
 
 
 def main() -> None:
-    force = "--force" in sys.argv
-
-    if not force and rl.is_up_to_date(OUT, [Path(__file__), REQUEST]):
-        print(f"{OUT.relative_to(ROOT)} up to date — skipping (use --force to rebuild)")
-        return
-
     if not REQUEST.exists():
         raise SystemExit(
             f"{SCRIPT_NAME}: request file {REQUEST.relative_to(ROOT)} is missing "
@@ -168,5 +162,9 @@ def main() -> None:
     print(f"wrote {OUT.relative_to(ROOT)} ({written} rows)")
 
 
+def describe() -> dict:
+    return rl.description(ADQL_TEMPLATE, rl.gaia_sync_client(50_000).services, release=rl.GAIA_DR3_RELEASE)
+
+
 if __name__ == "__main__":
-    main()
+    rl.pull_main(main, describe)

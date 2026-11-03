@@ -13,9 +13,6 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import refresh_lib as rl  # noqa: E402
 
-# Callers pass this to is_up_to_date — see magnitude/README.md
-MODULE_PATH = Path(__file__).resolve()
-
 # ─── The magnitude-bounded selection ──────────────────────────────────
 
 G_MAG_FLOOR = 11.0
@@ -126,12 +123,24 @@ def magnitude_leg_adql(
 
 
 def request_leg_adql(
-    columns: Sequence[str], table: str, ids: Sequence[int]
+    columns: Sequence[str], table: str, ids: Sequence[int | str]
 ) -> str:
     inlist = ",".join(str(i) for i in ids)
     return (
         f"SELECT {', '.join(columns)} FROM {table} "
         f"WHERE source_id IN ({inlist})"
+    )
+
+
+def describe_deep_population(
+    table: str, columns: Sequence[str], client: rl.TapClient, release: str
+) -> dict[str, Any]:
+    """Every magnitude-leg slice and the request leg's template: a moved
+    floor or slice edge stales the pull as a changed column list does."""
+    queries = [magnitude_leg_adql(columns, table, bounds) for bounds in magnitude_slices()]
+    template = request_leg_adql(columns, table, ["{inlist}"])
+    return rl.description(
+        "\n".join([*queries, template]), client.services, release=release
     )
 
 

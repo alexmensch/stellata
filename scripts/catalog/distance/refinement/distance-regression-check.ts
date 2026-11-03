@@ -4,7 +4,7 @@
 
 import type { SimbadSampleRow } from '../../validate/simbad-sample-parse';
 import type { Star } from '../../parse/stars-parse';
-import type { DistVia } from '../parallax/parallax-cascade';
+import type { DistVia } from '../../../../src/catalog-format/record/catalog-pure';
 
 // Only an override layer moves a record off its own inversion. Bailer-Jones
 // legitimately re-anchors the low-S/N tail of Gaia parallaxes, so that tier
@@ -32,7 +32,7 @@ export interface SimbadDistanceEntry {
 // `reason` is a hand-edited rationale carried in the committed snapshot —
 // "ρ Cas yellow hypergiant; SIMBAD's 1/π is the noisy Hipparcos value",
 // "LMC kinematic snap legitimate", etc. Omitted on fresh detection;
-// preserved across UPDATE_DISTANCE_OUTLIERS=1 refreshes via mergeReasons
+// preserved across UPDATE_SNAPSHOTS=1 refreshes via mergeReasons
 // so a refresh never silently drops the rationale a human wrote. Not part
 // of the equality check — editing a reason in the snapshot does not fail
 // the build.
@@ -219,7 +219,7 @@ function diffSection<T extends SelfConsistencyOutlier | SimbadOutlier>(
   return diffs;
 }
 
-/** Called on UPDATE_DISTANCE_OUTLIERS=1 refreshes so hand-edited rationales
+/** Called on UPDATE_SNAPSHOTS=1 refreshes so hand-edited rationales
  *  survive an explicit rebaseline; a new outlier lands without one, for the
  *  committing human to fill in. */
 export function mergeReasonsFromSnapshot(

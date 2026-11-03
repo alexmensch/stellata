@@ -1,9 +1,9 @@
 // Fetches the five probe trajectory JSONs from public/probes/ and parses
 // each into a runtime ProbeTrajectory.
 
-import { PROBE_MISSIONS } from '../../../../scripts/probes/probe-roster';
-import { probeTrajectoryFilename } from '../../../../scripts/probes/sync-probes-pure';
-import type { ProbeTrajectoryFile } from '../../../../scripts/probes/probe-trajectory-schema';
+import { PROBE_MISSIONS } from '../../../catalog-format/probes/probe-roster';
+import { probeTrajectoryFilename } from '../../../catalog-format/probes/sync-probes-pure';
+import type { ProbeTrajectoryFile } from '../../../catalog-format/probes/probe-trajectory-schema';
 import { buildProbeTrajectory, type ProbeTrajectory } from './probe-trajectory';
 
 /**

@@ -1,0 +1,13 @@
+{
+  "inputs": {},
+  "outputs": {
+    "data/simbad/simbad_tyc_hd.tsv": "ab59b8462a1f08610db193697dba7026e68b7ffe"
+  },
+  "query": "b5ecd29c98b9d7758a25b1d7621fce66ee94ad65",
+  "answeredBy": [],
+  "request": "f96f93bb5fc5c9d3a16126a699aa75aea567ac78",
+  "requestFrom": [
+    "data/membership/membership-manifest.tsv",
+    "data/classic-ids/tyc2_hd.tsv"
+  ]
+}
