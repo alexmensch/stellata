@@ -143,7 +143,7 @@ describe('FrameLoop tick', () => {
     loop.start();
     expect(log).toEqual([
       'advanceEpochTo', 'origin.tick', 'flushLocalPositions', 'cameraStep', 'realtime?', 'gate',
-      'occluders.beginFrame', 'updateAll', 'extinction.update', 'cadence.refresh', 'measure',
+      'startTimestampFrame', 'occluders.beginFrame', 'updateAll', 'extinction.update', 'cadence.refresh', 'measure',
       'hdr.bind', 'syncPhysSizeWindow', 'syncUniformNodes', 'starPipeline.update', 'render',
       'localDepth.render', 'hdr.resolve', 'reduce', 'emitFrame',
     ]);
@@ -366,12 +366,6 @@ describe('FrameLoop GPU pacing', () => {
     knobs.render = true;
     runNext();
     expect(seen).toHaveLength(1);
-  });
-
-  it('leaves the timestamp frame to three under rAF pacing', () => {
-    const { loop, log } = harness();
-    loop.start();
-    expect(log).not.toContain('startTimestampFrame');
   });
 
   it('a refused tick waits for the display, not the GPU', async () => {

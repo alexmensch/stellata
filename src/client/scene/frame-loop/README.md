@@ -108,9 +108,9 @@ one caller that sets it, the perf runner's dwell
   silicon that idle share is what lowers the clock
   (`stellata-8cg.49.42`'s notes).
 
-**A GPU-paced rendered tick opens its own timestamp frame** before any
-pass, compute included, or every tick inside one display interval would
-resolve as one GPU sample
+**Every rendered tick opens its own timestamp frame**, under either pacing,
+before any pass, compute included; under GPU pacing every tick inside one
+display interval would otherwise resolve as one GPU sample
 ([One frame per tag](../../debug/gpu-timing/README.md#one-frame-per-tag)).
 
 **A tick the gate refuses waits for the display under either pacing.** It

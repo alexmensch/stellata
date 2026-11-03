@@ -170,7 +170,7 @@ export class FrameLoop {
       return;
     }
     // README.md#pacing — before the frame's first pass, compute included.
-    if (this.pacing === 'gpu') d.webgpu.startTimestampFrame();
+    d.webgpu.startTimestampFrame();
     perfMark('pre-render');
     d.uniforms.uCameraPos.value.copy(d.camera.position);
     d.uniforms.uPinFocusToCenter.value = d.focus.pinnedStar() ?? NO_INSTANCE;
