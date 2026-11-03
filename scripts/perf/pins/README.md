@@ -281,7 +281,7 @@ a pin run reads `steady`.
   names which statistic the row was judged on, and it is not the same at
   every row: `gpu-plain-p50` where the vantage draws two pass classes and
   `compute-p10` on a compute row ([The compute row](#the-compute-row)).
-- <a id="ungated-vantages-and-lg-is-permanently-one"></a>**Ungated vantages, and `lg` is permanently one.** `PIN_UNGATED_SCENARIOS`
+- <a id="ungated-vantages-and-lg-is-permanently-one"></a>**Ungated vantages, and `lg` is one under rAF pacing.** `PIN_UNGATED_SCENARIOS`
   maps a vantage the band never marks to the reason, which the row's note
   prints. `lg`'s GPU duration **wanders as much inside a single dwell as it
   does between runs**, so its median is not a stable estimator there and
@@ -293,8 +293,11 @@ a pin run reads `steady`.
   dwells trip the state guard; 0 of 56 elsewhere do. Reproduced at 9.216 Mpx
   (where the frame clears the refresh interval), at run positions 1, 5 and
   10, cold and warm, across a dozen commits — so it is a property of the
-  vantage and **not** waiting on a fix. The band stands down, and so does the
-  **state guard**: a trending lg is that same wander read across the quarters,
+  vantage and **not** waiting on a fix — under rAF pacing, where all of
+  that was measured. GPU-paced, lg's throughput quarters read flat
+  (4.00–4.08 ms, `8cg-49-42-gpu-all-{3,4}.json`), so whether lg stays
+  ungated on a GPU-paced pin is `stellata-8cg.49.38`'s to decide. The band
+  stands down, and so does the **state guard**: a trending lg is that same wander read across the quarters,
   not a verdict on the run, and since any refused row refuses the whole pin,
   leaving the refusal in force killed roughly one pin re-take in three on the
   one row the gate never acts on — ~25 min of held-idle machine each.
@@ -335,7 +338,8 @@ a pin run reads `steady`.
   it is the discriminator, not the gate. The p10 and not the single fastest
   frame, which is noisier again — repeat-pair |Δ| tails of 1.473 ms against
   1.353. Blank on a compute row, where the p10 *is* the metric and the column
-  would restate `delta`. `frameFloor` lives in `../dwell/dwell-pure.ts`
+  would restate `delta`, and on throughput and CPU rows, which keep no
+  per-frame floor. `frameFloor` lives in `../dwell/dwell-pure.ts`
   because `--baseline` prints the same column off the same statistic
   ([Comparing against a baseline](../README.md#comparing-against-a-baseline)), and a reader asking "cost
   or wander?" must not have to ask it differently of the two tables.
@@ -344,7 +348,8 @@ a pin run reads `steady`.
   while the rest did not — a pass deliberately spread across frames, or a
   class of frame that costs more — which the gated statistic is chosen not to
   follow.
-- **Ceiling.** A GPU-stream p50 over `PIN_CEILING_MS` (33.4 ms, two 60 Hz
+- **Ceiling.** A row's gated value — GPU-stream p50, throughput mean or CPU
+  p50 — over `PIN_CEILING_MS` (33.4 ms, two 60 Hz
   intervals of hardware time) is `✗` whatever the band says — and on an
   ungated vantage too, which is where it earns its keep: those rows have
   nothing else watching them.
