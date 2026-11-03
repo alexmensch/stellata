@@ -868,9 +868,9 @@ describe('a GPU-paced pin — throughput, CPU and the bottleneck', () => {
     expect(rows[1].verdict).toBe('same');
   });
 
-  it('refuses a context the main thread paced, on either side', () => {
+  it('refuses a context the main thread paced, in the run and when writing the pin', () => {
     expect(compareToPin(pinOf([paced(5, 2)]), file([paced(5, 4.5)])).refusals[0].reason).toContain('CPU-bound');
-    expect(compareToPin(pinOf([paced(5, 4.5)]), file([paced(5, 2)])).refusals[0].reason).toContain('CPU-bound');
+    expect(pinFromRuns([runOf(file([paced(5, 4.5)]))], SOURCE).refusals[0]).toContain('CPU-bound');
   });
 });
 

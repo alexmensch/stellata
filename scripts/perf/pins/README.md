@@ -269,7 +269,8 @@ a pin run reads `steady`.
 ## Reading `--against-pin`
 
 - **Metric.** On a GPU-paced row, throughput, with a `|cpu` row beside it
-  and a CPU-bound context refused
+  and a CPU-bound context refused — in the run, and when the pin is
+  written, so no pinned row is CPU-bound
   ([CPU and GPU, apart](../dwell/README.md#cpu-and-gpu-apart)). On an
   rAF-paced row, the GPU-stream p50 alone — the one continuous whole-frame
   reading the pin holds. Two cold pins on identical code put four of the

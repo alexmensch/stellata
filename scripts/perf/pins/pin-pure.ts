@@ -269,6 +269,9 @@ function rowRefusal(record: ScenarioRecord): string | null {
   // as the pin would carry its lever's cost in every later run's verdict.
   const precondition = preconditionRefusal({}, record.params);
   if (precondition !== null) return precondition;
+  // Here, so a pin row is never CPU-bound and `compareToPin` checks the run alone.
+  const cpuBound = cpuBoundRefusal(cpuClock(record.dwell)?.p50, throughputFrameMs(record.dwell, dwellPacing(record)));
+  if (cpuBound !== null) return cpuBound;
   if (PIN_UNGATED_SCENARIOS[record.name] === undefined
     && gatingClock(record.dwell, dwellPacing(record)).clock.stateGuard === 'trending') {
     return 'the dwell trended across its quarters — it straddled a load-state transition';
@@ -757,8 +760,6 @@ export function compareToPin(pin: PinFile, current: PerfFile): PinDiff {
       ?? positionRefusal(pinned.position, record.position)
       ?? framesRefusal(pinned.frames, dwellFrames(record))
       ?? pacingRefusal(recordedPacing(pinned.pacing), dwellPacing(record))
-      ?? cpuBoundRefusal(cpuClock(dwell)?.p50, throughputFrameMs(dwell, dwellPacing(record)))
-      ?? cpuBoundRefusal(pinned.cpu?.p50, pinned.throughput?.meanMs)
       // Gated on the pin holding a GPU stream for the row, matching the clock
       // `compareRows` goes on to judge: a pair with none is printed ungated and
       // never marked, so narrowing it would refuse a row nothing reads.
