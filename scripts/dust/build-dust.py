@@ -55,7 +55,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--synthetic", action="store_true",
                         help="Generate a test-pattern voxel grid without any real data.")
-    parser.add_argument("--flavor", default="main", choices=["main", "less_data_but_2kpc"],
+    parser.add_argument("--flavor", default="main", choices=list(edenhofer2024.FLAVOR_VARIANT),
                         help="Edenhofer map flavor: 'main' is 1.25 kpc standard, "
                              "'less_data_but_2kpc' is a validation run extending to 2 kpc.")
     parser.add_argument("--output", type=Path, default=DATA_DUST,
