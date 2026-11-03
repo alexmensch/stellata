@@ -508,6 +508,24 @@ describe('diffRuns — refusals', () => {
     expect(pacingRefusal(undefined, undefined)).toBeNull();
   });
 
+  it('gates a GPU-paced pair on throughput and adds a CPU row', () => {
+    const paced = (frameMs: number, cpuMs: number): PerfFile => {
+      const f = withDwell(dwellStats(16.7), { params: { pacing: 'gpu' } }, dwellStats(frameMs * 1.3));
+      const d = f.scenarios[0].dwell!;
+      return file([{ ...f.scenarios[0], dwell: {
+        ...d, throughputStats: dwellStats(frameMs), cpuMs: [cpuMs], cpuStats: dwellStats(cpuMs),
+      } }]);
+    };
+    const diff = diffRuns(paced(5, 2), paced(6, 2));
+    expect(diff.refusals).toEqual([]);
+    const [frame, cpu] = [diff.rows.find((r) => r.key.endsWith('|dwell'))!, diff.rows.find((r) => r.key.endsWith('|cpu'))!];
+    expect(frame.metric).toBe('throughput-p50');
+    expect(frame.deltaMs).toBeCloseTo(1, 9);
+    expect(cpu.metric).toBe('cpu-p50');
+    expect(cpu.deltaMs).toBe(0);
+    expect(diffRuns(paced(5, 2), paced(5, 4.5)).refusals[0].reason).toContain('CPU-bound');
+  });
+
   it('refuses a comparison where either side recorded no record count', () => {
     const counted = withDwell(dwellStats(30));
     const uncounted = withDwell(dwellStats(30), { recordCount: null });

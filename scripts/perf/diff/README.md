@@ -57,9 +57,11 @@ rests on it. What the two tables do differently is only the note: the pin
 calls out a `✗` whose floor did not follow ([Reading](../pins/README.md#reading---against-pin)
 `--against-pin`), and this table has no note column to say it in.
 
-**A dwell row is judged on the clock `gatingClock` names** — the GPU stream
-where both runs resolved one, wall only where neither did — and the metric
-column says which, `gpu-p50` or `wall-p50`, exactly as the pin's does. Every
+**A dwell row is judged on the clock `gatingClock` names** — throughput on a
+GPU-paced pair ([CPU and GPU, apart](../dwell/README.md#cpu-and-gpu-apart)),
+otherwise the GPU stream where both runs resolved one, wall only where neither
+did — and the metric column says which, `throughput-p50`, `gpu-p50` or
+`wall-p50`, exactly as the pin's does. Every
 test on the row reads that same clock: the clamp, the state guard and the
 band. That is the whole of the rule, and the half worth stating is what it
 frees. Wall deltas are quantised to the refresh interval, so at a vantage
@@ -97,6 +99,11 @@ row and leaves the frame row standing — an archive written before the compute
 pool was resolved carries no stream, and a run since does; neither side
 prints no compute row at all. A frame row that is refused takes its compute
 row with it.
+
+**The main thread is a third row, keyed `|cpu`**, on `cpu-p50` and banded as
+the frame is. One side alone refuses it the way the compute row does. A
+context CPU-bound on either side is refused whole, before any row: its
+frame time is not GPU work ([CPU and GPU, apart](../dwell/README.md#cpu-and-gpu-apart)).
 
 **A frame row at a vantage drawing two pass classes is judged on the plain
 class**, `gpu-plain-p50`, for the same reason one field over: the mixture's

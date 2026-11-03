@@ -7,7 +7,7 @@ import { SETTLE_FRAMES } from '../../src/client/debug/frame-cost/frame-cost-pure
 import type { FramePacing } from '../../src/client/scene/frame-loop/frame-loop';
 import { ROUNDTRIP_IDLE } from './args';
 import {
-  readbackCadenceHeld, summarizeFrameDwell, summarizePassCounts,
+  readbackCadenceHeld, summarizeFrameDwell, summarizePassCounts, throughputSamples,
 } from './dwell/dwell-pure';
 import {
   awaitSettle,
@@ -77,6 +77,11 @@ function toRecord(raw: DwellRaw, plan: DwellPlan): DwellRecord | null {
     gpuStats: summarizeFrameDwell(raw.gpuMs, null),
     computeMs: raw.computeMs.length > 0 ? raw.computeMs : null,
     computeStats: summarizeFrameDwell(raw.computeMs, null),
+    cpuMs: raw.cpuMs.length > 0 ? raw.cpuMs : null,
+    cpuStats: summarizeFrameDwell(raw.cpuMs, null),
+    throughputStats: plan.pacing === 'gpu'
+      ? summarizeFrameDwell(throughputSamples(raw.deltasMs), null)
+      : null,
     limitMag: raw.effectiveLimitMag,
     dm: raw.dm,
     readbackPerFrame: raw.readbackPerFrame,

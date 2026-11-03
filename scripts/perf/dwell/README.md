@@ -13,8 +13,10 @@ scripts/perf/dwell/
                             clock a row is judged on, the two pass classes a
                             split frame draws, the per-frame WebGPU
                             pass-count summary, the pinned readback
-                            cadence with the bound that says it held, and
-                            the pacings a dwell can run under.
+                            cadence with the bound that says it held, the
+                            pacings a dwell can run under, and the
+                            throughput windows and CPU-bound test a
+                            GPU-paced row gates on.
 ```
 
 The dwell loop itself is a page function in `../page-protocol.ts`
@@ -122,10 +124,9 @@ few-percent window of frame cost. Pacing on the GPU holds it at any size.
 **Under GPU pacing the wall row is throughput, not a display cadence.** The
 delta between frames is how long the slower of the CPU's encode and the
 GPU's work took, so it cannot sit on a refresh interval and `vsyncClamped`
-is not judged on it. The GPU stream stays the gated clock either way
-([Measurement canon](/docs/render-rules.md#9-measurement-canon)). `method`
-stays `raf-delta`, naming the wall clock; `params.pacing` says what
-scheduled it.
+is not judged on it. What a GPU-paced row gates on instead:
+[CPU and GPU, apart](#cpu-and-gpu-apart). `method` stays `raf-delta`,
+naming the wall clock; `params.pacing` says what scheduled it.
 
 **Two pacings never compare.** `pacingRefusal` refuses a pair, in
 `--baseline` and against the pin alike, and the pin carries the pacing on
@@ -136,6 +137,47 @@ unknown one (`../diff/diff-pure.ts`).
 **`--pacing raf` is the old dwell**, kept for a headed run or a machine
 where saturation is not wanted. Everything this README says about vsync
 clamping applies to it alone.
+
+## CPU and GPU, apart
+
+A GPU-paced dwell reports the frame's GPU cost and its CPU cost as two
+numbers, and says which of them set the pace, rather than reading one
+frame time that conflates them.
+
+**GPU cost per frame is throughput: `throughputStats`, metric
+`throughput-p50`.** With the GPU never idle and its clock pinned, the wall
+time between frames is the GPU's time per frame at a fixed clock, so it is
+proportional to GPU work: sol at 4.1 / 6.4 / 9.2 Mpx read 4.6 / 7.5 /
+10.3 ms, slope 1.007 against pixels
+(`.perf-runs/2026-11-03/8cg-49-42-gpu-sol-sweep.json`). Two frames in
+flight hand frames back in bursts (mw120 deltas p10 1.6, p50 9.0, p90
+17.8 ms), so the summary is taken over the means of consecutive
+`THROUGHPUT_WINDOW_FRAMES` (8) windows: the median of those is the
+throughput, and their spread and quarters feed the band and the state
+guard unchanged. It counts every frame, readback frames included, so the
+two-class split above does not arise.
+
+**The GPU timestamp stream is recorded and not gated under GPU pacing.**
+With two frames in flight, the next frame's passes overlap the current
+one's, and a pass's begin-to-end span includes time it shared the GPU with
+the other frame, so the summed spans read 1.25–1.69× throughput
+(`8cg-49-42-gpu-all-2.json`). It is the over-attribution
+[Measurement canon](/docs/render-rules.md#9-measurement-canon) describes
+between passes, now between frames.
+
+**CPU cost per frame is the `cpu-tick` row: `cpuStats`, metric
+`cpu-p50`, keyed `|cpu`.** Each rendered tick's main-thread time, start to
+after the `'frame'` handlers
+([CPU time per tick](/src/client/scene/frame-loop/README.md#cpu-time-per-tick)),
+recorded under either pacing and banded the way the frame is. Chrome's GPU
+process spends CPU on the same commands and is not in it.
+
+**A context whose CPU per tick passes `CPU_BOUND_SHARE` (0.8) of its
+throughput is refused, CPU-bound** (`cpuBoundRefusal`, both gates, either
+side). There the main thread is near setting the pace, so the frame time
+is partly CPU and the GPU number is not GPU work. Every canon vantage
+reads 97–100 % GPU-busy today, so the refusal is a guard on a future
+vantage, not a description of a current one.
 
 ## The state guard
 

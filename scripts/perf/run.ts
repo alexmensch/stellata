@@ -17,7 +17,7 @@ import {
 } from './checkout';
 import { packageVersion } from '../util/git-provenance';
 import { diffRuns } from './diff/diff-pure';
-import { computeClock, type DwellSummary } from './dwell/dwell-pure';
+import { computeClock, cpuClock, type DwellSummary } from './dwell/dwell-pure';
 import {
   PASS_TOGGLES_MODULE_URL, applyRoundTrip, measureDwell, measureSweep, type DwellPlan, type Measured,
 } from './measure';
@@ -122,6 +122,9 @@ function printDwell(label: string, dwelt: Measured<DwellRecord>, plan: DwellPlan
   if (d.gpuStats !== null) clocks.push(['gpu-timestamp', d.gpuStats]);
   const compute = computeClock(d);
   if (compute !== null) clocks.push(['gpu-compute', compute]);
+  if (d.throughputStats != null) clocks.push(['throughput', d.throughputStats]);
+  const cpu = cpuClock(d);
+  if (cpu !== null) clocks.push(['cpu-tick', cpu]);
   console.log(`${label}\n${formatDwellTable(clocks)}`);
   console.log(
     `gpu stream: ${d.gpuNote} · readback ${d.readbackPerFrame.toFixed(3)}/frame ` +

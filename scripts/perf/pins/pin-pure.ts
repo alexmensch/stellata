@@ -10,7 +10,8 @@ import {
   verdictFor, type DiffRefusal, type Verdict,
 } from '../diff/diff-pure';
 import {
-  COMPUTE_ROW, classClock, computeClock, frameFloor, gatingClock, pointMove, sampleClasses,
+  COMPUTE_ROW, CPU_ROW, classClock, computeClock, cpuBoundRefusal, cpuClock, frameFloor, gatingClock,
+  pointMove, sampleClasses,
   spreadMove, type DwellMetric, type DwellSummary, type FrameFloor, type StateGuard,
 } from '../dwell/dwell-pure';
 import { DWELL_METHOD, contextOrder } from '../run-pure';
@@ -116,6 +117,9 @@ export interface PinRow {
    *  the context. */
   readonly compute?: PinClock | null;
   readonly computeFloor?: FrameFloor | null;
+  /** GPU-paced rows gate on this (../dwell/README.md#cpu-and-gpu-apart). */
+  readonly throughput?: PinClock | null;
+  readonly cpu?: PinClock | null;
   /** The run file this row was summarised from, under `.perf-runs/`. Rows
    *  of one pin may cite different runs of the same commit (`pinFromRuns`). */
   readonly sourceRun: string;
@@ -373,6 +377,7 @@ function nonCanonKeys(sources: readonly RunSource[]): string[] {
 function rowFrom(record: ScenarioRecord, sourceRun: string): PinRow {
   const dwell = record.dwell!;
   const compute = computeClock(dwell);
+  const cpu = cpuClock(dwell);
   return {
     key: pinKey(record),
     name: record.name,
@@ -392,6 +397,8 @@ function rowFrom(record: ScenarioRecord, sourceRun: string): PinRow {
     gpuClasses: dwell.gpuStats === null ? null : frameClassesOf(dwell),
     compute: compute === null ? null : clockOf(compute),
     computeFloor: compute === null ? null : frameFloor(dwell.computeMs),
+    throughput: dwell.throughputStats == null ? null : clockOf(dwell.throughputStats),
+    cpu: cpu === null ? null : clockOf(cpu),
     sourceRun,
   };
 }
@@ -477,7 +484,7 @@ export function missingCanonRows(pin: PinFile): readonly string[] {
  *  only that it is ungated — the pin having one and the run not is an
  *  instrument regression rather than the adapter being itself. */
 function ungatedNote(
-  stream: 'GPU' | 'compute', hasPinned: boolean, hasCurrent: boolean,
+  stream: StreamSpec['stream'], hasPinned: boolean, hasCurrent: boolean,
 ): string {
   if (!hasPinned && !hasCurrent) {
     return `no ${stream} stream on either side — the adapter resolved no believable durations`;
@@ -559,7 +566,7 @@ interface GatedSide {
 interface StreamSpec {
   readonly key: string;
   readonly metric: DwellMetric;
-  readonly stream: 'GPU' | 'compute';
+  readonly stream: 'GPU' | 'compute' | 'CPU';
   readonly pinned: GatedSide | null;
   readonly current: GatedSide | null;
   readonly floorMs: number;
@@ -635,11 +642,24 @@ function gatedCompute(clock: PinClock | DwellSummary | null, floor: FrameFloor |
   return { valueMs: floor.p10, standardErrorMs: 0, p10: floor.p10, p90: clock.p90 };
 }
 
-function compareRows(pinned: PinRow, dwell: DwellRecord): PinVerdictRow[] {
+/** Valid only after `pacingRefusal` passed the pair. */
+function frameStreamRow(pinned: PinRow, dwell: DwellRecord): PinVerdictRow {
+  if (pinned.pacing === 'gpu') {
+    const pinnedThroughput = pinned.throughput ?? null;
+    return streamRow(pinned, {
+      key: pinned.key,
+      metric: 'throughput-p50',
+      stream: 'GPU',
+      pinned: gatedFrame(pinnedThroughput, null, null),
+      current: gatedFrame(dwell.throughputStats ?? null, null, null),
+      floorMs: dwellFloorMs(pinnedThroughput?.p50 ?? 0),
+      ungatedContext: { metric: 'wall-p50', pinnedMs: pinned.wall.p50, currentMs: dwell.stats.p50 },
+    });
+  }
   const pinnedClasses = pinned.gpuClasses ?? null;
   const currentClasses = frameClassesOf(dwell);
   const split = pinnedClasses !== null && currentClasses !== null;
-  const frame = streamRow(pinned, {
+  return streamRow(pinned, {
     key: pinned.key,
     metric: split ? 'gpu-plain-p50' : 'gpu-p50',
     stream: 'GPU',
@@ -648,11 +668,30 @@ function compareRows(pinned: PinRow, dwell: DwellRecord): PinVerdictRow[] {
     floorMs: dwellFloorMs(split ? pinnedClasses!.plain.p50 : pinned.gpu?.p50 ?? 0),
     ungatedContext: { metric: 'wall-p50', pinnedMs: pinned.wall.p50, currentMs: dwell.stats.p50 },
   });
+}
+
+function cpuStreamRows(pinned: PinRow, dwell: DwellRecord): PinVerdictRow[] {
+  const [pinnedCpu, cpu] = [pinned.cpu ?? null, cpuClock(dwell)];
+  if (pinnedCpu === null && cpu === null) return [];
+  return [streamRow(pinned, {
+    key: `${pinned.key}|${CPU_ROW}`,
+    metric: 'cpu-p50',
+    stream: 'CPU',
+    pinned: gatedFrame(pinnedCpu, null, null),
+    current: gatedFrame(cpu, null, null),
+    floorMs: dwellFloorMs(pinnedCpu?.p50 ?? 0),
+    ungatedContext: null,
+  })];
+}
+
+function compareRows(pinned: PinRow, dwell: DwellRecord): PinVerdictRow[] {
+  const frame = frameStreamRow(pinned, dwell);
+  const cpu = cpuStreamRows(pinned, dwell);
   const pinnedCompute = pinned.compute ?? null;
   const compute = computeClock(dwell);
-  if (pinnedCompute === null && compute === null) return [frame];
+  if (pinnedCompute === null && compute === null) return [frame, ...cpu];
   const pinnedComputeFloor = pinned.computeFloor ?? null;
-  return [frame, streamRow(pinned, {
+  return [frame, ...cpu, streamRow(pinned, {
     key: `${pinned.key}|${COMPUTE_ROW}`,
     metric: 'compute-p10',
     stream: 'compute',
@@ -710,6 +749,8 @@ export function compareToPin(pin: PinFile, current: PerfFile): PinDiff {
       ?? positionRefusal(pinned.position, record.position)
       ?? framesRefusal(pinned.frames, dwellFrames(record))
       ?? pacingRefusal(pinned.pacing, dwellPacing(record))
+      ?? cpuBoundRefusal(cpuClock(dwell), dwell.throughputStats)
+      ?? cpuBoundRefusal(pinned.cpu, pinned.throughput)
       // Gated on the pin holding a GPU stream for the row, matching the clock
       // `compareRows` goes on to judge: a pair with none is printed ungated and
       // never marked, so narrowing it would refuse a row nothing reads.

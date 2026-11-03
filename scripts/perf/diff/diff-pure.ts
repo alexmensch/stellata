@@ -8,8 +8,8 @@ import {
 } from '../../../src/client/debug/frame-cost/passes/passes-pure';
 import type { FramePacing } from '../../../src/client/scene/frame-loop/frame-loop';
 import {
-  COMPUTE_ROW, DWELL_PACINGS, classClock, computeClock, floorMove, frameFloor, gatingClock,
-  sampleClasses, spreadMove, type ClassClock, type DwellMetric,
+  COMPUTE_ROW, CPU_ROW, DWELL_PACINGS, classClock, computeClock, cpuBoundRefusal, cpuClock, floorMove,
+  frameFloor, gatingClock, sampleClasses, spreadMove, type ClassClock, type DwellMetric,
 } from '../dwell/dwell-pure';
 import type { DwellRecord, PerfFile, ScenarioRecord } from '../schema';
 import type { ScenarioName } from '../scenarios';
@@ -475,8 +475,36 @@ function dwellRows(key: string, a: ScenarioRecord, b: ScenarioRecord): (DiffRow 
   if (da === null || db === null) {
     return [{ key: `${key}|dwell`, reason: 'one run has no dwell record' }];
   }
+  const cpuBound = cpuBoundRefusal(cpuClock(da), da.throughputStats)
+    ?? cpuBoundRefusal(cpuClock(db), db.throughputStats);
+  if (cpuBound !== null) return [{ key: `${key}|dwell`, reason: cpuBound }];
   const frame = frameRow(key, da, db);
-  return 'reason' in frame ? [frame] : [frame, ...computeRow(key, a.name, da, db)];
+  return 'reason' in frame
+    ? [frame]
+    : [frame, ...computeRow(key, a.name, da, db), ...cpuRow(key, da, db)];
+}
+
+/** The main thread's time per tick, banded as the frame is
+ *  (../dwell/README.md#cpu-and-gpu-apart). */
+function cpuRow(key: string, da: DwellRecord, db: DwellRecord): (DiffRow | DiffRefusal)[] {
+  const [ca, cb] = [cpuClock(da), cpuClock(db)];
+  if (ca === null && cb === null) return [];
+  if (ca === null || cb === null) {
+    return [{ key: `${key}|${CPU_ROW}`, reason: 'one run recorded main-thread time for this row and the other did not' }];
+  }
+  const deltaMs = cb.p50 - ca.p50;
+  const bandMs = band(medianStandardErrorMs(ca), medianStandardErrorMs(cb), dwellFloorMs(ca.p50));
+  return [{
+    key: `${key}|${CPU_ROW}`,
+    metric: 'cpu-p50',
+    baselineMs: ca.p50,
+    currentMs: cb.p50,
+    deltaMs,
+    floorDeltaMs: null,
+    spreadDeltaMs: null,
+    bandMs,
+    verdict: verdictFor(deltaMs, bandMs),
+  }];
 }
 
 /** README.md, on the compute row; why the p10, `../pins/README.md#the-compute-row`.
@@ -561,7 +589,7 @@ function frameRow(key: string, da: DwellRecord, db: DwellRecord): DiffRow | Diff
   // Off the GPU stream alone. A wall floor is quantised to the refresh
   // interval exactly as its median is, so its p10 is the same value the
   // median already reports and the column would answer nothing.
-  const [fa, fb] = ga.metric === 'wall-p50'
+  const [fa, fb] = ga.metric === 'wall-p50' || ga.metric === 'throughput-p50'
     ? [null, null]
     : [frameFloor(da.gpuMs), frameFloor(db.gpuMs)];
   return {
@@ -584,7 +612,9 @@ function frameRow(key: string, da: DwellRecord, db: DwellRecord): DiffRow | Diff
 function judgedFrameStat(
   dwell: DwellRecord, gating: ReturnType<typeof gatingClock>,
 ): { readonly clock: ClassClock; readonly metric: DwellMetric } {
-  if (gating.metric === 'wall-p50') return { clock: gating.clock, metric: gating.metric };
+  if (gating.metric === 'wall-p50' || gating.metric === 'throughput-p50') {
+    return { clock: gating.clock, metric: gating.metric };
+  }
   const classes = splitFrameClasses(dwell.passCounts) ? sampleClasses(dwell.gpuMs) : null;
   return classes === null
     ? { clock: gating.clock, metric: 'gpu-p50' }

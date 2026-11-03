@@ -253,6 +253,7 @@ export interface DwellRaw {
   readonly deltasMs: number[];
   readonly gpuMs: number[];
   readonly computeMs: number[];
+  readonly cpuMs: number[];
   readonly gpuNote: string;
   readonly passCounts: Record<PassCounter, number[]> | null;
   readonly passNote: string;
@@ -295,6 +296,8 @@ export function runDwell(page: Page, params: DwellParams): Promise<DwellRaw> {
     const s = (window as unknown as PerfWindow).stellata;
     const gpuMs: number[] = [];
     const computeMs: number[] = [];
+    const cpuMs: number[] = [];
+    let offCpu: (() => void) | null = null;
     let stopGpu: (() => void) | null = null;
     let stopCompute: (() => void) | null = null;
     let gpuNote: string;
@@ -402,6 +405,7 @@ export function runDwell(page: Page, params: DwellParams): Promise<DwellRaw> {
       computeMs.length = 0;
       const readbacksBefore = s.reduction.readbackRequests;
       let last = await pace.nextFrame();
+      offCpu = s.frameLoop.onRenderedTick((ms) => { cpuMs.push(ms); });
       live.submits = 0;
       live.commandBuffers = 0;
       live.renderPasses = 0;
@@ -425,6 +429,7 @@ export function runDwell(page: Page, params: DwellParams): Promise<DwellRaw> {
       rateDuring = clock.getRate();
       s.frameLoop.setPacing('raf');
       offFrame?.();
+      offCpu?.();
       cadence.every = readbackEveryBefore;
       s.extinction.setRecomputeForced(recomputeForcedBefore);
       stopGpu?.();
@@ -443,6 +448,7 @@ export function runDwell(page: Page, params: DwellParams): Promise<DwellRaw> {
       deltasMs,
       gpuMs,
       computeMs,
+      cpuMs,
       gpuNote,
       passCounts: origSubmit !== null ? perFrame : null,
       passNote,

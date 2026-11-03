@@ -2,6 +2,10 @@ import { describe, expect, it } from 'vitest';
 import {
   CLASS_GAP_OVER_MEDIAN,
   CLASS_MIN_SHARE,
+  CPU_BOUND_SHARE,
+  THROUGHPUT_WINDOW_FRAMES,
+  cpuBoundRefusal,
+  throughputSamples,
   DEFAULT_DWELL_FRAMES,
   DWELL_READBACK_EVERY_FRAMES,
   PASS_COUNTERS,
@@ -135,6 +139,32 @@ describe('gatingClock — which clock a gate may act on', () => {
   it('names the clock it returned', () => {
     expect(gatingClock({ stats: wall, gpuStats: gpu }).metric).toBe('gpu-p50');
     expect(gatingClock({ stats: wall, gpuStats: null }).metric).toBe('wall-p50');
+  });
+
+  it('is throughput wherever the dwell was GPU-paced, over the GPU stream', () => {
+    const throughput = summarizeFrameDwell([5, 5, 5, 5], null)!;
+    const gated = gatingClock({ stats: wall, gpuStats: gpu, throughputStats: throughput });
+    expect(gated.clock).toBe(throughput);
+    expect(gated.metric).toBe('throughput-p50');
+  });
+});
+
+describe('throughputSamples — GPU-paced wall deltas, smoothed', () => {
+  it('averages consecutive whole windows and drops a partial last one', () => {
+    const bursty = Array.from({ length: 2 * THROUGHPUT_WINDOW_FRAMES + 3 }, (_, i) => (i % 2 === 0 ? 1 : 9));
+    expect(throughputSamples(bursty)).toEqual([5, 5]);
+  });
+});
+
+describe('cpuBoundRefusal — the main thread setting the pace', () => {
+  it(`refuses where CPU per tick passes ${CPU_BOUND_SHARE} of the frame, and only there`, () => {
+    expect(cpuBoundRefusal({ p50: 8.1 }, { p50: 10 })).toContain('CPU-bound');
+    expect(cpuBoundRefusal({ p50: 8 }, { p50: 10 })).toBeNull();
+  });
+
+  it('declines where either clock is missing', () => {
+    expect(cpuBoundRefusal(null, { p50: 10 })).toBeNull();
+    expect(cpuBoundRefusal({ p50: 9 }, undefined)).toBeNull();
   });
 });
 
