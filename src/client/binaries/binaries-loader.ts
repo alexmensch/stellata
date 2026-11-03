@@ -2,6 +2,7 @@
 // reads per frame. See /src/client/binaries/README.md#format-contract.
 
 import { J2000_JD } from '../../astro-core/astronomy-constants';
+import { PUBLIC_FILES } from '../../catalog-format/public-artifacts/public-artifacts';
 
 export const MAGIC = 'BIN1';
 export const VERSION = 1;
@@ -106,7 +107,7 @@ export function parseBinaries(buf: ArrayBuffer): BinariesData {
   if (buf.byteLength < HEADER_SIZE) {
     throw new BinariesParseError({
       kind: 'truncated',
-      message: `binaries.bin too short (${buf.byteLength} < ${HEADER_SIZE}-byte header)`,
+      message: `${PUBLIC_FILES.binaries} too short (${buf.byteLength} < ${HEADER_SIZE}-byte header)`,
     });
   }
   const view = new DataView(buf);
@@ -116,14 +117,14 @@ export function parseBinaries(buf: ArrayBuffer): BinariesData {
   if (magic !== MAGIC) {
     throw new BinariesParseError({
       kind: 'magic',
-      message: `binaries.bin magic "${magic}" does not match "${MAGIC}"`,
+      message: `${PUBLIC_FILES.binaries} magic "${magic}" does not match "${MAGIC}"`,
     });
   }
   const version = view.getUint32(4, true);
   if (version !== VERSION) {
     throw new BinariesParseError({
       kind: 'version',
-      message: `binaries.bin version ${version} unsupported (expected ${VERSION})`,
+      message: `${PUBLIC_FILES.binaries} version ${version} unsupported (expected ${VERSION})`,
     });
   }
   const count = view.getUint32(8, true);
@@ -132,7 +133,7 @@ export function parseBinaries(buf: ArrayBuffer): BinariesData {
     throw new BinariesParseError({
       kind: 'truncated',
       message:
-        `binaries.bin truncated: expected ${expectedLen} bytes for ${count} ` +
+        `${PUBLIC_FILES.binaries} truncated: expected ${expectedLen} bytes for ${count} ` +
         `records, got ${buf.byteLength}`,
     });
   }

@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 
 import { sidColumnError } from '../util/sid-resolver';
+import { PUBLIC_FILES } from '../../catalog-format/public-artifacts/public-artifacts';
 
 export type CloudSource = 'Z2021T1' | 'Z2020';
 
@@ -104,12 +105,12 @@ export async function loadClouds(url: string): Promise<CloudCatalog | null> {
   if (!res.ok) return null;
   const raw = (await res.json()) as RawCatalog;
   if (raw.version !== 3) {
-    console.warn(`clouds.json version ${raw.version} unsupported`);
+    console.warn(`${PUBLIC_FILES.clouds} version ${raw.version} unsupported`);
     return null;
   }
   const sidErr = sidColumnError(raw.clouds.map((c) => c.sid));
   if (sidErr) {
-    console.warn(`clouds.json ${sidErr} — rebuild with \`pnpm run build:clouds\``);
+    console.warn(`${PUBLIC_FILES.clouds} ${sidErr} — rebuild with \`pnpm run build:clouds\``);
     return null;
   }
   const clouds: Cloud[] = raw.clouds.map((c) => ({

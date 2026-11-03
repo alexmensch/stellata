@@ -22,6 +22,7 @@ import { loadClouds, type CloudCatalog } from './cloud-loader';
 import { loadCloudSurfaces, type CloudSurface } from './cloud-surfaces-loader';
 import { MolecularClouds } from './molecular-clouds';
 import { arrayDomain } from '../util/sid-resolver';
+import { PUBLIC_FILES } from '../../catalog-format/public-artifacts/public-artifacts';
 
 export interface CloudKindModule extends ObjectKindModule<'cloud'> {
   /** The render layer, for dev-console tuning and the frame-cost levers.
@@ -102,8 +103,8 @@ export function createCloudKindModule(): CloudKindModule {
       let loaded: CloudCatalog | null = null;
       try {
         [loaded, surfaces] = await Promise.all([
-          loadClouds(`${baseUrl}clouds.json`),
-          loadCloudSurfaces(`${baseUrl}cloud-surfaces.bin`),
+          loadClouds(`${baseUrl}${PUBLIC_FILES.clouds}`),
+          loadCloudSurfaces(`${baseUrl}${PUBLIC_FILES.cloudSurfaces}`),
         ]);
       } finally {
         if (loaded && loaded.clouds.length > 0) catalogCell.land(loaded);
