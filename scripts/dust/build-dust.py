@@ -55,7 +55,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--synthetic", action="store_true",
                         help="Generate a test-pattern voxel grid without any real data.")
-    parser.add_argument("--flavor", default="main", choices=["main", "less_data_but_2kpc"],
+    parser.add_argument("--flavor", default="main", choices=list(edenhofer2024.FLAVOR_VARIANT),
                         help="Edenhofer map flavor: 'main' is 1.25 kpc standard, "
                              "'less_data_but_2kpc' is a validation run extending to 2 kpc.")
     parser.add_argument("--output", type=Path, default=DATA_DUST,
@@ -63,7 +63,7 @@ def main() -> int:
     parser.add_argument("--skip-public", action="store_true",
                         help="Skip mirroring to public/dust/ (useful for alt output dirs).")
     parser.add_argument("--force-resample", action="store_true",
-                        help="Ignore any cached .voxels.npy and re-run the full resample.")
+                        help="Ignore the cached voxel grid and re-run the full resample.")
     args = parser.parse_args()
 
     args.output.mkdir(parents=True, exist_ok=True)
@@ -75,11 +75,7 @@ def main() -> int:
         density_max = DENSITY_MAX_SYNTHETIC
     else:
         edenhofer2024.require(args.flavor)
-        # Cache the raw resampled float32 grid (~512 MiB, gitignored) so
-        # re-encoding after tweaking DENSITY_MAX etc. doesn't require
-        # re-running the 10-minute query phase. Delete it manually to force
-        # a fresh resample.
-        cache_path = args.output / ".voxels.npy"
+        cache_path = edenhofer2024.voxel_cache_path(args.output, args.flavor)
         if cache_path.exists() and not args.force_resample:
             print(f"Loading cached voxel grid from {cache_path.relative_to(ROOT)}…", file=sys.stderr)
             voxels = np.load(cache_path)
@@ -88,6 +84,9 @@ def main() -> int:
             voxels = resample_edenhofer(flavor=args.flavor)
             print(f"Saving raw grid cache to {cache_path.relative_to(ROOT)}…", file=sys.stderr)
             np.save(cache_path, voxels)
+            for stale in edenhofer2024.stale_voxel_caches(args.output, args.flavor):
+                print(f"Deleting superseded grid cache {stale.relative_to(ROOT)}…", file=sys.stderr)
+                stale.unlink()
         zucker_report = zucker_column_check(voxels)
         density_max = DENSITY_MAX_REAL
 
@@ -353,7 +352,7 @@ def build_manifest(chunks: list[dict], *, synthetic: bool, density_max: float,
 def is_runtime_asset(name: str) -> bool:
     """Mirror of the sync-dust-pure.ts allowlist — only runtime assets may
     land in public/dust/ (tests/bundle-content.test.ts guards the built
-    tree against strays like README.md or the .voxels.npy cache)."""
+    tree against strays like README.md or a .voxels-*.npy cache)."""
     return (name == "manifest.json"
             or (name.startswith("chunk_") and name.endswith(".bin")))
 

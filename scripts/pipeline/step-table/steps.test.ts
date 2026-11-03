@@ -4,18 +4,18 @@ import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join, relative, resolve } from 'node:path';
 import { beforeAll, describe, expect, it } from 'vitest';
 
-import { MULTIPLES_TSV } from '../binaries/multiples-tsv';
-import { CNS5 as CNS5_SOURCE } from '../catalog/classic-ids/cns5-source';
-import { REASON_CODES_FILE } from '../catalog/lineage/reason-codes-tsv';
-import { MEMBERSHIP_MANIFEST_FILE } from '../catalog/membership/membership-manifest-tsv';
-import { packageScripts } from '../util/import-closure';
-import { lfsContentReadable, publicFile, REPO_ROOT } from '../util/paths';
-import { PUBLIC_FILES } from '../../src/catalog-format/public-artifacts/public-artifacts';
-import { entryInputPaths } from '../util/step-inputs';
-import { describeStep } from './freshness';
+import { MULTIPLES_TSV } from '../../binaries/multiples-tsv';
+import { CNS5 as CNS5_SOURCE } from '../../catalog/classic-ids/cns5-source';
+import { REASON_CODES_FILE } from '../../catalog/lineage/reason-codes-tsv';
+import { MEMBERSHIP_MANIFEST_FILE } from '../../catalog/membership/membership-manifest-tsv';
+import { packageScripts } from '../../util/import-closure';
+import { lfsContentReadable, publicFile, REPO_ROOT } from '../../util/paths';
+import { PUBLIC_FILES } from '../../../src/catalog-format/public-artifacts/public-artifacts';
+import { entryInputPaths } from '../../util/step-inputs';
+import { describeStep } from '../freshness';
 import { loadTable, type Loaded } from './load-table';
 import { MANUAL_STEPS } from './manual-step-outputs';
-import { pipelineTree } from './pipeline-tree';
+import { pipelineTree } from '../pipeline-tree';
 import { describesItself, isBuild, selectSteps } from './step-table-pure';
 import { STEPS } from './steps';
 

@@ -12,7 +12,7 @@ describe('sync-dust / isDustPublicAsset', () => {
   it('rejects docs, source, and intermediates', () => {
     expect(isDustPublicAsset('README.md')).toBe(false);
     expect(isDustPublicAsset('build-dust.py')).toBe(false);
-    expect(isDustPublicAsset('.voxels.npy')).toBe(false);
+    expect(isDustPublicAsset('.voxels-main-10c823a5fcf81b47b6e15530bcdf54dc.npy')).toBe(false);
     expect(isDustPublicAsset('notes.txt')).toBe(false);
     expect(isDustPublicAsset('chunk_0_0_0.bin.bak')).toBe(false);
     expect(isDustPublicAsset('chunk_a_b_c.bin')).toBe(false);

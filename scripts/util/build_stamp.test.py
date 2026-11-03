@@ -14,7 +14,6 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from scripts.util.paths import REPO_ROOT  # noqa: E402
-from scripts.util.build_stamp import listing_hash  # noqa: E402
 
 
 RUN_PYTHON_STEP = REPO_ROOT / "scripts" / "pipeline" / "run_python_step.py"
@@ -85,9 +84,10 @@ class RecorderTests(unittest.TestCase):
         _, record = self.run_step()
         self.assertNotIn(str(self.root / "out.bin"), record["reads"])
 
-    def test_records_listings_by_directory_over_sorted_names(self) -> None:
+    def test_records_listings_by_directory_as_sorted_names(self) -> None:
+        (self.root / "folder" / "a").write_text("")
         _, record = self.run_step()
-        self.assertEqual(record["listings"], {str(self.root / "folder"): listing_hash(["x"])})
+        self.assertEqual(record["listings"], {str(self.root / "folder"): ["a", "x"]})
 
     def test_records_probes_made_through_the_helper(self) -> None:
         _, record = self.run_step()

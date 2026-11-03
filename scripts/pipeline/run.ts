@@ -2,10 +2,10 @@
 
 import { REPO_ROOT } from '../util/paths';
 import { entryInputPaths } from '../util/step-inputs';
-import { loadTable } from './load-table';
+import { loadTable } from './step-table/load-table';
 import { runSteps } from './runner';
-import { expandTargets } from './step-table-pure';
-import { STEPS } from './steps';
+import { expandTargets } from './step-table/step-table-pure';
+import { STEPS } from './step-table/steps';
 
 const FLAGS = new Set(['--force', '--update-snapshots']);
 

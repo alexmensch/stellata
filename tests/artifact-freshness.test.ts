@@ -20,7 +20,7 @@ import { changedSince, readStamp } from '../scripts/util/build-stamp';
 import { stampPath } from '../scripts/util/stamp-path-pure';
 import { DEFAULT_CATALOG_MANIFEST } from '../scripts/catalog/catalog-paths-pure';
 import { MULTIPLES_TSV } from '../scripts/binaries/multiples-tsv';
-import { STEPS } from '../scripts/pipeline/steps';
+import { STEPS } from '../scripts/pipeline/step-table/steps';
 
 const RUNTIME_STEP = 'build:binaries-runtime';
 const runtime = STEPS.steps.find((s) => s.name === RUNTIME_STEP);

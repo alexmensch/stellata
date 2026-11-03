@@ -5,7 +5,7 @@ as a module-level constant: an external table or file through `defineSource`,
 a file this repo writes through its `defineArtifact` codec (`../tsv/`). The
 constant is the only way a step opens the file, and the set a step's import
 closure reaches is that step's data input set — derived, never listed
-([The step table](../../pipeline/README.md#the-step-table--stepsts)).
+([The step table](../../pipeline/step-table/README.md#the-step-table--stepsts)).
 
 ## Files in this area
 
