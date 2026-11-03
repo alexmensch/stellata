@@ -58,7 +58,7 @@ export const OUT = declareOutputs({ out: ${JSON.stringify(at(out))} });
 }
 
 /** A Python pull whose query is the text of query-<name>.txt. */
-function pullStep(name: string, out: string, request: string, queryText = 'SELECT *'): StepEntry {
+function pullStep(name: string, out: string, request: string, queryText = 'SELECT *', reads: string[] = []): StepEntry {
   write(`query-${name}.txt`, queryText);
   write(`steps/${name}.py`, `
 import json, sys
@@ -67,13 +67,13 @@ if sys.argv[1:] == ["--describe"]:
     print(json.dumps({"query": Path(${JSON.stringify(at(`query-${name}.txt`))}).read_text(), "services": ["esa", "ari"]}))
 `);
   write(out, 'pulled');
-  writeManualStamp(name, out, request, queryText);
+  writeManualStamp(name, out, [request, ...reads], queryText);
   return { name, kind: 'pull', language: 'python', entry: at(`steps/${name}.py`), outputs: [at(out)] };
 }
 
-function writeManualStamp(name: string, out: string, request: string, queryText: string): void {
+function writeManualStamp(name: string, out: string, reads: string[], queryText: string): void {
   write(relative(root, pipelineTree(root).manualStamp(name)), JSON.stringify({
-    inputs: fileHashes([at(request)], root),
+    inputs: fileHashes(reads.map(at), root),
     outputs: fileHashes([at(out)], root),
     query: pullQueryHash({ query: queryText, services: ['esa', 'ari'] }),
   }));
@@ -245,7 +245,7 @@ describe('runSteps — manual steps', () => {
     write('req.tsv', 'request(i1)');
     const steps = [tsStep('request', 'req.tsv', ['ids.tsv']), pullStep('astro', 'astro.tsv', 'req.tsv'), tsStep('reader', 'reader.out', ['astro.tsv'])];
     await run(steps, ['reader']);
-    writeManualStamp('astro', 'astro.tsv', 'req.tsv', 'SELECT *');
+    writeManualStamp('astro', 'astro.tsv', ['req.tsv'], 'SELECT *');
     expect((await run(steps, ['reader'])).kinds).toEqual({ request: 'fresh', astro: 'fresh', reader: 'fresh' });
     write('ids.tsv', 'i2');
     expect((await run(steps, ['reader'])).kinds).toEqual({ request: 'built', astro: 'stale', reader: 'skipped' });
@@ -394,23 +394,23 @@ os.replace(tmp, ${JSON.stringify(at(out))})
 
   it('counts a pull it runs after as covered when that edge closes a kept loop, and no other step through the loop', async () => {
     write('req.tsv', 'r');
-    write('down.in', 'x');
+    write('w.in', 'x');
+    write('w.out', 'w(x)');
     const body = [
       `Path(${JSON.stringify(at('astro.tsv'))}).read_text()`,
       `Path(${JSON.stringify(at('req.tsv'))}).write_text("r")`,
     ].join('\n');
     const loop = (extraRead = ''): StepEntry[] => [
+      tsStep('w', 'w.out', ['w.in']),
       pyStep('p', 'req.tsv', `${extraRead}${body}`, { after: ['astro'] } as Partial<StepEntry>),
-      pullStep('astro', 'astro.tsv', 'req.tsv'),
-      tsStep('down', 'down.out', ['req.tsv']),
+      pullStep('astro', 'astro.tsv', 'req.tsv', 'SELECT *', ['w.out']),
     ];
     const kept = await run(loop(), ['p', 'astro']);
-    expect(kept.kinds).toEqual({ p: 'built', astro: 'fresh' });
+    expect(kept.kinds).toEqual({ w: 'built', p: 'built', astro: 'fresh' });
 
-    write('down.out', 'stale copy');
-    const throughLoop = await run(loop(`Path(${JSON.stringify(at('down.out'))}).read_text()\n`), ['p'], { force: true });
+    const throughLoop = await run(loop(`Path(${JSON.stringify(at('w.out'))}).read_text()\n`), ['p']);
     expect(throughLoop.verdicts.get('p')).toEqual({
-      kind: 'failed', reason: `p read ${at('down.out')}, an output of down, without running after it`,
+      kind: 'failed', reason: `p read ${at('w.out')}, an output of w, without running after it`,
     });
   });
 
