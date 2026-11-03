@@ -5,8 +5,8 @@
     "data/molecular-clouds/zucker2021-table2.dat": "aa52a25b254721d09365469bbb35667ca0b0800c",
     "data/molecular-clouds/zucker2021-table3.dat": "99e0b6fdc23a0f2d841e2c55049d6bb82421a03f",
     "scripts/clouds/cloud_model.py": "3cc541a02497feaf8406b0431b6886514646f4a0",
-    "scripts/dust/build-dust.py": "48c2b6bb0bc73907209fa8a290d5e4a8d7bae761",
-    "scripts/dust/edenhofer2024.py": "bf8661c9d1e8c43443eed5d8ba537c5c6976a08f"
+    "scripts/dust/build-dust.py": "523f7e4051802379337115f4ad312095bbb64ee5",
+    "scripts/dust/edenhofer2024.py": "58ba52e2bbaa3aa028fdae9103791badb39bad40"
   },
   "outputs": {
     "data/dust/chunk_0_0_0.bin": "176275b2376e1448381992066544515305a774ca",
@@ -74,6 +74,12 @@
     "data/dust/chunk_3_3_2.bin": "0a889480212b348c206212bb6dd395d09dac97a3",
     "data/dust/chunk_3_3_3.bin": "69e60e02d703bb6d905e325e2b87e024fb184707",
     "data/dust/manifest.json": "58cbac3945b85a9c9172d30df0fdc0e5d9179506"
+  },
+  "recorded": {
+    "listings": {
+      "data/dust": "51353e448964b539ac2c24a874eda14ed73ebc4f"
+    },
+    "probes": {}
   },
   "requestFrom": []
 }

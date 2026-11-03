@@ -11,7 +11,7 @@ import { TSX } from './processes';
 import { stampedMembers, type PullDescription } from '../util/emit-artifacts';
 import { landStaged, writeStaged } from '../util/staged-write';
 import type { PipelineTree } from './pipeline-tree';
-import { describesItself, type ManualStep, type OutputClaims } from './step-table-pure';
+import { describesItself, type ManualStep, type OutputClaims } from './step-table/step-table-pure';
 
 export type Freshness =
   | { readonly kind: 'fresh' }

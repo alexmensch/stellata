@@ -6,13 +6,13 @@ import { dirname, resolve } from 'node:path';
 
 import { build, type BuildFailure, type Metafile } from 'esbuild';
 
-import type { DeclaredOutputs } from '../util/emit-artifacts';
-import { entryMetafile } from '../util/import-closure';
-import { REPO_ROOT } from '../util/paths';
-import { treeOf, treeRoots, type Tree } from '../util/source-trees';
-import { readManualRecord } from './freshness';
+import type { DeclaredOutputs } from '../../util/emit-artifacts';
+import { entryMetafile } from '../../util/import-closure';
+import { REPO_ROOT } from '../../util/paths';
+import { treeOf, treeRoots, type Tree } from '../../util/source-trees';
+import { readManualRecord } from '../freshness';
+import { pipelineTree, type PipelineTree } from '../pipeline-tree';
 import { LEGACY_IMPORTABLE } from './legacy-importable';
-import { pipelineTree, type PipelineTree } from './pipeline-tree';
 import {
   deriveGraph,
   type OutputClaims, type ResolvedStep, type StepEntry, type StepGraph, type StepTable,

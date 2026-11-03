@@ -1,3 +1,4 @@
+import { execFileSync } from 'node:child_process';
 import {
   existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, symlinkSync, writeFileSync,
 } from 'node:fs';
@@ -10,10 +11,12 @@ import { escapeRegExp } from '../util/escape-regexp';
 import { entryMetafile } from '../util/import-closure';
 import { REPO_ROOT } from '../util/paths';
 import { pullQueryHash, requestHash } from './freshness';
-import { importTimeProblems, loadTable, TABLE_LOAD_BUILTINS, WALKABLE, walkOutputsModules, type Loaded } from './load-table';
+import {
+  importTimeProblems, loadTable, TABLE_LOAD_BUILTINS, WALKABLE, walkOutputsModules, type Loaded,
+} from './step-table/load-table';
 import { pipelineTree } from './pipeline-tree';
 import { runSteps, type Verdict } from './runner';
-import type { StepEntry, StepTable } from './step-table-pure';
+import type { StepEntry, StepTable } from './step-table/step-table-pure';
 
 let root: string;
 let logDir: string;
@@ -23,6 +26,7 @@ const EMIT_ARTIFACTS = join(REPO_ROOT, 'scripts/util/emit-artifacts');
 beforeEach(() => {
   root = realpathSync(mkdtempSync(join(tmpdir(), 'runner-')));
   mkdirSync(join(root, 'steps'));
+  execFileSync('git', ['init', '-q'], { cwd: root });
   logDir = mkdtempSync(join(tmpdir(), 'runner-log-'));
   reads = new Map();
 });
@@ -350,6 +354,32 @@ os.replace(tmp, ${JSON.stringify(at(out))})
     expect((await run(steps, ['p'])).kinds).toEqual({ p: 'fresh' });
     write('folder/two', '');
     expect((await run(steps, ['p'])).kinds).toEqual({ p: 'built' });
+  });
+
+  it('leaves a git-ignored name out of a listing, so a local cache neither stales nor freshens a step', async () => {
+    write('.gitignore', 'folder/.cache*\n');
+    write('folder/one', '');
+    write('folder/.cache-a', '');
+    const listing = `${rename('p.out')}\nos.listdir(${JSON.stringify(at('folder'))})`;
+    write('p.in', 'x');
+    const steps = [pyStep('p', 'p.out', listing)];
+    await run(steps, ['p']);
+    rmSync(at('folder/.cache-a'));
+    write('folder/.cache-b', '');
+    expect((await run(steps, ['p'])).kinds).toEqual({ p: 'fresh' });
+  });
+
+  it('records no input for a listed folder git ignores', async () => {
+    write('.gitignore', 'scratch/\n');
+    write('scratch/one', '');
+    const listing = `${rename('p.out')}\nos.listdir(${JSON.stringify(at('scratch'))})`;
+    write('p.in', 'x');
+    const steps = [pyStep('p', 'p.out', listing)];
+    await run(steps, ['p']);
+    const stamp = JSON.parse(readFileSync(pipelineTree(root).buildStamp('p'), 'utf8'));
+    expect(stamp.recorded.listings).toEqual({});
+    write('scratch/two', '');
+    expect((await run(steps, ['p'])).kinds).toEqual({ p: 'fresh' });
   });
 
   it('stales a step when a path it probed appears', async () => {

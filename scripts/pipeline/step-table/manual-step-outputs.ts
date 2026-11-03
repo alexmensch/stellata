@@ -1,7 +1,7 @@
 // Every pull and bake in the step table, each with the files it writes. See README.md#the-step-table--stepsts.
 
-import { CHUNK_PATTERN } from '../dust/sync-dust-pure';
-import type { OutputFamily } from '../util/emit-artifacts';
+import { CHUNK_PATTERN } from '../../dust/sync-dust-pure';
+import type { OutputFamily } from '../../util/emit-artifacts';
 import type { ManualStep } from './step-table-pure';
 
 const pull = (name: string, entry: string, outputs: readonly string[]): ManualStep => ({

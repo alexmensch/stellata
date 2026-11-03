@@ -1,7 +1,7 @@
 // The step table's types, its load-time rules and the order derived from it. See README.md.
 
-import { stepFileName } from '../util/stamp-path-pure';
-import { isFamilyMember, isMemberName, type OutputFamily } from '../util/emit-artifacts';
+import { stepFileName } from '../../util/stamp-path-pure';
+import { isFamilyMember, isMemberName, type OutputFamily } from '../../util/emit-artifacts';
 
 /** A `declareOutputs` constant, named by module and export so the module can be
  *  checked side-effect-free before it is imported. */

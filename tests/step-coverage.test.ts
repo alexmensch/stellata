@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { relative } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
-import { STEPS } from '../scripts/pipeline/steps';
+import { STEPS } from '../scripts/pipeline/step-table/steps';
 import { packageScripts } from '../scripts/util/import-closure';
 import { REPO_ROOT } from '../scripts/util/paths';
 import { isProductionTs, walkFiles } from './walk-files';

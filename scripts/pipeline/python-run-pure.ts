@@ -1,10 +1,10 @@
-// A Python step's run record checked against its declarations. See README.md#the-step-table--stepsts.
+// A Python step's run record checked against its declarations. See step-table/README.md#the-step-table--stepsts.
 
 import { dirname } from 'node:path';
 
 import {
   claims, reaches, type OutputClaims, type ResolvedStep, type StepGraph,
-} from './step-table-pure';
+} from './step-table/step-table-pure';
 
 function listsOutputsOf(outputs: OutputClaims, dir: string): boolean {
   return outputs.families.some((f) => f.dir === dir) || outputs.files.some((p) => dirname(p) === dir);
@@ -13,7 +13,7 @@ function listsOutputsOf(outputs: OutputClaims, dir: string): boolean {
 /** What `build_stamp.record_run` writes; every path absolute. */
 export interface RunRecord {
   readonly reads: Readonly<Record<string, string | null>>;
-  readonly listings: Readonly<Record<string, string>>;
+  readonly listings: Readonly<Record<string, readonly string[]>>;
   readonly probes: Readonly<Record<string, boolean>>;
   readonly services: readonly string[];
   readonly writes: readonly string[];

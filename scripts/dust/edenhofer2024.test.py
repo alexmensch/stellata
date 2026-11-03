@@ -25,6 +25,24 @@ class IdentityTests(unittest.TestCase):
     def test_every_flavor_names_one_variant(self) -> None:
         self.assertEqual(e.FLAVOR_VARIANT, {"main": "main", "less_data_but_2kpc": "2kpc"})
 
+    def test_each_flavor_and_dataset_version_caches_its_grid_apart(self) -> None:
+        out = Path("/out")
+        paths = {e.voxel_cache_path(out, flavor) for flavor in e.FLAVOR_VARIANT}
+        self.assertEqual(len(paths), len(e.FLAVOR_VARIANT))
+        with mock.patch.dict(e.VARIANTS["main"], {"md5": "0" * 32}):
+            self.assertNotIn(e.voxel_cache_path(out, "main"), paths)
+
+    def test_stale_caches_are_the_flavors_older_versions_and_the_unkeyed_cache(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            out = Path(tmp)
+            current = e.voxel_cache_path(out, "main")
+            older = out / f".voxels-main-{'0' * 32}.npy"
+            other_variant = e.voxel_cache_path(out, "less_data_but_2kpc")
+            unkeyed = out / ".voxels.npy"
+            for p in (current, older, other_variant, unkeyed):
+                p.write_bytes(b"")
+            self.assertEqual(e.stale_voxel_caches(out, "main"), sorted([older, unkeyed]))
+
 
 class RequireTests(unittest.TestCase):
     def _at(self, root: Path):

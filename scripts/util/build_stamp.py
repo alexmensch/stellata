@@ -8,7 +8,7 @@ import json
 import os
 import sys
 from pathlib import Path
-from typing import Iterable, Optional
+from typing import Optional
 
 _HASH_CHUNK_BYTES = 1 << 22
 
@@ -19,12 +19,6 @@ def hash_file(path: Path) -> str:
         while chunk := f.read(_HASH_CHUNK_BYTES):
             h.update(chunk)
     return h.hexdigest()
-
-
-def listing_hash(names: Iterable[str]) -> str:
-    """A directory listing's hash: its sorted names, so an added or removed
-    file changes it and a reordering does not. Same formula as build-stamp.ts."""
-    return hashlib.sha1("\n".join(sorted(names)).encode()).hexdigest()
 
 
 _WRITE_MODE_CHARS = frozenset("wax+")
@@ -51,7 +45,7 @@ class _Recorder:
         self.root = root.resolve()
         self.record = record.resolve()
         self.reads: dict[str, Optional[str]] = {}
-        self.listings: dict[str, str] = {}
+        self.listings: dict[str, list[str]] = {}
         self.probes: dict[str, bool] = {}
         self.opened_for_write: set[str] = set()
         self.renamed: dict[str, str] = {}
@@ -109,7 +103,7 @@ class _Recorder:
             raw = "." if args[0] is None else args[0]
             path = self._inside(raw)
             if path is not None and str(path) not in self.listings and path.is_dir():
-                self.listings[str(path)] = listing_hash(os.listdir(path))
+                self.listings[str(path)] = sorted(os.listdir(path))
 
     def finish(self) -> dict:
         for name, module in list(sys.modules.items()):

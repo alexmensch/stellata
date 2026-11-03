@@ -5,7 +5,7 @@
     "scripts/cloud-surfaces/build-cloud-surfaces.py": "4a363c4a8570837ff6aa71504c8821d205c550d2",
     "scripts/cloud-surfaces/cloud_geometry.py": "1abc5901d03ae7147fb1f54091e29860d9896d66",
     "scripts/cloud-surfaces/trace_surfaces.py": "67609b5747059f282476cc7c0ef86e47e91272e4",
-    "scripts/dust/edenhofer2024.py": "bf8661c9d1e8c43443eed5d8ba537c5c6976a08f"
+    "scripts/dust/edenhofer2024.py": "58ba52e2bbaa3aa028fdae9103791badb39bad40"
   },
   "outputs": {
     "data/molecular-clouds/cloud-surfaces.bin": "c7591f20da45afe4787e9355ed67d52ed2769945"

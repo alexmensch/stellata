@@ -71,13 +71,16 @@ same thing — single-use helpers stay with their consumer.
   `build/stamps/<name>.json` with `:` written `-` (`stepFileName`, which names
   a step's lock too).
   A stamp the runner writes for a Python step also carries `recorded`: the
-  folders it listed (`listingHash`, the same formula on both sides) and the
-  paths it probed, which `recordedChanges` re-checks.
+  folders it listed (`listingHash`, over the sorted names git does not
+  ignore, so a local cache in a listed folder reads the same in every
+  checkout) and the paths it probed, which `recordedChanges` re-checks.
+  `ignoredPaths` is the one `git check-ignore` call, which `listingHash` and
+  `../pipeline/record-step.ts` both make.
   `record_run` is how the runner runs a Python step
   (`../pipeline/run_python_step.py`): Python's audit hook records, under a
   root, every file the process opens for reading, hashed at its first read
   (a file the step wrote before reading it is not an input), every
-  directory it lists (`listing_hash`, over the sorted names; the import
+  directory it lists (its sorted names, which the runner hashes; the import
   system's own scans of `sys.path` are not listings), and every file it
   writes — a rename's target, not its temp file, and not a scratch file it
   deleted — plus each module the step loaded (not those already loaded
@@ -111,11 +114,11 @@ same thing — single-use helpers stay with their consumer.
 - `source-trees.ts` — `TREE_ROOTS` and `treeOf`, which tree a repo path
   belongs to, and `BROWSER_TREES`: the one list both import-boundary tests
   (`/tests/README.md#pipeline-viewer-boundary`) and the step table's
-  outputs-module walk ([Load-time rules](../pipeline/README.md#load-time-rules)) read.
+  outputs-module walk ([Load-time rules](../pipeline/step-table/README.md#load-time-rules)) read.
 - `step-inputs.ts` — `entryInputPaths(entries)`, every file a TypeScript
   step reads: the closure of its entry files, the closure's siblings, and
   every declaration the closure reads (`sources/`); the runner derives each
-  TypeScript step's inputs with it ([The step table](../pipeline/README.md#the-step-table--stepsts)).
+  TypeScript step's inputs with it ([The step table](../pipeline/step-table/README.md#the-step-table--stepsts)).
   `stepEntries(name)` is a step's entry: its `steps.ts` entry when the step is
   on the table (`package.json` then names only `run.ts`), else each `tsx` entry
   its `package.json` script chains; `stepInputPaths(name)` is
