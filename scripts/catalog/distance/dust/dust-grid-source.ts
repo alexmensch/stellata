@@ -1,5 +1,6 @@
 // The Edenhofer 2024 (/data/papers/index.md#edenhofer2024) dust grid: the manifest and every chunk it lists, declared.
 
+import { DUST_MANIFEST } from '../../../../src/catalog-format/public-artifacts/public-artifacts';
 import { defineSource } from '../../../util/sources/source';
 import { assembleDustGrid, parseDustManifest } from './dust-deextinction';
 
@@ -8,7 +9,7 @@ const HINT = 'Re-run scripts/dust/build-dust.py.';
 const chunkFile = (name: string): string => `${DIR}/${name}`;
 
 export const DUST_GRID = defineSource({
-  file: `${DIR}/manifest.json`,
+  file: chunkFile(DUST_MANIFEST),
   hint: HINT,
   members: (input) => parseDustManifest(input.text()).chunks.map((c) => ({ file: chunkFile(c.file), hint: HINT })),
   parse: (input) => assembleDustGrid(

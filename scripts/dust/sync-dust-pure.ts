@@ -2,7 +2,9 @@
 // runtime-consumed artifacts may ship (docs/source files leak to the
 // public bundle otherwise).
 
-const ALLOWED_EXACT = new Set(['manifest.json']);
+import { DUST_MANIFEST } from '../../src/catalog-format/public-artifacts/public-artifacts';
+
+const ALLOWED_EXACT = new Set([DUST_MANIFEST]);
 export const CHUNK_PATTERN = /^chunk_\d+_\d+_\d+\.bin$/;
 
 export function isDustPublicAsset(name: string): boolean {

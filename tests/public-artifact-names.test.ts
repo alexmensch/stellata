@@ -26,11 +26,7 @@ const OWNED: Owned[] = [
     owner: 'src/catalog-format/public-artifacts/',
     re: new RegExp(`^${escape(dir)}/|${PUBLIC_DIR}/${escape(dir)}(/|$)`),
   })),
-  {
-    label: `${PUBLIC_FOLDERS.dust}/${DUST_MANIFEST}`,
-    owner: 'src/catalog-format/public-artifacts/',
-    re: new RegExp(`(^|/)${escape(PUBLIC_FOLDERS.dust)}/${escape(DUST_MANIFEST)}$`),
-  },
+  { label: DUST_MANIFEST, owner: 'src/catalog-format/public-artifacts/', re: fileName(DUST_MANIFEST) },
   { label: CATALOG_MANIFEST_FILENAME, owner: 'src/catalog-format/record/', re: fileName(CATALOG_MANIFEST_FILENAME) },
   { label: 'catalog.bin.<i>', owner: 'src/catalog-format/record/', re: /(^|[^\w.-])catalog\.bin\.(\d|$)/ },
 ];
