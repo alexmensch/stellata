@@ -10,6 +10,7 @@ import { CATALOG_MANIFEST_FILENAME } from '../src/catalog-format/record/catalog-
 
 const ROOT = resolve(__dirname, '..');
 const SCAN_DIRS = ['src', 'scripts'];
+const SCAN_FILES = ['vite.config.ts'];
 
 const escape = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 const fileName = (name: string) => new RegExp(`(^|[^\\w.-])${escape(name)}($|[^\\w-])`);
@@ -17,6 +18,7 @@ const fileName = (name: string) => new RegExp(`(^|[^\\w.-])${escape(name)}($|[^\
 interface Owned { label: string; owner: string; re: RegExp }
 
 const OWNED: Owned[] = [
+  { label: `${PUBLIC_DIR}/`, owner: 'scripts/util/paths.ts', re: new RegExp(`^${escape(PUBLIC_DIR)}(/|$)`) },
   ...Object.values(PUBLIC_FILES).map((name) => ({
     label: name, owner: 'src/catalog-format/public-artifacts/', re: fileName(name),
   })),
@@ -49,20 +51,25 @@ function* literalTexts(sf: ts.SourceFile): Generator<{ text: string; line: numbe
   yield* visit(sf);
 }
 
-function spellings(): string[] {
-  const found: string[] = [];
+function* scannedFiles(): Generator<string> {
   for (const dir of SCAN_DIRS) {
-    for (const path of walkFiles(resolve(ROOT, dir), {
+    yield* walkFiles(resolve(ROOT, dir), {
       include: (p) => isProductionTs(p) || /\.mts$/.test(p),
       skipDir: (name) => name === 'node_modules',
-    })) {
-      const repoPath = relative(ROOT, path);
-      const sf = ts.createSourceFile(path, readFileSync(path, 'utf8'), ts.ScriptTarget.Latest, true);
-      for (const { text, line } of literalTexts(sf)) {
-        for (const owned of OWNED) {
-          if (!repoPath.startsWith(owned.owner) && owned.re.test(text)) {
-            found.push(`${repoPath}:${line} spells ${owned.label} — import it from ${owned.owner}`);
-          }
+    });
+  }
+  for (const file of SCAN_FILES) yield resolve(ROOT, file);
+}
+
+function spellings(): string[] {
+  const found: string[] = [];
+  for (const path of scannedFiles()) {
+    const repoPath = relative(ROOT, path);
+    const sf = ts.createSourceFile(path, readFileSync(path, 'utf8'), ts.ScriptTarget.Latest, true);
+    for (const { text, line } of literalTexts(sf)) {
+      for (const owned of OWNED) {
+        if (!repoPath.startsWith(owned.owner) && owned.re.test(text)) {
+          found.push(`${repoPath}:${line} spells ${owned.label} — import it from ${owned.owner}`);
         }
       }
     }

@@ -3,6 +3,7 @@
 import { CHUNK_PATTERN } from '../dust/sync-dust-pure';
 import { DUST_MANIFEST, PUBLIC_FILES } from '../../src/catalog-format/public-artifacts/public-artifacts';
 import type { OutputFamily } from '../util/emit-artifacts';
+import { publicRepoPath } from '../util/paths';
 import type { ManualStep } from './step-table-pure';
 
 const pull = (name: string, entry: string, outputs: readonly string[]): ManualStep => ({
@@ -65,6 +66,6 @@ export const MANUAL_STEPS: readonly ManualStep[] = [
   }),
   bake('build:icons', 'scripts/icons/build-icons.py', [
     'favicon-16.png', 'favicon-32.png', 'favicon-48.png', 'apple-touch-icon.png', 'icon-192.png', 'icon-512.png', 'favicon.ico',
-  ].map((f) => `public/${f}`)),
-  bake('build:og', 'scripts/og/build-og.py', ['public/og-image.jpg']),
+  ].map(publicRepoPath)),
+  bake('build:og', 'scripts/og/build-og.py', [publicRepoPath('og-image.jpg')]),
 ];

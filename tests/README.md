@@ -505,10 +505,12 @@ the side that happens to compute it first.
 ## Public artifact names
 
 `public-artifact-names.test.ts` parses every production TypeScript module
-under `src/` and `scripts/` and fails on a string or template literal that
-spells a name `src/catalog-format/public-artifacts/` owns — a `public/`
-file, a mirrored folder as `public/<dir>` or `<dir>/…`, the dust manifest —
-or the catalogue manifest or a `catalog.bin.<i>` chunk outside
+under `src/` and `scripts/`, plus `vite.config.ts`, and fails on a string or
+template literal that spells a name outside its owner: the `public` folder
+itself outside `scripts/util/paths.ts`; a name
+`src/catalog-format/public-artifacts/` owns — a `public/` file, a mirrored
+folder as `public/<dir>` or `<dir>/…`, the dust manifest — outside it; or
+the catalogue manifest or a `catalog.bin.<i>` chunk outside
 `src/catalog-format/record/`. Import specifiers are not names. Prose counts:
 a loader's error message interpolates the constant too, so a rename reaches
 it. Tests are not scanned; one that addresses a real artifact imports the

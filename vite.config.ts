@@ -3,6 +3,7 @@ import { resolve } from 'node:path';
 import { indexCitations } from './scripts/site/json-ld-citations.ts';
 import { BUILD_TARGET, buildFigures, figureSubstitution, publishBuildEnv } from './vite.env.ts';
 import { documentRoutingInDev } from './vite.site-dev.ts';
+import { PUBLIC_DIR } from './scripts/util/paths.ts';
 
 const figures = buildFigures();
 publishBuildEnv(figures);
@@ -18,7 +19,7 @@ export default defineConfig(() => ({
     indexCitations(),
   ],
   root: resolve(import.meta.dirname, 'src/client'),
-  publicDir: resolve(import.meta.dirname, 'public'),
+  publicDir: resolve(import.meta.dirname, PUBLIC_DIR),
   build: {
     outDir: resolve(import.meta.dirname, 'dist'),
     emptyOutDir: true,
