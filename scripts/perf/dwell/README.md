@@ -225,9 +225,9 @@ Which gate acts on the verdict, and where it stands down:
 
 **A dwell also counts what the frame submits.** For the timed frames
 it wraps `GPUQueue.submit` and `GPUCommandEncoder.beginRenderPass` /
-`beginComputePass` on their prototypes and records, per rAF interval, the
-submits, the command buffers they carried, and the render and compute
-passes encoded — then puts the originals back in the same `finally` as the
+`beginComputePass` on their prototypes and records, per rendered frame
+(each `'frame'` event, whichever pacing scheduled it), the submits, the
+command buffers they carried, and the render and compute passes encoded — then puts the originals back in the same `finally` as the
 clock and the hold. The table prints min / p50 / max per counter, since a
 count is small and quantised: a readback frame carries the reduction
 chain's extra passes, so the distribution is bimodal and the extremes are
@@ -325,8 +325,8 @@ measured rate rather than on the knob that was typed.
 **The counters sit inside the timed frames, and only on WebGPU.** Each
 wrapped call adds one JavaScript frame: at the counts a canon vantage
 actually reads (2–4 submits and 2–4 render passes per frame, up to 12 on a
-readback frame), that is under twenty extra calls against a 16.7 ms
-interval. Stated rather than assumed, because it is the instrument sitting
+readback frame), that is under twenty extra calls against a frame of
+4.0 ms at the shortest (lg, GPU-paced) and 16.7 ms under rAF. Stated rather than assumed, because it is the instrument sitting
 inside its own measurement.
 
 **`--roundtrip <pass>` asks whether a toggle leaves the frame where it found
