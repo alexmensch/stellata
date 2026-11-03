@@ -1,10 +1,11 @@
 // Content-hash freshness stamps for build steps. See scripts/util/README.md.
 
+import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import {
   closeSync, existsSync, openSync, readFileSync, readSync, readdirSync, rmSync, statSync,
 } from 'node:fs';
-import { relative, resolve } from 'node:path';
+import { join, relative, resolve } from 'node:path';
 
 import { REPO_ROOT } from './paths';
 import { discardStaged, landStaged, writeStaged } from './staged-write';
@@ -73,19 +74,38 @@ export function asStamp(json: Readonly<Record<string, unknown>>): Stamp | null {
     : { inputs: parsed.inputs, outputs: parsed.outputs };
 }
 
-/** A directory listing's hash over its sorted names. Same formula as build_stamp.py. */
-export function listingHash(names: readonly string[]): string {
-  return createHash('sha1').update([...names].sort().join('\n')).digest('hex');
+/** The subset of `paths` git ignores under `root`, each spelled as given. */
+export function ignoredPaths(paths: readonly string[], root: string): Set<string> {
+  if (paths.length === 0) return new Set();
+  const run = spawnSync('git', ['check-ignore', '--stdin'], { cwd: root, input: paths.join('\n'), encoding: 'utf8' });
+  if (run.status !== 0 && run.status !== 1) throw new Error(`git check-ignore exited ${run.status}: ${run.stderr.trim()}`);
+  return new Set(run.stdout.split('\n').filter(Boolean));
 }
 
-function currentListing(dir: string): string | null {
-  return existsSync(dir) && statSync(dir).isDirectory() ? listingHash(readdirSync(dir)) : null;
+/** A directory listing's hash over its sorted names, git-ignored names left out. */
+export function listingHash(dir: string, names: readonly string[], root: string): string {
+  const skip = ignoredPaths(names.map((n) => join(dir, n)), root);
+  const kept = names.filter((n) => !skip.has(join(dir, n)));
+  return createHash('sha1').update(kept.sort().join('\n')).digest('hex');
+}
+
+/** Absolute directory → its listed names, as `build_stamp.record_run` writes them, hashed;
+ *  a git-ignored directory is no input and is dropped. */
+export function listingHashes(listed: Readonly<Record<string, readonly string[]>>, root: string): Record<string, string> {
+  const ignoredDirs = ignoredPaths(Object.keys(listed), root);
+  return Object.fromEntries(Object.entries(listed)
+    .filter(([dir]) => !ignoredDirs.has(dir))
+    .map(([dir, names]) => [dir, listingHash(dir, names, root)]));
+}
+
+function currentListing(dir: string, root: string): string | null {
+  return existsSync(dir) && statSync(dir).isDirectory() ? listingHash(dir, readdirSync(dir), root) : null;
 }
 
 /** Recorded listings and probes whose answer on disk has moved. */
 export function recordedChanges({ listings, probes }: RecordedReads, root: string = REPO_ROOT): string[] {
   return [
-    ...Object.keys(listings).filter((d) => currentListing(resolve(root, d)) !== listings[d]).map((d) => `${d}/`),
+    ...Object.keys(listings).filter((d) => currentListing(resolve(root, d), root) !== listings[d]).map((d) => `${d}/`),
     ...Object.keys(probes).filter((p) => existsSync(resolve(root, p)) !== probes[p]),
   ];
 }

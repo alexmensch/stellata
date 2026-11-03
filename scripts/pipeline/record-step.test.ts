@@ -8,10 +8,10 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { REPO_ROOT } from '../util/paths';
 import { manualDescription, manualFreshness, pullQueryHash, requestHash } from './freshness';
-import { loadTable } from './load-table';
+import { loadTable } from './step-table/load-table';
 import { pipelineTree } from './pipeline-tree';
 import { recordStep, type RecordOutcome } from './record-step';
-import type { ManualStep, StepEntry } from './step-table-pure';
+import type { ManualStep, StepEntry } from './step-table/step-table-pure';
 
 let root: string;
 beforeEach(() => {
