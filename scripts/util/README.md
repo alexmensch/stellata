@@ -71,13 +71,15 @@ same thing — single-use helpers stay with their consumer.
   `build/stamps/<name>.json` with `:` written `-` (`stepFileName`, which names
   a step's lock too).
   A stamp the runner writes for a Python step also carries `recorded`: the
-  folders it listed (`listingHash`, the same formula on both sides) and the
-  paths it probed, which `recordedChanges` re-checks.
+  folders it listed (`listingHash`, over the sorted names git does not
+  ignore, so a local cache in a listed folder reads the same in every
+  checkout) and the paths it probed, which `recordedChanges` re-checks.
+  `ignoredPaths` is the one `git check-ignore` call, `record.ts`'s too.
   `record_run` is how the runner runs a Python step
   (`../pipeline/run_python_step.py`): Python's audit hook records, under a
   root, every file the process opens for reading, hashed at its first read
   (a file the step wrote before reading it is not an input), every
-  directory it lists (`listing_hash`, over the sorted names; the import
+  directory it lists (its sorted names, which the runner hashes; the import
   system's own scans of `sys.path` are not listings), and every file it
   writes — a rename's target, not its temp file, and not a scratch file it
   deleted — plus each module the step loaded (not those already loaded

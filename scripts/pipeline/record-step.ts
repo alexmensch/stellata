@@ -2,7 +2,7 @@
 
 import { existsSync } from 'node:fs';
 
-import { fileHashes, ignoredPaths, type FileHashes, type RecordedReads } from '../util/build-stamp';
+import { fileHashes, ignoredPaths, listingHashes, type FileHashes, type RecordedReads } from '../util/build-stamp';
 import {
   manualDescription, manualFreshness, pullQueryHash, requestHash, stampedOutputs, writeManualRecord,
   type Description, type ManualRecord,
@@ -58,7 +58,7 @@ function recordedReads(run: RunRecord, keep: (path: string) => boolean, tree: Pi
   const any = Object.keys(listings).length + Object.keys(probes).length > 0;
   return {
     inputs: tree.rekey(pick(run.reads, keep)),
-    recorded: any ? { listings: tree.rekey(listings), probes: tree.rekey(probes) } : undefined,
+    recorded: any ? { listings: tree.rekey(listingHashes(listings, tree.root)), probes: tree.rekey(probes) } : undefined,
     services: run.services,
   };
 }

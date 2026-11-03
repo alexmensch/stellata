@@ -103,8 +103,9 @@ raises no event. Two reads open no file, so they need their own record:
 
 - **Directory listings** (`os.listdir`, `os.scandir`, `glob.glob`, which
   `iterdir` and `Path.glob` go through) are audit events too; each is recorded
-  as an input keyed by the directory, hashed over its sorted names, so a file
-  added to a scanned folder stales the step.
+  as an input keyed by the directory, hashed over its sorted names less the
+  ones git ignores, so a file added to a scanned folder stales the step and a
+  local cache beside it does not.
 - **Existence probes** (`Path.exists()`, `os.path.exists`) raise no audit
   event. A Python step probes existence only through `build_stamp.probe`,
   which records the probe; a test over the Python step modules fails on any
@@ -298,7 +299,8 @@ reads stale until a plain run.
 The record counts as read every file the run read, listed or probed, except
 its own outputs, a file named in `requestFrom` (it counts through the
 request), an ignored file (a `.ckpt` batch cache, the dust bake's
-`.voxels-*.npy`: no other checkout has one), and, for a pull, code. An ignored
+`.voxels-*.npy`: no other checkout has one, so no listing counts it either),
+and, for a pull, code. An ignored
 write is scratch; any other write the step does not declare fails the run
 and leaves the record as it was. `answeredBy` is the run record's services,
 in first-answer order; `release` is the description's.

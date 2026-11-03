@@ -3,7 +3,7 @@
 import { existsSync } from 'node:fs';
 
 import {
-  clearStamp, fileHashes, writeStamp, type FileHashes, type RecordedReads,
+  clearStamp, fileHashes, listingHashes, writeStamp, type FileHashes, type RecordedReads,
 } from '../util/build-stamp';
 import { PIPELINE_STEP_ENV, UPDATE_SNAPSHOTS_ENV } from '../util/snapshot-check';
 import {
@@ -122,7 +122,7 @@ class Run {
     const problems = recordProblems(resolved, snapshots, run, this.loaded.steps.values(), this.graph);
     if (problems.length > 0) return { kind: 'failed', reason: problems.join('; ') };
     return this.land(stampFile, resolved, rehashed(tree.rekey(run.reads), run.writes, tree), {
-      listings: tree.rekey(run.listings),
+      listings: tree.rekey(listingHashes(run.listings, tree.root)),
       probes: tree.rekey(run.probes),
     });
   }

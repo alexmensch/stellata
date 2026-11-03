@@ -1,3 +1,4 @@
+import { execFileSync } from 'node:child_process';
 import {
   existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, symlinkSync, writeFileSync,
 } from 'node:fs';
@@ -21,6 +22,7 @@ const EMIT_ARTIFACTS = join(REPO_ROOT, 'scripts/util/emit-artifacts');
 beforeEach(() => {
   root = realpathSync(mkdtempSync(join(tmpdir(), 'runner-')));
   mkdirSync(join(root, 'steps'));
+  execFileSync('git', ['init', '-q'], { cwd: root });
   logDir = mkdtempSync(join(tmpdir(), 'runner-log-'));
   reads = new Map();
 });
@@ -348,6 +350,19 @@ os.replace(tmp, ${JSON.stringify(at(out))})
     expect((await run(steps, ['p'])).kinds).toEqual({ p: 'fresh' });
     write('folder/two', '');
     expect((await run(steps, ['p'])).kinds).toEqual({ p: 'built' });
+  });
+
+  it('leaves a git-ignored name out of a listing, so a local cache neither stales nor freshens a step', async () => {
+    write('.gitignore', 'folder/.cache*\n');
+    write('folder/one', '');
+    write('folder/.cache-a', '');
+    const listing = `${rename('p.out')}\nos.listdir(${JSON.stringify(at('folder'))})`;
+    write('p.in', 'x');
+    const steps = [pyStep('p', 'p.out', listing)];
+    await run(steps, ['p']);
+    rmSync(at('folder/.cache-a'));
+    write('folder/.cache-b', '');
+    expect((await run(steps, ['p'])).kinds).toEqual({ p: 'fresh' });
   });
 
   it('stales a step when a path it probed appears', async () => {

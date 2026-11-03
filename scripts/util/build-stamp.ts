@@ -5,7 +5,7 @@ import { createHash } from 'node:crypto';
 import {
   closeSync, existsSync, openSync, readFileSync, readSync, readdirSync, rmSync, statSync,
 } from 'node:fs';
-import { relative, resolve } from 'node:path';
+import { join, relative, resolve } from 'node:path';
 
 import { REPO_ROOT } from './paths';
 import { discardStaged, landStaged, writeStaged } from './staged-write';
@@ -82,19 +82,27 @@ export function ignoredPaths(paths: readonly string[], root: string): Set<string
   return new Set(run.stdout.split('\n').filter(Boolean));
 }
 
-/** A directory listing's hash over its sorted names. Same formula as build_stamp.py. */
-export function listingHash(names: readonly string[]): string {
-  return createHash('sha1').update([...names].sort().join('\n')).digest('hex');
+/** A directory listing's hash over its sorted names, git-ignored names left out:
+ *  scratch such as a local cache exists in one checkout only. */
+export function listingHash(dir: string, names: readonly string[], root: string): string {
+  const skip = ignoredPaths(names.map((n) => join(dir, n)), root);
+  const kept = names.filter((n) => !skip.has(join(dir, n)));
+  return createHash('sha1').update(kept.sort().join('\n')).digest('hex');
 }
 
-function currentListing(dir: string): string | null {
-  return existsSync(dir) && statSync(dir).isDirectory() ? listingHash(readdirSync(dir)) : null;
+/** Absolute directory → its listed names, as `build_stamp.record_run` writes them, hashed. */
+export function listingHashes(listed: Readonly<Record<string, readonly string[]>>, root: string): Record<string, string> {
+  return Object.fromEntries(Object.entries(listed).map(([dir, names]) => [dir, listingHash(dir, names, root)]));
+}
+
+function currentListing(dir: string, root: string): string | null {
+  return existsSync(dir) && statSync(dir).isDirectory() ? listingHash(dir, readdirSync(dir), root) : null;
 }
 
 /** Recorded listings and probes whose answer on disk has moved. */
 export function recordedChanges({ listings, probes }: RecordedReads, root: string = REPO_ROOT): string[] {
   return [
-    ...Object.keys(listings).filter((d) => currentListing(resolve(root, d)) !== listings[d]).map((d) => `${d}/`),
+    ...Object.keys(listings).filter((d) => currentListing(resolve(root, d), root) !== listings[d]).map((d) => `${d}/`),
     ...Object.keys(probes).filter((p) => existsSync(resolve(root, p)) !== probes[p]),
   ];
 }
