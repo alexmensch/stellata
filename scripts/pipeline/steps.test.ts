@@ -9,7 +9,8 @@ import { CNS5 as CNS5_SOURCE } from '../catalog/classic-ids/cns5-source';
 import { REASON_CODES_FILE } from '../catalog/lineage/reason-codes-tsv';
 import { MEMBERSHIP_MANIFEST_FILE } from '../catalog/membership/membership-manifest-tsv';
 import { packageScripts } from '../util/import-closure';
-import { lfsContentReadable, REPO_ROOT } from '../util/paths';
+import { lfsContentReadable, publicFile, REPO_ROOT } from '../util/paths';
+import { PUBLIC_FILES } from '../../src/catalog-format/public-artifacts/public-artifacts';
 import { entryInputPaths } from '../util/step-inputs';
 import { describeStep } from './freshness';
 import { loadTable, type Loaded } from './load-table';
@@ -92,7 +93,7 @@ describe('the step table', () => {
     }
   }, 60_000);
 
-  it.skipIf(!existsSync(resolve(REPO_ROOT, 'public/clouds.json')))('describes every describing bake under python3 -I -S', () => {
+  it.skipIf(!existsSync(publicFile(PUBLIC_FILES.clouds)))('describes every describing bake under python3 -I -S', () => {
     const tree = pipelineTree(REPO_ROOT);
     const bakes = MANUAL_STEPS.filter((s) => s.kind === 'bake' && describesItself(s));
     expect(bakes.map((s) => s.name)).toEqual(['build:cloud-surfaces']);
