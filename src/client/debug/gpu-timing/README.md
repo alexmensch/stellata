@@ -189,7 +189,9 @@ same newest frame.
 
 The batch also covers every frame since the last resolve but returns only
 the newest frame's total — earlier frames' passes are dropped, not summed
-into it.
+into it. So samples arrive at fewer than one per rendered frame under load,
+and each one is a single honest frame, which is what the ring average and
+the dwell medians need.
 
 <a id="one-frame-per-tag"></a>**"Frame" here is three's tag, not the frame
 loop's tick.** three groups by `renderer.info.frame`, which its own internal
@@ -201,9 +203,7 @@ throughput of 4.6 ms per frame, and every vantage read about one interval.
 So a GPU-paced tick opens its own tag first, through
 `WebGpuSeam.startTimestampFrame()`, numbered far above three's so the two
 never meet inside one batch
-([Pacing](../../scene/frame-loop/README.md#pacing)). So samples arrive at fewer than one per rendered frame under load,
-and each one is a single honest frame, which is what the ring average and
-the dwell medians need.
+([Pacing](../../scene/frame-loop/README.md#pacing)).
 
 **Covering both pools costs sample rate, because the cycle ends on the
 slower readback.** Measured across the two committed pins on this adapter
