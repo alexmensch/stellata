@@ -10,6 +10,8 @@ import {
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { PUBLIC_DIR } from '../../src/catalog-format/public-artifacts/public-artifacts';
+
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 // scripts/util/paths.ts sits two levels below the repo root
@@ -17,6 +19,8 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 export const REPO_ROOT = resolve(__dirname, '..', '..');
 
 export const PACKAGE_JSON = 'package.json';
+
+export const publicFile = (name: string): string => resolve(REPO_ROOT, PUBLIC_DIR, name);
 
 const LFS_PROBE_BYTES = 128;
 
