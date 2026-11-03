@@ -224,10 +224,10 @@ version would never stale either bake.
 The pull's code is not an input: a refactor of the plumbing, or its port to
 TypeScript, does not make a pull stale; a changed column list or `WHERE` does.
 Each pull states its query as data, so the runner can hash the current query
-without a network call: a TypeScript pull exports it, and a Python pull prints
-it under `--describe`. The describe path imports the standard library only,
-since every build runs it and a worktree has no refresh virtualenv; a test
-runs each pull's `--describe` under `python3 -I -S`.
+without a network call: every pull prints it under `--describe` (a
+TypeScript pull through `runStep(main, describe)`). A Python pull's describe
+path imports the standard library only, since every build runs it and a
+worktree has no refresh virtualenv (`steps.test.ts`, [Files](#files)).
 
 Manual-step stamps are committed because frozen data needs a committed record
 of what produced it; `build/` is gitignored. One file per step, since several
@@ -414,9 +414,10 @@ Hand-kept lists become derivations over the table:
   declaration a `data/` path may be spelled.
   The test holds the table to the load-time rules, every manual step's
   `package.json` target to `tsx scripts/pipeline/record.ts <name>`, and every
-  pull's and describing bake's `--describe` to running under `python3 -I -S`
-  (skipped while the manifest is an unsmudged LFS pointer, or before
-  `build:clouds` has written `public/clouds.json`).
+  pull's and describing bake's `--describe` to running (Python under
+  `python3 -I -S`, TypeScript through `tsx`; skipped while the manifest is
+  an unsmudged LFS pointer, or before `build:clouds` has written
+  `public/clouds.json`).
 - `record.ts` / `record-step.ts` (+ test) — [Recording a manual
   step](#recording-a-manual-step--recordts): `recordStep` and the
   `RecordOutcome` union (`fresh`, `recorded`, `failed`).

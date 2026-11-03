@@ -85,7 +85,7 @@ describe('the step table', () => {
     );
   });
 
-  it.skipIf(!lfsContentReadable(MANIFEST))('describes every pull under python3 -I -S', () => {
+  it.skipIf(!lfsContentReadable(MANIFEST))('describes every pull: Python under python3 -I -S, TypeScript through tsx', () => {
     const tree = pipelineTree(REPO_ROOT);
     for (const step of MANUAL_STEPS.filter((s) => s.kind === 'pull')) {
       expect(describeStep(step, tree), step.name).toMatchObject({ kind: 'pull', query: expect.any(String) });
