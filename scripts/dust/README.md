@@ -100,4 +100,6 @@ plain `pnpm run build:dust`
 
 Real mode needs `pip install -r scripts/requirements-dust.txt` and the
 pulled map (~3.2 GB); a re-encode (e.g. a `DENSITY_MAX` change) reuses the
-gitignored `.voxels-<variant>-<md5>.npy` cache (`edenhofer2024.voxel_cache_path`, one per dataset variant and version) and needs only numpy.
+gitignored `.voxels-<variant>-<md5>.npy` cache (`edenhofer2024.voxel_cache_path`, one per dataset variant and version) and needs only numpy. A fresh resample deletes
+that variant's older-version caches and the unkeyed `.voxels.npy`
+(`stale_voxel_caches`), so each variant keeps one ~512 MiB grid.

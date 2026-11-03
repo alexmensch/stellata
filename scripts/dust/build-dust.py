@@ -84,6 +84,9 @@ def main() -> int:
             voxels = resample_edenhofer(flavor=args.flavor)
             print(f"Saving raw grid cache to {cache_path.relative_to(ROOT)}…", file=sys.stderr)
             np.save(cache_path, voxels)
+            for stale in edenhofer2024.stale_voxel_caches(args.output, args.flavor):
+                print(f"Deleting superseded grid cache {stale.relative_to(ROOT)}…", file=sys.stderr)
+                stale.unlink()
         zucker_report = zucker_column_check(voxels)
         density_max = DENSITY_MAX_REAL
 

@@ -57,9 +57,24 @@ def cached_file(variant: str) -> Path:
     return Path(data_dir()) / DUSTMAPS_SUBDIR / VARIANTS[variant]["file"]
 
 
+_UNKEYED_VOXEL_CACHE = ".voxels.npy"
+
+
+def _voxel_cache_name(variant: str, md5: str) -> str:
+    return f".voxels-{variant}-{md5}.npy"
+
+
 def voxel_cache_path(output_dir: Path, flavor: str) -> Path:
     variant = FLAVOR_VARIANT[flavor]
-    return output_dir / f".voxels-{variant}-{VARIANTS[variant]['md5']}.npy"
+    return output_dir / _voxel_cache_name(variant, VARIANTS[variant]["md5"])
+
+
+def stale_voxel_caches(output_dir: Path, flavor: str) -> list[Path]:
+    """The flavor's caches no current dataset version reads: its older
+    versions, and the unkeyed cache of any variant."""
+    current = voxel_cache_path(output_dir, flavor)
+    keyed = output_dir.glob(_voxel_cache_name(FLAVOR_VARIANT[flavor], "*"))
+    return sorted([p for p in keyed if p != current] + list(output_dir.glob(_UNKEYED_VOXEL_CACHE)))
 
 
 def require(flavor: str) -> dict[str, Any]:
