@@ -340,6 +340,23 @@ describe('FrameLoop GPU pacing', () => {
     expect(log.indexOf('startTimestampFrame')).toBeLessThan(log.indexOf('extinction.update'));
   });
 
+  it('reports each rendered tick\'s CPU time, and nothing for a refused one or after unsubscribe', () => {
+    const now = vi.spyOn(performance, 'now');
+    now.mockReturnValueOnce(100).mockReturnValue(103.5);
+    const { loop, knobs } = harness();
+    const seen: number[] = [];
+    const off = loop.onRenderedTick((ms) => seen.push(ms));
+    loop.start();
+    expect(seen).toEqual([3.5]);
+    knobs.render = false;
+    runNext();
+    expect(seen).toHaveLength(1);
+    off();
+    knobs.render = true;
+    runNext();
+    expect(seen).toHaveLength(1);
+  });
+
   it('leaves the timestamp frame to three under rAF pacing', () => {
     const { loop, log } = harness();
     loop.start();

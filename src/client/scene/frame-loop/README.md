@@ -117,6 +117,18 @@ resolve as one GPU sample
 submitted nothing, so its work-done promise would settle at once and a
 GPU-paced chain of refusals would spin the page without yielding a frame.
 
+## CPU time per tick
+
+`onRenderedTick` hands each subscriber the main-thread time of every
+rendered tick: from the tick's one `performance.now()` read to after the
+`'frame'` handlers, so it covers the fan-out, the encode and submit calls
+and the overlays. A refused tick reports nothing. It is the perf dwell's
+CPU row ([CPU and GPU, apart](/scripts/perf/dwell/README.md#cpu-and-gpu-apart)),
+always on rather than tied to the debug panel the way the perf HUD's
+`frame.total` is, because a dwell refuses to run with the panel open. It
+does not see the CPU time Chrome's GPU process spends on the same
+commands.
+
 ## The frustum
 
 `FrameCtx.frustum` is invalidated when the frame context is built and

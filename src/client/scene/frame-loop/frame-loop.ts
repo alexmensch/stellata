@@ -66,6 +66,7 @@ export class FrameLoop {
   private readonly frameCtx: Mutable<FrameCtx>;
   private pacing: FramePacing = 'raf';
   private readonly gpuInFlight: Promise<void>[] = [];
+  private readonly tickCpuListeners = new Set<(cpuMs: number) => void>();
   private readonly epochFollowDelta = new THREE.Vector3();
   private readonly cameraAbs = new THREE.Vector3();
   private realtimeNeeded = false;
@@ -110,11 +111,19 @@ export class FrameLoop {
     this.gpuInFlight.length = 0;
   }
 
+  /** Each rendered tick's main-thread time, start to after the `'frame'`
+   *  handlers (README.md#cpu-time-per-tick); returns the unsubscribe. */
+  onRenderedTick(listener: (cpuMs: number) => void): () => void {
+    this.tickCpuListeners.add(listener);
+    return () => { this.tickCpuListeners.delete(listener); };
+  }
+
   dispose(): void {
     this.disposed = true;
     this.realtimeNeeded = false;
     this.pacing = 'raf';
     this.gpuInFlight.length = 0;
+    this.tickCpuListeners.clear();
     this.frameCtx.frustum.invalidate();
   }
 
@@ -212,6 +221,10 @@ export class FrameLoop {
     perfMeasure('frame.handlers');
     perfMeasure('frame.total');
     perfFrame();
+    if (this.tickCpuListeners.size > 0) {
+      const cpuMs = performance.now() - nowMs;
+      for (const listener of this.tickCpuListeners) listener(cpuMs);
+    }
     this.scheduleNext(true);
   };
 
