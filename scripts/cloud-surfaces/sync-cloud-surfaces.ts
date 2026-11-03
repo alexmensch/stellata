@@ -2,22 +2,23 @@
 // public/ (gitignored) so the build serves it without astro-Python. See the folder README.
 
 import { mkdirSync, statSync } from 'node:fs';
-import { dirname, resolve } from 'node:path';
+import { dirname } from 'node:path';
 
 import { syncFile } from '../util/mirror-to-public';
-import { REPO_ROOT } from '../util/paths';
+import { publicFile } from '../util/paths';
+import { PUBLIC_FILES, publicRepoPath } from '../../src/catalog-format/public-artifacts/public-artifacts';
 import { CLOUD_SURFACES_BIN } from './cloud-surfaces-source';
 
-const DST = resolve(REPO_ROOT, 'public/cloud-surfaces.bin');
+const DST = publicFile(PUBLIC_FILES.cloudSurfaces);
 
 function main(): void {
   const src = CLOUD_SURFACES_BIN.read();
   mkdirSync(dirname(DST), { recursive: true });
   if (syncFile(src, DST) === 'up-to-date') {
-    console.log('public/cloud-surfaces.bin up to date.');
+    console.log(`${publicRepoPath(PUBLIC_FILES.cloudSurfaces)} up to date.`);
     return;
   }
-  console.log(`synced cloud-surfaces.bin (${statSync(DST).size} bytes).`);
+  console.log(`synced ${PUBLIC_FILES.cloudSurfaces} (${statSync(DST).size} bytes).`);
 }
 
 main();

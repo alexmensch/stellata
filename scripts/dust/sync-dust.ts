@@ -3,7 +3,8 @@
 // voxel chunks.
 
 import { mirrorDataFolder } from '../util/mirror-to-public';
+import { PUBLIC_FOLDERS, publicRepoPath } from '../../src/catalog-format/public-artifacts/public-artifacts';
 
 import { DUST_MIRROR } from './dust-mirror-source';
 
-mirrorDataFolder(DUST_MIRROR.read(), { dstDir: 'public/dust', label: 'dust' });
+mirrorDataFolder(DUST_MIRROR.read(), { dstDir: publicRepoPath(PUBLIC_FOLDERS.dust), label: 'dust' });

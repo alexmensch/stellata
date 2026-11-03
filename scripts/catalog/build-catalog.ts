@@ -134,10 +134,10 @@ import { REPO_ROOT as ROOT } from '../util/paths';
 import { fileHashes, type FileHashes } from '../util/build-stamp';
 import {
   DEFAULT_CATALOG_MANIFEST as OUT_MANIFEST, DEFAULT_CONSTELLATIONS_JSON as OUT_CON,
-  DEFAULT_ROW_INDEX_MAP, DEFAULT_SEARCH_INDEX as OUT_SEARCH,
+  DEFAULT_BOUNDARIES, DEFAULT_ROW_INDEX_MAP, DEFAULT_SEARCH_INDEX as OUT_SEARCH,
 } from './catalog-paths-pure';
 import {
-  CATALOG_CHUNK_DIR, CATALOG_OUTPUTS, OUT_BOUNDARIES,
+  CATALOG_CHUNK_DIR, CATALOG_OUTPUTS,
 } from './catalog-outputs';
 import {
   emitArtifacts, runStep, sweepStaged, type ArtifactContents, type Check,
@@ -1175,7 +1175,7 @@ async function main() {
   counts.boundaryArtifactKb = Math.round(boundaries.bytes / 1024);
   const fade = boundaries.artifact.fade;
   console.log(
-    `Built ${OUT_BOUNDARIES} (${boundaries.segments} arcs, `
+    `Built ${DEFAULT_BOUNDARIES} (${boundaries.segments} arcs, `
       + `${boundaries.directions} directions, `
       + `${boundaries.artifact.labels.length} labels, `
       + `${boundaries.regionRuns} region runs, `
