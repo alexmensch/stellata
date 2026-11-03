@@ -108,7 +108,6 @@ export class FrameLoop {
 
   setPacing(pacing: FramePacing): void {
     this.pacing = pacing;
-    this.gpuInFlight.length = 0;
   }
 
   /** Each rendered tick's main-thread time, start to after the `'frame'`

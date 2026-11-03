@@ -330,6 +330,17 @@ describe('FrameLoop GPU pacing', () => {
     expect(scheduled).toHaveLength(0);
   });
 
+  it(`re-selecting GPU pacing mid-run still holds ${GPU_FRAMES_IN_FLIGHT} frames on the GPU`, async () => {
+    const { loop, log, workDone } = harness();
+    loop.setPacing('gpu');
+    loop.start();
+    await flushMicrotasks();
+    loop.setPacing('gpu');
+    workDone[0]();
+    await flushMicrotasks();
+    expect(renders(log)).toBe(GPU_FRAMES_IN_FLIGHT + 1);
+  });
+
   it('opens a timestamp frame on every rendered tick, ahead of its first GPU work', async () => {
     const { loop, log } = harness();
     loop.setPacing('gpu');
