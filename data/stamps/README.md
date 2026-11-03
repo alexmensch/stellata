@@ -1,7 +1,7 @@
 # Manual-step records
 
-One JSON file per pull and bake — every `refresh:*` pull, the two Edenhofer
-dataset pulls and the six bakes — named for its step (`:` written `-`). Each
+One JSON file per pull and bake — every `refresh:*` and `fetch:*` pull and
+the six bakes — named for its step (`:` written `-`). Each
 is the committed record of that step's last run: the hash of every repo
 file it read and every file it wrote, and for a pull the hash of its query,
 the services that answered and the upstream release. The design is
