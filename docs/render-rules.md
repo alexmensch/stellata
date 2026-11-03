@@ -377,19 +377,20 @@ at the canonical vantages is what explains a row that moved.
   (`debug/frame-cost/README.md` owns the gates `noiseMs` / `bracketMs`
   and how to read a row; `debug/frame-cost/passes/README.md` owns the
   roster).
-- **The whole-frame comparison reads the GPU-stream median, not wall.**
-  Under rAF pacing, wall time at a canon vantage is quantised to the
-  display's refresh interval: the median sits on a multiple of it whatever
-  the frame costs, so it resolves nothing under one interval and jumps a
-  whole one when it moves. Under the dwell's default GPU pacing it is
-  throughput, the slower of CPU encode and GPU work. **The GPU stream is
-  read with the GPU clock held at max** — paced on rAF, an idle GPU's clock
-  falls until the frame fills the interval, and the stream then reads work
-  over a clock the governor chose
-  ([Pacing](/scripts/perf/dwell/README.md#pacing)). The pin gates on the GPU-stream p50 where the backend supplies
-  one and records wall beside it ([Perf pin](/RELEASING.md#perf-pin)). This is the
-  frame's own span, not a per-pass slot — attribution is still a
-  differential.
+- **The whole-frame comparison reads GPU work at a fixed clock, and CPU
+  work beside it, never one frame time that conflates them.** Under the
+  dwell's default GPU pacing the GPU never idles and its clock holds max, so
+  the frame row gates on throughput (wall ÷ frames), the main thread's time
+  per tick is its own `|cpu` row, and a context whose CPU share passes 80 %
+  is refused as CPU-bound
+  ([CPU and GPU, apart](/scripts/perf/dwell/README.md#cpu-and-gpu-apart)).
+  Paced on rAF instead, an idle GPU's clock falls until the frame fills the
+  interval, so the GPU-stream p50 gates there and reads work over a clock
+  the governor chose ([Pacing](/scripts/perf/dwell/README.md#pacing)), and
+  wall time is quantised to the refresh interval — its median sits on a
+  multiple of it whatever the frame costs. Either way this is the frame's
+  own span, not a per-pass slot — attribution is still a differential
+  ([Perf pin](/RELEASING.md#perf-pin)).
 - **`gpu.frame` is the render passes; compute passes are their own row.**
   three keeps a timestamp pool per pass type, and `gpu.frame` sums the
   render pool alone — the meaning every pin row and archived dwell carries.
