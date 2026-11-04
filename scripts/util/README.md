@@ -66,11 +66,8 @@ same thing — single-use helpers stay with their consumer.
 - `build-stamp.ts` / `build_stamp.py` — the content-hash stamp
   ([Preprocessor idempotency](../README.md#preprocessor-idempotency)): `fileHashes` maps each file's
   repo-relative path (relative to a passed root, the runner's tree) to its
-  sha1, `null` when absent, so an input's arrival is
-  a change too; `hashBytes` is `hashFile`'s hash over bytes still in memory,
-  which the lineage header records for the files it is emitted with, and
-  `listingHash` and `../pipeline/freshness.ts`'s query and request hashes
-  are taken with. `inputHashes` is the same map with each code file hashed by
+  sha1 (`hashFile`, `stamp-hash.ts`), `null` when absent, so an input's arrival is
+  a change too. `inputHashes` is the same map with each code file hashed by
   its identity (`code-identity.ts`), and `recordedInputs` turns a Python run
   record's reads into it, keeping the first-read bytes hash of a code file
   edited mid-run, which no identity equals, so the step reads stale. A stamp (`build/stamps/<step>.json`) records two
@@ -104,7 +101,7 @@ same thing — single-use helpers stay with their consumer.
   writes — a rename's target, not its temp file, and not a scratch file it
   deleted — plus each module the step loaded (not those already loaded
   when the recording began: the recorder's own `run_python_step.py`,
-  `build_stamp.py` and `paths.py`, so editing the recorder stales no
+  `build_stamp.py`, `stamp_hash.py` and `paths.py`, so editing the recorder stales no
   step), nothing under `.venv` or `__pycache__` included, into a JSON
   record the runner turns
   into the step's stamp. An existence check opens nothing, so a step probes
@@ -112,6 +109,17 @@ same thing — single-use helpers stay with their consumer.
   records which network service answered, once each in first-answer order
   (`refresh_lib.TapClient` calls it); `record.ts` copies the list into a
   pull's committed record as `answeredBy`.
+- `stamp-hash.ts` / `stamp_hash.py` (+ tests) — the stamp hash, sha1, and its
+  only spelling in each language: `hashFile` / `hash_file` over a file's bytes
+  and `hashBytes` / `hash_bytes` over bytes still in memory, equal for equal
+  bytes. Every stamp-side digest is taken with one of them — `build-stamp.ts`'s
+  maps and `listingHash`, a code identity in either language, the lineage
+  header's file hashes, `../pipeline/freshness.ts`'s query and request hashes,
+  a recorded run's reads. A leaf below both stamp modules and both
+  code-identity modules, since `build-stamp.ts` imports `code-identity.ts`.
+  The two languages must agree byte for byte, since `recordedInputs` compares
+  a Python-recorded hash against a TypeScript one; both suites pin the same
+  digests.
 - `code-identity.ts` / `code_identity.py` (+ test) — a code input's identity,
   the one rule for every step: the sha1 of its token stream with comments
   and docstrings dropped, so a comment, docstring or layout edit stales

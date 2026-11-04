@@ -1,13 +1,13 @@
 // A code file's identity: the sha1 of its token stream, comments and docstrings dropped. See README.md.
 
 import { spawnSync } from 'node:child_process';
-import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 import ts from 'typescript';
 
 import { REPO_ROOT } from './paths';
+import { hashBytes } from './stamp-hash';
 
 const PYTHON_IDENTITY = resolve(REPO_ROOT, 'scripts/util/code_identity.py');
 
@@ -22,7 +22,7 @@ export function tsIdentity(text: string): string {
     else children.forEach(visit);
   };
   visit(source);
-  return createHash('sha1').update(JSON.stringify(tokens)).digest('hex');
+  return hashBytes(JSON.stringify(tokens));
 }
 
 function pythonIdentities(paths: readonly string[]): Record<string, string> {
