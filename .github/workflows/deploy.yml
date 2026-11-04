@@ -13,10 +13,10 @@ concurrency:
 
 # Triggered on every push to main (i.e. PR merge), but the deploy job
 # only runs when package.json#version changed across the pushed range.
-# This pairs with version-guard.yml on PRs: PRs that touch shipped code
-# must bump the version, and that bump is what fires the deploy.
-# Pure-metadata PRs (skip-version-bump label) leave the version alone
-# and therefore don't redeploy.
+# This pairs with version-guard.yml on PRs: PRs that change what the site
+# serves (RELEASING.md's live-app consumer test) bump the version, and
+# that bump is what fires the deploy. `skip-version-bump` PRs leave the
+# version alone and therefore don't redeploy.
 #
 # The comparison is against the push's base commit, not HEAD~1: merging
 # a stack lands N commits in ONE push event, and each of those commits
