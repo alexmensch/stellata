@@ -56,8 +56,9 @@ together produces six release pages, each with its own author's prose.
 - **Patch** — bug fixes, copy tweaks, dependency bumps with no
   user-visible behaviour change.
 
-Every PR that passes [the live-app consumer test](#the-live-app-consumer-test)
-bumps `package.json`, so the version on `main` is always the *next*
+Every PR that changes what the deployed site serves
+([the live-app consumer test](#the-live-app-consumer-test)) bumps
+`package.json`, so the version on `main` is always the *next*
 release. Cutting a release is then just merging — the deploy workflow
 handles tag, GitHub release, and Cloudflare deploy. PRs without a bump
 don't redeploy.
