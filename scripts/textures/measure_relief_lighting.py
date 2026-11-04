@@ -13,7 +13,7 @@ from PIL import Image
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from dem_relief import DEM_BODIES, POLE_CUTOFF_DEG, read_frozen_dem, surface_normals  # noqa: E402
-from horizon_map import (
+from horizon_map import (  # noqa: E402
     HORIZON_AZIMUTHS,
     azimuth_lerp,
     decode_horizon_sin,
@@ -25,7 +25,7 @@ from horizon_map import (
     march_start,
     search_arc,
 )
-from sky_view import decode_sky_view
+from sky_view import decode_sky_view  # noqa: E402
 from scripts.util.baker_constants import CONSTANTS  # noqa: E402
 
 TEXTURES = Path(__file__).resolve().parents[2] / "data" / "textures"

@@ -44,7 +44,6 @@ const INK_ALPHA_DEFAULT = 0.95;
 const LABEL_SAMPLE_TARGET = 32;
 const GOLDEN_ANGLE = 2.399963229728653;
 
-
 const ABSORPTION_RENDER_ORDER = -2;
 // Rim shells draw with the reference wireframes at −1 — annotation
 // chrome, deliberately NOT extincted by the absorption pass.

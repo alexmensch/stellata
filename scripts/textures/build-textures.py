@@ -11,9 +11,9 @@ from PIL import Image, ImageFilter, ImageStat
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from dem_relief import DEM_BODIES, read_frozen_dem, surface_normals  # noqa: E402
-from horizon_map import horizon_maps
-from sky_view import sky_view_factor
-from texture_calibration import (
+from horizon_map import horizon_maps  # noqa: E402
+from sky_view import sky_view_factor  # noqa: E402
+from texture_calibration import (  # noqa: E402
     COLOUR_INDICES,
     LUMA,
     calibrate,
