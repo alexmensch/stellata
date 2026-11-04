@@ -9,7 +9,7 @@ import { judgeBaseline, type MergeBase, type StageProvenance } from './baseline/
 import { baselineMembers, readLineage, readStageHeader, stageEmission } from './lineage-io';
 import { lineageInvariant, NO_EXCEPTIONS } from './lineage-invariant-pure';
 import { paramsText, stageLineageLine, stageLineageText } from './lineage-row-pure';
-import { stageLineage } from './stage-lineage';
+import { mergeBaseAt, stageLineage } from './stage-lineage';
 import { LIVE, stageCodes } from './reason-codes-pure';
 import {
   lineageLayout, stageFamilies, stageFile, stageOutputFiles, type LineageLayout,
@@ -151,5 +151,18 @@ describe('stage rotation', () => {
     baselineMembers(layout, SPEC, true);
     baselineMembers(layout, SPEC, false);
     expect(snapshot()).toEqual(before);
+  });
+
+  it('a git failure while hashing the merge-base\'s inputs refuses the baseline, once, and fails nothing', () => {
+    run('old');
+    let calls = 0;
+    const failing = mergeBaseAt('base', () => {
+      calls += 1;
+      throw new Error('git exited 128');
+    });
+    const source = { kind: 'checkout' as const, header: readStageHeader(layout.current, SPEC) };
+    const verdict = judgeBaseline(source, failing, false);
+    expect(verdict.kind === 'refused' && verdict.message).toMatch(/hashing them failed: git exited 128/);
+    expect(calls).toBe(1);
   });
 });

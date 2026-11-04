@@ -7,7 +7,7 @@ import type { FileHashes } from '../../util/build-stamp';
 import type { ArtifactContents, Check } from '../../util/emit-artifacts';
 import { mergeBaseWithMain } from '../../util/git-provenance';
 import { diffLineage, stageDiffText, type DiffJoin, type KeyChange } from './lineage-diff-pure';
-import { inputHashesAt } from '../../util/input-hashes-at';
+import { inputHashesAt, type HashesAt } from '../../util/input-hashes-at';
 import {
   ACCEPT_ANY_BASELINE_FLAG, AGAINST_FLAG, planBaseline, type BaselineSource, type InputHashAt, type MergeBase,
 } from './baseline/lineage-header-pure';
@@ -62,19 +62,24 @@ function baselineSource<F extends string, S extends string>(run: StageLineageRun
   return { kind: 'checkout', header: readStageHeader(run.layout.current, run.spec) };
 }
 
+function inputHashAt(hashes: () => HashesAt): InputHashAt {
+  try {
+    const at = hashes();
+    return at.kind === 'hashed' ? { kind: 'hashed', hash: inputHashOf(at.hashes) } : at;
+  } catch (err) {
+    return { kind: 'unknown', reason: `hashing them failed: ${err instanceof Error ? err.message : String(err)}` };
+  }
+}
+
+/** Hashed once, on first ask; a failure to hash is a refusal, never a failed build. */
+export function mergeBaseAt(commit: string, hashes: () => HashesAt): MergeBase {
+  let at: InputHashAt | undefined;
+  return { commit, inputHash: () => (at ??= inputHashAt(hashes)) };
+}
+
 function mergeBase(inputs: FileHashes): MergeBase | null {
   const commit = mergeBaseWithMain();
-  if (commit === null) return null;
-  let hashed: InputHashAt | undefined;
-  return {
-    commit,
-    inputHash: () => {
-      if (hashed !== undefined) return hashed;
-      const at = inputHashesAt(commit, inputs);
-      hashed = at.kind === 'hashed' ? { kind: 'hashed', hash: inputHashOf(at.hashes) } : at;
-      return hashed;
-    },
-  };
+  return commit === null ? null : mergeBaseAt(commit, () => inputHashesAt(commit, inputs));
 }
 
 export async function stageLineage<F extends string, S extends string>(
