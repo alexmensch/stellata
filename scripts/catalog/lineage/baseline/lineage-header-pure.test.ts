@@ -117,14 +117,17 @@ describe('judgeBaseline', () => {
     expect(acceptedFiles([older], base('abc', { kind: 'hashed', hash: 'h' }))).toEqual({ 'demo.tsv.gz': 'f1' });
   });
 
-  it('counts a checkout as main exactly when HEAD is the merge-base', () => {
+  it('counts a checkout as main exactly when it is on the main branch and HEAD is the merge-base', () => {
     const inHistory = (commit: string) => commit === 'old';
-    expect(checkoutAt('abc', 'abc', inHistory)).toEqual({ kind: 'main', inHistory });
-    expect(checkoutAt('branch-head', 'abc', inHistory)).toEqual({ kind: 'branch' });
+    expect(checkoutAt({ onMainBranch: true, commit: 'abc' }, 'abc', inHistory)).toEqual({ kind: 'main', inHistory });
+    expect(checkoutAt({ onMainBranch: false, commit: 'abc' }, 'abc', inHistory)).toEqual({ kind: 'branch' });
+    expect(checkoutAt({ onMainBranch: true, commit: 'local-commit' }, 'abc', inHistory)).toEqual({ kind: 'branch' });
   });
 
   describe('on main', () => {
-    const onMain: CheckoutBase = { ...BASE, checkout: checkoutAt('abc', 'abc', (commit) => commit === 'old') };
+    const onMain: CheckoutBase = {
+      ...BASE, checkout: checkoutAt({ onMainBranch: true, commit: 'abc' }, 'abc', (commit) => commit === 'old'),
+    };
     const older = { kind: 'checkout' as const, header: matching(header('old')) };
 
     it('diffs a clean intact earlier main build with other inputs; a branch still refuses it', () => {

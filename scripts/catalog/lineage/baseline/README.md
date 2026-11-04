@@ -72,14 +72,18 @@ file.
 
 ## On main
 
-A checkout is **on main** when HEAD is its merge-base with `origin/main`
-(`checkoutAt`): the main checkout, and also a branch with no commits of its
-own, whose history is main's. There, a clean, intact header from an earlier
+A checkout is **on main** when it is on the `main` branch
+(`onMainBranch`, `../../../util/git-provenance.ts`) and HEAD is its
+merge-base with `origin/main` (`checkoutAt`). A fresh branch worktree, whose
+HEAD is the merge-base until its first commit, is not: its seeded baseline is
+main's last build, often from an older commit, and a diff against it would
+report other PRs' landings as the branch's change. A detached HEAD, as on
+CI, is not on main either. There, a clean, intact header from an earlier
 commit in HEAD's history (`inHeadHistory`, `git merge-base --is-ancestor`)
 is accepted whatever its inputs (`earlier-main-build`), so `build:seed` after
 a landing diffs against the previous main build and reports what the
 landing changed. That build is never pinned in `lineage.previous/`: the
 stage rotates as usual, so the next landing diffs against this one. A header
 from outside HEAD's history, a dirty one, or one beside files it did not
-record is still refused. A branch with commits of its own keeps the
-merge-base rule above unchanged.
+record is still refused. Every other checkout keeps the merge-base rule
+above unchanged.

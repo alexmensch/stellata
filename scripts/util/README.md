@@ -154,7 +154,8 @@ same thing — single-use helpers stay with their consumer.
   stamp passes as `files`.
 - `git-provenance.ts` — what a build or instrument records about its
   checkout: `packageVersion`, `headCommit`, `headState` (HEAD and whether
-  the tree is dirty), `inHeadHistory` (whether a commit is HEAD or an
+  the tree is dirty), `onMainBranch` (HEAD is on the branch `MAIN_REF`
+  tracks; false when detached), `inHeadHistory` (whether a commit is HEAD or an
   ancestor of it) and `mergeBaseWithMain` (null with no `origin/main` or in a
   shallow clone), and `fileAtMergeBase`, a file as the merge-base holds it — `absent`
   when it is new on the branch, kept apart from `no-merge-base`. The lineage

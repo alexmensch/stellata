@@ -6,7 +6,7 @@ import { performance } from 'node:perf_hooks';
 
 import type { FileHashes } from '../../util/build-stamp';
 import type { ArtifactContents, Check } from '../../util/emit-artifacts';
-import { headCommit, inHeadHistory, mergeBaseWithMain } from '../../util/git-provenance';
+import { headCommit, inHeadHistory, mergeBaseWithMain, onMainBranch } from '../../util/git-provenance';
 import { REPO_ROOT } from '../../util/paths';
 import { diffLineage, stageDiffText, type DiffJoin, type KeyChange } from './lineage-diff-pure';
 import { inputHashesAt, type HashesAt } from '../../util/input-hashes-at';
@@ -123,7 +123,7 @@ async function mergeBase<F extends string, S extends string>(
     ...mergeBaseAt(commit, () => (known.kind === 'failed'
       ? { kind: 'unknown', reason: known.reason }
       : inputHashesAt(commit, run.inputs, REPO_ROOT, known.hashes))),
-    checkout: checkoutAt(headCommit(), commit, inHeadHistory),
+    checkout: checkoutAt({ onMainBranch: onMainBranch(), commit: headCommit() }, commit, inHeadHistory),
   };
 }
 

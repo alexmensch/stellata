@@ -80,7 +80,7 @@ export interface MergeBase {
   readonly inputHash: () => InputHashAt;
 }
 
-/** `main`: HEAD is the merge-base — the main checkout, or a branch with no commits of its own. */
+/** `main`: the main branch, at its merge-base with origin/main. A branch with no commits of its own is `branch`. */
 export type Checkout =
   | { readonly kind: 'branch' }
   | { readonly kind: 'main'; readonly inHistory: (commit: string) => boolean };
@@ -90,9 +90,10 @@ export interface CheckoutBase extends MergeBase {
 }
 
 export function checkoutAt(
-  head: string, mergeBaseCommit: string, inHistory: (commit: string) => boolean,
+  head: { readonly onMainBranch: boolean; readonly commit: string }, mergeBaseCommit: string,
+  inHistory: (commit: string) => boolean,
 ): Checkout {
-  return head === mergeBaseCommit ? { kind: 'main', inHistory } : { kind: 'branch' };
+  return head.onMainBranch && head.commit === mergeBaseCommit ? { kind: 'main', inHistory } : { kind: 'branch' };
 }
 
 /** `merge-base`: built at it. `merge-base-inputs`: built at another commit from the inputs it holds. */
