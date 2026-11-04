@@ -232,7 +232,8 @@ scatter: 4 of 9 same-tree pairs at mw120 and 6 of 11 at sol land outside it,
 reaching 1.272 ms. So re-arm the identical command and quote both runs;
 [What a mark means](/RELEASING.md#what-a-mark-means) is the rule and stellata-8cg.74 the
 evidence. Compute rows are floored per vantage against exactly this scatter
-and need no second run.
+and need no second run — except at sol and earth, whose floors are capped
+under their scatter: a compute mark there, either way, gets the second run too.
 
 **Warm machine.** Never run the test suite in the minutes before arming. Rule
 out the scene first, it is cheap: exposure limitMag, recordCount, pass counts

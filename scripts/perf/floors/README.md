@@ -122,9 +122,9 @@ loosen a row (this one took earth from 0.10 to 0.25) but never past 0.25 —
 and it binds at sol and earth: each is banded at 0.25 under its own
 measured scatter — 0.396 at sol (p10 0.437–0.833 over six runs of one frame
 path), 0.359 at earth (0.456–0.815) — so a repeat pair can mark either on
-nothing. That is the
-cost of the cap; lifting sol to its derived 0.60 would buy it back and is the
-alternative on the table. Both tables key on every canon vantage and on
+nothing. That is the cost of the cap, and the operator rule pays it: a compute
+mark at sol or earth, `✓` or `✗`, owes a second cold run before it stands
+([What a mark means](/RELEASING.md#what-a-mark-means)). Both tables key on every canon vantage and on
 nothing else: `assertPerfFile` and `assertPinFile` refuse a file naming any
 other scenario, so no lookup here meets one.
 

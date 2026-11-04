@@ -392,10 +392,12 @@ band, reaching 1.272 ms at mw120 — 7 % of the frame, so a floor covering it
 would end the gate rather than tighten it. A second run is the only thing
 that separates the two, and nothing inside a single run does: `iqrMs`, the
 resolved-sample count and the state guard each read the wandered runs as
-sound (stellata-8cg.74). The **compute** rows need no such re-run — their
-floors are measured on the p10 those rows are gated on, which is the
-statistic the stream's two modes leave alone — and neither does a ceiling
-crossing, which is a collapse rather than a move.
+sound (stellata-8cg.74). A **compute** row needs no such re-run where its
+floor covers its own measured p10 scatter — mw120, mw50 and lg on the M6 —
+but sol and earth are capped at 0.25 under theirs, so a compute mark there,
+either direction, owes the second cold run a frame row does
+([The compute floor](scripts/perf/floors/README.md#the-compute-floor)). A ceiling crossing
+needs none, being a collapse rather than a move.
 
 **The floor is measured, and lg is the reason it is not one number.** Two
 cold pins taken on identical code — 2026-09-05 and 2026-09-06, `--mode
