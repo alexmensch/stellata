@@ -8,7 +8,7 @@ import { selectAll } from 'hast-util-select';
 import { catalogChunkFilename, readCatalogHeader } from '../../src/catalog-format/record/catalog-pure.ts';
 import type { IndexEntry } from '../util/citation-index-pure.ts';
 import { parseHtml } from '../util/parse-html.ts';
-import { PACKAGE_JSON, REPO_ROOT, publicFile } from '../util/paths.ts';
+import { PACKAGE_JSON, REPO_ROOT, publicFile, publicRepoPath } from '../util/paths.ts';
 import { CITATION_INDEX } from './citation-index-source.ts';
 
 const APP_DOC = 'src/client/app/index.html';
@@ -24,16 +24,26 @@ function readIfPresent(path: string): Buffer | null {
   }
 }
 
-export function catalogueRecordCount(): number {
+export type AbsentCatalogue = 'quote-snapshot' | 'refuse';
+
+export function catalogueRecordCount(absent: AbsentCatalogue): number {
   return recordCountOf(
     readIfPresent(publicFile(catalogChunkFilename(0))),
     () => readFileSync(resolve(REPO_ROOT, COUNT_SNAPSHOT), 'utf8'),
+    absent,
   );
 }
 
-/** The first transport chunk's header, else the count snapshot when no chunk is built. */
-export function recordCountOf(chunk: Buffer | null, snapshot: () => string): number {
-  if (chunk === null) return snapshotRecordCount(snapshot());
+/** The first transport chunk's header; with no chunk built, the count snapshot or a refusal, as `absent` says. */
+export function recordCountOf(chunk: Buffer | null, snapshot: () => string, absent: AbsentCatalogue): number {
+  if (chunk === null) {
+    if (absent === 'refuse') {
+      throw new Error(
+        `site metrics: ${publicRepoPath(catalogChunkFilename(0))} is not built — run pnpm run build:catalog`,
+      );
+    }
+    return snapshotRecordCount(snapshot());
+  }
   const bytes = chunk.buffer.slice(chunk.byteOffset, chunk.byteOffset + chunk.byteLength);
   return readCatalogHeader(bytes as ArrayBuffer).count;
 }

@@ -49,9 +49,9 @@ literal.
 ## Why each count is derived where it is
 
 - **Catalogue records** — the built `catalog.bin.0` header, which is the
-  only thing that knows. On a checkout that has not run `build:catalog` it
-  falls back to `scripts/catalog/build-catalog-expected.json`'s
-  `recordCount`. After `build:data` the two cannot disagree: the stamp
+  only thing that knows. Outside a production build, on a checkout that
+  has not run `build:catalog`, it falls back to
+  `scripts/catalog/build-catalog-expected.json`'s `recordCount`. After `build:data` the two cannot disagree: the stamp
   rebuilds a stale artifact, and `build-catalog` refuses to write one whose
   counts drift from that snapshot without `UPDATE_SNAPSHOTS=1`.
   `build:site` or `vite build` run alone reads whatever artifact is on disk,
@@ -60,7 +60,11 @@ literal.
   figure at all — a value that vanishes on a fresh clone has to be worded
   around, and the wording is what goes stale. The fallback covers an
   **absent** artifact only: one that is present but unreadable stops the
-  build rather than quoting the snapshot over it.
+  build rather than quoting the snapshot over it. And it covers every Vite
+  mode but `production` (`absentCatalogueFor` in `vite.env.ts`): with no
+  `catalog.bin.0`, the app pass would ship with no catalogue to load, and
+  the site pass, run alone as `build:site`, would publish a figure no
+  shipped catalogue backs, so a production build of either config stops.
 - **Credited sources** — the `<div>` rows of the application's own Credits
   tab (`src/client/app/index.html`, `.modal-credits`), selected from the
   parsed document, so reformatting the markup cannot move the figure.
