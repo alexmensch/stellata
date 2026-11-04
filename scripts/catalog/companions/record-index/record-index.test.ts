@@ -1,7 +1,6 @@
 import { beforeAll, describe, it, expect } from 'vitest';
 import { existsSync, readFileSync } from 'node:fs';
 
-import { CATALOG_OUTPUTS } from '../../catalog-outputs';
 import { loadStoredEdges } from '../../../sid/stored-edges';
 import { syntheticGaiaBridges } from '../../../sid/sid-pure';
 
@@ -17,6 +16,9 @@ import {
   wingRenderablePrimaries,
   type CatalogRowIndexMap,
 } from './record-index';
+import { REPO_ROOT } from '../../../util/paths';
+import { BUILD_FILES } from '../../../../src/catalog-format/pipeline-outputs/build-files';
+import { resolve } from 'node:path';
 
 function makeStar(overrides: Partial<Star> = {}): Star {
   return makeStarWithDefaults({
@@ -331,7 +333,7 @@ describe('buildComponentDesignations', () => {
 // the promotion unit tests and by the `componentDesignations` /
 // `namingUnlabelled` build counts, which is why their snapshot diff is read
 // rather than refreshed.
-const BRIDGE_FIXTURES_READY = existsSync(CATALOG_OUTPUTS.files.rowIndexMap);
+const BRIDGE_FIXTURES_READY = existsSync(resolve(REPO_ROOT, BUILD_FILES.catalogRowIndexMap));
 if (!BRIDGE_FIXTURES_READY) {
   // eslint-disable-next-line no-console
   console.warn(
@@ -344,7 +346,7 @@ describe.skipIf(!BRIDGE_FIXTURES_READY)('the same-as bridge, over the built cata
   let map: CatalogRowIndexMap;
   let bridges: ReturnType<typeof syntheticGaiaBridges>;
   beforeAll(() => {
-    map = JSON.parse(readFileSync(CATALOG_OUTPUTS.files.rowIndexMap, 'utf-8')) as CatalogRowIndexMap;
+    map = JSON.parse(readFileSync(resolve(REPO_ROOT, BUILD_FILES.catalogRowIndexMap), 'utf-8')) as CatalogRowIndexMap;
     bridges = syntheticGaiaBridges(loadStoredEdges());
   });
 

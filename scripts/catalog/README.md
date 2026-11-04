@@ -119,10 +119,12 @@ scripts/catalog/
                                   baseline and diff as families, the last
                                   two unstamped. Side-effect free, so a reader can
                                   import the declaration without running
-                                  the build: every reader of a built
-                                  catalogue file, catalog-lookup.ts
-                                  included, takes its path from
-                                  CATALOG_OUTPUTS.files.
+                                  the build. A reader of a built catalogue
+                                  file places its name itself
+                                  (publicFile over PUBLIC_FILES or
+                                  CATALOG_MANIFEST_FILENAME, the row-index
+                                  map's BUILD_FILES name), so its closure
+                                  never reaches this declaration.
   cascade-result.ts               `CascadeResult`, the one shape every
                                   per-field cascade returns: the tier that
                                   answered with its value, or `none`, and on

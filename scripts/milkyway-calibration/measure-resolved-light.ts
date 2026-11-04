@@ -3,13 +3,10 @@
 import { readFile, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import {
-  decodeRecordColumn,
-  readCatalogHeader,
-  wholeRecordSpan,
+  decodeRecordColumn, readCatalogHeader, wholeRecordSpan, CATALOG_MANIFEST_FILENAME,
 } from '../../src/catalog-format/record/catalog-pure';
 import { readCatalogBuffer } from '../catalog/catalog-lookup';
-import { CATALOG_OUTPUTS } from '../catalog/catalog-outputs';
-import { REPO_ROOT } from '../util/paths';
+import { REPO_ROOT, publicFile } from '../util/paths';
 import {
   GALACTIC_CENTRE_PC,
   GALACTIC_NORTH_POLE_ICRS,
@@ -111,7 +108,7 @@ function printShells(title: string, rows: readonly ShellTotal[], removed: readon
 async function main(): Promise<void> {
   const manifestArg = process.argv.indexOf('--manifest');
   const manifestPath =
-    manifestArg >= 0 ? resolve(process.argv[manifestArg + 1]) : CATALOG_OUTPUTS.files.manifest;
+    manifestArg >= 0 ? resolve(process.argv[manifestArg + 1]) : publicFile(CATALOG_MANIFEST_FILENAME);
   const stars = await loadColumns(manifestPath);
   const manifest = JSON.parse(await readFile(manifestPath, 'utf-8')) as { totalBytes: number };
   console.log(`catalogue: ${stars.count.toLocaleString()} records, ${manifest.totalBytes.toLocaleString()} bytes\n`);

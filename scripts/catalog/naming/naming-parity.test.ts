@@ -5,8 +5,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
-import { REPO_ROOT } from '../../util/paths';
-import { CATALOG_OUTPUTS } from '../catalog-outputs';
+import { REPO_ROOT, publicFile } from '../../util/paths';
 import type { SearchEntry } from '../../../src/catalog-format/record/catalog-pure';
 import { buildSearchIndex, normalizeGlKey } from '../../../src/catalog-format/naming/search-corpus';
 import { displayNamesFromSearchIndex } from '../../../src/catalog-format/naming/star-naming-pure';
@@ -21,6 +20,8 @@ import {
 import { NAMING_DUPLICATES } from './naming-duplicates-tsv';
 import { NAMING_PARITY } from './naming-parity-tsv';
 import { MEMBERSHIP_MANIFEST } from '../membership/membership-manifest-tsv';
+import { PUBLIC_FILES } from '../../../src/catalog-format/public-artifacts/public-artifacts';
+import { BUILD_FILES } from '../../../src/catalog-format/pipeline-outputs/build-files';
 
 const WGSN_NAMES_PATH = resolve(REPO_ROOT, WGSN_NAMES.file);
 const MANIFEST = resolve(REPO_ROOT, MEMBERSHIP_MANIFEST.file);
@@ -31,8 +32,9 @@ const MANIFEST = resolve(REPO_ROOT, MEMBERSHIP_MANIFEST.file);
  *  rather than the star (/docs/star-naming.md#2-authority--one-source-approves-names-everything-else-compiles-them). RATCHET DOWN — it last
  *  moved when the membership manifest admitted a record for one of them. */
 const PUBLISHED_NAMES_UNREACHED = 54;
-const FIXTURES_READY = existsSync(CATALOG_OUTPUTS.files.searchIndex) && existsSync(CATALOG_OUTPUTS.files.rowIndexMap)
-  && existsSync(CATALOG_OUTPUTS.files.constellations);
+const FIXTURES_READY = existsSync(publicFile(PUBLIC_FILES.searchIndex))
+  && existsSync(resolve(REPO_ROOT, BUILD_FILES.catalogRowIndexMap))
+  && existsSync(publicFile(PUBLIC_FILES.constellations));
 
 const readJson = <T>(path: string): T => JSON.parse(readFileSync(path, 'utf8')) as T;
 
@@ -47,9 +49,9 @@ interface Fixtures {
 }
 
 function loadFixtures(): Fixtures {
-  const raw = readJson<SearchEntry[]>(CATALOG_OUTPUTS.files.searchIndex);
-  const constellations = readJson<{ code: string; name: string }[]>(CATALOG_OUTPUTS.files.constellations);
-  const keys = ledgerKeys(readJson<RowIndexMap>(CATALOG_OUTPUTS.files.rowIndexMap));
+  const raw = readJson<SearchEntry[]>(publicFile(PUBLIC_FILES.searchIndex));
+  const constellations = readJson<{ code: string; name: string }[]>(publicFile(PUBLIC_FILES.constellations));
+  const keys = ledgerKeys(readJson<RowIndexMap>(resolve(REPO_ROOT, BUILD_FILES.catalogRowIndexMap)));
   const composed = displayNamesFromSearchIndex(raw, constellations);
   const labelByKey = new Map<string, string>();
   const entryByKey = new Map<string, SearchEntry>();

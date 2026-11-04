@@ -8,13 +8,14 @@ import { fileURLToPath } from 'node:url';
 import { parse } from 'csv-parse/sync';
 import { describe, it, beforeAll, expect } from 'vitest';
 import { type Catalog, type CatalogRecord, loadCatalog, lookupByRef } from '../../scripts/catalog/catalog-lookup';
-import { CATALOG_OUTPUTS } from '../../scripts/catalog/catalog-outputs';
 import { parseRef, type RecordRef } from '../../scripts/catalog/parse/corpus-tsv';
 import { unitVectorFromRaDec, type UnitVector } from '../../src/astro-core/equatorial-basis';
 import {
   CATALOG_SCENE_EPOCH_JYR,
   advancePositionsToEpoch,
 } from '../../src/client/loaders/epoch-advance-pure';
+import { publicFile } from '../../scripts/util/paths';
+import { CATALOG_MANIFEST_FILENAME } from '../../src/catalog-format/record/catalog-pure';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const CORPUS_TSV = resolve(__dirname, '../../scripts/catalog/validate/sky-position-corpus.tsv');
@@ -22,7 +23,7 @@ const CORPUS_TSV = resolve(__dirname, '../../scripts/catalog/validate/sky-positi
 // Same skip-with-hint contract as known-stars.test.ts: plain `pnpm test`
 // in CI has no catalog.bin; the Tier-A corpus CI job runs the suite
 // against real artifacts.
-const CATALOG_BIN_PRESENT = existsSync(CATALOG_OUTPUTS.files.manifest);
+const CATALOG_BIN_PRESENT = existsSync(publicFile(CATALOG_MANIFEST_FILENAME));
 if (!CATALOG_BIN_PRESENT) {
   // eslint-disable-next-line no-console
   console.warn(

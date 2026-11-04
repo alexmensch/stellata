@@ -6,7 +6,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { beforeAll, describe, expect, it } from 'vitest';
 
-import { REPO_ROOT, lfsContentReadable } from '../../util/paths';
+import { REPO_ROOT, lfsContentReadable, publicFile } from '../../util/paths';
 import { readArtifact } from '../../util/sources/source';
 import { compareCountSnapshot } from '../build-counts';
 import { PROPER_DISPOSITIONS } from '../naming/proper-dispositions-source';
@@ -26,8 +26,9 @@ import {
 } from '../../sid/sid-pure';
 import { loadStoredEdges } from '../../sid/stored-edges';
 import { loadCatalog } from '../catalog-lookup';
-import { CATALOG_OUTPUTS } from '../catalog-outputs';
-import { FLAG_BINARY_COMPANION_ONLY, type SearchEntry } from '../../../src/catalog-format/record/catalog-pure';
+import {
+  FLAG_BINARY_COMPANION_ONLY, type SearchEntry, CATALOG_MANIFEST_FILENAME,
+} from '../../../src/catalog-format/record/catalog-pure';
 import { parkedRecordKey } from '../distance/parallax/parked-ledger-pure';
 import { PARKED_LEDGER, parseParkedRecordsTsv } from '../distance/parallax/parked-ledger-tsv';
 import {
@@ -57,6 +58,8 @@ import {
   manifestDesignations,
   type ManifestRecord,
 } from './membership-manifest-tsv';
+import { PUBLIC_FILES } from '../../../src/catalog-format/public-artifacts/public-artifacts';
+import { BUILD_FILES } from '../../../src/catalog-format/pipeline-outputs/build-files';
 
 const SPINE_PATH = resolve(REPO_ROOT, INHERITED_SPINE.file);
 const MANIFEST_PATH = resolve(REPO_ROOT, MEMBERSHIP_MANIFEST.file);
@@ -67,8 +70,11 @@ const queue = BINDING_REVIEW.parse(readFileSync(resolve(REPO_ROOT, BINDING_REVIE
 const dispositions = BINDING_REVIEW_DISPOSITIONS.read();
 
 const inputsReadable = [SPINE_PATH, MANIFEST_PATH, LEDGER_PATH].every(lfsContentReadable);
-const built = [CATALOG_OUTPUTS.files.manifest, CATALOG_OUTPUTS.files.searchIndex, CATALOG_OUTPUTS.files.rowIndexMap]
-  .every(existsSync);
+const built = [
+  publicFile(CATALOG_MANIFEST_FILENAME),
+  publicFile(PUBLIC_FILES.searchIndex),
+  resolve(REPO_ROOT, BUILD_FILES.catalogRowIndexMap),
+].every(existsSync);
 
 const expected = JSON.parse(
   readFileSync(resolve(REPO_ROOT, MEMBERSHIP_EXPECTED_FILE), 'utf-8'),
@@ -334,8 +340,8 @@ describe.skipIf(!inputsReadable)('membership manifest ↔ inherited spine', () =
   describe.skipIf(!built)('↔ built catalogue', () => {
     it('(iii) ships exactly the manifest\'s designations', async () => {
       const catalog = await loadCatalog();
-      const searchIndex = JSON.parse(readFileSync(CATALOG_OUTPUTS.files.searchIndex, 'utf-8')) as SearchEntry[];
-      const { bySynth } = JSON.parse(readFileSync(CATALOG_OUTPUTS.files.rowIndexMap, 'utf-8')) as {
+      const searchIndex = JSON.parse(readFileSync(publicFile(PUBLIC_FILES.searchIndex), 'utf-8')) as SearchEntry[];
+      const { bySynth } = JSON.parse(readFileSync(resolve(REPO_ROOT, BUILD_FILES.catalogRowIndexMap), 'utf-8')) as {
         bySynth: Record<string, number>;
       };
       const fromBuild = tally(

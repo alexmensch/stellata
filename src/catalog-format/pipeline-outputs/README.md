@@ -26,6 +26,9 @@ repo-relative, so an outputs module passes them as they are.
   `/scripts/sid/registry-partitions-pure.ts`'s.
   It is the one module under `src/` that spells a `data/` path, listed by
   name in `tests/source-declarations.test.ts`'s `DATA_PATH_SPELLERS`.
+- `build-files.ts` — `BUILD_FILES`, the build-only hand-offs under
+  `build/` a declaration and its readers both name: today
+  `build/catalog-row-index-map.json`.
 - `lineage-files.ts` — the lineage layout under a build folder
   (`lineage/`, `lineage.previous/`, `lineage-diff/`; `LINEAGE_REPO_LAYOUT`
   is the checkout's own), each stage's spec (`MEMBERSHIP_LINEAGE`,

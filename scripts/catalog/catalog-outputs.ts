@@ -5,6 +5,7 @@ import { dirname } from 'node:path';
 import { declareOutputs } from '../util/emit-artifacts';
 import { publicFile } from '../util/paths';
 import { CATALOG_CHUNK_FILENAME, CATALOG_MANIFEST_FILENAME } from '../../src/catalog-format/record/catalog-pure';
+import { BUILD_FILES } from '../../src/catalog-format/pipeline-outputs/build-files';
 import { DATA_FILES, registryFiles, CATALOG_PARTITION } from '../../src/catalog-format/pipeline-outputs/data-files';
 import { PUBLIC_FILES } from '../../src/catalog-format/public-artifacts/public-artifacts';
 import {
@@ -21,7 +22,7 @@ export const CATALOG_OUTPUTS = declareOutputs(
     constellations: publicFile(PUBLIC_FILES.constellations),
     boundaries: publicFile(PUBLIC_FILES.boundaries),
     searchIndex: publicFile(PUBLIC_FILES.searchIndex),
-    rowIndexMap: 'build/catalog-row-index-map.json',
+    rowIndexMap: BUILD_FILES.catalogRowIndexMap,
     parkedLedger: DATA_FILES.parkedLedger,
     simbadSourcedDistances: DATA_FILES.simbadSourcedDistances,
     ...stageOutputFiles(LINEAGE_REPO_LAYOUT, PLACEMENT_LINEAGE),
