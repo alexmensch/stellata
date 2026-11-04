@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest';
 import { SOL_BODIES } from '../../planet-system';
 import { texelBytes } from '../../../util/texture-bytes-pure';
 import { readTslSource } from '../../../webgpu/tsl/tsl-source-fixture';
-import { RELIEF_BODIES } from '../../../../astro-core/baker-constants';
+import { RELIEF_BODIES, reliefBodyOf } from '../../../../astro-core/baker-constants';
 import { HORIZON_AZIMUTHS, HORIZON_SIN_RANGE } from '../../../../catalog-format/baker-artifacts/baker-artifacts';
 import {
   RELIEF_POLE_EPS,
@@ -180,8 +180,9 @@ describe('the layer gates every relief fetch on the span table', () => {
   );
 
   it('looks the table up in exactly one place', () => {
-    expect(layer.match(/RELIEF_BODIES\[/g)).toHaveLength(1);
-    expect(layer).toContain('RELIEF_BODIES[textureKey(planet.name)]?.elevSpanM ?? null');
+    expect(layer.match(/reliefBodyOf\(/g)).toHaveLength(1);
+    expect(layer).not.toContain('RELIEF_BODIES');
+    expect(layer).toContain('reliefBodyOf(textureKey(planet.name))?.elevSpanM ?? null');
   });
 
   // All four planes ride the one span gate. They are three fetch statements
@@ -405,10 +406,10 @@ const degOf = (sin: number): number => (Math.asin(sin) * 180) / Math.PI;
 const bodyOf = (name: string) =>
   SOL_BODIES.find((b) => b.name.toLowerCase() === name)!;
 const boundsOf = (name: string) =>
-  reliefHorizonSines(RELIEF_BODIES[name].elevSpanM, bodyOf(name).radiusKm);
+  reliefHorizonSines(reliefBodyOf(name)!.elevSpanM, bodyOf(name).radiusKm);
 /** What the shader is actually handed — the pair above, band-width guarded. */
 const uniformOf = (name: string) =>
-  reliefHorizonUniform(RELIEF_BODIES[name].elevSpanM, bodyOf(name).radiusKm);
+  reliefHorizonUniform(reliefBodyOf(name)!.elevSpanM, bodyOf(name).radiusKm);
 
 describe('the limb bound on how far relief may light', () => {
   it('gives each body a bound off its own DEM span and radius', () => {

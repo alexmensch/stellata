@@ -38,12 +38,18 @@ const span = (pair: readonly number[]): readonly [number, number] => {
   return [pair[0], pair[1]];
 };
 
+export type ReliefBodyName = keyof typeof constants.surfaceRelief.bodies;
+
 /** The bodies shipping DEM-derived relief, keyed by lowercased name. */
-export const RELIEF_BODIES: Readonly<Record<string, ReliefBody>> = Object.fromEntries(
+export const RELIEF_BODIES = Object.fromEntries(
   Object.entries(constants.surfaceRelief.bodies).map(([name, b]) => [
     name, { ...b, elevSpanM: span(b.elevSpanM) },
   ]),
-);
+) as Readonly<Record<ReliefBodyName, ReliefBody>>;
+
+/** The relief body behind a texture key, or null for a body that ships none. */
+export const reliefBodyOf = (key: string): ReliefBody | null =>
+  Object.hasOwn(RELIEF_BODIES, key) ? RELIEF_BODIES[key as ReliefBodyName] : null;
 
 export interface RingSpan {
   readonly innerRadiusKm: number;
@@ -51,4 +57,5 @@ export interface RingSpan {
 }
 
 /** The ring annuli the texture build draws strips for, keyed by lowercased name. */
-export const RING_SPANS: Readonly<Record<string, RingSpan>> = constants.ringSpans;
+export const RING_SPANS: Readonly<Record<keyof typeof constants.ringSpans, RingSpan>> =
+  constants.ringSpans;

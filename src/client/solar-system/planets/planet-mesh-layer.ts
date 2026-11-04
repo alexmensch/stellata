@@ -29,7 +29,7 @@ import {
 } from './textures/texture-budget-pure';
 import { polarRadiusRatio } from './spheroid-pure';
 import { reliefHorizonUniform } from './surface-relief/surface-relief-pure';
-import { RELIEF_BODIES } from '../../../astro-core/baker-constants';
+import { reliefBodyOf } from '../../../astro-core/baker-constants';
 import type { HdrEmitterUniforms } from '../../hdr/hdr-emitter-uniforms';
 import { relativeLuminance } from '../../../astro-core/tonemap/tonemap-pure';
 import {
@@ -200,7 +200,7 @@ const floorRungOf = (body: string): number | null => rungsOf(body)?.[0] ?? null;
 /** The body's DEM elevation span, or null where it ships no relief maps —
  *  which bodies fetch them and the fallback limb bound are the same question. */
 const reliefSpanOf = (planet: Planet): readonly [number, number] | null =>
-  RELIEF_BODIES[textureKey(planet.name)]?.elevSpanM ?? null;
+  reliefBodyOf(textureKey(planet.name))?.elevSpanM ?? null;
 
 /** The body's own limb bound on relief lighting, in the shader's units.
  *  Zero for bodies with no map — the shader never reads it there. */
