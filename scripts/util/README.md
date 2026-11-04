@@ -155,9 +155,10 @@ same thing — single-use helpers stay with their consumer.
   `input-hashes-at.ts` hashes.
 - `input-hashes-at.ts` (+ test) — `inputHashesAt(commit, inputs)`: an
   `inputHashes` map with each path that differs on disk from `commit`
-  re-hashed from `commit`'s copy (code by identity, LFS content smudged from
-  the local store), `unknown` where git holds no copy — a git-ignored input,
-  or LFS content not stored locally. Kept out of `git-provenance.ts` so the
+  re-hashed from `commit`'s copy (code by identity; LFS content read from the
+  local object its pointer names, never fetched, so no network call and no
+  `GIT_LFS_SKIP_SMUDGE` pointer read as content), `unknown` where git holds
+  no copy — a git-ignored input, or LFS content not stored locally. Kept out of `git-provenance.ts` so the
   perf instruments reading that do not load the TypeScript compiler. The
   lineage baseline verdict reads it
   ([The header and the refusal](../catalog/lineage/baseline/README.md#the-header-and-the-refusal)).
