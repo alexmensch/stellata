@@ -174,10 +174,10 @@ built, so the next build there sees them rewritten and rebuilds.
 
 ## Seeding builds — `build:seed`
 
-`pnpm run build:seed` (`build-seed.sh`) runs `build:seed-steps` — exactly the
-steps whose outputs seed a new worktree ([Building in a worktree](#building-in-a-worktree)) — with one
-build per checkout. That is `run.ts data`, every build step on the table,
-`build:membership` included, which keeps the main checkout holding the
+`pnpm run build:seed` (`build-seed.sh`) runs `build:data` — every build step
+on the table, exactly the steps whose outputs seed a new worktree
+([Building in a worktree](#building-in-a-worktree)) — with one build per
+checkout. `build:membership` is among them, which keeps the main checkout holding the
 lineage baseline a worktree diffs against.
 Each run registers `build/build-seed/<start ns>.<pid>`
 before looking at the others, then stops every older live run and waits for it

@@ -220,7 +220,7 @@ Hand-kept lists become derivations over the table:
 - `.worktreeinclude` may list only the `build` steps' stamped outputs, their
   stamp files and `build/lineage/`, and must list every stamped output and
   stamped family under `public/` or `build/`. `worktree-seed.test.ts` checks it against
-  the outputs and stamps of the steps `build:seed-steps` selects, read from
+  the outputs and stamps of the steps `build:data` selects, read from
   the loaded step table.
 - `tests/bundle-content.test.ts` reads the mirror steps' declarations.
 - `resolved-hole-table.ts`'s record count is tested against

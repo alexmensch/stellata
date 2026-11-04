@@ -77,7 +77,6 @@
     "build:data": "tsx scripts/pipeline/run.ts data",
     "build": "pnpm run build:data && pnpm run build:client && pnpm run build:site",
     "build:seed": "bash scripts/build-seed.sh",
-    "build:seed-steps": "tsx scripts/pipeline/run.ts data",
     "dev": "pnpm run build:data && vite",
     "dev:site": "vite --config vite.site.config.ts",
     "check:asset-sizes": "tsx scripts/release/check-asset-sizes.ts",

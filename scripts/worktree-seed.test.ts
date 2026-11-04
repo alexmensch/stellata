@@ -28,9 +28,9 @@ let seedSteps: readonly string[];
 beforeAll(async () => {
   const loaded = await loadTable(STEPS, { root: REPO_ROOT, deriveInputs: (entry) => entryInputPaths([entry]) });
   if (loaded.kind !== 'loaded') throw new Error(loaded.problems.join('\n'));
-  const parts = scriptParts(packageScripts(), 'build:seed-steps');
+  const parts = scriptParts(packageScripts(), 'build:data');
   const targets = parts.flatMap((p) => (p.kind === 'tsx' && p.entry === RUNNER ? p.args : []));
-  if (targets.length === 0 || parts.length !== 1) throw new Error('build:seed-steps must be one run.ts call');
+  if (targets.length === 0 || parts.length !== 1) throw new Error('build:data must be one run.ts call');
   seedSteps = selectSteps(loaded.graph, expandTargets(STEPS.steps, targets))
     .filter((name) => isBuild(loaded.steps.get(name)!.step));
   outputsOf = new Map([...loaded.steps].map(([name, { outputs }]) => [name, {
