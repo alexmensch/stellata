@@ -126,7 +126,7 @@ so a stale catalogue is rebuilt before the binaries read its row-index map.
 ## Building in a worktree
 
 A worktree Claude Code creates starts with the main checkout's build
-outputs under `public/` and `build/` (the mirrors' ~0.5 GB among them) plus
+outputs under `public/` and `build/` (the mirrors' ~0.3 GB among them, by `du -ch` over their public/ outputs) plus
 their stamps: `.worktreeinclude` at the repo root
 lists them, and the harness copies those gitignored files in at creation. The
 stamps make the copy safe — when the worktree's inputs match what the main
