@@ -154,7 +154,7 @@ information.
 - **Tier 2 — passes, buffers, draw counts, the catalogue, or the
   instrument itself.** The full cold sweep, and it re-takes the pin:
   `--mode dwell --scenario all --cooldown-ms 120000
-  --frames 960 --pin`, ~15–25 min. Every row the pin records is this tier's
+  --frames 960 --pin`, ~9.5 min on the M6. Every row the pin records is this tier's
   to re-take. **`--frames` is not optional and its value is whatever the
   outgoing pin's rows were taken at** — today 960, and every pin row carries
   its own `frames` so the outgoing pin answers the question itself. Omit it
@@ -503,8 +503,9 @@ own bead. Tiers 0 and 1 leave the pin where they found it, which is the
 point of them: the pin advances when the answer would change.
 
 **Who runs it.** The agent, human-armed: one arm per run, the machine idle
-throughout — about 15–25 min for a Tier 2 pin's five dwell contexts at a
-120 s cool-down, ~4 min for Tier 1's two.
+throughout — about 9.5 min for a Tier 2 pin's five dwell contexts at a
+120 s cool-down (eight of it the cool-downs), ~35 s for Tier 1's two, on the M6
+([Launch the runner detached](scripts/perf/arming/README.md#launch-the-runner-detached-always)).
 
 ## Citation and archiving
 

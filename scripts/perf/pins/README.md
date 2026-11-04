@@ -307,7 +307,7 @@ a pin run reads `steady`.
   stands down, and so does the **state guard**: a trending lg is that same wander read across the quarters,
   not a verdict on the run, and since any refused row refuses the whole pin,
   leaving the refusal in force killed roughly one pin re-take in three on the
-  one row the gate never acts on — ~25 min of held-idle machine each.
+  one row the gate never acts on — a full held-idle sweep each.
   **On an rAF-paced row the stand-down is keyed on the vantage**, so it covers an lg row whose
   adapter resolved no GPU stream and is therefore gated on wall. Such a row
   earns the exemption on the other ground: its wall median sits on the

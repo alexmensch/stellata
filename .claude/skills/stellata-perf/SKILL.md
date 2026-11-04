@@ -23,7 +23,7 @@ argues reachability in prose; do not arm for it. Tier 1 — per-frame code
 touched, draw counts and pass structure unchanged — is `--mode dwell
 --scenario mw120,sol --backend webgpu --frames 960
 --against-pin scripts/perf/pins/<slug>.json`,
-two contexts and ~4 min, read against the committed pin (whose run opens
+two contexts and ~35 s, read against the committed pin (whose run opens
 with those two contexts, so the rows compare at equal position; the three
 pin rows it does not visit print as not measured and fail nothing).
 **Match `--frames` to the count the pin's own rows carry** — today 960,
@@ -33,7 +33,7 @@ not stand on one run ([What a mark means](/RELEASING.md#what-a-mark-means)). Tie
 2 — passes, buffers, draw counts, the catalogue
 or the instrument — is the full cold pin below. Arming for a sweep the
 diff cannot justify is the cost this tiering exists to stop: it spends
-Alex's arm and 25 minutes to re-read a number the pin already holds.
+Alex's arm and ten minutes of idle machine to re-read a number the pin already holds.
 
 ## Never
 
@@ -80,8 +80,9 @@ already follows the table; this is for every other session.
 3. When it reports ARMED, **launch the runner as a background process too —
    Bash `run_in_background`, always, whatever the mode.** A foreground Bash
    call is capped at 10 minutes and the harness kills it there; every mode
-   worth arming for outlives that (a pin run is 15–25 min, a `--scenario all`
-   differential 18–21), so a foreground launch dies partway through. It costs
+   worth arming for comes close to or past it (a pin run is ~9.5 min on the M6,
+   a `--scenario all` differential ran 18–21 on the M4), so a foreground launch
+   dies partway through. It costs
    the arm, not just the run: the runner deletes the marker *before* the browser
    starts, so the launch is spent whatever happens after. Poll the output
    file for progress and read it when the process exits.
