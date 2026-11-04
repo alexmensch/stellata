@@ -16,7 +16,7 @@ import {
 } from '../dwell/dwell-pure';
 import { DWELL_METHOD, contextOrder } from '../run-pure';
 import { PERF_SCHEMA, type AdapterProbe, type DwellRecord, type GitProvenance, type PerfFile, type ScenarioRecord } from '../schema';
-import { BACKENDS, SCENARIO_NAMES, type Backend, type ScenarioName } from '../scenarios';
+import { BACKENDS, SCENARIO_NAMES, isScenarioName, type Backend, type ScenarioName } from '../scenarios';
 
 /** Removing a field or changing what one MEANS bumps the suffix; adding one
  *  does not — the same contract as `PERF_SCHEMA`. */
@@ -832,6 +832,10 @@ export function assertPinFile(value: unknown, source: string): PinFile {
   const pin = value as Partial<PinFile>;
   if (typeof pin.adapterSlug !== 'string' || !Array.isArray(pin.rows)) {
     throw new PinError(`${source} has no adapter slug or no rows`);
+  }
+  const stranger = pin.rows.find((r: { name?: unknown }) => !isScenarioName(r?.name));
+  if (stranger !== undefined) {
+    throw new PinError(`${source} pins scenario ${JSON.stringify(stranger?.name)}, no canon vantage`);
   }
   return pin as PinFile;
 }

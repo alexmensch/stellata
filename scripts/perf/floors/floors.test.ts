@@ -64,10 +64,6 @@ describe('the compute floor', () => {
     }
   });
 
-  it('falls back to the whole-frame floor for a vantage off the canon', () => {
-    expect(computeFloorMs('mw90' as ScenarioName, 0.3)).toBe(DWELL_FLOOR_MS);
-  });
-
   it('caps every vantage at the whole-frame floor, so a re-floor only tightens', () => {
     expect(computeFloorMs('sol', 0.736)).toBe(DWELL_FLOOR_MS);
     expect(computeFloorMs('earth', 0.664)).toBe(DWELL_FLOOR_MS);
@@ -91,9 +87,5 @@ describe('the CPU floor', () => {
       const derived = Number((Math.max(1, Math.ceil(1.5 * steps)) * CPU_CLOCK_STEP_MS).toFixed(1));
       expect([name, CPU_SCATTER_FLOOR_MS[name]]).toEqual([name, derived]);
     }
-  });
-
-  it('falls back to the whole-frame floor for a vantage off the canon', () => {
-    expect(cpuFloorMs('mw90' as ScenarioName, 1.4)).toBeCloseTo(DWELL_FLOOR_MS + CPU_CLOCK_STEP_MS / 2, 12);
   });
 });

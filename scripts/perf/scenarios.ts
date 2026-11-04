@@ -24,6 +24,10 @@ export const SCENARIOS = {
 export type ScenarioName = keyof typeof SCENARIOS;
 export const SCENARIO_NAMES = Object.keys(SCENARIOS) as readonly ScenarioName[];
 
+export function isScenarioName(name: unknown): name is ScenarioName {
+  return typeof name === 'string' && (SCENARIO_NAMES as readonly string[]).includes(name);
+}
+
 /** The Tier 1 run: `--scenario mw120,sol --backend webgpu`, in this order
  *  (`/RELEASING.md#perf-pin`). */
 export const TIER1_SCENARIOS = ['mw120', 'sol'] as const satisfies readonly ScenarioName[];

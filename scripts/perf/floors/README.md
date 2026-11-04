@@ -116,8 +116,9 @@ measured scatter — 0.396 at sol (p10 0.437–0.833 over six runs of one frame
 path), 0.359 at earth (0.456–0.815) — so a repeat pair can mark either on
 nothing. That is the
 cost of the cap; lifting sol to its derived 0.60 would buy it back and is the
-alternative on the table. A name outside these five — no canon vantage is one
-today — takes `DWELL_FLOOR_MS` rather than banding the row on a `NaN`.
+alternative on the table. Both tables key on every canon vantage and on
+nothing else: `assertPerfFile` and `assertPinFile` refuse a file naming any
+other scenario, so no lookup here meets one.
 
 **On the M6 the p10 is not the quieter statistic at every vantage.** At earth
 and sol the p50 spans an order of magnitude less than the p10; at mw120 the

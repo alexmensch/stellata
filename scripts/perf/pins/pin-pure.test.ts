@@ -931,6 +931,12 @@ describe('assertPinFile and the path', () => {
     expect(assertPinFile(pinOf(), 'x.json').adapterSlug).toBe('apple-m4-metal-3');
   });
 
+  it('refuses a row no canon vantage names', () => {
+    const pin = pinOf();
+    expect(() => assertPinFile({ ...pin, rows: [...pin.rows, { ...pin.rows[0], name: 'mw90' }] }, 'x.json'))
+      .toThrow('x.json pins scenario "mw90", no canon vantage');
+  });
+
   it('files one pin per adapter under scripts/perf/pins', () => {
     expect(pinPathFor('apple-m4-metal-3')).toBe('scripts/perf/pins/apple-m4-metal-3.json');
   });

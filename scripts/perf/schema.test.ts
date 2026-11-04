@@ -37,6 +37,14 @@ describe('assertPerfFile', () => {
       .toThrow(/no scenarios array/);
   });
 
+  it('rejects a scenario no canon vantage names, so no floor lookup meets one', () => {
+    for (const name of ['mw90', '', undefined]) {
+      expect(() => assertPerfFile({ ...CURRENT, scenarios: [{ name: 'sol' }, { name }] }, 'run.json'))
+        .toThrow(`run.json carries scenario ${JSON.stringify(name)}, no canon vantage`);
+    }
+    expect(assertPerfFile({ ...CURRENT, scenarios: [{ name: 'sol' }] }, 'run.json').scenarios).toHaveLength(1);
+  });
+
   it('rejects a non-object', () => {
     for (const value of [null, undefined, 3, 'x', []]) {
       expect(() => assertPerfFile(value, 'fixture')).toThrow(SchemaError);

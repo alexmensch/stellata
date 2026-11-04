@@ -39,12 +39,10 @@ export function dwellFloorMs(baselineMs: number): number {
 
 /** README.md#the-compute-floor */
 export function computeFloorMs(name: ScenarioName, baselineMs: number): number {
-  const derived: number | undefined = COMPUTE_SCATTER_FLOOR_MS[name];
-  return floorFor(Math.min(derived ?? DWELL_FLOOR_MS, DWELL_FLOOR_MS), baselineMs);
+  return floorFor(Math.min(COMPUTE_SCATTER_FLOOR_MS[name], DWELL_FLOOR_MS), baselineMs);
 }
 
 /** Uncapped, and half a step wide of its constant — README.md#the-cpu-floor. */
 export function cpuFloorMs(name: ScenarioName, baselineMs: number): number {
-  const derived: number | undefined = CPU_SCATTER_FLOOR_MS[name];
-  return floorFor((derived ?? DWELL_FLOOR_MS) + CPU_CLOCK_STEP_MS / 2, baselineMs);
+  return floorFor(CPU_SCATTER_FLOOR_MS[name] + CPU_CLOCK_STEP_MS / 2, baselineMs);
 }
