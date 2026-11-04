@@ -523,6 +523,11 @@ is safe, while multi-line input past a pipe buffer fails on every run. So the
 rule is applied to the form, not to input sizes: such a reader takes a
 here-string (`grep -q x <<< "$var"`), which has no writer process to kill.
 
+Each hook suite feeds its sites input past a pipe buffer with the match on
+line 1. Where the input is multi-line, that case fails on the pipe form.
+Where `tr` or jq first flattens it to one line, it passes on both forms and
+is kept as a pin: it fails once the flattening is gone and a pipe is back.
+
 `pipefail-early-reader.test.ts` scans every `scripts/**/*.sh` that sets
 pipefail, plus every library such a script sources with `.` or `source`
 (matched by file name, followed through libraries that source others), since
