@@ -276,8 +276,8 @@ same record — and never by a dispatch of their own.
 
 **That population is measured, and at `lg` it is the whole catalogue.**
 Share of the catalogue the frustum admits, real set / the V≤11 synthetic
-set (`.perf-runs/2026-09-19/8cg596-survivors-real.json` and
-`8cg596-survivors-m11.json`, 1280×800 at dpr 2): 46% / 45% at `mw120`,
+set (`.perf-runs/2026-09-19/8cg596-survivors-real.json.gz` and
+`8cg596-survivors-m11.json.gz`, 1280×800 at dpr 2): 46% / 45% at `mw120`,
 17% / 19% at `sol`, 6.9% / 7.1% at `earth`, 18% / 19% at `mw50`, and
 **100% at `lg`** at both sizes — every star is in frame there, so the
 frustum returns nothing and all four reads are paid on every thread of an
@@ -302,8 +302,8 @@ on all 388,071 threads, whether or not the march it guards would have done
 anything. Measured on the forced-recompute dwell (`gpu-compute` p50, ms):
 sol 3.195 → 1.729, earth 3.285 → 1.815, mw50 2.697 → 1.392, mw120
 2.634 → 1.363 — and **lg 0.982 → 1.316, +34%**
-(`.perf-runs/2026-09-18/8cg576-lg-clean.json`, against
-`cns-real-recompute-all.json`). `lg` is not an anomaly to explain away:
+(`.perf-runs/2026-09-18/8cg576-lg-clean.json.gz`, against
+`cns-real-recompute-all.json.gz`). `lg` is not an anomaly to explain away:
 that run predates the clipped march, when 48 taps spread over a 1 Mpc
 segment of which only the last ~1.25 kpc was inside the dust cube, so the
 march the gate skipped there was already a no-op and only the gate's own
@@ -314,7 +314,7 @@ before the gate reads, and a camera-outside-the-cube bypass is deliberately
 **not** built. Do not quote the `lg` figure above as current.
 
 **Current, on the same instrument and lever** — the frustum ahead of the
-gate and the refill sliced, `.perf-runs/2026-09-19/8cg575-frustum-recompute-all.json`
+gate and the refill sliced, `.perf-runs/2026-09-19/8cg575-frustum-recompute-all.json.gz`
 (`gpu-compute` p50, ms, 388,071 records): mw120 0.526, sol 0.525, earth
 0.487, mw50 0.394, **lg 0.926**. Against the gated column above that is −31%
 at `lg` and −61% to −73% elsewhere, and `lg` now sits below its own
@@ -323,8 +323,8 @@ that column and on the real catalogue it cannot separate them: the slicing
 dispatches a quarter of the slot space per frame, and the frustum returns the
 out-of-frame threads inside it. Every run quoted above predates 58.4's
 clipped march; **this tree's own figure is the same-commit pair at
-`1d5f934e`** (`.perf-runs/2026-09-19/poststack-refill-off.json` and
-`-refill-on.json`, 960 frames, readback one in four): forced 0.452 / 0.587
+`1d5f934e`** (`.perf-runs/2026-09-19/poststack-refill-off.json.gz` and
+`-refill-on.json.gz`, 960 frames, readback one in four): forced 0.452 / 0.587
 / 0.507 / 0.393 / **0.923** against the compaction alone at 0.286 / 0.392
 / 0.390 / 0.306 / 0.693 (mw120 / sol / earth / mw50 / lg), so the refill
 costs 0.09–0.23 ms per forced frame — under the 0.25 ms band at every
@@ -332,9 +332,9 @@ vantage, `lg` included.
 
 **The frustum's own share is separable at 1,278,785**, where a run exists at
 the slicing's tip with the same lever and flags. `gpu-compute` p50, ms:
-`cns-m11-recompute-all.json` 8.955 mw120 / 9.123 mw50 ungated,
-`8cg585-m11-spread.json` 1.961 / 1.928 with the gate and the slicing, and
-`.perf-runs/2026-09-19/8cg575-m11-recompute-all.json` **1.396 / 1.177** with
+`cns-m11-recompute-all.json.gz` 8.955 mw120 / 9.123 mw50 ungated,
+`8cg585-m11-spread.json.gz` 1.961 / 1.928 with the gate and the slicing, and
+`.perf-runs/2026-09-19/8cg575-m11-recompute-all.json.gz` **1.396 / 1.177** with
 the frustum as well — so the frustum alone takes **−29% at mw120 and −39% at
 mw50** off an already-gated, already-sliced kernel. The whole five-vantage
 column there reads mw120 1.396, sol 1.478, earth 1.288, mw50 1.177, lg 2.364.
@@ -421,7 +421,7 @@ the tail is still streaming, and the pass attaches when that small file
 resolves. How much of the tail is still out then depends on the network —
 on a localhost dev server most of it has landed, and the forced-recompute
 pair at mw120 reads only −5% for the re-sort
-(`.perf-runs/2026-09-24/cns21-forced-main.json` against `-branch.json`).
+(`.perf-runs/2026-09-24/cns21-forced-main.json.gz` against `-branch.json.gz`).
 The pass holds the catalogue itself and reads `loadedCount` live,
 at attach and on each refresh, rather than taking a count the shell
 sampled. An epoch bucket crossing never re-sorts: ±5,000 yr of stellar motion

@@ -1,8 +1,8 @@
-import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { dwellPacing, preconditionRefusal, recordCountRefusal } from '../diff/diff-pure';
 import { CANON_POSITIONS } from '../pins/pin-pure';
 import { frameFloor } from '../dwell/dwell-pure';
+import { readJsonFile } from '../run-file/run-file';
 import { SCENARIO_NAMES, type ScenarioName } from '../scenarios';
 import { assertPerfFile, type ScenarioRecord } from '../schema';
 import {
@@ -12,16 +12,16 @@ import {
 /** The comparable population both per-vantage floors are derived from: every
  *  GPU-paced M6 dwell a gate would compare against the pin. README.md. */
 const POPULATION_RUNS = [
-  '.perf-runs/2026-11-03/8cg-49-42-gpu-all-3.json',
-  '.perf-runs/2026-11-03/8cg-49-42-gpu-all-4.json',
-  '.perf-runs/2026-11-04/8cg-49-38-m6-pin.json',
-  '.perf-runs/2026-11-04/8cg-49-38-tier1-1.json',
-  '.perf-runs/2026-11-04/8cg-49-38-tier1-2.json',
-  '.perf-runs/2026-11-04/8cg-49-38-m6-check.json',
+  '.perf-runs/2026-11-03/8cg-49-42-gpu-all-3.json.gz',
+  '.perf-runs/2026-11-03/8cg-49-42-gpu-all-4.json.gz',
+  '.perf-runs/2026-11-04/8cg-49-38-m6-pin.json.gz',
+  '.perf-runs/2026-11-04/8cg-49-38-tier1-1.json.gz',
+  '.perf-runs/2026-11-04/8cg-49-38-tier1-2.json.gz',
+  '.perf-runs/2026-11-04/8cg-49-38-m6-check.json.gz',
 ];
 
 const POPULATION: readonly ScenarioRecord[] = POPULATION_RUNS
-  .flatMap((path) => assertPerfFile(JSON.parse(readFileSync(path, 'utf-8')), path).scenarios);
+  .flatMap((path) => assertPerfFile(readJsonFile(path), path).scenarios);
 
 function spanOf(name: ScenarioName, read: (r: ScenarioRecord) => number): number {
   const values = POPULATION.filter((r) => r.name === name).map(read);

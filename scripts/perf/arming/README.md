@@ -112,7 +112,7 @@ Bash `run_in_background`. The poller because it waits up to an hour; the
 runner because a foreground call is capped at **10 minutes** and killed
 there, and the long modes reach it: a pin run is 9.4 min on the M6 — five
 contexts of ~17 s each and four 120 s cool-downs
-(`.perf-runs/2026-11-04/8cg-49-38-m6-pin.json`, and every GPU-paced full
+(`.perf-runs/2026-11-04/8cg-49-38-m6-pin.json.gz`, and every GPU-paced full
 sweep before it) — inside the cap by less than a slow boot costs, and a
 `--scenario all` differential ran 18–21 min on the M4. A Tier 1 run is ~35 s.
 

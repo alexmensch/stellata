@@ -152,7 +152,7 @@ metric `throughput-mean`.** With the GPU never idle and its clock pinned,
 the wall time between frames is the GPU's time per frame at a fixed clock,
 so it is proportional to GPU work: sol at 4.1 / 6.4 / 9.2 Mpx read
 throughput means of 4.89 / 8.32 / 11.39 ms, slope 1.060 against pixels,
-r² 0.994 (`.perf-runs/2026-11-03/8cg-49-42-gpu-sol-sweep-2.json`). It counts every
+r² 0.994 (`.perf-runs/2026-11-03/8cg-49-42-gpu-sol-sweep-2.json.gz`). It counts every
 frame, readback frames included, so the two-class split above does not
 arise.
 
@@ -175,7 +175,7 @@ and throws rather than falling back to another clock.
 With two frames in flight, the next frame's passes overlap the current
 one's, and a pass's begin-to-end span includes time it shared the GPU with
 the other frame, so the summed spans read 1.25–1.69× throughput
-(`8cg-49-42-gpu-all-2.json`). It is the over-attribution
+(`8cg-49-42-gpu-all-2.json.gz`). It is the over-attribution
 [Measurement canon](/docs/render-rules.md#9-measurement-canon) describes
 between passes, now between frames.
 

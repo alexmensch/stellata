@@ -108,14 +108,14 @@ wastes are what the cap lets a dusty distant one spend.
 **Do not spend taps to buy frame time back.** The density is an accuracy
 knob, chosen on the sweep's tail above; what it costs is known and
 bounded. Measured 2026-09-19 at one commit over the five canon vantages
-(`.perf-runs/2026-09-19/8cg595-refill-off.json` against
-`-refill-on.json`), the kernel splits roughly in half: a per-THREAD
+(`.perf-runs/2026-09-19/8cg595-refill-off.json.gz` against
+`-refill-on.json.gz`), the kernel splits roughly in half: a per-THREAD
 floor of ~0.6–0.8 ms at every vantage — the visibility gate's scattered
 reads, the position read, the write, the dispatch — read directly at
 `lg`, where the gate admits nothing and no tap is spent; and the march
 itself, ~0.5–1.2 ms from inside the disc. No tap rule reaches the floor.
 The march's half does move with density — 15 → 10 pc per tap read
-+0.42 ms at `mw120` against `.perf-runs/2026-09-18/8cg584-recompute-all-cold.json`
++0.42 ms at `mw120` against `.perf-runs/2026-09-18/8cg584-recompute-all-cold.json.gz`
 — so a coarser rule buys frame time only out of that half, at the tail
 error the sweep prices.
 

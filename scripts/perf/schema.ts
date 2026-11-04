@@ -1,6 +1,6 @@
 // The on-disk shapes both instruments write — stellata-perf/2 and
 // stellata-survivors/1 — plus the adapter, scenario and per-mode records the
-// runner, the tables and the baseline diff share. README.md#json-output.
+// runner, the tables and the baseline diff share. run-file/README.md#json-output.
 
 import type { GpuFrameMethod, PriceFrameRow } from '../../src/client/debug/frame-cost/frame-cost-pure';
 import type { SurvivorReport } from '../../src/client/debug/survivor-counts';

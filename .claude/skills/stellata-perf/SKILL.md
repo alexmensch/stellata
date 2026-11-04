@@ -119,10 +119,10 @@ already follows the table; this is for every other session.
   the time-matched control, in the same session.
 - `pnpm run perf -- --mode sweep --scenario sol --scales 0.5,1,1.5,2` — what
   the frame is bound by (fill vs vertex/CPU), from the log-log slope.
-- `--json <path>` to save the run, `--baseline <path>` to diff against a
+- `--json <path>.json.gz` to save the run (gzipped; any other suffix is refused), `--baseline <path>` to diff against a
   saved one. Always `--json` a run worth citing: the table in your scrollback
   is not a record, and the raw samples are only in the file.
-- `pnpm run perf -- --mode dwell --scenario all --cooldown-ms 120000 --json <run> --pin scripts/perf/pins/<slug>.json`
+- `pnpm run perf -- --mode dwell --scenario all --cooldown-ms 120000 --json <run>.json.gz --pin scripts/perf/pins/<slug>.json`
   — take the perf pin, cold: one launch, idle between contexts, every
   context state-guarded. `--against-pin <path>` prints the verdicts a
   render-path PR pastes into its `## Perf` section. The `metric` column names
@@ -135,7 +135,7 @@ already follows the table; this is for every other session.
   run as `--against-pin` needs `--accept <row>:<bead>` for each `✗` — the
   compute row under its own key — or nothing is written.
   Rules: [Perf pin](/RELEASING.md#perf-pin); mechanics: `scripts/perf/pins/README.md`.
-- `pnpm run perf:pin -- <run.json>... [--pin <path>] [--accept <row>:<bead>]... [--dry-run]`
+- `pnpm run perf:pin -- <run.json.gz>... [--pin <path>] [--accept <row>:<bead>]... [--dry-run]`
   — the pin from saved run files, offline: no browser, no arm. **A pin run
   refused for one row is never re-armed.** Name every saved run of the same
   commit, in any order; each row comes from the newest run that held it
@@ -198,7 +198,7 @@ Per mode (`scripts/perf/dwell/README.md`, [Sweep mode](/scripts/perf/README.md#s
 A mark in the verdict table, a refused row, and a tripled frame each have a
 benign cause that presents identically. Separate them from the run's **own
 samples** before accepting a number or fixing anything. Read `dwell.gpuMs` from
-the run JSON — min, p10, and the quarter medians — before writing a word about
+the run file (`gzcat <path> | jq`) — min, p10, and the quarter medians — before writing a word about
 cause; `gpuStats.p50` alone cannot tell any of these apart.
 
 **The discriminators, in order of strength:**
@@ -295,7 +295,7 @@ to that worktree's `git status`, so nothing will ever prompt you for it.
 
 A `tee` of the console alongside it is a local convenience only: `*.log` is
 ignored repo-wide, so `git add` refuses it and the archive holds none. The
-`.json` carries the raw per-frame samples the console merely summarised.
+`.json.gz` carries the raw per-frame samples the console merely summarised.
 
 **Then `git add` it, in the PR that cites it.** This is a step, not a
 property — the folder being tracked commits nothing by itself, and the run

@@ -63,7 +63,7 @@ carries no insertions clause at all.
 
 Not to the main checkout. A pin is normally taken on a branch and a branch
 normally lives in a worktree, where runs are filed under that worktree's own
-`.perf-runs/` ([Recording](../../README.md#recording)) — so resolving against the main
+`.perf-runs/` ([Recording](../../run-file/README.md#recording)) — so resolving against the main
 checkout writes `.claude/worktrees/<name>/.perf-runs/…`, a path that stops
 resolving the moment the worktree is removed, which is to say shortly after
 the PR merges. `citeRunPath` takes the writing checkout's root for that
@@ -73,7 +73,7 @@ location.
 ## A deferred measurement cites a run file, never the pin
 
 A bead that asks for a measurement later names the baseline **run** —
-`.perf-runs/<date>/<file>.json` — and not "compare against the pin".
+`.perf-runs/<date>/<file>.json.gz` — and not "compare against the pin".
 
 Retrieval is not what makes a late comparison fail. Every pin is committed, so
 any historical one comes back without checking anything out:
