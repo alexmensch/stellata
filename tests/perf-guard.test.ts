@@ -176,6 +176,21 @@ describe('perf-guard', () => {
     });
   });
 
+  // Passes on a printf | grep -q form too while the command is flattened to
+  // one line, since grep must read a whole line before matching. Multi-line
+  // input past a pipe buffer is where that pipe fails open on every run.
+  describe('a command larger than a pipe buffer, matched on line 1', () => {
+    const padded = (first: string): string => [first, ...Array<string>(20_000).fill('echo padding')].join('\n');
+
+    it('still denies an unarmed launch', () => {
+      expect(denied(padded('pnpm run perf'))).toBe(true);
+    });
+
+    it('still denies naming the marker', () => {
+      expect(decision(bash(padded('touch .perf-go'))).reason).toMatch(/Only Alex creates/);
+    });
+  });
+
   describe('fails closed', () => {
     it('denies outside a git checkout', () => {
       rmSync(join(repo, '.git'), { recursive: true, force: true });
