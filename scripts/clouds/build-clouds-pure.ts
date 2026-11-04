@@ -1,9 +1,9 @@
 // clouds.json's records and the dust bake's column-check file, from the parsed Zucker tables. See README.md.
 
 import { AV_PER_NH_PC, DUST_GRID_HALF_EXTENT_PC } from '../../src/astro-core/baker-constants';
-import { GAL_TO_ICRS } from '../../src/astro-core/galactic-coords';
+import { GAL_TO_ICRS, galacticDirToIcrs } from '../../src/astro-core/galactic-coords';
 import { CLOUDS_JSON_SCHEMA, ZUCKER_PROFILED_SCHEMA } from '../../src/catalog-format/baker-artifacts/baker-artifacts';
-import { Quaternion } from 'three';
+import { Quaternion, Vector3 } from 'three';
 import {
   AV_TARGET_BY_CLASS,
   ENVELOPE_FADE_START,
@@ -16,8 +16,7 @@ import {
   cloudClass,
   extentGeometry,
   fnv1a32,
-  galacticLbdToXyzPc,
-  matvec,
+  galToIcrs,
   type CloudClass,
   type ProfiledCloud,
   type Vec3,
@@ -110,6 +109,7 @@ export function roundHalfEven(x: number, digits: number): number {
   return Math.sign(x) * magnitude;
 }
 
+const DEG = Math.PI / 180;
 const round2 = (v: Vec3): number[] => v.map((c) => roundHalfEven(c, 2));
 const norm = (v: Vec3): number => Math.sqrt(v[0] * v[0] + v[1] * v[1] + v[2] * v[2]);
 
@@ -157,7 +157,7 @@ export function z2021Clouds(
   const quat = new Quaternion().setFromRotationMatrix(GAL_TO_ICRS);
   return extents.map((e) => {
     const { centreGal, axesGal } = extentGeometry(e);
-    const centre = matvec(GAL_TO_ICRS_ROWS, centreGal);
+    const centre = galToIcrs(centreGal);
     const half = GAL_TO_ICRS_ROWS.map((row) => row.reduce((s, m, j) => s + Math.abs(m) * axesGal[j], 0));
     const name = displayName(e.cloud);
     const mass = masses.get(e.cloud);
@@ -182,13 +182,15 @@ export function z2020Clouds(
   profiled: ReadonlyMap<string, ProfiledCloud>,
 ): CloudRecord[] {
   return [...grouped].filter(([raw, s]) => !suppress.has(raw) && s.length > 0).map(([raw, sightlines]) => {
-    const pts = sightlines.map((s) => galacticLbdToXyzPc(s.lDeg, s.bDeg, s.dPc));
+    const pts = sightlines.map((s) => {
+      const p = galacticDirToIcrs(s.lDeg * DEG, s.bDeg * DEG, new Vector3()).multiplyScalar(s.dPc);
+      return [p.x, p.y, p.z] as const;
+    });
     const mean = (k: number): number => pts.reduce((s, p) => s + p[k], 0) / pts.length;
-    const c: Vec3 = [mean(0), mean(1), mean(2)];
+    const centre: Vec3 = [mean(0), mean(1), mean(2)];
     const radius = pts.length >= 2
-      ? Math.max(Math.max(...pts.map((p) => norm([p[0] - c[0], p[1] - c[1], p[2] - c[2]]))), MIN_AXIS_PC)
+      ? Math.max(Math.max(...pts.map((p) => norm([p[0] - centre[0], p[1] - centre[1], p[2] - centre[2]]))), MIN_AXIS_PC)
       : DEFAULT_SPHERE_RADIUS_PC;
-    const centre = matvec(GAL_TO_ICRS_ROWS, c);
     const name = displayName(raw);
     const r = roundHalfEven(radius, 2);
     return {

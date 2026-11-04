@@ -3,6 +3,7 @@
 import { AV_PER_NH_PC } from '../../src/astro-core/baker-constants';
 import { cloudEnvelope, plummerProfile } from '../../src/astro-core/cloud-density-pure';
 import { GAL_TO_ICRS } from '../../src/astro-core/galactic-coords';
+import { Vector3 } from 'three';
 import type { PlummerFit, Z2021Extent, Z2021Mass } from './zucker-parse';
 
 export type Vec3 = readonly [number, number, number];
@@ -82,8 +83,6 @@ export const NOISE_MODEL = {
   interp: 'quintic',
 } as const;
 
-const DEG = Math.PI / 180;
-
 /** `GAL_TO_ICRS` as rows: row i, column j is ICRS component i of galactic basis vector j. */
 export const GAL_TO_ICRS_ROWS: Mat3 = (() => {
   const e = GAL_TO_ICRS.elements;
@@ -91,19 +90,9 @@ export const GAL_TO_ICRS_ROWS: Mat3 = (() => {
   return [row(0), row(1), row(2)];
 })();
 
-export function matvec(m: Mat3, v: Vec3): Vec3 {
-  return [
-    m[0][0] * v[0] + m[0][1] * v[1] + m[0][2] * v[2],
-    m[1][0] * v[0] + m[1][1] * v[1] + m[1][2] * v[2],
-    m[2][0] * v[0] + m[2][1] * v[1] + m[2][2] * v[2],
-  ];
-}
-
-export function galacticLbdToXyzPc(lDeg: number, bDeg: number, dPc: number): Vec3 {
-  const lr = lDeg * DEG;
-  const br = bDeg * DEG;
-  const cb = Math.cos(br);
-  return [dPc * cb * Math.cos(lr), dPc * cb * Math.sin(lr), dPc * Math.sin(br)];
+export function galToIcrs(v: Vec3): Vec3 {
+  const p = new Vector3(...v).applyMatrix4(GAL_TO_ICRS);
+  return [p.x, p.y, p.z];
 }
 
 /** Deterministic 32-bit FNV-1a noise seed over the UTF-8 bytes of `s`. */
@@ -208,7 +197,7 @@ export function profiledClouds(
     const avColumnTarget = mass.maxAkLeike / AK_OVER_AV;
     return [{
       rawName: e.cloud,
-      centreIcrsPc: matvec(GAL_TO_ICRS_ROWS, centreGal),
+      centreIcrsPc: galToIcrs(centreGal),
       axesGalPc: axesGal,
       fit,
       massLeike: mass.massLeike,

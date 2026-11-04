@@ -10,9 +10,8 @@ import {
   cloudClass,
   columnIntegralPc,
   fnv1a32,
-  galacticLbdToXyzPc,
-  matvec,
   GAL_TO_ICRS_ROWS,
+  galToIcrs,
   profiledClouds,
   volumeIntegralPc3,
 } from './cloud-model-pure';
@@ -35,12 +34,16 @@ describe('cloudClass', () => {
 });
 
 describe('frames', () => {
-  it('puts l = 0, b = 0 on galactic +X and rotates it onto the galactic centre direction', () => {
-    const x = galacticLbdToXyzPc(0, 0, 10);
-    expect(x[0]).toBe(10);
-    const icrs = matvec(GAL_TO_ICRS_ROWS, [1, 0, 0]);
+  it('rotates galactic +X onto the galactic centre direction', () => {
+    const icrs = galToIcrs([1, 0, 0]);
     const raDeg = (Math.atan2(icrs[1], icrs[0]) * 180) / Math.PI + 360;
     expect(raDeg).toBeCloseTo(266.4051, 4);
+  });
+
+  it('writes the rotation rows the matrix applies', () => {
+    const v = [3, -2, 5] as const;
+    const rows = GAL_TO_ICRS_ROWS.map((r) => r[0] * v[0] + r[1] * v[1] + r[2] * v[2]);
+    expect(rows).toEqual(galToIcrs(v));
   });
 });
 
