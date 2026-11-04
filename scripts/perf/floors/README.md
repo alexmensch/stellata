@@ -8,8 +8,12 @@ and read: [Reading the table](../diff/README.md#reading-the-table) and
 ```
 scripts/perf/floors/
   floors.ts (+ test)    DWELL_FLOOR_MS / DWELL_FLOOR_FRACTION, the
-                        per-vantage COMPUTE_SCATTER_FLOOR_MS, and the two
-                        functions both gates band through.
+                        per-vantage COMPUTE_SCATTER_FLOOR_MS and
+                        CPU_SCATTER_FLOOR_MS, CPU_CLOCK_STEP_MS, and the
+                        three functions both gates band through
+                        (dwellFloorMs, computeFloorMs, cpuFloorMs). The test
+                        derives both per-vantage tables from the archived
+                        runs.
 ```
 
 **One module for both gates.** `--baseline` (`../diff/`) and
