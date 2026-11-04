@@ -83,9 +83,19 @@ export interface MergeBase {
 /** `merge-base`: built at it. `merge-base-inputs`: built at another commit from the inputs it holds. */
 export type MergeBaseMatch = 'merge-base' | 'merge-base-inputs';
 
+/** Built over a clean tree and still beside the files it recorded: its commit and input hash say what it is. */
+function intact(read: HeaderRead): read is ReadHeader {
+  return read.kind === 'read' && !read.header.dirty && mismatchedFiles(read).length === 0;
+}
+
+/** A header whose verdict turns on the merge-base's input hash. */
+export function comparesInputs(read: HeaderRead, mergeBaseCommit: string): read is ReadHeader {
+  return intact(read) && read.header.commit !== mergeBaseCommit;
+}
+
 export function mergeBaseMatch(read: HeaderRead, mergeBase: MergeBase | null): MergeBaseMatch | null {
-  if (read.kind !== 'read' || read.header.dirty || mergeBase === null || mismatchedFiles(read).length > 0) return null;
-  if (read.header.commit === mergeBase.commit) return 'merge-base';
+  if (mergeBase === null || !intact(read)) return null;
+  if (!comparesInputs(read, mergeBase.commit)) return 'merge-base';
   const at = mergeBase.inputHash();
   return at.kind === 'hashed' && at.hash === read.header.inputHash ? 'merge-base-inputs' : null;
 }
@@ -125,7 +135,7 @@ export function judgeBaseline(
       : builtAt(read);
   const base = mergeBase === null
     ? 'no merge-base with origin/main'
-    : `the merge-base ${mergeBase.commit}${read.kind === 'read' ? inputsClause(read, mergeBase) : ''}`;
+    : `the merge-base ${mergeBase.commit}${inputsClause(read, mergeBase)}`;
   return {
     kind: 'refused',
     message: `lineage diff refused: ${built}, not ${base}. Build the stage at the merge-base for a `
@@ -141,8 +151,8 @@ function builtAt(read: ReadHeader): string {
     + `its header (${built}) recorded`;
 }
 
-function inputsClause(read: ReadHeader, mergeBase: MergeBase): string {
-  if (read.header.dirty || mismatchedFiles(read).length > 0) return '';
+function inputsClause(read: HeaderRead, mergeBase: MergeBase): string {
+  if (!comparesInputs(read, mergeBase.commit)) return '';
   const at = mergeBase.inputHash();
   return at.kind === 'unknown'
     ? ` (its inputs could not be compared with the merge-base's: ${at.reason})`
