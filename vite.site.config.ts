@@ -1,16 +1,14 @@
 import { defineConfig, type Plugin } from 'vite';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+import type { Figures } from './scripts/site/figures-pure.ts';
 import { indexCitations } from './scripts/site/json-ld-citations.ts';
 import { LLMS_TXT_PATH, builtLlmsTxt } from './scripts/site/llms-txt.ts';
 import { markdownRendition } from './scripts/site/markdown-rendition.ts';
 import { fillPageMeta } from './scripts/site/page-meta-pure.ts';
 import { withoutCaptureComments } from './scripts/site/shipped-html-pure.ts';
 import { NOT_FOUND_SOURCE, SITE_PAGES, renditionPath } from './src/site/pages.ts';
-import { BUILD_TARGET, buildFigures, figureSubstitution, publishBuildEnv } from './vite.env.ts';
-
-const figures = buildFigures();
-publishBuildEnv(figures);
+import { BUILD_TARGET, absentCatalogueFor, buildFigures, figureSubstitution, publishBuildEnv } from './vite.env.ts';
 
 const SITE_DIR = resolve(import.meta.dirname, 'src/site');
 
@@ -31,7 +29,7 @@ function captureCommentStrip(): Plugin {
 }
 
 /** src/site/README.md#the-markdown-rendition--how-an-agent-reads-these-pages. */
-function markdownRenditions(): Plugin {
+function markdownRenditions(figures: Figures): Plugin {
   return {
     name: 'stellata:markdown-renditions',
     apply: 'build',
@@ -50,30 +48,34 @@ function markdownRenditions(): Plugin {
   };
 }
 
-export default defineConfig(() => ({
-  base: '/',
-  plugins: [
-    figureSubstitution(figures),
-    pageMetaFill(),
-    captureCommentStrip(),
-    indexCitations(),
-    markdownRenditions(),
-  ],
-  root: SITE_DIR,
-  // Both of these belong to the app pass, which runs first. Reversing
-  // either wipes dist/ — src/site/README.md#the-build-seam.
-  publicDir: false,
-  build: {
-    outDir: resolve(import.meta.dirname, 'dist'),
-    emptyOutDir: false,
-    target: BUILD_TARGET,
-    rollupOptions: {
-      input: [...SITE_PAGES.map((page) => page.source), NOT_FOUND_SOURCE].map((source) =>
-        resolve(SITE_DIR, source),
-      ),
+export default defineConfig((env) => {
+  const figures = buildFigures(absentCatalogueFor(env));
+  publishBuildEnv(figures);
+  return {
+    base: '/',
+    plugins: [
+      figureSubstitution(figures),
+      pageMetaFill(),
+      captureCommentStrip(),
+      indexCitations(),
+      markdownRenditions(figures),
+    ],
+    root: SITE_DIR,
+    // Both of these belong to the app pass, which runs first. Reversing
+    // either wipes dist/ — src/site/README.md#the-build-seam.
+    publicDir: false,
+    build: {
+      outDir: resolve(import.meta.dirname, 'dist'),
+      emptyOutDir: false,
+      target: BUILD_TARGET,
+      rollupOptions: {
+        input: [...SITE_PAGES.map((page) => page.source), NOT_FOUND_SOURCE].map((source) =>
+          resolve(SITE_DIR, source),
+        ),
+      },
     },
-  },
-  server: {
-    port: 5174,
-  },
-}));
+    server: {
+      port: 5174,
+    },
+  };
+});

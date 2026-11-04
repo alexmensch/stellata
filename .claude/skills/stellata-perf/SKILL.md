@@ -69,8 +69,10 @@ already follows the table; this is for every other session.
    run, and name the worktree whose dev server the run needs — assuming
    port 5173 unless Alex has named another.
 2. Start `bash scripts/perf/arming/await-go.sh` in the background (Bash
-   `run_in_background`). It polls every 15 s for up to an hour and prints one
-   line when a fresh marker exists. The poll and the runner both resolve the
+   `run_in_background`). It polls every 15 s for up to 15 minutes and prints
+   one line when a fresh marker exists. On timeout it exits 1 unarmed; what
+   a coordinated requester sends then is in
+   [the GPU table](/.claude/skills/stellata-pickup-epic/SKILL.md#the-gpu-is-one-resource-for-the-whole-machine). The poll and the runner both resolve the
    marker at the top level of the checkout they are launched from — from a
    worktree, the worktree root, not the main checkout — so the announcement
    names which root to arm. When the marker arrives it also warns on stderr

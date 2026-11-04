@@ -101,8 +101,9 @@ fan-out of jobs beyond the bare checks:
   there and run for real in the jobs below.
 - `python-tests` — every `scripts/**/*.test.py`, failing on any skip
   ([Python suites](/scripts/ci/README.md#python-suites)). Every job that
-  runs Python — this one, `build-binaries`, `spotcheck`, `build-catalog`
-  and `deploy.yml`'s — sets it up from the repo-root `.python-version`,
+  runs Python — this one, `test` (the runner and code-identity suites spawn
+  `python3`), `build-binaries`, `spotcheck`, `build-catalog` and
+  `deploy.yml`'s — sets it up from the repo-root `.python-version`,
   never the runner image's `python3`, so an image upgrade cannot move it.
 - `build-binaries` / `spotcheck` — rebuild `multiples.tsv` and assert it
   matches the committed artifact; resolve Stage 2 against the curated

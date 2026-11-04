@@ -45,6 +45,9 @@ jobs:
         with:
           node-version-file: .nvmrc
           cache: 'pnpm'
+      - uses: actions/setup-python@v6
+        with:
+          python-version-file: .python-version
       - run: pnpm install --frozen-lockfile
       - run: pnpm test
 
