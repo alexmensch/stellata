@@ -10,10 +10,10 @@ export const DWELL_FLOOR_FRACTION = 0.01;
 /** 1.5× each vantage's p10 scatter, rounded up to 0.05 — README.md#the-compute-floor. */
 export const COMPUTE_SCATTER_FLOOR_MS: Readonly<Record<ScenarioName, number>> = {
   mw120: 0.05,
-  sol: 0.15,
-  earth: 0.10,
+  sol: 0.60,
+  earth: 0.25,
   mw50: 0.05,
-  lg: 0.45,
+  lg: 0.05,
 };
 
 /** 1.5× each vantage's cpu-p50 scatter, rounded up to the 0.1 ms the clock

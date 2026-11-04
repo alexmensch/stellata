@@ -147,8 +147,11 @@ A dear sample sits on a frame whose render time is unchanged — 13.06 ms
 against 12.68 at earth, the cheap frames split by their own sample's mode —
 so it is not the GPU downclocking, and it is uncorrelated with the readback
 class. The share of the dear mode runs **0 % to 58 % across runs of identical
-code**, and the median follows it: earth's p50 spans 0.169 ms over the gate's
-own comparable population while its p10 spans 0.057.
+code**, and the median follows it: on the M4, earth's p50 spanned 0.169 ms
+over the gate's own comparable population while its p10 spanned 0.057. On the
+M6 the order reverses at earth and sol (p50 0.022 / 0.044, p10 0.152 / 0.396)
+and holds at mw120 (0.137 / 0.019); the row keeps one statistic for every
+vantage.
 
 Nothing inside a run separates them. Every one of those runs reads
 `stateGuard: steady`, and the quarter medians of the 58 % run are flat
@@ -158,7 +161,7 @@ scale and the level is flat across the dwell's deciles, so what varies is the
 share **between** runs, which no dwell length reaches.
 
 **The floor is this row's own, one number per vantage**, with its
-derivation and the cap that binds at lg: [The compute floor](../floors/README.md#the-compute-floor).
+derivation and the cap that binds at sol: [The compute floor](../floors/README.md#the-compute-floor).
 
 **The dear mode is printed, never gated.** `spread` is `p90 − p10` on the same
 stream, and its delta sits beside every dwell row in both tables. A pass that

@@ -632,19 +632,19 @@ describe('compareToPin', () => {
     it('reads the p10 through a duty-cycle crossing the median marks on', () => {
       const oneMode = Array.from({ length: 100 }, () => 0.39);
       const crossed = [...Array.from({ length: 42 }, () => 0.39), ...Array.from({ length: 58 }, () => 0.61)];
-      const earth = (samples: readonly number[], p50: number, p90: number) =>
-        scenario('earth', 'webgpu', withCompute(
+      const mw120 = (samples: readonly number[], p50: number, p90: number) =>
+        scenario('mw120', 'webgpu', withCompute(
           dwell(stats(16.7), stats(13.3)), stats(p50, { p90 }), samples,
         ));
       const diff = compareToPin(
-        pinOf([earth(oneMode, 0.39, 0.40)]), file([earth(crossed, 0.61, 0.62)]),
+        pinOf([mw120(oneMode, 0.39, 0.40)]), file([mw120(crossed, 0.61, 0.62)]),
       );
       const compute = diff.rows[1]!;
       expect([compute.key, compute.metric, compute.verdict]).toEqual([
-        'earth|webgpu|compute', 'compute-p10', 'same',
+        'mw120|webgpu|compute', 'compute-p10', 'same',
       ]);
       expect(compute.deltaMs).toBeCloseTo(0, 9);
-      expect(compute.bandMs).toBe(computeFloorMs('earth', 0.39));
+      expect(compute.bandMs).toBe(computeFloorMs('mw120', 0.39));
       expect(0.61 - 0.39).toBeGreaterThan(compute.bandMs);
       // The dear mode is not lost with it: the spread is exactly that gap.
       expect(compute.spreadDeltaMs).toBeCloseTo(0.22, 9);

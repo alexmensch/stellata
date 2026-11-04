@@ -22,17 +22,17 @@ describe('the whole-frame floor — one number, both gates', () => {
 describe('the compute floor', () => {
   it("is the vantage's own, not the whole-frame constant", () => {
     expect(COMPUTE_SCATTER_FLOOR_MS).toEqual({
-      mw120: 0.05, sol: 0.15, earth: 0.10, mw50: 0.05, lg: 0.45,
+      mw120: 0.05, sol: 0.60, earth: 0.25, mw50: 0.05, lg: 0.05,
     });
-    expect(computeFloorMs('mw120', 0.289)).toBe(0.05);
-    expect(computeFloorMs('mw50', 0.308)).toBe(0.05);
-    expect(computeFloorMs('earth', 0.318)).toBe(0.10);
+    expect(computeFloorMs('mw120', 0.413)).toBe(0.05);
+    expect(computeFloorMs('mw50', 0.439)).toBe(0.05);
+    expect(computeFloorMs('lg', 0.430)).toBe(0.05);
   });
 
   // A table that does not re-derive is one a later session re-litigates.
   it('holds each constant at the derivation the README states', () => {
     const POPULATION_SPAN_MS = {
-      mw120: 0.023, sol: 0.087, earth: 0.057, mw50: 0.008, lg: 0.267,
+      mw120: 0.019, sol: 0.396, earth: 0.152, mw50: 0.015, lg: 0.008,
     } as const;
     for (const [name, span] of Object.entries(POPULATION_SPAN_MS)) {
       const derived = Number((Math.ceil((1.5 * span) / 0.05) * 0.05).toFixed(2));
@@ -45,8 +45,8 @@ describe('the compute floor', () => {
   });
 
   it('caps every vantage at the whole-frame floor, so a re-floor only tightens', () => {
-    expect(computeFloorMs('lg', 0.589)).toBe(DWELL_FLOOR_MS);
-    expect(computeFloorMs('sol', 0.446)).toBe(0.15);
+    expect(computeFloorMs('sol', 0.736)).toBe(DWELL_FLOOR_MS);
+    expect(computeFloorMs('earth', 0.664)).toBe(0.25);
   });
 
   it('keeps the 1 % term, which binds on a compute row that has run away', () => {

@@ -85,38 +85,40 @@ median: [The compute row](../pins/README.md#the-compute-row).
 
 ```
         p10 span   FLOOR       p50 span
-mw120     0.023     0.05         0.032
-mw50      0.008     0.05         0.017
-earth     0.057     0.10         0.169
-sol       0.087     0.15         0.284
-lg        0.267     0.25         0.303   ungated, capped
+mw120     0.019     0.05         0.137
+mw50      0.015     0.05         0.003
+earth     0.152     0.25         0.022
+sol       0.396     0.25         0.044   capped
+lg        0.008     0.05         0.013
 ```
 
 The span is of the whole comparable population, which bounds the noise from
 above by containing any real change as well. That population is every row a
-gate would actually compare — 960 frames, canon position, one catalogue, no
-setup lever, **and its frame row steady**, the last because a trending
-context is refused rather than banded ([State guard](../pins/README.md#state-guard)). Each constant is
-1.5× the p10 span rounded up to 0.05 — so `COMPUTE_SCATTER_FLOOR_MS` holds
-0.45 at lg, and the FLOOR column is what `computeFloorMs` applies after
-**capping at `DWELL_FLOOR_MS`**. The cap is what makes a re-derivation only
-ever tighten a row, and lg is the one vantage it binds at: **the pin stands
-lg down by vantage, but `--baseline` does not** ([State guard](../pins/README.md#state-guard)), so lg's
-compute row is banded there at 0.25 under its own measured scatter of 0.267
-and a repeat pair can mark it on nothing. That is the cost of the cap, and
-`--baseline` is the gate that pays it; lifting lg to its derived 0.45 would
-buy it back and is the alternative on the table. A name outside these five —
-no canon vantage is one today — takes `DWELL_FLOOR_MS` rather than banding
-the row on a `NaN`.
+gate would actually compare against the M6 pin — GPU-paced, 960 frames,
+4.096 Mpx, canon position, one catalogue, no setup lever, **and its frame row
+steady**, the last because a trending context is refused rather than banded
+([State guard](../pins/README.md#state-guard)): the five runs
+[The CPU floor](#the-cpu-floor) names. Each constant is 1.5× the p10 span
+rounded up to 0.05 — so `COMPUTE_SCATTER_FLOOR_MS` holds 0.60 at sol, and
+the FLOOR column is what `computeFloorMs` applies after **capping at
+`DWELL_FLOOR_MS`**. The cap is what makes a re-derivation only ever tighten a
+row, and sol is the one vantage it binds at: sol's compute row is banded at
+0.25 under its own measured scatter of 0.396 (p10 0.437–0.833 across five
+runs of identical code), so a repeat pair can mark it on nothing. That is the
+cost of the cap; lifting sol to its derived 0.60 would buy it back and is the
+alternative on the table. A name outside these five — no canon vantage is one
+today — takes `DWELL_FLOOR_MS` rather than banding the row on a `NaN`.
 
-lg's 1.5× lands at 0.4005, within a thousandth of the 0.40 rung, so a
-re-derivation off a population differing by one run reads 0.40 rather than
-0.45. Both cap to the same 0.25; do not chase the rung.
+**On the M6 the p10 is not the quieter statistic at every vantage.** At earth
+and sol the p50 spans an order of magnitude less than the p10; at mw120 the
+reverse. The row gates on the p10 everywhere, one statistic for every
+vantage, so that column is a reading, not the gate.
 
 The p10 keeps the sensitivity the median had and adds some. A real per-frame
 cost lifts it: earth's compute reads 0.351 plain and 3.100 under
 `--force-recompute`, and the extinction-refill pair moved it 0.081 — a change
-the median missed against earth's own floor while reading 0.117.
+the median missed against earth's M4 floor of 0.10 while reading 0.117. Under
+the M6 floor of 0.25 that move reads `~` as well.
 
 **The floor IS the whole band on this row.** The p10's own sampling term runs
 an order of magnitude under every constant above, and the constants are

@@ -261,10 +261,10 @@ vantage. The floor covers sampling; the position refusal above covers
 the run-condition difference that exceeds it.
 
 A frame row is floored at `max(0.25 ms, 1 % of the baseline)`. A compute row
-takes **its vantage's own** floor as its whole band — 0.05 ms at mw120 and
-mw50, 0.10 at earth, 0.15 at sol, the 0.25 constant at lg — because scatter
-there runs 0.008 to 0.267 ms across the five, a factor of 33 one constant
-cannot fit, and the constant reads as 30× the noise at mw50
+takes **its vantage's own** floor as its whole band — 0.05 ms at mw120,
+mw50 and lg, 0.25 at earth, the 0.25 cap at sol — because scatter there runs
+0.008 to 0.396 ms across the five on the M6, a factor of 50 one constant
+cannot fit, and the constant reads as 17× the noise at mw50
 ([The compute row](scripts/perf/pins/README.md#the-compute-row)). Each is capped at the
 0.25, so a re-derivation only ever tightens a row.
 
