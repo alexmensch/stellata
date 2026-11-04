@@ -20,7 +20,9 @@ repo-relative, so an outputs module passes them as they are.
   fetchers) are still spelled beside their own outputs modules. Each file's codec (a `defineArtifact` in
   `scripts/`) takes its `file` from here. Also the SID registry's
   partitions (`REGISTRY_PARTITIONS`: the catalogue's and one per sibling
-  artifact, `SIBLING_PARTITIONS`) and how each one's ledger, events and head
+  artifact, `SIBLING_PARTITIONS`, each named here — `CLOUD_PARTITION`,
+  `LOCAL_GROUP_PARTITION` — so the clouds and Local Group outputs modules
+  and `/scripts/sid/sibling-artifacts-pure.ts` share one spelling) and how each one's ledger, events and head
   files are named and keyed (`registryPaths`, `registryKeys`,
   `registryFiles`), all typed by `RegistryPartition`, so naming a partition
   no step allocates fails typecheck. Which namespaces each partition owns is
