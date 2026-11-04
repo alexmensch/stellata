@@ -4,9 +4,10 @@ import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { gunzipSync, gzipSync } from 'node:zlib';
 
-import { fileHashes, hashBytes, type FileHashes } from '../../util/build-stamp';
+import { fileHashes, type FileHashes } from '../../util/build-stamp';
 import type { ArtifactContents } from '../../util/emit-artifacts';
 import { headState, packageVersion } from '../../util/git-provenance';
+import { hashBytes } from '../../util/stamp-hash';
 import { identityRows, type IdentityRow } from './identity-pure';
 import { lineageLines, lineageRows, type LineageLine, type LineageRow } from './lineage-row-pure';
 import {

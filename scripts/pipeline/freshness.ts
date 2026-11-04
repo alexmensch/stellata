@@ -4,12 +4,13 @@ import { spawnSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
 
 import {
-  asStamp, changedSince, fileHashes, hashBytes, inputHashes, readStamp, readStampJson, recordedChanges,
+  asStamp, changedSince, fileHashes, inputHashes, readStamp, readStampJson, recordedChanges,
   type FileHashes, type Stamp,
 } from '../util/build-stamp';
 import { TSX } from './processes';
 import { stampedMembers, type PullDescription } from '../util/emit-artifacts';
 import { landStaged, writeStaged } from '../util/staged-write';
+import { hashBytes } from '../util/stamp-hash';
 import type { PipelineTree } from './pipeline-tree';
 import { describesItself, type ManualStep, type OutputClaims } from './step-table/step-table-pure';
 

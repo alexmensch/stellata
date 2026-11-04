@@ -6,9 +6,10 @@ import { join } from 'node:path';
 
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 
-import { hashBytes, inputHashes } from './build-stamp';
+import { inputHashes } from './build-stamp';
 import { tsIdentity } from './code-identity';
 import { inputHashesAt } from './input-hashes-at';
+import { hashBytes } from './stamp-hash';
 
 describe('inputHashesAt', () => {
   let root: string;

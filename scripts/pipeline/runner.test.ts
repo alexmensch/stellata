@@ -498,9 +498,9 @@ describe('loadTable', () => {
     const step = tsStep('a', 'a.out');
     write('steps/a-outputs.ts', `
 import { declareOutputs } from ${JSON.stringify(EMIT_ARTIFACTS)};
-import { hashFile } from ${JSON.stringify(join(REPO_ROOT, 'scripts/util/build-stamp'))};
+import { fileHashes } from ${JSON.stringify(join(REPO_ROOT, 'scripts/util/build-stamp'))};
 writeSideEffect();
-export const OUT = declareOutputs({ out: hashFile.name });
+export const OUT = declareOutputs({ out: fileHashes.name });
 `);
     const loaded = await load([step]);
     expect(loaded).toEqual({ kind: 'rejected', problems: [reachesBuildStamp()] });
@@ -597,11 +597,11 @@ export const OUT = declareOutputs({ out: ${JSON.stringify(at('a.out'))} });
 
   it('walks a boundary tree only at the repo root, never a folder of the same name elsewhere', async () => {
     const step = tsStep('a', 'a.out');
-    write('src/catalog-format/leak.ts', `export { hashFile } from ${JSON.stringify(join(REPO_ROOT, 'scripts/util/build-stamp'))};\n`);
+    write('src/catalog-format/leak.ts', `export { fileHashes } from ${JSON.stringify(join(REPO_ROOT, 'scripts/util/build-stamp'))};\n`);
     write('steps/a-outputs.ts', `
 import { declareOutputs } from ${JSON.stringify(EMIT_ARTIFACTS)};
-import { hashFile } from ${JSON.stringify(at('src/catalog-format/leak'))};
-export const OUT = declareOutputs({ out: hashFile.name });
+import { fileHashes } from ${JSON.stringify(at('src/catalog-format/leak'))};
+export const OUT = declareOutputs({ out: fileHashes.name });
 `);
     const loaded = await load([step]);
     expect(loaded.kind === 'rejected' ? loaded.problems : []).toEqual([

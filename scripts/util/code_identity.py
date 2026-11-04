@@ -4,12 +4,14 @@ See scripts/util/README.md."""
 
 from __future__ import annotations
 
-import hashlib
 import io
 import json
 import sys
 import tokenize
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+from scripts.util.stamp_hash import hash_bytes  # noqa: E402
 
 _STRUCTURE = frozenset({tokenize.NEWLINE, tokenize.INDENT, tokenize.DEDENT, tokenize.ENDMARKER})
 _TRIVIA = frozenset({tokenize.COMMENT, tokenize.NL, tokenize.ENCODING})
@@ -23,7 +25,7 @@ def identity(source: bytes) -> str:
     try:
         return _token_identity(source)
     except (tokenize.TokenError, SyntaxError):
-        return "raw:" + hashlib.sha1(source).hexdigest()
+        return "raw:" + hash_bytes(source)
 
 
 def _token_identity(source: bytes) -> str:
@@ -41,7 +43,7 @@ def _token_identity(source: bytes) -> str:
         kept.extend(t.string for t in line)
         kept.append(tokenize.tok_name[tok.type])
         line = []
-    return hashlib.sha1(json.dumps(kept).encode()).hexdigest()
+    return hash_bytes(json.dumps(kept).encode())
 
 
 def _pinned_version() -> tuple[int, ...]:
