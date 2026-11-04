@@ -38,9 +38,9 @@ describe('the whole-frame floor — one number, both gates', () => {
     expect(dwellFloorMs(40)).toBe(0.4);
   });
 
-  it('binds on the millisecond term at every canon row but mw50, where 1 % is larger', () => {
-    expect(dwellFloorMs(21.8)).toBe(DWELL_FLOOR_MS);
-    expect(dwellFloorMs(16.9)).toBe(DWELL_FLOOR_MS);
+  it('binds on the millisecond term at every canon row of the M6 pin, and on 1 % only past 25 ms', () => {
+    expect(dwellFloorMs(13.147)).toBe(DWELL_FLOOR_MS);
+    expect(dwellFloorMs(25)).toBe(DWELL_FLOOR_MS);
     expect(dwellFloorMs(31.451)).toBe(0.31451);
   });
 });

@@ -29,8 +29,10 @@ baseline)`, under every frame row — the GPU stream, wall, throughput. Two sigm
 sampling alone, and a dwell's run conditions move it further than that: the
 same vantage read 21.950 and 21.464 ms across two runs of identical code,
 differing only in where the context sat in its run. Both forms were derived
-from the cold-to-cold spread of two pins on identical code. The millisecond
-term is the larger at every canon frame row but mw50.
+from the cold-to-cold spread of two pins on identical code. On the GPU-paced
+M6 pin the millisecond term is the larger at every canon frame row — the
+dearest, mw50, reads 13.147 ms, where 1 % is 0.131; the 1 % term binds only on
+a frame past 25 ms.
 
 **The frame rows are deliberately NOT re-floored, and the asymmetry is the
 finding.** Their repeat scatter runs *past* the 0.25 they are gated on: of
