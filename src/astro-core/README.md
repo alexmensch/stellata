@@ -72,6 +72,11 @@ Each has its own README.
   `skyBasis` deliberately does NOT ride this: it seeds a rotation
   quaternion and picks a canonical orientation at the pole, which this
   helper leaves to the caller's ra.
+- `cloud-density-pure.ts` (+ test) — the molecular-cloud density
+  profile: `plummerProfile` and the soft ellipsoid `cloudEnvelope`. The
+  clouds build calibrates against it (`scripts/clouds/`) and the absorption
+  march's CPU mirror evaluates it
+  (`src/client/molecular-clouds/absorption/`).
 - `galactic-coords.ts` — `GAL_TO_ICRS` (Matrix4) and `GALACTIC_CENTRE_PC`
   (Vector3 at R₀ = 8.122 kpc), built from the J2000 IAU galactic-pole and
   galactic-centre angles with explicit re-orthogonalisation, plus
