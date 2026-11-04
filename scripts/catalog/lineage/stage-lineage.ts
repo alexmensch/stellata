@@ -1,21 +1,24 @@
 // One stage's lineage for its emitArtifacts call: render, header, baseline verdict, diff, budget. See README.md#run-to-run-diff.
 
 import { existsSync } from 'node:fs';
+import { relative } from 'node:path';
 import { performance } from 'node:perf_hooks';
 
 import type { FileHashes } from '../../util/build-stamp';
 import type { ArtifactContents, Check } from '../../util/emit-artifacts';
 import { mergeBaseWithMain } from '../../util/git-provenance';
+import { REPO_ROOT } from '../../util/paths';
 import { diffLineage, stageDiffText, type DiffJoin, type KeyChange } from './lineage-diff-pure';
 import { inputHashesAt, type HashesAt } from '../../util/input-hashes-at';
 import {
-  ACCEPT_ANY_BASELINE_FLAG, AGAINST_FLAG, planBaseline, type BaselineSource, type InputHashAt, type MergeBase,
+  ACCEPT_ANY_BASELINE_FLAG, AGAINST_FLAG, acceptedFiles, comparesInputs, planBaseline, type BaselineSource,
+  type HeaderRead, type InputHashAt, type MergeBase,
 } from './baseline/lineage-header-pure';
 import { inputHashOf, readStageHeader, stageEmission, stageProvenance, streamLineage } from './lineage-io';
 import { invariantCheck, invariantViolations, type LineageInvariant } from './lineage-invariant-pure';
 import { sortLineageLines, type LineageLine } from './lineage-row-pure';
 import {
-  stageFile, type LineageLayout, type StageLineageSpec, type StageOutputKey,
+  stageFile, stageFileName, type LineageLayout, type StageLineageSpec, type StageOutputKey,
 } from '../../../src/catalog-format/pipeline-outputs/lineage-files';
 
 /** The stage's measured cost, pinned so lineage cannot quietly grow. */
@@ -42,6 +45,14 @@ export interface StageLineageRun<F extends string, S extends string> {
   /** Checked over `lines`; a violation fails the emission. */
   readonly invariants: readonly LineageInvariant[];
   readonly argv: readonly string[];
+  /** Every stage whose `build/lineage/` files are among `inputs`. See baseline/README.md. */
+  readonly upstream?: readonly UpstreamLineage[];
+}
+
+export interface UpstreamLineage {
+  readonly spec: StageLineageSpec<string>;
+  /** The upstream step's own input hashes, as its header's input hash covers them. */
+  readonly inputs: () => Promise<FileHashes>;
 }
 
 export interface StageLineageEmission<F extends string, S extends string> {
@@ -77,9 +88,40 @@ export function mergeBaseAt(commit: string, hashes: () => HashesAt): MergeBase {
   return { commit, inputHash: () => (at ??= inputHashAt(hashes)) };
 }
 
-function mergeBase(inputs: FileHashes): MergeBase | null {
+type Known = { readonly kind: 'known'; readonly hashes: FileHashes } | { readonly kind: 'failed'; readonly reason: string };
+
+async function upstreamHashes<F extends string, S extends string>(
+  run: StageLineageRun<F, S>, commit: string,
+): Promise<Known> {
+  const hashes: Record<string, string> = {};
+  try {
+    for (const up of run.upstream ?? []) {
+      const inputs = await up.inputs();
+      const files = acceptedFiles(
+        [readStageHeader(run.layout.previous, up.spec), readStageHeader(run.layout.current, up.spec)],
+        mergeBaseAt(commit, () => inputHashesAt(commit, inputs)),
+      );
+      if (files === null) continue;
+      for (const stem of up.spec.files) {
+        hashes[relative(REPO_ROOT, stageFile(run.layout.current, stem))] = files[stageFileName(stem)];
+      }
+    }
+  } catch (err) {
+    return { kind: 'failed', reason: `upstream lineage: ${err instanceof Error ? err.message : String(err)}` };
+  }
+  return { kind: 'known', hashes };
+}
+
+async function mergeBase<F extends string, S extends string>(
+  run: StageLineageRun<F, S>, headers: readonly HeaderRead[],
+): Promise<MergeBase | null> {
   const commit = mergeBaseWithMain();
-  return commit === null ? null : mergeBaseAt(commit, () => inputHashesAt(commit, inputs));
+  if (commit === null) return null;
+  const asked = headers.some((read) => comparesInputs(read, commit));
+  const known: Known = asked ? await upstreamHashes(run, commit) : { kind: 'known', hashes: {} };
+  return mergeBaseAt(commit, () => (known.kind === 'failed'
+    ? { kind: 'unknown', reason: known.reason }
+    : inputHashesAt(commit, run.inputs, REPO_ROOT, known.hashes)));
 }
 
 export async function stageLineage<F extends string, S extends string>(
@@ -87,8 +129,9 @@ export async function stageLineage<F extends string, S extends string>(
 ): Promise<StageLineageEmission<F, S>> {
   const started = performance.now();
   const source = baselineSource(run);
+  const previous = readStageHeader(run.layout.previous, run.spec);
   const plan = planBaseline(
-    readStageHeader(run.layout.previous, run.spec), source, mergeBase(run.inputs),
+    previous, source, await mergeBase(run, source.kind === 'checkout' ? [previous, source.header] : [previous]),
     run.argv.includes(ACCEPT_ANY_BASELINE_FLAG),
   );
   const { verdict } = plan;

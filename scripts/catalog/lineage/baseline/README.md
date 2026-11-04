@@ -46,10 +46,14 @@ verdict, once per stage. Two limits follow from computing over this
 branch's input set rather than the merge-base's closure:
 
 - An input git does not hold — a git-ignored build output — has no
-  merge-base copy, so the hash is `unknown` and the header from another
-  commit is refused. The catalogue's stages read `build/lineage/`'s
-  membership files, so placement, promotion and allocation still need a
-  build at the merge-base.
+  merge-base copy. The catalogue's stages read `build/lineage/`'s membership
+  files, so `build:catalog` names membership as their `upstream`
+  (`UpstreamLineage`): when membership's previous or current header stands
+  for the merge-base (`acceptedFiles`, judged against membership's own
+  inputs), its `files` map is those files' hash at the merge-base, the same
+  bytes sha1 the input map holds. Otherwise, and for any other ignored
+  input, the hash is `unknown` and the header from another commit is
+  refused.
 - A branch that adds or drops a file in the stage's import closure has a
   different input set from any merge-base build, so its hash never matches;
   the refusal stands until the stage is built at the merge-base. An LFS

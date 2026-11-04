@@ -75,9 +75,11 @@ describe('inputHashesAt', () => {
     expect(inputHashesAt(commit, { 'gone.tsv': null }, root)).toEqual({ kind: 'hashed', hashes: inputs });
   });
 
-  it('is unknown for an input git does not track the content of', () => {
+  it('is unknown for an input git does not track the content of, unless its hash at the commit is known', () => {
     expect(inputHashesAt(commit, hashesOf(['data.tsv', 'build.log']), root))
       .toEqual({ kind: 'unknown', reason: 'build.log not in git' });
+    expect(inputHashesAt(commit, hashesOf(['build.log', 'kept.tsv']), root, { 'build.log': 'recorded' }))
+      .toEqual({ kind: 'hashed', hashes: { 'build.log': 'recorded', 'kept.tsv': hashBytes('k\n') } });
   });
 
   it('hashes an LFS input from the local object its stored pointer names, never fetching one', () => {

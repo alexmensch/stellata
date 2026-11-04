@@ -52,19 +52,23 @@ function codeIdentityOf(path: string, bytes: Buffer): string {
   }
 }
 
-export function inputHashesAt(commit: string, inputs: FileHashes, root: string = REPO_ROOT): HashesAt {
+/** `known`: a git-ignored input's hash at `commit`, from whoever recorded it. */
+export function inputHashesAt(
+  commit: string, inputs: FileHashes, root: string = REPO_ROOT, known: FileHashes = {},
+): HashesAt {
   const paths = Object.keys(inputs);
-  const ignored = [...ignoredPaths(paths, root)];
-  if (ignored.length > 0) return { kind: 'unknown', reason: `${ignored.join(', ')} not in git` };
+  const unknown = [...ignoredPaths(paths, root)].filter((path) => !(path in known));
+  if (unknown.length > 0) return { kind: 'unknown', reason: `${unknown.join(', ')} not in git` };
   const listed = (...argv: string[]) => gitIn(root, '--literal-pathspecs', ...argv).split('\n').filter(Boolean);
   const changed = paths.length === 0 ? [] : [
     ...listed('diff', '--name-only', '--no-renames', commit, '--', ...paths),
     ...listed('ls-files', '--others', '--exclude-standard', '--', ...paths),
   ];
-  if (changed.length === 0) return { kind: 'hashed', hashes: inputs };
+  const hashes: Record<string, string | null> = { ...inputs };
+  for (const path of paths) if (path in known) hashes[path] = known[path];
+  if (changed.length === 0) return { kind: 'hashed', hashes };
   const lfs = new Set(listed('check-attr', 'filter', '--', ...changed)
     .filter((line) => line.endsWith(LFS_ATTR)).map((line) => line.slice(0, -LFS_ATTR.length)));
-  const hashes: Record<string, string | null> = { ...inputs };
   for (const path of changed) {
     const stored = fileAt(commit, path, root);
     if (stored.kind === 'absent') {

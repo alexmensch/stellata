@@ -100,6 +100,14 @@ export function mergeBaseMatch(read: HeaderRead, mergeBase: MergeBase | null): M
   return at.kind === 'hashed' && at.hash === read.header.inputHash ? 'merge-base-inputs' : null;
 }
 
+/** The file hashes of the first header that stands for the merge-base: what its files are at it. */
+export function acceptedFiles(
+  headers: readonly HeaderRead[], mergeBase: MergeBase,
+): Readonly<Record<string, string>> | null {
+  const accepted = headers.find((read): read is ReadHeader => mergeBaseMatch(read, mergeBase) !== null);
+  return accepted === undefined ? null : accepted.header.files;
+}
+
 export interface BaselinePlan {
   readonly verdict: BaselineVerdict;
   /** Which directory the diff reads, when it runs. */

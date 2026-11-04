@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
-  judgeBaseline, planBaseline, type InputHashAt, type MergeBase, type StageHeader,
+  acceptedFiles, judgeBaseline, planBaseline, type InputHashAt, type MergeBase, type StageHeader,
 } from './lineage-header-pure';
 
 describe('judgeBaseline', () => {
@@ -103,5 +103,15 @@ describe('judgeBaseline', () => {
     expect(dirty.kind === 'refused' && dirty.message).toMatch(/built at abc with uncommitted edits/);
     expect(judgeBaseline({ kind: 'checkout', header: matching(header('abc', true)) }, BASE, true))
       .toEqual({ kind: 'diff', why: 'accepted' });
+  });
+
+  it('hands back the files of the first header that stands for the merge-base, and none when none does', () => {
+    const pinned = { ...matching(header('abc')), header: { ...header('abc'), files: { 'demo.tsv.gz': 'pinned' } } };
+    pinned.onDisk = pinned.header.files;
+    const older = matching(header('old'));
+    expect(acceptedFiles([pinned, older], BASE)).toEqual({ 'demo.tsv.gz': 'pinned' });
+    expect(acceptedFiles([older, matching(header('abc'))], BASE)).toEqual({ 'demo.tsv.gz': 'f1' });
+    expect(acceptedFiles([older, { kind: 'missing' }], BASE)).toBeNull();
+    expect(acceptedFiles([older], base('abc', { kind: 'hashed', hash: 'h' }))).toEqual({ 'demo.tsv.gz': 'f1' });
   });
 });
