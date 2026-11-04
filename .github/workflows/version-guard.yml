@@ -11,7 +11,7 @@ permissions:
   pull-requests: read
 
 # Asserts the PR's `package.json#version` is strictly greater than the
-# base branch's version (per RELEASING.md § Version policy) and is
+# base branch's version (per RELEASING.md's Version policy) and is
 # not already a released tag. Catches the case where two concurrent PRs
 # both bump from N to N+1: whichever merges second fails this check until
 # rebased + re-bumped to N+2. A PR that changes nothing the deployed
