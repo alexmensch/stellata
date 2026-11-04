@@ -34,7 +34,8 @@ not just the summary. A re-analysis with a different estimator has to be
 possible from the file alone, and a summary cannot be un-summarised.
 
 `assertPerfFile` (`../schema.ts`) checks the schema string by equality before
-reading anything else, and it is the only place the suffix is judged — a
+reading anything else, and it is the only place the schema suffix (the `/2`
+of `stellata-perf/2`) is judged — a
 `--baseline` carrying another one is refused in the preflight, so the diff
 never sees a file it would have to reason about. What bumps the suffix, and
 why a bump abandons every recorded baseline: `schema.ts`, on `PERF_SCHEMA`.
