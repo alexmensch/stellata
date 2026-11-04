@@ -138,7 +138,7 @@ belong in that list: an mtime-gated step reads any fresh copy as up to date,
 whatever it was built from. The one other kind allowed is a diff baseline
 that no step reads to decide whether to rebuild and that records what it was
 built from — `build/lineage/`, whose header the lineage diff checks against
-the merge-base ([Run-to-run diff](catalog/lineage/README.md#run-to-run-diff)).
+the merge-base ([The header and the refusal](catalog/lineage/baseline/README.md#the-header-and-the-refusal)).
 Every listed file is an output of a step `build:seed` runs
 ([Seeding builds](#seeding-builds--buildseed)), so refreshing the main
 checkout's seed is that one command. `worktree-seed.test.ts` holds each
@@ -193,7 +193,7 @@ every step that finished skips ([Preprocessor idempotency](#preprocessor-idempot
 A TypeScript step's outputs land all or none (`emitArtifacts`), so an
 interrupted run leaves the previous set whole. On a dirty main membership's
 lineage header records the edits and a branch's diff refuses that baseline
-([Run-to-run diff](catalog/lineage/README.md#run-to-run-diff)). The
+([The header and the refusal](catalog/lineage/baseline/README.md#the-header-and-the-refusal)). The
 mtime-gated steps and the client are never run, so none is ever interrupted
 mid-write. Newest-run-wins covers `build:seed` runs only; a plain
 `pnpm run build` or `pnpm run dev` in the same checkout is never stopped, and

@@ -1,4 +1,4 @@
-// build:membership as a lineage stage: its reason codes, its outcome union, the one serialiser over it, and the four ledgers as views. See ../lineage/README.md#the-membership-stage.
+// build:membership as a lineage stage: its reason codes, its outcome union, the one serialiser over it, and the four ledgers as views. See README.md#membership-lineage.
 
 import { LABEL_DISPOSITIONS, type LabelDisposition, type LabelFlip } from '../classic-ids/label-merge/label-merge-pure';
 import type { IdentityRow } from '../lineage/identity-pure';

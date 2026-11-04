@@ -1,11 +1,11 @@
 // Whether a step's record still matches the disk: one test for every kind. See README.md#freshness--one-mechanism.
 
 import { spawnSync } from 'node:child_process';
-import { createHash } from 'node:crypto';
 import { existsSync } from 'node:fs';
 
 import {
-  asStamp, changedSince, fileHashes, inputHashes, readStamp, readStampJson, recordedChanges, type FileHashes, type Stamp,
+  asStamp, changedSince, fileHashes, hashBytes, inputHashes, readStamp, readStampJson, recordedChanges,
+  type FileHashes, type Stamp,
 } from '../util/build-stamp';
 import { TSX } from './processes';
 import { stampedMembers, type PullDescription } from '../util/emit-artifacts';
@@ -49,12 +49,10 @@ export type Description =
   | ({ readonly kind: 'pull' } & PullDescription & DerivedRequest)
   | ({ readonly kind: 'bake' } & DerivedRequest);
 
-const sha1 = (text: string): string => createHash('sha1').update(text).digest('hex');
-
 export const pullQueryHash = ({ query, services }: PullDescription): string => (
-  sha1(JSON.stringify([query, services]))
+  hashBytes(JSON.stringify([query, services]))
 );
-export const requestHash = (request: readonly string[]): string => sha1(request.join('\n'));
+export const requestHash = (request: readonly string[]): string => hashBytes(request.join('\n'));
 
 /** Every file a step's stamp or record hashes as its output. */
 export function stampedOutputs(outputs: OutputClaims): string[] {

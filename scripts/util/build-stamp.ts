@@ -31,8 +31,10 @@ export interface Stamp {
 
 const HASH_CHUNK_BYTES = 1 << 22;
 
+const stampHash = () => createHash('sha1');
+
 export function hashFile(path: string): string {
-  const hash = createHash('sha1');
+  const hash = stampHash();
   const buf = Buffer.allocUnsafe(HASH_CHUNK_BYTES);
   const fd = openSync(path, 'r');
   try {
@@ -41,6 +43,11 @@ export function hashFile(path: string): string {
     closeSync(fd);
   }
   return hash.digest('hex');
+}
+
+/** `hashFile` of a file holding exactly `bytes`. */
+export function hashBytes(bytes: string | Uint8Array): string {
+  return stampHash().update(bytes).digest('hex');
 }
 
 export type Hasher = (paths: readonly string[], root?: string) => FileHashes;
@@ -107,7 +114,7 @@ export function ignoredPaths(paths: readonly string[], root: string): Set<string
 export function listingHash(dir: string, names: readonly string[], root: string): string {
   const skip = ignoredPaths(names.map((n) => join(dir, n)), root);
   const kept = names.filter((n) => !skip.has(join(dir, n)));
-  return createHash('sha1').update(kept.sort().join('\n')).digest('hex');
+  return hashBytes(kept.sort().join('\n'));
 }
 
 /** Absolute directory → its listed names, as `build_stamp.record_run` writes them, hashed;

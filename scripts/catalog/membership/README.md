@@ -48,7 +48,7 @@ scripts/catalog/membership/
   membership-lineage-pure.ts      This stage's lineage: reason codes, the
                                   outcome union and its serialiser, and the
                                   four ledgers as views of it
-                                  (../lineage/README.md#the-membership-stage).
+                                  (#membership-lineage).
   membership-manifest-pure.ts     Row assembly (spine side, additions), the
     (+ test)                      review queue and the dispositions settling
                                   it, the admission rule, the label drops, and
@@ -329,6 +329,20 @@ arithmetic and label-flips replay:
   disposed, since an undisposed `contested` ships its winner while it waits.
   Every `label-drops.tsv` row keys a manifest row, and the per-reason counts
   are pinned.
+
+## Membership lineage
+
+`build:membership` is the first stage with lineage
+(`membership-lineage-pure.ts`). `buildMembership` returns a
+keyed outcome per decision — admission, fold, component, the spine
+derivation's verdict with every candidate it refused, a disposition, an
+addition's binding, each label flip and label drop — and
+`membershipLineageRow` is the one serialiser, its `switch` exhaustive so a
+new variant without a row fails typecheck. `ParamsOf` declares each code's
+params beside the codes; the writer and the views both read through it, so
+a renamed key fails typecheck on both sides. Every record gets an admission
+row. `membershipLedgers` generates the four ledgers from those rows and the
+identity rows alone, byte-identical to the files they replaced as writers.
 
 ## The identifier columns are read, never re-derived
 

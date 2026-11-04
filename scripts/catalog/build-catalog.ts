@@ -79,7 +79,7 @@ import {
   lineageLineCode, stageLineageLine, stageLineageText, type LineageLine,
 } from './lineage/lineage-row-pure';
 import { codeEffects } from './lineage/reason-codes-pure';
-import { stageLineage } from './lineage/stage-lineage';
+import { stageLineage, type UpstreamLineage } from './lineage/stage-lineage';
 import {
   buildCatalogRowIndexMap,
   buildComponentDesignations,
@@ -153,11 +153,15 @@ import { loadStoredEdges } from '../sid/stored-edges';
 import { stepInputPaths } from '../util/step-inputs';
 import { CATALOG_PARTITION } from '../../src/catalog-format/pipeline-outputs/data-files';
 import {
-  PROMOTION_LINEAGE, PLACEMENT_LINEAGE, ALLOCATION_LINEAGE,
+  PROMOTION_LINEAGE, PLACEMENT_LINEAGE, ALLOCATION_LINEAGE, MEMBERSHIP_LINEAGE,
 } from '../../src/catalog-format/pipeline-outputs/lineage-files';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
+
+const UPSTREAM_LINEAGE: readonly UpstreamLineage[] = [
+  { spec: MEMBERSHIP_LINEAGE, inputs: async () => inputHashes(await stepInputPaths('build:membership')) },
+];
 
 const EXPECTED_COUNTS = resolve(ROOT, BUILD_COUNTS_EXPECTED_FILE);
 const EXPECTED_OUTLIERS = resolve(
@@ -192,6 +196,7 @@ async function walkManifest(inputs: ReadStarsOptions, stepInputs: FileHashes) {
     budget: PLACEMENT_LINEAGE_BUDGET,
     invariants: PLACEMENT_INVARIANTS,
     argv: process.argv.slice(2),
+    upstream: UPSTREAM_LINEAGE,
   });
   return { stars, stats, parkedLedger, placementEmission, manifestFounded, placementRemovals };
 }
@@ -1262,6 +1267,7 @@ async function main() {
     budget: PROMOTION_LINEAGE_BUDGET,
     invariants: [],
     argv: process.argv.slice(2),
+    upstream: UPSTREAM_LINEAGE,
   });
   const allocationLineage = await stageLineage({
     layout: LINEAGE_LAYOUT,
@@ -1277,6 +1283,7 @@ async function main() {
     budget: ALLOCATION_LINEAGE_BUDGET,
     invariants: [],
     argv: process.argv.slice(2),
+    upstream: UPSTREAM_LINEAGE,
   });
   const files = {
     manifest: manifestJson,
