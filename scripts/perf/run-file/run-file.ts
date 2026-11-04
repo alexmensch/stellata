@@ -5,6 +5,8 @@ import { gunzipSync, gzipSync } from 'node:zlib';
 
 export const RUN_FILE_SUFFIX = '.json.gz';
 
+export const RUN_FILE_GZIP_LEVEL = 9;
+
 const GZIP_MAGIC = [0x1f, 0x8b] as const;
 
 export function runFilePathError(flag: string, path: string): string | null {
@@ -16,7 +18,7 @@ export function runFilePathError(flag: string, path: string): string | null {
 export function writeRunFile(path: string, value: unknown): void {
   const error = runFilePathError('run file', path);
   if (error !== null) throw new Error(error);
-  writeFileSync(path, gzipSync(`${JSON.stringify(value, null, 2)}\n`));
+  writeFileSync(path, gzipSync(`${JSON.stringify(value, null, 2)}\n`, { level: RUN_FILE_GZIP_LEVEL }));
 }
 
 export function readJsonFile(path: string): unknown {

@@ -1,9 +1,9 @@
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { gunzipSync } from 'node:zlib';
+import { gunzipSync, gzipSync } from 'node:zlib';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { RUN_FILE_SUFFIX, readJsonFile, runFilePathError, writeRunFile } from './run-file';
+import { RUN_FILE_GZIP_LEVEL, RUN_FILE_SUFFIX, readJsonFile, runFilePathError, writeRunFile } from './run-file';
 
 const RECORD = { schema: 'stellata-perf/2', run: { startedAt: '2026-11-04T10:00:00.000Z' }, scenarios: [] };
 
@@ -34,6 +34,13 @@ describe('writeRunFile', () => {
     const path = join(dir, `run${RUN_FILE_SUFFIX}`);
     writeRunFile(path, RECORD);
     expect(gunzipSync(readFileSync(path)).toString('utf-8')).toBe(`${JSON.stringify(RECORD, null, 2)}\n`);
+  });
+
+  it('compresses at level 9, the level the archive was gzipped at', () => {
+    const path = join(dir, `run${RUN_FILE_SUFFIX}`);
+    writeRunFile(path, RECORD);
+    expect(RUN_FILE_GZIP_LEVEL).toBe(9);
+    expect(readFileSync(path)).toEqual(gzipSync(`${JSON.stringify(RECORD, null, 2)}\n`, { level: 9 }));
   });
 
   it('refuses a path off the suffix and writes nothing', () => {
