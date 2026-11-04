@@ -9,7 +9,6 @@ import {
   displayName,
   inGrid,
   roundHalfEven,
-  slugify,
 } from './build-clouds-pure';
 import type { CloudRow } from '../../src/catalog-format/clouds/clouds-schema';
 
@@ -29,12 +28,9 @@ describe('roundHalfEven', () => {
 });
 
 describe('names', () => {
-  it('cleans raw table names and slugs the display name', () => {
+  it('cleans raw table names', () => {
     expect(displayName('Orionlam')).toBe('Orion λ');
     expect(displayName('Ophiuchus_Arc')).toBe('Ophiuchus Arc');
-    expect(slugify('Orion λ')).toBe('orion');
-    expect(slugify('Mon OB1 / NGC 2264')).toBe('mon-ob1-ngc-2264');
-    expect(slugify('λ')).toBe('cloud');
   });
 
   it('fails on an alias entry no cloud matches', () => {

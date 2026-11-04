@@ -21,7 +21,6 @@ import {
   roundN,
   roundSig,
   skyBasis,
-  slugify,
   DISC_ENV_SCALE_LENGTHS,
   DISC_ZD_SHELL_DIVISOR,
   DISPLAY_NAME_OVERRIDES,
@@ -674,19 +673,6 @@ describe('roundSig', () => {
     expect(roundSig(259.06500827, 8)).toBe(259.06501);
     expect(roundSig(0.0022375381146703534, 8)).toBe(0.0022375381);
     expect(roundSig(0, 8)).toBe(0);
-  });
-});
-
-describe('slugify', () => {
-  it('preserves a clean lower-case key', () => {
-    expect(slugify('lmc')).toBe('lmc');
-  });
-  it('strips punctuation and collapses whitespace', () => {
-    expect(slugify('Bootes II')).toBe('bootes-ii');
-    expect(slugify('NGC 6822')).toBe('ngc-6822');
-  });
-  it('falls back to "object" when input has nothing kebab-able', () => {
-    expect(slugify('…')).toBe('object');
   });
 });
 

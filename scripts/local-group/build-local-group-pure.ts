@@ -2,6 +2,7 @@
 // orientation quaternions, display-name routing, and per-object emission
 // assembly over the profile geometry + the shared ρ₀ solve. Off the I/O path.
 
+import { siblingSlug } from '../sid/sibling-artifacts-pure';
 import {
   fluxNumber,
   solveDensity0,
@@ -356,17 +357,6 @@ export function buildOrientationQuat(
   return basisToQuaternion(xWorld, yWorld, zWorld);
 }
 
-/** Build a slug from a display name (lower-case, kebab-case, ASCII only). */
-export function slugify(name: string): string {
-  return (
-    name
-      .normalize('NFKD')
-      .replace(/[^A-Za-z0-9]+/g, '-')
-      .replace(/^-+|-+$/g, '')
-      .toLowerCase() || 'object'
-  );
-}
-
 /** Filter LVDB rows to those that pass the rendering predicate:
  *  confirmed real, confirmed galaxy, valid ra/dec/distance, and within
  *  the MAX_DISTANCE_PC heliocentric envelope. */
@@ -625,7 +615,7 @@ function buildLgObjectFromOrient(
   const display = displayName(nameKey);
   return {
     name: display,
-    id: slugify(idKey),
+    id: siblingSlug(idKey, 'object'),
     type: objectTypeFor(display),
     center,
     kind,

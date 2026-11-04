@@ -21,6 +21,7 @@ import {
   type ProfiledCloud,
   type Vec3,
 } from './cloud-model-pure';
+import { siblingSlug } from '../sid/sibling-artifacts-pure';
 import type { Sightline, Z2021Extent, Z2021Mass } from './zucker-parse';
 
 /** Singleton Zucker 2020 sightlines: the small end of the 5–30 pc effective radii of local SF clouds. */
@@ -52,10 +53,6 @@ const DISPLAY_NAME_OVERRIDES: Readonly<Record<string, string>> = {
 
 export function displayName(raw: string): string {
   return Object.hasOwn(DISPLAY_NAME_OVERRIDES, raw) ? DISPLAY_NAME_OVERRIDES[raw] : raw.replaceAll('_', ' ');
-}
-
-export function slugify(name: string): string {
-  return name.replace(/[^A-Za-z0-9]+/g, '-').replace(/^-+|-+$/g, '').toLowerCase() || 'cloud';
 }
 
 /** Curated canonical name (null keeps the built one) and aliases, keyed by the frozen slug id, never the
@@ -162,7 +159,7 @@ export function z2021Clouds(
     const mass = masses.get(e.cloud);
     return {
       name,
-      id: slugify(name),
+      id: siblingSlug(name, 'cloud'),
       center: round2(centre),
       axes: round2(axesGal),
       quat: [roundHalfEven(quat.x, 6), roundHalfEven(quat.y, 6), roundHalfEven(quat.z, 6), roundHalfEven(quat.w, 6)],
@@ -194,7 +191,7 @@ export function z2020Clouds(
     const r = roundHalfEven(radius, 2);
     return {
       name,
-      id: slugify(name),
+      id: siblingSlug(name, 'cloud'),
       center: round2(centre),
       axes: [r, r, r],
       quat: [0, 0, 0, 1],

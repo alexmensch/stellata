@@ -173,7 +173,9 @@ sibling-artifacts-pure.ts SIBLING_ARTIFACTS spec (file / arrayKey / ns /
                           own registry partition: ns is typed by
                           SIBLING_PARTITIONS, and
                           EVERY_SIBLING_PARTITION_CLAIMED fails typecheck
-                          while a partition has no artifact.
+                          while a partition has no artifact. siblingSlug
+  (+ test)                is the one slug rule both builds key each
+                          record's id (and so its SID) on.
 ```
 
 The append-only CI guard is `tests/sid-ledger-guard.test.ts` (repo-meta:
@@ -307,7 +309,7 @@ altogether has no decision, so the build fails closed, printing the live
 synth keys under the same WDS root with their geometry: a re-lettered
 component needs a bridge line in `data/sid/sameas-overrides.tsv`, and a
 component that genuinely dissolved needs a coded decision in the stage
-that drops it. A vanished `cloud:`/`lg:` slug fails its stamp the same
+that drops it. A vanished `cloud:`/`lg:` slug fails its build the same
 way — a slug RENAME needs a bridge.
 
 A Stage-5 filter change that mass-drops optical pairs orphans every
