@@ -7,7 +7,7 @@ import type { StepTable, TsBuildStep } from './step-table-pure';
 import { registryPaths, REGISTRY_PARTITIONS } from '../../../src/catalog-format/pipeline-outputs/data-files';
 
 /** A `data/<layer>` → `public/` copy: `scripts/<layer>/sync-<layer>.ts` over its `<layer>-mirror-outputs.ts`. */
-const mirror = (layer: string): TsBuildStep => ({
+const mirrorStep = (layer: string): TsBuildStep => ({
   name: `build:${layer}-sync`,
   kind: 'build',
   language: 'ts',
@@ -15,7 +15,7 @@ const mirror = (layer: string): TsBuildStep => ({
   outputs: { module: `scripts/${layer}/${layer}-mirror-outputs.ts`, name: 'MIRROR_OUTPUTS' },
 });
 
-export const MIRROR_STEPS: readonly TsBuildStep[] = ['dust', 'probes', 'ephemerides', 'local-bubble', 'cloud-surfaces', 'textures'].map(mirror);
+export const MIRROR_STEPS: readonly TsBuildStep[] = ['dust', 'probes', 'ephemerides', 'local-bubble', 'cloud-surfaces', 'textures'].map(mirrorStep);
 
 export const STEPS: StepTable = {
   steps: [
