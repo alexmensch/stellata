@@ -66,9 +66,15 @@ never kill a build part-way.
 ## The post-landing step is `build:seed`
 
 `pickup-epic`'s post-landing step is `pnpm run build:seed` from the main
-checkout, run without piping its output, once before the next launch
+checkout, run without piping its output, started in the background right
+after each landing
 ([Rebuild main's artifacts](/.claude/skills/stellata-pr-cleanup/SKILL.md#rebuild-mains-artifacts--last-in-the-background)).
-It is heavy: never while a GPU grant is held.
+A launch waits only while it runs. Stellata's seeding detects a main
+checkout one landing behind
+([Building in a worktree](/scripts/README.md#building-in-a-worktree)), so
+`pickup-epic`'s Launch rule applies unnarrowed.
+It is heavy: never from a `GPU_REQUEST` until `GPU_DONE`; a landing that
+finishes in that window starts it at `RESUME`.
 
 ## The `SMOKE:` line
 
