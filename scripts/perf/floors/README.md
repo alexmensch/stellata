@@ -21,21 +21,12 @@ Tier 2 one it feeds would mark a move Tier 2 calls unresolved
 ## The whole-frame floor
 
 `dwellFloorMs` is `max(DWELL_FLOOR_MS 0.25 ms, DWELL_FLOOR_FRACTION 1 % ×
-baseline)`, under every frame row — the GPU stream, wall, throughput — and
-the main-thread `|cpu` row. Two sigma of the medians' own scatter describes
+baseline)`, under every frame row — the GPU stream, wall, throughput. Two sigma of the medians' own scatter describes
 sampling alone, and a dwell's run conditions move it further than that: the
 same vantage read 21.950 and 21.464 ms across two runs of identical code,
 differing only in where the context sat in its run. Both forms were derived
 from the cold-to-cold spread of two pins on identical code. The millisecond
 term is the larger at every canon frame row but mw50.
-
-**The `|cpu` row's floor is borrowed, not measured.** It reads 1.1–3.4 ms
-in 0.1 ms steps (Chrome's `performance.now()` resolution), so 0.25 ms lets
-a CPU increase of about 23 % at sol and lg pass unmarked. One repeat pair
-with CPU data exists (runs 3 and 4 of `8cg-49-42-gpu-all`, which moved
-0.0–0.1 ms), too few to derive from; `stellata-8cg.49.38` derives the
-row's own floor, in whole 0.1 ms steps, from its pin and Tier 1 runs. No
-pin gates the row until then.
 
 **The frame rows are deliberately NOT re-floored, and the asymmetry is the
 finding.** Their repeat scatter runs *past* the 0.25 they are gated on: of
@@ -48,6 +39,41 @@ a frame-row `✗` does not stand until a second cold run reproduces it.
 are rAF-paced GPU-stream rows; a GPU-paced throughput row's own repeat
 scatter is measured separately
 ([CPU and GPU, apart](../dwell/README.md#cpu-and-gpu-apart)).
+
+## The CPU floor
+
+**The `|cpu` row's floor is its own, one number per vantage, and uncapped** —
+`CPU_SCATTER_FLOOR_MS`, applied by both gates through `cpuFloorMs` from
+`CPU_JUDGEMENT`. The row reads 1.1–3.4 ms in 0.1 ms steps (Chrome's
+`performance.now()` resolution), so each constant is 1.5× the cpu-p50 span
+of the comparable population rounded up to a whole step, and never under
+one step.
+
+```
+        cpu-p50 runs                  span   FLOOR
+mw120   1.6 / 2.6 / 2.6 / 2.6 / 2.7   1.1    1.7
+sol     1.3 / 1.4 / 1.4 / 1.4 / 1.5   0.2    0.3
+earth   1.4 / 1.4 / 1.5               0.1    0.2
+mw50    3.2 / 3.4 / 3.4               0.2    0.3
+lg      1.1 / 1.1 / 1.1               0.0    0.1
+```
+
+The population is every GPU-paced M6 dwell a gate would compare — 960
+frames, 4.096 Mpx, canon position, throughput steady:
+`.perf-runs/2026-11-03/8cg-49-42-gpu-all-{3,4}.json` and
+`.perf-runs/2026-11-04/8cg-49-38-{m6-pin,tier1-1,tier1-2}.json`, the last
+two visiting mw120 and sol alone.
+
+**mw120's main thread holds two modes, near 1.4 and near 3.0 ms, and the
+share between them is set per run.** The pin run held the upper mode on 30 %
+of its frames, the other four on 61–68 %, every run's quarters flat. So its
+median, its p10 and its mean all step together with the share, and no
+statistic of that stream holds still across runs of identical code. The
+floor covers the step rather than refusing the row, so mw120's CPU row is
+blind to a move under 1.7 ms — about two-thirds of its CPU time — while the
+other four keep a band at or under the whole-frame floor. **Uncapped, unlike
+the compute floor**, because capping at 0.25 marks every Tier 1 run on
+unchanged code whenever the pin and the run caught different shares.
 
 ## The compute floor
 

@@ -441,12 +441,12 @@ function dwellRows(key: string, a: ScenarioRecord, b: ScenarioRecord): (DiffRow 
   const frame = frameRow(key, da, db, pacing);
   return 'reason' in frame
     ? [frame]
-    : [frame, ...computeRow(key, a.name, da, db), ...cpuRow(key, da, db)];
+    : [frame, ...computeRow(key, a.name, da, db), ...cpuRow(key, a.name, da, db)];
 }
 
 /** The main thread's time per tick, banded as the frame is
  *  (../dwell/README.md#cpu-and-gpu-apart). */
-function cpuRow(key: string, da: DwellRecord, db: DwellRecord): (DiffRow | DiffRefusal)[] {
+function cpuRow(key: string, name: ScenarioName, da: DwellRecord, db: DwellRecord): (DiffRow | DiffRefusal)[] {
   const [ca, cb] = [cpuClock(da), cpuClock(db)];
   if (ca === null && cb === null) return [];
   if (ca === null || cb === null) {
@@ -454,7 +454,7 @@ function cpuRow(key: string, da: DwellRecord, db: DwellRecord): (DiffRow | DiffR
   }
   const [sa, sb] = [CPU_JUDGEMENT.side(ca), CPU_JUDGEMENT.side(cb)];
   const deltaMs = sb.valueMs - sa.valueMs;
-  const bandMs = band(sa.standardErrorMs, sb.standardErrorMs, CPU_JUDGEMENT.floorMs(sa));
+  const bandMs = band(sa.standardErrorMs, sb.standardErrorMs, CPU_JUDGEMENT.floorMs(name, sa));
   return [{
     key: `${key}|${CPU_ROW}`,
     metric: CPU_JUDGEMENT.metric,

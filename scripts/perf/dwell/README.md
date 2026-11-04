@@ -180,7 +180,8 @@ between passes, now between frames.
 `cpu-p50`, keyed `|cpu`.** Each rendered tick's main-thread time, start to
 after the `'frame'` handlers
 ([CPU time per tick](/src/client/scene/frame-loop/README.md#cpu-time-per-tick)),
-recorded under either pacing and banded the way the frame is. Chrome's GPU
+recorded under either pacing and banded on its vantage's own floor
+([The CPU floor](../floors/README.md#the-cpu-floor)). Chrome's GPU
 process spends CPU on the same commands and is not in it.
 
 **Both gates judge these two rows through one definition each**,

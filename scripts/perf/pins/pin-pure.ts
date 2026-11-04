@@ -653,7 +653,7 @@ function frameStreamRow(pinned: PinRow, dwell: DwellRecord): PinVerdictRow {
       stream: 'GPU',
       pinned: pinnedSide,
       current: THROUGHPUT_JUDGEMENT.side({ ...dwell.throughputStats!, meanMs }),
-      floorMs: pinnedSide === null ? 0 : THROUGHPUT_JUDGEMENT.floorMs(pinnedSide),
+      floorMs: pinnedSide === null ? 0 : THROUGHPUT_JUDGEMENT.floorMs(pinned.name, pinnedSide),
       ungatedContext: { metric: 'wall-p50', pinnedMs: pinned.wall.p50, currentMs: dwell.stats.p50 },
     });
   }
@@ -681,7 +681,7 @@ function cpuStreamRows(pinned: PinRow, dwell: DwellRecord): PinVerdictRow[] {
     stream: 'CPU',
     pinned: pinnedSide,
     current: cpu === null ? null : CPU_JUDGEMENT.side(cpu),
-    floorMs: pinnedSide === null ? 0 : CPU_JUDGEMENT.floorMs(pinnedSide),
+    floorMs: pinnedSide === null ? 0 : CPU_JUDGEMENT.floorMs(pinned.name, pinnedSide),
     ungatedContext: null,
   })];
 }

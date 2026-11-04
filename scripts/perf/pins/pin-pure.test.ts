@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { medianStandardErrorMs } from '../../../src/client/debug/frame-cost/frame-cost-pure';
 import { BUFFER_MPX_TOLERANCE, RECORD_COUNT_TOLERANCE, diffRuns } from '../diff/diff-pure';
-import { computeFloorMs, dwellFloorMs } from '../floors/floors';
+import { computeFloorMs, cpuFloorMs, dwellFloorMs } from '../floors/floors';
 import { frameFloor, type DwellSummary } from '../dwell/dwell-pure';
 import {
   BAND_OVER_FLOOR_FACTOR,
@@ -863,6 +863,14 @@ describe('a GPU-paced pin — throughput, CPU and the bottleneck', () => {
     expect([row.key, row.metric, row.verdict, row.note]).toEqual(['lg|webgpu', 'throughput-mean', 'dearer', '']);
     expect(pinFromRuns([runOf(file([paced(4, 1, 'lg', trending(4.4))]))], SOURCE).refusals[0])
       .toContain('load-state transition');
+  });
+
+  it("bands the CPU row on its vantage's own floor, in both gates", () => {
+    const mw120 = compareToPin(pinOf([paced(9, 1.6, 'mw120')]), file([paced(9, 2.6, 'mw120')])).rows[1];
+    expect([mw120.key, mw120.verdict, mw120.bandMs]).toEqual(['mw120|webgpu|cpu', 'same', cpuFloorMs('mw120', 1.6)]);
+    const sol = compareToPin(pinOf([paced(5, 1.3)]), file([paced(5, 1.7)])).rows[1];
+    expect([sol.verdict, sol.bandMs]).toEqual(['dearer', cpuFloorMs('sol', 1.3)]);
+    expect(diffRuns(file([paced(5, 1.3)]), file([paced(5, 1.7)])).rows[1].bandMs).toBe(sol.bandMs);
   });
 
   it('carries both clocks on the row and gates on them', () => {

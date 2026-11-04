@@ -322,7 +322,8 @@ a pin run reads `steady`.
 - **Band.** On a frame row the pair's two-sigma standard error floored at
   `max(DWELL_FLOOR_MS 0.25 ms, DWELL_FLOOR_FRACTION 1 % × pinned)`; on a
   compute row the vantage's own constant and nothing else ([The compute
-  row](#the-compute-row)). A `✗` is past it; `~` is not resolved, never "no change". The
+  row](#the-compute-row)); on a `|cpu` row the pair's two-sigma term floored
+  at the vantage's own uncapped constant ([The CPU floor](../floors/README.md#the-cpu-floor)). A `✗` is past it; `~` is not resolved, never "no change". The
   millisecond term is the larger of the two at every canon frame row but
   mw50. A band the two-sigma term rather than the floor set is named on the
   row (`BAND_OVER_FLOOR_FACTOR`), which is what catches a spread that belongs

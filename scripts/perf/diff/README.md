@@ -99,8 +99,8 @@ pool was resolved carries no stream, and a run since does; neither side
 prints no compute row at all. A frame row that is refused takes its compute
 row with it.
 
-**The main thread is a third row, keyed `|cpu`**, on `cpu-p50` and banded as
-the frame is. One side alone refuses it the way the compute row does. A
+**The main thread is a third row, keyed `|cpu`**, on `cpu-p50` and banded on
+that vantage's own floor ([The CPU floor](../floors/README.md#the-cpu-floor)). One side alone refuses it the way the compute row does. A
 context CPU-bound on either side is refused whole, before any row: its
 frame time is not GPU work ([CPU and GPU, apart](../dwell/README.md#cpu-and-gpu-apart)).
 
