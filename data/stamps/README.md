@@ -20,9 +20,9 @@ message names the command to re-run.
 **Never edit one by hand.** Re-run the step through its target, which
 rewrites the record; hand edits are what the record exists to catch. The one
 exception is a change to how an input is hashed: that commit re-keys the
-affected hashes in every record by script, after checking each old hash
-still matches the file under the old rule, so no record turns fresh that
-was stale.
+affected hashes in every record, starting from a base where every manual
+step reads fresh, so no record turns fresh that was stale. CI's
+stale-manual-step stop catches a record the re-key missed.
 
 ## Bootstrap
 
