@@ -128,7 +128,7 @@ import { SIMBAD_SAMPLE } from './validate/simbad-sample-source';
 import { MEMBERSHIP_MANIFEST, manifestDesignations } from './membership/membership-manifest-tsv';
 import { artifactRows } from '../util/sources/source';
 import { REPO_ROOT as ROOT } from '../util/paths';
-import { fileHashes, type FileHashes } from '../util/build-stamp';
+import { inputHashes, type FileHashes } from '../util/build-stamp';
 import {
   CATALOG_CHUNK_DIR, CATALOG_OUTPUTS,
 } from './catalog-outputs';
@@ -167,7 +167,7 @@ const EXPECTED_OUTLIERS = resolve(
 
 // A function of its own so the placement lines are unreachable once it returns:
 // inlined into main, they outlive the walk and the build runs out of heap.
-async function walkManifest(inputs: ReadStarsOptions, inputHashes: FileHashes) {
+async function walkManifest(inputs: ReadStarsOptions, stepInputs: FileHashes) {
   const lines: LineageLine[] = [];
   const manifestFounded = new Set<string>();
   const manifest = function* () {
@@ -184,7 +184,7 @@ async function walkManifest(inputs: ReadStarsOptions, inputHashes: FileHashes) {
   const placementEmission = await stageLineage({
     layout: LINEAGE_LAYOUT,
     spec: PLACEMENT_LINEAGE,
-    inputs: inputHashes,
+    inputs: stepInputs,
     diffed: 'placement',
     lines,
     render: (sorted) => ({ placement: stageLineageText(PLACEMENT_CODES, sorted) }),
@@ -221,7 +221,7 @@ function simbadSourcedDistancesTsv(stars: readonly Star[]): string {
 async function main() {
   const heap = watchHeap('build:catalog');
   sweepStaged(CATALOG_OUTPUTS);
-  const inputHashesAtStart = fileHashes(await stepInputPaths('build:catalog'));
+  const inputHashesAtStart = inputHashes(await stepInputPaths('build:catalog'));
 
   // Accumulator for the headline counts asserted against
   // scripts/catalog/build-catalog-expected.json at the end of the

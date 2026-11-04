@@ -2,7 +2,7 @@
 
 import { dirname, extname } from 'node:path';
 
-const UNREAD_SIBLING_EXTENSIONS = new Set(['.ts', '.py', '.md']);
+export const CODE_FILE = /\.(py|ts|mts)$/;
 
 /** One `&&`-joined command of a package.json script. */
 export type ScriptPart =
@@ -37,7 +37,7 @@ export function closureWithSiblings(closure: ReadonlySet<string>, files: Iterabl
   const closureDirs = new Set([...closure].map(dirname));
   const keyed = new Set(closure);
   for (const path of files) {
-    if (closureDirs.has(dirname(path)) && !UNREAD_SIBLING_EXTENSIONS.has(extname(path))) {
+    if (closureDirs.has(dirname(path)) && !CODE_FILE.test(path) && extname(path) !== '.md') {
       keyed.add(path);
     }
   }

@@ -11,6 +11,7 @@ import {
   catalogCacheKey,
   keyedPaths,
   parseLsFilesStage,
+  withCodeIdentities,
   withVersionlessPackageJson,
 } from './catalog-stage-pure';
 
@@ -97,6 +98,21 @@ describe('withVersionlessPackageJson', () => {
   it('replaces only the package.json entry', () => {
     const tracked = index(['data/a.tsv', PACKAGE_JSON]);
     expect(withVersionlessPackageJson(tracked, JSON.stringify(base)).get('data/a.tsv')).toBe('b0');
+  });
+});
+
+describe('withCodeIdentities', () => {
+  const paths = ['scripts/a.ts', 'data/a.tsv'];
+
+  it('keys a code file by its identity, so two blobs with one identity share a key', () => {
+    const before = withCodeIdentities(new Map([['scripts/a.ts', 'blob1'], ['data/a.tsv', 'b0']]), { 'scripts/a.ts': 'id' });
+    const commented = withCodeIdentities(new Map([['scripts/a.ts', 'blob2'], ['data/a.tsv', 'b0']]), { 'scripts/a.ts': 'id' });
+    expect(catalogCacheKey(commented, paths, 'node-a')).toBe(catalogCacheKey(before, paths, 'node-a'));
+    expect(before.get('data/a.tsv')).toBe('b0');
+  });
+
+  it('keeps the blob id of a file with no identity', () => {
+    expect(withCodeIdentities(index(paths), { 'scripts/a.ts': null }).get('scripts/a.ts')).toBe('b0');
   });
 });
 

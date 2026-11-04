@@ -67,9 +67,14 @@ same thing — single-use helpers stay with their consumer.
   ([Preprocessor idempotency](../README.md#preprocessor-idempotency)): `fileHashes` maps each file's
   repo-relative path (relative to a passed root, the runner's tree) to its
   sha1, `null` when absent, so an input's arrival is
-  a change too. A stamp (`build/stamps/<step>.json`) records two such maps:
-  the inputs, hashed *before* the build, and every output the build wrote,
-  hashed after it; `changedSince` re-hashes a recorded map, so an output
+  a change too. `inputHashes` is the same map with each code file hashed by
+  its identity (`code-identity.ts`), and `recordedInputs` turns a Python run
+  record's reads into it, keeping the first-read bytes hash of a code file
+  edited mid-run, which no identity equals, so the step reads stale. A stamp (`build/stamps/<step>.json`) records two
+  maps: the inputs (`inputHashes`), hashed *before* the build, and every
+  output the build wrote (`fileHashes`, bytes, so a generated `.ts` output
+  whose comment moved still differs), hashed after it; `changedSince`
+  re-hashes a recorded map with the hasher that wrote it, so an output
   rewritten by anything other than this build — an older commit's build, a
   write through a symlink, a partial copy — reads as stale. The runner is the
   only writer: `clearStamp` before a step runs, `writeStamp` once it exits 0,
@@ -104,6 +109,26 @@ same thing — single-use helpers stay with their consumer.
   records which network service answered, once each in first-answer order
   (`refresh_lib.TapClient` calls it); `record.ts` copies the list into a
   pull's committed record as `answeredBy`.
+- `code-identity.ts` / `code_identity.py` (+ test) — a code input's identity,
+  the one rule for every step: the sha1 of its token stream with comments
+  and docstrings dropped, so a comment, docstring or layout edit stales
+  nothing and any change to a token the interpreter executes stales every
+  step that read the file. `CODE_FILE` (`.py`, `.ts`, `.mts`; `import-closure-pure.ts`) is the one
+  test of what is code, by extension wherever the file is read, so a Python
+  bake reading a generated `.ts` keys it the same way. TypeScript is the
+  compiler's tokens, walked from the parsed tree, since a bare scanner reads
+  `//` inside a regex or template literal as a comment. Python is the
+  standard library's `tokenize` (`python3 -I -S`, one process per batch):
+  comments and non-logical newlines dropped, indentation as structure only,
+  and a logical line of nothing but plain string literals (a docstring, or
+  any bare string statement) dropped; an f-string is never such a line. A
+  file `tokenize` rejects (a half-edited input) keys as `raw:` plus its
+  bytes hash, which no identity equals, so its steps read stale and the rest
+  of the batch still hashes. It refuses a `python3` whose major.minor is not
+  `.python-version`'s, since `tokenize` output differs across versions (3.12
+  split f-strings into tokens) and a local identity must equal CI's.
+  Changing either normaliser changes every recorded code identity, so it
+  re-keys the committed `data/stamps/` records in the same commit.
 - `import-closure.ts` / `import-closure-pure.ts` (+ test) — a TypeScript
   build's code inputs. `entryClosure(entries)` is every module the given
   entry files import, read from an esbuild metafile (`entryMetafile`, which
@@ -111,7 +136,7 @@ same thing — single-use helpers stay with their consumer.
   without anyone listing it. `scriptParts` is the one parser of a
   script's `&&`-chained commands (`tsx`, `python3`, `pnpm run`, or `other`)
   and `tsxEntries` every `tsx` entry among them; `closureWithSiblings(closure, files)` adds every file beside a
-  closure module except `.ts`, `.py` and `.md`, which is how the `*-expected.json`
+  closure module except code (`CODE_FILE`) and `.md`, which is how the `*-expected.json`
   snapshots a build reads by path get keyed. Shared by the catalogue stamp and
   CI's catalogue cache key ([The catalogue build cache](../ci/README.md#the-catalogue-build-cache)), so the two
   cannot disagree on what the build reads. `trackedFiles()` is the listing the
