@@ -80,7 +80,7 @@ population is added to that test's list.
 
 **mw120's main thread holds two modes, near 1.4 and near 3.0 ms, and the
 share between them is set per run.** The pin run held the upper mode on 30 %
-of its frames, the other four that carry the split on 61–68 %, every run's quarters flat. So its
+of its frames, the other five on 54–68 %, every run's quarters flat. So its
 median, its p10 and its mean all step together with the share, and no
 statistic of that stream holds still across runs of identical code. The
 floor covers the step rather than refusing the row, so mw120's CPU row is
