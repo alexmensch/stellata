@@ -1,10 +1,10 @@
-// The probe trajectories the mirror serves, declared.
+// The data/ files build:probes-sync copies, declared.
 
 import { mirrorSource } from '../util/mirror-to-public';
-import { isProbePublicAsset } from '../../src/catalog-format/probes/sync-probes-pure';
+import { MIRROR_OUTPUTS } from './probes-mirror-outputs';
 
 export const PROBES_MIRROR = mirrorSource({
   dir: 'data/probes',
   hint: 'Re-run `pnpm run fetch:probes`.',
-  isPublicAsset: isProbePublicAsset,
+  outputs: MIRROR_OUTPUTS,
 });

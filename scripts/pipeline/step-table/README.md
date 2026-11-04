@@ -155,7 +155,9 @@ the others once, and that rebuild appends nothing.
   files it writes, as an outputs module. Which modules may spell a `data/`
   path is `/tests/source-declarations.test.ts`'s rule.
 - `steps.ts` (+ test) — the table `run.ts` and `record.ts` load, its manual
-  steps `MANUAL_STEPS`.
+  steps `MANUAL_STEPS` and its six mirrors `MIRROR_STEPS` (one `mirror(layer)`
+  each: `scripts/<layer>/sync-<layer>.ts` over `<layer>-mirror-outputs.ts`'s
+  `MIRROR_OUTPUTS`).
   The test holds the table to the load-time rules, every manual step's
   `package.json` target to `tsx scripts/pipeline/record.ts <name>`, and every
   pull's and describing bake's `--describe` to running (Python under

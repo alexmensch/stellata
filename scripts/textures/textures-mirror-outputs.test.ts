@@ -1,8 +1,11 @@
 import { describe, it, expect } from 'vitest';
 
-import { isTexturePublicAsset } from './sync-textures-pure';
+import { declaresName } from '../util/mirror-to-public';
+import { MIRROR_OUTPUTS } from './textures-mirror-outputs';
 
-describe('sync-textures / isTexturePublicAsset', () => {
+const isTexturePublicAsset = (name: string): boolean => declaresName(MIRROR_OUTPUTS, name);
+
+describe('textures mirror outputs', () => {
   it('allows the built runtime artifacts', () => {
     expect(isTexturePublicAsset('earth-1024.jpg')).toBe(true);
     expect(isTexturePublicAsset('earth-8192.jpg')).toBe(true);

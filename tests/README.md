@@ -28,8 +28,8 @@ artifact-freshness.test.ts  Built-artifact coherence: fails (not skips)
 bundle-content.test.ts   Deployed-bundle guard: no source-tree file
                          types (.md/.txt/.py/.ts) under public/, no
                          `.staged` output a killed build left in public/
-                         or dist/; dust assets restricted to the sync
-                         allowlist.
+                         or dist/; each mirror's folders hold only its
+                         declared outputs (MIRROR_STEPS, strays()).
                          Self-skips when public/ is unbuilt.
 cadence-layer-declarations.test.ts
                          Source scan over the SHIPPED scene-layer

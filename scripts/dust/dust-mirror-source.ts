@@ -1,10 +1,10 @@
-// The dust voxel chunks the mirror serves, declared.
+// The data/ files build:dust-sync copies, declared.
 
 import { mirrorSource } from '../util/mirror-to-public';
-import { isDustPublicAsset } from './sync-dust-pure';
+import { MIRROR_OUTPUTS } from './dust-mirror-outputs';
 
 export const DUST_MIRROR = mirrorSource({
   dir: 'data/dust',
-  hint: 'Re-run scripts/dust/build-dust.py.',
-  isPublicAsset: isDustPublicAsset,
+  hint: 'Re-run `pnpm run build:dust`.',
+  outputs: MIRROR_OUTPUTS,
 });

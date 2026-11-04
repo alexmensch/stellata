@@ -25,6 +25,14 @@ export const PUBLIC_FOLDERS = {
 } as const;
 
 export const DUST_MANIFEST = DUST_MANIFEST_SCHEMA.fileName;
+export const DUST_CHUNK = /^chunk_\d+_\d+_\d+\.bin$/;
+
+export const TEXTURE_MEMBERS = {
+  // The rung width is required, so a stale pre-ladder `<body>.jpg` cannot ship as a file the renderer never asks for.
+  colourMap: /^[a-z]+-\d+\.jpg$/,
+  ringStrip: /^[a-z]+-rings\.png$/,
+  reliefMap: /^[a-z]+-(normal|skyview|horizon-[ab])\.webp$/,
+} as const;
 
 /** A rostered folder member's name: a probe trajectory, a planet element table. */
 export const rosterFileName = (id: string): string => `${id}.json`;

@@ -1,10 +1,10 @@
-// The committed Local Bubble shell mesh the sync copies, declared.
+// The data/ file build:local-bubble-sync copies, declared.
 
-import { defineSource } from '../util/sources/source';
-import { PUBLIC_FILES } from '../../src/catalog-format/public-artifacts/public-artifacts';
+import { mirrorSource } from '../util/mirror-to-public';
+import { MIRROR_OUTPUTS } from './local-bubble-mirror-outputs';
 
-export const LOCAL_BUBBLE_BIN = defineSource({
-  file: `data/local-bubble/${PUBLIC_FILES.localBubble}`,
+export const LOCAL_BUBBLE_MIRROR = mirrorSource({
+  dir: 'data/local-bubble',
   hint: 'Regenerate it offline with `pnpm run build:local-bubble`.',
-  parse: (input) => input.path,
+  outputs: MIRROR_OUTPUTS,
 });

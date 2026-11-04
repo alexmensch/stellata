@@ -1,7 +1,8 @@
 // Every pull and bake in the step table, each with the files it writes. See README.md#the-step-table--stepsts.
 
-import { CHUNK_PATTERN } from '../../dust/sync-dust-pure';
-import { DUST_MANIFEST, PUBLIC_FILES } from '../../../src/catalog-format/public-artifacts/public-artifacts';
+import {
+  DUST_CHUNK, DUST_MANIFEST, PUBLIC_FILES, TEXTURE_MEMBERS,
+} from '../../../src/catalog-format/public-artifacts/public-artifacts';
 import type { OutputFamily } from '../../util/emit-artifacts';
 import { publicRepoPath } from '../../util/paths';
 import type { ManualStep } from './step-table-pure';
@@ -49,7 +50,7 @@ export const MANUAL_STEPS: readonly ManualStep[] = [
   tsPull('fetch:probes', 'scripts/probes/fetch-probe-trajectories.ts', 'scripts/probes/probe-trajectory-outputs.ts', 'PROBE_OUTPUTS'),
   tsPull('fetch:ephemerides', 'scripts/ephemerides/fetch-planet-elements.ts', 'scripts/ephemerides/planet-element-outputs.ts', 'ELEMENT_TABLE_OUTPUTS'),
   bake('build:dust', 'scripts/dust/build-dust.py', [`data/dust/${DUST_MANIFEST}`], {
-    families: [{ dir: 'data/dust', member: CHUNK_PATTERN, stamped: true }],
+    families: [{ dir: 'data/dust', member: DUST_CHUNK, stamped: true }],
   }),
   bake('build:local-bubble', 'scripts/local-bubble/build-local-bubble.py', [`data/local-bubble/${PUBLIC_FILES.localBubble}`]),
   bake('build:cloud-surfaces', 'scripts/cloud-surfaces/build-cloud-surfaces.py', [`data/molecular-clouds/${PUBLIC_FILES.cloudSurfaces}`], { describes: true }),
@@ -59,9 +60,9 @@ export const MANUAL_STEPS: readonly ManualStep[] = [
     'src/client/solar-system/planets/textures/texture-ladder-generated.ts',
   ], {
     families: [
-      textures('', /^[a-z]+-\d+\.jpg$/),
-      textures('', /^[a-z]+-rings\.png$/),
-      textures('/relief', /^[a-z]+-(normal|skyview|horizon-[ab])\.webp$/),
+      textures('', TEXTURE_MEMBERS.colourMap),
+      textures('', TEXTURE_MEMBERS.ringStrip),
+      textures('/relief', TEXTURE_MEMBERS.reliefMap),
     ],
   }),
   bake('build:icons', 'scripts/icons/build-icons.py', [

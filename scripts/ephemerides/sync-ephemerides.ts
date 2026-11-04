@@ -1,10 +1,7 @@
-// Mirrors data/ephemerides/ (committed element tables) → public/ephemerides/
-// (gitignored) so Vite + the Cloudflare static-asset build serve them.
+// `pnpm run build:ephemerides-sync`: the committed data/ copy → public/. See ../util/README.md (mirror-to-public.ts).
 
-import { mirrorDataFolder } from '../util/mirror-to-public';
-import { publicRepoPath } from '../util/paths';
-import { PUBLIC_FOLDERS } from '../../src/catalog-format/public-artifacts/public-artifacts';
-
+import { runStep } from '../util/emit-artifacts';
+import { mirror } from '../util/mirror-to-public';
 import { EPHEMERIDES_MIRROR } from './ephemerides-mirror-source';
 
-mirrorDataFolder(EPHEMERIDES_MIRROR.read(), { dstDir: publicRepoPath(PUBLIC_FOLDERS.ephemerides), label: 'planet element table' });
+runStep(() => mirror(EPHEMERIDES_MIRROR.read()));

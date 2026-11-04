@@ -282,28 +282,30 @@ same thing — single-use helpers stay with their consumer.
 - `frozen-json.ts` — `serializeRowFile` (one sample array per line, so a
   thousand-row artifact still diffs sample-by-sample in git), shared by the
   probe-trajectory and planet-element emitters.
-- `mirror-to-public.ts` (+ test) — `mirrorDataFolder(folder, spec)`, the one
-  `data/<folder>/` → `public/<folder>/` copy used by
-  `scripts/{dust,textures,probes,ephemerides}/sync-*.ts`. `mirrorSource`
-  declares the mirrored folder as a folder source (`sources/`): every
-  allowlisted file is a member, so each is presence-checked and a file
-  added to the folder joins the step's inputs.
-  Each folder's constant lives in its `*-mirror-source.ts`. A missing
-  source folder or an unsmudged LFS file fails the sync rather than
-  shipping an empty or stub layer. Mtime+size skip for up-to-date files; **allowlist**, never denylist, because Vite copies
-  `public/` wholesale — anything left in the destination ships, so the
-  mirror also purges non-allowlisted strays a previous sync left behind.
-  `flattenSubDirs` copies named subfolders of the source into the same
-  flat destination, which is how a data folder groups big artifacts at
-  rest without moving them in `public/` — so no consumer URL changes when
-  it does (`data/textures/relief/`). Names must stay unique across all of
-  them: the allowlist is by name, and the purge pass cannot tell two
-  same-named files apart.
-  `tests/bundle-content.test.ts` asserts the built tree against the same
-  predicates. `syncFile(src, dst)` is the one size-and-mtime skip-or-copy:
-  the folder mirror's loop and the two single-file copies
-  (`sync-local-bubble.ts`, `sync-cloud-surfaces.ts`, each reading its binary
-  through a declared source beside it) all call it.
+- `mirror-to-public.ts` (+ test) — `mirror(folder)`, the one `data/` →
+  `public/` copy, which every `build:<layer>-sync` step runs
+  (`scripts/<layer>/sync-<layer>.ts`; `steps.ts`'s `MIRROR_STEPS`: dust,
+  probes, ephemerides, local-bubble, cloud-surfaces, textures). What a
+  mirror ships is its `<layer>-mirror-outputs.ts` declaration and nothing
+  else: a family per pattern-named or rostered folder, a file per fixed
+  name (the dust manifest, `local-bubble.bin`, `cloud-surfaces.bin`).
+  `mirrorSource` declares the data folder (`sources/`) with the
+  declaration as its **allowlist** (`declaresName`), never a denylist, so
+  each copied file is presence-checked and a file added to the folder joins
+  the step's inputs; a single file is an allowlist of one. A missing source
+  folder, a declared file missing from it, or an unsmudged LFS file fails
+  the step rather than shipping an empty or stub layer. The copy is one
+  `emitArtifacts` emission, so a family member the source lost is deleted;
+  the runner's stamp decides when it runs. Vite copies `public/` wholesale,
+  so every family folder is the mirror's alone and `strays(outputs)` — any
+  undeclared name in one — is purged after the copy; a mirror family at
+  `public/` itself would purge the whole folder, which is why the
+  single-file mirrors declare files. `flattenSubDirs` copies named
+  subfolders of the source into the same flat destination, which is how a
+  data folder groups big artifacts at rest without moving them in
+  `public/` (`data/textures/relief/`). Names must stay unique across all of
+  them: the copy is by name. `tests/bundle-content.test.ts` asserts
+  `strays` is empty for every mirror over the built tree.
 
 ## CI heap budget
 

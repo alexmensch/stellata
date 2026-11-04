@@ -51,8 +51,8 @@ scripts/util/sources/
   on an `openDeclared` call outside `source.ts`.
 
 **A folder source** (`defineFolder({dir, hint, include, subDirs?, parse})`)
-is a folder whose present files are the input: the SID bridges and the four
-mirrored data folders. Its presence check is that the folder exists; its
+is a folder whose present files are the input: the SID bridges and the six
+mirrors' data folders. Its presence check is that the folder exists; its
 members are the listing (`include` over `dir` and each `subDirs` folder),
 each presence-checked, and `files()` is that listing alone — no README or
 other anchor file joins the input set, and a file added to the folder

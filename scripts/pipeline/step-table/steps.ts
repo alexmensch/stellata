@@ -3,8 +3,19 @@
 import { MANUAL_STEPS } from './manual-step-outputs';
 import { PUBLIC_FILES } from '../../../src/catalog-format/public-artifacts/public-artifacts';
 import { publicRepoPath } from '../../util/paths';
-import type { StepTable } from './step-table-pure';
+import type { StepTable, TsBuildStep } from './step-table-pure';
 import { registryPaths, REGISTRY_PARTITIONS } from '../../../src/catalog-format/pipeline-outputs/data-files';
+
+/** A `data/<layer>` → `public/` copy: `scripts/<layer>/sync-<layer>.ts` over its `<layer>-mirror-outputs.ts`. */
+const mirror = (layer: string): TsBuildStep => ({
+  name: `build:${layer}-sync`,
+  kind: 'build',
+  language: 'ts',
+  entry: `scripts/${layer}/sync-${layer}.ts`,
+  outputs: { module: `scripts/${layer}/${layer}-mirror-outputs.ts`, name: 'MIRROR_OUTPUTS' },
+});
+
+export const MIRROR_STEPS: readonly TsBuildStep[] = ['dust', 'probes', 'ephemerides', 'local-bubble', 'cloud-surfaces', 'textures'].map(mirror);
 
 export const STEPS: StepTable = {
   steps: [
@@ -89,6 +100,7 @@ export const STEPS: StepTable = {
       entry: 'scripts/local-group/build-local-group.ts',
       outputs: { module: 'scripts/local-group/local-group-outputs.ts', name: 'LOCAL_GROUP_OUTPUTS' },
     },
+    ...MIRROR_STEPS,
     ...MANUAL_STEPS,
   ],
   registryFiles: REGISTRY_PARTITIONS.flatMap((p) => [registryPaths(p).ledger, registryPaths(p).events]),

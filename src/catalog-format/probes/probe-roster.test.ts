@@ -1,22 +1,6 @@
 import { describe, it, expect } from 'vitest';
 
 import { PROBE_MISSIONS } from './probe-roster';
-import { rosterFileName } from '../public-artifacts/public-artifacts';
-import { isProbePublicAsset } from './sync-probes-pure';
-
-describe('isProbePublicAsset', () => {
-  it('ships every roster trajectory', () => {
-    for (const probe of PROBE_MISSIONS) {
-      expect(isProbePublicAsset(rosterFileName(probe.id))).toBe(true);
-    }
-  });
-
-  it('keeps folder docs and strays out of the bundle', () => {
-    for (const name of ['README.md', 'cassini.json', 'voyager1.json.bak', 'voyager1']) {
-      expect(isProbePublicAsset(name)).toBe(false);
-    }
-  });
-});
 
 describe('PROBE_MISSIONS', () => {
   it('covers the five Sun-escape probes with unique ids', () => {

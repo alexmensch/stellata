@@ -1,10 +1,10 @@
-// The committed cloud isosurface meshes the sync copies, declared.
+// The data/ file build:cloud-surfaces-sync copies, declared.
 
-import { defineSource } from '../util/sources/source';
-import { PUBLIC_FILES } from '../../src/catalog-format/public-artifacts/public-artifacts';
+import { mirrorSource } from '../util/mirror-to-public';
+import { MIRROR_OUTPUTS } from './cloud-surfaces-mirror-outputs';
 
-export const CLOUD_SURFACES_BIN = defineSource({
-  file: `data/molecular-clouds/${PUBLIC_FILES.cloudSurfaces}`,
+export const CLOUD_SURFACES_MIRROR = mirrorSource({
+  dir: 'data/molecular-clouds',
   hint: 'Regenerate it offline with `pnpm run build:cloud-surfaces`.',
-  parse: (input) => input.path,
+  outputs: MIRROR_OUTPUTS,
 });

@@ -43,10 +43,12 @@ function globRegExp(pattern: string): RegExp {
   return new RegExp(`^${pattern.split('*').map(escapeRegExp).join('[^/]*')}$`);
 }
 
+/** A bare `*` covers a whole family; any other pattern, the family whose member its `*`s read as `0` name. */
 function covers(outputs: StepOutputs, pattern: string): boolean {
   const glob = globRegExp(pattern);
+  const name = basename(pattern);
   return outputs.files.some((file) => glob.test(file))
-    || outputs.families.some((f) => f.dir === dirname(pattern) && isMemberName(f, basename(pattern).replaceAll('*', '0')));
+    || outputs.families.some((f) => f.dir === dirname(pattern) && (name === '*' || isMemberName(f, name.replaceAll('*', '0'))));
 }
 
 const seedOutputs = (): StepOutputs[] => seedSteps.map((step) => outputsOf.get(step)!);

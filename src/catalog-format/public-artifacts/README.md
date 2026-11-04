@@ -12,12 +12,17 @@ drift from the URL its reader fetches.
   `local-bubble.bin`, `cloud-surfaces.bin`, `clouds.json`,
   `local-group.json`.
 - `PUBLIC_FOLDERS` — the mirrored folders: `dust/`, `probes/`,
-  `ephemerides/`, `textures/`. What each mirror copies is its own allowlist
-  (`isProbePublicAsset`, `isPlanetElementPublicAsset`, the dust and texture
-  predicates).
+  `ephemerides/`, `textures/`. What each mirror copies is its own output
+  declaration (`scripts/<layer>/<layer>-mirror-outputs.ts`), built from the
+  names here.
 - `DUST_MANIFEST` — the dust folder's index, `dust/manifest.json`: the one
-  folder member with a fixed name, so the dust allowlist, the grid's source
-  declaration and the dust loader all import it from here.
+  folder member with a fixed name, so the dust mirror, the grid's source
+  declaration and the dust loader all import it from here. `DUST_CHUNK` is
+  the chunk name pattern, the family both the dust bake and its mirror
+  declare.
+- `TEXTURE_MEMBERS` — the three texture name patterns (colour-map rungs,
+  ring strips, relief maps): the texture bake's families under
+  `data/textures/` and the mirror's under `public/textures/`.
 - `rosterFileName(id)` — a rostered folder member's name: each probe
   trajectory and planet element table, over its roster's ids, the one name
   the fetch writes, the mirror copies and the loader fetches.
@@ -27,8 +32,6 @@ Owned elsewhere, by the contract they belong to:
 - **The catalogue** — `catalog-manifest.json` and the `catalog.bin.<i>`
   chunks are part of the chunk-reassembly contract,
   [`../record/README.md`](../record/README.md#on-disk-transport-chunking).
-- **Pattern-named mirror members** — a dust chunk or texture, by its
-  mirror's member pattern.
 - **`data/` inputs** — the committed file a sync copies is a source
   declaration (`scripts/*/…-source.ts`); where a mirror keeps the public
   name, that declaration builds its path from the name here.

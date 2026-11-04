@@ -14,6 +14,6 @@ provenance and frame/unit facts are `data/probes/README.md`.
 - `probe-trajectory-schema.ts` — `ProbeTrajectoryFile` +
   `PROBE_SAMPLE_COLUMNS`, the wire contract shared by the emitter and the
   runtime loader.
-- `sync-probes-pure.ts` (+ test) — the mirror's allowlist predicate,
-  `isProbePublicAsset`. Each trajectory's name is `rosterFileName(id)`
+- `probe-roster.test.ts` pins the roster: five probes, unique ids, launch
+  and contact order. Each trajectory's name is `rosterFileName(id)`
   ([`../public-artifacts/`](../public-artifacts/README.md)).

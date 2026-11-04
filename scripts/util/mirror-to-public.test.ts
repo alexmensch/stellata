@@ -1,28 +1,45 @@
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, utimesSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { join, relative } from 'node:path';
 import { afterAll, describe, expect, it } from 'vitest';
 
-import { syncFile } from './mirror-to-public';
+import { declareOutputs } from './emit-artifacts';
+import { mirror, mirrorSource, strays } from './mirror-to-public';
 import { REPO_ROOT } from './paths';
 
 mkdirSync(join(REPO_ROOT, 'build'), { recursive: true });
-const dir = mkdtempSync(join(REPO_ROOT, 'build', 'mirror-test-'));
-afterAll(() => rmSync(dir, { recursive: true, force: true }));
+const root = mkdtempSync(join(REPO_ROOT, 'build', 'mirror-test-'));
+afterAll(() => rmSync(root, { recursive: true, force: true }));
 
-describe('syncFile', () => {
-  it('copies a new or changed file and skips one already in place', () => {
-    const src = join(dir, 'src.bin');
-    const dst = join(dir, 'dst.bin');
-    writeFileSync(src, 'abc');
-    expect(syncFile(src, dst)).toBe('copied');
-    expect(syncFile(src, dst)).toBe('up-to-date');
+const data = join(root, 'fixture-source');
+const pub = join(root, 'public');
+mkdirSync(join(data, 'sub'), { recursive: true });
+const outputs = declareOutputs({ index: join(pub, 'index.json') }, [{ dir: pub, member: /^part-\d\.bin$/, stamped: true }]);
+const source = mirrorSource({ dir: relative(REPO_ROOT, data), hint: 'test', outputs, flattenSubDirs: ['sub'] });
 
-    writeFileSync(src, 'abcd');
-    expect(syncFile(src, dst)).toBe('copied');
-    expect(readFileSync(dst, 'utf8')).toBe('abcd');
+describe('mirror', () => {
+  it('copies the declared files flat, drops members the source lost, and purges strays', () => {
+    writeFileSync(join(data, 'index.json'), '{}');
+    writeFileSync(join(data, 'part-1.bin'), 'one');
+    writeFileSync(join(data, 'sub', 'part-2.bin'), 'two');
+    writeFileSync(join(data, 'README.md'), 'not shipped');
+    mkdirSync(pub, { recursive: true });
+    writeFileSync(join(pub, 'part-9.bin'), 'stale member');
+    writeFileSync(join(pub, 'notes.txt'), 'stray');
 
-    const later = new Date(Date.now() + 60_000);
-    utimesSync(src, later, later);
-    expect(syncFile(src, dst)).toBe('copied');
+    mirror(source.read());
+
+    expect(readFileSync(join(pub, 'index.json'), 'utf8')).toBe('{}');
+    expect(readFileSync(join(pub, 'part-2.bin'), 'utf8')).toBe('two');
+    expect(existsSync(join(pub, 'part-9.bin'))).toBe(false);
+    expect(existsSync(join(pub, 'notes.txt'))).toBe(false);
+    expect(existsSync(join(pub, 'README.md'))).toBe(false);
+    expect(strays(outputs)).toEqual([]);
+  });
+
+  it('refuses a source missing a declared file, writing nothing', () => {
+    rmSync(join(data, 'index.json'));
+    writeFileSync(join(data, 'part-1.bin'), 'changed');
+    expect(() => mirror(source.read())).toThrow(/declared, not emitted/);
+    expect(readFileSync(join(pub, 'part-1.bin'), 'utf8')).toBe('one');
   });
 });

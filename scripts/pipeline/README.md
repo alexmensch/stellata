@@ -2,12 +2,10 @@
 
 One model of the build pipeline: a typed table of steps, a runner that orders
 and gates them, and the content stamp as the only freshness test. This README
-is the design; [Files](#files) maps it onto the code. `step-table/steps.ts` holds the
-catalogue chain's `build` steps (`steps.test.ts` pins their order and edges)
-and every pull and bake (`MANUAL_STEPS`, each run by hand through
-`record.ts`, the two Horizons fetchers among them); every other `build` step
-still runs through its own `package.json` target until it moves onto the
-table.
+is the design; [Files](#files) maps it onto the code. `step-table/steps.ts` holds every
+`build` step (`steps.test.ts` pins their order and edges; `MIRROR_STEPS`
+the six mirrors) and every pull and bake (`MANUAL_STEPS`, each run by hand
+through `record.ts`, the two Horizons fetchers among them).
 
 ## The model
 
@@ -77,9 +75,6 @@ re-hashes every manual step's record (`data/` is about 1.5 GB) and starts each
 Python pull's `--describe` on every run; the runner core quotes a no-op data
 phase before and after, warm and cold, on that machine and on a GitHub Actions
 runner, which is much slower, and optimises only if that number warrants it.
-Every mtime
-gate goes: `build:clouds`, `build:local-group`, the mirrors and
-`refresh_lib.is_up_to_date`.
 
 A **pull's stamp** adds three fields:
 

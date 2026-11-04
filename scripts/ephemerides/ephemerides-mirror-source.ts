@@ -1,10 +1,10 @@
-// The planet element tables the mirror serves, declared.
+// The data/ files build:ephemerides-sync copies, declared.
 
 import { mirrorSource } from '../util/mirror-to-public';
-import { isPlanetElementPublicAsset } from '../../src/catalog-format/ephemerides/sync-ephemerides-pure';
+import { MIRROR_OUTPUTS } from './ephemerides-mirror-outputs';
 
 export const EPHEMERIDES_MIRROR = mirrorSource({
   dir: 'data/ephemerides',
   hint: 'Re-run `pnpm run fetch:ephemerides`.',
-  isPublicAsset: isPlanetElementPublicAsset,
+  outputs: MIRROR_OUTPUTS,
 });

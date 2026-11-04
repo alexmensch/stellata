@@ -1,30 +1,26 @@
 // Deployed-bundle content guard: no source-tree docs/scripts may leak
-// into public/ (and thence dist/) via sync scripts that mirror data/
-// folders. Self-skips when public/ hasn't been built (bare CI test job).
+// into public/ (and thence dist/) via the mirror steps. Self-skips when
+// public/ hasn't been built (bare CI test job).
 
-import { existsSync, readdirSync } from 'node:fs';
-import { basename, join, resolve } from 'node:path';
+import { existsSync } from 'node:fs';
+import { basename, resolve } from 'node:path';
 
 import { describe, it, expect } from 'vitest';
 
 import { walkFiles } from './walk-files';
 
-import { isDustPublicAsset } from '../scripts/dust/sync-dust-pure';
-import { isPlanetElementPublicAsset } from '../src/catalog-format/ephemerides/sync-ephemerides-pure';
-import { isProbePublicAsset } from '../src/catalog-format/probes/sync-probes-pure';
-import { isTexturePublicAsset } from '../scripts/textures/sync-textures-pure';
+import { MIRROR_STEPS } from '../scripts/pipeline/step-table/steps';
+import type { DeclaredOutputs } from '../scripts/util/emit-artifacts';
+import { strays } from '../scripts/util/mirror-to-public';
+import { REPO_ROOT } from '../scripts/util/paths';
 import { STAGING_SUFFIX } from '../scripts/util/staged-write';
 
 const PUBLIC_DIR = resolve(__dirname, '..', 'public');
 const DIST_DIR = resolve(__dirname, '..', 'dist');
-// One row per mirrored folder; the predicate is the same one
-// scripts/util/mirror-to-public.ts syncs and purges with.
-const MIRRORED_FOLDERS: Array<[string, (name: string) => boolean]> = [
-  ['dust', isDustPublicAsset],
-  ['textures', isTexturePublicAsset],
-  ['probes', isProbePublicAsset],
-  ['ephemerides', isPlanetElementPublicAsset],
-];
+const MIRRORS = await Promise.all(MIRROR_STEPS.map(async ({ name, outputs }): Promise<[string, DeclaredOutputs]> => [
+  name,
+  (await import(resolve(REPO_ROOT, outputs.module)) as Record<string, DeclaredOutputs>)[outputs.name],
+]));
 const FORBIDDEN_EXTENSIONS = ['.md', '.txt', '.py', '.ts'];
 // Committed .txt assets that are meant to ship (crawler signals).
 const ALLOWED_SHIPPED = new Set(['robots.txt']);
@@ -47,10 +43,7 @@ describe.skipIf(!existsSync(PUBLIC_DIR))('deployed bundle content (public/)', ()
     expect(offenders).toEqual([]);
   });
 
-  it.each(MIRRORED_FOLDERS)('public/%s/ holds only allowlisted assets', (folder, isAllowed) => {
-    const dir = join(PUBLIC_DIR, folder);
-    if (!existsSync(dir)) return;
-    const offenders = readdirSync(dir).filter((name) => !isAllowed(name));
-    expect(offenders).toEqual([]);
+  it.each(MIRRORS)('%s\'s folders hold only its declared outputs', (_name, outputs) => {
+    expect(strays(outputs)).toEqual([]);
   });
 });

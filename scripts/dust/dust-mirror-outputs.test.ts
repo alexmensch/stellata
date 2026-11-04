@@ -1,8 +1,11 @@
 import { describe, it, expect } from 'vitest';
 
-import { isDustPublicAsset } from './sync-dust-pure';
+import { declaresName } from '../util/mirror-to-public';
+import { MIRROR_OUTPUTS } from './dust-mirror-outputs';
 
-describe('sync-dust / isDustPublicAsset', () => {
+const isDustPublicAsset = (name: string): boolean => declaresName(MIRROR_OUTPUTS, name);
+
+describe('dust mirror outputs', () => {
   it('allows the runtime-consumed artifacts', () => {
     expect(isDustPublicAsset('manifest.json')).toBe(true);
     expect(isDustPublicAsset('chunk_0_0_0.bin')).toBe(true);

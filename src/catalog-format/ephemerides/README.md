@@ -22,6 +22,5 @@ Provenance, units and the measured accuracy are `data/ephemerides/README.md`.
   re-reads its own output through it to measure the accuracy it claims
   ([Cadence](/scripts/ephemerides/README.md#cadence)), so the measured
   sampler and the shipped one are the same code.
-- `sync-ephemerides-pure.ts` — the mirror's allowlist predicate,
-  `isPlanetElementPublicAsset`. Each table's name is `rosterFileName(id)`
+- Each table's name is `rosterFileName(id)`
   ([`../public-artifacts/`](../public-artifacts/README.md)).

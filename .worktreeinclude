@@ -6,6 +6,12 @@ public/search-index.json
 public/binaries.bin
 public/clouds.json
 public/local-group.json
+public/local-bubble.bin
+public/cloud-surfaces.bin
+public/dust/*
+public/probes/*
+public/ephemerides/*
+public/textures/*
 build/catalog-row-index-map.json
 build/binding-integrity-verdicts.tsv
 build/stamps/build-binaries.json
@@ -18,4 +24,10 @@ build/stamps/build-catalog.json
 build/stamps/build-binaries-runtime.json
 build/stamps/build-clouds.json
 build/stamps/build-local-group.json
+build/stamps/build-dust-sync.json
+build/stamps/build-probes-sync.json
+build/stamps/build-ephemerides-sync.json
+build/stamps/build-local-bubble-sync.json
+build/stamps/build-cloud-surfaces-sync.json
+build/stamps/build-textures-sync.json
 build/lineage/*
