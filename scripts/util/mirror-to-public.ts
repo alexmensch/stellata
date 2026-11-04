@@ -38,7 +38,7 @@ export function mirrorSource(spec: MirrorSourceSpec): Source<MirroredFolder> {
   });
 }
 
-/** Absolute. A mirror family at public/ itself would make every other public file a stray. */
+/** Absolute; `steps.test.ts` holds each family folder to its mirror alone. */
 export function strays(outputs: DeclaredOutputs): string[] {
   const owned = claimsOf(outputs);
   return [...new Set(outputs.families.map((f) => f.dir))]

@@ -1,7 +1,7 @@
 // The real step table loads, orders and stales as README.md#the-step-table--stepsts says.
 
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
-import { join, relative, resolve } from 'node:path';
+import { dirname, join, relative, resolve } from 'node:path';
 import { beforeAll, describe, expect, it } from 'vitest';
 
 import { MULTIPLES_TSV } from '../../binaries/multiples-tsv';
@@ -9,7 +9,7 @@ import { CNS5 as CNS5_SOURCE } from '../../catalog/classic-ids/cns5-source';
 import { REASON_CODES } from '../../catalog/lineage/reason-codes-tsv';
 import { MEMBERSHIP_MANIFEST } from '../../catalog/membership/membership-manifest-tsv';
 import { packageScripts } from '../../util/import-closure';
-import { lfsContentReadable, publicFile, REPO_ROOT } from '../../util/paths';
+import { lfsContentReadable, publicFile, PUBLIC_DIR, REPO_ROOT } from '../../util/paths';
 import { PUBLIC_FILES } from '../../../src/catalog-format/public-artifacts/public-artifacts';
 import { entryInputPaths } from '../../util/step-inputs';
 import { describeStep } from '../freshness';
@@ -17,7 +17,7 @@ import { loadTable, type Loaded } from './load-table';
 import { MANUAL_STEPS } from './manual-step-outputs';
 import { pipelineTree } from '../pipeline-tree';
 import { describesItself, isBuild, selectSteps, type Edge, type ReadsEdge } from './step-table-pure';
-import { STEPS } from './steps';
+import { MIRROR_STEPS, STEPS } from './steps';
 
 const CNS5 = CNS5_SOURCE.file;
 const MANIFEST = resolve(REPO_ROOT, MEMBERSHIP_MANIFEST.file);
@@ -75,6 +75,20 @@ describe('the step table', () => {
     const selected = selectSteps(loaded.graph, ['build:binaries-runtime']);
     expect(selected.indexOf('build:catalog')).toBeLessThan(selected.indexOf('build:binaries-runtime'));
     expect(selected).toEqual(expect.arrayContaining(['build:binaries', 'build:membership', 'build:catalog']));
+  });
+
+  it('gives each mirror its family folders alone, none of them public/ itself', () => {
+    const shared = MIRROR_STEPS.flatMap(({ name }) => {
+      const owned = new Set(loaded.steps.get(name)!.outputs.families.map((f) => f.dir));
+      const others = [...loaded.steps.values()].filter(({ step }) => step.name !== name);
+      return [
+        ...[...owned].filter((dir) => dir === resolve(REPO_ROOT, PUBLIC_DIR)).map((dir) => `${name} owns ${dir}`),
+        ...others.flatMap(({ step, outputs }) => [...outputs.files.map(dirname), ...outputs.families.map((f) => f.dir)]
+          .filter((dir) => owned.has(dir))
+          .map((dir) => `${step.name} writes into ${name}'s ${relative(REPO_ROOT, dir)}`)),
+      ];
+    });
+    expect(shared).toEqual([]);
   });
 
   it('stales build:membership and build:catalog on an edit to cns5.tsv, membership first', () => {

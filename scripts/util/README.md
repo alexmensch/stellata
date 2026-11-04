@@ -324,7 +324,8 @@ same thing — single-use helpers stay with their consumer.
   so every family folder is the mirror's alone and `strays(outputs)` — any
   undeclared name in one — is purged after the copy; a mirror family at
   `public/` itself would purge the whole folder, which is why the
-  single-file mirrors declare files. `flattenSubDirs` copies named
+  single-file mirrors declare files; `steps.test.ts` holds every mirror's family
+  folders to that mirror alone, none of them `public/` itself. `flattenSubDirs` copies named
   subfolders of the source into the same flat destination, which is how a
   data folder groups big artifacts at rest without moving them in
   `public/` (`data/textures/relief/`). Names must stay unique across all of
