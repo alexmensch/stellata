@@ -4,7 +4,7 @@ import { dirname, join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import {
-  changedSince, clearStamp, fileHashes, readStamp, writeStamp, type FileHashes,
+  changedSince, clearStamp, fileHashes, inputHashes, readStamp, recordedInputs, writeStamp, type FileHashes,
 } from './build-stamp';
 
 describe('build-stamp', () => {
@@ -19,7 +19,7 @@ describe('build-stamp', () => {
     const now: FileHashes = fileHashes(inputs.length > 0 ? inputs : [input]);
     return recorded !== null
       && JSON.stringify(recorded.inputs) === JSON.stringify(now)
-      && changedSince(recorded.outputs).length === 0;
+      && changedSince(recorded.outputs, fileHashes).length === 0;
   };
 
   beforeEach(() => {
@@ -81,7 +81,7 @@ describe('build-stamp', () => {
     write();
     writeFileSync(output, 'built by another commit');
     expect(current()).toBe(false);
-    expect(changedSince(readStamp(stamp)!.outputs)).toHaveLength(1);
+    expect(changedSince(readStamp(stamp)!.outputs, fileHashes)).toHaveLength(1);
   });
 
   it('reads a stamp without recorded outputs as no stamp', () => {
@@ -118,5 +118,16 @@ describe('build-stamp', () => {
     expect(existsSync(stamp)).toBe(false);
     expect(readStamp(stamp)).toBeNull();
     expect(() => clearStamp(stamp)).not.toThrow();
+  });
+
+  it('keys a recorded code read by identity, unless its bytes moved after the read', () => {
+    const code = join(dir, 'model.py');
+    writeFileSync(code, 'X = 1\n');
+    const read = fileHashes([code], dir);
+    expect(recordedInputs(read, dir)).toEqual(inputHashes([code], dir));
+    writeFileSync(code, 'X = 2\n');
+    const edited = recordedInputs(read, dir);
+    expect(edited).toEqual(read);
+    expect(changedSince(edited, inputHashes, dir)).toEqual(['model.py']);
   });
 });

@@ -172,6 +172,30 @@ export const OUT = declareOutputs({ out: ${JSON.stringify(at('fetched.json'))} }
     expect(Object.keys(stamp(step.name).inputs)).toEqual(['roster.json']);
   });
 
+  it('hashes a TypeScript step\'s inputs before it runs, so an input edited mid-run reads stale', async () => {
+    write('roster.json', '["a"]');
+    write('steps/fetch.ts', `
+import { writeFileSync } from 'node:fs';
+if (process.argv.includes('--describe')) console.log(JSON.stringify({ query: 'Q', services: ['ssd.jpl.nasa.gov'] }));
+else { writeFileSync(${JSON.stringify(at('roster.json'))}, '["b"]'); writeFileSync(${JSON.stringify(at('fetched.json'))}, 'rows'); }
+`);
+    write('steps/fetch-outputs.ts', `
+import { declareOutputs } from ${JSON.stringify(join(REPO_ROOT, 'scripts/util/emit-artifacts'))};
+export const OUT = declareOutputs({ out: ${JSON.stringify(at('fetched.json'))} });
+`);
+    const step: ManualStep = {
+      name: 'fetch:x', kind: 'pull', language: 'ts', entry: at('steps/fetch.ts'),
+      outputs: { module: at('steps/fetch-outputs.ts'), name: 'OUT' },
+    };
+    const loaded = await loadTable({ steps: [step], registryFiles: [] }, { root, deriveInputs: async () => [] });
+    if (loaded.kind !== 'loaded') throw new Error(loaded.problems.join('; '));
+    const deriveInputs = async () => [at('roster.json')];
+    expect((await recordStep(loaded, { root, step: step.name, force: false, args: [], deriveInputs, log: () => {} })).kind).toBe('recorded');
+    const tree = pipelineTree(root);
+    expect(manualFreshness(step, { files: [at('fetched.json')], families: [] }, tree, manualDescription(step, tree)))
+      .toEqual({ kind: 'stale', changed: ['roster.json'] });
+  });
+
   it('keeps a bake\'s code among its inputs', async () => {
     write('helper.py', 'VALUE = 1\n');
     write('src.png', 'pixels');
@@ -186,6 +210,29 @@ Path(${JSON.stringify(at('baked.bin'))}).write_bytes(Path(${JSON.stringify(at('s
     await record([step], step.name);
     expect(Object.keys(stamp(step.name).inputs).sort()).toEqual(['helper.py', 'src.png', 'steps/bake.py']);
     write('helper.py', 'VALUE = 2\n');
+    expect(fresh(step)).toBe('stale');
+  });
+
+  it('leaves a bake fresh across comment and docstring edits to the Python it imports and the TypeScript it reads', async () => {
+    write('model.py', 'def scale(x):\n    return x * 2\n');
+    write('ladder.ts', 'export const LADDER = [1, 2];\n');
+    write('steps/bake.py', `
+import sys
+from pathlib import Path
+sys.path.insert(0, ${JSON.stringify(root)})
+import model
+rungs = Path(${JSON.stringify(at('ladder.ts'))}).read_text().split("[")[1].split("]")[0]
+Path(${JSON.stringify(at('baked.bin'))}).write_text(f"{model.scale(1)} {rungs}")
+`);
+    const step: ManualStep = { name: 'build:bake', kind: 'bake', describes: false, language: 'python', entry: at('steps/bake.py'), outputs: [at('baked.bin')] };
+    await record([step], step.name);
+    write('model.py', '"""Cloud model."""\n\n# Doubles.\ndef scale(x):\n    """Twice x."""\n    return x * 2  # exact\n');
+    write('ladder.ts', '/** Rungs. */\nexport const LADDER = [1, 2]; // generated\n');
+    expect(fresh(step)).toBe('fresh');
+    write('ladder.ts', 'export const LADDER = [1, 3];\n');
+    expect(fresh(step)).toBe('stale');
+    write('ladder.ts', 'export const LADDER = [1, 2];\n');
+    write('model.py', 'def scale(x):\n    return x * 3\n');
     expect(fresh(step)).toBe('stale');
   });
 });

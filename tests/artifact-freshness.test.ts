@@ -16,7 +16,7 @@ import { describe, it, expect } from 'vitest';
 
 import { REPO_ROOT, publicFile } from '../scripts/util/paths';
 import { isReadable } from '../scripts/util/sources/source';
-import { changedSince, readStamp } from '../scripts/util/build-stamp';
+import { changedSince, fileHashes, inputHashes, readStamp } from '../scripts/util/build-stamp';
 import { stampPath } from '../scripts/util/stamp-path-pure';
 import { MULTIPLES_TSV } from '../scripts/binaries/multiples-tsv';
 import { STEPS } from '../scripts/pipeline/step-table/steps';
@@ -50,7 +50,7 @@ describe.skipIf(skip)('built-artifact coherence (public/ + build/)', () => {
       const recorded = readStamp(BINARIES_BIN_STAMP);
       expect(recorded, `${BINARIES_BIN_STAMP} is missing — rebuild with: ${REBUILD}`).not.toBeNull();
       expect(
-        changedSince({ ...recorded?.inputs, ...recorded?.outputs }),
+        [...changedSince(recorded?.inputs ?? {}, inputHashes), ...changedSince(recorded?.outputs ?? {}, fileHashes)],
         `public/binaries.bin is stale against these files — rebuild with: ${REBUILD}`,
       ).toEqual([]);
     },

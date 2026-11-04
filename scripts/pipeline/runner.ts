@@ -3,7 +3,7 @@
 import { existsSync } from 'node:fs';
 
 import {
-  clearStamp, fileHashes, listingHashes, writeStamp, type FileHashes, type RecordedReads,
+  clearStamp, inputHashes, listingHashes, recordedInputs, writeStamp, type FileHashes, type RecordedReads,
 } from '../util/build-stamp';
 import { PIPELINE_STEP_ENV, UPDATE_SNAPSHOTS_ENV } from '../util/snapshot-check';
 import {
@@ -41,7 +41,7 @@ const blocks = (v: Verdict): boolean => v.kind === 'stale' || v.kind === 'failed
 
 function rehashed(inputs: FileHashes, paths: readonly string[] | 'all', tree: PipelineTree): FileHashes {
   const keys = paths === 'all' ? Object.keys(inputs) : paths.map(tree.rel).filter((k) => k in inputs);
-  return { ...inputs, ...fileHashes(keys.map(tree.abs), tree.root) };
+  return { ...inputs, ...inputHashes(keys.map(tree.abs), tree.root) };
 }
 
 class Run {
@@ -99,7 +99,7 @@ class Run {
   private async build(resolved: ResolvedStep, step: BuildStep): Promise<Verdict> {
     const { tree } = this;
     const stampFile = tree.buildStamp(step.name);
-    const inputs = step.language === 'ts' ? fileHashes([...resolved.reads], tree.root) : {};
+    const inputs = step.language === 'ts' ? inputHashes([...resolved.reads], tree.root) : {};
     const freshness: Freshness = step.language === 'ts'
       ? derivedFreshness(stampFile, resolved.outputs, inputs, tree)
       : recordedFreshness(stampFile, resolved.outputs, tree);
@@ -121,7 +121,7 @@ class Run {
     const snapshots = step.snapshots.map(tree.abs);
     const problems = recordProblems(resolved, snapshots, run, this.loaded.steps.values(), this.graph);
     if (problems.length > 0) return { kind: 'failed', reason: problems.join('; ') };
-    return this.land(stampFile, resolved, rehashed(tree.rekey(run.reads), run.writes, tree), {
+    return this.land(stampFile, resolved, rehashed(recordedInputs(tree.rekey(run.reads), tree.root), run.writes, tree), {
       listings: tree.rekey(listingHashes(run.listings, tree.root)),
       probes: tree.rekey(run.probes),
     });
