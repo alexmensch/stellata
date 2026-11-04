@@ -50,4 +50,14 @@ describe('Python identity', () => {
   it('changes with any executed token', () => {
     expect(pyIdentity(base.replace('+ 1', '+ 2'))).not.toBe(pyIdentity(base));
   });
+
+  it('keys a file tokenize rejects by its bytes, apart from every identity, without failing the batch', () => {
+    const good = join(dir, 'good.py');
+    const bad = join(dir, 'bad.py');
+    writeFileSync(good, base);
+    writeFileSync(bad, 'def f():\n    """unterminated\n');
+    const ids = codeIdentities([good, bad]);
+    expect(ids[good]).toBe(pyIdentity(base));
+    expect(ids[bad]).toMatch(/^raw:[0-9a-f]{40}$/);
+  });
 });

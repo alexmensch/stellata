@@ -121,7 +121,10 @@ same thing — single-use helpers stay with their consumer.
   standard library's `tokenize` (`python3 -I -S`, one process per batch):
   comments and non-logical newlines dropped, indentation as structure only,
   and a logical line of nothing but plain string literals (a docstring, or
-  any bare string statement) dropped; an f-string is never such a line.
+  any bare string statement) dropped; an f-string is never such a line. A
+  file `tokenize` rejects (a half-edited input) keys as `raw:` plus its
+  bytes hash, which no identity equals, so its steps read stale and the rest
+  of the batch still hashes.
   Changing either normaliser changes every recorded code identity, so it
   re-keys the committed `data/stamps/` records in the same commit.
 - `import-closure.ts` / `import-closure-pure.ts` (+ test) — a TypeScript

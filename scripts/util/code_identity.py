@@ -19,6 +19,13 @@ def _is_bare_string(line: list[tokenize.TokenInfo]) -> bool:
 
 
 def identity(source: bytes) -> str:
+    try:
+        return _token_identity(source)
+    except (tokenize.TokenError, SyntaxError):
+        return "raw:" + hashlib.sha1(source).hexdigest()
+
+
+def _token_identity(source: bytes) -> str:
     kept: list[str] = []
     line: list[tokenize.TokenInfo] = []
     for tok in tokenize.tokenize(io.BytesIO(source).readline):
