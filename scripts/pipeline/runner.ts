@@ -121,7 +121,7 @@ class Run {
     const snapshots = step.snapshots.map(tree.abs);
     const problems = recordProblems(resolved, snapshots, run, this.loaded.steps.values(), this.graph);
     if (problems.length > 0) return { kind: 'failed', reason: problems.join('; ') };
-    return this.land(stampFile, resolved, rehashed(recordedInputs(run.reads, tree.root), run.writes, tree), {
+    return this.land(stampFile, resolved, rehashed(recordedInputs(tree.rekey(run.reads), tree.root), run.writes, tree), {
       listings: tree.rekey(listingHashes(run.listings, tree.root)),
       probes: tree.rekey(run.probes),
     });

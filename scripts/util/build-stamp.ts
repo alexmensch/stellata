@@ -61,10 +61,13 @@ export const inputHashes: Hasher = (paths, root = REPO_ROOT) => {
   return Object.fromEntries([...bytes, ...identities].sort(([a], [b]) => (a < b ? -1 : 1)));
 };
 
-/** A recorded run's reads, absolute path → bytes hash as `build_stamp.py` takes them, as input hashes. */
-export function recordedInputs(reads: Readonly<Record<string, string | null>>, root: string): FileHashes {
-  const code = Object.keys(reads).filter((p) => CODE_FILE.test(p) && reads[p] !== null);
-  return { ...Object.fromEntries(Object.entries(reads).map(([p, h]) => [relative(root, p), h])), ...inputHashes(code, root) };
+/** A recorded run's reads, hashed as bytes at first read, as input hashes. A code file
+ *  whose bytes moved since keeps its bytes hash, which no identity equals, so it reads stale. */
+export function recordedInputs(reads: FileHashes, root: string): FileHashes {
+  const code = Object.keys(reads).filter((k) => CODE_FILE.test(k) && reads[k] !== null).map((k) => resolve(root, k));
+  const now = fileHashes(code, root);
+  const unmoved = code.filter((p) => now[relative(root, p)] === reads[relative(root, p)]);
+  return { ...reads, ...inputHashes(unmoved, root) };
 }
 
 /** Absent, unparseable and pre-outputs stamps all read as null: no stamp to trust. */

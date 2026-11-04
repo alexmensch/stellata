@@ -69,7 +69,8 @@ same thing — single-use helpers stay with their consumer.
   sha1, `null` when absent, so an input's arrival is
   a change too. `inputHashes` is the same map with each code file hashed by
   its identity (`code-identity.ts`), and `recordedInputs` turns a Python run
-  record's reads into it. A stamp (`build/stamps/<step>.json`) records two
+  record's reads into it, keeping the first-read bytes hash of a code file
+  edited mid-run, which no identity equals, so the step reads stale. A stamp (`build/stamps/<step>.json`) records two
   maps: the inputs (`inputHashes`), hashed *before* the build, and every
   output the build wrote (`fileHashes`, bytes, so a generated `.ts` output
   whose comment moved still differs), hashed after it; `changedSince`

@@ -4,7 +4,7 @@ import { dirname, join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import {
-  changedSince, clearStamp, fileHashes, readStamp, writeStamp, type FileHashes,
+  changedSince, clearStamp, fileHashes, inputHashes, readStamp, recordedInputs, writeStamp, type FileHashes,
 } from './build-stamp';
 
 describe('build-stamp', () => {
@@ -118,5 +118,16 @@ describe('build-stamp', () => {
     expect(existsSync(stamp)).toBe(false);
     expect(readStamp(stamp)).toBeNull();
     expect(() => clearStamp(stamp)).not.toThrow();
+  });
+
+  it('keys a recorded code read by identity, unless its bytes moved after the read', () => {
+    const code = join(dir, 'model.py');
+    writeFileSync(code, 'X = 1\n');
+    const read = fileHashes([code], dir);
+    expect(recordedInputs(read, dir)).toEqual(inputHashes([code], dir));
+    writeFileSync(code, 'X = 2\n');
+    const edited = recordedInputs(read, dir);
+    expect(edited).toEqual(read);
+    expect(changedSince(edited, inputHashes, dir)).toEqual(['model.py']);
   });
 });

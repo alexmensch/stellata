@@ -58,7 +58,7 @@ function recordedReads(run: RunRecord, keep: (path: string) => boolean, tree: Pi
   const probes = pick(run.probes, keep);
   const any = Object.keys(listings).length + Object.keys(probes).length > 0;
   return {
-    inputs: recordedInputs(pick(run.reads, keep), tree.root),
+    inputs: recordedInputs(tree.rekey(pick(run.reads, keep)), tree.root),
     recorded: any ? { listings: tree.rekey(listingHashes(listings, tree.root)), probes: tree.rekey(probes) } : undefined,
     services: run.services,
   };
