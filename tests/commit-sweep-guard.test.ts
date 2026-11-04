@@ -126,7 +126,8 @@ describe('commit-sweep-guard — input larger than a pipe buffer, matched on lin
     git('add', '-A');
     git('commit', '-q', '-m', 'seed');
     write('src/thing/README.md', '# thing, updated\n');
-    for (let i = 0; i < 300; i++) write(`src/thing/${'z'.repeat(240)}${i}.ts`, `export const x${i} = 1;\n`);
+    write('src/thing/a.ts', 'export const x = 1;\n');
+    for (let i = 0; i < 300; i++) write(`zpad/${'z'.repeat(240)}${i}.txt`);
     git('add', '-A');
     expect(allowed('git commit -m "add many things"')).toBe(true);
   });
