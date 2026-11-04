@@ -109,7 +109,7 @@ wastes are what the cap lets a dusty distant one spend.
 knob, chosen on the sweep's tail above; what it costs is known and
 bounded. Measured 2026-09-19 at one commit over the five canon vantages
 (`.perf-runs/2026-09-19/8cg595-refill-off.json.gz` against
-`-refill-on.json`), the kernel splits roughly in half: a per-THREAD
+`-refill-on.json.gz`), the kernel splits roughly in half: a per-THREAD
 floor of ~0.6–0.8 ms at every vantage — the visibility gate's scattered
 reads, the position read, the write, the dispatch — read directly at
 `lg`, where the gate admits nothing and no tap is spent; and the march

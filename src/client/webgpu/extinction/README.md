@@ -324,7 +324,7 @@ dispatches a quarter of the slot space per frame, and the frustum returns the
 out-of-frame threads inside it. Every run quoted above predates 58.4's
 clipped march; **this tree's own figure is the same-commit pair at
 `1d5f934e`** (`.perf-runs/2026-09-19/poststack-refill-off.json.gz` and
-`-refill-on.json`, 960 frames, readback one in four): forced 0.452 / 0.587
+`-refill-on.json.gz`, 960 frames, readback one in four): forced 0.452 / 0.587
 / 0.507 / 0.393 / **0.923** against the compaction alone at 0.286 / 0.392
 / 0.390 / 0.306 / 0.693 (mw120 / sol / earth / mw50 / lg), so the refill
 costs 0.09–0.23 ms per forced frame — under the 0.25 ms band at every
