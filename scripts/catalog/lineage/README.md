@@ -250,9 +250,13 @@ passes `stageLineage` (`stage-lineage.ts`) a `LineageBudget`, and a run over
 it fails its emission. Membership, measured 2026-10-29 on the full tree:
 1,355,182 rows (128 MB plain, 15.1 MB gzipped) plus 976,040 identity rows
 (85 MB, 22.3 MB), 37.4 MB together. The timed window is everything lineage
-adds to the build — the baseline headers' file re-hash, the diff, rendering,
+adds to the build — the baseline headers' file re-hash, the merge-base input
+re-hash when a header from another commit asks for it, the diff, rendering,
 gzip and invariants: about 5.8 s with a diff
-against a full baseline. The header's input hash is not in it: a stage hands
+against a full baseline. The merge-base input re-hash measured 128 ms for
+membership on a branch where 9 of its 163 inputs differ (2026-11-04,
+`inputHashesAt` over `inputHashes(stepInputPaths('build:membership'))`); a
+changed 204 MB LFS input adds its own hash of the local object. The header's input hash is not in it: a stage hands
 `stageLineage` the input hashes its step computed for its own use. Each step
 hashes that set a second time after the runner hashed it for the stamp
 (`build:catalog` and `build:membership` both call `stepInputPaths`), until
@@ -294,7 +298,8 @@ every later build diffs against it and leaves it in place (`planBaseline`).
 Otherwise the stage's current `<stage>.tsv.gz` replaces
 `build/lineage.previous/<stage>.tsv.gz` in the same emitArtifacts commit
 that renames the stage's new file into place, and the build diffs against
-that last build if it is the merge-base's. A stage that fails, is skipped by
+that last build if it stands for the merge-base — built at it, or from the
+inputs it holds ([Choosing the baseline](baseline/README.md)). A stage that fails, is skipped by
 its content-hash stamp, or does not run (a standalone `build:membership`)
 leaves both its copies untouched. The baseline and diff families are
 declared unstamped (`stageFamilies`), so a step's stamp never records them
