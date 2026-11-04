@@ -16,8 +16,6 @@ import numpy as np
 
 ROOT = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(ROOT))
-sys.path.insert(0, str(ROOT / "scripts" / "clouds"))
-import cloud_model  # noqa: E402
 import edenhofer2024  # noqa: E402
 from scripts.util.baker_constants import CONSTANTS  # noqa: E402
 
@@ -25,10 +23,12 @@ from scripts.util.baker_constants import CONSTANTS  # noqa: E402
 GRID_SIZE = 512
 CHUNK_SIZE = 128
 CHUNKS_PER_AXIS = GRID_SIZE // CHUNK_SIZE   # 4
-BOUNDS_PC = cloud_model.DUST_GRID_HALF_EXTENT_PC  # half-extent; full cube is 2*bounds
+BOUNDS_PC = float(CONSTANTS["cloudModel"]["dustGridHalfExtentPc"])  # half-extent; full cube is 2*bounds
 VOXEL_SIZE_PC = 2.0 * BOUNDS_PC / GRID_SIZE  # ≈ 4.883
 AV_PER_EZGR = CONSTANTS["extinction"]["avPerEzgr"]
 MANIFEST_NAME = CONSTANTS["artifacts"]["dustManifest"]["fileName"]
+ZUCKER_PROFILED = CONSTANTS["artifacts"]["zuckerProfiled"]
+ZUCKER_PROFILED_PATH = ROOT / "data" / "molecular-clouds" / ZUCKER_PROFILED["fileName"]
 
 # Encoding params. DENSITY_MIN is fixed below the real-data noise floor;
 # DENSITY_MAX is a fixed ceiling covering the raw Edenhofer 2024
@@ -122,13 +122,13 @@ def main() -> int:
     return 0
 
 
-def _peak_column_av(voxels: np.ndarray, cloud, rot: np.ndarray,
+def _peak_column_av(voxels: np.ndarray, cloud: dict, rot: np.ndarray,
                     offset_step_pc: float = 2.0, n_samples: int = 201) -> float:
     """Peak A_V column through the raw grid across the cloud's bounding
     ellipsoid, along the local shortest axis (trilinear, trapezoid) —
     mirrors the shader's raymarch geometry."""
-    axes = np.array(cloud.axes_gal, dtype=np.float64)
-    center = np.array(cloud.center_icrs, dtype=np.float64)
+    axes = np.array(cloud["axesGalPc"], dtype=np.float64)
+    center = np.array(cloud["centreIcrsPc"], dtype=np.float64)
     k_min = int(np.argmin(axes))
     perp = [i for i in range(3) if i != k_min]
     s_min = float(axes.min())
@@ -171,23 +171,28 @@ def zucker_column_check(voxels: np.ndarray) -> dict:
     ceiling, consistent with 1 pc → 4.9 pc beam dilution of the Leike peaks
     (/docs/science-molecular-clouds.md#4-per-cloud-density-model--the-presence-pass-field).
     Also asserts the encode ceiling covers the data."""
-    cm = cloud_model
-    rot = np.array(cm.GAL_TO_ICRS, dtype=np.float64)
+    profiled = json.loads(ZUCKER_PROFILED_PATH.read_text())
+    if profiled["version"] != ZUCKER_PROFILED["version"]:
+        sys.exit(f"{ZUCKER_PROFILED_PATH.relative_to(ROOT)} is version {profiled['version']}, "
+                 f"expected {ZUCKER_PROFILED['version']}: run `pnpm run build:clouds`.")
+    rot = np.array(profiled["galToIcrs"], dtype=np.float64)
     report: list[dict] = []
-    for cloud in cm.profiled_clouds():
+    for cloud in profiled["clouds"]:
+        name = cloud["name"]
+        target = cloud["avColumnTarget"]
         peak_av = _peak_column_av(voxels, cloud, rot)
-        ratio = peak_av / cloud.av_column_target
+        ratio = peak_av / target
         report.append({
-            "cloud": cloud.raw_name,
-            "avColumnTargetLeike": round(cloud.av_column_target, 3),
+            "cloud": name,
+            "avColumnTargetLeike": round(target, 3),
             "avPeakColumnEdenhofer": round(peak_av, 3),
             "ratio": round(ratio, 3),
         })
-        print(f"  zucker-check {cloud.raw_name:12} peak column "
-              f"{peak_av:5.2f} / target {cloud.av_column_target:5.2f} mag "
+        print(f"  zucker-check {name:12} peak column "
+              f"{peak_av:5.2f} / target {target:5.2f} mag "
               f"({ratio:4.2f}x)", file=sys.stderr)
         assert ratio >= 0.03, \
-            f"{cloud.raw_name}: peak column {peak_av:.2f} mag is <3% of the " \
+            f"{name}: peak column {peak_av:.2f} mag is <3% of the " \
             f"Leike target — encoding or resample regression"
 
     grid_max = float(voxels.max())
