@@ -316,6 +316,15 @@ describe('perf-section-check', () => {
       expect(check(tier1, RENDER).code).toBe(0);
     });
 
+    it('reads a section larger than a pipe buffer', () => {
+      const PIPE_BUFFER_BYTES = 65_536;
+      const row = ' ~  sol|webgpu    gpu-p50   21.8  21.9  0.1  0.250';
+      const rows = Array<string>(Math.ceil((2 * PIPE_BUFFER_BYTES) / row.length)).fill(row);
+      const r = check(section('Tier 2 — the catalogue changed.', ...rows), RENDER);
+      expect(r.code, r.stdout).toBe(0);
+      expect(r.stdout).toContain('every ✗ accepted');
+    });
+
     it('does not count a row key in prose as a table row', () => {
       const r = check(section('Tier 2; mw50|webgpu is the row most likely to move.'), RENDER);
       expect(r.code, r.stdout).toBe(1);
