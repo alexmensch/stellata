@@ -1,12 +1,13 @@
 import { describe, it, expect } from 'vitest';
 
 import { PROBE_MISSIONS } from './probe-roster';
-import { isProbePublicAsset, probeTrajectoryFilename } from './sync-probes-pure';
+import { rosterFileName } from '../public-artifacts/public-artifacts';
+import { isProbePublicAsset } from './sync-probes-pure';
 
 describe('isProbePublicAsset', () => {
   it('ships every roster trajectory', () => {
     for (const probe of PROBE_MISSIONS) {
-      expect(isProbePublicAsset(probeTrajectoryFilename(probe.id))).toBe(true);
+      expect(isProbePublicAsset(rosterFileName(probe.id))).toBe(true);
     }
   });
 

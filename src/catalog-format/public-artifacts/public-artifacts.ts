@@ -25,3 +25,6 @@ export const PUBLIC_FOLDERS = {
 } as const;
 
 export const DUST_MANIFEST = DUST_MANIFEST_SCHEMA.fileName;
+
+/** A rostered folder member's name: a probe trajectory, a planet element table. */
+export const rosterFileName = (id: string): string => `${id}.json`;
