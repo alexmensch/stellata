@@ -68,7 +68,9 @@ same thing — single-use helpers stay with their consumer.
   repo-relative path (relative to a passed root, the runner's tree) to its
   sha1, `null` when absent, so an input's arrival is
   a change too; `hashBytes` is the same hash over bytes still in memory, which
-  the lineage header records for the files it is emitted with. A stamp (`build/stamps/<step>.json`) records two such maps:
+  the lineage header records for the files it is emitted with, and
+  `listingHash` and `../pipeline/freshness.ts`'s query and request hashes
+  are taken with. A stamp (`build/stamps/<step>.json`) records two such maps:
   the inputs, hashed *before* the build, and every output the build wrote,
   hashed after it; `changedSince` re-hashes a recorded map, so an output
   rewritten by anything other than this build — an older commit's build, a
