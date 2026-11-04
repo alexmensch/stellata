@@ -7,6 +7,7 @@ import { chmodSync, existsSync, mkdtempSync, readFileSync, realpathSync, rmSync,
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { pastPipeBuffer } from './pipe-buffer';
 
 const HOOK = resolve(__dirname, '../scripts/hooks/prime-guard.sh');
 const SESSION = 'sess-abc123';
@@ -132,8 +133,7 @@ describe('prime-guard PreToolUse', () => {
   // and grep must read a whole line before matching; multi-line input past a
   // pipe buffer is where that pipe fails on every run.
   it('still finds the sentinel at the head of a tool input larger than a pipe buffer', () => {
-    const padding = Array<string>(20_000).fill('echo padding').join('\n');
-    expect(preToolUse('Bash', { command: `rm -f ${sentinel()}\n${padding}` }).allowed).toBe(true);
+    expect(preToolUse('Bash', { command: pastPipeBuffer(`rm -f ${sentinel()}`) }).allowed).toBe(true);
   });
 });
 

@@ -8,6 +8,7 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { PERF_GO_MAX_AGE_S } from '../scripts/perf/arming/perf-go-lib';
+import { pastPipeBuffer } from './pipe-buffer';
 
 const HOOK = resolve(__dirname, '../scripts/hooks/perf-guard.sh');
 
@@ -180,14 +181,12 @@ describe('perf-guard', () => {
   // one line, since grep must read a whole line before matching. Multi-line
   // input past a pipe buffer is where that pipe fails open on every run.
   describe('a command larger than a pipe buffer, matched on line 1', () => {
-    const padded = (first: string): string => [first, ...Array<string>(20_000).fill('echo padding')].join('\n');
-
     it('still denies an unarmed launch', () => {
-      expect(denied(padded('pnpm run perf'))).toBe(true);
+      expect(denied(pastPipeBuffer('pnpm run perf'))).toBe(true);
     });
 
     it('still denies naming the marker', () => {
-      expect(decision(bash(padded('touch .perf-go'))).reason).toMatch(/Only Alex creates/);
+      expect(decision(bash(pastPipeBuffer('touch .perf-go'))).reason).toMatch(/Only Alex creates/);
     });
   });
 

@@ -7,6 +7,7 @@ import { mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from 'nod
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { pastPipeBuffer } from './pipe-buffer';
 
 const HOOK = resolve(__dirname, '../scripts/hooks/commit-sweep/commit-sweep-guard.sh');
 
@@ -112,16 +113,14 @@ describe('commit-sweep-guard', () => {
 // the rest of input this long, so a pipe into grep -q fails here on every
 // run rather than when load happens to lose the race.
 describe('commit-sweep-guard — input larger than a pipe buffer, matched on line 1', () => {
-  const padding = Array<string>(20_000).fill('more message body').join('\n');
-
   it('still sweeps a commit whose command runs long', () => {
     stageStaleChange();
-    expect(allowed(`git commit -m "add a thing\n${padding}"`)).toBe(false);
+    expect(allowed(`git commit -m "${pastPipeBuffer('add a thing')}"`)).toBe(false);
   });
 
   it('still honours a skip tag at the head of a long message', () => {
     stageStaleChange();
-    expect(allowed(`git commit -m "add a thing ${SKIP_REASON}\n${padding}"`)).toBe(true);
+    expect(allowed(`git commit -m "${pastPipeBuffer(`add a thing ${SKIP_REASON}`)}"`)).toBe(true);
   });
 
   it('still finds a staged README among a long staged list', () => {

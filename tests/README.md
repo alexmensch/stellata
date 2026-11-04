@@ -294,6 +294,9 @@ doc-pointer-pure.ts      Not a test — extraction, anchor collection, path
                          resolution and the scanned corpus, shared by
                          doc-pointer-resolution.test.ts and
                          citation-index.test.ts.
+pipe-buffer.ts           Not a test — `pastPipeBuffer`, multi-line input
+                         longer than any pipe buffer, for the hook suites'
+                         pipefail cases.
 git-fixture.ts           Not a test — `gitIn` and `commitFile`, a throwaway
                          repo's git runner and one-file commit, for suites
                          that drive a script over real history.
