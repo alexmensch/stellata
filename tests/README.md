@@ -158,8 +158,9 @@ page-teardown-contract.test.ts
                          read). Flag and pass cases for both.
 pipefail-early-reader.test.ts
                          No scripts/**/*.sh that sets pipefail, or is
-                         sourced by one that does, pipes into
-                         grep -q, head, or an awk program containing exit.
+                         sourced by one that does, pipes into a reader
+                         that can exit early: grep -q / -m, head, awk
+                         exit, sed q.
                          README.md#pipefail-early-readers below.
 perf-guard.test.ts       Behavioural pins for scripts/hooks/perf-guard.sh's
                          two gates: every launch spelling denied unarmed and
@@ -513,8 +514,8 @@ the side that happens to compute it first.
 ## Pipefail early readers
 
 Under `set -o pipefail`, a pipeline fails if any stage does. A reader that
-exits before its input ends (`grep -q` at its first match, `head`, an awk
-`exit`) closes the pipe while the writer may still be writing; the writer
+exits before its input ends (`grep -q` at its first match, `grep -m N` at
+its Nth, `head`, an awk `exit`, a sed `q`) closes the pipe while the writer may still be writing; the writer
 dies of SIGPIPE, the pipeline returns 141, and an `if` reads a match as no
 match. Whether it happens depends on size: grep has to read a whole line
 before it can match, so one line of any length is safe, while multi-line

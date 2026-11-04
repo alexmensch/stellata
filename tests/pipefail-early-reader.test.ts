@@ -12,13 +12,16 @@ const PIPE = String.raw`(?<!\|)\|(?!\|)&?\s*(?:\\\n\s*)?`;
 const QUOTED = String.raw`'[^']*'|"(?:\\.|[^"\\])*"`;
 const GREP_ARGS = new RegExp(String.raw`${PIPE}grep\b((?:${QUOTED}|[^'"\n|;&)])*)`, 'g');
 const QUIET_FLAG = /(?:^|\s)(?:-[a-zA-Z0-9]*q[a-zA-Z0-9]*|--quiet|--silent)(?=\s|$)/;
+const MAX_COUNT_FLAG = /(?:^|\s)(?:-[a-zA-Z]*m[0-9]*|--max-count(?:=\S*)?)(?=\s|$)/;
+const SED_ARGS = new RegExp(String.raw`${PIPE}sed\b((?:${QUOTED}|[^'"\n|;&)])*)`, 'g');
+const SED_QUIT = /(?:^|[\s;{}\/0-9$])[qQ][0-9]*\s*(?=[;}]|$)/m;
 const HEAD = new RegExp(String.raw`${PIPE}head\b`, 'g');
 const AWK_PROGRAM = new RegExp(String.raw`${PIPE}awk\b[^'\n]*'([^']*)'`, 'g');
 const SETS_PIPEFAIL = /^\s*set\s+(?:-[a-zA-Z]+\s+)*-[a-zA-Z]*o\s+pipefail\b/m;
 
 interface Offence {
   readonly line: number;
-  readonly reader: 'grep -q' | 'head' | 'awk exit';
+  readonly reader: 'grep -q' | 'grep -m' | 'head' | 'awk exit' | 'sed q';
 }
 
 function lineOf(src: string, index: number): number {
@@ -31,6 +34,11 @@ function earlyReaderPipes(script: string): Offence[] {
   for (const m of src.matchAll(GREP_ARGS)) {
     const flags = m[1].replace(new RegExp(QUOTED, 'g'), ' ');
     if (QUIET_FLAG.test(flags)) out.push({ line: lineOf(src, m.index), reader: 'grep -q' });
+    else if (MAX_COUNT_FLAG.test(flags)) out.push({ line: lineOf(src, m.index), reader: 'grep -m' });
+  }
+  for (const m of src.matchAll(SED_ARGS)) {
+    const words = m[1].replace(/['"]/g, ' ');
+    if (SED_QUIT.test(words)) out.push({ line: lineOf(src, m.index), reader: 'sed q' });
   }
   for (const m of src.matchAll(HEAD)) out.push({ line: lineOf(src, m.index), reader: 'head' });
   for (const m of src.matchAll(AWK_PROGRAM)) {
@@ -74,6 +82,13 @@ describe('earlyReaderPipes', () => {
     ['printf "%s" "$x" |& grep -q foo', 'grep -q'],
     ['printf "%s" "$x" | grep "-q" -q', 'grep -q'],
     ['jq -r . | tr "\\n" " " | grep -qF "$s"', 'grep -q'],
+    ['printf "%s" "$x" | grep -m1 foo', 'grep -m'],
+    ['printf "%s" "$x" | grep -m 1 foo', 'grep -m'],
+    ['printf "%s" "$x" | grep -Em1 foo', 'grep -m'],
+    ['printf "%s" "$x" | grep --max-count=1 foo', 'grep -m'],
+    ['printf "%s" "$x" | sed -n "1p;q"', 'sed q'],
+    ['printf "%s" "$x" | sed -n \'/a/{s//b/p;q;}\'', 'sed q'],
+    ['printf "%s" "$x" | sed 5q', 'sed q'],
     ['sed -n p "$f" | head -1', 'head'],
     ['x="$(printf "%s" "$c" \\\n  | sed -n p \\\n  | head -1)"', 'head'],
     ['done < <(printf "%s" "$s" | awk -v k="$k" \'\n  $1 == k { print; exit }\n\')', 'awk exit'],
@@ -88,6 +103,11 @@ describe('earlyReaderPipes', () => {
     'printf "%s" "$x" | grep -E "a|b" > out',
     'printf "%s" "$x" | grep -E " -q" > out',
     'printf "%s" "$x" | grep -c foo; other -q',
+    'printf "%s" "$x" | grep -E "-m1" > out',
+    'printf "%s" "$x" | sed \'s/q/x/\'',
+    'printf "%s" "$x" | sed -E \'s/quit/x/g\'',
+    'printf "%s" "$x" | sed -n \'s/a/\\1/p\'',
+    'x=$(sed -n \'/a/{p;q;}\' <<< "$s")',
     'printf "%s" "$x" | awk \'{ print $1 }\'',
     'printf "%s" "$x" | header',
     '  # never printf | grep -q, never | head -1',
