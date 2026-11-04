@@ -11,7 +11,10 @@ scripts/perf/diff/
                           an invalid comparison. The buffer, record-count,
                           position, readback and precondition refusals are
                           exported because `--against-pin` applies the same
-                          ones. The floors under the band: `../floors/`.
+                          ones, and so is `judgedMove` — delta, band,
+                          columns and verdict off a row's two judged sides
+                          (`../dwell/README.md#cpu-and-gpu-apart`). The
+                          floors under the band: `../floors/`.
 ```
 
 ## Reading the table

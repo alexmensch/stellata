@@ -1,16 +1,16 @@
 import { describe, expect, it } from 'vitest';
 
 import type { EventRow } from './events-pure';
-import { registryPaths } from './registry-outputs';
-import {
-  CATALOG_PARTITION, partitionOf, REGISTRY_PARTITIONS, registryHint, type RegistryPartition,
-} from './registry-partitions-pure';
+import { partitionOf, registryHint } from './registry-partitions-pure';
 import { SIBLING_ARTIFACTS } from './sibling-artifacts-pure';
 import {
   registryAppendOnly, unionLedger, unionLedgerLines, validateRegistry, type PartitionLines, type PartitionRows,
 } from './registry-pure';
 import { computeLedgerHead, LEDGER_HEADER, type LedgerHead, type LedgerRow } from './sid-pure';
 import { EVENT_COLUMNS } from './events-pure';
+import {
+  CATALOG_PARTITION, REGISTRY_PARTITIONS, registryPaths, type RegistryPartition,
+} from '../../src/catalog-format/pipeline-outputs/data-files';
 
 const row = (sid: number, canonicalKey: string, kind: LedgerRow['kind'] = 'star'): LedgerRow => (
   { sid, canonicalKey, kind, firstSeen: '2026-07-10' }

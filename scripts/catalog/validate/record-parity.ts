@@ -3,9 +3,9 @@
 
 import { resolve } from 'node:path';
 import { readCatalogBuffer } from '../catalog-lookup';
-import { DEFAULT_CATALOG_MANIFEST } from '../catalog-paths-pure';
 import { CATALOG_MANIFEST_FILENAME } from '../../../src/catalog-format/record/catalog-pure';
 import { compareRecordParity, formatParityReport, parityHolds } from './record-parity-pure';
+import { publicFile } from '../../util/paths';
 
 function argValue(name: string): string | null {
   const hit = process.argv.find((a) => a.startsWith(`--${name}=`));
@@ -23,7 +23,7 @@ const [baseline, current] = await Promise.all([
   readCatalogBuffer(resolve(baselineDir, CATALOG_MANIFEST_FILENAME)),
   readCatalogBuffer(
     currentDir === null
-      ? DEFAULT_CATALOG_MANIFEST
+      ? publicFile(CATALOG_MANIFEST_FILENAME)
       : resolve(currentDir, CATALOG_MANIFEST_FILENAME),
   ),
 ]);

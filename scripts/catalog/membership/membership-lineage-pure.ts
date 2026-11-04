@@ -4,7 +4,6 @@ import { LABEL_DISPOSITIONS, type LabelDisposition, type LabelFlip } from '../cl
 import type { IdentityRow } from '../lineage/identity-pure';
 import type { DiffJoin } from '../lineage/lineage-diff-pure';
 import { lineageInvariant, NO_EXCEPTIONS, type LineageInvariant } from '../lineage/lineage-invariant-pure';
-import type { StageLineageSpec } from '../lineage/lineage-layout-pure';
 import { paramsOf, paramsText, type LineageParams, type LineageRow } from '../lineage/lineage-row-pure';
 import { LIVE, stageCodes, type CodeDeclaration } from '../lineage/reason-codes-pure';
 import type { GateReason } from './binding/binding-gate-pure';
@@ -13,14 +12,7 @@ import {
   type AdditionLedgerRow, type AdditionReason, type BindingReviewRow, type BindingReviewVerdict,
   type LabelDropReason, type LabelDropRow, type OwnCandidate, type OwnCandidateReason,
 } from './ledger-rows-pure';
-
-export const MEMBERSHIP_STAGE = 'membership';
-
-export const MEMBERSHIP_LINEAGE: StageLineageSpec<'membership' | 'identity', 'membership'> = {
-  stage: MEMBERSHIP_STAGE,
-  files: ['membership', 'identity'],
-  identity: 'identity',
-};
+import { MEMBERSHIP_LINEAGE } from '../../../src/catalog-format/pipeline-outputs/lineage-files';
 
 export const MEMBERSHIP_LINEAGE_BUDGET = { gzipBytes: 41_000_000, writeMs: 15_000 };
 
@@ -60,7 +52,7 @@ const LABEL_DROP_BRANCHES = {
   hd_unattested: 'label-drop.hd-unattested',
 } as const satisfies Record<LabelDropReason, string>;
 
-export const MEMBERSHIP_CODES = stageCodes(MEMBERSHIP_STAGE, {
+export const MEMBERSHIP_CODES = stageCodes(MEMBERSHIP_LINEAGE.stage, {
   'admit.spine': live('An AT-HYG spine row becomes a manifest row on the merge decision it records.'),
   fold: live('Review found the spine row duplicates another spine row; it folds onto that row and its SID merges into the survivor\'s.', 'merge'),
   'admit.hd-link-gap': live('An IV/25 Tycho-2 star with an HD below 100,000 that AT-HYG never linked is admitted.'),
@@ -217,7 +209,7 @@ function row<B extends Branch>(
   role: LineageRow['role'] = 'outcome',
 ): LineageRow {
   return {
-    stage: MEMBERSHIP_STAGE, key, role, code: MEMBERSHIP_CODES.code(branch),
+    stage: MEMBERSHIP_LINEAGE.stage, key, role, code: MEMBERSHIP_CODES.code(branch),
     params: paramsText(params as LineageParams), evidence,
   };
 }

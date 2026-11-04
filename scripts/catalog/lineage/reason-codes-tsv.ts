@@ -3,11 +3,10 @@
 import { byText, defineArtifact } from '../../util/tsv/artifact-pure';
 import { CODE_STATUSES, type ReasonCodeEntry } from './reason-code-list-pure';
 import { CODE_EFFECTS } from './reason-codes-pure';
-
-export const REASON_CODES_FILE = 'data/lineage/reason-codes.tsv';
+import { DATA_FILES } from '../../../src/catalog-format/pipeline-outputs/data-files';
 
 export const REASON_CODES = defineArtifact({
-  file: REASON_CODES_FILE,
+  file: DATA_FILES.reasonCodes,
   columns: ['code', 'stage', 'effect', 'status', 'retired_in', 'first_version', 'description'] as const,
   hint: 'Re-run `pnpm run lineage:codes`.',
   order: byText((e: ReasonCodeEntry) => e.code),

@@ -77,20 +77,22 @@ section=$(awk '
   /^## / && capture { exit }
   capture { print }
 ' "$body_file")
-stripped=$(printf '%s' "$section" | perl -0777 -pe 's/<!--.*?-->//gs')
+# Here-strings, never `printf | reader`: under pipefail a reader that stops
+# early (grep -q, awk's exit) SIGPIPEs the writer and the pipeline fails.
+stripped=$(perl -0777 -pe 's/<!--.*?-->//gs' <<< "$section")
 
-if ! printf '%s' "$stripped" | grep -qE '[^[:space:]]'; then
+if ! grep -qE '[^[:space:]]' <<< "$stripped"; then
   echo "::error::${reason} but the PR body has no non-empty '## Perf' section. Run the perf runner with --against-pin and paste its table — /RELEASING.md#perf-pin."
   exit 1
 fi
 
 # The first tier the section names is the one it claims; later mentions are
 # prose ("Tier 0, so no Tier 2 sweep").
-tier=$(printf '%s\n' "$stripped" | awk 'match($0, /Tier [0-2]/) { print substr($0, RSTART + 5, 1); exit }')
+tier=$(awk 'match($0, /Tier [0-2]/) { print substr($0, RSTART + 5, 1); exit }' <<< "$stripped")
 if [[ "$tier" == 1 || "$tier" == 2 ]]; then
-  rows=$(printf '%s\n' "$stripped" | awk -v key_re="$row_key" '
+  rows=$(awk -v key_re="$row_key" '
     ($1 == "✓" || $1 == "✗" || $1 == "~" || $1 == "·") && $2 ~ key_re { n++ }
-    END { print n + 0 }')
+    END { print n + 0 }' <<< "$stripped")
   if [ "$rows" -eq 0 ]; then
     echo "::error::${reason}; '## Perf' claims Tier ${tier} but carries no --against-pin table row. Paste the runner's table — /RELEASING.md#what-the-section-carries."
     exit 1
@@ -107,10 +109,10 @@ fi
 missing=()
 while IFS= read -r key; do
   [ -z "$key" ] && continue
-  if ! printf '%s\n' "$stripped" | awk -v k="$key" '$1 == "accepted:" && $2 == k { found=1 } END { exit !found }'; then
+  if ! awk -v k="$key" '$1 == "accepted:" && $2 == k { found=1 } END { exit !found }' <<< "$stripped"; then
     missing+=("$key")
   fi
-done < <(printf '%s\n' "$stripped" | awk -v key_re="$row_key" '
+done < <(awk -v key_re="$row_key" '
   { gsub(/`✗`/, "") }
   index($0, "✗") {
     named = 0
@@ -120,7 +122,7 @@ done < <(printf '%s\n' "$stripped" | awk -v key_re="$row_key" '
       if (f ~ key_re) { print f; named = 1 }
     }
     if (!named) print "<unnamed row on line " NR ">"
-  }')
+  }' <<< "$stripped")
 
 if [ ${#missing[@]} -gt 0 ]; then
   echo "::error::'## Perf' carries ✗ rows without an 'accepted: <row> <reason> (<bead-id>)' line: ${missing[*]}"

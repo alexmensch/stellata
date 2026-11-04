@@ -7,7 +7,6 @@ import { readFile } from 'node:fs/promises';
 import { beforeAll, describe, expect, it } from 'vitest';
 
 import { readCatalogBuffer } from '../../scripts/catalog/catalog-lookup';
-import { DEFAULT_CATALOG_MANIFEST, DEFAULT_CONSTELLATIONS_JSON } from '../../scripts/catalog/catalog-paths-pure';
 import buildCatalogExpected from '../../scripts/catalog/build-catalog-expected.json';
 import { peakAmplitudeFactor } from '../../src/client/camera/controls/star-geometry';
 import { STAR_RENDER_DEFAULTS, starPxSizes } from '../../src/client/filters/filter-state';
@@ -17,8 +16,11 @@ import { MIN_PHYSICAL_RADIUS_R_SUN, R_SUN_PC } from '../../src/astro-core/astron
 import { discWindowPc } from '../../src/client/star-pipeline/local-pass/star-local-cluster-pure';
 import { perceptualDiscExponent } from '../../src/client/star-pipeline/perceptual-disc/perceptual-disc-pure';
 import { DISC_EXPONENT_TOLERANCE, physSizeElisionBoundPx } from '../../src/client/star-pipeline/perceptual-disc/phys-size-elision-pure';
+import { publicFile } from '../../scripts/util/paths';
+import { CATALOG_MANIFEST_FILENAME } from '../../src/catalog-format/record/catalog-pure';
+import { PUBLIC_FILES } from '../../src/catalog-format/public-artifacts/public-artifacts';
 
-const skip = !existsSync(DEFAULT_CATALOG_MANIFEST);
+const skip = !existsSync(publicFile(CATALOG_MANIFEST_FILENAME));
 
 const FOV_DEG = 50;
 const FOV_Y_RAD = (FOV_DEG * Math.PI) / 180;
@@ -31,9 +33,9 @@ let catalog: Catalog;
 describe.skipIf(skip)('the physical-size elision over the built catalog', () => {
   beforeAll(async () => {
     const [ab, conText, manifestText] = await Promise.all([
-      readCatalogBuffer(DEFAULT_CATALOG_MANIFEST),
-      readFile(DEFAULT_CONSTELLATIONS_JSON, 'utf-8'),
-      readFile(DEFAULT_CATALOG_MANIFEST, 'utf-8'),
+      readCatalogBuffer(publicFile(CATALOG_MANIFEST_FILENAME)),
+      readFile(publicFile(PUBLIC_FILES.constellations), 'utf-8'),
+      readFile(publicFile(CATALOG_MANIFEST_FILENAME), 'utf-8'),
     ]);
     catalog = parseBinary(ab, JSON.parse(conText), JSON.parse(manifestText).sidSuccessors);
   }, 120000);
