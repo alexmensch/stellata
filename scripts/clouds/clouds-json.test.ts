@@ -52,7 +52,7 @@ const PROFILED_PINS: Record<
   orion: { cls: 'hii', n0Cal: 512.21, uEnv: 0.2229, massLeike: 856, akPeak: 0.22 },
 };
 
-describe.skipIf(!existsSync(CLOUDS_JSON))('clouds.json v3', () => {
+describe.skipIf(!existsSync(CLOUDS_JSON))('clouds.json', () => {
   const payload = existsSync(CLOUDS_JSON)
     ? (JSON.parse(readFileSync(CLOUDS_JSON, 'utf-8')) as {
         version: number;
