@@ -109,6 +109,8 @@ describe('loadClouds', () => {
       } satisfies Raw);
       expect(await loadClouds('/clouds.json')).toBeNull();
     }
+    mockFetch({ version: CLOUDS_JSON_SCHEMA.version, count: 1, clouds: [baseCloud] });
+    expect(await loadClouds('/clouds.json')).toBeNull();
     warn.mockRestore();
   });
 
