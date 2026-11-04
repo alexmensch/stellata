@@ -64,11 +64,13 @@ job restores that build's outputs and skips the stage — gates included,
 since the committed files they compare against are keyed too.
 
 **The key is every file the stage can read, digested by git blob id**, plus
-the Node version:
+the Node version. A code file is digested by its identity instead
+(`withCodeIdentities`, over `../util/build-stamp.ts`'s `inputHashes`), the
+same digest the local stamp records, so a comment-only edit hits the cache:
 
 - the TypeScript import closure of each entry, read from an esbuild
   metafile, so a new import is keyed without anyone listing it;
-- every tracked file beside a closure module except `.ts`, `.py` and `.md` — the
+- every tracked file beside a closure module except code and `.md` — the
   build reads its `*-expected.json` count snapshots by path, not by import.
   These two are `../util/import-closure.ts`, which the local catalogue stamp
   keys too;

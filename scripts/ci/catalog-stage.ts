@@ -4,7 +4,9 @@ import { execFileSync, spawnSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
+import { inputHashes } from '../util/build-stamp';
 import { entryClosure } from '../util/import-closure';
+import { CODE_FILE } from '../util/import-closure-pure';
 import { stepEntries } from '../util/step-inputs';
 import { PACKAGE_JSON, REPO_ROOT } from '../util/paths';
 import {
@@ -13,6 +15,7 @@ import {
   catalogCacheKey,
   keyedPaths,
   parseLsFilesStage,
+  withCodeIdentities,
   withVersionlessPackageJson,
 } from './catalog-stage-pure';
 
@@ -24,7 +27,9 @@ async function stageKeyInputs(): Promise<{ index: BlobIndex; paths: string[] }> 
     parseLsFilesStage(execFileSync('git', ['ls-files', '-s', '-z'], { cwd: REPO_ROOT, encoding: 'utf-8' })),
     readFileSync(resolve(REPO_ROOT, PACKAGE_JSON), 'utf-8'),
   );
-  return { index, paths: keyedPaths(closure, index) };
+  const paths = keyedPaths(closure, index);
+  const code = paths.filter((p) => CODE_FILE.test(p)).map((p) => resolve(REPO_ROOT, p));
+  return { index: withCodeIdentities(index, inputHashes(code, REPO_ROOT)), paths };
 }
 
 function runStage(): void {

@@ -32,7 +32,8 @@ const ALWAYS_KEYED_FILES = new Set([
 ]);
 const ALWAYS_KEYED_DIRS = ['data/', 'scripts/ci/'];
 
-/** Path → content digest: the git blob id, except `package.json` once `withVersionlessPackageJson` has run. */
+/** Path → content digest: the git blob id, except `package.json` once `withVersionlessPackageJson` has run
+ *  and each code file once `withCodeIdentities` has. */
 export type BlobIndex = ReadonlyMap<string, string>;
 
 /** `git ls-files -s -z` output → path → blob id. */
@@ -67,6 +68,13 @@ export function withVersionlessPackageJson(index: BlobIndex, packageJson: string
   const fields = JSON.parse(packageJson);
   delete fields.version;
   return new Map(index).set(PACKAGE_JSON, createHash('sha256').update(JSON.stringify(fields)).digest('hex'));
+}
+
+// see README.md#the-catalogue-build-cache
+export function withCodeIdentities(index: BlobIndex, identities: Readonly<Record<string, string | null>>): BlobIndex {
+  const keyed = new Map(index);
+  for (const [path, identity] of Object.entries(identities)) if (identity !== null) keyed.set(path, identity);
+  return keyed;
 }
 
 export function catalogCacheKey(index: BlobIndex, paths: readonly string[], nodeVersion: string): string {
