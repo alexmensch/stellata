@@ -5,7 +5,7 @@ import { resolve } from 'node:path';
 import { beforeAll, describe, expect, it } from 'vitest';
 
 import { REPO_ROOT, lfsContentReadable } from '../../../util/paths';
-import { MEMBERSHIP_MANIFEST, MEMBERSHIP_MANIFEST_FILE } from '../membership-manifest-tsv';
+import { MEMBERSHIP_MANIFEST } from '../membership-manifest-tsv';
 import { MAGNITUDE_PULL } from './magnitude-pull-source';
 import { readMagnitudeTerm, readMagnitudeTermAstrometry } from './magnitude-term';
 import {
@@ -17,7 +17,7 @@ import {
  *  MAGNITUDE_PULL_G_BOUND, which bounds the file rather than the term. */
 const GATE_FLOOR_V = 11;
 
-const MANIFEST_PATH = resolve(REPO_ROOT, MEMBERSHIP_MANIFEST_FILE);
+const MANIFEST_PATH = resolve(REPO_ROOT, MEMBERSHIP_MANIFEST.file);
 const readable = [resolve(REPO_ROOT, MAGNITUDE_PULL.file), MANIFEST_PATH].every(lfsContentReadable);
 
 describe.skipIf(!readable)('the floor over the committed pull', () => {

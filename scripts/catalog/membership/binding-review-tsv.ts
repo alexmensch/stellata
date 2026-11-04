@@ -8,14 +8,13 @@ import {
   bindingReviewKey,
   type BindingReviewRow,
 } from './ledger-rows-pure';
-
-export const BINDING_REVIEW_FILE = 'data/membership/binding-review.tsv';
+import { DATA_FILES } from '../../../src/catalog-format/pipeline-outputs/data-files';
 
 const byVerdict = byText((r: BindingReviewRow) => r.verdict);
 const byKey = byText(bindingReviewKey);
 
 export const BINDING_REVIEW = defineArtifact({
-  file: BINDING_REVIEW_FILE,
+  file: DATA_FILES.bindingReview,
   columns: BINDING_REVIEW_COLUMNS,
   hint: 'Re-run `pnpm run build:membership`.',
   order: (a: BindingReviewRow, b: BindingReviewRow) => compareSourceIds(a.derived_source_id, b.derived_source_id)

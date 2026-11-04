@@ -9,8 +9,8 @@ import { LEDGERS } from './ledger-tsv';
 import { readArtifact } from '../util/sources/source';
 import { retiredSids } from './events-pure';
 import { EVENTS } from './events-tsv';
-import { CATALOG_PARTITION } from './registry-partitions-pure';
 import { parseDesignation } from './sid-pure';
+import { CATALOG_PARTITION } from '../../src/catalog-format/pipeline-outputs/data-files';
 
 function main(): void {
   const ledger = readArtifact(LEDGERS[CATALOG_PARTITION]);

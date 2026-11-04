@@ -2,12 +2,12 @@ import { describe, expect, it } from 'vitest';
 
 import { SOL_OBJECTS } from '../../scripts/sid/object-mints-source';
 import { LEDGERS } from '../../scripts/sid/ledger-tsv';
-import { CATALOG_PARTITION } from '../../scripts/sid/registry-partitions-pure';
 import { loadRegistry } from '../../scripts/sid/registry-io';
 import { PROBE_MISSIONS } from '../../src/catalog-format/probes/probe-roster';
 import { SOL_BODIES } from '../../src/client/solar-system/planet-system';
 import { SOL_OBJECT_SIDS } from '../../src/client/solar-system/sol-object-sids';
 import { isReadable } from '../../scripts/util/sources/source';
+import { CATALOG_PARTITION } from '../../src/catalog-format/pipeline-outputs/data-files';
 
 const registry = isReadable(LEDGERS[CATALOG_PARTITION]) ? loadRegistry() : null;
 

@@ -11,9 +11,11 @@ import {
   ACCEPT_ANY_BASELINE_FLAG, AGAINST_FLAG, planBaseline, type BaselineSource,
 } from './lineage-header-pure';
 import { readStageHeader, stageEmission, stageHeader, streamLineage } from './lineage-io';
-import { stageFile, type LineageLayout, type StageLineageSpec, type StageOutputKey } from './lineage-layout-pure';
 import { invariantCheck, invariantViolations, type LineageInvariant } from './lineage-invariant-pure';
 import { sortLineageLines, type LineageLine } from './lineage-row-pure';
+import {
+  stageFile, type LineageLayout, type StageLineageSpec, type StageOutputKey,
+} from '../../../src/catalog-format/pipeline-outputs/lineage-files';
 
 /** The stage's measured cost, pinned so lineage cannot quietly grow. */
 export interface LineageBudget {

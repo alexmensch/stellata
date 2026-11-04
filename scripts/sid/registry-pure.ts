@@ -1,10 +1,11 @@
 // The registry across its partitions: their ledgers as one SID sequence, structural validation of the whole, and its append-only check. See README.md#registry-partitions.
 
 import { validateEvents, type EventRow } from './events-pure';
-import { CATALOG_PARTITION, inPartition, type RegistryPartition } from './registry-partitions-pure';
+import { inPartition } from './registry-partitions-pure';
 import {
   checkAppendOnly, EMPTY_HEAD_TRIPLE, isValidDesignation, parseDesignation, validateLedger, type LedgerHead, type LedgerRow,
 } from './sid-pure';
+import { CATALOG_PARTITION, type RegistryPartition } from '../../src/catalog-format/pipeline-outputs/data-files';
 
 export interface PartitionRows {
   partition: RegistryPartition;

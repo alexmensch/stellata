@@ -10,7 +10,6 @@ import { ROUTE_DISAGREEMENTS } from './route-disagreements-tsv';
 import { SAMEAS_OVERRIDES } from '../../sid/sameas-source';
 import { artifactRows, isReadable, readArtifact } from '../../util/sources/source';
 import { LEDGERS } from '../../sid/ledger-tsv';
-import { CATALOG_PARTITION } from '../../sid/registry-partitions-pure';
 import { INHERITED_SPINE } from '../spine/inherited-spine-tsv';
 import { BSC5 } from './bsc5-source';
 import {
@@ -18,6 +17,7 @@ import {
 } from './label-merge/label-merge-pure';
 import { LABEL_FLIPS } from './label-merge/label-flips-tsv';
 import { ROUTE_DISAGREEMENTS_REVIEW } from './route-disagreements-review-source';
+import { CATALOG_PARTITION } from '../../../src/catalog-format/pipeline-outputs/data-files';
 
 const IDENTITY_VERDICTS = new Set(['no-identity-event', 'merge', 'split']);
 

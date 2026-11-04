@@ -1,42 +1,39 @@
 // Every file build-catalog.ts writes: its emitArtifacts declaration. See README.md#files-in-this-area.
 
-import { dirname, resolve } from 'node:path';
+import { dirname } from 'node:path';
 
 import { declareOutputs } from '../util/emit-artifacts';
-import { REPO_ROOT } from '../util/paths';
+import { publicFile } from '../util/paths';
+import { CATALOG_CHUNK_FILENAME, CATALOG_MANIFEST_FILENAME } from '../../src/catalog-format/record/catalog-pure';
+import { BUILD_FILES } from '../../src/catalog-format/pipeline-outputs/build-files';
+import { DATA_FILES, registryFiles, CATALOG_PARTITION } from '../../src/catalog-format/pipeline-outputs/data-files';
+import { PUBLIC_FILES } from '../../src/catalog-format/public-artifacts/public-artifacts';
 import {
-  DEFAULT_BOUNDARIES, DEFAULT_CATALOG_MANIFEST, DEFAULT_CONSTELLATIONS_JSON, DEFAULT_ROW_INDEX_MAP, DEFAULT_SEARCH_INDEX,
-} from './catalog-paths-pure';
-import { PROMOTION_LINEAGE } from './companions/promotion-lineage-pure';
-import { PARKED_LEDGER } from './distance/parallax/parked-ledger-tsv';
-import { SIMBAD_SOURCED_DISTANCES_FILE } from './distance/parallax/simbad-sourced-ledger-tsv';
-import { PLACEMENT_LINEAGE } from './distance/placement-lineage-pure';
-import { LINEAGE_LAYOUT, stageFamilies, stageOutputFiles } from './lineage/lineage-layout-pure';
-import { CATALOG_CHUNK_FILENAME } from '../../src/catalog-format/record/catalog-pure';
-import { ALLOCATION_LINEAGE } from '../sid/allocation-lineage-pure';
-import { registryFiles } from '../sid/registry-outputs';
-import { CATALOG_PARTITION } from '../sid/registry-partitions-pure';
+  PROMOTION_LINEAGE, PLACEMENT_LINEAGE, LINEAGE_REPO_LAYOUT, stageFamilies, stageOutputFiles,
+  ALLOCATION_LINEAGE,
+} from '../../src/catalog-format/pipeline-outputs/lineage-files';
 
-export const CATALOG_CHUNK_DIR = dirname(DEFAULT_CATALOG_MANIFEST);
+const MANIFEST = publicFile(CATALOG_MANIFEST_FILENAME);
+export const CATALOG_CHUNK_DIR = dirname(MANIFEST);
 
 export const CATALOG_OUTPUTS = declareOutputs(
   {
-    manifest: DEFAULT_CATALOG_MANIFEST,
-    constellations: DEFAULT_CONSTELLATIONS_JSON,
-    boundaries: DEFAULT_BOUNDARIES,
-    searchIndex: DEFAULT_SEARCH_INDEX,
-    rowIndexMap: DEFAULT_ROW_INDEX_MAP,
-    parkedLedger: resolve(REPO_ROOT, PARKED_LEDGER.file),
-    simbadSourcedDistances: resolve(REPO_ROOT, SIMBAD_SOURCED_DISTANCES_FILE),
-    ...stageOutputFiles(LINEAGE_LAYOUT, PLACEMENT_LINEAGE),
-    ...stageOutputFiles(LINEAGE_LAYOUT, PROMOTION_LINEAGE),
-    ...stageOutputFiles(LINEAGE_LAYOUT, ALLOCATION_LINEAGE),
+    manifest: MANIFEST,
+    constellations: publicFile(PUBLIC_FILES.constellations),
+    boundaries: publicFile(PUBLIC_FILES.boundaries),
+    searchIndex: publicFile(PUBLIC_FILES.searchIndex),
+    rowIndexMap: BUILD_FILES.catalogRowIndexMap,
+    parkedLedger: DATA_FILES.parkedLedger,
+    simbadSourcedDistances: DATA_FILES.simbadSourcedDistances,
+    ...stageOutputFiles(LINEAGE_REPO_LAYOUT, PLACEMENT_LINEAGE),
+    ...stageOutputFiles(LINEAGE_REPO_LAYOUT, PROMOTION_LINEAGE),
+    ...stageOutputFiles(LINEAGE_REPO_LAYOUT, ALLOCATION_LINEAGE),
     ...registryFiles(CATALOG_PARTITION),
   },
   [
     { dir: CATALOG_CHUNK_DIR, member: CATALOG_CHUNK_FILENAME, stamped: true },
-    ...stageFamilies(LINEAGE_LAYOUT, PLACEMENT_LINEAGE),
-    ...stageFamilies(LINEAGE_LAYOUT, PROMOTION_LINEAGE),
-    ...stageFamilies(LINEAGE_LAYOUT, ALLOCATION_LINEAGE),
+    ...stageFamilies(LINEAGE_REPO_LAYOUT, PLACEMENT_LINEAGE),
+    ...stageFamilies(LINEAGE_REPO_LAYOUT, PROMOTION_LINEAGE),
+    ...stageFamilies(LINEAGE_REPO_LAYOUT, ALLOCATION_LINEAGE),
   ],
 );

@@ -1,11 +1,10 @@
 // The step table: one entry per producer of a file the build or a pull depends on. See README.md#the-step-table--stepsts.
 
-import { registryPaths } from '../../sid/registry-outputs';
-import { REGISTRY_PARTITIONS } from '../../sid/registry-partitions-pure';
 import { MANUAL_STEPS } from './manual-step-outputs';
 import { PUBLIC_FILES } from '../../../src/catalog-format/public-artifacts/public-artifacts';
 import { publicRepoPath } from '../../util/paths';
 import type { StepTable } from './step-table-pure';
+import { registryPaths, REGISTRY_PARTITIONS } from '../../../src/catalog-format/pipeline-outputs/data-files';
 
 export const STEPS: StepTable = {
   steps: [

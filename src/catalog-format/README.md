@@ -3,7 +3,9 @@
 What the build pipeline (`scripts/`) writes and the viewer (`src/client/`)
 reads: the catalogue record layout and its codec, the artefact schemas,
 and the rules both sides apply to a record's fields — its display name, its
-search labels, its spectral class and radius.
+search labels, its spectral class and radius. Also the names of the files
+the pipeline writes for itself, because the step table may import nothing
+else at load (`pipeline-outputs/`).
 
 **It imports nothing outside itself but `/src/astro-core/`** — no `scripts/`,
 no `src/client/`. The viewer reaches pipeline code only through this tree,
@@ -32,3 +34,5 @@ Each has its own README.
 - `public-artifacts/` — the name of every other file and folder under
   `public/` the viewer fetches, imported by the viewer and every TypeScript
   writer.
+- `pipeline-outputs/` — where the files the pipeline writes and the viewer
+  never fetches land: the names an outputs module declares.
