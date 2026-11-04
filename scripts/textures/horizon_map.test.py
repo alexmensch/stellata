@@ -117,14 +117,6 @@ class FlatGroundTests(unittest.TestCase):
         with self.assertRaises(AssertionError):
             horizon_angles(np.zeros((H, W), np.float32), MOON, 8, 32)
 
-    def test_starts_past_what_the_colour_map_can_resolve(self) -> None:
-        """The reason for the start distance rather than its consequence: a
-        caster inside one output texel is half a colour-map texel, so the ground
-        throwing the shadow cannot be drawn at any camera distance."""
-        self.assertGreaterEqual(HORIZON_MARCH_START_TEXELS, 2.0)
-        km = march_start(horizon_target_w(MOON)) * MOON["radius_km"]
-        self.assertAlmostEqual(km, 10.66, places=2)
-
 
 class AzimuthRegistrationTests(unittest.TestCase):
     """A skyline pinned to the wrong azimuth shades real terrain lit from the
@@ -273,9 +265,11 @@ class GridTests(unittest.TestCase):
 
 class MarchBoundTests(unittest.TestCase):
     def test_every_body_starts_past_a_colour_map_texel(self) -> None:
-        """Set in output texels, so the kilometres differ per body; Earth's pair
-        is twice as wide, so two of its texels are a smaller angle on a larger
-        body."""
+        """A caster inside one output texel is half a colour-map texel, so the
+        ground throwing the shadow cannot be drawn at any camera distance. Set in
+        output texels, so the kilometres differ per body; Earth's pair is twice
+        as wide, so two of its texels are a smaller angle on a larger body."""
+        self.assertGreaterEqual(HORIZON_MARCH_START_TEXELS, 2.0)
         km = {
             name: round(march_start(horizon_target_w(spec)) * spec["radius_km"], 1)
             for name, spec in DEM_BODIES.items()
