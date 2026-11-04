@@ -14,6 +14,8 @@
     "build:binaries": "tsx scripts/pipeline/run.ts build:binaries",
     "build:binaries-runtime": "tsx scripts/pipeline/run.ts build:binaries-runtime",
     "build:clouds": "tsx scripts/clouds/build-clouds.ts",
+    "build:vaidman-tsv": "tsx scripts/distance-validation/build-vaidman-tsv.ts",
+    "validate:distances": "tsx scripts/distance-validation/validate-distances.ts",
     "build:local-bubble": "tsx scripts/pipeline/record.ts build:local-bubble",
     "build:dust": "tsx scripts/pipeline/record.ts build:dust",
     "build:local-bubble-sync": "tsx scripts/local-bubble/sync-local-bubble.ts",

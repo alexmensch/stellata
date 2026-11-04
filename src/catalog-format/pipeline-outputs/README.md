@@ -14,7 +14,8 @@ repo-relative, so an outputs module passes them as they are.
 - `data-files.ts` — `DATA_FILES`, the committed `data/` files the
   step-table outputs modules declare: the membership manifest and its three
   ledgers, the parked and SIMBAD-sourced distance ledgers, the label-merge
-  queue and the generated reason-code list. Other TypeScript writers'
+  queue, the generated reason-code list, and the Vaidman 2025 reference
+  table the hand-run `build:vaidman-tsv` writes. Other TypeScript writers'
   `data/` names (classic-ids, WGSN, the astrometry request, the Horizons
   fetchers) are still spelled beside their own outputs modules. Each file's codec (a `defineArtifact` in
   `scripts/`) takes its `file` from here. Also the SID registry's

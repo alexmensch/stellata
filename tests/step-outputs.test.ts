@@ -11,6 +11,7 @@ import { MEMBERSHIP_OUTPUTS } from '../scripts/catalog/membership/membership-man
 import { NAMING_PARITY_OUTPUTS } from '../scripts/catalog/naming/naming-parity-outputs';
 import { WGSN_OUTPUTS } from '../scripts/catalog/naming/wgsn-tables-outputs';
 import { LUT_OUTPUTS } from '../scripts/colour/blackbody-lut-outputs';
+import { VAIDMAN_OUTPUTS } from '../scripts/distance-validation/vaidman-outputs';
 import { ELEMENT_TABLE_OUTPUTS } from '../scripts/ephemerides/planet-element-outputs';
 import { LOCAL_GROUP_OUTPUTS } from '../scripts/local-group/local-group-outputs';
 import { PROBE_OUTPUTS } from '../scripts/probes/probe-trajectory-outputs';
@@ -30,6 +31,7 @@ const STEPS: Record<string, DeclaredOutputs> = {
   'build:local-group': LOCAL_GROUP_OUTPUTS,
   'build:clouds': CLOUDS_OUTPUTS,
   'build:lut': LUT_OUTPUTS,
+  'build:vaidman-tsv': VAIDMAN_OUTPUTS,
   'sid:risk-set': DR_RISK_SET_OUTPUTS,
   'sid:dr-reconcile': DR_RECONCILE_OUTPUTS,
   'fetch:probes': PROBE_OUTPUTS,
