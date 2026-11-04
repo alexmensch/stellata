@@ -2,7 +2,7 @@
 // before its writer finishes — README.md#pipefail-early-readers.
 
 import { readFileSync } from 'node:fs';
-import { join, relative, resolve } from 'node:path';
+import { basename, join, relative, resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { walkFiles } from './walk-files';
 
@@ -39,12 +39,27 @@ function earlyReaderPipes(script: string): Offence[] {
   return out.sort((a, b) => a.line - b.line);
 }
 
+const SOURCED = /^[ \t]*(?:\.|source)[ \t]+[^\n]*?([A-Za-z0-9_-][A-Za-z0-9_.-]*\.sh)\b/gm;
+
 function pipefailScripts(): string[] {
-  const files = walkFiles(join(ROOT, 'scripts'), {
-    skipDir: (name) => name === 'node_modules',
-    include: (p) => p.endsWith('.sh'),
-  });
-  return [...files].filter((p) => SETS_PIPEFAIL.test(readFileSync(p, 'utf8')));
+  const all = [
+    ...walkFiles(join(ROOT, 'scripts'), {
+      skipDir: (name) => name === 'node_modules',
+      include: (p) => p.endsWith('.sh'),
+    }),
+  ];
+  const text = new Map(all.map((p) => [p, readFileSync(p, 'utf8')]));
+  const scanned = new Set(all.filter((p) => SETS_PIPEFAIL.test(text.get(p)!)));
+  const pending = [...scanned];
+  for (let p = pending.pop(); p !== undefined; p = pending.pop()) {
+    for (const [, name] of text.get(p)!.matchAll(SOURCED)) {
+      for (const lib of all.filter((q) => basename(q) === name && !scanned.has(q))) {
+        scanned.add(lib);
+        pending.push(lib);
+      }
+    }
+  }
+  return [...scanned];
 }
 
 describe('earlyReaderPipes', () => {
@@ -91,6 +106,12 @@ describe('pipefail scripts under scripts/', () => {
     const found = pipefailScripts().map((p) => relative(ROOT, p));
     expect(found).toContain('scripts/hooks/commit-sweep/commit-sweep-guard.sh');
     expect(found).toContain('scripts/hooks/perf-guard.sh');
+  });
+
+  it('also scans the libraries those scripts source, which run under their pipefail', () => {
+    const found = pipefailScripts().map((p) => relative(ROOT, p));
+    expect(found).toContain('scripts/hooks/command-match.sh');
+    expect(found).toContain('scripts/perf/arming/perf-go-lib.sh');
   });
 
   it('pipe into no reader that exits before its writer finishes', () => {

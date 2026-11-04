@@ -157,7 +157,8 @@ page-teardown-contract.test.ts
                          an inline arrow handler's options are still
                          read). Flag and pass cases for both.
 pipefail-early-reader.test.ts
-                         No scripts/**/*.sh that sets pipefail pipes into
+                         No scripts/**/*.sh that sets pipefail, or is
+                         sourced by one that does, pipes into
                          grep -q, head, or an awk program containing exit.
                          README.md#pipefail-early-readers below.
 perf-guard.test.ts       Behavioural pins for scripts/hooks/perf-guard.sh's
@@ -522,7 +523,10 @@ form, not to input sizes: such a reader takes a here-string
 (`grep -q x <<< "$var"`), which has no writer process to kill.
 
 `pipefail-early-reader.test.ts` scans every `scripts/**/*.sh` that sets
-pipefail, with no allowlist. Full-line comments are skipped, and quoted
+pipefail, plus every library such a script sources with `.` or `source`
+(matched by file name, followed through libraries that source others),
+since a sourced file runs under its caller's options. There is no
+allowlist. Full-line comments are skipped, and quoted
 strings never count as a grep flag. The matcher has its own
 flag and pass cases, and a case that the scan finds the hooks at all, so a
 detector that stops seeing pipes fails instead of passing on an empty scan.
