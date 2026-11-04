@@ -262,10 +262,9 @@ the run-condition difference that exceeds it.
 
 A frame row is floored at `max(0.25 ms, 1 % of the baseline)`. A compute row
 takes **its vantage's own** floor as its whole band — 0.05 ms at mw120,
-mw50 and lg, the 0.25 cap at earth and sol — because scatter there runs
-0.008 to 0.396 ms across the five on the M6, a factor of 50 one constant
-cannot fit, and the constant reads as 18× the noise at mw50
-([The compute row](scripts/perf/pins/README.md#the-compute-row)). What the 0.25 cap
+mw50 and lg, the 0.25 cap at earth and sol — because one constant cannot fit
+the scatter across the five ([The compute floor](scripts/perf/floors/README.md#the-compute-floor),
+[The compute row](scripts/perf/pins/README.md#the-compute-row)). What the 0.25 cap
 holds: [The compute floor](scripts/perf/floors/README.md#the-compute-floor). A `|cpu` row
 takes its vantage's own floor too, uncapped and under the two-sigma term
 ([The CPU floor](scripts/perf/floors/README.md#the-cpu-floor)).

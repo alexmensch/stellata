@@ -148,7 +148,8 @@ away — under `--force-recompute` mw120's compute reads 13.17 ms, where 1 % is
 
 The whole-frame `max(0.25 ms, 1 % × pinned)` does not transfer to this row:
 it was drawn from how far two cold **whole-frame** dwells of one tree
-disagree — a 10–30 ms reading — and on the M6 reads as 18× the noise at mw50
-and 0.63× it at sol, a factor of 28 across the five under one constant. At
+disagree — a 10–30 ms reading. On the M6 the compute row's own p10 scatter
+runs 0.008 ms at lg to 0.396 at sol, a factor of about 50 across the five, so
+that one constant would read as 31× the noise at lg and 0.63× it at sol. At
 mw120 the compaction could have got most of the way to twice as dear and
 printed `~`, which is the row's whole purpose missed.
