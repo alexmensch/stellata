@@ -62,6 +62,9 @@ merge-base copy to hash:
   never fetched.
 
 The comparison runs over this branch's input set, not the merge-base's
-closure, so a branch that adds or drops a file in the stage's import closure
-has a different input set from any merge-base build: its hash never matches,
-and the refusal stands until the stage is built at the merge-base.
+closure: a merge-base input outside that set is never compared. So a branch
+that adds a file to the stage's import closure, or drops one the older
+build read, usually differs from it and is refused until the stage is built
+at the merge-base; and a branch that drops a file the merge-base gained
+after the older build can match it although the merge-base build read that
+file.
