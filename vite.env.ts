@@ -1,8 +1,9 @@
 /** What both Vite configs share: the build target and the figures they publish, so app and site read one set. */
 
-import type { Plugin } from 'vite';
+import type { ConfigEnv, Plugin } from 'vite';
 import { type Figures, substituteFigures } from './scripts/site/figures-pure.ts';
 import {
+  type AbsentCatalogue,
   appVersion,
   catalogueRecordCount,
   citedReferenceCount,
@@ -11,10 +12,14 @@ import {
 
 export const BUILD_TARGET = 'es2022';
 
-export function buildFigures(): Figures {
+export function absentCatalogueFor(env: Pick<ConfigEnv, 'mode'>): AbsentCatalogue {
+  return env.mode === 'production' ? 'refuse' : 'quote-snapshot';
+}
+
+export function buildFigures(absent: AbsentCatalogue): Figures {
   return {
     VITE_APP_VERSION: appVersion(),
-    VITE_STAR_COUNT: catalogueRecordCount().toLocaleString('en-US'),
+    VITE_STAR_COUNT: catalogueRecordCount(absent).toLocaleString('en-US'),
     VITE_SOURCE_COUNT: String(creditedSourceCount()),
     VITE_REFERENCE_COUNT: String(citedReferenceCount()),
   };

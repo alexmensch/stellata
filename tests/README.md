@@ -287,6 +287,10 @@ tsl-standin-filters.test.ts
                          (/src/client/webgpu/solar-system/README.md#a-stand-ins-filters);
                          README.md#tsl-stand-in-filters below
                          carries the scan's one limit.
+vite-env.test.ts         absentCatalogueFor: only a production Vite build
+                         refuses an unbuilt catalogue; every other mode
+                         quotes the count snapshot
+                         (/scripts/site/README.md#why-each-count-is-derived-where-it-is).
 webgpu-import-boundary.test.ts
                          No value import of three/webgpu or three/tsl
                          outside src/client/webgpu/, so the ~1 MB second
