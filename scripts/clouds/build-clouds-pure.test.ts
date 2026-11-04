@@ -8,8 +8,11 @@ import {
   buildClouds,
   displayName,
   inGrid,
+  zuckerProfiledPayload,
 } from './build-clouds-pure';
 import type { CloudRow } from '../../src/catalog-format/clouds/clouds-schema';
+import { ZUCKER_PROFILED_SCHEMA } from '../../src/catalog-format/baker-artifacts/baker-artifacts';
+import { profiledClouds } from './cloud-model-pure';
 
 describe('names', () => {
   it('cleans raw table names', () => {
@@ -57,5 +60,32 @@ describe('buildClouds', () => {
   it('promotes the curated canonical name and keeps the slug', () => {
     expect(byId.get('m16')!.name).toBe('Eagle Nebula');
     expect(byId.get('m16')!.aliases).toEqual(['M16', 'NGC 6611', 'IC 4703']);
+  });
+});
+
+describe('zuckerProfiledPayload', () => {
+  const extents = [{ cloud: 'Musca', xmin: 0, xmax: 20, ymin: 0, ymax: 10, zmin: -4, zmax: 4 }];
+  const profiled = profiledClouds(
+    extents,
+    new Map([['Musca', { n0: 1, rflat: 1, p: 2 }]]),
+    new Map([['Musca', { massNicest: 1, massLeike: 1e9, maxAkLeike: 0.19 }]]),
+  );
+  const payload = zuckerProfiledPayload(profiled);
+
+  it('carries the schema version and exactly the keys the dust bake reads', () => {
+    expect(payload.version).toBe(ZUCKER_PROFILED_SCHEMA.version);
+    expect(Object.keys(payload)).toEqual(['version', 'galToIcrs', 'clouds']);
+    expect(Object.keys(payload.clouds[0])).toEqual(['name', 'centreIcrsPc', 'axesGalPc', 'avColumnTarget']);
+    expect(payload.clouds[0].name).toBe('Musca');
+  });
+
+  it('records an orthonormal rotation', () => {
+    const rows = payload.galToIcrs;
+    for (let i = 0; i < 3; i++) {
+      for (let j = 0; j < 3; j++) {
+        const dot = rows[i][0] * rows[j][0] + rows[i][1] * rows[j][1] + rows[i][2] * rows[j][2];
+        expect(dot).toBeCloseTo(i === j ? 1 : 0, 12);
+      }
+    }
   });
 });

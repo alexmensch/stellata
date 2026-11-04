@@ -48,12 +48,18 @@ describe('frames', () => {
 });
 
 describe('the integrals', () => {
-  it('reduce to the chord length and ellipsoid volume for a flat profile with no taper reach', () => {
+  it('reduce to the tapered chord length and a volume inside the ellipsoid for a flat profile', () => {
     const flat = { rflat: 1e9, p: 2 };
     expect(columnIntegralPc(flat.rflat, flat.p, 10, 1, 4001)).toBeCloseTo(2 * 10 * (0.85 + 0.15 * 0.5), 3);
     const unit = volumeIntegralPc3(flat.rflat, flat.p, [1, 1, 1], 1, 4001);
     expect(unit).toBeLessThan((4 / 3) * Math.PI);
     expect(unit).toBeGreaterThan((4 / 3) * Math.PI * 0.85 ** 3);
+  });
+});
+
+describe('MSUN_PER_NH_PC3', () => {
+  it('is μ m_H pc³ / M☉ with μ = 1.37', () => {
+    expect(MSUN_PER_NH_PC3).toBe(0.033868465974435095);
   });
 });
 
@@ -74,7 +80,6 @@ describe('calibrate', () => {
     expect(c.uEnv).toBeLessThan(1);
     expect(c.massModel).toBeLessThanOrEqual(MASS_CAP_FACTOR * massLeike);
     expect(c.massModel / (MASS_CAP_FACTOR * massLeike)).toBeCloseTo(1, 6);
-    expect(MSUN_PER_NH_PC3).toBeGreaterThan(0);
   });
 });
 
