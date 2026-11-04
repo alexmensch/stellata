@@ -3,7 +3,6 @@
 // Never add to it: a new module an outputs module imports lives in src/catalog-format/ or src/astro-core/.
 export const LEGACY_IMPORTABLE: ReadonlySet<string> = new Set([
   'scripts/binaries/multiples-row-key-pure.ts',
-  'scripts/catalog/catalog-paths-pure.ts',
   'scripts/catalog/classic-ids/classic-id-overlay-pure.ts',
   'scripts/catalog/classic-ids/label-merge/label-merge-pure.ts',
   'scripts/catalog/companions/promotion-lineage-pure.ts',

@@ -1,7 +1,7 @@
 import { beforeAll, describe, it, expect } from 'vitest';
 import { existsSync, readFileSync } from 'node:fs';
 
-import { DEFAULT_ROW_INDEX_MAP } from '../../catalog-paths-pure';
+import { CATALOG_OUTPUTS } from '../../catalog-outputs';
 import { loadStoredEdges } from '../../../sid/stored-edges';
 import { syntheticGaiaBridges } from '../../../sid/sid-pure';
 
@@ -331,7 +331,7 @@ describe('buildComponentDesignations', () => {
 // the promotion unit tests and by the `componentDesignations` /
 // `namingUnlabelled` build counts, which is why their snapshot diff is read
 // rather than refreshed.
-const BRIDGE_FIXTURES_READY = existsSync(DEFAULT_ROW_INDEX_MAP);
+const BRIDGE_FIXTURES_READY = existsSync(CATALOG_OUTPUTS.files.rowIndexMap);
 if (!BRIDGE_FIXTURES_READY) {
   // eslint-disable-next-line no-console
   console.warn(
@@ -344,7 +344,7 @@ describe.skipIf(!BRIDGE_FIXTURES_READY)('the same-as bridge, over the built cata
   let map: CatalogRowIndexMap;
   let bridges: ReturnType<typeof syntheticGaiaBridges>;
   beforeAll(() => {
-    map = JSON.parse(readFileSync(DEFAULT_ROW_INDEX_MAP, 'utf-8')) as CatalogRowIndexMap;
+    map = JSON.parse(readFileSync(CATALOG_OUTPUTS.files.rowIndexMap, 'utf-8')) as CatalogRowIndexMap;
     bridges = syntheticGaiaBridges(loadStoredEdges());
   });
 

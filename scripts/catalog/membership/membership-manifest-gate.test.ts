@@ -26,7 +26,7 @@ import {
 } from '../../sid/sid-pure';
 import { loadStoredEdges } from '../../sid/stored-edges';
 import { loadCatalog } from '../catalog-lookup';
-import { DEFAULT_CATALOG_MANIFEST, DEFAULT_ROW_INDEX_MAP, DEFAULT_SEARCH_INDEX } from '../catalog-paths-pure';
+import { CATALOG_OUTPUTS } from '../catalog-outputs';
 import { FLAG_BINARY_COMPANION_ONLY, type SearchEntry } from '../../../src/catalog-format/record/catalog-pure';
 import { parkedRecordKey } from '../distance/parallax/parked-ledger-pure';
 import { PARKED_LEDGER, parseParkedRecordsTsv } from '../distance/parallax/parked-ledger-tsv';
@@ -67,7 +67,7 @@ const queue = BINDING_REVIEW.parse(readFileSync(resolve(REPO_ROOT, BINDING_REVIE
 const dispositions = BINDING_REVIEW_DISPOSITIONS.read();
 
 const inputsReadable = [SPINE_PATH, MANIFEST_PATH, LEDGER_PATH].every(lfsContentReadable);
-const built = [DEFAULT_CATALOG_MANIFEST, DEFAULT_SEARCH_INDEX, DEFAULT_ROW_INDEX_MAP]
+const built = [CATALOG_OUTPUTS.files.manifest, CATALOG_OUTPUTS.files.searchIndex, CATALOG_OUTPUTS.files.rowIndexMap]
   .every(existsSync);
 
 const expected = JSON.parse(
@@ -334,8 +334,8 @@ describe.skipIf(!inputsReadable)('membership manifest ↔ inherited spine', () =
   describe.skipIf(!built)('↔ built catalogue', () => {
     it('(iii) ships exactly the manifest\'s designations', async () => {
       const catalog = await loadCatalog();
-      const searchIndex = JSON.parse(readFileSync(DEFAULT_SEARCH_INDEX, 'utf-8')) as SearchEntry[];
-      const { bySynth } = JSON.parse(readFileSync(DEFAULT_ROW_INDEX_MAP, 'utf-8')) as {
+      const searchIndex = JSON.parse(readFileSync(CATALOG_OUTPUTS.files.searchIndex, 'utf-8')) as SearchEntry[];
+      const { bySynth } = JSON.parse(readFileSync(CATALOG_OUTPUTS.files.rowIndexMap, 'utf-8')) as {
         bySynth: Record<string, number>;
       };
       const fromBuild = tally(

@@ -6,7 +6,7 @@ import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 import { REPO_ROOT } from '../../util/paths';
-import { DEFAULT_CONSTELLATIONS_JSON, DEFAULT_ROW_INDEX_MAP, DEFAULT_SEARCH_INDEX } from '../catalog-paths-pure';
+import { CATALOG_OUTPUTS } from '../catalog-outputs';
 import type { SearchEntry } from '../../../src/catalog-format/record/catalog-pure';
 import { buildSearchIndex, normalizeGlKey } from '../../../src/catalog-format/naming/search-corpus';
 import { displayNamesFromSearchIndex } from '../../../src/catalog-format/naming/star-naming-pure';
@@ -31,8 +31,8 @@ const MANIFEST = resolve(REPO_ROOT, MEMBERSHIP_MANIFEST.file);
  *  rather than the star (/docs/star-naming.md#2-authority--one-source-approves-names-everything-else-compiles-them). RATCHET DOWN — it last
  *  moved when the membership manifest admitted a record for one of them. */
 const PUBLISHED_NAMES_UNREACHED = 54;
-const FIXTURES_READY = existsSync(DEFAULT_SEARCH_INDEX) && existsSync(DEFAULT_ROW_INDEX_MAP)
-  && existsSync(DEFAULT_CONSTELLATIONS_JSON);
+const FIXTURES_READY = existsSync(CATALOG_OUTPUTS.files.searchIndex) && existsSync(CATALOG_OUTPUTS.files.rowIndexMap)
+  && existsSync(CATALOG_OUTPUTS.files.constellations);
 
 const readJson = <T>(path: string): T => JSON.parse(readFileSync(path, 'utf8')) as T;
 
@@ -47,9 +47,9 @@ interface Fixtures {
 }
 
 function loadFixtures(): Fixtures {
-  const raw = readJson<SearchEntry[]>(DEFAULT_SEARCH_INDEX);
-  const constellations = readJson<{ code: string; name: string }[]>(DEFAULT_CONSTELLATIONS_JSON);
-  const keys = ledgerKeys(readJson<RowIndexMap>(DEFAULT_ROW_INDEX_MAP));
+  const raw = readJson<SearchEntry[]>(CATALOG_OUTPUTS.files.searchIndex);
+  const constellations = readJson<{ code: string; name: string }[]>(CATALOG_OUTPUTS.files.constellations);
+  const keys = ledgerKeys(readJson<RowIndexMap>(CATALOG_OUTPUTS.files.rowIndexMap));
   const composed = displayNamesFromSearchIndex(raw, constellations);
   const labelByKey = new Map<string, string>();
   const entryByKey = new Map<string, SearchEntry>();

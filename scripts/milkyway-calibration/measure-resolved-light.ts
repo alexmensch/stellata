@@ -8,7 +8,7 @@ import {
   wholeRecordSpan,
 } from '../../src/catalog-format/record/catalog-pure';
 import { readCatalogBuffer } from '../catalog/catalog-lookup';
-import { DEFAULT_CATALOG_MANIFEST } from '../catalog/catalog-paths-pure';
+import { CATALOG_OUTPUTS } from '../catalog/catalog-outputs';
 import { REPO_ROOT } from '../util/paths';
 import {
   GALACTIC_CENTRE_PC,
@@ -111,7 +111,7 @@ function printShells(title: string, rows: readonly ShellTotal[], removed: readon
 async function main(): Promise<void> {
   const manifestArg = process.argv.indexOf('--manifest');
   const manifestPath =
-    manifestArg >= 0 ? resolve(process.argv[manifestArg + 1]) : DEFAULT_CATALOG_MANIFEST;
+    manifestArg >= 0 ? resolve(process.argv[manifestArg + 1]) : CATALOG_OUTPUTS.files.manifest;
   const stars = await loadColumns(manifestPath);
   const manifest = JSON.parse(await readFile(manifestPath, 'utf-8')) as { totalBytes: number };
   console.log(`catalogue: ${stars.count.toLocaleString()} records, ${manifest.totalBytes.toLocaleString()} bytes\n`);

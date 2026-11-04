@@ -3,7 +3,7 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
-import { DEFAULT_ROW_INDEX_MAP } from '../../catalog/catalog-paths-pure';
+import { CATALOG_OUTPUTS } from '../../catalog/catalog-outputs';
 import { MULTIPLES_TSV } from '../multiples-tsv';
 import { readArtifact } from '../../util/sources/source';
 import { REPO_ROOT } from '../../util/paths';
@@ -15,7 +15,7 @@ const multiples = cutMultiples(
   readArtifact(MULTIPLES_TSV), FIXTURE_SYSTEMS,
 );
 const map = cutRowIndexMap(
-  JSON.parse(readFileSync(DEFAULT_ROW_INDEX_MAP, 'utf8')), multiples, FIXTURE_SYSTEMS,
+  JSON.parse(readFileSync(CATALOG_OUTPUTS.files.rowIndexMap, 'utf8')), multiples, FIXTURE_SYSTEMS,
 );
 writeFileSync(resolve(HERE, 'fixture-multiples.tsv'), MULTIPLES_TSV.serialize(multiples));
 writeFileSync(resolve(HERE, 'fixture-row-index-map.json'), `${JSON.stringify(map, null, 1)}\n`);

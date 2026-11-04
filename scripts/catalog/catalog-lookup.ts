@@ -27,12 +27,12 @@ import {
 } from '../../src/catalog-format/record/catalog-pure';
 import { displayNamesFromSearchIndex } from '../../src/catalog-format/naming/star-naming-pure';
 import type { RecordRef } from './parse/corpus-tsv';
-import { DEFAULT_CATALOG_MANIFEST, DEFAULT_CONSTELLATIONS_JSON, DEFAULT_SEARCH_INDEX } from './catalog-paths-pure';
+import { CATALOG_OUTPUTS } from './catalog-outputs';
 
 /** The client loader's Node-side twin — same `assembleCatalogChunks`
  *  contract, fs instead of fetch. */
 export async function readCatalogBuffer(
-  manifestPath: string = DEFAULT_CATALOG_MANIFEST,
+  manifestPath: string = CATALOG_OUTPUTS.files.manifest,
 ): Promise<ArrayBuffer> {
   const manifest = JSON.parse(await readFile(manifestPath, 'utf-8')) as CatalogManifest;
   const dir = dirname(manifestPath);
@@ -106,9 +106,9 @@ export type SearchableCatalog = Catalog & { readonly searchIndex: readonly Searc
 export function loadCatalog(opts: LoadCatalogOptions & { withSearchIndex: true }): Promise<SearchableCatalog>;
 export function loadCatalog(opts?: LoadCatalogOptions): Promise<Catalog>;
 export async function loadCatalog(opts: LoadCatalogOptions = {}): Promise<Catalog> {
-  const manifestPath = opts.catalogManifestPath ?? DEFAULT_CATALOG_MANIFEST;
-  const conPath = opts.constellationsJsonPath ?? DEFAULT_CONSTELLATIONS_JSON;
-  const searchIndexPath = opts.searchIndexPath ?? DEFAULT_SEARCH_INDEX;
+  const manifestPath = opts.catalogManifestPath ?? CATALOG_OUTPUTS.files.manifest;
+  const conPath = opts.constellationsJsonPath ?? CATALOG_OUTPUTS.files.constellations;
+  const searchIndexPath = opts.searchIndexPath ?? CATALOG_OUTPUTS.files.searchIndex;
 
   const [ab, conText, searchIndexText] = await Promise.all([
     readCatalogBuffer(manifestPath),

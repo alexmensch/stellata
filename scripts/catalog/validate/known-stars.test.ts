@@ -29,7 +29,7 @@ import {
   classifyFromSimbad,
 } from '../../../src/catalog-format/spectral/spectral-classify';
 import { type Catalog, type CatalogRecord, distancePc, loadCatalog, lookupByHip, lookupByGaiaSourceId, displayLabel, lookupByName, lookupByRef } from '../catalog-lookup';
-import { DEFAULT_CATALOG_MANIFEST } from '../catalog-paths-pure';
+import { CATALOG_OUTPUTS } from '../catalog-outputs';
 import {
   parseOptionalRef,
   type RecordRef,
@@ -48,7 +48,7 @@ const TOPOLOGY_TSV = resolve(__dirname, 'system-pair-topology.tsv');
 // a console hint when either is missing. The .github/workflows/test.yml
 // `build-catalog` job runs the full suite after `pnpm run build:catalog`
 // + LFS pull, so the assertions execute against real data on every PR.
-const CATALOG_BIN_PRESENT = existsSync(DEFAULT_CATALOG_MANIFEST);
+const CATALOG_BIN_PRESENT = existsSync(CATALOG_OUTPUTS.files.manifest);
 const MULTIPLES_PRESENT = existsSync(MULTIPLES_TSV_PATH);
 const FIXTURES_READY = CATALOG_BIN_PRESENT && MULTIPLES_PRESENT;
 if (!FIXTURES_READY) {

@@ -132,10 +132,6 @@ import { artifactRows } from '../util/sources/source';
 import { REPO_ROOT as ROOT } from '../util/paths';
 import { fileHashes, type FileHashes } from '../util/build-stamp';
 import {
-  DEFAULT_CATALOG_MANIFEST as OUT_MANIFEST, DEFAULT_CONSTELLATIONS_JSON as OUT_CON,
-  DEFAULT_BOUNDARIES, DEFAULT_ROW_INDEX_MAP, DEFAULT_SEARCH_INDEX as OUT_SEARCH,
-} from './catalog-paths-pure';
-import {
   CATALOG_CHUNK_DIR, CATALOG_OUTPUTS,
 } from './catalog-outputs';
 import {
@@ -1174,7 +1170,7 @@ async function main() {
   counts.boundaryArtifactKb = Math.round(boundaries.bytes / 1024);
   const fade = boundaries.artifact.fade;
   console.log(
-    `Built ${DEFAULT_BOUNDARIES} (${boundaries.segments} arcs, `
+    `Built ${CATALOG_OUTPUTS.files.boundaries} (${boundaries.segments} arcs, `
       + `${boundaries.directions} directions, `
       + `${boundaries.artifact.labels.length} labels, `
       + `${boundaries.regionRuns} region runs, `
@@ -1202,7 +1198,7 @@ async function main() {
   // that carry no real ID — Algol Ab). Built once above, after the sort.
   const rowIndexMapJson = JSON.stringify(rowIndexMap) + '\n';
   console.log(
-    `Row-index map ${DEFAULT_ROW_INDEX_MAP} (${Object.keys(rowIndexMap.byGaia).length} ` +
+    `Row-index map ${CATALOG_OUTPUTS.files.rowIndexMap} (${Object.keys(rowIndexMap.byGaia).length} ` +
       `Gaia entries, ${Object.keys(rowIndexMap.byHip).length} HIP entries, ` +
       `${Object.keys(rowIndexMap.bySynth).length} synthetic entries)`,
   );
@@ -1213,14 +1209,14 @@ async function main() {
   );
   const mb = (totalLength / 1024 / 1024).toFixed(2);
   console.log(
-    `Built ${chunkBytes.length} catalog chunk(s) + ${OUT_MANIFEST} ` +
+    `Built ${chunkBytes.length} catalog chunk(s) + ${CATALOG_OUTPUTS.files.manifest} ` +
       `(${mb} MB, ${stars.length} records, v${BINARY_VERSION})`,
   );
   console.log(
-    `Built ${OUT_CON} (${CONSTELLATIONS.length} constellations, ${figureCount} stick-figure polylines across ${figureLines.size})`,
+    `Built ${CATALOG_OUTPUTS.files.constellations} (${CONSTELLATIONS.length} constellations, ${figureCount} stick-figure polylines across ${figureLines.size})`,
   );
   const searchMb = (Buffer.byteLength(searchJson) / 1024 / 1024).toFixed(2);
-  console.log(`Built ${OUT_SEARCH} (${searchEntries.length} searchable entries, ${searchMb} MB)`);
+  console.log(`Built ${CATALOG_OUTPUTS.files.searchIndex} (${searchEntries.length} searchable entries, ${searchMb} MB)`);
   if (solIndex >= 0) {
     console.log(
       `Sol at record index ${solIndex} (absmag=${stars[solIndex].absmag}, R=${stars[solIndex].physicalRadius.toFixed(3)} R☉)`,

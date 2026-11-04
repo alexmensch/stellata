@@ -8,7 +8,7 @@ import { fileURLToPath } from 'node:url';
 import { parse } from 'csv-parse/sync';
 import { describe, it, beforeAll, expect } from 'vitest';
 import { type Catalog, type CatalogRecord, loadCatalog, lookupByRef } from '../../scripts/catalog/catalog-lookup';
-import { DEFAULT_CATALOG_MANIFEST } from '../../scripts/catalog/catalog-paths-pure';
+import { CATALOG_OUTPUTS } from '../../scripts/catalog/catalog-outputs';
 import { parseRef, type RecordRef } from '../../scripts/catalog/parse/corpus-tsv';
 import { unitVectorFromRaDec, type UnitVector } from '../../src/astro-core/equatorial-basis';
 import {
@@ -22,7 +22,7 @@ const CORPUS_TSV = resolve(__dirname, '../../scripts/catalog/validate/sky-positi
 // Same skip-with-hint contract as known-stars.test.ts: plain `pnpm test`
 // in CI has no catalog.bin; the Tier-A corpus CI job runs the suite
 // against real artifacts.
-const CATALOG_BIN_PRESENT = existsSync(DEFAULT_CATALOG_MANIFEST);
+const CATALOG_BIN_PRESENT = existsSync(CATALOG_OUTPUTS.files.manifest);
 if (!CATALOG_BIN_PRESENT) {
   // eslint-disable-next-line no-console
   console.warn(

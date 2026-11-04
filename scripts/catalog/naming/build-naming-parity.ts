@@ -4,7 +4,7 @@
 import { readFileSync } from 'node:fs';
 
 import { emitArtifacts, runStep } from '../../util/emit-artifacts';
-import { DEFAULT_CONSTELLATIONS_JSON, DEFAULT_ROW_INDEX_MAP, DEFAULT_SEARCH_INDEX } from '../catalog-paths-pure';
+import { CATALOG_OUTPUTS } from '../catalog-outputs';
 import type { SearchEntry } from '../../../src/catalog-format/record/catalog-pure';
 import { buildSearchIndex, normalizeGlKey } from '../../../src/catalog-format/naming/search-corpus';
 import { displayNamesFromSearchIndex } from '../../../src/catalog-format/naming/star-naming-pure';
@@ -45,9 +45,9 @@ function frozenOldLabels(): Map<string, string> {
 }
 
 function main(): void {
-  const raw = readJson<SearchEntry[]>(DEFAULT_SEARCH_INDEX);
-  const rowIndexMap = readJson<RowIndexMap>(DEFAULT_ROW_INDEX_MAP);
-  const constellations = readJson<{ code: string; name: string }[]>(DEFAULT_CONSTELLATIONS_JSON);
+  const raw = readJson<SearchEntry[]>(CATALOG_OUTPUTS.files.searchIndex);
+  const rowIndexMap = readJson<RowIndexMap>(CATALOG_OUTPUTS.files.rowIndexMap);
+  const constellations = readJson<{ code: string; name: string }[]>(CATALOG_OUTPUTS.files.constellations);
   const keys = ledgerKeys(rowIndexMap);
   const composed = displayNamesFromSearchIndex(raw, constellations);
   const labelByKey = new Map<string, string>();

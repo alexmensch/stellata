@@ -7,7 +7,7 @@ import { readFile } from 'node:fs/promises';
 import { beforeAll, describe, expect, it } from 'vitest';
 
 import { readCatalogBuffer } from '../../scripts/catalog/catalog-lookup';
-import { DEFAULT_CATALOG_MANIFEST, DEFAULT_CONSTELLATIONS_JSON } from '../../scripts/catalog/catalog-paths-pure';
+import { CATALOG_OUTPUTS } from '../../scripts/catalog/catalog-outputs';
 import buildCatalogExpected from '../../scripts/catalog/build-catalog-expected.json';
 import { peakAmplitudeFactor } from '../../src/client/camera/controls/star-geometry';
 import { STAR_RENDER_DEFAULTS, starPxSizes } from '../../src/client/filters/filter-state';
@@ -18,7 +18,7 @@ import { discWindowPc } from '../../src/client/star-pipeline/local-pass/star-loc
 import { perceptualDiscExponent } from '../../src/client/star-pipeline/perceptual-disc/perceptual-disc-pure';
 import { DISC_EXPONENT_TOLERANCE, physSizeElisionBoundPx } from '../../src/client/star-pipeline/perceptual-disc/phys-size-elision-pure';
 
-const skip = !existsSync(DEFAULT_CATALOG_MANIFEST);
+const skip = !existsSync(CATALOG_OUTPUTS.files.manifest);
 
 const FOV_DEG = 50;
 const FOV_Y_RAD = (FOV_DEG * Math.PI) / 180;
@@ -31,9 +31,9 @@ let catalog: Catalog;
 describe.skipIf(skip)('the physical-size elision over the built catalog', () => {
   beforeAll(async () => {
     const [ab, conText, manifestText] = await Promise.all([
-      readCatalogBuffer(DEFAULT_CATALOG_MANIFEST),
-      readFile(DEFAULT_CONSTELLATIONS_JSON, 'utf-8'),
-      readFile(DEFAULT_CATALOG_MANIFEST, 'utf-8'),
+      readCatalogBuffer(CATALOG_OUTPUTS.files.manifest),
+      readFile(CATALOG_OUTPUTS.files.constellations, 'utf-8'),
+      readFile(CATALOG_OUTPUTS.files.manifest, 'utf-8'),
     ]);
     catalog = parseBinary(ab, JSON.parse(conText), JSON.parse(manifestText).sidSuccessors);
   }, 120000);

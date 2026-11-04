@@ -5,16 +5,16 @@ import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 import { BUILD_COUNTS_EXPECTED_FILE, type BuildCounts } from '../build-counts';
-import { DEFAULT_SEARCH_INDEX } from '../catalog-paths-pure';
+import { CATALOG_OUTPUTS } from '../catalog-outputs';
 import type { SearchEntry } from '../../../src/catalog-format/record/catalog-pure';
 import { CON_INDEX } from '../parse/constellations/constellations';
 import { REPO_ROOT } from '../../util/paths';
 
-const built = existsSync(DEFAULT_SEARCH_INDEX);
+const built = existsSync(CATALOG_OUTPUTS.files.searchIndex);
 
 describe.skipIf(!built)('designation constellation on the wire', () => {
   const index = built
-    ? (JSON.parse(readFileSync(DEFAULT_SEARCH_INDEX, 'utf-8')) as SearchEntry[])
+    ? (JSON.parse(readFileSync(CATALOG_OUTPUTS.files.searchIndex, 'utf-8')) as SearchEntry[])
     : [];
   const byHip = new Map(index.filter((e) => e.hip !== undefined).map((e) => [e.hip!, e]));
   const byHd = new Map(index.filter((e) => e.hd !== undefined).map((e) => [e.hd!, e]));

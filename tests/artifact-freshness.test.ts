@@ -18,7 +18,7 @@ import { REPO_ROOT } from '../scripts/util/paths';
 import { isReadable } from '../scripts/util/sources/source';
 import { changedSince, readStamp } from '../scripts/util/build-stamp';
 import { stampPath } from '../scripts/util/stamp-path-pure';
-import { DEFAULT_CATALOG_MANIFEST } from '../scripts/catalog/catalog-paths-pure';
+import { CATALOG_OUTPUTS } from '../scripts/catalog/catalog-outputs';
 import { MULTIPLES_TSV } from '../scripts/binaries/multiples-tsv';
 import { STEPS } from '../scripts/pipeline/step-table/steps';
 
@@ -31,7 +31,7 @@ const BINARIES_BIN = resolve(REPO_ROOT, runtime.outputs[0]);
 const BINARIES_BIN_STAMP = stampPath(RUNTIME_STEP);
 const REBUILD = `pnpm run ${RUNTIME_STEP}`;
 
-const catalogBuilt = existsSync(DEFAULT_CATALOG_MANIFEST);
+const catalogBuilt = existsSync(CATALOG_OUTPUTS.files.manifest);
 const skip = !catalogBuilt || !isReadable(MULTIPLES_TSV);
 
 describe.skipIf(skip)('built-artifact coherence (public/ + build/)', () => {
