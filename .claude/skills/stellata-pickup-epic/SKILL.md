@@ -31,7 +31,7 @@ busy-session warning, so keep it current.
 | `HOLD` | coordinator → the landing subagent, if one is running | on a `GPU_REQUEST`; the hold in `pickup-epic`'s Land step, unchanged |
 | `PAUSED` | worker → coordinator | its current command has finished and it will start nothing heavier than reading files — no build, test run, `pnpm run perf`, `survivors`, or data pull |
 | `GPU_GRANTED` | coordinator → requester | every other worker has replied `PAUSED` or is idle, the landing subagent, if one is running, has replied to `HOLD`, and no `build:seed` is running |
-| `GPU_DONE` | requester → coordinator | the runner has exited, whatever its result |
+| `GPU_DONE` | requester → coordinator | the runner has exited, whatever its result; or `GPU_DONE unarmed` when `await-go.sh` timed out with no arm |
 | `RESUME` | coordinator → every paused worker and the held landing subagent | on `GPU_DONE` |
 
 **Coordinator.** Serve a `GPU_REQUEST` from any session the same way, worker
@@ -42,10 +42,23 @@ Record the pause in the run state. Tell the user nothing: the requester's announ
 the owner reads. One request is served at a time; a second waits in the run state
 until `GPU_DONE`.
 
+**A grant awaiting the arm is a worker waiting on the user.** At
+`GPU_GRANTED` to a worker of this run, record it "waiting on the user" as a
+`NEEDS_INPUT` would: its idle-watch line reads `<item> waiting`, and the
+reminder timer runs. Every `GPU_DONE` ends the grant and sends `RESUME`; a
+plain one also clears the mark. `GPU_DONE unarmed` leaves it: the grant lapsed for
+want of the owner, so once the worker's turn ends the idle watcher prints
+`dismissed` and `pickup-epic`'s dismissed row hands it off (`HIBERNATE`),
+phase `awaiting owner answer`, relaunched when the user says they will arm.
+A new `GPU_REQUEST` from it clears the mark first.
+
 **Worker.** Announce and start `await-go.sh` only after `GPU_GRANTED`. A
 re-run needs a new announcement but not a new request while the grant holds;
-send `GPU_DONE` when no further run is planned. On `PAUSE`, reply `PAUSED`
-once the current command ends — never kill a build part-way.
+send `GPU_DONE` when no further run is planned. `await-go.sh` gives up after
+15 minutes unarmed (`PERF_GO_WAIT_S`): send `GPU_DONE unarmed`, carry on with
+work that needs no run, and send a new `GPU_REQUEST` when the owner says
+they are ready. On `PAUSE`, reply `PAUSED` once the current command ends —
+never kill a build part-way.
 
 ## The post-landing step is `build:seed`
 
