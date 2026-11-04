@@ -21,3 +21,12 @@ repo-relative, so an outputs module passes them as they are.
   which partitions exist is `/scripts/sid/registry-partitions-pure.ts`'s.
   It is the one module under `src/` that spells a `data/` path, listed by
   name in `tests/source-declarations.test.ts`'s `DATA_PATH_SPELLERS`.
+- `lineage-files.ts` — the lineage layout under a build folder
+  (`lineage/`, `lineage.previous/`, `lineage-diff/`; `LINEAGE_REPO_LAYOUT`
+  is the checkout's own), each stage's spec (`MEMBERSHIP_LINEAGE`,
+  `PLACEMENT_LINEAGE`, `PROMOTION_LINEAGE`, `ALLOCATION_LINEAGE`: the stage
+  name and its file stems), the file names, and `stageOutputFiles` /
+  `stageFamilies`, a stage's files as output declarations. Each stage's codes
+  stay with its stage module; the absolute layout the readers and writers use
+  is `/scripts/catalog/lineage/lineage-layout-pure.ts`'s. The contract is
+  [Run-to-run diff](/scripts/catalog/lineage/README.md#run-to-run-diff).

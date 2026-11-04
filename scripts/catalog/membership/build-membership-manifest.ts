@@ -13,11 +13,11 @@ import { artifactRows, readArtifact } from '../../util/sources/source';
 import { MEMBERSHIP_OUTPUTS } from './membership-manifest-outputs';
 import { identityText } from '../lineage/identity-pure';
 import { readIdentity } from '../lineage/lineage-io';
-import { LINEAGE_LAYOUT, stageFile } from '../lineage/lineage-layout-pure';
+import { LINEAGE_LAYOUT } from '../lineage/lineage-layout-pure';
 import { stageLineageLine, stageLineageText } from '../lineage/lineage-row-pure';
 import { stageLineage } from '../lineage/stage-lineage';
 import {
-  MEMBERSHIP_CODES, MEMBERSHIP_INVARIANTS, MEMBERSHIP_LINEAGE_BUDGET, multiplesComponentJoin, MEMBERSHIP_LINEAGE,
+  MEMBERSHIP_CODES, MEMBERSHIP_INVARIANTS, MEMBERSHIP_LINEAGE_BUDGET, multiplesComponentJoin,
 } from './membership-lineage-pure';
 import { snapshotCheck } from '../../util/snapshot-check';
 import { compareCountSnapshot } from '../build-counts';
@@ -53,6 +53,7 @@ import { LABEL_DROPS } from './label-drops-tsv';
 import { MEMBERSHIP_MANIFEST } from './membership-manifest-tsv';
 import { BINDING_REVIEW_DISPOSITIONS } from './binding-review-dispositions-source';
 import { SPINE_CORRECTIONS } from './spine-corrections/spine-corrections-source';
+import { stageFile, MEMBERSHIP_LINEAGE } from '../../../src/catalog-format/pipeline-outputs/lineage-files';
 
 
 /** Per-identifier overlay coverage over the membership term, as a ratio of the

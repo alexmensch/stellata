@@ -1,9 +1,10 @@
 // Every file build:membership writes, as its emitArtifacts declaration. See README.md#files-in-this-area.
 
 import { declareOutputs } from '../../util/emit-artifacts';
-import { LINEAGE_LAYOUT, stageFamilies, stageOutputFiles } from '../lineage/lineage-layout-pure';
-import { MEMBERSHIP_LINEAGE } from './membership-lineage-pure';
 import { DATA_FILES } from '../../../src/catalog-format/pipeline-outputs/data-files';
+import {
+  LINEAGE_REPO_LAYOUT, stageFamilies, stageOutputFiles, MEMBERSHIP_LINEAGE,
+} from '../../../src/catalog-format/pipeline-outputs/lineage-files';
 
 export const MEMBERSHIP_OUTPUTS = declareOutputs({
   labelFlips: DATA_FILES.labelFlips,
@@ -11,5 +12,5 @@ export const MEMBERSHIP_OUTPUTS = declareOutputs({
   additions: DATA_FILES.additionsLedger,
   bindingReview: DATA_FILES.bindingReview,
   labelDrops: DATA_FILES.labelDrops,
-  ...stageOutputFiles(LINEAGE_LAYOUT, MEMBERSHIP_LINEAGE),
-}, stageFamilies(LINEAGE_LAYOUT, MEMBERSHIP_LINEAGE));
+  ...stageOutputFiles(LINEAGE_REPO_LAYOUT, MEMBERSHIP_LINEAGE),
+}, stageFamilies(LINEAGE_REPO_LAYOUT, MEMBERSHIP_LINEAGE));

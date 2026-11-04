@@ -72,9 +72,7 @@ import {
   parkedRefusals,
   RECURATED_BRIGHTNESS,
 } from './companions/companion-promotion';
-import {
-  PROMOTION_CODES, PROMOTION_LINEAGE, PROMOTION_LINEAGE_BUDGET, promotionLineage,
-} from './companions/promotion-lineage-pure';
+import { PROMOTION_CODES, PROMOTION_LINEAGE_BUDGET, promotionLineage } from './companions/promotion-lineage-pure';
 import { identityText } from './lineage/identity-pure';
 import { LINEAGE_LAYOUT } from './lineage/lineage-layout-pure';
 import {
@@ -115,7 +113,7 @@ import {
 } from './distance/parallax/parked-ledger-pure';
 import { PARKED_LEDGER } from './distance/parallax/parked-ledger-tsv';
 import {
-  PLACEMENT_CODES, PLACEMENT_INVARIANTS, PLACEMENT_LINEAGE, PLACEMENT_LINEAGE_BUDGET, parkedLedgerView, placementLineageLines,
+  PLACEMENT_CODES, PLACEMENT_INVARIANTS, PLACEMENT_LINEAGE_BUDGET, parkedLedgerView, placementLineageLines,
 } from './distance/placement-lineage-pure';
 import {
   SIMBAD_SOURCED_DISTANCES,
@@ -143,8 +141,8 @@ import { syntheticGaiaBridges } from '../sid/sid-pure';
 import { sidSuccessorPairs } from '../sid/events-pure';
 import { allocate } from '../sid/allocate-pure';
 import {
-  ALLOCATION_CODES, ALLOCATION_LINEAGE, ALLOCATION_LINEAGE_BUDGET,
-  allocationIdentityRows, allocationIdentityText, allocationLineageRows,
+  ALLOCATION_CODES, ALLOCATION_LINEAGE_BUDGET, allocationIdentityRows, allocationIdentityText,
+  allocationLineageRows,
 } from '../sid/allocation-lineage-pure';
 import { catalogSidObjects } from '../sid/catalog-objects';
 import { inPartition } from '../sid/registry-partitions-pure';
@@ -154,6 +152,9 @@ import { allocationRun, loadRegistry, registryTexts } from '../sid/registry-io';
 import { loadStoredEdges } from '../sid/stored-edges';
 import { stepInputPaths } from '../util/step-inputs';
 import { CATALOG_PARTITION } from '../../src/catalog-format/pipeline-outputs/data-files';
+import {
+  PROMOTION_LINEAGE, PLACEMENT_LINEAGE, ALLOCATION_LINEAGE,
+} from '../../src/catalog-format/pipeline-outputs/lineage-files';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);

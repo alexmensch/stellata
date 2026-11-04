@@ -9,11 +9,11 @@ import { retiredSids } from '../../sid/events-pure';
 import { allocationIdentity } from '../../sid/allocation-lineage-pure';
 import { catalogRecordDesignations } from '../../sid/catalog-designations';
 import { loadCatalog, nameTable, type SearchableCatalog } from '../catalog-lookup';
-import { MEMBERSHIP_LINEAGE } from '../membership/membership-lineage-pure';
 import { readIdentity, readLineage } from './lineage-io';
-import { LINEAGE_LAYOUT, stageFile } from './lineage-layout-pure';
+import { LINEAGE_LAYOUT } from './lineage-layout-pure';
 import { LINEAGE_STAGES } from './lineage-stages';
 import { parseTraceQuery, queryTerms, traceRecords, traceText, type TraceLookups } from './trace-pure';
+import { MEMBERSHIP_LINEAGE, stageFile } from '../../../src/catalog-format/pipeline-outputs/lineage-files';
 
 const DIR_FLAG = '--dir';
 

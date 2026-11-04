@@ -1,30 +1,4 @@
 // Modules outside the boundary trees an outputs module may still import at table load. See README.md#load-time-rules.
 
 // Never add to it: a new module an outputs module imports lives in src/catalog-format/ or src/astro-core/.
-export const LEGACY_IMPORTABLE: ReadonlySet<string> = new Set([
-  'scripts/binaries/multiples-row-key-pure.ts',
-  'scripts/catalog/classic-ids/classic-id-overlay-pure.ts',
-  'scripts/catalog/classic-ids/label-merge/label-merge-pure.ts',
-  'scripts/catalog/companions/promotion-lineage-pure.ts',
-  'scripts/catalog/distance/parallax/parked-ledger-pure.ts',
-  'scripts/catalog/distance/placement-lineage-pure.ts',
-  'scripts/catalog/gliese-parse-pure.ts',
-  'scripts/catalog/lineage/lineage-invariant-pure.ts',
-  'scripts/catalog/lineage/lineage-layout-pure.ts',
-  'scripts/catalog/lineage/lineage-row-pure.ts',
-  'scripts/catalog/lineage/reason-codes-pure.ts',
-  'scripts/catalog/membership/binding/binding-gate-pure.ts',
-  'scripts/catalog/membership/ledger-rows-pure.ts',
-  'scripts/catalog/membership/membership-lineage-pure.ts',
-  'scripts/catalog/photometry/gaia-photometry-pure.ts',
-  'scripts/catalog/photometry/hip-photometry-parse-pure.ts',
-  'scripts/catalog/photometry/v-magnitude-pure.ts',
-  'scripts/catalog/record/record-build-pure.ts',
-  'scripts/sid/allocation-lineage-pure.ts',
-  'scripts/sid/ledger-pure.ts',
-  'scripts/sid/sid-pure.ts',
-  'scripts/util/sources/row-ref-pure.ts',
-  'scripts/util/tally-pure.ts',
-  'scripts/util/tsv/artifact-pure.ts',
-  'scripts/util/tsv/table-pure.ts',
-]);
+export const LEGACY_IMPORTABLE: ReadonlySet<string> = new Set([]);
