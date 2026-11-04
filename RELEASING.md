@@ -409,21 +409,23 @@ It is not a shift between two levels — lg's GPU duration wanders as much
 *inside* one dwell as it does between runs (within-dwell quarter span
 median 0.626 ms and up to 1.775, against ~0.02 at the other four; spread
 across runs 1.608 ms, the same size), so a 120-sample median there lands
-anywhere in that band and no cool-down or longer dwell narrows it. So lg is
-recorded and **permanently** never marked by the band —
+anywhere in that band and no cool-down or longer dwell narrows it. So on
+an rAF-paced pin lg is recorded and never marked by the band —
 [Ungated vantages](scripts/perf/pins/README.md#ungated-vantages-and-lg-is-permanently-one) carries the evidence and
 stellata-8cg.49.18 closed on it. A single floor wide enough to cover lg would have to be ~12 %, which
 would hide a 3.9 ms regression at mw50 — the gate would be a formality.
+**GPU-paced, lg holds still** (throughput 4.037 / 4.063 / 4.037 ms over
+three cold M6 runs), so a GPU-paced pin gates lg like the other four.
 
-**What ungating lg costs, and what still watches it.** lg is the only
-canon vantage that sees the Local Group, so a render change under
-`src/client/local-group/` is priced by no pin row of its own: it reads five
-`~` and a `·`, and `perf-section-guard` demands an `accepted:` line only
-for a `✗`. The ceiling is what remains — it applies to lg like any other
-row carrying a GPU reading, so a frame that doubles there is still `✗`.
-That is a backstop, not a gate: it catches a collapse and nothing smaller.
-So price a `local-group/` diff with a per-pass differential at lg, never
-with its pin row. This is the standing arrangement, not an interim one.
+**What ungating lg costs on an rAF-paced pin, and what still watches it.**
+lg is the only canon vantage that sees the Local Group, so there a render
+change under `src/client/local-group/` is priced by no pin row of its own:
+it reads five `~` and a `·`, and `perf-section-guard` demands an
+`accepted:` line only for a `✗`. The ceiling is what remains — it applies to
+lg like any other row carrying a GPU reading, so a frame that doubles there
+is still `✗`. That is a backstop, not a gate: it catches a collapse and
+nothing smaller. So against an rAF-paced pin, price a `local-group/` diff
+with a per-pass differential at lg. A GPU-paced pin's lg row prices it.
 
 <a id="the-perf-section"></a>**The `## Perf` section.** Required in the PR body when the diff touches
 anything under `src/client/` — `.ts` and `.wgsl` alike — outside

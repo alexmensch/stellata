@@ -9,7 +9,7 @@ import {
   FLOOR_FOLLOWS_FRACTION,
   PIN_CEILING_MS,
   PIN_SCHEMA,
-  PIN_UNGATED_SCENARIOS,
+  RAF_UNGATED_SCENARIOS,
   PinError,
   adapterSlug,
   assertPinFile,
@@ -485,8 +485,8 @@ describe('compareToPin', () => {
   });
 
   it('names lg alone as ungated, carrying the reason the row note prints', () => {
-    expect(PIN_UNGATED_SCENARIOS)
-      .toEqual({ lg: 'wanders as much inside one dwell as between runs' });
+    expect(RAF_UNGATED_SCENARIOS)
+      .toEqual({ lg: 'wanders as much inside one dwell as between runs under rAF pacing' });
   });
 
   it('records lg and never marks it below the ceiling, at the full 1.47 ms it moved', () => {
@@ -495,7 +495,7 @@ describe('compareToPin', () => {
     expect([row.metric, row.verdict]).toEqual(['gpu-p50', 'ungated']);
     expect(row.currentMs).toBe(13.36);
     expect(row.bandMs).toBe(0);
-    expect(row.note).toContain(PIN_UNGATED_SCENARIOS.lg);
+    expect(row.note).toContain(RAF_UNGATED_SCENARIOS.lg);
     expect(pinDiffFails(diff)).toBe(false);
   });
 
@@ -624,7 +624,7 @@ describe('compareToPin', () => {
       const lgCompute = (compute: number) => scenario('lg', 'webgpu', withCompute(dwell(stats(16.7), stats(11.891)), stats(compute)));
       const wander = compareToPin(pinOf([lgCompute(1.4)]), file([lgCompute(3)])).rows[1];
       expect([wander.key, wander.verdict]).toEqual(['lg|webgpu|compute', 'ungated']);
-      expect(wander.note).toContain(PIN_UNGATED_SCENARIOS.lg);
+      expect(wander.note).toContain(RAF_UNGATED_SCENARIOS.lg);
       const hot = compareToPin(pinOf([lgCompute(1.4)]), file([lgCompute(33.5)])).rows[1];
       expect([hot.verdict, hot.note]).toEqual(['dearer', 'compute-p10 over the 33.4 ms ceiling']);
     });
@@ -851,10 +851,19 @@ describe('the pinned pacing', () => {
 });
 
 describe('a GPU-paced pin — throughput, CPU and the bottleneck', () => {
-  const paced = (frameMs: number, cpuMs: number) => scenario('sol', 'webgpu', {
+  const paced = (
+    frameMs: number, cpuMs: number, name: ScenarioName = 'sol', throughput: DwellSummary = stats(frameMs + 0.4),
+  ) => scenario(name, 'webgpu', {
     ...dwell(stats(16.7), stats(frameMs * 1.3)),
-    deltasMs: [frameMs - 1, frameMs + 1], throughputStats: stats(frameMs + 0.4), cpuMs: [cpuMs], cpuStats: stats(cpuMs),
+    deltasMs: [frameMs - 1, frameMs + 1], throughputStats: throughput, cpuMs: [cpuMs], cpuStats: stats(cpuMs),
   }, { params: { pacing: 'gpu' } });
+
+  it('gates lg like any other vantage: its stand-down is rAF-paced only', () => {
+    const row = compareToPin(pinOf([paced(4, 1, 'lg')]), file([paced(5, 1, 'lg')])).rows[0];
+    expect([row.key, row.metric, row.verdict, row.note]).toEqual(['lg|webgpu', 'throughput-mean', 'dearer', '']);
+    expect(pinFromRuns([runOf(file([paced(4, 1, 'lg', trending(4.4))]))], SOURCE).refusals[0])
+      .toContain('load-state transition');
+  });
 
   it('carries both clocks on the row and gates on them', () => {
     const pin = pinOf([paced(5, 2)]);

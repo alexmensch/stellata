@@ -22,16 +22,21 @@ import { BACKENDS, SCENARIO_NAMES, type Backend, type ScenarioName } from '../sc
  *  does not — the same contract as `PERF_SCHEMA`. */
 export const PIN_SCHEMA = 'stellata-perf/pin-3';
 
-/** Vantages the band never marks, mapped to the reason, which the row's note
- *  carries. lg wanders as much across one dwell's quarters as it does between
- *  runs, so neither a steady nor a trending state guard says anything about
- *  whether the row is comparable — and a trending one must therefore not
- *  refuse it, since any refused row refuses the whole pin. The ceiling still
- *  applies: a vantage that wanders 1.5 ms is no licence for a frame that
- *  doubled. README.md#reading---against-pin `--against-pin`. */
-export const PIN_UNGATED_SCENARIOS: Readonly<Partial<Record<ScenarioName, string>>> = {
-  lg: 'wanders as much inside one dwell as between runs',
+/** Vantages the band never marks on an rAF-paced row, mapped to the reason,
+ *  which the row's note carries. Under rAF pacing lg wanders as much across
+ *  one dwell's quarters as it does between runs, so neither a steady nor a
+ *  trending state guard says anything about whether the row is comparable —
+ *  and a trending one must therefore not refuse it, since any refused row
+ *  refuses the whole pin. The ceiling still applies: a vantage that wanders
+ *  1.5 ms is no licence for a frame that doubled.
+ *  README.md#reading---against-pin `--against-pin`. */
+export const RAF_UNGATED_SCENARIOS: Readonly<Partial<Record<ScenarioName, string>>> = {
+  lg: 'wanders as much inside one dwell as between runs under rAF pacing',
 };
+
+export function ungatedBecause(name: ScenarioName, pacing: FramePacing): string | undefined {
+  return pacing === 'raf' ? RAF_UNGATED_SCENARIOS[name] : undefined;
+}
 
 /** Two 60 Hz intervals of hardware time. A canon vantage whose GPU-stream
  *  p50 crosses it marks whatever the band says, and whether or not the
@@ -153,8 +158,8 @@ export interface PinFile {
 
 /** `ungated` is a row the band never marks, on either of two grounds: it
  *  carries no GPU-stream median on one side or the other, and wall time is
- *  quantised to the display's refresh interval; or its vantage is in
- *  `PIN_UNGATED_SCENARIOS`. The ceiling reaches the second kind, so an
+ *  quantised to the display's refresh interval; or `ungatedBecause` stands
+ *  its vantage down at its pacing. The ceiling reaches the second kind, so an
  *  ungated vantage can still read `dearer`. /RELEASING.md#perf-pin. */
 export type PinVerdict = Verdict | 'ungated';
 
@@ -272,7 +277,7 @@ function rowRefusal(record: ScenarioRecord): string | null {
   // Here, so a pin row is never CPU-bound and `compareToPin` checks the run alone.
   const cpuBound = cpuBoundRefusal(cpuClock(record.dwell)?.p50, throughputFrameMs(record.dwell, dwellPacing(record)));
   if (cpuBound !== null) return cpuBound;
-  if (PIN_UNGATED_SCENARIOS[record.name] === undefined
+  if (ungatedBecause(record.name, dwellPacing(record)) === undefined
     && gatingClock(record.dwell, dwellPacing(record)).clock.stateGuard === 'trending') {
     return 'the dwell trended across its quarters — it straddled a load-state transition';
   }
@@ -590,12 +595,12 @@ function streamRow(pinned: PinRow, spec: StreamSpec): PinVerdictRow {
   // Null where the p10 IS the metric: the column would restate `delta`.
   const floorDeltaMs = metric === 'compute-p10' ? null : pointMove(side.p10, current.p10);
   const spreadDeltaMs = spreadMove(side, current);
-  const ungatedBecause = PIN_UNGATED_SCENARIOS[pinned.name];
-  if (ungatedBecause !== undefined) {
+  const reason = ungatedBecause(pinned.name, recordedPacing(pinned.pacing));
+  if (reason !== undefined) {
     return underCeiling({
       ...ungatedRow(
         key, metric, side.valueMs, current.valueMs,
-        `${pinned.name} ${ungatedBecause} — recorded, never marked below the ceiling`,
+        `${pinned.name} ${reason} — recorded, never marked below the ceiling`,
       ),
       floorDeltaMs,
       spreadDeltaMs,

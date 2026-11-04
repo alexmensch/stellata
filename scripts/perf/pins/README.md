@@ -281,9 +281,11 @@ a pin run reads `steady`.
   names which statistic the row was judged on, and it is not the same at
   every row: `gpu-plain-p50` where the vantage draws two pass classes and
   `compute-p10` on a compute row ([The compute row](#the-compute-row)).
-- <a id="ungated-vantages-and-lg-is-permanently-one"></a>**Ungated vantages, and `lg` is one under rAF pacing.** `PIN_UNGATED_SCENARIOS`
-  maps a vantage the band never marks to the reason, which the row's note
-  prints. `lg`'s GPU duration **wanders as much inside a single dwell as it
+- <a id="ungated-vantages-and-lg-is-permanently-one"></a>**Ungated vantages, and `lg` is one under rAF pacing.** `RAF_UNGATED_SCENARIOS`
+  maps a vantage the band never marks on an rAF-paced row to the reason,
+  which the row's note prints; `ungatedBecause` is the one reading of it, by
+  vantage and recorded pacing. **A GPU-paced lg row is gated like any other.**
+  Under rAF pacing `lg`'s GPU duration **wanders as much inside a single dwell as it
   does between runs**, so its median is not a stable estimator there and
   there is no level to hold it to. Measured over every dwell ever taken at
   the pin buffer: lg's within-dwell quarter span runs 0.090–1.775 ms, median
@@ -294,14 +296,16 @@ a pin run reads `steady`.
   (where the frame clears the refresh interval), at run positions 1, 5 and
   10, cold and warm, across a dozen commits — so it is a property of the
   vantage and **not** waiting on a fix — under rAF pacing, where all of
-  that was measured. GPU-paced, lg's throughput quarters read flat
-  (4.00–4.08 ms, `8cg-49-42-gpu-all-{3,4}.json`), so whether lg stays
-  ungated on a GPU-paced pin is `stellata-8cg.49.38`'s to decide. The band
+  that was measured. GPU-paced on the M6, lg's throughput reads 4.037 /
+  4.063 / 4.037 ms over three cold runs, every quarter inside 0.08 ms of its
+  run's others and every run steady (`8cg-49-42-gpu-all-{3,4}.json`,
+  `.perf-runs/2026-11-04/8cg-49-38-m6-pin.json`) — the stability the other
+  four vantages show, so the stand-down does not reach it. On an rAF-paced row the band
   stands down, and so does the **state guard**: a trending lg is that same wander read across the quarters,
   not a verdict on the run, and since any refused row refuses the whole pin,
   leaving the refusal in force killed roughly one pin re-take in three on the
   one row the gate never acts on — ~25 min of held-idle machine each.
-  **The stand-down is keyed on the vantage**, so it covers an lg row whose
+  **On an rAF-paced row the stand-down is keyed on the vantage**, so it covers an lg row whose
   adapter resolved no GPU stream and is therefore gated on wall. Such a row
   earns the exemption on the other ground: its wall median sits on the
   refresh interval, so its quarters swing by a whole interval however idle
@@ -311,10 +315,10 @@ a pin run reads `steady`.
   ceiling below still marks lg, and a failed, tainted, resized or
   mis-positioned lg still refuses, those being facts about the run rather
   than about lg. **`lg` is
-  the only canon vantage that sees the Local Group**, so a
-  `src/client/local-group/` render change has no pin row that prices it short
-  of the ceiling: price one with a per-pass differential at lg instead, never
-  with its pin row.
+  the only canon vantage that sees the Local Group**, so against an
+  rAF-paced pin a `src/client/local-group/` render change has no row that
+  prices it short of the ceiling: price one there with a per-pass
+  differential at lg. A GPU-paced pin's lg row prices it.
 - **Band.** On a frame row the pair's two-sigma standard error floored at
   `max(DWELL_FLOOR_MS 0.25 ms, DWELL_FLOOR_FRACTION 1 % × pinned)`; on a
   compute row the vantage's own constant and nothing else ([The compute

@@ -53,7 +53,7 @@ scatter is measured separately
 
 **The compute row's floor is its own, one number per vantage** —
 `COMPUTE_SCATTER_FLOOR_MS`, keyed on the vantage the way
-`PIN_UNGATED_SCENARIOS` keys lg's stand-down, and applied by both gates
+`RAF_UNGATED_SCENARIOS` keys lg's stand-down, and applied by both gates
 through `computeFloorMs`. Why that row gates on its p10 rather than its
 median: [The compute row](../pins/README.md#the-compute-row).
 
