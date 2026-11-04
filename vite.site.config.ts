@@ -1,13 +1,13 @@
 import { defineConfig, type Plugin } from 'vite';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+import type { Figures } from './scripts/site/figures-pure.ts';
 import { indexCitations } from './scripts/site/json-ld-citations.ts';
 import { LLMS_TXT_PATH, builtLlmsTxt } from './scripts/site/llms-txt.ts';
 import { markdownRendition } from './scripts/site/markdown-rendition.ts';
 import { fillPageMeta } from './scripts/site/page-meta-pure.ts';
 import { withoutCaptureComments } from './scripts/site/shipped-html-pure.ts';
 import { NOT_FOUND_SOURCE, SITE_PAGES, renditionPath } from './src/site/pages.ts';
-import { type Figures } from './scripts/site/figures-pure.ts';
 import { BUILD_TARGET, absentCatalogueFor, buildFigures, figureSubstitution, publishBuildEnv } from './vite.env.ts';
 
 const SITE_DIR = resolve(import.meta.dirname, 'src/site');
