@@ -1,4 +1,4 @@
-"""Molecular-cloud density model shared by build-clouds.py (clouds.json v3)
+"""Molecular-cloud density model shared by build-clouds.py (clouds.json)
 and build-dust.py (extinction column check): Zucker 2021 (/data/papers/index.md#zucker2021) Plummer profiles,
 column calibration, taxonomy, noise constants. /docs/science-molecular-clouds.md#2-extinction-physics-and-the-units-chain through /docs/science-molecular-clouds.md#5-substructure-noise-build-side-spec."""
 
