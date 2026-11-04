@@ -266,9 +266,8 @@ illusion survives it.
 
 Exit codes: **0** ok · **1** a scenario failed, was tainted, priceFrame
 refused, the adapter was software, or the JSON could not be written · **2**
-bad flags, an unreachable URL, or an unusable `--json` / `--baseline` path
-(a `--json` off `.json.gz` among them)
-(marker untouched) · **3** not armed (marker absent or stale).
+bad flags, an unreachable URL, or an unusable `--json` / `--baseline` path,
+a `--json` off `.json.gz` among them (marker untouched) · **3** not armed (marker absent or stale).
 
 **Both output paths are proved usable before the marker is consumed.** A
 `--json` directory that does not exist, or a `--baseline` that is missing,
