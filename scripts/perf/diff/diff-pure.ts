@@ -10,7 +10,7 @@ import {
   COMPUTE_JUDGEMENT, COMPUTE_ROW, CPU_BOUND_SHARE, CPU_JUDGEMENT, CPU_ROW, GPU_FRAME_JUDGEMENT,
   GPU_PLAIN_FRAME_JUDGEMENT, THROUGHPUT_JUDGEMENT, WALL_JUDGEMENT, classClock, computeClock, cpuClock,
   frameFloor, gatingClock, pointMove, recordedPacing, sampleClasses, spreadMove, throughputFrameMs,
-  type DwellMetric, type GatedSide, type GatingClock, type RowJudgement,
+  type ClassClock, type DwellMetric, type GatedSide, type GatingClock, type RowJudgement,
 } from '../dwell/dwell-pure';
 import type { DwellRecord, PerfFile, ScenarioRecord } from '../schema';
 import type { ScenarioName } from '../scenarios';
@@ -303,6 +303,16 @@ export function splitFrameClasses(counts: DwellRecord['passCounts'] | undefined)
   return min !== max;
 }
 
+/** Gated on the counters: the gap alone finds a cut at `lg` too. */
+export function frameClassesOf(
+  dwell: DwellRecord,
+): { readonly cutMs: number; readonly plain: ClassClock; readonly dear: ClassClock } | null {
+  if (!splitFrameClasses(dwell.passCounts)) return null;
+  const classes = sampleClasses(dwell.gpuMs);
+  if (classes === null) return null;
+  return { cutMs: classes.cutMs, plain: classClock(classes.plain), dear: classClock(classes.dear) };
+}
+
 /**
  * Two dwells at different exposure-readback duty cycles, where the frame has
  * two classes. The stream samples over half the rendered frames, so the
@@ -533,10 +543,10 @@ function judgedFrame(dwell: DwellRecord, gating: GatingClock): JudgedSide {
   }
   if (gating.metric === 'wall-p50') return judged(WALL_JUDGEMENT, gating.clock);
   const reading = { clock: gating.clock, floor: frameFloor(dwell.gpuMs) };
-  const classes = splitFrameClasses(dwell.passCounts) ? sampleClasses(dwell.gpuMs) : null;
+  const classes = frameClassesOf(dwell);
   return classes === null
     ? judged(GPU_FRAME_JUDGEMENT, reading)
-    : judged(GPU_PLAIN_FRAME_JUDGEMENT, { ...reading, plain: classClock(classes.plain) });
+    : judged(GPU_PLAIN_FRAME_JUDGEMENT, { ...reading, plain: classes.plain });
 }
 
 interface JudgedSide {

@@ -4,12 +4,12 @@
 
 import type { FramePacing } from '../../../src/client/scene/frame-loop/frame-loop';
 import {
-  VERDICT_MARK, bufferRefusal, cpuBoundRefusal, dwellFrames, dwellPacing, framesRefusal, judgedMove, pacingRefusal, positionRefusal, preconditionRefusal, readbackRefusal, recordCountRefusal, splitFrameClasses,
+  VERDICT_MARK, bufferRefusal, cpuBoundRefusal, dwellFrames, dwellPacing, frameClassesOf, framesRefusal, judgedMove, pacingRefusal, positionRefusal, preconditionRefusal, readbackRefusal, recordCountRefusal, splitFrameClasses,
   type DiffRefusal, type Verdict,
 } from '../diff/diff-pure';
 import {
   COMPUTE_JUDGEMENT, COMPUTE_ROW, CPU_JUDGEMENT, CPU_ROW, GPU_FRAME_JUDGEMENT, GPU_PLAIN_FRAME_JUDGEMENT, THROUGHPUT_JUDGEMENT,
-  classClock, computeClock, cpuClock, frameFloor, gatingClock, recordedPacing, sampleClasses, throughputFrameMs, throughputMs,
+  computeClock, cpuClock, frameFloor, gatingClock, recordedPacing, throughputFrameMs, throughputMs,
   type DwellMetric, type DwellSummary, type FrameFloor, type GpuFrameReading, type RowJudgement, type StateGuard,
 } from '../dwell/dwell-pure';
 import { DWELL_METHOD, contextOrder } from '../run-pure';
@@ -227,18 +227,6 @@ export function pinKey(record: ScenarioRecord): string {
 export const CANON_POSITIONS: ReadonlyMap<string, number> = new Map(
   contextOrder(SCENARIO_NAMES, BACKENDS).map(({ name, backend }, i) => [keyOf(name, backend), i + 1]),
 );
-
-/** Gated on the counters: the gap alone finds a cut at `lg` too. */
-function frameClassesOf(dwell: DwellRecord): PinFrameClasses | null {
-  if (!splitFrameClasses(dwell.passCounts)) return null;
-  const classes = sampleClasses(dwell.gpuMs);
-  if (classes === null) return null;
-  return {
-    cutMs: classes.cutMs,
-    plain: classClock(classes.plain),
-    dear: classClock(classes.dear),
-  };
-}
 
 function clockOf(stats: DwellSummary): PinClock {
   return {
