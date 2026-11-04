@@ -26,7 +26,7 @@ function start(): Server {
   const watched: string[] = [];
   const changed: ((file: string) => void)[] = [];
   const sent: { type: string; path?: string }[] = [];
-  const plugin = documentRoutingInDev(ROOT, buildFigures());
+  const plugin = documentRoutingInDev(ROOT, buildFigures('development'));
   const post = plugin.configureServer!({
     middlewares: { use: (fn: never) => registered.push(fn) },
     transformIndexHtml: async (_base: string, html: string) => html,

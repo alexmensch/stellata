@@ -48,8 +48,8 @@ function markdownRenditions(figures: Figures): Plugin {
   };
 }
 
-export default defineConfig(() => {
-  const figures = buildFigures();
+export default defineConfig(({ mode }) => {
+  const figures = buildFigures(mode);
   publishBuildEnv(figures);
   return {
     base: '/',

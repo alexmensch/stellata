@@ -60,7 +60,10 @@ literal.
   figure at all — a value that vanishes on a fresh clone has to be worded
   around, and the wording is what goes stale. The fallback covers an
   **absent** artifact only: one that is present but unreadable stops the
-  build rather than quoting the snapshot over it.
+  build rather than quoting the snapshot over it. And it covers every Vite
+  mode but `production`: a production build of either config with no
+  `catalog.bin.0` stops, since the app it ships would have no catalogue to
+  load (`buildFigures(mode)` in `vite.env.ts` makes the call).
 - **Credited sources** — the `<div>` rows of the application's own Credits
   tab (`src/client/app/index.html`, `.modal-credits`), selected from the
   parsed document, so reformatting the markup cannot move the figure.

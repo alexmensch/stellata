@@ -5,8 +5,8 @@ import { BUILD_TARGET, buildFigures, figureSubstitution, publishBuildEnv } from 
 import { documentRoutingInDev } from './vite.site-dev.ts';
 import { PUBLIC_DIR } from './scripts/util/paths.ts';
 
-export default defineConfig(() => {
-  const figures = buildFigures();
+export default defineConfig(({ mode }) => {
+  const figures = buildFigures(mode);
   publishBuildEnv(figures);
   return {
     base: '/',

@@ -24,7 +24,7 @@ const HOME_SOURCE = readFileSync(join(ROOT, 'src/site/index.html'), 'utf8');
 const HOME = parseHtml(HOME_SOURCE);
 const NOT_FOUND = parseHtml(readFileSync(join(ROOT, 'src/site/404.html'), 'utf8'));
 const TOKEN = new RegExp(`^%(?:${FIGURE_NAMES.join('|')})%$`);
-const FIGURES = buildFigures();
+const FIGURES = buildFigures('test');
 const DOCUMENTS = [
   ...[...SITE_PAGES.map((page) => page.source), NOT_FOUND_SOURCE].map((source) => `src/site/${source}`),
   'src/client/app/index.html',
