@@ -1,4 +1,4 @@
-// `pnpm run build:vaidman-tsv [--pdf <path>]`: the paper PDF → the committed reference table. See README.md.
+// `pnpm run build:vaidman-table [--pdf <path>]`: the paper PDF → the committed reference table. See README.md.
 
 import { execFileSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
@@ -6,7 +6,7 @@ import { resolve } from 'node:path';
 
 import { emitArtifacts, runStep } from '../util/emit-artifacts';
 import { REPO_ROOT } from '../util/paths';
-import { EXPECTED_A1_ROWS, EXPECTED_A2_ROWS, attachGaiaSourceIds, extractTables } from './build-vaidman-tsv-pure';
+import { EXPECTED_A1_ROWS, EXPECTED_A2_ROWS, attachGaiaSourceIds, extractTables } from './build-vaidman-table-pure';
 import { VAIDMAN_OUTPUTS } from './vaidman-outputs';
 import { VAIDMAN_SUPERGIANTS } from './vaidman-tsv';
 
@@ -19,7 +19,7 @@ function main(): void {
   const pdf = pdfArgument();
   if (!existsSync(pdf)) {
     throw new Error(
-      `build-vaidman-tsv: PDF not found at ${pdf}. Drop the paper PDF (DOI 10.3390/universe11110359) at the repo `
+      `build-vaidman-table: PDF not found at ${pdf}. Drop the paper PDF (DOI 10.3390/universe11110359) at the repo `
         + 'root or pass --pdf <path>; remove it after the TSV is committed.',
     );
   }
@@ -28,14 +28,14 @@ function main(): void {
   console.log(`  Table A2 (BJ_old):   ${a2.length} rows (expect ${EXPECTED_A2_ROWS})`);
   if (a1.length !== EXPECTED_A1_ROWS || a2.length !== EXPECTED_A2_ROWS) {
     throw new Error(
-      'build-vaidman-tsv: appendix row counts moved; the layout has changed or the parser missed rows. '
+      'build-vaidman-table: appendix row counts moved; the layout has changed or the parser missed rows. '
         + 'Inspect the pdftotext output before re-pinning.',
     );
   }
   const joined = attachGaiaSourceIds([...a1, ...a2]);
   if (joined.kind === 'missing') {
     throw new Error(
-      `build-vaidman-tsv: ${joined.names.length} paper name(s) not in NAME_TO_GAIA_DR3: ${joined.names.join(', ')}. `
+      `build-vaidman-table: ${joined.names.length} paper name(s) not in NAME_TO_GAIA_DR3: ${joined.names.join(', ')}. `
         + 'Resolve via SIMBAD per data/distance-validation/README.md and extend the mapping.',
     );
   }

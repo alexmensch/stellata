@@ -77,6 +77,12 @@ describe('source declarations', () => {
     expect(offenders).toEqual([]);
   });
 
+  it('names no script entry like a declaring module, which the input-set walk imports', () => {
+    const entries = Object.keys(scripts).flatMap((name) => scriptParts(scripts, name))
+      .flatMap((p) => (p.kind === 'tsx' ? [p.entry] : []));
+    expect(entries.filter((entry) => DECLARING_MODULE.test(entry))).toEqual([]);
+  });
+
   it('declares sources only in a module named for it', () => {
     const misplaced: string[] = [];
     for (const file of walkFiles(resolve(REPO_ROOT, 'scripts'), { include: isProductionTs })) {

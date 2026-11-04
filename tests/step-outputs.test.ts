@@ -31,7 +31,7 @@ const STEPS: Record<string, DeclaredOutputs> = {
   'build:local-group': LOCAL_GROUP_OUTPUTS,
   'build:clouds': CLOUDS_OUTPUTS,
   'build:lut': LUT_OUTPUTS,
-  'build:vaidman-tsv': VAIDMAN_OUTPUTS,
+  'build:vaidman-table': VAIDMAN_OUTPUTS,
   'sid:risk-set': DR_RISK_SET_OUTPUTS,
   'sid:dr-reconcile': DR_RECONCILE_OUTPUTS,
   'fetch:probes': PROBE_OUTPUTS,

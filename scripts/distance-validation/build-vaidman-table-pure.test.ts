@@ -8,7 +8,7 @@ import {
   attachGaiaSourceIds,
   extractTables,
   parseAppendixRow,
-} from './build-vaidman-tsv-pure';
+} from './build-vaidman-table-pure';
 import { ADOPTED_BJ_OLD, ADOPTED_EDSD_NEW, VAIDMAN_SUPERGIANTS } from './vaidman-tsv';
 
 describe('parseAppendixRow', () => {

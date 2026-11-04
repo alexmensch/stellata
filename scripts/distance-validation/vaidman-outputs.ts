@@ -1,4 +1,4 @@
-// The file build:vaidman-tsv writes, as its emitArtifacts declaration. See README.md.
+// The file build:vaidman-table writes, as its emitArtifacts declaration. See README.md.
 
 import { declareOutputs } from '../util/emit-artifacts';
 import { DATA_FILES } from '../../src/catalog-format/pipeline-outputs/data-files';

@@ -40,7 +40,7 @@ const NUMERIC_COLUMNS = Object.keys(NUMERIC) as NumericColumn[];
 export const VAIDMAN_SUPERGIANTS = defineArtifact({
   file: DATA_FILES.vaidmanSupergiants,
   columns: ['name', ...NUMERIC_COLUMNS, 'adopted', 'gaia_source_id'] as const,
-  hint: 'Rebuild it from the paper PDF with `pnpm run build:vaidman-tsv` (/data/distance-validation/README.md).',
+  hint: 'Rebuild it from the paper PDF with `pnpm run build:vaidman-table` (/data/distance-validation/README.md).',
   order: 'as-given',
   decode: (row): VaidmanRow => {
     const required = (column: NumericColumn): number => {

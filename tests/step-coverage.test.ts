@@ -18,7 +18,7 @@ const EXCLUDED: Readonly<Record<string, readonly Ref[]>> = {
   'identity:snapshot': [],
   'build:lut': ['scripts/colour/blackbody-lut-outputs.ts#LUT_OUTPUTS'],
   'build:naming-parity': ['scripts/catalog/naming/naming-parity-outputs.ts#NAMING_PARITY_OUTPUTS'],
-  'build:vaidman-tsv': ['scripts/distance-validation/vaidman-outputs.ts#VAIDMAN_OUTPUTS'],
+  'build:vaidman-table': ['scripts/distance-validation/vaidman-outputs.ts#VAIDMAN_OUTPUTS'],
 };
 
 /** Steps whose move onto the table is a later item's; each entry goes when its step joins steps.ts. */

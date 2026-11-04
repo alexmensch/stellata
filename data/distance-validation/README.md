@@ -44,7 +44,7 @@ this subset.
 All 132 source_ids were hand-resolved once via SIMBAD's Sesame-style
 ASCII endpoint and verified against the paper's reported `g_mag`. The
 canonical mapping is committed inline in
-`scripts/distance-validation/build-vaidman-tsv-pure.ts`'s `NAME_TO_GAIA_DR3`.
+`scripts/distance-validation/build-vaidman-table-pure.ts`'s `NAME_TO_GAIA_DR3`.
 
 The resolution recipe per name type:
 
@@ -58,7 +58,7 @@ The resolution recipe per name type:
 | `6 Cas`, `HD 43820`                                                 | SIMBAD's primary lookup carries no Gaia DR3 cross-ID for the system (a known SIMBAD coverage gap). Resolved by 5″ cone-search of VizieR `I/355/gaiadr3` around SIMBAD coordinates and verified by G-magnitude match. |
 | `ϵ CMa`                                                             | Adhara (G ≈ 1.5) saturates Gaia DR3; the paper's G = 8.38 matches the catalogued companion `eps CMa B` (verified). The mapping uses the B-component source_id.                  |
 
-Run `pnpm run build:vaidman-tsv --pdf <PDF>` (needs `pdftotext`) to
+Run `pnpm run build:vaidman-table --pdf <PDF>` (needs `pdftotext`) to
 re-extract the TSV from the paper PDF. Any name newly present in the PDF
 but absent from the inline mapping triggers a hard fail; extend the
 mapping by the same procedure above and re-run.

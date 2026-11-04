@@ -15,12 +15,14 @@ reference.
   driver. Exits 0 on pass, 1 on a bar miss. `validate-distances-pure.ts`
   (+ test) holds the statistics, the acceptance bars and the report, whose
   `validate-distances:` headline lines are stable for a downstream grep.
-- `build-vaidman-tsv.ts` — `pnpm run build:vaidman-tsv [--pdf <path>]`,
+- `build-vaidman-table.ts` — `pnpm run build:vaidman-table [--pdf <path>]`,
   the one-time builder: paper appendix tables (through `pdftotext -layout`)
   → `data/distance-validation/vaidman-2025-supergiants.tsv`.
-  `build-vaidman-tsv-pure.ts` (+ test) parses the appendix and joins each
+  `build-vaidman-table-pure.ts` (+ test) parses the appendix and joins each
   name to its hand-resolved source_id. A hand-run writer, so it is on the
-  step table's not-a-step list (`tests/step-coverage.test.ts`).
+  step table's not-a-step list (`tests/step-coverage.test.ts`). An entry's
+  name never ends in `-tsv.ts` or `-source.ts`: the input-set walk imports
+  every module so named, and an entry runs its step on import.
 - `vaidman-tsv.ts` — the reference table's codec, which the builder writes
   through and the validator reads through; the builder's test round-trips the
   committed file byte for byte. `vaidman-outputs.ts` is the builder's
