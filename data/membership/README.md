@@ -72,7 +72,7 @@ label-drops.tsv          Regular git. The /docs/catalog-driver.md#62-label-parit
 
 The three ledgers above that `build:membership` writes, and
 `../classic-ids/label_flips.tsv`, are views of the stage's lineage
-([The membership stage](/scripts/catalog/lineage/README.md#the-membership-stage)):
+([Membership lineage](/scripts/catalog/membership/README.md#membership-lineage)):
 no code writes their rows except by generating them from it.
 
 `data/membership/*.tsv` is a blanket LFS rule, so the small files carry their
