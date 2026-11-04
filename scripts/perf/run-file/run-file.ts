@@ -9,15 +9,19 @@ export const RUN_FILE_GZIP_LEVEL = 9;
 
 const GZIP_MAGIC = [0x1f, 0x8b] as const;
 
-export function runFilePathError(flag: string, path: string): string | null {
+declare const runFilePathBrand: unique symbol;
+export type RunFilePath = string & { readonly [runFilePathBrand]: true };
+
+export function parseRunFilePath(
+  flag: string,
+  path: string,
+): { readonly path: RunFilePath; readonly error: null } | { readonly path: null; readonly error: string } {
   return path.endsWith(RUN_FILE_SUFFIX)
-    ? null
-    : `${flag} ${path}: a run file is written gzipped, so its path must end ${RUN_FILE_SUFFIX}`;
+    ? { path: path as RunFilePath, error: null }
+    : { path: null, error: `${flag} ${path}: a run file is written gzipped, so its path must end ${RUN_FILE_SUFFIX}` };
 }
 
-export function writeRunFile(path: string, value: unknown): void {
-  const error = runFilePathError('run file', path);
-  if (error !== null) throw new Error(error);
+export function writeRunFile(path: RunFilePath, value: unknown): void {
   writeFileSync(path, gzipSync(`${JSON.stringify(value, null, 2)}\n`, { level: RUN_FILE_GZIP_LEVEL }));
 }
 

@@ -6,9 +6,12 @@ archive itself and its naming rules are `/.perf-runs/README.md`.
 
 ```
 scripts/perf/run-file/
-  run-file.ts (+ test)   RUN_FILE_SUFFIX, the --json path check both
-                         instruments' parsers apply, writeRunFile, and
-                         readJsonFile — gzip or plain JSON, so a pin
+  run-file.ts (+ test)   RUN_FILE_SUFFIX, parseRunFilePath — the --json
+                         check both parsers apply, returning the branded
+                         RunFilePath that writeRunFile alone accepts, so
+                         the compiler refuses a write to an unchecked
+                         path; RUN_FILE_GZIP_LEVEL; and readJsonFile —
+                         gzip or plain JSON, so a pin
                          (plain) reads through it too.
 ```
 

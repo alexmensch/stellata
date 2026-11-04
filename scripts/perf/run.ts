@@ -27,7 +27,7 @@ import {
   type PinDiff, type PinFile,
 } from './pins/pin-pure';
 import { citeRunPath } from './pins/provenance/provenance-pure';
-import { writeRunFile } from './run-file/run-file';
+import { writeRunFile, type RunFilePath } from './run-file/run-file';
 import {
   BROWSER_CHANNEL,
   DWELL_METHOD,
@@ -343,7 +343,7 @@ async function runScenario(browser: Browser, args: RunArgs, plan: ScenarioPlan):
   return { record: { ...record, console: consoleLines, pageErrors, tainted }, probe };
 }
 
-function writeJson(path: string, file: PerfFile): void {
+function writeJson(path: RunFilePath, file: PerfFile): void {
   writeRunFile(path, file);
   console.log(`\nperf: wrote ${path} (${PERF_SCHEMA})`);
 }

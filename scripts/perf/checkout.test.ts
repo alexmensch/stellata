@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { readJsonFlag } from './checkout';
-import { writeRunFile } from './run-file/run-file';
+import { parseRunFilePath, writeRunFile } from './run-file/run-file';
 import { PERF_SCHEMA, assertPerfFile } from './schema';
 
 const RUN = { schema: PERF_SCHEMA, run: { startedAt: '2026-11-04T10:00:00.000Z', gpu: null }, scenarios: [] };
@@ -18,13 +18,13 @@ afterEach(() => {
 
 describe('readJsonFlag — what --baseline, --against-pin and perf:pin read through', () => {
   it('reads a gzipped run file', () => {
-    const path = join(dir, 'run.json.gz');
+    const path = parseRunFilePath('test', join(dir, 'run.json.gz')).path!;
     writeRunFile(path, RUN);
     expect(readJsonFlag('--baseline', path, assertPerfFile)).toEqual({ value: RUN, error: null });
   });
 
   it('names the flag and the schema when the gzipped file is a foreign schema', () => {
-    const path = join(dir, 'old.json.gz');
+    const path = parseRunFilePath('test', join(dir, 'old.json.gz')).path!;
     writeRunFile(path, { ...RUN, schema: 'stellata-perf/1' });
     expect(readJsonFlag('--baseline', path, assertPerfFile).error)
       .toMatch(`--baseline ${path} carries schema "stellata-perf/1", not '${PERF_SCHEMA}'`);

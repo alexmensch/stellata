@@ -16,7 +16,7 @@ import {
   THROUGHPUT_WINDOW_FRAMES,
 } from './dwell/dwell-pure';
 import { DEFAULT_SWEEP_SCALES } from './sweep/sweep-pure';
-import { RUN_FILE_SUFFIX, runFilePathError } from './run-file/run-file';
+import { RUN_FILE_SUFFIX, parseRunFilePath, type RunFilePath } from './run-file/run-file';
 import { DEFAULT_QUIET_MS } from './settle-pure';
 import { BACKENDS, SCENARIO_NAMES, isScenarioName, type Backend, type ScenarioName } from './scenarios';
 
@@ -80,7 +80,7 @@ export interface RunArgs {
   /** dwell: a priceFrame pass key, or `idle`, applied between two dwells. */
   readonly roundtrip: RoundTrip | undefined;
   readonly scales: readonly number[];
-  readonly json: string | undefined;
+  readonly json: RunFilePath | undefined;
   readonly baseline: string | undefined;
   /** dwell: write this run as the pin (needs --json, the run it cites). */
   readonly pin: string | undefined;
@@ -110,10 +110,11 @@ export const ARG_DEFAULTS = {
 
 export class ArgError extends Error {}
 
-function runFileFlag(path: string | undefined): string | undefined {
-  const error = path === undefined ? null : runFilePathError('--json', path);
-  if (error !== null) throw new ArgError(error);
-  return path;
+function runFileFlag(path: string | undefined): RunFilePath | undefined {
+  if (path === undefined) return undefined;
+  const parsed = parseRunFilePath('--json', path);
+  if (parsed.error !== null) throw new ArgError(parsed.error);
+  return parsed.path;
 }
 
 const OPTIONS = {
@@ -491,7 +492,7 @@ export function parsePinArgs(argv: readonly string[]): PinArgs {
 /** `pnpm run survivors` — the canon-vantage survivor counts, no clock. */
 export interface SurvivorsArgs {
   readonly url: string;
-  readonly json: string | null;
+  readonly json: RunFilePath | null;
 }
 
 /** Here rather than beside the instrument so a test can reach it: survivors.ts
