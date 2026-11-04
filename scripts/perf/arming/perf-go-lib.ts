@@ -1,5 +1,5 @@
-// The arm scalars, parsed out of perf-go-lib.sh so the runner and the tests
-// cannot drift from the shell that enforces them. README.md#traps.
+// The arm scalars, parsed out of perf-go-lib.sh so no second copy drifts
+// from the shell. README.md#traps.
 
 import { readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
