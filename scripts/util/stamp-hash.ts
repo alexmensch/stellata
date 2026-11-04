@@ -3,7 +3,7 @@
 import { createHash } from 'node:crypto';
 import { closeSync, openSync, readSync } from 'node:fs';
 
-const HASH_CHUNK_BYTES = 1 << 22;
+export const HASH_CHUNK_BYTES = 1 << 22;
 
 const stampHash = () => createHash('sha1');
 
