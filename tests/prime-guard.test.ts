@@ -127,6 +127,14 @@ describe('prime-guard PreToolUse', () => {
   it('allows a call that names the sentinel as the documented escape hatch', () => {
     expect(preToolUse('Bash', { command: `rm -f ${sentinel()}` }).allowed).toBe(true);
   });
+
+  // Passes on a jq | grep -q form too, since jq's tostring prints one line
+  // and grep must read a whole line before matching; multi-line input past a
+  // pipe buffer is where that pipe fails on every run.
+  it('still finds the sentinel at the head of a tool input larger than a pipe buffer', () => {
+    const padding = Array<string>(20_000).fill('echo padding').join('\n');
+    expect(preToolUse('Bash', { command: `rm -f ${sentinel()}\n${padding}` }).allowed).toBe(true);
+  });
 });
 
 describe('prime-guard failure modes', () => {
