@@ -11,7 +11,10 @@ scripts/perf/diff/
                           an invalid comparison. The buffer, record-count,
                           position, readback and precondition refusals are
                           exported because `--against-pin` applies the same
-                          ones. The floors under the band: `../floors/`.
+                          ones, and so is `judgedMove` — delta, band,
+                          columns and verdict off a row's two judged sides
+                          (`../dwell/README.md#cpu-and-gpu-apart`). The
+                          floors under the band: `../floors/`.
 ```
 
 ## Reading the table
@@ -92,15 +95,15 @@ runs carry the compute stream ([The compute row](../pins/README.md#the-compute-r
 judged on `compute-p10` and banded on **that vantage's own floor** and nothing
 else — the stream holds two overlapping modes whose share varies between runs
 of identical code, so its median is a statistic of that share, while the p10
-is not. The whole-frame constant would run 15× the row's noise at mw50 and
-about 1× it at sol, a factor of 18 across the five. One side alone refuses the
+is not. Why the whole-frame constant does not fit it:
+[The compute floor](../floors/README.md#the-compute-floor). One side alone refuses the
 row and leaves the frame row standing — an archive written before the compute
 pool was resolved carries no stream, and a run since does; neither side
 prints no compute row at all. A frame row that is refused takes its compute
 row with it.
 
-**The main thread is a third row, keyed `|cpu`**, on `cpu-p50` and banded as
-the frame is. One side alone refuses it the way the compute row does. A
+**The main thread is a third row, keyed `|cpu`**, on `cpu-p50` and banded on
+that vantage's own floor ([The CPU floor](../floors/README.md#the-cpu-floor)). One side alone refuses it the way the compute row does. A
 context CPU-bound on either side is refused whole, before any row: its
 frame time is not GPU work ([CPU and GPU, apart](../dwell/README.md#cpu-and-gpu-apart)).
 

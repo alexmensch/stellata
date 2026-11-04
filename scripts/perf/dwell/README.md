@@ -14,9 +14,10 @@ scripts/perf/dwell/
                             split frame draws, the per-frame WebGPU
                             pass-count summary, the pinned readback
                             cadence with the bound that says it held, the
-                            pacings a dwell can run under, and the
+                            pacings a dwell can run under, the
                             throughput windows and CPU-bound test a
-                            GPU-paced row gates on.
+                            GPU-paced row gates on, and the row
+                            judgements both gates band every row on.
 ```
 
 The dwell loop itself is a page function in `../page-protocol.ts`
@@ -159,8 +160,10 @@ arise.
 bursts (mw120 deltas p10 1.6, p50 9.0, p90 17.8 ms), so any per-frame
 median is a statistic of the burst pattern. A median of 8-frame window
 means is too: at mw50 it moved 0.300 ms between two cold runs of
-identical code, where the mean moved 0.105, and across runs 2–4 the mean
-spread 0.014–0.105 ms at every vantage. `throughputStats` summarises those
+identical code, where the mean moved 0.105. Over the six comparable M6
+runs (`../floors/README.md#the-cpu-floor` lists them) the mean spans 0.020 ms
+at lg, 0.066 at earth, 0.070 at sol, 0.235 at mw120 and 0.372 at mw50 — the
+last two the pin run reading low, inside the band on the check sweep. `throughputStats` summarises those
 `THROUGHPUT_WINDOW_FRAMES` (8) window means for what the mean cannot carry:
 their spread sets the band's sampling term and their quarters the state
 guard. The pin, which keeps no samples, records the mean on its throughput
@@ -180,13 +183,16 @@ between passes, now between frames.
 `cpu-p50`, keyed `|cpu`.** Each rendered tick's main-thread time, start to
 after the `'frame'` handlers
 ([CPU time per tick](/src/client/scene/frame-loop/README.md#cpu-time-per-tick)),
-recorded under either pacing and banded the way the frame is. Chrome's GPU
+recorded under either pacing and banded on its vantage's own floor
+([The CPU floor](../floors/README.md#the-cpu-floor)). Chrome's GPU
 process spends CPU on the same commands and is not in it.
 
-**Both gates judge these two rows through one definition each**,
-`THROUGHPUT_JUDGEMENT` and `CPU_JUDGEMENT`: the value, its standard error
-and its floor. Every context's rows come out frame, compute, CPU, in both
-gates.
+**Both gates judge every row kind through one definition each** — a
+`RowJudgement` in `dwell-pure.ts` for throughput, CPU, the rAF-paced GPU
+stream (whole or plain class), compute and wall: the value, its standard
+error, its floor and whether the floor column prints. `judgedMove` in
+`../diff/diff-pure.ts` turns two sides into delta, band and verdict for
+both. Every context's rows come out frame, compute, CPU, in both gates.
 
 **A context whose CPU per tick passes `CPU_BOUND_SHARE` (0.8) of its
 throughput is refused, CPU-bound** (`cpuBoundRefusal` in

@@ -79,12 +79,13 @@ scripts/perf/
                             README.
   dwell/                    Dwell mode: the whole-frame statistics, the
                             state guard, the gating clock, the frame floor
-                            both tables print. Own README.
+                            both tables print, the row judgements both
+                            gates band on. Own README.
   sweep/                    Sweep mode: measurement order, the log-log fit,
                             the bracket. Own README.
   pins/                     The committed per-GPU pin: adapterSlug,
-                            pinFromRuns, compareToPin, the gated statistic
-                            per stream, the ceiling. Own README.
+                            pinFromRuns, compareToPin, the ceiling. Own
+                            README.
 ```
 
 ## Survivor counts — the one entry point here that is not a cost instrument
@@ -376,7 +377,9 @@ possible from the file alone, and a summary cannot be un-summarised.
 anything else, and it is the only place the suffix is judged — a `--baseline`
 carrying another one is refused in the preflight, so the diff never sees a
 file it would have to reason about. What bumps the suffix, and why a bump
-abandons every recorded baseline: `schema.ts`, on `PERF_SCHEMA`.
+abandons every recorded baseline: `schema.ts`, on `PERF_SCHEMA`. It also refuses
+a file naming any scenario outside the canon five (`isScenarioName`, in
+`scenarios.ts`), so every per-vantage lookup past it is total.
 
 ## Comparing against a baseline
 
