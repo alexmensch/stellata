@@ -397,7 +397,7 @@ at the canonical vantages is what explains a row that moved.
   The compute pool (the star compaction every frame, the extinction
   prepass on recompute frames) is resolved in the same cycle and lands as
   `gpu.compute` / `compute-p10`, gated by the pin under its own key and on
-  its vantage's own floor, tighter than the frame's at four of the five —
+  its vantage's own floor, tighter than the frame's at three of the five —
   the p10 and not the median, because that stream holds two overlapping
   modes whose share varies between runs of identical code
   ([The compute row](/scripts/perf/pins/README.md#the-compute-row)). Never
@@ -406,8 +406,9 @@ at the canonical vantages is what explains a row that moved.
   the frame falling and the compute row rising, and only the pair says
   whether the frame got cheaper. A vantage whose reading does not reproduce between cold
   runs is recorded and left to the ceiling instead; `lg` is that vantage
-  today, which is what makes the Local Group the one layer a pin table
-  cannot price.
+  on an rAF-paced pin, which makes the Local Group the one layer such a pin
+  table cannot price. GPU-paced, lg reproduces and its row gates
+  ([Ungated vantages](/scripts/perf/pins/README.md#ungated-vantages)).
 - **Absolute numbers do not reproduce; ratios at the same buffer and the
   same clock do.** The frame is linear in pixels, so `bufferMpx` is
   stamped on every row and only same-buffer tables compare. `method`

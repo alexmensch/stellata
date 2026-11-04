@@ -4,7 +4,7 @@
 
 import type { GpuFrameMethod, PriceFrameRow } from '../../src/client/debug/frame-cost/frame-cost-pure';
 import type { SurvivorReport } from '../../src/client/debug/survivor-counts';
-import type { Backend, ScenarioName } from './scenarios';
+import { isScenarioName, type Backend, type ScenarioName } from './scenarios';
 import type { DwellSummary, PassCountsPerFrame, PassCountsSummary } from './dwell/dwell-pure';
 import type { SweepFit, SweepPoint } from './sweep/sweep-pure';
 
@@ -236,6 +236,10 @@ export function assertPerfFile(value: unknown, source: string): PerfFile {
   }
   if (!Array.isArray(file.scenarios)) {
     throw new SchemaError(`${source} has no scenarios array`);
+  }
+  const stranger = file.scenarios.find((s: { name?: unknown }) => !isScenarioName(s?.name));
+  if (stranger !== undefined) {
+    throw new SchemaError(`${source} carries scenario ${JSON.stringify(stranger?.name)}, no canon vantage`);
   }
   return file as PerfFile;
 }

@@ -11,7 +11,8 @@ import {
   percentile,
 } from '../../../src/client/debug/frame-cost/frame-cost-pure';
 import type { FramePacing } from '../../../src/client/scene/frame-loop/frame-loop';
-import { dwellFloorMs } from '../floors/floors';
+import { cpuFloorMs, dwellFloorMs } from '../floors/floors';
+import type { ScenarioName } from '../scenarios';
 
 export const DEFAULT_DWELL_FRAMES = 240;
 
@@ -339,19 +340,19 @@ export interface GatedSide {
 export interface RowJudgement<C> {
   readonly metric: DwellMetric;
   side(clock: C): GatedSide;
-  floorMs(baseline: GatedSide): number;
+  floorMs(name: ScenarioName, baseline: GatedSide): number;
 }
 
 export const CPU_JUDGEMENT: RowJudgement<SpreadClock> = {
   metric: 'cpu-p50',
   side: (c) => ({ valueMs: c.p50, standardErrorMs: medianStandardErrorMs(c), p10: null, p90: c.p90 }),
-  floorMs: (baseline) => dwellFloorMs(baseline.valueMs),
+  floorMs: (name, baseline) => cpuFloorMs(name, baseline.valueMs),
 };
 
 export const THROUGHPUT_JUDGEMENT: RowJudgement<SpreadClock & { readonly meanMs: number }> = {
   metric: 'throughput-mean',
   side: (c) => ({ valueMs: c.meanMs, standardErrorMs: medianStandardErrorMs(c), p10: null, p90: c.p90 }),
-  floorMs: (baseline) => dwellFloorMs(baseline.valueMs),
+  floorMs: (_name, baseline) => dwellFloorMs(baseline.valueMs),
 };
 
 /** The frame a CPU-bound test divides by; undefined off GPU pacing. */

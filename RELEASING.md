@@ -132,7 +132,7 @@ information.
   prose, though: it marks wherever it appears ([What the section carries](#what-the-section-carries)).
 - **Tier 1 — per-frame code touched, no change to draw counts or pass
   structure.** `--mode dwell --scenario mw120,sol --backend webgpu
-  --frames 960 --against-pin scripts/perf/pins/<slug>.json`. Two contexts, ~4 min, one
+  --frames 960 --against-pin scripts/perf/pins/<slug>.json`. Two contexts, ~35 s on the M6, one
   arm, read against the committed pin: the pin run opens with exactly
   those two contexts in that order ([Run position](scripts/perf/pins/README.md#run-position)), so its rows for them
   were taken at the positions Tier 1 takes them at. Direction against a
@@ -154,7 +154,7 @@ information.
 - **Tier 2 — passes, buffers, draw counts, the catalogue, or the
   instrument itself.** The full cold sweep, and it re-takes the pin:
   `--mode dwell --scenario all --cooldown-ms 120000
-  --frames 960 --pin`, ~15–25 min. Every row the pin records is this tier's
+  --frames 960 --pin`, ~9.5 min on the M6. Every row the pin records is this tier's
   to re-take. **`--frames` is not optional and its value is whatever the
   outgoing pin's rows were taken at** — today 960, and every pin row carries
   its own `frames` so the outgoing pin answers the question itself. Omit it
@@ -261,12 +261,13 @@ vantage. The floor covers sampling; the position refusal above covers
 the run-condition difference that exceeds it.
 
 A frame row is floored at `max(0.25 ms, 1 % of the baseline)`. A compute row
-takes **its vantage's own** floor as its whole band — 0.05 ms at mw120 and
-mw50, 0.10 at earth, 0.15 at sol, the 0.25 constant at lg — because scatter
-there runs 0.008 to 0.267 ms across the five, a factor of 33 one constant
-cannot fit, and the constant reads as 30× the noise at mw50
-([The compute row](scripts/perf/pins/README.md#the-compute-row)). Each is capped at the
-0.25, so a re-derivation only ever tightens a row.
+takes **its vantage's own** floor as its whole band — 0.05 ms at mw120,
+mw50 and lg, the 0.25 cap at earth and sol — because one constant cannot fit
+the scatter across the five ([The compute floor](scripts/perf/floors/README.md#the-compute-floor),
+[The compute row](scripts/perf/pins/README.md#the-compute-row)). What the 0.25 cap
+holds: [The compute floor](scripts/perf/floors/README.md#the-compute-floor). A `|cpu` row
+takes its vantage's own floor too, uncapped and under the two-sigma term
+([The CPU floor](scripts/perf/floors/README.md#the-cpu-floor)).
 
 **What is pinned.** `--mode dwell` at the five canon vantages in canon
 order (mw120, sol, earth, mw50, lg — [Run position](scripts/perf/pins/README.md#run-position): a permutation pins
@@ -281,15 +282,18 @@ the run, not the row. The per-pass differential is attribution, run when a row
 moves or when the PR touches a pass directly; it explains a mark and never
 fails one.
 
-**The GPU stream gates the frame, and the compute stream gates the compute
-passes — nothing else marks.** The GPU stream is the one continuous
-whole-frame reading the pin holds — the middle half of a canon row spans
-0.03–0.36 ms — and it is the render passes alone: three pools compute
+**Three rows per context mark: the frame, the compute passes and, GPU-paced,
+the main thread — nothing else does.** On a GPU-paced pin the frame row is
+throughput, the GPU's time per frame at a held clock
+([CPU and GPU, apart](scripts/perf/dwell/README.md#cpu-and-gpu-apart)); on an
+rAF-paced one it is the GPU stream, whose middle half spans 0.03–0.36 ms at a
+canon row. Either way it is the render passes alone: three pools compute
 timestamps separately, so a WebGPU context prints a second row,
 `<scenario>|webgpu|compute`, banded on its own vantage's floor (above), the
 same ceiling, and accepted under its own key
-([The compute row](scripts/perf/pins/README.md#the-compute-row)). The two are never
-summed, and a compute regression marks whatever the frame row says.
+([The compute row](scripts/perf/pins/README.md#the-compute-row)). A GPU-paced context
+prints a third, `<scenario>|webgpu|cpu`, also accepted under its own key. None
+are summed, and each marks whatever the others say.
 
 **Which statistic of each stream is the `metric` column's job**, and it is
 not the same at every row. A GPU-paced frame row reads `throughput-mean`
@@ -310,7 +314,8 @@ grants the timestamp feature and then refuses the query set resolves no
 believable durations. Every canon row on the pinned adapter gates. A
 vantage that does not
 reproduce cold-to-cold is recorded and not gated on the same footing —
-today that is lg alone, and the paragraph on the floor below says why.
+lg on an rAF-paced pin, and none on the GPU-paced M6 pin; the paragraph on the
+floor below says why.
 It keeps its GPU reading, so unlike a row with no such clock it still
 meets the ceiling.
 
@@ -370,11 +375,13 @@ moved in between:
 
 <a id="what-a-mark-means"></a>**What a mark means.** A row is `✗` when the statistic its `metric` column
 names moves past its band — the pair's two-sigma standard error floored, on a
-frame row; the vantage's own constant alone, on a compute row — or when it
+frame row; the vantage's own constant alone, on a compute row; the two-sigma
+term floored at the vantage's own constant plus half a clock step, on a `|cpu`
+row ([The CPU floor](scripts/perf/floors/README.md#the-cpu-floor)) — or when it
 crosses the
 ceiling — 33.4 ms at any canon vantage, two 60 Hz intervals of hardware
-time — whatever the band says and whether or not the vantage is gated. mw50 at 30.551 is the nearest
-row today, 2.85 ms under. `✓` is cheaper, `~` is not resolved — not "no
+time — whatever the band says and whether or not the vantage is gated. mw50's throughput at 13.147 is the
+nearest row today, 20.25 ms under. `✓` is cheaper, `~` is not resolved — not "no
 change". The `floor` column beside `delta` — how far the 10th-percentile
 frame moved — never marks; it says whether a `✗` lifted every frame or
 only the slow half ([Reading](scripts/perf/pins/README.md#reading---against-pin) `--against-pin`).
@@ -392,10 +399,12 @@ band, reaching 1.272 ms at mw120 — 7 % of the frame, so a floor covering it
 would end the gate rather than tighten it. A second run is the only thing
 that separates the two, and nothing inside a single run does: `iqrMs`, the
 resolved-sample count and the state guard each read the wandered runs as
-sound (stellata-8cg.74). The **compute** rows need no such re-run — their
-floors are measured on the p10 those rows are gated on, which is the
-statistic the stream's two modes leave alone — and neither does a ceiling
-crossing, which is a collapse rather than a move.
+sound (stellata-8cg.74). A **compute** row needs no such re-run where its
+floor covers its own measured p10 scatter — mw120, mw50 and lg on the M6 —
+but sol and earth are capped at 0.25 under theirs, so a compute mark there,
+either direction, owes the second cold run a frame row does
+([The compute floor](scripts/perf/floors/README.md#the-compute-floor)). A ceiling crossing
+needs none, being a collapse rather than a move.
 
 **The floor is measured, and lg is the reason it is not one number.** Two
 cold pins taken on identical code — 2026-09-05 and 2026-09-06, `--mode
@@ -409,21 +418,24 @@ It is not a shift between two levels — lg's GPU duration wanders as much
 *inside* one dwell as it does between runs (within-dwell quarter span
 median 0.626 ms and up to 1.775, against ~0.02 at the other four; spread
 across runs 1.608 ms, the same size), so a 120-sample median there lands
-anywhere in that band and no cool-down or longer dwell narrows it. So lg is
-recorded and **permanently** never marked by the band —
-[Ungated vantages](scripts/perf/pins/README.md#ungated-vantages-and-lg-is-permanently-one) carries the evidence and
+anywhere in that band and no cool-down or longer dwell narrows it. So on
+an rAF-paced pin lg is recorded and never marked by the band —
+[Ungated vantages](scripts/perf/pins/README.md#ungated-vantages) carries the evidence and
 stellata-8cg.49.18 closed on it. A single floor wide enough to cover lg would have to be ~12 %, which
 would hide a 3.9 ms regression at mw50 — the gate would be a formality.
+**GPU-paced, lg holds still**
+([Ungated vantages](scripts/perf/pins/README.md#ungated-vantages)), so a GPU-paced pin gates
+lg like the other four.
 
-**What ungating lg costs, and what still watches it.** lg is the only
-canon vantage that sees the Local Group, so a render change under
-`src/client/local-group/` is priced by no pin row of its own: it reads five
-`~` and a `·`, and `perf-section-guard` demands an `accepted:` line only
-for a `✗`. The ceiling is what remains — it applies to lg like any other
-row carrying a GPU reading, so a frame that doubles there is still `✗`.
-That is a backstop, not a gate: it catches a collapse and nothing smaller.
-So price a `local-group/` diff with a per-pass differential at lg, never
-with its pin row. This is the standing arrangement, not an interim one.
+**What ungating lg costs on an rAF-paced pin, and what still watches it.**
+lg is the only canon vantage that sees the Local Group, so there a render
+change under `src/client/local-group/` is priced by no pin row of its own:
+it reads five `~` and a `·`, and `perf-section-guard` demands an
+`accepted:` line only for a `✗`. The ceiling is what remains — it applies to
+lg like any other row carrying a GPU reading, so a frame that doubles there
+is still `✗`. That is a backstop, not a gate: it catches a collapse and
+nothing smaller. So against an rAF-paced pin, price a `local-group/` diff
+with a per-pass differential at lg. A GPU-paced pin's lg row prices it.
 
 <a id="the-perf-section"></a>**The `## Perf` section.** Required in the PR body when the diff touches
 anything under `src/client/` — `.ts` and `.wgsl` alike — outside
@@ -501,8 +513,9 @@ own bead. Tiers 0 and 1 leave the pin where they found it, which is the
 point of them: the pin advances when the answer would change.
 
 **Who runs it.** The agent, human-armed: one arm per run, the machine idle
-throughout — about 15–25 min for a Tier 2 pin's five dwell contexts at a
-120 s cool-down, ~4 min for Tier 1's two.
+throughout — about 9.5 min for a Tier 2 pin's five dwell contexts at a
+120 s cool-down (eight of it the cool-downs), ~35 s for Tier 1's two, on the M6
+([Launch the runner detached](scripts/perf/arming/README.md#launch-the-runner-detached-always)).
 
 ## Citation and archiving
 
