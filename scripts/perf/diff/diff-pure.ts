@@ -2,15 +2,15 @@
 // uncertainty, and which pairs are not comparable at all.
 // README.md.
 
-import { medianStandardErrorMs } from '../../../src/client/debug/frame-cost/frame-cost-pure';
 import {
   EMPTY_PASSES_DEFAULT, EMPTY_PASS_KEY,
 } from '../../../src/client/debug/frame-cost/passes/passes-pure';
 import type { FramePacing } from '../../../src/client/scene/frame-loop/frame-loop';
-import { computeFloorMs, dwellFloorMs } from '../floors/floors';
 import {
-  COMPUTE_ROW, CPU_BOUND_SHARE, CPU_JUDGEMENT, CPU_ROW, classClock, computeClock, cpuClock, floorMove,
-  frameFloor, gatingClock, recordedPacing, sampleClasses, throughputFrameMs, spreadMove, type ClassClock, type DwellMetric,
+  COMPUTE_JUDGEMENT, COMPUTE_ROW, CPU_BOUND_SHARE, CPU_JUDGEMENT, CPU_ROW, GPU_FRAME_JUDGEMENT,
+  GPU_PLAIN_FRAME_JUDGEMENT, THROUGHPUT_JUDGEMENT, WALL_JUDGEMENT, classClock, computeClock, cpuClock,
+  frameFloor, gatingClock, pointMove, recordedPacing, sampleClasses, spreadMove, throughputFrameMs,
+  type DwellMetric, type GatedSide, type GatingClock, type RowJudgement,
 } from '../dwell/dwell-pure';
 import type { DwellRecord, PerfFile, ScenarioRecord } from '../schema';
 import type { ScenarioName } from '../scenarios';
@@ -438,38 +438,24 @@ function dwellRows(key: string, a: ScenarioRecord, b: ScenarioRecord): (DiffRow 
   const cpuBound = cpuBoundRefusal(cpuClock(da)?.p50, throughputFrameMs(da, pacing))
     ?? cpuBoundRefusal(cpuClock(db)?.p50, throughputFrameMs(db, pacing));
   if (cpuBound !== null) return [{ key: `${key}|dwell`, reason: cpuBound }];
-  const frame = frameRow(key, da, db, pacing);
+  const frame = frameRow(key, a.name, da, db, pacing);
   return 'reason' in frame
     ? [frame]
-    : [frame, ...computeRow(key, a.name, da, db), ...cpuRow(key, da, db)];
+    : [frame, ...computeRow(key, a.name, da, db), ...cpuRow(key, a.name, da, db)];
 }
 
 /** The main thread's time per tick, banded as the frame is
  *  (../dwell/README.md#cpu-and-gpu-apart). */
-function cpuRow(key: string, da: DwellRecord, db: DwellRecord): (DiffRow | DiffRefusal)[] {
+function cpuRow(key: string, name: ScenarioName, da: DwellRecord, db: DwellRecord): (DiffRow | DiffRefusal)[] {
   const [ca, cb] = [cpuClock(da), cpuClock(db)];
   if (ca === null && cb === null) return [];
   if (ca === null || cb === null) {
     return [{ key: `${key}|${CPU_ROW}`, reason: 'one run recorded main-thread time for this row and the other did not' }];
   }
-  const [sa, sb] = [CPU_JUDGEMENT.side(ca), CPU_JUDGEMENT.side(cb)];
-  const deltaMs = sb.valueMs - sa.valueMs;
-  const bandMs = band(sa.standardErrorMs, sb.standardErrorMs, CPU_JUDGEMENT.floorMs(sa));
-  return [{
-    key: `${key}|${CPU_ROW}`,
-    metric: CPU_JUDGEMENT.metric,
-    baselineMs: sa.valueMs,
-    currentMs: sb.valueMs,
-    deltaMs,
-    floorDeltaMs: null,
-    spreadDeltaMs: null,
-    bandMs,
-    verdict: verdictFor(deltaMs, bandMs),
-  }];
+  return [judgedRow(`${key}|${CPU_ROW}`, name, judged(CPU_JUDGEMENT, ca), judged(CPU_JUDGEMENT, cb))];
 }
 
-/** README.md, on the compute row; why the p10, `../pins/README.md#the-compute-row`.
- * */
+/** README.md, on the compute row. */
 function computeRow(
   key: string, name: ScenarioName, da: DwellRecord, db: DwellRecord,
 ): (DiffRow | DiffRefusal)[] {
@@ -488,23 +474,16 @@ function computeRow(
       reason: 'one run retained no compute samples, so the p10 the row is gated on cannot be read',
     }];
   }
-  const deltaMs = fb.p10 - fa.p10;
-  const bandMs = computeFloorMs(name, fa.p10);
-  return [{
-    key: `${key}|${COMPUTE_ROW}`,
-    metric: 'compute-p10',
-    baselineMs: fa.p10,
-    currentMs: fb.p10,
-    deltaMs,
-    floorDeltaMs: null,
-    spreadDeltaMs: spreadMove({ p10: fa.p10, p90: ca.p90 }, { p10: fb.p10, p90: cb.p90 }),
-    bandMs,
-    verdict: verdictFor(deltaMs, bandMs),
-  }];
+  return [judgedRow(
+    `${key}|${COMPUTE_ROW}`, name,
+    judged(COMPUTE_JUDGEMENT, { clock: ca, floor: fa }), judged(COMPUTE_JUDGEMENT, { clock: cb, floor: fb }),
+  )];
 }
 
 /** Valid only after `pacingRefusal` passed the pair. */
-function frameRow(key: string, da: DwellRecord, db: DwellRecord, pacing: FramePacing): DiffRow | DiffRefusal {
+function frameRow(
+  key: string, name: ScenarioName, da: DwellRecord, db: DwellRecord, pacing: FramePacing,
+): DiffRow | DiffRefusal {
   if ((da.gpuStats === null) !== (db.gpuStats === null)) {
     return {
       key: `${key}|dwell`,
@@ -514,14 +493,13 @@ function frameRow(key: string, da: DwellRecord, db: DwellRecord, pacing: FramePa
     };
   }
   const [ga, gb] = [gatingClock(da, pacing), gatingClock(db, pacing)];
-  const [ca, cb] = [ga.clock, gb.clock];
-  if (ca.vsyncClamped || cb.vsyncClamped) {
+  if (ga.clock.vsyncClamped || gb.clock.vsyncClamped) {
     return {
       key: `${key}|dwell`,
       reason: 'a dwell was vsync-clamped — it measured the panel, not the frame',
     };
   }
-  if ([ca, cb].some((c) => c.stateGuard === 'trending')) {
+  if ([ga.clock, gb.clock].some((c) => c.stateGuard === 'trending')) {
     return {
       key: `${key}|dwell`,
       reason: 'a dwell trended across its quarters — it straddled a load-state transition',
@@ -535,50 +513,81 @@ function frameRow(key: string, da: DwellRecord, db: DwellRecord, pacing: FramePa
     const drifted = readbackRefusal(da.readbackPerFrame, db.readbackPerFrame, split);
     if (drifted !== null) return { key: `${key}|dwell`, reason: drifted };
   }
-  const [ja, jb] = [judgedFrameStat(da, ga), judgedFrameStat(db, gb)];
-  if (ja.metric !== jb.metric) {
+  const [ja, jb] = [judgedFrame(da, ga), judgedFrame(db, gb)];
+  if (ja.judgement.metric !== jb.judgement.metric) {
     return {
       key: `${key}|dwell`,
       reason:
-        `${ja.metric} vs ${jb.metric} — one run's frame separated into two pass classes and the ` +
+        `${ja.judgement.metric} vs ${jb.judgement.metric} — one run's frame separated into two pass classes and the ` +
         "other's did not, and a plain-class median against a mixture median is two statistics",
     };
   }
-  const deltaMs = jb.valueMs - ja.valueMs;
-  const bandMs = band(
-    medianStandardErrorMs(ja.clock), medianStandardErrorMs(jb.clock), dwellFloorMs(ja.valueMs),
-  );
-  // Off the GPU stream alone. A wall floor is quantised to the refresh
-  // interval exactly as its median is, so its p10 is the same value the
-  // median already reports and the column would answer nothing.
-  const [fa, fb] = ga.metric === 'wall-p50' || ga.metric === 'throughput-mean'
-    ? [null, null]
-    : [frameFloor(da.gpuMs), frameFloor(db.gpuMs)];
+  return judgedRow(`${key}|dwell`, name, ja, jb);
+}
+
+/** The gating clock under its judgement. Off the GPU stream no floor column:
+ *  a wall p10 is quantised to the refresh interval exactly as its median is. */
+function judgedFrame(dwell: DwellRecord, gating: GatingClock): JudgedSide {
+  if (gating.metric === 'throughput-mean') {
+    return judged(THROUGHPUT_JUDGEMENT, { ...gating.clock, meanMs: gating.valueMs });
+  }
+  if (gating.metric === 'wall-p50') return judged(WALL_JUDGEMENT, gating.clock);
+  const reading = { clock: gating.clock, floor: frameFloor(dwell.gpuMs) };
+  const classes = splitFrameClasses(dwell.passCounts) ? sampleClasses(dwell.gpuMs) : null;
+  return classes === null
+    ? judged(GPU_FRAME_JUDGEMENT, reading)
+    : judged(GPU_PLAIN_FRAME_JUDGEMENT, { ...reading, plain: classClock(classes.plain) });
+}
+
+interface JudgedSide {
+  readonly judgement: RowJudgement<never>;
+  readonly side: GatedSide;
+}
+
+function judged<C>(judgement: RowJudgement<C>, clock: C): JudgedSide {
+  return { judgement, side: judgement.side(clock) };
+}
+
+/** Both sides under one metric: `frameRow` refuses a pair that is not. */
+function judgedRow(key: string, name: ScenarioName, a: JudgedSide, b: JudgedSide): DiffRow {
+  const { deltaMs, bandMs, floorDeltaMs, spreadDeltaMs, verdict } = judgedMove(a.judgement, a.side, b.side, name);
   return {
-    key: `${key}|dwell`,
-    metric: ja.metric,
-    baselineMs: ja.valueMs,
-    currentMs: jb.valueMs,
+    key,
+    metric: a.judgement.metric,
+    baselineMs: a.side.valueMs,
+    currentMs: b.side.valueMs,
     deltaMs,
-    floorDeltaMs: floorMove(fa, fb),
-    spreadDeltaMs: spreadMove(
-      { p10: fa?.p10 ?? null, p90: ca.p90 }, { p10: fb?.p10 ?? null, p90: cb.p90 },
-    ),
+    floorDeltaMs,
+    spreadDeltaMs,
     bandMs,
-    verdict: verdictFor(deltaMs, bandMs),
+    verdict,
   };
 }
 
-/** The plain class where the vantage draws two, the whole dwell otherwise —
- *  `../pins/README.md#the-compute-row` last. */
-function judgedFrameStat(
-  dwell: DwellRecord, gating: ReturnType<typeof gatingClock>,
-): { readonly clock: ClassClock; readonly metric: DwellMetric; readonly valueMs: number } {
-  if (gating.metric === 'wall-p50' || gating.metric === 'throughput-mean') return gating;
-  const classes = splitFrameClasses(dwell.passCounts) ? sampleClasses(dwell.gpuMs) : null;
-  if (classes === null) return gating;
-  const plain = classClock(classes.plain);
-  return { clock: plain, metric: 'gpu-plain-p50', valueMs: plain.p50 };
+/** One row's move between its two sides, read by both gates. */
+export interface JudgedMove {
+  readonly deltaMs: number;
+  readonly floorMs: number;
+  readonly bandMs: number;
+  readonly floorDeltaMs: number | null;
+  readonly spreadDeltaMs: number | null;
+  readonly verdict: Verdict;
+}
+
+export function judgedMove(
+  judgement: RowJudgement<never>, baseline: GatedSide, current: GatedSide, vantage: ScenarioName,
+): JudgedMove {
+  const deltaMs = current.valueMs - baseline.valueMs;
+  const floorMs = judgement.floorMs(baseline, vantage);
+  const bandMs = band(baseline.standardErrorMs, current.standardErrorMs, floorMs);
+  return {
+    deltaMs,
+    floorMs,
+    bandMs,
+    floorDeltaMs: judgement.printsFloor ? pointMove(baseline.p10, current.p10) : null,
+    spreadDeltaMs: spreadMove(baseline, current),
+    verdict: verdictFor(deltaMs, bandMs),
+  };
 }
 
 /**
