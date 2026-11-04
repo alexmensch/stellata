@@ -162,6 +162,17 @@ describe('judgeBaseline', () => {
       .toEqual({ verdict: { kind: 'diff', why: 'merge-base' }, from: 'current', rotate: true });
   });
 
+  it('refuses a header that names none, or only some, of the stage\'s files', () => {
+    const onDisk = { 'demo.tsv.gz': 'f1', 'identity.tsv.gz': 'i1' };
+    const partial = { kind: 'read' as const, header: header('abc'), onDisk };
+    const empty = { kind: 'read' as const, header: { ...header('abc'), files: {} }, onDisk };
+    for (const read of [partial, empty]) {
+      expect(judgeBaseline({ kind: 'checkout', header: read }, 'abc', false).kind).toBe('refused');
+    }
+    const message = judgeBaseline({ kind: 'checkout', header: partial }, 'abc', false);
+    expect(message.kind === 'refused' && message.message).toMatch(/whose identity\.tsv\.gz is not the file/);
+  });
+
   it('refuses a baseline built over uncommitted edits, even at the merge-base', () => {
     const dirty = judgeBaseline({ kind: 'checkout', header: matching(header('abc', true)) }, 'abc', false);
     expect(dirty.kind === 'refused' && dirty.message).toMatch(/built at abc with uncommitted edits/);

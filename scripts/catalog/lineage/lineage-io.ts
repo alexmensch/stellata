@@ -71,8 +71,8 @@ export function readIdentity(path: string): IdentityRow[] {
   return [...identityRows(gunzipSync(readFileSync(path)).toString('utf8'), path)];
 }
 
-export function readStageHeader(dir: string, stage: string): HeaderRead {
-  const path = resolve(dir, stageHeaderName(stage));
+export function readStageHeader<F extends string>(dir: string, spec: StageLineageSpec<F>): HeaderRead {
+  const path = resolve(dir, stageHeaderName(spec.stage));
   if (!existsSync(path)) return { kind: 'missing' };
   let header: StageHeader;
   try {
@@ -80,7 +80,8 @@ export function readStageHeader(dir: string, stage: string): HeaderRead {
   } catch (err) {
     return { kind: 'unreadable', reason: err instanceof Error ? err.message : String(err) };
   }
-  return { kind: 'read', header, onDisk: fileHashes(Object.keys(header.files).map((name) => resolve(dir, name)), dir) };
+  const paths = spec.files.map((f) => resolve(dir, stageFileName(f)));
+  return { kind: 'read', header, onDisk: fileHashes(paths, dir) };
 }
 
 export function stageProvenance<F extends string>(

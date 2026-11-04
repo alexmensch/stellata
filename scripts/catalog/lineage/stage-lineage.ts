@@ -58,7 +58,7 @@ function baselineSource<F extends string, S extends string>(run: StageLineageRun
     return { kind: 'against', dir };
   }
   if (!existsSync(stageFile(run.layout.current, run.diffed))) return { kind: 'absent' };
-  return { kind: 'checkout', header: readStageHeader(run.layout.current, run.spec.stage) };
+  return { kind: 'checkout', header: readStageHeader(run.layout.current, run.spec) };
 }
 
 export async function stageLineage<F extends string, S extends string>(
@@ -67,7 +67,7 @@ export async function stageLineage<F extends string, S extends string>(
   const started = performance.now();
   const source = baselineSource(run);
   const plan = planBaseline(
-    readStageHeader(run.layout.previous, run.spec.stage), source, mergeBaseWithMain(),
+    readStageHeader(run.layout.previous, run.spec), source, mergeBaseWithMain(),
     run.argv.includes(ACCEPT_ANY_BASELINE_FLAG),
   );
   const { verdict } = plan;

@@ -43,7 +43,7 @@ export type HeaderRead =
   | {
     readonly kind: 'read';
     readonly header: StageHeader;
-    /** The header's files as they are on disk now: name → sha1, null when absent. */
+    /** The stage spec's files as they are on disk now: name → sha1, null when absent. */
     readonly onDisk: FileHashes;
   }
   | { readonly kind: 'missing' }
@@ -64,9 +64,9 @@ export const AGAINST_FLAG = '--against';
 
 type ReadHeader = Extract<HeaderRead, { kind: 'read' }>;
 
-/** The header's files whose bytes on disk are not the ones it recorded. */
+/** The stage's files whose bytes on disk are not the ones the header recorded, or that it does not name. */
 export function mismatchedFiles(read: ReadHeader): string[] {
-  return Object.keys(read.header.files).filter((name) => read.onDisk[name] !== read.header.files[name]);
+  return Object.keys(read.onDisk).filter((name) => read.onDisk[name] !== read.header.files[name]);
 }
 
 export function isMergeBaseBuild(read: HeaderRead, mergeBase: string | null): boolean {

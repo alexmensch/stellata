@@ -306,7 +306,8 @@ stage is what lets one stage rotate without rewriting another's. The diff
 refuses a baseline whose commit is not the branch's merge-base with main, or
 that was built over uncommitted edits — its commit then names code it was
 not built from — or whose files on disk are not the bytes its header
-recorded (`readStageHeader` re-hashes them): the seed copies files one at a
+recorded (`readStageHeader` re-hashes the stage spec's files, so one the
+header does not name is a mismatch too): the seed copies files one at a
 time, so a worktree created while `build:seed` rotates a stage can pair one
 build's header with another's files
 (`judgeBaseline`, `lineage-header-pure.ts`). A pinned merge-base copy in

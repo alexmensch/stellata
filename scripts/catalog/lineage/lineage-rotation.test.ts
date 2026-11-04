@@ -99,10 +99,10 @@ describe('stage rotation', () => {
     run('one');
     const theirs = readFileSync(stageFile(layout.current, 'demo'));
     run('base');
-    expect(judgeBaseline({ kind: 'checkout', header: readStageHeader(layout.current, 'demo') }, 'base', false))
+    expect(judgeBaseline({ kind: 'checkout', header: readStageHeader(layout.current, SPEC) }, 'base', false))
       .toEqual({ kind: 'diff', why: 'merge-base' });
     writeFileSync(stageFile(layout.current, 'demo'), theirs);
-    const verdict = judgeBaseline({ kind: 'checkout', header: readStageHeader(layout.current, 'demo') }, 'base', false);
+    const verdict = judgeBaseline({ kind: 'checkout', header: readStageHeader(layout.current, SPEC) }, 'base', false);
     expect(verdict.kind === 'refused' && verdict.message)
       .toMatch(/whose demo\.tsv\.gz is not the file its header \(built at base\) recorded/);
   });
