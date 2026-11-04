@@ -285,8 +285,7 @@ a standing global rule; **never push or commit to main**, and diff size is
 never a justification. What this project adds:
 
 - **`skip-version-bump` label** on `gh pr create` for pure docs / CI /
-  `.beads` / repo-config changes — see [Version policy](RELEASING.md#version-policy), the
-  "live-app consumer" test.
+  `.beads` / repo-config changes — see [the live-app consumer test](RELEASING.md#the-live-app-consumer-test).
 - **`## Release notes` is required whenever the version bumps.** Every PR with
   a `package.json` version bump fills that block in the PR body (Summary /
   New features / Bugfixes / Changes). The deploy workflow extracts it and

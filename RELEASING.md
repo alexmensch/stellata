@@ -55,40 +55,42 @@ together produces six release pages, each with its own author's prose.
 - **Patch** — bug fixes, copy tweaks, dependency bumps with no
   user-visible behaviour change.
 
-Bump `package.json` on every PR so the version on `main` is always
-the *next* release. Cutting a release is then just merging — the
-deploy workflow handles tag, GitHub release, and Cloudflare deploy.
+Every PR that passes [the live-app consumer test](#the-live-app-consumer-test)
+bumps `package.json`, so the version on `main` is always the *next*
+release. Cutting a release is then just merging — the deploy workflow
+handles tag, GitHub release, and Cloudflare deploy. PRs without a bump
+don't redeploy.
 
 The `version-guard` workflow (`.github/workflows/version-guard.yml`)
-runs on every PR and asserts:
+runs on every PR without the `skip-version-bump` label and asserts:
 
 1. `package.json#version` is strictly greater (per semver) than the
    base branch's version.
 2. The new version is not already a published git tag.
 
 Concurrent PRs can't silently both claim the same bump: whichever
-merges second fails the guard until rebased and re-bumped. Pure
-metadata PRs (e.g. `bd` issue-sync, no shipped code, CI workflow
-edits) can attach the `skip-version-bump` label to opt out — use
-sparingly. PRs without a bump don't redeploy.
+merges second fails the guard until rebased and re-bumped.
 
-### What "no user-visible behaviour change" actually means
-
-"Patch" reads as the floor for any code change, but it isn't:
-internal pipeline / build-script / tooling work whose output is **not
-yet wired into the live deployed app** is a `skip-version-bump`, not
-a patch. The bump rides the PR that wires new code into the live
-consumer, not the PR that adds new code in isolation.
+### The live-app consumer test
 
 At commit time, ask: **does merging this PR change anything the
-deployed site surfaces by the next push to main?** If no (data
-pipeline output unused by current `build-catalog.ts` /
-`catalog-loader.ts`; refresh-script work producing a TSV the build
-doesn't yet read; CI / tooling / internal docs; partial multi-stage
-rewrites mid-stream):
+deployed site serves by the next push to main?** Yes → bump. No →
+`skip-version-bump`. No covers docs, CI, `.beads`, repo config, and
+build scripts whose output to the site is unchanged — data-pipeline
+output unused by the current `build-catalog.ts` / `catalog-loader.ts`,
+refresh-script work producing a TSV the build doesn't yet read,
+partial multi-stage rewrites mid-stream.
+
+"Patch" is not the floor for a code change: pipeline, build-script or
+tooling work whose output is **not yet wired into the live deployed
+app** skips. The bump rides the PR that wires new code into its live
+consumer, not the PR that adds it in isolation.
+
+For a skip:
 
 1. Do NOT bump `package.json#version`.
-2. Attach the `skip-version-bump` label (`gh pr edit <N> --add-label
+2. Attach the `skip-version-bump` label (`gh pr create --label
+   skip-version-bump`, or `gh pr edit <N> --add-label
    skip-version-bump`).
 3. `release-notes-guard` skips the `## Release notes` check when the
    label is on, so the section is optional for pure no-bump PRs.
