@@ -164,7 +164,7 @@ async function main(): Promise<void> {
       identity: identityText(result.identity),
     }),
     joins: (baselineDir) => {
-      const baseline = readIdentity(stageFile(baselineDir, 'identity'));
+      const baseline = readIdentity(stageFile(baselineDir, MEMBERSHIP_LINEAGE.identity!));
       const identity = new Map([...baseline, ...result.identity].map((r) => [r.key, r]));
       return [multiplesComponentJoin(identity, multiples)];
     },

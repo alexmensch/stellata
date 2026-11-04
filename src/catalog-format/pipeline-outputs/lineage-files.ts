@@ -38,9 +38,12 @@ export const PROMOTION_LINEAGE: StageLineageSpec<'promotion' | 'promotion.identi
   identity: 'promotion.identity',
 };
 
-export const ALLOCATION_LINEAGE: StageLineageSpec<'allocation' | 'allocation.identity', 'allocation'> = {
+/** Allocation's key -> SID file: not `identity`, which names the rows of records a stage founds. */
+export const ALLOCATION_IDENTITY_STEM = 'allocation.identity';
+
+export const ALLOCATION_LINEAGE: StageLineageSpec<'allocation' | typeof ALLOCATION_IDENTITY_STEM, 'allocation'> = {
   stage: 'allocation',
-  files: ['allocation', 'allocation.identity'],
+  files: ['allocation', ALLOCATION_IDENTITY_STEM],
 };
 
 /** Keyed by stage as well as stem, so two stages can share one emitArtifacts call. */

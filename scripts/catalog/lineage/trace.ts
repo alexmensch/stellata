@@ -13,7 +13,7 @@ import { readIdentity, readLineage } from './lineage-io';
 import { LINEAGE_LAYOUT } from './lineage-layout-pure';
 import { LINEAGE_STAGES } from './lineage-stages';
 import { parseTraceQuery, queryTerms, traceRecords, traceText, type TraceLookups } from './trace-pure';
-import { MEMBERSHIP_LINEAGE, stageFile } from '../../../src/catalog-format/pipeline-outputs/lineage-files';
+import { ALLOCATION_IDENTITY_STEM, MEMBERSHIP_LINEAGE, stageFile } from '../../../src/catalog-format/pipeline-outputs/lineage-files';
 
 const DIR_FLAG = '--dir';
 
@@ -61,7 +61,7 @@ async function main(): Promise<void> {
   const q = parseTraceQuery(query);
   const catalog = q.kind === 'name' ? await loadCatalog({ withSearchIndex: true }) : null;
   const terms = queryTerms(q, lookups(catalog));
-  const allocationIdentityPath = stageFile(dir, 'allocation.identity');
+  const allocationIdentityPath = stageFile(dir, ALLOCATION_IDENTITY_STEM);
   const sidsOf = existsSync(allocationIdentityPath)
     ? [...allocationIdentity(gunzipSync(readFileSync(allocationIdentityPath)).toString('utf8'), allocationIdentityPath)]
     : [];
