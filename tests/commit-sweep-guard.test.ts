@@ -7,7 +7,7 @@ import { mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from 'nod
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { pastPipeBuffer } from './pipe-buffer';
+import { PAST_PIPE_BUFFER_BYTES, pastPipeBuffer } from './pipe-buffer';
 
 const HOOK = resolve(__dirname, '../scripts/hooks/commit-sweep/commit-sweep-guard.sh');
 
@@ -147,7 +147,9 @@ describe('commit-sweep-guard — input larger than a pipe buffer, matched on lin
     git('commit', '-q', '-m', 'seed');
     write('src/thing/README.md', '# thing, updated\n');
     write('src/thing/a.ts', 'export const x = 1;\n');
-    for (let i = 0; i < 300; i++) write(`zpad/${'z'.repeat(240)}${i}.txt`);
+    const name = (i: number): string => `zpad/${'z'.repeat(240)}${i}.txt`;
+    const count = Math.ceil(PAST_PIPE_BUFFER_BYTES / name(0).length);
+    for (let i = 0; i < count; i++) write(name(i));
     git('add', '-A');
     expect(allowed('git commit -m "add many things"')).toBe(true);
   });
