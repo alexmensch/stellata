@@ -152,8 +152,8 @@ the others once, and that rebuild appends nothing.
   TypeScript step's inputs come from the injected `deriveInputs`;
   `run.ts` passes `util/step-inputs.ts`'s `entryInputPaths`.
 - `manual-step-outputs.ts` — `MANUAL_STEPS`, every pull and bake with the
-  files it writes, as an outputs module: the one place outside a declaration
-  a `data/` path may be spelled.
+  files it writes, as an outputs module. Which modules may spell a `data/`
+  path is `/tests/source-declarations.test.ts`'s rule.
 - `steps.ts` (+ test) — the table `run.ts` and `record.ts` load, its manual
   steps `MANUAL_STEPS`.
   The test holds the table to the load-time rules, every manual step's
