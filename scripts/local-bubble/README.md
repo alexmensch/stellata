@@ -34,6 +34,9 @@ vertex normals.
 
 ## Output format (`local-bubble.bin`, magic `LBUB`)
 
+File name, magic and version come from `src/astro-core/baker-constants.json`
+(`artifacts.localBubble`), which the client loader checks against too.
+
 - Header (32 B): `LBUB` · uint32 version · uint32 vertexCount · uint32
   indexCount · float32×3 volume centroid (ICRS pc, Sol origin; written
   for reference, unused by the runtime — the label hugs the silhouette,

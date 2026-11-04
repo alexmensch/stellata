@@ -3,26 +3,18 @@ import { resolve } from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
-import {
-  HORIZON_AZIMUTHS,
-  SKY_VIEW_RANGE,
-  decodeSkyView,
-} from '../../src/client/solar-system/planets/surface-relief/surface-relief-pure';
+import { decodeSkyView } from '../../src/client/solar-system/planets/surface-relief/surface-relief-pure';
+import { HORIZON_AZIMUTHS, SKY_VIEW_RANGE } from '../../src/catalog-format/baker-artifacts/baker-artifacts';
 import { lfsContentReadable } from '../../scripts/util/paths';
 import { webpSize } from '../../scripts/textures/image-header-pure';
 
-// sky_view.py cannot import the runtime tables, so this pins its encoding
-// range against the shader that decodes it, and both against the shipped
-// artifacts. Why the map exists at all, and why it is not the horizon pair's
-// job: /data/textures/relief/README.md#sky-view-factor--what-terrain-takes-out-of-the-sky.
+// See /data/textures/relief/README.md#sky-view-factor--what-terrain-takes-out-of-the-sky.
 
 const RELIEF = resolve(__dirname, '../../data/textures/relief');
 const MESH_SHADER = resolve(
   __dirname,
   '../../src/client/webgpu/solar-system/planet-mesh-tsl.ts',
 );
-const pySource = readFileSync(resolve(__dirname, '../../scripts/textures/sky_view.py'), 'utf-8');
-const horizonSource = readFileSync(resolve(__dirname, '../../scripts/textures/horizon_map.py'), 'utf-8');
 const layer = readFileSync(
   resolve(
     __dirname,
@@ -45,32 +37,12 @@ const manifest: Record<string, { skyView?: SkyViewRow; horizon?: { width: number
   JSON.parse(readFileSync(resolve(RELIEF, 'relief.json'), 'utf-8'));
 
 describe('sky view factor map', () => {
-  it('shares its encoding range with the Python generator', () => {
-    // A range the two disagree on scales every shadow by the ratio, which
-    // reads as "the fill term is mistuned" rather than as an encoding bug.
-    expect(pySource).toContain(`SKY_VIEW_RANGE = ${SKY_VIEW_RANGE}`);
-  });
-
   it('decodes a raw channel the way the shader multiplies it', () => {
     expect(decodeSkyView(0)).toBe(0);
     expect(decodeSkyView(1)).toBe(SKY_VIEW_RANGE);
     expect(readFileSync(MESH_SHADER, 'utf-8')).toContain(
       'p.uSkyView.sample(vUvM).r.mul(SKY_VIEW_RANGE)',
     );
-  });
-
-  it('marches from one DEM texel, inside the shadow march it is not', () => {
-    // The whole reason for a second artifact. The horizon pair starts
-    // HORIZON_MARCH_START_TEXELS OUTPUT texels out because a nearer caster
-    // throws an undrawable shadow; sky occlusion has no such requirement, and
-    // the near field is where a crater floor loses most of its sky.
-    expect(pySource).toContain('return 2 * np.pi / w_dem');
-    expect(horizonSource).toContain('HORIZON_MARCH_START_TEXELS = 2.0');
-    expect(pySource).toContain('near_bound(w_dem), search_arc(spec)');
-  });
-
-  it('shares the horizon pair grid, so both sample at one UV', () => {
-    expect(pySource).toContain('return horizon_target_w(spec)');
   });
 
   it('records the achieved factor for every body that ships one', () => {

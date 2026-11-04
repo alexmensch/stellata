@@ -34,5 +34,8 @@ Each has its own README.
 - `public-artifacts/` — the name of every other file and folder under
   `public/` the viewer fetches, imported by the viewer and every TypeScript
   writer.
+- `baker-artifacts/` — the versions, magic and encode ranges of the
+  artifacts the Python bakers write, and the header gate their loaders open
+  with.
 - `pipeline-outputs/` — where the files the pipeline writes and the viewer
   never fetches land: the names an outputs module declares.

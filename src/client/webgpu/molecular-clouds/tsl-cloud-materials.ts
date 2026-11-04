@@ -41,7 +41,7 @@ export function makeTslCloudMaterials(cfg: TslCloudConfig): CloudMaterials {
     absorption(spec) {
       const nodes = cloudAbsorptionUniformNodes(spec);
       const field = spec.field === null ? null : cloudFieldUniformNodes(spec.field);
-      const built = buildCloudAbsorptionMaterial(cfg.nodes, nodes, field);
+      const built = buildCloudAbsorptionMaterial(cfg.nodes, nodes, field, spec.envelopeFadeStart);
       // `field` is deliberately withheld from the written record
       // (README.md#the-shared-pair-is-not-in-this-record).
       return wrap(built, nodes);

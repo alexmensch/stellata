@@ -3,20 +3,24 @@
 (contract + provenance in README.md and data/textures/README.md)."""
 
 import json
+import sys
 from pathlib import Path
 
 from PIL import Image, ImageFilter, ImageStat
 
-from dem_relief import DEM_BODIES, read_frozen_dem, surface_normals
-from horizon_map import horizon_maps
-from sky_view import sky_view_factor
-from texture_calibration import (
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+
+from dem_relief import DEM_BODIES, read_frozen_dem, surface_normals  # noqa: E402
+from horizon_map import horizon_maps  # noqa: E402
+from sky_view import sky_view_factor  # noqa: E402
+from texture_calibration import (  # noqa: E402
     COLOUR_INDICES,
     LUMA,
     calibrate,
     sphere_mean_linear,
 )
-from texture_ladder import rungs_for
+from texture_ladder import rungs_for  # noqa: E402
+from scripts.util.baker_constants import CONSTANTS, merge_shared  # noqa: E402
 
 # Frozen, license-vetted sources — the Mars mosaic alone is 21k x 10k.
 Image.MAX_IMAGE_PIXELS = None
@@ -111,21 +115,15 @@ RINGS_W = 2048
 
 # Uranus/Neptune ring strips built from literature tables at TRUE
 # opacity (derivation + 8-bit floor analysis in
-# /data/textures/README.md#ring-strips--true-opacity-and-the-8-bit-floor). span_km MUST match the
-# body's `rings` entry in src/client/solar-system/planet-system.ts —
-# tests/integration/ring-strips.test.ts pins the parity.
-RING_TABLES = {
-    "uranus": {
-        "src": "rings-uranus.tsv",
-        "span_km": (41600.0, 51300.0),
-        "rgb": (0.10, 0.10, 0.10),
+# /data/textures/README.md#ring-strips--true-opacity-and-the-8-bit-floor).
+RING_TABLES = merge_shared(
+    {
+        "uranus": {"src": "rings-uranus.tsv", "rgb": (0.10, 0.10, 0.10)},
+        "neptune": {"src": "rings-neptune.tsv", "rgb": (0.11, 0.10, 0.09)},
     },
-    "neptune": {
-        "src": "rings-neptune.tsv",
-        "span_km": (40900.0, 63100.0),
-        "rgb": (0.11, 0.10, 0.09),
-    },
-}
+    CONSTANTS["ringSpans"],
+    lambda s: {"span_km": (float(s["innerRadiusKm"]), float(s["outerRadiusKm"]))},
+)
 
 
 def fill_gap(im: Image.Image, threshold: int) -> Image.Image:
@@ -209,6 +207,20 @@ def ladder_row(name: str, rungs: tuple[int, ...]) -> dict:
     }
 
 
+def merge_relief_row(relief: dict, name: str, fields: dict) -> None:
+    """Merge, never replace: the parts of a body's relief row are written by
+    separate up-to-date gates, so any of them can be skipped while another runs."""
+    relief.setdefault(name, {}).update(fields)
+
+
+def save_horizon_plane(plane, out_path: Path) -> None:
+    # exact=True or libwebp rewrites RGB wherever alpha is 0 — which here is
+    # one azimuth's horizon quietly overwriting three others.
+    Image.fromarray(plane, "RGBA").save(
+        out_path, "WEBP", lossless=True, exact=True, method=6
+    )
+
+
 def build_normal_map(name: str, relief: dict) -> None:
     spec = DEM_BODIES[name]
     src_path = SRC / spec["src"]
@@ -219,8 +231,7 @@ def build_normal_map(name: str, relief: dict) -> None:
         "the two would disagree about which way is east"
     )
     rgb, stats = surface_normals(read_frozen_dem(src_path), spec)
-    # Merge, never replace: the horizon and sky-view legs add to this row.
-    relief.setdefault(name, {}).update(stats)
+    merge_relief_row(relief, name, stats)
     # Lossless: WebP q98 errs 1.6 deg of normal angle against a 2.7 deg median
     # tilt on the Moon, which is most of the signal
     # (/data/textures/relief/README.md#surface-relief--dem-derived-normal-maps).
@@ -238,13 +249,9 @@ def build_horizon_map(name: str, relief: dict) -> None:
     src_path = SRC / spec["src"]
     outs = [RELIEF / f"{name}-horizon-{half}.webp" for half in "ab"]
     first, second, stats = horizon_maps(read_frozen_dem(src_path), spec)
-    relief.setdefault(name, {})["horizon"] = stats
+    merge_relief_row(relief, name, {"horizon": stats})
     for plane, out_path in zip((first, second), outs):
-        # exact=True or libwebp rewrites RGB wherever alpha is 0 — which here
-        # is one azimuth's horizon quietly overwriting three others.
-        Image.fromarray(plane, "RGBA").save(
-            out_path, "WEBP", lossless=True, exact=True, method=6
-        )
+        save_horizon_plane(plane, out_path)
     kb = sum(p.stat().st_size for p in outs) // 1024
     print(
         f"  {name}-horizon: 2 x {first.shape[1]}x{first.shape[0]} -> {kb} KB, "
@@ -258,7 +265,7 @@ def build_sky_view(name: str, relief: dict) -> None:
     src_path = SRC / spec["src"]
     out_path = RELIEF / f"{name}-skyview.webp"
     raw, stats = sky_view_factor(read_frozen_dem(src_path), spec)
-    relief.setdefault(name, {})["skyView"] = stats
+    merge_relief_row(relief, name, {"skyView": stats})
     # One channel, and grayscale WebP writes it as three identical ones — the
     # upload narrows to R8, so the duplication costs file size the lossless
     # coder mostly removes and no VRAM at all.

@@ -11,14 +11,17 @@ from pathlib import Path
 import numpy as np
 
 REPO = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(REPO))
 sys.path.insert(0, str(REPO / "scripts" / "dust"))
 import edenhofer2024  # noqa: E402
 from cloud_geometry import CLOUDS_JSON  # noqa: E402
+from scripts.util.baker_constants import CONSTANTS  # noqa: E402
 
-OUT_PATH = REPO / "data" / "molecular-clouds" / "cloud-surfaces.bin"
-
-MAGIC = b"CSUR"
-VERSION = 2
+_SCHEMA = CONSTANTS["artifacts"]["cloudSurfaces"]
+OUT_PATH = REPO / "data" / "molecular-clouds" / _SCHEMA["fileName"]
+MAGIC = _SCHEMA["magic"].encode("ascii")
+VERSION = _SCHEMA["version"]
+CLOUDS_JSON_VERSION = CONSTANTS["artifacts"]["clouds"]["version"]
 
 # Density-brick budget: the sampled volume ships (mean-pooled to fit)
 # as a per-cloud uint8 3D texture so the runtime absorption raymarch
@@ -250,7 +253,7 @@ def main() -> None:
     if not CLOUDS_JSON.exists():
         sys.exit("public/clouds.json missing — run `pnpm run build:clouds` first.")
     catalog = json.loads(CLOUDS_JSON.read_text())
-    if catalog.get("version") != 3:
+    if catalog.get("version") != CLOUDS_JSON_VERSION:
         sys.exit(f"clouds.json version {catalog.get('version')} unsupported.")
     clouds = catalog["clouds"]
     if args.only:
@@ -303,7 +306,7 @@ def main() -> None:
     OUT_PATH.parent.mkdir(parents=True, exist_ok=True)
     with open(OUT_PATH, "wb") as f:
         f.write(MAGIC)
-        f.write(struct.pack("<III", VERSION, len(entries), 0))
+        f.write(struct.pack("<IIf", VERSION, len(entries), ENVELOPE_HI))
         for sid, positions, indices, brick in entries:
             data, dims, bmin, bstep, dmax = brick
             f.write(struct.pack("<III", sid, len(positions), len(indices)))

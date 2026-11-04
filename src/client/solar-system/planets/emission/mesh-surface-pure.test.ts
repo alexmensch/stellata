@@ -2,10 +2,9 @@ import { describe, it, expect } from 'vitest';
 import {
   hostIrradianceLuminance,
   lambertLimbDiscMean,
-  LIMB_EXP,
-  LIMB_FLOOR,
   meshSurfaceLuminance,
 } from './mesh-surface-pure';
+import { LIMB_EXP, LIMB_FLOOR } from '../../../../astro-core/baker-constants';
 import {
   bodySurfaceBrightnessMagArcsec2,
   planetApparentMagnitude,

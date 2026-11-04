@@ -12,8 +12,9 @@ import { makeLabelDom } from '../overlays/label-dom-mock';
 import { CLOUD_LABELS_GROUP_ID } from './cloud-labels';
 import { createCloudKindModule } from './cloud-module';
 import { fakeWebGpuSeam } from '../webgpu/seam-mock';
-import { fakeCloudMaterials } from './cloud-mock';
+import { MOCK_ENVELOPE_FADE_START, fakeCloudMaterials } from './cloud-mock';
 import { sidsOf } from '../util/sid-resolver/sid-domain-fixture';
+import { CLOUDS_JSON_SCHEMA } from '../../catalog-format/baker-artifacts/baker-artifacts';
 
 function rawCloud(overrides: Record<string, unknown> = {}): Record<string, unknown> {
   return {
@@ -50,7 +51,8 @@ function stubFetch(present: boolean): void {
     return {
       ok: true,
       json: async () => ({
-        version: 3,
+        version: CLOUDS_JSON_SCHEMA.version,
+        envelopeFadeStart: MOCK_ENVELOPE_FADE_START,
         count: 2,
         clouds: [
           rawCloud({

@@ -3,6 +3,7 @@
 // uniforms — README.md#density-profiles calibration/README.md.
 
 import { R0_PC } from '../../galactic-coords';
+import { AV_PER_EZGR } from '../../baker-constants';
 import {
   footprintAlong,
   footprintRadiusPc,
@@ -81,13 +82,8 @@ export const LOCAL_DUST_RATE_MAG_PER_KPC = 1.0;
 
 export const REDDENING_RGB: Rgb = [0.76, 1.0, 1.35];
 
-/** `avPerDensityPerPc` from the dust manifest (ZGR_TO_AV). `attachDust`
- *  overwrites the uniform from the loaded field; this is the value the
- *  shipped artifact carries and the one the calibration is derived at. */
-export const DEFAULT_DUST_AV_PER_DENSITY_PC = 2.742;
-
 export const ANALYTICAL_DUST_NORM_PER_PC =
-  LOCAL_DUST_RATE_MAG_PER_KPC / (DEFAULT_DUST_AV_PER_DENSITY_PC * 1000);
+  LOCAL_DUST_RATE_MAG_PER_KPC / (AV_PER_EZGR * 1000);
 
 /** The dust multiplier is a dev lever, not a calibration term — the
  *  normalisation above is the calibration. Anything but 1 means the
@@ -214,7 +210,7 @@ export function dustTauVPerPc(
   rPc: number,
   zPc: number,
   extinctionStrength: number,
-  avPerDensityPc = DEFAULT_DUST_AV_PER_DENSITY_PC,
+  avPerDensityPc = AV_PER_EZGR,
 ): number {
   return (
     (analyticalDustDensity(rPc, zPc) * avPerDensityPc * extinctionStrength) /

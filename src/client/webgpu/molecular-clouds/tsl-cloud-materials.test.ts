@@ -12,7 +12,7 @@ import type { CloudAbsorptionSpec } from '../../molecular-clouds/cloud-materials
 import { makeTslCloudMaterials } from './tsl-cloud-materials';
 import { MolecularClouds } from '../../molecular-clouds/molecular-clouds';
 import {
-  fakeCloudMaterials, makeMockCatalog, makeMockCloud,
+  MOCK_ENVELOPE_FADE_START, fakeCloudMaterials, makeMockCatalog, makeMockCloud,
 } from '../../molecular-clouds/cloud-mock';
 import { expectSlotsServedBy } from '../../scene/emitter-material-mock';
 
@@ -34,6 +34,7 @@ const absorptionSpec = (field: CloudAbsorptionSpec['field']): CloudAbsorptionSpe
   rflatPc: 3,
   p: 1.5,
   uEnv: field === null ? 2.5 : 1.05,
+  envelopeFadeStart: MOCK_ENVELOPE_FADE_START,
   invQuat: new THREE.Matrix3(),
   steps: 16,
   field,

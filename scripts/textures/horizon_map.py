@@ -6,8 +6,9 @@ HORIZON_AZIMUTHS directions, packed into two RGBA maps (rationale in
 import numpy as np
 
 from dem_relief import dem_target_w, roll_to_map_centre, weighted_quantile
+from scripts.util.baker_constants import CONSTANTS
 
-HORIZON_AZIMUTHS = 8
+HORIZON_AZIMUTHS = CONSTANTS["surfaceRelief"]["horizonAzimuths"]
 
 # The output grid is HALF the DEM's width, and that ratio is load-bearing
 # rather than a pair of independent constants. The observer's own elevation
@@ -31,7 +32,7 @@ HORIZON_MARCH_START_TEXELS = 2.0
 # Full-scale of the encoded horizon SINE, both signs. Wider than any body's own
 # limb bound, which is where the negative side saturates on its own; the
 # positive side has to reach a crater wall seen from its floor.
-HORIZON_SIN_RANGE = 0.4
+HORIZON_SIN_RANGE = CONSTANTS["surfaceRelief"]["horizonSinRange"]
 
 
 def decode_sin(raw: np.ndarray) -> np.ndarray:

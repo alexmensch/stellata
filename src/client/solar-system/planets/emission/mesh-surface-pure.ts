@@ -4,15 +4,10 @@
 
 import { ARCSEC_TO_RAD } from '../../../../astro-core/astronomy-constants';
 import { luminanceForMagnitude, surfaceBrightnessLuminance } from '../../../../astro-core/emission/emission-pure';
+import { LIMB_EXP, LIMB_FLOOR } from '../../../../astro-core/baker-constants';
 import type { AtmoDiscMeans } from '../../atmosphere/atmosphere-scattering-pure';
 import { bodySurfaceBrightnessMagArcsec2, hostIrradianceMagnitude } from '../../../../astro-core/perceptual-magnitude';
 
-/** Limb-darkening floor and exponent — `mix(LIMB_FLOOR, 1, μ^LIMB_EXP)`.
- *  Mirrored as literals in `../../../webgpu/solar-system/planet-mesh-tsl.ts`; the drift test pins
- *  them. Atmospheric bodies substitute a floor of 1 (no limb term: the
- *  scattering governs their limb). */
-export const LIMB_FLOOR = 0.45;
-export const LIMB_EXP = 0.5;
 
 /**
  * Disc-average of `μ · mix(limbFloor, 1, μ^limbExp)` at full phase, where

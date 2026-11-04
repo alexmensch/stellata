@@ -9,7 +9,9 @@ from pathlib import Path
 import numpy as np
 from PIL import Image
 
-from dem_relief import DEM_BODIES, DEM_ZERO_LEVEL, dem_target_w
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+
+from dem_relief import DEM_BODIES, DEM_ZERO_LEVEL, dem_target_w  # noqa: E402
 
 Image.MAX_IMAGE_PIXELS = None
 

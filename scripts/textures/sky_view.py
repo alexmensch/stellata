@@ -5,6 +5,7 @@ the whole arc terrain can occlude (/data/textures/relief/README.md#sky-view-fact
 import numpy as np
 
 from dem_relief import dem_target_w, weighted_quantile
+from scripts.util.baker_constants import CONSTANTS
 from horizon_map import (
     HORIZON_AZIMUTHS,
     box_reduce,
@@ -13,12 +14,10 @@ from horizon_map import (
     search_arc,
 )
 
-# Owned by src/client/solar-system/planets/surface-relief/surface-relief-pure.ts
-# and pinned against it by /tests/integration/sky-view.test.ts, along with the mesh shader's own
-# copy. The headroom it leaves over what terrain actually reaches, and why the
+# The headroom it leaves over what terrain actually reaches, and why the
 # quantisation is invisible, are
 # /data/textures/relief/README.md#sky-view-factor--what-terrain-takes-out-of-the-sky.
-SKY_VIEW_RANGE = 0.25
+SKY_VIEW_RANGE = CONSTANTS["surfaceRelief"]["skyViewRange"]
 
 
 def sky_view_target_w(spec: dict) -> int:

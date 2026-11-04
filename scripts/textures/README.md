@@ -4,7 +4,11 @@ Planet texture build + sync. Data contract and per-body provenance
 live in `data/textures/README.md`; this folder owns the scripts.
 
 Everything Python here runs on the project venv —
-`requirements.txt` carries the install line. A rebuild is
+`requirements.txt` carries the install line. Facts these scripts share with
+the renderer (relief bodies' radius, albedo, map centre and elevation span;
+the horizon and sky-view encodings; the limb constants; the Uranus/Neptune
+ring spans) are read from `src/astro-core/baker-constants.json`, so every entry point
+puts the repo root on `sys.path`. A rebuild is
 pixel-reproducible but not byte-reproducible: Pillow's zlib build
 picks the compressed stream, so a version change can rewrite an
 artifact to identical pixels under a different tail. Revert that churn
@@ -36,8 +40,11 @@ rather than shipping it.
   every input.
   Uranus is deliberately absent from
   `BODIES` (2f6.6 design record: texture-less by design — its ring
-  strip is separate). `/tests/integration/ring-strips.test.ts` pins `RING_TABLES` spans
-  to `SOL_PLANETS` and the strips' 8-bit visibility claims.
+  strip is separate). `/tests/integration/ring-strips.test.ts` pins the
+  strips' 8-bit visibility claims against the source TSVs.
+  `build_textures.test.py` pins the relief-row merge, the horizon planes'
+  exact-mode encode and each provenance row's desaturation wording against
+  `DESATURATE`.
 - `dem_relief.py` — surface-relief half of the build (imported by
   it): the `DEM_BODIES` per-body contract and the DEM →
   tangent-space normal-map derivation. Owns the three facts nothing
@@ -46,21 +53,21 @@ rather than shipping it.
   radius the body is drawn at, which sets the slope scale, and the
   elevation span, which both decodes the reduction and gives the
   renderer its limb bound on relief lighting.
-  `/tests/integration/dem-relief.test.ts` pins all three against `SOL_BODIES` /
-  `RotationElements.mapCenterLonDeg` /
-  `surface-relief-pure.ts:RELIEF_ELEV_SPAN_M`, plus the achieved tilt
-  statistics in `data/textures/relief/relief.json`, the shipped maps' own
-  dimensions read from their WebP headers, and the +1 encoding of the
-  unused third channel. Rationale:
+  The map centre, radius and span are merged in from
+  `src/astro-core/baker-constants.json`, which the renderer reads too.
+  `/tests/integration/dem-relief.test.ts` pins the achieved tilt statistics in
+  `data/textures/relief/relief.json` and the shipped maps' own dimensions
+  read from their WebP headers; `horizon_map.test.py` pins the roll, the
+  per-body DEM widths and the +1 encoding of the unused third channel. Rationale:
   [Surface relief](/data/textures/relief/README.md#surface-relief--dem-derived-normal-maps).
 - `horizon_map.py` — cast-shadow half of the build (imported by it):
   per-texel skyline elevation in 8 azimuths, encoded as sines into the
   two `<body>-horizon-{a,b}.webp` planes. Owns the exact spherical
   elevation-angle geometry that makes the body's own limb an occluder,
   the search arc that bounds it, and the encoding scale.
-  `/tests/integration/horizon-map.test.ts` pins the azimuth count and that scale against
-  `surface-relief-pure.ts`, the search arc against the renderer's
-  fallback limb bound, and the manifest rows against the shipped
+  The azimuth count and sine scale are `src/astro-core/baker-constants.json`'s.
+  `/tests/integration/horizon-map.test.ts` pins the renderer's fallback limb
+  bound against the search arc and the manifest rows against the shipped
   planes' own headers. Rationale:
   [Cast shadows](/data/textures/relief/README.md#cast-shadows--dem-derived-horizon-maps).
 - `sky_view.py` — the third relief artifact (imported by the build):
@@ -69,20 +76,22 @@ rather than shipping it.
   the one thing the horizon pair cannot state — that the near field it
   skips for shadowing still blocks sky, so this marches from **one DEM
   texel** where that one starts at two OUTPUT texels. The encoding range
-  is NOT its own: `SKY_VIEW_RANGE` is owned by
-  `surface-relief-pure.ts`, and `/tests/integration/sky-view.test.ts` pins both this script
-  and the mesh shader against that one export, plus the grid against the
-  horizon pair's, the manifest rows against the shipped maps' own
-  headers, and the R8 upload and its fallback in the layer. Rationale:
+  is NOT its own: `SKY_VIEW_RANGE` is `src/astro-core/baker-constants.json`'s,
+  read by the mesh shader too. `/tests/integration/sky-view.test.ts` pins the
+  manifest rows against the shipped maps' own headers and the R8 upload and
+  its fallback in the layer; `horizon_map.test.py` pins its near bound and
+  its grid against the horizon pair's. Rationale:
   [Sky view factor](/data/textures/relief/README.md#sky-view-factor--what-terrain-takes-out-of-the-sky).
-- `horizon_map.test.py` — stdlib unittest pins for the geometry the
-  TS suite can only source-pin: the flat-ground floor's closed form,
-  azimuth registration and its east/west handedness against a
-  synthetic wall, the isolated-summit limb identity, and the encoding
-  round-trip. Run directly: `python3 horizon_map.test.py` (needs
-  NumPy). Not in CI, like every `*.test.py` here.
-- `measure_relief_lighting.py` — manual, run by hand, NOT part of the
-  build: reads the SHIPPED maps and reports how much ground each relief
+- `horizon_map.test.py` — stdlib unittest pins for the relief half of
+  the build: the flat-ground floor's closed form, azimuth registration
+  and its east/west handedness against a synthetic wall, the
+  isolated-summit limb identity, the encoding round-trip, the grids every
+  relief map is built on and the widths `relief.json` records, the march
+  bounds and its DEM-resolution step, the colour-map roll and the normal map's blue channel. Run
+  directly: `python3 horizon_map.test.py` (needs NumPy); CI's Python
+  suites job runs it with every other `*.test.py`.
+- `measure_relief_lighting.py` (+ `measure_relief_lighting.test.py`, an
+  import pin CI runs) — manual, run by hand, NOT part of the build: reads the SHIPPED maps and reports how much ground each relief
   term lights past the terminator against the same march at full DEM width
   **from the same start distance**, plus the disc integral against phase.
   `--sweep` costs output width and azimuth count against what each buys
@@ -137,9 +146,10 @@ rather than shipping it.
   the file's own header (the FIRST size a row states, which is the
   README's own rule), the 2:1 equirect ratio, exact row and image-row
   counts so a source cannot leave coverage silently, and each row's
-  colour-invention wording against `DESATURATE` in `build-textures.py`
-  — the one half of a row that is invented rather than measured. It
-  also asserts that NO row still promises a representative-chroma tint,
+  colour-invention wording (the desaturation half is
+  `build_textures.test.py`'s) — the one half of a row that is invented
+  rather than measured. It also asserts that NO row still promises a
+  representative-chroma tint,
   since the build applies none: a grayscale source takes its colour
   from its measured index. Self-skips per row on an unpulled LFS object, warning
   rather than passing quietly, like the two relief suites.

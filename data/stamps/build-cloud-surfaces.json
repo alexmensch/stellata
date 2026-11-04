@@ -2,13 +2,16 @@
   "inputs": {
     "data/dust/edenhofer2024-2kpc.json": "3ed6b301cbf5eacc2a7b8d393456560d9f0a1bd5",
     "data/dust/edenhofer2024-main.json": "77b0906cc2a72aaf6e97f189c8e329426122e65d",
-    "scripts/cloud-surfaces/build-cloud-surfaces.py": "4a363c4a8570837ff6aa71504c8821d205c550d2",
-    "scripts/cloud-surfaces/cloud_geometry.py": "1abc5901d03ae7147fb1f54091e29860d9896d66",
-    "scripts/cloud-surfaces/trace_surfaces.py": "67609b5747059f282476cc7c0ef86e47e91272e4",
-    "scripts/dust/edenhofer2024.py": "58ba52e2bbaa3aa028fdae9103791badb39bad40"
+    "scripts/cloud-surfaces/build-cloud-surfaces.py": "7118c44e85f8e5ff7430d8daeb30463d9d211407",
+    "scripts/cloud-surfaces/cloud_geometry.py": "3c42c538f4b372c301addee78fc2db04b7aa9760",
+    "scripts/cloud-surfaces/trace_surfaces.py": "23df1c4405c66d67e48b0e34222520f5e18d9008",
+    "scripts/dust/edenhofer2024.py": "58ba52e2bbaa3aa028fdae9103791badb39bad40",
+    "scripts/util/baker_constants.py": "9450de842cfd6f8d4498ea3d263044e899b5aa44",
+    "scripts/util/paths.py": "8cb5f2a374d46e465a6baa9005c7cbc822d8a2fc",
+    "src/astro-core/baker-constants.json": "87f0268a16a3c0e5bad44ad051165dda1be82e01"
   },
   "outputs": {
-    "data/molecular-clouds/cloud-surfaces.bin": "c7591f20da45afe4787e9355ed67d52ed2769945"
+    "data/molecular-clouds/cloud-surfaces.bin": "973ce7da2eb6fbe8a5f409e5eb93879b446258ff"
   },
   "request": "9ceb18acc2ea98bca4ce275f3b81332569707d53",
   "requestFrom": [

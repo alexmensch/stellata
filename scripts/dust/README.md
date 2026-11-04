@@ -22,7 +22,9 @@ priced against the converged integral. Its own README.
 
 ## Output layout
 
-Canonical; must stay in sync with `src/client/loaders/dust-loader.ts`:
+Canonical; must stay in sync with `src/client/loaders/dust-loader.ts`. The
+manifest's name and `version` are `artifacts.dustManifest` in
+`src/astro-core/baker-constants.json`, and the loader refuses any other version:
 
 ```
 data/dust/
