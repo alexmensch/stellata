@@ -4,9 +4,12 @@
     "data/molecular-clouds/zucker2021-table1.dat": "d00ec0052c1eda74ec8a44e8177e4a5bd8680f37",
     "data/molecular-clouds/zucker2021-table2.dat": "aa52a25b254721d09365469bbb35667ca0b0800c",
     "data/molecular-clouds/zucker2021-table3.dat": "99e0b6fdc23a0f2d841e2c55049d6bb82421a03f",
-    "scripts/clouds/cloud_model.py": "3cc541a02497feaf8406b0431b6886514646f4a0",
-    "scripts/dust/build-dust.py": "523f7e4051802379337115f4ad312095bbb64ee5",
-    "scripts/dust/edenhofer2024.py": "58ba52e2bbaa3aa028fdae9103791badb39bad40"
+    "scripts/clouds/cloud_model.py": "2e7296d5d9913978791070c094ad6efe365e1bf5",
+    "scripts/dust/build-dust.py": "157d7fad4b8c7141d46a3d24ef29a333e9aa6252",
+    "scripts/dust/edenhofer2024.py": "58ba52e2bbaa3aa028fdae9103791badb39bad40",
+    "scripts/util/baker_constants.py": "ddbf15341d0d4e016e66e79c8fb4ed49177f1f53",
+    "scripts/util/paths.py": "8cb5f2a374d46e465a6baa9005c7cbc822d8a2fc",
+    "src/astro-core/baker-constants.json": "87f0268a16a3c0e5bad44ad051165dda1be82e01"
   },
   "outputs": {
     "data/dust/chunk_0_0_0.bin": "176275b2376e1448381992066544515305a774ca",
