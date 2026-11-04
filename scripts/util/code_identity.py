@@ -9,6 +9,7 @@ import io
 import json
 import sys
 import tokenize
+from pathlib import Path
 
 _STRUCTURE = frozenset({tokenize.NEWLINE, tokenize.INDENT, tokenize.DEDENT, tokenize.ENDMARKER})
 _TRIVIA = frozenset({tokenize.COMMENT, tokenize.NL, tokenize.ENCODING})
@@ -43,6 +44,17 @@ def _token_identity(source: bytes) -> str:
     return hashlib.sha1(json.dumps(kept).encode()).hexdigest()
 
 
+def _pinned_version() -> tuple[int, ...]:
+    pin = Path(__file__).resolve().parents[2] / ".python-version"
+    return tuple(int(n) for n in pin.read_text().strip().split(".")[:2])
+
+
 if __name__ == "__main__":
+    if sys.version_info[:2] != _pinned_version():
+        sys.exit(
+            f"code_identity.py: python3 is {sys.version_info[0]}.{sys.version_info[1]}, "
+            f".python-version pins {'.'.join(map(str, _pinned_version()))}; "
+            "tokenize differs across versions, so identities would not match CI's"
+        )
     paths = [p for p in sys.stdin.read().split("\n") if p]
     print(json.dumps({p: identity(open(p, "rb").read()) for p in paths}))

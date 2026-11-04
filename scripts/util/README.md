@@ -124,7 +124,9 @@ same thing — single-use helpers stay with their consumer.
   any bare string statement) dropped; an f-string is never such a line. A
   file `tokenize` rejects (a half-edited input) keys as `raw:` plus its
   bytes hash, which no identity equals, so its steps read stale and the rest
-  of the batch still hashes.
+  of the batch still hashes. It refuses a `python3` whose major.minor is not
+  `.python-version`'s, since `tokenize` output differs across versions (3.12
+  split f-strings into tokens) and a local identity must equal CI's.
   Changing either normaliser changes every recorded code identity, so it
   re-keys the committed `data/stamps/` records in the same commit.
 - `import-closure.ts` / `import-closure-pure.ts` (+ test) — a TypeScript
