@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { parseGlieseTsv } from '../gliese-parse';
+import { parseGlieseTsv } from '../gliese-parse-pure';
 import type { Tycho2Row } from '../tycho2-parse';
 import { TYCHO2 } from '../tycho2-source';
 import { GLIESE } from '../gliese-source';

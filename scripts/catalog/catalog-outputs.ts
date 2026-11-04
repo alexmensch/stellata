@@ -2,30 +2,28 @@
 
 import { dirname, resolve } from 'node:path';
 
-import { stampPath } from '../util/build-stamp';
 import { declareOutputs } from '../util/emit-artifacts';
 import { REPO_ROOT } from '../util/paths';
 import {
-  DEFAULT_CATALOG_MANIFEST, DEFAULT_CONSTELLATIONS_JSON, DEFAULT_ROW_INDEX_MAP, DEFAULT_SEARCH_INDEX,
-} from './catalog-lookup';
+  DEFAULT_BOUNDARIES, DEFAULT_CATALOG_MANIFEST, DEFAULT_CONSTELLATIONS_JSON, DEFAULT_ROW_INDEX_MAP, DEFAULT_SEARCH_INDEX,
+} from './catalog-paths-pure';
 import { PROMOTION_LINEAGE } from './companions/promotion-lineage-pure';
 import { PARKED_LEDGER } from './distance/parallax/parked-ledger-tsv';
-import { PLACEMENT_LINEAGE } from './distance/placement-lineage-pure';
-import { LINEAGE_LAYOUT, stageFamilies, stageOutputFiles } from './lineage/lineage-io';
 import { SIMBAD_SOURCED_DISTANCES_FILE } from './distance/parallax/simbad-sourced-ledger-tsv';
-import { CATALOG_CHUNK_FILENAME } from './record/catalog-pure';
+import { PLACEMENT_LINEAGE } from './distance/placement-lineage-pure';
+import { LINEAGE_LAYOUT, stageFamilies, stageOutputFiles } from './lineage/lineage-layout-pure';
+import { CATALOG_CHUNK_FILENAME } from '../../src/catalog-format/record/catalog-pure';
 import { ALLOCATION_LINEAGE } from '../sid/allocation-lineage-pure';
 import { registryFiles } from '../sid/registry-outputs';
 import { CATALOG_PARTITION } from '../sid/registry-partitions-pure';
 
 export const CATALOG_CHUNK_DIR = dirname(DEFAULT_CATALOG_MANIFEST);
-export const OUT_BOUNDARIES = resolve(REPO_ROOT, 'public/constellation-boundaries.json');
 
 export const CATALOG_OUTPUTS = declareOutputs(
   {
     manifest: DEFAULT_CATALOG_MANIFEST,
     constellations: DEFAULT_CONSTELLATIONS_JSON,
-    boundaries: OUT_BOUNDARIES,
+    boundaries: DEFAULT_BOUNDARIES,
     searchIndex: DEFAULT_SEARCH_INDEX,
     rowIndexMap: DEFAULT_ROW_INDEX_MAP,
     parkedLedger: resolve(REPO_ROOT, PARKED_LEDGER.file),
@@ -36,11 +34,9 @@ export const CATALOG_OUTPUTS = declareOutputs(
     ...registryFiles(CATALOG_PARTITION),
   },
   [
-    { dir: CATALOG_CHUNK_DIR, member: CATALOG_CHUNK_FILENAME },
+    { dir: CATALOG_CHUNK_DIR, member: CATALOG_CHUNK_FILENAME, stamped: true },
     ...stageFamilies(LINEAGE_LAYOUT, PLACEMENT_LINEAGE),
     ...stageFamilies(LINEAGE_LAYOUT, PROMOTION_LINEAGE),
     ...stageFamilies(LINEAGE_LAYOUT, ALLOCATION_LINEAGE),
   ],
 );
-
-export const CATALOG_STAMP = stampPath('catalog');

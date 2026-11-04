@@ -115,6 +115,13 @@ registry-io.ts            loadRegistry: every partition plus the stored
                           appended as encodeLine lines, never a committed
                           line rewritten, and its head recomputed. Shared
                           by build-catalog and the stamp.
+registry-step-inputs.test.ts
+                          Every allocating step (build:catalog,
+                          build:local-group, sid:stamp) has every
+                          partition's ledger and events in its
+                          stepInputPaths, read through the LEDGERS /
+                          EVENTS declaration maps
+                          (../util/sources/README.md#reached-means-read).
 registry-outputs.ts       registryPaths(partition), the one place a
                           registry path is spelled, and
                           registryFiles(partition): its three files, keyed
@@ -152,27 +159,29 @@ dr-reconcile.ts           pnpm run sid:dr-reconcile — churn report for a
 dr-reconcile-pure.ts      Pure classifier + request/neighbourhood TSV
                           readers. ACCEPT_MAS / MAG_REVIEW_DELTA live
                           here.
-stamp-sibling-sids.ts     Allocates the cloud: / lg: namespaces and stamps
-                          each object's sid onto clouds.json /
-                          local-group.json after their emitters run — the
-                          tail of build:clouds / build:local-group (also
-                          pnpm run sid:stamp). Every named target allocates
-                          before one emitArtifacts call lands them and the
-                          registry. See README.md#sibling-artifact-stamping.
-sibling-stamp-outputs.ts  SID_STAMP_OUTPUTS: the sibling artifacts sid:stamp
-                          rewrites in place plus the cloud and lg
-                          partitions' registry files, as its
-                          emitArtifacts declaration (../util/README.md).
-                          Side-effect free. The artifact paths are their
-                          emitters' outputs too; the stamp is an in-place
-                          transform after them.
-sibling-artifacts.ts      SIBLING_ARTIFACTS spec (file / arrayKey / ns /
+sibling-allocation.ts     allocateSibling: one sibling namespace allocated
+  (+ test)                over the registry, giving each record's sid and
+                          the partition's files only when the allocation
+                          appended, so a run that mints nothing rewrites
+                          no registry file (null otherwise, never a
+                          partial set); emitSibling, the artifact plus
+                          those files in one emitArtifacts call. Called by
+                          build:local-group and the clouds stamp.
+stamp-sibling-sids.ts     pnpm run sid:stamp, the tail of build:clouds:
+                          allocates the cloud: namespace and stamps each
+                          cloud's sid onto clouds.json after the Python
+                          emitter runs. See README.md#sibling-artifact-stamping.
+sibling-stamp-outputs.ts  SID_STAMP_OUTPUTS: clouds.json, which sid:stamp
+                          rewrites in place, plus the cloud partition's
+                          registry files, as its emitArtifacts declaration
+                          (../util/README.md). Side-effect free.
+sibling-artifacts-pure.ts SIBLING_ARTIFACTS spec (file / arrayKey / ns /
                           kind / mint code per sibling) +
                           siblingArtifactObjects, so the namespace→kind
-                          mapping is defined once; SIBLING_NAMES and
-                          SIBLING_NAMESPACES with their type guards, so a
-                          sibling or partition name is a literal type;
-                          each namespace is its own registry partition.
+                          mapping is defined once; SIBLING_NAMESPACES with
+                          its type guard, so a partition name is a literal
+                          type; each namespace is its own registry
+                          partition.
 ```
 
 The append-only CI guard is `tests/sid-ledger-guard.test.ts` (repo-meta:
@@ -190,9 +199,9 @@ that folder's README for why; a suite gating on a declared file takes
 
 The registry is split by allocating step, so each file has one writer:
 `build:catalog` owns the `catalog` partition (`ledger.tsv`, `events.tsv`,
-`ledger-head.json`: every namespace but the siblings'), and the stamp owns
-one partition per sibling namespace (`ledger-cloud.tsv`,
-`events-cloud.tsv`, `ledger-head-cloud.json`, and the same for `lg`).
+`ledger-head.json`: every namespace but the siblings'), `sid:stamp` owns
+`cloud` (`ledger-cloud.tsv`, `events-cloud.tsv`, `ledger-head-cloud.json`)
+and `build:local-group` owns `lg` (the same three, suffixed `-lg`).
 `registry-partitions-pure.ts` decides which namespace lands where.
 
 SIDs remain one dense sequence across all of them: every allocation mints
@@ -201,23 +210,23 @@ step reads every partition's ledger and events and writes only its own.
 `validateRegistry` holds the union dense and unique; the guard checks each
 partition append-only against its own merge-base head, or the sid-ordered
 union against the catalogue head when the base predates the partitions.
-The read loop this makes between `build:catalog` and `sid:stamp` is a
-kept loop in the step graph
+The read loop this makes among `build:catalog`, `sid:stamp` and
+`build:local-group` is a kept loop in the step graph
 ([Loops through committed files](../pipeline/README.md#loops-through-committed-files)).
 
 ## SID events
 
 SID allocation is a lineage stage (`allocation-lineage-pure.ts`),
-run in-process by `build:catalog` over the records, sol and shell objects
-and by the clouds and Local Group stamps over their own namespaces. Per
+run in-process by `build:catalog` over the records, sol and shell objects,
+by `build:local-group` over `lg:` and by the clouds stamp over `cloud:`. Per
 object it records `allocation.resolved` (with `via`, the ledger key, only when
 the object reached it through a designation it does not carry),
 `allocation.minted` or `allocation.reinstated` (with the admitting code),
 keyed on the object's origin; per SID no object keeps,
 `allocation.retired`, `.parked` or `.merged`, keyed on the origin of the
 upstream decision that settled it, with that code as `cause`. Its identity
-file `allocation.identity.tsv.gz` maps each origin key to its SID. The stamps
-write events but no lineage rows yet (stellata-hhaw.45.32.12).
+file `allocation.identity.tsv.gz` maps each origin key to its SID. The two sibling
+allocations write events but no lineage rows yet (stellata-hhaw.45.32.12).
 
 An orphan inherits its cause from the upstream decisions on its record,
 joined on the origin key (`lineageCauses`, `lineage-upstream-pure.ts`):
@@ -321,15 +330,19 @@ change's.
 
 ## Sibling-artifact stamping
 
-`clouds.json` and `local-group.json` carry an in-record `sid` ([§ 7](/docs/sid.md#7-storage--sid-in-every-artifact)).
-Because `build-clouds.py` is Python, allocation is NOT duplicated into
-either emitter — `stamp-sibling-sids.ts` post-processes the built artifact,
-allocating each object's `cloud:<id>` / `lg:<id>` over that namespace alone
-and writing the sid in. It runs as the tail of `pnpm run build:clouds` and
-`pnpm run build:local-group` (and `pnpm run sid:stamp` does both). A new
-slug mints under `allocation.mint.cloud` / `.local-group` and appends to
-the registry; neither emitter writes lineage, so a vanished slug has no
-decision and fails the stamp (a renamed slug needs a
-`sameas-overrides.tsv` bridge). The catalog's stellar sids are allocated
-in-record at build time instead ([SID allocation](/scripts/catalog/README.md#sid-allocation)); the Sol system's are pinned
-client-side in `src/client/solar-system/sol-object-sids.ts`.
+`clouds.json` and `local-group.json` carry an in-record `sid` ([§ 7](/docs/sid.md#7-storage--sid-in-every-artifact)),
+each allocated over its own namespace by `allocateSibling`
+(`sibling-allocation.ts`). `build:local-group` is TypeScript, so it
+allocates `lg:<id>` in-process and writes `local-group.json` and the `lg`
+partition in one `emitArtifacts` call. `build-clouds.py` is Python, so
+`stamp-sibling-sids.ts` post-processes its output as the tail of
+`pnpm run build:clouds` (and `pnpm run sid:stamp`), allocating `cloud:<id>`
+and rewriting `clouds.json` through `emitArtifacts` too, so a stamp killed
+mid-write leaves the previous file whole. A new slug mints under
+`allocation.mint.cloud` / `.local-group` and appends to its partition;
+neither emitter writes lineage, so a vanished slug has no decision and fails
+its step (a renamed slug needs a `sameas-overrides.tsv` bridge). The
+catalog's stellar sids are allocated in-record at build time
+([SID allocation](/scripts/catalog/README.md#sid-allocation)); the Sol
+system's are pinned client-side in
+`src/client/solar-system/sol-object-sids.ts`.

@@ -4,13 +4,13 @@ import {
   GLOW_COLLAPSE_STACK_MARGIN,
   glowCollapseHalfStepL,
 } from './glow-collapse-pure';
-import { displayLevel, tonemapWhitePoint } from '../../hdr/tonemap/tonemap-pure';
-import { pointSourcePeakLuminance } from '../../hdr/emission/emission-pure';
+import { displayLevel, tonemapWhitePoint } from '../../../astro-core/tonemap/tonemap-pure';
+import { pointSourcePeakLuminance } from '../../../astro-core/emission/emission-pure';
 import {
   EV_MAX_STOPS, sceneExposure, thresholdMagFor,
 } from '../../hdr/exposure/exposure-epoch';
 import { emitterPutsInkOnScreen, taperFactor } from '../../hdr/exposure/visibility/emitter-visibility-pure';
-import { SOFT_TAPER_MARGIN_MAG } from '../../solar-system/perceptual-magnitude';
+import { SOFT_TAPER_MARGIN_MAG } from '../../../astro-core/perceptual-magnitude';
 
 describe('the collapse floor', () => {
   it('is the operator inverted at half an 8-bit step, margin under it', () => {

@@ -1,0 +1,8 @@
+{
+  "dataset": "Edenhofer 2024 (/data/papers/index.md#edenhofer2024) 3D dust map, dustmaps edenhofer2023",
+  "doi": "10.5281/zenodo.8187943",
+  "file": "validation_with_less_data_but_2kpc_mean_and_std_healpix.fits",
+  "flavor": "less_data_but_2kpc",
+  "md5": "0826b2f4cdfccad69bdc5e2d85bb4c54",
+  "variant": "2kpc"
+}

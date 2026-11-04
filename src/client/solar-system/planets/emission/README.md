@@ -3,7 +3,7 @@
 The normalisers that put a planet's mesh and glare on the one physical
 luminance scale, and the reason a body does not brighten per-pixel on
 approach. `../README.md` owns the two layers that read these scalars;
-[Unit](../../../hdr/emission/README.md#unit--what-an-emitting-layer-writes) is the contract they emit into.
+[Unit](../../../../astro-core/emission/README.md#unit--what-an-emitting-layer-writes) is the contract they emit into.
 
 ```
 src/client/solar-system/planets/emission/
@@ -151,6 +151,6 @@ in these layers (`../rings/README.md`).
 **Both render paths.** Each planet shader applies the operator inline
 when `uHdrTarget` is 0, undithered — the mesh, ring annulus and
 atmosphere shell composite over each other, so a fragCoord-keyed dither
-would bias a pixel once per layer ([Operator](../../../hdr/tonemap/README.md#operator)).
+would bias a pixel once per layer ([Operator](../../../../astro-core/tonemap/README.md#operator)).
 The shell runs the operator on its airlight *before* `uFade` premultiplies,
 since the crossfade is a compositing weight, not light.

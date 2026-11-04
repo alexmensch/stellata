@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { fakeChromeLineMaterials } from '../chrome-lines/chrome-lines-mock';
 import { makeFrameCtx } from '../scene/frame-ctx-mock';
-import { GALACTIC_CENTRE_PC } from './galactic-coords';
+import { GALACTIC_CENTRE_PC } from '../../astro-core/galactic-coords';
 import { galacticDiscSceneLayer } from './galactic-disc';
 
 function rig() {

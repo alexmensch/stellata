@@ -1,0 +1,12 @@
+{
+  "inputs": {},
+  "outputs": {
+    "data/msc/msc_components.tsv": "9ac4f2c6e714fccce0ae52cabfafbe438a91b56f",
+    "data/msc/msc_orbits.tsv": "6b8d6ab4e00f91193443d6cfbb8d1ab2d1be4441",
+    "data/msc/msc_systems.tsv": "dca89df6c78710c73a5920945d1de26d1f860129"
+  },
+  "query": "d6b5b449737587a91e8a1afa638d9e303d50b06b",
+  "answeredBy": [],
+  "release": "VizieR J/ApJS/235/6/systems, VizieR J/ApJS/235/6/orbits, VizieR J/ApJS/235/6/catalog",
+  "requestFrom": []
+}

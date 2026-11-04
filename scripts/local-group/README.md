@@ -11,9 +11,11 @@ three inputs (`../util/sources/`), `local-group-parse.ts` holds their
 parsers, and `local-group-inputs.test.ts` pins the up-to-date gate's
 input set, `stepInputPaths('build:local-group')` (`../util/step-inputs.ts`). The quadrature and the ρ₀ solve
 itself are shared with the Milky Way band and live in
-`src/client/hdr/emission/density0-solver-pure.ts` — a build script
-importing from the client is the established direction, and the reverse
-is not. All vitest-pinned in `*.test.ts`.
+`src/astro-core/emission/density0-solver-pure.ts`. The distance envelope
+and the emission block's types are what the viewer reads, so they live in
+[`/src/catalog-format/local-group/`](/src/catalog-format/local-group/README.md)
+(the `MAX_DISTANCE_PC` filter is documented there). All vitest-pinned in
+`*.test.ts`.
 
 The TSV parser handles both LVDB-merge and standalone-position
 override rows; optional emission columns are resolved by header name.
@@ -32,22 +34,26 @@ required:
   optional `canonical` name promotion) merged into each object's `name` /
   `type` / `aliases` output fields; unmatched rows fail the build.
 
-Emits `public/local-group.json` through `emitArtifacts`
-(`../util/README.md`; the declaration is `local-group-outputs.ts`), with one entry per renderable object
-within `MAX_DISTANCE_PC` of Sol. Output schema is documented at the
-`LgObject` type in `build-local-group-pure.ts`; the client loader at
-`src/client/local-group/local-group-loader.ts` mirrors it 1:1.
+Emits `public/local-group.json` and the `lg` SID registry partition through
+one `emitArtifacts` call (`../util/README.md`; the declaration is
+`local-group-outputs.ts`), with one entry per renderable object
+within `MAX_DISTANCE_PC` of Sol. The output schema is
+`/src/catalog-format/local-group/local-group-schema.ts` (`LgObjectRow`,
+`LocalGroupFile`), which the client loader at
+`src/client/local-group/local-group-loader.ts` reads too.
 
 Each object also carries a `sid` (frozen Stellata ID, [§ 7](/docs/sid.md#7-storage--sid-in-every-artifact)),
-stamped after this script by `scripts/sid/stamp-sibling-sids.ts` (the tail
-of `pnpm run build:local-group`) — it allocates each `lg:<id>` slug against
-the committed ledger; this build never touches the ledger. A new slug mints
-there under `allocation.mint.local-group`; a vanished slug fails the stamp,
-and a rename needs a `data/sid/sameas-overrides.tsv` bridge. See [Sibling-artifact stamping](/scripts/sid/README.md#sibling-artifact-stamping).
+allocated in-process before the emit (`allocateSibling`,
+`../sid/sibling-allocation.ts`): each `lg:<id>` slug resolves against the
+registry, and this step is the sole writer of the `lg` partition
+(`data/sid/ledger-lg.tsv`, `events-lg.tsv`, `ledger-head-lg.json`), which it
+rewrites only on a run that appends. A new slug mints under
+`allocation.mint.local-group`; a vanished slug fails the build, and a rename
+needs a `data/sid/sameas-overrides.tsv` bridge. See [Sibling-artifact stamping](/scripts/sid/README.md#sibling-artifact-stamping).
 
 Idempotent — exits early if `public/local-group.json` is newer than
-every input `stepInputPaths` derives: the import closure of both
-`tsx` entries `build:local-group` chains (`../util/import-closure.ts`),
+every input `stepInputPaths` derives: the import closure of the
+`build:local-group` entry (`../util/import-closure.ts`),
 their sibling files, and every declaration that closure reads — the way the
 catalogue stamp derives its own, so a moved parser or a new import is never
 missed. Run via
@@ -171,7 +177,7 @@ consumes raw numbers and never re-derives photometry.
   (`integrateOverEllipsoid`, Gauss–Legendre in unit-ball coordinates) for
   every profile; the analytic incomplete-gamma closed forms exist only as
   vitest cross-pins. `emission-geometry-pure.ts` supplies the shapes,
-  [Solving ρ₀](/src/client/hdr/emission/README.md#solving-ρ--a-published-magnitude-into-an-emitters-density) owns the solve.
+  [Solving ρ₀](/src/astro-core/emission/README.md#solving-ρ--a-published-magnitude-into-an-emitters-density) owns the solve.
 - **M31 bulge contract:** the bulge is its own spheroid component —
   density0 solves over the bulge's u ≤ uMax sphere via the same
   Sérsic geometry integral as every spheroid, and the renderer packs
@@ -189,19 +195,6 @@ M31 (disc + bulge) / Fornax against the committed data, plus the
 ⟨μ⟩_e ↔ `surface_brightness_rhalf` definitional consistency sweep. A
 catalogue refresh that shifts photometry moves those pins —
 re-derive, don't loosen.
-
-## MAX_DISTANCE_PC
-
-`build-local-group-pure.ts` exports `MAX_DISTANCE_PC = 2_000_000` —
-the heliocentric envelope the build filter applies. 2 Mpc covers the
-canonical Local Group (M31 + M33 + their satellites, plus the outer
-dIrrs out to ~1.4 Mpc) with comfort headroom past the ~1.5 Mpc
-IAU-style boundary; beyond 2 Mpc we'd be picking up the
-IC 342 / Maffei groups — a separate decision. The constant is
-shared: the runtime camera envelope (`stellata.ts` —
-`controls.maxDistance = 2 Mpc`, PerspectiveCamera far = 3 Mpc) is
-paired with this filter so a fully zoomed-out view shows the entire
-rendered catalogue.
 
 ## Orientation specs
 

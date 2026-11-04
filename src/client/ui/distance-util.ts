@@ -1,4 +1,4 @@
-import { AU_KM, AU_PER_PC } from '../util/astronomy-constants';
+import { AU_KM, AU_PER_PC } from '../../astro-core/astronomy-constants';
 
 export type DistanceUnit = 'pc' | 'ly';
 

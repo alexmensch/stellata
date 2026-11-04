@@ -53,7 +53,7 @@ literal.
   falls back to `scripts/catalog/build-catalog-expected.json`'s
   `recordCount`. After `build:data` the two cannot disagree: the stamp
   rebuilds a stale artifact, and `build-catalog` refuses to write one whose
-  counts drift from that snapshot without `UPDATE_BUILD_COUNTS=1`.
+  counts drift from that snapshot without `UPDATE_SNAPSHOTS=1`.
   `build:site` or `vite build` run alone reads whatever artifact is on disk,
   which in a worktree seeded from another commit can be one the branch's
   snapshot no longer matches. That fallback is what lets a page state an exact

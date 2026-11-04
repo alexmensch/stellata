@@ -4,7 +4,7 @@
 import type { Stellata } from '../stellata';
 import { STAR_PASS_DISC } from '../star-pipeline/star-pass';
 import { type DebugSection, buildDiagnosticReadout, setReadoutText } from './debug-panel';
-import { AU_PC } from '../util/astronomy-constants';
+import { AU_PC } from '../../astro-core/astronomy-constants';
 
 const UPDATE_EVERY_N_FRAMES = 12;
 

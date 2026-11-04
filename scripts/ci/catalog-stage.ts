@@ -4,8 +4,8 @@ import { execFileSync, spawnSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
-import { scriptClosure } from '../util/import-closure';
-import { tsxEntry } from '../util/import-closure-pure';
+import { entryClosure } from '../util/import-closure';
+import { stepEntries } from '../util/step-inputs';
 import { PACKAGE_JSON, REPO_ROOT } from '../util/paths';
 import {
   type BlobIndex,
@@ -16,8 +16,10 @@ import {
   withVersionlessPackageJson,
 } from './catalog-stage-pure';
 
+const RUNNER = 'scripts/pipeline/run.ts';
+
 async function stageKeyInputs(): Promise<{ index: BlobIndex; paths: string[] }> {
-  const closure = await scriptClosure(CATALOG_STAGE.map((step) => step.script));
+  const closure = await entryClosure(CATALOG_STAGE.flatMap((step) => stepEntries(step.script)));
   const index = withVersionlessPackageJson(
     parseLsFilesStage(execFileSync('git', ['ls-files', '-s', '-z'], { cwd: REPO_ROOT, encoding: 'utf-8' })),
     readFileSync(resolve(REPO_ROOT, PACKAGE_JSON), 'utf-8'),
@@ -26,11 +28,10 @@ async function stageKeyInputs(): Promise<{ index: BlobIndex; paths: string[] }> 
 }
 
 function runStage(): void {
-  const { scripts } = JSON.parse(readFileSync(resolve(REPO_ROOT, PACKAGE_JSON), 'utf-8'));
   for (const { script, pinned } of CATALOG_STAGE) {
     console.log(`::group::${script}`);
     // `pnpm run` would export npm_package_version, which the cache key excludes.
-    execFileSync('pnpm', ['exec', 'tsx', tsxEntry(scripts, script)], { cwd: REPO_ROOT, stdio: 'inherit' });
+    execFileSync('pnpm', ['exec', 'tsx', RUNNER, script], { cwd: REPO_ROOT, stdio: 'inherit' });
     console.log('::endgroup::');
     const diff = spawnSync('git', ['diff', '--exit-code', '--', ...pinned], { cwd: REPO_ROOT, stdio: 'inherit' });
     if (diff.status !== 0) {

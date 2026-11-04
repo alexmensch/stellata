@@ -25,14 +25,10 @@ src/client/solar-system/ephemerides/
                                   in M, plus the frozen Horizons tables
                                   where they reach. Heliocentric ecliptic
                                   parsecs out.
-  equinoctial-pure.ts (+ test)    The non-singular element representation
-                                  every source is expressed in, and the
-                                  blend. See README.md#equinoctial-elements.
-  element-table.ts (+ test)       One planet's uniform-cadence table of
-                                  equinoctial elements + the Catmull–Rom
-                                  sampler. See README.md#horizons-element-tables.
   element-table-loader.ts         Parallel fetch of the nine tables from
-                                  public/ephemerides/. A missing file
+                                  public/ephemerides/, decoded by the
+                                  shared sampler
+                                  (/src/catalog-format/ephemerides/element-table.ts). A missing file
                                   drops that planet onto Standish; it is
                                   never an error.
   moon-ephemeris.ts (+ test)      MOON_ELEMENTS — J2000 osculating orbital
@@ -134,7 +130,7 @@ the measured per-planet accuracy are in
   cadence is uniform, so there is no search and no cursor to invalidate
   when a scrub jumps decades between frames. The reasons for cubic over
   linear and for extrapolating the boundary control point are measured
-  and live in `element-table.ts`.
+  and live in `/src/catalog-format/ephemerides/element-table.ts`.
 
 ### The seam
 
@@ -152,7 +148,8 @@ monotone ramp between them.
 
 ## Equinoctial elements
 
-`equinoctial-pure.ts` is the representation both sources are expressed
+`/src/astro-core/equinoctial-pure.ts` (shared with the Horizons fetch) is
+the representation both sources are expressed
 in: `h/k` = `e·(sin ϖ, cos ϖ)`, `p/q` = `tan(i/2)·(sin Ω, cos Ω)`, and
 the mean longitude λ = M + ϖ.
 
@@ -214,7 +211,7 @@ Frame: the series is referred to the equinox of date, and the model works
 in the J2000 ecliptic. Over the clock's span the equinox sweeps ~42° and
 the ecliptic plane itself moves ~0.5°, so the conversion is a full
 three-angle rotation, not a longitude offset —
-`../../util/precession.ts`'s [Vondrák 2011](/data/papers/index.md#vondrak2011) long-term model supplies it.
+`/src/astro-core/precession.ts`'s [Vondrák 2011](/data/papers/index.md#vondrak2011) long-term model supplies it.
 Nutation is deliberately omitted: mean-of-date → mean-of-J2000 is exactly
 the precession-only chain, and the Sun's position carries no nutation
 either, so the pair stays consistent.

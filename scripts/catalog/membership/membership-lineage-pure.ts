@@ -4,7 +4,7 @@ import { LABEL_DISPOSITIONS, type LabelDisposition, type LabelFlip } from '../cl
 import type { IdentityRow } from '../lineage/identity-pure';
 import type { DiffJoin } from '../lineage/lineage-diff-pure';
 import { lineageInvariant, NO_EXCEPTIONS, type LineageInvariant } from '../lineage/lineage-invariant-pure';
-import type { StageLineageSpec } from '../lineage/lineage-io';
+import type { StageLineageSpec } from '../lineage/lineage-layout-pure';
 import { paramsOf, paramsText, type LineageParams, type LineageRow } from '../lineage/lineage-row-pure';
 import { LIVE, stageCodes, type CodeDeclaration } from '../lineage/reason-codes-pure';
 import type { GateReason } from './binding/binding-gate-pure';

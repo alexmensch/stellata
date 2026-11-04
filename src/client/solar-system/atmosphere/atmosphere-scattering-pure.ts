@@ -2,7 +2,7 @@
 // mirror of ../../webgpu/solar-system/atmosphere-scatter-tsl.ts. Geometry in planet-radius units, planet
 // centred at origin. Model + calibration: README.md#the-model.
 
-import { relativeLuminance } from '../../hdr/tonemap/tonemap-pure';
+import { relativeLuminance } from '../../../astro-core/tonemap/tonemap-pure';
 import { scalePolarInto } from '../../util/polar-scale';
 import type { PlanetAtmosphere } from '../planet-system';
 

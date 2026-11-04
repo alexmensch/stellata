@@ -38,7 +38,7 @@ import {
   KM_PC,
   MIN_PHYSICAL_RADIUS_R_SUN,
   R_SUN_PC,
-} from '../../util/astronomy-constants';
+} from '../../../astro-core/astronomy-constants';
 import {
   fovMinorRad,
   minOrbitDistForPlanet,

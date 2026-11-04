@@ -1,0 +1,15 @@
+{
+  "inputs": {
+    "scripts/icons/build-icons.py": "05fa3900dc64232c999e59502a57592e5cf5ce2c"
+  },
+  "outputs": {
+    "public/apple-touch-icon.png": "42516d0f3636bf760572bf0a0c8deb72690f57bb",
+    "public/favicon-16.png": "0c4cbdd584e194424c77671b625de00328eb194a",
+    "public/favicon-32.png": "d03422f9f3c82028d4a4218abf2d2a8cf9ac315a",
+    "public/favicon-48.png": "dfcf955185965241a1597602532ae2627ee303e2",
+    "public/favicon.ico": "3694ec14c715cdbc13a885e325c69c1f5f025f66",
+    "public/icon-192.png": "bc4cf17b48c37556a932abc461adb7aa74bac5f7",
+    "public/icon-512.png": "6ff49a7a3e59af7ec05161350c7efa589e688a80"
+  },
+  "requestFrom": []
+}

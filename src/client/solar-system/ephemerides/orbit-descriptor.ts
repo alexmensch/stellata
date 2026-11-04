@@ -2,7 +2,7 @@
 // orbit distance, and period derived from its parent (planet ← host star;
 // moon ← parent planet), no solar-mass assumption. README.md#moon-ephemeris.
 
-import { AU_KM } from '../../util/astronomy-constants';
+import { AU_KM } from '../../../astro-core/astronomy-constants';
 import { formatKm, planetPeriodYears } from '../../format/physical-format';
 import type { Planet, PlanetSystem } from '../planet-system';
 

@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import csv
 import hashlib
+import json
 import os
 import random
 import re
@@ -15,39 +16,47 @@ from pathlib import Path
 from typing import Any, Callable, Iterable, Iterator, Mapping, Sequence, TypeVar
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "util"))
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from paths import REPO_ROOT  # noqa: E402
+from scripts.util.build_stamp import report_service  # noqa: E402
 
 T = TypeVar("T")
 R = TypeVar("R")
 
 
-# ─── Idempotency ──────────────────────────────────────────────────────
-
-_LIB_PATH = Path(__file__).resolve()
+# ─── Describe ─────────────────────────────────────────────────────────
 
 
-def is_up_to_date(output: Path, sources: Iterable[Path]) -> bool:
-    """True iff `output` exists and is newer than every path in `sources`
-    AND newer than refresh_lib.py itself.
+def description(
+    query: str,
+    services: Sequence[str],
+    *,
+    release: str | None = None,
+    request: Iterable[str] | None = None,
+    request_from: Iterable[Path] = (),
+) -> dict[str, Any]:
+    """What a pull prints under --describe: freshness.ts parses this shape.
+    `query` excludes batch values; `request` is the list a pull derives from
+    the `request_from` files, which then count only through it."""
+    described: dict[str, Any] = {"query": query, "services": list(services)}
+    if release is not None:
+        described["release"] = release
+    if request is not None:
+        described["request"] = list(request)
+    from_paths = [Path(p).resolve().relative_to(REPO_ROOT).as_posix() for p in request_from]
+    if from_paths:
+        described["requestFrom"] = from_paths
+    return described
 
-    Callers pass the refresh script's `Path(__file__)` plus any data
-    inputs; refresh_lib's own mtime is folded in automatically so a fix
-    to `coerce_masked`, `write_tsv`, `_dtype_matches`, or the atomic-
-    rename plumbing invalidates every cached output without each caller
-    having to list `Path(refresh_lib.__file__)` explicitly. A missing
-    source is treated as stale rather than ignored — refusing to skip
-    is safer than silently keeping a possibly-out-of-date output.
-    """
-    if not output.exists():
-        return False
-    out_mtime = output.stat().st_mtime
-    if _LIB_PATH.stat().st_mtime > out_mtime:
-        return False
-    for src in sources:
-        if not src.exists() or src.stat().st_mtime > out_mtime:
-            return False
-    return True
+
+def pull_main(run: Callable[[], object], describe: Callable[[], Mapping[str, Any]]) -> None:
+    """A pull's entry point: `--describe` prints its description with no
+    network call and no import beyond the standard library; otherwise it pulls."""
+    if sys.argv[1:] == ["--describe"]:
+        print(json.dumps(describe()))
+        return
+    sys.exit(run())
 
 
 # ─── AT-HYG ingest conventions ────────────────────────────────────────
@@ -586,7 +595,7 @@ class TapClient:
     `backends` is required — there is no default list. Which service can
     serve a query is a property of the table, not of TAP, so picking for
     the caller only ever picks wrong: Gaia-keyed pulls want
-    `gaia_sync_client()`, VizieR-only tables want `[cds_backend()]`, and
+    `gaia_sync_client()`, VizieR-only tables want `cds_client()`, and
     SIMBAD's divergent dialect wants `simbad_client()`.
     """
 
@@ -601,6 +610,11 @@ class TapClient:
             raise ValueError("TapClient requires at least one backend")
         self.retry_kwargs = dict(retry_kwargs or {})
 
+    @property
+    def services(self) -> list[str]:
+        """The backends' names in the order tried: a pull's declared service list."""
+        return [b.name for b in self.backends]
+
     def run(self, query: str) -> Any:
         last_transient: BaseException | None = None
         for backend in list(self.backends):
@@ -613,6 +627,7 @@ class TapClient:
                 continue
             self.backends.remove(backend)
             self.backends.insert(0, backend)
+            report_service(backend.name)
             return result
         assert last_transient is not None  # at least one backend, all transient
         raise last_transient
@@ -633,6 +648,8 @@ GAIA_ARI_SYNC_TAP_URL = "https://gaia.ari.uni-heidelberg.de/tap"
 # /capabilities); ARI's hard cap is 10,000,000. A whole-table sync pull
 # has to fit the smaller of the two, since either mirror may serve it.
 GAIA_SYNC_MAX_ROWS = 3_000_000
+
+GAIA_DR3_RELEASE = "Gaia DR3"
 
 GAIA_SYNC_RETRY_KWARGS: Mapping[str, Any] = {"max_attempts": 5, "base_delay_s": 2.0}
 
@@ -657,6 +674,11 @@ def cds_backend() -> TapBackend:
     there as `external.gaiaedr3_distance`, and only that copy can be bounded
     by magnitude."""
     return TapBackend(name="CDS", run=_cds_run)
+
+
+def cds_client() -> TapClient:
+    """TapClient over CDS VizieR alone: no mirror serves VizieR's table ids."""
+    return TapClient(backends=[cds_backend()])
 
 
 def simbad_backend(name: str, *, base_url: str) -> TapBackend:
@@ -1099,8 +1121,7 @@ def write_tsv_lines(
     swaps in via ``os.replace`` once the stream completes. Any mid-stream
     failure (disk full, KeyboardInterrupt, masked-cell coerce raising, OOM
     on a large batch) leaves the committed output untouched — never
-    half-written — and the ``.tmp`` sibling is cleaned up so a future
-    ``is_up_to_date`` check can't be fooled by a stale partial. POSIX
+    half-written — and the ``.tmp`` sibling is cleaned up. POSIX
     ``rename(2)`` guarantees the swap is atomic on the same filesystem,
     which the sibling-path layout ensures.
     """

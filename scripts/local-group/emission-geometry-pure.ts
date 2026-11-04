@@ -5,7 +5,7 @@
 import {
   integrateOverEllipsoid,
   integrateOverEllipsoidRz,
-} from '../../src/client/hdr/emission/density0-solver-pure';
+} from '../../src/astro-core/emission/density0-solver-pure';
 
 /** Ciotti 1999 (/data/papers/index.md#ciotti1999) asymptotic b_n — the
  *  Sérsic shape constant placing half the projected light inside R_e. */

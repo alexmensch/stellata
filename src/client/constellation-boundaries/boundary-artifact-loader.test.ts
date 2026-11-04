@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { boundaryArtifactFixture as artifact } from '../../../scripts/catalog/boundaries/boundary-artifact-fixture';
+import { boundaryArtifactFixture as artifact } from '../../catalog-format/boundaries/boundary-artifact-fixture';
 import { loadBoundaries, validateBoundaryArtifact } from './boundary-artifact-loader';
 
 afterEach(() => {

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 
-import { NO_CONSTELLATION_INDEX } from '../../record/catalog-pure';
+import { NO_CONSTELLATION_INDEX } from '../../../../src/catalog-format/record/catalog-pure';
 import { CON_INDEX } from '../../parse/constellations/constellations';
 import type {
   ClassicIdOverlay,

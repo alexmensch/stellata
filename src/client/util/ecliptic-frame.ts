@@ -1,7 +1,7 @@
 // The fixed J2000 ecliptic ↔ ICRS equatorial rotation about the
 // obliquity. See README.md#ecliptic-framets.ts.
 
-import { J2000_OBLIQUITY_RAD } from './astronomy-constants';
+import { J2000_OBLIQUITY_RAD } from '../../astro-core/astronomy-constants';
 
 const COS_OBLIQUITY = Math.cos(J2000_OBLIQUITY_RAD);
 const SIN_OBLIQUITY = Math.sin(J2000_OBLIQUITY_RAD);

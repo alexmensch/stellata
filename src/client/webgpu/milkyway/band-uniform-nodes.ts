@@ -4,7 +4,7 @@
 import { Color, Matrix3, Vector3 } from 'three';
 import { texture3D, uniform } from 'three/tsl';
 import type { BandComponentSpec } from '../../milkyway/band-materials';
-import { makeResolvedHoleTexture } from '../../milkyway/calibration/resolved-hole-texture';
+import { makeResolvedHoleTexture } from '../../milkyway/resolved-hole-texture';
 
 /**
  * The slots both components hold by reference to each other.

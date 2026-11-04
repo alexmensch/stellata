@@ -2,7 +2,7 @@
 // Espenak 2006 (/data/papers/index.md#espenak2006) Sect. 2.7
 // polynomial set, -1999 to +3000. See README.md#timescales.
 
-import { DAYS_PER_JULIAN_YEAR, J2000_JD } from '../../util/astronomy-constants';
+import { DAYS_PER_JULIAN_YEAR, J2000_JD } from '../../../astro-core/astronomy-constants';
 
 function poly(x: number, coeffs: readonly number[]): number {
   let sum = 0;

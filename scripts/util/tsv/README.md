@@ -123,7 +123,7 @@ and its parse each have one owner.
   decoding. A declared `rowKey` (then required in the artifact's type) lets lineage cite its rows
   ([SourceRowRef](../sources/README.md#sourcerowref)).
 - Each artifact constant lives in a leaf module that only its readers and its
-  writer import ([The step table](../../pipeline/README.md#the-step-table--stepsts),
+  writer import ([The step table](../../pipeline/step-table/README.md#the-step-table--stepsts),
   "Reachable must mean read").
 
 ## Cell corrections

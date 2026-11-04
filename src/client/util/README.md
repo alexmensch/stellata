@@ -1,35 +1,9 @@
 # Util
 
-Project-agnostic plumbing. Each topic owns a subfolder; the parent
-also hosts `astronomy-constants.ts`, the single source of truth for
-physical / astronomical constants shared across the client runtime,
-build scripts, tests, and shader uniforms.
+Project-agnostic plumbing for the viewer. Each topic owns a subfolder.
+Physical constants, angles, frames and the Kepler solver are shared with
+the build pipeline, so they live in `/src/astro-core/`.
 
-- `angles.ts` (+ test) — `wrapAngle(a)` / `wrapDegrees(d)`, the signed
-  wraps onto (−π, π] and (−180, 180]. Both reduce by one `floor`, not by
-  a while-loop: Earth's spin accumulates ~6.6e8 degrees at the model
-  clock's bounds and a loop would iterate millions of times to bring that
-  back. `wrapAngle` used to live in `kepler-solver.ts`. Also
-  `angleBetweenRad`, the unsigned angle between two unnormalised vectors
-  as `atan2(|a×b|, a·b)` — **the small-angle-safe form, and the reason it
-  is not `phaseAngleFromLegs`**: the cosine is flat near zero, so at
-  1e-6 rad the normalised dot rounds to 1 and `acos` returns exactly 0.
-  Its callers (the render cadence's measured on-screen displacement, a
-  moon's separation from the parent disc that hides it) work in that
-  regime; a phase angle, read in degrees across a half-turn, does not.
-- `astronomy-constants.ts` (+ test) — `AU_PER_PC` / `AU_PC` / `AU_KM` /
-  `KM_PC` / `R_SUN_PC` / `SUN_ABSMAG_V` / `MIN_PHYSICAL_RADIUS_R_SUN` /
-  `ARCSEC_TO_RAD` / `J2000_JD` / `J2000_OBLIQUITY_RAD` /
-  `DAYS_PER_JULIAN_YEAR` / `LIGHT_TIME_PER_AU_S` / `RA_HOURS_TO_DEG`.
-  Canonical values, one definition each, so client / build-script /
-  shader consumers can't drift on precision — import from here rather
-  than re-derive. `RA_HOURS_TO_DEG` is the hours→degrees factor every
-  catalogue RA column and sexagesimal boundary coordinate goes through;
-  tests import it rather than restating 15.
-  <a id="sun-absmag-v"></a>`SUN_ABSMAG_V` = 4.83 departs from the 4.81 (Vega) of
-  [Willmer 2018](/data/papers/index.md#willmer2018) Table 3, and nothing records where 4.83 comes
-  from: which value to adopt is an open decision (stellata-uadc.69.21, under
-  the stellata-uadc.69 epic).
 - `ulp.ts` (+ test) — `ulpsBetween(a, b)`, the distance between two
   float64s in representable steps. The unit that separates a value which
   will not converge (a handful of ULP, re-derived each frame from inputs
@@ -68,22 +42,6 @@ build scripts, tests, and shader uniforms.
   quaternion one the ring vertices ride, and the two are parity-pinned
   against each other. Sign trap: the north ecliptic pole comes back with
   a NEGATIVE y — see [Gotchas](../solar-system/ephemerides/README.md#gotchas).
-- `equatorial-basis.ts` — the ICRS tangent basis every sky-frame
-  projection resolves against: `equatorialTangentBasisRad` (core) /
-  `equatorialTangentBasis` (degrees) / `equatorialTangentBasisAt(x, y, z)`
-  (from an equatorial Cartesian position, `null` at the origin) return
-  `{u, east, north}` with east = ∂u/∂α / cos δ — never divided by cos δ,
-  so it stays a unit vector through the poles. `unitVectorFromRaDec` is
-  the `u` component alone and `raDecFromUnitVector` its inverse (ra
-  wrapped to [0, 360)); `SkyPosition` is the `{raDeg, decDeg}` pair both
-  sides speak. Shared by the catalog build's PM propagation +
-  space-motion velocity (`scripts/catalog/distance/direction-cascade.ts`), the
-  companion tangent-projection (`scripts/catalog/companions/companion-promotion.ts`),
-  and the runtime Tier-1 sky→ICRS orbit projection
-  (`../binaries/binary-orbit-pure.ts`). `scripts/local-group/`'s
-  `skyBasis` deliberately does NOT ride this: it seeds a rotation
-  quaternion and picks a canonical orientation at the pole, which this
-  helper leaves to the caller's ra.
 - `call-args.ts` (+ test) — `callArgs(src, name)`, the top-level argument
   list of a call in shader source. Walks the parens rather than matching a
   regex, so a nested call in an earlier slot cannot split the list in the
@@ -95,16 +53,6 @@ build scripts, tests, and shader uniforms.
   emitters may claim lit-surface coverage
   (`../hdr/attachments/statistic-mask.test.ts`). Nothing at runtime reads
   shader text.
-- `kepler-solver.ts` (+ test) — `solveKepler(M, e)`, the Newton
-  solver shared between Sol's planet ephemerides (e ≲ 0.25) and binary
-  orbits (e up to ~0.95). 50-iter, 1e-12 tolerance defaults. Also the
-  element↔state pair `orbitalStateToCartesian` and its inverse
-  `cartesianToOrbitalElements` — the inverse is what lets a body
-  positioned by a *series* rather than by elements still get an orbit
-  ring that passes through it (the Moon; [Orbit rings](../solar-system/ephemerides/README.md#orbit-rings)).
-  The inverse also returns the eccentric anomaly, which
-  the ring layer anchors its first vertex on; it comes out of `r` and
-  `r·v` directly rather than from a second Kepler solve.
 - `orbit-line.ts` (+ test) — shared bits of the line overlays
   (`solar-system/ephemerides/orbit-rings-layer.ts`, `binaries/orbit-paths/binary-orbit-path-layer.ts`,
   `solar-system/probes/probe-path-layer.ts`,
@@ -155,31 +103,6 @@ build scripts, tests, and shader uniforms.
   drifts past `LINE_ANCHOR_MAX_DRIFT_PC` — otherwise the shader cancels
   two large float32 quantities per vertex and the line visibly jitters
   under camera motion at close framings (the Pluto-focus wobble).
-- <a id="precessionts"></a>`precession.ts` (+ test) — ICRS/J2000 ↔ the mean equator and equinox
-  of another epoch, in **two models with different validity windows**:
-  - **IAU 1976 ([Lieske 1979](/data/papers/index.md#lieske1979))** — `precessionAnglesFromJ2000`, the rotation
-    they compose (`precessionRotationFromJ2000`), and its forward /
-    inverse application to a direction or a `SkyPosition`.
-    `besselianEpochToJd` supplies `B1875_JD`, the equinox the IAU
-    constellation boundaries are drawn at — the θ sign and the epoch are
-    both silent-failure modes, documented in
-    [B1875](../constellation-boundaries/iau-geometry/README.md#b1875). Cubic
-    polynomials: right for the 125 years back to B1875, arcminutes off at
-    the model clock's bounds.
-  - **[Vondrák 2011](/data/papers/index.md#vondrak2011)** — `longTermEclipticPole` /
-    `longTermEquatorPole` / `longTermEquinox` and the two frames they
-    build (`longTermEclipticRotationFromJ2000`,
-    `longTermEquatorRotationFromJ2000`), valid ±200 kyr. This is the one
-    the model clock's span needs: the lunar theory's equinox-of-date
-    frame and Earth's own pole both read it.
-
-  The two coexist deliberately and are pinned against each other inside
-  the overlap (they agree to 0.15″ near the present, 0.37″ at B1875).
-  Don't replace the [Lieske 1979](/data/papers/index.md#lieske1979) path with the long-term one to "DRY them up" —
-  the boundary geometry is pinned to arcsecond edge cases at B1875.
-  [Vondrák 2011](/data/papers/index.md#vondrak2011) carries its own obliquity constant (84381.406″, IAU 2006) for
-  the same reason: it is part of the published series, not a duplicate of
-  `J2000_OBLIQUITY_RAD`.
 - `polar-scale.ts` (+ test) — `scalePolarInto`, scaling a vector's
   component along a body's pole. `s = 1/polarRatio` carries an oblate
   spheroid onto the sphere of its equatorial radius; the map is linear

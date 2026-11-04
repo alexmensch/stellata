@@ -15,8 +15,9 @@ also usable by hand (see [Manual release](/RELEASING.md#manual-release-fallback)
   ceiling (`WORKERS_MAX_ASSET_BYTES`, 25 MiB) and `judgeAssetSizes()`,
   which ranks a file list largest first and splits out oversize and
   near-limit (over
-  `ASSET_WARN_FRACTION`, 80 %). The catalogue chunk plan's test imports
-  the same ceiling.
+  `ASSET_WARN_FRACTION`, 80 %). Its test also holds the catalogue's
+  transport chunk plan (`/src/catalog-format/record/`) under that
+  ceiling.
 - `release-notes-check.ts` (+ test) — `release-notes-guard.yml`'s check:
   `node release-notes-check.ts <body-file>` fails unless
   `extractReleaseNotes()` finds the `## Release notes` section non-empty,

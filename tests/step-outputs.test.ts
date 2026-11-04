@@ -47,7 +47,7 @@ describe('step output declarations', () => {
     }
   });
 
-  it('give each path one producer, sid:stamp rewriting local-group.json in place excepted', () => {
+  it('give each path one producer', () => {
     const producers = new Map<string, string[]>();
     for (const [step, outputs] of Object.entries(STEPS)) {
       for (const p of Object.values(outputs.files)) {
@@ -55,7 +55,7 @@ describe('step output declarations', () => {
       }
     }
     const shared = [...producers].filter(([, steps]) => steps.length > 1);
-    expect(shared).toEqual([['public/local-group.json', ['build:local-group', 'sid:stamp']]]);
+    expect(shared).toEqual([]);
   });
 
   it('never cover the frozen DR2 dry-run pair, as a file or inside a family', () => {

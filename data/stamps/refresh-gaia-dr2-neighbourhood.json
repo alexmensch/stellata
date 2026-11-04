@@ -1,0 +1,12 @@
+{
+  "inputs": {
+    "data/gaia/gaia_dr2_neighbourhood_request.tsv": "a2d215b20c493cdc3e37ae3e990f90354f928ed1"
+  },
+  "outputs": {
+    "data/gaia/gaia_dr2_neighbourhood.tsv": "a63747cd5b7ecb1fb3a16741b12fdac645dd1c82"
+  },
+  "query": "91d795a35e97bdb14e871310494de85e13163cc2",
+  "answeredBy": [],
+  "release": "Gaia DR3",
+  "requestFrom": []
+}

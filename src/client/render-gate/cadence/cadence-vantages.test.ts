@@ -6,7 +6,7 @@ import * as THREE from 'three';
 import { PlanetBodyField } from '../../solar-system/planets/planet-body-field';
 import { makePlanetFieldUniforms } from '../../solar-system/planets/planet-field-uniforms-fixture';
 import { SOL_BODIES, getPlanetSystem } from '../../solar-system/planet-system';
-import { KM_PC, R_SUN_PC, SUN_ABSMAG_V } from '../../util/astronomy-constants';
+import { KM_PC, R_SUN_PC, SUN_ABSMAG_V } from '../../../astro-core/astronomy-constants';
 import { makeCadenceCtx, ACCEPTANCE_PX_PER_RADIAN } from '../../scene/frame-ctx-mock';
 import {
   CADENCE_CAP_SIM_S,

@@ -251,7 +251,7 @@ astronomer-relevant summary:
    `build-binaries-expected.json`; per-strategy rates gate
    `build-binaries-rates-expected.json`. A regression in either
    surfaces in the build log as a per-key diff and refuses to
-   advance. Refreshes are explicit (`UPDATE_BUILD_COUNTS=1`); silent
+   advance. Refreshes are explicit (`UPDATE_SNAPSHOTS=1`); silent
    drift is impossible.
 
 **Layer 4 — validation harness.** Three tiers covered in
@@ -604,7 +604,7 @@ consume it in two complementary ways:
      which runs cool for any companion behind dust — an open decision,
      `stellata-uadc.69`. `B−V` then comes from the catalogue's own inverse of [Ballesteros 2012](/data/papers/index.md#ballesteros2012) eq. 14 (this project's algebra; the paper gives only B−V → Teff)
      (`ballesteros_bv_from_teff`, mirroring
-     `scripts/colour/blackbody-lut-pure.ts`). Routing colour through the
+     `src/astro-core/colour/blackbody-lut-pure.ts`). Routing colour through the
      [Ballesteros 2012](/data/papers/index.md#ballesteros2012) manifold — rather than a direct Gaia→(B−V) fit — keeps
      the stored `ci` round-tripping to the Gaia-implied temperature
      through the same relation the renderer reads

@@ -2,7 +2,7 @@
 
 import { select, selectAll } from 'hast-util-select';
 
-import { MAGIC, readCatalogHeader } from '../catalog/record/catalog-pure.ts';
+import { MAGIC, readCatalogHeader } from '../../src/catalog-format/record/catalog-pure.ts';
 import { parseHtml, textOf } from '../util/parse-html.ts';
 import type { RoutingCase, ServedDocument } from '../../src/routing-cases-fixture.ts';
 import { locationPath, type RawAnswer } from './raw-get.ts';

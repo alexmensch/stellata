@@ -78,7 +78,7 @@ SYNC_MAXREC = mp.slice_sync_maxrec(EXPECTED_MAGNITUDE_ROWS_MAX)
 # row, so the regression-detection goal is preserved.
 MAX_MISSING_PINS = 1
 
-# Five fixtures cross-listed with scripts/catalog/record/catalog-pure.test.ts —
+# Five fixtures cross-listed with src/catalog-format/record/catalog-pure.test.ts —
 # the four catastrophic-parallax-inversion supergiants (HIP 22365, 25733,
 # 38430, 46144) and the well-measured F-dwarf HIP 23785 control. Pinning
 # both r_med_geo + r_med_photogeo guards against a column-rename or unit
@@ -131,12 +131,6 @@ def write_row(row: Any) -> dict[str, Any]:
 
 
 def main() -> None:
-    force = "--force" in sys.argv
-
-    if not force and rl.is_up_to_date(OUT, [Path(__file__), REQUEST, mp.MODULE_PATH]):
-        print(f"{OUT.relative_to(ROOT)} up to date — skipping (use --force to rebuild)")
-        return
-
     lines: dict[int, str] = {}
     spot_ids = {spec["source_id"] for spec in SPOT_CHECKS}
     spot_rows: dict[int, Any] = {}
@@ -208,5 +202,11 @@ def main() -> None:
     )
 
 
+def describe() -> dict:
+    return mp.describe_deep_population(
+        TABLE, TSV_COLUMNS, rl.gaia_sync_client(SYNC_MAXREC), "Bailer-Jones 2021 (Gaia EDR3)"
+    )
+
+
 if __name__ == "__main__":
-    main()
+    rl.pull_main(main, describe)

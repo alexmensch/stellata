@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import {
   CLASS_GAP_OVER_MEDIAN,
   CLASS_MIN_SHARE,
+  THROUGHPUT_WINDOW_FRAMES,
+  throughputSamples,
   DEFAULT_DWELL_FRAMES,
   DWELL_READBACK_EVERY_FRAMES,
   PASS_COUNTERS,
@@ -11,6 +13,7 @@ import {
   gatingClock,
   quarterMedians,
   readbackCadenceHeld,
+  recordedPacing,
   sampleClasses,
   stateGuardVerdict,
   summarizeFrameDwell,
@@ -120,21 +123,56 @@ describe('gatingClock — which clock a gate may act on', () => {
   const gpu = summarizeFrameDwell(VSYNC, null)!;
 
   it('is the GPU stream wherever the row has one', () => {
-    expect(gatingClock({ stats: wall, gpuStats: gpu }).clock).toBe(gpu);
-    expect(gatingClock({ stats: wall, gpuStats: gpu }).clock.stateGuard).toBe('steady');
+    expect(gatingClock({ deltasMs: [], stats: wall, gpuStats: gpu }, 'raf').clock).toBe(gpu);
+    expect(gatingClock({ deltasMs: [], stats: wall, gpuStats: gpu }, 'raf').clock.stateGuard).toBe('steady');
   });
 
   it('falls back to wall only where there is no GPU stream', () => {
-    expect(gatingClock({ stats: wall, gpuStats: null }).clock).toBe(wall);
-    expect(gatingClock({ stats: wall, gpuStats: null }).clock.stateGuard).toBe('trending');
+    expect(gatingClock({ deltasMs: [], stats: wall, gpuStats: null }, 'raf').clock).toBe(wall);
+    expect(gatingClock({ deltasMs: [], stats: wall, gpuStats: null }, 'raf').clock.stateGuard).toBe('trending');
   });
 
   // The metric comes back with the clock so that no caller can name one and
   // read the other: both gates print it, and a table saying gpu-p50 over a
   // wall median is the one error neither of them could detect.
   it('names the clock it returned', () => {
-    expect(gatingClock({ stats: wall, gpuStats: gpu }).metric).toBe('gpu-p50');
-    expect(gatingClock({ stats: wall, gpuStats: null }).metric).toBe('wall-p50');
+    expect(gatingClock({ deltasMs: [], stats: wall, gpuStats: gpu }, 'raf').metric).toBe('gpu-p50');
+    expect(gatingClock({ deltasMs: [], stats: wall, gpuStats: null }, 'raf').metric).toBe('wall-p50');
+  });
+
+  it('is the throughput mean wherever the dwell was GPU-paced, over the GPU stream', () => {
+    const throughput = summarizeFrameDwell([5, 5, 5, 5], null)!;
+    const gated = gatingClock({ deltasMs: [1, 9, 2, 8], stats: wall, gpuStats: gpu, throughputStats: throughput }, 'gpu');
+    expect(gated.clock).toBe(throughput);
+    expect(gated.metric).toBe('throughput-mean');
+    expect(gated.valueMs).toBe(5);
+  });
+
+  it('reads pacing off the record, not off which summaries happen to be present', () => {
+    const throughput = summarizeFrameDwell([5, 5, 5, 5], null)!;
+    expect(gatingClock({ deltasMs: [5], stats: wall, gpuStats: gpu, throughputStats: throughput }, 'raf').metric)
+      .toBe('gpu-p50');
+    expect(() => gatingClock({ deltasMs: [5], stats: wall, gpuStats: gpu }, 'gpu')).toThrow(/no throughput clock/);
+  });
+
+  it('reads the p50 of every other clock', () => {
+    expect(gatingClock({ deltasMs: [], stats: wall, gpuStats: gpu }, 'raf').valueMs).toBe(gpu.p50);
+    expect(gatingClock({ deltasMs: [], stats: wall, gpuStats: null }, 'raf').valueMs).toBe(wall.p50);
+  });
+});
+
+describe('recordedPacing — one reading of the recorded pacing', () => {
+  it('reads an absent pacing as rAF and refuses an unknown one', () => {
+    expect(recordedPacing(undefined)).toBe('raf');
+    expect(recordedPacing('gpu')).toBe('gpu');
+    expect(() => recordedPacing('vsync')).toThrow(/unknown dwell pacing/);
+  });
+});
+
+describe('throughputSamples — GPU-paced wall deltas, smoothed', () => {
+  it('averages consecutive whole windows and drops a partial last one', () => {
+    const bursty = Array.from({ length: 2 * THROUGHPUT_WINDOW_FRAMES + 3 }, (_, i) => (i % 2 === 0 ? 1 : 9));
+    expect(throughputSamples(bursty)).toEqual([5, 5]);
   });
 });
 

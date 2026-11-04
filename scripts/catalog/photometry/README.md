@@ -38,7 +38,7 @@ scripts/catalog/photometry/
   gspc-parse.ts (+ test)         data/gaia/gaia_dr3_gspc.tsv → source_id →
                                  synthetic Johnson B−V + the archive's
                                  validated-range flag.
-  hip-photometry-parse.ts        data/hipparcos/hip_main_vmag.tsv → HIP →
+  hip-photometry-parse-pure.ts   data/hipparcos/hip_main_vmag.tsv → HIP →
     (+ test)                     printed Johnson V and B−V, as two maps off
                                  one walk, plus `printedByHip` — the one
                                  HIP-keyed read of either. The ci cascade

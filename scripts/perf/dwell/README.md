@@ -12,8 +12,11 @@ scripts/perf/dwell/
                             the state guard (quarter medians), the gating
                             clock a row is judged on, the two pass classes a
                             split frame draws, the per-frame WebGPU
-                            pass-count summary, and the pinned readback
-                            cadence with the bound that says it held.
+                            pass-count summary, the pinned readback
+                            cadence with the bound that says it held, the
+                            pacings a dwell can run under, and the
+                            throughput windows and CPU-bound test a
+                            GPU-paced row gates on.
 ```
 
 The dwell loop itself is a page function in `../page-protocol.ts`
@@ -21,8 +24,9 @@ The dwell loop itself is a page function in `../page-protocol.ts`
 
 ## What a dwell measures
 
-`--mode dwell` measures the whole frame instead of pricing passes: one rAF
-loop under a render-gate hold, with the simulation clock stopped and the
+`--mode dwell` measures the whole frame instead of pricing passes: one run
+of frames under a render-gate hold, paced on the GPU unless `--pacing raf`
+says otherwise ([Pacing](#pacing)), with the simulation clock stopped and the
 exposure pinned where the warmup left it. Those are the differential's own
 three preconditions
 ([Preconditions](/src/client/debug/frame-cost/README.md#preconditions)) and they hold here
@@ -57,7 +61,7 @@ ascending cadences is a trend and that drift wearing the same shape. The two
 readings at the first cadence bound the second. What the probe is for is
 `stellata-8cg.67.2`.
 
-**rAF wall-clock deltas are the metric.** On a WebGPU boot the frame-sample
+**Wall-clock deltas between frames are the first row.** On a WebGPU boot the frame-sample
 stream is subscribed alongside where `gpuFrameSamplesAreSound()` says the
 adapter resolves believable durations, and reported as a second row
 (`gpu-timestamp`, the render passes) — and the compute stream from the same
@@ -96,6 +100,102 @@ The console line says which cadence the verdict was judged against. **The GPU
 row is never clamped**: a resolved timestamp is a span the hardware reports,
 and no compositor can pad it.
 
+## Pacing
+
+**A dwell renders frames back to back by default, so the GPU never idles
+and its clock holds max.** `--pacing gpu` sets the app's frame loop to GPU
+pacing for the warmup and the timed frames: the next frame is encoded as
+soon as fewer than two are unfinished on the GPU
+([Pacing](/src/client/scene/frame-loop/README.md#pacing)). The dwell then
+counts a frame per `'frame'` event rather than per rAF callback, and
+restores rAF pacing in the same `finally` as the hold.
+
+**Why: under rAF pacing the GPU reading is work divided by a clock the
+governor chose.** A frame that fits inside the display interval leaves the
+GPU idle for the rest of it, and Apple silicon lowers the clock until the
+frame fills the interval — so a cost that adds work can read as almost
+none. Measured on the M6 (`stellata-8cg.49.42`'s notes,
+`.perf-runs/2026-11-03/8cg-49-42-*`): sol at 11.5 Mpx ran 95.5 % busy at a
+median 1637 MHz and never reached 1735; at 14 Mpx, 99.8 % busy, it held
+1735 throughout. The clock holds max only when the GPU essentially never
+waits, and a viewport sized to fill one interval does that only inside a
+few-percent window of frame cost. Pacing on the GPU holds it at any size.
+
+**Under GPU pacing the wall row is throughput, not a display cadence.** The
+delta between frames is how long the slower of the CPU's encode and the
+GPU's work took, so it cannot sit on a refresh interval and `vsyncClamped`
+is not judged on it. What a GPU-paced row gates on instead:
+[CPU and GPU, apart](#cpu-and-gpu-apart). `method` stays `raf-delta`,
+naming the wall clock; `params.pacing` says what scheduled it.
+
+**Two pacings never compare.** `pacingRefusal` refuses a pair, in
+`--baseline` and against the pin alike, and the pin carries the pacing on
+every row. An unrecorded pacing reads as `raf`: every dwell archived before
+the lever existed was paced on rAF, so absence is a known value, not an
+unknown one. `recordedPacing` is the one reading of it, and the recorded
+pacing alone decides which clock a row gates on — never which summaries
+the record happens to carry.
+
+**`--pacing raf` is the old dwell**, kept for a headed run or a machine
+where saturation is not wanted. Everything this README says about vsync
+clamping applies to it alone.
+
+## CPU and GPU, apart
+
+A GPU-paced dwell reports the frame's GPU cost and its CPU cost as two
+numbers, and says which of them set the pace, rather than reading one
+frame time that conflates them.
+
+**GPU cost per frame is throughput: the dwell's wall time over its frames,
+metric `throughput-mean`.** With the GPU never idle and its clock pinned,
+the wall time between frames is the GPU's time per frame at a fixed clock,
+so it is proportional to GPU work: sol at 4.1 / 6.4 / 9.2 Mpx read
+throughput means of 4.89 / 8.32 / 11.39 ms, slope 1.060 against pixels,
+r² 0.994 (`.perf-runs/2026-11-03/8cg-49-42-gpu-sol-sweep-2.json`). It counts every
+frame, readback frames included, so the two-class split above does not
+arise.
+
+**The mean, not a median.** Two frames in flight hand frames back in
+bursts (mw120 deltas p10 1.6, p50 9.0, p90 17.8 ms), so any per-frame
+median is a statistic of the burst pattern. A median of 8-frame window
+means is too: at mw50 it moved 0.300 ms between two cold runs of
+identical code, where the mean moved 0.105, and across runs 2–4 the mean
+spread 0.014–0.105 ms at every vantage. `throughputStats` summarises those
+`THROUGHPUT_WINDOW_FRAMES` (8) window means for what the mean cannot carry:
+their spread sets the band's sampling term and their quarters the state
+guard. The pin, which keeps no samples, records the mean on its throughput
+clock (`meanMs`). The runner refuses `--pacing gpu` with fewer frames than
+one window, so a GPU-paced record without `throughputStats` is malformed
+and throws rather than falling back to another clock.
+
+**The GPU timestamp stream is recorded and not gated under GPU pacing.**
+With two frames in flight, the next frame's passes overlap the current
+one's, and a pass's begin-to-end span includes time it shared the GPU with
+the other frame, so the summed spans read 1.25–1.69× throughput
+(`8cg-49-42-gpu-all-2.json`). It is the over-attribution
+[Measurement canon](/docs/render-rules.md#9-measurement-canon) describes
+between passes, now between frames.
+
+**CPU cost per frame is the `cpu-tick` row: `cpuStats`, metric
+`cpu-p50`, keyed `|cpu`.** Each rendered tick's main-thread time, start to
+after the `'frame'` handlers
+([CPU time per tick](/src/client/scene/frame-loop/README.md#cpu-time-per-tick)),
+recorded under either pacing and banded the way the frame is. Chrome's GPU
+process spends CPU on the same commands and is not in it.
+
+**Both gates judge these two rows through one definition each**,
+`THROUGHPUT_JUDGEMENT` and `CPU_JUDGEMENT`: the value, its standard error
+and its floor. Every context's rows come out frame, compute, CPU, in both
+gates.
+
+**A context whose CPU per tick passes `CPU_BOUND_SHARE` (0.8) of its
+throughput is refused, CPU-bound** (`cpuBoundRefusal` in
+`../diff/diff-pure.ts`, both gates, either side). There the main thread is
+near setting the pace, so the frame time is partly CPU and the GPU number
+is not GPU work. Every canon vantage reads 97–100 % GPU-busy today, so
+the refusal is a guard on a future vantage, not a description of a
+current one.
+
 ## The state guard
 
 Every dwell summary is read in four consecutive quarters (`quarterMedians`);
@@ -123,9 +223,9 @@ Which gate acts on the verdict, and where it stands down:
 
 **A dwell also counts what the frame submits.** For the timed frames
 it wraps `GPUQueue.submit` and `GPUCommandEncoder.beginRenderPass` /
-`beginComputePass` on their prototypes and records, per rAF interval, the
-submits, the command buffers they carried, and the render and compute
-passes encoded — then puts the originals back in the same `finally` as the
+`beginComputePass` on their prototypes and records, per rendered frame
+(each `'frame'` event, whichever pacing scheduled it), the submits, the
+command buffers they carried, and the render and compute passes encoded — then puts the originals back in the same `finally` as the
 clock and the hold. The table prints min / p50 / max per counter, since a
 count is small and quantised: a readback frame carries the reduction
 chain's extra passes, so the distribution is bimodal and the extremes are
@@ -223,8 +323,8 @@ measured rate rather than on the knob that was typed.
 **The counters sit inside the timed frames, and only on WebGPU.** Each
 wrapped call adds one JavaScript frame: at the counts a canon vantage
 actually reads (2–4 submits and 2–4 render passes per frame, up to 12 on a
-readback frame), that is under twenty extra calls against a 16.7 ms
-interval. Stated rather than assumed, because it is the instrument sitting
+readback frame), that is under twenty extra calls against a frame of
+4.0 ms at the shortest (lg, GPU-paced) and 16.7 ms under rAF. Stated rather than assumed, because it is the instrument sitting
 inside its own measurement.
 
 **`--roundtrip <pass>` asks whether a toggle leaves the frame where it found

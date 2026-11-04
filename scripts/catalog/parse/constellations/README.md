@@ -16,6 +16,9 @@ scripts/catalog/parse/constellations/
                                   the boundary lookup to the table's indices.
   stellarium-source.ts            STELLARIUM, the sky culture's declaration
                                   (../../../util/sources/).
+  iau-boundaries-pure.test.ts     /src/astro-core/iau-geometry/'s pins, run
+  iau-athyg-agreement.test.ts     over the real edge set this folder parses
+                                  (/src/astro-core/iau-geometry/README.md).
 ```
 
 ## Positional constellation membership
@@ -25,7 +28,7 @@ Catalog byte 34 is **positional**: `createConstellationAssignment`
 region a record's own xyz falls in and maps it onto the `CONSTELLATIONS` index
 space. The geometry — the B1875 precession, the edge decomposition, and
 its self-validating 89-region invariant — is
-`src/client/constellation-boundaries/iau-geometry/README.md`; this module owns only
+`src/astro-core/iau-geometry/README.md`; this module owns only
 the index mapping, and throws at construction if a region names a
 constellation the IAU-88 table doesn't carry.
 
@@ -51,7 +54,7 @@ designation the naming ladder resolves states its own constellation and wins
 label pass fills it from IV/27A keyed on the record's own HD/HIP, else a GCVS
 designation's trailing abbreviation. Cascade, coverage and the GCVS precedence:
 [The designation constellation](../../classic-ids/README.md#the-designation-constellation).
-`designationConIndex(dc, c)` in `../../record/catalog-pure.ts` is still the single
+`designationConIndex(dc, c)` in `../../../../src/catalog-format/record/catalog-pure.ts` is still the single
 statement of which field a Bayer / Flamsteed / GCVS designation reads, and the
 positional `conIndex` is still the last fallback (123 faint Flamsteed-only
 records IV/27A's TAP subset omits).
@@ -79,7 +82,7 @@ ways —
 
 Those two plus CM Ind (named for Indus, positionally in Pavo) are the GCVS
 share of the entries `designationConMismatch` pins; the rest come from IV/27A.
-The count lives in [Search index](../../record/README.md#search-index-publicsearch-indexjson); it moves with the
+The count lives in [Search index](../../../../src/catalog-format/record/README.md#search-index-publicsearch-indexjson); it moves with the
 record set.
 
 ## Stick figures from Stellarium
@@ -93,7 +96,7 @@ work.
 Pipeline in `scripts/catalog/build-catalog.ts`:
 
 1. `readStars` reads the manifest's `hip` column into each star record.
-2. After the apparent-V sort ([Record order](../../record/README.md#record-order)) fixes the record indices, a
+2. After the apparent-V sort ([Record order](../../../../src/catalog-format/record/README.md#record-order)) fixes the record indices, a
    `hipToIndex: Map<number, number>` is built from the post-sort order.
    Duplicate HIPs (rare — binary companions) keep the brightest entry
    (first-write wins).

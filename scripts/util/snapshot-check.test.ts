@@ -3,15 +3,16 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import { snapshotCheck, type SnapshotCheckSpec } from './snapshot-check';
-
-const ENV = 'SNAPSHOT_ASSERT_TEST_UPDATE';
+import {
+  PIPELINE_STEP_ENV, UPDATE_SNAPSHOTS_ENV as ENV, snapshotCheck, type SnapshotCheckSpec,
+} from './snapshot-check';
 
 describe('snapshotCheck', () => {
   let dir: string;
   let path: string;
 
   beforeEach(() => {
+    delete process.env[ENV];
     dir = mkdtempSync(join(tmpdir(), 'snapshot-check-'));
     path = join(dir, 'expected.json');
   });
@@ -23,12 +24,11 @@ describe('snapshotCheck', () => {
 
   function spec(actual: { n: number }): SnapshotCheckSpec<{ n: number }> {
     return {
-      envVar: ENV,
       snapshotPath: path,
       actual,
       compare: (e, a) => ({ drifted: e.n !== a.n, report: `${e.n} vs ${a.n}` }),
       failureLabel: 'test',
-      refreshCommand: `${ENV}=1 build`,
+      script: 'build',
     };
   }
 
@@ -41,7 +41,18 @@ describe('snapshotCheck', () => {
     writeFileSync(path, JSON.stringify({ n: 1 }));
     const check = snapshotCheck(spec({ n: 2 }));
     expect(check.kind).toBe('fail');
-    expect(check.kind === 'fail' && check.message).toContain(`${ENV}=1 build`);
+    expect(check.kind === 'fail' && check.message).toContain(`${ENV}=1 pnpm run build`);
+  });
+
+  it('names the runner flag when the runner runs the step, since it drops the inherited variable', () => {
+    writeFileSync(path, JSON.stringify({ n: 1 }));
+    process.env[PIPELINE_STEP_ENV] = 'build';
+    try {
+      const check = snapshotCheck(spec({ n: 2 }));
+      expect(check.kind === 'fail' && check.message).toContain('pnpm run build --update-snapshots');
+    } finally {
+      delete process.env[PIPELINE_STEP_ENV];
+    }
   });
 
   it('fails on a missing snapshot without the update flag', () => {

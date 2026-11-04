@@ -69,7 +69,7 @@ tests. No overlap with this folder.
 ```
 
 `columns` names the row layout; the TypeScript contract is
-`ProbeTrajectoryFile` in `scripts/probes/probe-trajectory-schema.ts`,
+`ProbeTrajectoryFile` in `src/catalog-format/probes/probe-trajectory-schema.ts`,
 imported by both the emitter and the runtime loader. One flat array per
 sample rather than an object: no repeated keys across ~11,200 rows, and
 a refresh still diffs sample-by-sample in git.

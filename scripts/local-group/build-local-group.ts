@@ -6,22 +6,27 @@ import { existsSync, statSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { emitArtifacts, runStep, sweepStaged } from '../util/emit-artifacts';
+import { allocateSibling, emitSibling } from '../sid/sibling-allocation';
+import { SIBLING_ARTIFACTS } from '../sid/sibling-artifacts-pure';
+import { runStep, sweepStaged } from '../util/emit-artifacts';
 import { stepInputPaths } from '../util/step-inputs';
 import { LOCAL_GROUP_OUTPUTS } from './local-group-outputs';
 import { LG_ALIASES, LG_OVERRIDES, LVDB } from './local-group-source';
+import { PUBLIC_FILES } from '../../src/catalog-format/public-artifacts/public-artifacts';
 import {
   applyAliasMeta,
-  buildOrientationQuat,
   buildStandaloneOverride,
   filterForRendering,
   mergeRowAndOverride,
   roundN,
   roundSig,
-  type LgEmission,
-  type LgObject,
-  type SersicParams,
 } from './build-local-group-pure';
+import {
+  LOCAL_GROUP_VERSION,
+  type LgObjectRow,
+  type LgEmission,
+  type SersicParams,
+} from '../../src/catalog-format/local-group/local-group-schema';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -63,7 +68,7 @@ function emissionToJson(e: LgEmission) {
   };
 }
 
-function toJsonObject(o: LgObject) {
+function toJsonObject(o: LgObjectRow) {
   return {
     name: o.name,
     id: o.id,
@@ -93,7 +98,7 @@ async function main(): Promise<void> {
   sweepStaged(LOCAL_GROUP_OUTPUTS);
   const force = process.argv.includes('--force');
   if (!force && await isUpToDate()) {
-    console.log('local-group.json up to date — skipping (use --force to rebuild)');
+    console.log(`${PUBLIC_FILES.localGroup} up to date — skipping (use --force to rebuild)`);
     return;
   }
 
@@ -105,7 +110,7 @@ async function main(): Promise<void> {
   const aliasMatched = new Set<string>();
 
   const renderable = filterForRendering(lvdb);
-  const objects: LgObject[] = [];
+  const objects: LgObjectRow[] = [];
   const overrideMatched = new Set<string>();
   let overrideHits = 0;
   let lvdbDefaultHits = 0;
@@ -175,26 +180,22 @@ async function main(): Promise<void> {
   // byte-identical artifacts.
   objects.sort((a, b) => a.name.localeCompare(b.name, 'en', { sensitivity: 'base' }));
 
+  const allocation = allocateSibling(SIBLING_ARTIFACTS['local-group'], objects);
   const payload = {
-    version: 2,
+    version: LOCAL_GROUP_VERSION,
     count: objects.length,
-    objects: objects.map(toJsonObject),
+    objects: objects.map((o, i) => ({ ...toJsonObject(o), sid: allocation.sids[i] })),
   };
-  emitArtifacts({
-    outputs: LOCAL_GROUP_OUTPUTS,
-    files: { localGroup: JSON.stringify(payload, null, 0) + '\n' },
-  });
+  emitSibling(LOCAL_GROUP_OUTPUTS, { localGroup: JSON.stringify(payload, null, 0) + '\n' }, allocation);
 
   console.log(
     `wrote ${OUT.replace(ROOT + '/', '')} ` +
     `(${objects.length} objects: ${overrideHits} LVDB+override, ` +
     `${lvdbDefaultHits} LVDB-only, ${standaloneHits} standalone override; ` +
     `${skippedNoStructure} LVDB rows skipped — no structural data; ` +
-    `${skippedOutOfRange} standalone overrides skipped — past MAX_DISTANCE_PC)`,
+    `${skippedOutOfRange} standalone overrides skipped — past MAX_DISTANCE_PC; ` +
+    `${allocation.minted} lg SIDs minted)`,
   );
-  // Reference the unused symbol so the import survives tree-shaking
-  // analysis in the test path that imports this file for the parsers.
-  void buildOrientationQuat;
 }
 
 // Run as a script. ESM doesn't have require.main; gate on the entry-point

@@ -18,7 +18,7 @@ import {
   meshFadeFromPhysPx,
   TEXTURE_PREFETCH_PX,
 } from './mesh-crossfade';
-import { AU_PC, KM_PC, R_SUN_PC } from '../../util/astronomy-constants';
+import { AU_PC, KM_PC, R_SUN_PC } from '../../../astro-core/astronomy-constants';
 import { phaseAngleFromLegs } from '../phase-function';
 import { ringPhaseFactor } from './rings/ring-photometry-pure';
 import { depthStampRadius } from './depth-stamp/depth-stamp-pure';

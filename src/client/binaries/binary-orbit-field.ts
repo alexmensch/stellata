@@ -2,7 +2,7 @@
 // positions. See /src/client/binaries/README.md#tier-mapping + LOD.
 
 import * as THREE from 'three';
-import { ARCSEC_TO_RAD } from '../util/astronomy-constants';
+import { ARCSEC_TO_RAD } from '../../astro-core/astronomy-constants';
 import { tToJdUt } from '../solar-system/time/time';
 import { jdeToJulianEpochYear, writeAdvancedLocal } from '../loaders/epoch-advance-pure';
 import { type BinariesData, type BinaryRelation } from './binaries-loader';
@@ -18,14 +18,14 @@ import {
   SUB_PIXEL_THRESHOLD_PX,
   VISIBILITY_HORIZON_PC,
 } from './binary-tuning';
-import { apparentMagnitude, SOFT_TAPER_MARGIN_MAG } from '../solar-system/perceptual-magnitude';
+import { apparentMagnitude, SOFT_TAPER_MARGIN_MAG } from '../../astro-core/perceptual-magnitude';
 import {
   CADENCE_REPORT_STILL,
   fasterRate,
   type CadenceReport,
 } from '../render-gate/cadence/clock-cadence-pure';
 import type { CadenceCtx } from '../scene/scene-layer';
-import { angleBetweenRad } from '../util/angles';
+import { angleBetweenRad } from '../../astro-core/angles';
 
 export interface BinaryOrbitFieldOptions {
   binaries: BinariesData;

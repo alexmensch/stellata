@@ -244,14 +244,16 @@ expands mw120, sol, earth, mw50, lg — so the pin run and the Tier 1 run
 share their first two contexts. Reordering either constant re-takes the
 pin (stellata-8cg.49.27).
 
-**Tier 1 reads the GPU-stream p50, the same metric the pin gates on.** Its
-two vantages are exactly the ones a wall-clock row cannot resolve — sol's
+**Tier 1 reads the same metric the pin gates on** — throughput on a
+GPU-paced pin ([CPU and GPU, apart](scripts/perf/dwell/README.md#cpu-and-gpu-apart)),
+the GPU-stream p50 on an rAF-paced one. Its
+two vantages are exactly the ones an rAF-paced wall-clock row cannot resolve — sol's
 wall p50 sits at two refresh intervals and mw120's at one — so a row
 marked on wall would compare two quantised medians and refuse or fabricate
 by turns ([Reading the table](scripts/perf/diff/README.md#reading-the-table)).
 
 **And the same floor**, one implementation in
-`scripts/perf/diff/diff-pure.ts` that both gates apply. Tier 1 may not gate
+`scripts/perf/floors/floors.ts` that both gates apply. Tier 1 may not gate
 tighter than the Tier 2 it feeds, or it marks moves Tier 2 calls
 unresolved — which is what an unfloored band did, two sigma of the
 medians' own scatter being about 0.02 ms at 240 frames on a steady
@@ -290,7 +292,8 @@ same ceiling, and accepted under its own key
 summed, and a compute regression marks whatever the frame row says.
 
 **Which statistic of each stream is the `metric` column's job**, and it is
-not the same at every row. A frame row reads `gpu-p50`, except where the
+not the same at every row. A GPU-paced frame row reads `throughput-mean`
+and its main-thread row `cpu-p50`. An rAF-paced frame row reads `gpu-p50`, except where the
 vantage draws two pass classes — `earth` alone — where it reads the plain
 class, `gpu-plain-p50`. A compute row reads `compute-p10`. Both exceptions
 exist for one reason: a stream holding two populations has a median that
@@ -438,7 +441,7 @@ Required equally when the diff **moves catalogue membership by more than
 1 %**, whatever it touches — `recordCount` in
 `scripts/catalog/build-catalog-expected.json`, base against head, which is
 the membership term's own committed record and cannot move without a
-deliberate `UPDATE_BUILD_COUNTS` refresh. A membership change lands in
+deliberate `UPDATE_SNAPSHOTS` refresh. A membership change lands in
 `scripts/` and `public/`, so no path rule above reaches it, yet it moves
 how many instanced quads every star pass draws. Under 1 % the trigger
 stands down, because 1 % is ~3,900 records against a measured 0.39–0.59 ms
@@ -556,11 +559,12 @@ action. Archiving starts at v3.44.2, the release that minted both DOIs.
 
 ## Catalogue refresh policy
 
-External catalogues (AT-HYG, Gaia DR3 cross-walks + 5p astrometry +
+External catalogues (Gaia DR3 cross-walks + 5p astrometry +
 NSS + Apsis, [Bailer-Jones 2021](/data/papers/index.md#bailerjones2021) DR3,
 Hipparcos-2 [van Leeuwen 2007](/data/papers/index.md#vanleeuwen2007), SIMBAD pulls)
 are refreshed by manual `pnpm run refresh:*` invocations, **not** by
-`pnpm run build` or the deploy workflow. The build reads the committed
+`pnpm run build` or the deploy workflow; AT-HYG is a dropped-in file with no
+refresh script. The build reads the committed
 files under `data/<source>/` and never hits the network — see
 [Frozen external data](data/README.md#frozen-external-data) for the rationale.
 
@@ -569,16 +573,20 @@ upstream catalogue release:
 
 - **Gaia DR transition** (DR3 → DR4 expected late 2026) — the largest
   refresh. Re-run every `refresh-gaia-*.py` script + `refresh-bailer-
-  jones.py` in lockstep with the AT-HYG drop that re-keys to the new
-  source_ids. Tier-A `known-stars.tsv` rows may need per-row source_id
-  updates against the DR3↔DR4 cross-walk.
+  jones.py` in the order of [Refreshing data when DR4 / new AT-HYG lands](scripts/refresh/README.md#refreshing-data-when-dr4--new-at-hyg-lands). Tier-A `known-stars.tsv` rows may need
+  per-row source_id updates against the DR3↔DR4 cross-walk.
 - **AT-HYG point release** — drop the new
-  `data/athyg/athyg_3X_classic_ids.csv` in, rebuild, refresh the
-  source_id-keyed side-files if AT-HYG's gaia coverage changed.
-- **Bailer-Jones republication** — drop the new
-  `bailer-jones-drN.tsv` in, rebuild. Runs independently of any other
-  refresh; the override gate (`dist_src ∈ {G_R3, G_R2}`) is
-  unchanged.
+  `data/athyg/athyg_3X_classic_ids.csv` in, re-point the two filename pins
+  (`ATHYG_CLASSIC_IDS` in `scripts/catalog/spine/athyg-classic-ids-source.ts`,
+  `SRC_ATHYG` in `scripts/binaries/build-binaries.py`) and re-run
+  `pnpm run build:binaries`, its one build consumer
+  ([Consumed by](data/athyg/README.md#consumed-by) lists every reader).
+  `build:catalog` reads neither it nor the frozen spine.
+- **Bailer-Jones republication** — re-run `pnpm run refresh:bailer-jones`
+  against the republished ESA table (`TABLE` in `refresh-bailer-jones.py`),
+  then rebuild. Runs independently of any other refresh; the override still
+  fires only on records the parallax cascade placed by `gaia_dr3_inversion`
+  ([Consumed by](data/bailer-jones/README.md#consumed-by)).
 - **SIMBAD / Hipparcos-2** — refresh on demand; both are rolling
   catalogues and a sample-time anchor is fine for the validation tier.
 

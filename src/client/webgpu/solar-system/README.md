@@ -216,7 +216,7 @@ Venus (~−4) all show, ordered by magnitude, exactly as the surrounding
 star field does.
 
 `appMag` already folds the phase factor φ(α)
-(`../../perceptual-magnitude.ts`), so a crescent is correctly dimmer — no
+(`/src/astro-core/perceptual-magnitude.ts`), so a crescent is correctly dimmer — no
 separate illumFrac on brightness. A ring system folds in the same way, on
 `iRingFlux` ([Ring photometry](../../solar-system/planets/rings/README.md#ring-photometry--the-unresolved-magnitude)): its flux belongs in
 the magnitude, so it ADDS to φ — same unit — rather than touching the

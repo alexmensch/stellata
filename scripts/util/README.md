@@ -26,7 +26,7 @@ same thing — single-use helpers stay with their consumer.
   CodeQL's `js/incomplete-sanitization` flags.
 
 - `astronomy_constants.py` — Python mirror of
-  `src/client/util/astronomy-constants.ts`. `J2000_JD`,
+  `src/astro-core/astronomy-constants.ts`. `J2000_JD`,
   `DAYS_PER_JULIAN_YEAR`, and any future physics constants Python-side
   build scripts share with the client runtime. Keep value-by-value in
   sync with the TS canonical; `tests/astronomy-constants-sync.test.ts`
@@ -38,6 +38,10 @@ same thing — single-use helpers stay with their consumer.
 - `paths.ts` — TypeScript sibling of `paths.py`: `REPO_ROOT` for
   `scripts/catalog/*.ts` scripts, and `PACKAGE_JSON`, the manifest's
   repo-relative name, for the readers of its `scripts` table.
+  `PUBLIC_DIR` is Vite's `publicDir`, the folder the build ships;
+  `publicRepoPath(name)` and `publicFile(name)` place a public artifact's
+  name (`/src/catalog-format/public-artifacts/`) in it, repo-relative and
+  absolute.
   `isLfsPointer(text)` recognises a pointer stub from a head string and
   `isLfsPointerFile(path)` probes a file's head for one — the state the
   bare CI test job leaves LFS-tracked inputs in — without reading the
@@ -52,33 +56,52 @@ same thing — single-use helpers stay with their consumer.
   `REPO_ROOT` from it.
   `paths.test.ts` pins the pointer-probe cases.
   **No data paths live here**: each is a declaration (`sources/`).
-- `build-stamp.ts` / `build_stamp.py` — the content-hash skip gate
+- `build-stamp.ts` / `build_stamp.py` — the content-hash stamp
   ([Preprocessor idempotency](../README.md#preprocessor-idempotency)): `fileHashes` maps each file's
-  repo-relative path to its sha1, `null` when absent, so an input's arrival is
+  repo-relative path (relative to a passed root, the runner's tree) to its
+  sha1, `null` when absent, so an input's arrival is
   a change too. A stamp (`build/stamps/<step>.json`) records two such maps:
   the inputs, hashed *before* the build, and every output the build wrote,
-  hashed after it. `stampIsCurrent` compares the inputs against the caller's
-  and re-hashes the recorded outputs (`changedSince`), so an output rewritten
-  by anything other than this build — an older commit's build, a write
-  through a symlink, a partial copy — reads as stale. `clearStamp` runs
-  before a build writes, `writeStamp` after its asserts pass (for a TS step,
-  `emitArtifacts` calls it last, over the emitted set), refusing a
-  missing output and landing the stamp by rename, so a stamp on disk is whole
-  or absent; an unparseable one still reads as no stamp. The Python sibling serves the two binaries steps and writes
-  the same JSON shape, which `tests/artifact-freshness.test.ts` reads from the
-  TS side. Its `imported_script_modules()` is those steps' code inputs: every
-  `scripts/` module the process has imported, so the import statements are
-  the only list. Its `outputs_json` is both steps' `--outputs` answer — their
-  output tuple and stamp, repo-relative — which `../worktree-seed.test.ts`
-  reads. Both pinned by co-located tests
-  (`python3 scripts/util/build_stamp.test.py`).
+  hashed after it; `changedSince` re-hashes a recorded map, so an output
+  rewritten by anything other than this build — an older commit's build, a
+  write through a symlink, a partial copy — reads as stale. The runner is the
+  only writer: `clearStamp` before a step runs, `writeStamp` once it exits 0,
+  refusing a missing output and landing the stamp by rename, so a stamp on
+  disk is whole or absent; an unparseable one still reads as no stamp. The
+  freshness verdict over a stamp is `../pipeline/freshness.ts`'s.
+  `build_stamp.py` is the Python step recorder below, pinned by
+  `python3 scripts/util/build_stamp.test.py`.
+  `stamp-path-pure.ts` names the files: `stampPath(name, root)` is
+  `build/stamps/<name>.json` with `:` written `-` (`stepFileName`, which names
+  a step's lock too).
+  A stamp the runner writes for a Python step also carries `recorded`: the
+  folders it listed (`listingHash`, over the sorted names git does not
+  ignore, so a local cache in a listed folder reads the same in every
+  checkout) and the paths it probed, which `recordedChanges` re-checks.
+  `ignoredPaths` is the one `git check-ignore` call, which `listingHash` and
+  `../pipeline/record-step.ts` both make.
+  `record_run` is how the runner runs a Python step
+  (`../pipeline/run_python_step.py`): Python's audit hook records, under a
+  root, every file the process opens for reading, hashed at its first read
+  (a file the step wrote before reading it is not an input), every
+  directory it lists (its sorted names, which the runner hashes; the import
+  system's own scans of `sys.path` are not listings), and every file it
+  writes — a rename's target, not its temp file, and not a scratch file it
+  deleted — plus each module the step loaded (not those already loaded
+  when the recording began: the recorder's own `run_python_step.py`,
+  `build_stamp.py` and `paths.py`, so editing the recorder stales no
+  step), nothing under `.venv` or `__pycache__` included, into a JSON
+  record the runner turns
+  into the step's stamp. An existence check opens nothing, so a step probes
+  through `probe(path)`, which records the answer. `report_service(name)`
+  records which network service answered, once each in first-answer order
+  (`refresh_lib.TapClient` calls it); `record.ts` copies the list into a
+  pull's committed record as `answeredBy`.
 - `import-closure.ts` / `import-closure-pure.ts` (+ test) — a TypeScript
   build's code inputs. `entryClosure(entries)` is every module the given
-  entry files import, read from an esbuild metafile, so a new import joins
-  without anyone listing it; `scriptClosure(names)` is that over the named
-  `package.json` scripts, each held by `tsxEntry` to exactly `tsx <file>.ts`,
-  so `package.json` is the one place an entry is named and no half of a
-  chained script is keyed alone. `scriptParts` is the one parser of a
+  entry files import, read from an esbuild metafile (`entryMetafile`, which
+  the runner also reads for an outputs module's imports), so a new import joins
+  without anyone listing it. `scriptParts` is the one parser of a
   script's `&&`-chained commands (`tsx`, `python3`, `pnpm run`, or `other`)
   and `tsxEntries` every `tsx` entry among them; `closureWithSiblings(closure, files)` adds every file beside a
   closure module except `.ts`, `.py` and `.md`, which is how the `*-expected.json`
@@ -92,11 +115,20 @@ same thing — single-use helpers stay with their consumer.
   clone), and `fileAtMergeBase`, a file as the merge-base holds it — `absent`
   when it is new on the branch, kept apart from `no-merge-base`. The lineage
   header, perf's `gitMeta` and the two merge-base guards read it.
-- `step-inputs.ts` — `stepInputPaths(script)`, every file a `package.json`
-  step reads: the closure of each `tsx` entry it chains, the closure's
-  siblings, and every declaration the closure reads (`sources/`). The
-  catalogue stamp and `build:local-group`'s up-to-date gate both key on it;
-  each step's own suite pins its set
+- `source-trees.ts` — `TREE_ROOTS` and `treeOf`, which tree a repo path
+  belongs to, and `BROWSER_TREES`: the one list both import-boundary tests
+  (`/tests/README.md#pipeline-viewer-boundary`) and the step table's
+  outputs-module walk ([Load-time rules](../pipeline/step-table/README.md#load-time-rules)) read.
+- `step-inputs.ts` — `entryInputPaths(entries)`, every file a TypeScript
+  step reads: the closure of its entry files, the closure's siblings, and
+  every declaration the closure reads (`sources/`); the runner derives each
+  TypeScript step's inputs with it ([The step table](../pipeline/step-table/README.md#the-step-table--stepsts)).
+  `stepEntries(name)` is a step's entry: its `steps.ts` entry when the step is
+  on the table (`package.json` then names only `run.ts`), else each `tsx` entry
+  its `package.json` script chains; `stepInputPaths(name)` is
+  `entryInputPaths` over it, which the catalogue and membership lineage
+  headers and `build:local-group`'s up-to-date gate key on, and CI's catalogue
+  cache key reads `stepEntries` too. Each step's own suite pins its set
   (`../catalog/catalog-inputs.test.ts`, `../local-group/local-group-inputs.test.ts`).
 - `tsv/` — the one TSV reader (`readTable`, typed columns, cells that keep
   empty and malformed apart) and `defineArtifact`, the codec of every table
@@ -104,20 +136,20 @@ same thing — single-use helpers stay with their consumer.
 - `output-identity.ts` (+ `output-identity-pure.ts`, its diff and test) —
   `pnpm run identity:snapshot` / `identity:diff`, the byte-identity check in
   [Proving a restructuring byte-identical](#proving-a-restructuring-byte-identical).
-- `tally.ts` — `emptyTallyPartition(values)`, the zeroed per-bucket
+- `tally-pure.ts` — `emptyTallyPartition(values)`, the zeroed per-bucket
   counting record every routing cascade in the catalog build tallies
   into (direction, velocity, V, distance). Buckets are derived from
   the string-literal tuple that DEFINES each tier set, so a new tier
   cannot tally onto an absent key — `undefined + 1` is NaN, which
   reaches the pinned count snapshot as a hole instead of a drift
-  failure. `tally.test.ts` pins all four cascades' key coverage.
+  failure. `tally-pure.test.ts` pins all four cascades' key coverage.
 - `staged-write.ts` — the one stage-then-rename: `writeStaged` writes
   `<path>.staged` beside its target (same filesystem, so the rename is
   atomic), `landStaged` renames it over the target, and `discardStaged` removes
   a leftover. `writeStamp` and `emitArtifacts` are its two callers, and
   `clearStamp` discards a stamp's leftover too.
-- `emit-artifacts.ts` (+ test) — `emitArtifacts({outputs, files, checks,
-  stamp})`, the one way a TypeScript pipeline step writes its outputs. Every
+- `emit-artifacts.ts` (+ test) — `emitArtifacts({outputs, files, checks})`,
+  the one way a TypeScript pipeline step writes its outputs. Every
   check is already a verdict when it arrives; any `fail` refuses the whole
   emission before a byte is written. Otherwise each file is staged at
   `<path>.staged` beside its target, so the rename stays on one filesystem,
@@ -128,28 +160,30 @@ same thing — single-use helpers stay with their consumer.
   mixed, which only a stamped step detects (its stamp was cleared and is not
   yet rewritten, so it reruns). A
   `.staged` file a killed run left behind is swept by the next run of that
-  step; a step with a skip gate (`build:catalog`'s stamp, `build:local-group`'s
-  mtime check) calls `sweepStaged` before the gate, since a skipped run never
-  reaches `emitArtifacts`. Staging under `public/` would otherwise ship: Vite
+  step; a step with a skip gate of its own (`build:local-group`'s mtime check)
+  or one that can fail before it emits (`build:catalog`) calls `sweepStaged`
+  first, since such a run never reaches `emitArtifacts`. Staging under `public/` would otherwise ship: Vite
   copies it wholesale, and `tests/bundle-content.test.ts` fails on any
   `*.staged` file under `public/` or `dist/`. `outputs` is the step's
   `declareOutputs({key: path, …}, families)` constant, the one place each
   path is written; an emission supplies only contents, keyed the same, so a
   missing or extra key is a compile error. Family members (a directory plus a
-  name pattern — the catalogue's transport chunks) arrive separately in
+  name pattern — the catalogue's transport chunks — or the exact names a
+  member may take, as each lineage stage's baseline does, so stages can share
+  the folder) arrive separately in
   `members`, by path, and must match a declared family. Family members a run
-  does not emit are deleted once the new set has landed. A step that can be
-  told to do only some targets (`fetch:ephemerides saturn`, `sid:stamp
-  clouds`) still passes its one full declaration, plus `only`: the run must
+  does not emit are deleted once the new set has landed; `familyMembers` is
+  the one listing of a family on disk, which the runner stamps from too. A
+  step that can be told to do only some targets (`fetch:ephemerides saturn`),
+  or that leaves a SID registry partition alone when its allocation appended
+  nothing (`build:local-group`, `sid:stamp`), still passes its one full
+  declaration, plus `only`: the run must
   emit exactly those keys, and the leftover sweep still covers every declared
   path. A `refresh` check
   (a snapshot under its update flag) stages its own baseline with the outputs.
-  `stamp`, when given, is written last over exactly the emitted files, so a
-  stamp's outputs and the declaration cannot disagree. A file the step both
-  reads and writes — a refreshed snapshot (the `*-expected.json` beside the
-  build's modules), or the SID ledger and events `build:catalog` appends to —
-  has its input hash re-read after it lands; the next run then skips instead
-  of rebuilding for its own write.
+  `stampedMembers` is the one listing of the family members a stamp records
+  — less those of a family declared `stamped: false` (the lineage baseline and
+  diff, which no worktree seed carries) — which the runner stamps from.
   `emitEach(outputs, keys, produce)` is the per-target form, for steps whose
   files are each read on their own (the two Horizons fetchers): every target
   that produces and passes its checks lands by itself, a failing one is
@@ -157,7 +191,10 @@ same thing — single-use helpers stay with their consumer.
   all have been tried.
   `runStep(main)` is every step's entry point: a refused emission has
   already printed its failed checks, so it exits 1 with one line and no
-  stack; any other error keeps its stack.
+  stack; any other error keeps its stack. A TypeScript pull (the two
+  Horizons fetchers) passes `runStep(main, describe)`, and `--describe`
+  then prints its `PullDescription` instead of running.
+  `horizons-response.ts`' `HORIZONS_SERVICE` is the service both state.
 - `heap-budget.ts` / `heap-budget-pure.ts` (+ test) — `watchHeap(step)`,
   started first thing in a step's `main`, and its `check()`, the step's peak
   live heap against the CI runner's as an `emitArtifacts` check
@@ -165,13 +202,18 @@ same thing — single-use helpers stay with their consumer.
   `build:membership` carry it.
 - `snapshot-check.ts` — `snapshotCheck(spec)`: a build script's computed
   snapshot against its committed JSON, answered as an `emitArtifacts`
-  check — `pass`, `fail`, or `refresh` (the rewritten JSON) when the spec's
-  env var is `1`. It writes nothing itself. A missing snapshot fails too: a
-  deleted `*-expected.json` must fail, not re-baseline itself, so the env var
-  is the only way any snapshot is written, a new one included. Used by `build-catalog.ts` (build counts
-  under `UPDATE_BUILD_COUNTS`, distance outliers under
-  `UPDATE_DISTANCE_OUTLIERS`) and the classic-ID overlay, membership and
-  WGSN builds (`UPDATE_BUILD_COUNTS`). The count snapshots all pass
+  check — `pass`, `fail`, or `refresh` (the rewritten JSON) when
+  `UPDATE_SNAPSHOTS` (`UPDATE_SNAPSHOTS_ENV`) is `1`, the variable the
+  runner's `--update-snapshots` sets. It writes nothing itself. A missing
+  snapshot fails too: a deleted `*-expected.json` must fail, not re-baseline
+  itself, so the variable is the only way any snapshot is written, a new one
+  included. One variable refreshes every snapshot a run reaches. A drift
+  message names the refresh command: `pnpm run <step> --update-snapshots`
+  when `PIPELINE_STEP` is set (the runner sets it to each step it runs, and
+  drops an inherited `UPDATE_SNAPSHOTS`), the variable form otherwise;
+  `snapshot_assert.py` does the same. Used by
+  `build-catalog.ts` (build counts and distance outliers) and the classic-ID
+  overlay, membership and WGSN builds. The count snapshots all pass
   `compareCountSnapshot` (`catalog/build-counts.ts`) as the compare.
   `snapshot-check.test.ts` pins pass, drift, missing and refresh.
 - `snapshot_assert.py` — the Python sibling, for the two binaries steps
@@ -180,7 +222,7 @@ same thing — single-use helpers stay with their consumer.
   primitives). A leaf on purpose: `build_stamp.py` hashes every module a
   step imports, so the runtime step reaching this through `stage7_counts`
   would restamp `binaries.bin` on every pipeline-stage edit. Same rule
-  on a missing snapshot: it fails, and only `UPDATE_BUILD_COUNTS=1`
+  on a missing snapshot: it fails, and only `UPDATE_SNAPSHOTS=1`
   writes one. Returns a bool where the TS sibling returns an `emitArtifacts` check, since the Python
   drivers own their exit.
   Pinned by `snapshot_assert.test.py`.

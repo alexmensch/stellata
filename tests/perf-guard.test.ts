@@ -141,6 +141,7 @@ describe('perf-guard', () => {
 
     it('carries the protocol and the marker path in the deny reason', () => {
       const { reason } = decision(bash('pnpm run perf'));
+      expect(reason).toMatch(/GPU_REQUEST/);
       expect(reason).toMatch(/Announce/);
       expect(reason).toMatch(/await-go\.sh/);
       expect(reason).toMatch(/Proceed only when/);

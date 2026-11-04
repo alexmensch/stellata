@@ -1,0 +1,10 @@
+{
+  "inputs": {
+    "scripts/og/build-og.py": "cacbfdc576deb454ade7998bd70cc692e2542d91",
+    "scripts/og/og-source.jpg": "80a6fdc7fab6817652f28eb65aa477278253f488"
+  },
+  "outputs": {
+    "public/og-image.jpg": "12d526170f32c5ef4bdc8b799a4adff8b80c732e"
+  },
+  "requestFrom": []
+}

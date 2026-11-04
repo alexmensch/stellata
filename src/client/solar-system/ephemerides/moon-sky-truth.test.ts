@@ -11,7 +11,7 @@ import { getPlanetPositions, resetPositionCache, type Vec3 } from './ephemeris';
 import { MOON_ELEMENTS, moonOffsetEcliptic } from './moon-ephemeris';
 import { ECLIPTIC_NORTH_POLE_ICRS } from './orbit-rings-layer';
 import { jdUtToT } from '../time/time';
-import { KM_PC } from '../../util/astronomy-constants';
+import { KM_PC } from '../../../astro-core/astronomy-constants';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const TRUTH_TSV = resolve(__dirname, '../../../../data/horizons/moon-radec-truth.tsv');

@@ -18,6 +18,8 @@ scripts/perf/arming/
                             run.ts and the tests, so no second copy of the
                             marker name or the hour can drift from the hook.
   await-go.sh (+ test)      The arm poller the agent runs in the background.
+  busy-sessions.sh (+ test) Which `claude agents --json` rows are busy in this
+                            repo — the filter await-go's warning reads.
 ```
 
 `scripts/hooks/perf-guard.sh` is the gate itself and lives with the other
@@ -69,15 +71,35 @@ Reading `run.ts`, running the pure tests, `await-go.sh`, and
 
 ## The protocol
 
-The deny reason carries these four steps verbatim:
+The deny reason carries these five steps verbatim:
 
-1. Announce what is to be measured and why, with the exact command.
-2. Start `bash scripts/perf/arming/await-go.sh` in the background. It polls
+1. A live `pickup-epic` coordinator (the `beads` skill's coordinator-field
+   lookup; that name busy, idle or waiting in `ListAgents`) gets
+   `GPU_REQUEST` first; wait
+   for `GPU_GRANTED`, and send `GPU_DONE` after the last run
+   ([stellata-perf protocol](/.claude/skills/stellata-perf/SKILL.md#protocol--announce--arm--run-one-run-per-arm)).
+2. Announce what is to be measured and why, with the exact command.
+3. Start `bash scripts/perf/arming/await-go.sh` in the background. It polls
    every `PERF_GO_POLL_S` (15) s for up to `PERF_GO_TIMEOUT_S` (3600) s,
    prints one line when a fresh marker exists (exit 0), or exits 1 on
    timeout.
-3. Proceed only when it reports the marker.
-4. Never create the marker.
+4. Proceed only when it reports the marker, and only on Alex's answer if it
+   warns about busy sessions.
+5. Never create the marker.
+
+When the marker arrives, `await-go.sh` also lists every other Claude session
+whose `status` is `busy` and whose `cwd` is the main checkout or anything
+under it (worktrees included), excluding its own ancestor processes — the
+requesting session — and every live `pickup-epic` coordinator named by an
+epic's `coordinator` metadata key, which reads busy while it only waits on
+its workers (an unreadable `bd` excludes none, so the warning errs loud).
+Any hit, or a session list that cannot be read or parsed
+— a failed check is never read as all-clear — prints a
+`WARNING` on stderr and turns the ARMED line into "ask Alex before
+launching": the run would likely be discarded under foreground load, and
+whether to launch anyway is Alex's call. The arm is not spent by waiting —
+only `run.ts` consumes it. This catches uncoordinated sessions; a live
+`pickup-epic` run is paused through its coordinator instead (step 1).
 
 `run.ts` consumes the marker before the browser launches: absent → exit 3;
 stale → deleted, exit 3; fresh → deleted, then launch. One arm is one launch

@@ -65,6 +65,12 @@ export interface DwellRecord {
    *  no key, and a reader takes that as null rather than as a fault. */
   readonly computeMs?: readonly number[] | null;
   readonly computeStats?: DwellSummary | null;
+  /** Main-thread time per rendered tick (`dwell/README.md#cpu-and-gpu-apart`).
+   *  Absent on a file written before it was recorded. */
+  readonly cpuMs?: readonly number[] | null;
+  readonly cpuStats?: DwellSummary | null;
+  /** Over `throughputSamples(deltasMs)`; GPU-paced dwells only. */
+  readonly throughputStats?: DwellSummary | null;
   readonly limitMag: number;
   readonly dm: number;
   readonly readbackPerFrame: number;

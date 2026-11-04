@@ -1,9 +1,11 @@
 # Naming — the authority ladder, its ingest, and the display-name composer
 
 Everything that decides what a star is CALLED: the IAU WGSN ingest, the
-designation normalisers, and the one pure composer that turns a record's
-structured designation set into the string the app shows. The contract is
-`docs/star-naming.md`; this folder implements it end to end.
+designation normalisers, and the build's half of the display-name composer.
+The composer itself turns a record's structured designation set into the
+string the app shows, and the viewer runs it too, so it lives in
+[`/src/catalog-format/naming/`](/src/catalog-format/naming/README.md) with
+the Greek spellings it reads. The contract is `docs/star-naming.md`.
 
 Two entry points regenerate committed artifacts, both asserted
 byte-identical in CI so artifact and code always land together:
@@ -19,15 +21,6 @@ name table is written.
 
 ```
 scripts/catalog/naming/
-  greek-forms.ts                GREEK_SPELLINGS — every published spelling
-                                of each Greek letter, keyed by the glyph the
-                                wire carries: `full` (Alpha), `abbr` (Alp),
-                                and the lowercase ASCII `variants` (alf).
-                                ASCII_GREEK derives from it, so a spelling
-                                added for the build's normalisers reaches
-                                the runtime's search labels too. Plus the
-                                curly-variant folds (ϕ→φ, ϵ→ε) and the
-                                genitive → IAU-code map.
   wgsn-nec-source.ts            WGSN_NEC and WGSN_FAINTS, declared
   wgsn-faints-source.ts         (../../util/sources/); the faints source
                                 applies its curated corrections file, a
@@ -65,9 +58,12 @@ scripts/catalog/naming/
                                 compareDesignationRows.
   wgsn-tables-outputs.ts        WGSN_OUTPUTS — the two derived tables as
                                 build:wgsn's emitArtifacts declaration
-                                (../../util/README.md). Side-effect free.
+                                (../../util/README.md), and their paths,
+                                which the codecs import: a codec reaches the
+                                constellation table, which an outputs module
+                                may not. Side-effect free.
   wgsn-expected.json            Pinned count snapshot
-                                (UPDATE_BUILD_COUNTS=1 refreshes).
+                                (--update-snapshots refreshes).
   manifest-naming-expected.json The manifest's naming figures — the residual
                                 gate's and the Bayer coverage — pinned by
                                 ../membership/membership-manifest-gate.test.ts,
@@ -89,10 +85,6 @@ scripts/catalog/naming/
   proper-dispositions-source.ts PROPER_DISPOSITIONS and NAME_OVERRIDES, the
   name-overrides-source.ts      two curated tables, declared
                                 (../../util/sources/).
-  star-naming-pure.ts (+ test)  THE COMPOSER. The ladder, the component
-                                rules, the wire adapter. Imported by the
-                                build AND by the runtime
-                                (README.md#two-callers-one-composer).
   display-names.ts (+ test)     The build's half of the composer: every
                                 record's designation set → its display
                                 name, with the NAME tiers written into
@@ -241,57 +233,6 @@ different constellation from the record's Flamsteed number — 16 Lyn is
 also ψ¹⁰ Aur, `namingDesigConWgsnConflict` pins <!-- count:build-catalog/namingDesigConWgsnConflict -->2<!-- /count --> — the displaced
 Flamsteed form ships as an alias rather than going unsearchable.
 
-## Two callers, one composer
-
-`star-naming-pure.ts` is the single pure ladder, and it is a COLLECTION
-pass rather than a per-star function because two of its three rules are
-relational:
-
-1. **The ladder** — curated override → IAU name → [§ 2](/docs/star-naming.md#2-authority--one-source-approves-names-everything-else-compiles-them) string designation →
-   Bayer (Greek) → Flamsteed → Bayer (Latin) → Gould → GCVS → catalogue
-   (HIP → HD → HR → GJ). **The Bayer tier is split**, because Bayer's Greek
-   letters and his Latin overflow are read differently: `α UMa` outranks
-   `50 UMa`, while atlases print `15 UMa` over `f UMa`. 313 records take
-   their Flamsteed number back; the 237 with no Flamsteed number to take
-   keep their letter (`namingTierBayerLatin` — the far-southern `p Eri` /
-   `f Pup` series, outside what Greenwich could catalogue).
-   The Gaia tail and the `SID #<n>` last resort below it belong to the
-   runtime's `resolveStarName`: neither is a designation a catalogue
-   published, neither reaches the search index, and composing them here
-   would give every record a base and stop components borrowing.
-2. **Borrowing.** A component takes its WDS root anchor's base plus its own
-   letter wherever it holds no sky designation of its own — nothing at all
-   (`Sirius B`, `HIP 82676 Ab`), a bare catalogue number (σ² UMa C reads
-   better than its HIP 45064), an identifier-shaped GCVS serial (λ Oph B
-   over `NSV 07784`), or a sky designation the SYSTEM also carries (ξ UMa
-   B's Flamsteed 53 is ξ UMa's). A sky designation that singles the star
-   out wins however high the anchor's tier: β² Sco stays β² Sco rather than
-   becoming a lettered Acrab, and θ¹ Tau stays θ¹ Tau rather than borrowing
-   θ² Tau's approved name.
-3. **The letter.** Appended to a DESIGNATION only where it has to be: the
-   authority attributes the designation to a component (`p Eri A` / `p Eri
-   B`, which WDS letters only one of), or a sibling owns the same
-   designation (four records own `θ¹ Ori`). A NAME never takes one — the
-   authority's attribution IS the component statement, which is why Sirius
-   A displays `Sirius` while Sirius B displays `Sirius B`.
-
-Injective given (naming anchor, component letter). A surviving duplicate is
-therefore two catalogue entries claiming one designation — a data finding,
-never something the renderer should qualify away.
-
-**The build calls it over `Star`; the runtime calls it over `SearchEntry`.**
-`display-names.ts` and `designationSetOfEntry` are the two adapters, and
-`catalog.bin`'s name table carries the NAME tiers alone (<!-- count:build-catalog/namingNameTable -->729<!-- /count --> records) so
-first paint has names while the runtime composes every designation off
-`search-index.json` through the same function. A BORROWED label carries
-its anchor's tier, so `Sirius B` is a name-table entry too — which is why
-the table holds 725 records where the authority names only 447
-(`namingTierIau` + `namingTierEponym`, not `namingIauNamed`). That split is why
-`FLAG_HAS_NAME` now means *an authority named this star* — a record
-displaying a designation carries no name-table entry, and
-`../catalog-lookup.ts`'s `name:` record refs resolve through the composer
-for exactly that reason.
-
 ## The parity ledger
 
 [§ 8](/docs/star-naming.md#8-parity--the-gate-on-any-naming-change), as two committed TSVs plus
@@ -308,7 +249,7 @@ for exactly that reason.
   records, 74 fallbacks.
 - **`naming-duplicates.tsv`** — every display label two or more records
   compose, with its claimants. A RATCHET: each row is a curation finding
-  upstream, and `../companions/multi-star-regression.test.ts` additionally
+  upstream, and `../../../tests/integration/multi-star-regression.test.ts` additionally
   refuses any within-one-WDS-root duplicate this file does not enumerate.
 
 The gate is stated over strings with EXTERNAL provenance — every name the

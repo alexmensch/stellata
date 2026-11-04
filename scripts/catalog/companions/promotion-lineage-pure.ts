@@ -1,10 +1,10 @@
 // Companion promotion as a lineage stage: its reason codes, the one serialiser over RowOutcome, and the identity rows of the records it mints and the rows it removes. See ../lineage/README.md#the-promotion-stage.
 
-import { MULTIPLES_TSV } from '../../binaries/multiples-tsv';
+import { MULTIPLES_ROW_KEY } from '../../binaries/multiples-row-key-pure';
 import { starDesignations } from '../../sid/sid-pure';
-import { sourceRowRef, sourceRowRefText } from '../../util/sources/row-ref-pure';
+import { rowKeyText } from '../../util/sources/row-ref-pure';
 import type { IdentityRow } from '../lineage/identity-pure';
-import type { StageLineageSpec } from '../lineage/lineage-io';
+import type { StageLineageSpec } from '../lineage/lineage-layout-pure';
 import { paramsText, type LineageParams, type LineageRow } from '../lineage/lineage-row-pure';
 import { LIVE, codeEffects, stageCodes, type CodeDeclaration, type CodeStatus } from '../lineage/reason-codes-pure';
 import type { Star } from '../parse/stars-parse';
@@ -79,7 +79,7 @@ const brightness = (b: MintedBrightness): Brightness => (
 );
 
 export function promotionOriginKey(row: Pick<MultiplesTsvRow, 'systemId' | 'comp'>): string {
-  return sourceRowRefText(sourceRowRef(MULTIPLES_TSV, row));
+  return rowKeyText(MULTIPLES_ROW_KEY, row);
 }
 
 /** `recordKey` is the origin key of the record at a pre-sort catalogue index. */

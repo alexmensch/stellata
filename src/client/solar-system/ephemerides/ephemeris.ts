@@ -2,10 +2,11 @@
 // (Unix-seconds): frozen Horizons element tables where they reach, the Standish 1992
 // (/data/papers/index.md#standish1992) series elsewhere. See README.md#planet-ephemeris.
 
-import { AU_PC, DAYS_PER_JULIAN_YEAR, J2000_JD } from '../../util/astronomy-constants';
-import { orbitalStateToCartesian, solveKepler } from '../../util/kepler-solver';
+import { AU_PC, DAYS_PER_JULIAN_YEAR, J2000_JD } from '../../../astro-core/astronomy-constants';
+import { orbitalStateToCartesian, solveKepler } from '../../../astro-core/kepler-solver';
 import { tToJdTdb } from '../time/time';
-import { elementTableSampleAt, type PlanetElementTable } from './element-table';
+import { elementTableSampleAt, type PlanetElementTable } from '../../../catalog-format/ephemerides/element-table';
+import type { PlanetName } from '../../../catalog-format/ephemerides/planet-element-roster';
 import {
   blendEquinoctialInto,
   equinoctialFromAngles,
@@ -13,7 +14,7 @@ import {
   makeClassical,
   makeEquinoctial,
   type EquinoctialElements,
-} from './equinoctial-pure';
+} from '../../../astro-core/equinoctial-pure';
 
 const DEG = Math.PI / 180;
 const DAYS_PER_JULIAN_CENTURY = 36525;
@@ -139,11 +140,6 @@ const ELEMENTS: ElementSet[] = [
     b: -0.01262724, c: 0, s: 0, f: 0,
   },
 ];
-
-export type PlanetName =
-  | 'mercury' | 'venus' | 'earth' | 'mars'
-  | 'jupiter' | 'saturn' | 'uranus' | 'neptune'
-  | 'pluto';
 
 export const PLANET_ORDER: readonly PlanetName[] = [
   'mercury', 'venus', 'earth', 'mars',

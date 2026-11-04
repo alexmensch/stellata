@@ -10,7 +10,11 @@ import {
   PRICED_PASS_KEYS,
   type PricedPassKey,
 } from '../../src/client/debug/frame-cost/passes/passes-pure';
-import { COMPUTE_ROW, DEFAULT_DWELL_FRAMES, DWELL_READBACK_EVERY_FRAMES } from './dwell/dwell-pure';
+import type { FramePacing } from '../../src/client/scene/frame-loop/frame-loop';
+import {
+  COMPUTE_ROW, DEFAULT_DWELL_FRAMES, DEFAULT_DWELL_PACING, DWELL_PACINGS, DWELL_READBACK_EVERY_FRAMES,
+  THROUGHPUT_WINDOW_FRAMES,
+} from './dwell/dwell-pure';
 import { DEFAULT_SWEEP_SCALES } from './sweep/sweep-pure';
 import { DEFAULT_QUIET_MS } from './settle-pure';
 import { BACKENDS, SCENARIO_NAMES, type Backend, type ScenarioName } from './scenarios';
@@ -70,6 +74,8 @@ export interface RunArgs {
    *  per cadence, which is a probe rather than a comparable run
    *  (`dwell/README.md`). */
   readonly readbackEvery: readonly number[];
+  /** dwell and sweep: what schedules the next frame (`dwell/README.md#pacing`). */
+  readonly pacing: FramePacing;
   /** dwell: a priceFrame pass key, or `idle`, applied between two dwells. */
   readonly roundtrip: RoundTrip | undefined;
   readonly scales: readonly number[];
@@ -96,6 +102,7 @@ export const ARG_DEFAULTS = {
   quietMs: DEFAULT_QUIET_MS,
   frames: DEFAULT_DWELL_FRAMES,
   readbackEvery: String(DWELL_READBACK_EVERY_FRAMES),
+  pacing: DEFAULT_DWELL_PACING,
   scales: DEFAULT_SWEEP_SCALES.join(','),
   cooldownMs: 0,
 } as const;
@@ -128,6 +135,7 @@ const OPTIONS = {
   hash: { type: 'string', default: '' },
   frames: { type: 'string', default: String(ARG_DEFAULTS.frames) },
   'readback-every': { type: 'string', default: ARG_DEFAULTS.readbackEvery },
+  pacing: { type: 'string', default: ARG_DEFAULTS.pacing },
   roundtrip: { type: 'string' },
   scales: { type: 'string', default: ARG_DEFAULTS.scales },
   json: { type: 'string' },
@@ -161,6 +169,7 @@ export function usage(): string {
     '  --hash <fragment>        URL-fragment switches for every boot, e.g. webgpu-gate=force',
     `  --frames <n>             dwell and sweep: frames per dwell         (default ${ARG_DEFAULTS.frames})`,
     `  --readback-every <list>  dwell and sweep: frames between statistic readbacks, pinned per dwell; several = one context each (default ${ARG_DEFAULTS.readbackEvery})`,
+    `  --pacing <${DWELL_PACINGS.join('|')}>     dwell and sweep: next frame when the GPU has room, or on rAF (default ${ARG_DEFAULTS.pacing})`,
     `  --roundtrip <pass|${ROUNDTRIP_IDLE}>  dwell: dwell, hold the pass off for --frames then restore it, dwell again`,
     `  --scales <list>          sweep: viewport scales                    (default ${ARG_DEFAULTS.scales})`,
     '  --json <path>            write the whole run as stellata-perf/2',
@@ -195,6 +204,7 @@ const MODE_ONLY_FLAGS: Readonly<Record<string, readonly Mode[]>> = {
   'no-interleave': ['differential'],
   frames: ['dwell', 'sweep'],
   'readback-every': ['dwell', 'sweep'],
+  pacing: ['dwell', 'sweep'],
   roundtrip: ['dwell'],
   scales: ['sweep'],
   pin: ['dwell'],
@@ -360,6 +370,14 @@ export function parseRunArgs(argv: readonly string[]): RunArgs {
     }
   }
 
+  const pacing = oneOf('pacing', DWELL_PACINGS);
+  const frames = num('frames');
+  if (pacing === 'gpu' && (mode === 'dwell' || mode === 'sweep') && frames < THROUGHPUT_WINDOW_FRAMES) {
+    throw new ArgError(
+      `--frames ${frames} under GPU pacing: the gated throughput is read in windows of `
+      + `${THROUGHPUT_WINDOW_FRAMES} frames, so a shorter dwell has nothing to gate on`);
+  }
+
   const accept = (values.accept as string[]).map(parseAccept);
   if (str('pin') !== undefined && str('json') === undefined) {
     throw new ArgError('--pin needs --json: the pin cites the run file its rows were summarised from');
@@ -399,8 +417,9 @@ export function parseRunArgs(argv: readonly string[]): RunArgs {
     quietMs: num('quiet-ms'),
     chromeArgs: values['chrome-arg'] as string[],
     hash: (str('hash') ?? '').replace(/^#/, ''),
-    frames: num('frames'),
+    frames,
     readbackEvery,
+    pacing,
     roundtrip,
     scales: numberList('scales'),
     json: str('json'),

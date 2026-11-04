@@ -12,7 +12,7 @@ import {
   writeStarRecord,
   type ApsisField,
   type WireStarRecord,
-} from '../../../scripts/catalog/record/catalog-pure';
+} from '../../catalog-format/record/catalog-pure';
 
 export type StarRecord = Omit<WireStarRecord, 'apsis'> & { apsis: Record<ApsisField, number> };
 

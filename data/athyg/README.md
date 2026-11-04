@@ -128,7 +128,7 @@ refresh script reads it.** It stays committed as the spine's provenance and for
 consumers that walk the upstream cells directly, all naming it through
 `ATHYG_CLASSIC_IDS` (`scripts/catalog/spine/athyg-classic-ids-source.ts`) on
 the TypeScript side: `pnpm run audit:spine-primaries` (the `hd` / `hyg`
-tallies), `src/client/constellation-boundaries/iau-geometry/iau-athyg-agreement.test.ts`
+tallies), `scripts/catalog/parse/constellations/iau-athyg-agreement.test.ts`
 (the boundary-epoch cross-check against the editorial `con` column), and
 `scripts/binaries/build-binaries.py` (Stage 1's AT-HYG parse, on the
 `build:binaries` path, not `build:catalog`).

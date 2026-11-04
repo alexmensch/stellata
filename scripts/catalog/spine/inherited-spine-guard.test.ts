@@ -35,7 +35,7 @@ function* keyColumn(declared: Declared, column: string): Generator<string> {
 }
 
 /** The frozen artifact's byte identity, pinned in test source rather than in
- *  the count snapshot: `UPDATE_BUILD_COUNTS=1` rewrites that snapshot, so a
+ *  the count snapshot: `UPDATE_SNAPSHOTS=1` rewrites that snapshot, so a
  *  regeneration would otherwise refresh its own guard. Changing these two
  *  literals is the deliberate act that unfreezes the spine. */
 const FROZEN_BYTES = 42_426_957;

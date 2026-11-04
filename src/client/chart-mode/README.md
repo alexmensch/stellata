@@ -231,7 +231,7 @@ the realistic footprint is what let a resolved primary swallow every
 nearby hit. The catalog-wide prefilter still prunes on the realistic
 footprint, so in chart it must bound the ink disc too
 (`../camera/controls/README.md`). The shared cutoff constant lives in
-`solar-system/perceptual-magnitude.ts`.
+`/src/astro-core/perceptual-magnitude.ts`.
 
 `Picker.pickStar` (`camera/controls/picker.ts`) three fixes for the small-disc /
 variable case:

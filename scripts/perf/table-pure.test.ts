@@ -121,7 +121,7 @@ describe('formatRoundTripLine', () => {
   });
 
   it('reads the second dwell against the first as a ratio on each clock', () => {
-    const line = formatRoundTripLine('localDepth', record(20, 17), record(25, 22.1));
+    const line = formatRoundTripLine('localDepth', record(20, 17), record(25, 22.1), 'raf');
     expect(line).toContain('round trip localDepth');
     expect(line).toContain('raf p50 20 → 25 (×1.250)');
     expect(line).toContain('gpu p50 17 → 22.1 (×1.300)');
@@ -129,15 +129,26 @@ describe('formatRoundTripLine', () => {
   });
 
   it('omits the GPU clock where either dwell lacks a stream', () => {
-    expect(formatRoundTripLine('idle', record(20, null), record(20, 17))).not.toContain('gpu p50');
+    expect(formatRoundTripLine('idle', record(20, null), record(20, 17), 'raf')).not.toContain('gpu p50');
   });
 
   it('reads the compute stream as a third ratio where both dwells carry one, and omits it otherwise', () => {
     const withCompute = (p50: number, compute: number): DwellRecord =>
       ({ ...record(p50, 17), computeMs: [compute], computeStats: { ...dwell, p50: compute } });
-    expect(formatRoundTripLine('idle', withCompute(20, 1.4), withCompute(20, 1.75)))
+    expect(formatRoundTripLine('idle', withCompute(20, 1.4), withCompute(20, 1.75), 'raf'))
       .toContain('compute p50 1.4 → 1.75 (×1.250)');
-    expect(formatRoundTripLine('idle', record(20, 17), withCompute(20, 1.4))).not.toContain('compute p50');
+    expect(formatRoundTripLine('idle', record(20, 17), withCompute(20, 1.4), 'raf')).not.toContain('compute p50');
+  });
+
+  it('reads throughput and CPU in place of the wall median under GPU pacing', () => {
+    const paced = (frameMs: number, cpuMs: number): DwellRecord => ({
+      ...record(frameMs - 0.5, null), deltasMs: [frameMs - 1, frameMs + 1],
+      throughputStats: { ...dwell, p50: frameMs }, cpuMs: [cpuMs], cpuStats: { ...dwell, p50: cpuMs },
+    });
+    const line = formatRoundTripLine('localDepth', paced(4, 1.2), paced(5, 1.5), 'gpu');
+    expect(line).toContain('throughput mean 4 → 5 (×1.250)');
+    expect(line).toContain('cpu p50 1.2 → 1.5 (×1.250)');
+    expect(line).not.toContain('raf p50');
   });
 });
 

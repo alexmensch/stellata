@@ -4,7 +4,7 @@ import { ALLOCATION_CODES, ALLOCATION_LINEAGE } from '../../sid/allocation-linea
 import { PROMOTION_CODES, PROMOTION_LINEAGE } from '../companions/promotion-lineage-pure';
 import { PLACEMENT_CODES, PLACEMENT_LINEAGE } from '../distance/placement-lineage-pure';
 import { MEMBERSHIP_CODES, MEMBERSHIP_LINEAGE } from '../membership/membership-lineage-pure';
-import type { StageLineageSpec } from './lineage-io';
+import type { StageLineageSpec } from './lineage-layout-pure';
 import type { StageCodes } from './reason-codes-pure';
 
 export interface LineageStage {

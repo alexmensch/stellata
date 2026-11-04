@@ -1,0 +1,17 @@
+{
+  "inputs": {},
+  "outputs": {
+    "data/ephemerides/earth.json": "ccd3c24f873acc103a6db9af5a6e319ff958297a",
+    "data/ephemerides/jupiter.json": "bfae3661ecb4879f1a717833099551cc23826bd1",
+    "data/ephemerides/mars.json": "ddd425af1f4bbc0ed2a126b089a05e81faf3138e",
+    "data/ephemerides/mercury.json": "44a5e0e55e288df47cd7d54ae44132358743ea56",
+    "data/ephemerides/neptune.json": "9ccde2fa372fe56de254593c290aae67df4ada7d",
+    "data/ephemerides/pluto.json": "291fe1eac7c7a8d035b7472d8ca21ce6f591f8f5",
+    "data/ephemerides/saturn.json": "6937018d2bdc3bba70a4fbfe74246a3a98ce4893",
+    "data/ephemerides/uranus.json": "f3c8e4e8d42e229592b703cf743b94a916712bd4",
+    "data/ephemerides/venus.json": "a525d92e91989578058cb32bbb63dbfed06cac6f"
+  },
+  "query": "e1ee145d7d10654b7cf607a6aaa074201a8ac4e8",
+  "answeredBy": [],
+  "requestFrom": []
+}

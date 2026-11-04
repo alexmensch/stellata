@@ -162,7 +162,7 @@ what a consumer may conclude from these tables; this one owns what they are.
 - **`sp_type`** is SIMBAD's canonicalised Morgan-Keenan string —
   variability annotations live in `otype` and never in `sp_type`, so
   the parser
-  ([`classifyFromSimbad`](../../scripts/catalog/spectral/spectral-classify.ts))
+  ([`classifyFromSimbad`](../../src/catalog-format/spectral/spectral-classify.ts))
   is
   a strict MK walker.
 - **`wds_xids_overrides.tsv`** is the manual escape hatch for a component
@@ -240,7 +240,7 @@ The +2,169 into SIMBAD is exactly the 1,821 leaving GSP-Spec plus the 348
 leaving unknown, so no record changed tier for any other reason. 348 fewer
 stars display as unknown. The TYC and GJ rows only reach records because
 the resolver gained matching tiers in the same change — the pull's cross-ID
-columns are inert without them ([The resolver and the radius chain](/scripts/catalog/spectral/README.md#the-resolver-and-the-radius-chain)).
+columns are inert without them ([The resolver](/scripts/catalog/spectral/README.md#the-resolver)).
 
 **The union closed the 34 the ladder could not** (re-pulled 2026-09-02).
 Those 34 records had lost a spectral type to a vanished HIP key: the object
@@ -402,6 +402,9 @@ which is exactly what `tests/artifact-freshness.test.ts` fails on.
   [`scripts/refresh/refresh-simbad-values.py`](../../scripts/refresh/README.md).
 - `pnpm run refresh:simbad-tyc-hd` →
   [`scripts/refresh/refresh-simbad-tyc-hd.py`](../../scripts/refresh/README.md).
-- `refresh-simbad-sptype.py` and `refresh-simbad-wds-xids.py` have
-  no pnpm targets; invoke directly. All share the
-  `scripts/refresh/simbad/` plumbing.
+- `pnpm run refresh:simbad-sptype` →
+  [`scripts/refresh/refresh-simbad-sptype.py`](../../scripts/refresh/README.md).
+- `pnpm run refresh:simbad-wds-xids` →
+  [`scripts/refresh/refresh-simbad-wds-xids.py`](../../scripts/refresh/README.md).
+
+All share the `scripts/refresh/simbad/` plumbing.

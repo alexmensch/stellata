@@ -4,7 +4,7 @@
 import * as THREE from 'three';
 import type { MemberSphere } from '../../local-depth/bracket/slice-pure';
 import { RING_EXTENT_MARGIN } from '../../solar-system/local-cluster-pure';
-import { AU_PC } from '../../util/astronomy-constants';
+import { AU_PC } from '../../../astro-core/astronomy-constants';
 import { type BinariesData } from '../binaries-loader';
 import { keplerRelationParams, relationIndicesInBounds } from '../orbit-relation-cache';
 import { keplerChainRelationIdxs, buildBinaryOrbitRingPoints } from './binary-orbit-path-pure';

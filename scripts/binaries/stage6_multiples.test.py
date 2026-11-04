@@ -852,7 +852,7 @@ class GaiaPhotometryAbsmagTests(unittest.TestCase):
 
     def test_ballesteros_bv_from_teff_mirrors_ts(self) -> None:
         # Python port pinned against the TS canonical
-        # (scripts/colour/blackbody-lut-pure.ts) across the range — one
+        # (src/astro-core/colour/blackbody-lut-pure.ts) across the range — one
         # point drifts silently at the ends, where a mirror is likeliest
         # to diverge. Hot blue → ~0, solar → 0.652, cool red → ~1.71.
         self.assertAlmostEqual(ballesteros_bv_from_teff(10000.0), 0.010, places=3)

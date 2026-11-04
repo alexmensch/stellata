@@ -4,7 +4,7 @@ import { dirname, join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import {
-  changedSince, clearStamp, fileHashes, readStamp, stampIsCurrent, writeStamp,
+  changedSince, clearStamp, fileHashes, readStamp, writeStamp, type FileHashes,
 } from './build-stamp';
 
 describe('build-stamp', () => {
@@ -14,8 +14,13 @@ describe('build-stamp', () => {
   let stamp: string;
 
   const write = (): void => writeStamp(stamp, fileHashes([input]), [output]);
-  const current = (...inputs: string[]): boolean =>
-    stampIsCurrent(stamp, fileHashes(inputs.length > 0 ? inputs : [input]));
+  const current = (...inputs: string[]): boolean => {
+    const recorded = readStamp(stamp);
+    const now: FileHashes = fileHashes(inputs.length > 0 ? inputs : [input]);
+    return recorded !== null
+      && JSON.stringify(recorded.inputs) === JSON.stringify(now)
+      && changedSince(recorded.outputs).length === 0;
+  };
 
   beforeEach(() => {
     dir = mkdtempSync(join(tmpdir(), 'build-stamp-'));

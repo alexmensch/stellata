@@ -117,8 +117,8 @@ fan-out of jobs beyond the bare checks:
   set and the one way to get a stale hit: `scripts/ci/README.md`. The
   checks:
   - `SID registry committed` — `git diff --exit-code -- data/sid` after
-    `build:layers`: a mint or event the clouds or Local Group stamp
-    appended that the PR did not commit. The catalogue stage's own diff
+    `build:layers`: a mint or event the clouds stamp or
+    `build:local-group` appended that the PR did not commit. The catalogue stage's own diff
     gate covers `build:catalog`'s.
   - `Full vitest, smudged and built` — `pnpm test` again, now with LFS
     content and every built artifact present, so each suite that
@@ -127,8 +127,8 @@ fan-out of jobs beyond the bare checks:
     Any test that skips here fails the step
     ([Vitest with every input](/scripts/ci/README.md#vitest-with-every-input)).
   - `Deploy asset sizes` — finishes the deploy build with
-    `build:client` (`pnpm run build`'s one stage this job skips is
-    `build:binaries`, pinned by `build-binaries`), then
+    `build:client` (`build:binaries` runs inside the catalogue stage's
+    runner, and `build-binaries` pins its committed outputs), then
     `pnpm run check:asset-sizes` over
     `dist/`: fails on any file past Cloudflare Workers' 25 MiB per-asset
     limit, warns past 80 % of it. `deploy.yml` runs the same check before

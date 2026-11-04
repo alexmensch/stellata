@@ -7,10 +7,26 @@ import {
   isVsyncClamped,
   lag1Autocorrelation,
   median,
+  medianStandardErrorMs,
   percentile,
 } from '../../../src/client/debug/frame-cost/frame-cost-pure';
+import type { FramePacing } from '../../../src/client/scene/frame-loop/frame-loop';
+import { dwellFloorMs } from '../floors/floors';
 
 export const DEFAULT_DWELL_FRAMES = 240;
+
+export const DWELL_PACINGS = ['gpu', 'raf'] as const satisfies readonly FramePacing[];
+export const DEFAULT_DWELL_PACING: FramePacing = 'gpu';
+/** Every dwell taken before the lever existed was paced on rAF (README.md#pacing). */
+const PACING_WHEN_UNRECORDED: FramePacing = 'raf';
+
+/** The one reading of a recorded pacing, absent included. */
+export function recordedPacing(pacing: unknown): FramePacing {
+  if (pacing === undefined) return PACING_WHEN_UNRECORDED;
+  const known = DWELL_PACINGS.find((p) => p === pacing);
+  if (known === undefined) throw new Error(`unknown dwell pacing '${String(pacing)}'`);
+  return known;
+}
 
 /**
  * Rendered frames between statistic readbacks for the duration of a dwell,
@@ -207,11 +223,19 @@ export function classClock(samples: readonly number[]): ClassClock {
 /** Which clock — and which statistic of it — a row was judged on. Named in
  *  every table, and `gatingClock` returns it alongside the clock itself so no
  *  caller re-derives the choice. */
-export type DwellMetric = 'gpu-p50' | 'gpu-plain-p50' | 'wall-p50' | 'compute-p10';
+export type DwellMetric =
+  'gpu-p50' | 'gpu-plain-p50' | 'wall-p50' | 'throughput-mean' | 'compute-p10' | 'cpu-p50';
 
 /** Row-key suffix (`mw120|webgpu|compute`). Its own key, so a mark on the
  *  frame and one on the compute pass are accepted separately. */
 export const COMPUTE_ROW = 'compute';
+
+/** Row-key suffix of the main-thread time per tick (README.md#cpu-and-gpu-apart). */
+export const CPU_ROW = 'cpu';
+
+/** README.md#cpu-and-gpu-apart */
+export const THROUGHPUT_WINDOW_FRAMES = 8;
+export const CPU_BOUND_SHARE = 0.8;
 
 /** One reader for the optional field, so no caller tells `undefined` from
  *  `null` differently. */
@@ -221,9 +245,33 @@ export function computeClock(
   return dwell.computeStats ?? null;
 }
 
+export function cpuClock(dwell: { readonly cpuStats?: DwellSummary | null }): DwellSummary | null {
+  return dwell.cpuStats ?? null;
+}
+
+/** Wall time per frame over the whole dwell: README.md#cpu-and-gpu-apart. */
+export function throughputMs(deltasMs: readonly number[]): number {
+  let sum = 0;
+  for (const d of deltasMs) sum += d;
+  return sum / deltasMs.length;
+}
+
+/** README.md#cpu-and-gpu-apart; a partial last window is dropped. */
+export function throughputSamples(deltasMs: readonly number[]): number[] {
+  const windows: number[] = [];
+  for (let i = 0; i + THROUGHPUT_WINDOW_FRAMES <= deltasMs.length; i += THROUGHPUT_WINDOW_FRAMES) {
+    let sum = 0;
+    for (let j = i; j < i + THROUGHPUT_WINDOW_FRAMES; j++) sum += deltasMs[j];
+    windows.push(sum / THROUGHPUT_WINDOW_FRAMES);
+  }
+  return windows;
+}
+
 export interface GatingClock {
   readonly clock: DwellSummary;
   readonly metric: DwellMetric;
+  /** What the row is judged on: the clock's p50, or the mean for throughput. */
+  readonly valueMs: number;
 }
 
 /**
@@ -245,12 +293,75 @@ export interface GatingClock {
  * The metric rides along for the same reason: a caller that names the clock
  * separately from choosing it can disagree with itself and still compile.
  */
-export function gatingClock(
-  dwell: { readonly stats: DwellSummary; readonly gpuStats: DwellSummary | null },
-): GatingClock {
+export function gatingClock(dwell: {
+  readonly deltasMs: readonly number[];
+  readonly stats: DwellSummary;
+  readonly gpuStats: DwellSummary | null;
+  readonly throughputStats?: DwellSummary | null;
+}, pacing: FramePacing): GatingClock {
+  // README.md#cpu-and-gpu-apart — a GPU-paced dwell gates on throughput.
+  if (pacing === 'gpu') {
+    return { clock: throughputClock(dwell), metric: 'throughput-mean', valueMs: throughputMs(dwell.deltasMs) };
+  }
   return dwell.gpuStats === null
-    ? { clock: dwell.stats, metric: 'wall-p50' }
-    : { clock: dwell.gpuStats, metric: 'gpu-p50' };
+    ? { clock: dwell.stats, metric: 'wall-p50', valueMs: dwell.stats.p50 }
+    : { clock: dwell.gpuStats, metric: 'gpu-p50', valueMs: dwell.gpuStats.p50 };
+}
+
+/** The runner refuses a GPU-paced dwell too short for one window (`../args.ts`),
+ *  so a missing clock here is a malformed record, not a short dwell. */
+function throughputClock(dwell: { readonly throughputStats?: DwellSummary | null }): DwellSummary {
+  if (dwell.throughputStats == null) {
+    throw new Error('a GPU-paced dwell with no throughput clock — the record is malformed');
+  }
+  return dwell.throughputStats;
+}
+
+/** What a clock must carry to be banded on its spread. */
+export interface SpreadClock {
+  readonly p50: number;
+  readonly p90: number;
+  readonly iqrMs: number;
+  readonly samples: number;
+}
+
+/** One side of a gated row, reduced to what a verdict needs. */
+export interface GatedSide {
+  readonly valueMs: number;
+  /** Zero where the row bands on its floor alone. */
+  readonly standardErrorMs: number;
+  readonly p10: number | null;
+  readonly p90: number | null;
+}
+
+/** How one kind of row is judged, read by `--baseline` and `--against-pin`
+ *  alike, so the two gates cannot band it differently. */
+export interface RowJudgement<C> {
+  readonly metric: DwellMetric;
+  side(clock: C): GatedSide;
+  floorMs(baseline: GatedSide): number;
+}
+
+export const CPU_JUDGEMENT: RowJudgement<SpreadClock> = {
+  metric: 'cpu-p50',
+  side: (c) => ({ valueMs: c.p50, standardErrorMs: medianStandardErrorMs(c), p10: null, p90: c.p90 }),
+  floorMs: (baseline) => dwellFloorMs(baseline.valueMs),
+};
+
+export const THROUGHPUT_JUDGEMENT: RowJudgement<SpreadClock & { readonly meanMs: number }> = {
+  metric: 'throughput-mean',
+  side: (c) => ({ valueMs: c.meanMs, standardErrorMs: medianStandardErrorMs(c), p10: null, p90: c.p90 }),
+  floorMs: (baseline) => dwellFloorMs(baseline.valueMs),
+};
+
+/** The frame a CPU-bound test divides by; undefined off GPU pacing. */
+export function throughputFrameMs(
+  dwell: { readonly deltasMs: readonly number[]; readonly throughputStats?: DwellSummary | null },
+  pacing: FramePacing,
+): number | undefined {
+  if (pacing !== 'gpu') return undefined;
+  throughputClock(dwell);
+  return throughputMs(dwell.deltasMs);
 }
 
 /**

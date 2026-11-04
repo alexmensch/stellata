@@ -14,7 +14,6 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "util"))
 
 import refresh_lib as rl  # noqa: E402
 from paths import REPO_ROOT  # noqa: E402
-import simbad  # noqa: E402
 from simbad import coverage, inputs, query, request, tsv, union  # noqa: E402
 from simbad.specs import (  # noqa: E402
     OID, MAIN_ID, SP_TYPE, SP_QUAL, SP_BIBCODE, OTYPE, GAIA_DR3, GJ, HIP, TYC,
@@ -63,13 +62,6 @@ def collect_oid_requests(client: rl.TapClient) -> request.OidRequest:
 
 
 def main() -> None:
-    force = "--force" in sys.argv
-
-    sources = [MEMBERSHIP, WDS_XIDS_TSV, Path(__file__), *simbad.source_files()]
-    if not force and rl.is_up_to_date(OUT, sources):
-        print(f"{OUT.relative_to(ROOT)} up to date — skipping (use --force to rebuild)")
-        return
-
     start = time.time()
     client = rl.simbad_client()
 
@@ -132,5 +124,15 @@ def main() -> None:
     )
 
 
+def describe() -> dict:
+    keys = inputs.membership_request_keys(MEMBERSHIP)
+    wds_oids = [f"oid:{oid}" for oid in inputs.iter_wds_xids_oids(WDS_XIDS_TSV)]
+    return query.describe_pull(
+        basic=BASIC_COLUMNS, idents=IDENT_LOOKUPS,
+        request=[*keys.request_lines(), *wds_oids],
+        request_from=[MEMBERSHIP, WDS_XIDS_TSV],
+    )
+
+
 if __name__ == "__main__":
-    main()
+    rl.pull_main(main, describe)

@@ -4,7 +4,7 @@ import { relative } from 'node:path';
 import { gunzipSync } from 'node:zlib';
 
 import { identityRows } from '../lineage/identity-pure';
-import { LINEAGE_LAYOUT, stageFile } from '../lineage/lineage-io';
+import { LINEAGE_LAYOUT, stageFile } from '../lineage/lineage-layout-pure';
 import { lineageLines } from '../lineage/lineage-row-pure';
 import { REPO_ROOT } from '../../util/paths';
 import { defineSource } from '../../util/sources/source';

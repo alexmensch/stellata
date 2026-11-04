@@ -256,7 +256,7 @@ modelled, and why a culled host correctly reports zero are
 ## Physical-luminance emission
 
 Both layers emit into the scene-wide HDR unit
-([Unit](../../hdr/emission/README.md#unit--what-an-emitting-layer-writes)) — the glare through the point-source rule, the mesh through the
+([Unit](../../../astro-core/emission/README.md#unit--what-an-emitting-layer-writes)) — the glare through the point-source rule, the mesh through the
 surface-brightness rule, and past 1 px the two are the same quantity, so
 the resolve step is continuous by construction. The mesh anchor, the two
 disc means that divide out, and the colour bookkeeping that keeps a

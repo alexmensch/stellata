@@ -3,7 +3,6 @@ import { FilterController, type FilterUniforms } from './filter-controller';
 import {
   arcsecPerPx,
   DEFAULT_FILTER,
-  INSTRUMENTS,
   STAR_K_MULTIPLIER_DEFAULT,
   STAR_K_MULTIPLIER_MAX,
   STAR_K_MULTIPLIER_MIN,
@@ -16,6 +15,7 @@ import {
   starPxSizes,
   TARGET_PX,
 } from './filter-state';
+import { INSTRUMENTS } from '../../astro-core/instruments';
 import { SCENE_ELEMENT_IDS, visibleSet } from '../scene/declutter/scene-elements';
 import { SceneDeclutter } from '../scene/declutter/scene-declutter';
 

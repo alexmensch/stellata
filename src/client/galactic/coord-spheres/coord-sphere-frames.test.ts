@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import { unitVectorFromRaDec } from '../../util/equatorial-basis';
-import { GALACTIC_NORTH_POLE_ICRS, galacticDirToIcrs } from '../galactic-coords';
+import { unitVectorFromRaDec } from '../../../astro-core/equatorial-basis';
+import { GALACTIC_NORTH_POLE_ICRS, galacticDirToIcrs } from '../../../astro-core/galactic-coords';
 import type { CoordSphereFrame, CoordSphereSpec, DrawnCoordSphereFrame } from './coord-sphere';
 import {
   COORD_SPHERE_FRAMES,

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { eclipticToIcrs, icrsToEcliptic, type Vec3 } from './ecliptic-frame';
-import { J2000_OBLIQUITY_RAD } from './astronomy-constants';
+import { J2000_OBLIQUITY_RAD } from '../../astro-core/astronomy-constants';
 
 const SAMPLES: Vec3[] = [
   { x: 1, y: 0, z: 0 },

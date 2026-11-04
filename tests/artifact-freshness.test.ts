@@ -16,13 +16,20 @@ import { describe, it, expect } from 'vitest';
 
 import { REPO_ROOT } from '../scripts/util/paths';
 import { isReadable } from '../scripts/util/sources/source';
-import { changedSince, readStamp, stampPath } from '../scripts/util/build-stamp';
-import { DEFAULT_CATALOG_MANIFEST } from '../scripts/catalog/catalog-lookup';
+import { changedSince, readStamp } from '../scripts/util/build-stamp';
+import { stampPath } from '../scripts/util/stamp-path-pure';
+import { DEFAULT_CATALOG_MANIFEST } from '../scripts/catalog/catalog-paths-pure';
 import { MULTIPLES_TSV } from '../scripts/binaries/multiples-tsv';
+import { STEPS } from '../scripts/pipeline/step-table/steps';
 
-const BINARIES_BIN = resolve(REPO_ROOT, 'public/binaries.bin');
-const BINARIES_BIN_STAMP = stampPath('binaries-bin');
-const REBUILD = 'pnpm run build:binaries-runtime';
+const RUNTIME_STEP = 'build:binaries-runtime';
+const runtime = STEPS.steps.find((s) => s.name === RUNTIME_STEP);
+if (runtime?.kind !== 'build' || runtime.language !== 'python' || runtime.outputs.length !== 1) {
+  throw new Error(`${RUNTIME_STEP} is not a one-output Python build step in steps.ts`);
+}
+const BINARIES_BIN = resolve(REPO_ROOT, runtime.outputs[0]);
+const BINARIES_BIN_STAMP = stampPath(RUNTIME_STEP);
+const REBUILD = `pnpm run ${RUNTIME_STEP}`;
 
 const catalogBuilt = existsSync(DEFAULT_CATALOG_MANIFEST);
 const skip = !catalogBuilt || !isReadable(MULTIPLES_TSV);

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { J2000_JD } from '../util/astronomy-constants';
+import { J2000_JD } from '../../astro-core/astronomy-constants';
 import {
   FLAG_HAS_ORBIT,
   FLAG_HAS_INCLINATION,

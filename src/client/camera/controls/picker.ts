@@ -7,7 +7,7 @@ import type { FilterState } from '../../filters/filter-state';
 import type { TargetKind } from '../focus/focus-target';
 import type { KindPick } from '../../kinds/kind-module';
 import { DCAM_LOG_FLOOR_PC } from '../timing';
-import { apparentMagnitude } from '../../solar-system/perceptual-magnitude';
+import { apparentMagnitude } from '../../../astro-core/perceptual-magnitude';
 import { projectToScreenInto } from '../../overlays/overlay-project';
 import {
   PICK_THRESHOLD_PX,

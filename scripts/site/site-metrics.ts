@@ -5,10 +5,10 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { selectAll } from 'hast-util-select';
 
-import { catalogChunkFilename, readCatalogHeader } from '../catalog/record/catalog-pure.ts';
+import { catalogChunkFilename, readCatalogHeader } from '../../src/catalog-format/record/catalog-pure.ts';
 import type { IndexEntry } from '../util/citation-index-pure.ts';
 import { parseHtml } from '../util/parse-html.ts';
-import { PACKAGE_JSON, REPO_ROOT } from '../util/paths.ts';
+import { PACKAGE_JSON, REPO_ROOT, publicFile } from '../util/paths.ts';
 import { CITATION_INDEX } from './citation-index-source.ts';
 
 const APP_DOC = 'src/client/app/index.html';
@@ -26,7 +26,7 @@ function readIfPresent(path: string): Buffer | null {
 
 export function catalogueRecordCount(): number {
   return recordCountOf(
-    readIfPresent(resolve(REPO_ROOT, 'public', catalogChunkFilename(0))),
+    readIfPresent(publicFile(catalogChunkFilename(0))),
     () => readFileSync(resolve(REPO_ROOT, COUNT_SNAPSHOT), 'utf8'),
   );
 }

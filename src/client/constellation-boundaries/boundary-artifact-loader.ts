@@ -4,16 +4,21 @@
 import {
   validateRegionGridWire,
   type BoundaryArtifact,
-} from '../../../scripts/catalog/boundaries/boundaries-artifact-pure';
+} from '../../catalog-format/boundaries/boundaries-artifact-pure';
 import {
   FADE_END_MISPLACED_PCT,
   FADE_START_MISPLACED_PCT,
 } from './boundary-layer-pure';
-import { FULL_SPHERE_SQUARE_DEG, IAU_REGION_COUNT } from './iau-geometry/iau-boundaries-pure';
+import { FULL_SPHERE_SQUARE_DEG, IAU_REGION_COUNT } from '../../astro-core/iau-geometry/iau-boundaries-pure';
+import { PUBLIC_FILES } from '../../catalog-format/public-artifacts/public-artifacts';
 
 /** Slack on the sphere-closure check. Each of the 89 areas is quantised to
  *  `AREA_DECIMALS = 2`, so the sum carries at most 89 × 0.005 of rounding. */
 const AREA_CLOSURE_TOLERANCE_SQUARE_DEG = 1;
+
+function artifactError(detail: string): Error {
+  return new Error(`${PUBLIC_FILES.boundaries}: ${detail}`);
+}
 
 /**
  * Narrow a parsed wire object to `BoundaryArtifact`, throwing on anything the
@@ -22,31 +27,31 @@ const AREA_CLOSURE_TOLERANCE_SQUARE_DEG = 1;
  * `frame` is the load-bearing check: the arcs are *drawn* at equinox B1875
  * but the directions are *emitted* in ICRS, and B1875 directions rendered as
  * if they were ICRS resolve to a plausible-looking sky sitting ~1.4° off
- * every star (iau-geometry/README.md#b1875).
+ * every star (/src/astro-core/iau-geometry/README.md#b1875).
  */
 export function validateBoundaryArtifact(raw: unknown): BoundaryArtifact {
   const artifact = raw as BoundaryArtifact;
   if (artifact?.frame !== 'ICRS') {
-    throw new Error(
-      `constellation-boundaries.json: frame is ${String(artifact?.frame)}, expected ICRS`,
+    throw artifactError(
+      `frame is ${String(artifact?.frame)}, expected ICRS`,
     );
   }
   if (!Array.isArray(artifact.segments) || artifact.segments.length === 0) {
-    throw new Error('constellation-boundaries.json: no boundary segments');
+    throw artifactError('no boundary segments');
   }
   // One label per region, not "at least one": a short list is a partial sky
   // whose missing names read as a declutter decision rather than a stale file.
   if (!Array.isArray(artifact.labels) || artifact.labels.length !== IAU_REGION_COUNT) {
-    throw new Error(
-      `constellation-boundaries.json: ${Array.isArray(artifact.labels) ? artifact.labels.length : 'no'} `
+    throw artifactError(
+      `${Array.isArray(artifact.labels) ? artifact.labels.length : 'no'} `
       + `label anchors for ${IAU_REGION_COUNT} regions`,
     );
   }
   let areaSquareDeg = 0;
   for (const label of artifact.labels) {
     if (!label.c || !Array.isArray(label.d) || label.d.length !== 3) {
-      throw new Error(
-        `constellation-boundaries.json: label ${String(label?.c)} carries no direction`,
+      throw artifactError(
+        `label ${String(label?.c)} carries no direction`,
       );
     }
     areaSquareDeg += label.a;
@@ -57,36 +62,36 @@ export function validateBoundaryArtifact(raw: unknown): BoundaryArtifact {
   // asserted rather than assumed: a truncated or reordered region set arrives
   // with the right label count and the wrong sky.
   if (Math.abs(areaSquareDeg - FULL_SPHERE_SQUARE_DEG) > AREA_CLOSURE_TOLERANCE_SQUARE_DEG) {
-    throw new Error(
-      `constellation-boundaries.json: label areas sum to ${areaSquareDeg.toFixed(2)} `
+    throw artifactError(
+      `label areas sum to ${areaSquareDeg.toFixed(2)} `
       + `sq deg, expected the full sphere (${FULL_SPHERE_SQUARE_DEG.toFixed(2)})`,
     );
   }
   try {
     validateRegionGridWire(artifact.regions);
   } catch (err) {
-    throw new Error(`constellation-boundaries.json: ${(err as Error).message}`);
+    throw artifactError((err as Error).message);
   }
   const fade = artifact.fade;
   if (!Array.isArray(fade?.magLimits) || fade.magLimits.length === 0) {
-    throw new Error('constellation-boundaries.json: fade table has no magnitude rows');
+    throw artifactError('fade table has no magnitude rows');
   }
   // resolveBoundaryFadeWindowPc brackets a magnitude against this column by
   // walking it forwards; out of order it silently returns the wrong window.
   for (let i = 1; i < fade.magLimits.length; i++) {
     if (fade.magLimits[i] <= fade.magLimits[i - 1]) {
-      throw new Error(
-        `constellation-boundaries.json: fade magLimits must ascend (row ${i} is `
+      throw artifactError(
+        `fade magLimits must ascend (row ${i} is `
         + `${fade.magLimits[i]} after ${fade.magLimits[i - 1]})`,
       );
     }
   }
   if (!Array.isArray(fade.quantilePcts) || fade.quantilePcts.length === 0) {
-    throw new Error('constellation-boundaries.json: fade table has no quantile columns');
+    throw artifactError('fade table has no quantile columns');
   }
   if (!Array.isArray(fade.offsetsPc) || fade.offsetsPc.length !== fade.magLimits.length) {
-    throw new Error(
-      `constellation-boundaries.json: fade table has ${fade.magLimits.length} magnitude rows `
+    throw artifactError(
+      `fade table has ${fade.magLimits.length} magnitude rows `
       + `but ${Array.isArray(fade.offsetsPc) ? fade.offsetsPc.length : 'no'} offset rows`,
     );
   }
@@ -96,8 +101,8 @@ export function validateBoundaryArtifact(raw: unknown): BoundaryArtifact {
   for (let i = 0; i < fade.offsetsPc.length; i++) {
     const row = fade.offsetsPc[i];
     if (!Array.isArray(row) || row.length !== fade.quantilePcts.length) {
-      throw new Error(
-        `constellation-boundaries.json: fade row ${i} carries `
+      throw artifactError(
+        `fade row ${i} carries `
         + `${Array.isArray(row) ? row.length : 'no'} offsets for `
         + `${fade.quantilePcts.length} quantile columns`,
       );
@@ -105,8 +110,8 @@ export function validateBoundaryArtifact(raw: unknown): BoundaryArtifact {
   }
   for (const pct of [FADE_START_MISPLACED_PCT, FADE_END_MISPLACED_PCT]) {
     if (!fade.quantilePcts.includes(pct)) {
-      throw new Error(
-        `constellation-boundaries.json: fade table carries no ${pct}% quantile `
+      throw artifactError(
+        `fade table carries no ${pct}% quantile `
         + `(has ${fade.quantilePcts.join(', ')})`,
       );
     }

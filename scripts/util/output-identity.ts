@@ -4,18 +4,19 @@ import { execFileSync } from 'node:child_process';
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join, relative, resolve } from 'node:path';
 
-import { STAMP_DIR, fileHashes, readStamp, type FileHashes } from './build-stamp';
+import { fileHashes, readStamp, type FileHashes } from './build-stamp';
+import { STAMP_DIR } from './stamp-path-pure';
 import { diffOutputHashes, formatDifference, isIdentical } from './output-identity-pure';
-import { REPO_ROOT } from './paths';
+import { PUBLIC_DIR, REPO_ROOT } from './paths';
 
 const SNAPSHOT = resolve(REPO_ROOT, 'build/output-identity.json');
 
-const PUBLIC_DIR = resolve(REPO_ROOT, 'public');
+const PUBLIC_ROOT = resolve(REPO_ROOT, PUBLIC_DIR);
 
 function rebuildFromScratch(): void {
   const sh = (cmd: string, args: string[]) =>
     execFileSync(cmd, args, { cwd: REPO_ROOT, stdio: 'inherit' });
-  sh('git', ['clean', '-fdqX', '--', 'public']);
+  sh('git', ['clean', '-fdqX', '--', PUBLIC_DIR]);
   rmSync(STAMP_DIR, { recursive: true, force: true });
   sh('pnpm', ['run', 'build:data']);
 }
@@ -31,7 +32,7 @@ function stampedOutputs(): string[] {
 }
 
 function publicFiles(): string[] {
-  return readdirSync(PUBLIC_DIR, { recursive: true, withFileTypes: true })
+  return readdirSync(PUBLIC_ROOT, { recursive: true, withFileTypes: true })
     .filter((e) => e.isFile())
     .map((e) => relative(REPO_ROOT, join(e.parentPath, e.name)));
 }

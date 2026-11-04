@@ -4,9 +4,10 @@ import { defineArtifact, nullableCell } from '../../util/tsv/artifact-pure';
 import {
   DESIGNATION_KINDS, DESIGNATION_SOURCES, compareDesignationRows, type DesignationRow,
 } from './wgsn-tables-pure';
+import { WGSN_DESIGNATIONS_FILE } from './wgsn-tables-outputs';
 
 export const WGSN_DESIGNATIONS = defineArtifact({
-  file: 'data/iau-wgsn/wgsn_designations.tsv',
+  file: WGSN_DESIGNATIONS_FILE,
   columns: [
     'kind', 'letter', 'sup', 'num', 'dc', 'half', 'component', 'hip', 'hr', 'hd', 'source',
   ] as const,

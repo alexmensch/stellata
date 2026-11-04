@@ -223,7 +223,7 @@ which refuses that mint and six more.
 
 ### What that costs on the wire
 
-`RECORD_SIZE` is 100 bytes (`../../record/README.md`), so the
+`RECORD_SIZE` is 100 bytes (`../../../../src/catalog-format/record/README.md`), so the
 record array is linear in the count. Measured on both builds rather than scaled
 from a ratio:
 
@@ -252,7 +252,7 @@ decision.
 
 **First paint does not pay any of it.** The whole catalogue on the wire moves
 29.8 → 66.9 MB gz, 2.24×, but the loader paints from the first transport chunk
-and fills behind it ([On-disk transport chunking](../../record/README.md#on-disk-transport-chunking),
+and fills behind it ([On-disk transport chunking](../../../../src/catalog-format/record/README.md#on-disk-transport-chunking),
 [Progressive catalog load](../../../../src/client/loaders/README.md#progressive-catalog-load)). That
 chunk is a fixed byte budget, so it holds the same <!-- count:build-catalog/recordsInFirstChunk -->10,412<!-- /count --> records to apparent
 V 6.62 at either depth: the naked-eye sky arrives at the speed it always did

@@ -3,16 +3,16 @@
 
 import type {
   IauConstellationLookup,
-} from '../../../src/client/constellation-boundaries/iau-geometry/iau-boundaries-pure';
-import { raDecFromUnitVector } from '../../../src/client/util/equatorial-basis';
-import { absoluteToApparentMagnitude } from '../record/catalog-pure';
+} from '../../../src/astro-core/iau-geometry/iau-boundaries-pure';
+import { raDecFromUnitVector } from '../../../src/astro-core/equatorial-basis';
+import { absoluteToApparentMagnitude } from '../record/record-build-pure';
 import {
   buildBoundaryArtifact,
   countDirections,
   misplacementOffsetPc,
   type BoundaryArtifact,
   type FadeSample,
-} from './boundaries-artifact-pure';
+} from '../../../src/catalog-format/boundaries/boundaries-artifact-pure';
 
 /** The per-record inputs the fade table needs: where the star is and how
  *  bright it looks from Sol. */

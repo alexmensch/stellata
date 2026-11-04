@@ -5,7 +5,7 @@ import { registryPaths } from './registry-outputs';
 import {
   CATALOG_PARTITION, partitionOf, REGISTRY_PARTITIONS, registryHint, type RegistryPartition,
 } from './registry-partitions-pure';
-import { SIBLING_ARTIFACTS } from './sibling-artifacts';
+import { SIBLING_ARTIFACTS } from './sibling-artifacts-pure';
 import {
   registryAppendOnly, unionLedger, unionLedgerLines, validateRegistry, type PartitionLines, type PartitionRows,
 } from './registry-pure';
