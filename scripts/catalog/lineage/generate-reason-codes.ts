@@ -6,12 +6,12 @@ import { packageVersion } from '../../util/git-provenance';
 import { LINEAGE_STAGES } from './lineage-stages';
 import { reasonCodeList } from './reason-code-list-pure';
 import { REASON_CODES_OUTPUTS } from './reason-codes-outputs';
-import { REASON_CODES, REASON_CODES_FILE } from './reason-codes-tsv';
+import { REASON_CODES } from './reason-codes-tsv';
 
 function main(): void {
   const entries = reasonCodeList(LINEAGE_STAGES.map((s) => s.codes), readArtifact(REASON_CODES), packageVersion());
   emitArtifacts({ outputs: REASON_CODES_OUTPUTS, files: { codes: REASON_CODES.serialize(entries) } });
-  console.log(`wrote ${entries.length} codes to ${REASON_CODES_FILE}`);
+  console.log(`wrote ${entries.length} codes to ${REASON_CODES.file}`);
 }
 
 runStep(main);

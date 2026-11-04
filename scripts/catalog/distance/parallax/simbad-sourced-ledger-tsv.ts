@@ -3,10 +3,7 @@
 // and ../../validate/README.md for the validator that reads it.
 
 import { defineArtifact, nullableCell } from '../../../util/tsv/artifact-pure';
-
-/** Where the exclusion list is committed. */
-export const SIMBAD_SOURCED_DISTANCES_FILE =
-  'data/athyg/simbad_sourced_distances.tsv';
+import { DATA_FILES } from '../../../../src/catalog-format/pipeline-outputs/data-files';
 
 /** One record on the `simbad_plx` tier, by the two identifiers a SIMBAD-based
  *  validator joins on. Both are emitted where the record carries both, since
@@ -17,7 +14,7 @@ export interface SimbadSourcedDistance {
 }
 
 export const SIMBAD_SOURCED_DISTANCES = defineArtifact({
-  file: SIMBAD_SOURCED_DISTANCES_FILE,
+  file: DATA_FILES.simbadSourcedDistances,
   columns: ['gaia_source_id', 'hip'] as const,
   hint: 'Re-run `pnpm run build:catalog`.',
   order: 'by-line',

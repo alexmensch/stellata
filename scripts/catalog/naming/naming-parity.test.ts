@@ -20,10 +20,10 @@ import {
 } from './naming-parity-pure';
 import { NAMING_DUPLICATES } from './naming-duplicates-tsv';
 import { NAMING_PARITY } from './naming-parity-tsv';
-import { MEMBERSHIP_MANIFEST, MEMBERSHIP_MANIFEST_FILE } from '../membership/membership-manifest-tsv';
+import { MEMBERSHIP_MANIFEST } from '../membership/membership-manifest-tsv';
 
 const WGSN_NAMES_PATH = resolve(REPO_ROOT, WGSN_NAMES.file);
-const MANIFEST = resolve(REPO_ROOT, MEMBERSHIP_MANIFEST_FILE);
+const MANIFEST = resolve(REPO_ROOT, MEMBERSHIP_MANIFEST.file);
 
 /** Published names reaching no record: the wgsnFaints hosts whose only key
  *  was a survey id the normaliser drops (they name stars outside the

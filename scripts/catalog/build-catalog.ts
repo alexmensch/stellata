@@ -118,7 +118,6 @@ import {
   PLACEMENT_CODES, PLACEMENT_INVARIANTS, PLACEMENT_LINEAGE, PLACEMENT_LINEAGE_BUDGET, parkedLedgerView, placementLineageLines,
 } from './distance/placement-lineage-pure';
 import {
-  SIMBAD_SOURCED_DISTANCES_FILE,
   SIMBAD_SOURCED_DISTANCES,
 } from './distance/parallax/simbad-sourced-ledger-tsv';
 import { loadReadStarsInputs } from './parse/read-stars-inputs';
@@ -216,7 +215,7 @@ function simbadSourcedDistancesTsv(stars: readonly Star[]): string {
     .filter((s) => s.distVia === 'simbad_plx')
     .map((s) => ({ gaiaSourceId: s.gaiaSourceId, hip: s.hip }));
   console.log(
-    `  SIMBAD-sourced distances: ${rows.length} → ${SIMBAD_SOURCED_DISTANCES_FILE}`,
+    `  SIMBAD-sourced distances: ${rows.length} → ${SIMBAD_SOURCED_DISTANCES.file}`,
   );
   return SIMBAD_SOURCED_DISTANCES.serialize(rows);
 }

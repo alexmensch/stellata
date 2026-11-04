@@ -2,8 +2,7 @@
 
 import { byText, defineArtifact } from '../../../util/tsv/artifact-pure';
 import { LABEL_DISPOSITIONS, LABEL_FIELDS, type LabelFlip } from './label-merge-pure';
-
-export const LABEL_FLIPS_FILE = 'data/classic-ids/label_flips.tsv';
+import { DATA_FILES } from '../../../../src/catalog-format/pipeline-outputs/data-files';
 
 const rank = (flip: LabelFlip): number => LABEL_FIELDS.indexOf(flip.field);
 
@@ -13,7 +12,7 @@ const TIE_BREAKS = (['sourceId', 'disposition', 'applied', 'label', 'spine', 'ov
 /** Field-major, then source_id, so a diff reads as "which rows changed
  *  disposition", not "which order the walk ran in". */
 export const LABEL_FLIPS = defineArtifact({
-  file: LABEL_FLIPS_FILE,
+  file: DATA_FILES.labelFlips,
   columns: ['gaia_source_id', 'label', 'field', 'spine', 'overlay', 'applied', 'disposition'] as const,
   hint: 'Re-run `pnpm run build:membership`.',
   order: (a: LabelFlip, b: LabelFlip) => rank(a) - rank(b)

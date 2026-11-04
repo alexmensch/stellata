@@ -19,6 +19,7 @@ const DATA_PATH_SPELLERS = [
   'scripts/local-group/local-group-inputs.test.ts',
   'scripts/pipeline/pipeline-tree.ts',
   'scripts/pipeline/step-table/steps.ts',
+  'src/catalog-format/pipeline-outputs/data-files.ts',
   'tests/citation-index.test.ts',
   'tests/doc-pointer-resolution.test.ts',
   'tests/paper-store-link.test.ts',

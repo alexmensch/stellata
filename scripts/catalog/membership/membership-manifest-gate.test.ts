@@ -47,24 +47,23 @@ import {
   type MembershipCounts,
   type SpineMatch,
 } from './membership-manifest-pure';
-import { ADDITIONS_LEDGER_FILE, ADDITIONS_LEDGER } from './additions-ledger-tsv';
+import { ADDITIONS_LEDGER } from './additions-ledger-tsv';
 import { ADDITION_REASONS, COMPONENT_REASON_PREFIX } from './ledger-rows-pure';
-import { BINDING_REVIEW_FILE, BINDING_REVIEW } from './binding-review-tsv';
+import { BINDING_REVIEW } from './binding-review-tsv';
 import { bindingReviewKey } from './ledger-rows-pure';
-import { LABEL_DROPS_FILE, LABEL_DROPS } from './label-drops-tsv';
+import { LABEL_DROPS } from './label-drops-tsv';
 import {
   MEMBERSHIP_MANIFEST,
-  MEMBERSHIP_MANIFEST_FILE,
   manifestDesignations,
   type ManifestRecord,
 } from './membership-manifest-tsv';
 
 const SPINE_PATH = resolve(REPO_ROOT, INHERITED_SPINE.file);
-const MANIFEST_PATH = resolve(REPO_ROOT, MEMBERSHIP_MANIFEST_FILE);
-const LEDGER_PATH = resolve(REPO_ROOT, ADDITIONS_LEDGER_FILE);
+const MANIFEST_PATH = resolve(REPO_ROOT, MEMBERSHIP_MANIFEST.file);
+const LEDGER_PATH = resolve(REPO_ROOT, ADDITIONS_LEDGER.file);
 const REQUEST_PATH = ASTROMETRY_REQUEST_OUTPUTS.files.request;
 
-const queue = BINDING_REVIEW.parse(readFileSync(resolve(REPO_ROOT, BINDING_REVIEW_FILE), 'utf-8'));
+const queue = BINDING_REVIEW.parse(readFileSync(resolve(REPO_ROOT, BINDING_REVIEW.file), 'utf-8'));
 const dispositions = BINDING_REVIEW_DISPOSITIONS.read();
 
 const inputsReadable = [SPINE_PATH, MANIFEST_PATH, LEDGER_PATH].every(lfsContentReadable);
@@ -296,7 +295,7 @@ describe.skipIf(!inputsReadable)('membership manifest ↔ inherited spine', () =
   // Label parity (/docs/catalog-driver.md#62-label-parity): every spine label the manifest leaves out is on the label ledger,
   // keyed on the manifest row it left, under a closed reason.
   it('ledgers every dropped spine label onto its manifest row', () => {
-    const drops = LABEL_DROPS.parse(readFileSync(resolve(REPO_ROOT, LABEL_DROPS_FILE), 'utf-8'));
+    const drops = LABEL_DROPS.parse(readFileSync(resolve(REPO_ROOT, LABEL_DROPS.file), 'utf-8'));
     const manifestKeys = new Set(manifest.map(manifestKey));
     for (const d of drops) {
       expect(manifestKeys.has(parkedRecordKey(d)), `label drop keys a manifest row: ${parkedRecordKey(d)}`).toBe(true);
@@ -314,7 +313,7 @@ describe.skipIf(!inputsReadable)('membership manifest ↔ inherited spine', () =
   // This is the rule: whatever keys the row now already outranked the cell it
   // lost, so the drop cannot have moved a canonical key.
   it('drops no label that was keying its record', () => {
-    const drops = LABEL_DROPS.parse(readFileSync(resolve(REPO_ROOT, LABEL_DROPS_FILE), 'utf-8'));
+    const drops = LABEL_DROPS.parse(readFileSync(resolve(REPO_ROOT, LABEL_DROPS.file), 'utf-8'));
     const byKey = new Map(manifest.map((r) => [manifestKey(r), r]));
     const moved: string[] = [];
     for (const d of drops) {

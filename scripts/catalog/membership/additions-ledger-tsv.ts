@@ -8,8 +8,7 @@ import {
   LEDGER_COLUMNS,
   type AdditionLedgerRow,
 } from './ledger-rows-pure';
-
-export const ADDITIONS_LEDGER_FILE = 'data/membership/additions-ledger.tsv';
+import { DATA_FILES } from '../../../src/catalog-format/pipeline-outputs/data-files';
 
 function isLedgerReason(reason: string): boolean {
   if (reason.startsWith(COMPONENT_REASON_PREFIX)) {
@@ -19,7 +18,7 @@ function isLedgerReason(reason: string): boolean {
 }
 
 export const ADDITIONS_LEDGER = defineArtifact({
-  file: ADDITIONS_LEDGER_FILE,
+  file: DATA_FILES.additionsLedger,
   columns: LEDGER_COLUMNS,
   hint: 'Re-run `pnpm run build:membership`.',
   order: 'by-line',
