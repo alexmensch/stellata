@@ -23,7 +23,7 @@ scripts/perf/pins/
 ## Taking one
 
 `pnpm run perf -- --mode dwell --scenario all --cooldown-ms 120000
---frames 960 --json .perf-runs/<date>/pin.json --pin scripts/perf/pins/<slug>.json`
+--frames 960 --json .perf-runs/<date>/pin.json.gz --pin scripts/perf/pins/<slug>.json`
 
 Per `scenario|backend` the pin holds wall p50 / p90 / iqr / n /
 vsyncClamped, the GPU-stream p50 where it was sound and the compute-stream
@@ -57,7 +57,7 @@ already — the arm protected the machine's idleness, which is spent — so
 the pin is written from it offline:
 
 ```
-pnpm run perf:pin -- <run.json>... [--pin scripts/perf/pins/<slug>.json]
+pnpm run perf:pin -- <run.json.gz>... [--pin scripts/perf/pins/<slug>.json]
                      [--accept <scenario>|<backend>:<bead>]... [--dry-run]
 ```
 
@@ -304,8 +304,8 @@ a pin run reads `steady`.
   vantage and **not** waiting on a fix — under rAF pacing, where all of
   that was measured. GPU-paced on the M6, lg's throughput mean reads 4.033 /
   4.018 / 4.024 / 4.012 ms over four cold full sweeps, every quarter inside
-  0.08 ms of its run's others and every run steady (`8cg-49-42-gpu-all-{3,4}.json`,
-  `.perf-runs/2026-11-04/8cg-49-38-{m6-pin,m6-check}.json`) — the stability the other
+  0.08 ms of its run's others and every run steady (`8cg-49-42-gpu-all-{3,4}.json.gz`,
+  `.perf-runs/2026-11-04/8cg-49-38-{m6-pin,m6-check}.json.gz`) — the stability the other
   four vantages show, so the stand-down does not reach it. On an rAF-paced row the band
   stands down, and so does the **state guard**: a trending lg is that same wander read across the quarters,
   not a verdict on the run, and since any refused row refuses the whole pin,

@@ -72,8 +72,8 @@ lg      1.1 / 1.1 / 1.1 / 1.1               0.0    0.1
 The population is every GPU-paced M6 dwell a gate would compare — 960
 frames, 4.096 Mpx, canon position, throughput steady — and
 `floors.test.ts` derives both tables' constants from the files themselves:
-`.perf-runs/2026-11-03/8cg-49-42-gpu-all-{3,4}.json` (02cf403f, a dirty
-tree) and `.perf-runs/2026-11-04/8cg-49-38-{m6-pin,tier1-1,tier1-2,m6-check}.json`
+`.perf-runs/2026-11-03/8cg-49-42-gpu-all-{3,4}.json.gz` (02cf403f, a dirty
+tree) and `.perf-runs/2026-11-04/8cg-49-38-{m6-pin,tier1-1,tier1-2,m6-check}.json.gz`
 (1b0a6a68 to feb31d8e, clean; no frame-path code moves across that range),
 the two Tier 1 runs visiting mw120 and sol alone. A run added to the
 population is added to that test's list.

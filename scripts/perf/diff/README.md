@@ -121,7 +121,7 @@ says there are two classes at all: `../dwell/README.md`.
 buffers or adapters produce a table that looks like a comparison and is not,
 so an incomparable pair is named and skipped rather than dropped silently:
 a differing adapter string refuses the whole run (a differing schema never
-reaches the diff — [JSON output](../README.md#json-output)); a differing method or
+reaches the diff — [JSON output](../run-file/README.md#json-output)); a differing method or
 mode, a buffer more than 1 % apart, a **record count** more than 1 % apart or
 absent on either side (a row priced against a different catalogue is not a
 comparison), a **run position** that differs or is absent on either side

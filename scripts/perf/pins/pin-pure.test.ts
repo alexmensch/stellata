@@ -128,7 +128,7 @@ const EARTH_NO_STREAM = scenario('earth', 'webgpu', dwell(stats(16.0, { iqrMs: 2
 const lgAt = (gpuP50: number) => scenario('lg', 'webgpu', dwell(stats(16.7), stats(gpuP50)));
 const LG_GPU = lgAt(11.891);
 const LG_TRENDED = scenario('lg', 'webgpu', dwell(stats(16.7), trending(12.5)));
-const RUN = '.perf-runs/2026-09-05/pin.json';
+const RUN = '.perf-runs/2026-09-05/pin.json.gz';
 const SOURCE = { version: '3.44.3', accepted: {} };
 
 const runOf = (perf: PerfFile, sourceRun = RUN) => ({ file: perf, sourceRun });
@@ -300,8 +300,8 @@ describe('pinFromRuns — several runs of one commit', () => {
   const EARTH_TRENDED = scenario('earth', 'webgpu', dwell(stats(16.7), trending(12.8)));
   const MW120_TRENDED = scenario('mw120', 'webgpu', dwell(stats(16.7), trending(19.0)));
   const MW120_LATER = scenario('mw120', 'webgpu', dwell(stats(16.7), stats(19.4)));
-  const FIRST = '.perf-runs/2026-09-13/pin.json';
-  const SECOND = '.perf-runs/2026-09-13/pin-2.json';
+  const FIRST = '.perf-runs/2026-09-13/pin.json.gz';
+  const SECOND = '.perf-runs/2026-09-13/pin-2.json.gz';
 
   const OLDER = '2026-09-13T15:20:26.967Z';
   const NEWER = '2026-09-13T15:51:27.653Z';
