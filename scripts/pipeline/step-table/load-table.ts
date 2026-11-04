@@ -102,7 +102,7 @@ export async function importTimeProblems(
 async function topLevelAwaits(modules: readonly string[]): Promise<string[]> {
   try {
     await build({
-      entryPoints: modules.map(codePath),
+      entryPoints: modules.filter((m) => !m.endsWith('.json')).map(codePath),
       absWorkingDir: REPO_ROOT,
       platform: 'node',
       format: 'esm',
