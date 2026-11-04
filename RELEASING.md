@@ -422,8 +422,9 @@ an rAF-paced pin lg is recorded and never marked by the band —
 [Ungated vantages](scripts/perf/pins/README.md#ungated-vantages) carries the evidence and
 stellata-8cg.49.18 closed on it. A single floor wide enough to cover lg would have to be ~12 %, which
 would hide a 3.9 ms regression at mw50 — the gate would be a formality.
-**GPU-paced, lg holds still** (throughput 4.037 / 4.063 / 4.037 ms over
-three cold M6 runs), so a GPU-paced pin gates lg like the other four.
+**GPU-paced, lg holds still**
+([Ungated vantages](scripts/perf/pins/README.md#ungated-vantages)), so a GPU-paced pin gates
+lg like the other four.
 
 **What ungating lg costs on an rAF-paced pin, and what still watches it.**
 lg is the only canon vantage that sees the Local Group, so there a render
