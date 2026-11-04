@@ -33,8 +33,9 @@ The `release-notes-guard` workflow
 (`.github/workflows/release-notes-guard.yml`) fails any PR whose
 body lacks a non-empty `## Release notes` section (HTML comments are
 stripped before the check, so the empty template doesn't pass).
-Pure metadata PRs that attach `skip-version-bump` are exempt — they
-don't ship a release.
+PRs that take `skip-version-bump`
+([the live-app consumer test](#the-live-app-consumer-test)) are exempt —
+they don't ship a release.
 
 When the deploy workflow runs, it parses each releasing commit's
 squash subject for the merged PR number, fetches that body via `gh pr
