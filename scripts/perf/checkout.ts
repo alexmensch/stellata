@@ -3,7 +3,7 @@
 // and the pin's on-disk read / compare / write.
 
 import { execFileSync } from 'node:child_process';
-import { readFileSync, writeFileSync } from 'node:fs';
+import { writeFileSync } from 'node:fs';
 import { MAIN_REF, headState, mergeBaseWithMain } from '../util/git-provenance';
 import { dirname, resolve } from 'node:path';
 import {
@@ -14,6 +14,7 @@ import {
   type PinCommitState, type RenderPathDrift,
 } from './pins/provenance/provenance-pure';
 import { SchemaError, type GitProvenance, type PerfFile } from './schema';
+import { readJsonFile } from './run-file';
 import { formatPinTable } from './table-pure';
 
 export const REPO_ROOT = resolve(import.meta.dirname, '../..');
@@ -75,7 +76,7 @@ export function readJsonFlag<T>(
   parse: (value: unknown, source: string) => T,
 ): { value: T | null; error: string | null } {
   try {
-    return { value: parse(JSON.parse(readFileSync(path, 'utf-8')), path), error: null };
+    return { value: parse(readJsonFile(path), path), error: null };
   } catch (e) {
     const why = e instanceof SchemaError || e instanceof PinError || e instanceof SyntaxError
       ? (e as Error).message

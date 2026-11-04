@@ -24,9 +24,15 @@ scripts/perf/
                             canon vantages. Reads no clock and is not a cost
                             instrument (README.md#survivor-counts--the-one-entry-point-here-that-is-not-a-cost-instrument). The other
                             Playwright value import; not imported by a test.
-  checkout.ts               What run.ts and pin.ts share about the checkout:
+  checkout.ts (+ test)      What run.ts and pin.ts share about the checkout:
                             root, main checkout, git provenance, the pin's
-                            read / compare / write.
+                            read / compare / write, and readJsonFlag, the
+                            one read behind --baseline, --against-pin and
+                            perf:pin.
+  run-file.ts (+ test)      A run file's encoding: gzipped JSON at a
+                            `.json.gz` path, the suffix both instruments'
+                            --json refuse to go without, and the reader
+                            that takes gzip or plain JSON (a pin is plain).
   args.ts (+ test)          Flags → RunArgs, PinArgs and SurvivorsArgs
                             (node:util parseArgs), plus the mode-compatibility
                             check over the flags actually typed. All three

@@ -1,8 +1,8 @@
-import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { dwellPacing, preconditionRefusal, recordCountRefusal } from '../diff/diff-pure';
 import { CANON_POSITIONS } from '../pins/pin-pure';
 import { frameFloor } from '../dwell/dwell-pure';
+import { readJsonFile } from '../run-file';
 import { SCENARIO_NAMES, type ScenarioName } from '../scenarios';
 import { assertPerfFile, type ScenarioRecord } from '../schema';
 import {
@@ -21,7 +21,7 @@ const POPULATION_RUNS = [
 ];
 
 const POPULATION: readonly ScenarioRecord[] = POPULATION_RUNS
-  .flatMap((path) => assertPerfFile(JSON.parse(readFileSync(path, 'utf-8')), path).scenarios);
+  .flatMap((path) => assertPerfFile(readJsonFile(path), path).scenarios);
 
 function spanOf(name: ScenarioName, read: (r: ScenarioRecord) => number): number {
   const values = POPULATION.filter((r) => r.name === name).map(read);
