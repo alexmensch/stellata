@@ -117,13 +117,14 @@ async function mergeBase<F extends string, S extends string>(
 ): Promise<CheckoutBase | null> {
   const commit = mergeBaseWithMain();
   if (commit === null) return null;
-  const asked = headers.some((read) => comparesInputs(read, commit));
+  const checkout = checkoutAt({ onMainBranch: onMainBranch(), commit: headCommit() }, commit, inHeadHistory);
+  const asked = checkout.kind === 'branch' && headers.some((read) => comparesInputs(read, commit));
   const known: Known = asked ? await upstreamHashes(run, commit) : { kind: 'known', hashes: {} };
   return {
     ...mergeBaseAt(commit, () => (known.kind === 'failed'
       ? { kind: 'unknown', reason: known.reason }
       : inputHashesAt(commit, run.inputs, REPO_ROOT, known.hashes))),
-    checkout: checkoutAt({ onMainBranch: onMainBranch(), commit: headCommit() }, commit, inHeadHistory),
+    checkout,
   };
 }
 

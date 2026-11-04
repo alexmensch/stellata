@@ -125,19 +125,33 @@ describe('judgeBaseline', () => {
   });
 
   describe('on main', () => {
+    const history = (commit: string) => commit === 'old' || commit === 'abc';
     const onMain: CheckoutBase = {
-      ...BASE, checkout: checkoutAt({ onMainBranch: true, commit: 'abc' }, 'abc', (commit) => commit === 'old'),
+      ...BASE, checkout: checkoutAt({ onMainBranch: true, commit: 'abc' }, 'abc', history),
     };
     const older = { kind: 'checkout' as const, header: matching(header('old')) };
 
     it('diffs a clean intact earlier main build with other inputs; a branch still refuses it', () => {
-      expect(judgeBaseline(older, onMain, false)).toEqual({ kind: 'diff', why: 'earlier-main-build' });
+      expect(judgeBaseline(older, onMain, false)).toEqual({ kind: 'diff', why: 'main-build' });
       expect(judgeBaseline(older, BASE, false).kind).toBe('refused');
     });
 
-    it('rotates over that build, never pins it', () => {
+    it('rotates over that build, and never pins one, even built from the inputs HEAD holds', () => {
       expect(planBaseline(matching(header('old')), older, onMain, false))
-        .toEqual({ verdict: { kind: 'diff', why: 'earlier-main-build' }, from: 'current', rotate: true });
+        .toEqual({ verdict: { kind: 'diff', why: 'main-build' }, from: 'current', rotate: true });
+      const sameInputs: CheckoutBase = { ...onMain, inputHash: () => ({ kind: 'hashed', hash: 'h' }) };
+      expect(planBaseline(matching(header('old')), older, sameInputs, false))
+        .toEqual({ verdict: { kind: 'diff', why: 'main-build' }, from: 'current', rotate: true });
+      expect(planBaseline(matching(header('abc')), older, onMain, false))
+        .toMatchObject({ from: 'current', rotate: true });
+    });
+
+    it('never hashes the merge-base\'s inputs', () => {
+      const unasked: CheckoutBase = { ...onMain, inputHash: () => { throw new Error('hashed'); } };
+      const elsewhere = { kind: 'checkout' as const, header: matching(header('side-branch')) };
+      expect(planBaseline(matching(header('old')), older, unasked, false).verdict)
+        .toEqual({ kind: 'diff', why: 'main-build' });
+      expect(judgeBaseline(elsewhere, unasked, false).kind).toBe('refused');
     });
 
     it('refuses a dirty or swapped earlier build, or one from outside main\'s history', () => {
@@ -147,7 +161,7 @@ describe('judgeBaseline', () => {
       for (const source of [dirty, swapped, elsewhere]) expect(judgeBaseline(source, onMain, false).kind).toBe('refused');
       const refused = judgeBaseline(elsewhere, onMain, false);
       expect(refused.kind === 'refused' && refused.message)
-        .toMatch(/not the merge-base abc or a build from the inputs it holds, nor an earlier clean build on main\./);
+        .toMatch(/built at side-branch, not a clean build on main at or before abc\./);
     });
   });
 });
