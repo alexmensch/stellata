@@ -57,10 +57,10 @@ New worktrees are seeded from the main checkout's `public/` and `build/`
 artifacts ([Building in a worktree](/scripts/README.md#building-in-a-worktree)); a stamp that
 disagrees with the worktree's inputs rebuilds that step. Rebuilding main
 right after the pull keeps those stamps matching, so the next worktree starts
-without a cold catalogue build. It refreshes the lineage baseline a
-worktree's membership change report diffs against only when the landing
-rebuilt membership; otherwise that report is refused
-([Run-to-run diff](/scripts/catalog/lineage/README.md#run-to-run-diff)).
+without a cold catalogue build. A landing that leaves a lineage stage's
+inputs alone skips that stage, and its seeded baseline stays usable while
+its inputs match the merge-base's
+([The header and the refusal](/scripts/catalog/lineage/baseline/README.md#the-header-and-the-refusal)).
 
 Run it from the main checkout with Bash `run_in_background: true`, after
 every `pr-cleanup` step has finished:

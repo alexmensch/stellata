@@ -67,7 +67,10 @@ same thing — single-use helpers stay with their consumer.
   ([Preprocessor idempotency](../README.md#preprocessor-idempotency)): `fileHashes` maps each file's
   repo-relative path (relative to a passed root, the runner's tree) to its
   sha1, `null` when absent, so an input's arrival is
-  a change too. `inputHashes` is the same map with each code file hashed by
+  a change too; `hashBytes` is `hashFile`'s hash over bytes still in memory,
+  which the lineage header records for the files it is emitted with, and
+  `listingHash` and `../pipeline/freshness.ts`'s query and request hashes
+  are taken with. `inputHashes` is the same map with each code file hashed by
   its identity (`code-identity.ts`), and `recordedInputs` turns a Python run
   record's reads into it, keeping the first-read bytes hash of a code file
   edited mid-run, which no identity equals, so the step reads stale. A stamp (`build/stamps/<step>.json`) records two
@@ -146,7 +149,19 @@ same thing — single-use helpers stay with their consumer.
   dirty) and `mergeBaseWithMain` (null with no `origin/main` or in a shallow
   clone), and `fileAtMergeBase`, a file as the merge-base holds it — `absent`
   when it is new on the branch, kept apart from `no-merge-base`. The lineage
-  header, perf's `gitMeta` and the two merge-base guards read it.
+  header, perf's `gitMeta` and the two merge-base guards read it. `gitIn` is
+  its git call, in a given folder; `fileAt(commit, path)`, a file's bytes as
+  a commit stores it, is what `fileAtMergeBase` decodes and
+  `input-hashes-at.ts` hashes.
+- `input-hashes-at.ts` (+ test) — `inputHashesAt(commit, inputs)`: an
+  `inputHashes` map with each path that differs on disk from `commit`
+  re-hashed from `commit`'s copy (code by identity; LFS content read from the
+  local object its pointer names, never fetched, so no network call and no
+  `GIT_LFS_SKIP_SMUDGE` pointer read as content), `unknown` where git holds
+  no copy — a git-ignored input, or LFS content not stored locally. Kept out of `git-provenance.ts` so the
+  perf instruments reading that do not load the TypeScript compiler. The
+  lineage baseline verdict reads it
+  ([The header and the refusal](../catalog/lineage/baseline/README.md#the-header-and-the-refusal)).
 - `source-trees.ts` — `TREE_ROOTS` and `treeOf`, which tree a repo path
   belongs to, and `BROWSER_TREES`: the one list both import-boundary tests
   (`/tests/README.md#pipeline-viewer-boundary`) and the step table's

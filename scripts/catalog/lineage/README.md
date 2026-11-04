@@ -29,8 +29,9 @@ scripts/catalog/lineage/
                                  effect and status.
   lineage-diff-pure.ts           diffLineage, the merge-join of two stage
                                  files' lines; stageDiffText, the diff file.
-  lineage-header-pure.ts         StageHeader; planBaseline and judgeBaseline,
-                                 which baseline a build diffs against.
+  baseline/                      StageHeader, planBaseline and judgeBaseline:
+                                 which baseline a build diffs against. Own
+                                 README.
   identity-pure.ts               The identity row and its file; refuses two
                                  records on one key.
   lineage-stages.ts              LINEAGE_STAGES, every stage's codes and
@@ -59,8 +60,9 @@ scripts/catalog/lineage/
                                  their output declarations:
                                  /src/catalog-format/pipeline-outputs/.
   lineage-io.ts                  The baseline members and a stage's emission,
-                                 gzip, and the header with its input hash.
-  lineage-core-pure.test.ts      Order, writer refusal, diff, baseline verdict.
+                                 gzip, and the header with its input hash
+                                 and file hashes, re-checked on read.
+  lineage-core-pure.test.ts      Order, writer refusal, diff.
   lineage-rotation.test.ts       Rotation over a scratch build/: a failed or
                                  absent emission moves nothing, another
                                  stage's files are never touched.
@@ -248,10 +250,17 @@ passes `stageLineage` (`stage-lineage.ts`) a `LineageBudget`, and a run over
 it fails its emission. Membership, measured 2026-10-29 on the full tree:
 1,355,182 rows (128 MB plain, 15.1 MB gzipped) plus 976,040 identity rows
 (85 MB, 22.3 MB), 37.4 MB together. The timed window is everything lineage
-adds to the build — the diff, rendering, gzip and invariants: about 5.8 s with a diff
-against a full baseline. The header's input hash is not in it: a stage hands
-`stageLineage` the input hashes its step already computed (`build:catalog`'s
-are its stamp's), so a build hashes its inputs once.
+adds to the build — the baseline headers' file re-hash, the merge-base input
+re-hash when a header from another commit asks for it, the diff, rendering,
+gzip and invariants: about 5.8 s with a diff
+against a full baseline. The merge-base input re-hash measured 128 ms for
+membership on a branch where 9 of its 163 inputs differ (2026-11-04,
+`inputHashesAt` over `inputHashes(stepInputPaths('build:membership'))`); a
+changed 204 MB LFS input adds its own hash of the local object. The header's input hash is not in it: a stage hands
+`stageLineage` the input hashes its step computed for its own use. Each step
+hashes that set a second time after the runner hashed it for the stamp
+(`build:catalog` and `build:membership` both call `stepInputPaths`), until
+the runner hands its hashes over (stellata-hhaw.45.11.12).
 A spine derivation's row carries only its winner, route and component
 letters; the binding-review columns ride the rows the queue lists — a
 contested or collision verdict and a disposition — since the candidates and
@@ -289,27 +298,16 @@ every later build diffs against it and leaves it in place (`planBaseline`).
 Otherwise the stage's current `<stage>.tsv.gz` replaces
 `build/lineage.previous/<stage>.tsv.gz` in the same emitArtifacts commit
 that renames the stage's new file into place, and the build diffs against
-that last build if it is the merge-base's. A stage that fails, is skipped by
+that last build if it stands for the merge-base — built at it, or from the
+inputs it holds ([Choosing the baseline](baseline/README.md)). A stage that fails, is skipped by
 its content-hash stamp, or does not run (a standalone `build:membership`)
 leaves both its copies untouched. The baseline and diff families are
 declared unstamped (`stageFamilies`), so a step's stamp never records them
 and a worktree without them is not stale.
 
-A fresh worktree is seeded with the main checkout's last `build/lineage/`
-(`.worktreeinclude`), which may come from an older commit. So each stage
-writes a header beside its files, `<stage>.header.json`, recording the
-build version, the commit, whether the tree had uncommitted edits, and the
-content hash of the inputs the stage was built from (`stepInputPaths`, `../../util/step-inputs.ts`); a header per
-stage is what lets one stage rotate without rewriting another's. The diff
-refuses a baseline whose commit is not the branch's merge-base with main, or
-that was built over uncommitted edits — its commit then names code it was
-not built from
-(`judgeBaseline`, `lineage-header-pure.ts`). The refusal names the
-baseline's commit and how to get a matching one; `--any-baseline` accepts it
-anyway, and `--against <dir>` diffs against that directory instead. A
-refused diff fails nothing: the stage's lineage still lands, no diff is
-written, and a stale one is deleted, so a missing report is visible rather
-than out of date. A stage diff is a merge-join of two files sorted by that
+Which baseline a build may diff against — the per-stage header, what it
+records and when the diff refuses — is [Choosing the baseline](baseline/README.md).
+A stage diff is a merge-join of two files sorted by that
 one comparator: keys added, removed and changed.
 
 Every stage diff writes `build/lineage-diff/<stage>.tsv` — outside
@@ -386,22 +384,13 @@ still regenerated and diffed by CI, so a PR diff keeps showing the change:
 
 `binding-review.tsv` and `rejected_bindings.tsv` are then two filters over
 one row type. Each view moves when its writing stage gains lineage; the
-first four are views now ([The membership stage](#the-membership-stage)),
+first four are views now ([Membership lineage](../membership/README.md#membership-lineage)),
 and so is `parked-ledger.tsv` ([Placement lineage](../distance/README.md#placement-lineage)).
 
 ## The membership stage
 
-`build:membership` is the first stage with lineage
-(`../membership/membership-lineage-pure.ts`). `buildMembership` returns a
-keyed outcome per decision — admission, fold, component, the spine
-derivation's verdict with every candidate it refused, a disposition, an
-addition's binding, each label flip and label drop — and
-`membershipLineageRow` is the one serialiser, its `switch` exhaustive so a
-new variant without a row fails typecheck. `ParamsOf` declares each code's
-params beside the codes; the writer and the views both read through it, so
-a renamed key fails typecheck on both sides. Every record gets an admission
-row. `membershipLedgers` generates the four ledgers from those rows and the
-identity rows alone, byte-identical to the files they replaced as writers.
+`build:membership` is the first stage with lineage; its contract lives
+beside its module, in [Membership lineage](../membership/README.md#membership-lineage).
 
 Curated human input stays hand-written and is read by the build or its
 tests: `binding-review-dispositions.tsv`, `spine-corrections.tsv`,
