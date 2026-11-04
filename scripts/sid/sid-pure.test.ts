@@ -22,7 +22,7 @@ import {
 import { EVENT_COLUMNS } from './events-pure';
 import { eventsFile } from './events-tsv';
 import { LEDGERS, ledgerFile } from './ledger-tsv';
-import { CATALOG_PARTITION } from './registry-partitions-pure';
+import { CATALOG_PARTITION } from '../../src/catalog-format/pipeline-outputs/data-files';
 
 const LEDGER = LEDGERS[CATALOG_PARTITION];
 

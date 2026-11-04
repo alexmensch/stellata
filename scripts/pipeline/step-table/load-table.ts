@@ -12,16 +12,15 @@ import { REPO_ROOT } from '../../util/paths';
 import { treeOf, treeRoots, type Tree } from '../../util/source-trees';
 import { readManualRecord } from '../freshness';
 import { pipelineTree, type PipelineTree } from '../pipeline-tree';
-import { LEGACY_IMPORTABLE } from './legacy-importable';
 import {
   deriveGraph,
   type OutputClaims, type ResolvedStep, type StepEntry, type StepGraph, type StepTable,
 } from './step-table-pure';
 
 const OUTPUTS_MODULE_LEAVES = new Set(['scripts/util/emit-artifacts.ts', 'scripts/util/paths.ts']);
-export const SHARED_TREES: ReadonlySet<Tree> = new Set(['catalog-format', 'astro-core']);
-const isWalkable = (module: string): boolean => SHARED_TREES.has(treeOf(module)) || LEGACY_IMPORTABLE.has(module);
-export const WALKABLE = `util/emit-artifacts, util/paths, ${treeRoots(SHARED_TREES).join(', ')} and the modules legacy-importable.ts lists`;
+const SHARED_TREES: ReadonlySet<Tree> = new Set(['catalog-format', 'astro-core']);
+const isWalkable = (module: string): boolean => SHARED_TREES.has(treeOf(module));
+export const WALKABLE = `util/emit-artifacts, util/paths, ${treeRoots(SHARED_TREES).join(', ')}`;
 export const TABLE_LOAD_BUILTINS: ReadonlySet<string> = new Set(['node:path', 'node:crypto']);
 const builtinName = (spec: string): string => (isBuiltin(spec) && !spec.startsWith('node:') ? `node:${spec}` : spec);
 

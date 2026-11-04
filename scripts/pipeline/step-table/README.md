@@ -95,9 +95,10 @@ The runner rejects the table, before running anything, when:
 - a step's outputs module reaches, over its import closure, a module beyond
   `util/emit-artifacts`, `util/paths` and the two boundary trees
   (`src/catalog-format/**`, `src/astro-core/**`, as `util/source-trees.ts`
-  roots them), other than one `legacy-importable.ts` lists. That list only
-  shrinks: `steps.test.ts` holds it to the modules the walk reaches outside the
-  trees, and a filename suffix grants nothing;
+  roots them). A filename suffix grants nothing: a name an outputs module
+  declares lives in the format tree (`/src/catalog-format/pipeline-outputs/`
+  for the files the viewer never fetches), and the module that reads or
+  writes the file imports it from there;
 - a module that loading imports could act on import: an outputs module or
   one the walk accepts imports a package, a Node built-in other than
   `node:path` and `node:crypto`, or awaits at top level. The two leaves and
@@ -143,7 +144,7 @@ the others once, and that rebuild appends nothing.
   the run order (table order breaks ties). `selectSteps` is a target plus
   everything upstream, kept loops included; `writersOf` names the steps a
   step takes shared locks on.
-- `load-table.ts` / `legacy-importable.ts` — `loadTable`: checks every
+- `load-table.ts` — `loadTable`: checks every
   TypeScript outputs module's imports (`walkOutputsModules`, its import-time
   rule `importTimeProblems`) before importing any, imports the `declareOutputs` constants, rejects a build output
   through a symlink (the path or any folder above it, up to the root), reads
@@ -151,8 +152,8 @@ the others once, and that rebuild appends nothing.
   TypeScript step's inputs come from the injected `deriveInputs`;
   `run.ts` passes `util/step-inputs.ts`'s `entryInputPaths`.
 - `manual-step-outputs.ts` — `MANUAL_STEPS`, every pull and bake with the
-  files it writes, as an outputs module: the one place outside a declaration
-  a `data/` path may be spelled.
+  files it writes, as an outputs module. Which modules may spell a `data/`
+  path is `/tests/source-declarations.test.ts`'s rule.
 - `steps.ts` (+ test) — the table `run.ts` and `record.ts` load, its manual
   steps `MANUAL_STEPS`.
   The test holds the table to the load-time rules, every manual step's

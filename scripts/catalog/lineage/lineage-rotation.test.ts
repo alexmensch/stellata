@@ -7,11 +7,13 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { declareOutputs, emitArtifacts, EmissionRefused } from '../../util/emit-artifacts';
 import type { StageHeader } from './lineage-header-pure';
 import { baselineMembers, readLineage, stageEmission } from './lineage-io';
-import { lineageLayout, stageFamilies, stageFile, stageOutputFiles, type LineageLayout } from './lineage-layout-pure';
 import { lineageInvariant, NO_EXCEPTIONS } from './lineage-invariant-pure';
 import { paramsText, stageLineageLine, stageLineageText } from './lineage-row-pure';
 import { stageLineage } from './stage-lineage';
 import { LIVE, stageCodes } from './reason-codes-pure';
+import {
+  lineageLayout, stageFamilies, stageFile, stageOutputFiles, type LineageLayout,
+} from '../../../src/catalog-format/pipeline-outputs/lineage-files';
 
 const SPEC = { stage: 'demo', files: ['demo', 'identity'] as const };
 const CODES = stageCodes('demo', { kept: { description: 'kept', effect: 'none', status: LIVE } });

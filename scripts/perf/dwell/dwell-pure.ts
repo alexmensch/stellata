@@ -11,7 +11,7 @@ import {
   percentile,
 } from '../../../src/client/debug/frame-cost/frame-cost-pure';
 import type { FramePacing } from '../../../src/client/scene/frame-loop/frame-loop';
-import { cpuFloorMs, dwellFloorMs } from '../floors/floors';
+import { computeFloorMs, cpuFloorMs, dwellFloorMs } from '../floors/floors';
 import type { ScenarioName } from '../scenarios';
 
 export const DEFAULT_DWELL_FRAMES = 240;
@@ -138,12 +138,6 @@ export function pointMove(
   before: number | null | undefined, after: number | null | undefined,
 ): number | null {
   return before == null || after == null ? null : after - before;
-}
-
-/** How far the fast end moved between two dwells. Context for the median's
- *  delta in both tables, never an input to a verdict. */
-export function floorMove(before: FrameFloor | null, after: FrameFloor | null): number | null {
-  return pointMove(before?.p10, after?.p10);
 }
 
 /** The two ends both gates read a stream's spread off. */
@@ -335,24 +329,85 @@ export interface GatedSide {
   readonly p90: number | null;
 }
 
-/** How one kind of row is judged, read by `--baseline` and `--against-pin`
- *  alike, so the two gates cannot band it differently. */
-export interface RowJudgement<C> {
+/** How a row kind bands two judged sides. */
+export interface RowBanding {
   readonly metric: DwellMetric;
-  side(clock: C): GatedSide;
+  /** False where the p10 is the gated value, so a floor column would restate `delta`. */
+  readonly printsFloor: boolean;
   floorMs(name: ScenarioName, baseline: GatedSide): number;
 }
 
-export const CPU_JUDGEMENT: RowJudgement<SpreadClock> = {
-  metric: 'cpu-p50',
-  side: (c) => ({ valueMs: c.p50, standardErrorMs: medianStandardErrorMs(c), p10: null, p90: c.p90 }),
-  floorMs: (name, baseline) => cpuFloorMs(name, baseline.valueMs),
-};
+/** How one kind of row is judged, read by `--baseline` and `--against-pin`
+ *  alike, so the two gates cannot band it differently. */
+export interface RowJudgement<C> extends RowBanding {
+  side(clock: C): GatedSide;
+}
 
-export const THROUGHPUT_JUDGEMENT: RowJudgement<SpreadClock & { readonly meanMs: number }> = {
-  metric: 'throughput-mean',
-  side: (c) => ({ valueMs: c.meanMs, standardErrorMs: medianStandardErrorMs(c), p10: null, p90: c.p90 }),
-  floorMs: (_name, baseline) => dwellFloorMs(baseline.valueMs),
+const FRAME_FLOOR_BANDING = {
+  printsFloor: true,
+  floorMs: (_name: ScenarioName, baseline: GatedSide) => dwellFloorMs(baseline.valueMs),
+} as const;
+
+function medianJudgement<C extends SpreadClock>(metric: DwellMetric, {
+  value = (clock) => clock.p50,
+  floorMs = FRAME_FLOOR_BANDING.floorMs,
+}: {
+  readonly value?: (clock: C) => number;
+  readonly floorMs?: RowBanding['floorMs'];
+} = {}): RowJudgement<C> {
+  return {
+    metric,
+    printsFloor: FRAME_FLOOR_BANDING.printsFloor,
+    floorMs,
+    side: (c) => ({ valueMs: value(c), standardErrorMs: medianStandardErrorMs(c), p10: null, p90: c.p90 }),
+  };
+}
+
+export const CPU_JUDGEMENT = medianJudgement('cpu-p50', {
+  floorMs: (name, baseline) => cpuFloorMs(name, baseline.valueMs),
+});
+/** No p10 on the side, so no floor column: a wall p10 is quantised to the
+ *  refresh interval exactly as its median is, and would restate it. */
+export const WALL_JUDGEMENT = medianJudgement('wall-p50');
+export const THROUGHPUT_JUDGEMENT = medianJudgement<SpreadClock & { readonly meanMs: number }>(
+  'throughput-mean', { value: (c) => c.meanMs },
+);
+
+export interface GpuFrameReading {
+  readonly clock: SpreadClock;
+  readonly floor: FrameFloor | null;
+}
+
+function gpuFrameJudgement<C extends GpuFrameReading>(
+  metric: DwellMetric, gated: (reading: C) => ClassClock,
+): RowJudgement<C> {
+  return {
+    metric,
+    ...FRAME_FLOOR_BANDING,
+    side: (r) => {
+      const clock = gated(r);
+      return {
+        valueMs: clock.p50, standardErrorMs: medianStandardErrorMs(clock), p10: r.floor?.p10 ?? null, p90: r.clock.p90,
+      };
+    },
+  };
+}
+
+export const GPU_FRAME_JUDGEMENT = gpuFrameJudgement<GpuFrameReading>('gpu-p50', (r) => r.clock);
+
+/** Where the frame draws two pass classes: banded on the plain class, with
+ *  the spread and floor still read off the whole stream —
+ *  `../pins/README.md#the-compute-row` last. */
+export const GPU_PLAIN_FRAME_JUDGEMENT = gpuFrameJudgement<GpuFrameReading & { readonly plain: ClassClock }>(
+  'gpu-plain-p50', (r) => r.plain,
+);
+
+/** `../pins/README.md#the-compute-row` */
+export const COMPUTE_JUDGEMENT: RowJudgement<{ readonly clock: { readonly p90: number }; readonly floor: FrameFloor }> = {
+  metric: 'compute-p10',
+  printsFloor: false,
+  side: (r) => ({ valueMs: r.floor.p10, standardErrorMs: 0, p10: r.floor.p10, p90: r.clock.p90 }),
+  floorMs: (name, baseline) => computeFloorMs(name, baseline.valueMs),
 };
 
 /** The frame a CPU-bound test divides by; undefined off GPU pacing. */

@@ -12,8 +12,10 @@ its repo-relative path.
 scripts/perf/pins/
   <adapter-slug>.json       The committed pin, one per GPU.
   pin-pure.ts (+ test)      adapterSlug, pinFromRuns, compareToPin, the
-                            gated statistic per stream, the ceiling and the
-                            band-over-floor note.
+                            ungated rows, the ceiling and the
+                            band-over-floor note. The gated statistic per
+                            row is `../dwell/dwell-pure.ts`'s, shared with
+                            `--baseline`.
   provenance/               Which run and which tree a row came from, and
                             the drift above it. Own README.
 ```

@@ -6,23 +6,21 @@ import { beforeAll, describe, expect, it } from 'vitest';
 
 import { MULTIPLES_TSV } from '../../binaries/multiples-tsv';
 import { CNS5 as CNS5_SOURCE } from '../../catalog/classic-ids/cns5-source';
-import { REASON_CODES_FILE } from '../../catalog/lineage/reason-codes-tsv';
-import { MEMBERSHIP_MANIFEST_FILE } from '../../catalog/membership/membership-manifest-tsv';
+import { REASON_CODES } from '../../catalog/lineage/reason-codes-tsv';
+import { MEMBERSHIP_MANIFEST } from '../../catalog/membership/membership-manifest-tsv';
 import { packageScripts } from '../../util/import-closure';
 import { lfsContentReadable, publicFile, REPO_ROOT } from '../../util/paths';
 import { PUBLIC_FILES } from '../../../src/catalog-format/public-artifacts/public-artifacts';
-import { treeOf } from '../../util/source-trees';
 import { entryInputPaths } from '../../util/step-inputs';
 import { describeStep } from '../freshness';
-import { LEGACY_IMPORTABLE } from './legacy-importable';
-import { loadTable, SHARED_TREES, walkOutputsModules, type Loaded } from './load-table';
+import { loadTable, type Loaded } from './load-table';
 import { MANUAL_STEPS } from './manual-step-outputs';
 import { pipelineTree } from '../pipeline-tree';
 import { describesItself, isBuild, selectSteps, type Edge, type ReadsEdge } from './step-table-pure';
 import { STEPS } from './steps';
 
 const CNS5 = CNS5_SOURCE.file;
-const MANIFEST = resolve(REPO_ROOT, MEMBERSHIP_MANIFEST_FILE);
+const MANIFEST = resolve(REPO_ROOT, MEMBERSHIP_MANIFEST.file);
 
 let loaded: Extract<Loaded, { kind: 'loaded' }>;
 
@@ -48,17 +46,10 @@ describe('the step table', () => {
 
   it('derives each TypeScript edge from a file the reader declares and the writer reads', () => {
     expect(edgeFiles('build:membership', 'build:catalog')).toEqual(expect.arrayContaining([
-      MEMBERSHIP_MANIFEST_FILE, 'build/lineage/membership.tsv.gz',
+      MEMBERSHIP_MANIFEST.file, 'build/lineage/membership.tsv.gz',
     ]));
-    expect(edgeFiles('lineage:codes', 'build:catalog')).toEqual([REASON_CODES_FILE]);
+    expect(edgeFiles('lineage:codes', 'build:catalog')).toEqual([REASON_CODES.file]);
     expect(edgeFiles('build:binaries', 'build:membership')).toEqual([MULTIPLES_TSV.file]);
-  });
-
-  it('lists as legacy-importable exactly the modules the outputs walk reaches outside the boundary trees, and only shrinks', async () => {
-    const { accepted } = await walkOutputsModules(STEPS, pipelineTree(REPO_ROOT));
-    const outsideTrees = [...accepted].filter((m) => !SHARED_TREES.has(treeOf(m))).sort();
-    expect(outsideTrees).toEqual([...LEGACY_IMPORTABLE].sort());
-    expect(LEGACY_IMPORTABLE.size).toBe(38);
   });
 
   it('is the one place a table step\'s entry is named: no package.json script or workflow runs one directly', () => {

@@ -72,9 +72,7 @@ import {
   parkedRefusals,
   RECURATED_BRIGHTNESS,
 } from './companions/companion-promotion';
-import {
-  PROMOTION_CODES, PROMOTION_LINEAGE, PROMOTION_LINEAGE_BUDGET, promotionLineage,
-} from './companions/promotion-lineage-pure';
+import { PROMOTION_CODES, PROMOTION_LINEAGE_BUDGET, promotionLineage } from './companions/promotion-lineage-pure';
 import { identityText } from './lineage/identity-pure';
 import { LINEAGE_LAYOUT } from './lineage/lineage-layout-pure';
 import {
@@ -115,10 +113,9 @@ import {
 } from './distance/parallax/parked-ledger-pure';
 import { PARKED_LEDGER } from './distance/parallax/parked-ledger-tsv';
 import {
-  PLACEMENT_CODES, PLACEMENT_INVARIANTS, PLACEMENT_LINEAGE, PLACEMENT_LINEAGE_BUDGET, parkedLedgerView, placementLineageLines,
+  PLACEMENT_CODES, PLACEMENT_INVARIANTS, PLACEMENT_LINEAGE_BUDGET, parkedLedgerView, placementLineageLines,
 } from './distance/placement-lineage-pure';
 import {
-  SIMBAD_SOURCED_DISTANCES_FILE,
   SIMBAD_SOURCED_DISTANCES,
 } from './distance/parallax/simbad-sourced-ledger-tsv';
 import { loadReadStarsInputs } from './parse/read-stars-inputs';
@@ -133,10 +130,6 @@ import { artifactRows } from '../util/sources/source';
 import { REPO_ROOT as ROOT } from '../util/paths';
 import { fileHashes, type FileHashes } from '../util/build-stamp';
 import {
-  DEFAULT_CATALOG_MANIFEST as OUT_MANIFEST, DEFAULT_CONSTELLATIONS_JSON as OUT_CON,
-  DEFAULT_BOUNDARIES, DEFAULT_ROW_INDEX_MAP, DEFAULT_SEARCH_INDEX as OUT_SEARCH,
-} from './catalog-paths-pure';
-import {
   CATALOG_CHUNK_DIR, CATALOG_OUTPUTS,
 } from './catalog-outputs';
 import {
@@ -148,16 +141,20 @@ import { syntheticGaiaBridges } from '../sid/sid-pure';
 import { sidSuccessorPairs } from '../sid/events-pure';
 import { allocate } from '../sid/allocate-pure';
 import {
-  ALLOCATION_CODES, ALLOCATION_LINEAGE, ALLOCATION_LINEAGE_BUDGET,
-  allocationIdentityRows, allocationIdentityText, allocationLineageRows,
+  ALLOCATION_CODES, ALLOCATION_LINEAGE_BUDGET, allocationIdentityRows, allocationIdentityText,
+  allocationLineageRows,
 } from '../sid/allocation-lineage-pure';
 import { catalogSidObjects } from '../sid/catalog-objects';
-import { CATALOG_PARTITION, inPartition } from '../sid/registry-partitions-pure';
+import { inPartition } from '../sid/registry-partitions-pure';
 import { catalogUpstream } from '../sid/catalog-upstream';
 import { synthChurnReport } from '../sid/synth-churn-pure';
 import { allocationRun, loadRegistry, registryTexts } from '../sid/registry-io';
 import { loadStoredEdges } from '../sid/stored-edges';
 import { stepInputPaths } from '../util/step-inputs';
+import { CATALOG_PARTITION } from '../../src/catalog-format/pipeline-outputs/data-files';
+import {
+  PROMOTION_LINEAGE, PLACEMENT_LINEAGE, ALLOCATION_LINEAGE,
+} from '../../src/catalog-format/pipeline-outputs/lineage-files';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -216,7 +213,7 @@ function simbadSourcedDistancesTsv(stars: readonly Star[]): string {
     .filter((s) => s.distVia === 'simbad_plx')
     .map((s) => ({ gaiaSourceId: s.gaiaSourceId, hip: s.hip }));
   console.log(
-    `  SIMBAD-sourced distances: ${rows.length} → ${SIMBAD_SOURCED_DISTANCES_FILE}`,
+    `  SIMBAD-sourced distances: ${rows.length} → ${SIMBAD_SOURCED_DISTANCES.file}`,
   );
   return SIMBAD_SOURCED_DISTANCES.serialize(rows);
 }
@@ -1175,7 +1172,7 @@ async function main() {
   counts.boundaryArtifactKb = Math.round(boundaries.bytes / 1024);
   const fade = boundaries.artifact.fade;
   console.log(
-    `Built ${DEFAULT_BOUNDARIES} (${boundaries.segments} arcs, `
+    `Built ${CATALOG_OUTPUTS.files.boundaries} (${boundaries.segments} arcs, `
       + `${boundaries.directions} directions, `
       + `${boundaries.artifact.labels.length} labels, `
       + `${boundaries.regionRuns} region runs, `
@@ -1203,7 +1200,7 @@ async function main() {
   // that carry no real ID — Algol Ab). Built once above, after the sort.
   const rowIndexMapJson = JSON.stringify(rowIndexMap) + '\n';
   console.log(
-    `Row-index map ${DEFAULT_ROW_INDEX_MAP} (${Object.keys(rowIndexMap.byGaia).length} ` +
+    `Row-index map ${CATALOG_OUTPUTS.files.rowIndexMap} (${Object.keys(rowIndexMap.byGaia).length} ` +
       `Gaia entries, ${Object.keys(rowIndexMap.byHip).length} HIP entries, ` +
       `${Object.keys(rowIndexMap.bySynth).length} synthetic entries)`,
   );
@@ -1214,14 +1211,14 @@ async function main() {
   );
   const mb = (totalLength / 1024 / 1024).toFixed(2);
   console.log(
-    `Built ${chunkBytes.length} catalog chunk(s) + ${OUT_MANIFEST} ` +
+    `Built ${chunkBytes.length} catalog chunk(s) + ${CATALOG_OUTPUTS.files.manifest} ` +
       `(${mb} MB, ${stars.length} records, v${BINARY_VERSION})`,
   );
   console.log(
-    `Built ${OUT_CON} (${CONSTELLATIONS.length} constellations, ${figureCount} stick-figure polylines across ${figureLines.size})`,
+    `Built ${CATALOG_OUTPUTS.files.constellations} (${CONSTELLATIONS.length} constellations, ${figureCount} stick-figure polylines across ${figureLines.size})`,
   );
   const searchMb = (Buffer.byteLength(searchJson) / 1024 / 1024).toFixed(2);
-  console.log(`Built ${OUT_SEARCH} (${searchEntries.length} searchable entries, ${searchMb} MB)`);
+  console.log(`Built ${CATALOG_OUTPUTS.files.searchIndex} (${searchEntries.length} searchable entries, ${searchMb} MB)`);
   if (solIndex >= 0) {
     console.log(
       `Sol at record index ${solIndex} (absmag=${stars[solIndex].absmag}, R=${stars[solIndex].physicalRadius.toFixed(3)} R☉)`,
