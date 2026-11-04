@@ -6,7 +6,7 @@ import { chmodSync, mkdirSync, mkdtempSync, realpathSync, rmSync, utimesSync, wr
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { PERF_GO_MAX_AGE_S } from './perf-go-lib';
+import { PERF_GO_MAX_AGE_S, PERF_GO_WAIT_S } from './perf-go-lib';
 
 const SCRIPT = resolve(__dirname, 'await-go.sh');
 
@@ -29,7 +29,7 @@ function run(env: Record<string, string>): Promise<Exit> {
   });
 }
 
-function fakeBin(command: 'claude' | 'bd', script: string): void {
+function fakeBin(command: 'claude' | 'bd' | 'date', script: string): void {
   const path = join(bin, command);
   writeFileSync(path, `#!/usr/bin/env bash\n${script}\n`);
   chmodSync(path, 0o755);
@@ -90,6 +90,14 @@ describe('await-go', () => {
     expect(r.code).toBe(1);
     expect(r.stdout).toBe('');
     expect(r.stderr).toMatch(/not armed/);
+  }, 15_000);
+
+  it('defaults its timeout to PERF_GO_WAIT_S', async () => {
+    const clock = join(bin, 'clock');
+    fakeBin('date', `[ -f '${clock}' ] && echo ${PERF_GO_WAIT_S} || { touch '${clock}'; echo 0; }`);
+    const r = await run({ PERF_GO_POLL_S: '0.2', PERF_GO_TIMEOUT_S: '' });
+    expect(r.code).toBe(1);
+    expect(r.stderr).toContain(`after ${PERF_GO_WAIT_S} s`);
   }, 15_000);
 
   it('treats a stale marker as absent', async () => {
