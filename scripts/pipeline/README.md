@@ -183,7 +183,7 @@ lands with it; `run.ts` rejects it until then.
 takes the step's lock, and the shared locks on the steps writing its inputs,
 as the runner does; skips a step whose record is fresh unless `--force`;
 describes it; runs it (a Python step under `build_stamp.record_run`, a
-TypeScript one through `tsx`, its inputs derived as a TypeScript build's
+TypeScript one through `tsx`, its inputs derived and hashed before the run, as a TypeScript build's
 are); then writes `data/stamps/<step>.json` with `writeManualRecord`. Extra
 arguments pass through to the step (`--only <stem>`, `--dry-run`,
 `--synthetic`), which then always runs but writes no record: a partial or

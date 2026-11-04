@@ -172,6 +172,30 @@ export const OUT = declareOutputs({ out: ${JSON.stringify(at('fetched.json'))} }
     expect(Object.keys(stamp(step.name).inputs)).toEqual(['roster.json']);
   });
 
+  it('hashes a TypeScript step\'s inputs before it runs, so an input edited mid-run reads stale', async () => {
+    write('roster.json', '["a"]');
+    write('steps/fetch.ts', `
+import { writeFileSync } from 'node:fs';
+if (process.argv.includes('--describe')) console.log(JSON.stringify({ query: 'Q', services: ['ssd.jpl.nasa.gov'] }));
+else { writeFileSync(${JSON.stringify(at('roster.json'))}, '["b"]'); writeFileSync(${JSON.stringify(at('fetched.json'))}, 'rows'); }
+`);
+    write('steps/fetch-outputs.ts', `
+import { declareOutputs } from ${JSON.stringify(join(REPO_ROOT, 'scripts/util/emit-artifacts'))};
+export const OUT = declareOutputs({ out: ${JSON.stringify(at('fetched.json'))} });
+`);
+    const step: ManualStep = {
+      name: 'fetch:x', kind: 'pull', language: 'ts', entry: at('steps/fetch.ts'),
+      outputs: { module: at('steps/fetch-outputs.ts'), name: 'OUT' },
+    };
+    const loaded = await loadTable({ steps: [step], registryFiles: [] }, { root, deriveInputs: async () => [] });
+    if (loaded.kind !== 'loaded') throw new Error(loaded.problems.join('; '));
+    const deriveInputs = async () => [at('roster.json')];
+    expect((await recordStep(loaded, { root, step: step.name, force: false, args: [], deriveInputs, log: () => {} })).kind).toBe('recorded');
+    const tree = pipelineTree(root);
+    expect(manualFreshness(step, { files: [at('fetched.json')], families: [] }, tree, manualDescription(step, tree)))
+      .toEqual({ kind: 'stale', changed: ['roster.json'] });
+  });
+
   it('keeps a bake\'s code among its inputs', async () => {
     write('helper.py', 'VALUE = 1\n');
     write('src.png', 'pixels');

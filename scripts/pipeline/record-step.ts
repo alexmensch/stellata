@@ -81,11 +81,11 @@ async function runAndRead(
   const { step } = resolved;
   const entry = tree.abs(step.entry);
   if (step.language === 'ts') {
-    const code = await exec(TSX, [entry, ...options.args], process.env);
-    if (code !== 0) return `exited ${code}`;
     const derived = await options.deriveInputs(entry);
     const keep = inputFilter(resolved, described, ignoredPaths(derived, tree.root), tree);
-    return { inputs: inputHashes(derived.filter(keep), tree.root), services: [] };
+    const inputs = inputHashes(derived.filter(keep), tree.root);
+    const code = await exec(TSX, [entry, ...options.args], process.env);
+    return code === 0 ? { inputs, services: [] } : `exited ${code}`;
   }
   const recorded = await runRecorded(tree, step.name, entry, options.args, process.env);
   if (recorded.kind === 'exited') return `exited ${recorded.code}`;
