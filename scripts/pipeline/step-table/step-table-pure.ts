@@ -79,13 +79,15 @@ export type Edge =
   | { readonly kind: 'reads'; readonly from: string; readonly to: string; readonly files: readonly string[] }
   | { readonly kind: 'after'; readonly from: string; readonly to: string };
 
+export type ReadsEdge = Extract<Edge, { kind: 'reads' }>;
+
 export interface StepGraph {
   /** Step names in run order. */
   readonly order: readonly string[];
   readonly edges: readonly Edge[];
   /** Back edges from a manual step's output that would close a loop. */
   readonly keptLoops: readonly Edge[];
-  readonly registryEdges: readonly Edge[];
+  readonly registryEdges: readonly ReadsEdge[];
 }
 
 export type Derived =
@@ -213,7 +215,7 @@ export function deriveGraph(steps: readonly ResolvedStep[], registryFiles: reado
   );
 
   const registry = new Set(registryFiles);
-  const isRegistryEdge = (e: Edge): boolean => kindOf.get(e.from) === 'build' && kindOf.get(e.to) === 'build'
+  const isRegistryEdge = (e: Edge): e is ReadsEdge => kindOf.get(e.from) === 'build' && kindOf.get(e.to) === 'build'
     && e.kind === 'reads' && e.files.every((f) => registry.has(f));
   const registryEdges = all.filter(isRegistryEdge);
   const remaining = all.filter((e) => !isRegistryEdge(e));
