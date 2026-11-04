@@ -36,6 +36,15 @@ describe('mirror', () => {
     expect(strays(outputs)).toEqual([]);
   });
 
+  it('refuses two source files of one name, writing nothing', () => {
+    writeFileSync(join(data, 'part-1.bin'), 'shadowed');
+    writeFileSync(join(data, 'sub', 'part-1.bin'), 'shadowing');
+    expect(() => mirror(source.read())).toThrow(/share a name: part-1\.bin/);
+    expect(readFileSync(join(pub, 'part-1.bin'), 'utf8')).toBe('one');
+    rmSync(join(data, 'sub', 'part-1.bin'));
+    writeFileSync(join(data, 'part-1.bin'), 'one');
+  });
+
   it('refuses a source missing a declared file, writing nothing', () => {
     rmSync(join(data, 'index.json'));
     writeFileSync(join(data, 'part-1.bin'), 'changed');

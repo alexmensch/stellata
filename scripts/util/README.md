@@ -328,8 +328,8 @@ same thing — single-use helpers stay with their consumer.
   folders to that mirror alone, none of them `public/` itself. `flattenSubDirs` copies named
   subfolders of the source into the same flat destination, which is how a
   data folder groups big artifacts at rest without moving them in
-  `public/` (`data/textures/relief/`). Names must stay unique across all of
-  them: the copy is by name. `tests/bundle-content.test.ts` asserts
+  `public/` (`data/textures/relief/`). A name two of
+  them share fails the step: the copy is by name. `tests/bundle-content.test.ts` asserts
   `strays` is empty for every mirror over the built tree.
 
 ## CI heap budget

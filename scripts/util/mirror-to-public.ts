@@ -18,7 +18,7 @@ export interface MirrorSourceSpec {
   readonly dir: string;
   readonly hint: string;
   readonly outputs: DeclaredOutputs;
-  /** Subfolders of `dir` whose files land flat beside the rest; names must stay unique across all of them. */
+  /** Subfolders of `dir` whose files land flat beside the rest. */
   readonly flattenSubDirs?: readonly string[];
 }
 
@@ -48,6 +48,10 @@ export function strays(outputs: DeclaredOutputs): string[] {
 
 export function mirror({ files, outputs }: MirroredFolder): void {
   const sources = new Map(files.map(({ file }) => [basename(file), resolve(REPO_ROOT, file)]));
+  if (sources.size !== files.length) {
+    const names = files.map(({ file }) => basename(file));
+    throw new Error(`mirror: two source files share a name: ${[...new Set(names.filter((n, i) => names.indexOf(n) !== i))].join(', ')}`);
+  }
   const keyed = Object.entries<string>(outputs.files);
   const fileNames = new Set(keyed.map(([, path]) => basename(path)));
   const contents: Record<string, ArtifactContents> = Object.fromEntries(keyed
