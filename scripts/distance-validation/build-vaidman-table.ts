@@ -5,24 +5,21 @@ import { existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 import { emitArtifacts, runStep } from '../util/emit-artifacts';
-import { REPO_ROOT } from '../util/paths';
 import { EXPECTED_A1_ROWS, EXPECTED_A2_ROWS, attachGaiaSourceIds, extractTables } from './build-vaidman-table-pure';
 import { VAIDMAN_OUTPUTS } from './vaidman-outputs';
+import { VAIDMAN_2025_PDF } from './vaidman-paper-source';
 import { VAIDMAN_SUPERGIANTS } from './vaidman-tsv';
 
-function pdfArgument(): string {
+function paperPdf(): string {
   const i = process.argv.indexOf('--pdf');
-  return i >= 0 && process.argv[i + 1] ? resolve(process.argv[i + 1]) : resolve(REPO_ROOT, 'universe-11-00359.pdf');
+  if (i < 0 || !process.argv[i + 1]) return VAIDMAN_2025_PDF.read();
+  const pdf = resolve(process.argv[i + 1]);
+  if (!existsSync(pdf)) throw new Error(`build-vaidman-table: no PDF at ${pdf}`);
+  return pdf;
 }
 
 function main(): void {
-  const pdf = pdfArgument();
-  if (!existsSync(pdf)) {
-    throw new Error(
-      `build-vaidman-table: PDF not found at ${pdf}. Drop the paper PDF (DOI 10.3390/universe11110359) at the repo `
-        + 'root or pass --pdf <path>; remove it after the TSV is committed.',
-    );
-  }
+  const pdf = paperPdf();
   const { a1, a2 } = extractTables(execFileSync('pdftotext', ['-layout', pdf, '-'], { encoding: 'utf8' }));
   console.log(`  Table A1 (EDSD_new): ${a1.length} rows (expect ${EXPECTED_A1_ROWS})`);
   console.log(`  Table A2 (BJ_old):   ${a2.length} rows (expect ${EXPECTED_A2_ROWS})`);

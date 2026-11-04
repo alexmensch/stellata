@@ -17,7 +17,9 @@ reference.
   `validate-distances:` headline lines are stable for a downstream grep.
 - `build-vaidman-table.ts` — `pnpm run build:vaidman-table [--pdf <path>]`,
   the one-time builder: paper appendix tables (through `pdftotext -layout`)
-  → `data/distance-validation/vaidman-2025-supergiants.tsv`.
+  → `data/distance-validation/vaidman-2025-supergiants.tsv`. It reads the
+  paper store's copy (`vaidman-paper-source.ts`, `data/papers/pdf/`) unless
+  `--pdf` names another.
   `build-vaidman-table-pure.ts` (+ test) parses the appendix and joins each
   name to its hand-resolved source_id. A hand-run writer, so it is on the
   step table's not-a-step list (`tests/step-coverage.test.ts`). An entry's
