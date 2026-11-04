@@ -43,14 +43,17 @@ the owner reads. One request is served at a time; a second waits in the run stat
 until `GPU_DONE`.
 
 **A grant awaiting the arm is a worker waiting on the user.** At
-`GPU_GRANTED` to a worker of this run, record it "waiting on the user" as a
-`NEEDS_INPUT` would: its idle-watch line reads `<item> waiting`, and the
-reminder timer runs. Every `GPU_DONE` ends the grant and sends `RESUME`; a
-plain one also clears the mark. `GPU_DONE unarmed` leaves it: the grant lapsed for
-want of the owner, so once the worker's turn ends the idle watcher prints
-`dismissed` and `pickup-epic`'s dismissed row hands it off (`HIBERNATE`),
-phase `awaiting owner answer`, relaunched when the user says they will arm.
-A new `GPU_REQUEST` from it clears the mark first.
+`GPU_GRANTED` to a worker of this run, record it "waiting on the user — arm",
+a reason of its own beside any open question: its idle-watch line reads
+`<item> waiting` while either reason holds, and the reminder timer runs.
+`UNBLOCKED` clears only the question; the arm reason holds through a
+question asked under the grant (a busy-session warning, say). Every
+`GPU_DONE` ends the grant and sends `RESUME`; a plain one also clears the
+arm reason. `GPU_DONE unarmed` leaves it: the grant lapsed for want of the
+owner, so once the worker's turn ends the idle watcher prints `dismissed`
+and `pickup-epic`'s dismissed row hands it off (`HIBERNATE`), phase
+`awaiting owner answer`, relaunched when the user says they will arm. A new
+`GPU_REQUEST` from it clears the arm reason first.
 
 **Worker.** Announce and start `await-go.sh` only after `GPU_GRANTED`. A
 re-run needs a new announcement but not a new request while the grant holds;
