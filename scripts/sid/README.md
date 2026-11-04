@@ -118,7 +118,7 @@ registry-io.ts            loadRegistry: every partition plus the stored
                           ledger and events with an allocation's rows
                           appended as encodeLine lines, never a committed
                           line rewritten, and its head recomputed. Shared
-                          by build-catalog and the stamp.
+                          by build-catalog and allocateSibling.
 registry-step-inputs.test.ts
                           Every allocating step (build:catalog,
                           build:local-group, build:clouds) has every
