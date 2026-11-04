@@ -60,11 +60,6 @@ fi
 # command catches `[readme-skip: ...]` whether it's a `-m`-arg or
 # HEREDOC inline message. `-F <file>` does not, and is handled below.
 #
-# Flatten newlines to spaces first so the regex `[^]]*` (which doesn't
-# span newlines in line-mode grep) still spans a multi-line skip
-# reason. Without this a HEREDOC message that wraps the bracketed
-# reason across lines is silently ignored — surprise denials on
-# what looks like a valid opt-out.
 # `-F <file>` puts the message in a file, so the command carries only a
 # path and a tag inside it would never be seen. In a worktree that is the
 # ONLY route for a long message — the worktree guard rejects `$( )` and
@@ -81,6 +76,11 @@ for mf in $msg_files; do
   fi
 done
 
+# Flatten newlines to spaces first so the regex `[^]]*` (which doesn't
+# span newlines in line-mode grep) still spans a multi-line skip
+# reason. Without this a HEREDOC message that wraps the bracketed
+# reason across lines is silently ignored — surprise denials on
+# what looks like a valid opt-out.
 flat_scan="$(tr '\n' ' ' <<< "$skip_scan")"
 
 opt_out=0
