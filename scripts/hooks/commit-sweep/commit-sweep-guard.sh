@@ -44,7 +44,7 @@ if ! grep -qE '\bgit([[:space:]]+-C[[:space:]]+[^[:space:]]+)?[[:space:]]+commit
 fi
 
 # Resolve the repo top-level. Prefer `git -C <path>` if specified.
-repo_arg="$(sed -nE 's/.*\bgit[[:space:]]+-C[[:space:]]+([^[:space:]]+).*/\1/p' <<< "$cmd")"
+repo_arg="$(sed -nE 's/.*(^|[^[:alnum:]_])git[[:space:]]+-C[[:space:]]+([^[:space:]]+).*/\2/p' <<< "$cmd")"
 repo_arg="${repo_arg%%$'\n'*}"
 if [ -n "$repo_arg" ]; then
   toplevel="$(git -C "$repo_arg" rev-parse --show-toplevel 2>/dev/null || true)"

@@ -28,9 +28,9 @@ function write(rel: string, body = 'placeholder\n'): void {
   writeFileSync(full, body);
 }
 
-function allowed(command: string): boolean {
+function allowed(command: string, cwd = repo): boolean {
   const stdout = execFileSync('bash', [HOOK], {
-    cwd: repo,
+    cwd,
     input: JSON.stringify({ tool_name: 'Bash', tool_input: { command } }),
     encoding: 'utf-8',
   });
@@ -71,6 +71,16 @@ describe('commit-sweep-guard', () => {
   it('denies a commit that leaves its folder README stale', () => {
     stageStaleChange();
     expect(allowed('git commit -m "add a thing"')).toBe(false);
+  });
+
+  it('sweeps the repo git -C names, not the one the shell is in', () => {
+    stageStaleChange();
+    const elsewhere = realpathSync(mkdtempSync(join(tmpdir(), 'commit-sweep-cwd-')));
+    try {
+      expect(allowed(`cd /tmp && git -C ${repo} commit -m "add a thing"`, elsewhere)).toBe(false);
+    } finally {
+      rmSync(elsewhere, { recursive: true, force: true });
+    }
   });
 
   it('honours the skip tag in an inline -m message', () => {
