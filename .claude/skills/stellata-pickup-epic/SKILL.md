@@ -73,7 +73,8 @@ A launch waits only while it runs. Stellata's seeding detects a main
 checkout one landing behind
 ([Building in a worktree](/scripts/README.md#building-in-a-worktree)), so
 `pickup-epic`'s Launch rule applies unnarrowed.
-It is heavy: never while a GPU grant is held.
+It is heavy: never from a `GPU_REQUEST` until `GPU_DONE`; a landing that
+finishes in that window starts it at `RESUME`.
 
 ## The `SMOKE:` line
 
