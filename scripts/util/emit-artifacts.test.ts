@@ -50,6 +50,14 @@ describe('emitArtifacts', () => {
     expect(readdirSync(dir).filter((n) => n.endsWith(STAGING_SUFFIX))).toEqual([]);
   });
 
+  it('copies a copyFrom output from its file', () => {
+    const source = join(dir, 'source.bin');
+    writeFileSync(source, 'copied bytes');
+    emitArtifacts({ outputs: both(), files: { a: { copyFrom: source }, b: 'new b' } });
+    expect(readFileSync(a, 'utf8')).toBe('copied bytes');
+    expect(readFileSync(source, 'utf8')).toBe('copied bytes');
+  });
+
   it('writes nothing when a check fails', () => {
     const fail: Check = { kind: 'fail', message: 'drifted' };
     expect(() => emitArtifacts({ outputs: both(), files: files(), checks: [{ kind: 'pass' }, fail] }))

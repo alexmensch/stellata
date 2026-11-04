@@ -1,6 +1,6 @@
 // The one data/ → public/ mirror: a step that copies the files its output declaration names. See README.md.
 
-import { existsSync, readdirSync, readFileSync, rmSync } from 'node:fs';
+import { existsSync, readdirSync, rmSync } from 'node:fs';
 import { basename, resolve } from 'node:path';
 
 import { claims, claimsOf } from '../pipeline/step-table/step-table-pure';
@@ -52,10 +52,10 @@ export function mirror({ files, outputs }: MirroredFolder): void {
   const fileNames = new Set(keyed.map(([, path]) => basename(path)));
   const contents: Record<string, ArtifactContents> = Object.fromEntries(keyed
     .filter(([, path]) => sources.has(basename(path)))
-    .map(([key, path]) => [key, readFileSync(sources.get(basename(path))!)]));
+    .map(([key, path]) => [key, { copyFrom: sources.get(basename(path))! }]));
   const members = new Map([...sources]
     .filter(([name]) => !fileNames.has(name))
-    .map(([name, src]) => [resolve(outputs.families.find((f) => isMemberName(f, name))!.dir, name), readFileSync(src)]));
+    .map(([name, src]): [string, ArtifactContents] => [resolve(outputs.families.find((f) => isMemberName(f, name))!.dir, name), { copyFrom: src }]));
 
   emitArtifacts({ outputs, files: contents, members });
   for (const path of strays(outputs)) rmSync(path, { recursive: true });
