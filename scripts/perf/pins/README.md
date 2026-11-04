@@ -304,8 +304,8 @@ a pin run reads `steady`.
   vantage and **not** waiting on a fix — under rAF pacing, where all of
   that was measured. GPU-paced on the M6, lg's throughput mean reads 4.033 /
   4.018 / 4.024 / 4.012 ms over four cold full sweeps, every quarter inside
-  0.08 ms of its run's others and every run steady (`8cg-49-42-gpu-all-{3,4}.json`,
-  `.perf-runs/2026-11-04/8cg-49-38-{m6-pin,m6-check}.json`) — the stability the other
+  0.08 ms of its run's others and every run steady (`8cg-49-42-gpu-all-{3,4}.json.gz`,
+  `.perf-runs/2026-11-04/8cg-49-38-{m6-pin,m6-check}.json.gz`) — the stability the other
   four vantages show, so the stand-down does not reach it. On an rAF-paced row the band
   stands down, and so does the **state guard**: a trending lg is that same wander read across the quarters,
   not a verdict on the run, and since any refused row refuses the whole pin,

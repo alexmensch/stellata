@@ -503,7 +503,7 @@ same work spans **3.3 to 78.9 G fetches/s, 24×**, and what moves it is the
 geometry of the rays rather than anything about the grid. Measured at a fixed
 100,663,296 fetches per row with only that geometry varying — Apple M4 /
 metal-3, Chrome headless, `raf-delta`, 4.096 Mpx,
-`.perf-runs/2026-09-15/ty4-9-volume-geometry.json`:
+`.perf-runs/2026-09-15/ty4-9-volume-geometry.json.gz`:
 
 | rays | taps along each ray | volume touched | rate |
 | --- | --- | --- | --- |

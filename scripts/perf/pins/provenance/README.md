@@ -73,7 +73,7 @@ location.
 ## A deferred measurement cites a run file, never the pin
 
 A bead that asks for a measurement later names the baseline **run** —
-`.perf-runs/<date>/<file>.json` — and not "compare against the pin".
+`.perf-runs/<date>/<file>.json.gz` — and not "compare against the pin".
 
 Retrieval is not what makes a late comparison fail. Every pin is committed, so
 any historical one comes back without checking anything out:

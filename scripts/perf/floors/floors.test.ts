@@ -12,12 +12,12 @@ import {
 /** The comparable population both per-vantage floors are derived from: every
  *  GPU-paced M6 dwell a gate would compare against the pin. README.md. */
 const POPULATION_RUNS = [
-  '.perf-runs/2026-11-03/8cg-49-42-gpu-all-3.json',
-  '.perf-runs/2026-11-03/8cg-49-42-gpu-all-4.json',
-  '.perf-runs/2026-11-04/8cg-49-38-m6-pin.json',
-  '.perf-runs/2026-11-04/8cg-49-38-tier1-1.json',
-  '.perf-runs/2026-11-04/8cg-49-38-tier1-2.json',
-  '.perf-runs/2026-11-04/8cg-49-38-m6-check.json',
+  '.perf-runs/2026-11-03/8cg-49-42-gpu-all-3.json.gz',
+  '.perf-runs/2026-11-03/8cg-49-42-gpu-all-4.json.gz',
+  '.perf-runs/2026-11-04/8cg-49-38-m6-pin.json.gz',
+  '.perf-runs/2026-11-04/8cg-49-38-tier1-1.json.gz',
+  '.perf-runs/2026-11-04/8cg-49-38-tier1-2.json.gz',
+  '.perf-runs/2026-11-04/8cg-49-38-m6-check.json.gz',
 ];
 
 const POPULATION: readonly ScenarioRecord[] = POPULATION_RUNS

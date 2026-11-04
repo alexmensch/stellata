@@ -92,8 +92,8 @@ describe('pinProvenanceLines — what the pin measured, before any row is read',
 
 describe('citeRunPath — the pin ships in a public repo', () => {
   it('cites a run under the checkout by its repo-relative path', () => {
-    expect(citeRunPath('/Users/alexm/github/stellata/.perf-runs/2026-09-05/pin.json', '/Users/alexm/github/stellata'))
-      .toBe('.perf-runs/2026-09-05/pin.json');
+    expect(citeRunPath('/Users/alexm/github/stellata/.perf-runs/2026-09-05/pin.json.gz', '/Users/alexm/github/stellata'))
+      .toBe('.perf-runs/2026-09-05/pin.json.gz');
   });
 
   it('keeps the name and drops the location of a run stored elsewhere', () => {
@@ -102,10 +102,10 @@ describe('citeRunPath — the pin ships in a public repo', () => {
 
   it('cites a worktree run relative to that worktree, not to the main checkout', () => {
     const worktree = '/Users/alexm/github/stellata/.claude/worktrees/topic';
-    const run = `${worktree}/.perf-runs/2026-09-19/pin.json`;
-    expect(citeRunPath(run, worktree)).toBe('.perf-runs/2026-09-19/pin.json');
+    const run = `${worktree}/.perf-runs/2026-09-19/pin.json.gz`;
+    expect(citeRunPath(run, worktree)).toBe('.perf-runs/2026-09-19/pin.json.gz');
     expect(citeRunPath(run, '/Users/alexm/github/stellata'))
-      .toBe('.claude/worktrees/topic/.perf-runs/2026-09-19/pin.json');
+      .toBe('.claude/worktrees/topic/.perf-runs/2026-09-19/pin.json.gz');
   });
 });
 

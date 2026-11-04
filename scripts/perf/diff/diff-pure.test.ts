@@ -674,7 +674,7 @@ describe('the compute row', () => {
   });
 
   // The measured case, both sides from `.perf-runs/2026-09-15/8cg-74-compute-
-  // scatter.json`: mw120's repeat scatter is 0.009 ms and its pinned compute
+  // scatter.json.gz`: mw120's repeat scatter is 0.009 ms and its pinned compute
   // 0.289, so a move of 0.06 is six times the noise and a fifth of the pass.
   // Under the inherited 0.25 the compaction could have gone most of the way
   // to twice as dear and read `~`.

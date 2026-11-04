@@ -25,7 +25,7 @@
   "version": "7.1.8",
   "takenAt": "2026-11-04T10:49:48.740Z",
   "sourceRuns": [
-    ".perf-runs/2026-11-04/8cg-49-38-m6-pin.json"
+    ".perf-runs/2026-11-04/8cg-49-38-m6-pin.json.gz"
   ],
   "rows": [
     {
@@ -85,7 +85,7 @@
         "samples": 960,
         "stateGuard": "steady"
       },
-      "sourceRun": ".perf-runs/2026-11-04/8cg-49-38-m6-pin.json"
+      "sourceRun": ".perf-runs/2026-11-04/8cg-49-38-m6-pin.json.gz"
     },
     {
       "key": "sol|webgpu",
@@ -144,7 +144,7 @@
         "samples": 960,
         "stateGuard": "steady"
       },
-      "sourceRun": ".perf-runs/2026-11-04/8cg-49-38-m6-pin.json"
+      "sourceRun": ".perf-runs/2026-11-04/8cg-49-38-m6-pin.json.gz"
     },
     {
       "key": "earth|webgpu",
@@ -215,7 +215,7 @@
         "samples": 960,
         "stateGuard": "steady"
       },
-      "sourceRun": ".perf-runs/2026-11-04/8cg-49-38-m6-pin.json"
+      "sourceRun": ".perf-runs/2026-11-04/8cg-49-38-m6-pin.json.gz"
     },
     {
       "key": "mw50|webgpu",
@@ -274,7 +274,7 @@
         "samples": 960,
         "stateGuard": "steady"
       },
-      "sourceRun": ".perf-runs/2026-11-04/8cg-49-38-m6-pin.json"
+      "sourceRun": ".perf-runs/2026-11-04/8cg-49-38-m6-pin.json.gz"
     },
     {
       "key": "lg|webgpu",
@@ -333,7 +333,7 @@
         "samples": 960,
         "stateGuard": "steady"
       },
-      "sourceRun": ".perf-runs/2026-11-04/8cg-49-38-m6-pin.json"
+      "sourceRun": ".perf-runs/2026-11-04/8cg-49-38-m6-pin.json.gz"
     }
   ],
   "accepted": {}
