@@ -4,7 +4,6 @@
 import { describe, expect, it } from 'vitest';
 import { existsSync } from 'node:fs';
 import { loadCatalog } from '../scripts/catalog/catalog-lookup';
-import { DEFAULT_CATALOG_MANIFEST } from '../scripts/catalog/catalog-paths-pure';
 import {
   CADENCE_CAP_SIM_S,
   pulsationCadenceBudgetS,
@@ -13,8 +12,10 @@ import {
 import {
   buildPulsationSuppressMask,
 } from '../src/client/star-pipeline/pulsation/pulsation-suppress-pure';
+import { publicFile } from '../scripts/util/paths';
+import { CATALOG_MANIFEST_FILENAME } from '../src/catalog-format/record/catalog-pure';
 
-describe.skipIf(!existsSync(DEFAULT_CATALOG_MANIFEST))('clock-cadence pulsation bound', () => {
+describe.skipIf(!existsSync(publicFile(CATALOG_MANIFEST_FILENAME)))('clock-cadence pulsation bound', () => {
   it('the shipped catalogue measures 32.36 s — above the cap, so it never binds', async () => {
     const catalog = await loadCatalog();
     const periodDays: number[] = [];

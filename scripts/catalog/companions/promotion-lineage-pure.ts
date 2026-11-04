@@ -4,19 +4,11 @@ import { MULTIPLES_ROW_KEY } from '../../binaries/multiples-row-key-pure';
 import { starDesignations } from '../../sid/sid-pure';
 import { rowKeyText } from '../../util/sources/row-ref-pure';
 import type { IdentityRow } from '../lineage/identity-pure';
-import type { StageLineageSpec } from '../lineage/lineage-layout-pure';
 import { paramsText, type LineageParams, type LineageRow } from '../lineage/lineage-row-pure';
 import { LIVE, codeEffects, stageCodes, type CodeDeclaration, type CodeStatus } from '../lineage/reason-codes-pure';
 import type { Star } from '../parse/stars-parse';
 import type { MintedBrightness, MultiplesTsvRow, PromotedRow, RowOutcome } from './companion-promotion';
-
-export const PROMOTION_STAGE = 'promotion';
-
-export const PROMOTION_LINEAGE: StageLineageSpec<'promotion' | 'promotion.identity', 'promotion'> = {
-  stage: PROMOTION_STAGE,
-  files: ['promotion', 'promotion.identity'],
-  identity: 'promotion.identity',
-};
+import { PROMOTION_LINEAGE } from '../../../src/catalog-format/pipeline-outputs/lineage-files';
 
 export const PROMOTION_LINEAGE_BUDGET = { gzipBytes: 1_040_000, writeMs: 5_000 };
 
@@ -26,7 +18,7 @@ const live = (description: string, effect: CodeDeclaration['effect'] = 'none'): 
 
 const RETIRED_7_1_8: CodeStatus = { kind: 'retired', retiredIn: '7.1.8' };
 
-export const PROMOTION_CODES = stageCodes(PROMOTION_STAGE, {
+export const PROMOTION_CODES = stageCodes(PROMOTION_LINEAGE.stage, {
   'dropped.compound-comp': live('The row\'s component letter is an unresolved aggregate of components that have rows of their own, so it is not one star.', 'retire'),
   'dropped.beyond-tidal-limit': live('Projected at the anchor\'s distance, the pair is wider than the 1 pc tidal limit, so it cannot be bound.', 'retire'),
   'dropped.collocated-primary': live('A pair\'s primary promoted as the system anchor\'s companion has neither its own fit nor a measured offset from the anchor, so it has no position.', 'retire'),
@@ -91,7 +83,7 @@ export function promotionLineageRow(r: PromotedRow, recordKey: (idx: number) => 
     .filter((k): k is string => k !== null && k !== key);
   const via = r.via;
   const row = <B extends Branch>(branch: B, params: ParamsOf<B>): LineageRow => ({
-    stage: PROMOTION_STAGE, key, role: 'outcome', code: PROMOTION_CODES.code(branch),
+    stage: PROMOTION_LINEAGE.stage, key, role: 'outcome', code: PROMOTION_CODES.code(branch),
     params: paramsText(params as LineageParams), evidence,
   });
   switch (o.kind) {

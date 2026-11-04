@@ -8,9 +8,9 @@ import { afterAll, describe, expect, it } from 'vitest';
 import { REPO_ROOT } from '../../util/paths';
 import { identityRows } from './identity-pure';
 import { gzipText } from './lineage-io';
-import { stageFile } from './lineage-layout-pure';
 import { lineageRows } from './lineage-row-pure';
 import { matchName, parseTraceQuery, queryTerms, traceRecords, traceText, type TraceLookups } from './trace-pure';
+import { stageFile } from '../../../src/catalog-format/pipeline-outputs/lineage-files';
 
 const REFUSED_ONLY = '4000000000000000009';
 const PARKED = '5000000000000000001';

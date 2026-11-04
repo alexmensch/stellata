@@ -4,7 +4,6 @@
 import { readFileSync } from 'node:fs';
 
 import { emitArtifacts, runStep } from '../../util/emit-artifacts';
-import { DEFAULT_CONSTELLATIONS_JSON, DEFAULT_ROW_INDEX_MAP, DEFAULT_SEARCH_INDEX } from '../catalog-paths-pure';
 import type { SearchEntry } from '../../../src/catalog-format/record/catalog-pure';
 import { buildSearchIndex, normalizeGlKey } from '../../../src/catalog-format/naming/search-corpus';
 import { displayNamesFromSearchIndex } from '../../../src/catalog-format/naming/star-naming-pure';
@@ -21,6 +20,10 @@ import {
 import { NAMING_DUPLICATES } from './naming-duplicates-tsv';
 import { NAMING_PARITY } from './naming-parity-tsv';
 import { NAMING_PARITY_OUTPUTS } from './naming-parity-outputs';
+import { publicFile, REPO_ROOT } from '../../util/paths';
+import { PUBLIC_FILES } from '../../../src/catalog-format/public-artifacts/public-artifacts';
+import { BUILD_FILES } from '../../../src/catalog-format/pipeline-outputs/build-files';
+import { resolve } from 'node:path';
 
 function readJson<T>(path: string): T {
   return JSON.parse(readFileSync(path, 'utf8')) as T;
@@ -45,9 +48,9 @@ function frozenOldLabels(): Map<string, string> {
 }
 
 function main(): void {
-  const raw = readJson<SearchEntry[]>(DEFAULT_SEARCH_INDEX);
-  const rowIndexMap = readJson<RowIndexMap>(DEFAULT_ROW_INDEX_MAP);
-  const constellations = readJson<{ code: string; name: string }[]>(DEFAULT_CONSTELLATIONS_JSON);
+  const raw = readJson<SearchEntry[]>(publicFile(PUBLIC_FILES.searchIndex));
+  const rowIndexMap = readJson<RowIndexMap>(resolve(REPO_ROOT, BUILD_FILES.catalogRowIndexMap));
+  const constellations = readJson<{ code: string; name: string }[]>(publicFile(PUBLIC_FILES.constellations));
   const keys = ledgerKeys(rowIndexMap);
   const composed = displayNamesFromSearchIndex(raw, constellations);
   const labelByKey = new Map<string, string>();

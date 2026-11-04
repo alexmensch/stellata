@@ -14,9 +14,10 @@ scripts/perf/dwell/
                             split frame draws, the per-frame WebGPU
                             pass-count summary, the pinned readback
                             cadence with the bound that says it held, the
-                            pacings a dwell can run under, and the
+                            pacings a dwell can run under, the
                             throughput windows and CPU-bound test a
-                            GPU-paced row gates on.
+                            GPU-paced row gates on, and the row
+                            judgements both gates band every row on.
 ```
 
 The dwell loop itself is a page function in `../page-protocol.ts`
@@ -186,10 +187,12 @@ recorded under either pacing and banded on its vantage's own floor
 ([The CPU floor](../floors/README.md#the-cpu-floor)). Chrome's GPU
 process spends CPU on the same commands and is not in it.
 
-**Both gates judge these two rows through one definition each**,
-`THROUGHPUT_JUDGEMENT` and `CPU_JUDGEMENT`: the value, its standard error
-and its floor. Every context's rows come out frame, compute, CPU, in both
-gates.
+**Both gates judge every row kind through one definition each** — a
+`RowJudgement` in `dwell-pure.ts` for throughput, CPU, the rAF-paced GPU
+stream (whole or plain class), compute and wall: the value, its standard
+error, its floor and whether the floor column prints. `judgedMove` in
+`../diff/diff-pure.ts` turns two sides into delta, band and verdict for
+both. Every context's rows come out frame, compute, CPU, in both gates.
 
 **A context whose CPU per tick passes `CPU_BOUND_SHARE` (0.8) of its
 throughput is refused, CPU-bound** (`cpuBoundRefusal` in

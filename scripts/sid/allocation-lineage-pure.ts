@@ -1,18 +1,11 @@
 // SID allocation as a lineage stage: its reason codes, live and historical, the one serialiser over its outcomes, and its key -> SID identity file. See README.md#sid-events.
 
-import type { StageLineageSpec } from '../catalog/lineage/lineage-layout-pure';
 import { compareUtf8, paramsText, type LineageParams, type LineageRow } from '../catalog/lineage/lineage-row-pure';
 import { LIVE, stageCodes, type CodeDeclaration, type CodeEffect } from '../catalog/lineage/reason-codes-pure';
 import { readTable, type TableSpec } from '../util/tsv/table-pure';
 import type { Allocation, ObjectOutcome, SidObject } from './allocate-pure';
 import { PUBLIC_FILES } from '../../src/catalog-format/public-artifacts/public-artifacts';
-
-export const ALLOCATION_STAGE = 'allocation';
-
-export const ALLOCATION_LINEAGE: StageLineageSpec<'allocation' | 'allocation.identity', 'allocation'> = {
-  stage: ALLOCATION_STAGE,
-  files: ['allocation', 'allocation.identity'],
-};
+import { ALLOCATION_LINEAGE } from '../../src/catalog-format/pipeline-outputs/lineage-files';
 
 export const ALLOCATION_LINEAGE_BUDGET = { gzipBytes: 19_300_000, writeMs: 15_000 };
 
@@ -22,7 +15,7 @@ const historical = (effect: CodeEffect, description: string): CodeDeclaration =>
   { description, effect, status: { kind: 'historical' } }
 );
 
-export const ALLOCATION_CODES = stageCodes(ALLOCATION_STAGE, {
+export const ALLOCATION_CODES = stageCodes(ALLOCATION_LINEAGE.stage, {
   resolved: live('none', 'The object\'s same-as class reaches one SID in service, which it keeps.'),
   minted: live('none', 'The object\'s same-as class reaches no ledger row, so it takes the next SID under its canonical key.'),
   reinstated: live('none', 'The object\'s same-as class reaches only one retired SID, which returns to service.'),
@@ -77,7 +70,7 @@ type ParamsOf<B extends Branch> =
   : never;
 
 const lineageRow = <B extends Branch>(key: string, branch: B, params: ParamsOf<B>): LineageRow => ({
-  stage: ALLOCATION_STAGE, key, role: 'outcome', code: ALLOCATION_CODES.code(branch),
+  stage: ALLOCATION_LINEAGE.stage, key, role: 'outcome', code: ALLOCATION_CODES.code(branch),
   params: paramsText(params as LineageParams), evidence: [],
 });
 

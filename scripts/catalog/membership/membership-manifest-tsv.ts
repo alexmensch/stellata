@@ -4,8 +4,7 @@ import { defineArtifact, nullableCell } from '../../util/tsv/artifact-pure';
 import { compareSourceIds, idCell, idListCell, sourceIdCell } from '../../util/tsv/table-pure';
 import { SOL_PROPER_NAME } from '../../../src/catalog-format/record/catalog-pure';
 import { canonicalKeyOf, compareDesignations, starDesignations } from '../../sid/sid-pure';
-
-export const MEMBERSHIP_MANIFEST_FILE = 'data/membership/membership-manifest.tsv';
+import { DATA_FILES } from '../../../src/catalog-format/pipeline-outputs/data-files';
 
 /** Multi-value separator inside `hd_alt` / `hr_alt` / `routes`. */
 export const MANIFEST_VALUE_SEPARATOR = '|';
@@ -122,7 +121,7 @@ export function sortManifestRecords(records: readonly ManifestRecord[]): Manifes
 }
 
 export const MEMBERSHIP_MANIFEST = defineArtifact({
-  file: MEMBERSHIP_MANIFEST_FILE,
+  file: DATA_FILES.membershipManifest,
   columns: MANIFEST_COLUMNS,
   hint: 'Re-run `pnpm run build:membership`.',
   order: 'as-given',

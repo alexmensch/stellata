@@ -8,7 +8,6 @@ import { fileURLToPath } from 'node:url';
 import { parse } from 'csv-parse/sync';
 import { describe, it, beforeAll, expect } from 'vitest';
 import { type Catalog, type CatalogRecord, distancePc, loadCatalog, lookupByGaiaSourceId, lookupByHip, displayLabel, lookupByName, lookupByRef } from '../../scripts/catalog/catalog-lookup';
-import { DEFAULT_CATALOG_MANIFEST } from '../../scripts/catalog/catalog-paths-pure';
 import { parseRef, type RecordRef } from '../../scripts/catalog/parse/corpus-tsv';
 import { floatCell } from '../../scripts/util/tsv/table-pure';
 import {
@@ -17,9 +16,7 @@ import {
 } from '../../scripts/catalog/distance/direction-cascade';
 import { equatorialTangentBasisAt } from '../../src/astro-core/equatorial-basis';
 import {
-  FLAG_BINARY_COMPANION_ONLY,
-  FLAG_BINARY_PRIMARY,
-  VAR_TYPE_ECLIPSING,
+  FLAG_BINARY_COMPANION_ONLY, FLAG_BINARY_PRIMARY, VAR_TYPE_ECLIPSING, CATALOG_MANIFEST_FILENAME,
 } from '../../src/catalog-format/record/catalog-pure';
 import {
   FLAG_HAS_ORBIT,
@@ -42,7 +39,7 @@ import { MULTIPLES_TSV, MULTIPLES_TSV_PATH } from '../../scripts/binaries/multip
 import { NAMING_DUPLICATES } from '../../scripts/catalog/naming/naming-duplicates-tsv';
 import { REPO_ROOT, publicFile } from '../../scripts/util/paths';
 import { PUBLIC_FILES } from '../../src/catalog-format/public-artifacts/public-artifacts';
-import { DEFAULT_ROW_INDEX_MAP } from '../../scripts/catalog/catalog-paths-pure';
+import { BUILD_FILES } from '../../src/catalog-format/pipeline-outputs/build-files';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const CORPUS_TSV = resolve(__dirname, '../../scripts/catalog/companions/multi-star-regression.tsv');
@@ -52,13 +49,13 @@ const BINARIES_BIN = publicFile(PUBLIC_FILES.binaries);
 // generated). CI's plain `pnpm test` job skips; the Tier-A corpus job
 // runs the full corpus against real artifacts.
 const FIXTURES_READY =
-  existsSync(DEFAULT_CATALOG_MANIFEST) && existsSync(MULTIPLES_TSV_PATH)
-  && existsSync(BINARIES_BIN) && existsSync(DEFAULT_ROW_INDEX_MAP);
+  existsSync(publicFile(CATALOG_MANIFEST_FILENAME)) && existsSync(MULTIPLES_TSV_PATH)
+  && existsSync(BINARIES_BIN) && existsSync(resolve(REPO_ROOT, BUILD_FILES.catalogRowIndexMap));
 if (!FIXTURES_READY) {
   // eslint-disable-next-line no-console
   console.warn(
     `[multi-star-regression] skipping corpus assertions — ` +
-    `catalog.bin ${existsSync(DEFAULT_CATALOG_MANIFEST) ? 'present' : 'MISSING'}, ` +
+    `catalog.bin ${existsSync(publicFile(CATALOG_MANIFEST_FILENAME)) ? 'present' : 'MISSING'}, ` +
     `multiples.tsv ${existsSync(MULTIPLES_TSV_PATH) ? 'present' : 'MISSING'}, ` +
     `binaries.bin ${existsSync(BINARIES_BIN) ? 'present' : 'MISSING'}. ` +
     `Run \`pnpm run build:catalog\` + \`pnpm run build:binaries-runtime\` (with LFS pulled).`,
@@ -856,7 +853,7 @@ function buildWdsRootToIndices(): Map<string, number[]> {
     if (rec === null && row.hip !== null && row.hip > 0) rec = lookupByHip(catalog, row.hip);
     if (rec !== null) bindRoot(root, rec.i);
   }
-  const bySynth = (JSON.parse(readFileSync(DEFAULT_ROW_INDEX_MAP, 'utf-8')) as
+  const bySynth = (JSON.parse(readFileSync(resolve(REPO_ROOT, BUILD_FILES.catalogRowIndexMap), 'utf-8')) as
     { bySynth: Record<string, number> }).bySynth;
   for (const [key, idx] of Object.entries(bySynth)) {
     const body = key.slice('synth-'.length);

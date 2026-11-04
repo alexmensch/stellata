@@ -6,6 +6,7 @@ import { PUBLIC_FILES } from '../../src/catalog-format/public-artifacts/public-a
 import type { SidObject } from './allocate-pure';
 import { ALLOCATION_CODES } from './allocation-lineage-pure';
 import type { SidKind } from './sid-pure';
+import { SIBLING_PARTITIONS, type SiblingPartition } from '../../src/catalog-format/pipeline-outputs/data-files';
 
 export interface SiblingArtifactSpec {
   /** public/ filename. */
@@ -13,7 +14,7 @@ export interface SiblingArtifactSpec {
   /** Top-level array property holding the objects. */
   arrayKey: string;
   /** Designation namespace the ledger keys these objects on (/docs/sid.md#3-designation-namespaces). */
-  ns: string;
+  ns: SiblingPartition;
   kind: SidKind;
   /** pnpm script that emits `file` and allocates `ns`. */
   buildHint: string;
@@ -41,17 +42,18 @@ export const SIBLING_ARTIFACTS = {
 } as const satisfies Record<string, SiblingArtifactSpec>;
 
 export type SiblingName = keyof typeof SIBLING_ARTIFACTS;
-export type SiblingNamespace = (typeof SIBLING_ARTIFACTS)[SiblingName]['ns'];
+type UnclaimedPartition = Exclude<SiblingPartition, (typeof SIBLING_ARTIFACTS)[SiblingName]['ns']>;
+/** Fails typecheck while a sibling partition has no artifact; nothing reads it. */
+export const EVERY_SIBLING_PARTITION_CLAIMED: [UnclaimedPartition] extends [never] ? true : never = true;
 
 const SIBLING_NAMES = Object.keys(SIBLING_ARTIFACTS) as SiblingName[];
-export const SIBLING_NAMESPACES: readonly SiblingNamespace[] = SIBLING_NAMES.map((name) => SIBLING_ARTIFACTS[name].ns);
 
-export function siblingOf(ns: SiblingNamespace): SiblingArtifactSpec {
+export function siblingOf(ns: SiblingPartition): SiblingArtifactSpec {
   return SIBLING_ARTIFACTS[SIBLING_NAMES.find((name) => SIBLING_ARTIFACTS[name].ns === ns)!];
 }
 
-export function isSiblingNamespace(ns: string): ns is SiblingNamespace {
-  return (SIBLING_NAMESPACES as readonly string[]).includes(ns);
+export function isSiblingNamespace(ns: string): ns is SiblingPartition {
+  return (SIBLING_PARTITIONS as readonly string[]).includes(ns);
 }
 
 export interface SiblingItem {

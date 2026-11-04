@@ -9,7 +9,7 @@ import { BSC5 } from '../classic-ids/bsc5-source';
 import { TYC2_HD } from '../classic-ids/tyc2-hd-source';
 import { CLASSIC_ID_OVERRIDES } from '../classic-ids/label-merge/classic-id-overrides-source';
 import { SIMBAD_TYC_HD } from './simbad-tyc-hd-source';
-import { MEMBERSHIP_MANIFEST, MEMBERSHIP_MANIFEST_FILE } from '../membership/membership-manifest-tsv';
+import { MEMBERSHIP_MANIFEST } from '../membership/membership-manifest-tsv';
 import {
   hdNumbers,
   parseSimbadTycHdTsv,
@@ -97,7 +97,7 @@ describe('hdNumbers', () => {
 const AT = (f: string): string => resolve(REPO_ROOT, f);
 const SRC_SIMBAD_TYC_HD = AT(SIMBAD_TYC_HD.file);
 const SRC_TYC2_HD = AT(TYC2_HD.file);
-const SRC_MANIFEST = AT(MEMBERSHIP_MANIFEST_FILE);
+const SRC_MANIFEST = AT(MEMBERSHIP_MANIFEST.file);
 const ADJUDICATION_INPUTS = [SRC_SIMBAD_TYC_HD, SRC_TYC2_HD, SRC_MANIFEST];
 
 // Pins README.md#what-the-tyc--hd-pull-adjudicates. The figures are the

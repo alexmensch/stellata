@@ -569,18 +569,6 @@ export const OUT = declareOutputs({ out });
     expect([...walk.trusted]).toEqual(expect.arrayContaining(['scripts/util/emit-artifacts.ts', 'scripts/util/staged-write.ts']));
   });
 
-  it('walks on through a listed legacy module into its own imports', async () => {
-    const step = tsStep('a', 'a.out');
-    write('steps/a-outputs.ts', `
-import ${JSON.stringify(join(REPO_ROOT, 'scripts/sid/registry-outputs'))};
-import { declareOutputs } from ${JSON.stringify(EMIT_ARTIFACTS)};
-export const OUT = declareOutputs({ out: ${JSON.stringify(at('a.out'))} });
-`);
-    const walk = await walkOutputsModules({ steps: [step], registryFiles: [] }, pipelineTree(root));
-    expect(walk.problems).toEqual([]);
-    expect([...walk.accepted]).toEqual(expect.arrayContaining(['scripts/sid/registry-outputs.ts', 'scripts/sid/registry-partitions-pure.ts']));
-  });
-
   it.each(['src/catalog-format/probes/probe-roster', 'src/astro-core/angles'])(
     'accepts an outputs module importing the boundary tree module %s.ts',
     async (module) => {

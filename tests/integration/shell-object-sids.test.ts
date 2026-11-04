@@ -2,11 +2,11 @@ import { describe, expect, it } from 'vitest';
 
 import { SHELL_OBJECTS } from '../../scripts/sid/object-mints-source';
 import { LEDGERS } from '../../scripts/sid/ledger-tsv';
-import { CATALOG_PARTITION } from '../../scripts/sid/registry-partitions-pure';
 import { loadRegistry } from '../../scripts/sid/registry-io';
 import { SHELL_KEYS } from '../../src/client/fresnel-shell/shell-registry';
 import { SHELL_OBJECT_SIDS } from '../../src/client/fresnel-shell/shell-object-sids';
 import { isReadable } from '../../scripts/util/sources/source';
+import { CATALOG_PARTITION } from '../../src/catalog-format/pipeline-outputs/data-files';
 
 // The append-only ledger is LFS; in the bare CI `test` job it is a pointer
 // stub, so this suite self-skips there and runs for real locally + in the

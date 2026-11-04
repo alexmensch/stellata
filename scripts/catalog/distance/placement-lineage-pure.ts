@@ -1,7 +1,6 @@
 // Placement as a lineage stage: its reason codes, the one serialiser over each record's Placement, and parked-ledger.tsv as a view. See README.md#placement-lineage.
 
 import { lineageInvariant, NO_EXCEPTIONS, type LineageInvariant } from '../lineage/lineage-invariant-pure';
-import type { StageLineageSpec } from '../lineage/lineage-layout-pure';
 import {
   decodeLineageLine, lineageLineCode, paramsOf, paramsText, stageLineageLine,
   type LineageLine, type LineageParams, type LineageRow,
@@ -17,13 +16,7 @@ import {
 import type { PmRescueResolution, PmRescueVia } from './pm-rescue/pm-rescue';
 import type { RadialVelocityResolution, RvVia } from './radial-velocity/radial-velocity';
 import type { LmcKinematicVerdict } from './refinement/distance-overrides-pure';
-
-export const PLACEMENT_STAGE = 'placement';
-
-export const PLACEMENT_LINEAGE: StageLineageSpec<'placement', 'placement'> = {
-  stage: PLACEMENT_STAGE,
-  files: ['placement'],
-};
+import { PLACEMENT_LINEAGE } from '../../../src/catalog-format/pipeline-outputs/lineage-files';
 
 export const PLACEMENT_LINEAGE_BUDGET = { gzipBytes: 34_000_000, writeMs: 30_000 };
 
@@ -98,7 +91,7 @@ const PARK_BRANCHES = {
 
 const PARK = 'park';
 
-export const PLACEMENT_CODES = stageCodes(PLACEMENT_STAGE, {
+export const PLACEMENT_CODES = stageCodes(PLACEMENT_LINEAGE.stage, {
   'parallax.gaia-dr3-inversion': live('The record\'s own Gaia DR3 five-parameter parallax.'),
   'parallax.hip2-parallax': live('The record\'s own HIP in Hipparcos-2, van Leeuwen 2007 (/data/papers/index.md#vanleeuwen2007), above the S/N floor.'),
   'parallax.cns5-plx': live('The record\'s own GJ in CNS5, cited to a publication no tier above refused, above the S/N floor.'),
@@ -239,7 +232,7 @@ export function placementLineageRows(p: Placement): LineageRow[] {
     role: LineageRow['role'], branch: B, params: ParamsOf<B>, refs: readonly AnySourceRowRef[],
   ): void => {
     out.push({
-      stage: PLACEMENT_STAGE, key, role, code: PLACEMENT_CODES.code(branch),
+      stage: PLACEMENT_LINEAGE.stage, key, role, code: PLACEMENT_CODES.code(branch),
       params: paramsText(params as LineageParams), evidence: evidence(refs),
     });
   };

@@ -78,12 +78,13 @@ scripts/perf/
                             README.
   dwell/                    Dwell mode: the whole-frame statistics, the
                             state guard, the gating clock, the frame floor
-                            both tables print. Own README.
+                            both tables print, the row judgements both
+                            gates band on. Own README.
   sweep/                    Sweep mode: measurement order, the log-log fit,
                             the bracket. Own README.
   pins/                     The committed per-GPU pin: adapterSlug,
-                            pinFromRuns, compareToPin, the gated statistic
-                            per stream, the ceiling. Own README.
+                            pinFromRuns, compareToPin, the ceiling. Own
+                            README.
 ```
 
 ## Survivor counts — the one entry point here that is not a cost instrument
