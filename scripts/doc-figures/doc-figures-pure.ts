@@ -1,7 +1,7 @@
 // Doc-figure markers: parse them, resolve each key against the count snapshots, render the figure.
 import { Lexer, walkTokens } from 'marked';
 import { escapeRegExp } from '../util/escape-regexp';
-import { roundSignificant } from '../util/frozen-json';
+import { roundSignificant } from '../util/round-pure';
 
 export type FigureFormat =
   | { kind: 'exact' }

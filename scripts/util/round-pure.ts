@@ -14,3 +14,8 @@ export function roundHalfEven(x: number, digits: number): number {
   const magnitude = lastDigit % 2 === 0 ? truncated : Number((truncated + step).toFixed(digits));
   return Math.sign(x) * magnitude;
 }
+
+/** `v` to `digits` significant figures, rounded on the double's exact decimal value. */
+export function roundSignificant(v: number, digits: number): number {
+  return Number(v.toPrecision(digits));
+}

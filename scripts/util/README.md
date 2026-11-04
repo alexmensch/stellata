@@ -152,9 +152,11 @@ same thing — single-use helpers stay with their consumer.
   (`/tests/README.md#pipeline-viewer-boundary`) and the step table's
   outputs-module walk ([Load-time rules](../pipeline/step-table/README.md#load-time-rules)) read.
 - `round-pure.ts` (+ test) — `roundHalfEven(x, digits)`, Python's
-  `round`: half to even on the double's exact decimal value. Every number a
-  TypeScript build rounds into a JSON artifact goes through it, never
-  `Math.round(x · 10ⁿ) / 10ⁿ`, whose multiply moves near-ties.
+  `round`: half to even on the double's exact decimal value; and
+  `roundSignificant(v, digits)`, significant figures through
+  `toPrecision`. Every number a TypeScript build rounds into a JSON
+  artifact goes through one of them, never `Math.round(x · 10ⁿ) / 10ⁿ`,
+  whose multiply moves near-ties.
 - `step-inputs.ts` — `entryInputPaths(entries)`, every file a TypeScript
   step reads: the closure of its entry files, the closure's siblings, and
   every declaration the closure reads (`sources/`); the runner derives each
@@ -280,9 +282,8 @@ same thing — single-use helpers stay with their consumer.
   uniform-cadence span into range queries whose endpoints land on grid
   epochs.
 - `frozen-json.ts` — `serializeRowFile` (one sample array per line, so a
-  thousand-row artifact still diffs sample-by-sample in git) and
-  `roundSignificant`, shared by the probe-trajectory and planet-element
-  emitters.
+  thousand-row artifact still diffs sample-by-sample in git), shared by the
+  probe-trajectory and planet-element emitters.
 - `mirror-to-public.ts` (+ test) — `mirrorDataFolder(folder, spec)`, the one
   `data/<folder>/` → `public/<folder>/` copy used by
   `scripts/{dust,textures,probes,ephemerides}/sync-*.ts`. `mirrorSource`
