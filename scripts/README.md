@@ -96,7 +96,8 @@ the PR, not the post-merge deploy.
 
 The catalogue chain — `build:binaries`, `lineage:codes`, the four generators
 (`build:classic-ids`, `build:wgsn`, `build:astrometry-request`,
-`build:membership`), `build:catalog` and `build:binaries-runtime` — runs
+`build:membership`), `build:catalog` and `build:binaries-runtime` — and the
+two layer emitters `build:clouds` and `build:local-group` run
 through the step table's runner ([pipeline/README.md](pipeline/README.md)):
 each `package.json` target is `run.ts <step>`, which runs that step and every
 step upstream of it in data-flow order, and skips each on a **content-hash
@@ -110,7 +111,7 @@ output it wrote, and the step is fresh while both re-hash the same. The stamp
 is cleared before the step runs and written only once it exits 0 with its
 declared outputs in place, so a failed or interrupted build always reruns.
 Unstamped families (the lineage baseline and diff) are never recorded. A
-no-op `build:stamped` (all eight fresh) takes about two seconds on a warm page
+no-op `build:stamped` (all ten fresh) takes about two seconds on a warm page
 cache.
 
 An unchanged input invalidates nothing, so a rebuilt `multiples.tsv` with
@@ -121,9 +122,9 @@ the count snapshots of every step it runs. `build:stamped` is `run.ts data`, eve
 `build:binaries-runtime` and the mtime-gated steps, so a stale catalogue is
 rebuilt before the binaries read its row-index map.
 
-`build:clouds`, `build:local-group` and the `*-sync` mirrors — together
-`build:mtime-gated` — are mtime-gated (size + mtime for the mirrors) and cost
-seconds cold. `build:data` is `build:stamped` then `build:mtime-gated`.
+The `*-sync` mirrors — `build:mtime-gated`, with `build:clouds` and
+`build:local-group` run through the runner first — are gated on size + mtime
+and cost seconds cold. `build:data` is `build:stamped` then `build:mtime-gated`.
 
 ## Building in a worktree
 

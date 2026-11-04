@@ -16,8 +16,7 @@ or a pull depends on is a **step**. Report, draft and on-demand writers
 (`sid:dr-reconcile`, `sid:risk-set`, `identity:snapshot`, and the hand-run
 `build:lut` and `build:naming-parity`) are excluded by name, and
 `tests/step-coverage.test.ts` holds every `declareOutputs` constant under
-`scripts/` to an entry in `steps.ts`, that list, or a not-yet-migrated list
-of steps a later item moves.
+`scripts/` to an entry in `steps.ts` or that list.
 
 A step's outputs are declared once, its inputs are derived, and the order of
 steps follows from which step reads which file. The runner runs the steps it

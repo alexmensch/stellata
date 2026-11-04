@@ -166,8 +166,6 @@ same thing — single-use helpers stay with their consumer.
   its `package.json` script chains; `stepInputPaths(name)` is
   `entryInputPaths` over it, which the catalogue and membership lineage
   headers key on, and CI's catalogue cache key reads `stepEntries` too.
-  `outputsNewerThanInputs(step, outputs)` is the mtime gate of the two
-  off-table emitters, `build:clouds` and `build:local-group`, over that set.
   Each step's own suite pins its set (`../catalog/catalog-inputs.test.ts`,
   `../local-group/local-group-inputs.test.ts`, `../clouds/clouds-inputs.test.ts`).
 - `tsv/` — the one TSV reader (`readTable`, typed columns, cells that keep
@@ -200,9 +198,9 @@ same thing — single-use helpers stay with their consumer.
   mixed, which only a stamped step detects (its stamp was cleared and is not
   yet rewritten, so it reruns). A
   `.staged` file a killed run left behind is swept by the next run of that
-  step; a step with a skip gate of its own (`build:local-group`'s mtime check)
-  or one that can fail before it emits (`build:catalog`) calls `sweepStaged`
-  first, since such a run never reaches `emitArtifacts`. Staging under `public/` would otherwise ship: Vite
+  step; a step that can fail before it emits (`build:catalog`, `build:clouds`,
+  `build:local-group`) calls `sweepStaged` first, since such a run never
+  reaches `emitArtifacts`. Staging under `public/` would otherwise ship: Vite
   copies it wholesale, and `tests/bundle-content.test.ts` fails on any
   `*.staged` file under `public/` or `dist/`. `outputs` is the step's
   `declareOutputs({key: path, …}, families)` constant, the one place each
@@ -349,8 +347,7 @@ A pipeline restructuring promises unchanged outputs; prove it, don't
 eyeball it. Both commands first rebuild everything from scratch: they delete
 the gitignored files under `public/` and every stamp, then run
 `pnpm run build:data`. A stamp's input list can miss a file the step reads, so
-a skipped step proves nothing; a missing output is what makes every
-mtime-gated emitter rebuild too. Each run costs a cold catalogue build (about
+a skipped step proves nothing. Each run costs a cold catalogue build (about
 six minutes), and a dev server on the same checkout serves nothing meanwhile.
 
 1. On the base commit, `pnpm run identity:snapshot` hashes every output into

@@ -37,10 +37,10 @@ const edgeFiles = (from: string, to: string): string[] => loaded.graph.edges
 const isBuildStep = (name: string): boolean => isBuild(loaded.steps.get(name)!.step);
 
 describe('the step table', () => {
-  it('runs the catalogue chain in its data-flow order', () => {
+  it('runs the build steps in their data-flow order', () => {
     expect(loaded.graph.order.filter(isBuildStep)).toEqual([
-      'lineage:codes', 'build:wgsn', 'build:binaries', 'build:astrometry-request', 'build:classic-ids',
-      'build:membership', 'build:catalog', 'build:binaries-runtime',
+      'lineage:codes', 'build:clouds', 'build:local-group', 'build:wgsn', 'build:binaries',
+      'build:astrometry-request', 'build:classic-ids', 'build:membership', 'build:catalog', 'build:binaries-runtime',
     ]);
   });
 
@@ -61,9 +61,12 @@ describe('the step table', () => {
     expect(STEPS.steps.map((s) => s.entry).filter((entry) => texts.some((text) => text.includes(entry)))).toEqual([]);
   });
 
-  it('keeps loops only through a manual step and sets aside no registry edge while build:catalog is the only allocating step on it', () => {
+  it('keeps loops only through a manual step, and sets aside exactly the registry edges between the three allocating steps', () => {
     expect(loaded.graph.keptLoops.filter((e) => isBuildStep(e.from))).toEqual([]);
-    expect(loaded.graph.registryEdges).toEqual([]);
+    const allocating = ['build:catalog', 'build:clouds', 'build:local-group'];
+    expect(loaded.graph.registryEdges.map((e) => `${e.from} → ${e.to}`).sort()).toEqual(
+      allocating.flatMap((from) => allocating.filter((to) => to !== from).map((to) => `${from} → ${to}`)).sort(),
+    );
   });
 
   it('selects the whole catalogue chain upstream of build:binaries-runtime, so build:layers never reads a stale row-index map', () => {

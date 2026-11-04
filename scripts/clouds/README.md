@@ -21,7 +21,7 @@ the clouds both cover.
 - `zucker-parse.ts` (+ test) / `zucker-source.ts` — the four tables' parsers
   and declarations (`../util/sources/`).
 - `clouds-outputs.ts` — the emitArtifacts declaration.
-- `clouds-inputs.test.ts` — pins the up-to-date gate's input set,
+- `clouds-inputs.test.ts` — pins the step's derived input set,
   `stepInputPaths('build:clouds')`.
 - `clouds-json.test.ts` pins the emitted payload (11 calibrated clouds, class
   defaults, noiseModel, in-grid split, the alias / canonical-name table); it
@@ -38,10 +38,11 @@ Sources under `data/molecular-clouds/`:
 - `zucker2021-table3.dat` — masses + peak A_K for the same 11 clouds
   (joined on the raw cloud name).
 
-Idempotent — exits early if both artifacts are newer than every input
-`stepInputPaths` derives (the entry's import closure, its sibling files and
-the declarations it reads, `src/astro-core/baker-constants.json` among them).
-Run via `pnpm run build:clouds`.
+A `build` step on the runner
+([The runner](../pipeline/README.md#the-runner--runts)): `pnpm run build:clouds`
+skips it while its stamp holds every input `stepInputPaths` derives (the
+entry's import closure, its sibling files and the declarations it reads,
+`src/astro-core/baker-constants.json` among them) and both artifacts.
 
 ## Outputs
 

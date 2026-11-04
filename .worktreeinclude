@@ -4,6 +4,8 @@ public/constellations.json
 public/constellation-boundaries.json
 public/search-index.json
 public/binaries.bin
+public/clouds.json
+public/local-group.json
 build/catalog-row-index-map.json
 build/binding-integrity-verdicts.tsv
 build/stamps/build-binaries.json
@@ -14,4 +16,6 @@ build/stamps/build-astrometry-request.json
 build/stamps/build-membership.json
 build/stamps/build-catalog.json
 build/stamps/build-binaries-runtime.json
+build/stamps/build-clouds.json
+build/stamps/build-local-group.json
 build/lineage/*
