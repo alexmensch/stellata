@@ -9,7 +9,9 @@ import { describe, it, expect } from 'vitest';
 
 import { walkFiles } from './walk-files';
 
+import { loadDeclaredOutputs } from '../scripts/pipeline/step-table/load-table';
 import { MIRROR_STEPS } from '../scripts/pipeline/step-table/steps';
+import { pipelineTree } from '../scripts/pipeline/pipeline-tree';
 import type { DeclaredOutputs } from '../scripts/util/emit-artifacts';
 import { strays } from '../scripts/util/mirror-to-public';
 import { REPO_ROOT } from '../scripts/util/paths';
@@ -19,7 +21,7 @@ const PUBLIC_DIR = resolve(__dirname, '..', 'public');
 const DIST_DIR = resolve(__dirname, '..', 'dist');
 const MIRRORS = await Promise.all(MIRROR_STEPS.map(async ({ name, outputs }): Promise<[string, DeclaredOutputs]> => [
   name,
-  (await import(resolve(REPO_ROOT, outputs.module)) as Record<string, DeclaredOutputs>)[outputs.name],
+  await loadDeclaredOutputs(outputs, pipelineTree(REPO_ROOT)),
 ]));
 const FORBIDDEN_EXTENSIONS = ['.md', '.txt', '.py', '.ts'];
 // Committed .txt assets that are meant to ship (crawler signals).

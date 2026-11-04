@@ -3,7 +3,7 @@
 import { existsSync, readdirSync, readFileSync, rmSync } from 'node:fs';
 import { basename, resolve } from 'node:path';
 
-import { claims, type OutputClaims } from '../pipeline/step-table/step-table-pure';
+import { claims, claimsOf } from '../pipeline/step-table/step-table-pure';
 import { emitArtifacts, isMemberName, type ArtifactContents, type DeclaredOutputs } from './emit-artifacts';
 import { REPO_ROOT } from './paths';
 import { defineFolder, type Declared, type Source } from './sources/source';
@@ -21,8 +21,6 @@ export interface MirrorSourceSpec {
   /** Subfolders of `dir` whose files land flat beside the rest; names must stay unique across all of them. */
   readonly flattenSubDirs?: readonly string[];
 }
-
-const claimsOf = (outputs: DeclaredOutputs): OutputClaims => ({ files: Object.values<string>(outputs.files), families: outputs.families });
 
 /** Whether a file of this name is a declared output: a declared file's name or a family member's. */
 export function declaresName(outputs: DeclaredOutputs, name: string): boolean {

@@ -13,8 +13,8 @@ import { treeOf, treeRoots, type Tree } from '../../util/source-trees';
 import { readManualRecord } from '../freshness';
 import { pipelineTree, type PipelineTree } from '../pipeline-tree';
 import {
-  deriveGraph,
-  type OutputClaims, type ResolvedStep, type StepEntry, type StepGraph, type StepTable,
+  claimsOf, deriveGraph,
+  type OutputClaims, type OutputsRef, type ResolvedStep, type StepEntry, type StepGraph, type StepTable,
 } from './step-table-pure';
 
 const OUTPUTS_MODULE_LEAVES = new Set(['scripts/util/emit-artifacts.ts', 'scripts/util/paths.ts']);
@@ -127,10 +127,13 @@ async function outputClaims(step: StepEntry, tree: PipelineTree): Promise<Output
     const families = step.kind === 'build' ? [] : (step.families ?? []).map((f) => ({ ...f, dir: tree.abs(f.dir) }));
     return { files: step.outputs.map(tree.abs), families };
   }
-  const ref = step.outputs;
+  return claimsOf(await loadDeclaredOutputs(step.outputs, tree));
+}
+
+export async function loadDeclaredOutputs(ref: OutputsRef, tree: PipelineTree): Promise<DeclaredOutputs> {
   const declared = (await import(tree.abs(ref.module)) as Record<string, unknown>)[ref.name];
   if (!isDeclaredOutputs(declared)) throw new Error(`${ref.module} exports no declareOutputs constant ${ref.name}`);
-  return { files: Object.values<string>(declared.files), families: declared.families };
+  return declared;
 }
 
 function symlinkedOutputs(root: string, outputs: OutputClaims): string[] {
