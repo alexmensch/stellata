@@ -471,11 +471,13 @@ export function missingCanonRows(pin: PinFile): readonly string[] {
   return [...CANON_POSITIONS.keys()].filter((key) => !held.has(key));
 }
 
+type StreamKind = 'GPU' | 'compute' | 'CPU';
+
 /** Which side is missing the stream, so an ungated row says why rather than
  *  only that it is ungated — the pin having one and the run not is an
  *  instrument regression rather than the adapter being itself. */
 function ungatedNote(
-  stream: StreamSpec<never>['stream'], hasPinned: boolean, hasCurrent: boolean,
+  stream: StreamKind, hasPinned: boolean, hasCurrent: boolean,
 ): string {
   if (!hasPinned && !hasCurrent) {
     return `no ${stream} stream on either side — the adapter resolved no believable durations`;
@@ -544,7 +546,7 @@ function underCeiling(row: PinVerdictRow): PinVerdictRow {
 /** One timestamp stream of a context and the two sides to judge it on. */
 interface StreamSpec<C> {
   readonly key: string;
-  readonly stream: 'GPU' | 'compute' | 'CPU';
+  readonly stream: StreamKind;
   readonly judgement: RowJudgement<C>;
   readonly pinned: C | null;
   readonly current: C | null;

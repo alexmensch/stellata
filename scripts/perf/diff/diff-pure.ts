@@ -10,7 +10,7 @@ import {
   COMPUTE_JUDGEMENT, COMPUTE_ROW, CPU_BOUND_SHARE, CPU_JUDGEMENT, CPU_ROW, GPU_FRAME_JUDGEMENT,
   GPU_PLAIN_FRAME_JUDGEMENT, THROUGHPUT_JUDGEMENT, WALL_JUDGEMENT, classClock, computeClock, cpuClock,
   frameFloor, gatingClock, pointMove, recordedPacing, sampleClasses, spreadMove, throughputFrameMs,
-  type ClassClock, type DwellMetric, type GatedSide, type GatingClock, type RowJudgement,
+  type ClassClock, type DwellMetric, type GatedSide, type GatingClock, type RowBanding, type RowJudgement,
 } from '../dwell/dwell-pure';
 import type { DwellRecord, PerfFile, ScenarioRecord } from '../schema';
 import type { ScenarioName } from '../scenarios';
@@ -462,7 +462,7 @@ function cpuRow(key: string, name: ScenarioName, da: DwellRecord, db: DwellRecor
   if (ca === null || cb === null) {
     return [{ key: `${key}|${CPU_ROW}`, reason: 'one run recorded main-thread time for this row and the other did not' }];
   }
-  return [judgedRow(`${key}|${CPU_ROW}`, name, judged(CPU_JUDGEMENT, ca), judged(CPU_JUDGEMENT, cb))];
+  return [judgedRow(`${key}|${CPU_ROW}`, name, CPU_JUDGEMENT, CPU_JUDGEMENT.side(ca), CPU_JUDGEMENT.side(cb))];
 }
 
 /** README.md, on the compute row. */
@@ -485,8 +485,8 @@ function computeRow(
     }];
   }
   return [judgedRow(
-    `${key}|${COMPUTE_ROW}`, name,
-    judged(COMPUTE_JUDGEMENT, { clock: ca, floor: fa }), judged(COMPUTE_JUDGEMENT, { clock: cb, floor: fb }),
+    `${key}|${COMPUTE_ROW}`, name, COMPUTE_JUDGEMENT,
+    COMPUTE_JUDGEMENT.side({ clock: ca, floor: fa }), COMPUTE_JUDGEMENT.side({ clock: cb, floor: fb }),
   )];
 }
 
@@ -524,15 +524,15 @@ function frameRow(
     if (drifted !== null) return { key: `${key}|dwell`, reason: drifted };
   }
   const [ja, jb] = [judgedFrame(da, ga), judgedFrame(db, gb)];
-  if (ja.judgement.metric !== jb.judgement.metric) {
+  if (ja.banding.metric !== jb.banding.metric) {
     return {
       key: `${key}|dwell`,
       reason:
-        `${ja.judgement.metric} vs ${jb.judgement.metric} — one run's frame separated into two pass classes and the ` +
+        `${ja.banding.metric} vs ${jb.banding.metric} — one run's frame separated into two pass classes and the ` +
         "other's did not, and a plain-class median against a mixture median is two statistics",
     };
   }
-  return judgedRow(`${key}|dwell`, name, ja, jb);
+  return judgedRow(`${key}|dwell`, name, ja.banding, ja.side, jb.side);
 }
 
 /** The gating clock under its judgement. Off the GPU stream no floor column:
@@ -550,22 +550,21 @@ function judgedFrame(dwell: DwellRecord, gating: GatingClock): JudgedSide {
 }
 
 interface JudgedSide {
-  readonly judgement: RowJudgement<never>;
+  readonly banding: RowBanding;
   readonly side: GatedSide;
 }
 
 function judged<C>(judgement: RowJudgement<C>, clock: C): JudgedSide {
-  return { judgement, side: judgement.side(clock) };
+  return { banding: judgement, side: judgement.side(clock) };
 }
 
-/** Both sides under one metric: `frameRow` refuses a pair that is not. */
-function judgedRow(key: string, name: ScenarioName, a: JudgedSide, b: JudgedSide): DiffRow {
-  const { deltaMs, bandMs, floorDeltaMs, spreadDeltaMs, verdict } = judgedMove(a.judgement, a.side, b.side, name);
+function judgedRow(key: string, name: ScenarioName, banding: RowBanding, a: GatedSide, b: GatedSide): DiffRow {
+  const { deltaMs, bandMs, floorDeltaMs, spreadDeltaMs, verdict } = judgedMove(banding, a, b, name);
   return {
     key,
-    metric: a.judgement.metric,
-    baselineMs: a.side.valueMs,
-    currentMs: b.side.valueMs,
+    metric: banding.metric,
+    baselineMs: a.valueMs,
+    currentMs: b.valueMs,
     deltaMs,
     floorDeltaMs,
     spreadDeltaMs,
@@ -585,16 +584,16 @@ export interface JudgedMove {
 }
 
 export function judgedMove(
-  judgement: RowJudgement<never>, baseline: GatedSide, current: GatedSide, vantage: ScenarioName,
+  banding: RowBanding, baseline: GatedSide, current: GatedSide, vantage: ScenarioName,
 ): JudgedMove {
   const deltaMs = current.valueMs - baseline.valueMs;
-  const floorMs = judgement.floorMs(baseline, vantage);
+  const floorMs = banding.floorMs(baseline, vantage);
   const bandMs = band(baseline.standardErrorMs, current.standardErrorMs, floorMs);
   return {
     deltaMs,
     floorMs,
     bandMs,
-    floorDeltaMs: judgement.printsFloor ? pointMove(baseline.p10, current.p10) : null,
+    floorDeltaMs: banding.printsFloor ? pointMove(baseline.p10, current.p10) : null,
     spreadDeltaMs: spreadMove(baseline, current),
     verdict: verdictFor(deltaMs, bandMs),
   };

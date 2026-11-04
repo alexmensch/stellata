@@ -329,14 +329,18 @@ export interface GatedSide {
   readonly p90: number | null;
 }
 
-/** How one kind of row is judged, read by `--baseline` and `--against-pin`
- *  alike, so the two gates cannot band it differently. */
-export interface RowJudgement<C> {
+/** How a row kind bands two judged sides. */
+export interface RowBanding {
   readonly metric: DwellMetric;
   /** False where the p10 is the gated value, so a floor column would restate `delta`. */
   readonly printsFloor: boolean;
-  side(clock: C): GatedSide;
   floorMs(baseline: GatedSide, vantage: ScenarioName): number;
+}
+
+/** How one kind of row is judged, read by `--baseline` and `--against-pin`
+ *  alike, so the two gates cannot band it differently. */
+export interface RowJudgement<C> extends RowBanding {
+  side(clock: C): GatedSide;
 }
 
 const FRAME_FLOOR_BANDING = {
