@@ -11,10 +11,12 @@ its build — imports it from here; neither spells it.
 Names are repo-relative. `declareOutputs` reads a relative path as
 repo-relative, so an outputs module passes them as they are.
 
-- `data-files.ts` — `DATA_FILES`, the committed `data/` files TypeScript
-  steps write: the membership manifest and its three ledgers, the parked
-  and SIMBAD-sourced distance ledgers, the label-merge queue and the
-  generated reason-code list. Each file's codec (a `defineArtifact` in
+- `data-files.ts` — `DATA_FILES`, the committed `data/` files the
+  step-table outputs modules declare: the membership manifest and its three
+  ledgers, the parked and SIMBAD-sourced distance ledgers, the label-merge
+  queue and the generated reason-code list. Other TypeScript writers'
+  `data/` names (classic-ids, WGSN, the astrometry request, the Horizons
+  fetchers) are still spelled beside their own outputs modules. Each file's codec (a `defineArtifact` in
   `scripts/`) takes its `file` from here. Also the SID registry's
   partitions (`REGISTRY_PARTITIONS`: the catalogue's and one per sibling
   artifact, `SIBLING_PARTITIONS`) and how each one's ledger, events and head
