@@ -8,6 +8,8 @@ Python bakers that write each artifact read the same blocks.
 
 - `CLOUDS_JSON_SCHEMA`, `DUST_MANIFEST_SCHEMA` — the version each JSON
   artifact's loader accepts.
+- Every schema's `fileName` — the name its baker writes, which
+  `../public-artifacts/` re-exports as the name the viewer fetches.
 - `CLOUD_SURFACES_SCHEMA`, `LOCAL_BUBBLE_SCHEMA` — magic and version of
   the two binaries.
 - `checkBinaryHeader(view, schema, file)` — the magic-and-version gate every

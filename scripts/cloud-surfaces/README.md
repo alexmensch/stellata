@@ -79,7 +79,7 @@ two Edenhofer identity files and its own code, recorded as it runs.
 
 ## Output format (`cloud-surfaces.bin`, magic `CSUR`, v3)
 
-Magic and version come from `src/astro-core/baker-constants.json`
+File name, magic and version come from `src/astro-core/baker-constants.json`
 (`artifacts.cloudSurfaces`), which the client loader checks against too;
 a format change bumps the version there.
 

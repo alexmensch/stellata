@@ -17,9 +17,8 @@ import edenhofer2024  # noqa: E402
 from cloud_geometry import CLOUDS_JSON  # noqa: E402
 from scripts.util.baker_constants import CONSTANTS  # noqa: E402
 
-OUT_PATH = REPO / "data" / "molecular-clouds" / "cloud-surfaces.bin"
-
 _SCHEMA = CONSTANTS["artifacts"]["cloudSurfaces"]
+OUT_PATH = REPO / "data" / "molecular-clouds" / _SCHEMA["fileName"]
 MAGIC = _SCHEMA["magic"].encode("ascii")
 VERSION = _SCHEMA["version"]
 CLOUDS_JSON_VERSION = CONSTANTS["artifacts"]["clouds"]["version"]

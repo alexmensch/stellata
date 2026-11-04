@@ -28,6 +28,7 @@ CHUNKS_PER_AXIS = GRID_SIZE // CHUNK_SIZE   # 4
 BOUNDS_PC = cloud_model.DUST_GRID_HALF_EXTENT_PC  # half-extent; full cube is 2*bounds
 VOXEL_SIZE_PC = 2.0 * BOUNDS_PC / GRID_SIZE  # ≈ 4.883
 AV_PER_EZGR = CONSTANTS["extinction"]["avPerEzgr"]
+MANIFEST_NAME = CONSTANTS["artifacts"]["dustManifest"]["fileName"]
 
 # Encoding params. DENSITY_MIN is fixed below the real-data noise floor;
 # DENSITY_MAX is a fixed ceiling covering the raw Edenhofer 2024
@@ -112,7 +113,7 @@ def main() -> int:
         chunks, synthetic=args.synthetic, density_max=density_max,
         zucker=zucker_report,
     )
-    (args.output / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n")
+    (args.output / MANIFEST_NAME).write_text(json.dumps(manifest, indent=2) + "\n")
     print(f"Wrote {len(chunks)} chunks + manifest to {args.output.relative_to(ROOT)}/", file=sys.stderr)
 
     if not args.skip_public and args.output == DATA_DUST:
@@ -356,7 +357,7 @@ def is_runtime_asset(name: str) -> bool:
     """Mirror of the sync-dust-pure.ts allowlist — only runtime assets may
     land in public/dust/ (tests/bundle-content.test.ts guards the built
     tree against strays like README.md or a .voxels-*.npy cache)."""
-    return (name == "manifest.json"
+    return (name == MANIFEST_NAME
             or (name.startswith("chunk_") and name.endswith(".bin")))
 
 

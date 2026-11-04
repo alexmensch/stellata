@@ -10,10 +10,10 @@
     "avPerNhPc": 0.00165
   },
   "artifacts": {
-    "clouds": { "version": 4 },
-    "dustManifest": { "version": 2 },
-    "cloudSurfaces": { "magic": "CSUR", "version": 3 },
-    "localBubble": { "magic": "LBUB", "version": 1 }
+    "clouds": { "fileName": "clouds.json", "version": 4 },
+    "dustManifest": { "fileName": "manifest.json", "version": 2 },
+    "cloudSurfaces": { "fileName": "cloud-surfaces.bin", "magic": "CSUR", "version": 3 },
+    "localBubble": { "fileName": "local-bubble.bin", "magic": "LBUB", "version": 1 }
   },
   "planetShading": {
     "limbFloor": 0.45,

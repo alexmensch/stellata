@@ -2,6 +2,7 @@
 import { BAKER_CONSTANTS } from '../../astro-core/baker-constants';
 
 export interface JsonArtifactSchema {
+  readonly fileName: string;
   readonly version: number;
 }
 
