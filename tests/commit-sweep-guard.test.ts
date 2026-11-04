@@ -7,6 +7,7 @@ import { mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from 'nod
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { PAST_PIPE_BUFFER_BYTES, pastPipeBuffer } from './pipe-buffer';
 
 const HOOK = resolve(__dirname, '../scripts/hooks/commit-sweep/commit-sweep-guard.sh');
 
@@ -27,9 +28,9 @@ function write(rel: string, body = 'placeholder\n'): void {
   writeFileSync(full, body);
 }
 
-function allowed(command: string): boolean {
+function allowed(command: string, cwd = repo): boolean {
   const stdout = execFileSync('bash', [HOOK], {
-    cwd: repo,
+    cwd,
     input: JSON.stringify({ tool_name: 'Bash', tool_input: { command } }),
     encoding: 'utf-8',
   });
@@ -72,6 +73,26 @@ describe('commit-sweep-guard', () => {
     expect(allowed('git commit -m "add a thing"')).toBe(false);
   });
 
+  it('sweeps the repo git -C names, not the one the shell is in', () => {
+    stageStaleChange();
+    const elsewhere = realpathSync(mkdtempSync(join(tmpdir(), 'commit-sweep-cwd-')));
+    try {
+      expect(allowed(`cd /tmp && git -C ${repo} commit -m "add a thing"`, elsewhere)).toBe(false);
+    } finally {
+      rmSync(elsewhere, { recursive: true, force: true });
+    }
+  });
+
+  it('takes -C from the commit, not from an earlier git call', () => {
+    stageStaleChange();
+    const other = realpathSync(mkdtempSync(join(tmpdir(), 'commit-sweep-other-')));
+    try {
+      expect(allowed(`git -C ${other} status && git commit -m "add a thing"`)).toBe(false);
+    } finally {
+      rmSync(other, { recursive: true, force: true });
+    }
+  });
+
   it('honours the skip tag in an inline -m message', () => {
     stageStaleChange();
     expect(allowed(`git commit -m "add a thing ${SKIP_REASON}"`)).toBe(true);
@@ -105,6 +126,32 @@ describe('commit-sweep-guard', () => {
   it('does not fall over when the -F file does not exist', () => {
     stageStaleChange();
     expect(allowed(`git commit -F ${join(repo, 'absent.txt')}`)).toBe(false);
+  });
+});
+
+describe('commit-sweep-guard — input larger than a pipe buffer, matched on line 1', () => {
+  it('still sweeps a commit whose command runs long', () => {
+    stageStaleChange();
+    expect(allowed(`git commit -m "${pastPipeBuffer('add a thing')}"`)).toBe(false);
+  });
+
+  // Pin only: input is one line here, so the old pipe form passes too — /tests/README.md#pipefail-early-readers
+  it('still honours a skip tag at the head of a long message', () => {
+    stageStaleChange();
+    expect(allowed(`git commit -m "${pastPipeBuffer(`add a thing ${SKIP_REASON}`)}"`)).toBe(true);
+  });
+
+  it('still finds a staged README among a long staged list', () => {
+    write('src/thing/README.md', '# thing\n');
+    git('add', '-A');
+    git('commit', '-q', '-m', 'seed');
+    write('src/thing/README.md', '# thing, updated\n');
+    write('src/thing/a.ts', 'export const x = 1;\n');
+    const name = (i: number): string => `zpad/${'z'.repeat(240)}${i}.txt`;
+    const count = Math.ceil(PAST_PIPE_BUFFER_BYTES / name(0).length);
+    for (let i = 0; i < count; i++) write(name(i));
+    git('add', '-A');
+    expect(allowed('git commit -m "add many things"')).toBe(true);
   });
 });
 
@@ -218,17 +265,22 @@ export const x = 1;
 });
 
 describe('snapshot-copy sweep', () => {
-  function stageDoc(line: string): void {
+  function stageDoc(line: string, doc = 'NOTES.md'): void {
     write('counts/s-expected.json', '{ "rows": 975573, "segments": 781 }\n');
-    write('NOTES.md', '# notes\n');
+    write(doc, '# notes\n');
     git('add', '-A');
     git('commit', '-q', '-m', 'seed');
-    write('NOTES.md', `# notes\n\n${line}\n`);
+    write(doc, `# notes\n\n${line}\n`);
     git('add', '-A');
   }
 
   it('denies an added line quoting a snapshot count unmarked', () => {
     stageDoc('the manifest holds 975,573 rows');
+    expect(allowed('git commit -m "notes"')).toBe(false);
+  });
+
+  it('sweeps a markdown file whose name git quotes', () => {
+    stageDoc('the manifest holds 975,573 rows', 'NÖTES.md');
     expect(allowed('git commit -m "notes"')).toBe(false);
   });
 

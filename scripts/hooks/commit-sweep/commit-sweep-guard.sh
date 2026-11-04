@@ -37,16 +37,14 @@ fi
 
 cmd="$(printf '%s' "$input" | jq -r '.tool_input.command // ""')"
 
-# Match `git commit ...`, allowing `git -C <path> commit`. Excludes
-# subcommands that aren't commit and substrings like `git commit-tree`.
-if ! printf '%s' "$cmd" | grep -qE '\bgit([[:space:]]+-C[[:space:]]+[^[:space:]]+)?[[:space:]]+commit([[:space:]]|$)'; then
+# `git commit ...` or `git -C <path> commit ...`, not `git commit-tree`.
+# Group 3 is the -C path. BSD sed has no \b, hence the bracket class.
+commit_re='(^|[^[:alnum:]_])git([[:space:]]+-C[[:space:]]+([^[:space:]]+))?[[:space:]]+commit([[:space:]]|$)'
+if ! grep -qE "$commit_re" <<< "$cmd"; then
   exit 0
 fi
 
-# Resolve the repo top-level. Prefer `git -C <path>` if specified.
-repo_arg="$(printf '%s' "$cmd" \
-  | sed -nE 's/.*\bgit[[:space:]]+-C[[:space:]]+([^[:space:]]+).*/\1/p' \
-  | head -1)"
+repo_arg="$(sed -nE "/$commit_re/{s/.*${commit_re}.*/\3/p;q;}" <<< "$cmd")"
 if [ -n "$repo_arg" ]; then
   toplevel="$(git -C "$repo_arg" rev-parse --show-toplevel 2>/dev/null || true)"
 else
@@ -61,11 +59,6 @@ fi
 # command catches `[readme-skip: ...]` whether it's a `-m`-arg or
 # HEREDOC inline message. `-F <file>` does not, and is handled below.
 #
-# Flatten newlines to spaces first so the regex `[^]]*` (which doesn't
-# span newlines in line-mode grep) still spans a multi-line skip
-# reason. Without this a HEREDOC message that wraps the bracketed
-# reason across lines is silently ignored — surprise denials on
-# what looks like a valid opt-out.
 # `-F <file>` puts the message in a file, so the command carries only a
 # path and a tag inside it would never be seen. In a worktree that is the
 # ONLY route for a long message — the worktree guard rejects `$( )` and
@@ -82,20 +75,29 @@ for mf in $msg_files; do
   fi
 done
 
+# Flatten newlines to spaces first so the regex `[^]]*` (which doesn't
+# span newlines in line-mode grep) still spans a multi-line skip
+# reason. Without this a HEREDOC message that wraps the bracketed
+# reason across lines is silently ignored — surprise denials on
+# what looks like a valid opt-out.
+flat_scan="$(tr '\n' ' ' <<< "$skip_scan")"
+
 opt_out=0
-if printf '%s' "$skip_scan" | tr '\n' ' ' | grep -qE '\[readme-skip:[^]]*\]'; then
+if grep -qE '\[readme-skip:[^]]*\]' <<< "$flat_scan"; then
   opt_out=1
 fi
 
 comment_ok=0
-if printf '%s' "$skip_scan" | tr '\n' ' ' | grep -qE '\[comment-ok:[^]]*\]'; then
+if grep -qE '\[comment-ok:[^]]*\]' <<< "$flat_scan"; then
   comment_ok=1
 fi
 
 figure_ok=0
-if printf '%s' "$skip_scan" | tr '\n' ' ' | grep -qE '\[figure-ok:[^]]*\]'; then
+if grep -qE '\[figure-ok:[^]]*\]' <<< "$flat_scan"; then
   figure_ok=1
 fi
+
+staged="$(git -C "$toplevel" diff --cached --name-only)"
 
 # README staleness check.
 stale=""
@@ -123,13 +125,10 @@ if [ "$opt_out" = 0 ]; then
       dir="$parent"
     done
     [ -n "$readme" ] || continue
-    # Is this README in the staged set? Cheap recheck — diff--name-only
-    # is O(staged size), but staged size is small per commit so this is
-    # fine without memoisation.
-    if ! git -C "$toplevel" diff --cached --name-only | grep -qxF "$readme"; then
+    if ! grep -qxF "$readme" <<< "$staged"; then
       printf '%s\n' "  $f  →  needs review of $readme" >> "${TMPDIR:-/tmp}/commit-sweep-stale.$$"
     fi
-  done < <(git -C "$toplevel" diff --cached --name-only)
+  done <<< "$staged"
 
   stale_file="${TMPDIR:-/tmp}/commit-sweep-stale.$$"
   if [ -f "$stale_file" ]; then
@@ -257,7 +256,7 @@ copies=""
 figure_check="$(dirname "$0")/../../doc-figures/check-staged-figures.ts"
 tsx_bin="$(dirname "$0")/../../../node_modules/.bin/tsx"
 if [ "$figure_ok" = 0 ] && [ -f "$figure_check" ] && [ -x "$tsx_bin" ] \
-  && git -C "$toplevel" diff --cached --name-only -- '*.md' | grep -q .; then
+  && ! git -C "$toplevel" diff --cached --quiet -- '*.md'; then
   set +e
   copies="$("$tsx_bin" "$figure_check" "$toplevel" 2>/dev/null)"
   status=$?

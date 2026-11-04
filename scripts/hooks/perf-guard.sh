@@ -65,7 +65,7 @@ esac
 # unmatched by CMD_START below.
 cmd="$(printf '%s' "$input" | jq -r '.tool_input.command // ""' | tr '\n' ';')"
 
-if printf '%s' "$cmd" | grep -qF "$PERF_GO_MARKER_NAME"; then
+if grep -qF "$PERF_GO_MARKER_NAME" <<< "$cmd"; then
   deny "Refusing: this command names ${PERF_GO_MARKER_NAME}, the perf runner's arm marker.
 
 ${marker_rule}
@@ -78,7 +78,7 @@ VIA_RUNNER="(pnpm[[:space:]]+(exec|dlx)[[:space:]]+)?(tsx|node|npx|bunx?|deno|pn
 VIA_PKG='(pnpm|npm|yarn|bun)([[:space:]]+[^[:space:];&|]+)*[[:space:]]+perf([[:space:]]|$|[;&|)])'
 DIRECT='\./scripts/perf/run\.ts([[:space:]]|$|[;&|)])'
 
-printf '%s' "$cmd" | grep -qE "${CMD_START}${ENV_PREFIX}(${VIA_RUNNER}|${VIA_PKG}|${DIRECT})" || exit 0
+grep -qE "${CMD_START}${ENV_PREFIX}(${VIA_RUNNER}|${VIA_PKG}|${DIRECT})" <<< "$cmd" || exit 0
 
 [ -f "$marker" ] || deny "Refusing the perf runner: no ${PERF_GO_MARKER_NAME} marker at ${marker} — not armed.
 

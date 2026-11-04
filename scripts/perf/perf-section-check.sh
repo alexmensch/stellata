@@ -77,8 +77,6 @@ section=$(awk '
   /^## / && capture { exit }
   capture { print }
 ' "$body_file")
-# Here-strings, never `printf | reader`: under pipefail a reader that stops
-# early (grep -q, awk's exit) SIGPIPEs the writer and the pipeline fails.
 stripped=$(perl -0777 -pe 's/<!--.*?-->//gs' <<< "$section")
 
 if ! grep -qE '[^[:space:]]' <<< "$stripped"; then
