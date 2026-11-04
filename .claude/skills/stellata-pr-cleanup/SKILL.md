@@ -69,7 +69,7 @@ pnpm run build:seed
 
 Never pipe its output (`| tail` reports `tail`'s exit code, not the build's).
 A landing coordinated by `pickup-epic` skips this section: the coordinator
-runs it once before its next launch instead.
+starts it in the background right after the landing instead.
 
 `build:seed` builds only the steps worktrees are seeded from, and
 stops a build another landing already started in the main checkout, so
