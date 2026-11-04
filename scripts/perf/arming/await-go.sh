@@ -9,7 +9,7 @@ here="$(dirname "$0")"
 . "$here/perf-go-lib.sh"
 
 poll_s="${PERF_GO_POLL_S:-15}"
-timeout_s="${PERF_GO_TIMEOUT_S:-3600}"
+timeout_s="${PERF_GO_TIMEOUT_S:-$PERF_GO_WAIT_S}"
 
 marker="$(perf_go_marker)" || { echo "perf-go: not inside a git checkout" >&2; exit 1; }
 started="$(date +%s)"

@@ -1,5 +1,5 @@
-// The arm marker's name and freshness, parsed out of perf-go-lib.sh so the
-// runner cannot drift from the hook that enforces them. README.md#traps.
+// The arm scalars, parsed out of perf-go-lib.sh so the runner and the tests
+// cannot drift from the shell that enforces them. README.md#traps.
 
 import { readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
@@ -16,3 +16,4 @@ function shellScalar(name: string): string {
 
 export const PERF_GO_MARKER_NAME = shellScalar('PERF_GO_MARKER_NAME');
 export const PERF_GO_MAX_AGE_S = Number(shellScalar('PERF_GO_MAX_AGE_S'));
+export const PERF_GO_WAIT_S = Number(shellScalar('PERF_GO_WAIT_S'));

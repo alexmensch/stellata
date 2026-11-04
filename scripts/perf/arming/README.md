@@ -11,10 +11,10 @@ measures is `../README.md`.
 
 ```
 scripts/perf/arming/
-  perf-go-lib.sh (+ test)   Marker name, path and freshness — the single
-                            source, sourced by await-go.sh and
+  perf-go-lib.sh (+ test)   Marker name, path, freshness and the poll's wait
+                            — the single source, sourced by await-go.sh and
                             scripts/hooks/perf-guard.sh.
-  perf-go-lib.ts            The same two scalars parsed out of the .sh for
+  perf-go-lib.ts            The same scalars parsed out of the .sh for
                             run.ts and the tests, so no second copy of the
                             marker name or the hour can drift from the hook.
   await-go.sh (+ test)      The arm poller the agent runs in the background.
@@ -80,9 +80,11 @@ The deny reason carries these five steps verbatim:
    ([stellata-perf protocol](/.claude/skills/stellata-perf/SKILL.md#protocol--announce--arm--run-one-run-per-arm)).
 2. Announce what is to be measured and why, with the exact command.
 3. Start `bash scripts/perf/arming/await-go.sh` in the background. It polls
-   every `PERF_GO_POLL_S` (15) s for up to `PERF_GO_TIMEOUT_S` (3600) s,
-   prints one line when a fresh marker exists (exit 0), or exits 1 on
-   timeout.
+   every `PERF_GO_POLL_S` (15) s for up to `PERF_GO_TIMEOUT_S` s — default
+   `PERF_GO_WAIT_S` (900, fifteen minutes) — prints one line when a fresh
+   marker exists (exit 0), or exits 1 on timeout. The wait is short because
+   a coordinated run holds every other worker paused for it; a timeout ends
+   the grant, and the requester asks again when Alex is ready.
 4. Proceed only when it reports the marker, and only on Alex's answer if it
    warns about busy sessions.
 5. Never create the marker.
@@ -108,7 +110,7 @@ attempt, whatever happens after.
 ## Launch the runner detached, always
 
 **Both the poller and the runner go in the background** — under Claude Code,
-Bash `run_in_background`. The poller because it waits up to an hour; the
+Bash `run_in_background`. The poller because it waits up to fifteen minutes; the
 runner because a foreground call is capped at **10 minutes** and killed
 there, and the long modes reach it: a pin run is 9.4 min on the M6 — five
 contexts of ~17 s each and four 120 s cool-downs
