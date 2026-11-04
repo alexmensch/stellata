@@ -16,7 +16,7 @@ import { describeStep } from '../freshness';
 import { loadTable, type Loaded } from './load-table';
 import { MANUAL_STEPS } from './manual-step-outputs';
 import { pipelineTree } from '../pipeline-tree';
-import { describesItself, isBuild, selectSteps } from './step-table-pure';
+import { describesItself, isBuild, selectSteps, type Edge, type ReadsEdge } from './step-table-pure';
 import { STEPS } from './steps';
 
 const CNS5 = CNS5_SOURCE.file;
@@ -31,7 +31,8 @@ beforeAll(async () => {
 }, 60_000);
 
 const edgeFiles = (from: string, to: string): string[] => loaded.graph.edges
-  .filter((e) => e.from === from && e.to === to).flatMap((e) => e.files.map((f) => relative(REPO_ROOT, f)));
+  .filter((e: Edge): e is ReadsEdge => e.kind === 'reads' && e.from === from && e.to === to)
+  .flatMap((e) => e.files.map((f) => relative(REPO_ROOT, f)));
 
 const isBuildStep = (name: string): boolean => isBuild(loaded.steps.get(name)!.step);
 
