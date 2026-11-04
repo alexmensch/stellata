@@ -117,9 +117,11 @@ fan-out of jobs beyond the bare checks:
   restores from a content-keyed cache when no input changed; key, cached
   set and the one way to get a stale hit: `scripts/ci/README.md`. The
   checks:
-  - `SID registry committed` — `git diff --exit-code -- data/sid` after
-    `build:layers`: a mint or event the clouds stamp or
-    `build:local-group` appended that the PR did not commit. The catalogue stage's own diff
+  - `Layer outputs committed` — `git diff --exit-code -- data/sid
+    data/molecular-clouds` after `build:layers`: a mint or event
+    `build:clouds` or `build:local-group` appended, or a change to the dust
+    bake's column-check inputs `build:clouds` wrote, that the PR did not
+    commit. The catalogue stage's own diff
     gate covers `build:catalog`'s.
   - `Full vitest, smudged and built` — `pnpm test` again, now with LFS
     content and every built artifact present, so each suite that

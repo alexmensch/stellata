@@ -9,6 +9,7 @@ export const DATA_FILES = {
   labelFlips: 'data/classic-ids/label_flips.tsv',
   simbadSourcedDistances: 'data/athyg/simbad_sourced_distances.tsv',
   reasonCodes: 'data/lineage/reason-codes.tsv',
+  vaidmanSupergiants: 'data/distance-validation/vaidman-2025-supergiants.tsv',
 } as const;
 
 export const CATALOG_PARTITION = 'catalog';

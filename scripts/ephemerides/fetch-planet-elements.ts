@@ -3,7 +3,8 @@
 // data/ephemerides/{id}.json. See README.md#cadence.
 
 import { emitEach, runStep, type Check, type PullDescription } from '../util/emit-artifacts';
-import { roundSignificant, serializeRowFile } from '../util/frozen-json';
+import { serializeRowFile } from '../util/frozen-json';
+import { roundSignificant } from '../util/round-pure';
 import {
   fetchHorizonsText, HORIZONS_API, HORIZONS_SERVICE, rangeChunks,
 } from '../util/horizons-response';

@@ -1,5 +1,6 @@
 // Every file a step reads: its import closure, the closure's siblings, and the declarations it reads. See README.md.
 
+import { existsSync, statSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 import { STEPS } from '../pipeline/step-table/steps';
@@ -28,4 +29,14 @@ export async function entryInputPaths(entries: readonly string[]): Promise<strin
     ...declaredFiles((await declaredInputs(closure)).filter(isRead)),
     ...closureWithSiblings(closure, trackedFiles()),
   ].map((path) => resolve(REPO_ROOT, path));
+}
+
+/** An off-table step's mtime gate: every output exists and is newer than every input `stepInputPaths` derives. */
+export async function outputsNewerThanInputs(step: string, outputs: readonly string[]): Promise<boolean> {
+  if (!outputs.every(existsSync)) return false;
+  const oldest = Math.min(...outputs.map((p) => statSync(p).mtimeMs));
+  for (const src of await stepInputPaths(step)) {
+    if (!existsSync(src) || statSync(src).mtimeMs > oldest) return false;
+  }
+  return true;
 }

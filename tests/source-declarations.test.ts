@@ -33,7 +33,7 @@ const isTs = (path: string): boolean => path.endsWith('.ts') && !path.endsWith('
 const DECLARATION_FACTORIES = ['scripts/util/mirror-to-public.ts'];
 
 const scripts = packageScripts();
-const MANUAL_TS_STEPS = ['sid:stamp', 'sid:risk-set'];
+const MANUAL_TS_STEPS = ['sid:risk-set'];
 /** Targets named like steps that are not pipeline steps (Vite is not a step; the seed wrapper runs steps). */
 const NOT_STEPS = ['build:client', 'build:site', 'build:seed'];
 const STEP_NAMED = Object.keys(scripts)
@@ -48,7 +48,7 @@ describe('source declarations', () => {
   it('resolves every step-named script into steps it can check', () => {
     const unresolved = STEP_NAMED.filter((name) => scriptParts(scripts, name).some((p) => p.kind === 'other'));
     expect(unresolved).toEqual([]);
-    expect(TS_STEPS).toEqual(expect.arrayContaining(['build:catalog', 'lineage:codes', 'build:local-group', 'build:clouds', 'sid:stamp']));
+    expect(TS_STEPS).toEqual(expect.arrayContaining(['build:catalog', 'lineage:codes', 'build:local-group', 'build:clouds']));
     expect(TS_STEPS).not.toContain('build:stamped');
   });
 
@@ -75,6 +75,12 @@ describe('source declarations', () => {
       });
     }
     expect(offenders).toEqual([]);
+  });
+
+  it('names no script entry like a declaring module, which the input-set walk imports', () => {
+    const entries = Object.keys(scripts).flatMap((name) => scriptParts(scripts, name))
+      .flatMap((p) => (p.kind === 'tsx' ? [p.entry] : []));
+    expect(entries.filter((entry) => DECLARING_MODULE.test(entry))).toEqual([]);
   });
 
   it('declares sources only in a module named for it', () => {

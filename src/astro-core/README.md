@@ -72,6 +72,11 @@ Each has its own README.
   `skyBasis` deliberately does NOT ride this: it seeds a rotation
   quaternion and picks a canonical orientation at the pole, which this
   helper leaves to the caller's ra.
+- `cloud-density-pure.ts` (+ test) — the molecular-cloud density
+  profile: `plummerProfile` and the soft ellipsoid `cloudEnvelope`. The
+  clouds build calibrates against it (`scripts/clouds/`) and the absorption
+  march's CPU mirror evaluates it
+  (`src/client/molecular-clouds/absorption/`).
 - `galactic-coords.ts` — `GAL_TO_ICRS` (Matrix4) and `GALACTIC_CENTRE_PC`
   (Vector3 at R₀ = 8.122 kpc), built from the J2000 IAU galactic-pole and
   galactic-centre angles with explicit re-orthogonalisation, plus
@@ -160,8 +165,8 @@ the other half of the axis. `passband` still has no consumer.
 ## Baker constants
 
 `baker-constants.json` is the one spelling of every fact the Python asset
-bakers (dust, cloud surfaces, Local Bubble, textures, and the cloud model
-behind `build-clouds.py`) share with TypeScript. Neither language owns a
+bakers (dust, cloud surfaces, Local Bubble, textures) share with
+TypeScript. Neither language owns a
 copy: Python loads it through `scripts/util/baker_constants.py`
 (`CONSTANTS`, a plain `json.load`); in TypeScript, `baker-constants.ts` is
 the file's only importer. It holds next to the tree's other shared physics
@@ -192,9 +197,10 @@ Adding a fact:
 
 | Key | What | TS readers | Python readers |
 |---|---|---|---|
-| `galacticFrame` | J2000 IAU galactic centre and north pole, ICRS degrees | `galactic-coords.ts` | `scripts/clouds/cloud_model.py` |
-| `artifacts` | File name, version and (for binaries) 4-byte magic of each baker-written artifact: `clouds`, `dustManifest`, `cloudSurfaces`, `localBubble` | each artifact's loader, via `checkBinaryHeader` for the binaries | each artifact's writer; `trace_surfaces.py` also gates on the `clouds` version it reads |
+| `galacticFrame` | J2000 IAU galactic centre and north pole, ICRS degrees | `galactic-coords.ts` | none: the dust bake reads the rotation it needs from `zucker-profiled.json` |
+| `cloudModel` | `dustGridHalfExtentPc`, the dust voxel cube's half-extent | `DUST_GRID_HALF_EXTENT_PC`: the clouds build's in-grid test | `build-dust.py` |
+| `artifacts` | File name, version and (for binaries) 4-byte magic of each artifact crossing the language line: `clouds`, `dustManifest`, `cloudSurfaces`, `localBubble`, and `zuckerProfiled` (written by `build:clouds`, read by the dust bake) | each artifact's loader, via `checkBinaryHeader` for the binaries | each artifact's writer; `trace_surfaces.py` also gates on the `clouds` version it reads |
 | `planetShading` | Limb-darkening floor and exponent, and the terminator-softness floor, of the planet mesh shader | `planet-mesh-tsl.ts`, `mesh-surface-pure.ts` | `scripts/textures/measure_relief_lighting.py` |
 | `surfaceRelief` | Horizon-map azimuth count and sine range, sky-view range, and per relief body its radius, albedo, colour-map centre longitude and DEM elevation span (Earth's floor is the sea surface: the DEM is clamped there) | `planet-system.ts`, `rotation-elements-pure.ts`, `surface-relief-pure.ts`, `planet-mesh-layer.ts`, `planet-mesh-tsl.ts` | `dem_relief.py` (merged into `DEM_BODIES`), `horizon_map.py`, `sky_view.py`, `measure_relief_lighting.py` |
 | `ringSpans` | Uranus's and Neptune's ring annuli, km | `planet-system.ts` `rings` | `build-textures.py` `RING_TABLES` |
-| `extinction` | `avPerEzgr`, A_V per unit Edenhofer dust density; `avPerNhPc`, A_V per pc per n_H cm⁻³ ([§ 2](/docs/science-molecular-clouds.md#2-extinction-physics-and-the-units-chain)) | cloud absorption graph, Milky Way column, shared-uniforms seed | `cloud_model.py`, `build-dust.py` (which writes `avPerEzgr` into the dust manifest) |
+| `extinction` | `avPerEzgr`, A_V per unit Edenhofer dust density; `avPerNhPc`, A_V per pc per n_H cm⁻³ ([§ 2](/docs/science-molecular-clouds.md#2-extinction-physics-and-the-units-chain)) | cloud absorption graph, Milky Way column, shared-uniforms seed, the clouds build's calibration | `build-dust.py` (which writes `avPerEzgr` into the dust manifest) |

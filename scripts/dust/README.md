@@ -68,7 +68,13 @@ The build also runs a per-cloud column check (`zucker` block in the
 manifest): peak A_V columns through each
 [Zucker 2021](/data/papers/index.md#zucker2021) profiled cloud vs the
 [Leike 2020](/data/papers/index.md#leike2020)-resolution targets,
-pinned in `dust-manifest.test.ts`.
+pinned in `dust-manifest.test.ts`. Each cloud's box, target and the
+galactic→ICRS rotation come from
+`data/molecular-clouds/zucker-profiled.json`, which `build:clouds` writes
+([Outputs](../clouds/README.md#outputs)); the bake refuses any version but
+`artifacts.zuckerProfiled`'s. The grid half-extent is `cloudModel` in
+`src/astro-core/baker-constants.json`, the one the clouds build's in-grid
+split reads.
 
 ## The Edenhofer 2024 pulls
 

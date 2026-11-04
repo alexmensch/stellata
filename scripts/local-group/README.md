@@ -114,7 +114,7 @@ canonical rename churns no SID and needs no `sameas` bridge.
 parsed, and wherever `displayName` passes one through: **Messier numbers
 close up ("M31"); every other catalogue prefix takes a single space
 ("NGC 224", "UGC 5364")**. That is the convention Wikipedia's designation
-lists and `scripts/clouds/build-clouds.py`'s alias table both follow, and
+lists and `scripts/clouds/build-clouds-pure.ts`'s alias table both follow, and
 it is why `DISPLAY_NAME_OVERRIDES` no longer carries an `M 32` → `M32`
 entry: LVDB's SIMBAD-spaced shortform closes up under the general rule.
 

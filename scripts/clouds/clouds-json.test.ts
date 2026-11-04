@@ -5,30 +5,12 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { describe, it, expect } from 'vitest';
 import { CLOUDS_JSON_SCHEMA } from '../../src/catalog-format/baker-artifacts/baker-artifacts';
+import type { CloudsFile } from '../../src/catalog-format/clouds/clouds-schema';
 
 import { PUBLIC_FILES } from '../../src/catalog-format/public-artifacts/public-artifacts';
 import { publicFile } from '../util/paths';
 
 const CLOUDS_JSON = publicFile(PUBLIC_FILES.clouds);
-
-interface CloudV2 {
-  name: string;
-  id: string;
-  aliases?: string[];
-  source: string;
-  inGrid: boolean;
-  class: 'dark' | 'sf' | 'hii';
-  sigmaS: number;
-  seed: number;
-  embedded: unknown[];
-  n0Cal: number;
-  uEnv: number;
-  rflat: number;
-  p: number;
-  massLeike: number | null;
-  akPeak: number | null;
-  mass?: number;
-}
 
 // The calibration contract (/docs/science-molecular-clouds.md#42-calibration-procedure-per-cloud): n0Cal sets the
 // centroid shortest-axis column to akPeak/0.117 mag; uEnv < 1 records the
@@ -54,13 +36,7 @@ const PROFILED_PINS: Record<
 
 describe.skipIf(!existsSync(CLOUDS_JSON))('clouds.json', () => {
   const payload = existsSync(CLOUDS_JSON)
-    ? (JSON.parse(readFileSync(CLOUDS_JSON, 'utf-8')) as {
-        version: number;
-        envelopeFadeStart: number;
-        count: number;
-        noiseModel: Record<string, unknown>;
-        clouds: CloudV2[];
-      })
+    ? (JSON.parse(readFileSync(CLOUDS_JSON, 'utf-8')) as CloudsFile)
     : null!;
 
   it('carries the shared schema version and the full cloud set', () => {

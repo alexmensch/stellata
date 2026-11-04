@@ -30,7 +30,7 @@ is load-bearing:
 2. **The presence layer is the calibrated Zucker model.** It drives the
    absorption raymarch (dimming diffuse layers behind a cloud) and the
    rim silhouette, shipped in `clouds.json`. Its parameters are the one
-   source of truth: `cloud_model.py` → `clouds.json` → shader uniforms,
+   source of truth: `cloud-model-pure.ts` → `clouds.json` → shader uniforms,
    never redefined shader-side.
 
 Two consequences:
@@ -138,9 +138,11 @@ skeletons themselves are not ingested).
 
 The analytic model drives the presence pass and the embedded-star /
 cavity work. It does **not** modify the voxel extinction field ([§ 1](#1-overview--two-independent-fields)).
-Shared implementation: `scripts/clouds/cloud_model.py`, consumed by
-`build-clouds.py` (clouds.json fields) and `build-dust.py` (the column
-check).
+Shared implementation: `scripts/clouds/cloud-model-pure.ts`, over the
+profile in `src/astro-core/cloud-density-pure.ts`, consumed by
+`build-clouds.ts`, which writes the clouds.json fields and the profiled
+clouds' column-check inputs `build-dust.py` reads
+(`data/molecular-clouds/zucker-profiled.json`).
 
 ### 4.1 The 11 profiled clouds (Zucker 2021)
 
@@ -205,7 +207,7 @@ only shape silhouettes.
 Cloud substructure ships as real data — per-cloud isosurface meshes
 traced from the [Edenhofer 2024](/data/papers/index.md#edenhofer2024) field ([§ 9](#9-presence-pass)). The presence shader carries no
 noise. The log-normal octave model below is retained as the build-side
-spec: `cloud_model.py` still emits the `noiseModel` block ([§ 8](#8-per-cloud-parameter-schema)) so a
+spec: `cloud-model-pure.ts` still emits the `noiseModel` block ([§ 8](#8-per-cloud-parameter-schema)) so a
 future volumetric-substructure upgrade has one calibrated source of
 truth to pick up. No client code reads it today.
 
@@ -335,7 +337,7 @@ cross-match unchanged.
 
 Classification rule: any ≤ B1 star → `hii`; else any B2–B9 or a curated
 flag → `sf`; else `dark`. A small curated override table in
-`cloud_model.py` handles (a) out-of-grid famous HII regions whose
+`cloud-model-pure.ts` handles (a) out-of-grid famous HII regions whose
 ionising stars may be missing/too-faint in the catalog (Carina, W3, W4,
 W5, M16, M17, Rosette, IC 2944, NGC 6604, Gem OB1), (b) IC 443 (a
 supernova remnant — treated as `hii` for tinting), (c) any

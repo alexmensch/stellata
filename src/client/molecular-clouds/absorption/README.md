@@ -14,9 +14,11 @@ annotates the same cloud's silhouette is annotation and lives in the parent
   `TAU_PER_AV`, `ALPHA_CAP`, `AV_SATURATED`,
   `MARCH_MIN_STEPS`, `MARCH_MIN_CHORD_T`. Vitest-pinned, and imported by
   the graph (`../../webgpu/molecular-clouds/cloud-absorption-tsl.ts`), so
-  neither can drift from the other. The two unit conversions the build
+  neither can drift from the other. The profile itself (Plummer under the
+  envelope) is `../../../astro-core/cloud-density-pure.ts`, the one the
+  build calibrated `n0Cal` / `uEnv` with. The two unit conversions the build
   calibrated against — `AV_PER_NH_PC` and `AV_PER_EZGR` — come from
-  `../../../astro-core/baker-constants.ts`, shared with `scripts/clouds/cloud_model.py`.
+  `../../../astro-core/baker-constants.ts`, shared with the clouds build (`scripts/clouds/`).
   The analytic tier's taper start is the catalogue's `envelopeFadeStart`
   (`clouds.json`), carried on each `CloudAbsorptionSpec`. The **dither** is owned by
   `../../../astro-core/tonemap/tonemap-pure.ts` and read from there.

@@ -23,7 +23,7 @@ unsmudged LFS pointer. Regenerate offline and commit:
 
 ```
 ./.venv/bin/pip install -r scripts/cloud-surfaces/requirements.txt
-pnpm run build:clouds                    # sid-stamped clouds.json first
+pnpm run build:clouds                    # clouds.json, sids included, first
 pnpm run build:cloud-surfaces            # under the venv's python3
 ```
 

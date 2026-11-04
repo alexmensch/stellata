@@ -266,7 +266,7 @@ Allocation (`allocate`, `scripts/sid/allocate-pure.ts`) is the **only**
 writer of ledger rows and events, and the catalogue build is the minting
 step: `build:catalog` allocates its records and the sol and shell lists
 in-process before it emits, `build:local-group` allocates the `lg:`
-namespace the same way, and the clouds stamp the `cloud:` namespace. Each caller allocates only
+namespace the same way, and `build:clouds` the `cloud:` namespace. Each caller allocates only
 its own namespaces:
 
 1. Build the same-as graph (recomputed edges + stored edges) over the

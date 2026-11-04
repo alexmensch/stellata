@@ -2,14 +2,14 @@
 // layer. See scripts/local-group/README.md for inputs, output schema,
 // idempotency, and the LVDB-refresh protocol.
 
-import { existsSync, statSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { allocateSibling, emitSibling } from '../sid/sibling-allocation';
 import { SIBLING_ARTIFACTS } from '../sid/sibling-artifacts-pure';
 import { runStep, sweepStaged } from '../util/emit-artifacts';
-import { stepInputPaths } from '../util/step-inputs';
+import { roundHalfEven, roundSignificant } from '../util/round-pure';
+import { outputsNewerThanInputs } from '../util/step-inputs';
 import { LOCAL_GROUP_OUTPUTS } from './local-group-outputs';
 import { LG_ALIASES, LG_OVERRIDES, LVDB } from './local-group-source';
 import { PUBLIC_FILES } from '../../src/catalog-format/public-artifacts/public-artifacts';
@@ -18,8 +18,6 @@ import {
   buildStandaloneOverride,
   filterForRendering,
   mergeRowAndOverride,
-  roundN,
-  roundSig,
 } from './build-local-group-pure';
 import {
   LOCAL_GROUP_VERSION,
@@ -37,12 +35,12 @@ const OUT = LOCAL_GROUP_OUTPUTS.files.localGroup;
 /** Trims numeric precision so repeat builds produce stable diffs. */
 function sersicParamsToJson(p: SersicParams) {
   return {
-    reffAxesPc: p.reffAxesPc.map((v) => roundN(v, 2)),
-    n: roundN(p.n, 4),
-    bn: roundN(p.bn, 6),
-    pn: roundN(p.pn, 6),
-    uMax: roundN(p.uMax, 4),
-    density0: roundSig(p.density0, 8),
+    reffAxesPc: p.reffAxesPc.map((v) => roundHalfEven(v, 2)),
+    n: roundHalfEven(p.n, 4),
+    bn: roundHalfEven(p.bn, 6),
+    pn: roundHalfEven(p.pn, 6),
+    uMax: roundHalfEven(p.uMax, 4),
+    density0: roundSignificant(p.density0, 8),
   };
 }
 
@@ -50,20 +48,20 @@ function emissionToJson(e: LgEmission) {
   if (e.family === 'sersic') {
     return {
       family: e.family,
-      mV: roundN(e.mV, 2),
+      mV: roundHalfEven(e.mV, 2),
       ...(e.color ? { color: e.color } : {}),
       ...sersicParamsToJson(e),
     };
   }
   return {
     family: e.family,
-    mV: roundN(e.mV, 2),
+    mV: roundHalfEven(e.mV, 2),
     ...(e.color ? { color: e.color } : {}),
-    rdPc: roundN(e.rdPc, 2),
-    zdPc: roundN(e.zdPc, 2),
-    rEnvPc: roundN(e.rEnvPc, 2),
-    zEnvPc: roundN(e.zEnvPc, 2),
-    density0: roundSig(e.density0, 8),
+    rdPc: roundHalfEven(e.rdPc, 2),
+    zdPc: roundHalfEven(e.zdPc, 2),
+    rEnvPc: roundHalfEven(e.rEnvPc, 2),
+    zEnvPc: roundHalfEven(e.zEnvPc, 2),
+    density0: roundSignificant(e.density0, 8),
     ...(e.bulge ? { bulge: sersicParamsToJson(e.bulge) } : {}),
   };
 }
@@ -74,30 +72,20 @@ function toJsonObject(o: LgObjectRow) {
     id: o.id,
     type: o.type,
     ...(o.aliases ? { aliases: o.aliases } : {}),
-    center: o.center.map((v) => roundN(v, 2)),
+    center: o.center.map((v) => roundHalfEven(v, 2)),
     kind: o.kind,
-    axes: o.axes.map((v) => roundN(v, 2)),
-    quat: o.quat.map((v) => roundN(v, 6)),
+    axes: o.axes.map((v) => roundHalfEven(v, 2)),
+    quat: o.quat.map((v) => roundHalfEven(v, 6)),
     source: o.source,
-    distance: roundN(o.distance, 1),
+    distance: roundHalfEven(o.distance, 1),
     emission: emissionToJson(o.emission),
   };
-}
-
-async function isUpToDate(): Promise<boolean> {
-  if (!existsSync(OUT)) return false;
-  const outMtime = statSync(OUT).mtimeMs;
-  for (const src of await stepInputPaths('build:local-group')) {
-    if (!existsSync(src)) return false;
-    if (statSync(src).mtimeMs > outMtime) return false;
-  }
-  return true;
 }
 
 async function main(): Promise<void> {
   sweepStaged(LOCAL_GROUP_OUTPUTS);
   const force = process.argv.includes('--force');
-  if (!force && await isUpToDate()) {
+  if (!force && await outputsNewerThanInputs('build:local-group', [OUT])) {
     console.log(`${PUBLIC_FILES.localGroup} up to date — skipping (use --force to rebuild)`);
     return;
   }

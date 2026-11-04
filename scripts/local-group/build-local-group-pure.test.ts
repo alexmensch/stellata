@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import { roundHalfEven, roundSignificant } from '../util/round-pure';
 import { lgObjectStub } from './lg-object-mock';
 import {
   applyAliasMeta,
@@ -18,10 +19,7 @@ import {
   projectedSemiMajorPc,
   renderedWireframeAxes,
   raDecDistanceToIcrs,
-  roundN,
-  roundSig,
   skyBasis,
-  slugify,
   DISC_ENV_SCALE_LENGTHS,
   DISC_ZD_SHELL_DIVISOR,
   DISPLAY_NAME_OVERRIDES,
@@ -566,7 +564,7 @@ describe('buildEmission', () => {
     if (e.family !== 'sersic') throw new Error('expected sersic');
     // s = rhalf / projected semi-major = 1080.85 / 4960; shape kept,
     // scale anchored to the half-light radius.
-    expect(e.reffAxesPc.map((v) => roundSig(v, 6))).toEqual([812.817, 1080.85, 1307.48]);
+    expect(e.reffAxesPc.map((v) => roundSignificant(v, 6))).toEqual([812.817, 1080.85, 1307.48]);
     // Envelope reaches the wireframe silhouette: uMax = 1/s > u99(1).
     expect(e.uMax).toBeCloseTo(4960 / 1080.85, 10);
   });
@@ -670,23 +668,10 @@ describe('projectedSemiMajorPc', () => {
 
 describe('roundSig', () => {
   it('rounds to significant digits across magnitudes', () => {
-    expect(roundSig(0.20821438024760253, 8)).toBe(0.20821438);
-    expect(roundSig(259.06500827, 8)).toBe(259.06501);
-    expect(roundSig(0.0022375381146703534, 8)).toBe(0.0022375381);
-    expect(roundSig(0, 8)).toBe(0);
-  });
-});
-
-describe('slugify', () => {
-  it('preserves a clean lower-case key', () => {
-    expect(slugify('lmc')).toBe('lmc');
-  });
-  it('strips punctuation and collapses whitespace', () => {
-    expect(slugify('Bootes II')).toBe('bootes-ii');
-    expect(slugify('NGC 6822')).toBe('ngc-6822');
-  });
-  it('falls back to "object" when input has nothing kebab-able', () => {
-    expect(slugify('…')).toBe('object');
+    expect(roundSignificant(0.20821438024760253, 8)).toBe(0.20821438);
+    expect(roundSignificant(259.06500827, 8)).toBe(259.06501);
+    expect(roundSignificant(0.0022375381146703534, 8)).toBe(0.0022375381);
+    expect(roundSignificant(0, 8)).toBe(0);
   });
 });
 
@@ -730,7 +715,7 @@ describe('renderedWireframeAxes — silhouette vs emission envelope', () => {
     // so what an observer sees is uMax·R_e over the half-light shell. The
     // ratio for a real object is pinned in
     // /tests/integration/local-group-emission-calibration.test.ts, which has the catalogue.
-    expect(roundN(u99(1), 3)).toBe(4.557);
+    expect(roundHalfEven(u99(1), 3)).toBe(4.557);
   });
 });
 
