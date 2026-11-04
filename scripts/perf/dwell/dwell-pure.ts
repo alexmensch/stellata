@@ -339,24 +339,26 @@ export interface RowJudgement<C> {
   floorMs(baseline: GatedSide, vantage: ScenarioName): number;
 }
 
-function medianJudgement(metric: DwellMetric): RowJudgement<SpreadClock> {
+const FRAME_FLOOR_BANDING = {
+  printsFloor: true,
+  floorMs: (baseline: GatedSide) => dwellFloorMs(baseline.valueMs),
+} as const;
+
+function medianJudgement<C extends SpreadClock>(
+  metric: DwellMetric, valueOf: (clock: C) => number = (clock) => clock.p50,
+): RowJudgement<C> {
   return {
     metric,
-    printsFloor: true,
-    side: (c) => ({ valueMs: c.p50, standardErrorMs: medianStandardErrorMs(c), p10: null, p90: c.p90 }),
-    floorMs: (baseline) => dwellFloorMs(baseline.valueMs),
+    ...FRAME_FLOOR_BANDING,
+    side: (c) => ({ valueMs: valueOf(c), standardErrorMs: medianStandardErrorMs(c), p10: null, p90: c.p90 }),
   };
 }
 
 export const CPU_JUDGEMENT = medianJudgement('cpu-p50');
 export const WALL_JUDGEMENT = medianJudgement('wall-p50');
-
-export const THROUGHPUT_JUDGEMENT: RowJudgement<SpreadClock & { readonly meanMs: number }> = {
-  metric: 'throughput-mean',
-  printsFloor: true,
-  side: (c) => ({ valueMs: c.meanMs, standardErrorMs: medianStandardErrorMs(c), p10: null, p90: c.p90 }),
-  floorMs: (baseline) => dwellFloorMs(baseline.valueMs),
-};
+export const THROUGHPUT_JUDGEMENT = medianJudgement<SpreadClock & { readonly meanMs: number }>(
+  'throughput-mean', (c) => c.meanMs,
+);
 
 /** One side's rAF-paced GPU stream: the whole dwell's clock and its p10. */
 export interface GpuFrameReading {
@@ -369,14 +371,13 @@ function gpuFrameJudgement<C extends GpuFrameReading>(
 ): RowJudgement<C> {
   return {
     metric,
-    printsFloor: true,
+    ...FRAME_FLOOR_BANDING,
     side: (r) => {
       const clock = gated(r);
       return {
         valueMs: clock.p50, standardErrorMs: medianStandardErrorMs(clock), p10: r.floor?.p10 ?? null, p90: r.clock.p90,
       };
     },
-    floorMs: (baseline) => dwellFloorMs(baseline.valueMs),
   };
 }
 
