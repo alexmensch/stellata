@@ -8,20 +8,22 @@ import { walkFiles } from './walk-files';
 
 const ROOT = resolve(__dirname, '..');
 
-const PIPE = String.raw`(?<!\|)\|(?!\|)&?\s*(?:\\\n\s*)?`;
+const PIPE = String.raw`(?<!\|)\|(?!\|)&?\s*(?:\\\n\s*)?(?:[A-Za-z_][A-Za-z0-9_]*=\S*\s+)*(?:command\s+)?`;
 const QUOTED = String.raw`'[^']*'|"(?:\\.|[^"\\])*"`;
-const GREP_ARGS = new RegExp(String.raw`${PIPE}grep\b((?:${QUOTED}|[^'"\n|;&)])*)`, 'g');
+const GREP_ARGS = new RegExp(String.raw`${PIPE}[ef]?grep\b((?:${QUOTED}|[^'"\n|;&)])*)`, 'g');
 const QUIET_FLAG = /(?:^|\s)(?:-[a-zA-Z0-9]*q[a-zA-Z0-9]*|--quiet|--silent)(?=\s|$)/;
+const FILES_FLAG = /(?:^|\s)(?:-[a-zA-Z0-9]*l[a-zA-Z0-9]*|--files-with-matches)(?=\s|$)/;
 const MAX_COUNT_FLAG = /(?:^|\s)(?:-[a-zA-Z]*m[0-9]*|--max-count(?:=\S*)?)(?=\s|$)/;
 const SED_ARGS = new RegExp(String.raw`${PIPE}sed\b((?:${QUOTED}|[^'"\n|;&)])*)`, 'g');
 const SED_QUIT = /(?:^|[\s;{}\/0-9$])[qQ][0-9]*\s*(?=[;}]|$)/m;
 const HEAD = new RegExp(String.raw`${PIPE}head\b`, 'g');
 const AWK_PROGRAM = new RegExp(String.raw`${PIPE}awk\b[^'\n]*'([^']*)'`, 'g');
-const SETS_PIPEFAIL = /^\s*set\s+(?:-[a-zA-Z]+\s+)*-[a-zA-Z]*o\s+pipefail\b/m;
+const SETS_PIPEFAIL =
+  /^\s*set\s+(?:-[a-zA-Z]*o\s+(?!pipefail\b)[a-z]+\s+|-[a-zA-Z]+\s+)*-[a-zA-Z]*o\s+pipefail\b/m;
 
 interface Offence {
   readonly line: number;
-  readonly reader: 'grep -q' | 'grep -m' | 'head' | 'awk exit' | 'sed q';
+  readonly reader: 'grep -q' | 'grep -l' | 'grep -m' | 'head' | 'awk exit' | 'sed q';
 }
 
 function lineOf(src: string, index: number): number {
@@ -34,6 +36,7 @@ function earlyReaderPipes(script: string): Offence[] {
   for (const m of src.matchAll(GREP_ARGS)) {
     const flags = m[1].replace(new RegExp(QUOTED, 'g'), ' ');
     if (QUIET_FLAG.test(flags)) out.push({ line: lineOf(src, m.index), reader: 'grep -q' });
+    else if (FILES_FLAG.test(flags)) out.push({ line: lineOf(src, m.index), reader: 'grep -l' });
     else if (MAX_COUNT_FLAG.test(flags)) out.push({ line: lineOf(src, m.index), reader: 'grep -m' });
   }
   for (const m of src.matchAll(SED_ARGS)) {
@@ -82,6 +85,14 @@ describe('earlyReaderPipes', () => {
     ['printf "%s" "$x" |& grep -q foo', 'grep -q'],
     ['printf "%s" "$x" | grep "-q" -q', 'grep -q'],
     ['jq -r . | tr "\\n" " " | grep -qF "$s"', 'grep -q'],
+    ['printf "%s" "$x" | egrep -q "a|b"', 'grep -q'],
+    ['printf "%s" "$x" | fgrep -q foo', 'grep -q'],
+    ['printf "%s" "$x" | LC_ALL=C grep -q foo', 'grep -q'],
+    ['printf "%s" "$x" | command grep -q foo', 'grep -q'],
+    ['printf "%s" "$x" | grep -l foo', 'grep -l'],
+    ['printf "%s" "$x" | grep -El foo', 'grep -l'],
+    ['printf "%s" "$x" | grep --files-with-matches foo', 'grep -l'],
+    ['printf "%s" "$x" | LC_ALL=C head -1', 'head'],
     ['printf "%s" "$x" | grep -m1 foo', 'grep -m'],
     ['printf "%s" "$x" | grep -m 1 foo', 'grep -m'],
     ['printf "%s" "$x" | grep -Em1 foo', 'grep -m'],
@@ -114,6 +125,18 @@ describe('earlyReaderPipes', () => {
     'x=$(awk \'NR == 1 { print; exit }\' <<< "$s")',
   ])('passes %j', (script) => {
     expect(earlyReaderPipes(script)).toEqual([]);
+  });
+
+  it.each([
+    ['set -euo pipefail', true],
+    ['set -o pipefail', true],
+    ['set -e -o pipefail', true],
+    ['set -o errexit -o pipefail', true],
+    ['set -o errexit -o nounset -o pipefail', true],
+    ['set -euo errexit', false],
+    ['set -o errexit', false],
+  ])('reads %j as setting pipefail: %s', (line, sets) => {
+    expect(SETS_PIPEFAIL.test(line)).toBe(sets);
   });
 
   it('reports the line the pipe sits on', () => {
