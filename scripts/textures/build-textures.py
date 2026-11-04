@@ -20,7 +20,7 @@ from texture_calibration import (
     sphere_mean_linear,
 )
 from texture_ladder import rungs_for  # noqa: E402
-from scripts.util.baker_constants import CONSTANTS  # noqa: E402
+from scripts.util.baker_constants import CONSTANTS, merge_shared  # noqa: E402
 
 # Frozen, license-vetted sources — the Mars mosaic alone is 21k x 10k.
 Image.MAX_IMAGE_PIXELS = None
@@ -116,13 +116,14 @@ RINGS_W = 2048
 # Uranus/Neptune ring strips built from literature tables at TRUE
 # opacity (derivation + 8-bit floor analysis in
 # /data/textures/README.md#ring-strips--true-opacity-and-the-8-bit-floor).
-RING_TABLES = {
-    "uranus": {"src": "rings-uranus.tsv", "rgb": (0.10, 0.10, 0.10)},
-    "neptune": {"src": "rings-neptune.tsv", "rgb": (0.11, 0.10, 0.09)},
-}
-for _body, _span in CONSTANTS["ringSpans"].items():
-    RING_TABLES[_body]["span_km"] = (
-        float(_span["innerRadiusKm"]), float(_span["outerRadiusKm"]))
+RING_TABLES = merge_shared(
+    {
+        "uranus": {"src": "rings-uranus.tsv", "rgb": (0.10, 0.10, 0.10)},
+        "neptune": {"src": "rings-neptune.tsv", "rgb": (0.11, 0.10, 0.09)},
+    },
+    CONSTANTS["ringSpans"],
+    lambda s: {"span_km": (float(s["innerRadiusKm"]), float(s["outerRadiusKm"]))},
+)
 
 
 def fill_gap(im: Image.Image, threshold: int) -> Image.Image:

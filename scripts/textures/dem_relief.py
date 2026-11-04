@@ -6,7 +6,7 @@ DEM -> tangent-space normal-map derivation (rationale in
 import numpy as np
 from PIL import Image
 
-from scripts.util.baker_constants import CONSTANTS
+from scripts.util.baker_constants import CONSTANTS, merge_shared
 
 # The frozen reductions store metres above the body's reference sphere as
 # uint16 biased by this, so a signed elevation survives a format every tool
@@ -27,7 +27,7 @@ POLE_CUTOFF_DEG = 85.0
 # Per-body relief contract (/data/textures/relief/README.md#surface-relief--dem-derived-normal-maps).
 # `dtype`/`scale`/`offset`/`nodata` decode the DOWNLOADED original for
 # reduce_dem.py; the rest drive every build. `span_m`, `map_center_lon` and
-# `radius_km` come from the shared constants (`with_shared_facts` below).
+# `radius_km` come from the shared constants (`DEM_BODIES` below).
 # Two of those name the thing they are NOT: `map_center_lon` is the COLOUR
 # map's centre rather than the DEM's, and `radius_km` is the radius the body
 # is DRAWN at rather than the DEM's georeferencing radius.
@@ -88,21 +88,15 @@ _DEM_SOURCES = {
 }
 
 
-def with_shared_facts(sources: dict) -> dict:
-    bodies = CONSTANTS["surfaceRelief"]["bodies"]
-    assert sources.keys() == bodies.keys(), (sources.keys(), bodies.keys())
-    return {
-        name: {
-            **spec,
-            "span_m": tuple(bodies[name]["elevSpanM"]),
-            "map_center_lon": bodies[name]["mapCenterLonDeg"],
-            "radius_km": bodies[name]["radiusKm"],
-        }
-        for name, spec in sources.items()
-    }
-
-
-DEM_BODIES = with_shared_facts(_DEM_SOURCES)
+DEM_BODIES = merge_shared(
+    _DEM_SOURCES,
+    CONSTANTS["surfaceRelief"]["bodies"],
+    lambda b: {
+        "span_m": tuple(b["elevSpanM"]),
+        "map_center_lon": b["mapCenterLonDeg"],
+        "radius_km": b["radiusKm"],
+    },
+)
 
 
 def dem_target_w(spec: dict) -> int:

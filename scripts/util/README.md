@@ -32,9 +32,12 @@ same thing — single-use helpers stay with their consumer.
   binaries stages define their own (`AU_PER_PC` in `stage5_optical.py`,
   `CATALOG_SCENE_EPOCH` in `stage6_multiples.py`), and the asset bakers
   read theirs from `baker_constants.py`.
-- `baker_constants.py` — `CONSTANTS`, `src/astro-core/baker-constants.json`
+- `baker_constants.py` (+ test) — `CONSTANTS`, `src/astro-core/baker-constants.json`
   loaded once: the facts the Python asset bakers share with TypeScript
   ([Baker constants](/src/astro-core/README.md#baker-constants)).
+  `merge_shared` folds a per-body block of it into a baker's own per-body
+  table and refuses unless the two name the same bodies; `dem_relief.py`'s
+  `DEM_BODIES` and `build-textures.py`'s `RING_TABLES` are built with it.
 - `paths.py` — `REPO_ROOT`, the repo-root `Path` every top-level
   Python build/refresh script under `scripts/binaries/` and
   `scripts/refresh/` imports instead of independently walking
