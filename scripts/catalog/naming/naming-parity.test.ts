@@ -5,8 +5,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
-import { REPO_ROOT } from '../../util/paths';
-import { DEFAULT_CONSTELLATIONS_JSON, DEFAULT_ROW_INDEX_MAP, DEFAULT_SEARCH_INDEX } from '../catalog-paths-pure';
+import { REPO_ROOT, publicFile } from '../../util/paths';
 import type { SearchEntry } from '../../../src/catalog-format/record/catalog-pure';
 import { buildSearchIndex, normalizeGlKey } from '../../../src/catalog-format/naming/search-corpus';
 import { displayNamesFromSearchIndex } from '../../../src/catalog-format/naming/star-naming-pure';
@@ -20,10 +19,12 @@ import {
 } from './naming-parity-pure';
 import { NAMING_DUPLICATES } from './naming-duplicates-tsv';
 import { NAMING_PARITY } from './naming-parity-tsv';
-import { MEMBERSHIP_MANIFEST, MEMBERSHIP_MANIFEST_FILE } from '../membership/membership-manifest-tsv';
+import { MEMBERSHIP_MANIFEST } from '../membership/membership-manifest-tsv';
+import { PUBLIC_FILES } from '../../../src/catalog-format/public-artifacts/public-artifacts';
+import { BUILD_FILES } from '../../../src/catalog-format/pipeline-outputs/build-files';
 
 const WGSN_NAMES_PATH = resolve(REPO_ROOT, WGSN_NAMES.file);
-const MANIFEST = resolve(REPO_ROOT, MEMBERSHIP_MANIFEST_FILE);
+const MANIFEST = resolve(REPO_ROOT, MEMBERSHIP_MANIFEST.file);
 
 /** Published names reaching no record: the wgsnFaints hosts whose only key
  *  was a survey id the normaliser drops (they name stars outside the
@@ -31,8 +32,9 @@ const MANIFEST = resolve(REPO_ROOT, MEMBERSHIP_MANIFEST_FILE);
  *  rather than the star (/docs/star-naming.md#2-authority--one-source-approves-names-everything-else-compiles-them). RATCHET DOWN — it last
  *  moved when the membership manifest admitted a record for one of them. */
 const PUBLISHED_NAMES_UNREACHED = 54;
-const FIXTURES_READY = existsSync(DEFAULT_SEARCH_INDEX) && existsSync(DEFAULT_ROW_INDEX_MAP)
-  && existsSync(DEFAULT_CONSTELLATIONS_JSON);
+const FIXTURES_READY = existsSync(publicFile(PUBLIC_FILES.searchIndex))
+  && existsSync(resolve(REPO_ROOT, BUILD_FILES.catalogRowIndexMap))
+  && existsSync(publicFile(PUBLIC_FILES.constellations));
 
 const readJson = <T>(path: string): T => JSON.parse(readFileSync(path, 'utf8')) as T;
 
@@ -47,9 +49,9 @@ interface Fixtures {
 }
 
 function loadFixtures(): Fixtures {
-  const raw = readJson<SearchEntry[]>(DEFAULT_SEARCH_INDEX);
-  const constellations = readJson<{ code: string; name: string }[]>(DEFAULT_CONSTELLATIONS_JSON);
-  const keys = ledgerKeys(readJson<RowIndexMap>(DEFAULT_ROW_INDEX_MAP));
+  const raw = readJson<SearchEntry[]>(publicFile(PUBLIC_FILES.searchIndex));
+  const constellations = readJson<{ code: string; name: string }[]>(publicFile(PUBLIC_FILES.constellations));
+  const keys = ledgerKeys(readJson<RowIndexMap>(resolve(REPO_ROOT, BUILD_FILES.catalogRowIndexMap)));
   const composed = displayNamesFromSearchIndex(raw, constellations);
   const labelByKey = new Map<string, string>();
   const entryByKey = new Map<string, SearchEntry>();

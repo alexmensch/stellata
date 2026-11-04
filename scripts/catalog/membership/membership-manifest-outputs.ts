@@ -1,24 +1,16 @@
 // Every file build:membership writes, as its emitArtifacts declaration. See README.md#files-in-this-area.
 
-import { resolve } from 'node:path';
-
 import { declareOutputs } from '../../util/emit-artifacts';
-import { REPO_ROOT as ROOT } from '../../util/paths';
+import { DATA_FILES } from '../../../src/catalog-format/pipeline-outputs/data-files';
 import {
-  LABEL_FLIPS_FILE,
-} from '../classic-ids/label-merge/label-flips-tsv';
-import { LINEAGE_LAYOUT, stageFamilies, stageOutputFiles } from '../lineage/lineage-layout-pure';
-import { ADDITIONS_LEDGER_FILE } from './additions-ledger-tsv';
-import { BINDING_REVIEW_FILE } from './binding-review-tsv';
-import { LABEL_DROPS_FILE } from './label-drops-tsv';
-import { MEMBERSHIP_LINEAGE } from './membership-lineage-pure';
-import { MEMBERSHIP_MANIFEST_FILE } from './membership-manifest-tsv';
+  LINEAGE_REPO_LAYOUT, stageFamilies, stageOutputFiles, MEMBERSHIP_LINEAGE,
+} from '../../../src/catalog-format/pipeline-outputs/lineage-files';
 
 export const MEMBERSHIP_OUTPUTS = declareOutputs({
-  labelFlips: resolve(ROOT, LABEL_FLIPS_FILE),
-  manifest: resolve(ROOT, MEMBERSHIP_MANIFEST_FILE),
-  additions: resolve(ROOT, ADDITIONS_LEDGER_FILE),
-  bindingReview: resolve(ROOT, BINDING_REVIEW_FILE),
-  labelDrops: resolve(ROOT, LABEL_DROPS_FILE),
-  ...stageOutputFiles(LINEAGE_LAYOUT, MEMBERSHIP_LINEAGE),
-}, stageFamilies(LINEAGE_LAYOUT, MEMBERSHIP_LINEAGE));
+  labelFlips: DATA_FILES.labelFlips,
+  manifest: DATA_FILES.membershipManifest,
+  additions: DATA_FILES.additionsLedger,
+  bindingReview: DATA_FILES.bindingReview,
+  labelDrops: DATA_FILES.labelDrops,
+  ...stageOutputFiles(LINEAGE_REPO_LAYOUT, MEMBERSHIP_LINEAGE),
+}, stageFamilies(LINEAGE_REPO_LAYOUT, MEMBERSHIP_LINEAGE));

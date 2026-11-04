@@ -6,11 +6,10 @@ import {
   LABEL_DROP_REASONS,
   type LabelDropRow,
 } from './ledger-rows-pure';
-
-export const LABEL_DROPS_FILE = 'data/membership/label-drops.tsv';
+import { DATA_FILES } from '../../../src/catalog-format/pipeline-outputs/data-files';
 
 export const LABEL_DROPS = defineArtifact({
-  file: LABEL_DROPS_FILE,
+  file: DATA_FILES.labelDrops,
   columns: LABEL_DROP_COLUMNS,
   hint: 'Re-run `pnpm run build:membership`.',
   order: 'by-line',

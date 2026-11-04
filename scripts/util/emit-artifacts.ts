@@ -3,6 +3,7 @@
 import { existsSync, readdirSync, rmSync } from 'node:fs';
 import { basename, dirname, resolve } from 'node:path';
 
+import { REPO_ROOT } from './paths';
 import {
   STAGING_SUFFIX, discardStaged, landStaged, writeStaged,
 } from './staged-write';
@@ -25,15 +26,16 @@ export interface DeclaredOutputs<K extends string = string> {
   readonly families: readonly OutputFamily[];
 }
 
+/** A relative path is repo-relative. */
 export function declareOutputs<K extends string>(
   files: Record<K, string>,
   families: readonly OutputFamily[] = [],
 ): DeclaredOutputs<K> {
   return {
     files: Object.fromEntries(
-      Object.entries<string>(files).map(([k, p]) => [k, resolve(p)]),
+      Object.entries<string>(files).map(([k, p]) => [k, resolve(REPO_ROOT, p)]),
     ) as Record<K, string>,
-    families: families.map((f) => ({ ...f, dir: resolve(f.dir) })),
+    families: families.map((f) => ({ ...f, dir: resolve(REPO_ROOT, f.dir) })),
   };
 }
 

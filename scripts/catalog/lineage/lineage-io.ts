@@ -12,9 +12,9 @@ import { identityRows, type IdentityRow } from './identity-pure';
 import { lineageLines, lineageRows, type LineageLine, type LineageRow } from './lineage-row-pure';
 import { headerText, parseHeader, type HeaderRead, type StageHeader } from './lineage-header-pure';
 import {
-  stageDiffName, stageFileName, stageHeaderName, stageNames,
-  type LineageLayout, type StageLineageSpec, type StageOutputKey,
-} from './lineage-layout-pure';
+  stageDiffName, stageFileName, stageHeaderName, stageNames, type LineageLayout, type StageLineageSpec,
+  type StageOutputKey,
+} from '../../../src/catalog-format/pipeline-outputs/lineage-files';
 
 /** The baseline as it lands in the same emission as the stage's new files:
  *  the current files, read now, when it rotates; the pinned merge-base copy,

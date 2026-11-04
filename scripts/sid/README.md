@@ -87,11 +87,15 @@ stored-edges.ts           loadStoredEdges: overrides plus bridges, the
 catalog-designations.ts   Designation set per BUILT catalog record, from
                           catalog.bin + the two public/ sidecars (README.md#designation-extraction--where-each-namespace-comes-from). Shared by trace and
                           the inherited spine's parity gate.
-registry-partitions-pure.ts  The partitions (REGISTRY_PARTITIONS),
-                          partitionOf / inPartition (a namespace's
+registry-partitions-pure.ts  partitionOf / inPartition (a namespace's
                           owner, and the scope its allocation runs
-                          under), and each partition's emit keys, all
-                          typed by RegistryPartition.
+                          under) and registryHint. The partitions
+                          themselves (REGISTRY_PARTITIONS,
+                          RegistryPartition) and each one's file names
+                          and emit keys are
+                          /src/catalog-format/pipeline-outputs/data-files.ts's,
+                          so an outputs module can declare them at
+                          table load.
 registry-pure.ts (+ test) unionLedger / unionLedgerLines: every
                           partition as one sid sequence; validateRegistry:
                           that union dense and unique, each ledger
@@ -122,11 +126,6 @@ registry-step-inputs.test.ts
                           stepInputPaths, read through the LEDGERS /
                           EVENTS declaration maps
                           (../util/sources/README.md#reached-means-read).
-registry-outputs.ts       registryPaths(partition), the one place a
-                          registry path is spelled, and
-                          registryFiles(partition): its three files, keyed
-                          for the output declaration of the step that
-                          allocates it.
 export-dr-risk-set.ts     pnpm run sid:risk-set — source_ids of the
                           non-retired gaia_*-keyed ledger rows, written
                           as the next DR transition's neighbourhood-pull
@@ -178,10 +177,11 @@ sibling-stamp-outputs.ts  SID_STAMP_OUTPUTS: clouds.json, which sid:stamp
 sibling-artifacts-pure.ts SIBLING_ARTIFACTS spec (file / arrayKey / ns /
                           kind / mint code per sibling) +
                           siblingArtifactObjects, so the namespace→kind
-                          mapping is defined once; SIBLING_NAMESPACES with
-                          its type guard, so a partition name is a literal
-                          type; each namespace is its own registry
-                          partition.
+                          mapping is defined once. Each namespace is its
+                          own registry partition: ns is typed by
+                          SIBLING_PARTITIONS, and
+                          EVERY_SIBLING_PARTITION_CLAIMED fails typecheck
+                          while a partition has no artifact.
 ```
 
 The append-only CI guard is `tests/sid-ledger-guard.test.ts` (repo-meta:

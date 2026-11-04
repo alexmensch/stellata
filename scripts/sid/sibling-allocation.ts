@@ -3,12 +3,13 @@
 import { emitArtifacts, type DeclaredOutputs } from '../util/emit-artifacts';
 import { allocate, type Upstream } from './allocate-pure';
 import { allocationRun, loadRegistry, registryTexts } from './registry-io';
-import { inPartition, type RegistryKey } from './registry-partitions-pure';
-import { siblingArtifactObjects, type SiblingArtifactSpec, type SiblingItem, type SiblingNamespace } from './sibling-artifacts-pure';
+import { inPartition } from './registry-partitions-pure';
+import { siblingArtifactObjects, type SiblingArtifactSpec, type SiblingItem } from './sibling-artifacts-pure';
+import type { RegistryKey, SiblingPartition } from '../../src/catalog-format/pipeline-outputs/data-files';
 
 const NO_LINEAGE: Upstream = { causes: () => new Map(), admissions: () => new Map() };
 
-export interface SiblingAllocation<N extends SiblingNamespace> {
+export interface SiblingAllocation<N extends SiblingPartition> {
   /** Parallel to the items allocated. */
   readonly sids: readonly number[];
   readonly minted: number;
@@ -16,7 +17,7 @@ export interface SiblingAllocation<N extends SiblingNamespace> {
   readonly registry: Readonly<Record<RegistryKey<N>, string>> | null;
 }
 
-export function allocateSibling<N extends SiblingNamespace>(
+export function allocateSibling<N extends SiblingPartition>(
   spec: SiblingArtifactSpec & { readonly ns: N },
   items: SiblingItem[],
 ): SiblingAllocation<N> {
@@ -44,7 +45,7 @@ export function allocateSibling<N extends SiblingNamespace>(
 }
 
 /** Lands the artifact, and the registry partition when the allocation appended, in one emitArtifacts call. */
-export function emitSibling<K extends string, N extends SiblingNamespace>(
+export function emitSibling<K extends string, N extends SiblingPartition>(
   outputs: DeclaredOutputs<K | RegistryKey<N>>, artifact: Readonly<Record<K, string>>, allocation: SiblingAllocation<N>,
 ): void {
   if (allocation.registry === null) {

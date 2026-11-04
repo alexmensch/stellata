@@ -2,8 +2,8 @@
 
 import { declareOutputs } from '../util/emit-artifacts';
 import { publicFile } from '../util/paths';
-import { registryFiles } from './registry-outputs';
 import { SIBLING_ARTIFACTS } from './sibling-artifacts-pure';
+import { registryFiles } from '../../src/catalog-format/pipeline-outputs/data-files';
 
 export const SID_STAMP_OUTPUTS = declareOutputs({
   clouds: publicFile(SIBLING_ARTIFACTS.clouds.file),

@@ -77,8 +77,9 @@ scripts/catalog/membership/
                                   (../../util/README.md#ci-heap-budget) pass.
   membership-manifest-outputs.ts  MEMBERSHIP_OUTPUTS — every file the
                                   generator writes, as its emitArtifacts
-                                  declaration (../../util/README.md), and
-                                  MEMBERSHIP_LINEAGE, its lineage files.
+                                  declaration (../../util/README.md), its
+                                  lineage files included (MEMBERSHIP_LINEAGE,
+                                  /src/catalog-format/pipeline-outputs/).
                                   Side-effect free.
   committed-artifacts.test.ts     Each of the four codecs above round-trips
                                   its committed file byte for byte.
