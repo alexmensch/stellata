@@ -108,8 +108,10 @@ configs — test code included — it also fails on a `data/` path literal
 outside a declaring or `*-outputs.ts` module: a test names a data file through
 its declaration (`X.file`, `isReadable(X)`, `X.read()`). The test's named
 `DATA_PATH_SPELLERS` are the exceptions: the two input-set pins, which check a
-derivation from outside the declarations, and the scanners of the repo's
-top-level folders and paper store. A pure parser's test labels its fixtures
+derivation from outside the declarations; the step table and its tree;
+`/src/catalog-format/pipeline-outputs/data-files.ts`, the names the step
+table's outputs modules declare, which each codec takes its `file` from; and
+the scanners of the repo's top-level folders and paper store. A pure parser's test labels its fixtures
 `fixture/…`, never a real path.
 
 A helper that a non-reader needs does not live beside a declaration: it moves
