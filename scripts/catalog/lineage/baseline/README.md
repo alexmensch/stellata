@@ -9,7 +9,8 @@ Which earlier build a stage's run-to-run diff reads, and when it refuses one
 scripts/catalog/lineage/baseline/
   lineage-header-pure.ts         StageHeader and its parse; planBaseline and
     (+ test)                     judgeBaseline, the verdict over a header and
-                                 the merge-base.
+                                 the merge-base; checkoutAt, whether the
+                                 checkout is on main.
 ```
 
 Its readers and writers live one folder up: `../lineage-io.ts` writes and
@@ -68,3 +69,17 @@ build read, usually differs from it and is refused until the stage is built
 at the merge-base; and a branch that drops a file the merge-base gained
 after the older build can match it although the merge-base build read that
 file.
+
+## On main
+
+A checkout is **on main** when HEAD is its merge-base with `origin/main`
+(`checkoutAt`): the main checkout, and also a branch with no commits of its
+own, whose history is main's. There, a clean, intact header from an earlier
+commit in HEAD's history (`inHeadHistory`, `git merge-base --is-ancestor`)
+is accepted whatever its inputs (`earlier-main-build`), so `build:seed` after
+a landing diffs against the previous main build and reports what the
+landing changed. That build is never pinned in `lineage.previous/`: the
+stage rotates as usual, so the next landing diffs against this one. A header
+from outside HEAD's history, a dirty one, or one beside files it did not
+record is still refused. A branch with commits of its own keeps the
+merge-base rule above unchanged.

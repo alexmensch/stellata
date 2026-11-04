@@ -153,9 +153,10 @@ same thing — single-use helpers stay with their consumer.
   cannot disagree on what the build reads. `trackedFiles()` is the listing the
   stamp passes as `files`.
 - `git-provenance.ts` — what a build or instrument records about its
-  checkout: `packageVersion`, `headState` (HEAD and whether the tree is
-  dirty) and `mergeBaseWithMain` (null with no `origin/main` or in a shallow
-  clone), and `fileAtMergeBase`, a file as the merge-base holds it — `absent`
+  checkout: `packageVersion`, `headCommit`, `headState` (HEAD and whether
+  the tree is dirty), `inHeadHistory` (whether a commit is HEAD or an
+  ancestor of it) and `mergeBaseWithMain` (null with no `origin/main` or in a
+  shallow clone), and `fileAtMergeBase`, a file as the merge-base holds it — `absent`
   when it is new on the branch, kept apart from `no-merge-base`. The lineage
   header, perf's `gitMeta` and the two merge-base guards read it. `gitIn` is
   its git call, in a given folder; `fileAt(commit, path)`, a file's bytes as

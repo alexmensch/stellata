@@ -5,7 +5,7 @@ import { join, resolve } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { declareOutputs, emitArtifacts, EmissionRefused } from '../../util/emit-artifacts';
-import { judgeBaseline, type MergeBase, type StageProvenance } from './baseline/lineage-header-pure';
+import { judgeBaseline, type CheckoutBase, type StageProvenance } from './baseline/lineage-header-pure';
 import { baselineMembers, readLineage, readStageHeader, stageEmission } from './lineage-io';
 import { lineageInvariant, NO_EXCEPTIONS } from './lineage-invariant-pure';
 import { paramsText, stageLineageLine, stageLineageText } from './lineage-row-pure';
@@ -24,7 +24,10 @@ let layout: LineageLayout;
 const header = (commit: string): StageProvenance => ({
   stage: 'demo', version: '1.0.0', commit, dirty: false, inputHash: 'h',
 });
-const BASE: MergeBase = { commit: 'base', inputHash: () => ({ kind: 'hashed', hash: 'other inputs' }) };
+const BRANCH = { kind: 'branch' } as const;
+const BASE: CheckoutBase = {
+  commit: 'base', inputHash: () => ({ kind: 'hashed', hash: 'other inputs' }), checkout: BRANCH,
+};
 
 function text(source: string): Uint8Array {
   return stageLineageText(CODES, [stageLineageLine(CODES, {
@@ -156,10 +159,13 @@ describe('stage rotation', () => {
   it('a git failure while hashing the merge-base\'s inputs refuses the baseline, once, and fails nothing', () => {
     run('old');
     let calls = 0;
-    const failing = mergeBaseAt('base', () => {
-      calls += 1;
-      throw new Error('git exited 128');
-    });
+    const failing = {
+      ...mergeBaseAt('base', () => {
+        calls += 1;
+        throw new Error('git exited 128');
+      }),
+      checkout: BRANCH,
+    };
     const source = { kind: 'checkout' as const, header: readStageHeader(layout.current, SPEC) };
     const verdict = judgeBaseline(source, failing, false);
     expect(verdict.kind === 'refused' && verdict.message).toMatch(/hashing them failed: git exited 128/);

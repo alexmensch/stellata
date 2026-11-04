@@ -6,13 +6,13 @@ import { performance } from 'node:perf_hooks';
 
 import type { FileHashes } from '../../util/build-stamp';
 import type { ArtifactContents, Check } from '../../util/emit-artifacts';
-import { mergeBaseWithMain } from '../../util/git-provenance';
+import { headCommit, inHeadHistory, mergeBaseWithMain } from '../../util/git-provenance';
 import { REPO_ROOT } from '../../util/paths';
 import { diffLineage, stageDiffText, type DiffJoin, type KeyChange } from './lineage-diff-pure';
 import { inputHashesAt, type HashesAt } from '../../util/input-hashes-at';
 import {
-  ACCEPT_ANY_BASELINE_FLAG, AGAINST_FLAG, acceptedFiles, comparesInputs, planBaseline, type BaselineSource,
-  type HeaderRead, type InputHashAt, type MergeBase,
+  ACCEPT_ANY_BASELINE_FLAG, AGAINST_FLAG, acceptedFiles, checkoutAt, comparesInputs, planBaseline, type BaselineSource,
+  type CheckoutBase, type HeaderRead, type InputHashAt, type MergeBase,
 } from './baseline/lineage-header-pure';
 import { inputHashOf, readStageHeader, stageEmission, stageProvenance, streamLineage } from './lineage-io';
 import { invariantCheck, invariantViolations, type LineageInvariant } from './lineage-invariant-pure';
@@ -114,14 +114,17 @@ async function upstreamHashes<F extends string, S extends string>(
 
 async function mergeBase<F extends string, S extends string>(
   run: StageLineageRun<F, S>, headers: readonly HeaderRead[],
-): Promise<MergeBase | null> {
+): Promise<CheckoutBase | null> {
   const commit = mergeBaseWithMain();
   if (commit === null) return null;
   const asked = headers.some((read) => comparesInputs(read, commit));
   const known: Known = asked ? await upstreamHashes(run, commit) : { kind: 'known', hashes: {} };
-  return mergeBaseAt(commit, () => (known.kind === 'failed'
-    ? { kind: 'unknown', reason: known.reason }
-    : inputHashesAt(commit, run.inputs, REPO_ROOT, known.hashes)));
+  return {
+    ...mergeBaseAt(commit, () => (known.kind === 'failed'
+      ? { kind: 'unknown', reason: known.reason }
+      : inputHashesAt(commit, run.inputs, REPO_ROOT, known.hashes))),
+    checkout: checkoutAt(headCommit(), commit, inHeadHistory),
+  };
 }
 
 export async function stageLineage<F extends string, S extends string>(

@@ -21,9 +21,21 @@ export function packageVersion(): string {
   return (JSON.parse(readFileSync(resolve(REPO_ROOT, PACKAGE_JSON), 'utf-8')) as { version: string }).version;
 }
 
+export const headCommit = (): string => git('rev-parse', 'HEAD');
+
 /** Throws where git cannot answer: no repository, no HEAD. */
 export function headState(): { readonly commit: string; readonly dirty: boolean } {
-  return { commit: git('rev-parse', 'HEAD'), dirty: git('status', '--porcelain').length > 0 };
+  return { commit: headCommit(), dirty: git('status', '--porcelain').length > 0 };
+}
+
+/** False for a commit this repository does not hold. */
+export function inHeadHistory(commit: string): boolean {
+  try {
+    git('merge-base', '--is-ancestor', commit, 'HEAD');
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 /** Null where there is none to find: no `origin/main`, or a shallow clone. */

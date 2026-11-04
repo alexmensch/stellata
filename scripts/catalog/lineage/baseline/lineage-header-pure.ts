@@ -55,7 +55,7 @@ export type BaselineSource =
   | { readonly kind: 'absent' };
 
 export type BaselineVerdict =
-  | { readonly kind: 'diff'; readonly why: MergeBaseMatch | 'accepted' | 'against' }
+  | { readonly kind: 'diff'; readonly why: MergeBaseMatch | 'earlier-main-build' | 'accepted' | 'against' }
   | { readonly kind: 'none' }
   | { readonly kind: 'refused'; readonly message: string };
 
@@ -78,6 +78,21 @@ export interface MergeBase {
   readonly commit: string;
   /** Evaluated only for a clean, intact header from another commit. */
   readonly inputHash: () => InputHashAt;
+}
+
+/** `main`: HEAD is the merge-base — the main checkout, or a branch with no commits of its own. */
+export type Checkout =
+  | { readonly kind: 'branch' }
+  | { readonly kind: 'main'; readonly inHistory: (commit: string) => boolean };
+
+export interface CheckoutBase extends MergeBase {
+  readonly checkout: Checkout;
+}
+
+export function checkoutAt(
+  head: string, mergeBaseCommit: string, inHistory: (commit: string) => boolean,
+): Checkout {
+  return head === mergeBaseCommit ? { kind: 'main', inHistory } : { kind: 'branch' };
 }
 
 /** `merge-base`: built at it. `merge-base-inputs`: built at another commit from the inputs it holds. */
@@ -115,8 +130,13 @@ export interface BaselinePlan {
     readonly rotate: boolean;
 }
 
+function earlierMainBuild(read: HeaderRead, base: CheckoutBase | null): boolean {
+  return base !== null && base.checkout.kind === 'main' && intact(read)
+    && base.checkout.inHistory(read.header.commit);
+}
+
 export function planBaseline(
-  previous: HeaderRead, source: BaselineSource, mergeBase: MergeBase | null, acceptAny: boolean,
+  previous: HeaderRead, source: BaselineSource, mergeBase: CheckoutBase | null, acceptAny: boolean,
 ): BaselinePlan {
   const pinned = mergeBaseMatch(previous, mergeBase);
   if (source.kind === 'against') {
@@ -128,13 +148,14 @@ export function planBaseline(
 }
 
 export function judgeBaseline(
-  source: BaselineSource, mergeBase: MergeBase | null, acceptAny: boolean,
+  source: BaselineSource, mergeBase: CheckoutBase | null, acceptAny: boolean,
 ): BaselineVerdict {
   if (source.kind === 'absent') return { kind: 'none' };
   if (source.kind === 'against') return { kind: 'diff', why: 'against' };
   const read = source.header;
   const match = mergeBaseMatch(read, mergeBase);
   if (match !== null) return { kind: 'diff', why: match };
+  if (earlierMainBuild(read, mergeBase)) return { kind: 'diff', why: 'earlier-main-build' };
   if (acceptAny) return { kind: 'diff', why: 'accepted' };
   const built = read.kind === 'missing'
     ? 'a baseline with no header'
@@ -143,7 +164,8 @@ export function judgeBaseline(
       : builtAt(read);
   const base = mergeBase === null
     ? 'no merge-base with origin/main'
-    : `the merge-base ${mergeBase.commit}${inputsClause(read, mergeBase)}`;
+    : `the merge-base ${mergeBase.commit}${inputsClause(read, mergeBase)}${
+      mergeBase.checkout.kind === 'main' ? ', nor an earlier clean build on main' : ''}`;
   return {
     kind: 'refused',
     message: `lineage diff refused: ${built}, not ${base}. Build the stage at the merge-base for a `
