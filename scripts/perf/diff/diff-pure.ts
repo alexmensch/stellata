@@ -454,8 +454,7 @@ function dwellRows(key: string, a: ScenarioRecord, b: ScenarioRecord): (DiffRow 
     : [frame, ...computeRow(key, a.name, da, db), ...cpuRow(key, a.name, da, db)];
 }
 
-/** The main thread's time per tick, banded as the frame is
- *  (../dwell/README.md#cpu-and-gpu-apart). */
+/** The main thread's time per tick (../floors/README.md#the-cpu-floor). */
 function cpuRow(key: string, name: ScenarioName, da: DwellRecord, db: DwellRecord): (DiffRow | DiffRefusal)[] {
   const [ca, cb] = [cpuClock(da), cpuClock(db)];
   if (ca === null && cb === null) return [];
@@ -585,7 +584,7 @@ export function judgedMove(
   banding: RowBanding, baseline: GatedSide, current: GatedSide, vantage: ScenarioName,
 ): JudgedMove {
   const deltaMs = current.valueMs - baseline.valueMs;
-  const floorMs = banding.floorMs(baseline, vantage);
+  const floorMs = banding.floorMs(vantage, baseline);
   const bandMs = band(baseline.standardErrorMs, current.standardErrorMs, floorMs);
   return {
     deltaMs,

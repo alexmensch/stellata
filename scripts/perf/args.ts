@@ -17,7 +17,7 @@ import {
 } from './dwell/dwell-pure';
 import { DEFAULT_SWEEP_SCALES } from './sweep/sweep-pure';
 import { DEFAULT_QUIET_MS } from './settle-pure';
-import { BACKENDS, SCENARIO_NAMES, type Backend, type ScenarioName } from './scenarios';
+import { BACKENDS, SCENARIO_NAMES, isScenarioName, type Backend, type ScenarioName } from './scenarios';
 
 export const MODES = ['differential', 'probe', 'dwell', 'sweep'] as const;
 export type Mode = (typeof MODES)[number];
@@ -339,10 +339,10 @@ export function parseRunArgs(argv: readonly string[]): RunArgs {
 
   const requested = list('scenario') ?? [];
   const scenarios = requested.includes('all') ? [...SCENARIO_NAMES] : requested.map((name) => {
-    if (!SCENARIO_NAMES.includes(name as ScenarioName)) {
+    if (!isScenarioName(name)) {
       throw new ArgError(`--scenario must name ${SCENARIO_NAMES.join(', ')} or all; got '${name}'`);
     }
-    return name as ScenarioName;
+    return name;
   });
   if (scenarios.length === 0) throw new ArgError('--scenario names nothing');
 

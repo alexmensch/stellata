@@ -23,7 +23,7 @@ scripts/perf/pins/
 ## Taking one
 
 `pnpm run perf -- --mode dwell --scenario all --cooldown-ms 120000
---json .perf-runs/<date>/pin.json --pin scripts/perf/pins/<slug>.json`
+--frames 960 --json .perf-runs/<date>/pin.json --pin scripts/perf/pins/<slug>.json`
 
 Per `scenario|backend` the pin holds wall p50 / p90 / iqr / n /
 vsyncClamped, the GPU-stream p50 where it was sound and the compute-stream
@@ -149,8 +149,11 @@ A dear sample sits on a frame whose render time is unchanged — 13.06 ms
 against 12.68 at earth, the cheap frames split by their own sample's mode —
 so it is not the GPU downclocking, and it is uncorrelated with the readback
 class. The share of the dear mode runs **0 % to 58 % across runs of identical
-code**, and the median follows it: earth's p50 spans 0.169 ms over the gate's
-own comparable population while its p10 spans 0.057.
+code**, and the median follows it: on the M4, earth's p50 spanned 0.169 ms
+over the gate's own comparable population while its p10 spanned 0.057. On the
+M6 the order reverses at earth and sol (p50 0.025 / 0.044, p10 0.359 / 0.396)
+and holds at mw120 (0.137 / 0.019); the row keeps one statistic for every
+vantage.
 
 Nothing inside a run separates them. Every one of those runs reads
 `stateGuard: steady`, and the quarter medians of the 58 % run are flat
@@ -160,7 +163,7 @@ scale and the level is flat across the dwell's deciles, so what varies is the
 share **between** runs, which no dwell length reaches.
 
 **The floor is this row's own, one number per vantage**, with its
-derivation and the cap that binds at lg: [The compute floor](../floors/README.md#the-compute-floor).
+derivation and the cap that binds at sol: [The compute floor](../floors/README.md#the-compute-floor).
 
 **The dear mode is printed, never gated.** `spread` is `p90 − p10` on the same
 stream, and its delta sits beside every dwell row in both tables. A pass that
@@ -171,9 +174,10 @@ the gate refuses to do is mark on it, because a coincidence of timing moves
 the same number.
 
 Two of the three guards stay inert at this magnitude: `PIN_CEILING_MS` is
-112× mw120's compute value, and `STATE_GUARD_TREND_MS` (1 ms) exceeds every
-compute median, so a compute row's own `stateGuard` cannot read anything but
-`steady` and nothing consults it — the frame row's verdict is what refuses
+81× mw120's compute value on the M6 pin, and `STATE_GUARD_TREND_MS` (1 ms)
+is about the largest canon compute median (lg's, 1.001), so a
+compute row's own `stateGuard` could read `trending` only on a quarter-to-
+quarter swing the size of the whole row, and nothing consults it — the frame row's verdict is what refuses
 the context.
 
 **The frame rows are deliberately NOT re-floored**
@@ -283,9 +287,11 @@ a pin run reads `steady`.
   names which statistic the row was judged on, and it is not the same at
   every row: `gpu-plain-p50` where the vantage draws two pass classes and
   `compute-p10` on a compute row ([The compute row](#the-compute-row)).
-- <a id="ungated-vantages-and-lg-is-permanently-one"></a>**Ungated vantages, and `lg` is one under rAF pacing.** `PIN_UNGATED_SCENARIOS`
-  maps a vantage the band never marks to the reason, which the row's note
-  prints. `lg`'s GPU duration **wanders as much inside a single dwell as it
+- <a id="ungated-vantages"></a>**Ungated vantages, and `lg` is one under rAF pacing.** `RAF_UNGATED_SCENARIOS`
+  maps a vantage the band never marks on an rAF-paced row to the reason,
+  which the row's note prints; `ungatedBecause` is the one reading of it, by
+  vantage and recorded pacing. **A GPU-paced lg row is gated like any other.**
+  Under rAF pacing `lg`'s GPU duration **wanders as much inside a single dwell as it
   does between runs**, so its median is not a stable estimator there and
   there is no level to hold it to. Measured over every dwell ever taken at
   the pin buffer: lg's within-dwell quarter span runs 0.090–1.775 ms, median
@@ -296,14 +302,16 @@ a pin run reads `steady`.
   (where the frame clears the refresh interval), at run positions 1, 5 and
   10, cold and warm, across a dozen commits — so it is a property of the
   vantage and **not** waiting on a fix — under rAF pacing, where all of
-  that was measured. GPU-paced, lg's throughput quarters read flat
-  (4.00–4.08 ms, `8cg-49-42-gpu-all-{3,4}.json`), so whether lg stays
-  ungated on a GPU-paced pin is `stellata-8cg.49.38`'s to decide. The band
+  that was measured. GPU-paced on the M6, lg's throughput mean reads 4.033 /
+  4.018 / 4.024 / 4.012 ms over four cold full sweeps, every quarter inside
+  0.08 ms of its run's others and every run steady (`8cg-49-42-gpu-all-{3,4}.json`,
+  `.perf-runs/2026-11-04/8cg-49-38-{m6-pin,m6-check}.json`) — the stability the other
+  four vantages show, so the stand-down does not reach it. On an rAF-paced row the band
   stands down, and so does the **state guard**: a trending lg is that same wander read across the quarters,
   not a verdict on the run, and since any refused row refuses the whole pin,
   leaving the refusal in force killed roughly one pin re-take in three on the
-  one row the gate never acts on — ~25 min of held-idle machine each.
-  **The stand-down is keyed on the vantage**, so it covers an lg row whose
+  one row the gate never acts on — a full held-idle sweep each.
+  **On an rAF-paced row the stand-down is keyed on the vantage**, so it covers an lg row whose
   adapter resolved no GPU stream and is therefore gated on wall. Such a row
   earns the exemption on the other ground: its wall median sits on the
   refresh interval, so its quarters swing by a whole interval however idle
@@ -313,16 +321,16 @@ a pin run reads `steady`.
   ceiling below still marks lg, and a failed, tainted, resized or
   mis-positioned lg still refuses, those being facts about the run rather
   than about lg. **`lg` is
-  the only canon vantage that sees the Local Group**, so a
-  `src/client/local-group/` render change has no pin row that prices it short
-  of the ceiling: price one with a per-pass differential at lg instead, never
-  with its pin row.
+  the only canon vantage that sees the Local Group**, so against an
+  rAF-paced pin a `src/client/local-group/` render change has no row that
+  prices it short of the ceiling: price one there with a per-pass
+  differential at lg. A GPU-paced pin's lg row prices it.
 - **Band.** On a frame row the pair's two-sigma standard error floored at
   `max(DWELL_FLOOR_MS 0.25 ms, DWELL_FLOOR_FRACTION 1 % × pinned)`; on a
   compute row the vantage's own constant and nothing else ([The compute
-  row](#the-compute-row)). A `✗` is past it; `~` is not resolved, never "no change". The
-  millisecond term is the larger of the two at every canon frame row but
-  mw50. A band the two-sigma term rather than the floor set is named on the
+  row](#the-compute-row)); on a `|cpu` row the pair's two-sigma term floored
+  at the vantage's own uncapped constant plus half a clock step ([The CPU floor](../floors/README.md#the-cpu-floor)). A `✗` is past it; `~` is not resolved, never "no change".
+  Which of the frame floor's two terms binds: [The whole-frame floor](../floors/README.md#the-whole-frame-floor). A band the two-sigma term rather than the floor set is named on the
   row (`BAND_OVER_FLOOR_FACTOR`), which is what catches a spread that belongs
   to the instrument. Both floors live in `../floors/`, shared with
   `--baseline` ([Band floors](../floors/README.md)). **A frame row's `✗` is not
@@ -400,5 +408,5 @@ a pin run reads `steady`.
   unexamined regression cannot quietly become the pinned value.
 
 The slug is the chip plus the WebGPU architecture from the adapter probe
-(`apple-m4-metal-3`); two machines with the same silicon share a pin, which
+(`apple-m6-metal-3`); two machines with the same silicon share a pin, which
 is the same rule `--baseline` applies to its adapter string.

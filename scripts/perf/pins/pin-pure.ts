@@ -14,22 +14,21 @@ import {
 } from '../dwell/dwell-pure';
 import { DWELL_METHOD, contextOrder } from '../run-pure';
 import { PERF_SCHEMA, type AdapterProbe, type DwellRecord, type GitProvenance, type PerfFile, type ScenarioRecord } from '../schema';
-import { BACKENDS, SCENARIO_NAMES, type Backend, type ScenarioName } from '../scenarios';
+import { BACKENDS, SCENARIO_NAMES, isScenarioName, type Backend, type ScenarioName } from '../scenarios';
 
 /** Removing a field or changing what one MEANS bumps the suffix; adding one
  *  does not — the same contract as `PERF_SCHEMA`. */
 export const PIN_SCHEMA = 'stellata-perf/pin-3';
 
-/** Vantages the band never marks, mapped to the reason, which the row's note
- *  carries. lg wanders as much across one dwell's quarters as it does between
- *  runs, so neither a steady nor a trending state guard says anything about
- *  whether the row is comparable — and a trending one must therefore not
- *  refuse it, since any refused row refuses the whole pin. The ceiling still
- *  applies: a vantage that wanders 1.5 ms is no licence for a frame that
- *  doubled. README.md#reading---against-pin `--against-pin`. */
-export const PIN_UNGATED_SCENARIOS: Readonly<Partial<Record<ScenarioName, string>>> = {
-  lg: 'wanders as much inside one dwell as between runs',
+/** Vantages whose rAF-paced rows the band never marks and a trending state
+ *  guard never refuses; the reason is the row's note. README.md#ungated-vantages. */
+export const RAF_UNGATED_SCENARIOS: Readonly<Partial<Record<ScenarioName, string>>> = {
+  lg: 'wanders as much inside one dwell as between runs under rAF pacing',
 };
+
+function ungatedBecause(name: ScenarioName, pacing: FramePacing): string | undefined {
+  return pacing === 'raf' ? RAF_UNGATED_SCENARIOS[name] : undefined;
+}
 
 /** Two 60 Hz intervals of hardware time. A canon vantage whose GPU-stream
  *  p50 crosses it marks whatever the band says, and whether or not the
@@ -151,8 +150,8 @@ export interface PinFile {
 
 /** `ungated` is a row the band never marks, on either of two grounds: it
  *  carries no GPU-stream median on one side or the other, and wall time is
- *  quantised to the display's refresh interval; or its vantage is in
- *  `PIN_UNGATED_SCENARIOS`. The ceiling reaches the second kind, so an
+ *  quantised to the display's refresh interval; or `ungatedBecause` stands
+ *  its vantage down at its pacing. The ceiling reaches the second kind, so an
  *  ungated vantage can still read `dearer`. /RELEASING.md#perf-pin. */
 export type PinVerdict = Verdict | 'ungated';
 
@@ -258,7 +257,7 @@ function rowRefusal(record: ScenarioRecord): string | null {
   // Here, so a pin row is never CPU-bound and `compareToPin` checks the run alone.
   const cpuBound = cpuBoundRefusal(cpuClock(record.dwell)?.p50, throughputFrameMs(record.dwell, dwellPacing(record)));
   if (cpuBound !== null) return cpuBound;
-  if (PIN_UNGATED_SCENARIOS[record.name] === undefined
+  if (ungatedBecause(record.name, dwellPacing(record)) === undefined
     && gatingClock(record.dwell, dwellPacing(record)).clock.stateGuard === 'trending') {
     return 'the dwell trended across its quarters — it straddled a load-state transition';
   }
@@ -578,12 +577,12 @@ function streamRow<C>(pinned: PinRow, spec: StreamSpec<C>): PinVerdictRow {
   }
   const { deltaMs, floorMs, bandMs, floorDeltaMs, spreadDeltaMs, verdict } =
     judgedMove(judgement, side, current, pinned.name);
-  const ungatedBecause = PIN_UNGATED_SCENARIOS[pinned.name];
-  if (ungatedBecause !== undefined) {
+  const reason = ungatedBecause(pinned.name, recordedPacing(pinned.pacing));
+  if (reason !== undefined) {
     return underCeiling({
       ...ungatedRow(
         key, metric, side.valueMs, current.valueMs,
-        `${pinned.name} ${ungatedBecause} — recorded, never marked below the ceiling`,
+        `${pinned.name} ${reason} — recorded, never marked below the ceiling`,
       ),
       floorDeltaMs,
       spreadDeltaMs,
@@ -789,6 +788,10 @@ export function assertPinFile(value: unknown, source: string): PinFile {
   const pin = value as Partial<PinFile>;
   if (typeof pin.adapterSlug !== 'string' || !Array.isArray(pin.rows)) {
     throw new PinError(`${source} has no adapter slug or no rows`);
+  }
+  const stranger = pin.rows.find((r: { name?: unknown }) => !isScenarioName(r?.name));
+  if (stranger !== undefined) {
+    throw new PinError(`${source} pins scenario ${JSON.stringify(stranger?.name)}, no canon vantage`);
   }
   return pin as PinFile;
 }

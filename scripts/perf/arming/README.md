@@ -1,6 +1,6 @@
 # Arming the perf runner — the consent gate
 
-A GPU measurement costs Alex a machine held idle for 15–25 minutes, so the
+A GPU measurement costs Alex a machine held idle for up to ten minutes, so the
 runner never launches on the agent's own initiative. A marker file `.perf-go`
 at the repo root (gitignored, anchored `/.perf-go`) authorises exactly one
 launch, and **only Alex creates it**. This folder is the marker's name, its
@@ -110,9 +110,11 @@ attempt, whatever happens after.
 **Both the poller and the runner go in the background** — under Claude Code,
 Bash `run_in_background`. The poller because it waits up to an hour; the
 runner because a foreground call is capped at **10 minutes** and killed
-there, while every mode worth arming for runs longer: a pin run is 15–25 min
-across its ten contexts at a 120 s cool-down, a `--scenario all` differential
-18–21.
+there, and the long modes reach it: a pin run is 9.4 min on the M6 — five
+contexts of ~17 s each and four 120 s cool-downs
+(`.perf-runs/2026-11-04/8cg-49-38-m6-pin.json`, and every GPU-paced full
+sweep before it) — inside the cap by less than a slow boot costs, and a
+`--scenario all` differential ran 18–21 min on the M4. A Tier 1 run is ~35 s.
 
 The cost of getting this wrong is the arm, not merely the run. The marker is
 consumed *before* the browser starts, so a launch killed at the cap has

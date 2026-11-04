@@ -377,7 +377,9 @@ possible from the file alone, and a summary cannot be un-summarised.
 anything else, and it is the only place the suffix is judged — a `--baseline`
 carrying another one is refused in the preflight, so the diff never sees a
 file it would have to reason about. What bumps the suffix, and why a bump
-abandons every recorded baseline: `schema.ts`, on `PERF_SCHEMA`.
+abandons every recorded baseline: `schema.ts`, on `PERF_SCHEMA`. It also refuses
+a file naming any scenario outside the canon five (`isScenarioName`, in
+`scenarios.ts`), so every per-vantage lookup past it is total.
 
 ## Comparing against a baseline
 
