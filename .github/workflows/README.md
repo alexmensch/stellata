@@ -81,10 +81,10 @@ sends the body: [How pr-body-guard works](/scripts/hooks/README.md#how-pr-body-g
 
 ## `version-guard.yml`
 
-CI check on every PR. Fails the PR if `package.json#version` was bumped
-inconsistently with the PR's contents — pure-docs PRs need
-`skip-version-bump`; user-visible behaviour PRs need a bump. See
-[Version policy](/RELEASING.md#version-policy). Exempt under
+CI check on every PR. Fails the PR unless `package.json#version` is
+above the base branch's and not already a tag. Whether a PR bumps or
+takes `skip-version-bump` is
+[the live-app consumer test](/RELEASING.md#the-live-app-consumer-test). Exempt under
 [the `skip-version-bump` exemption](#the-skip-version-bump-exemption).
 
 ## `test.yml`

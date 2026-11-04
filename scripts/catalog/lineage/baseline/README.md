@@ -9,7 +9,8 @@ Which earlier build a stage's run-to-run diff reads, and when it refuses one
 scripts/catalog/lineage/baseline/
   lineage-header-pure.ts         StageHeader and its parse; planBaseline and
     (+ test)                     judgeBaseline, the verdict over a header and
-                                 the merge-base.
+                                 the merge-base; checkoutAt, whether the
+                                 checkout is on main.
 ```
 
 Its readers and writers live one folder up: `../lineage-io.ts` writes and
@@ -68,3 +69,23 @@ build read, usually differs from it and is refused until the stage is built
 at the merge-base; and a branch that drops a file the merge-base gained
 after the older build can match it although the merge-base build read that
 file.
+
+## On main
+
+A checkout is **on main** when it is on the `main` branch
+(`onMainBranch`, `../../../util/git-provenance.ts`) and HEAD is its
+merge-base with `origin/main` (`checkoutAt`). A fresh branch worktree, whose
+HEAD is the merge-base until its first commit, is not: its seeded baseline is
+main's last build, often from an older commit, and a diff against it would
+report other PRs' landings as the branch's change. A detached HEAD, as on
+CI, is not on main either. There, the one rule is that a clean, intact
+header from HEAD or an earlier commit in its history (`inHeadHistory`,
+`git merge-base --is-ancestor`) is accepted whatever its inputs
+(`main-build`), so `build:seed` after a landing diffs against the previous
+main build and reports what the landing changed. The merge-base's input
+hash is never asked, so neither membership's upstream re-hash nor
+`inputHashesAt` runs. Nothing is pinned in `lineage.previous/` on main, a
+build from the inputs HEAD holds included: the stage rotates every time, so
+each landing diffs against the one before it. A header from outside HEAD's
+history, a dirty one, or one beside files it did not record is refused. Every other checkout keeps the merge-base rule
+above unchanged.
