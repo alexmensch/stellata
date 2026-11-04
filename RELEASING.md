@@ -266,7 +266,9 @@ mw50 and lg, the 0.25 cap at earth and sol — because scatter there runs
 0.008 to 0.396 ms across the five on the M6, a factor of 50 one constant
 cannot fit, and the constant reads as 18× the noise at mw50
 ([The compute row](scripts/perf/pins/README.md#the-compute-row)). What the 0.25 cap
-holds: [The compute floor](scripts/perf/floors/README.md#the-compute-floor).
+holds: [The compute floor](scripts/perf/floors/README.md#the-compute-floor). A `|cpu` row
+takes its vantage's own floor too, uncapped and under the two-sigma term
+([The CPU floor](scripts/perf/floors/README.md#the-cpu-floor)).
 
 **What is pinned.** `--mode dwell` at the five canon vantages in canon
 order (mw120, sol, earth, mw50, lg — [Run position](scripts/perf/pins/README.md#run-position): a permutation pins
@@ -281,15 +283,18 @@ the run, not the row. The per-pass differential is attribution, run when a row
 moves or when the PR touches a pass directly; it explains a mark and never
 fails one.
 
-**The GPU stream gates the frame, and the compute stream gates the compute
-passes — nothing else marks.** The GPU stream is the one continuous
-whole-frame reading the pin holds — the middle half of a canon row spans
-0.03–0.36 ms — and it is the render passes alone: three pools compute
+**Three rows per context mark: the frame, the compute passes and, GPU-paced,
+the main thread — nothing else does.** On a GPU-paced pin the frame row is
+throughput, the GPU's time per frame at a held clock
+([CPU and GPU, apart](scripts/perf/dwell/README.md#cpu-and-gpu-apart)); on an
+rAF-paced one it is the GPU stream, whose middle half spans 0.03–0.36 ms at a
+canon row. Either way it is the render passes alone: three pools compute
 timestamps separately, so a WebGPU context prints a second row,
 `<scenario>|webgpu|compute`, banded on its own vantage's floor (above), the
 same ceiling, and accepted under its own key
-([The compute row](scripts/perf/pins/README.md#the-compute-row)). The two are never
-summed, and a compute regression marks whatever the frame row says.
+([The compute row](scripts/perf/pins/README.md#the-compute-row)). A GPU-paced context
+prints a third, `<scenario>|webgpu|cpu`, also accepted under its own key. None
+are summed, and each marks whatever the others say.
 
 **Which statistic of each stream is the `metric` column's job**, and it is
 not the same at every row. A GPU-paced frame row reads `throughput-mean`
@@ -370,7 +375,8 @@ moved in between:
 
 <a id="what-a-mark-means"></a>**What a mark means.** A row is `✗` when the statistic its `metric` column
 names moves past its band — the pair's two-sigma standard error floored, on a
-frame row; the vantage's own constant alone, on a compute row — or when it
+frame row; the vantage's own constant alone, on a compute row; the two-sigma
+term floored at the vantage's own constant, on a `|cpu` row — or when it
 crosses the
 ceiling — 33.4 ms at any canon vantage, two 60 Hz intervals of hardware
 time — whatever the band says and whether or not the vantage is gated. mw50's throughput at 13.147 is the
