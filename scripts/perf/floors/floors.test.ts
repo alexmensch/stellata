@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { dwellPacing } from '../diff/diff-pure';
+import { dwellPacing, preconditionRefusal, recordCountRefusal } from '../diff/diff-pure';
+import { CANON_POSITIONS } from '../pins/pin-pure';
 import { frameFloor } from '../dwell/dwell-pure';
 import { SCENARIO_NAMES, type ScenarioName } from '../scenarios';
 import { assertPerfFile, type ScenarioRecord } from '../schema';
@@ -20,15 +21,23 @@ const POPULATION_RUNS = [
 ];
 
 const POPULATION: readonly ScenarioRecord[] = POPULATION_RUNS
-  .flatMap((path) => assertPerfFile(JSON.parse(readFileSync(path, 'utf-8')), path).scenarios)
-  .filter((r) => dwellPacing(r) === 'gpu' && r.params.frames === 960 && r.bufferMpx === 4.096
-    && r.dwell?.throughputStats?.stateGuard === 'steady');
+  .flatMap((path) => assertPerfFile(JSON.parse(readFileSync(path, 'utf-8')), path).scenarios);
 
 function spanOf(name: ScenarioName, read: (r: ScenarioRecord) => number): number {
   const values = POPULATION.filter((r) => r.name === name).map(read);
-  expect([name, values.length]).toEqual([name, name === 'mw120' || name === 'sol' ? 6 : 4]);
   return Math.max(...values) - Math.min(...values);
 }
+
+describe('the floor population', () => {
+  it('holds only rows a gate would compare against the pin', () => {
+    const catalogue = POPULATION[0].recordCount;
+    for (const r of POPULATION) {
+      expect([r.name, dwellPacing(r), r.params.frames, r.bufferMpx, r.position,
+        r.dwell?.throughputStats?.stateGuard, preconditionRefusal({}, r.params), recordCountRefusal(catalogue, r.recordCount)])
+        .toEqual([r.name, 'gpu', 960, 4.096, CANON_POSITIONS.get(`${r.name}|${r.backend.actual}`), 'steady', null, null]);
+    }
+  });
+});
 
 describe('the whole-frame floor — one number, both gates', () => {
   it('is 0.25 ms or 1 % of the baseline, whichever is larger', () => {
