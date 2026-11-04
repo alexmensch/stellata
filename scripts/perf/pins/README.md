@@ -173,7 +173,7 @@ the same number.
 
 Two of the three guards stay inert at this magnitude: `PIN_CEILING_MS` is
 81× mw120's compute value on the M6 pin, and `STATE_GUARD_TREND_MS` (1 ms)
-is at least every canon compute median (lg's, the largest, reads 1.001), so a
+is about the largest canon compute median (lg's, 1.001), so a
 compute row's own `stateGuard` could read `trending` only on a quarter-to-
 quarter swing the size of the whole row, and nothing consults it — the frame row's verdict is what refuses
 the context.
