@@ -90,6 +90,7 @@ describe('await-go', () => {
     expect(r.code).toBe(1);
     expect(r.stdout).toBe('');
     expect(r.stderr).toMatch(/not armed/);
+    expect(r.stderr).toContain('GPU_DONE unarmed');
   }, 15_000);
 
   it('defaults its timeout to PERF_GO_WAIT_S', async () => {
