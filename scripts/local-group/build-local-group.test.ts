@@ -2,6 +2,7 @@
 // TSV parser plus an integration test that reads the committed LVDB
 // CSV and pins display-name routing for every renderable name.
 
+import { roundHalfEven } from '../util/round-pure';
 import { parse } from 'csv-parse/sync';
 import { describe, expect, it } from 'vitest';
 import { parseAliases, parseLvdb, parseOverrides } from './local-group-parse';
@@ -14,7 +15,6 @@ import {
   filterForRendering,
   isCatalogDesignation,
   mergeRowAndOverride,
-  roundN,
 } from './build-local-group-pure';
 import { type LgObjectRow } from '../../src/catalog-format/local-group/local-group-schema';
 import { lgObjectStub } from './lg-object-mock';
@@ -253,8 +253,8 @@ describe('emission over the committed catalog', () => {
     if (e.family !== 'sersic') throw new Error('expected sersic');
     expect(e.mV).toBe(2.2);
     expect(e.n).toBe(1);
-    expect(e.reffAxesPc.map((v) => roundN(v, 2))).toEqual([812.82, 1080.85, 1307.48]);
-    expect(roundN(e.uMax, 4)).toBe(4.589);
+    expect(e.reffAxesPc.map((v) => roundHalfEven(v, 2))).toEqual([812.82, 1080.85, 1307.48]);
+    expect(roundHalfEven(e.uMax, 4)).toBe(4.589);
     expect(e.density0).toBe(0.09850365183085676);
   });
 
@@ -305,8 +305,8 @@ describe('emission over the committed catalog', () => {
     }
     devs.sort((x, y) => x - y);
     expect(devs.length).toBe(121);
-    expect(roundN(devs[Math.floor(devs.length / 2)], 4)).toBe(0.0078);
-    expect(roundN(worstDev, 4)).toBe(0.2504);
+    expect(roundHalfEven(devs[Math.floor(devs.length / 2)], 4)).toBe(0.0078);
+    expect(roundHalfEven(worstDev, 4)).toBe(0.2504);
     expect(worstName).toBe('Andromeda XX');
   });
 });

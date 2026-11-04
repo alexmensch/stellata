@@ -107,19 +107,19 @@ describe('deriveGraph', () => {
 
   it('drops exactly the registry edges between allocating steps, and no other edge of the loop', () => {
     const cat = ts('build:catalog', ['/r/sid/ledger.tsv', '/r/catalog.bin'], ['/r/sid/ledger.tsv', '/r/sid/cloud-ledger.tsv']);
-    const stamp = ts('sid:stamp', ['/r/sid/cloud-ledger.tsv', '/r/clouds.json'], ['/r/sid/ledger.tsv', '/r/sid/cloud-ledger.tsv']);
-    const g = ordered(deriveGraph([cat, stamp], ['/r/sid/ledger.tsv', '/r/sid/cloud-ledger.tsv']));
+    const clouds = ts('build:clouds', ['/r/sid/cloud-ledger.tsv', '/r/clouds.json'], ['/r/sid/ledger.tsv', '/r/sid/cloud-ledger.tsv']);
+    const g = ordered(deriveGraph([cat, clouds], ['/r/sid/ledger.tsv', '/r/sid/cloud-ledger.tsv']));
     expect(g.registryEdges).toEqual([
-      { kind: 'reads', from: 'sid:stamp', to: 'build:catalog', files: ['/r/sid/cloud-ledger.tsv'] },
-      { kind: 'reads', from: 'build:catalog', to: 'sid:stamp', files: ['/r/sid/ledger.tsv'] },
+      { kind: 'reads', from: 'build:clouds', to: 'build:catalog', files: ['/r/sid/cloud-ledger.tsv'] },
+      { kind: 'reads', from: 'build:catalog', to: 'build:clouds', files: ['/r/sid/ledger.tsv'] },
     ]);
     expect(g.edges).toEqual([]);
   });
 
   it('still rejects a loop through a file outside the registry', () => {
     const cat = ts('build:catalog', ['/r/sid/ledger.tsv', '/r/catalog.bin'], ['/r/clouds.json']);
-    const stamp = ts('sid:stamp', ['/r/clouds.json'], ['/r/catalog.bin']);
-    expect(problems(deriveGraph([cat, stamp], ['/r/sid/ledger.tsv']))[0]).toMatch(/cycle/);
+    const clouds = ts('build:clouds', ['/r/clouds.json'], ['/r/catalog.bin']);
+    expect(problems(deriveGraph([cat, clouds], ['/r/sid/ledger.tsv']))[0]).toMatch(/cycle/);
   });
 
   it('orders a pull after the build that writes its request, and its reader after the pull', () => {
@@ -169,9 +169,9 @@ describe('selectSteps', () => {
 describe('writersOf', () => {
   it('names each step whose output a step reads, registry partners included', () => {
     const cat = ts('build:catalog', ['/r/sid/ledger.tsv'], ['/r/sid/cloud-ledger.tsv', '/r/m.tsv']);
-    const stamp = ts('sid:stamp', ['/r/sid/cloud-ledger.tsv'], ['/r/sid/ledger.tsv']);
+    const clouds = ts('build:clouds', ['/r/sid/cloud-ledger.tsv'], ['/r/sid/ledger.tsv']);
     const bin = ts('build:binaries', ['/r/m.tsv']);
-    const g = ordered(deriveGraph([cat, stamp, bin], ['/r/sid/ledger.tsv', '/r/sid/cloud-ledger.tsv']));
-    expect(writersOf(g, 'build:catalog').sort()).toEqual(['build:binaries', 'sid:stamp']);
+    const g = ordered(deriveGraph([cat, clouds, bin], ['/r/sid/ledger.tsv', '/r/sid/cloud-ledger.tsv']));
+    expect(writersOf(g, 'build:catalog').sort()).toEqual(['build:binaries', 'build:clouds']);
   });
 });

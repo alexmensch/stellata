@@ -163,6 +163,12 @@ same thing — single-use helpers stay with their consumer.
   belongs to, and `BROWSER_TREES`: the one list both import-boundary tests
   (`/tests/README.md#pipeline-viewer-boundary`) and the step table's
   outputs-module walk ([Load-time rules](../pipeline/step-table/README.md#load-time-rules)) read.
+- `round-pure.ts` (+ test) — `roundHalfEven(x, digits)`, Python's
+  `round`: half to even on the double's exact decimal value; and
+  `roundSignificant(v, digits)`, significant figures through
+  `toPrecision`. Every number a TypeScript build rounds into a JSON
+  artifact goes through one of them, never `Math.round(x · 10ⁿ) / 10ⁿ`,
+  whose multiply moves near-ties.
 - `step-inputs.ts` — `entryInputPaths(entries)`, every file a TypeScript
   step reads: the closure of its entry files, the closure's siblings, and
   every declaration the closure reads (`sources/`); the runner derives each
@@ -171,9 +177,11 @@ same thing — single-use helpers stay with their consumer.
   on the table (`package.json` then names only `run.ts`), else each `tsx` entry
   its `package.json` script chains; `stepInputPaths(name)` is
   `entryInputPaths` over it, which the catalogue and membership lineage
-  headers and `build:local-group`'s up-to-date gate key on, and CI's catalogue
-  cache key reads `stepEntries` too. Each step's own suite pins its set
-  (`../catalog/catalog-inputs.test.ts`, `../local-group/local-group-inputs.test.ts`).
+  headers key on, and CI's catalogue cache key reads `stepEntries` too.
+  `outputsNewerThanInputs(step, outputs)` is the mtime gate of the two
+  off-table emitters, `build:clouds` and `build:local-group`, over that set.
+  Each step's own suite pins its set (`../catalog/catalog-inputs.test.ts`,
+  `../local-group/local-group-inputs.test.ts`, `../clouds/clouds-inputs.test.ts`).
 - `tsv/` — the one TSV reader (`readTable`, typed columns, cells that keep
   empty and malformed apart) and `defineArtifact`, the codec of every table
   this repo writes. Own README.
@@ -220,7 +228,7 @@ same thing — single-use helpers stay with their consumer.
   the one listing of a family on disk, which the runner stamps from too. A
   step that can be told to do only some targets (`fetch:ephemerides saturn`),
   or that leaves a SID registry partition alone when its allocation appended
-  nothing (`build:local-group`, `sid:stamp`), still passes its one full
+  nothing (`build:local-group`, `build:clouds`), still passes its one full
   declaration, plus `only`: the run must
   emit exactly those keys, and the leftover sweep still covers every declared
   path. A `refresh` check
@@ -286,9 +294,8 @@ same thing — single-use helpers stay with their consumer.
   uniform-cadence span into range queries whose endpoints land on grid
   epochs.
 - `frozen-json.ts` — `serializeRowFile` (one sample array per line, so a
-  thousand-row artifact still diffs sample-by-sample in git) and
-  `roundSignificant`, shared by the probe-trajectory and planet-element
-  emitters.
+  thousand-row artifact still diffs sample-by-sample in git), shared by the
+  probe-trajectory and planet-element emitters.
 - `mirror-to-public.ts` (+ test) — `mirrorDataFolder(folder, spec)`, the one
   `data/<folder>/` → `public/<folder>/` copy used by
   `scripts/{dust,textures,probes,ephemerides}/sync-*.ts`. `mirrorSource`

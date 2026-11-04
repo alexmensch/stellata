@@ -221,7 +221,7 @@ spot-check the override on a recurring basis.
 The 132 rows live under CC BY 4.0 at
 `data/distance-validation/vaidman-2025-supergiants.tsv` (provenance and
 SIMBAD name-resolution recipe in `data/distance-validation/README.md`);
-`scripts/distance-validation/validate-distances.py` runs the comparison
+`pnpm run validate:distances` runs the comparison
 end-to-end and reports the per-star fractional difference distribution
 (median, 84th-pct, and top-5 disagreements) against the override's
 [Bailer-Jones 2021](/data/papers/index.md#bailerjones2021) input. The harness is built to re-run on every distance-

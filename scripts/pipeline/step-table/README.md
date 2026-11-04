@@ -120,7 +120,7 @@ output's hash, so it rebuilds once the pull is re-run. The cycle check
 therefore never sees a loop through a manual step.
 
 The registry loop is the one kept loop among `build` steps: `build:catalog`,
-`sid:stamp` and `build:local-group` each read every registry partition, the
+`build:clouds` and `build:local-group` each read every registry partition, the
 others' and their own. The edges dropped are exactly those whose file is a `data/sid/`
 registry partition file (ledger or events) read by an allocating step, its
 own partition included, named in the table as such rather than inferred,

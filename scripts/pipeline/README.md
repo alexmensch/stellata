@@ -47,7 +47,7 @@ everything else, then exits non-zero naming each stale step's command. So
 rebuild.
 
 SID allocation is not a step of its own: `build:catalog`, `build:local-group`
-and the clouds stamp (`sid:stamp`) each allocate their namespaces in-process, and a failed
+and `build:clouds` each allocate their namespaces in-process, and a failed
 allocation fails that `build` step
 ([SID allocation](../catalog/README.md#sid-allocation)). Each appends to its
 own registry partition under `data/sid/`, so every registry file has one
@@ -214,7 +214,7 @@ that writes it. Measured 2026-10-27.
 | manifest ↔ `simbad_sptype` (the derivation's fourth binding source) | Kept. The request genuinely depends on the binding outcome. The stale-pull stop is its convergence check; re-pulling reopens the review queue, as `refresh/README.md` says. The same file also reaches the astrometry request (its derivation candidates), so manifest → `simbad_sptype` → request → astrometry pull → `build:membership` is a second path through this loop, covered by the same stop. |
 | `build:binaries` ↔ its own astrometry request | Kept, same check. The request keeps rejected candidates, so it grows rather than oscillates. |
 | `build:catalog` reads the SID ledger and events it appends to | Kept: an append-only file whose committed prefix the step only reads; its stamp records the post-append hash, so the next run rebuilds once and appends nothing. |
-| `build:catalog` ↔ `sid:stamp` ↔ `build:local-group` through each other's registry partition (ledger and events) | Kept, the registry loop ([Load-time rules](step-table/README.md#load-time-rules)), which also covers the row before: each reads the union for the next SID and the retired state, and appends only to its own partition. |
+| `build:catalog` ↔ `build:clouds` ↔ `build:local-group` through each other's registry partition (ledger and events) | Kept, the registry loop ([Load-time rules](step-table/README.md#load-time-rules)), which also covers the row before: each reads the union for the next SID and the retired state, and appends only to its own partition. |
 | `build:naming-parity` reads its own `naming-parity.tsv` | Carries frozen columns forward deliberately; not a pipeline step. |
 
 ## Derived checks
@@ -246,9 +246,8 @@ Hand-kept lists become derivations over the table:
   record takes its inputs from today's hand list; its next run replaces them
   with the recorded set.
 - **Order.** Runner core, then the stamped steps and the four generators, then
-  the mtime steps and mirrors (after clouds sets SIDs in its own record, as
-  local-group does, so no step rewrites another's output, and after clouds' port
-  to TypeScript, so it reaches the runner as a TypeScript step), then CI's
+  the mtime steps and mirrors (clouds and local-group are TypeScript and each
+  sets SIDs in its own record, so no step rewrites another's output), then CI's
   `--verify-committed`, then the derived checks. The four loop breaks ship
   with the slice that moves their step.
 

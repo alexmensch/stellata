@@ -2,6 +2,8 @@
 // Plummer density and absorption alpha. Physics: /docs/science-molecular-clouds.md#2-extinction-physics-and-the-units-chain,
 // /docs/science-molecular-clouds.md#4-per-cloud-density-model--the-presence-pass-field, /docs/science-molecular-clouds.md#9-presence-pass.
 
+import { cloudEnvelope, plummerProfile } from '../../../astro-core/cloud-density-pure';
+
 /** τ_V = 0.921 · A_V (A_V = 1.086 τ_V). */
 export const TAU_PER_AV = 0.921;
 
@@ -20,11 +22,6 @@ export const MARCH_MIN_STEPS = 4;
  *  finite on a grazing ray. */
 export const MARCH_MIN_CHORD_T = 1e-6;
 
-function smoothstep(e0: number, e1: number, x: number): number {
-  const t = Math.min(Math.max((x - e0) / (e1 - e0), 0), 1);
-  return t * t * (3 - 2 * t);
-}
-
 /**
  * Calibrated Plummer density [cm⁻³] at ellipsoidal radius `u`
  * (/docs/science-molecular-clouds.md#41-the-11-profiled-clouds-zucker-2021): profile radius is `u · sMin`, the
@@ -39,10 +36,9 @@ export function cloudModelDensity(
   uEnv: number,
   envelopeFadeStart: number,
 ): number {
-  const envelope = 1 - smoothstep(envelopeFadeStart * uEnv, uEnv, u);
+  const envelope = cloudEnvelope(u, uEnv, envelopeFadeStart);
   if (envelope <= 0) return 0;
-  const q = (u * sMinPc) / rflatPc;
-  return n0Cal * (1 + q * q) ** (-p / 2) * envelope;
+  return n0Cal * plummerProfile(u * sMinPc, rflatPc, p) * envelope;
 }
 
 /** `av` is a raymarched A_V column (/docs/science-molecular-clouds.md#9-presence-pass). */

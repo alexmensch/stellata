@@ -31,13 +31,13 @@ Owned elsewhere, by the contract they belong to:
   declaration (`scripts/*/…-source.ts`); where a mirror keeps the public
   name, that declaration builds its path from the name here.
 
-The four names the Python bakers write — `local-bubble.bin`,
+The four names a Python baker writes or reads — `local-bubble.bin`,
 `cloud-surfaces.bin`, `clouds.json` and the dust manifest — come from the
 artifact blocks of `/src/astro-core/baker-constants.json`
 ([`../baker-artifacts/`](../baker-artifacts/README.md)), which the bakers read
-too; `PUBLIC_FILES` and `DUST_MANIFEST` take them from there. The two Python
-`build` steps (`build-clouds.py`, `build-runtime-binaries.py`) still spell
-their output names themselves.
+too; `PUBLIC_FILES` and `DUST_MANIFEST` take them from there. The one Python
+`build` step, `build-runtime-binaries.py`, still spells its output name
+itself.
 
 `tests/public-artifact-names.test.ts` holds the invariant: no TypeScript
 string literal under `src/` or `scripts/` outside this folder spells one of

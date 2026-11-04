@@ -6,7 +6,7 @@ import { REPO_ROOT } from '../util/paths';
 import { stepInputPaths } from '../util/step-inputs';
 import { registryPaths, REGISTRY_PARTITIONS } from '../../src/catalog-format/pipeline-outputs/data-files';
 
-const ALLOCATING_STEPS = ['build:catalog', 'build:local-group', 'sid:stamp'];
+const ALLOCATING_STEPS = ['build:catalog', 'build:local-group', 'build:clouds'];
 
 const registryInputs = REGISTRY_PARTITIONS.flatMap((partition) => {
   const { ledger, events } = registryPaths(partition);

@@ -7,8 +7,8 @@ import { holdLocks, lockSpecs, type HeldLocks } from './locks';
 
 describe('lockSpecs', () => {
   it('takes its own lock exclusive and the others shared, all in step-name order', () => {
-    expect(lockSpecs({ step: 'sid:stamp', exclusive: true, shared: ['build:catalog', 'build:binaries'] }))
-      .toEqual(['sh:build-binaries', 'sh:build-catalog', 'ex:sid-stamp']);
+    expect(lockSpecs({ step: 'build:clouds', exclusive: true, shared: ['build:catalog', 'build:binaries'] }))
+      .toEqual(['sh:build-binaries', 'sh:build-catalog', 'ex:build-clouds']);
   });
 
   it('holds a step it also reads from exclusive, once', () => {

@@ -2,6 +2,7 @@
 // orientation quaternions, display-name routing, and per-object emission
 // assembly over the profile geometry + the shared ρ₀ solve. Off the I/O path.
 
+import { siblingSlug } from '../sid/sibling-artifacts-pure';
 import {
   fluxNumber,
   solveDensity0,
@@ -222,7 +223,7 @@ export function skyBasis(raDeg: number, decDeg: number): {
 
 /** Build a unit quaternion [x, y, z, w] from an orthonormal basis matrix
  *  whose columns are the world-space directions of the local +X, +Y, +Z
- *  axes. Standard Shepperd's method (matches build-clouds.py). */
+ *  axes. Standard Shepperd's method. */
 export function basisToQuaternion(
   bx: [number, number, number],
   by: [number, number, number],
@@ -354,17 +355,6 @@ export function buildOrientationQuat(
     zWorld[0] * xWorld[1] - zWorld[1] * xWorld[0],
   ];
   return basisToQuaternion(xWorld, yWorld, zWorld);
-}
-
-/** Build a slug from a display name (lower-case, kebab-case, ASCII only). */
-export function slugify(name: string): string {
-  return (
-    name
-      .normalize('NFKD')
-      .replace(/[^A-Za-z0-9]+/g, '-')
-      .replace(/^-+|-+$/g, '')
-      .toLowerCase() || 'object'
-  );
 }
 
 /** Filter LVDB rows to those that pass the rendering predicate:
@@ -625,7 +615,7 @@ function buildLgObjectFromOrient(
   const display = displayName(nameKey);
   return {
     name: display,
-    id: slugify(idKey),
+    id: siblingSlug(idKey, 'object'),
     type: objectTypeFor(display),
     center,
     kind,
@@ -735,20 +725,4 @@ export function buildStandaloneOverride(ov: OverrideRow): LgObjectRow | null {
     'OVERRIDE',
     emission,
   );
-}
-
-/** Round a number to N decimal places. Strips JS float noise from
- *  output JSON so committed (gitignored) artifacts diff cleanly when
- *  regenerated. */
-export function roundN(x: number, decimals: number): number {
-  const f = Math.pow(10, decimals);
-  return Math.round(x * f) / f;
-}
-
-/** For quantities whose magnitude spans decades across the catalog
- *  (density0); `roundN` above covers the fixed-decimal rest. */
-export function roundSig(x: number, sig: number): number {
-  if (x === 0) return 0;
-  const mag = Math.ceil(Math.log10(Math.abs(x)));
-  return roundN(x, sig - mag);
 }

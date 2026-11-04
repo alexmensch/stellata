@@ -4,7 +4,8 @@
 
 import { emitEach, runStep, type PullDescription } from '../util/emit-artifacts';
 import { HORIZONS_API, HORIZONS_SERVICE } from '../util/horizons-response';
-import { roundSignificant, serializeRowFile } from '../util/frozen-json';
+import { serializeRowFile } from '../util/frozen-json';
+import { roundSignificant } from '../util/round-pure';
 
 import {
   BASE_STEP_MICRODAYS,

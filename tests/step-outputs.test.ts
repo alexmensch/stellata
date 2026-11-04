@@ -5,18 +5,19 @@ import { describe, expect, it } from 'vitest';
 
 import { ASTROMETRY_REQUEST_OUTPUTS } from '../scripts/catalog/astrometry-request/astrometry-request-outputs';
 import { CATALOG_OUTPUTS } from '../scripts/catalog/catalog-outputs';
+import { CLOUDS_OUTPUTS } from '../scripts/clouds/clouds-outputs';
 import { CLASSIC_ID_OUTPUTS } from '../scripts/catalog/classic-ids/classic-id-overlay-outputs';
 import { MEMBERSHIP_OUTPUTS } from '../scripts/catalog/membership/membership-manifest-outputs';
 import { NAMING_PARITY_OUTPUTS } from '../scripts/catalog/naming/naming-parity-outputs';
 import { WGSN_OUTPUTS } from '../scripts/catalog/naming/wgsn-tables-outputs';
 import { LUT_OUTPUTS } from '../scripts/colour/blackbody-lut-outputs';
+import { VAIDMAN_OUTPUTS } from '../scripts/distance-validation/vaidman-outputs';
 import { ELEMENT_TABLE_OUTPUTS } from '../scripts/ephemerides/planet-element-outputs';
 import { LOCAL_GROUP_OUTPUTS } from '../scripts/local-group/local-group-outputs';
 import { PROBE_OUTPUTS } from '../scripts/probes/probe-trajectory-outputs';
 import { DR_RECONCILE_OUTPUTS } from '../scripts/sid/dr-reconcile-outputs';
 import { DR2_NEIGHBOURHOOD, DR2_NEIGHBOURHOOD_REQUEST } from '../scripts/sid/dr2-neighbourhood-source';
 import { DR_RISK_SET_OUTPUTS } from '../scripts/sid/dr-risk-set-outputs';
-import { SID_STAMP_OUTPUTS } from '../scripts/sid/sibling-stamp-outputs';
 import type { DeclaredOutputs } from '../scripts/util/emit-artifacts';
 import { REPO_ROOT } from '../scripts/util/paths';
 
@@ -28,8 +29,9 @@ const STEPS: Record<string, DeclaredOutputs> = {
   'build:naming-parity': NAMING_PARITY_OUTPUTS,
   'build:astrometry-request': ASTROMETRY_REQUEST_OUTPUTS,
   'build:local-group': LOCAL_GROUP_OUTPUTS,
+  'build:clouds': CLOUDS_OUTPUTS,
   'build:lut': LUT_OUTPUTS,
-  'sid:stamp': SID_STAMP_OUTPUTS,
+  'build:vaidman-table': VAIDMAN_OUTPUTS,
   'sid:risk-set': DR_RISK_SET_OUTPUTS,
   'sid:dr-reconcile': DR_RECONCILE_OUTPUTS,
   'fetch:probes': PROBE_OUTPUTS,

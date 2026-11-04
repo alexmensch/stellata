@@ -70,3 +70,9 @@ export function siblingArtifactObjects(spec: SiblingArtifactSpec, items: Sibling
     admission: { kind: 'declared', code: spec.mintCode, origin: null },
   }));
 }
+
+/** A sibling record's frozen `id`, the slug its SID is keyed on: ASCII kebab-case of `name` after NFKD,
+ *  `fallback` when nothing survives. Changing it re-keys every sibling record. */
+export function siblingSlug(name: string, fallback: string): string {
+  return name.normalize('NFKD').replace(/[^A-Za-z0-9]+/g, '-').replace(/^-+|-+$/g, '').toLowerCase() || fallback;
+}

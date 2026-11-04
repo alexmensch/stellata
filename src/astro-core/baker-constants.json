@@ -9,11 +9,15 @@
     "avPerEzgr": 2.742,
     "avPerNhPc": 0.00165
   },
+  "cloudModel": {
+    "dustGridHalfExtentPc": 1250
+  },
   "artifacts": {
     "clouds": { "fileName": "clouds.json", "version": 4 },
     "dustManifest": { "fileName": "manifest.json", "version": 2 },
     "cloudSurfaces": { "fileName": "cloud-surfaces.bin", "magic": "CSUR", "version": 3 },
-    "localBubble": { "fileName": "local-bubble.bin", "magic": "LBUB", "version": 1 }
+    "localBubble": { "fileName": "local-bubble.bin", "magic": "LBUB", "version": 1 },
+    "zuckerProfiled": { "fileName": "zucker-profiled.json", "version": 1 }
   },
   "planetShading": {
     "limbFloor": 0.45,
