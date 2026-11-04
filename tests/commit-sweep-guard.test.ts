@@ -83,6 +83,16 @@ describe('commit-sweep-guard', () => {
     }
   });
 
+  it('takes -C from the commit, not from an earlier git call', () => {
+    stageStaleChange();
+    const other = realpathSync(mkdtempSync(join(tmpdir(), 'commit-sweep-other-')));
+    try {
+      expect(allowed(`git -C ${other} status && git commit -m "add a thing"`)).toBe(false);
+    } finally {
+      rmSync(other, { recursive: true, force: true });
+    }
+  });
+
   it('honours the skip tag in an inline -m message', () => {
     stageStaleChange();
     expect(allowed(`git commit -m "add a thing ${SKIP_REASON}"`)).toBe(true);

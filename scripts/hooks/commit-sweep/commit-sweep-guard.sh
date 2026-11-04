@@ -37,14 +37,14 @@ fi
 
 cmd="$(printf '%s' "$input" | jq -r '.tool_input.command // ""')"
 
-# Match `git commit ...`, allowing `git -C <path> commit`. Excludes
-# subcommands that aren't commit and substrings like `git commit-tree`.
-if ! grep -qE '\bgit([[:space:]]+-C[[:space:]]+[^[:space:]]+)?[[:space:]]+commit([[:space:]]|$)' <<< "$cmd"; then
+# `git commit ...` or `git -C <path> commit ...`, not `git commit-tree`.
+# Group 3 is the -C path. BSD sed has no \b, hence the bracket class.
+commit_re='(^|[^[:alnum:]_])git([[:space:]]+-C[[:space:]]+([^[:space:]]+))?[[:space:]]+commit([[:space:]]|$)'
+if ! grep -qE "$commit_re" <<< "$cmd"; then
   exit 0
 fi
 
-# Resolve the repo top-level. Prefer `git -C <path>` if specified.
-repo_arg="$(sed -nE '/.*(^|[^[:alnum:]_])git[[:space:]]+-C[[:space:]]+([^[:space:]]+).*/{s//\2/p;q;}' <<< "$cmd")"
+repo_arg="$(sed -nE "/$commit_re/{s/.*${commit_re}.*/\3/p;q;}" <<< "$cmd")"
 if [ -n "$repo_arg" ]; then
   toplevel="$(git -C "$repo_arg" rev-parse --show-toplevel 2>/dev/null || true)"
 else
