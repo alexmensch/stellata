@@ -5,36 +5,37 @@ import { BUILD_TARGET, buildFigures, figureSubstitution, publishBuildEnv } from 
 import { documentRoutingInDev } from './vite.site-dev.ts';
 import { PUBLIC_DIR } from './scripts/util/paths.ts';
 
-const figures = buildFigures();
-publishBuildEnv(figures);
-
-export default defineConfig(() => ({
-  base: '/',
-  // Drop it and Vite's fallback serves the homepage for every path.
-  // src/site/README.md#reading-it-in-dev.
-  appType: 'custom' as const,
-  plugins: [
-    figureSubstitution(figures),
-    documentRoutingInDev(import.meta.dirname, figures),
-    indexCitations(),
-  ],
-  root: resolve(import.meta.dirname, 'src/client'),
-  publicDir: resolve(import.meta.dirname, PUBLIC_DIR),
-  build: {
-    outDir: resolve(import.meta.dirname, 'dist'),
-    emptyOutDir: true,
-    target: BUILD_TARGET,
-    // src/client/app/README.md#the-chunk-size-limit-is-raised-not-chased.
-    chunkSizeWarningLimit: 1600,
-    rollupOptions: {
-      // src/client/app/README.md#why-one-file-has-a-folder-to-itself.
-      input: resolve(import.meta.dirname, 'src/client/app/index.html'),
+export default defineConfig(() => {
+  const figures = buildFigures();
+  publishBuildEnv(figures);
+  return {
+    base: '/',
+    // Drop it and Vite's fallback serves the homepage for every path.
+    // src/site/README.md#reading-it-in-dev.
+    appType: 'custom' as const,
+    plugins: [
+      figureSubstitution(figures),
+      documentRoutingInDev(import.meta.dirname, figures),
+      indexCitations(),
+    ],
+    root: resolve(import.meta.dirname, 'src/client'),
+    publicDir: resolve(import.meta.dirname, PUBLIC_DIR),
+    build: {
+      outDir: resolve(import.meta.dirname, 'dist'),
+      emptyOutDir: true,
+      target: BUILD_TARGET,
+      // src/client/app/README.md#the-chunk-size-limit-is-raised-not-chased.
+      chunkSizeWarningLimit: 1600,
+      rollupOptions: {
+        // src/client/app/README.md#why-one-file-has-a-folder-to-itself.
+        input: resolve(import.meta.dirname, 'src/client/app/index.html'),
+      },
     },
-  },
-  server: {
-    port: 5173,
-    fs: {
-      allow: [resolve(import.meta.dirname, '..')],
+    server: {
+      port: 5173,
+      fs: {
+        allow: [resolve(import.meta.dirname, '..')],
+      },
     },
-  },
-}));
+  };
+});
