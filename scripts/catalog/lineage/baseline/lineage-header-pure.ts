@@ -1,6 +1,6 @@
-// A stage's lineage header — what its files were built from — and whether a baseline may be diffed against. See README.md#run-to-run-diff.
+// A stage's lineage header — what its files were built from — and whether a baseline may be diffed against. See README.md.
 
-import type { FileHashes } from '../../util/build-stamp';
+import type { FileHashes } from '../../../util/build-stamp';
 
 export interface StageHeader {
   readonly stage: string;

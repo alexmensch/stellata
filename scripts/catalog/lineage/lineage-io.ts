@@ -11,7 +11,7 @@ import { identityRows, type IdentityRow } from './identity-pure';
 import { lineageLines, lineageRows, type LineageLine, type LineageRow } from './lineage-row-pure';
 import {
   headerText, parseHeader, type HeaderRead, type StageHeader, type StageProvenance,
-} from './lineage-header-pure';
+} from './baseline/lineage-header-pure';
 import {
   stageDiffName, stageFileName, stageHeaderName, stageNames, type LineageLayout, type StageLineageSpec,
   type StageOutputKey,

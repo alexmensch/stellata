@@ -5,7 +5,7 @@ import { join, resolve } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { declareOutputs, emitArtifacts, EmissionRefused } from '../../util/emit-artifacts';
-import { judgeBaseline, type StageProvenance } from './lineage-header-pure';
+import { judgeBaseline, type StageProvenance } from './baseline/lineage-header-pure';
 import { baselineMembers, readLineage, readStageHeader, stageEmission } from './lineage-io';
 import { lineageInvariant, NO_EXCEPTIONS } from './lineage-invariant-pure';
 import { paramsText, stageLineageLine, stageLineageText } from './lineage-row-pure';

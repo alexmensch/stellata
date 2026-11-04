@@ -9,7 +9,7 @@ import { mergeBaseWithMain } from '../../util/git-provenance';
 import { diffLineage, stageDiffText, type DiffJoin, type KeyChange } from './lineage-diff-pure';
 import {
   ACCEPT_ANY_BASELINE_FLAG, AGAINST_FLAG, planBaseline, type BaselineSource,
-} from './lineage-header-pure';
+} from './baseline/lineage-header-pure';
 import { readStageHeader, stageEmission, stageProvenance, streamLineage } from './lineage-io';
 import { invariantCheck, invariantViolations, type LineageInvariant } from './lineage-invariant-pure';
 import { sortLineageLines, type LineageLine } from './lineage-row-pure';
