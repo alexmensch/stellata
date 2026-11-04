@@ -726,19 +726,3 @@ export function buildStandaloneOverride(ov: OverrideRow): LgObjectRow | null {
     emission,
   );
 }
-
-/** Round a number to N decimal places. Strips JS float noise from
- *  output JSON so committed (gitignored) artifacts diff cleanly when
- *  regenerated. */
-export function roundN(x: number, decimals: number): number {
-  const f = Math.pow(10, decimals);
-  return Math.round(x * f) / f;
-}
-
-/** For quantities whose magnitude spans decades across the catalog
- *  (density0); `roundN` above covers the fixed-decimal rest. */
-export function roundSig(x: number, sig: number): number {
-  if (x === 0) return 0;
-  const mag = Math.ceil(Math.log10(Math.abs(x)));
-  return roundN(x, sig - mag);
-}

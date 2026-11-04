@@ -2,8 +2,8 @@
 // through the shader's exact raymarch scheme (CPU mirror), matches the
 // physical prediction from any camera position to ±0.1 mag. See /src/client/local-group/emission/README.md.
 
+import { roundHalfEven } from '../../scripts/util/round-pure';
 import { describe, expect, it } from 'vitest';
-import { roundN } from '../../scripts/local-group/build-local-group-pure';
 import { MAX_DISTANCE_PC } from '../../src/catalog-format/local-group/local-group-schema';
 import { ALL_OBJECTS, type BuildLgObject, buildObject } from './lg-catalog-fixture';
 import {
@@ -297,7 +297,7 @@ describe('LG emission calibration — rendered flux vs physical prediction', () 
       // don't loosen.
       const worst = deviations.reduce((a, b) => (Math.abs(b.dev) > Math.abs(a.dev) ? b : a));
       expect(deviations.length).toBe(30);
-      expect(`${worst.pair}:${roundN(worst.dev, 3)}`).toBe(WORST_DEVIATION_PIN);
+      expect(`${worst.pair}:${roundHalfEven(worst.dev, 3)}`).toBe(WORST_DEVIATION_PIN);
     },
   );
 });
@@ -352,7 +352,7 @@ describe('sub-pixel expansion — flux through the real integral', () => {
     }
     const worst = deviations.reduce((a, b) => (Math.abs(b.dev) > Math.abs(a.dev) ? b : a));
     expect(deviations.length).toBe(15);
-    expect(`${worst.pair}:${roundN(worst.dev, 6)}`).toBe(WORST_EXPANSION_PIN);
+    expect(`${worst.pair}:${roundHalfEven(worst.dev, 6)}`).toBe(WORST_EXPANSION_PIN);
   });
 
   it('magnifies the profile rather than reshaping it', () => {
@@ -381,7 +381,7 @@ describe('sub-pixel expansion — flux through the real integral', () => {
     const fornax = OBJECTS.fornax;
     if (fornax.emission.family !== 'sersic') throw new Error('expected a spheroid');
     const meshSemiMajor = fornax.emission.uMax * fornax.emission.reffAxesPc[0];
-    expect(roundN(meshSemiMajor / fornax.axes[0], 2)).toBe(4.56);
+    expect(roundHalfEven(meshSemiMajor / fornax.axes[0], 2)).toBe(4.56);
   });
 
   it('pins how much of the catalogue the floor catches, per viewpoint', () => {
@@ -458,7 +458,7 @@ describe('M31 surface-brightness profile vs published photometry', () => {
     const mu0 = columnSurfaceBrightness(faceOnColumnAt(0));
     expect(mu0).toBeGreaterThan(21.35);
     expect(mu0).toBeLessThan(21.95);
-    expect(roundN(mu0, 2)).toBe(21.45);
+    expect(roundHalfEven(mu0, 2)).toBe(21.45);
   });
 
   it('falls 1.0857 mag per scale length — exponential in flux, linear in mag', () => {
