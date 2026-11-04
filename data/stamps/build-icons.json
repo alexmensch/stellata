@@ -1,6 +1,6 @@
 {
   "inputs": {
-    "scripts/icons/build-icons.py": "05fa3900dc64232c999e59502a57592e5cf5ce2c"
+    "scripts/icons/build-icons.py": "a47fda19686e0bc204b35bd4c6a1f35f14a50408"
   },
   "outputs": {
     "public/apple-touch-icon.png": "42516d0f3636bf760572bf0a0c8deb72690f57bb",

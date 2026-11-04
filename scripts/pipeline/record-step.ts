@@ -2,7 +2,10 @@
 
 import { existsSync } from 'node:fs';
 
-import { fileHashes, ignoredPaths, listingHashes, type FileHashes, type RecordedReads } from '../util/build-stamp';
+import {
+  fileHashes, ignoredPaths, inputHashes, listingHashes, recordedInputs, type FileHashes, type RecordedReads,
+} from '../util/build-stamp';
+import { CODE_FILE } from '../util/code-identity';
 import {
   manualDescription, manualFreshness, pullQueryHash, requestHash, stampedOutputs, writeManualRecord,
   type Description, type ManualRecord,
@@ -34,12 +37,10 @@ export type RecordOutcome =
 
 type Loads = Extract<Loaded, { kind: 'loaded' }>;
 
-const CODE = /\.(py|ts|mts)$/;
-
 function inputFilter(resolved: ResolvedStep, described: Description | null, skip: ReadonlySet<string>, tree: PipelineTree) {
   const projected = new Set((described?.requestFrom ?? []).map(tree.abs));
   return (path: string): boolean => !claims(resolved.outputs, path) && !projected.has(path) && !skip.has(path)
-    && !(resolved.step.kind === 'pull' && CODE.test(path));
+    && !(resolved.step.kind === 'pull' && CODE_FILE.test(path));
 }
 
 interface Reads {
@@ -57,7 +58,7 @@ function recordedReads(run: RunRecord, keep: (path: string) => boolean, tree: Pi
   const probes = pick(run.probes, keep);
   const any = Object.keys(listings).length + Object.keys(probes).length > 0;
   return {
-    inputs: tree.rekey(pick(run.reads, keep)),
+    inputs: recordedInputs(pick(run.reads, keep), tree.root),
     recorded: any ? { listings: tree.rekey(listingHashes(listings, tree.root)), probes: tree.rekey(probes) } : undefined,
     services: run.services,
   };
@@ -84,7 +85,7 @@ async function runAndRead(
     if (code !== 0) return `exited ${code}`;
     const derived = await options.deriveInputs(entry);
     const keep = inputFilter(resolved, described, ignoredPaths(derived, tree.root), tree);
-    return { inputs: fileHashes(derived.filter(keep), tree.root), services: [] };
+    return { inputs: inputHashes(derived.filter(keep), tree.root), services: [] };
   }
   const recorded = await runRecorded(tree, step.name, entry, options.args, process.env);
   if (recorded.kind === 'exited') return `exited ${recorded.code}`;

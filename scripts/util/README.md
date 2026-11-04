@@ -67,9 +67,13 @@ same thing — single-use helpers stay with their consumer.
   ([Preprocessor idempotency](../README.md#preprocessor-idempotency)): `fileHashes` maps each file's
   repo-relative path (relative to a passed root, the runner's tree) to its
   sha1, `null` when absent, so an input's arrival is
-  a change too. A stamp (`build/stamps/<step>.json`) records two such maps:
-  the inputs, hashed *before* the build, and every output the build wrote,
-  hashed after it; `changedSince` re-hashes a recorded map, so an output
+  a change too. `inputHashes` is the same map with each code file hashed by
+  its identity (`code-identity.ts`), and `recordedInputs` turns a Python run
+  record's reads into it. A stamp (`build/stamps/<step>.json`) records two
+  maps: the inputs (`inputHashes`), hashed *before* the build, and every
+  output the build wrote (`fileHashes`, bytes, so a generated `.ts` output
+  whose comment moved still differs), hashed after it; `changedSince`
+  re-hashes a recorded map with the hasher that wrote it, so an output
   rewritten by anything other than this build — an older commit's build, a
   write through a symlink, a partial copy — reads as stale. The runner is the
   only writer: `clearStamp` before a step runs, `writeStamp` once it exits 0,
@@ -104,6 +108,21 @@ same thing — single-use helpers stay with their consumer.
   records which network service answered, once each in first-answer order
   (`refresh_lib.TapClient` calls it); `record.ts` copies the list into a
   pull's committed record as `answeredBy`.
+- `code-identity.ts` / `code_identity.py` (+ test) — a code input's identity,
+  the one rule for every step: the sha1 of its token stream with comments
+  and docstrings dropped, so a comment, docstring or layout edit stales
+  nothing and any change to a token the interpreter executes stales every
+  step that read the file. `CODE_FILE` (`.py`, `.ts`, `.mts`) is the one
+  test of what is code, by extension wherever the file is read, so a Python
+  bake reading a generated `.ts` keys it the same way. TypeScript is the
+  compiler's tokens, walked from the parsed tree, since a bare scanner reads
+  `//` inside a regex or template literal as a comment. Python is the
+  standard library's `tokenize` (`python3 -I -S`, one process per batch):
+  comments and non-logical newlines dropped, indentation as structure only,
+  and a logical line of nothing but plain string literals (a docstring, or
+  any bare string statement) dropped; an f-string is never such a line.
+  Changing either normaliser changes every recorded code identity, so it
+  re-keys the committed `data/stamps/` records in the same commit.
 - `import-closure.ts` / `import-closure-pure.ts` (+ test) — a TypeScript
   build's code inputs. `entryClosure(entries)` is every module the given
   entry files import, read from an esbuild metafile (`entryMetafile`, which

@@ -1,6 +1,6 @@
 {
   "inputs": {
-    "scripts/og/build-og.py": "cacbfdc576deb454ade7998bd70cc692e2542d91",
+    "scripts/og/build-og.py": "1c5872fd9833ba0a0da1ff19e9ad05de0dfb8d84",
     "scripts/og/og-source.jpg": "80a6fdc7fab6817652f28eb65aa477278253f488"
   },
   "outputs": {

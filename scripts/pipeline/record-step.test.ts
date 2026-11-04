@@ -188,4 +188,27 @@ Path(${JSON.stringify(at('baked.bin'))}).write_bytes(Path(${JSON.stringify(at('s
     write('helper.py', 'VALUE = 2\n');
     expect(fresh(step)).toBe('stale');
   });
+
+  it('leaves a bake fresh across comment and docstring edits to the Python it imports and the TypeScript it reads', async () => {
+    write('model.py', 'def scale(x):\n    return x * 2\n');
+    write('ladder.ts', 'export const LADDER = [1, 2];\n');
+    write('steps/bake.py', `
+import sys
+from pathlib import Path
+sys.path.insert(0, ${JSON.stringify(root)})
+import model
+rungs = Path(${JSON.stringify(at('ladder.ts'))}).read_text().split("[")[1].split("]")[0]
+Path(${JSON.stringify(at('baked.bin'))}).write_text(f"{model.scale(1)} {rungs}")
+`);
+    const step: ManualStep = { name: 'build:bake', kind: 'bake', describes: false, language: 'python', entry: at('steps/bake.py'), outputs: [at('baked.bin')] };
+    await record([step], step.name);
+    write('model.py', '"""Cloud model."""\n\n# Doubles.\ndef scale(x):\n    """Twice x."""\n    return x * 2  # exact\n');
+    write('ladder.ts', '/** Rungs. */\nexport const LADDER = [1, 2]; // generated\n');
+    expect(fresh(step)).toBe('fresh');
+    write('ladder.ts', 'export const LADDER = [1, 3];\n');
+    expect(fresh(step)).toBe('stale');
+    write('ladder.ts', 'export const LADDER = [1, 2];\n');
+    write('model.py', 'def scale(x):\n    return x * 3\n');
+    expect(fresh(step)).toBe('stale');
+  });
 });

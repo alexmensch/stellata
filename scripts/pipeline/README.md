@@ -65,7 +65,10 @@ back edges and the registry loop among them.
 ## Freshness — one mechanism
 
 A stamp is `{inputs, outputs}`, each a map of repo-relative path to content
-hash (`util/build-stamp.ts`, `util/build_stamp.py`). A step is fresh when
+hash (`util/build-stamp.ts`, `util/build_stamp.py`). An input that is code
+hashes as its token stream without comments or docstrings
+(`util/code-identity.ts`), so an edit that cannot change
+what a step computes leaves it fresh; an output hashes as bytes. A step is fresh when
 its input set re-hashes the same and every recorded output re-hashes the
 same. For a TypeScript step the input set is computed now; for a Python step
 it is the recorded set, re-hashed. A missing or unparseable stamp is stale.

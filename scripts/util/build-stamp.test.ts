@@ -19,7 +19,7 @@ describe('build-stamp', () => {
     const now: FileHashes = fileHashes(inputs.length > 0 ? inputs : [input]);
     return recorded !== null
       && JSON.stringify(recorded.inputs) === JSON.stringify(now)
-      && changedSince(recorded.outputs).length === 0;
+      && changedSince(recorded.outputs, fileHashes).length === 0;
   };
 
   beforeEach(() => {
@@ -81,7 +81,7 @@ describe('build-stamp', () => {
     write();
     writeFileSync(output, 'built by another commit');
     expect(current()).toBe(false);
-    expect(changedSince(readStamp(stamp)!.outputs)).toHaveLength(1);
+    expect(changedSince(readStamp(stamp)!.outputs, fileHashes)).toHaveLength(1);
   });
 
   it('reads a stamp without recorded outputs as no stamp', () => {

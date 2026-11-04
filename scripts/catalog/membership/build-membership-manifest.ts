@@ -5,7 +5,7 @@
 import { resolve } from 'node:path';
 
 import { REPO_ROOT as ROOT } from '../../util/paths';
-import { fileHashes } from '../../util/build-stamp';
+import { inputHashes } from '../../util/build-stamp';
 import { emitArtifacts, runStep } from '../../util/emit-artifacts';
 import { watchHeap } from '../../util/heap-budget';
 import { stepInputPaths } from '../../util/step-inputs';
@@ -156,7 +156,7 @@ async function main(): Promise<void> {
   const lineage = await stageLineage({
     layout: LINEAGE_LAYOUT,
     spec: MEMBERSHIP_LINEAGE,
-    inputs: fileHashes(await stepInputPaths('build:membership')),
+    inputs: inputHashes(await stepInputPaths('build:membership')),
     diffed: 'membership',
     lines: result.lineage.map((row) => stageLineageLine(MEMBERSHIP_CODES, row)),
     render: (sorted) => ({

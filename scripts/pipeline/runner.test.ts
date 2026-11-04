@@ -156,6 +156,19 @@ describe('runSteps — build steps', () => {
     expect(read('b.out')).toBe('b(a(y))');
   });
 
+  it('leaves a TypeScript step fresh across comment edits to a module it imports, and rebuilds on a token edit', async () => {
+    const step = tsStep('a', 'a.out');
+    write('steps/helper.ts', 'export const VALUE = 1;\n');
+    write('steps/a.ts', `import { VALUE } from './helper';\n${read('steps/a.ts')}\nvoid VALUE;\n`);
+    reads.set(step.entry, [step.entry, at('steps/helper.ts')]);
+    await run([step], ['a']);
+    write('steps/helper.ts', '/** The value. */\nexport const VALUE = 1; // fixed\n');
+    write('steps/a.ts', `// Entry.\n${read('steps/a.ts')}`);
+    expect((await run([step], ['a'])).kinds).toEqual({ a: 'fresh' });
+    write('steps/helper.ts', 'export const VALUE = 2;\n');
+    expect((await run([step], ['a'])).kinds).toEqual({ a: 'built' });
+  });
+
   it('rebuilds a step whose output was rewritten by something else', async () => {
     write('a.in', 'x');
     const steps = [tsStep('a', 'a.out', ['a.in'])];

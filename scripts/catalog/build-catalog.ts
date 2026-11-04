@@ -128,7 +128,7 @@ import { SIMBAD_SAMPLE } from './validate/simbad-sample-source';
 import { MEMBERSHIP_MANIFEST, manifestDesignations } from './membership/membership-manifest-tsv';
 import { artifactRows } from '../util/sources/source';
 import { REPO_ROOT as ROOT } from '../util/paths';
-import { fileHashes, type FileHashes } from '../util/build-stamp';
+import { inputHashes, type FileHashes } from '../util/build-stamp';
 import {
   CATALOG_CHUNK_DIR, CATALOG_OUTPUTS,
 } from './catalog-outputs';
@@ -221,7 +221,7 @@ function simbadSourcedDistancesTsv(stars: readonly Star[]): string {
 async function main() {
   const heap = watchHeap('build:catalog');
   sweepStaged(CATALOG_OUTPUTS);
-  const inputHashesAtStart = fileHashes(await stepInputPaths('build:catalog'));
+  const inputHashesAtStart = inputHashes(await stepInputPaths('build:catalog'));
 
   // Accumulator for the headline counts asserted against
   // scripts/catalog/build-catalog-expected.json at the end of the
