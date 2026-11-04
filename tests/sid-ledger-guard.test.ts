@@ -16,11 +16,12 @@ import { retiredSids, sidSuccessorPairs } from '../scripts/sid/events-pure';
 import { EVENTS, eventsFile } from '../scripts/sid/events-tsv';
 import { LEDGERS, ledgerFile } from '../scripts/sid/ledger-tsv';
 import { SHELL_OBJECTS, SOL_OBJECTS } from '../scripts/sid/object-mints-source';
-import { REGISTRY_PARTITIONS, type RegistryPartition } from '../scripts/sid/registry-partitions-pure';
 import { registryAppendOnly, validateRegistry } from '../scripts/sid/registry-pure';
 import { SAMEAS_BRIDGES, SAMEAS_OVERRIDES } from '../scripts/sid/sameas-source';
 import { computeLedgerHead, type LedgerHead } from '../scripts/sid/sid-pure';
-import { registryPaths, CATALOG_PARTITION } from '../src/catalog-format/pipeline-outputs/data-files';
+import {
+  registryPaths, CATALOG_PARTITION, REGISTRY_PARTITIONS, type RegistryPartition,
+} from '../src/catalog-format/pipeline-outputs/data-files';
 
 const available = isReadable(LEDGERS[CATALOG_PARTITION]);
 

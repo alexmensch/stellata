@@ -6,11 +6,12 @@ import { LEDGERS } from './ledger-tsv';
 import type { EventRow } from './events-pure';
 import { EVENTS } from './events-tsv';
 import { REASON_CODES } from '../catalog/lineage/reason-codes-tsv';
-import { REGISTRY_PARTITIONS, type RegistryPartition } from './registry-partitions-pure';
 import { unionLedger, validateRegistry, type PartitionRows } from './registry-pure';
 import { computeLedgerHead, type LedgerRow, type SameasEdge } from './sid-pure';
 import { loadStoredEdges } from './stored-edges';
-import { registryKeys, type RegistryKey } from '../../src/catalog-format/pipeline-outputs/data-files';
+import {
+  registryKeys, type RegistryKey, REGISTRY_PARTITIONS, type RegistryPartition,
+} from '../../src/catalog-format/pipeline-outputs/data-files';
 
 export interface Registry {
   /** Every partition's rows, by sid: the sequence each allocation mints past. */

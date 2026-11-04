@@ -4,8 +4,7 @@ import { describe, expect, it } from 'vitest';
 
 import { REPO_ROOT } from '../util/paths';
 import { stepInputPaths } from '../util/step-inputs';
-import { REGISTRY_PARTITIONS } from './registry-partitions-pure';
-import { registryPaths } from '../../src/catalog-format/pipeline-outputs/data-files';
+import { registryPaths, REGISTRY_PARTITIONS } from '../../src/catalog-format/pipeline-outputs/data-files';
 
 const ALLOCATING_STEPS = ['build:catalog', 'build:local-group', 'sid:stamp'];
 

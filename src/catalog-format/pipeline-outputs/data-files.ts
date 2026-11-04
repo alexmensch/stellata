@@ -12,6 +12,13 @@ export const DATA_FILES = {
 } as const;
 
 export const CATALOG_PARTITION = 'catalog';
+/** One per sibling artifact; `/scripts/sid/sibling-artifacts-pure.ts` must name each. */
+export const SIBLING_PARTITIONS = ['cloud', 'lg'] as const;
+
+export type SiblingPartition = (typeof SIBLING_PARTITIONS)[number];
+export type RegistryPartition = typeof CATALOG_PARTITION | SiblingPartition;
+
+export const REGISTRY_PARTITIONS: readonly RegistryPartition[] = [CATALOG_PARTITION, ...SIBLING_PARTITIONS];
 
 export interface RegistryFileSet {
   ledger: string;
@@ -19,14 +26,14 @@ export interface RegistryFileSet {
   head: string;
 }
 
-export type RegistryKey<P extends string> = `sid.${P}.${keyof RegistryFileSet}`;
+export type RegistryKey<P extends RegistryPartition> = `sid.${P}.${keyof RegistryFileSet}`;
 
 /** The emitArtifacts keys a partition's three files land under. */
-export function registryKeys<P extends string>(partition: P): { [F in keyof RegistryFileSet]: `sid.${P}.${F}` } {
+export function registryKeys<P extends RegistryPartition>(partition: P): { [F in keyof RegistryFileSet]: `sid.${P}.${F}` } {
   return { ledger: `sid.${partition}.ledger`, events: `sid.${partition}.events`, head: `sid.${partition}.head` };
 }
 
-export function registryPaths(partition: string): RegistryFileSet {
+export function registryPaths(partition: RegistryPartition): RegistryFileSet {
   const suffix = partition === CATALOG_PARTITION ? '' : `-${partition}`;
   return {
     ledger: `data/sid/ledger${suffix}.tsv`,
@@ -35,7 +42,7 @@ export function registryPaths(partition: string): RegistryFileSet {
   };
 }
 
-export function registryFiles<P extends string>(partition: P): Record<RegistryKey<P>, string> {
+export function registryFiles<P extends RegistryPartition>(partition: P): Record<RegistryKey<P>, string> {
   const paths = registryPaths(partition);
   const keys = registryKeys(partition);
   return { [keys.ledger]: paths.ledger, [keys.events]: paths.events, [keys.head]: paths.head } as Record<RegistryKey<P>, string>;

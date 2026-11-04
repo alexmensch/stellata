@@ -15,10 +15,13 @@ repo-relative, so an outputs module passes them as they are.
   steps write: the membership manifest and its three ledgers, the parked
   and SIMBAD-sourced distance ledgers, the label-merge queue and the
   generated reason-code list. Each file's codec (a `defineArtifact` in
-  `scripts/`) takes its `file` from here. Also how a SID registry
-  partition's ledger, events and head files are named and keyed
-  (`registryPaths`, `registryKeys`, `registryFiles`, `CATALOG_PARTITION`);
-  which partitions exist is `/scripts/sid/registry-partitions-pure.ts`'s.
+  `scripts/`) takes its `file` from here. Also the SID registry's
+  partitions (`REGISTRY_PARTITIONS`: the catalogue's and one per sibling
+  artifact, `SIBLING_PARTITIONS`) and how each one's ledger, events and head
+  files are named and keyed (`registryPaths`, `registryKeys`,
+  `registryFiles`), all typed by `RegistryPartition`, so naming a partition
+  no step allocates fails typecheck. Which namespaces each partition owns is
+  `/scripts/sid/registry-partitions-pure.ts`'s.
   It is the one module under `src/` that spells a `data/` path, listed by
   name in `tests/source-declarations.test.ts`'s `DATA_PATH_SPELLERS`.
 - `lineage-files.ts` — the lineage layout under a build folder

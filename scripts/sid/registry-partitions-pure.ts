@@ -1,11 +1,9 @@
-// The SID registry's partitions: one ledger / events / head file set per allocating step, and the namespaces each owns. See README.md#registry-partitions.
+// The namespaces each SID registry partition owns. See README.md#registry-partitions.
 
-import { CATALOG_PARTITION } from '../../src/catalog-format/pipeline-outputs/data-files';
-import { isSiblingNamespace, SIBLING_NAMESPACES, siblingOf, type SiblingNamespace } from './sibling-artifacts-pure';
-
-export type RegistryPartition = typeof CATALOG_PARTITION | SiblingNamespace;
-
-export const REGISTRY_PARTITIONS: readonly RegistryPartition[] = [CATALOG_PARTITION, ...SIBLING_NAMESPACES];
+import {
+  CATALOG_PARTITION, type RegistryPartition,
+} from '../../src/catalog-format/pipeline-outputs/data-files';
+import { isSiblingNamespace, siblingOf } from './sibling-artifacts-pure';
 
 export function partitionOf(ns: string): RegistryPartition {
   return isSiblingNamespace(ns) ? ns : CATALOG_PARTITION;

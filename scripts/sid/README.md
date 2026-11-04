@@ -87,13 +87,12 @@ stored-edges.ts           loadStoredEdges: overrides plus bridges, the
 catalog-designations.ts   Designation set per BUILT catalog record, from
                           catalog.bin + the two public/ sidecars (README.md#designation-extraction--where-each-namespace-comes-from). Shared by trace and
                           the inherited spine's parity gate.
-registry-partitions-pure.ts  The partitions (REGISTRY_PARTITIONS) and
-                          partitionOf / inPartition (a namespace's
+registry-partitions-pure.ts  partitionOf / inPartition (a namespace's
                           owner, and the scope its allocation runs
-                          under), typed by RegistryPartition. A
-                          partition's file names and emit keys
-                          (registryPaths, registryKeys, registryFiles,
-                          CATALOG_PARTITION) are
+                          under) and registryHint. The partitions
+                          themselves (REGISTRY_PARTITIONS,
+                          RegistryPartition) and each one's file names
+                          and emit keys are
                           /src/catalog-format/pipeline-outputs/data-files.ts's,
                           so an outputs module can declare them at
                           table load.
@@ -178,10 +177,10 @@ sibling-stamp-outputs.ts  SID_STAMP_OUTPUTS: clouds.json, which sid:stamp
 sibling-artifacts-pure.ts SIBLING_ARTIFACTS spec (file / arrayKey / ns /
                           kind / mint code per sibling) +
                           siblingArtifactObjects, so the namespace→kind
-                          mapping is defined once; SIBLING_NAMESPACES with
-                          its type guard, so a partition name is a literal
-                          type; each namespace is its own registry
-                          partition.
+                          mapping is defined once. Each namespace is its
+                          own registry partition: ns is typed by
+                          SIBLING_PARTITIONS, and registry-pure.test.ts
+                          holds every sibling partition to one artifact.
 ```
 
 The append-only CI guard is `tests/sid-ledger-guard.test.ts` (repo-meta:
