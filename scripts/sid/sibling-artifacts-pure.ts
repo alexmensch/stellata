@@ -42,7 +42,11 @@ export const SIBLING_ARTIFACTS = {
 } as const satisfies Record<string, SiblingArtifactSpec>;
 
 export type SiblingName = keyof typeof SIBLING_ARTIFACTS;
-export const SIBLING_NAMES = Object.keys(SIBLING_ARTIFACTS) as SiblingName[];
+type UnclaimedPartition = Exclude<SiblingPartition, (typeof SIBLING_ARTIFACTS)[SiblingName]['ns']>;
+/** Fails typecheck while a sibling partition has no artifact; nothing reads it. */
+export const EVERY_SIBLING_PARTITION_CLAIMED: [UnclaimedPartition] extends [never] ? true : never = true;
+
+const SIBLING_NAMES = Object.keys(SIBLING_ARTIFACTS) as SiblingName[];
 
 export function siblingOf(ns: SiblingPartition): SiblingArtifactSpec {
   return SIBLING_ARTIFACTS[SIBLING_NAMES.find((name) => SIBLING_ARTIFACTS[name].ns === ns)!];

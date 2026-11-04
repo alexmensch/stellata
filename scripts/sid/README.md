@@ -179,8 +179,9 @@ sibling-artifacts-pure.ts SIBLING_ARTIFACTS spec (file / arrayKey / ns /
                           siblingArtifactObjects, so the namespace→kind
                           mapping is defined once. Each namespace is its
                           own registry partition: ns is typed by
-                          SIBLING_PARTITIONS, and registry-pure.test.ts
-                          holds every sibling partition to one artifact.
+                          SIBLING_PARTITIONS, and
+                          EVERY_SIBLING_PARTITION_CLAIMED fails typecheck
+                          while a partition has no artifact.
 ```
 
 The append-only CI guard is `tests/sid-ledger-guard.test.ts` (repo-meta:

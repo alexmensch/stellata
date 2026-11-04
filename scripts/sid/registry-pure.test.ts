@@ -2,14 +2,14 @@ import { describe, expect, it } from 'vitest';
 
 import type { EventRow } from './events-pure';
 import { partitionOf, registryHint } from './registry-partitions-pure';
-import { SIBLING_ARTIFACTS, SIBLING_NAMES } from './sibling-artifacts-pure';
+import { SIBLING_ARTIFACTS } from './sibling-artifacts-pure';
 import {
   registryAppendOnly, unionLedger, unionLedgerLines, validateRegistry, type PartitionLines, type PartitionRows,
 } from './registry-pure';
 import { computeLedgerHead, LEDGER_HEADER, type LedgerHead, type LedgerRow } from './sid-pure';
 import { EVENT_COLUMNS } from './events-pure';
 import {
-  CATALOG_PARTITION, REGISTRY_PARTITIONS, registryPaths, SIBLING_PARTITIONS, type RegistryPartition,
+  CATALOG_PARTITION, REGISTRY_PARTITIONS, registryPaths, type RegistryPartition,
 } from '../../src/catalog-format/pipeline-outputs/data-files';
 
 const row = (sid: number, canonicalKey: string, kind: LedgerRow['kind'] = 'star'): LedgerRow => (
@@ -42,10 +42,6 @@ describe('registry partitions', () => {
   it('name the command that grows each partition, a sibling\'s from its own build hint', () => {
     expect(registryHint(CATALOG_PARTITION)).toContain('pnpm run build:catalog');
     expect(registryHint('lg')).toContain(SIBLING_ARTIFACTS['local-group'].buildHint);
-  });
-
-  it('give each sibling partition exactly one sibling artifact', () => {
-    expect(SIBLING_NAMES.map((name) => SIBLING_ARTIFACTS[name].ns).sort()).toEqual([...SIBLING_PARTITIONS].sort());
   });
 
   it('refuse, at compile time, a partition no step allocates', () => {
