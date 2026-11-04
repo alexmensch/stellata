@@ -316,6 +316,16 @@ describe('perf-section-check', () => {
       expect(check(tier1, RENDER).code).toBe(0);
     });
 
+    // Past a pipe buffer the writer is still writing when a reader that stops
+    // at its first match exits, so a SIGPIPE under pipefail is certain here
+    // rather than a race that only full-suite load wins.
+    it('reads a section larger than a pipe buffer', () => {
+      const row = ' ~  sol|webgpu    gpu-p50   21.8  21.9  0.1  0.250';
+      const r = check(section('Tier 2 — the catalogue changed.', ...Array<string>(40_000).fill(row)), RENDER);
+      expect(r.code, r.stdout).toBe(0);
+      expect(r.stdout).toContain('every ✗ accepted');
+    });
+
     it('does not count a row key in prose as a table row', () => {
       const r = check(section('Tier 2; mw50|webgpu is the row most likely to move.'), RENDER);
       expect(r.code, r.stdout).toBe(1);

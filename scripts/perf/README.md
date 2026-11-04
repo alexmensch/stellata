@@ -68,8 +68,7 @@ scripts/perf/
                             perf-section-guard.yml and, before the body
                             reaches GitHub, scripts/hooks/pr-body-guard.sh.
                             Its git-driven cases sit in their own file so a
-                            flake under load names which suite it hit
-                            (the check's own file has one open).
+                            flake under load names which suite it hit.
   arming/                   The consent gate: marker name and freshness, the
                             arm poller, the protocol. Own README.
   diff/                     Two runs differenced: the band, the verdicts,
