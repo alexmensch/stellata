@@ -16,9 +16,8 @@ SRC_2021_T2 = ROOT / 'data' / 'molecular-clouds' / 'zucker2021-table2.dat'
 SRC_2021_T3 = ROOT / 'data' / 'molecular-clouds' / 'zucker2021-table3.dat'
 
 # Units chain (/docs/science-molecular-clouds.md#2-extinction-physics-and-the-units-chain): every layer works in
-# extinction rate; n_H [cm^-3] converts through these.
+# extinction rate; n_H [cm^-3] converts through this.
 AV_PER_NH_PC = CONSTANTS['extinction']['avPerNhPc']  # mag A_V per pc per (n_H cm^-3)
-ZGR_PER_NH = 6.02e-4        # E_ZGR per pc per (n_H cm^-3)
 # Cardelli 1989 (/data/papers/index.md#cardelli1989) eq. 2 evaluated at
 # 2.159 µm (2MASS Ks), R_V = 3.1 — not its Table 3 K row, which gives 0.114.
 AK_OVER_AV = 0.117
