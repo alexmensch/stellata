@@ -7,6 +7,8 @@ import {
 } from 'node:fs';
 import { join, relative, resolve } from 'node:path';
 
+import { codeIdentities } from './code-identity';
+import { CODE_FILE } from './import-closure-pure';
 import { REPO_ROOT } from './paths';
 import { discardStaged, landStaged, writeStaged } from './staged-write';
 
@@ -48,13 +50,32 @@ export function hashBytes(bytes: string | Uint8Array): string {
   return stampHash().update(bytes).digest('hex');
 }
 
-/** Keyed relative to `root`. */
-export function fileHashes(paths: readonly string[], root: string = REPO_ROOT): FileHashes {
+export type Hasher = (paths: readonly string[], root?: string) => FileHashes;
+
+/** Content bytes, keyed relative to `root`: the identity of an output. */
+export const fileHashes: Hasher = (paths, root = REPO_ROOT) => {
   const hashes: Record<string, string | null> = {};
   for (const p of [...new Set(paths)].sort()) {
     hashes[relative(root, p)] = existsSync(p) ? hashFile(p) : null;
   }
   return hashes;
+};
+
+/** As `fileHashes`, but a code file hashes as its `codeIdentities` entry: the identity of an input. */
+export const inputHashes: Hasher = (paths, root = REPO_ROOT) => {
+  const code = new Set(paths.filter((p) => CODE_FILE.test(p) && existsSync(p)));
+  const identities = Object.entries(codeIdentities([...code])).map(([p, identity]) => [relative(root, p), identity]);
+  const bytes = Object.entries(fileHashes(paths.filter((p) => !code.has(p)), root));
+  return Object.fromEntries([...bytes, ...identities].sort(([a], [b]) => (a < b ? -1 : 1)));
+};
+
+/** A recorded run's reads, hashed as bytes at first read, as input hashes. A code file
+ *  whose bytes moved since keeps its bytes hash, which no identity equals, so it reads stale. */
+export function recordedInputs(reads: FileHashes, root: string): FileHashes {
+  const code = Object.keys(reads).filter((k) => CODE_FILE.test(k) && reads[k] !== null).map((k) => resolve(root, k));
+  const now = fileHashes(code, root);
+  const unmoved = code.filter((p) => now[relative(root, p)] === reads[relative(root, p)]);
+  return { ...reads, ...inputHashes(unmoved, root) };
 }
 
 /** Absent, unparseable and pre-outputs stamps all read as null: no stamp to trust. */
@@ -117,9 +138,9 @@ export function recordedChanges({ listings, probes }: RecordedReads, root: strin
   ];
 }
 
-/** Recorded paths whose content on disk no longer matches the recorded hash. */
-export function changedSince(recorded: FileHashes, root: string = REPO_ROOT): string[] {
-  const current = fileHashes(Object.keys(recorded).map((p) => resolve(root, p)), root);
+/** Recorded paths whose content on disk no longer matches the recorded hash, by the hasher that recorded it. */
+export function changedSince(recorded: FileHashes, hash: Hasher, root: string = REPO_ROOT): string[] {
+  const current = hash(Object.keys(recorded).map((p) => resolve(root, p)), root);
   return Object.keys(recorded).filter((p) => current[p] !== recorded[p]);
 }
 

@@ -4,7 +4,8 @@ import { spawnSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
 
 import {
-  asStamp, changedSince, hashBytes, readStamp, readStampJson, recordedChanges, type FileHashes, type Stamp,
+  asStamp, changedSince, fileHashes, hashBytes, inputHashes, readStamp, readStampJson, recordedChanges,
+  type FileHashes, type Stamp,
 } from '../util/build-stamp';
 import { TSX } from './processes';
 import { stampedMembers, type PullDescription } from '../util/emit-artifacts';
@@ -64,7 +65,7 @@ function verdict(changed: readonly string[]): Freshness {
 
 function stampChanges(stamp: Stamp, outputs: OutputClaims, tree: PipelineTree): string[] {
   return [
-    ...changedSince(stamp.outputs, tree.root),
+    ...changedSince(stamp.outputs, fileHashes, tree.root),
     ...outputs.files.map(tree.rel).filter((p) => !(p in stamp.outputs)),
     ...(stamp.recorded ? recordedChanges(stamp.recorded, tree.root) : []),
   ];
@@ -80,7 +81,7 @@ export function derivedFreshness(stampFile: string, outputs: OutputClaims, input
 export function recordedFreshness(stampFile: string, outputs: OutputClaims, tree: PipelineTree): Freshness {
   const stamp = readStamp(stampFile);
   if (stamp === null) return { kind: 'stale', changed: ['(no stamp)'] };
-  return verdict([...changedSince(stamp.inputs, tree.root), ...stampChanges(stamp, outputs, tree)]);
+  return verdict([...changedSince(stamp.inputs, inputHashes, tree.root), ...stampChanges(stamp, outputs, tree)]);
 }
 
 const isStrings = (value: unknown): value is string[] => Array.isArray(value) && value.every((v) => typeof v === 'string');
@@ -145,7 +146,7 @@ export function manualFreshness(step: ManualStep, outputs: OutputClaims, tree: P
   const read = readManualRecord(step, tree.manualStamp(step.name));
   if (read.kind !== 'read') return { kind: 'stale', changed: [`(${read.kind === 'absent' ? 'no' : 'unreadable'} stamp)`] };
   const { record } = read;
-  const changed = [...changedSince(record.stamp.inputs, tree.root), ...stampChanges(record.stamp, outputs, tree)];
+  const changed = [...changedSince(record.stamp.inputs, inputHashes, tree.root), ...stampChanges(record.stamp, outputs, tree)];
   if (now !== null) {
     if (now.kind === 'pull' && record.kind === 'pull' && pullQueryHash(now) !== record.query) changed.push('(query)');
     if ((now.request ? requestHash(now.request) : undefined) !== record.request) changed.push('(request)');
