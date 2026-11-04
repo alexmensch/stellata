@@ -95,7 +95,7 @@ For a skip:
    skip-version-bump`, or `gh pr edit <N> --add-label
    skip-version-bump`).
 3. `release-notes-guard` skips the `## Release notes` check when the
-   label is on, so the section is optional for pure no-bump PRs.
+   label is on, so the section may stay empty.
 
 When the wiring lands (a later stage wires earlier-stage output into
 the build → new binary version), **that** PR carries the bump for
