@@ -147,12 +147,13 @@ import {
   allocationIdentityRows, allocationIdentityText, allocationLineageRows,
 } from '../sid/allocation-lineage-pure';
 import { catalogSidObjects } from '../sid/catalog-objects';
-import { CATALOG_PARTITION, inPartition } from '../sid/registry-partitions-pure';
+import { inPartition } from '../sid/registry-partitions-pure';
 import { catalogUpstream } from '../sid/catalog-upstream';
 import { synthChurnReport } from '../sid/synth-churn-pure';
 import { allocationRun, loadRegistry, registryTexts } from '../sid/registry-io';
 import { loadStoredEdges } from '../sid/stored-edges';
 import { stepInputPaths } from '../util/step-inputs';
+import { CATALOG_PARTITION } from '../../src/catalog-format/pipeline-outputs/data-files';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);

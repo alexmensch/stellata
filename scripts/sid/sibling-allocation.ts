@@ -3,8 +3,9 @@
 import { emitArtifacts, type DeclaredOutputs } from '../util/emit-artifacts';
 import { allocate, type Upstream } from './allocate-pure';
 import { allocationRun, loadRegistry, registryTexts } from './registry-io';
-import { inPartition, type RegistryKey } from './registry-partitions-pure';
+import { inPartition } from './registry-partitions-pure';
 import { siblingArtifactObjects, type SiblingArtifactSpec, type SiblingItem, type SiblingNamespace } from './sibling-artifacts-pure';
+import type { RegistryKey } from '../../src/catalog-format/pipeline-outputs/data-files';
 
 const NO_LINEAGE: Upstream = { causes: () => new Map(), admissions: () => new Map() };
 

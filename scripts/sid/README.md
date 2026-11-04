@@ -87,11 +87,16 @@ stored-edges.ts           loadStoredEdges: overrides plus bridges, the
 catalog-designations.ts   Designation set per BUILT catalog record, from
                           catalog.bin + the two public/ sidecars (README.md#designation-extraction--where-each-namespace-comes-from). Shared by trace and
                           the inherited spine's parity gate.
-registry-partitions-pure.ts  The partitions (REGISTRY_PARTITIONS),
+registry-partitions-pure.ts  The partitions (REGISTRY_PARTITIONS) and
                           partitionOf / inPartition (a namespace's
                           owner, and the scope its allocation runs
-                          under), and each partition's emit keys, all
-                          typed by RegistryPartition.
+                          under), typed by RegistryPartition. A
+                          partition's file names and emit keys
+                          (registryPaths, registryKeys, registryFiles,
+                          CATALOG_PARTITION) are
+                          /src/catalog-format/pipeline-outputs/data-files.ts's,
+                          so an outputs module can declare them at
+                          table load.
 registry-pure.ts (+ test) unionLedger / unionLedgerLines: every
                           partition as one sid sequence; validateRegistry:
                           that union dense and unique, each ledger
@@ -122,11 +127,6 @@ registry-step-inputs.test.ts
                           stepInputPaths, read through the LEDGERS /
                           EVENTS declaration maps
                           (../util/sources/README.md#reached-means-read).
-registry-outputs.ts       registryPaths(partition), the one place a
-                          registry path is spelled, and
-                          registryFiles(partition): its three files, keyed
-                          for the output declaration of the step that
-                          allocates it.
 export-dr-risk-set.ts     pnpm run sid:risk-set — source_ids of the
                           non-retired gaia_*-keyed ledger rows, written
                           as the next DR transition's neighbourhood-pull

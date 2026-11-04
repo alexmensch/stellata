@@ -2,9 +2,9 @@
 
 import { defineArtifact } from '../util/tsv/artifact-pure';
 import { decodeEventRow, encodeEventRow, EVENT_COLUMNS, type EventRow } from './events-pure';
-import { registryPaths } from './registry-outputs';
 import { REGISTRY_PARTITIONS, registryHint, type RegistryPartition } from './registry-partitions-pure';
 import { registryFile, type RegistryFile } from './sid-pure';
+import { registryPaths } from '../../src/catalog-format/pipeline-outputs/data-files';
 
 function eventsArtifact(partition: RegistryPartition) {
   return defineArtifact({

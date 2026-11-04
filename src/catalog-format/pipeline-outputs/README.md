@@ -15,6 +15,9 @@ repo-relative, so an outputs module passes them as they are.
   steps write: the membership manifest and its three ledgers, the parked
   and SIMBAD-sourced distance ledgers, the label-merge queue and the
   generated reason-code list. Each file's codec (a `defineArtifact` in
-  `scripts/`) takes its `file` from here.
+  `scripts/`) takes its `file` from here. Also how a SID registry
+  partition's ledger, events and head files are named and keyed
+  (`registryPaths`, `registryKeys`, `registryFiles`, `CATALOG_PARTITION`);
+  which partitions exist is `/scripts/sid/registry-partitions-pure.ts`'s.
   It is the one module under `src/` that spells a `data/` path, listed by
   name in `tests/source-declarations.test.ts`'s `DATA_PATH_SPELLERS`.

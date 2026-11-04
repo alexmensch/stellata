@@ -8,11 +8,9 @@ import { PROMOTION_LINEAGE } from './companions/promotion-lineage-pure';
 import { PLACEMENT_LINEAGE } from './distance/placement-lineage-pure';
 import { LINEAGE_LAYOUT, stageFamilies, stageOutputFiles } from './lineage/lineage-layout-pure';
 import { CATALOG_CHUNK_FILENAME, CATALOG_MANIFEST_FILENAME } from '../../src/catalog-format/record/catalog-pure';
-import { DATA_FILES } from '../../src/catalog-format/pipeline-outputs/data-files';
+import { DATA_FILES, registryFiles, CATALOG_PARTITION } from '../../src/catalog-format/pipeline-outputs/data-files';
 import { PUBLIC_FILES } from '../../src/catalog-format/public-artifacts/public-artifacts';
 import { ALLOCATION_LINEAGE } from '../sid/allocation-lineage-pure';
-import { registryFiles } from '../sid/registry-outputs';
-import { CATALOG_PARTITION } from '../sid/registry-partitions-pure';
 
 const MANIFEST = publicFile(CATALOG_MANIFEST_FILENAME);
 export const CATALOG_CHUNK_DIR = dirname(MANIFEST);

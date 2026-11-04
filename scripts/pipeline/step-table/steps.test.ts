@@ -57,7 +57,7 @@ describe('the step table', () => {
     const { accepted } = await walkOutputsModules(STEPS, pipelineTree(REPO_ROOT));
     const outsideTrees = [...accepted].filter((m) => !SHARED_TREES.has(treeOf(m))).sort();
     expect(outsideTrees).toEqual([...LEGACY_IMPORTABLE].sort());
-    expect(LEGACY_IMPORTABLE.size).toBe(28);
+    expect(LEGACY_IMPORTABLE.size).toBe(25);
   });
 
   it('is the one place a table step\'s entry is named: no package.json script or workflow runs one directly', () => {

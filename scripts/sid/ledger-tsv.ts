@@ -2,9 +2,9 @@
 
 import { defineArtifact } from '../util/tsv/artifact-pure';
 import { decodeLedgerRow, encodeLedgerRow, LEDGER_COLUMNS, type LedgerRow } from './ledger-pure';
-import { registryPaths } from './registry-outputs';
 import { REGISTRY_PARTITIONS, registryHint, type RegistryPartition } from './registry-partitions-pure';
 import { registryFile, type RegistryFile } from './sid-pure';
+import { registryPaths } from '../../src/catalog-format/pipeline-outputs/data-files';
 
 function ledgerArtifact(partition: RegistryPartition) {
   return defineArtifact({
