@@ -26,6 +26,7 @@ from horizon_map import (  # noqa: E402
     HORIZON_DEM_RATIO,
     HORIZON_MARCH_START_TEXELS,
     HORIZON_SIN_RANGE,
+    box_reduce,
     decode_horizon_sin,
     encode_horizon,
     horizon_angles,
@@ -109,6 +110,19 @@ class FlatGroundTests(unittest.TestCase):
         self.assertAlmostEqual(
             float(wider[0, 0, 0]) / float(coarse[0, 0, 0]), 2.0, places=3
         )
+
+    def test_the_march_steps_at_the_dem_resolution(self) -> None:
+        """The half the DEM owns: a ridge one DEM texel wide at range is caught
+        from every distance, and reads higher than the same ridge box-reduced to
+        the output width. A march stepping at the output grid lands between
+        such a ridge's samples at every other distance and reads the floor."""
+        for offset in range(9, 14):
+            fine = np.zeros((2 * H, 2 * W), np.float32)
+            fine[H - 2 : H + 2, W + offset] = 10000.0
+            seen = float(horizon_angles(fine, MOON, 8, W)[H // 2, W // 2, 0])
+            reduced = float(horizon_angles(box_reduce(fine, W), MOON, 8, W)[H // 2, W // 2, 0])
+            self.assertGreater(seen, flat_floor() + math.radians(0.5), msg=offset)
+            self.assertGreater(seen, reduced, msg=offset)
 
     def test_refuses_an_output_grid_coarser_than_the_search_arc(self) -> None:
         """A near bound past the search arc would put every sample inside the

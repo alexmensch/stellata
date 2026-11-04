@@ -87,7 +87,7 @@ rather than shipping it.
   and its east/west handedness against a synthetic wall, the
   isolated-summit limb identity, the encoding round-trip, the grids every
   relief map is built on and the widths `relief.json` records, the march
-  bounds, the colour-map roll and the normal map's blue channel. Run
+  bounds and its DEM-resolution step, the colour-map roll and the normal map's blue channel. Run
   directly: `python3 horizon_map.test.py` (needs NumPy); CI's Python
   suites job runs it with every other `*.test.py`.
 - `measure_relief_lighting.py` (+ `measure_relief_lighting.test.py`, an
