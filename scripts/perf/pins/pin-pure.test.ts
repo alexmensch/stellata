@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { medianStandardErrorMs } from '../../../src/client/debug/frame-cost/frame-cost-pure';
 import { BUFFER_MPX_TOLERANCE, RECORD_COUNT_TOLERANCE, diffRuns } from '../diff/diff-pure';
-import { computeFloorMs, cpuFloorMs, dwellFloorMs } from '../floors/floors';
+import { CPU_CLOCK_STEP_MS, CPU_SCATTER_FLOOR_MS, computeFloorMs, cpuFloorMs, dwellFloorMs } from '../floors/floors';
 import { frameFloor, type DwellSummary } from '../dwell/dwell-pure';
 import {
   BAND_OVER_FLOOR_FACTOR,
@@ -871,6 +871,26 @@ describe('a GPU-paced pin — throughput, CPU and the bottleneck', () => {
     const sol = compareToPin(pinOf([paced(5, 1.3)]), file([paced(5, 1.7)])).rows[1];
     expect([sol.verdict, sol.bandMs]).toEqual(['dearer', cpuFloorMs('sol', 1.3)]);
     expect(diffRuns(file([paced(5, 1.3)]), file([paced(5, 1.7)])).rows[1].bandMs).toBe(sol.bandMs);
+  });
+
+  it('reads a move of the floor in whole clock steps the same wherever it starts, in both gates', () => {
+    const at = (name: ScenarioName, cpuMs: number) => {
+      const s = paced(20, Math.fround(cpuMs), name);
+      return { ...s, dwell: { ...s.dwell!, cpuStats: stats(Math.fround(cpuMs), { samples: 960, iqrMs: 0.4 }) } };
+    };
+    for (const [name, starts] of [
+      ['mw120', [1.6, 2.6]], ['sol', [1.3, 1.4]], ['earth', [1.4, 1.5]], ['mw50', [3.2, 3.4]], ['lg', [1.1, 1.3]],
+    ] as const) {
+      const steps = Math.round(CPU_SCATTER_FLOOR_MS[name] / CPU_CLOCK_STEP_MS);
+      for (const start of starts) {
+        for (const [moved, verdict] of [[steps, 'same'], [steps + 1, 'dearer']] as const) {
+          const after = start + moved * CPU_CLOCK_STEP_MS;
+          const pinRow = compareToPin(pinOf([at(name, start)]), file([at(name, after)])).rows[1];
+          const runRow = diffRuns(file([at(name, start)]), file([at(name, after)])).rows[1];
+          expect([name, start, moved, pinRow.verdict, runRow.verdict]).toEqual([name, start, moved, verdict, verdict]);
+        }
+      }
+    }
   });
 
   it('carries both clocks on the row and gates on them', () => {

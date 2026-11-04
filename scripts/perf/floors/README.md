@@ -45,9 +45,14 @@ scatter is measured separately
 **The `|cpu` row's floor is its own, one number per vantage, and uncapped** —
 `CPU_SCATTER_FLOOR_MS`, applied by both gates through `cpuFloorMs` from
 `CPU_JUDGEMENT`. The row reads 1.1–3.4 ms in 0.1 ms steps (Chrome's
-`performance.now()` resolution), so each constant is 1.5× the cpu-p50 span
-of the comparable population rounded up to a whole step, and never under
-one step.
+`performance.now()` resolution, `CPU_CLOCK_STEP_MS`), so each constant is
+1.5× the cpu-p50 span of the comparable population rounded up to a whole
+step, and never under one step. **`cpuFloorMs` applies it half a step
+wider.** Every median is itself a whole number of steps, stored as float32, so
+a move of exactly the constant would land on the band edge and the rounding
+would pick its verdict — sol 1.3→1.6 marked where mw50 3.2→3.5 did not. Half a
+step puts the edge between two moves the clock can show: up to the constant
+reads `~`, one step more marks, wherever the median started.
 
 ```
         cpu-p50 runs                  span   FLOOR

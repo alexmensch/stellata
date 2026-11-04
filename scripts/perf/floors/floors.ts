@@ -16,8 +16,11 @@ export const COMPUTE_SCATTER_FLOOR_MS: Readonly<Record<ScenarioName, number>> = 
   lg: 0.05,
 };
 
-/** 1.5× each vantage's cpu-p50 scatter, rounded up to the 0.1 ms the clock
- *  resolves and never under it — README.md#the-cpu-floor. */
+/** Chrome's `performance.now()` resolution: every cpu-p50 is a whole number of these. */
+export const CPU_CLOCK_STEP_MS = 0.1;
+
+/** 1.5× each vantage's cpu-p50 scatter, rounded up to whole clock steps and
+ *  never under one — README.md#the-cpu-floor. */
 export const CPU_SCATTER_FLOOR_MS: Readonly<Record<ScenarioName, number>> = {
   mw120: 1.7,
   sol: 0.3,
@@ -40,8 +43,8 @@ export function computeFloorMs(name: ScenarioName, baselineMs: number): number {
   return floorFor(Math.min(derived ?? DWELL_FLOOR_MS, DWELL_FLOOR_MS), baselineMs);
 }
 
-/** Uncapped, unlike the compute floor — README.md#the-cpu-floor. */
+/** Uncapped, and half a step wide of its constant — README.md#the-cpu-floor. */
 export function cpuFloorMs(name: ScenarioName, baselineMs: number): number {
   const derived: number | undefined = CPU_SCATTER_FLOOR_MS[name];
-  return floorFor(derived ?? DWELL_FLOOR_MS, baselineMs);
+  return floorFor((derived ?? DWELL_FLOOR_MS) + CPU_CLOCK_STEP_MS / 2, baselineMs);
 }

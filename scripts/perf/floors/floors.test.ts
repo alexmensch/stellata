@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { ScenarioName } from '../scenarios';
 import {
-  COMPUTE_SCATTER_FLOOR_MS, CPU_SCATTER_FLOOR_MS, DWELL_FLOOR_FRACTION, DWELL_FLOOR_MS, computeFloorMs, cpuFloorMs, dwellFloorMs,
+  COMPUTE_SCATTER_FLOOR_MS, CPU_CLOCK_STEP_MS, CPU_SCATTER_FLOOR_MS, DWELL_FLOOR_FRACTION, DWELL_FLOOR_MS, computeFloorMs, cpuFloorMs, dwellFloorMs,
 } from './floors';
 
 describe('the whole-frame floor — one number, both gates', () => {
@@ -57,20 +57,20 @@ describe('the compute floor', () => {
 describe('the CPU floor', () => {
   it("is the vantage's own, uncapped", () => {
     expect(CPU_SCATTER_FLOOR_MS).toEqual({ mw120: 1.7, sol: 0.3, earth: 0.2, mw50: 0.3, lg: 0.1 });
-    expect(cpuFloorMs('mw120', 1.6)).toBe(1.7);
-    expect(cpuFloorMs('lg', 1.1)).toBe(0.1);
+    expect(cpuFloorMs('mw120', 1.6)).toBeCloseTo(1.75, 12);
+    expect(cpuFloorMs('lg', 1.1)).toBeCloseTo(0.15, 12);
   });
 
-  // Spans in the clock's 0.1 ms steps, as integers, so the rounding is exact.
+  // Spans in whole clock steps, as integers, so the rounding is exact.
   it('holds each constant at the derivation the README states', () => {
-    const POPULATION_SPAN_TENTHS = { mw120: 11, sol: 2, earth: 1, mw50: 2, lg: 0 } as const;
-    for (const [name, span] of Object.entries(POPULATION_SPAN_TENTHS)) {
-      const derived = Math.max(1, Math.ceil(1.5 * span)) / 10;
+    const POPULATION_SPAN_STEPS = { mw120: 11, sol: 2, earth: 1, mw50: 2, lg: 0 } as const;
+    for (const [name, span] of Object.entries(POPULATION_SPAN_STEPS)) {
+      const derived = Number((Math.max(1, Math.ceil(1.5 * span)) * CPU_CLOCK_STEP_MS).toFixed(1));
       expect([name, CPU_SCATTER_FLOOR_MS[name as ScenarioName]]).toEqual([name, derived]);
     }
   });
 
   it('falls back to the whole-frame floor for a vantage off the canon', () => {
-    expect(cpuFloorMs('mw90' as ScenarioName, 1.4)).toBe(DWELL_FLOOR_MS);
+    expect(cpuFloorMs('mw90' as ScenarioName, 1.4)).toBeCloseTo(DWELL_FLOOR_MS + CPU_CLOCK_STEP_MS / 2, 12);
   });
 });
