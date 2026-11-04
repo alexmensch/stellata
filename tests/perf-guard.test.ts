@@ -177,9 +177,7 @@ describe('perf-guard', () => {
     });
   });
 
-  // Passes on a printf | grep -q form too while the command is flattened to
-  // one line, since grep must read a whole line before matching. Multi-line
-  // input past a pipe buffer is where that pipe fails open on every run.
+  // Pin only: input is one line here, so the old pipe form passes too — /tests/README.md#pipefail-early-readers
   describe('a command larger than a pipe buffer, matched on line 1', () => {
     it('still denies an unarmed launch', () => {
       expect(denied(pastPipeBuffer('pnpm run perf'))).toBe(true);

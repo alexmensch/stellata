@@ -129,9 +129,7 @@ describe('prime-guard PreToolUse', () => {
     expect(preToolUse('Bash', { command: `rm -f ${sentinel()}` }).allowed).toBe(true);
   });
 
-  // Passes on a jq | grep -q form too, since jq's tostring prints one line
-  // and grep must read a whole line before matching; multi-line input past a
-  // pipe buffer is where that pipe fails on every run.
+  // Pin only: input is one line here, so the old pipe form passes too — /tests/README.md#pipefail-early-readers
   it('still finds the sentinel at the head of a tool input larger than a pipe buffer', () => {
     expect(preToolUse('Bash', { command: pastPipeBuffer(`rm -f ${sentinel()}`) }).allowed).toBe(true);
   });

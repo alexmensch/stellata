@@ -109,15 +109,13 @@ describe('commit-sweep-guard', () => {
   });
 });
 
-// A reader that stops at its first match exits while a writer still holds
-// the rest of input this long, so a pipe into grep -q fails here on every
-// run rather than when load happens to lose the race.
 describe('commit-sweep-guard — input larger than a pipe buffer, matched on line 1', () => {
   it('still sweeps a commit whose command runs long', () => {
     stageStaleChange();
     expect(allowed(`git commit -m "${pastPipeBuffer('add a thing')}"`)).toBe(false);
   });
 
+  // Pin only: input is one line here, so the old pipe form passes too — /tests/README.md#pipefail-early-readers
   it('still honours a skip tag at the head of a long message', () => {
     stageStaleChange();
     expect(allowed(`git commit -m "${pastPipeBuffer(`add a thing ${SKIP_REASON}`)}"`)).toBe(true);
