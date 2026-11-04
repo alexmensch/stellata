@@ -5,8 +5,8 @@ import { join, resolve } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { declareOutputs, emitArtifacts, EmissionRefused } from '../../util/emit-artifacts';
-import type { StageHeader } from './lineage-header-pure';
-import { baselineMembers, readLineage, stageEmission } from './lineage-io';
+import { judgeBaseline, type StageProvenance } from './lineage-header-pure';
+import { baselineMembers, readLineage, readStageHeader, stageEmission } from './lineage-io';
 import { lineageInvariant, NO_EXCEPTIONS } from './lineage-invariant-pure';
 import { paramsText, stageLineageLine, stageLineageText } from './lineage-row-pure';
 import { stageLineage } from './stage-lineage';
@@ -21,8 +21,8 @@ const CODES = stageCodes('demo', { kept: { description: 'kept', effect: 'none', 
 let dir: string;
 let layout: LineageLayout;
 
-const header = (commit: string): StageHeader => ({
-  stage: 'demo', version: '1.0.0', commit, dirty: false, inputHash: 'h', files: ['demo.tsv.gz', 'identity.tsv.gz'],
+const header = (commit: string): StageProvenance => ({
+  stage: 'demo', version: '1.0.0', commit, dirty: false, inputHash: 'h',
 });
 
 function text(source: string): Uint8Array {
@@ -93,6 +93,18 @@ describe('stage rotation', () => {
     expect(readFileSync(stageFile(layout.previous, 'demo'))).toEqual(pinned);
     expect(readFileSync(resolve(layout.previous, 'demo.header.json'), 'utf8')).toMatch(/"commit": "base"/);
     expect(readLineage(stageFile(layout.current, 'demo'))[0].params).toBe('{"source":"branch-3"}');
+  });
+
+  it('a header seeded beside another build\'s stage file is refused as a baseline', () => {
+    run('one');
+    const theirs = readFileSync(stageFile(layout.current, 'demo'));
+    run('base');
+    expect(judgeBaseline({ kind: 'checkout', header: readStageHeader(layout.current, 'demo') }, 'base', false))
+      .toEqual({ kind: 'diff', why: 'merge-base' });
+    writeFileSync(stageFile(layout.current, 'demo'), theirs);
+    const verdict = judgeBaseline({ kind: 'checkout', header: readStageHeader(layout.current, 'demo') }, 'base', false);
+    expect(verdict.kind === 'refused' && verdict.message)
+      .toMatch(/whose demo\.tsv\.gz is not the file its header \(built at base\) recorded/);
   });
 
   it('a run with no diff deletes the stale one', () => {

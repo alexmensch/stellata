@@ -1,16 +1,17 @@
 // A stage's lineage on disk: the rotation into the baseline, gzip, git provenance. See README.md#run-to-run-diff.
 
-import { createHash } from 'node:crypto';
 import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { gunzipSync, gzipSync } from 'node:zlib';
 
-import type { FileHashes } from '../../util/build-stamp';
+import { fileHashes, hashBytes, type FileHashes } from '../../util/build-stamp';
 import type { ArtifactContents } from '../../util/emit-artifacts';
 import { headState, packageVersion } from '../../util/git-provenance';
 import { identityRows, type IdentityRow } from './identity-pure';
 import { lineageLines, lineageRows, type LineageLine, type LineageRow } from './lineage-row-pure';
-import { headerText, parseHeader, type HeaderRead, type StageHeader } from './lineage-header-pure';
+import {
+  headerText, parseHeader, type HeaderRead, type StageHeader, type StageProvenance,
+} from './lineage-header-pure';
 import {
   stageDiffName, stageFileName, stageHeaderName, stageNames, type LineageLayout, type StageLineageSpec,
   type StageOutputKey,
@@ -35,13 +36,18 @@ export function stageEmission<F extends string, S extends string>(
   layout: LineageLayout,
   spec: StageLineageSpec<F, S>,
   texts: Readonly<Record<F, string | Uint8Array>>,
-  header: StageHeader,
+  provenance: StageProvenance,
   diff: Uint8Array | null,
   rotate: boolean,
 ): { files: Record<StageOutputKey<F, S>, ArtifactContents>; members: Map<string, ArtifactContents> } {
+  const gzipped = spec.files.map((f) => [f, gzipText(texts[f])] as const);
   const files = Object.fromEntries(
-    spec.files.map((f) => [`lineage:${f}`, gzipText(texts[f])]),
+    gzipped.map(([f, bytes]) => [`lineage:${f}`, bytes]),
   ) as Record<StageOutputKey<F, S>, ArtifactContents>;
+  const header: StageHeader = {
+    ...provenance,
+    files: Object.fromEntries(gzipped.map(([f, bytes]) => [stageFileName(f), hashBytes(bytes)])),
+  };
   files[`lineage:${spec.stage}.header`] = headerText(header);
   const members = new Map<string, ArtifactContents>(baselineMembers(layout, spec, rotate));
   if (diff !== null) members.set(resolve(layout.diff, stageDiffName(spec.stage)), diff);
@@ -68,21 +74,22 @@ export function readIdentity(path: string): IdentityRow[] {
 export function readStageHeader(dir: string, stage: string): HeaderRead {
   const path = resolve(dir, stageHeaderName(stage));
   if (!existsSync(path)) return { kind: 'missing' };
+  let header: StageHeader;
   try {
-    return { kind: 'read', header: parseHeader(readFileSync(path, 'utf8'), path) };
+    header = parseHeader(readFileSync(path, 'utf8'), path);
   } catch (err) {
     return { kind: 'unreadable', reason: err instanceof Error ? err.message : String(err) };
   }
+  return { kind: 'read', header, onDisk: fileHashes(Object.keys(header.files).map((name) => resolve(dir, name)), dir) };
 }
 
-export function stageHeader<F extends string>(
+export function stageProvenance<F extends string>(
   spec: StageLineageSpec<F>, inputs: FileHashes,
-): StageHeader {
+): StageProvenance {
   return {
     stage: spec.stage,
     version: packageVersion(),
     ...headState(),
-    inputHash: createHash('sha1').update(JSON.stringify(inputs)).digest('hex'),
-    files: spec.files.map(stageFileName),
+    inputHash: hashBytes(JSON.stringify(inputs)),
   };
 }

@@ -1,5 +1,7 @@
 // A stage's lineage header — what its files were built from — and whether a baseline may be diffed against. See README.md#run-to-run-diff.
 
+import type { FileHashes } from '../../util/build-stamp';
+
 export interface StageHeader {
   readonly stage: string;
   /** package.json's version: the build version the README keeps off every row. */
@@ -9,8 +11,12 @@ export interface StageHeader {
   readonly dirty: boolean;
   /** sha1 over the stage's input-file hashes. */
   readonly inputHash: string;
-  readonly files: readonly string[];
+  /** Each stage file's name → sha1 of its bytes as written. */
+  readonly files: Readonly<Record<string, string>>;
 }
+
+/** A header before its files are written. */
+export type StageProvenance = Omit<StageHeader, 'files'>;
 
 export function headerText(header: StageHeader): string {
   return `${JSON.stringify(header, null, 2)}\n`;
@@ -23,8 +29,10 @@ export function parseHeader(text: string, file: string): StageHeader {
     if (typeof h[field] !== 'string' || h[field] === '') throw new Error(`${file}: header has no ${field}`);
   }
   if (typeof h.dirty !== 'boolean') throw new Error(`${file}: header has no dirty flag`);
-  if (!Array.isArray(h.files) || h.files.some((f) => typeof f !== 'string')) {
-    throw new Error(`${file}: header has no file list`);
+  const files: unknown = h.files;
+  if (typeof files !== 'object' || files === null || Array.isArray(files)
+    || Object.values(files).some((hash) => typeof hash !== 'string' || hash === '')) {
+    throw new Error(`${file}: header has no file hashes`);
   }
   return h as StageHeader;
 }
@@ -32,7 +40,12 @@ export function parseHeader(text: string, file: string): StageHeader {
 /** A header written by an older build may not parse; that is a baseline to
  *  refuse, never a failed build. */
 export type HeaderRead =
-  | { readonly kind: 'read'; readonly header: StageHeader }
+  | {
+    readonly kind: 'read';
+    readonly header: StageHeader;
+    /** The header's files as they are on disk now: name → sha1, null when absent. */
+    readonly onDisk: FileHashes;
+  }
   | { readonly kind: 'missing' }
   | { readonly kind: 'unreadable'; readonly reason: string };
 
@@ -49,8 +62,16 @@ export type BaselineVerdict =
 export const ACCEPT_ANY_BASELINE_FLAG = '--any-baseline';
 export const AGAINST_FLAG = '--against';
 
+type ReadHeader = Extract<HeaderRead, { kind: 'read' }>;
+
+/** The header's files whose bytes on disk are not the ones it recorded. */
+export function mismatchedFiles(read: ReadHeader): string[] {
+  return Object.keys(read.header.files).filter((name) => read.onDisk[name] !== read.header.files[name]);
+}
+
 export function isMergeBaseBuild(read: HeaderRead, mergeBase: string | null): boolean {
-  return read.kind === 'read' && !read.header.dirty && mergeBase !== null && read.header.commit === mergeBase;
+  return read.kind === 'read' && !read.header.dirty && mergeBase !== null && read.header.commit === mergeBase
+    && mismatchedFiles(read).length === 0;
 }
 
 export interface BaselinePlan {
@@ -82,11 +103,20 @@ export function judgeBaseline(
     ? 'a baseline with no header'
     : read.kind === 'unreadable'
       ? `a baseline whose header does not read (${read.reason})`
-      : `a baseline built at ${read.header.commit}${read.header.dirty ? ' with uncommitted edits' : ''}`;
+      : builtAt(read);
   const base = mergeBase === null ? 'no merge-base with origin/main' : `the merge-base ${mergeBase}`;
   return {
     kind: 'refused',
     message: `lineage diff refused: ${built}, not ${base}. Build the stage at the merge-base for a `
       + `matching baseline, or re-run with ${ACCEPT_ANY_BASELINE_FLAG} or ${AGAINST_FLAG} <dir>.`,
   };
+}
+
+function builtAt(read: ReadHeader): string {
+  const mismatched = mismatchedFiles(read);
+  if (mismatched.length > 0) {
+    return `a baseline whose ${mismatched.join(', ')} ${mismatched.length === 1 ? 'is not the file' : 'are not the files'} `
+      + `its header (built at ${read.header.commit}) recorded`;
+  }
+  return `a baseline built at ${read.header.commit}${read.header.dirty ? ' with uncommitted edits' : ''}`;
 }

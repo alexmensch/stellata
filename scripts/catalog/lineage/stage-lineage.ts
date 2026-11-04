@@ -10,7 +10,7 @@ import { diffLineage, stageDiffText, type DiffJoin, type KeyChange } from './lin
 import {
   ACCEPT_ANY_BASELINE_FLAG, AGAINST_FLAG, planBaseline, type BaselineSource,
 } from './lineage-header-pure';
-import { readStageHeader, stageEmission, stageHeader, streamLineage } from './lineage-io';
+import { readStageHeader, stageEmission, stageProvenance, streamLineage } from './lineage-io';
 import { invariantCheck, invariantViolations, type LineageInvariant } from './lineage-invariant-pure';
 import { sortLineageLines, type LineageLine } from './lineage-row-pure';
 import {
@@ -84,10 +84,11 @@ export async function stageLineage<F extends string, S extends string>(
     console.log(`lineage: no ${run.spec.stage} baseline in this checkout, so no diff`);
   }
 
-  const header = stageHeader(run.spec, run.inputs);
   const texts = run.render(sorted);
   const diff = changes === null ? null : stageDiffText(changes, joins);
-  const { files, members } = stageEmission(run.layout, run.spec, texts, header, diff, plan.rotate);
+  const { files, members } = stageEmission(
+    run.layout, run.spec, texts, stageProvenance(run.spec, run.inputs), diff, plan.rotate,
+  );
   const invariantChecks = invariantViolations(run.invariants, sorted).map(invariantCheck);
   const writeMs = performance.now() - started;
   const gzipBytes = run.spec.files.reduce(

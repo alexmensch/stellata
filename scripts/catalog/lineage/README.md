@@ -59,7 +59,8 @@ scripts/catalog/lineage/
                                  their output declarations:
                                  /src/catalog-format/pipeline-outputs/.
   lineage-io.ts                  The baseline members and a stage's emission,
-                                 gzip, and the header with its input hash.
+                                 gzip, and the header with its input hash
+                                 and file hashes, re-checked on read.
   lineage-core-pure.test.ts      Order, writer refusal, diff, baseline verdict.
   lineage-rotation.test.ts       Rotation over a scratch build/: a failed or
                                  absent emission moves nothing, another
@@ -299,12 +300,17 @@ A fresh worktree is seeded with the main checkout's last `build/lineage/`
 (`.worktreeinclude`), which may come from an older commit. So each stage
 writes a header beside its files, `<stage>.header.json`, recording the
 build version, the commit, whether the tree had uncommitted edits, and the
-content hash of the inputs the stage was built from (`stepInputPaths`, `../../util/step-inputs.ts`); a header per
+content hash of the inputs the stage was built from (`stepInputPaths`, `../../util/step-inputs.ts`),
+and the sha1 of each stage file it was written with; a header per
 stage is what lets one stage rotate without rewriting another's. The diff
 refuses a baseline whose commit is not the branch's merge-base with main, or
 that was built over uncommitted edits — its commit then names code it was
-not built from
-(`judgeBaseline`, `lineage-header-pure.ts`). The refusal names the
+not built from — or whose files on disk are not the bytes its header
+recorded (`readStageHeader` re-hashes them): the seed copies files one at a
+time, so a worktree created while `build:seed` rotates a stage can pair one
+build's header with another's files
+(`judgeBaseline`, `lineage-header-pure.ts`). A pinned merge-base copy in
+`lineage.previous/` is held to the same check. The refusal names the
 baseline's commit and how to get a matching one; `--any-baseline` accepts it
 anyway, and `--against <dir>` diffs against that directory instead. A
 refused diff fails nothing: the stage's lineage still lands, no diff is

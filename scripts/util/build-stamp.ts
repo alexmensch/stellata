@@ -41,6 +41,11 @@ export function hashFile(path: string): string {
   return hash.digest('hex');
 }
 
+/** `hashFile` of a file holding exactly `bytes`. */
+export function hashBytes(bytes: string | Uint8Array): string {
+  return createHash('sha1').update(bytes).digest('hex');
+}
+
 /** Keyed relative to `root`. */
 export function fileHashes(paths: readonly string[], root: string = REPO_ROOT): FileHashes {
   const hashes: Record<string, string | null> = {};
