@@ -8,7 +8,7 @@ import { fillPageMeta } from './scripts/site/page-meta-pure.ts';
 import { withoutCaptureComments } from './scripts/site/shipped-html-pure.ts';
 import { NOT_FOUND_SOURCE, SITE_PAGES, renditionPath } from './src/site/pages.ts';
 import { type Figures } from './scripts/site/figures-pure.ts';
-import { BUILD_TARGET, buildFigures, figureSubstitution, publishBuildEnv } from './vite.env.ts';
+import { BUILD_TARGET, absentCatalogueFor, buildFigures, figureSubstitution, publishBuildEnv } from './vite.env.ts';
 
 const SITE_DIR = resolve(import.meta.dirname, 'src/site');
 
@@ -48,8 +48,8 @@ function markdownRenditions(figures: Figures): Plugin {
   };
 }
 
-export default defineConfig(({ mode }) => {
-  const figures = buildFigures(mode);
+export default defineConfig((env) => {
+  const figures = buildFigures(absentCatalogueFor(env));
   publishBuildEnv(figures);
   return {
     base: '/',

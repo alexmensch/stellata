@@ -1,12 +1,12 @@
 import { defineConfig } from 'vite';
 import { resolve } from 'node:path';
 import { indexCitations } from './scripts/site/json-ld-citations.ts';
-import { BUILD_TARGET, buildFigures, figureSubstitution, publishBuildEnv } from './vite.env.ts';
+import { BUILD_TARGET, absentCatalogueFor, buildFigures, figureSubstitution, publishBuildEnv } from './vite.env.ts';
 import { documentRoutingInDev } from './vite.site-dev.ts';
 import { PUBLIC_DIR } from './scripts/util/paths.ts';
 
-export default defineConfig(({ mode }) => {
-  const figures = buildFigures(mode);
+export default defineConfig((env) => {
+  const figures = buildFigures(absentCatalogueFor(env));
   publishBuildEnv(figures);
   return {
     base: '/',
