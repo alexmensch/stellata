@@ -71,7 +71,8 @@ module's `sidDomain()` leg, attached by main.ts's roster loop (see
   the live `renderedSizePx`, each reading the layer below.
 - `molecular-clouds.ts` — `MolecularClouds` renderer + the silhouette /
   viewing-distance helpers.
-- `cloud-loader.ts` — `clouds.json` fetch/decode.
+- `cloud-loader.ts` — `clouds.json` fetch/decode, over the wire schema
+  `/src/catalog-format/clouds/clouds-schema.ts` the build writes against.
 - `cloud-surfaces-loader.ts` — `cloud-surfaces.bin` fetch/decode
   (format: `scripts/cloud-surfaces/README.md`); throws unless the header
   matches `CLOUD_SURFACES_SCHEMA`.

@@ -4,6 +4,7 @@ import { AV_PER_NH_PC } from '../../src/astro-core/baker-constants';
 import { cloudEnvelope, plummerProfile } from '../../src/astro-core/cloud-density-pure';
 import { GAL_TO_ICRS } from '../../src/astro-core/galactic-coords';
 import { Vector3 } from 'three';
+import type { CloudClass, CloudNoiseModel } from '../../src/catalog-format/clouds/clouds-schema';
 import type { PlummerFit, Z2021Extent, Z2021Mass } from './zucker-parse';
 
 export type Vec3 = readonly [number, number, number];
@@ -29,8 +30,6 @@ export const MIN_AXIS_PC = 3.0;
 
 /** The calibrated model may hold at most this multiple of Table 3's `mass_leike` before its envelope tightens. */
 export const MASS_CAP_FACTOR = 2.0;
-
-export type CloudClass = 'dark' | 'sf' | 'hii';
 
 export const SIGMA_S_BY_CLASS: Readonly<Record<CloudClass, number>> = { dark: 1.3, sf: 1.7, hii: 1.9 };
 export const AV_TARGET_BY_CLASS: Readonly<Record<CloudClass, number>> = { dark: 2.0, sf: 3.0, hii: 4.0 };
@@ -70,7 +69,7 @@ export function cloudClass(rawName: string): CloudClass {
 
 /** The substructure noise ladder (/docs/science-molecular-clouds.md#5-substructure-noise-build-side-spec),
  *  exported whole as clouds.json's `noiseModel`. */
-export const NOISE_MODEL = {
+export const NOISE_MODEL: CloudNoiseModel = {
   lacunarity: 2.0,
   betaSpectral: 2.0,
   lambdaMinPc: 0.3,
@@ -81,7 +80,7 @@ export const NOISE_MODEL = {
   sigmaS: SIGMA_S_BY_CLASS,
   hash: 'pcg3d',
   interp: 'quintic',
-} as const;
+};
 
 /** `GAL_TO_ICRS` as rows: row i, column j is ICRS component i of galactic basis vector j. */
 export const GAL_TO_ICRS_ROWS: Mat3 = (() => {

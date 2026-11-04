@@ -3,6 +3,7 @@
 import { AV_PER_NH_PC, DUST_GRID_HALF_EXTENT_PC } from '../../src/astro-core/baker-constants';
 import { GAL_TO_ICRS, galacticDirToIcrs } from '../../src/astro-core/galactic-coords';
 import { CLOUDS_JSON_SCHEMA, ZUCKER_PROFILED_SCHEMA } from '../../src/catalog-format/baker-artifacts/baker-artifacts';
+import type { CloudClass, CloudRow, CloudsFile } from '../../src/catalog-format/clouds/clouds-schema';
 import { Quaternion, Vector3 } from 'three';
 import {
   AV_TARGET_BY_CLASS,
@@ -17,7 +18,6 @@ import {
   extentGeometry,
   fnv1a32,
   galToIcrs,
-  type CloudClass,
   type ProfiledCloud,
   type Vec3,
 } from './cloud-model-pure';
@@ -110,20 +110,19 @@ export function roundHalfEven(x: number, digits: number): number {
 }
 
 const DEG = Math.PI / 180;
-const round2 = (v: Vec3): number[] => v.map((c) => roundHalfEven(c, 2));
+const round2 = (v: Vec3): [number, number, number] => [roundHalfEven(v[0], 2), roundHalfEven(v[1], 2), roundHalfEven(v[2], 2)];
 const norm = (v: Vec3): number => Math.sqrt(v[0] * v[0] + v[1] * v[1] + v[2] * v[2]);
 
 export function inGrid(centreIcrs: Vec3, halfExtentsIcrs: readonly number[]): boolean {
   return centreIcrs.every((c, i) => Math.abs(c) + halfExtentsIcrs[i] <= DUST_GRID_HALF_EXTENT_PC);
 }
 
-export interface CloudRecord {
-  name: string;
-  readonly id: string;
-  [field: string]: unknown;
-}
+type DensityModelFields = Pick<CloudRow,
+  'class' | 'sigmaS' | 'seed' | 'embedded' | 'n0Cal' | 'uEnv' | 'rflat' | 'p' | 'massLeike' | 'akPeak'>;
 
-function densityModelFields(rawName: string, radiusPc: number, profiled: ReadonlyMap<string, ProfiledCloud>) {
+function densityModelFields(
+  rawName: string, radiusPc: number, profiled: ReadonlyMap<string, ProfiledCloud>,
+): DensityModelFields {
   const cls: CloudClass = cloudClass(rawName);
   const common = { class: cls, sigmaS: SIGMA_S_BY_CLASS[cls], seed: fnv1a32(rawName), embedded: [] };
   const p = profiled.get(rawName);
@@ -153,7 +152,7 @@ export function z2021Clouds(
   extents: readonly Z2021Extent[],
   masses: ReadonlyMap<string, Z2021Mass>,
   profiled: ReadonlyMap<string, ProfiledCloud>,
-): CloudRecord[] {
+): CloudRow[] {
   const quat = new Quaternion().setFromRotationMatrix(GAL_TO_ICRS);
   return extents.map((e) => {
     const { centreGal, axesGal } = extentGeometry(e);
@@ -166,7 +165,7 @@ export function z2021Clouds(
       id: slugify(name),
       center: round2(centre),
       axes: round2(axesGal),
-      quat: [quat.x, quat.y, quat.z, quat.w].map((q) => roundHalfEven(q, 6)),
+      quat: [roundHalfEven(quat.x, 6), roundHalfEven(quat.y, 6), roundHalfEven(quat.z, 6), roundHalfEven(quat.w, 6)],
       source: 'Z2021T1',
       distance: roundHalfEven(norm(centre), 1),
       inGrid: inGrid(centre, half),
@@ -180,7 +179,7 @@ export function z2020Clouds(
   grouped: ReadonlyMap<string, readonly Sightline[]>,
   suppress: ReadonlySet<string>,
   profiled: ReadonlyMap<string, ProfiledCloud>,
-): CloudRecord[] {
+): CloudRow[] {
   return [...grouped].filter(([raw, s]) => !suppress.has(raw) && s.length > 0).map(([raw, sightlines]) => {
     const pts = sightlines.map((s) => {
       const p = galacticDirToIcrs(s.lDeg * DEG, s.bDeg * DEG, new Vector3()).multiplyScalar(s.dPc);
@@ -208,14 +207,14 @@ export function z2020Clouds(
 }
 
 /** Layers CLOUD_ALT_NAMES onto the built clouds; an entry matching no cloud id is a curation typo. */
-export function applyAltNames(clouds: readonly CloudRecord[]): void {
+export function applyAltNames(clouds: readonly Pick<CloudRow, 'id' | 'name' | 'aliases'>[]): void {
   const byId = new Map(clouds.map((c) => [c.id, c]));
   const orphans = Object.keys(CLOUD_ALT_NAMES).filter((id) => !byId.has(id)).sort();
   if (orphans.length > 0) throw new Error(`CLOUD_ALT_NAMES: no cloud matches ${orphans.join(', ')}`);
   for (const [id, [canonical, aliases]] of Object.entries(CLOUD_ALT_NAMES)) {
     const cloud = byId.get(id)!;
     if (canonical !== null) cloud.name = canonical;
-    if (aliases.length > 0) cloud.aliases = aliases;
+    if (aliases.length > 0) cloud.aliases = [...aliases];
   }
 }
 
@@ -227,22 +226,22 @@ export interface ZuckerTables {
 }
 
 /** Every cloud, Zucker 2021 winning an id both papers produce, sorted by lower-cased display name. */
-export function buildClouds(t: ZuckerTables): { clouds: CloudRecord[]; ellipsoids: number; spheres: number } {
+export function buildClouds(t: ZuckerTables): { clouds: CloudRow[]; ellipsoids: number; spheres: number } {
   const profiled = new Map(t.profiled.map((p) => [p.rawName, p]));
   const z2021Names = new Set(t.extents.map((e) => e.cloud));
   const suppress = new Set(Object.entries(Z2021_TO_Z2020_SUPPRESS).filter(([raw]) => z2021Names.has(raw)).map(([, z20]) => z20));
   const ellipsoids = z2021Clouds(t.extents, t.masses, profiled);
   const spheres = z2020Clouds(t.sightlines, suppress, profiled);
-  const byId = new Map<string, CloudRecord>();
+  const byId = new Map<string, CloudRow>();
   for (const c of [...ellipsoids, ...spheres]) if (!byId.has(c.id)) byId.set(c.id, c);
   const clouds = [...byId.values()];
   applyAltNames(clouds);
-  const key = (c: CloudRecord): string => c.name.toLowerCase();
+  const key = (c: CloudRow): string => c.name.toLowerCase();
   clouds.sort((a, b) => (key(a) < key(b) ? -1 : key(a) > key(b) ? 1 : 0));
   return { clouds, ellipsoids: ellipsoids.length, spheres: spheres.length };
 }
 
-export function cloudsPayload(clouds: readonly CloudRecord[], sids: readonly number[]) {
+export function cloudsPayload(clouds: readonly CloudRow[], sids: readonly number[]): CloudsFile {
   return {
     version: CLOUDS_JSON_SCHEMA.version,
     count: clouds.length,

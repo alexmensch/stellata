@@ -62,7 +62,8 @@ model exists.
 
 ## Output schema
 
-`{version, count, envelopeFadeStart, noiseModel, clouds[]}` — the version is
+`{version, count, envelopeFadeStart, noiseModel, clouds[]}`, typed for writer
+and loader alike by `/src/catalog-format/clouds/clouds-schema.ts` — the version is
 `artifacts.clouds` in `src/astro-core/baker-constants.json`, which the client loader
 gates on too. `envelopeFadeStart` is `ENVELOPE_FADE_START` (`cloud-model-pure.ts`), the
 fraction of `uEnv` where the density model's taper begins: the calibration

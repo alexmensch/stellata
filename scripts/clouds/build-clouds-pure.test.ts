@@ -10,8 +10,8 @@ import {
   inGrid,
   roundHalfEven,
   slugify,
-  type CloudRecord,
 } from './build-clouds-pure';
+import type { CloudRow } from '../../src/catalog-format/clouds/clouds-schema';
 
 describe('roundHalfEven', () => {
   it('rounds an exact binary tie to even, as Python round() does', () => {
@@ -59,7 +59,7 @@ describe('buildClouds', () => {
   const extents = [{ cloud: 'Oriona', xmin: -10, xmax: 10, ymin: -10, ymax: 10, zmin: -5, zmax: 5 }];
 
   const built = buildClouds({ sightlines, extents, masses: new Map([['Oriona', { massNicest: 5, massLeike: 1, maxAkLeike: 1 }]]), profiled: [] });
-  const byId = new Map(built.clouds.map((c): [string, CloudRecord] => [c.id, c]));
+  const byId = new Map(built.clouds.map((c): [string, CloudRow] => [c.id, c]));
 
   it('suppresses the Zucker 2020 cloud a Zucker 2021 ellipsoid replaces', () => {
     expect(byId.has('orion')).toBe(false);

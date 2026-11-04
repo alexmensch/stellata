@@ -3,21 +3,7 @@ import * as THREE from 'three';
 import { CLOUDS_JSON_SCHEMA } from '../../catalog-format/baker-artifacts/baker-artifacts';
 import { sidColumnError } from '../util/sid-resolver';
 import { PUBLIC_FILES } from '../../catalog-format/public-artifacts/public-artifacts';
-
-export type CloudSource = 'Z2021T1' | 'Z2020';
-
-export type CloudClass = 'dark' | 'sf' | 'hii';
-
-/** Embedded O/early-B star with its carved cavity (/docs/science-molecular-clouds.md#73-cavities-designed-not-yet-shipped).
- * Empty until the A.5 cross-match populates it. */
-export interface EmbeddedStar {
-  name: string;
-  /** Absolute ICRS heliocentric position in parsecs. */
-  xyz: [number, number, number];
-  sptype: string;
-  logQH: number;
-  rCavPc: number;
-}
+import type { CloudClass, CloudSource, CloudsFile, EmbeddedStar } from '../../catalog-format/clouds/clouds-schema';
 
 export interface Cloud {
   name: string;
@@ -64,35 +50,6 @@ export interface CloudCatalog {
   envelopeFadeStart: number;
 }
 
-interface RawCloud {
-  name: string;
-  id: string;
-  aliases?: string[];
-  sid: number;
-  center: [number, number, number];
-  axes: [number, number, number];
-  quat: [number, number, number, number];
-  source: CloudSource;
-  distance: number;
-  mass?: number;
-  class: CloudClass;
-  n0Cal: number;
-  uEnv: number;
-  rflat: number;
-  p: number;
-  sigmaS: number;
-  seed: number;
-  inGrid: boolean;
-  embedded: EmbeddedStar[];
-}
-
-interface RawCatalog {
-  version: number;
-  count: number;
-  envelopeFadeStart: number;
-  clouds: RawCloud[];
-}
-
 /**
  * Fetch the molecular cloud catalog. Returns null if the file is missing
  * (fresh checkout without `pnpm run build:clouds`, or a deploy that didn't
@@ -107,7 +64,7 @@ export async function loadClouds(url: string): Promise<CloudCatalog | null> {
     return null;
   }
   if (!res.ok) return null;
-  const raw = (await res.json()) as RawCatalog;
+  const raw = (await res.json()) as CloudsFile;
   if (raw.version !== CLOUDS_JSON_SCHEMA.version) {
     console.warn(
       `${PUBLIC_FILES.clouds} version ${raw.version} unsupported (expected ${CLOUDS_JSON_SCHEMA.version})`);
