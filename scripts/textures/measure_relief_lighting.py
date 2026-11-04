@@ -26,6 +26,7 @@ from horizon_map import (
     search_arc,
 )
 from sky_view import decode_sky_view
+from scripts.util.baker_constants import CONSTANTS  # noqa: E402
 
 TEXTURES = Path(__file__).resolve().parents[2] / "data" / "textures"
 RELIEF = TEXTURES / "relief"

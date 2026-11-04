@@ -90,8 +90,8 @@ rather than shipping it.
   bounds, the colour-map roll and the normal map's blue channel. Run
   directly: `python3 horizon_map.test.py` (needs NumPy); CI's Python
   suites job runs it with every other `*.test.py`.
-- `measure_relief_lighting.py` — manual, run by hand, NOT part of the
-  build: reads the SHIPPED maps and reports how much ground each relief
+- `measure_relief_lighting.py` (+ `measure_relief_lighting.test.py`, an
+  import pin CI runs) — manual, run by hand, NOT part of the build: reads the SHIPPED maps and reports how much ground each relief
   term lights past the terminator against the same march at full DEM width
   **from the same start distance**, plus the disc integral against phase.
   `--sweep` costs output width and azimuth count against what each buys
