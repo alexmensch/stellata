@@ -79,6 +79,7 @@ def main() -> int:
         density_max = DENSITY_MAX_SYNTHETIC
     else:
         edenhofer2024.require(args.flavor)
+        profiled = load_zucker_profiled()
         cache_path = edenhofer2024.voxel_cache_path(args.output, args.flavor)
         if cache_path.exists() and not args.force_resample:
             print(f"Loading cached voxel grid from {cache_path.relative_to(ROOT)}…", file=sys.stderr)
@@ -91,7 +92,7 @@ def main() -> int:
             for stale in edenhofer2024.stale_voxel_caches(args.output, args.flavor):
                 print(f"Deleting superseded grid cache {stale.relative_to(ROOT)}…", file=sys.stderr)
                 stale.unlink()
-        zucker_report = zucker_column_check(voxels)
+        zucker_report = zucker_column_check(voxels, profiled)
         density_max = DENSITY_MAX_REAL
 
     # Encode float densities → uint8 via pure-log scaling over
@@ -159,7 +160,17 @@ def _peak_column_av(voxels: np.ndarray, cloud: dict, rot: np.ndarray,
     return float(cols.max())
 
 
-def zucker_column_check(voxels: np.ndarray) -> dict:
+def load_zucker_profiled() -> dict:
+    """The profiled clouds' column-check inputs build:clouds writes, refused
+    on a version mismatch."""
+    profiled = json.loads(ZUCKER_PROFILED_PATH.read_text())
+    if profiled["version"] != ZUCKER_PROFILED["version"]:
+        sys.exit(f"{ZUCKER_PROFILED_PATH.relative_to(ROOT)} is version {profiled['version']}, "
+                 f"expected {ZUCKER_PROFILED['version']}: run `pnpm run build:clouds`.")
+    return profiled
+
+
+def zucker_column_check(voxels: np.ndarray, profiled: dict) -> dict:
     """Compare peak extinction columns through the raw Edenhofer 2024
     (/data/papers/index.md#edenhofer2024) field against the Zucker 2021
     (/data/papers/index.md#zucker2021) Leike 2020
@@ -171,10 +182,6 @@ def zucker_column_check(voxels: np.ndarray) -> dict:
     ceiling, consistent with 1 pc → 4.9 pc beam dilution of the Leike peaks
     (/docs/science-molecular-clouds.md#4-per-cloud-density-model--the-presence-pass-field).
     Also asserts the encode ceiling covers the data."""
-    profiled = json.loads(ZUCKER_PROFILED_PATH.read_text())
-    if profiled["version"] != ZUCKER_PROFILED["version"]:
-        sys.exit(f"{ZUCKER_PROFILED_PATH.relative_to(ROOT)} is version {profiled['version']}, "
-                 f"expected {ZUCKER_PROFILED['version']}: run `pnpm run build:clouds`.")
     rot = np.array(profiled["galToIcrs"], dtype=np.float64)
     report: list[dict] = []
     for cloud in profiled["clouds"]:
