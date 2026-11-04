@@ -127,7 +127,7 @@ export interface BaselinePlan {
   readonly verdict: BaselineVerdict;
   /** Which directory the diff reads, when it runs. */
   readonly from: 'previous' | 'current' | 'against' | null;
-    readonly rotate: boolean;
+  readonly rotate: boolean;
 }
 
 function earlierMainBuild(read: HeaderRead, base: CheckoutBase | null): boolean {
