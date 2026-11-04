@@ -6,7 +6,8 @@ import { resolve } from 'node:path';
 
 import { PACKAGE_JSON, REPO_ROOT } from './paths';
 
-export const MAIN_REF = 'origin/main';
+const MAIN_BRANCH = 'main';
+export const MAIN_REF = `origin/${MAIN_BRANCH}`;
 
 /** git's trimmed stdout, run in `cwd`; throws on a non-zero exit. */
 export function gitIn(cwd: string, ...argv: string[]): string {
@@ -21,9 +22,30 @@ export function packageVersion(): string {
   return (JSON.parse(readFileSync(resolve(REPO_ROOT, PACKAGE_JSON), 'utf-8')) as { version: string }).version;
 }
 
+export const headCommit = (): string => git('rev-parse', 'HEAD');
+
 /** Throws where git cannot answer: no repository, no HEAD. */
 export function headState(): { readonly commit: string; readonly dirty: boolean } {
-  return { commit: git('rev-parse', 'HEAD'), dirty: git('status', '--porcelain').length > 0 };
+  return { commit: headCommit(), dirty: git('status', '--porcelain').length > 0 };
+}
+
+/** False on a detached HEAD. */
+export function onMainBranch(): boolean {
+  try {
+    return git('symbolic-ref', '--short', '-q', 'HEAD') === MAIN_BRANCH;
+  } catch {
+    return false;
+  }
+}
+
+/** False for a commit this repository does not hold. */
+export function inHeadHistory(commit: string): boolean {
+  try {
+    git('merge-base', '--is-ancestor', commit, 'HEAD');
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 /** Null where there is none to find: no `origin/main`, or a shallow clone. */

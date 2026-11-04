@@ -295,11 +295,11 @@ The baseline is kept per stage in `build/lineage.previous/`, and what a
 branch's report needs is the whole change against main, so a **clean build
 at the merge-base is pinned there**: while `lineage.previous/` holds one,
 every later build diffs against it and leaves it in place (`planBaseline`).
-Otherwise the stage's current `<stage>.tsv.gz` replaces
+Otherwise, and always on main, the stage's current `<stage>.tsv.gz` replaces
 `build/lineage.previous/<stage>.tsv.gz` in the same emitArtifacts commit
 that renames the stage's new file into place, and the build diffs against
 that last build if it stands for the merge-base — built at it, or from the
-inputs it holds ([Choosing the baseline](baseline/README.md)). A stage that fails, is skipped by
+inputs it holds — or, on main, is a clean build from HEAD's history ([Choosing the baseline](baseline/README.md)). A stage that fails, is skipped by
 its content-hash stamp, or does not run (a standalone `build:membership`)
 leaves both its copies untouched. The baseline and diff families are
 declared unstamped (`stageFamilies`), so a step's stamp never records them
