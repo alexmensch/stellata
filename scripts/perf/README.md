@@ -29,10 +29,6 @@ scripts/perf/
                             read / compare / write, and readJsonFlag, the
                             one read behind --baseline, --against-pin and
                             perf:pin.
-  run-file.ts (+ test)      A run file's encoding: gzipped JSON at a
-                            `.json.gz` path, the suffix both instruments'
-                            --json refuse to go without, and the reader
-                            that takes gzip or plain JSON (a pin is plain).
   args.ts (+ test)          Flags → RunArgs, PinArgs and SurvivorsArgs
                             (node:util parseArgs), plus the mode-compatibility
                             check over the flags actually typed. All three
@@ -89,6 +85,8 @@ scripts/perf/
                             gates band on. Own README.
   sweep/                    Sweep mode: measurement order, the log-log fit,
                             the bracket. Own README.
+  run-file/                 The --json record: what it holds, its gzip
+                            encoding, where it is filed. Own README.
   pins/                     The committed per-GPU pin: adapterSlug,
                             pinFromRuns, compareToPin, the ceiling. Own
                             README.
@@ -368,31 +366,10 @@ to read a slope: `sweep/README.md`.
 
 ## JSON output
 
-**`--json` writes gzip, and a path not ending `.json.gz` is a flag error**
-(exit 2, marker untouched) — on the runner and on `survivors` alike, so the
-archive holds one format. `--baseline`, `--against-pin` and `perf:pin` read
-gzip or plain JSON: a pin is plain. Read one by hand with
-`gzcat <path> | jq …`.
-
-`--json <path>.json.gz` writes the whole run as schema `stellata-perf/2`:
-`run` (timestamps, url, argv, the commit pair and dirty flag, browser and its
-switches, the adapter probe, host) plus one record per scenario × backend
-(backend requested and actual, viewport, buffer and Mpx, catalogue record
-count, the context's 1-based position in the run, mode, method, params,
-settle time, the mode's own block, forwarded console, page errors,
-`tainted` and `failed`).
-
-**Raw samples are always retained** — every rAF delta and every GPU sample,
-not just the summary. A re-analysis with a different estimator has to be
-possible from the file alone, and a summary cannot be un-summarised.
-
-`assertPerfFile` checks the schema string by equality before reading
-anything else, and it is the only place the suffix is judged — a `--baseline`
-carrying another one is refused in the preflight, so the diff never sees a
-file it would have to reason about. What bumps the suffix, and why a bump
-abandons every recorded baseline: `schema.ts`, on `PERF_SCHEMA`. It also refuses
-a file naming any scenario outside the canon five (`isScenarioName`, in
-`scenarios.ts`), so every per-vantage lookup past it is total.
+`--json <path>.json.gz` writes the whole run, gzipped, as schema
+`stellata-perf/2`, raw samples included; any other suffix is a flag error.
+What the record holds, how it is encoded and read back:
+[JSON output](run-file/README.md#json-output).
 
 ## Comparing against a baseline
 
@@ -442,19 +419,5 @@ ceiling: `pins/README.md`. When a PR must run it and what a mark means:
 
 ## Recording
 
-`--json` output and the run's log go under the `.perf-runs/<date>/` of **the
-checkout you will commit from** — the worktree holding the branch, not the main
-checkout and not `/tmp` or the home directory. A run written into another
-checkout never appears in this branch's `git status`, so nothing will prompt
-you for it and the PR ships a citation to a file no one else has.
-
-**`git add` the run file in the PR that cites it — the folder being tracked
-does not commit anything.** A bead note, a PR body or a README quoting
-`.perf-runs/<date>/<file>` is a promise that the path resolves for the next
-reader; [Names](../../.perf-runs/README.md#names) is where that promise is written
-down. Until the file is in a commit it resolves on one machine only, and a
-`git clean` ends it.
-
-Results go to the bead's notes with the `.perf-runs/<date>/<file>` path, never
-into this README. Say which vantage, backend, method, headless flag and buffer
-size the run used.
+Under the `.perf-runs/<date>/` of the checkout you will commit from, and
+added in the PR that cites it: [Recording](run-file/README.md#recording).

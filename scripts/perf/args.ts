@@ -16,7 +16,7 @@ import {
   THROUGHPUT_WINDOW_FRAMES,
 } from './dwell/dwell-pure';
 import { DEFAULT_SWEEP_SCALES } from './sweep/sweep-pure';
-import { RUN_FILE_SUFFIX, runFilePathError } from './run-file';
+import { RUN_FILE_SUFFIX, runFilePathError } from './run-file/run-file';
 import { DEFAULT_QUIET_MS } from './settle-pure';
 import { BACKENDS, SCENARIO_NAMES, isScenarioName, type Backend, type ScenarioName } from './scenarios';
 

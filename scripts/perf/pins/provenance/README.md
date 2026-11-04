@@ -63,7 +63,7 @@ carries no insertions clause at all.
 
 Not to the main checkout. A pin is normally taken on a branch and a branch
 normally lives in a worktree, where runs are filed under that worktree's own
-`.perf-runs/` ([Recording](../../README.md#recording)) — so resolving against the main
+`.perf-runs/` ([Recording](../../run-file/README.md#recording)) — so resolving against the main
 checkout writes `.claude/worktrees/<name>/.perf-runs/…`, a path that stops
 resolving the moment the worktree is removed, which is to say shortly after
 the PR merges. `citeRunPath` takes the writing checkout's root for that

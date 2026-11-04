@@ -14,7 +14,7 @@ import {
   type PinCommitState, type RenderPathDrift,
 } from './pins/provenance/provenance-pure';
 import { SchemaError, type GitProvenance, type PerfFile } from './schema';
-import { readJsonFile } from './run-file';
+import { readJsonFile } from './run-file/run-file';
 import { formatPinTable } from './table-pure';
 
 export const REPO_ROOT = resolve(import.meta.dirname, '../..');

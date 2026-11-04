@@ -2,7 +2,7 @@
 
 Every `pnpm run perf` invocation worth citing, as the runner wrote it: the
 `--json` record, under `<date>/`. Written here by the protocol in
-[Recording](../scripts/perf/README.md#recording), which also says the part the tracked
+[Recording](../scripts/perf/run-file/README.md#recording), which also says the part the tracked
 folder does not do for you: the file reaches main only if the PR that cites
 it adds it.
 
@@ -14,9 +14,9 @@ the raw per-frame samples the console only ever summarised.
 
 **Every run file is gzipped JSON, `<slug>.json.gz`.** `--json` refuses any
 other path, and the tooling that reads a run takes it as it is
-([JSON output](../scripts/perf/README.md#json-output)). By hand:
+([JSON output](../scripts/perf/run-file/README.md#json-output)). By hand:
 `gzcat <path> | jq …`; from a script, `readJsonFile` in
-`../scripts/perf/run-file.ts`.
+`../scripts/perf/run-file/run-file.ts`.
 
 `pnpm run survivors` writes here too — the survivor-count read, which is not
 a cost instrument and takes no clock. Its file is schema

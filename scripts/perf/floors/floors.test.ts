@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { dwellPacing, preconditionRefusal, recordCountRefusal } from '../diff/diff-pure';
 import { CANON_POSITIONS } from '../pins/pin-pure';
 import { frameFloor } from '../dwell/dwell-pure';
-import { readJsonFile } from '../run-file';
+import { readJsonFile } from '../run-file/run-file';
 import { SCENARIO_NAMES, type ScenarioName } from '../scenarios';
 import { assertPerfFile, type ScenarioRecord } from '../schema';
 import {

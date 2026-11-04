@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { readJsonFlag } from './checkout';
-import { writeRunFile } from './run-file';
+import { writeRunFile } from './run-file/run-file';
 import { PERF_SCHEMA, assertPerfFile } from './schema';
 
 const RUN = { schema: PERF_SCHEMA, run: { startedAt: '2026-11-04T10:00:00.000Z', gpu: null }, scenarios: [] };

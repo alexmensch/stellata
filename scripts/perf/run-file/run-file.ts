@@ -1,4 +1,4 @@
-// A run file's on-disk encoding: README.md#files.
+// A run file's on-disk encoding: README.md.
 
 import { readFileSync, writeFileSync } from 'node:fs';
 import { gunzipSync, gzipSync } from 'node:zlib';

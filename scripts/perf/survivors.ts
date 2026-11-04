@@ -8,7 +8,7 @@ import {
   BOOT_TIMEOUT_MS, DEFAULT_CHROME_ARGS, SETTLE_TIMEOUT_MS,
   awaitSettle, bootScenario, probeAdapters, seedDismissals, type PerfWindow,
 } from './page-protocol';
-import { writeRunFile } from './run-file';
+import { writeRunFile } from './run-file/run-file';
 import { BROWSER_CHANNEL, runProvenance } from './run-pure';
 import {
   SURVIVORS_SCHEMA, type AdapterProbe, type SurvivorsFile, type SurvivorsRecord, type Viewport,

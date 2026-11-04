@@ -27,7 +27,7 @@ import {
   type PinDiff, type PinFile,
 } from './pins/pin-pure';
 import { citeRunPath } from './pins/provenance/provenance-pure';
-import { writeRunFile } from './run-file';
+import { writeRunFile } from './run-file/run-file';
 import {
   BROWSER_CHANNEL,
   DWELL_METHOD,
