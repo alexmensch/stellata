@@ -156,6 +156,10 @@ page-teardown-contract.test.ts
                          own file (parsed with the TypeScript compiler, so
                          an inline arrow handler's options are still
                          read). Flag and pass cases for both.
+pipefail-early-reader.test.ts
+                         No scripts/**/*.sh that sets pipefail pipes into
+                         grep -q, head, or an awk program containing exit.
+                         README.md#pipefail-early-readers below.
 perf-guard.test.ts       Behavioural pins for scripts/hooks/perf-guard.sh's
                          two gates: every launch spelling denied unarmed and
                          allowed under a fresh marker (including the
@@ -501,6 +505,24 @@ design; the suite fails if either stops, so an unused exemption cannot
 linger. A new fact both sides need goes into the format tree (a wire shape,
 a file name, a rule over record fields) or astro-core (physics), never into
 the side that happens to compute it first.
+
+## Pipefail early readers
+
+Under `set -o pipefail`, a pipeline fails if any stage does. A reader that
+exits before its input ends (`grep -q` at its first match, `head`, an awk
+`exit`) closes the pipe while the writer may still be writing; the writer
+dies of SIGPIPE, the pipeline returns 141, and an `if` reads a match as no
+match. Whether it happens depends on size: grep has to read a whole line
+before it can match, so one line of any length is safe, while multi-line
+input past a pipe buffer fails on every run. So the rule is applied to the
+form, not to input sizes: such a reader takes a here-string
+(`grep -q x <<< "$var"`), which has no writer process to kill.
+
+`pipefail-early-reader.test.ts` scans every `scripts/**/*.sh` that sets
+pipefail, with no allowlist. Full-line comments are skipped; grep's flags
+count only when written before its pattern. The matcher has its own
+flag and pass cases, and a case that the scan finds the hooks at all, so a
+detector that stops seeing pipes fails instead of passing on an empty scan.
 
 ## Public artifact names
 
