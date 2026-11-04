@@ -32,7 +32,12 @@ header does not name is a mismatch too): the seed copies files one at a
 time, so a worktree created while `build:seed` rotates a stage can pair one
 build's header with another's files
 (`judgeBaseline`). A pinned merge-base copy in
-`lineage.previous/` is held to the same check.
+`lineage.previous/` is held to the same check. The refusal names the
+baseline's commit and how to get a matching one; `--any-baseline` accepts it
+anyway, and `--against <dir>` diffs against that directory instead. A
+refused diff fails nothing: the stage's lineage still lands, no diff is
+written, and a stale one is deleted, so a missing report is visible rather
+than out of date.
 
 A clean, intact header from **another commit** is accepted when its input
 hash equals the hash of the stage's inputs as the merge-base holds them
@@ -42,25 +47,21 @@ inputs alone the seeded header still names the last commit that rebuilt it.
 `inputHashesAt` (`../../../util/input-hashes-at.ts`) takes the step's own
 input map and re-hashes, from the merge-base's copy, each path git reports
 changed since it; it runs only when a header from another commit reaches the
-verdict, once per stage. Two limits follow from computing over this
-branch's input set rather than the merge-base's closure:
+verdict, once per stage.
 
-- An input git does not hold — a git-ignored build output — has no
-  merge-base copy. The catalogue's stages read `build/lineage/`'s membership
-  files, so `build:catalog` names membership as their `upstream`
+The hash is `unknown`, and such a header refused, where an input has no
+merge-base copy to hash:
+
+- A git-ignored build output. The catalogue's stages read `build/lineage/`'s
+  membership files, so `build:catalog` names membership as their `upstream`
   (`UpstreamLineage`): when membership's previous or current header stands
   for the merge-base (`acceptedFiles`, judged against membership's own
   inputs), its `files` map is those files' hash at the merge-base, the same
-  bytes sha1 the input map holds. Otherwise, and for any other ignored
-  input, the hash is `unknown` and the header from another commit is
-  refused.
-- A branch that adds or drops a file in the stage's import closure has a
-  different input set from any merge-base build, so its hash never matches;
-  the refusal stands until the stage is built at the merge-base. An LFS
-  input whose merge-base content is not in the local LFS store is `unknown`
-  too. The refusal names the
-baseline's commit and how to get a matching one; `--any-baseline` accepts it
-anyway, and `--against <dir>` diffs against that directory instead. A
-refused diff fails nothing: the stage's lineage still lands, no diff is
-written, and a stale one is deleted, so a missing report is visible rather
-than out of date.
+  bytes sha1 the input map holds. Any other ignored input stays `unknown`.
+- An LFS input whose merge-base content is not in the local LFS store; it is
+  never fetched.
+
+The comparison runs over this branch's input set, not the merge-base's
+closure, so a branch that adds or drops a file in the stage's import closure
+has a different input set from any merge-base build: its hash never matches,
+and the refusal stands until the stage is built at the merge-base.
