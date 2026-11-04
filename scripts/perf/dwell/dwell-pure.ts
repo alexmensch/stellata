@@ -359,12 +359,13 @@ function medianJudgement<C extends SpreadClock>(
 }
 
 export const CPU_JUDGEMENT = medianJudgement('cpu-p50');
+/** No p10 on the side, so no floor column: a wall p10 is quantised to the
+ *  refresh interval exactly as its median is, and would restate it. */
 export const WALL_JUDGEMENT = medianJudgement('wall-p50');
 export const THROUGHPUT_JUDGEMENT = medianJudgement<SpreadClock & { readonly meanMs: number }>(
   'throughput-mean', (c) => c.meanMs,
 );
 
-/** One side's rAF-paced GPU stream: the whole dwell's clock and its p10. */
 export interface GpuFrameReading {
   readonly clock: SpreadClock;
   readonly floor: FrameFloor | null;

@@ -535,8 +535,6 @@ function frameRow(
   return judgedRow(`${key}|dwell`, name, ja.banding, ja.side, jb.side);
 }
 
-/** The gating clock under its judgement. Off the GPU stream no floor column:
- *  a wall p10 is quantised to the refresh interval exactly as its median is. */
 function judgedFrame(dwell: DwellRecord, gating: GatingClock): JudgedSide {
   if (gating.metric === 'throughput-mean') {
     return judged(THROUGHPUT_JUDGEMENT, { ...gating.clock, meanMs: gating.valueMs });
