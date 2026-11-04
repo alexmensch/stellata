@@ -113,10 +113,9 @@ export function judgeBaseline(
 }
 
 function builtAt(read: ReadHeader): string {
+  const built = `built at ${read.header.commit}${read.header.dirty ? ' with uncommitted edits' : ''}`;
   const mismatched = mismatchedFiles(read);
-  if (mismatched.length > 0) {
-    return `a baseline whose ${mismatched.join(', ')} ${mismatched.length === 1 ? 'is not the file' : 'are not the files'} `
-      + `its header (built at ${read.header.commit}) recorded`;
-  }
-  return `a baseline built at ${read.header.commit}${read.header.dirty ? ' with uncommitted edits' : ''}`;
+  if (mismatched.length === 0) return `a baseline ${built}`;
+  return `a baseline whose ${mismatched.join(', ')} ${mismatched.length === 1 ? 'is not the file' : 'are not the files'} `
+    + `its header (${built}) recorded`;
 }

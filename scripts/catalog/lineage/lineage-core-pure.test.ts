@@ -160,6 +160,9 @@ describe('judgeBaseline', () => {
       .toBe('refused');
     expect(planBaseline(swapped, { kind: 'checkout', header: matching(header('abc')) }, 'abc', false))
       .toEqual({ verdict: { kind: 'diff', why: 'merge-base' }, from: 'current', rotate: true });
+    const dirty = judgeBaseline({ kind: 'checkout', header: { ...swapped, header: header('abc', true) } }, 'abc', false);
+    expect(dirty.kind === 'refused' && dirty.message)
+      .toMatch(/whose demo\.tsv\.gz is not the file its header \(built at abc with uncommitted edits\) recorded/);
   });
 
   it('refuses a header that names none, or only some, of the stage\'s files', () => {
