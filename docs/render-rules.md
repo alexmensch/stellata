@@ -408,7 +408,7 @@ at the canonical vantages is what explains a row that moved.
   runs is recorded and left to the ceiling instead; `lg` is that vantage
   on an rAF-paced pin, which makes the Local Group the one layer such a pin
   table cannot price. GPU-paced, lg reproduces and its row gates
-  ([Ungated vantages](/scripts/perf/pins/README.md#ungated-vantages-and-lg-is-permanently-one)).
+  ([Ungated vantages](/scripts/perf/pins/README.md#ungated-vantages)).
 - **Absolute numbers do not reproduce; ratios at the same buffer and the
   same clock do.** The frame is linear in pixels, so `bufferMpx` is
   stamped on every row and only same-buffer tables compare. `method`

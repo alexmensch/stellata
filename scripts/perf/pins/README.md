@@ -172,9 +172,10 @@ the gate refuses to do is mark on it, because a coincidence of timing moves
 the same number.
 
 Two of the three guards stay inert at this magnitude: `PIN_CEILING_MS` is
-112× mw120's compute value, and `STATE_GUARD_TREND_MS` (1 ms) exceeds every
-compute median, so a compute row's own `stateGuard` cannot read anything but
-`steady` and nothing consults it — the frame row's verdict is what refuses
+81× mw120's compute value on the M6 pin, and `STATE_GUARD_TREND_MS` (1 ms)
+is at least every canon compute median (lg's, the largest, reads 1.001), so a
+compute row's own `stateGuard` could read `trending` only on a quarter-to-
+quarter swing the size of the whole row, and nothing consults it — the frame row's verdict is what refuses
 the context.
 
 **The frame rows are deliberately NOT re-floored**
@@ -284,7 +285,7 @@ a pin run reads `steady`.
   names which statistic the row was judged on, and it is not the same at
   every row: `gpu-plain-p50` where the vantage draws two pass classes and
   `compute-p10` on a compute row ([The compute row](#the-compute-row)).
-- <a id="ungated-vantages-and-lg-is-permanently-one"></a>**Ungated vantages, and `lg` is one under rAF pacing.** `RAF_UNGATED_SCENARIOS`
+- <a id="ungated-vantages"></a>**Ungated vantages, and `lg` is one under rAF pacing.** `RAF_UNGATED_SCENARIOS`
   maps a vantage the band never marks on an rAF-paced row to the reason,
   which the row's note prints; `ungatedBecause` is the one reading of it, by
   vantage and recorded pacing. **A GPU-paced lg row is gated like any other.**

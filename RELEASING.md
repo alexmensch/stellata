@@ -420,7 +420,7 @@ median 0.626 ms and up to 1.775, against ~0.02 at the other four; spread
 across runs 1.608 ms, the same size), so a 120-sample median there lands
 anywhere in that band and no cool-down or longer dwell narrows it. So on
 an rAF-paced pin lg is recorded and never marked by the band —
-[Ungated vantages](scripts/perf/pins/README.md#ungated-vantages-and-lg-is-permanently-one) carries the evidence and
+[Ungated vantages](scripts/perf/pins/README.md#ungated-vantages) carries the evidence and
 stellata-8cg.49.18 closed on it. A single floor wide enough to cover lg would have to be ~12 %, which
 would hide a 3.9 ms regression at mw50 — the gate would be a formality.
 **GPU-paced, lg holds still** (throughput 4.037 / 4.063 / 4.037 ms over
