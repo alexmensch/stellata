@@ -6,7 +6,7 @@ import { mkdtempSync, rmSync, utimesSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { PERF_GO_MARKER_NAME, PERF_GO_MAX_AGE_S } from './perf-go-lib';
+import { PERF_GO_MARKER_NAME, PERF_GO_MAX_AGE_S, PERF_GO_WAIT_S } from './perf-go-lib';
 
 const LIB = resolve(__dirname, 'perf-go-lib.sh');
 
@@ -25,9 +25,10 @@ beforeEach(() => { dir = mkdtempSync(join(tmpdir(), 'perf-go-lib-')); });
 afterEach(() => { rmSync(dir, { recursive: true, force: true }); });
 
 describe('perf-go-lib.sh', () => {
-  it('exposes the marker name and the freshness window to TypeScript', () => {
+  it('exposes the marker name, the freshness window and the poll wait to TypeScript', () => {
     expect(PERF_GO_MARKER_NAME).toBe('.perf-go');
     expect(PERF_GO_MAX_AGE_S).toBe(3600);
+    expect(PERF_GO_WAIT_S).toBe(900);
   });
 
   // The BSD/GNU stat split: BSD's -f is GNU's --file-system and succeeds
