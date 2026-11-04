@@ -137,7 +137,8 @@ the others once, and that rebuild appends nothing.
   variant per kind and language), the load-time rules that need no disk
   (one writer per output, files against families included, and two families
   in one folder only when both list names and none is shared; a build-step
-  cycle; an `after` naming no step), and `deriveGraph`: read edges, the
+  cycle; an `after` naming no step), and `deriveGraph`: edges (`reads`, a
+  reader's files, or `after`, a Python step's declaration), the
   registry edges set aside, a manual step's back edges kept as loops, and
   the run order (table order breaks ties). `selectSteps` is a target plus
   everything upstream, kept loops included; `writersOf` names the steps a
