@@ -391,17 +391,8 @@ and so is `parked-ledger.tsv` ([Placement lineage](../distance/README.md#placeme
 
 ## The membership stage
 
-`build:membership` is the first stage with lineage
-(`../membership/membership-lineage-pure.ts`). `buildMembership` returns a
-keyed outcome per decision — admission, fold, component, the spine
-derivation's verdict with every candidate it refused, a disposition, an
-addition's binding, each label flip and label drop — and
-`membershipLineageRow` is the one serialiser, its `switch` exhaustive so a
-new variant without a row fails typecheck. `ParamsOf` declares each code's
-params beside the codes; the writer and the views both read through it, so
-a renamed key fails typecheck on both sides. Every record gets an admission
-row. `membershipLedgers` generates the four ledgers from those rows and the
-identity rows alone, byte-identical to the files they replaced as writers.
+`build:membership` is the first stage with lineage; its contract lives
+beside its module, in [Membership lineage](../membership/README.md#membership-lineage).
 
 Curated human input stays hand-written and is read by the build or its
 tests: `binding-review-dispositions.tsv`, `spine-corrections.tsv`,
