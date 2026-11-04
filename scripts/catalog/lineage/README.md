@@ -251,8 +251,10 @@ it fails its emission. Membership, measured 2026-10-29 on the full tree:
 (85 MB, 22.3 MB), 37.4 MB together. The timed window is everything lineage
 adds to the build — the diff, rendering, gzip and invariants: about 5.8 s with a diff
 against a full baseline. The header's input hash is not in it: a stage hands
-`stageLineage` the input hashes its step already computed (`build:catalog`'s
-are its stamp's), so a build hashes its inputs once.
+`stageLineage` the input hashes its step computed for its own use. Each step
+hashes that set a second time after the runner hashed it for the stamp
+(`build:catalog` and `build:membership` both call `stepInputPaths`), until
+the runner hands its hashes over (stellata-hhaw.45.11.12).
 A spine derivation's row carries only its winner, route and component
 letters; the binding-review columns ride the rows the queue lists — a
 contested or collision verdict and a disposition — since the candidates and
