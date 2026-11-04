@@ -53,6 +53,7 @@ describe('deriveGraph', () => {
   it('orders a Python build step by its declared after', () => {
     const g = ordered(deriveGraph([py('p', ['/r/p.out'], ['a']), ts('a', ['/r/a.out'])], []));
     expect(g.order).toEqual(['a', 'p']);
+    expect(g.edges).toEqual([{ kind: 'after', from: 'a', to: 'p' }]);
   });
 
   it('matches a read against a declared output family', () => {
