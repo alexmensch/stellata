@@ -16,7 +16,8 @@ scripts/perf/arming/
                             scripts/hooks/perf-guard.sh.
   perf-go-lib.ts            The same scalars parsed out of the .sh for
                             run.ts and the tests, so no second copy of the
-                            marker name or the hour can drift from the hook.
+                            marker name or its freshness can drift from the
+                            hook.
   await-go.sh (+ test)      The arm poller the agent runs in the background.
   busy-sessions.sh (+ test) Which `claude agents --json` rows are busy in this
                             repo — the filter await-go's warning reads.
@@ -141,8 +142,10 @@ the exit code as the verdict, since a tainted run still prints its tables.
   `$( a || b )` capture concatenates both outputs. Pinned by
   `perf-go-lib.test.ts`, which asserts bare seconds rather than a non-zero
   exit.
-- **The two scalars have one source.** `perf-go-lib.ts` parses them out of
+- **The scalars have one source.** `perf-go-lib.ts` parses them out of
   `perf-go-lib.sh` rather than re-declaring them, because the hook can only
-  read the `.sh` and a second copy of the hour would drift from the gate
-  silently — the runner would refuse a marker the hook had accepted, or
-  worse, accept one it had not.
+  read the `.sh` and a second copy of the marker name or its freshness
+  window would drift from the gate silently — the runner would refuse a
+  marker the hook had accepted, or worse, accept one it had not.
+  `PERF_GO_WAIT_S` the hook never reads: `await-go.sh` takes it as its
+  default timeout and `perf-go-lib.test.ts` pins it.
