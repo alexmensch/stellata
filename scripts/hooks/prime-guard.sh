@@ -38,8 +38,7 @@ case "$event" in
     mv "$PRIME_FILE.part" "$PRIME_FILE"
     : >"$SENTINEL"
 
-    count="$(sed -n 's/.*Persistent Memories (\([0-9]*\)).*/\1/p' "$PRIME_FILE")"
-    count="${count%%$'\n'*}"
+    count="$(sed -n '/.*Persistent Memories (\([0-9]*\)).*/{s//\1/p;q;}' "$PRIME_FILE")"
     if [ -n "$count" ]; then
       subject="$count persistent project memories"
     else
