@@ -1,7 +1,7 @@
 // The perf runner: human-armed, Chrome only, clocks only. Protocol, flags
-// and exit codes: README.md. The only Playwright value import in the tree.
+// and exit codes: README.md. One of the tree's two Playwright value imports.
 
-import { accessSync, constants, existsSync, mkdirSync, statSync, unlinkSync, writeFileSync } from 'node:fs';
+import { accessSync, constants, existsSync, mkdirSync, statSync, unlinkSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { chromium, type Browser } from 'playwright';
 import type { PriceFrameOptions } from '../../src/client/debug/frame-cost/frame-cost';
@@ -27,6 +27,7 @@ import {
   type PinDiff, type PinFile,
 } from './pins/pin-pure';
 import { citeRunPath } from './pins/provenance/provenance-pure';
+import { writeRunFile } from './run-file';
 import {
   BROWSER_CHANNEL,
   DWELL_METHOD,
@@ -343,7 +344,7 @@ async function runScenario(browser: Browser, args: RunArgs, plan: ScenarioPlan):
 }
 
 function writeJson(path: string, file: PerfFile): void {
-  writeFileSync(path, `${JSON.stringify(file, null, 2)}\n`);
+  writeRunFile(path, file);
   console.log(`\nperf: wrote ${path} (${PERF_SCHEMA})`);
 }
 

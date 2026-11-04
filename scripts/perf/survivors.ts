@@ -1,6 +1,5 @@
 // Reads debug.survivors() at the canon vantages. README.md#survivor-counts--the-one-entry-point-here-that-is-not-a-cost-instrument.
 
-import { writeFileSync } from 'node:fs';
 import { chromium, type Page } from 'playwright';
 import { survivorPct, type SurvivorReport } from '../../src/client/debug/survivor-counts';
 import { ARG_DEFAULTS, parseSurvivorsArgs, type SurvivorsArgs } from './args';
@@ -9,6 +8,7 @@ import {
   BOOT_TIMEOUT_MS, DEFAULT_CHROME_ARGS, SETTLE_TIMEOUT_MS,
   awaitSettle, bootScenario, probeAdapters, seedDismissals, type PerfWindow,
 } from './page-protocol';
+import { writeRunFile } from './run-file';
 import { BROWSER_CHANNEL, runProvenance } from './run-pure';
 import {
   SURVIVORS_SCHEMA, type AdapterProbe, type SurvivorsFile, type SurvivorsRecord, type Viewport,
@@ -48,7 +48,7 @@ async function main(): Promise<number> {
     args = parseSurvivorsArgs(process.argv.slice(2));
   } catch (e) {
     console.error(`${e instanceof Error ? e.message : String(e)}\n`
-      + 'usage: pnpm run survivors -- [--url <base>] [--json <path>]');
+      + 'usage: pnpm run survivors -- [--url <base>] [--json <path.json.gz>]');
     return 2;
   }
 
@@ -110,7 +110,7 @@ async function main(): Promise<number> {
       },
       rows,
     };
-    writeFileSync(args.json, `${JSON.stringify(file, null, 2)}\n`);
+    writeRunFile(args.json, file);
     console.log(`\nwrote ${args.json}`);
   }
   return 0;

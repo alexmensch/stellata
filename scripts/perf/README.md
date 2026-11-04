@@ -121,7 +121,7 @@ compaction dispatch, so a read issued before the gate goes quiet belongs to a
 camera still arriving.
 
 ```
-pnpm run survivors -- [--url http://localhost:5173] [--json <path>]
+pnpm run survivors -- [--url http://localhost:5173] [--json <path>.json.gz]
 ```
 
 It visits every canon vantage on WebGPU at the runner's own default viewport
@@ -154,7 +154,7 @@ pnpm run perf -- [--scenario mw120,sol,earth,mw50,lg | all] [--backend webgpu]
                  [--frames 240] [--readback-every 4|4,1,2] [--pacing gpu|raf]
                  [--roundtrip <pass>|idle] [--scales 0.5,1,1.5,2]
                  [--headed] [--width 1280] [--height 800] [--dpr 2] [--quiet-ms 5000]
-                 [--json <path>] [--baseline <path>] [--cooldown-ms 0]
+                 [--json <path>.json.gz] [--baseline <path>] [--cooldown-ms 0]
                  [--pin <path> [--accept <scenario>|<backend>[|compute]:<bead>]...] [--against-pin <path>]
                  [--url http://localhost:5173] [--chrome-arg=<switch>]... [--hash <fragment>]
 ```
@@ -269,6 +269,7 @@ illusion survives it.
 Exit codes: **0** ok · **1** a scenario failed, was tainted, priceFrame
 refused, the adapter was software, or the JSON could not be written · **2**
 bad flags, an unreachable URL, or an unusable `--json` / `--baseline` path
+(a `--json` off `.json.gz` among them)
 (marker untouched) · **3** not armed (marker absent or stale).
 
 **Both output paths are proved usable before the marker is consumed.** A
@@ -367,7 +368,13 @@ to read a slope: `sweep/README.md`.
 
 ## JSON output
 
-`--json <path>` writes the whole run as schema `stellata-perf/2`:
+**`--json` writes gzip, and a path not ending `.json.gz` is a flag error**
+(exit 2, marker untouched) — on the runner and on `survivors` alike, so the
+archive holds one format. `--baseline`, `--against-pin` and `perf:pin` read
+gzip or plain JSON: a pin is plain. Read one by hand with
+`gzcat <path> | jq …`.
+
+`--json <path>.json.gz` writes the whole run as schema `stellata-perf/2`:
 `run` (timestamps, url, argv, the commit pair and dirty flag, browser and its
 switches, the adapter probe, host) plus one record per scenario × backend
 (backend requested and actual, viewport, buffer and Mpx, catalogue record

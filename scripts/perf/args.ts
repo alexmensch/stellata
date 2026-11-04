@@ -16,6 +16,7 @@ import {
   THROUGHPUT_WINDOW_FRAMES,
 } from './dwell/dwell-pure';
 import { DEFAULT_SWEEP_SCALES } from './sweep/sweep-pure';
+import { RUN_FILE_SUFFIX, runFilePathError } from './run-file';
 import { DEFAULT_QUIET_MS } from './settle-pure';
 import { BACKENDS, SCENARIO_NAMES, isScenarioName, type Backend, type ScenarioName } from './scenarios';
 
@@ -109,6 +110,12 @@ export const ARG_DEFAULTS = {
 
 export class ArgError extends Error {}
 
+function runFileFlag(path: string | undefined): string | undefined {
+  const error = path === undefined ? null : runFilePathError('--json', path);
+  if (error !== null) throw new ArgError(error);
+  return path;
+}
+
 const OPTIONS = {
   help: { type: 'boolean', short: 'h', default: false },
   url: { type: 'string', default: ARG_DEFAULTS.url },
@@ -172,7 +179,7 @@ export function usage(): string {
     `  --pacing <${DWELL_PACINGS.join('|')}>     dwell and sweep: next frame when the GPU has room, or on rAF (default ${ARG_DEFAULTS.pacing})`,
     `  --roundtrip <pass|${ROUNDTRIP_IDLE}>  dwell: dwell, hold the pass off for --frames then restore it, dwell again`,
     `  --scales <list>          sweep: viewport scales                    (default ${ARG_DEFAULTS.scales})`,
-    '  --json <path>            write the whole run as stellata-perf/2',
+    `  --json <path>            write the whole run as stellata-perf/2, gzipped (the path ends ${RUN_FILE_SUFFIX})`,
     '  --baseline <path>        diff this run against a saved one and print the verdicts',
     '  --pin <path>             dwell: write this run as the perf pin (with --json; /RELEASING.md#perf-pin)',
     '  --against-pin <path>     dwell: verdicts against a pin; a ✗ or a refused row exits 1',
@@ -422,7 +429,7 @@ export function parseRunArgs(argv: readonly string[]): RunArgs {
     pacing,
     roundtrip,
     scales: numberList('scales'),
-    json: str('json'),
+    json: runFileFlag(str('json')),
     baseline: str('baseline'),
     pin: str('pin'),
     againstPin: str('against-pin'),
@@ -452,8 +459,8 @@ const PIN_OPTIONS = {
 
 export function pinUsage(): string {
   return [
-    'Usage: pnpm run perf:pin -- <run.json>... [flags]',
-    '  <run.json>...            saved --json runs of ONE commit, any order; a row comes from the newest holding it sound',
+    'Usage: pnpm run perf:pin -- <run.json.gz>... [flags]',
+    '  <run.json.gz>...         saved --json runs of ONE commit, any order; a row comes from the newest holding it sound',
     '  --pin <path>             the pin to write                          (default scripts/perf/pins/<adapter slug>.json)',
     '  --accept <scenario>|<backend>[|compute]:<bead>  accept a ✗ against the pin being replaced, repeatable',
     '  --dry-run                print the rows, their runs and the verdicts; write nothing',
@@ -496,7 +503,7 @@ export function parseSurvivorsArgs(argv: readonly string[]): SurvivorsArgs {
       options: { url: { type: 'string' }, json: { type: 'string' } },
       strict: true,
     });
-    return { url: values.url ?? ARG_DEFAULTS.url, json: values.json ?? null };
+    return { url: values.url ?? ARG_DEFAULTS.url, json: runFileFlag(values.json) ?? null };
   } catch (e) {
     throw new ArgError(e instanceof Error ? e.message : String(e));
   }
