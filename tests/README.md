@@ -515,22 +515,22 @@ the side that happens to compute it first.
 
 Under `set -o pipefail`, a pipeline fails if any stage does. A reader that
 exits before its input ends (`grep -q` at its first match, `grep -m N` at
-its Nth, `head`, an awk `exit`, a sed `q`) closes the pipe while the writer may still be writing; the writer
-dies of SIGPIPE, the pipeline returns 141, and an `if` reads a match as no
-match. Whether it happens depends on size: grep has to read a whole line
-before it can match, so one line of any length is safe, while multi-line
-input past a pipe buffer fails on every run. So the rule is applied to the
-form, not to input sizes: such a reader takes a here-string
-(`grep -q x <<< "$var"`), which has no writer process to kill.
+its Nth, `head`, an awk `exit`, a sed `q`) closes the pipe while the writer
+may still be writing; the writer dies of SIGPIPE, the pipeline returns 141,
+and an `if` reads a match as no match. Whether it happens depends on size:
+grep has to read a whole line before it can match, so one line of any length
+is safe, while multi-line input past a pipe buffer fails on every run. So the
+rule is applied to the form, not to input sizes: such a reader takes a
+here-string (`grep -q x <<< "$var"`), which has no writer process to kill.
 
 `pipefail-early-reader.test.ts` scans every `scripts/**/*.sh` that sets
 pipefail, plus every library such a script sources with `.` or `source`
-(matched by file name, followed through libraries that source others),
-since a sourced file runs under its caller's options. There is no
-allowlist. Full-line comments are skipped, and quoted
-strings never count as a grep flag. The matcher has its own
-flag and pass cases, and a case that the scan finds the hooks at all, so a
-detector that stops seeing pipes fails instead of passing on an empty scan.
+(matched by file name, followed through libraries that source others), since
+a sourced file runs under its caller's options. There is no allowlist.
+Full-line comments are skipped, and quoted strings never count as a grep
+flag. The matcher has its own flag and pass cases, and a case that the scan
+finds the hooks at all, so a detector that stops seeing pipes fails instead
+of passing on an empty scan.
 
 ## Public artifact names
 
