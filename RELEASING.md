@@ -376,7 +376,8 @@ moved in between:
 <a id="what-a-mark-means"></a>**What a mark means.** A row is `✗` when the statistic its `metric` column
 names moves past its band — the pair's two-sigma standard error floored, on a
 frame row; the vantage's own constant alone, on a compute row; the two-sigma
-term floored at the vantage's own constant, on a `|cpu` row — or when it
+term floored at the vantage's own constant plus half a clock step, on a `|cpu`
+row ([The CPU floor](scripts/perf/floors/README.md#the-cpu-floor)) — or when it
 crosses the
 ceiling — 33.4 ms at any canon vantage, two 60 Hz intervals of hardware
 time — whatever the band says and whether or not the vantage is gated. mw50's throughput at 13.147 is the
