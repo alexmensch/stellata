@@ -17,9 +17,7 @@ the clouds both cover.
   [§ 2](/docs/science-molecular-clouds.md#2-extinction-physics-and-the-units-chain) to [§ 5](/docs/science-molecular-clouds.md#5-substructure-noise-build-side-spec).
 - `build-clouds-pure.ts` (+ test) — the ellipsoid and sphere records, the
   display-name and alias tables, the merge, and both output payloads.
-  Every rounded field goes through `roundHalfEven` (half to even on the
-  double's exact value), never `Math.round(x · 10ⁿ) / 10ⁿ`, whose scaling
-  moves near-ties.
+  Every rounded field goes through `../util/round-pure.ts`.
 - `zucker-parse.ts` (+ test) / `zucker-source.ts` — the four tables' parsers
   and declarations (`../util/sources/`).
 - `clouds-outputs.ts` — the emitArtifacts declaration.

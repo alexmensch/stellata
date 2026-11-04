@@ -22,6 +22,7 @@ import {
   type Vec3,
 } from './cloud-model-pure';
 import { siblingSlug } from '../sid/sibling-artifacts-pure';
+import { roundHalfEven } from '../util/round-pure';
 import type { Sightline, Z2021Extent, Z2021Mass } from './zucker-parse';
 
 /** Singleton Zucker 2020 sightlines: the small end of the 5–30 pc effective radii of local SF clouds. */
@@ -90,21 +91,6 @@ const Z2021_TO_Z2020_SUPPRESS: Readonly<Record<string, string>> = {
   Orionb: 'Orion',
   Orionlam: 'Orion_Lam',
 };
-
-/** Python's `round(x, digits)`: half-to-even on the double's exact decimal value. */
-export function roundHalfEven(x: number, digits: number): number {
-  const exact = Math.abs(x).toFixed(100);
-  const cut = exact.indexOf('.') + 1 + digits;
-  const rest = exact.slice(cut);
-  const tie = /^50*$/.test(rest);
-  if (!tie) return Number(x.toFixed(digits));
-  const kept = exact.slice(0, cut).replace(/\.$/, '');
-  const lastDigit = Number(kept[kept.length - 1]);
-  const truncated = Number(kept);
-  const step = 10 ** -digits;
-  const magnitude = lastDigit % 2 === 0 ? truncated : Number((truncated + step).toFixed(digits));
-  return Math.sign(x) * magnitude;
-}
 
 const DEG = Math.PI / 180;
 const round2 = (v: Vec3): [number, number, number] => [roundHalfEven(v[0], 2), roundHalfEven(v[1], 2), roundHalfEven(v[2], 2)];

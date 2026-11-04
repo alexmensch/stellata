@@ -151,6 +151,10 @@ same thing — single-use helpers stay with their consumer.
   belongs to, and `BROWSER_TREES`: the one list both import-boundary tests
   (`/tests/README.md#pipeline-viewer-boundary`) and the step table's
   outputs-module walk ([Load-time rules](../pipeline/step-table/README.md#load-time-rules)) read.
+- `round-pure.ts` (+ test) — `roundHalfEven(x, digits)`, Python's
+  `round`: half to even on the double's exact decimal value. Every number a
+  TypeScript build rounds into a JSON artifact goes through it, never
+  `Math.round(x · 10ⁿ) / 10ⁿ`, whose multiply moves near-ties.
 - `step-inputs.ts` — `entryInputPaths(entries)`, every file a TypeScript
   step reads: the closure of its entry files, the closure's siblings, and
   every declaration the closure reads (`sources/`); the runner derives each
