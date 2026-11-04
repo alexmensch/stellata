@@ -98,7 +98,7 @@ if grep -qE '\[figure-ok:[^]]*\]' <<< "$flat_scan"; then
   figure_ok=1
 fi
 
-staged="$(git -C "$toplevel" diff --cached --name-only)" || staged=""
+staged="$(git -C "$toplevel" diff --cached --name-only)"
 
 # README staleness check.
 stale=""
