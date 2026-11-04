@@ -11,7 +11,7 @@ export const DWELL_FLOOR_FRACTION = 0.01;
 export const COMPUTE_SCATTER_FLOOR_MS: Readonly<Record<ScenarioName, number>> = {
   mw120: 0.05,
   sol: 0.60,
-  earth: 0.25,
+  earth: 0.55,
   mw50: 0.05,
   lg: 0.05,
 };

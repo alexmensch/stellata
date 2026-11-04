@@ -55,23 +55,26 @@ step puts the edge between two moves the clock can show: up to the constant
 reads `~`, one step more marks, wherever the median started.
 
 ```
-        cpu-p50 runs                  span   FLOOR
-mw120   1.6 / 2.6 / 2.6 / 2.6 / 2.7   1.1    1.7
-sol     1.3 / 1.4 / 1.4 / 1.4 / 1.5   0.2    0.3
-earth   1.4 / 1.4 / 1.5               0.1    0.2
-mw50    3.2 / 3.4 / 3.4               0.2    0.3
-lg      1.1 / 1.1 / 1.1               0.0    0.1
+        cpu-p50 runs                        span   FLOOR
+mw120   1.6 / 2.6 / 2.6 / 2.6 / 2.7 / 2.3   1.1    1.7
+sol     1.3 / 1.4 / 1.4 / 1.4 / 1.5 / 1.4   0.2    0.3
+earth   1.4 / 1.4 / 1.5 / 1.4               0.1    0.2
+mw50    3.2 / 3.4 / 3.4 / 3.3               0.2    0.3
+lg      1.1 / 1.1 / 1.1 / 1.1               0.0    0.1
 ```
 
 The population is every GPU-paced M6 dwell a gate would compare — 960
-frames, 4.096 Mpx, canon position, throughput steady:
-`.perf-runs/2026-11-03/8cg-49-42-gpu-all-{3,4}.json` and
-`.perf-runs/2026-11-04/8cg-49-38-{m6-pin,tier1-1,tier1-2}.json`, the last
-two visiting mw120 and sol alone.
+frames, 4.096 Mpx, canon position, throughput steady — and
+`floors.test.ts` derives both tables' constants from the files themselves:
+`.perf-runs/2026-11-03/8cg-49-42-gpu-all-{3,4}.json` (02cf403f, a dirty
+tree) and `.perf-runs/2026-11-04/8cg-49-38-{m6-pin,tier1-1,tier1-2,m6-check}.json`
+(1b0a6a68 to feb31d8e, clean; no frame-path code moves across that range),
+the two Tier 1 runs visiting mw120 and sol alone. A run added to the
+population is added to that test's list.
 
 **mw120's main thread holds two modes, near 1.4 and near 3.0 ms, and the
 share between them is set per run.** The pin run held the upper mode on 30 %
-of its frames, the other four on 61–68 %, every run's quarters flat. So its
+of its frames, the other four that carry the split on 61–68 %, every run's quarters flat. So its
 median, its p10 and its mean all step together with the share, and no
 statistic of that stream holds still across runs of identical code. The
 floor covers the step rather than refusing the row, so mw120's CPU row is
@@ -91,8 +94,8 @@ median: [The compute row](../pins/README.md#the-compute-row).
 ```
         p10 span   FLOOR       p50 span
 mw120     0.019     0.05         0.137
-mw50      0.015     0.05         0.003
-earth     0.152     0.25         0.022
+mw50      0.014     0.05         0.016
+earth     0.359     0.25         0.025   capped
 sol       0.396     0.25         0.044   capped
 lg        0.008     0.05         0.013
 ```
@@ -102,14 +105,16 @@ above by containing any real change as well. That population is every row a
 gate would actually compare against the M6 pin — GPU-paced, 960 frames,
 4.096 Mpx, canon position, one catalogue, no setup lever, **and its frame row
 steady**, the last because a trending context is refused rather than banded
-([State guard](../pins/README.md#state-guard)): the five runs
+([State guard](../pins/README.md#state-guard)): the six runs
 [The CPU floor](#the-cpu-floor) names. Each constant is 1.5× the p10 span
-rounded up to 0.05 — so `COMPUTE_SCATTER_FLOOR_MS` holds 0.60 at sol, and
+rounded up to 0.05 — so `COMPUTE_SCATTER_FLOOR_MS` holds 0.60 at sol and
+0.55 at earth, and
 the FLOOR column is what `computeFloorMs` applies after **capping at
 `DWELL_FLOOR_MS`**. The cap is what makes a re-derivation only ever tighten a
-row, and sol is the one vantage it binds at: sol's compute row is banded at
-0.25 under its own measured scatter of 0.396 (p10 0.437–0.833 across five
-runs of identical code), so a repeat pair can mark it on nothing. That is the
+row, and it binds at sol and earth: each is banded at 0.25 under its own
+measured scatter — 0.396 at sol (p10 0.437–0.833 over six runs of one frame
+path), 0.359 at earth (0.456–0.815) — so a repeat pair can mark either on
+nothing. That is the
 cost of the cap; lifting sol to its derived 0.60 would buy it back and is the
 alternative on the table. A name outside these five — no canon vantage is one
 today — takes `DWELL_FLOOR_MS` rather than banding the row on a `NaN`.
@@ -123,7 +128,7 @@ The p10 keeps the sensitivity the median had and adds some. A real per-frame
 cost lifts it: earth's compute reads 0.351 plain and 3.100 under
 `--force-recompute`, and the extinction-refill pair moved it 0.081 — a change
 the median missed against earth's M4 floor of 0.10 while reading 0.117. Under
-the M6 floor of 0.25 that move reads `~` as well.
+the M6 floor of 0.25 (capped from 0.55) that move reads `~` as well.
 
 **The floor IS the whole band on this row.** The p10's own sampling term runs
 an order of magnitude under every constant above, and the constants are

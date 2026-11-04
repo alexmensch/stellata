@@ -149,7 +149,7 @@ so it is not the GPU downclocking, and it is uncorrelated with the readback
 class. The share of the dear mode runs **0 % to 58 % across runs of identical
 code**, and the median follows it: on the M4, earth's p50 spanned 0.169 ms
 over the gate's own comparable population while its p10 spanned 0.057. On the
-M6 the order reverses at earth and sol (p50 0.022 / 0.044, p10 0.152 / 0.396)
+M6 the order reverses at earth and sol (p50 0.025 / 0.044, p10 0.359 / 0.396)
 and holds at mw120 (0.137 / 0.019); the row keeps one statistic for every
 vantage.
 
