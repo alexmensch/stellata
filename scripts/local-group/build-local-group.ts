@@ -2,14 +2,13 @@
 // layer. See scripts/local-group/README.md for inputs, output schema,
 // idempotency, and the LVDB-refresh protocol.
 
-import { existsSync, statSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { allocateSibling, emitSibling } from '../sid/sibling-allocation';
 import { SIBLING_ARTIFACTS } from '../sid/sibling-artifacts-pure';
 import { runStep, sweepStaged } from '../util/emit-artifacts';
-import { stepInputPaths } from '../util/step-inputs';
+import { outputsNewerThanInputs } from '../util/step-inputs';
 import { LOCAL_GROUP_OUTPUTS } from './local-group-outputs';
 import { LG_ALIASES, LG_OVERRIDES, LVDB } from './local-group-source';
 import { PUBLIC_FILES } from '../../src/catalog-format/public-artifacts/public-artifacts';
@@ -84,20 +83,10 @@ function toJsonObject(o: LgObjectRow) {
   };
 }
 
-async function isUpToDate(): Promise<boolean> {
-  if (!existsSync(OUT)) return false;
-  const outMtime = statSync(OUT).mtimeMs;
-  for (const src of await stepInputPaths('build:local-group')) {
-    if (!existsSync(src)) return false;
-    if (statSync(src).mtimeMs > outMtime) return false;
-  }
-  return true;
-}
-
 async function main(): Promise<void> {
   sweepStaged(LOCAL_GROUP_OUTPUTS);
   const force = process.argv.includes('--force');
-  if (!force && await isUpToDate()) {
+  if (!force && await outputsNewerThanInputs('build:local-group', [OUT])) {
     console.log(`${PUBLIC_FILES.localGroup} up to date — skipping (use --force to rebuild)`);
     return;
   }

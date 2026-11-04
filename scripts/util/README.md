@@ -159,9 +159,11 @@ same thing — single-use helpers stay with their consumer.
   on the table (`package.json` then names only `run.ts`), else each `tsx` entry
   its `package.json` script chains; `stepInputPaths(name)` is
   `entryInputPaths` over it, which the catalogue and membership lineage
-  headers and `build:local-group`'s up-to-date gate key on, and CI's catalogue
-  cache key reads `stepEntries` too. Each step's own suite pins its set
-  (`../catalog/catalog-inputs.test.ts`, `../local-group/local-group-inputs.test.ts`).
+  headers key on, and CI's catalogue cache key reads `stepEntries` too.
+  `outputsNewerThanInputs(step, outputs)` is the mtime gate of the two
+  off-table emitters, `build:clouds` and `build:local-group`, over that set.
+  Each step's own suite pins its set (`../catalog/catalog-inputs.test.ts`,
+  `../local-group/local-group-inputs.test.ts`, `../clouds/clouds-inputs.test.ts`).
 - `tsv/` — the one TSV reader (`readTable`, typed columns, cells that keep
   empty and malformed apart) and `defineArtifact`, the codec of every table
   this repo writes. Own README.
