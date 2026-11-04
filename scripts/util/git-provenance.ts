@@ -35,23 +35,33 @@ export function mergeBaseWithMain(commit = 'HEAD'): string | null {
   }
 }
 
-export type MergeBaseFile =
-  | { readonly kind: 'present'; readonly text: string }
-  | { readonly kind: 'absent' }
-  | { readonly kind: 'no-merge-base' };
+export type FileAt =
+  | { readonly kind: 'present'; readonly bytes: Buffer }
+  | { readonly kind: 'absent' };
 
-/** A repo-relative file as the merge-base with main holds it. `absent` is a
- *  real answer — the file is new on this branch — never a failed git. */
-export function fileAtMergeBase(path: string): MergeBaseFile {
-  const base = mergeBaseWithMain();
-  if (base === null) return { kind: 'no-merge-base' };
+/** A file relative to `root` as `commit` stores it. `absent` is a real answer —
+ *  `commit` has no such path — never a failed git. */
+export function fileAt(commit: string, path: string, root: string = REPO_ROOT): FileAt {
   try {
-    git('cat-file', '-e', `${base}:${path}`);
+    gitIn(root, 'cat-file', '-e', `${commit}:${path}`);
   } catch {
     return { kind: 'absent' };
   }
   return {
     kind: 'present',
-    text: execFileSync('git', ['show', `${base}:${path}`], { cwd: REPO_ROOT, encoding: 'utf-8' }),
+    bytes: execFileSync('git', ['show', `${commit}:${path}`], { cwd: root, maxBuffer: Number.MAX_SAFE_INTEGER }),
   };
+}
+
+export type MergeBaseFile =
+  | { readonly kind: 'present'; readonly text: string }
+  | { readonly kind: 'absent' }
+  | { readonly kind: 'no-merge-base' };
+
+/** A repo-relative file as the merge-base with main holds it: absent when it is new on this branch. */
+export function fileAtMergeBase(path: string): MergeBaseFile {
+  const base = mergeBaseWithMain();
+  if (base === null) return { kind: 'no-merge-base' };
+  const at = fileAt(base, path);
+  return at.kind === 'absent' ? at : { kind: 'present', text: at.bytes.toString('utf8') };
 }

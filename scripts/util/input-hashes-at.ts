@@ -7,7 +7,7 @@ import { basename, join } from 'node:path';
 
 import { hashBytes, ignoredPaths, type FileHashes } from './build-stamp';
 import { codeIdentities } from './code-identity';
-import { gitIn } from './git-provenance';
+import { fileAt, gitIn } from './git-provenance';
 import { CODE_FILE } from './import-closure-pure';
 import { REPO_ROOT } from './paths';
 
@@ -43,18 +43,16 @@ export function inputHashesAt(commit: string, inputs: FileHashes, root: string =
     ...listed('ls-files', '--others', '--exclude-standard', '--', ...paths),
   ];
   if (changed.length === 0) return { kind: 'hashed', hashes: inputs };
-  const stored = new Set(listed('ls-tree', '-r', '--name-only', commit, '--', ...changed));
   const lfs = new Set(listed('check-attr', 'filter', '--', ...changed)
     .filter((line) => line.endsWith(LFS_ATTR)).map((line) => line.slice(0, -LFS_ATTR.length)));
   const hashes: Record<string, string | null> = { ...inputs };
   for (const path of changed) {
-    if (!stored.has(path)) {
+    const stored = fileAt(commit, path, root);
+    if (stored.kind === 'absent') {
       hashes[path] = null;
       continue;
     }
-    const blob = gitBytes(root, ['show', `${commit}:${path}`]);
-    if (blob === null) throw new Error(`git show ${commit}:${path} failed`);
-    const bytes = lfs.has(path) ? gitBytes(root, ['lfs', 'smudge', '--', path], blob) : blob;
+    const bytes = lfs.has(path) ? gitBytes(root, ['lfs', 'smudge', '--', path], stored.bytes) : stored.bytes;
     if (bytes === null) return { kind: 'unknown', reason: `${path}: its LFS content at ${commit} is not available` };
     hashes[path] = CODE_FILE.test(path) ? codeIdentityOf(path, bytes) : hashBytes(bytes);
   }

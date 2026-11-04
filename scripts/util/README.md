@@ -150,7 +150,9 @@ same thing — single-use helpers stay with their consumer.
   clone), and `fileAtMergeBase`, a file as the merge-base holds it — `absent`
   when it is new on the branch, kept apart from `no-merge-base`. The lineage
   header, perf's `gitMeta` and the two merge-base guards read it. `gitIn` is
-  its git call, in a given folder.
+  its git call, in a given folder; `fileAt(commit, path)`, a file's bytes as
+  a commit stores it, is what `fileAtMergeBase` decodes and
+  `input-hashes-at.ts` hashes.
 - `input-hashes-at.ts` (+ test) — `inputHashesAt(commit, inputs)`: an
   `inputHashes` map with each path that differs on disk from `commit`
   re-hashed from `commit`'s copy (code by identity, LFS content smudged from
