@@ -261,7 +261,7 @@ describe('the terrain view factor', () => {
   it('counts a skyline below the local horizontal as sky, not terrain', () => {
     // Open ground reads the body's own limb bound on every azimuth — negative.
     // Squaring it unclamped would light every plain like a crater floor.
-    const [, none] = reliefHorizonSines(RELIEF_BODIES.moon.elevSpanM, 1737.4);
+    const [, none] = reliefHorizonSines(RELIEF_BODIES.moon.elevSpanM, RELIEF_BODIES.moon.radiusKm);
     expect(none).toBeGreaterThan(0);
     expect(terrainViewFactor(all(-none))).toBe(0);
   });
@@ -462,10 +462,10 @@ describe('the limb bound on how far relief may light', () => {
   it('is the body that bounds it, not the slope', () => {
     // Flat ground on a body with no elevation at all sees the sun exactly to
     // the geometric terminator, however the map tilts its normal there.
-    expect(reliefHorizonSines([0, 0], 1737.4)).toEqual([0, 0]);
+    expect(reliefHorizonSines([0, 0], RELIEF_BODIES.moon.radiusKm)).toEqual([0, 0]);
     // Doubling the radius under the same relief narrows the bound.
-    const [, near] = reliefHorizonSines([-9110, 10760], 1737.4);
-    const [, far] = reliefHorizonSines([-9110, 10760], 3474.8);
+    const [, near] = reliefHorizonSines(RELIEF_BODIES.moon.elevSpanM, RELIEF_BODIES.moon.radiusKm);
+    const [, far] = reliefHorizonSines(RELIEF_BODIES.moon.elevSpanM, 2 * RELIEF_BODIES.moon.radiusKm);
     expect(far).toBeLessThan(near);
   });
 });
