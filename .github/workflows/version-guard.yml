@@ -14,8 +14,9 @@ permissions:
 # base branch's version (per RELEASING.md's per-PR bump policy) and is
 # not already a released tag. Catches the case where two concurrent PRs
 # both bump from N to N+1: whichever merges second fails this check until
-# rebased + re-bumped to N+2. Pure metadata PRs (no shipped code, no
-# bump expected) can attach the `skip-version-bump` label to opt out.
+# rebased + re-bumped to N+2. A PR that changes nothing the deployed
+# site serves (RELEASING.md's live-app consumer test) attaches the
+# `skip-version-bump` label to opt out.
 
 jobs:
   version-guard:
