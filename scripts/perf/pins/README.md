@@ -21,7 +21,7 @@ scripts/perf/pins/
 ## Taking one
 
 `pnpm run perf -- --mode dwell --scenario all --cooldown-ms 120000
---json .perf-runs/<date>/pin.json --pin scripts/perf/pins/<slug>.json`
+--frames 960 --json .perf-runs/<date>/pin.json --pin scripts/perf/pins/<slug>.json`
 
 Per `scenario|backend` the pin holds wall p50 / p90 / iqr / n /
 vsyncClamped, the GPU-stream p50 where it was sound and the compute-stream
