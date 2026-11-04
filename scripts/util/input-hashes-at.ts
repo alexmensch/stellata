@@ -4,7 +4,8 @@ import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'no
 import { tmpdir } from 'node:os';
 import { basename, join, resolve } from 'node:path';
 
-import { hashBytes, hashFile, ignoredPaths, type FileHashes } from './build-stamp';
+import { ignoredPaths, type FileHashes } from './build-stamp';
+import { hashBytes, hashFile } from './stamp-hash';
 import { codeIdentities } from './code-identity';
 import { fileAt, gitIn } from './git-provenance';
 import { CODE_FILE } from './import-closure-pure';

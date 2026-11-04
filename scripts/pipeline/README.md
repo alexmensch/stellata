@@ -65,7 +65,7 @@ back edges and the registry loop among them.
 ## Freshness — one mechanism
 
 A stamp is `{inputs, outputs}`, each a map of repo-relative path to content
-hash (`util/build-stamp.ts`, `util/build_stamp.py`). An input that is code
+hash (`util/build-stamp.ts` over `util/stamp-hash.ts`, `util/build_stamp.py`). An input that is code
 hashes as its token stream without comments or docstrings
 (`util/code-identity.ts`), so an edit that cannot change
 what a step computes leaves it fresh; an output hashes as bytes. A step is fresh when
@@ -263,7 +263,7 @@ The table's own files are in [step-table/](step-table/README.md#files).
   runs has lost the locks with it, so the runner fails that step. `lockSpecs`
   is that order; `holdStepLocks` takes a step's locks within a loaded table,
   for the runner and `record.ts` alike. A lock
-  file is `build/locks/<step>`, `:` written `-` (`util/build-stamp.ts`'s
+  file is `build/locks/<step>`, `:` written `-` (`util/stamp-path-pure.ts`'s
   `stepFileName`, which names the step's stamp too).
 - `freshness.ts` (+ test) — the one stamp test per kind: a TypeScript
   build's inputs derived now, a Python build's recorded inputs, listings and

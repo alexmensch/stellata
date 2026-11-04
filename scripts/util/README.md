@@ -66,11 +66,8 @@ same thing — single-use helpers stay with their consumer.
 - `build-stamp.ts` / `build_stamp.py` — the content-hash stamp
   ([Preprocessor idempotency](../README.md#preprocessor-idempotency)): `fileHashes` maps each file's
   repo-relative path (relative to a passed root, the runner's tree) to its
-  sha1, `null` when absent, so an input's arrival is
-  a change too; `hashBytes` is `hashFile`'s hash over bytes still in memory,
-  which the lineage header records for the files it is emitted with, and
-  `listingHash` and `../pipeline/freshness.ts`'s query and request hashes
-  are taken with. `inputHashes` is the same map with each code file hashed by
+  sha1 (`hashFile`, `stamp-hash.ts`), `null` when absent, so an input's arrival is
+  a change too. `inputHashes` is the same map with each code file hashed by
   its identity (`code-identity.ts`), and `recordedInputs` turns a Python run
   record's reads into it, keeping the first-read bytes hash of a code file
   edited mid-run, which no identity equals, so the step reads stale. A stamp (`build/stamps/<step>.json`) records two
@@ -112,6 +109,13 @@ same thing — single-use helpers stay with their consumer.
   records which network service answered, once each in first-answer order
   (`refresh_lib.TapClient` calls it); `record.ts` copies the list into a
   pull's committed record as `answeredBy`.
+- `stamp-hash.ts` (+ test) — the TypeScript stamp hash, sha1, and its only
+  spelling: `hashFile` over a file's bytes and `hashBytes` over bytes still in
+  memory, equal for equal bytes. Every stamp-side digest is taken with one of
+  them — `build-stamp.ts`'s maps and `listingHash`, a code identity, the
+  lineage header's file hashes, `../pipeline/freshness.ts`'s query and request
+  hashes. A leaf below both `build-stamp.ts` and `code-identity.ts`, since the
+  first imports the second.
 - `code-identity.ts` / `code_identity.py` (+ test) — a code input's identity,
   the one rule for every step: the sha1 of its token stream with comments
   and docstrings dropped, so a comment, docstring or layout edit stales

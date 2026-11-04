@@ -1,16 +1,14 @@
 // Content-hash freshness stamps for build steps. See scripts/util/README.md.
 
 import { spawnSync } from 'node:child_process';
-import { createHash } from 'node:crypto';
-import {
-  closeSync, existsSync, openSync, readFileSync, readSync, readdirSync, rmSync, statSync,
-} from 'node:fs';
+import { existsSync, readFileSync, readdirSync, rmSync, statSync } from 'node:fs';
 import { join, relative, resolve } from 'node:path';
 
 import { codeIdentities } from './code-identity';
 import { CODE_FILE } from './import-closure-pure';
 import { REPO_ROOT } from './paths';
 import { discardStaged, landStaged, writeStaged } from './staged-write';
+import { hashBytes, hashFile } from './stamp-hash';
 
 /** Repo-relative path → sha1 of its content, or null when the file is absent. */
 export type FileHashes = Readonly<Record<string, string | null>>;
@@ -27,27 +25,6 @@ export interface Stamp {
   readonly inputs: FileHashes;
   readonly outputs: FileHashes;
   readonly recorded?: RecordedReads;
-}
-
-const HASH_CHUNK_BYTES = 1 << 22;
-
-const stampHash = () => createHash('sha1');
-
-export function hashFile(path: string): string {
-  const hash = stampHash();
-  const buf = Buffer.allocUnsafe(HASH_CHUNK_BYTES);
-  const fd = openSync(path, 'r');
-  try {
-    for (let n; (n = readSync(fd, buf)) > 0;) hash.update(buf.subarray(0, n));
-  } finally {
-    closeSync(fd);
-  }
-  return hash.digest('hex');
-}
-
-/** `hashFile` of a file holding exactly `bytes`. */
-export function hashBytes(bytes: string | Uint8Array): string {
-  return stampHash().update(bytes).digest('hex');
 }
 
 export type Hasher = (paths: readonly string[], root?: string) => FileHashes;
