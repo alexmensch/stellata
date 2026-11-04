@@ -119,8 +119,7 @@ An unchanged input invalidates nothing, so a rebuilt `multiples.tsv` with
 identical content leaves the catalogue skipped. Forcing a rebuild:
 `run.ts <step> --force`, which reaches every build step the run selects, or
 delete the stamp. `--update-snapshots` reruns each named step even when fresh and rewrites
-the count snapshots of every step it runs. `build:data` (and its aliases
-`build:stamped` and `build:layers`) is `run.ts data`, every step on the table,
+the count snapshots of every step it runs. `build:data` is `run.ts data`, every step on the table,
 so a stale catalogue is rebuilt before the binaries read its row-index map.
 
 ## Building in a worktree

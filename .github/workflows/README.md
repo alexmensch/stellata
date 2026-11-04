@@ -110,15 +110,15 @@ fan-out of jobs beyond the bare checks:
   ground-truth corpus.
 - `build-catalog` — checked out with full history, which the SID
   ledger's append-only guard reads for its merge-base. The catalogue
-  stage with its regenerate-and-diff gates, then `build:layers` (everything `pnpm run build` does after
-  `build:catalog` except the client), then every check that reads the
+  stage with its regenerate-and-diff gates, then `build:data` (every build step on the table; on a cache hit the
+  catalogue chain reads fresh), then every check that reads the
   built artifacts, as named steps. On a pull request
   the catalogue stage (`build:classic-ids` through `build:catalog`, ~5 min)
   restores from a content-keyed cache when no input changed; key, cached
   set and the one way to get a stale hit: `scripts/ci/README.md`. The
   checks:
   - `Layer outputs committed` — `git diff --exit-code -- data/sid
-    data/molecular-clouds` after `build:layers`: a mint or event
+    data/molecular-clouds` after `build:data`: a mint or event
     `build:clouds` or `build:local-group` appended, or a change to the dust
     bake's column-check inputs `build:clouds` wrote, that the PR did not
     commit. The catalogue stage's own diff
@@ -137,7 +137,7 @@ fan-out of jobs beyond the bare checks:
     limit, warns past 80 % of it. `deploy.yml` runs the same check before
     `wrangler versions upload`.
 
-  Each check gates on `build:layers`, not on the others, so all report
+  Each check gates on `build:data`, not on the others, so all report
   when one fails. They share the build's runner rather than downloading its
   output in jobs of their own: a job costs ~45 s of checkout, LFS
   restore and install before it starts, and here that setup would sit

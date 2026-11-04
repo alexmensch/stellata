@@ -16,7 +16,7 @@ pulls with no target before (`refresh-simbad-sptype.py`,
 step (the two Horizons fetchers) names its `declareOutputs` constant as a
 TypeScript build does; a Python one lists its files, plus any families.
 `package.json` keeps one-line targets that call the runner (`build:catalog` →
-`run.ts build:catalog`, `build:stamped` and `build:seed-steps` → `run.ts
+`run.ts build:catalog`, `build:data` and `build:seed-steps` → `run.ts
 data`, every build step on the table) or `record.ts` (every manual step), and
 never names a table step's entry file; `util/step-inputs.ts`'s `stepEntries`
 reads it from `steps.ts`.

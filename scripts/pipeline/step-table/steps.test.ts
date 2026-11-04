@@ -71,7 +71,7 @@ describe('the step table', () => {
     );
   });
 
-  it('selects the whole catalogue chain upstream of build:binaries-runtime, so build:layers never reads a stale row-index map', () => {
+  it('selects the whole catalogue chain upstream of build:binaries-runtime, so build:data never reads a stale row-index map', () => {
     const selected = selectSteps(loaded.graph, ['build:binaries-runtime']);
     expect(selected.indexOf('build:catalog')).toBeLessThan(selected.indexOf('build:binaries-runtime'));
     expect(selected).toEqual(expect.arrayContaining(['build:binaries', 'build:membership', 'build:catalog']));

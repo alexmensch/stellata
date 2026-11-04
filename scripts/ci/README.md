@@ -57,7 +57,7 @@ these inputs.
 step table's runner and followed by its regenerate-and-diff gate. The runner
 also runs whatever is upstream of each, so `build:binaries` runs ahead of
 `build:membership` and `lineage:codes` ahead of `build:catalog`, and it writes
-every step's stamp, which the cached set carries to `build:layers`:
+every step's stamp, which the cached set carries to `build:data`:
 about five minutes, most of it `build:catalog`. The stage is a pure function
 of committed files, so on a pull request whose key matches a saved build the
 job restores that build's outputs and skips the stage — gates included,

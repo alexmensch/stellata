@@ -159,7 +159,7 @@ jobs:
           path: ${{ runner.temp }}/catalog-build.tar
           key: ${{ steps.catalog-key.outputs.key }}
       - id: built
-        run: pnpm run build:layers
+        run: pnpm run build:data
       # A mint or event build:clouds or build:local-group appends
       # (/docs/sid.md#45-ci-guard), or a change to the dust bake's column-check
       # inputs build:clouds writes, that the PR did not commit fails here.
