@@ -446,6 +446,22 @@ os.replace(tmp, ${JSON.stringify(at(out))})
     });
   });
 
+  it('lists a kept loop by the files it runs through, or by the after entry that declares it', async () => {
+    write('req.tsv', 'r');
+    write('sptype-req.tsv', 's');
+    const steps = [
+      tsStep('request', 'req.tsv', ['astro.tsv']),
+      pullStep('astro', 'astro.tsv', 'req.tsv'),
+      pyStep('binaries', 'sptype-req.tsv', `Path(${JSON.stringify(at('sptype-req.tsv'))}).write_text("s")`, { after: ['sptype'] } as Partial<StepEntry>),
+      pullStep('sptype', 'sptype.tsv', 'sptype-req.tsv'),
+    ];
+    const { lines } = await run(steps, ['request', 'binaries']);
+    expect(lines.filter((l) => l.startsWith('kept loop:'))).toEqual([
+      'kept loop: astro → request through astro.tsv',
+      'kept loop: sptype → binaries via an after entry',
+    ]);
+  });
+
   it.each([
     ['lists', `os.listdir(${JSON.stringify('OUTDIR')})`],
     ['probes', `from scripts.util.build_stamp import probe\nprobe(Path(${JSON.stringify('OUTFILE')}))`],
