@@ -72,7 +72,8 @@ Reading `run.ts`, running the pure tests, `await-go.sh`, and
 
 ## The protocol
 
-The deny reason carries these five steps verbatim:
+The deny reason (`perf-guard.sh`'s `protocol`) carries these five steps;
+the detail here is the README's:
 
 1. A live `pickup-epic` coordinator (the `beads` skill's coordinator-field
    lookup; that name busy, idle or waiting in `ListAgents`) gets
