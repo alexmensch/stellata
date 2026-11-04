@@ -22,19 +22,13 @@ import { BACKENDS, SCENARIO_NAMES, isScenarioName, type Backend, type ScenarioNa
  *  does not — the same contract as `PERF_SCHEMA`. */
 export const PIN_SCHEMA = 'stellata-perf/pin-3';
 
-/** Vantages the band never marks on an rAF-paced row, mapped to the reason,
- *  which the row's note carries. Under rAF pacing lg wanders as much across
- *  one dwell's quarters as it does between runs, so neither a steady nor a
- *  trending state guard says anything about whether the row is comparable —
- *  and a trending one must therefore not refuse it, since any refused row
- *  refuses the whole pin. The ceiling still applies: a vantage that wanders
- *  1.5 ms is no licence for a frame that doubled.
- *  README.md#reading---against-pin `--against-pin`. */
+/** Vantages whose rAF-paced rows the band never marks and a trending state
+ *  guard never refuses; the reason is the row's note. README.md#ungated-vantages. */
 export const RAF_UNGATED_SCENARIOS: Readonly<Partial<Record<ScenarioName, string>>> = {
   lg: 'wanders as much inside one dwell as between runs under rAF pacing',
 };
 
-export function ungatedBecause(name: ScenarioName, pacing: FramePacing): string | undefined {
+function ungatedBecause(name: ScenarioName, pacing: FramePacing): string | undefined {
   return pacing === 'raf' ? RAF_UNGATED_SCENARIOS[name] : undefined;
 }
 
