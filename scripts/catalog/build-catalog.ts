@@ -167,7 +167,7 @@ const EXPECTED_OUTLIERS = resolve(
 
 // A function of its own so the placement lines are unreachable once it returns:
 // inlined into main, they outlive the walk and the build runs out of heap.
-async function walkManifest(inputs: ReadStarsOptions, inputHashes: FileHashes) {
+async function walkManifest(inputs: ReadStarsOptions, stepInputs: FileHashes) {
   const lines: LineageLine[] = [];
   const manifestFounded = new Set<string>();
   const manifest = function* () {
@@ -184,7 +184,7 @@ async function walkManifest(inputs: ReadStarsOptions, inputHashes: FileHashes) {
   const placementEmission = await stageLineage({
     layout: LINEAGE_LAYOUT,
     spec: PLACEMENT_LINEAGE,
-    inputs: inputHashes,
+    inputs: stepInputs,
     diffed: 'placement',
     lines,
     render: (sorted) => ({ placement: stageLineageText(PLACEMENT_CODES, sorted) }),
