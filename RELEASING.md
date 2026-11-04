@@ -315,7 +315,8 @@ grants the timestamp feature and then refuses the query set resolves no
 believable durations. Every canon row on the pinned adapter gates. A
 vantage that does not
 reproduce cold-to-cold is recorded and not gated on the same footing —
-today that is lg alone, and the paragraph on the floor below says why.
+lg on an rAF-paced pin, and none on the GPU-paced M6 pin; the paragraph on the
+floor below says why.
 It keeps its GPU reading, so unlike a row with no such clock it still
 meets the ceiling.
 
