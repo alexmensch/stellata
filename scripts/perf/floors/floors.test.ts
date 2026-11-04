@@ -64,7 +64,7 @@ describe('the compute floor', () => {
     }
   });
 
-  it('caps every vantage at the whole-frame floor, so a re-floor only tightens', () => {
+  it('caps every vantage at the whole-frame floor, so no compute row is looser than a frame row', () => {
     expect(computeFloorMs('sol', 0.736)).toBe(DWELL_FLOOR_MS);
     expect(computeFloorMs('earth', 0.664)).toBe(DWELL_FLOOR_MS);
   });

@@ -116,8 +116,10 @@ steady**, the last because a trending context is refused rather than banded
 rounded up to 0.05 — so `COMPUTE_SCATTER_FLOOR_MS` holds 0.60 at sol and
 0.55 at earth, and
 the FLOOR column is what `computeFloorMs` applies after **capping at
-`DWELL_FLOOR_MS`**. The cap is what makes a re-derivation only ever tighten a
-row, and it binds at sol and earth: each is banded at 0.25 under its own
+`DWELL_FLOOR_MS`**. The cap is what holds every compute row at or under the
+whole-frame floor, however wide its own scatter runs — a re-derivation can
+loosen a row (this one took earth from 0.10 to 0.25) but never past 0.25 —
+and it binds at sol and earth: each is banded at 0.25 under its own
 measured scatter — 0.396 at sol (p10 0.437–0.833 over six runs of one frame
 path), 0.359 at earth (0.456–0.815) — so a repeat pair can mark either on
 nothing. That is the
