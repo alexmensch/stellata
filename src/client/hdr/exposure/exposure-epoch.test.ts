@@ -11,14 +11,11 @@ import {
   steppedEv,
   thresholdMagFor,
 } from './exposure-epoch';
-import { luminanceForMagnitude } from '../emission/emission-pure';
-import { L_THRESH } from '../tonemap/tonemap-pure';
-import {
-  DEFAULT_FILTER,
-  instrumentLimitMag,
-  limitMagForAperture,
-} from '../../filters/filter-state';
-import { SOFT_TAPER_MARGIN_MAG } from '../../solar-system/perceptual-magnitude';
+import { luminanceForMagnitude } from '../../../astro-core/emission/emission-pure';
+import { L_THRESH } from '../../../astro-core/tonemap/tonemap-pure';
+import { DEFAULT_FILTER } from '../../filters/filter-state';
+import { instrumentLimitMag, limitMagForAperture } from '../../../astro-core/instruments';
+import { SOFT_TAPER_MARGIN_MAG } from '../../../astro-core/perceptual-magnitude';
 
 const EYE_LIMIT_MAG = instrumentLimitMag(DEFAULT_FILTER.instrument);
 

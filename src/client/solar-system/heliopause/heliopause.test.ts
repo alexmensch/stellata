@@ -6,7 +6,7 @@ import {
 import {
   DEPTH_DIM_CLEARANCE_PC, rimDistancesForExtent,
 } from '../../fresnel-shell/shell-distance-pure';
-import { AU_PC } from '../../util/astronomy-constants';
+import { AU_PC } from '../../../astro-core/astronomy-constants';
 import { ShellRegistry } from '../../fresnel-shell/shell-registry';
 import { fakeShellMaterials } from '../../fresnel-shell/shell-materials-mock';
 

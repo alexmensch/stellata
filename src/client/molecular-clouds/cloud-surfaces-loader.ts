@@ -2,7 +2,8 @@
 // density bricks traced from the Edenhofer 2024 (/data/papers/index.md#edenhofer2024)
 // dust field, keyed by cloud sid. Format: scripts/cloud-surfaces/README.md.
 
-import { CLOUD_SURFACES_SCHEMA, checkBinaryHeader } from '../util/baker-constants';
+import { CLOUD_SURFACES_SCHEMA, checkBinaryHeader } from '../../catalog-format/baker-artifacts/baker-artifacts';
+import { PUBLIC_FILES } from '../../catalog-format/public-artifacts/public-artifacts';
 
 const HEADER_BYTES = 16;
 const DIR_ENTRY_BYTES = 44;
@@ -36,11 +37,11 @@ export interface CloudSurface {
  *  magic, version, or a size that doesn't match the directory sums. */
 export function parseCloudSurfaces(buffer: ArrayBuffer): Map<number, CloudSurface> {
   const view = new DataView(buffer);
-  checkBinaryHeader(view, CLOUD_SURFACES_SCHEMA, 'cloud-surfaces.bin');
+  checkBinaryHeader(view, CLOUD_SURFACES_SCHEMA, PUBLIC_FILES.cloudSurfaces);
   const cloudCount = view.getUint32(8, true);
   const envelopeU = view.getFloat32(12, true);
   if (!(envelopeU > 0)) {
-    throw new Error(`cloud-surfaces.bin: envelope ${envelopeU} is not positive`);
+    throw new Error(`${PUBLIC_FILES.cloudSurfaces}: envelope ${envelopeU} is not positive`);
   }
   const dirBytes = cloudCount * DIR_ENTRY_BYTES;
   let blobBytes = 0;
@@ -51,7 +52,7 @@ export function parseCloudSurfaces(buffer: ArrayBuffer): Map<number, CloudSurfac
         * view.getUint32(off + 20, true);
   }
   if (buffer.byteLength !== HEADER_BYTES + dirBytes + blobBytes) {
-    throw new Error('cloud-surfaces.bin: size mismatch (truncated or corrupt)');
+    throw new Error(`${PUBLIC_FILES.cloudSurfaces}: size mismatch (truncated or corrupt)`);
   }
   const surfaces = new Map<number, CloudSurface>();
   let blobOff = HEADER_BYTES + dirBytes;

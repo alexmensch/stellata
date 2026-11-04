@@ -3,23 +3,13 @@
 // README is too long to be worth reading." See /AGENTS.md#folder-readmes--read-before-you-touch-the-folder-update-at-commit.
 
 import { describe, expect, it } from 'vitest';
-import { readdirSync, statSync, existsSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { join, relative, resolve } from 'node:path';
+import { README_TREES, readmeTreeFolders } from './readme-trees';
 
 const ROOT = resolve(__dirname, '..');
 
-// The trees scripts/hooks/readme-guard.sh gates. A README outside them
-// costs nothing until a session deliberately opens it, so it isn't capped
-// (research/ holds frozen reports that are allowed to run long).
-const SCAN_DIRS = ['src', 'scripts', 'data', 'docs'];
-
 const MAX_LINES = 450;
-
-const EXCLUDED_DIRS = new Set([
-  'node_modules', '.git', 'dist', '.vite', '.wrangler', 'public',
-  '__pycache__', '.beads', '.claude', '.venv', 'coverage',
-  'screenshots',
-]);
 
 // Documented exceptions. An entry must say why splitting the folder is
 // the WRONG fix — the cap's default remedy is to split, so anything
@@ -60,18 +50,6 @@ function countLines(content: string): number {
 
 function lineCount(path: string): number {
   return countLines(readFileSync(path, 'utf8'));
-}
-
-function collectReadmes(dir: string, out: string[]): void {
-  for (const entry of readdirSync(dir)) {
-    if (EXCLUDED_DIRS.has(entry)) continue;
-    const full = join(dir, entry);
-    if (statSync(full).isDirectory()) {
-      collectReadmes(full, out);
-    } else if (entry === 'README.md') {
-      out.push(full);
-    }
-  }
 }
 
 function failureMessage(
@@ -128,15 +106,10 @@ describe('folder README size guard', () => {
     expect(countLines('\n')).toBe(1);
   });
 
-  it(`every README under ${SCAN_DIRS.join(', ')} is at most ${MAX_LINES} lines`, () => {
-    const readmes: string[] = [];
-    for (const scan of SCAN_DIRS) {
-      const full = resolve(ROOT, scan);
-      if (!existsSync(full)) continue;
-      collectReadmes(full, readmes);
-    }
-
-    const offenders = readmes
+  it(`every README under ${README_TREES.join(', ')} is at most ${MAX_LINES} lines`, () => {
+    const offenders = readmeTreeFolders(ROOT)
+      .map((dir) => join(dir, 'README.md'))
+      .filter((p) => existsSync(p))
       .map((p) => ({
         path: relative(ROOT, p),
         lines: lineCount(p),

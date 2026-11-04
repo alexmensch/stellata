@@ -4,15 +4,14 @@ import { existsSync, readFileSync } from 'node:fs';
 import { gunzipSync } from 'node:zlib';
 
 import { runStep } from '../../util/emit-artifacts';
-import { readArtifact } from '../../util/sources/source';
-import { LEDGER } from '../../sid/ledger-tsv';
-import { EVENTS } from '../../sid/events-tsv';
+import { readRegistryUnion } from '../../sid/registry-io';
 import { retiredSids } from '../../sid/events-pure';
 import { allocationIdentity } from '../../sid/allocation-lineage-pure';
 import { catalogRecordDesignations } from '../../sid/catalog-designations';
 import { loadCatalog, nameTable, type SearchableCatalog } from '../catalog-lookup';
 import { MEMBERSHIP_LINEAGE } from '../membership/membership-lineage-pure';
-import { LINEAGE_LAYOUT, readIdentity, readLineage, stageFile } from './lineage-io';
+import { readIdentity, readLineage } from './lineage-io';
+import { LINEAGE_LAYOUT, stageFile } from './lineage-layout-pure';
 import { LINEAGE_STAGES } from './lineage-stages';
 import { parseTraceQuery, queryTerms, traceRecords, traceText, type TraceLookups } from './trace-pure';
 
@@ -23,11 +22,17 @@ function lookups(catalog: SearchableCatalog | null): TraceLookups {
     if (catalog === null) throw new Error('a name query needs the built catalogue');
     return catalog;
   };
-  let keys: Map<number, string> | null = null;
-  let retired: Map<number, { successor: number | null }> | null = null;
+  let registry: { keys: Map<number, string>; retired: Map<number, { successor: number | null }> } | null = null;
+  const sids = () => {
+    if (registry === null) {
+      const { ledger, events } = readRegistryUnion();
+      registry = { keys: new Map(ledger.map((r) => [r.sid, r.canonicalKey])), retired: retiredSids(events) };
+    }
+    return registry;
+  };
   return {
-    canonicalKey: (sid) => (keys ??= new Map(readArtifact(LEDGER).map((r) => [r.sid, r.canonicalKey]))).get(sid) ?? null,
-    successor: (sid) => (retired ??= retiredSids(readArtifact(EVENTS))).get(sid)?.successor ?? null,
+    canonicalKey: (sid) => sids().keys.get(sid) ?? null,
+    successor: (sid) => sids().retired.get(sid)?.successor ?? null,
     names: () => nameTable(need()),
     designations: (i) => {
       const named = need();

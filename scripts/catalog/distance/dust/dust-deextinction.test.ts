@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { assembleDustGrid, type DustManifest } from './dust-deextinction';
-import { AV_PER_EZGR } from '../../../../src/client/util/baker-constants';
+import { AV_PER_EZGR } from '../../../../src/astro-core/baker-constants';
 
 // 2³ grid split into 1³ chunks (8 chunks) so the chunk-placement mapping
 // is exercised: each chunk carries a single voxel whose value encodes its

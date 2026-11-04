@@ -1,0 +1,150 @@
+import { describe, it, expect } from 'vitest';
+
+import { emptyGlieseIndex, lookupGliese, parseGlieseTsv } from './gliese-parse-pure';
+import { GLIESE } from './gliese-source';
+
+const HEADER = ['name', 'comp', 'vmag', 'n_vmag', 'r_vmag', 'bv', 'n_bv',
+  'r_bv', 'sp', 'r_sp', 'plx_mas', 'e_plx_mas', 'n_plx', 'trplx_mas',
+  'rv', 'n_rv', 'hd'].join('\t');
+
+const row = (name: string, comp: string, vmag: string, bv = '', sp = '', hd = '') =>
+  [name, comp, vmag, '', '', bv, '', '', sp, '', '', '', '', '', '', '', hd].join('\t');
+
+/** The same row with V/70A's four parallax cells filled: resulting value, its
+ *  error, the `n_plx` code stating which kind of parallax that is, and the
+ *  trigonometric value the code decides against. */
+const plxRow = (
+  name: string, plx: string, ePlx: string, nPlx: string, trPlx = '',
+) => [name, '', '9.9', '', '', '', '', '', '', '', plx, ePlx, nPlx, trPlx,
+  '', '', ''].join('\t');
+
+const tsv = (...rows: string[]) => [HEADER, ...rows].join('\n');
+
+describe('parseGlieseTsv', () => {
+  it('keys on the bare number so every V/70A prefix meets the record cell', () => {
+    // GJ 3xxx / 4xxx are printed `NN nnnn`, which is the whole reason the
+    // prefix cannot be part of the key.
+    const index = parseGlieseTsv(tsv(
+      row('Gl 699', '', '9.55', '1.74', 'M5 V'),
+      row('NN 3417', '', '13.65'),
+      row('GJ 1001', '', '12.84'),
+      row('Wo 9038', '', '11.2'),
+    ), GLIESE);
+    expect(index.rowCount).toBe(4);
+    expect(lookupGliese(index, 'Gl 699')?.vMag).toBe(9.55);
+    expect(lookupGliese(index, 'GJ 3417')?.vMag).toBe(13.65);
+    expect(lookupGliese(index, 'Gl 3417')?.vMag).toBe(13.65);
+    expect(lookupGliese(index, 'GJ 1001')?.vMag).toBe(12.84);
+  });
+
+  it('reads the HD column, null where V/70A prints none', () => {
+    const index = parseGlieseTsv(tsv(
+      row('Gl 559', 'A', '0.01', '', '', '128620'),
+      row('NN 3417', '', '13.65'),
+    ), GLIESE);
+    expect(lookupGliese(index, 'Gl 559A')?.hd).toBe(128620);
+    expect(lookupGliese(index, 'GJ 3417')?.hd).toBeNull();
+  });
+
+  it('resolves a component against the row that covers it', () => {
+    const index = parseGlieseTsv(tsv(
+      row('Gl 559', 'A', '0.01'),
+      row('Gl 559', 'B', '1.34'),
+    ), GLIESE);
+    expect(lookupGliese(index, 'Gl 559A')?.vMag).toBe(0.01);
+    expect(lookupGliese(index, 'Gl 559B')?.vMag).toBe(1.34);
+    // Bare number with two components resolves to the first row indexed.
+    expect(lookupGliese(index, 'Gl 559')?.vMag).toBe(0.01);
+  });
+
+  // Gl 165 is the shape: the catalogue never split the pair, so the record's
+  // `Gl 165A` has only the blend to read — which is why this tier is a
+  // system blend.
+  it('falls a component back to the blended system entry', () => {
+    const index = parseGlieseTsv(tsv(row('Gl 165', 'AB', '13.67')), GLIESE);
+    expect(lookupGliese(index, 'Gl 165A')?.vMag).toBe(13.67);
+    expect(lookupGliese(index, 'Gl 165B')?.vMag).toBe(13.67);
+    expect(lookupGliese(index, 'Gl 165')?.vMag).toBe(13.67);
+  });
+
+  // A per-letter alias must never displace a row that names that component
+  // outright, or the blend would shadow the resolved component's own value.
+  it('prefers an exact component row over a blend row aliasing onto it', () => {
+    const index = parseGlieseTsv(tsv(
+      row('Gl 800', 'AB', '11.0'),
+      row('Gl 800', 'A', '11.5'),
+    ), GLIESE);
+    expect(lookupGliese(index, 'Gl 800A')?.vMag).toBe(11.5);
+    expect(lookupGliese(index, 'Gl 800B')?.vMag).toBe(11.0);
+  });
+
+  it('throws on a repeated exact key rather than picking a winner', () => {
+    expect(() => parseGlieseTsv(tsv(
+      row('Gl 699', '', '9.55'),
+      row('Gl 699', '', '9.60'),
+    ), GLIESE)).toThrow(/two rows keyed 699/);
+  });
+
+  it('carries the decimal-numbered entries distinctly', () => {
+    const index = parseGlieseTsv(tsv(
+      row('Gl 165', '', '13.67'),
+      row('Gl 165.1', '', '8.67'),
+    ), GLIESE);
+    expect(lookupGliese(index, 'Gl 165.1')?.vMag).toBe(8.67);
+    expect(lookupGliese(index, 'Gl 165')?.vMag).toBe(13.67);
+  });
+
+  it('answers null for an absent or empty cell', () => {
+    const index = parseGlieseTsv(tsv(row('Gl 699', '', '9.55')), GLIESE);
+    expect(lookupGliese(index, 'Gl 9999')).toBeNull();
+    expect(lookupGliese(index, null)).toBeNull();
+    expect(lookupGliese(index, '  ')).toBeNull();
+    expect(lookupGliese(emptyGlieseIndex(), 'Gl 699')).toBeNull();
+  });
+
+  it('reads B−V and the spectral string alongside V', () => {
+    const index = parseGlieseTsv(tsv(row('Gl 699', '', '9.55', '1.74', 'M5 V')), GLIESE);
+    const r = lookupGliese(index, 'Gl 699')!;
+    expect(r.bMinusV).toBe(1.74);
+    expect(r.spectral).toBe('M5 V');
+    expect(r.name).toBe('Gl 699');
+  });
+
+  it('leaves an absent V null rather than zero', () => {
+    const index = parseGlieseTsv(tsv(row('Gl 700', '', '')), GLIESE);
+    expect(lookupGliese(index, 'Gl 700')?.vMag).toBeNull();
+  });
+});
+
+// V/70A's resulting parallax is the trigonometric one only where `n_plx` is
+// blank; every code the column carries names a photometric or spectroscopic
+// estimate. Inverting one of those and then deriving the record's own absolute
+// magnitude from the result assumes the answer, so the parser must not
+// represent it at all. /data/gliese/README.md#the-parallax-is-half-the-column-and-the-other-half-is-not-astrometry.
+describe('parseGlieseTsv / the parallax carries which kind it is', () => {
+  it('marks a blank n_plx trigonometric — the catalogue saying its resulting '
+    + 'parallax IS the trigonometric one', () => {
+    const index = parseGlieseTsv(tsv(plxRow('Gl 559', '749.0', '4.7', '', '749.0')), GLIESE);
+    expect(lookupGliese(index, 'Gl 559')?.parallax).toEqual({
+      mas: 749.0, errMas: 4.7, trigonometric: true,
+    });
+  });
+
+  it('marks every code the column carries NOT trigonometric, since each names '
+    + 'a photometric or spectroscopic estimate', () => {
+    // r spectral-type/colour · w white-dwarf photometric · s and o Strömgren
+    // · p other colours. Gl 423 (ξ UMa) is the real `r` row: resulting 96.0
+    // against its own trigonometric 130.5.
+    for (const code of ['r', 'w', 's', 'o', 'p']) {
+      const index = parseGlieseTsv(tsv(plxRow('Gl 423', '96.0', '13.0', code, '130.5')), GLIESE);
+      expect(lookupGliese(index, 'Gl 423')?.parallax, `n_plx=${code}`).toEqual({
+        mas: 96.0, errMas: 13.0, trigonometric: false,
+      });
+    }
+  });
+
+  it('leaves the whole quantity null where no parallax is printed', () => {
+    const index = parseGlieseTsv(tsv(plxRow('Gl 700', '', '', '')), GLIESE);
+    expect(lookupGliese(index, 'Gl 700')?.parallax).toBeNull();
+  });
+});

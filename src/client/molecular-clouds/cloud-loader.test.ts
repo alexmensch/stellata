@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { CLOUDS_JSON_SCHEMA } from '../util/baker-constants';
+import { CLOUDS_JSON_SCHEMA } from '../../catalog-format/baker-artifacts/baker-artifacts';
 import { MOCK_ENVELOPE_FADE_START } from './cloud-mock';
 import { loadClouds } from './cloud-loader';
 

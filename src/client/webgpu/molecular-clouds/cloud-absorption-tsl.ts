@@ -10,12 +10,12 @@ import {
   smoothstep, sqrt, varying, vec3, vec4,
 } from 'three/tsl';
 import { NodeMaterial } from 'three/webgpu';
-import { DITHER_SEED_OFFSET } from '../../hdr/tonemap/tonemap-pure';
+import { DITHER_SEED_OFFSET } from '../../../astro-core/tonemap/tonemap-pure';
 import {
   ALPHA_CAP, AV_SATURATED,
   MARCH_MIN_CHORD_T, MARCH_MIN_STEPS, TAU_PER_AV,
 } from '../../molecular-clouds/absorption/cloud-presence-pure';
-import { AV_PER_EZGR, AV_PER_NH_PC } from '../../util/baker-constants';
+import { AV_PER_EZGR, AV_PER_NH_PC } from '../../../astro-core/baker-constants';
 import { finishMrtMaterial, type MrtEmitterMaterial } from '../hdr/mrt-material';
 import { interleavedGradientNoiseTsl, lsbDitherTsl } from '../tsl/jitter-tsl';
 import type { SharedUniformNodes } from '../tsl/shared-uniform-nodes';

@@ -1,12 +1,15 @@
 // Fetches the nine planet element tables from public/ephemerides/ and installs
 // them into the ephemeris. See README.md#horizons-element-tables.
 
-import { ELEMENT_TARGETS } from '../../../../scripts/ephemerides/planet-element-roster';
-import { planetElementFilename } from '../../../../scripts/ephemerides/sync-ephemerides-pure';
-import type { PlanetElementTableFile } from '../../../../scripts/ephemerides/planet-element-schema';
-import { buildElementTable, type PlanetElementTable } from './element-table';
+import {
+  ELEMENT_TARGETS,
+  type PlanetName,
+} from '../../../catalog-format/ephemerides/planet-element-roster';
+import { planetElementFilename } from '../../../catalog-format/ephemerides/sync-ephemerides-pure';
+import type { PlanetElementTableFile } from '../../../catalog-format/ephemerides/planet-element-schema';
+import { buildElementTable, type PlanetElementTable } from '../../../catalog-format/ephemerides/element-table';
 import { installPlanetElementTables } from './ephemeris';
-import type { PlanetName } from './ephemeris';
+import { PUBLIC_FOLDERS } from '../../../catalog-format/public-artifacts/public-artifacts';
 
 /**
  * Load every table whose artifact is present and install it. A missing or
@@ -24,7 +27,7 @@ export async function loadPlanetElementTables(baseUrl: string): Promise<void> {
   await Promise.all(
     ELEMENT_TARGETS.map(async (target) => {
       try {
-        const res = await fetch(`${baseUrl}ephemerides/${planetElementFilename(target.id)}`);
+        const res = await fetch(`${baseUrl}${PUBLIC_FOLDERS.ephemerides}/${planetElementFilename(target.id)}`);
         if (!res.ok) return;
         loaded.set(target.id, buildElementTable(await res.json() as PlanetElementTableFile));
       } catch {

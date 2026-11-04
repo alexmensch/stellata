@@ -1,7 +1,7 @@
 // Printed Hipparcos V and B−V (the I/239 slice), declared.
 
 import { defineSource } from '../../util/sources/source';
-import { parseHipPhotometryTsv } from './hip-photometry-parse';
+import { parseHipPhotometryTsv } from './hip-photometry-parse-pure';
 
 export const HIP_PHOTOMETRY = defineSource({
   file: 'data/hipparcos/hip_main_vmag.tsv',

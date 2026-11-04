@@ -16,9 +16,9 @@ import {
   unresolvedBandLightAt,
   type MilkywayComponent,
   type Vec3,
-} from '../../../src/client/milkyway/column/milkyway-column-pure';
-import { shippedResolvedHoleGrid } from '../../../src/client/milkyway/calibration/resolved-fraction-pure';
-import { relativeLuminance } from '../../../src/client/hdr/tonemap/tonemap-pure';
+} from '../../../src/astro-core/milkyway/column/milkyway-column-pure';
+import { shippedResolvedHoleGrid } from '../../../src/astro-core/milkyway/calibration/resolved-fraction-pure';
+import { relativeLuminance } from '../../../src/astro-core/tonemap/tonemap-pure';
 
 export interface PlanStep {
   readonly sa: number;

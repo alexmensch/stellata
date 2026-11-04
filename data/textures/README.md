@@ -58,7 +58,7 @@ gitignored mirror.
   Saturn **74,510 → 140,390 km** (the Jónsson profile span, source
   transparency inverted), Uranus **41,600 → 51,300 km**, Neptune
   **40,900 → 63,100 km**. Uranus's and Neptune's spans are
-  `ringSpans` in `data/schema/constants.json`, which the build and
+  `ringSpans` in `src/astro-core/baker-constants.json`, which the build and
   `planet-system.ts`'s `rings` entries both read.
 
 ## Surface relief and cast shadows
@@ -240,7 +240,7 @@ is not changes hue the moment its texture lands — which reads as a texture bug
 not as a stale constant.
 
 The **eight calibrated moons are pinned to their own target** by
-`scripts/textures/texture-colours.test.ts`, at each body's existing relative
+`tests/integration/texture-colours.test.ts`, at each body's existing relative
 luminance so only hue moved. Titan was the worst offender at 16 % off its
 measured chromaticity, which is the same hand-picked orange the retired tint
 applied; Io, Europa, Callisto and Rhea were 7–9 % off.

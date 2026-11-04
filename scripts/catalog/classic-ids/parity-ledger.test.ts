@@ -9,7 +9,8 @@ import { PARKED_LEDGER } from '../distance/parallax/parked-ledger-tsv';
 import { ROUTE_DISAGREEMENTS } from './route-disagreements-tsv';
 import { SAMEAS_OVERRIDES } from '../../sid/sameas-source';
 import { artifactRows, isReadable, readArtifact } from '../../util/sources/source';
-import { LEDGER } from '../../sid/ledger-tsv';
+import { LEDGERS } from '../../sid/ledger-tsv';
+import { CATALOG_PARTITION } from '../../sid/registry-partitions-pure';
 import { INHERITED_SPINE } from '../spine/inherited-spine-tsv';
 import { BSC5 } from './bsc5-source';
 import {
@@ -45,7 +46,7 @@ describe('HD/HIP route-disagreement review', () => {
   });
 });
 
-const ledgerReadable = isReadable(LEDGER);
+const ledgerReadable = isReadable(LEDGERS[CATALOG_PARTITION]);
 const bsc5Readable = isReadable(BSC5);
 const spineReadable = isReadable(INHERITED_SPINE);
 
@@ -56,7 +57,7 @@ describe.skipIf(!ledgerReadable)('label delta vs the SID ledger', () => {
   // are the shipped shape (/docs/catalog-driver.md#4-how-hd-reaches-gaia).
   it('bridges every canonical key the merge removes from its record', () => {
     const canonical = new Set(
-      readArtifact(LEDGER).map((r) => r.canonicalKey),
+      readArtifact(LEDGERS[CATALOG_PARTITION]).map((r) => r.canonicalKey),
     );
     const bridgeEndpoints = new Set(
       SAMEAS_OVERRIDES.read().flatMap((e) => [e.a, e.b]),

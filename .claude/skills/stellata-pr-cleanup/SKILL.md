@@ -67,6 +67,10 @@ every `pr-cleanup` step has finished:
 pnpm run build:seed
 ```
 
+Never pipe its output (`| tail` reports `tail`'s exit code, not the build's).
+A landing coordinated by `pickup-epic` skips this section: the coordinator
+runs it once before its next launch instead.
+
 `build:seed` builds only the steps worktrees are seeded from, and
 stops a build another landing already started in the main checkout, so
 concurrent `/pr-cleanup` runs never build side by side ([Seeding builds](/scripts/README.md#seeding-builds--buildseed)).

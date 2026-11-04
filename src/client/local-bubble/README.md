@@ -17,7 +17,7 @@ its pick surface) — see [Boundary shells as focus targets](../fresnel-shell/RE
 - `local-bubble-loader.ts` — `parseLocalBubble(buf)` / `loadLocalBubble(url)`
   for `public/local-bubble.bin` (magic `LBUB`; format in
   `scripts/local-bubble/README.md`). The parse throws unless the magic and
-  version match `LOCAL_BUBBLE_SCHEMA` (`data/schema/constants.json`, which the
+  version match `LOCAL_BUBBLE_SCHEMA` (`src/astro-core/baker-constants.json`, which the
   Python build writes from too). `load*` resolves null when the asset
   is absent — the layer is optional. The parse also surfaces the header's
   volume `centroidAbs` (the focus-target center) and computes `extentPc`

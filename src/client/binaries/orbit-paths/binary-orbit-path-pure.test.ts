@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { AU_PC } from '../../util/astronomy-constants';
+import { AU_PC } from '../../../astro-core/astronomy-constants';
 import { FLAG_HAS_ORBIT, NO_PARENT, type BinariesData } from '../binaries-loader';
 import { type OrbitalElements } from '../binary-orbit-pure';
 import { makeRelation } from '../binary-relation-fixture';

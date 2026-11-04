@@ -9,7 +9,8 @@ import { fileURLToPath } from 'node:url';
 import { describe, it, expect } from 'vitest';
 
 import { DUST_GRID } from '../catalog/distance/dust/dust-grid-source';
-import { AV_PER_EZGR, DUST_MANIFEST_SCHEMA } from '../../src/client/util/baker-constants';
+import { AV_PER_EZGR } from '../../src/astro-core/baker-constants';
+import { DUST_MANIFEST_SCHEMA } from '../../src/catalog-format/baker-artifacts/baker-artifacts';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const MANIFEST = resolve(ROOT, DUST_GRID.file);

@@ -1,5 +1,7 @@
 import { readTslSource } from '../webgpu/tsl/tsl-source-fixture';
 import { describe, it, expect } from 'vitest';
+import { planetApparentMagnitude } from '../../astro-core/perceptual-magnitude';
+import { AU_PC, KM_PC, SUN_ABSMAG_V } from '../../astro-core/astronomy-constants';
 import {
   EARTH_PHASE,
   JUPITER_PHASE,
@@ -513,5 +515,23 @@ describe('illuminatedFraction mirrors the shader', () => {
       new URL('../webgpu/solar-system/planet-glare-tsl.ts', import.meta.url));
     expect(glare).toContain('const illumFrac = cosA.add(1.0).mul(0.5);');
     expect(glare).toContain('float(1.0).sub(illumFrac)');
+  });
+});
+
+describe('planetApparentMagnitude over the Moon\'s phase curve', () => {
+  it('the Moon runs the whole lunation on its own curve, anchor untouched', () => {
+    // End-to-end through MOON_PHASE rather than a hand-passed φ: the
+    // −12.74 anchor survives because the law has c0 = 0, and the half
+    // Moon lands 1.36 mag fainter than the Lambert sphere it used to
+    // render as.
+    const moonMag = (phi: number): number => planetApparentMagnitude(
+      SUN_ABSMAG_V, 384_400 * KM_PC, AU_PC, 0.12, 1737.4 * KM_PC, phi,
+    );
+    expect(moonMag(empiricalPhaseFactor(MOON_PHASE, 0))).toBeCloseTo(-12.7, 1);
+
+    const half = Math.PI / 2;
+    const onCurve = moonMag(empiricalPhaseFactor(MOON_PHASE, half));
+    const onLambert = moonMag(lambertianPhaseFactor(half));
+    expect(onCurve - onLambert).toBeCloseTo(1.36, 2);
   });
 });

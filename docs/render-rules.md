@@ -101,7 +101,7 @@ band keyed on where Sol is:
    `emitterPutsInkOnScreen`, i.e. its peak surface brightness is more
    than `TOE_BLACK_MAG` past the live extended threshold
    (`extendedThresholdSbTsl`, 22.0 mag/arcsec² at the shipped
-   instrument, [Extended sources](/src/client/hdr/emission/README.md#extended-sources--two-solid-angles-one-write-tail)). Skipping an
+   instrument, [Extended sources](/src/astro-core/emission/README.md#extended-sources--two-solid-angles-one-write-tail)). Skipping an
    emitter on this test removes its share from the exposure statistic,
    which eases the cut, which brings the emitter back — so the skip is
    admissible only under two rules: the emitter must be invisible at the
@@ -377,21 +377,27 @@ at the canonical vantages is what explains a row that moved.
   (`debug/frame-cost/README.md` owns the gates `noiseMs` / `bracketMs`
   and how to read a row; `debug/frame-cost/passes/README.md` owns the
   roster).
-- **The whole-frame comparison reads the GPU-stream median, not wall.**
-  Wall time at a canon vantage is quantised to the display's refresh
-  interval: the median sits on a multiple of it whatever the frame costs,
-  so it resolves nothing under one interval and jumps a whole one when it
-  moves. The pin gates on the GPU-stream p50 where the backend supplies
-  one and records wall beside it ([Perf pin](/RELEASING.md#perf-pin)). This is the
-  frame's own span, not a per-pass slot — attribution is still a
-  differential.
+- **The whole-frame comparison reads GPU work at a fixed clock, and CPU
+  work beside it, never one frame time that conflates them.** Under the
+  dwell's default GPU pacing the GPU never idles and its clock holds max, so
+  the frame row gates on throughput (wall ÷ frames), the main thread's time
+  per tick is its own `|cpu` row, and a context whose CPU share passes 80 %
+  is refused as CPU-bound
+  ([CPU and GPU, apart](/scripts/perf/dwell/README.md#cpu-and-gpu-apart)).
+  Paced on rAF instead, an idle GPU's clock falls until the frame fills the
+  interval, so the GPU-stream p50 gates there and reads work over a clock
+  the governor chose ([Pacing](/scripts/perf/dwell/README.md#pacing)), and
+  wall time is quantised to the refresh interval — its median sits on a
+  multiple of it whatever the frame costs. Either way this is the frame's
+  own span, not a per-pass slot — attribution is still a differential
+  ([Perf pin](/RELEASING.md#perf-pin)).
 - **`gpu.frame` is the render passes; compute passes are their own row.**
   three keeps a timestamp pool per pass type, and `gpu.frame` sums the
   render pool alone — the meaning every pin row and archived dwell carries.
   The compute pool (the star compaction every frame, the extinction
   prepass on recompute frames) is resolved in the same cycle and lands as
   `gpu.compute` / `compute-p10`, gated by the pin under its own key and on
-  its vantage's own floor, tighter than the frame's at four of the five —
+  its vantage's own floor, tighter than the frame's at three of the five —
   the p10 and not the median, because that stream holds two overlapping
   modes whose share varies between runs of identical code
   ([The compute row](/scripts/perf/pins/README.md#the-compute-row)). Never
@@ -400,8 +406,9 @@ at the canonical vantages is what explains a row that moved.
   the frame falling and the compute row rising, and only the pair says
   whether the frame got cheaper. A vantage whose reading does not reproduce between cold
   runs is recorded and left to the ceiling instead; `lg` is that vantage
-  today, which is what makes the Local Group the one layer a pin table
-  cannot price.
+  on an rAF-paced pin, which makes the Local Group the one layer such a pin
+  table cannot price. GPU-paced, lg reproduces and its row gates
+  ([Ungated vantages](/scripts/perf/pins/README.md#ungated-vantages)).
 - **Absolute numbers do not reproduce; ratios at the same buffer and the
   same clock do.** The frame is linear in pixels, so `bufferMpx` is
   stamped on every row and only same-buffer tables compare. `method`

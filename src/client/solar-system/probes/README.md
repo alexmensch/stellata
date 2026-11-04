@@ -102,7 +102,7 @@ A metre-scale spacecraft has no angular diameter to resolve and no
 reflected-light magnitude that could cross the slider, so the marker is
 deliberately **not** a body: `PROBE_MARKER_PX` is a fixed CSS-pixel size at
 every range, drawn as a diamond so it doesn't read as one more star point.
-The reflected-light model in `../perceptual-magnitude.ts` is not reachable
+The reflected-light model in `/src/astro-core/perceptual-magnitude.ts` is not reachable
 from here on purpose.
 
 - **Own instance space.** The domain index IS the instance index — the

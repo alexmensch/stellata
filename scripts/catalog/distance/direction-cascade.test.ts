@@ -42,7 +42,7 @@ import {
   equatorialTangentBasis,
   unitVectorFromRaDec,
   type UnitVector,
-} from '../../../src/client/util/equatorial-basis';
+} from '../../../src/astro-core/equatorial-basis';
 
 const SIMBAD_REF = sourceRowRef(SIMBAD_VALUES, 1);
 

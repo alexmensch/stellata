@@ -34,7 +34,7 @@ client may ever attach (`star`, `planet`, `cloud`, `lg`, `shell`,
 
 `resolve(sid)` first canonicalises through the **successor map**
 (retired sid → successor sid, [§ 9.4](/docs/sid.md#94-migration-semantics--exact-table)) — built at catalog
-build time from the `merge` events in `data/sid/events.tsv` (each
+build time from the `merge` events in every `data/sid/events*.tsv` registry partition (each
 still-retired sid whose last removal is a merge maps to its
 `successor`), shipped as the catalog manifest's `sidSuccessors`
 side-field, and passed to the constructor. Chains are followed to their

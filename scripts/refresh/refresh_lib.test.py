@@ -4,11 +4,14 @@ in-memory backends). Run via `python3 scripts/refresh/refresh_lib.test.py`."""
 
 from __future__ import annotations
 
+import contextlib
+import io
 import json
 import sys
 import tempfile
 import time
 import unittest
+from unittest import mock
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -539,62 +542,6 @@ class SchemaTests(unittest.TestCase):
         rl.validate_schema(table, {"tyc_object": str, "tyc_unicode": str})
 
 
-# ─── is_up_to_date ────────────────────────────────────────────────────
-
-class IdempotencyTests(unittest.TestCase):
-    def setUp(self) -> None:
-        self.dir = tempfile.TemporaryDirectory()
-        self.path = Path(self.dir.name)
-        self.addCleanup(self.dir.cleanup)
-
-    def _touch(self, name: str, mtime: float | None = None) -> Path:
-        p = self.path / name
-        p.write_text("x")
-        if mtime is not None:
-            import os
-            os.utime(p, (mtime, mtime))
-        return p
-
-    def test_false_when_output_missing(self) -> None:
-        src = self._touch("src.py", mtime=1000.0)
-        self.assertFalse(rl.is_up_to_date(self.path / "missing.tsv", [src]))
-
-    def test_true_when_output_newer(self) -> None:
-        # Output mtime must clear refresh_lib's own mtime since it's auto-
-        # included in the comparison — use future-from-now anchors so the
-        # test is invariant to when refresh_lib was last edited.
-        lib_mtime = rl._LIB_PATH.stat().st_mtime
-        src = self._touch("src.py", mtime=lib_mtime - 100.0)
-        out = self._touch("out.tsv", mtime=lib_mtime + 100.0)
-        self.assertTrue(rl.is_up_to_date(out, [src]))
-
-    def test_false_when_source_newer(self) -> None:
-        lib_mtime = rl._LIB_PATH.stat().st_mtime
-        out = self._touch("out.tsv", mtime=lib_mtime + 100.0)
-        src = self._touch("src.py", mtime=lib_mtime + 200.0)
-        self.assertFalse(rl.is_up_to_date(out, [src]))
-
-    def test_false_when_source_missing(self) -> None:
-        lib_mtime = rl._LIB_PATH.stat().st_mtime
-        out = self._touch("out.tsv", mtime=lib_mtime + 100.0)
-        self.assertFalse(rl.is_up_to_date(out, [self.path / "missing.py"]))
-
-    def test_false_when_refresh_lib_newer_than_output(self) -> None:
-        # is_up_to_date folds refresh_lib's own mtime into the comparison so
-        # a bug fix in write_tsv / coerce_masked / _dtype_matches invalidates
-        # every cached TSV without requiring each caller to pass
-        # Path(refresh_lib.__file__) explicitly.
-        import os
-        out = self._touch("out.tsv", mtime=1000.0)
-        src = self._touch("src.py", mtime=500.0)
-        # Backdate the output below refresh_lib's mtime — the auto-inclusion
-        # should make is_up_to_date return False even though the caller's
-        # explicit `sources` list is older than the output.
-        lib_mtime = rl._LIB_PATH.stat().st_mtime
-        os.utime(out, (lib_mtime - 1.0, lib_mtime - 1.0))
-        self.assertFalse(rl.is_up_to_date(out, [src]))
-
-
 # ─── TapClient ────────────────────────────────────────────────────────
 
 class TapClientTests(unittest.TestCase):
@@ -648,6 +595,19 @@ class TapClientTests(unittest.TestCase):
         client.run("SELECT 2")
         self.assertEqual(calls, ["esa", "esa", "cds", "cds"])
         self.assertEqual([b.name for b in client.backends], ["cds", "esa"])
+
+    def test_reports_the_answering_backend_and_states_the_service_order(self) -> None:
+        def esa(_q: str) -> None:
+            raise rl.TransientError("503")
+        client = rl.TapClient(
+            [rl.TapBackend("esa", esa), rl.TapBackend("cds", lambda _q: "ok")],
+            retry_kwargs={**self._silent_retry(), "max_attempts": 1},
+        )
+        self.assertEqual(client.services, ["esa", "cds"])
+        reported: list[str] = []
+        with mock.patch.object(rl, "report_service", reported.append):
+            client.run("SELECT 1")
+        self.assertEqual(reported, ["cds"])
 
     def test_raises_when_all_backends_transient(self) -> None:
         def esa(_q: str) -> None:
@@ -715,6 +675,36 @@ class TapClientTests(unittest.TestCase):
             rl.TapClient()
         self.assertFalse(hasattr(rl, "esa_backend"))
         self.assertFalse(hasattr(rl, "_default_backends"))
+
+
+# ─── describe ─────────────────────────────────────────────────────────
+
+class DescribeTests(unittest.TestCase):
+    def test_states_only_what_was_given(self) -> None:
+        self.assertEqual(rl.description("SELECT 1", ["CDS"]), {"query": "SELECT 1", "services": ["CDS"]})
+
+    def test_states_a_derived_request_and_its_source_repo_relative(self) -> None:
+        described = rl.description(
+            "Q", ["SIMBAD-CDS"], release="R", request=iter(["a", "b"]),
+            request_from=[rl.MEMBERSHIP_MANIFEST],
+        )
+        self.assertEqual(described, {
+            "query": "Q", "services": ["SIMBAD-CDS"], "release": "R", "request": ["a", "b"],
+            "requestFrom": ["data/membership/membership-manifest.tsv"],
+        })
+
+    def test_pull_main_describes_without_running(self) -> None:
+        ran: list[int] = []
+        out = io.StringIO()
+        with mock.patch.object(sys, "argv", ["x.py", "--describe"]), contextlib.redirect_stdout(out):
+            rl.pull_main(lambda: ran.append(1), lambda: {"query": "Q", "services": ["S"]})
+        self.assertEqual(ran, [])
+        self.assertEqual(json.loads(out.getvalue()), {"query": "Q", "services": ["S"]})
+
+    def test_pull_main_exits_with_the_run_status(self) -> None:
+        with mock.patch.object(sys, "argv", ["x.py"]), self.assertRaises(SystemExit) as exit_:
+            rl.pull_main(lambda: 3, lambda: {})
+        self.assertEqual(exit_.exception.code, 3)
 
 
 # ─── Gaia sync client ─────────────────────────────────────────────────
@@ -1012,9 +1002,6 @@ class WriteTsvTests(unittest.TestCase):
         self.assertTrue(target.exists())
 
     def test_mid_write_failure_leaves_existing_output_intact(self) -> None:
-        # A coerce raising / KeyboardInterrupt / OOM mid-row used to leave a
-        # partially-written TSV whose mtime was newer than the source, so
-        # the next is_up_to_date returned True against silently broken data.
         # The atomic write contract: the committed output is either the
         # last good version or absent, never half-written.
         self.path.write_text("OLD\nrow1\trow2\n")
@@ -1029,8 +1016,8 @@ class WriteTsvTests(unittest.TestCase):
         with self.assertRaises(RuntimeError):
             rl.write_tsv(explode(), columns=["a", "b"], output=self.path)
         self.assertEqual(self.path.read_text(), original)
-        # The .tmp sibling must be cleaned up; otherwise a future
-        # is_up_to_date probe (or an `ls data/` audit) sees stale partial.
+        # The .tmp sibling must be cleaned up, or an `ls data/` audit sees
+        # a stale partial.
         self.assertFalse(
             self.path.with_suffix(self.path.suffix + ".tmp").exists()
         )

@@ -7,7 +7,7 @@ import {
   splitDataBlock,
 } from '../util/horizons-response';
 
-import { PROBE_SAMPLE_STRIDE } from './probe-trajectory-schema';
+import { PROBE_SAMPLE_STRIDE } from '../../src/catalog-format/probes/probe-trajectory-schema';
 
 export type HorizonsVectorsHeader = {
   targetBody: string;

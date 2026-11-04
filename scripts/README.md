@@ -11,10 +11,10 @@ cross-script policy and pointers.
   `data/binaries/multiples.tsv` ride catalog.bin as first-class
   records with `FLAG_BINARY_COMPANION_ONLY` set). The chunks are a
   byte-range split of the v9 binary that keeps every deployed asset
-  under Cloudflare Workers' 25 MiB limit; see [Binary catalog format](catalog/record/README.md#binary-catalog-format-publiccatalogbini--manifest).
+  under Cloudflare Workers' 25 MiB limit; see [Binary catalog format](../src/catalog-format/record/README.md#binary-catalog-format-publiccatalogbini--manifest).
   Also emits
   `public/constellation-boundaries.json` (IAU boundary arcs precessed to
-  ICRS + the fade-quantile table; `catalog/boundaries/README.md`).
+  ICRS + the fade-quantile table; `/src/catalog-format/boundaries/README.md`).
 - `binaries/` — binary-system pipeline → `data/binaries/multiples.tsv`
   (two rows per physical pair, with sep+PA+epoch+Δmag columns) and
   `public/binaries.bin` (runtime artifact, one record per pair, for
@@ -38,17 +38,18 @@ cross-script policy and pointers.
   (`pnpm run measure:band-resolved`): the
   [Leinert 1998](/data/papers/index.md#leinert1998) cap rows and the
   resolution-hole table, written as one generated module into
-  `src/client/milkyway/calibration/`. Not part of the build.
+  `src/astro-core/milkyway/calibration/`. Not part of the build.
 - `release/` — `deploy.yml`'s release steps: checks each uploaded version
   on its preview URL before it takes traffic, then plans and cuts one tag
   + GitHub release per
   version bump in a pushed range (a merged stack is one push carrying
   several). Not part of `pnpm run build`.
 - `sid/` — SID registry tools: the allocation `build:catalog` runs over its
-  records (the writer of `data/sid/ledger.tsv` and `events.tsv`, with the
-  clouds and Local Group stamps), DR-churn risk-set export, DR
+  records (the writer of the catalogue's registry partition,
+  `data/sid/ledger.tsv` and `events.tsv`; `build:local-group` and the
+  clouds stamp write their own), DR-churn risk-set export, DR
   reconciliation classifier, and `sid:stamp` (allocates and stamps sids onto
-  clouds.json / local-group.json). See `docs/sid.md`.
+  clouds.json). See `docs/sid.md`.
 - `perf/` — the human-armed headless perf runner (`pnpm run perf`):
   drives `debug.priceFrame()` in Playwright Chromium at the canon
   vantages and prints the differential table. Clocks only, never a
@@ -65,8 +66,8 @@ cross-script policy and pointers.
 - `ci/` — helpers only `.github/workflows/` runs: the catalogue build
   cache's key.
 - `pipeline/` — the step table and runner design: one model of which step
-  writes which file, in what order, and when each is stale. The sections
-  below describe today's gates until the runner replaces them.
+  writes which file, in what order, and when each is stale. The catalogue
+  chain runs through its runner; the mtime-gated steps follow.
 - `clouds/`, `cloud-surfaces/`, `dust/`, `local-group/`,
   `local-bubble/`, `textures/` — per-layer build helpers.
   `local-bubble/` turns the
@@ -94,27 +95,32 @@ the PR, not the post-merge deploy.
 
 ## Preprocessor idempotency
 
-`build:binaries`, `build:catalog` and `build:binaries-runtime` — together
-`build:stamped` — skip on a **content-hash stamp**, never on mtimes. Each hashes every input it reads —
-data tables, the SID registry, and every module it imports: for the Python
-steps, each `scripts/` module the process imported; for `build:catalog`, the
-esbuild import closure (`src/client/` modules included) plus the snapshots
-beside it, the same set CI's cache key reads
-([The catalogue build cache](ci/README.md#the-catalogue-build-cache)) — and skips when that set matches `build/stamps/<step>.json` and
-every output the stamp recorded still hashes the same. The stamp is cleared
-before the build writes anything and rewritten only once the build's snapshot
-asserts pass, so a failed or interrupted build always reruns. For
-`build:catalog` the stamp's outputs are exactly the set `emitArtifacts` landed
-([`util/README.md`](util/README.md)), the committed `parked-ledger.tsv` and
-`simbad_sourced_distances.tsv` included. Hashing the
-~1.1 GB input set plus ~100 MB of outputs costs about a second on a warm page
-cache. Helpers: `util/build-stamp.ts`,
-`util/build_stamp.py`.
+The catalogue chain — `build:binaries`, `lineage:codes`, the four generators
+(`build:classic-ids`, `build:wgsn`, `build:astrometry-request`,
+`build:membership`), `build:catalog` and `build:binaries-runtime` — runs
+through the step table's runner ([pipeline/README.md](pipeline/README.md)):
+each `package.json` target is `run.ts <step>`, which runs that step and every
+step upstream of it in data-flow order, and skips each on a **content-hash
+stamp**, never on mtimes. A stamp (`build/stamps/<step>.json`, written by the
+runner alone) records every input the step read — for a TypeScript step its
+esbuild import closure (`src/client/` modules included), the snapshots beside
+it and every declared source it reads, the same set CI's cache key reads
+([The catalogue build cache](ci/README.md#the-catalogue-build-cache)); for a
+Python step every repo file the process opened, recorded as it ran — and every
+output it wrote, and the step is fresh while both re-hash the same. The stamp
+is cleared before the step runs and written only once it exits 0 with its
+declared outputs in place, so a failed or interrupted build always reruns.
+Unstamped families (the lineage baseline and diff) are never recorded. A
+no-op `build:stamped` (all eight fresh) takes about two seconds on a warm page
+cache.
 
 An unchanged input invalidates nothing, so a rebuilt `multiples.tsv` with
-identical content leaves the catalogue skipped. Forcing a rebuild: `--force`
-on either Python step, `UPDATE_BUILD_COUNTS=1` on `build:catalog`, or delete
-the stamp.
+identical content leaves the catalogue skipped. Forcing a rebuild:
+`run.ts <step> --force`, which reaches every build step the run selects, or
+delete the stamp. `--update-snapshots` reruns each named step even when fresh and rewrites
+the count snapshots of every step it runs. `build:stamped` is `run.ts data`, every step on the table; `build:layers` is
+`build:binaries-runtime` and the mtime-gated steps, so a stale catalogue is
+rebuilt before the binaries read its row-index map.
 
 `build:clouds`, `build:local-group` and the `*-sync` mirrors — together
 `build:mtime-gated` — are mtime-gated (size + mtime for the mirrors) and cost
@@ -137,12 +143,13 @@ the merge-base ([Run-to-run diff](catalog/lineage/README.md#run-to-run-diff)).
 Every listed file is an output of a step `build:seed` runs
 ([Seeding builds](#seeding-builds--buildseed)), so refreshing the main
 checkout's seed is that one command. `worktree-seed.test.ts` holds each
-pattern to a declared output or stamp of one of those steps — a TypeScript
-step's `declareOutputs` constant, a Python step's answer to `--outputs` — and
-the converse: every such file or stamp under `public/` or `build/` is listed.
-An output family needs no line of its own: the catalogue chunks have one, and
-the lineage baseline copies and diff are never seeded, since a worktree pins
-its own baseline. A worktree made any other way
+pattern to a declared output or stamp of one of those steps, read from the
+step table, and the converse: every such file, stamped output family or stamp under `public/`
+or `build/` is listed, so nothing a stamp records can be missing from a fresh
+worktree. The lineage baseline copies and diff are declared unstamped
+(`stamped: false`) and never seeded, since a worktree pins its own baseline; a
+stamp never records them, so their absence leaves the step fresh. A worktree
+made any other way
 (`git worktree add`) builds from scratch.
 
 The private paper-store link is not in that list — the harness's copy skips
@@ -159,10 +166,10 @@ main checkout — not a perf run, not an artifact-backed suite, not anything.
 **Never symlink the main checkout's `public/` into a worktree.** Any build in
 the worktree then writes *through* the symlinks into the main checkout's
 `public/`, leaving it with artifacts that disagree with each other.
-`tests/artifact-freshness.test.ts` exists to catch exactly that mismatch.
-**Copy** artifacts, never link them. Before running `build:catalog` or
-`build:binaries-runtime` in a worktree, confirm nothing is a symlink:
-`find public -maxdepth 1 -type l`.
+**Copy** artifacts, never link them. The runner refuses to load the step table
+when a build step's declared output, or a folder above it, is a symlink; the
+mtime-gated steps are not on it yet, and `tests/artifact-freshness.test.ts`
+catches the mismatch a write through a link leaves.
 
 A clobbered main checkout repairs itself: its stamps record the outputs it
 built, so the next build there sees them rewritten and rebuilds.
@@ -171,11 +178,10 @@ built, so the next build there sees them rewritten and rebuilds.
 
 `pnpm run build:seed` (`build-seed.sh`) runs `build:seed-steps` — exactly the
 steps whose outputs seed a new worktree ([Building in a worktree](#building-in-a-worktree)) — with one
-build per checkout. That is `build:binaries`, `build:membership`, then
-`build:stamped`, whose `build:binaries` finds its stamp current and skips:
-membership reads `multiples.tsv` and `build:catalog` reads the manifest it
-writes, and running it keeps the main checkout holding the lineage baseline a
-worktree diffs against. Each run registers `build/build-seed/<start ns>.<pid>`
+build per checkout. That is `run.ts data`, every build step on the table,
+`build:membership` included, which keeps the main checkout holding the
+lineage baseline a worktree diffs against.
+Each run registers `build/build-seed/<start ns>.<pid>`
 before looking at the others, then stops every older live run and waits for it
 to exit, or exits at once if a newer one is registered; so the newest run
 builds and no two ever build at the same time, however many start together. A
@@ -183,15 +189,14 @@ stopped run takes its build's whole process group down (TERM, then KILL after
 30 s) before exiting, and an entry whose process is gone is deleted on sight.
 `scripts/build-seed.test.ts` pins all of this. The superseded run exits 0 with
 `superseded by a newer build:seed`; any other exit is the build's own status.
-Nothing is forced — the stamped step that was interrupted has no stamp and
-reruns, every step that finished skips ([Preprocessor idempotency](#preprocessor-idempotency)).
-`build:membership` has no stamp, so it reruns every time (about 20 s); its
-outputs land all or none (`emitArtifacts`), so an interrupted run leaves the
-previous set whole. On a clean main it rewrites the committed
-`data/membership/` and `label_flips.tsv` byte-identically, since CI fails on
-any diff there; on a dirty main its lineage header records the edits and a
-branch's diff refuses that baseline
+Nothing is forced — the step that was interrupted has no stamp and reruns,
+every step that finished skips ([Preprocessor idempotency](#preprocessor-idempotency)).
+A TypeScript step's outputs land all or none (`emitArtifacts`), so an
+interrupted run leaves the previous set whole. On a dirty main membership's
+lineage header records the edits and a branch's diff refuses that baseline
 ([Run-to-run diff](catalog/lineage/README.md#run-to-run-diff)). The
 mtime-gated steps and the client are never run, so none is ever interrupted
-mid-write. Only `build:seed` runs take part: a plain `pnpm run build` or
-`pnpm run dev` in the same checkout is neither stopped nor seen.
+mid-write. Newest-run-wins covers `build:seed` runs only; a plain
+`pnpm run build` or `pnpm run dev` in the same checkout is never stopped, and
+the runner's per-step locks serialise it with a seed run step by step
+([The runner](pipeline/README.md#the-runner--runts)).

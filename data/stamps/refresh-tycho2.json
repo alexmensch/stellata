@@ -1,0 +1,15 @@
+{
+  "inputs": {},
+  "outputs": {
+    "data/tycho2/tycho2_main.tsv": "7cb692d6e6e7a701b83a7fd48ce97fb02b1c61fa",
+    "data/tycho2/tycho2_suppl1.tsv": "de0c1700d005fea964317facfc18204987833b69"
+  },
+  "query": "a27bf916066b25b975ddc774553ac68cb873b42a",
+  "answeredBy": [],
+  "release": "VizieR I/259/tyc2, VizieR I/259/suppl_1",
+  "request": "f96f93bb5fc5c9d3a16126a699aa75aea567ac78",
+  "requestFrom": [
+    "data/membership/membership-manifest.tsv",
+    "data/classic-ids/tyc2_hd.tsv"
+  ]
+}

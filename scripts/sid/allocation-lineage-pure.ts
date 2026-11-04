@@ -1,10 +1,11 @@
 // SID allocation as a lineage stage: its reason codes, live and historical, the one serialiser over its outcomes, and its key -> SID identity file. See README.md#sid-events.
 
-import type { StageLineageSpec } from '../catalog/lineage/lineage-io';
+import type { StageLineageSpec } from '../catalog/lineage/lineage-layout-pure';
 import { compareUtf8, paramsText, type LineageParams, type LineageRow } from '../catalog/lineage/lineage-row-pure';
 import { LIVE, stageCodes, type CodeDeclaration, type CodeEffect } from '../catalog/lineage/reason-codes-pure';
 import { readTable, type TableSpec } from '../util/tsv/table-pure';
 import type { Allocation, ObjectOutcome, SidObject } from './allocate-pure';
+import { PUBLIC_FILES } from '../../src/catalog-format/public-artifacts/public-artifacts';
 
 export const ALLOCATION_STAGE = 'allocation';
 
@@ -30,8 +31,8 @@ export const ALLOCATION_CODES = stageCodes(ALLOCATION_STAGE, {
   parked: live('park', 'A SID no object keeps any more stays in service, absent from this build, under its upstream decision\'s code.'),
   'mint.sol-list': live('none', 'The object is a row of data/sid/sol-objects.tsv.'),
   'mint.shell-list': live('none', 'The object is a row of data/sid/shell-objects.tsv.'),
-  'mint.cloud': live('none', 'The object is a cloud clouds.json carries.'),
-  'mint.local-group': live('none', 'The object is a galaxy local-group.json carries.'),
+  'mint.cloud': live('none', `The object is a cloud ${PUBLIC_FILES.clouds} carries.`),
+  'mint.local-group': live('none', `The object is a galaxy ${PUBLIC_FILES.localGroup} carries.`),
   'legacy.optical-cpm-test': historical('retire', 'optical companion rejected by the Stage 5 WDS epoch-baseline CPM test (background star, not a physical companion)'),
   'legacy.component-dissolved': historical('retire', 'A component the July 2026 re-pulls and promotion gates stopped emitting or promoting (re-paired, subsumed into an unpromoted aggregate, or its system no longer emitted), leaving no successor key.'),
   'legacy.component-parked': historical('retire', 'A component whose record left the build while SIMBAD xids still name its own Gaia source: a presence gap filed as a retirement.'),

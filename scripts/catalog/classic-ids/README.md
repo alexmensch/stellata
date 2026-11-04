@@ -50,7 +50,7 @@ scripts/catalog/classic-ids/
                                   curated IV/27A corrections and their
                                   application. The gate's
                                   HIP → printed-V slice is
-                                  ../photometry/hip-photometry-parse.ts, shared
+                                  ../photometry/hip-photometry-parse-pure.ts, shared
                                   with the V cascade's bright tier. CNS5's row
                                   also carries the astrometry half of the
                                   slice, which `cns5AstrometryByGj` keys on the
@@ -129,8 +129,7 @@ scripts/catalog/classic-ids/
                                   one (label-merge/README.md#what-a-freed-number-costs).
   classic-id-overlay-expected.json
                                   Pinned count snapshot. Refresh with
-                                  UPDATE_BUILD_COUNTS=1 (same env var
-                                  build-catalog.ts uses).
+                                  --update-snapshots.
 ```
 
 ## Join routes
@@ -235,7 +234,7 @@ Bayer and 110 Flamsteed** designation groups, and nearly all of them are a
 close pair whose components the survey photographed separately. That is not a
 defect: the naming ladder appends the component letter, so 40 Eri B, χ Aql B
 and β Lyr B compose distinct labels from their primaries'
-([Two callers, one composer](../naming/README.md#two-callers-one-composer)).
+([Two callers, one composer](/src/catalog-format/naming/README.md#two-callers-one-composer)).
 
 The defect is the pair IV/27A joins that is **not one system**, where no
 component letter exists to tell the two apart and both records compose the
@@ -313,7 +312,7 @@ constellation out of the designation string and loses only its expanded alias
 ## Counts and the parity measurement
 
 `classic-id-overlay-expected.json` pins the counts through the same
-`compareCountSnapshot` / `UPDATE_BUILD_COUNTS` machinery
+`compareCountSnapshot` / `UPDATE_SNAPSHOTS` machinery
 `build-catalog.ts` uses (`snapshotCheck` in
 `../../util/snapshot-check.ts`). Three groups:
 

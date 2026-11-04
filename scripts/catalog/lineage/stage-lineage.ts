@@ -10,10 +10,8 @@ import { diffLineage, stageDiffText, type DiffJoin, type KeyChange } from './lin
 import {
   ACCEPT_ANY_BASELINE_FLAG, AGAINST_FLAG, planBaseline, type BaselineSource,
 } from './lineage-header-pure';
-import {
-  readStageHeader, stageEmission, stageFile, stageHeader, streamLineage,
-  type LineageLayout, type StageLineageSpec, type StageOutputKey,
-} from './lineage-io';
+import { readStageHeader, stageEmission, stageHeader, streamLineage } from './lineage-io';
+import { stageFile, type LineageLayout, type StageLineageSpec, type StageOutputKey } from './lineage-layout-pure';
 import { invariantCheck, invariantViolations, type LineageInvariant } from './lineage-invariant-pure';
 import { sortLineageLines, type LineageLine } from './lineage-row-pure';
 

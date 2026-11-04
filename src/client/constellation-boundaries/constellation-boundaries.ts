@@ -1,7 +1,7 @@
 // See README.md#the-owner.
 
 import * as THREE from 'three';
-import type { BoundaryArtifact } from '../../../scripts/catalog/boundaries/boundaries-artifact-pure';
+import type { BoundaryArtifact } from '../../catalog-format/boundaries/boundaries-artifact-pure';
 import type { ChromeLineMaterials } from '../chrome-lines/chrome-line-materials';
 import type { ConstellationOfKind } from '../focus-card/constellation-row';
 import { updateWarpGatedRefLayer, type SceneLayer } from '../scene/scene-layer';

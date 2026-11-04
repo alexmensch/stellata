@@ -15,7 +15,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 import refresh_lib as rl  # noqa: E402
 from test_helpers import FakeTable, fake_tap_client  # noqa: E402
-from vizier_slice import VizierSlice, pull_slices  # noqa: E402
+from vizier_slice import VizierSlice, describe_slices, pull_slices  # noqa: E402
 
 
 ROWS = [
@@ -64,8 +64,7 @@ class PullTests(unittest.TestCase):
         pull_slices(
             [slice_for(out, **kwargs)],
             script_name="test",
-            sources=[Path(__file__)],
-            argv=["--force"],
+            argv=[],
             log=lambda _m: None,
             client=client_for(rows),
         )
@@ -106,26 +105,23 @@ class PullTests(unittest.TestCase):
                 pull_slices(
                     [slice_for(out, row_count_min=5, row_count_max=9)],
                     script_name="test",
-                    sources=[Path(__file__)],
-                    argv=["--force"],
+                    argv=[],
                     log=lambda _m: None,
                     client=client_for(ROWS),
                 )
             self.assertFalse(out.exists())
 
-    def test_skips_an_up_to_date_output_without_force(self) -> None:
+
+class DescribeTests(unittest.TestCase):
+    def test_states_every_slice_query_and_table(self) -> None:
         with tempfile.TemporaryDirectory() as d:
-            out = Path(d) / "out.tsv"
-            out.write_text("stale\n")
-            pull_slices(
-                [slice_for(out)],
-                script_name="test",
-                sources=[],
-                argv=[],
-                log=lambda _m: None,
-                client=client_for(ROWS),
-            )
-            self.assertEqual(out.read_text(), "stale\n")
+            a, b = slice_for(Path(d) / "a.tsv"), slice_for(Path(d) / "b.tsv")
+            described = describe_slices([a, b])
+        self.assertEqual(described, {
+            "query": f"{a.adql}\n{b.adql}",
+            "services": ["CDS"],
+            "release": "VizieR I/239/hip_main, VizieR I/239/hip_main",
+        })
 
 
 class OnlyArgTests(unittest.TestCase):
@@ -136,8 +132,7 @@ class OnlyArgTests(unittest.TestCase):
             pull_slices(
                 [slice_for(a), slice_for(b)],
                 script_name="test",
-                sources=[Path(__file__)],
-                argv=["--force", "--only", "b"],
+                argv=["--only", "b"],
                 log=lambda _m: None,
                 client=client_for(ROWS),
             )
@@ -150,7 +145,6 @@ class OnlyArgTests(unittest.TestCase):
                 pull_slices(
                     [slice_for(Path(d) / "a.tsv")],
                     script_name="test",
-                    sources=[Path(__file__)],
                     argv=["--only", "nope"],
                     log=lambda _m: None,
                     client=client_for(ROWS),
@@ -162,7 +156,6 @@ class OnlyArgTests(unittest.TestCase):
                 pull_slices(
                     [slice_for(Path(d) / "a.tsv")],
                     script_name="test",
-                    sources=[Path(__file__)],
                     argv=["--only"],
                     log=lambda _m: None,
                     client=client_for(ROWS),
@@ -177,8 +170,7 @@ class SchemaTests(unittest.TestCase):
                 pull_slices(
                     [slice_for(out)],
                     script_name="test",
-                    sources=[Path(__file__)],
-                    argv=["--force"],
+                    argv=[],
                     log=lambda _m: None,
                     client=client_for([{"HIP": 1}], colnames=["HIP"]),
                 )

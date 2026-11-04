@@ -1,7 +1,5 @@
 #!/usr/bin/env python3
-"""Stage 1 parsers + Row dataclasses for the reference catalogs.
-Per-row dirty data drops just that row; a missing required column is fatal.
-"""
+"""Stage 1 parsers + Row dataclasses for the reference catalogs."""
 
 from __future__ import annotations
 
@@ -400,7 +398,7 @@ class GcvsRow:
 
     Only the fields Stage 5 (intrinsic-variability cross-match) actually
     needs are pinned here; type / period / amplitude parsing live in
-    ``scripts/catalog/record/catalog-pure.ts`` for the TS-side consumer and need not be
+    ``src/catalog-format/record/catalog-pure.ts`` for the TS-side consumer and need not be
     duplicated for Stage 1's load-and-count.
     """
 

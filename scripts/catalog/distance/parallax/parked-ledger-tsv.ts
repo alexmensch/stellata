@@ -4,7 +4,7 @@ import { defineArtifact } from '../../../util/tsv/artifact-pure';
 import {
   PARKED_REASONS, parkedIdentifiersOf, parkedLedgerCells, parkedRecordKey,
   type ParkedLedgerEntry, type ParkedReason,
-} from './parked-ledger';
+} from './parked-ledger-pure';
 
 /** Sorted on the whole row, not on `tyc` alone: a park with no TYC would tie
  *  with every other and leave the file's order a function of the walk. */

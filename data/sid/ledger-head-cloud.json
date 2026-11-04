@@ -1,0 +1,12 @@
+{
+  "ledger": {
+    "rows": 96,
+    "max_sid": 327548,
+    "sha256": "9e594eb5dfa997b9c3e734fe4ff3d9c882befe13809c0807ffeea4f0cf97c9e4"
+  },
+  "events": {
+    "rows": 0,
+    "max_sid": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  }
+}

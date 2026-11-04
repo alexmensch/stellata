@@ -193,6 +193,21 @@ into it. So samples arrive at fewer than one per rendered frame under load,
 and each one is a single honest frame, which is what the ring average and
 the dwell medians need.
 
+<a id="one-frame-per-tag"></a>**"Frame" here is three's tag, not the frame
+loop's tick.** three groups by `renderer.info.frame`, which its own internal
+`requestAnimationFrame` loop advances — once per display interval, not per
+`render()`. Under rAF pacing the two coincide. Under the perf dwell's GPU
+pacing several ticks land in one interval, and their passes would resolve
+as one sample: measured on the M6, sol read 17.5 ms against a wall
+throughput of 4.6 ms per frame, and every vantage read about one interval.
+So every rendered tick, under either pacing, opens its own tag first,
+through `WebGpuSeam.startTimestampFrame()`, numbered far above three's so
+the two never meet inside one batch
+([Pacing](../../scene/frame-loop/README.md#pacing)). three's loop still
+rewrites the counter each interval; the tag a pass carries is the one set
+just before the tick's first pass, and the timestamp label is the
+counter's only reader in three.
+
 **Covering both pools costs sample rate, because the cycle ends on the
 slower readback.** Measured across the two committed pins on this adapter
 (960-frame dwells at 4.096 Mpx), samples per rendered frame fell mw120

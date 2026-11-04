@@ -3,7 +3,7 @@
 
 import * as THREE from 'three';
 import type { MemberSphere } from '../../local-depth/bracket/slice-pure';
-import { KM_PC } from '../../util/astronomy-constants';
+import { KM_PC } from '../../../astro-core/astronomy-constants';
 import { texelBytes } from '../../util/texture-bytes-pure';
 import {
   PLANET_MESH_TEXTURE_SLOTS, textureSlotRecord,
@@ -29,9 +29,9 @@ import {
 } from './textures/texture-budget-pure';
 import { polarRadiusRatio } from './spheroid-pure';
 import { reliefHorizonUniform } from './surface-relief/surface-relief-pure';
-import { RELIEF_BODIES } from '../../util/baker-constants';
+import { RELIEF_BODIES } from '../../../astro-core/baker-constants';
 import type { HdrEmitterUniforms } from '../../hdr/hdr-emitter-uniforms';
-import { relativeLuminance } from '../../hdr/tonemap/tonemap-pure';
+import { relativeLuminance } from '../../../astro-core/tonemap/tonemap-pure';
 import {
   phaseAngleFor,
   phaseAngleFromLegs,
@@ -65,6 +65,7 @@ import type { EmitterMaterial } from '../../scene/emitter-material';
 import type { SolarSystemMaterials } from '../materials/solar-system-materials';
 import type { WebGpuSeam } from '../../webgpu/seam';
 import { mark as perfMark, measure as perfMeasure } from '../../debug/perf-hud';
+import { PUBLIC_FOLDERS } from '../../../catalog-format/public-artifacts/public-artifacts';
 
 const Z_AXIS = new THREE.Vector3(0, 0, 1);
 const X_AXIS = new THREE.Vector3(1, 0, 0);
@@ -1112,7 +1113,7 @@ export class PlanetMeshLayer {
     if (this.textures.has(key)) return;
     this.textures.set(key, { state: 'loading' });
     this.loader.load(
-      `${this.textureBaseUrl}textures/${key}.${ext}`,
+      `${this.textureBaseUrl}${PUBLIC_FOLDERS.textures}/${key}.${ext}`,
       (bitmap) => {
         // The colour ladder is clamped before it asks, but the relief and ring
         // maps ship one fixed width each — Earth's normal map is 8192 — so the

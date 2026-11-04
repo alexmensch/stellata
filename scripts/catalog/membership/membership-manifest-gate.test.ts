@@ -7,6 +7,17 @@ import { resolve } from 'node:path';
 import { beforeAll, describe, expect, it } from 'vitest';
 
 import { REPO_ROOT, lfsContentReadable } from '../../util/paths';
+import { readArtifact } from '../../util/sources/source';
+import { compareCountSnapshot } from '../build-counts';
+import { PROPER_DISPOSITIONS } from '../naming/proper-dispositions-source';
+import { WGSN_DESIGNATIONS } from '../naming/wgsn-designations-tsv';
+import { WGSN_NAMES } from '../naming/wgsn-names-tsv';
+import {
+  buildWgsnIndex,
+  manifestNaming,
+  type ManifestNamingCounts,
+  type ManifestNamingRow,
+} from '../naming/wgsn-index-pure';
 import { SAMEAS_OVERRIDES } from '../../sid/sameas-source';
 import { catalogRecordDesignations } from '../../sid/catalog-designations';
 import {
@@ -14,20 +25,18 @@ import {
   syntheticGaiaBridges,
 } from '../../sid/sid-pure';
 import { loadStoredEdges } from '../../sid/stored-edges';
-import {
-  DEFAULT_CATALOG_MANIFEST,
-  DEFAULT_ROW_INDEX_MAP,
-  DEFAULT_SEARCH_INDEX,
-  loadCatalog,
-} from '../catalog-lookup';
-import { FLAG_BINARY_COMPANION_ONLY, type SearchEntry } from '../record/catalog-pure';
-import { parkedRecordKey } from '../distance/parallax/parked-ledger';
+import { loadCatalog } from '../catalog-lookup';
+import { DEFAULT_CATALOG_MANIFEST, DEFAULT_ROW_INDEX_MAP, DEFAULT_SEARCH_INDEX } from '../catalog-paths-pure';
+import { FLAG_BINARY_COMPANION_ONLY, type SearchEntry } from '../../../src/catalog-format/record/catalog-pure';
+import { parkedRecordKey } from '../distance/parallax/parked-ledger-pure';
 import { PARKED_LEDGER, parseParkedRecordsTsv } from '../distance/parallax/parked-ledger-tsv';
 import {
   spineDesignations,
   type SpineRow,
 } from '../spine/inherited-spine-pure';
 import { INHERITED_SPINE } from '../spine/inherited-spine-tsv';
+import { ASTROMETRY_REQUEST_OUTPUTS } from '../astrometry-request/astrometry-request-outputs';
+import { parseSourceIdRequest, unrequestedBindings } from '../astrometry-request/export-astrometry-request-pure';
 import { BINDING_REVIEW_DISPOSITIONS } from './binding-review-dispositions-source';
 import { applySpineCorrections, type SpineFold } from './spine-corrections/spine-corrections-pure';
 import { SPINE_CORRECTIONS } from './spine-corrections/spine-corrections-source';
@@ -53,6 +62,7 @@ import {
 const SPINE_PATH = resolve(REPO_ROOT, INHERITED_SPINE.file);
 const MANIFEST_PATH = resolve(REPO_ROOT, MEMBERSHIP_MANIFEST_FILE);
 const LEDGER_PATH = resolve(REPO_ROOT, ADDITIONS_LEDGER_FILE);
+const REQUEST_PATH = ASTROMETRY_REQUEST_OUTPUTS.files.request;
 
 const queue = BINDING_REVIEW.parse(readFileSync(resolve(REPO_ROOT, BINDING_REVIEW_FILE), 'utf-8'));
 const dispositions = BINDING_REVIEW_DISPOSITIONS.read();
@@ -64,6 +74,8 @@ const built = [DEFAULT_CATALOG_MANIFEST, DEFAULT_SEARCH_INDEX, DEFAULT_ROW_INDEX
 const expected = JSON.parse(
   readFileSync(resolve(REPO_ROOT, MEMBERSHIP_EXPECTED_FILE), 'utf-8'),
 ) as MembershipCounts;
+
+const NAMING_EXPECTED_FILE = 'scripts/catalog/naming/manifest-naming-expected.json';
 
 function tally(sets: Iterable<readonly string[]>): Map<string, number> {
   const counts = new Map<string, number>();
@@ -191,6 +203,46 @@ describe.skipIf(!inputsReadable)('membership manifest ↔ inherited spine', () =
     expect(new Set(ids).size).toBe(ids.length);
     expect(manifest.filter((r) => manifestDesignations(r).length === 0)).toEqual([]);
     expect(manifest.filter((r) => manifestDesignations(r).includes('sol:sun'))).toHaveLength(1);
+  });
+
+  // build:astrometry-request reads no manifest, so nothing in its construction
+  // says a binding's source was requested; this is what does.
+  it.skipIf(!lfsContentReadable(REQUEST_PATH))('requests every primaries row\'s source', () => {
+    const requested = parseSourceIdRequest(readFileSync(REQUEST_PATH, 'utf-8'));
+    const unrequested = unrequestedBindings(manifest, requested).map(manifestKey);
+    expect(unrequested.slice(0, 20)).toEqual([]);
+    expect(unrequested).toHaveLength(0);
+  });
+
+  // build:wgsn reads no manifest, so the naming authority's residual
+  // (/docs/star-naming.md#2-authority--one-source-approves-names-everything-else-compiles-them)
+  // is held here.
+  describe('↔ the naming authority', () => {
+    const designations = readArtifact(WGSN_DESIGNATIONS);
+    const { approvedNameKeys } = buildWgsnIndex(readArtifact(WGSN_NAMES), designations);
+    const naming = (rows: Iterable<ManifestNamingRow>) => manifestNaming(
+      rows, approvedNameKeys, designations, PROPER_DISPOSITIONS.read(),
+    );
+
+    it('disposes exactly the manifest propers no WGSN name matches', () => {
+      const { missing, stale } = naming(manifest);
+      expect({ missing, stale }).toEqual({ missing: [], stale: [] });
+    });
+
+    it('fails on a manifest proper WGSN does not name and the file does not dispose', () => {
+      const seeded: ManifestNamingRow = {
+        proper: 'Nonesuch', bayer: null, hip: null, hd: 999_999, isSol: false,
+      };
+      expect(naming([...manifest, seeded]).missing).toEqual(['Nonesuch||999999']);
+    });
+
+    it('matches the pinned naming counts', () => {
+      const pinned = JSON.parse(
+        readFileSync(resolve(REPO_ROOT, NAMING_EXPECTED_FILE), 'utf-8'),
+      ) as ManifestNamingCounts;
+      const { drifted, report } = compareCountSnapshot(pinned, naming(manifest).counts);
+      expect(drifted, report).toBe(false);
+    });
   });
 
   it('ends no gl cell on a null marker or other punctuation', () => {

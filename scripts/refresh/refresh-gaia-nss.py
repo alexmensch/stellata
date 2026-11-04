@@ -157,12 +157,6 @@ SYNC_MAXREC = rl.whole_table_sync_maxrec(EXPECTED_ROW_COUNT_MAX)
 
 
 def main() -> None:
-    force = "--force" in sys.argv
-
-    if not force and rl.is_up_to_date(OUT, [Path(__file__)]):
-        print(f"{OUT.relative_to(ROOT)} up to date — skipping (use --force to rebuild)")
-        return
-
     client = rl.gaia_sync_client(SYNC_MAXREC)
     print("querying Gaia sync TAP (ESA → ARI) — gaiadr3.nss_two_body_orbit (~443 k rows) …")
     t0 = time.time()
@@ -186,5 +180,9 @@ def main() -> None:
     print(f"wrote {OUT.relative_to(ROOT)} ({written} rows)")
 
 
+def describe() -> dict:
+    return rl.description(ADQL, rl.gaia_sync_client(SYNC_MAXREC).services, release=rl.GAIA_DR3_RELEASE)
+
+
 if __name__ == "__main__":
-    main()
+    rl.pull_main(main, describe)

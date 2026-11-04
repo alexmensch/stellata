@@ -47,6 +47,7 @@ import { setupDebug } from './debug/debug';
 import { createHoverEngine } from './hover/hover-engine';
 import { createCardRolodex } from './focus-card/card-rolodex';
 import type { HoverProvider } from './hover/hover-types';
+import { PUBLIC_FILES, PUBLIC_FOLDERS } from '../catalog-format/public-artifacts/public-artifacts';
 
 /** Hand the render loop a frame. Wave 2 builds several catalogue-wide
  *  tables back to back, and without a yield between them the scene — which
@@ -107,12 +108,12 @@ async function main() {
       // artifact is missing (fresh checkout without
       // `pnpm run build:binaries`). The renderer renders identically
       // without the field; orbital evolution simply doesn't fire.
-      loadBinaries(`${import.meta.env.BASE_URL}binaries.bin`),
+      loadBinaries(`${import.meta.env.BASE_URL}${PUBLIC_FILES.binaries}`),
       // IAU constellation boundary arcs + the fade-quantile table. ~334 KB;
       // null when the artifact is missing or invalid (a checkout that never
       // ran `pnpm run build:catalog`). Chart mode then draws no boundaries.
       // Never rejects — inside this Promise.all a rejection blanks the app.
-      loadBoundaries(`${import.meta.env.BASE_URL}constellation-boundaries.json`),
+      loadBoundaries(`${import.meta.env.BASE_URL}${PUBLIC_FILES.boundaries}`),
       // Only the critical module (star: catalog + search index) can reject
       // out of here — the catch below is the error screen.
       ...loadKindModules(kinds, import.meta.env.BASE_URL, showCatalogProgress),
@@ -185,7 +186,7 @@ async function main() {
     // preprocessor, etc.) the stellata renders exactly as it did before
     // dust was introduced.
     void (async () => {
-      const dustBase = `${import.meta.env.BASE_URL}dust/`;
+      const dustBase = `${import.meta.env.BASE_URL}${PUBLIC_FOLDERS.dust}/`;
       const manifest = await loadDustManifest(dustBase);
       if (!manifest) {
         console.info('dust manifest not found; skipping extinction layer');

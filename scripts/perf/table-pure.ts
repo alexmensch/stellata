@@ -4,7 +4,10 @@
 
 import { round3, type PriceFrameRow } from '../../src/client/debug/frame-cost/frame-cost-pure';
 import { VERDICT_MARK, type RunDiff } from './diff/diff-pure';
-import { PASS_COUNTERS, computeClock, type DwellSummary, type PassCountsSummary } from './dwell/dwell-pure';
+import type { FramePacing } from '../../src/client/scene/frame-loop/frame-loop';
+import {
+  PASS_COUNTERS, computeClock, cpuClock, throughputFrameMs, type DwellSummary, type PassCountsSummary,
+} from './dwell/dwell-pure';
 import { PIN_VERDICT_MARK, type PinDiff } from './pins/pin-pure';
 import type { DwellRecord } from './schema';
 import type { SweepFit, SweepPoint } from './sweep/sweep-pure';
@@ -70,9 +73,15 @@ export function formatPassCountTable(summary: PassCountsSummary): string {
 
 /** The second dwell against the first, both clocks, as ratios — absolute
  *  milliseconds do not reproduce, ratios at one buffer and one clock do. */
-export function formatRoundTripLine(pass: string, before: DwellRecord, after: DwellRecord): string {
+export function formatRoundTripLine(
+  pass: string, before: DwellRecord, after: DwellRecord, pacing: FramePacing,
+): string {
   const ratio = (a: number, b: number): string => `${round3(a)} → ${round3(b)} (×${(b / a).toFixed(3)})`;
-  const parts = [`round trip ${pass}: raf p50 ${ratio(before.stats.p50, after.stats.p50)}`];
+  // Under GPU pacing the wall median follows the burst pattern (dwell/README.md#cpu-and-gpu-apart).
+  const frame = pacing === 'gpu'
+    ? `throughput mean ${ratio(throughputFrameMs(before, pacing)!, throughputFrameMs(after, pacing)!)}`
+    : `raf p50 ${ratio(before.stats.p50, after.stats.p50)}`;
+  const parts = [`round trip ${pass}: ${frame}`];
   if (before.gpuStats !== null && after.gpuStats !== null) {
     parts.push(`gpu p50 ${ratio(before.gpuStats.p50, after.gpuStats.p50)}`);
   }
@@ -80,18 +89,22 @@ export function formatRoundTripLine(pass: string, before: DwellRecord, after: Dw
   if (computeBefore !== null && computeAfter !== null) {
     parts.push(`compute p50 ${ratio(computeBefore.p50, computeAfter.p50)}`);
   }
+  const [cpuBefore, cpuAfter] = [cpuClock(before), cpuClock(after)];
+  if (cpuBefore !== null && cpuAfter !== null) {
+    parts.push(`cpu p50 ${ratio(cpuBefore.p50, cpuAfter.p50)}`);
+  }
   parts.push(`limit ${round3(before.limitMag)} → ${round3(after.limitMag)} mag`);
   parts.push(`dm ${round3(before.dm)} → ${round3(after.dm)}`);
   return parts.join(' · ');
 }
 
-export const SWEEP_COLUMNS = ['scale', 'width', 'height', 'Mpx', 'ms', 'vsyncClamped'] as const;
+export const SWEEP_COLUMNS = ['scale', 'width', 'height', 'Mpx', 'ms', 'metric', 'vsyncClamped'] as const;
 
 export function formatSweepTable(points: readonly SweepPoint[], fit: SweepFit, bracketMs: number): string {
   const table = formatTable(
     SWEEP_COLUMNS,
     points.map((p) => [
-      p.scale, p.width, p.height, round3(p.px / 1e6), round3(p.ms), p.vsyncClamped,
+      p.scale, p.width, p.height, round3(p.px / 1e6), round3(p.ms), p.metric ?? 'wall-p50', p.vsyncClamped,
     ]),
   );
   return `${table}\nslope ${fit.slope.toFixed(3)} · r² ${fit.r2.toFixed(3)} · ` +

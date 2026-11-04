@@ -16,10 +16,10 @@ annotates the same cloud's silhouette is annotation and lives in the parent
   the graph (`../../webgpu/molecular-clouds/cloud-absorption-tsl.ts`), so
   neither can drift from the other. The two unit conversions the build
   calibrated against — `AV_PER_NH_PC` and `AV_PER_EZGR` — come from
-  `../../util/baker-constants.ts`, shared with `scripts/clouds/cloud_model.py`.
+  `../../../astro-core/baker-constants.ts`, shared with `scripts/clouds/cloud_model.py`.
   The analytic tier's taper start is the catalogue's `envelopeFadeStart`
   (`clouds.json`), carried on each `CloudAbsorptionSpec`. The **dither** is owned by
-  `../../hdr/tonemap/tonemap-pure.ts` and read from there.
+  `../../../astro-core/tonemap/tonemap-pure.ts` and read from there.
 
 The materials that consume these — the seam, the per-cloud
 `CloudAbsorptionSpec`, and the brick texture's lifetime — stay in the

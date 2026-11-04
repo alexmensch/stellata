@@ -5,8 +5,6 @@ import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import {
-  buildHipToIndex,
-  inferBinaries,
   FLAG_IS_SOL,
   FLAG_BINARY_PRIMARY,
   VAR_TYPE_ECLIPSING,
@@ -22,7 +20,6 @@ import {
   MULTIPLICITY_SINGLE,
   MULTIPLICITY_RESOLVED,
   MULTIPLICITY_UNRESOLVED,
-  SIMBAD_OTYPE_MULTIPLE,
   APSIS_FIELDS,
   type ApsisField,
   writeStarRecord,
@@ -35,7 +32,9 @@ import {
   buildSearchEntry,
   type SearchEntry,
   type CatalogManifest,
-} from './record/catalog-pure';
+  DIST_VIA_VALUES,
+} from '../../src/catalog-format/record/catalog-pure';
+import { buildHipToIndex, inferBinaries, SIMBAD_OTYPE_MULTIPLE } from './record/record-build-pure';
 import { apparentVFromSol } from './record/record-order-pure';
 import { avSolToStar } from './distance/dust/dust-deextinction-pure';
 import {
@@ -48,10 +47,7 @@ import {
   spectralSimbadPartitionError,
   type BuildCounts,
 } from './build-counts';
-import {
-  DIST_VIA_VALUES,
-  DIST_VIA_COUNT_KEY,
-} from './distance/parallax/parallax-cascade';
+import { DIST_VIA_COUNT_KEY } from './distance/parallax/parallax-cascade';
 import {
   buildRegressionReport,
   compareRegressionReports,
@@ -80,7 +76,7 @@ import {
   PROMOTION_CODES, PROMOTION_LINEAGE, PROMOTION_LINEAGE_BUDGET, promotionLineage,
 } from './companions/promotion-lineage-pure';
 import { identityText } from './lineage/identity-pure';
-import { LINEAGE_LAYOUT } from './lineage/lineage-io';
+import { LINEAGE_LAYOUT } from './lineage/lineage-layout-pure';
 import {
   lineageLineCode, stageLineageLine, stageLineageText, type LineageLine,
 } from './lineage/lineage-row-pure';
@@ -102,7 +98,7 @@ import {
   GALACTIC_ESCAPE_VELOCITY_KM_S,
 } from './distance/direction-cascade';
 import { RV_ERROR_BANDS } from './distance/radial-velocity/radial-velocity';
-import { emptyTallyPartition } from '../util/tally';
+import { emptyTallyPartition } from '../util/tally-pure';
 import {
   applyDesignationConstellations,
   loadDesignationConstellationInputs,
@@ -116,7 +112,7 @@ import { readStars, type ReadStarsOptions, type Star } from './parse/stars-parse
 import {
   PARKED_COUNT_KEY,
   PARKED_REASONS,
-} from './distance/parallax/parked-ledger';
+} from './distance/parallax/parked-ledger-pure';
 import { PARKED_LEDGER } from './distance/parallax/parked-ledger-tsv';
 import {
   PLACEMENT_CODES, PLACEMENT_INVARIANTS, PLACEMENT_LINEAGE, PLACEMENT_LINEAGE_BUDGET, parkedLedgerView, placementLineageLines,
@@ -135,15 +131,13 @@ import { SIMBAD_SAMPLE } from './validate/simbad-sample-source';
 import { MEMBERSHIP_MANIFEST, manifestDesignations } from './membership/membership-manifest-tsv';
 import { artifactRows } from '../util/sources/source';
 import { REPO_ROOT as ROOT } from '../util/paths';
-import {
-  clearStamp, fileHashes, stampIsCurrent, type FileHashes,
-} from '../util/build-stamp';
+import { fileHashes, type FileHashes } from '../util/build-stamp';
 import {
   DEFAULT_CATALOG_MANIFEST as OUT_MANIFEST, DEFAULT_CONSTELLATIONS_JSON as OUT_CON,
-  DEFAULT_ROW_INDEX_MAP, DEFAULT_SEARCH_INDEX as OUT_SEARCH,
-} from './catalog-lookup';
+  DEFAULT_BOUNDARIES, DEFAULT_ROW_INDEX_MAP, DEFAULT_SEARCH_INDEX as OUT_SEARCH,
+} from './catalog-paths-pure';
 import {
-  CATALOG_CHUNK_DIR, CATALOG_OUTPUTS, CATALOG_STAMP, OUT_BOUNDARIES,
+  CATALOG_CHUNK_DIR, CATALOG_OUTPUTS,
 } from './catalog-outputs';
 import {
   emitArtifacts, runStep, sweepStaged, type ArtifactContents, type Check,
@@ -157,7 +151,8 @@ import {
   ALLOCATION_CODES, ALLOCATION_LINEAGE, ALLOCATION_LINEAGE_BUDGET,
   allocationIdentityRows, allocationIdentityText, allocationLineageRows,
 } from '../sid/allocation-lineage-pure';
-import { catalogSidObjects, inCatalogScope } from '../sid/catalog-objects';
+import { catalogSidObjects } from '../sid/catalog-objects';
+import { CATALOG_PARTITION, inPartition } from '../sid/registry-partitions-pure';
 import { catalogUpstream } from '../sid/catalog-upstream';
 import { synthChurnReport } from '../sid/synth-churn-pure';
 import { allocationRun, loadRegistry, registryTexts } from '../sid/registry-io';
@@ -229,17 +224,7 @@ function simbadSourcedDistancesTsv(stars: readonly Star[]): string {
 async function main() {
   const heap = watchHeap('build:catalog');
   sweepStaged(CATALOG_OUTPUTS);
-  // The UPDATE_* snapshot-refresh flags rewrite artifacts written at the end
-  // of a full build, so they must force one even when the sources are
-  // unchanged (the snapshot assert/refresh is unreachable otherwise).
-  const forceRebuild =
-    process.env.UPDATE_BUILD_COUNTS === '1' || process.env.UPDATE_DISTANCE_OUTLIERS === '1';
   const inputHashesAtStart = fileHashes(await stepInputPaths('build:catalog'));
-  if (!forceRebuild && stampIsCurrent(CATALOG_STAMP, inputHashesAtStart)) {
-    console.log('catalog.bin is up to date with its inputs; skipping rebuild.');
-    return;
-  }
-  clearStamp(CATALOG_STAMP);
 
   // Accumulator for the headline counts asserted against
   // scripts/catalog/build-catalog-expected.json at the end of the
@@ -783,13 +768,13 @@ async function main() {
 
   // Sort by apparent V from Sol ascending (brightest-looking first), so any
   // prefix of the record array is a usable sky and the transport chunks can
-  // stream one (record/README.md#record-order). Record indices are final
+  // stream one (/src/catalog-format/record/README.md#record-order). Record indices are final
   // after this point.
   const sortKey = new Float64Array(stars.length);
   for (let i = 0; i < stars.length; i++) {
     const s = stars[i];
     const v = apparentVFromSol(s, dustGrid ? avSolToStar(dustGrid, s.x, s.y, s.z) : 0);
-    // On the key, before the sort — record/README.md#record-order.
+    // On the key, before the sort — /src/catalog-format/record/README.md#record-order.
     if (!Number.isFinite(v)) {
       throw new Error(`Record ${i} has a non-finite apparent V sort key: ${v}`);
     }
@@ -946,7 +931,7 @@ async function main() {
     storedEdges: registry.storedEdges,
     ledger: registry.ledger,
     events: registry.events,
-    scope: inCatalogScope,
+    scope: inPartition(CATALOG_PARTITION),
     ...allocationRun(),
   }, catalogUpstream({ placementRemovals, promotion: promotionLines, promotionIdentity }));
   if (allocation.kind === 'failed') {
@@ -1043,7 +1028,7 @@ async function main() {
   const bytes = new Uint8Array(out);
 
   // Header, then the name table, then the records — the order the first
-  // transport chunk needs to decode standalone (`record/README.md#on-disk-transport-chunking`).
+  // transport chunk needs to decode standalone (`/src/catalog-format/record/README.md#on-disk-transport-chunking`).
   writeCatalogHeader(view, {
     count: stars.length,
     nameTableOffset: HEADER_SIZE,
@@ -1146,7 +1131,7 @@ async function main() {
     chunkBytes, 1, HEADER_SIZE + nameTableLength, stars.length,
   );
   assertFigureVerticesInFirstChunk(figureLines, counts.recordsInFirstChunk);
-  // record/README.md#on-disk-transport-chunking is measured from this line.
+  // /src/catalog-format/record/README.md#on-disk-transport-chunking is measured from this line.
   const sortedKey = order.map((i) => sortKey[i]);
   const chunkRows = chunkBytes.map((_, i) => {
     const n = recordsInChunkPrefix(
@@ -1190,7 +1175,7 @@ async function main() {
   counts.boundaryArtifactKb = Math.round(boundaries.bytes / 1024);
   const fade = boundaries.artifact.fade;
   console.log(
-    `Built ${OUT_BOUNDARIES} (${boundaries.segments} arcs, `
+    `Built ${DEFAULT_BOUNDARIES} (${boundaries.segments} arcs, `
       + `${boundaries.directions} directions, `
       + `${boundaries.artifact.labels.length} labels, `
       + `${boundaries.regionRuns} region runs, `
@@ -1307,7 +1292,7 @@ async function main() {
     ...placementEmission.files,
     ...lineage.files,
     ...allocationLineage.files,
-    ...registryTexts(allocation.minted, allocation.events),
+    ...registryTexts(CATALOG_PARTITION, allocation.minted, allocation.events),
   };
   const members = new Map([
     ...chunks, ...placementEmission.members, ...lineage.members, ...allocationLineage.members,
@@ -1322,18 +1307,16 @@ async function main() {
       buildCountsCheck(counts), distanceOutliersCheck(stars),
       heap.check(),
     ],
-    stamp: { path: CATALOG_STAMP, inputs: inputHashesAtStart },
   });
 }
 
 function buildCountsCheck(actual: BuildCounts): Check {
   return snapshotCheck<BuildCounts>({
-    envVar: 'UPDATE_BUILD_COUNTS',
     snapshotPath: EXPECTED_COUNTS,
     actual,
     compare: compareCountSnapshot,
     failureLabel: 'build-catalog count',
-    refreshCommand: 'UPDATE_BUILD_COUNTS=1 pnpm run build:catalog',
+    script: 'build:catalog',
   });
 }
 
@@ -1347,7 +1330,6 @@ function distanceOutliersCheck(stars: readonly Star[]): Check {
   );
 
   return snapshotCheck<RegressionReport>({
-    envVar: 'UPDATE_DISTANCE_OUTLIERS',
     snapshotPath: EXPECTED_OUTLIERS,
     actual: report,
     refreshTransform: mergeReasonsFromSnapshot,
@@ -1359,7 +1341,7 @@ function distanceOutliersCheck(stars: readonly Star[]): Check {
       };
     },
     failureLabel: 'distance-regression',
-    refreshCommand: 'UPDATE_DISTANCE_OUTLIERS=1 pnpm run build:catalog',
+    script: 'build:catalog',
   });
 }
 

@@ -3,7 +3,6 @@
 import { existsSync, readdirSync, rmSync } from 'node:fs';
 import { basename, dirname, resolve } from 'node:path';
 
-import { fileHashes, writeStamp, type FileHashes } from './build-stamp';
 import {
   STAGING_SUFFIX, discardStaged, landStaged, writeStaged,
 } from './staged-write';
@@ -12,7 +11,13 @@ import {
  *  emit are deleted once the new set has landed. */
 export interface OutputFamily {
   readonly dir: string;
-  readonly member: RegExp;
+  /** A pattern over member names, or every name a member may have. */
+  readonly member: RegExp | readonly string[];
+  readonly stamped: boolean;
+}
+
+export function isMemberName(family: OutputFamily, name: string): boolean {
+  return family.member instanceof RegExp ? family.member.test(name) : family.member.includes(name);
 }
 
 export interface DeclaredOutputs<K extends string = string> {
@@ -28,7 +33,7 @@ export function declareOutputs<K extends string>(
     files: Object.fromEntries(
       Object.entries<string>(files).map(([k, p]) => [k, resolve(p)]),
     ) as Record<K, string>,
-    families: families.map((f) => ({ dir: resolve(f.dir), member: f.member })),
+    families: families.map((f) => ({ ...f, dir: resolve(f.dir) })),
   };
 }
 
@@ -46,8 +51,6 @@ interface EmissionBase<K extends string> {
   /** Family members, keyed by absolute path. */
   readonly members?: ReadonlyMap<string, ArtifactContents>;
   readonly checks?: readonly Check[];
-  /** Written last, over exactly the emitted files. */
-  readonly stamp?: { readonly path: string; readonly inputs: FileHashes };
 }
 
 export interface Emission<K extends string> extends EmissionBase<K> {
@@ -73,9 +76,7 @@ function assertDeclared(
   const undeclared = [
     ...expected.filter((k) => !(k in outputs.files)),
     ...keys.filter((k) => !(k in outputs.files)),
-    ...members.filter((p) => !outputs.families.some(
-      (f) => dirname(p) === f.dir && f.member.test(basename(p)),
-    )),
+    ...members.filter((p) => !outputs.families.some((f) => isFamilyMember(f, p))),
   ];
   const unemitted = expected.filter((k) => !keys.includes(k));
   const unasked = keys.filter((k) => k in outputs.files && !expected.includes(k));
@@ -89,15 +90,29 @@ function assertDeclared(
   }
 }
 
+export function isFamilyMember(family: OutputFamily, path: string): boolean {
+  return dirname(path) === family.dir && isMemberName(family, basename(path));
+}
+
 function familyEntries(family: OutputFamily): string[] {
   return existsSync(family.dir) ? readdirSync(family.dir) : [];
+}
+
+/** The family's members on disk, absolute. */
+export function familyMembers(family: OutputFamily): string[] {
+  return familyEntries(family).filter((name) => isMemberName(family, name)).map((name) => resolve(family.dir, name));
+}
+
+/** The members on disk of the families a stamp records. */
+export function stampedMembers(families: readonly OutputFamily[]): string[] {
+  return families.filter((f) => f.stamped).flatMap(familyMembers);
 }
 
 export function sweepStaged(outputs: DeclaredOutputs, extra: readonly string[] = []): void {
   for (const p of [...Object.values<string>(outputs.files), ...extra]) discardStaged(p);
   for (const family of outputs.families) {
     for (const name of familyEntries(family)) {
-      if (name.endsWith(STAGING_SUFFIX) && family.member.test(name.slice(0, -STAGING_SUFFIX.length))) {
+      if (name.endsWith(STAGING_SUFFIX) && isMemberName(family, name.slice(0, -STAGING_SUFFIX.length))) {
         rmSync(resolve(family.dir, name), { force: true });
       }
     }
@@ -109,15 +124,13 @@ export function emitArtifacts<K extends string, E extends K>(emission: NarrowedE
 export function emitArtifacts<K extends string>(
   emission: Emission<K> | NarrowedEmission<K, K>,
 ): void {
-  const { outputs, checks = [], stamp } = emission;
+  const { outputs, checks = [] } = emission;
   const keyed = Object.entries<ArtifactContents>(emission.files);
   const members = [...(emission.members ?? new Map())].map(([p, c]) => [resolve(p), c] as const);
   const expected = 'only' in emission ? emission.only : Object.keys(outputs.files);
   assertDeclared(outputs, expected, keyed.map(([k]) => k), members.map(([p]) => p));
-  const files = new Map<string, ArtifactContents>([
-    ...keyed.map(([k, c]) => [outputs.files[k as K], c] as const),
-    ...members,
-  ]);
+  const declared = keyed.map(([k, c]) => [outputs.files[k as K], c] as const);
+  const files = new Map<string, ArtifactContents>([...declared, ...members]);
 
   for (const check of checks) {
     if (check.kind !== 'refresh' && check.report) console.log(check.report);
@@ -142,15 +155,11 @@ export function emitArtifacts<K extends string>(
   for (const path of staged.keys()) landStaged(path);
 
   for (const family of outputs.families) {
-    for (const name of familyEntries(family)) {
-      const path = resolve(family.dir, name);
-      if (family.member.test(name) && !files.has(path)) rmSync(path);
+    for (const path of familyMembers(family)) {
+      if (!files.has(path)) rmSync(path);
     }
   }
   for (const r of refreshes) console.log(`Updated ${r.path}`);
-  if (stamp) {
-    writeStamp(stamp.path, rehashWritten(stamp.inputs, [...files.keys(), ...refreshes.map((r) => r.path)]), [...files.keys()]);
-  }
 }
 
 export async function emitEach<K extends string>(
@@ -173,16 +182,21 @@ export async function emitEach<K extends string>(
   }
 }
 
-export function runStep(main: () => void | Promise<void>): void {
+/** A manual step's `--describe` answer: its query, the services it may ask,
+ *  and the upstream release, with no network call (`pipeline/freshness.ts`). */
+export interface PullDescription {
+  readonly query: string;
+  readonly services: readonly string[];
+  readonly release?: string;
+}
+
+export function runStep(main: () => void | Promise<void>, describe?: () => PullDescription): void {
+  if (describe && process.argv.includes('--describe')) {
+    console.log(JSON.stringify(describe()));
+    return;
+  }
   Promise.resolve().then(main).catch((err: unknown) => {
     console.error(err instanceof EmissionRefused ? err.message : err);
     process.exit(1);
   });
-}
-
-function rehashWritten(inputs: FileHashes, written: readonly string[]): FileHashes {
-  const rewritten = fileHashes(written.map((p) => resolve(p)));
-  return Object.fromEntries(
-    Object.entries(inputs).map(([p, h]) => [p, p in rewritten ? rewritten[p] : h]),
-  );
 }

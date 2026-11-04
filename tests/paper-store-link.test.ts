@@ -3,8 +3,8 @@
 
 import { execFileSync, spawnSync } from 'node:child_process';
 import {
-  chmodSync, existsSync, lstatSync, mkdirSync, mkdtempSync, readlinkSync, realpathSync, rmSync, symlinkSync,
-  writeFileSync,
+  chmodSync, existsSync, lstatSync, mkdirSync, mkdtempSync, readdirSync, readlinkSync, realpathSync,
+  rmSync, symlinkSync, writeFileSync,
 } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
@@ -19,13 +19,31 @@ let main: string;
 const git = (cwd: string, ...args: string[]) =>
   execFileSync('git', args, { cwd, encoding: 'utf-8', stdio: ['ignore', 'pipe', 'pipe'] });
 
-function run(projectDir = main): { status: number | null; stderr: string } {
+function run(projectDir = main, pathPrefix?: string): { status: number | null; stderr: string } {
   const { status, stderr } = spawnSync('bash', [HOOK], {
     input: JSON.stringify({ hook_event_name: 'SessionStart' }),
-    env: { ...process.env, CLAUDE_PROJECT_DIR: projectDir },
+    env: {
+      ...process.env,
+      CLAUDE_PROJECT_DIR: projectDir,
+      ...(pathPrefix ? { PATH: `${pathPrefix}:${process.env.PATH}` } : {}),
+    },
     encoding: 'utf-8',
   });
   return { status, stderr };
+}
+
+function lnThatLosesTheRace(): string {
+  const bin = join(root, 'bin');
+  mkdirSync(bin);
+  writeFileSync(join(bin, 'ln'), [
+    '#!/bin/bash',
+    'dest="${!#}"; n=$(($# - 1)); target="${!n}"',
+    '/bin/ln -s "$target" "$dest" 2>/dev/null',
+    'exec /bin/ln "$@"',
+    '',
+  ].join('\n'));
+  chmodSync(join(bin, 'ln'), 0o755);
+  return bin;
 }
 
 function addWorktree(name: string): string {
@@ -107,6 +125,30 @@ describe('paper-store-link', () => {
     writeFileSync(join(wt, LINK), 'not a link\n');
     run();
     expect(lstatSync(join(wt, LINK)).isFile()).toBe(true);
+  });
+
+  it('leaves a link already at the store in place, store listing unchanged', () => {
+    const wt = addWorktree('wt1');
+    symlinkSync(join(root, 'store-a'), join(wt, LINK));
+    run();
+    expect(readdirSync(join(root, 'store-a'))).toEqual([]);
+    expect(linkOf(wt)).toBe(join(root, 'store-a'));
+  });
+
+  it('repoints a link to another store, both store listings unchanged', () => {
+    const wt = addWorktree('wt1');
+    symlinkSync(join(root, 'store-b'), join(wt, LINK));
+    run();
+    expect(readdirSync(join(root, 'store-a'))).toEqual([]);
+    expect(readdirSync(join(root, 'store-b'))).toEqual([]);
+    expect(linkOf(wt)).toBe(join(root, 'store-a'));
+  });
+
+  it('never writes into the store when a concurrent sweep links the worktree between check and ln', () => {
+    const wt = addWorktree('wt1');
+    run(main, lnThatLosesTheRace());
+    expect(readdirSync(join(root, 'store-a'))).toEqual([]);
+    expect(linkOf(wt)).toBe(join(root, 'store-a'));
   });
 
   it('exits 0 with empty stderr outside a git repository', () => {

@@ -14,7 +14,6 @@ import {
   PERIOD_DAYS_PER_UNIT,
   RECORD_SIZE,
   recordsOffset,
-  CATALOG_MANIFEST_FILENAME,
   catalogChunkFilename,
   assembleCatalogChunks,
   readCatalogHeader,
@@ -25,18 +24,10 @@ import {
   type CatalogHeaderFields,
   type CatalogManifest,
   type SearchEntry,
-} from './record/catalog-pure';
-import { displayNamesFromSearchIndex } from './naming/star-naming-pure';
-import { REPO_ROOT } from '../util/paths';
+} from '../../src/catalog-format/record/catalog-pure';
+import { displayNamesFromSearchIndex } from '../../src/catalog-format/naming/star-naming-pure';
 import type { RecordRef } from './parse/corpus-tsv';
-
-export const DEFAULT_CATALOG_MANIFEST = resolve(REPO_ROOT, 'public', CATALOG_MANIFEST_FILENAME);
-export const DEFAULT_CONSTELLATIONS_JSON = resolve(REPO_ROOT, 'public/constellations.json');
-/** The two sidecars a record's full designation set needs beyond the binary —
- *  `hd`/`hr`/`gl` and the synthetic keys. */
-export const DEFAULT_SEARCH_INDEX = resolve(REPO_ROOT, 'public/search-index.json');
-/** Build-time hand-off, never shipped: `build/` sits outside Vite's `publicDir`. */
-export const DEFAULT_ROW_INDEX_MAP = resolve(REPO_ROOT, 'build/catalog-row-index-map.json');
+import { DEFAULT_CATALOG_MANIFEST, DEFAULT_CONSTELLATIONS_JSON, DEFAULT_SEARCH_INDEX } from './catalog-paths-pure';
 
 /** The client loader's Node-side twin — same `assembleCatalogChunks`
  *  contract, fs instead of fetch. */

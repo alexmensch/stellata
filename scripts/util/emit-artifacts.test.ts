@@ -5,9 +5,8 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { fileHashes, readStamp, stampIsCurrent } from './build-stamp';
 import {
-  EmissionRefused, declareOutputs, emitArtifacts, emitEach, type Check,
+  EmissionRefused, declareOutputs, emitArtifacts, emitEach, runStep, type Check,
 } from './emit-artifacts';
 import { STAGING_SUFFIX } from './staged-write';
 
@@ -70,7 +69,7 @@ describe('emitArtifacts', () => {
 
   it('refuses an undeclared file and a declared one left out, before writing', () => {
     const stray = join(dir, 'stray.txt');
-    const chunks = declareOutputs({ a }, [{ dir, member: /^chunk-\d+$/ }]);
+    const chunks = declareOutputs({ a }, [{ dir, member: /^chunk-\d+$/, stamped: true }]);
     expect(() => emitArtifacts({ outputs: chunks, files: { a: 'x' }, members: new Map([[stray, 'x']]) }))
       .toThrow(/undeclared: .*stray\.txt/);
     // @ts-expect-error the compiler refuses a declared key left out
@@ -100,7 +99,7 @@ describe('emitArtifacts', () => {
     mkdirSync(chunks);
     for (const n of ['chunk-0', 'chunk-1', 'chunk-2', 'README']) writeFileSync(join(chunks, n), 'old');
     emitArtifacts({
-      outputs: declareOutputs({}, [{ dir: chunks, member: /^chunk-\d+$/ }]),
+      outputs: declareOutputs({}, [{ dir: chunks, member: /^chunk-\d+$/, stamped: true }]),
       files: {},
       members: new Map([[join(chunks, 'chunk-0'), 'fresh 0'], [join(chunks, 'chunk-1'), 'fresh 1']]),
     });
@@ -108,46 +107,16 @@ describe('emitArtifacts', () => {
     expect(readFileSync(join(chunks, 'chunk-1'), 'utf8')).toBe('fresh 1');
   });
 
-  it('lands a refreshed baseline with the outputs, and the stamp records only the outputs', () => {
-    const snapshot = join(dir, 'expected.json');
-    const stampFile = join(dir, 'stamps', 'step.json');
-    emitArtifacts({
-      outputs: both(),
-      files: files(),
-      checks: [{ kind: 'refresh', path: snapshot, text: '{"n":2}\n' }],
-      stamp: { path: stampFile, inputs: { 'in.txt': 'abc' } },
-    });
-    expect(readFileSync(snapshot, 'utf8')).toBe('{"n":2}\n');
-    const stamp = readStamp(stampFile);
-    expect(stamp?.inputs).toEqual({ 'in.txt': 'abc' });
-    const recorded = Object.keys(stamp?.outputs ?? {}).sort();
-    expect(recorded).toHaveLength(2);
-    expect(recorded[0]).toMatch(/a\.txt$/);
-    expect(recorded[1]).toMatch(/out\/b\.txt$/);
-  });
-
-  it('records a refreshed snapshot the step reads at its new hash, so the stamp stays current', () => {
-    const snapshot = join(dir, 'expected.json');
-    const stampFile = join(dir, 'stamps', 'step.json');
-    writeFileSync(snapshot, '{"n":1}\n');
-    emitArtifacts({
-      outputs: both(),
-      files: files(),
-      checks: [{ kind: 'refresh', path: snapshot, text: '{"n":2}\n' }],
-      stamp: { path: stampFile, inputs: fileHashes([snapshot]) },
-    });
-    expect(stampIsCurrent(stampFile, fileHashes([snapshot]))).toBe(true);
-  });
-
-  it('records an output the step also reads at its written hash, so an unchanged re-run is skipped', () => {
-    const stampFile = join(dir, 'stamps', 'step.json');
-    emitArtifacts({
-      outputs: both(),
-      files: files(),
-      stamp: { path: stampFile, inputs: fileHashes([a]) },
-    });
-    expect(readFileSync(a, 'utf8')).toBe('new a');
-    expect(stampIsCurrent(stampFile, fileHashes([a]))).toBe(true);
+  it('treats a name-list family as exactly those names: a listed one it omits is deleted, anything else is left', () => {
+    const base = join(dir, 'base');
+    mkdirSync(base);
+    writeFileSync(join(base, 'gone'), 'old');
+    writeFileSync(join(base, 'other'), 'not ours');
+    const outputs = declareOutputs({ a }, [{ dir: base, member: ['kept', 'gone'], stamped: false }]);
+    emitArtifacts({ outputs, files: { a: 'new a' }, members: new Map([[join(base, 'kept'), 'k']]) });
+    expect(readdirSync(base).sort()).toEqual(['kept', 'other']);
+    expect(() => emitArtifacts({ outputs, files: { a: 'x' }, members: new Map([[join(base, 'other'), 'o']]) }))
+      .toThrow(/undeclared/);
   });
 
   it('emitEach lands every target that verifies and refuses the rest, after trying all', async () => {
@@ -167,7 +136,7 @@ describe('emitArtifacts', () => {
     writeFileSync(join(chunks, `chunk-3${STAGING_SUFFIX}`), 'stale');
     writeFileSync(join(chunks, `README${STAGING_SUFFIX}`), 'not a member');
     emitArtifacts({
-      outputs: declareOutputs({}, [{ dir: chunks, member: /^chunk-\d+$/ }]),
+      outputs: declareOutputs({}, [{ dir: chunks, member: /^chunk-\d+$/, stamped: true }]),
       files: {},
       members: new Map([[join(chunks, 'chunk-0'), 'fresh 0']]),
     });
@@ -197,5 +166,22 @@ describe('emitArtifacts', () => {
     })).toThrow(EmissionRefused);
     expect(console.log).toHaveBeenCalledWith('counts match');
     expect(console.log).toHaveBeenCalledWith('key x: 1 -> 2');
+  });
+});
+
+describe('runStep', () => {
+  it('prints the description under --describe without running main', () => {
+    const argv = process.argv;
+    const ran = vi.fn();
+    const log = vi.spyOn(console, 'log').mockImplementation(() => {});
+    process.argv = [...argv, '--describe'];
+    try {
+      runStep(ran, () => ({ query: 'Q', services: ['ssd.jpl.nasa.gov'] }));
+    } finally {
+      process.argv = argv;
+      vi.restoreAllMocks();
+    }
+    expect(ran).not.toHaveBeenCalled();
+    expect(JSON.parse(log.mock.calls[0][0] as string)).toEqual({ query: 'Q', services: ['ssd.jpl.nasa.gov'] });
   });
 });

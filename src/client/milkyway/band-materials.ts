@@ -3,17 +3,17 @@
 
 import * as THREE from 'three';
 import type { EmitterMaterial } from '../scene/emitter-material';
-import { ICRS_TO_GAL_M3, GALACTIC_CENTRE_PC, R0_PC } from '../galactic/galactic-coords';
-import { SB_ZERO_POINT } from '../hdr/emission/emission-pure';
-import { AV_PER_EZGR } from '../util/baker-constants';
+import { ICRS_TO_GAL_M3, GALACTIC_CENTRE_PC, R0_PC } from '../../astro-core/galactic-coords';
+import { SB_ZERO_POINT } from '../../astro-core/emission/emission-pure';
+import { AV_PER_EZGR } from '../../astro-core/baker-constants';
 import {
   ANALYTICAL_DUST_NORM_PER_PC,
   ANALYTICAL_DUST_SCALE_HEIGHT_PC,
   ANALYTICAL_DUST_SCALE_LENGTH_PC,
   DEFAULT_EXTINCTION_STRENGTH,
   REDDENING_RGB,
-} from './column/milkyway-column-pure';
-import { writeResolvedHoleTexture } from './calibration/resolved-hole-texture';
+} from '../../astro-core/milkyway/column/milkyway-column-pure';
+import { writeResolvedHoleTexture } from './resolved-hole-texture';
 
 /**
  * The slots the disc and the bulge hold **by reference to each other**, so

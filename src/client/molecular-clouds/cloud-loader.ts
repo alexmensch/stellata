@@ -1,7 +1,8 @@
 import * as THREE from 'three';
 
-import { CLOUDS_JSON_SCHEMA } from '../util/baker-constants';
+import { CLOUDS_JSON_SCHEMA } from '../../catalog-format/baker-artifacts/baker-artifacts';
 import { sidColumnError } from '../util/sid-resolver';
+import { PUBLIC_FILES } from '../../catalog-format/public-artifacts/public-artifacts';
 
 export type CloudSource = 'Z2021T1' | 'Z2020';
 
@@ -108,17 +109,18 @@ export async function loadClouds(url: string): Promise<CloudCatalog | null> {
   if (!res.ok) return null;
   const raw = (await res.json()) as RawCatalog;
   if (raw.version !== CLOUDS_JSON_SCHEMA.version) {
-    console.warn(`clouds.json version ${raw.version} unsupported (expected ${CLOUDS_JSON_SCHEMA.version})`);
+    console.warn(
+      `${PUBLIC_FILES.clouds} version ${raw.version} unsupported (expected ${CLOUDS_JSON_SCHEMA.version})`);
     return null;
   }
   const fade = raw.envelopeFadeStart;
   if (!(typeof fade === 'number' && fade > 0 && fade < 1)) {
-    console.warn(`clouds.json envelopeFadeStart ${String(fade)} is not in (0, 1)`);
+    console.warn(`${PUBLIC_FILES.clouds} envelopeFadeStart ${String(fade)} is not in (0, 1)`);
     return null;
   }
   const sidErr = sidColumnError(raw.clouds.map((c) => c.sid));
   if (sidErr) {
-    console.warn(`clouds.json ${sidErr} — rebuild with \`pnpm run build:clouds\``);
+    console.warn(`${PUBLIC_FILES.clouds} ${sidErr} — rebuild with \`pnpm run build:clouds\``);
     return null;
   }
   const clouds: Cloud[] = raw.clouds.map((c) => ({

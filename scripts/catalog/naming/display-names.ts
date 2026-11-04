@@ -1,8 +1,8 @@
 // The record build's half of the composer: every record's designation set
 // to its display name, with the NAME tiers written into `proper`.
-// See README.md#two-callers-one-composer.
+// See /src/catalog-format/naming/README.md#two-callers-one-composer.
 
-import { FLAG_HAS_NAME, NO_CONSTELLATION_INDEX } from '../record/catalog-pure';
+import { FLAG_HAS_NAME, NO_CONSTELLATION_INDEX } from '../../../src/catalog-format/record/catalog-pure';
 import type { ComponentDesignation } from '../companions/record-index/record-index';
 import {
   isApprovedName,
@@ -12,7 +12,7 @@ import {
   type DisplayName,
   type DisplayNameInput,
   type NameTier,
-} from './star-naming-pure';
+} from '../../../src/catalog-format/naming/star-naming-pure';
 
 /** Structural subset of `Star` the display-name pass reads. */
 export interface DisplayNameSource {

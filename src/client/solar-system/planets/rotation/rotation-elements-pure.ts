@@ -2,10 +2,10 @@
 // Sol planets, evaluated at model time `t`. Sources + dropped-terms
 // rationale in ../README.md#planet-rotation.
 
-import { J2000_JD } from '../../../util/astronomy-constants';
+import { J2000_JD } from '../../../../astro-core/astronomy-constants';
 import { tToJdTdb } from '../../time/time';
 import { earthPoleRaDecDeg, earthSpinDeg } from './earth-orientation-pure';
-import { RELIEF_BODIES } from '../../../util/baker-constants';
+import { RELIEF_BODIES } from '../../../../astro-core/baker-constants';
 
 const DEG = Math.PI / 180;
 const DAYS_PER_JULIAN_CENTURY = 36525;

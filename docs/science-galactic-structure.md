@@ -3,12 +3,12 @@
 Covers the shared galactic coordinate
 frame, Milky Way stellar density profiles, interstellar dust
 extinction, and constellation stick-figure geometry. Spans
-`src/client/galactic/galactic-coords.ts`, `src/client/milkyway/`,
+`src/astro-core/galactic-coords.ts`, `src/client/milkyway/`,
 `src/client/star-pipeline/extinction/`, `scripts/dust/`, `src/client/overlays/`.
 
 ## Galactic coordinate system
 
-The shared module `src/client/galactic/galactic-coords.ts` exports two constants
+The shared module `src/astro-core/galactic-coords.ts` exports two constants
 used wherever the code needs to anchor in galactic geometry:
 
 - `GAL_TO_ICRS` — a `Matrix4` rotation built from the J2000 IAU
@@ -64,7 +64,7 @@ on its own, and it is what makes the scalar volume integral below the
 luminance integral. The emission column then converts to a V surface brightness
 and, through the scene-wide HDR unit, to per-pixel luminance — the same
 exposure the discrete star catalog emits against. See
-`src/client/milkyway/calibration/README.md` for the calibrated values and
+`src/astro-core/milkyway/calibration/README.md` for the calibrated values and
 that conversion, and `src/client/milkyway/README.md` for the full
 coordinate-handling chain.
 
@@ -83,7 +83,7 @@ Dividing through leaves only the RATIO of the two Υ\*_V — 3.15 from a
 [Bruzual 2003](/data/papers/index.md#bruzual2003) Chabrier SSP at Z = 0.02, 10 Gyr, against
 [Flynn 2006](/data/papers/index.md#flynn2006)'s
 measured 1.5 for the local disc column. There is no free parameter left;
-[The light ratio](/src/client/milkyway/calibration/README.md#the-light-ratio--bt-in-the-solve-is-not-the-published-number) carries the
+[The light ratio](/src/astro-core/milkyway/calibration/README.md#the-light-ratio--bt-in-the-solve-is-not-the-published-number) carries the
 closed form and the metallicity brackets.
 
 **The band marches the model minus the stars the catalogue draws.** The
@@ -92,7 +92,7 @@ field draws the resolved ones itself, so a band marching the whole
 emissivity counts them twice. The band therefore multiplies the emissivity
 at each step by one minus the catalogue's measured share of the model's
 light there — a table over distance from Sol and |sin b|, read off the
-built catalogue ([The resolution hole](/src/client/milkyway/calibration/README.md#the-resolution-hole--the-band-marches-the-model-minus-the-drawn-stars)).
+built catalogue ([The resolution hole](/src/astro-core/milkyway/calibration/README.md#the-resolution-hole--the-band-marches-the-model-minus-the-drawn-stars)).
 At V ≤ 11 the hole removes **0.35 %** of the model's
 light over the tabulated volume — 1.03× the catalogue's own light there,
 the shell average being blind to structure in longitude — while the
@@ -131,7 +131,7 @@ floor, and the residual anchor re-run there would put the Galaxy a
 magnitude *fainter* than M31. A vertical-profile change cannot substitute
 — the pole column and the integrated total are both vertical integrals,
 and adding the thick disc moved their ratio by 0.09 mag.
-[Two checks](/src/client/milkyway/calibration/README.md#two-checks-and-both-disagree-by-the-same-sign-and-order) carries the
+[Two checks](/src/astro-core/milkyway/calibration/README.md#two-checks-and-both-disagree-by-the-same-sign-and-order) carries the
 numbers and the pins.
 
 ## Interstellar dust extinction
@@ -713,7 +713,7 @@ nearest-voxel decode, `A_V = 2.742 · ∫E dl`. Slab columns: the profile above 
 the shipped normalisation. Cascade march: the CPU mirror in
 `milkyway-column-pure.ts`, per-channel, with the measured field replacing the
 slab inside coverage and sub-sampled at ≤ 10 pc within each log step; it
-reproduces every pinned row in `milkyway.test.ts` to under 0.001 mag before
+reproduces every pinned row in `/tests/integration/milkyway.test.ts` to under 0.001 mag before
 the source is swapped. Cloud geometry and brick steps: `public/clouds.json`
 and `data/molecular-clouds/cloud-surfaces.bin`.
 

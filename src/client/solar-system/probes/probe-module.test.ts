@@ -3,14 +3,14 @@
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import * as THREE from 'three';
-import { PROBE_MISSIONS } from '../../../../scripts/probes/probe-roster';
-import type { ProbeTrajectoryFile } from '../../../../scripts/probes/probe-trajectory-schema';
+import { PROBE_MISSIONS } from '../../../catalog-format/probes/probe-roster';
+import type { ProbeTrajectoryFile } from '../../../catalog-format/probes/probe-trajectory-schema';
 import { PROBE_ORBIT_FLOOR_PC, PROBE_PARK_DIST_PC } from './probe-focus-geometry';
 import type { KindContext } from '../../kinds/kind-module';
 import { makeKindContext } from '../../kinds/kind-context-mock';
 import { makeFrameCtx } from '../../scene/frame-ctx-mock';
 import type { FrameCtx } from '../../scene/scene-layer';
-import { AU_PC } from '../../util/astronomy-constants';
+import { AU_PC } from '../../../astro-core/astronomy-constants';
 import { tToJdUt } from '../time/time';
 import { SOL_OBJECT_SIDS } from '../sol-object-sids';
 import { PROBE_MARKER_PX } from './probe-field';

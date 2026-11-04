@@ -17,8 +17,12 @@ unsmudged LFS pointer. Regenerate offline and commit the result:
 ```
 python3 -m venv .venv && ./.venv/bin/pip install -r scripts/local-bubble/requirements.txt
 pnpm run build:local-bubble          # default: r_in_lmax-08, 48×96 grid
-./.venv/bin/python scripts/local-bubble/build-local-bubble.py --column r_in_lmax-10
+pnpm run build:local-bubble --column r_in_lmax-10
 ```
+
+A run with arguments writes no record, so its output reads stale until a
+plain `pnpm run build:local-bubble`
+([Recording a manual step](/scripts/pipeline/README.md#recording-a-manual-step--recordts)).
 
 The map gives, per galactic direction, the distance to the wall in pc.
 The shell is single-valued from the Sun, so the build resamples the map
@@ -30,7 +34,7 @@ vertex normals.
 
 ## Output format (`local-bubble.bin`, magic `LBUB`)
 
-Magic and version come from `data/schema/constants.json`
+Magic and version come from `src/astro-core/baker-constants.json`
 (`artifacts.localBubble`), which the client loader checks against too.
 
 - Header (32 B): `LBUB` · uint32 version · uint32 vertexCount · uint32

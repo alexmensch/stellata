@@ -1,23 +1,23 @@
 // The seven-tier spectral resolver and the SIMBAD sp_type index it walks.
 // See README.md.
 
+import { type ApsisRow } from '../../../src/catalog-format/record/catalog-pure';
 import {
   emptySimbadNamespaceIndex,
   indexSimbadRow,
   simbadHipKey,
   walkSimbadNamespaces,
-  type ApsisRow,
   type SimbadNamespace,
   type SimbadNamespaceIndex,
   type SimbadRecordKeys,
-} from '../record/catalog-pure';
+} from '../record/record-build-pure';
 import type { Declared } from '../../util/sources/source';
 import { readTable } from '../../util/tsv/table-pure';
 import {
   classifyFromGspspec,
   classifyFromSimbad,
   type SpectralInfo,
-} from './spectral-classify';
+} from '../../../src/catalog-format/spectral/spectral-classify';
 import type { CascadeRefusal, CascadeResult } from '../cascade-result';
 
 /** Per-source SIMBAD spectral-classification row from
@@ -162,7 +162,7 @@ export const CURATED_SPTYPE_BY_HIP: ReadonlyMap<number, string> = new Map([
 
 /** Seven-tier spectral resolver: a curated HIP override, the four SIMBAD
  *  namespaces in ladder order, Gaia DR3 GSP-Spec, else `none`.
- *  Which tier exists for which population is in `./README.md#the-resolver-and-the-radius-chain`.
+ *  Which tier exists for which population is in `./README.md#the-resolver`.
  * */
 export function resolveSpectralInfo(
   keys: SimbadRecordKeys,

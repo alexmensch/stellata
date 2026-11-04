@@ -18,8 +18,8 @@ around. Adding `radial_velocity` to the 5p schema, re-slicing a VizieR table
 for one more column, widening a request set, re-stratifying the SIMBAD sample
 — all are in-session work. Never scope a design down, defer a field, or hand a
 pull back to the user on the assumption that a network fetch is out of reach;
-the cost is the pull's wall-clock time, and `--force` / the `.ckpt` resume path
-([Resuming a long pull](#resuming-a-long-pull)) bound the retry risk.
+the cost is the pull's wall-clock time, and the `.ckpt` resume path
+([Resuming a long pull](#resuming-a-long-pull)) bounds the retry risk.
 
 **None of these is a reason to defer a pull to its own PR**, and each has been
 used as one: the artifact is tens of MB and tracked in LFS; the re-pull moves
@@ -55,17 +55,21 @@ python3 -m venv .venv
 ```
 
 After that, prefix every `python3` invocation with `.venv/bin/`, or
-shell-activate via `source .venv/bin/activate`. The pnpm targets below
-call bare `python3` — activate the venv (or alias `python3` to the
-venv binary) in the shell that runs them.
+shell-activate via `source .venv/bin/activate`. Every pnpm target below
+runs its script through `scripts/pipeline/record.ts`, which starts bare
+`python3` — activate the venv (or alias `python3` to the venv binary) in the
+shell that runs them. `record.ts` skips a pull whose `data/stamps/` record is
+still fresh (`--force` re-pulls) and rewrites the record after every run
+([Recording a manual step](../pipeline/README.md#recording-a-manual-step--recordts)).
 
 **`.venv` is gitignored, so a git worktree has none** — a refresh run from
 one dies on `ModuleNotFoundError: astropy` after resolving its paths
-perfectly well, which reads like a code fault and is not one. Point the
-absolute path at the main checkout's venv
-(`<main-checkout>/.venv/bin/python scripts/refresh/<script>.py`); the
-scripts resolve `REPO_ROOT` from their own location, so they still read and
-write the worktree's `data/`.
+perfectly well, which reads like a code fault and is not one. Put the main
+checkout's venv first on `PATH` and run the target
+(`PATH=<main-checkout>/.venv/bin:$PATH pnpm run refresh:<x>`): `record.ts`
+starts bare `python3`, and the scripts resolve `REPO_ROOT` from their own
+location, so they still read and write the worktree's `data/`. Running the
+script directly writes no record, so the build then stops on that pull.
 
 ### Per-script targets
 
@@ -75,7 +79,7 @@ write the worktree's `data/`.
 | `refresh:gaia-tyc` | `refresh-gaia-tyc-xmatch.py` | `data/gaia/gaia_dr3_tyc_xmatch.tsv` | Tycho-2 → Gaia DR3 cross-walk from `tycho2tdsc_merge_best_neighbour`. |
 | `refresh:gaia-nss` | `refresh-gaia-nss.py` | `data/gaia/gaia_dr3_nss_two_body.tsv` | Gaia DR3 `nss_two_body_orbit` (binary orbits Gaia detected astrometrically). |
 | `refresh:gaia-astrometry` | `refresh-gaia-astrometry.py` | `data/gaia/gaia_dr3_astrometry.tsv` | Gaia DR3 5-parameter astrometry for the binaries request (`data/gaia/gaia_astrometry_source_id_request.tsv`): the source_ids Stage 2 resolved plus every candidate a Stage-2 gate weighed — `write_astrometry_request` owns the list. Run AFTER `refresh:gaia-hip` + `refresh:gaia-tyc` + a fresh `pnpm run build:binaries`. |
-| `build:astrometry-request` | `scripts/catalog/astrometry-request/export-astrometry-request.ts` | `data/gaia/gaia_catalog_source_id_request.tsv` | Full-catalog deduped Gaia DR3 source_id request list — the manifest's `gaia_source_id` column (the same binding the record build reads) UNION the classic-ID binding gate's candidate sources UNION the membership derivation's candidate sources UNION `multiples.tsv`'s kept-physical pair members. Not a network pull. Reads the manifest, the spine and both Gaia cross-walks, so it still runs AFTER `refresh:gaia-hip` / `refresh:gaia-tyc`. |
+| `build:astrometry-request` | `scripts/catalog/astrometry-request/export-astrometry-request.ts` | `data/gaia/gaia_catalog_source_id_request.tsv` | Full-catalog deduped Gaia DR3 source_id request list — the union of four contributions ([The request is a union](../catalog/astrometry-request/README.md#the-request-is-a-union-and-why-that-is-not-a-compromise)). Not a network pull. Reads both Gaia cross-walks and `multiples.tsv`'s kept pairs, which Stage 5 decides from `gaia_dr3_astrometry.tsv`, so it runs AFTER `refresh:gaia-hip` / `refresh:gaia-tyc` and a `build:binaries` that follows `refresh:gaia-astrometry`. |
 | `refresh:gaia-astrometry-catalog` | `refresh-gaia-astrometry-catalog.py` | `data/gaia/gaia_dr3_astrometry_catalog.tsv` | Gaia DR3 5p astrometry + `radial_velocity` for every catalog source_id ([the request](../catalog/astrometry-request/README.md)) — tier 1 of the direction, rv, V and ci cascades. Same schema/query as `refresh:gaia-astrometry`; reads `gaia_catalog_source_id_request.tsv`. Run AFTER `build:astrometry-request`. |
 | `refresh:gaia-magnitude` | `refresh-gaia-magnitude.py` | `data/gaia/gaia_dr3_magnitude_pull.tsv` | Every `gaiadr3.gaia_source` row at `G ≤ 11` (<!-- count:membership-manifest/magnitudeTerm.rows -->1,247,240<!-- /count -->) — membership's magnitude term ([§ 1](/docs/catalog-driver.md#1-the-driver-model)), on `gaia_astrometry_pull.TSV_COLUMNS`. The one Gaia pull with **no request set**: its selection is the magnitude bound, so it reads nothing under `data/` and has no ordering constraint. Floor rationale — why `G ≤ 11` needs no margin over `V ≤ 11` — [Why the floor carries no margin](/data/gaia/README.md#why-the-floor-carries-no-margin). |
 | `refresh:gaia-apsis` | `refresh-gaia-apsis.py` | `data/gaia/gaia_dr3_apsis.tsv` | Gaia DR3 `astrophysical_parameters` (gspphot ∪ gspspec) — Teff / log g / [M/H] / A0 + the ESP-ELS `spectraltype_esphs` enum. Scoped to the deep population (`magnitude/README.md`), so it runs AFTER `build:astrometry-request`. |
@@ -89,13 +93,15 @@ write the worktree's `data/`.
 | `refresh:tycho2` | `refresh-tycho2.py` | `data/tycho2/{tycho2_main,tycho2_suppl1}.tsv` | Tycho-2 (`I/259` `tyc2` + `suppl_1`) mean positions with per-star mean epochs, PM, BT/VT — filtered to the TYCs the manifest and IV/25 mention. Range-batched over TYC1 and filtered locally; VizieR can express no server-side filter on the full identifier ([Why the pull is range-batched](/data/tycho2/README.md#why-the-pull-is-range-batched-rather-than-key-filtered)). |
 | `refresh:gliese` | `refresh-gliese.py` | `data/gliese/gliese_v70a.tsv` | [Gliese 1991](/data/papers/index.md#gliese1991) third catalogue of nearby stars (`V/70A`, whole table) — printed Johnson V + B−V, spectral type, parallax and rv, plus the B1950 position, proper motion and cross-names the binding review measures against. The V cascade's tier under Tycho-2, and the first-order source behind every `mag_src=GJ` cell (`data/gliese/README.md`). |
 | `refresh:simbad` | `refresh-simbad-sample.py` | `data/simbad/simbad_sample.tsv` | Stratified random 50k SIMBAD sample (validation corpus). |
-| `refresh:simbad-values` | `refresh-simbad-values.py` | `data/simbad/simbad_values.tsv` | Bibcoded rv / parallax / PM / coordinates + B/V fluxes for the [§ 5](/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers) value cohort — the manifest rows a SIMBAD value tier can reach. Cohort predicate and coverage: [The values pull](/data/simbad/README.md#the-values-pull). |
+| `refresh:simbad-values` | `refresh-simbad-values.py` | `data/simbad/simbad_values.tsv` | Bibcoded rv / parallax / PM / coordinates + B/V fluxes for the [§ 5](/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers) value cohort — the manifest rows a SIMBAD value tier can reach. Cohort predicate and coverage: [The values pull](/data/simbad/README.md#the-values-pull). The cohort is manifest rows less those `gaia_dr3_astrometry_catalog.tsv` already completes, and `build:membership` reads that same table, so it runs AFTER `refresh:gaia-astrometry-catalog` and the `build:membership` that follows it. |
 | `refresh:simbad-tyc-hd` | `refresh-simbad-tyc-hd.py` | `data/simbad/simbad_tyc_hd.tsv` | SIMBAD's own HD identification per Tycho-2 entry, keyed on TYC — the witness independent of IV/25 that a close pair's crossed HD cells need ([The TYC → HD pull](/data/simbad/README.md#the-tyc--hd-pull)). Request set is `refresh_lib.read_mentioned_tycs` — IV/25's Tycho ids union the manifest's — shared with `refresh:tycho2` rather than restated, so both cover the same entries by construction. Composes the `simbad/` plumbing and states no ADQL of its own. |
+| `refresh:edenhofer2024-main` / `-2kpc` | `refresh-edenhofer2024-{main,2kpc}.py` | `data/dust/edenhofer2024-{main,2kpc}.json` | The [Edenhofer 2024](/data/papers/index.md#edenhofer2024) dust map's two variants into `dustmaps`' cache, each recorded as a committed identity file the bakes read — [The Edenhofer 2024 pulls](/scripts/dust/README.md#the-edenhofer-2024-pulls). |
 | `validate:simbad` | `scripts/catalog/validate/validate-simbad-sample.ts` | (report only) | Tier C — cross-check `public/catalog.bin` against the committed SIMBAD sample. The build-time subset of the same check is `distance-regression-check.ts`, gated on `build-distance-outliers-expected.json`. |
 
-`refresh-simbad-sptype.py`, `refresh-simbad-wds-xids.py`, and
-`refresh-msc.py` don't yet have dedicated pnpm targets — invoke
-directly with `python3 scripts/refresh/<script>.py`. The SIMBAD
+`refresh:simbad-sptype`, `refresh:simbad-wds-xids` and `refresh:msc` run
+`refresh-simbad-sptype.py`, `refresh-simbad-wds-xids.py` and
+`refresh-msc.py` (outputs `data/simbad/simbad_sptype.tsv`,
+`data/simbad/simbad_wds_xids.tsv`, `data/msc/msc_*.tsv`). The SIMBAD
 scripts share `scripts/refresh/simbad/` plumbing (`specs.py`,
 `inputs.py`, `request.py`, `query.py`, `union.py`, `coverage.py`,
 `tsv.py`) so adding new SIMBAD-anchored pulls reuses the entire stack —
@@ -109,13 +115,16 @@ per-table schema validation and row bounds — source detail in
 **No refresh script reads `data/athyg/`** — neither AT-HYG's own CSV
 (`athyg_33_classic_ids.csv`) nor the inherited spine.
 Every catalog-scoped request set
-traces to `data/membership/membership-manifest.tsv` — the membership term
-([§ 3.1](/docs/catalog-driver.md#31-retiring-the-spine--the-membership-rule-measured-against-the-primaries)) — by one of two routes: directly, through
+traces to the membership term
+([§ 3.1](/docs/catalog-driver.md#31-retiring-the-spine--the-membership-rule-measured-against-the-primaries)) by one of two routes: directly off
+`data/membership/membership-manifest.tsv`, through
 `refresh_lib.read_membership_source_ids` / `iter_membership_rows` (the
-SIMBAD pulls), or through a request file `export-astrometry-request.ts`
-exported off the same manifest column (astrometry-catalog, GSPC,
+SIMBAD pulls), or off the committed inputs `build:membership` derives the
+manifest from, through the request file `export-astrometry-request.ts`
+builds (astrometry-catalog, GSPC,
 [Bailer-Jones 2021](/data/papers/index.md#bailerjones2021), Apsis —
-see `read_source_id_request` below).
+see `read_source_id_request` below), whose coverage of the manifest's
+bindings the membership gate test holds.
 `refresh_lib.MEMBERSHIP_MANIFEST` is the one statement of where that table
 lives, and `refresh_lib.TYC2_HD_CROSS_INDEX` the same for IV/25; a script
 naming either path itself has drifted from it. The two pulls scoped to Tycho
@@ -128,15 +137,19 @@ The manifest's `gaia_source_id` is the binding the manifest **justified**, its
 `binding` cell saying on what basis, so a request derived from it and the
 record build name the same sources by construction — `readStars` reads the
 same cell. A raw cross-walk value is the ungated one, which is why a walk over
-one over-pulls rows that never became records — the failure
-[Request and record build name the same set](/scripts/catalog/astrometry-request/README.md#request-and-record-build-name-the-same-set-by-construction)
-diagnoses at length.
+one over-pulls rows that never became records. The astrometry request walks
+candidates on purpose, since both binding gates need a G for every source they
+weigh, and covers the manifest's bindings by measurement rather than
+construction
+([The record build's sources are covered by measurement](/scripts/catalog/astrometry-request/README.md#the-record-builds-sources-are-covered-by-measurement)).
 
 **A rebased request set does not rewrite its output.** The rebase changes
 what the *next* run asks for; the committed TSV keeps whatever the previous
 run pulled until that run happens — the same terms as `radial_velocity`
-above. Editing `refresh_lib.py` or a `simbad/*.py` module invalidates
-`is_up_to_date`, so the next invocation re-pulls rather than skips.
+above. A rebase that changes the keys a pull asks under changes its
+`--describe` request, so the pull's `data/stamps/` record reads stale and the
+build stops naming its refresh; a plumbing edit alone does not
+([Freshness](../pipeline/README.md#freshness--one-mechanism)).
 
 [Bailer-Jones 2021](/data/papers/index.md#bailerjones2021) and Apsis
 add a second, magnitude-bounded leg on top of that request —
@@ -159,7 +172,7 @@ edit and it is no help here: nothing is stale in the *build*, the *data* is.
 `bjOverridden`, `apsisMatched` — cannot serve as the gate, because when the
 column gains sources the pull was never asked for, the numerator simply
 stops growing. "Stopped growing" is the most invisible diff a snapshot can
-carry: it reads as no change, and `UPDATE_BUILD_COUNTS` writes it back
+carry: it reads as no change, and `UPDATE_SNAPSHOTS` writes it back
 without comment. The shortfall is what moves loudly, so the shortfall is what
 is gated — where it must be zero, by a check that fails the build and names
 each missing row (a lineage invariant, [Invariants](/scripts/catalog/lineage/README.md#invariants), or an
@@ -278,14 +291,16 @@ it the `astroquery` dependency.
 
 A `TapClient` moves whichever backend answered to the front, so a mirror
 that is down costs its retry schedule (about 5 min of connect timeouts)
-once per run, not once per batch.
+once per run, not once per batch. It reports each answering backend through
+`build_stamp.report_service`, and `client.services` is its declared service
+list, the one a pull's `--describe` states.
 
 `TapClient` takes `backends=` as a required argument — there is no
 default list, because which service can serve a query is a property of
 the table. CDS VizieR doesn't host `gaiadr3.*`, so an ESA→CDS fallback
 would fail with a misleading "table not found";
-`refresh-hipparcos2.py` goes the other way and passes
-`backends=[cds_backend()]` because `I/311/hip2` is VizieR-only. SIMBAD
+`refresh-hipparcos2.py` goes the other way and uses
+`cds_client()` (CDS alone) because `I/311/hip2` is VizieR-only. SIMBAD
 gets `simbad_client()` for its divergent dialect — CDS primary, the
 Harvard CfA mirror as fallback, both serving the same database and oids.
 Check ESA's
@@ -353,9 +368,8 @@ spot-check rows.
 
 `TSV_COLUMNS` there is the one place the schema is stated, so **a column
 added to it lands in both scopes** — but only in whichever output is
-actually re-pulled. Editing the module also invalidates both outputs'
-`is_up_to_date` check (it folds this file's mtime), so the next refresh of
-either scope re-pulls rather than skips.
+actually re-pulled. The column list is part of both scopes' query, so an
+added column stales both records and the build names both refreshes.
 
 Both scopes carry `radial_velocity` and `radial_velocity_error`. The catalog
 scope's rv cascade reads them, and `parseGaiaAstrometryCatalogTsv` requires
@@ -379,29 +393,28 @@ catalogue inconsistent. Order matters:
    ([Consumed by](/data/athyg/README.md#consumed-by)), which step 4 re-runs. Membership is
    the primaries-derived manifest and `build:catalog` reads neither this file
    nor the frozen spine, so the swap moves no record.
-2. **Refresh the Gaia DR4-keyed side-files** in any order — they're
-   independent pulls keyed on the deduped source_id list:
-   `refresh-gaia-hip-xmatch.py`, `refresh-gaia-tyc-xmatch.py`,
-   `refresh-gaia-astrometry.py`, `refresh-gaia-nss.py`,
-   `refresh-gaia-apsis.py`, `refresh-bailer-jones.py`.
-   `refresh-gaia-magnitude.py` goes here too and is the one with no
-   ordering constraint at all — it asks the new release for a magnitude
-   range, so it neither reads nor bridges a DR3 id.
-   Each commits its TSV under `data/gaia/` or `data/bailer-jones/`.
-   Then regenerate the full-catalog astrometry (two stages, in this
-   order): `pnpm run build:astrometry-request` (the manifest's
-   `gaia_source_id` column plus both binding gates' candidates and the
-   bound-pair siblings, so it runs after both cross-walk refreshes), then
-   `pnpm run refresh:gaia-astrometry-catalog`. Under a DR transition the
-   manifest's `gaia_dr3:` ids bridge through [§ 6](/docs/sid.md#6-gaia-data-release-reconciliation) first —
+2. **Refresh the Gaia DR4-keyed side-files** — `refresh:gaia-hip`,
+   `refresh:gaia-tyc`, `refresh:gaia-nss`, `refresh:gaia-magnitude`,
+   `refresh:gaia-astrometry`, `build:astrometry-request`,
+   `refresh:gaia-astrometry-catalog`, `refresh:gaia-apsis`,
+   `refresh:gaia-gspc`, `refresh:bailer-jones`, then `build:membership`
+   (it reads the astrometry catalog and the magnitude pull) and
+   `refresh:simbad-values` — in the order the
+   "Run AFTER" prerequisites in [Per-script targets](#per-script-targets)
+   set; that table is the one statement of it. Under a DR transition the
+   request's `gaia_dr3:` ids bridge through
+   [§ 6](/docs/sid.md#6-gaia-data-release-reconciliation) first —
    requesting DR3 ids against a DR4 table returns nothing.
 3. **Refresh HIP2 + SIMBAD if upstream republished** — these are
    keyed on HIP / SIMBAD `oid` respectively, so they don't change
    under a Gaia DR transition unless their own pipeline updated.
-4. **Re-run `pnpm run build:binaries`** then **`pnpm run build:catalog`**.
+   The SIMBAD pulls key their requests off the manifest, so any that run
+   go after step 2's `build:membership`.
+4. **Re-run `pnpm run build:binaries`**, **`pnpm run build:membership`**,
+   then **`pnpm run build:catalog`**.
    Both build steps reassert against their snapshots; the count diffs
    are the first place to look for regressions.
-5. **`UPDATE_BUILD_COUNTS=1` then `UPDATE_DISTANCE_OUTLIERS=1`** to
+5. **`pnpm run build:catalog --update-snapshots`** to
    refresh both snapshots once the new build is reviewed. Re-edit the
    `reason` strings on the distance-outliers snapshot for any new
    outliers.

@@ -1,7 +1,7 @@
 // Binary-companion card lines shared by the star hover formatter and the
 // star focus-card provider. See ./README.md.
 
-import { J2000_JD } from '../util/astronomy-constants';
+import { J2000_JD } from '../../astro-core/astronomy-constants';
 import type { LateState } from '../util/late/late';
 import {
   type BinariesData,

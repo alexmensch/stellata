@@ -1,7 +1,7 @@
 // Pure helpers for the build-catalog count assertion — diff a
 // BuildCounts record against the committed snapshot. See
 // /scripts/catalog/validate/README.md#validation-harness-1.
-import type { DistVia } from './distance/parallax/parallax-cascade';
+import type { DistVia } from '../../src/catalog-format/record/catalog-pure';
 import type { RvErrorBandPartition } from './distance/radial-velocity/radial-velocity';
 import type { RecuratedBrightness } from './companions/companion-promotion';
 
@@ -46,7 +46,7 @@ export interface BuildCounts {
    *  already set by `inferBinaries`). */
   ccdmFlagged: number;
   /** Records the first transport chunk carries — what first paint draws
-   *  (`record/README.md#on-disk-transport-chunking`). */
+   *  (`/src/catalog-format/record/README.md#on-disk-transport-chunking`). */
   recordsInFirstChunk: number;
   /** CCDM primaries the optical-double gate vetoed: nearest same-group
    *  sibling >1 pc away in 3D at Gaia-quality distances, with no physical

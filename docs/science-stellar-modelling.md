@@ -52,8 +52,9 @@ The famous-star radius and colour claims are pinned end-to-end against
 (`primary_radius_rsun` / `primary_ci` corpus columns).
 
 Implementation: `physicalRadius` / `resolveApsisTeff` in
-`scripts/catalog/spectral/physical-radius.ts`, wired in `stars-parse.ts`; see
-[The resolver and the radius chain](/scripts/catalog/spectral/README.md#the-resolver-and-the-radius-chain) for
+`src/catalog-format/spectral/physical-radius.ts`, wired in `stars-parse.ts`; see
+[The radius chain](/src/catalog-format/spectral/README.md#the-radius-chain) and
+[The resolver](/scripts/catalog/spectral/README.md#the-resolver) for
 the spectral-string parser and the surrounding pipeline.
 
 ## Stellar perception model
@@ -213,7 +214,7 @@ first match wins:
    build), baked into `iCi`.
 4. **Spectral-class T_TABLE** — when a no-Apsis star has no B-V but a
    parseable class, `spectralClassCi`
-   (`scripts/catalog/spectral/physical-radius.ts`)
+   (`src/catalog-format/spectral/physical-radius.ts`)
    bakes `Ballesteros(tempKelvin(class))` into `iCi` — the intrinsic
    class colour, so a class star renders its true hue rather than
    solar-yellow. Counted `ciSpectralDerived`.
@@ -322,7 +323,7 @@ move on any axis.
 ### Per-type table
 
 One code path, parameterised by variability family. `classifyGcvsVarType`
-(`scripts/catalog/record/catalog-pure.ts`) refines the GCVS type into a subtype
+(`scripts/catalog/record/record-build-pure.ts`) refines the GCVS type into a subtype
 code (byte 37); `buildPulsationParams`
 (`src/client/star-pipeline/pulsation/pulsation-params-pure.ts`) maps each code to
 `{ρ, ΔB−V}`:

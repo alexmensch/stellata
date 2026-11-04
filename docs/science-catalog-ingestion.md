@@ -165,8 +165,9 @@ onto the likelihood (well-measured stars don't move); at low S/N it
 collapses onto the prior (catastrophic outliers get pulled back to
 plausible disc distances). This is the principled fix and we apply it where
 the underlying distance actually is a Gaia inverse-parallax estimate
-— i.e. AT-HYG rows whose `dist_src` is `G_R3` or `G_R2`. For those
-rows we take the [Bailer-Jones 2021](/data/papers/index.md#bailerjones2021) distance (photogeometric `r_med_photogeo`
+— i.e. records the parallax cascade placed by their own DR3 parallax
+(`gaia_dr3_inversion`; [Consumed by](/data/bailer-jones/README.md#consumed-by)
+owns the gate). For those records we take the [Bailer-Jones 2021](/data/papers/index.md#bailerjones2021) distance (photogeometric `r_med_photogeo`
 preferred, geometric `r_med_geo` as fallback when photogeo is absent);
 position follows as the direction-cascade unit vector × the new distance
 ([Driver astrometry](#driver-astrometry--at-hyg-precision-findings-and-the-direct-sourcing-decision)). Brightness needs no separate correction here:
@@ -269,7 +270,7 @@ a value the paper's tag list does not include.
 Stellata pulls all seven Apsis floats plus the ESP-ELS spectral-type
 enum per Gaia DR3 source_id into `data/gaia/gaia_dr3_apsis.tsv` and
 writes them per record into the binary at offsets 52–79 (see
-[Binary catalog format](/scripts/catalog/record/README.md#binary-catalog-format-publiccatalogbini--manifest)). Coverage: ~99.6% of
+[Binary catalog format](/src/catalog-format/record/README.md#binary-catalog-format-publiccatalogbini--manifest)). Coverage: ~99.6% of
 AT-HYG rows that resolve to a Gaia DR3 source_id match an Apsis row;
 ~85% have a non-null T_eff in at least one of gspphot or gspspec. That
 last number is the population the renderer's colour LUT path can re-

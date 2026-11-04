@@ -9,7 +9,7 @@ import {
   type VerifiableDustField,
 } from './dust-voxel-readback';
 import { webGpuRendererMock, type VoxelSource } from './dust-renderer-mock';
-import { AV_PER_EZGR } from '../util/baker-constants';
+import { AV_PER_EZGR } from '../../astro-core/baker-constants';
 
 const CHUNK = 4;
 const GRID = 8;

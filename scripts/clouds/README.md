@@ -32,12 +32,12 @@ Sources under `data/molecular-clouds/`:
   (joined on the raw cloud name).
 
 Idempotent — exits early if `public/clouds.json` is newer than the
-scripts, the source files and `data/schema/constants.json`. Run via `pnpm run build:clouds`.
+scripts, the source files and `src/astro-core/baker-constants.json`. Run via `pnpm run build:clouds`.
 
 ## Output schema
 
 `{version, count, envelopeFadeStart, noiseModel, clouds[]}` — the version is
-`artifacts.clouds` in `data/schema/constants.json`, which the client loader
+`artifacts.clouds` in `src/astro-core/baker-constants.json`, which the client loader
 gates on too. `envelopeFadeStart` is `cloud_model.ENVELOPE_FADE_START`, the
 fraction of `uEnv` where the density model's taper begins: the calibration
 of `n0Cal` / `uEnv` assumed it, so the client's analytic march reads it from
@@ -67,7 +67,9 @@ One entry per cloud:
 
 `sid` is stamped after this script runs by `scripts/sid/stamp-sibling-sids.ts`
 (the tail of `pnpm run build:clouds`), allocating each `cloud:<id>` slug
-against the committed ledger — this Python build never touches the ledger. A
+against the committed ledger — this Python build never touches the ledger.
+The stamp rewrites `clouds.json` through `emitArtifacts`, so a stamp killed
+mid-write leaves the previous file whole. A
 new cloud slug mints there under `allocation.mint.cloud`; a vanished slug fails
 the stamp, and a rename needs a `data/sid/sameas-overrides.tsv` bridge. See [Sibling-artifact stamping](/scripts/sid/README.md#sibling-artifact-stamping).
 

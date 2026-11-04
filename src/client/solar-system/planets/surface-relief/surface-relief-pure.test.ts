@@ -5,9 +5,8 @@ import { describe, expect, it } from 'vitest';
 import { SOL_BODIES } from '../../planet-system';
 import { texelBytes } from '../../../util/texture-bytes-pure';
 import { readTslSource } from '../../../webgpu/tsl/tsl-source-fixture';
-import {
-  HORIZON_AZIMUTHS, HORIZON_SIN_RANGE, RELIEF_BODIES,
-} from '../../../util/baker-constants';
+import { RELIEF_BODIES } from '../../../../astro-core/baker-constants';
+import { HORIZON_AZIMUTHS, HORIZON_SIN_RANGE } from '../../../../catalog-format/baker-artifacts/baker-artifacts';
 import {
   RELIEF_POLE_EPS,
   horizonSin,

@@ -5,7 +5,7 @@ import * as THREE from 'three';
 import type { LocalCluster } from '../local-depth/local-depth-pass';
 import type { MemberSphere } from '../local-depth/bracket/slice-pure';
 import type { OccluderSet } from '../occlusion/occluder-set';
-import { KM_PC } from '../util/astronomy-constants';
+import { KM_PC } from '../../astro-core/astronomy-constants';
 import {
   isHostLocallyActive,
   moonRingExtentsPc,

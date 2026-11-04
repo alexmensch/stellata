@@ -13,7 +13,7 @@ import { fakeShellMaterials } from './shell-materials-mock';
 import { SHELL_OBJECT_SIDS } from './shell-object-sids';
 import { createShellKindModule } from './shell-module';
 import { sidsOf } from '../util/sid-resolver/sid-domain-fixture';
-import { LOCAL_BUBBLE_SCHEMA, writeBinaryHeader } from '../util/baker-constants';
+import { LOCAL_BUBBLE_SCHEMA, writeBinaryHeader } from '../../catalog-format/baker-artifacts/baker-artifacts';
 
 /** Minimal LBUB buffer: an octahedron of wall vertices around a
  *  centroid at (50, 0, 0), 100 pc out along each axis. */

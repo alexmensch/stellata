@@ -15,7 +15,7 @@ it. Stars and planet glare share this kernel exactly.
 - `phys-size-elision-pure.ts` (+ test) — the `physSize` below which every
   consumer of it stops responding, and the tolerance the one graceful
   consumer is held to ([Eliding the physical-size branch](#eliding-the-physical-size-branch)).
-  `phys-size-elision-catalog.test.ts` is the second leg: it re-derives the
+  `/tests/integration/phys-size-elision-catalog.test.ts` is the second leg: it re-derives the
   window and the worst gated star over `public/catalog.bin`, so the
   measured figures in that section are regenerated rather than quoted.
 - `perceptual-disc-uniforms.ts` — TypeScript shape for the uniforms the
@@ -138,7 +138,7 @@ Three stop responding at a hard threshold:
   floor, so tiering's bound implies this one.
 - **The peak** — `pointSourcePeakTsl`'s `max(1, π·r²)` saturates at
   or below `POINT_SOURCE_FLAT_PEAK_DIAMETER_PX` = 2/√π
-  ([Unit](../../hdr/emission/README.md#unit--what-an-emitting-layer-writes)), where pinning the radius to 0
+  ([Unit](../../../astro-core/emission/README.md#unit--what-an-emitting-layer-writes)), where pinning the radius to 0
   changes the peak by nothing at all.
 
 The fourth has **no plateau**: `physRatio` is also a varying, and
@@ -166,7 +166,7 @@ cycle, and a window solved from the static radius would sit that much too
 close.
 
 Measured over the built catalog at a Sol vantage, 50° FOV and 1000 px
-(`phys-size-elision-catalog.test.ts`, which pins every figure here): the
+(`/tests/integration/phys-size-elision-catalog.test.ts`, which pins every figure here): the
 window is 7.12 pc and admits **162 of <!-- count:build-catalog/recordCount -->979,678<!-- /count --> records**; the rest
 are gated, and the widest disc among them subtends 2.14e-4 px —
 93× inside the 0.0199 px bound, so the worst exponent movement in the

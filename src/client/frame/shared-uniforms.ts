@@ -3,16 +3,12 @@
 
 import * as THREE from 'three';
 import { ZOOM_FLOOR_FRACTION } from '../camera/controls/star-physics';
-import {
-  DEFAULT_FILTER,
-  instrumentLimitMag,
-  sizeSpanOf,
-  STAR_RENDER_DEFAULTS,
-} from '../filters/filter-state';
+import { DEFAULT_FILTER, sizeSpanOf, STAR_RENDER_DEFAULTS } from '../filters/filter-state';
+import { instrumentLimitMag } from '../../astro-core/instruments';
 import { cullMagFor } from '../hdr/exposure/exposure-epoch';
 import type { HdrEmitterUniforms } from '../hdr/hdr-emitter-uniforms';
-import { R_SUN_PC } from '../util/astronomy-constants';
-import { AV_PER_EZGR } from '../util/baker-constants';
+import { R_SUN_PC } from '../../astro-core/astronomy-constants';
+import { AV_PER_EZGR } from '../../astro-core/baker-constants';
 import { makeColorLutTexture } from '../star-pipeline/blackbody-lut';
 import type { PerceptualDiscUniforms } from '../star-pipeline/perceptual-disc/perceptual-disc-uniforms';
 import { MIRROR_CAPACITY } from '../star-pipeline/local-pass/star-mirror-slots';

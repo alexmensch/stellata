@@ -308,16 +308,6 @@ def assert_membership_covered(
 
 
 def main() -> None:
-    force = "--force" in sys.argv
-    sources = [Path(__file__), Path(rl.__file__), MEMBERSHIP, TYC2_HD]
-    outputs = [t.output for t in TABLES]
-    if not force and all(rl.is_up_to_date(out, sources) for out in outputs):
-        print(
-            f"{OUT_DIR.relative_to(ROOT)}/*.tsv up to date — skipping "
-            "(use --force to rebuild)"
-        )
-        return
-
     membership_tycs = read_membership_tycs(MEMBERSHIP)
     wanted = read_mentioned_tycs(MEMBERSHIP, TYC2_HD)
     if not wanted:
@@ -332,12 +322,24 @@ def main() -> None:
         f"(manifest {len(membership_tycs)} ∪ IV/25 {len(wanted) - len(membership_tycs)} new)"
     )
 
-    client = rl.TapClient(backends=[rl.cds_backend()])
+    client = rl.cds_client()
     kept = [pull_table(spec, client, wanted) for spec in TABLES]
     assert_membership_covered(membership_tycs, set().union(*kept))
     for spec, rows in zip(TABLES, kept):
         write_table(spec, rows)
 
 
+def describe() -> dict:
+    """Every TYC1 range query of both tables; the request is the mentioned
+    TYCs, which the pull filters the ranges down to."""
+    return rl.description(
+        "\n".join(spec.adql(lo, hi) for spec in TABLES for lo, hi in tyc1_ranges()),
+        rl.cds_client().services,
+        release=", ".join(f"VizieR {spec.vizier_table}" for spec in TABLES),
+        request=sorted(format_tyc(t) for t in read_mentioned_tycs(MEMBERSHIP, TYC2_HD)),
+        request_from=[MEMBERSHIP, TYC2_HD],
+    )
+
+
 if __name__ == "__main__":
-    main()
+    rl.pull_main(main, describe)

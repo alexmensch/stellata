@@ -1,16 +1,12 @@
 // The SID objects build:catalog allocates, in allocation order: its records, then the sol and shell lists.
 
-import { FLAG_IS_SOL } from '../catalog/record/catalog-pure';
+import { FLAG_IS_SOL } from '../../src/catalog-format/record/catalog-pure';
 import type { Star } from '../catalog/parse/stars-parse';
 import { sourceRowRef, sourceRowRefText } from '../util/sources/row-ref-pure';
 import type { SidObject } from './allocate-pure';
 import { ALLOCATION_CODES } from './allocation-lineage-pure';
 import { SHELL_OBJECTS, SOL_OBJECTS } from './object-mints-source';
 import { starDesignations } from './sid-pure';
-import { SIBLING_NAMESPACES } from './sibling-artifacts';
-
-/** Every namespace but the sibling artifacts', which their own stamp steps allocate. */
-export const inCatalogScope = (ns: string): boolean => !SIBLING_NAMESPACES.has(ns);
 
 export function catalogSidObjects(stars: readonly Star[]): SidObject[] {
   const records = stars.map((s, i): SidObject => ({

@@ -3,7 +3,8 @@ import {
   DustField, dustManifestError, loadDustManifest, type DustChunkMeta, type DustManifest,
 } from './dust-loader';
 import { webGpuRendererMock } from './dust-renderer-mock';
-import { AV_PER_EZGR, DUST_MANIFEST_SCHEMA } from '../util/baker-constants';
+import { AV_PER_EZGR } from '../../astro-core/baker-constants';
+import { DUST_MANIFEST_SCHEMA } from '../../catalog-format/baker-artifacts/baker-artifacts';
 
 const GRID = 8;
 const CHUNK = 4;

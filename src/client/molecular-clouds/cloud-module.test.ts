@@ -14,7 +14,7 @@ import { createCloudKindModule } from './cloud-module';
 import { fakeWebGpuSeam } from '../webgpu/seam-mock';
 import { MOCK_ENVELOPE_FADE_START, fakeCloudMaterials } from './cloud-mock';
 import { sidsOf } from '../util/sid-resolver/sid-domain-fixture';
-import { CLOUDS_JSON_SCHEMA } from '../util/baker-constants';
+import { CLOUDS_JSON_SCHEMA } from '../../catalog-format/baker-artifacts/baker-artifacts';
 
 function rawCloud(overrides: Record<string, unknown> = {}): Record<string, unknown> {
   return {

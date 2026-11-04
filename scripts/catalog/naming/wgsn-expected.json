@@ -24,10 +24,5 @@
   "designationRows": 4627,
   "designationsKeyless": 3,
   "designationDuplicateRows": 7,
-  "nameDuplicateRows": 7,
-  "membershipPropers": 491,
-  "membershipProperMatched": 445,
-  "membershipProperResiduals": 46,
-  "membershipBayerRows": 1522,
-  "membershipBayerRowsCovered": 1520
+  "nameDuplicateRows": 7
 }

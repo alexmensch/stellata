@@ -4,14 +4,14 @@ import {
   lambertLimbDiscMean,
   meshSurfaceLuminance,
 } from './mesh-surface-pure';
-import { LIMB_EXP, LIMB_FLOOR } from '../../../util/baker-constants';
+import { LIMB_EXP, LIMB_FLOOR } from '../../../../astro-core/baker-constants';
 import {
   bodySurfaceBrightnessMagArcsec2,
   planetApparentMagnitude,
-} from '../../perceptual-magnitude';
-import { LUMA_CEIL, pointSourcePeakLuminance, surfaceBrightnessLuminance } from '../../../hdr/emission/emission-pure';
+} from '../../../../astro-core/perceptual-magnitude';
+import { LUMA_CEIL, pointSourcePeakLuminance, surfaceBrightnessLuminance } from '../../../../astro-core/emission/emission-pure';
 import { BASE_EPOCH_EXPOSURE } from '../../../hdr/exposure/exposure-epoch';
-import { ARCSEC_TO_RAD, AU_PC, KM_PC, SUN_ABSMAG_V } from '../../../util/astronomy-constants';
+import { ARCSEC_TO_RAD, AU_PC, KM_PC, SUN_ABSMAG_V } from '../../../../astro-core/astronomy-constants';
 
 /** Numerical disc average of the shader's shading, area-weighted over the
  *  projected disc at full phase — the independent check on the closed form. */

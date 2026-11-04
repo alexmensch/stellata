@@ -39,6 +39,8 @@ scripts/catalog/lineage/
   reason-code-list-pure.ts       reasonCodeList, the generated list, and
                                  appendOnlyViolations.
   reason-codes-tsv.ts            REASON_CODES, the list's codec.
+  reason-codes-outputs.ts        REASON_CODES_OUTPUTS, the generator's
+                                 output declaration.
   generate-reason-codes.ts       `pnpm run lineage:codes`.
   reason-codes.test.ts           The list equals its generation, and is
                                  append-only against the merge-base.
@@ -52,9 +54,11 @@ scripts/catalog/lineage/
                                  call.
   lineage-invariant-pure.ts      LineageInvariant and its check (#invariants).
     (+ test)
-  lineage-io.ts                  The on-disk layout (build/lineage/,
-                                 lineage.previous/, lineage-diff/), the
-                                 baseline members and a stage's emission,
+  lineage-layout-pure.ts         The on-disk layout (build/lineage/,
+                                 lineage.previous/, lineage-diff/), each
+                                 stage's file names, and their output
+                                 declarations: what an outputs module imports.
+  lineage-io.ts                  The baseline members and a stage's emission,
                                  gzip, and the header with its input hash.
   lineage-core-pure.test.ts      Order, writer refusal, diff, baseline verdict.
   lineage-rotation.test.ts       Rotation over a scratch build/: a failed or
@@ -215,14 +219,14 @@ nothing lands, and the message lists the offending rows' keys and params.
 Placement's (`PLACEMENT_INVARIANTS`): no `distance.bailer-jones-absent` row.
 Membership's (`MEMBERSHIP_INVARIANTS`): no `admit.magnitude` row whose
 `own_candidate` is outside `ALLOWED_OWN_CANDIDATE_REASONS`
-([The additions](../membership/README.md#the-additions)), and no
+([The additions](../membership/additions/README.md#grouping-and-admission)), and no
 `binding.unweighed-no-pulled-row` row
 ([The candidates have to be in the astrometry pull](../membership/binding/README.md#the-candidates-have-to-be-in-the-astrometry-pull)).
 
 ## SID events
 
-SID allocation is the fourth stage, run inside `build:catalog` and the
-clouds and Local Group stamps. Its rows, its events and its fail-closed
+SID allocation is the fourth stage, run inside `build:catalog`,
+`build:local-group` and the clouds stamp. Its rows, its events and its fail-closed
 rule live beside its modules, in [SID events](/scripts/sid/README.md#sid-events).
 
 ## Storage and cost
@@ -287,7 +291,9 @@ Otherwise the stage's current `<stage>.tsv.gz` replaces
 that renames the stage's new file into place, and the build diffs against
 that last build if it is the merge-base's. A stage that fails, is skipped by
 its content-hash stamp, or does not run (a standalone `build:membership`)
-leaves both its copies untouched.
+leaves both its copies untouched. The baseline and diff families are
+declared unstamped (`stageFamilies`), so a step's stamp never records them
+and a worktree without them is not stale.
 
 A fresh worktree is seeded with the main checkout's last `build/lineage/`
 (`.worktreeinclude`), which may come from an older commit. So each stage

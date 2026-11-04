@@ -26,7 +26,7 @@ Moon, Mercury, Mars and Earth ship a DEM-derived tangent-space normal map
 of horizon maps (`<body>-horizon-{a,b}.webp`, [Cast shadows](/data/textures/relief/README.md#cast-shadows--dem-derived-horizon-maps) there), all
 lazy-loaded on the same `TEXTURE_PREFETCH_PX` approach lane as the colour
 map. Three planes for four of ~30 bodies, so the fetch is gated on
-`RELIEF_BODIES` (`data/schema/constants.json`, shared with the texture
+`RELIEF_BODIES` (`src/astro-core/baker-constants.json`, shared with the texture
 build) — `reliefSpanOf` in `../planet-mesh-layer.ts` is the one
 lookup, shared with the fallback limb bound, because "does this body ship
 relief" and "how far past the terminator may it light" are one question. The
@@ -146,7 +146,7 @@ terminator passes, whichever way the ground faces. Before the horizon maps
 land (they are a separate fetch on the same lane) `dayside` carries a
 per-body gate standing in for them, derived from the DEM elevation span
 (`reliefHorizonSines`; the span is the one the build reduces against, read
-from the same `data/schema/constants.json` entry) — full out to a summit's bound over
+from the same `src/astro-core/baker-constants.json` entry) — full out to a summit's bound over
 ground at the reference sphere, nothing past that same summit over terrain at
 the span's floor, tapering between:
 
@@ -238,7 +238,7 @@ It is added to `col`, never folded into `dayside`. Folding it in would put it
 inside the direct term, and `dayside` is what the coverage mask below is cut
 from. Both readings of `F` are mirrored in `surface-relief-pure.ts` —
 `decodeSkyView` for the shipped map, `terrainViewFactor` for the fallback the
-next section describes. `SKY_VIEW_RANGE` is `data/schema/constants.json`'s, so
+next section describes. `SKY_VIEW_RANGE` is `src/astro-core/baker-constants.json`'s, so
 the shader and `sky_view.py` read one value rather than being pinned
 against each other. The clamp inside `terrainViewFactor` is source-pinned against the
 shader's own graph, because a `max()` dropped there alone would brighten
@@ -275,7 +275,7 @@ planes topped out at 0.101 and sat fifty times under it at p99.
 
 ### What the exposure has to be for it to show
 
-The faint-end toe ([Operator](../../../hdr/tonemap/README.md#operator)) crushes anything more
+The faint-end toe ([Operator](../../../../astro-core/tonemap/README.md#operator)) crushes anything more
 than `TOE_BLACK_MAG` = 1.5 mag under `L_THRESH` to black, and it measures that
 against the GLOBAL threshold rather than against the lit ground beside it. So
 "will this shadow show" is a question about the lit surface's own level, not

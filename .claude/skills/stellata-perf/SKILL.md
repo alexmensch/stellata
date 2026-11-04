@@ -23,7 +23,7 @@ argues reachability in prose; do not arm for it. Tier 1 — per-frame code
 touched, draw counts and pass structure unchanged — is `--mode dwell
 --scenario mw120,sol --backend webgpu --frames 960
 --against-pin scripts/perf/pins/<slug>.json`,
-two contexts and ~4 min, read against the committed pin (whose run opens
+two contexts and ~35 s, read against the committed pin (whose run opens
 with those two contexts, so the rows compare at equal position; the three
 pin rows it does not visit print as not measured and fail nothing).
 **Match `--frames` to the count the pin's own rows carry** — today 960,
@@ -33,7 +33,7 @@ not stand on one run ([What a mark means](/RELEASING.md#what-a-mark-means)). Tie
 2 — passes, buffers, draw counts, the catalogue
 or the instrument — is the full cold pin below. Arming for a sweep the
 diff cannot justify is the cost this tiering exists to stop: it spends
-Alex's arm and 25 minutes to re-read a number the pin already holds.
+Alex's arm and ten minutes of idle machine to re-read a number the pin already holds.
 
 ## Never
 
@@ -54,6 +54,17 @@ Alex's arm and 25 minutes to re-read a number the pin already holds.
 
 ## Protocol — announce → arm → run, one run per arm
 
+**Before step 1, ask any live coordinator for the GPU.** A `pickup-epic` run
+keeps workers building and testing, and only its coordinator can pause them.
+`pickup-epic`'s coordinator field names it, and its liveness rule decides
+whether it is live (its "The coordinator field" section); the `beads` skill's
+"find the coordinator field" row is the lookup. Live → send it `GPU_REQUEST`,
+wait for `GPU_GRANTED`, and send `GPU_DONE` once the last run you plan has
+exited — the message kinds and who sends which are
+[the GPU table](/.claude/skills/stellata-pickup-epic/SKILL.md#the-gpu-is-one-resource-for-the-whole-machine).
+No field set, or no live session by that name → proceed. A worker in that run
+already follows the table; this is for every other session.
+
 1. Say what you want to measure and why, with the exact command you will
    run, and name the worktree whose dev server the run needs — assuming
    port 5173 unless Alex has named another.
@@ -62,12 +73,16 @@ Alex's arm and 25 minutes to re-read a number the pin already holds.
    line when a fresh marker exists. The poll and the runner both resolve the
    marker at the top level of the checkout they are launched from — from a
    worktree, the worktree root, not the main checkout — so the announcement
-   names which root to arm.
+   names which root to arm. When the marker arrives it also warns on stderr
+   about any other Claude session busy in this repo, coordinated or not —
+   relay the warning and launch only on Alex's answer
+   ([The protocol](/scripts/perf/arming/README.md#the-protocol)).
 3. When it reports ARMED, **launch the runner as a background process too —
    Bash `run_in_background`, always, whatever the mode.** A foreground Bash
    call is capped at 10 minutes and the harness kills it there; every mode
-   worth arming for outlives that (a pin run is 15–25 min, a `--scenario all`
-   differential 18–21), so a foreground launch dies partway through. It costs
+   worth arming for comes close to or past it (a pin run is ~9.5 min on the M6,
+   a `--scenario all` differential ran 18–21 on the M4), so a foreground launch
+   dies partway through. It costs
    the arm, not just the run: the runner deletes the marker *before* the browser
    starts, so the launch is spent whatever happens after. Poll the output
    file for progress and read it when the process exits.
@@ -111,9 +126,10 @@ Alex's arm and 25 minutes to re-read a number the pin already holds.
   — take the perf pin, cold: one launch, idle between contexts, every
   context state-guarded. `--against-pin <path>` prints the verdicts a
   render-path PR pastes into its `## Perf` section. The `metric` column names
-  the statistic each row was marked on — `gpu-p50`, or `gpu-plain-p50` where
-  the vantage draws two pass classes, and `compute-p10` on the
-  `<scenario>|webgpu|compute` row beside it, and the `spread` column never
+  the statistic each row was marked on — `throughput-mean` on a GPU-paced
+  frame row with `cpu-p50` on its `|cpu` row, `gpu-p50` (or `gpu-plain-p50`
+  where the vantage draws two pass classes) on an rAF-paced one, and
+  `compute-p10` on the `<scenario>|webgpu|compute` row beside it, and the `spread` column never
   marks at all. A `✗` exits 1, and so does a refused row — a run whose rows were
   all refused shows a table with no `✗` in it. Taking the pin in the same
   run as `--against-pin` needs `--accept <row>:<bead>` for each `✗` — the
@@ -164,7 +180,9 @@ Per mode (`scripts/perf/dwell/README.md`, [Sweep mode](/scripts/perf/README.md#s
   the panel's number. Do not quote it; re-measure at a heavier vantage. The
   console line names the cadence the verdict was judged against (headless
   Chromium idles at 60 Hz, like a 60 Hz panel), and the GPU row is never
-  clamped — no compositor pads a hardware timestamp.
+  clamped — no compositor pads a hardware timestamp. Only a `--pacing raf`
+  dwell can clamp: the default GPU pacing schedules frames on the GPU, not
+  the display ([Pacing](/scripts/perf/dwell/README.md#pacing)).
 - **A sweep with any clamped point reads `bound inconclusive`** — say
   inconclusive, don't quote the slope.
 - **`savedMs` going UP is a regression**, not an improvement: the field is
@@ -214,7 +232,8 @@ scatter: 4 of 9 same-tree pairs at mw120 and 6 of 11 at sol land outside it,
 reaching 1.272 ms. So re-arm the identical command and quote both runs;
 [What a mark means](/RELEASING.md#what-a-mark-means) is the rule and stellata-8cg.74 the
 evidence. Compute rows are floored per vantage against exactly this scatter
-and need no second run.
+and need no second run — except at sol and earth, whose floors are capped
+under their scatter: a compute mark there, either way, gets the second run too.
 
 **Warm machine.** Never run the test suite in the minutes before arming. Rule
 out the scene first, it is cheap: exposure limitMag, recordCount, pass counts

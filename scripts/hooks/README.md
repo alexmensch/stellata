@@ -285,6 +285,13 @@ checkout the session is in, and reaches worktrees made by hand with
 
 - **It never replaces a real folder or file** at that path — only a missing
   entry or a symlink.
+- **It never writes through an existing link.** The link is written with
+  `ln -sfn`, which replaces a symlink in place without following it. A plain
+  `ln -s` onto a symlink to a directory follows it (BSD and GNU `ln` alike) and creates
+  `<store>/<basename>` inside the private store — which is what two sessions
+  sweeping at once do, since both see no link and the second `ln` meets the
+  first one's. `tests/paper-store-link.test.ts` reproduces that interleaving
+  with an `ln` on `PATH` that plants the link just before the real one runs.
 - **Fails open**, like prime-guard: any error exits 0 silently, since a
   missing link is a test failure, not a reason to stop a session.
 - **Two events.** SessionStart covers a session opened in an existing

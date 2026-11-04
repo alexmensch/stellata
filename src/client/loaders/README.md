@@ -13,10 +13,10 @@ catalog-loader.ts        public/catalog-manifest.json + its
                          (README.md#progressive-catalog-load), decoding each as it
                          lands (byte-range chunking clears Cloudflare
                          Workers' 25 MiB per-asset limit — see
-                         /scripts/catalog/record/README.md#on-disk-transport-chunking).
+                         /src/catalog-format/record/README.md#on-disk-transport-chunking).
                          Layout, chunk and record-decode
                          helpers imported from
-                         scripts/catalog/record/catalog-pure.ts — single source
+                         src/catalog-format/record/catalog-pure.ts — single source
                          of truth shared with the writer and the Node
                          AoS reader; the decode itself is
                          catalog-window.ts, off the main thread
@@ -48,7 +48,7 @@ catalog-window.ts        one record window's decode as plain typed arrays,
                          memcpy back walks and the allocator the full
                          catalogue shares (README.md#the-catalog-decode-worker).
                          Column-at-a-time via decodeRecordColumn (see
-                         /scripts/catalog/record/README.md#binary-catalog-format-publiccatalogbini--manifest).
+                         /src/catalog-format/record/README.md#binary-catalog-format-publiccatalogbini--manifest).
 catalog-decode-worker.ts that pass off the main thread, and the spawn +
 catalog-decode-host.ts   inline fallback around it
   (+ host test)          (README.md#the-catalog-decode-worker).
@@ -123,8 +123,8 @@ dust-renderer-mock.ts    A recording renderer stand-in, enough surface
 `loadCatalog` resolves on the **first chunk carrying a whole record**, not on
 the whole artifact, so boot paints a sky while the rest is still on the wire.
 Records are apparent-V ordered and the chunk plan ramps from 1 MiB
-([Record order](/scripts/catalog/record/README.md#record-order), [On-disk transport
-chunking](/scripts/catalog/record/README.md#on-disk-transport-chunking)), so that prefix is roughly the naked-eye sky.
+([Record order](/src/catalog-format/record/README.md#record-order), [On-disk transport
+chunking](/src/catalog-format/record/README.md#on-disk-transport-chunking)), so that prefix is roughly the naked-eye sky.
 
 The shape: one buffer pre-allocated at `manifest.totalBytes`, the chunks
 fetched **one at a time in order** straight into their own slices, each
@@ -292,7 +292,7 @@ writing one chunk's bytes inside the volume.
 **`loadDustManifest` answers null for any manifest a `DustField` cannot be
 built from**, warning when it parsed but is the wrong shape or carries a
 version other than `DUST_MANIFEST_SCHEMA`'s (`dustManifestError`; the
-version lives in `data/schema/constants.json`, which `build-dust.py` writes
+version lives in `src/astro-core/baker-constants.json`, which `build-dust.py` writes
 from), silently when it is missing — a real 404
 ([Request routing](/src/README.md#request-routing)) — or present but not
 JSON. So

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { R_SUN_PC } from '../../../src/client/util/astronomy-constants';
+import { R_SUN_PC } from '../../../src/astro-core/astronomy-constants';
 import {
   orbitChainExemption,
   overlapLabel,

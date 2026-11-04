@@ -15,8 +15,8 @@ import {
   isCatalogDesignation,
   mergeRowAndOverride,
   roundN,
-  type LgObject,
 } from './build-local-group-pure';
+import { type LgObjectRow } from '../../src/catalog-format/local-group/local-group-schema';
 import { lgObjectStub } from './lg-object-mock';
 
 describe('parseOverrides', () => {
@@ -205,7 +205,7 @@ describe('emission over the committed catalog', () => {
   const overrideByName = new Map(overrides.map((o) => [o.name, o]));
   const renderable = filterForRendering(lvdb);
 
-  const objects: LgObject[] = [];
+  const objects: LgObjectRow[] = [];
   for (const row of renderable) {
     const merged = mergeRowAndOverride(row, overrideByName.get(row.name));
     if (merged) objects.push(merged);

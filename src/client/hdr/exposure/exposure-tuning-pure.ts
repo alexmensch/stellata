@@ -1,8 +1,8 @@
 // Text of the debug panel's exposure readout: the statistic, the three
 // adaptation branches and which governs, and the exposure decomposition.
 
-import { LUMA_CEIL } from '../emission/emission-pure';
-import { L_THRESH } from '../tonemap/tonemap-pure';
+import { LUMA_CEIL } from '../../../astro-core/emission/emission-pure';
+import { L_THRESH } from '../../../astro-core/tonemap/tonemap-pure';
 import {
   type AdaptationBranches,
   type AdaptationRegime,

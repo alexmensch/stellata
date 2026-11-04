@@ -2,9 +2,7 @@
 // perturbation and the horizon lookup on it — CPU mirrors of
 // ../../../webgpu/solar-system/planet-mesh-tsl.ts — plus the limb bound that stands in while loading.
 
-import {
-  HORIZON_AZIMUTHS, HORIZON_SIN_RANGE, SKY_VIEW_RANGE,
-} from '../../../util/baker-constants';
+import { HORIZON_AZIMUTHS, HORIZON_SIN_RANGE, SKY_VIEW_RANGE } from '../../../../catalog-format/baker-artifacts/baker-artifacts';
 
 /** Below this the east direction is numerically undefined and the
  *  perturbation is dropped — mirrors the guard in the mesh graph. */

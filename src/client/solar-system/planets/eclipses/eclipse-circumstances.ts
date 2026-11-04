@@ -7,7 +7,7 @@ import {
   KM_PC,
   LIGHT_TIME_PER_AU_S,
   R_SUN_PC,
-} from '../../../util/astronomy-constants';
+} from '../../../../astro-core/astronomy-constants';
 import { eclipticToIcrs } from '../../../util/ecliptic-frame';
 import {
   getPlanetPositions,

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { CLOUD_SURFACES_SCHEMA, writeBinaryHeader } from '../util/baker-constants';
+import { CLOUD_SURFACES_SCHEMA, writeBinaryHeader } from '../../catalog-format/baker-artifacts/baker-artifacts';
 import { parseCloudSurfaces } from './cloud-surfaces-loader';
 
 interface TestEntry {
@@ -16,7 +16,7 @@ interface TestEntry {
 }
 
 /** Assemble a CSUR buffer from sid-keyed meshes (mirrors the writer
- *  in scripts/cloud-surfaces/build-cloud-surfaces.py). */
+ *  in scripts/cloud-surfaces/trace_surfaces.py). */
 function makeBuffer(
   entries: TestEntry[], version = CLOUD_SURFACES_SCHEMA.version, envelopeU = 1.05,
 ): ArrayBuffer {

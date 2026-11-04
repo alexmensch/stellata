@@ -1,0 +1,12 @@
+{
+  "inputs": {
+    "data/gaia/gaia_catalog_source_id_request.tsv": "58d08db948e98c660e7abffc6b5e4dfeb5cdf671"
+  },
+  "outputs": {
+    "data/gaia/gaia_dr3_astrometry_catalog.tsv": "657b16344d15efef8c69791d33df8cc5ae69278c"
+  },
+  "query": "9e6d8a3cc5c4850ea239c27f6810ab064dc941de",
+  "answeredBy": [],
+  "release": "Gaia DR3",
+  "requestFrom": []
+}

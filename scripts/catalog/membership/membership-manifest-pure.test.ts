@@ -4,7 +4,7 @@ import {
   type ClassicIdOverlay,
   type OverlayEntry,
 } from '../classic-ids/classic-id-overlay-pure';
-import { parseGlieseTsv } from '../gliese-parse';
+import { parseGlieseTsv } from '../gliese-parse-pure';
 import { SPINE_COLUMNS, spineDesignations, type SpineRow } from '../spine/inherited-spine-pure';
 import type { PrimaryTables } from '../spine/primaries-audit-pure';
 import { printedVLookups } from '../photometry/v-magnitude-pure';
@@ -14,13 +14,15 @@ import { TYCHO2 } from '../tycho2-source';
 import { GLIESE } from '../gliese-source';
 import { sourceRowRef } from '../../util/sources/row-ref-pure';
 import {
-  additionItemCells,
   buildMembership,
   manifestKey,
   matchSpineToManifest,
+} from './membership-manifest-pure';
+import {
   parseBindingDispositionsTsv,
   type BindingDispositionRow,
-} from './membership-manifest-pure';
+} from './binding-review-dispositions-pure';
+import { additionItemCells } from './additions/addition-items-pure';
 import type { SpineCorrectionRow } from './spine-corrections/spine-corrections-pure';
 import { ADDITIONS_LEDGER } from './additions-ledger-tsv';
 import { ADDITION_REASONS, COMPONENT_REASON_PREFIX } from './ledger-rows-pure';
@@ -34,7 +36,7 @@ import {
   type ManifestColumn,
   type ManifestRecord,
 } from './membership-manifest-tsv';
-import { parkedRecordKey } from '../distance/parallax/parked-ledger';
+import { parkedRecordKey } from '../distance/parallax/parked-ledger-pure';
 import { diffLineage, stageDiffText } from '../lineage/lineage-diff-pure';
 import {
   decodeLineageLine, paramsOf, sortLineageLines, stageLineageLine, type LineageLine, type LineageRow,

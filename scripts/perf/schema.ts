@@ -4,7 +4,7 @@
 
 import type { GpuFrameMethod, PriceFrameRow } from '../../src/client/debug/frame-cost/frame-cost-pure';
 import type { SurvivorReport } from '../../src/client/debug/survivor-counts';
-import type { Backend, ScenarioName } from './scenarios';
+import { isScenarioName, type Backend, type ScenarioName } from './scenarios';
 import type { DwellSummary, PassCountsPerFrame, PassCountsSummary } from './dwell/dwell-pure';
 import type { SweepFit, SweepPoint } from './sweep/sweep-pure';
 
@@ -65,6 +65,12 @@ export interface DwellRecord {
    *  no key, and a reader takes that as null rather than as a fault. */
   readonly computeMs?: readonly number[] | null;
   readonly computeStats?: DwellSummary | null;
+  /** Main-thread time per rendered tick (`dwell/README.md#cpu-and-gpu-apart`).
+   *  Absent on a file written before it was recorded. */
+  readonly cpuMs?: readonly number[] | null;
+  readonly cpuStats?: DwellSummary | null;
+  /** Over `throughputSamples(deltasMs)`; GPU-paced dwells only. */
+  readonly throughputStats?: DwellSummary | null;
   readonly limitMag: number;
   readonly dm: number;
   readonly readbackPerFrame: number;
@@ -230,6 +236,10 @@ export function assertPerfFile(value: unknown, source: string): PerfFile {
   }
   if (!Array.isArray(file.scenarios)) {
     throw new SchemaError(`${source} has no scenarios array`);
+  }
+  const stranger = file.scenarios.find((s: { name?: unknown }) => !isScenarioName(s?.name));
+  if (stranger !== undefined) {
+    throw new SchemaError(`${source} carries scenario ${JSON.stringify(stranger?.name)}, no canon vantage`);
   }
   return file as PerfFile;
 }

@@ -188,7 +188,7 @@ Determinism itself was verified at authoring time by generating twice and
 comparing bytes.
 
 The byte pin lives in the **test source**, not in
-`inherited-spine-expected.json`: `UPDATE_BUILD_COUNTS=1` rewrites that
+`inherited-spine-expected.json`: `UPDATE_SNAPSHOTS=1` rewrites that
 snapshot, so a regeneration would otherwise refresh its own guard. Editing
 the two literals is what unfreezes the spine, and it shows up in review as
 a diff in a test rather than in a 40 MB LFS blob.
@@ -214,7 +214,7 @@ The ledgered drops are subtracted by **key**, not by count: a ledger row is
 matched on the whole five-cell identifier tuple
 (`tyc`/`hip`/`hd`/`gl`/`gaia_source_id`), so a park with no identifier at all
 is still named by the empty tuple rather than left to a guess about which id
-identifies. `../distance/parallax/parked-ledger.ts` holds the closed reason
+identifies. `../distance/parallax/parked-ledger-pure.ts` holds the closed reason
 enum, pinned by its own test. What pins the ledger's *rows* is the
 reproduce-and-diff step on `data/membership/parked-ledger.tsv` in the
 `build-catalog` job — `build:catalog` writes that file, so without the diff a

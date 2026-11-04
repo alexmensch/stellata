@@ -15,8 +15,8 @@ import {
   S_MIN_PC,
   SOL_GALACTOCENTRIC_PC,
   galacticDirection,
-} from '../../../src/client/milkyway/column/milkyway-column-pure';
-import { AV_PER_EZGR } from '../../../src/client/util/baker-constants';
+} from '../../../src/astro-core/milkyway/column/milkyway-column-pure';
+import { AV_PER_EZGR } from '../../../src/astro-core/baker-constants';
 
 const GRID = 32;
 const PARAMS: DustParams = {

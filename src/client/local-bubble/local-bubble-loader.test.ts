@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { LOCAL_BUBBLE_SCHEMA, writeBinaryHeader } from '../util/baker-constants';
+import { LOCAL_BUBBLE_SCHEMA, writeBinaryHeader } from '../../catalog-format/baker-artifacts/baker-artifacts';
 import { parseLocalBubble } from './local-bubble-loader';
 
 function buildBuffer(

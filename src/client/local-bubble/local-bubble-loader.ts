@@ -1,7 +1,8 @@
 // Parses public/local-bubble.bin (magic LBUB) into a shell mesh.
 // See src/client/local-bubble/README.md.
 
-import { LOCAL_BUBBLE_SCHEMA, checkBinaryHeader } from '../util/baker-constants';
+import { LOCAL_BUBBLE_SCHEMA, checkBinaryHeader } from '../../catalog-format/baker-artifacts/baker-artifacts';
+import { PUBLIC_FILES } from '../../catalog-format/public-artifacts/public-artifacts';
 
 const HEADER_BYTES = 32;
 
@@ -25,13 +26,13 @@ export interface LocalBubbleMesh {
  *  shell center. */
 export function parseLocalBubble(buffer: ArrayBuffer): LocalBubbleMesh {
   const view = new DataView(buffer);
-  checkBinaryHeader(view, LOCAL_BUBBLE_SCHEMA, 'local-bubble.bin');
+  checkBinaryHeader(view, LOCAL_BUBBLE_SCHEMA, PUBLIC_FILES.localBubble);
   const vertexCount = view.getUint32(8, true);
   const indexCount = view.getUint32(12, true);
   const posBytes = vertexCount * 3 * 4;
   const idxBytes = indexCount * 4;
   if (buffer.byteLength !== HEADER_BYTES + posBytes + idxBytes) {
-    throw new Error('local-bubble.bin: size mismatch (truncated or corrupt)');
+    throw new Error(`${PUBLIC_FILES.localBubble}: size mismatch (truncated or corrupt)`);
   }
   const centroidAbs: [number, number, number] = [
     view.getFloat32(16, true),

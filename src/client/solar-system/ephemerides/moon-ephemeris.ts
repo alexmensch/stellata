@@ -2,16 +2,16 @@
 // that composes their heliocentric ecliptic positions. Sibling of
 // ephemeris.ts (planets). See ./README.md#moon-ephemeris.
 
-import { J2000_JD, KM_PC } from '../../util/astronomy-constants';
+import { J2000_JD, KM_PC } from '../../../astro-core/astronomy-constants';
 import { icrsToEcliptic } from '../../util/ecliptic-frame';
 import {
   cartesianToOrbitalElements,
   orbitalStateToCartesian,
-} from '../../util/kepler-solver';
+} from '../../../astro-core/kepler-solver';
 import {
   longTermEclipticRotationFromJ2000,
   unprecessDirection,
-} from '../../util/precession';
+} from '../../../astro-core/precession';
 import type { Vec3 } from './ephemeris';
 import { moonGeocentricOfDate } from './lunar-theory-pure';
 import { tToJdTdb } from '../time/time';

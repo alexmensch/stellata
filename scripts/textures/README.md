@@ -7,7 +7,7 @@ Everything Python here runs on the project venv —
 `requirements.txt` carries the install line. Facts these scripts share with
 the renderer (relief bodies' radius, albedo, map centre and elevation span;
 the horizon and sky-view encodings; the limb constants; the Uranus/Neptune
-ring spans) are read from `data/schema/constants.json`, so every entry point
+ring spans) are read from `src/astro-core/baker-constants.json`, so every entry point
 puts the repo root on `sys.path`. A rebuild is
 pixel-reproducible but not byte-reproducible: Pillow's zlib build
 picks the compressed stream, so a version change can rewrite an
@@ -33,17 +33,18 @@ rather than shipping it.
   `<body>-normal.webp` and paired half-width
   `<body>-horizon-{a,b}.webp` relief maps for the four bodies with a
   usable global DEM — Earth at double the rest). Manual, infrequent
-  (`pnpm run build:textures`); needs Pillow + NumPy. Idempotent via
-  mtime, per artifact, against its own sources, the helper module
-  it derives from and, for the relief maps and ring strips,
-  `data/schema/constants.json` — only this script gates everything, so editing the
-  relief leg does not rewrite the colour maps or the ring strips.
+  (`pnpm run build:textures`); needs Pillow + NumPy. A manual bake step
+  ([Step kinds](/scripts/pipeline/README.md#step-kinds)): `record.ts` skips
+  it while its `data/stamps/` record is fresh, and a stale one rebuilds
+  every artifact, since the record is only sound when each run reads
+  every input.
   Uranus is deliberately absent from
   `BODIES` (2f6.6 design record: texture-less by design — its ring
-  strip is separate). `ring-strips.test.ts` pins the strips' 8-bit
-  visibility claims against the source TSVs. `build_textures.test.py`
-  pins the relief-row merge, the horizon planes' exact-mode encode and
-  each provenance row's desaturation wording against `DESATURATE`.
+  strip is separate). `/tests/integration/ring-strips.test.ts` pins the
+  strips' 8-bit visibility claims against the source TSVs.
+  `build_textures.test.py` pins the relief-row merge, the horizon planes'
+  exact-mode encode and each provenance row's desaturation wording against
+  `DESATURATE`.
 - `dem_relief.py` — surface-relief half of the build (imported by
   it): the `DEM_BODIES` per-body contract and the DEM →
   tangent-space normal-map derivation. Owns the three facts nothing
@@ -53,8 +54,8 @@ rather than shipping it.
   elevation span, which both decodes the reduction and gives the
   renderer its limb bound on relief lighting.
   The map centre, radius and span are merged in from
-  `data/schema/constants.json`, which the renderer reads too.
-  `dem-relief.test.ts` pins the achieved tilt statistics in
+  `src/astro-core/baker-constants.json`, which the renderer reads too.
+  `/tests/integration/dem-relief.test.ts` pins the achieved tilt statistics in
   `data/textures/relief/relief.json` and the shipped maps' own dimensions
   read from their WebP headers; `horizon_map.test.py` pins the roll, the
   per-body DEM widths and the +1 encoding of the unused third channel. Rationale:
@@ -64,10 +65,10 @@ rather than shipping it.
   two `<body>-horizon-{a,b}.webp` planes. Owns the exact spherical
   elevation-angle geometry that makes the body's own limb an occluder,
   the search arc that bounds it, and the encoding scale.
-  The azimuth count and sine scale are `data/schema/constants.json`'s.
-  `horizon-map.test.ts` pins the renderer's fallback limb bound against
-  the search arc and the manifest rows against the shipped planes' own
-  headers. Rationale:
+  The azimuth count and sine scale are `src/astro-core/baker-constants.json`'s.
+  `/tests/integration/horizon-map.test.ts` pins the renderer's fallback limb
+  bound against the search arc and the manifest rows against the shipped
+  planes' own headers. Rationale:
   [Cast shadows](/data/textures/relief/README.md#cast-shadows--dem-derived-horizon-maps).
 - `sky_view.py` — the third relief artifact (imported by the build):
   one scalar per texel, the cosine-weighted share of its sky that
@@ -75,11 +76,11 @@ rather than shipping it.
   the one thing the horizon pair cannot state — that the near field it
   skips for shadowing still blocks sky, so this marches from **one DEM
   texel** where that one starts at two OUTPUT texels. The encoding range
-  is NOT its own: `SKY_VIEW_RANGE` is `data/schema/constants.json`'s, read
-  by the mesh shader too. `sky-view.test.ts` pins the manifest rows against
-  the shipped maps' own headers and the R8 upload and its fallback in the
-  layer; `horizon_map.test.py` pins its near bound and its grid against
-  the horizon pair's. Rationale:
+  is NOT its own: `SKY_VIEW_RANGE` is `src/astro-core/baker-constants.json`'s,
+  read by the mesh shader too. `/tests/integration/sky-view.test.ts` pins the
+  manifest rows against the shipped maps' own headers and the R8 upload and
+  its fallback in the layer; `horizon_map.test.py` pins its near bound and
+  its grid against the horizon pair's. Rationale:
   [Sky view factor](/data/textures/relief/README.md#sky-view-factor--what-terrain-takes-out-of-the-sky).
 - `horizon_map.test.py` — stdlib unittest pins for the relief half of
   the build: the flat-ground floor's closed form, azimuth registration

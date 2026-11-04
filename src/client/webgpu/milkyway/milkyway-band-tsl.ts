@@ -1,6 +1,6 @@
 // The Milky Way band's graph: the log-distributed march
 // through a proxy mesh, with running per-channel dust extinction.
-// CPU mirror: ../../milkyway/column/milkyway-column-pure.ts.
+// CPU mirror: ../../../astro-core/milkyway/column/milkyway-column-pure.ts.
 
 import { AdditiveBlending, BackSide } from 'three';
 import {
@@ -12,12 +12,12 @@ import {
 import { NodeMaterial, type Node } from 'three/webgpu';
 import {
   FOREGROUND_DUST_STEPS, MAG_PER_TAU, S_MIN_PC, STEPS, UNIT_BALL_SLACK,
-} from '../../milkyway/column/milkyway-column-pure';
+} from '../../../astro-core/milkyway/column/milkyway-column-pure';
 import {
   RESOLVED_HOLE_GRID_HALF_PC,
-} from '../../milkyway/calibration/resolved-fraction-pure';
-import { LUMA_WEIGHTS } from '../../hdr/tonemap/tonemap-pure';
-import { MAG_PER_STOP } from '../../hdr/emission/emission-pure';
+} from '../../../astro-core/milkyway/calibration/resolved-fraction-pure';
+import { LUMA_WEIGHTS } from '../../../astro-core/tonemap/tonemap-pure';
+import { MAG_PER_STOP } from '../../../astro-core/emission/emission-pure';
 import {
   extendedThresholdSbTsl, footprintAlongTsl, footprintPcTsl, softenRadiusTsl,
 } from '../emission-tsl';
@@ -67,7 +67,7 @@ export function buildMilkyWayBandMaterial(
       .mul(vertical);
   };
 
-  /** `unresolvedBandLightAt`'s fetch (../../milkyway/calibration/README.md#the-resolution-hole--the-band-marches-the-model-minus-the-drawn-stars).
+  /** `unresolvedBandLightAt`'s fetch (../../../astro-core/milkyway/calibration/README.md#the-resolution-hole--the-band-marches-the-model-minus-the-drawn-stars).
    * */
   const unresolvedBandLight = (posGalCentric: N3): NF => {
     const fromSol = posGalCentric.add(vec3(s.uR0Pc, 0.0, 0.0)).toVar();

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { medianStandardErrorMs } from '../../../src/client/debug/frame-cost/frame-cost-pure';
-import { BUFFER_MPX_TOLERANCE, RECORD_COUNT_TOLERANCE, computeFloorMs, dwellFloorMs } from '../diff/diff-pure';
+import { BUFFER_MPX_TOLERANCE, RECORD_COUNT_TOLERANCE, diffRuns } from '../diff/diff-pure';
+import { CPU_CLOCK_STEP_MS, CPU_SCATTER_FLOOR_MS, computeFloorMs, cpuFloorMs, dwellFloorMs } from '../floors/floors';
 import { frameFloor, type DwellSummary } from '../dwell/dwell-pure';
 import {
   BAND_OVER_FLOOR_FACTOR,
@@ -8,7 +9,7 @@ import {
   FLOOR_FOLLOWS_FRACTION,
   PIN_CEILING_MS,
   PIN_SCHEMA,
-  PIN_UNGATED_SCENARIOS,
+  RAF_UNGATED_SCENARIOS,
   PinError,
   adapterSlug,
   assertPinFile,
@@ -484,8 +485,8 @@ describe('compareToPin', () => {
   });
 
   it('names lg alone as ungated, carrying the reason the row note prints', () => {
-    expect(PIN_UNGATED_SCENARIOS)
-      .toEqual({ lg: 'wanders as much inside one dwell as between runs' });
+    expect(RAF_UNGATED_SCENARIOS)
+      .toEqual({ lg: 'wanders as much inside one dwell as between runs under rAF pacing' });
   });
 
   it('records lg and never marks it below the ceiling, at the full 1.47 ms it moved', () => {
@@ -494,7 +495,7 @@ describe('compareToPin', () => {
     expect([row.metric, row.verdict]).toEqual(['gpu-p50', 'ungated']);
     expect(row.currentMs).toBe(13.36);
     expect(row.bandMs).toBe(0);
-    expect(row.note).toContain(PIN_UNGATED_SCENARIOS.lg);
+    expect(row.note).toContain(RAF_UNGATED_SCENARIOS.lg);
     expect(pinDiffFails(diff)).toBe(false);
   });
 
@@ -623,7 +624,7 @@ describe('compareToPin', () => {
       const lgCompute = (compute: number) => scenario('lg', 'webgpu', withCompute(dwell(stats(16.7), stats(11.891)), stats(compute)));
       const wander = compareToPin(pinOf([lgCompute(1.4)]), file([lgCompute(3)])).rows[1];
       expect([wander.key, wander.verdict]).toEqual(['lg|webgpu|compute', 'ungated']);
-      expect(wander.note).toContain(PIN_UNGATED_SCENARIOS.lg);
+      expect(wander.note).toContain(RAF_UNGATED_SCENARIOS.lg);
       const hot = compareToPin(pinOf([lgCompute(1.4)]), file([lgCompute(33.5)])).rows[1];
       expect([hot.verdict, hot.note]).toEqual(['dearer', 'compute-p10 over the 33.4 ms ceiling']);
     });
@@ -631,19 +632,19 @@ describe('compareToPin', () => {
     it('reads the p10 through a duty-cycle crossing the median marks on', () => {
       const oneMode = Array.from({ length: 100 }, () => 0.39);
       const crossed = [...Array.from({ length: 42 }, () => 0.39), ...Array.from({ length: 58 }, () => 0.61)];
-      const earth = (samples: readonly number[], p50: number, p90: number) =>
-        scenario('earth', 'webgpu', withCompute(
+      const mw120 = (samples: readonly number[], p50: number, p90: number) =>
+        scenario('mw120', 'webgpu', withCompute(
           dwell(stats(16.7), stats(13.3)), stats(p50, { p90 }), samples,
         ));
       const diff = compareToPin(
-        pinOf([earth(oneMode, 0.39, 0.40)]), file([earth(crossed, 0.61, 0.62)]),
+        pinOf([mw120(oneMode, 0.39, 0.40)]), file([mw120(crossed, 0.61, 0.62)]),
       );
       const compute = diff.rows[1]!;
       expect([compute.key, compute.metric, compute.verdict]).toEqual([
-        'earth|webgpu|compute', 'compute-p10', 'same',
+        'mw120|webgpu|compute', 'compute-p10', 'same',
       ]);
       expect(compute.deltaMs).toBeCloseTo(0, 9);
-      expect(compute.bandMs).toBe(computeFloorMs('earth', 0.39));
+      expect(compute.bandMs).toBe(computeFloorMs('mw120', 0.39));
       expect(0.61 - 0.39).toBeGreaterThan(compute.bandMs);
       // The dear mode is not lost with it: the spread is exactly that gap.
       expect(compute.spreadDeltaMs).toBeCloseTo(0.22, 9);
@@ -831,10 +832,109 @@ describe('the pinned dwell length', () => {
   });
 });
 
+describe('the pinned pacing', () => {
+  const sol = (params: Record<string, unknown>) => scenario('sol', 'webgpu', {
+    ...dwell(stats(18.7), stats(16.9)), deltasMs: [18.7], throughputStats: stats(18.7),
+  }, { params });
+
+  it('is carried on every row, off the params the runner stamped', () => {
+    expect(pinOf([sol({ pacing: 'gpu' })]).rows[0].pacing).toBe('gpu');
+  });
+
+  it('refuses a run paced differently, a pin without the field reading as rAF', () => {
+    expect(compareToPin(pinOf([sol({ pacing: 'gpu' })]), file([sol({ pacing: 'raf' })])).refusals[0].reason)
+      .toContain('paced on gpu vs raf');
+    expect(compareToPin(pinOf([sol({})]), file([sol({ pacing: 'gpu' })])).refusals[0].reason)
+      .toContain('paced on raf vs gpu');
+    expect(compareToPin(pinOf([sol({ pacing: 'gpu' })]), file([sol({ pacing: 'gpu' })])).refusals).toEqual([]);
+  });
+});
+
+describe('a GPU-paced pin — throughput, CPU and the bottleneck', () => {
+  const paced = (
+    frameMs: number, cpuMs: number, name: ScenarioName = 'sol', throughput: DwellSummary = stats(frameMs + 0.4),
+  ) => scenario(name, 'webgpu', {
+    ...dwell(stats(16.7), stats(frameMs * 1.3)),
+    deltasMs: [frameMs - 1, frameMs + 1], throughputStats: throughput, cpuMs: [cpuMs], cpuStats: stats(cpuMs),
+  }, { params: { pacing: 'gpu' } });
+
+  it('gates lg like any other vantage: its stand-down is rAF-paced only', () => {
+    const row = compareToPin(pinOf([paced(4, 1, 'lg')]), file([paced(5, 1, 'lg')])).rows[0];
+    expect([row.key, row.metric, row.verdict, row.note]).toEqual(['lg|webgpu', 'throughput-mean', 'dearer', '']);
+    expect(pinFromRuns([runOf(file([paced(4, 1, 'lg', trending(4.4))]))], SOURCE).refusals[0])
+      .toContain('load-state transition');
+  });
+
+  it("bands the CPU row on its vantage's own floor, in both gates", () => {
+    const mw120 = compareToPin(pinOf([paced(9, 1.6, 'mw120')]), file([paced(9, 2.6, 'mw120')])).rows[1];
+    expect([mw120.key, mw120.verdict, mw120.bandMs]).toEqual(['mw120|webgpu|cpu', 'same', cpuFloorMs('mw120', 1.6)]);
+    const sol = compareToPin(pinOf([paced(5, 1.3)]), file([paced(5, 1.7)])).rows[1];
+    expect([sol.verdict, sol.bandMs]).toEqual(['dearer', cpuFloorMs('sol', 1.3)]);
+    expect(diffRuns(file([paced(5, 1.3)]), file([paced(5, 1.7)])).rows[1].bandMs).toBe(sol.bandMs);
+  });
+
+  it('reads a move of the floor in whole clock steps the same wherever it starts, in both gates', () => {
+    const at = (name: ScenarioName, cpuMs: number) => {
+      const s = paced(20, Math.fround(cpuMs), name);
+      return { ...s, dwell: { ...s.dwell!, cpuStats: stats(Math.fround(cpuMs), { samples: 960, iqrMs: 0.4 }) } };
+    };
+    for (const [name, starts] of [
+      ['mw120', [1.6, 2.6]], ['sol', [1.3, 1.4]], ['earth', [1.4, 1.5]], ['mw50', [3.2, 3.4]], ['lg', [1.1, 1.3]],
+    ] as const) {
+      const steps = Math.round(CPU_SCATTER_FLOOR_MS[name] / CPU_CLOCK_STEP_MS);
+      for (const start of starts) {
+        for (const [moved, verdict] of [[steps, 'same'], [steps + 1, 'dearer']] as const) {
+          const after = start + moved * CPU_CLOCK_STEP_MS;
+          const pinRow = compareToPin(pinOf([at(name, start)]), file([at(name, after)])).rows[1];
+          const runRow = diffRuns(file([at(name, start)]), file([at(name, after)])).rows[1];
+          expect([name, start, moved, pinRow.verdict, runRow.verdict]).toEqual([name, start, moved, verdict, verdict]);
+        }
+      }
+    }
+  });
+
+  it('carries both clocks on the row and gates on them', () => {
+    const pin = pinOf([paced(5, 2)]);
+    expect(pin.rows[0].throughput?.meanMs).toBe(5);
+    expect(pin.rows[0].cpu?.p50).toBe(2);
+    const { rows, refusals } = compareToPin(pin, file([paced(6, 2)]));
+    expect(refusals).toEqual([]);
+    expect(rows.map((r) => r.metric)).toEqual(['throughput-mean', 'cpu-p50']);
+    expect([rows[0].pinnedMs, rows[0].currentMs]).toEqual([5, 6]);
+    expect(rows[0].verdict).toBe('dearer');
+    expect(rows[1].verdict).toBe('same');
+  });
+
+  it('judges the same rows in the same order as --baseline does', () => {
+    const full = (frameMs: number, cpuMs: number): ScenarioRecord => {
+      const s = paced(frameMs, cpuMs);
+      return { ...s, dwell: withCompute(s.dwell!, stats(0.4)) };
+    };
+    const againstPin = compareToPin(pinOf([full(5, 2)]), file([full(6, 2)]));
+    const againstRun = diffRuns(file([full(5, 2)]), file([full(6, 2)]));
+    expect(againstPin.refusals).toEqual([]);
+    expect(againstRun.refusals).toEqual([]);
+    const judged = (rows: readonly { metric: string; bandMs: number }[]) => rows.map((r) => [r.metric, r.bandMs]);
+    expect(judged(againstPin.rows)).toEqual(judged(againstRun.rows));
+    expect(againstPin.rows.map((r) => r.metric)).toEqual(['throughput-mean', 'compute-p10', 'cpu-p50']);
+  });
+
+  it('refuses a context the main thread paced, in the run and when writing the pin', () => {
+    expect(compareToPin(pinOf([paced(5, 2)]), file([paced(5, 4.5)])).refusals[0].reason).toContain('CPU-bound');
+    expect(pinFromRuns([runOf(file([paced(5, 4.5)]))], SOURCE).refusals[0]).toContain('CPU-bound');
+  });
+});
+
 describe('assertPinFile and the path', () => {
   it('refuses a foreign schema by name', () => {
     expect(() => assertPinFile({ schema: 'stellata-perf/1', run: {} }, 'x.json')).toThrow(PinError);
     expect(assertPinFile(pinOf(), 'x.json').adapterSlug).toBe('apple-m4-metal-3');
+  });
+
+  it('refuses a row no canon vantage names', () => {
+    const pin = pinOf();
+    expect(() => assertPinFile({ ...pin, rows: [...pin.rows, { ...pin.rows[0], name: 'mw90' }] }, 'x.json'))
+      .toThrow('x.json pins scenario "mw90", no canon vantage');
   });
 
   it('files one pin per adapter under scripts/perf/pins', () => {

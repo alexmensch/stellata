@@ -1,7 +1,7 @@
 // The binding review queue's dispositions, declared.
 
 import { defineSource } from '../../util/sources/source';
-import { parseBindingDispositionsTsv } from './membership-manifest-pure';
+import { parseBindingDispositionsTsv } from './binding-review-dispositions-pure';
 
 export const BINDING_REVIEW_DISPOSITIONS = defineSource({
   file: 'data/membership/binding-review-dispositions.tsv',

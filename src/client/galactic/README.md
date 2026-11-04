@@ -11,10 +11,6 @@ obscuring the local stars.
 
 ```
 src/client/galactic/
-  galactic-coords.ts (+ test)     Shared GAL_TO_ICRS (Matrix4) +
-                                  GALACTIC_CENTRE_PC (Vector3 at R₀ =
-                                  8.122 kpc). Reused by the Milky Way
-                                  volumetric layer (src/client/milkyway/README.md).
   galactic-disc.ts (+ test)       15 kpc midplane ring + ±1800 pc
                                   thickness rings + 5 × 3 kpc bulge
                                   wireframe, on one seam stroke;
@@ -41,12 +37,9 @@ src/client/overlays/                  (full overlay roster in src/client/overlay
 Local Group wireframes + per-galaxy labels are a separate layer; see
 `src/client/local-group/README.md`.
 
-**Shared module** `galactic-coords.ts` exports `GAL_TO_ICRS` (Matrix4)
-and `GALACTIC_CENTRE_PC` (Vector3 at R₀ = 8.122 kpc), built from the
-J2000 IAU galactic-pole and galactic-centre angles with explicit
-re-orthogonalisation. The angles live in `data/schema/constants.json`
-(`galacticFrame`), which the Python cloud model reads too. The Milky Way volumetric layer reuses these
-constants directly — keep the module minimal and stable.
+The galactic frame itself — `GAL_TO_ICRS`, `GALACTIC_CENTRE_PC` — is
+shared with the build pipeline, so it lives in
+`/src/astro-core/galactic-coords.ts`.
 
 **Galactic disc outline** (`galactic-disc.ts`) — *on in dark mode at
 detail level ≥ representational, hidden in chart mode*. The declutter
@@ -59,7 +52,7 @@ loops in the galactic frame), all centred on the galactic centre — Sol
 sits ~8 kpc *inside* the disc, not at its middle.
 
 **Every extent is imported from the Milky Way proxy meshes**
-(`../milkyway/column/milkyway-column-pure.ts` `DISC_RADIUS_PC` /
+(`../../astro-core/milkyway/column/milkyway-column-pure.ts` `DISC_RADIUS_PC` /
 `DISC_HALF_THICKNESS_PC` / `BULGE_RADIUS_PC` /
 `BULGE_HALF_THICKNESS_PC`), never restated here. The wireframe's job is
 to outline the volume that emits, so any divergence renders band light
@@ -67,7 +60,7 @@ outside its own outline — which is what the previous hand-set ±400 pc and
 3 × 1.5 kpc did: 1.5× short vertically on the disc, and on the bulge 2×
 vertically and 1.67× radially. Changing a mesh envelope now moves the
 ring with it — the thickness rings tripled when the disc gained its thick
-component ([Density profiles](../milkyway/column/README.md#density-profiles)).
+component ([Density profiles](../../astro-core/milkyway/column/README.md#density-profiles)).
 
 **The disc is the one layer gating on the frustum**, and its registry
 entry declares both admissible tests in order: `'opacity'` when

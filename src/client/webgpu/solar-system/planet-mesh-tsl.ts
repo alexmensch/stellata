@@ -10,10 +10,8 @@ import {
 import { NodeMaterial } from 'three/webgpu';
 import type { Node } from 'three/webgpu';
 import { MAX_SHADOW_CASTERS } from '../../solar-system/planets/body-shadow-pure';
-import {
-  HORIZON_AZIMUTHS, HORIZON_SIN_RANGE, LIMB_EXP, LIMB_FLOOR, SKY_VIEW_RANGE,
-  TERM_SOFTNESS_FLOOR,
-} from '../../util/baker-constants';
+import { LIMB_EXP, LIMB_FLOOR, TERM_SOFTNESS_FLOOR } from '../../../astro-core/baker-constants';
+import { HORIZON_AZIMUTHS, HORIZON_SIN_RANGE, SKY_VIEW_RANGE } from '../../../catalog-format/baker-artifacts/baker-artifacts';
 import {
   RELIEF_POLE_EPS,
 } from '../../solar-system/planets/surface-relief/surface-relief-pure';

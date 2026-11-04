@@ -21,8 +21,9 @@ function timeParam(mu: number): string {
   return `'JD${jdOfMicrodays(mu).toFixed(6)}'`;
 }
 
-function requestParams(horizonsId: string, request: EpochRequest): URLSearchParams {
-  const params = new URLSearchParams({
+/** Every parameter a VECTORS query fixes, before its epochs. */
+export function vectorParams(horizonsId: string): URLSearchParams {
+  return new URLSearchParams({
     format: 'text',
     COMMAND: `'${horizonsId}'`,
     EPHEM_TYPE: 'VECTORS',
@@ -32,6 +33,10 @@ function requestParams(horizonsId: string, request: EpochRequest): URLSearchPara
     OUT_UNITS: 'AU-D',
     CSV_FORMAT: "'YES'",
   });
+}
+
+function requestParams(horizonsId: string, request: EpochRequest): URLSearchParams {
+  const params = vectorParams(horizonsId);
   if (request.kind === 'range') {
     params.set('START_TIME', timeParam(request.startMu));
     params.set('STOP_TIME', timeParam(request.stopMu));

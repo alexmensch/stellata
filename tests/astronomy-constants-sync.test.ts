@@ -1,5 +1,5 @@
 // Pins the Python mirror at scripts/util/astronomy_constants.py to the
-// TS canonical at src/client/util/astronomy-constants.ts. Value drift
+// TS canonical at src/astro-core/astronomy-constants.ts. Value drift
 // between the two files is what this test catches; the README and
 // import statements give no compile-time guarantee.
 
@@ -27,7 +27,7 @@ function parsePyConstants(): Record<string, number> {
 describe('astronomy_constants.py mirrors astronomy-constants.ts', () => {
   it('every Python constant matches the TS canonical value', async () => {
     const py = parsePyConstants();
-    const ts = await import('../src/client/util/astronomy-constants');
+    const ts = await import('../src/astro-core/astronomy-constants');
     for (const [name, pyValue] of Object.entries(py)) {
       expect(name in ts, `TS canonical missing constant ${name}`).toBe(true);
       const tsValue = (ts as unknown as Record<string, number>)[name];

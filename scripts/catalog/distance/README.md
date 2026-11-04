@@ -158,7 +158,7 @@ and the per-route build-counts pins (`directionGaia5p` … `directionCurated`)
 hold each tier's share.
 
 The sky-position regression corpus (`sky-position-corpus.tsv` +
-`sky-position.test.ts`) pins the canonical high-PM set (Barnard's,
+`/tests/integration/sky-position.test.ts`) pins the canonical high-PM set (Barnard's,
 Kapteyn's, Groombridge 1830, 61 Cyg A/B, Keid) plus one row per non-Gaia
 tier — Sirius + Vega for hip2_saturated, **Gl 863.1A** (HIP 111293, no
 Gaia source and absent from HIP2) for simbad, which ξ UMa vacated when

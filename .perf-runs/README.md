@@ -41,17 +41,22 @@ answer a cost question without spending an arm, which
 ## Reading one without being misled
 
 Absolute numbers are comparable only within the envelope the run recorded —
-`method`, `bufferMpx`, headed vs headless, browser, backend, and a dev server
-against a production build. The record carries all of them; check them before
-differencing two files.
+`method`, `bufferMpx`, headed vs headless, browser, backend, `params.pacing`
+(absent reads `raf`), and a dev server against a production build. The record
+carries all of them; check them before differencing two files.
 
-Two traps the archive is full of, both documented at
+Traps the archive is full of, all documented at
 `../scripts/perf/dwell/README.md`:
 
 - **`vsyncClamped: true` invalidates a dwell's wall clock.** It measured the
   display's cadence, not the frame.
 - **On a split frame the GPU-stream median follows the readback duty cycle.**
   Two files whose `readbackPerFrame` differ are not each other's comparison.
+- **Two pacings never compare.** A GPU-paced dwell holds the GPU clock at
+  max; an rAF-paced one lets it idle down.
+- **Under GPU pacing the GPU stream over-reads.** With two frames in flight
+  the summed pass spans read 1.25–1.69× throughput; the throughput mean is
+  the frame's GPU cost, and the wall median follows the burst pattern.
 
 A run also measures whichever render path existed at its commit, and the path
 has moved repeatedly — `run.git.commit` in the file is what says which.
@@ -66,3 +71,22 @@ append-only and a path quoted in a bead note stays valid.
 That last clause is a promise about a **committed** path. An uncommitted file
 resolves on one machine, and every note quoting it is already broken; check
 with `git ls-files --error-unmatch <path>` before you quote one.
+
+## Clock logs
+
+`<date>/<slug>.powermetrics.txt.gz` is the GPU clock beside a run: `sudo
+powermetrics --samplers gpu_power -i 100`, taken by Alex for the length of
+one or more runs, one sample per 100 ms of active frequency, per-state
+residency, idle share and power. It answers what no run file can — whether
+the governor held the clock, and at what busy share — which is the evidence
+GPU pacing rests on ([Pacing](../scripts/perf/dwell/README.md#pacing)). The
+timestamps have second resolution, so a run is placed by its busy blocks:
+contiguous samples under 50 % idle, each matched to a context by order and
+by the run file's `startedAt` / `finishedAt`.
+
+**Commit it trimmed and gzipped.** Keep the log's header and every sample
+inside the span of a run it covers, `startedAt` − 5 s to `finishedAt` + 5 s
+off that run's file (powermetrics stamps in the same UTC); the rest is the
+machine idling between arms. The text is mostly repeated headers and
+gzips about 48×. Read one with `gzcat <path> | less`. Nothing in the tree
+parses these; the runs that cite them say which busy block is which.

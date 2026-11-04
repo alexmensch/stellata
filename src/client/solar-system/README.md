@@ -60,15 +60,6 @@ src/client/solar-system/
                                   PlanetBodyField.isCollapsedOntoParent
                                   verdicts. Covers exoplanet hosts as
                                   soon as bk5 attaches them.
-  perceptual-magnitude.ts         Per-body apparent-magnitude model
-                                  (Lambertian + empirical phase factors)
-                                  + the host-irradiance magnitude and the
-                                  mesh's disc surface brightness (see
-                                  planets/README.md#physical-luminance-emission).
-                                  Drives the body field's glare
-                                  sizing/brightness and per-planet label
-                                  gating. Also consumed by ../binaries/
-                                  and ../camera/controls/ for stars.
   phase-function.ts (+ test)      Lambertian + empirical phase
                                   functions + phaseRatioToLambert
                                   (mesh phase scalar). Pure helpers.
@@ -100,7 +91,7 @@ satisfies:
   index-calibrated moons take theirs from the same measured target their
   texture is calibrated to, at their own unchanged luminance
   ([Colour fidelity](/data/textures/README.md#colour-fidelity--index-anchored-calibration); pinned by
-  `scripts/textures/texture-colours.test.ts`). Every other row is still
+  `tests/integration/texture-colours.test.ts`). Every other row is still
   hand-picked. Optional `parentName` marks a body that
   orbits a planet rather than the host star (a moon); optional
   `gravParamGM` (km³/s²) is carried by moon parents so a moon's period
@@ -171,7 +162,7 @@ domains: `planet` (moons reuse the `planet` kind — a moon is a
 planet-domain object under the resolver) and `probe` (`kind=probe` in
 the ledger, keyed on the mission roster id). The values are frozen
 ledger sids minted from `data/sid/sol-objects.tsv`;
-`sol-object-sids.test.ts` imports the ledger and asserts each entry
+`/tests/integration/sol-object-sids.test.ts` imports the ledger and asserts each entry
 matches (tests import, never redefine), covers exactly the mint list,
 pins a sid for every `SOL_BODIES` runtime body and every
 `PROBE_MISSIONS` entry, and asserts the probe rows carry ledger kind
@@ -181,7 +172,8 @@ via a same-as edge, so that record's in-record sid and
 
 ## Reflected-light magnitude model
 
-`perceptual-magnitude.ts` + `phase-function.ts` are the CPU side of the
+`/src/astro-core/perceptual-magnitude.ts` (the per-body apparent-magnitude
+model, shared with the build pipeline) + `phase-function.ts` are the CPU side of the
 shared reflected-light model; `webgpu/solar-system/planet-glare-tsl.ts`
 carries the GPU mirror. Both must stay in step — the pure helpers are vitest-pinned
 and the full-Moon calibration (−12.7) anchors the underlying flux.

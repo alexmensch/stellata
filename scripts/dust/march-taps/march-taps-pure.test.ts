@@ -5,11 +5,11 @@ import {
   dustRaymarchAv,
   type DustDecodeParams,
   type Vec3,
-} from '../../../src/client/star-pipeline/extinction/dust-raymarch-pure';
+} from '../../../src/astro-core/extinction/dust-raymarch-pure';
 import {
   FIXED_MARCH_TAPS, fp32March, percentile, strideSample, summarise, unclippedFixedMarch,
 } from './march-taps-pure';
-import { AV_PER_EZGR } from '../../../src/client/util/baker-constants';
+import { AV_PER_EZGR } from '../../../src/astro-core/baker-constants';
 
 const P: DustDecodeParams = {
   boundsPc: 1250,
