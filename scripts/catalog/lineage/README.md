@@ -249,7 +249,8 @@ passes `stageLineage` (`stage-lineage.ts`) a `LineageBudget`, and a run over
 it fails its emission. Membership, measured 2026-10-29 on the full tree:
 1,355,182 rows (128 MB plain, 15.1 MB gzipped) plus 976,040 identity rows
 (85 MB, 22.3 MB), 37.4 MB together. The timed window is everything lineage
-adds to the build — the diff, rendering, gzip and invariants: about 5.8 s with a diff
+adds to the build — the baseline headers' file re-hash, the diff, rendering,
+gzip and invariants: about 5.8 s with a diff
 against a full baseline. The header's input hash is not in it: a stage hands
 `stageLineage` the input hashes its step computed for its own use. Each step
 hashes that set a second time after the runner hashed it for the stamp
