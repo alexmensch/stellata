@@ -9,7 +9,7 @@ here="$(dirname "$0")"
 . "$here/perf-go-lib.sh"
 
 poll_s="${PERF_GO_POLL_S:-15}"
-timeout_s="${PERF_GO_TIMEOUT_S:-3600}"
+timeout_s="${PERF_GO_TIMEOUT_S:-$PERF_GO_WAIT_S}"
 
 marker="$(perf_go_marker)" || { echo "perf-go: not inside a git checkout" >&2; exit 1; }
 started="$(date +%s)"
@@ -50,7 +50,7 @@ while :; do
     exit 0
   fi
   if [ $(( $(date +%s) - started )) -ge "$timeout_s" ]; then
-    echo "perf-go: no fresh marker after ${timeout_s} s — not armed. Re-announce and start await-go.sh again when Alex is ready." >&2
+    echo "perf-go: no fresh marker after ${timeout_s} s — not armed. Re-announce and start await-go.sh again when Alex is ready — under a pickup-epic coordinator, send GPU_DONE unarmed first, and GPU_REQUEST again when Alex is ready." >&2
     exit 1
   fi
   sleep "$poll_s"
