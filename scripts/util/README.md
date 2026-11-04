@@ -112,7 +112,7 @@ same thing — single-use helpers stay with their consumer.
 - `stamp-hash.ts` (+ test) — the TypeScript stamp hash, sha1, and its only
   spelling: `hashFile` over a file's bytes and `hashBytes` over bytes still in
   memory, equal for equal bytes. Every stamp-side digest is taken with one of
-  them — `build-stamp.ts`'s maps and `listingHash`, a code identity, the
+  them — `build-stamp.ts`'s maps and `listingHash`, a TypeScript code identity, the
   lineage header's file hashes, `../pipeline/freshness.ts`'s query and request
   hashes. A leaf below both `build-stamp.ts` and `code-identity.ts`, since the
   first imports the second.
