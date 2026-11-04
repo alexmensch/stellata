@@ -33,7 +33,7 @@ beforeAll(async () => {
 }, 60_000);
 
 const edgeFiles = (from: string, to: string): string[] => loaded.graph.edges
-  .filter((e) => e.from === from && e.to === to).flatMap((e) => e.files.map((f) => relative(REPO_ROOT, f)));
+  .filter((e) => e.from === from && e.to === to).flatMap((e) => (e.kind === 'reads' ? e.files : []).map((f) => relative(REPO_ROOT, f)));
 
 const isBuildStep = (name: string): boolean => isBuild(loaded.steps.get(name)!.step);
 

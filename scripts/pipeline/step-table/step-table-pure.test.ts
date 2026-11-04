@@ -43,7 +43,7 @@ describe('deriveGraph', () => {
   it('orders a reader after the step that declares the file it reads, whatever the table order', () => {
     const g = ordered(deriveGraph([ts('b', ['/r/b.out'], ['/r/a.out']), ts('a', ['/r/a.out'])], []));
     expect(g.order).toEqual(['a', 'b']);
-    expect(g.edges).toEqual([{ from: 'a', to: 'b', files: ['/r/a.out'] }]);
+    expect(g.edges).toEqual([{ kind: 'reads', from: 'a', to: 'b', files: ['/r/a.out'] }]);
   });
 
   it('keeps table order between steps with no edge between them', () => {
@@ -109,8 +109,8 @@ describe('deriveGraph', () => {
     const stamp = ts('sid:stamp', ['/r/sid/cloud-ledger.tsv', '/r/clouds.json'], ['/r/sid/ledger.tsv', '/r/sid/cloud-ledger.tsv']);
     const g = ordered(deriveGraph([cat, stamp], ['/r/sid/ledger.tsv', '/r/sid/cloud-ledger.tsv']));
     expect(g.registryEdges).toEqual([
-      { from: 'sid:stamp', to: 'build:catalog', files: ['/r/sid/cloud-ledger.tsv'] },
-      { from: 'build:catalog', to: 'sid:stamp', files: ['/r/sid/ledger.tsv'] },
+      { kind: 'reads', from: 'sid:stamp', to: 'build:catalog', files: ['/r/sid/cloud-ledger.tsv'] },
+      { kind: 'reads', from: 'build:catalog', to: 'sid:stamp', files: ['/r/sid/ledger.tsv'] },
     ]);
     expect(g.edges).toEqual([]);
   });
@@ -134,7 +134,7 @@ describe('deriveGraph', () => {
     const membership = ts('build:membership', ['/r/manifest.json'], ['/r/sptype.tsv']);
     const p = pull('simbad-sptype', ['/r/sptype.tsv'], ['/r/manifest.json']);
     const g = ordered(deriveGraph([p, membership], []));
-    expect(g.keptLoops).toEqual([{ from: 'simbad-sptype', to: 'build:membership', files: ['/r/sptype.tsv'] }]);
+    expect(g.keptLoops).toEqual([{ kind: 'reads', from: 'simbad-sptype', to: 'build:membership', files: ['/r/sptype.tsv'] }]);
     expect(g.order).toEqual(['build:membership', 'simbad-sptype']);
   });
 });

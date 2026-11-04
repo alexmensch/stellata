@@ -146,7 +146,7 @@ function describeVerdict(name: string, verdict: Verdict): string {
 }
 
 function keptLoopLines(graph: StepGraph, tree: PipelineTree): string[] {
-  return graph.keptLoops.map((e) => `kept loop: ${e.from} → ${e.to} through ${e.files.map(tree.rel).join(', ')}`);
+  return graph.keptLoops.map((e) => `kept loop: ${e.from} → ${e.to} through ${(e.kind === 'reads' ? e.files : []).map(tree.rel).join(', ')}`);
 }
 
 export async function runSteps(loaded: Loads, options: RunOptions): Promise<{ verdicts: ReadonlyMap<string, Verdict>; status: number }> {

@@ -75,12 +75,9 @@ export interface ResolvedStep {
   readonly reads: readonly string[];
 }
 
-export interface Edge {
-  readonly from: string;
-  readonly to: string;
-  /** Empty for an edge a Python step declares with `after`. */
-  readonly files: readonly string[];
-}
+export type Edge =
+  | { readonly kind: 'reads'; readonly from: string; readonly to: string; readonly files: readonly string[] }
+  | { readonly kind: 'after'; readonly from: string; readonly to: string };
 
 export interface StepGraph {
   /** Step names in run order. */
@@ -134,7 +131,7 @@ function readEdges(steps: readonly ResolvedStep[]): { edges: Edge[]; problems: s
     const { step } = reader;
     if (step.kind === 'build' && step.language === 'python') {
       for (const name of step.after) {
-        if (byName.has(name)) edges.push({ from: name, to: step.name, files: [] });
+        if (byName.has(name)) edges.push({ kind: 'after', from: name, to: step.name });
         else problems.push(`${step.name} runs after ${name}, which is not a step`);
       }
       continue;
@@ -142,7 +139,7 @@ function readEdges(steps: readonly ResolvedStep[]): { edges: Edge[]; problems: s
     for (const writer of steps) {
       if (writer === reader) continue;
       const files = reader.reads.filter((p) => claims(writer.outputs, p));
-      if (files.length > 0) edges.push({ from: writer.step.name, to: step.name, files });
+      if (files.length > 0) edges.push({ kind: 'reads', from: writer.step.name, to: step.name, files });
     }
   }
   return { edges, problems };
@@ -217,7 +214,7 @@ export function deriveGraph(steps: readonly ResolvedStep[], registryFiles: reado
 
   const registry = new Set(registryFiles);
   const isRegistryEdge = (e: Edge): boolean => kindOf.get(e.from) === 'build' && kindOf.get(e.to) === 'build'
-    && e.files.length > 0 && e.files.every((f) => registry.has(f));
+    && e.kind === 'reads' && e.files.every((f) => registry.has(f));
   const registryEdges = all.filter(isRegistryEdge);
   const remaining = all.filter((e) => !isRegistryEdge(e));
   const fromManual = (e: Edge): boolean => kindOf.get(e.from) !== 'build';
