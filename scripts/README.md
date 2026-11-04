@@ -112,8 +112,9 @@ output it wrote, and the step is fresh while both re-hash the same. The stamp
 is cleared before the step runs and written only once it exits 0 with its
 declared outputs in place, so a failed or interrupted build always reruns.
 Unstamped families (the lineage baseline and diff) are never recorded. A
-no-op `build:data` (all sixteen fresh) re-hashes the mirrors' ~0.5 GB of
-inputs and outputs besides, about a second more on a warm page cache.
+no-op `build:data` (all sixteen build steps fresh, every manual step checked)
+takes about ten seconds on a warm page cache, measured 2026-11-04; the mirrors'
+~0.5 GB of inputs and outputs are re-hashed within it.
 
 An unchanged input invalidates nothing, so a rebuilt `multiples.tsv` with
 identical content leaves the catalogue skipped. Forcing a rebuild:
