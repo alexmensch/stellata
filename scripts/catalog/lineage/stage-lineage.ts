@@ -7,10 +7,11 @@ import type { FileHashes } from '../../util/build-stamp';
 import type { ArtifactContents, Check } from '../../util/emit-artifacts';
 import { mergeBaseWithMain } from '../../util/git-provenance';
 import { diffLineage, stageDiffText, type DiffJoin, type KeyChange } from './lineage-diff-pure';
+import { inputHashesAt } from '../../util/input-hashes-at';
 import {
-  ACCEPT_ANY_BASELINE_FLAG, AGAINST_FLAG, planBaseline, type BaselineSource,
+  ACCEPT_ANY_BASELINE_FLAG, AGAINST_FLAG, planBaseline, type BaselineSource, type InputHashAt, type MergeBase,
 } from './baseline/lineage-header-pure';
-import { readStageHeader, stageEmission, stageProvenance, streamLineage } from './lineage-io';
+import { inputHashOf, readStageHeader, stageEmission, stageProvenance, streamLineage } from './lineage-io';
 import { invariantCheck, invariantViolations, type LineageInvariant } from './lineage-invariant-pure';
 import { sortLineageLines, type LineageLine } from './lineage-row-pure';
 import {
@@ -61,13 +62,28 @@ function baselineSource<F extends string, S extends string>(run: StageLineageRun
   return { kind: 'checkout', header: readStageHeader(run.layout.current, run.spec) };
 }
 
+function mergeBase(inputs: FileHashes): MergeBase | null {
+  const commit = mergeBaseWithMain();
+  if (commit === null) return null;
+  let hashed: InputHashAt | undefined;
+  return {
+    commit,
+    inputHash: () => {
+      if (hashed !== undefined) return hashed;
+      const at = inputHashesAt(commit, inputs);
+      hashed = at.kind === 'hashed' ? { kind: 'hashed', hash: inputHashOf(at.hashes) } : at;
+      return hashed;
+    },
+  };
+}
+
 export async function stageLineage<F extends string, S extends string>(
   run: StageLineageRun<F, S>,
 ): Promise<StageLineageEmission<F, S>> {
   const started = performance.now();
   const source = baselineSource(run);
   const plan = planBaseline(
-    readStageHeader(run.layout.previous, run.spec), source, mergeBaseWithMain(),
+    readStageHeader(run.layout.previous, run.spec), source, mergeBase(run.inputs),
     run.argv.includes(ACCEPT_ANY_BASELINE_FLAG),
   );
   const { verdict } = plan;

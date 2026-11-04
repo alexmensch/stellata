@@ -149,7 +149,16 @@ same thing — single-use helpers stay with their consumer.
   dirty) and `mergeBaseWithMain` (null with no `origin/main` or in a shallow
   clone), and `fileAtMergeBase`, a file as the merge-base holds it — `absent`
   when it is new on the branch, kept apart from `no-merge-base`. The lineage
-  header, perf's `gitMeta` and the two merge-base guards read it.
+  header, perf's `gitMeta` and the two merge-base guards read it. `gitIn` is
+  its git call, in a given folder.
+- `input-hashes-at.ts` (+ test) — `inputHashesAt(commit, inputs)`: an
+  `inputHashes` map with each path that differs on disk from `commit`
+  re-hashed from `commit`'s copy (code by identity, LFS content smudged from
+  the local store), `unknown` where git holds no copy — a git-ignored input,
+  or LFS content not stored locally. Kept out of `git-provenance.ts` so the
+  perf instruments reading that do not load the TypeScript compiler. The
+  lineage baseline verdict reads it
+  ([The header and the refusal](../catalog/lineage/baseline/README.md#the-header-and-the-refusal)).
 - `source-trees.ts` — `TREE_ROOTS` and `treeOf`, which tree a repo path
   belongs to, and `BROWSER_TREES`: the one list both import-boundary tests
   (`/tests/README.md#pipeline-viewer-boundary`) and the step table's

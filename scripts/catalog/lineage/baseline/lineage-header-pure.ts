@@ -55,7 +55,7 @@ export type BaselineSource =
   | { readonly kind: 'absent' };
 
 export type BaselineVerdict =
-  | { readonly kind: 'diff'; readonly why: 'merge-base' | 'accepted' | 'against' }
+  | { readonly kind: 'diff'; readonly why: MergeBaseMatch | 'accepted' | 'against' }
   | { readonly kind: 'none' }
   | { readonly kind: 'refused'; readonly message: string };
 
@@ -69,9 +69,25 @@ export function mismatchedFiles(read: ReadHeader): string[] {
   return Object.keys(read.onDisk).filter((name) => read.onDisk[name] !== read.header.files[name]);
 }
 
-export function isMergeBaseBuild(read: HeaderRead, mergeBase: string | null): boolean {
-  return read.kind === 'read' && !read.header.dirty && mergeBase !== null && read.header.commit === mergeBase
-    && mismatchedFiles(read).length === 0;
+/** The stage's input hash over its input files as the merge-base holds them. */
+export type InputHashAt =
+  | { readonly kind: 'hashed'; readonly hash: string }
+  | { readonly kind: 'unknown'; readonly reason: string };
+
+export interface MergeBase {
+  readonly commit: string;
+  /** Evaluated only for a clean, intact header from another commit. */
+  readonly inputHash: () => InputHashAt;
+}
+
+/** `merge-base`: built at it. `merge-base-inputs`: built at another commit from the inputs it holds. */
+export type MergeBaseMatch = 'merge-base' | 'merge-base-inputs';
+
+export function mergeBaseMatch(read: HeaderRead, mergeBase: MergeBase | null): MergeBaseMatch | null {
+  if (read.kind !== 'read' || read.header.dirty || mergeBase === null || mismatchedFiles(read).length > 0) return null;
+  if (read.header.commit === mergeBase.commit) return 'merge-base';
+  const at = mergeBase.inputHash();
+  return at.kind === 'hashed' && at.hash === read.header.inputHash ? 'merge-base-inputs' : null;
 }
 
 export interface BaselinePlan {
@@ -82,29 +98,34 @@ export interface BaselinePlan {
 }
 
 export function planBaseline(
-  previous: HeaderRead, source: BaselineSource, mergeBase: string | null, acceptAny: boolean,
+  previous: HeaderRead, source: BaselineSource, mergeBase: MergeBase | null, acceptAny: boolean,
 ): BaselinePlan {
-  const pinned = isMergeBaseBuild(previous, mergeBase);
-  if (source.kind === 'against') return { verdict: { kind: 'diff', why: 'against' }, from: 'against', rotate: !pinned };
-  if (pinned) return { verdict: { kind: 'diff', why: 'merge-base' }, from: 'previous', rotate: false };
+  const pinned = mergeBaseMatch(previous, mergeBase);
+  if (source.kind === 'against') {
+    return { verdict: { kind: 'diff', why: 'against' }, from: 'against', rotate: pinned === null };
+  }
+  if (pinned !== null) return { verdict: { kind: 'diff', why: pinned }, from: 'previous', rotate: false };
   const verdict = judgeBaseline(source, mergeBase, acceptAny);
   return { verdict, from: verdict.kind === 'diff' ? 'current' : null, rotate: true };
 }
 
 export function judgeBaseline(
-  source: BaselineSource, mergeBase: string | null, acceptAny: boolean,
+  source: BaselineSource, mergeBase: MergeBase | null, acceptAny: boolean,
 ): BaselineVerdict {
   if (source.kind === 'absent') return { kind: 'none' };
   if (source.kind === 'against') return { kind: 'diff', why: 'against' };
   const read = source.header;
-  if (isMergeBaseBuild(read, mergeBase)) return { kind: 'diff', why: 'merge-base' };
+  const match = mergeBaseMatch(read, mergeBase);
+  if (match !== null) return { kind: 'diff', why: match };
   if (acceptAny) return { kind: 'diff', why: 'accepted' };
   const built = read.kind === 'missing'
     ? 'a baseline with no header'
     : read.kind === 'unreadable'
       ? `a baseline whose header does not read (${read.reason})`
       : builtAt(read);
-  const base = mergeBase === null ? 'no merge-base with origin/main' : `the merge-base ${mergeBase}`;
+  const base = mergeBase === null
+    ? 'no merge-base with origin/main'
+    : `the merge-base ${mergeBase.commit}${read.kind === 'read' ? inputsClause(read, mergeBase) : ''}`;
   return {
     kind: 'refused',
     message: `lineage diff refused: ${built}, not ${base}. Build the stage at the merge-base for a `
@@ -118,4 +139,12 @@ function builtAt(read: ReadHeader): string {
   if (mismatched.length === 0) return `a baseline ${built}`;
   return `a baseline whose ${mismatched.join(', ')} ${mismatched.length === 1 ? 'is not the file' : 'are not the files'} `
     + `its header (${built}) recorded`;
+}
+
+function inputsClause(read: ReadHeader, mergeBase: MergeBase): string {
+  if (read.header.dirty || mismatchedFiles(read).length > 0) return '';
+  const at = mergeBase.inputHash();
+  return at.kind === 'unknown'
+    ? ` (its inputs could not be compared with the merge-base's: ${at.reason})`
+    : ' or a build from the inputs it holds';
 }

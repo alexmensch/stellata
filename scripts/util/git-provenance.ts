@@ -8,11 +8,14 @@ import { PACKAGE_JSON, REPO_ROOT } from './paths';
 
 export const MAIN_REF = 'origin/main';
 
-function git(...argv: string[]): string {
+/** git's trimmed stdout, run in `cwd`; throws on a non-zero exit. */
+export function gitIn(cwd: string, ...argv: string[]): string {
   return execFileSync('git', argv, {
-    cwd: REPO_ROOT, encoding: 'utf-8', stdio: ['ignore', 'pipe', 'pipe'],
+    cwd, encoding: 'utf-8', stdio: ['ignore', 'pipe', 'pipe'], maxBuffer: 1 << 28,
   }).trim();
 }
+
+const git = (...argv: string[]): string => gitIn(REPO_ROOT, ...argv);
 
 export function packageVersion(): string {
   return (JSON.parse(readFileSync(resolve(REPO_ROOT, PACKAGE_JSON), 'utf-8')) as { version: string }).version;

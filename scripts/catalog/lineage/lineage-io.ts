@@ -91,6 +91,8 @@ export function stageProvenance<F extends string>(
     stage: spec.stage,
     version: packageVersion(),
     ...headState(),
-    inputHash: hashBytes(JSON.stringify(inputs)),
+    inputHash: inputHashOf(inputs),
   };
 }
+
+export const inputHashOf = (inputs: FileHashes): string => hashBytes(JSON.stringify(inputs));
