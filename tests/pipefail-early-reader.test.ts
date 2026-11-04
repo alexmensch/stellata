@@ -8,8 +8,10 @@ import { walkFiles } from './walk-files';
 
 const ROOT = resolve(__dirname, '..');
 
-const PIPE = String.raw`(?<!\|)\|(?![|&])\s*(?:\\\n\s*)?`;
-const GREP_QUIET = new RegExp(String.raw`${PIPE}grep((?:\s+-[a-zA-Z-]+)*)`, 'g');
+const PIPE = String.raw`(?<!\|)\|(?!\|)&?\s*(?:\\\n\s*)?`;
+const QUOTED = String.raw`'[^']*'|"(?:\\.|[^"\\])*"`;
+const GREP_ARGS = new RegExp(String.raw`${PIPE}grep\b((?:${QUOTED}|[^'"\n|;&)])*)`, 'g');
+const QUIET_FLAG = /(?:^|\s)(?:-[a-zA-Z0-9]*q[a-zA-Z0-9]*|--quiet|--silent)(?=\s|$)/;
 const HEAD = new RegExp(String.raw`${PIPE}head\b`, 'g');
 const AWK_PROGRAM = new RegExp(String.raw`${PIPE}awk\b[^'\n]*'([^']*)'`, 'g');
 const SETS_PIPEFAIL = /^\s*set\s+(?:-[a-zA-Z]+\s+)*-[a-zA-Z]*o\s+pipefail\b/m;
@@ -26,8 +28,9 @@ function lineOf(src: string, index: number): number {
 function earlyReaderPipes(script: string): Offence[] {
   const src = script.replace(/^[ \t]*#.*$/gm, '');
   const out: Offence[] = [];
-  for (const m of src.matchAll(GREP_QUIET)) {
-    if (/(?:^|\s)(?:-[a-zA-Z]*q|--quiet|--silent)/.test(m[1])) out.push({ line: lineOf(src, m.index), reader: 'grep -q' });
+  for (const m of src.matchAll(GREP_ARGS)) {
+    const flags = m[1].replace(new RegExp(QUOTED, 'g'), ' ');
+    if (QUIET_FLAG.test(flags)) out.push({ line: lineOf(src, m.index), reader: 'grep -q' });
   }
   for (const m of src.matchAll(HEAD)) out.push({ line: lineOf(src, m.index), reader: 'head' });
   for (const m of src.matchAll(AWK_PROGRAM)) {
@@ -51,6 +54,10 @@ describe('earlyReaderPipes', () => {
     ['printf "%s" "$x" | grep -Eq foo', 'grep -q'],
     ['printf "%s" "$x" | grep -E -q foo', 'grep -q'],
     ['printf "%s" "$x" | grep --quiet foo', 'grep -q'],
+    ['printf "%s" "$x" | grep -m1 -q foo', 'grep -q'],
+    ['printf "%s" "$x" | grep -e foo -q', 'grep -q'],
+    ['printf "%s" "$x" |& grep -q foo', 'grep -q'],
+    ['printf "%s" "$x" | grep "-q" -q', 'grep -q'],
     ['jq -r . | tr "\\n" " " | grep -qF "$s"', 'grep -q'],
     ['sed -n p "$f" | head -1', 'head'],
     ['x="$(printf "%s" "$c" \\\n  | sed -n p \\\n  | head -1)"', 'head'],
@@ -64,6 +71,8 @@ describe('earlyReaderPipes', () => {
     'test -f x || grep -q foo file',
     'printf "%s" "$x" | grep -oE "[a-z]+"',
     'printf "%s" "$x" | grep -E "a|b" > out',
+    'printf "%s" "$x" | grep -E " -q" > out',
+    'printf "%s" "$x" | grep -c foo; other -q',
     'printf "%s" "$x" | awk \'{ print $1 }\'',
     'printf "%s" "$x" | header',
     '  # never printf | grep -q, never | head -1',

@@ -519,8 +519,8 @@ form, not to input sizes: such a reader takes a here-string
 (`grep -q x <<< "$var"`), which has no writer process to kill.
 
 `pipefail-early-reader.test.ts` scans every `scripts/**/*.sh` that sets
-pipefail, with no allowlist. Full-line comments are skipped; grep's flags
-count only when written before its pattern. The matcher has its own
+pipefail, with no allowlist. Full-line comments are skipped, and quoted
+strings never count as a grep flag. The matcher has its own
 flag and pass cases, and a case that the scan finds the hooks at all, so a
 detector that stops seeing pipes fails instead of passing on an empty scan.
 
