@@ -256,7 +256,7 @@ copies=""
 figure_check="$(dirname "$0")/../../doc-figures/check-staged-figures.ts"
 tsx_bin="$(dirname "$0")/../../../node_modules/.bin/tsx"
 if [ "$figure_ok" = 0 ] && [ -f "$figure_check" ] && [ -x "$tsx_bin" ] \
-  && grep -q '\.md$' <<< "$staged"; then
+  && ! git -C "$toplevel" diff --cached --quiet -- '*.md'; then
   set +e
   copies="$("$tsx_bin" "$figure_check" "$toplevel" 2>/dev/null)"
   status=$?

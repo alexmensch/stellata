@@ -263,17 +263,22 @@ export const x = 1;
 });
 
 describe('snapshot-copy sweep', () => {
-  function stageDoc(line: string): void {
+  function stageDoc(line: string, doc = 'NOTES.md'): void {
     write('counts/s-expected.json', '{ "rows": 975573, "segments": 781 }\n');
-    write('NOTES.md', '# notes\n');
+    write(doc, '# notes\n');
     git('add', '-A');
     git('commit', '-q', '-m', 'seed');
-    write('NOTES.md', `# notes\n\n${line}\n`);
+    write(doc, `# notes\n\n${line}\n`);
     git('add', '-A');
   }
 
   it('denies an added line quoting a snapshot count unmarked', () => {
     stageDoc('the manifest holds 975,573 rows');
+    expect(allowed('git commit -m "notes"')).toBe(false);
+  });
+
+  it('sweeps a markdown file whose name git quotes', () => {
+    stageDoc('the manifest holds 975,573 rows', 'NÖTES.md');
     expect(allowed('git commit -m "notes"')).toBe(false);
   });
 
