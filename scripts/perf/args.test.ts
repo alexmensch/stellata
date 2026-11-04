@@ -47,7 +47,7 @@ describe('parseRunArgs', () => {
     });
   });
 
-  const PIN_RUN = ['--mode', 'dwell', '--scenario', 'all', '--json', 'run.json', '--pin', 'scripts/perf/pins/x.json'];
+  const PIN_RUN = ['--mode', 'dwell', '--scenario', 'all', '--json', 'run.json.gz', '--pin', 'scripts/perf/pins/x.json'];
 
   it('takes the pin flags in dwell mode, --accept as key:bead pairs, and a zero cool-down', () => {
     const a = parseRunArgs([
@@ -84,7 +84,7 @@ describe('parseRunArgs', () => {
   // writes refuses every row of the next comparison instead.
   it('refuses --pin unless the run is the whole canon, in canon order', () => {
     const pinned = (...flags: string[]): string[] =>
-      ['--mode', 'dwell', ...flags, '--json', 'r.json', '--pin', 'p.json'];
+      ['--mode', 'dwell', ...flags, '--json', 'r.json.gz', '--pin', 'p.json'];
     for (const flags of [
       [],
       ['--scenario', 'mw120,sol'],
@@ -106,7 +106,7 @@ describe('parseRunArgs', () => {
   });
 
   it('refuses the pin flags outside dwell mode', () => {
-    expect(() => parseRunArgs(['--json', 'r.json', '--pin', 'p.json'])).toThrow(/--mode dwell only/);
+    expect(() => parseRunArgs(['--json', 'r.json.gz', '--pin', 'p.json'])).toThrow(/--mode dwell only/);
     expect(() => parseRunArgs(['--against-pin', 'p.json'])).toThrow(/--mode dwell only/);
   });
 
@@ -227,17 +227,24 @@ describe('parseRunArgs', () => {
     }
   });
 
+  it('refuses a --json path that is not .json.gz, so the archive stays one format', () => {
+    for (const path of ['r.json', 'r.gz', 'r']) {
+      expect(() => parseRunArgs(['--json', path])).toThrow(ArgError);
+      expect(() => parseRunArgs(['--json', path])).toThrow(`--json ${path}: `);
+    }
+  });
+
   it('takes the new modes and the two paths', () => {
     const a = parseRunArgs([
       '--mode', 'sweep', '--frames', '480',
-      '--scales', '0.25, 1, 3', '--json', '/tmp/a.json', '--baseline', '/tmp/b.json',
+      '--scales', '0.25, 1, 3', '--json', '/tmp/a.json.gz', '--baseline', '/tmp/b.json.gz',
     ]);
     expect(a.mode).toBe('sweep');
     expect(a.backend).toBe('webgpu');
     expect(a.frames).toBe(480);
     expect(a.scales).toEqual([0.25, 1, 3]);
-    expect(a.json).toBe('/tmp/a.json');
-    expect(a.baseline).toBe('/tmp/b.json');
+    expect(a.json).toBe('/tmp/a.json.gz');
+    expect(a.baseline).toBe('/tmp/b.json.gz');
   });
 
   it('accepts every mode and backend request it advertises', () => {
@@ -308,12 +315,12 @@ describe('parseRunArgs', () => {
 describe('parsePinArgs — the pin from saved runs', () => {
   it('takes the run files as positionals, in the order given, with the pin flags', () => {
     const a = parsePinArgs([
-      '--', '.perf-runs/a.json', '.perf-runs/b.json', '--pin', 'scripts/perf/pins/x.json',
+      '--', '.perf-runs/a.json.gz', '.perf-runs/b.json.gz', '--pin', 'scripts/perf/pins/x.json',
       '--accept', 'mw120|webgpu:bead-1', '--dry-run',
     ]);
     expect(a).toEqual({
       help: false,
-      runs: ['.perf-runs/a.json', '.perf-runs/b.json'],
+      runs: ['.perf-runs/a.json.gz', '.perf-runs/b.json.gz'],
       pin: 'scripts/perf/pins/x.json',
       accept: [{ key: 'mw120|webgpu', bead: 'bead-1' }],
       dryRun: true,
@@ -339,8 +346,12 @@ describe('parseSurvivorsArgs', () => {
   });
 
   it('drops the -- that pnpm run forwards ahead of the flags', () => {
-    expect(parseSurvivorsArgs(['--', '--url', 'http://localhost:5199', '--json', 'a.json']))
-      .toEqual({ url: 'http://localhost:5199', json: 'a.json' });
+    expect(parseSurvivorsArgs(['--', '--url', 'http://localhost:5199', '--json', 'a.json.gz']))
+      .toEqual({ url: 'http://localhost:5199', json: 'a.json.gz' });
+  });
+
+  it('refuses a --json path that is not .json.gz, so the archive stays one format', () => {
+    expect(() => parseSurvivorsArgs(['--json', 'a.json'])).toThrow(/--json a\.json: .*must end \.json\.gz/);
   });
 
   it('refuses an unknown flag rather than ignoring it', () => {
