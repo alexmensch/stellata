@@ -8,7 +8,7 @@ const git = (...args: string[]): string => execFileSync('git', args, { cwd: root
 
 const leaves = snapshotLeaves(loadSnapshots(root));
 const findings: string[] = [];
-for (const file of git('diff', '--cached', '--name-only', '--diff-filter=AM', '--', '*.md').split('\n').filter(Boolean)) {
+for (const file of git('diff', '--cached', '--name-only', '-z', '--diff-filter=AM', '--', '*.md').split('\0').filter(Boolean)) {
   const added = addedLineNumbers(git('diff', '--cached', '-U0', '--', file));
   const staged = scannable(git('show', `:${file}`), 'markdown');
   for (const { line, figure, keys } of unmarkedSnapshotCopies(staged, added, leaves)) {
