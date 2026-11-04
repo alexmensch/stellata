@@ -2,9 +2,9 @@
 // density bricks traced from the Edenhofer 2024 (/data/papers/index.md#edenhofer2024)
 // dust field, keyed by cloud sid. Format: scripts/cloud-surfaces/README.md.
 
+import { CLOUD_SURFACES_SCHEMA, checkBinaryHeader } from '../../catalog-format/baker-artifacts/baker-artifacts';
 import { PUBLIC_FILES } from '../../catalog-format/public-artifacts/public-artifacts';
 
-const MAGIC = 0x43535552; // 'CSUR' big-endian read of bytes C,S,U,R
 const HEADER_BYTES = 16;
 const DIR_ENTRY_BYTES = 44;
 
@@ -20,6 +20,8 @@ export interface CloudBrick {
   stepPc: number;
   /** Density (E_ZGR pc⁻¹) that encodes to 255 — linear decode. */
   densityMax: number;
+  /** The header's envelope (/scripts/cloud-surfaces/README.md#output-format-cloud-surfacesbin-magic-csur-v3). */
+  envelopeU: number;
   data: Uint8Array<ArrayBuffer>;
 }
 
@@ -35,14 +37,12 @@ export interface CloudSurface {
  *  magic, version, or a size that doesn't match the directory sums. */
 export function parseCloudSurfaces(buffer: ArrayBuffer): Map<number, CloudSurface> {
   const view = new DataView(buffer);
-  if (view.getUint32(0, false) !== MAGIC) {
-    throw new Error(`${PUBLIC_FILES.cloudSurfaces}: bad magic (expected CSUR)`);
-  }
-  const version = view.getUint32(4, true);
-  if (version !== 2) {
-    throw new Error(`${PUBLIC_FILES.cloudSurfaces}: unsupported version ${version}`);
-  }
+  checkBinaryHeader(view, CLOUD_SURFACES_SCHEMA, PUBLIC_FILES.cloudSurfaces);
   const cloudCount = view.getUint32(8, true);
+  const envelopeU = view.getFloat32(12, true);
+  if (!(envelopeU > 0)) {
+    throw new Error(`${PUBLIC_FILES.cloudSurfaces}: envelope ${envelopeU} is not positive`);
+  }
   const dirBytes = cloudCount * DIR_ENTRY_BYTES;
   let blobBytes = 0;
   for (let i = 0; i < cloudCount; i++) {
@@ -85,7 +85,7 @@ export function parseCloudSurfaces(buffer: ArrayBuffer): Map<number, CloudSurfac
     surfaces.set(sid, {
       positions,
       indices,
-      brick: { dims, aabbMinAbs, stepPc, densityMax, data },
+      brick: { dims, aabbMinAbs, stepPc, densityMax, envelopeU, data },
     });
   }
   return surfaces;

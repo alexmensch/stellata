@@ -31,8 +31,11 @@ export function makeMockCloud(overrides: Partial<Cloud> = {}): Cloud {
   };
 }
 
+/** The taper the shipped catalogue carries. */
+export const MOCK_ENVELOPE_FADE_START = 0.85;
+
 export function makeMockCatalog(clouds: Cloud[]): CloudCatalog {
-  return { clouds };
+  return { clouds, envelopeFadeStart: MOCK_ENVELOPE_FADE_START };
 }
 
 /** Carries the real brick's linear pair — on the Data3DTexture default this
@@ -54,6 +57,7 @@ export function makeMockAbsorptionSpec(withField: boolean): CloudAbsorptionSpec 
     rflatPc: 0.4,
     p: 2.1,
     uEnv: 0.85,
+    envelopeFadeStart: MOCK_ENVELOPE_FADE_START,
     invQuat: new THREE.Matrix3(),
     steps: 14,
     field: withField

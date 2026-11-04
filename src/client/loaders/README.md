@@ -290,8 +290,10 @@ the progress listeners and the dispose; `createVoxelChunkUploader` owns
 writing one chunk's bytes inside the volume.
 
 **`loadDustManifest` answers null for any manifest a `DustField` cannot be
-built from**, warning when it parsed but is the wrong shape
-(`dustManifestError`), silently when it is missing — a real 404
+built from**, warning when it parsed but is the wrong shape or carries a
+version other than `DUST_MANIFEST_SCHEMA`'s (`dustManifestError`; the
+version lives in `src/astro-core/baker-constants.json`, which `build-dust.py` writes
+from), silently when it is missing — a real 404
 ([Request routing](/src/README.md#request-routing)) — or present but not
 JSON. So
 `DustField`'s constructor never sees a malformed manifest, and `main.ts`

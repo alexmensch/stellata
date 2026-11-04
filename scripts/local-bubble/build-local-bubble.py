@@ -16,14 +16,18 @@ from astropy.io import fits
 import astropy.units as u
 
 REPO = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(REPO))
+from scripts.util.baker_constants import CONSTANTS  # noqa: E402
+
 FITS_PATH = REPO / "data" / "local-bubble" / "zucker2022-inner-surface.fits"
 # Committed product (LFS), like the dust grid — sync-local-bubble.ts copies
 # it to public/ at build time so deploy needs no astro-Python.
-OUT_PATH = REPO / "data" / "local-bubble" / "local-bubble.bin"
+_SCHEMA = CONSTANTS["artifacts"]["localBubble"]
+OUT_PATH = REPO / "data" / "local-bubble" / _SCHEMA["fileName"]
 DUST_DIR = REPO / "data" / "dust"
-
-MAGIC = b"LBUB"
-VERSION = 1
+DUST_MANIFEST = CONSTANTS["artifacts"]["dustManifest"]["fileName"]
+MAGIC = _SCHEMA["magic"].encode("ascii")
+VERSION = _SCHEMA["version"]
 
 
 def load_wall_radii(column: str) -> tuple[np.ndarray, int]:
@@ -86,7 +90,7 @@ def build_mesh(r_map: np.ndarray, n_lat: int, n_lon: int):
 def dust_crosscheck(r_map: np.ndarray, nside: int) -> None:
     """Assert the independent Edenhofer 2024 (/data/papers/index.md#edenhofer2024) dust
     grid peaks at this wall."""
-    m = json.loads((DUST_DIR / "manifest.json").read_text())
+    m = json.loads((DUST_DIR / DUST_MANIFEST).read_text())
     N, CS = m["gridSize"], m["chunkSize"]
     lo, _ = m["boundsPc"]
     vs = m["voxelSizePc"]

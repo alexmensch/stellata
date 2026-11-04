@@ -13,6 +13,7 @@ import {
   segmentCubeOverlap,
   type DustDecodeParams,
 } from './dust-raymarch-pure';
+import { AV_PER_EZGR } from '../baker-constants';
 
 // Manifest-matching decode window (public/dust/manifest.json): the full
 // ±1250 pc cube, the pure-log density window [1e-7, 0.2] E_ZGR/pc, and
@@ -22,7 +23,7 @@ const P: DustDecodeParams = {
   boundsPc: 1250,
   densityMin: 1e-7,
   logRatio: Math.log(0.2 / 1e-7),
-  avPerDensityPc: 2.742,
+  avPerDensityPc: AV_PER_EZGR,
 };
 const worldFromU = (u: number) => (u - 0.5) * 2 * P.boundsPc;
 

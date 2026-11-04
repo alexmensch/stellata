@@ -5,6 +5,7 @@
 import { J2000_JD } from '../../../../astro-core/astronomy-constants';
 import { tToJdTdb } from '../../time/time';
 import { earthPoleRaDecDeg, earthSpinDeg } from './earth-orientation-pure';
+import { RELIEF_BODIES } from '../../../../astro-core/baker-constants';
 
 const DEG = Math.PI / 180;
 const DAYS_PER_JULIAN_CENTURY = 36525;
@@ -87,6 +88,7 @@ export const MERCURY_ROTATION: RotationElements = {
   poleRaDeg: 281.0103, poleRaDegPerCty: -0.0328,
   poleDecDeg: 61.4155, poleDecDegPerCty: -0.0049,
   w0Deg: 329.5988, wDegPerDay: 6.1385108,
+  mapCenterLonDeg: RELIEF_BODIES.mercury.mapCenterLonDeg,
 };
 
 export const VENUS_ROTATION: RotationElements = {
@@ -106,6 +108,7 @@ export const EARTH_ROTATION: RotationElements = {
   poleRaDeg: 0, poleRaDegPerCty: -0.641,
   poleDecDeg: 90, poleDecDegPerCty: -0.557,
   w0Deg: 190.147, wDegPerDay: 360.9856235,
+  mapCenterLonDeg: RELIEF_BODIES.earth.mapCenterLonDeg,
   orientationModel: {
     poleRaDecDeg: earthPoleRaDecDeg,
     spinDeg: earthSpinDeg,
@@ -123,6 +126,7 @@ export const MARS_ROTATION: RotationElements = {
   poleRaDeg: 317.681106, poleRaDegPerCty: -0.10859696,
   poleDecDeg: 52.886346, poleDecDegPerCty: -0.06158182,
   w0Deg: 176.631819, wDegPerDay: 350.891982430062,
+  mapCenterLonDeg: RELIEF_BODIES.mars.mapCenterLonDeg,
 };
 
 export const JUPITER_ROTATION: RotationElements = {
@@ -181,6 +185,7 @@ export const MOON_ROTATION_BY_NAME: ReadonlyMap<string, RotationElements> = new 
     poleRaDeg: 269.9949, poleRaDegPerCty: 0.0031,
     poleDecDeg: 66.5392, poleDecDegPerCty: 0.0130,
     w0Deg: 38.3213, wDegPerDay: 13.17635815,
+    mapCenterLonDeg: RELIEF_BODIES.moon.mapCenterLonDeg,
     // E1/E2 of the lunar libration series — the 18.6 yr nodal regression and
     // its half-period harmonic. E1 alone is ~4 deg, the largest dropped term
     // on any body users know by eye: Tycho sits ~100 km off without it.

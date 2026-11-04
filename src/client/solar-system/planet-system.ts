@@ -4,6 +4,7 @@
 
 import { AU_KM } from '../../astro-core/astronomy-constants';
 import { solveKepler } from '../../astro-core/kepler-solver';
+import { RELIEF_BODIES, RING_SPANS } from '../../astro-core/baker-constants';
 import {
   getPlanetOrbitShapes,
   getPlanetPositions,
@@ -293,12 +294,12 @@ function solPositionsAt(t: number, out: Float64Array): void {
 export const SOL_PLANETS: readonly Planet[] = [
   {
     name: 'Mercury',
-    radiusKm: 2440,
+    radiusKm: RELIEF_BODIES.mercury.radiusKm,
     semiMajorAxisAu: 0.387,
     eccentricity: 0.2056,
     type: 'rocky',
     colour: [0.55, 0.47, 0.32],
-    albedo: 0.142,
+    albedo: RELIEF_BODIES.mercury.albedo,
     phaseCoefficients: MERCURY_PHASE,
     rotation: MERCURY_ROTATION,
   },
@@ -326,14 +327,14 @@ export const SOL_PLANETS: readonly Planet[] = [
   },
   {
     name: 'Earth',
-    radiusKm: 6371,
+    radiusKm: RELIEF_BODIES.earth.radiusKm,
     flattening: 0.00335,
     gravParamGM: 398600.435,
     semiMajorAxisAu: 1.000,
     eccentricity: 0.0167,
     type: 'rocky',
     colour: [0.31, 0.49, 0.67],
-    albedo: 0.434,
+    albedo: RELIEF_BODIES.earth.albedo,
     phaseCoefficients: EARTH_PHASE,
     rotation: EARTH_ROTATION,
     terminatorSoftness: 0.05,
@@ -349,13 +350,13 @@ export const SOL_PLANETS: readonly Planet[] = [
   },
   {
     name: 'Mars',
-    radiusKm: 3390,
+    radiusKm: RELIEF_BODIES.mars.radiusKm,
     flattening: 0.00589,
     semiMajorAxisAu: 1.524,
     eccentricity: 0.0934,
     type: 'rocky',
     colour: [0.76, 0.27, 0.05],
-    albedo: 0.170,
+    albedo: RELIEF_BODIES.mars.albedo,
     phaseCoefficients: MARS_PHASE,
     rotation: MARS_ROTATION,
     terminatorSoftness: 0.02,
@@ -420,7 +421,7 @@ export const SOL_PLANETS: readonly Planet[] = [
     albedo: 0.488,
     rotation: URANUS_ROTATION,
     terminatorSoftness: 0.03,
-    rings: { innerRadiusKm: 41600, outerRadiusKm: 51300 },
+    rings: RING_SPANS.uranus,
   },
   {
     name: 'Neptune',
@@ -434,7 +435,7 @@ export const SOL_PLANETS: readonly Planet[] = [
     albedo: 0.442,
     rotation: NEPTUNE_ROTATION,
     terminatorSoftness: 0.03,
-    rings: { innerRadiusKm: 40900, outerRadiusKm: 63100 },
+    rings: RING_SPANS.neptune,
   },
   // Pluto — mean radius Nimmo 2017 (/data/papers/index.md#nimmo2017)'s
   // 1188.3 ± 1.6 km from New Horizons images, rounded. Type
@@ -475,7 +476,8 @@ interface MoonPhysical {
 // — SOL_MOONS reads them from MOON_ELEMENTS by name, so each has a single
 // source of truth.
 const MOON_PHYSICAL: readonly MoonPhysical[] = [
-  { name: 'Moon', parentName: 'Earth', radiusKm: 1737.4, albedo: 0.12, type: 'rocky', colour: [0.55, 0.54, 0.52],
+  { name: 'Moon', parentName: 'Earth', radiusKm: RELIEF_BODIES.moon.radiusKm,
+    albedo: RELIEF_BODIES.moon.albedo, type: 'rocky', colour: [0.55, 0.54, 0.52],
     phaseCoefficients: MOON_PHASE },
 
   { name: 'Io', parentName: 'Jupiter', radiusKm: 1821.6, albedo: 0.63, type: 'rocky', colour: [0.854, 0.778, 0.483] },

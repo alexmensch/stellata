@@ -1,0 +1,38 @@
+{
+  "galacticFrame": {
+    "centreRaDeg": 266.4051,
+    "centreDecDeg": -28.93617,
+    "northPoleRaDeg": 192.85948,
+    "northPoleDecDeg": 27.12825
+  },
+  "extinction": {
+    "avPerEzgr": 2.742,
+    "avPerNhPc": 0.00165
+  },
+  "artifacts": {
+    "clouds": { "fileName": "clouds.json", "version": 4 },
+    "dustManifest": { "fileName": "manifest.json", "version": 2 },
+    "cloudSurfaces": { "fileName": "cloud-surfaces.bin", "magic": "CSUR", "version": 3 },
+    "localBubble": { "fileName": "local-bubble.bin", "magic": "LBUB", "version": 1 }
+  },
+  "planetShading": {
+    "limbFloor": 0.45,
+    "limbExp": 0.5,
+    "termSoftnessFloor": 0.0001
+  },
+  "surfaceRelief": {
+    "horizonAzimuths": 8,
+    "horizonSinRange": 0.4,
+    "skyViewRange": 0.25,
+    "bodies": {
+      "moon": { "radiusKm": 1737.4, "albedo": 0.12, "mapCenterLonDeg": 0, "elevSpanM": [-9110, 10760] },
+      "mercury": { "radiusKm": 2440, "albedo": 0.142, "mapCenterLonDeg": 0, "elevSpanM": [-5380, 4480] },
+      "mars": { "radiusKm": 3390, "albedo": 0.17, "mapCenterLonDeg": 0, "elevSpanM": [-8200, 21230] },
+      "earth": { "radiusKm": 6371, "albedo": 0.434, "mapCenterLonDeg": 0, "elevSpanM": [0, 8354] }
+    }
+  },
+  "ringSpans": {
+    "uranus": { "innerRadiusKm": 41600, "outerRadiusKm": 51300 },
+    "neptune": { "innerRadiusKm": 40900, "outerRadiusKm": 63100 }
+  }
+}

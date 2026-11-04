@@ -4,25 +4,11 @@ import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 import { SOL_PLANETS } from '../../src/client/solar-system/planet-system';
+import { RING_SPANS } from '../../src/astro-core/baker-constants';
 
-// build-textures.py can't import the TS SOL_PLANETS table, so its
-// RING_TABLES spans are copies of each body's `rings` annulus. These
-// pins keep the two in lockstep, and pin the headline 8-bit
-// visibility claims of /data/textures/README.md#ring-strips--true-opacity-and-the-8-bit-floor against
-// the source TSVs.
+// See /data/textures/README.md#ring-strips--true-opacity-and-the-8-bit-floor.
 
 const STRIP_W = 2048;
-
-function pySpans(): Record<string, [number, number]> {
-  const src = readFileSync(resolve(__dirname, '../../scripts/textures/build-textures.py'), 'utf-8');
-  const out: Record<string, [number, number]> = {};
-  for (const m of src.matchAll(
-    /"([a-z]+)": \{\s*"src": "[^"]+",\s*"span_km": \(([\d.]+), ([\d.]+)\)/g,
-  )) {
-    out[m[1]] = [Number(m[2]), Number(m[3])];
-  }
-  return out;
-}
 
 interface RingRow {
   name: string;
@@ -60,16 +46,12 @@ function peakAlpha8(ring: RingRow, spanKm: [number, number]): number {
 }
 
 describe('ring strips', () => {
-  const spans = pySpans();
+  const spans: Record<string, [number, number]> = Object.fromEntries(
+    Object.entries(RING_SPANS).map(([body, r]) => [body, [r.innerRadiusKm, r.outerRadiusKm]]),
+  );
 
-  it('py RING_TABLES spans match SOL_PLANETS rings for uranus + neptune', () => {
+  it('draws strips for Uranus and Neptune', () => {
     expect(Object.keys(spans).sort()).toEqual(['neptune', 'uranus']);
-    for (const [body, [inner, outer]] of Object.entries(spans)) {
-      const planet = SOL_PLANETS.find((p) => p.name.toLowerCase() === body);
-      expect(planet?.rings).toBeDefined();
-      expect(planet!.rings!.innerRadiusKm).toBe(inner);
-      expect(planet!.rings!.outerRadiusKm).toBe(outer);
-    }
   });
 
   it('exactly Saturn, Uranus and Neptune carry rings', () => {

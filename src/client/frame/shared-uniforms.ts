@@ -8,6 +8,7 @@ import { instrumentLimitMag } from '../../astro-core/instruments';
 import { cullMagFor } from '../hdr/exposure/exposure-epoch';
 import type { HdrEmitterUniforms } from '../hdr/hdr-emitter-uniforms';
 import { R_SUN_PC } from '../../astro-core/astronomy-constants';
+import { AV_PER_EZGR } from '../../astro-core/baker-constants';
 import { makeColorLutTexture } from '../star-pipeline/blackbody-lut';
 import type { PerceptualDiscUniforms } from '../star-pipeline/perceptual-disc/perceptual-disc-uniforms';
 import { MIRROR_CAPACITY } from '../star-pipeline/local-pass/star-mirror-slots';
@@ -124,7 +125,7 @@ export function buildSharedUniforms(opts: SharedUniformsOptions) {
     // shader runs before dust attaches.
     uDustDensityMin: { value: 1e-7 },
     uDustLogRatio: { value: Math.log(1e3) },
-    uDustAvPerDensityPc: { value: 2.742 },
+    uDustAvPerDensityPc: { value: AV_PER_EZGR },
     uDustEnabled: { value: 0.0 },
     uExtinctionStrength: { value: 1.0 },
     uWorldOffset: { value: new THREE.Vector3() },

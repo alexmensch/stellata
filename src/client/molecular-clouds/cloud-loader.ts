@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 
+import { CLOUDS_JSON_SCHEMA } from '../../catalog-format/baker-artifacts/baker-artifacts';
 import { sidColumnError } from '../util/sid-resolver';
 import { PUBLIC_FILES } from '../../catalog-format/public-artifacts/public-artifacts';
 
@@ -59,6 +60,8 @@ export interface Cloud {
 
 export interface CloudCatalog {
   clouds: Cloud[];
+  /** See /scripts/clouds/README.md#output-schema. */
+  envelopeFadeStart: number;
 }
 
 interface RawCloud {
@@ -86,6 +89,7 @@ interface RawCloud {
 interface RawCatalog {
   version: number;
   count: number;
+  envelopeFadeStart: number;
   clouds: RawCloud[];
 }
 
@@ -104,8 +108,14 @@ export async function loadClouds(url: string): Promise<CloudCatalog | null> {
   }
   if (!res.ok) return null;
   const raw = (await res.json()) as RawCatalog;
-  if (raw.version !== 3) {
-    console.warn(`${PUBLIC_FILES.clouds} version ${raw.version} unsupported`);
+  if (raw.version !== CLOUDS_JSON_SCHEMA.version) {
+    console.warn(
+      `${PUBLIC_FILES.clouds} version ${raw.version} unsupported (expected ${CLOUDS_JSON_SCHEMA.version})`);
+    return null;
+  }
+  const fade = raw.envelopeFadeStart;
+  if (!(typeof fade === 'number' && fade > 0 && fade < 1)) {
+    console.warn(`${PUBLIC_FILES.clouds} envelopeFadeStart ${String(fade)} is not in (0, 1)`);
     return null;
   }
   const sidErr = sidColumnError(raw.clouds.map((c) => c.sid));
@@ -134,5 +144,5 @@ export async function loadClouds(url: string): Promise<CloudCatalog | null> {
     inGrid: c.inGrid,
     embedded: c.embedded,
   }));
-  return { clouds };
+  return { clouds, envelopeFadeStart: fade };
 }

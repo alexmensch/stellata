@@ -107,11 +107,10 @@ What each check settles, and what it does not:
 - **Chroma** settles every "grayscale mosaic" claim outright: Mercury,
   Europa, Callisto and Titan all measure 0.00, and Ganymede's 13.6
   confirms its colour is imaged rather than applied.
-- **Chroma *invention* is not measured at all** — the rows saying half,
-  full or halfway-to-gray are reading `TINT_STRENGTH` and `DESATURATE`
-  in `build-textures.py`, and the halfway-to-gray choice is by eye.
-  `source-provenance.test.ts` pins each row's wording against the
-  constant so the prose cannot drift off the build, which is all a test
+- **Chroma *invention* is not measured at all** — the rows saying
+  halfway-to-gray are reading `DESATURATE` in `build-textures.py`, and
+  the choice is by eye. `build_textures.test.py` pins each row's wording
+  against the constant so the prose cannot drift off the build, which is all a test
   can do here: the judgement itself has no ground truth.
 - **The mirror test cannot identify a mirror on its own.** North
   against a flipped south correlates highly for two innocent reasons —

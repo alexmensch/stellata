@@ -36,9 +36,10 @@ owns the derivation and the per-body contract.
   what makes dropping it worthwhile.
 - **Registered to the body's COLOUR map, not to its DEM.** The
   MESSENGER Mercury DEM is centred on 180°E while PIA15063 is centred
-  on 0°, so the build rolls it; `dem_relief.py` carries both centres
-  per body and `/tests/integration/dem-relief.test.ts` pins the target against the
-  runtime's `mapCenterLonDeg`. This is the failure with no other
+  on 0°, so the build rolls it; `dem_relief.py` carries the DEM's centre
+  per body, and the target is `mapCenterLonDeg` in
+  `src/astro-core/baker-constants.json`, which the runtime's rotation rows read too
+  (`horizon_map.test.py` pins the roll). This is the failure with no other
   symptom — a mis-rolled map shades real terrain in the wrong place
   and everything else about the render looks fine.
 - Derivation: area-average the DEM to the target width (never
@@ -53,7 +54,8 @@ owns the derivation and the per-body contract.
 - Vertical exaggeration is **none**: slopes are true, computed against
   the radius the body is *drawn* at, so relief is honest at any camera
   distance.
-- Each body's **elevation span** (`span_m`, asserted against the published
+- Each body's **elevation span** (`elevSpanM` in `src/astro-core/baker-constants.json`,
+  `span_m` once `dem_relief.py` has merged it, asserted against the published
   one by `reduce_dem.py`) is read twice: it decodes the reduction, and the
   renderer fences relief lighting at the depression that span's summit can
   see past the limb —
@@ -227,7 +229,8 @@ the derivation, on the same four bodies and the same frozen DEMs.
   summit over deepest floor) the elevation angle *peaks* exactly there and
   every gentler pair peaks earlier, so nothing past it can win. It is the
   same quantity as the renderer's fallback limb bound, and
-  `/tests/integration/horizon-map.test.ts` pins the identity.
+  `horizon_map.test.py` and `/tests/integration/horizon-map.test.ts` pin the
+  identity from each side.
 - **The march starts two output texels out and steps at the DEM's own
   resolution from there** — two independent parameters, and only the first
   moved. `HORIZON_MARCH_START_TEXELS` sets the near bound: 10.7 km on the Moon,

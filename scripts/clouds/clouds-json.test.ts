@@ -1,9 +1,10 @@
-// Pins the clouds.json v3 payload: density-model fields, class defaults,
+// Pins the clouds.json payload: density-model fields, class defaults,
 // noiseModel constants, and the alias / canonical-name table. Self-skips
 // when the artifact isn't built.
 
 import { existsSync, readFileSync } from 'node:fs';
 import { describe, it, expect } from 'vitest';
+import { CLOUDS_JSON_SCHEMA } from '../../src/catalog-format/baker-artifacts/baker-artifacts';
 
 import { PUBLIC_FILES } from '../../src/catalog-format/public-artifacts/public-artifacts';
 import { publicFile } from '../util/paths';
@@ -51,20 +52,25 @@ const PROFILED_PINS: Record<
   orion: { cls: 'hii', n0Cal: 512.21, uEnv: 0.2229, massLeike: 856, akPeak: 0.22 },
 };
 
-describe.skipIf(!existsSync(CLOUDS_JSON))('clouds.json v3', () => {
+describe.skipIf(!existsSync(CLOUDS_JSON))('clouds.json', () => {
   const payload = existsSync(CLOUDS_JSON)
     ? (JSON.parse(readFileSync(CLOUDS_JSON, 'utf-8')) as {
         version: number;
+        envelopeFadeStart: number;
         count: number;
         noiseModel: Record<string, unknown>;
         clouds: CloudV2[];
       })
     : null!;
 
-  it('carries version 3 and the full cloud set', () => {
-    expect(payload.version).toBe(3);
+  it('carries the shared schema version and the full cloud set', () => {
+    expect(payload.version).toBe(CLOUDS_JSON_SCHEMA.version);
     expect(payload.count).toBe(96);
     expect(payload.clouds).toHaveLength(96);
+  });
+
+  it('carries the taper the density model was calibrated with', () => {
+    expect(payload.envelopeFadeStart).toBe(0.85);
   });
 
   it('pins the noiseModel constants the presence shader consumes', () => {

@@ -11,11 +11,14 @@ annotates the same cloud's silhouette is annotation and lives in the parent
 
 - `cloud-presence-pure.ts` (+ test) — the CPU mirror of the math (Plummer
   density, absorption alpha) plus the constants the march reads:
-  `TAU_PER_AV`, `AV_RATE_PER_NH`, `AV_PER_DENSITY`, `ALPHA_CAP`,
-  `AV_SATURATED`, `ENVELOPE_TAPER_FRAC`, `MARCH_MIN_STEPS`,
-  `MARCH_MIN_CHORD_T`. Vitest-pinned, and imported by the graph
-  (`../../webgpu/molecular-clouds/cloud-absorption-tsl.ts`), so neither
-  can drift from the other. The **dither** is owned by
+  `TAU_PER_AV`, `ALPHA_CAP`, `AV_SATURATED`,
+  `MARCH_MIN_STEPS`, `MARCH_MIN_CHORD_T`. Vitest-pinned, and imported by
+  the graph (`../../webgpu/molecular-clouds/cloud-absorption-tsl.ts`), so
+  neither can drift from the other. The two unit conversions the build
+  calibrated against — `AV_PER_NH_PC` and `AV_PER_EZGR` — come from
+  `../../../astro-core/baker-constants.ts`, shared with `scripts/clouds/cloud_model.py`.
+  The analytic tier's taper start is the catalogue's `envelopeFadeStart`
+  (`clouds.json`), carried on each `CloudAbsorptionSpec`. The **dither** is owned by
   `../../../astro-core/tonemap/tonemap-pure.ts` and read from there.
 
 The materials that consume these — the seam, the per-cloud
@@ -33,7 +36,8 @@ capped at 0.95.
 
 **Traced clouds march the per-cloud [Edenhofer 2024](/data/papers/index.md#edenhofer2024) density brick** (a builder
 branch, [The material seam](../README.md#the-material-seam); a linear-u8 `Data3DTexture` from `cloud-surfaces.bin`,
-`A_V = 2.742·∫E dl`, clip at the brick's u = 1.05 taper edge) — the same
+`A_V = 2.742·∫E dl`, clip at the taper edge the artifact's header records,
+u = 1.05 today) — the same
 volume the rim isosurface was traced from, so the shadow matches the
 silhouette 1:1 and the dimming matches per-star extinction physics. Fallback
 clouds march the calibrated Plummer profile, clipped at the mass-budget

@@ -5,11 +5,11 @@ import * as THREE from 'three';
 import type { EmitterMaterial } from '../scene/emitter-material';
 import { ICRS_TO_GAL_M3, GALACTIC_CENTRE_PC, R0_PC } from '../../astro-core/galactic-coords';
 import { SB_ZERO_POINT } from '../../astro-core/emission/emission-pure';
+import { AV_PER_EZGR } from '../../astro-core/baker-constants';
 import {
   ANALYTICAL_DUST_NORM_PER_PC,
   ANALYTICAL_DUST_SCALE_HEIGHT_PC,
   ANALYTICAL_DUST_SCALE_LENGTH_PC,
-  DEFAULT_DUST_AV_PER_DENSITY_PC,
   DEFAULT_EXTINCTION_STRENGTH,
   REDDENING_RGB,
 } from '../../astro-core/milkyway/column/milkyway-column-pure';
@@ -55,7 +55,7 @@ export interface BandSharedSlots {
  * live the moment it is handed out. Every key is written here; `band-materials.test.ts` fails if one is not.
  */
 export function seedBandSharedSlots(s: BandSharedSlots): void {
-  s.uDustAvPerDensityPc.value = DEFAULT_DUST_AV_PER_DENSITY_PC;
+  s.uDustAvPerDensityPc.value = AV_PER_EZGR;
   s.uDustEnabled.value = 0;
   s.uExtinctionStrength.value = DEFAULT_EXTINCTION_STRENGTH;
   s.uAnalyticalDustScaleLengthPc.value = ANALYTICAL_DUST_SCALE_LENGTH_PC;

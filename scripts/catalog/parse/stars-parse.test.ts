@@ -31,6 +31,7 @@ import { CONSTELLATIONS, createConstellationAssignment, iauEdgeRecords } from '.
 import { STELLARIUM } from './constellations/stellarium-source';
 import type { Placement } from '../distance/placement-lineage-pure';
 import { MAX_DIST_PC, readStars } from './stars-parse';
+import { AV_PER_EZGR } from '../../../src/astro-core/baker-constants';
 
 const readStarsDiscarding = (
   manifest: Parameters<typeof readStars>[0], options: Parameters<typeof readStars>[1],
@@ -110,7 +111,7 @@ function uniformDustGrid(): DustGrid {
     boundsHalfPc: 200,
     densityMin: 0.01,
     logRatio: 0,
-    avPerDensityPc: 2.742,
+    avPerDensityPc: AV_PER_EZGR,
     voxelSizePc: 200,
     data: new Uint8Array(8).fill(255),
   };

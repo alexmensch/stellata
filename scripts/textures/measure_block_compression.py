@@ -11,7 +11,9 @@ from pathlib import Path
 import numpy as np
 from PIL import Image
 
-from dem_relief import POLE_CUTOFF_DEG, weighted_quantile
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+
+from dem_relief import POLE_CUTOFF_DEG, weighted_quantile  # noqa: E402
 
 REPO = Path(__file__).resolve().parents[2]
 TEXTURES = REPO / 'data' / 'textures'

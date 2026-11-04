@@ -2,7 +2,7 @@
 
 `build-clouds.py` — [Zucker 2020](/data/papers/index.md#zucker2020) Table A1 +
 [Zucker 2021](/data/papers/index.md#zucker2021) Tables 1–3 →
-`public/clouds.json` (v3). Z2021 entries take precedence over Z2020 for the
+`public/clouds.json`. Z2021 entries take precedence over Z2020 for the
 clouds both cover. Consumed by the runtime presence layer
 (`src/client/molecular-clouds/`).
 
@@ -15,7 +15,7 @@ constants exported as the `noiseModel` block. `build-dust.py` imports
 it for the per-cloud extinction column check. Physics + measured
 numbers: [§ 2](/docs/science-molecular-clouds.md#2-extinction-physics-and-the-units-chain) to [§ 5](/docs/science-molecular-clouds.md#5-substructure-noise-build-side-spec).
 
-`clouds-json.test.ts` pins the emitted v3 payload (11 calibrated
+`clouds-json.test.ts` pins the emitted payload (11 calibrated
 clouds, class defaults, noiseModel, in-grid split, the alias /
 canonical-name table); it self-skips until `public/clouds.json` is
 built.
@@ -32,11 +32,16 @@ Sources under `data/molecular-clouds/`:
   (joined on the raw cloud name).
 
 Idempotent — exits early if `public/clouds.json` is newer than the
-scripts and source files. Run via `pnpm run build:clouds`.
+scripts, the source files and `src/astro-core/baker-constants.json`. Run via `pnpm run build:clouds`.
 
 ## Output schema
 
-`{version: 3, count, noiseModel, clouds[]}` — `noiseModel` carries
+`{version, count, envelopeFadeStart, noiseModel, clouds[]}` — the version is
+`artifacts.clouds` in `src/astro-core/baker-constants.json`, which the client loader
+gates on too. `envelopeFadeStart` is `cloud_model.ENVELOPE_FADE_START`, the
+fraction of `uEnv` where the density model's taper begins: the calibration
+of `n0Cal` / `uEnv` assumed it, so the client's analytic march reads it from
+here rather than restating it. `noiseModel` carries
 the substructure noise-ladder constants ([§ 5.2](/docs/science-molecular-clouds.md#52-the-multiplicative-field);
 build-side only — the client no longer reads them, see [§ 5](/docs/science-molecular-clouds.md#5-substructure-noise-build-side-spec)).
 One entry per cloud:

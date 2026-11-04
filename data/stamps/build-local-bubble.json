@@ -66,7 +66,10 @@
     "data/dust/chunk_3_3_3.bin": "69e60e02d703bb6d905e325e2b87e024fb184707",
     "data/dust/manifest.json": "58cbac3945b85a9c9172d30df0fdc0e5d9179506",
     "data/local-bubble/zucker2022-inner-surface.fits": "7b11bc786ec8b3aaf90f534a28406a35073c4f43",
-    "scripts/local-bubble/build-local-bubble.py": "248a8e2a1f044289d12643684691cb10eb9c46e9"
+    "scripts/local-bubble/build-local-bubble.py": "f090a68b6163d7ab572f3182812d5180238ee146",
+    "scripts/util/baker_constants.py": "9450de842cfd6f8d4498ea3d263044e899b5aa44",
+    "scripts/util/paths.py": "8cb5f2a374d46e465a6baa9005c7cbc822d8a2fc",
+    "src/astro-core/baker-constants.json": "87f0268a16a3c0e5bad44ad051165dda1be82e01"
   },
   "outputs": {
     "data/local-bubble/local-bubble.bin": "c9cee00d12c7fc59ba0b9e64a33735f27e350829"

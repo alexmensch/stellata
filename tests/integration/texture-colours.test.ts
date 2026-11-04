@@ -63,16 +63,3 @@ describe('the eight index-calibrated moons', () => {
     }
   });
 });
-
-describe('the build invents no colour of its own', () => {
-  it('carries no representative-colour table to drift out of sync', () => {
-    // The predecessor of this file pinned build-textures.py's own
-    // REPRESENTATIVE_COLOURS copies against SOL_BODIES. Both those tables and
-    // the tints they fed are retired: a grayscale source now takes its colour
-    // from its measured index, so there is no second copy to keep in step.
-    const build = readFileSync(resolve(__dirname, '../../scripts/textures/build-textures.py'), 'utf-8');
-    expect(build).not.toContain('REPRESENTATIVE_COLOURS');
-    expect(build).not.toContain('TINT_STRENGTH');
-    expect(build).not.toContain('def tint_grayscale');
-  });
-});

@@ -17,6 +17,8 @@ function makeCatalog(): CloudCatalog {
   return makeMockCatalog([makeCloud([10, 10, 10], 'A'), makeCloud([22, 19, 9.5], 'B')]);
 }
 
+const SURFACE_ENVELOPE_U = 1.1;
+
 // A tiny valid surface mesh (one triangle + a 2×1×1 brick) for
 // sid-keyed rim / field-absorption tests.
 function makeSurface(): CloudSurface {
@@ -28,6 +30,7 @@ function makeSurface(): CloudSurface {
       aabbMinAbs: [-5, -5, -5],
       stepPc: 5,
       densityMax: 0.05,
+      envelopeU: SURFACE_ENVELOPE_U,
       data: new Uint8Array([255, 128]),
     },
   };
@@ -108,8 +111,8 @@ describe('MolecularClouds / absorption material contract', () => {
     expect(traced.field).not.toBeNull();
     expect(traced.field!.brick).toBeInstanceOf(THREE.Data3DTexture);
     expect(traced.field!.densityMax).toBeCloseTo(0.05, 7);
-    // Field mode clips at the brick's taper edge, not the analytic uEnv.
-    expect(traced.uEnv).toBeCloseTo(1.05, 12);
+    // Field mode clips at the envelope the artifact records, not the analytic uEnv.
+    expect(traced.uEnv).toBe(SURFACE_ENVELOPE_U);
     // Texel-centre uvw mapping: scale = 1/(step·dims), bias = 0.5/dims.
     expect(traced.field!.uvwScale.x).toBeCloseTo(1 / (5 * 2), 12);
     expect(traced.field!.uvwScale.y).toBeCloseTo(1 / (5 * 1), 12);

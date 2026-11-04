@@ -16,6 +16,7 @@ import {
   SOL_GALACTOCENTRIC_PC,
   galacticDirection,
 } from '../../../src/astro-core/milkyway/column/milkyway-column-pure';
+import { AV_PER_EZGR } from '../../../src/astro-core/baker-constants';
 
 const GRID = 32;
 const PARAMS: DustParams = {
@@ -24,7 +25,7 @@ const PARAMS: DustParams = {
   voxelPc: (2 * 1250) / GRID,
   densityMin: 1e-7,
   logRatio: Math.log(0.2 / 1e-7),
-  avPerDensityPerPc: 2.742,
+  avPerDensityPerPc: AV_PER_EZGR,
 };
 const UNIFORM_CODE = 200;
 

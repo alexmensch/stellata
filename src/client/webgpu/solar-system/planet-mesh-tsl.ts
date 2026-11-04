@@ -10,11 +10,10 @@ import {
 import { NodeMaterial } from 'three/webgpu';
 import type { Node } from 'three/webgpu';
 import { MAX_SHADOW_CASTERS } from '../../solar-system/planets/body-shadow-pure';
+import { LIMB_EXP, LIMB_FLOOR, TERM_SOFTNESS_FLOOR } from '../../../astro-core/baker-constants';
+import { HORIZON_AZIMUTHS, HORIZON_SIN_RANGE, SKY_VIEW_RANGE } from '../../../catalog-format/baker-artifacts/baker-artifacts';
 import {
-  LIMB_EXP, LIMB_FLOOR,
-} from '../../solar-system/planets/emission/mesh-surface-pure';
-import {
-  HORIZON_AZIMUTHS, HORIZON_SIN_RANGE, RELIEF_POLE_EPS, SKY_VIEW_RANGE,
+  RELIEF_POLE_EPS,
 } from '../../solar-system/planets/surface-relief/surface-relief-pure';
 import {
   exposedLuminanceTsl, maskedStatisticTexelTsl, occluderTexelTsl,
@@ -142,9 +141,9 @@ export function buildPlanetMeshMaterial(
 
     // Lambert cosine away from the terminator; a smoothstep band of
     // half-width uTermSoftness carries twilight past it on atmospheric
-    // bodies. The 1e-4 floor keeps the airless w = 0 case a hard cut
-    // without a divide-by-zero smoothstep.
-    const w = max(p.uTermSoftness, 1e-4).toVar();
+    // bodies. The floor keeps the airless w = 0 case a hard cut without a
+    // divide-by-zero smoothstep.
+    const w = max(p.uTermSoftness, TERM_SOFTNESS_FLOOR).toVar();
     const dayside = smoothstep(w.negate(), w, sunCosRelief)
       .mul(max(sunCosRelief, w)).mul(horizonGate).toVar();
 

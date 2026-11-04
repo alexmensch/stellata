@@ -8,8 +8,10 @@ import json
 from pathlib import Path
 from typing import Any
 
+from scripts.util.baker_constants import CONSTANTS
+
 REPO = Path(__file__).resolve().parents[2]
-CLOUDS_JSON = REPO / "public" / "clouds.json"
+CLOUDS_JSON = REPO / "public" / CONSTANTS["artifacts"]["clouds"]["fileName"]
 
 GEOMETRY_FIELDS = ("id", "sid", "center", "axes", "quat", "inGrid")
 
