@@ -108,6 +108,33 @@ describe('commit-sweep-guard', () => {
   });
 });
 
+// A reader that stops at its first match exits while a writer still holds
+// the rest of input this long, so a pipe into grep -q fails here on every
+// run rather than when load happens to lose the race.
+describe('commit-sweep-guard — input larger than a pipe buffer, matched on line 1', () => {
+  const padding = Array<string>(20_000).fill('more message body').join('\n');
+
+  it('still sweeps a commit whose command runs long', () => {
+    stageStaleChange();
+    expect(allowed(`git commit -m "add a thing\n${padding}"`)).toBe(false);
+  });
+
+  it('still honours a skip tag at the head of a long message', () => {
+    stageStaleChange();
+    expect(allowed(`git commit -m "add a thing ${SKIP_REASON}\n${padding}"`)).toBe(true);
+  });
+
+  it('still finds a staged README among a long staged list', () => {
+    write('src/thing/README.md', '# thing\n');
+    git('add', '-A');
+    git('commit', '-q', '-m', 'seed');
+    write('src/thing/README.md', '# thing, updated\n');
+    for (let i = 0; i < 300; i++) write(`src/thing/${'z'.repeat(240)}${i}.ts`, `export const x${i} = 1;\n`);
+    git('add', '-A');
+    expect(allowed('git commit -m "add many things"')).toBe(true);
+  });
+});
+
 // The comment sweep compiles scripts/hooks/commit-sweep/comment-rules.json through Perl
 // qr//, while tests/code-comment-rules.test.ts compiles the same strings
 // through JavaScript RegExp. Only a case run through the hook proves the two
