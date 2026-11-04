@@ -7,7 +7,8 @@ import {
 } from 'node:fs';
 import { join, relative, resolve } from 'node:path';
 
-import { CODE_FILE, codeIdentities } from './code-identity';
+import { codeIdentities } from './code-identity';
+import { CODE_FILE } from './import-closure-pure';
 import { REPO_ROOT } from './paths';
 import { discardStaged, landStaged, writeStaged } from './staged-write';
 

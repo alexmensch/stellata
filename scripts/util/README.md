@@ -113,7 +113,7 @@ same thing — single-use helpers stay with their consumer.
   the one rule for every step: the sha1 of its token stream with comments
   and docstrings dropped, so a comment, docstring or layout edit stales
   nothing and any change to a token the interpreter executes stales every
-  step that read the file. `CODE_FILE` (`.py`, `.ts`, `.mts`) is the one
+  step that read the file. `CODE_FILE` (`.py`, `.ts`, `.mts`; `import-closure-pure.ts`) is the one
   test of what is code, by extension wherever the file is read, so a Python
   bake reading a generated `.ts` keys it the same way. TypeScript is the
   compiler's tokens, walked from the parsed tree, since a bare scanner reads
@@ -134,7 +134,7 @@ same thing — single-use helpers stay with their consumer.
   without anyone listing it. `scriptParts` is the one parser of a
   script's `&&`-chained commands (`tsx`, `python3`, `pnpm run`, or `other`)
   and `tsxEntries` every `tsx` entry among them; `closureWithSiblings(closure, files)` adds every file beside a
-  closure module except `.ts`, `.py` and `.md`, which is how the `*-expected.json`
+  closure module except code (`CODE_FILE`) and `.md`, which is how the `*-expected.json`
   snapshots a build reads by path get keyed. Shared by the catalogue stamp and
   CI's catalogue cache key ([The catalogue build cache](../ci/README.md#the-catalogue-build-cache)), so the two
   cannot disagree on what the build reads. `trackedFiles()` is the listing the

@@ -5,7 +5,7 @@ import { existsSync } from 'node:fs';
 import {
   fileHashes, ignoredPaths, inputHashes, listingHashes, recordedInputs, type FileHashes, type RecordedReads,
 } from '../util/build-stamp';
-import { CODE_FILE } from '../util/code-identity';
+import { CODE_FILE } from '../util/import-closure-pure';
 import {
   manualDescription, manualFreshness, pullQueryHash, requestHash, stampedOutputs, writeManualRecord,
   type Description, type ManualRecord,

@@ -9,8 +9,6 @@ import ts from 'typescript';
 
 import { REPO_ROOT } from './paths';
 
-export const CODE_FILE = /\.(py|ts|mts)$/;
-
 const PYTHON_IDENTITY = resolve(REPO_ROOT, 'scripts/util/code_identity.py');
 
 const isJsDoc = (node: ts.Node): boolean => node.kind >= ts.SyntaxKind.FirstJSDocNode && node.kind <= ts.SyntaxKind.LastJSDocNode;
