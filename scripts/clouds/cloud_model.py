@@ -49,7 +49,7 @@ MIN_AXIS_PC = 3.0
 # fully inside get baked per-star extinction; the rest are presence-only
 # (/docs/science-molecular-clouds.md#1-overview--two-independent-fields
 # decision 2).
-DUST_GRID_HALF_EXTENT_PC = 1250.0
+DUST_GRID_HALF_EXTENT_PC = CONSTANTS['cloudModel']['dustGridHalfExtentPc']
 
 # Mass budget: the peak-column calibration alone over-fills elongated /
 # near-uniform-profile clouds (a real cloud is a filament inside its bbox,

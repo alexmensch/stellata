@@ -17,6 +17,8 @@ export const CLOUDS_JSON_SCHEMA: JsonArtifactSchema = artifacts.clouds;
 export const DUST_MANIFEST_SCHEMA: JsonArtifactSchema = artifacts.dustManifest;
 export const CLOUD_SURFACES_SCHEMA: BinaryArtifactSchema = artifacts.cloudSurfaces;
 export const LOCAL_BUBBLE_SCHEMA: BinaryArtifactSchema = artifacts.localBubble;
+/** The profiled clouds' column-check inputs, which build:clouds writes and the dust bake reads. */
+export const ZUCKER_PROFILED_SCHEMA: JsonArtifactSchema = artifacts.zuckerProfiled;
 
 /** Azimuths a horizon map stores, and the full-scale of the sine it encodes. */
 export const HORIZON_AZIMUTHS: number = surfaceRelief.horizonAzimuths;

@@ -23,7 +23,7 @@ const EXCLUDED: Readonly<Record<string, readonly Ref[]>> = {
 /** Steps whose move onto the table is a later item's; each entry goes when its step joins steps.ts. */
 const NOT_YET_MIGRATED: Readonly<Record<Ref, string>> = {
   'scripts/local-group/local-group-outputs.ts#LOCAL_GROUP_OUTPUTS': 'build:local-group',
-  'scripts/sid/sibling-stamp-outputs.ts#SID_STAMP_OUTPUTS': 'sid:stamp',
+  'scripts/clouds/clouds-outputs.ts#CLOUDS_OUTPUTS': 'build:clouds',
 };
 
 const DECLARATION = /^(export )?const (\w+) = declareOutputs\(/gm;

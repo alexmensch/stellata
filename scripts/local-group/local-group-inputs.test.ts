@@ -18,7 +18,7 @@ describe('stepInputPaths(build:local-group)', () => {
     expect(inputs).toContain(abs('scripts/local-group/local-group-parse.ts'));
     expect(inputs).toContain(abs('scripts/local-group/local-group-source.ts'));
     expect(inputs).toContain(abs('scripts/sid/sibling-allocation.ts'));
-    expect(inputs).not.toContain(abs('scripts/sid/stamp-sibling-sids.ts'));
+    expect(inputs).not.toContain(abs('scripts/clouds/build-clouds.ts'));
   });
 
   it('keys the three declared inputs', () => {

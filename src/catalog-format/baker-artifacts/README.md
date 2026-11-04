@@ -8,6 +8,10 @@ Python bakers that write each artifact read the same blocks.
 
 - `CLOUDS_JSON_SCHEMA`, `DUST_MANIFEST_SCHEMA` — the version each JSON
   artifact's loader accepts.
+- `ZUCKER_PROFILED_SCHEMA` — the profiled clouds' column-check inputs,
+  the one JSON artifact running the other way: `build:clouds`
+  (TypeScript) writes it and `build-dust.py` refuses another version
+  ([Outputs](/scripts/clouds/README.md#outputs)).
 - Every schema's `fileName` — the name its baker writes, which
   `../public-artifacts/` re-exports as the name the viewer fetches.
 - `CLOUD_SURFACES_SCHEMA`, `LOCAL_BUBBLE_SCHEMA` — magic and version of

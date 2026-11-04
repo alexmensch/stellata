@@ -183,7 +183,7 @@ same thing — single-use helpers stay with their consumer.
   the one listing of a family on disk, which the runner stamps from too. A
   step that can be told to do only some targets (`fetch:ephemerides saturn`),
   or that leaves a SID registry partition alone when its allocation appended
-  nothing (`build:local-group`, `sid:stamp`), still passes its one full
+  nothing (`build:local-group`, `build:clouds`), still passes its one full
   declaration, plus `only`: the run must
   emit exactly those keys, and the leftover sweep still covers every declared
   path. A `refresh` check

@@ -157,12 +157,12 @@ jobs:
           key: ${{ steps.catalog-key.outputs.key }}
       - id: built
         run: pnpm run build:layers
-      # The clouds and Local Group stamps allocate their own namespaces
-      # (/docs/sid.md#45-ci-guard): a mint or event they append that the PR
-      # did not commit fails here.
-      - name: SID registry committed
+      # A mint or event build:clouds or build:local-group appends
+      # (/docs/sid.md#45-ci-guard), or a change to the dust bake's column-check
+      # inputs build:clouds writes, that the PR did not commit fails here.
+      - name: Layer outputs committed
         if: ${{ !cancelled() && steps.built.outcome == 'success' }}
-        run: git diff --exit-code -- data/sid
+        run: git diff --exit-code -- data/sid data/molecular-clouds
       # see /scripts/ci/README.md#vitest-with-every-input
       - name: Full vitest, smudged and built
         if: ${{ !cancelled() && steps.built.outcome == 'success' }}

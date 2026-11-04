@@ -19,6 +19,9 @@ export const AV_PER_EZGR: number = constants.extinction.avPerEzgr;
 /** A_V rate [mag/pc] per hydrogen number density n_H [cm⁻³]. */
 export const AV_PER_NH_PC: number = constants.extinction.avPerNhPc;
 
+/** Half-extent of the dust voxel cube along each ICRS axis, pc; a cloud wholly inside it is in-grid. */
+export const DUST_GRID_HALF_EXTENT_PC: number = constants.cloudModel.dustGridHalfExtentPc;
+
 /** Limb-darkening floor and exponent — `mix(LIMB_FLOOR, 1, μ^LIMB_EXP)` — and
  *  the floor on the terminator-softness width. */
 export const LIMB_FLOOR: number = constants.planetShading.limbFloor;

@@ -1,24 +1,33 @@
 # Molecular cloud build
 
-`build-clouds.py` — [Zucker 2020](/data/papers/index.md#zucker2020) Table A1 +
+`build-clouds.ts` — [Zucker 2020](/data/papers/index.md#zucker2020) Table A1 +
 [Zucker 2021](/data/papers/index.md#zucker2021) Tables 1–3 →
-`public/clouds.json`. Z2021 entries take precedence over Z2020 for the
-clouds both cover. Consumed by the runtime presence layer
-(`src/client/molecular-clouds/`).
+`public/clouds.json`, consumed by the runtime presence layer
+(`src/client/molecular-clouds/`), and
+`data/molecular-clouds/zucker-profiled.json`, the dust bake's column-check
+inputs ([Outputs](#outputs)). Z2021 entries take precedence over Z2020 for
+the clouds both cover.
 
-`cloud_model.py` is the shared physics module (stdlib-pure where
-`build-clouds.py` needs it — CI runs it without numpy): the
-galactic↔ICRS frame math, Zucker table parsers, the calibrated
-Plummer density model (column calibration + mass-budget envelope
-tightening), the curated class taxonomy, and the substructure-noise
-constants exported as the `noiseModel` block. `build-dust.py` imports
-it for the per-cloud extinction column check. Physics + measured
-numbers: [§ 2](/docs/science-molecular-clouds.md#2-extinction-physics-and-the-units-chain) to [§ 5](/docs/science-molecular-clouds.md#5-substructure-noise-build-side-spec).
-
-`clouds-json.test.ts` pins the emitted payload (11 calibrated
-clouds, class defaults, noiseModel, in-grid split, the alias /
-canonical-name table); it self-skips until `public/clouds.json` is
-built.
+- `cloud-model-pure.ts` (+ test) — the calibrated density model: frame
+  helpers, the column and volume integrals, the column calibration with its
+  mass-budget envelope tightening, the curated class taxonomy and the
+  substructure-noise constants exported as the `noiseModel` block. The
+  profile it integrates is `/src/astro-core/cloud-density-pure.ts`, the one
+  the absorption march evaluates. Physics + measured numbers:
+  [§ 2](/docs/science-molecular-clouds.md#2-extinction-physics-and-the-units-chain) to [§ 5](/docs/science-molecular-clouds.md#5-substructure-noise-build-side-spec).
+- `build-clouds-pure.ts` (+ test) — the ellipsoid and sphere records, the
+  display-name and alias tables, the merge, and both output payloads.
+  Every rounded field goes through `roundHalfEven` (half to even on the
+  double's exact value), never `Math.round(x · 10ⁿ) / 10ⁿ`, whose scaling
+  moves near-ties.
+- `zucker-parse.ts` (+ test) / `zucker-source.ts` — the four tables' parsers
+  and declarations (`../util/sources/`).
+- `clouds-outputs.ts` — the emitArtifacts declaration.
+- `clouds-inputs.test.ts` — pins the up-to-date gate's input set,
+  `stepInputPaths('build:clouds')`.
+- `clouds-json.test.ts` pins the emitted payload (11 calibrated clouds, class
+  defaults, noiseModel, in-grid split, the alias / canonical-name table); it
+  self-skips until `public/clouds.json` is built.
 
 Sources under `data/molecular-clouds/`:
 
@@ -31,14 +40,31 @@ Sources under `data/molecular-clouds/`:
 - `zucker2021-table3.dat` — masses + peak A_K for the same 11 clouds
   (joined on the raw cloud name).
 
-Idempotent — exits early if `public/clouds.json` is newer than the
-scripts, the source files and `src/astro-core/baker-constants.json`. Run via `pnpm run build:clouds`.
+Idempotent — exits early if both artifacts are newer than every input
+`stepInputPaths` derives (the entry's import closure, its sibling files and
+the declarations it reads, `src/astro-core/baker-constants.json` among them).
+Run via `pnpm run build:clouds`.
+
+## Outputs
+
+One `emitArtifacts` call lands `clouds.json`, `zucker-profiled.json` and,
+on a run that mints, the `cloud` SID registry partition.
+
+`zucker-profiled.json` (committed; name and version are `artifacts.zuckerProfiled`
+in `src/astro-core/baker-constants.json`) is
+`{version, galToIcrs, clouds[]}`: the galactic→ICRS rotation as rows, and per
+profiled cloud its raw table `name`, `centreIcrsPc`, `axesGalPc` (floored
+semi-axes along galactic X, Y, Z) and `avColumnTarget` (Table 3's
+Leike-resolution peak A_K ÷ 0.117), at full precision. `build-dust.py`'s
+Zucker column check reads it ([Encoding](../dust/README.md#encoding)), so the
+dust bake's record names a committed input and no Python copy of the cloud
+model exists.
 
 ## Output schema
 
 `{version, count, envelopeFadeStart, noiseModel, clouds[]}` — the version is
 `artifacts.clouds` in `src/astro-core/baker-constants.json`, which the client loader
-gates on too. `envelopeFadeStart` is `cloud_model.ENVELOPE_FADE_START`, the
+gates on too. `envelopeFadeStart` is `ENVELOPE_FADE_START` (`cloud-model-pure.ts`), the
 fraction of `uEnv` where the density model's taper begins: the calibration
 of `n0Cal` / `uEnv` assumed it, so the client's analytic march reads it from
 here rather than restating it. `noiseModel` carries
@@ -65,13 +91,13 @@ One entry per cloud:
 | `inGrid`   | Cloud lies fully inside the ±1250 pc dust voxel cube. |
 | `embedded` | Embedded-star/cavity list — currently empty (the cross-match + cavity carve are tracked, not yet shipped). |
 
-`sid` is stamped after this script runs by `scripts/sid/stamp-sibling-sids.ts`
-(the tail of `pnpm run build:clouds`), allocating each `cloud:<id>` slug
-against the committed ledger — this Python build never touches the ledger.
-The stamp rewrites `clouds.json` through `emitArtifacts`, so a stamp killed
-mid-write leaves the previous file whole. A
-new cloud slug mints there under `allocation.mint.cloud`; a vanished slug fails
-the stamp, and a rename needs a `data/sid/sameas-overrides.tsv` bridge. See [Sibling-artifact stamping](/scripts/sid/README.md#sibling-artifact-stamping).
+`sid` is allocated in-process before the emit (`allocateSibling`,
+`../sid/sibling-allocation.ts`): each `cloud:<id>` slug resolves against the
+registry, and this step is the sole writer of the `cloud` partition
+(`data/sid/ledger-cloud.tsv`, `events-cloud.tsv`, `ledger-head-cloud.json`),
+which it rewrites only on a run that appends. A new slug mints under
+`allocation.mint.cloud`; a vanished slug fails the build, and a rename needs
+a `data/sid/sameas-overrides.tsv` bridge. See [Sibling-artifact stamping](/scripts/sid/README.md#sibling-artifact-stamping).
 
 ## Merge logic
 
@@ -92,7 +118,7 @@ the stamp, and a rename needs a `data/sid/sameas-overrides.tsv` bridge. See [Sib
 
 ## Alternate names
 
-`CLOUD_ALT_NAMES` (in `build-clouds.py`) curates the cross-catalogue and
+`CLOUD_ALT_NAMES` (in `build-clouds-pure.ts`) curates the cross-catalogue and
 common names per cloud, mirroring the Local Group `aliases.tsv` pattern.
 Each cloud gets one canonical `name` (label + focus-card title + search
 `primary`) plus an `aliases[]` list that feeds the Fuse search index and

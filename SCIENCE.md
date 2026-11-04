@@ -422,7 +422,7 @@ enough to see it.
 > **Molecular cloud sources.** [Zucker 2020](/data/papers/index.md#zucker2020) + [Zucker 2021](/data/papers/index.md#zucker2021) cloud
 > distances, 3D skeleton extents (Table 1 bounds each cloud's spine, not
 > its volume), and radial profiles drive the
-> molecular-cloud presence layer (`scripts/clouds/build-clouds.py`,
+> molecular-cloud presence layer (`scripts/clouds/build-clouds.ts`,
 > `data/molecular-clouds/`; physics model in
 > `docs/science-molecular-clouds.md`). Cloud masses come from
 > [Zucker 2021](/data/papers/index.md#zucker2021)

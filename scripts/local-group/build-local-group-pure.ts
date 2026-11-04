@@ -222,7 +222,7 @@ export function skyBasis(raDeg: number, decDeg: number): {
 
 /** Build a unit quaternion [x, y, z, w] from an orthonormal basis matrix
  *  whose columns are the world-space directions of the local +X, +Y, +Z
- *  axes. Standard Shepperd's method (matches build-clouds.py). */
+ *  axes. Standard Shepperd's method. */
 export function basisToQuaternion(
   bx: [number, number, number],
   by: [number, number, number],

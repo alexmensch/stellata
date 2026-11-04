@@ -121,7 +121,7 @@ registry-io.ts            loadRegistry: every partition plus the stored
                           by build-catalog and the stamp.
 registry-step-inputs.test.ts
                           Every allocating step (build:catalog,
-                          build:local-group, sid:stamp) has every
+                          build:local-group, build:clouds) has every
                           partition's ledger and events in its
                           stepInputPaths, read through the LEDGERS /
                           EVENTS declaration maps
@@ -165,15 +165,7 @@ sibling-allocation.ts     allocateSibling: one sibling namespace allocated
                           no registry file (null otherwise, never a
                           partial set); emitSibling, the artifact plus
                           those files in one emitArtifacts call. Called by
-                          build:local-group and the clouds stamp.
-stamp-sibling-sids.ts     pnpm run sid:stamp, the tail of build:clouds:
-                          allocates the cloud: namespace and stamps each
-                          cloud's sid onto clouds.json after the Python
-                          emitter runs. See README.md#sibling-artifact-stamping.
-sibling-stamp-outputs.ts  SID_STAMP_OUTPUTS: clouds.json, which sid:stamp
-                          rewrites in place, plus the cloud partition's
-                          registry files, as its emitArtifacts declaration
-                          (../util/README.md). Side-effect free.
+                          build:local-group and build:clouds.
 sibling-artifacts-pure.ts SIBLING_ARTIFACTS spec (file / arrayKey / ns /
                           kind / mint code per sibling) +
                           siblingArtifactObjects, so the namespace→kind
@@ -199,7 +191,7 @@ that folder's README for why; a suite gating on a declared file takes
 
 The registry is split by allocating step, so each file has one writer:
 `build:catalog` owns the `catalog` partition (`ledger.tsv`, `events.tsv`,
-`ledger-head.json`: every namespace but the siblings'), `sid:stamp` owns
+`ledger-head.json`: every namespace but the siblings'), `build:clouds` owns
 `cloud` (`ledger-cloud.tsv`, `events-cloud.tsv`, `ledger-head-cloud.json`)
 and `build:local-group` owns `lg` (the same three, suffixed `-lg`).
 `registry-partitions-pure.ts` decides which namespace lands where.
@@ -210,7 +202,7 @@ step reads every partition's ledger and events and writes only its own.
 `validateRegistry` holds the union dense and unique; the guard checks each
 partition append-only against its own merge-base head, or the sid-ordered
 union against the catalogue head when the base predates the partitions.
-The read loop this makes among `build:catalog`, `sid:stamp` and
+The read loop this makes among `build:catalog`, `build:clouds` and
 `build:local-group` is a kept loop in the step graph
 ([Loops through committed files](../pipeline/README.md#loops-through-committed-files)).
 
@@ -218,7 +210,7 @@ The read loop this makes among `build:catalog`, `sid:stamp` and
 
 SID allocation is a lineage stage (`allocation-lineage-pure.ts`),
 run in-process by `build:catalog` over the records, sol and shell objects,
-by `build:local-group` over `lg:` and by the clouds stamp over `cloud:`. Per
+by `build:local-group` over `lg:` and by `build:clouds` over `cloud:`. Per
 object it records `allocation.resolved` (with `via`, the ledger key, only when
 the object reached it through a designation it does not carry),
 `allocation.minted` or `allocation.reinstated` (with the admitting code),
@@ -332,13 +324,11 @@ change's.
 
 `clouds.json` and `local-group.json` carry an in-record `sid` ([§ 7](/docs/sid.md#7-storage--sid-in-every-artifact)),
 each allocated over its own namespace by `allocateSibling`
-(`sibling-allocation.ts`). `build:local-group` is TypeScript, so it
-allocates `lg:<id>` in-process and writes `local-group.json` and the `lg`
-partition in one `emitArtifacts` call. `build-clouds.py` is Python, so
-`stamp-sibling-sids.ts` post-processes its output as the tail of
-`pnpm run build:clouds` (and `pnpm run sid:stamp`), allocating `cloud:<id>`
-and rewriting `clouds.json` through `emitArtifacts` too, so a stamp killed
-mid-write leaves the previous file whole. A new slug mints under
+(`sibling-allocation.ts`), in-process in the step that builds the artifact:
+`build:local-group` allocates `lg:<id>` and `build:clouds` allocates
+`cloud:<id>`, each landing its artifact and its partition in one
+`emitArtifacts` call, so every file has one writer and none is rewritten
+after the fact. A new slug mints under
 `allocation.mint.cloud` / `.local-group` and appends to its partition;
 neither emitter writes lineage, so a vanished slug has no decision and fails
 its step (a renamed slug needs a `sameas-overrides.tsv` bridge). The
