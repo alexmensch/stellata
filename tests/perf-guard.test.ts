@@ -8,6 +8,7 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { PERF_GO_MAX_AGE_S } from '../scripts/perf/arming/perf-go-lib';
+import { pastPipeBuffer } from './pipe-buffer';
 
 const HOOK = resolve(__dirname, '../scripts/hooks/perf-guard.sh');
 
@@ -173,6 +174,17 @@ describe('perf-guard', () => {
     it.each(['Write', 'Edit', 'NotebookEdit'])('lets %s of any other file through', (tool) => {
       const d = decision({ tool_name: tool, tool_input: { file_path: join(repo, 'scripts/perf/run.ts') } });
       expect(d.denied).toBe(false);
+    });
+  });
+
+  // Pin only: input is one line here, so the old pipe form passes too — /tests/README.md#pipefail-early-readers
+  describe('a command larger than a pipe buffer, matched on line 1', () => {
+    it('still denies an unarmed launch', () => {
+      expect(denied(pastPipeBuffer('pnpm run perf'))).toBe(true);
+    });
+
+    it('still denies naming the marker', () => {
+      expect(decision(bash(pastPipeBuffer('touch .perf-go'))).reason).toMatch(/Only Alex creates/);
     });
   });
 

@@ -32,7 +32,7 @@ for entry in "$runs"/*; do
   [ "$entry" = "$me" ] && continue
   name=${entry##*/}
   pid=${name##*.}
-  if ! ps -o command= -p "$pid" 2>/dev/null | grep -q build-seed.sh; then
+  if ! grep -q build-seed.sh <<< "$(ps -o command= -p "$pid" 2>/dev/null)"; then
     rm -f "$entry"
   elif [ "${name%.*}" -gt "$ticket" ]; then
     rm -f "$me"

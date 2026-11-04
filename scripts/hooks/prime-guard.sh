@@ -38,7 +38,7 @@ case "$event" in
     mv "$PRIME_FILE.part" "$PRIME_FILE"
     : >"$SENTINEL"
 
-    count="$(sed -n 's/.*Persistent Memories (\([0-9]*\)).*/\1/p' "$PRIME_FILE" | head -1)"
+    count="$(sed -n '/.*Persistent Memories (\([0-9]*\)).*/{s//\1/p;q;}' "$PRIME_FILE")"
     if [ -n "$count" ]; then
       subject="$count persistent project memories"
     else
@@ -75,7 +75,8 @@ Every other tool call is blocked until that Read lands."
     fi
 
     # Escape hatch: any call naming the sentinel is the operator clearing it.
-    if printf '%s' "$input" | jq -r '.tool_input | tostring' | grep -qF "$SENTINEL"; then
+    tool_input="$(jq -r '.tool_input | tostring' <<< "$input")"
+    if grep -qF "$SENTINEL" <<< "$tool_input"; then
       exit 0
     fi
 

@@ -156,6 +156,12 @@ page-teardown-contract.test.ts
                          own file (parsed with the TypeScript compiler, so
                          an inline arrow handler's options are still
                          read). Flag and pass cases for both.
+pipefail-early-reader.test.ts
+                         No scripts/**/*.sh that sets pipefail, or is
+                         sourced by one that does, pipes into a reader
+                         that can exit early: grep -q / -l / -m, head,
+                         awk exit, sed q.
+                         README.md#pipefail-early-readers below.
 perf-guard.test.ts       Behavioural pins for scripts/hooks/perf-guard.sh's
                          two gates: every launch spelling denied unarmed and
                          allowed under a fresh marker (including the
@@ -290,6 +296,9 @@ doc-pointer-pure.ts      Not a test — extraction, anchor collection, path
                          resolution and the scanned corpus, shared by
                          doc-pointer-resolution.test.ts and
                          citation-index.test.ts.
+pipe-buffer.ts           Not a test — `pastPipeBuffer`, multi-line input
+                         longer than any pipe buffer, for the hook suites'
+                         pipefail cases.
 git-fixture.ts           Not a test — `gitIn` and `commitFile`, a throwaway
                          repo's git runner and one-file commit, for suites
                          that drive a script over real history.
@@ -501,6 +510,34 @@ design; the suite fails if either stops, so an unused exemption cannot
 linger. A new fact both sides need goes into the format tree (a wire shape,
 a file name, a rule over record fields) or astro-core (physics), never into
 the side that happens to compute it first.
+
+## Pipefail early readers
+
+Under `set -o pipefail`, a pipeline fails if any stage does. A reader that
+exits before its input ends (`grep -q` or `grep -l` at its first match,
+`grep -m N` at its Nth, `head`, an awk `exit`, a sed `q`) closes the pipe
+while the writer may still be writing; the writer dies of SIGPIPE, the
+pipeline returns 141, and an `if` reads a match as no match. Whether it
+happens depends on size: grep has to read a whole line before it can match,
+so one line of any length is safe, while multi-line input past a pipe buffer
+fails on every run. So the rule is applied to the form, not to input sizes:
+such a reader takes a here-string (`grep -q x <<< "$var"`), which has no
+writer process to kill.
+
+Each hook suite feeds its sites input past a pipe buffer with the match on
+line 1. Where the input is multi-line, that case fails on the pipe form.
+Where `tr` or jq first flattens it to one line, it passes on both forms and
+is kept as a pin: it fails once the flattening is gone and a pipe is back.
+
+`pipefail-early-reader.test.ts` scans every `scripts/**/*.sh` that sets
+pipefail, plus every library such a script sources with `.` or `source`
+(matched by file name, followed through libraries that source others), since
+a sourced file runs under its caller's options. There is no allowlist.
+A reader is recognised behind `NAME=value` prefixes and `command`, and as
+`egrep` / `fgrep`. Full-line comments are skipped, and quoted strings never
+count as a grep flag. The matcher has its own flag and pass cases, and a case that the scan
+finds the hooks at all, so a detector that stops seeing pipes fails instead
+of passing on an empty scan.
 
 ## Public artifact names
 

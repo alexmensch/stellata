@@ -7,6 +7,7 @@ import { chmodSync, existsSync, mkdtempSync, readFileSync, realpathSync, rmSync,
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { pastPipeBuffer } from './pipe-buffer';
 
 const HOOK = resolve(__dirname, '../scripts/hooks/prime-guard.sh');
 const SESSION = 'sess-abc123';
@@ -126,6 +127,11 @@ describe('prime-guard PreToolUse', () => {
 
   it('allows a call that names the sentinel as the documented escape hatch', () => {
     expect(preToolUse('Bash', { command: `rm -f ${sentinel()}` }).allowed).toBe(true);
+  });
+
+  // Pin only: input is one line here, so the old pipe form passes too — /tests/README.md#pipefail-early-readers
+  it('still finds the sentinel at the head of a tool input larger than a pipe buffer', () => {
+    expect(preToolUse('Bash', { command: pastPipeBuffer(`rm -f ${sentinel()}`) }).allowed).toBe(true);
   });
 });
 
