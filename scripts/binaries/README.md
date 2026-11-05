@@ -247,7 +247,8 @@ the committed inputs and asserts that stage's keys in the committed
 `build-binaries-expected.json` (and `build-binaries-rates-expected.json`
 where the stage has keys there). The Python writes those snapshots
 until the switch; the test reads them and never restates a count, so a
-diff at the switch is already narrowed to the stage whose counts held.
+count divergence fails in the slice that introduces it, and a byte diff
+at the switch is one the counts do not see.
 
 Values never cross between the languages. The runner records a step's
 inputs from either the TS import closure or the Python run record, and a
