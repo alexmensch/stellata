@@ -163,7 +163,7 @@ export interface SearchIndex<Kind extends string = 'star'> {
 // its superscript to disambiguate α¹ / α² even though the search labels
 // drop it (see buildBayerLabels).
 export function buildSearchIndex<Kind extends string = 'star'>(
-  raw: SearchEntry[],
+  raw: readonly SearchEntry[],
   constellations: { code: string; name: string }[],
   /** `../../client/typeahead/README.md#the-search-index-worker`. */
   precomposed?: ReturnType<typeof displayNamesFromSearchIndex>,

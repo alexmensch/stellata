@@ -75,6 +75,7 @@ export interface CatalogRecord {
   mhGspspec: number | null;
   name: string | null;
   conCode: string | null;
+  sid: number;
 }
 
 export interface Catalog {
@@ -165,6 +166,7 @@ export async function loadCatalog(opts: LoadCatalogOptions = {}): Promise<Catalo
       ...apsis,
       name,
       conCode: conIdx === NO_CONSTELLATION_INDEX ? null : constellations[conIdx]?.code ?? null,
+      sid: readRecordField(view, off, 'sid'),
     };
   }
 
