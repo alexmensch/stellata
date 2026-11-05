@@ -136,6 +136,8 @@ def read_membership_source_ids(path: Path) -> list[int]:
 
 TYC2_HD_CROSS_INDEX = REPO_ROOT / "data" / "classic-ids" / "tyc2_hd.tsv"
 
+CATALOG_SOURCE_ID_REQUEST = REPO_ROOT / "data" / "gaia" / "gaia_catalog_source_id_request.tsv"
+
 Tyc = tuple[int, int, int]
 
 
