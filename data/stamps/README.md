@@ -1,7 +1,7 @@
 # Manual-step records
 
 One JSON file per pull and bake — every `refresh:*` and `fetch:*` pull and
-the seven bakes — named for its step (`:` written `-`). Each
+every bake — named for its step (`:` written `-`). Each
 is the committed record of that step's last run: the hash of every repo
 file it read (a code file by its identity, so a comment-only edit to a
 bake's code leaves it fresh: `scripts/util/code-identity.ts`) and every file
