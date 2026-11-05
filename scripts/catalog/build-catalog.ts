@@ -161,7 +161,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 const UPSTREAM_LINEAGE: readonly UpstreamLineage[] = [
-  { spec: MEMBERSHIP_LINEAGE, inputs: async () => stampedInputs('build:membership') },
+  { spec: MEMBERSHIP_LINEAGE, inputs: () => stampedInputs('build:membership') },
 ];
 
 function stampedInputs(step: string): FileHashes {
@@ -178,7 +178,7 @@ const EXPECTED_OUTLIERS = resolve(
 
 // A function of its own so the placement lines are unreachable once it returns:
 // inlined into main, they outlive the walk and the build runs out of heap.
-async function walkManifest(inputs: ReadStarsOptions, stepInputs: FileHashes) {
+function walkManifest(inputs: ReadStarsOptions, stepInputs: FileHashes) {
   const lines: LineageLine[] = [];
   const manifestFounded = new Set<string>();
   const manifest = function* () {
@@ -192,7 +192,7 @@ async function walkManifest(inputs: ReadStarsOptions, stepInputs: FileHashes) {
   });
   const parkedLedger = parkedLedgerTsv(lines);
   const placementRemovals = lines.filter((line) => PLACEMENT_EFFECTS.get(lineageLineCode(line)) !== 'none');
-  const placementEmission = await stageLineage({
+  const placementEmission = stageLineage({
     layout: LINEAGE_LAYOUT,
     spec: PLACEMENT_LINEAGE,
     inputs: stepInputs,
@@ -456,7 +456,7 @@ async function main() {
   const t0 = Date.now();
   const {
     stars, stats, parkedLedger, placementEmission, manifestFounded, placementRemovals,
-  } = await walkManifest(inputs, inputHashesAtStart);
+  } = walkManifest(inputs, inputHashesAtStart);
   console.log(`  parsed ${stats.total} rows in ${Date.now() - t0}ms`);
   console.log(`  kept ${stars.length} stars; parked ${stats.parked.length}`);
   if (stats.bjEligible > 0) {
@@ -1260,7 +1260,7 @@ async function main() {
     );
   }
 
-  const lineage = await stageLineage({
+  const lineage = stageLineage({
     layout: LINEAGE_LAYOUT,
     spec: PROMOTION_LINEAGE,
     inputs: inputHashesAtStart,
@@ -1276,7 +1276,7 @@ async function main() {
     argv: process.argv.slice(2),
     upstream: UPSTREAM_LINEAGE,
   });
-  const allocationLineage = await stageLineage({
+  const allocationLineage = stageLineage({
     layout: LINEAGE_LAYOUT,
     spec: ALLOCATION_LINEAGE,
     inputs: inputHashesAtStart,

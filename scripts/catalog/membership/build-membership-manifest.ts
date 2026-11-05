@@ -152,7 +152,7 @@ async function main(): Promise<void> {
   );
   reportLabelCoverage(c);
 
-  const lineage = await stageLineage({
+  const lineage = stageLineage({
     layout: LINEAGE_LAYOUT,
     spec: MEMBERSHIP_LINEAGE,
     inputs: stepInputHashes(),
