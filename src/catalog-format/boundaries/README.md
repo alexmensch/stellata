@@ -52,7 +52,7 @@ chunking).
 KiB, not bytes.** The artifact is ~30k decimal-formatted floats, so its
 byte length is a function of the last digit of every one of them — and
 V8's trig differs in the last bit across Node versions and architectures
-(local dev runs Node 26 / arm64, CI Node 24 / x64). An exact byte pin
+(arm64 locally, x64 in CI). An exact byte pin
 therefore fails on a difference that changes nothing: it drifted
 343047 → 343049 between the two. KiB keeps the signal the pin exists for —
 dropping `DIRECTION_DECIMALS` by one moves ~30k values a character each,
