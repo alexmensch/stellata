@@ -186,5 +186,5 @@ the others once, and that rebuild appends nothing.
   `package.json` target to `record.ts <name>` through the launcher, and every
   pull's and describing bake's `--describe` to running (Python under
   `python3 -I -S`, TypeScript through `tsx` and the launcher; skipped while the manifest is
-  an unsmudged LFS pointer, or before `build:clouds` and `build:catalog` have
-  written `public/clouds.json` and `public/catalog-manifest.json`).
+  an unsmudged LFS pointer; a bake's case, while the file its record's
+  `requestFrom` names is unbuilt).
