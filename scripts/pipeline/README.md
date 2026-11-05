@@ -301,7 +301,7 @@ The table's own files are in [step-table/](step-table/README.md#files).
   written name by name; one with a pattern, as the glob `memberGlob` reads
   from it: each run of regex syntax becomes `*`, so the glob matches every
   member and a few names more (`catalog.bin.*`). A pattern it cannot read
-  that way (unanchored, a top-level `|`, a literal glob metacharacter)
+  that way (unanchored, flagged, a top-level `|`, a literal glob metacharacter)
   throws rather than guess. `seedSteps` is `build:data`'s selection.
 - `record.ts` / `record-step.ts` (+ test) — [Recording a manual
   step](#recording-a-manual-step--recordts): `recordStep` and the

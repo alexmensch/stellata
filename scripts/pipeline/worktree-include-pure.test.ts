@@ -35,6 +35,7 @@ describe('memberGlob', () => {
     [/catalog\.bin/, 'not anchored'],
     [/^a|b$/, "no glob: '|'"],
     [/^a\*$/, "glob metacharacter '*'"],
+    [/^a\.bin$/i, "flags 'i'"],
   ])('refuses %s', (member, message) => {
     expect(() => memberGlob(member)).toThrow(message);
   });

@@ -24,6 +24,7 @@ function pastClosing(source: string, start: number, open: string, close: string)
 /** A glob matching every name the anchored `member` matches: each run of non-literal syntax reads as `*`. */
 export function memberGlob(member: RegExp): string {
   const source = member.source;
+  if (member.flags !== '') throw new Error(`member pattern /${source}/ has flags '${member.flags}', which no glob can carry`);
   if (!source.startsWith('^') || !source.endsWith('$') || source.endsWith('\\$')) {
     throw new Error(`member pattern /${source}/ is not anchored at both ends`);
   }
