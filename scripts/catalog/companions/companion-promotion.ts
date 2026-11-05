@@ -1517,7 +1517,7 @@ function recurateExistingMember(
     member.ci = imputeCompanionCi(row, spectral);
     if (companionCiIsObserved(row)) member.ci -= avNew / R_V;
   } else if (dOld > 0 && dNew > 0) {
-    member.absmag += 5 * Math.log10(dOld / dNew) + avOld - avNew;
+    member.absmag = absoluteMagnitude(apparentMagnitude(member.absmag, dOld) + avOld - avNew, dNew);
   }
   member.physicalRadius = physicalRadius(member.absmag, spectral);
   state.recuratedMembers.set(memberIdx, brightness);
