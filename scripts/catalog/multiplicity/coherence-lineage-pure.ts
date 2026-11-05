@@ -1,4 +1,4 @@
-// System distance coherence as a lineage stage: its reason codes and the one serialiser over its verdicts. See ../lineage/README.md#the-coherence-stage.
+// System distance coherence as a lineage stage: its reason codes and the one serialiser over its verdicts. See README.md#coherence-lineage.
 
 import { paramsText, stageLineageLine, type LineageLine, type LineageParams, type LineageRow } from '../lineage/lineage-row-pure';
 import { LIVE, stageCodes, type CodeDeclaration } from '../lineage/reason-codes-pure';

@@ -397,23 +397,8 @@ its module, in [Placement lineage](../distance/README.md#placement-lineage).
 
 ## The coherence stage
 
-`build:catalog`'s system distance coherence is the third stage
-(`../multiplicity/coherence-lineage-pure.ts`; the pass is
-[System distance coherence](../multiplicity/README.md#system-distance-coherence)).
-`coherenceLineageRows` serialises each `SystemVerdict` through an exhaustive
-`switch`. A system's anchor gets `coherence.anchor`, or `anchor.inconsistent` /
-`anchor.unplaced` when the pass skips the system. Each member the system decides
-gets a `snapped`, `unmoved.*` or `kept.*` row, and every other record gets
-`coherence.not-applicable`. A record two systems decide (an earlier system's
-snapped member that anchors a later one) carries a row from each, and
-`params.root` tells them apart. Every row names its WDS root and the anchor's tier.
-A member row names its anchor by origin key in `params.anchor`, which is how
-`trace` gets from a snapped record to the record it moved onto, and a snapped
-row carries the distance it replaced and the one it ships (`from_pc`, `to_pc`).
-The evidence is the row the anchor's tier rests on: its Gaia DR3 or Hipparcos-2
-astrometry row, or its Bailer-Jones posterior. The inherited tier cites none.
-Coherence founds no record, so it writes no identity rows, and every code's
-effect is `none`.
+`build:catalog`'s system distance coherence is the third stage; its contract
+lives beside its module, in [Coherence lineage](../multiplicity/README.md#coherence-lineage).
 
 ## The promotion stage
 
