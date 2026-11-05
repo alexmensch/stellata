@@ -13,7 +13,9 @@ so the snapshot is a projection of lineage, never kept in step with it. Membersh
 its review-queue and label-drop counts fold from the outcomes, while the
 derivation, admission and component counters are still kept by hand beside
 them (stellata-hhaw.45.23). Promotion's per-row counters all fold from its
-outcomes; its post-passes act on records and keep their own.
+outcomes; its post-passes act on records and keep their own. Coherence's
+counters fold from its verdicts, still under their `systemCoherence*` keys
+until those keys become its codes (stellata-hhaw.45.23).
 
 ## Files in this area
 
@@ -235,7 +237,7 @@ lineage.
 
 ## SID events
 
-SID allocation is the fourth stage, run inside `build:catalog`; each sibling
+SID allocation is the fifth stage, run inside `build:catalog`; each sibling
 build allocates as a stage of its own, `allocation-clouds` in `build:clouds`
 and `allocation-local-group` in `build:local-group`. Their rows, events and
 fail-closed rule live beside their modules, in [SID events](/scripts/sid/README.md#sid-events).
@@ -289,6 +291,10 @@ The sibling allocation stages, measured 2026-11-05: 96 cloud rows in 1,455
 bytes and 123 Local Group rows in 1,720 bytes gzipped, identity files
 included, each in about 0.1 s; `SIBLING_LINEAGE_BUDGET`
 (`../../sid/sibling-allocation.ts`) pins 1,900 bytes and 5 s for either.
+Coherence, measured 2026-11-05: one row per record that exists before
+promotion mints companions, all but about 4,600 of them `not-applicable`
+(66 MB plain), 7.5 MB gzipped in 0.7 s without a diff;
+`COHERENCE_LINEAGE_BUDGET` pins 8.2 MB and 15 s.
 Placement, measured 2026-10-30: 3,872,657 rows (349 MB plain, 31.0 MB
 gzipped) in 3.2 s without a diff and 8.1 s with one against a full
 baseline; `PLACEMENT_LINEAGE_BUDGET` pins 34 MB and 60 s: a CI run that diffs against a restored merge-base baseline took 36.5 s (2026-11-05). A file that size outruns
@@ -391,9 +397,14 @@ against reinstates per SID, as it was over the two files.
 `build:catalog`'s record walk is the second stage; its contract lives beside
 its module, in [Placement lineage](../distance/README.md#placement-lineage).
 
+## The coherence stage
+
+`build:catalog`'s system distance coherence is the third stage; its contract
+lives beside its module, in [Coherence lineage](../multiplicity/README.md#coherence-lineage).
+
 ## The promotion stage
 
-`build:catalog`'s companion promotion is the third stage
+`build:catalog`'s companion promotion is the fourth stage
 (`../companions/promotion-lineage-pure.ts`). `promoteCompanions` returns one
 `PromotedRow` per `multiples.tsv` row, keyed on that row
 (`multiples:<system_id>/<comp>`), and `promotionLineageRow` serialises its
