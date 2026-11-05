@@ -257,10 +257,9 @@ against a full baseline. The merge-base input re-hash measured 128 ms for
 membership on a branch where 9 of its 163 inputs differ (2026-11-04,
 `inputHashesAt` over `inputHashes(stepInputPaths('build:membership'))`); a
 changed 204 MB LFS input adds its own hash of the local object. The header's input hash is not in it: a stage hands
-`stageLineage` the input hashes its step computed for its own use. Each step
-hashes that set a second time after the runner hashed it for the stamp
-(`build:catalog` and `build:membership` both call `stepInputPaths`), until
-the runner hands its hashes over (stellata-hhaw.45.11.12).
+`stageLineage` the input hashes the runner took for its step's stamp before
+starting it (`stepInputHashes`, `../../util/step-input-hashes.ts`), so no
+step hashes its own input set.
 A spine derivation's row carries only its winner, route and component
 letters; the binding-review columns ride the rows the queue lists — a
 contested or collision verdict and a disposition — since the candidates and
