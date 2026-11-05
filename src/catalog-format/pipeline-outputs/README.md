@@ -15,10 +15,12 @@ repo-relative, so an outputs module passes them as they are.
   step-table outputs modules declare: the membership manifest and its three
   ledgers, the parked and SIMBAD-sourced distance ledgers, the label-merge
   queue, the classic-ID overlay and its two gate queues, the two WGSN
-  tables, the generated reason-code list, and the Vaidman 2025 reference
-  table the hand-run `build:vaidman-table` writes. Other TypeScript writers'
-  `data/` names (the astrometry request, the Horizons fetchers) are spelled
-  beside their own outputs modules. Each file's codec (a `defineArtifact` in
+  tables, the Gaia astrometry request, the generated reason-code list, and
+  the Vaidman 2025 reference table the hand-run `build:vaidman-table`
+  writes. The Horizons fetchers' per-target families are spelled beside
+  their own outputs modules. A Python reader of any of these files (the
+  `scripts/refresh/` pulls read the manifest and the request) spells the
+  path itself, since it cannot import this module. Each file's codec (a `defineArtifact` in
   `scripts/`) takes its `file` from here. Also the SID registry's
   partitions (`REGISTRY_PARTITIONS`: the catalogue's and one per sibling
   artifact, `SIBLING_PARTITIONS`, each named here — `CLOUD_PARTITION`,

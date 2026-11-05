@@ -12,6 +12,7 @@ export const DATA_FILES = {
   rejectedBindings: 'data/classic-ids/rejected_bindings.tsv',
   wgsnNames: 'data/iau-wgsn/wgsn_names.tsv',
   wgsnDesignations: 'data/iau-wgsn/wgsn_designations.tsv',
+  astrometryRequest: 'data/gaia/gaia_catalog_source_id_request.tsv',
   simbadSourcedDistances: 'data/athyg/simbad_sourced_distances.tsv',
   reasonCodes: 'data/lineage/reason-codes.tsv',
   vaidmanSupergiants: 'data/distance-validation/vaidman-2025-supergiants.tsv',
