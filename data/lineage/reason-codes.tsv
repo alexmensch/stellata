@@ -52,10 +52,10 @@ coherence.anchor.unplaced	coherence	none	live		7.1.12	The record wins its system
 coherence.kept.anchor-inconsistent	coherence	none	live		7.1.12	The record's system anchor contradicts its own parallax, so the system is skipped and the record keeps its own distance.
 coherence.kept.anchor-unplaced	coherence	none	live		7.1.12	The record's system anchor has no positive finite distance, so the system is skipped and the record keeps its own distance.
 coherence.kept.member-unplaced	coherence	none	live		7.1.12	The record has no positive finite distance to move from, so it keeps its own.
-coherence.kept.significant-depth	coherence	none	live		7.1.12	The record's parallax gap from its system anchor is at least 3 sigma of the combined error, a measured depth, so it keeps its own distance.
+coherence.kept.significant-depth	coherence	none	live		7.1.12	The record's parallax gap from its system anchor is more than 3 sigma of a nonzero combined error, a measured depth, so it keeps its own distance.
 coherence.kept.wide-gap	coherence	none	live		7.1.12	The record has no parallax error model and sits more than 20% and 1 pc from its system anchor, so it keeps its own distance.
 coherence.not-applicable	coherence	none	live		7.1.12	The record is in no kept-physical WDS system with two or more resolved catalogue records, so coherence decides nothing for it.
-coherence.snapped	coherence	none	live		7.1.12	The record moves radially onto its system anchor's distance: its parallax gap from the anchor is under 3 sigma of the combined error, or, with no error model, within 20% or 1 pc.
+coherence.snapped	coherence	none	live		7.1.12	The record moves radially onto its system anchor's distance: its parallax gap from the anchor is at most 3 sigma of the combined error, or that error is zero; with no parallax, its distance is within 20% or 1 pc of the anchor's.
 coherence.unmoved.at-anchor-distance	coherence	none	live		7.1.12	The record already sits at its system anchor's distance.
 membership.addition-binding.bound	membership	none	live		7.1.6	The admitted star's own Gaia source survives both gates and is no other record's.
 membership.addition-binding.no-candidate	membership	none	live		7.1.6	No catalogue proposes a Gaia source for the admitted star.
