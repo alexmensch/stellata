@@ -194,6 +194,31 @@ absmag-from-Δmag).
 Build-time statistics for every phase land in snapshot JSONs, each
 gating the next build via an `UPDATE_SNAPSHOTS=1` refresh.
 
+## Porting to TypeScript — one stack, one switch
+
+The port of this step to TypeScript (Stage 1 and the shell, then Stages
+2–7) lands as one stack of PRs merged together. Each slice adds its TS
+stage and the vitest ports of its `*.test.py` cases **beside** the
+Python, called only from tests: the step table keeps running
+`build-binaries.py`, so every PR in the stack builds and `multiples.tsv`
+cannot move. The last slice is the switch: `build:binaries` becomes a TS
+step on the shell, `multiples.tsv` lands only through `emitArtifacts`
+after the count checks, every Python module here is deleted, and
+`pnpm run identity:snapshot` / `identity:diff`
+([Proving a restructuring byte-identical](/scripts/util/README.md#proving-a-restructuring-byte-identical))
+proves byte identity once.
+
+Values never cross between the languages. The runner records a step's
+inputs from either the TS import closure or the Python run record, and a
+subprocess in the other language is invisible to both
+([The step table](/scripts/pipeline/step-table/README.md)), so a
+half-TS, half-Python step would miss inputs. While the stack is open,
+a behaviour change to this step waits for the switch and is written
+once, in TS. The switch also waits for the other importers of this
+package — `build-runtime-binaries.py` (`component_tokens.py`) and
+`scripts/refresh/refresh-simbad-wds-xids.py` (`parsers`, `stage2_resolve`)
+— to port first.
+
 
 ## Stage 2 — WDS component → Gaia DR3 source_id
 
