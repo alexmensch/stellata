@@ -249,9 +249,9 @@ Per WDS root with ≥2 resolved own-record members:
 - **Anchor pick — purpose-aware, not recency-aware.** Best tier wins:
   clean unsaturated Gaia 5p (`isCoherenceAnchorGrade`, in
   `anchor-grade-pure.ts` — parallax > 0,
-  RUWE ≤ 1.4, ipd_frac_multi_peak ≤ 2 **percent**, the column being
-  0–100 here unlike direction-cascade's fraction-scale threshold, and
-  G ≥ 3.0), then HIP2 coverage, then
+  RUWE ≤ 1.4 and ipd_frac_multi_peak ≤ 2 **percent** — the same two
+  constants direction-cascade's unreliable-fit gate uses, on the same
+  0–100 column — and G ≥ 3.0), then HIP2 coverage, then
   [Bailer-Jones 2021](/data/papers/index.md#bailerjones2021) membership, then
   inherited. That predicate is exported: the parallax cascade's
   `pair_member_parallax` tier lends the same grade of fit to a member
