@@ -19,12 +19,11 @@ import {
   FLAG_BINARY_COMPANION_ONLY, FLAG_BINARY_PRIMARY, VAR_TYPE_ECLIPSING, CATALOG_MANIFEST_FILENAME,
 } from '../../src/catalog-format/record/catalog-pure';
 import {
-  FLAG_HAS_ORBIT,
-  FLAG_HAS_INCLINATION,
   parseBinaries,
   type BinariesData,
   type BinaryRelation,
 } from '../../src/client/binaries/binaries-loader';
+import { FLAG_HAS_ORBIT, FLAG_HAS_INCLINATION } from '../../src/catalog-format/binaries/binaries-format';
 import * as THREE from 'three';
 import {
   buildOrbitRelationCaches,
@@ -34,7 +33,8 @@ import {
 import { evaluateOrbitSkyAU } from '../../src/client/binaries/binary-orbit-pure';
 import { BinaryOrbitField } from '../../src/client/binaries/binary-orbit-field';
 import { AU_PC, AU_PER_PC } from '../../src/astro-core/astronomy-constants';
-import { readMultiplesTsv, wdsRootOf } from '../../scripts/catalog/companions/companion-promotion';
+import { readMultiplesTsv } from '../../scripts/catalog/companions/companion-promotion';
+import { wdsRootOf } from '../../scripts/binaries/component-tokens-pure';
 import { MULTIPLES_TSV, MULTIPLES_TSV_PATH } from '../../scripts/binaries/multiples-tsv';
 import { NAMING_DUPLICATES } from '../../scripts/catalog/naming/naming-duplicates-tsv';
 import { REPO_ROOT, publicFile } from '../../scripts/util/paths';
@@ -787,9 +787,7 @@ describe.runIf(FIXTURES_READY)('renderable-companion wings', () => {
     // top-level pairs — and (b) the two ends of every rendered pair, which ties
     // in promoted companions whose synth key was minted under a sibling WDS
     // designation. Assert every component that renders a pair carries the bit
-    // somewhere. A gap means a system renders a companion with no glyph — the
-    // failure mode the mirror's resolve_idx + synth retries exist to prevent —
-    // and catches drift in either the TS mirror or the Python resolver.
+    // somewhere. A gap means a system renders a companion with no glyph.
     const parent = new Map<number, number>();
     const add = (x: number) => { if (!parent.has(x)) parent.set(x, x); };
     const find = (x: number): number => {
@@ -856,9 +854,8 @@ function buildWdsRootToIndices(): Map<string, number[]> {
   const bySynth = (JSON.parse(readFileSync(resolve(REPO_ROOT, BUILD_FILES.catalogRowIndexMap), 'utf-8')) as
     { bySynth: Record<string, number> }).bySynth;
   for (const [key, idx] of Object.entries(bySynth)) {
-    const body = key.slice('synth-'.length);
-    const dash = body.lastIndexOf('-');
-    if (dash > 0) bindRoot(body.slice(0, dash), idx);
+    const root = wdsRootOf(key.slice('synth-'.length));
+    if (root !== null) bindRoot(root, idx);
   }
   return rootToIndices;
 }

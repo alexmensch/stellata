@@ -9,7 +9,7 @@ import {
   type SearchEntry,
 } from '../../catalog-format/record/catalog-pure';
 import type { BinariesData } from '../binaries/binaries-loader';
-import { NO_PARENT } from '../binaries/binaries-loader';
+import { NO_PARENT } from '../../catalog-format/binaries/binaries-format';
 import { makeKindContext } from '../kinds/kind-context-mock';
 import { makeEmptyCatalog, type MockCatalog } from '../loaders/catalog-mock';
 import { MIN_PHYSICAL_RADIUS_R_SUN, R_SUN_PC } from '../../astro-core/astronomy-constants';

@@ -29,6 +29,10 @@ import {
   vTierIsSystemBlend,
 } from '../photometry/v-magnitude-pure';
 import { MULTIPLES_TSV, type MultiplesRecord, type PhotometryVia } from '../../binaries/multiples-tsv';
+import {
+  canonicalCompLetter, composeSyntheticId, parentComponentToken, wdsRootOf,
+} from '../../binaries/component-tokens-pure';
+import { hasRenderableOrbit } from '../../../src/catalog-format/binaries/binaries-format';
 import { readArtifact } from '../../util/sources/source';
 import { promotionOriginKey } from './promotion-lineage-pure';
 import { emptyTallyPartition } from '../../util/counts/tally-pure';
@@ -68,19 +72,6 @@ export const PER_COMPONENT_SPECT_VIA: ReadonlySet<string> = new Set([
   'curated',
   'simbad',
 ]);
-
-/** Mirrors the runtime has_orbit contract (binaries-loader FLAG_HAS_ORBIT
- *  + orbit-relation-cache finite-elements gate): BinaryOrbitField
- *  animates the pair only when P, T, e, a, ω, q are all present.
- *  i and Ω are optional (Tier-2 galactic-plane fallback). */
-export type RenderableOrbitRow = MultiplesTsvRow & {
-  pDays: number; tJd: number; e: number; aAU: number; omegaRad: number; q: number;
-};
-
-export function hasRenderableOrbit(row: MultiplesTsvRow): row is RenderableOrbitRow {
-  return row.pDays !== null && row.tJd !== null && row.e !== null
-    && row.aAU !== null && row.omegaRad !== null && row.q !== null;
-}
 
 /** Source_ids whose system names more than one component, so the pair's other
  *  component has a record of its own for a second HD number to belong to.
@@ -337,7 +328,7 @@ export interface PostPassStats {
    *  parent component in the post-pass. Their cursor primary's blended
    *  identifier baked them on a sibling (Castor Bb on A); this moves them
    *  onto B so the catalog placement matches the binaries.bin pair anchor
-   *  (build-runtime-binaries.py's override_inner_primary_indices). */
+   *  (runtime-binaries-pure.ts's overrideInnerPrimaryIndices). */
   repositionedInnerToParent: number;
   /** Promoted gaia_photometry records whose absmag was reduced by the
    *  blend-split post-pass: when N≥2 collocated records share one Gaia
@@ -589,46 +580,6 @@ export function foldRowOutcomes(rows: readonly PromotedRow[]): RowOutcomeStats {
   }
   for (const b of RECURATED_BRIGHTNESS) stats.existingMemberRecurated[b] = recuratedMembers[b].size;
   return stats;
-}
-
-/** See ./README.md#companion-promotion-from-databinariesmultiplestsv `data/binaries/multiples.tsv`
- *  for when this fires. */
-export function composeSyntheticId(
-  systemId: string,
-  comp: string,
-): string | null {
-  const c = comp.trim();
-  if (!c) return null;
-  const dash = systemId.lastIndexOf('-');
-  if (dash < 0) return null;
-  const wdsId = systemId.slice(0, dash);
-  if (!wdsId) return null;
-  return `synth-${wdsId}-${c}`;
-}
-
-/** Re-anchor WDS prefix-truncation on a secondary's `comp` cell.
- *  Stage 6 emits `comp="2"` for the secondary side of `"Aa1,2"`
- *  pairs; canonical WDS form is `"Aa2"` (primary stem + secondary
- *  digit). Used for both the synthetic-ID key and the display name
- *  so the catalog and runtime share one canonical comp form. */
-export function canonicalCompLetter(
-  primaryComp: string,
-  secondaryComp: string,
-): string {
-  const sec = secondaryComp.trim();
-  const pri = primaryComp.trim();
-  if (sec && /^\d+$/.test(sec) && pri.length >= 2 && /\d$/.test(pri)) {
-    return pri.slice(0, -1) + sec;
-  }
-  return sec;
-}
-
-/** Parent component token: ``"Ba" → "B"``, ``"Aa1" → "Aa"``, ``"A" → null``.
- *  Drops the rightmost designator; mirrors
- *  `component_tokens.py:parent_component_token` on the Python side. */
-export function parentComponentToken(comp: string): string | null {
-  const c = comp.trim();
-  return c.length > 1 ? c.slice(0, -1) : null;
 }
 
 interface ExistingIndexes {
@@ -1141,17 +1092,6 @@ function athygDoubleProbeNames(
     systemAnchorStar?.proper ?? '',
   ].map((b) => b.trim()).filter((b) => b !== '');
   return [...new Set(bases.map((base) => `${base} ${canonicalComp}`))];
-}
-
-/** Extracts the WDS positional ID from a Stage 6 system_id. The system_id
- *  is `<wds_id>-<pair_components>` (e.g. `04153-0739-BC`), so the WDS
- *  root is everything before the last dash. Matches composeSyntheticId's
- *  split so both promotion and synthetic-ID paths see the same root. */
-export function wdsRootOf(systemId: string): string | null {
-  const dash = systemId.lastIndexOf('-');
-  if (dash < 0) return null;
-  const root = systemId.slice(0, dash);
-  return root || null;
 }
 
 /** Single-character comp letters per WDS root — the resolved components
@@ -2135,7 +2075,7 @@ export function promoteCompanions(
   // (Castor A) and resolvePosition anchored the secondary there. Now every
   // component is resolved; re-run the placement against the parent's slot
   // so the catalog matches the binaries.bin pair anchor
-  // (build-runtime-binaries.py's override_inner_primary_indices) — both the
+  // (runtime-binaries-pure.ts's overrideInnerPrimaryIndices) — both the
   // ρ=0 collocation case and a measured sep+PA re-projection. Position
   // only — dedup/naming already resolved, and A_V de-extinction across the
   // sub-arcsec sibling offset is below the dust grid's resolution. Parent
@@ -2187,7 +2127,7 @@ export function promoteCompanions(
   // inheritance above is the load-bearing guarantee: no promoted companion
   // freezes at v=0 while its primary drifts. FULL coherence for
   // binaries.bin's authoritative runtime pairing (which re-homes a handful
-  // of inner pairs via override_inner_primary_indices, and owns Tier-3
+  // of inner pairs via overrideInnerPrimaryIndices, and owns Tier-3
   // static pairs the catalog build doesn't group) is deferred — and
   // harmless for v1 since Tier-1/2 offsets are elements-owned.
   for (const g of systemicGroups.values()) {
