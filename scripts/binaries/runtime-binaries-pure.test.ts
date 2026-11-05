@@ -5,6 +5,7 @@ import {
 } from '../../src/catalog-format/binaries/binaries-format';
 import type { CatalogRowIndexMap } from '../catalog/companions/record-index/catalog-row-index-map-pure';
 import { multiplesRow } from '../catalog/companions/multiples-fixture';
+import { canonicalCompLetter } from './component-tokens-pure';
 import {
   assignParentRelations,
   multiplesHandshake,
@@ -20,11 +21,11 @@ const ORBIT = { pDays: 365.25, tJd: 2451545, e: 0.5, aAU: 10, omegaRad: 1, q: 0.
 
 function pair(systemId = '00000+0000-AB', over: Partial<MultiplesPair> = {}): MultiplesPair {
   const components = systemId.slice(systemId.lastIndexOf('-') + 1);
-  const [primaryComp, secondaryComp] = components.includes(',')
+  const [primaryComp, secondaryCell] = components.includes(',')
     ? components.split(',')
     : [components[0], components[1] ?? ''];
   return {
-    systemId, components, primaryComp, secondaryComp,
+    systemId, primaryComp, secondaryComp: canonicalCompLetter(primaryComp, secondaryCell),
     primaryGaia: '1', primaryHip: null, secondaryGaia: '2', secondaryHip: null,
     pDays: null, tJd: null, e: null, aAU: null, iRad: null, omegaRad: null, OmegaRad: null, q: null,
     sepArcsec: null, paDeg: null, sepPaEpochJd: null,
@@ -54,7 +55,7 @@ describe('pairsFromRows', () => {
       multiplesRow({ systemId: '03082+4057-Aa1,2', comp: '2', orbitRole: 'secondary', gaiaSourceId: '9' }),
     ]);
     expect(p).toMatchObject({
-      components: 'Aa1,2', primaryComp: 'Aa1', secondaryComp: 'Aa2',
+      primaryComp: 'Aa1', secondaryComp: 'Aa2',
       primaryHip: 14576, secondaryGaia: '9', pDays: 2.87,
     });
   });
@@ -90,10 +91,6 @@ describe('assignParentRelations', () => {
   it('pairs in different systems are never parents of each other', () => {
     expect(assignParentRelations([pair('00000+0000-AB'), pair('11111+1111-AB')]))
       .toEqual([NO_PARENT, NO_PARENT]);
-  });
-
-  it('an unsplittable components field takes no parent', () => {
-    expect(assignParentRelations([pair('00000+0000-X')])).toEqual([NO_PARENT]);
   });
 
   it('prefers the bound parent over an element-less wide pair (Castor)', () => {
@@ -262,10 +259,7 @@ describe('planRecords', () => {
 
   it('a WDS-truncated secondary resolves through its canonical synth key (Algol Aa1,2)', () => {
     const { counts } = planFlat(
-      [pair('03082+4057-Aa1,2', {
-        primaryComp: 'Aa1', secondaryComp: 'Aa2',
-        primaryGaia: null, primaryHip: 14576, secondaryGaia: null,
-      })],
+      [pair('03082+4057-Aa1,2', { primaryGaia: null, primaryHip: 14576, secondaryGaia: null })],
       { byGaia: {}, byHip: { 14576: 100 }, bySynth: { 'synth-03082+4057-Aa2': 200 } },
     );
     expect(counts).toMatchObject({ pairs_emitted: 1, pairs_dropped_secondary_unresolved: 0 });
