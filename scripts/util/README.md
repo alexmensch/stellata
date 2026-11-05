@@ -297,7 +297,9 @@ same thing — single-use helpers stay with their consumer.
   `build_stamp.report_service`: appends `name`, once, to the file
   `ANSWERED_BY_ENV` names, which `../pipeline/record-step.ts` creates for a
   TypeScript manual step and copies into its record as `answeredBy`. Outside
-  `record.ts` it records nothing.
+  `record.ts` it records nothing. Its callers: the refresh pulls' TAP client
+  (`../refresh/pull/`) and `fetchHorizonsText`, so both Horizons fetchers
+  record `HORIZONS_SERVICE`.
 - `heap-budget.ts` / `heap-budget-pure.ts` (+ test) — `watchHeap(step)`,
   started first thing in a step's `main`, and its `check()`, the step's peak
   live heap against the CI runner's as an `emitArtifacts` check
