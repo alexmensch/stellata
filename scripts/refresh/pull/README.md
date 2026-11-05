@@ -9,6 +9,10 @@ SIMBAD. A pull is a `pull` step on the step table
 
 - `tap-pure.ts` (+ test) — the backend: the three archives, the sync query,
   the reply's classification, and `tapClient`.
+- `columns-pure.ts` (+ test) — a table's `Column` list and everything derived
+  from it: the projection, the reply's schema check, the TSV.
+- `gates-pure.ts` (+ test) — the row band, spot rows and coverage, each an
+  `emitArtifacts` check.
 
 ## The TAP backend
 
@@ -52,3 +56,34 @@ describe states.
 
 The VizieR CSV dialect is unmeasured: CDS Strasbourg was unreachable on
 2026-11-05, and Harvard mirrors SIMBAD's TAP but not VizieR's.
+
+## Columns
+
+A table's `Column` list is the one statement of its schema. Each column's
+`name` is the header the archive answers with and the TSV writes; `select`
+is its projection when that is not the quoted name (a qualified `t.source_id`,
+which still answers as `source_id`, or an aliased expression); `format`
+rewrites each non-empty cell before it is written, the one place a pull
+rounds. So the projection, the schema check and the header order cannot
+disagree: a reply whose header is not exactly the declared names, in order,
+is refused (`checkedRows`).
+
+**An empty CSV cell is the masked value**, read as `null` and written as an
+empty TSV cell; a CSV reply cannot tell an empty string from a null, and
+neither can the TSV. `formatTsv` writes LF line endings and a final newline,
+and refuses a cell holding a tab or line break (`tsvCell`).
+
+## Gates
+
+Every gate is an `emitArtifacts` check, so one that fails refuses the whole
+emission before a byte is written, every output of the pull included.
+
+- **Row band** (`bandCheck`), required: inclusive both ends. Outside it, the
+  upstream table, the request or the query moved.
+- **Spot rows** (`spotRowCheck`), required, at least one: a row keyed by one
+  column's text, each pinned cell exact text, `{near, within}` for a number,
+  or `null` for empty. A missing row and every drifted cell are reported
+  together.
+- **Coverage** (`coverageCheck`), request-scoped tables only: the share of
+  the request each group and their union reach, always reported, failing
+  under `floor` when one is set.
