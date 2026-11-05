@@ -7,7 +7,7 @@ import json
 import os
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Callable, Sequence
+from typing import Any, Callable
 
 from scripts.util.paths import REPO_ROOT
 
@@ -23,28 +23,16 @@ def refresh_command(script: str) -> str:
 
 STAGES_KEY = "stages"
 
-
-@dataclass(frozen=True)
-class CountStages:
-    """Where each key of a staged snapshot is filed: ``order`` is the
-    stages in pipeline order, ``of`` names a key's stage (raising on a key
-    it does not know)."""
-
-    order: Sequence[str]
-    of: Callable[[str], str]
+Staged = dict[str, dict[str, Any]]
+"""Stage → count → value, stages in pipeline order: what a build step
+hands the snapshot, each count written inside the block of the stage that
+computes it."""
 
 
-def nest_by_stage(flat: dict[str, Any], stages: CountStages) -> dict[str, Any]:
-    """``flat`` grouped under each key's stage, stages in ``stages.order``
-    (a stage no key reaches left out) and keys in ``flat``'s order.
-    Sibling of count-stages-pure.ts."""
-    nested: dict[str, dict[str, Any]] = {stage: {} for stage in stages.order}
-    for key, value in flat.items():
-        stage = stages.of(key)
-        if stage not in nested:
-            raise ValueError(f"count {key} is filed under {stage}, which is not a declared stage")
-        nested[stage][key] = value
-    return {STAGES_KEY: {stage: counts for stage, counts in nested.items() if counts}}
+def flatten_staged(staged: Staged) -> dict[str, Any]:
+    """Every count of ``staged`` with its stage level dropped; a key two
+    stages share raises."""
+    return flatten_stages({STAGES_KEY: staged})
 
 
 def flatten_stages(payload: Any) -> Any:
@@ -143,27 +131,30 @@ def format_diff(
 
 
 def assert_or_update_snapshot(
-    actual: dict[str, float],
+    actual: Staged,
     expected_path: Path,
     *,
     label: str,
     script: str,
-    stages: CountStages,
     build_payload: Callable[[dict[str, float], Path], dict[str, Any]],
     compare: Callable[[dict[str, Any], dict[str, float]], list[SnapshotDiff]],
     render: Callable[[list[SnapshotDiff]], str],
 ) -> bool:
     """True on a full match; False on drift or a missing snapshot, after
     printing how to refresh it through ``script``. Under ``UPDATE_SNAPSHOTS=1`` writes
-    ``build_payload(actual, expected_path)``, nested by ``stages``, instead
-    and returns True. ``compare`` sees the committed snapshot flattened."""
+    the staged snapshot instead, each stage's block through
+    ``build_payload(counts, expected_path)`` and a stage with no counts left
+    out, and returns True. ``compare`` sees both sides flattened."""
     try:
         shown = expected_path.relative_to(REPO_ROOT)
     except ValueError:
         shown = expected_path
 
     if os.environ.get(UPDATE_SNAPSHOTS_ENV_VAR) == "1":
-        payload = nest_by_stage(build_payload(actual, expected_path), stages)
+        payload = {STAGES_KEY: {
+            stage: build_payload(counts, expected_path)
+            for stage, counts in actual.items() if counts
+        }}
         expected_path.write_text(json.dumps(payload, indent=2) + "\n")
         print(f"[{label}] Updated {shown}")
         return True
@@ -173,7 +164,7 @@ def assert_or_update_snapshot(
         return False
 
     expected = flatten_stages(json.loads(expected_path.read_text()))
-    diff = compare(expected, actual)
+    diff = compare(expected, flatten_staged(actual))
     print(f"[{label}] {render(diff)}")
     if all(d.status == "match" for d in diff):
         return True
@@ -216,15 +207,13 @@ def format_count_diff(diff: list[SnapshotDiff], label: str) -> str:
 
 
 def assert_or_update_counts(
-    actual: dict[str, int], expected_path: Path, *, label: str, script: str,
-    stages: CountStages,
+    actual: Staged, expected_path: Path, *, label: str, script: str,
 ) -> bool:
     """Exact-match snapshot assert/refresh for an int-count JSON."""
     return assert_or_update_snapshot(
         actual, expected_path,
         label=label,
         script=script,
-        stages=stages,
         build_payload=lambda a, _path: a,
         compare=compare_build_counts,
         render=lambda diff: format_count_diff(diff, label),

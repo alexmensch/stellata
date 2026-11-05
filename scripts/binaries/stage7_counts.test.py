@@ -23,15 +23,13 @@ from scripts.binaries.stage5_optical import (  # noqa: E402
     OpticalClassification,
 )
 from scripts.binaries.stage7_counts import (  # noqa: E402
-    COUNT_STAGES,
     DEFAULT_RATE_TOLERANCE,
-    RATE_STAGES,
     assert_or_update_rates,
     build_binaries_counts,
     build_binaries_rates,
     compare_build_rates,
 )
-from scripts.util.snapshot_assert import UPDATE_SNAPSHOTS_ENV_VAR  # noqa: E402
+from scripts.util.snapshot_assert import UPDATE_SNAPSHOTS_ENV_VAR, flatten_staged  # noqa: E402
 from scripts.binaries.pipeline_test_fixtures import (  # noqa: E402
     _component_astrometry,
     _resolved,
@@ -55,34 +53,23 @@ class BuildBinariesCountsTests(unittest.TestCase):
             classifications=[OpticalClassification(True, "wds_notes_kept")],
             multiples_rows=[],
         )
-        for tag in RESOLVE_VIA_VALUES:
-            self.assertIn(f"resolution_{tag}", counts)
-        for tag in ASTROMETRY_VIA_VALUES:
-            self.assertIn(f"astrometry_{tag}", counts)
-        for tag in ORBIT_VIA_VALUES:
-            self.assertIn(f"orbit_{tag}", counts)
-        for tag in OPTICAL_VIA_VALUES:
-            self.assertIn(f"optical_{tag}", counts)
-        self.assertEqual(counts["wds_pairs_total"], 1)
-        self.assertEqual(counts["decomposing_pairs"], 1)
-        self.assertEqual(counts["components_total"], 2)
-        self.assertEqual(counts["optical_wds_notes_kept"], 1)
-
-    def test_files_every_count_under_a_pipeline_stage(self) -> None:
-        counts = build_binaries_counts(
-            pairs=[], components=[], astrometry=[], orbits=[],
-            classifications=[], multiples_rows=[],
+        self.assertEqual(
+            list(counts),
+            ["ingest", "subdivide", "resolve", "astrometry", "orbits", "optical", "multiples"],
         )
-        for key in counts:
-            self.assertIn(COUNT_STAGES.of(key), COUNT_STAGES.order, key)
-        self.assertEqual(COUNT_STAGES.of("resolution_simbad_xid"), "resolve")
-        self.assertEqual(COUNT_STAGES.of("msc_pair_mags_filled"), "multiples")
-        with self.assertRaisesRegex(KeyError, "count stray has no stage"):
-            COUNT_STAGES.of("stray")
-
-    def test_files_every_rate_under_a_pipeline_stage(self) -> None:
-        for key in build_binaries_rates({}):
-            self.assertIn(RATE_STAGES.of(key), RATE_STAGES.order, key)
+        for tag in RESOLVE_VIA_VALUES:
+            self.assertIn(f"resolution_{tag}", counts["resolve"])
+        for tag in ASTROMETRY_VIA_VALUES:
+            self.assertIn(f"astrometry_{tag}", counts["astrometry"])
+        for tag in ORBIT_VIA_VALUES:
+            self.assertIn(f"orbit_{tag}", counts["orbits"])
+        for tag in OPTICAL_VIA_VALUES:
+            self.assertIn(f"optical_{tag}", counts["optical"])
+        self.assertEqual(counts["ingest"]["wds_pairs_total"], 1)
+        self.assertEqual(counts["resolve"]["decomposing_pairs"], 1)
+        self.assertEqual(counts["resolve"]["components_total"], 2)
+        self.assertEqual(counts["optical"]["optical_wds_notes_kept"], 1)
+        flatten_staged(counts)
 
 
 class BuildBinariesRatesTests(unittest.TestCase):
@@ -112,30 +99,30 @@ class BuildBinariesRatesTests(unittest.TestCase):
         }
 
     def test_gaia_resolve_rate_is_source_id_anchored_fraction(self) -> None:
-        rates = build_binaries_rates(self._baseline_counts())
+        rates = flatten_staged(build_binaries_rates({"all": self._baseline_counts()}))
         # (100 + 1000 + 3400) / 10000 = 0.45 — ccdm_hip excluded.
         self.assertAlmostEqual(rates["gaia_resolve_rate"], 0.45)
 
     def test_optical_rejected_rate_sums_cascade_rejections(self) -> None:
-        rates = build_binaries_rates(self._baseline_counts())
+        rates = flatten_staged(build_binaries_rates({"all": self._baseline_counts()}))
         # (500 + 100 + 50 + 850) / 5000 = 0.30
         self.assertAlmostEqual(rates["optical_rejected_rate"], 0.30)
 
     def test_nss_orbit_rate_uses_only_resolved_orbit_population(self) -> None:
-        rates = build_binaries_rates(self._baseline_counts())
+        rates = flatten_staged(build_binaries_rates({"all": self._baseline_counts()}))
         # 150 / (150 + 100 + 50) = 0.5
         self.assertAlmostEqual(rates["nss_orbit_rate"], 0.5)
 
     def test_hip2_fallback_rate_is_per_component_fraction(self) -> None:
-        rates = build_binaries_rates(self._baseline_counts())
+        rates = flatten_staged(build_binaries_rates({"all": self._baseline_counts()}))
         # 200 / 10000 = 0.02
         self.assertAlmostEqual(rates["hip2_fallback_rate"], 0.02)
 
     def test_zero_denominator_returns_zero_rate(self) -> None:
-        rates = build_binaries_rates({
+        rates = flatten_staged(build_binaries_rates({"resolve": {
             "components_total": 0,
             "decomposing_pairs": 0,
-        })
+        }}))
         for key, value in rates.items():
             self.assertEqual(value, 0.0, msg=key)
 
@@ -172,7 +159,7 @@ class AssertOrUpdateRatesTests(unittest.TestCase):
     def test_a_missing_snapshot_fails_and_writes_nothing(self) -> None:
         with tempfile.TemporaryDirectory() as td:
             p = Path(td) / "rates.json"
-            self.assertFalse(assert_or_update_rates({"nss_orbit_rate": 0.42}, p))
+            self.assertFalse(assert_or_update_rates({"orbits": {"nss_orbit_rate": 0.42}}, p))
             self.assertFalse(p.exists())
 
     def test_writes_a_missing_snapshot_with_default_tolerance_under_the_env_var(self) -> None:
@@ -182,7 +169,7 @@ class AssertOrUpdateRatesTests(unittest.TestCase):
             p = Path(td) / "rates.json"
             try:
                 _os.environ[UPDATE_SNAPSHOTS_ENV_VAR] = "1"
-                ok = assert_or_update_rates({"nss_orbit_rate": 0.42}, p)
+                ok = assert_or_update_rates({"orbits": {"nss_orbit_rate": 0.42}}, p)
             finally:
                 _os.environ.pop(UPDATE_SNAPSHOTS_ENV_VAR, None)
             self.assertTrue(ok)
@@ -198,7 +185,7 @@ class AssertOrUpdateRatesTests(unittest.TestCase):
             p.write_text(_json.dumps({"stages": {"orbits": {"nss_orbit_rate": {"value": 0.30, "tolerance": 0.05}}}}))
             try:
                 _os.environ[UPDATE_SNAPSHOTS_ENV_VAR] = "1"
-                ok = assert_or_update_rates({"nss_orbit_rate": 0.42}, p)
+                ok = assert_or_update_rates({"orbits": {"nss_orbit_rate": 0.42}}, p)
             finally:
                 _os.environ.pop(UPDATE_SNAPSHOTS_ENV_VAR, None)
             self.assertTrue(ok)
@@ -212,7 +199,7 @@ class AssertOrUpdateRatesTests(unittest.TestCase):
             p = Path(td) / "rates.json"
             body = '{"stages": {"orbits": {"nss_orbit_rate": {"value": 0.50, "tolerance": 0.10}}}}'
             p.write_text(body)
-            ok = assert_or_update_rates({"nss_orbit_rate": 0.80}, p)
+            ok = assert_or_update_rates({"orbits": {"nss_orbit_rate": 0.80}}, p)
             self.assertFalse(ok)
             self.assertEqual(p.read_text(), body)
 

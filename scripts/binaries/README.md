@@ -99,11 +99,11 @@ scripts/binaries/
                                   assert / refresh they share with
                                   build-runtime-binaries.py is
                                   scripts/util/snapshot_assert.py.
-                                  COUNT_STAGES / RATE_STAGES file each key
-                                  under the stage module that counts it
-                                  (ingest, subdivide, resolve, astrometry,
-                                  orbits, optical, multiples); a key with no
-                                  stage fails the refresh.
+                                  build_binaries_counts / _rates build each
+                                  key inside the block of the stage module
+                                  that counts it (ingest, subdivide,
+                                  resolve, astrometry, orbits, optical,
+                                  multiples).
   mass_estimate.py                Spectral-class-aware mass-ratio q backfill
                                   (Cox 2000
                                   (/data/papers/index.md#cox2000) Sect. 15.2; dwarf

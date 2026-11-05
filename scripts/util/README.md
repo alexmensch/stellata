@@ -337,10 +337,10 @@ same thing — single-use helpers stay with their consumer.
   would restamp `binaries.bin` on every pipeline-stage edit. Same rule
   on a missing snapshot: it fails, and only `UPDATE_SNAPSHOTS=1`
   writes one. Returns a bool where the TS sibling returns an `emitArtifacts` check, since the Python
-  drivers own their exit. Every snapshot it writes is staged:
-  `nest_by_stage` / `flatten_stages` are `count-stages-pure.ts`'s twins,
-  and a caller passes its `CountStages` (pipeline order, and which stage
-  each key is filed under).
+  drivers own their exit. Every snapshot it writes is staged: a caller
+  hands it `Staged` counts (stage → count, each count built inside its
+  stage's block, stages in pipeline order), and it compares both sides
+  through `flatten_stages`, `count-stages-pure.ts`'s twin.
   Pinned by `snapshot_assert.test.py`.
 - <a id="git-files"></a>`git-files.ts` — `gitFiles(root, pathspecs, { untracked })`,
   git's file list (tracked, optionally untracked-but-not-ignored), for a scan
