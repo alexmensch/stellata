@@ -72,8 +72,9 @@ order:
 
 The split prefixes are load-bearing: GitHub tries every restore key against
 the PR's own entries before any of main's, so one shared prefix would always
-return the PR's own newest entry, however stale. A stamp hashes
-every file the step reads as data or code and every file it writes, so a
+return the PR's own newest entry, however stale.
+
+A stamp hashes every file the step reads as data or code and every file it writes, so a
 step hits on whatever build last made it from the same inputs, whatever
 commit that was, and a file no step reads that way (a workflow, a
 `package.json` script, a README) moves nothing. Python steps are covered the
