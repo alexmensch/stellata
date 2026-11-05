@@ -13,6 +13,8 @@ export type MkLetter = 0 | 1 | 2 | 3 | 4 | 5 | 6;
 export type LumClass = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9;
 /** VII is a white dwarf, which is its own kind. */
 export type MkLumClass = Exclude<LumClass, 0>;
+export const LUM_CLASS_MAIN_SEQUENCE = 2;
+export const LUM_CLASS_MAX = 9;
 
 /** The subclass the tables read a class at when its source states none. */
 export const DEFAULT_SUBCLASS = 5;
@@ -90,7 +92,7 @@ export function classifyFromSimbad(rawSpType: string | null | undefined): MkSpec
       kind: 'mk',
       letter: mkLetter(yerkesMatch[2]) as MkLetter,
       subclass: subMatch ? Number(subMatch[1]) : null,
-      lumClass: yerkesMatch[1] === 'g' ? 4 : 2,
+      lumClass: yerkesMatch[1] === 'g' ? 4 : LUM_CLASS_MAIN_SEQUENCE,
     };
   }
 

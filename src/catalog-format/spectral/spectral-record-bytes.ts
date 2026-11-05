@@ -2,6 +2,7 @@
 // See README.md#spectralinfo-is-a-variant.
 
 import {
+  LUM_CLASS_MAX,
   type MkLumClass,
   type MkLetter,
   type SpectralInfo,
@@ -29,8 +30,6 @@ export function encodeSpectralBytes(info: SpectralInfo): SpectralBytes {
   }
 }
 
-const MK_LUM_CLASS_MAX = 9;
-
 export function decodeSpectralBytes(bytes: SpectralBytes): SpectralInfo {
   const { spectClass, lumClass } = bytes;
   const lumUnknown = lumClass === LUM_CLASS_UNKNOWN;
@@ -41,7 +40,7 @@ export function decodeSpectralBytes(bytes: SpectralBytes): SpectralInfo {
     if (lumUnknown) return { kind: 'carbon', subclass: null };
   } else if (Number.isInteger(spectClass) && spectClass >= 0 && spectClass < SPECT_CLASS_CARBON) {
     const mkLum = Number.isInteger(lumClass) && lumClass > LUM_CLASS_WHITE_DWARF
-      && lumClass <= MK_LUM_CLASS_MAX;
+      && lumClass <= LUM_CLASS_MAX;
     if (lumUnknown || mkLum) {
       return {
         kind: 'mk',

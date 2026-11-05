@@ -5,6 +5,7 @@ import { ballesterosBvFromTeff } from '../../astro-core/colour/blackbody-lut-pur
 import { SOLAR_BV_FALLBACK, type ApsisRow } from '../record/catalog-pure';
 import {
   DEFAULT_SUBCLASS,
+  LUM_CLASS_MAIN_SEQUENCE,
   type MkLetter,
   type MkLumClass,
   type SpectralInfo,
@@ -286,6 +287,6 @@ export function spectralFromAbsmag(mv: number): SpectralInfo & { kind: 'mk' } {
     kind: 'mk',
     letter,
     subclass: inverseInterpolate(MV_MS_TABLE[letter], mv),
-    lumClass: 2,
+    lumClass: LUM_CLASS_MAIN_SEQUENCE,
   };
 }
