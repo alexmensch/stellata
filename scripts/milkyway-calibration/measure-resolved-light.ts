@@ -3,7 +3,7 @@
 import { readFile, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { CATALOG_MANIFEST_FILENAME } from '../../src/catalog-format/record/catalog-pure';
-import { readCatalogColumns } from '../catalog/catalog-columns';
+import { readCatalogColumns } from '../catalog/columns/catalog-columns';
 import { REPO_ROOT, publicFile } from '../util/paths';
 import {
   GALACTIC_CENTRE_PC,

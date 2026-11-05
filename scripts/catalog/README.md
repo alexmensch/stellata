@@ -76,6 +76,9 @@ layout, its codec, the chunk plan and the search-index wire entry — is
   reason code and cited source rows, keyed on the record's origin source
   row; the trace command, the run-to-run diff, and the committed ledgers as
   views of it.
+- `columns/` — the Node readers of a built catalogue's bytes, and the
+  column projection a bake measuring the catalogue records. Holds code
+  only, so no snapshot here becomes such a bake's input.
 - `validate/` — the Tier-A/B validation harness, `verify-catalog`, the
   SIMBAD-sample cross-check, and the frozen regression corpora.
 
@@ -173,14 +176,6 @@ scripts/catalog/
                                   `nameTable` hands
                                   trace the same table for its folded one
                                   (lineage/trace/README.md).
-  catalog-columns.ts (+ test)     readCatalogColumns: float32 record columns
-                                  of a built catalogue, each decoded whole
-                                  (decodeRecordColumn) — the reader for a
-                                  bake that measures the catalogue
-                                  (../milkyway-calibration/); and
-                                  catalogColumnsProjection, the same
-                                  columns hashed as that bake's describe
-                                  ([../pipeline/README.md](../pipeline/README.md#freshness--one-mechanism)).
   build-counts.ts (+ test)        Per-strategy / per-tier count snapshot
                                   comparator, pinned by
                                   build-catalog-expected.json, which

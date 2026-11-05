@@ -108,7 +108,7 @@ orders the bake after `build:clouds` as a pull's orders the pull, so the
 check reads the `clouds.json` this run rebuilt.
 
 A TypeScript bake that reads the built catalogue describes itself the same
-way, through `catalogColumnsProjection` (`../catalog/catalog-columns.ts`):
+way, through `catalogColumnsProjection` (`../catalog/columns/`):
 its record holds a hash of each float32 record column it reads, and
 `requestFrom` names `public/catalog-manifest.json`, ordering it after
 `build:catalog`. The catalogue's bytes are never an input, so a rebuild
@@ -330,7 +330,7 @@ The table's own files are in [step-table/](step-table/README.md#files).
 - `manual-step-fixture.ts` — test support: `tsManualFixture` writes a
   TypeScript pull or bake and its outputs module under a fixture root and
   hands back its `record()` and `freshness()`, for every suite that records
-  one (`record-step.test.ts`, `../catalog/catalog-columns.test.ts`).
+  one (`record-step.test.ts`, `../catalog/columns/catalog-columns.test.ts`).
 - `processes.ts` — how the runner and `record.ts` start a step: `runTs`, a
   TypeScript step under `tsx`, handed the input hashes taken before it
   started (`util/step-input-hashes.ts`), or `runRecorded`, a Python step
