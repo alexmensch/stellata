@@ -527,8 +527,6 @@ does not follow it — Node strips the import, so its target never loads.
 Dynamic imports, and the rest of the repo, are out of scope. The walk is
 pinned to reach `scripts/catalog/build-counts.ts` and
 `scripts/util/sources/source.ts`, so an empty walk cannot pass.
-`isRelativeSpecifier` in `import-specifiers.ts` is shared with the
-pipeline-viewer boundary.
 
 ## Pipeline-viewer boundary
 
