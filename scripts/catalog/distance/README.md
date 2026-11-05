@@ -19,10 +19,13 @@ supplies alongside its own position.
 scripts/catalog/distance/
   direction-cascade.ts (+ test)   Per-row sky-direction resolution cascade
                                   (which position source wins, and the
-                                  precision each carries) plus the
-                                  space-motion velocity assembly. Its tiers'
-                                  Gaia, HIP2 and NSS rows are read in
-                                  ../sources/.
+                                  precision each carries). Its tiers' Gaia,
+                                  HIP2 and NSS rows are read in ../sources/.
+  velocity.ts (+ test)            The space-motion velocity assembly
+                                  (velocityPcPerYr), its km/s ↔ pc/yr
+                                  conversion, the sanity ceiling and escape
+                                  threshold, and VelocityVia — which
+                                  catalogue supplied the PM.
   gaia-distrust.ts (+ test)       `gaiaHas5pSolution`, `gaiaRowIs2p` and
                                   `isGaiaCatalogueBibcode` — one predicate per
                                   way this build refuses a Gaia value on a

@@ -6,7 +6,7 @@ import {
   resolveRadialVelocity,
   rvErrorBand,
 } from './radial-velocity';
-import { VELOCITY_SANITY_CEILING_KM_S } from '../direction-cascade';
+import { VELOCITY_SANITY_CEILING_KM_S } from '../velocity';
 import { type GaiaAstrometryCatalogRow } from '../../sources/gaia-astrometry-source';
 import type { SimbadRadialVelocity } from '../../simbad/simbad-values-parse';
 import { SIMBAD_VALUES } from '../../simbad/simbad-values-source';

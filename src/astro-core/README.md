@@ -64,8 +64,9 @@ Each has its own README.
   so it stays a unit vector through the poles. `unitVectorFromRaDec` is
   the `u` component alone and `raDecFromUnitVector` its inverse (ra
   wrapped to [0, 360)); `SkyPosition` is the `{raDeg, decDeg}` pair both
-  sides speak. Shared by the catalog build's PM propagation +
-  space-motion velocity (`scripts/catalog/distance/direction-cascade.ts`), the
+  sides speak. Shared by the catalog build's PM propagation
+  (`scripts/catalog/distance/direction-cascade.ts`) and space-motion velocity
+  (`scripts/catalog/distance/velocity.ts`), the
   companion tangent-projection (`scripts/catalog/companions/companion-promotion.ts`),
   and the runtime Tier-1 sky→ICRS orbit projection
   (`src/client/binaries/binary-orbit-pure.ts`). `scripts/local-group/`'s

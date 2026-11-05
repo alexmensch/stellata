@@ -15,7 +15,7 @@ scripts/catalog/distance/radial-velocity/
                                 term on its own. Imports `gaiaHas5pSolution`,
                                 `gaiaRefusals` and `refusedPublicationCited` from
                                 ../gaia-distrust and the sanity ceiling from
-                                ../direction-cascade, so the radial and
+                                ../velocity, so the radial and
                                 tangential terms distrust a row for the same
                                 reason and by the same predicates.
 ```

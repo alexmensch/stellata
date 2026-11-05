@@ -235,7 +235,7 @@ scene epoch on disk; the runtime epoch-advance pass
 propagate every position to `getT()`. Full design:
 [Current-epoch star positions](/docs/science-catalog-ingestion.md#current-epoch-star-positions--space-motion-propagation-to-t).
 
-`velocityPcPerYr` (`direction-cascade.ts`) assembles
+`velocityPcPerYr` (`../distance/velocity.ts`) assembles
 `v = v_r·û + d·MAS_TO_RAD·(μ_α*·ê + μ_δ·n̂)` from the tier solution
 `resolveDirection` selected (`DirectionSolution.src*` fields), so position
 and velocity come from one astrometric solution wherever that solution states

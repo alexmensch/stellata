@@ -1,9 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
-import {
-  DIRECTION_VIA_VALUES,
-  VELOCITY_VIA_VALUES,
-} from '../../catalog/distance/direction-cascade';
+import { DIRECTION_VIA_VALUES } from '../../catalog/distance/direction-cascade';
+import { VELOCITY_VIA_VALUES } from '../../catalog/distance/velocity';
 import { DIST_VIA_VALUES } from '../../../src/catalog-format/record/catalog-pure';
 import { V_VIA_VALUES } from '../../catalog/photometry/v-magnitude-pure';
 import { emptyTallyPartition, fold } from './tally-pure';

@@ -100,10 +100,7 @@ import {
   bridgeGcvsByGaia,
   applyVariability,
 } from './parse/gcvs/gcvs-parse';
-import {
-  VELOCITY_SANITY_CEILING_KM_S,
-  GALACTIC_ESCAPE_VELOCITY_KM_S,
-} from './distance/direction-cascade';
+import { VELOCITY_SANITY_CEILING_KM_S, GALACTIC_ESCAPE_VELOCITY_KM_S } from './distance/velocity';
 import { RV_ERROR_BANDS } from './distance/radial-velocity/radial-velocity';
 import { emptyTallyPartition } from '../util/counts/tally-pure';
 import {
