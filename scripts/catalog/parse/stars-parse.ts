@@ -111,7 +111,7 @@ import {
 } from '../photometry/colour-index-pure';
 import type { GspcColour } from '../photometry/gspc-parse';
 import { printedByHip } from '../photometry/hip-photometry-parse-pure';
-import { emptyTallyPartition } from '../../util/tally-pure';
+import { emptyTallyPartition } from '../../util/counts/tally-pure';
 import type { ManifestRecord } from '../membership/membership-manifest-tsv';
 import { type ConstellationAssignment } from './constellations/constellations';
 import {

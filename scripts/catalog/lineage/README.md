@@ -7,9 +7,9 @@ between two builds is explained. This README is the design contract the
 folder's code is built to.
 
 A stage returns a typed outcome per record; lineage is those outcomes
-serialised. The target is that a stage's count snapshot folds from the same
-outcome arrays, so a snapshot and lineage are two projections of one value
-and neither is kept in step with the other. Membership is part-way there:
+serialised. The target is that a stage's count snapshot folds from its
+lineage lines, keyed on its reason codes ([Counts fold from lineage](#counts-fold-from-lineage)),
+so the snapshot is a projection of lineage, never kept in step with it. Membership is part-way there:
 its review-queue and label-drop counts fold from the outcomes, while the
 derivation, admission and component counters are still kept by hand beside
 them (stellata-hhaw.45.23). Promotion's per-row counters all fold from its
@@ -224,6 +224,16 @@ Membership's (`MEMBERSHIP_INVARIANTS`): no `admit.magnitude` row whose
 ([The additions](../membership/additions/README.md#grouping-and-admission)), and no
 `binding.unweighed-no-pulled-row` row
 ([The candidates have to be in the astrometry pull](../membership/binding/README.md#the-candidates-have-to-be-in-the-astrometry-pull)).
+
+## Counts fold from lineage
+
+A stage's count-snapshot keys are its reason codes, so the code list is the
+one owner of every counted tier. `foldStageLines(codes, lines, role)`
+(`lineage-row-pure.ts`, over `../../util/counts/tally-pure.ts`'s `fold`) counts a
+stage's lines per code in one role, every declared code present, typed
+`Record<code, number>` from the stage's `codes`; a line of another stage
+throws. A stage with no codes yet keeps its snapshot keys until it gains
+lineage.
 
 ## SID events
 

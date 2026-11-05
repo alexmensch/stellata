@@ -18,6 +18,8 @@ from scripts.util.snapshot_assert import (  # noqa: E402
     UPDATE_SNAPSHOTS_ENV_VAR,
     assert_or_update_counts,
     compare_build_counts,
+    flatten_staged,
+    flatten_stages,
     format_count_diff,
     refresh_command,
 )
@@ -25,6 +27,17 @@ from scripts.util.snapshot_assert import (  # noqa: E402
 LABEL = "test"
 REFRESH = "UPDATE_SNAPSHOTS=1 pnpm run build:test"
 KW = {"label": LABEL, "script": "build:test"}
+
+
+class StagedSnapshotTests(unittest.TestCase):
+    def test_flattens_a_staged_payload_and_leaves_a_flat_one_alone(self) -> None:
+        flat = {"x": 1, "y": {"value": 0.5, "tolerance": 0.2}}
+        self.assertEqual(flatten_stages({"stages": {"read": {"x": 1}, "filter": {"y": flat["y"]}}}), flat)
+        self.assertIs(flatten_stages(flat), flat)
+
+    def test_refuses_a_key_two_stages_share(self) -> None:
+        with self.assertRaisesRegex(ValueError, "count x is under two stages, read and filter"):
+            flatten_staged({"read": {"x": 1}, "filter": {"x": 2}})
 
 
 class CompareBuildCountsTests(unittest.TestCase):
@@ -74,7 +87,7 @@ class AssertOrUpdateCountsTests(unittest.TestCase):
         out = io.StringIO()
         with tempfile.TemporaryDirectory() as td, contextlib.redirect_stdout(out):
             p = Path(td) / "snapshot.json"
-            ok = assert_or_update_counts({"x": 1, "y": 2}, p, **KW)
+            ok = assert_or_update_counts({"read": {"x": 1}, "filter": {"y": 2}}, p, **KW)
             self.assertFalse(ok)
             self.assertFalse(p.exists())
         self.assertIn("is missing", out.getvalue())
@@ -88,18 +101,36 @@ class AssertOrUpdateCountsTests(unittest.TestCase):
             p = Path(td) / "snapshot.json"
             try:
                 _os.environ[UPDATE_SNAPSHOTS_ENV_VAR] = "1"
-                ok = assert_or_update_counts({"x": 1, "y": 2}, p, **KW)
+                ok = assert_or_update_counts({"read": {"x": 1}, "filter": {"y": 2}}, p, **KW)
             finally:
                 _os.environ.pop(UPDATE_SNAPSHOTS_ENV_VAR, None)
             self.assertTrue(ok)
             written = _json.loads(p.read_text())
-        self.assertEqual(written, {"x": 1, "y": 2})
+        self.assertEqual(written, {"stages": {"read": {"x": 1}, "filter": {"y": 2}}})
 
     def test_compares_against_existing_snapshot_match(self) -> None:
         with tempfile.TemporaryDirectory() as td:
             p = Path(td) / "snapshot.json"
             p.write_text('{"x": 1, "y": 2}\n')
-            ok = assert_or_update_counts({"x": 1, "y": 2}, p, **KW)
+            ok = assert_or_update_counts({"read": {"x": 1}, "filter": {"y": 2}}, p, **KW)
+        self.assertTrue(ok)
+
+    def test_a_count_moved_to_another_stage_is_drift(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            p = Path(td) / "snapshot.json"
+            p.write_text('{"stages": {"read": {"x": 1}, "filter": {"y": 2}}}\n')
+            out = io.StringIO()
+            with contextlib.redirect_stdout(out):
+                ok = assert_or_update_counts({"read": {"x": 1, "y": 2}}, p, **KW)
+        self.assertFalse(ok)
+        self.assertIn("1 of 2 counts differ", out.getvalue())
+        self.assertIn("moved from stage filter to read", out.getvalue())
+
+    def test_compares_a_staged_snapshot_by_its_counts(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            p = Path(td) / "snapshot.json"
+            p.write_text('{"stages": {"read": {"x": 1}, "filter": {"y": 2}}}\n')
+            ok = assert_or_update_counts({"read": {"x": 1}, "filter": {"y": 2}}, p, **KW)
         self.assertTrue(ok)
 
     def test_compares_against_existing_snapshot_mismatch(self) -> None:
@@ -108,7 +139,7 @@ class AssertOrUpdateCountsTests(unittest.TestCase):
             p.write_text('{"x": 1, "y": 2}\n')
             out = io.StringIO()
             with contextlib.redirect_stdout(out):
-                ok = assert_or_update_counts({"x": 1, "y": 3}, p, **KW)
+                ok = assert_or_update_counts({"read": {"x": 1}, "filter": {"y": 3}}, p, **KW)
             self.assertFalse(ok)
             self.assertIn(f"refresh the snapshot with: {REFRESH}", out.getvalue())
             # Snapshot file must NOT be silently rewritten on mismatch.
@@ -122,12 +153,12 @@ class AssertOrUpdateCountsTests(unittest.TestCase):
             p.write_text('{"x": 1}\n')
             try:
                 _os.environ[UPDATE_SNAPSHOTS_ENV_VAR] = "1"
-                ok = assert_or_update_counts({"x": 2}, p, **KW)
+                ok = assert_or_update_counts({"read": {"x": 2}, "filter": {}}, p, **KW)
             finally:
                 _os.environ.pop(UPDATE_SNAPSHOTS_ENV_VAR, None)
             self.assertTrue(ok)
             written = _json.loads(p.read_text())
-        self.assertEqual(written, {"x": 2})
+        self.assertEqual(written, {"stages": {"read": {"x": 2}}})
 
 
 if __name__ == "__main__":
