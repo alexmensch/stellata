@@ -170,18 +170,16 @@ function parallaxDistanceWithError(
   return h !== undefined ? invert(h.plxMas, h.plxErrorMas) : null;
 }
 
-function starDist(star: Star): number {
-  return Math.sqrt(star.x * star.x + star.y * star.y + star.z * star.z);
+type Position = Pick<Star, 'x' | 'y' | 'z'>;
+
+function starDist(p: Position): number {
+  return Math.sqrt(p.x * p.x + p.y * p.y + p.z * p.z);
 }
 
-/** The distance `star` reads once scaled by `scale`, computed as starDist
- *  would read the scaled coordinates, so a later system anchored on it sees
- *  the same float the applied record carries. */
-function scaledDist(star: Star, scale: number): number {
-  const x = star.x * scale;
-  const y = star.y * scale;
-  const z = star.z * scale;
-  return Math.sqrt(x * x + y * y + z * z);
+/** The one place a record's position is scaled: the verdict pass reads a
+ *  snapped record's later distance from it, and the move writes it. */
+function scaledPosition(p: Position, scale: number): Position {
+  return { x: p.x * scale, y: p.y * scale, z: p.z * scale };
 }
 
 /** Move `star` radially to `distPc`, preserving its (mas-accurate)
@@ -190,10 +188,7 @@ function scaledDist(star: Star, scale: number): number {
  *  (R ∝ √L at fixed Teff). */
 function repositionRadially(star: Star, distPc: number): void {
   const dOld = starDist(star);
-  const scale = distPc / dOld;
-  star.x *= scale;
-  star.y *= scale;
-  star.z *= scale;
+  Object.assign(star, scaledPosition(star, distPc / dOld));
   const absmag = absoluteMagnitude(apparentMagnitude(star.absmag, dOld), distPc);
   star.physicalRadius *= Math.pow(10, (star.absmag - absmag) / 5);
   star.absmag = absmag;
@@ -376,7 +371,7 @@ export function systemCoherenceVerdicts(
         decided.push({ kind: 'at-anchor-distance', idx });
         continue;
       }
-      movedDist.set(idx, scaledDist(member, scale));
+      movedDist.set(idx, starDist(scaledPosition(member, scale)));
       decided.push({ kind: 'snapped', idx, fromPc: dOld, toPc: anchorDist });
     }
     processed.add(anchor.idx);
