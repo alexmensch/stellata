@@ -22,7 +22,7 @@ also usable by hand (see [Manual release](/RELEASING.md#manual-release-fallback)
   `node release-notes-check.ts <body-file>` fails unless
   `extractReleaseNotes()` finds the `## Release notes` section non-empty,
   so the guard and the deploy cannot disagree on what counts. Run by plain
-  `node` (built-in TypeScript support, Node 24 in CI), which is why it and
+  `node` (built-in TypeScript support, the `.nvmrc` Node in CI), which is why it and
   `release-plan-pure.ts` must import no package and no path that needs a
   bundler — the job checks out `scripts/release` alone and installs nothing.
   The test holds both to `node:` builtins and `./sibling.ts` imports.

@@ -666,7 +666,7 @@ On every push to `main`, `deploy.yml`:
 1. Compares `HEAD:package.json#version` against the version at the
    push's base commit (`github.event.before`, falling back to `HEAD~1`
    when that commit isn't in the clone). No change → exits silently.
-2. Checks out with LFS, sets up Node 24 + Python 3, runs `pnpm install --frozen-lockfile`
+2. Checks out with LFS, sets up Node and Python from `.nvmrc` / `.python-version`, runs `pnpm install --frozen-lockfile`
    and `pnpm run build` (binaries + catalog + binaries-runtime +
    clouds + local-group + dust-sync + client).
 3. Deploys to Cloudflare once, at HEAD, in three steps: `wrangler
