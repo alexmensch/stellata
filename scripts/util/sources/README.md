@@ -86,13 +86,12 @@ A declaration lives only in a module named `*-source.ts` or `*-tsv.ts`, and
 that module is imported only by code that reads (or, for an artifact, writes)
 the file through it. Import reachability then equals reading, which is what
 lets a step's data inputs be derived from its closure.
-`tests/source-declarations.test.ts` holds every TypeScript pipeline step to
-it — the `build:*` and `fetch:*` targets plus `sid:risk-set`, the step
-kinds in [Step kinds](../../pipeline/README.md#step-kinds), over the closure
-of every `tsx` entry a chained script runs; reports, audits and validators
-are not steps. A step-named script
-whose commands `scriptParts` cannot classify fails the test, unless it is on
-the test's named not-a-step list (the Vite builds, the seed wrapper). `declaredInputs(closure)` classifies each reached
+`tests/source-declarations.test.ts` holds every TypeScript step on the table
+to it, and the report and on-demand writers of the step table's
+`NON_STEP_WRITERS` (`closureReadingWriters`), over the closure of every
+`tsx` entry a chained script runs; a draft writer reads the files its command
+line names, and audits and validators are not steps. A writer whose commands
+`scriptParts` cannot classify fails the test. `declaredInputs(closure)` classifies each reached
 declaration by the calls in the closure's other modules: `read` (a source's
 `.read(`, an artifact read), `written` (an artifact's `serialize` /
 `encodeLine`), `both`, or `unused`. A step's data inputs are the `read` and

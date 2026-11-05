@@ -7,6 +7,7 @@ import { describe, expect, it } from 'vitest';
 import { declaredInputs, DECLARING_MODULE } from '../scripts/util/sources/declared-inputs';
 import { entryClosure, packageScripts } from '../scripts/util/import-closure';
 import { scriptParts } from '../scripts/util/import-closure-pure';
+import { closureReadingWriters } from '../scripts/pipeline/step-table/non-step-writers';
 import { STEPS } from '../scripts/pipeline/step-table/steps';
 import { stepEntries } from '../scripts/util/step-inputs';
 import { REPO_ROOT } from '../scripts/util/paths';
@@ -34,15 +35,10 @@ const isTs = (path: string): boolean => path.endsWith('.ts') && !path.endsWith('
 const DECLARATION_FACTORIES = ['scripts/util/mirror-to-public.ts'];
 
 const scripts = packageScripts();
-const MANUAL_TS_STEPS = ['sid:risk-set'];
-/** Targets named like steps that are not pipeline steps (Vite is not a step; the seed wrapper runs steps). */
-const NOT_STEPS = ['build:client', 'build:site', 'build:seed'];
-const STEP_NAMED = Object.keys(scripts)
-  .filter((name) => /^(build|fetch):/.test(name) || MANUAL_TS_STEPS.includes(name))
-  .filter((name) => !NOT_STEPS.includes(name));
+const WRITERS = closureReadingWriters();
 const RUNNER = 'scripts/pipeline/run.ts';
-/** Every step with TypeScript in it: a run.ts or all-`pnpm run` target is an aggregate of steps checked on their own, and an all-Python step records its reads at run time. */
-const TS_STEPS = [...new Set([...STEPS.steps.map((s) => s.name), ...STEP_NAMED])]
+/** Every step and non-step writer with TypeScript in it: an all-Python step records its reads at run time. */
+const TS_STEPS = [...STEPS.steps.map((s) => s.name), ...WRITERS]
   .filter((name) => stepEntries(name).some((entry) => entry !== RUNNER));
 
 function codeLinesOutsideSpellers(): { rel: string; at: string; code: string }[] {
@@ -61,11 +57,10 @@ function codeLinesOutsideSpellers(): { rel: string; at: string; code: string }[]
 }
 
 describe('source declarations', () => {
-  it('resolves every step-named script into steps it can check', () => {
-    const unresolved = STEP_NAMED.filter((name) => scriptParts(scripts, name).some((p) => p.kind === 'other'));
+  it('resolves every non-step writer into entries it can check', () => {
+    const unresolved = WRITERS.filter((name) => scriptParts(scripts, name).some((p) => p.kind === 'other'));
     expect(unresolved).toEqual([]);
-    expect(TS_STEPS).toEqual(expect.arrayContaining(['build:catalog', 'lineage:codes', 'build:local-group', 'build:clouds']));
-    expect(TS_STEPS).not.toContain('build:data');
+    expect(TS_STEPS).toEqual(expect.arrayContaining(['build:catalog', 'lineage:codes', 'build:local-group', 'build:clouds', 'sid:risk-set']));
   });
 
   it.each(TS_STEPS)('%s reads every source and artifact its import closure reaches', async (step) => {

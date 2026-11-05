@@ -205,10 +205,10 @@ sid-ledger-guard.test.ts Append-only CI guard for data/sid/ (/docs/sid.md#45-ci-
                          test job); runs for real in build-catalog's
                          full vitest and locally.
 source-declarations.test.ts
-                         Every TypeScript pipeline step's (build:*,
-                         fetch:*, sid:risk-set; every tsx
-                         entry of a chained script, and a step-named script
-                         it cannot classify fails) import closure reads
+                         Every TypeScript step's on the table, and every
+                         closure-reading NON_STEP_WRITERS entry's (every tsx
+                         entry of a chained script, and a writer it cannot
+                         classify fails), import closure reads
                          each declared source and artifact it reaches
                          (/scripts/util/sources/README.md#reached-means-read);
                          a data/ path literal sits only in a declaring or
@@ -247,9 +247,12 @@ site-dev-routing.test.ts The dev server's routing table held against the
                          gets the homepage, everything else 404s. Pairs
                          with src/worker.test.ts, which pins the same
                          table on the production side.
-step-coverage.test.ts    Every declareOutputs constant under scripts/ is a
-                         steps.ts entry's or a writer excluded by name
-                         (../scripts/pipeline/README.md#the-model).
+step-coverage.test.ts    Every declareOutputs constant under scripts/,
+                         imported from the *-outputs.ts module it must live
+                         in and be exported from, is a steps.ts entry's or a
+                         NON_STEP_WRITERS entry's; every build:/fetch:/
+                         refresh: script is on one of the two or runs the
+                         runner (../scripts/pipeline/README.md#the-model).
 step-outputs.test.ts     Imports every TS pipeline step's emitArtifacts
                          declaration (the *-outputs.ts modules), so one
                          that runs its step on import fails here; pins

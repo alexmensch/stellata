@@ -21,8 +21,8 @@ reference.
   paper store's copy (`vaidman-paper-source.ts`, `data/papers/pdf/`) unless
   `--pdf` names another.
   `build-vaidman-table-pure.ts` (+ test) parses the appendix and joins each
-  name to its hand-resolved source_id. A hand-run writer, so it is on the
-  step table's not-a-step list (`tests/step-coverage.test.ts`). An entry's
+  name to its hand-resolved source_id. A hand-run writer, so it is an `on-demand`
+  entry in the step table's `NON_STEP_WRITERS`. An entry's
   name never ends in `-tsv.ts` or `-source.ts`: the input-set walk imports
   every module so named, and an entry runs its step on import.
 - `vaidman-tsv.ts` — the reference table's codec, which the builder writes

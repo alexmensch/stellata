@@ -159,6 +159,13 @@ the others once, and that rebuild appends nothing.
 - `manual-step-outputs.ts` — `MANUAL_STEPS`, every pull and bake with the
   files it writes, as an outputs module. Which modules may spell a `data/`
   path is `/tests/source-declarations.test.ts`'s rule.
+- `non-step-writers.ts` — `NON_STEP_WRITERS`, the one list of the
+  `package.json` scripts named or shaped like steps that are not on the
+  table, each with its kind (`report`, `draft`, `on-demand`, `vite`, `seed`)
+  and a writer's `declareOutputs` constants; `closureReadingWriters` are the
+  report and on-demand ones, whose closures `/tests/source-declarations.test.ts`
+  holds to the source rules like a step's. `/tests/step-coverage.test.ts`
+  holds every declaration and step-named script to the table or this list.
 - `steps.ts` (+ test) — the table `run.ts` and `record.ts` load, its manual
   steps `MANUAL_STEPS` and its six mirrors `MIRROR_STEPS` (one `mirrorStep(layer)`
   each: `scripts/<layer>/sync-<layer>.ts` over `<layer>-mirror-outputs.ts`'s
