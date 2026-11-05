@@ -121,8 +121,9 @@ scripts/binaries/
                                   after its pair-count snapshot check
                                   (#runtime-side-artifact).
   runtime-binaries-pure.ts        The writer itself: pairs joined from the
-    (+ test)                      rows (a system with two rows in one role
-                                  throws), parents by component-letter prefix,
+    (+ test)                      rows (a system with a role missing or
+                                  doubled, or no WDS id, throws), parents by
+                                  component-letter prefix,
                                   outer-before-inner walk, and planRecords —
                                   both ends resolved, unaddressable pairs
                                   dropped and counted, flags set — whose

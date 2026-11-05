@@ -59,9 +59,9 @@ export type PairRow = Pick<MultiplesRecord,
   | 'pDays' | 'tJd' | 'e' | 'aAU' | 'iRad' | 'omegaRad' | 'OmegaRad' | 'q'
   | 'sepArcsec' | 'paDeg' | 'sepPaEpochJd'>;
 
-/** Joins each system's primary and secondary rows; a system missing either,
- *  or whose system_id has no WDS id, is skipped, as are standalone rows. A
- *  system with two rows in one role throws. */
+/** Joins each system's primary and secondary rows; standalone rows are no
+ *  pair's. A system with a role missing or doubled, or whose system_id names
+ *  no WDS id, throws. */
 export function pairsFromRows(rows: readonly PairRow[]): MultiplesPair[] {
   const primaries = new Map<string, PairRow>();
   const secondaries = new Map<string, PairRow>();
@@ -74,11 +74,14 @@ export function pairsFromRows(rows: readonly PairRow[]): MultiplesPair[] {
     byRole.set(row.systemId, row);
   }
   const pairs: MultiplesPair[] = [];
+  for (const systemId of secondaries.keys()) {
+    if (!primaries.has(systemId)) throw new Error(`multiples.tsv: system ${systemId} has no primary row`);
+  }
   for (const [systemId, p] of primaries) {
     const s = secondaries.get(systemId);
-    if (s === undefined) continue;
+    if (s === undefined) throw new Error(`multiples.tsv: system ${systemId} has no secondary row`);
     const wdsId = wdsRootOf(systemId);
-    if (wdsId === null) continue;
+    if (wdsId === null) throw new Error(`multiples.tsv: system ${systemId} names no WDS id`);
     const primaryComp = p.comp.trim();
     pairs.push({
       systemId,

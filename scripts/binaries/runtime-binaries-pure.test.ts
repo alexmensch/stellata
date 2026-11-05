@@ -66,11 +66,22 @@ describe('pairsFromRows', () => {
     expect(() => pairsFromRows([row, { ...row }])).toThrow(/two primary rows/);
   });
 
-  it('skips a system missing a side, and standalone rows', () => {
-    expect(pairsFromRows([
-      multiplesRow({ systemId: '00000+0000-AB', comp: 'A', orbitRole: 'primary' }),
-      multiplesRow({ systemId: '-_C', comp: 'C', orbitRole: 'standalone' }),
-    ])).toEqual([]);
+  it('skips standalone rows', () => {
+    expect(pairsFromRows([multiplesRow({ systemId: '-_C', comp: 'C', orbitRole: 'standalone' })])).toEqual([]);
+  });
+
+  it('throws on a system missing a side', () => {
+    expect(() => pairsFromRows([multiplesRow({ systemId: '00000+0000-AB', comp: 'A', orbitRole: 'primary' })]))
+      .toThrow(/no secondary row/);
+    expect(() => pairsFromRows([multiplesRow({ systemId: '00000+0000-AB', comp: 'B', orbitRole: 'secondary' })]))
+      .toThrow(/no primary row/);
+  });
+
+  it('throws on a system_id with no WDS id', () => {
+    expect(() => pairsFromRows([
+      multiplesRow({ systemId: 'NODASH', comp: 'A', orbitRole: 'primary' }),
+      multiplesRow({ systemId: 'NODASH', comp: 'B', orbitRole: 'secondary' }),
+    ])).toThrow(/no WDS id/);
   });
 });
 
