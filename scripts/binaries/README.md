@@ -82,7 +82,7 @@ scripts/binaries/
                                   side. Its test round-trips the committed
                                   file byte for byte, which is what holds it
                                   to the Python writer until the switch
-                                  (§ Porting to TypeScript).
+                                  (README.md#porting-to-typescript--one-stack-one-switch).
                                   Its rowKey cites a row by
                                   (system_id, comp) for lineage
                                   (../util/sources/README.md#sourcerowref).
