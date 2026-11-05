@@ -242,7 +242,9 @@ same thing — single-use helpers stay with their consumer.
   copies it wholesale, and `tests/bundle-content.test.ts` fails on any
   `*.staged` file under `public/` or `dist/`. `outputs` is the step's
   `declareOutputs({key: path, …}, families)` constant, the one place each
-  path is written, a relative one read as repo-relative; an emission supplies only contents (bytes, or `{copyFrom: path}`), keyed the same, so a
+  path is written, a relative one read as repo-relative
+  (`isDeclaredOutputs` holds a value it returned, never a look-alike, which
+  is how `/tests/step-coverage.test.ts` finds them); an emission supplies only contents (bytes, or `{copyFrom: path}`), keyed the same, so a
   missing or extra key is a compile error. Family members (a directory plus a
   name pattern — the catalogue's transport chunks — or the exact names a
   member may take, as each lineage stage's baseline does, so stages can share

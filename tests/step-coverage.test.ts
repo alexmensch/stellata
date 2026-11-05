@@ -6,6 +6,7 @@ import { describe, expect, it } from 'vitest';
 
 import { NON_STEP_WRITERS, outputsOwners } from '../scripts/pipeline/step-table/non-step-writers';
 import { STEPS } from '../scripts/pipeline/step-table/steps';
+import { isDeclaredOutputs } from '../scripts/util/emit-artifacts';
 import { packageScripts } from '../scripts/util/import-closure';
 import { runnerTargets, scriptParts } from '../scripts/util/import-closure-pure';
 import { REPO_ROOT } from '../scripts/util/paths';
@@ -16,9 +17,6 @@ type Ref = `${string}#${string}`;
 const DEFINITION = 'scripts/util/emit-artifacts.ts';
 const OUTPUTS_MODULE = /-outputs\.ts$/;
 const CALL = /\bdeclareOutputs\(/g;
-
-const isDeclaredOutputs = (value: unknown): boolean => typeof value === 'object' && value !== null
-  && 'files' in value && 'families' in value && Array.isArray(value.families);
 
 const calling = [...walkFiles(`${REPO_ROOT}/scripts`, { include: isProductionTs })]
   .map((file) => ({ module: relative(REPO_ROOT, file), calls: readFileSync(file, 'utf8').match(CALL)?.length ?? 0 }))

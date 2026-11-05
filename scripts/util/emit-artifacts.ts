@@ -26,17 +26,26 @@ export interface DeclaredOutputs<K extends string = string> {
   readonly families: readonly OutputFamily[];
 }
 
+const DECLARED = new WeakSet<object>();
+
 /** A relative path is repo-relative. */
 export function declareOutputs<K extends string>(
   files: Record<K, string>,
   families: readonly OutputFamily[] = [],
 ): DeclaredOutputs<K> {
-  return {
+  const declared: DeclaredOutputs<K> = {
     files: Object.fromEntries(
       Object.entries<string>(files).map(([k, p]) => [k, resolve(REPO_ROOT, p)]),
     ) as Record<K, string>,
     families: families.map((f) => ({ ...f, dir: resolve(REPO_ROOT, f.dir) })),
   };
+  DECLARED.add(declared);
+  return declared;
+}
+
+/** True only for a value `declareOutputs` returned. */
+export function isDeclaredOutputs(value: unknown): value is DeclaredOutputs {
+  return typeof value === 'object' && value !== null && DECLARED.has(value);
 }
 
 /** `refresh` replaces the check with a rewrite of its own baseline, which

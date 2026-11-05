@@ -6,7 +6,7 @@ import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
-  EmissionRefused, declareOutputs, emitArtifacts, emitEach, runStep, type Check,
+  EmissionRefused, declareOutputs, emitArtifacts, emitEach, isDeclaredOutputs, runStep, type Check,
 } from './emit-artifacts';
 import { REPO_ROOT } from './paths';
 import { STAGING_SUFFIX } from './staged-write';
@@ -19,6 +19,15 @@ describe('declareOutputs', () => {
     cwd.mockRestore();
     expect(declared.files).toEqual({ a: join(REPO_ROOT, 'build/a.txt'), b: '/abs/b.txt' });
     expect(declared.families[0].dir).toBe(join(REPO_ROOT, 'build/f'));
+  });
+});
+
+describe('isDeclaredOutputs', () => {
+  it('holds a declareOutputs value, not a copy of its shape', () => {
+    const declared = declareOutputs({ a: 'build/a.txt' });
+    expect(isDeclaredOutputs(declared)).toBe(true);
+    expect(isDeclaredOutputs({ ...declared })).toBe(false);
+    expect(isDeclaredOutputs(null)).toBe(false);
   });
 });
 
