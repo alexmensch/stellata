@@ -1,58 +1,77 @@
-// Built-artifact coherence guard. The binaries.bin-dependent suites
-// (multi-star regression, parts of Tier A) self-skip when the artifact
-// is absent — so "npm test green" after rebuilding the catalog but not
-// binaries.bin silently under-tests, and the count drift only surfaces
-// in CI. This test FAILS in that state instead: a local catalog build
-// must be accompanied by a binaries.bin built from the current inputs.
-//
-// Self-skips only when nothing is built (fresh clone, unit-only run) or
-// when data/binaries/multiples.tsv is an LFS pointer stub (bare CI test
-// job) — mirroring sid-ledger-guard's skip contract.
+// Every stamp under build/stamps/ and data/stamps/ is a step's, and matches the disk the way the runner judges it.
 
-import { existsSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { existsSync, readdirSync } from 'node:fs';
+import { basename, dirname } from 'node:path';
 
 import { describe, it, expect } from 'vitest';
 
-import { REPO_ROOT, publicFile } from '../scripts/util/paths';
-import { isReadable } from '../scripts/util/sources/source';
-import { changedSince, fileHashes, inputHashes, readStamp } from '../scripts/util/build-stamp';
-import { stampPath } from '../scripts/util/stamp-path-pure';
-import { MULTIPLES_TSV } from '../scripts/binaries/multiples-tsv';
+import { buildFreshness, manualFreshness, readManualRecord } from '../scripts/pipeline/freshness';
+import { pipelineTree } from '../scripts/pipeline/pipeline-tree';
+import { loadTable } from '../scripts/pipeline/step-table/load-table';
+import { isBuild, type ManualStep, type StepEntry } from '../scripts/pipeline/step-table/step-table-pure';
 import { STEPS } from '../scripts/pipeline/step-table/steps';
-import { CATALOG_MANIFEST_FILENAME } from '../src/catalog-format/record/catalog-pure';
+import { isLfsPointerFile, REPO_ROOT } from '../scripts/util/paths';
+import { entryInputPaths } from '../scripts/util/step-inputs';
 
-const RUNTIME_STEP = 'build:binaries-runtime';
-const runtime = STEPS.steps.find((s) => s.name === RUNTIME_STEP);
-if (runtime?.kind !== 'build' || runtime.language !== 'python' || runtime.outputs.length !== 1) {
-  throw new Error(`${RUNTIME_STEP} is not a one-output Python build step in steps.ts`);
+const loaded = await loadTable(STEPS, { root: REPO_ROOT, deriveInputs: (entry) => entryInputPaths([entry]) });
+if (loaded.kind !== 'loaded') throw new Error(loaded.problems.join('\n'));
+const tree = pipelineTree(REPO_ROOT);
+const resolved = [...loaded.steps.values()];
+const builds = resolved.flatMap((r) => (isBuild(r.step) ? [{ step: r.step, resolved: r }] : []));
+const manuals = resolved.flatMap((r) => (isBuild(r.step) ? [] : [{ step: r.step, resolved: r }]));
+
+const HASHING_TIMEOUT_MS = 120_000;
+
+function folderOf(stamps: readonly string[]): string {
+  const folders = [...new Set(stamps.map((s) => dirname(s)))];
+  if (folders.length !== 1) throw new Error(`stamps span ${folders.length} folders: ${folders.join(', ')}`);
+  return folders[0];
 }
-const BINARIES_BIN = resolve(REPO_ROOT, runtime.outputs[0]);
-const BINARIES_BIN_STAMP = stampPath(RUNTIME_STEP);
-const REBUILD = `pnpm run ${RUNTIME_STEP}`;
 
-const catalogBuilt = existsSync(publicFile(CATALOG_MANIFEST_FILENAME));
-const skip = !catalogBuilt || !isReadable(MULTIPLES_TSV);
+const jsonIn = (folder: string): string[] => (existsSync(folder)
+  ? readdirSync(folder).filter((name) => name.endsWith('.json')).sort()
+  : []);
 
-describe.skipIf(skip)('built-artifact coherence (public/ + build/)', () => {
-  it('binaries.bin exists whenever the catalog has been built', () => {
-    expect(
-      existsSync(BINARIES_BIN),
-      'public/catalog-manifest.json exists but public/binaries.bin is missing — '
-        + 'the binaries-dependent suites would silently self-skip. '
-        + `Run: ${REBUILD}`,
-    ).toBe(true);
+const BUILD_STAMPS = builds.map(({ step }) => tree.buildStamp(step.name));
+const MANUAL_STAMPS = manuals.map(({ step }) => tree.manualStamp(step.name));
+const BUILD_STAMP_DIR = folderOf(BUILD_STAMPS);
+const MANUAL_STAMP_DIR = folderOf(MANUAL_STAMPS);
+
+const rerun = (step: StepEntry): string => `pnpm run ${step.name}`;
+
+function onLfsStub(step: ManualStep): boolean {
+  const read = readManualRecord(step, tree.manualStamp(step.name));
+  if (read.kind !== 'read') return false;
+  const { inputs, outputs } = read.record.stamp;
+  return [...Object.keys(inputs), ...Object.keys(outputs)]
+    .some((p) => existsSync(tree.abs(p)) && isLfsPointerFile(tree.abs(p)));
+}
+
+describe('stamp folders hold only steps\' stamps', () => {
+  it('every data/stamps/ record is a manual step\'s, and every manual step has one', () => {
+    expect(jsonIn(MANUAL_STAMP_DIR)).toEqual(MANUAL_STAMPS.map((s) => basename(s)).sort());
   });
 
-  it.skipIf(!existsSync(BINARIES_BIN))(
-    'binaries.bin was built from every input and output its stamp records',
-    () => {
-      const recorded = readStamp(BINARIES_BIN_STAMP);
-      expect(recorded, `${BINARIES_BIN_STAMP} is missing — rebuild with: ${REBUILD}`).not.toBeNull();
-      expect(
-        [...changedSince(recorded?.inputs ?? {}, inputHashes), ...changedSince(recorded?.outputs ?? {}, fileHashes)],
-        `public/binaries.bin is stale against these files — rebuild with: ${REBUILD}`,
-      ).toEqual([]);
-    },
-  );
+  it('every build/stamps/ file is a build step\'s stamp — delete any other', () => {
+    const known = new Set(BUILD_STAMPS.map((s) => basename(s)));
+    expect(jsonIn(BUILD_STAMP_DIR).filter((name) => !known.has(name))).toEqual([]);
+  });
+});
+
+describe.skipIf(jsonIn(BUILD_STAMP_DIR).length === 0)('once any build step has run, every build stamp is fresh', () => {
+  for (const { step, resolved: r } of builds) {
+    it(step.name, () => {
+      expect(buildFreshness(step, r, tree).freshness, `${step.name} is stale against these files — rebuild with: ${rerun(step)}`)
+        .toEqual({ kind: 'fresh' });
+    }, HASHING_TIMEOUT_MS);
+  }
+});
+
+describe('every manual step\'s committed record matches the disk', () => {
+  for (const { step, resolved: r } of manuals) {
+    it.skipIf(onLfsStub(step))(step.name, () => {
+      expect(manualFreshness(step, r.outputs, tree, null), `${step.name}'s record is stale against these files — re-run: ${rerun(step)}`)
+        .toEqual({ kind: 'fresh' });
+    }, HASHING_TIMEOUT_MS);
+  }
 });

@@ -10,7 +10,6 @@
 # Format: one repo-relative path per line; blank lines and lines
 # starting with `#` are comments.
 
-tests/artifact-freshness.test.ts
 tests/astronomy-constants-sync.test.ts
 tests/cadence-layer-declarations.test.ts
 tests/sid-ledger-guard.test.ts
