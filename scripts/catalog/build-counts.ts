@@ -5,7 +5,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 import type { DistVia } from '../../src/catalog-format/record/catalog-pure';
-import { flattenStages } from '../util/count-stages-pure';
+import { flattenStages, stageOfCounts } from '../util/count-stages-pure';
 import { REPO_ROOT } from '../util/paths';
 import type { RvErrorBandPartition } from './distance/radial-velocity/radial-velocity';
 import type { RecuratedBrightness } from './companions/companion-promotion';
@@ -891,10 +891,11 @@ export const CATALOG_COUNT_STAGE: Readonly<Record<keyof BuildCounts, CatalogCoun
 export type CountDiff =
   | { key: string; status: 'match'; value: number }
   | { key: string; status: 'mismatch'; expected: number; actual: number }
+  | { key: string; status: 'moved'; value: number; from: string; to: string }
   | { key: string; status: 'absent-from-snapshot'; actual: number }
   | { key: string; status: 'absent-from-build'; expected: number };
 
-/** A staged snapshot's stage level is dropped first (`flattenStages`).
+/** Staged snapshots: ../util/README.md (count-stages-pure.ts entry).
  *  Partition-valued entries (a `Record<tier, number>`) expand to one
  *  `parent.bucket` row each, so a single drifting bucket names itself.
  *  Walks the union of both sides' rows: a count the build stopped
@@ -910,31 +911,37 @@ export function compareBuildCounts<T extends object>(
 ): CountDiff[] {
   const e = flattenCounts(expected);
   const a = flattenCounts(actual);
+  const eStage = stageOfCounts(expected);
+  const aStage = stageOfCounts(actual);
   const diff: CountDiff[] = [];
-  for (const [key, av] of a) {
-    const ev = e.get(key);
+  for (const [key, { n: av, count }] of a) {
+    const ev = e.get(key)?.n;
+    const from = eStage?.get(count);
+    const to = aStage?.get(count);
     if (ev === undefined) diff.push({ key, status: 'absent-from-snapshot', actual: av });
-    else if (ev === av) diff.push({ key, status: 'match', value: av });
-    else diff.push({ key, status: 'mismatch', expected: ev, actual: av });
+    else if (ev !== av) diff.push({ key, status: 'mismatch', expected: ev, actual: av });
+    else if (from !== undefined && to !== undefined && from !== to) diff.push({ key, status: 'moved', value: av, from, to });
+    else diff.push({ key, status: 'match', value: av });
   }
-  for (const [key, ev] of e) {
+  for (const [key, { n: ev }] of e) {
     if (!a.has(key)) diff.push({ key, status: 'absent-from-build', expected: ev });
   }
   return diff;
 }
 
-function flattenCounts(counts: object): Map<string, number> {
-  const rows = new Map<string, number>();
-  for (const [key, value] of Object.entries(flattenStages(counts) as Record<string, unknown>)) {
+/** Each row with the count it belongs to: a partition's buckets share their parent's. */
+function flattenCounts(counts: object): Map<string, { n: number; count: string }> {
+  const rows = new Map<string, { n: number; count: string }>();
+  for (const [count, value] of Object.entries(flattenStages(counts) as Record<string, unknown>)) {
     if (typeof value === 'number') {
-      rows.set(key, value);
+      rows.set(count, { n: value, count });
       continue;
     }
     if (value === null || typeof value !== 'object') {
-      throw new Error(`count ${key} is ${JSON.stringify(value)}, not a number or a partition`);
+      throw new Error(`count ${count} is ${JSON.stringify(value)}, not a number or a partition`);
     }
     for (const [bucket, n] of Object.entries(value as Record<string, number>)) {
-      rows.set(`${key}.${bucket}`, n);
+      rows.set(`${count}.${bucket}`, { n, count });
     }
   }
   return rows;
@@ -967,6 +974,9 @@ export function formatCountDiff(diff: CountDiff[]): string {
         break;
       case 'absent-from-build':
         lines.push(`${label} expected ${d.expected}, absent from build`);
+        break;
+      case 'moved':
+        lines.push(`${label} ${d.value} moved from stage ${d.from} to ${d.to}`);
         break;
       case 'mismatch': {
         const delta = d.actual - d.expected;

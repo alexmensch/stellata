@@ -34,6 +34,12 @@ export function isStaged(json: unknown): json is StagedCounts {
     && stages !== null && typeof stages === 'object' && !Array.isArray(stages);
 }
 
+/** Each count's stage in a staged snapshot; null for any other JSON. */
+export function stageOfCounts(json: unknown): ReadonlyMap<string, string> | null {
+  if (!isStaged(json)) return null;
+  return new Map(Object.entries(json.stages).flatMap(([stage, counts]) => Object.keys(counts).map((key) => [key, stage])));
+}
+
 /** A staged snapshot with its stage level dropped; any other JSON as it is. A key two stages share throws. */
 export function flattenStages(json: unknown): unknown {
   if (!isStaged(json)) return json;

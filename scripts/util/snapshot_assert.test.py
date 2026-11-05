@@ -115,6 +115,17 @@ class AssertOrUpdateCountsTests(unittest.TestCase):
             ok = assert_or_update_counts({"read": {"x": 1}, "filter": {"y": 2}}, p, **KW)
         self.assertTrue(ok)
 
+    def test_a_count_moved_to_another_stage_is_drift(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            p = Path(td) / "snapshot.json"
+            p.write_text('{"stages": {"read": {"x": 1}, "filter": {"y": 2}}}\n')
+            out = io.StringIO()
+            with contextlib.redirect_stdout(out):
+                ok = assert_or_update_counts({"read": {"x": 1, "y": 2}}, p, **KW)
+        self.assertFalse(ok)
+        self.assertIn("1 of 2 counts differ", out.getvalue())
+        self.assertIn("moved from stage filter to read", out.getvalue())
+
     def test_compares_a_staged_snapshot_by_its_counts(self) -> None:
         with tempfile.TemporaryDirectory() as td:
             p = Path(td) / "snapshot.json"

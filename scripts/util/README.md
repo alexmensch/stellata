@@ -238,7 +238,9 @@ same thing — single-use helpers stay with their consumer.
   is addressed by its name alone (`build-catalog/recordCount`), never its
   stage: the comparator (`compareCountSnapshot`), `committedBuildCounts`,
   the doc figures' snapshot load and `../site/site-metrics.ts` all flatten
-  first.
+  first. The stage still counts as drift: when both sides are staged, a
+  count filed under another stage than the snapshot's is `moved`, in this
+  comparator and in `snapshot_assert.py`'s.
 - `staged-write.ts` — the one stage-then-rename: `writeStaged` writes
   `<path>.staged` beside its target (same filesystem, so the rename is
   atomic) — the bytes given, or a copy of `{copyFrom}`'s file, which never
