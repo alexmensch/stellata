@@ -173,6 +173,11 @@ scripts/catalog/
                                   `nameTable` hands
                                   trace the same table for its folded one
                                   (lineage/README.md#trace).
+  catalog-columns.ts (+ test)     readCatalogColumns: float32 record columns
+                                  of a built catalogue, each decoded whole
+                                  (decodeRecordColumn) — the reader for a
+                                  bake that measures the catalogue
+                                  (../milkyway-calibration/).
   build-counts.ts (+ test)        Per-strategy / per-tier count snapshot
                                   comparator, pinned by
                                   build-catalog-expected.json, which
