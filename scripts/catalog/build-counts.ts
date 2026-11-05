@@ -1,7 +1,11 @@
-// Pure helpers for the build-catalog count assertion — diff a
-// BuildCounts record against the committed snapshot. See
+// The build-catalog count snapshot: its file, its reader, and the diff of a
+// BuildCounts record against it. See
 // /scripts/catalog/validate/README.md#validation-harness-1.
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+
 import type { DistVia } from '../../src/catalog-format/record/catalog-pure';
+import { REPO_ROOT } from '../util/paths';
 import type { RvErrorBandPartition } from './distance/radial-velocity/radial-velocity';
 import type { RecuratedBrightness } from './companions/companion-promotion';
 
@@ -9,6 +13,11 @@ import type { RecuratedBrightness } from './companions/companion-promotion';
  *  build and every consumer that reads the shipped figures back resolve one
  *  path. The generic comparator below is reused with other snapshots. */
 export const BUILD_COUNTS_EXPECTED_FILE = 'scripts/catalog/build-catalog-expected.json';
+
+/** The committed snapshot's figures: what the catalogue build last pinned. */
+export function committedBuildCounts(): BuildCounts {
+  return JSON.parse(readFileSync(resolve(REPO_ROOT, BUILD_COUNTS_EXPECTED_FILE), 'utf8')) as BuildCounts;
+}
 
 export interface BuildCounts {
   /** Records written to catalog.bin after filtering and sort. */
