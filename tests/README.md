@@ -253,8 +253,8 @@ step-coverage.test.ts    Every declareOutputs constant under scripts/,
                          NON_STEP_WRITERS entry's; every build:/fetch:/
                          refresh: script is on one of the two or runs the
                          runner (../scripts/pipeline/README.md#the-model).
-step-outputs.test.ts     Imports every TS pipeline step's emitArtifacts
-                         declaration (the *-outputs.ts modules), so one
+step-outputs.test.ts     Imports every TS emitArtifacts declaration the
+                         step table and NON_STEP_WRITERS name, so one
                          that runs its step on import fails here; pins
                          every declared path inside the repo and one
                          producer per path; no file

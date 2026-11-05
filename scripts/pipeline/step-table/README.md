@@ -166,6 +166,9 @@ the others once, and that rebuild appends nothing.
   report and on-demand ones, whose closures `/tests/source-declarations.test.ts`
   holds to the source rules like a step's. `/tests/step-coverage.test.ts`
   holds every declaration and step-named script to the table or this list.
+  `outputsOwners(table)` is every TypeScript outputs declaration the two
+  name, with its owner, which both that test and
+  `/tests/step-outputs.test.ts` read.
 - `steps.ts` (+ test) — the table `run.ts` and `record.ts` load, its manual
   steps `MANUAL_STEPS` and its six mirrors `MIRROR_STEPS` (one `mirrorStep(layer)`
   each: `scripts/<layer>/sync-<layer>.ts` over `<layer>-mirror-outputs.ts`'s

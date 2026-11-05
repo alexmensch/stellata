@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { relative, resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
-import { NON_STEP_WRITERS } from '../scripts/pipeline/step-table/non-step-writers';
+import { NON_STEP_WRITERS, outputsOwners } from '../scripts/pipeline/step-table/non-step-writers';
 import { STEPS } from '../scripts/pipeline/step-table/steps';
 import { packageScripts } from '../scripts/util/import-closure';
 import { scriptParts } from '../scripts/util/import-closure-pure';
@@ -30,12 +30,7 @@ async function exported(module: string): Promise<Ref[]> {
   return Object.entries(exports).flatMap(([name, value]) => (isDeclaredOutputs(value) ? [`${module}#${name}` as Ref] : []));
 }
 
-const tableRefs = new Set<Ref>(STEPS.steps.flatMap((s) => (
-  s.language === 'ts' ? [`${s.outputs.module}#${s.outputs.name}` as Ref] : []
-)));
-const writerRefs = new Set<Ref>(Object.values(NON_STEP_WRITERS).flatMap((w) => (
-  'outputs' in w ? w.outputs.map(({ module, name }) => `${module}#${name}` as Ref) : []
-)));
+const listed = outputsOwners(STEPS).map(([, { module, name }]) => `${module}#${name}` as Ref);
 
 describe('declareOutputs coverage', () => {
   it('calls declareOutputs only in an outputs module, and exports every call', async () => {
@@ -49,9 +44,7 @@ describe('declareOutputs coverage', () => {
 
   it('places every constant on the table or with a non-step writer, and names only constants that exist, once', async () => {
     const found = new Set((await Promise.all(calling.map(({ module }) => exported(module)))).flat());
-    expect(found.size).toBeGreaterThan(tableRefs.size);
-    expect([...found].filter((ref) => !tableRefs.has(ref) && !writerRefs.has(ref))).toEqual([]);
-    const listed = [...tableRefs, ...writerRefs];
+    expect([...found].filter((ref) => !listed.includes(ref))).toEqual([]);
     expect(listed.filter((ref) => !found.has(ref))).toEqual([]);
     expect(listed.filter((ref, i) => listed.indexOf(ref) !== i)).toEqual([]);
   });
