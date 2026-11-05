@@ -102,9 +102,11 @@ scripts/catalog/classic-ids/
                                   Bayer union and ../spine/primaries-tables.ts
                                   — so no reader can miss a correction.
   designation-constellation-pure.ts
-                                  IV/27A's `cst` keyed by HD/HIP — the
+    (+ test)                      IV/27A's `cst` keyed by HD/HIP — the
                                   constellation a Bayer / Flamsteed
-                                  designation is NAMED for. Pure.
+                                  designation is NAMED for — and
+                                  `setDesignationCon`, every cascade tier's
+                                  one writer of a record's value. Pure.
   apply-designation-constellation.ts
                                   The record build's one remaining classic-ID
                                   pass: loads IV/27A's cross-index and applies
@@ -278,6 +280,11 @@ derived from the record's position. The cascade:
 IAU WGSN designation -> IV/27A `cst` by HD -> by HIP
   -> GCVS trailing abbreviation -> positional conIndex
 ```
+
+Every tier writes through `setDesignationCon`, which sets `desigConIndex` and
+`desigConSource` together: the tier that wrote it (`wgsn-bayer`, `wgsn-gould`,
+`iv27a`, `gcvs`, or `anchor` for a companion that took its system anchor's),
+and for an authority tier the IV/27A value it overwrote with a different one.
 
 The authority tops it because it states which constellation its OWN
 designation is named for; this folder's route runs beneath it and is what

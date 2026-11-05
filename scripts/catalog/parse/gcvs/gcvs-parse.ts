@@ -12,6 +12,7 @@ import {
   splitPipeDelimited,
 } from '../../record/record-build-pure';
 import { CON_INDEX } from '../constellations/constellations';
+import { setDesignationCon } from '../../classic-ids/designation-constellation-pure';
 import type { Star } from '../stars-parse';
 
 export interface VarStarData {
@@ -209,7 +210,7 @@ export function applyVariability(
     const desigCon = gcvsDesignationConIndex(gcvsName);
     if (desigCon !== NO_CONSTELLATION_INDEX
         && s.desigConIndex === NO_CONSTELLATION_INDEX) {
-      s.desigConIndex = desigCon;
+      setDesignationCon(s, desigCon, { via: 'gcvs' });
       desigConSupplied++;
     }
     const data = gcvsData.get(gcvsName);

@@ -59,3 +59,38 @@ export function resolveDesignationConIndex(
   const byHip = hip === null ? undefined : index.byHip.get(hip);
   return byHip ?? NO_CONSTELLATION_INDEX;
 }
+
+/** Which tier of the cascade wrote a record's `desigConIndex`. The authority's
+ *  tiers name the cascade value they overwrote with a different one. */
+export type DesignationConSource =
+  | { via: 'none' }
+  | { via: 'iv27a' | 'gcvs' | 'anchor' }
+  | { via: 'wgsn-bayer' | 'wgsn-gould'; displaced: number | null };
+
+export const NO_DESIGNATION_CON: DesignationConSource = { via: 'none' };
+
+export interface DesignationConTarget {
+  desigConIndex: number;
+  desigConSource: DesignationConSource;
+}
+
+/** The one writer of a record's designation constellation, so the index and
+ *  the tier that wrote it never disagree. */
+export function setDesignationCon(
+  star: DesignationConTarget,
+  index: number,
+  source: Exclude<DesignationConSource, { via: 'none' }>,
+): void {
+  if (index === NO_CONSTELLATION_INDEX) {
+    throw new Error(`setDesignationCon: ${source.via} wrote no constellation`);
+  }
+  star.desigConIndex = index;
+  star.desigConSource = source;
+}
+
+/** A companion's designation constellation, taken from its system anchor. */
+export function inheritedDesignationCon(anchor: DesignationConTarget | null): DesignationConTarget {
+  return anchor === null || anchor.desigConIndex === NO_CONSTELLATION_INDEX
+    ? { desigConIndex: NO_CONSTELLATION_INDEX, desigConSource: NO_DESIGNATION_CON }
+    : { desigConIndex: anchor.desigConIndex, desigConSource: { via: 'anchor' } };
+}

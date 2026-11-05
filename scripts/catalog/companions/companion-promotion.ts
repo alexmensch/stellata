@@ -40,6 +40,7 @@ import { ARCSEC_TO_RAD } from '../../../src/astro-core/astronomy-constants';
 import { equatorialTangentBasisAt } from '../../../src/astro-core/equatorial-basis';
 import type { ConstellationAssignment } from '../parse/constellations/constellations';
 import type { Star } from '../parse/stars-parse';
+import { inheritedDesignationCon, setDesignationCon } from '../classic-ids/designation-constellation-pure';
 import type { GaiaAstrometryCatalogRow } from '../distance/direction-cascade';
 import { isCoherenceAnchorGrade } from '../multiplicity/anchor-grade-pure';
 import {
@@ -1496,7 +1497,7 @@ function inheritAnchorDesignationCon(
       || anchor.desigConIndex === NO_CONSTELLATION_INDEX) {
     return false;
   }
-  member.desigConIndex = anchor.desigConIndex;
+  setDesignationCon(member, anchor.desigConIndex, { via: 'anchor' });
   return true;
 }
 
@@ -1705,7 +1706,7 @@ function promoteRow(
   if (usesSynth) flags |= FLAG_BINARY_COMPANION_SYNTHETIC;
 
   const conIndex = state.conAssignment.indexAt(position.x, position.y, position.z);
-  const desigConIndex = inheritAnchor?.desigConIndex ?? NO_CONSTELLATION_INDEX;
+  const { desigConIndex, desigConSource } = inheritedDesignationCon(inheritAnchor ?? null);
 
   state.newStars.push({
     x: position.x, y: position.y, z: position.z,
@@ -1716,6 +1717,7 @@ function promoteRow(
     physicalRadius: physicalRadius(absmag, spectral.info),
     conIndex,
     desigConIndex,
+    desigConSource,
     flags,
     // Every display name is composed post-sort from the structured
     // designation set, so a minted record ships none of its own.

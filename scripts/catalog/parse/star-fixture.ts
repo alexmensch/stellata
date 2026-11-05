@@ -2,6 +2,7 @@
 
 import { NO_CONSTELLATION_INDEX } from '../../../src/catalog-format/record/catalog-pure';
 import type { Star } from './stars-parse';
+import { NO_DESIGNATION_CON } from '../classic-ids/designation-constellation-pure';
 
 export function makeStar(overrides: Partial<Star> = {}): Star {
   return {
@@ -18,6 +19,7 @@ export function makeStar(overrides: Partial<Star> = {}): Star {
     physicalRadius: 1,
     conIndex: NO_CONSTELLATION_INDEX,
     desigConIndex: NO_CONSTELLATION_INDEX,
+    desigConSource: NO_DESIGNATION_CON,
     flags: 0,
     proper: null,
     iauName: null,
