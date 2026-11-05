@@ -7,8 +7,9 @@ import { describe, it, expect } from 'vitest';
 
 import { buildFreshness, manualFreshness, readManualRecord } from '../scripts/pipeline/freshness';
 import { pipelineTree } from '../scripts/pipeline/pipeline-tree';
+import { rerunCommand } from '../scripts/pipeline/runner';
 import { loadTable } from '../scripts/pipeline/step-table/load-table';
-import { isBuild, type ManualStep, type StepEntry } from '../scripts/pipeline/step-table/step-table-pure';
+import { isBuild, type ManualStep } from '../scripts/pipeline/step-table/step-table-pure';
 import { STEPS } from '../scripts/pipeline/step-table/steps';
 import { isLfsPointerFile, REPO_ROOT } from '../scripts/util/paths';
 import { entryInputPaths } from '../scripts/util/step-inputs';
@@ -30,8 +31,6 @@ const BUILD_STAMPS = builds.map(({ step }) => tree.buildStamp(step.name));
 const MANUAL_STAMPS = manuals.map(({ step }) => tree.manualStamp(step.name));
 const BUILD_STAMP_DIR = tree.buildStamps;
 const MANUAL_STAMP_DIR = tree.manualStamps;
-
-const rerun = (step: StepEntry): string => `pnpm run ${step.name}`;
 
 function onLfsStub(step: ManualStep): boolean {
   const read = readManualRecord(step, tree.manualStamp(step.name));
@@ -55,7 +54,7 @@ describe('stamp folders hold only steps\' stamps', () => {
 describe.skipIf(jsonIn(BUILD_STAMP_DIR).length === 0)('once any build step has run, every build stamp is fresh', () => {
   for (const { step, resolved: r } of builds) {
     it(step.name, () => {
-      expect(buildFreshness(step, r, tree).freshness, `${step.name} is stale against these files — rebuild with: ${rerun(step)}`)
+      expect(buildFreshness(step, r, tree).freshness, `${step.name} is stale against these files — rebuild with: ${rerunCommand(step.name)}`)
         .toEqual({ kind: 'fresh' });
     }, HASHING_TIMEOUT_MS);
   }
@@ -64,7 +63,7 @@ describe.skipIf(jsonIn(BUILD_STAMP_DIR).length === 0)('once any build step has r
 describe('every manual step\'s committed record matches the disk', () => {
   for (const { step, resolved: r } of manuals) {
     it.skipIf(onLfsStub(step))(step.name, () => {
-      expect(manualFreshness(step, r.outputs, tree, null), `${step.name}'s record is stale against these files — re-run: ${rerun(step)}`)
+      expect(manualFreshness(step, r.outputs, tree, null), `${step.name}'s record is stale against these files — re-run: ${rerunCommand(step.name)}`)
         .toEqual({ kind: 'fresh' });
     }, HASHING_TIMEOUT_MS);
   }

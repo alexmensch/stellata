@@ -130,11 +130,13 @@ class Run {
   }
 }
 
+export const rerunCommand = (name: string): string => `pnpm run ${name}`;
+
 function describeVerdict(name: string, verdict: Verdict): string {
   switch (verdict.kind) {
     case 'fresh': return `· ${name} fresh`;
     case 'built': return `✓ ${name} built`;
-    case 'stale': return `✗ ${name} stale (${verdict.changed.join(', ')}): run pnpm run ${name}`;
+    case 'stale': return `✗ ${name} stale (${verdict.changed.join(', ')}): run ${rerunCommand(name)}`;
     case 'failed': return `✗ ${name} failed: ${verdict.reason}`;
     case 'skipped': return `– ${name} skipped behind ${verdict.behind}`;
   }
