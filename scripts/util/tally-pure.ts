@@ -1,14 +1,26 @@
-// Zeroed counting partitions over a closed string-literal tuple.
+// Counting partitions over a closed string-literal tuple: the zeroed record and the fold into it. See README.md (tally-pure.ts entry).
 
-/** A zeroed bucket per member of `values`, typed to exactly those keys.
- *
- *  Every routing cascade in the catalog build tallies per-tier counts this way
- *  (direction, velocity, V, dist_src). Deriving the buckets from the tuple that
- *  DEFINES the tier set is what stops a newly-added tier from tallying onto an
- *  absent key — `undefined + 1` is NaN, and a NaN reaches the pinned snapshot
- *  as a silent hole rather than a drift failure. */
+/** A zeroed bucket per member of `values`, typed to exactly those keys. */
 export function emptyTallyPartition<T extends string>(
   values: readonly T[],
 ): Record<T, number> {
   return Object.fromEntries(values.map((v) => [v, 0])) as Record<T, number>;
+}
+
+/** How many of `items` fall in each of `variants`, every variant present,
+ *  zeros included. An item whose key is not a declared variant throws. */
+export function fold<T extends string, I>(
+  variants: readonly T[],
+  items: Iterable<I>,
+  key: (item: I) => string,
+): Record<T, number> {
+  const tally: Record<string, number> = emptyTallyPartition(variants);
+  for (const item of items) {
+    const k = key(item);
+    if (!Object.hasOwn(tally, k)) {
+      throw new Error(`tally: "${k}" is not one of the declared variants ${variants.join(', ')}`);
+    }
+    tally[k]++;
+  }
+  return tally as Record<T, number>;
 }

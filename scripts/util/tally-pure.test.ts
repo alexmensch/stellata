@@ -6,7 +6,30 @@ import {
 } from '../catalog/distance/direction-cascade';
 import { DIST_VIA_VALUES } from '../../src/catalog-format/record/catalog-pure';
 import { V_VIA_VALUES } from '../catalog/photometry/v-magnitude-pure';
-import { emptyTallyPartition } from './tally-pure';
+import { emptyTallyPartition, fold } from './tally-pure';
+
+describe('util/tally / fold', () => {
+  const OUTCOMES = ['kept', 'parked', 'dropped'] as const;
+
+  it('counts each item under its key, every variant present', () => {
+    expect(fold(OUTCOMES, ['kept', 'kept', 'parked'], (o) => o)).toEqual({ kept: 2, parked: 1, dropped: 0 });
+  });
+
+  it('folds through a key function', () => {
+    const rows = [{ code: 'parked' }, { code: 'parked' }];
+    expect(fold(OUTCOMES, rows, (r) => r.code)).toEqual({ kept: 0, parked: 2, dropped: 0 });
+  });
+
+  it('refuses an item outside the declared variants', () => {
+    expect(() => fold(OUTCOMES, ['merged'], (o) => o)).toThrow(/"merged" is not one of the declared variants/);
+  });
+
+  it('types the result over the declared variants, so a snapshot keyed on a wider union fails to compile', () => {
+    // @ts-expect-error — 'merged' is in the snapshot's union but no fold variant tallies it
+    const snapshot: Record<(typeof OUTCOMES)[number] | 'merged', number> = fold(OUTCOMES, [], (o: string) => o);
+    expect(snapshot).toEqual({ kept: 0, parked: 0, dropped: 0 });
+  });
+});
 
 describe('util/tally / emptyTallyPartition', () => {
   it('zeroes one bucket per declared value', () => {

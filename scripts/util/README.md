@@ -217,13 +217,18 @@ same thing — single-use helpers stay with their consumer.
 - `output-identity.ts` (+ `output-identity-pure.ts`, its diff and test) —
   `pnpm run identity:snapshot` / `identity:diff`, the byte-identity check in
   [Proving a restructuring byte-identical](#proving-a-restructuring-byte-identical).
-- `tally-pure.ts` — `emptyTallyPartition(values)`, the zeroed per-bucket
-  counting record every routing cascade in the catalog build tallies
-  into (direction, velocity, V, distance). Buckets are derived from
-  the string-literal tuple that DEFINES each tier set, so a new tier
-  cannot tally onto an absent key — `undefined + 1` is NaN, which
-  reaches the pinned count snapshot as a hole instead of a drift
-  failure. `tally-pure.test.ts` pins all four cascades' key coverage.
+- `tally-pure.ts` — `fold(variants, items, key)`, the one tally: how many
+  items fall under each declared variant, zeros included, typed
+  `Record<variant, number>` so a snapshot keyed on a wider union fails to
+  compile; an item outside the variants throws. Its zero case,
+  `emptyTallyPartition(values)`, is the record the routing cascades still
+  increment by hand (direction, velocity, V, distance). Both derive their
+  buckets from the string-literal tuple that DEFINES the set, so a new
+  variant cannot tally onto an absent key — `undefined + 1` is NaN, which
+  reaches the pinned count snapshot as a hole instead of a drift failure.
+  A lineage stage folds its lines through it
+  ([Counts fold from lineage](../catalog/lineage/README.md#counts-fold-from-lineage)).
+  `tally-pure.test.ts` pins the fold and all four cascades' key coverage.
 - `staged-write.ts` — the one stage-then-rename: `writeStaged` writes
   `<path>.staged` beside its target (same filesystem, so the rename is
   atomic) — the bytes given, or a copy of `{copyFrom}`'s file, which never
