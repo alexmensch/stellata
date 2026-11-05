@@ -154,6 +154,10 @@ pipeline-viewer-boundary.test.ts
                          One-way imports between scripts/ (the pipeline),
                          src/client/ (the viewer) and the two trees they
                          share. README.md#pipeline-viewer-boundary below.
+record-codec-imports.test.ts
+                         src/catalog-format/record/ imports nothing from
+                         outside itself. README.md#record-codec-imports
+                         below.
 public-artifact-names.test.ts
                          Each public/ artifact name is spelled in one
                          TypeScript literal, its owner's.
@@ -555,6 +559,15 @@ design; the suite fails if either stops, so an unused exemption cannot
 linger. A new fact both sides need goes into the format tree (a wire shape,
 a file name, a rule over record fields) or astro-core (physics), never into
 the side that happens to compute it first.
+
+## Record codec imports
+
+`record-codec-imports.test.ts` holds every shipped module under
+`src/catalog-format/record/` to imports from within that folder, bare packages
+included. The codec is the one statement of the `catalog.bin` bytes, read by the
+pipeline and the viewer alike, so a domain rule reaching it from either side
+would ride along into both. The pipeline-viewer boundary still admits
+`astro-core` here; this test is narrower.
 
 ## Pipefail early readers
 

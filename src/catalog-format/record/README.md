@@ -5,7 +5,8 @@ layout with both directions of its codec, the record order, the transport chunk
 plan, and the
 `search-index.json` wire entry. `catalog-pure.ts` is the single statement of
 all three, which is why the catalogue build, `src/client/loaders/` and the
-viewer's readers all import it, and it imports nothing.
+viewer's readers all import it, and it imports nothing
+([Record codec imports](/tests/README.md#record-codec-imports) holds it there).
 
 ## Files in this area
 
