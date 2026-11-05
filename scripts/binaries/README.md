@@ -242,7 +242,7 @@ after the count checks, every Python module here is deleted, and
 ([Proving a restructuring byte-identical](/scripts/util/README.md#proving-a-restructuring-byte-identical))
 proves byte identity once.
 
-Each slice also carries one vitest case that runs TS Stages 1..N over
+Each slice before the switch also carries one vitest case that runs TS Stages 1..N over
 the committed inputs and asserts that stage's keys in the committed
 `build-binaries-expected.json` (and `build-binaries-rates-expected.json`
 where the stage has keys there). The Python writes those snapshots
