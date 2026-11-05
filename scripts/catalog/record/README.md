@@ -10,8 +10,7 @@ scripts/catalog/record/
   gaia-apsis-source.ts (+ test)   GAIA_APSIS with its parse, declared
                                   (../../util/sources/).
   record-build-pure.ts (+ test)   Record logic only the build runs:
-                                  GCVS parsing and variability
-                                  classification, and geometric binary and
+                                  geometric binary and
                                   CCDM optical-double inference. Pure.
   record-order-pure.ts            `apparentVFromSol` — the key the build sorts
                                   records on. Pure.

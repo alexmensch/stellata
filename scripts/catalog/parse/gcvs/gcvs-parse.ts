@@ -2,17 +2,133 @@
 // See README.md.
 import {
   NO_CONSTELLATION_INDEX,
+  VAR_TYPE_CEPHEID,
+  VAR_TYPE_DSCT,
+  VAR_TYPE_ECLIPSING,
+  VAR_TYPE_MIRA,
+  VAR_TYPE_OTHER,
+  VAR_TYPE_PULSATING,
+  VAR_TYPE_RR_LYRAE,
+  VAR_TYPE_SEMIREGULAR,
   VAR_TYPE_UNKNOWN,
 } from '../../../../src/catalog-format/record/catalog-pure';
-import {
-  classifyGcvsVarType,
-  isPlanetaryTransitOnly,
-  normalizeGcvsName,
-  parseGcvsNumber,
-  splitPipeDelimited,
-} from '../../record/record-build-pure';
 import { CON_INDEX } from '../constellations/constellations';
 import type { Star } from '../stars-parse';
+
+export function splitPipeDelimited(text: string): string[][] {
+  const out: string[][] = [];
+  for (const line of text.split(/\r?\n/)) {
+    if (!line.trim()) continue;
+    out.push(line.split('|').map((f) => f.trim()));
+  }
+  return out;
+}
+
+// GCVS designations in both files are space-padded fixed-width, e.g.
+// "R     And *" or "Z     Peg". Trailing asterisk is an indicator we
+// don't need; collapse internal whitespace to a single space.
+export function normalizeGcvsName(raw: string): string {
+  return raw
+    .replace(/\*+$/, '')
+    .trim()
+    .replace(/\s+/g, ' ');
+}
+
+// Parse a possibly-annotated GCVS number field: entries may carry "<", ">",
+// ":", "()" uncertainty markers or trailing "*"; strip them before parsing.
+export function parseGcvsNumber(s: string): number | null {
+  const t = s.trim().replace(/[<>():;*]/g, '').trim();
+  if (!t) return null;
+  const v = parseFloat(t);
+  return Number.isFinite(v) ? v : null;
+}
+
+/** Classify a GCVS variability-type column ("EA", "EA/RS", "M", "DCEP",
+ *  "RRAB", "SR", "ZAND", "UGSU", ...) into the runtime enum.
+ *
+ *  Composite types ("EA+RS", "EA/RS", "EA/DM") are classified as
+ *  eclipsing whenever the eclipsing-binary prefix appears anywhere in
+ *  the string — the geometric-occlusion signal is the real photometric
+ *  driver, and superimposing a synthetic intrinsic pulsation on top
+ *  would double-count the eclipse depth. */
+export function classifyGcvsVarType(rawType: string | null | undefined): number {
+  if (!rawType) return VAR_TYPE_UNKNOWN;
+  const t = rawType.trim().toUpperCase();
+  if (!t) return VAR_TYPE_UNKNOWN;
+  // Eclipsing-binary prefixes anywhere in the string. EA / EB / EW are
+  // GCVS's three canonical eclipsing classes; ELL is ellipsoidal (no
+  // primary minimum, but the modulation is geometric, same suppression
+  // logic applies). E* catches the bare "E" form GCVS uses on
+  // unclassified eclipsing systems. EP (eclipsing-by-planet) is
+  // deliberately NOT here — a transiting-planet host is not a stellar
+  // multiple, so it must earn no wings and fall through to VAR_TYPE_OTHER.
+  if (/\bE([ABW]|LL)?\b/.test(t)) return VAR_TYPE_ECLIPSING;
+  // Intrinsic pulsators, identified by a family prefix at the start of a
+  // GCVS type component (split on the composite separators + / |), each
+  // mapped to its refined subtype so the runtime can drive the per-type
+  // radius/colour-swing table. Only the base family is listed; GCVS's
+  // trailing subtype letters ("DCEP"→"DCEPS", "CW"→"CWA/CWB",
+  // "RV"→"RVA/RVB", "L"→"LB/LC") are accepted by the tail gate below, so
+  // the list never has to enumerate every subtype. Order matters: the
+  // longer of two nested families comes first so it wins the `startsWith`
+  // ("DCEP"/"BCEP" before "CEP"). "M" and "L" are LAST — a bare single
+  // letter would otherwise shadow a longer family sharing that initial.
+  //
+  // Family → subtype rationale: DCEP/CEP/CW/WVIR are the classical +
+  // Type-II Cepheid instability strip; BCEP (β Cep) is a short-period
+  // low-amplitude p-mode pulsator, grouped with the DSCT-class low-amp
+  // set (DSCT/GDOR/SXPHE/ROAP/SPB/PVTEL/ACYG/ZZ). SR + L are red-giant /
+  // supergiant semiregulars; M is the Mira archetype. RV (RV Tauri,
+  // ambiguous post-AGB) falls to the generic pulsating default.
+  const pulsatorPrefixes: [string, number][] = [
+    ['DCEP', VAR_TYPE_CEPHEID], ['BCEP', VAR_TYPE_DSCT], ['CEP', VAR_TYPE_CEPHEID],
+    ['DSCT', VAR_TYPE_DSCT], ['GDOR', VAR_TYPE_DSCT], ['SXPHE', VAR_TYPE_DSCT],
+    ['PVTEL', VAR_TYPE_DSCT], ['ACYG', VAR_TYPE_DSCT], ['ROAP', VAR_TYPE_DSCT],
+    ['WVIR', VAR_TYPE_CEPHEID], ['CW', VAR_TYPE_CEPHEID],
+    ['RR', VAR_TYPE_RR_LYRAE], ['RV', VAR_TYPE_PULSATING],
+    ['SPB', VAR_TYPE_DSCT],
+    ['SR', VAR_TYPE_SEMIREGULAR],
+    ['ZZ', VAR_TYPE_DSCT],
+    ['M', VAR_TYPE_MIRA], ['L', VAR_TYPE_SEMIREGULAR],
+  ];
+  for (const part of t.split(/[+/|]/)) {
+    const p = part.trim();
+    if (!p) continue;
+    for (const [pre, subtype] of pulsatorPrefixes) {
+      if (p.startsWith(pre)) {
+        // The tail after the family prefix must be a GCVS subtype
+        // continuation: trailing subtype letters, a digit, a paren, or
+        // end-of-string. No non-pulsator GCVS code shares a pulsator
+        // family's prefix, so a letter tail is always a subtype — never
+        // a coincidental longer word. A non-matching tail falls through
+        // to the next prefix.
+        const tail = p.slice(pre.length);
+        if (tail === '' || /^[A-Z0-9()/.]/.test(tail)) return subtype;
+      }
+    }
+  }
+  // Anything GCVS classifies that isn't eclipsing or a pulsator —
+  // cataclysmic (UG*, ZAND), eruptive (FU, GCAS, IN*), rotating
+  // (ACV, BY, RS, ELL, FKCOM), X-ray binaries (X*) — falls through
+  // here. The shader's pulsation gate doesn't fire on these (varType
+  // != ECLIPSING), so they keep their GCVS-amplitude modulation as
+  // before. The category exists primarily for hover-tooltip
+  // disambiguation and future per-type rendering.
+  return VAR_TYPE_OTHER;
+}
+
+/** True when GCVS "EP" (eclipsing-by-planet) is the star's SOLE
+ *  variability class. A transiting-planet host has no intrinsic
+ *  variability (the dip is extrinsic occlusion by a planet) and is not
+ *  a stellar multiple, so it earns neither a variable ring/pulse nor
+ *  multi-star wings — the cross-match drops it entirely. A superimposed
+ *  intrinsic pulsator ("EP+DSCT") classifies as that pulsator and keeps
+ *  its ring, so it returns false here. */
+export function isPlanetaryTransitOnly(rawType: string | null | undefined): boolean {
+  if (!rawType) return false;
+  if (!/\bEP\b/.test(rawType.trim().toUpperCase())) return false;
+  return classifyGcvsVarType(rawType) === VAR_TYPE_OTHER;
+}
 
 export interface VarStarData {
   periodDays: number;

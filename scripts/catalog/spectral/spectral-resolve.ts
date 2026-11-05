@@ -20,6 +20,10 @@ import {
 } from '../../../src/catalog-format/spectral/spectral-classify';
 import type { CascadeRefusal, CascadeResult } from '../cascade-result';
 
+/** SIMBAD's object-type code for a confirmed double/multiple star — the
+ *  otype value that marks a record `unresolved` when nothing resolves. */
+export const SIMBAD_OTYPE_MULTIPLE = '**';
+
 /** Per-source SIMBAD spectral-classification row from
  *  `data/simbad/simbad_sptype.tsv`. `spType` is the canonical
  *  Morgan-Keenan string (free of variability-type contamination by
