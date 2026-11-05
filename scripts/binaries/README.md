@@ -81,7 +81,8 @@ scripts/binaries/
                                   and the only parse of the file on the TS
                                   side. Its test round-trips the committed
                                   file byte for byte, which is what holds it
-                                  to the Python writer until Stage 6 ports.
+                                  to the Python writer until the switch
+                                  (§ Porting to TypeScript).
                                   Its rowKey cites a row by
                                   (system_id, comp) for lineage
                                   (../util/sources/README.md#sourcerowref).
