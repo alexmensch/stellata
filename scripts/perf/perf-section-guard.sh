@@ -15,7 +15,9 @@ changed="$(mktemp)"
 trap 'rm -f "$changed"' EXIT
 git diff --name-only "$fork" "$head_ref" > "$changed"
 
-base_records="$(git show "${fork}:${counts}" 2>/dev/null | jq -r '.recordCount // empty' 2>/dev/null)" || base_records=''
-head_records="$(git show "${head_ref}:${counts}" 2>/dev/null | jq -r '.recordCount // empty' 2>/dev/null)" || head_records=''
+# A fork point can predate the staged snapshot and hold its counts flat.
+record_count='(.stages // {} | map(.recordCount // empty) | first) // .recordCount // empty'
+base_records="$(git show "${fork}:${counts}" 2>/dev/null | jq -r "$record_count" 2>/dev/null)" || base_records=''
+head_records="$(git show "${head_ref}:${counts}" 2>/dev/null | jq -r "$record_count" 2>/dev/null)" || head_records=''
 
 bash "$here/perf-section-check.sh" "$body_file" "$changed" "$base_records" "$head_records"

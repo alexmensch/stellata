@@ -42,6 +42,8 @@ import {
 } from './companions/overlap-gate-pure';
 import {
   BUILD_COUNTS_EXPECTED_FILE,
+  CATALOG_COUNT_STAGE,
+  CATALOG_COUNT_STAGES,
   compareCountSnapshot,
   formatPartition,
   spectralSimbadPartitionError,
@@ -98,7 +100,7 @@ import {
   GALACTIC_ESCAPE_VELOCITY_KM_S,
 } from './distance/direction-cascade';
 import { RV_ERROR_BANDS } from './distance/radial-velocity/radial-velocity';
-import { emptyTallyPartition } from '../util/tally-pure';
+import { emptyTallyPartition } from '../util/counts/tally-pure';
 import {
   applyDesignationConstellations,
   loadDesignationConstellationInputs,
@@ -139,6 +141,7 @@ import {
   emitArtifacts, sweepStaged, type ArtifactContents, type Check,
 } from '../util/emit-artifacts';
 import { snapshotCheck } from '../util/snapshot-check';
+import { nestByStage, type StagedCounts } from '../util/counts/count-stages-pure';
 import { watchHeap } from '../util/heap-budget';
 import { syntheticGaiaBridges } from '../sid/sid-pure';
 import { sidSuccessorPairs } from '../sid/events-pure';
@@ -1310,10 +1313,10 @@ export async function main() {
   });
 }
 
-function buildCountsCheck(actual: BuildCounts): Check {
-  return snapshotCheck<BuildCounts>({
+function buildCountsCheck(counts: BuildCounts): Check {
+  return snapshotCheck<StagedCounts>({
     snapshotPath: EXPECTED_COUNTS,
-    actual,
+    actual: nestByStage(counts, { order: CATALOG_COUNT_STAGES, of: CATALOG_COUNT_STAGE }),
     compare: compareCountSnapshot,
     failureLabel: 'build-catalog count',
     script: 'build:catalog',

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { emptyTallyPartition } from '../util/tally-pure';
+import { emptyTallyPartition } from '../util/counts/tally-pure';
 import {
   compareBuildCounts,
   compareCountSnapshot,
@@ -406,6 +406,21 @@ describe('compareCountSnapshot', () => {
     delete (short as Partial<BuildCounts>).gcvsMatched;
     expect(compareCountSnapshot(full, short).drifted).toBe(true);
     expect(compareCountSnapshot(short, full).drifted).toBe(true);
+  });
+
+  it('compares a staged snapshot by its counts, the stage level dropped', () => {
+    const staged = { stages: { read: { rows: 3 }, filter: { kept: 2, tiers: { a: 1 } } } };
+    expect(compareCountSnapshot<object>(staged, { rows: 3, kept: 2, tiers: { a: 1 } }).drifted).toBe(false);
+    expect(compareBuildCounts<object>(staged, { stages: { read: { rows: 4 }, filter: { kept: 2, tiers: { a: 1 } } } }))
+      .toContainEqual({ key: 'rows', status: 'mismatch', expected: 3, actual: 4 });
+  });
+
+  it('drifts on a count filed under another stage at the same value, every row of a partition', () => {
+    const staged = { stages: { read: { rows: 3 }, filter: { kept: 2, tiers: { a: 1 } } } };
+    const moved = { stages: { read: { rows: 3, tiers: { a: 1 } }, filter: { kept: 2 } } };
+    const diff = compareBuildCounts<object>(staged, moved);
+    expect(driftedRows(diff)).toEqual([{ key: 'tiers.a', status: 'moved', value: 1, from: 'filter', to: 'read' }]);
+    expect(formatCountDiff(diff)).toContain('tiers.a 1 moved from stage filter to read');
   });
 });
 

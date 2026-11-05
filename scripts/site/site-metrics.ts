@@ -6,14 +6,14 @@ import { resolve } from 'node:path';
 import { selectAll } from 'hast-util-select';
 
 import { catalogChunkFilename, readCatalogHeader } from '../../src/catalog-format/record/catalog-pure.ts';
+import { BUILD_COUNTS_EXPECTED_FILE as COUNT_SNAPSHOT } from '../catalog/build-counts.ts';
 import type { IndexEntry } from '../util/citation-index-pure.ts';
+import { flattenStages } from '../util/counts/count-stages-pure.ts';
 import { parseHtml } from '../util/parse-html.ts';
 import { PACKAGE_JSON, REPO_ROOT, publicFile, publicRepoPath } from '../util/paths.ts';
 import { CITATION_INDEX } from './citation-index-source.ts';
 
 const APP_DOC = 'src/client/app/index.html';
-
-const COUNT_SNAPSHOT = 'scripts/catalog/build-catalog-expected.json';
 
 function readIfPresent(path: string): Buffer | null {
   try {
@@ -49,7 +49,7 @@ export function recordCountOf(chunk: Buffer | null, snapshot: () => string, abse
 }
 
 function snapshotRecordCount(json: string): number {
-  const { recordCount } = JSON.parse(json) as { recordCount?: unknown };
+  const { recordCount } = flattenStages(JSON.parse(json)) as { recordCount?: unknown };
   if (!Number.isInteger(recordCount) || (recordCount as number) <= 0) {
     throw new Error(`site metrics: ${COUNT_SNAPSHOT} states no recordCount`);
   }

@@ -104,6 +104,11 @@ scripts/binaries/
   stage7_counts.py                Build-counts + build-rates snapshots,
                                   asserted / refreshed through
                                   scripts/util/snapshot_assert.py.
+                                  build_binaries_counts / _rates build each
+                                  key inside the block of the stage module
+                                  that counts it (ingest, subdivide,
+                                  resolve, astrometry, orbits, optical,
+                                  multiples).
   mass_estimate.py                Spectral-class-aware mass-ratio q backfill
                                   (Cox 2000
                                   (/data/papers/index.md#cox2000) Sect. 15.2; dwarf
@@ -145,7 +150,10 @@ scripts/binaries/
                                   duplicates across them.
   __init__.py                     Package marker (see above).
   *-expected.json                 Snapshot pins refreshed with
-                                  --update-snapshots: build-binaries
+                                  --update-snapshots, staged by pipeline
+                                  stage (../util/counts/count-stages-pure.ts;
+                                  build-runtime-binaries' one stage is
+                                  `encode`): build-binaries
                                   (per-strategy / per-tier counts),
                                   build-binaries-rates (per-strategy rates —
                                   catches population-mix shifts that don't move

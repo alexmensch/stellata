@@ -7,13 +7,12 @@ import { CATALOG_ROW_INDEX_MAP } from '../catalog/companions/record-index/catalo
 import { emitArtifacts } from '../util/emit-artifacts';
 import { REPO_ROOT } from '../util/paths';
 import { snapshotCheck } from '../util/snapshot-check';
+import type { StagedCounts } from '../util/counts/count-stages-pure';
 import { handedFileHash, stepInputHashes } from '../util/step-input-hashes';
 import { readArtifact } from '../util/sources/source';
 import { MULTIPLES_TSV } from './multiples-tsv';
 import { RUNTIME_BINARIES_OUTPUTS } from './runtime-binaries-outputs';
-import {
-  encodeRuntimeBinaries, multiplesHandshake, type RuntimeBinariesCounts,
-} from './runtime-binaries-pure';
+import { encodeRuntimeBinaries, multiplesHandshake } from './runtime-binaries-pure';
 
 const EXPECTED_COUNTS = resolve(REPO_ROOT, 'scripts/binaries/build-runtime-binaries-expected.json');
 
@@ -42,9 +41,9 @@ export function main(): void {
     files: { binaries: bytes },
     checks: [
       multiplesHandshake(map.multiplesSha1, handedFileHash(stepInputHashes(), MULTIPLES_TSV.file)),
-      snapshotCheck<RuntimeBinariesCounts>({
+      snapshotCheck<StagedCounts>({
         snapshotPath: EXPECTED_COUNTS,
-        actual: c,
+        actual: { stages: { encode: c } },
         compare: compareCountSnapshot,
         failureLabel: 'build-runtime-binaries count',
         script: 'build:binaries-runtime',

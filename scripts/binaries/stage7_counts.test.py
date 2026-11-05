@@ -29,7 +29,7 @@ from scripts.binaries.stage7_counts import (  # noqa: E402
     build_binaries_rates,
     compare_build_rates,
 )
-from scripts.util.snapshot_assert import UPDATE_SNAPSHOTS_ENV_VAR  # noqa: E402
+from scripts.util.snapshot_assert import UPDATE_SNAPSHOTS_ENV_VAR, flatten_staged  # noqa: E402
 from scripts.binaries.pipeline_test_fixtures import (  # noqa: E402
     _component_astrometry,
     _resolved,
@@ -53,18 +53,23 @@ class BuildBinariesCountsTests(unittest.TestCase):
             classifications=[OpticalClassification(True, "wds_notes_kept")],
             multiples_rows=[],
         )
+        self.assertEqual(
+            list(counts),
+            ["ingest", "subdivide", "resolve", "astrometry", "orbits", "optical", "multiples"],
+        )
         for tag in RESOLVE_VIA_VALUES:
-            self.assertIn(f"resolution_{tag}", counts)
+            self.assertIn(f"resolution_{tag}", counts["resolve"])
         for tag in ASTROMETRY_VIA_VALUES:
-            self.assertIn(f"astrometry_{tag}", counts)
+            self.assertIn(f"astrometry_{tag}", counts["astrometry"])
         for tag in ORBIT_VIA_VALUES:
-            self.assertIn(f"orbit_{tag}", counts)
+            self.assertIn(f"orbit_{tag}", counts["orbits"])
         for tag in OPTICAL_VIA_VALUES:
-            self.assertIn(f"optical_{tag}", counts)
-        self.assertEqual(counts["wds_pairs_total"], 1)
-        self.assertEqual(counts["decomposing_pairs"], 1)
-        self.assertEqual(counts["components_total"], 2)
-        self.assertEqual(counts["optical_wds_notes_kept"], 1)
+            self.assertIn(f"optical_{tag}", counts["optical"])
+        self.assertEqual(counts["ingest"]["wds_pairs_total"], 1)
+        self.assertEqual(counts["resolve"]["decomposing_pairs"], 1)
+        self.assertEqual(counts["resolve"]["components_total"], 2)
+        self.assertEqual(counts["optical"]["optical_wds_notes_kept"], 1)
+        flatten_staged(counts)
 
 
 class BuildBinariesRatesTests(unittest.TestCase):
@@ -94,30 +99,30 @@ class BuildBinariesRatesTests(unittest.TestCase):
         }
 
     def test_gaia_resolve_rate_is_source_id_anchored_fraction(self) -> None:
-        rates = build_binaries_rates(self._baseline_counts())
+        rates = flatten_staged(build_binaries_rates({"all": self._baseline_counts()}))
         # (100 + 1000 + 3400) / 10000 = 0.45 — ccdm_hip excluded.
         self.assertAlmostEqual(rates["gaia_resolve_rate"], 0.45)
 
     def test_optical_rejected_rate_sums_cascade_rejections(self) -> None:
-        rates = build_binaries_rates(self._baseline_counts())
+        rates = flatten_staged(build_binaries_rates({"all": self._baseline_counts()}))
         # (500 + 100 + 50 + 850) / 5000 = 0.30
         self.assertAlmostEqual(rates["optical_rejected_rate"], 0.30)
 
     def test_nss_orbit_rate_uses_only_resolved_orbit_population(self) -> None:
-        rates = build_binaries_rates(self._baseline_counts())
+        rates = flatten_staged(build_binaries_rates({"all": self._baseline_counts()}))
         # 150 / (150 + 100 + 50) = 0.5
         self.assertAlmostEqual(rates["nss_orbit_rate"], 0.5)
 
     def test_hip2_fallback_rate_is_per_component_fraction(self) -> None:
-        rates = build_binaries_rates(self._baseline_counts())
+        rates = flatten_staged(build_binaries_rates({"all": self._baseline_counts()}))
         # 200 / 10000 = 0.02
         self.assertAlmostEqual(rates["hip2_fallback_rate"], 0.02)
 
     def test_zero_denominator_returns_zero_rate(self) -> None:
-        rates = build_binaries_rates({
+        rates = flatten_staged(build_binaries_rates({"resolve": {
             "components_total": 0,
             "decomposing_pairs": 0,
-        })
+        }}))
         for key, value in rates.items():
             self.assertEqual(value, 0.0, msg=key)
 
@@ -154,7 +159,7 @@ class AssertOrUpdateRatesTests(unittest.TestCase):
     def test_a_missing_snapshot_fails_and_writes_nothing(self) -> None:
         with tempfile.TemporaryDirectory() as td:
             p = Path(td) / "rates.json"
-            self.assertFalse(assert_or_update_rates({"r": 0.42}, p))
+            self.assertFalse(assert_or_update_rates({"orbits": {"nss_orbit_rate": 0.42}}, p))
             self.assertFalse(p.exists())
 
     def test_writes_a_missing_snapshot_with_default_tolerance_under_the_env_var(self) -> None:
@@ -164,37 +169,37 @@ class AssertOrUpdateRatesTests(unittest.TestCase):
             p = Path(td) / "rates.json"
             try:
                 _os.environ[UPDATE_SNAPSHOTS_ENV_VAR] = "1"
-                ok = assert_or_update_rates({"r": 0.42}, p)
+                ok = assert_or_update_rates({"orbits": {"nss_orbit_rate": 0.42}}, p)
             finally:
                 _os.environ.pop(UPDATE_SNAPSHOTS_ENV_VAR, None)
             self.assertTrue(ok)
             written = _json.loads(p.read_text())
-        self.assertEqual(written["r"]["value"], 0.42)
-        self.assertEqual(written["r"]["tolerance"], DEFAULT_RATE_TOLERANCE)
+        self.assertEqual(written["stages"]["orbits"]["nss_orbit_rate"]["value"], 0.42)
+        self.assertEqual(written["stages"]["orbits"]["nss_orbit_rate"]["tolerance"], DEFAULT_RATE_TOLERANCE)
 
     def test_preserves_hand_edited_tolerance_on_refresh(self) -> None:
         import json as _json
         import os as _os
         with tempfile.TemporaryDirectory() as td:
             p = Path(td) / "rates.json"
-            p.write_text(_json.dumps({"r": {"value": 0.30, "tolerance": 0.05}}))
+            p.write_text(_json.dumps({"stages": {"orbits": {"nss_orbit_rate": {"value": 0.30, "tolerance": 0.05}}}}))
             try:
                 _os.environ[UPDATE_SNAPSHOTS_ENV_VAR] = "1"
-                ok = assert_or_update_rates({"r": 0.42}, p)
+                ok = assert_or_update_rates({"orbits": {"nss_orbit_rate": 0.42}}, p)
             finally:
                 _os.environ.pop(UPDATE_SNAPSHOTS_ENV_VAR, None)
             self.assertTrue(ok)
             written = _json.loads(p.read_text())
-        self.assertEqual(written["r"]["value"], 0.42)
+        self.assertEqual(written["stages"]["orbits"]["nss_orbit_rate"]["value"], 0.42)
         # Hand-edited tolerance must survive the refresh.
-        self.assertEqual(written["r"]["tolerance"], 0.05)
+        self.assertEqual(written["stages"]["orbits"]["nss_orbit_rate"]["tolerance"], 0.05)
 
     def test_returns_false_on_drift_without_rewriting_snapshot(self) -> None:
         with tempfile.TemporaryDirectory() as td:
             p = Path(td) / "rates.json"
-            body = '{"r": {"value": 0.50, "tolerance": 0.10}}'
+            body = '{"stages": {"orbits": {"nss_orbit_rate": {"value": 0.50, "tolerance": 0.10}}}}'
             p.write_text(body)
-            ok = assert_or_update_rates({"r": 0.80}, p)
+            ok = assert_or_update_rates({"orbits": {"nss_orbit_rate": 0.80}}, p)
             self.assertFalse(ok)
             self.assertEqual(p.read_text(), body)
 
