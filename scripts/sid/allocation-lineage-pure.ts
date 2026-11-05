@@ -26,6 +26,9 @@ const OBJECT_OUTCOMES = {
 type ObjectBranch = keyof typeof OBJECT_OUTCOMES;
 export type ObjectOutcomeCodes = StageCodes<ObjectBranch>;
 
+/** What a row needs of a stage's codes, so a stage declaring more branches still serialises these. */
+type BranchCoder<B extends string> = { readonly stage: string; code(branch: B): string };
+
 /** A stage that allocates objects and settles no orphan: its object outcomes' codes. */
 export function objectOutcomeCodes(stage: string): ObjectOutcomeCodes {
   return stageCodes(stage, OBJECT_OUTCOMES);
@@ -84,7 +87,7 @@ type ParamsOf<B extends Branch> =
   : never;
 
 const lineageRow = <B extends Branch>(
-  codes: StageCodes<B>, key: string, branch: B, params: ParamsOf<B>,
+  codes: BranchCoder<B>, key: string, branch: B, params: ParamsOf<B>,
 ): LineageRow => ({
   stage: codes.stage, key, role: 'outcome', code: codes.code(branch),
   params: paramsText(params as LineageParams), evidence: [],
@@ -92,7 +95,7 @@ const lineageRow = <B extends Branch>(
 
 /** One row per object, under its origin. An object's SID rides the stage's key -> SID or identity file, not its row; `via` appears only when the object reached its ledger key through a designation it does not carry itself. */
 export function objectOutcomeRows(
-  codes: ObjectOutcomeCodes, objects: readonly SidObject[], outcomes: readonly ObjectOutcome[],
+  codes: BranchCoder<ObjectBranch>, objects: readonly SidObject[], outcomes: readonly ObjectOutcome[],
 ): LineageRow[] {
   return objects.map((obj, i): LineageRow => {
     const key = obj.origin;
