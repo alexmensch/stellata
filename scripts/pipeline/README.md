@@ -73,8 +73,9 @@ same. For a TypeScript step the input set is computed now; for a Python step
 it is the recorded set, re-hashed. A missing or unparseable stamp is stale.
 Hashing costs about a second per gigabyte on a warm page cache, measured over
 today's stamped steps (about 1.1 GB) on a fast workstation. The runner also
-re-hashes every manual step's record (`data/` is about 1.5 GB) and starts each
-Python pull's `--describe` on every run; the runner core quotes a no-op data
+re-hashes every manual step's record (`data/` is about 1.5 GB) and starts the
+`--describe` of every manual step that describes itself (every pull, and a
+bake that reads a projection) on every run; the runner core quotes a no-op data
 phase before and after, warm and cold, on that machine and on a GitHub Actions
 runner, which is much slower, and optimises only if that number warrants it.
 
