@@ -10,6 +10,8 @@ export const DATA_FILES = {
   classicIdOverlay: 'data/classic-ids/classic_id_overlay.tsv',
   routeDisagreements: 'data/classic-ids/hd_hip_route_disagreements.tsv',
   rejectedBindings: 'data/classic-ids/rejected_bindings.tsv',
+  wgsnNames: 'data/iau-wgsn/wgsn_names.tsv',
+  wgsnDesignations: 'data/iau-wgsn/wgsn_designations.tsv',
   simbadSourcedDistances: 'data/athyg/simbad_sourced_distances.tsv',
   reasonCodes: 'data/lineage/reason-codes.tsv',
   vaidmanSupergiants: 'data/distance-validation/vaidman-2025-supergiants.tsv',
