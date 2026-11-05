@@ -10,6 +10,7 @@ import { scriptParts } from '../scripts/util/import-closure-pure';
 import { STEPS } from '../scripts/pipeline/step-table/steps';
 import { stepEntries } from '../scripts/util/step-inputs';
 import { REPO_ROOT } from '../scripts/util/paths';
+import { DATA_FILES } from '../src/catalog-format/pipeline-outputs/data-files';
 import { isProductionTs, walkFiles } from './walk-files';
 
 const OUT_OF_PIPELINE = /^scripts\/(perf|release|hooks|ci)\//;
@@ -44,6 +45,21 @@ const RUNNER = 'scripts/pipeline/run.ts';
 const TS_STEPS = [...new Set([...STEPS.steps.map((s) => s.name), ...STEP_NAMED])]
   .filter((name) => stepEntries(name).some((entry) => entry !== RUNNER));
 
+function codeLinesOutsideSpellers(): { rel: string; at: string; code: string }[] {
+  const files = [
+    ...['scripts', 'src', 'tests'].flatMap((root) => [...walkFiles(resolve(REPO_ROOT, root), { include: isTs })]),
+    ...readdirSync(REPO_ROOT).filter((name) => /^vite.*\.ts$/.test(name)).map((name) => resolve(REPO_ROOT, name)),
+  ];
+  return files.flatMap((file) => {
+    const rel = file.slice(REPO_ROOT.length + 1);
+    if (OUT_OF_PIPELINE.test(rel) || DATA_PATH_SPELLERS.includes(rel)) return [];
+    return readFileSync(file, 'utf8').split('\n').flatMap((line, i) => {
+      const code = line.replace(/\/\/.*$/, '');
+      return /^\s*(\*|\/\*)/.test(code) ? [] : [{ rel, at: `${rel}:${i + 1}`, code }];
+    });
+  });
+}
+
 describe('source declarations', () => {
   it('resolves every step-named script into steps it can check', () => {
     const unresolved = STEP_NAMED.filter((name) => scriptParts(scripts, name).some((p) => p.kind === 'other'));
@@ -59,21 +75,18 @@ describe('source declarations', () => {
   }, 60_000);
 
   it('names a data/ path only in a declaring or outputs module, tree-wide', () => {
-    const files = [
-      ...['scripts', 'src', 'tests'].flatMap((root) => [...walkFiles(resolve(REPO_ROOT, root), { include: isTs })]),
-      ...readdirSync(REPO_ROOT).filter((name) => /^vite.*\.ts$/.test(name)).map((name) => resolve(REPO_ROOT, name)),
-    ];
-    const offenders: string[] = [];
-    for (const file of files) {
-      const rel = file.slice(REPO_ROOT.length + 1);
-      if (OUT_OF_PIPELINE.test(rel) || DATA_PATH_SPELLERS.includes(rel)) continue;
-      if (DECLARING_MODULE.test(rel) || /-outputs\.ts$/.test(rel)) continue;
-      readFileSync(file, 'utf8').split('\n').forEach((line, i) => {
-        const code = line.replace(/\/\/.*$/, '');
-        if (/^\s*(\*|\/\*)/.test(code)) return;
-        if (/['"`]data\/|,\s*['"]data['"]\s*[,)]/.test(code)) offenders.push(`${rel}:${i + 1}`);
-      });
-    }
+    const offenders = codeLinesOutsideSpellers()
+      .filter(({ rel, code }) => !DECLARING_MODULE.test(rel) && !/-outputs\.ts$/.test(rel)
+        && /['"`]data\/|,\s*['"]data['"]\s*[,)]/.test(code))
+      .map(({ at }) => at);
+    expect(offenders).toEqual([]);
+  });
+
+  it('spells a DATA_FILES path only in DATA_FILES', () => {
+    const literals = Object.values(DATA_FILES).flatMap((path) => ["'", '"', '`'].map((q) => `${q}${path}${q}`));
+    const offenders = codeLinesOutsideSpellers()
+      .filter(({ code }) => literals.some((literal) => code.includes(literal)))
+      .map(({ at }) => at);
     expect(offenders).toEqual([]);
   });
 

@@ -14,10 +14,13 @@ repo-relative, so an outputs module passes them as they are.
 - `data-files.ts` — `DATA_FILES`, the committed `data/` files the
   step-table outputs modules declare: the membership manifest and its three
   ledgers, the parked and SIMBAD-sourced distance ledgers, the label-merge
-  queue, the generated reason-code list, and the Vaidman 2025 reference
-  table the hand-run `build:vaidman-table` writes. Other TypeScript writers'
-  `data/` names (classic-ids, WGSN, the astrometry request, the Horizons
-  fetchers) are still spelled beside their own outputs modules. Each file's codec (a `defineArtifact` in
+  queue, the classic-ID overlay and its two gate queues, the two WGSN
+  tables, the Gaia astrometry request, the generated reason-code list, and
+  the Vaidman 2025 reference table the hand-run `build:vaidman-table`
+  writes. The Horizons fetchers' per-target families are spelled beside
+  their own outputs modules. Python cannot import this module, so the
+  `scripts/refresh/` pulls take the manifest's and the request's paths
+  from `refresh_lib.py`, Python's one spelling of each. Each file's codec (a `defineArtifact` in
   `scripts/`) takes its `file` from here. Also the SID registry's
   partitions (`REGISTRY_PARTITIONS`: the catalogue's and one per sibling
   artifact, `SIBLING_PARTITIONS`, each named here — `CLOUD_PARTITION`,

@@ -213,7 +213,9 @@ source-declarations.test.ts
                          (/scripts/util/sources/README.md#reached-means-read);
                          a data/ path literal sits only in a declaring or
                          outputs module, across scripts/, src/, tests/ and
-                         vite*.ts (named DATA_PATH_SPELLERS excepted);
+                         vite*.ts (named DATA_PATH_SPELLERS excepted),
+                         and a DATA_FILES path in none of them, outputs
+                         and declaring modules included;
                          defineSource / defineArtifact only
                          in a *-source.ts / *-tsv.ts module.
 site-claims.test.ts      The homepage against what it states: figures are

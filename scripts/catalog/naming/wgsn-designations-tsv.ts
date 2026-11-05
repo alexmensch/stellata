@@ -1,13 +1,13 @@
 // Codec for data/iau-wgsn/wgsn_designations.tsv. See README.md#files-in-this-area.
 
+import { DATA_FILES } from '../../../src/catalog-format/pipeline-outputs/data-files';
 import { defineArtifact, nullableCell } from '../../util/tsv/artifact-pure';
 import {
   DESIGNATION_KINDS, DESIGNATION_SOURCES, compareDesignationRows, type DesignationRow,
 } from './wgsn-tables-pure';
-import { WGSN_DESIGNATIONS_FILE } from './wgsn-tables-outputs';
 
 export const WGSN_DESIGNATIONS = defineArtifact({
-  file: WGSN_DESIGNATIONS_FILE,
+  file: DATA_FILES.wgsnDesignations,
   columns: [
     'kind', 'letter', 'sup', 'num', 'dc', 'half', 'component', 'hip', 'hr', 'hd', 'source',
   ] as const,

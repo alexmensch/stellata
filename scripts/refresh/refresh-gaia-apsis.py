@@ -18,7 +18,6 @@ from magnitude import magnitude_pull as mp  # noqa: E402
 from paths import REPO_ROOT  # noqa: E402
 
 ROOT = REPO_ROOT
-REQUEST = ROOT / "data" / "gaia" / "gaia_catalog_source_id_request.tsv"
 OUT = ROOT / "data" / "gaia" / "gaia_dr3_apsis.tsv"
 
 TABLE = "gaiadr3.astrophysical_parameters"
@@ -207,7 +206,7 @@ def main() -> None:
         rl.gaia_sync_client(SYNC_MAXREC),
         table=TABLE,
         columns=TSV_COLUMNS,
-        request_path=REQUEST,
+        request_path=rl.CATALOG_SOURCE_ID_REQUEST,
         on_row=on_row,
         script_name=SCRIPT_NAME,
         maxrec=SYNC_MAXREC,

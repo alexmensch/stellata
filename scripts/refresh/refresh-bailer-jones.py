@@ -19,7 +19,6 @@ from paths import REPO_ROOT  # noqa: E402
 
 SCRIPT_NAME = "refresh-bailer-jones"
 ROOT = REPO_ROOT
-REQUEST = ROOT / "data" / "gaia" / "gaia_catalog_source_id_request.tsv"
 OUT = ROOT / "data" / "bailer-jones" / "bailer-jones-dr3.tsv"
 
 # see /data/bailer-jones/README.md#why-the-pull-is-esa-side
@@ -155,7 +154,7 @@ def main() -> None:
         rl.gaia_sync_client(SYNC_MAXREC),
         table=TABLE,
         columns=TSV_COLUMNS,
-        request_path=REQUEST,
+        request_path=rl.CATALOG_SOURCE_ID_REQUEST,
         on_row=on_row,
         script_name=SCRIPT_NAME,
         maxrec=SYNC_MAXREC,
