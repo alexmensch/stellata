@@ -106,15 +106,35 @@ jobs:
       - run: pnpm install --frozen-lockfile
       # see /scripts/ci/README.md#the-data-build-cache
       - id: build-cache
-        run: echo "prefix=data-build-${{ runner.os }}-node${{ steps.node.outputs.node-version }}-py${{ steps.python.outputs.python-version }}-${{ hashFiles('pnpm-lock.yaml') }}-" >> "$GITHUB_OUTPUT"
+        env:
+          PREFIX: data-build-${{ runner.os }}-node${{ steps.node.outputs.node-version }}-py${{ steps.python.outputs.python-version }}-${{ hashFiles('pnpm-lock.yaml') }}-
+          RUN: ${{ github.run_id }}-${{ github.run_attempt }}
+        run: |
+          if [ "$GITHUB_EVENT_NAME" = pull_request ]; then
+            own="${PREFIX}pr-$(git rev-parse HEAD^1)-"
+            {
+              echo "key=${own}${RUN}"
+              printf 'restore-keys<<EOF\n%s\n%s\nEOF\n' "$own" "${PREFIX}main-"
+              echo "own-older=${PREFIX}pr-"
+            } >> "$GITHUB_OUTPUT"
+          else
+            echo "key=${PREFIX}main-${RUN}" >> "$GITHUB_OUTPUT"
+          fi
       - id: restore
         if: github.event_name == 'pull_request'
         uses: actions/cache/restore@v6
         with:
           path: ${{ runner.temp }}/data-build.tar
-          key: ${{ steps.build-cache.outputs.prefix }}${{ github.run_id }}-${{ github.run_attempt }}
-          restore-keys: ${{ steps.build-cache.outputs.prefix }}
-      - if: steps.restore.outputs.cache-matched-key != ''
+          key: ${{ steps.build-cache.outputs.key }}
+          restore-keys: ${{ steps.build-cache.outputs.restore-keys }}
+      - id: restore-own-older
+        if: github.event_name == 'pull_request' && steps.restore.outputs.cache-matched-key == ''
+        uses: actions/cache/restore@v6
+        with:
+          path: ${{ runner.temp }}/data-build.tar
+          key: ${{ steps.build-cache.outputs.key }}
+          restore-keys: ${{ steps.build-cache.outputs.own-older }}
+      - if: steps.restore.outputs.cache-matched-key != '' || steps.restore-own-older.outputs.cache-matched-key != ''
         run: tar --skip-old-files -xf "$RUNNER_TEMP/data-build.tar"
       - id: built
         run: pnpm run build:data --verify-committed ${{ github.event_name == 'push' && '--force' || '' }}
@@ -129,7 +149,7 @@ jobs:
         uses: actions/cache/save@v6
         with:
           path: ${{ runner.temp }}/data-build.tar
-          key: ${{ steps.build-cache.outputs.prefix }}${{ github.run_id }}-${{ github.run_attempt }}
+          key: ${{ steps.build-cache.outputs.key }}
       # see /scripts/ci/README.md#vitest-with-every-input
       - name: Full vitest, smudged and built
         if: ${{ !cancelled() && steps.built.outcome == 'success' }}

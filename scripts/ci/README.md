@@ -56,9 +56,23 @@ the stage's median was 554 s on a runner, `build:catalog`'s 346 s of it
 (runner log timestamps).
 
 **The cache holds a whole build and the step stamps decide what is reused.**
-A pull request restores the newest saved build whose key starts with the
-prefix: its own previous push's first, else main's latest. The runner then
-rebuilds exactly the steps whose stamp no longer matches. A stamp hashes
+A pull request restores one saved build, and the runner rebuilds exactly the
+steps whose stamp no longer matches. Main saves under `<prefix>main-` and a
+pull request under `<prefix>pr-<main SHA>-`, the SHA being its merge
+commit's first parent (the main it was built on). The restore takes, in
+order:
+
+1. **Its own build on the same main** — main's build plus this PR's changes,
+   so only the PR's own new edits rebuild.
+2. **Main's newest build.** Once main has moved, the PR's own entry predates
+   the landing, and every step whose code the landing touched would rebuild
+   from it; main's build has them already, so only the PR's own changes do.
+3. **Its own older build**, in a second restore step, only when main has no
+   build under the prefix — typically a PR that changes `pnpm-lock.yaml`.
+
+The split prefixes are load-bearing: GitHub tries every restore key against
+the PR's own entries before any of main's, so one shared prefix would always
+return the PR's own newest entry, however stale. A stamp hashes
 every file the step reads as data or code and every file it writes, so a
 step hits on whatever build last made it from the same inputs, whatever
 commit that was, and a file no step reads that way (a workflow, a
@@ -70,8 +84,8 @@ the commit that reused it.
 
 **The prefix carries what no stamp records**: the runner OS, the Node and
 Python versions, and `pnpm-lock.yaml`'s hash. A change to any of these starts
-from a cold build. The full key adds the run id and attempt, so a run that
-saves gets an entry of its own.
+from a cold build. The full key adds `main-` or `pr-<main SHA>-`, then the run
+id and attempt, so a run that saves gets an entry of its own.
 
 **`.python-version` and `.nvmrc` name exact patch releases**
 (`toolchain-pins.test.ts`). `setup-python` and `setup-node` otherwise
