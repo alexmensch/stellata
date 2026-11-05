@@ -290,9 +290,10 @@ The table's own files are in [step-table/](step-table/README.md#files).
 - `run.ts` — the command line over `step-table/steps.ts`. Under GitHub
   Actions it also writes `built=true|false` (whether any step built) to
   `GITHUB_OUTPUT`, which gates CI's save.
-- `build-files.ts` (tested through `runner.test.ts`) — `buildFiles`: every
-  build step's declared outputs, family members and stamp that exist on
-  disk, which is the set CI caches
+- `build-files.ts` (tested through `runner.test.ts`) — `buildClaims`, the
+  one statement of what a build step owns: its declared files, families and
+  stamp. `buildFiles` is those that exist on disk, family members expanded,
+  which is the set CI caches
   ([The data build cache](../ci/README.md#the-data-build-cache)).
 - `worktree-include-pure.ts` (+ test) / `worktree-include.ts` (+ test) /
   `write-worktree-include.ts` — `.worktreeinclude`'s generator

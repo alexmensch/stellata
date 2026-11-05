@@ -1,11 +1,10 @@
 // The steps build:seed runs and .worktreeinclude rendered from their outputs, over the loaded repo table. See README.md#files.
 
-import { relative } from 'node:path';
-
 import { packageScripts } from '../util/import-closure';
 import { scriptParts } from '../util/import-closure-pure';
 import { REPO_ROOT } from '../util/paths';
-import { stampPath } from '../util/stamp-path-pure';
+import { buildClaims } from './build-files';
+import { pipelineTree } from './pipeline-tree';
 import type { Loaded } from './step-table/load-table';
 import { expandTargets, isBuild, selectSteps, type OutputClaims } from './step-table/step-table-pure';
 import { STEPS } from './step-table/steps';
@@ -14,7 +13,7 @@ import { renderWorktreeInclude } from './worktree-include-pure';
 const RUNNER = 'scripts/pipeline/run.ts';
 const SEED_SCRIPT = 'build:data';
 
-const rel = (path: string): string => relative(REPO_ROOT, path);
+const tree = pipelineTree(REPO_ROOT);
 
 export function seedSteps(loaded: Extract<Loaded, { kind: 'loaded' }>): string[] {
   const parts = scriptParts(packageScripts(), SEED_SCRIPT);
@@ -26,11 +25,8 @@ export function seedSteps(loaded: Extract<Loaded, { kind: 'loaded' }>): string[]
 
 /** Repo-relative, the stamp among the files. */
 export function seedOutputs(loaded: Extract<Loaded, { kind: 'loaded' }>, step: string): OutputClaims {
-  const { outputs } = loaded.steps.get(step)!;
-  return {
-    files: [...outputs.files, stampPath(step)].map(rel),
-    families: outputs.families.map((f) => ({ ...f, dir: rel(f.dir) })),
-  };
+  const { files, families } = buildClaims(loaded.steps.get(step)!, tree);
+  return { files: files.map(tree.rel), families: families.map((f) => ({ ...f, dir: tree.rel(f.dir) })) };
 }
 
 export function worktreeInclude(loaded: Extract<Loaded, { kind: 'loaded' }>): string {
