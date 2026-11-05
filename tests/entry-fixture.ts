@@ -10,13 +10,15 @@ export interface EntryFixture {
   readonly runs: () => string[];
 }
 
-export function writeEntryFixture(name: string, { describes = true }: { describes?: boolean } = {}): EntryFixture {
+export function writeEntryFixture(
+  name: string, { mains = true, describes = true }: { mains?: boolean; describes?: boolean } = {},
+): EntryFixture {
   const dir = mkdtempSync(join(tmpdir(), 'entry-fixture-'));
   const path = join(dir, name);
   const marker = join(dir, 'runs');
   writeFileSync(path, [
     "import { appendFileSync } from 'node:fs';",
-    `export function main(): number { appendFileSync(${JSON.stringify(marker)}, process.argv.slice(2).join(' ') + '\\n'); return 3; }`,
+    `${mains ? 'export ' : ''}function main(): number { appendFileSync(${JSON.stringify(marker)}, process.argv.slice(2).join(' ') + '\\n'); return 3; }`,
     ...(describes ? ["export function describe() { return { query: 'Q', services: ['svc'] }; }"] : []),
     '',
   ].join('\n'));

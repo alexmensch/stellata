@@ -225,4 +225,10 @@ describe('runStep', () => {
     await expect(launched(['--describe'], fixture)).rejects.toThrow(/exports no describe/);
     expect(fixture.runs()).toEqual([]);
   });
+
+  it('refuses an entry that exports no main', async () => {
+    const fixture = writeEntryFixture('entry.ts', { mains: false });
+    await expect(launched([], fixture)).rejects.toThrow(/exports no main/);
+    expect(fixture.runs()).toEqual([]);
+  });
 });
