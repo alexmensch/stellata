@@ -133,14 +133,16 @@ its retries once per run, and each answer is reported through
 `answeredBy`. `services`, the declared mirror list, is what a pull's
 describe states.
 
-**VizieR and SIMBAD-CDS are unverified, and the first PR that reaches them
-verifies them before it lands.** CDS Strasbourg was unreachable from
-2026-11-05 (an internet-wide vulnerability, no restoration date), and Harvard
-mirrors SIMBAD's TAP but not VizieR's, so their CSV dialect (quoting, a BOM,
-the empty cell), `/capabilities` limit and error body are unmeasured. A PR in
-which a pull is answered by `CDS` or `SIMBAD-CDS` (its record's `answeredBy`)
-closes stellata-hhaw.45.29.9 — whose description lists the live checks — in
-that same PR, fixing here whatever they find.
+**The `CDS` and `SIMBAD-CDS` mirrors are unverified, and the first PR a mirror
+answers verifies that mirror before it lands.** CDS Strasbourg was unreachable
+from 2026-11-05 (an internet-wide vulnerability, no restoration date), and
+Harvard mirrors SIMBAD's TAP but not VizieR's, so their CSV dialect (quoting,
+a BOM, the empty cell), `/capabilities` limit and error body are unmeasured.
+The two are separate hosts and may return apart, so the rule is per mirror: a
+PR in which a pull is answered by one (its record's `answeredBy`) runs that
+mirror's group of live checks in stellata-hhaw.45.29.9, records the result
+here, and fixes whatever they find, in that same PR. The bead closes once both
+groups pass.
 
 ## Columns
 
