@@ -646,7 +646,7 @@ SIMBAD_HARVARD_TAP_URL = "https://simbad.cfa.harvard.edu/simbad/sim-tap"
 GAIA_ESA_SYNC_TAP_URL = "https://gea.esac.esa.int/tap-server/tap"
 GAIA_ARI_SYNC_TAP_URL = "https://gaia.ari.uni-heidelberg.de/tap"
 
-# Not ESA's current limit: see scripts/refresh/README.md#gaia-tap-synchronous-endpoints-only.
+# Not ESA's current limit: see README.md#gaia-tap-synchronous-endpoints-only.
 GAIA_SYNC_MAX_ROWS = 3_000_000
 
 GAIA_DR3_RELEASE = "Gaia DR3"
