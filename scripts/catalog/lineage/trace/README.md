@@ -28,16 +28,18 @@ name.
    folded, refuses, listing both: one composed label can sit on two records
    (`54 Leo`, a HIP primary and a Gaia-only companion), and the designation
    half has case-only twins that are different stars (`a Car`, `A Car`).
-   `lookupByName` itself stays exact, for the frozen corpora. Designations follow `../../../sid/sid-pure.ts`'s grammar; a SID
-   resolves to its canonical key through the ledger.
+   `lookupByName` itself stays exact, for the frozen corpora. Designations
+   follow `../../../sid/sid-pure.ts`'s grammar; a SID resolves to its
+   canonical key through the ledger.
 2. Find the origin keys whose identity rows carry that designation. Parked
    and dropped records have lineage rows too, so they are found. Also find
    every row that names it in `params` or `evidence` — a source a gate
    weighed and refused, or only cited, sits on no identity row — and every
    row that cites one of those identity-row records by origin key, as a
    companion's promotion row cites its anchor. Identity rows come from every
-   stage that writes them (`StageLineageSpec.identity`, [Identity](../README.md#identity--the-origin-source-row)). A full scan of the
-   stage files, about two seconds today, so no index is kept.
+   stage that writes them (`StageLineageSpec.identity`,
+   [Identity](../README.md#identity--the-origin-source-row)). A full scan of
+   the stage files, about two seconds today, so no index is kept.
 3. Widen through allocation's rows: a SID query also finds the origin keys
    allocation filed it under — the record it resolved to, or the decision
    that retired, parked or merged it — and a merged SID's successor.
