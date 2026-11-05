@@ -2,19 +2,15 @@ import { describe, it, expect } from 'vitest';
 import { tangentOffset, type Stage6Offset } from './anchor-offset-pure';
 import {
   ANCHOR_DIM_MAX_FIT_RESIDUAL_MAG,
-  canonicalCompLetter,
   componentDepth,
-  composeSyntheticId,
   emptyParkedRefusals,
   foldRowOutcomes,
   GAIA_BLEND_MAX_SEP_ARCSEC,
   PRINTED_BLEND_MAX_SEP_ARCSEC,
-  hasRenderableOrbit,
   imputeCompanionAbsmag,
   imputeCompanionCi,
   isDisjointSingleLetter,
   isMoreCanonicalAnchor,
-  parentComponentToken,
   parseMultiplesTsv,
   projectFromSepPa,
   parkedRefusals,
@@ -77,7 +73,7 @@ function makeStar(overrides: Partial<Star> = {}): Star {
 }
 
 
-/** Complete Tier-1 element set — hasRenderableOrbit(row) === true. */
+/** Complete Tier-1 element set — a renderable orbit. */
 const ORBIT_ELEMENTS = {
   pDays: 680.168, tJd: 2446927.22, e: 0.227, aAU: 2.576,
   iRad: 1.46, omegaRad: 5.41, q: 0.5,
@@ -1110,19 +1106,6 @@ describe('anchor flux dimming', () => {
     expect(stats.blendDimmedAnchors).toBe(1);
     expect(anchor.absmag).toBeCloseTo(2.3078, 4);
     expect(blendMag(anchor.absmag, member.absmag)).toBeCloseTo(1.5, 9);
-  });
-});
-
-describe('hasRenderableOrbit', () => {
-  it('true only when P, T, e, a, ω, q are all present', () => {
-    expect(hasRenderableOrbit(multiplesRow(ORBIT_ELEMENTS))).toBe(true);
-    expect(hasRenderableOrbit(multiplesRow())).toBe(false);
-    expect(hasRenderableOrbit(multiplesRow({ ...ORBIT_ELEMENTS, aAU: null }))).toBe(false);
-    expect(hasRenderableOrbit(multiplesRow({ ...ORBIT_ELEMENTS, q: null }))).toBe(false);
-  });
-
-  it('i is optional (Tier-2 galactic-plane fallback)', () => {
-    expect(hasRenderableOrbit(multiplesRow({ ...ORBIT_ELEMENTS, iRad: null }))).toBe(true);
   });
 });
 
@@ -2765,45 +2748,6 @@ describe('promoteCompanions', () => {
   });
 });
 
-describe('composeSyntheticId', () => {
-  it('builds "synth-<wds_id>-<comp>" from a Stage 6 system_id', () => {
-    expect(composeSyntheticId('03082+4057-Aa,Ab', 'Ab')).toBe('synth-03082+4057-Ab');
-  });
-
-  it('preserves negative-Dec wds_id intact', () => {
-    expect(composeSyntheticId('16120-1928-Aa,Ab', 'Ab')).toBe('synth-16120-1928-Ab');
-  });
-
-  it('returns null for empty comp letter', () => {
-    expect(composeSyntheticId('03082+4057-Aa,Ab', '')).toBeNull();
-    expect(composeSyntheticId('03082+4057-Aa,Ab', '   ')).toBeNull();
-  });
-
-  it('returns null when system_id has no dash (malformed)', () => {
-    expect(composeSyntheticId('NODASH', 'Ab')).toBeNull();
-  });
-});
-
-describe('canonicalCompLetter', () => {
-  it('re-anchors WDS prefix-truncated bare-digit secondary onto primary stem', () => {
-    // Algol Aa1,2 — secondary cell carries "2" not "Aa2".
-    expect(canonicalCompLetter('Aa1', '2')).toBe('Aa2');
-  });
-
-  it('passes through non-digit secondary unchanged', () => {
-    expect(canonicalCompLetter('A', 'B')).toBe('B');
-    expect(canonicalCompLetter('Aa', 'Ab')).toBe('Ab');
-  });
-
-  it('passes through when primary has no trailing digit', () => {
-    expect(canonicalCompLetter('AB', '2')).toBe('2');
-  });
-
-  it('passes through for single-character primary (no stem to extract)', () => {
-    expect(canonicalCompLetter('A', '2')).toBe('2');
-  });
-});
-
 describe('isMoreCanonicalAnchor', () => {
   it('ranks the A branch above every other branch, at any depth', () => {
     // 15 Mon (06410+0954): its only A-branch cursor is Aa,Ab, and the root
@@ -2829,20 +2773,6 @@ describe('isMoreCanonicalAnchor', () => {
     // record-index/ imports this one rather than keeping a twin: both want
     // the branch the root is named for.
     expect(isMoreCanonicalAnchor('B', 'C')).toBe(true);
-  });
-});
-
-describe('parentComponentToken', () => {
-  // Fixtures mirror component_tokens.py:test_parent_component_token so
-  // the Python↔TS mirror can't silently drift.
-  it('drops the rightmost designator', () => {
-    expect(parentComponentToken('Aa1')).toBe('Aa');
-    expect(parentComponentToken('Ba')).toBe('B');
-    expect(parentComponentToken('Aa')).toBe('A');
-  });
-
-  it('returns null for a single-character (top-level) token', () => {
-    expect(parentComponentToken('A')).toBeNull();
   });
 });
 

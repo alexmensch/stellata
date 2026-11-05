@@ -335,7 +335,7 @@ pnpm run build:catalog           # reads that multiples.tsv; writes catalog-row-
 pnpm run build:binaries-runtime  # reads BOTH of the above
 ```
 
-`build-runtime-binaries.py` resolves every component through
+`build:binaries-runtime` resolves every component through
 `build/catalog-row-index-map.json`, which `build:catalog` writes, so running
 it before the catalogue leaves `public/binaries.bin` older than an input —
 which is exactly what `tests/artifact-freshness.test.ts` fails on.

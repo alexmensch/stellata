@@ -6,26 +6,18 @@ import {
 } from '../../../../src/catalog-format/record/catalog-pure';
 import type { Star } from '../../parse/stars-parse';
 import {
-  canonicalCompLetter,
-  composeSyntheticId,
   groupBySystem,
-  hasRenderableOrbit,
   isMoreCanonicalAnchor,
-  parentComponentToken,
-  wdsRootOf,
   type MultiplesTsvRow,
   type PairCursor,
 } from '../companion-promotion';
-
-export interface CatalogRowIndexMap {
-  /** Gaia DR3 source_id (decimal string) → catalog.bin record index. */
-  byGaia: Record<string, number>;
-  /** Hipparcos catalog number → catalog.bin record index. */
-  byHip: Record<string, number>;
-  /** Synthetic identifier → catalog.bin record index. See
-   *  ../README.md#companion-promotion-from-databinariesmultiplestsv `data/binaries/multiples.tsv`. */
-  bySynth: Record<string, number>;
-}
+import {
+  canonicalCompLetter, composeSyntheticId, parentComponentToken, wdsRootOf,
+} from '../../../binaries/component-tokens-pure';
+import { hasRenderableOrbit } from '../../../../src/catalog-format/binaries/binaries-format';
+import {
+  resolveMultiplesIdx, synthSlotIdx, type CatalogRowIndexMap,
+} from './catalog-row-index-map-pure';
 
 // Build the lookup sidecar after the final record sort. The runtime
 // binaries loader resolves multiples.tsv rows to catalog.bin records
@@ -33,7 +25,7 @@ export interface CatalogRowIndexMap {
 // search-index.json.
 export function buildCatalogRowIndexMap(
   stars: Star[],
-  /** README.md#the-sidecar-and-why-resolution-is-duplicated-from-python. */
+  /** README.md#the-sidecar-and-how-a-component-resolves. */
   synthGaiaBridges: ReadonlyMap<string, string> = new Map(),
 ): CatalogRowIndexMap {
   const byGaia: Record<string, number> = {};
@@ -60,45 +52,6 @@ export function buildCatalogRowIndexMap(
 
 // ---- Wings for renderable-companion primaries --------------------------
 
-/** gaia → hip → synth catalog-row resolution — the TS twin of
- *  build-runtime-binaries.py's `resolve_idx`. Kept faithful so the winged
- *  set matches binaries.bin's rendered pairs; the invariant is pinned by
- *  /tests/integration/multi-star-regression.test.ts against the real artifacts. */
-function resolveMultiplesIdx(
-  gaia: string | null,
-  hip: number | null,
-  synthKey: string | null,
-  rowIndexMap: CatalogRowIndexMap,
-): number | null {
-  if (gaia) {
-    const hit = rowIndexMap.byGaia[gaia];
-    if (hit !== undefined) return hit;
-  }
-  if (hip !== null && hip > 0) {
-    const hit = rowIndexMap.byHip[`${hip}`];
-    if (hit !== undefined) return hit;
-  }
-  if (synthKey !== null) {
-    const hit = rowIndexMap.bySynth[synthKey];
-    if (hit !== undefined) return hit;
-  }
-  return null;
-}
-
-/** The catalog row a component's synth key addresses, or null when no synth
- *  record exists or it aliases `exclude`. TS twin of the Python `synth_slot`;
- *  a hit is the truer slot than an id-first resolve that blended onto a
- *  system anchor. */
-function synthSlotIdx(
-  synthKey: string | null,
-  rowIndexMap: CatalogRowIndexMap,
-  exclude: number | null = null,
-): number | null {
-  if (synthKey === null) return null;
-  const hit = rowIndexMap.bySynth[synthKey];
-  return hit === undefined || hit === exclude ? null : hit;
-}
-
 interface ResolvedComponent {
   idx: number;
   /** Canonical WDS component letter (`canonicalCompLetter` applied). */
@@ -113,13 +66,7 @@ interface ResolvedSystem {
   components: ResolvedComponent[];
 }
 
-/** Resolve a pair cursor's primary + secondaries to catalog record indices
- *  through the gaia → hip → synth priority + both-ends synth re-home that
- *  build-runtime-binaries.py's `resolve_idx` uses, so both consumers below
- *  (wings, component designations) track binaries.bin's rendered pairs. A
- *  blended component (its id resolves onto another member's row) has its own
- *  distinct synth slot minted by promotion, and that slot is the truer end.
- *  Null when the primary itself doesn't resolve. */
+/** Null when the primary itself doesn't resolve. */
 function resolvePairComponents(
   cursor: PairCursor,
   rowIndexMap: CatalogRowIndexMap,
@@ -182,7 +129,7 @@ function resolveRowIdx(
 }
 
 /** A component carrying no identifier of its own renders through the PARENT
- *  component's slot — `build-runtime-binaries.py` forces exactly this before
+ *  component's slot — the binaries.bin writer forces exactly this before
  *  emitting (/src/client/binaries/README.md#hierarchical-walk), so the winged set has to mirror it or a
  *  system renders a companion with no wings bit anywhere on it. Castor Ba is
  *  the shape it was written for; WDS 02536-6420 is the shape that needs it
@@ -206,9 +153,6 @@ interface RenderedCursor {
   secondaries: { idx: number; row: MultiplesTsvRow }[];
 }
 
-/** Every pair cursor that renders a companion, resolved the way
- *  build-runtime-binaries.py resolves it before emitting: `resolve_idx`, both
- *  synth retries, and the parent re-home. */
 function renderedCursors(
   cursors: PairCursor[],
   rowIndexMap: CatalogRowIndexMap,
@@ -270,8 +214,8 @@ export function renderableOrbitRelations(
  *  physical system that renders a companion but which build-catalog's three
  *  wings passes (geometric, CCDM, eclipsing) all missed (Canopus, 16 Cyg A).
  *  A pair renders a companion when its sides resolve to DISTINCT catalog
- *  records under the same `resolve_idx` + blended-sibling synth retries
- *  build-runtime-binaries.py runs to emit binaries.bin, so the winged set
+ *  records under the same resolution + blended-sibling synth retries the
+ *  binaries.bin writer runs, so the winged set
  *  tracks binaries.bin's primaries (both retries mirrored; the writer's
  *  post-resolution override / relation dedup can't change the distinct-pair
  *  boolean this pass keys on, only which index, which root-grouping and the
