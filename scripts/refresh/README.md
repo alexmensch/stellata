@@ -261,6 +261,10 @@ partial-write protection so a mid-run failure never leaves a
 half-written TSV under `data/`. `assert_row_count` is also imported by
 `scripts/binaries/build-binaries.py` for its Stage-1 parser bounds.
 
+The pulls port onto `pull/`, the TypeScript runtime: one CSV TAP backend whose
+overflow check is a row count, a query-keyed resume cache, required gates and
+an all-or-none write ([pull/README.md](pull/README.md)).
+
 ### VizieR
 
 The declarative whole-table case — `VizierSlice` / `pull_slices()`, CDS's

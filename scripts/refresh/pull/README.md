@@ -13,6 +13,51 @@ SIMBAD. A pull is a `pull` step on the step table
   from it: the projection, the reply's schema check, the TSV.
 - `gates-pure.ts` (+ test) — the row band, spot rows and coverage, each an
   `emitArtifacts` check.
+- `checkpoint.ts` — the resume cache.
+- `pull.ts` (+ test, the faked-transport acceptance cases) — the `Pull` type,
+  `describePull`, `runPull`, and `LIVE`, the network transport.
+
+## A pull
+
+```ts
+export const pull: Pull<'xmatch'> = { archive: GAIA, outputs: XMATCH_OUTPUTS, release: 'Gaia DR3', tables: { xmatch: {…} } };
+export const describe = () => describePull(pull);
+export const main = () => runPull(pull);
+```
+
+A `Pull` is an archive, the step's `declareOutputs` constant, and one
+`PullTable` per declared output: `from`, optional `where` and `orderBy`, its
+columns, a scope, and its gates. **A table without a row band or at least one
+spot row does not compile.** Scopes:
+
+- `whole-table` — one query, limit `band.max × LIMIT_HEADROOM`.
+- `request` — the ids (ADQL literals) ANDed onto `where` as
+  `<key> IN (…)`, `batchSize` per query, limit
+  `batchSize × rowsPerId × LIMIT_HEADROOM`; optional coverage over the ids.
+
+`LIMIT_HEADROOM` (2) leaves room for a moved table to reach the band gate,
+which reports its count, rather than the overflow, which cannot.
+
+`describePull` states every table's query with its request ids left as
+`{request}`, plus the mirror list and release: what the record's query hash
+covers ([Freshness](../../pipeline/README.md#freshness--one-mechanism)), so a
+changed column, `WHERE` or mirror stales the pull and a changed id list does
+not, except through the pull's inputs.
+
+`runPull` queries every table, gates every one, then makes one
+`emitArtifacts` emission of all its outputs: a failed gate, query or schema
+check anywhere leaves every prior output byte-identical.
+
+## The checkpoint
+
+Each answered query's CSV reply is cached as it lands, under
+`<first output>.ckpt/`, named by the hash of the query's text; a re-run
+replays a cached reply (re-checked against the limit and the columns) and
+asks only what is missing. Keying on the text is what makes **a changed
+query never replay an old answer**: a new column, `WHERE`, batch or id hashes
+to a new file. The folder is removed only after the outputs commit, so **a
+failed gate keeps it**, and the fix re-run costs no network. It is
+gitignored (`data/**/*.tsv.ckpt*/`) and deleting it is always safe.
 
 ## The TAP backend
 
