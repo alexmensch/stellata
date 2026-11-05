@@ -22,8 +22,7 @@ import {
   NO_PARENT,
 } from '../../catalog-format/binaries/binaries-format';
 
-/** Per-relation cache populated once per attach. Cheap to keep — at
- *  ~900 binary records the whole list is well under 100 KB. */
+/** Per-relation cache populated once per attach. */
 export interface OrbitRelationCache {
   /** Index back into `BinariesData.relations`. */
   relationIdx: number;
