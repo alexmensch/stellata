@@ -16,12 +16,12 @@ import { isProductionTs, walkFiles } from './walk-files';
 
 const OUT_OF_PIPELINE = /^scripts\/(perf|release|hooks|ci)\//;
 
+const DATA_FILES_MODULE = 'src/catalog-format/pipeline-outputs/data-files.ts';
+
 const DATA_PATH_SPELLERS = [
   'scripts/catalog/catalog-inputs.test.ts',
   'scripts/local-group/local-group-inputs.test.ts',
-  'scripts/pipeline/pipeline-tree.ts',
-  'scripts/pipeline/step-table/steps.ts',
-  'src/catalog-format/pipeline-outputs/data-files.ts',
+  DATA_FILES_MODULE,
   'tests/citation-index.test.ts',
   'tests/doc-pointer-resolution.test.ts',
   'tests/paper-store-link.test.ts',
@@ -75,6 +75,10 @@ describe('source declarations', () => {
         && /['"`]data\/|,\s*['"]data['"]\s*[,)]/.test(code))
       .map(({ at }) => at);
     expect(offenders).toEqual([]);
+  });
+
+  it('lets only DATA_FILES spell a data/ path among production modules', () => {
+    expect(DATA_PATH_SPELLERS.filter((rel) => /^(scripts|src)\//.test(rel) && isProductionTs(rel))).toEqual([DATA_FILES_MODULE]);
   });
 
   it('spells a DATA_FILES path only in DATA_FILES', () => {

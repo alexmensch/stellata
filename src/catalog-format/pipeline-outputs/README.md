@@ -15,9 +15,11 @@ repo-relative, so an outputs module passes them as they are.
   step-table outputs modules declare: the membership manifest and its three
   ledgers, the parked and SIMBAD-sourced distance ledgers, the label-merge
   queue, the classic-ID overlay and its two gate queues, the two WGSN
-  tables, the Gaia astrometry request, the generated reason-code list, and
-  the Vaidman 2025 reference table the hand-run `build:vaidman-table`
-  writes. The Horizons fetchers' per-target families are spelled beside
+  tables, the two Gaia astrometry requests (the catalogue's, and the one
+  `build:binaries` writes, which the step table names), the generated
+  reason-code list, and the Vaidman 2025 reference table the hand-run
+  `build:vaidman-table` writes; and `MANUAL_STAMP_FOLDER`, where the manual
+  steps' committed records live (`/scripts/pipeline/pipeline-tree.ts`). The Horizons fetchers' per-target families are spelled beside
   their own outputs modules. Python cannot import this module, so the
   `scripts/refresh/` pulls take the manifest's and the request's paths
   from `refresh_lib.py`, Python's one spelling of each. Each file's codec (a `defineArtifact` in
@@ -30,8 +32,9 @@ repo-relative, so an outputs module passes them as they are.
   `registryFiles`), all typed by `RegistryPartition`, so naming a partition
   no step allocates fails typecheck. Which namespaces each partition owns is
   `/scripts/sid/registry-partitions-pure.ts`'s.
-  It is the one module under `src/` that spells a `data/` path, listed by
-  name in `tests/source-declarations.test.ts`'s `DATA_PATH_SPELLERS`.
+  It is the one production module that spells a `data/` path:
+  `tests/source-declarations.test.ts`'s `DATA_PATH_SPELLERS` names it, and
+  pins it as the list's only production entry.
 - `build-files.ts` — `BUILD_FILES`, the build-only hand-offs under
   `build/` a declaration and its readers both name: today
   `build/catalog-row-index-map.json`.
