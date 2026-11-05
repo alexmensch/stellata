@@ -55,7 +55,8 @@ export function* coherenceLineageRows(verdicts: readonly SystemVerdict[], stars:
     return {
       stage: COHERENCE_LINEAGE.stage, key, role: 'outcome', code: COHERENCE_CODES.code(branch),
       params: paramsText(params as LineageParams),
-      evidence: anchor?.ref == null ? [] : [sourceRowRefText(anchor.ref)].filter((t) => t !== key),
+      evidence: anchor === null || anchor.tier === 'inherited'
+        ? [] : [sourceRowRefText(anchor.ref)].filter((t) => t !== key),
     };
   };
   const byIdx = new Map<number, LineageRow[]>();

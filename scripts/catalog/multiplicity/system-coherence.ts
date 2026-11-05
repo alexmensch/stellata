@@ -54,14 +54,16 @@ export interface CoherenceSources {
   bailerJones: BailerJonesIndex;
 }
 
-export interface CoherenceAnchor {
+/** An anchor tier and the row it rests on; the inherited tier rests on none. */
+export type AnchorBasis =
+  | { readonly tier: 'inherited' }
+  | { readonly tier: Exclude<AnchorTier, 'inherited'>; readonly ref: AnySourceRowRef };
+
+export type CoherenceAnchor = AnchorBasis & {
   readonly idx: number;
-  readonly tier: AnchorTier;
-  /** The row the tier rests on; null for the inherited tier. */
-  readonly ref: AnySourceRowRef | null;
   readonly memberWon: boolean;
   readonly precisionVetoed: boolean;
-}
+};
 
 export type MemberVerdict =
   | { readonly kind: 'snapped'; readonly idx: number; readonly fromPc: number; readonly toPc: number }
@@ -109,11 +111,7 @@ function fractionalError(plxMas: number | null, errMas: number | null): number |
   return plxMas !== null && plxMas > 0 && errMas !== null ? errMas / plxMas : null;
 }
 
-interface AnchorEvidence {
-  tier: AnchorTier;
-  fracError: number | null;
-  ref: AnySourceRowRef | null;
-}
+type AnchorEvidence = AnchorBasis & { readonly fracError: number | null };
 
 /** The member's anchor tier, the row that earned it, and the fractional
  *  parallax error of that fit — null below the HIP2 tier, which carries no
@@ -144,7 +142,7 @@ function anchorEvidence(
       tier: 'bailer-jones', fracError: null, ref: sourceRowRef(sources.bailerJones.source, star.gaiaSourceId),
     };
   }
-  return { tier: 'inherited', fracError: null, ref: null };
+  return { tier: 'inherited', fracError: null };
 }
 
 /** Best available (distance_pc, sigma_pc) measurement for the record,
@@ -304,12 +302,9 @@ export function systemCoherenceVerdicts(
       best = bestPrimary;
       precisionVetoed = true;
     }
+    const { fracError: _, ...basis } = best.evidence;
     const anchor: CoherenceAnchor = {
-      idx: best.idx,
-      tier: best.evidence.tier,
-      ref: best.evidence.ref,
-      memberWon: best.rank.primarySide === 1,
-      precisionVetoed,
+      ...basis, idx: best.idx, memberWon: best.rank.primarySide === 1, precisionVetoed,
     };
     const undecided = (): number[] => [...members.keys()]
       .filter((idx) => idx !== anchor.idx && !processed.has(idx));

@@ -5,13 +5,15 @@ import { gaiaAstrometryRow } from '../distance/astrometry-fixture';
 import { makeStar } from '../parse/star-fixture';
 import { sourceRowRefText } from '../../util/sources/row-ref-pure';
 import { COHERENCE_CODES, coherenceLineageLines, coherenceLineageRows } from './coherence-lineage-pure';
-import type { CoherenceAnchor, SystemVerdict } from './system-coherence';
+import type { AnchorBasis, CoherenceAnchor, SystemVerdict } from './system-coherence';
 
 const stars = ['spine:1', 'spine:2', 'spine:3', 'spine:4', 'spine:5', 'spine:6'].map((originKey) => makeStar({ originKey }));
 const gaia = gaiaAstrometryRow({});
-const anchor = (idx: number, o: Partial<CoherenceAnchor> = {}): CoherenceAnchor => (
-  { idx, tier: 'gaia-clean', ref: gaia.ref, memberWon: false, precisionVetoed: false, ...o }
-);
+const INHERITED: AnchorBasis = { tier: 'inherited' };
+const anchor = (
+  idx: number, o: Partial<Pick<CoherenceAnchor, 'memberWon' | 'precisionVetoed'>> = {},
+  basis: AnchorBasis = { tier: 'gaia-clean', ref: gaia.ref },
+): CoherenceAnchor => ({ ...basis, idx, memberWon: false, precisionVetoed: false, ...o });
 
 describe('coherenceLineageRows', () => {
   it('writes not-applicable, with no params or evidence, for every record no system decided', () => {
@@ -34,7 +36,7 @@ describe('coherenceLineageRows', () => {
         ],
       },
       { kind: 'anchor-inconsistent', root: '00002+0002', anchor: anchor(1), anchorPc: 1686, parallaxPc: 534, sigmaPc: 210, members: [2] },
-      { kind: 'anchor-unplaced', root: '00003+0003', anchor: anchor(3, { tier: 'inherited', ref: null }), members: [4] },
+      { kind: 'anchor-unplaced', root: '00003+0003', anchor: anchor(3, {}, INHERITED), members: [4] },
     ];
     const rows = [...coherenceLineageRows(verdicts, stars)];
     expect(rows.map((r) => [r.key, r.code])).toEqual([
@@ -76,7 +78,7 @@ describe('coherenceLineageRows', () => {
 
   it('cites nothing for an inherited anchor', () => {
     const rows = [...coherenceLineageRows([{
-      kind: 'anchor-unplaced', root: '00003+0003', anchor: anchor(0, { tier: 'inherited', ref: null }), members: [1],
+      kind: 'anchor-unplaced', root: '00003+0003', anchor: anchor(0, {}, INHERITED), members: [1],
     }], stars.slice(0, 2))];
     expect(rows.map((r) => r.evidence)).toEqual([[], []]);
   });

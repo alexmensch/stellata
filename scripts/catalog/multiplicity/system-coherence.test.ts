@@ -473,6 +473,6 @@ describe('systemCoherenceVerdicts', () => {
     const [withBj] = systemCoherenceVerdicts(rows, [a, b], bj);
     expect(withBj.anchor).toMatchObject({ idx: 0, tier: 'bailer-jones', ref: { source: BAILER_JONES, row: '7' } });
     const [inherited] = systemCoherenceVerdicts(rows, [a, b], sources());
-    expect(inherited.anchor).toMatchObject({ idx: 0, tier: 'inherited', ref: null });
+    expect(inherited.anchor).toEqual({ idx: 0, tier: 'inherited', memberWon: false, precisionVetoed: false });
   });
 });
