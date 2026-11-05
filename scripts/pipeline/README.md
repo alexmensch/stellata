@@ -126,8 +126,7 @@ write more than one file (classic-ids four, Tycho-2 two).
 
 `run.ts <target…> [--force] [--update-snapshots] [--verify-committed]`
 
-A target is a step name, or `data` for every build step on the table. `--verify-committed` is CI's slice of the runner and
-lands with it; `run.ts` rejects it until then.
+A target is a step name, or `data` for every build step on the table.
 
 1. Load and validate the table.
 2. Walk the steps the targets reach, in derived order.
@@ -161,14 +160,16 @@ lands with it; `run.ts` rejects it until then.
   `snapshotCheck` and `snapshot_assert.py` read. A forced rebuild therefore
   still checks counts. Every step it runs also gets `PIPELINE_STEP` set to
   its name, so a drift message names this flag rather than the variable.
-- **`--verify-committed`** forces each selected step, then fails on any diff
-  in its declared outputs that git tracks (`git ls-files` over the declared
-  paths decides which are committed; the declaration carries no committed
-  mark). It replaces `ci/catalog-stage-pure.ts`'s `CATALOG_STAGE` and
-  `test.yml`'s inline build-binaries diff, and covers
-  `build:astrometry-request`'s output, which nothing verifies today.
-- **CI cache key**: the digest of the stage's step input sets, the same
-  closure the stamps hash. `keyedPaths` stays CI's own filter over it.
+- **`--verify-committed`** fails a step, fresh or built, whose declared
+  outputs git tracks and whose working copy differs from the index, naming
+  the files and the command; its readers are skipped as behind any failure.
+  Git decides which outputs are committed; the declaration carries no
+  committed mark. It does not force: a fresh step's stamp already vouches
+  that its outputs are what its inputs build, since a committed output that
+  differs from the recorded hash stales the step, and the rebuild then
+  shows the diff. With `--force` every selected step is rebuilt first. CI
+  runs it over `data` on every push, forced on main
+  ([The data build cache](../ci/README.md#the-data-build-cache)).
 
 ## Recording a manual step — `record.ts`
 
@@ -285,7 +286,13 @@ The table's own files are in [step-table/](step-table/README.md#files).
   stamp keys are relative to it, and a step's build stamp (through
   `stampPath`), manual record, run record, handed inputs and lock folder sit under it.
   `run.ts` passes the repo root; tests pass a temporary folder.
-- `run.ts` — the command line over `step-table/steps.ts`.
+- `run.ts` — the command line over `step-table/steps.ts`. Under GitHub
+  Actions it also writes `built=true|false` (whether any step built) to
+  `GITHUB_OUTPUT`, which gates CI's save.
+- `build-files.ts` (tested through `runner.test.ts`) — `buildFiles`: every
+  build step's declared outputs, family members and stamp that exist on
+  disk, which is the set CI caches
+  ([The data build cache](../ci/README.md#the-data-build-cache)).
 - `record.ts` / `record-step.ts` (+ test) — [Recording a manual
   step](#recording-a-manual-step--recordts): `recordStep` and the
   `RecordOutcome` union (`fresh`, `recorded`, `failed`).
@@ -299,8 +306,8 @@ The table's own files are in [step-table/](step-table/README.md#files).
 - **Q1, one owner per fact.** Step order: the data flow. Outputs: each step's
   declaration. Code inputs: the import closure (TS) or the run record
   (Python). Data inputs: the source constants (TS) or the run record (Python).
-  Freshness: the stamp. Force and snapshot updating: two runner flags.
-  Committed-output verification: one runner mode.
+  Freshness, locally and in CI's cache: the stamp. Force, snapshot updating
+  and committed-output verification: three runner flags.
 - **Q2, wrong states.** Fresh, stale, failed and skipped-behind-a-stale-or-
   failed-step are the variants of one verdict union the runner matches on
   exhaustively; a missing stamp reads as stale, never fresh.
@@ -315,5 +322,4 @@ The table's own files are in [step-table/](step-table/README.md#files).
   Step kinds exist because two runner behaviours (run it; check it and stop)
   each hold several cases today.
 - **Q7, copies.** The two stamp helpers stay one per language with one JSON
-  shape; `refresh_lib.is_up_to_date`, the mtime gates, `CATALOG_STAGE` and
-  the inline YAML diff are deleted, not wrapped.
+  shape, and CI keys no input set of its own.

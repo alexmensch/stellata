@@ -87,6 +87,15 @@ takes `skip-version-bump` is
 [the live-app consumer test](/RELEASING.md#the-live-app-consumer-test). Exempt under
 [the `skip-version-bump` exemption](#the-skip-version-bump-exemption).
 
+## `cache-cleanup.yml`
+
+Runs when a pull request closes, merged or not, and deletes every Actions
+cache entry scoped to it (`refs/pull/<n>/merge`): its saved data builds
+([The data build cache](/scripts/ci/README.md#the-data-build-cache)) and
+anything else its runs saved. No other run can restore them, and the
+repository's cache store evicts least-recently-used entries past its cap,
+main's builds among them.
+
 ## `test.yml`
 
 CI pipeline on every PR (and push to `main`). Required for merge. A
@@ -102,27 +111,19 @@ fan-out of jobs beyond the bare checks:
 - `python-tests` — every `scripts/**/*.test.py`, failing on any skip
   ([Python suites](/scripts/ci/README.md#python-suites)). Every job that
   runs Python — this one, `test` (the runner and code-identity suites spawn
-  `python3`), `build-binaries`, `spotcheck`, `build-catalog` and
+  `python3`), `spotcheck`, `build-catalog` and
   `deploy.yml`'s — sets it up from the repo-root `.python-version`,
   never the runner image's `python3`, so an image upgrade cannot move it.
-- `build-binaries` / `spotcheck` — rebuild `multiples.tsv` and assert it
-  matches the committed artifact; resolve Stage 2 against the curated
-  ground-truth corpus.
+- `spotcheck` — resolves Stage 2 against the curated ground-truth corpus.
 - `build-catalog` — checked out with full history, which the SID
-  ledger's append-only guard reads for its merge-base. The catalogue
-  stage with its regenerate-and-diff gates, then `build:data` (every build step on the table; on a cache hit the
-  catalogue chain reads fresh), then every check that reads the
-  built artifacts, as named steps. On a pull request
-  the catalogue stage (`build:classic-ids` through `build:catalog`, ~5 min)
-  restores from a content-keyed cache when no input changed; key, cached
-  set and the one way to get a stale hit: `scripts/ci/README.md`. The
-  checks:
-  - `Layer outputs committed` — `git diff --exit-code -- data/sid
-    data/molecular-clouds` after `build:data`: a mint or event
-    `build:clouds` or `build:local-group` appended, or a change to the dust
-    bake's column-check inputs `build:clouds` wrote, that the PR did not
-    commit. The catalogue stage's own diff
-    gate covers `build:catalog`'s.
+  ledger's append-only guard reads for its merge-base. `build:data
+  --verify-committed` (every build step on the table, failing on any
+  committed output the build moves: a SID mint the PR did not commit, a
+  stale `multiples.tsv`, either astrometry request), then every check that
+  reads the built artifacts, as named steps. A pull request restores the
+  newest saved build and rebuilds only the steps whose stamps moved; a push
+  to `main` rebuilds everything: [The data build cache](/scripts/ci/README.md#the-data-build-cache).
+  The checks:
   - `Full vitest, smudged and built` — `pnpm test` again, now with LFS
     content and every built artifact present, so each suite that
     self-skips in the bare `test` job runs here: the known-stars corpus,
@@ -130,8 +131,7 @@ fan-out of jobs beyond the bare checks:
     Any test that skips here fails the step
     ([Vitest with every input](/scripts/ci/README.md#vitest-with-every-input)).
   - `Deploy asset sizes` — finishes the deploy build with
-    `build:client` (`build:binaries` runs inside the catalogue stage's
-    runner, and `build-binaries` pins its committed outputs), then
+    `build:client`, then
     `pnpm run check:asset-sizes` over
     `dist/`: fails on any file past Cloudflare Workers' 25 MiB per-asset
     limit, warns past 80 % of it. `deploy.yml` runs the same check before

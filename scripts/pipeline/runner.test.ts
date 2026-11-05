@@ -14,8 +14,9 @@ import { pullQueryHash, requestHash } from './freshness';
 import {
   importTimeProblems, loadTable, TABLE_LOAD_BUILTINS, WALKABLE, walkOutputsModules, type Loaded,
 } from './step-table/load-table';
+import { buildFiles } from './build-files';
 import { pipelineTree } from './pipeline-tree';
-import { runSteps, type Verdict } from './runner';
+import { runSteps, type RunOptions, type Verdict } from './runner';
 import type { StepEntry, StepTable } from './step-table/step-table-pure';
 
 let root: string;
@@ -124,12 +125,19 @@ async function load(steps: StepEntry[], registryFiles: string[] = []): Promise<L
   return loadTable(table, { root, deriveInputs: async (entry) => reads.get(entry) ?? [] });
 }
 
-async function run(steps: StepEntry[], targets: string[], flags: { force?: boolean; updateSnapshots?: boolean } = {}) {
+type Flags = Partial<Pick<RunOptions, 'force' | 'updateSnapshots' | 'verifyCommitted'>>;
+
+async function run(steps: StepEntry[], targets: string[], flags: Flags = {}) {
   const loaded = await load(steps);
   if (loaded.kind !== 'loaded') throw new Error(loaded.problems.join('; '));
   const lines: string[] = [];
   const result = await runSteps(loaded, {
-    root, targets, force: flags.force ?? false, updateSnapshots: flags.updateSnapshots ?? false, log: (l) => lines.push(l),
+    root,
+    targets,
+    force: flags.force ?? false,
+    updateSnapshots: flags.updateSnapshots ?? false,
+    verifyCommitted: flags.verifyCommitted ?? false,
+    log: (l) => lines.push(l),
   });
   return { ...result, lines, kinds: Object.fromEntries([...result.verdicts].map(([n, v]) => [n, v.kind])) };
 }
@@ -261,6 +269,133 @@ writeFileSync(${JSON.stringify(at('a.out'))}, JSON.stringify({ handed: stepInput
     const [one, two] = await Promise.all([run(steps, ['a']), run(steps, ['a'])]);
     expect([one.kinds.a, two.kinds.a].sort()).toEqual(['built', 'fresh']);
     expect(builds()).toEqual(['a']);
+  });
+});
+
+describe('runSteps — --verify-committed', () => {
+  const commit = (...names: string[]): void => {
+    execFileSync('git', ['add', '--', ...names], { cwd: root });
+    execFileSync('git', ['-c', 'user.name=t', '-c', 'user.email=t@t', 'commit', '-q', '--no-gpg-sign', '-m', 'c'], { cwd: root });
+  };
+
+  it('passes a build whose committed outputs come out unchanged, fresh or rebuilt', async () => {
+    write('a.in', 'x');
+    const steps = [tsStep('a', 'a.out', ['a.in']), tsStep('b', 'b.out', ['a.out'])];
+    await run(steps, ['b']);
+    commit('a.out');
+    expect((await run(steps, ['b'], { verifyCommitted: true })).status).toBe(0);
+    const forced = await run(steps, ['b'], { verifyCommitted: true, force: true });
+    expect(forced.kinds).toEqual({ a: 'built', b: 'built' });
+    expect(forced.status).toBe(0);
+  });
+
+  it('fails a step whose committed output its build moved, naming the file and the command, and skips its readers', async () => {
+    write('a.in', 'x');
+    const steps = [tsStep('a', 'a.out', ['a.in']), tsStep('b', 'b.out', ['a.out']), tsStep('c', 'c.out')];
+    await run(steps, ['b', 'c']);
+    commit('a.out');
+    write('a.in', 'y');
+    const result = await run(steps, ['b', 'c'], { verifyCommitted: true });
+    expect(result.kinds).toEqual({ a: 'failed', b: 'skipped', c: 'fresh' });
+    expect(result.verdicts.get('a')).toEqual({
+      kind: 'failed',
+      reason: 'its committed outputs differ from this build (a.out): run pnpm run a and commit them',
+    } satisfies Verdict);
+    expect(result.status).toBe(1);
+  });
+
+  it('rebuilds a fresh step whose committed output was edited by hand, then fails it', async () => {
+    write('a.in', 'x');
+    const steps = [tsStep('a', 'a.out', ['a.in'])];
+    await run(steps, ['a']);
+    write('a.out', 'edited');
+    commit('a.out');
+    const result = await run(steps, ['a'], { verifyCommitted: true });
+    expect(result.kinds).toEqual({ a: 'failed' });
+    expect(read('a.out')).toBe('a(x)');
+  });
+
+  it('ignores a moved output git does not track', async () => {
+    write('a.in', 'x');
+    const steps = [tsStep('a', 'a.out', ['a.in'])];
+    await run(steps, ['a']);
+    write('a.in', 'y');
+    expect((await run(steps, ['a'], { verifyCommitted: true })).kinds).toEqual({ a: 'built' });
+  });
+
+  it('fails a fresh step whose working copy was built past its committed output', async () => {
+    write('a.in', 'x');
+    const steps = [tsStep('a', 'a.out', ['a.in'])];
+    await run(steps, ['a']);
+    commit('a.out');
+    write('a.in', 'y');
+    await run(steps, ['a']);
+    const result = await run(steps, ['a'], { verifyCommitted: true });
+    expect(builds()).toEqual(['a', 'a']);
+    expect(result.kinds).toEqual({ a: 'failed' });
+  });
+
+  it('checks a family\'s tracked members and ignores a tracked file in its folder that is no member', async () => {
+    write('f.in', 'x');
+    write('steps/f.ts', `
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+mkdirSync(${JSON.stringify(at('fam'))}, { recursive: true });
+writeFileSync(${JSON.stringify(at('fam/m-0'))}, readFileSync(${JSON.stringify(at('f.in'))}, 'utf8'));
+`);
+    write('steps/f-outputs.ts', `
+import { declareOutputs } from ${JSON.stringify(EMIT_ARTIFACTS)};
+export const OUT = declareOutputs({}, [{ dir: ${JSON.stringify(at('fam'))}, member: /^m-\\d+$/, stamped: true }]);
+`);
+    reads.set(at('steps/f.ts'), [at('f.in')]);
+    const steps: StepEntry[] = [{ name: 'f', kind: 'build', language: 'ts', entry: at('steps/f.ts'), outputs: { module: at('steps/f-outputs.ts'), name: 'OUT' } }];
+    await run(steps, ['f']);
+    write('fam/notes.txt', 'committed');
+    commit('fam/m-0', 'fam/notes.txt');
+    write('fam/notes.txt', 'edited');
+    expect((await run(steps, ['f'], { verifyCommitted: true })).kinds).toEqual({ f: 'fresh' });
+    write('f.in', 'y');
+    expect((await run(steps, ['f'], { verifyCommitted: true })).verdicts.get('f')).toEqual({
+      kind: 'failed',
+      reason: 'its committed outputs differ from this build (fam/m-0): run pnpm run f and commit them',
+    } satisfies Verdict);
+  });
+
+  it('fails a Python step whose committed output its build moved', async () => {
+    write('p.in', 'x');
+    const steps = [pyStep('p', 'p.out', `Path(${JSON.stringify(at('p.out'))}).write_text(Path(${JSON.stringify(at('p.in'))}).read_text() + "!")`)];
+    await run(steps, ['p']);
+    commit('p.out');
+    expect((await run(steps, ['p'], { verifyCommitted: true })).kinds).toEqual({ p: 'fresh' });
+    write('p.in', 'y');
+    expect((await run(steps, ['p'], { verifyCommitted: true })).kinds).toEqual({ p: 'failed' });
+  });
+});
+
+describe('buildFiles', () => {
+  it('lists each build step\'s outputs, family members and stamp on disk, and nothing else', async () => {
+    write('f.in', 'x');
+    write('steps/f.ts', `
+import { mkdirSync, writeFileSync } from 'node:fs';
+mkdirSync(${JSON.stringify(at('fam'))}, { recursive: true });
+writeFileSync(${JSON.stringify(at('f.out'))}, 'f');
+writeFileSync(${JSON.stringify(at('fam/m-0'))}, 'm');
+`);
+    write('steps/f-outputs.ts', `
+import { declareOutputs } from ${JSON.stringify(EMIT_ARTIFACTS)};
+export const OUT = declareOutputs({ out: ${JSON.stringify(at('f.out'))} }, [
+  { dir: ${JSON.stringify(at('fam'))}, member: /^m-\\d+$/, stamped: false },
+]);
+`);
+    const f: StepEntry = { name: 'f', kind: 'build', language: 'ts', entry: at('steps/f.ts'), outputs: { module: at('steps/f-outputs.ts'), name: 'OUT' } };
+    const steps = [f, tsStep('unbuilt', 'unbuilt.out'), pullStep('p', 'p.out', 'f.in')];
+    await run([f], ['f']);
+    write('fam/orphan', 'left behind');
+    write('orphan.out', 'left behind');
+    const loaded = await load(steps);
+    if (loaded.kind !== 'loaded') throw new Error(loaded.problems.join('; '));
+    expect(buildFiles(loaded.steps.values(), pipelineTree(root))).toEqual([
+      relative(root, pipelineTree(root).buildStamp('f')), 'f.out', 'fam/m-0',
+    ].sort());
   });
 });
 
