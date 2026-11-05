@@ -1,18 +1,18 @@
-// `pnpm run trace <name | designation | sid | gaia id> [--dir <lineage dir>]` — every stage's lineage rows for the records it names. See README.md#trace.
+// `pnpm run trace <name | designation | sid | gaia id> [--dir <lineage dir>]` — every stage's lineage rows for the records it names. See README.md.
 
 import { existsSync, readFileSync } from 'node:fs';
 import { gunzipSync } from 'node:zlib';
 
-import { readRegistryUnion } from '../../sid/registry-io';
-import { retiredSids } from '../../sid/events-pure';
-import { allocationSids } from '../../sid/allocation-lineage-pure';
-import { catalogRecordDesignations } from '../../sid/catalog-designations';
-import { loadCatalog, nameTable, type SearchableCatalog } from '../catalog-lookup';
-import { readIdentity, readLineage } from './lineage-io';
-import { LINEAGE_LAYOUT } from './lineage-layout-pure';
-import { LINEAGE_STAGES } from './lineage-stages';
+import { readRegistryUnion } from '../../../sid/registry-io';
+import { retiredSids } from '../../../sid/events-pure';
+import { allocationSids } from '../../../sid/allocation-lineage-pure';
+import { catalogRecordDesignations } from '../../../sid/catalog-designations';
+import { loadCatalog, nameTable, type SearchableCatalog } from '../../catalog-lookup';
+import { readIdentity, readLineage } from '../lineage-io';
+import { LINEAGE_LAYOUT } from '../lineage-layout-pure';
+import { LINEAGE_STAGES } from '../lineage-stages';
 import { parseTraceQuery, queryTerms, traceRecords, traceText, type TraceLookups } from './trace-pure';
-import { ALLOCATION_SIDS_STEM, MEMBERSHIP_LINEAGE, stageFile } from '../../../src/catalog-format/pipeline-outputs/lineage-files';
+import { ALLOCATION_SIDS_STEM, MEMBERSHIP_LINEAGE, stageFile } from '../../../../src/catalog-format/pipeline-outputs/lineage-files';
 
 const DIR_FLAG = '--dir';
 

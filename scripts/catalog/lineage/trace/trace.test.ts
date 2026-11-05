@@ -5,13 +5,13 @@ import { join } from 'node:path';
 
 import { afterAll, describe, expect, it } from 'vitest';
 
-import { LAUNCHER } from '../../util/import-closure-pure';
-import { REPO_ROOT } from '../../util/paths';
-import { identityRows } from './identity-pure';
-import { gzipText } from './lineage-io';
-import { lineageRows } from './lineage-row-pure';
+import { LAUNCHER } from '../../../util/import-closure-pure';
+import { REPO_ROOT } from '../../../util/paths';
+import { identityRows } from '../identity-pure';
+import { gzipText } from '../lineage-io';
+import { lineageRows } from '../lineage-row-pure';
 import { matchName, parseTraceQuery, queryTerms, traceRecords, traceText, type TraceLookups } from './trace-pure';
-import { CLOUDS_ALLOCATION_LINEAGE, stageFile } from '../../../src/catalog-format/pipeline-outputs/lineage-files';
+import { CLOUDS_ALLOCATION_LINEAGE, stageFile } from '../../../../src/catalog-format/pipeline-outputs/lineage-files';
 
 const REFUSED_ONLY = '4000000000000000009';
 const PARKED = '5000000000000000001';
@@ -219,7 +219,7 @@ describe('pnpm run trace', () => {
   writeFileSync(stageFile(dir, 'promotion.identity'), gzipText(PROMOTION_IDENTITY));
   afterAll(() => rmSync(dir, { recursive: true, force: true }));
   const run = (query: string): string => execFileSync(
-    'pnpm', ['exec', 'tsx', LAUNCHER, 'scripts/catalog/lineage/trace.ts', query, '--dir', dir],
+    'pnpm', ['exec', 'tsx', LAUNCHER, 'scripts/catalog/lineage/trace/trace.ts', query, '--dir', dir],
     { cwd: REPO_ROOT, encoding: 'utf-8' },
   );
 

@@ -172,7 +172,7 @@ scripts/catalog/
                                   primary and a Gaia-only companion);
                                   `nameTable` hands
                                   trace the same table for its folded one
-                                  (lineage/README.md#trace).
+                                  (lineage/trace/README.md).
   build-counts.ts (+ test)        Per-strategy / per-tier count snapshot
                                   comparator, pinned by
                                   build-catalog-expected.json, which
