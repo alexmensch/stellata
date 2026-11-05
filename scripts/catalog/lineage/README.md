@@ -7,9 +7,9 @@ between two builds is explained. This README is the design contract the
 folder's code is built to.
 
 A stage returns a typed outcome per record; lineage is those outcomes
-serialised. The target is that a stage's count snapshot folds from the same
-outcome arrays, so a snapshot and lineage are two projections of one value
-and neither is kept in step with the other. Membership is part-way there:
+serialised. The target is that a stage's count snapshot folds from its
+lineage lines, keyed on its reason codes ([Counts fold from lineage](#counts-fold-from-lineage)),
+so the snapshot is a projection of lineage, never kept in step with it. Membership is part-way there:
 its review-queue and label-drop counts fold from the outcomes, while the
 derivation, admission and component counters are still kept by hand beside
 them (stellata-hhaw.45.23). Promotion's per-row counters all fold from its
