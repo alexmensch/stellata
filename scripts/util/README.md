@@ -219,13 +219,8 @@ same thing — single-use helpers stay with their consumer.
 - `output-identity.ts` (+ `output-identity-pure.ts`, its diff and test) —
   `pnpm run identity:snapshot` / `identity:diff`, the byte-identity check in
   [Proving a restructuring byte-identical](#proving-a-restructuring-byte-identical).
-- `tally-pure.ts` — `emptyTallyPartition(values)`, the zeroed per-bucket
-  counting record every routing cascade in the catalog build tallies
-  into (direction, velocity, V, distance). Buckets are derived from
-  the string-literal tuple that DEFINES each tier set, so a new tier
-  cannot tally onto an absent key — `undefined + 1` is NaN, which
-  reaches the pinned count snapshot as a hole instead of a drift
-  failure. `tally-pure.test.ts` pins all four cascades' key coverage.
+- `counts/` — the one tally (`fold`) and the staged count snapshot
+  (`nestByStage`, `flattenStages`). Own README.
 - `staged-write.ts` — the one stage-then-rename: `writeStaged` writes
   `<path>.staged` beside its target (same filesystem, so the rename is
   atomic) — the bytes given, or a copy of `{copyFrom}`'s file, which never
@@ -331,7 +326,10 @@ same thing — single-use helpers stay with their consumer.
   would restamp `binaries.bin` on every pipeline-stage edit. Same rule
   on a missing snapshot: it fails, and only `UPDATE_SNAPSHOTS=1`
   writes one. Returns a bool where the TS sibling returns an `emitArtifacts` check, since the Python
-  drivers own their exit.
+  drivers own their exit. Every snapshot it writes is staged: a caller
+  hands it `Staged` counts (stage → count, each count built inside its
+  stage's block, stages in pipeline order), and it compares both sides
+  through `flatten_stages`, `counts/count-stages-pure.ts`'s twin.
   Pinned by `snapshot_assert.test.py`.
 - <a id="git-files"></a>`git-files.ts` — `gitFiles(root, pathspecs, { untracked })`,
   git's file list (tracked, optionally untracked-but-not-ignored), for a scan
