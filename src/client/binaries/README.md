@@ -237,8 +237,9 @@ ride their baked velocity directly, so a promoted companion with no own PM
 inherits its primary's systemic velocity at build time
 (`scripts/catalog/companions/companion-promotion.ts`) or it would freeze at `v=0` and
 shear from a drifting primary. Full systemic coherence for *every*
-binaries.bin pair — keyed on this file's authoritative resolved pairing,
-which the catalog build can't replicate — is `stellata-zau1`; until it
+binaries.bin pair — keyed on this file's authoritative resolved pairing
+(`planRecords`, `/scripts/binaries/runtime-binaries-pure.ts`) — is deferred
+to `stellata-zau1`; until it
 lands, the ~950 divergent-velocity Tier-3 wide pairs shear up to tens of
 arcminutes at the scrub-range extremes ([Current-epoch star](/docs/science-catalog-ingestion.md#current-epoch-star-positions--space-motion-propagation-to-t)
 positions).

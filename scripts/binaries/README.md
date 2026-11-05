@@ -635,8 +635,8 @@ shears a static (Tier-3) pair. `scripts/catalog/companions/companion-promotion.t
 uses this `q` for the barycentric blend `v_sys = (1−q)·v_p + q·v_s` on a
 lone renderable-orbit pair, and a promoted companion with no own PM
 inherits its primary's velocity. **Full** systemic coherence for every
-`binaries.bin` pair — keyed on `build:binaries-runtime`'s authoritative
-resolved pairing (which the catalog build can't replicate) — is
+`binaries.bin` pair — keyed on the authoritative resolved pairing,
+`planRecords` in `runtime-binaries-pure.ts` — is deferred to
 `stellata-zau1`; v1 ships the promoted-companion + lone-pair subset.
 
 ## Stage 5 — Optical-pair filter cascade
