@@ -89,18 +89,13 @@ export function siblingLineage<S extends string>(
   });
 }
 
-export interface SiblingLineageFiles<L extends string> {
-  readonly files: Readonly<Record<L, ArtifactContents>>;
-  readonly members: ReadonlyMap<string, ArtifactContents>;
-  readonly checks: StageLineageEmission<string, string>['checks'];
-}
 
 /** Lands the artifact and its lineage, and the registry partition when the allocation appended, in one emitArtifacts call. */
 export function emitSibling<K extends string, N extends SiblingPartition, S extends string>(
   outputs: DeclaredOutputs<K | StageOutputKey<SiblingStem<S>, S> | RegistryKey<N>>,
   artifact: Readonly<Record<K, string>>,
   allocation: SiblingAllocation<N>,
-  lineage: SiblingLineageFiles<StageOutputKey<SiblingStem<S>, S>>,
+  lineage: Pick<StageLineageEmission<SiblingStem<S>, S>, 'files' | 'members' | 'checks'>,
 ): void {
   type Landed = K | StageOutputKey<SiblingStem<S>, S>;
   const files = { ...artifact, ...lineage.files } as Record<Landed, ArtifactContents>;
