@@ -105,8 +105,7 @@ step upstream of it in data-flow order, and skips each on a **content-hash
 stamp**, never on mtimes. A stamp (`build/stamps/<step>.json`, written by the
 runner alone) records every input the step read — for a TypeScript step its
 esbuild import closure (`src/client/` modules included), the snapshots beside
-it and every declared source it reads, the same set CI's cache key reads
-([The catalogue build cache](ci/README.md#the-catalogue-build-cache)); for a
+it and every declared source it reads; for a
 Python step every repo file the process opened, recorded as it ran — and every
 output it wrote, and the step is fresh while both re-hash the same. The stamp
 is cleared before the step runs and written only once it exits 0 with its
