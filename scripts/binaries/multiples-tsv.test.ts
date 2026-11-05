@@ -26,4 +26,17 @@ describe('multiples.tsv codec', () => {
     expect(() => MULTIPLES_TSV.parse(`${header}\n${cells({ gaia_source_id: '12a' })}\n`))
       .toThrow(/multiples\.tsv:2: gaia_source_id: "12a" is not a source_id/);
   });
+
+  it('rejects orbital elements no bound orbit has', () => {
+    for (const [over, message] of [
+      [{ P_days: '0.000000' }, /P_days 0 is not positive/],
+      [{ a_AU: '-1.000000' }, /a_AU -1 is not positive/],
+      [{ e: '1.000000' }, /e 1 is not a bound orbit/],
+      [{ e: '-0.100000' }, /e -0.1 is not a bound orbit/],
+    ] as const) {
+      expect(() => MULTIPLES_TSV.parse(`${header}\n${cells(over)}\n`)).toThrow(message);
+    }
+    expect(MULTIPLES_TSV.parse(`${header}\n${cells({ P_days: '2.867000', a_AU: '0.060000', e: '0.000000' })}\n`)[0])
+      .toMatchObject({ pDays: 2.867, aAU: 0.06, e: 0 });
+  });
 });

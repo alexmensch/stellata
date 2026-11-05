@@ -76,8 +76,9 @@ scripts/binaries/
                                   binaries + SIMBAD standalone augmentation.
   multiples-tsv.ts (+ test)       MULTIPLES_TSV: the TypeScript codec for
                                   multiples.tsv — column roster, closed
-                                  value sets, per-column decimal places —
-                                  and the only parse of the file on the TS
+                                  value sets, per-column decimal places,
+                                  P and a positive and 0 ≤ e < 1 — and
+                                  the only parse of the file on the TS
                                   side. Its test round-trips the committed
                                   file byte for byte, which is what holds it
                                   to the Python writer until Stage 6 ports.
