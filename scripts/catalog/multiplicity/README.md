@@ -20,6 +20,10 @@ scripts/catalog/multiplicity/
                                   physical system, so a pair never
                                   straddles two distance layers: the
                                   verdicts, then the move.
+  coherence-lineage-pure.ts       The pass as a lineage stage: its reason
+    (+ test)                      codes and the serialiser over its
+                                  verdicts
+                                  (../lineage/README.md#the-coherence-stage).
   anchor-grade-pure.ts            isCoherenceAnchorGrade and its two
                                   thresholds. Pure, and imported by three
                                   folders — the coherence pass here, the
@@ -229,7 +233,11 @@ and each member's verdict. `applySystemCoherence` then moves the snapped
 members, and `systemCoherenceStats` counts the verdicts. A later system
 anchored on a record an earlier system snapped is decided on that record's
 snapped distance, computed exactly as the applied record will read it, so
-the split leaves catalog.bin unchanged. Two members of a bound WDS
+the split leaves catalog.bin unchanged. The verdicts are also the pass's
+lineage, a row per record
+([The coherence stage](../lineage/README.md#the-coherence-stage)), so
+`pnpm run trace` shows which anchor a snapped record moved onto and the
+distance it replaced. Two members of a bound WDS
 system carry independently-measured catalog distances whose noise
 scatter (a fraction of a parsec at ~50 pc) dwarfs the pair's true
 physical size (hundreds of AU), so without this pass the pair renders

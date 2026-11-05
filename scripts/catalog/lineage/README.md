@@ -235,7 +235,7 @@ lineage.
 
 ## SID events
 
-SID allocation is the fourth stage, run inside `build:catalog`; each sibling
+SID allocation is the fifth stage, run inside `build:catalog`; each sibling
 build allocates as a stage of its own, `allocation-clouds` in `build:clouds`
 and `allocation-local-group` in `build:local-group`. Their rows, events and
 fail-closed rule live beside their modules, in [SID events](/scripts/sid/README.md#sid-events).
@@ -291,7 +291,11 @@ included, each in about 0.1 s; `SIBLING_LINEAGE_BUDGET`
 (`../../sid/sibling-allocation.ts`) pins 1,900 bytes and 5 s for either.
 Placement, measured 2026-10-30: 3,872,657 rows (349 MB plain, 31.0 MB
 gzipped) in 3.2 s without a diff and 8.1 s with one against a full
-baseline; `PLACEMENT_LINEAGE_BUDGET` pins 34 MB and 60 s: a CI run that diffs against a restored merge-base baseline took 36.5 s (2026-11-05). A file that size outruns
+baseline; `PLACEMENT_LINEAGE_BUDGET` pins 34 MB and 60 s: a CI run that diffs against a restored merge-base baseline took 36.5 s (2026-11-05).
+Coherence, measured 2026-11-05: one row per record that exists before
+promotion mints companions, all but about 4,600 of them `not-applicable`
+(66 MB plain), 7.5 MB gzipped in 0.7 s
+without a diff; `COHERENCE_LINEAGE_BUDGET` pins 8.2 MB and 15 s. A file that size outruns
 V8's longest string, so stage files and diffs are written and read as UTF-8
 bytes in chunks, and the diff walks the baseline a key at a time
 (`streamLineage`) rather than holding it.
@@ -391,9 +395,29 @@ against reinstates per SID, as it was over the two files.
 `build:catalog`'s record walk is the second stage; its contract lives beside
 its module, in [Placement lineage](../distance/README.md#placement-lineage).
 
+## The coherence stage
+
+`build:catalog`'s system distance coherence is the third stage
+(`../multiplicity/coherence-lineage-pure.ts`; the pass is
+[System distance coherence](../multiplicity/README.md#system-distance-coherence)).
+`coherenceLineageRows` serialises each `SystemVerdict` through an exhaustive
+`switch`. A system's anchor gets `coherence.anchor`, or `anchor.inconsistent` /
+`anchor.unplaced` when the pass skips the system. Each member the system decides
+gets a `snapped`, `unmoved.*` or `kept.*` row, and every other record gets
+`coherence.not-applicable`. A record two systems decide (an earlier system's
+snapped member that anchors a later one) carries a row from each, and
+`params.root` tells them apart. Every row names its WDS root and the anchor's tier.
+A member row names its anchor by origin key in `params.anchor`, which is how
+`trace` gets from a snapped record to the record it moved onto, and a snapped
+row carries the distance it replaced and the one it ships (`from_pc`, `to_pc`).
+The evidence is the row the anchor's tier rests on: its Gaia DR3 or Hipparcos-2
+astrometry row, or its Bailer-Jones posterior. The inherited tier cites none.
+Coherence founds no record, so it writes no identity rows, and every code's
+effect is `none`.
+
 ## The promotion stage
 
-`build:catalog`'s companion promotion is the third stage
+`build:catalog`'s companion promotion is the fourth stage
 (`../companions/promotion-lineage-pure.ts`). `promoteCompanions` returns one
 `PromotedRow` per `multiples.tsv` row, keyed on that row
 (`multiples:<system_id>/<comp>`), and `promotionLineageRow` serialises its

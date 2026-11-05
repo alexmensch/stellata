@@ -21,13 +21,15 @@ describe('CATALOG_OUTPUTS', () => {
   it('declares the transport chunks as one stamped family in public/, beside each lineage stage\'s unstamped baseline and diff', () => {
     expect(CATALOG_OUTPUTS.families.map((f) => repoRelative(f.dir))).toEqual([
       'public', 'build/lineage.previous', 'build/lineage-diff', 'build/lineage.previous', 'build/lineage-diff',
-      'build/lineage.previous', 'build/lineage-diff',
+      'build/lineage.previous', 'build/lineage-diff', 'build/lineage.previous', 'build/lineage-diff',
     ]);
     const families = (name: string) => CATALOG_OUTPUTS.families
       .filter((f) => isMemberName(f, name)).map((f) => repoRelative(f.dir));
     expect(families('placement.tsv.gz')).toEqual(['build/lineage.previous']);
     expect(families('placement.tsv')).toEqual(['build/lineage-diff']);
     expect(families('promotion.tsv.gz')).toEqual(['build/lineage.previous']);
+    expect(families('coherence.tsv.gz')).toEqual(['build/lineage.previous']);
+    expect(families('coherence.tsv')).toEqual(['build/lineage-diff']);
     const [chunks, ...lineage] = CATALOG_OUTPUTS.families;
     expect(repoRelative(chunks.dir)).toBe('public');
     expect(chunks.stamped).toBe(true);

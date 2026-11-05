@@ -10,7 +10,7 @@ import { DATA_FILES, registryFiles, CATALOG_PARTITION } from '../../src/catalog-
 import { PUBLIC_FILES } from '../../src/catalog-format/public-artifacts/public-artifacts';
 import {
   PROMOTION_LINEAGE, PLACEMENT_LINEAGE, LINEAGE_REPO_LAYOUT, stageFamilies, stageOutputFiles,
-  ALLOCATION_LINEAGE,
+  ALLOCATION_LINEAGE, COHERENCE_LINEAGE,
 } from '../../src/catalog-format/pipeline-outputs/lineage-files';
 
 const MANIFEST = publicFile(CATALOG_MANIFEST_FILENAME);
@@ -26,6 +26,7 @@ export const CATALOG_OUTPUTS = declareOutputs(
     parkedLedger: DATA_FILES.parkedLedger,
     simbadSourcedDistances: DATA_FILES.simbadSourcedDistances,
     ...stageOutputFiles(LINEAGE_REPO_LAYOUT, PLACEMENT_LINEAGE),
+    ...stageOutputFiles(LINEAGE_REPO_LAYOUT, COHERENCE_LINEAGE),
     ...stageOutputFiles(LINEAGE_REPO_LAYOUT, PROMOTION_LINEAGE),
     ...stageOutputFiles(LINEAGE_REPO_LAYOUT, ALLOCATION_LINEAGE),
     ...registryFiles(CATALOG_PARTITION),
@@ -33,6 +34,7 @@ export const CATALOG_OUTPUTS = declareOutputs(
   [
     { dir: CATALOG_CHUNK_DIR, member: CATALOG_CHUNK_FILENAME, stamped: true },
     ...stageFamilies(LINEAGE_REPO_LAYOUT, PLACEMENT_LINEAGE),
+    ...stageFamilies(LINEAGE_REPO_LAYOUT, COHERENCE_LINEAGE),
     ...stageFamilies(LINEAGE_REPO_LAYOUT, PROMOTION_LINEAGE),
     ...stageFamilies(LINEAGE_REPO_LAYOUT, ALLOCATION_LINEAGE),
   ],

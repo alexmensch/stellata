@@ -32,7 +32,12 @@ export const PLACEMENT_LINEAGE: StageLineageSpec<'placement', 'placement'> = {
   files: ['placement'],
 };
 
-export const PROMOTION_LINEAGE: StageLineageSpec<'promotion' | 'promotion.identity', 'promotion'> = {
+export const COHERENCE_LINEAGE: StageLineageSpec<'coherence', 'coherence'> = {
+  stage: 'coherence',
+  files: ['coherence'],
+};
+
+export const PROMOTION_LINEAGE:StageLineageSpec<'promotion' | 'promotion.identity', 'promotion'> = {
   stage: 'promotion',
   files: ['promotion', 'promotion.identity'],
   identity: 'promotion.identity',
