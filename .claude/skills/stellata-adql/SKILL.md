@@ -103,13 +103,20 @@ Only `gaia_sync_client` reads that flag, raising `SyncOverflowError`, which is
 deliberately not transient. `cds_client` and `simbad_client` run through pyvo,
 which demotes it to a `DALOverflowWarning` and returns the truncated table. So
 a CDS or SIMBAD query, and a CSV probe on any service, checks its own row
-count: ask `MAXREC = limit + 1` and refuse more than `limit` rows.
+count: ask for `limit + 1` rows and refuse more than `limit`. A raw POST, or
+pyvo's `search(maxrec=)`, asks with `MAXREC = limit + 1` — pyvo gives no
+warning for a result exactly at its `maxrec`. `cds_client` and `simbad_client`
+take no MAXREC and run at the server default, so ask with `TOP limit + 1` in
+the ADQL.
 
 The three Gaia sizing rules — whole-table, batched, value-range — are in
 [Gaia TAP](/scripts/refresh/README.md#gaia-tap-synchronous-endpoints-only); never replace one with a bare literal.
 
-MAXREC is not load-bearing on CDS, whose default is ~1e9. There the row-count
-band is what catches an upstream row loss.
+MAXREC is not load-bearing on CDS, whose default is ~1e9; there the row-count
+band is what catches an upstream row loss. SIMBAD's is not: its default is
+50,000 rows (hard limit 2,000,000; Harvard `/capabilities`, 2026-11-05), so
+a `simbad_client` query over 50,000 rows comes back truncated with only a
+warning.
 
 ## Batching a selection with no request set
 
