@@ -178,7 +178,7 @@ never a membership decision — so the walk throws, naming the row.
    [Multi-layer distance refinement](../distance/refinement/README.md#multi-layer-distance-refinement).
 5. **`MAX_DIST_PC = 50_000` bounded-scope cutoff** (`stars-parse.ts`). A
    row still beyond LMC depth after every override **fails the walk**.
-6. **absmag** — `apparentToAbsoluteMagnitude` on step 1's V and the distance
+6. **absmag** — astro-core's `absoluteMagnitude` on step 1's V and the distance
    the whole override stack settled; **position** — `directionOnPm` advances
    the step-2 solution to the scene epoch on the motion the row ends up
    carrying, and `xyz = direction × distance` in float64; then **velocity**
