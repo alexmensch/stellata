@@ -88,7 +88,9 @@ import {
   renderableOrbitRelations,
   wingRenderablePrimaries,
 } from './companions/record-index/record-index';
-import { applySystemDistanceCoherence } from './multiplicity/system-coherence';
+import {
+  applySystemCoherence, systemCoherenceStats, systemCoherenceVerdicts,
+} from './multiplicity/system-coherence';
 import {
   bridgeGcvsByGaia,
   applyVariability,
@@ -674,11 +676,13 @@ export async function main() {
   const synthGaiaBridges = syntheticGaiaBridges(loadStoredEdges());
   // Intra-system radial coherence BEFORE promotion, so minted members
   // project off already-coherent anchor positions.
-  const coherence = applySystemDistanceCoherence(multiplesRows, stars, {
+  const coherenceVerdicts = systemCoherenceVerdicts(multiplesRows, stars, {
     gaiaAstrometry: directions.gaiaAstrometry,
     hip2: directions.hip2,
-    bjMap: bailerJones.distPc,
+    bailerJones,
   });
+  applySystemCoherence(stars, coherenceVerdicts);
+  const coherence = systemCoherenceStats(coherenceVerdicts);
   console.log(
     `  system distance coherence: ${coherence.membersRepositioned} ` +
       `members repositioned across ${coherence.systemsProcessed} systems ` +

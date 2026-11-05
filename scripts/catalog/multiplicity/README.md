@@ -18,7 +18,8 @@ scripts/catalog/multiplicity/
                                   optical-double suppression cascade.
   system-coherence.ts (+ test)    Post-pass forcing one distance per
                                   physical system, so a pair never
-                                  straddles two distance layers.
+                                  straddles two distance layers: the
+                                  verdicts, then the move.
   anchor-grade-pure.ts            isCoherenceAnchorGrade and its two
                                   thresholds. Pure, and imported by three
                                   folders — the coherence pass here, the
@@ -221,9 +222,14 @@ own coverage.
 
 ## System distance coherence
 
-`system-coherence.ts` (`applySystemDistanceCoherence`) runs **before
-companion promotion**, over the kept-physical pair rows of
-`multiples.tsv`. Two members of a bound WDS
+`system-coherence.ts` runs **before companion promotion**, over the
+kept-physical pair rows of `multiples.tsv`. `systemCoherenceVerdicts`
+decides and moves nothing: one `SystemVerdict` per system, naming its anchor
+and each member's verdict. `applySystemCoherence` then moves the snapped
+members, and `systemCoherenceStats` counts the verdicts. A later system
+anchored on a record an earlier system snapped is decided on that record's
+snapped distance, computed exactly as the applied record will read it, so
+the split leaves catalog.bin unchanged. Two members of a bound WDS
 system carry independently-measured catalog distances whose noise
 scatter (a fraction of a parsec at ~50 pc) dwarfs the pair's true
 physical size (hundreds of AU), so without this pass the pair renders

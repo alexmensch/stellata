@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
-  applySystemDistanceCoherence,
+  applySystemCoherence,
   COHERENCE_RADIAL_SIGMA,
+  systemCoherenceStats,
+  systemCoherenceVerdicts,
   type CoherenceSources,
 } from './system-coherence';
 import type { Star } from '../parse/stars-parse';
@@ -15,6 +17,13 @@ import { HIP2 } from '../distance/hip2-source';
 import { sourceRowRef } from '../../util/sources/row-ref-pure';
 import type { MultiplesTsvRow } from '../companions/companion-promotion';
 import { multiplesRow } from '../companions/multiples-fixture';
+import { BAILER_JONES } from '../distance/refinement/bailer-jones-source';
+
+function coherence(rows: MultiplesTsvRow[], stars: Star[], src: CoherenceSources) {
+  const verdicts = systemCoherenceVerdicts(rows, stars, src);
+  applySystemCoherence(stars, verdicts);
+  return systemCoherenceStats(verdicts);
+}
 
 function star(overrides: Partial<Star>): Star {
   return makeStar({
@@ -53,7 +62,7 @@ function hip2Row(overrides: Partial<Hip2AstrometryRow>): Hip2AstrometryRow {
 
 function sources(o: Partial<CoherenceSources> = {}): CoherenceSources {
   return {
-    gaiaAstrometry: new Map(), hip2: new Map(), bjMap: new Map(),
+    gaiaAstrometry: new Map(), hip2: new Map(), bailerJones: { source: BAILER_JONES, distPc: new Map() },
     ...o,
   };
 }
@@ -89,10 +98,10 @@ function acruxFixture() {
   return { primary, member, stars, rows, src };
 }
 
-describe('applySystemDistanceCoherence', () => {
+describe('system distance coherence', () => {
   it('snaps an insignificant radial gap to the anchor distance (Acrux)', () => {
     const { primary, member, stars, rows, src } = acruxFixture();
-    const stats = applySystemDistanceCoherence(rows, stars, src);
+    const stats = coherence(rows, stars, src);
     expect(stats.systemsProcessed).toBe(1);
     expect(stats.membersRepositioned).toBe(1);
     expect(stats.memberAnchorWins).toBe(0);
@@ -112,7 +121,7 @@ describe('applySystemDistanceCoherence', () => {
     member.x = 60;
     member.y = 80;
     member.z = 30; // |xyz| = 104.4
-    applySystemDistanceCoherence(rows, stars, src);
+    coherence(rows, stars, src);
     const d = Math.hypot(member.x, member.y, member.z);
     expect(d).toBeCloseTo(98.72, 6);
     expect(member.y / member.x).toBeCloseTo(80 / 60, 9);
@@ -135,7 +144,7 @@ describe('applySystemDistanceCoherence', () => {
         ['2', gaiaRow({ parallaxMas: 768.5, parallaxErrorMas: 0.02 })],
       ]),
     });
-    const stats = applySystemDistanceCoherence(rows, [primary, member], src);
+    const stats = coherence(rows, [primary, member], src);
     expect(stats.significantDepthKept).toBe(1);
     expect(stats.membersRepositioned).toBe(0);
     expect(member.x).toBeCloseTo(1.3013, 9);
@@ -157,7 +166,7 @@ describe('applySystemDistanceCoherence', () => {
         ['9', gaiaRow({ parallaxMas: 19.23, parallaxErrorMas: 0.05 })],
       ]),
     });
-    const stats = applySystemDistanceCoherence(rows, [primary, member], src);
+    const stats = coherence(rows, [primary, member], src);
     expect(stats.memberAnchorWins).toBe(1);
     expect(primary.x).toBeCloseTo(52, 6);
     expect(member.x).toBeCloseTo(52, 9);
@@ -179,7 +188,7 @@ describe('applySystemDistanceCoherence', () => {
         ['9', gaiaRow({ parallaxMas: 19.23, parallaxErrorMas: 0.05, gMag: 1.5 })],
       ]),
     });
-    const stats = applySystemDistanceCoherence(rows, [primary, member], src);
+    const stats = coherence(rows, [primary, member], src);
     expect(stats.memberAnchorWins).toBe(0);
     // Gap 50 vs 52 at σ≈2 pc (HIP2-dominated) is insignificant → snap.
     expect(member.x).toBeCloseTo(50, 6);
@@ -202,7 +211,7 @@ describe('applySystemDistanceCoherence', () => {
         orbitRole: 'secondary',
       }),
     ];
-    const stats = applySystemDistanceCoherence(rows, [a, b, c], sources());
+    const stats = coherence(rows, [a, b, c], sources());
     expect(stats.systemsProcessed).toBe(0);
     expect(b.x).toBe(300);
     expect(c.x).toBe(55);
@@ -221,7 +230,7 @@ describe('applySystemDistanceCoherence', () => {
     const src = sources({
       hip2: new Map([[100, hip2Row({ plxMas: 20, plxErrorMas: 0.5 })]]),
     });
-    const stats = applySystemDistanceCoherence(rows, [primary, member], src);
+    const stats = coherence(rows, [primary, member], src);
     expect(stats.membersRepositioned).toBe(1);
     expect(member.x).toBeCloseTo(50, 6);
     expect(COHERENCE_RADIAL_SIGMA).toBe(3.0);
@@ -249,7 +258,7 @@ describe('applySystemDistanceCoherence', () => {
         ['200', gaiaRow({ parallaxMas: 5.6632, parallaxErrorMas: 0.275, ruwe: 2.16 })],
       ]),
     });
-    const stats = applySystemDistanceCoherence(rows, [primary, member], src);
+    const stats = coherence(rows, [primary, member], src);
     expect(stats.anchorPlacementInconsistent).toBe(1);
     expect(stats.membersRepositioned).toBe(0);
     expect(member.x).toBeCloseTo(176.6, 6);
@@ -269,7 +278,7 @@ describe('applySystemDistanceCoherence', () => {
     const src = sources({
       hip2: new Map([[100, hip2Row({ plxMas: 0.59, plxErrorMas: 0.4 })]]),
     });
-    const stats = applySystemDistanceCoherence(rows, [primary, member], src);
+    const stats = coherence(rows, [primary, member], src);
     expect(stats.membersRepositioned).toBe(0);
     expect(stats.significantDepthKept).toBe(1);
     expect(member.x).toBeCloseTo(176.6, 6);
@@ -296,7 +305,7 @@ describe('member-anchor precision veto', () => {
     });
     return {
       primary, member,
-      stats: applySystemDistanceCoherence(rows, [primary, member], src),
+      stats: coherence(rows, [primary, member], src),
     };
   }
 
@@ -344,7 +353,7 @@ describe('member-anchor precision veto', () => {
         ['2', gaiaRow({ parallaxMas: 19.9203, parallaxErrorMas: 0.0996 })],
       ]),
     });
-    const stats = applySystemDistanceCoherence(rows, [primary, member], src);
+    const stats = coherence(rows, [primary, member], src);
     expect(stats.memberAnchorWins).toBe(1);
     expect(stats.memberAnchorPrecisionVetoed).toBe(0);
     expect(primary.x).toBeCloseTo(50.2, 6);
@@ -374,7 +383,7 @@ describe('member-anchor precision veto', () => {
         ['5519219999721187968', gaiaRow({ parallaxMas: 2.9193, parallaxErrorMas: 0.0348 })],
       ]),
     });
-    const stats = applySystemDistanceCoherence(rows, [a, b, c], src);
+    const stats = coherence(rows, [a, b, c], src);
     expect(stats.membersRepositioned).toBe(2);
     expect(a.x).toBeCloseTo(340.1, 6);
     expect(b.x).toBeCloseTo(340.1, 6);
@@ -404,10 +413,66 @@ describe('member-anchor precision veto', () => {
         ['386655019234959872', gaiaRow({ parallaxMas: 86.9299, parallaxErrorMas: 0.017 })],
       ]),
     });
-    const stats = applySystemDistanceCoherence(rows, [a, b, f], src);
+    const stats = coherence(rows, [a, b, f], src);
     expect(stats.memberAnchorWins).toBe(0);
     expect(stats.significantDepthKept).toBe(1);
     expect(b.x).toBeCloseTo(11.521, 6);
     expect(f.x).toBeCloseTo(11.503, 6);
+  });
+});
+
+describe('systemCoherenceVerdicts', () => {
+  it('names the anchor, its tier and row, and each member\'s move (Polaris)', () => {
+    const primary = star({ hip: 11767, x: 132.626 });
+    const member = star({ gaiaSourceId: '576', x: 137.233 });
+    const rows = [
+      pairRow({ systemId: '02318+8916-AB', comp: 'A', hip: 11767 }),
+      pairRow({ systemId: '02318+8916-AB', comp: 'B', gaiaSourceId: '576', orbitRole: 'secondary' }),
+    ];
+    const gaia = gaiaRow({ parallaxMas: 7.2869, parallaxErrorMas: 0.0178 });
+    const src = sources({
+      hip2: new Map([[11767, hip2Row({ plxMas: 7.54, plxErrorMas: 0.11 })]]),
+      gaiaAstrometry: new Map([['576', gaia]]),
+    });
+    expect(systemCoherenceVerdicts(rows, [primary, member], src)).toEqual([{
+      kind: 'coherent', root: '02318+8916', anchorPc: 137.233,
+      anchor: { idx: 1, tier: 'gaia-clean', ref: gaia.ref, memberWon: true, precisionVetoed: false },
+      members: [{ kind: 'snapped', idx: 0, fromPc: 132.626, toPc: 137.233 }],
+    }]);
+    expect(primary.x).toBe(132.626);
+  });
+
+  it('decides a later system on an earlier system\'s snapped distance, as applied', () => {
+    const a = star({ hip: 100, x: 50 });
+    const b = star({ hip: 200, x: 51, y: 3 });
+    const c = star({ hip: 300, x: 52 });
+    const rows = [
+      pairRow({ systemId: '00001+0001-AB', comp: 'A', hip: 100 }),
+      pairRow({ systemId: '00001+0001-AB', comp: 'B', hip: 200, orbitRole: 'secondary' }),
+      pairRow({ systemId: '00002+0002-AB', comp: 'A', hip: 200 }),
+      pairRow({ systemId: '00002+0002-AB', comp: 'B', hip: 300, orbitRole: 'secondary' }),
+    ];
+    const stars = [a, b, c];
+    const verdicts = systemCoherenceVerdicts(rows, stars, sources());
+    applySystemCoherence(stars, verdicts);
+    const second = verdicts[1];
+    if (second.kind !== 'coherent') throw new Error(`expected a coherent second system, got ${second.kind}`);
+    expect(second.anchor.idx).toBe(1);
+    expect(second.anchorPc).toBe(Math.sqrt(b.x * b.x + b.y * b.y + b.z * b.z));
+    expect(Math.sqrt(c.x * c.x + c.y * c.y + c.z * c.z)).toBeCloseTo(second.anchorPc, 12);
+  });
+
+  it('cites the Bailer-Jones row for that tier, and no row for an inherited anchor', () => {
+    const a = star({ gaiaSourceId: '7', x: 50 });
+    const b = star({ hip: 9, x: 50.5 });
+    const rows = [
+      pairRow({ systemId: '00003+0003-AB', comp: 'A', gaiaSourceId: '7' }),
+      pairRow({ systemId: '00003+0003-AB', comp: 'B', hip: 9, orbitRole: 'secondary' }),
+    ];
+    const bj = sources({ bailerJones: { source: BAILER_JONES, distPc: new Map([['7', 50]]) } });
+    const [withBj] = systemCoherenceVerdicts(rows, [a, b], bj);
+    expect(withBj.anchor).toMatchObject({ idx: 0, tier: 'bailer-jones', ref: { source: BAILER_JONES, row: '7' } });
+    const [inherited] = systemCoherenceVerdicts(rows, [a, b], sources());
+    expect(inherited.anchor).toMatchObject({ idx: 0, tier: 'inherited', ref: null });
   });
 });
