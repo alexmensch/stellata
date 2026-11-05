@@ -5,6 +5,7 @@ import { creditCount, recordCountOf, versionOf } from './site-metrics';
 describe('the catalogue size with no built artifact', () => {
   it('is the count snapshot beside the build', () => {
     expect(recordCountOf(null, () => '{"recordCount":12345}', 'quote-snapshot')).toBe(12345);
+    expect(recordCountOf(null, () => '{"stages":{"records":{"recordCount":12345}}}', 'quote-snapshot')).toBe(12345);
   });
 
   it.each([

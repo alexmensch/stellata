@@ -7,9 +7,9 @@ between two builds is explained. This README is the design contract the
 folder's code is built to.
 
 A stage returns a typed outcome per record; lineage is those outcomes
-serialised. The target is that a stage's count snapshot folds from the same
-outcome arrays, so a snapshot and lineage are two projections of one value
-and neither is kept in step with the other. Membership is part-way there:
+serialised. The target is that a stage's count snapshot folds from its
+lineage lines, keyed on its reason codes ([Counts fold from lineage](#counts-fold-from-lineage)),
+so the snapshot is a projection of lineage, never kept in step with it. Membership is part-way there:
 its review-queue and label-drop counts fold from the outcomes, while the
 derivation, admission and component counters are still kept by hand beside
 them (stellata-hhaw.45.23). Promotion's per-row counters all fold from its
@@ -225,6 +225,16 @@ Membership's (`MEMBERSHIP_INVARIANTS`): no `admit.magnitude` row whose
 `binding.unweighed-no-pulled-row` row
 ([The candidates have to be in the astrometry pull](../membership/binding/README.md#the-candidates-have-to-be-in-the-astrometry-pull)).
 
+## Counts fold from lineage
+
+A stage's count-snapshot keys are its reason codes, so the code list is the
+one owner of every counted tier. `foldStageLines(codes, lines, role)`
+(`lineage-row-pure.ts`, over `../../util/counts/tally-pure.ts`'s `fold`) counts a
+stage's lines per code in one role, every declared code present, typed
+`Record<code, number>` from the stage's `codes`; a line of another stage
+throws. A stage with no codes yet keeps its snapshot keys until it gains
+lineage.
+
 ## SID events
 
 SID allocation is the fourth stage, run inside `build:catalog`,
@@ -268,16 +278,17 @@ A spine derivation's row carries only its winner, route and component
 letters; the binding-review columns ride the rows the queue lists — a
 contested or collision verdict and a disposition — since the candidates and
 refusals are rows of their own. `MEMBERSHIP_LINEAGE_BUDGET` pins 41 MB and
-15 s — the time ceiling sits well above the measurement because CI runners
-write slower than a workstation. Promotion, measured 2026-11-01: <!-- count:build-binaries/multiples_rows_emitted -->47,021<!-- /count --> rows, one
+30 s: a CI run that diffs against a restored merge-base baseline took
+13.6–19.7 s (2026-11-05, 9 runs), against 5.3–7.5 s with no diff. Promotion, measured 2026-11-01: <!-- count:build-binaries/multiples_rows_emitted -->47,021<!-- /count --> rows, one
 per `multiples.tsv` row, plus 31,908 identity rows (<!-- count:build-catalog/companionPromoted -->14,676<!-- /count --> minted companions,
 17,232 rows it retires, parks or merges), 0.95 MB gzipped in 0.2 s;
 `PROMOTION_LINEAGE_BUDGET` pins 1.04 MB and 5 s. Allocation, measured
 2026-11-01: 980,151 rows (979,712 objects plus 439 parked SIDs, 62.6 MB plain)
 and 979,712 identity rows (29.1 MB), 17.6 MB gzipped in 4.7 s without a diff;
-`ALLOCATION_LINEAGE_BUDGET` pins 19.3 MB and 15 s. Placement, measured 2026-10-30: 3,872,657 rows (349 MB plain, 31.0 MB
+`ALLOCATION_LINEAGE_BUDGET` pins 19.3 MB and 30 s: a workstation at load average 28–46 took 18.1–31.4 s (2026-11-05).
+Placement, measured 2026-10-30: 3,872,657 rows (349 MB plain, 31.0 MB
 gzipped) in 3.2 s without a diff and 8.1 s with one against a full
-baseline; `PLACEMENT_LINEAGE_BUDGET` pins 34 MB and 30 s. A file that size outruns
+baseline; `PLACEMENT_LINEAGE_BUDGET` pins 34 MB and 60 s: a CI run that diffs against a restored merge-base baseline took 36.5 s (2026-11-05). A file that size outruns
 V8's longest string, so stage files and diffs are written and read as UTF-8
 bytes in chunks, and the diff walks the baseline a key at a time
 (`streamLineage`) rather than holding it.
