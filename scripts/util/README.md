@@ -199,9 +199,12 @@ same thing — single-use helpers stay with their consumer.
   (`writeStepInputs`) to `build/step-inputs/<step>.json`, names it in
   `PIPELINE_STEP_INPUTS` (`STEP_INPUTS_ENV`) and removes it when the step
   exits; the step reads them with `stepInputHashes()`, which throws when the
-  step was started any other way. The same map the step's stamp records as
-  its inputs, so a step that needs its own input hashes (a lineage header's
-  input hash) never re-derives them.
+  step was started any other way. It is the map the runner hashed for the
+  step's stamp before starting it; the stamp then re-hashes any input the
+  step also writes (every input under `--update-snapshots`), so for
+  `build:membership` and `build:catalog`, which rewrite inputs, the two differ
+  on those entries. A step that needs its own input hashes (a lineage
+  header's input hash) reads them here and never re-derives them.
 - `tsv/` — the one TSV reader (`readTable`, typed columns, cells that keep
   empty and malformed apart) and `defineArtifact`, the codec of every table
   this repo writes. Own README.
