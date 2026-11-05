@@ -194,7 +194,9 @@ A target is a step name, or `data` for every build step on the table.
 `record.ts <step> [--force] [args…]` is every pull's and bake's
 `package.json` target, so a hand re-run is what keeps its record fresh. It
 takes the step's lock, and the shared locks on the steps writing its inputs,
-as the runner does; skips a step whose record is fresh unless `--force`;
+as the runner does, plus those on the writers of the files its describe
+names (`requestFrom`; `locks.ts`'s `sharedLocks`), which a step with no
+record yet has no graph edge from; skips a step whose record is fresh unless `--force`;
 describes it; runs it (a Python step under `build_stamp.record_run`, a
 TypeScript one through `tsx`, its inputs derived and hashed before the run, as a TypeScript build's
 are); then writes `data/stamps/<step>.json` with `writeManualRecord`. Extra

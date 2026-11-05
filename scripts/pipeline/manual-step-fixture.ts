@@ -10,7 +10,7 @@ import { manualDescription, manualFreshness, type Freshness } from './freshness'
 import { pipelineTree } from './pipeline-tree';
 import { recordStep, type RecordOutcome } from './record-step';
 import { loadTable } from './step-table/load-table';
-import type { ManualKind, ManualStep } from './step-table/step-table-pure';
+import type { ManualKind, ManualStep, StepEntry } from './step-table/step-table-pure';
 
 export interface TsManualFixture {
   readonly step: ManualStep;
@@ -27,9 +27,11 @@ export interface TsManualSpec {
   readonly out: string;
   /** What `deriveInputs` answers beside the entry itself, absolute. */
   readonly inputs: readonly string[];
+  /** Further steps on its table. */
+  readonly others?: readonly StepEntry[];
 }
 
-export async function tsManualFixture(root: string, { name, kind, source, out, inputs }: TsManualSpec): Promise<TsManualFixture> {
+export async function tsManualFixture(root: string, { name, kind, source, out, inputs, others = [] }: TsManualSpec): Promise<TsManualFixture> {
   const base = join(root, 'steps', stepFileName(name));
   mkdirSync(join(root, 'steps'), { recursive: true });
   writeFileSync(`${base}.ts`, source);
@@ -38,7 +40,7 @@ import { ${declareOutputs.name} } from ${JSON.stringify(join(REPO_ROOT, 'scripts
 export const OUT = ${declareOutputs.name}({ out: ${JSON.stringify(out)} });
 `);
   const step: ManualStep = { name, ...kind, language: 'ts', entry: `${base}.ts`, outputs: { module: `${base}-outputs.ts`, name: 'OUT' } };
-  const loaded = await loadTable({ steps: [step], registryFiles: [] }, { root, deriveInputs: async () => [] });
+  const loaded = await loadTable({ steps: [step, ...others], registryFiles: [] }, { root, deriveInputs: async () => [] });
   if (loaded.kind !== 'loaded') throw new Error(loaded.problems.join('; '));
   const tree = pipelineTree(root);
   return {

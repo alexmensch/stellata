@@ -9,6 +9,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { manualDescription, manualFreshness, pullQueryHash, requestHash } from './freshness';
 import { loadTable } from './step-table/load-table';
 import { pipelineTree } from './pipeline-tree';
+import { holdLocks } from './locks';
 import { tsManualFixture } from './manual-step-fixture';
 import { recordStep, type RecordOutcome } from './record-step';
 import type { ManualStep, StepEntry } from './step-table/step-table-pure';
@@ -215,16 +216,18 @@ Path(${JSON.stringify(at('baked.bin'))}).write_text(f"{model.scale(1)} {rungs}")
     expect(fresh(step)).toBe('stale');
   });
 
-  it('records a TypeScript bake through the projection its async describe prints, and freshens it on a re-run', async () => {
-    write('clouds.json', '{"shape": "ellipse", "sid": 1}');
-    const fixture = await tsManualFixture(root, {
-      name: 'build:bake', kind: { kind: 'bake', describes: true }, out: at('surfaces.bin'), inputs: [at('clouds.json')], source: `
+  const projectingBake = (others: StepEntry[] = []) => tsManualFixture(root, {
+    name: 'build:bake', kind: { kind: 'bake', describes: true }, out: at('surfaces.bin'), inputs: [at('clouds.json')], others, source: `
 import { readFile, writeFile } from 'node:fs/promises';
 const shape = async () => JSON.parse(await readFile(${JSON.stringify(at('clouds.json'))}, 'utf8')).shape;
 export const describe = async () => ({ request: [await shape()], requestFrom: ['clouds.json'] });
 export async function main(): Promise<void> { await writeFile(${JSON.stringify(at('surfaces.bin'))}, await shape()); }
 `,
-    });
+  });
+
+  it('records a TypeScript bake through the projection its async describe prints, and freshens it on a re-run', async () => {
+    write('clouds.json', '{"shape": "ellipse", "sid": 1}');
+    const fixture = await projectingBake();
 
     expect((await fixture.record()).kind).toBe('recorded');
     expect(stamp('build:bake')).toEqual({
@@ -239,5 +242,20 @@ export async function main(): Promise<void> { await writeFile(${JSON.stringify(a
     expect(fixture.freshness().kind).toBe('stale');
     expect((await fixture.record()).kind).toBe('recorded');
     expect(fixture.freshness().kind).toBe('fresh');
+  });
+
+  it('holds a first record behind the build writing the file its describe projects, though no record names that file yet', async () => {
+    write('clouds.json', '{"shape": "ellipse"}');
+    const writer: StepEntry = {
+      name: 'build:writer', kind: 'build', language: 'python', entry: at('steps/writer.py'), outputs: [at('clouds.json')], after: [], snapshots: [],
+    };
+    const fixture = await projectingBake([writer]);
+    const building = await holdLocks(pipelineTree(root).locks, { step: 'build:writer', exclusive: true, shared: [] }, () => {});
+    let settled = false;
+    const recording = fixture.record().then((outcome) => { settled = true; return outcome; });
+    await new Promise((done) => { setTimeout(done, 300); });
+    expect(settled).toBe(false);
+    await building.release();
+    expect((await recording).kind).toBe('recorded');
   });
 });
