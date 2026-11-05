@@ -16,15 +16,20 @@ agents-md-size.test.ts   Size guard for AGENTS.md. Holds the file under
 astronomy-constants-sync.test.ts
                          Parity pin between astro-core/astronomy-constants.ts
                          and the build-script copy.
-artifact-freshness.test.ts  Built-artifact coherence: fails (not skips)
-                         when public/catalog-manifest.json exists but
-                         public/binaries.bin is missing, or any file its
-                         stamp (build/stamps/build-binaries-runtime.json) records —
-                         input or output — has changed since — the state
-                         where the binaries-dependent suites would
-                         silently self-skip and "npm test green" means
-                         less than it reads. Self-skips on fresh clones
-                         and LFS pointer stubs.
+artifact-freshness.test.ts  Every stamp, judged as the runner judges it
+                         (`buildFreshness`, `manualFreshness`;
+                         /scripts/pipeline/README.md#freshness--one-mechanism),
+                         one case per step on the loaded table. build/stamps/
+                         and data/stamps/ hold only the table's steps'
+                         stamps, and every manual step has its committed
+                         record. Once any build stamp exists, every build
+                         step's must exist and be fresh — a partial build
+                         otherwise leaves the artifact-backed suites
+                         self-skipping, and "pnpm test green" means less
+                         than it reads. Each manual record must match the
+                         disk, its `--describe` aside (the runner's check).
+                         Self-skips the build cases with nothing built, and
+                         a manual record whose files are LFS pointer stubs.
 bundle-content.test.ts   Deployed-bundle guard: no source-tree file
                          types (.md/.txt/.py/.ts) under public/, no
                          `.staged` output a killed build left in public/

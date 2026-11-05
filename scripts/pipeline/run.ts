@@ -1,8 +1,7 @@
 // The runner's command line. See README.md#the-runner--runts.
 
 import { REPO_ROOT } from '../util/paths';
-import { entryInputPaths } from '../util/step-inputs';
-import { loadTable } from './step-table/load-table';
+import { loadRepoTable } from './step-table/repo-table';
 import { runSteps } from './runner';
 import { expandTargets } from './step-table/step-table-pure';
 import { STEPS } from './step-table/steps';
@@ -17,7 +16,7 @@ async function main(): Promise<number> {
     console.error(`usage: run.ts <step…|data> ${[...FLAGS].map((f) => `[${f}]`).join(' ')}${unknown.length > 0 ? `; unknown: ${unknown.join(' ')}` : ''}`);
     return 2;
   }
-  const loaded = await loadTable(STEPS, { root: REPO_ROOT, deriveInputs: (entry) => entryInputPaths([entry]) });
+  const loaded = await loadRepoTable();
   if (loaded.kind === 'rejected') {
     for (const problem of loaded.problems) console.error(`step table rejected: ${problem}`);
     return 1;

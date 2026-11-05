@@ -1,10 +1,8 @@
 // record.ts <manual step> [--force] [args…]: every pull and bake's package.json target. See README.md#recording-a-manual-step--recordts.
 
 import { REPO_ROOT } from '../util/paths';
-import { entryInputPaths } from '../util/step-inputs';
-import { loadTable } from './step-table/load-table';
+import { deriveRepoInputs, loadRepoTable } from './step-table/repo-table';
 import { recordStep } from './record-step';
-import { STEPS } from './step-table/steps';
 
 async function main(): Promise<number> {
   const [step, ...rest] = process.argv.slice(2);
@@ -12,8 +10,7 @@ async function main(): Promise<number> {
     console.error('usage: record.ts <manual step> [--force] [args…]');
     return 2;
   }
-  const deriveInputs = (entry: string) => entryInputPaths([entry]);
-  const loaded = await loadTable(STEPS, { root: REPO_ROOT, deriveInputs });
+  const loaded = await loadRepoTable();
   if (loaded.kind === 'rejected') {
     for (const problem of loaded.problems) console.error(`step table rejected: ${problem}`);
     return 1;
@@ -23,7 +20,7 @@ async function main(): Promise<number> {
     step,
     force: rest.includes('--force'),
     args: rest.filter((a) => a !== '--force'),
-    deriveInputs,
+    deriveInputs: deriveRepoInputs,
     log: (line) => console.log(line),
   });
   switch (outcome.kind) {

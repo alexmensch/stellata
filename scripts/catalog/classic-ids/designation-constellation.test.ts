@@ -1,13 +1,12 @@
 // The designation-constellation cascade, pinned against the BUILT search
 // index. See README.md#the-designation-constellation.
 import { existsSync, readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
-import { BUILD_COUNTS_EXPECTED_FILE, type BuildCounts } from '../build-counts';
+import { committedBuildCounts } from '../build-counts';
 import type { SearchEntry } from '../../../src/catalog-format/record/catalog-pure';
 import { CON_INDEX } from '../parse/constellations/constellations';
-import { REPO_ROOT, publicFile } from '../../util/paths';
+import { publicFile } from '../../util/paths';
 import { PUBLIC_FILES } from '../../../src/catalog-format/public-artifacts/public-artifacts';
 
 const built = existsSync(publicFile(PUBLIC_FILES.searchIndex));
@@ -72,11 +71,8 @@ describe.skipIf(!built)('designation constellation on the wire', () => {
   });
 
   it('emits dc on exactly the pinned population', () => {
-    const expected = JSON.parse(
-      readFileSync(resolve(REPO_ROOT, BUILD_COUNTS_EXPECTED_FILE), 'utf-8'),
-    ) as BuildCounts;
     expect(index.filter((e) => e.dc !== undefined)).toHaveLength(
-      expected.designationConMismatch,
+      committedBuildCounts().designationConMismatch,
     );
   });
 });

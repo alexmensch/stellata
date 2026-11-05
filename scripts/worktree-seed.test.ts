@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import { basename, dirname, relative, resolve } from 'node:path';
 import { beforeAll, describe, expect, it } from 'vitest';
 
-import { loadTable } from './pipeline/step-table/load-table';
+import { loadedRepoTable } from './pipeline/step-table/repo-table';
 import { expandTargets, isBuild, selectSteps } from './pipeline/step-table/step-table-pure';
 import { STEPS } from './pipeline/step-table/steps';
 import { isMemberName, type OutputFamily } from './util/emit-artifacts';
@@ -12,7 +12,6 @@ import { packageScripts } from './util/import-closure';
 import { scriptParts } from './util/import-closure-pure';
 import { REPO_ROOT } from './util/paths';
 import { stampPath } from './util/stamp-path-pure';
-import { entryInputPaths } from './util/step-inputs';
 
 interface StepOutputs {
   readonly files: readonly string[];
@@ -26,8 +25,7 @@ let outputsOf: ReadonlyMap<string, StepOutputs>;
 let seedSteps: readonly string[];
 
 beforeAll(async () => {
-  const loaded = await loadTable(STEPS, { root: REPO_ROOT, deriveInputs: (entry) => entryInputPaths([entry]) });
-  if (loaded.kind !== 'loaded') throw new Error(loaded.problems.join('\n'));
+  const loaded = await loadedRepoTable();
   const parts = scriptParts(packageScripts(), 'build:data');
   const targets = parts.flatMap((p) => (p.kind === 'tsx' && p.entry === RUNNER ? p.args : []));
   if (targets.length === 0 || parts.length !== 1) throw new Error('build:data must be one run.ts call');

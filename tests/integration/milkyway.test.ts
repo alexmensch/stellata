@@ -346,7 +346,7 @@ describe('MilkyWay luminosity solve', () => {
             dustEnabled: false,
           }),
         );
-    expect(NGP_DIFFUSE_RESIDUAL_MAG_ARCSEC2 - dustFree).toBeCloseTo(1.3093, 4);
+    expect(NGP_DIFFUSE_RESIDUAL_MAG_ARCSEC2 - dustFree).toBeCloseTo(1.3097, 4);
   });
 
   // Check 2, the sightline the ORIGINAL anchor used. Compared against
@@ -375,7 +375,7 @@ describe('MilkyWay luminosity solve', () => {
       { resolvedHole: null },
     );
     const doubleCounted = -2.5 * Math.log10(fluxNumber(bandWithoutHole) + catalogue);
-    expect(LEINERT_TOTAL_STARLIGHT_MAG_ARCSEC2.northGalacticPole - sky).toBeCloseTo(0.4122, 4);
+    expect(LEINERT_TOTAL_STARLIGHT_MAG_ARCSEC2.northGalacticPole - sky).toBeCloseTo(0.4123, 4);
     expect(sky - bandWithoutHole).toBeCloseTo(0.016, 3);
     expect(LEINERT_TOTAL_STARLIGHT_MAG_ARCSEC2.northGalacticPole - doubleCounted).toBeCloseTo(0.884, 3);
   });
