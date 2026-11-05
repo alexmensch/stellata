@@ -18,6 +18,10 @@ import {
   classifyFromSimbad,
   resolveSpectDisplay,
 } from '../../../src/catalog-format/spectral/spectral-classify';
+import {
+  decodeSpectralBytes,
+  encodeSpectralBytes,
+} from '../../../src/catalog-format/spectral/spectral-record-bytes';
 import type { ParkedReason } from '../distance/parallax/parked-ledger-pure';
 import {
   absmagFromSpectral,
@@ -1098,16 +1102,9 @@ function anchorAloneMagnitude(cands: AnchorDimCandidate[]): number | null {
   return best?.mag ?? null;
 }
 
-/** Subclass defaults to the mid-class 5 where only the coarse fields survive. */
 function recordSpectralInfo(star: Star): SpectralInfo {
-  const parsed = star.spectDisplay ? classifyFromSimbad(star.spectDisplay) : null;
-  return parsed ?? {
-    classIdx: star.spectClass,
-    subclass: 5,
-    lumClass: star.lumClass,
-    isWhiteDwarf: star.lumClass === 0,
-    wdSubclass: 5,
-  };
+  return (star.spectDisplay ? classifyFromSimbad(star.spectDisplay) : null)
+    ?? decodeSpectralBytes(star);
 }
 
 // Re-runs the strict SIMBAD parser rather than taking the string as-is, so the
@@ -1774,8 +1771,7 @@ function promoteRow(
     x: position.x, y: position.y, z: position.z,
     vx: anchorVel.x, vy: anchorVel.y, vz: anchorVel.z,
     absmag, ci,
-    spectClass: spectral.info.classIdx,
-    lumClass: spectral.info.lumClass,
+    ...encodeSpectralBytes(spectral.info),
     physicalRadius: physicalRadius(absmag, spectral.info),
     conIndex,
     desigConIndex,

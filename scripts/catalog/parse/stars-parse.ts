@@ -21,6 +21,7 @@ import {
   type SimbadRecordKeys,
 } from '../record/record-build-pure';
 import { classifyFromSimbad, SPECTRAL_UNKNOWN } from '../../../src/catalog-format/spectral/spectral-classify';
+import { encodeSpectralBytes } from '../../../src/catalog-format/spectral/spectral-record-bytes';
 import {
   type SimbadSpectralIndex,
   type SpectralResolution,
@@ -715,8 +716,7 @@ export function readStars(
       x, y, z,
       vx: vel.x, vy: vel.y, vz: vel.z,
       absmag, ci,
-      spectClass: spectInfo.classIdx,
-      lumClass: spectInfo.lumClass,
+      ...encodeSpectralBytes(spectInfo),
       physicalRadius: physRadius,
       conIndex,
       // Left unset here: three later passes fill it, and everything else

@@ -13,8 +13,10 @@ seven-tier SIMBAD resolver — is the build's:
 src/catalog-format/spectral/
   spectral-classify.ts (+ test)   The MK walker over SIMBAD `sp_type`, the
                                   ESP-ELS letter enum, the `SpectralInfo`
-                                  shape both produce, and the hover-display
+                                  variant both produce, and the hover-display
                                   string. No catalogue joins — pure parsing.
+  spectral-record-bytes.ts        The record's spectClass / lumClass byte
+    (+ test)                      pair: encode and decode. See below.
   physical-radius.ts (+ test)     Effective temperature and bolometric
                                   correction by class, the Apsis Teff sanity
                                   window, `physicalRadius`, and the
@@ -22,14 +24,36 @@ src/catalog-format/spectral/
                                   companion's class.
 ```
 
+## `SpectralInfo` is a variant
+
+A class is one of `mk` (an O–M letter, a subclass, and a luminosity class or
+none), `carbon` (C/S/N/R), `wolf-rayet`, `white-dwarf` (its Sion temperature
+index), `letter-only` (ESP-ELS: a letter, or carbon, and nothing else) or
+`unknown`. Every consumer matches on `kind`; nothing compares a class number.
+`classifyFromSimbad` returns `MkSpectral`, which excludes the last two, so
+a caller holding its result never handles an unknown class.
+
+**The on-disk codes exist only in `spectral-record-bytes.ts`.** The record
+packs a class into two bytes — spectClass 0–6 for O–M, 7 carbon (Wolf-Rayet
+too), 8 none; lumClass 0–9, 255 none — and a white dwarf as `8 / 0`.
+`encodeSpectralBytes` is how a pipeline record gets them, and
+`decodeSpectralBytes` is how companion promotion reads a record's class
+back when its display string does not parse; the viewer's descriptor
+(`/src/client/format/spectral-format.ts`) reads the same named codes. The bytes drop the subclass,
+the WD index and the Wolf-Rayet kind, so a decode reads them at
+`DEFAULT_SUBCLASS` and a Wolf-Rayet as carbon; a lumClass of 0 decodes as a
+white dwarf whatever the class byte. `scripts/binaries/mass_estimate.py`
+parses to the same codes independently, pinned by
+`/scripts/catalog/parse/spectral-encoding-parity.test.ts`.
+
 ## The radius chain
 
 `physicalRadius` computes R/R☉ via Stefan–Boltzmann:
 
 ```
 T       = Apsis Teff (gspphot → gspspec) when measured, else
-          interp(T_TABLE[classIdx], subclass)
-BC      = interp(BC_TABLE[classIdx], subclass)
+          interp(T_TABLE[class], subclass)
+BC      = interp(BC_TABLE[class], subclass)
 Mbol    = absmag + BC
 L/L☉    = 10^((4.74 − Mbol) / 2.5)
 R/R☉    = sqrt(L/L☉) × (T_sun/T)²
@@ -37,7 +61,7 @@ R/R☉    = sqrt(L/L☉) × (T_sun/T)²
 
 `resolveApsisTeff` supplies the measured Teff (2–60 kK sanity window);
 R ∝ T⁻², so the class-table fallback misized ESP-ELS-tier stars
-(letter-only, subclass defaulted to 5) by up to ~36% and unknown-class
+(letter-only, read at subclass 5) by up to ~36% and unknown-class
 stars by up to ~2×. Tables are main-sequence values — cooler for
 giants/supergiants in reality — but the Mbol side of the equation
 absorbs the luminosity-class difference, so the end result lands close

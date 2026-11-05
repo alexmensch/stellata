@@ -58,8 +58,8 @@ describe('resolveSpectralInfo — tier priority', () => {
     const simbad = idx([], [[36850, row('K0III', 'C', '**')]]);
     const out = flatSp(keys(null, 36850), simbad, new Map());
     expect(out.source).toBe('curated');
-    expect(out.info.classIdx).toBe(2); // A
-    expect(out.info.lumClass).toBe(3); // IV
+    expect(out.info).toMatchObject({ letter: 2 }); // A
+    expect(out.info).toMatchObject({ lumClass: 3 }); // IV
     expect(out.spectDisplay).toBe('A1.5IV+');
   });
 
@@ -70,9 +70,9 @@ describe('resolveSpectralInfo — tier priority', () => {
     ]);
     const out = flatSp(keys(GAIA_ID, HIP), simbad, apsis);
     expect(out.source).toBe('simbad');
-    expect(out.info.classIdx).toBe(2); // A
-    expect(out.info.subclass).toBe(6);
-    expect(out.info.lumClass).toBe(2); // V
+    expect(out.info).toMatchObject({ letter: 2 }); // A
+    expect(out.info).toMatchObject({ subclass: 6 });
+    expect(out.info).toMatchObject({ lumClass: 2 }); // V
     expect(out.spectDisplay).toBe('A6V');
   });
 
@@ -80,9 +80,9 @@ describe('resolveSpectralInfo — tier priority', () => {
     const simbad = idx([], [[HIP, row('B8V', 'C', 'SB*')]]);
     const out = flatSp(keys(null, HIP), simbad, new Map());
     expect(out.source).toBe('simbad');
-    expect(out.info.classIdx).toBe(1); // B
-    expect(out.info.subclass).toBe(8);
-    expect(out.info.lumClass).toBe(2); // V
+    expect(out.info).toMatchObject({ letter: 1 }); // B
+    expect(out.info).toMatchObject({ subclass: 8 });
+    expect(out.info).toMatchObject({ lumClass: 2 }); // V
     expect(out.spectDisplay).toBe('B8V');
   });
 
@@ -93,8 +93,8 @@ describe('resolveSpectralInfo — tier priority', () => {
     ]);
     const out = flatSp(keys(GAIA_ID, HIP), simbad, apsis);
     expect(out.source).toBe('simbad');
-    expect(out.info.classIdx).toBe(2); // A, not K
-    expect(out.info.lumClass).toBe(3); // IV
+    expect(out.info).toMatchObject({ letter: 2 }); // A, not K
+    expect(out.info).toMatchObject({ lumClass: 3 }); // IV
   });
 
   it('tier 3: SIMBAD-by-TYC reaches an object SIMBAD holds no Gaia id for', () => {
@@ -102,7 +102,7 @@ describe('resolveSpectralInfo — tier priority', () => {
     const out = flatSp(keys(GAIA_ID, HIP, '1234-5678-1', null), simbad, new Map());
     expect(out.source).toBe('simbad');
     expect(out.simbadKey).toBe('tyc');
-    expect(out.info.classIdx).toBe(5); // K
+    expect(out.info).toMatchObject({ letter: 5 }); // K
     expect(out.spectDisplay).toBe('K2III');
   });
 
@@ -111,15 +111,15 @@ describe('resolveSpectralInfo — tier priority', () => {
       [GAIA_ID, { ...APSIS_NONE, spectraltypeEsphs: 'F' }],
     ]);
     const tycOnly = idx([], [], [['1-2-1', row('M4V', 'C', '*')]]);
-    expect(flatSp(keys(GAIA_ID, null, '1-2-1', null), tycOnly, apsis).info.classIdx)
-      .toBe(6); // M, not F
+    expect(flatSp(keys(GAIA_ID, null, '1-2-1', null), tycOnly, apsis).info)
+      .toMatchObject({ kind: 'mk', letter: 6 }); // M, not F
     const both = idx(
       [[GAIA_ID, row('A0V', 'C', '*', GAIA_ID)]], [],
       [['1-2-1', row('M4V', 'C', '*')]],
     );
     const out = flatSp(keys(GAIA_ID, null, '1-2-1', null), both, apsis);
     expect(out.simbadKey).toBe('source_id');
-    expect(out.info.classIdx).toBe(2); // A
+    expect(out.info).toMatchObject({ letter: 2 }); // A
   });
 
   it('tier 4: SIMBAD-by-GJ, matched on the folded key not the raw cell', () => {
@@ -127,7 +127,7 @@ describe('resolveSpectralInfo — tier priority', () => {
     for (const spelling of ['Gl 165A', 'GJ 165A', '165 A']) {
       const out = flatSp(keys(null, null, null, spelling), simbad, new Map());
       expect(out.simbadKey, spelling).toBe('gj');
-      expect(out.info.classIdx).toBe(6); // M
+      expect(out.info).toMatchObject({ letter: 6 }); // M
     }
   });
 
@@ -157,7 +157,7 @@ describe('resolveSpectralInfo — tier priority', () => {
     ]);
     const out = flatSp(keys(GAIA_ID, HIP), idx(), apsis);
     expect(out.source).toBe('gspspec');
-    expect(out.info.classIdx).toBe(5); // K
+    expect(out.info).toMatchObject({ letter: 5 }); // K
     expect(out.spectDisplay).toBe('K');
   });
 
@@ -168,7 +168,7 @@ describe('resolveSpectralInfo — tier priority', () => {
     ]);
     const out = flatSp(keys(GAIA_ID, HIP), simbad, apsis);
     expect(out.source).toBe('gspspec');
-    expect(out.info.classIdx).toBe(3); // F
+    expect(out.info).toMatchObject({ letter: 3 }); // F
   });
 
   it('every curated sp_type classifies', () => {
@@ -212,7 +212,7 @@ describe('resolveSpectralInfo — tier priority', () => {
     const simbad = idx([], [[HIP, row('B2V', 'C', '*', '999888777')]]);
     const out = flatSp(keys(GAIA_ID, HIP), simbad, apsis);
     expect(out.source).toBe('gspspec');
-    expect(out.info.classIdx).toBe(5); // K from GSP-Spec, not B from the HIP row
+    expect(out.info).toEqual({ kind: 'letter-only', letter: 5 }); // K from GSP-Spec, not B from the HIP row
   });
 
   it('the walk continues past a contradicting row to a later namespace', () => {
@@ -222,7 +222,7 @@ describe('resolveSpectralInfo — tier priority', () => {
     );
     const out = flatSp(keys(GAIA_ID, HIP, '1-2-1', null), simbad, new Map());
     expect(out.simbadKey).toBe('tyc');
-    expect(out.info.classIdx).toBe(6); // M
+    expect(out.info).toMatchObject({ letter: 6 }); // M
   });
 
   it('a row stating no Gaia id at all still matches — nothing contradicts it', () => {
@@ -231,14 +231,14 @@ describe('resolveSpectralInfo — tier priority', () => {
     const simbad = idx([], [[HIP, row('B8V', 'C', 'SB*')]]);
     const out = flatSp(keys(GAIA_ID, HIP), simbad, new Map());
     expect(out.simbadKey).toBe('hip');
-    expect(out.info.classIdx).toBe(1); // B
+    expect(out.info).toMatchObject({ letter: 1 }); // B
   });
 
   it('a record with no Gaia id of its own has nothing to contradict with', () => {
     const simbad = idx([], [[HIP, row('B8V', 'C', '*', '999888777')]]);
     const out = flatSp(keys(null, HIP), simbad, new Map());
     expect(out.simbadKey).toBe('hip');
-    expect(out.info.classIdx).toBe(1); // B
+    expect(out.info).toMatchObject({ letter: 1 }); // B
   });
 });
 

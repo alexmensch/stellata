@@ -4,28 +4,23 @@
 import { ballesterosBvFromTeff } from '../../astro-core/colour/blackbody-lut-pure';
 import { SOLAR_BV_FALLBACK, type ApsisRow } from '../record/catalog-pure';
 import {
-  SPECTRAL_UNKNOWN,
-  UNKNOWN_CLASS_IDX,
+  DEFAULT_SUBCLASS,
+  type LumClass,
+  type MkLetter,
   type SpectralInfo,
 } from './spectral-classify';
 
-// Effective temperature (Kelvin) by spectral class + subclass for main-sequence
-// stars. Giants and supergiants of the same letter+digit run ~10-15% cooler;
-// the physical-radius calculation rides mostly on the *relative* scaling, so
-// the MS table is close enough. White dwarfs use a separate formula.
-const T_TABLE: Record<number, [number, number][]> = {
-  0: [[0, 50000], [5, 42000], [9, 34000]],             // O
-  1: [[0, 30000], [5, 15200], [9, 10500]],             // B
-  2: [[0,  9790], [5,  8180], [9,  7600]],             // A
-  3: [[0,  7300], [5,  6650], [9,  6050]],             // F
-  4: [[0,  5940], [5,  5560], [9,  5310]],             // G
-  5: [[0,  5150], [5,  4410], [9,  3900]],             // K
-  6: [[0,  3840], [5,  3170], [9,  2500]],             // M
-  7: [[0,  4000], [5,  3000], [9,  2500]],             // C/S/N/R (cool carbon) — rough; WR routes via WR_T_TABLE
-  8: [[0,  5000], [5,  5000], [9,  5000]],             // unknown — neutral default
-};
+type ClassRow = [number, number][];
 
-function interpolate(table: [number, number][], key: number): number {
+/** One quantity tabulated per class family, white dwarfs aside. */
+interface ClassTables {
+  byLetter: readonly ClassRow[];
+  carbon: ClassRow;
+  wolfRayet: ClassRow;
+  unknown: number;
+}
+
+function interpolate(table: ClassRow, key: number): number {
   // Explicit high-end clamp: callers contract for keys in [0, 9] and the
   // tables span [0, 9] inclusive, so any key >= the last bucket boundary
   // is at-or-beyond the table. Returning the last value here is the
@@ -44,7 +39,27 @@ function interpolate(table: [number, number][], key: number): number {
   return last[1];
 }
 
-// Wolf-Rayet Teff / BC by ionization subclass — one shared WN/WC ramp.
+function fromClassTables(
+  t: ClassTables, info: Exclude<SpectralInfo, { kind: 'white-dwarf' }>,
+): number {
+  switch (info.kind) {
+    case 'mk': return interpolate(t.byLetter[info.letter], info.subclass);
+    case 'carbon': return interpolate(t.carbon, info.subclass);
+    case 'wolf-rayet': return interpolate(t.wolfRayet, info.subclass);
+    case 'letter-only':
+      return interpolate(
+        info.letter === 'carbon' ? t.carbon : t.byLetter[info.letter], DEFAULT_SUBCLASS,
+      );
+    case 'unknown': return t.unknown;
+  }
+}
+
+// Effective temperature (Kelvin) by spectral class + subclass for main-sequence
+// stars. Giants and supergiants of the same letter+digit run ~10-15% cooler;
+// the physical-radius calculation rides mostly on the *relative* scaling, so
+// the MS table is close enough. White dwarfs use a separate formula.
+//
+// Wolf-Rayet: one shared WN/WC ramp by ionization subclass.
 // Hamann 2006 (/data/papers/index.md#hamann2006) Table 2 gives WN2 141 kK,
 // WN5 63 kK and WN8 45 kK; the ramp yields 114, 75 and 51.75 kK there, and
 // which to adopt is an open decision
@@ -52,26 +67,35 @@ function interpolate(table: [number, number][], key: number): number {
 // (/data/papers/index.md#sander2012) Table 6 puts WC4 at ~117 kK
 // and WC9 at ~44 kK; the ramp meets it only at WC9 and runs 8–29 kK under it
 // for WC4–WC8.
-const WR_T_TABLE: [number, number][] = [[0, 140000], [5, 75000], [9, 44000]];
-const WR_BC_TABLE: [number, number][] = [[0, -6.0], [5, -4.0], [9, -2.7]];
+const T_TABLES: ClassTables = {
+  byLetter: [
+    [[0, 50000], [5, 42000], [9, 34000]],             // O
+    [[0, 30000], [5, 15200], [9, 10500]],             // B
+    [[0,  9790], [5,  8180], [9,  7600]],             // A
+    [[0,  7300], [5,  6650], [9,  6050]],             // F
+    [[0,  5940], [5,  5560], [9,  5310]],             // G
+    [[0,  5150], [5,  4410], [9,  3900]],             // K
+    [[0,  3840], [5,  3170], [9,  2500]],             // M
+  ],
+  carbon: [[0, 4000], [5, 3000], [9, 2500]],          // C/S/N/R (cool carbon) — rough
+  wolfRayet: [[0, 140000], [5, 75000], [9, 44000]],
+  unknown: 5000,                                      // neutral default
+};
 
 export function tempKelvin(info: SpectralInfo): number {
-  if (info.isWhiteDwarf) {
+  if (info.kind === 'white-dwarf') {
     // WD temperature index N = 50400 / T_eff (Sion 1983
     // (/data/papers/index.md#sion)), so T_eff ≈ 50400 / N for N=1..9.
     const n = Math.max(1, info.wdSubclass);
     return 50400 / n;
   }
-  if (info.isWolfRayet) {
-    return interpolate(WR_T_TABLE, info.subclass);
-  }
-  return interpolate(T_TABLE[info.classIdx] ?? T_TABLE[UNKNOWN_CLASS_IDX], info.subclass);
+  return fromClassTables(T_TABLES, info);
 }
 
 /** Intrinsic (extinction-free) B−V from a parsed spectral class — the
  *  build-side tier-4/5/6 colour bake. White dwarfs / class stars route
  *  their `tempKelvin` through Ballesteros 2012
- *  (/data/papers/index.md#ballesteros2012); an unparseable class falls to
+ *  (/data/papers/index.md#ballesteros2012); an unknown class falls to
  *  `SOLAR_BV_FALLBACK` rather than `tempKelvin`'s neutral 5000 K row (a
  *  yellow-white default that would misrepresent an unknown star as solar).
  *  Shared by the main-catalog read (`stars-parse.ts`) and companion
@@ -85,31 +109,33 @@ export function spectralClassCi(info: SpectralInfo): number {
 }
 
 /** True when `spectralClassCi` derives a real class colour rather than
- *  returning `SOLAR_BV_FALLBACK` — a parseable non-WD class, or any white
- *  dwarf. Callers counting the tier-4/5 bake (`ciSpectralDerived`) gate on
- *  this instead of comparing the returned B−V to the fallback value, which
- *  a class landing exactly on 0.65 would miscount. */
+ *  returning `SOLAR_BV_FALLBACK`. Callers counting the tier-4/5 bake
+ *  (`ciSpectralDerived`) gate on this instead of comparing the returned
+ *  B−V to the fallback value, which a class landing exactly on 0.65 would
+ *  miscount. */
 export function spectralClassColorIsDerivable(info: SpectralInfo): boolean {
-  return !(info === SPECTRAL_UNKNOWN
-    || (info.classIdx === UNKNOWN_CLASS_IDX && !info.isWhiteDwarf));
+  return info.kind !== 'unknown';
 }
 
 // Bolometric correction by spectral class + subclass. Mostly negligible for
 // solar-type stars; large negatives for O/B (lots of UV) and M (lots of IR).
-const BC_TABLE: Record<number, [number, number][]> = {
-  0: [[0, -4.9], [5, -4.4], [9, -3.3]],
-  1: [[0, -3.16], [5, -1.46], [9, -0.51]],
-  2: [[0, -0.30], [5, -0.15], [9, -0.10]],
-  3: [[0, -0.09], [5, -0.14], [9, -0.16]],
-  4: [[0, -0.18], [5, -0.21], [9, -0.31]],
-  5: [[0, -0.31], [5, -0.72], [9, -1.20]],
-  6: [[0, -1.38], [5, -2.73], [9, -4.10]],
-  7: [[0, -2.00], [5, -3.00], [9, -4.00]],
-  8: [[0,  0.00], [5,  0.00], [9,  0.00]],
+const BC_TABLES: ClassTables = {
+  byLetter: [
+    [[0, -4.9], [5, -4.4], [9, -3.3]],
+    [[0, -3.16], [5, -1.46], [9, -0.51]],
+    [[0, -0.30], [5, -0.15], [9, -0.10]],
+    [[0, -0.09], [5, -0.14], [9, -0.16]],
+    [[0, -0.18], [5, -0.21], [9, -0.31]],
+    [[0, -0.31], [5, -0.72], [9, -1.20]],
+    [[0, -1.38], [5, -2.73], [9, -4.10]],
+  ],
+  carbon: [[0, -2.00], [5, -3.00], [9, -4.00]],
+  wolfRayet: [[0, -6.0], [5, -4.0], [9, -2.7]],
+  unknown: 0,
 };
 
 export function boloCorr(info: SpectralInfo): number {
-  if (info.isWhiteDwarf) {
+  if (info.kind === 'white-dwarf') {
     // WDs have large BCs that depend strongly on T; a single value is a lie
     // but good enough for display sizing. Hot DA ≈ -2, cool ≈ 0.
     const T = tempKelvin(info);
@@ -118,10 +144,7 @@ export function boloCorr(info: SpectralInfo): number {
     if (T > 8000) return -0.2;
     return 0.3;
   }
-  if (info.isWolfRayet) {
-    return interpolate(WR_BC_TABLE, info.subclass);
-  }
-  return interpolate(BC_TABLE[info.classIdx] ?? BC_TABLE[UNKNOWN_CLASS_IDX], info.subclass);
+  return fromClassTables(BC_TABLES, info);
 }
 
 const T_SUN = 5778;
@@ -154,12 +177,12 @@ export function resolveApsisTeff(apsis: ApsisRow | null | undefined): number | n
 export function physicalRadius(
   absmag: number, info: SpectralInfo, teffOverride: number | null = null,
 ): number {
-  if (info.isWhiteDwarf) {
+  if (info.kind === 'white-dwarf') {
     // White dwarfs cluster tightly around 0.01 R☉; absmag doesn't translate
     // reliably into a radius for them.
     return 0.013;
   }
-  const T = teffOverride !== null && !info.isWolfRayet
+  const T = teffOverride !== null && info.kind !== 'wolf-rayet'
     ? teffOverride
     : tempKelvin(info);
   const BC = boloCorr(info);
@@ -177,29 +200,29 @@ export function physicalRadius(
 // The dwarf row departs from Mamajek 2022 (/data/papers/index.md#mamajek2022)
 // — A0V 0.65 against its 0.99, M5V 12.3 against 14.15 — an open decision
 // (README.md#the-absolute-magnitude-tables).
-const MV_MS_TABLE: Record<number, [number, number][]> = {
-  0: [[0, -5.8], [5, -5.5], [9, -4.3]],   // O V
-  1: [[0, -4.0], [5, -1.2], [9,  0.4]],   // B V
-  2: [[0,  0.65], [5,  1.9], [9,  2.55]], // A V
-  3: [[0,  2.7], [5,  3.5], [9,  4.3]],   // F V
-  4: [[0,  4.4], [5,  5.1], [9,  5.8]],   // G V
-  5: [[0,  5.9], [5,  7.4], [9,  8.6]],   // K V
-  6: [[0,  8.8], [5, 12.3], [9, 16.0]],   // M V
-};
+const MV_MS_TABLE: readonly ClassRow[] = [
+  [[0, -5.8], [5, -5.5], [9, -4.3]],   // O V
+  [[0, -4.0], [5, -1.2], [9,  0.4]],   // B V
+  [[0,  0.65], [5,  1.9], [9,  2.55]], // A V
+  [[0,  2.7], [5,  3.5], [9,  4.3]],   // F V
+  [[0,  4.4], [5,  5.1], [9,  5.8]],   // G V
+  [[0,  5.9], [5,  7.4], [9,  8.6]],   // K V
+  [[0,  8.8], [5, 12.3], [9, 16.0]],   // M V
+];
 
-const MV_GIANT_TABLE: Record<number, [number, number][]> = {
-  0: [[0, -6.3], [5, -5.9], [9, -5.2]],   // O III
-  1: [[0, -5.0], [5, -2.2], [9, -0.5]],   // B III
-  2: [[0, -0.3], [5,  0.6], [9,  1.0]],   // A III
-  3: [[0,  1.1], [5,  1.4], [9,  1.2]],   // F III
-  4: [[0,  1.0], [5,  0.9], [9,  0.8]],   // G III
-  5: [[0,  0.7], [5, -0.2], [9, -0.4]],   // K III
-  6: [[0, -0.4], [5, -0.8], [9, -1.0]],   // M III
-};
+const MV_GIANT_TABLE: readonly ClassRow[] = [
+  [[0, -6.3], [5, -5.9], [9, -5.2]],   // O III
+  [[0, -5.0], [5, -2.2], [9, -0.5]],   // B III
+  [[0, -0.3], [5,  0.6], [9,  1.0]],   // A III
+  [[0,  1.1], [5,  1.4], [9,  1.2]],   // F III
+  [[0,  1.0], [5,  0.9], [9,  0.8]],   // G III
+  [[0,  0.7], [5, -0.2], [9, -0.4]],   // K III
+  [[0, -0.4], [5, -0.8], [9, -1.0]],   // M III
+];
 
 // Supergiant M_V is roughly spectral-class-independent in V; one
 // constant per luminosity class is within the calibration scatter.
-const MV_BY_SUPERGIANT_LUMCLASS: Record<number, number> = {
+const MV_BY_SUPERGIANT_LUMCLASS: Record<5 | 6 | 7 | 8 | 9, number> = {
   5: -2.3,   // II
   6: -4.5,   // Ib
   7: -6.0,   // Iab
@@ -209,6 +232,19 @@ const MV_BY_SUPERGIANT_LUMCLASS: Record<number, number> = {
 
 const MV_SUBDWARF_OFFSET = 1.5;
 
+function mkAbsmag(letter: MkLetter, subclass: number, lumClass: LumClass | null): number | null {
+  const mvMs = interpolate(MV_MS_TABLE[letter], subclass);
+  switch (lumClass) {
+    case 0: return null;                                              // VII/D without WD form
+    case 1: return mvMs + MV_SUBDWARF_OFFSET;                         // VI/sd
+    case 3: return (mvMs + interpolate(MV_GIANT_TABLE[letter], subclass)) / 2;  // IV
+    case 4: return interpolate(MV_GIANT_TABLE[letter], subclass);     // III
+    case 5: case 6: case 7: case 8: case 9:
+      return MV_BY_SUPERGIANT_LUMCLASS[lumClass];
+    default: return mvMs;                                             // V or unknown → MS
+  }
+}
+
 /** Absolute visual magnitude from a parsed MK type. Companion promotion
  *  uses this when a promoted secondary's photometry is inherited from
  *  the system primary and no WDS Δmag exists to impute from — the
@@ -216,28 +252,18 @@ const MV_SUBDWARF_OFFSET = 1.5;
  *  signal. Returns null for white dwarfs, carbon/WR stars, and the
  *  unknown class, where a single M_V calibration would be fiction. */
 export function absmagFromSpectral(info: SpectralInfo): number | null {
-  if (info.isWhiteDwarf || info.classIdx === 7 || info.classIdx === UNKNOWN_CLASS_IDX) {
-    return null;
-  }
-  const ms = MV_MS_TABLE[info.classIdx];
-  const giant = MV_GIANT_TABLE[info.classIdx];
-  if (!ms || !giant) return null;
-  const mvMs = interpolate(ms, info.subclass);
-  switch (info.lumClass) {
-    case 0: return null;                                     // VII/D without WD flag
-    case 1: return mvMs + MV_SUBDWARF_OFFSET;                // VI/sd
-    case 3: return (mvMs + interpolate(giant, info.subclass)) / 2;  // IV
-    case 4: return interpolate(giant, info.subclass);        // III
-    case 5: case 6: case 7: case 8: case 9:
-      return MV_BY_SUPERGIANT_LUMCLASS[info.lumClass];
-    default: return mvMs;                                    // V or unknown → MS
+  switch (info.kind) {
+    case 'mk': return mkAbsmag(info.letter, info.subclass, info.lumClass);
+    case 'letter-only':
+      return info.letter === 'carbon' ? null : mkAbsmag(info.letter, DEFAULT_SUBCLASS, null);
+    default: return null;
   }
 }
 
 /** Piecewise-linear inverse of an anchor table: value → key. Assumes the
  *  table's values are monotonically increasing (MV_MS_TABLE is, O0 → M9);
  *  clamps to the end keys outside the span. */
-function inverseInterpolate(table: [number, number][], value: number): number {
+function inverseInterpolate(table: ClassRow, value: number): number {
   if (value <= table[0][1]) return table[0][0];
   for (let i = 1; i < table.length; i++) {
     const [k0, v0] = table[i - 1];
@@ -247,27 +273,27 @@ function inverseInterpolate(table: [number, number][], value: number): number {
   return table[table.length - 1][0];
 }
 
-/** Main-sequence (classIdx, subclass) from an absolute visual magnitude —
- *  the inverse of `absmagFromSpectral`'s MS branch. The input M_V must be
- *  intrinsic (de-extincted): the MV_MS_TABLE calibration is. Clamped to
- *  the table's [O0, M9] span; lumClass is always V (2). Wrong for evolved
+/** Main-sequence MK type from an absolute visual magnitude — the inverse
+ *  of `absmagFromSpectral`'s MS branch. The input M_V must be intrinsic
+ *  (de-extincted): the MV_MS_TABLE calibration is. Clamped to the table's
+ *  [O0, M9] span; lumClass is always V (2). Wrong for evolved
  *  companions, but strictly less wrong than the alternative it replaces
  *  (wearing the system primary's type) — curated overrides and measured
  *  per-component types take precedence upstream. */
-export function spectralFromAbsmag(mv: number): SpectralInfo {
-  let cls = 6;
-  for (let c = 0; c < 6; c++) {
-    const [, mvEnd] = MV_MS_TABLE[c][MV_MS_TABLE[c].length - 1];
-    if (mv <= mvEnd) {
-      cls = c;
+export function spectralFromAbsmag(mv: number): SpectralInfo & { kind: 'mk' } {
+  const last = (MV_MS_TABLE.length - 1) as MkLetter;
+  let letter = last;
+  for (let c = 0; c < last; c++) {
+    const row = MV_MS_TABLE[c];
+    if (mv <= row[row.length - 1][1]) {
+      letter = c as MkLetter;
       break;
     }
   }
   return {
-    classIdx: cls,
-    subclass: inverseInterpolate(MV_MS_TABLE[cls], mv),
+    kind: 'mk',
+    letter,
+    subclass: inverseInterpolate(MV_MS_TABLE[letter], mv),
     lumClass: 2,
-    isWhiteDwarf: false,
-    wdSubclass: 0,
   };
 }

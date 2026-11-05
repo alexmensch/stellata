@@ -1,4 +1,4 @@
-// Cross-language parity: mass_estimate.py mirrors catalog-pure.ts's
+// Cross-language parity: mass_estimate.py mirrors spectral-record-bytes.ts's
 // spectral encoding with no shared source of truth — this corpus fails
 // when either side renumbers a class or drifts on the parse surface.
 
@@ -7,14 +7,18 @@ import { resolve } from 'node:path';
 import { describe, it, expect } from 'vitest';
 import {
   classifyFromSimbad,
+  DEFAULT_SUBCLASS,
+  type MkSpectral,
 } from '../../../src/catalog-format/spectral/spectral-classify';
+import { encodeSpectralBytes } from '../../../src/catalog-format/spectral/spectral-record-bytes';
 import { REPO_ROOT } from '../../util/paths';
 
 // The parse surface both sides document handling: plain MK across every
 // class letter and luminosity code, white dwarfs, subdwarfs, Yerkes
 // prefixes, carbon/S/WR, Am/Ap composites, and unparseable strings.
-// Fields beyond the shared quadruple (TS wdSubclass / isWolfRayet) are
-// deliberately out of scope — Python's mass tables don't consume them.
+// Python's quadruple carries a subclass on a white dwarf, at the default;
+// the WD temperature index and the Wolf-Rayet kind are out of scope —
+// Python's mass tables don't consume them.
 const CORPUS = [
   'O5V', 'B2III', 'A1V', 'F5IV', 'G2V', 'K0III', 'M1.5Iab',
   'B0Ia', 'A0Ia+', 'G8Ib', 'B2II', 'K1IV', 'M4.5V', 'F8VI',
@@ -47,7 +51,17 @@ for s in json.load(sys.stdin):
 print(json.dumps(out))
 `;
 
-describe('spectral-encoding parity (mass_estimate.py vs catalog-pure.ts)', () => {
+function sharedShape(info: MkSpectral): SharedShape {
+  const bytes = encodeSpectralBytes(info);
+  return {
+    classIdx: bytes.spectClass,
+    subclass: info.kind === 'white-dwarf' ? DEFAULT_SUBCLASS : info.subclass,
+    lumClass: bytes.lumClass,
+    isWhiteDwarf: info.kind === 'white-dwarf',
+  };
+}
+
+describe('spectral-encoding parity (mass_estimate.py vs spectral-record-bytes.ts)', () => {
   it('both sides parse the shared corpus to identical class/subclass/lum encodings', () => {
     const raw = execFileSync('python3', ['-c', PY_DUMP], {
       cwd: resolve(REPO_ROOT),
@@ -57,10 +71,7 @@ describe('spectral-encoding parity (mass_estimate.py vs catalog-pure.ts)', () =>
     const py = JSON.parse(raw) as Record<string, SharedShape | null>;
     for (const s of CORPUS) {
       const t = classifyFromSimbad(s);
-      const ts: SharedShape | null = t === null ? null : {
-        classIdx: t.classIdx, subclass: t.subclass,
-        lumClass: t.lumClass, isWhiteDwarf: t.isWhiteDwarf,
-      };
+      const ts = t === null ? null : sharedShape(t);
       expect(ts, `"${s}"`).toEqual(py[s]);
     }
   });

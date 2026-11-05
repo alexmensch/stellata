@@ -1167,14 +1167,6 @@ describe('imputeCompanionCi', () => {
     });
     expect(imputeCompanionCi(sec, SPECTRAL_UNKNOWN)).toBe(SOLAR_BV_FALLBACK);
   });
-
-  it('falls through to SOLAR_BV_FALLBACK when spectral classIdx is 8 and not a WD', () => {
-    const sec = multiplesRow({
-      comp: 'B', ci: null, photometryVia: 'none',
-    });
-    const unknownButLumClass = { ...SPECTRAL_UNKNOWN, lumClass: 2 };
-    expect(imputeCompanionCi(sec, unknownButLumClass)).toBe(SOLAR_BV_FALLBACK);
-  });
 });
 
 describe('promoteCompanions rows', () => {

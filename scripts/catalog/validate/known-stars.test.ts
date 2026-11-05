@@ -29,6 +29,7 @@ import {
   type SpectralInfo,
   classifyFromSimbad,
 } from '../../../src/catalog-format/spectral/spectral-classify';
+import { encodeSpectralBytes } from '../../../src/catalog-format/spectral/spectral-record-bytes';
 import { type Catalog, type CatalogRecord, distancePc, loadCatalog, lookupByHip, lookupByGaiaSourceId, displayLabel, lookupByName, lookupByRef } from '../catalog-lookup';
 import {
   parseOptionalRef,
@@ -323,7 +324,7 @@ function classifyOrUnknown(s: string): SpectralInfo {
 
 function spectralStringIsBareClass(s: string): boolean {
   // "A0" / "M5.5" / "K0" — no Roman luminosity class. lookupLumClass would
-  // return 255 for these, so the row deliberately opts out of the
+  // return null for these, so the row deliberately opts out of the
   // luminosity-class pin.
   return !/[IV]/.test(s);
 }
@@ -381,11 +382,11 @@ function assertPrimary(row: CorpusRow, record: CatalogRecord): void {
     `${row.systemName}: expected absmag ${row.primaryAbsmag}, got ${record.absmag.toFixed(3)} (diff ${absmagDiff.toFixed(3)} > tolerance ${ABSMAG_TOLERANCE})`,
   ).toBeLessThanOrEqual(ABSMAG_TOLERANCE);
 
-  const expectedSpec = classifyOrUnknown(row.primarySpectral);
+  const expectedSpec = encodeSpectralBytes(classifyOrUnknown(row.primarySpectral));
   expect(
     record.spectClass,
-    `${row.systemName}: expected spectClass ${expectedSpec.classIdx} (from "${row.primarySpectral}"), got ${record.spectClass}`,
-  ).toBe(expectedSpec.classIdx);
+    `${row.systemName}: expected spectClass ${expectedSpec.spectClass} (from "${row.primarySpectral}"), got ${record.spectClass}`,
+  ).toBe(expectedSpec.spectClass);
   if (!spectralStringIsBareClass(row.primarySpectral)) {
     expect(
       record.lumClass,

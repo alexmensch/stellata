@@ -26,9 +26,9 @@ scripts/catalog/spectral/
 
 ## The resolver
 
-`resolveSpectralInfo` in `spectral-resolve.ts` resolves
-`{ classIdx, subclass, lumClass, isWhiteDwarf }` per star via a seven-tier
-priority chain:
+`resolveSpectralInfo` in `spectral-resolve.ts` resolves each star's
+`SpectralInfo` ([the variant](/src/catalog-format/spectral/README.md#spectralinfo-is-a-variant))
+via a seven-tier priority chain:
 
 0. **Curated HIP → sp_type override** (`CURATED_SPTYPE_BY_HIP`) —
    saturated stars whose SIMBAD entry is a component-lettered main_id
@@ -85,10 +85,10 @@ priority chain:
    used to carry went stale.
 5. **Gaia DR3 ESP-ELS `spectraltype_esphs`** ([Creevey 2023](/data/papers/index.md#creevey2023); a column on
    `data/gaia/gaia_dr3_apsis.tsv`, keyed by source_id). Letter-only enum;
-   `classifyFromGspspec` (same module) maps each letter to its `classIdx` with neutral
-   subclass=5 / lumClass=255.
+   `classifyFromGspspec` (same module) maps each letter to a `letter-only`
+   class, which the radius chain reads at subclass 5.
 6. **`none`** — no upstream covers the row, and the walk renders it as
-   `SPECTRAL_UNKNOWN`: `classIdx=UNKNOWN_CLASS_IDX` (8) / `lumClass=255`.
+   `SPECTRAL_UNKNOWN`, the `unknown` kind.
 
 `resolveSpectralInfo` returns the shared cascade shape (`../cascade-result.ts`)
 over `SPECTRAL_VIA_VALUES` — `curated`, `simbad` (with the namespace that found
