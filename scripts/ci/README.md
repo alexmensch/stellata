@@ -54,10 +54,14 @@ them `build:catalog`.
 A pull request restores the newest saved build whose key starts with the
 prefix: its own previous push's first, else main's latest. The runner then
 rebuilds exactly the steps whose stamp no longer matches. A stamp hashes
-everything the step read and wrote, so a step hits on whatever build last
-made it from the same inputs, whatever commit that was, and a file no step
-reads (a workflow, a `package.json` script, a README) moves nothing.
-Python steps are covered the same way, through their recorded inputs.
+every file the step reads as data or code and every file it writes, so a
+step hits on whatever build last made it from the same inputs, whatever
+commit that was, and a file no step reads that way (a workflow, a
+`package.json` script, a README) moves nothing. Python steps are covered the
+same way, through their recorded inputs. Build provenance is not an input:
+the package version and HEAD that lineage and registry headers record
+(`../util/git-provenance.ts`) name the build that made a reused output, not
+the commit that reused it.
 
 **The prefix carries what no stamp records**: the runner OS, the Node and
 Python versions, and `pnpm-lock.yaml`'s hash. A change to any of these starts
