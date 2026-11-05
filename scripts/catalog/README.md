@@ -149,9 +149,7 @@ scripts/catalog/
                                   `MeasuredParallax`, the value + error pair
                                   every parallax source and the cascade's
                                   resolution share, lives beside it with
-                                  `parallaxSignalToNoise` — a leaf, so the
-                                  record codec can import it without pulling
-                                  the cascade into vite.config.ts's graph.
+                                  `parallaxSignalToNoise`.
   tycho2-source.ts                TYCHO2: main and supplement 1 as one
                                   declared source (../util/sources/).
   tycho2-parse.ts (+ test)        data/tycho2/ indexed on the full TYC, with
