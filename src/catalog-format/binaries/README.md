@@ -19,8 +19,10 @@ Flag bits on each record:
 
 - `FLAG_HAS_ORBIT` (`0x1`) — every element the orbit walk consumes is
   present: P, T, e, a, ω, q. Ω is optional (the walk falls back to 0; only
-  Tier 1 reads it). The writer sets it only when all six are, so a record
-  carrying it is Kepler-evaluable.
+  Tier 1 reads it). `hasRenderableOrbit` is that rule over a row's element
+  cells: the writer sets the bit by it, so a record carrying it is
+  Kepler-evaluable, and the catalogue build's orbit-aware passes ask it
+  the same question.
 - `FLAG_HAS_INCLINATION` (`0x2`) — `i_rad` is valid; set only with
   `FLAG_HAS_ORBIT`. Unset, the walk uses the galactic-Z orbit normal
   ([Tier mapping](/src/client/binaries/README.md#tier-mapping)).

@@ -30,3 +30,24 @@ export const FLAG_HAS_INCLINATION = 0x2;
 export const FLAG_IS_INNER_OF_HIERARCHY = 0x4;
 
 export const NO_PARENT = -1;
+
+/** The six elements `FLAG_HAS_ORBIT` requires, null where absent. */
+export interface OrbitElementCells {
+  readonly pDays: number | null;
+  readonly tJd: number | null;
+  readonly e: number | null;
+  readonly aAU: number | null;
+  readonly omegaRad: number | null;
+  readonly q: number | null;
+}
+
+export type RenderableOrbit<T extends OrbitElementCells> = T & {
+  readonly pDays: number; readonly tJd: number; readonly e: number;
+  readonly aAU: number; readonly omegaRad: number; readonly q: number;
+};
+
+/** The `FLAG_HAS_ORBIT` rule: P, T, e, a, ω and q all present. */
+export function hasRenderableOrbit<T extends OrbitElementCells>(row: T): row is RenderableOrbit<T> {
+  return row.pDays !== null && row.tJd !== null && row.e !== null
+    && row.aAU !== null && row.omegaRad !== null && row.q !== null;
+}

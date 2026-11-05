@@ -17,6 +17,12 @@ scripts/catalog/companions/record-index/
                              renderableOrbitRelations (the overlap gate's
                              exemption, ../README.md#overlap-gate),
                              buildComponentDesignations.
+  catalog-row-index-map-pure.ts
+                             CatalogRowIndexMap (the sidecar's shape),
+                             resolveMultiplesIdx (gaia → hip → synth) and
+                             synthSlotIdx (the blended-sibling retry): how
+                             one multiples.tsv component resolves to a
+                             record.
 ```
 
 ## The sidecar and why resolution is duplicated from Python

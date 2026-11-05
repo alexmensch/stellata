@@ -32,6 +32,10 @@ import {
   vTierIsSystemBlend,
 } from '../photometry/v-magnitude-pure';
 import { MULTIPLES_TSV, type MultiplesRecord, type PhotometryVia } from '../../binaries/multiples-tsv';
+import {
+  canonicalCompLetter, composeSyntheticId, parentComponentToken,
+} from '../../binaries/component-tokens-pure';
+import { hasRenderableOrbit } from '../../../src/catalog-format/binaries/binaries-format';
 import { readArtifact } from '../../util/sources/source';
 import { promotionOriginKey } from './promotion-lineage-pure';
 import { emptyTallyPartition } from '../../util/tally-pure';
@@ -71,19 +75,6 @@ export const PER_COMPONENT_SPECT_VIA: ReadonlySet<string> = new Set([
   'curated',
   'simbad',
 ]);
-
-/** Mirrors the runtime has_orbit contract (binaries-loader FLAG_HAS_ORBIT
- *  + orbit-relation-cache finite-elements gate): BinaryOrbitField
- *  animates the pair only when P, T, e, a, ω, q are all present.
- *  i and Ω are optional (Tier-2 galactic-plane fallback). */
-export type RenderableOrbitRow = MultiplesTsvRow & {
-  pDays: number; tJd: number; e: number; aAU: number; omegaRad: number; q: number;
-};
-
-export function hasRenderableOrbit(row: MultiplesTsvRow): row is RenderableOrbitRow {
-  return row.pDays !== null && row.tJd !== null && row.e !== null
-    && row.aAU !== null && row.omegaRad !== null && row.q !== null;
-}
 
 /** Source_ids whose system names more than one component, so the pair's other
  *  component has a record of its own for a second HD number to belong to.
@@ -592,46 +583,6 @@ export function foldRowOutcomes(rows: readonly PromotedRow[]): RowOutcomeStats {
   }
   for (const b of RECURATED_BRIGHTNESS) stats.existingMemberRecurated[b] = recuratedMembers[b].size;
   return stats;
-}
-
-/** See ./README.md#companion-promotion-from-databinariesmultiplestsv `data/binaries/multiples.tsv`
- *  for when this fires. */
-export function composeSyntheticId(
-  systemId: string,
-  comp: string,
-): string | null {
-  const c = comp.trim();
-  if (!c) return null;
-  const dash = systemId.lastIndexOf('-');
-  if (dash < 0) return null;
-  const wdsId = systemId.slice(0, dash);
-  if (!wdsId) return null;
-  return `synth-${wdsId}-${c}`;
-}
-
-/** Re-anchor WDS prefix-truncation on a secondary's `comp` cell.
- *  Stage 6 emits `comp="2"` for the secondary side of `"Aa1,2"`
- *  pairs; canonical WDS form is `"Aa2"` (primary stem + secondary
- *  digit). Used for both the synthetic-ID key and the display name
- *  so the catalog and runtime share one canonical comp form. */
-export function canonicalCompLetter(
-  primaryComp: string,
-  secondaryComp: string,
-): string {
-  const sec = secondaryComp.trim();
-  const pri = primaryComp.trim();
-  if (sec && /^\d+$/.test(sec) && pri.length >= 2 && /\d$/.test(pri)) {
-    return pri.slice(0, -1) + sec;
-  }
-  return sec;
-}
-
-/** Parent component token: ``"Ba" → "B"``, ``"Aa1" → "Aa"``, ``"A" → null``.
- *  Drops the rightmost designator; mirrors
- *  `component_tokens.py:parent_component_token` on the Python side. */
-export function parentComponentToken(comp: string): string | null {
-  const c = comp.trim();
-  return c.length > 1 ? c.slice(0, -1) : null;
 }
 
 interface ExistingIndexes {

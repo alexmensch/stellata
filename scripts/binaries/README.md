@@ -85,6 +85,12 @@ scripts/binaries/
                                   Its rowKey cites a row by
                                   (system_id, comp) for lineage
                                   (../util/sources/README.md#sourcerowref).
+  component-tokens-pure.ts        The TypeScript side of component_tokens.py:
+    (+ test)                      composeSyntheticId (the synth-<wds>-<comp>
+                                  key promotion mints and every resolver
+                                  looks up), canonicalCompLetter (WDS
+                                  truncation re-anchored: Aa1,2 → Aa2),
+                                  parentComponentToken.
   multiples-row-key-pure.ts       MULTIPLES_ROW_KEY, that rowKey, for code
                                   that cites a row without reading the file
                                   (promotion's origin keys), so it never

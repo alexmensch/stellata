@@ -6,26 +6,19 @@ import {
 } from '../../../../src/catalog-format/record/catalog-pure';
 import type { Star } from '../../parse/stars-parse';
 import {
-  canonicalCompLetter,
-  composeSyntheticId,
   groupBySystem,
-  hasRenderableOrbit,
   isMoreCanonicalAnchor,
-  parentComponentToken,
   wdsRootOf,
   type MultiplesTsvRow,
   type PairCursor,
 } from '../companion-promotion';
-
-export interface CatalogRowIndexMap {
-  /** Gaia DR3 source_id (decimal string) → catalog.bin record index. */
-  byGaia: Record<string, number>;
-  /** Hipparcos catalog number → catalog.bin record index. */
-  byHip: Record<string, number>;
-  /** Synthetic identifier → catalog.bin record index. See
-   *  ../README.md#companion-promotion-from-databinariesmultiplestsv `data/binaries/multiples.tsv`. */
-  bySynth: Record<string, number>;
-}
+import {
+  canonicalCompLetter, composeSyntheticId, parentComponentToken,
+} from '../../../binaries/component-tokens-pure';
+import { hasRenderableOrbit } from '../../../../src/catalog-format/binaries/binaries-format';
+import {
+  resolveMultiplesIdx, synthSlotIdx, type CatalogRowIndexMap,
+} from './catalog-row-index-map-pure';
 
 // Build the lookup sidecar after the final record sort. The runtime
 // binaries loader resolves multiples.tsv rows to catalog.bin records
@@ -59,45 +52,6 @@ export function buildCatalogRowIndexMap(
 }
 
 // ---- Wings for renderable-companion primaries --------------------------
-
-/** gaia → hip → synth catalog-row resolution — the TS twin of
- *  build-runtime-binaries.py's `resolve_idx`. Kept faithful so the winged
- *  set matches binaries.bin's rendered pairs; the invariant is pinned by
- *  /tests/integration/multi-star-regression.test.ts against the real artifacts. */
-function resolveMultiplesIdx(
-  gaia: string | null,
-  hip: number | null,
-  synthKey: string | null,
-  rowIndexMap: CatalogRowIndexMap,
-): number | null {
-  if (gaia) {
-    const hit = rowIndexMap.byGaia[gaia];
-    if (hit !== undefined) return hit;
-  }
-  if (hip !== null && hip > 0) {
-    const hit = rowIndexMap.byHip[`${hip}`];
-    if (hit !== undefined) return hit;
-  }
-  if (synthKey !== null) {
-    const hit = rowIndexMap.bySynth[synthKey];
-    if (hit !== undefined) return hit;
-  }
-  return null;
-}
-
-/** The catalog row a component's synth key addresses, or null when no synth
- *  record exists or it aliases `exclude`. TS twin of the Python `synth_slot`;
- *  a hit is the truer slot than an id-first resolve that blended onto a
- *  system anchor. */
-function synthSlotIdx(
-  synthKey: string | null,
-  rowIndexMap: CatalogRowIndexMap,
-  exclude: number | null = null,
-): number | null {
-  if (synthKey === null) return null;
-  const hit = rowIndexMap.bySynth[synthKey];
-  return hit === undefined || hit === exclude ? null : hit;
-}
 
 interface ResolvedComponent {
   idx: number;

@@ -1,6 +1,6 @@
 // Cut multiples.tsv and the catalogue row-index map down to the golden's WDS systems. See README.md.
 
-import type { CatalogRowIndexMap } from '../../catalog/companions/record-index/record-index';
+import type { CatalogRowIndexMap } from '../../catalog/companions/record-index/catalog-row-index-map-pure';
 import type { MultiplesRecord } from '../multiples-tsv';
 
 export const FIXTURE_SYSTEMS: readonly string[] = [
