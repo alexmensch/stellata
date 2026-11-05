@@ -293,6 +293,11 @@ same thing — single-use helpers stay with their consumer.
   TypeScript pull (the two Horizons fetchers) also exports `describe`, and
   `--describe` then prints its `PullDescription` instead of running.
   `horizons-response.ts`' `HORIZONS_SERVICE` is the service both state.
+- `answered-by.ts` — `reportService(name)`, the TypeScript sibling of
+  `build_stamp.report_service`: appends `name`, once, to the file
+  `ANSWERED_BY_ENV` names, which `../pipeline/record-step.ts` creates for a
+  TypeScript manual step and copies into its record as `answeredBy`. Outside
+  `record.ts` it records nothing.
 - `heap-budget.ts` / `heap-budget-pure.ts` (+ test) — `watchHeap(step)`,
   started first thing in a step's `main`, and its `check()`, the step's peak
   live heap against the CI runner's as an `emitArtifacts` check
