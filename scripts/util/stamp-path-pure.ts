@@ -4,7 +4,7 @@ import { resolve } from 'node:path';
 
 import { REPO_ROOT } from './paths';
 
-const STAMP_FOLDER = 'build/stamps';
+export const STAMP_FOLDER = 'build/stamps';
 export const STAMP_DIR = resolve(REPO_ROOT, STAMP_FOLDER);
 
 /** A step's name as a file name, for its stamp and its lock. */

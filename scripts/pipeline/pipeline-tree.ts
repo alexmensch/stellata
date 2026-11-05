@@ -2,7 +2,9 @@
 
 import { relative, resolve } from 'node:path';
 
-import { stampPath, stepFileName } from '../util/stamp-path-pure';
+import { STAMP_FOLDER, stampPath, stepFileName } from '../util/stamp-path-pure';
+
+const MANUAL_STAMP_FOLDER = 'data/stamps';
 
 export interface PipelineTree {
   readonly root: string;
@@ -10,7 +12,9 @@ export interface PipelineTree {
   readonly rel: (path: string) => string;
   readonly rekey: <V>(byPath: Readonly<Record<string, V>>) => Record<string, V>;
   readonly buildStamp: (step: string) => string;
+  readonly buildStamps: string;
   readonly manualStamp: (step: string) => string;
+  readonly manualStamps: string;
   readonly record: (step: string) => string;
   readonly handedInputs: (step: string) => string;
   readonly locks: string;
@@ -25,7 +29,9 @@ export function pipelineTree(root: string): PipelineTree {
     rel,
     rekey: (byPath) => Object.fromEntries(Object.entries(byPath).map(([p, v]) => [rel(p), v])),
     buildStamp: (step) => stampPath(step, root),
-    manualStamp: perStep('data/stamps'),
+    buildStamps: resolve(root, STAMP_FOLDER),
+    manualStamp: perStep(MANUAL_STAMP_FOLDER),
+    manualStamps: resolve(root, MANUAL_STAMP_FOLDER),
     record: perStep('build/records'),
     handedInputs: perStep('build/step-inputs'),
     locks: resolve(root, 'build/locks'),

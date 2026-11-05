@@ -149,8 +149,13 @@ the others once, and that rebuild appends nothing.
   rule `importTimeProblems`) before importing any, imports the `declareOutputs` constants, rejects a build output
   through a symlink (the path or any folder above it, up to the root), reads
   each manual step's record for its inputs, then `deriveGraph`. A
-  TypeScript step's inputs come from the injected `deriveInputs`;
-  `run.ts` passes `util/step-inputs.ts`'s `entryInputPaths`.
+  TypeScript step's inputs come from the injected `deriveInputs`, so a
+  fixture table can load under a temporary root.
+- `repo-table.ts` — the repo's table loaded against this checkout, its
+  `deriveInputs` `util/step-inputs.ts`'s `entryInputPaths`: `loadRepoTable`
+  for `run.ts` and `record.ts`, `loadedRepoTable` (a rejected table throws)
+  for the suites that read the real table — `steps.test.ts`,
+  `/scripts/worktree-seed.test.ts`, `/tests/artifact-freshness.test.ts`.
 - `manual-step-outputs.ts` — `MANUAL_STEPS`, every pull and bake with the
   files it writes, as an outputs module. Which modules may spell a `data/`
   path is `/tests/source-declarations.test.ts`'s rule.

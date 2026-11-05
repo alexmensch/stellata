@@ -6,10 +6,7 @@ import {
   clearStamp, inputHashes, listingHashes, recordedInputs, writeStamp, type FileHashes, type RecordedReads,
 } from '../util/build-stamp';
 import { PIPELINE_STEP_ENV, UPDATE_SNAPSHOTS_ENV } from '../util/snapshot-check';
-import {
-  derivedFreshness, manualDescription, manualFreshness, recordedFreshness, stampedOutputs,
-  type Freshness,
-} from './freshness';
+import { buildFreshness, manualDescription, manualFreshness, stampedOutputs } from './freshness';
 import type { Loaded } from './step-table/load-table';
 import { holdStepLocks } from './locks';
 import { pipelineTree, type PipelineTree } from './pipeline-tree';
@@ -99,18 +96,16 @@ class Run {
   private async build(resolved: ResolvedStep, step: BuildStep): Promise<Verdict> {
     const { tree } = this;
     const stampFile = tree.buildStamp(step.name);
-    const inputs = step.language === 'ts' ? inputHashes([...resolved.reads], tree.root) : {};
-    const freshness: Freshness = step.language === 'ts'
-      ? derivedFreshness(stampFile, resolved.outputs, inputs, tree)
-      : recordedFreshness(stampFile, resolved.outputs, tree);
-    if (freshness.kind === 'fresh' && !this.forced(step.name)) return freshness;
+    const judged = buildFreshness(step, resolved, tree);
+    if (judged.freshness.kind === 'fresh' && !this.forced(step.name)) return judged.freshness;
 
     clearStamp(stampFile);
     const env: NodeJS.ProcessEnv = { ...process.env, [PIPELINE_STEP_ENV]: step.name };
     if (this.options.updateSnapshots) env[UPDATE_SNAPSHOTS_ENV] = '1';
     else delete env[UPDATE_SNAPSHOTS_ENV];
     const entry = tree.abs(step.entry);
-    if (step.language === 'ts') {
+    if (judged.language === 'ts') {
+      const { inputs } = judged;
       const code = await runTs(tree, step.name, entry, [], inputs, env);
       if (code !== 0) return { kind: 'failed', reason: `exited ${code}` };
       return this.land(stampFile, resolved, rehashed(inputs, this.options.updateSnapshots ? 'all' : resolved.outputs.files, tree));
@@ -118,7 +113,7 @@ class Run {
     const recorded = await runRecorded(tree, step.name, entry, [], env);
     if (recorded.kind === 'exited') return { kind: 'failed', reason: `exited ${recorded.code}` };
     const { run } = recorded;
-    const snapshots = step.snapshots.map(tree.abs);
+    const snapshots = judged.step.snapshots.map(tree.abs);
     const problems = recordProblems(resolved, snapshots, run, this.loaded.steps.values(), this.graph);
     if (problems.length > 0) return { kind: 'failed', reason: problems.join('; ') };
     return this.land(stampFile, resolved, rehashed(recordedInputs(tree.rekey(run.reads), tree.root), run.writes, tree), {
@@ -135,11 +130,13 @@ class Run {
   }
 }
 
+export const rerunCommand = (name: string): string => `pnpm run ${name}`;
+
 function describeVerdict(name: string, verdict: Verdict): string {
   switch (verdict.kind) {
     case 'fresh': return `· ${name} fresh`;
     case 'built': return `✓ ${name} built`;
-    case 'stale': return `✗ ${name} stale (${verdict.changed.join(', ')}): run pnpm run ${name}`;
+    case 'stale': return `✗ ${name} stale (${verdict.changed.join(', ')}): run ${rerunCommand(name)}`;
     case 'failed': return `✗ ${name} failed: ${verdict.reason}`;
     case 'skipped': return `– ${name} skipped behind ${verdict.behind}`;
   }

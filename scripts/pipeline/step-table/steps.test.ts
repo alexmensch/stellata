@@ -11,11 +11,11 @@ import { MEMBERSHIP_MANIFEST } from '../../catalog/membership/membership-manifes
 import { entryClosure, packageScripts } from '../../util/import-closure';
 import { lfsContentReadable, publicFile, PUBLIC_DIR, REPO_ROOT } from '../../util/paths';
 import { PUBLIC_FILES } from '../../../src/catalog-format/public-artifacts/public-artifacts';
-import { entryInputPaths } from '../../util/step-inputs';
 import { describeStep } from '../freshness';
-import { loadTable, type Loaded } from './load-table';
+import type { Loaded } from './load-table';
 import { MANUAL_STEPS } from './manual-step-outputs';
 import { pipelineTree } from '../pipeline-tree';
+import { loadedRepoTable } from './repo-table';
 import { describesItself, isBuild, selectSteps, type Edge, type ReadsEdge } from './step-table-pure';
 import { MIRROR_STEPS, STEPS } from './steps';
 
@@ -25,9 +25,7 @@ const MANIFEST = resolve(REPO_ROOT, MEMBERSHIP_MANIFEST.file);
 let loaded: Extract<Loaded, { kind: 'loaded' }>;
 
 beforeAll(async () => {
-  const result = await loadTable(STEPS, { root: REPO_ROOT, deriveInputs: (entry) => entryInputPaths([entry]) });
-  if (result.kind !== 'loaded') throw new Error(result.problems.join('\n'));
-  loaded = result;
+  loaded = await loadedRepoTable();
 }, 60_000);
 
 const edgeFiles = (from: string, to: string): string[] => loaded.graph.edges

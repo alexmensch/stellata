@@ -1,12 +1,8 @@
 // Texel counts and dust-fetch counts for the two froxel parameterisations —
 // the cost currency that transfers to the GPU. See README.md.
 
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
-
 import { coverageRadiusPc, loadDustField, type DustParams } from './dust-grid';
-import { REPO_ROOT } from '../../util/paths';
-import { BUILD_COUNTS_EXPECTED_FILE, type BuildCounts } from '../../catalog/build-counts';
+import { committedBuildCounts } from '../../catalog/build-counts';
 import { allSkyCells, frustumCells, frustumSr, screenGridOverhead } from './cost-pure';
 import {
   ARCMIN_TO_RAD,
@@ -22,9 +18,7 @@ import {
 import { FIXED_MARCH_TAPS } from '../march-taps/march-taps-pure';
 
 const BYTES_PER_TEXEL = 2;
-const STAR_COUNT = (JSON.parse(
-  readFileSync(resolve(REPO_ROOT, BUILD_COUNTS_EXPECTED_FILE), 'utf8'),
-) as BuildCounts).recordCount;
+const STAR_COUNT = committedBuildCounts().recordCount;
 const PREPASS_FETCHES = STAR_COUNT * FIXED_MARCH_TAPS;
 
 const FOVS_DEG = [10, 50, 120];

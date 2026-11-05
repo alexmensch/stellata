@@ -267,8 +267,9 @@ The table's own files are in [step-table/](step-table/README.md#files).
   step), parsed into a `Description` and hashed as `pullQueryHash` (query text
   and service list) and `requestHash` (the derived request list). Every kind
   is also stale when a recorded output moved or a declared output is missing
-  from the record. `writeManualRecord` is `readManualRecord`'s encoder, the
-  one writer of `data/stamps/`.
+  from the record. `buildFreshness` is a build step's verdict, the runner's
+  and `tests/artifact-freshness.test.ts`'s alike. `writeManualRecord` is
+  `readManualRecord`'s encoder, the one writer of `data/stamps/`.
 - `python-run-pure.ts` (tested through `runner.test.ts`) — `recordProblems`: a
   write outside the declared outputs and snapshots, or a read, listing or
   probe of another step's output with no path from that step in the graph

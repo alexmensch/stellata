@@ -175,7 +175,10 @@ scripts/catalog/
                                   (lineage/README.md#trace).
   build-counts.ts (+ test)        Per-strategy / per-tier count snapshot
                                   comparator, pinned by
-                                  build-catalog-expected.json. Generic over
+                                  build-catalog-expected.json, which
+                                  committedBuildCounts reads back for
+                                  every consumer of the pinned figures.
+                                  Generic over
                                   the count record: compareCountSnapshot is
                                   the compare every count snapshot passes
                                   (consumer list: the snapshot-check.ts
