@@ -12,6 +12,7 @@ import { readTable } from '../../util/tsv/table-pure';
 import { readArtifact } from '../../util/sources/source';
 import {
   labelIndexOf,
+  ledgerLabel,
   labelResolvesTo,
   ledgerKeys,
   type DuplicateRow,
@@ -58,7 +59,7 @@ export async function main(): Promise<void> {
   const labelByKey = new Map<string, string>();
   const indexByKey = new Map<string, number>();
   for (const [i, key] of keys) {
-    labelByKey.set(key, labels[i]);
+    labelByKey.set(key, ledgerLabel(labels[i]));
     indexByKey.set(key, i);
   }
 

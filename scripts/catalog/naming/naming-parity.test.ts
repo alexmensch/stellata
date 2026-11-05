@@ -13,6 +13,7 @@ import { foldNameKey } from './wgsn-normalise-pure';
 import { WGSN_NAMES } from './wgsn-names-tsv';
 import {
   labelIndexOf,
+  ledgerLabel,
   labelResolvesTo,
   ledgerKeys,
   type RowIndexMap,
@@ -49,7 +50,7 @@ interface Fixtures {
   raw: readonly SearchEntry[];
   constellations: { code: string; name: string }[];
   /** Indexed by record, read off the naming lineage. */
-  labels: readonly string[];
+  labels: readonly (string | null)[];
   labelByKey: Map<string, string>;
   indexByKey: Map<string, number>;
 }
@@ -62,7 +63,7 @@ async function loadFixtures(): Promise<Fixtures> {
   const labelByKey = new Map<string, string>();
   const indexByKey = new Map<string, number>();
   for (const [i, key] of keys) {
-    labelByKey.set(key, labels[i]);
+    labelByKey.set(key, ledgerLabel(labels[i]));
     indexByKey.set(key, i);
   }
   return { raw: catalog.searchIndex, constellations, labels, labelByKey, indexByKey };
@@ -81,8 +82,8 @@ describe.runIf(FIXTURES_READY)('naming parity ledger', () => {
     const composed = displayNamesFromSearchIndex(raw, constellations);
     const inIndex = new Set(raw.map((e) => e.i));
     const drifted = labels.flatMap((built, i) => {
-      const runtime = inIndex.has(i) ? composed.get(i)?.label ?? '' : '';
-      return runtime === built ? [] : [`record ${i}: built "${built}", runtime "${runtime}"`];
+      const runtime = inIndex.has(i) ? composed.get(i)?.label ?? null : null;
+      return runtime === built ? [] : [`record ${i}: built ${JSON.stringify(built)}, runtime ${JSON.stringify(runtime)}`];
     });
     expect(drifted.slice(0, 20)).toEqual([]);
   });

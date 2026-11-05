@@ -22,6 +22,11 @@ export function ledgerKeys(map: RowIndexMap): Map<number, string> {
   return out;
 }
 
+/** The ledger's spelling of a built label: an unlabelled record's `new` is empty. */
+export function ledgerLabel(label: string | null): string {
+  return label ?? '';
+}
+
 export type ParityRecord =
   | {
     present: true;

@@ -129,15 +129,25 @@ export function* namingLineageRows(
   }
 }
 
-const NAME_CODE_PREFIX = `${NAMING_LINEAGE.stage}.name.`;
+const LABELLED_CODES: ReadonlySet<string> = new Set(([
+  'name.own', 'name.borrowed.no-own-designation', 'name.borrowed.system-designation', 'name.borrowed.outranked-identifier',
+] as const satisfies readonly Branch[]).map((b) => NAMING_CODES.code(b)));
+const UNLABELLED_CODE = NAMING_CODES.code('name.unlabelled');
 
-/** By origin key; an unlabelled record reads `''`. */
-export function namingLabels(rows: Iterable<LineageRow>): Map<string, string> {
-  const out = new Map<string, string>();
+/** By origin key; `null` for an unlabelled record. */
+export function namingLabels(rows: Iterable<LineageRow>): Map<string, string | null> {
+  const out = new Map<string, string | null>();
   for (const r of rows) {
-    if (r.role !== 'outcome' || !r.code.startsWith(NAME_CODE_PREFIX)) continue;
+    const labelled = LABELLED_CODES.has(r.code);
+    if (r.role !== 'outcome' || (!labelled && r.code !== UNLABELLED_CODE)) continue;
     if (out.has(r.key)) throw new Error(`naming lineage: two name rows for ${r.key}`);
-    out.set(r.key, paramsOf(r).label ?? '');
+    if (!labelled) {
+      out.set(r.key, null);
+      continue;
+    }
+    const { label } = paramsOf(r);
+    if (label === undefined) throw new Error(`naming lineage: ${r.code} row for ${r.key} carries no label`);
+    out.set(r.key, label);
   }
   return out;
 }

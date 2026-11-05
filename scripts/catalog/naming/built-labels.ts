@@ -19,17 +19,17 @@ export function builtLabelsReady(lineageDir: string): boolean {
   return builtLabelFiles(lineageDir).every(existsSync);
 }
 
-/** Indexed by record; an unlabelled record reads `''`. Throws on a record
+/** Indexed by record; `null` for an unlabelled record. Throws on a record
  *  whose SID or origin key the lineage does not carry, so a catalogue and a
  *  lineage from two builds never pair silently. */
-export function builtLabels(catalog: Catalog, lineageDir: string): string[] {
+export function builtLabels(catalog: Catalog, lineageDir: string): (string | null)[] {
   const [namingPath, sidsPath] = builtLabelFiles(lineageDir);
   const keyBySid = new Map<number, string>();
   for (const { key, sid } of allocationSids(gunzipSync(readFileSync(sidsPath)).toString('utf8'), sidsPath)) {
     keyBySid.set(sid, key);
   }
   const labelByKey = namingLabels(readLineage(namingPath));
-  const out: string[] = [];
+  const out: (string | null)[] = [];
   for (const r of catalog.records()) {
     const key = keyBySid.get(r.sid);
     const label = key === undefined ? undefined : labelByKey.get(key);

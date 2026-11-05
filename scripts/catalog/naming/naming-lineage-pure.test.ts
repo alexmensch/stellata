@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { paramsOf } from '../lineage/lineage-row-pure';
+import { paramsOf, type LineageRow } from '../lineage/lineage-row-pure';
 import type { NamedRecord } from './display-names';
 import { namingLabels, namingLineageRows, type NamingLineageRecord } from './naming-lineage-pure';
 
@@ -84,6 +84,20 @@ describe('namingLabels', () => {
       { name: { kind: 'unlabelled' }, set: {}, dc: { from: 'none' } },
     ];
     const rows = namingLineageRows(records, [rec('spine:1'), rec('spine:2'), rec('gaia_dr3:3')], CONS);
-    expect([...namingLabels(rows)]).toEqual([['spine:1', 'Alrakis'], ['spine:2', 'Alrakis C'], ['gaia_dr3:3', '']]);
+    expect([...namingLabels(rows)]).toEqual([['spine:1', 'Alrakis'], ['spine:2', 'Alrakis C'], ['gaia_dr3:3', null]]);
+  });
+
+  const nameRow = (key: string, code: string, params: string): LineageRow =>
+    ({ stage: 'naming', key, role: 'outcome', code, params, evidence: [] });
+
+  it('refuses a labelled name row that carries no label', () => {
+    expect(() => namingLabels([nameRow('spine:1', 'naming.name.own', '{"tier":"iau"}')])).toThrow(/carries no label/);
+  });
+
+  it('refuses two name rows for one record', () => {
+    expect(() => namingLabels([
+      nameRow('spine:1', 'naming.name.unlabelled', ''),
+      nameRow('spine:1', 'naming.name.own', '{"tier":"iau","label":"Alrakis"}'),
+    ])).toThrow(/two name rows/);
   });
 });
