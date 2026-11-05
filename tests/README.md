@@ -142,6 +142,12 @@ node-import-boundary.test.ts
                          crosses, since it erases before the bundler
                          runs. README.md#node-import-boundary below carries the
                          one limit it cannot see.
+vite-config-import-extensions.test.ts
+                         Every relative import specifier in
+                         vite.config.ts's static import graph carries its
+                         file extension, which Vite's native config
+                         loader needs. README.md#vite-config-import-extensions
+                         below.
 integration/             Tests that read the pipeline and the viewer
                          together. Own README.
 pipeline-viewer-boundary.test.ts
@@ -331,7 +337,8 @@ import-specifiers.ts     Not a test — `importSpecifiers` (every specifier,
                          its form, and whether it is type-only),
                          `isRelativeSpecifier` and `isShippedSource` (not
                          a test, `.d.ts` or `*-fixture.ts`), shared by
-                         node-import-boundary and pipeline-viewer-boundary.
+                         node-import-boundary, pipeline-viewer-boundary
+                         and vite-config-import-extensions.
 walk-files.ts            Not a test — file enumeration the scanners above
                          share. `walkFiles` is a recursive walk taking
                          `include` / `skipDir` predicates, and follows
@@ -507,6 +514,20 @@ browser trees — `src/client/` and the two shared trees, `BROWSER_TREES` in
 `scripts/util/source-trees.ts` — so a builtin anywhere the bundle reaches is caught where
 it is written. What it cannot see is a builtin behind an import from outside
 those trees, which the pipeline-viewer boundary already forbids.
+
+## Vite config import extensions
+
+`vite-config-import-extensions.test.ts` walks the modules `vite.config.ts`
+loads, following static relative imports, and fails on any relative
+specifier without a file extension: Vite's `configLoader: 'native'` loads
+the config through Node, which resolves no extensionless relative path. A
+type-only import's specifier is checked, since Vite flags it, but the walk
+does not follow it — Node strips the import, so its target never loads.
+Dynamic imports, and the rest of the repo, are out of scope. The walk is
+pinned to reach `scripts/catalog/build-counts.ts` and
+`scripts/util/sources/source.ts`, so an empty walk cannot pass.
+`isRelativeSpecifier` in `import-specifiers.ts` is shared with the
+pipeline-viewer boundary.
 
 ## Pipeline-viewer boundary
 
