@@ -1491,13 +1491,9 @@ function inheritAnchorDesignationCon(
   member: Star,
   anchor: Star | null,
 ): boolean {
-  if (anchor === null
-      || member.desigCon.via !== 'none'
-      || anchor.desigCon.via === 'none') {
-    return false;
-  }
-  member.desigCon = { via: 'anchor', index: anchor.desigCon.index };
-  return true;
+  if (anchor === null || member.desigCon.via !== 'none') return false;
+  member.desigCon = inheritedDesignationCon(anchor.desigCon);
+  return member.desigCon.via !== 'none';
 }
 
 /** Shared by the secondary loop and the pair-row-primary escape; only the
