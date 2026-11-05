@@ -5,7 +5,7 @@ import type {
   IauConstellationLookup,
 } from '../../../src/astro-core/iau-geometry/iau-boundaries-pure';
 import { raDecFromUnitVector } from '../../../src/astro-core/equatorial-basis';
-import { absoluteToApparentMagnitude } from '../record/record-build-pure';
+import { apparentMagnitude } from '../../../src/astro-core/perceptual-magnitude';
 import {
   buildBoundaryArtifact,
   countDirections,
@@ -47,7 +47,7 @@ export function collectFadeSamples(
     }));
     samples.push({
       offsetPc: misplacementOffsetPc(nearestDeg, distPc),
-      appMag: absoluteToApparentMagnitude(s.absmag, distPc),
+      appMag: apparentMagnitude(s.absmag, distPc),
     });
   }
   return samples;

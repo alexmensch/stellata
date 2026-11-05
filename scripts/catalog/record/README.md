@@ -14,10 +14,8 @@ scripts/catalog/record/
                                   index and join through
                                   (/scripts/catalog/spectral/README.md#the-ladder-is-ordered-by-what-an-identifier-names),
                                   GCVS parsing and variability
-                                  classification, geometric binary and CCDM
-                                  optical-double inference, and the
-                                  apparent ↔ absolute magnitude conversions.
-                                  Pure.
+                                  classification, and geometric binary and
+                                  CCDM optical-double inference. Pure.
   record-order-pure.ts            `apparentVFromSol` — the key the build sorts
                                   records on. Pure.
                                   /src/catalog-format/record/README.md#record-order.

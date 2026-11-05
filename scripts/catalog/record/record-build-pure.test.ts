@@ -40,7 +40,6 @@ import {
   BINARY_MAX_SEP_PC,
   type BinaryStar,
   type DoublesStar,
-  apparentToAbsoluteMagnitude,
 } from './record-build-pure';
 
 describe('record-build-pure / normaliseGjKey', () => {
@@ -820,22 +819,5 @@ describe('record-build-pure / isOpticalDoublePrimary', () => {
       { absmag: 2, x: 900, y: 0, z: 0, hip: 300, gaiaSourceId: null, distVia: 'bailer_jones', varType: 0 }, // background
     ];
     expect(isOpticalDoublePrimary(0, [0, 1, 2], stars, ctx())).toBe(false);
-  });
-});
-
-// Pin the v5 byte layout. The writer (build-catalog.ts) and the readers
-// (catalog-loader.ts, verify-catalog.ts) all index off these constants;
-// drift between the two would silently produce a corrupt binary, so the
-// constants themselves get the regression coverage.
-describe('record-build-pure / apparentToAbsoluteMagnitude', () => {
-  it('is identity at 10 pc', () => {
-    expect(apparentToAbsoluteMagnitude(5.0, 10)).toBe(5.0);
-  });
-
-  it('M = m − 5·log₁₀(d/10)', () => {
-    // 100 pc is 5 magnitudes dimmer than 10 pc.
-    expect(apparentToAbsoluteMagnitude(15, 100)).toBeCloseTo(10, 10);
-    // 1000 pc is 10 magnitudes dimmer than 10 pc.
-    expect(apparentToAbsoluteMagnitude(20, 1000)).toBeCloseTo(10, 10);
   });
 });
