@@ -116,7 +116,9 @@ that moves a name or any column the bake does not read leaves it fresh, and
 a committed record needs only those columns, not the whole build, to come
 out identical on another machine. The bake passes the same field list to
 `readCatalogColumns` and to the projection, so what it hashes is what it
-measures.
+measures. Each run's describe reads the whole catalogue in one `tsx`
+process: four columns of the 93 MB catalogue took about 0.3 s and 300 MB
+peak memory on a fast workstation (2026-11-05); unmeasured on a CI runner.
 
 An **external dataset** a baker reads from outside the repo is a pull of its
 own, whose query is the dataset's identity and version: the two variants of
