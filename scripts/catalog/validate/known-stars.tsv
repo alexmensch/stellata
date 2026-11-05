@@ -33,7 +33,7 @@
 # primary_spectral          Expected MK spectral type as a human-readable
 #                           string ("A0V", "M5.5Ve", "DA1.9"). The test
 #                           parses it via classifyFromSimbad and asserts
-#                           classIdx + lumClass match record.spectClass +
+#                           its encodeSpectralBytes match record.spectClass +
 #                           record.lumClass. The binary stores only those
 #                           two bytes; subclass round-trips through the
 #                           resolver but is not pinned in catalog.bin.
@@ -113,7 +113,7 @@
 # Asserted by known-stars.test.ts:
 #   primary_distance_pc       ±0.01 pc OR 1-sigma, whichever is larger
 #   primary_absmag            ±0.05
-#   primary_spectral          classIdx (record.spectClass) exact match;
+#   primary_spectral          record.spectClass exact match;
 #                             lumClass exact match unless the row's
 #                             spectral string is bare-class (no Roman).
 #   primary_ci                ±0.03 (float32 + Ballesteros 2012
