@@ -96,15 +96,20 @@ which quotes for you, and `vizier_slice.py` for the whole-table-subset case.
 
 ## MAXREC, and the truncation that answers 200
 
-A sync endpoint flags an over-long result in a VOTable `QUERY_STATUS` INFO and
-still returns HTTP 200, so a MAXREC below the result size silently shortens a
-pull. `refresh_lib` raises `SyncOverflowError` for it and deliberately does
-not classify it transient. The three sizing rules — whole-table, batched, and
-value-range — are in [Gaia TAP](/scripts/refresh/README.md#gaia-tap-synchronous-endpoints-only); never replace one
-with a bare literal.
+A result cut at MAXREC is still HTTP 200. Only a VOTable reply flags it, in a
+trailing `QUERY_STATUS=OVERFLOW` INFO; **a `FORMAT=csv` reply carries no
+status at all**, just MAXREC rows (ESA, ARI, SIMBAD-Harvard, 2026-11-05).
+Error replies stay VOTable under `FORMAT=csv`, so the archive's message is
+still readable. A CSV probe detects overflow by count: ask `MAXREC = n + 1`,
+and more than `n` rows means truncated — what the TS backend does
+([The TAP backend](/scripts/refresh/pull/README.md#the-tap-backend)).
 
-MAXREC is not load-bearing on CDS, whose default is ~1e9. There the row-count
-band is what catches an upstream row loss.
+**A mirror also truncates at its own hard output limit**, whatever MAXREC asks:
+read `<outputLimit><hard>` from `<url>/capabilities` before trusting a count.
+2026-11-05: ESA 50,000, ARI 10,000,000, SIMBAD-Harvard 2,000,000. The Python
+sizing rules are in [Gaia TAP](/scripts/refresh/README.md#gaia-tap-synchronous-endpoints-only);
+never replace one with a bare literal. CDS's default MAXREC is ~1e9, so there
+the row-count band is what catches an upstream row loss.
 
 ## Batching a selection with no request set
 
@@ -119,9 +124,8 @@ slices where equal magnitude steps give a 27x spread.
 spacing rule and the partition discipline (share the edge as a formatted
 literal, gate that no row is returned twice).
 
-`phot_g_mean_mag` is indexed on ESA — a `COUNT(*)` under a magnitude bound
-over the 1.8-billion-row table returns in ~2 s — which is what makes
-magnitude slicing cheap rather than a full scan per slice.
+`phot_g_mean_mag` is indexed on ESA (a bounded `COUNT(*)` over the
+1.8-billion-row table returns in ~2 s), so a slice is no full scan.
 
 **A table with no magnitude of its own is still sliceable: join to
 `gaiadr3.gaia_source` for the bound.** Both sides key on the indexed
@@ -140,14 +144,10 @@ coverage fraction does not need the whole table to be trustworthy.
 
 ## Reading the real error
 
-`refresh_lib` lifts the VOTable `QUERY_STATUS` message into the raised
-exception for any non-2xx response, so an in-repo pull already tells you which
-clause was rejected — and a complaint naming one escapes the retry rather than
-being mistaken for a degraded service. Only the parsed message is read that
-way: a proxy's HTML page saying "not found" must still fail over to the mirror.
-Outside that path, POST directly and print `resp.text`:
-the status line alone never names the fault, and `raise_for_status()` discards
-the body that does.
+`refresh_lib` and the TS backend lift the VOTable `QUERY_STATUS` message into
+the raised error, so an in-repo pull names the rejected clause and escapes the
+retry. Outside them, POST directly and print the body: the status line never
+names the fault, and `raise_for_status()` discards the body that does.
 
 Empty result, no error, is the other shape. Check the obvious first: a
 magnitude or colour column that is NULL satisfies neither `>` nor `<=`, so a
@@ -176,9 +176,8 @@ While writing or debugging a TAP query, if you ever:
 then **edit this file in that same session.** Do not ask permission and do not
 defer it; an unrecorded rejection is a round trip every future session repeats.
 
-That last trigger is the one that gets skipped, because the rule usually *does*
-exist somewhere and the miss reads as carelessness rather than a documentation
-gap. Treat a correction as a defect in this file until proven otherwise.
+The last trigger is the one skipped: treat a correction as a defect in this
+file until proven otherwise.
 
 How to edit it well:
 
