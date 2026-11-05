@@ -212,7 +212,9 @@ same thing — single-use helpers stay with their consumer.
   and `build:catalog`, which rewrite inputs, the two differ on those entries;
   the runner builds every stamp's inputs through it. A step that needs its
   own input hashes (a lineage header's input map) reads the handed map here
-  and never re-derives them.
+  and never re-derives them; `handedFileHash(hashes, file)` is one entry,
+  throwing when the map holds none (`build:catalog` records `multiples.tsv`'s
+  in the row-index map, and `build:binaries-runtime` checks it with its own).
 - `tsv/` — the one TSV reader (`readTable`, typed columns, cells that keep
   empty and malformed apart) and `defineArtifact`, the codec of every table
   this repo writes. Own README.
@@ -314,16 +316,14 @@ same thing — single-use helpers stay with their consumer.
   when `PIPELINE_STEP` is set (the runner sets it to each step it runs, and
   drops an inherited `UPDATE_SNAPSHOTS`), the variable form otherwise;
   `snapshot_assert.py` does the same. Used by
-  `build-catalog.ts` (build counts and distance outliers) and the classic-ID
-  overlay, membership and WGSN builds. The count snapshots all pass
+  `build-catalog.ts` (build counts and distance outliers), the classic-ID
+  overlay, membership and WGSN builds, and `build:binaries-runtime`'s pair
+  counts. The count snapshots all pass
   `compareCountSnapshot` (`catalog/build-counts.ts`) as the compare.
   `snapshot-check.test.ts` pins pass, drift, missing and refresh.
-- `snapshot_assert.py` — the Python sibling, for the two binaries steps
-  (`build-binaries.py`'s counts, `build-runtime-binaries.py`'s pair
-  counts; `binaries/stage7_counts.py` builds its rates snapshot on the same
-  primitives). A leaf on purpose: `build_stamp.py` hashes every module a
-  step imports, so the runtime step reaching this through `stage7_counts`
-  would restamp `binaries.bin` on every pipeline-stage edit. Same rule
+- `snapshot_assert.py` — the Python sibling, for `build-binaries.py`'s
+  counts (`binaries/stage7_counts.py` builds its rates snapshot on the same
+  primitives). Same rule
   on a missing snapshot: it fails, and only `UPDATE_SNAPSHOTS=1`
   writes one. Returns a bool where the TS sibling returns an `emitArtifacts` check, since the Python
   drivers own their exit. Every snapshot it writes is staged: a caller

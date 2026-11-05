@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { NO_PARENT, type BinariesData } from './binaries-loader';
+import { type BinariesData } from './binaries-loader';
+import { NO_PARENT } from '../../catalog-format/binaries/binaries-format';
 import { makeRelation } from './binary-relation-fixture';
 import { focalChainRelationSet } from './focal-chain';
 

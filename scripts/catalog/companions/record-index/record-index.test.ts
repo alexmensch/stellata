@@ -14,8 +14,8 @@ import {
   buildComponentDesignations,
   renderableOrbitRelations,
   wingRenderablePrimaries,
-  type CatalogRowIndexMap,
 } from './record-index';
+import type { CatalogRowIndexMap } from './catalog-row-index-map-pure';
 import { REPO_ROOT } from '../../../util/paths';
 import { BUILD_FILES } from '../../../../src/catalog-format/pipeline-outputs/build-files';
 import { resolve } from 'node:path';

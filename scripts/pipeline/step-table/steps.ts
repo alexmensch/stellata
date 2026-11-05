@@ -2,8 +2,6 @@
 
 import { MULTIPLES_TSV } from '../../binaries/multiples-tsv';
 import { MANUAL_STEPS } from './manual-step-outputs';
-import { PUBLIC_FILES } from '../../../src/catalog-format/public-artifacts/public-artifacts';
-import { publicRepoPath } from '../../util/paths';
 import type { StepTable, TsBuildStep } from './step-table-pure';
 import { DATA_FILES, registryPaths, REGISTRY_PARTITIONS } from '../../../src/catalog-format/pipeline-outputs/data-files';
 
@@ -81,11 +79,9 @@ export const STEPS: StepTable = {
     {
       name: 'build:binaries-runtime',
       kind: 'build',
-      language: 'python',
-      entry: 'scripts/binaries/build-runtime-binaries.py',
-      outputs: [publicRepoPath(PUBLIC_FILES.binaries)],
-      after: ['build:binaries', 'build:catalog'],
-      snapshots: ['scripts/binaries/build-runtime-binaries-expected.json'],
+      language: 'ts',
+      entry: 'scripts/binaries/build-runtime-binaries.ts',
+      outputs: { module: 'scripts/binaries/runtime-binaries-outputs.ts', name: 'RUNTIME_BINARIES_OUTPUTS' },
     },
     {
       name: 'build:clouds',

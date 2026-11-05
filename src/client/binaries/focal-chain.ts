@@ -1,7 +1,8 @@
 // Relation-index set on a focal star's slot-chain. See
 // /src/client/binaries/README.md#walk-active-lod.
 
-import { NO_PARENT, type BinariesData } from './binaries-loader';
+import { type BinariesData } from './binaries-loader';
+import { NO_PARENT } from '../../catalog-format/binaries/binaries-format';
 
 /** Every relation that writes the focal's slot (focal as primary or
  *  secondary) plus their `parentRelation` ancestors — the set

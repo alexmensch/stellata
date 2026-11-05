@@ -4,7 +4,6 @@ import type { LgObject } from '../local-group/local-group-loader';
 import { setUnit } from '../ui/distance-util';
 import {
   createLgFocusProvider,
-  lgAbsoluteMag,
   lgApparentMagFrom,
 } from './lg-focus-provider';
 
@@ -37,9 +36,6 @@ describe('lg magnitude helpers', () => {
   });
   it('apparent mag brightens 5 mag per 10× approach', () => {
     expect(lgApparentMagFrom(3.44, 776_000, 77_600)).toBeCloseTo(-1.56, 10);
-  });
-  it('absolute mag pins M31 at the RC3-derived value', () => {
-    expect(lgAbsoluteMag(3.44, 776_000)).toBeCloseTo(-21.01, 2);
   });
 });
 

@@ -3,7 +3,8 @@
 // See the folder README.
 
 import { evaluateOrbitOffsetPc, type OrbitalElements, type Vec3 } from '../binary-orbit-pure';
-import { FLAG_HAS_ORBIT, type BinariesData } from '../binaries-loader';
+import { type BinariesData } from '../binaries-loader';
+import { FLAG_HAS_ORBIT } from '../../../catalog-format/binaries/binaries-format';
 import { focalChainRelationSet } from '../focal-chain';
 
 /** Relation indices on the focal star's chain that carry Kepler elements

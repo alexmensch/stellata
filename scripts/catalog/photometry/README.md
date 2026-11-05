@@ -304,7 +304,7 @@ double-counts: [Anchor flux conservation](../companions/README.md#anchor-flux-co
 consumer, and `RIELLO_G_MINUS_V_SIGMA` is the decisive margin its subset solve
 compares hypotheses at, since a Gaia-derived V is only good to that σ.
 
-**absmag is derived from this V, never tabulated.** `apparentToAbsoluteMagnitude`
+**absmag is derived from this V, never tabulated.** `absoluteMagnitude` (`src/astro-core/perceptual-magnitude.ts`)
 runs once on the final distance the override stack settled, so a distance
 override cannot place a star at a new distance while lighting it for the old
 one — that class of bug is unreachable rather than guarded against.

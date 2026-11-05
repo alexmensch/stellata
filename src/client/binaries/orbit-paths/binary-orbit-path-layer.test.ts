@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import { FLAG_HAS_ORBIT, type BinariesData } from '../binaries-loader';
+import { type BinariesData } from '../binaries-loader';
+import { FLAG_HAS_ORBIT } from '../../../catalog-format/binaries/binaries-format';
 import { makeRelation } from '../binary-relation-fixture';
 import { relationIndicesInBounds } from '../orbit-relation-cache';
 import { BinaryOrbitPathLayer, type RelationOffsetSource } from './binary-orbit-path-layer';
