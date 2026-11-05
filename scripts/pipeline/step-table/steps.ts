@@ -1,5 +1,6 @@
 // The step table: one entry per producer of a file the build or a pull depends on. See README.md#the-step-table--stepsts.
 
+import { MULTIPLES_TSV } from '../../binaries/multiples-tsv';
 import { MANUAL_STEPS } from './manual-step-outputs';
 import { PUBLIC_FILES } from '../../../src/catalog-format/public-artifacts/public-artifacts';
 import { publicRepoPath } from '../../util/paths';
@@ -25,7 +26,7 @@ export const STEPS: StepTable = {
       language: 'python',
       entry: 'scripts/binaries/build-binaries.py',
       outputs: [
-        'data/binaries/multiples.tsv',
+        MULTIPLES_TSV.file,
         'data/gaia/gaia_astrometry_source_id_request.tsv',
         'build/binding-integrity-verdicts.tsv',
       ],

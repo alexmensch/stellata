@@ -12,6 +12,7 @@ export interface PipelineTree {
   readonly buildStamp: (step: string) => string;
   readonly manualStamp: (step: string) => string;
   readonly record: (step: string) => string;
+  readonly handedInputs: (step: string) => string;
   readonly locks: string;
 }
 
@@ -26,6 +27,7 @@ export function pipelineTree(root: string): PipelineTree {
     buildStamp: (step) => stampPath(step, root),
     manualStamp: perStep('data/stamps'),
     record: perStep('build/records'),
+    handedInputs: perStep('build/step-inputs'),
     locks: resolve(root, 'build/locks'),
   };
 }

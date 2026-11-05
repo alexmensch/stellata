@@ -2,10 +2,12 @@
 
 import { spawn } from 'node:child_process';
 import { once } from 'node:events';
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { mkdirSync, readFileSync, rmSync } from 'node:fs';
+import { dirname, resolve } from 'node:path';
 
+import type { FileHashes } from '../util/build-stamp';
 import { REPO_ROOT } from '../util/paths';
+import { STEP_INPUTS_ENV, writeStepInputs } from '../util/step-input-hashes';
 import type { PipelineTree } from './pipeline-tree';
 import type { RunRecord } from './python-run-pure';
 
@@ -16,6 +18,20 @@ export async function exec(command: string, args: readonly string[], env: NodeJS
   const child = spawn(command, args, { stdio: 'inherit', env });
   const [code] = await once(child, 'exit') as [number | null];
   return code;
+}
+
+/** A TypeScript step under `tsx`, handed `inputs` (`stepInputHashes`); the file goes when it exits. */
+export async function runTs(
+  tree: PipelineTree, name: string, entry: string, args: readonly string[], inputs: FileHashes, env: NodeJS.ProcessEnv,
+): Promise<number | null> {
+  const handed = tree.handedInputs(name);
+  mkdirSync(dirname(handed), { recursive: true });
+  writeStepInputs(handed, inputs);
+  try {
+    return await exec(TSX, [entry, ...args], { ...env, [STEP_INPUTS_ENV]: handed });
+  } finally {
+    rmSync(handed, { force: true });
+  }
 }
 
 export type RecordedRun =

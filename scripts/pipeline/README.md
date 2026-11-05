@@ -283,15 +283,16 @@ The table's own files are in [step-table/](step-table/README.md#files).
   under `--update-snapshots`, all of a TypeScript step's) re-hashed after.
   `pipeline-tree.ts` is the run's one root: table paths resolve against it,
   stamp keys are relative to it, and a step's build stamp (through
-  `stampPath`), manual record, run record and lock folder sit under it.
+  `stampPath`), manual record, run record, handed inputs and lock folder sit under it.
   `run.ts` passes the repo root; tests pass a temporary folder.
 - `run.ts` — the command line over `step-table/steps.ts`.
 - `record.ts` / `record-step.ts` (+ test) — [Recording a manual
   step](#recording-a-manual-step--recordts): `recordStep` and the
   `RecordOutcome` union (`fresh`, `recorded`, `failed`).
-- `processes.ts` — how the runner and `record.ts` start a step: `tsx`, or
-  `runRecorded`, a Python step under the recorder, whose run record is read
-  only when it exits 0.
+- `processes.ts` — how the runner and `record.ts` start a step: `runTs`, a
+  TypeScript step under `tsx`, handed the input hashes taken before it
+  started (`util/step-input-hashes.ts`), or `runRecorded`, a Python step
+  under the recorder, whose run record is read only when it exits 0.
 
 ## Design pass
 
