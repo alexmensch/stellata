@@ -12,7 +12,9 @@ import { stampedMembers, type PullDescription } from '../util/emit-artifacts';
 import { landStaged, writeStaged } from '../util/staged-write';
 import { hashBytes } from '../util/stamp-hash';
 import type { PipelineTree } from './pipeline-tree';
-import { describesItself, type ManualStep, type OutputClaims } from './step-table/step-table-pure';
+import {
+  describesItself, type BuildStep, type ManualStep, type OutputClaims, type ResolvedStep,
+} from './step-table/step-table-pure';
 
 export type Freshness =
   | { readonly kind: 'fresh' }
@@ -85,7 +87,15 @@ export function recordedFreshness(stampFile: string, outputs: OutputClaims, tree
   return verdict([...changedSince(stamp.inputs, inputHashes, tree.root), ...stampChanges(stamp, outputs, tree)]);
 }
 
-const isStrings = (value: unknown): value is string[] => Array.isArray(value) && value.every((v) => typeof v === 'string');
+/** `inputs` is empty for a Python step: it is judged on its recorded set. */
+export function buildFreshness(step: BuildStep, resolved: ResolvedStep, tree: PipelineTree): { inputs: FileHashes; freshness: Freshness } {
+  const stampFile = tree.buildStamp(step.name);
+  if (step.language !== 'ts') return { inputs: {}, freshness: recordedFreshness(stampFile, resolved.outputs, tree) };
+  const inputs = inputHashes([...resolved.reads], tree.root);
+  return { inputs, freshness: derivedFreshness(stampFile, resolved.outputs, inputs, tree) };
+}
+
+const isStrings =(value: unknown): value is string[] => Array.isArray(value) && value.every((v) => typeof v === 'string');
 const optionalString = (value: unknown): string | undefined => (typeof value === 'string' ? value : undefined);
 
 export function readManualRecord(step: ManualStep, stampFile: string): ManualRead {

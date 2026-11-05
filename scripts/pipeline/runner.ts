@@ -6,10 +6,7 @@ import {
   clearStamp, inputHashes, listingHashes, recordedInputs, writeStamp, type FileHashes, type RecordedReads,
 } from '../util/build-stamp';
 import { PIPELINE_STEP_ENV, UPDATE_SNAPSHOTS_ENV } from '../util/snapshot-check';
-import {
-  derivedFreshness, manualDescription, manualFreshness, recordedFreshness, stampedOutputs,
-  type Freshness,
-} from './freshness';
+import { buildFreshness, manualDescription, manualFreshness, stampedOutputs } from './freshness';
 import type { Loaded } from './step-table/load-table';
 import { holdStepLocks } from './locks';
 import { pipelineTree, type PipelineTree } from './pipeline-tree';
@@ -99,10 +96,7 @@ class Run {
   private async build(resolved: ResolvedStep, step: BuildStep): Promise<Verdict> {
     const { tree } = this;
     const stampFile = tree.buildStamp(step.name);
-    const inputs = step.language === 'ts' ? inputHashes([...resolved.reads], tree.root) : {};
-    const freshness: Freshness = step.language === 'ts'
-      ? derivedFreshness(stampFile, resolved.outputs, inputs, tree)
-      : recordedFreshness(stampFile, resolved.outputs, tree);
+    const { inputs, freshness } = buildFreshness(step, resolved, tree);
     if (freshness.kind === 'fresh' && !this.forced(step.name)) return freshness;
 
     clearStamp(stampFile);
