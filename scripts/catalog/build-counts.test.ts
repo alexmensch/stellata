@@ -407,6 +407,13 @@ describe('compareCountSnapshot', () => {
     expect(compareCountSnapshot(full, short).drifted).toBe(true);
     expect(compareCountSnapshot(short, full).drifted).toBe(true);
   });
+
+  it('compares a staged snapshot by its counts, the stage level dropped', () => {
+    const staged = { stages: { read: { rows: 3 }, filter: { kept: 2, tiers: { a: 1 } } } };
+    expect(compareCountSnapshot<object>(staged, { rows: 3, kept: 2, tiers: { a: 1 } }).drifted).toBe(false);
+    expect(compareBuildCounts<object>(staged, { stages: { read: { rows: 4 }, filter: { kept: 2, tiers: { a: 1 } } } }))
+      .toContainEqual({ key: 'rows', status: 'mismatch', expected: 3, actual: 4 });
+  });
 });
 
 describe('formatPartition', () => {

@@ -229,6 +229,15 @@ same thing — single-use helpers stay with their consumer.
   A lineage stage folds its lines through it
   ([Counts fold from lineage](../catalog/lineage/README.md#counts-fold-from-lineage)).
   `tally-pure.test.ts` pins the fold and all four cascades' key coverage.
+- `count-stages-pure.ts` (+ test) — the staged count snapshot,
+  `{"stages": {<stage>: {<count>: …}}}`: `nestByStage(flat, stageOf)`
+  groups a flat count record under each key's stage, and `flattenStages`
+  drops the stage level again — a key two stages share throws — and hands
+  any other JSON back as it is, so every reader takes both shapes. A count
+  is addressed by its name alone (`build-catalog/recordCount`), never its
+  stage: the comparator (`compareCountSnapshot`), `committedBuildCounts`,
+  the doc figures' snapshot load and `../site/site-metrics.ts` all flatten
+  first.
 - `staged-write.ts` — the one stage-then-rename: `writeStaged` writes
   `<path>.staged` beside its target (same filesystem, so the rename is
   atomic) — the bytes given, or a copy of `{copyFrom}`'s file, which never

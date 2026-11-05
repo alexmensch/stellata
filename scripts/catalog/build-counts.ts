@@ -5,6 +5,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 import type { DistVia } from '../../src/catalog-format/record/catalog-pure';
+import { flattenStages } from '../util/count-stages-pure';
 import { REPO_ROOT } from '../util/paths';
 import type { RvErrorBandPartition } from './distance/radial-velocity/radial-velocity';
 import type { RecuratedBrightness } from './companions/companion-promotion';
@@ -16,7 +17,7 @@ export const BUILD_COUNTS_EXPECTED_FILE = 'scripts/catalog/build-catalog-expecte
 
 /** The committed snapshot's figures: what the catalogue build last pinned. */
 export function committedBuildCounts(): BuildCounts {
-  return JSON.parse(readFileSync(resolve(REPO_ROOT, BUILD_COUNTS_EXPECTED_FILE), 'utf8')) as BuildCounts;
+  return flattenStages(JSON.parse(readFileSync(resolve(REPO_ROOT, BUILD_COUNTS_EXPECTED_FILE), 'utf8'))) as BuildCounts;
 }
 
 export interface BuildCounts {
@@ -681,7 +682,8 @@ export type CountDiff =
   | { key: string; status: 'absent-from-snapshot'; actual: number }
   | { key: string; status: 'absent-from-build'; expected: number };
 
-/** Partition-valued entries (a `Record<tier, number>`) expand to one
+/** A staged snapshot's stage level is dropped first (`flattenStages`).
+ *  Partition-valued entries (a `Record<tier, number>`) expand to one
  *  `parent.bucket` row each, so a single drifting bucket names itself.
  *  Walks the union of both sides' rows: a count the build stopped
  *  producing is as much drift as one the snapshot never had. Rows come in
@@ -711,7 +713,7 @@ export function compareBuildCounts<T extends object>(
 
 function flattenCounts(counts: object): Map<string, number> {
   const rows = new Map<string, number>();
-  for (const [key, value] of Object.entries(counts as Record<string, unknown>)) {
+  for (const [key, value] of Object.entries(flattenStages(counts) as Record<string, unknown>)) {
     if (typeof value === 'number') {
       rows.set(key, value);
       continue;
