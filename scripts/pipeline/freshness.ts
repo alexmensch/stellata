@@ -95,7 +95,7 @@ export function buildFreshness(step: BuildStep, resolved: ResolvedStep, tree: Pi
   return { inputs, freshness: derivedFreshness(stampFile, resolved.outputs, inputs, tree) };
 }
 
-const isStrings =(value: unknown): value is string[] => Array.isArray(value) && value.every((v) => typeof v === 'string');
+const isStrings = (value: unknown): value is string[] => Array.isArray(value) && value.every((v) => typeof v === 'string');
 const optionalString = (value: unknown): string | undefined => (typeof value === 'string' ? value : undefined);
 
 export function readManualRecord(step: ManualStep, stampFile: string): ManualRead {
