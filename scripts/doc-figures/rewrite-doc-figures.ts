@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { REPO_ROOT } from '../util/paths';
 import { scanDocFigures } from './doc-figures';
 
-export function main(): void {
+export function main(): number {
   let failed = false;
   let rewritten = 0;
   for (const { file, text, report } of scanDocFigures(REPO_ROOT)) {
@@ -20,5 +20,5 @@ export function main(): void {
     }
   }
   console.log(`doc figures: ${rewritten} file(s) rewritten`);
-  if (failed) process.exit(1);
+  return failed ? 1 : 0;
 }

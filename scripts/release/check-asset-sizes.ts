@@ -25,10 +25,10 @@ function walk(dir: string): AssetSize[] {
   });
 }
 
-export function main(): void {
+export function main(): number {
   if (!existsSync(DIST)) {
     console.error(`No ${DIST} to check. Run \`pnpm run build\` first.`);
-    process.exit(1);
+    return 1;
   }
 
   const assets = walk(DIST);
@@ -54,8 +54,9 @@ export function main(): void {
           + `rejects any static asset over ${limit}, so the deploy would fail`,
       );
     }
-    process.exit(1);
+    return 1;
   }
 
   console.log(`All assets within the ${limit} Workers per-asset limit.`);
+  return 0;
 }

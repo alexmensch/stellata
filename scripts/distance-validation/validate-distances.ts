@@ -7,7 +7,7 @@ import {
 } from './validate-distances-pure';
 import { VAIDMAN_SUPERGIANTS } from './vaidman-tsv';
 
-export function main(): void {
+export function main(): number {
   const report = buildReport(readArtifact(VAIDMAN_SUPERGIANTS), BAILER_JONES.read().distPc);
   console.log(formatReport(report));
   if (passesAcceptanceBars(report)) {
@@ -17,6 +17,7 @@ export function main(): void {
       `validate-distances: FAIL — median ${pct(report.edsd.stats.median)} > ${pct(MEDIAN_FRAC_DIFF_MAX)} `
         + `OR large-diff count ${report.edsd.large.length} > ${LARGE_DIFF_COUNT_MAX}`,
     );
-    process.exitCode = 1;
+    return 1;
   }
+  return 0;
 }

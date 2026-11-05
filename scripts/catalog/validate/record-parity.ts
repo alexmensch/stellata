@@ -12,11 +12,11 @@ function argValue(name: string): string | null {
   return hit === undefined ? null : hit.slice(name.length + 3);
 }
 
-export async function main(): Promise<void> {
+export async function main(): Promise<number> {
   const baselineDir = argValue('baseline');
   if (baselineDir === null) {
     console.error('usage: validate:record-parity --baseline=<dir> [--current=<dir>]');
-    process.exit(2);
+    return 2;
   }
   const currentDir = argValue('current');
 
@@ -33,6 +33,7 @@ export async function main(): Promise<void> {
   console.log(formatParityReport(report));
   if (!parityHolds(report)) {
     console.error('\nrecord parity FAILED — /docs/catalog-driver.md#8-gaia-dr-transitions--what-re-pulls-and-what-never-does additive mode');
-    process.exit(1);
+    return 1;
   }
+  return 0;
 }
