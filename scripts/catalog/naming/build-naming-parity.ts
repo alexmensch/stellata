@@ -4,9 +4,10 @@
 import { readFileSync } from 'node:fs';
 
 import { emitArtifacts } from '../../util/emit-artifacts';
-import type { SearchEntry } from '../../../src/catalog-format/record/catalog-pure';
 import { buildSearchIndex, normalizeGlKey } from '../../../src/catalog-format/naming/search-corpus';
-import { displayNamesFromSearchIndex } from '../../../src/catalog-format/naming/star-naming-pure';
+import { loadCatalog } from '../catalog-lookup';
+import { LINEAGE_LAYOUT } from '../lineage/lineage-layout-pure';
+import { builtLabels } from './built-labels';
 import { readTable } from '../../util/tsv/table-pure';
 import { readArtifact } from '../../util/sources/source';
 import {
@@ -47,19 +48,18 @@ function frozenOldLabels(): Map<string, string> {
   return new Map(rows.map((r) => [r.key, r.old]));
 }
 
-export function main(): void {
-  const raw = readJson<SearchEntry[]>(publicFile(PUBLIC_FILES.searchIndex));
+export async function main(): Promise<void> {
+  const catalog = await loadCatalog({ withSearchIndex: true });
+  const raw = catalog.searchIndex;
   const rowIndexMap = readJson<RowIndexMap>(resolve(REPO_ROOT, BUILD_FILES.catalogRowIndexMap));
   const constellations = readJson<{ code: string; name: string }[]>(publicFile(PUBLIC_FILES.constellations));
   const keys = ledgerKeys(rowIndexMap);
-  const composed = displayNamesFromSearchIndex(raw, constellations);
+  const labels = builtLabels(catalog, LINEAGE_LAYOUT.current);
   const labelByKey = new Map<string, string>();
   const indexByKey = new Map<string, number>();
-  for (const entry of raw) {
-    const key = keys.get(entry.i);
-    if (key === undefined) continue;
-    labelByKey.set(key, composed.get(entry.i)?.label ?? '');
-    indexByKey.set(key, entry.i);
+  for (const [i, key] of keys) {
+    labelByKey.set(key, labels[i]);
+    indexByKey.set(key, i);
   }
 
   const searchIndex = buildSearchIndex(raw, constellations);

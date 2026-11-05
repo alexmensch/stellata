@@ -225,8 +225,8 @@ admits — throws before anything is staged, so nothing lands.
 The runtime reader (`catalog-loader.ts`) decodes the column into
 `Catalog.sid`, the star domain of the runtime SID resolver
 (`src/client/util/sid-resolver/README.md`); the Node reader
-(`catalog-lookup.ts`) inherits the field off `RECORD_LAYOUT` without
-decoding it.
+(`catalog-lookup.ts`) decodes it into `CatalogRecord.sid`, which is how
+`naming/built-labels.ts` joins a record to its lineage rows.
 
 ## Gaia DR3 Apsis surfacing
 

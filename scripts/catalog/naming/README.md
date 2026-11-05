@@ -103,6 +103,8 @@ scripts/catalog/naming/
     (+ naming-ledgers-tsv.test) key and by label.
   committed-artifacts.test.ts   serialize(parse(committed)) === committed
                                 for all four artifacts this folder writes.
+  built-labels.ts               builtLabels: every built record's label,
+                                off the naming lineage, by record index.
   build-naming-parity.ts        Refreshes the ledger and the duplicate
                                 list from the built artifacts, both in
                                 one emitArtifacts call.
@@ -251,8 +253,8 @@ Flamsteed form ships as an alias rather than going unsearchable.
   have typed, and `resolves` records whether it still reaches that record.
   A record the catalogue no longer carries reads `resolves = absent` with
   an empty `new`; an empty `new` on a `yes` / `no` row is a record that now
-  displays the runtime's identifier fallback. 3,680 changes: 26 absent
-  records, 74 fallbacks.
+  displays the runtime's identifier fallback. 3,680 changes: 6 absent
+  records, 92 fallbacks.
 - **`naming-duplicates.tsv`** — every display label two or more records
   compose, with its claimants. A RATCHET: each row is a curation finding
   upstream, and `../../../tests/integration/multi-star-regression.test.ts` additionally
@@ -261,11 +263,17 @@ Flamsteed form ships as an alias rather than going unsearchable.
 The gate is stated over strings with EXTERNAL provenance — every name the
 authority approves and every name the manifest carries must reach a record.
 A string the build composed itself has no external existence, so [§ 5](/docs/star-naming.md#5-aliases--ship-what-cannot-be-derived-derive-what-can) lets
-it disappear with the composition that made it; 1,955 do, and the ledger's
+it disappear with the composition that made it; 1,974 do, and the ledger's
 `resolves` column is where each one is reviewable.
 
 `pnpm run build:naming-parity` refreshes `new`, `resolves` and the
-duplicate list from the built artifacts, and prints the figures above. `key` and `old` carry forward from
+duplicate list, and prints the figures above. `new` and the duplicates are
+a view of the [naming lineage](#naming-lineage): `builtLabels` reads each
+record's label off its name row, joined to its record index through its
+SID (`allocation.sids` and catalog.bin's SID column), so no reader
+re-composes a label. `resolves` asks the search corpus.
+`naming-parity.test.ts` reads the same labels, and checks that the runtime's
+composition off `search-index.json` reaches every one of them. `key` and `old` carry forward from
 the committed file; `NAMING_PARITY_SEED=<key/old TSV>` re-seeds them, which
 is what a deliberate wholesale naming change needs and nothing else should
 touch.
