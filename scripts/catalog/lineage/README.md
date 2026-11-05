@@ -363,8 +363,8 @@ name.
 
 `trace.test.ts` runs the command over a small committed fixture: it finds a
 record the catalogue parks, the record that refused a source no identity
-row carries, and every component row of a promoted system from its anchor's
-designation.
+row carries, every component row of a promoted system from its anchor's
+designation, and a cloud from its `cloud:` slug.
 
 ## Cross-stage joins
 
@@ -441,5 +441,6 @@ does every row whose code retires, parks or merges, keyed on the `hip` and
 would carry (`PromotedRow.synthKey`), less any designation a membership
 manifest record or one of promotion's own mints already carries, so an
 orphaned SID keyed on one of them joins to that row's cause and never to a
-row that merely cites another stage's star. Every other record's is
+row that merely cites another stage's star. A cloud's or Local Group
+object's is its sibling allocation stage's; every other record's is
 membership's.

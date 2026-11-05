@@ -2,7 +2,9 @@
 
 Every file under `data/` a TypeScript pipeline step reads is declared once,
 as a module-level constant: an external table or file through `defineSource`,
-a file this repo writes through its `defineArtifact` codec (`../tsv/`). The
+a file this repo writes through its `defineArtifact` codec (`../tsv/`), or a
+JSON file it writes whose records lineage cites through `defineJsonArtifact`
+([A JSON artifact](#a-json-artifact)). The
 constant is the only way a step opens the file, and the set a step's import
 closure reaches is that step's data input set — derived, never listed
 ([The step table](../../pipeline/step-table/README.md#the-step-table--stepsts)).
