@@ -1,12 +1,11 @@
-// Record logic only the build runs. See README.md.
+// Geometric binary inference and the CCDM doubles flag with its optical-double
+// gate. See README.md.
 
 import {
   FLAG_BINARY_PRIMARY,
   VAR_TYPE_ECLIPSING,
   type DistVia,
 } from '../../../src/catalog-format/record/catalog-pure';
-
-// ---- Geometric binary inference -----------------------------------------
 
 // Pairs within this 3D distance are flagged as a physical binary/multiple
 // system. 0.005 pc ≈ 1030 AU — wide-binary territory. Gaia resolves most

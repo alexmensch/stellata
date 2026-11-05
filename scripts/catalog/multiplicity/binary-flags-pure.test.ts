@@ -19,9 +19,9 @@ import {
   BINARY_MAX_SEP_PC,
   type BinaryStar,
   type DoublesStar,
-} from './record-build-pure';
+} from './binary-flags-pure';
 
-describe('record-build-pure / inferBinaries', () => {
+describe('binary-flags-pure / inferBinaries', () => {
   function makeStar(opts: Partial<BinaryStar> & { x: number; y: number; z: number; absmag: number }): BinaryStar {
     return { flags: 0, companionIdx: -1, ...opts };
   }
@@ -170,7 +170,7 @@ describe('record-build-pure / inferBinaries', () => {
   });
 });
 
-describe("record-build-pure / markPrimary", () => {
+describe("binary-flags-pure / markPrimary", () => {
   type Slim = { absmag: number; flags: number };
   const star = (absmag: number, flags = 0): Slim => ({ absmag, flags });
 
@@ -211,7 +211,7 @@ describe("record-build-pure / markPrimary", () => {
   });
 });
 
-describe("record-build-pure / markPrimaryIfUnflagged", () => {
+describe("binary-flags-pure / markPrimaryIfUnflagged", () => {
   type Slim = { absmag: number; flags: number };
   const star = (absmag: number, flags = 0): Slim => ({ absmag, flags });
 
@@ -251,7 +251,7 @@ describe("record-build-pure / markPrimaryIfUnflagged", () => {
   });
 });
 
-describe('record-build-pure / buildHipToIndex', () => {
+describe('binary-flags-pure / buildHipToIndex', () => {
   it('maps positive HIPs to their record index and skips null / non-positive', () => {
     const m = buildHipToIndex([
       { hip: 100 },
@@ -274,7 +274,7 @@ describe('record-build-pure / buildHipToIndex', () => {
   });
 });
 
-describe('record-build-pure / applyDoublesFlag', () => {
+describe('binary-flags-pure / applyDoublesFlag', () => {
   // Mini Star fixture with just the fields applyDoublesFlag reads/writes.
   function s(absmag: number, hip: number | null, flags = 0): DoublesStar {
     return { absmag, hip, flags };
@@ -402,7 +402,7 @@ describe('record-build-pure / applyDoublesFlag', () => {
   });
 });
 
-describe('record-build-pure / pickBrightest', () => {
+describe('binary-flags-pure / pickBrightest', () => {
   const s = (absmag: number) => ({ absmag });
   it('returns the lowest-absmag index', () => {
     expect(pickBrightest([s(4), s(2), s(6)], [0, 1, 2])).toBe(1);
@@ -417,7 +417,7 @@ describe('record-build-pure / pickBrightest', () => {
   });
 });
 
-describe('record-build-pure / markPrimaryIfUnflagged suppress hook', () => {
+describe('binary-flags-pure / markPrimaryIfUnflagged suppress hook', () => {
   const s = (absmag: number, flags = 0) => ({ absmag, flags });
   it('returns -3 and sets no bit when suppress vetoes the pick', () => {
     const stars = [s(2), s(5)];
@@ -438,7 +438,7 @@ describe('record-build-pure / markPrimaryIfUnflagged suppress hook', () => {
   });
 });
 
-describe('record-build-pure / hasGaiaQualityDistance', () => {
+describe('binary-flags-pure / hasGaiaQualityDistance', () => {
   it('accepts the two tiers that rest on a Gaia parallax', () => {
     expect(hasGaiaQualityDistance('gaia_dr3_inversion')).toBe(true);
     expect(hasGaiaQualityDistance('bailer_jones')).toBe(true);
@@ -453,7 +453,7 @@ describe('record-build-pure / hasGaiaQualityDistance', () => {
   });
 });
 
-describe('record-build-pure / isOpticalDoublePrimary', () => {
+describe('binary-flags-pure / isOpticalDoublePrimary', () => {
   // Two components 3 pc apart on the x-axis, both Gaia-quality, no physical
   // evidence — the canonical optical double.
   function make(overrides: Partial<OpticalDoubleStar>[] = []): OpticalDoubleStar[] {

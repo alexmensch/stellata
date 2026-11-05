@@ -21,10 +21,9 @@ layout, its codec, the chunk plan and the search-index wire entry — is
 
 ## Subfolders
 
-- `record/` — the on-disk contract: the v10 `catalog.bin` layout with both
-  directions of its codec, the record order, the transport chunk plan, and
-  the `SearchEntry` wire shape. `catalog-pure.ts` alone, imported by every other subfolder and
-  by `src/client/loaders/`, importing back from none of them.
+- `record/` — the build's halves of the record contract: the record-order
+  key and the `GAIA_APSIS` source. The on-disk contract itself is
+  `/src/catalog-format/record/`.
 - `astrometry-request/` — the Gaia 5p pull's source_id list: both binding
   gates' candidates (overlay and derivation), the bound-pair siblings and the
   review dispositions' kept ids. Input prep, off `build:catalog`.

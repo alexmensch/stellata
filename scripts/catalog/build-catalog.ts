@@ -33,7 +33,7 @@ import {
   type CatalogManifest,
   DIST_VIA_VALUES,
 } from '../../src/catalog-format/record/catalog-pure';
-import { buildHipToIndex, inferBinaries } from './record/record-build-pure';
+import { buildHipToIndex, inferBinaries } from './multiplicity/binary-flags-pure';
 import { SIMBAD_OTYPE_MULTIPLE } from './spectral/spectral-resolve';
 import { apparentVFromSol } from './record/record-order-pure';
 import { avSolToStar } from './distance/dust/dust-deextinction-pure';

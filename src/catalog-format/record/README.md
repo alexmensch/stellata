@@ -19,9 +19,8 @@ src/catalog-format/record/
 ```
 
 The build-side halves stay in `/scripts/catalog/record/`: the record-order
-key (`record-order-pure.ts`, [Record order](#record-order)), the `GAIA_APSIS`
-source, and the record logic only the build runs (`record-build-pure.ts`:
-binary inference).
+key (`record-order-pure.ts`, [Record order](#record-order)) and the
+`GAIA_APSIS` source.
 
 ## Record order
 
