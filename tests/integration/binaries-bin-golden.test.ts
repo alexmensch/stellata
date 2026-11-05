@@ -7,8 +7,13 @@ import { join, resolve } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import {
-  HEADER_SIZE, RECORD_LAYOUT, RECORD_SIZE, parseBinaries,
+  parseBinaries,
 } from '../../src/client/binaries/binaries-loader';
+import {
+  HEADER_SIZE,
+  RECORD_LAYOUT,
+  RECORD_SIZE,
+} from '../../src/catalog-format/binaries/binaries-format';
 import { REPO_ROOT } from '../../scripts/util/paths';
 
 const HERE = resolve(REPO_ROOT, 'scripts/binaries/golden');

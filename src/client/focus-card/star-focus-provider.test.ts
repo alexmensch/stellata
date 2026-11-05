@@ -6,7 +6,7 @@ import { galacticDirToIcrs } from '../../astro-core/galactic-coords';
 import { J2000_JD } from '../../astro-core/astronomy-constants';
 import type { SearchEntry } from '../typeahead/search';
 import type { BinariesData, BinaryRelation } from '../binaries/binaries-loader';
-import { NO_PARENT } from '../binaries/binaries-loader';
+import { NO_PARENT } from '../../catalog-format/binaries/binaries-format';
 import type { LateState } from '../util/late/late';
 import { KMS_PER_PC_YR } from '../format/velocity-format';
 import {

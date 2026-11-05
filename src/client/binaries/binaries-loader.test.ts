@@ -3,6 +3,8 @@ import {
   parseBinaries,
   loadBinaries,
   BinariesParseError,
+} from './binaries-loader';
+import {
   MAGIC,
   VERSION,
   HEADER_SIZE,
@@ -12,7 +14,7 @@ import {
   FLAG_HAS_INCLINATION,
   FLAG_IS_INNER_OF_HIERARCHY,
   NO_PARENT,
-} from './binaries-loader';
+} from '../../catalog-format/binaries/binaries-format';
 import { J2000_JD } from '../../astro-core/astronomy-constants';
 
 // Round-trip fixture builder mirroring the Python writer. Keeping the

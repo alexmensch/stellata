@@ -19,12 +19,11 @@ import {
   FLAG_BINARY_COMPANION_ONLY, FLAG_BINARY_PRIMARY, VAR_TYPE_ECLIPSING, CATALOG_MANIFEST_FILENAME,
 } from '../../src/catalog-format/record/catalog-pure';
 import {
-  FLAG_HAS_ORBIT,
-  FLAG_HAS_INCLINATION,
   parseBinaries,
   type BinariesData,
   type BinaryRelation,
 } from '../../src/client/binaries/binaries-loader';
+import { FLAG_HAS_ORBIT, FLAG_HAS_INCLINATION } from '../../src/catalog-format/binaries/binaries-format';
 import * as THREE from 'three';
 import {
   buildOrbitRelationCaches,

@@ -2,38 +2,10 @@
 // reads per frame. See /src/client/binaries/README.md#format-contract.
 
 import { J2000_JD } from '../../astro-core/astronomy-constants';
+import {
+  HEADER_SIZE, MAGIC, RECORD_LAYOUT, RECORD_SIZE, VERSION,
+} from '../../catalog-format/binaries/binaries-format';
 import { PUBLIC_FILES } from '../../catalog-format/public-artifacts/public-artifacts';
-
-export const MAGIC = 'BIN1';
-export const VERSION = 1;
-export const HEADER_SIZE = 16;
-export const RECORD_SIZE = 72;
-
-// Record-field byte offsets. Single source of truth for the
-// writer↔reader contract — drift here ships a misaligned binary.
-export const RECORD_LAYOUT = {
-  primary_idx: 0,
-  secondary_idx: 4,
-  flags: 8,
-  parent_relation: 12,
-  P_days: 16,
-  T_jd: 24,
-  e: 32,
-  a_AU: 36,
-  i_rad: 40,
-  omega_rad: 44,
-  Omega_rad: 48,
-  q: 52,
-  sep_arcsec: 56,
-  pa_deg: 60,
-  sep_pa_epoch_jd: 64,
-} as const;
-
-export const FLAG_HAS_ORBIT = 0x1;
-export const FLAG_HAS_INCLINATION = 0x2;
-export const FLAG_IS_INNER_OF_HIERARCHY = 0x4;
-
-export const NO_PARENT = -1;
 
 export interface BinaryRelation {
   /** Catalog.bin record index of the primary. */

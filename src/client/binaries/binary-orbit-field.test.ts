@@ -2,13 +2,15 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import * as THREE from 'three';
 import { BinaryOrbitField } from './binary-orbit-field';
 import {
+  type BinariesData,
+  type BinaryRelation,
+} from './binaries-loader';
+import {
   FLAG_HAS_ORBIT,
   FLAG_HAS_INCLINATION,
   FLAG_IS_INNER_OF_HIERARCHY,
   NO_PARENT,
-  type BinariesData,
-  type BinaryRelation,
-} from './binaries-loader';
+} from '../../catalog-format/binaries/binaries-format';
 import { AU_PC, J2000_JD } from '../../astro-core/astronomy-constants';
 import { tToJdUt } from '../solar-system/time/time';
 import { advancePositionsToEpoch, jdeToJulianEpochYear } from '../loaders/epoch-advance-pure';
