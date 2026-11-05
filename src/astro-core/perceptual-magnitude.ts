@@ -69,30 +69,8 @@ export function bodySurfaceBrightnessMagArcsec2(
   );
 }
 
-/**
- * Reflected-light apparent magnitude of a planet seen by a viewer. CPU
- * mirror of the integrated formula in /src/client/webgpu/solar-system/planet-glare-tsl.ts.
- *
- *   m_host_at_planet = M_host + 5·log10(d_hp / 10pc)
- *   m_planet         = m_host_at_planet
- *                    − 2.5·log10( p · (R/d_vp)² · φ(α) )
- *
- * The viewer→host distance d_vh cancels out of the physical formula
- * (host flux at the viewer × d_vh² round-trip) and MUST NOT appear:
- * observe mode parks the camera exactly at the host, so any d_vh term
- * evaluates log10(0) there and kills every planet of the focused host.
- *
- * - `hostAbsmag` is the host star's absolute V-band magnitude.
- * - `dVpPc` is viewer→planet distance in parsecs.
- * - `dHpPc` is host→planet distance in parsecs.
- * - `albedo` is the planet's geometric albedo p (dimensionless).
- * - `radiusPc` is the planet's physical radius in parsecs.
- * - `phaseFactor` is φ(α) — pass 1 for full-phase, or use
- *   `lambertianPhaseFactor` / `empiricalPhaseFactor` from `phase-function.ts`.
- *
- * Distances and the reflectance product floor at 1e-30 to match the
- * shader's defensive clamps at the singular zero-distance point.
- */
+/** CPU mirror of /src/client/webgpu/solar-system/planet-glare-tsl.ts; takes no viewer→host
+ *  distance — /src/client/solar-system/README.md#reflected-light-magnitude-model. */
 export function planetApparentMagnitude(
   hostAbsmag: number,
   dVpPc: number,
