@@ -10,10 +10,11 @@ writer's pair and row types are built from. `encodeBinaries` turns
 `BinaryRecord`s (absent elements null) into the file's bytes; the writer and the loader's
 tests both encode through it.
 
-- Header (`HEADER_SIZE`, 16 B): `MAGIC` (`BIN1`), uint32 `VERSION`, uint32
-  record count, 4 B reserved. Little-endian throughout.
+- Header (`HEADER_SIZE`, 16 B; `HEADER_LAYOUT`): `MAGIC` (`BIN1`), uint32
+  `VERSION`, uint32 record count, 4 B reserved. Little-endian throughout.
 - Record (`RECORD_SIZE`, 72 B): `RECORD_LAYOUT` gives each field's byte
-  offset. Indices and flags are uint32, `parent_relation` int32 (`NO_PARENT`,
+  offset and wire type, keyed by its record property; `encodeBinaries` and
+  `decodeBinaryRecord` both walk it, so neither spells an offset or a type. Indices and flags are uint32, `parent_relation` int32 (`NO_PARENT`,
   -1, for a top-level pair), `P_days` / `T_jd` float64, every other element
   float32. A missing element is NaN. `sep_pa_epoch_jd` is stored as
   `JD − J2000_JD`, so float32 keeps about a minute of precision; the loader

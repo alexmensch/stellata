@@ -8,6 +8,7 @@ import {
   MAGIC,
   VERSION,
   HEADER_SIZE,
+  HEADER_LAYOUT,
   FLAG_HAS_ORBIT,
   FLAG_HAS_INCLINATION,
   FLAG_IS_INNER_OF_HIERARCHY,
@@ -57,7 +58,7 @@ describe('parseBinaries', () => {
     const buf = new ArrayBuffer(HEADER_SIZE);
     const bytes = new Uint8Array(buf);
     bytes.set(new TextEncoder().encode(MAGIC), 0);
-    new DataView(buf).setUint32(4, 99, true);
+    new DataView(buf).setUint32(HEADER_LAYOUT.version, 99, true);
     try {
       parseBinaries(buf);
       throw new Error('expected throw');
@@ -246,7 +247,7 @@ describe('loadBinaries', () => {
     const buf = new ArrayBuffer(HEADER_SIZE);
     const u8 = new Uint8Array(buf);
     u8.set(new TextEncoder().encode('BIN1'), 0);
-    new DataView(buf).setUint32(4, 99, true);
+    new DataView(buf).setUint32(HEADER_LAYOUT.version, 99, true);
     mockFetch(async () =>
       ({ ok: true, arrayBuffer: async () => buf }) as Response);
     await expect(loadBinaries('/binaries.bin'))

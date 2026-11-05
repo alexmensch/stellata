@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { J2000_JD } from '../../astro-core/astronomy-constants';
 import {
-  HEADER_SIZE, MAGIC, NO_PARENT, RECORD_LAYOUT, RECORD_SIZE, VERSION, encodeBinaries,
+  HEADER_LAYOUT, HEADER_SIZE, MAGIC, NO_PARENT, RECORD_LAYOUT, RECORD_SIZE, VERSION, decodeBinaryRecord, encodeBinaries,
   hasRenderableOrbit, type BinaryRecord,
 } from './binaries-format';
 
@@ -17,15 +17,24 @@ describe('encodeBinaries', () => {
     const bytes = encodeBinaries([RECORD]);
     expect(new TextDecoder().decode(bytes.subarray(0, 4))).toBe(MAGIC);
     const view = new DataView(bytes.buffer);
-    expect(view.getUint32(4, true)).toBe(VERSION);
-    expect(view.getUint32(8, true)).toBe(1);
+    expect(view.getUint32(HEADER_LAYOUT.version, true)).toBe(VERSION);
+    expect(view.getUint32(HEADER_LAYOUT.count, true)).toBe(1);
     expect(bytes.length).toBe(HEADER_SIZE + RECORD_SIZE);
   });
 
   it('writes an absent element as NaN and the epoch as its offset from J2000', () => {
     const view = new DataView(encodeBinaries([{ ...RECORD, sepPaEpochJd: 2459945.75 }]).buffer);
-    expect(view.getFloat32(HEADER_SIZE + RECORD_LAYOUT.e, true)).toBeNaN();
-    expect(view.getFloat32(HEADER_SIZE + RECORD_LAYOUT.sep_pa_epoch_jd, true)).toBe(2459945.75 - J2000_JD);
+    expect(view.getFloat32(HEADER_SIZE + RECORD_LAYOUT.e.offset, true)).toBeNaN();
+    expect(view.getFloat32(HEADER_SIZE + RECORD_LAYOUT.sepPaEpochJd.offset, true)).toBe(2459945.75 - J2000_JD);
+  });
+
+  it('decodes what it encodes, absent elements as NaN', () => {
+    const record = { ...RECORD, flags: 3, parentRelation: 0, pDays: 365.25, sepPaEpochJd: 2459945.75 };
+    const decoded = decodeBinaryRecord(new DataView(encodeBinaries([record]).buffer), HEADER_SIZE);
+    expect(decoded).toMatchObject({
+      primaryIdx: 7, secondaryIdx: 9, flags: 3, parentRelation: 0, pDays: 365.25, sepPaEpochJd: 2459945.75,
+    });
+    expect(decoded.e).toBeNaN();
   });
 });
 

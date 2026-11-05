@@ -34,7 +34,8 @@ const EXPECTED_COUNTS = {
 };
 
 function fieldAt(recordOffset: number): string {
-  return Object.entries(RECORD_LAYOUT).reduce((best, entry) =>
+  const fields = Object.entries(RECORD_LAYOUT).map(([name, { offset }]) => [name, offset] as const);
+  return fields.reduce((best, entry) =>
     entry[1] <= recordOffset && entry[1] > best[1] ? entry : best)[0];
 }
 
