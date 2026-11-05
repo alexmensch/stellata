@@ -242,10 +242,13 @@ after the count checks, every Python module here is deleted, and
 ([Proving a restructuring byte-identical](/scripts/util/README.md#proving-a-restructuring-byte-identical))
 proves byte identity once.
 
-Each slice before the switch also carries one vitest case that runs TS Stages 1..N over
-the committed inputs and asserts that stage's keys in the committed
-`build-binaries-expected.json` (and `build-binaries-rates-expected.json`
-where the stage has keys there). The Python writes those snapshots
+Each slice before the switch also carries one vitest case that runs TS
+Stages 1..N over the committed inputs and asserts the keys its own
+ported code counts in the committed `build-binaries-expected.json` (and
+`build-binaries-rates-expected.json` where it has keys there). A key
+belongs to the slice whose code produces it, not to the stage the
+snapshot files it under: `subdivide`'s orphan and MSC inner-pair counts
+are Stage 1's, its NSS inner-pair count Stage 3's. The Python writes those snapshots
 until the switch; the test reads them and never restates a count, so a
 count divergence fails in the slice that introduces it, and a byte diff
 at the switch is one the counts do not see.
