@@ -1,18 +1,28 @@
 {
-  "gaia_resolve_rate": {
-    "value": 0.455444,
-    "tolerance": 0.2
-  },
-  "optical_rejected_rate": {
-    "value": 0.381615,
-    "tolerance": 0.2
-  },
-  "nss_orbit_rate": {
-    "value": 0.14341,
-    "tolerance": 0.2
-  },
-  "hip2_fallback_rate": {
-    "value": 0.034565,
-    "tolerance": 0.2
+  "stages": {
+    "resolve": {
+      "gaia_resolve_rate": {
+        "value": 0.455444,
+        "tolerance": 0.2
+      }
+    },
+    "astrometry": {
+      "hip2_fallback_rate": {
+        "value": 0.034565,
+        "tolerance": 0.2
+      }
+    },
+    "orbits": {
+      "nss_orbit_rate": {
+        "value": 0.14341,
+        "tolerance": 0.2
+      }
+    },
+    "optical": {
+      "optical_rejected_rate": {
+        "value": 0.381615,
+        "tolerance": 0.2
+      }
+    }
   }
 }

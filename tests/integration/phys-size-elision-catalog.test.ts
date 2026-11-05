@@ -7,7 +7,7 @@ import { readFile } from 'node:fs/promises';
 import { beforeAll, describe, expect, it } from 'vitest';
 
 import { readCatalogBuffer } from '../../scripts/catalog/catalog-lookup';
-import buildCatalogExpected from '../../scripts/catalog/build-catalog-expected.json';
+import { committedBuildCounts } from '../../scripts/catalog/build-counts';
 import { peakAmplitudeFactor } from '../../src/client/camera/controls/star-geometry';
 import { STAR_RENDER_DEFAULTS, starPxSizes } from '../../src/client/filters/filter-state';
 import { DEFAULT_INSTRUMENT } from '../../src/astro-core/instruments';
@@ -42,7 +42,7 @@ describe.skipIf(skip)('the physical-size elision over the built catalog', () => 
 
   it('admits 162 records at a Sol vantage, and gates the rest', () => {
     const { window, inside } = measure();
-    expect(catalog.count).toBe(buildCatalogExpected.recordCount);
+    expect(catalog.count).toBe(committedBuildCounts().recordCount);
     expect(window).toBeCloseTo(7.1211, 4);
     expect(inside).toBe(162);
   });

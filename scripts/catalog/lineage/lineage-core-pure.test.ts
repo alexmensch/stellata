@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { diffLineage, stageDiffText } from './lineage-diff-pure';
 import {
-  compareUtf8, decodeLineageLine, encodeLineageLine, lineageLineKey, lineageLines, lineageRows, paramsOf,
+  compareUtf8, decodeLineageLine, encodeLineageLine, foldStageLines, lineageLineKey, lineageLines, lineageRows, paramsOf,
   paramsText, sortLineageLines, stageLineageLine, stageLineageText, type LineageLine, type LineageRow,
 } from './lineage-row-pure';
 import { LIVE, stageCodes } from './reason-codes-pure';
@@ -17,6 +17,26 @@ function row(key: string, code = 'demo.kept', params: Record<string, string> = {
 }
 
 const line = (r: LineageRow): LineageLine => stageLineageLine(CODES, r);
+
+describe('foldStageLines', () => {
+  const refused = (key: string): LineageRow => ({ ...row(key, 'demo.gate.refused'), role: 'refused' });
+
+  it('counts the outcome lines per code, every declared code present', () => {
+    const lines = [row('spine:1'), row('spine:2'), refused('spine:2')].map(line);
+    expect(foldStageLines(CODES, lines, 'outcome')).toEqual({ 'demo.kept': 2, 'demo.gate.refused': 0 });
+  });
+
+  it('counts the refused lines apart from the outcomes', () => {
+    const lines = [row('spine:1'), refused('spine:1'), refused('spine:2')].map(line);
+    expect(foldStageLines(CODES, lines, 'refused')).toEqual({ 'demo.kept': 0, 'demo.gate.refused': 2 });
+  });
+
+  it('refuses a line of another stage', () => {
+    const other = stageCodes('other', { kept: { description: 'kept', effect: 'none', status: LIVE } });
+    const foreign = stageLineageLine(other, { ...row('spine:1', 'other.kept'), stage: 'other' });
+    expect(() => foldStageLines(CODES, [foreign], 'outcome')).toThrow(/"other.kept" is not one of the declared variants/);
+  });
+});
 
 describe('the lineage order', () => {
   it('sorts Gaia ids above 2^53 by bytes, never numerically, the same in writer and diff', () => {

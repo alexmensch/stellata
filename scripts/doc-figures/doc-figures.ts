@@ -2,6 +2,7 @@
 import { readFileSync } from 'node:fs';
 import { basename, extname, join } from 'node:path';
 import { CITATION_INDEX } from '../site/citation-index-source';
+import { flattenStages } from '../util/counts/count-stages-pure';
 import { gitFiles, lfsTracked, presentFiles } from '../util/git-files';
 import {
   catalogueSizeFigures,
@@ -45,7 +46,7 @@ export function loadSnapshots(root: string): Snapshots {
   for (const path of presentFiles(root, gitFiles(root, [`*${SNAPSHOT_SUFFIX}`], { untracked: true }))) {
     const stem = basename(path, SNAPSHOT_SUFFIX);
     if (snapshots.has(stem)) throw new Error(`two snapshots share the stem ${stem}; doc-figure keys would be ambiguous`);
-    snapshots.set(stem, JSON.parse(readFileSync(join(root, path), 'utf8')));
+    snapshots.set(stem, flattenStages(JSON.parse(readFileSync(join(root, path), 'utf8'))));
   }
   return snapshots;
 }

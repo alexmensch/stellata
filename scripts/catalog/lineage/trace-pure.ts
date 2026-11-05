@@ -124,7 +124,7 @@ function names(row: LineageRow, terms: ReadonlySet<string>): boolean {
   return false;
 }
 
-const SETTLING = new Set((['merged', 'retired', 'parked'] as const).map((b) => ALLOCATION_CODES.code(b)));
+const SETTLING = new Set<string>((['merged', 'retired', 'parked'] as const).map((b) => ALLOCATION_CODES.code(b)));
 
 /** An allocation row names a SID it settled or merged into. */
 function settles(row: LineageRow, sids: ReadonlySet<string>): boolean {

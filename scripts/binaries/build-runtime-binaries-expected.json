@@ -1,12 +1,16 @@
 {
-  "pairs_total": 18670,
-  "pairs_emitted": 14452,
-  "pairs_dropped_primary_unresolved": 3036,
-  "pairs_dropped_secondary_unresolved": 760,
-  "pairs_dropped_degenerate_idx": 417,
-  "pairs_dropped_same_relation_alias": 3,
-  "pairs_dropped_duplicate_relation": 2,
-  "pairs_with_orbit": 3391,
-  "pairs_with_inclination": 2888,
-  "pairs_inner_of_hierarchy": 1827
+  "stages": {
+    "encode": {
+      "pairs_total": 18670,
+      "pairs_emitted": 14452,
+      "pairs_dropped_primary_unresolved": 3036,
+      "pairs_dropped_secondary_unresolved": 760,
+      "pairs_dropped_degenerate_idx": 417,
+      "pairs_dropped_same_relation_alias": 3,
+      "pairs_dropped_duplicate_relation": 2,
+      "pairs_with_orbit": 3391,
+      "pairs_with_inclination": 2888,
+      "pairs_inner_of_hierarchy": 1827
+    }
+  }
 }
