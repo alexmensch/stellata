@@ -2,7 +2,7 @@
 
 import {
   FLAG_HAS_INCLINATION, FLAG_HAS_ORBIT, FLAG_IS_INNER_OF_HIERARCHY, NO_PARENT, encodeBinaries,
-  hasRenderableOrbit, type BinaryRecord,
+  hasRenderableOrbit, pickBinaryElements, type BinaryElementKey, type BinaryElements, type BinaryRecord,
 } from '../../src/catalog-format/binaries/binaries-format';
 import {
   resolveMultiplesIdx, synthSlotIdx, type CatalogRowIndexMap,
@@ -14,8 +14,7 @@ import {
 import type { MultiplesRecord } from './multiples-tsv';
 import type { Check } from '../util/emit-artifacts';
 
-/** One physical pair: a system's primary and secondary rows joined. Elements
- *  and WDS geometry are the primary row's. */
+/** One physical pair: a system's primary and secondary rows joined. */
 export interface MultiplesPair {
   readonly systemId: string;
   readonly wdsId: string;
@@ -26,17 +25,8 @@ export interface MultiplesPair {
   readonly primaryHip: number | null;
   readonly secondaryGaia: string | null;
   readonly secondaryHip: number | null;
-  readonly pDays: number | null;
-  readonly tJd: number | null;
-  readonly e: number | null;
-  readonly aAU: number | null;
-  readonly iRad: number | null;
-  readonly omegaRad: number | null;
-  readonly OmegaRad: number | null;
-  readonly q: number | null;
-  readonly sepArcsec: number | null;
-  readonly paDeg: number | null;
-  readonly sepPaEpochJd: number | null;
+  /** The primary row's. */
+  readonly elements: BinaryElements;
 }
 
 /** The snapshot `build-runtime-binaries-expected.json` pins. */
@@ -55,9 +45,7 @@ export interface RuntimeBinariesCounts {
 
 /** The cells of a multiples.tsv row a pair is built from. */
 export type PairRow = Pick<MultiplesRecord,
-  | 'systemId' | 'comp' | 'orbitRole' | 'gaiaSourceId' | 'hip'
-  | 'pDays' | 'tJd' | 'e' | 'aAU' | 'iRad' | 'omegaRad' | 'OmegaRad' | 'q'
-  | 'sepArcsec' | 'paDeg' | 'sepPaEpochJd'>;
+  'systemId' | 'comp' | 'orbitRole' | 'gaiaSourceId' | 'hip' | BinaryElementKey>;
 
 /** Joins each system's primary and secondary rows; standalone rows are no
  *  pair's. A system with a role missing or doubled, or whose system_id names
@@ -92,24 +80,14 @@ export function pairsFromRows(rows: readonly PairRow[]): MultiplesPair[] {
       primaryHip: p.hip,
       secondaryGaia: s.gaiaSourceId,
       secondaryHip: s.hip,
-      pDays: p.pDays,
-      tJd: p.tJd,
-      e: p.e,
-      aAU: p.aAU,
-      iRad: p.iRad,
-      omegaRad: p.omegaRad,
-      OmegaRad: p.OmegaRad,
-      q: p.q,
-      sepArcsec: p.sepArcsec,
-      paDeg: p.paDeg,
-      sepPaEpochJd: p.sepPaEpochJd,
+      elements: pickBinaryElements(p),
     });
   }
   return pairs;
 }
 
 function parentRank(pair: MultiplesPair): readonly [number, number] {
-  return [hasRenderableOrbit(pair) ? 0 : 1, pair.sepArcsec ?? Infinity];
+  return [hasRenderableOrbit(pair.elements) ? 0 : 1, pair.elements.sepArcsec ?? Infinity];
 }
 
 function ranksBefore(a: readonly [number, number], b: readonly [number, number]): boolean {
@@ -257,7 +235,7 @@ export function planRecords(
     if (resolvedPrimary[i] === resolvedSecondary[i]) continue;
     const incumbent = relationWinner.get(relationKey(i));
     if (incumbent === undefined
-      || (hasRenderableOrbit(pairs[i]) && !hasRenderableOrbit(pairs[incumbent]))) {
+      || (hasRenderableOrbit(pairs[i].elements) && !hasRenderableOrbit(pairs[incumbent].elements))) {
       relationWinner.set(relationKey(i), i);
     }
   }
@@ -278,20 +256,15 @@ export function planRecords(
       continue;
     }
     const p = pairs[i];
-    const hasOrbit = hasRenderableOrbit(p);
-    const hasInclination = hasOrbit && p.iRad !== null;
+    const hasOrbit = hasRenderableOrbit(p.elements);
+    const hasInclination = hasOrbit && p.elements.iRad !== null;
     const parentRelation = inputToOutput.get(parents[i]) ?? NO_PARENT;
     let flags = 0;
     if (hasOrbit) { flags |= FLAG_HAS_ORBIT; counts.pairs_with_orbit++; }
     if (hasInclination) { flags |= FLAG_HAS_INCLINATION; counts.pairs_with_inclination++; }
     if (parentRelation !== NO_PARENT) { flags |= FLAG_IS_INNER_OF_HIERARCHY; counts.pairs_inner_of_hierarchy++; }
     inputToOutput.set(i, records.length);
-    records.push({
-      primaryIdx, secondaryIdx, flags, parentRelation,
-      pDays: p.pDays, tJd: p.tJd, e: p.e, aAU: p.aAU, iRad: p.iRad,
-      omegaRad: p.omegaRad, OmegaRad: p.OmegaRad, q: p.q,
-      sepArcsec: p.sepArcsec, paDeg: p.paDeg, sepPaEpochJd: p.sepPaEpochJd,
-    });
+    records.push({ primaryIdx, secondaryIdx, flags, parentRelation, ...p.elements });
   }
   counts.pairs_emitted = records.length;
   return { records, counts };

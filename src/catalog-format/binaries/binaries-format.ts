@@ -34,14 +34,7 @@ export const FLAG_IS_INNER_OF_HIERARCHY = 0x4;
 export const NO_PARENT = -1;
 
 /** The six elements `FLAG_HAS_ORBIT` requires, null where absent. */
-export interface OrbitElementCells {
-  readonly pDays: number | null;
-  readonly tJd: number | null;
-  readonly e: number | null;
-  readonly aAU: number | null;
-  readonly omegaRad: number | null;
-  readonly q: number | null;
-}
+export type OrbitElementCells = Pick<BinaryElements, 'pDays' | 'tJd' | 'e' | 'aAU' | 'omegaRad' | 'q'>;
 
 export type RenderableOrbit<T extends OrbitElementCells> = T & {
   readonly pDays: number; readonly tJd: number; readonly e: number;
@@ -54,24 +47,26 @@ export function hasRenderableOrbit<T extends OrbitElementCells>(row: T): row is 
     && row.aAU !== null && row.omegaRad !== null && row.q !== null;
 }
 
-/** One record as written; an absent element is null (NaN on the wire).
- *  `sepPaEpochJd` is an absolute JD. */
-export interface BinaryRecord {
+/** A pair's orbital elements and WDS geometry, as each record carries them. */
+export const BINARY_ELEMENT_KEYS = [
+  'pDays', 'tJd', 'e', 'aAU', 'iRad', 'omegaRad', 'OmegaRad', 'q', 'sepArcsec', 'paDeg', 'sepPaEpochJd',
+] as const;
+
+export type BinaryElementKey = (typeof BINARY_ELEMENT_KEYS)[number];
+
+/** Absent is null (NaN on the wire); `sepPaEpochJd` is an absolute JD. */
+export type BinaryElements = { readonly [K in BinaryElementKey]: number | null };
+
+export function pickBinaryElements(row: BinaryElements): BinaryElements {
+  return Object.fromEntries(BINARY_ELEMENT_KEYS.map((k) => [k, row[k]])) as BinaryElements;
+}
+
+/** One record as written. */
+export interface BinaryRecord extends BinaryElements {
   readonly primaryIdx: number;
   readonly secondaryIdx: number;
   readonly flags: number;
   readonly parentRelation: number;
-  readonly pDays: number | null;
-  readonly tJd: number | null;
-  readonly e: number | null;
-  readonly aAU: number | null;
-  readonly iRad: number | null;
-  readonly omegaRad: number | null;
-  readonly OmegaRad: number | null;
-  readonly q: number | null;
-  readonly sepArcsec: number | null;
-  readonly paDeg: number | null;
-  readonly sepPaEpochJd: number | null;
 }
 
 export function encodeBinaries(records: readonly BinaryRecord[]): Uint8Array {

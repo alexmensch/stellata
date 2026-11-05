@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
 import {
-  FLAG_HAS_INCLINATION, FLAG_HAS_ORBIT, FLAG_IS_INNER_OF_HIERARCHY, NO_PARENT, type BinaryRecord,
+  BINARY_ELEMENT_KEYS, FLAG_HAS_INCLINATION, FLAG_HAS_ORBIT, FLAG_IS_INNER_OF_HIERARCHY, NO_PARENT,
+  type BinaryElements, type BinaryRecord,
 } from '../../src/catalog-format/binaries/binaries-format';
 import type { CatalogRowIndexMap } from '../catalog/companions/record-index/catalog-row-index-map-pure';
 import { multiplesRow } from '../catalog/companions/multiples-fixture';
@@ -19,18 +20,20 @@ import {
 
 const ORBIT = { pDays: 365.25, tJd: 2451545, e: 0.5, aAU: 10, omegaRad: 1, q: 0.5 };
 
-function pair(systemId = '00000+0000-AB', over: Partial<MultiplesPair> = {}): MultiplesPair {
+type PairOver = Partial<Omit<MultiplesPair, 'elements'> & BinaryElements>;
+
+function pair(systemId = '00000+0000-AB', over: PairOver = {}): MultiplesPair {
   const components = systemId.slice(systemId.lastIndexOf('-') + 1);
   const [primaryComp, secondaryCell] = components.includes(',')
     ? components.split(',')
     : [components[0], components[1] ?? ''];
+  const isElement = (k: string): boolean => (BINARY_ELEMENT_KEYS as readonly string[]).includes(k);
   return {
     systemId, wdsId: wdsRootOf(systemId) as string,
     primaryComp, secondaryComp: canonicalCompLetter(primaryComp, secondaryCell),
     primaryGaia: '1', primaryHip: null, secondaryGaia: '2', secondaryHip: null,
-    pDays: null, tJd: null, e: null, aAU: null, iRad: null, omegaRad: null, OmegaRad: null, q: null,
-    sepArcsec: null, paDeg: null, sepPaEpochJd: null,
-    ...over,
+    ...Object.fromEntries(Object.entries(over).filter(([k]) => !isElement(k))),
+    elements: Object.fromEntries(BINARY_ELEMENT_KEYS.map((k) => [k, over[k] ?? null])) as BinaryElements,
   };
 }
 
@@ -57,7 +60,7 @@ describe('pairsFromRows', () => {
     ]);
     expect(p).toMatchObject({
       primaryComp: 'Aa1', secondaryComp: 'Aa2',
-      primaryHip: 14576, secondaryGaia: '9', pDays: 2.87,
+      primaryHip: 14576, secondaryGaia: '9', elements: { pDays: 2.87 },
     });
   });
 
