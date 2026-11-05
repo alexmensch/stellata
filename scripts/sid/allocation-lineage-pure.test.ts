@@ -7,9 +7,9 @@ import {
 import { stageLineageLine } from '../catalog/lineage/lineage-row-pure';
 
 const objects: SidObject[] = [
-  { designations: ['hip:1'], kind: 'star', label: 'a', admission: { kind: 'lineage', origin: 'spine:1' } },
-  { designations: ['cloud:x'], kind: 'cloud', label: 'x', admission: { kind: 'declared', code: 'allocation.mint.cloud', origin: null } },
-  { designations: ['sol:pluto'], kind: 'planet', label: 'p', admission: { kind: 'declared', code: 'allocation.mint.sol-list', origin: 'sol-objects:pluto' } },
+  { designations: ['hip:1'], kind: 'star', label: 'a', origin: 'spine:1', admission: { kind: 'lineage' } },
+  { designations: ['cloud:x'], kind: 'cloud', label: 'x', origin: 'clouds:x', admission: { kind: 'declared', code: 'allocation.mint.cloud' } },
+  { designations: ['sol:pluto'], kind: 'planet', label: 'p', origin: 'sol-objects:pluto', admission: { kind: 'declared', code: 'allocation.mint.sol-list' } },
 ];
 
 const allocation = allocate({
@@ -33,20 +33,23 @@ const allocation = allocate({
 if (allocation.kind !== 'allocated') throw new Error(allocation.errors.join('\n'));
 
 describe('allocation lineage', () => {
-  it('writes a row per keyed object and per settled SID, each a declared code', () => {
+  it('writes a row per object and per settled SID, each a declared code', () => {
     const rows = allocationLineageRows(objects, allocation);
     expect(rows.map((r) => [r.key, r.code, r.params])).toEqual([
       ['spine:1', 'allocation.resolved', ''],
+      ['clouds:x', 'allocation.minted', '{"canonical_key":"cloud:x","route":"allocation.mint.cloud"}'],
       ['sol-objects:pluto', 'allocation.minted', '{"canonical_key":"sol:pluto","route":"allocation.mint.sol-list"}'],
       ['spine:7', 'allocation.parked', '{"sid":"2","canonical_key":"gaia_dr3:2","cause":"placement.park.no-position"}'],
     ]);
     for (const r of rows) stageLineageLine(ALLOCATION_CODES, r);
   });
 
-  it('round-trips its identity file, key to SID, skipping objects with no origin', () => {
+  it('round-trips its identity file, key to SID', () => {
     const rows = allocationIdentityRows(objects, allocation.outcomes);
     const text = allocationIdentityText(rows);
-    expect(text).toBe('key\tsid\nsol-objects:pluto\t4\nspine:1\t1\n');
-    expect([...allocationIdentity(text, 'fixture')]).toEqual([{ key: 'sol-objects:pluto', sid: 4 }, { key: 'spine:1', sid: 1 }]);
+    expect(text).toBe('key\tsid\nclouds:x\t3\nsol-objects:pluto\t4\nspine:1\t1\n');
+    expect([...allocationIdentity(text, 'fixture')]).toEqual([
+      { key: 'clouds:x', sid: 3 }, { key: 'sol-objects:pluto', sid: 4 }, { key: 'spine:1', sid: 1 },
+    ]);
   });
 });

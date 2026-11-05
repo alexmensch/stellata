@@ -59,9 +59,9 @@ export function allocateSibling<N extends SiblingPartition>(
     minted: allocation.minted.length,
     registry: appended ? registryTexts(spec.ns, allocation.minted, allocation.events) : null,
     lines: objectOutcomeRows(spec.codes, objects, allocation.outcomes).map((row) => stageLineageLine(spec.codes, row)),
-    identity: objects.flatMap(({ admission, designations }) => (admission.origin === null ? [] : [{
-      key: admission.origin, tyc: '', hip: '', hd: '', gl: '', gaia_source_id: '', designations,
-    }])),
+    identity: objects.map(({ origin, designations }) => ({
+      key: origin, tyc: '', hip: '', hd: '', gl: '', gaia_source_id: '', designations,
+    })),
   };
 }
 

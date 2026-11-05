@@ -243,7 +243,7 @@ under those origins whose code removes or re-binds.
 
 Its rows follow the lineage row contract
 ([Row contract](/scripts/catalog/lineage/README.md#row-contract)): one per
-object with an origin key, under that key, and one per SID that left the
+object, under its origin key, and one per SID that left the
 build under its deciding origin.
 
 Allocation is the sole writer of each partition's events file, apart from the

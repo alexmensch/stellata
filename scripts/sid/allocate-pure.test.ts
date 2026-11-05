@@ -20,7 +20,7 @@ const row = (sid: number, canonicalKey: string, kind: LedgerRow['kind'] = 'star'
   { sid, canonicalKey, kind, firstSeen: '2026-07-01' }
 );
 const star = (origin: string, ...designations: string[]): SidObject => (
-  { designations, kind: 'star', label: origin, admission: { kind: 'lineage', origin } }
+  { designations, kind: 'star', label: origin, origin, admission: { kind: 'lineage' } }
 );
 const decision = (origin: string, code: string, effect: Decision['effect'], into: string | null = null): Decision => (
   { stage: code.split('.')[0], origin, code, effect, into }
@@ -57,10 +57,10 @@ describe('allocate: resolution and minting', () => {
     star('spine:2', 'hip:32349', 'hd:48915', 'gaia_dr3:9'),
     star('magnitude:5', 'gaia_dr3:594599568167552'),
     star('multiples:04357+1010/Aa,Ab', 'synth:04357+1010-Aa,Ab'),
-    { designations: ['cloud:orion-a'], kind: 'cloud', label: 'cloud orion-a', admission: { kind: 'declared', code: 'allocation.mint.cloud', origin: null } },
-    { designations: ['sol:pluto'], kind: 'planet', label: 'sol pluto', admission: { kind: 'declared', code: 'allocation.mint.sol-list', origin: 'sol-objects:pluto' } },
+    { designations: ['cloud:orion-a'], kind: 'cloud', label: 'cloud orion-a', origin: 'clouds:orion-a', admission: { kind: 'declared', code: 'allocation.mint.cloud' } },
+    { designations: ['sol:pluto'], kind: 'planet', label: 'sol pluto', origin: 'sol-objects:pluto', admission: { kind: 'declared', code: 'allocation.mint.sol-list' } },
   ];
-  const admissions = Object.fromEntries(objects.flatMap((o) => (o.admission.kind === 'lineage' ? [[o.admission.origin, ADMIT]] : [])));
+  const admissions = Object.fromEntries(objects.flatMap((o) => (o.admission.kind === 'lineage' ? [[o.origin, ADMIT]] : [])));
 
   it('mints in object order with ladder canonical keys, each event coded by the admitting decision', () => {
     const a = allocated(run({ objects, scope: ALL }, upstream({}, admissions)));
@@ -78,7 +78,7 @@ describe('allocate: resolution and minting', () => {
       [2, 'mint', ADMIT, '{"key":"spine:2"}', version],
       [3, 'mint', ADMIT, '{"key":"magnitude:5"}', version],
       [4, 'mint', ADMIT, '{"key":"multiples:04357+1010/Aa,Ab"}', version],
-      [5, 'mint', 'allocation.mint.cloud', '', version],
+      [5, 'mint', 'allocation.mint.cloud', '{"key":"clouds:orion-a"}', version],
       [6, 'mint', 'allocation.mint.sol-list', '{"key":"sol-objects:pluto"}', version],
     ]);
   });
@@ -141,7 +141,7 @@ describe('allocate: resolution and minting', () => {
 
   it('errors on a kind conflict with the frozen ledger row', () => {
     const a = run({
-      objects: [{ designations: ['cloud:orion-a'], kind: 'galaxy', label: 'lg orion-a', admission: { kind: 'declared', code: 'allocation.mint.local-group', origin: null } }],
+      objects: [{ designations: ['cloud:orion-a'], kind: 'galaxy', label: 'lg orion-a', origin: 'local-group:orion-a', admission: { kind: 'declared', code: 'allocation.mint.local-group' } }],
       ledger: [row(1, 'cloud:orion-a', 'cloud')],
       scope: ALL,
     });

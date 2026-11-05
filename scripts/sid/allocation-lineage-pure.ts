@@ -90,18 +90,17 @@ const lineageRow = <B extends Branch>(
   params: paramsText(params as LineageParams), evidence: [],
 });
 
-/** One row per object with an origin key, under it. An object's SID rides the stage's key -> SID or identity file, not its row; `via` appears only when the object reached its ledger key through a designation it does not carry itself. */
+/** One row per object, under its origin. An object's SID rides the stage's key -> SID or identity file, not its row; `via` appears only when the object reached its ledger key through a designation it does not carry itself. */
 export function objectOutcomeRows(
   codes: ObjectOutcomeCodes, objects: readonly SidObject[], outcomes: readonly ObjectOutcome[],
 ): LineageRow[] {
-  return objects.flatMap((obj, i): LineageRow[] => {
-    const key = obj.admission.origin;
-    if (key === null) return [];
+  return objects.map((obj, i): LineageRow => {
+    const key = obj.origin;
     const o = outcomes[i];
     switch (o.kind) {
-      case 'resolved': return [lineageRow(codes, key, 'resolved', obj.designations.includes(o.via) ? {} : { via: o.via })];
-      case 'minted': return [lineageRow(codes, key, 'minted', { canonical_key: o.canonicalKey, route: o.code })];
-      case 'reinstated': return [lineageRow(codes, key, 'reinstated', { route: o.code })];
+      case 'resolved': return lineageRow(codes, key, 'resolved', obj.designations.includes(o.via) ? {} : { via: o.via });
+      case 'minted': return lineageRow(codes, key, 'minted', { canonical_key: o.canonicalKey, route: o.code });
+      case 'reinstated': return lineageRow(codes, key, 'reinstated', { route: o.code });
       default: {
         const unmapped: never = o;
         throw new Error(`allocation outcome with no row mapping: ${JSON.stringify(unmapped)}`);
@@ -134,7 +133,7 @@ export interface AllocationIdentityRow {
 export function allocationIdentityRows(
   objects: readonly SidObject[], outcomes: readonly ObjectOutcome[],
 ): AllocationIdentityRow[] {
-  return objects.flatMap((obj, i) => (obj.admission.origin === null ? [] : [{ key: obj.admission.origin, sid: outcomes[i].sid }]));
+  return objects.map((obj, i) => ({ key: obj.origin, sid: outcomes[i].sid }));
 }
 
 export function allocationIdentityText(rows: readonly AllocationIdentityRow[]): string {

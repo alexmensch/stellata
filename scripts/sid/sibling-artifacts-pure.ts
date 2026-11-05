@@ -76,7 +76,8 @@ export function siblingArtifactObjects(
     designations: [`${spec.ns}:${o.id}`],
     kind: spec.kind,
     label: `${spec.ns} ${o.name ?? o.id}`,
-    admission: { kind: 'declared', code: spec.mintCode, origin: sourceRowRefText(sourceRowRef(artifact, o)) },
+    origin: sourceRowRefText(sourceRowRef(artifact, o)),
+    admission: { kind: 'declared', code: spec.mintCode },
   }));
 }
 
