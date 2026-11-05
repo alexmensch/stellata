@@ -12,7 +12,7 @@ import { entryClosure, packageScripts } from '../../util/import-closure';
 import { lfsContentReadable, publicFile, PUBLIC_DIR, REPO_ROOT } from '../../util/paths';
 import { PUBLIC_FILES } from '../../../src/catalog-format/public-artifacts/public-artifacts';
 import { describeStep } from '../freshness';
-import type { Loaded } from './load-table';
+import type { LoadedTable } from './load-table';
 import { MANUAL_STEPS } from './manual-step-outputs';
 import { pipelineTree } from '../pipeline-tree';
 import { loadedRepoTable } from './repo-table';
@@ -22,7 +22,7 @@ import { MIRROR_STEPS, STEPS } from './steps';
 const CNS5 = CNS5_SOURCE.file;
 const MANIFEST = resolve(REPO_ROOT, MEMBERSHIP_MANIFEST.file);
 
-let loaded: Extract<Loaded, { kind: 'loaded' }>;
+let loaded: LoadedTable;
 
 beforeAll(async () => {
   loaded = await loadedRepoTable();

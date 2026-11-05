@@ -131,19 +131,21 @@ lists them, and the harness copies those gitignored files in at creation. The
 stamps make the copy safe — when the worktree's inputs match what the main
 checkout last built from, the dev server starts without rebuilding; when they
 differ (main checkout built from an older commit, a pipeline change on the
-branch), the stamp mismatches and the step rebuilds. Only stamped outputs
-belong in that list, since a stamp is what tells a copy apart from the
-worktree's own build. The one other kind allowed is a diff baseline
-that no step reads to decide whether to rebuild and that records what it was
-built from — `build/lineage/`, whose header the lineage diff checks against
-the merge-base ([The header and the refusal](catalog/lineage/baseline/README.md#the-header-and-the-refusal)).
+branch), the stamp mismatches and the step rebuilds. Every listed file is
+one a stamp records, since a stamp is what tells a copy apart from the
+worktree's own build. `build/lineage/` is among them, and seeding it from an
+older commit is safe for a second reason: its header records what it was
+built from, and the lineage diff checks that against the merge-base
+([The header and the refusal](catalog/lineage/baseline/README.md#the-header-and-the-refusal)).
 Every listed file is an output of a step `build:seed` runs
 ([Seeding builds](#seeding-builds--buildseed)), so refreshing the main
-checkout's seed is that one command. `worktree-seed.test.ts` holds each
-pattern to a declared output or stamp of one of those steps, read from the
-step table, and the converse: every such file, stamped output family or stamp under `public/`
-or `build/` is listed, so nothing a stamp records can be missing from a fresh
-worktree. The lineage baseline copies and diff are declared unstamped
+checkout's seed is that one command. The list itself is gitignored and
+`build:seed` writes it first, from the step table (`pnpm run
+worktree:include`, [Derived checks](pipeline/README.md#derived-checks)):
+every file, stamped output family and stamp of those steps under `public/` or
+`build/`, and nothing else, so nothing a stamp records can be missing from a
+fresh worktree. A checkout that has never run `build:seed` has no list, and
+its worktrees build from scratch. The lineage baseline copies and diff are declared unstamped
 (`stamped: false`) and never seeded, since a worktree pins its own baseline; a
 stamp never records them, so their absence leaves the step fresh. A worktree
 made any other way
@@ -173,7 +175,7 @@ built, so the next build there sees them rewritten and rebuilds.
 
 ## Seeding builds — `build:seed`
 
-`pnpm run build:seed` (`build-seed.sh`) runs `build:data` — every build step
+`pnpm run build:seed` (`build-seed.sh`) writes `.worktreeinclude`, then runs `build:data` — every build step
 on the table, exactly the steps whose outputs seed a new worktree
 ([Building in a worktree](#building-in-a-worktree)) — with one build per
 checkout. `build:membership` is among them, which keeps the main checkout holding the

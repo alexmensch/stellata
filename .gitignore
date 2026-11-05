@@ -81,3 +81,5 @@ scripts/**/__pycache__/
 .dolt/
 *.db
 .beads-credential-key
+
+.worktreeinclude

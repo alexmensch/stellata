@@ -2,7 +2,7 @@
 
 import { REPO_ROOT } from '../../util/paths';
 import { entryInputPaths } from '../../util/step-inputs';
-import { loadTable, type Loaded } from './load-table';
+import { loadTable, type Loaded, type LoadedTable } from './load-table';
 import { STEPS } from './steps';
 
 export const deriveRepoInputs = (entry: string): Promise<readonly string[]> => entryInputPaths([entry]);
@@ -12,7 +12,7 @@ export function loadRepoTable(): Promise<Loaded> {
 }
 
 /** For a suite: a rejected table fails the suite rather than skipping it. */
-export async function loadedRepoTable(): Promise<Extract<Loaded, { kind: 'loaded' }>> {
+export async function loadedRepoTable(): Promise<LoadedTable> {
   const loaded = await loadRepoTable();
   if (loaded.kind !== 'loaded') throw new Error(loaded.problems.join('\n'));
   return loaded;
