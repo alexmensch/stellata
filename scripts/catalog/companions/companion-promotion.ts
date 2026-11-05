@@ -6,7 +6,7 @@ import {
   FLAG_BINARY_COMPANION_ONLY,
   FLAG_BINARY_COMPANION_SYNTHETIC,
 } from '../../../src/catalog-format/record/catalog-pure';
-import { OPTICAL_DOUBLE_MIN_SEP_PC } from '../record/record-build-pure';
+import { OPTICAL_DOUBLE_MIN_SEP_PC } from '../multiplicity/binary-flags-pure';
 import { absoluteMagnitude, apparentMagnitude } from '../../../src/astro-core/perceptual-magnitude';
 import {
   SPECTRAL_UNKNOWN,
@@ -40,7 +40,7 @@ import { equatorialTangentBasisAt } from '../../../src/astro-core/equatorial-bas
 import type { ConstellationAssignment } from '../parse/constellations/constellations';
 import type { Star } from '../parse/stars-parse';
 import { inheritedDesignationCon, NO_DESIGNATION_CON } from '../classic-ids/designation-constellation-pure';
-import type { GaiaAstrometryCatalogRow } from '../distance/direction-cascade';
+import type { GaiaAstrometryCatalogRow } from '../sources/gaia-astrometry-source';
 import { isCoherenceAnchorGrade } from '../multiplicity/anchor-grade-pure';
 import {
   parseStage6Offset, rebasedAnchorOffset, tangentOffset, type Stage6Offset,

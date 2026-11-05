@@ -3,7 +3,7 @@
 // variable-star samples, space-motion velocity coverage.
 
 import { HEADER_SIZE, RECORD_SIZE } from '../../../src/catalog-format/record/catalog-pure';
-import { KM_S_TO_PC_YR, VELOCITY_SANITY_CEILING_KM_S } from '../distance/direction-cascade';
+import { KM_S_TO_PC_YR, VELOCITY_SANITY_CEILING_KM_S } from '../distance/velocity';
 import {
   type CatalogRecord,
   distancePc,

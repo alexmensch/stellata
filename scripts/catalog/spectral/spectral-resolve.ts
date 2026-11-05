@@ -10,7 +10,7 @@ import {
   type SimbadNamespace,
   type SimbadNamespaceIndex,
   type SimbadRecordKeys,
-} from '../record/record-build-pure';
+} from '../simbad/simbad-namespace-ladder-pure';
 import type { Declared } from '../../util/sources/source';
 import { readTable } from '../../util/tsv/table-pure';
 import {
@@ -19,6 +19,10 @@ import {
   type SpectralInfo,
 } from '../../../src/catalog-format/spectral/spectral-classify';
 import type { CascadeRefusal, CascadeResult } from '../cascade-result';
+
+/** SIMBAD's object-type code for a confirmed double/multiple star — the
+ *  otype value that marks a record `unresolved` when nothing resolves. */
+export const SIMBAD_OTYPE_MULTIPLE = '**';
 
 /** Per-source SIMBAD spectral-classification row from
  *  `data/simbad/simbad_sptype.tsv`. `spType` is the canonical

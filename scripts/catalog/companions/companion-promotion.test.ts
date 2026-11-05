@@ -39,7 +39,7 @@ import { makeStar as makeStarWithDefaults } from '../parse/star-fixture';
 import { NO_DESIGNATION_CON } from '../classic-ids/designation-constellation-pure';
 import { multiplesRow } from './multiples-fixture';
 import { MULTIPLES_COLUMNS } from '../../binaries/multiples-tsv';
-import { gaiaAstrometryRow } from '../distance/astrometry-fixture';
+import { gaiaAstrometryRow } from '../sources/gaia-astrometry-fixture';
 import { AU_PER_PC } from '../../../src/astro-core/astronomy-constants';
 
 // The real IAU decomposition, not a stub: the fixtures below carry real

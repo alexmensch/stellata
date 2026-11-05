@@ -108,7 +108,7 @@ entry point folds rows through the same function — `readTable` feeding it
 where the accumulator's `line` is a `tableLineReader` — so the two paths
 cannot diverge on what a row means:
 `bestNeighbourAccumulator` (`gaia-xmatch.ts`),
-`gaiaAstrometryAccumulator` (`../distance/direction-cascade.ts`),
+`gaiaAstrometryAccumulator` (`../sources/gaia-astrometry-source.ts`),
 `magnitudeTermAccumulator` (`../membership/magnitude-term/`) and
 `MEMBERSHIP_MANIFEST.lineReader` (`../membership/membership-manifest-tsv.ts`) are the
 four, each paired with its whole-text sibling.
@@ -165,7 +165,7 @@ never a membership decision — so the walk throws, naming the row.
    the coordinate tier has nothing to serve it either. Every other row of that
    shape reaches SIMBAD coordinates ([The values pull](/data/simbad/README.md#the-values-pull)).
 3. **Proper-motion rescue** (`resolvePmRescue`), where the direction tier
-   states a position but no motion. See [Space-motion velocity](#space-motion-velocity).
+   states a position but no motion. See [Space-motion velocity](../distance/README.md#space-motion-velocity).
 4. **Distance overrides**, in order, each superseding the last on the rows it
    claims. `dist = 1000/plx` from step 0, then
    **[Bailer-Jones 2021](/data/papers/index.md#bailerjones2021) (DR3)**
@@ -182,7 +182,7 @@ never a membership decision — so the walk throws, naming the row.
    the whole override stack settled; **position** — `directionOnPm` advances
    the step-2 solution to the scene epoch on the motion the row ends up
    carrying, and `xyz = direction × distance` in float64; then **velocity**
-   assembly ([Space-motion velocity](#space-motion-velocity)).
+   assembly ([Space-motion velocity](../distance/README.md#space-motion-velocity)).
 7. **Spectral classification** (`resolveSpectralInfo`; Sol special-cased
    to curated G2V in `stars-parse.ts` — no HIP/Gaia/SIMBAD key reaches
    it). See `../spectral/README.md`.
@@ -228,99 +228,9 @@ high-PM stars ([Driver astrometry](/docs/science-catalog-ingestion.md#driver-ast
 
 ## Space-motion velocity
 
-Each record carries a space-motion velocity (`vx/vy/vz`, pc/yr, equatorial
-Cartesian) alongside its J2016.0 position. Positions stay at the fixed
-scene epoch on disk; the runtime epoch-advance pass
-(`src/client/loaders/epoch-advance-pure.ts`) reads these once at load to
-propagate every position to `getT()`. Full design:
-[Current-epoch star positions](/docs/science-catalog-ingestion.md#current-epoch-star-positions--space-motion-propagation-to-t).
-
-`velocityPcPerYr` (`direction-cascade.ts`) assembles
-`v = v_r·û + d·MAS_TO_RAD·(μ_α*·ê + μ_δ·n̂)` from the tier solution
-`resolveDirection` selected (`DirectionSolution.src*` fields), so position
-and velocity come from one astrometric solution wherever that solution states
-both. Where it states only a position, the PM comes from a designation-keyed
-tier instead — and carries that position to the scene epoch as well as the
-velocity, so the two still read one motion. The pairing rests on both
-quantities describing the same object:
-[Why an owned PM on a blended row is admissible at all](../distance/pm-rescue/README.md#why-an-owned-pm-on-a-blended-row-is-admissible-at-all).
-The
-east/north tangent basis is `equatorialTangentBasis`
-(`src/astro-core/equatorial-basis.ts`), shared with `directionAtEpoch`,
-`companion-promotion.ts`'s sep+PA projection, and the runtime's Tier-1
-sky→ICRS orbit projection. μ_α* is cos δ-applied — never divide by cos δ.
-
-Velocity source per row (pinned in build-counts as `velocity*`):
-
-| PM source | Rows routed |
-| --- | --- |
-| Gaia DR3 5p PM | gaia_5p / gaia_nss_systemic tiers |
-| HIP2 PM | hip2_saturated / hip2_pm_discrepant tiers |
-| Tycho-2 PM | tycho2 tier, plus the rescue cascade's 5 |
-| CNS5 PM | cns5 tier, plus 5 |
-| SIMBAD bibcoded PM | simbad tier, plus 14 |
-
-**A tier with no PM of its own does not end the search.** The 39 rows whose
-direction tier carries none — Gaia 2p solutions, Tycho-2 rows with no mean
-solution — re-key on the record's own designations through
-`../distance/pm-rescue/`. `velocityZero` is what survives that: Sol, 6 clamped
-artifact rows, and the 15 the rescue leaves. The rescued motion then advances
-the tier's position too (`directionOnPm`), so the 3 Tycho-2 rows stating an
-observed J1991.25 position stop tracking their rate from a 24.75-yr-stale place;
-the 36 Gaia rows are already at J2016.0 and do not move.
-
-`velocityAboveEscape` moved when the rv cascade took its SIMBAD tier — a
-published-but-wrong velocity is what these thresholds are for, and which rows
-moved is recorded in [The sanity thresholds](../distance/radial-velocity/README.md#the-sanity-thresholds-are-the-filter-on-a-bad-simbad-value).
-
-Radial velocity comes from its own cascade — Gaia DR3 `radial_velocity` on a
-row with a 5p solution, else a bibcoded SIMBAD `rvz_radvel`
-(`../distance/radial-velocity/README.md`) — and is zero where neither tier
-carries one. The 5p condition is the same one the PM rescue turns on: a 2p
-row's RVS spectrum is as blended as its astrometry, and both cascades read it
-off `../distance/gaia-distrust.ts`. **Sol** carries
-no PM row and sits at the origin, so its velocity is forced to exactly zero
-(the advance pass must leave the world origin fixed).
-
-**Sanity ceiling + escape-velocity ratchet.** `v = d·μ` inflates a noisy
-sub-arcsec/yr PM on a faint distant star into thousands of km/s, and a bad
-`rv` cell shows up as a nonphysical radial term. Three tracked thresholds
-guard this:
-
-- A radial term that alone exceeds `VELOCITY_SANITY_CEILING_KM_S` is dropped
-  **before** assembly (`radialTermExceedsCeiling`), leaving the row's measured
-  PM intact — the clamp below would otherwise take a real proper motion down
-  with a bad velocity. Counted `rvRadialRejected` and logged per star;
-  [The sanity thresholds](../distance/radial-velocity/README.md#the-sanity-thresholds-are-the-filter-on-a-bad-simbad-value) carries the
-  case that fixed the rule.
-- `VELOCITY_SANITY_CEILING_KM_S` (1500, ~3× escape): a hard clamp — the
-  velocity is zeroed (kept at J2016.0, same as no-PM rows) so the star
-  doesn't streak under the advance. Counted `velocityClamped` (a subset of
-  `velocityZero`); each clamped star is logged at build time.
-- `GALACTIC_ESCAPE_VELOCITY_KM_S` (550): a **ratchet, not a clamp**. Unbound
-  stars are genuinely exceptional (a handful of proven hypervelocity stars
-  Galaxy-wide), so a large above-escape population is almost all artifact —
-  but these rows are KEPT (a proven escaper must survive) and counted
-  `velocityAboveEscape`, pinned in build-counts so the artifact tail stays
-  visible. A drift forces review; a proven genuine escaper gets whitelisted
-  rather than silently dropped. Finer per-row PM-S/N + RV-sanity filtering
-  is future work (`stellata`-tracked).
-
-**Pair coherence.** A bound pair's components share one systemic velocity;
-otherwise the epoch-advance shears a *static* (Tier-3) pair apart. The
-load-bearing guarantee here: a promoted companion inherits its anchor
-primary's velocity at mint time (`companion-promotion.ts`), so the ~9k
-synthetic/inherited-id companions with no own PM ride the primary instead of
-freezing at `v=0`. A systemic-velocity post-pass additionally blends the
-renderable-orbit pairs the build resolves (lone pair →
-`v_sys = (1−q)·v_p + q·v_s`; hierarchy → root-anchor velocity). Tier-1/2
-offsets are elements-owned (`BinaryOrbitField` repositions the secondary
-from the primary each frame), so their baked velocities never affect the
-render. **Full** systemic coherence for `binaries.bin`'s authoritative
-pairing — which re-homes some inner pairs and owns the Tier-3 static pairs
-this build doesn't group — is `stellata-zau1` (deferred; the pairing is only
-known in the binaries pipeline, and the residual shear is sub-arcsec/decade
-over the v1 load-time advance).
+Each record's `vx/vy/vz` is assembled after its direction resolves, by
+`velocityPcPerYr` in `../distance/`:
+[Space-motion velocity](../distance/README.md#space-motion-velocity).
 
 After the per-row pass: GCVS cross-match (`bridgeGcvsByGaia`), CCDM
 visual-doubles flagging (`visual-doubles.ts`), and the 100-byte v9

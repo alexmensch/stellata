@@ -3,11 +3,11 @@
 import type { Declared } from '../../util/sources/source';
 import { readTable } from '../../util/tsv/table-pure';
 import {
-  applyDoublesFlag as applyDoublesFlagPure,
+  flagGroupPrimaries,
   isOpticalDoublePrimary,
   OPTICAL_DOUBLE_MIN_SEP_PC,
   type OpticalDoubleContext,
-} from '../record/record-build-pure';
+} from './binary-flags-pure';
 import type { MultiplesTsvRow } from '../companions/companion-promotion';
 import type { Star } from '../parse/stars-parse';
 
@@ -131,10 +131,9 @@ export function collectPhysicalPairKeys(
 }
 
 // Build the union of CCDM groups (parsed from Hipparcos) and the curated
-// KNOWN_VISUAL_DOUBLES overrides, then delegate to the pure
-// `applyDoublesFlag` helper. The pure helper handles the per-group
-// "brightest in-catalog component, idempotent with existing flags" logic
-// — see catalog-pure.ts for the contract.
+// KNOWN_VISUAL_DOUBLES overrides, then delegate to `flagGroupPrimaries`,
+// which handles the per-group "brightest in-catalog component, idempotent
+// with existing flags" logic.
 //
 // `physical` gates the optical-double suppression (isOpticalDoublePrimary):
 // CCDM keeps a tail of wide line-of-sight optical pairs whose brightest
@@ -160,5 +159,5 @@ export function applyDoublesFlag(
   };
   const suppress = (primaryIdx: number, memberIndices: number[]): boolean =>
     isOpticalDoublePrimary(primaryIdx, memberIndices, stars, ctx);
-  return applyDoublesFlagPure(stars, allGroups, hipToIndex, suppress);
+  return flagGroupPrimaries(stars, allGroups, hipToIndex, suppress);
 }

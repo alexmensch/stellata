@@ -37,6 +37,8 @@ export const MIN_PHYSICAL_RADIUS_R_SUN = 1e-9;
 // at 1 pc by definition) but written out here so the unit conversion reads as
 // the angular operation it is.
 export const ARCSEC_TO_RAD = Math.PI / (180.0 * 3600.0);
+// Written out rather than ARCSEC_TO_RAD / 1000, which rounds one ulp apart.
+export const MAS_TO_RAD = Math.PI / (180.0 * 3600.0 * 1000.0);
 
 // Julian Date of the J2000.0 epoch (2000 Jan 1.5 TT). Anchor for
 // JD-offset wire formats and the JD ↔ Julian-year converter in stage 6.
@@ -51,6 +53,7 @@ export const J2000_JD = 2451545.0;
 export const J2000_OBLIQUITY_RAD = (23.4392911 * Math.PI) / 180;
 
 export const DAYS_PER_JULIAN_YEAR = 365.25;
+export const SECONDS_PER_DAY = 86400;
 
 // Catalogue RA columns (AT-HYG's `ra`) and sexagesimal `hh:mm:ss` boundary
 // coordinates both arrive in hours; everything downstream of the parse works

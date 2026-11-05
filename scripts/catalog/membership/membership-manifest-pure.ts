@@ -6,7 +6,7 @@ import {
   SOL_APPARENT_V_MAGNITUDE,
   SOL_PROPER_NAME,
 } from '../../../src/catalog-format/record/catalog-pure';
-import { normaliseGjKey } from '../record/record-build-pure';
+import { normaliseGjKey } from '../simbad/simbad-namespace-ladder-pure';
 import type { Cns5Row } from '../classic-ids/classic-ids-parse';
 import {
   BRIGHT_TIER_MAG_CEILING,

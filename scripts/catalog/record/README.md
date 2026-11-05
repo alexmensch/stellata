@@ -9,13 +9,6 @@ This folder holds the build's own halves of it.
 scripts/catalog/record/
   gaia-apsis-source.ts (+ test)   GAIA_APSIS with its parse, declared
                                   (../../util/sources/).
-  record-build-pure.ts (+ test)   Record logic only the build runs: the
-                                  SIMBAD namespace ladder both SIMBAD pulls
-                                  index and join through
-                                  (/scripts/catalog/spectral/README.md#the-ladder-is-ordered-by-what-an-identifier-names),
-                                  GCVS parsing and variability
-                                  classification, and geometric binary and
-                                  CCDM optical-double inference. Pure.
   record-order-pure.ts            `apparentVFromSol` — the key the build sorts
                                   records on. Pure.
                                   /src/catalog-format/record/README.md#record-order.

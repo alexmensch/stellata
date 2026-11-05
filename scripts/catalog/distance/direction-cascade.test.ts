@@ -3,43 +3,30 @@ import {
   CATALOG_SCENE_EPOCH,
   DIRECTION_VIA_VALUES,
   GAIA_DR3_REF_EPOCH,
-  GAIA_IPD_FRAC_MULTI_PEAK_THRESHOLD,
-  GAIA_RUWE_UNRELIABLE_THRESHOLD,
   HIP2_PM_DELTA_THRESHOLD_MASYR,
   HIP2_REF_EPOCH,
-  KM_S_TO_PC_YR,
   SIMBAD_REF_EPOCH,
   directionAtEpoch,
   directionOnPm,
-  gaia5pUnreliable,
   hip2PmDisagrees,
-  gaiaAstrometryAccumulator,
-  parseGaiaAstrometryCatalogTsv,
-  parseHip2Tsv,
-  parseNssIndex,
   resolveDirection,
-  velocityPcPerYr,
   type DirectionInputs,
   type DirectionSolution,
   type DirectionVia,
   type DirectionSources,
-  type GaiaAstrometryCatalogRow,
-  type Hip2AstrometryRow,
 } from './direction-cascade';
 import {
   TYCHO2_ICRS_EPOCH, TYCHO2_MEAN_EPOCH, type Tycho2Row,
 } from '../tycho2-parse';
-import { gaiaAstrometryRow } from './astrometry-fixture';
-import { GAIA_ASTROMETRY } from './gaia-astrometry-source';
-import { GAIA_NSS } from './gaia-nss-source';
-import { HIP2 } from './hip2-source';
+import { gaiaAstrometryRow } from '../sources/gaia-astrometry-fixture';
+import { type GaiaAstrometryCatalogRow } from '../sources/gaia-astrometry-source';
+import { GAIA_NSS } from '../sources/gaia-nss-source';
+import { HIP2, type Hip2AstrometryRow } from '../sources/hip2-source';
 import { TYCHO2 } from '../tycho2-source';
 import { SIMBAD_VALUES } from '../simbad/simbad-values-source';
-import { MAGNITUDE_PULL } from '../membership/magnitude-term/magnitude-pull-source';
 import { sourceRowRef, type SourceRowRef } from '../../util/sources/row-ref-pure';
 import { cns5Astrometry } from '../classic-ids/cns5-fixture';
 import {
-  equatorialTangentBasis,
   unitVectorFromRaDec,
   type UnitVector,
 } from '../../../src/astro-core/equatorial-basis';
@@ -122,28 +109,6 @@ function inputs(overrides: Partial<DirectionInputs> = {}): DirectionInputs {
     isSol: false, ...overrides,
   };
 }
-
-describe('direction-cascade / unitVectorFromRaDec', () => {
-  it('maps the equatorial basis axes', () => {
-    const a = unitVectorFromRaDec(0, 0);
-    expect(a.x).toBeCloseTo(1, 12);
-    expect(a.y).toBeCloseTo(0, 12);
-    expect(a.z).toBeCloseTo(0, 12);
-    const b = unitVectorFromRaDec(90, 0);
-    expect(b.x).toBeCloseTo(0, 12);
-    expect(b.y).toBeCloseTo(1, 12);
-    expect(b.z).toBeCloseTo(0, 12);
-    const c = unitVectorFromRaDec(0, 90);
-    expect(c.x).toBeCloseTo(0, 12);
-    expect(c.y).toBeCloseTo(0, 12);
-    expect(c.z).toBeCloseTo(1, 12);
-  });
-
-  it('south pole lands at -z (dec sign is not flipped)', () => {
-    const s = unitVectorFromRaDec(123, -90);
-    expect(s.z).toBeCloseTo(-1, 12);
-  });
-});
 
 describe('direction-cascade / directionAtEpoch', () => {
   it('returns the measured direction unchanged when either PM is missing', () => {
@@ -235,15 +200,6 @@ describe('direction-cascade / directionAtEpoch', () => {
 });
 
 describe('direction-cascade / gates', () => {
-  it('gaia5pUnreliable fires on either indicator, tolerates nulls', () => {
-    expect(gaia5pUnreliable(gaiaRow())).toBe(false);
-    expect(gaia5pUnreliable(gaiaRow({ ruwe: GAIA_RUWE_UNRELIABLE_THRESHOLD + 0.01 }))).toBe(true);
-    expect(gaia5pUnreliable(gaiaRow({
-      ipdFracMultiPeak: GAIA_IPD_FRAC_MULTI_PEAK_THRESHOLD + 0.01,
-    }))).toBe(true);
-    expect(gaia5pUnreliable(gaiaRow({ ruwe: null, ipdFracMultiPeak: null }))).toBe(false);
-  });
-
   it('hip2PmDisagrees trips on either axis alone, never on missing PMs', () => {
     const delta = HIP2_PM_DELTA_THRESHOLD_MASYR + 1;
     expect(hip2PmDisagrees(gaiaRow(), hip2Row())).toBe(false);
@@ -482,185 +438,6 @@ describe('direction-cascade / resolveDirection routing', () => {
       'simbad',
       'curated',
     ]);
-  });
-});
-
-describe('direction-cascade / TSV parsers', () => {
-  it('parseGaiaAstrometryCatalogTsv decodes rows and null cells', () => {
-    const tsv = [
-      'source_id\tra\tra_error\tdec\tdec_error\tparallax\tparallax_error\tpmra\tpmra_error\tpmdec\tpmdec_error\tref_epoch\truwe\tipd_frac_multi_peak\tphot_g_mean_mag\tphot_bp_mean_mag\tphot_rp_mean_mag\tradial_velocity\tradial_velocity_error',
-      '123\t100.5\t0.1\t-20.25\t0.1\t50.0\t0.1\t10.5\t0.1\t-3.5\t0.1\t2016.0\t1.2\t0\t8.0\t8.6\t7.3\t-110.51\t0.22',
-      '456\t200.0\t\t30.0\t\t\t\t\t\t\t\t2016.0\t\t\t9.0\t\t\t\t',
-      '',
-    ].join('\n');
-    const map = parseGaiaAstrometryCatalogTsv(tsv, GAIA_ASTROMETRY);
-    expect(map.size).toBe(2);
-    expect(map.get('123')).toEqual({
-      raDeg: 100.5, decDeg: -20.25,
-      parallaxMas: 50.0, parallaxErrorMas: 0.1,
-      pmraMasyr: 10.5, pmdecMasyr: -3.5,
-      ruwe: 1.2, ipdFracMultiPeak: 0,
-      gMag: 8.0, bpMag: 8.6, rpMag: 7.3,
-      radialVelocityKmS: -110.51,
-      radialVelocityErrorKmS: 0.22,
-      ref: sourceRowRef(GAIA_ASTROMETRY, '123'),
-    });
-    expect(map.get('456')).toEqual({
-      raDeg: 200.0, decDeg: 30.0,
-      parallaxMas: null, parallaxErrorMas: null,
-      pmraMasyr: null, pmdecMasyr: null,
-      ruwe: null, ipdFracMultiPeak: null,
-      gMag: 9.0, bpMag: null, rpMag: null,
-      radialVelocityKmS: null,
-      radialVelocityErrorKmS: null,
-      ref: sourceRowRef(GAIA_ASTROMETRY, '456'),
-    });
-  });
-
-  it('parseGaiaAstrometryCatalogTsv throws on a missing column', () => {
-    expect(() => parseGaiaAstrometryCatalogTsv('source_id\tra\tdec\n', GAIA_ASTROMETRY)).toThrow(/missing required columns/);
-  });
-
-  it('gaiaAstrometryAccumulator keeps only the requested sources', () => {
-    const lines = [
-      'source_id\tra\tra_error\tdec\tdec_error\tparallax\tparallax_error\tpmra\tpmra_error\tpmdec\tpmdec_error\tref_epoch\truwe\tipd_frac_multi_peak\tphot_g_mean_mag\tphot_bp_mean_mag\tphot_rp_mean_mag\tradial_velocity\tradial_velocity_error',
-      '123\t100.5\t0.1\t-20.25\t0.1\t50.0\t0.1\t10.5\t0.1\t-3.5\t0.1\t2016.0\t1.2\t0\t8.0\t8.6\t7.3\t-110.51\t0.22',
-      '456\t200.0\t\t30.0\t\t\t\t\t\t\t\t2016.0\t\t\t9.0\t\t\t\t',
-    ];
-    const acc = gaiaAstrometryAccumulator(MAGNITUDE_PULL, new Set(['456']));
-    for (const line of lines) acc.line(line);
-    const map = acc.result();
-    expect([...map.keys()]).toEqual(['456']);
-    expect(map.get('456')?.raDeg).toBe(200.0);
-  });
-
-  it('gaiaAstrometryAccumulator resolves source_id by name, not by position', () => {
-    const acc = gaiaAstrometryAccumulator(MAGNITUDE_PULL, new Set(['123']));
-    acc.line('ra\tsource_id\tra_error\tdec\tdec_error\tparallax\tparallax_error\tpmra\tpmra_error\tpmdec\tpmdec_error\tref_epoch\truwe\tipd_frac_multi_peak\tphot_g_mean_mag\tphot_bp_mean_mag\tphot_rp_mean_mag\tradial_velocity\tradial_velocity_error');
-    acc.line('100.5\t123\t0.1\t-20.25\t0.1\t50.0\t0.1\t10.5\t0.1\t-3.5\t0.1\t2016.0\t1.2\t0\t8.0\t8.6\t7.3\t-110.51\t0.22');
-    expect(acc.result().get('123')?.raDeg).toBe(100.5);
-  });
-
-  it('parseHip2Tsv decodes rows keyed by HIP', () => {
-    const tsv = [
-      'hip\tra_icrs\tde_icrs\tplx\te_plx\tpm_ra\tpm_de\te_pm_ra\te_pm_de\tgoodness_of_fit\tn_transits',
-      '32349\t101.28854105\t-16.71314306\t379.21\t1.58\t-546.01\t-1223.07\t1.33\t1.24\t0.99\t100',
-      '\t\t\t\t\t\t\t\t\t\t',
-    ].join('\n');
-    const map = parseHip2Tsv(tsv, HIP2).astrometry;
-    expect(map.size).toBe(1);
-    expect(map.get(32349)).toEqual({
-      raDeg: 101.28854105, decDeg: -16.71314306,
-      plxMas: 379.21, plxErrorMas: 1.58,
-      pmRaMasyr: -546.01, pmDeMasyr: -1223.07,
-      ref: sourceRowRef(HIP2, 32349),
-    });
-  });
-
-  it('parseHip2Tsv lists a HIP with no position among the published HIPs', () => {
-    const tsv = [
-      'hip\tra_icrs\tde_icrs\tplx\te_plx\tpm_ra\tpm_de',
-      '32349\t101.2\t-16.7\t379.21\t1.58\t-546.01\t-1223.07',
-      '7\t\t\t\t\t\t',
-    ].join('\n');
-    const { astrometry, hips } = parseHip2Tsv(tsv, HIP2);
-    expect([...astrometry.keys()]).toEqual([32349]);
-    expect([...hips]).toEqual([32349, 7]);
-  });
-
-  it('parseNssIndex collects the source_id column', () => {
-    const tsv = [
-      'source_id\tnss_solution_type\tperiod',
-      '111\tOrbital\t500',
-      '111\tSB1\t500',
-      '222\tEclipsingBinary\t3',
-    ].join('\n');
-    const index = parseNssIndex(tsv, GAIA_NSS);
-    expect(index.size).toBe(2);
-    expect(index.get('111')).toEqual(sourceRowRef(GAIA_NSS, '111'));
-    expect(index.has('222')).toBe(true);
-  });
-});
-
-const MAS_TO_RAD = Math.PI / (180 * 3600 * 1000);
-
-function dot(a: UnitVector, b: UnitVector): number {
-  return a.x * b.x + a.y * b.y + a.z * b.z;
-}
-function norm(a: UnitVector): number {
-  return Math.hypot(a.x, a.y, a.z);
-}
-
-describe('equatorialTangentBasis', () => {
-  it('is orthonormal away from and adjacent to the pole and on RA-wrap', () => {
-    for (const [ra, dec] of [[0, 0], [123.4, -45.6], [359.999, 89.9], [0, -89.9]]) {
-      const { u, east, north } = equatorialTangentBasis(ra, dec);
-      expect(norm(u)).toBeCloseTo(1, 12);
-      expect(norm(east)).toBeCloseTo(1, 12);
-      expect(norm(north)).toBeCloseTo(1, 12);
-      expect(dot(u, east)).toBeCloseTo(0, 12);
-      expect(dot(u, north)).toBeCloseTo(0, 12);
-      expect(dot(east, north)).toBeCloseTo(0, 12);
-    }
-  });
-
-  it('pins the canonical (0,0) basis and is RA-wrap invariant', () => {
-    const b = equatorialTangentBasis(0, 0);
-    expect(b.u).toEqual({ x: 1, y: 0, z: 0 });
-    expect(b.east.x).toBeCloseTo(0, 12);
-    expect(b.east.y).toBeCloseTo(1, 12);
-    expect(b.north.z).toBeCloseTo(1, 12);
-    const wrap = equatorialTangentBasis(360, 0);
-    expect(wrap.east.y).toBeCloseTo(b.east.y, 12);
-    expect(wrap.north.z).toBeCloseTo(b.north.z, 12);
-  });
-});
-
-describe('velocityPcPerYr', () => {
-  it('pins the km/s → pc/yr conversion', () => {
-    // 1 Julian yr (3.15576e7 s) / 1 pc (3.0856775814913673e13 km).
-    expect(KM_S_TO_PC_YR).toBeCloseTo(1.0227121650e-6, 15);
-  });
-
-  it('pure radial velocity lands along û with no tangential term', () => {
-    const v = velocityPcPerYr(0, 0, null, null, 5, 100);
-    expect(v.x).toBeCloseTo(100 * KM_S_TO_PC_YR, 18);
-    expect(v.y).toBeCloseTo(0, 18);
-    expect(v.z).toBeCloseTo(0, 18);
-  });
-
-  it('pure east/north PM scale with distance and never divide by cos δ', () => {
-    // At (0,0): east = +y, north = +z. μ_α* is already cos δ-applied.
-    const east = velocityPcPerYr(0, 0, 1000, 0, 3, 0);
-    expect(east.x).toBeCloseTo(0, 18);
-    expect(east.y).toBeCloseTo(3 * MAS_TO_RAD * 1000, 18);
-    expect(east.z).toBeCloseTo(0, 18);
-    const north = velocityPcPerYr(0, 0, 0, 1000, 3, 0);
-    expect(north.z).toBeCloseTo(3 * MAS_TO_RAD * 1000, 18);
-    // A high-declination star: μ_α* still maps straight onto east, so the
-    // tangential speed is distance × μ, independent of dec (the cos δ is
-    // already folded into μ_α*). The ecliptic-pole sign-flip bug class
-    // would corrupt this.
-    const hi = velocityPcPerYr(45, 80, 500, 0, 3, 0);
-    const speedMasyr = norm(hi) / (3 * MAS_TO_RAD);
-    expect(speedMasyr).toBeCloseTo(500, 6);
-  });
-
-  it("reproduces Barnard's Star space velocity (~142 km/s) from published μ+ϖ+RV", () => {
-    // Gaia DR3: μ_α* = −798.71, μ_δ = +10337.77 mas/yr; ϖ = 546.98 mas
-    // (d = 1.8282 pc); RV = −110.51 km/s. Tangential v_t = 4.74047·μ″·d.
-    const d = 1000 / 546.98;
-    const v = velocityPcPerYr(269.448, 4.693, -798.71, 10337.77, d, -110.51);
-    const speedKmS = norm(v) / KM_S_TO_PC_YR;
-    expect(speedKmS).toBeCloseTo(142.4, 0);
-    // Radial component along û equals RV exactly.
-    const u = equatorialTangentBasis(269.448, 4.693).u;
-    const radialKmS = dot(v, u) / KM_S_TO_PC_YR;
-    expect(radialKmS).toBeCloseTo(-110.51, 3);
-    // Tangential matches the textbook 4.74·μ·d formula.
-    const muArcsec = Math.hypot(798.71, 10337.77) / 1000;
-    const tangentialKmS = Math.sqrt(speedKmS ** 2 - radialKmS ** 2);
-    expect(tangentialKmS).toBeCloseTo(4.740470 * muArcsec * d, 1);
   });
 });
 

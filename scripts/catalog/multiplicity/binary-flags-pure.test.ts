@@ -1,36 +1,15 @@
 import { describe, it, expect } from 'vitest';
 import {
   VAR_TYPE_UNKNOWN,
-  VAR_TYPE_PULSATING,
   VAR_TYPE_ECLIPSING,
-  VAR_TYPE_OTHER,
-  VAR_TYPE_MIRA,
-  VAR_TYPE_SEMIREGULAR,
-  VAR_TYPE_CEPHEID,
-  VAR_TYPE_RR_LYRAE,
-  VAR_TYPE_DSCT,
   FLAG_BINARY_PRIMARY,
 } from '../../../src/catalog-format/record/catalog-pure';
 import {
-  normaliseGjKey,
-  simbadHipKey,
-  SIMBAD_NAMESPACE_VALUES,
-  emptySimbadNamespaceIndex,
-  indexSimbadRow,
-  walkSimbadNamespaces,
-  type SimbadNamespace,
-  type SimbadNamespaceIndex,
-  type SimbadRecordKeys,
-  normalizeGcvsName,
-  parseGcvsNumber,
-  splitPipeDelimited,
-  classifyGcvsVarType,
-  isPlanetaryTransitOnly,
   inferBinaries,
   pickBrightest,
   markPrimary,
   markPrimaryIfUnflagged,
-  applyDoublesFlag,
+  flagGroupPrimaries,
   hasGaiaQualityDistance,
   isOpticalDoublePrimary,
   OPTICAL_DOUBLE_MIN_SEP_PC,
@@ -40,301 +19,9 @@ import {
   BINARY_MAX_SEP_PC,
   type BinaryStar,
   type DoublesStar,
-} from './record-build-pure';
+} from './binary-flags-pure';
 
-describe('record-build-pure / normaliseGjKey', () => {
-  // The spine spells the catalogue word both ways and SIMBAD stores its own
-  // spacing; one folded key is what lets the two meet.
-  it('folds both catalogue words and SIMBAD spacing onto one key', () => {
-    expect(normaliseGjKey('Gl 165A')).toBe('165A');
-    expect(normaliseGjKey('GJ 165A')).toBe('165A');
-    expect(normaliseGjKey('165 A')).toBe('165A');
-    expect(normaliseGjKey('gj 9728 a')).toBe('9728A');
-  });
-
-  it('keeps a bare designation and rejects an empty cell', () => {
-    expect(normaliseGjKey('4246')).toBe('4246');
-    expect(normaliseGjKey('  ')).toBeNull();
-    expect(normaliseGjKey(null)).toBeNull();
-    expect(normaliseGjKey('GJ ')).toBeNull();
-  });
-});
-
-describe('record-build-pure / SIMBAD namespace ladder', () => {
-  const ALL_KEYS: SimbadRecordKeys = {
-    sourceId: '99', hip: 22, tyc: '1-2-1', gl: 'Gl 165A',
-  };
-
-  const indexOneRowPerNamespace = (): SimbadNamespaceIndex<string> => {
-    const index = emptySimbadNamespaceIndex<string>();
-    index.bySourceId.set('99', 'source_id');
-    index.byHip.set(22, 'hip');
-    index.byGj.set('165A', 'gj');
-    index.byTyc.set('1-2-1', 'tyc');
-    return index;
-  };
-
-  // The array is the only statement of walk order; withdrawing the winning
-  // namespace's key one at a time must surface the rest in exactly its order.
-  it('walks namespaces in SIMBAD_NAMESPACE_VALUES order', () => {
-    const index = indexOneRowPerNamespace();
-    const keys: SimbadRecordKeys = { ...ALL_KEYS };
-    const withdraw: Record<SimbadNamespace, () => void> = {
-      source_id: () => { keys.sourceId = null; },
-      hip: () => { keys.hip = null; },
-      gj: () => { keys.gl = null; },
-      tyc: () => { keys.tyc = null; },
-    };
-    const seen: SimbadNamespace[] = [];
-    for (let i = 0; i < SIMBAD_NAMESPACE_VALUES.length; i++) {
-      const hit = walkSimbadNamespaces(index, keys, (row) => row);
-      seen.push(hit!.namespace);
-      withdraw[hit!.namespace]();
-    }
-    expect(seen).toEqual([...SIMBAD_NAMESPACE_VALUES]);
-    expect(walkSimbadNamespaces(index, keys, (row) => row)).toBeNull();
-  });
-
-  // indexSimbadRow and walkSimbadNamespaces derive each key from one binding
-  // table, so a row written under a namespace is reachable by it.
-  it('reaches an indexed row under every namespace that keyed it', () => {
-    const index = emptySimbadNamespaceIndex<string>();
-    indexSimbadRow(index, ALL_KEYS, 'row', () => {
-      throw new Error('unexpected duplicate');
-    });
-    for (const namespace of SIMBAD_NAMESPACE_VALUES) {
-      const only: SimbadRecordKeys = {
-        sourceId: namespace === 'source_id' ? ALL_KEYS.sourceId : null,
-        hip: namespace === 'hip' ? ALL_KEYS.hip : null,
-        tyc: namespace === 'tyc' ? ALL_KEYS.tyc : null,
-        gl: namespace === 'gj' ? ALL_KEYS.gl : null,
-      };
-      expect(walkSimbadNamespaces(index, only, (row) => row)).toEqual({
-        value: 'row', namespace,
-      });
-    }
-  });
-
-  it('hands every colliding namespace to the resolver', () => {
-    const index = emptySimbadNamespaceIndex<string>();
-    indexSimbadRow(index, ALL_KEYS, 'first', () => {
-      throw new Error('unexpected duplicate');
-    });
-    const collisions: SimbadNamespace[] = [];
-    indexSimbadRow(index, ALL_KEYS, 'second', (namespace, _key, incumbent) => {
-      collisions.push(namespace);
-      return incumbent;
-    });
-    expect(collisions).toEqual([...SIMBAD_NAMESPACE_VALUES]);
-    expect(walkSimbadNamespaces(index, ALL_KEYS, (row) => row)?.value).toBe('first');
-  });
-
-  it('indexes the row the resolver picks, under every shared key', () => {
-    // A pull that unions namespaces reaches one star under two objects, so
-    // the consumer that knows which cell it came for decides.
-    const index = emptySimbadNamespaceIndex<string>();
-    indexSimbadRow(index, ALL_KEYS, 'first', () => {
-      throw new Error('unexpected duplicate');
-    });
-    indexSimbadRow(index, ALL_KEYS, 'second', (_ns, _key, _incumbent, candidate) => candidate);
-    expect(walkSimbadNamespaces(index, ALL_KEYS, (row) => row)?.value).toBe('second');
-  });
-
-  // A bogus HIP cell must be no key at all rather than a key nothing looks
-  // up, which is what would make an indexed row unreachable but present.
-  it('takes only a positive integer HIP as a key', () => {
-    expect(simbadHipKey(22)).toBe(22);
-    expect(simbadHipKey(0)).toBeNull();
-    expect(simbadHipKey(-1)).toBeNull();
-    expect(simbadHipKey(22.5)).toBeNull();
-    expect(simbadHipKey(Number.NaN)).toBeNull();
-    expect(simbadHipKey(null)).toBeNull();
-  });
-
-  it('indexes nowhere for a row carrying no namespace key', () => {
-    const index = emptySimbadNamespaceIndex<string>();
-    const none: SimbadRecordKeys = { sourceId: '', hip: 0, tyc: '', gl: '  ' };
-    indexSimbadRow(index, none, 'row', () => {
-      throw new Error('unexpected duplicate');
-    });
-    expect(index.bySourceId.size + index.byHip.size + index.byGj.size + index.byTyc.size)
-      .toBe(0);
-  });
-});
-
-describe('record-build-pure / splitPipeDelimited', () => {
-  it('splits lines on | and trims each cell', () => {
-    expect(splitPipeDelimited('R     And  |M   | 5.8 ')).toEqual([['R     And', 'M', '5.8']]);
-  });
-
-  it('skips blank and whitespace-only lines', () => {
-    expect(splitPipeDelimited('a|b\n\n   \nc|d')).toEqual([
-      ['a', 'b'],
-      ['c', 'd'],
-    ]);
-  });
-
-  it('accepts CRLF line endings', () => {
-    expect(splitPipeDelimited('a|b\r\nc|d\r\n')).toEqual([
-      ['a', 'b'],
-      ['c', 'd'],
-    ]);
-  });
-
-  it('returns empty for empty input', () => {
-    expect(splitPipeDelimited('')).toEqual([]);
-  });
-
-  it('keeps empty interior cells', () => {
-    expect(splitPipeDelimited('a| |b||')).toEqual([['a', '', 'b', '', '']]);
-  });
-});
-
-describe('record-build-pure / normalizeGcvsName', () => {
-  it('collapses internal whitespace to a single space', () => {
-    expect(normalizeGcvsName('R     And')).toBe('R And');
-    expect(normalizeGcvsName('V0640    Cas')).toBe('V0640 Cas');
-  });
-
-  it('strips trailing asterisks', () => {
-    expect(normalizeGcvsName('R And *')).toBe('R And');
-    expect(normalizeGcvsName('R And **')).toBe('R And');
-  });
-
-  it('trims leading and trailing whitespace', () => {
-    expect(normalizeGcvsName('  R And  ')).toBe('R And');
-  });
-
-  it('returns empty string for whitespace-only input', () => {
-    expect(normalizeGcvsName('   ')).toBe('');
-  });
-});
-
-describe('record-build-pure / parseGcvsNumber', () => {
-  it('parses a plain number', () => {
-    expect(parseGcvsNumber('5.5')).toBe(5.5);
-    expect(parseGcvsNumber('100')).toBe(100);
-  });
-
-  it('strips uncertainty markers and brackets', () => {
-    expect(parseGcvsNumber('<5.5')).toBe(5.5);
-    expect(parseGcvsNumber('5.5:')).toBe(5.5);
-    expect(parseGcvsNumber('(5.5)')).toBe(5.5);
-    expect(parseGcvsNumber('5.5*')).toBe(5.5);
-    expect(parseGcvsNumber('>5.5')).toBe(5.5);
-  });
-
-  it('returns null for empty / whitespace input', () => {
-    expect(parseGcvsNumber('')).toBeNull();
-    expect(parseGcvsNumber('   ')).toBeNull();
-  });
-
-  it('returns null for non-numeric input', () => {
-    expect(parseGcvsNumber('abc')).toBeNull();
-    expect(parseGcvsNumber('---')).toBeNull();
-  });
-
-  it('returns null for input that strips down to nothing', () => {
-    expect(parseGcvsNumber('()')).toBeNull();
-    expect(parseGcvsNumber(':*')).toBeNull();
-  });
-});
-
-describe('record-build-pure / classifyGcvsVarType', () => {
-  it('classifies eclipsing prefixes: EA / EB / EW / ELL / E', () => {
-    expect(classifyGcvsVarType('EA')).toBe(VAR_TYPE_ECLIPSING);
-    expect(classifyGcvsVarType('EB')).toBe(VAR_TYPE_ECLIPSING);
-    expect(classifyGcvsVarType('EW')).toBe(VAR_TYPE_ECLIPSING);
-    expect(classifyGcvsVarType('ELL')).toBe(VAR_TYPE_ECLIPSING);
-    expect(classifyGcvsVarType('E')).toBe(VAR_TYPE_ECLIPSING);
-  });
-
-  it('classifies EP (eclipsing-by-planet) as OTHER, not eclipsing', () => {
-    // A transiting-planet host is not a stellar multiple: it must earn
-    // no wings and no cosmetic-pulsation suppression as a "binary".
-    expect(classifyGcvsVarType('EP')).toBe(VAR_TYPE_OTHER);
-  });
-
-  it('flags bare EP hosts as planetary-transit-only; keeps a superimposed pulsator', () => {
-    expect(isPlanetaryTransitOnly('EP')).toBe(true);
-    expect(isPlanetaryTransitOnly('EP:')).toBe(true);
-    // A real intrinsic pulsator superimposed keeps its ring/pulse.
-    expect(isPlanetaryTransitOnly('EP+DSCT')).toBe(false);
-    // Non-EP types are never dropped by this gate.
-    expect(isPlanetaryTransitOnly('EA')).toBe(false);
-    expect(isPlanetaryTransitOnly('M')).toBe(false);
-  });
-
-  it('classifies composite eclipsing-+-rotational/RS as eclipsing', () => {
-    // Algol's "EA/RS" should keep the eclipsing tag — the geometric
-    // occlusion is the dominant photometric signal, and superimposing
-    // GCVS-amplitude pulsation would double-count the eclipse.
-    expect(classifyGcvsVarType('EA/RS')).toBe(VAR_TYPE_ECLIPSING);
-    expect(classifyGcvsVarType('EA+RS')).toBe(VAR_TYPE_ECLIPSING);
-    expect(classifyGcvsVarType('EB/DM')).toBe(VAR_TYPE_ECLIPSING);
-  });
-
-  it('refines intrinsic pulsators into families: M / SR / DCEP / RRAB / RV / DSCT', () => {
-    expect(classifyGcvsVarType('M')).toBe(VAR_TYPE_MIRA);
-    expect(classifyGcvsVarType('SR')).toBe(VAR_TYPE_SEMIREGULAR);
-    expect(classifyGcvsVarType('SRA')).toBe(VAR_TYPE_SEMIREGULAR);
-    expect(classifyGcvsVarType('DCEP')).toBe(VAR_TYPE_CEPHEID);
-    expect(classifyGcvsVarType('CEP')).toBe(VAR_TYPE_CEPHEID);
-    expect(classifyGcvsVarType('RR')).toBe(VAR_TYPE_RR_LYRAE);
-    expect(classifyGcvsVarType('RRAB')).toBe(VAR_TYPE_RR_LYRAE);
-    // RV Tauri has no dedicated family bucket → generic pulsating fallback.
-    expect(classifyGcvsVarType('RV')).toBe(VAR_TYPE_PULSATING);
-    expect(classifyGcvsVarType('DSCT')).toBe(VAR_TYPE_DSCT);
-  });
-
-  it('maps pulsator subtypes with trailing letters to their family (DCEPS/Polaris, CWA, RVA, LB, DSCTC)', () => {
-    // Subtype letters after the family prefix — the tail gate must accept
-    // them, not fall through to OTHER.
-    expect(classifyGcvsVarType('DCEPS')).toBe(VAR_TYPE_CEPHEID);   // Polaris
-    expect(classifyGcvsVarType('DSCTC')).toBe(VAR_TYPE_DSCT);
-    expect(classifyGcvsVarType('CWA')).toBe(VAR_TYPE_CEPHEID);     // Type II Cepheid
-    expect(classifyGcvsVarType('CWB')).toBe(VAR_TYPE_CEPHEID);
-    expect(classifyGcvsVarType('RVA')).toBe(VAR_TYPE_PULSATING);
-    expect(classifyGcvsVarType('RVB')).toBe(VAR_TYPE_PULSATING);
-    expect(classifyGcvsVarType('LB')).toBe(VAR_TYPE_SEMIREGULAR);  // slow irregular red giant
-    expect(classifyGcvsVarType('LC')).toBe(VAR_TYPE_SEMIREGULAR);
-    expect(classifyGcvsVarType('ZZA')).toBe(VAR_TYPE_DSCT);        // ZZ Ceti (low-amp)
-    expect(classifyGcvsVarType('BCEP')).toBe(VAR_TYPE_DSCT);       // β Cep (low-amp p-mode)
-    // Uncertainty-flagged subtype (GCVS ':' after the subtype letter).
-    expect(classifyGcvsVarType('SRA:')).toBe(VAR_TYPE_SEMIREGULAR);
-    // Composite: rotating + pulsator → the pulsator component wins.
-    expect(classifyGcvsVarType('ACV+DSCTC')).toBe(VAR_TYPE_DSCT);
-  });
-
-  it('classifies cataclysmic / eruptive / rotating as OTHER', () => {
-    expect(classifyGcvsVarType('UGSU')).toBe(VAR_TYPE_OTHER);
-    expect(classifyGcvsVarType('ZAND')).toBe(VAR_TYPE_OTHER);
-    expect(classifyGcvsVarType('GCAS')).toBe(VAR_TYPE_OTHER);
-    expect(classifyGcvsVarType('ACV')).toBe(VAR_TYPE_OTHER);
-    expect(classifyGcvsVarType('BY')).toBe(VAR_TYPE_OTHER);
-    expect(classifyGcvsVarType('CST')).toBe(VAR_TYPE_OTHER);
-    // Non-pulsators that share an initial with a pulsator family must not
-    // be promoted by the letter-tail gate (RCB≠RR/RV, RS≠RR, SDOR≠SR).
-    expect(classifyGcvsVarType('RCB')).toBe(VAR_TYPE_OTHER);
-    expect(classifyGcvsVarType('RS')).toBe(VAR_TYPE_OTHER);
-    expect(classifyGcvsVarType('SDOR')).toBe(VAR_TYPE_OTHER);
-    expect(classifyGcvsVarType('ACVO')).toBe(VAR_TYPE_OTHER);
-  });
-
-  it('returns UNKNOWN for blank, null, or whitespace input', () => {
-    expect(classifyGcvsVarType(null)).toBe(VAR_TYPE_UNKNOWN);
-    expect(classifyGcvsVarType(undefined)).toBe(VAR_TYPE_UNKNOWN);
-    expect(classifyGcvsVarType('')).toBe(VAR_TYPE_UNKNOWN);
-    expect(classifyGcvsVarType('   ')).toBe(VAR_TYPE_UNKNOWN);
-  });
-
-  it('is case-insensitive', () => {
-    expect(classifyGcvsVarType('ea')).toBe(VAR_TYPE_ECLIPSING);
-    expect(classifyGcvsVarType('dcep')).toBe(VAR_TYPE_CEPHEID);
-  });
-});
-
-describe('record-build-pure / inferBinaries', () => {
+describe('binary-flags-pure / inferBinaries', () => {
   function makeStar(opts: Partial<BinaryStar> & { x: number; y: number; z: number; absmag: number }): BinaryStar {
     return { flags: 0, companionIdx: -1, ...opts };
   }
@@ -483,7 +170,7 @@ describe('record-build-pure / inferBinaries', () => {
   });
 });
 
-describe("record-build-pure / markPrimary", () => {
+describe("binary-flags-pure / markPrimary", () => {
   type Slim = { absmag: number; flags: number };
   const star = (absmag: number, flags = 0): Slim => ({ absmag, flags });
 
@@ -524,7 +211,7 @@ describe("record-build-pure / markPrimary", () => {
   });
 });
 
-describe("record-build-pure / markPrimaryIfUnflagged", () => {
+describe("binary-flags-pure / markPrimaryIfUnflagged", () => {
   type Slim = { absmag: number; flags: number };
   const star = (absmag: number, flags = 0): Slim => ({ absmag, flags });
 
@@ -564,7 +251,7 @@ describe("record-build-pure / markPrimaryIfUnflagged", () => {
   });
 });
 
-describe('record-build-pure / buildHipToIndex', () => {
+describe('binary-flags-pure / buildHipToIndex', () => {
   it('maps positive HIPs to their record index and skips null / non-positive', () => {
     const m = buildHipToIndex([
       { hip: 100 },
@@ -587,8 +274,8 @@ describe('record-build-pure / buildHipToIndex', () => {
   });
 });
 
-describe('record-build-pure / applyDoublesFlag', () => {
-  // Mini Star fixture with just the fields applyDoublesFlag reads/writes.
+describe('binary-flags-pure / flagGroupPrimaries', () => {
+  // Mini Star fixture with just the fields flagGroupPrimaries reads/writes.
   function s(absmag: number, hip: number | null, flags = 0): DoublesStar {
     return { absmag, hip, flags };
   }
@@ -597,7 +284,7 @@ describe('record-build-pure / applyDoublesFlag', () => {
     // Three stars; the group covers them all. Lowest absmag (=brightest)
     // should get FLAG_BINARY_PRIMARY; the others stay clean.
     const stars: DoublesStar[] = [s(4, 100), s(2, 200), s(6, 300)];
-    const r = applyDoublesFlag(stars, [[100, 200, 300]], buildHipToIndex(stars));
+    const r = flagGroupPrimaries(stars, [[100, 200, 300]], buildHipToIndex(stars));
     expect(r.systems).toBe(1);
     expect(r.flagged).toBe(1);
     expect(stars[1].flags).toBe(FLAG_BINARY_PRIMARY);
@@ -607,7 +294,7 @@ describe('record-build-pure / applyDoublesFlag', () => {
 
   it('silently drops groups whose HIPs are all missing from the catalog', () => {
     const stars: DoublesStar[] = [s(4, 100), s(5, 200)];
-    const r = applyDoublesFlag(stars, [[999, 1000]], buildHipToIndex(stars));
+    const r = flagGroupPrimaries(stars, [[999, 1000]], buildHipToIndex(stars));
     expect(r.systems).toBe(0);
     expect(r.flagged).toBe(0);
     expect(stars[0].flags).toBe(0);
@@ -619,7 +306,7 @@ describe('record-build-pure / applyDoublesFlag', () => {
     // pick the brighter one but must defer per markPrimaryIfUnflagged's
     // contract.
     const stars: DoublesStar[] = [s(2, 100), s(5, 200, FLAG_BINARY_PRIMARY)];
-    const r = applyDoublesFlag(stars, [[100, 200]], buildHipToIndex(stars));
+    const r = flagGroupPrimaries(stars, [[100, 200]], buildHipToIndex(stars));
     expect(r.systems).toBe(1);
     expect(r.flagged).toBe(0);
     expect(stars[0].flags).toBe(0);                    // not re-flagged
@@ -631,7 +318,7 @@ describe('record-build-pure / applyDoublesFlag', () => {
       s(2, 100), s(3, 101), // group A — 100 brightest
       s(5, 200), s(4, 201), // group B — 201 brightest
     ];
-    const r = applyDoublesFlag(stars, [[100, 101], [200, 201]], buildHipToIndex(stars));
+    const r = flagGroupPrimaries(stars, [[100, 101], [200, 201]], buildHipToIndex(stars));
     expect(r.systems).toBe(2);
     expect(r.flagged).toBe(2);
     expect(stars[0].flags).toBe(FLAG_BINARY_PRIMARY); // 100 won group A
@@ -646,7 +333,7 @@ describe('record-build-pure / applyDoublesFlag', () => {
     // sources behave identically once unioned.
     const stars: DoublesStar[] = [s(3, 100), s(2, 101)];
     // Pretend the CCDM pass produced one group, the override another.
-    const r = applyDoublesFlag(stars, [[100], [101]], buildHipToIndex(stars));
+    const r = flagGroupPrimaries(stars, [[100], [101]], buildHipToIndex(stars));
     expect(r.systems).toBe(2);
     expect(r.flagged).toBe(2);
     // Each single-member group flags its own brightest (and only)
@@ -657,7 +344,7 @@ describe('record-build-pure / applyDoublesFlag', () => {
 
   it('skips HIP=0 / null records when building the lookup', () => {
     const stars: DoublesStar[] = [s(2, null), s(4, 0), s(3, 100)];
-    const r = applyDoublesFlag(stars, [[100]], buildHipToIndex(stars));
+    const r = flagGroupPrimaries(stars, [[100]], buildHipToIndex(stars));
     expect(r.systems).toBe(1);
     expect(stars[2].flags).toBe(FLAG_BINARY_PRIMARY);
     // The 0/null-HIP rows must never be hit by HIP→index lookup.
@@ -668,9 +355,9 @@ describe('record-build-pure / applyDoublesFlag', () => {
   it('is idempotent under re-application', () => {
     const stars: DoublesStar[] = [s(2, 100), s(5, 200)];
     const idx = buildHipToIndex(stars);
-    applyDoublesFlag(stars, [[100, 200]], idx);
+    flagGroupPrimaries(stars, [[100, 200]], idx);
     const flagsBefore = stars.map((x) => x.flags);
-    applyDoublesFlag(stars, [[100, 200]], idx);
+    flagGroupPrimaries(stars, [[100, 200]], idx);
     // Second pass sees the existing primary bit and bails — no
     // additional bits set.
     expect(stars.map((x) => x.flags)).toEqual(flagsBefore);
@@ -678,7 +365,7 @@ describe('record-build-pure / applyDoublesFlag', () => {
 
   it('reports suppressed=0 when no suppress predicate is supplied', () => {
     const stars: DoublesStar[] = [s(2, 100), s(5, 200)];
-    const r = applyDoublesFlag(stars, [[100, 200]], buildHipToIndex(stars));
+    const r = flagGroupPrimaries(stars, [[100, 200]], buildHipToIndex(stars));
     expect(r.suppressed).toBe(0);
   });
 
@@ -686,7 +373,7 @@ describe('record-build-pure / applyDoublesFlag', () => {
     // Group {100, 200}; 100 is brightest. A predicate that suppresses the
     // picked primary leaves both stars unflagged and counts one suppression.
     const stars: DoublesStar[] = [s(2, 100), s(5, 200)];
-    const r = applyDoublesFlag(
+    const r = flagGroupPrimaries(
       stars,
       [[100, 200]],
       buildHipToIndex(stars),
@@ -704,7 +391,7 @@ describe('record-build-pure / applyDoublesFlag', () => {
     // no-op before the predicate would see the picked primary.
     const stars: DoublesStar[] = [s(2, 100), s(5, 200, FLAG_BINARY_PRIMARY)];
     let called = false;
-    const r = applyDoublesFlag(stars, [[100, 200]], buildHipToIndex(stars), () => {
+    const r = flagGroupPrimaries(stars, [[100, 200]], buildHipToIndex(stars), () => {
       called = true;
       return true;
     });
@@ -715,7 +402,7 @@ describe('record-build-pure / applyDoublesFlag', () => {
   });
 });
 
-describe('record-build-pure / pickBrightest', () => {
+describe('binary-flags-pure / pickBrightest', () => {
   const s = (absmag: number) => ({ absmag });
   it('returns the lowest-absmag index', () => {
     expect(pickBrightest([s(4), s(2), s(6)], [0, 1, 2])).toBe(1);
@@ -730,7 +417,7 @@ describe('record-build-pure / pickBrightest', () => {
   });
 });
 
-describe('record-build-pure / markPrimaryIfUnflagged suppress hook', () => {
+describe('binary-flags-pure / markPrimaryIfUnflagged suppress hook', () => {
   const s = (absmag: number, flags = 0) => ({ absmag, flags });
   it('returns -3 and sets no bit when suppress vetoes the pick', () => {
     const stars = [s(2), s(5)];
@@ -751,7 +438,7 @@ describe('record-build-pure / markPrimaryIfUnflagged suppress hook', () => {
   });
 });
 
-describe('record-build-pure / hasGaiaQualityDistance', () => {
+describe('binary-flags-pure / hasGaiaQualityDistance', () => {
   it('accepts the two tiers that rest on a Gaia parallax', () => {
     expect(hasGaiaQualityDistance('gaia_dr3_inversion')).toBe(true);
     expect(hasGaiaQualityDistance('bailer_jones')).toBe(true);
@@ -766,7 +453,7 @@ describe('record-build-pure / hasGaiaQualityDistance', () => {
   });
 });
 
-describe('record-build-pure / isOpticalDoublePrimary', () => {
+describe('binary-flags-pure / isOpticalDoublePrimary', () => {
   // Two components 3 pc apart on the x-axis, both Gaia-quality, no physical
   // evidence — the canonical optical double.
   function make(overrides: Partial<OpticalDoubleStar>[] = []): OpticalDoubleStar[] {

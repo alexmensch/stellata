@@ -4,7 +4,7 @@ The radial term of the space-motion velocity: which source supplies it, the
 gate that withholds Gaia's on a blended row, and the rule stopping Gaia's own
 reduction of that row from returning through SIMBAD. The tangential term and
 the velocity assembly that consumes both are [Direction resolution](../README.md#direction-resolution)
-and [Space-motion velocity](../../parse/README.md#space-motion-velocity).
+and [Space-motion velocity](../README.md#space-motion-velocity).
 
 ## Files in this area
 
@@ -15,7 +15,7 @@ scripts/catalog/distance/radial-velocity/
                                 term on its own. Imports `gaiaHas5pSolution`,
                                 `gaiaRefusals` and `refusedPublicationCited` from
                                 ../gaia-distrust and the sanity ceiling from
-                                ../direction-cascade, so the radial and
+                                ../velocity, so the radial and
                                 tangential terms distrust a row for the same
                                 reason and by the same predicates.
 ```
@@ -163,7 +163,7 @@ EGGR 252's reads **243,879 km/s**.
 
 The tier ships what the bibcode says, so a published-but-wrong velocity
 arrives with it and is caught downstream by the two thresholds
-[Space-motion velocity](../../parse/README.md#space-motion-velocity) describes, not by a quality
+[Space-motion velocity](../README.md#space-motion-velocity) describes, not by a quality
 or magnitude gate here. Both moved when the tier landed, and both are pinned:
 
 - `velocityAboveEscape` **45 → 56**. Fourteen tier values exceed 550 km/s,

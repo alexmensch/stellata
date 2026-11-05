@@ -5,7 +5,7 @@
 import type { Declared } from '../util/sources/source';
 import { sourceRowRef, type RowKeyed, type SourceRowRef } from '../util/sources/row-ref-pure';
 import { readTable } from '../util/tsv/table-pure';
-import { normaliseGjKey } from './record/record-build-pure';
+import { normaliseGjKey } from './simbad/simbad-namespace-ladder-pure';
 import type { MeasuredParallax } from './cited-parallax';
 
 const GLIESE_COLUMNS = ['name', 'comp', 'vmag', 'bv', 'sp', 'plx_mas', 'e_plx_mas', 'n_plx', 'hd'] as const;

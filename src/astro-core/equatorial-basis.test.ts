@@ -56,6 +56,17 @@ describe('equatorialTangentBasis', () => {
     expect(norm(east)).toBeCloseTo(1, 12);
   });
 
+  it('pins the canonical (0,0) basis and is RA-wrap invariant at 360', () => {
+    const b = equatorialTangentBasis(0, 0);
+    expect(b.u).toEqual({ x: 1, y: 0, z: 0 });
+    expect(b.east.x).toBeCloseTo(0, 12);
+    expect(b.east.y).toBeCloseTo(1, 12);
+    expect(b.north.z).toBeCloseTo(1, 12);
+    const wrap = equatorialTangentBasis(360, 0);
+    expect(wrap.east.y).toBeCloseTo(b.east.y, 12);
+    expect(wrap.north.z).toBeCloseTo(b.north.z, 12);
+  });
+
   it('degrees wrapper matches the radians core', () => {
     const deg = equatorialTangentBasis(200, -33);
     const rad = equatorialTangentBasisRad(200 * DEG_TO_RAD, -33 * DEG_TO_RAD);
@@ -65,10 +76,18 @@ describe('equatorialTangentBasis', () => {
 
 describe('unitVectorFromRaDec', () => {
   it('places the axes where the equatorial convention says', () => {
-    expect(unitVectorFromRaDec(0, 0).x).toBeCloseTo(1, 12);
-    expect(unitVectorFromRaDec(90, 0).y).toBeCloseTo(1, 12);
-    expect(unitVectorFromRaDec(0, 90).z).toBeCloseTo(1, 12);
-    expect(unitVectorFromRaDec(0, -90).z).toBeCloseTo(-1, 12);
+    const axes: [number, number, UnitVector][] = [
+      [0, 0, { x: 1, y: 0, z: 0 }],
+      [90, 0, { x: 0, y: 1, z: 0 }],
+      [0, 90, { x: 0, y: 0, z: 1 }],
+      [123, -90, { x: 0, y: 0, z: -1 }],
+    ];
+    for (const [ra, dec, want] of axes) {
+      const v = unitVectorFromRaDec(ra, dec);
+      expect(v.x, `x at (${ra}, ${dec})`).toBeCloseTo(want.x, 12);
+      expect(v.y, `y at (${ra}, ${dec})`).toBeCloseTo(want.y, 12);
+      expect(v.z, `z at (${ra}, ${dec})`).toBeCloseTo(want.z, 12);
+    }
   });
 
   it('wraps RA by 360°', () => {

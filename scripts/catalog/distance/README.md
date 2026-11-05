@@ -17,24 +17,19 @@ supplies alongside its own position.
 
 ```
 scripts/catalog/distance/
-  gaia-astrometry-source.ts       GAIA_ASTROMETRY, GAIA_NSS, HIP2: the
-  gaia-nss-source.ts              direction tiers' inputs declared
-  hip2-source.ts                  (../../util/sources/), each calling
-                                  direction-cascade.ts's parse. HIP2's parse
-                                  also lists every HIP the table publishes,
-                                  positioned or not, for
-                                  ../spine/primaries-tables.ts.
   direction-cascade.ts (+ test)   Per-row sky-direction resolution cascade
                                   (which position source wins, and the
-                                  precision each carries) plus the
-                                  space-motion velocity assembly. Owns the
-                                  one Gaia astrometry row fold: tier 1's own
-                                  table reads it whole
-                                  (parseGaiaAstrometryCatalogTsv), and the
-                                  magnitude term streams its pull through it
-                                  with a keep-set (gaiaAstrometryAccumulator,
-                                  `../parse/README.md#streaming-a-committed-table`).
-  gaia-distrust.ts (+ test)       `gaiaHas5pSolution`, `gaiaRowIs2p` and
+                                  precision each carries). Its tiers' Gaia,
+                                  HIP2 and NSS rows are read in ../sources/.
+  velocity.ts (+ test)            The space-motion velocity assembly
+                                  (velocityPcPerYr), its km/s ↔ pc/yr
+                                  conversion, the sanity ceiling and escape
+                                  threshold, and VelocityVia — which
+                                  catalogue supplied the PM.
+  gaia-distrust.ts (+ test)       `gaiaHas5pSolution`, `gaiaRowIs2p`,
+                                  `gaia5pUnreliable` (with its RUWE and
+                                  ipd_frac_multi_peak thresholds, which the
+                                  coherence anchor grade reuses) and
                                   `isGaiaCatalogueBibcode` — one predicate per
                                   way this build refuses a Gaia value on a
                                   blended row — and `refusedPublicationCited`, the one skip
@@ -66,12 +61,6 @@ scripts/catalog/distance/
   radial-velocity/                The radial-velocity cascade and the
                                   Gaia-bibcode skip rule, with its own
                                   README.
-  astrometry-fixture.ts           Test-only GaiaAstrometryCatalogRow
-                                  builder. A module, not an export from a
-                                  test file: three suites across two
-                                  folders build these rows, and the point
-                                  is that a column added to the interface
-                                  lands in one place.
   placement-lineage-pure.ts       Placement as a lineage stage: its codes,
     (+ test)                      the Placement each manifest row's walk
                                   hands on, its one serialiser (rows, or
@@ -194,6 +183,102 @@ kind — its records are by construction the ones Gaia and HIP2 both miss, and n
 one of the 41 carries a HIP, a Gaia source_id or a proper name, so the other
 three ref kinds cannot name one. It is the tier's highest-PM member, which is
 what makes it the row that pins the epoch.
+
+## Space-motion velocity
+
+Each record carries a space-motion velocity (`vx/vy/vz`, pc/yr, equatorial
+Cartesian) alongside its J2016.0 position. Positions stay at the fixed
+scene epoch on disk; the runtime epoch-advance pass
+(`src/client/loaders/epoch-advance-pure.ts`) reads these once at load to
+propagate every position to `getT()`. Full design:
+[Current-epoch star positions](/docs/science-catalog-ingestion.md#current-epoch-star-positions--space-motion-propagation-to-t).
+
+`velocityPcPerYr` (`velocity.ts`) assembles
+`v = v_r·û + d·MAS_TO_RAD·(μ_α*·ê + μ_δ·n̂)` from the tier solution
+`resolveDirection` selected (`DirectionSolution.src*` fields), so position
+and velocity come from one astrometric solution wherever that solution states
+both. Where it states only a position, the PM comes from a designation-keyed
+tier instead — and carries that position to the scene epoch as well as the
+velocity, so the two still read one motion. The pairing rests on both
+quantities describing the same object:
+[Why an owned PM on a blended row is admissible at all](pm-rescue/README.md#why-an-owned-pm-on-a-blended-row-is-admissible-at-all).
+The
+east/north tangent basis is `equatorialTangentBasis`
+(`src/astro-core/equatorial-basis.ts`), shared with `directionAtEpoch`,
+`companion-promotion.ts`'s sep+PA projection, and the runtime's Tier-1
+sky→ICRS orbit projection. μ_α* is cos δ-applied — never divide by cos δ.
+
+Velocity source per row (pinned in build-counts as `velocity*`):
+
+| PM source | Rows routed |
+| --- | --- |
+| Gaia DR3 5p PM | gaia_5p / gaia_nss_systemic tiers |
+| HIP2 PM | hip2_saturated / hip2_pm_discrepant tiers |
+| Tycho-2 PM | tycho2 tier, plus the rescue cascade's 5 |
+| CNS5 PM | cns5 tier, plus 5 |
+| SIMBAD bibcoded PM | simbad tier, plus 14 |
+
+**A tier with no PM of its own does not end the search.** The 39 rows whose
+direction tier carries none — Gaia 2p solutions, Tycho-2 rows with no mean
+solution — re-key on the record's own designations through
+`pm-rescue/`. `velocityZero` is what survives that: Sol, 6 clamped
+artifact rows, and the 15 the rescue leaves. The rescued motion then advances
+the tier's position too (`directionOnPm`), so the 3 Tycho-2 rows stating an
+observed J1991.25 position stop tracking their rate from a 24.75-yr-stale place;
+the 36 Gaia rows are already at J2016.0 and do not move.
+
+`velocityAboveEscape` moved when the rv cascade took its SIMBAD tier — a
+published-but-wrong velocity is what these thresholds are for, and which rows
+moved is recorded in [The sanity thresholds](radial-velocity/README.md#the-sanity-thresholds-are-the-filter-on-a-bad-simbad-value).
+
+Radial velocity comes from its own cascade — Gaia DR3 `radial_velocity` on a
+row with a 5p solution, else a bibcoded SIMBAD `rvz_radvel`
+(`radial-velocity/README.md`) — and is zero where neither tier
+carries one. The 5p condition is the same one the PM rescue turns on: a 2p
+row's RVS spectrum is as blended as its astrometry, and both cascades read it
+off `gaia-distrust.ts`. **Sol** carries
+no PM row and sits at the origin, so its velocity is forced to exactly zero
+(the advance pass must leave the world origin fixed).
+
+**Sanity ceiling + escape-velocity ratchet.** `v = d·μ` inflates a noisy
+sub-arcsec/yr PM on a faint distant star into thousands of km/s, and a bad
+`rv` cell shows up as a nonphysical radial term. Three tracked thresholds
+guard this:
+
+- A radial term that alone exceeds `VELOCITY_SANITY_CEILING_KM_S` is dropped
+  **before** assembly (`radialTermExceedsCeiling`), leaving the row's measured
+  PM intact — the clamp below would otherwise take a real proper motion down
+  with a bad velocity. Counted `rvRadialRejected` and logged per star;
+  [The sanity thresholds](radial-velocity/README.md#the-sanity-thresholds-are-the-filter-on-a-bad-simbad-value) carries the
+  case that fixed the rule.
+- `VELOCITY_SANITY_CEILING_KM_S` (1500, ~3× escape): a hard clamp — the
+  velocity is zeroed (kept at J2016.0, same as no-PM rows) so the star
+  doesn't streak under the advance. Counted `velocityClamped` (a subset of
+  `velocityZero`); each clamped star is logged at build time.
+- `GALACTIC_ESCAPE_VELOCITY_KM_S` (550): a **ratchet, not a clamp**. Unbound
+  stars are genuinely exceptional (a handful of proven hypervelocity stars
+  Galaxy-wide), so a large above-escape population is almost all artifact —
+  but these rows are KEPT (a proven escaper must survive) and counted
+  `velocityAboveEscape`, pinned in build-counts so the artifact tail stays
+  visible. A drift forces review; a proven genuine escaper gets whitelisted
+  rather than silently dropped. Finer per-row PM-S/N + RV-sanity filtering
+  is future work (`stellata`-tracked).
+
+**Pair coherence.** A bound pair's components share one systemic velocity;
+otherwise the epoch-advance shears a *static* (Tier-3) pair apart. The
+load-bearing guarantee here: a promoted companion inherits its anchor
+primary's velocity at mint time (`companion-promotion.ts`), so the ~9k
+synthetic/inherited-id companions with no own PM ride the primary instead of
+freezing at `v=0`. A systemic-velocity post-pass additionally blends the
+renderable-orbit pairs the build resolves (lone pair →
+`v_sys = (1−q)·v_p + q·v_s`; hierarchy → root-anchor velocity). Tier-1/2
+offsets are elements-owned (`BinaryOrbitField` repositions the secondary
+from the primary each frame), so their baked velocities never affect the
+render. **Full** systemic coherence for `binaries.bin`'s authoritative
+pairing — which re-homes some inner pairs and owns the Tier-3 static pairs
+this build doesn't group — is `stellata-zau1` (deferred; the pairing is only
+known in the binaries pipeline, and the residual shear is sub-arcsec/decade
+over the v1 load-time advance).
 
 ### The escape-speed threshold departs from its source
 

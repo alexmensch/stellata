@@ -1,5 +1,7 @@
 // Import-specifier scan shared by the import-boundary tests.
 
+import { dirname, relative, resolve } from 'node:path';
+
 export type ImportKind = 'value import' | 'side-effect import' | 'dynamic import';
 
 export interface ImportSpecifier {
@@ -13,6 +15,10 @@ const BARE_IMPORT_RE = /(?:^|\n)\s*import\s*['"]([^'"]+)['"]/g;
 const DYNAMIC_IMPORT_RE = /import\s*\(\s*['"]([^'"]+)['"]\s*\)/g;
 
 export const isRelativeSpecifier = (spec: string) => spec.startsWith('.');
+
+/** The repo-relative path a relative specifier in `repoPath` points at. */
+export const resolveImportTarget = (repoRoot: string, repoPath: string, spec: string): string =>
+  relative(repoRoot, resolve(repoRoot, dirname(repoPath), spec));
 
 export function importSpecifiers(src: string): ImportSpecifier[] {
   const out: ImportSpecifier[] = [];

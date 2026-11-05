@@ -9,7 +9,7 @@
     "scripts/util/paths.ts": "57cc218a71295c2f51e5f3b5f4657c26e6b13927",
     "scripts/util/staged-write.ts": "33b66e0828f74af840ad7bd4c3b195d5c1b5e12c",
     "scripts/util/stamp-hash.ts": "06bb1b80efc9333d0ea2fdf52a592e0173faaa7e",
-    "src/astro-core/astronomy-constants.ts": "558b635982b8b63a34b58ec4e42ce79adc436d71",
+    "src/astro-core/astronomy-constants.ts": "0bcbfa052a6044c09d0b4c4e1b1e3fe7e3040941",
     "src/astro-core/baker-constants.json": "238d1c125cd62e2ebf2cde18a8dc8a525d1b6122",
     "src/astro-core/baker-constants.ts": "2c76bd671c87cfa7d9e5ef7efe5799740f81cfdc",
     "src/astro-core/colour/blackbody-lut-pure.ts": "9d61e33c0bb2b7ea8e39c5db510654c568a01a76",
@@ -22,7 +22,7 @@
     "src/astro-core/milkyway/column/milkyway-column-pure.ts": "05659cdc2b1eeb615875af698320072c332bfd69",
     "src/astro-core/perceptual-magnitude.ts": "6d7aac33f16b24ca26a5110d33b86c4e70fb0c52",
     "src/astro-core/tonemap/tonemap-pure.ts": "18dda3006619a2623a578456ee9e013947355f05",
-    "src/catalog-format/record/catalog-pure.ts": "5a81621cbc4bc97e8f3ebb144b63e895befdb7a0"
+    "src/catalog-format/record/catalog-pure.ts": "c1d59d5c25c4b34755be92d88ff6ca3516d8d804"
   },
   "outputs": {
     "src/astro-core/milkyway/calibration/resolved-hole-table.ts": "dac55b871c11d59ea7552a4f6b399953ac4a4300"

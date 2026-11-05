@@ -1,15 +1,16 @@
 import { describe, it, expect } from 'vitest';
 
-import { gaiaAstrometryRow } from '../astrometry-fixture';
+import { gaiaAstrometryRow } from '../../sources/gaia-astrometry-fixture';
 import {
   radialTermExceedsCeiling,
   resolveRadialVelocity,
   rvErrorBand,
 } from './radial-velocity';
-import { VELOCITY_SANITY_CEILING_KM_S, type GaiaAstrometryCatalogRow } from '../direction-cascade';
+import { VELOCITY_SANITY_CEILING_KM_S } from '../velocity';
+import { type GaiaAstrometryCatalogRow } from '../../sources/gaia-astrometry-source';
 import type { SimbadRadialVelocity } from '../../simbad/simbad-values-parse';
 import { SIMBAD_VALUES } from '../../simbad/simbad-values-source';
-import { GAIA_ASTROMETRY } from '../gaia-astrometry-source';
+import { GAIA_ASTROMETRY } from '../../sources/gaia-astrometry-source';
 import { sourceRowRef } from '../../../util/sources/row-ref-pure';
 
 const SIMBAD_REF = sourceRowRef(SIMBAD_VALUES, 1);

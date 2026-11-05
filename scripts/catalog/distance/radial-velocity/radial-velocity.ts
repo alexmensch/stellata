@@ -1,10 +1,8 @@
 // The radial-velocity cascade: Gaia DR3 RVS on a 5p row → bibcoded SIMBAD
 // → zero radial term, with the Gaia-bibcode skip rule. See README.md.
 
-import {
-  VELOCITY_SANITY_CEILING_KM_S,
-  type GaiaAstrometryCatalogRow,
-} from '../direction-cascade';
+import { VELOCITY_SANITY_CEILING_KM_S } from '../velocity';
+import { type GaiaAstrometryCatalogRow } from '../../sources/gaia-astrometry-source';
 import {
   gaiaHas5pSolution,
   gaiaRefusals,
