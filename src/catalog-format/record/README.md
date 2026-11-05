@@ -219,7 +219,7 @@ consumer spells out a `view.get*` / `view.set*` byte read of its own:
 
 | Direction | Surface | Consumers |
 | --- | --- | --- |
-| write | `writeStarRecord`, `writeCatalogHeader` | `../../../scripts/catalog/build-catalog.ts`, loader round-trip tests |
+| write | `writeStarRecord`, `writeCatalogHeader`, `encodeNameTable` | `../../../scripts/catalog/build-catalog.ts`, loader round-trip tests |
 | read, one record | `readRecordField`, `readRecordFieldBig` | `../../../scripts/catalog/catalog-lookup.ts` (AoS) |
 | read, one column × all records | `decodeRecordColumn`, `decodeRecordColumnBig` | `catalog-loader.ts` (SoA), `../../../scripts/catalog/columns/catalog-columns.ts` |
 | read, header / name table | `readCatalogHeader`, `readNameTable` | both readers |

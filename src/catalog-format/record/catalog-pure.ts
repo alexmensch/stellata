@@ -573,9 +573,45 @@ export function recordsOffset(
 export const NAME_TABLE_PADDING = 2;
 export const NAME_LENGTH_PREFIX_BYTES = 2;
 
+export interface EncodedNameTable {
+  bytes: Uint8Array;
+  /** Per input index, the offset RECORD_LAYOUT.nameOffset stores; 0 = none. */
+  offsets: Uint32Array;
+  entries: number;
+}
+
+/** Encode one name per record into the name table; a null or empty name
+ *  gets offset 0, the "no name" sentinel. */
+export function encodeNameTable(names: readonly (string | null)[]): EncodedNameTable {
+  const encoder = new TextEncoder();
+  const chunks: Uint8Array[] = [new Uint8Array(NAME_TABLE_PADDING)];
+  const offsets = new Uint32Array(names.length);
+  let length = NAME_TABLE_PADDING;
+  let entries = 0;
+  for (let i = 0; i < names.length; i++) {
+    const name = names[i];
+    if (!name) continue;
+    const encoded = encoder.encode(name);
+    if (encoded.length > 0xffff) throw new Error(`Name too long: ${name}`);
+    offsets[i] = length;
+    const lenHeader = new Uint8Array(NAME_LENGTH_PREFIX_BYTES);
+    new DataView(lenHeader.buffer).setUint16(0, encoded.length, true);
+    chunks.push(lenHeader, encoded);
+    length += NAME_LENGTH_PREFIX_BYTES + encoded.length;
+    entries++;
+  }
+  const bytes = new Uint8Array(length);
+  let off = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, off);
+    off += chunk.length;
+  }
+  return { bytes, offsets, entries };
+}
+
 /** Decode the name table into `nameOffset` → name, keyed by the offset
  *  RECORD_LAYOUT.nameOffset stores (relative to the table start). The
- *  reader side of the writer's table emit, shared by both readers. */
+ *  reader side of `encodeNameTable`, shared by both readers. */
 export function readNameTable(
   buffer: ArrayBuffer,
   nameTableOffset: number,
