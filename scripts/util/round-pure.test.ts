@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { formatFixed, roundHalfEven } from './round-pure';
+import { formatFixed, roundEach, roundHalfEven } from './round-pure';
 
 describe('roundHalfEven', () => {
   it('rounds an exact binary tie to even, as Python round() does', () => {
@@ -22,5 +22,12 @@ describe('formatFixed', () => {
     const python3 = ['0.062', '0.125', '2.675', '-0.000', '-0.000', '0.000', '-1.000', '123456.000'];
     expect([0.0625, 0.125, 2.675, -0.0001, -0, 1e-7, -1.0005, 123456.0005].map((x) => formatFixed(x, 3))).toEqual(python3);
     expect([0.125, 0.375, -0.125].map((x) => formatFixed(x, 2))).toEqual(['0.12', '0.38', '-0.12']);
+  });
+});
+
+describe('roundEach', () => {
+  it('rounds every element half to even and keeps the tuple', () => {
+    const rounded: [number, number, number] = roundEach([0.125, 2.675, -0.125] as const, 2);
+    expect(rounded).toEqual([0.12, 2.67, -0.12]);
   });
 });

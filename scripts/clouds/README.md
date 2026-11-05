@@ -21,9 +21,12 @@ the clouds both cover.
 - `zucker-parse.ts` (+ test) / `zucker-source.ts` — the four tables' parsers
   and declarations (`../util/sources/`).
 - `clouds-outputs.ts` — the emitArtifacts declaration.
+- `clouds-json.ts` — `CLOUDS_JSON`, `clouds.json` as a JSON artifact
+  (`../util/sources/README.md#a-json-artifact`): the writer serializes
+  through it, and lineage cites a cloud as `clouds:<slug>`.
 - `clouds-inputs.test.ts` — pins the step's derived input set,
   `stepInputPaths('build:clouds')`.
-- `clouds-json.test.ts` pins the emitted payload (11 calibrated clouds, class
+- `clouds-payload.test.ts` pins the emitted payload (11 calibrated clouds, class
   defaults, noiseModel, in-grid split, the alias / canonical-name table); it
   self-skips until `public/clouds.json` is built.
 
@@ -46,8 +49,10 @@ entry's import closure, its sibling files and the declarations it reads,
 
 ## Outputs
 
-One `emitArtifacts` call lands `clouds.json`, `zucker-profiled.json` and,
-on a run that mints, the `cloud` SID registry partition.
+One `emitArtifacts` call lands `clouds.json`, `zucker-profiled.json`, the
+`allocation-clouds` lineage stage (`build/lineage/`,
+[SID events](/scripts/sid/README.md#sid-events)) and, on a run that mints,
+the `cloud` SID registry partition.
 
 `zucker-profiled.json` (committed; name and version are `artifacts.zuckerProfiled`
 in `src/astro-core/baker-constants.json`) is

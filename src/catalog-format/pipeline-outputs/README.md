@@ -41,7 +41,9 @@ repo-relative, so an outputs module passes them as they are.
 - `lineage-files.ts` — the lineage layout under a build folder
   (`lineage/`, `lineage.previous/`, `lineage-diff/`; `LINEAGE_REPO_LAYOUT`
   is the checkout's own), each stage's spec (`MEMBERSHIP_LINEAGE`,
-  `PLACEMENT_LINEAGE`, `PROMOTION_LINEAGE`, `ALLOCATION_LINEAGE`: the stage
+  `PLACEMENT_LINEAGE`, `PROMOTION_LINEAGE`, `ALLOCATION_LINEAGE`, and the
+  sibling builds' `CLOUDS_ALLOCATION_LINEAGE` and
+  `LOCAL_GROUP_ALLOCATION_LINEAGE` from `siblingAllocationLineage`: the stage
   name and its file stems), the file names, and `stageOutputFiles` /
   `stageFamilies`, a stage's files as output declarations. Each stage's codes
   stay with its stage module; the absolute layout the readers and writers use

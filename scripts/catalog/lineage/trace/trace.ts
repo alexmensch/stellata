@@ -1,18 +1,18 @@
-// `pnpm run trace <name | designation | sid | gaia id> [--dir <lineage dir>]` — every stage's lineage rows for the records it names. See README.md#trace.
+// `pnpm run trace <name | designation | sid | gaia id> [--dir <lineage dir>]` — every stage's lineage rows for the records it names. See README.md.
 
 import { existsSync, readFileSync } from 'node:fs';
 import { gunzipSync } from 'node:zlib';
 
-import { readRegistryUnion } from '../../sid/registry-io';
-import { retiredSids } from '../../sid/events-pure';
-import { allocationIdentity } from '../../sid/allocation-lineage-pure';
-import { catalogRecordDesignations } from '../../sid/catalog-designations';
-import { loadCatalog, nameTable, type SearchableCatalog } from '../catalog-lookup';
-import { readIdentity, readLineage } from './lineage-io';
-import { LINEAGE_LAYOUT } from './lineage-layout-pure';
-import { LINEAGE_STAGES } from './lineage-stages';
+import { readRegistryUnion } from '../../../sid/registry-io';
+import { retiredSids } from '../../../sid/events-pure';
+import { allocationSids } from '../../../sid/allocation-lineage-pure';
+import { catalogRecordDesignations } from '../../../sid/catalog-designations';
+import { loadCatalog, nameTable, type SearchableCatalog } from '../../catalog-lookup';
+import { readIdentity, readLineage } from '../lineage-io';
+import { LINEAGE_LAYOUT } from '../lineage-layout-pure';
+import { LINEAGE_STAGES } from '../lineage-stages';
 import { parseTraceQuery, queryTerms, traceRecords, traceText, type TraceLookups } from './trace-pure';
-import { ALLOCATION_IDENTITY_STEM, MEMBERSHIP_LINEAGE, stageFile } from '../../../src/catalog-format/pipeline-outputs/lineage-files';
+import { ALLOCATION_SIDS_STEM, MEMBERSHIP_LINEAGE, stageFile } from '../../../../src/catalog-format/pipeline-outputs/lineage-files';
 
 const DIR_FLAG = '--dir';
 
@@ -60,9 +60,9 @@ export async function main(): Promise<void> {
   const q = parseTraceQuery(query);
   const catalog = q.kind === 'name' ? await loadCatalog({ withSearchIndex: true }) : null;
   const terms = queryTerms(q, lookups(catalog));
-  const allocationIdentityPath = stageFile(dir, ALLOCATION_IDENTITY_STEM);
-  const sidsOf = existsSync(allocationIdentityPath)
-    ? [...allocationIdentity(gunzipSync(readFileSync(allocationIdentityPath)).toString('utf8'), allocationIdentityPath)]
+  const allocationSidsPath = stageFile(dir, ALLOCATION_SIDS_STEM);
+  const sidsOf = existsSync(allocationSidsPath)
+    ? [...allocationSids(gunzipSync(readFileSync(allocationSidsPath)).toString('utf8'), allocationSidsPath)]
     : [];
   const stages = LINEAGE_STAGES
     .filter(({ spec }) => existsSync(stageFile(dir, spec.stage)))

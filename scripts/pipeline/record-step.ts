@@ -112,9 +112,11 @@ export async function recordStep(loaded: LoadedTable, options: RecordOptions): P
   if (isBuild(step)) throw new Error(`${step.name} is a build step: run it with run.ts`);
   const manual = { ...resolved, step };
   const tree = pipelineTree(options.root);
-  const held = await holdStepLocks(tree.locks, loaded, step.name, true, options.log);
+  const projects = (manualDescription(step, tree)?.requestFrom ?? []).map(tree.abs);
+  const held = await holdStepLocks(tree.locks, loaded, step.name, true, options.log, projects);
   try {
     const partial = options.args.length > 0;
+    // Described again under the locks: the first answer only names the files to lock.
     const described = manualDescription(step, tree);
     if (!partial && !options.force && manualFreshness(step, resolved.outputs, tree, described).kind === 'fresh') return { kind: 'fresh' };
     const reads = await runAndRead(manual, described, options, tree);

@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { dirname, join, relative, resolve } from 'node:path';
 import { walkFiles } from './walk-files';
-import { importSpecifiers, isTypeScript } from './import-specifiers';
+import { importSpecifiers, isRelativeSpecifier, isTypeScript } from './import-specifiers';
 import { TREE_ROOTS, treeOf, type Tree } from '../scripts/util/source-trees';
 
 const ROOT = resolve(__dirname, '..');
@@ -19,7 +19,7 @@ const MAY_IMPORT: Record<Tree, ReadonlySet<Tree> | 'anything'> = {
 };
 
 function relativeSpecifiers(src: string): string[] {
-  return importSpecifiers(src).map((i) => i.spec).filter((spec) => spec.startsWith('.'));
+  return importSpecifiers(src).map((i) => i.spec).filter(isRelativeSpecifier);
 }
 
 function importTargets(repoPath: string, src: string): string[] {

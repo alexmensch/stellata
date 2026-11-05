@@ -18,7 +18,8 @@ scripts/milkyway-calibration/
                               src/astro-core/milkyway/calibration/resolved-hole-table.ts.
   resolved-light-pure.ts      The cap sums, the (shell × latitude band) cells,
     (+ test)                  the table they become, and the light the table
-                              removes. Pure.
+                              removes. Pure. STAR_FIELDS is the one list of
+                              record columns the measurement reads.
   resolved-hole-catalogue.test.ts
                               RESOLVED_HOLE_CATALOGUE_RECORDS equals the
                               recordCount build-catalog-expected.json pins, so

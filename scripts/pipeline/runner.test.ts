@@ -512,6 +512,27 @@ if sys.argv[1:] == ["--describe"]:
     expect((await run([step], ['bake'])).verdicts.get('bake')).toEqual({ kind: 'stale', changed: ['(request)'] });
   });
 
+  it('orders a describing bake after the writer of the file it projects, and judges it against this run\'s rebuild', async () => {
+    write('steps/bake.py', `
+import json, sys
+from pathlib import Path
+if sys.argv[1:] == ["--describe"]:
+    print(json.dumps({"request": [Path(${JSON.stringify(at('clouds.json'))}).read_text()], "requestFrom": ["clouds.json"]}))
+`);
+    write('surfaces.bin', 'baked');
+    write('shape.in', 'ellipse');
+    const bake: StepEntry = { name: 'bake', kind: 'bake', describes: true, language: 'python', entry: at('steps/bake.py'), outputs: [at('surfaces.bin')] };
+    const steps = [bake, tsStep('clouds', 'clouds.json', ['shape.in'])];
+    write(relative(root, pipelineTree(root).manualStamp('bake')), JSON.stringify({
+      inputs: {}, outputs: fileHashes([at('surfaces.bin')], root), request: requestHash(['clouds(ellipse)']), requestFrom: ['clouds.json'],
+    }));
+    const first = await run(steps, ['bake']);
+    expect([...first.verdicts.keys()]).toEqual(['clouds', 'bake']);
+    expect(first.kinds).toEqual({ clouds: 'built', bake: 'fresh' });
+    write('shape.in', 'torus');
+    expect((await run(steps, ['bake'])).kinds).toEqual({ clouds: 'built', bake: 'stale' });
+  });
+
   it('fails a manual step whose describe cannot run, and skips its readers', async () => {
     write('req.tsv', 'r1');
     const pull = pullStep('astro', 'astro.tsv', 'req.tsv');
