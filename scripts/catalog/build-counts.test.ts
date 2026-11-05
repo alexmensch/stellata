@@ -1,6 +1,13 @@
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { describe, it, expect } from 'vitest';
+import { isStaged, type StagedCounts } from '../util/count-stages-pure';
+import { REPO_ROOT } from '../util/paths';
 import { emptyTallyPartition } from '../util/tally-pure';
 import {
+  BUILD_COUNTS_EXPECTED_FILE,
+  CATALOG_COUNT_STAGE,
+  CATALOG_COUNT_STAGES,
   compareBuildCounts,
   compareCountSnapshot,
   driftedRows,
@@ -413,6 +420,22 @@ describe('compareCountSnapshot', () => {
     expect(compareCountSnapshot<object>(staged, { rows: 3, kept: 2, tiers: { a: 1 } }).drifted).toBe(false);
     expect(compareBuildCounts<object>(staged, { stages: { read: { rows: 4 }, filter: { kept: 2, tiers: { a: 1 } } } }))
       .toContainEqual({ key: 'rows', status: 'mismatch', expected: 3, actual: 4 });
+  });
+});
+
+describe('the committed count snapshot', () => {
+  const committed = JSON.parse(readFileSync(resolve(REPO_ROOT, BUILD_COUNTS_EXPECTED_FILE), 'utf8')) as unknown;
+
+  it('is staged, every count under the stage CATALOG_COUNT_STAGE files it in', () => {
+    expect(isStaged(committed)).toBe(true);
+    const filed = Object.entries((committed as StagedCounts).stages)
+      .flatMap(([stage, counts]) => Object.keys(counts).map((key) => [key, stage]));
+    expect(Object.fromEntries(filed)).toEqual(CATALOG_COUNT_STAGE);
+    expect(filed).toHaveLength(Object.keys(CATALOG_COUNT_STAGE).length);
+  });
+
+  it('lists its stages in CATALOG_COUNT_STAGES order', () => {
+    expect(Object.keys((committed as StagedCounts).stages)).toEqual(CATALOG_COUNT_STAGES);
   });
 });
 

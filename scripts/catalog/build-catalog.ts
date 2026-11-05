@@ -42,6 +42,7 @@ import {
 } from './companions/overlap-gate-pure';
 import {
   BUILD_COUNTS_EXPECTED_FILE,
+  CATALOG_COUNT_STAGE,
   compareCountSnapshot,
   formatPartition,
   spectralSimbadPartitionError,
@@ -137,6 +138,7 @@ import {
   emitArtifacts, sweepStaged, type ArtifactContents, type Check,
 } from '../util/emit-artifacts';
 import { snapshotCheck } from '../util/snapshot-check';
+import { nestByStage, type StagedCounts } from '../util/count-stages-pure';
 import { watchHeap } from '../util/heap-budget';
 import { syntheticGaiaBridges } from '../sid/sid-pure';
 import { sidSuccessorPairs } from '../sid/events-pure';
@@ -1312,10 +1314,10 @@ export async function main() {
   });
 }
 
-function buildCountsCheck(actual: BuildCounts): Check {
-  return snapshotCheck<BuildCounts>({
+function buildCountsCheck(counts: BuildCounts): Check {
+  return snapshotCheck<StagedCounts>({
     snapshotPath: EXPECTED_COUNTS,
-    actual,
+    actual: nestByStage(counts, CATALOG_COUNT_STAGE),
     compare: compareCountSnapshot,
     failureLabel: 'build-catalog count',
     script: 'build:catalog',
