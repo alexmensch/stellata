@@ -25,11 +25,7 @@ comes out* is here.
   table ([The resolution hole](#the-resolution-hole--the-band-marches-the-model-minus-the-drawn-stars)). Never edited by hand.
 - `resolved-fraction-pure.ts` (+ test) — the table's layout constants, the
   rule the table is sampled with, the cube it is resampled onto, the
-  CPU mirror of the trilinear fetch both shaders make, and
-  `resolvedHoleCatalogueMismatch`: the table subtracts the light of the
-  catalogue it was measured on, so `MilkyWay` checks the loaded record count
-  against `RESOLVED_HOLE_CATALOGUE_RECORDS` once and warns. A warning, never
-  a throw — a shallower local build is legitimate and the band still renders.
+  CPU mirror of the trilinear fetch both shaders make.
 - The `Data3DTexture` those voxels go into is the viewer's:
   `/src/client/milkyway/resolved-hole-texture.ts`.
 
