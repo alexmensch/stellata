@@ -1,6 +1,7 @@
 // Physical-quantity display formatting shared by the hover and focus
 // cards — radii, extents, magnitudes, coarse provenance. See ./README.md.
 
+import { apparentMagnitude } from '../../astro-core/perceptual-magnitude';
 import { fmtDist } from '../ui/distance-util';
 
 /** Mean Earth radius, km (IUGG). Planet radii display in Earth radii. */
@@ -50,11 +51,6 @@ export function formatAxisPair(majorPc: number, minorPc: number): string {
   return `${major} × ${minor}`;
 }
 
-/** Apparent V magnitude at the camera's vantage: absmag + 5·log10(d) − 5. */
-export function apparentMagFromCamera(absmag: number, dCameraPc: number): number {
-  return absmag + 5 * Math.log10(dCameraPc) - 5;
-}
-
 /** Magnitude with an explicit sign so brightness reads at a glance
  *  (negative = naked-eye bright). One decimal. */
 export function formatMagnitude(m: number): string {
@@ -65,7 +61,7 @@ export function formatMagnitude(m: number): string {
  *  when the distance is degenerate (zero / non-finite). */
 export function appMagCameraDisplay(absmag: number, dCameraPc: number): string {
   if (!Number.isFinite(dCameraPc) || dCameraPc <= 0) return '—';
-  const appMag = apparentMagFromCamera(absmag, dCameraPc);
+  const appMag = apparentMagnitude(absmag, dCameraPc);
   if (!Number.isFinite(appMag)) return '—';
   return formatMagnitude(appMag);
 }

@@ -646,15 +646,3 @@ export function inferBinaries(
 
   return { pairs, mutualPairs };
 }
-
-/** Apparent magnitude → absolute magnitude at given distance.
- *  M = m − 5·log₁₀(d / 10 pc). */
-export function apparentToAbsoluteMagnitude(mag: number, distPc: number): number {
-  return mag - 5 * Math.log10(distPc / 10);
-}
-
-/** Absolute magnitude → apparent magnitude at given distance.
- *  m = M + 5·log₁₀(d / 10 pc). */
-export function absoluteToApparentMagnitude(absmag: number, distPc: number): number {
-  return absmag + 5 * Math.log10(distPc / 10);
-}

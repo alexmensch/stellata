@@ -252,7 +252,7 @@ Per-row gates and resolution:
   component→index map for a parent that kept its own Gaia row), covering
   both the ρ=0 collocation and a measured sep+PA re-projection. This makes
   the baked placement match the runtime pair anchor
-  (`build-runtime-binaries.py`'s `override_inner_primary_indices`);
+  (`/scripts/binaries/runtime-binaries-pure.ts`'s `overrideInnerPrimaryIndices`);
   counted by `repositionedInnerToParent`. Rendering is unaffected either
   way (elements-alone R(t)), but a consistent bake keeps the
   baked-vs-elements ratchet in `/tests/integration/multi-star-regression.test.ts` honest.
@@ -491,7 +491,7 @@ bit-identical bake there is the deliberate sub-resolution placement above. Two
 siblings of one primary are not exempt: each moves on its own orbit, and
 nothing keeps them apart. The relations come from the runtime's own pairing —
 `renderableOrbitRelations` in `record-index/`, the wings pass's resolution
-(writer's `resolve_idx`, both synth retries, the parent re-home) filtered to
+(the writer's gaia → hip → synth resolution, both synth retries, the parent re-home) filtered to
 renderable orbits — never from promotion's cursor walk, which records a pair
 before its parent is minted.
 

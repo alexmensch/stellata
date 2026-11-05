@@ -653,7 +653,7 @@ consume it in two complementary ways:
    - [**Montalto 2021**](/data/papers/index.md#montalto2021) — BP−RP →
      T_eff fifth-order relation.
 
-2. **Runtime artifact.** `scripts/binaries/build-runtime-binaries.py`
+2. **Runtime artifact.** `scripts/binaries/build-runtime-binaries.ts`
    emits `public/binaries.bin` — one record per kept physical pair,
    carrying Kepler elements (when known) plus the sep+PA the
    `BinaryOrbitField` uses for per-frame orbital evaluation.
@@ -662,7 +662,7 @@ consume it in two complementary ways:
 
 Implementation: `scripts/binaries/build-binaries.py` for the WDS+ORB6
 pipeline (engineer walk-through in `scripts/binaries/README.md`);
-`scripts/binaries/build-runtime-binaries.py` for the runtime artifact;
+`scripts/binaries/build-runtime-binaries.ts` for the runtime artifact;
 `scripts/catalog/build-catalog.ts` + `visual-doubles.ts` +
 `companion-promotion.ts` for the catalog-side passes (see
 [Geometric binary inference](/scripts/catalog/multiplicity/README.md#geometric-binary-inference)

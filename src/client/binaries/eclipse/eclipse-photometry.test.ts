@@ -3,12 +3,14 @@ import * as THREE from 'three';
 import { EclipsePhotometryField } from './eclipse-photometry';
 import { DIM_FLOOR } from './eclipse-photometry-pure';
 import {
-  FLAG_HAS_ORBIT,
-  FLAG_HAS_INCLINATION,
-  NO_PARENT,
   type BinariesData,
   type BinaryRelation,
 } from '../binaries-loader';
+import {
+  FLAG_HAS_ORBIT,
+  FLAG_HAS_INCLINATION,
+  NO_PARENT,
+} from '../../../catalog-format/binaries/binaries-format';
 import { J2000_JD, AU_PC, R_SUN_PC } from '../../../astro-core/astronomy-constants';
 
 /** Sim-time t (Unix seconds) for a Julian date — inverse of tToJdUt. */

@@ -131,7 +131,7 @@ the seven-stage pipeline + per-stage modules.
 
 - `scripts/catalog/companions/companion-promotion.ts` (build-time — surfaces pair
   secondaries as catalog.bin records).
-- `scripts/binaries/build-runtime-binaries.py` (emits
+- `scripts/binaries/build-runtime-binaries.ts` (emits
   `public/binaries.bin` for the per-frame
   [`src/client/binaries/`](../../src/client/binaries/README.md) layer).
 - `scripts/catalog/validate/known-stars.test.ts` +

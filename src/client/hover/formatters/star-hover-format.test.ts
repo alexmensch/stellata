@@ -2,12 +2,14 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { setUnit } from '../../ui/distance-util';
 import { J2000_JD } from '../../../astro-core/astronomy-constants';
 import {
-  FLAG_HAS_ORBIT,
-  FLAG_HAS_INCLINATION,
-  NO_PARENT,
   type BinariesData,
   type BinaryRelation,
 } from '../../binaries/binaries-loader';
+import {
+  FLAG_HAS_ORBIT,
+  FLAG_HAS_INCLINATION,
+  NO_PARENT,
+} from '../../../catalog-format/binaries/binaries-format';
 import { makeBinaries } from '../../binaries/binary-relation-fixture';
 import { createBinarySystemMembership } from '../../binaries/binary-system-membership';
 import { lateReady } from '../../util/late/late-fixture';

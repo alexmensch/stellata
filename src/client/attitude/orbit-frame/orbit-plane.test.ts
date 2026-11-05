@@ -26,11 +26,13 @@ import {
   makeRelation,
 } from '../../binaries/binary-relation-fixture';
 import {
+  type BinariesData,
+} from '../../binaries/binaries-loader';
+import {
   FLAG_HAS_INCLINATION,
   FLAG_HAS_ORBIT,
   NO_PARENT,
-  type BinariesData,
-} from '../../binaries/binaries-loader';
+} from '../../../catalog-format/binaries/binaries-format';
 import {
   captureOrbitFrame,
   copyReferenceFrame,

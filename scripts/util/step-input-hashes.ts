@@ -24,6 +24,13 @@ export function stepInputHashes(): FileHashes {
   return parsed;
 }
 
+/** One input's hash from a handed map; throws when the map holds none for it. */
+export function handedFileHash(hashes: FileHashes, file: string): string {
+  const hash = hashes[file];
+  if (hash === undefined || hash === null) throw new Error(`no handed input hash for ${file}`);
+  return hash;
+}
+
 /** The stamp's input map: the handed pre-run map, with each input the step also wrote re-hashed after the run. */
 export function stampedInputMap(handed: FileHashes, rewritten: FileHashes): FileHashes {
   return { ...handed, ...Object.fromEntries(Object.entries(rewritten).filter(([path]) => path in handed)) };
