@@ -87,6 +87,15 @@ takes `skip-version-bump` is
 [the live-app consumer test](/RELEASING.md#the-live-app-consumer-test). Exempt under
 [the `skip-version-bump` exemption](#the-skip-version-bump-exemption).
 
+## `cache-cleanup.yml`
+
+Runs when a pull request closes, merged or not, and deletes every Actions
+cache entry scoped to it (`refs/pull/<n>/merge`): its saved data builds
+([The data build cache](/scripts/ci/README.md#the-data-build-cache)) and
+anything else its runs saved. No other run can restore them, and the
+repository's cache store evicts least-recently-used entries past its cap,
+main's builds among them.
+
 ## `test.yml`
 
 CI pipeline on every PR (and push to `main`). Required for merge. A
