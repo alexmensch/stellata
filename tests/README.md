@@ -28,8 +28,8 @@ artifact-freshness.test.ts  Built-artifact coherence: fails (not skips)
 bundle-content.test.ts   Deployed-bundle guard: no source-tree file
                          types (.md/.txt/.py/.ts) under public/, no
                          `.staged` output a killed build left in public/
-                         or dist/; dust assets restricted to the sync
-                         allowlist.
+                         or dist/; each mirror's folders hold only its
+                         declared outputs (MIRROR_STEPS, strays()).
                          Self-skips when public/ is unbuilt.
 cadence-layer-declarations.test.ts
                          Source scan over the SHIPPED scene-layer
@@ -241,9 +241,8 @@ site-dev-routing.test.ts The dev server's routing table held against the
                          with src/worker.test.ts, which pins the same
                          table on the production side.
 step-coverage.test.ts    Every declareOutputs constant under scripts/ is a
-                         steps.ts entry's, a writer excluded by name, or
-                         on the not-yet-migrated list of steps a later
-                         item moves (../scripts/pipeline/README.md#the-model).
+                         steps.ts entry's or a writer excluded by name
+                         (../scripts/pipeline/README.md#the-model).
 step-outputs.test.ts     Imports every TS pipeline step's emitArtifacts
                          declaration (the *-outputs.ts modules), so one
                          that runs its step on import fails here; pins

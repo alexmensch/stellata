@@ -8,7 +8,7 @@ rules, distance filter, emission assembly);
 `emission-geometry-pure.ts` holds the Sérsic deprojection and each
 family's truncated-volume integral. `local-group-source.ts` declares the
 three inputs (`../util/sources/`), `local-group-parse.ts` holds their
-parsers, and `local-group-inputs.test.ts` pins the up-to-date gate's
+parsers, and `local-group-inputs.test.ts` pins the step's derived
 input set, `stepInputPaths('build:local-group')` (`../util/step-inputs.ts`). The quadrature and the ρ₀ solve
 itself are shared with the Milky Way band and live in
 `src/astro-core/emission/density0-solver-pure.ts`. The distance envelope
@@ -51,13 +51,12 @@ rewrites only on a run that appends. A new slug mints under
 `allocation.mint.local-group`; a vanished slug fails the build, and a rename
 needs a `data/sid/sameas-overrides.tsv` bridge. See [Sibling-artifact stamping](/scripts/sid/README.md#sibling-artifact-stamping).
 
-Idempotent — exits early if `public/local-group.json` is newer than
-every input `stepInputPaths` derives: the import closure of the
-`build:local-group` entry (`../util/import-closure.ts`),
-their sibling files, and every declaration that closure reads — the way the
-catalogue stamp derives its own, so a moved parser or a new import is never
-missed. Run via
-`pnpm run build:local-group`. No live fetches at build time; refresh
+A `build` step on the runner
+([The runner](../pipeline/README.md#the-runner--runts)): `pnpm run build:local-group`
+skips it while its stamp holds `public/local-group.json` and every input
+`stepInputPaths` derives — the import closure of the entry
+(`../util/import-closure.ts`), its sibling files, and every declaration that
+closure reads — so a moved parser or a new import is never missed. No live fetches at build time; refresh
 of the LVDB snapshot is a manual `curl` of
 `raw.githubusercontent.com/apace7/local_volume_database/main/data/dwarf_all.csv`
 → `data/local-group/lvdb-snapshot.csv`.

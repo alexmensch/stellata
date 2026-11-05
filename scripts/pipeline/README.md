@@ -2,12 +2,10 @@
 
 One model of the build pipeline: a typed table of steps, a runner that orders
 and gates them, and the content stamp as the only freshness test. This README
-is the design; [Files](#files) maps it onto the code. `step-table/steps.ts` holds the
-catalogue chain's `build` steps (`steps.test.ts` pins their order and edges)
-and every pull and bake (`MANUAL_STEPS`, each run by hand through
-`record.ts`, the two Horizons fetchers among them); every other `build` step
-still runs through its own `package.json` target until it moves onto the
-table.
+is the design; [Files](#files) maps it onto the code. `step-table/steps.ts` holds every
+`build` step (`steps.test.ts` pins their order and edges; `MIRROR_STEPS`
+the six mirrors) and every pull and bake (`MANUAL_STEPS`, each run by hand
+through `record.ts`, the two Horizons fetchers among them).
 
 ## The model
 
@@ -16,8 +14,7 @@ or a pull depends on is a **step**. Report, draft and on-demand writers
 (`sid:dr-reconcile`, `sid:risk-set`, `identity:snapshot`, and the hand-run
 `build:lut` and `build:naming-parity`) are excluded by name, and
 `tests/step-coverage.test.ts` holds every `declareOutputs` constant under
-`scripts/` to an entry in `steps.ts`, that list, or a not-yet-migrated list
-of steps a later item moves.
+`scripts/` to an entry in `steps.ts` or that list.
 
 A step's outputs are declared once, its inputs are derived, and the order of
 steps follows from which step reads which file. The runner runs the steps it
@@ -78,9 +75,6 @@ re-hashes every manual step's record (`data/` is about 1.5 GB) and starts each
 Python pull's `--describe` on every run; the runner core quotes a no-op data
 phase before and after, warm and cold, on that machine and on a GitHub Actions
 runner, which is much slower, and optimises only if that number warrants it.
-Every mtime
-gate goes: `build:clouds`, `build:local-group`, the mirrors and
-`refresh_lib.is_up_to_date`.
 
 A **pull's stamp** adds three fields:
 
@@ -226,7 +220,7 @@ Hand-kept lists become derivations over the table:
 - `.worktreeinclude` may list only the `build` steps' stamped outputs, their
   stamp files and `build/lineage/`, and must list every stamped output and
   stamped family under `public/` or `build/`. `worktree-seed.test.ts` checks it against
-  the outputs and stamps of the steps `build:seed-steps` selects, read from
+  the outputs and stamps of the steps `build:data` selects, read from
   the loaded step table.
 - `tests/bundle-content.test.ts` reads the mirror steps' declarations.
 - `resolved-hole-table.ts`'s record count is tested against

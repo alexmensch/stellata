@@ -1,7 +1,7 @@
 // The real step table loads, orders and stales as README.md#the-step-table--stepsts says.
 
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
-import { join, relative, resolve } from 'node:path';
+import { dirname, join, relative, resolve } from 'node:path';
 import { beforeAll, describe, expect, it } from 'vitest';
 
 import { MULTIPLES_TSV } from '../../binaries/multiples-tsv';
@@ -9,7 +9,7 @@ import { CNS5 as CNS5_SOURCE } from '../../catalog/classic-ids/cns5-source';
 import { REASON_CODES } from '../../catalog/lineage/reason-codes-tsv';
 import { MEMBERSHIP_MANIFEST } from '../../catalog/membership/membership-manifest-tsv';
 import { packageScripts } from '../../util/import-closure';
-import { lfsContentReadable, publicFile, REPO_ROOT } from '../../util/paths';
+import { lfsContentReadable, publicFile, PUBLIC_DIR, REPO_ROOT } from '../../util/paths';
 import { PUBLIC_FILES } from '../../../src/catalog-format/public-artifacts/public-artifacts';
 import { entryInputPaths } from '../../util/step-inputs';
 import { describeStep } from '../freshness';
@@ -17,7 +17,7 @@ import { loadTable, type Loaded } from './load-table';
 import { MANUAL_STEPS } from './manual-step-outputs';
 import { pipelineTree } from '../pipeline-tree';
 import { describesItself, isBuild, selectSteps, type Edge, type ReadsEdge } from './step-table-pure';
-import { STEPS } from './steps';
+import { MIRROR_STEPS, STEPS } from './steps';
 
 const CNS5 = CNS5_SOURCE.file;
 const MANIFEST = resolve(REPO_ROOT, MEMBERSHIP_MANIFEST.file);
@@ -37,10 +37,12 @@ const edgeFiles = (from: string, to: string): string[] => loaded.graph.edges
 const isBuildStep = (name: string): boolean => isBuild(loaded.steps.get(name)!.step);
 
 describe('the step table', () => {
-  it('runs the catalogue chain in its data-flow order', () => {
+  it('runs the build steps in their data-flow order', () => {
     expect(loaded.graph.order.filter(isBuildStep)).toEqual([
-      'lineage:codes', 'build:wgsn', 'build:binaries', 'build:astrometry-request', 'build:classic-ids',
-      'build:membership', 'build:catalog', 'build:binaries-runtime',
+      'lineage:codes', 'build:clouds', 'build:local-group', 'build:wgsn', 'build:binaries',
+      'build:astrometry-request', 'build:classic-ids', 'build:membership', 'build:probes-sync', 'build:ephemerides-sync',
+      'build:catalog', 'build:binaries-runtime', 'build:dust-sync', 'build:local-bubble-sync', 'build:cloud-surfaces-sync',
+      'build:textures-sync',
     ]);
   });
 
@@ -61,15 +63,32 @@ describe('the step table', () => {
     expect(STEPS.steps.map((s) => s.entry).filter((entry) => texts.some((text) => text.includes(entry)))).toEqual([]);
   });
 
-  it('keeps loops only through a manual step and sets aside no registry edge while build:catalog is the only allocating step on it', () => {
+  it('keeps loops only through a manual step, and sets aside exactly the registry edges between the three allocating steps', () => {
     expect(loaded.graph.keptLoops.filter((e) => isBuildStep(e.from))).toEqual([]);
-    expect(loaded.graph.registryEdges).toEqual([]);
+    const allocating = ['build:catalog', 'build:clouds', 'build:local-group'];
+    expect(loaded.graph.registryEdges.map((e) => `${e.from} → ${e.to}`).sort()).toEqual(
+      allocating.flatMap((from) => allocating.filter((to) => to !== from).map((to) => `${from} → ${to}`)).sort(),
+    );
   });
 
-  it('selects the whole catalogue chain upstream of build:binaries-runtime, so build:layers never reads a stale row-index map', () => {
+  it('selects the whole catalogue chain upstream of build:binaries-runtime, so build:data never reads a stale row-index map', () => {
     const selected = selectSteps(loaded.graph, ['build:binaries-runtime']);
     expect(selected.indexOf('build:catalog')).toBeLessThan(selected.indexOf('build:binaries-runtime'));
     expect(selected).toEqual(expect.arrayContaining(['build:binaries', 'build:membership', 'build:catalog']));
+  });
+
+  it('gives each mirror its family folders alone, none of them public/ itself', () => {
+    const shared = MIRROR_STEPS.flatMap(({ name }) => {
+      const owned = new Set(loaded.steps.get(name)!.outputs.families.map((f) => f.dir));
+      const others = [...loaded.steps.values()].filter(({ step }) => step.name !== name);
+      return [
+        ...[...owned].filter((dir) => dir === resolve(REPO_ROOT, PUBLIC_DIR)).map((dir) => `${name} owns ${dir}`),
+        ...others.flatMap(({ step, outputs }) => [...outputs.files.map(dirname), ...outputs.families.map((f) => f.dir)]
+          .filter((dir) => owned.has(dir))
+          .map((dir) => `${step.name} writes into ${name}'s ${relative(REPO_ROOT, dir)}`)),
+      ];
+    });
+    expect(shared).toEqual([]);
   });
 
   it('stales build:membership and build:catalog on an edit to cns5.tsv, membership first', () => {

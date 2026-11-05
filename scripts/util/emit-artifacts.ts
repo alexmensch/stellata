@@ -5,7 +5,7 @@ import { basename, dirname, resolve } from 'node:path';
 
 import { REPO_ROOT } from './paths';
 import {
-  STAGING_SUFFIX, discardStaged, landStaged, writeStaged,
+  STAGING_SUFFIX, discardStaged, landStaged, writeStaged, type StagedContents,
 } from './staged-write';
 
 /** Outputs whose member set is whatever one run emits: members a run does not
@@ -46,7 +46,7 @@ export type Check =
   | { readonly kind: 'fail'; readonly report?: string; readonly message: string }
   | { readonly kind: 'refresh'; readonly path: string; readonly text: string };
 
-export type ArtifactContents = string | Uint8Array;
+export type ArtifactContents = StagedContents;
 
 interface EmissionBase<K extends string> {
   readonly outputs: DeclaredOutputs<K>;

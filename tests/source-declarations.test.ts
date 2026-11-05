@@ -49,7 +49,7 @@ describe('source declarations', () => {
     const unresolved = STEP_NAMED.filter((name) => scriptParts(scripts, name).some((p) => p.kind === 'other'));
     expect(unresolved).toEqual([]);
     expect(TS_STEPS).toEqual(expect.arrayContaining(['build:catalog', 'lineage:codes', 'build:local-group', 'build:clouds']));
-    expect(TS_STEPS).not.toContain('build:stamped');
+    expect(TS_STEPS).not.toContain('build:data');
   });
 
   it.each(TS_STEPS)('%s reads every source and artifact its import closure reaches', async (step) => {

@@ -16,7 +16,7 @@ pulls with no target before (`refresh-simbad-sptype.py`,
 step (the two Horizons fetchers) names its `declareOutputs` constant as a
 TypeScript build does; a Python one lists its files, plus any families.
 `package.json` keeps one-line targets that call the runner (`build:catalog` →
-`run.ts build:catalog`, `build:stamped` and `build:seed-steps` → `run.ts
+`run.ts build:catalog`, `build:data` → `run.ts
 data`, every build step on the table) or `record.ts` (every manual step), and
 never names a table step's entry file; `util/step-inputs.ts`'s `stepEntries`
 reads it from `steps.ts`.
@@ -155,8 +155,11 @@ the others once, and that rebuild appends nothing.
   files it writes, as an outputs module. Which modules may spell a `data/`
   path is `/tests/source-declarations.test.ts`'s rule.
 - `steps.ts` (+ test) — the table `run.ts` and `record.ts` load, its manual
-  steps `MANUAL_STEPS`.
-  The test holds the table to the load-time rules, every manual step's
+  steps `MANUAL_STEPS` and its six mirrors `MIRROR_STEPS` (one `mirrorStep(layer)`
+  each: `scripts/<layer>/sync-<layer>.ts` over `<layer>-mirror-outputs.ts`'s
+  `MIRROR_OUTPUTS`).
+  The test holds the table to the load-time rules, each mirror's family
+  folders to that mirror alone (`strays()` deletes anything else there), every manual step's
   `package.json` target to `tsx scripts/pipeline/record.ts <name>`, and every
   pull's and describing bake's `--describe` to running (Python under
   `python3 -I -S`, TypeScript through `tsx`; skipped while the manifest is

@@ -1,11 +1,7 @@
-// Mirrors data/textures/ (committed artifacts) → public/textures/
-// (gitignored) so Vite + the Cloudflare static-asset build serve the
-// per-body maps.
+// `pnpm run build:textures-sync`: the committed data/ copy → public/. See ../util/README.md (mirror-to-public.ts).
 
-import { mirrorDataFolder } from '../util/mirror-to-public';
-import { publicRepoPath } from '../util/paths';
-import { PUBLIC_FOLDERS } from '../../src/catalog-format/public-artifacts/public-artifacts';
-
+import { runStep } from '../util/emit-artifacts';
+import { mirror } from '../util/mirror-to-public';
 import { TEXTURES_MIRROR } from './textures-mirror-source';
 
-mirrorDataFolder(TEXTURES_MIRROR.read(), { dstDir: publicRepoPath(PUBLIC_FOLDERS.textures), label: 'texture' });
+runStep(() => mirror(TEXTURES_MIRROR.read()));

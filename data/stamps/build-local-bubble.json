@@ -69,7 +69,7 @@
     "scripts/local-bubble/build-local-bubble.py": "3889880afeeca0eec2e2d98825f513bed39b72b6",
     "scripts/util/baker_constants.py": "39afaedc61d5574bb6cebb106abba6a33ae1c705",
     "scripts/util/paths.py": "c570852282c2f3be0781466bfa28930ae71e1a6f",
-    "src/astro-core/baker-constants.json": "87f0268a16a3c0e5bad44ad051165dda1be82e01"
+    "src/astro-core/baker-constants.json": "238d1c125cd62e2ebf2cde18a8dc8a525d1b6122"
   },
   "outputs": {
     "data/local-bubble/local-bubble.bin": "c9cee00d12c7fc59ba0b9e64a33735f27e350829"

@@ -21,8 +21,8 @@ import {
 } from '../ephemerides/ephemeris';
 import { ECLIPTIC_NORTH_POLE_ICRS } from '../ephemerides/orbit-rings-layer';
 import { HELIOPAUSE_APEX_SOL_PC } from '../heliopause/heliopause';
-import { probeTrajectoryFilename } from '../../../catalog-format/probes/sync-probes-pure';
 import type { ProbeTrajectoryFile } from '../../../catalog-format/probes/probe-trajectory-schema';
+import { rosterFileName } from '../../../catalog-format/public-artifacts/public-artifacts';
 import {
   buildProbeTrajectory,
   probeStateAt,
@@ -136,7 +136,7 @@ const FILES = new Map<string, ProbeTrajectoryFile>(
   PROBE_IDS.map((id) => [
     id,
     JSON.parse(
-      readFileSync(resolve(PROBE_DIR, probeTrajectoryFilename(id)), 'utf-8'),
+      readFileSync(resolve(PROBE_DIR, rosterFileName(id)), 'utf-8'),
     ) as ProbeTrajectoryFile,
   ]),
 );

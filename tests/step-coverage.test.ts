@@ -1,4 +1,4 @@
-// Every declareOutputs constant under scripts/ belongs to a step on the table, a writer excluded by name, or a step still to move. See ../scripts/pipeline/README.md#the-model.
+// Every declareOutputs constant under scripts/ belongs to a step on the table or a writer excluded by name. See ../scripts/pipeline/README.md#the-model.
 
 import { readFileSync } from 'node:fs';
 import { relative } from 'node:path';
@@ -19,12 +19,6 @@ const EXCLUDED: Readonly<Record<string, readonly Ref[]>> = {
   'build:lut': ['scripts/colour/blackbody-lut-outputs.ts#LUT_OUTPUTS'],
   'build:naming-parity': ['scripts/catalog/naming/naming-parity-outputs.ts#NAMING_PARITY_OUTPUTS'],
   'build:vaidman-table': ['scripts/distance-validation/vaidman-outputs.ts#VAIDMAN_OUTPUTS'],
-};
-
-/** Steps whose move onto the table is a later item's; each entry goes when its step joins steps.ts. */
-const NOT_YET_MIGRATED: Readonly<Record<Ref, string>> = {
-  'scripts/local-group/local-group-outputs.ts#LOCAL_GROUP_OUTPUTS': 'build:local-group',
-  'scripts/clouds/clouds-outputs.ts#CLOUDS_OUTPUTS': 'build:clouds',
 };
 
 const DECLARATION = /^(export )?const (\w+) = declareOutputs\(/gm;
@@ -66,23 +60,23 @@ describe('declareOutputs coverage', () => {
     expect(found.filter((c) => !c.exported).map((c) => c.ref)).toEqual([]);
   });
 
-  it('places every constant on the table, the exclusion list or the not-yet-migrated list', () => {
+  it('places every constant on the table or the exclusion list', () => {
     const unplaced = declaredConstants().map((c) => c.ref)
-      .filter((ref) => !tableRefs.has(ref) && !excludedRefs.has(ref) && !(ref in NOT_YET_MIGRATED));
+      .filter((ref) => !tableRefs.has(ref) && !excludedRefs.has(ref));
     expect(unplaced).toEqual([]);
   });
 
   it('names only constants that exist, each in one list', () => {
     const found = new Set(declaredConstants().map((c) => c.ref));
-    const listed = [...tableRefs, ...excludedRefs, ...Object.keys(NOT_YET_MIGRATED) as Ref[]];
+    const listed = [...tableRefs, ...excludedRefs];
     expect(listed.filter((ref) => !found.has(ref))).toEqual([]);
     expect(listed.filter((ref, i) => listed.indexOf(ref) !== i)).toEqual([]);
   });
 
-  it('keys the exclusion and not-yet-migrated lists on package.json scripts off the table', () => {
+  it('keys the exclusion list on package.json scripts off the table', () => {
     const scripts = packageScripts();
     const tableNames = new Set(STEPS.steps.map((s) => s.name));
-    const names = [...Object.keys(EXCLUDED), ...Object.values(NOT_YET_MIGRATED)];
+    const names = Object.keys(EXCLUDED);
     expect(names.filter((name) => !(name in scripts))).toEqual([]);
     expect(names.filter((name) => tableNames.has(name))).toEqual([]);
   });

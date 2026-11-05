@@ -30,11 +30,12 @@ sampler and the public file names are shared with the viewer:
   truth-VECTORS query over the table window, so a changed id, cadence or
   window stales its `data/stamps/` record
   ([Freshness](../pipeline/README.md#freshness--one-mechanism)).
-- `sync-ephemerides.ts` (+ `ephemerides-mirror-source.ts` declaring the
-  folder) — mirrors the committed JSONs to
+- `sync-ephemerides.ts` (`ephemerides-mirror-source.ts` declares the
+  folder, `ephemerides-mirror-outputs.ts` the roster files that ship) —
+  `build:ephemerides-sync` mirrors the committed JSONs to
   `public/ephemerides/` (gitignored) via `../util/mirror-to-public.ts` on
   every `pnpm run dev` / `build`, so CI and deploy never touch the network.
-  The allowlist predicate keeps this README out of the deployed bundle;
+  This README is not declared, so it never ships;
   `tests/bundle-content.test.ts` guards the built tree.
 
 ## Header pins

@@ -1,10 +1,7 @@
-// Mirrors data/probes/ (committed trajectory JSONs) → public/probes/
-// (gitignored) so Vite + the Cloudflare static-asset build serve them.
+// `pnpm run build:probes-sync`: the committed data/ copy → public/. See ../util/README.md (mirror-to-public.ts).
 
-import { mirrorDataFolder } from '../util/mirror-to-public';
-import { publicRepoPath } from '../util/paths';
-import { PUBLIC_FOLDERS } from '../../src/catalog-format/public-artifacts/public-artifacts';
-
+import { runStep } from '../util/emit-artifacts';
+import { mirror } from '../util/mirror-to-public';
 import { PROBES_MIRROR } from './probes-mirror-source';
 
-mirrorDataFolder(PROBES_MIRROR.read(), { dstDir: publicRepoPath(PUBLIC_FOLDERS.probes), label: 'probe' });
+runStep(() => mirror(PROBES_MIRROR.read()));

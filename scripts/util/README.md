@@ -191,8 +191,6 @@ same thing — single-use helpers stay with their consumer.
   its `package.json` script chains; `stepInputPaths(name)` is
   `entryInputPaths` over it, which the catalogue and membership lineage
   headers key on, and CI's catalogue cache key reads `stepEntries` too.
-  `outputsNewerThanInputs(step, outputs)` is the mtime gate of the two
-  off-table emitters, `build:clouds` and `build:local-group`, over that set.
   Each step's own suite pins its set (`../catalog/catalog-inputs.test.ts`,
   `../local-group/local-group-inputs.test.ts`, `../clouds/clouds-inputs.test.ts`).
 - `tsv/` — the one TSV reader (`readTable`, typed columns, cells that keep
@@ -210,7 +208,8 @@ same thing — single-use helpers stay with their consumer.
   failure. `tally-pure.test.ts` pins all four cascades' key coverage.
 - `staged-write.ts` — the one stage-then-rename: `writeStaged` writes
   `<path>.staged` beside its target (same filesystem, so the rename is
-  atomic), `landStaged` renames it over the target, and `discardStaged` removes
+  atomic) — the bytes given, or a copy of `{copyFrom}`'s file, which never
+  holds it in memory (the mirrors' layers run to ~140 MB) — `landStaged` renames it over the target, and `discardStaged` removes
   a leftover. `writeStamp` and `emitArtifacts` are its two callers, and
   `clearStamp` discards a stamp's leftover too.
 - `emit-artifacts.ts` (+ test) — `emitArtifacts({outputs, files, checks})`,
@@ -225,13 +224,13 @@ same thing — single-use helpers stay with their consumer.
   mixed, which only a stamped step detects (its stamp was cleared and is not
   yet rewritten, so it reruns). A
   `.staged` file a killed run left behind is swept by the next run of that
-  step; a step with a skip gate of its own (`build:local-group`'s mtime check)
-  or one that can fail before it emits (`build:catalog`) calls `sweepStaged`
-  first, since such a run never reaches `emitArtifacts`. Staging under `public/` would otherwise ship: Vite
+  step; a step that can fail before it emits (`build:catalog`, `build:clouds`,
+  `build:local-group`) calls `sweepStaged` first, since such a run never
+  reaches `emitArtifacts`. Staging under `public/` would otherwise ship: Vite
   copies it wholesale, and `tests/bundle-content.test.ts` fails on any
   `*.staged` file under `public/` or `dist/`. `outputs` is the step's
   `declareOutputs({key: path, …}, families)` constant, the one place each
-  path is written, a relative one read as repo-relative; an emission supplies only contents, keyed the same, so a
+  path is written, a relative one read as repo-relative; an emission supplies only contents (bytes, or `{copyFrom: path}`), keyed the same, so a
   missing or extra key is a compile error. Family members (a directory plus a
   name pattern — the catalogue's transport chunks — or the exact names a
   member may take, as each lineage stage's baseline does, so stages can share
@@ -309,28 +308,31 @@ same thing — single-use helpers stay with their consumer.
 - `frozen-json.ts` — `serializeRowFile` (one sample array per line, so a
   thousand-row artifact still diffs sample-by-sample in git), shared by the
   probe-trajectory and planet-element emitters.
-- `mirror-to-public.ts` (+ test) — `mirrorDataFolder(folder, spec)`, the one
-  `data/<folder>/` → `public/<folder>/` copy used by
-  `scripts/{dust,textures,probes,ephemerides}/sync-*.ts`. `mirrorSource`
-  declares the mirrored folder as a folder source (`sources/`): every
-  allowlisted file is a member, so each is presence-checked and a file
-  added to the folder joins the step's inputs.
-  Each folder's constant lives in its `*-mirror-source.ts`. A missing
-  source folder or an unsmudged LFS file fails the sync rather than
-  shipping an empty or stub layer. Mtime+size skip for up-to-date files; **allowlist**, never denylist, because Vite copies
-  `public/` wholesale — anything left in the destination ships, so the
-  mirror also purges non-allowlisted strays a previous sync left behind.
-  `flattenSubDirs` copies named subfolders of the source into the same
-  flat destination, which is how a data folder groups big artifacts at
-  rest without moving them in `public/` — so no consumer URL changes when
-  it does (`data/textures/relief/`). Names must stay unique across all of
-  them: the allowlist is by name, and the purge pass cannot tell two
-  same-named files apart.
-  `tests/bundle-content.test.ts` asserts the built tree against the same
-  predicates. `syncFile(src, dst)` is the one size-and-mtime skip-or-copy:
-  the folder mirror's loop and the two single-file copies
-  (`sync-local-bubble.ts`, `sync-cloud-surfaces.ts`, each reading its binary
-  through a declared source beside it) all call it.
+- `mirror-to-public.ts` (+ test) — `mirror(folder)`, the one `data/` →
+  `public/` copy, which every `build:<layer>-sync` step runs
+  (`scripts/<layer>/sync-<layer>.ts`; `steps.ts`'s `MIRROR_STEPS`: dust,
+  probes, ephemerides, local-bubble, cloud-surfaces, textures). What a
+  mirror ships is its `<layer>-mirror-outputs.ts` declaration and nothing
+  else: a family per pattern-named or rostered folder, a file per fixed
+  name (the dust manifest, `local-bubble.bin`, `cloud-surfaces.bin`).
+  `mirrorSource` declares the data folder (`sources/`) with the
+  declaration as its **allowlist** (`declaresName`), never a denylist, so
+  each copied file is presence-checked and a file added to the folder joins
+  the step's inputs; a single file is an allowlist of one. A missing source
+  folder, a declared file missing from it, or an unsmudged LFS file fails
+  the step rather than shipping an empty or stub layer. The copy is one
+  `emitArtifacts` emission, so a family member the source lost is deleted;
+  the runner's stamp decides when it runs. Vite copies `public/` wholesale,
+  so every family folder is the mirror's alone and `strays(outputs)` — any
+  undeclared name in one — is purged after the copy; a mirror family at
+  `public/` itself would purge the whole folder, which is why the
+  single-file mirrors declare files; `steps.test.ts` holds every mirror's family
+  folders to that mirror alone, none of them `public/` itself. `flattenSubDirs` copies named
+  subfolders of the source into the same flat destination, which is how a
+  data folder groups big artifacts at rest without moving them in
+  `public/` (`data/textures/relief/`). A name two of
+  them share fails the step: the copy is by name. `tests/bundle-content.test.ts` asserts
+  `strays` is empty for every mirror over the built tree.
 
 ## CI heap budget
 
@@ -374,8 +376,7 @@ A pipeline restructuring promises unchanged outputs; prove it, don't
 eyeball it. Both commands first rebuild everything from scratch: they delete
 the gitignored files under `public/` and every stamp, then run
 `pnpm run build:data`. A stamp's input list can miss a file the step reads, so
-a skipped step proves nothing; a missing output is what makes every
-mtime-gated emitter rebuild too. Each run costs a cold catalogue build (about
+a skipped step proves nothing. Each run costs a cold catalogue build (about
 six minutes), and a dev server on the same checkout serves nothing meanwhile.
 
 1. On the base commit, `pnpm run identity:snapshot` hashes every output into

@@ -1,11 +1,7 @@
-// Mirrors data/dust/ (LFS-tracked source of truth) → public/dust/
-// (gitignored) so Vite + the Cloudflare static-asset build serve the
-// voxel chunks.
+// `pnpm run build:dust-sync`: the committed data/ copy → public/. See ../util/README.md (mirror-to-public.ts).
 
-import { mirrorDataFolder } from '../util/mirror-to-public';
-import { publicRepoPath } from '../util/paths';
-import { PUBLIC_FOLDERS } from '../../src/catalog-format/public-artifacts/public-artifacts';
-
+import { runStep } from '../util/emit-artifacts';
+import { mirror } from '../util/mirror-to-public';
 import { DUST_MIRROR } from './dust-mirror-source';
 
-mirrorDataFolder(DUST_MIRROR.read(), { dstDir: publicRepoPath(PUBLIC_FOLDERS.dust), label: 'dust' });
+runStep(() => mirror(DUST_MIRROR.read()));

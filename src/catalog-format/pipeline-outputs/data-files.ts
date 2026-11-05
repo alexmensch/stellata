@@ -14,7 +14,9 @@ export const DATA_FILES = {
 
 export const CATALOG_PARTITION = 'catalog';
 /** One per sibling artifact; `/scripts/sid/sibling-artifacts-pure.ts` must name each. */
-export const SIBLING_PARTITIONS = ['cloud', 'lg'] as const;
+export const CLOUD_PARTITION = 'cloud';
+export const LOCAL_GROUP_PARTITION = 'lg';
+export const SIBLING_PARTITIONS = [CLOUD_PARTITION, LOCAL_GROUP_PARTITION] as const;
 
 export type SiblingPartition = (typeof SIBLING_PARTITIONS)[number];
 export type RegistryPartition = typeof CATALOG_PARTITION | SiblingPartition;

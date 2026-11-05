@@ -39,11 +39,13 @@ wire schema and the public file names are shared with the viewer:
   (`horizons-client.ts`' `vectorParams`, the epochs left out), the roster
   and the stop time: the roster's mission facts are written into each file,
   so an edit to any of them stales the pull's `data/stamps/` record.
-- `sync-probes.ts` (`probes-mirror-source.ts` declares the folder) — mirrors the committed JSONs
-  to `public/probes/` (gitignored) via `scripts/util/mirror-to-public.ts`
-  on every `pnpm run dev` / `build`, so CI and deploy never touch the
-  network. The allowlist predicate keeps this folder's README out of the
-  deployed bundle; `tests/bundle-content.test.ts` guards the built tree.
+- `sync-probes.ts` (`probes-mirror-source.ts` declares the folder,
+  `probes-mirror-outputs.ts` + test the roster files that ship) —
+  `build:probes-sync` mirrors the committed JSONs to `public/probes/`
+  (gitignored) via `scripts/util/mirror-to-public.ts` on every
+  `pnpm run dev` / `build`, so CI and deploy never touch the network. This
+  folder's README is not declared, so it never ships;
+  `tests/bundle-content.test.ts` guards the built tree.
 
 ## Adaptive grid
 

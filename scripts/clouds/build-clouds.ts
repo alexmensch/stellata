@@ -3,7 +3,6 @@
 import { allocateSibling, emitSibling } from '../sid/sibling-allocation';
 import { SIBLING_ARTIFACTS } from '../sid/sibling-artifacts-pure';
 import { runStep, sweepStaged } from '../util/emit-artifacts';
-import { outputsNewerThanInputs } from '../util/step-inputs';
 import { buildClouds, cloudsPayload, zuckerProfiledPayload } from './build-clouds-pure';
 import { CLOUDS_OUTPUTS } from './clouds-outputs';
 import { profiledClouds } from './cloud-model-pure';
@@ -11,11 +10,6 @@ import { ZUCKER_2020, ZUCKER_2021_EXTENTS, ZUCKER_2021_FITS, ZUCKER_2021_MASSES 
 
 async function main(): Promise<void> {
   sweepStaged(CLOUDS_OUTPUTS);
-  if (!process.argv.includes('--force') && await outputsNewerThanInputs('build:clouds', [CLOUDS_OUTPUTS.files.clouds, CLOUDS_OUTPUTS.files.zuckerProfiled])) {
-    console.log(`${SIBLING_ARTIFACTS.clouds.file} up to date — skipping (use --force to rebuild)`);
-    return;
-  }
-
   const extents = ZUCKER_2021_EXTENTS.read();
   const masses = ZUCKER_2021_MASSES.read();
   const profiled = profiledClouds(extents, ZUCKER_2021_FITS.read(), masses);

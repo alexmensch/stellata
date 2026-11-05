@@ -1,7 +1,7 @@
 // The step table's types, its load-time rules and the order derived from it. See README.md.
 
 import { stepFileName } from '../../util/stamp-path-pure';
-import { isFamilyMember, isMemberName, type OutputFamily } from '../../util/emit-artifacts';
+import { isFamilyMember, isMemberName, type DeclaredOutputs, type OutputFamily } from '../../util/emit-artifacts';
 
 /** A `declareOutputs` constant, named by module and export so the module can be
  *  checked side-effect-free before it is imported. */
@@ -95,6 +95,11 @@ export type Derived =
   | { readonly kind: 'rejected'; readonly problems: readonly string[] };
 
 export const isBuild = (step: StepEntry): step is BuildStep => step.kind === 'build';
+
+export const claimsOf = (declared: DeclaredOutputs): OutputClaims => ({
+  files: Object.values<string>(declared.files),
+  families: declared.families,
+});
 
 export function claims(outputs: OutputClaims, path: string): boolean {
   return outputs.files.includes(path)

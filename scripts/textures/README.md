@@ -184,12 +184,13 @@ rather than shipping it.
   `texture-calibration.test.ts` pins targets, achieved means, the index
   table and that conversion. Rationale:
   [Colour fidelity](/data/textures/README.md#colour-fidelity--index-anchored-calibration).
-- `sync-textures.ts` (+ `-pure.ts`, test; `textures-mirror-source.ts`
-  declares the folder) — mirrors the committed
-  artifacts to `public/textures/` (gitignored) on every `pnpm run
-  build` / `dev`; pure copy, so CI/deploy never needs Pillow. The
-  allowlist predicate keeps README/source files out of the deployed
-  bundle, mirroring `scripts/dust/sync-dust-pure.ts`.
+- `sync-textures.ts` (`textures-mirror-source.ts` declares the folder,
+  `textures-mirror-outputs.ts` + test what ships) — `build:textures-sync`
+  mirrors the committed artifacts to `public/textures/` (gitignored) on
+  every `pnpm run build` / `dev`; pure copy, so CI/deploy never needs
+  Pillow. It ships the bake's own families
+  (`TEXTURE_MEMBERS`, `/src/catalog-format/public-artifacts/`), so
+  README/source files stay out of the deployed bundle.
 
 ## Size ladder
 

@@ -1,13 +1,11 @@
-// The per-body maps the mirror serves, declared.
+// The data/ files build:textures-sync copies, declared.
 
 import { mirrorSource } from '../util/mirror-to-public';
-import { isTexturePublicAsset } from './sync-textures-pure';
+import { MIRROR_OUTPUTS } from './textures-mirror-outputs';
 
 export const TEXTURES_MIRROR = mirrorSource({
   dir: 'data/textures',
   hint: 'Rebuild with `pnpm run build:textures`.',
-  isPublicAsset: isTexturePublicAsset,
-  // relief/ groups the big DEM-derived maps at rest; they still serve from
-  // public/textures/ alongside the colour rungs, so no renderer URL moves.
+  outputs: MIRROR_OUTPUTS,
   flattenSubDirs: ['relief'],
 });

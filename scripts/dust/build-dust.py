@@ -52,7 +52,6 @@ DENSITY_MAX_HEADROOM = 1.2
 # (matches published values; most real sightlines clip far below this).
 
 DATA_DUST = ROOT / "data" / "dust"
-PUBLIC_DUST = ROOT / "public" / "dust"
 
 
 def main() -> int:
@@ -64,8 +63,6 @@ def main() -> int:
                              "'less_data_but_2kpc' is a validation run extending to 2 kpc.")
     parser.add_argument("--output", type=Path, default=DATA_DUST,
                         help=f"Output directory for chunks + manifest (default: {DATA_DUST.relative_to(ROOT)}).")
-    parser.add_argument("--skip-public", action="store_true",
-                        help="Skip mirroring to public/dust/ (useful for alt output dirs).")
     parser.add_argument("--force-resample", action="store_true",
                         help="Ignore the cached voxel grid and re-run the full resample.")
     args = parser.parse_args()
@@ -105,9 +102,6 @@ def main() -> int:
           f"uint8 {int(encoded.min())}..{int(encoded.max())}; "
           f"log window [{DENSITY_MIN:.0e}, {density_max:.6f}]", file=sys.stderr)
 
-    # Write chunks + manifest to `args.output`. Then mirror into public/dust/
-    # so Vite and the Cloudflare asset build see them; data/dust/ remains
-    # the canonical LFS-tracked source.
     chunks = write_chunks(encoded, args.output)
 
     manifest = build_manifest(
@@ -116,9 +110,6 @@ def main() -> int:
     )
     (args.output / MANIFEST_NAME).write_text(json.dumps(manifest, indent=2) + "\n")
     print(f"Wrote {len(chunks)} chunks + manifest to {args.output.relative_to(ROOT)}/", file=sys.stderr)
-
-    if not args.skip_public and args.output == DATA_DUST:
-        copy_to_public()
 
     return 0
 
@@ -363,34 +354,6 @@ def build_manifest(chunks: list[dict], *, synthetic: bool, density_max: float,
     if zucker is not None:
         manifest["zucker"] = zucker
     return manifest
-
-
-def is_runtime_asset(name: str) -> bool:
-    """Mirror of the sync-dust-pure.ts allowlist — only runtime assets may
-    land in public/dust/ (tests/bundle-content.test.ts guards the built
-    tree against strays like README.md or a .voxels-*.npy cache)."""
-    return (name == MANIFEST_NAME
-            or (name.startswith("chunk_") and name.endswith(".bin")))
-
-
-def copy_to_public() -> None:
-    """Mirror data/dust → public/dust so Vite serves the chunks at /dust/.
-
-    `data/dust/` is the canonical LFS-tracked location; `public/dust/` is a
-    gitignored copy so the dev server and Vite build pick it up without
-    the preprocessor having to know about two locations.
-    """
-    import shutil
-    PUBLIC_DUST.mkdir(parents=True, exist_ok=True)
-    # Wipe stale files so stepping back from --synthetic to real (or vice
-    # versa) doesn't leave mismatched chunks behind.
-    for old in PUBLIC_DUST.iterdir():
-        if old.is_file():
-            old.unlink()
-    for src in DATA_DUST.iterdir():
-        if src.is_file() and is_runtime_asset(src.name):
-            shutil.copy2(src, PUBLIC_DUST / src.name)
-    print(f"Mirrored to {PUBLIC_DUST.relative_to(ROOT)}/", file=sys.stderr)
 
 
 if __name__ == "__main__":

@@ -9,10 +9,8 @@ import { allocateSibling, emitSibling } from '../sid/sibling-allocation';
 import { SIBLING_ARTIFACTS } from '../sid/sibling-artifacts-pure';
 import { runStep, sweepStaged } from '../util/emit-artifacts';
 import { roundHalfEven, roundSignificant } from '../util/round-pure';
-import { outputsNewerThanInputs } from '../util/step-inputs';
 import { LOCAL_GROUP_OUTPUTS } from './local-group-outputs';
 import { LG_ALIASES, LG_OVERRIDES, LVDB } from './local-group-source';
-import { PUBLIC_FILES } from '../../src/catalog-format/public-artifacts/public-artifacts';
 import {
   applyAliasMeta,
   buildStandaloneOverride,
@@ -84,12 +82,6 @@ function toJsonObject(o: LgObjectRow) {
 
 async function main(): Promise<void> {
   sweepStaged(LOCAL_GROUP_OUTPUTS);
-  const force = process.argv.includes('--force');
-  if (!force && await outputsNewerThanInputs('build:local-group', [OUT])) {
-    console.log(`${PUBLIC_FILES.localGroup} up to date — skipping (use --force to rebuild)`);
-    return;
-  }
-
   const lvdb = LVDB.read();
   const overrides = LG_OVERRIDES.read();
   const overrideByName = new Map(overrides.map((o) => [o.name, o]));

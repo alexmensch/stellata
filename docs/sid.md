@@ -343,7 +343,7 @@ step; in the bare `test` job it sees an LFS pointer stub and self-skips.
 The guard protects the ledger *file*; CI protects its *consistency with
 the build* by diffing it: the catalogue stage fails when `build:catalog`
 appends a row or event the PR did not commit, and a `git diff
---exit-code -- data/sid` after `build:layers` does the same for the
+--exit-code -- data/sid` after `build:data` does the same for the
 stamps. An object-set change (a Stage-5 filter dropping pairs, a WDS
 re-lettering) therefore cannot land without its allocation, its coded
 removal or its bridge in the same PR, so main's ledger ⟷ artifact state

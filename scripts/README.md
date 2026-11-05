@@ -65,8 +65,8 @@ cross-script policy and pointers.
 - `ci/` — helpers only `.github/workflows/` runs: the catalogue build
   cache's key.
 - `pipeline/` — the step table and runner design: one model of which step
-  writes which file, in what order, and when each is stale. The catalogue
-  chain runs through its runner; the mtime-gated steps follow.
+  writes which file, in what order, and when each is stale. Every build
+  step runs through its runner.
 - `clouds/`, `cloud-surfaces/`, `dust/`, `local-group/`,
   `local-bubble/`, `textures/` — per-layer build helpers.
   `local-bubble/` turns the
@@ -94,9 +94,11 @@ the PR, not the post-merge deploy.
 
 ## Preprocessor idempotency
 
-The catalogue chain — `build:binaries`, `lineage:codes`, the four generators
-(`build:classic-ids`, `build:wgsn`, `build:astrometry-request`,
-`build:membership`), `build:catalog` and `build:binaries-runtime` — runs
+Every build step — the catalogue chain (`build:binaries`, `lineage:codes`,
+the four generators `build:classic-ids`, `build:wgsn`,
+`build:astrometry-request` and `build:membership`, `build:catalog` and
+`build:binaries-runtime`), the two layer emitters `build:clouds` and
+`build:local-group`, and the six `build:<layer>-sync` mirrors — runs
 through the step table's runner ([pipeline/README.md](pipeline/README.md)):
 each `package.json` target is `run.ts <step>`, which runs that step and every
 step upstream of it in data-flow order, and skips each on a **content-hash
@@ -110,32 +112,29 @@ output it wrote, and the step is fresh while both re-hash the same. The stamp
 is cleared before the step runs and written only once it exits 0 with its
 declared outputs in place, so a failed or interrupted build always reruns.
 Unstamped families (the lineage baseline and diff) are never recorded. A
-no-op `build:stamped` (all eight fresh) takes about two seconds on a warm page
-cache.
+no-op `build:data` (all sixteen build steps fresh, every manual step checked)
+takes about ten seconds on a warm page cache, measured 2026-11-04; the mirrors'
+~0.5 GB of inputs and outputs are re-hashed within it.
 
 An unchanged input invalidates nothing, so a rebuilt `multiples.tsv` with
 identical content leaves the catalogue skipped. Forcing a rebuild:
 `run.ts <step> --force`, which reaches every build step the run selects, or
 delete the stamp. `--update-snapshots` reruns each named step even when fresh and rewrites
-the count snapshots of every step it runs. `build:stamped` is `run.ts data`, every step on the table; `build:layers` is
-`build:binaries-runtime` and the mtime-gated steps, so a stale catalogue is
-rebuilt before the binaries read its row-index map.
-
-`build:clouds`, `build:local-group` and the `*-sync` mirrors — together
-`build:mtime-gated` — are mtime-gated (size + mtime for the mirrors) and cost
-seconds cold. `build:data` is `build:stamped` then `build:mtime-gated`.
+the count snapshots of every step it runs. `build:data` is `run.ts data`, every step on the table,
+so a stale catalogue is rebuilt before the binaries read its row-index map.
 
 ## Building in a worktree
 
-A worktree Claude Code creates starts with the main checkout's catalogue and
-binaries artifacts plus their stamps: `.worktreeinclude` at the repo root
+A worktree Claude Code creates starts with the main checkout's build
+outputs under `public/` and `build/` (the mirrors' ~0.3 GB among them, by `du -ch` over their public/ outputs) plus
+their stamps: `.worktreeinclude` at the repo root
 lists them, and the harness copies those gitignored files in at creation. The
 stamps make the copy safe — when the worktree's inputs match what the main
 checkout last built from, the dev server starts without rebuilding; when they
 differ (main checkout built from an older commit, a pipeline change on the
 branch), the stamp mismatches and the step rebuilds. Only stamped outputs
-belong in that list: an mtime-gated step reads any fresh copy as up to date,
-whatever it was built from. The one other kind allowed is a diff baseline
+belong in that list, since a stamp is what tells a copy apart from the
+worktree's own build. The one other kind allowed is a diff baseline
 that no step reads to decide whether to rebuild and that records what it was
 built from — `build/lineage/`, whose header the lineage diff checks against
 the merge-base ([The header and the refusal](catalog/lineage/baseline/README.md#the-header-and-the-refusal)).
@@ -166,19 +165,19 @@ main checkout — not a perf run, not an artifact-backed suite, not anything.
 the worktree then writes *through* the symlinks into the main checkout's
 `public/`, leaving it with artifacts that disagree with each other.
 **Copy** artifacts, never link them. The runner refuses to load the step table
-when a build step's declared output, or a folder above it, is a symlink; the
-mtime-gated steps are not on it yet, and `tests/artifact-freshness.test.ts`
-catches the mismatch a write through a link leaves.
+when a build step's declared output, or a folder above it, is a symlink, and
+`tests/artifact-freshness.test.ts` catches the mismatch a write through a
+link leaves.
 
 A clobbered main checkout repairs itself: its stamps record the outputs it
 built, so the next build there sees them rewritten and rebuilds.
 
 ## Seeding builds — `build:seed`
 
-`pnpm run build:seed` (`build-seed.sh`) runs `build:seed-steps` — exactly the
-steps whose outputs seed a new worktree ([Building in a worktree](#building-in-a-worktree)) — with one
-build per checkout. That is `run.ts data`, every build step on the table,
-`build:membership` included, which keeps the main checkout holding the
+`pnpm run build:seed` (`build-seed.sh`) runs `build:data` — every build step
+on the table, exactly the steps whose outputs seed a new worktree
+([Building in a worktree](#building-in-a-worktree)) — with one build per
+checkout. `build:membership` is among them, which keeps the main checkout holding the
 lineage baseline a worktree diffs against.
 Each run registers `build/build-seed/<start ns>.<pid>`
 before looking at the others, then stops every older live run and waits for it
@@ -194,8 +193,7 @@ A TypeScript step's outputs land all or none (`emitArtifacts`), so an
 interrupted run leaves the previous set whole. On a dirty main membership's
 lineage header records the edits and a branch's diff refuses that baseline
 ([The header and the refusal](catalog/lineage/baseline/README.md#the-header-and-the-refusal)). The
-mtime-gated steps and the client are never run, so none is ever interrupted
-mid-write. Newest-run-wins covers `build:seed` runs only; a plain
+client is never run. Newest-run-wins covers `build:seed` runs only; a plain
 `pnpm run build` or `pnpm run dev` in the same checkout is never stopped, and
 the runner's per-step locks serialise it with a seed run step by step
 ([The runner](pipeline/README.md#the-runner--runts)).

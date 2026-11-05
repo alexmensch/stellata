@@ -2,7 +2,7 @@
   "inputs": {
     "data/dust/edenhofer2024-main.json": "77b0906cc2a72aaf6e97f189c8e329426122e65d",
     "data/molecular-clouds/zucker-profiled.json": "9a292901d965c64a0971efb66899f4502af23bb9",
-    "scripts/dust/build-dust.py": "625fde1fc49fa5b990276ad70181d955608b5b39",
+    "scripts/dust/build-dust.py": "fb78f3b6fc321525d93205eb3e75a4c7177edb33",
     "scripts/dust/edenhofer2024.py": "0aabd7a3d00b5f2389260f442535c63050e7e4c3",
     "scripts/util/baker_constants.py": "39afaedc61d5574bb6cebb106abba6a33ae1c705",
     "scripts/util/paths.py": "c570852282c2f3be0781466bfa28930ae71e1a6f",

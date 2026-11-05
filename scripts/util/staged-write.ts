@@ -1,15 +1,18 @@
 // Write beside a target, then rename over it. See README.md (staged-write.ts entry).
 
-import { mkdirSync, renameSync, rmSync, writeFileSync } from 'node:fs';
+import { copyFileSync, mkdirSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
 
 export const STAGING_SUFFIX = '.staged';
 
 export const stagedPath = (path: string): string => path + STAGING_SUFFIX;
 
-export function writeStaged(path: string, contents: string | Uint8Array): void {
+export type StagedContents = string | Uint8Array | { readonly copyFrom: string };
+
+export function writeStaged(path: string, contents: StagedContents): void {
   mkdirSync(dirname(path), { recursive: true });
-  writeFileSync(stagedPath(path), contents);
+  if (typeof contents === 'object' && 'copyFrom' in contents) copyFileSync(contents.copyFrom, stagedPath(path));
+  else writeFileSync(stagedPath(path), contents);
 }
 
 export function landStaged(path: string): void {

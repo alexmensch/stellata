@@ -6,7 +6,9 @@ import { PUBLIC_FILES } from '../../src/catalog-format/public-artifacts/public-a
 import type { SidObject } from './allocate-pure';
 import { ALLOCATION_CODES } from './allocation-lineage-pure';
 import type { SidKind } from './sid-pure';
-import { SIBLING_PARTITIONS, type SiblingPartition } from '../../src/catalog-format/pipeline-outputs/data-files';
+import {
+  CLOUD_PARTITION, LOCAL_GROUP_PARTITION, SIBLING_PARTITIONS, type SiblingPartition,
+} from '../../src/catalog-format/pipeline-outputs/data-files';
 
 export interface SiblingArtifactSpec {
   /** public/ filename. */
@@ -26,7 +28,7 @@ export const SIBLING_ARTIFACTS = {
   clouds: {
     file: PUBLIC_FILES.clouds,
     arrayKey: 'clouds',
-    ns: 'cloud',
+    ns: CLOUD_PARTITION,
     kind: 'cloud',
     buildHint: 'pnpm run build:clouds',
     mintCode: ALLOCATION_CODES.code('mint.cloud'),
@@ -34,7 +36,7 @@ export const SIBLING_ARTIFACTS = {
   'local-group': {
     file: PUBLIC_FILES.localGroup,
     arrayKey: 'objects',
-    ns: 'lg',
+    ns: LOCAL_GROUP_PARTITION,
     kind: 'galaxy',
     buildHint: 'pnpm run build:local-group',
     mintCode: ALLOCATION_CODES.code('mint.local-group'),
