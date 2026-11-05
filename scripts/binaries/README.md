@@ -91,7 +91,11 @@ scripts/binaries/
                                   key promotion mints and every resolver
                                   looks up), canonicalCompLetter (WDS
                                   truncation re-anchored: Aa1,2 → Aa2),
-                                  parentComponentToken.
+                                  parentComponentToken, isComponentToken,
+                                  and relatedHier / compoundContains — the
+                                  test planRecords uses to tell one link
+                                  named twice from two stars collapsed onto
+                                  one record.
   multiples-row-key-pure.ts       MULTIPLES_ROW_KEY, that rowKey, for code
                                   that cites a row without reading the file
                                   (promotion's origin keys), so it never
