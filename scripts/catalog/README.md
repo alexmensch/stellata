@@ -27,8 +27,8 @@ layout, its codec, the chunk plan and the search-index wire entry — is
 - `astrometry-request/` — the Gaia 5p pull's source_id list: both binding
   gates' candidates (overlay and derivation), the bound-pair siblings and the
   review dispositions' kept ids. Input prep, off `build:catalog`.
-- `parse/` — the per-row pipeline (`readStars`), reference-catalogue
-  parsers and space-motion velocity. Its `gcvs/` subfolder owns the
+- `parse/` — the per-row pipeline (`readStars`) and reference-catalogue
+  parsers. Its `gcvs/` subfolder owns the
   variable-star parsing and the variability cross-match; `constellations/`
   owns the IAU-88 table, byte 34's positional membership and the
   Stellarium stick figures.
@@ -52,7 +52,8 @@ layout, its codec, the chunk plan and the search-index wire entry — is
 - `multiplicity/` — multiplicity status, geometric binary inference, the
   CCDM double-star cross-match with its optical-double suppression
   cascade, and system distance coherence.
-- `distance/` — direction resolution, build-time de-extinction, and the
+- `distance/` — direction resolution, space-motion velocity, build-time
+  de-extinction, and the
   multi-layer distance-refinement override stack with its authoring
   discipline and post-build regression check. Its `radial-velocity/` and
   `pm-rescue/` subfolders own the velocity's two fall-back cascades.

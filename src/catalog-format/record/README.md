@@ -75,7 +75,7 @@ ahead of the records and changed no record byte; v9 appended a `uint8`
 `multiplicity_status` at byte 96 (bytes 97–99 reserved, zero-filled, so
 the stride stays a multiple of 4) — see [Multiplicity status](../../../scripts/catalog/multiplicity/README.md#multiplicity-status). v8
 appended three `float32` space-motion velocity components (`vx/vy/vz`,
-pc/yr) at bytes 84–95 — see [Space-motion velocity](../../../scripts/catalog/parse/README.md#space-motion-velocity). v7 appended a `uint32` `sid` (Stellata ID)
+pc/yr) at bytes 84–95 — see [Space-motion velocity](../../../scripts/catalog/distance/README.md#space-motion-velocity). v7 appended a `uint32` `sid` (Stellata ID)
 at byte 80 — see [SID allocation](/scripts/catalog/README.md#sid-allocation). v5 appended a `uint64` Gaia
 DR3 `source_id` at bytes 44–51 so downstream cross-match (GCVS, CCDM,
 NSS, Apsis) can anchor on the same Gaia ID Stellata's source-ID-anchored
@@ -176,7 +176,7 @@ for its coverage and the runtime colour-LUT re-key it enables.
                           (`NO_SID`) is reserved as the none sentinel.
   - 84–87 `float32`      **vx** — space-motion velocity x (pc/yr, equatorial
                           Cartesian, Sol at origin). See
-                          [Space-motion velocity](../../../scripts/catalog/parse/README.md#space-motion-velocity).
+                          [Space-motion velocity](../../../scripts/catalog/distance/README.md#space-motion-velocity).
   - 88–91 `float32`      **vy** — space-motion velocity y (pc/yr).
   - 92–95 `float32`      **vz** — space-motion velocity z (pc/yr).
   - 96    `uint8`        **multiplicity_status** (`MULTIPLICITY_*`:

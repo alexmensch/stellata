@@ -109,7 +109,7 @@ makes one tier up.
 **The one-solution pairing is not really broken.** A 2p Gaia position *is* the
 blend's light centre at J2016, and a Tycho-2 mean PM *is* that same light
 centre's motion; the two describe one object, which is what the rule protects
-([Space-motion velocity](../../parse/README.md#space-motion-velocity)). Both `pflag='P'` rows in the
+([Space-motion velocity](../README.md#space-motion-velocity)). Both `pflag='P'` rows in the
 cohort — ξ UMa A and B — are the case in point: the flag warns that the mean
 *position* is a light centre, the PM is the quantity being taken, and handing
 both components the one Tycho-2 motion is what stops the advance shearing the
