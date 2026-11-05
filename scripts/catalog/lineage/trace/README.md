@@ -28,7 +28,7 @@ name.
    folded, refuses, listing both: one composed label can sit on two records
    (`54 Leo`, a HIP primary and a Gaia-only companion), and the designation
    half has case-only twins that are different stars (`a Car`, `A Car`).
-   `lookupByName` itself stays exact, for the frozen corpora. Designations follow `sid-pure.ts`'s grammar; a SID
+   `lookupByName` itself stays exact, for the frozen corpora. Designations follow `../../../sid/sid-pure.ts`'s grammar; a SID
    resolves to its canonical key through the ledger.
 2. Find the origin keys whose identity rows carry that designation. Parked
    and dropped records have lineage rows too, so they are found. Also find
