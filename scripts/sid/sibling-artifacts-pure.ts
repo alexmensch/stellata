@@ -14,8 +14,6 @@ import {
 } from '../../src/catalog-format/pipeline-outputs/lineage-files';
 
 export interface SiblingArtifactSpec<S extends string = string> {
-  /** Top-level array property holding the objects. */
-  arrayKey: string;
   /** Designation namespace the ledger keys these objects on (/docs/sid.md#3-designation-namespaces). */
   ns: SiblingPartition;
   kind: SidKind;
@@ -30,7 +28,6 @@ export interface SiblingArtifactSpec<S extends string = string> {
 
 export const SIBLING_ARTIFACTS = {
   clouds: {
-    arrayKey: 'clouds',
     ns: CLOUD_PARTITION,
     kind: 'cloud',
     buildHint: 'pnpm run build:clouds',
@@ -39,7 +36,6 @@ export const SIBLING_ARTIFACTS = {
     codes: objectOutcomeCodes(CLOUDS_ALLOCATION_LINEAGE.stage),
   },
   'local-group': {
-    arrayKey: 'objects',
     ns: LOCAL_GROUP_PARTITION,
     kind: 'galaxy',
     buildHint: 'pnpm run build:local-group',

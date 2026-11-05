@@ -173,8 +173,8 @@ sibling-allocation.ts     allocateSibling: one sibling namespace allocated
                           emission and those files in one emitArtifacts
                           call. Called by build:local-group and
                           build:clouds.
-sibling-artifacts-pure.ts SIBLING_ARTIFACTS spec (arrayKey / ns /
-                          kind / mint code / lineage stage and its codes
+sibling-artifacts-pure.ts SIBLING_ARTIFACTS spec (ns / kind /
+                          mint code / lineage stage and its codes
                           per sibling) + siblingArtifactObjects, each
                           object founded on its record of the artifact
                           the caller hands in, so the namespace→kind
