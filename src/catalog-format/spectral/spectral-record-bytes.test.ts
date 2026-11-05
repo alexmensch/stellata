@@ -66,13 +66,22 @@ describe('decodeSpectralBytes', () => {
       .toEqual({ kind: 'white-dwarf', wdSubclass: null });
   });
 
-  it('reads a luminosity code of 0 as a white dwarf whatever the class', () => {
-    expect(decodeSpectralBytes({ spectClass: 4, lumClass: LUM_CLASS_WHITE_DWARF }).kind)
-      .toBe('white-dwarf');
-  });
-
-  it('refuses bytes the encoder never writes', () => {
-    expect(() => decodeSpectralBytes({ spectClass: 9, lumClass: 2 })).toThrow(/spectClass byte 9/);
-    expect(() => decodeSpectralBytes({ spectClass: 4, lumClass: 10 })).toThrow(/lumClass byte 10/);
+  it('decodes exactly the byte pairs the encoder writes, and refuses the rest', () => {
+    let decoded = 0;
+    for (let spectClass = 0; spectClass < 256; spectClass++) {
+      for (let lumClass = 0; lumClass < 256; lumClass++) {
+        const bytes = { spectClass, lumClass };
+        let info;
+        try {
+          info = decodeSpectralBytes(bytes);
+        } catch {
+          continue;
+        }
+        expect(encodeSpectralBytes(info), `${spectClass} / ${lumClass}`).toEqual(bytes);
+        decoded++;
+      }
+    }
+    // 7 letters × (9 luminosity classes + none), carbon, white dwarf, unknown.
+    expect(decoded).toBe(73);
   });
 });

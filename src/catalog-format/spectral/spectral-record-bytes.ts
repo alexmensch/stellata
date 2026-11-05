@@ -29,22 +29,27 @@ export function encodeSpectralBytes(info: SpectralInfo): SpectralBytes {
   }
 }
 
-export function decodeSpectralBytes({ spectClass, lumClass }: SpectralBytes): SpectralInfo {
-  if (lumClass === LUM_CLASS_WHITE_DWARF) {
-    return { kind: 'white-dwarf', wdSubclass: null };
+const MK_LUM_CLASS_MAX = 9;
+
+export function decodeSpectralBytes(bytes: SpectralBytes): SpectralInfo {
+  const { spectClass, lumClass } = bytes;
+  const lumUnknown = lumClass === LUM_CLASS_UNKNOWN;
+  if (spectClass === SPECT_CLASS_UNKNOWN) {
+    if (lumClass === LUM_CLASS_WHITE_DWARF) return { kind: 'white-dwarf', wdSubclass: null };
+    if (lumUnknown) return { kind: 'unknown' };
+  } else if (spectClass === SPECT_CLASS_CARBON) {
+    if (lumUnknown) return { kind: 'carbon', subclass: null };
+  } else if (Number.isInteger(spectClass) && spectClass >= 0 && spectClass < SPECT_CLASS_CARBON) {
+    const mkLum = Number.isInteger(lumClass) && lumClass > LUM_CLASS_WHITE_DWARF
+      && lumClass <= MK_LUM_CLASS_MAX;
+    if (lumUnknown || mkLum) {
+      return {
+        kind: 'mk',
+        letter: spectClass as MkLetter,
+        subclass: null,
+        lumClass: lumUnknown ? null : (lumClass as MkLumClass),
+      };
+    }
   }
-  if (spectClass === SPECT_CLASS_CARBON) return { kind: 'carbon', subclass: null };
-  if (spectClass === SPECT_CLASS_UNKNOWN) return { kind: 'unknown' };
-  if (!Number.isInteger(spectClass) || spectClass < 0 || spectClass >= SPECT_CLASS_CARBON) {
-    throw new Error(`spectClass byte ${spectClass} encodes no class`);
-  }
-  if (lumClass !== LUM_CLASS_UNKNOWN && !(Number.isInteger(lumClass) && lumClass >= 0 && lumClass <= 9)) {
-    throw new Error(`lumClass byte ${lumClass} encodes no luminosity class`);
-  }
-  return {
-    kind: 'mk',
-    letter: spectClass as MkLetter,
-    subclass: null,
-    lumClass: lumClass === LUM_CLASS_UNKNOWN ? null : (lumClass as MkLumClass),
-  };
+  throw new Error(`class bytes ${spectClass} / ${lumClass} encode no class`);
 }

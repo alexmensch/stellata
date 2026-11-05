@@ -38,14 +38,16 @@ look it up. `classifyFromSimbad` returns `MkSpectral`, which excludes
 
 **The on-disk codes exist only in `spectral-record-bytes.ts`.** The record
 packs a class into two bytes — spectClass 0–6 for O–M, 7 carbon (Wolf-Rayet
-too), 8 none; lumClass 0–9, 255 none — and a white dwarf as `8 / 0`.
-`encodeSpectralBytes` is how a pipeline record gets them, and
-`decodeSpectralBytes` is how companion promotion reads a record's class
-back when its display string does not parse; the viewer's descriptor
-(`/src/client/format/spectral-format.ts`) reads the same named codes. The
-bytes drop the subclass, the WD index and the Wolf-Rayet kind, so a decode
-reads the first two back as not stated and a Wolf-Rayet as carbon; a lumClass of 0 decodes as a
-white dwarf whatever the class byte. `scripts/binaries/mass_estimate.py`
+too), 8 none; lumClass 1–9, 255 none — and a white dwarf as `8 / 0`. The
+build writes them once, where a `Star` becomes a record; companion promotion
+decodes them back
+([Reading a record's class back](/scripts/catalog/companions/README.md#reading-a-records-class-back));
+the viewer's descriptor (`/src/client/format/spectral-format.ts`) reads the
+same named codes. The bytes drop the subclass, the WD index and the
+Wolf-Rayet kind, so a decode reads the first two back as not stated and a
+Wolf-Rayet as carbon. **The decoder accepts exactly the 73 pairs the encoder
+writes** and throws on any other, pinned over all 65,536 pairs.
+`scripts/binaries/mass_estimate.py`
 parses to the same codes independently, pinned by
 `/scripts/catalog/parse/spectral-encoding-parity.test.ts`.
 
