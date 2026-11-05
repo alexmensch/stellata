@@ -166,10 +166,14 @@ same thing — single-use helpers stay with their consumer.
   re-hashed from `commit`'s copy (code by identity; LFS content read from the
   local object its pointer names, never fetched, so no network call and no
   `GIT_LFS_SKIP_SMUDGE` pointer read as content), `unknown` where git holds
-  no copy — a git-ignored input, or LFS content not stored locally. Kept out of `git-provenance.ts` so the
-  perf instruments reading that do not load the TypeScript compiler. The
-  lineage baseline verdict reads it
-  ([The header and the refusal](../catalog/lineage/baseline/README.md#the-header-and-the-refusal)).
+  no copy — a git-ignored input, or LFS content not stored locally;
+  `onDiskHashes(paths, hashed)`, a map over `paths` taking what it is handed
+  and hashing the rest from disk; and `deletedSiblingsSince(commit, inputs)`,
+  the files deleted since `commit` that sat beside a code input — the
+  siblings a build at `commit` read (`closureWithSiblings`'s rule). Kept out
+  of `git-provenance.ts` so the perf instruments reading that do not load the
+  TypeScript compiler. The lineage baseline verdict reads it
+  ([The verdict](../catalog/lineage/baseline/README.md#the-verdict--one-map-comparison)).
 - `source-trees.ts` — `TREE_ROOTS` and `treeOf`, which tree a repo path
   belongs to, and `BROWSER_TREES`: the one list both import-boundary tests
   (`/tests/README.md#pipeline-viewer-boundary`) and the step table's
@@ -197,12 +201,14 @@ same thing — single-use helpers stay with their consumer.
   (`writeStepInputs`) to `build/step-inputs/<step>.json`, names it in
   `PIPELINE_STEP_INPUTS` (`STEP_INPUTS_ENV`) and removes it when the step
   exits; the step reads them with `stepInputHashes()`, which throws when the
-  step was started any other way. It is the map the runner hashed for the
-  step's stamp before starting it; the stamp then re-hashes any input the
-  step also writes (every input under `--update-snapshots`), so for
-  `build:membership` and `build:catalog`, which rewrite inputs, the two differ
-  on those entries. A step that needs its own input hashes (a lineage
-  header's input hash) reads them here and never re-derives them.
+  step was started any other way. It is the pre-run map: what the step read.
+  The stamp's input map is `stampedInputMap(handed, rewritten)`, the handed
+  map with each input the step also wrote (every input under
+  `--update-snapshots`) re-hashed after the run, so for `build:membership`
+  and `build:catalog`, which rewrite inputs, the two differ on those entries;
+  the runner builds every stamp's inputs through it. A step that needs its
+  own input hashes (a lineage header's input map) reads the handed map here
+  and never re-derives them.
 - `tsv/` — the one TSV reader (`readTable`, typed columns, cells that keep
   empty and malformed apart) and `defineArtifact`, the codec of every table
   this repo writes. Own README.

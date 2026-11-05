@@ -60,7 +60,7 @@ right after the pull keeps those stamps matching, so the next worktree starts
 without a cold catalogue build. A landing that leaves a lineage stage's
 inputs alone skips that stage, and its seeded baseline stays usable while
 its inputs match the merge-base's
-([The header and the refusal](/scripts/catalog/lineage/baseline/README.md#the-header-and-the-refusal)).
+([The verdict](/scripts/catalog/lineage/baseline/README.md#the-verdict--one-map-comparison)).
 
 Run it from the main checkout with Bash `run_in_background: true`, after
 every `pr-cleanup` step has finished:

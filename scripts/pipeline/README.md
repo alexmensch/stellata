@@ -282,7 +282,8 @@ The table's own files are in [step-table/](step-table/README.md#files).
   `failed`, `skipped`) matched exhaustively, and the exit status. The runner
   writes every build stamp itself once a step exits 0 and its declared
   outputs exist: inputs hashed before the run, those it also wrote (and,
-  under `--update-snapshots`, all of a TypeScript step's) re-hashed after.
+  under `--update-snapshots`, all of a TypeScript step's) re-hashed after
+  (`stampedInputMap`, `../util/step-input-hashes.ts`).
   `pipeline-tree.ts` is the run's one root: table paths resolve against it,
   stamp keys are relative to it, and a step's build stamp (through
   `stampPath`), manual record, run record, handed inputs and lock folder sit under it.

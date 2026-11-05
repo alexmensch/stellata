@@ -79,7 +79,7 @@ import {
   lineageLineCode, stageLineageLine, stageLineageText, type LineageLine,
 } from './lineage/lineage-row-pure';
 import { codeEffects } from './lineage/reason-codes-pure';
-import { stageLineage, type UpstreamLineage } from './lineage/stage-lineage';
+import { stageLineage, upstreamLineage } from './lineage/stage-lineage';
 import {
   buildCatalogRowIndexMap,
   buildComponentDesignations,
@@ -128,8 +128,7 @@ import { SIMBAD_SAMPLE } from './validate/simbad-sample-source';
 import { MEMBERSHIP_MANIFEST, manifestDesignations } from './membership/membership-manifest-tsv';
 import { artifactRows } from '../util/sources/source';
 import { REPO_ROOT as ROOT } from '../util/paths';
-import { readStamp, type FileHashes } from '../util/build-stamp';
-import { stampPath } from '../util/stamp-path-pure';
+import type { FileHashes } from '../util/build-stamp';
 import { stepInputHashes } from '../util/step-input-hashes';
 import {
   CATALOG_CHUNK_DIR, CATALOG_OUTPUTS,
@@ -160,15 +159,7 @@ import {
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-const UPSTREAM_LINEAGE: readonly UpstreamLineage[] = [
-  { spec: MEMBERSHIP_LINEAGE, inputs: () => stampedInputs('build:membership') },
-];
-
-function stampedInputs(step: string): FileHashes {
-  const stamp = readStamp(stampPath(step));
-  if (stamp === null) throw new Error(`${step} has no stamp: run pnpm run ${step}`);
-  return stamp.inputs;
-}
+const UPSTREAM_LINEAGE = upstreamLineage(LINEAGE_LAYOUT, [MEMBERSHIP_LINEAGE]);
 
 const EXPECTED_COUNTS = resolve(ROOT, BUILD_COUNTS_EXPECTED_FILE);
 const EXPECTED_OUTLIERS = resolve(

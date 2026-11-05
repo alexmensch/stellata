@@ -134,9 +134,9 @@ differ (main checkout built from an older commit, a pipeline change on the
 branch), the stamp mismatches and the step rebuilds. Every listed file is
 one a stamp records, since a stamp is what tells a copy apart from the
 worktree's own build. `build/lineage/` is among them, and seeding it from an
-older commit is safe for a second reason: its header records what it was
-built from, and the lineage diff checks that against the merge-base
-([The header and the refusal](catalog/lineage/baseline/README.md#the-header-and-the-refusal)).
+older commit is safe for a second reason: its header records the input map it
+was built from, and the lineage diff checks that against the merge-base's
+([The verdict](catalog/lineage/baseline/README.md#the-verdict--one-map-comparison)).
 Every listed file is an output of a step `build:seed` runs
 ([Seeding builds](#seeding-builds--buildseed)), so refreshing the main
 checkout's seed is that one command. The list itself is gitignored and
@@ -192,8 +192,9 @@ Nothing is forced — the step that was interrupted has no stamp and reruns,
 every step that finished skips ([Preprocessor idempotency](#preprocessor-idempotency)).
 A TypeScript step's outputs land all or none (`emitArtifacts`), so an
 interrupted run leaves the previous set whole. On a dirty main membership's
-lineage header records the edits and a branch's diff refuses that baseline
-([The header and the refusal](catalog/lineage/baseline/README.md#the-header-and-the-refusal)). The
+lineage header's input map records the edited inputs, and a branch's diff
+refuses that baseline when an edit touched one
+([The verdict](catalog/lineage/baseline/README.md#the-verdict--one-map-comparison)). The
 client is never run. Newest-run-wins covers `build:seed` runs only; a plain
 `pnpm run build` or `pnpm run dev` in the same checkout is never stopped, and
 the runner's per-step locks serialise it with a seed run step by step

@@ -1,167 +1,167 @@
 import { describe, expect, it } from 'vitest';
 
+import type { FileHashes } from '../../../util/build-stamp';
 import {
-  acceptedFiles, checkoutAt, judgeBaseline, planBaseline, type CheckoutBase, type InputHashAt, type StageHeader,
+  acceptedFiles, baseAt, differingInputs, judgeBaseline, parseHeader, planBaseline, type BaselineContext,
+  type HeaderRead, type InputsAt, type StageHeader,
 } from './lineage-header-pure';
 
-describe('judgeBaseline', () => {
-  const header = (commit: string, dirty = false): StageHeader => ({
-    stage: 'demo', version: '1.0.0', commit, dirty, inputHash: 'h', files: { 'demo.tsv.gz': 'f1' },
-  });
-  const matching = (h: StageHeader) => ({ kind: 'read' as const, header: h, onDisk: h.files });
-  const base = (commit: string, inputs: InputHashAt): CheckoutBase => ({
-    commit, inputHash: () => inputs, checkout: { kind: 'branch' },
-  });
-  const BASE = base('abc', { kind: 'hashed', hash: 'other inputs' });
+const INPUTS: FileHashes = { 'scripts/demo/build.ts': 'code-1', 'scripts/demo/table.tsv': 'table-1' };
 
-  it('diffs a baseline built at the merge-base, and nothing when there is none', () => {
-    expect(judgeBaseline({ kind: 'checkout', header: matching(header('abc')) }, BASE, false))
-      .toEqual({ kind: 'diff', why: 'merge-base' });
-    expect(judgeBaseline({ kind: 'absent' }, BASE, false)).toEqual({ kind: 'none' });
-  });
+/** Each commit's inputs; a path a commit does not hold is null. */
+const tree = (commits: Readonly<Record<string, FileHashes>>): InputsAt => (commit, paths) =>
+  ({ kind: 'hashed', hashes: Object.fromEntries(paths().map((p) => [p, commits[commit]?.[p] ?? null])) });
 
-  it('refuses any other baseline, naming its commit, unless told to accept it', () => {
-    const refused = judgeBaseline({ kind: 'checkout', header: matching(header('old')) }, BASE, false);
-    expect(refused.kind).toBe('refused');
-    expect(refused.kind === 'refused' && refused.message).toMatch(/built at old, not the merge-base abc/);
-    expect(judgeBaseline({ kind: 'checkout', header: matching(header('old')) }, BASE, true))
-      .toEqual({ kind: 'diff', why: 'accepted' });
-    expect(judgeBaseline({ kind: 'against', dir: '/elsewhere' }, null, false))
-      .toEqual({ kind: 'diff', why: 'against' });
+const header = (commit: string, inputs: FileHashes = INPUTS): StageHeader => ({
+  stage: 'demo', version: '1.0.0', commit, inputs, files: { 'demo.tsv.gz': 'f1' },
+});
+const intact = (h: StageHeader): HeaderRead => ({ kind: 'read', header: h, onDisk: h.files });
+const checkout = (read: HeaderRead) => ({ kind: 'checkout' as const, header: read });
+
+const branch = (commits: Readonly<Record<string, FileHashes>>, paths = Object.keys(INPUTS)): BaselineContext => ({
+  base: { kind: 'fixed', commit: 'abc', paths: () => paths }, inputsAt: tree(commits),
+});
+const BRANCH = branch({ abc: INPUTS });
+
+describe('judgeBaseline — one map comparison', () => {
+  it('diffs a baseline whose inputs are the merge-base\'s, and nothing when there is none', () => {
+    expect(judgeBaseline(checkout(intact(header('abc'))), BRANCH, false)).toEqual({ kind: 'diff', why: 'matched' });
+    expect(judgeBaseline({ kind: 'absent' }, BRANCH, false)).toEqual({ kind: 'none' });
+    expect(judgeBaseline({ kind: 'against', dir: '/elsewhere' }, null, false)).toEqual({ kind: 'diff', why: 'against' });
   });
 
-  it('pins a merge-base baseline in lineage.previous: diffs against it and never rotates over it', () => {
-    const read = (commit: string, dirty = false) => matching(header(commit, dirty));
-    const branchBuild = { kind: 'checkout' as const, header: read('branch') };
-    expect(planBaseline(read('abc'), branchBuild, BASE, false))
-      .toEqual({ verdict: { kind: 'diff', why: 'merge-base' }, from: 'previous', rotate: false });
-    expect(planBaseline({ kind: 'missing' }, { kind: 'checkout', header: read('abc') }, BASE, false))
-      .toEqual({ verdict: { kind: 'diff', why: 'merge-base' }, from: 'current', rotate: true });
-    expect(planBaseline(read('abc', true), branchBuild, BASE, false))
-      .toMatchObject({ verdict: { kind: 'refused' }, from: null, rotate: true });
-    expect(planBaseline(read('abc'), { kind: 'against', dir: '/x' }, BASE, false))
-      .toEqual({ verdict: { kind: 'diff', why: 'against' }, from: 'against', rotate: false });
+  it('accepts an older commit\'s build from the inputs the merge-base holds, whatever its commit', () => {
+    expect(judgeBaseline(checkout(intact(header('old'))), BRANCH, false)).toEqual({ kind: 'diff', why: 'matched' });
   });
 
-  it('refuses, never crashes on, a header an older build wrote in another shape', () => {
-    const verdict = judgeBaseline({ kind: 'checkout', header: { kind: 'unreadable', reason: 'no dirty flag' } }, BASE, false);
-    expect(verdict.kind === 'refused' && verdict.message).toMatch(/header does not read \(no dirty flag\)/);
+  it('refuses a baseline whose inputs differ, naming each differing path, unless told to accept it', () => {
+    const moved = branch({ abc: { ...INPUTS, 'scripts/demo/table.tsv': 'table-2' } });
+    const refused = judgeBaseline(checkout(intact(header('old'))), moved, false);
+    expect(refused.kind === 'refused' && refused.message).toMatch(
+      /built at old, whose inputs differ from the merge-base abc's: scripts\/demo\/table\.tsv\. Build the stage/,
+    );
+    expect(judgeBaseline(checkout(intact(header('old'))), moved, true)).toEqual({ kind: 'diff', why: 'accepted' });
   });
 
-  it('refuses a merge-base header beside files it did not record, and never pins it', () => {
-    const swapped = { kind: 'read' as const, header: header('abc'), onDisk: { 'demo.tsv.gz': 'f2' } };
-    const verdict = judgeBaseline({ kind: 'checkout', header: swapped }, BASE, false);
-    expect(verdict.kind === 'refused' && verdict.message)
+  it('refuses a header built over an edit the merge-base does not hold, at the merge-base commit too', () => {
+    const edited = header('abc', { ...INPUTS, 'scripts/demo/build.ts': 'uncommitted' });
+    const refused = judgeBaseline(checkout(intact(edited)), BRANCH, false);
+    expect(refused.kind === 'refused' && refused.message).toMatch(/differ from the merge-base abc's: scripts\/demo\/build\.ts/);
+  });
+
+  it('compares the branch\'s own input paths too: one the baseline never read refuses it', () => {
+    const added = branch({ abc: { ...INPUTS, 'scripts/demo/extra.tsv': 'x' } }, [...Object.keys(INPUTS), 'scripts/demo/extra.tsv']);
+    const refused = judgeBaseline(checkout(intact(header('old'))), added, false);
+    expect(refused.kind === 'refused' && refused.message).toMatch(/: scripts\/demo\/extra\.tsv\./);
+  });
+
+  it('refuses a baseline the merge-base build read a file for that the branch deleted', () => {
+    const atBase = { abc: { ...INPUTS, 'scripts/demo/gained.tsv': 'g' } };
+    const branchInputsOnly = branch(atBase);
+    expect(judgeBaseline(checkout(intact(header('old'))), branchInputsOnly, false))
+      .toEqual({ kind: 'diff', why: 'matched' });
+    const withDeletedSiblings = branch(atBase, [...Object.keys(INPUTS), 'scripts/demo/gained.tsv']);
+    const refused = judgeBaseline(checkout(intact(header('old'))), withDeletedSiblings, false);
+    expect(refused.kind === 'refused' && refused.message).toMatch(/: scripts\/demo\/gained\.tsv\./);
+  });
+
+  it('refuses when the base\'s inputs cannot be hashed', () => {
+    const unknown: BaselineContext = { ...BRANCH, inputsAt: () => ({ kind: 'unknown', reason: 'x is git-ignored' }) };
+    const refused = judgeBaseline(checkout(intact(header('old'))), unknown, false);
+    expect(refused.kind === 'refused' && refused.message)
+      .toMatch(/built at old, whose inputs could not be compared with the merge-base abc's: x is git-ignored\./);
+  });
+
+  it('refuses with no merge-base, and never crashes on a header an older build wrote in another shape', () => {
+    const none = judgeBaseline(checkout(intact(header('abc'))), null, false);
+    expect(none.kind === 'refused' && none.message).toMatch(/built at abc, and no merge-base with origin\/main/);
+    const old = judgeBaseline(checkout({ kind: 'unreadable', reason: 'header has no input map' }), BRANCH, false);
+    expect(old.kind === 'refused' && old.message).toMatch(/header does not read \(header has no input map\)/);
+    expect(judgeBaseline(checkout({ kind: 'missing' }), BRANCH, true)).toEqual({ kind: 'diff', why: 'accepted' });
+  });
+
+  it('refuses a header beside files it did not record, or that names only some of them', () => {
+    const swapped: HeaderRead = { kind: 'read', header: header('abc'), onDisk: { 'demo.tsv.gz': 'f2' } };
+    const refused = judgeBaseline(checkout(swapped), BRANCH, false);
+    expect(refused.kind === 'refused' && refused.message)
       .toMatch(/whose demo\.tsv\.gz is not the file its header \(built at abc\) recorded/);
-    expect(judgeBaseline({ kind: 'checkout', header: { ...swapped, onDisk: { 'demo.tsv.gz': null } } }, BASE, false).kind)
+    const partial: HeaderRead = { kind: 'read', header: header('abc'), onDisk: { 'demo.tsv.gz': 'f1', 'identity.tsv.gz': 'i1' } };
+    const named = judgeBaseline(checkout(partial), BRANCH, false);
+    expect(named.kind === 'refused' && named.message).toMatch(/whose identity\.tsv\.gz is not the file/);
+  });
+});
+
+describe('planBaseline', () => {
+  const branchBuild = checkout(intact(header('branch', { ...INPUTS, 'scripts/demo/build.ts': 'code-2' })));
+
+  it('pins a baseline matching the merge-base in lineage.previous: diffs against it and never rotates over it', () => {
+    expect(planBaseline(intact(header('old')), branchBuild, BRANCH, false))
+      .toEqual({ kind: 'diff', why: 'matched', from: 'previous', rotate: false });
+    expect(planBaseline({ kind: 'missing' }, checkout(intact(header('abc'))), BRANCH, false))
+      .toEqual({ kind: 'diff', why: 'matched', from: 'current', rotate: true });
+    expect(planBaseline(intact(header('old')), { kind: 'against', dir: '/x' }, BRANCH, false))
+      .toEqual({ kind: 'diff', why: 'against', from: 'against', rotate: false });
+    expect(planBaseline({ kind: 'missing' }, branchBuild, BRANCH, false)).toMatchObject({ kind: 'refused', rotate: true });
+  });
+});
+
+describe('on main', () => {
+  const inHistory = (commit: string) => commit === 'old' || commit === 'abc';
+  const main = (commits: Readonly<Record<string, FileHashes>>): BaselineContext => ({
+    base: baseAt({ onMainBranch: true, commit: 'abc' }, 'abc', inHistory, () => { throw new Error('branch paths'); }),
+    inputsAt: tree(commits),
+  });
+  const MAIN = main({ old: INPUTS, abc: { ...INPUTS, 'scripts/demo/table.tsv': 'table-2' } });
+  const older = checkout(intact(header('old')));
+
+  it('diffs the previous main build against its own commit\'s inputs, though the landing changed them', () => {
+    expect(judgeBaseline(older, MAIN, false)).toEqual({ kind: 'diff', why: 'matched' });
+    expect(judgeBaseline(older, branch({ abc: { ...INPUTS, 'scripts/demo/table.tsv': 'table-2' } }), false).kind)
       .toBe('refused');
-    expect(planBaseline(swapped, { kind: 'checkout', header: matching(header('abc')) }, BASE, false))
-      .toEqual({ verdict: { kind: 'diff', why: 'merge-base' }, from: 'current', rotate: true });
-    const dirty = judgeBaseline({ kind: 'checkout', header: { ...swapped, header: header('abc', true) } }, BASE, false);
-    expect(dirty.kind === 'refused' && dirty.message)
-      .toMatch(/whose demo\.tsv\.gz is not the file its header \(built at abc with uncommitted edits\) recorded/);
   });
 
-  it('refuses a header that names none, or only some, of the stage\'s files', () => {
-    const onDisk = { 'demo.tsv.gz': 'f1', 'identity.tsv.gz': 'i1' };
-    const partial = { kind: 'read' as const, header: header('abc'), onDisk };
-    const empty = { kind: 'read' as const, header: { ...header('abc'), files: {} }, onDisk };
-    for (const read of [partial, empty]) {
-      expect(judgeBaseline({ kind: 'checkout', header: read }, BASE, false).kind).toBe('refused');
-    }
-    const message = judgeBaseline({ kind: 'checkout', header: partial }, BASE, false);
-    expect(message.kind === 'refused' && message.message).toMatch(/whose identity\.tsv\.gz is not the file/);
+  it('rotates over that build, and never pins one', () => {
+    expect(planBaseline(intact(header('old')), older, MAIN, false))
+      .toEqual({ kind: 'diff', why: 'matched', from: 'current', rotate: true });
   });
 
-  it('diffs a baseline from an older commit built from the merge-base\'s inputs, and pins it', () => {
-    const same = base('abc', { kind: 'hashed', hash: 'h' });
-    const older = matching(header('old'));
-    expect(judgeBaseline({ kind: 'checkout', header: older }, same, false))
-      .toEqual({ kind: 'diff', why: 'merge-base-inputs' });
-    expect(planBaseline(older, { kind: 'checkout', header: matching(header('branch')) }, same, false))
-      .toEqual({ verdict: { kind: 'diff', why: 'merge-base-inputs' }, from: 'previous', rotate: false });
-    expect(judgeBaseline({ kind: 'checkout', header: matching(header('old', true)) }, same, false).kind)
-      .toBe('refused');
+  it('refuses one from outside HEAD\'s history, or whose inputs are not its commit\'s', () => {
+    const elsewhere = judgeBaseline(checkout(intact(header('side-branch'))), MAIN, false);
+    expect(elsewhere.kind === 'refused' && elsewhere.message).toMatch(/built at side-branch, not a build from HEAD's history/);
+    const edited = judgeBaseline(checkout(intact(header('old', { ...INPUTS, 'scripts/demo/build.ts': 'local' }))), MAIN, false);
+    expect(edited.kind === 'refused' && edited.message).toMatch(/differ from its commit old's: scripts\/demo\/build\.ts/);
   });
 
-  it('refuses an older commit\'s baseline when the merge-base\'s inputs differ or cannot be hashed', () => {
-    const older = { kind: 'checkout' as const, header: matching(header('old')) };
-    const differ = judgeBaseline(older, BASE, false);
-    expect(differ.kind === 'refused' && differ.message)
-      .toMatch(/built at old, not the merge-base abc or a build from the inputs it holds\./);
-    const unknown = judgeBaseline(older, base('abc', { kind: 'unknown', reason: 'x is git-ignored' }), false);
-    expect(unknown.kind === 'refused' && unknown.message)
-      .toMatch(/not the merge-base abc \(its inputs could not be compared with the merge-base's: x is git-ignored\)/);
+  it('is main exactly on the main branch with HEAD at the merge-base', () => {
+    const paths = () => ['p'];
+    expect(baseAt({ onMainBranch: true, commit: 'abc' }, 'abc', inHistory, paths)).toEqual({ kind: 'recorded', inHistory });
+    expect(baseAt({ onMainBranch: false, commit: 'abc' }, 'abc', inHistory, paths))
+      .toEqual({ kind: 'fixed', commit: 'abc', paths });
+    expect(baseAt({ onMainBranch: true, commit: 'local' }, 'abc', inHistory, paths).kind).toBe('fixed');
+  });
+});
+
+describe('acceptedFiles', () => {
+  it('hands back the files of the first header whose inputs are the base\'s, and none when none is', () => {
+    const pinned = intact({ ...header('old'), files: { 'demo.tsv.gz': 'pinned' } });
+    const stale = intact(header('older', { ...INPUTS, 'scripts/demo/table.tsv': 'table-0' }));
+    expect(acceptedFiles([pinned, intact(header('abc'))], BRANCH)).toEqual({ 'demo.tsv.gz': 'pinned' });
+    expect(acceptedFiles([stale, intact(header('abc'))], BRANCH)).toEqual({ 'demo.tsv.gz': 'f1' });
+    expect(acceptedFiles([stale, { kind: 'missing' }], BRANCH)).toBeNull();
+  });
+});
+
+describe('the header', () => {
+  it('reads an absent input as matching an input the base does not hold', () => {
+    expect(differingInputs({ a: 'x' }, { a: 'x', b: null }, ['a', 'b'])).toEqual([]);
+    expect(differingInputs({ a: 'x', b: null }, { a: 'x' }, ['a', 'b'])).toEqual([]);
+    expect(differingInputs({ a: 'x' }, { a: 'y', b: 'z' }, ['a', 'b'])).toEqual(['a', 'b']);
   });
 
-  it('never hashes the merge-base\'s inputs for a header built at it', () => {
-    const unasked: CheckoutBase = { ...BASE, inputHash: () => { throw new Error('hashed'); } };
-    expect(judgeBaseline({ kind: 'checkout', header: matching(header('abc')) }, unasked, false))
-      .toEqual({ kind: 'diff', why: 'merge-base' });
-  });
-
-  it('refuses a baseline built over uncommitted edits, even at the merge-base', () => {
-    const dirty = judgeBaseline({ kind: 'checkout', header: matching(header('abc', true)) }, BASE, false);
-    expect(dirty.kind === 'refused' && dirty.message).toMatch(/built at abc with uncommitted edits/);
-    expect(judgeBaseline({ kind: 'checkout', header: matching(header('abc', true)) }, BASE, true))
-      .toEqual({ kind: 'diff', why: 'accepted' });
-  });
-
-  it('hands back the files of the first header that stands for the merge-base, and none when none does', () => {
-    const pinned = { ...matching(header('abc')), header: { ...header('abc'), files: { 'demo.tsv.gz': 'pinned' } } };
-    pinned.onDisk = pinned.header.files;
-    const older = matching(header('old'));
-    expect(acceptedFiles([pinned, older], BASE)).toEqual({ 'demo.tsv.gz': 'pinned' });
-    expect(acceptedFiles([older, matching(header('abc'))], BASE)).toEqual({ 'demo.tsv.gz': 'f1' });
-    expect(acceptedFiles([older, { kind: 'missing' }], BASE)).toBeNull();
-    expect(acceptedFiles([older], base('abc', { kind: 'hashed', hash: 'h' }))).toEqual({ 'demo.tsv.gz': 'f1' });
-  });
-
-  it('counts a checkout as main exactly when it is on the main branch and HEAD is the merge-base', () => {
-    const inHistory = (commit: string) => commit === 'old';
-    expect(checkoutAt({ onMainBranch: true, commit: 'abc' }, 'abc', inHistory)).toEqual({ kind: 'main', inHistory });
-    expect(checkoutAt({ onMainBranch: false, commit: 'abc' }, 'abc', inHistory)).toEqual({ kind: 'branch' });
-    expect(checkoutAt({ onMainBranch: true, commit: 'local-commit' }, 'abc', inHistory)).toEqual({ kind: 'branch' });
-  });
-
-  describe('on main', () => {
-    const history = (commit: string) => commit === 'old' || commit === 'abc';
-    const onMain: CheckoutBase = {
-      ...BASE, checkout: checkoutAt({ onMainBranch: true, commit: 'abc' }, 'abc', history),
-    };
-    const older = { kind: 'checkout' as const, header: matching(header('old')) };
-
-    it('diffs a clean intact earlier main build with other inputs; a branch still refuses it', () => {
-      expect(judgeBaseline(older, onMain, false)).toEqual({ kind: 'diff', why: 'main-build' });
-      expect(judgeBaseline(older, BASE, false).kind).toBe('refused');
-    });
-
-    it('rotates over that build, and never pins one, even built from the inputs HEAD holds', () => {
-      expect(planBaseline(matching(header('old')), older, onMain, false))
-        .toEqual({ verdict: { kind: 'diff', why: 'main-build' }, from: 'current', rotate: true });
-      const sameInputs: CheckoutBase = { ...onMain, inputHash: () => ({ kind: 'hashed', hash: 'h' }) };
-      expect(planBaseline(matching(header('old')), older, sameInputs, false))
-        .toEqual({ verdict: { kind: 'diff', why: 'main-build' }, from: 'current', rotate: true });
-      expect(planBaseline(matching(header('abc')), older, onMain, false))
-        .toMatchObject({ from: 'current', rotate: true });
-    });
-
-    it('never hashes the merge-base\'s inputs', () => {
-      const unasked: CheckoutBase = { ...onMain, inputHash: () => { throw new Error('hashed'); } };
-      const elsewhere = { kind: 'checkout' as const, header: matching(header('side-branch')) };
-      expect(planBaseline(matching(header('old')), older, unasked, false).verdict)
-        .toEqual({ kind: 'diff', why: 'main-build' });
-      expect(judgeBaseline(elsewhere, unasked, false).kind).toBe('refused');
-    });
-
-    it('refuses a dirty or swapped earlier build, or one from outside main\'s history', () => {
-      const dirty = { kind: 'checkout' as const, header: matching(header('old', true)) };
-      const swapped = { kind: 'checkout' as const, header: { ...matching(header('old')), onDisk: { 'demo.tsv.gz': 'f2' } } };
-      const elsewhere = { kind: 'checkout' as const, header: matching(header('side-branch')) };
-      for (const source of [dirty, swapped, elsewhere]) expect(judgeBaseline(source, onMain, false).kind).toBe('refused');
-      const refused = judgeBaseline(elsewhere, onMain, false);
-      expect(refused.kind === 'refused' && refused.message)
-        .toMatch(/built at side-branch, not a clean build on main at or before abc\./);
-    });
+  it('parses the input map, absent inputs included, and refuses a header written in the older shape', () => {
+    const h = { ...header('abc', { a: 'x', gone: null }) };
+    expect(parseHeader(JSON.stringify(h), 'h.json')).toEqual(h);
+    const older = { stage: 'demo', version: '1', commit: 'abc', dirty: false, inputHash: 'h', files: {} };
+    expect(() => parseHeader(JSON.stringify(older), 'h.json')).toThrow(/h\.json: header has no input map/);
   });
 });
