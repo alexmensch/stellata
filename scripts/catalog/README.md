@@ -177,7 +177,10 @@ scripts/catalog/
                                   of a built catalogue, each decoded whole
                                   (decodeRecordColumn) — the reader for a
                                   bake that measures the catalogue
-                                  (../milkyway-calibration/).
+                                  (../milkyway-calibration/); and
+                                  catalogColumnsProjection, the same
+                                  columns hashed as that bake's describe
+                                  ([../pipeline/README.md](../pipeline/README.md#freshness--one-mechanism)).
   build-counts.ts (+ test)        Per-strategy / per-tier count snapshot
                                   comparator, pinned by
                                   build-catalog-expected.json, which

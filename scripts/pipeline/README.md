@@ -37,7 +37,7 @@ then Vite.
 |---|---|---|---|---|
 | `build` | yes | `build/stamps/<step>.json` (gitignored) | an input or an output hash moved | the catalogue chain, the four generators, binaries, clouds, local-group, the mirrors |
 | `pull` | never | `data/stamps/<step>.json` (committed) | its request rows, a data input, its query or an output hash moved | every `refresh:*` (the two Edenhofer variants among them); both `fetch:*` |
-| `bake` | never | `data/stamps/<step>.json` (committed) | an input or an output hash moved | dust, local-bubble, cloud-surfaces, textures, icons, og |
+| `bake` | never | `data/stamps/<step>.json` (committed) | an input, its projection of a file it reads, or an output hash moved | dust, local-bubble, cloud-surfaces, textures, icons, og (all Python; a TypeScript bake declares itself as a TypeScript pull does) |
 
 A step the runner never runs is a **manual** step. When one is stale, the
 runner skips every step that reads its outputs (transitively), still builds
@@ -105,6 +105,17 @@ change in `clouds.json` leaves it fresh, a geometry or SID change stops the
 build. The bake record is the only owner of that fact. Its `requestFrom`
 orders the bake after `build:clouds` as a pull's orders the pull, so the
 check reads the `clouds.json` this run rebuilt.
+
+A TypeScript bake that reads the built catalogue describes itself the same
+way, through `catalogColumnsProjection` (`../catalog/catalog-columns.ts`):
+its record holds a hash of each float32 record column it reads, and
+`requestFrom` names `public/catalog-manifest.json`, ordering it after
+`build:catalog`. The catalogue's bytes are never an input, so a rebuild
+that moves a name or any column the bake does not read leaves it fresh, and
+a committed record needs only those columns, not the whole build, to come
+out identical on another machine. The bake passes the same field list to
+`readCatalogColumns` and to the projection, so what it hashes is what it
+measures.
 
 An **external dataset** a baker reads from outside the repo is a pull of its
 own, whose query is the dataset's identity and version: the two variants of

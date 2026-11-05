@@ -1,4 +1,5 @@
-import { mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
+import { mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
@@ -7,7 +8,13 @@ import {
   APSIS_FIELDS, CATALOG_MANIFEST_FILENAME, HEADER_SIZE, NAME_TABLE_PADDING, NO_APSIS, NO_COMPANION, RECORD_SIZE,
   catalogChunkFilename, writeCatalogHeader, writeStarRecord, type CatalogManifest, type WireStarRecord,
 } from '../../src/catalog-format/record/catalog-pure';
-import { readCatalogColumns } from './catalog-columns';
+import { manualDescription, manualFreshness, requestHash } from '../pipeline/freshness';
+import { pipelineTree } from '../pipeline/pipeline-tree';
+import { recordStep } from '../pipeline/record-step';
+import { loadTable } from '../pipeline/step-table/load-table';
+import type { ManualStep } from '../pipeline/step-table/step-table-pure';
+import { REPO_ROOT } from '../util/paths';
+import { catalogColumnsProjection, readCatalogColumns } from './catalog-columns';
 
 let dir: string;
 beforeEach(() => { dir = realpathSync(mkdtempSync(join(tmpdir(), 'catalog-columns-'))); });
@@ -47,4 +54,60 @@ describe('readCatalogColumns', () => {
     expect([...columns.absmag]).toEqual([4.75, 0.5]);
     expect(Object.keys(columns).sort()).toEqual(['absmag', 'count', 'x', 'z']);
   });
+});
+
+describe('catalogColumnsProjection', () => {
+  const MANIFEST = 'public/catalog-manifest.json';
+
+  it('hashes each named column and names the manifest it projects', async () => {
+    writeFixtureCatalogue(join(dir, 'public'), [SOL, VEGA]);
+    const projection = await catalogColumnsProjection(['x', 'absmag'], dir);
+    expect(projection.requestFrom).toEqual([MANIFEST]);
+    expect(projection.request).toEqual([expect.stringMatching(/^x [0-9a-f]{40}$/), expect.stringMatching(/^absmag [0-9a-f]{40}$/)]);
+    writeFixtureCatalogue(join(dir, 'public'), [SOL, { ...VEGA, ci: 1.5 }]);
+    expect(await catalogColumnsProjection(['x', 'absmag'], dir)).toEqual(projection);
+  });
+
+  it('stales a TypeScript bake recorded over it when a catalogue rebuild moves a column it reads, and record.ts freshens it', async () => {
+    execFileSync('git', ['init', '-q'], { cwd: dir });
+    writeFixtureCatalogue(join(dir, 'public'), [SOL, VEGA]);
+    const out = join(dir, 'luminosity.txt');
+    mkdirSync(join(dir, 'steps'));
+    writeFileSync(join(dir, 'steps/bake.ts'), `
+import { writeFileSync } from 'node:fs';
+import { catalogColumnsProjection, readCatalogColumns } from ${JSON.stringify(join(REPO_ROOT, 'scripts/catalog/catalog-columns'))};
+const FIELDS = ['x', 'y', 'z', 'absmag'] as const;
+export const describe = () => catalogColumnsProjection(FIELDS, ${JSON.stringify(dir)});
+export async function main(): Promise<void> {
+  const { absmag } = await readCatalogColumns(FIELDS, ${JSON.stringify(join(dir, MANIFEST))});
+  writeFileSync(${JSON.stringify(out)}, String(absmag.reduce((sum, m) => sum + m, 0)));
+}
+`);
+    writeFileSync(join(dir, 'steps/bake-outputs.ts'), `
+import { declareOutputs } from ${JSON.stringify(join(REPO_ROOT, 'scripts/util/emit-artifacts'))};
+export const OUT = declareOutputs({ out: ${JSON.stringify(out)} });
+`);
+    const step: ManualStep = {
+      name: 'measure:fixture', kind: 'bake', describes: true, language: 'ts', entry: join(dir, 'steps/bake.ts'),
+      outputs: { module: join(dir, 'steps/bake-outputs.ts'), name: 'OUT' },
+    };
+    const loaded = await loadTable({ steps: [step], registryFiles: [] }, { root: dir, deriveInputs: async () => [] });
+    if (loaded.kind !== 'loaded') throw new Error(loaded.problems.join('; '));
+    const deriveInputs = async () => [join(dir, 'steps/bake.ts')];
+    const recordIt = () => recordStep(loaded, { root: dir, step: step.name, force: false, args: [], deriveInputs, log: () => {} });
+    const tree = pipelineTree(dir);
+    const freshness = () => manualFreshness(step, { files: [out], families: [] }, tree, manualDescription(step, tree));
+
+    expect((await recordIt()).kind).toBe('recorded');
+    const { request } = await catalogColumnsProjection(['x', 'y', 'z', 'absmag'], dir);
+    expect(JSON.parse(readFileSync(tree.manualStamp(step.name), 'utf8'))).toMatchObject({
+      request: requestHash(request), requestFrom: [MANIFEST],
+    });
+    writeFixtureCatalogue(join(dir, 'public'), [SOL, { ...VEGA, ci: 1.5 }]);
+    expect(freshness()).toEqual({ kind: 'fresh' });
+    writeFixtureCatalogue(join(dir, 'public'), [SOL, { ...VEGA, absmag: 0.25 }]);
+    expect(freshness()).toEqual({ kind: 'stale', changed: ['(request)'] });
+    expect((await recordIt()).kind).toBe('recorded');
+    expect(freshness()).toEqual({ kind: 'fresh' });
+  }, 30_000);
 });

@@ -13,8 +13,11 @@ runs) and its outputs. A manual step is named for its `package.json` script,
 which is what the stop message prints and what runs it by hand, so the three
 pulls with no target before (`refresh-simbad-sptype.py`,
 `refresh-simbad-wds-xids.py`, `refresh-msc.py`) gain one. A TypeScript manual
-step (the two Horizons fetchers) names its `declareOutputs` constant as a
-TypeScript build does; a Python one lists its files, plus any families.
+step, pull or bake (`manual-step-outputs.ts`'s `tsManual`; the two Horizons
+fetchers today), names its `declareOutputs` constant as a TypeScript build
+does, and one that describes itself exports `describe`
+([util/README.md](../../util/README.md), `emit-artifacts.ts` entry); a Python
+one lists its files, plus any families.
 `package.json` keeps one-line targets that call the runner (`build:catalog` →
 `run.ts build:catalog`, `build:data` → `run.ts
 data`, every build step on the table) or `record.ts` (every manual step), and
