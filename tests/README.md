@@ -328,10 +328,10 @@ entry-fixture.ts         Not a test — `writeEntryFixture`, a throwaway
                          suites (emit-artifacts.test.ts and
                          source-declarations.test.ts).
 import-specifiers.ts     Not a test — `importSpecifiers` (every specifier,
-                         its form, and whether it is type-only) and
-                         `isShippedSource` (not a test, `.d.ts` or
-                         `*-fixture.ts`), shared by node-import-boundary
-                         and pipeline-viewer-boundary.
+                         its form, and whether it is type-only),
+                         `isRelativeSpecifier` and `isShippedSource` (not
+                         a test, `.d.ts` or `*-fixture.ts`), shared by
+                         node-import-boundary and pipeline-viewer-boundary.
 walk-files.ts            Not a test — file enumeration the scanners above
                          share. `walkFiles` is a recursive walk taking
                          `include` / `skipDir` predicates, and follows
