@@ -17,7 +17,6 @@ import refresh_lib as rl  # noqa: E402
 from paths import REPO_ROOT  # noqa: E402
 
 ROOT = REPO_ROOT
-REQUEST = ROOT / "data" / "gaia" / "gaia_catalog_source_id_request.tsv"
 OUT = ROOT / "data" / "gaia" / "gaia_dr3_astrometry_catalog.tsv"
 
 # Self-consistency spot-checks pinned from the live ESA Gaia archive on
@@ -62,7 +61,7 @@ SPOT_CHECKS: list[dict[str, Any]] = [
 
 def main() -> None:
     gap.run_pull(
-        request=REQUEST,
+        request=rl.CATALOG_SOURCE_ID_REQUEST,
         out=OUT,
         spot_checks=SPOT_CHECKS,
         script_name="refresh-gaia-astrometry-catalog",

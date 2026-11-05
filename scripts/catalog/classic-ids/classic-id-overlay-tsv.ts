@@ -1,5 +1,6 @@
 // Codec for data/classic-ids/classic_id_overlay.tsv. See README.md#files-in-this-area.
 
+import { DATA_FILES } from '../../../src/catalog-format/pipeline-outputs/data-files';
 import { compareSourceIds } from '../../util/tsv/table-pure';
 import { defineArtifact } from '../../util/tsv/artifact-pure';
 import {
@@ -23,7 +24,7 @@ export interface OverlayRow extends OverlayEntry {
 }
 
 export const CLASSIC_ID_OVERLAY = defineArtifact({
-  file: 'data/classic-ids/classic_id_overlay.tsv',
+  file: DATA_FILES.classicIdOverlay,
   columns: OVERLAY_COLUMNS,
   hint: 'Re-run `pnpm run build:classic-ids`.',
   order: (a: OverlayRow, b: OverlayRow) => compareSourceIds(a.sourceId, b.sourceId),

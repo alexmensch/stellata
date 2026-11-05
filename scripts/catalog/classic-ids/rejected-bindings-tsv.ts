@@ -1,5 +1,6 @@
 // Codec for data/classic-ids/rejected_bindings.tsv. See README.md#files-in-this-area.
 
+import { DATA_FILES } from '../../../src/catalog-format/pipeline-outputs/data-files';
 import { compareSourceIds } from '../../util/tsv/table-pure';
 import { defineArtifact, nullableCell } from '../../util/tsv/artifact-pure';
 import { GATE_REASONS, type GateReason } from '../membership/binding/binding-gate-pure';
@@ -24,7 +25,7 @@ function compareHipNullsFirst(a: number | null, b: number | null): number {
 const mag = (v: number | null): string => (v === null ? '' : v.toFixed(3));
 
 export const REJECTED_BINDINGS = defineArtifact({
-  file: 'data/classic-ids/rejected_bindings.tsv',
+  file: DATA_FILES.rejectedBindings,
   columns: ['gaia_source_id', 'hip', 'v_mag', 'v_via', 'g_mag', 'reason', 'designations'] as const,
   hint: 'Re-run `pnpm run build:classic-ids`.',
   order: (a: RejectedBindingRow, b: RejectedBindingRow) =>
