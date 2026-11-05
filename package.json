@@ -1,6 +1,6 @@
 {
   "name": "stellata",
-  "version": "7.1.13",
+  "version": "7.1.14",
   "private": true,
   "type": "module",
   "packageManager": "pnpm@11.24.0",
@@ -65,7 +65,7 @@
     "analyse:prefilter": "tsx scripts/util/launch.ts scripts/dust/prefilter/measure.ts",
     "analyse:prefilter-cost": "tsx scripts/util/launch.ts scripts/dust/prefilter/cost.ts",
     "analyse:march-taps": "tsx scripts/util/launch.ts scripts/dust/march-taps/measure.ts",
-    "measure:band-resolved": "tsx scripts/util/launch.ts scripts/milkyway-calibration/measure-resolved-light.ts",
+    "measure:band-resolved": "tsx scripts/util/launch.ts scripts/pipeline/record.ts measure:band-resolved",
     "build:local-group": "tsx scripts/util/launch.ts scripts/pipeline/run.ts build:local-group",
     "build:dust-sync": "tsx scripts/util/launch.ts scripts/pipeline/run.ts build:dust-sync",
     "build:probes-sync": "tsx scripts/util/launch.ts scripts/pipeline/run.ts build:probes-sync",
