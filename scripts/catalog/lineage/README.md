@@ -36,7 +36,7 @@ scripts/catalog/lineage/
                                  records on one key.
   lineage-stages.ts              LINEAGE_STAGES, every stage's codes and
                                  files in pipeline order: the one list the
-                                 code generator and trace read.
+                                 code generator and trace/ read.
   reason-code-list-pure.ts       reasonCodeList, the generated list, and
                                  appendOnlyViolations.
   reason-codes-tsv.ts            REASON_CODES, the list's codec.
@@ -45,10 +45,7 @@ scripts/catalog/lineage/
   generate-reason-codes.ts       `pnpm run lineage:codes`.
   reason-codes.test.ts           The list equals its generation, and is
                                  append-only against the merge-base.
-  trace-pure.ts                  The query parse, the name match and the
-                                 record search.
-  trace.ts                       `pnpm run trace` (#trace).
-  trace.test.ts                  Both, the command over a committed fixture.
+  trace/                         `pnpm run trace`. Own README.
   stage-lineage.ts               stageLineage: one stage's files, header,
                                  baseline plan, diff, budget and invariant
                                  checks, ready for the stage's emitArtifacts
@@ -81,6 +78,7 @@ source row that founded the record.
 | an addition group | the group anchor's source row — its IV/25 star, else its I/239 HIP, else its CNS5 row; the other members are evidence |
 | a magnitude-term row | its Gaia DR3 `source_id` |
 | a promoted companion | its `multiples.tsv` `(system_id, comp)` |
+| a cloud or Local Group object | its record in `clouds.json` / `local-group.json`, by slug (`clouds:<slug>`, `local-group:<slug>`) |
 
 The spine's line number is stable because the file is frozen and
 byte-guarded, and it covers Sol, whose identifier cells are empty; its
@@ -102,8 +100,8 @@ origin key, the manifest's current five-cell tuple
 full designation set, all written by membership. Each column lands with the
 stage that computes it, never as a placeholder: the record index (after the
 apparent-V sort) arrives when the sort stage gains lineage, the SID with
-allocation's. A later stage writes its columns to an identity file of its
-own (`allocation.identity.tsv.gz`: key → SID), rotated with that stage and
+allocation's. A later stage writes its columns to a file of its
+own (`allocation.sids.tsv.gz`: key → SID), rotated with that stage and
 never by rewriting membership's; the identity row is the join of those files
 on the origin key. A record membership does not admit — a folded spine row, a
 component group — still gets one, keyed on the cells it arrived with, so
@@ -112,7 +110,7 @@ this row, never re-deriving them — except where the deciding stage's input
 cells ARE the ledger's key: `binding-review.tsv` keys on the spine cells
 the derivation weighed, which its curated dispositions join on, so those
 ride the binding row's `params`. A parked or dropped record never gets an
-index or a SID: it has no `allocation.identity` row, and a SID it once held
+index or a SID: it has no `allocation.sids` row, and a SID it once held
 is carried by allocation's parked, retired or merged row under the deciding
 origin, with that decision's code as `cause`.
 
@@ -237,9 +235,10 @@ lineage.
 
 ## SID events
 
-SID allocation is the fourth stage, run inside `build:catalog`,
-`build:local-group` and `build:clouds`. Its rows, its events and its fail-closed
-rule live beside its modules, in [SID events](/scripts/sid/README.md#sid-events).
+SID allocation is the fourth stage, run inside `build:catalog`; each sibling
+build allocates as a stage of its own, `allocation-clouds` in `build:clouds`
+and `allocation-local-group` in `build:local-group`. Their rows, events and
+fail-closed rule live beside their modules, in [SID events](/scripts/sid/README.md#sid-events).
 
 ## Storage and cost
 
@@ -284,8 +283,12 @@ per `multiples.tsv` row, plus 31,908 identity rows (<!-- count:build-catalog/com
 17,232 rows it retires, parks or merges), 0.95 MB gzipped in 0.2 s;
 `PROMOTION_LINEAGE_BUDGET` pins 1.04 MB and 5 s. Allocation, measured
 2026-11-01: 980,151 rows (979,712 objects plus 439 parked SIDs, 62.6 MB plain)
-and 979,712 identity rows (29.1 MB), 17.6 MB gzipped in 4.7 s without a diff;
+and 979,712 key → SID rows (29.1 MB), 17.6 MB gzipped in 4.7 s without a diff;
 `ALLOCATION_LINEAGE_BUDGET` pins 19.3 MB and 30 s: a workstation at load average 28–46 took 18.1–31.4 s (2026-11-05).
+The sibling allocation stages, measured 2026-11-05: 96 cloud rows in 1,455
+bytes and 123 Local Group rows in 1,720 bytes gzipped, identity files
+included, each in about 0.1 s; `SIBLING_LINEAGE_BUDGET`
+(`../../sid/sibling-allocation.ts`) pins 1,900 bytes and 5 s for either.
 Placement, measured 2026-10-30: 3,872,657 rows (349 MB plain, 31.0 MB
 gzipped) in 3.2 s without a diff and 8.1 s with one against a full
 baseline; `PLACEMENT_LINEAGE_BUDGET` pins 34 MB and 60 s: a CI run that diffs against a restored merge-base baseline took 36.5 s (2026-11-05). A file that size outruns
@@ -334,42 +337,8 @@ non-empty diff puts that diff's summary in its PR body.
 
 ## Trace
 
-`pnpm run trace <name | designation | sid | gaia id> [--dir <dir>]`
-(`trace.ts`, over `trace-pure.ts`; `--dir` reads another lineage directory,
-`build/lineage/` by default). `parseTraceQuery` tells the four apart: ten or
-more bare digits, or `gaia_dr3:<id>`, is a Gaia id (a SID never runs that
-long); fewer, or `sid:<n>`, a SID; `ns:key` a designation; anything else a
-name.
-
-1. A name resolves over the name table `lookupByName` reads (`nameTable`,
-   `catalog-lookup.ts`: names plus composed designation labels) to its
-   record's full designation set (`catalogRecordDesignations`, `../../sid/`),
-   so it needs a built catalogue. `matchName` tries the name exactly, then
-   case- and accent-folded (`foldNameKey`, `../naming/`), so `algol` finds
-   Algol and `Yunu` finds Yunü. A name reaching two records, exactly or
-   folded, refuses, listing both: one composed label can sit on two records
-   (`54 Leo`, a HIP primary and a Gaia-only companion), and the designation
-   half has case-only twins that are different stars (`a Car`, `A Car`).
-   `lookupByName` itself stays exact, for the frozen corpora. Designations follow `sid-pure.ts`'s grammar; a SID
-   resolves to its canonical key through the ledger.
-2. Find the origin keys whose identity rows carry that designation. Parked
-   and dropped records have lineage rows too, so they are found. Also find
-   every row that names it in `params` or `evidence` — a source a gate
-   weighed and refused, or only cited, sits on no identity row — and every
-   row that cites one of those identity-row records by origin key, as a
-   companion's promotion row cites its anchor. Identity rows come from every
-   stage that writes them (`StageLineageSpec.identity`). A full scan of the
-   stage files, about two seconds today, so no index is kept.
-3. Widen through allocation's rows: a SID query also finds the origin keys
-   allocation filed it under — the record it resolved to, or the decision
-   that retired, parked or merged it — and a merged SID's successor.
-4. Print every stage's rows for those keys in stage order
-   (`LINEAGE_STAGES`).
-
-`trace.test.ts` runs the command over a small committed fixture: it finds a
-record the catalogue parks, the record that refused a source no identity
-row carries, and every component row of a promoted system from its anchor's
-designation.
+`pnpm run trace`, every stage's rows for the records a query names, lives in
+[trace/](trace/README.md).
 
 ## Cross-stage joins
 
@@ -446,5 +415,6 @@ does every row whose code retires, parks or merges, keyed on the `hip` and
 would carry (`PromotedRow.synthKey`), less any designation a membership
 manifest record or one of promotion's own mints already carries, so an
 orphaned SID keyed on one of them joins to that row's cause and never to a
-row that merely cites another stage's star. Every other record's is
+row that merely cites another stage's star. A cloud's or Local Group
+object's is its sibling allocation stage's; every other record's is
 membership's.

@@ -1,4 +1,10 @@
 code	stage	effect	status	retired_in	first_version	description
+allocation-clouds.minted	allocation-clouds	none	live		7.1.11	The object's same-as class reaches no ledger row, so it takes the next SID under its canonical key.
+allocation-clouds.reinstated	allocation-clouds	none	live		7.1.11	The object's same-as class reaches only one retired SID, which returns to service.
+allocation-clouds.resolved	allocation-clouds	none	live		7.1.11	The object's same-as class reaches one SID in service, which it keeps.
+allocation-local-group.minted	allocation-local-group	none	live		7.1.11	The object's same-as class reaches no ledger row, so it takes the next SID under its canonical key.
+allocation-local-group.reinstated	allocation-local-group	none	live		7.1.11	The object's same-as class reaches only one retired SID, which returns to service.
+allocation-local-group.resolved	allocation-local-group	none	live		7.1.11	The object's same-as class reaches one SID in service, which it keeps.
 allocation.legacy.addition-admitted-twice	allocation	merge	historical		7.1.8	one star admitted twice: an I/239 HIP or CNS5 row with no HD link was a record of its own beside the Tycho-2 star SIMBAD holds under the same Gaia source; the additions group on the derived source, so the two are one record and the sid merges into the canonical-key sid; old refs follow the successor
 allocation.legacy.anchor-offset-unreached	allocation	retire	historical		7.1.8	companion no longer promoted: Stage 6 now anchors its WDS root on Aa (the anchor promotion resolves), no measured edge reaches it from Aa, so its anchor offset is blank and promotion drops it; reinstate when the Aa-to-A offset link restores it
 allocation.legacy.anchor-parked-no-parallax	allocation	retire	historical		7.1.8	A component that stops promoting because its anchor primary reaches no owned parallax and parks out of the catalogue: a presence event, filed as a retirement.

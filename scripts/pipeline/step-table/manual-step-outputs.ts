@@ -5,14 +5,14 @@ import {
 } from '../../../src/catalog-format/public-artifacts/public-artifacts';
 import type { OutputFamily } from '../../util/emit-artifacts';
 import { publicRepoPath } from '../../util/paths';
-import type { ManualStep } from './step-table-pure';
+import type { ManualKind, ManualStep } from './step-table-pure';
 
 const pull = (name: string, entry: string, outputs: readonly string[]): ManualStep => ({
   name, kind: 'pull', language: 'python', entry: `scripts/refresh/${entry}`, outputs,
 });
 
-const tsPull = (name: string, entry: string, module: string, constant: string): ManualStep => ({
-  name, kind: 'pull', language: 'ts', entry, outputs: { module, name: constant },
+const tsManual = (kind: ManualKind, name: string, entry: string, module: string, constant: string): ManualStep => ({
+  name, ...kind, language: 'ts', entry, outputs: { module, name: constant },
 });
 
 const bake = (
@@ -47,8 +47,8 @@ export const MANUAL_STEPS: readonly ManualStep[] = [
   pull('refresh:simbad-tyc-hd', 'refresh-simbad-tyc-hd.py', ['data/simbad/simbad_tyc_hd.tsv']),
   pull('refresh:edenhofer2024-main', 'refresh-edenhofer2024-main.py', ['data/dust/edenhofer2024-main.json']),
   pull('refresh:edenhofer2024-2kpc', 'refresh-edenhofer2024-2kpc.py', ['data/dust/edenhofer2024-2kpc.json']),
-  tsPull('fetch:probes', 'scripts/probes/fetch-probe-trajectories.ts', 'scripts/probes/probe-trajectory-outputs.ts', 'PROBE_OUTPUTS'),
-  tsPull('fetch:ephemerides', 'scripts/ephemerides/fetch-planet-elements.ts', 'scripts/ephemerides/planet-element-outputs.ts', 'ELEMENT_TABLE_OUTPUTS'),
+  tsManual({ kind: 'pull' }, 'fetch:probes', 'scripts/probes/fetch-probe-trajectories.ts', 'scripts/probes/probe-trajectory-outputs.ts', 'PROBE_OUTPUTS'),
+  tsManual({ kind: 'pull' }, 'fetch:ephemerides', 'scripts/ephemerides/fetch-planet-elements.ts', 'scripts/ephemerides/planet-element-outputs.ts', 'ELEMENT_TABLE_OUTPUTS'),
   bake('build:dust', 'scripts/dust/build-dust.py', [`data/dust/${DUST_MANIFEST}`], {
     families: [{ dir: 'data/dust', member: DUST_CHUNK, stamped: true }],
   }),

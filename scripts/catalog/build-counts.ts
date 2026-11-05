@@ -4,11 +4,11 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
-import type { DistVia } from '../../src/catalog-format/record/catalog-pure';
-import { flattenStages, stageOfCounts } from '../util/counts/count-stages-pure';
-import { REPO_ROOT } from '../util/paths';
-import type { RvErrorBandPartition } from './distance/radial-velocity/radial-velocity';
-import type { RecuratedBrightness } from './companions/companion-promotion';
+import type { DistVia } from '../../src/catalog-format/record/catalog-pure.ts';
+import { flattenStages, stageOfCounts } from '../util/counts/count-stages-pure.ts';
+import { REPO_ROOT } from '../util/paths.ts';
+import type { RvErrorBandPartition } from './distance/radial-velocity/radial-velocity.ts';
+import type { RecuratedBrightness } from './companions/companion-promotion.ts';
 
 /** Repo-relative path of the snapshot `BuildCounts` is pinned against, so the
  *  build and every consumer that reads the shipped figures back resolve one

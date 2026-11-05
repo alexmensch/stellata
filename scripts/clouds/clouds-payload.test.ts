@@ -3,14 +3,16 @@
 // when the artifact isn't built.
 
 import { existsSync, readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+
 import { describe, it, expect } from 'vitest';
 import { CLOUDS_JSON_SCHEMA } from '../../src/catalog-format/baker-artifacts/baker-artifacts';
 import type { CloudsFile } from '../../src/catalog-format/clouds/clouds-schema';
 
-import { PUBLIC_FILES } from '../../src/catalog-format/public-artifacts/public-artifacts';
-import { publicFile } from '../util/paths';
+import { REPO_ROOT } from '../util/paths';
+import { CLOUDS_JSON } from './clouds-json';
 
-const CLOUDS_JSON = publicFile(PUBLIC_FILES.clouds);
+const CLOUDS_PATH = resolve(REPO_ROOT, CLOUDS_JSON.file);
 
 // The calibration contract (/docs/science-molecular-clouds.md#42-calibration-procedure-per-cloud): n0Cal sets the
 // centroid shortest-axis column to akPeak/0.117 mag; uEnv < 1 records the
@@ -34,9 +36,9 @@ const PROFILED_PINS: Record<
   orion: { cls: 'hii', n0Cal: 512.21, uEnv: 0.2229, massLeike: 856, akPeak: 0.22 },
 };
 
-describe.skipIf(!existsSync(CLOUDS_JSON))('clouds.json', () => {
-  const payload = existsSync(CLOUDS_JSON)
-    ? (JSON.parse(readFileSync(CLOUDS_JSON, 'utf-8')) as CloudsFile)
+describe.skipIf(!existsSync(CLOUDS_PATH))('clouds.json', () => {
+  const payload = existsSync(CLOUDS_PATH)
+    ? (JSON.parse(readFileSync(CLOUDS_PATH, 'utf-8')) as CloudsFile)
     : null!;
 
   it('carries the shared schema version and the full cloud set', () => {

@@ -4,11 +4,13 @@
 overrides → `public/local-group.json`. `build-local-group-pure.ts`
 holds the pure helpers (RA/Dec→ICRS, orient → quaternion, override
 merge, standalone-row builder, display-name + catalog-designation
-rules, distance filter, emission assembly);
+rules, distance filter, emission assembly, and `localGroupPayload`, the
+rounded output with each object's SID);
 `emission-geometry-pure.ts` holds the Sérsic deprojection and each
 family's truncated-volume integral. `local-group-source.ts` declares the
 three inputs (`../util/sources/`), `local-group-parse.ts` holds their
-parsers, and `local-group-inputs.test.ts` pins the step's derived
+parsers, `local-group-json.ts` declares the output it serializes through
+(`local-group:<slug>` to lineage), and `local-group-inputs.test.ts` pins the step's derived
 input set, `stepInputPaths('build:local-group')` (`../util/step-inputs.ts`). The quadrature and the ρ₀ solve
 itself are shared with the Milky Way band and live in
 `src/astro-core/emission/density0-solver-pure.ts`. The distance envelope
@@ -34,8 +36,9 @@ required:
   optional `canonical` name promotion) merged into each object's `name` /
   `type` / `aliases` output fields; unmatched rows fail the build.
 
-Emits `public/local-group.json` and the `lg` SID registry partition through
-one `emitArtifacts` call (`../util/README.md`; the declaration is
+Emits `public/local-group.json`, the `allocation-local-group` lineage stage
+(`build/lineage/`, [SID events](/scripts/sid/README.md#sid-events)) and the
+`lg` SID registry partition through one `emitArtifacts` call (`../util/README.md`; the declaration is
 `local-group-outputs.ts`), with one entry per renderable object
 within `MAX_DISTANCE_PC` of Sol. The output schema is
 `/src/catalog-format/local-group/local-group-schema.ts` (`LgObjectRow`,
