@@ -1,8 +1,9 @@
-// A throwaway launchable entry that records each run of its main in a marker file.
+// A throwaway launchable entry that records each run of its main in a marker file, removed when the test finishes.
 
-import { existsSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { onTestFinished } from 'vitest';
 
 export interface EntryFixture {
   readonly path: string;
@@ -14,6 +15,7 @@ export function writeEntryFixture(
   name: string, { mains = true, describes = true }: { mains?: boolean; describes?: boolean } = {},
 ): EntryFixture {
   const dir = mkdtempSync(join(tmpdir(), 'entry-fixture-'));
+  onTestFinished(() => rmSync(dir, { recursive: true, force: true }));
   const path = join(dir, name);
   const marker = join(dir, 'runs');
   writeFileSync(path, [
