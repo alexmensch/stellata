@@ -5,6 +5,7 @@ import { join } from 'node:path';
 
 import { afterAll, describe, expect, it } from 'vitest';
 
+import { LAUNCHER } from '../../util/import-closure-pure';
 import { REPO_ROOT } from '../../util/paths';
 import { identityRows } from './identity-pure';
 import { gzipText } from './lineage-io';
@@ -206,7 +207,7 @@ describe('pnpm run trace', () => {
   writeFileSync(stageFile(dir, 'promotion.identity'), gzipText(PROMOTION_IDENTITY));
   afterAll(() => rmSync(dir, { recursive: true, force: true }));
   const run = (query: string): string => execFileSync(
-    'pnpm', ['exec', 'tsx', 'scripts/catalog/lineage/trace.ts', query, '--dir', dir],
+    'pnpm', ['exec', 'tsx', LAUNCHER, 'scripts/catalog/lineage/trace.ts', query, '--dir', dir],
     { cwd: REPO_ROOT, encoding: 'utf-8' },
   );
 

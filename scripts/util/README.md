@@ -146,7 +146,9 @@ same thing — single-use helpers stay with their consumer.
   the runner also reads for an outputs module's imports), so a new import joins
   without anyone listing it. `scriptParts` is the one parser of a
   script's `&&`-chained commands (`tsx`, `python3`, `pnpm run`, or `other`)
-  and `tsxEntries` every `tsx` entry among them; `closureWithSiblings(closure, files)` adds every file beside a
+  and `tsxEntries` every `tsx` entry among them; `runnerTargets` the
+  targets of a script that is one `run.ts` call (`RUNNER`), else `null`;
+  `closureWithSiblings(closure, files)` adds every file beside a
   closure module except code (`CODE_FILE`) and `.md`, which is how the `*-expected.json`
   snapshots a build reads by path get keyed. `trackedFiles()` is the listing the
   stamp passes as `files`.
@@ -246,7 +248,9 @@ same thing — single-use helpers stay with their consumer.
   copies it wholesale, and `tests/bundle-content.test.ts` fails on any
   `*.staged` file under `public/` or `dist/`. `outputs` is the step's
   `declareOutputs({key: path, …}, families)` constant, the one place each
-  path is written, a relative one read as repo-relative; an emission supplies only contents (bytes, or `{copyFrom: path}`), keyed the same, so a
+  path is written, a relative one read as repo-relative
+  (`isDeclaredOutputs` holds a value it returned, never a look-alike, which
+  is how `/tests/step-coverage.test.ts` finds them); an emission supplies only contents (bytes, or `{copyFrom: path}`), keyed the same, so a
   missing or extra key is a compile error. Family members (a directory plus a
   name pattern — the catalogue's transport chunks — or the exact names a
   member may take, as each lineage stage's baseline does, so stages can share
@@ -269,11 +273,25 @@ same thing — single-use helpers stay with their consumer.
   that produces and passes its checks lands by itself, a failing one is
   reported and skipped, and the run throws naming the refused targets once
   all have been tried.
-  `runStep(main)` is every step's entry point: a refused emission has
-  already printed its failed checks, so it exits 1 with one line and no
-  stack; any other error keeps its stack. A TypeScript pull (the two
-  Horizons fetchers) passes `runStep(main, describe)`, and `--describe`
-  then prints its `PullDescription` instead of running.
+  `runStep(entry, args)` is how every script runs, and `launch.ts` its one
+  command line: `package.json` names `tsx scripts/util/launch.ts <entry>`
+  (`import-closure-pure.ts`'s `LAUNCHER`; `scriptParts` reads any other
+  `tsx` command as unclassified, which `/tests/source-declarations.test.ts`
+  fails), and the runner and `record.ts` start a TypeScript step the same
+  way (`../pipeline/processes.ts`'s `launchArgs`). An entry exports `main`
+  and never calls it (`/tests/source-declarations.test.ts` parses every
+  launched entry and fails any top-level statement that is not a
+  declaration), so **importing a package-script or step entry runs
+  nothing** — the input-set walk (`sources/declared-inputs.ts`) can import
+  whatever its name matches. A script no `package.json` command names
+  (CI's `pnpm exec tsx` calls, the commit-sweep figure check,
+  `binaries/golden/cut-fixture.ts`) is neither, and no step's closure
+  reaches one. `runStep` imports the entry, hands it `process.argv` as
+  `tsx` would have, and runs `main`: a number it returns is the exit
+  status; a refused emission has already printed its failed checks, so it
+  exits 1 with one line and no stack; any other error keeps its stack. A
+  TypeScript pull (the two Horizons fetchers) also exports `describe`, and
+  `--describe` then prints its `PullDescription` instead of running.
   `horizons-response.ts`' `HORIZONS_SERVICE` is the service both state.
 - `heap-budget.ts` / `heap-budget-pure.ts` (+ test) — `watchHeap(step)`,
   started first thing in a step's `main`, and its `check()`, the step's peak

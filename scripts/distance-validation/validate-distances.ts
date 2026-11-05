@@ -7,14 +7,17 @@ import {
 } from './validate-distances-pure';
 import { VAIDMAN_SUPERGIANTS } from './vaidman-tsv';
 
-const report = buildReport(readArtifact(VAIDMAN_SUPERGIANTS), BAILER_JONES.read().distPc);
-console.log(formatReport(report));
-if (passesAcceptanceBars(report)) {
-  console.log('validate-distances: PASS');
-} else {
-  console.error(
-    `validate-distances: FAIL — median ${pct(report.edsd.stats.median)} > ${pct(MEDIAN_FRAC_DIFF_MAX)} `
-      + `OR large-diff count ${report.edsd.large.length} > ${LARGE_DIFF_COUNT_MAX}`,
-  );
-  process.exitCode = 1;
+export function main(): number {
+  const report = buildReport(readArtifact(VAIDMAN_SUPERGIANTS), BAILER_JONES.read().distPc);
+  console.log(formatReport(report));
+  if (passesAcceptanceBars(report)) {
+    console.log('validate-distances: PASS');
+  } else {
+    console.error(
+      `validate-distances: FAIL — median ${pct(report.edsd.stats.median)} > ${pct(MEDIAN_FRAC_DIFF_MAX)} `
+        + `OR large-diff count ${report.edsd.large.length} > ${LARGE_DIFF_COUNT_MAX}`,
+    );
+    return 1;
+  }
+  return 0;
 }

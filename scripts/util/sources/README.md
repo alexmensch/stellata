@@ -21,7 +21,12 @@ scripts/util/sources/
                        import closure reaches, by importing its declaring
                        modules, each classified read / written / both /
                        unused; isRead, the step's data inputs among them;
-                       declaredFiles, their repo-relative files.
+                       declaredFiles, their repo-relative files. It may
+                       import any module its name matches, an entry
+                       script included: every package-script and step
+                       entry only exports main and runs through the one
+                       launcher, so importing it runs nothing
+                       (../README.md, emit-artifacts.ts entry).
   row-ref-pure.ts      SourceRowRef, RowKey — a cited source row
                        (#sourcerowref).
 ```
@@ -86,13 +91,12 @@ A declaration lives only in a module named `*-source.ts` or `*-tsv.ts`, and
 that module is imported only by code that reads (or, for an artifact, writes)
 the file through it. Import reachability then equals reading, which is what
 lets a step's data inputs be derived from its closure.
-`tests/source-declarations.test.ts` holds every TypeScript pipeline step to
-it — the `build:*` and `fetch:*` targets plus `sid:risk-set`, the step
-kinds in [Step kinds](../../pipeline/README.md#step-kinds), over the closure
-of every `tsx` entry a chained script runs; reports, audits and validators
-are not steps. A step-named script
-whose commands `scriptParts` cannot classify fails the test, unless it is on
-the test's named not-a-step list (the Vite builds, the seed wrapper). `declaredInputs(closure)` classifies each reached
+`tests/source-declarations.test.ts` holds every TypeScript step on the table
+to it, and the report and on-demand writers of the step table's
+`NON_STEP_WRITERS` (`closureReadingWriters`), over the closure of every
+`tsx` entry a chained script runs; a draft writer reads the files its command
+line names, and audits and validators are not steps. A writer whose commands
+`scriptParts` cannot classify fails the test. `declaredInputs(closure)` classifies each reached
 declaration by the calls in the closure's other modules: `read` (a source's
 `.read(`, an artifact read), `written` (an artifact's `serialize` /
 `encodeLine`), `both`, or `unused`. A step's data inputs are the `read` and
@@ -108,10 +112,12 @@ configs — test code included — it also fails on a `data/` path literal
 outside a declaring or `*-outputs.ts` module: a test names a data file through
 its declaration (`X.file`, `isReadable(X)`, `X.read()`). The test's named
 `DATA_PATH_SPELLERS` are the exceptions: the two input-set pins, which check a
-derivation from outside the declarations; the step table and its tree;
+derivation from outside the declarations;
 `/src/catalog-format/pipeline-outputs/data-files.ts`, the names the step
-table's outputs modules declare, which each codec takes its `file` from; and
-the scanners of the repo's top-level folders and paper store. A pure parser's test labels its fixtures
+table declares, which each codec takes its `file` from; and the scanners of
+the repo's top-level folders and paper store. `data-files.ts` is the one
+production module among them, and the test pins that, so a production module
+takes a `data/` name from it or from a declaration. A pure parser's test labels its fixtures
 `fixture/…`, never a real path.
 
 A helper that a non-reader needs does not live beside a declaration: it moves

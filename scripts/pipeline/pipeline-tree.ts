@@ -2,9 +2,8 @@
 
 import { relative, resolve } from 'node:path';
 
+import { MANUAL_STAMP_FOLDER } from '../../src/catalog-format/pipeline-outputs/data-files';
 import { STAMP_FOLDER, stampPath, stepFileName } from '../util/stamp-path-pure';
-
-const MANUAL_STAMP_FOLDER = 'data/stamps';
 
 export interface PipelineTree {
   readonly root: string;

@@ -6,10 +6,11 @@ import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
-  EmissionRefused, declareOutputs, emitArtifacts, emitEach, runStep, type Check,
+  EmissionRefused, declareOutputs, emitArtifacts, emitEach, isDeclaredOutputs, runStep, type Check,
 } from './emit-artifacts';
 import { REPO_ROOT } from './paths';
 import { STAGING_SUFFIX } from './staged-write';
+import { writeEntryFixture, type EntryFixture } from '../../tests/entry-fixture';
 
 describe('declareOutputs', () => {
   it('reads a relative path as repo-relative, whatever the working directory', () => {
@@ -18,6 +19,15 @@ describe('declareOutputs', () => {
     cwd.mockRestore();
     expect(declared.files).toEqual({ a: join(REPO_ROOT, 'build/a.txt'), b: '/abs/b.txt' });
     expect(declared.families[0].dir).toBe(join(REPO_ROOT, 'build/f'));
+  });
+});
+
+describe('isDeclaredOutputs', () => {
+  it('holds a declareOutputs value, not a copy of its shape', () => {
+    const declared = declareOutputs({ a: 'build/a.txt' });
+    expect(isDeclaredOutputs(declared)).toBe(true);
+    expect(isDeclaredOutputs({ ...declared })).toBe(false);
+    expect(isDeclaredOutputs(null)).toBe(false);
   });
 });
 
@@ -189,18 +199,45 @@ describe('emitArtifacts', () => {
 });
 
 describe('runStep', () => {
-  it('prints the description under --describe without running main', () => {
-    const argv = process.argv;
-    const ran = vi.fn();
-    const log = vi.spyOn(console, 'log').mockImplementation(() => {});
-    process.argv = [...argv, '--describe'];
+  const launched = async (
+    args: string[], fixture: EntryFixture = writeEntryFixture('entry.ts'),
+  ): Promise<{ fixture: EntryFixture; exitCode: typeof process.exitCode }> => {
+    const { argv, exitCode } = process;
     try {
-      runStep(ran, () => ({ query: 'Q', services: ['ssd.jpl.nasa.gov'] }));
+      await runStep(fixture.path, args);
+      return { fixture, exitCode: process.exitCode };
     } finally {
       process.argv = argv;
+      process.exitCode = exitCode;
+    }
+  };
+
+  it('runs the entry main with the arguments after it, and exits with what main returns', async () => {
+    const { fixture, exitCode } = await launched(['a', 'b']);
+    expect(fixture.runs()).toEqual(['a b']);
+    expect(exitCode).toBe(3);
+  });
+
+  it('prints the description under --describe without running main', async () => {
+    const log = vi.spyOn(console, 'log').mockImplementation(() => {});
+    try {
+      const { fixture } = await launched(['--describe']);
+      expect(fixture.runs()).toEqual([]);
+      expect(JSON.parse(log.mock.calls[0][0] as string)).toEqual({ query: 'Q', services: ['svc'] });
+    } finally {
       vi.restoreAllMocks();
     }
-    expect(ran).not.toHaveBeenCalled();
-    expect(JSON.parse(log.mock.calls[0][0] as string)).toEqual({ query: 'Q', services: ['ssd.jpl.nasa.gov'] });
+  });
+
+  it('refuses --describe for an entry that exports no describe, without running main', async () => {
+    const fixture = writeEntryFixture('entry.ts', { describes: false });
+    await expect(launched(['--describe'], fixture)).rejects.toThrow(/exports no describe/);
+    expect(fixture.runs()).toEqual([]);
+  });
+
+  it('refuses an entry that exports no main', async () => {
+    const fixture = writeEntryFixture('entry.ts', { mains: false });
+    await expect(launched([], fixture)).rejects.toThrow(/exports no main/);
+    expect(fixture.runs()).toEqual([]);
   });
 });

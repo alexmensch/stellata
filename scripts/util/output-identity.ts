@@ -66,19 +66,21 @@ function diff(): number {
   return 1;
 }
 
-const mode = process.argv[2];
-if (mode !== 'snapshot' && mode !== 'diff') {
-  console.error('usage: tsx scripts/util/output-identity.ts snapshot|diff');
-  process.exit(2);
-}
-if (mode === 'diff' && !existsSync(SNAPSHOT)) {
-  console.error('no build/output-identity.json; run pnpm run identity:snapshot first');
-  process.exit(1);
-}
-try {
-  rebuildFromScratch();
-  process.exit(mode === 'snapshot' ? snapshot() : diff());
-} catch (err) {
-  console.error((err as Error).message);
-  process.exit(1);
+export function main(): number {
+  const mode = process.argv[2];
+  if (mode !== 'snapshot' && mode !== 'diff') {
+    console.error('usage: pnpm run identity:snapshot|identity:diff');
+    return 2;
+  }
+  if (mode === 'diff' && !existsSync(SNAPSHOT)) {
+    console.error('no build/output-identity.json; run pnpm run identity:snapshot first');
+    return 1;
+  }
+  try {
+    rebuildFromScratch();
+    return mode === 'snapshot' ? snapshot() : diff();
+  } catch (err) {
+    console.error((err as Error).message);
+    return 1;
+  }
 }

@@ -51,11 +51,13 @@ function tsStep(name: string, out: string, inputs: string[] = [], sleepMs = 0): 
   const entry = `steps/${name}.ts`;
   write(entry, `
 import { appendFileSync, existsSync, readFileSync, writeFileSync } from 'node:fs';
-if (existsSync(${JSON.stringify(at(`fail-${name}`))})) process.exit(3);
-const body = ${JSON.stringify(inputs.map(at))}.map((p) => readFileSync(p, 'utf8')).join('+');
-Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ${sleepMs});
-writeFileSync(${JSON.stringify(at(out))}, ${JSON.stringify(name)} + '(' + body + ')' + (process.env.UPDATE_SNAPSHOTS ?? ''));
-appendFileSync(${JSON.stringify(log())}, (process.env.PIPELINE_STEP ?? '(unnamed)') + '\\n');
+export function main(): void {
+  if (existsSync(${JSON.stringify(at(`fail-${name}`))})) process.exit(3);
+  const body = ${JSON.stringify(inputs.map(at))}.map((p) => readFileSync(p, 'utf8')).join('+');
+  Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ${sleepMs});
+  writeFileSync(${JSON.stringify(at(out))}, ${JSON.stringify(name)} + '(' + body + ')' + (process.env.UPDATE_SNAPSHOTS ?? ''));
+  appendFileSync(${JSON.stringify(log())}, (process.env.PIPELINE_STEP ?? '(unnamed)') + '\\n');
+}
 `);
   write(`steps/${name}-outputs.ts`, `
 import { declareOutputs } from ${JSON.stringify(EMIT_ARTIFACTS)};
@@ -189,10 +191,12 @@ describe('runSteps — build steps', () => {
   it('stamps a stamped family\'s members and leaves an unstamped family\'s out', async () => {
     write('steps/f.ts', `
 import { mkdirSync, writeFileSync } from 'node:fs';
-for (const d of ['pub', 'base']) mkdirSync(${JSON.stringify(root)} + '/' + d, { recursive: true });
-writeFileSync(${JSON.stringify(at('f.out'))}, 'f');
-writeFileSync(${JSON.stringify(at('pub/chunk-0'))}, 'c');
-writeFileSync(${JSON.stringify(at('base/prev'))}, 'p');
+export function main(): void {
+  for (const d of ['pub', 'base']) mkdirSync(${JSON.stringify(root)} + '/' + d, { recursive: true });
+  writeFileSync(${JSON.stringify(at('f.out'))}, 'f');
+  writeFileSync(${JSON.stringify(at('pub/chunk-0'))}, 'c');
+  writeFileSync(${JSON.stringify(at('base/prev'))}, 'p');
+}
 `);
     write('steps/f-outputs.ts', `
 import { declareOutputs } from ${JSON.stringify(EMIT_ARTIFACTS)};
@@ -229,7 +233,9 @@ export const OUT = declareOutputs({ out: ${JSON.stringify(at('f.out'))} }, [
     write('steps/a.ts', `
 import { writeFileSync } from 'node:fs';
 import { stepInputHashes, STEP_INPUTS_ENV } from ${JSON.stringify(join(REPO_ROOT, 'scripts/util/step-input-hashes'))};
-writeFileSync(${JSON.stringify(at('a.out'))}, JSON.stringify({ handed: stepInputHashes(), file: process.env[STEP_INPUTS_ENV] }));
+export function main(): void {
+  writeFileSync(${JSON.stringify(at('a.out'))}, JSON.stringify({ handed: stepInputHashes(), file: process.env[STEP_INPUTS_ENV] }));
+}
 `);
     expect((await run([step], ['a'])).kinds).toEqual({ a: 'built' });
     const { handed, file } = JSON.parse(read('a.out')) as { handed: unknown; file: string };
@@ -246,9 +252,11 @@ writeFileSync(${JSON.stringify(at('a.out'))}, JSON.stringify({ handed: stepInput
     write('steps/a.ts', `
 import { writeFileSync } from 'node:fs';
 import { stepInputHashes } from ${JSON.stringify(join(REPO_ROOT, 'scripts/util/step-input-hashes'))};
-writeFileSync(${JSON.stringify(at('a.handed'))}, JSON.stringify(stepInputHashes()));
-writeFileSync(${JSON.stringify(at('a.in'))}, 'rewritten');
-writeFileSync(${JSON.stringify(at('a.out'))}, 'out');
+export function main(): void {
+  writeFileSync(${JSON.stringify(at('a.handed'))}, JSON.stringify(stepInputHashes()));
+  writeFileSync(${JSON.stringify(at('a.in'))}, 'rewritten');
+  writeFileSync(${JSON.stringify(at('a.out'))}, 'out');
+}
 `);
     write('steps/a-outputs.ts', `
 import { declareOutputs } from ${JSON.stringify(EMIT_ARTIFACTS)};
@@ -363,8 +371,10 @@ describe('runSteps — --verify-committed', () => {
     write('f.in', 'x');
     write('steps/f.ts', `
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-mkdirSync(${JSON.stringify(at('fam'))}, { recursive: true });
-writeFileSync(${JSON.stringify(at('fam/m-0'))}, readFileSync(${JSON.stringify(at('f.in'))}, 'utf8'));
+export function main(): void {
+  mkdirSync(${JSON.stringify(at('fam'))}, { recursive: true });
+  writeFileSync(${JSON.stringify(at('fam/m-0'))}, readFileSync(${JSON.stringify(at('f.in'))}, 'utf8'));
+}
 `);
     write('steps/f-outputs.ts', `
 import { declareOutputs } from ${JSON.stringify(EMIT_ARTIFACTS)};
@@ -400,9 +410,11 @@ describe('buildFiles', () => {
     write('f.in', 'x');
     write('steps/f.ts', `
 import { mkdirSync, writeFileSync } from 'node:fs';
-mkdirSync(${JSON.stringify(at('fam'))}, { recursive: true });
-writeFileSync(${JSON.stringify(at('f.out'))}, 'f');
-writeFileSync(${JSON.stringify(at('fam/m-0'))}, 'm');
+export function main(): void {
+  mkdirSync(${JSON.stringify(at('fam'))}, { recursive: true });
+  writeFileSync(${JSON.stringify(at('f.out'))}, 'f');
+  writeFileSync(${JSON.stringify(at('fam/m-0'))}, 'm');
+}
 `);
     write('steps/f-outputs.ts', `
 import { declareOutputs } from ${JSON.stringify(EMIT_ARTIFACTS)};

@@ -3,45 +3,20 @@
 import { isAbsolute, relative, resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
-import { ASTROMETRY_REQUEST_OUTPUTS } from '../scripts/catalog/astrometry-request/astrometry-request-outputs';
-import { CATALOG_OUTPUTS } from '../scripts/catalog/catalog-outputs';
-import { CLOUDS_OUTPUTS } from '../scripts/clouds/clouds-outputs';
-import { CLASSIC_ID_OUTPUTS } from '../scripts/catalog/classic-ids/classic-id-overlay-outputs';
-import { MEMBERSHIP_OUTPUTS } from '../scripts/catalog/membership/membership-manifest-outputs';
-import { NAMING_PARITY_OUTPUTS } from '../scripts/catalog/naming/naming-parity-outputs';
-import { WGSN_OUTPUTS } from '../scripts/catalog/naming/wgsn-tables-outputs';
-import { LUT_OUTPUTS } from '../scripts/colour/blackbody-lut-outputs';
-import { VAIDMAN_OUTPUTS } from '../scripts/distance-validation/vaidman-outputs';
-import { ELEMENT_TABLE_OUTPUTS } from '../scripts/ephemerides/planet-element-outputs';
-import { LOCAL_GROUP_OUTPUTS } from '../scripts/local-group/local-group-outputs';
-import { PROBE_OUTPUTS } from '../scripts/probes/probe-trajectory-outputs';
-import { DR_RECONCILE_OUTPUTS } from '../scripts/sid/dr-reconcile-outputs';
+import { outputsOwners } from '../scripts/pipeline/step-table/non-step-writers';
+import { STEPS } from '../scripts/pipeline/step-table/steps';
 import { DR2_NEIGHBOURHOOD, DR2_NEIGHBOURHOOD_REQUEST } from '../scripts/sid/dr2-neighbourhood-source';
-import { DR_RISK_SET_OUTPUTS } from '../scripts/sid/dr-risk-set-outputs';
 import type { DeclaredOutputs } from '../scripts/util/emit-artifacts';
 import { REPO_ROOT } from '../scripts/util/paths';
 
-const STEPS: Record<string, DeclaredOutputs> = {
-  'build:catalog': CATALOG_OUTPUTS,
-  'build:membership': MEMBERSHIP_OUTPUTS,
-  'build:classic-ids': CLASSIC_ID_OUTPUTS,
-  'build:wgsn': WGSN_OUTPUTS,
-  'build:naming-parity': NAMING_PARITY_OUTPUTS,
-  'build:astrometry-request': ASTROMETRY_REQUEST_OUTPUTS,
-  'build:local-group': LOCAL_GROUP_OUTPUTS,
-  'build:clouds': CLOUDS_OUTPUTS,
-  'build:lut': LUT_OUTPUTS,
-  'build:vaidman-table': VAIDMAN_OUTPUTS,
-  'sid:risk-set': DR_RISK_SET_OUTPUTS,
-  'sid:dr-reconcile': DR_RECONCILE_OUTPUTS,
-  'fetch:probes': PROBE_OUTPUTS,
-  'fetch:ephemerides': ELEMENT_TABLE_OUTPUTS,
-};
+const DECLARED: [string, DeclaredOutputs][] = await Promise.all(outputsOwners(STEPS).map(async ([step, { module, name }]) => (
+  [step, (await import(resolve(REPO_ROOT, module)) as Record<string, DeclaredOutputs>)[name]]
+)));
 
 describe('step output declarations', () => {
-  it('declare at least one absolute path inside the repo each', () => {
-    for (const [step, outputs] of Object.entries(STEPS)) {
-      const paths = Object.values(outputs.files);
+  it('declare at least one file or family, each absolute and inside the repo', () => {
+    for (const [step, outputs] of DECLARED) {
+      const paths = [...Object.values(outputs.files), ...outputs.families.map((f) => f.dir)];
       expect(paths.length, step).toBeGreaterThan(0);
       for (const p of paths) {
         expect(isAbsolute(p) && !relative(REPO_ROOT, p).startsWith('..'), `${step}: ${p}`).toBe(true);
@@ -51,7 +26,7 @@ describe('step output declarations', () => {
 
   it('give each path one producer', () => {
     const producers = new Map<string, string[]>();
-    for (const [step, outputs] of Object.entries(STEPS)) {
+    for (const [step, outputs] of DECLARED) {
       for (const p of Object.values(outputs.files)) {
         producers.set(relative(REPO_ROOT, p), [...(producers.get(relative(REPO_ROOT, p)) ?? []), step]);
       }
@@ -62,7 +37,7 @@ describe('step output declarations', () => {
 
   it('never cover the frozen DR2 dry-run pair, as a file or inside a family', () => {
     const frozen = [DR2_NEIGHBOURHOOD_REQUEST, DR2_NEIGHBOURHOOD].map((src) => resolve(REPO_ROOT, src.file));
-    for (const [step, outputs] of Object.entries(STEPS)) {
+    for (const [step, outputs] of DECLARED) {
       for (const p of frozen) {
         expect(Object.values(outputs.files), step).not.toContain(p);
         for (const { dir } of outputs.families) {

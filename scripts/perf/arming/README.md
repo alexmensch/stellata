@@ -44,9 +44,11 @@ arms and launches — the whole gate rested on recognising the launch, and a
 spelling it missed (`npm run perf`, or a launch on its own line in a
 multi-line command) took the self-arm through with it. Split, a missed launch
 spelling degrades to the runner's own exit 3, because there is no route to a
-marker for it to pair with. `cd scripts/perf && tsx run.ts` is the known
-residual: matching a bare `run.ts` would deny unrelated commands, and
-over-denying a launch is worse than deferring to exit 3.
+marker for it to pair with. A launcher call that names the runner by a
+relative path from elsewhere (`cd scripts/util && tsx launch.ts
+../perf/run.ts`) is the known residual: matching a bare `run.ts` would deny
+unrelated commands, and over-denying a launch is worse than deferring to
+exit 3.
 
 Newlines are flattened to `;`, not to spaces, so a line boundary stays a
 command boundary. The cost is a false positive: a multi-line commit message

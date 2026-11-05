@@ -134,7 +134,7 @@ import {
   CATALOG_CHUNK_DIR, CATALOG_OUTPUTS,
 } from './catalog-outputs';
 import {
-  emitArtifacts, runStep, sweepStaged, type ArtifactContents, type Check,
+  emitArtifacts, sweepStaged, type ArtifactContents, type Check,
 } from '../util/emit-artifacts';
 import { snapshotCheck } from '../util/snapshot-check';
 import { watchHeap } from '../util/heap-budget';
@@ -221,7 +221,7 @@ function simbadSourcedDistancesTsv(stars: readonly Star[]): string {
   return SIMBAD_SOURCED_DISTANCES.serialize(rows);
 }
 
-async function main() {
+export async function main() {
   const heap = watchHeap('build:catalog');
   sweepStaged(CATALOG_OUTPUTS);
   const inputHashesAtStart = stepInputHashes();
@@ -1347,4 +1347,3 @@ function distanceOutliersCheck(stars: readonly Star[]): Check {
   });
 }
 
-runStep(main);

@@ -7,5 +7,7 @@ import { loadedRepoTable } from './step-table/repo-table';
 import { worktreeInclude } from './worktree-include';
 import { WORKTREE_INCLUDE } from './worktree-include-pure';
 
-writeFileSync(resolve(REPO_ROOT, WORKTREE_INCLUDE), worktreeInclude(await loadedRepoTable()));
-console.log(`${WORKTREE_INCLUDE} written`);
+export async function main(): Promise<void> {
+  writeFileSync(resolve(REPO_ROOT, WORKTREE_INCLUDE), worktreeInclude(await loadedRepoTable()));
+  console.log(`${WORKTREE_INCLUDE} written`);
+}

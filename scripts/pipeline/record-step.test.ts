@@ -148,8 +148,8 @@ Path(${JSON.stringify(at('derived.tsv'))}).write_text("\\n".join(keys))
     write('roster.json', '["a"]');
     write('steps/fetch.ts', `
 import { writeFileSync } from 'node:fs';
-if (process.argv.includes('--describe')) console.log(JSON.stringify({ query: 'Q', services: ['ssd.jpl.nasa.gov'] }));
-else writeFileSync(${JSON.stringify(at('fetched.json'))}, 'rows');
+export const describe = () => ({ query: 'Q', services: ['ssd.jpl.nasa.gov'] });
+export function main(): void { writeFileSync(${JSON.stringify(at('fetched.json'))}, 'rows'); }
 `);
     write('steps/fetch-outputs.ts', `
 import { declareOutputs } from ${JSON.stringify(join(REPO_ROOT, 'scripts/util/emit-artifacts'))};
@@ -176,8 +176,8 @@ export const OUT = declareOutputs({ out: ${JSON.stringify(at('fetched.json'))} }
     write('roster.json', '["a"]');
     write('steps/fetch.ts', `
 import { writeFileSync } from 'node:fs';
-if (process.argv.includes('--describe')) console.log(JSON.stringify({ query: 'Q', services: ['ssd.jpl.nasa.gov'] }));
-else { writeFileSync(${JSON.stringify(at('roster.json'))}, '["b"]'); writeFileSync(${JSON.stringify(at('fetched.json'))}, 'rows'); }
+export const describe = () => ({ query: 'Q', services: ['ssd.jpl.nasa.gov'] });
+export function main(): void { writeFileSync(${JSON.stringify(at('roster.json'))}, '["b"]'); writeFileSync(${JSON.stringify(at('fetched.json'))}, 'rows'); }
 `);
     write('steps/fetch-outputs.ts', `
 import { declareOutputs } from ${JSON.stringify(join(REPO_ROOT, 'scripts/util/emit-artifacts'))};

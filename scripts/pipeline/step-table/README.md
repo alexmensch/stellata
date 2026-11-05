@@ -160,6 +160,16 @@ the others once, and that rebuild appends nothing.
 - `manual-step-outputs.ts` — `MANUAL_STEPS`, every pull and bake with the
   files it writes, as an outputs module. Which modules may spell a `data/`
   path is `/tests/source-declarations.test.ts`'s rule.
+- `non-step-writers.ts` — `NON_STEP_WRITERS`, the one list of the
+  `package.json` scripts named or shaped like steps that are not on the
+  table, each with its kind (`report`, `draft`, `on-demand`, `vite`, `seed`)
+  and a writer's `declareOutputs` constants; `closureReadingWriters` are the
+  report and on-demand ones, whose closures `/tests/source-declarations.test.ts`
+  holds to the source rules like a step's. `/tests/step-coverage.test.ts`
+  holds every declaration and step-named script to the table or this list.
+  `outputsOwners(table)` is every TypeScript outputs declaration the two
+  name, with its owner, which both that test and
+  `/tests/step-outputs.test.ts` read.
 - `steps.ts` (+ test) — the table `run.ts` and `record.ts` load, its manual
   steps `MANUAL_STEPS` and its six mirrors `MIRROR_STEPS` (one `mirrorStep(layer)`
   each: `scripts/<layer>/sync-<layer>.ts` over `<layer>-mirror-outputs.ts`'s
@@ -168,8 +178,8 @@ the others once, and that rebuild appends nothing.
   import closure clear of `util/step-inputs.ts` (a step takes its input
   hashes from the runner, `util/step-input-hashes.ts`), each mirror's family
   folders to that mirror alone (`strays()` deletes anything else there), every manual step's
-  `package.json` target to `tsx scripts/pipeline/record.ts <name>`, and every
+  `package.json` target to `record.ts <name>` through the launcher, and every
   pull's and describing bake's `--describe` to running (Python under
-  `python3 -I -S`, TypeScript through `tsx`; skipped while the manifest is
+  `python3 -I -S`, TypeScript through `tsx` and the launcher; skipped while the manifest is
   an unsmudged LFS pointer, or before `build:clouds` has written
   `public/clouds.json`).

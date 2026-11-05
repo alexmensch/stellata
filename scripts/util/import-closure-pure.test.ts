@@ -1,11 +1,12 @@
 import { describe, expect, it } from 'vitest';
 
-import { closureWithSiblings, scriptParts, tsxEntries } from './import-closure-pure';
+import { closureWithSiblings, LAUNCHER, RUNNER, runnerTargets, scriptParts, tsxEntries } from './import-closure-pure';
 
 describe('scriptParts / tsxEntries', () => {
   const scripts = {
-    'build:lg': 'tsx scripts/lg/build.ts && tsx scripts/sid/stamp.ts local-group',
-    'build:clouds': 'python3 scripts/clouds/build.py && tsx scripts/sid/stamp.ts clouds',
+    'build:lg': `tsx ${LAUNCHER} scripts/lg/build.ts && tsx ${LAUNCHER} scripts/sid/stamp.ts local-group`,
+    'build:clouds': `python3 scripts/clouds/build.py && tsx ${LAUNCHER} scripts/sid/stamp.ts clouds`,
+    'audit:x': 'tsx scripts/audit/x.ts',
     'build:data': 'pnpm run build:a && pnpm run build:b',
     'build:client': 'vite build',
   };
@@ -17,11 +18,19 @@ describe('scriptParts / tsxEntries', () => {
     ]);
     expect(scriptParts(scripts, 'build:data').map((p) => p.kind)).toEqual(['pnpm', 'pnpm']);
     expect(scriptParts(scripts, 'build:client')).toEqual([{ kind: 'other', command: 'vite build' }]);
+    expect(scriptParts(scripts, 'audit:x')).toEqual([{ kind: 'other', command: 'tsx scripts/audit/x.ts' }]);
   });
 
   it('lists every tsx entry a chained script runs', () => {
     expect(tsxEntries(scripts, 'build:lg')).toEqual(['scripts/lg/build.ts', 'scripts/sid/stamp.ts']);
     expect(tsxEntries(scripts, 'build:data')).toEqual([]);
+  });
+
+  it('reads the targets of a script that is one run.ts call, and of no other', () => {
+    const runs = { one: `tsx ${LAUNCHER} ${RUNNER} data`, two: `tsx ${LAUNCHER} ${RUNNER} a && tsx ${LAUNCHER} ${RUNNER} b` };
+    expect(runnerTargets(scriptParts(runs, 'one'))).toEqual(['data']);
+    expect(runnerTargets(scriptParts(runs, 'two'))).toBeNull();
+    expect(runnerTargets(scriptParts(scripts, 'build:lg'))).toBeNull();
   });
 
   it('refuses a missing script', () => {

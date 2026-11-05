@@ -5,7 +5,7 @@ import { MANUAL_STEPS } from './manual-step-outputs';
 import { PUBLIC_FILES } from '../../../src/catalog-format/public-artifacts/public-artifacts';
 import { publicRepoPath } from '../../util/paths';
 import type { StepTable, TsBuildStep } from './step-table-pure';
-import { registryPaths, REGISTRY_PARTITIONS } from '../../../src/catalog-format/pipeline-outputs/data-files';
+import { DATA_FILES, registryPaths, REGISTRY_PARTITIONS } from '../../../src/catalog-format/pipeline-outputs/data-files';
 
 /** A `data/<layer>` → `public/` copy: `scripts/<layer>/sync-<layer>.ts` over its `<layer>-mirror-outputs.ts`. */
 const mirrorStep = (layer: string): TsBuildStep => ({
@@ -27,7 +27,7 @@ export const STEPS: StepTable = {
       entry: 'scripts/binaries/build-binaries.py',
       outputs: [
         MULTIPLES_TSV.file,
-        'data/gaia/gaia_astrometry_source_id_request.tsv',
+        DATA_FILES.binariesAstrometryRequest,
         'build/binding-integrity-verdicts.tsv',
       ],
       after: [

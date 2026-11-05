@@ -2,7 +2,7 @@
 // adaptive grid and writes data/probes/{id}.json. Manual + infrequent
 // (`pnpm run fetch:probes`); README.md#adaptive-grid.
 
-import { emitEach, runStep, type PullDescription } from '../util/emit-artifacts';
+import { emitEach, type PullDescription } from '../util/emit-artifacts';
 import { HORIZONS_API, HORIZONS_SERVICE } from '../util/horizons-response';
 import { serializeRowFile } from '../util/frozen-json';
 import { roundSignificant } from '../util/round-pure';
@@ -259,7 +259,7 @@ function shortestGapDays(rows: VectorRow[]): number {
   return gap;
 }
 
-async function main(): Promise<void> {
+export async function main(): Promise<void> {
   const retrievedUtc = new Date().toISOString();
   console.log(
     `Chord tolerance ${CHORD_TOLERANCE_AU} AU, base step ` +
@@ -275,7 +275,7 @@ async function main(): Promise<void> {
   }));
 }
 
-function describe(): PullDescription {
+export function describe(): PullDescription {
   return {
     query: JSON.stringify({
       queries: PROBE_MISSIONS.map((p) => `${HORIZONS_API}?${vectorParams(p.horizonsId)}`),
@@ -286,4 +286,3 @@ function describe(): PullDescription {
   };
 }
 
-runStep(main, describe);

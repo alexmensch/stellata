@@ -4,7 +4,6 @@
 
 import { writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
 
 import {
   loadCatalog,
@@ -24,7 +23,6 @@ import { REPO_ROOT } from '../../util/paths';
 import { artifactRows } from '../../util/sources/source';
 import { SIMBAD_SAMPLE } from './simbad-sample-source';
 
-const __filename = fileURLToPath(import.meta.url);
 const DEFAULT_REPORT_PATH = resolve(REPO_ROOT, 'docs/validation-residuals.md');
 
 // ─── Thresholds ──────────────────────────────────────────────────────
@@ -439,30 +437,24 @@ export async function runValidation(opts: RunOptions = {}): Promise<{
   return { report, failures };
 }
 
-// CLI entrypoint — only runs when this file is the process's main
-// module, so the test file can import the pure helpers without firing
-// the catalog load.
-const isMain = process.argv[1] && resolve(process.argv[1]) === resolve(__filename);
-if (isMain) {
-  runValidation()
-    .then(({ report, failures }) => {
-      const m = report.matchStats;
-      console.log(
-        `validate-simbad: ${m.usable} usable rows; `
-          + `absmag median=${report.absmagStats.median.toFixed(4)} `
-          + `abs95=${report.absmagStats.absP95.toFixed(3)}; `
-          + `distance logRatio median=${report.distanceLogRatioStats.median.toFixed(4)}; `
-          + `plx σ median=${report.plxSigmaStats.median.toFixed(2)}; `
-          + `outliers=${report.outlierCount}`,
-      );
-      if (failures.length > 0) {
-        console.error('FAIL — population thresholds tripped:');
-        for (const f of failures) console.error(`  ${f}`);
-        process.exit(1);
-      }
-    })
-    .catch((err) => {
-      console.error('validate-simbad failed:', err);
-      process.exit(2);
-    });
+export async function main(): Promise<number> {
+  try {
+    const { report, failures } = await runValidation();
+    const m = report.matchStats;
+    console.log(
+      `validate-simbad: ${m.usable} usable rows; `
+        + `absmag median=${report.absmagStats.median.toFixed(4)} `
+        + `abs95=${report.absmagStats.absP95.toFixed(3)}; `
+        + `distance logRatio median=${report.distanceLogRatioStats.median.toFixed(4)}; `
+        + `plx σ median=${report.plxSigmaStats.median.toFixed(2)}; `
+        + `outliers=${report.outlierCount}`,
+    );
+    if (failures.length === 0) return 0;
+    console.error('FAIL — population thresholds tripped:');
+    for (const f of failures) console.error(`  ${f}`);
+    return 1;
+  } catch (err) {
+    console.error('validate-simbad failed:', err);
+    return 2;
+  }
 }

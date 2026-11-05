@@ -10,7 +10,7 @@ import { STEPS } from './step-table/steps';
 
 const FLAGS = new Set(['--force', '--update-snapshots', '--verify-committed']);
 
-async function main(): Promise<number> {
+export async function main(): Promise<number> {
   const args = process.argv.slice(2);
   const unknown = args.filter((a) => a.startsWith('--') && !FLAGS.has(a));
   const targets = args.filter((a) => !a.startsWith('--'));
@@ -37,8 +37,3 @@ async function main(): Promise<number> {
   }
   return status;
 }
-
-main().then((status) => process.exit(status), (err: unknown) => {
-  console.error(err);
-  process.exit(1);
-});

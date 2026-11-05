@@ -13,10 +13,13 @@ export const DATA_FILES = {
   wgsnNames: 'data/iau-wgsn/wgsn_names.tsv',
   wgsnDesignations: 'data/iau-wgsn/wgsn_designations.tsv',
   astrometryRequest: 'data/gaia/gaia_catalog_source_id_request.tsv',
+  binariesAstrometryRequest: 'data/gaia/gaia_astrometry_source_id_request.tsv',
   simbadSourcedDistances: 'data/athyg/simbad_sourced_distances.tsv',
   reasonCodes: 'data/lineage/reason-codes.tsv',
   vaidmanSupergiants: 'data/distance-validation/vaidman-2025-supergiants.tsv',
 } as const;
+
+export const MANUAL_STAMP_FOLDER = 'data/stamps';
 
 export const CATALOG_PARTITION = 'catalog';
 /** One per sibling artifact; `/scripts/sid/sibling-artifacts-pure.ts` must name each. */

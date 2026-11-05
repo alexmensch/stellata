@@ -10,11 +10,13 @@ through `record.ts`, the two Horizons fetchers among them).
 ## The model
 
 Every producer of a file under `data/`, `public/` or `build/` that the build
-or a pull depends on is a **step**. Report, draft and on-demand writers
-(`sid:dr-reconcile`, `sid:risk-set`, `identity:snapshot`, and the hand-run
-`build:lut` and `build:naming-parity`) are excluded by name, and
-`tests/step-coverage.test.ts` holds every `declareOutputs` constant under
-`scripts/` to an entry in `steps.ts` or that list.
+or a pull depends on is a **step**. Report, draft and on-demand writers,
+Vite and the seed wrapper are not: `step-table/non-step-writers.ts`'s
+`NON_STEP_WRITERS` names each with its kind and its `declareOutputs`
+constants, and `tests/step-coverage.test.ts` holds every `declareOutputs`
+constant under `scripts/` to an entry in `steps.ts` or there, and every
+`build:` / `fetch:` / `refresh:` script to one of the two or a run of the
+runner.
 
 A step's outputs are declared once, its inputs are derived, and the order of
 steps follows from which step reads which file. The runner runs the steps it
@@ -26,8 +28,8 @@ Record lineage (`catalog/lineage/README.md`) is the companion half: the step
 graph says which step made which file, lineage says why each record in it is
 as it is.
 
-Vite (`build:client`, `build:site`) is not a step. `pnpm run build` and
-`pnpm run dev` run the data build through the runner, then Vite.
+`pnpm run build` and `pnpm run dev` run the data build through the runner,
+then Vite.
 
 ## Step kinds
 
@@ -114,7 +116,7 @@ The pull's code is not an input: a refactor of the plumbing, or its port to
 TypeScript, does not make a pull stale; a changed column list or `WHERE` does.
 Each pull states its query as data, so the runner can hash the current query
 without a network call: every pull prints it under `--describe` (a
-TypeScript pull through `runStep(main, describe)`). A Python pull's describe
+TypeScript pull through its exported `describe`, which the launcher prints). A Python pull's describe
 path imports the standard library only, since every build runs it and a
 worktree has no refresh virtualenv (`steps.test.ts`, [step-table/README.md](step-table/README.md#files)).
 

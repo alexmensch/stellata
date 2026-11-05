@@ -23,12 +23,12 @@ import { INHERITED_SPINE } from '../spine/inherited-spine-tsv';
 import { indexCns5 } from '../spine/primaries-audit-pure';
 import { loadPrimaryTables } from '../spine/primaries-tables';
 import { readArtifact } from '../../util/sources/source';
-import { emitArtifacts, runStep } from '../../util/emit-artifacts';
+import { emitArtifacts } from '../../util/emit-artifacts';
 
 const OUT = ASTROMETRY_REQUEST_OUTPUTS.files.request;
 
 
-async function main(): Promise<void> {
+export async function main(): Promise<void> {
   const ids = new Set<string>();
   const hipVMag = loadHipVMag();
 
@@ -90,4 +90,3 @@ async function main(): Promise<void> {
   console.log(`wrote ${OUT} (${ids.size} source_ids)`);
 }
 
-runStep(main);

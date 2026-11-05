@@ -35,7 +35,7 @@ though the two measured the same scene.
 ## Invocation
 
 ```
-tsx scripts/perf/synthetic-catalog/build-synthetic-catalog.ts \
+pnpm run perf:synthetic \
   --source <dir with catalog.bin.* + catalog-manifest.json> \
   --out <dir> [--limit-mag 11|12|13|14|15] [--seed 1] [--max-records N]
 ```

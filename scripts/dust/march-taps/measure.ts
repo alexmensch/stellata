@@ -96,7 +96,7 @@ function argInt(flag: string, fallback: number): number {
   return i >= 0 ? Number(process.argv[i + 1]) : fallback;
 }
 
-async function run(): Promise<void> {
+export async function main(): Promise<void> {
   const grid = DUST_GRID.read();
   const p = paramsOf(grid);
   const sample = (u: number, v: number, w: number) => sampleEncodedAt(grid, u, v, w);
@@ -138,8 +138,3 @@ async function run(): Promise<void> {
     console.log();
   }
 }
-
-run().catch((err) => {
-  console.error(err);
-  process.exit(1);
-});

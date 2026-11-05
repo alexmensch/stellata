@@ -205,19 +205,26 @@ sid-ledger-guard.test.ts Append-only CI guard for data/sid/ (/docs/sid.md#45-ci-
                          test job); runs for real in build-catalog's
                          full vitest and locally.
 source-declarations.test.ts
-                         Every TypeScript pipeline step's (build:*,
-                         fetch:*, sid:risk-set; every tsx
-                         entry of a chained script, and a step-named script
-                         it cannot classify fails) import closure reads
+                         Every TypeScript step's on the table, and every
+                         closure-reading NON_STEP_WRITERS entry's (every tsx
+                         entry of a chained script, and a writer it cannot
+                         classify fails), import closure reads
                          each declared source and artifact it reaches
                          (/scripts/util/sources/README.md#reached-means-read);
                          a data/ path literal sits only in a declaring or
                          outputs module, across scripts/, src/, tests/ and
-                         vite*.ts (named DATA_PATH_SPELLERS excepted),
+                         vite*.ts (named DATA_PATH_SPELLERS excepted,
+                         data-files.ts pinned as the only production one),
                          and a DATA_FILES path in none of them, outputs
                          and declaring modules included;
                          defineSource / defineArtifact only
-                         in a *-source.ts / *-tsv.ts module.
+                         in a *-source.ts / *-tsv.ts module; every
+                         package.json tsx command goes through the
+                         launcher; every launched entry's top level is
+                         declarations only (TypeScript's parser; no bare
+                         call, guard, or value computed by main), and an
+                         entry named like a declaring module runs nothing
+                         when the walk imports it (entry-fixture.ts).
 site-claims.test.ts      The homepage against what it states: figures are
                          published tokens, never literals · every saved-view
                          link decodes, and each sight's two anchors share
@@ -247,11 +254,14 @@ site-dev-routing.test.ts The dev server's routing table held against the
                          gets the homepage, everything else 404s. Pairs
                          with src/worker.test.ts, which pins the same
                          table on the production side.
-step-coverage.test.ts    Every declareOutputs constant under scripts/ is a
-                         steps.ts entry's or a writer excluded by name
-                         (../scripts/pipeline/README.md#the-model).
-step-outputs.test.ts     Imports every TS pipeline step's emitArtifacts
-                         declaration (the *-outputs.ts modules), so one
+step-coverage.test.ts    Every declareOutputs constant under scripts/,
+                         imported from the *-outputs.ts module it must live
+                         in and be exported from, is a steps.ts entry's or a
+                         NON_STEP_WRITERS entry's; every build:/fetch:/
+                         refresh: script is on one of the two or runs the
+                         runner (../scripts/pipeline/README.md#the-model).
+step-outputs.test.ts     Imports every TS emitArtifacts declaration the
+                         step table and NON_STEP_WRITERS name, so one
                          that runs its step on import fails here; pins
                          every declared path inside the repo and one
                          producer per path; no file
@@ -312,6 +322,11 @@ pipe-buffer.ts           Not a test — `pastPipeBuffer`, multi-line input
 git-fixture.ts           Not a test — `gitIn` and `commitFile`, a throwaway
                          repo's git runner and one-file commit, for suites
                          that drive a script over real history.
+entry-fixture.ts         Not a test — `writeEntryFixture`, a throwaway
+                         launchable entry (exports main and describe) whose
+                         main logs each run's arguments, for the launcher
+                         suites (emit-artifacts.test.ts and
+                         source-declarations.test.ts).
 import-specifiers.ts     Not a test — `importSpecifiers` (every specifier,
                          its form, and whether it is type-only) and
                          `isShippedSource` (not a test, `.d.ts` or

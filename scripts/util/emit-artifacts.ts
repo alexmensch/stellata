@@ -26,17 +26,26 @@ export interface DeclaredOutputs<K extends string = string> {
   readonly families: readonly OutputFamily[];
 }
 
+const DECLARED = new WeakSet<object>();
+
 /** A relative path is repo-relative. */
 export function declareOutputs<K extends string>(
   files: Record<K, string>,
   families: readonly OutputFamily[] = [],
 ): DeclaredOutputs<K> {
-  return {
+  const declared: DeclaredOutputs<K> = {
     files: Object.fromEntries(
       Object.entries<string>(files).map(([k, p]) => [k, resolve(REPO_ROOT, p)]),
     ) as Record<K, string>,
     families: families.map((f) => ({ ...f, dir: resolve(REPO_ROOT, f.dir) })),
   };
+  DECLARED.add(declared);
+  return declared;
+}
+
+/** True only for a value `declareOutputs` returned. */
+export function isDeclaredOutputs(value: unknown): value is DeclaredOutputs {
+  return typeof value === 'object' && value !== null && DECLARED.has(value);
 }
 
 /** `refresh` replaces the check with a rewrite of its own baseline, which
@@ -192,13 +201,29 @@ export interface PullDescription {
   readonly release?: string;
 }
 
-export function runStep(main: () => void | Promise<void>, describe?: () => PullDescription): void {
-  if (describe && process.argv.includes('--describe')) {
-    console.log(JSON.stringify(describe()));
+/** What a launched entry exports: `main`, whose number is the exit status; a pull's `describe`, printed under `--describe` instead. */
+export interface StepModule {
+  readonly main: () => void | number | Promise<void | number>;
+  readonly describe?: () => PullDescription;
+}
+
+/** Imports `entry` and runs its `main`: the one way a script runs, so importing an entry runs nothing. */
+export async function runStep(entry: string, args: readonly string[]): Promise<void> {
+  const path = resolve(REPO_ROOT, entry);
+  // A launched entry reads process.argv exactly as if tsx had started it.
+  process.argv = [process.argv[0], path, ...args];
+  const step = await import(path) as Partial<StepModule>;
+  if (typeof step.main !== 'function') throw new Error(`${entry} exports no main, so it cannot be launched`);
+  if (args.includes('--describe')) {
+    if (typeof step.describe !== 'function') throw new Error(`${entry} exports no describe, so it cannot answer --describe`);
+    console.log(JSON.stringify(step.describe()));
     return;
   }
-  Promise.resolve().then(main).catch((err: unknown) => {
+  try {
+    const status = await step.main();
+    if (typeof status === 'number') process.exitCode = status;
+  } catch (err) {
     console.error(err instanceof EmissionRefused ? err.message : err);
     process.exit(1);
-  });
+  }
 }

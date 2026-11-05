@@ -66,7 +66,7 @@ function attestationWriter(path: string): { onRow: RowSink; close: () => void } 
   };
 }
 
-async function main(): Promise<void> {
+export async function main(): Promise<void> {
   const outDir = process.argv.find((a) => a.startsWith('--out='))?.slice('--out='.length) ?? null;
 
   const spine = readArtifact(INHERITED_SPINE);
@@ -139,8 +139,3 @@ async function main(): Promise<void> {
   ));
   console.log(`wrote ${outDir}`);
 }
-
-main().catch((err: unknown) => {
-  console.error(err);
-  process.exit(1);
-});

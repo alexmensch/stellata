@@ -216,7 +216,7 @@ interface SightlineSet {
   readonly stripStepDeg?: number;
 }
 
-function run(): void {
+export function main(): void {
   const t0 = Date.now();
   const field = loadDustField();
   console.log(`grid loaded in ${((Date.now() - t0) / 1000).toFixed(1)} s`);
@@ -347,5 +347,3 @@ function run(): void {
       `fill ${PINNED_FILL_STEPS_PER_VOXEL}/voxel · total ${((Date.now() - t0) / 1000).toFixed(1)} s`,
   );
 }
-
-run();

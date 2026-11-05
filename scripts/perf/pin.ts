@@ -41,7 +41,7 @@ function existingPin(path: string): { pin: ReturnType<typeof assertPinFile> | nu
   return { pin: read.value, note: null };
 }
 
-function main(): number {
+export function main(): number {
   let args: PinArgs;
   try {
     args = parsePinArgs(process.argv.slice(2));
@@ -103,5 +103,3 @@ function main(): number {
   writePinFile(pinPath, summary.pin);
   return EXIT.ok;
 }
-
-process.exitCode = main();

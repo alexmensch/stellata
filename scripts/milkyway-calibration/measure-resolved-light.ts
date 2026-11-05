@@ -105,7 +105,7 @@ function printShells(title: string, rows: readonly ShellTotal[], removed: readon
   }
 }
 
-async function main(): Promise<void> {
+export async function main(): Promise<void> {
   const manifestArg = process.argv.indexOf('--manifest');
   const manifestPath =
     manifestArg >= 0 ? resolve(process.argv[manifestArg + 1]) : publicFile(CATALOG_MANIFEST_FILENAME);
@@ -178,8 +178,3 @@ async function main(): Promise<void> {
   await writeFile(out, renderModule(stars.count, caps, table));
   console.log(`\nWrote ${out}`);
 }
-
-main().catch((err) => {
-  console.error(err);
-  process.exit(1);
-});

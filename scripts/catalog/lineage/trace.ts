@@ -3,7 +3,6 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { gunzipSync } from 'node:zlib';
 
-import { runStep } from '../../util/emit-artifacts';
 import { readRegistryUnion } from '../../sid/registry-io';
 import { retiredSids } from '../../sid/events-pure';
 import { allocationIdentity } from '../../sid/allocation-lineage-pure';
@@ -43,7 +42,7 @@ function lookups(catalog: SearchableCatalog | null): TraceLookups {
   };
 }
 
-async function main(): Promise<void> {
+export async function main(): Promise<void> {
   const args = process.argv.slice(2);
   const at = args.indexOf(DIR_FLAG);
   const dir = at >= 0 ? args[at + 1] : LINEAGE_LAYOUT.current;
@@ -71,4 +70,3 @@ async function main(): Promise<void> {
   process.stdout.write(traceText(traceRecords(terms, identity, sidsOf, stages)));
 }
 
-runStep(main);

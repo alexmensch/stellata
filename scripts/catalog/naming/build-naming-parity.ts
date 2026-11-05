@@ -3,7 +3,7 @@
 
 import { readFileSync } from 'node:fs';
 
-import { emitArtifacts, runStep } from '../../util/emit-artifacts';
+import { emitArtifacts } from '../../util/emit-artifacts';
 import type { SearchEntry } from '../../../src/catalog-format/record/catalog-pure';
 import { buildSearchIndex, normalizeGlKey } from '../../../src/catalog-format/naming/search-corpus';
 import { displayNamesFromSearchIndex } from '../../../src/catalog-format/naming/star-naming-pure';
@@ -47,7 +47,7 @@ function frozenOldLabels(): Map<string, string> {
   return new Map(rows.map((r) => [r.key, r.old]));
 }
 
-function main(): void {
+export function main(): void {
   const raw = readJson<SearchEntry[]>(publicFile(PUBLIC_FILES.searchIndex));
   const rowIndexMap = readJson<RowIndexMap>(resolve(REPO_ROOT, BUILD_FILES.catalogRowIndexMap));
   const constellations = readJson<{ code: string; name: string }[]>(publicFile(PUBLIC_FILES.constellations));
@@ -112,5 +112,3 @@ function main(): void {
   );
   console.log(`naming-duplicates.tsv: ${duplicates.length} duplicate label(s)`);
 }
-
-runStep(main);
