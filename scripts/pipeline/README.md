@@ -287,6 +287,10 @@ The table's own files are in [step-table/](step-table/README.md#files).
   `stampPath`), manual record, run record, handed inputs and lock folder sit under it.
   `run.ts` passes the repo root; tests pass a temporary folder.
 - `run.ts` — the command line over `step-table/steps.ts`.
+- `build-files.ts` (tested through `runner.test.ts`) — `buildFiles`: every
+  build step's declared outputs, family members and stamp that exist on
+  disk, which is the set CI caches
+  ([The data build cache](../ci/README.md#the-data-build-cache)).
 - `record.ts` / `record-step.ts` (+ test) — [Recording a manual
   step](#recording-a-manual-step--recordts): `recordStep` and the
   `RecordOutcome` union (`fresh`, `recorded`, `failed`).

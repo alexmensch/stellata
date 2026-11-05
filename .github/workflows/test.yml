@@ -122,7 +122,9 @@ jobs:
       # saved, and the restore skips any path the checkout already has, which
       # covers a file tracked since the build was saved.
       - if: ${{ !cancelled() && steps.built.outcome != 'skipped' }}
-        run: git ls-files -z --others --ignored --exclude-standard public build | tar --null -T - -cf "$RUNNER_TEMP/data-build.tar"
+        run: |
+          set -o pipefail
+          pnpm exec tsx scripts/ci/saved-build.ts | tar --null -T - -cf "$RUNNER_TEMP/data-build.tar"
       - if: ${{ !cancelled() && steps.built.outcome != 'skipped' }}
         uses: actions/cache/save@v6
         with:

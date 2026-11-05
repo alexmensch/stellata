@@ -2,6 +2,8 @@
 
 Scripts that `.github/workflows/` runs.
 
+- `saved-build.ts` — prints, NUL-separated, the files `test.yml` saves as
+  its data build ([The data build cache](#the-data-build-cache)).
 - `python_tests.py` (+ test) — the Python suites' runner, below; locally
   `pnpm run test:py`.
 - `vitest-no-skip.ts`, `vitest-skips-pure.ts` (+ test) — the whole vitest
@@ -74,9 +76,12 @@ saves a build of its own.
 scratch and its committed outputs compared; that bounds a stamp that misses
 an input to one merge. Pull requests run unforced.
 
-**What is cached** is every untracked file under `public/` and `build/`,
-found with `git ls-files --others --ignored`, stamps among them; `public/`'s
-tracked icons and manifest are never cached, and the restore
+**What is cached** is what the step table owns on disk and git does not
+track: each build step's declared outputs, family members and stamp
+(`saved-build.ts`, over `../pipeline/build-files.ts`). A file no current step
+declares (an output a renamed or deleted step left behind) is never saved,
+so a restore cannot bring it back for a reader of the old path to pass on.
+`public/`'s tracked icons and manifest are never cached, and the restore
 (`tar --skip-old-files`) never replaces a file the checkout has, so a path
 tracked since the build was saved keeps its committed content. A run saves even when a step
 fails: a crashed step's stamp is already cleared, and a step that failed

@@ -14,6 +14,7 @@ import { pullQueryHash, requestHash } from './freshness';
 import {
   importTimeProblems, loadTable, TABLE_LOAD_BUILTINS, WALKABLE, walkOutputsModules, type Loaded,
 } from './step-table/load-table';
+import { buildFiles } from './build-files';
 import { pipelineTree } from './pipeline-tree';
 import { runSteps, type RunOptions, type Verdict } from './runner';
 import type { StepEntry, StepTable } from './step-table/step-table-pure';
@@ -367,6 +368,34 @@ export const OUT = declareOutputs({}, [{ dir: ${JSON.stringify(at('fam'))}, memb
     expect((await run(steps, ['p'], { verifyCommitted: true })).kinds).toEqual({ p: 'fresh' });
     write('p.in', 'y');
     expect((await run(steps, ['p'], { verifyCommitted: true })).kinds).toEqual({ p: 'failed' });
+  });
+});
+
+describe('buildFiles', () => {
+  it('lists each build step\'s outputs, family members and stamp on disk, and nothing else', async () => {
+    write('f.in', 'x');
+    write('steps/f.ts', `
+import { mkdirSync, writeFileSync } from 'node:fs';
+mkdirSync(${JSON.stringify(at('fam'))}, { recursive: true });
+writeFileSync(${JSON.stringify(at('f.out'))}, 'f');
+writeFileSync(${JSON.stringify(at('fam/m-0'))}, 'm');
+`);
+    write('steps/f-outputs.ts', `
+import { declareOutputs } from ${JSON.stringify(EMIT_ARTIFACTS)};
+export const OUT = declareOutputs({ out: ${JSON.stringify(at('f.out'))} }, [
+  { dir: ${JSON.stringify(at('fam'))}, member: /^m-\\d+$/, stamped: false },
+]);
+`);
+    const f: StepEntry = { name: 'f', kind: 'build', language: 'ts', entry: at('steps/f.ts'), outputs: { module: at('steps/f-outputs.ts'), name: 'OUT' } };
+    const steps = [f, tsStep('unbuilt', 'unbuilt.out'), pullStep('p', 'p.out', 'f.in')];
+    await run([f], ['f']);
+    write('fam/orphan', 'left behind');
+    write('orphan.out', 'left behind');
+    const loaded = await load(steps);
+    if (loaded.kind !== 'loaded') throw new Error(loaded.problems.join('; '));
+    expect(buildFiles(loaded.steps.values(), pipelineTree(root))).toEqual([
+      relative(root, pipelineTree(root).buildStamp('f')), 'f.out', 'fam/m-0',
+    ].sort());
   });
 });
 
