@@ -8,7 +8,7 @@ import {
   type FileHashes, type Stamp,
 } from '../util/build-stamp';
 import { launchArgs, TSX } from './processes';
-import { stampedMembers, type PullDescription } from '../util/emit-artifacts';
+import { stampedMembers, type Projection, type PullDescription } from '../util/emit-artifacts';
 import { landStaged, writeStaged } from '../util/staged-write';
 import { hashBytes } from '../util/stamp-hash';
 import type { PipelineTree } from './pipeline-tree';
@@ -44,14 +44,9 @@ export type ManualRead =
 
 /** What a manual step prints under `--describe`, with no network call. A bake
  *  prints only its projection. */
-interface DerivedRequest {
-  readonly request?: readonly string[];
-  readonly requestFrom: readonly string[];
-}
-
 export type Description =
-  | ({ readonly kind: 'pull' } & PullDescription & DerivedRequest)
-  | ({ readonly kind: 'bake' } & DerivedRequest);
+  | ({ readonly kind: 'pull' } & PullDescription & Projection)
+  | ({ readonly kind: 'bake' } & Projection);
 
 export const pullQueryHash = ({ query, services }: PullDescription): string => (
   hashBytes(JSON.stringify([query, services]))
