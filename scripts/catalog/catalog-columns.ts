@@ -28,8 +28,6 @@ export async function readCatalogColumns<F extends Float32RecordField>(
   return { ...columns, count: header.count } as CatalogColumns<F>;
 }
 
-/** A bake's `describe` over the columns it reads: a change to any other field
- *  leaves it fresh, and `requestFrom` orders it after `build:catalog`. */
 export async function catalogColumnsProjection(fields: readonly Float32RecordField[], root: string = REPO_ROOT): Promise<Required<Projection>> {
   const manifest = publicRepoPath(CATALOG_MANIFEST_FILENAME);
   const columns = await readCatalogColumns(fields, resolve(root, manifest));
