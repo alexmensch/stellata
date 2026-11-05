@@ -181,8 +181,7 @@ export interface BuildCounts {
    *  (CURATED_SPTYPE_BY_HIP) — saturated stars whose SIMBAD entry
    *  carries neither hip nor source_id (Castor). */
   spectralByCurated: number;
-  /** Records whose spectral classification (classIdx + subclass + lumClass)
-   *  came from SIMBAD's `sp_type` — the canonical Morgan-Keenan tier. */
+  /** Records whose spectral classification came from SIMBAD's `sp_type` — the canonical Morgan-Keenan tier. */
   spectralBySimbad: number;
   /** The four SIMBAD tiers split by the namespace that found the row, summing
    *  to `spectralBySimbad` — enforced by `spectralSimbadPartitionError`, not
@@ -197,8 +196,8 @@ export interface BuildCounts {
   /** Records that fell through to Gaia DR3 GSP-Spec's
    *  `spectraltype_esphs` enum — second-tier letter-only classification. */
   spectralByGspspec: number;
-  /** Records with neither SIMBAD sp_type nor GSP-Spec coverage — packed
-   *  as classIdx=8 (unknown) / lumClass=255 (no luminosity-class ramp). */
+  /** Records with neither SIMBAD sp_type nor GSP-Spec coverage — the
+   *  `unknown` class. */
   spectralFallback: number;
   /** Records whose `ci` came from the Gaia BP−RP relation. */
   ciGaiaRelation: number;

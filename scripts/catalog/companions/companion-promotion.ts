@@ -1056,9 +1056,6 @@ function recordSpectralInfo(star: Star): SpectralInfo {
     ?? decodeSpectralBytes(encodeSpectralBytes(star.spectral));
 }
 
-// Re-runs the strict SIMBAD parser rather than taking the string as-is, so the
-// caller gets a SpectralInfo: "DA1.9" parses with isWhiteDwarf=true, and its
-// wdSubclass flows into the colour-temperature LUT downstream.
 function resolveCompanionSpectral(row: MultiplesTsvRow): {
   info: SpectralInfo;
   display: string | null;

@@ -350,7 +350,7 @@ export function readStars(
     rvGaiaErrorBand: Record<RvErrorBand, number>; // gaia_dr3-tier rows by stated rv uncertainty
     rvGaiaErrorMaxKmS: number;     // largest stated rv uncertainty on a gaia_dr3-tier row
     rvApplied: number;             // rows whose velocity carries a non-zero radial velocity
-    spectralVia: Record<SpectralVia, number>; // per-tier spectral resolver routing; none renders classIdx=8/lumClass=255
+    spectralVia: Record<SpectralVia, number>; // per-tier spectral resolver routing; none renders as SPECTRAL_UNKNOWN
     spectralSimbadKey: Record<SimbadNamespace, number>; // which namespace found a SIMBAD-tier row
     ciVia: Record<CiVia, number>;  // per-tier B−V cascade routing
     ciGspcValidatedRange: number;  // gspc-tier rows the archive calls in-range
