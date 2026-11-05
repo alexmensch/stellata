@@ -10,6 +10,11 @@ export function nullableCell(v: string | number | null): string {
   return v === null ? '' : String(v);
 }
 
+export function tsvCell(file: string, column: string, cell: string): string {
+  if (/[\t\n\r]/.test(cell)) throw new Error(`${file}: cell ${column}="${cell}" contains a TSV delimiter`);
+  return cell;
+}
+
 /** Code-unit order: the same on every machine, unlike `localeCompare`. */
 export function byText<R>(text: (r: R) => string): (a: R, b: R) => number {
   return (a, b) => (text(a) < text(b) ? -1 : text(a) > text(b) ? 1 : 0);
@@ -48,13 +53,7 @@ export function defineArtifact<C extends string, R, K = never>(
 
   const encodeLine = (record: R): string => {
     const cells = spec.encode(record);
-    return spec.columns.map((c) => {
-      const cell = cells[c];
-      if (/[\t\n\r]/.test(cell)) {
-        throw new Error(`${spec.file}: cell ${c}="${cell}" contains a TSV delimiter`);
-      }
-      return cell;
-    }).join('\t');
+    return spec.columns.map((c) => tsvCell(spec.file, c, cells[c])).join('\t');
   };
 
   function* rows(text: string): Generator<R> {

@@ -21,7 +21,9 @@ scripts/util/tsv/
                               cell parsers (textCell, floatCell, intCell,
                               idCell, idListCell, sourceIdCell,
                               oneOfCell).
-  artifact-pure.ts (+ test)   defineArtifact — a self-written table's codec.
+  artifact-pure.ts (+ test)   defineArtifact — a self-written table's codec;
+                              tsvCell, its delimiter check, which the
+                              refresh pulls' formatter shares.
   committed-round-trip.ts     Test support: describeCommittedRoundTrip, an
                               artifact's codec over its committed file, byte
                               for byte; a failure names the first line
