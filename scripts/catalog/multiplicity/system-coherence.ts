@@ -10,6 +10,7 @@ import type {
 import type { MultiplesTsvRow } from '../companions/companion-promotion';
 import { wdsRootOf } from '../../binaries/component-tokens-pure';
 import { isCoherenceAnchorGrade } from './anchor-grade-pure';
+import { absoluteMagnitude, apparentMagnitude } from '../../../src/astro-core/perceptual-magnitude';
 
 /** A member snaps to the anchor distance only when the radial gap is
  *  NOT significant at this many sigma of the combined parallax error —
@@ -147,8 +148,8 @@ function starDist(star: Star): number {
 }
 
 /** Move `star` radially to `distPc`, preserving its (mas-accurate)
- *  measured direction. Apparent brightness is invariant: absmag shifts
- *  by 5·log10(d_old/d_new) and the Stefan-Boltzmann radius follows
+ *  measured direction. Apparent brightness is invariant: absmag is
+ *  re-derived at the new distance and the Stefan-Boltzmann radius follows
  *  (R ∝ √L at fixed Teff). */
 function repositionRadially(star: Star, distPc: number): boolean {
   const dOld = starDist(star);
@@ -158,9 +159,9 @@ function repositionRadially(star: Star, distPc: number): boolean {
   star.x *= scale;
   star.y *= scale;
   star.z *= scale;
-  const dAbsmag = 5 * Math.log10(dOld / distPc);
-  star.absmag += dAbsmag;
-  star.physicalRadius *= Math.pow(10, -dAbsmag / 5);
+  const absmag = absoluteMagnitude(apparentMagnitude(star.absmag, dOld), distPc);
+  star.physicalRadius *= Math.pow(10, (star.absmag - absmag) / 5);
+  star.absmag = absmag;
   return true;
 }
 
