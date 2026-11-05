@@ -209,8 +209,8 @@ noisy parallax can never strip real wings:
 only** — it skips any HIP the curated list already claims, and mints no
 key of its own for one. `applyDoublesFlag` is what unions the two, and it
 does so as bare component lists rather than keyed groups, so a curated
-system never needs a CCDM identifier it does not have. That wrapper then
-walks each group, picks the **brightest** catalog member (lowest
+system never needs a CCDM identifier it does not have.
+`flagGroupPrimaries` (`binary-flags-pure.ts`) then walks each group, picks the **brightest** catalog member (lowest
 `absmag`), and — unless the optical-double gate above vetoes it —
 ORs `0x10` onto only that one, so each Hipparcos-resolved system
 contributes exactly one chart-mode wings glyph, matching the

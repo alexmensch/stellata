@@ -28,7 +28,7 @@ export interface BinaryStar {
 // Index of the brightest (lowest absmag) star in `indices`, or -1 when
 // empty. Single point of truth for the "primary = brightest of group"
 // convention shared by every binary-flagging path (geometric mutual pairs
-// in inferBinaries; CCDM groups + curated doubles in applyDoublesFlag).
+// in inferBinaries; CCDM groups + curated doubles in flagGroupPrimaries).
 export function pickBrightest(
   stars: Pick<BinaryStar, 'absmag'>[],
   indices: number[],
@@ -141,7 +141,7 @@ export function buildHipToIndex(
   return m;
 }
 
-export function applyDoublesFlag(
+export function flagGroupPrimaries(
   stars: DoublesStar[],
   groups: Iterable<Iterable<number>>,
   hipToIndex: Map<number, number>,

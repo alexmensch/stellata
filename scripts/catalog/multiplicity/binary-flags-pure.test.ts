@@ -9,7 +9,7 @@ import {
   pickBrightest,
   markPrimary,
   markPrimaryIfUnflagged,
-  applyDoublesFlag,
+  flagGroupPrimaries,
   hasGaiaQualityDistance,
   isOpticalDoublePrimary,
   OPTICAL_DOUBLE_MIN_SEP_PC,
@@ -274,8 +274,8 @@ describe('binary-flags-pure / buildHipToIndex', () => {
   });
 });
 
-describe('binary-flags-pure / applyDoublesFlag', () => {
-  // Mini Star fixture with just the fields applyDoublesFlag reads/writes.
+describe('binary-flags-pure / flagGroupPrimaries', () => {
+  // Mini Star fixture with just the fields flagGroupPrimaries reads/writes.
   function s(absmag: number, hip: number | null, flags = 0): DoublesStar {
     return { absmag, hip, flags };
   }
@@ -284,7 +284,7 @@ describe('binary-flags-pure / applyDoublesFlag', () => {
     // Three stars; the group covers them all. Lowest absmag (=brightest)
     // should get FLAG_BINARY_PRIMARY; the others stay clean.
     const stars: DoublesStar[] = [s(4, 100), s(2, 200), s(6, 300)];
-    const r = applyDoublesFlag(stars, [[100, 200, 300]], buildHipToIndex(stars));
+    const r = flagGroupPrimaries(stars, [[100, 200, 300]], buildHipToIndex(stars));
     expect(r.systems).toBe(1);
     expect(r.flagged).toBe(1);
     expect(stars[1].flags).toBe(FLAG_BINARY_PRIMARY);
@@ -294,7 +294,7 @@ describe('binary-flags-pure / applyDoublesFlag', () => {
 
   it('silently drops groups whose HIPs are all missing from the catalog', () => {
     const stars: DoublesStar[] = [s(4, 100), s(5, 200)];
-    const r = applyDoublesFlag(stars, [[999, 1000]], buildHipToIndex(stars));
+    const r = flagGroupPrimaries(stars, [[999, 1000]], buildHipToIndex(stars));
     expect(r.systems).toBe(0);
     expect(r.flagged).toBe(0);
     expect(stars[0].flags).toBe(0);
@@ -306,7 +306,7 @@ describe('binary-flags-pure / applyDoublesFlag', () => {
     // pick the brighter one but must defer per markPrimaryIfUnflagged's
     // contract.
     const stars: DoublesStar[] = [s(2, 100), s(5, 200, FLAG_BINARY_PRIMARY)];
-    const r = applyDoublesFlag(stars, [[100, 200]], buildHipToIndex(stars));
+    const r = flagGroupPrimaries(stars, [[100, 200]], buildHipToIndex(stars));
     expect(r.systems).toBe(1);
     expect(r.flagged).toBe(0);
     expect(stars[0].flags).toBe(0);                    // not re-flagged
@@ -318,7 +318,7 @@ describe('binary-flags-pure / applyDoublesFlag', () => {
       s(2, 100), s(3, 101), // group A — 100 brightest
       s(5, 200), s(4, 201), // group B — 201 brightest
     ];
-    const r = applyDoublesFlag(stars, [[100, 101], [200, 201]], buildHipToIndex(stars));
+    const r = flagGroupPrimaries(stars, [[100, 101], [200, 201]], buildHipToIndex(stars));
     expect(r.systems).toBe(2);
     expect(r.flagged).toBe(2);
     expect(stars[0].flags).toBe(FLAG_BINARY_PRIMARY); // 100 won group A
@@ -333,7 +333,7 @@ describe('binary-flags-pure / applyDoublesFlag', () => {
     // sources behave identically once unioned.
     const stars: DoublesStar[] = [s(3, 100), s(2, 101)];
     // Pretend the CCDM pass produced one group, the override another.
-    const r = applyDoublesFlag(stars, [[100], [101]], buildHipToIndex(stars));
+    const r = flagGroupPrimaries(stars, [[100], [101]], buildHipToIndex(stars));
     expect(r.systems).toBe(2);
     expect(r.flagged).toBe(2);
     // Each single-member group flags its own brightest (and only)
@@ -344,7 +344,7 @@ describe('binary-flags-pure / applyDoublesFlag', () => {
 
   it('skips HIP=0 / null records when building the lookup', () => {
     const stars: DoublesStar[] = [s(2, null), s(4, 0), s(3, 100)];
-    const r = applyDoublesFlag(stars, [[100]], buildHipToIndex(stars));
+    const r = flagGroupPrimaries(stars, [[100]], buildHipToIndex(stars));
     expect(r.systems).toBe(1);
     expect(stars[2].flags).toBe(FLAG_BINARY_PRIMARY);
     // The 0/null-HIP rows must never be hit by HIP→index lookup.
@@ -355,9 +355,9 @@ describe('binary-flags-pure / applyDoublesFlag', () => {
   it('is idempotent under re-application', () => {
     const stars: DoublesStar[] = [s(2, 100), s(5, 200)];
     const idx = buildHipToIndex(stars);
-    applyDoublesFlag(stars, [[100, 200]], idx);
+    flagGroupPrimaries(stars, [[100, 200]], idx);
     const flagsBefore = stars.map((x) => x.flags);
-    applyDoublesFlag(stars, [[100, 200]], idx);
+    flagGroupPrimaries(stars, [[100, 200]], idx);
     // Second pass sees the existing primary bit and bails — no
     // additional bits set.
     expect(stars.map((x) => x.flags)).toEqual(flagsBefore);
@@ -365,7 +365,7 @@ describe('binary-flags-pure / applyDoublesFlag', () => {
 
   it('reports suppressed=0 when no suppress predicate is supplied', () => {
     const stars: DoublesStar[] = [s(2, 100), s(5, 200)];
-    const r = applyDoublesFlag(stars, [[100, 200]], buildHipToIndex(stars));
+    const r = flagGroupPrimaries(stars, [[100, 200]], buildHipToIndex(stars));
     expect(r.suppressed).toBe(0);
   });
 
@@ -373,7 +373,7 @@ describe('binary-flags-pure / applyDoublesFlag', () => {
     // Group {100, 200}; 100 is brightest. A predicate that suppresses the
     // picked primary leaves both stars unflagged and counts one suppression.
     const stars: DoublesStar[] = [s(2, 100), s(5, 200)];
-    const r = applyDoublesFlag(
+    const r = flagGroupPrimaries(
       stars,
       [[100, 200]],
       buildHipToIndex(stars),
@@ -391,7 +391,7 @@ describe('binary-flags-pure / applyDoublesFlag', () => {
     // no-op before the predicate would see the picked primary.
     const stars: DoublesStar[] = [s(2, 100), s(5, 200, FLAG_BINARY_PRIMARY)];
     let called = false;
-    const r = applyDoublesFlag(stars, [[100, 200]], buildHipToIndex(stars), () => {
+    const r = flagGroupPrimaries(stars, [[100, 200]], buildHipToIndex(stars), () => {
       called = true;
       return true;
     });
