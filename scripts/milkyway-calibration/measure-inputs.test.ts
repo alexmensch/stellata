@@ -2,6 +2,7 @@ import { relative } from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
+import { CODE_FILE } from '../util/import-closure-pure';
 import { REPO_ROOT } from '../util/paths';
 import { STEPS } from '../pipeline/step-table/steps';
 import { entryInputPaths } from '../util/step-inputs';
@@ -14,11 +15,7 @@ describe('measure:band-resolved\'s input set', () => {
     expect(inputs).toContain('scripts/catalog/columns/catalog-columns.ts');
   });
 
-  it('keys no count snapshot, so a catalogue re-pin leaves the bake fresh', () => {
-    expect(inputs.filter((p) => p.endsWith('-expected.json'))).toEqual([]);
-  });
-
-  it('keys none of the built catalogue: it counts through the column projection', () => {
-    expect(inputs.filter((p) => p.startsWith('public/'))).toEqual([]);
+  it('keys one data file, so no count snapshot or other file beside a module it imports stales it', () => {
+    expect(inputs.filter((p) => !CODE_FILE.test(p))).toEqual(['src/astro-core/baker-constants.json']);
   });
 });

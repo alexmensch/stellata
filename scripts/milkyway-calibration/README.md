@@ -30,8 +30,9 @@ scripts/milkyway-calibration/
   resolved-hole-table-outputs.ts
                               RESOLVED_HOLE_TABLE_OUTPUTS, the one file the
                               bake writes, as its emitArtifacts declaration.
-  measure-inputs.test.ts      The bake's input set: the column reader, no
-                              count snapshot, nothing under public/.
+  measure-inputs.test.ts      The bake's input set: the column reader, and
+                              baker-constants.json as its one data file, so
+                              no snapshot beside an imported module joins it.
   resolved-light-pure.ts      The cap sums, the (shell × latitude band) cells,
     (+ test)                  the table they become, and the light the table
                               removes. Pure. STAR_FIELDS is the one list of
