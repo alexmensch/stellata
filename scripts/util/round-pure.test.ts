@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { roundHalfEven } from './round-pure';
+import { roundEach, roundHalfEven } from './round-pure';
 
 describe('roundHalfEven', () => {
   it('rounds an exact binary tie to even, as Python round() does', () => {
@@ -14,5 +14,12 @@ describe('roundHalfEven', () => {
     expect(roundHalfEven(2.675, 2)).toBe(2.67);
     expect(roundHalfEven(1.005, 2)).toBe(1);
     expect(roundHalfEven(240.9626700838767, 2)).toBe(240.96);
+  });
+});
+
+describe('roundEach', () => {
+  it('rounds every element half to even and keeps the tuple', () => {
+    const rounded: [number, number, number] = roundEach([0.125, 2.675, -0.125] as const, 2);
+    expect(rounded).toEqual([0.12, 2.67, -0.12]);
   });
 });

@@ -1,10 +1,10 @@
-// trace: a query to the origin keys it names, and every stage's rows for them in stage order. See README.md#trace.
+// trace: a query to the origin keys it names, and every stage's rows for them in stage order. See README.md.
 
-import { ALLOCATION_CODES, type AllocationIdentityRow } from '../../sid/allocation-lineage-pure';
-import { isValidDesignation } from '../../sid/sid-pure';
-import { foldNameKey } from '../naming/wgsn-normalise-pure';
-import type { IdentityRow } from './identity-pure';
-import { compareUtf8, type LineageRow } from './lineage-row-pure';
+import { ALLOCATION_CODES, type AllocationSidRow } from '../../../sid/allocation-lineage-pure';
+import { isValidDesignation } from '../../../sid/sid-pure';
+import { foldNameKey } from '../../naming/wgsn-normalise-pure';
+import type { IdentityRow } from '../identity-pure';
+import { compareUtf8, type LineageRow } from '../lineage-row-pure';
 
 /** Gaia DR3 source_ids run to 10 digits and more; a SID never does. */
 const GAIA_ID = /^[0-9]{10,}$/;
@@ -42,7 +42,7 @@ export type NameMatch =
   | { readonly kind: 'missing' }
   | { readonly kind: 'ambiguous'; readonly candidates: readonly (readonly [string, number])[] };
 
-/** See README.md#trace, step 1. */
+/** See README.md#the-command, step 1. */
 export function matchName(names: ReadonlyMap<string, readonly number[]>, name: string): NameMatch {
   const exact = names.get(name);
   const key = foldNameKey(name);
@@ -136,7 +136,7 @@ function settles(row: LineageRow, sids: ReadonlySet<string>): boolean {
 export function traceRecords(
   query: { readonly designations: readonly string[]; readonly terms: readonly string[]; readonly sids: readonly number[] },
   identity: readonly IdentityRow[],
-  allocationIdentity: readonly AllocationIdentityRow[],
+  allocationSids: readonly AllocationSidRow[],
   stages: readonly StageRows[],
 ): TracedRecord[] {
   const wanted = new Set(query.designations);
@@ -145,7 +145,7 @@ export function traceRecords(
   const sidText = new Set(query.sids.map(String));
   const named = new Set([
     ...identity.filter((r) => r.designations.some((d) => wanted.has(d))).map((r) => r.key),
-    ...allocationIdentity.filter((r) => sidSet.has(r.sid)).map((r) => r.key),
+    ...allocationSids.filter((r) => sidSet.has(r.sid)).map((r) => r.key),
   ]);
   const keys = new Set(named);
   for (const { rows } of stages) {

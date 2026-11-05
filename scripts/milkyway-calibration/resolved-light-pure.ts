@@ -22,16 +22,13 @@ import {
   resolvedLightFraction,
 } from '../../src/astro-core/milkyway/calibration/resolved-fraction-pure';
 import { ARCSEC_TO_RAD } from '../../src/astro-core/astronomy-constants';
+import type { CatalogColumns } from '../catalog/catalog-columns';
 
-/** Parallel columns off a built catalogue, Sol at the origin, ICRS axes. */
-export interface StarColumns {
-  readonly x: Float32Array;
-  readonly y: Float32Array;
-  readonly z: Float32Array;
-  /** Intrinsic — the build already subtracted the Sol→star A_V. */
-  readonly absmag: Float32Array;
-  readonly count: number;
-}
+/** The record columns the measurement reads: position (Sol at the origin, ICRS
+ *  axes) and absmag, intrinsic — the build already subtracted the Sol→star A_V. */
+export const STAR_FIELDS = ['x', 'y', 'z', 'absmag'] as const;
+
+export type StarColumns = CatalogColumns<(typeof STAR_FIELDS)[number]>;
 
 export const CAP_RADIUS_DEG = 10;
 

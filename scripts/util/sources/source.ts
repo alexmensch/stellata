@@ -4,9 +4,9 @@ import { createReadStream, readdirSync, readFileSync, statSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { createInterface } from 'node:readline';
 
-import type { Artifact } from '../tsv/artifact-pure';
+import type { Artifact } from '../tsv/artifact-pure.ts';
 import { lfsContentReadable, REPO_ROOT } from '../paths.ts';
-import type { Declaration, RowKey, RowKeyOf } from './row-ref-pure';
+import type { Declaration, RowKey, RowKeyOf } from './row-ref-pure.ts';
 
 export interface Declared {
   /** Repo-relative. */
