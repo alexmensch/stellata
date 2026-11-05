@@ -28,6 +28,8 @@ export type Loaded =
   | { readonly kind: 'loaded'; readonly steps: ReadonlyMap<string, ResolvedStep>; readonly graph: StepGraph }
   | { readonly kind: 'rejected'; readonly problems: readonly string[] };
 
+export type LoadedTable = Extract<Loaded, { kind: 'loaded' }>;
+
 export interface LoadOptions {
   readonly root: string;
   /** A TypeScript build step's input files, absolute, from its entry. */

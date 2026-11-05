@@ -3,12 +3,12 @@ import { resolve } from 'node:path';
 import { beforeAll, describe, expect, it } from 'vitest';
 
 import { REPO_ROOT } from '../util/paths';
-import type { Loaded } from './step-table/load-table';
+import type { LoadedTable } from './step-table/load-table';
 import { loadedRepoTable } from './step-table/repo-table';
 import { seedOutputs, seedSteps, worktreeInclude } from './worktree-include';
 import { WORKTREE_INCLUDE, WORKTREE_INCLUDE_COMMAND } from './worktree-include-pure';
 
-let loaded: Extract<Loaded, { kind: 'loaded' }>;
+let loaded: LoadedTable;
 
 beforeAll(async () => {
   loaded = await loadedRepoTable();
