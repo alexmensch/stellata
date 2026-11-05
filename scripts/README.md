@@ -139,11 +139,12 @@ built from — `build/lineage/`, whose header the lineage diff checks against
 the merge-base ([The header and the refusal](catalog/lineage/baseline/README.md#the-header-and-the-refusal)).
 Every listed file is an output of a step `build:seed` runs
 ([Seeding builds](#seeding-builds--buildseed)), so refreshing the main
-checkout's seed is that one command. `worktree-seed.test.ts` holds each
-pattern to a declared output or stamp of one of those steps, read from the
-step table, and the converse: every such file, stamped output family or stamp under `public/`
-or `build/` is listed, so nothing a stamp records can be missing from a fresh
-worktree. The lineage baseline copies and diff are declared unstamped
+checkout's seed is that one command. The list is generated from the step
+table (`pnpm run worktree:include`, [Derived checks](pipeline/README.md#derived-checks)):
+every file, stamped output family and stamp of those steps under `public/` or
+`build/`, and nothing else, so nothing a stamp records can be missing from a
+fresh worktree. Re-run it after changing a build step's outputs; the suite
+fails until the committed list matches. The lineage baseline copies and diff are declared unstamped
 (`stamped: false`) and never seeded, since a worktree pins its own baseline; a
 stamp never records them, so their absence leaves the step fresh. A worktree
 made any other way
