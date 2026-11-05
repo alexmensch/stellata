@@ -6,7 +6,7 @@ import {
   equatorialTangentBasis,
   type UnitVector,
 } from '../../../src/astro-core/equatorial-basis';
-import { gaiaHas5pSolution } from './gaia-distrust';
+import { gaia5pUnreliable, gaiaHas5pSolution } from './gaia-distrust';
 import { MAS_TO_RAD, type VelocityVia } from './velocity';
 import type { SimbadRecordKeys } from '../simbad/simbad-namespace-ladder-pure';
 import type { Tycho2Row } from '../tycho2-parse';
@@ -33,13 +33,8 @@ export const SIMBAD_REF_EPOCH = 2000.0;
 // — keep the two in sync (see /data/README.md#reference-epoch-and-proper-motion).
 export const CATALOG_SCENE_EPOCH = 2016.0;
 
-// Gaia 5p reliability + HIP2-preference thresholds, mirrored from
-// scripts/binaries/stage3_astrometry.py so both pipelines route a shared
-// star identically.
-export const GAIA_RUWE_UNRELIABLE_THRESHOLD = 1.4;
-// ipd_frac_multi_peak is a PERCENTAGE (0-100) in Gaia DR3: a fit above 2%
-// is unreliable here and below anchor grade in multiplicity/anchor-grade-pure.ts.
-export const GAIA_IPD_FRAC_MULTI_PEAK_THRESHOLD = 2.0;
+// HIP2-preference threshold, mirrored from scripts/binaries/stage3_astrometry.py
+// so both pipelines route a shared star identically.
 export const HIP2_PM_DELTA_THRESHOLD_MASYR = 50.0;
 
 
@@ -154,17 +149,6 @@ export function directionOnPm(
     solution.srcRaDeg, solution.srcDecDeg, pmraMasyr, pmdecMasyr,
     solution.srcEpoch, CATALOG_SCENE_EPOCH,
   );
-}
-
-/** RUWE / ipd_frac_multi_peak orbit-corruption indicators on the 5p fit.
- *  Same pair of gates as stage3_astrometry.py's `gaia_5p_unreliable`. */
-export function gaia5pUnreliable(row: GaiaAstrometryCatalogRow): boolean {
-  if (row.ruwe !== null && row.ruwe > GAIA_RUWE_UNRELIABLE_THRESHOLD) return true;
-  if (
-    row.ipdFracMultiPeak !== null
-    && row.ipdFracMultiPeak > GAIA_IPD_FRAC_MULTI_PEAK_THRESHOLD
-  ) return true;
-  return false;
 }
 
 /** |Δμ| > 50 mas/yr on either axis between the Gaia 5p and HIP2 PMs.

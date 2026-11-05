@@ -3,14 +3,11 @@ import {
   CATALOG_SCENE_EPOCH,
   DIRECTION_VIA_VALUES,
   GAIA_DR3_REF_EPOCH,
-  GAIA_IPD_FRAC_MULTI_PEAK_THRESHOLD,
-  GAIA_RUWE_UNRELIABLE_THRESHOLD,
   HIP2_PM_DELTA_THRESHOLD_MASYR,
   HIP2_REF_EPOCH,
   SIMBAD_REF_EPOCH,
   directionAtEpoch,
   directionOnPm,
-  gaia5pUnreliable,
   hip2PmDisagrees,
   resolveDirection,
   type DirectionInputs,
@@ -226,15 +223,6 @@ describe('direction-cascade / directionAtEpoch', () => {
 });
 
 describe('direction-cascade / gates', () => {
-  it('gaia5pUnreliable fires on either indicator, tolerates nulls', () => {
-    expect(gaia5pUnreliable(gaiaRow())).toBe(false);
-    expect(gaia5pUnreliable(gaiaRow({ ruwe: GAIA_RUWE_UNRELIABLE_THRESHOLD + 0.01 }))).toBe(true);
-    expect(gaia5pUnreliable(gaiaRow({
-      ipdFracMultiPeak: GAIA_IPD_FRAC_MULTI_PEAK_THRESHOLD + 0.01,
-    }))).toBe(true);
-    expect(gaia5pUnreliable(gaiaRow({ ruwe: null, ipdFracMultiPeak: null }))).toBe(false);
-  });
-
   it('hip2PmDisagrees trips on either axis alone, never on missing PMs', () => {
     const delta = HIP2_PM_DELTA_THRESHOLD_MASYR + 1;
     expect(hip2PmDisagrees(gaiaRow(), hip2Row())).toBe(false);

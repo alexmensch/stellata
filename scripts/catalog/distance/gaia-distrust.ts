@@ -1,6 +1,6 @@
-// The two ways this build refuses a Gaia value on a blended row: the 5p
-// condition, and the bibcode naming Gaia's own reduction returning through a
-// second-order index. Both terms of the space-motion velocity share them.
+// The ways this build refuses a Gaia value on a blended row: no 5p solution, a
+// 5p fit its own indicators mark orbit-corrupted, and the bibcode naming Gaia's
+// own reduction returning through a second-order index.
 
 import type { GaiaAstrometryCatalogRow } from '../sources/gaia-astrometry-source';
 
@@ -18,6 +18,22 @@ export function gaiaHas5pSolution(row: GaiaAstrometryCatalogRow): boolean {
  *  it is an ordinary citation rather than the withheld fit returning. */
 export function gaiaRowIs2p(row: GaiaAstrometryCatalogRow | null): boolean {
   return row !== null && !gaiaHas5pSolution(row);
+}
+
+// Mirrored from scripts/binaries/stage3_astrometry.py so both pipelines route a
+// shared star identically. ipd_frac_multi_peak is a PERCENTAGE (0-100) in DR3.
+export const GAIA_RUWE_UNRELIABLE_THRESHOLD = 1.4;
+export const GAIA_IPD_FRAC_MULTI_PEAK_THRESHOLD = 2.0;
+
+/** RUWE / ipd_frac_multi_peak orbit-corruption indicators on the 5p fit.
+ *  Same pair of gates as stage3_astrometry.py's `gaia_5p_unreliable`. */
+export function gaia5pUnreliable(row: GaiaAstrometryCatalogRow): boolean {
+  if (row.ruwe !== null && row.ruwe > GAIA_RUWE_UNRELIABLE_THRESHOLD) return true;
+  if (
+    row.ipdFracMultiPeak !== null
+    && row.ipdFracMultiPeak > GAIA_IPD_FRAC_MULTI_PEAK_THRESHOLD
+  ) return true;
+  return false;
 }
 
 // Gaia's own catalogue releases, in BOTH forms a second-order index cites them

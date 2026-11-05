@@ -2,6 +2,9 @@ import { describe, it, expect } from 'vitest';
 
 import { gaiaAstrometryRow } from '../sources/gaia-astrometry-fixture';
 import {
+  GAIA_IPD_FRAC_MULTI_PEAK_THRESHOLD,
+  GAIA_RUWE_UNRELIABLE_THRESHOLD,
+  gaia5pUnreliable,
   gaiaHas5pSolution,
   gaiaRowIs2p,
   isGaiaCatalogueBibcode,
@@ -75,5 +78,24 @@ describe('refusedPublicationCited', () => {
 
   it('never refuses the literature', () => {
     expect(refusedPublicationCited(LITERATURE, new Set(['gaia_release', 'hipparcos2']))).toBeNull();
+  });
+});
+
+describe('gaia-distrust / gaia5pUnreliable', () => {
+  const row = (o: Parameters<typeof gaiaAstrometryRow>[0] = {}) =>
+    gaiaAstrometryRow({ parallaxMas: 50, ruwe: 1.0, ipdFracMultiPeak: 0, ...o });
+
+  it('fires on either indicator, tolerates nulls', () => {
+    expect(gaia5pUnreliable(row())).toBe(false);
+    expect(gaia5pUnreliable(row({ ruwe: GAIA_RUWE_UNRELIABLE_THRESHOLD + 0.01 }))).toBe(true);
+    expect(gaia5pUnreliable(row({
+      ipdFracMultiPeak: GAIA_IPD_FRAC_MULTI_PEAK_THRESHOLD + 0.01,
+    }))).toBe(true);
+    expect(gaia5pUnreliable(row({ ruwe: null, ipdFracMultiPeak: null }))).toBe(false);
+  });
+
+  it('passes a fit sitting exactly on either threshold', () => {
+    expect(gaia5pUnreliable(row({ ruwe: GAIA_RUWE_UNRELIABLE_THRESHOLD }))).toBe(false);
+    expect(gaia5pUnreliable(row({ ipdFracMultiPeak: GAIA_IPD_FRAC_MULTI_PEAK_THRESHOLD }))).toBe(false);
   });
 });
