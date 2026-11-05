@@ -22,7 +22,7 @@ A fresh worktree is seeded with the main checkout's last `build/lineage/`
 (`.worktreeinclude`), which may come from an older commit. So each stage
 writes a header beside its files, `<stage>.header.json`, recording the
 build version, the commit, whether the tree had uncommitted edits, and the
-content hash of the inputs the stage was built from (`stepInputPaths`, `../../../util/step-inputs.ts`),
+content hash of the inputs the stage was built from (the runner's pre-run hashes, `stepInputHashes`, `../../../util/step-input-hashes.ts`),
 and the sha1 of each stage file it was written with; a header per
 stage is what lets one stage rotate without rewriting another's. The diff
 refuses a baseline whose commit is not the branch's merge-base with main, or
@@ -57,7 +57,7 @@ merge-base copy to hash:
   membership files, so `build:catalog` names membership as their `upstream`
   (`UpstreamLineage`): when membership's previous or current header stands
   for the merge-base (`acceptedFiles`, judged against membership's own
-  inputs), its `files` map is those files' hash at the merge-base, the same
+  inputs, as its build stamp records them), its `files` map is those files' hash at the merge-base, the same
   bytes sha1 the input map holds. Any other ignored input stays `unknown`.
 - An LFS input whose merge-base content is not in the local LFS store; it is
   never fetched.

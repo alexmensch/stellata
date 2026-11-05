@@ -14,7 +14,7 @@ import {
 import type { Loaded } from './step-table/load-table';
 import { holdStepLocks } from './locks';
 import { pipelineTree, type PipelineTree } from './pipeline-tree';
-import { exec, runRecorded, TSX } from './processes';
+import { runRecorded, runTs } from './processes';
 import { recordProblems } from './python-run-pure';
 import {
   claims, isBuild, selectSteps,
@@ -114,7 +114,7 @@ class Run {
     else delete env[UPDATE_SNAPSHOTS_ENV];
     const entry = tree.abs(step.entry);
     if (step.language === 'ts') {
-      const code = await exec(TSX, [entry], env);
+      const code = await runTs(tree, step.name, entry, [], inputs, env);
       if (code !== 0) return { kind: 'failed', reason: `exited ${code}` };
       return this.land(stampFile, resolved, rehashed(inputs, this.options.updateSnapshots ? 'all' : resolved.outputs.files, tree));
     }

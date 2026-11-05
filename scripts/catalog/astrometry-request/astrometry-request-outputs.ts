@@ -1,7 +1,8 @@
 // The file build:astrometry-request writes, as its emitArtifacts declaration. See README.md#files-in-this-area.
 
+import { DATA_FILES } from '../../../src/catalog-format/pipeline-outputs/data-files';
 import { declareOutputs } from '../../util/emit-artifacts';
 
 export const ASTROMETRY_REQUEST_OUTPUTS = declareOutputs({
-  request: 'data/gaia/gaia_catalog_source_id_request.tsv',
+  request: DATA_FILES.astrometryRequest,
 });

@@ -131,7 +131,7 @@ describe('stage rotation', () => {
     const line = stageLineageLine(CODES, {
       stage: 'demo', key: 'spine:9', role: 'outcome', code: 'demo.kept', params: '', evidence: [],
     });
-    const emission = await stageLineage({
+    const emission = stageLineage({
       layout, spec: SPEC, inputs: {}, diffed: 'demo', lines: [line],
       render: (sorted) => ({ demo: stageLineageText(CODES, sorted), identity: stageLineageText(CODES, sorted) }),
       joins: () => [],

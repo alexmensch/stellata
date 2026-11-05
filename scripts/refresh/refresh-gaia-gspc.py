@@ -16,7 +16,6 @@ import refresh_lib as rl  # noqa: E402
 from paths import REPO_ROOT  # noqa: E402
 
 ROOT = REPO_ROOT
-REQUEST = ROOT / "data" / "gaia" / "gaia_catalog_source_id_request.tsv"
 OUT = ROOT / "data" / "gaia" / "gaia_dr3_gspc.tsv"
 
 TSV_COLUMNS = [
@@ -184,16 +183,16 @@ def assert_flag_domain(rows: list[Any]) -> None:
 
 
 def main() -> None:
-    if not REQUEST.exists():
+    if not rl.CATALOG_SOURCE_ID_REQUEST.exists():
         raise SystemExit(
-            f"{SCRIPT_NAME}: request file {REQUEST.relative_to(ROOT)} is missing "
+            f"{SCRIPT_NAME}: request file {rl.CATALOG_SOURCE_ID_REQUEST.relative_to(ROOT)} is missing "
             f"— run `pnpm run build:astrometry-request` first."
         )
 
-    source_ids = rl.read_source_id_request(REQUEST)
+    source_ids = rl.read_source_id_request(rl.CATALOG_SOURCE_ID_REQUEST)
     total = len(source_ids)
     if total == 0:
-        raise SystemExit(f"{SCRIPT_NAME}: no source_ids in {REQUEST.relative_to(ROOT)}")
+        raise SystemExit(f"{SCRIPT_NAME}: no source_ids in {rl.CATALOG_SOURCE_ID_REQUEST.relative_to(ROOT)}")
     n_batches = (total + BATCH_SIZE - 1) // BATCH_SIZE
     print(
         f"reading {total} source_ids → {n_batches} batches of "

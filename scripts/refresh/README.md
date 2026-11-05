@@ -126,8 +126,9 @@ builds (astrometry-catalog, GSPC,
 see `read_source_id_request` below), whose coverage of the manifest's
 bindings the membership gate test holds.
 `refresh_lib.MEMBERSHIP_MANIFEST` is the one statement of where that table
-lives, and `refresh_lib.TYC2_HD_CROSS_INDEX` the same for IV/25; a script
-naming either path itself has drifted from it. The two pulls scoped to Tycho
+lives, `refresh_lib.TYC2_HD_CROSS_INDEX` the same for IV/25 and
+`refresh_lib.CATALOG_SOURCE_ID_REQUEST` for the request file; a script
+naming any of these paths itself has drifted from it. The two pulls scoped to Tycho
 entries share the whole request set, not just the paths —
 `refresh_lib.read_mentioned_tycs`, [The request set](/data/tycho2/README.md#the-request-set--manifest--iv25).
 [Request sets come off the membership term](/data/simbad/README.md#request-sets-come-off-the-membership-term) carries

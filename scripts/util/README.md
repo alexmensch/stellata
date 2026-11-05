@@ -187,10 +187,22 @@ same thing — single-use helpers stay with their consumer.
   `stepEntries(name)` is a step's entry: its `steps.ts` entry when the step is
   on the table (`package.json` then names only `run.ts`), else each `tsx` entry
   its `package.json` script chains; `stepInputPaths(name)` is
-  `entryInputPaths` over it, which the catalogue and membership lineage
-  headers key on.
+  `entryInputPaths` over it, for the suites that pin a step's set. No step's
+  own code imports this module: a step's input hashes come from
+  `step-input-hashes.ts`.
   Each step's own suite pins its set (`../catalog/catalog-inputs.test.ts`,
   `../local-group/local-group-inputs.test.ts`, `../clouds/clouds-inputs.test.ts`).
+- `step-input-hashes.ts` — the runner's pre-run input hashes, handed to a
+  TypeScript step: `../pipeline/processes.ts`'s `runTs` writes them
+  (`writeStepInputs`) to `build/step-inputs/<step>.json`, names it in
+  `PIPELINE_STEP_INPUTS` (`STEP_INPUTS_ENV`) and removes it when the step
+  exits; the step reads them with `stepInputHashes()`, which throws when the
+  step was started any other way. It is the map the runner hashed for the
+  step's stamp before starting it; the stamp then re-hashes any input the
+  step also writes (every input under `--update-snapshots`), so for
+  `build:membership` and `build:catalog`, which rewrite inputs, the two differ
+  on those entries. A step that needs its own input hashes (a lineage
+  header's input hash) reads them here and never re-derives them.
 - `tsv/` — the one TSV reader (`readTable`, typed columns, cells that keep
   empty and malformed apart) and `defineArtifact`, the codec of every table
   this repo writes. Own README.

@@ -30,8 +30,7 @@ export interface LineageBudget {
 export interface StageLineageRun<F extends string, S extends string> {
   readonly layout: LineageLayout;
   readonly spec: StageLineageSpec<F, S>;
-  /** The content hashes of the step's inputs (`stepInputPaths`), as the step
-   *  already computed them for its stamp or its own use. */
+  /** The step's input hashes as the runner handed them (`stepInputHashes`). */
   readonly inputs: FileHashes;
   /** The stage's own file: the one its diff reads. */
   readonly diffed: F;
@@ -51,8 +50,8 @@ export interface StageLineageRun<F extends string, S extends string> {
 
 export interface UpstreamLineage {
   readonly spec: StageLineageSpec<string>;
-  /** The upstream step's own input hashes, as its header's input hash covers them. */
-  readonly inputs: () => Promise<FileHashes>;
+  /** The upstream step's input hashes, as its stamp records them. */
+  readonly inputs: () => FileHashes;
 }
 
 export interface StageLineageEmission<F extends string, S extends string> {
@@ -90,13 +89,13 @@ export function mergeBaseAt(commit: string, hashes: () => HashesAt): MergeBase {
 
 type Known = { readonly kind: 'known'; readonly hashes: FileHashes } | { readonly kind: 'failed'; readonly reason: string };
 
-async function upstreamHashes<F extends string, S extends string>(
+function upstreamHashes<F extends string, S extends string>(
   run: StageLineageRun<F, S>, commit: string,
-): Promise<Known> {
+): Known {
   const hashes: Record<string, string> = {};
   try {
     for (const up of run.upstream ?? []) {
-      const inputs = await up.inputs();
+      const inputs = up.inputs();
       const files = acceptedFiles(
         [readStageHeader(run.layout.previous, up.spec), readStageHeader(run.layout.current, up.spec)],
         mergeBaseAt(commit, () => inputHashesAt(commit, inputs)),
@@ -112,14 +111,14 @@ async function upstreamHashes<F extends string, S extends string>(
   return { kind: 'known', hashes };
 }
 
-async function mergeBase<F extends string, S extends string>(
+function mergeBase<F extends string, S extends string>(
   run: StageLineageRun<F, S>, headers: readonly HeaderRead[],
-): Promise<CheckoutBase | null> {
+): CheckoutBase | null {
   const commit = mergeBaseWithMain();
   if (commit === null) return null;
   const checkout = checkoutAt({ onMainBranch: onMainBranch(), commit: headCommit() }, commit, inHeadHistory);
   const asked = checkout.kind === 'branch' && headers.some((read) => comparesInputs(read, commit));
-  const known: Known = asked ? await upstreamHashes(run, commit) : { kind: 'known', hashes: {} };
+  const known: Known = asked ? upstreamHashes(run, commit) : { kind: 'known', hashes: {} };
   return {
     ...mergeBaseAt(commit, () => (known.kind === 'failed'
       ? { kind: 'unknown', reason: known.reason }
@@ -128,14 +127,14 @@ async function mergeBase<F extends string, S extends string>(
   };
 }
 
-export async function stageLineage<F extends string, S extends string>(
+export function stageLineage<F extends string, S extends string>(
   run: StageLineageRun<F, S>,
-): Promise<StageLineageEmission<F, S>> {
+): StageLineageEmission<F, S> {
   const started = performance.now();
   const source = baselineSource(run);
   const previous = readStageHeader(run.layout.previous, run.spec);
   const plan = planBaseline(
-    previous, source, await mergeBase(run, source.kind === 'checkout' ? [previous, source.header] : [previous]),
+    previous, source, mergeBase(run, source.kind === 'checkout' ? [previous, source.header] : [previous]),
     run.argv.includes(ACCEPT_ANY_BASELINE_FLAG),
   );
   const { verdict } = plan;

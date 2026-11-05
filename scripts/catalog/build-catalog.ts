@@ -128,7 +128,9 @@ import { SIMBAD_SAMPLE } from './validate/simbad-sample-source';
 import { MEMBERSHIP_MANIFEST, manifestDesignations } from './membership/membership-manifest-tsv';
 import { artifactRows } from '../util/sources/source';
 import { REPO_ROOT as ROOT } from '../util/paths';
-import { inputHashes, type FileHashes } from '../util/build-stamp';
+import { readStamp, type FileHashes } from '../util/build-stamp';
+import { stampPath } from '../util/stamp-path-pure';
+import { stepInputHashes } from '../util/step-input-hashes';
 import {
   CATALOG_CHUNK_DIR, CATALOG_OUTPUTS,
 } from './catalog-outputs';
@@ -150,7 +152,6 @@ import { catalogUpstream } from '../sid/catalog-upstream';
 import { synthChurnReport } from '../sid/synth-churn-pure';
 import { allocationRun, loadRegistry, registryTexts } from '../sid/registry-io';
 import { loadStoredEdges } from '../sid/stored-edges';
-import { stepInputPaths } from '../util/step-inputs';
 import { CATALOG_PARTITION } from '../../src/catalog-format/pipeline-outputs/data-files';
 import {
   PROMOTION_LINEAGE, PLACEMENT_LINEAGE, ALLOCATION_LINEAGE, MEMBERSHIP_LINEAGE,
@@ -160,8 +161,14 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 const UPSTREAM_LINEAGE: readonly UpstreamLineage[] = [
-  { spec: MEMBERSHIP_LINEAGE, inputs: async () => inputHashes(await stepInputPaths('build:membership')) },
+  { spec: MEMBERSHIP_LINEAGE, inputs: () => stampedInputs('build:membership') },
 ];
+
+function stampedInputs(step: string): FileHashes {
+  const stamp = readStamp(stampPath(step));
+  if (stamp === null) throw new Error(`${step} has no stamp: run pnpm run ${step}`);
+  return stamp.inputs;
+}
 
 const EXPECTED_COUNTS = resolve(ROOT, BUILD_COUNTS_EXPECTED_FILE);
 const EXPECTED_OUTLIERS = resolve(
@@ -171,7 +178,7 @@ const EXPECTED_OUTLIERS = resolve(
 
 // A function of its own so the placement lines are unreachable once it returns:
 // inlined into main, they outlive the walk and the build runs out of heap.
-async function walkManifest(inputs: ReadStarsOptions, stepInputs: FileHashes) {
+function walkManifest(inputs: ReadStarsOptions, stepInputs: FileHashes) {
   const lines: LineageLine[] = [];
   const manifestFounded = new Set<string>();
   const manifest = function* () {
@@ -185,7 +192,7 @@ async function walkManifest(inputs: ReadStarsOptions, stepInputs: FileHashes) {
   });
   const parkedLedger = parkedLedgerTsv(lines);
   const placementRemovals = lines.filter((line) => PLACEMENT_EFFECTS.get(lineageLineCode(line)) !== 'none');
-  const placementEmission = await stageLineage({
+  const placementEmission = stageLineage({
     layout: LINEAGE_LAYOUT,
     spec: PLACEMENT_LINEAGE,
     inputs: stepInputs,
@@ -226,7 +233,7 @@ function simbadSourcedDistancesTsv(stars: readonly Star[]): string {
 async function main() {
   const heap = watchHeap('build:catalog');
   sweepStaged(CATALOG_OUTPUTS);
-  const inputHashesAtStart = inputHashes(await stepInputPaths('build:catalog'));
+  const inputHashesAtStart = stepInputHashes();
 
   // Accumulator for the headline counts asserted against
   // scripts/catalog/build-catalog-expected.json at the end of the
@@ -449,7 +456,7 @@ async function main() {
   const t0 = Date.now();
   const {
     stars, stats, parkedLedger, placementEmission, manifestFounded, placementRemovals,
-  } = await walkManifest(inputs, inputHashesAtStart);
+  } = walkManifest(inputs, inputHashesAtStart);
   console.log(`  parsed ${stats.total} rows in ${Date.now() - t0}ms`);
   console.log(`  kept ${stars.length} stars; parked ${stats.parked.length}`);
   if (stats.bjEligible > 0) {
@@ -1253,7 +1260,7 @@ async function main() {
     );
   }
 
-  const lineage = await stageLineage({
+  const lineage = stageLineage({
     layout: LINEAGE_LAYOUT,
     spec: PROMOTION_LINEAGE,
     inputs: inputHashesAtStart,
@@ -1269,7 +1276,7 @@ async function main() {
     argv: process.argv.slice(2),
     upstream: UPSTREAM_LINEAGE,
   });
-  const allocationLineage = await stageLineage({
+  const allocationLineage = stageLineage({
     layout: LINEAGE_LAYOUT,
     spec: ALLOCATION_LINEAGE,
     inputs: inputHashesAtStart,
