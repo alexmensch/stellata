@@ -23,3 +23,8 @@ export function stepInputHashes(): FileHashes {
   if (!isFileHashes(parsed)) throw new Error(`${path} is not a path → hash map`);
   return parsed;
 }
+
+/** The stamp's input map: the handed pre-run map, with each input the step also wrote re-hashed after the run. */
+export function stampedInputMap(handed: FileHashes, rewritten: FileHashes): FileHashes {
+  return { ...handed, ...Object.fromEntries(Object.entries(rewritten).filter(([path]) => path in handed)) };
+}

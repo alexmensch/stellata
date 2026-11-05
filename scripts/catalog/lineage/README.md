@@ -60,7 +60,7 @@ scripts/catalog/lineage/
                                  their output declarations:
                                  /src/catalog-format/pipeline-outputs/.
   lineage-io.ts                  The baseline members and a stage's emission,
-                                 gzip, and the header with its input hash
+                                 gzip, and the header with its input map
                                  and file hashes, re-checked on read.
   lineage-core-pure.test.ts      Order, writer refusal, diff.
   lineage-rotation.test.ts       Rotation over a scratch build/: a failed or
@@ -250,16 +250,20 @@ passes `stageLineage` (`stage-lineage.ts`) a `LineageBudget`, and a run over
 it fails its emission. Membership, measured 2026-10-29 on the full tree:
 1,355,182 rows (128 MB plain, 15.1 MB gzipped) plus 976,040 identity rows
 (85 MB, 22.3 MB), 37.4 MB together. The timed window is everything lineage
-adds to the build — the baseline headers' file re-hash, the merge-base input
-re-hash when a header from another commit asks for it, the diff, rendering,
+adds to the build — the baseline headers' file re-hash, the base's input
+re-hash each verdict asks for, the diff, rendering,
 gzip and invariants: about 5.8 s with a diff
 against a full baseline. The merge-base input re-hash measured 128 ms for
 membership on a branch where 9 of its 163 inputs differ (2026-11-04,
 `inputHashesAt` over `inputHashes(stepInputPaths('build:membership'))`); a
-changed 204 MB LFS input adds its own hash of the local object. The header's input hash is not in it: a stage hands
+changed 204 MB LFS input adds its own hash of the local object. The header's input map is not in it: a stage hands
 `stageLineage` the input hashes the runner took for its step's stamp before
 starting it (`stepInputHashes`, `../../util/step-input-hashes.ts`), so no
-step hashes its own input set.
+step hashes its own input set. `build:catalog` does hash membership's inputs
+from disk, once per build (`upstreamLineage`), to judge membership's header
+against the base: 153 paths in 275–352 ms (2026-11-05,
+`onDiskHashes(stepInputPaths('build:membership'), {})`), inside the first
+catalogue stage's timed window.
 A spine derivation's row carries only its winner, route and component
 letters; the binding-review columns ride the rows the queue lists — a
 contested or collision verdict and a disposition — since the candidates and
@@ -297,8 +301,8 @@ every later build diffs against it and leaves it in place (`planBaseline`).
 Otherwise, and always on main, the stage's current `<stage>.tsv.gz` replaces
 `build/lineage.previous/<stage>.tsv.gz` in the same emitArtifacts commit
 that renames the stage's new file into place, and the build diffs against
-that last build if it stands for the merge-base — built at it, or from the
-inputs it holds — or, on main, is a clean build from HEAD's history ([Choosing the baseline](baseline/README.md)). A stage that fails, is skipped by
+that last build if its input map is the merge-base's — or, on main, its own
+commit's, a commit in HEAD's history ([Choosing the baseline](baseline/README.md)). A stage that fails, is skipped by
 its content-hash stamp, or does not run (a standalone `build:membership`)
 leaves both its copies untouched. The baseline and diff families are
 declared unstamped (`stageFamilies`), so a step's stamp never records them

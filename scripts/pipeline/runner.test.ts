@@ -6,10 +6,11 @@ import { tmpdir } from 'node:os';
 import { join, relative } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import { fileHashes } from '../util/build-stamp';
+import { fileHashes, type FileHashes } from '../util/build-stamp';
 import { escapeRegExp } from '../util/escape-regexp';
 import { entryMetafile } from '../util/import-closure';
 import { REPO_ROOT } from '../util/paths';
+import { stampedInputMap } from '../util/step-input-hashes';
 import { pullQueryHash, requestHash } from './freshness';
 import {
   importTimeProblems, loadTable, TABLE_LOAD_BUILTINS, WALKABLE, walkOutputsModules, type Loaded,
@@ -243,6 +244,29 @@ export function main(): void {
     expect(handed).toEqual(fileHashes([at('a.in')], root));
     expect(file).toBe(pipelineTree(root).handedInputs('a'));
     expect(existsSync(file)).toBe(false);
+  });
+
+  it('stamps a step that rewrites an input with the handed map, that input re-hashed after the run', async () => {
+    write('a.in', 'x');
+    const step = tsStep('a', 'a.out', ['a.in']);
+    write('steps/a.ts', `
+import { writeFileSync } from 'node:fs';
+import { stepInputHashes } from ${JSON.stringify(join(REPO_ROOT, 'scripts/util/step-input-hashes'))};
+writeFileSync(${JSON.stringify(at('a.handed'))}, JSON.stringify(stepInputHashes()));
+writeFileSync(${JSON.stringify(at('a.in'))}, 'rewritten');
+writeFileSync(${JSON.stringify(at('a.out'))}, 'out');
+`);
+    write('steps/a-outputs.ts', `
+import { declareOutputs } from ${JSON.stringify(EMIT_ARTIFACTS)};
+export const OUT = declareOutputs({ out: ${JSON.stringify(at('a.out'))}, rewritten: ${JSON.stringify(at('a.in'))} });
+`);
+    const preRun = fileHashes([at('a.in')], root);
+    expect((await run([step], ['a'])).kinds).toEqual({ a: 'built' });
+    const handed = JSON.parse(read('a.handed')) as FileHashes;
+    const stamp = JSON.parse(readFileSync(pipelineTree(root).buildStamp('a'), 'utf8')) as { inputs: unknown };
+    expect(handed).toEqual(preRun);
+    expect(stamp.inputs).toEqual(stampedInputMap(handed, fileHashes([at('a.in')], root)));
+    expect(stamp.inputs).not.toEqual(handed);
   });
 
   it('--update-snapshots reruns a fresh named target, but not the fresh steps upstream of it', async () => {
