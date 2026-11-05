@@ -33,6 +33,8 @@ describe('memberGlob', () => {
 
   it.each([
     [/catalog\.bin/, 'not anchored'],
+    [/^a\$/, 'not anchored'],
+    [/^a\\$/, "glob metacharacter '\\'"],
     [/^a|b$/, "no glob: '|'"],
     [/^a\*$/, "glob metacharacter '*'"],
     [/^a\.bin$/i, "flags 'i'"],

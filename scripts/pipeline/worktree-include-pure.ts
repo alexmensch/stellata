@@ -25,7 +25,8 @@ function pastClosing(source: string, start: number, open: string, close: string)
 export function memberGlob(member: RegExp): string {
   const source = member.source;
   if (member.flags !== '') throw new Error(`member pattern /${source}/ has flags '${member.flags}', which no glob can carry`);
-  if (!source.startsWith('^') || !source.endsWith('$') || source.endsWith('\\$')) {
+  const backslashesBeforeEnd = source.length - 1 - source.slice(0, -1).replace(/\\+$/, '').length;
+  if (!source.startsWith('^') || !source.endsWith('$') || backslashesBeforeEnd % 2 === 1) {
     throw new Error(`member pattern /${source}/ is not anchored at both ends`);
   }
   const body = source.slice(1, -1);
