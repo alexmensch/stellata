@@ -15,18 +15,25 @@ import { ARCSEC_TO_RAD } from './astronomy-constants';
 // non-chart path.
 export const SOFT_TAPER_MARGIN_MAG = 0.5;
 
+/** `m − M = 5·log10(d / 10 pc)`; undefined at `dPc` = 0. */
+export function distanceModulus(dPc: number): number {
+  return 5 * (Math.log10(dPc) - 1);
+}
+
 /**
  * Standard apparent-magnitude formula for an unobscured emitter.
- *
- * `M + 5·(log10(d/pc) − 1) = M + 5·log10(d / 10pc)`.
  *
  * Floors `dPc` at 1e-30 so callers don't need to guard against zero
  * distances at the singular focal-star point — matches the glare graph's
  * behaviour exactly.
  */
 export function apparentMagnitude(absmag: number, dPc: number): number {
-  const d = Math.max(dPc, 1e-30);
-  return absmag + 5 * (Math.log10(d) - 1);
+  return absmag + distanceModulus(Math.max(dPc, 1e-30));
+}
+
+/** The inverse of `apparentMagnitude`, unfloored: the caller rules out `dPc` = 0. */
+export function absoluteMagnitude(mag: number, dPc: number): number {
+  return mag - distanceModulus(dPc);
 }
 
 /**

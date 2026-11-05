@@ -1,7 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import {
+  absoluteMagnitude,
   apparentMagnitude,
   bodySurfaceBrightnessMagArcsec2,
+  distanceModulus,
   hostIrradianceMagnitude,
   planetApparentMagnitude,
 } from './perceptual-magnitude';
@@ -30,6 +32,34 @@ describe('apparentMagnitude', () => {
 
   it('does not divide by zero at d = 0', () => {
     expect(Number.isFinite(apparentMagnitude(0, 0))).toBe(true);
+  });
+});
+
+describe('distanceModulus', () => {
+  it('vanishes exactly at 10 pc', () => {
+    expect(distanceModulus(10)).toBe(0);
+  });
+
+  it('adds five magnitudes per factor of ten in distance', () => {
+    expect(distanceModulus(100)).toBeCloseTo(5, 10);
+    expect(distanceModulus(1000)).toBeCloseTo(10, 10);
+  });
+});
+
+describe('absoluteMagnitude', () => {
+  it('is the identity at 10 pc', () => {
+    expect(absoluteMagnitude(5.0, 10)).toBe(5.0);
+  });
+
+  it('subtracts five magnitudes per factor of ten in distance', () => {
+    expect(absoluteMagnitude(15, 100)).toBeCloseTo(10, 10);
+    expect(absoluteMagnitude(20, 1000)).toBeCloseTo(10, 10);
+  });
+
+  it('inverts apparentMagnitude across the catalogue span', () => {
+    for (const d of [4.8481368e-6, 1.3, 10, 22.466861, 776_000, 50_000]) {
+      expect(absoluteMagnitude(apparentMagnitude(4.83, d), d)).toBeCloseTo(4.83, 12);
+    }
   });
 });
 

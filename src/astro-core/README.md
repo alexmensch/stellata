@@ -94,8 +94,11 @@ Each has its own README.
   The inverse also returns the eccentric anomaly, which
   the ring layer anchors its first vertex on; it comes out of `r` and
   `r·v` directly rather than from a second Kepler solve.
-- `perceptual-magnitude.ts` (+ test) — `apparentMagnitude` (the distance
-  modulus) and the reflected-light model's CPU side: the host-irradiance
+- `perceptual-magnitude.ts` (+ test) — `distanceModulus`, the one spelling
+  of `5·log10(d / 10 pc)`, and the pair built on it: `apparentMagnitude`
+  (floored at 1e-30 pc for the focal star) and its inverse
+  `absoluteMagnitude` (unfloored: the build derives absmag only away from
+  the origin). Then the reflected-light model's CPU side: the host-irradiance
   magnitude, a body's disc surface brightness and `planetApparentMagnitude`,
   plus `SOFT_TAPER_MARGIN_MAG`, the visibility taper every star and glare
   pass shares. The formula, its GPU mirror and the full-Moon anchor:
