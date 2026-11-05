@@ -37,7 +37,7 @@ export const COHERENCE_LINEAGE: StageLineageSpec<'coherence', 'coherence'> = {
   files: ['coherence'],
 };
 
-export const PROMOTION_LINEAGE:StageLineageSpec<'promotion' | 'promotion.identity', 'promotion'> = {
+export const PROMOTION_LINEAGE: StageLineageSpec<'promotion' | 'promotion.identity', 'promotion'> = {
   stage: 'promotion',
   files: ['promotion', 'promotion.identity'],
   identity: 'promotion.identity',
