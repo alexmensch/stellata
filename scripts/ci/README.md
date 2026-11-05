@@ -68,8 +68,12 @@ the commit that reused it.
 
 **The prefix carries what no stamp records**: the runner OS, the Node and
 Python versions, and `pnpm-lock.yaml`'s hash. A change to any of these starts
-from a cold build. The full key adds the run id and attempt, so every run
-saves a build of its own.
+from a cold build. The full key adds the run id and attempt, so a run that
+saves gets an entry of its own.
+
+**A run saves only when a step built** (`run.ts` writes `built=true|false`
+to the job's `GITHUB_OUTPUT`). A run that rebuilt nothing would upload a copy
+of what it restored, and its next push still finds the same entry.
 
 **Main is forced.** A push to `main` restores nothing and runs
 `--verify-committed --force`, so every merged commit is still built from
@@ -83,8 +87,9 @@ declares (an output a renamed or deleted step left behind) is never saved,
 so a restore cannot bring it back for a reader of the old path to pass on.
 `public/`'s tracked icons and manifest are never cached, and the restore
 (`tar --skip-old-files`) never replaces a file the checkout has, so a path
-tracked since the build was saved keeps its committed content. A run saves even when a step
-fails: a crashed step's stamp is already cleared, and a step that failed
+tracked since the build was saved keeps its committed content. A run that
+built saves even when a step failed: a crashed step's stamp is already
+cleared, and a step that failed
 verification recorded the outputs it built, so a committed copy that still
 differs stales it again on the next push. `cache-cleanup.yml` deletes a pull
 request's entries when it closes.

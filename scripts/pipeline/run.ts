@@ -1,5 +1,7 @@
 // The runner's command line. See README.md#the-runner--runts.
 
+import { appendFileSync } from 'node:fs';
+
 import { REPO_ROOT } from '../util/paths';
 import { loadRepoTable } from './step-table/repo-table';
 import { runSteps } from './runner';
@@ -21,7 +23,7 @@ async function main(): Promise<number> {
     for (const problem of loaded.problems) console.error(`step table rejected: ${problem}`);
     return 1;
   }
-  const { status } = await runSteps(loaded, {
+  const { status, verdicts } = await runSteps(loaded, {
     root: REPO_ROOT,
     targets: expandTargets(STEPS.steps, targets),
     force: args.includes('--force'),
@@ -29,6 +31,10 @@ async function main(): Promise<number> {
     verifyCommitted: args.includes('--verify-committed'),
     log: (line) => console.log(line),
   });
+  const actionsOutput = process.env.GITHUB_OUTPUT;
+  if (actionsOutput !== undefined) {
+    appendFileSync(actionsOutput, `built=${[...verdicts.values()].some((v) => v.kind === 'built')}\n`);
+  }
   return status;
 }
 

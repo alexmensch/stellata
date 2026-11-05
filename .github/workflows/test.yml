@@ -121,11 +121,11 @@ jobs:
       # A tracked file must never come from a cache: only untracked files are
       # saved, and the restore skips any path the checkout already has, which
       # covers a file tracked since the build was saved.
-      - if: ${{ !cancelled() && steps.built.outcome != 'skipped' }}
+      - if: ${{ !cancelled() && steps.built.outputs.built == 'true' }}
         run: |
           set -o pipefail
           pnpm exec tsx scripts/ci/saved-build.ts | tar --null -T - -cf "$RUNNER_TEMP/data-build.tar"
-      - if: ${{ !cancelled() && steps.built.outcome != 'skipped' }}
+      - if: ${{ !cancelled() && steps.built.outputs.built == 'true' }}
         uses: actions/cache/save@v6
         with:
           path: ${{ runner.temp }}/data-build.tar

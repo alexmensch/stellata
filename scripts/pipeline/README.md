@@ -286,7 +286,9 @@ The table's own files are in [step-table/](step-table/README.md#files).
   stamp keys are relative to it, and a step's build stamp (through
   `stampPath`), manual record, run record, handed inputs and lock folder sit under it.
   `run.ts` passes the repo root; tests pass a temporary folder.
-- `run.ts` — the command line over `step-table/steps.ts`.
+- `run.ts` — the command line over `step-table/steps.ts`. Under GitHub
+  Actions it also writes `built=true|false` (whether any step built) to
+  `GITHUB_OUTPUT`, which gates CI's save.
 - `build-files.ts` (tested through `runner.test.ts`) — `buildFiles`: every
   build step's declared outputs, family members and stamp that exist on
   disk, which is the set CI caches
