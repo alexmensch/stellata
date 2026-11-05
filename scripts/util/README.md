@@ -210,7 +210,9 @@ same thing — single-use helpers stay with their consumer.
   and `build:catalog`, which rewrite inputs, the two differ on those entries;
   the runner builds every stamp's inputs through it. A step that needs its
   own input hashes (a lineage header's input map) reads the handed map here
-  and never re-derives them.
+  and never re-derives them; `handedFileHash(hashes, file)` is one entry,
+  throwing when the map holds none (`build:catalog` records `multiples.tsv`'s
+  in the row-index map, and `build:binaries-runtime` checks it with its own).
 - `tsv/` — the one TSV reader (`readTable`, typed columns, cells that keep
   empty and malformed apart) and `defineArtifact`, the codec of every table
   this repo writes. Own README.

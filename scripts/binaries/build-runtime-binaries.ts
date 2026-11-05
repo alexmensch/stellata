@@ -7,10 +7,13 @@ import { CATALOG_ROW_INDEX_MAP } from '../catalog/companions/record-index/catalo
 import { emitArtifacts } from '../util/emit-artifacts';
 import { REPO_ROOT } from '../util/paths';
 import { snapshotCheck } from '../util/snapshot-check';
+import { handedFileHash, stepInputHashes } from '../util/step-input-hashes';
 import { readArtifact } from '../util/sources/source';
 import { MULTIPLES_TSV } from './multiples-tsv';
 import { RUNTIME_BINARIES_OUTPUTS } from './runtime-binaries-outputs';
-import { encodeRuntimeBinaries, type RuntimeBinariesCounts } from './runtime-binaries-pure';
+import {
+  encodeRuntimeBinaries, multiplesHandshake, type RuntimeBinariesCounts,
+} from './runtime-binaries-pure';
 
 const EXPECTED_COUNTS = resolve(REPO_ROOT, 'scripts/binaries/build-runtime-binaries-expected.json');
 
@@ -37,13 +40,16 @@ export function main(): void {
   emitArtifacts({
     outputs: RUNTIME_BINARIES_OUTPUTS,
     files: { binaries: bytes },
-    checks: [snapshotCheck<RuntimeBinariesCounts>({
-      snapshotPath: EXPECTED_COUNTS,
-      actual: c,
-      compare: compareCountSnapshot,
-      failureLabel: 'build-runtime-binaries count',
-      script: 'build:binaries-runtime',
-    })],
+    checks: [
+      multiplesHandshake(map.multiplesSha1, handedFileHash(stepInputHashes(), MULTIPLES_TSV.file)),
+      snapshotCheck<RuntimeBinariesCounts>({
+        snapshotPath: EXPECTED_COUNTS,
+        actual: c,
+        compare: compareCountSnapshot,
+        failureLabel: 'build-runtime-binaries count',
+        script: 'build:binaries-runtime',
+      }),
+    ],
   });
   const out = RUNTIME_BINARIES_OUTPUTS.files.binaries;
   log(`wrote ${relative(REPO_ROOT, out)} (${c.pairs_emitted.toLocaleString()} pairs, ${(bytes.length / 1024).toFixed(1)} KB)`);

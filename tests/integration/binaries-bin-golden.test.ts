@@ -12,6 +12,7 @@ import { MULTIPLES_TSV } from '../../scripts/binaries/multiples-tsv';
 import { encodeRuntimeBinaries, type RuntimeBinaries } from '../../scripts/binaries/runtime-binaries-pure';
 import { parseCatalogRowIndexMap } from '../../scripts/catalog/companions/record-index/catalog-row-index-map-pure';
 import { REPO_ROOT } from '../../scripts/util/paths';
+import { hashBytes } from '../../scripts/util/stamp-hash';
 
 const HERE = resolve(REPO_ROOT, 'scripts/binaries/golden');
 const FIXTURE_MULTIPLES = join(HERE, 'fixture-multiples.tsv');
@@ -76,6 +77,11 @@ describe('binaries.bin golden', () => {
       difference,
       `re-baseline with ${UPDATE_COMMAND} only when the change is meant to alter binaries.bin`,
     ).toBeNull();
+  });
+
+  it('the fixture map was built from the fixture multiples.tsv', () => {
+    const sidecar = parseCatalogRowIndexMap(readFileSync(FIXTURE_ROW_INDEX_MAP, 'utf8'));
+    expect(sidecar.multiplesSha1).toBe(hashBytes(readFileSync(FIXTURE_MULTIPLES)));
   });
 
   it('the loader parses the golden', () => {

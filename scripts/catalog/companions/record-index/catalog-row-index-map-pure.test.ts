@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
 import {
-  parseCatalogRowIndexMap, resolveMultiplesIdx, synthSlotIdx, type CatalogRowIndexMap,
+  parseCatalogRowIndexMap, resolveMultiplesIdx, serializeCatalogRowIndexSidecar, synthSlotIdx,
+  type CatalogRowIndexMap,
 } from './catalog-row-index-map-pure';
 
 const MAP: CatalogRowIndexMap = {
@@ -10,21 +11,28 @@ const MAP: CatalogRowIndexMap = {
   bySynth: { 'synth-03082+4057-Ab': 400 },
 };
 const SYNTH = 'synth-03082+4057-Ab';
+const SHA1 = 'da39a3ee5e6b4b0d3255bfef95601890afd80709';
+const SIDECAR = { multiplesSha1: SHA1, ...MAP };
 
 describe('parseCatalogRowIndexMap', () => {
-  it('reads the three sections', () => {
-    expect(parseCatalogRowIndexMap(JSON.stringify(MAP))).toEqual(MAP);
+  it('reads back what the serializer writes', () => {
+    expect(parseCatalogRowIndexMap(serializeCatalogRowIndexSidecar(SHA1, MAP))).toEqual(SIDECAR);
   });
 
   it('throws on a missing section, never reading it as empty', () => {
-    expect(() => parseCatalogRowIndexMap(JSON.stringify({ byGaia: {}, byHip: {} })))
+    expect(() => parseCatalogRowIndexMap(JSON.stringify({ multiplesSha1: SHA1, byGaia: {}, byHip: {} })))
       .toThrow(/bySynth is missing/);
   });
 
+  it('throws on a missing or malformed multiplesSha1', () => {
+    expect(() => parseCatalogRowIndexMap(JSON.stringify(MAP))).toThrow(/multiplesSha1/);
+    expect(() => parseCatalogRowIndexMap(JSON.stringify({ ...MAP, multiplesSha1: 'x' }))).toThrow(/multiplesSha1/);
+  });
+
   it('throws on an entry that is not a record index', () => {
-    expect(() => parseCatalogRowIndexMap(JSON.stringify({ ...MAP, byHip: { 1: -1 } })))
+    expect(() => parseCatalogRowIndexMap(JSON.stringify({ ...SIDECAR, byHip: { 1: -1 } })))
       .toThrow(/byHip\[1\]/);
-    expect(() => parseCatalogRowIndexMap(JSON.stringify({ ...MAP, byGaia: { 1: '7' } })))
+    expect(() => parseCatalogRowIndexMap(JSON.stringify({ ...SIDECAR, byGaia: { 1: '7' } })))
       .toThrow(/byGaia\[1\]/);
   });
 });

@@ -190,7 +190,9 @@ Three build steps in order, with `data/binaries/multiples.tsv` and
    sits alongside `byGaia` / `byHip`), emits `public/binaries.bin` — one
    fixed-size record per physical pair carrying Kepler elements + sep/PA
    + a hierarchical parent-relation index, in the layout
-   `/src/catalog-format/binaries/` owns. Each end resolves through
+   `/src/catalog-format/binaries/` owns. It refuses to emit when the map's
+   `multiplesSha1` is not the `multiples.tsv` it reads (a catalogue built
+   from another copy). Each end resolves through
    `catalog-row-index-map-pure.ts` (`../catalog/companions/record-index/`),
    the functions the catalogue's wings pass calls too:
    gaia → hip → synth; the synth key composes from the pair's expanded

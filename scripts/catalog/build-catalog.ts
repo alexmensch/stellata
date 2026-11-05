@@ -86,6 +86,8 @@ import {
   renderableOrbitRelations,
   wingRenderablePrimaries,
 } from './companions/record-index/record-index';
+import { serializeCatalogRowIndexSidecar } from './companions/record-index/catalog-row-index-map-pure';
+import { MULTIPLES_TSV } from '../binaries/multiples-tsv';
 import { applySystemDistanceCoherence } from './multiplicity/system-coherence';
 import {
   bridgeGcvsByGaia,
@@ -129,7 +131,7 @@ import { MEMBERSHIP_MANIFEST, manifestDesignations } from './membership/membersh
 import { artifactRows } from '../util/sources/source';
 import { REPO_ROOT as ROOT } from '../util/paths';
 import type { FileHashes } from '../util/build-stamp';
-import { stepInputHashes } from '../util/step-input-hashes';
+import { handedFileHash, stepInputHashes } from '../util/step-input-hashes';
 import {
   CATALOG_CHUNK_DIR, CATALOG_OUTPUTS,
 } from './catalog-outputs';
@@ -1195,13 +1197,9 @@ export async function main() {
   }
   const searchJson = JSON.stringify(searchEntries) + '\n';
 
-  // Catalog row-index map sidecar — lets the runtime binaries loader
-  // resolve a multiples.tsv row's identifier to a catalog.bin record
-  // index without scanning every record at startup. Keyed by Gaia DR3
-  // source_id (decimal string, since source_ids exceed 2^53), HIP, and
-  // synthetic identifier (`synth-<wds_id>-<comp>` for promoted companions
-  // that carry no real ID — Algol Ab). Built once above, after the sort.
-  const rowIndexMapJson = JSON.stringify(rowIndexMap) + '\n';
+  const rowIndexMapJson = serializeCatalogRowIndexSidecar(
+    handedFileHash(inputHashesAtStart, MULTIPLES_TSV.file), rowIndexMap,
+  );
   console.log(
     `Row-index map ${CATALOG_OUTPUTS.files.rowIndexMap} (${Object.keys(rowIndexMap.byGaia).length} ` +
       `Gaia entries, ${Object.keys(rowIndexMap.byHip).length} HIP entries, ` +

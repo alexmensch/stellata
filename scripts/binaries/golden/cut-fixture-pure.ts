@@ -1,6 +1,8 @@
 // Cut multiples.tsv and the catalogue row-index map down to the golden's WDS systems. See README.md.
 
-import type { CatalogRowIndexMap } from '../../catalog/companions/record-index/catalog-row-index-map-pure';
+import type {
+  CatalogRowIndexMap, CatalogRowIndexSidecar,
+} from '../../catalog/companions/record-index/catalog-row-index-map-pure';
 import type { MultiplesRecord } from '../multiples-tsv';
 
 export const FIXTURE_SYSTEMS: readonly string[] = [
@@ -29,11 +31,14 @@ function pick(table: Readonly<Record<string, number>>, keys: Iterable<string>): 
   return out;
 }
 
+/** `multiplesSha1` is the cut multiples.tsv's, so the fixture pair holds the handshake. */
 export function cutRowIndexMap(
   map: CatalogRowIndexMap, records: readonly MultiplesRecord[], systems: readonly string[],
-): CatalogRowIndexMap {
+  multiplesSha1: string,
+): CatalogRowIndexSidecar {
   const synthPrefixes = systems.map((wds) => `synth-${wds}-`);
   return {
+    multiplesSha1,
     byGaia: pick(map.byGaia, records.flatMap((r) => (r.gaiaSourceId === null ? [] : [r.gaiaSourceId]))),
     byHip: pick(map.byHip, records.flatMap((r) => (r.hip === null ? [] : [String(r.hip)]))),
     bySynth: pick(map.bySynth, Object.keys(map.bySynth).filter((k) => synthPrefixes.some((p) => k.startsWith(p)))),

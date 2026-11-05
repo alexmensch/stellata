@@ -22,8 +22,9 @@ scripts/catalog/companions/record-index/
                              resolveMultiplesIdx (gaia → hip → synth) and
                              synthSlotIdx (the blended-sibling retry): how
                              one multiples.tsv component resolves to a
-                             record; parseCatalogRowIndexMap, which throws
-                             on a missing section or a non-index entry.
+                             record; the file's serializer and its parse,
+                             which throws on a missing section or sha1 or a
+                             non-index entry.
   catalog-row-index-map-source.ts
                              CATALOG_ROW_INDEX_MAP, the sidecar declared.
 ```
@@ -32,7 +33,11 @@ scripts/catalog/companions/record-index/
 
 `buildCatalogRowIndexMap` runs after the sort and emits
 `build/catalog-row-index-map.json` with three sections — `byGaia`,
-`byHip`, `bySynth`. `catalog-row-index-map-pure.ts` is how one
+`byHip`, `bySynth` — and `multiplesSha1`, the sha1 of the `multiples.tsv`
+the build consumed, taken from the runner's handed input map. Record indices
+are only true for that copy of the file, so `build:binaries-runtime` refuses
+to emit unless the `multiples.tsv` it reads has the same sha1.
+`catalog-row-index-map-pure.ts` is how one
 `multiples.tsv` component resolves through it, and both the runtime writer
 (`/scripts/binaries/runtime-binaries-pure.ts`) and `resolvePairComponents`
 here call it: `resolveMultiplesIdx` walks gaia → hip → synth, then

@@ -10,9 +10,23 @@ export interface CatalogRowIndexMap {
   bySynth: Record<string, number>;
 }
 
-/** Throws on a missing section or an entry that is not a record index. */
-export function parseCatalogRowIndexMap(text: string): CatalogRowIndexMap {
+/** The map as build:catalog writes it: the sections plus the sha1 of the
+ *  multiples.tsv the build consumed, which a reader holds its own copy to. */
+export interface CatalogRowIndexSidecar extends CatalogRowIndexMap {
+  readonly multiplesSha1: string;
+}
+
+export function serializeCatalogRowIndexSidecar(multiplesSha1: string, map: CatalogRowIndexMap): string {
+  return JSON.stringify({ multiplesSha1, byGaia: map.byGaia, byHip: map.byHip, bySynth: map.bySynth }) + '\n';
+}
+
+/** Throws on a missing section or sha1, or an entry that is not a record index. */
+export function parseCatalogRowIndexMap(text: string): CatalogRowIndexSidecar {
   const raw = JSON.parse(text) as Record<string, unknown>;
+  const { multiplesSha1 } = raw;
+  if (typeof multiplesSha1 !== 'string' || !/^[0-9a-f]{40}$/.test(multiplesSha1)) {
+    throw new Error(`catalog row-index map: multiplesSha1 is ${JSON.stringify(multiplesSha1)}, not a sha1`);
+  }
   const section = (name: keyof CatalogRowIndexMap): Record<string, number> => {
     const value = raw[name];
     if (typeof value !== 'object' || value === null || Array.isArray(value)) {
@@ -25,7 +39,7 @@ export function parseCatalogRowIndexMap(text: string): CatalogRowIndexMap {
     }
     return value as Record<string, number>;
   };
-  return { byGaia: section('byGaia'), byHip: section('byHip'), bySynth: section('bySynth') };
+  return { multiplesSha1, byGaia: section('byGaia'), byHip: section('byHip'), bySynth: section('bySynth') };
 }
 
 /** gaia → hip → synth, the first section that holds the component's key. */

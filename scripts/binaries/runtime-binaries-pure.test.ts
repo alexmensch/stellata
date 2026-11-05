@@ -7,6 +7,7 @@ import type { CatalogRowIndexMap } from '../catalog/companions/record-index/cata
 import { multiplesRow } from '../catalog/companions/multiples-fixture';
 import {
   assignParentRelations,
+  multiplesHandshake,
   overrideInnerPrimaryIndices,
   pairsFromRows,
   planRecords,
@@ -278,6 +279,15 @@ describe('planRecords', () => {
     expect(record(records, 0)).toMatchObject({ primary: 100, secondary: 200 });
   });
 
+});
+
+describe('multiplesHandshake', () => {
+  it('passes on the same multiples.tsv and refuses another', () => {
+    expect(multiplesHandshake('a'.repeat(40), 'a'.repeat(40)).kind).toBe('pass');
+    expect(multiplesHandshake('a'.repeat(40), 'b'.repeat(40))).toMatchObject({
+      kind: 'fail', message: expect.stringMatching(/build:catalog/),
+    });
+  });
 });
 
 describe('sameRelationAlias', () => {

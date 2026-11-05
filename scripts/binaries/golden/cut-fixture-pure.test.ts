@@ -37,7 +37,8 @@ describe('cutRowIndexMap', () => {
       bySynth: { 'synth-00001+0001-B': 7, 'synth-00002-0002-B': 8 },
     };
     const cut = cutMultiples(RECORDS, ['00001+0001']);
-    expect(cutRowIndexMap(map, cut, ['00001+0001'])).toEqual({
+    expect(cutRowIndexMap(map, cut, ['00001+0001'], 'f'.repeat(40))).toEqual({
+      multiplesSha1: 'f'.repeat(40),
       byGaia: { 100: 1, 101: 2 },
       byHip: { 10: 4, 12: 5 },
       bySynth: { 'synth-00001+0001-B': 7 },

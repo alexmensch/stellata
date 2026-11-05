@@ -15,7 +15,8 @@ data, so any restructuring of it can prove it writes the same
 - `fixture-row-index-map.json` — the real `build/catalog-row-index-map.json`
   cut down to the gaia / hip ids those rows carry and the `synth-<wds>-`
   keys of those systems. Row indices are the real ones, so the drops and
-  re-homes are the ones the full build makes.
+  re-homes are the ones the full build makes. Its `multiplesSha1` is the
+  fixture `multiples.tsv`'s own, which the test holds it to.
 - `cut-fixture.ts` (+ `cut-fixture-pure.ts`, its cut and test) — writes both
   fixtures from the real `multiples.tsv` and a built row-index map.
   `FIXTURE_SYSTEMS` is the system list; the test holds the committed
@@ -32,7 +33,8 @@ The fixtures are frozen inputs: the golden pins the encoder, not the current
 data. The test reads the fixture through the `MULTIPLES_TSV` codec, which
 requires the real file's exact header, so a column `multiples.tsv` gains has
 to reach the fixture too. When the encoder does not read it, add it to the
-existing rows with the real file's values: the golden stands. Re-cut
+existing rows with the real file's values and set the map's `multiplesSha1`
+to the edited file's sha1: the golden stands. Re-cut
 (`tsx scripts/binaries/golden/cut-fixture.ts`, which needs the LFS
 `multiples.tsv` and a built catalogue) only when the encoder starts reading
 a new column or `FIXTURE_SYSTEMS` changes; the cut takes the current row

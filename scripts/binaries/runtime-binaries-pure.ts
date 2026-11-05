@@ -12,6 +12,7 @@ import {
   splitComponents,
 } from './component-tokens-pure';
 import type { MultiplesRecord } from './multiples-tsv';
+import type { Check } from '../util/emit-artifacts';
 
 /** One physical pair: a system's primary and secondary rows joined. Elements
  *  and WDS geometry are the primary row's. */
@@ -307,6 +308,18 @@ export function planRecords(
   }
   counts.pairs_emitted = records.length;
   return { records, counts };
+}
+
+/** Fails unless the row-index map was built from the multiples.tsv this run
+ *  reads: against another copy, record indices resolve to the wrong stars. */
+export function multiplesHandshake(builtFrom: string, reading: string): Check {
+  return builtFrom === reading
+    ? { kind: 'pass' }
+    : {
+        kind: 'fail',
+        message: `the catalogue row-index map was built from multiples.tsv ${builtFrom}, `
+          + `but this run reads ${reading}. Re-run \`pnpm run build:catalog\`.`,
+      };
 }
 
 export interface RuntimeBinaries {
