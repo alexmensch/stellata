@@ -24,7 +24,6 @@ import {
 import {
   FLAG_BINARY_COMPANION_ONLY,
   FLAG_BINARY_COMPANION_SYNTHETIC,
-  NO_CONSTELLATION_INDEX,
   SOLAR_BV_FALLBACK,
 } from '../../../src/catalog-format/record/catalog-pure';
 import {
@@ -37,6 +36,7 @@ import { avSolToStar, type DustGrid } from '../distance/dust/dust-deextinction-p
 import { R_V } from '../../../src/astro-core/extinction/dust-raymarch-pure';
 import type { Star } from '../parse/stars-parse';
 import { makeStar as makeStarWithDefaults } from '../parse/star-fixture';
+import { NO_DESIGNATION_CON } from '../classic-ids/designation-constellation-pure';
 import { multiplesRow } from './multiples-fixture';
 import { MULTIPLES_COLUMNS } from '../../binaries/multiples-tsv';
 import { gaiaAstrometryRow } from '../distance/astrometry-fixture';
@@ -1393,11 +1393,11 @@ describe('promoteCompanions', () => {
     const aqr = CONSTELLATIONS.findIndex((c) => c.code.toLowerCase() === 'aqr');
     const anchor = makeStar({
       x: 10, y: 0, z: 0, absmag: 1.0, proper: 'Fomalhaut', gaiaSourceId: 'A',
-      conIndex: psa, desigConIndex: psa,
+      conIndex: psa, desigCon: { via: 'iv27a', index: psa },
     });
     const member = makeStar({
       x: 10.0005, y: 0, z: 0, absmag: 9.0, gaiaSourceId: 'C',
-      conIndex: aqr, desigConIndex: NO_CONSTELLATION_INDEX,
+      conIndex: aqr, desigCon: NO_DESIGNATION_CON,
     });
     const rows: MultiplesTsvRow[] = [
       multiplesRow({
@@ -1414,7 +1414,7 @@ describe('promoteCompanions', () => {
     const { stats } = promoteCompanions(rows, [anchor, member], inputs());
     expect(stats.alreadyInCatalog).toBe(1);
     expect(stats.existingDesigConFromAnchor).toBe(1);
-    expect(member.desigConIndex).toBe(psa);
+    expect(member.desigCon).toEqual({ via: 'anchor', index: psa });
     // Positional membership is untouched — the two answer different questions.
     expect(member.conIndex).toBe(aqr);
   });
@@ -1424,11 +1424,11 @@ describe('promoteCompanions', () => {
     const aqr = CONSTELLATIONS.findIndex((c) => c.code.toLowerCase() === 'aqr');
     const anchor = makeStar({
       x: 10, y: 0, z: 0, absmag: 1.0, proper: 'Fomalhaut', gaiaSourceId: 'A',
-      conIndex: psa, desigConIndex: psa,
+      conIndex: psa, desigCon: { via: 'iv27a', index: psa },
     });
     const member = makeStar({
       x: 10.0005, y: 0, z: 0, absmag: 9.0, gaiaSourceId: 'C',
-      conIndex: aqr, desigConIndex: aqr,
+      conIndex: aqr, desigCon: { via: 'iv27a', index: aqr },
     });
     const rows: MultiplesTsvRow[] = [
       multiplesRow({
@@ -1444,7 +1444,7 @@ describe('promoteCompanions', () => {
     ];
     const { stats } = promoteCompanions(rows, [anchor, member], inputs());
     expect(stats.existingDesigConFromAnchor).toBe(0);
-    expect(member.desigConIndex).toBe(aqr);
+    expect(member.desigCon).toEqual({ via: 'iv27a', index: aqr });
   });
 
   it('own-gaia miss + HIP naming a NON-anchor existing record is alreadyInCatalog, not a twin', () => {
@@ -2267,7 +2267,7 @@ describe('promoteCompanions', () => {
     const d = newStars.find((s) => s.gaiaSourceId === '5317053587001807104');
     expect(d, 'D promoted').toBeDefined();
     expect(d?.conIndex).toBe(vel);
-    expect(d?.desigConIndex).toBe(NO_CONSTELLATION_INDEX);
+    expect(d?.desigCon).toEqual(NO_DESIGNATION_CON);
     expect([d?.vx, d?.vy, d?.vz]).toEqual([0, 0, 0]);
     expect(stats.constellationSplitFromAnchor).toBe(0);
   });

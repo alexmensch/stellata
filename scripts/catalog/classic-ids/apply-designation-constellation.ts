@@ -7,7 +7,6 @@ import { CROSS_INDEX } from './cross-index-source';
 import {
   buildDesignationConIndex,
   resolveDesignationConIndex,
-  setDesignationCon,
   type DesignationConIndex,
 } from './designation-constellation-pure';
 
@@ -40,7 +39,7 @@ export function applyDesignationConstellations(
   for (const star of stars) {
     const conIndex = resolveDesignationConIndex(inputs.desigCon, star.hd, star.hip);
     if (conIndex === NO_CONSTELLATION_INDEX) continue;
-    setDesignationCon(star, conIndex, { via: 'iv27a' });
+    star.desigCon = { via: 'iv27a', index: conIndex };
     desigConFromCrossIndex++;
   }
   return { desigConFromCrossIndex, crossIndexUnknownCst: inputs.crossIndexUnknownCst };

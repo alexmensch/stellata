@@ -47,8 +47,8 @@ star's *designation* constellation is fixed by nomenclature and diverges from
 position once a boundary moves past a named star: ρ Aql / 67 Aql (HIP 99742) has
 been positionally in **Delphinus** since 1992 and is ρ **Aquilae** permanently.
 The manifest carries no editorial `con` column,
-so the walk leaves `desigConIndex` (search-index `dc`) at
-`NO_CONSTELLATION_INDEX` and three later passes fill it — the IAU WGSN
+so the walk leaves `desigCon` (search-index `dc`) at
+`{ via: 'none' }` and three later passes fill it — the IAU WGSN
 designation the naming ladder resolves states its own constellation and wins
 ([The designation constellation](../../naming/README.md#the-designation-constellation)), else the classic-ID
 label pass fills it from IV/27A keyed on the record's own HD/HIP, else a GCVS
@@ -68,7 +68,7 @@ designation (Fomalhaut C is α PsA C while sitting in Aquarius).
 
 **A GCVS designation names its own constellation.** "LT Vul" names Vulpecula
 whatever any catalogue column says, so `applyVariability` (`../gcvs/gcvs-parse.ts`)
-sets `desigConIndex` from the designation's trailing abbreviation wherever
+sets `desigCon` from the designation's trailing abbreviation wherever
 IV/27A left it empty — `gcvsDesignationCon` pins **<!-- count:build-catalog/gcvsDesignationCon -->7,929<!-- /count -->**. Its authority is
 not a fallback position: the cell it used to correct was untrustworthy both
 ways —

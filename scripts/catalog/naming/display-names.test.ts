@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest';
 
 import { FLAG_HAS_NAME, NO_CONSTELLATION_INDEX } from '../../../src/catalog-format/record/catalog-pure';
 import type { ComponentDesignation } from '../companions/record-index/record-index';
+import { NO_DESIGNATION_CON } from '../classic-ids/designation-constellation-pure';
 import { assignDisplayNames, type DisplayNameResult, type DisplayNameSource } from './display-names';
 
 const CONSTELLATIONS = [{ code: 'Ori' }, { code: 'Cep' }, { code: 'CMa' }];
@@ -28,7 +29,7 @@ function star(over: Partial<DisplayNameSource> = {}): DisplayNameSource {
     hr: null,
     gl: null,
     conIndex: NO_CONSTELLATION_INDEX,
-    desigConIndex: NO_CONSTELLATION_INDEX,
+    desigCon: NO_DESIGNATION_CON,
     flags: 0,
     ...over,
   };
@@ -48,7 +49,7 @@ describe('assignDisplayNames', () => {
     // the runtime composes it off the search index.
     const stars = [
       star({ iauName: 'Sirius', hip: 32349 }),
-      star({ bayer: 'θ', bayerSup: 1, desigConIndex: ORI, flags: FLAG_HAS_NAME }),
+      star({ bayer: 'θ', bayerSup: 1, desigCon: { via: 'iv27a', index: ORI }, flags: FLAG_HAS_NAME }),
       star({ hip: 11767 }),
     ];
     const out = assignDisplayNames(stars, noComponents, CONSTELLATIONS, new Map(), [1, 2, 3]);
@@ -63,7 +64,7 @@ describe('assignDisplayNames', () => {
   it('renders a designation against dc, never the positional constellation', () => {
     // ρ Aql sits in Delphinus and is ρ Aquilae permanently; the positional
     // index would rename it (/docs/star-naming.md#6-rendering--glyphs-everywhere-no-fallback-path).
-    const stars = [star({ bayer: 'δ', conIndex: CMA, desigConIndex: 1 })];
+    const stars = [star({ bayer: 'δ', conIndex: CMA, desigCon: { via: 'iv27a', index: 1 } })];
     assignDisplayNames(stars, noComponents, CONSTELLATIONS, new Map(), [1]);
     expect(
       labelOf(assignDisplayNames(stars, noComponents, CONSTELLATIONS, new Map(), [1]), 0),
@@ -140,7 +141,7 @@ describe('assignDisplayNames', () => {
   it('keeps a borrowed DESIGNATION base out of the name table', () => {
     // The same borrow off a Bayer anchor composes at runtime instead: only
     // the NAME tiers reach catalog.bin.
-    const stars = [star({ bayer: 'θ', bayerSup: 1, desigConIndex: ORI }), star()];
+    const stars = [star({ bayer: 'θ', bayerSup: 1, desigCon: { via: 'iv27a', index: ORI } }), star()];
     const components = new Map<number, ComponentDesignation>([
       [1, { comp: 'C', primaryIdx: 0 }],
     ]);

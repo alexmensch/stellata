@@ -3,10 +3,10 @@
 // See README.md#the-record-side-join.
 
 import { readArtifact } from '../../util/sources/source';
-import { FLAG_IS_SOL, NO_CONSTELLATION_INDEX } from '../../../src/catalog-format/record/catalog-pure';
+import { FLAG_IS_SOL } from '../../../src/catalog-format/record/catalog-pure';
 import { CON_INDEX } from '../parse/constellations/constellations';
 import { foldNameKey } from './wgsn-normalise-pure';
-import { setDesignationCon, type DesignationConSource } from '../classic-ids/designation-constellation-pure';
+import type { DesignationCon } from '../classic-ids/designation-constellation-pure';
 import {
   buildWgsnIndex,
   routeDisposedProper,
@@ -47,8 +47,7 @@ export interface NamingTarget {
   hip: number | null;
   hd: number | null;
   hr: number | null;
-  desigConIndex: number;
-  desigConSource: DesignationConSource;
+  desigCon: DesignationCon;
   flam: number | null;
 }
 
@@ -182,14 +181,15 @@ function applyDesignationConstellation(
 ): void {
   const idx = CON_INDEX.get(dc.toLowerCase());
   if (idx === undefined) return;
-  const conflict = star.desigConIndex !== NO_CONSTELLATION_INDEX && star.desigConIndex !== idx;
-  if (conflict) {
+  const prior = star.desigCon;
+  const displaced = prior.via !== 'none' && prior.index !== idx ? prior.index : null;
+  if (displaced !== null) {
     counts.namingDesigConWgsnConflict++;
-    const displaced = constellations[star.desigConIndex]?.code;
-    if (star.flam !== null && displaced !== undefined) {
-      star.aliases.push(`${star.flam} ${displaced}`);
+    const code = constellations[displaced]?.code;
+    if (star.flam !== null && code !== undefined) {
+      star.aliases.push(`${star.flam} ${code}`);
     }
   }
-  setDesignationCon(star, idx, { via, displaced: conflict ? star.desigConIndex : null });
+  star.desigCon = { via, index: idx, displaced };
   counts.namingDesigConFromWgsn++;
 }

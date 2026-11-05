@@ -105,8 +105,8 @@ scripts/catalog/classic-ids/
     (+ test)                      IV/27A's `cst` keyed by HD/HIP — the
                                   constellation a Bayer / Flamsteed
                                   designation is NAMED for — and
-                                  `setDesignationCon`, every cascade tier's
-                                  one writer of a record's value. Pure.
+                                  `DesignationCon`, a record's value with
+                                  the cascade tier that wrote it. Pure.
   apply-designation-constellation.ts
                                   The record build's one remaining classic-ID
                                   pass: loads IV/27A's cross-index and applies
@@ -270,7 +270,7 @@ HIP 72105 to HD 129988 (ε Boo B) while SIMBAD, V/50 and the record's own
 
 ## The designation constellation
 
-`desigConIndex` (search-index `dc`) is the constellation a Bayer / Flamsteed
+`desigCon` (search-index `dc`) is the constellation a Bayer / Flamsteed
 designation is NAMED for. It is fixed by nomenclature and does not migrate when
 proper motion carries a star across a
 [Delporte 1930](/data/papers/index.md#delporte1930) boundary, so it cannot be
@@ -281,10 +281,10 @@ IAU WGSN designation -> IV/27A `cst` by HD -> by HIP
   -> GCVS trailing abbreviation -> positional conIndex
 ```
 
-Every tier writes through `setDesignationCon`, which sets `desigConIndex` and
-`desigConSource` together: the tier that wrote it (`wgsn-bayer`, `wgsn-gould`,
-`iv27a`, `gcvs`, or `anchor` for a companion that took its system anchor's),
-and for an authority tier the IV/27A value it overwrote with a different one;
+`DesignationCon` holds the index with the tier that wrote it (`wgsn-bayer`,
+`wgsn-gould`, `iv27a`, `gcvs`, or `anchor` for a companion that took its system
+anchor's), and for an authority tier the IV/27A index it overwrote with a
+different one; `{ via: 'none' }` until a tier writes it.
 [Naming lineage](../naming/README.md#naming-lineage) records both.
 
 The authority tops it because it states which constellation its OWN

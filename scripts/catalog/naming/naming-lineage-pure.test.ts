@@ -1,16 +1,14 @@
 import { describe, expect, it } from 'vitest';
 
 import { paramsOf } from '../lineage/lineage-row-pure';
-import { NO_DESIGNATION_CON, type DesignationConSource } from '../classic-ids/designation-constellation-pure';
 import type { NamedRecord } from './display-names';
-import { namingLabels, namingLineageLines, namingLineageRows, type NamingLineageRecord } from './naming-lineage-pure';
+import { namingLabels, namingLineageRows, type NamingLineageRecord } from './naming-lineage-pure';
 
 const CONS = [{ code: 'Dra' }, { code: 'Her' }];
 const DRA = 0;
 const HER = 1;
 
-const rec = (originKey: string, desigConSource: DesignationConSource = NO_DESIGNATION_CON): NamingLineageRecord =>
-  ({ originKey, desigConSource });
+const rec = (originKey: string): NamingLineageRecord => ({ originKey });
 
 const brief = (records: NamedRecord[], stars: NamingLineageRecord[]) =>
   [...namingLineageRows(records, stars, CONS)].map((r) => ({ key: r.key, role: r.role, code: r.code, params: paramsOf(r) }));
@@ -20,9 +18,9 @@ describe('namingLineageRows', () => {
     const records: NamedRecord[] = [{
       name: { kind: 'own', label: 'Alrakis', tier: 'iau', letter: null },
       set: { iauName: 'Alrakis', bayer: 'μ', bayerSup: 1, flamsteed: 21, hip: 83608, dc: 'Dra' },
-      dc: { from: 'designation', index: DRA },
+      dc: { from: 'designation', con: { via: 'wgsn-bayer', index: DRA, displaced: HER } },
     }];
-    expect(brief(records, [rec('spine:1', { via: 'wgsn-bayer', displaced: HER })])).toEqual([
+    expect(brief(records, [rec('spine:1')])).toEqual([
       { key: 'spine:1', role: 'outcome', code: 'naming.name.own', params: { tier: 'iau', label: 'Alrakis' } },
       { key: 'spine:1', role: 'refused', code: 'naming.name.lower-tier', params: { tier: 'bayer', label: 'μ¹ Dra' } },
       { key: 'spine:1', role: 'refused', code: 'naming.name.lower-tier', params: { tier: 'flamsteed', label: '21 Dra' } },
@@ -69,15 +67,6 @@ describe('namingLineageRows', () => {
     expect(brief(records, [rec('gaia_dr3:1')])).toEqual([
       { key: 'gaia_dr3:1', role: 'outcome', code: 'naming.name.unlabelled', params: {} },
     ]);
-  });
-
-  it('refuses a designation constellation no tier wrote', () => {
-    const records: NamedRecord[] = [{
-      name: { kind: 'own', label: '21 Dra', tier: 'flamsteed', letter: null },
-      set: { flamsteed: 21, dc: 'Dra' },
-      dc: { from: 'designation', index: DRA },
-    }];
-    expect(() => namingLineageLines(records, [rec('spine:3')], CONS)).toThrow(/no tier wrote/);
   });
 });
 

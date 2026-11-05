@@ -2,7 +2,6 @@
 
 import { paramsOf, paramsText, stageLineageLine, type LineageLine, type LineageParams, type LineageRole, type LineageRow } from '../lineage/lineage-row-pure';
 import { LIVE, stageCodes, type CodeDeclaration } from '../lineage/reason-codes-pure';
-import type { DesignationConSource } from '../classic-ids/designation-constellation-pure';
 import type { NamedRecord } from './display-names';
 import {
   designationAtTier,
@@ -42,7 +41,6 @@ type Branch = Parameters<typeof NAMING_CODES.code>[0];
 /** Structural subset of `Star` the serialiser reads. */
 export interface NamingLineageRecord {
   originKey: string;
-  desigConSource: DesignationConSource;
 }
 
 type TierParams = { tier: NameTier; label: string };
@@ -107,15 +105,13 @@ export function* namingLineageRows(
       yield row('outcome', 'dc.none', {});
       continue;
     }
-    const con = constellations[dc.index].code;
     if (dc.from === 'positional') {
-      yield row('outcome', 'dc.positional', { con });
+      yield row('outcome', 'dc.positional', { con: constellations[dc.index].code });
       continue;
     }
-    const source = stars[i].desigConSource;
+    const source = dc.con;
+    const con = constellations[source.index].code;
     switch (source.via) {
-      case 'none':
-        throw new Error(`naming: record ${key} renders against a designation constellation no tier wrote`);
       case 'iv27a': case 'gcvs': case 'anchor':
         yield row('outcome', `dc.${source.via}`, { con });
         break;

@@ -4,6 +4,7 @@
 
 import { FLAG_HAS_NAME, NO_CONSTELLATION_INDEX } from '../../../src/catalog-format/record/catalog-pure';
 import type { ComponentDesignation } from '../companions/record-index/record-index';
+import type { DesignationCon, StatedDesignationCon } from '../classic-ids/designation-constellation-pure';
 import {
   isApprovedName,
   NAME_TIERS,
@@ -31,21 +32,22 @@ export interface DisplayNameSource {
   hr: number | null;
   gl: string | null;
   conIndex: number;
-  desigConIndex: number;
+  desigCon: DesignationCon;
   flags: number;
 }
 
 /** Which constellation the record's constellation-relative designations
  *  render against. */
 export type DesignationConUse =
-  | { from: 'designation' | 'positional'; index: number }
+  | { from: 'designation'; con: StatedDesignationCon }
+  | { from: 'positional'; index: number }
   | { from: 'none' };
 
 /** The designation's own constellation, never the positional one: once a
  *  boundary moves past a named star the two diverge and the positional
  *  index renames ρ Aql to ρ Del (/docs/star-naming.md#6-rendering--glyphs-everywhere-no-fallback-path). */
-export function designationConUse(star: Pick<DisplayNameSource, 'desigConIndex' | 'conIndex'>): DesignationConUse {
-  if (star.desigConIndex !== NO_CONSTELLATION_INDEX) return { from: 'designation', index: star.desigConIndex };
+export function designationConUse(star: Pick<DisplayNameSource, 'desigCon' | 'conIndex'>): DesignationConUse {
+  if (star.desigCon.via !== 'none') return { from: 'designation', con: star.desigCon };
   if (star.conIndex !== NO_CONSTELLATION_INDEX) return { from: 'positional', index: star.conIndex };
   return { from: 'none' };
 }
@@ -56,7 +58,8 @@ export function designationSetOf(
   override?: string,
   dc: DesignationConUse = designationConUse(star),
 ): DesignationSet {
-  const con = dc.from === 'none' ? undefined : constellations[dc.index];
+  const con = dc.from === 'none' ? undefined
+    : constellations[dc.from === 'designation' ? dc.con.index : dc.index];
   const set: DesignationSet = {};
   if (override !== undefined) set.override = override;
   if (star.iauName !== null) set.iauName = star.iauName;

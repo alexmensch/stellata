@@ -114,7 +114,7 @@ import { printedByHip } from '../photometry/hip-photometry-parse-pure';
 import { emptyTallyPartition } from '../../util/counts/tally-pure';
 import type { ManifestRecord } from '../membership/membership-manifest-tsv';
 import { type ConstellationAssignment } from './constellations/constellations';
-import { NO_DESIGNATION_CON, type DesignationConSource } from '../classic-ids/designation-constellation-pure';
+import { NO_DESIGNATION_CON, type DesignationCon } from '../classic-ids/designation-constellation-pure';
 import {
   applyBailerJonesOverride,
   applyLmcKinematicOverride,
@@ -153,9 +153,7 @@ export interface Star {
    *  the IAU WGSN designation the naming ladder resolves states it, else
    *  IV/27A keyed on HD/HIP, else a GCVS designation's own trailing
    *  abbreviation. See ./constellations/README.md#positional-constellation-membership. */
-  desigConIndex: number;
-  /** The cascade tier that wrote `desigConIndex`; set only by `setDesignationCon`. */
-  desigConSource: DesignationConSource;
+  desigCon: DesignationCon;
   flags: number;
   /** The record's display name — what `catalog.bin`'s name table carries.
    *  The manifest's printed cell until the naming ladder runs, then the
@@ -724,8 +722,7 @@ export function readStars(
       conIndex,
       // Left unset here: three later passes fill it, and everything else
       // reads `conIndex`.
-      desigConIndex: NO_CONSTELLATION_INDEX,
-      desigConSource: NO_DESIGNATION_CON,
+      desigCon: NO_DESIGNATION_CON,
       flags,
       proper, bayer, hip,
       hd: row.hd,

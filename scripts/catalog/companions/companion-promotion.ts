@@ -5,7 +5,6 @@
 import {
   FLAG_BINARY_COMPANION_ONLY,
   FLAG_BINARY_COMPANION_SYNTHETIC,
-  NO_CONSTELLATION_INDEX,
 } from '../../../src/catalog-format/record/catalog-pure';
 import { OPTICAL_DOUBLE_MIN_SEP_PC } from '../record/record-build-pure';
 import { absoluteMagnitude, apparentMagnitude } from '../../../src/astro-core/perceptual-magnitude';
@@ -40,7 +39,7 @@ import { ARCSEC_TO_RAD } from '../../../src/astro-core/astronomy-constants';
 import { equatorialTangentBasisAt } from '../../../src/astro-core/equatorial-basis';
 import type { ConstellationAssignment } from '../parse/constellations/constellations';
 import type { Star } from '../parse/stars-parse';
-import { inheritedDesignationCon, setDesignationCon } from '../classic-ids/designation-constellation-pure';
+import { inheritedDesignationCon, NO_DESIGNATION_CON } from '../classic-ids/designation-constellation-pure';
 import type { GaiaAstrometryCatalogRow } from '../distance/direction-cascade';
 import { isCoherenceAnchorGrade } from '../multiplicity/anchor-grade-pure';
 import {
@@ -1493,11 +1492,11 @@ function inheritAnchorDesignationCon(
   anchor: Star | null,
 ): boolean {
   if (anchor === null
-      || member.desigConIndex !== NO_CONSTELLATION_INDEX
-      || anchor.desigConIndex === NO_CONSTELLATION_INDEX) {
+      || member.desigCon.via !== 'none'
+      || anchor.desigCon.via === 'none') {
     return false;
   }
-  setDesignationCon(member, anchor.desigConIndex, { via: 'anchor' });
+  member.desigCon = { via: 'anchor', index: anchor.desigCon.index };
   return true;
 }
 
@@ -1706,7 +1705,8 @@ function promoteRow(
   if (usesSynth) flags |= FLAG_BINARY_COMPANION_SYNTHETIC;
 
   const conIndex = state.conAssignment.indexAt(position.x, position.y, position.z);
-  const { desigConIndex, desigConSource } = inheritedDesignationCon(inheritAnchor ?? null);
+  const desigCon = inheritAnchor === undefined || inheritAnchor === null
+    ? NO_DESIGNATION_CON : inheritedDesignationCon(inheritAnchor.desigCon);
 
   state.newStars.push({
     x: position.x, y: position.y, z: position.z,
@@ -1716,8 +1716,7 @@ function promoteRow(
     lumClass: spectral.info.lumClass,
     physicalRadius: physicalRadius(absmag, spectral.info),
     conIndex,
-    desigConIndex,
-    desigConSource,
+    desigCon,
     flags,
     // Every display name is composed post-sort from the structured
     // designation set, so a minted record ships none of its own.
