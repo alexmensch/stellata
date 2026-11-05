@@ -7,7 +7,8 @@ import {
   type UnitVector,
 } from '../../../src/astro-core/equatorial-basis';
 import { gaia5pUnreliable, gaiaHas5pSolution } from './gaia-distrust';
-import { MAS_TO_RAD, type VelocityVia } from './velocity';
+import { type VelocityVia } from './velocity';
+import { MAS_TO_RAD } from '../../../src/astro-core/astronomy-constants';
 import type { SimbadRecordKeys } from '../simbad/simbad-namespace-ladder-pure';
 import type { Tycho2Row } from '../tycho2-parse';
 import type { AnySourceRowRef, SourceRowRef } from '../../util/sources/row-ref-pure';

@@ -2,8 +2,9 @@
 // thresholds, and which catalogue supplied the proper motion.
 
 import { equatorialTangentBasis, type UnitVector } from '../../../src/astro-core/equatorial-basis';
-
-export const MAS_TO_RAD = Math.PI / (180 * 3600 * 1000);
+import {
+  DAYS_PER_JULIAN_YEAR, KM_PC, MAS_TO_RAD, SECONDS_PER_DAY,
+} from '../../../src/astro-core/astronomy-constants';
 
 // Which catalogue supplied the space-motion PM for this row's velocity —
 // provenance, not coherence. It maps off the direction tier wherever that tier
@@ -21,9 +22,7 @@ export const VELOCITY_VIA_VALUES = [
 
 export type VelocityVia = (typeof VELOCITY_VIA_VALUES)[number];
 
-// 1 km/s in pc/yr: (1 km/s)·(1 Julian yr in s) / (1 pc in km)
-//   = 3.15576e7 s / 3.0856775814913673e13 km ≈ 1.0227121651e-6.
-export const KM_S_TO_PC_YR = 3.15576e7 / 3.0856775814913673e13;
+export const KM_S_TO_PC_YR = KM_PC * DAYS_PER_JULIAN_YEAR * SECONDS_PER_DAY;
 
 // Space-velocity sanity ceiling. The Galactic escape velocity near Sol is
 // ~530 km/s; the fastest known hypervelocity stars reach ~1700 km/s but none

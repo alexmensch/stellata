@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { KM_S_TO_PC_YR, MAS_TO_RAD, velocityPcPerYr } from './velocity';
+import { KM_S_TO_PC_YR, velocityPcPerYr } from './velocity';
+import { MAS_TO_RAD } from '../../../src/astro-core/astronomy-constants';
 import { equatorialTangentBasis } from '../../../src/astro-core/equatorial-basis';
 
 describe('velocityPcPerYr', () => {
