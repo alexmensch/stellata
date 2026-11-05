@@ -14,7 +14,7 @@ which is what the stop message prints and what runs it by hand, so the three
 pulls with no target before (`refresh-simbad-sptype.py`,
 `refresh-simbad-wds-xids.py`, `refresh-msc.py`) gain one. A TypeScript manual
 step, pull or bake (`manual-step-outputs.ts`'s `tsManual`; the two Horizons
-fetchers today), names its `declareOutputs` constant as a TypeScript build
+fetchers and `measure:band-resolved` today), names its `declareOutputs` constant as a TypeScript build
 does, and one that describes itself exports `describe`
 ([util/README.md](../../util/README.md), `emit-artifacts.ts` entry); a Python
 one lists its files, plus any families.
@@ -186,5 +186,5 @@ the others once, and that rebuild appends nothing.
   `package.json` target to `record.ts <name>` through the launcher, and every
   pull's and describing bake's `--describe` to running (Python under
   `python3 -I -S`, TypeScript through `tsx` and the launcher; skipped while the manifest is
-  an unsmudged LFS pointer, or before `build:clouds` has written
-  `public/clouds.json`).
+  an unsmudged LFS pointer; a bake's case, while the file its record's
+  `requestFrom` names is unbuilt).

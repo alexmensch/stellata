@@ -10,22 +10,33 @@ pnpm run measure:band-resolved              # needs a built public/catalog.bin, 
 pnpm run measure:band-resolved -- --manifest path/to/catalog-manifest.json
 ```
 
+It is a TypeScript manual bake on the step table
+([Step kinds](../pipeline/README.md#step-kinds)), so `record.ts` runs it and
+writes `data/stamps/measure-band-resolved.json`. Its record holds a hash of
+each catalogue column in `STAR_FIELDS`, never the catalogue's bytes
+(`describe`, through `catalogColumnsProjection`): a catalogue rebuild that
+moves any measured column (any membership change does) stops the build and
+names this command, and one that moves only a name or an unread field
+leaves it fresh. A `--manifest` run measures another catalogue and writes no
+record, so the table reads stale until a plain run.
+
 ```
 scripts/milkyway-calibration/
   measure-resolved-light.ts   Entry point. Reads the four record columns the
                               measurement needs (xyz, absmag), prints every
                               figure, and writes
-                              src/astro-core/milkyway/calibration/resolved-hole-table.ts.
+                              src/astro-core/milkyway/calibration/resolved-hole-table.ts;
+                              its describe is the same columns' projection.
+  resolved-hole-table-outputs.ts
+                              RESOLVED_HOLE_TABLE_OUTPUTS, the one file the
+                              bake writes, as its emitArtifacts declaration.
+  measure-inputs.test.ts      The bake's input set: the column reader, and
+                              baker-constants.json as its one data file, so
+                              no snapshot beside an imported module joins it.
   resolved-light-pure.ts      The cap sums, the (shell × latitude band) cells,
     (+ test)                  the table they become, and the light the table
                               removes. Pure. STAR_FIELDS is the one list of
                               record columns the measurement reads.
-  resolved-hole-catalogue.test.ts
-                              RESOLVED_HOLE_CATALOGUE_RECORDS equals the
-                              recordCount build-catalog-expected.json pins, so
-                              a membership change that lands without a
-                              re-measure fails here rather than as the
-                              viewer's load-time warning.
 ```
 
 The quadrature samples stay on the cell that owns them and nothing copies
@@ -35,7 +46,7 @@ samples. `shellHoleLight` reaches them where they are.
 
 ## What it writes
 
-`resolved-hole-table.ts` carries three things, all measured, none authored:
+`resolved-hole-table.ts` carries two things, both measured, neither authored:
 
 - **`RESOLVED_CATALOGUE_CAP`** — Σ10^(−0.4·V) over the records inside a 10°
   cap on the ICRS J2000 galactic centre and north pole, per arcsec². `V` is
@@ -45,10 +56,10 @@ samples. `shellHoleLight` reaches them where they are.
   light in each of 32 log-distance shells × 8 equal-|sin b| bands around Sol,
   clamped to [0, 1]. Layout constants live in `resolved-fraction-pure.ts`;
   this file is data.
-- **`RESOLVED_HOLE_CATALOGUE_RECORDS`** — the record count it was measured
-  on. The script refuses to overwrite a table with one measured on a
-  *shallower* catalogue unless `--force` is passed: the band ships against
-  the deepest floor, and a floor-off build on a branch is not it.
+
+Which catalogue they were measured on is the bake's record, not the table:
+CI builds the full catalogue, so a table measured on a shallower local build
+reads stale there and fails the build.
 
 ## How a cell is measured
 

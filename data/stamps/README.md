@@ -1,12 +1,14 @@
 # Manual-step records
 
 One JSON file per pull and bake — every `refresh:*` and `fetch:*` pull and
-the six bakes — named for its step (`:` written `-`). Each
+every bake — named for its step (`:` written `-`). Each
 is the committed record of that step's last run: the hash of every repo
 file it read (a code file by its identity, so a comment-only edit to a
 bake's code leaves it fresh: `scripts/util/code-identity.ts`) and every file
-it wrote, and for a pull the hash of its query,
-the services that answered and the upstream release. The design is
+it wrote, for a pull the hash of its query,
+the services that answered and the upstream release, and for a bake that
+describes itself the hash of its projection of the file it reads
+(`requestFrom`). The design is
 [Freshness](/scripts/pipeline/README.md#freshness--one-mechanism); the one
 writer is `scripts/pipeline/record.ts`, which every pull's and bake's
 `package.json` target runs ([Recording a manual

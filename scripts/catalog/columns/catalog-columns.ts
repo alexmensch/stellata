@@ -4,11 +4,11 @@ import { resolve } from 'node:path';
 
 import {
   decodeRecordColumn, readCatalogHeader, wholeRecordSpan, CATALOG_MANIFEST_FILENAME, type Float32RecordField,
-} from '../../src/catalog-format/record/catalog-pure';
-import type { Projection } from '../util/emit-artifacts';
-import { publicFile, publicRepoPath, REPO_ROOT } from '../util/paths';
-import { hashBytes } from '../util/stamp-hash';
-import { readCatalogBuffer } from './catalog-lookup';
+} from '../../../src/catalog-format/record/catalog-pure';
+import type { Projection } from '../../util/emit-artifacts';
+import { publicFile, publicRepoPath, REPO_ROOT } from '../../util/paths';
+import { hashBytes } from '../../util/stamp-hash';
+import { readCatalogBuffer } from './catalog-buffer';
 
 export type CatalogColumns<F extends Float32RecordField> = { readonly count: number } & { readonly [K in F]: Float32Array };
 

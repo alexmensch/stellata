@@ -347,7 +347,7 @@ export class Stellata {
       this.controls.target.sub(delta);
     });
     this.floatingOrigin.onRecenter((origin) => this.layers.recenterAll(origin));
-    this.milkyway = new MilkyWay(this.webgpu.bandMaterials, catalog.count);
+    this.milkyway = new MilkyWay(this.webgpu.bandMaterials);
     this.extinction = new ExtinctionAttachment({
       catalog,
       uniforms: sharedUniforms,

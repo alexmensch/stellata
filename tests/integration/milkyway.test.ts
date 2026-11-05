@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import * as THREE from 'three';
@@ -8,7 +8,6 @@ import {
   GC_SIGHTLINE_MAG_ARCSEC2,
   MilkyWay,
 } from '../../src/client/milkyway/milkyway';
-import { RESOLVED_HOLE_CATALOGUE_RECORDS } from '../../src/astro-core/milkyway/calibration/resolved-hole-table';
 import {
   BULGE_COLOR_RGB,
   BULGE_COMPONENT,
@@ -93,26 +92,11 @@ import {
   tonemapWhitePoint,
 } from '../../src/astro-core/tonemap/tonemap-pure';
 
-function build(catalogRecords = RESOLVED_HOLE_CATALOGUE_RECORDS) {
+function build() {
   const materials = fakeBandMaterials();
-  const layer = new MilkyWay(materials, catalogRecords);
+  const layer = new MilkyWay(materials);
   return { layer, specs: materials.specs, surfaces: materials.surfaces };
 }
-
-describe('MilkyWay against the catalogue it loads', () => {
-  it('warns once when the hole table was measured on another catalogue', () => {
-    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
-    try {
-      build(RESOLVED_HOLE_CATALOGUE_RECORDS - 1);
-      expect(warn).toHaveBeenCalledTimes(1);
-      warn.mockClear();
-      build();
-      expect(warn).not.toHaveBeenCalled();
-    } finally {
-      warn.mockRestore();
-    }
-  });
-});
 
 describe('MilkyWay component specs', () => {
   it('exposes glowMagOffset as the only photometric knob left', () => {

@@ -49,6 +49,7 @@ export const MANUAL_STEPS: readonly ManualStep[] = [
   pull('refresh:edenhofer2024-2kpc', 'refresh-edenhofer2024-2kpc.py', ['data/dust/edenhofer2024-2kpc.json']),
   tsManual({ kind: 'pull' }, 'fetch:probes', 'scripts/probes/fetch-probe-trajectories.ts', 'scripts/probes/probe-trajectory-outputs.ts', 'PROBE_OUTPUTS'),
   tsManual({ kind: 'pull' }, 'fetch:ephemerides', 'scripts/ephemerides/fetch-planet-elements.ts', 'scripts/ephemerides/planet-element-outputs.ts', 'ELEMENT_TABLE_OUTPUTS'),
+  tsManual({ kind: 'bake', describes: true }, 'measure:band-resolved', 'scripts/milkyway-calibration/measure-resolved-light.ts', 'scripts/milkyway-calibration/resolved-hole-table-outputs.ts', 'RESOLVED_HOLE_TABLE_OUTPUTS'),
   bake('build:dust', 'scripts/dust/build-dust.py', [`data/dust/${DUST_MANIFEST}`], {
     families: [{ dir: 'data/dust', member: DUST_CHUNK, stamped: true }],
   }),

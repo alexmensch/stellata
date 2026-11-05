@@ -7,11 +7,11 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import {
   APSIS_FIELDS, CATALOG_MANIFEST_FILENAME, HEADER_SIZE, NAME_TABLE_PADDING, NO_APSIS, NO_COMPANION, RECORD_SIZE,
   catalogChunkFilename, writeCatalogHeader, writeStarRecord, type CatalogManifest, type WireStarRecord,
-} from '../../src/catalog-format/record/catalog-pure';
-import { requestHash } from '../pipeline/freshness';
-import { tsManualFixture } from '../pipeline/manual-step-fixture';
-import { pipelineTree } from '../pipeline/pipeline-tree';
-import { REPO_ROOT } from '../util/paths';
+} from '../../../src/catalog-format/record/catalog-pure';
+import { requestHash } from '../../pipeline/freshness';
+import { tsManualFixture } from '../../pipeline/manual-step-fixture';
+import { pipelineTree } from '../../pipeline/pipeline-tree';
+import { REPO_ROOT } from '../../util/paths';
 import { catalogColumnsProjection, readCatalogColumns } from './catalog-columns';
 
 let dir: string;
@@ -73,7 +73,7 @@ describe('catalogColumnsProjection', () => {
     const fixture = await tsManualFixture(dir, {
       name: 'measure:fixture', kind: { kind: 'bake', describes: true }, out, inputs: [], source: `
 import { writeFileSync } from 'node:fs';
-import { catalogColumnsProjection, readCatalogColumns } from ${JSON.stringify(join(REPO_ROOT, 'scripts/catalog/catalog-columns'))};
+import { catalogColumnsProjection, readCatalogColumns } from ${JSON.stringify(join(REPO_ROOT, 'scripts/catalog/columns/catalog-columns'))};
 const FIELDS = ['x', 'y', 'z', 'absmag'] as const;
 export const describe = () => catalogColumnsProjection(FIELDS, ${JSON.stringify(dir)});
 export async function main(): Promise<void> {

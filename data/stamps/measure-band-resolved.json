@@ -1,0 +1,34 @@
+{
+  "inputs": {
+    "scripts/catalog/columns/catalog-buffer.ts": "ef714be2cd1ed896bffab5c342840bbecda23ba8",
+    "scripts/catalog/columns/catalog-columns.ts": "6233acd5ccaea4dc8d598d1c55200431e188bb83",
+    "scripts/milkyway-calibration/measure-resolved-light.ts": "bc309445d7332f1d4ac9826a52009fab297a6a3f",
+    "scripts/milkyway-calibration/resolved-hole-table-outputs.ts": "e2e25cc022519a880ce61194711bf7a40777c060",
+    "scripts/milkyway-calibration/resolved-light-pure.ts": "1e8fd25209b4852d8ddc0c1e0d26908ca526bef7",
+    "scripts/util/emit-artifacts.ts": "fbcf67915d807b948badcae9b64a885d8705c026",
+    "scripts/util/paths.ts": "57cc218a71295c2f51e5f3b5f4657c26e6b13927",
+    "scripts/util/staged-write.ts": "33b66e0828f74af840ad7bd4c3b195d5c1b5e12c",
+    "scripts/util/stamp-hash.ts": "06bb1b80efc9333d0ea2fdf52a592e0173faaa7e",
+    "src/astro-core/astronomy-constants.ts": "558b635982b8b63a34b58ec4e42ce79adc436d71",
+    "src/astro-core/baker-constants.json": "238d1c125cd62e2ebf2cde18a8dc8a525d1b6122",
+    "src/astro-core/baker-constants.ts": "2c76bd671c87cfa7d9e5ef7efe5799740f81cfdc",
+    "src/astro-core/colour/blackbody-lut-pure.ts": "9d61e33c0bb2b7ea8e39c5db510654c568a01a76",
+    "src/astro-core/emission/density0-solver-pure.ts": "2ca34dd919653866fde48847e31b27c436bdb5f8",
+    "src/astro-core/emission/emission-pure.ts": "2e4f361db94b75484f1ea60a81317937c67a8ff4",
+    "src/astro-core/emission/population-colour-pure.ts": "f2903bae0d800fa206d99bec5bdd27e75d89c018",
+    "src/astro-core/galactic-coords.ts": "9cbd6d112ecf5563f14936cf4ad084993802e72f",
+    "src/astro-core/milkyway/calibration/diffuse-reference.ts": "1971b83be68194363fdfc1ba78af30b781b14728",
+    "src/astro-core/milkyway/calibration/resolved-fraction-pure.ts": "f691541501b1d2c7559a2115c6c2ca3afdc7eb97",
+    "src/astro-core/milkyway/column/milkyway-column-pure.ts": "05659cdc2b1eeb615875af698320072c332bfd69",
+    "src/astro-core/perceptual-magnitude.ts": "6d7aac33f16b24ca26a5110d33b86c4e70fb0c52",
+    "src/astro-core/tonemap/tonemap-pure.ts": "18dda3006619a2623a578456ee9e013947355f05",
+    "src/catalog-format/record/catalog-pure.ts": "407a0a38e21f81d1d14fb29c5e629ac529a94c08"
+  },
+  "outputs": {
+    "src/astro-core/milkyway/calibration/resolved-hole-table.ts": "dac55b871c11d59ea7552a4f6b399953ac4a4300"
+  },
+  "request": "022d18b6aeb5e764921a7296b82ff2d862ef9b81",
+  "requestFrom": [
+    "public/catalog-manifest.json"
+  ]
+}

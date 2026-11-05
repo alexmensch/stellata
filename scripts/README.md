@@ -38,7 +38,8 @@ cross-script policy and pointers.
   (`pnpm run measure:band-resolved`): the
   [Leinert 1998](/data/papers/index.md#leinert1998) cap rows and the
   resolution-hole table, written as one generated module into
-  `src/astro-core/milkyway/calibration/`. Not part of the build.
+  `src/astro-core/milkyway/calibration/`. A manual bake: the build stops
+  when a catalogue rebuild moves a column it measures.
 - `release/` — `deploy.yml`'s release steps: checks each uploaded version
   on its preview URL before it takes traffic, then plans and cuts one tag
   + GitHub release per

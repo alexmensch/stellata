@@ -21,15 +21,10 @@ comes out* is here.
   brackets off `m52` / `m72`.
 - `resolved-hole-table.ts` — **generated** by
   `scripts/milkyway-calibration/` off the built catalogue: the two cap
-  rows, the record count they were measured on, and the resolution-hole
-  table ([The resolution hole](#the-resolution-hole--the-band-marches-the-model-minus-the-drawn-stars)). Never edited by hand.
+  rows and the resolution-hole table ([The resolution hole](#the-resolution-hole--the-band-marches-the-model-minus-the-drawn-stars)). Never edited by hand.
 - `resolved-fraction-pure.ts` (+ test) — the table's layout constants, the
   rule the table is sampled with, the cube it is resampled onto, the
-  CPU mirror of the trilinear fetch both shaders make, and
-  `resolvedHoleCatalogueMismatch`: the table subtracts the light of the
-  catalogue it was measured on, so `MilkyWay` checks the loaded record count
-  against `RESOLVED_HOLE_CATALOGUE_RECORDS` once and warns. A warning, never
-  a throw — a shallower local build is legitimate and the band still renders.
+  CPU mirror of the trilinear fetch both shaders make.
 - The `Data3DTexture` those voxels go into is the viewer's:
   `/src/client/milkyway/resolved-hole-texture.ts`.
 
@@ -317,9 +312,9 @@ Half rather than single: `r16float` is core-filterable, where `r32float`
 needs the optional `float32-filterable` device feature.
 
 Regenerate the underlying table with `pnpm run measure:band-resolved` on a
-floor-on build whenever the catalogue's membership or photometry moves
-inside 15 kpc; the script refuses a shallower catalogue than the table was
-measured on. `MilkyWay.setResolvedHoleStrength(0)` — the `resolvedHole`
+floor-on build when the build stops on it: the bake's record holds the
+catalogue columns it measured, so a membership or photometry change
+stales it ([Band calibration measurements](/scripts/milkyway-calibration/README.md)). `MilkyWay.setResolvedHoleStrength(0)` — the `resolvedHole`
 slider in the debug panel — switches the hole off for an A/B, rebuilding the
 cube, at which point the band draws the resolved stars' light a second time.
 The one writer clamps it to [0, 1] rather than the slider doing it: past 1
@@ -347,15 +342,15 @@ The 25.44 is *not* published; `diffuse-reference.ts` builds it:
 | The <!-- count:build-catalog/recordCount -->979,678<!-- /count --> catalogue stars Stellata draws at V ≤ 11 | 24.110 |
 | Residual left for the diffuse band | **25.44** |
 
-**The catalogue rows are measured per build, into `resolved-hole-table.ts`
-beside the hole** (`scripts/milkyway-calibration/`), and the residual moves
+**The catalogue rows are measured by the `measure:band-resolved` bake, into
+`resolved-hole-table.ts` beside the hole** (`scripts/milkyway-calibration/`), and the residual moves
 with them. The 388k catalogue before the floor read 24.271 at the pole over
 1,155 stars and 22.368 toward the centre over 11,776; V ≤ 11 takes the pole
 to 24.110 over 2,763 and the centre to 22.191 over 16,869, so the star field's
 share of [Leinert 1998](/data/papers/index.md#leinert1998)'s pole total goes from two thirds to **77 %**. **A record
-has to land INSIDE a 10° cap to move a row**, so `recordCount` can move
-without moving either: re-derive when a record lands within 10° of a centre,
-not whenever the count changes.
+has to land INSIDE a 10° cap to move a row**, so a re-run the build demands
+can leave both rows where they were; when to re-run is the build's stop, not
+the caps.
 
 [Leinert 1998](/data/papers/index.md#leinert1998)'s table is a sky model ([Wainscoat 1992](/data/papers/index.md#wainscoat1992)) for *all* stars,
 resolved or not, so pinning the published figure would double-count the

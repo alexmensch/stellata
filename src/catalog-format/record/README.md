@@ -221,7 +221,7 @@ consumer spells out a `view.get*` / `view.set*` byte read of its own:
 | --- | --- | --- |
 | write | `writeStarRecord`, `writeCatalogHeader` | `../../../scripts/catalog/build-catalog.ts`, loader round-trip tests |
 | read, one record | `readRecordField`, `readRecordFieldBig` | `../../../scripts/catalog/catalog-lookup.ts` (AoS) |
-| read, one column × all records | `decodeRecordColumn`, `decodeRecordColumnBig` | `catalog-loader.ts` (SoA), `../../../scripts/catalog/catalog-columns.ts` |
+| read, one column × all records | `decodeRecordColumn`, `decodeRecordColumnBig` | `catalog-loader.ts` (SoA), `../../../scripts/catalog/columns/catalog-columns.ts` |
 | read, header / name table | `readCatalogHeader`, `readNameTable` | both readers |
 
 Each picks its `view.get*` call from `RECORD_FIELD_KINDS`, so a field's
@@ -309,7 +309,7 @@ The chunk-plan / filename / assembly helpers (`planCatalogChunks`,
 in `catalog-pure.ts` and are the single reassembly contract shared by
 all three consumers: the writer (`../../../scripts/catalog/build-catalog.ts`), the runtime loader
 (`src/client/loaders/catalog-loader.ts`, fetch), and the Node test/verify
-reader (`../../../scripts/catalog/catalog-lookup.ts` `readCatalogBuffer`, fs). The chunks are a
+reader (`../../../scripts/catalog/columns/catalog-buffer.ts` `readCatalogBuffer`, fs). The chunks are a
 declared output family of `build:catalog` (`../../../scripts/util/emit-artifacts.ts`):
 once the new set has landed, any chunk it does not include is deleted, so a
 shrunk chunk count can't strand stale files. The skip gate and all Node

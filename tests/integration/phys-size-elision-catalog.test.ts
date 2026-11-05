@@ -6,7 +6,7 @@ import { existsSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { beforeAll, describe, expect, it } from 'vitest';
 
-import { readCatalogBuffer } from '../../scripts/catalog/catalog-lookup';
+import { readCatalogBuffer } from '../../scripts/catalog/columns/catalog-buffer';
 import { committedBuildCounts } from '../../scripts/catalog/build-counts';
 import { peakAmplitudeFactor } from '../../src/client/camera/controls/star-geometry';
 import { STAR_RENDER_DEFAULTS, starPxSizes } from '../../src/client/filters/filter-state';

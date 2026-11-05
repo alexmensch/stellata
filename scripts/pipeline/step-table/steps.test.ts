@@ -10,9 +10,10 @@ import { REASON_CODES } from '../../catalog/lineage/reason-codes-tsv';
 import { MEMBERSHIP_MANIFEST } from '../../catalog/membership/membership-manifest-tsv';
 import { entryClosure, packageScripts } from '../../util/import-closure';
 import { LAUNCHER } from '../../util/import-closure-pure';
-import { lfsContentReadable, publicFile, publicRepoPath, PUBLIC_DIR, REPO_ROOT } from '../../util/paths';
+import { lfsContentReadable, publicRepoPath, PUBLIC_DIR, REPO_ROOT } from '../../util/paths';
 import { PUBLIC_FILES } from '../../../src/catalog-format/public-artifacts/public-artifacts';
-import { describeStep } from '../freshness';
+import { CATALOG_MANIFEST_FILENAME } from '../../../src/catalog-format/record/catalog-pure';
+import { describeStep, readManualRecord } from '../freshness';
 import type { LoadedTable } from './load-table';
 import { MANUAL_STEPS } from './manual-step-outputs';
 import { pipelineTree } from '../pipeline-tree';
@@ -20,6 +21,7 @@ import { loadedRepoTable } from './repo-table';
 import { describesItself, isBuild, selectSteps, type Edge, type ReadsEdge } from './step-table-pure';
 import { MIRROR_STEPS, STEPS } from './steps';
 
+const SLOW_TIMEOUT_MS = 60_000;
 const CNS5 = CNS5_SOURCE.file;
 const MANIFEST = resolve(REPO_ROOT, MEMBERSHIP_MANIFEST.file);
 
@@ -27,7 +29,7 @@ let loaded: LoadedTable;
 
 beforeAll(async () => {
   loaded = await loadedRepoTable();
-}, 60_000);
+}, SLOW_TIMEOUT_MS);
 
 const edgeFiles = (from: string, to: string): string[] => loaded.graph.edges
   .filter((e: Edge): e is ReadsEdge => e.kind === 'reads' && e.from === from && e.to === to)
@@ -64,6 +66,7 @@ describe('the step table', () => {
 
   it('orders a describing bake after the writer of the file it projects', () => {
     expect(edgeFiles('build:clouds', 'build:cloud-surfaces')).toEqual([publicRepoPath(PUBLIC_FILES.clouds)]);
+    expect(edgeFiles('build:catalog', 'measure:band-resolved')).toEqual([publicRepoPath(CATALOG_MANIFEST_FILENAME)]);
   });
 
   it('is the one place a table step\'s entry is named: no package.json script or workflow runs one directly', () => {
@@ -123,14 +126,29 @@ describe('the step table', () => {
     for (const step of MANUAL_STEPS.filter((s) => s.kind === 'pull')) {
       expect(describeStep(step, tree), step.name).toMatchObject({ kind: 'pull', query: expect.any(String) });
     }
-  }, 60_000);
+  }, SLOW_TIMEOUT_MS);
 
-  it.skipIf(!existsSync(publicFile(PUBLIC_FILES.clouds)))('describes every describing bake under python3 -I -S', () => {
+  const describingBakes = MANUAL_STEPS.filter((s) => s.kind === 'bake' && describesItself(s));
+
+  it('lists the describing bakes', () => {
+    expect(describingBakes.map((s) => s.name)).toEqual(['measure:band-resolved', 'build:cloud-surfaces']);
+  });
+
+  describe.each(describingBakes.map((step) => [step.name, step] as const))('%s', (_, step) => {
     const tree = pipelineTree(REPO_ROOT);
-    const bakes = MANUAL_STEPS.filter((s) => s.kind === 'bake' && describesItself(s));
-    expect(bakes.map((s) => s.name)).toEqual(['build:cloud-surfaces']);
-    for (const step of bakes) {
-      expect(describeStep(step, tree), step.name).toMatchObject({ kind: 'bake', request: expect.any(Array) });
-    }
+    const read = readManualRecord(step, tree.manualStamp(step.name));
+    const projected = read.kind === 'read' ? read.record.requestFrom : [];
+
+    it('records the file it projects', () => {
+      expect(projected.length).toBeGreaterThan(0);
+    });
+
+    it.skipIf(!projected.every((path) => existsSync(tree.abs(path))))(
+      'describes itself: Python under python3 -I -S, TypeScript through tsx',
+      () => {
+        expect(describeStep(step, tree)).toMatchObject({ kind: 'bake', request: expect.any(Array) });
+      },
+      SLOW_TIMEOUT_MS,
+    );
   });
 });
