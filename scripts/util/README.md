@@ -193,6 +193,14 @@ same thing — single-use helpers stay with their consumer.
   headers key on, and CI's catalogue cache key reads `stepEntries` too.
   Each step's own suite pins its set (`../catalog/catalog-inputs.test.ts`,
   `../local-group/local-group-inputs.test.ts`, `../clouds/clouds-inputs.test.ts`).
+- `step-input-hashes.ts` — the runner's pre-run input hashes, handed to a
+  TypeScript step: `../pipeline/processes.ts`'s `runTs` writes them
+  (`writeStepInputs`) to `build/step-inputs/<step>.json`, names it in
+  `PIPELINE_STEP_INPUTS` (`STEP_INPUTS_ENV`) and removes it when the step
+  exits; the step reads them with `stepInputHashes()`, which throws when the
+  step was started any other way. The same map the step's stamp records as
+  its inputs, so a step that needs its own input hashes (a lineage header's
+  input hash) never re-derives them.
 - `tsv/` — the one TSV reader (`readTable`, typed columns, cells that keep
   empty and malformed apart) and `defineArtifact`, the codec of every table
   this repo writes. Own README.

@@ -214,6 +214,23 @@ export const OUT = declareOutputs({ out: ${JSON.stringify(at('f.out'))} }, [
     expect(builds()).toEqual(['a', 'b']);
   });
 
+  it('hands a TypeScript step the input hashes its stamp records, and removes the file once it exits', async () => {
+    write('a.in', 'x');
+    const step = tsStep('a', 'a.out', ['a.in']);
+    write('steps/a.ts', `
+import { writeFileSync } from 'node:fs';
+import { stepInputHashes, STEP_INPUTS_ENV } from ${JSON.stringify(join(REPO_ROOT, 'scripts/util/step-input-hashes'))};
+writeFileSync(${JSON.stringify(at('a.out'))}, JSON.stringify({ handed: stepInputHashes(), file: process.env[STEP_INPUTS_ENV] }));
+`);
+    expect((await run([step], ['a'])).kinds).toEqual({ a: 'built' });
+    const { handed, file } = JSON.parse(read('a.out')) as { handed: unknown; file: string };
+    const stamp = JSON.parse(readFileSync(pipelineTree(root).buildStamp('a'), 'utf8')) as { inputs: unknown };
+    expect(handed).toEqual(stamp.inputs);
+    expect(handed).toEqual(fileHashes([at('a.in')], root));
+    expect(file).toBe(pipelineTree(root).handedInputs('a'));
+    expect(existsSync(file)).toBe(false);
+  });
+
   it('--update-snapshots reruns a fresh named target, but not the fresh steps upstream of it', async () => {
     write('a.in', 'x');
     const steps = [tsStep('a', 'a.out', ['a.in']), tsStep('b', 'b.out', ['a.out'])];

@@ -13,7 +13,7 @@ import {
 import type { Loaded } from './step-table/load-table';
 import { holdStepLocks } from './locks';
 import { pipelineTree, type PipelineTree } from './pipeline-tree';
-import { exec, runRecorded, TSX } from './processes';
+import { runRecorded, runTs } from './processes';
 import { undeclaredWrites, type RunRecord } from './python-run-pure';
 import {
   claims, isBuild,
@@ -84,7 +84,7 @@ async function runAndRead(
     const derived = await options.deriveInputs(entry);
     const keep = inputFilter(resolved, described, ignoredPaths(derived, tree.root), tree);
     const inputs = inputHashes(derived.filter(keep), tree.root);
-    const code = await exec(TSX, [entry, ...options.args], process.env);
+    const code = await runTs(tree, step.name, entry, options.args, inputs, process.env);
     return code === 0 ? { inputs, services: [] } : `exited ${code}`;
   }
   const recorded = await runRecorded(tree, step.name, entry, options.args, process.env);
