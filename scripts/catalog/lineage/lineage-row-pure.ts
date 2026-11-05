@@ -1,7 +1,8 @@
 // The lineage envelope every stage writes, its TSV line, and the one sort order over lines. See README.md#row-contract.
 
+import { fold } from '../../util/tally-pure';
 import { readTable, type TableSpec } from '../../util/tsv/table-pure';
-import type { StageCodes } from './reason-codes-pure';
+import type { StageCode, StageCodes } from './reason-codes-pure';
 
 export const LINEAGE_ROLES = ['outcome', 'refused'] as const;
 export type LineageRole = (typeof LINEAGE_ROLES)[number];
@@ -129,6 +130,16 @@ export function lineageLineKey(line: LineageLine): string {
 
 export function lineageLineCode(line: LineageLine): string {
   return lineCell(line, 'code');
+}
+
+/** How many of a stage's lines in `role` carry each of its codes, every code present; a line of another stage throws. */
+export function foldStageLines<B extends string, S extends string>(
+  codes: StageCodes<B, S>, lines: Iterable<LineageLine>, role: LineageRole,
+): Record<StageCode<S, B>, number> {
+  function* inRole(): Generator<LineageLine> {
+    for (const line of lines) if (lineCell(line, 'role') === role) yield line;
+  }
+  return fold(codes.codes, inRole(), lineageLineCode);
 }
 
 function rowOfCells(cells: readonly string[], where: string): LineageRow {
