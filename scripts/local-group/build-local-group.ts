@@ -5,7 +5,6 @@
 import { allocateSibling, emitSibling, siblingLineage } from '../sid/sibling-allocation';
 import { SIBLING_ARTIFACTS } from '../sid/sibling-artifacts-pure';
 import { sweepStaged } from '../util/emit-artifacts';
-import { roundEach, roundHalfEven, roundSignificant } from '../util/round-pure';
 import { LOCAL_GROUP_JSON } from './local-group-json';
 import { LOCAL_GROUP_OUTPUTS } from './local-group-outputs';
 import { LG_ALIASES, LG_OVERRIDES, LVDB } from './local-group-source';
@@ -13,64 +12,10 @@ import {
   applyAliasMeta,
   buildStandaloneOverride,
   filterForRendering,
+  localGroupPayload,
   mergeRowAndOverride,
 } from './build-local-group-pure';
-import {
-  LOCAL_GROUP_VERSION,
-  type LgObjectRow,
-  type LgEmission,
-  type SersicParams,
-} from '../../src/catalog-format/local-group/local-group-schema';
-
-/** Trims numeric precision so repeat builds produce stable diffs. */
-function sersicParamsToJson(p: SersicParams): SersicParams {
-  return {
-    reffAxesPc: roundEach(p.reffAxesPc, 2),
-    n: roundHalfEven(p.n, 4),
-    bn: roundHalfEven(p.bn, 6),
-    pn: roundHalfEven(p.pn, 6),
-    uMax: roundHalfEven(p.uMax, 4),
-    density0: roundSignificant(p.density0, 8),
-  };
-}
-
-function emissionToJson(e: LgEmission): LgEmission {
-  if (e.family === 'sersic') {
-    return {
-      family: e.family,
-      mV: roundHalfEven(e.mV, 2),
-      ...(e.color ? { color: e.color } : {}),
-      ...sersicParamsToJson(e),
-    };
-  }
-  return {
-    family: e.family,
-    mV: roundHalfEven(e.mV, 2),
-    ...(e.color ? { color: e.color } : {}),
-    rdPc: roundHalfEven(e.rdPc, 2),
-    zdPc: roundHalfEven(e.zdPc, 2),
-    rEnvPc: roundHalfEven(e.rEnvPc, 2),
-    zEnvPc: roundHalfEven(e.zEnvPc, 2),
-    density0: roundSignificant(e.density0, 8),
-    ...(e.bulge ? { bulge: sersicParamsToJson(e.bulge) } : {}),
-  };
-}
-
-function toJsonObject(o: LgObjectRow): LgObjectRow {
-  return {
-    name: o.name,
-    id: o.id,
-    type: o.type,
-    ...(o.aliases ? { aliases: o.aliases } : {}),
-    center: roundEach(o.center, 2),
-    kind: o.kind,
-    axes: roundEach(o.axes, 2),
-    quat: roundEach(o.quat, 6),
-    source: o.source,
-    distance: roundHalfEven(o.distance, 1),
-    emission: emissionToJson(o.emission),
-  };
-}
+import type { LgObjectRow } from '../../src/catalog-format/local-group/local-group-schema';
 
 export async function main(): Promise<void> {
   sweepStaged(LOCAL_GROUP_OUTPUTS);
@@ -153,13 +98,8 @@ export async function main(): Promise<void> {
   objects.sort((a, b) => a.name.localeCompare(b.name, 'en', { sensitivity: 'base' }));
 
   const allocation = allocateSibling(SIBLING_ARTIFACTS['local-group'], LOCAL_GROUP_JSON, objects);
-  const payload = {
-    version: LOCAL_GROUP_VERSION,
-    count: objects.length,
-    objects: objects.map((o, i) => ({ ...toJsonObject(o), sid: allocation.sids[i] })),
-  };
   emitSibling(
-    LOCAL_GROUP_OUTPUTS, { localGroup: LOCAL_GROUP_JSON.serialize(payload) }, allocation,
+    LOCAL_GROUP_OUTPUTS, { localGroup: LOCAL_GROUP_JSON.serialize(localGroupPayload(objects, allocation.sids)) }, allocation,
     siblingLineage(SIBLING_ARTIFACTS['local-group'], allocation),
   );
 

@@ -4,7 +4,8 @@
 overrides → `public/local-group.json`. `build-local-group-pure.ts`
 holds the pure helpers (RA/Dec→ICRS, orient → quaternion, override
 merge, standalone-row builder, display-name + catalog-designation
-rules, distance filter, emission assembly);
+rules, distance filter, emission assembly, and `localGroupPayload`, the
+rounded output with each object's SID);
 `emission-geometry-pure.ts` holds the Sérsic deprojection and each
 family's truncated-volume integral. `local-group-source.ts` declares the
 three inputs (`../util/sources/`), `local-group-parse.ts` holds their
