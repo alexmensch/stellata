@@ -9,6 +9,8 @@ import type {
 } from '../distance/direction-cascade';
 import type { MultiplesTsvRow } from '../companions/companion-promotion';
 import { wdsRootOf } from '../companions/companion-promotion';
+import type { BailerJonesIndex } from '../distance/refinement/distance-overrides-pure';
+import { sourceRowRef, type AnySourceRowRef } from '../../util/sources/row-ref-pure';
 import { isCoherenceAnchorGrade } from './anchor-grade-pure';
 import { absoluteMagnitude, apparentMagnitude } from '../../../src/astro-core/perceptual-magnitude';
 
@@ -26,17 +28,15 @@ export const COHERENCE_RADIAL_SIGMA = 3.0;
  *  two catalog distances genuinely disagree and the member keeps its
  *  own. The same relative bound gates the anchor's own rendered
  *  distance against its parallax evidence (see the placement-
- *  consistency gate in applySystemDistanceCoherence). */
+ *  consistency gate in systemCoherenceVerdicts). */
 export const COHERENCE_NO_SIGMA_MAX_RELATIVE_GAP = 0.2;
 export const COHERENCE_NO_SIGMA_MIN_GAP_PC = 1.0;
 
 /** Best first, and purpose-aware rather than recency-aware: HIP2's long
  *  baseline outranks Gaia exactly where Gaia is saturated or
  *  binarity-corrupted. */
-export const ANCHOR_TIER_GAIA_CLEAN = 0;
-export const ANCHOR_TIER_HIP2 = 1;
-export const ANCHOR_TIER_BAILER_JONES = 2;
-export const ANCHOR_TIER_INHERITED = 3;
+export const ANCHOR_TIERS = ['gaia-clean', 'hip2', 'bailer-jones', 'inherited'] as const;
+export type AnchorTier = (typeof ANCHOR_TIERS)[number];
 
 export interface SystemCoherenceStats {
   systemsProcessed: number;
@@ -50,11 +50,37 @@ export interface SystemCoherenceStats {
 export interface CoherenceSources {
   gaiaAstrometry: Map<string, GaiaAstrometryCatalogRow>;
   hip2: Map<number, Hip2AstrometryRow>;
-  /** Bailer-Jones 2021 (/data/papers/index.md#bailerjones2021)
-   *  source_id (decimal string) → distance; only membership is consulted for
-   *  the tier pick. */
-  bjMap: ReadonlyMap<string, number>;
+  /** Only membership is consulted for the tier pick. */
+  bailerJones: BailerJonesIndex;
 }
+
+/** An anchor tier and the row it rests on; the inherited tier rests on none. */
+export type AnchorBasis =
+  | { readonly tier: 'inherited' }
+  | { readonly tier: Exclude<AnchorTier, 'inherited'>; readonly ref: AnySourceRowRef };
+
+export type CoherenceAnchor = AnchorBasis & {
+  readonly idx: number;
+  readonly memberWon: boolean;
+  readonly precisionVetoed: boolean;
+};
+
+export type MemberVerdict =
+  | { readonly kind: 'snapped'; readonly idx: number; readonly fromPc: number; readonly toPc: number }
+  | { readonly kind: 'at-anchor-distance'; readonly idx: number }
+  | { readonly kind: 'significant-depth'; readonly idx: number; readonly gapPc: number; readonly sigmaPc: number }
+  | { readonly kind: 'wide-gap'; readonly idx: number; readonly gapPc: number }
+  | { readonly kind: 'member-unplaced'; readonly idx: number };
+
+/** `members` omits the anchor and any record an earlier verdict decided. */
+export type SystemVerdict =
+  | { readonly kind: 'coherent'; readonly root: string; readonly anchor: CoherenceAnchor;
+    readonly anchorPc: number; readonly members: readonly MemberVerdict[] }
+  | { readonly kind: 'anchor-inconsistent'; readonly root: string; readonly anchor: CoherenceAnchor;
+    readonly anchorPc: number; readonly parallaxPc: number; readonly sigmaPc: number;
+    readonly members: readonly number[] }
+  | { readonly kind: 'anchor-unplaced'; readonly root: string; readonly anchor: CoherenceAnchor;
+    readonly members: readonly number[] };
 
 const COMPONENT_TOKEN_RE = /^[A-Z][a-z]?\d?$/;
 
@@ -71,7 +97,7 @@ function rankBeats(rank: AnchorRank, best: AnchorRank | null): boolean {
   if (best === null) return true;
   if (rank.tier !== best.tier) return rank.tier < best.tier;
   if (rank.primarySide !== best.primarySide) return rank.primarySide < best.primarySide;
-  if (rank.tier === ANCHOR_TIER_GAIA_CLEAN && rank.fracError !== best.fracError) {
+  if (rank.tier === ANCHOR_TIERS.indexOf('gaia-clean') && rank.fracError !== best.fracError) {
     return morePrecise(rank.fracError, best.fracError);
   }
   return rank.letter < best.letter;
@@ -85,12 +111,14 @@ function fractionalError(plxMas: number | null, errMas: number | null): number |
   return plxMas !== null && plxMas > 0 && errMas !== null ? errMas / plxMas : null;
 }
 
-/** The member's anchor tier, and the fractional parallax error of the fit that
- *  earned it — null below the HIP2 tier, which carries no trusted fit. See
- *  README.md#system-distance-coherence Precision veto. */
+type AnchorEvidence = AnchorBasis & { readonly fracError: number | null };
+
+/** The member's anchor tier, the row that earned it, and the fractional
+ *  parallax error of that fit — null below the HIP2 tier, which carries no
+ *  trusted fit. See README.md#system-distance-coherence Precision veto. */
 function anchorEvidence(
   star: Star, sources: CoherenceSources, hostsSubsystem: boolean,
-): { tier: number; fracError: number | null } {
+): AnchorEvidence {
   // A component that hosts its own sub-pair (Acrux C = Ca,Cb) is an
   // unresolved close binary whatever its RUWE says — photocentre wobble
   // on periods longer than Gaia's baseline corrupts the 5p parallax
@@ -100,24 +128,21 @@ function anchorEvidence(
   if (!hostsSubsystem && star.gaiaSourceId !== null) {
     const g = sources.gaiaAstrometry.get(star.gaiaSourceId);
     if (g !== undefined && isCoherenceAnchorGrade(g)) {
-      return {
-        tier: ANCHOR_TIER_GAIA_CLEAN,
-        fracError: fractionalError(g.parallaxMas, g.parallaxErrorMas),
-      };
+      return { tier: 'gaia-clean', fracError: fractionalError(g.parallaxMas, g.parallaxErrorMas), ref: g.ref };
     }
   }
   if (star.hip !== null) {
     const h = sources.hip2.get(star.hip);
     if (h !== undefined) {
-      return {
-        tier: ANCHOR_TIER_HIP2, fracError: fractionalError(h.plxMas, h.plxErrorMas),
-      };
+      return { tier: 'hip2', fracError: fractionalError(h.plxMas, h.plxErrorMas), ref: h.ref };
     }
   }
-  if (star.gaiaSourceId !== null && sources.bjMap.has(star.gaiaSourceId)) {
-    return { tier: ANCHOR_TIER_BAILER_JONES, fracError: null };
+  if (star.gaiaSourceId !== null && sources.bailerJones.distPc.has(star.gaiaSourceId)) {
+    return {
+      tier: 'bailer-jones', fracError: null, ref: sourceRowRef(sources.bailerJones.source, star.gaiaSourceId),
+    };
   }
-  return { tier: ANCHOR_TIER_INHERITED, fracError: null };
+  return { tier: 'inherited', fracError: null };
 }
 
 /** Best available (distance_pc, sigma_pc) measurement for the record,
@@ -143,52 +168,46 @@ function parallaxDistanceWithError(
   return h !== undefined ? invert(h.plxMas, h.plxErrorMas) : null;
 }
 
-function starDist(star: Star): number {
-  return Math.sqrt(star.x * star.x + star.y * star.y + star.z * star.z);
+type Position = Pick<Star, 'x' | 'y' | 'z'>;
+
+function starDist(p: Position): number {
+  return Math.sqrt(p.x * p.x + p.y * p.y + p.z * p.z);
+}
+
+/** The one place a record's position is scaled: the verdict pass reads a
+ *  snapped record's later distance from it, and the move writes it. */
+function scaledPosition(p: Position, scale: number): Position {
+  return { x: p.x * scale, y: p.y * scale, z: p.z * scale };
 }
 
 /** Move `star` radially to `distPc`, preserving its (mas-accurate)
  *  measured direction. Apparent brightness is invariant: absmag is
  *  re-derived at the new distance and the Stefan-Boltzmann radius follows
  *  (R ∝ √L at fixed Teff). */
-function repositionRadially(star: Star, distPc: number): boolean {
+function repositionRadially(star: Star, distPc: number): void {
   const dOld = starDist(star);
-  if (!(dOld > 0) || !Number.isFinite(dOld)) return false;
-  const scale = distPc / dOld;
-  if (Math.abs(scale - 1) < 1e-9) return false;
-  star.x *= scale;
-  star.y *= scale;
-  star.z *= scale;
+  Object.assign(star, scaledPosition(star, distPc / dOld));
   const absmag = absoluteMagnitude(apparentMagnitude(star.absmag, dOld), distPc);
   star.physicalRadius *= Math.pow(10, (star.absmag - absmag) / 5);
   star.absmag = absmag;
-  return true;
 }
 
 /** Group the pair rows of `multiplesRows` by WDS root and, per system,
- *  pick the best-tier member record as the distance anchor; every other
- *  member whose radial gap from the anchor is not a ≥3σ measurement
- *  moves to the anchor's distance along its own direction.
+ *  pick the best-tier member record as the distance anchor and decide, for
+ *  every other member, whether its radial gap from the anchor is a ≥3σ
+ *  measurement or it moves to the anchor's distance along its own direction.
+ *  Moves nothing: applySystemCoherence acts on the verdicts.
  *
  *  Physicality is inherited from Stage 5: multiples.tsv pair rows ARE
  *  the kept-physical set (WDS-notes / orbit / separation / escape-
  *  velocity / CPM-baseline gates) — standalone rows never
  *  participate. Runs BEFORE companion promotion so minted
  *  members project off already-coherent anchors. */
-export function applySystemDistanceCoherence(
-  multiplesRows: MultiplesTsvRow[],
-  stars: Star[],
+export function systemCoherenceVerdicts(
+  multiplesRows: readonly MultiplesTsvRow[],
+  stars: readonly Star[],
   sources: CoherenceSources,
-): SystemCoherenceStats {
-  const stats: SystemCoherenceStats = {
-    systemsProcessed: 0,
-    membersRepositioned: 0,
-    memberAnchorWins: 0,
-    significantDepthKept: 0,
-    anchorPlacementInconsistent: 0,
-    memberAnchorPrecisionVetoed: 0,
-  };
-
+): SystemVerdict[] {
   const byGaia = new Map<string, number>();
   const byHip = new Map<number, number>();
   for (let i = 0; i < stars.length; i++) {
@@ -238,10 +257,12 @@ export function applySystemDistanceCoherence(
     info.tokens.add(row.comp);
   }
 
+  const verdicts: SystemVerdict[] = [];
+  const movedDist = new Map<number, number>();
+  const distOf = (idx: number): number => movedDist.get(idx) ?? starDist(stars[idx]);
   const processed = new Set<number>();
   for (const [root, members] of systems) {
     if (members.size < 2) continue;
-    stats.systemsProcessed++;
     const rootTokens = tokensByRoot.get(root) ?? new Set<string>();
     const hostsSubsystem = (info: MemberInfo): boolean => {
       for (const t of rootTokens) {
@@ -252,10 +273,9 @@ export function applySystemDistanceCoherence(
       return false;
     };
 
-    let anchorIdx: number | null = null;
-    let anchorRank: AnchorRank | null = null;
-    let primaryIdx: number | null = null;
-    let primaryRank: AnchorRank | null = null;
+    type Candidate = { idx: number; rank: AnchorRank; evidence: AnchorEvidence };
+    let best: Candidate | null = null;
+    let bestPrimary: Candidate | null = null;
     for (const [idx, info] of members) {
       // The WDS-canonical letter is the last tie-break (the record holding
       // 'A' beats one holding 'C' — catalog index order is pre-sort CSV
@@ -266,34 +286,34 @@ export function applySystemDistanceCoherence(
       }
       const evidence = anchorEvidence(stars[idx], sources, hostsSubsystem(info));
       const rank: AnchorRank = {
-        tier: evidence.tier,
+        tier: ANCHOR_TIERS.indexOf(evidence.tier),
         fracError: evidence.fracError,
         primarySide: info.isPrimary ? 0 : 1,
         letter: minToken,
       };
-      if (rankBeats(rank, anchorRank)) {
-        anchorRank = rank;
-        anchorIdx = idx;
-      }
-      if (info.isPrimary && rankBeats(rank, primaryRank)) {
-        primaryRank = rank;
-        primaryIdx = idx;
-      }
+      if (rankBeats(rank, best?.rank ?? null)) best = { idx, rank, evidence };
+      if (info.isPrimary && rankBeats(rank, bestPrimary?.rank ?? null)) bestPrimary = { idx, rank, evidence };
     }
-    if (anchorIdx === null) continue;
+    if (best === null) throw new Error(`system coherence: root ${root} has members but no anchor`);
     // see README.md#system-distance-coherence Precision veto
-    if (anchorRank !== null && anchorRank.primarySide === 1
-      && primaryIdx !== null && primaryRank !== null) {
-      if (morePrecise(primaryRank.fracError, anchorRank.fracError)) {
-        anchorIdx = primaryIdx;
-        anchorRank = primaryRank;
-        stats.memberAnchorPrecisionVetoed++;
-      }
+    let precisionVetoed = false;
+    if (best.rank.primarySide === 1 && bestPrimary !== null
+      && morePrecise(bestPrimary.rank.fracError, best.rank.fracError)) {
+      best = bestPrimary;
+      precisionVetoed = true;
     }
-    const anchorStar = stars[anchorIdx];
-    const anchorDist = starDist(anchorStar);
-    if (!(anchorDist > 0) || !Number.isFinite(anchorDist)) continue;
-    if (anchorRank !== null && anchorRank.primarySide === 1) stats.memberAnchorWins++;
+    const { fracError: _, ...basis } = best.evidence;
+    const anchor: CoherenceAnchor = {
+      ...basis, idx: best.idx, memberWon: best.rank.primarySide === 1, precisionVetoed,
+    };
+    const undecided = (): number[] => [...members.keys()]
+      .filter((idx) => idx !== anchor.idx && !processed.has(idx));
+    const anchorStar = stars[anchor.idx];
+    const anchorDist = distOf(anchor.idx);
+    if (!(anchorDist > 0) || !Number.isFinite(anchorDist)) {
+      verdicts.push({ kind: 'anchor-unplaced', root, anchor, members: undecided() });
+      continue;
+    }
     const anchorPlx = parallaxDistanceWithError(anchorStar, sources);
     // An anchor whose rendered catalog distance contradicts its own
     // parallax evidence would drag every member onto a bogus placement
@@ -306,13 +326,16 @@ export function applySystemDistanceCoherence(
         placementGap > COHERENCE_RADIAL_SIGMA * anchorPlx.sigmaPc
         && placementGap > COHERENCE_NO_SIGMA_MAX_RELATIVE_GAP * anchorDist
       ) {
-        stats.anchorPlacementInconsistent++;
+        verdicts.push({
+          kind: 'anchor-inconsistent', root, anchor, anchorPc: anchorDist,
+          parallaxPc: anchorPlx.distPc, sigmaPc: anchorPlx.sigmaPc, members: undecided(),
+        });
         continue;
       }
     }
 
-    for (const idx of members.keys()) {
-      if (idx === anchorIdx || processed.has(idx)) continue;
+    const decided: MemberVerdict[] = [];
+    for (const idx of undecided()) {
       processed.add(idx);
       const member = stars[idx];
       const memberPlx = parallaxDistanceWithError(member, sources);
@@ -320,7 +343,7 @@ export function applySystemDistanceCoherence(
         const sigma = Math.hypot(memberPlx.sigmaPc, anchorPlx?.sigmaPc ?? 0);
         const gap = Math.abs(memberPlx.distPc - (anchorPlx?.distPc ?? anchorDist));
         if (sigma > 0 && gap > COHERENCE_RADIAL_SIGMA * sigma) {
-          stats.significantDepthKept++;
+          decided.push({ kind: 'significant-depth', idx, gapPc: gap, sigmaPc: sigma });
           continue;
         }
       } else {
@@ -329,15 +352,46 @@ export function applySystemDistanceCoherence(
           gap > COHERENCE_NO_SIGMA_MIN_GAP_PC
           && gap > COHERENCE_NO_SIGMA_MAX_RELATIVE_GAP * anchorDist
         ) {
-          stats.significantDepthKept++;
+          decided.push({ kind: 'wide-gap', idx, gapPc: gap });
           continue;
         }
       }
-      if (repositionRadially(member, anchorDist)) {
-        stats.membersRepositioned++;
+      const dOld = starDist(member);
+      if (!(dOld > 0) || !Number.isFinite(dOld)) {
+        decided.push({ kind: 'member-unplaced', idx });
+        continue;
       }
+      const scale = anchorDist / dOld;
+      if (Math.abs(scale - 1) < 1e-9) {
+        decided.push({ kind: 'at-anchor-distance', idx });
+        continue;
+      }
+      movedDist.set(idx, starDist(scaledPosition(member, scale)));
+      decided.push({ kind: 'snapped', idx, fromPc: dOld, toPc: anchorDist });
     }
-    processed.add(anchorIdx);
+    processed.add(anchor.idx);
+    verdicts.push({ kind: 'coherent', root, anchor, anchorPc: anchorDist, members: decided });
   }
-  return stats;
+  return verdicts;
+}
+
+/** Moves every snapped member of `verdicts` onto its anchor's distance. */
+export function applySystemCoherence(stars: Star[], verdicts: readonly SystemVerdict[]): void {
+  for (const v of verdicts) {
+    if (v.kind !== 'coherent') continue;
+    for (const m of v.members) if (m.kind === 'snapped') repositionRadially(stars[m.idx], m.toPc);
+  }
+}
+
+export function systemCoherenceStats(verdicts: readonly SystemVerdict[]): SystemCoherenceStats {
+  const coherentMembers = verdicts.flatMap((v) => (v.kind === 'coherent' ? v.members : []));
+  const count = <T>(xs: readonly T[], p: (x: T) => boolean): number => xs.filter(p).length;
+  return {
+    systemsProcessed: verdicts.length,
+    membersRepositioned: count(coherentMembers, (m) => m.kind === 'snapped'),
+    memberAnchorWins: count(verdicts, (v) => v.kind !== 'anchor-unplaced' && v.anchor.memberWon),
+    significantDepthKept: count(coherentMembers, (m) => m.kind === 'significant-depth' || m.kind === 'wide-gap'),
+    anchorPlacementInconsistent: count(verdicts, (v) => v.kind === 'anchor-inconsistent'),
+    memberAnchorPrecisionVetoed: count(verdicts, (v) => v.anchor.precisionVetoed),
+  };
 }

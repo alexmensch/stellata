@@ -176,7 +176,7 @@ export function resolveParallax(
 
   // A bound pair's components share a distance to a part in a million, so a
   // sibling's clean fit places this record where nothing measured on the record
-  // itself survived — the claim applySystemDistanceCoherence already ships
+  // itself survived — the claim system distance coherence already ships
   // catalogue-wide, reaching one tier further down. Below the second-order
   // indices because it lends a neighbour's measurement rather than serving this
   // star's own.

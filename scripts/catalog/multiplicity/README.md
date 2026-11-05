@@ -18,7 +18,12 @@ scripts/catalog/multiplicity/
                                   optical-double suppression cascade.
   system-coherence.ts (+ test)    Post-pass forcing one distance per
                                   physical system, so a pair never
-                                  straddles two distance layers.
+                                  straddles two distance layers: the
+                                  verdicts, then the move.
+  coherence-lineage-pure.ts       The pass as a lineage stage: its reason
+    (+ test)                      codes and the serialiser over its
+                                  verdicts
+                                  (#coherence-lineage).
   anchor-grade-pure.ts            isCoherenceAnchorGrade and its two
                                   thresholds. Pure, and imported by three
                                   folders — the coherence pass here, the
@@ -221,9 +226,17 @@ own coverage.
 
 ## System distance coherence
 
-`system-coherence.ts` (`applySystemDistanceCoherence`) runs **before
-companion promotion**, over the kept-physical pair rows of
-`multiples.tsv`. Two members of a bound WDS
+`system-coherence.ts` runs **before companion promotion**, over the
+kept-physical pair rows of `multiples.tsv`. `systemCoherenceVerdicts`
+decides and moves nothing: one `SystemVerdict` per system, naming its anchor
+and each member's verdict. `applySystemCoherence` then moves the snapped
+members, and `systemCoherenceStats` counts the verdicts. A later system
+anchored on a record an earlier system snapped is decided on that record's
+snapped distance, computed exactly as the applied record will read it, so
+the split leaves catalog.bin unchanged. The verdicts are also the pass's
+lineage, a row per record ([Coherence lineage](#coherence-lineage)), so
+`pnpm run trace` shows which anchor a snapped record moved onto and the
+distance it replaced. Two members of a bound WDS
 system carry independently-measured catalog distances whose noise
 scatter (a fraction of a parsec at ~50 pc) dwarfs the pair's true
 physical size (hundreds of AU), so without this pass the pair renders
@@ -314,3 +327,22 @@ matches what `binaries.bin` renders. Pinned in build-counts as
 `systemCoherenceMemberAnchorPrecisionVetoed`.
 [Multiple-star pipeline](/docs/science-multiple-star-pipeline.md#multiple-star-pipeline)
 carries the science framing.
+
+### Coherence lineage
+
+The pass is the third stage of the [lineage](../lineage/README.md) contract
+(`coherence-lineage-pure.ts`), between placement and promotion.
+`coherenceLineageRows` serialises each `SystemVerdict` through an exhaustive
+`switch`. A system's anchor gets `coherence.anchor`, or `anchor.inconsistent` /
+`anchor.unplaced` when the pass skips the system. Each member the system decides
+gets a `snapped`, `unmoved.*` or `kept.*` row, and every other record gets
+`coherence.not-applicable`. A record two systems decide (an earlier system's
+snapped member that anchors a later one) carries a row from each, and
+`params.root` tells them apart. Every row names its WDS root and the anchor's tier.
+A member row names its anchor by origin key in `params.anchor`, which is how
+`trace` gets from a snapped record to the record it moved onto, and a snapped
+row carries the distance it replaced and the one it ships (`from_pc`, `to_pc`).
+The evidence is the row the anchor's tier rests on: its Gaia DR3 or Hipparcos-2
+astrometry row, or its Bailer-Jones posterior. The inherited tier cites none.
+Coherence founds no record, so it writes no identity rows, and every code's
+effect is `none`.

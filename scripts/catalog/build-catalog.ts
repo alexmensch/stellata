@@ -88,7 +88,12 @@ import {
   renderableOrbitRelations,
   wingRenderablePrimaries,
 } from './companions/record-index/record-index';
-import { applySystemDistanceCoherence } from './multiplicity/system-coherence';
+import {
+  applySystemCoherence, systemCoherenceStats, systemCoherenceVerdicts, type SystemVerdict,
+} from './multiplicity/system-coherence';
+import {
+  COHERENCE_CODES, COHERENCE_LINEAGE_BUDGET, coherenceLineageLines,
+} from './multiplicity/coherence-lineage-pure';
 import {
   bridgeGcvsByGaia,
   applyVariability,
@@ -156,7 +161,7 @@ import { allocationRun, loadRegistry, registryTexts } from '../sid/registry-io';
 import { loadStoredEdges } from '../sid/stored-edges';
 import { CATALOG_PARTITION } from '../../src/catalog-format/pipeline-outputs/data-files';
 import {
-  PROMOTION_LINEAGE, PLACEMENT_LINEAGE, ALLOCATION_LINEAGE, ALLOCATION_SIDS_STEM, MEMBERSHIP_LINEAGE,
+  PROMOTION_LINEAGE, PLACEMENT_LINEAGE, COHERENCE_LINEAGE, ALLOCATION_LINEAGE, ALLOCATION_SIDS_STEM, MEMBERSHIP_LINEAGE,
 } from '../../src/catalog-format/pipeline-outputs/lineage-files';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -203,6 +208,24 @@ function walkManifest(inputs: ReadStarsOptions, stepInputs: FileHashes) {
 }
 
 const PLACEMENT_EFFECTS = codeEffects([PLACEMENT_CODES]);
+
+// A function of its own so its line per record is unreachable once it returns:
+// inlined into main, the lines outlive promotion and raise the build's peak heap.
+function coherenceLineage(verdicts: readonly SystemVerdict[], stars: readonly Star[], stepInputs: FileHashes) {
+  return stageLineage({
+    layout: LINEAGE_LAYOUT,
+    spec: COHERENCE_LINEAGE,
+    inputs: stepInputs,
+    diffed: 'coherence',
+    lines: coherenceLineageLines(verdicts, stars),
+    render: (sorted) => ({ coherence: stageLineageText(COHERENCE_CODES, sorted) }),
+    joins: () => [],
+    budget: COHERENCE_LINEAGE_BUDGET,
+    invariants: [],
+    argv: process.argv.slice(2),
+    upstream: UPSTREAM_LINEAGE,
+  });
+}
 
 function parkedLedgerTsv(placementLines: readonly LineageLine[]): string {
   const parked = parkedLedgerView(placementLines);
@@ -674,11 +697,14 @@ export async function main() {
   const synthGaiaBridges = syntheticGaiaBridges(loadStoredEdges());
   // Intra-system radial coherence BEFORE promotion, so minted members
   // project off already-coherent anchor positions.
-  const coherence = applySystemDistanceCoherence(multiplesRows, stars, {
+  const coherenceVerdicts = systemCoherenceVerdicts(multiplesRows, stars, {
     gaiaAstrometry: directions.gaiaAstrometry,
     hip2: directions.hip2,
-    bjMap: bailerJones.distPc,
+    bailerJones,
   });
+  const coherenceEmission = coherenceLineage(coherenceVerdicts, stars, inputHashesAtStart);
+  applySystemCoherence(stars, coherenceVerdicts);
+  const coherence = systemCoherenceStats(coherenceVerdicts);
   console.log(
     `  system distance coherence: ${coherence.membersRepositioned} ` +
       `members repositioned across ${coherence.systemsProcessed} systems ` +
@@ -1295,12 +1321,13 @@ export async function main() {
     parkedLedger,
     simbadSourcedDistances,
     ...placementEmission.files,
+    ...coherenceEmission.files,
     ...lineage.files,
     ...allocationLineage.files,
     ...registryTexts(CATALOG_PARTITION, allocation.minted, allocation.events),
   };
   const members = new Map([
-    ...chunks, ...placementEmission.members, ...lineage.members, ...allocationLineage.members,
+    ...chunks, ...placementEmission.members, ...coherenceEmission.members, ...lineage.members, ...allocationLineage.members,
   ]);
 
   emitArtifacts({
@@ -1308,7 +1335,7 @@ export async function main() {
     files,
     members,
     checks: [
-      ...placementEmission.checks, ...lineage.checks, ...allocationLineage.checks,
+      ...placementEmission.checks, ...coherenceEmission.checks, ...lineage.checks, ...allocationLineage.checks,
       buildCountsCheck(counts), distanceOutliersCheck(stars),
       heap.check(),
     ],

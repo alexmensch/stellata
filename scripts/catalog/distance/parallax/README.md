@@ -106,7 +106,7 @@ measurement of *this* record; `pair_member_parallax` states one of its bound
 sibling's. That is why it sits below even the second-order indices — a
 neighbour's fit is a weaker claim than a poor citation of the star's own — and
 above `none` only because the alternative is no record at all. The physical
-warrant is the one `applySystemDistanceCoherence` already ships
+warrant is the one system distance coherence already ships
 catalogue-wide ([System distance coherence](../../multiplicity/README.md#system-distance-coherence)): a
 bound pair's components share a distance to a part in a million. It borrows
 that pass's anchor gate outright (`isCoherenceAnchorGrade` — parallax > 0,

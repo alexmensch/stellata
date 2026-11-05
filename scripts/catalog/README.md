@@ -92,10 +92,11 @@ scripts/catalog/
                                   allocates every record's SID, then
                                   emits the chunked binary, manifests,
                                   both committed ledgers, the SID registry
-                                  and placement's, promotion's and
-                                  allocation's lineage through emitArtifacts
-                                  once its two snapshot checks, the three
-                                  lineage budgets, placement's lineage
+                                  and placement's, coherence's, promotion's
+                                  and allocation's lineage through
+                                  emitArtifacts once its two snapshot
+                                  checks, the four lineage budgets,
+                                  placement's lineage
                                   invariants (lineage/README.md#invariants)
                                   and the CI heap budget
                                   (../util/README.md#ci-heap-budget) pass.
@@ -116,8 +117,8 @@ scripts/catalog/
                                   the row-index map, the two committed
                                   ledgers, the catalogue's SID registry
                                   partition (registryFiles), placement's,
-                                  promotion's and allocation's lineage
-                                  files, and
+                                  coherence's, promotion's and allocation's
+                                  lineage files, and
                                   the transport chunks and the lineage
                                   baseline and diff as families, the last
                                   two unstamped. Side-effect free, so a reader can
