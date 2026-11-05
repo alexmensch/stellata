@@ -27,8 +27,17 @@ export const main = () => runPull(pull);
 
 A `Pull` is an archive, the step's `declareOutputs` constant, and one
 `PullTable` per declared output: `from`, optional `where` and `orderBy`, its
-columns, a scope, and its gates. **A table without a row band or at least one
-spot row does not compile.** Scopes:
+columns, its sort key, a scope, and its gates. **A table without a row band,
+at least one spot row, or a sort key does not compile.**
+
+**The sort key is the written order.** An archive's row order is not stable
+across runs and a server `ORDER BY` cannot order across batches, so
+`runPull` sorts every row of a table, all batches together, by `sortBy`
+before writing: each key a column compared as `integer` (exactly, through
+`BigInt`, so a source_id past 2^53 orders right), `decimal` or `text` (code
+unit), an empty cell first (`sortRows`). A re-pull of unchanged data writes
+the same bytes. `orderBy` is only for a query that needs a server order, such
+as one under `TOP`. Scopes:
 
 - `whole-table` — one query, limit `band.max × LIMIT_HEADROOM`.
 - `request` — the ids (ADQL literals, answering in `idColumn`) ANDed onto `where` as
@@ -39,10 +48,10 @@ spot row does not compile.** Scopes:
 which reports its count, rather than the overflow, which cannot.
 
 `describePull` states, per table, everything besides the data that decides
-its bytes — its query with the request ids left as `{request}`, and its
-column formats — plus the mirror list and release: what the record's query
+its bytes — its query with the request ids left as `{request}`, its
+column formats and its sort key — plus the mirror list and release: what the record's query
 hash covers ([Freshness](../../pipeline/README.md#freshness--one-mechanism)),
-so a changed column, `WHERE`, rounding or mirror stales the pull and a
+so a changed column, `WHERE`, rounding, order or mirror stales the pull and a
 changed id list does not, except through the pull's inputs.
 
 `runPull` queries every table, gates every one, then makes one

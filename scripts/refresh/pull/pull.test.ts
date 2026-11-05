@@ -16,6 +16,7 @@ afterEach(() => rmSync(dir, { recursive: true, force: true }));
 const STARS: PullTable = {
   from: 'gaiadr3.gaia_source',
   columns: [{ name: 'source_id' }, { name: 'parallax' }],
+  sortBy: [{ column: 'source_id', as: 'integer' }],
   scope: { kind: 'whole-table' },
   band: { min: 2, max: 3 },
   spotRows: [{ key: 'source_id', value: '1', cells: { parallax: '0.5' } }],
@@ -24,6 +25,7 @@ const STARS: PullTable = {
 const PAIRS: PullTable = {
   from: 'gaiadr3.nss_two_body_orbit',
   columns: [{ name: 'source_id' }, { name: 'period' }],
+  sortBy: [{ column: 'source_id', as: 'integer' }],
   scope: { kind: 'request', key: 'source_id', idColumn: 'source_id', ids: ['1', '2', '3'], batchSize: 2, rowsPerId: 1 },
   band: { min: 1, max: 3 },
   spotRows: [{ key: 'source_id', value: '2', cells: { period: '10' } }],
@@ -57,14 +59,14 @@ function deps(answer: (adql: string) => string | Error) {
 }
 
 const GOOD = (adql: string): string => (adql.includes('nss_two_body_orbit')
-  ? `source_id,period\n${adql.includes('IN (3)') ? '3,7' : '1,5\n2,10'}\n`
+  ? `source_id,period\n${adql.includes('IN (3)') ? '3,7' : '2,10\n1,5'}\n`
   : 'source_id,parallax\n1,0.5\n2,\n');
 
 const ckpt = (): string => join(dir, 'stars.tsv.ckpt');
 const read = (name: string): string => readFileSync(join(dir, name), 'utf8');
 
 describe('runPull', () => {
-  it('writes every output, gated, and clears its checkpoint', async () => {
+  it('writes every output, gated and sorted across batches, and clears its checkpoint', async () => {
     const { deps: d, asked } = deps(GOOD);
     await runPull(pullOf({ stars: STARS, pairs: PAIRS }), d);
     expect(read('stars.tsv')).toBe('source_id\tparallax\n1\t0.5\n2\t\n');
@@ -131,8 +133,12 @@ describe('describePull', () => {
     const description = describePull({ ...pullOf({ stars: STARS, pairs: PAIRS }), release: 'Gaia DR3' });
     expect(description).toEqual({
       query: JSON.stringify({
-        stars: { query: 'SELECT source_id, parallax FROM gaiadr3.gaia_source', formats: {} },
-        pairs: { query: 'SELECT source_id, period FROM gaiadr3.nss_two_body_orbit WHERE source_id IN ({request})', formats: {} },
+        stars: { query: 'SELECT source_id, parallax FROM gaiadr3.gaia_source', formats: {}, sortBy: STARS.sortBy },
+        pairs: {
+          query: 'SELECT source_id, period FROM gaiadr3.nss_two_body_orbit WHERE source_id IN ({request})',
+          formats: {},
+          sortBy: PAIRS.sortBy,
+        },
       }),
       services: ['ESA-sync', 'ARI-sync'],
       release: 'Gaia DR3',
@@ -166,5 +172,15 @@ export function pullsWithoutRequiredGatesDoNotCompile(): PullTable[] {
     { ...ungated, band },
     // @ts-expect-error a table with an empty spot-row list
     { ...ungated, band, spotRows: [] },
+  ];
+}
+
+export function pullsWithoutWriteOrderDoNotCompile(): PullTable[] {
+  const { sortBy: _, ...unordered } = STARS;
+  return [
+    // @ts-expect-error a table without a sort key
+    unordered,
+    // @ts-expect-error a table with an empty sort key
+    { ...unordered, sortBy: [] },
   ];
 }

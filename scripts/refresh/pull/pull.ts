@@ -5,7 +5,9 @@ import { setTimeout as sleep } from 'node:timers/promises';
 import { reportService } from '../../util/answered-by';
 import { emitArtifacts, type Check, type DeclaredOutputs, type PullDescription } from '../../util/emit-artifacts';
 import { checkpoint } from './checkpoint';
-import { cellReader, checkedRows, formatTsv, projection, type Column, type Row } from './columns-pure';
+import {
+  cellReader, checkedRows, formatTsv, projection, sortRows, type Column, type Row, type SortKey,
+} from './columns-pure';
 import { bandCheck, coverageCheck, spotRowCheck, type Coverage, type RowBand, type SpotRow } from './gates-pure';
 import { readCsv, tapClient, type TapArchive, type TapClientDeps, type Transport } from './tap-pure';
 
@@ -27,8 +29,11 @@ export type Scope =
 export interface PullTable {
   readonly from: string;
   readonly where?: string;
+  /** A server-side order, for a query that needs one (a `TOP`); the written order is `sortBy`'s. */
   readonly orderBy?: string;
   readonly columns: readonly [Column, ...Column[]];
+  /** The written order, over every batch: an archive's row order is not stable across runs. */
+  readonly sortBy: readonly [SortKey, ...SortKey[]];
   readonly scope: Scope;
   readonly band: RowBand;
   readonly spotRows: readonly [SpotRow, ...SpotRow[]];
@@ -78,7 +83,7 @@ const keysOf = <K extends string>(pull: Pull<K>): K[] => Object.keys(pull.tables
 /** Everything besides the data that decides a table's bytes, so a change to any of it stales the pull's record. */
 function tableDescription(table: PullTable, quote: TapArchive['quote']): object {
   const formats = Object.fromEntries(table.columns.flatMap((c) => (c.format ? [[c.name, c.format]] : [])));
-  return { query: queryTemplate(table, quote), formats };
+  return { query: queryTemplate(table, quote), formats, sortBy: table.sortBy };
 }
 
 export function describePull<K extends string>(pull: Pull<K>): PullDescription {
@@ -131,7 +136,7 @@ export async function runPull<K extends string>(pull: Pull<K>, deps: TapClientDe
       deps.log(`  ${key} batch ${i + 1}/${batches.length}: ${result.result.rows.length} rows${cached === null ? '' : ' from checkpoint'} (total ${rows.length})`);
     }
     checks.push(...tableChecks(key, table, rows));
-    files[key] = formatTsv(pull.outputs.files[key], table.columns, rows);
+    files[key] = formatTsv(pull.outputs.files[key], table.columns, sortRows(table.columns, rows, table.sortBy, key));
   }
   emitArtifacts({ outputs: pull.outputs, files, checks });
   cache.clear();

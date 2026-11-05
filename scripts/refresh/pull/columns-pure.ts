@@ -1,4 +1,4 @@
-// A pulled table's columns: the ADQL projection, the reply's schema check, and the TSV it writes. See README.md#columns.
+// A pulled table's columns: the ADQL projection, the reply's schema check, the write order, and the TSV it writes. See README.md#columns.
 
 import { formatFixed } from '../../util/round-pure';
 import { nullableCell, tsvLine, tsvText } from '../../util/tsv/artifact-pure';
@@ -15,6 +15,12 @@ export interface Column {
   /** The projection, when it is not `name` itself: a qualified column or an aliased expression answering as `name`. */
   readonly select?: string;
   readonly format?: Format;
+}
+
+/** How a column's text compares: `integer` exactly at any size (a source_id), `decimal` as a double. */
+export interface SortKey {
+  readonly column: string;
+  readonly as: 'integer' | 'decimal' | 'text';
 }
 
 export type Row = TapResult['rows'][number];
@@ -45,6 +51,27 @@ function columnIndex(columns: readonly Column[], label: string): (column: string
 export function cellReader(columns: readonly Column[], label: string): (row: Row) => Cell {
   const at = columnIndex(columns, label);
   return (row) => (column) => row[at(column)];
+}
+
+const COMPARE: Record<SortKey['as'], (a: string, b: string) => number> = {
+  integer: (a, b) => { const d = BigInt(a) - BigInt(b); return d < 0n ? -1 : d > 0n ? 1 : 0; },
+  decimal: (a, b) => Number(a) - Number(b),
+  text: (a, b) => (a < b ? -1 : a > b ? 1 : 0),
+};
+
+/** Every row, across batches, in `keys` order; an empty cell sorts first. */
+export function sortRows(columns: readonly Column[], rows: readonly Row[], keys: readonly SortKey[], label: string): Row[] {
+  const at = columnIndex(columns, label);
+  const steps = keys.map((k) => ({ i: at(k.column), compare: COMPARE[k.as] }));
+  return [...rows].sort((a, b) => {
+    for (const { i, compare } of steps) {
+      const x = a[i];
+      const y = b[i];
+      const d = x === y ? 0 : x === null ? -1 : y === null ? 1 : compare(x, y);
+      if (d !== 0) return d;
+    }
+    return 0;
+  });
 }
 
 function formatted(file: string, column: Column, cell: string | null): string {

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { cellReader, checkedRows, formatTsv, projection, type Column } from './columns-pure';
+import { cellReader, checkedRows, formatTsv, projection, sortRows, type Column } from './columns-pure';
 
 const COLUMNS: readonly Column[] = [
   { name: 'source_id', select: 't.source_id' },
@@ -33,6 +33,31 @@ describe('cellReader', () => {
     const cell = cellReader(COLUMNS, 't')(['1', '10.5', null]);
     expect([cell('source_id'), cell('plx')]).toEqual(['1', null]);
     expect(() => cell('nope')).toThrow('t: no column nope');
+  });
+});
+
+describe('sortRows', () => {
+  const cols: readonly Column[] = [{ name: 'id' }, { name: 'sep' }, { name: 'name' }];
+
+  it('orders integers exactly past 2^53, then decimals, with an empty cell first', () => {
+    const rows = [
+      ['5948276404969751808', '0.5', 'b'],
+      ['5948276404969751807', null, 'a'],
+      ['10', '2', 'c'],
+      ['9', '1', 'd'],
+      ['5948276404969751807', '0.25', 'e'],
+    ];
+    const keys = [{ column: 'id', as: 'integer' }, { column: 'sep', as: 'decimal' }] as const;
+    expect(sortRows(cols, rows, keys, 't').map((r) => r[2])).toEqual(['d', 'c', 'a', 'e', 'b']);
+  });
+
+  it('orders text by code unit, the same on every machine', () => {
+    expect(sortRows(cols, [['1', '1', 'b'], ['1', '1', 'B'], ['1', '1', 'a']], [{ column: 'name', as: 'text' }], 't').map((r) => r[2]))
+      .toEqual(['B', 'a', 'b']);
+  });
+
+  it('refuses a key that is not a declared column', () => {
+    expect(() => sortRows(cols, [], [{ column: 'nope', as: 'text' }], 't')).toThrow('t: no column nope');
   });
 });
 
