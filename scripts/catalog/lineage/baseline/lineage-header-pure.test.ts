@@ -10,7 +10,7 @@ const INPUTS: FileHashes = { 'scripts/demo/build.ts': 'code-1', 'scripts/demo/ta
 
 /** Each commit's inputs; a path a commit does not hold is null. */
 const tree = (commits: Readonly<Record<string, FileHashes>>): InputsAt => (commit, paths) =>
-  ({ kind: 'hashed', hashes: Object.fromEntries(paths.map((p) => [p, commits[commit]?.[p] ?? null])) });
+  ({ kind: 'hashed', hashes: Object.fromEntries(paths().map((p) => [p, commits[commit]?.[p] ?? null])) });
 
 const header = (commit: string, inputs: FileHashes = INPUTS): StageHeader => ({
   stage: 'demo', version: '1.0.0', commit, inputs, files: { 'demo.tsv.gz': 'f1' },
@@ -19,7 +19,7 @@ const intact = (h: StageHeader): HeaderRead => ({ kind: 'read', header: h, onDis
 const checkout = (read: HeaderRead) => ({ kind: 'checkout' as const, header: read });
 
 const branch = (commits: Readonly<Record<string, FileHashes>>, paths = Object.keys(INPUTS)): BaselineContext => ({
-  base: { kind: 'fixed', commit: 'abc', paths }, inputsAt: tree(commits),
+  base: { kind: 'fixed', commit: 'abc', paths: () => paths }, inputsAt: tree(commits),
 });
 const BRANCH = branch({ abc: INPUTS });
 
@@ -136,7 +136,7 @@ describe('on main', () => {
     const paths = () => ['p'];
     expect(baseAt({ onMainBranch: true, commit: 'abc' }, 'abc', inHistory, paths)).toEqual({ kind: 'recorded', inHistory });
     expect(baseAt({ onMainBranch: false, commit: 'abc' }, 'abc', inHistory, paths))
-      .toEqual({ kind: 'fixed', commit: 'abc', paths: ['p'] });
+      .toEqual({ kind: 'fixed', commit: 'abc', paths });
     expect(baseAt({ onMainBranch: true, commit: 'local' }, 'abc', inHistory, paths).kind).toBe('fixed');
   });
 });

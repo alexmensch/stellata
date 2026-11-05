@@ -72,11 +72,11 @@ export function mismatchedFiles(read: ReadHeader): string[] {
 }
 
 /** The inputs as `commit` holds them, over `paths`. */
-export type InputsAt = (commit: string, paths: readonly string[]) => HashesAt;
+export type InputsAt = (commit: string, paths: () => readonly string[]) => HashesAt;
 
 /** What a header's input map is compared with: see README.md#the-verdict--one-map-comparison. */
 export type Base =
-  | { readonly kind: 'fixed'; readonly commit: string; readonly paths: readonly string[] }
+  | { readonly kind: 'fixed'; readonly commit: string; readonly paths: () => readonly string[] }
   | { readonly kind: 'recorded'; readonly inHistory: (commit: string) => boolean };
 
 export interface BaselineContext {
@@ -91,7 +91,7 @@ export function baseAt(
 ): Base {
   return head.onMainBranch && head.commit === mergeBase
     ? { kind: 'recorded', inHistory }
-    : { kind: 'fixed', commit: mergeBase, paths: branchPaths() };
+    : { kind: 'fixed', commit: mergeBase, paths: branchPaths };
 }
 
 type Comparison =
@@ -115,11 +115,12 @@ function compare(read: ReadHeader, context: BaselineContext | null): Comparison 
   const { base } = context;
   if (base.kind === 'recorded' && !base.inHistory(header.commit)) return { kind: 'outside-history' };
   const commit = base.kind === 'fixed' ? base.commit : header.commit;
-  const paths = [...new Set([...Object.keys(header.inputs), ...(base.kind === 'fixed' ? base.paths : [])])].sort();
-  const at = context.inputsAt(commit, paths);
+  const at = context.inputsAt(
+    commit, () => [...new Set([...Object.keys(header.inputs), ...(base.kind === 'fixed' ? base.paths() : [])])].sort(),
+  );
   const named = base.kind === 'fixed' ? `the merge-base ${commit}` : `its commit ${commit}`;
   if (at.kind === 'unknown') return { kind: 'unknown', base: named, reason: at.reason };
-  const differing = differingInputs(header.inputs, at.hashes, paths);
+  const differing = differingInputs(header.inputs, at.hashes, Object.keys(at.hashes));
   return differing.length === 0 ? { kind: 'match' } : { kind: 'differs', base: named, paths: differing };
 }
 

@@ -72,25 +72,31 @@ type Known = { readonly kind: 'known'; readonly hashes: FileHashes } | { readonl
 export function inputsAtFrom(handed: FileHashes, known: (commit: string) => Known): InputsAt {
   const memo = new Map<string, HashesAt>();
   return (commit, paths) => {
-    const key = `${commit}\0${paths.join('\0')}`;
-    let at = memo.get(key);
-    if (at === undefined) {
-      try {
-        const upstream = known(commit);
-        at = upstream.kind === 'failed'
-          ? { kind: 'unknown', reason: upstream.reason }
-          : inputHashesAt(commit, onDiskHashes(paths, handed), REPO_ROOT, upstream.hashes);
-      } catch (err) {
-        at = { kind: 'unknown', reason: `hashing them failed: ${err instanceof Error ? err.message : String(err)}` };
-      }
+    let key = commit;
+    try {
+      const listed = paths();
+      key = `${commit}\0${listed.join('\0')}`;
+      const held = memo.get(key);
+      if (held !== undefined) return held;
+      const upstream = known(commit);
+      const at: HashesAt = upstream.kind === 'failed'
+        ? { kind: 'unknown', reason: upstream.reason }
+        : inputHashesAt(commit, onDiskHashes(listed, handed), REPO_ROOT, upstream.hashes);
       memo.set(key, at);
+      return at;
+    } catch (err) {
+      const at: HashesAt = { kind: 'unknown', reason: `hashing them failed: ${err instanceof Error ? err.message : String(err)}` };
+      memo.set(key, at);
+      return at;
     }
-    return at;
   };
 }
 
-const branchPaths = (mergeBase: string, inputs: readonly string[]): string[] =>
-  [...inputs, ...deletedSiblingsSince(mergeBase, inputs)];
+/** Listed on first ask, once. */
+function branchPaths(mergeBase: string, inputs: readonly string[]): () => readonly string[] {
+  let listed: readonly string[] | undefined;
+  return () => (listed ??= [...inputs, ...deletedSiblingsSince(mergeBase, inputs)]);
+}
 
 /** Each upstream stage's files as `commit` holds them, from the first of its headers whose inputs are `commit`'s. */
 function upstreamFiles<F extends string, S extends string>(run: StageLineageRun<F, S>, commit: string): Known {
@@ -124,7 +130,7 @@ function baselineContext<F extends string, S extends string>(run: StageLineageRu
   return {
     base: baseAt(
       { onMainBranch: onMainBranch(), commit: headCommit() }, mergeBase, inHeadHistory,
-      () => branchPaths(mergeBase, Object.keys(run.inputs)),
+      branchPaths(mergeBase, Object.keys(run.inputs)),
     ),
     inputsAt: inputsAtFrom(run.inputs, (commit) => {
       const key = `${commit}\0${(run.upstream ?? []).map((spec) => spec.stage).join('\0')}`;

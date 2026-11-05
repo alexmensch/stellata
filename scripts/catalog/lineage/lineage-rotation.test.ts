@@ -25,8 +25,8 @@ const header = (commit: string): StageProvenance => ({
   stage: 'demo', version: '1.0.0', commit, inputs: { 'demo.in': 'h' },
 });
 const BASE: BaselineContext = {
-  base: { kind: 'fixed', commit: 'base', paths: [] },
-  inputsAt: (_commit, paths) => ({ kind: 'hashed', hashes: Object.fromEntries(paths.map((p) => [p, 'h'])) }),
+  base: { kind: 'fixed', commit: 'base', paths: () => [] },
+  inputsAt: (_commit, paths) => ({ kind: 'hashed', hashes: Object.fromEntries(paths().map((p) => [p, 'h'])) }),
 };
 
 function text(source: string): Uint8Array {
@@ -172,5 +172,16 @@ describe('stage rotation', () => {
       expect(verdict.kind === 'refused' && verdict.message).toMatch(/hashing them failed: git exited 128/);
     }
     expect(calls).toBe(1);
+  });
+
+  it('a git failure while listing the branch\'s paths refuses the baseline, and fails nothing', () => {
+    run('old');
+    const failing: BaselineContext = {
+      base: { kind: 'fixed', commit: 'base', paths: () => { throw new Error('git diff exited 128'); } },
+      inputsAt: inputsAtFrom({}, () => ({ kind: 'known', hashes: {} })),
+    };
+    const source = { kind: 'checkout' as const, header: readStageHeader(layout.current, SPEC) };
+    const verdict = judgeBaseline(source, failing, false);
+    expect(verdict.kind === 'refused' && verdict.message).toMatch(/hashing them failed: git diff exited 128/);
   });
 });
