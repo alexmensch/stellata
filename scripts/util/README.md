@@ -273,7 +273,9 @@ same thing — single-use helpers stay with their consumer.
   `tsx` command as unclassified, which `/tests/source-declarations.test.ts`
   fails), and the runner and `record.ts` start a TypeScript step the same
   way (`../pipeline/processes.ts`'s `launchArgs`). An entry exports `main`
-  and never calls it, so **importing a package-script or step entry runs
+  and never calls it (`/tests/source-declarations.test.ts` parses every
+  launched entry and fails any top-level statement that is not a
+  declaration), so **importing a package-script or step entry runs
   nothing** — the input-set walk (`sources/declared-inputs.ts`) can import
   whatever its name matches. A script no `package.json` command names
   (CI's `pnpm exec tsx` calls, the commit-sweep figure check,

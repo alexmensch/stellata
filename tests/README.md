@@ -220,9 +220,11 @@ source-declarations.test.ts
                          defineSource / defineArtifact only
                          in a *-source.ts / *-tsv.ts module; every
                          package.json tsx command goes through the
-                         launcher, and an entry named like a declaring
-                         module runs nothing when the walk imports it
-                         (entry-fixture.ts).
+                         launcher; every launched entry's top level is
+                         declarations only (TypeScript's parser; no bare
+                         call, guard, or value computed by main), and an
+                         entry named like a declaring module runs nothing
+                         when the walk imports it (entry-fixture.ts).
 site-claims.test.ts      The homepage against what it states: figures are
                          published tokens, never literals · every saved-view
                          link decodes, and each sight's two anchors share

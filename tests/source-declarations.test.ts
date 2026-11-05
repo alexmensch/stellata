@@ -2,11 +2,12 @@
 
 import { readdirSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+import ts from 'typescript';
 import { describe, expect, it } from 'vitest';
 
 import { declaredInputs, DECLARING_MODULE } from '../scripts/util/sources/declared-inputs';
 import { entryClosure, packageScripts } from '../scripts/util/import-closure';
-import { RUNNER, scriptParts } from '../scripts/util/import-closure-pure';
+import { RUNNER, scriptParts, tsxEntries } from '../scripts/util/import-closure-pure';
 import { closureReadingWriters } from '../scripts/pipeline/step-table/non-step-writers';
 import { STEPS } from '../scripts/pipeline/step-table/steps';
 import { stepEntries } from '../scripts/util/step-inputs';
@@ -40,6 +41,30 @@ const WRITERS = closureReadingWriters();
 /** Every step and non-step writer with TypeScript in it: an all-Python step records its reads at run time. */
 const TS_STEPS = [...STEPS.steps.map((s) => s.name), ...WRITERS]
   .filter((name) => stepEntries(name).some((entry) => entry !== RUNNER));
+
+/** Every file the launcher starts: each package.json tsx command's entry and each TypeScript step's on the table. */
+const LAUNCHED = [...new Set([
+  ...Object.keys(scripts).flatMap((name) => tsxEntries(scripts, name)),
+  ...STEPS.steps.flatMap((s) => (s.language === 'ts' ? [s.entry] : [])),
+])].sort();
+
+const DECLARATION_KINDS = new Set([
+  ts.SyntaxKind.ImportDeclaration, ts.SyntaxKind.ImportEqualsDeclaration, ts.SyntaxKind.ExportDeclaration,
+  ts.SyntaxKind.FunctionDeclaration, ts.SyntaxKind.ClassDeclaration, ts.SyntaxKind.InterfaceDeclaration,
+  ts.SyntaxKind.TypeAliasDeclaration, ts.SyntaxKind.EnumDeclaration, ts.SyntaxKind.ModuleDeclaration,
+  ts.SyntaxKind.VariableStatement, ts.SyntaxKind.EmptyStatement,
+]);
+
+const callsMain = (node: ts.Node): boolean => (ts.isCallExpression(node) && ts.isIdentifier(node.expression)
+  && node.expression.text === 'main') || ts.forEachChild(node, callsMain) === true;
+
+/** Top-level statements that run on import: anything but a declaration, or a declaration whose value calls main. */
+function runsOnImport(rel: string, text = readFileSync(resolve(REPO_ROOT, rel), 'utf8')): string[] {
+  const source = ts.createSourceFile(rel, text, ts.ScriptTarget.Latest, true);
+  return source.statements
+    .filter((s) => !DECLARATION_KINDS.has(s.kind) || (ts.isVariableStatement(s) && callsMain(s)))
+    .map((s) => `${rel}:${source.getLineAndCharacterOfPosition(s.getStart()).line + 1} ${s.getText().split('\n')[0]}`);
+}
 
 function codeLinesOutsideSpellers(): { rel: string; at: string; code: string }[] {
   const files = [
@@ -93,6 +118,19 @@ describe('source declarations', () => {
     const bypassing = Object.keys(scripts).flatMap((name) => scriptParts(scripts, name))
       .flatMap((p) => (p.kind === 'other' && /^tsx\s/.test(p.command) ? [p.command] : []));
     expect(bypassing).toEqual([]);
+  });
+
+  it('gives every launched entry a top level of declarations only, so importing it runs nothing', () => {
+    expect(LAUNCHED.length).toBeGreaterThan(STEPS.steps.length / 2);
+    expect(LAUNCHED.flatMap((rel) => runsOnImport(rel))).toEqual([]);
+  });
+
+  it('reads a self-call, a guard or a value computed by main as running on import', () => {
+    const entry = (tail: string): string => `import { x } from './x';\nexport function main(): void { x(); }\n${tail}\n`;
+    expect(runsOnImport('e.ts', entry('const y = 1;'))).toEqual([]);
+    expect(runsOnImport('e.ts', entry('main();'))).toEqual(['e.ts:3 main();']);
+    expect(runsOnImport('e.ts', entry('if (process.argv[1]) main();'))).toEqual(['e.ts:3 if (process.argv[1]) main();']);
+    expect(runsOnImport('e.ts', entry('const done = main();'))).toEqual(['e.ts:3 const done = main();']);
   });
 
   it('runs nothing when the input-set walk imports an entry named like a declaring module', async () => {
