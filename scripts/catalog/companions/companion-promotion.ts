@@ -7,11 +7,8 @@ import {
   FLAG_BINARY_COMPANION_SYNTHETIC,
   NO_CONSTELLATION_INDEX,
 } from '../../../src/catalog-format/record/catalog-pure';
-import {
-  OPTICAL_DOUBLE_MIN_SEP_PC,
-  absoluteToApparentMagnitude,
-  apparentToAbsoluteMagnitude,
-} from '../record/record-build-pure';
+import { OPTICAL_DOUBLE_MIN_SEP_PC } from '../record/record-build-pure';
+import { absoluteMagnitude, apparentMagnitude } from '../../../src/astro-core/perceptual-magnitude';
 import {
   SPECTRAL_UNKNOWN,
   type SpectralInfo,
@@ -34,7 +31,7 @@ import {
 import { MULTIPLES_TSV, type MultiplesRecord, type PhotometryVia } from '../../binaries/multiples-tsv';
 import { readArtifact } from '../../util/sources/source';
 import { promotionOriginKey } from './promotion-lineage-pure';
-import { emptyTallyPartition } from '../../util/tally-pure';
+import { emptyTallyPartition } from '../../util/counts/tally-pure';
 import { ARCSEC_TO_RAD } from '../../../src/astro-core/astronomy-constants';
 import { equatorialTangentBasisAt } from '../../../src/astro-core/equatorial-basis';
 import type { ConstellationAssignment } from '../parse/constellations/constellations';
@@ -843,7 +840,7 @@ export function imputeCompanionAbsmag(
   const distPc = secondary.distPc ?? primary?.distPc ?? null;
   if (ownWdsMag !== null && distPc !== null && distPc > 0) {
     return {
-      absmag: apparentToAbsoluteMagnitude(ownWdsMag, distPc),
+      absmag: absoluteMagnitude(ownWdsMag, distPc),
       source: 'wds_mag',
     };
   }
@@ -1515,12 +1512,12 @@ function recurateExistingMember(
     brightness = imputed.source;
     const wdsMag = rowOwnWdsMag(row);
     const absmag = brightness === 'wds_mag' && wdsMag !== null
-      ? apparentToAbsoluteMagnitude(wdsMag, dNew) : imputed.absmag;
+      ? absoluteMagnitude(wdsMag, dNew) : imputed.absmag;
     member.absmag = deExtinctCompanionAbsmag({ absmag, source: brightness }, avNew);
     member.ci = imputeCompanionCi(row, spectral);
     if (companionCiIsObserved(row)) member.ci -= avNew / R_V;
   } else if (dOld > 0 && dNew > 0) {
-    member.absmag += 5 * Math.log10(dOld / dNew) + avOld - avNew;
+    member.absmag = absoluteMagnitude(apparentMagnitude(member.absmag, dOld) + avOld - avNew, dNew);
   }
   member.physicalRadius = physicalRadius(member.absmag, spectral);
   state.recuratedMembers.set(memberIdx, brightness);
@@ -2269,7 +2266,7 @@ export function promoteCompanions(
     const distPc = starDistPc(anchor);
     const recordObsMag = (s: Star): number | null => {
       const d = starDistPc(s);
-      return d > 0 ? absoluteToApparentMagnitude(s.absmag, d) + av : null;
+      return d > 0 ? apparentMagnitude(s.absmag, d) + av : null;
     };
     const mObs = distPc > 0 ? recordObsMag(anchor) : null;
     // ONE definition of a member's light, for the fit and the subtraction alike.
@@ -2413,7 +2410,7 @@ export function promoteCompanions(
     }
     const relSum = relatives.reduce((s, r) => s + Math.pow(10, -0.4 * r.delta), 0);
     const residualMObs = -2.5 * Math.log10(residualFlux / (1 + relSum));
-    anchor.absmag = apparentToAbsoluteMagnitude(residualMObs - av, distPc);
+    anchor.absmag = absoluteMagnitude(residualMObs - av, distPc);
     for (const { cand, delta } of relatives) {
       cand.member.absmag = anchor.absmag + delta;
       cand.member.physicalRadius = physicalRadius(

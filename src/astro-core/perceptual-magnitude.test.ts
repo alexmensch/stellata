@@ -1,8 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import {
+  absoluteMagnitude,
   apparentMagnitude,
   bodySurfaceBrightnessMagArcsec2,
-  hostIrradianceMagnitude,
+  distanceModulus,
   planetApparentMagnitude,
 } from './perceptual-magnitude';
 import { ARCSEC_TO_RAD, AU_PC, KM_PC, SUN_ABSMAG_V } from './astronomy-constants';
@@ -30,6 +31,34 @@ describe('apparentMagnitude', () => {
 
   it('does not divide by zero at d = 0', () => {
     expect(Number.isFinite(apparentMagnitude(0, 0))).toBe(true);
+  });
+});
+
+describe('distanceModulus', () => {
+  it('vanishes exactly at 10 pc', () => {
+    expect(distanceModulus(10)).toBe(0);
+  });
+
+  it('adds five magnitudes per factor of ten in distance', () => {
+    expect(distanceModulus(100)).toBeCloseTo(5, 10);
+    expect(distanceModulus(1000)).toBeCloseTo(10, 10);
+  });
+});
+
+describe('absoluteMagnitude', () => {
+  it('is the identity at 10 pc', () => {
+    expect(absoluteMagnitude(5.0, 10)).toBe(5.0);
+  });
+
+  it('subtracts five magnitudes per factor of ten in distance', () => {
+    expect(absoluteMagnitude(15, 100)).toBeCloseTo(10, 10);
+    expect(absoluteMagnitude(20, 1000)).toBeCloseTo(10, 10);
+  });
+
+  it('inverts apparentMagnitude across the catalogue span', () => {
+    for (const d of [4.8481368e-6, 1.3, 10, 22.466861, 776_000, 50_000]) {
+      expect(absoluteMagnitude(apparentMagnitude(4.83, d), d)).toBeCloseTo(4.83, 12);
+    }
   });
 });
 
@@ -140,27 +169,6 @@ describe('planetApparentMagnitude', () => {
       1,
     );
     expect(m).toBeCloseTo(-12.7, 1);
-  });
-});
-
-describe('hostIrradianceMagnitude', () => {
-  it('puts Sol at 1 AU at its known apparent magnitude', () => {
-    expect(hostIrradianceMagnitude(SUN_ABSMAG_V, AU_PC)).toBeCloseTo(-26.74, 2);
-  });
-
-  it('is the distance modulus: 5 mag per decade of host distance', () => {
-    expect(
-      hostIrradianceMagnitude(SUN_ABSMAG_V, 10 * AU_PC)
-        - hostIrradianceMagnitude(SUN_ABSMAG_V, AU_PC),
-    ).toBeCloseTo(5, 9);
-  });
-
-  it('trades luminosity against distance — equal irradiance is equal magnitude', () => {
-    // A host 5 mag fainter at 10x closer delivers the same irradiance, which
-    // is what makes everything derived from it general across systems rather
-    // than anchored to Sol.
-    expect(hostIrradianceMagnitude(SUN_ABSMAG_V + 5, AU_PC)).toBeCloseTo(
-      hostIrradianceMagnitude(SUN_ABSMAG_V, 10 * AU_PC), 9);
   });
 });
 

@@ -21,13 +21,58 @@ def refresh_command(script: str) -> str:
     return f"{UPDATE_SNAPSHOTS_ENV_VAR}=1 pnpm run {script}"
 
 
+STAGES_KEY = "stages"
+
+Staged = dict[str, dict[str, Any]]
+"""Stage → count → value, stages in pipeline order: what a build step
+hands the snapshot, each count written inside the block of the stage that
+computes it."""
+
+
+def flatten_staged(staged: Staged) -> dict[str, Any]:
+    """Every count of ``staged`` with its stage level dropped; a key two
+    stages share raises."""
+    return flatten_stages({STAGES_KEY: staged})
+
+
+def stage_of_counts(payload: Any) -> dict[str, str] | None:
+    """Each count's stage in a staged snapshot; None for any other payload."""
+    if not _is_staged(payload):
+        return None
+    return {key: stage for stage, counts in payload[STAGES_KEY].items() for key in counts}
+
+
+def _is_staged(payload: Any) -> bool:
+    return (
+        isinstance(payload, dict) and list(payload) == [STAGES_KEY]
+        and isinstance(payload[STAGES_KEY], dict)
+    )
+
+
+def flatten_stages(payload: Any) -> Any:
+    """A staged snapshot with its stage level dropped; any other payload
+    as it is. A key two stages share raises."""
+    if not _is_staged(payload):
+        return payload
+    flat: dict[str, Any] = {}
+    owner: dict[str, str] = {}
+    for stage, counts in payload[STAGES_KEY].items():
+        for key, value in counts.items():
+            if key in owner:
+                raise ValueError(f"count {key} is under two stages, {owner[key]} and {stage}")
+            owner[key] = stage
+            flat[key] = value
+    return flat
+
+
 @dataclass
 class SnapshotDiff:
     """One row of a snapshot diff. ``status`` is ``"match"``,
     ``"missing_actual"`` (key in expected but not in actual),
     ``"missing_expected"`` (key in actual but not in expected — typically
-    a newly-introduced entry), or the snapshot-specific mismatch status
-    (``"mismatch"`` for exact-match counts, ``"drift"`` for
+    a newly-introduced entry), ``"moved"`` (a matching value filed under
+    another stage, ``moved`` naming the two), or the snapshot-specific
+    mismatch status (``"mismatch"`` for exact-match counts, ``"drift"`` for
     tolerance-checked rates). ``tolerance`` is populated only for the
     tolerance-checked snapshot; ``None`` for exact-match counts."""
 
@@ -36,6 +81,7 @@ class SnapshotDiff:
     expected: float | None
     actual: float | None
     tolerance: float | None = None
+    moved: tuple[str, str] | None = None
 
 
 def compare_snapshot(
@@ -82,23 +128,25 @@ def format_diff(
     render_missing_expected: Callable[[SnapshotDiff], str],
 ) -> str:
     """A single match line when everything passes, otherwise the
-    mismatches first, then removed and new keys. Per-row rendering is the
-    caller's, so counts and rates format their own lines."""
+    mismatches first, then removed, new and moved keys. Per-row rendering
+    is the caller's, so counts and rates format their own lines."""
     mismatches = [d for d in diff if d.status == mismatch_status]
     missing_actual = [d for d in diff if d.status == "missing_actual"]
     missing_expected = [d for d in diff if d.status == "missing_expected"]
-    total_diffs = len(mismatches) + len(missing_actual) + len(missing_expected)
+    moved = [d for d in diff if d.status == "moved"]
+    total_diffs = len(mismatches) + len(missing_actual) + len(missing_expected) + len(moved)
     if total_diffs == 0:
         return f"{label} {noun}: all {len(diff)} {ok_suffix}"
     lines = [f"{label} {noun}: {total_diffs} of {len(diff)} {diff_verb}"]
     lines += [render_mismatch(d) for d in mismatches]
     lines += [render_missing_actual(d) for d in missing_actual]
     lines += [render_missing_expected(d) for d in missing_expected]
+    lines += [f"  {d.key:<40} moved from stage {d.moved[0]} to {d.moved[1]}" for d in moved if d.moved]
     return "\n".join(lines)
 
 
 def assert_or_update_snapshot(
-    actual: dict[str, float],
+    actual: Staged,
     expected_path: Path,
     *,
     label: str,
@@ -109,14 +157,21 @@ def assert_or_update_snapshot(
 ) -> bool:
     """True on a full match; False on drift or a missing snapshot, after
     printing how to refresh it through ``script``. Under ``UPDATE_SNAPSHOTS=1`` writes
-    ``build_payload(actual, expected_path)`` instead and returns True."""
+    the staged snapshot instead, each stage's block through
+    ``build_payload(counts, expected_path)`` and a stage with no counts left
+    out, and returns True. ``compare`` sees both sides flattened; a count it
+    matches that sits under another stage than the snapshot's is ``moved``."""
     try:
         shown = expected_path.relative_to(REPO_ROOT)
     except ValueError:
         shown = expected_path
 
     if os.environ.get(UPDATE_SNAPSHOTS_ENV_VAR) == "1":
-        expected_path.write_text(json.dumps(build_payload(actual, expected_path), indent=2) + "\n")
+        payload = {STAGES_KEY: {
+            stage: build_payload(counts, expected_path)
+            for stage, counts in actual.items() if counts
+        }}
+        expected_path.write_text(json.dumps(payload, indent=2) + "\n")
         print(f"[{label}] Updated {shown}")
         return True
 
@@ -124,8 +179,12 @@ def assert_or_update_snapshot(
         print(f"[{label}] snapshot {shown} is missing. To write it:\n  {refresh_command(script)}")
         return False
 
-    expected = json.loads(expected_path.read_text())
-    diff = compare(expected, actual)
+    committed = json.loads(expected_path.read_text())
+    diff = _with_moves(
+        compare(flatten_stages(committed), flatten_staged(actual)),
+        stage_of_counts(committed),
+        stage_of_counts({STAGES_KEY: actual}) or {},
+    )
     print(f"[{label}] {render(diff)}")
     if all(d.status == "match" for d in diff):
         return True
@@ -134,6 +193,18 @@ def assert_or_update_snapshot(
         f"refresh the snapshot with: {refresh_command(script)}"
     )
     return False
+
+
+def _with_moves(
+    diff: list[SnapshotDiff], committed: dict[str, str] | None, built: dict[str, str],
+) -> list[SnapshotDiff]:
+    if committed is None:
+        return diff
+    for d in diff:
+        was, now = committed.get(d.key), built.get(d.key)
+        if d.status == "match" and was is not None and now is not None and was != now:
+            d.status, d.moved = "moved", (was, now)
+    return diff
 
 
 def compare_build_counts(
@@ -168,7 +239,7 @@ def format_count_diff(diff: list[SnapshotDiff], label: str) -> str:
 
 
 def assert_or_update_counts(
-    actual: dict[str, int], expected_path: Path, *, label: str, script: str,
+    actual: Staged, expected_path: Path, *, label: str, script: str,
 ) -> bool:
     """Exact-match snapshot assert/refresh for an int-count JSON."""
     return assert_or_update_snapshot(

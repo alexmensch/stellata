@@ -14,8 +14,8 @@ import {
   DIST_VIA_VALUES,
   type DistVia,
 } from '../../../src/catalog-format/record/catalog-pure';
+import { absoluteMagnitude } from '../../../src/astro-core/perceptual-magnitude';
 import {
-  apparentToAbsoluteMagnitude,
   SIMBAD_NAMESPACE_VALUES,
   type SimbadNamespace,
   type SimbadRecordKeys,
@@ -111,7 +111,7 @@ import {
 } from '../photometry/colour-index-pure';
 import type { GspcColour } from '../photometry/gspc-parse';
 import { printedByHip } from '../photometry/hip-photometry-parse-pure';
-import { emptyTallyPartition } from '../../util/tally-pure';
+import { emptyTallyPartition } from '../../util/counts/tally-pure';
 import type { ManifestRecord } from '../membership/membership-manifest-tsv';
 import { type ConstellationAssignment } from './constellations/constellations';
 import {
@@ -594,7 +594,7 @@ export function readStars(
     // modulus is undefined and takes SOL_ABSOLUTE_V_MAGNITUDE instead.
     let absmag = isSol
       ? SOL_ABSOLUTE_V_MAGNITUDE
-      : apparentToAbsoluteMagnitude(vRes.value, dist);
+      : absoluteMagnitude(vRes.value, dist);
 
     // Must follow the PM rescue: the position advances on the motion the row
     // ends up carrying, which is the rescue's wherever the tier states none.

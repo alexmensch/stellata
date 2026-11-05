@@ -24,6 +24,7 @@ from scripts.binaries.component_tokens import (  # noqa: E402
 )
 from scripts.util.paths import REPO_ROOT  # noqa: E402
 from scripts.util.snapshot_assert import (  # noqa: E402
+    Staged,
     assert_or_update_counts,
 )
 
@@ -652,8 +653,8 @@ def write_binary(
     return stats
 
 
-def stats_to_counts(stats: WriteStats) -> dict[str, int]:
-    return {
+def stats_to_counts(stats: WriteStats) -> Staged:
+    return {"encode": {
         "pairs_total": stats.pairs_total,
         "pairs_emitted": stats.pairs_emitted,
         "pairs_dropped_primary_unresolved": stats.pairs_dropped_primary_unresolved,
@@ -664,7 +665,7 @@ def stats_to_counts(stats: WriteStats) -> dict[str, int]:
         "pairs_with_orbit": stats.pairs_with_orbit,
         "pairs_with_inclination": stats.pairs_with_inclination,
         "pairs_inner_of_hierarchy": stats.pairs_inner_of_hierarchy,
-    }
+    }}
 
 
 # ─── Driver ─────────────────────────────────────────────────────────

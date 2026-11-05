@@ -1,5 +1,6 @@
 // Local Group provider for the tier-2 focus card. See ./README.md.
 
+import { absoluteMagnitude, apparentMagnitude } from '../../astro-core/perceptual-magnitude';
 import type { LgObject } from '../local-group/local-group-loader';
 import { maxSemiAxisPc, minSemiAxisPc } from '../local-group/local-group-loader';
 import { fmtDistAuto } from '../ui/distance-util';
@@ -30,13 +31,7 @@ const SOURCE_LABEL: Record<LgObject['source'], string> = {
  *  near/inside the object the point-source
  *  law overstates brightness, which is acceptable card precision. */
 export function lgApparentMagFrom(mV: number, catalogDistPc: number, cameraDistPc: number): number {
-  return mV + 5 * Math.log10(Math.max(cameraDistPc, 1) / catalogDistPc);
-}
-
-/** Absolute V magnitude from the catalogued apparent magnitude and
- *  distance: M = m − 5·log10(d / 10 pc). */
-export function lgAbsoluteMag(mV: number, catalogDistPc: number): number {
-  return mV - 5 * Math.log10(catalogDistPc / 10);
+  return apparentMagnitude(absoluteMagnitude(mV, catalogDistPc), Math.max(cameraDistPc, 1));
 }
 
 export function createLgFocusProvider(
@@ -55,7 +50,7 @@ export function createLgFocusProvider(
           value: () =>
             lgApparentMagFrom(mV, obj.distanceFromSol, config.cameraDistancePc(idx)).toFixed(1),
         },
-        { label: 'Absolute mag', value: lgAbsoluteMag(mV, obj.distanceFromSol).toFixed(1) },
+        { label: 'Absolute mag', value: absoluteMagnitude(mV, obj.distanceFromSol).toFixed(1) },
         { label: 'Size', value: formatAxisPair(maxSemiAxisPc(obj), minSemiAxisPc(obj)) },
         { label: 'Known from', value: SOURCE_LABEL[obj.source] },
         ...constellationRows(() => config.constellationName(idx)),

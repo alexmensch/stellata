@@ -6,7 +6,7 @@ import { ARCSEC_TO_RAD } from '../../../../astro-core/astronomy-constants';
 import { luminanceForMagnitude, surfaceBrightnessLuminance } from '../../../../astro-core/emission/emission-pure';
 import { LIMB_EXP, LIMB_FLOOR } from '../../../../astro-core/baker-constants';
 import type { AtmoDiscMeans } from '../../atmosphere/atmosphere-scattering-pure';
-import { bodySurfaceBrightnessMagArcsec2, hostIrradianceMagnitude } from '../../../../astro-core/perceptual-magnitude';
+import { apparentMagnitude, bodySurfaceBrightnessMagArcsec2 } from '../../../../astro-core/perceptual-magnitude';
 
 
 /**
@@ -48,7 +48,7 @@ export function hostIrradianceLuminance(
 ): number {
   const irradiance = luminanceForMagnitude(
     1,
-    hostIrradianceMagnitude(hostAbsmag, dHpPc),
+    apparentMagnitude(hostAbsmag, dHpPc),
   );
   return irradiance * omegaPxArcsec2 * ARCSEC_TO_RAD * ARCSEC_TO_RAD;
 }

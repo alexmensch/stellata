@@ -15,7 +15,8 @@ let repo: string;
 
 const git = (...args: string[]) => gitIn(repo)(...args);
 const commit = (path: string, content?: string) => commitFile(repo, path, content);
-const expected = (n: number) => JSON.stringify({ recordCount: n });
+const expected = (n: number) => JSON.stringify({ stages: { inputs: { bjEntries: 1 }, records: { recordCount: n } } });
+const flatExpected = (n: number) => JSON.stringify({ recordCount: n });
 
 function guard(body: string, head?: string): { code: number | null; stdout: string } {
   writeFileSync(join(repo, 'body.md'), body);
@@ -61,6 +62,15 @@ describe('perf-section-guard gathers the inputs from git', () => {
   });
 
   it('reads the record count off both refs', () => {
+    commit('scripts/catalog/build-catalog-expected.json', expected(420_000));
+    const r = guard('## Summary\n\nx\n');
+    expect(r.code).toBe(1);
+    expect(r.stdout).toContain('catalogue membership 388063 -> 420000');
+  });
+
+  it('reads a flat count snapshot at a fork point that predates the stages', () => {
+    commit('scripts/catalog/build-catalog-expected.json', flatExpected(RECORDS));
+    git('branch', '-f', 'base');
     commit('scripts/catalog/build-catalog-expected.json', expected(420_000));
     const r = guard('## Summary\n\nx\n');
     expect(r.code).toBe(1);

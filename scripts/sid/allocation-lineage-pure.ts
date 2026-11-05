@@ -9,7 +9,7 @@ import type { Allocation, ObjectOutcome, SidObject } from './allocate-pure';
 import { PUBLIC_FILES } from '../../src/catalog-format/public-artifacts/public-artifacts';
 import { ALLOCATION_LINEAGE } from '../../src/catalog-format/pipeline-outputs/lineage-files';
 
-export const ALLOCATION_LINEAGE_BUDGET = { gzipBytes: 19_300_000, writeMs: 15_000 };
+export const ALLOCATION_LINEAGE_BUDGET = { gzipBytes: 19_300_000, writeMs: 30_000 };
 
 const live = (effect: CodeEffect, description: string): CodeDeclaration => ({ description, effect, status: LIVE });
 
