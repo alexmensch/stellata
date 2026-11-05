@@ -99,8 +99,13 @@ type Comparison =
   | { readonly kind: 'files'; readonly mismatched: readonly string[] }
   | { readonly kind: 'no-merge-base' }
   | { readonly kind: 'outside-history' }
-  | { readonly kind: 'unknown'; readonly base: string; readonly reason: string }
-  | { readonly kind: 'differs'; readonly base: string; readonly paths: readonly string[] };
+  | { readonly kind: 'unknown'; readonly base: BaseAt; readonly reason: string }
+  | { readonly kind: 'differs'; readonly base: BaseAt; readonly paths: readonly string[] };
+
+interface BaseAt {
+  readonly kind: Base['kind'];
+  readonly commit: string;
+}
 
 /** An input a header does not name was not read, which matches one the commit does not hold. */
 export function differingInputs(recorded: FileHashes, at: FileHashes, paths: readonly string[]): string[] {
@@ -118,7 +123,7 @@ function compare(read: ReadHeader, context: BaselineContext | null): Comparison 
   const at = context.inputsAt(
     commit, () => [...new Set([...Object.keys(header.inputs), ...(base.kind === 'fixed' ? base.paths() : [])])].sort(),
   );
-  const named = base.kind === 'fixed' ? `the merge-base ${commit}` : `its commit ${commit}`;
+  const named: BaseAt = { kind: base.kind, commit };
   if (at.kind === 'unknown') return { kind: 'unknown', base: named, reason: at.reason };
   const differing = differingInputs(header.inputs, at.hashes, Object.keys(at.hashes));
   return differing.length === 0 ? { kind: 'match' } : { kind: 'differs', base: named, paths: differing };
@@ -193,8 +198,11 @@ function refusal(commit: string, comparison: Exclude<Comparison, { kind: 'match'
     case 'outside-history':
       return `${built}, not a build from HEAD's history`;
     case 'unknown':
-      return `${built}, whose inputs could not be compared with ${comparison.base}'s: ${comparison.reason}`;
+      return `${built}, whose inputs could not be compared with ${baseName(comparison.base)}'s: ${comparison.reason}`;
     case 'differs':
-      return `${built}, whose inputs differ from ${comparison.base}'s: ${comparison.paths.join(', ')}`;
+      return `${built}, whose inputs differ from ${baseName(comparison.base)}'s: ${comparison.paths.join(', ')}`;
   }
 }
+
+const baseName = ({ kind, commit }: BaseAt): string =>
+  kind === 'fixed' ? `the merge-base ${commit}` : `its commit ${commit}`;
