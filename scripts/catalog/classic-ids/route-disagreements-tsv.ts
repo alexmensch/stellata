@@ -1,5 +1,6 @@
 // Codec for data/classic-ids/hd_hip_route_disagreements.tsv. See README.md#files-in-this-area.
 
+import { DATA_FILES } from '../../../src/catalog-format/pipeline-outputs/data-files';
 import { defineArtifact } from '../../util/tsv/artifact-pure';
 import { OVERLAY_VALUE_SEPARATOR } from './classic-id-overlay-pure';
 
@@ -11,7 +12,7 @@ export interface HdHipRouteDisagreement {
 }
 
 export const ROUTE_DISAGREEMENTS = defineArtifact({
-  file: 'data/classic-ids/hd_hip_route_disagreements.tsv',
+  file: DATA_FILES.routeDisagreements,
   columns: ['hd', 'hip', 'hd_route_source_ids', 'hip_route_source_id'] as const,
   hint: 'Re-run `pnpm run build:classic-ids`.',
   order: (a: HdHipRouteDisagreement, b: HdHipRouteDisagreement) => a.hd - b.hd,
