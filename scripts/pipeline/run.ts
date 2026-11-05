@@ -1,4 +1,4 @@
-// run.ts <step… | data> [--force] [--update-snapshots] [--verify-committed]. See README.md#the-runner--runts.
+// The runner's command line. See README.md#the-runner--runts.
 
 import { REPO_ROOT } from '../util/paths';
 import { entryInputPaths } from '../util/step-inputs';
@@ -14,7 +14,7 @@ async function main(): Promise<number> {
   const unknown = args.filter((a) => a.startsWith('--') && !FLAGS.has(a));
   const targets = args.filter((a) => !a.startsWith('--'));
   if (unknown.length > 0 || targets.length === 0) {
-    console.error(`usage: run.ts <step…|data> [--force] [--update-snapshots] [--verify-committed]${unknown.length > 0 ? `; unknown: ${unknown.join(' ')}` : ''}`);
+    console.error(`usage: run.ts <step…|data> ${[...FLAGS].map((f) => `[${f}]`).join(' ')}${unknown.length > 0 ? `; unknown: ${unknown.join(' ')}` : ''}`);
     return 2;
   }
   const loaded = await loadTable(STEPS, { root: REPO_ROOT, deriveInputs: (entry) => entryInputPaths([entry]) });
