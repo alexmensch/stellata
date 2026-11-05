@@ -145,7 +145,7 @@ describe('source declarations', () => {
     for (const file of walkFiles(resolve(REPO_ROOT, 'scripts'), { include: isProductionTs })) {
       const rel = file.slice(REPO_ROOT.length + 1);
       if (DECLARATION_FACTORIES.includes(rel)) continue;
-      if (/\b(defineSource|defineFolder|defineArtifact)\(/.test(readFileSync(file, 'utf8')) && !DECLARING_MODULE.test(rel)) {
+      if (/\b(defineSource|defineFolder|defineArtifact|defineJsonArtifact)\(/.test(readFileSync(file, 'utf8')) && !DECLARING_MODULE.test(rel)) {
         misplaced.push(rel);
       }
     }

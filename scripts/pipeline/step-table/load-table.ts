@@ -157,7 +157,7 @@ async function readsOf(step: StepEntry, tree: PipelineTree, options: LoadOptions
     const read = readManualRecord(step, tree.manualStamp(step.name));
     if (read.kind !== 'read') return [];
     const { record } = read;
-    return [...Object.keys(record.stamp.inputs), ...(record.kind === 'pull' ? record.requestFrom : [])].map(tree.abs);
+    return [...Object.keys(record.stamp.inputs), ...record.requestFrom].map(tree.abs);
   }
   return step.language === 'ts' ? options.deriveInputs(tree.abs(step.entry)) : [];
 }

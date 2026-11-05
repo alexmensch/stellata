@@ -2,83 +2,20 @@
 // layer. See scripts/local-group/README.md for inputs, output schema,
 // idempotency, and the LVDB-refresh protocol.
 
-import { dirname, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
-
-import { allocateSibling, emitSibling } from '../sid/sibling-allocation';
+import { allocateSibling, emitSibling, siblingLineage } from '../sid/sibling-allocation';
 import { SIBLING_ARTIFACTS } from '../sid/sibling-artifacts-pure';
 import { sweepStaged } from '../util/emit-artifacts';
-import { roundHalfEven, roundSignificant } from '../util/round-pure';
+import { LOCAL_GROUP_JSON } from './local-group-json';
 import { LOCAL_GROUP_OUTPUTS } from './local-group-outputs';
 import { LG_ALIASES, LG_OVERRIDES, LVDB } from './local-group-source';
 import {
   applyAliasMeta,
   buildStandaloneOverride,
   filterForRendering,
+  localGroupPayload,
   mergeRowAndOverride,
 } from './build-local-group-pure';
-import {
-  LOCAL_GROUP_VERSION,
-  type LgObjectRow,
-  type LgEmission,
-  type SersicParams,
-} from '../../src/catalog-format/local-group/local-group-schema';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-const ROOT = resolve(__dirname, '..', '..');
-
-const OUT = LOCAL_GROUP_OUTPUTS.files.localGroup;
-
-/** Trims numeric precision so repeat builds produce stable diffs. */
-function sersicParamsToJson(p: SersicParams) {
-  return {
-    reffAxesPc: p.reffAxesPc.map((v) => roundHalfEven(v, 2)),
-    n: roundHalfEven(p.n, 4),
-    bn: roundHalfEven(p.bn, 6),
-    pn: roundHalfEven(p.pn, 6),
-    uMax: roundHalfEven(p.uMax, 4),
-    density0: roundSignificant(p.density0, 8),
-  };
-}
-
-function emissionToJson(e: LgEmission) {
-  if (e.family === 'sersic') {
-    return {
-      family: e.family,
-      mV: roundHalfEven(e.mV, 2),
-      ...(e.color ? { color: e.color } : {}),
-      ...sersicParamsToJson(e),
-    };
-  }
-  return {
-    family: e.family,
-    mV: roundHalfEven(e.mV, 2),
-    ...(e.color ? { color: e.color } : {}),
-    rdPc: roundHalfEven(e.rdPc, 2),
-    zdPc: roundHalfEven(e.zdPc, 2),
-    rEnvPc: roundHalfEven(e.rEnvPc, 2),
-    zEnvPc: roundHalfEven(e.zEnvPc, 2),
-    density0: roundSignificant(e.density0, 8),
-    ...(e.bulge ? { bulge: sersicParamsToJson(e.bulge) } : {}),
-  };
-}
-
-function toJsonObject(o: LgObjectRow) {
-  return {
-    name: o.name,
-    id: o.id,
-    type: o.type,
-    ...(o.aliases ? { aliases: o.aliases } : {}),
-    center: o.center.map((v) => roundHalfEven(v, 2)),
-    kind: o.kind,
-    axes: o.axes.map((v) => roundHalfEven(v, 2)),
-    quat: o.quat.map((v) => roundHalfEven(v, 6)),
-    source: o.source,
-    distance: roundHalfEven(o.distance, 1),
-    emission: emissionToJson(o.emission),
-  };
-}
+import type { LgObjectRow } from '../../src/catalog-format/local-group/local-group-schema';
 
 export async function main(): Promise<void> {
   sweepStaged(LOCAL_GROUP_OUTPUTS);
@@ -160,16 +97,14 @@ export async function main(): Promise<void> {
   // byte-identical artifacts.
   objects.sort((a, b) => a.name.localeCompare(b.name, 'en', { sensitivity: 'base' }));
 
-  const allocation = allocateSibling(SIBLING_ARTIFACTS['local-group'], objects);
-  const payload = {
-    version: LOCAL_GROUP_VERSION,
-    count: objects.length,
-    objects: objects.map((o, i) => ({ ...toJsonObject(o), sid: allocation.sids[i] })),
-  };
-  emitSibling(LOCAL_GROUP_OUTPUTS, { localGroup: JSON.stringify(payload, null, 0) + '\n' }, allocation);
+  const allocation = allocateSibling(SIBLING_ARTIFACTS['local-group'], LOCAL_GROUP_JSON, objects);
+  emitSibling(
+    LOCAL_GROUP_OUTPUTS, { localGroup: LOCAL_GROUP_JSON.serialize(localGroupPayload(objects, allocation.sids)) }, allocation,
+    siblingLineage(SIBLING_ARTIFACTS['local-group'], allocation),
+  );
 
   console.log(
-    `wrote ${OUT.replace(ROOT + '/', '')} ` +
+    `wrote ${LOCAL_GROUP_JSON.file} ` +
     `(${objects.length} objects: ${overrideHits} LVDB+override, ` +
     `${lvdbDefaultHits} LVDB-only, ${standaloneHits} standalone override; ` +
     `${skippedNoStructure} LVDB rows skipped — no structural data; ` +

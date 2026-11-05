@@ -3,6 +3,7 @@
 // assembly over the profile geometry + the shared ρ₀ solve. Off the I/O path.
 
 import { siblingSlug } from '../sid/sibling-artifacts-pure';
+import { roundEach, roundHalfEven, roundSignificant } from '../util/round-pure';
 import {
   fluxNumber,
   solveDensity0,
@@ -15,10 +16,12 @@ import {
   u99,
 } from './emission-geometry-pure';
 import {
+  LOCAL_GROUP_VERSION,
   MAX_DISTANCE_PC,
   type LgEmission,
   type LgKind,
   type LgObjectRow,
+  type LocalGroupFile,
   type SersicParams,
 } from '../../src/catalog-format/local-group/local-group-schema';
 
@@ -725,4 +728,63 @@ export function buildStandaloneOverride(ov: OverrideRow): LgObjectRow | null {
     'OVERRIDE',
     emission,
   );
+}
+
+/** Trims numeric precision so repeat builds produce stable diffs. */
+function sersicParamsToJson(p: SersicParams): SersicParams {
+  return {
+    reffAxesPc: roundEach(p.reffAxesPc, 2),
+    n: roundHalfEven(p.n, 4),
+    bn: roundHalfEven(p.bn, 6),
+    pn: roundHalfEven(p.pn, 6),
+    uMax: roundHalfEven(p.uMax, 4),
+    density0: roundSignificant(p.density0, 8),
+  };
+}
+
+function emissionToJson(e: LgEmission): LgEmission {
+  if (e.family === 'sersic') {
+    return {
+      family: e.family,
+      mV: roundHalfEven(e.mV, 2),
+      ...(e.color ? { color: e.color } : {}),
+      ...sersicParamsToJson(e),
+    };
+  }
+  return {
+    family: e.family,
+    mV: roundHalfEven(e.mV, 2),
+    ...(e.color ? { color: e.color } : {}),
+    rdPc: roundHalfEven(e.rdPc, 2),
+    zdPc: roundHalfEven(e.zdPc, 2),
+    rEnvPc: roundHalfEven(e.rEnvPc, 2),
+    zEnvPc: roundHalfEven(e.zEnvPc, 2),
+    density0: roundSignificant(e.density0, 8),
+    ...(e.bulge ? { bulge: sersicParamsToJson(e.bulge) } : {}),
+  };
+}
+
+function toJsonObject(o: LgObjectRow): LgObjectRow {
+  return {
+    name: o.name,
+    id: o.id,
+    type: o.type,
+    ...(o.aliases ? { aliases: o.aliases } : {}),
+    center: roundEach(o.center, 2),
+    kind: o.kind,
+    axes: roundEach(o.axes, 2),
+    quat: roundEach(o.quat, 6),
+    source: o.source,
+    distance: roundHalfEven(o.distance, 1),
+    emission: emissionToJson(o.emission),
+  };
+}
+
+/** local-group.json: every object rounded for stable diffs, each with its SID. */
+export function localGroupPayload(objects: readonly LgObjectRow[], sids: readonly number[]): LocalGroupFile {
+  return {
+    version: LOCAL_GROUP_VERSION,
+    count: objects.length,
+    objects: objects.map((o, i) => ({ ...toJsonObject(o), sid: sids[i] })),
+  };
 }

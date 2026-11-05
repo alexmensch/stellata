@@ -9,13 +9,14 @@ import {
 
 /** How the object came to be in the build: through a lineage stage's admission row, or by a list the allocating step owns. */
 export type Admission =
-  | { readonly kind: 'lineage'; readonly origin: string }
-  | { readonly kind: 'declared'; readonly code: string; readonly origin: string | null };
+  | { readonly kind: 'lineage' }
+  | { readonly kind: 'declared'; readonly code: string };
 
 export interface SidObject {
   readonly designations: readonly string[];
   readonly kind: SidKind;
   readonly label: string;
+  readonly origin: string;
   readonly admission: Admission;
 }
 
@@ -185,8 +186,8 @@ export function allocate(input: AllocateInput, upstream: Upstream): Allocation {
 
   const admitted = [...pendingByRoot].flatMap(([root, p]) => {
     if (p.kind === 'resolved') return [];
-    const { admission } = firstObject(root);
-    return admission.kind === 'lineage' ? [admission.origin] : [];
+    const { admission, origin } = firstObject(root);
+    return admission.kind === 'lineage' ? [origin] : [];
   });
   const admissions = admitted.length === 0 ? new Map<string, string>() : upstream.admissions(admitted);
 
@@ -199,7 +200,7 @@ export function allocate(input: AllocateInput, upstream: Upstream): Allocation {
       continue;
     }
     const obj = firstObject(root);
-    const code = obj.admission.kind === 'declared' ? obj.admission.code : admissions.get(obj.admission.origin);
+    const code = obj.admission.kind === 'declared' ? obj.admission.code : admissions.get(obj.origin);
     if (code === undefined) {
       errors.push(`${obj.label} ${classText(root)}: no lineage stage records the decision that admitted it, so it cannot be ${p.kind === 'new' ? 'minted' : 'reinstated'}`);
     } else if (p.kind === 'new') {
@@ -221,7 +222,7 @@ export function allocate(input: AllocateInput, upstream: Upstream): Allocation {
     if (kindBySid.get(outcome.sid) !== obj.kind) {
       errors.push(`${obj.label}: kind "${obj.kind}" conflicts with sid ${outcome.sid}'s ledger kind "${kindBySid.get(outcome.sid)}"`);
     }
-    if (obj.admission.origin !== null) sidByOrigin.set(obj.admission.origin, outcome.sid);
+    sidByOrigin.set(obj.origin, outcome.sid);
     return outcome;
   });
   const sidOfOrigin = (origin: string): number | undefined => sidByOrigin.get(origin);
@@ -266,9 +267,9 @@ export function allocate(input: AllocateInput, upstream: Upstream): Allocation {
     return o;
   });
 
-  const event = (sid: number, kind: EventRow['event'], code: string, origin: string | null, successor: number | null = null): EventRow => ({
+  const event = (sid: number, kind: EventRow['event'], code: string, origin: string, successor: number | null = null): EventRow => ({
     sid, date: input.date, event: kind, code,
-    params: origin === null ? '' : JSON.stringify({ key: origin }),
+    params: JSON.stringify({ key: origin }),
     successor, buildVersion: input.version,
   });
   const removalOrder = new Map(ledger.map((r, i) => [r.sid, i]));
@@ -283,7 +284,7 @@ export function allocate(input: AllocateInput, upstream: Upstream): Allocation {
   outcomes.forEach((o, i) => {
     if (o.kind === 'resolved' || announced.has(o.sid)) return;
     announced.add(o.sid);
-    events.push(event(o.sid, o.kind === 'minted' ? 'mint' : 'reinstate', o.code, objects[i].admission.origin));
+    events.push(event(o.sid, o.kind === 'minted' ? 'mint' : 'reinstate', o.code, objects[i].origin));
   });
 
   return { kind: 'allocated', outcomes, removals, minted, events, ambiguous };
