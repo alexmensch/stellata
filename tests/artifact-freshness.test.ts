@@ -1,7 +1,7 @@
 // Every stamp under build/stamps/ and data/stamps/ is a step's, and matches the disk the way the runner judges it.
 
 import { existsSync, readdirSync } from 'node:fs';
-import { basename, dirname } from 'node:path';
+import { basename } from 'node:path';
 
 import { describe, it, expect } from 'vitest';
 
@@ -22,20 +22,14 @@ const manuals = resolved.flatMap((r) => (isBuild(r.step) ? [] : [{ step: r.step,
 
 const HASHING_TIMEOUT_MS = 120_000;
 
-function folderOf(stamps: readonly string[]): string {
-  const folders = [...new Set(stamps.map((s) => dirname(s)))];
-  if (folders.length !== 1) throw new Error(`stamps span ${folders.length} folders: ${folders.join(', ')}`);
-  return folders[0];
-}
-
 const jsonIn = (folder: string): string[] => (existsSync(folder)
   ? readdirSync(folder).filter((name) => name.endsWith('.json')).sort()
   : []);
 
 const BUILD_STAMPS = builds.map(({ step }) => tree.buildStamp(step.name));
 const MANUAL_STAMPS = manuals.map(({ step }) => tree.manualStamp(step.name));
-const BUILD_STAMP_DIR = folderOf(BUILD_STAMPS);
-const MANUAL_STAMP_DIR = folderOf(MANUAL_STAMPS);
+const BUILD_STAMP_DIR = tree.buildStamps;
+const MANUAL_STAMP_DIR = tree.manualStamps;
 
 const rerun = (step: StepEntry): string => `pnpm run ${step.name}`;
 
