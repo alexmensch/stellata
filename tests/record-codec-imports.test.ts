@@ -1,9 +1,11 @@
 // See /tests/README.md#record-codec-imports.
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { dirname, join, relative, resolve } from 'node:path';
+import { join, relative, resolve } from 'node:path';
 import { walkFiles } from './walk-files';
-import { importSpecifiers, isRelativeSpecifier, isShippedSource } from './import-specifiers';
+import {
+  importSpecifiers, isRelativeSpecifier, isShippedSource, resolveImportTarget,
+} from './import-specifiers';
 
 const ROOT = resolve(__dirname, '..');
 const RECORD_DIR = 'src/catalog-format/record';
@@ -16,7 +18,7 @@ function outsideImports(repoPath: string): string[] {
   return importSpecifiers(src)
     .map(({ spec }) => spec)
     .filter((spec) => !isRelativeSpecifier(spec)
-      || !relative(ROOT, resolve(ROOT, dirname(repoPath), spec)).startsWith(`${RECORD_DIR}/`))
+      || !resolveImportTarget(ROOT, repoPath, spec).startsWith(`${RECORD_DIR}/`))
     .map((spec) => `${repoPath} imports ${spec}`);
 }
 

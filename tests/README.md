@@ -339,9 +339,11 @@ entry-fixture.ts         Not a test — `writeEntryFixture`, a throwaway
                          source-declarations.test.ts).
 import-specifiers.ts     Not a test — `importSpecifiers` (every specifier,
                          its form, and whether it is type-only),
-                         `isRelativeSpecifier` and `isShippedSource` (not
-                         a test, `.d.ts` or `*-fixture.ts`), shared by
-                         node-import-boundary, pipeline-viewer-boundary
+                         `isRelativeSpecifier`, `resolveImportTarget` (the
+                         repo path a relative specifier names) and
+                         `isShippedSource` (not a test, `.d.ts` or
+                         `*-fixture.ts`), shared by node-import-boundary,
+                         pipeline-viewer-boundary, record-codec-imports
                          and vite-config-import-extensions.
 walk-files.ts            Not a test — file enumeration the scanners above
                          share. `walkFiles` is a recursive walk taking
