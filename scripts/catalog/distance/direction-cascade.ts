@@ -38,8 +38,6 @@ export const CATALOG_SCENE_EPOCH = 2016.0;
 // so both pipelines route a shared star identically.
 export const HIP2_PM_DELTA_THRESHOLD_MASYR = 50.0;
 
-
-
 /** The reference datasets this cascade routes between. It is not their only
  *  reader — `gaiaAstrometry` also carries the photometry the V and ci cascades
  *  transform and the rv the radial term takes, and `tycho2` the BT/VT the V
