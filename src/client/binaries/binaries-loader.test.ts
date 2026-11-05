@@ -8,74 +8,19 @@ import {
   MAGIC,
   VERSION,
   HEADER_SIZE,
-  RECORD_SIZE,
-  RECORD_LAYOUT,
   FLAG_HAS_ORBIT,
   FLAG_HAS_INCLINATION,
   FLAG_IS_INNER_OF_HIERARCHY,
   NO_PARENT,
+  encodeBinaries,
+  type BinaryRecord,
 } from '../../catalog-format/binaries/binaries-format';
-import { J2000_JD } from '../../astro-core/astronomy-constants';
 
-// Round-trip fixture builder mirroring the Python writer. Keeping the
-// encoder local to the test pins the wire contract without dragging
-// build-time scripts into the unit-test surface.
-interface FixtureRecord {
-  primaryIdx: number;
-  secondaryIdx: number;
-  flags: number;
-  parentRelation: number;
-  pDays: number;
-  tJd: number;
-  e: number;
-  aAU: number;
-  iRad: number;
-  omegaRad: number;
-  OmegaRad: number;
-  q: number;
-  sepArcsec: number;
-  paDeg: number;
-  sepPaEpochJd: number;
+function encodeFixture(records: BinaryRecord[]): ArrayBuffer {
+  return encodeBinaries(records).buffer as ArrayBuffer;
 }
 
-function encodeFixture(records: FixtureRecord[]): ArrayBuffer {
-  const buf = new ArrayBuffer(HEADER_SIZE + records.length * RECORD_SIZE);
-  const bytes = new Uint8Array(buf);
-  const view = new DataView(buf);
-  const enc = new TextEncoder();
-  bytes.set(enc.encode(MAGIC), 0);
-  view.setUint32(4, VERSION, true);
-  view.setUint32(8, records.length, true);
-  // bytes 12..15 reserved → already zero
-  for (let i = 0; i < records.length; i++) {
-    const off = HEADER_SIZE + i * RECORD_SIZE;
-    const r = records[i];
-    view.setUint32(off + RECORD_LAYOUT.primary_idx, r.primaryIdx, true);
-    view.setUint32(off + RECORD_LAYOUT.secondary_idx, r.secondaryIdx, true);
-    view.setUint32(off + RECORD_LAYOUT.flags, r.flags, true);
-    view.setInt32(off + RECORD_LAYOUT.parent_relation, r.parentRelation, true);
-    view.setFloat64(off + RECORD_LAYOUT.P_days, r.pDays, true);
-    view.setFloat64(off + RECORD_LAYOUT.T_jd, r.tJd, true);
-    view.setFloat32(off + RECORD_LAYOUT.e, r.e, true);
-    view.setFloat32(off + RECORD_LAYOUT.a_AU, r.aAU, true);
-    view.setFloat32(off + RECORD_LAYOUT.i_rad, r.iRad, true);
-    view.setFloat32(off + RECORD_LAYOUT.omega_rad, r.omegaRad, true);
-    view.setFloat32(off + RECORD_LAYOUT.Omega_rad, r.OmegaRad, true);
-    view.setFloat32(off + RECORD_LAYOUT.q, r.q, true);
-    view.setFloat32(off + RECORD_LAYOUT.sep_arcsec, r.sepArcsec, true);
-    view.setFloat32(off + RECORD_LAYOUT.pa_deg, r.paDeg, true);
-    // sep_pa_epoch_jd is stored as a J2000 offset on the wire — write
-    // the offset so the loader round-trips back to the same absolute
-    // JD the fixture caller supplies. NaN passes through unchanged.
-    const wireEpoch = Number.isNaN(r.sepPaEpochJd)
-      ? NaN
-      : r.sepPaEpochJd - J2000_JD;
-    view.setFloat32(off + RECORD_LAYOUT.sep_pa_epoch_jd, wireEpoch, true);
-  }
-  return buf;
-}
-
-function record(overrides: Partial<FixtureRecord> = {}): FixtureRecord {
+function record(overrides: Partial<BinaryRecord> = {}): BinaryRecord {
   return {
     primaryIdx: 0, secondaryIdx: 1,
     flags: 0,

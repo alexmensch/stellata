@@ -4,7 +4,9 @@
 fixed-size record per physical pair. Its writer (`build:binaries-runtime`,
 [Runtime side artifact](/scripts/binaries/README.md#runtime-side-artifact))
 and the viewer's loader (`/src/client/binaries/binaries-loader.ts`) both
-read every offset and flag from it.
+read every offset and flag from it. `encodeBinaries` turns `BinaryRecord`s
+(absent elements null) into the file's bytes; the writer and the loader's
+tests both encode through it.
 
 - Header (`HEADER_SIZE`, 16 B): `MAGIC` (`BIN1`), uint32 `VERSION`, uint32
   record count, 4 B reserved. Little-endian throughout.

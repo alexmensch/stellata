@@ -1,9 +1,8 @@
 // multiples.tsv + the catalogue row-index map → binaries.bin bytes. See README.md#runtime-side-artifact.
 
-import { J2000_JD } from '../../src/astro-core/astronomy-constants';
 import {
-  FLAG_HAS_INCLINATION, FLAG_HAS_ORBIT, FLAG_IS_INNER_OF_HIERARCHY, HEADER_SIZE, MAGIC, NO_PARENT,
-  RECORD_LAYOUT, RECORD_SIZE, VERSION, hasRenderableOrbit,
+  FLAG_HAS_INCLINATION, FLAG_HAS_ORBIT, FLAG_IS_INNER_OF_HIERARCHY, NO_PARENT, encodeBinaries,
+  hasRenderableOrbit, type BinaryRecord,
 } from '../../src/catalog-format/binaries/binaries-format';
 import {
   resolveMultiplesIdx, synthSlotIdx, type CatalogRowIndexMap,
@@ -223,24 +222,38 @@ function emptyCounts(total: number): RuntimeBinariesCounts {
   };
 }
 
-/** `parent_relation` holds the parent's emitted position, not its input index. */
-export function encodeBinaries(
+/** Both ends of a pair as records: gaia → hip → synth, then each end's own
+ *  synth record when that is a different one. */
+function resolvePairEnds(
+  p: MultiplesPair,
+  map: CatalogRowIndexMap,
+): { primary: number | null; secondary: number | null } {
+  const end = (gaia: string | null, hip: number | null, comp: string): number | null => {
+    const synth = composeSyntheticId(p.systemId, comp);
+    const id = resolveMultiplesIdx(gaia, hip, synth, map);
+    return id === null ? null : synthSlotIdx(synth, map, id) ?? id;
+  };
+  return {
+    primary: end(p.primaryGaia, p.primaryHip, p.primaryComp),
+    secondary: end(p.secondaryGaia, p.secondaryHip, p.secondaryComp),
+  };
+}
+
+/** The records binaries.bin carries, in walk order, and the counts of what
+ *  was dropped and flagged. `parentRelation` is the parent's emitted
+ *  position, not its input index. */
+export function planRecords(
   pairs: readonly MultiplesPair[],
   parents: readonly number[],
   walkOrder: readonly number[],
   map: CatalogRowIndexMap,
-): { bytes: Uint8Array; counts: RuntimeBinariesCounts } {
+): { records: BinaryRecord[]; counts: RuntimeBinariesCounts } {
   const resolvedPrimary: (number | null)[] = [];
   const resolvedSecondary: (number | null)[] = [];
   for (const p of pairs) {
-    const primarySynth = composeSyntheticId(p.systemId, p.primaryComp);
-    const secondarySynth = composeSyntheticId(p.systemId, p.secondaryComp);
-    let pri = resolveMultiplesIdx(p.primaryGaia, p.primaryHip, primarySynth, map);
-    let sec = resolveMultiplesIdx(p.secondaryGaia, p.secondaryHip, secondarySynth, map);
-    if (sec !== null) sec = synthSlotIdx(secondarySynth, map, sec) ?? sec;
-    if (pri !== null) pri = synthSlotIdx(primarySynth, map, pri) ?? pri;
-    resolvedPrimary.push(pri);
-    resolvedSecondary.push(sec);
+    const { primary, secondary } = resolvePairEnds(p, map);
+    resolvedPrimary.push(primary);
+    resolvedSecondary.push(secondary);
   }
   overrideInnerPrimaryIndices(pairs, parents, walkOrder, resolvedPrimary, resolvedSecondary);
 
@@ -257,60 +270,38 @@ export function encodeBinaries(
   }
 
   const counts = emptyCounts(pairs.length);
-  const emitted: number[] = [];
+  const records: BinaryRecord[] = [];
   const inputToOutput = new Map<number, number>();
   for (const i of walkOrder) {
-    if (resolvedPrimary[i] === null) { counts.pairs_dropped_primary_unresolved++; continue; }
-    if (resolvedSecondary[i] === null) { counts.pairs_dropped_secondary_unresolved++; continue; }
-    if (resolvedPrimary[i] === resolvedSecondary[i]) { counts.pairs_dropped_degenerate_idx++; continue; }
+    const primaryIdx = resolvedPrimary[i];
+    const secondaryIdx = resolvedSecondary[i];
+    if (primaryIdx === null) { counts.pairs_dropped_primary_unresolved++; continue; }
+    if (secondaryIdx === null) { counts.pairs_dropped_secondary_unresolved++; continue; }
+    if (primaryIdx === secondaryIdx) { counts.pairs_dropped_degenerate_idx++; continue; }
     const winner = relationWinner.get(relationKey(i)) as number;
     if (winner !== i) {
       if (sameRelationAlias(pairs[i], pairs[winner])) counts.pairs_dropped_same_relation_alias++;
       else counts.pairs_dropped_duplicate_relation++;
       continue;
     }
-    inputToOutput.set(i, emitted.length);
-    emitted.push(i);
-  }
-  counts.pairs_emitted = emitted.length;
-
-  const bytes = new Uint8Array(HEADER_SIZE + emitted.length * RECORD_SIZE);
-  const view = new DataView(bytes.buffer);
-  for (let k = 0; k < MAGIC.length; k++) bytes[k] = MAGIC.charCodeAt(k);
-  view.setUint32(4, VERSION, true);
-  view.setUint32(8, emitted.length, true);
-
-  emitted.forEach((i, out) => {
     const p = pairs[i];
-    const off = HEADER_SIZE + out * RECORD_SIZE;
     const hasOrbit = hasRenderableOrbit(p);
     const hasInclination = hasOrbit && p.iRad !== null;
-    const parentOutput = inputToOutput.get(parents[i]) ?? NO_PARENT;
+    const parentRelation = inputToOutput.get(parents[i]) ?? NO_PARENT;
     let flags = 0;
     if (hasOrbit) { flags |= FLAG_HAS_ORBIT; counts.pairs_with_orbit++; }
     if (hasInclination) { flags |= FLAG_HAS_INCLINATION; counts.pairs_with_inclination++; }
-    if (parentOutput !== NO_PARENT) { flags |= FLAG_IS_INNER_OF_HIERARCHY; counts.pairs_inner_of_hierarchy++; }
-    const f32 = (field: keyof typeof RECORD_LAYOUT, v: number | null): void =>
-      view.setFloat32(off + RECORD_LAYOUT[field], v ?? NaN, true);
-    const f64 = (field: keyof typeof RECORD_LAYOUT, v: number | null): void =>
-      view.setFloat64(off + RECORD_LAYOUT[field], v ?? NaN, true);
-    view.setUint32(off + RECORD_LAYOUT.primary_idx, resolvedPrimary[i] as number, true);
-    view.setUint32(off + RECORD_LAYOUT.secondary_idx, resolvedSecondary[i] as number, true);
-    view.setUint32(off + RECORD_LAYOUT.flags, flags, true);
-    view.setInt32(off + RECORD_LAYOUT.parent_relation, parentOutput, true);
-    f64('P_days', p.pDays);
-    f64('T_jd', p.tJd);
-    f32('e', p.e);
-    f32('a_AU', p.aAU);
-    f32('i_rad', p.iRad);
-    f32('omega_rad', p.omegaRad);
-    f32('Omega_rad', p.OmegaRad);
-    f32('q', p.q);
-    f32('sep_arcsec', p.sepArcsec);
-    f32('pa_deg', p.paDeg);
-    f32('sep_pa_epoch_jd', p.sepPaEpochJd === null ? null : p.sepPaEpochJd - J2000_JD);
-  });
-  return { bytes, counts };
+    if (parentRelation !== NO_PARENT) { flags |= FLAG_IS_INNER_OF_HIERARCHY; counts.pairs_inner_of_hierarchy++; }
+    inputToOutput.set(i, records.length);
+    records.push({
+      primaryIdx, secondaryIdx, flags, parentRelation,
+      pDays: p.pDays, tJd: p.tJd, e: p.e, aAU: p.aAU, iRad: p.iRad,
+      omegaRad: p.omegaRad, OmegaRad: p.OmegaRad, q: p.q,
+      sepArcsec: p.sepArcsec, paDeg: p.paDeg, sepPaEpochJd: p.sepPaEpochJd,
+    });
+  }
+  counts.pairs_emitted = records.length;
+  return { records, counts };
 }
 
 export interface RuntimeBinaries {
@@ -326,6 +317,6 @@ export function encodeRuntimeBinaries(
 ): RuntimeBinaries {
   const pairs = pairsFromRows(rows);
   const parents = assignParentRelations(pairs);
-  const { bytes, counts } = encodeBinaries(pairs, parents, topologicalWalkOrder(parents), map);
-  return { bytes, counts, nested: parents.filter((p) => p !== NO_PARENT).length };
+  const { records, counts } = planRecords(pairs, parents, topologicalWalkOrder(parents), map);
+  return { bytes: encodeBinaries(records), counts, nested: parents.filter((p) => p !== NO_PARENT).length };
 }

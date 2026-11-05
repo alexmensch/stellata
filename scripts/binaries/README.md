@@ -116,8 +116,11 @@ scripts/binaries/
                                   (#runtime-side-artifact).
   runtime-binaries-pure.ts        The writer itself: pairs joined from the
     (+ test)                      rows, parents by component-letter prefix,
-                                  outer-before-inner walk, both ends
-                                  resolved, the bytes encoded.
+                                  outer-before-inner walk, and planRecords —
+                                  both ends resolved, unaddressable pairs
+                                  dropped and counted, flags set — whose
+                                  records the format's encodeBinaries
+                                  writes.
   runtime-binaries-outputs.ts     RUNTIME_BINARIES_OUTPUTS, its declaration.
   golden/                         binaries.bin golden test: the writer on a
                                   committed non-LFS fixture, byte for byte.
@@ -518,7 +521,7 @@ agree (see [Companion promotion](/scripts/catalog/companions/README.md#companion
 
 A blended primary the synth re-home can't reach (its component was dropped
 by promotion, or it's a compound / secondary-side collapse) still resolves
-onto the anchor, producing a duplicate `(primary, secondary)`. `encodeBinaries`
+onto the anchor, producing a duplicate `(primary, secondary)`. `planRecords`
 emits one record per relation, and when duplicates collide it keeps the
 orbit-bearing member (`hasRenderableOrbit`; ties keep first in walk order) so the
 system's live motion survives the dedup rather than an element-less wide
