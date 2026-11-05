@@ -66,6 +66,7 @@ const RUN_SPELLINGS = [
   'node scripts/perf/run.ts',
   'node --import tsx scripts/perf/run',
   'pnpm exec tsx scripts/perf/run.ts',
+  'tsx scripts/util/launch.ts scripts/perf/run.ts',
   './scripts/perf/run.ts --mode probe',
   'cd /somewhere && pnpm run perf',
   'PERF_DEBUG=1 pnpm run perf',
