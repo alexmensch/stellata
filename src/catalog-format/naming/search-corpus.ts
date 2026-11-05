@@ -12,6 +12,7 @@ import {
   bayerDesignation,
   displayNamesFromSearchIndex,
   gouldDesignation,
+  isLettered,
 } from './star-naming-pure';
 import { formatGcvsDesignation } from './star-designations';
 export interface FuzzyEntry<Kind extends string = 'star'> {
@@ -216,7 +217,7 @@ export function buildSearchIndex<Kind extends string = 'star'>(
     // component composite ("θ¹ Ori C", "HIP 82676 Ab") that exists nowhere
     // else.
     const indexedLabel = display !== undefined
-      && (properName !== null || display.lettered || display.borrowed)
+      && (properName !== null || isLettered(display))
       ? display.label : null;
     const hasNamedDisplay = properName !== null || bayerDisplay !== null;
 

@@ -87,7 +87,7 @@ export interface DisplayNameCounts {
 
 export interface DisplayNameResult {
   counts: DisplayNameCounts;
-  labels: Map<number, DisplayName>;
+  labels: Map<number, DisplayName<number>>;
   /** Duplicate label → the records claiming it, for the parity ledger. */
   duplicates: Map<string, number[]>;
 }
@@ -157,8 +157,8 @@ export function assignDisplayNames(
       continue;
     }
     counts.namingTier[label.tier]++;
-    if (label.borrowed) counts.namingBorrowed++;
-    else if (label.lettered) counts.namingLettered++;
+    if (label.kind === 'borrowed') counts.namingBorrowed++;
+    else if (label.letter !== null) counts.namingLettered++;
     // A name attaches to a star; a designation is compiled for it. Only the
     // former reaches catalog.bin, so first paint carries names while the
     // runtime composes designations off the search index.
