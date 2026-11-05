@@ -131,12 +131,12 @@ lists them, and the harness copies those gitignored files in at creation. The
 stamps make the copy safe — when the worktree's inputs match what the main
 checkout last built from, the dev server starts without rebuilding; when they
 differ (main checkout built from an older commit, a pipeline change on the
-branch), the stamp mismatches and the step rebuilds. Only stamped outputs
-belong in that list, since a stamp is what tells a copy apart from the
-worktree's own build. The one other kind allowed is a diff baseline
-that no step reads to decide whether to rebuild and that records what it was
-built from — `build/lineage/`, whose header the lineage diff checks against
-the merge-base ([The header and the refusal](catalog/lineage/baseline/README.md#the-header-and-the-refusal)).
+branch), the stamp mismatches and the step rebuilds. Every listed file is
+one a stamp records, since a stamp is what tells a copy apart from the
+worktree's own build. `build/lineage/` is among them, and seeding it from an
+older commit is safe for a second reason: its header records what it was
+built from, and the lineage diff checks that against the merge-base
+([The header and the refusal](catalog/lineage/baseline/README.md#the-header-and-the-refusal)).
 Every listed file is an output of a step `build:seed` runs
 ([Seeding builds](#seeding-builds--buildseed)), so refreshing the main
 checkout's seed is that one command. The list itself is gitignored and
