@@ -5,7 +5,7 @@ import { cellReader, checkedRows, formatTsv, projection, type Column } from './c
 const COLUMNS: readonly Column[] = [
   { name: 'source_id', select: 't.source_id' },
   { name: 'RA(ICRS)' },
-  { name: 'plx', format: (cell) => Number(cell).toFixed(2) },
+  { name: 'plx', format: { fixed: 2 } },
 ];
 
 describe('projection', () => {
@@ -40,6 +40,11 @@ describe('formatTsv', () => {
   it('writes the header, an empty cell for null, formats only present cells, and ends with a newline', () => {
     expect(formatTsv('f.tsv', COLUMNS, [['1', '10.5', '3.14159'], ['2', '11', null]]))
       .toBe('source_id\tRA(ICRS)\tplx\n1\t10.5\t3.14\n2\t11\t\n');
+  });
+
+  it('rounds as Python does, and refuses a formatted cell that is not a number', () => {
+    expect(formatTsv('f.tsv', COLUMNS, [['1', 'x', '0.125']])).toBe('source_id\tRA(ICRS)\tplx\n1\tx\t0.12\n');
+    expect(() => formatTsv('f.tsv', COLUMNS, [['1', 'x', 'n/a']])).toThrow('f.tsv: plx="n/a" has a numeric format but is not a number');
   });
 
   it('refuses a cell holding a tab', () => {

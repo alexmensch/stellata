@@ -4,6 +4,7 @@ import { join } from 'node:path';
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
+import { pullQueryHash } from '../../pipeline/freshness';
 import { EmissionRefused, declareOutputs } from '../../util/emit-artifacts';
 import { batchQueries, describePull, queryLimit, runPull, type Pull, type PullTable } from './pull';
 import { GAIA, SIMBAD, TapOverflow, VIZIER, type TapArchive, type TapClientDeps } from './tap-pure';
@@ -130,12 +131,18 @@ describe('describePull', () => {
     const description = describePull({ ...pullOf({ stars: STARS, pairs: PAIRS }), release: 'Gaia DR3' });
     expect(description).toEqual({
       query: JSON.stringify({
-        stars: 'SELECT source_id, parallax FROM gaiadr3.gaia_source',
-        pairs: 'SELECT source_id, period FROM gaiadr3.nss_two_body_orbit WHERE source_id IN ({request})',
+        stars: { query: 'SELECT source_id, parallax FROM gaiadr3.gaia_source', formats: {} },
+        pairs: { query: 'SELECT source_id, period FROM gaiadr3.nss_two_body_orbit WHERE source_id IN ({request})', formats: {} },
       }),
       services: ['ESA-sync', 'ARI-sync'],
       release: 'Gaia DR3',
     });
+  });
+
+  it('a changed rounding changes the query hash', () => {
+    const rounded = (fixed: number): PullTable => ({ ...STARS, columns: [{ name: 'source_id' }, { name: 'parallax', format: { fixed } }] });
+    const hash = (fixed: number) => pullQueryHash(describePull(pullOf({ stars: rounded(fixed), pairs: PAIRS })));
+    expect(hash(3)).not.toBe(hash(4));
   });
 });
 

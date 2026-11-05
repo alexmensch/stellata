@@ -75,8 +75,14 @@ export function batchQueries(table: PullTable, quote: TapArchive['quote']): stri
 
 const keysOf = <K extends string>(pull: Pull<K>): K[] => Object.keys(pull.tables) as K[];
 
+/** Everything besides the data that decides a table's bytes, so a change to any of it stales the pull's record. */
+function tableDescription(table: PullTable, quote: TapArchive['quote']): object {
+  const formats = Object.fromEntries(table.columns.flatMap((c) => (c.format ? [[c.name, c.format]] : [])));
+  return { query: queryTemplate(table, quote), formats };
+}
+
 export function describePull<K extends string>(pull: Pull<K>): PullDescription {
-  const queries = Object.fromEntries(keysOf(pull).map((k) => [k, queryTemplate(pull.tables[k], pull.archive.quote)]));
+  const queries = Object.fromEntries(keysOf(pull).map((k) => [k, tableDescription(pull.tables[k], pull.archive.quote)]));
   return {
     query: JSON.stringify(queries),
     services: pull.archive.mirrors.map((m) => m.name),

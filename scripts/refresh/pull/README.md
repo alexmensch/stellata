@@ -38,11 +38,12 @@ spot row does not compile.** Scopes:
 `LIMIT_HEADROOM` (2) leaves room for a moved table to reach the band gate,
 which reports its count, rather than the overflow, which cannot.
 
-`describePull` states every table's query with its request ids left as
-`{request}`, plus the mirror list and release: what the record's query hash
-covers ([Freshness](../../pipeline/README.md#freshness--one-mechanism)), so a
-changed column, `WHERE` or mirror stales the pull and a changed id list does
-not, except through the pull's inputs.
+`describePull` states, per table, everything besides the data that decides
+its bytes — its query with the request ids left as `{request}`, and its
+column formats — plus the mirror list and release: what the record's query
+hash covers ([Freshness](../../pipeline/README.md#freshness--one-mechanism)),
+so a changed column, `WHERE`, rounding or mirror stales the pull and a
+changed id list does not, except through the pull's inputs.
 
 `runPull` queries every table, gates every one, then makes one
 `emitArtifacts` emission of all its outputs: a failed gate, query or schema
@@ -110,8 +111,10 @@ A table's `Column` list is the one statement of its schema. Each column's
 `name` is the header the archive answers with and the TSV writes; `select`
 is its projection when that is not the quoted name (a qualified `t.source_id`,
 which still answers as `source_id`, or an aliased expression); `format`
-rewrites each non-empty cell before it is written, the one place a pull
-rounds. So the projection, the schema check and the header order cannot
+is the one place a pull rounds, and it is data, `{fixed: n}`: Python's
+`f"{x:.nf}"` text (`formatFixed`, `../../util/round-pure.ts`), the rounding
+every Python pull writes with. Being data, it is part of what `describePull`
+states, so a changed rounding stales the pull. So the projection, the schema check and the header order cannot
 disagree: a reply whose header is not exactly the declared names, in order,
 is refused (`checkedRows`).
 
