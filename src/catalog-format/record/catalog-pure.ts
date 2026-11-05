@@ -337,6 +337,7 @@ type RecordFieldOfKind<K extends FieldKind> = {
  *  fits a JS number. */
 export type NumericRecordField = RecordFieldOfKind<'f32' | 'u8' | 'u16' | 'u32'>;
 export type BigRecordField = RecordFieldOfKind<'u64'>;
+export type Float32RecordField = RecordFieldOfKind<'f32'>;
 
 export const RECORD_FIELD_SIZES = fieldSizes(RECORD_FIELD_KINDS);
 

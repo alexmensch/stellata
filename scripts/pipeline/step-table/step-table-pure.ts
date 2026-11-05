@@ -33,7 +33,7 @@ export interface PythonBuildStep extends StepBase {
 
 /** A pull always describes itself; a bake does only when it reads a file
  *  through a projection of it (`--describe` prints the projection). */
-type ManualKind =
+export type ManualKind =
   | { readonly kind: 'pull' }
   | { readonly kind: 'bake'; readonly describes: boolean };
 

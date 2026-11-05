@@ -286,8 +286,10 @@ same thing — single-use helpers stay with their consumer.
   `tsx` would have, and runs `main`: a number it returns is the exit
   status; a refused emission has already printed its failed checks, so it
   exits 1 with one line and no stack; any other error keeps its stack. A
-  TypeScript pull (the two Horizons fetchers) also exports `describe`, and
-  `--describe` then prints its `PullDescription` instead of running.
+  TypeScript manual step that describes itself also exports `describe`,
+  sync or async — a pull's `PullDescription` (the two Horizons fetchers),
+  or a bake's `Projection` of a file it reads — and `--describe` then
+  prints what it returns instead of running.
   `horizons-response.ts`' `HORIZONS_SERVICE` is the service both state.
 - `heap-budget.ts` / `heap-budget-pure.ts` (+ test) — `watchHeap(step)`,
   started first thing in a step's `main`, and its `check()`, the step's peak

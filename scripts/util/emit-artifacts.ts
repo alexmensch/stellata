@@ -201,10 +201,19 @@ export interface PullDescription {
   readonly release?: string;
 }
 
-/** What a launched entry exports: `main`, whose number is the exit status; a pull's `describe`, printed under `--describe` instead. */
+/** The part of a file a manual step reads, as the request its record hashes,
+ *  and the files it is derived from, which are never hashed themselves. */
+export interface Projection {
+  readonly request?: readonly string[];
+  readonly requestFrom: readonly string[];
+}
+
+export type StepDescription = PullDescription | Projection;
+
+/** What a launched entry exports: `main`, whose number is the exit status; a manual step's `describe`, printed under `--describe` instead. */
 export interface StepModule {
   readonly main: () => void | number | Promise<void | number>;
-  readonly describe?: () => PullDescription;
+  readonly describe?: () => StepDescription | Promise<StepDescription>;
 }
 
 /** Imports `entry` and runs its `main`: the one way a script runs, so importing an entry runs nothing. */
@@ -216,7 +225,7 @@ export async function runStep(entry: string, args: readonly string[]): Promise<v
   if (typeof step.main !== 'function') throw new Error(`${entry} exports no main, so it cannot be launched`);
   if (args.includes('--describe')) {
     if (typeof step.describe !== 'function') throw new Error(`${entry} exports no describe, so it cannot answer --describe`);
-    console.log(JSON.stringify(step.describe()));
+    console.log(JSON.stringify(await step.describe()));
     return;
   }
   try {

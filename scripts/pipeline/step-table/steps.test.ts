@@ -10,7 +10,7 @@ import { REASON_CODES } from '../../catalog/lineage/reason-codes-tsv';
 import { MEMBERSHIP_MANIFEST } from '../../catalog/membership/membership-manifest-tsv';
 import { entryClosure, packageScripts } from '../../util/import-closure';
 import { LAUNCHER } from '../../util/import-closure-pure';
-import { lfsContentReadable, publicFile, PUBLIC_DIR, REPO_ROOT } from '../../util/paths';
+import { lfsContentReadable, publicFile, publicRepoPath, PUBLIC_DIR, REPO_ROOT } from '../../util/paths';
 import { PUBLIC_FILES } from '../../../src/catalog-format/public-artifacts/public-artifacts';
 import { describeStep } from '../freshness';
 import type { LoadedTable } from './load-table';
@@ -60,6 +60,10 @@ describe('the step table', () => {
     ]));
     expect(edgeFiles('lineage:codes', 'build:catalog')).toEqual([REASON_CODES.file]);
     expect(edgeFiles('build:binaries', 'build:membership')).toEqual([MULTIPLES_TSV.file]);
+  });
+
+  it('orders a describing bake after the writer of the file it projects', () => {
+    expect(edgeFiles('build:clouds', 'build:cloud-surfaces')).toEqual([publicRepoPath(PUBLIC_FILES.clouds)]);
   });
 
   it('is the one place a table step\'s entry is named: no package.json script or workflow runs one directly', () => {
