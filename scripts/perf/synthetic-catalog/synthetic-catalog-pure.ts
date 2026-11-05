@@ -14,6 +14,7 @@ import {
   discDensity,
   dustTauVPerPc,
 } from '../../../src/astro-core/milkyway/column/milkyway-column-pure';
+import { distanceModulus } from '../../../src/astro-core/perceptual-magnitude';
 
 export type Vec3 = readonly [number, number, number];
 
@@ -34,10 +35,6 @@ export function mulberry32(seed: number): () => number {
     t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
   };
-}
-
-export function distanceModulus(distPc: number): number {
-  return 5 * Math.log10(distPc / 10);
 }
 
 /** The intrinsic half of a record — everything that does not depend on where
