@@ -19,6 +19,12 @@ scripts/milkyway-calibration/
   resolved-light-pure.ts      The cap sums, the (shell × latitude band) cells,
     (+ test)                  the table they become, and the light the table
                               removes. Pure.
+  resolved-hole-catalogue.test.ts
+                              RESOLVED_HOLE_CATALOGUE_RECORDS equals the
+                              recordCount build-catalog-expected.json pins, so
+                              a membership change that lands without a
+                              re-measure fails here rather than as the
+                              viewer's load-time warning.
 ```
 
 The quadrature samples stay on the cell that owns them and nothing copies
