@@ -115,11 +115,12 @@ jobs:
           key: ${{ steps.build-cache.outputs.prefix }}${{ github.run_id }}-${{ github.run_attempt }}
           restore-keys: ${{ steps.build-cache.outputs.prefix }}
       - if: steps.restore.outputs.cache-matched-key != ''
-        run: tar -xf "$RUNNER_TEMP/data-build.tar"
+        run: tar --skip-old-files -xf "$RUNNER_TEMP/data-build.tar"
       - id: built
         run: pnpm run build:data --verify-committed ${{ github.event_name == 'push' && '--force' || '' }}
-      # The tracked icons and manifest under public/ must never be restored
-      # from a cache, so only untracked files are saved.
+      # A tracked file must never come from a cache: only untracked files are
+      # saved, and the restore skips any path the checkout already has, which
+      # covers a file tracked since the build was saved.
       - if: ${{ !cancelled() && steps.built.outcome != 'skipped' }}
         run: git ls-files -z --others --ignored --exclude-standard public build | tar --null -T - -cf "$RUNNER_TEMP/data-build.tar"
       - if: ${{ !cancelled() && steps.built.outcome != 'skipped' }}

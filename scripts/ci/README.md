@@ -71,7 +71,9 @@ an input to one merge. Pull requests run unforced.
 
 **What is cached** is every untracked file under `public/` and `build/`,
 found with `git ls-files --others --ignored`, stamps among them; `public/`'s
-tracked icons and manifest are never cached. A run saves even when a step
+tracked icons and manifest are never cached, and the restore
+(`tar --skip-old-files`) never replaces a file the checkout has, so a path
+tracked since the build was saved keeps its committed content. A run saves even when a step
 fails: a crashed step's stamp is already cleared, and a step that failed
 verification recorded the outputs it built, so a committed copy that still
 differs stales it again on the next push. `cache-cleanup.yml` deletes a pull
