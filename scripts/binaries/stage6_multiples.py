@@ -295,8 +295,8 @@ def _position_pc(astrometry: ComponentAstrometry) -> SystemAnchor | None:
     with the single-star catalogue. Gaia routes (native J2016.0) are a
     zero-Δt no-op; hip2_long_baseline (J1991.25) and athyg_position
     advance forward. Returns ``None`` when the astrometry row is
-    unresolved or carries no positive parallax — ``build-runtime-binaries.ts``
-    reads the empty columns as "no position constraint" and falls back to the
+    unresolved or carries no positive parallax — companion promotion reads
+    the empty columns as "no position constraint" and falls back to the
     AT-HYG single-component position if needed."""
     if (
         astrometry.ra_deg is None
