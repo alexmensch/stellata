@@ -252,9 +252,11 @@ export function main(): void {
     write('steps/a.ts', `
 import { writeFileSync } from 'node:fs';
 import { stepInputHashes } from ${JSON.stringify(join(REPO_ROOT, 'scripts/util/step-input-hashes'))};
-writeFileSync(${JSON.stringify(at('a.handed'))}, JSON.stringify(stepInputHashes()));
-writeFileSync(${JSON.stringify(at('a.in'))}, 'rewritten');
-writeFileSync(${JSON.stringify(at('a.out'))}, 'out');
+export function main(): void {
+  writeFileSync(${JSON.stringify(at('a.handed'))}, JSON.stringify(stepInputHashes()));
+  writeFileSync(${JSON.stringify(at('a.in'))}, 'rewritten');
+  writeFileSync(${JSON.stringify(at('a.out'))}, 'out');
+}
 `);
     write('steps/a-outputs.ts', `
 import { declareOutputs } from ${JSON.stringify(EMIT_ARTIFACTS)};
