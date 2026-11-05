@@ -70,7 +70,8 @@ map is `unknown`, and the baseline refused, where an input has no copy at the
 base to hash:
 
 - A git-ignored build output. The catalogue's stages read `build/lineage/`'s
-  membership files, so `build:catalog` names membership as their `upstream`:
+  membership files, so `build:catalog` names membership as their `upstream`
+  (`upstreamLineage`, one per build over its layout, hashed once per commit):
   when membership's previous or current header's input map is the base
   commit's (`acceptedFiles`, the same comparison over membership's own
   recorded map, with the current header's paths as the branch's), its

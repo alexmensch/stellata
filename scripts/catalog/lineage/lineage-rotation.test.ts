@@ -1,18 +1,21 @@
 import { mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join, resolve } from 'node:path';
+import { join, relative, resolve } from 'node:path';
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
+import { fileHashes } from '../../util/build-stamp';
 import { declareOutputs, emitArtifacts, EmissionRefused } from '../../util/emit-artifacts';
+import { headCommit } from '../../util/git-provenance';
+import { REPO_ROOT } from '../../util/paths';
 import { judgeBaseline, type BaselineContext, type StageProvenance } from './baseline/lineage-header-pure';
 import { baselineMembers, readLineage, readStageHeader, stageEmission } from './lineage-io';
 import { lineageInvariant, NO_EXCEPTIONS } from './lineage-invariant-pure';
 import { paramsText, stageLineageLine, stageLineageText } from './lineage-row-pure';
-import { inputsAtFrom, stageLineage } from './stage-lineage';
+import { inputsAtFrom, stageLineage, upstreamLineage } from './stage-lineage';
 import { LIVE, stageCodes } from './reason-codes-pure';
 import {
-  lineageLayout, stageFamilies, stageFile, stageOutputFiles, type LineageLayout,
+  lineageLayout, stageFamilies, stageFile, stageFileName, stageOutputFiles, type LineageLayout,
 } from '../../../src/catalog-format/pipeline-outputs/lineage-files';
 
 const SPEC = { stage: 'demo', files: ['demo', 'identity'] as const };
@@ -183,5 +186,30 @@ describe('stage rotation', () => {
     const source = { kind: 'checkout' as const, header: readStageHeader(layout.current, SPEC) };
     const verdict = judgeBaseline(source, failing, false);
     expect(verdict.kind === 'refused' && verdict.message).toMatch(/hashing them failed: git diff exited 128/);
+  });
+
+  it('an upstream stage\'s files stand for a commit exactly when its header\'s inputs are that commit\'s, hashed once', () => {
+    const emitUpstream = (inputs: Readonly<Record<string, string | null>>) => {
+      const { files, members } = stageEmission(
+        layout, SPEC, { demo: text('up'), identity: text('id-up') },
+        { stage: 'demo', version: '1.0.0', commit: 'up', inputs }, null, false,
+      );
+      emitArtifacts({ outputs: declareOutputs(stageOutputFiles(layout, SPEC), stageFamilies(layout, SPEC)), files, members, checks: [] });
+    };
+    const head = headCommit();
+    emitUpstream(fileHashes([resolve(REPO_ROOT, 'package.json')]));
+    const read = readStageHeader(layout.current, SPEC);
+    const recorded = read.kind === 'read' ? read.header.files : {};
+    const upstream = upstreamLineage(layout, [SPEC]);
+    const known = upstream.filesAt(head);
+    expect(known).toEqual({
+      kind: 'known',
+      hashes: Object.fromEntries(SPEC.files.map((stem) => [
+        relative(REPO_ROOT, stageFile(layout.current, stem)), recorded[stageFileName(stem)],
+      ])),
+    });
+    expect(upstream.filesAt(head)).toBe(known);
+    emitUpstream({ 'package.json': 'not what HEAD holds' });
+    expect(upstreamLineage(layout, [SPEC]).filesAt(head)).toEqual({ kind: 'known', hashes: {} });
   });
 });

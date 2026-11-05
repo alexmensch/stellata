@@ -79,7 +79,7 @@ import {
   lineageLineCode, stageLineageLine, stageLineageText, type LineageLine,
 } from './lineage/lineage-row-pure';
 import { codeEffects } from './lineage/reason-codes-pure';
-import { stageLineage } from './lineage/stage-lineage';
+import { stageLineage, upstreamLineage } from './lineage/stage-lineage';
 import {
   buildCatalogRowIndexMap,
   buildComponentDesignations,
@@ -159,7 +159,7 @@ import {
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-const UPSTREAM_LINEAGE = [MEMBERSHIP_LINEAGE];
+const UPSTREAM_LINEAGE = upstreamLineage(LINEAGE_LAYOUT, [MEMBERSHIP_LINEAGE]);
 
 const EXPECTED_COUNTS = resolve(ROOT, BUILD_COUNTS_EXPECTED_FILE);
 const EXPECTED_OUTLIERS = resolve(

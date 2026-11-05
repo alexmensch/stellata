@@ -44,8 +44,8 @@ export interface StageLineageRun<F extends string, S extends string> {
   /** Checked over `lines`; a violation fails the emission. */
   readonly invariants: readonly LineageInvariant[];
   readonly argv: readonly string[];
-  /** Every stage whose `build/lineage/` files are among `inputs`. See baseline/README.md. */
-  readonly upstream?: readonly StageLineageSpec<string>[];
+  /** The stages whose `build/lineage/` files are among `inputs`. See baseline/README.md. */
+  readonly upstream?: UpstreamLineage;
 }
 
 export interface StageLineageEmission<F extends string, S extends string> {
@@ -66,7 +66,9 @@ function baselineSource<F extends string, S extends string>(run: StageLineageRun
   return { kind: 'checkout', header: readStageHeader(run.layout.current, run.spec) };
 }
 
-type Known = { readonly kind: 'known'; readonly hashes: FileHashes } | { readonly kind: 'failed'; readonly reason: string };
+export type Known =
+  | { readonly kind: 'known'; readonly hashes: FileHashes }
+  | { readonly kind: 'failed'; readonly reason: string };
 
 /** Each `(commit, paths)` hashed once; a failure to hash is a refusal, never a failed build. */
 export function inputsAtFrom(handed: FileHashes, known: (commit: string) => Known): InputsAt {
@@ -98,12 +100,28 @@ function branchPaths(mergeBase: string, inputs: readonly string[]): () => readon
   return () => (listed ??= [...inputs, ...deletedSiblingsSince(mergeBase, inputs)]);
 }
 
-/** Each upstream stage's files as `commit` holds them, from the first of its headers whose inputs are `commit`'s. */
-function upstreamFiles<F extends string, S extends string>(run: StageLineageRun<F, S>, commit: string): Known {
+export interface UpstreamLineage {
+  /** Each upstream stage's files as `commit` holds them, by repo-relative path; hashed once per commit. */
+  readonly filesAt: (commit: string) => Known;
+}
+
+export function upstreamLineage(layout: LineageLayout, specs: readonly StageLineageSpec<string>[]): UpstreamLineage {
+  const memo = new Map<string, Known>();
+  return {
+    filesAt: (commit) => {
+      let known = memo.get(commit);
+      if (known === undefined) memo.set(commit, known = upstreamFiles(layout, specs, commit));
+      return known;
+    },
+  };
+}
+
+/** From the first of each stage's headers whose inputs are `commit`'s. */
+function upstreamFiles(layout: LineageLayout, specs: readonly StageLineageSpec<string>[], commit: string): Known {
   const hashes: Record<string, string> = {};
   try {
-    for (const spec of run.upstream ?? []) {
-      const headers = [readStageHeader(run.layout.previous, spec), readStageHeader(run.layout.current, spec)];
+    for (const spec of specs) {
+      const headers = [readStageHeader(layout.previous, spec), readStageHeader(layout.current, spec)];
       const current = headers[1];
       const read = current.kind === 'read' ? Object.keys(current.header.inputs) : [];
       const files = acceptedFiles(headers, {
@@ -112,7 +130,7 @@ function upstreamFiles<F extends string, S extends string>(run: StageLineageRun<
       });
       if (files === null) continue;
       for (const stem of spec.files) {
-        hashes[relative(REPO_ROOT, stageFile(run.layout.current, stem))] = files[stageFileName(stem)];
+        hashes[relative(REPO_ROOT, stageFile(layout.current, stem))] = files[stageFileName(stem)];
       }
     }
   } catch (err) {
@@ -120,9 +138,6 @@ function upstreamFiles<F extends string, S extends string>(run: StageLineageRun<
   }
   return { kind: 'known', hashes };
 }
-
-/** Per process, so a step's later stages reuse its first stage's hashing of the upstream inputs. */
-const upstreamAt = new Map<string, Known>();
 
 function baselineContext<F extends string, S extends string>(run: StageLineageRun<F, S>): BaselineContext | null {
   const mergeBase = mergeBaseWithMain();
@@ -132,12 +147,7 @@ function baselineContext<F extends string, S extends string>(run: StageLineageRu
       { onMainBranch: onMainBranch(), commit: headCommit() }, mergeBase, inHeadHistory,
       branchPaths(mergeBase, Object.keys(run.inputs)),
     ),
-    inputsAt: inputsAtFrom(run.inputs, (commit) => {
-      const key = `${commit}\0${(run.upstream ?? []).map((spec) => spec.stage).join('\0')}`;
-      let known = upstreamAt.get(key);
-      if (known === undefined) upstreamAt.set(key, known = upstreamFiles(run, commit));
-      return known;
-    }),
+    inputsAt: inputsAtFrom(run.inputs, (commit) => run.upstream?.filesAt(commit) ?? { kind: 'known', hashes: {} }),
   };
 }
 
