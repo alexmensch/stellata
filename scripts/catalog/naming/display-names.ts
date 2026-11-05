@@ -35,17 +35,28 @@ export interface DisplayNameSource {
   flags: number;
 }
 
+/** Which constellation the record's constellation-relative designations
+ *  render against. */
+export type DesignationConUse =
+  | { from: 'designation' | 'positional'; index: number }
+  | { from: 'none' };
+
+/** The designation's own constellation, never the positional one: once a
+ *  boundary moves past a named star the two diverge and the positional
+ *  index renames ρ Aql to ρ Del (/docs/star-naming.md#6-rendering--glyphs-everywhere-no-fallback-path). */
+export function designationConUse(star: Pick<DisplayNameSource, 'desigConIndex' | 'conIndex'>): DesignationConUse {
+  if (star.desigConIndex !== NO_CONSTELLATION_INDEX) return { from: 'designation', index: star.desigConIndex };
+  if (star.conIndex !== NO_CONSTELLATION_INDEX) return { from: 'positional', index: star.conIndex };
+  return { from: 'none' };
+}
+
 export function designationSetOf(
   star: DisplayNameSource,
   constellations: readonly { code: string }[],
   override?: string,
+  dc: DesignationConUse = designationConUse(star),
 ): DesignationSet {
-  // The designation's own constellation, never the positional one: once a
-  // boundary moves past a named star the two diverge and the positional
-  // index renames ρ Aql to ρ Del (/docs/star-naming.md#6-rendering--glyphs-everywhere-no-fallback-path).
-  const conIdx = star.desigConIndex !== NO_CONSTELLATION_INDEX
-    ? star.desigConIndex : star.conIndex;
-  const con = conIdx !== NO_CONSTELLATION_INDEX ? constellations[conIdx] : undefined;
+  const con = dc.from === 'none' ? undefined : constellations[dc.index];
   const set: DesignationSet = {};
   if (override !== undefined) set.override = override;
   if (star.iauName !== null) set.iauName = star.iauName;
@@ -85,9 +96,20 @@ export interface DisplayNameCounts {
   namingDuplicateRecords: number;
 }
 
+export type NameOutcome = DisplayName<number> | { kind: 'unlabelled' };
+
+/** One record's naming decision: what it displays, the designation set the
+ *  ladder weighed, and the constellation that set renders against. */
+export interface NamedRecord {
+  name: NameOutcome;
+  set: DesignationSet;
+  dc: DesignationConUse;
+}
+
 export interface DisplayNameResult {
   counts: DisplayNameCounts;
-  labels: Map<number, DisplayName<number>>;
+  /** Indexed by record. */
+  records: NamedRecord[];
   /** Duplicate label → the records claiming it, for the parity ledger. */
   duplicates: Map<string, number[]>;
 }
@@ -120,11 +142,12 @@ export function assignDisplayNames(
     }
   }
 
+  const dcs = stars.map(designationConUse);
   const inputs: DisplayNameInput<number>[] = stars.map((star, i) => {
     const component = components.get(i);
     const input: DisplayNameInput<number> = {
       key: i,
-      set: designationSetOf(star, constellations, overrides.get(recordSids[i])),
+      set: designationSetOf(star, constellations, overrides.get(recordSids[i]), dcs[i]),
     };
     if (component !== undefined) {
       input.component = component.comp;
@@ -135,52 +158,61 @@ export function assignDisplayNames(
   });
 
   const labels = resolveDisplayNames(inputs);
+  const records: NamedRecord[] = inputs.map((input, i) => ({
+    name: labels.get(i) ?? { kind: 'unlabelled' },
+    set: input.set,
+    dc: dcs[i],
+  }));
+  for (let i = 0; i < stars.length; i++) writeName(stars[i], records[i].name);
+  const duplicates = duplicateLabels(records);
+  return { counts: displayNameCounts(records, duplicates, overrides.size), records, duplicates };
+}
+
+/** A name attaches to a star; a designation is compiled for it. Only the
+ *  former reaches catalog.bin, so first paint carries names while the
+ *  runtime composes designations off the search index. */
+function writeName(star: DisplayNameSource, name: NameOutcome): void {
+  const isName = name.kind !== 'unlabelled' && isApprovedName(name.tier);
+  star.proper = isName ? name.label : null;
+  if (isName) star.flags |= FLAG_HAS_NAME;
+  else star.flags &= ~FLAG_HAS_NAME;
+}
+
+function duplicateLabels(records: readonly NamedRecord[]): Map<string, number[]> {
+  const claimants = new Map<string, number[]>();
+  records.forEach(({ name }, i) => {
+    if (name.kind === 'unlabelled') return;
+    const bucket = claimants.get(name.label);
+    if (bucket) bucket.push(i);
+    else claimants.set(name.label, [i]);
+  });
+  return new Map([...claimants].filter(([, idxs]) => idxs.length > 1));
+}
+
+function displayNameCounts(
+  records: readonly NamedRecord[],
+  duplicates: ReadonlyMap<string, number[]>,
+  overrides: number,
+): DisplayNameCounts {
   const counts: DisplayNameCounts = {
     namingTier: zeroedTiers(),
     namingBorrowed: 0,
     namingLettered: 0,
     namingNameTable: 0,
-    namingOverrides: overrides.size,
+    namingOverrides: overrides,
     namingUnlabelled: 0,
-    namingDuplicateLabels: 0,
-    namingDuplicateRecords: 0,
+    namingDuplicateLabels: duplicates.size,
+    namingDuplicateRecords: [...duplicates.values()].reduce((n, idxs) => n + idxs.length, 0),
   };
-
-  const claimants = new Map<string, number[]>();
-  for (let i = 0; i < stars.length; i++) {
-    const star = stars[i];
-    const label = labels.get(i);
-    if (label === undefined) {
-      star.proper = null;
-      star.flags &= ~FLAG_HAS_NAME;
+  for (const { name } of records) {
+    if (name.kind === 'unlabelled') {
       counts.namingUnlabelled++;
       continue;
     }
-    counts.namingTier[label.tier]++;
-    if (label.kind === 'borrowed') counts.namingBorrowed++;
-    else if (label.letter !== null) counts.namingLettered++;
-    // A name attaches to a star; a designation is compiled for it. Only the
-    // former reaches catalog.bin, so first paint carries names while the
-    // runtime composes designations off the search index.
-    const isName = isApprovedName(label.tier);
-    star.proper = isName ? label.label : null;
-    if (isName) {
-      star.flags |= FLAG_HAS_NAME;
-      counts.namingNameTable++;
-    } else {
-      star.flags &= ~FLAG_HAS_NAME;
-    }
-    const bucket = claimants.get(label.label);
-    if (bucket) bucket.push(i);
-    else claimants.set(label.label, [i]);
+    counts.namingTier[name.tier]++;
+    if (name.kind === 'borrowed') counts.namingBorrowed++;
+    else if (name.letter !== null) counts.namingLettered++;
+    if (isApprovedName(name.tier)) counts.namingNameTable++;
   }
-
-  const duplicates = new Map<string, number[]>();
-  for (const [label, idxs] of claimants) {
-    if (idxs.length < 2) continue;
-    duplicates.set(label, idxs);
-    counts.namingDuplicateLabels++;
-    counts.namingDuplicateRecords += idxs.length;
-  }
-  return { counts, labels, duplicates };
+  return counts;
 }

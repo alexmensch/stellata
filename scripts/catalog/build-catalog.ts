@@ -1013,7 +1013,7 @@ export async function main() {
     namingDuplicateRecords: display.counts.namingDuplicateRecords,
   });
   console.log(
-    `Display names: ${display.labels.size} composed ` +
+    `Display names: ${stars.length - display.counts.namingUnlabelled} composed ` +
       `(${display.counts.namingNameTable} names in catalog.bin, ` +
       `${display.counts.namingBorrowed} borrowed from a system anchor, ` +
       `${display.counts.namingLettered} lettered, ` +
