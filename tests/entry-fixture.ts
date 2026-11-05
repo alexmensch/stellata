@@ -5,6 +5,8 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { onTestFinished } from 'vitest';
 
+const MARKER = 'runs';
+
 export interface EntryFixture {
   readonly path: string;
   /** The arguments of each run of its main, in order. */
@@ -17,10 +19,10 @@ export function writeEntryFixture(
   const dir = mkdtempSync(join(tmpdir(), 'entry-fixture-'));
   onTestFinished(() => rmSync(dir, { recursive: true, force: true }));
   const path = join(dir, name);
-  const marker = join(dir, 'runs');
+  const marker = join(dir, MARKER);
   writeFileSync(path, [
     "import { appendFileSync } from 'node:fs';",
-    `${mains ? 'export ' : ''}function main(): number { appendFileSync(${JSON.stringify(marker)}, process.argv.slice(2).join(' ') + '\\n'); return 3; }`,
+    `${mains ? 'export ' : ''}function main(): number { appendFileSync(new URL('${MARKER}', import.meta.url), process.argv.slice(2).join(' ') + '\\n'); return 3; }`,
     ...(describes ? ["export function describe() { return { query: 'Q', services: ['svc'] }; }"] : []),
     '',
   ].join('\n'));
