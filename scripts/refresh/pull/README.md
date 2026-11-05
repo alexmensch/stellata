@@ -135,8 +135,7 @@ describe states.
 
 **The `CDS` and `SIMBAD-CDS` mirrors are unverified, and the first PR a mirror
 answers verifies that mirror before it lands.** CDS Strasbourg was unreachable
-from 2026-11-05 (an internet-wide vulnerability, no restoration date), and
-Harvard mirrors SIMBAD's TAP but not VizieR's, so their CSV dialect (quoting,
+from 2026-11-05, and Harvard mirrors SIMBAD's TAP but not VizieR's, so their CSV dialect (quoting,
 a BOM, the empty cell), `/capabilities` limit and error body are unmeasured.
 The two are separate hosts and may return apart, so the rule is per mirror: a
 PR in which a pull is answered by one (its record's `answeredBy`) runs that
