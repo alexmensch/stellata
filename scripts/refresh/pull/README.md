@@ -116,7 +116,7 @@ is refused (`checkedRows`).
 **An empty CSV cell is the masked value**, read as `null` and written as an
 empty TSV cell; a CSV reply cannot tell an empty string from a null, and
 neither can the TSV. `formatTsv` writes LF line endings and a final newline,
-and refuses a cell holding a tab or line break (`tsvCell`).
+and refuses a cell holding a tab or line break: the codec's own layout (`tsvLine`, `tsvText`, `../../util/tsv/`).
 
 ## Gates
 

@@ -1,6 +1,6 @@
 // A pulled table's columns: the ADQL projection, the reply's schema check, and the TSV it writes. See README.md#columns.
 
-import { tsvCell } from '../../util/tsv/artifact-pure';
+import { nullableCell, tsvLine, tsvText } from '../../util/tsv/artifact-pure';
 import type { TapResult } from './tap-pure';
 
 export interface Column {
@@ -38,9 +38,7 @@ export function cellReader(columns: readonly Column[], label: string): (row: Row
 }
 
 export function formatTsv(file: string, columns: readonly Column[], rows: readonly Row[]): string {
-  const lines = rows.map((row) => columns.map((c, i) => {
-    const cell = row[i];
-    return tsvCell(file, c.name, cell === null ? '' : c.format ? c.format(cell) : cell);
-  }).join('\t'));
-  return `${[columns.map((c) => c.name).join('\t'), ...lines].join('\n')}\n`;
+  const names = columns.map((c) => c.name);
+  const formatted = (c: Column, cell: string | null): string => nullableCell(cell !== null && c.format ? c.format(cell) : cell);
+  return tsvText(names, rows.map((row) => tsvLine(file, names, columns.map((c, i) => formatted(c, row[i])))));
 }

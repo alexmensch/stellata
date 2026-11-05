@@ -10,9 +10,16 @@ export function nullableCell(v: string | number | null): string {
   return v === null ? '' : String(v);
 }
 
-export function tsvCell(file: string, column: string, cell: string): string {
-  if (/[\t\n\r]/.test(cell)) throw new Error(`${file}: cell ${column}="${cell}" contains a TSV delimiter`);
-  return cell;
+export function tsvLine(file: string, columns: readonly string[], cells: readonly string[]): string {
+  return columns.map((column, i) => {
+    const cell = cells[i];
+    if (/[\t\n\r]/.test(cell)) throw new Error(`${file}: cell ${column}="${cell}" contains a TSV delimiter`);
+    return cell;
+  }).join('\t');
+}
+
+export function tsvText(columns: readonly string[], lines: readonly string[]): string {
+  return `${[columns.join('\t'), ...lines].join('\n')}\n`;
 }
 
 /** Code-unit order: the same on every machine, unlike `localeCompare`. */
@@ -53,7 +60,7 @@ export function defineArtifact<C extends string, R, K = never>(
 
   const encodeLine = (record: R): string => {
     const cells = spec.encode(record);
-    return spec.columns.map((c) => tsvCell(spec.file, c, cells[c])).join('\t');
+    return tsvLine(spec.file, spec.columns, spec.columns.map((c) => cells[c]));
   };
 
   function* rows(text: string): Generator<R> {
@@ -74,7 +81,7 @@ export function defineArtifact<C extends string, R, K = never>(
       const sorted = typeof order === 'function' ? [...records].sort(order) : records;
       const lines = sorted.map(encodeLine);
       if (order === 'by-line') lines.sort();
-      return `${[spec.columns.join('\t'), ...lines].join('\n')}\n`;
+      return tsvText(spec.columns, lines);
     },
   } as Artifact<C, R, K>;
 }
