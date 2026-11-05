@@ -26,7 +26,6 @@ const OBJECT_OUTCOMES = {
 type ObjectBranch = keyof typeof OBJECT_OUTCOMES;
 export type ObjectOutcomeCodes = StageCodes<ObjectBranch>;
 
-/** What a row needs of a stage's codes, so a stage declaring more branches still serialises these. */
 type BranchCoder<B extends string> = { readonly stage: string; code(branch: B): string };
 
 /** A stage that allocates objects and settles no orphan: its object outcomes' codes. */
