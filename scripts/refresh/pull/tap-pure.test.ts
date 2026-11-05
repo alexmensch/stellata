@@ -94,6 +94,16 @@ describe('tapClient', () => {
     expect(reported).toEqual(['ARI-sync']);
   });
 
+  it('falls back past a mirror whose /capabilities fails, whatever its status', async () => {
+    const { client, syncCalls, reported } = fake(({ url }) => {
+      if (url.includes('esac') && url.endsWith('/capabilities')) return { status: 404, contentType: 'text/html', body: '<html>not found</html>' };
+      return url.endsWith('/capabilities') ? capabilities(null) : csv(rowsCsv(1));
+    });
+    await client(GAIA).query('Q', 10);
+    expect(syncCalls().map((c) => c.url)).toEqual(['https://gaia.ari.uni-heidelberg.de/tap/sync']);
+    expect(reported).toEqual(['ARI-sync']);
+  });
+
   it('refuses when no mirror can hold limit + 1', async () => {
     const { client, syncCalls } = fake(() => capabilities(1_000));
     await expect(client(GAIA).query('Q', 1_000)).rejects.toThrow(/no mirror returns 1001 rows/);

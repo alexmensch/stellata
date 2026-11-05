@@ -152,7 +152,7 @@ export function tapClient(archive: TapArchive, deps: TapClientDeps): TapClient {
     if (cap === undefined) {
       cap = withRetry(async () => {
         const reply = await deps.transport(`${mirror.url}/capabilities`);
-        if (reply.status !== 200) throw replyError(reply, `${mirror.name} /capabilities`);
+        if (reply.status !== 200) throw new TapTransient(`${mirror.name} /capabilities: HTTP ${reply.status}`);
         return hardRowLimit(reply.body);
       }, archive.retryDelaysMs, deps.sleep);
       cap.catch(() => caps.delete(mirror.name));

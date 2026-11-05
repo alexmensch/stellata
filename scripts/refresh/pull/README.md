@@ -81,6 +81,8 @@ truncates at its own hard output limit whatever MAXREC asks. The client reads
 each mirror's hard limit from its `/capabilities` once per run
 (`hardRowLimit`; none declared means none) and sends a query only to mirrors
 that can hold `n + 1`. When none can, the query is refused as one to batch.
+A `/capabilities` reply other than 200 is about the mirror, never the query,
+so it is transient on any status and the next mirror is tried.
 Measured 2026-11-05: ESA 50,000, ARI 10,000,000, SIMBAD-Harvard 2,000,000.
 
 **The archive's own error message is what classifies a failure.** A failed
