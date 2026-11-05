@@ -275,9 +275,10 @@ same thing — single-use helpers stay with their consumer.
   way (`../pipeline/processes.ts`'s `launchArgs`). An entry exports `main`
   and never calls it, so **importing a package-script or step entry runs
   nothing** — the input-set walk (`sources/declared-inputs.ts`) can import
-  whatever its name matches. A script CI or a hook starts with a bare `tsx`
-  (`scripts/ci/`, `scripts/release/`, the commit-sweep figure check) is
-  neither, and no step's closure reaches one. `runStep` imports the entry, hands it `process.argv` as
+  whatever its name matches. A script no `package.json` command names
+  (CI's `pnpm exec tsx` calls, the commit-sweep figure check,
+  `binaries/golden/cut-fixture.ts`) is neither, and no step's closure
+  reaches one. `runStep` imports the entry, hands it `process.argv` as
   `tsx` would have, and runs `main`: a number it returns is the exit
   status; a refused emission has already printed its failed checks, so it
   exits 1 with one line and no stack; any other error keeps its stack. A
