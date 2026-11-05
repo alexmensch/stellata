@@ -29,8 +29,8 @@ export interface MultiplesPair {
   readonly elements: BinaryElements;
 }
 
-/** The snapshot `build-runtime-binaries-expected.json` pins. */
-export interface RuntimeBinariesCounts {
+/** The snapshot `build-runtime-binaries-expected.json` pins, as its `encode` stage. */
+export type RuntimeBinariesCounts = {
   pairs_total: number;
   pairs_emitted: number;
   pairs_dropped_primary_unresolved: number;
@@ -41,7 +41,7 @@ export interface RuntimeBinariesCounts {
   pairs_with_orbit: number;
   pairs_with_inclination: number;
   pairs_inner_of_hierarchy: number;
-}
+};
 
 /** The cells of a multiples.tsv row a pair is built from. */
 export type PairRow = Pick<MultiplesRecord,
