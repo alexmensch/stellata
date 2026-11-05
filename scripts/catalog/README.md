@@ -76,8 +76,8 @@ layout, its codec, the chunk plan and the search-index wire entry — is
   reason code and cited source rows, keyed on the record's origin source
   row; the trace command, the run-to-run diff, and the committed ledgers as
   views of it.
-- `columns/` — the Node readers of a built catalogue's bytes, and the
-  column projection a bake measuring the catalogue records. Holds code
+- `columns/` — the readers a bake that measures the built catalogue
+  imports, and the column projection it records. Holds code
   only, so no snapshot here becomes such a bake's input.
 - `validate/` — the Tier-A/B validation harness, `verify-catalog`, the
   SIMBAD-sample cross-check, and the frozen regression corpora.

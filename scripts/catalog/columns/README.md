@@ -1,7 +1,7 @@
 # Reading a built catalogue
 
-The two Node readers of a built catalogue's bytes, and the projection a bake
-that measures the catalogue records
+The readers a bake that measures the built catalogue imports, and the
+projection it records
 ([Freshness](../../pipeline/README.md#freshness--one-mechanism)).
 
 **Nothing but code lives in this folder.** A TypeScript step's inputs
