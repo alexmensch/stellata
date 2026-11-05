@@ -2,7 +2,7 @@
 
 Runtime support for binary / multiple-star systems. The loader here
 parses `public/binaries.bin` (written by
-`scripts/binaries/build-runtime-binaries.py`) into a typed record-set
+`scripts/binaries/build-runtime-binaries.ts`) into a typed record-set
 that `BinaryOrbitField` walks per frame to apply orbital motion to
 star catalog records.
 

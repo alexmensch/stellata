@@ -22,28 +22,32 @@ scripts/catalog/companions/record-index/
                              resolveMultiplesIdx (gaia → hip → synth) and
                              synthSlotIdx (the blended-sibling retry): how
                              one multiples.tsv component resolves to a
-                             record.
+                             record; parseCatalogRowIndexMap.
+  catalog-row-index-map-source.ts
+                             CATALOG_ROW_INDEX_MAP, the sidecar declared.
 ```
 
-## The sidecar and why resolution is duplicated from Python
+## The sidecar and how a component resolves
 
 `buildCatalogRowIndexMap` runs after the sort and emits
 `build/catalog-row-index-map.json` with three sections — `byGaia`,
-`byHip`, `bySynth`. That priority order is how the runtime binaries layer
-turns a `multiples.tsv` row back into a record, and
-`resolvePairComponents` is the **TypeScript twin of
-`build-runtime-binaries.py`'s `resolve_idx`**, including both of that
-writer's blended-sibling synth retries (the wings pass adds a third, below): each pair end re-homes onto its
-own distinct synth slot whenever promotion minted one, and a synth slot
-exists only for a row whose ids were inherited then stripped, so it is
-always the truer target (Castor Ca inside the outer pair,
-`04049-3527`'s pair-mate-inherited C).
+`byHip`, `bySynth`. `catalog-row-index-map-pure.ts` is how one
+`multiples.tsv` component resolves through it, and both the runtime writer
+(`/scripts/binaries/runtime-binaries-pure.ts`) and `resolvePairComponents`
+here call it: `resolveMultiplesIdx` walks gaia → hip → synth, then
+`synthSlotIdx` re-homes each pair end onto its own distinct synth slot
+whenever promotion minted one (the wings pass adds a third retry, below). A
+synth slot exists only for a row whose ids were inherited then stripped, so
+it is always the truer target (Castor Ca inside the outer pair,
+`04049-3527`'s pair-mate-inherited C). `CATALOG_ROW_INDEX_MAP`
+(`catalog-row-index-map-source.ts`) is the declaration its readers open the
+file through.
 
-The duplication is deliberate and load-bearing: the wings set has to
-match what `binaries.bin` actually renders, and the two are computed by
-different languages in different processes. `/tests/integration/multi-star-regression.test.ts`
-pins the correspondence against the real artifact, so drift on either
-side fails.
+The pair walk around those calls is still written twice — the writer's and
+`renderedCursors` here — because the wings set has to match what
+`binaries.bin` actually renders. `/tests/integration/multi-star-regression.test.ts`
+pins the correspondence against the real artifact, so drift on either side
+fails.
 
 **`bySynth` also carries bridged keys.** A component whose row carries no
 identifier is addressable only under its synth key, and where promotion
@@ -54,7 +58,7 @@ letter, no search entry and no `binaries.bin` pairing. A record that owns the
 key outright wins over a bridge. Addressing only: the record's own
 designations stay the manifest's.
 
-The writer's **`override_inner_primary_indices`** — an inner pair's primary
+The writer's **`overrideInnerPrimaryIndices`** — an inner pair's primary
 forced onto its PARENT component's slot — is replicated, by
 `reHomeToParent`. It was left out while it only changed *which* index
 anchors a pair, which root-grouping and the brightest-participant pick

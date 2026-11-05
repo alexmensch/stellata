@@ -3,7 +3,10 @@ import { describe, expect, it } from 'vitest';
 import {
   canonicalCompLetter,
   composeSyntheticId,
+  compoundContains,
   parentComponentToken,
+  relatedHier,
+  splitComponents,
 } from './component-tokens-pure';
 
 describe('composeSyntheticId', () => {
@@ -56,5 +59,44 @@ describe('parentComponentToken', () => {
 
   it('returns null for a single-character (top-level) token', () => {
     expect(parentComponentToken('A')).toBeNull();
+    expect(parentComponentToken('')).toBeNull();
+  });
+});
+
+describe('splitComponents', () => {
+  it('splits a two-letter field and a comma field', () => {
+    expect(splitComponents('AB')).toEqual(['A', 'B']);
+    expect(splitComponents('Aa,Ab')).toEqual(['Aa', 'Ab']);
+    expect(splitComponents('BC,D')).toEqual(['BC', 'D']);
+  });
+
+  it('keeps a WDS-truncated secondary as written', () => {
+    expect(splitComponents('Aa1,2')).toEqual(['Aa1', '2']);
+  });
+
+  it('refuses what it cannot split without guessing', () => {
+    expect(splitComponents('')).toBeNull();
+    expect(splitComponents('A,B,C')).toBeNull();
+    expect(splitComponents('ABC')).toBeNull();
+    expect(splitComponents('A')).toBeNull();
+  });
+});
+
+describe('relatedHier', () => {
+  it('equal tokens and ancestors relate; siblings and compounds do not', () => {
+    expect(relatedHier('A', 'A')).toBe(true);
+    expect(relatedHier('A', 'Aa1')).toBe(true);
+    expect(relatedHier('Aa1', 'Aa')).toBe(true);
+    expect(relatedHier('Aa', 'Ab')).toBe(false);
+    expect(relatedHier('AB', 'A')).toBe(false);
+  });
+});
+
+describe('compoundContains', () => {
+  it('a compound contains every token whose capitals it holds', () => {
+    expect(compoundContains('AB', 'A')).toBe(true);
+    expect(compoundContains('Aa', 'AB')).toBe(true);
+    expect(compoundContains('AB', 'CD')).toBe(false);
+    expect(compoundContains('A', 'A')).toBe(false);
   });
 });

@@ -10,6 +10,11 @@ export interface CatalogRowIndexMap {
   bySynth: Record<string, number>;
 }
 
+export function parseCatalogRowIndexMap(text: string): CatalogRowIndexMap {
+  const raw = JSON.parse(text) as Partial<CatalogRowIndexMap>;
+  return { byGaia: raw.byGaia ?? {}, byHip: raw.byHip ?? {}, bySynth: raw.bySynth ?? {} };
+}
+
 /** gaia → hip → synth, the first section that holds the component's key. */
 export function resolveMultiplesIdx(
   gaia: string | null,

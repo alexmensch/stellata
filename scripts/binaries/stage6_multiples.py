@@ -56,7 +56,7 @@ CATALOG_SCENE_EPOCH = 2016.0
 
 
 # Canonical order — a change breaks every downstream reader
-# (``build-runtime-binaries.py``, the catalog build's companion
+# (``build-runtime-binaries.ts``, the catalog build's companion
 # promotion, the SIMBAD statistical gates) and must propagate through
 # ``build-binaries-expected.json``.
 MULTIPLES_TSV_COLUMNS: tuple[str, ...] = (
@@ -189,7 +189,7 @@ ORBIT_VIA_TO_REGIME: dict[str, int] = {
 @dataclass
 class MultiplesRow:
     """One per-component row of multiples.tsv. All numeric fields are
-    optional — ``build-runtime-binaries.py`` treats missing values as
+    optional — ``build-runtime-binaries.ts`` treats missing values as
     "skip this column for this record" rather than imputing a sentinel."""
 
     system_id: str
@@ -295,7 +295,7 @@ def _position_pc(astrometry: ComponentAstrometry) -> SystemAnchor | None:
     with the single-star catalogue. Gaia routes (native J2016.0) are a
     zero-Δt no-op; hip2_long_baseline (J1991.25) and athyg_position
     advance forward. Returns ``None`` when the astrometry row is
-    unresolved or carries no positive parallax — ``build-runtime-binaries.py``
+    unresolved or carries no positive parallax — ``build-runtime-binaries.ts``
     reads the empty columns as "no position constraint" and falls back to the
     AT-HYG single-component position if needed."""
     if (
@@ -978,7 +978,7 @@ def _fmt_int(v: int | None) -> str:
 def write_multiples_tsv(rows: list[MultiplesRow], path: Path) -> int:
     """Emit ``rows`` to ``path`` as a tab-separated table with the
     canonical ``MULTIPLES_TSV_COLUMNS`` header. Numeric precision is
-    chosen so the round-trip into ``build-runtime-binaries.py``'s binary
+    chosen so the round-trip into ``build-runtime-binaries.ts``'s binary
     format loses no user-visible precision: positions 6 dp (~µpc), magnitudes 4 dp,
     radians 6 dp, period 6 dp, eccentricity 6 dp, WDS sep 3 dp
     (matches the ρ catalogue's published resolution), PA 2 dp

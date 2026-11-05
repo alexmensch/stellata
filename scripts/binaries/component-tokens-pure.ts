@@ -36,3 +36,51 @@ export function parentComponentToken(comp: string): string | null {
   const c = comp.trim();
   return c.length > 1 ? c.slice(0, -1) : null;
 }
+
+/** A WDS `components` field as (primary, secondary), stage2_resolve.py's
+ *  `split_components` rule: `"AB"` → (A, B), `"Aa,Ab"` → (Aa, Ab),
+ *  `"BC,D"` → (BC, D). Blank, three-part and unbraced three-letter fields
+ *  are null: they cannot be split without guessing. The secondary is as
+ *  written, so `"Aa1,2"` gives (Aa1, 2); `canonicalCompLetter` re-anchors it. */
+export function splitComponents(field: string): readonly [string, string] | null {
+  const s = field.trim();
+  if (!s) return null;
+  if (s.includes(',')) {
+    const parts = s.split(',').map((p) => p.trim()).filter((p) => p);
+    return parts.length === 2 ? [parts[0], parts[1]] : null;
+  }
+  return s.length === 2 ? [s[0], s[1]] : null;
+}
+
+/** One component, not a compound: `"A"`, `"Aa"`, `"Aa1"`. Only these sit in
+ *  the letter hierarchy; a compound's overlap is `compoundContains`. */
+export function isComponentToken(tok: string): boolean {
+  return /^[A-Z][a-z]?\d?$/.test(tok);
+}
+
+function isHierAncestor(a: string, b: string): boolean {
+  if (!isComponentToken(a) || !isComponentToken(b)) return false;
+  for (let cur = parentComponentToken(b); cur !== null; cur = parentComponentToken(cur)) {
+    if (cur === a) return true;
+  }
+  return false;
+}
+
+/** Equal, or one is the other's ancestor (`A` / `Aa` / `Aa1`). */
+export function relatedHier(a: string, b: string): boolean {
+  return a === b || isHierAncestor(a, b) || isHierAncestor(b, a);
+}
+
+function tokenLetters(tok: string): Set<string> {
+  return new Set(tok.match(/[A-Z]/g) ?? []);
+}
+
+/** One token is a multi-letter compound whose capitals include all of the
+ *  other's: `"AB"` contains `"A"` and `"Aa"`. */
+export function compoundContains(a: string, b: string): boolean {
+  const la = tokenLetters(a);
+  const lb = tokenLetters(b);
+  const within = (inner: Set<string>, outer: Set<string>): boolean =>
+    outer.size >= 2 && inner.size > 0 && [...inner].every((l) => outer.has(l));
+  return within(lb, la) || within(la, lb);
+}

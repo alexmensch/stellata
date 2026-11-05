@@ -26,7 +26,7 @@ import {
 // search-index.json.
 export function buildCatalogRowIndexMap(
   stars: Star[],
-  /** README.md#the-sidecar-and-why-resolution-is-duplicated-from-python. */
+  /** README.md#the-sidecar-and-how-a-component-resolves. */
   synthGaiaBridges: ReadonlyMap<string, string> = new Map(),
 ): CatalogRowIndexMap {
   const byGaia: Record<string, number> = {};
@@ -67,13 +67,7 @@ interface ResolvedSystem {
   components: ResolvedComponent[];
 }
 
-/** Resolve a pair cursor's primary + secondaries to catalog record indices
- *  through the gaia → hip → synth priority + both-ends synth re-home that
- *  build-runtime-binaries.py's `resolve_idx` uses, so both consumers below
- *  (wings, component designations) track binaries.bin's rendered pairs. A
- *  blended component (its id resolves onto another member's row) has its own
- *  distinct synth slot minted by promotion, and that slot is the truer end.
- *  Null when the primary itself doesn't resolve. */
+/** Null when the primary itself doesn't resolve. */
 function resolvePairComponents(
   cursor: PairCursor,
   rowIndexMap: CatalogRowIndexMap,
@@ -136,7 +130,7 @@ function resolveRowIdx(
 }
 
 /** A component carrying no identifier of its own renders through the PARENT
- *  component's slot — `build-runtime-binaries.py` forces exactly this before
+ *  component's slot — the binaries.bin writer forces exactly this before
  *  emitting (/src/client/binaries/README.md#hierarchical-walk), so the winged set has to mirror it or a
  *  system renders a companion with no wings bit anywhere on it. Castor Ba is
  *  the shape it was written for; WDS 02536-6420 is the shape that needs it
@@ -160,9 +154,6 @@ interface RenderedCursor {
   secondaries: { idx: number; row: MultiplesTsvRow }[];
 }
 
-/** Every pair cursor that renders a companion, resolved the way
- *  build-runtime-binaries.py resolves it before emitting: `resolve_idx`, both
- *  synth retries, and the parent re-home. */
 function renderedCursors(
   cursors: PairCursor[],
   rowIndexMap: CatalogRowIndexMap,
@@ -224,8 +215,8 @@ export function renderableOrbitRelations(
  *  physical system that renders a companion but which build-catalog's three
  *  wings passes (geometric, CCDM, eclipsing) all missed (Canopus, 16 Cyg A).
  *  A pair renders a companion when its sides resolve to DISTINCT catalog
- *  records under the same `resolve_idx` + blended-sibling synth retries
- *  build-runtime-binaries.py runs to emit binaries.bin, so the winged set
+ *  records under the same resolution + blended-sibling synth retries the
+ *  binaries.bin writer runs, so the winged set
  *  tracks binaries.bin's primaries (both retries mirrored; the writer's
  *  post-resolution override / relation dedup can't change the distinct-pair
  *  boolean this pass keys on, only which index, which root-grouping and the

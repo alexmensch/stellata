@@ -786,9 +786,7 @@ describe.runIf(FIXTURES_READY)('renderable-companion wings', () => {
     // top-level pairs — and (b) the two ends of every rendered pair, which ties
     // in promoted companions whose synth key was minted under a sibling WDS
     // designation. Assert every component that renders a pair carries the bit
-    // somewhere. A gap means a system renders a companion with no glyph — the
-    // failure mode the mirror's resolve_idx + synth retries exist to prevent —
-    // and catches drift in either the TS mirror or the Python resolver.
+    // somewhere. A gap means a system renders a companion with no glyph.
     const parent = new Map<number, number>();
     const add = (x: number) => { if (!parent.has(x)) parent.set(x, x); };
     const find = (x: number): number => {
