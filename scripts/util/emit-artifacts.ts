@@ -198,14 +198,15 @@ export interface StepModule {
   readonly describe?: () => PullDescription;
 }
 
-/** Imports `entry` and runs its `main`: the one way a script runs, so importing any module runs nothing. */
+/** Imports `entry` and runs its `main`: the one way a script runs, so importing an entry runs nothing. */
 export async function runStep(entry: string, args: readonly string[]): Promise<void> {
   const path = resolve(REPO_ROOT, entry);
   // A launched entry reads process.argv exactly as if tsx had started it.
   process.argv = [process.argv[0], path, ...args];
   const step = await import(path) as Partial<StepModule>;
   if (typeof step.main !== 'function') throw new Error(`${entry} exports no main, so it cannot be launched`);
-  if (step.describe && args.includes('--describe')) {
+  if (args.includes('--describe')) {
+    if (typeof step.describe !== 'function') throw new Error(`${entry} exports no describe, so it cannot answer --describe`);
     console.log(JSON.stringify(step.describe()));
     return;
   }

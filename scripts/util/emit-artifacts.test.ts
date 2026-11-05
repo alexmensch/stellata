@@ -190,8 +190,9 @@ describe('emitArtifacts', () => {
 });
 
 describe('runStep', () => {
-  const launched = async (args: string[]): Promise<{ fixture: EntryFixture; exitCode: typeof process.exitCode }> => {
-    const fixture = writeEntryFixture('entry.ts');
+  const launched = async (
+    args: string[], fixture: EntryFixture = writeEntryFixture('entry.ts'),
+  ): Promise<{ fixture: EntryFixture; exitCode: typeof process.exitCode }> => {
     const { argv, exitCode } = process;
     try {
       await runStep(fixture.path, args);
@@ -217,5 +218,11 @@ describe('runStep', () => {
     } finally {
       vi.restoreAllMocks();
     }
+  });
+
+  it('refuses --describe for an entry that exports no describe, without running main', async () => {
+    const fixture = writeEntryFixture('entry.ts', { describes: false });
+    await expect(launched(['--describe'], fixture)).rejects.toThrow(/exports no describe/);
+    expect(fixture.runs()).toEqual([]);
   });
 });
