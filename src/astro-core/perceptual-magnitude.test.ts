@@ -4,7 +4,6 @@ import {
   apparentMagnitude,
   bodySurfaceBrightnessMagArcsec2,
   distanceModulus,
-  hostIrradianceMagnitude,
   planetApparentMagnitude,
 } from './perceptual-magnitude';
 import { ARCSEC_TO_RAD, AU_PC, KM_PC, SUN_ABSMAG_V } from './astronomy-constants';
@@ -170,27 +169,6 @@ describe('planetApparentMagnitude', () => {
       1,
     );
     expect(m).toBeCloseTo(-12.7, 1);
-  });
-});
-
-describe('hostIrradianceMagnitude', () => {
-  it('puts Sol at 1 AU at its known apparent magnitude', () => {
-    expect(hostIrradianceMagnitude(SUN_ABSMAG_V, AU_PC)).toBeCloseTo(-26.74, 2);
-  });
-
-  it('is the distance modulus: 5 mag per decade of host distance', () => {
-    expect(
-      hostIrradianceMagnitude(SUN_ABSMAG_V, 10 * AU_PC)
-        - hostIrradianceMagnitude(SUN_ABSMAG_V, AU_PC),
-    ).toBeCloseTo(5, 9);
-  });
-
-  it('trades luminosity against distance — equal irradiance is equal magnitude', () => {
-    // A host 5 mag fainter at 10x closer delivers the same irradiance, which
-    // is what makes everything derived from it general across systems rather
-    // than anchored to Sol.
-    expect(hostIrradianceMagnitude(SUN_ABSMAG_V + 5, AU_PC)).toBeCloseTo(
-      hostIrradianceMagnitude(SUN_ABSMAG_V, 10 * AU_PC), 9);
   });
 });
 

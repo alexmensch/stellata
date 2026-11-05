@@ -37,46 +37,6 @@ export function absoluteMagnitude(mag: number, dPc: number): number {
 }
 
 /**
- * Reflected-light apparent magnitude of a planet seen by a viewer. CPU
- * mirror of the integrated formula in /src/client/webgpu/solar-system/planet-glare-tsl.ts.
- *
- *   m_host_at_planet = M_host + 5·log10(d_hp / 10pc)
- *   m_planet         = m_host_at_planet
- *                    − 2.5·log10( p · (R/d_vp)² · φ(α) )
- *
- * The viewer→host distance d_vh cancels out of the physical formula
- * (host flux at the viewer × d_vh² round-trip) and MUST NOT appear:
- * observe mode parks the camera exactly at the host, so any d_vh term
- * evaluates log10(0) there and kills every planet of the focused host.
- *
- * - `hostAbsmag` is the host star's absolute V-band magnitude.
- * - `dVpPc` is viewer→planet distance in parsecs.
- * - `dHpPc` is host→planet distance in parsecs.
- * - `albedo` is the planet's geometric albedo p (dimensionless).
- * - `radiusPc` is the planet's physical radius in parsecs.
- * - `phaseFactor` is φ(α) — pass 1 for full-phase, or use
- *   `lambertianPhaseFactor` / `empiricalPhaseFactor` from `phase-function.ts`.
- *
- * Distances and the reflectance product floor at 1e-30 to match the
- * shader's defensive clamps at the singular zero-distance point.
- */
-/**
- * V-band apparent magnitude of the host **as seen from the body** — the
- * irradiance the host delivers there, on the magnitude scale.
- * `M_host + 5·(log10(d_hp) − 1)`. Folding the host's absolute magnitude is
- * what makes an O-class host light its bodies far brighter than Sol does at
- * the same distance.
- *
- * Deliberately independent of viewer distance: fixed for a given orbital
- * position, so nothing derived from it can blow out as the camera
- * approaches — the failure mode that rules out any viewer-distance term in
- * surface brightness.
- */
-export function hostIrradianceMagnitude(hostAbsmag: number, dHpPc: number): number {
-  return hostAbsmag + 5 * (Math.log10(Math.max(dHpPc, 1e-30)) - 1);
-}
-
-/**
  * Mean surface brightness of a body's lit disc at full phase, in
  * mag/arcsec² — what the mesh emits through the scene-wide unit
  * (`/src/astro-core/emission/README.md#unit--what-an-emitting-layer-writes`).
@@ -104,11 +64,35 @@ export function bodySurfaceBrightnessMagArcsec2(
 ): number {
   const p = Math.max(albedo, 1e-30);
   return (
-    hostIrradianceMagnitude(hostAbsmag, dHpPc) +
+    apparentMagnitude(hostAbsmag, dHpPc) +
     2.5 * Math.log10(Math.PI / (ARCSEC_TO_RAD * ARCSEC_TO_RAD * p))
   );
 }
 
+/**
+ * Reflected-light apparent magnitude of a planet seen by a viewer. CPU
+ * mirror of the integrated formula in /src/client/webgpu/solar-system/planet-glare-tsl.ts.
+ *
+ *   m_host_at_planet = M_host + 5·log10(d_hp / 10pc)
+ *   m_planet         = m_host_at_planet
+ *                    − 2.5·log10( p · (R/d_vp)² · φ(α) )
+ *
+ * The viewer→host distance d_vh cancels out of the physical formula
+ * (host flux at the viewer × d_vh² round-trip) and MUST NOT appear:
+ * observe mode parks the camera exactly at the host, so any d_vh term
+ * evaluates log10(0) there and kills every planet of the focused host.
+ *
+ * - `hostAbsmag` is the host star's absolute V-band magnitude.
+ * - `dVpPc` is viewer→planet distance in parsecs.
+ * - `dHpPc` is host→planet distance in parsecs.
+ * - `albedo` is the planet's geometric albedo p (dimensionless).
+ * - `radiusPc` is the planet's physical radius in parsecs.
+ * - `phaseFactor` is φ(α) — pass 1 for full-phase, or use
+ *   `lambertianPhaseFactor` / `empiricalPhaseFactor` from `phase-function.ts`.
+ *
+ * Distances and the reflectance product floor at 1e-30 to match the
+ * shader's defensive clamps at the singular zero-distance point.
+ */
 export function planetApparentMagnitude(
   hostAbsmag: number,
   dVpPc: number,
@@ -118,8 +102,7 @@ export function planetApparentMagnitude(
   phaseFactor: number,
 ): number {
   const dVp = Math.max(dVpPc, 1e-30);
-  const dHp = Math.max(dHpPc, 1e-30);
-  const mHostAtPlanet = hostAbsmag + 5 * (Math.log10(dHp) - 1);
+  const mHostAtPlanet = apparentMagnitude(hostAbsmag, dHpPc);
   const radRatio = radiusPc / dVp;
   const reflFactor = albedo * radRatio * radRatio * Math.max(phaseFactor, 0);
   return mHostAtPlanet - 2.5 * Math.log10(Math.max(reflFactor, 1e-30));

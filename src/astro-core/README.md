@@ -98,8 +98,9 @@ Each has its own README.
   of `5·log10(d / 10 pc)`, and the pair built on it: `apparentMagnitude`
   (floored at 1e-30 pc for the focal star) and its inverse
   `absoluteMagnitude` (unfloored: the build derives absmag only away from
-  the origin). Then the reflected-light model's CPU side: the host-irradiance
-  magnitude, a body's disc surface brightness and `planetApparentMagnitude`,
+  the origin). Then the reflected-light model's CPU side, which reads the
+  host's irradiance at a body as `apparentMagnitude` at the host→body
+  distance: a body's disc surface brightness and `planetApparentMagnitude`,
   plus `SOFT_TAPER_MARGIN_MAG`, the visibility taper every star and glare
   pass shares. The formula, its GPU mirror and the full-Moon anchor:
   [Reflected-light magnitude model](/src/client/solar-system/README.md#reflected-light-magnitude-model).
