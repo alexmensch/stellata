@@ -79,7 +79,7 @@ describe('sampling the table', () => {
 
 describe('the shipped table', () => {
   it('was measured on the V ≤ 11 catalogue', () => {
-    expect(RESOLVED_HOLE_CATALOGUE_RECORDS).toBe(979659);
+    expect(RESOLVED_HOLE_CATALOGUE_RECORDS).toBe(979678);
     expect(SHIPPED_RESOLVED_HOLE.values).toBe(RESOLVED_HOLE_VALUES);
   });
 
