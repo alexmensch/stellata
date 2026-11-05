@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { roundHalfEven, roundSignificant } from '../util/round-pure';
 import { lgObjectStub } from './lg-object-mock';
 import {
+  localGroupPayload,
   applyAliasMeta,
   basisToQuaternion,
   buildEmission,
@@ -813,5 +814,28 @@ describe('applyAliasMeta — canonical promotion', () => {
     });
     expect(out.name).toBe('Pisces Dwarf');
     expect(out.type).toBe('Dwarf spheroidal');
+  });
+});
+
+describe('localGroupPayload', () => {
+  it('rounds each object for stable diffs, keeps its tuples, and pairs it with its SID', () => {
+    const o = {
+      ...lgObjectStub('Fornax'),
+      center: [1.005, 2.675, -0.125] as [number, number, number],
+      quat: [0.1234567, 0, 0, 1] as [number, number, number, number],
+      distance: 147000.04,
+      emission: { family: 'sersic' as const, mV: 7.384, reffAxesPc: [812.825, 1, 1] as [number, number, number], n: 0.80004, bn: 1.1, pn: 0.2, uMax: 3, density0: 0.123456789 },
+    };
+    const payload = localGroupPayload([o], [42]);
+    expect(payload.version).toBe(2);
+    expect(payload.count).toBe(1);
+    const [row] = payload.objects;
+    expect(row.sid).toBe(42);
+    expect(row.center).toEqual([1, 2.67, -0.12]);
+    expect(row.quat).toEqual([0.123457, 0, 0, 1]);
+    expect(row.distance).toBe(147000);
+    expect(row.emission).toEqual({
+      family: 'sersic', mV: 7.38, reffAxesPc: [812.83, 1, 1], n: 0.8, bn: 1.1, pn: 0.2, uMax: 3, density0: 0.12345679,
+    });
   });
 });

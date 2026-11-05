@@ -13,7 +13,8 @@ export function catalogSidObjects(stars: readonly Star[]): SidObject[] {
     designations: starDesignations({ ...s, isSol: (s.flags & FLAG_IS_SOL) !== 0 }),
     kind: 'star',
     label: `record ${i}${s.proper ? ` (${s.proper})` : ''}`,
-    admission: { kind: 'lineage', origin: s.originKey },
+    origin: s.originKey,
+    admission: { kind: 'lineage' },
   }));
   const solRows = SOL_OBJECTS.read();
   const sun = solRows.find((r) => r.key === 'sun');
@@ -23,13 +24,15 @@ export function catalogSidObjects(stars: readonly Star[]): SidObject[] {
     designations: [`sol:${row.key}`],
     kind: row.kind,
     label: `sol ${row.key}`,
-    admission: { kind: 'declared', code: ALLOCATION_CODES.code('mint.sol-list'), origin: sourceRowRefText(sourceRowRef(SOL_OBJECTS, row)) },
+    origin: sourceRowRefText(sourceRowRef(SOL_OBJECTS, row)),
+    admission: { kind: 'declared', code: ALLOCATION_CODES.code('mint.sol-list') },
   }));
   const shell = SHELL_OBJECTS.read().map((row): SidObject => ({
     designations: [`shell:${row.key}`],
     kind: row.kind,
     label: `shell ${row.key}`,
-    admission: { kind: 'declared', code: ALLOCATION_CODES.code('mint.shell-list'), origin: sourceRowRefText(sourceRowRef(SHELL_OBJECTS, row)) },
+    origin: sourceRowRefText(sourceRowRef(SHELL_OBJECTS, row)),
+    admission: { kind: 'declared', code: ALLOCATION_CODES.code('mint.shell-list') },
   }));
   return [...records, ...sol, ...shell];
 }
