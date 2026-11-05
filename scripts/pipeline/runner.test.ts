@@ -321,6 +321,53 @@ describe('runSteps — --verify-committed', () => {
     write('a.in', 'y');
     expect((await run(steps, ['a'], { verifyCommitted: true })).kinds).toEqual({ a: 'built' });
   });
+
+  it('fails a fresh step whose working copy was built past its committed output', async () => {
+    write('a.in', 'x');
+    const steps = [tsStep('a', 'a.out', ['a.in'])];
+    await run(steps, ['a']);
+    commit('a.out');
+    write('a.in', 'y');
+    await run(steps, ['a']);
+    const result = await run(steps, ['a'], { verifyCommitted: true });
+    expect(builds()).toEqual(['a', 'a']);
+    expect(result.kinds).toEqual({ a: 'failed' });
+  });
+
+  it('checks a family\'s tracked members and ignores a tracked file in its folder that is no member', async () => {
+    write('f.in', 'x');
+    write('steps/f.ts', `
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+mkdirSync(${JSON.stringify(at('fam'))}, { recursive: true });
+writeFileSync(${JSON.stringify(at('fam/m-0'))}, readFileSync(${JSON.stringify(at('f.in'))}, 'utf8'));
+`);
+    write('steps/f-outputs.ts', `
+import { declareOutputs } from ${JSON.stringify(EMIT_ARTIFACTS)};
+export const OUT = declareOutputs({}, [{ dir: ${JSON.stringify(at('fam'))}, member: /^m-\\d+$/, stamped: true }]);
+`);
+    reads.set(at('steps/f.ts'), [at('f.in')]);
+    const steps: StepEntry[] = [{ name: 'f', kind: 'build', language: 'ts', entry: at('steps/f.ts'), outputs: { module: at('steps/f-outputs.ts'), name: 'OUT' } }];
+    await run(steps, ['f']);
+    write('fam/notes.txt', 'committed');
+    commit('fam/m-0', 'fam/notes.txt');
+    write('fam/notes.txt', 'edited');
+    expect((await run(steps, ['f'], { verifyCommitted: true })).kinds).toEqual({ f: 'fresh' });
+    write('f.in', 'y');
+    expect((await run(steps, ['f'], { verifyCommitted: true })).verdicts.get('f')).toEqual({
+      kind: 'failed',
+      reason: 'its committed outputs differ from this build (fam/m-0): run pnpm run f and commit them',
+    } satisfies Verdict);
+  });
+
+  it('fails a Python step whose committed output its build moved', async () => {
+    write('p.in', 'x');
+    const steps = [pyStep('p', 'p.out', `Path(${JSON.stringify(at('p.out'))}).write_text(Path(${JSON.stringify(at('p.in'))}).read_text() + "!")`)];
+    await run(steps, ['p']);
+    commit('p.out');
+    expect((await run(steps, ['p'], { verifyCommitted: true })).kinds).toEqual({ p: 'fresh' });
+    write('p.in', 'y');
+    expect((await run(steps, ['p'], { verifyCommitted: true })).kinds).toEqual({ p: 'failed' });
+  });
 });
 
 describe('runSteps — manual steps', () => {
