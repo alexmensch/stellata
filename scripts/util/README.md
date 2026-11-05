@@ -217,30 +217,8 @@ same thing — single-use helpers stay with their consumer.
 - `output-identity.ts` (+ `output-identity-pure.ts`, its diff and test) —
   `pnpm run identity:snapshot` / `identity:diff`, the byte-identity check in
   [Proving a restructuring byte-identical](#proving-a-restructuring-byte-identical).
-- `tally-pure.ts` — `fold(variants, items, key)`, the one tally: how many
-  items fall under each declared variant, zeros included, typed
-  `Record<variant, number>` so a snapshot keyed on a wider union fails to
-  compile; an item outside the variants throws. Its zero case,
-  `emptyTallyPartition(values)`, is the record the routing cascades still
-  increment by hand (direction, velocity, V, distance). Both derive their
-  buckets from the string-literal tuple that DEFINES the set, so a new
-  variant cannot tally onto an absent key — `undefined + 1` is NaN, which
-  reaches the pinned count snapshot as a hole instead of a drift failure.
-  A lineage stage folds its lines through it
-  ([Counts fold from lineage](../catalog/lineage/README.md#counts-fold-from-lineage)).
-  `tally-pure.test.ts` pins the fold and all four cascades' key coverage.
-- `count-stages-pure.ts` (+ test) — the staged count snapshot,
-  `{"stages": {<stage>: {<count>: …}}}`: `nestByStage(flat, {order, of})`
-  groups a flat count record under each key's stage, stages in the declared
-  pipeline order and a stage no key reaches left out, and `flattenStages`
-  drops the stage level again — a key two stages share throws — and hands
-  any other JSON back as it is, so every reader takes both shapes. A count
-  is addressed by its name alone (`build-catalog/recordCount`), never its
-  stage: the comparator (`compareCountSnapshot`), `committedBuildCounts`,
-  the doc figures' snapshot load and `../site/site-metrics.ts` all flatten
-  first. The stage still counts as drift: when both sides are staged, a
-  count filed under another stage than the snapshot's is `moved`, in this
-  comparator and in `snapshot_assert.py`'s.
+- `counts/` — the one tally (`fold`) and the staged count snapshot
+  (`nestByStage`, `flattenStages`). Own README.
 - `staged-write.ts` — the one stage-then-rename: `writeStaged` writes
   `<path>.staged` beside its target (same filesystem, so the rename is
   atomic) — the bytes given, or a copy of `{copyFrom}`'s file, which never
@@ -342,7 +320,7 @@ same thing — single-use helpers stay with their consumer.
   drivers own their exit. Every snapshot it writes is staged: a caller
   hands it `Staged` counts (stage → count, each count built inside its
   stage's block, stages in pipeline order), and it compares both sides
-  through `flatten_stages`, `count-stages-pure.ts`'s twin.
+  through `flatten_stages`, `counts/count-stages-pure.ts`'s twin.
   Pinned by `snapshot_assert.test.py`.
 - <a id="git-files"></a>`git-files.ts` — `gitFiles(root, pathspecs, { untracked })`,
   git's file list (tracked, optionally untracked-but-not-ignored), for a scan

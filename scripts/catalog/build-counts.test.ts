@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { emptyTallyPartition } from '../util/tally-pure';
+import { emptyTallyPartition } from '../util/counts/tally-pure';
 import {
   compareBuildCounts,
   compareCountSnapshot,

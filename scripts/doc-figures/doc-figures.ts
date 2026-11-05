@@ -2,7 +2,7 @@
 import { readFileSync } from 'node:fs';
 import { basename, extname, join } from 'node:path';
 import { CITATION_INDEX } from '../site/citation-index-source';
-import { flattenStages } from '../util/count-stages-pure';
+import { flattenStages } from '../util/counts/count-stages-pure';
 import { gitFiles, lfsTracked, presentFiles } from '../util/git-files';
 import {
   catalogueSizeFigures,

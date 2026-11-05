@@ -5,7 +5,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 import type { DistVia } from '../../src/catalog-format/record/catalog-pure';
-import { flattenStages, stageOfCounts } from '../util/count-stages-pure';
+import { flattenStages, stageOfCounts } from '../util/counts/count-stages-pure';
 import { REPO_ROOT } from '../util/paths';
 import type { RvErrorBandPartition } from './distance/radial-velocity/radial-velocity';
 import type { RecuratedBrightness } from './companions/companion-promotion';
@@ -895,7 +895,7 @@ export type CountDiff =
   | { key: string; status: 'absent-from-snapshot'; actual: number }
   | { key: string; status: 'absent-from-build'; expected: number };
 
-/** Staged snapshots: ../util/README.md (count-stages-pure.ts entry).
+/** Staged snapshots: ../util/counts/README.md.
  *  Partition-valued entries (a `Record<tier, number>`) expand to one
  *  `parent.bucket` row each, so a single drifting bucket names itself.
  *  Walks the union of both sides' rows: a count the build stopped

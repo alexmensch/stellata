@@ -179,7 +179,7 @@ scripts/catalog/
                                   committedBuildCounts reads back for
                                   every consumer of the pinned figures.
                                   The file is staged
-                                  (../util/count-stages-pure.ts):
+                                  (../util/counts/count-stages-pure.ts):
                                   CATALOG_COUNT_STAGE files each count
                                   under the step that computes it, typed
                                   over every BuildCounts key, so a new

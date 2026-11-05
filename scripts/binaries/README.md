@@ -137,7 +137,7 @@ scripts/binaries/
   __init__.py                     Package marker (see above).
   *-expected.json                 Snapshot pins refreshed with
                                   --update-snapshots, staged by pipeline
-                                  stage (../util/count-stages-pure.ts;
+                                  stage (../util/counts/count-stages-pure.ts;
                                   build-runtime-binaries' one stage is
                                   `encode`): build-binaries
                                   (per-strategy / per-tier counts),

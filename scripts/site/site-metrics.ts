@@ -8,7 +8,7 @@ import { selectAll } from 'hast-util-select';
 import { catalogChunkFilename, readCatalogHeader } from '../../src/catalog-format/record/catalog-pure.ts';
 import { BUILD_COUNTS_EXPECTED_FILE as COUNT_SNAPSHOT } from '../catalog/build-counts.ts';
 import type { IndexEntry } from '../util/citation-index-pure.ts';
-import { flattenStages } from '../util/count-stages-pure.ts';
+import { flattenStages } from '../util/counts/count-stages-pure.ts';
 import { parseHtml } from '../util/parse-html.ts';
 import { PACKAGE_JSON, REPO_ROOT, publicFile, publicRepoPath } from '../util/paths.ts';
 import { CITATION_INDEX } from './citation-index-source.ts';

@@ -98,7 +98,7 @@ import {
   GALACTIC_ESCAPE_VELOCITY_KM_S,
 } from './distance/direction-cascade';
 import { RV_ERROR_BANDS } from './distance/radial-velocity/radial-velocity';
-import { emptyTallyPartition } from '../util/tally-pure';
+import { emptyTallyPartition } from '../util/counts/tally-pure';
 import {
   applyDesignationConstellations,
   loadDesignationConstellationInputs,
@@ -139,7 +139,7 @@ import {
   emitArtifacts, sweepStaged, type ArtifactContents, type Check,
 } from '../util/emit-artifacts';
 import { snapshotCheck } from '../util/snapshot-check';
-import { nestByStage, type StagedCounts } from '../util/count-stages-pure';
+import { nestByStage, type StagedCounts } from '../util/counts/count-stages-pure';
 import { watchHeap } from '../util/heap-budget';
 import { syntheticGaiaBridges } from '../sid/sid-pure';
 import { sidSuccessorPairs } from '../sid/events-pure';

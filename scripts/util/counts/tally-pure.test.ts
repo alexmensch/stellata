@@ -3,9 +3,9 @@ import { describe, expect, it } from 'vitest';
 import {
   DIRECTION_VIA_VALUES,
   VELOCITY_VIA_VALUES,
-} from '../catalog/distance/direction-cascade';
-import { DIST_VIA_VALUES } from '../../src/catalog-format/record/catalog-pure';
-import { V_VIA_VALUES } from '../catalog/photometry/v-magnitude-pure';
+} from '../../catalog/distance/direction-cascade';
+import { DIST_VIA_VALUES } from '../../../src/catalog-format/record/catalog-pure';
+import { V_VIA_VALUES } from '../../catalog/photometry/v-magnitude-pure';
 import { emptyTallyPartition, fold } from './tally-pure';
 
 describe('util/tally / fold', () => {
