@@ -2,7 +2,6 @@ import { describe, it, expect } from 'vitest';
 import {
   classifyFromGspspec,
   classifyFromSimbad,
-  DEFAULT_SUBCLASS,
   SPECTRAL_UNKNOWN,
 } from './spectral-classify';
 import {
@@ -32,7 +31,7 @@ describe('encodeSpectralBytes', () => {
     expect(bytesOf('DA1.9')).toEqual({ spectClass: SPECT_CLASS_UNKNOWN, lumClass: LUM_CLASS_WHITE_DWARF });
   });
 
-  it('writes an ESP-ELS letter with no luminosity class', () => {
+  it('writes an ESP-ELS class with no luminosity class', () => {
     expect(encodeSpectralBytes(classifyFromGspspec('K')!))
       .toEqual({ spectClass: 5, lumClass: LUM_CLASS_UNKNOWN });
     expect(encodeSpectralBytes(classifyFromGspspec('CSTAR')!))
@@ -57,13 +56,13 @@ describe('decodeSpectralBytes', () => {
     }
   });
 
-  it('reads the dropped fields back at their defaults', () => {
+  it('reads the fields the bytes drop back as not stated', () => {
     expect(decodeSpectralBytes(bytesOf('K0III')))
-      .toEqual({ kind: 'mk', letter: 5, subclass: DEFAULT_SUBCLASS, lumClass: 4 });
+      .toEqual({ kind: 'mk', letter: 5, subclass: null, lumClass: 4 });
     expect(decodeSpectralBytes(bytesOf('WN5')))
-      .toEqual({ kind: 'carbon', subclass: DEFAULT_SUBCLASS });
+      .toEqual({ kind: 'carbon', subclass: null });
     expect(decodeSpectralBytes(bytesOf('DA1.9')))
-      .toEqual({ kind: 'white-dwarf', wdSubclass: DEFAULT_SUBCLASS });
+      .toEqual({ kind: 'white-dwarf', wdSubclass: null });
   });
 
   it('reads a luminosity code of 0 as a white dwarf whatever the class', () => {

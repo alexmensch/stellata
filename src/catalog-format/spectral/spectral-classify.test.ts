@@ -2,13 +2,12 @@ import { describe, it, expect } from 'vitest';
 import {
   classifyFromGspspec,
   classifyFromSimbad,
-  DEFAULT_SUBCLASS,
   resolveSpectDisplay,
   type LumClass,
   type MkLetter,
 } from './spectral-classify';
 
-const mk = (letter: MkLetter, subclass: number, lumClass: LumClass | null) =>
+const mk = (letter: MkLetter, subclass: number | null, lumClass: LumClass | null) =>
   ({ kind: 'mk', letter, subclass, lumClass });
 
 describe('classifyFromSimbad', () => {
@@ -55,11 +54,11 @@ describe('classifyFromSimbad', () => {
 
   it('parses subdwarfs (sdB, sdO) with lumClass=1', () => {
     expect(classifyFromSimbad('sdB5')).toEqual(mk(1, 5, 1));
-    expect(classifyFromSimbad('sdO')).toEqual(mk(0, DEFAULT_SUBCLASS, 1));
+    expect(classifyFromSimbad('sdO')).toEqual(mk(0, null, 1));
   });
 
   it('parses white dwarfs (DA, DB, DA2, DAH)', () => {
-    expect(classifyFromSimbad('DA')).toEqual({ kind: 'white-dwarf', wdSubclass: DEFAULT_SUBCLASS });
+    expect(classifyFromSimbad('DA')).toEqual({ kind: 'white-dwarf', wdSubclass: null });
     expect(classifyFromSimbad('DB')!.kind).toBe('white-dwarf');
     expect(classifyFromSimbad('DA2')).toEqual({ kind: 'white-dwarf', wdSubclass: 2 });
     expect(classifyFromSimbad('DAH')!.kind).toBe('white-dwarf');
@@ -93,7 +92,7 @@ describe('classifyFromSimbad', () => {
     // measures; the WR-first listing is catalog convention, not
     // brightness order.
     expect(classifyFromSimbad('WC8+O7.5III-V')).toEqual(mk(0, 7, 4));
-    expect(classifyFromSimbad('WC4+Be')).toEqual(mk(1, DEFAULT_SUBCLASS, null));
+    expect(classifyFromSimbad('WC4+Be')).toEqual(mk(1, null, null));
     // A non-MK companion leaves the WR single.
     expect(classifyFromSimbad('WN6/WC4')).toEqual({ kind: 'wolf-rayet', subclass: 6 });
   });
@@ -204,14 +203,18 @@ describe('classifyFromGspspec', () => {
     expect(classifyFromGspspec('UNKNOWN')).toBeNull();
   });
 
-  it('maps each MK letter to a letter-only class', () => {
+  it('maps each MK letter to a class stating no subclass or luminosity class', () => {
     for (const [s, letter] of [['O', 0], ['B', 1], ['A', 2], ['F', 3], ['G', 4], ['K', 5], ['M', 6]] as const) {
-      expect(classifyFromGspspec(s)).toEqual({ kind: 'letter-only', letter });
+      expect(classifyFromGspspec(s)).toEqual(mk(letter, null, null));
     }
   });
 
-  it('maps CSTAR to a letter-only carbon class', () => {
-    expect(classifyFromGspspec('CSTAR')).toEqual({ kind: 'letter-only', letter: 'carbon' });
+  it('maps CSTAR to carbon with no subclass', () => {
+    expect(classifyFromGspspec('CSTAR')).toEqual({ kind: 'carbon', subclass: null });
+  });
+
+  it('reads the same as a bare SIMBAD letter', () => {
+    expect(classifyFromGspspec('K')).toEqual(classifyFromSimbad('K'));
   });
 
   it('returns null for any unrecognised letter (no defaulting)', () => {

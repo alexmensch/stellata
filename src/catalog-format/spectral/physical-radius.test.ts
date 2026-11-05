@@ -84,7 +84,7 @@ describe('tempKelvin', () => {
     expect(boloCorr(SPECTRAL_UNKNOWN)).toBe(0);
   });
 
-  it('reads a letter-only class at the mid subclass of its letter', () => {
+  it('reads a class with no stated subclass at DEFAULT_SUBCLASS', () => {
     expect(tempKelvin(classifyFromGspspec('K')!)).toBe(4410);
     expect(tempKelvin(classifyFromGspspec('CSTAR')!)).toBe(3000);
   });

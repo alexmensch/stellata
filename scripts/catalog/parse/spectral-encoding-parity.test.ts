@@ -16,9 +16,9 @@ import { REPO_ROOT } from '../../util/paths';
 // The parse surface both sides document handling: plain MK across every
 // class letter and luminosity code, white dwarfs, subdwarfs, Yerkes
 // prefixes, carbon/S/WR, Am/Ap composites, and unparseable strings.
-// Python's quadruple carries a subclass on a white dwarf, at the default;
-// the WD temperature index and the Wolf-Rayet kind are out of scope —
-// Python's mass tables don't consume them.
+// Python fills an unstated subclass, and every white dwarf's, with the
+// default; the WD temperature index and the Wolf-Rayet kind are out of
+// scope — Python's mass tables don't consume them.
 const CORPUS = [
   'O5V', 'B2III', 'A1V', 'F5IV', 'G2V', 'K0III', 'M1.5Iab',
   'B0Ia', 'A0Ia+', 'G8Ib', 'B2II', 'K1IV', 'M4.5V', 'F8VI',
@@ -55,7 +55,7 @@ function sharedShape(info: MkSpectral): SharedShape {
   const bytes = encodeSpectralBytes(info);
   return {
     classIdx: bytes.spectClass,
-    subclass: info.kind === 'white-dwarf' ? DEFAULT_SUBCLASS : info.subclass,
+    subclass: (info.kind === 'white-dwarf' ? null : info.subclass) ?? DEFAULT_SUBCLASS,
     lumClass: bytes.lumClass,
     isWhiteDwarf: info.kind === 'white-dwarf',
   };

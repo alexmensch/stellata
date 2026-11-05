@@ -85,8 +85,8 @@ via a seven-tier priority chain:
    used to carry went stale.
 5. **Gaia DR3 ESP-ELS `spectraltype_esphs`** ([Creevey 2023](/data/papers/index.md#creevey2023); a column on
    `data/gaia/gaia_dr3_apsis.tsv`, keyed by source_id). Letter-only enum;
-   `classifyFromGspspec` (same module) maps each letter to a `letter-only`
-   class, which the radius chain reads at subclass 5.
+   `classifyFromGspspec` (same module) maps each letter to an `mk` class
+   stating no subclass and no luminosity class (CSTAR to `carbon`).
 6. **`none`** — no upstream covers the row, and the walk renders it as
    `SPECTRAL_UNKNOWN`, the `unknown` kind.
 

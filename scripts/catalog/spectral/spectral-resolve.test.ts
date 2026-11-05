@@ -212,7 +212,7 @@ describe('resolveSpectralInfo — tier priority', () => {
     const simbad = idx([], [[HIP, row('B2V', 'C', '*', '999888777')]]);
     const out = flatSp(keys(GAIA_ID, HIP), simbad, apsis);
     expect(out.source).toBe('gspspec');
-    expect(out.info).toEqual({ kind: 'letter-only', letter: 5 }); // K from GSP-Spec, not B from the HIP row
+    expect(out.info).toEqual({ kind: 'mk', letter: 5, subclass: null, lumClass: null }); // K from GSP-Spec, not B from the HIP row
   });
 
   it('the walk continues past a contradicting row to a later namespace', () => {

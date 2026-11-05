@@ -12,23 +12,21 @@ export type MkLetter = 0 | 1 | 2 | 3 | 4 | 5 | 6;
 //   4 = III      (giant)              9 = Ia+ / 0   (hypergiant)
 export type LumClass = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9;
 
-/** The subclass a type string that states none is read at. */
+/** The subclass the tables read a class at when its source states none. */
 export const DEFAULT_SUBCLASS = 5;
 
+/** `null` subclass / index / luminosity class: the source stated none. */
 export type SpectralInfo =
-  | { kind: 'mk'; letter: MkLetter; subclass: number; lumClass: LumClass | null }
-  | { kind: 'carbon'; subclass: number }
+  | { kind: 'mk'; letter: MkLetter; subclass: number | null; lumClass: LumClass | null }
+  | { kind: 'carbon'; subclass: number | null }
   /** WN/WC: rides the WR Teff/BC ramps — the carbon row misizes a ~40-140 kK
    *  WR photosphere by ~(T ratio)² ≈ 1000×. */
-  | { kind: 'wolf-rayet'; subclass: number }
+  | { kind: 'wolf-rayet'; subclass: number | null }
   /** `wdSubclass` is the Sion temperature index, the digit after D. */
-  | { kind: 'white-dwarf'; wdSubclass: number }
-  /** ESP-ELS's letter enum: no subclass, no luminosity class. */
-  | { kind: 'letter-only'; letter: MkLetter | 'carbon' }
+  | { kind: 'white-dwarf'; wdSubclass: number | null }
   | { kind: 'unknown' };
 
-/** What the MK walker can produce: never `letter-only` or `unknown`. */
-export type MkSpectral = Exclude<SpectralInfo, { kind: 'letter-only' | 'unknown' }>;
+export type MkSpectral = Exclude<SpectralInfo, { kind: 'unknown' }>;
 
 export const SPECTRAL_UNKNOWN: SpectralInfo = { kind: 'unknown' };
 
@@ -89,7 +87,7 @@ export function classifyFromSimbad(rawSpType: string | null | undefined): MkSpec
     return {
       kind: 'mk',
       letter: mkLetter(yerkesMatch[2]) as MkLetter,
-      subclass: subMatch ? Number(subMatch[1]) : DEFAULT_SUBCLASS,
+      subclass: subMatch ? Number(subMatch[1]) : null,
       lumClass: yerkesMatch[1] === 'g' ? 4 : 2,
     };
   }
@@ -102,8 +100,10 @@ export function classifyFromSimbad(rawSpType: string | null | undefined): MkSpec
   // canonical form is uppercase so we don't need to fold case here.
   const wdMatch = s.match(/^D[ABCOHQXZV]+(\d(?:\.\d)?)?/);
   if (wdMatch) {
-    const wdSub = wdMatch[1] ? Math.round(Number(wdMatch[1])) : DEFAULT_SUBCLASS;
-    return { kind: 'white-dwarf', wdSubclass: Math.max(0, Math.min(9, wdSub)) };
+    const wdSubclass = wdMatch[1]
+      ? Math.max(0, Math.min(9, Math.round(Number(wdMatch[1]))))
+      : null;
+    return { kind: 'white-dwarf', wdSubclass };
   }
 
   // Subdwarf prefix: "sdB", "sdO", etc. → lumClass=1 (subdwarf).
@@ -112,7 +112,7 @@ export function classifyFromSimbad(rawSpType: string | null | undefined): MkSpec
     return {
       kind: 'mk',
       letter: mkLetter(sdMatch[1]) as MkLetter,
-      subclass: sdMatch[2] ? Number(sdMatch[2].split('.')[0]) : DEFAULT_SUBCLASS,
+      subclass: sdMatch[2] ? Number(sdMatch[2].split('.')[0]) : null,
       lumClass: 1,
     };
   }
@@ -150,7 +150,7 @@ export function classifyFromSimbad(rawSpType: string | null | undefined): MkSpec
   if (letter === null && !CARBON_FAMILY_RE.test(firstChar)) return null;
 
   // Subclass digit: take the integer part of an optionally-fractional digit.
-  let subclass = DEFAULT_SUBCLASS;
+  let subclass: number | null = null;
   let afterSub = 1;
   const subMatch = body.substring(1).match(/^(\d)(?:\.\d)?/);
   if (subMatch) {
@@ -188,17 +188,16 @@ export function classifyFromSimbad(rawSpType: string | null | undefined): MkSpec
   return { kind: 'mk', letter, subclass, lumClass: lookupLumClass(lumWindow) };
 }
 
-/** Map Gaia DR3 ESP-ELS's `spectraltype_esphs` enum to a SpectralInfo.
- *  The enum is letter-only (Creevey 2023
- *  (/data/papers/index.md#creevey2023)). Returns null for the catch-all
- *  "unknown" value and for unrecognised letters. */
+/** Gaia DR3 ESP-ELS's letter-only `spectraltype_esphs` enum (Creevey 2023
+ *  (/data/papers/index.md#creevey2023)). Null for "unknown" and unrecognised
+ *  letters. */
 export function classifyFromGspspec(esphs: string | null | undefined): SpectralInfo | null {
   if (!esphs) return null;
   const s = esphs.trim().toUpperCase();
   if (!s || s === 'UNKNOWN') return null;
-  if (s === 'CSTAR') return { kind: 'letter-only', letter: 'carbon' };
+  if (s === 'CSTAR') return { kind: 'carbon', subclass: null };
   const letter = mkLetter(s.charAt(0));
-  return letter === null ? null : { kind: 'letter-only', letter };
+  return letter === null ? null : { kind: 'mk', letter, subclass: null, lumClass: null };
 }
 
 /** Hover/search display string: prefer the resolver's MK-canonical

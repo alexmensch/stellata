@@ -2,7 +2,6 @@
 // See README.md#spectralinfo-is-a-variant.
 
 import {
-  DEFAULT_SUBCLASS,
   type LumClass,
   type MkLetter,
   type SpectralInfo,
@@ -26,20 +25,15 @@ export function encodeSpectralBytes(info: SpectralInfo): SpectralBytes {
     case 'carbon':
     case 'wolf-rayet': return { spectClass: SPECT_CLASS_CARBON, lumClass: LUM_CLASS_UNKNOWN };
     case 'white-dwarf': return { spectClass: SPECT_CLASS_UNKNOWN, lumClass: LUM_CLASS_WHITE_DWARF };
-    case 'letter-only':
-      return {
-        spectClass: info.letter === 'carbon' ? SPECT_CLASS_CARBON : info.letter,
-        lumClass: LUM_CLASS_UNKNOWN,
-      };
     case 'unknown': return { spectClass: SPECT_CLASS_UNKNOWN, lumClass: LUM_CLASS_UNKNOWN };
   }
 }
 
 export function decodeSpectralBytes({ spectClass, lumClass }: SpectralBytes): SpectralInfo {
   if (lumClass === LUM_CLASS_WHITE_DWARF) {
-    return { kind: 'white-dwarf', wdSubclass: DEFAULT_SUBCLASS };
+    return { kind: 'white-dwarf', wdSubclass: null };
   }
-  if (spectClass === SPECT_CLASS_CARBON) return { kind: 'carbon', subclass: DEFAULT_SUBCLASS };
+  if (spectClass === SPECT_CLASS_CARBON) return { kind: 'carbon', subclass: null };
   if (spectClass === SPECT_CLASS_UNKNOWN) return { kind: 'unknown' };
   if (!Number.isInteger(spectClass) || spectClass < 0 || spectClass >= SPECT_CLASS_CARBON) {
     throw new Error(`spectClass byte ${spectClass} encodes no class`);
@@ -50,7 +44,7 @@ export function decodeSpectralBytes({ spectClass, lumClass }: SpectralBytes): Sp
   return {
     kind: 'mk',
     letter: spectClass as MkLetter,
-    subclass: DEFAULT_SUBCLASS,
+    subclass: null,
     lumClass: lumClass === LUM_CLASS_UNKNOWN ? null : (lumClass as LumClass),
   };
 }

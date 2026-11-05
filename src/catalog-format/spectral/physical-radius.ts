@@ -43,13 +43,9 @@ function fromClassTables(
   t: ClassTables, info: Exclude<SpectralInfo, { kind: 'white-dwarf' }>,
 ): number {
   switch (info.kind) {
-    case 'mk': return interpolate(t.byLetter[info.letter], info.subclass);
-    case 'carbon': return interpolate(t.carbon, info.subclass);
-    case 'wolf-rayet': return interpolate(t.wolfRayet, info.subclass);
-    case 'letter-only':
-      return interpolate(
-        info.letter === 'carbon' ? t.carbon : t.byLetter[info.letter], DEFAULT_SUBCLASS,
-      );
+    case 'mk': return interpolate(t.byLetter[info.letter], info.subclass ?? DEFAULT_SUBCLASS);
+    case 'carbon': return interpolate(t.carbon, info.subclass ?? DEFAULT_SUBCLASS);
+    case 'wolf-rayet': return interpolate(t.wolfRayet, info.subclass ?? DEFAULT_SUBCLASS);
     case 'unknown': return t.unknown;
   }
 }
@@ -86,7 +82,7 @@ export function tempKelvin(info: SpectralInfo): number {
   if (info.kind === 'white-dwarf') {
     // WD temperature index N = 50400 / T_eff (Sion 1983
     // (/data/papers/index.md#sion)), so T_eff ≈ 50400 / N for N=1..9.
-    const n = Math.max(1, info.wdSubclass);
+    const n = Math.max(1, info.wdSubclass ?? DEFAULT_SUBCLASS);
     return 50400 / n;
   }
   return fromClassTables(T_TABLES, info);
@@ -252,12 +248,9 @@ function mkAbsmag(letter: MkLetter, subclass: number, lumClass: LumClass | null)
  *  signal. Returns null for white dwarfs, carbon/WR stars, and the
  *  unknown class, where a single M_V calibration would be fiction. */
 export function absmagFromSpectral(info: SpectralInfo): number | null {
-  switch (info.kind) {
-    case 'mk': return mkAbsmag(info.letter, info.subclass, info.lumClass);
-    case 'letter-only':
-      return info.letter === 'carbon' ? null : mkAbsmag(info.letter, DEFAULT_SUBCLASS, null);
-    default: return null;
-  }
+  return info.kind === 'mk'
+    ? mkAbsmag(info.letter, info.subclass ?? DEFAULT_SUBCLASS, info.lumClass)
+    : null;
 }
 
 /** Piecewise-linear inverse of an anchor table: value → key. Assumes the
