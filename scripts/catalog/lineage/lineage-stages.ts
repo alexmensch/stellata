@@ -6,9 +6,10 @@ import { PROMOTION_CODES } from '../companions/promotion-lineage-pure';
 import { PLACEMENT_CODES } from '../distance/placement-lineage-pure';
 import { MEMBERSHIP_CODES } from '../membership/membership-lineage-pure';
 import { COHERENCE_CODES } from '../multiplicity/coherence-lineage-pure';
+import { NAMING_CODES } from '../naming/naming-lineage-pure';
 import type { StageCodes } from './reason-codes-pure';
 import {
-  ALLOCATION_LINEAGE, COHERENCE_LINEAGE, PROMOTION_LINEAGE, PLACEMENT_LINEAGE, MEMBERSHIP_LINEAGE,
+  ALLOCATION_LINEAGE, COHERENCE_LINEAGE, PROMOTION_LINEAGE, PLACEMENT_LINEAGE, MEMBERSHIP_LINEAGE, NAMING_LINEAGE,
   type StageLineageSpec,
 } from '../../../src/catalog-format/pipeline-outputs/lineage-files';
 
@@ -23,5 +24,6 @@ export const LINEAGE_STAGES: readonly LineageStage[] = [
   { codes: COHERENCE_CODES, spec: COHERENCE_LINEAGE },
   { codes: PROMOTION_CODES, spec: PROMOTION_LINEAGE },
   { codes: ALLOCATION_CODES, spec: ALLOCATION_LINEAGE },
+  { codes: NAMING_CODES, spec: NAMING_LINEAGE },
   ...Object.values(SIBLING_ARTIFACTS).map(({ codes, lineage }) => ({ codes, spec: lineage })),
 ];

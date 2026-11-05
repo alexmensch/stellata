@@ -86,10 +86,16 @@ scripts/catalog/naming/
   name-overrides-source.ts      two curated tables, declared
                                 (../../util/sources/).
   display-names.ts (+ test)     The build's half of the composer: every
-                                record's designation set → its display
-                                name, with the NAME tiers written into
-                                `proper`. Also the curated override's join,
-                                which hard-fails on an unmatched SID.
+                                record's designation set → its naming
+                                outcome (`NamedRecord`), with the NAME
+                                tiers written into `proper` and the counts
+                                folded from the outcomes. Also the curated
+                                override's join, which hard-fails on an
+                                unmatched SID.
+  naming-lineage-pure.ts        The display-name pass as a lineage stage:
+    (+ test)                    its reason codes and the serialiser over
+                                each record's naming outcome
+                                (#naming-lineage).
   naming-parity-pure.ts         Ledger row types, the record-identity key
                                 and the shared label resolver.
   naming-parity-tsv.ts          NAMING_PARITY / NAMING_DUPLICATES — the
@@ -263,3 +269,28 @@ duplicate list from the built artifacts, and prints the figures above. `key` and
 the committed file; `NAMING_PARITY_SEED=<key/old TSV>` re-seeds them, which
 is what a deliberate wholesale naming change needs and nothing else should
 touch.
+
+## Naming lineage
+
+The display-name pass is the sixth stage of the [lineage](../lineage/README.md)
+contract (`naming-lineage-pure.ts`), after SID allocation, since the curated
+override keys on SIDs. `namingLineageRows` serialises each record's
+`NamedRecord` through an exhaustive `switch`:
+
+- every record gets one name row: `name.own` (the highest tier it carries),
+  one of three `name.borrowed.*` codes naming the borrowing rule that fired,
+  or `name.unlabelled`, where the runtime's Gaia DR3 / SID fallback takes over.
+  `params` carry the tier and the label; a borrowed row names its anchor by
+  origin key (`params.anchor`) and its component letter;
+- each other tier the record carries is a `refused` row: `name.lower-tier`
+  below an own label, `name.borrowed-over` for a borrowed one;
+- a lettered label adds its letter's source: `letter.stated` (the authority's
+  attribution), `letter.sibling-owns`, or `letter.borrowed`;
+- a record carrying a Bayer, Flamsteed or Gould designation adds the
+  constellation it renders against: the cascade tier that wrote it
+  (`desigConSource`, [The designation constellation](../classic-ids/README.md#the-designation-constellation)),
+  `dc.positional` or `dc.none`, and a `refused` `dc.displaced` row for the
+  IV/27A constellation an authority tier overwrote.
+
+The stage founds no record, so it writes no identity rows, and every code's
+effect is `none`.
