@@ -28,11 +28,7 @@ scripts/catalog/multiplicity/
                                   thresholds. Pure, and imported by three
                                   folders — the coherence pass here, the
                                   parallax cascade's pair_member tier, and
-                                  companion promotion. Its own module
-                                  because the coherence pass reads
-                                  wdsRootOf out of ../companions/, so a
-                                  promotion-side import of it through
-                                  system-coherence.ts would close a cycle.
+                                  companion promotion.
 ```
 
 ## Multiplicity status

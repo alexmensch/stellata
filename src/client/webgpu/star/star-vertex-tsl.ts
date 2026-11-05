@@ -22,6 +22,11 @@ import {
 } from '../../star-pipeline/star-pass';
 import { SOFT_TAPER_MARGIN_MAG } from '../../../astro-core/perceptual-magnitude';
 import { R_V } from '../../../astro-core/extinction/dust-raymarch-pure';
+import {
+  LUM_CLASS_MAIN_SEQUENCE,
+  LUM_CLASS_MAX,
+} from '../../../catalog-format/spectral/spectral-classify';
+import { LUM_CLASS_UNKNOWN } from '../../../catalog-format/spectral/spectral-record-bytes';
 import { kernelFluxPeakTsl, pointSourcePeakTsl } from '../emission-tsl';
 import { dustRaymarchAvTsl, type DustTextureNode } from '../extinction/dust-raymarch-tsl';
 import type { AvStorageNode } from '../extinction/extinction-nodes';
@@ -343,8 +348,9 @@ export function buildStarVertexNode(
         const effectiveCi = intrinsicBv.add(s.absorbAV.div(R_V)).add(s.ciMod);
 
         const lumRaw = tables.stat(self, 'iLumClass');
-        const lumClass = select(lumRaw.lessThan(100.0), lumRaw, 2.0);
-        const softness = clamp(lumClass.div(9.0), 0.0, 1.0);
+        const lumClass = select(
+          lumRaw.lessThan(float(LUM_CLASS_UNKNOWN)), lumRaw, float(LUM_CLASS_MAIN_SEQUENCE));
+        const softness = clamp(lumClass.div(float(LUM_CLASS_MAX)), 0.0, 1.0);
 
         v.vAppMag.assign(s.appMag);
         v.vColor.assign(ciToColor(effectiveCi));

@@ -102,6 +102,14 @@ export const MULTIPLES_TSV = defineArtifact({
   rowKey: MULTIPLES_ROW_KEY,
   decode: (row): MultiplesRecord => {
     const regime = row.int('regime') ?? row.fail('regime is empty');
+    const positive = (column: 'P_days' | 'a_AU'): number | null => {
+      const v = row.float(column);
+      return v === null || v > 0 ? v : row.fail(`${column} ${v} is not positive`);
+    };
+    const eccentricity = row.float('e');
+    if (eccentricity !== null && !(eccentricity >= 0 && eccentricity < 1)) {
+      row.fail(`e ${eccentricity} is not a bound orbit's eccentricity`);
+    }
     return {
       systemId: row.raw('system_id'),
       comp: row.raw('comp'),
@@ -124,10 +132,10 @@ export const MULTIPLES_TSV = defineArtifact({
       photometryVia: row.oneOf('photometry_via', PHOTOMETRY_VIA),
       aVia: row.oneOf('a_via', A_VIA),
       orbitRole: row.oneOf('orbit_role', ORBIT_ROLES),
-      pDays: row.float('P_days'),
+      pDays: positive('P_days'),
       tJd: row.float('T_jd'),
-      e: row.float('e'),
-      aAU: row.float('a_AU'),
+      e: eccentricity,
+      aAU: positive('a_AU'),
       iRad: row.float('i_rad'),
       omegaRad: row.float('omega_rad'),
       OmegaRad: row.float('Omega_rad'),

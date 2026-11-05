@@ -17,9 +17,9 @@ spectral-format.ts        formatSpectral(raw, spectClass, lumClass,
                           is plain language ("orange giant") composed
                           from the shipped numeric class bytes, with
                           white-dwarf / Wolf-Rayet / carbon overrides.
-                          This is a runtime mini-formatter — the full
-                          parser in src/catalog-format/record/catalog-pure.ts is
-                          BUILD-only.
+                          The byte codes are spectral-record-bytes.ts's
+                          (src/catalog-format/spectral/); the label is a
+                          string cleanup, not a parse.
 physical-format.ts        Radii (stars "X R☉" — catalog physicalRadius
                           is already solar radii; planets "X R⊕ (km)"),
                           axis pairs, apparent-mag-from-camera (always

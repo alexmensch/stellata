@@ -648,7 +648,7 @@ def run() -> int:
 
     log(
         "Stage 7 complete. data/binaries/multiples.tsv ready for "
-        "build-runtime-binaries.py."
+        "build:binaries-runtime."
     )
     return 0
 

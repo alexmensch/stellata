@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""WDS component-letter token helpers shared by the pipeline stages and
-the runtime-binaries writer."""
+"""WDS component-letter token helpers shared by the pipeline stages."""
 
 from __future__ import annotations
 

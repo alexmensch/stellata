@@ -364,7 +364,7 @@ Multiple-star components additionally carry `cl` (canonical WDS component
 letter) + `cp` (the record its system's designation comes from), emitted
 by `buildComponentDesignations` (`../companions/record-index/`) after the
 row-index map is built — resolving each `multiples.tsv` component through
-the same `gaia → hip → synth` priority `build-runtime-binaries.py` uses.
+the same `gaia → hip → synth` resolution the `binaries.bin` writer uses.
 The pair drives both the composed display label ("Sirius B") and the
 runtime "<system> <letter>" aliases ("Alpha Centauri C" / "α Cen C" →
 Proxima). `cp` is the WDS ROOT's anchor, not the pair cursor's:

@@ -13,15 +13,16 @@ import {
 import { innermostRelationOf } from './focal-chain';
 import { GALACTIC_NORTH_POLE_ICRS } from '../../astro-core/galactic-coords';
 import {
-  FLAG_HAS_ORBIT,
-  FLAG_HAS_INCLINATION,
-  NO_PARENT,
   type BinariesData,
   type BinaryRelation,
 } from './binaries-loader';
+import {
+  FLAG_HAS_ORBIT,
+  FLAG_HAS_INCLINATION,
+  NO_PARENT,
+} from '../../catalog-format/binaries/binaries-format';
 
-/** Per-relation cache populated once per attach. Cheap to keep — at
- *  ~900 binary records the whole list is well under 100 KB. */
+/** Per-relation cache populated once per attach. */
 export interface OrbitRelationCache {
   /** Index back into `BinariesData.relations`. */
   relationIdx: number;
