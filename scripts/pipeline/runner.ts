@@ -9,7 +9,7 @@ import {
 import { PIPELINE_STEP_ENV, UPDATE_SNAPSHOTS_ENV } from '../util/snapshot-check';
 import { stampedInputMap } from '../util/step-input-hashes';
 import { buildFreshness, manualDescription, manualFreshness, stampedOutputs } from './freshness';
-import type { Loaded } from './step-table/load-table';
+import type { LoadedTable } from './step-table/load-table';
 import { holdStepLocks } from './locks';
 import { pipelineTree, type PipelineTree } from './pipeline-tree';
 import { runRecorded, runTs } from './processes';
@@ -35,7 +35,6 @@ export interface RunOptions {
   readonly log: (line: string) => void;
 }
 
-type Loads = Extract<Loaded, { kind: 'loaded' }>;
 
 const blocks = (v: Verdict): boolean => v.kind === 'stale' || v.kind === 'failed' || v.kind === 'skipped';
 
@@ -48,7 +47,7 @@ class Run {
   private readonly tree: PipelineTree;
   private readonly verdicts = new Map<string, Verdict>();
 
-  constructor(private readonly loaded: Loads, private readonly options: RunOptions) {
+  constructor(private readonly loaded: LoadedTable, private readonly options: RunOptions) {
     this.tree = pipelineTree(options.root);
   }
 
@@ -169,7 +168,7 @@ function keptLoopLines(graph: StepGraph, tree: PipelineTree): string[] {
   });
 }
 
-export async function runSteps(loaded: Loads, options: RunOptions): Promise<{ verdicts: ReadonlyMap<string, Verdict>; status: number }> {
+export async function runSteps(loaded: LoadedTable, options: RunOptions): Promise<{ verdicts: ReadonlyMap<string, Verdict>; status: number }> {
   const unknown = options.targets.filter((t) => !loaded.steps.has(t));
   if (unknown.length > 0) throw new Error(`no step named ${unknown.join(', ')}`);
   for (const line of keptLoopLines(loaded.graph, pipelineTree(options.root))) options.log(line);

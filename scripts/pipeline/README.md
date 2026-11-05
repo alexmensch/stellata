@@ -218,11 +218,12 @@ Hand-kept lists become derivations over the table:
 
 - `tests/artifact-freshness.test.ts` iterates every stamp in `build/stamps/`
   and `data/stamps/`.
-- `.worktreeinclude` may list only the `build` steps' stamped outputs, their
-  stamp files and `build/lineage/`, and must list every stamped output and
-  stamped family under `public/` or `build/`. `worktree-seed.test.ts` checks it against
-  the outputs and stamps of the steps `build:data` selects, read from
-  the loaded step table.
+- `.worktreeinclude` is gitignored and generated (`pnpm run
+  worktree:include`, which `build:seed` runs first) from the steps
+  `build:data` selects in the loaded table: each one's declared files under
+  `public/` or `build/` (`build/lineage/` among them), its stamped families
+  there and its stamp, sorted. No copy is committed, so a step added to the
+  table is seeded from the next `build:seed` on.
 - `tests/bundle-content.test.ts` reads the mirror steps' declarations.
 - `resolved-hole-table.ts`'s record count is tested against
   `build-catalog-expected.json`'s `recordCount`.
@@ -290,10 +291,19 @@ The table's own files are in [step-table/](step-table/README.md#files).
 - `run.ts` — the command line over `step-table/steps.ts`. Under GitHub
   Actions it also writes `built=true|false` (whether any step built) to
   `GITHUB_OUTPUT`, which gates CI's save.
-- `build-files.ts` (tested through `runner.test.ts`) — `buildFiles`: every
-  build step's declared outputs, family members and stamp that exist on
-  disk, which is the set CI caches
+- `build-files.ts` (tested through `runner.test.ts`) — `buildClaims`, the
+  one statement of what a build step owns: its declared files, families and
+  stamp. `buildFiles` is those that exist on disk, family members expanded,
+  which is the set CI caches
   ([The data build cache](../ci/README.md#the-data-build-cache)).
+- `worktree-include-pure.ts` (+ test) / `worktree-include.ts` (+ test) /
+  `write-worktree-include.ts` — `.worktreeinclude`'s generator
+  ([Derived checks](#derived-checks)). A family listing its names is
+  written name by name; one with a pattern, as the glob `memberGlob` reads
+  from it: each run of regex syntax becomes `*`, so the glob matches every
+  member and a few names more (`catalog.bin.*`). A pattern it cannot read
+  that way (unanchored, flagged, a top-level `|`, a literal glob metacharacter)
+  throws rather than guess. `seedSteps` is `build:data`'s selection.
 - `record.ts` / `record-step.ts` (+ test) — [Recording a manual
   step](#recording-a-manual-step--recordts): `recordStep` and the
   `RecordOutcome` union (`fresh`, `recorded`, `failed`).
