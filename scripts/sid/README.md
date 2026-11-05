@@ -166,7 +166,7 @@ sibling-allocation.ts     allocateSibling: one sibling namespace allocated
                           partial set); emitSibling, the artifact plus
                           those files in one emitArtifacts call. Called by
                           build:local-group and build:clouds.
-sibling-artifacts-pure.ts SIBLING_ARTIFACTS spec (file / arrayKey / ns /
+sibling-artifacts-pure.ts SIBLING_ARTIFACTS spec (arrayKey / ns /
                           kind / mint code per sibling) +
                           siblingArtifactObjects, so the namespace→kind
                           mapping is defined once. Each namespace is its

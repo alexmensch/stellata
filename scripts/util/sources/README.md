@@ -29,6 +29,8 @@ scripts/util/sources/
                        (../README.md, emit-artifacts.ts entry).
   row-ref-pure.ts      SourceRowRef, RowKey — a cited source row
                        (#sourcerowref).
+  json-artifact-pure.ts  defineJsonArtifact (#a-json-artifact).
+    (+ test)
 ```
 
 ## Declaring a source
@@ -85,9 +87,20 @@ an unlistable source counts as its declared file, which hashes as absent, so
 its arrival is a change like any other — a stamp over many steps marks the one
 step stale instead of failing to compute. The throw stays at `read`.
 
+## A JSON artifact
+
+`defineJsonArtifact({file, hint, rowKey})` declares a JSON file a step writes
+whose records lineage cites: `clouds.json` (`clouds:<slug>`,
+`../../clouds/clouds-json.ts`) and `local-group.json` (`local-group:<slug>`,
+`../../local-group/local-group-json.ts`). Its `serialize` is the one encoding
+of the file — compact, one final newline — so the writer emits through it and
+the step's closure classifies it `written`. The row key is required: a JSON
+file nothing cites needs no declaration.
+
 ## Reached means read
 
-A declaration lives only in a module named `*-source.ts` or `*-tsv.ts`, and
+A declaration lives only in a module named `*-source.ts`, `*-tsv.ts` or
+`*-json.ts`, and
 that module is imported only by code that reads (or, for an artifact, writes)
 the file through it. Import reachability then equals reading, which is what
 lets a step's data inputs be derived from its closure.

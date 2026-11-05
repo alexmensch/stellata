@@ -2,13 +2,11 @@
 // layer. See scripts/local-group/README.md for inputs, output schema,
 // idempotency, and the LVDB-refresh protocol.
 
-import { dirname, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
-
 import { allocateSibling, emitSibling } from '../sid/sibling-allocation';
 import { SIBLING_ARTIFACTS } from '../sid/sibling-artifacts-pure';
 import { sweepStaged } from '../util/emit-artifacts';
 import { roundHalfEven, roundSignificant } from '../util/round-pure';
+import { LOCAL_GROUP_JSON } from './local-group-json';
 import { LOCAL_GROUP_OUTPUTS } from './local-group-outputs';
 import { LG_ALIASES, LG_OVERRIDES, LVDB } from './local-group-source';
 import {
@@ -24,16 +22,14 @@ import {
   type SersicParams,
 } from '../../src/catalog-format/local-group/local-group-schema';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-const ROOT = resolve(__dirname, '..', '..');
-
-const OUT = LOCAL_GROUP_OUTPUTS.files.localGroup;
+const roundEach = <T extends readonly number[]>(v: T, digits: number): T => (
+  v.map((x) => roundHalfEven(x, digits)) as unknown as T
+);
 
 /** Trims numeric precision so repeat builds produce stable diffs. */
-function sersicParamsToJson(p: SersicParams) {
+function sersicParamsToJson(p: SersicParams): SersicParams {
   return {
-    reffAxesPc: p.reffAxesPc.map((v) => roundHalfEven(v, 2)),
+    reffAxesPc: roundEach(p.reffAxesPc, 2),
     n: roundHalfEven(p.n, 4),
     bn: roundHalfEven(p.bn, 6),
     pn: roundHalfEven(p.pn, 6),
@@ -42,7 +38,7 @@ function sersicParamsToJson(p: SersicParams) {
   };
 }
 
-function emissionToJson(e: LgEmission) {
+function emissionToJson(e: LgEmission): LgEmission {
   if (e.family === 'sersic') {
     return {
       family: e.family,
@@ -64,16 +60,16 @@ function emissionToJson(e: LgEmission) {
   };
 }
 
-function toJsonObject(o: LgObjectRow) {
+function toJsonObject(o: LgObjectRow): LgObjectRow {
   return {
     name: o.name,
     id: o.id,
     type: o.type,
     ...(o.aliases ? { aliases: o.aliases } : {}),
-    center: o.center.map((v) => roundHalfEven(v, 2)),
+    center: roundEach(o.center, 2),
     kind: o.kind,
-    axes: o.axes.map((v) => roundHalfEven(v, 2)),
-    quat: o.quat.map((v) => roundHalfEven(v, 6)),
+    axes: roundEach(o.axes, 2),
+    quat: roundEach(o.quat, 6),
     source: o.source,
     distance: roundHalfEven(o.distance, 1),
     emission: emissionToJson(o.emission),
@@ -166,10 +162,10 @@ export async function main(): Promise<void> {
     count: objects.length,
     objects: objects.map((o, i) => ({ ...toJsonObject(o), sid: allocation.sids[i] })),
   };
-  emitSibling(LOCAL_GROUP_OUTPUTS, { localGroup: JSON.stringify(payload, null, 0) + '\n' }, allocation);
+  emitSibling(LOCAL_GROUP_OUTPUTS, { localGroup: LOCAL_GROUP_JSON.serialize(payload) }, allocation);
 
   console.log(
-    `wrote ${OUT.replace(ROOT + '/', '')} ` +
+    `wrote ${LOCAL_GROUP_JSON.file} ` +
     `(${objects.length} objects: ${overrideHits} LVDB+override, ` +
     `${lvdbDefaultHits} LVDB-only, ${standaloneHits} standalone override; ` +
     `${skippedNoStructure} LVDB rows skipped — no structural data; ` +

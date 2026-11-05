@@ -21,6 +21,9 @@ the clouds both cover.
 - `zucker-parse.ts` (+ test) / `zucker-source.ts` — the four tables' parsers
   and declarations (`../util/sources/`).
 - `clouds-outputs.ts` — the emitArtifacts declaration.
+- `clouds-json.ts` — `CLOUDS_JSON`, `clouds.json` as a JSON artifact
+  (`../util/sources/README.md#a-json-artifact`): the writer serializes
+  through it, and lineage cites a cloud as `clouds:<slug>`.
 - `clouds-inputs.test.ts` — pins the step's derived input set,
   `stepInputPaths('build:clouds')`.
 - `clouds-json.test.ts` pins the emitted payload (11 calibrated clouds, class

@@ -2,7 +2,6 @@
 // that carry an in-record sid, each namespace its own registry partition. See
 // /scripts/sid/README.md#sibling-artifact-stamping.
 
-import { PUBLIC_FILES } from '../../src/catalog-format/public-artifacts/public-artifacts';
 import type { SidObject } from './allocate-pure';
 import { ALLOCATION_CODES } from './allocation-lineage-pure';
 import type { SidKind } from './sid-pure';
@@ -11,8 +10,6 @@ import {
 } from '../../src/catalog-format/pipeline-outputs/data-files';
 
 export interface SiblingArtifactSpec {
-  /** public/ filename. */
-  file: string;
   /** Top-level array property holding the objects. */
   arrayKey: string;
   /** Designation namespace the ledger keys these objects on (/docs/sid.md#3-designation-namespaces). */
@@ -26,7 +23,6 @@ export interface SiblingArtifactSpec {
 
 export const SIBLING_ARTIFACTS = {
   clouds: {
-    file: PUBLIC_FILES.clouds,
     arrayKey: 'clouds',
     ns: CLOUD_PARTITION,
     kind: 'cloud',
@@ -34,7 +30,6 @@ export const SIBLING_ARTIFACTS = {
     mintCode: ALLOCATION_CODES.code('mint.cloud'),
   },
   'local-group': {
-    file: PUBLIC_FILES.localGroup,
     arrayKey: 'objects',
     ns: LOCAL_GROUP_PARTITION,
     kind: 'galaxy',

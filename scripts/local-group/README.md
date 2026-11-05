@@ -8,7 +8,8 @@ rules, distance filter, emission assembly);
 `emission-geometry-pure.ts` holds the Sérsic deprojection and each
 family's truncated-volume integral. `local-group-source.ts` declares the
 three inputs (`../util/sources/`), `local-group-parse.ts` holds their
-parsers, and `local-group-inputs.test.ts` pins the step's derived
+parsers, `local-group-json.ts` declares the output it serializes through
+(`local-group:<slug>` to lineage), and `local-group-inputs.test.ts` pins the step's derived
 input set, `stepInputPaths('build:local-group')` (`../util/step-inputs.ts`). The quadrature and the ρ₀ solve
 itself are shared with the Milky Way band and live in
 `src/astro-core/emission/density0-solver-pure.ts`. The distance envelope
