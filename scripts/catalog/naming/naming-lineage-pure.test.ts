@@ -73,6 +73,33 @@ describe('namingLineageRows', () => {
   });
 });
 
+describe('namingLineageRows: every letter and constellation source', () => {
+  it('writes the sibling-owns letter and each cascade tier\'s constellation code', () => {
+    const records: NamedRecord[] = [
+      {
+        name: { kind: 'own', label: 'θ¹ Ori C', tier: 'bayer', letter: { source: 'sibling-owns', comp: 'C' } },
+        set: { bayer: 'θ', bayerSup: 1, dc: 'Dra' }, dc: { from: 'designation', con: { via: 'iv27a', index: DRA } },
+      },
+      {
+        name: { kind: 'own', label: '21 Dra', tier: 'flamsteed', letter: null },
+        set: { flamsteed: 21, dc: 'Dra' }, dc: { from: 'designation', con: { via: 'gcvs', index: DRA } },
+      },
+      {
+        name: { kind: 'own', label: '22 Her', tier: 'flamsteed', letter: null },
+        set: { flamsteed: 22, dc: 'Her' }, dc: { from: 'designation', con: { via: 'anchor', index: HER } },
+      },
+    ];
+    expect(brief(records, [rec('spine:1'), rec('spine:2'), rec('spine:3')])
+      .filter((r) => !r.code.startsWith('naming.name.'))
+      .map((r) => [r.key, r.code, r.params])).toEqual([
+      ['spine:1', 'naming.letter.sibling-owns', { comp: 'C' }],
+      ['spine:1', 'naming.dc.iv27a', { con: 'Dra' }],
+      ['spine:2', 'naming.dc.gcvs', { con: 'Dra' }],
+      ['spine:3', 'naming.dc.anchor', { con: 'Her' }],
+    ]);
+  });
+});
+
 describe('namingLabels', () => {
   it('reads each record\'s label off its name row alone', () => {
     const records: NamedRecord[] = [

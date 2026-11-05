@@ -108,7 +108,7 @@ scripts/catalog/classic-ids/
                                   `DesignationCon`, a record's value with
                                   the cascade tier that wrote it. Pure.
   apply-designation-constellation.ts
-                                  The record build's one remaining classic-ID
+    (+ test)                      The record build's one remaining classic-ID
                                   pass: loads IV/27A's cross-index and applies
                                   designation-constellation-pure to the Star
                                   array. The label merge does NOT run here —
