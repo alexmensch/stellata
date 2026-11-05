@@ -1,5 +1,6 @@
 // Walks the selected steps in order: lock, check, run or skip, stamp. See README.md#the-runner--runts.
 
+import { execFileSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
 
 import {
@@ -16,8 +17,8 @@ import { pipelineTree, type PipelineTree } from './pipeline-tree';
 import { exec, runRecorded, TSX } from './processes';
 import { recordProblems } from './python-run-pure';
 import {
-  isBuild, selectSteps,
-  type BuildStep, type ResolvedStep, type StepGraph,
+  claims, isBuild, selectSteps,
+  type BuildStep, type OutputClaims, type ResolvedStep, type StepGraph,
 } from './step-table/step-table-pure';
 
 export type Verdict =
@@ -32,6 +33,7 @@ export interface RunOptions {
   readonly targets: readonly string[];
   readonly force: boolean;
   readonly updateSnapshots: boolean;
+  readonly verifyCommitted: boolean;
   readonly log: (line: string) => void;
 }
 
@@ -88,7 +90,8 @@ class Run {
     }
     try {
       const verdict = await this.build(resolved, step);
-      return held.died() ? { kind: 'failed', reason: 'its lock holder died while it ran' } : verdict;
+      if (held.died()) return { kind: 'failed', reason: 'its lock holder died while it ran' };
+      return this.options.verifyCommitted && !blocks(verdict) ? this.verifyCommitted(step.name, resolved.outputs, verdict) : verdict;
     } catch (err) {
       return { kind: 'failed', reason: err instanceof Error ? err.message : String(err) };
     } finally {
@@ -127,12 +130,28 @@ class Run {
     });
   }
 
+  private verifyCommitted(name: string, outputs: OutputClaims, verdict: Verdict): Verdict {
+    const moved = movedCommittedOutputs(this.tree, outputs);
+    return moved.length === 0 ? verdict : {
+      kind: 'failed',
+      reason: `its committed outputs differ from this build (${moved.join(', ')}): run pnpm run ${name} and commit them`,
+    };
+  }
+
   private land(stampFile: string, resolved: ResolvedStep, inputs: FileHashes, recorded?: RecordedReads): Verdict {
     const missing = resolved.outputs.files.filter((p) => !existsSync(p));
     if (missing.length > 0) return { kind: 'failed', reason: `declared outputs not written: ${missing.map(this.tree.rel).join(', ')}` };
     writeStamp(stampFile, inputs, stampedOutputs(resolved.outputs), { recorded, root: this.tree.root });
     return { kind: 'built' };
   }
+}
+
+/** Repo-relative: the declared outputs git tracks whose working copy differs from the index. */
+function movedCommittedOutputs(tree: PipelineTree, outputs: OutputClaims): string[] {
+  const paths = [...outputs.files, ...outputs.families.map((f) => f.dir)].map(tree.rel);
+  if (paths.length === 0) return [];
+  const diff = execFileSync('git', ['diff', '--name-only', '-z', '--', ...paths], { cwd: tree.root, encoding: 'utf8' });
+  return diff.split('\0').filter((p) => p !== '' && claims(outputs, tree.abs(p)));
 }
 
 function describeVerdict(name: string, verdict: Verdict): string {

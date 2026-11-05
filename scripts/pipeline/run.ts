@@ -1,4 +1,4 @@
-// run.ts <step… | data> [--force] [--update-snapshots]. See README.md#the-runner--runts.
+// run.ts <step… | data> [--force] [--update-snapshots] [--verify-committed]. See README.md#the-runner--runts.
 
 import { REPO_ROOT } from '../util/paths';
 import { entryInputPaths } from '../util/step-inputs';
@@ -7,14 +7,14 @@ import { runSteps } from './runner';
 import { expandTargets } from './step-table/step-table-pure';
 import { STEPS } from './step-table/steps';
 
-const FLAGS = new Set(['--force', '--update-snapshots']);
+const FLAGS = new Set(['--force', '--update-snapshots', '--verify-committed']);
 
 async function main(): Promise<number> {
   const args = process.argv.slice(2);
   const unknown = args.filter((a) => a.startsWith('--') && !FLAGS.has(a));
   const targets = args.filter((a) => !a.startsWith('--'));
   if (unknown.length > 0 || targets.length === 0) {
-    console.error(`usage: run.ts <step…|data> [--force] [--update-snapshots]${unknown.length > 0 ? `; unknown: ${unknown.join(' ')}` : ''}`);
+    console.error(`usage: run.ts <step…|data> [--force] [--update-snapshots] [--verify-committed]${unknown.length > 0 ? `; unknown: ${unknown.join(' ')}` : ''}`);
     return 2;
   }
   const loaded = await loadTable(STEPS, { root: REPO_ROOT, deriveInputs: (entry) => entryInputPaths([entry]) });
@@ -27,6 +27,7 @@ async function main(): Promise<number> {
     targets: expandTargets(STEPS.steps, targets),
     force: args.includes('--force'),
     updateSnapshots: args.includes('--update-snapshots'),
+    verifyCommitted: args.includes('--verify-committed'),
     log: (line) => console.log(line),
   });
   return status;

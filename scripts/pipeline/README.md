@@ -126,8 +126,7 @@ write more than one file (classic-ids four, Tycho-2 two).
 
 `run.ts <target…> [--force] [--update-snapshots] [--verify-committed]`
 
-A target is a step name, or `data` for every build step on the table. `--verify-committed` is CI's slice of the runner and
-lands with it; `run.ts` rejects it until then.
+A target is a step name, or `data` for every build step on the table.
 
 1. Load and validate the table.
 2. Walk the steps the targets reach, in derived order.
@@ -161,14 +160,14 @@ lands with it; `run.ts` rejects it until then.
   `snapshotCheck` and `snapshot_assert.py` read. A forced rebuild therefore
   still checks counts. Every step it runs also gets `PIPELINE_STEP` set to
   its name, so a drift message names this flag rather than the variable.
-- **`--verify-committed`** forces each selected step, then fails on any diff
-  in its declared outputs that git tracks (`git ls-files` over the declared
-  paths decides which are committed; the declaration carries no committed
-  mark). It replaces `ci/catalog-stage-pure.ts`'s `CATALOG_STAGE` and
-  `test.yml`'s inline build-binaries diff, and covers
-  `build:astrometry-request`'s output, which nothing verifies today.
-- **CI cache key**: the digest of the stage's step input sets, the same
-  closure the stamps hash. `keyedPaths` stays CI's own filter over it.
+- **`--verify-committed`** fails a step, fresh or built, whose declared
+  outputs git tracks and whose working copy differs from the index, naming
+  the files and the command; its readers are skipped as behind any failure.
+  Git decides which outputs are committed; the declaration carries no
+  committed mark. It does not force: a fresh step's stamp already vouches
+  that its outputs are what its inputs build, since a committed output that
+  differs from the recorded hash stales the step, and the rebuild then
+  shows the diff. With `--force` every selected step is rebuilt first.
 
 ## Recording a manual step — `record.ts`
 

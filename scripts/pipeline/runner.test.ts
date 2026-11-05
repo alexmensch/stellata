@@ -124,12 +124,19 @@ async function load(steps: StepEntry[], registryFiles: string[] = []): Promise<L
   return loadTable(table, { root, deriveInputs: async (entry) => reads.get(entry) ?? [] });
 }
 
-async function run(steps: StepEntry[], targets: string[], flags: { force?: boolean; updateSnapshots?: boolean } = {}) {
+interface Flags { force?: boolean; updateSnapshots?: boolean; verifyCommitted?: boolean }
+
+async function run(steps: StepEntry[], targets: string[], flags: Flags = {}) {
   const loaded = await load(steps);
   if (loaded.kind !== 'loaded') throw new Error(loaded.problems.join('; '));
   const lines: string[] = [];
   const result = await runSteps(loaded, {
-    root, targets, force: flags.force ?? false, updateSnapshots: flags.updateSnapshots ?? false, log: (l) => lines.push(l),
+    root,
+    targets,
+    force: flags.force ?? false,
+    updateSnapshots: flags.updateSnapshots ?? false,
+    verifyCommitted: flags.verifyCommitted ?? false,
+    log: (l) => lines.push(l),
   });
   return { ...result, lines, kinds: Object.fromEntries([...result.verdicts].map(([n, v]) => [n, v.kind])) };
 }
@@ -244,6 +251,58 @@ export const OUT = declareOutputs({ out: ${JSON.stringify(at('f.out'))} }, [
     const [one, two] = await Promise.all([run(steps, ['a']), run(steps, ['a'])]);
     expect([one.kinds.a, two.kinds.a].sort()).toEqual(['built', 'fresh']);
     expect(builds()).toEqual(['a']);
+  });
+});
+
+describe('runSteps — --verify-committed', () => {
+  const commit = (...names: string[]): void => {
+    execFileSync('git', ['add', '--', ...names], { cwd: root });
+    execFileSync('git', ['-c', 'user.name=t', '-c', 'user.email=t@t', 'commit', '-q', '--no-gpg-sign', '-m', 'c'], { cwd: root });
+  };
+
+  it('passes a build whose committed outputs come out unchanged, fresh or rebuilt', async () => {
+    write('a.in', 'x');
+    const steps = [tsStep('a', 'a.out', ['a.in']), tsStep('b', 'b.out', ['a.out'])];
+    await run(steps, ['b']);
+    commit('a.out');
+    expect((await run(steps, ['b'], { verifyCommitted: true })).status).toBe(0);
+    const forced = await run(steps, ['b'], { verifyCommitted: true, force: true });
+    expect(forced.kinds).toEqual({ a: 'built', b: 'built' });
+    expect(forced.status).toBe(0);
+  });
+
+  it('fails a step whose committed output its build moved, naming the file and the command, and skips its readers', async () => {
+    write('a.in', 'x');
+    const steps = [tsStep('a', 'a.out', ['a.in']), tsStep('b', 'b.out', ['a.out']), tsStep('c', 'c.out')];
+    await run(steps, ['b', 'c']);
+    commit('a.out');
+    write('a.in', 'y');
+    const result = await run(steps, ['b', 'c'], { verifyCommitted: true });
+    expect(result.kinds).toEqual({ a: 'failed', b: 'skipped', c: 'fresh' });
+    expect(result.verdicts.get('a')).toEqual({
+      kind: 'failed',
+      reason: 'its committed outputs differ from this build (a.out): run pnpm run a and commit them',
+    } satisfies Verdict);
+    expect(result.status).toBe(1);
+  });
+
+  it('rebuilds a fresh step whose committed output was edited by hand, then fails it', async () => {
+    write('a.in', 'x');
+    const steps = [tsStep('a', 'a.out', ['a.in'])];
+    await run(steps, ['a']);
+    write('a.out', 'edited');
+    commit('a.out');
+    const result = await run(steps, ['a'], { verifyCommitted: true });
+    expect(result.kinds).toEqual({ a: 'failed' });
+    expect(read('a.out')).toBe('a(x)');
+  });
+
+  it('ignores a moved output git does not track', async () => {
+    write('a.in', 'x');
+    const steps = [tsStep('a', 'a.out', ['a.in'])];
+    await run(steps, ['a']);
+    write('a.in', 'y');
+    expect((await run(steps, ['a'], { verifyCommitted: true })).kinds).toEqual({ a: 'built' });
   });
 });
 
