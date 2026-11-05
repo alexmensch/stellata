@@ -44,7 +44,7 @@ describe('memberGlob', () => {
 });
 
 describe('renderWorktreeInclude', () => {
-  it('lists public/ and build/ files and stamped families, sorted, under the header', () => {
+  it('lists public/ and build/ files and stamped families, sorted', () => {
     const text = renderWorktreeInclude([
       {
         files: ['public/b.json', 'src/committed.tsv', 'build/stamps/b.json'],
@@ -56,7 +56,6 @@ describe('renderWorktreeInclude', () => {
       { files: ['build/stamps/a.json'], families: [{ dir: 'public/rosters', member: ['p.json', 'q.json'], stamped: true }] },
     ]);
     expect(text.split('\n')).toEqual([
-      '# Generated from the step table by pnpm run worktree:include; never edit by hand.',
       'build/stamps/a.json',
       'build/stamps/b.json',
       'public/b.json',

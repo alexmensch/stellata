@@ -139,12 +139,13 @@ built from — `build/lineage/`, whose header the lineage diff checks against
 the merge-base ([The header and the refusal](catalog/lineage/baseline/README.md#the-header-and-the-refusal)).
 Every listed file is an output of a step `build:seed` runs
 ([Seeding builds](#seeding-builds--buildseed)), so refreshing the main
-checkout's seed is that one command. The list is generated from the step
-table (`pnpm run worktree:include`, [Derived checks](pipeline/README.md#derived-checks)):
+checkout's seed is that one command. The list itself is gitignored and
+`build:seed` writes it first, from the step table (`pnpm run
+worktree:include`, [Derived checks](pipeline/README.md#derived-checks)):
 every file, stamped output family and stamp of those steps under `public/` or
 `build/`, and nothing else, so nothing a stamp records can be missing from a
-fresh worktree. Re-run it after changing a build step's outputs; the suite
-fails until the committed list matches. The lineage baseline copies and diff are declared unstamped
+fresh worktree. A checkout that has never run `build:seed` has no list, and
+its worktrees build from scratch. The lineage baseline copies and diff are declared unstamped
 (`stamped: false`) and never seeded, since a worktree pins its own baseline; a
 stamp never records them, so their absence leaves the step fresh. A worktree
 made any other way
@@ -174,7 +175,7 @@ built, so the next build there sees them rewritten and rebuilds.
 
 ## Seeding builds — `build:seed`
 
-`pnpm run build:seed` (`build-seed.sh`) runs `build:data` — every build step
+`pnpm run build:seed` (`build-seed.sh`) writes `.worktreeinclude`, then runs `build:data` — every build step
 on the table, exactly the steps whose outputs seed a new worktree
 ([Building in a worktree](#building-in-a-worktree)) — with one build per
 checkout. `build:membership` is among them, which keeps the main checkout holding the

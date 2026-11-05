@@ -218,12 +218,12 @@ Hand-kept lists become derivations over the table:
 
 - `tests/artifact-freshness.test.ts` iterates every stamp in `build/stamps/`
   and `data/stamps/`.
-- `.worktreeinclude` is generated (`pnpm run worktree:include`) from the
-  steps `build:data` selects in the loaded table: each one's declared files
-  under `public/` or `build/` (`build/lineage/` among them), its stamped
-  families there and its stamp, sorted. `worktree-include.test.ts`
-  regenerates it and fails on any difference, so a step added to the table
-  is seeded once the command is re-run.
+- `.worktreeinclude` is gitignored and generated (`pnpm run
+  worktree:include`, which `build:seed` runs first) from the steps
+  `build:data` selects in the loaded table: each one's declared files under
+  `public/` or `build/` (`build/lineage/` among them), its stamped families
+  there and its stamp, sorted. No copy is committed, so a step added to the
+  table is seeded from the next `build:seed` on.
 - `tests/bundle-content.test.ts` reads the mirror steps' declarations.
 - `resolved-hole-table.ts`'s record count is tested against
   `build-catalog-expected.json`'s `recordCount`.

@@ -1,12 +1,8 @@
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
 import { beforeAll, describe, expect, it } from 'vitest';
 
-import { REPO_ROOT } from '../util/paths';
 import type { LoadedTable } from './step-table/load-table';
 import { loadedRepoTable } from './step-table/repo-table';
 import { seedOutputs, seedSteps, worktreeInclude } from './worktree-include';
-import { WORKTREE_INCLUDE, WORKTREE_INCLUDE_COMMAND } from './worktree-include-pure';
 
 let loaded: LoadedTable;
 
@@ -14,9 +10,9 @@ beforeAll(async () => {
   loaded = await loadedRepoTable();
 }, 60_000);
 
-describe(WORKTREE_INCLUDE, () => {
-  it(`is what the step table renders — run ${WORKTREE_INCLUDE_COMMAND}`, () => {
-    expect(readFileSync(resolve(REPO_ROOT, WORKTREE_INCLUDE), 'utf8')).toBe(worktreeInclude(loaded));
+describe('the worktree include', () => {
+  it('renders from the repo table', () => {
+    expect(worktreeInclude(loaded).split('\n')).toEqual(expect.arrayContaining(['build/stamps/build-catalog.json', 'public/catalog.bin.*']));
   });
 
   it('loses membership\'s lineage baseline without build:membership', () => {

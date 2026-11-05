@@ -26,14 +26,16 @@ beforeEach(() => {
   mkdirSync(join(dir, 'scripts'));
   copyFileSync(join(__dirname, 'build-seed.sh'), join(dir, 'scripts', 'build-seed.sh'));
   writeFileSync(join(dir, 'stub.sh'), STUB);
-  writeFileSync(join(dir, 'package.json'), JSON.stringify({ scripts: { 'build:data': 'sh stub.sh' } }));
+  writeFileSync(join(dir, 'package.json'), JSON.stringify({
+    scripts: { 'worktree:include': 'echo written >> include; exit "${INCLUDE_EXIT:-0}"', 'build:data': 'sh stub.sh' },
+  }));
 });
 
 afterEach(() => rmSync(dir, { recursive: true, force: true }));
 
-function seed(seconds: number, exit = 0): Promise<Run> {
+function seed(seconds: number, exit = 0, includeExit = 0): Promise<Run> {
   const child = spawn('bash', [join(dir, 'scripts', 'build-seed.sh')], {
-    env: { ...process.env, STUB_SECONDS: String(seconds), STUB_EXIT: String(exit) },
+    env: { ...process.env, STUB_SECONDS: String(seconds), STUB_EXIT: String(exit), INCLUDE_EXIT: String(includeExit) },
   });
   let stdout = '';
   child.stdout.on('data', (chunk: Buffer) => (stdout += chunk.toString()));
@@ -56,6 +58,16 @@ describe('build-seed.sh', () => {
   it("returns the build's exit status and leaves no entry", async () => {
     const run = await seed(0, 3);
     expect(run.code).toBe(3);
+    expect(entries()).toEqual([]);
+  });
+
+  it('writes the worktree include before building, and a failed write builds nothing', async () => {
+    expect((await seed(0)).code).toBe(0);
+    expect(readFileSync(join(dir, 'include'), 'utf8')).toBe('written\n');
+    expect(log()).toEqual(['start', 'done']);
+    rmSync(join(dir, 'log'));
+    expect((await seed(0, 0, 4)).code).toBe(4);
+    expect(readdirSync(dir)).not.toContain('log');
     expect(entries()).toEqual([]);
   });
 

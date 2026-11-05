@@ -4,7 +4,6 @@ import type { OutputClaims } from './step-table/step-table-pure';
 import type { OutputFamily } from '../util/emit-artifacts';
 
 export const WORKTREE_INCLUDE = '.worktreeinclude';
-export const WORKTREE_INCLUDE_COMMAND = 'pnpm run worktree:include';
 
 const SEEDABLE = /^(public|build)\//;
 const GLOB_SPECIAL = new Set(['*', '?', '[', ']', '\\', '!', '#']);
@@ -74,5 +73,5 @@ export function renderWorktreeInclude(seeds: readonly OutputClaims[]): string {
     .flatMap(({ files, families }) => [...files, ...families.filter((f) => f.stamped).flatMap(familyPatterns)])
     .filter((path) => SEEDABLE.test(path))
     .sort();
-  return [`# Generated from the step table by ${WORKTREE_INCLUDE_COMMAND}; never edit by hand.`, ...patterns, ''].join('\n');
+  return [...patterns, ''].join('\n');
 }
