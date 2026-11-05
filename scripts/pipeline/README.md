@@ -322,6 +322,10 @@ The table's own files are in [step-table/](step-table/README.md#files).
 - `record.ts` / `record-step.ts` (+ test) — [Recording a manual
   step](#recording-a-manual-step--recordts): `recordStep` and the
   `RecordOutcome` union (`fresh`, `recorded`, `failed`).
+- `manual-step-fixture.ts` — test support: `tsManualFixture` writes a
+  TypeScript pull or bake and its outputs module under a fixture root and
+  hands back its `record()` and `freshness()`, for every suite that records
+  one (`record-step.test.ts`, `../catalog/catalog-columns.test.ts`).
 - `processes.ts` — how the runner and `record.ts` start a step: `runTs`, a
   TypeScript step under `tsx`, handed the input hashes taken before it
   started (`util/step-input-hashes.ts`), or `runRecorded`, a Python step

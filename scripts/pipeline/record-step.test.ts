@@ -6,10 +6,10 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import { REPO_ROOT } from '../util/paths';
 import { manualDescription, manualFreshness, pullQueryHash, requestHash } from './freshness';
 import { loadTable } from './step-table/load-table';
 import { pipelineTree } from './pipeline-tree';
+import { tsManualFixture } from './manual-step-fixture';
 import { recordStep, type RecordOutcome } from './record-step';
 import type { ManualStep, StepEntry } from './step-table/step-table-pure';
 
@@ -146,54 +146,33 @@ Path(${JSON.stringify(at('derived.tsv'))}).write_text("\\n".join(keys))
 
   it('records a TypeScript pull: its derived data inputs, never its code', async () => {
     write('roster.json', '["a"]');
-    write('steps/fetch.ts', `
+    const fixture = await tsManualFixture(root, {
+      name: 'fetch:x', kind: { kind: 'pull' }, out: at('fetched.json'), inputs: [at('roster.json')], source: `
 import { writeFileSync } from 'node:fs';
 export const describe = () => ({ query: 'Q', services: ['ssd.jpl.nasa.gov'] });
 export function main(): void { writeFileSync(${JSON.stringify(at('fetched.json'))}, 'rows'); }
-`);
-    write('steps/fetch-outputs.ts', `
-import { declareOutputs } from ${JSON.stringify(join(REPO_ROOT, 'scripts/util/emit-artifacts'))};
-export const OUT = declareOutputs({ out: ${JSON.stringify(at('fetched.json'))} });
-`);
-    const step: ManualStep = {
-      name: 'fetch:x', kind: 'pull', language: 'ts', entry: at('steps/fetch.ts'),
-      outputs: { module: at('steps/fetch-outputs.ts'), name: 'OUT' },
-    };
-    const loaded = await loadTable({ steps: [step], registryFiles: [] }, { root, deriveInputs: async () => [] });
-    if (loaded.kind !== 'loaded') throw new Error(loaded.problems.join('; '));
-    const deriveInputs = async () => [at('steps/fetch.ts'), at('roster.json')];
-    const outcome = await recordStep(loaded, { root, step: step.name, force: false, args: [], deriveInputs, log: () => {} });
-    expect(outcome.kind).toBe('recorded');
-    expect(stamp(step.name)).toMatchObject({
+`,
+    });
+    expect((await fixture.record()).kind).toBe('recorded');
+    expect(stamp('fetch:x')).toMatchObject({
       inputs: { 'roster.json': expect.any(String) },
       outputs: { 'fetched.json': expect.any(String) },
       query: pullQueryHash({ query: 'Q', services: ['ssd.jpl.nasa.gov'] }),
     });
-    expect(Object.keys(stamp(step.name).inputs)).toEqual(['roster.json']);
+    expect(Object.keys(stamp('fetch:x').inputs)).toEqual(['roster.json']);
   });
 
   it('hashes a TypeScript step\'s inputs before it runs, so an input edited mid-run reads stale', async () => {
     write('roster.json', '["a"]');
-    write('steps/fetch.ts', `
+    const fixture = await tsManualFixture(root, {
+      name: 'fetch:x', kind: { kind: 'pull' }, out: at('fetched.json'), inputs: [at('roster.json')], source: `
 import { writeFileSync } from 'node:fs';
 export const describe = () => ({ query: 'Q', services: ['ssd.jpl.nasa.gov'] });
 export function main(): void { writeFileSync(${JSON.stringify(at('roster.json'))}, '["b"]'); writeFileSync(${JSON.stringify(at('fetched.json'))}, 'rows'); }
-`);
-    write('steps/fetch-outputs.ts', `
-import { declareOutputs } from ${JSON.stringify(join(REPO_ROOT, 'scripts/util/emit-artifacts'))};
-export const OUT = declareOutputs({ out: ${JSON.stringify(at('fetched.json'))} });
-`);
-    const step: ManualStep = {
-      name: 'fetch:x', kind: 'pull', language: 'ts', entry: at('steps/fetch.ts'),
-      outputs: { module: at('steps/fetch-outputs.ts'), name: 'OUT' },
-    };
-    const loaded = await loadTable({ steps: [step], registryFiles: [] }, { root, deriveInputs: async () => [] });
-    if (loaded.kind !== 'loaded') throw new Error(loaded.problems.join('; '));
-    const deriveInputs = async () => [at('roster.json')];
-    expect((await recordStep(loaded, { root, step: step.name, force: false, args: [], deriveInputs, log: () => {} })).kind).toBe('recorded');
-    const tree = pipelineTree(root);
-    expect(manualFreshness(step, { files: [at('fetched.json')], families: [] }, tree, manualDescription(step, tree)))
-      .toEqual({ kind: 'stale', changed: ['roster.json'] });
+`,
+    });
+    expect((await fixture.record()).kind).toBe('recorded');
+    expect(fixture.freshness()).toEqual({ kind: 'stale', changed: ['roster.json'] });
   });
 
   it('keeps a bake\'s code among its inputs', async () => {
@@ -238,39 +217,27 @@ Path(${JSON.stringify(at('baked.bin'))}).write_text(f"{model.scale(1)} {rungs}")
 
   it('records a TypeScript bake through the projection its async describe prints, and freshens it on a re-run', async () => {
     write('clouds.json', '{"shape": "ellipse", "sid": 1}');
-    write('steps/bake.ts', `
+    const fixture = await tsManualFixture(root, {
+      name: 'build:bake', kind: { kind: 'bake', describes: true }, out: at('surfaces.bin'), inputs: [at('clouds.json')], source: `
 import { readFile, writeFile } from 'node:fs/promises';
 const shape = async () => JSON.parse(await readFile(${JSON.stringify(at('clouds.json'))}, 'utf8')).shape;
 export const describe = async () => ({ request: [await shape()], requestFrom: ['clouds.json'] });
 export async function main(): Promise<void> { await writeFile(${JSON.stringify(at('surfaces.bin'))}, await shape()); }
-`);
-    write('steps/bake-outputs.ts', `
-import { declareOutputs } from ${JSON.stringify(join(REPO_ROOT, 'scripts/util/emit-artifacts'))};
-export const OUT = declareOutputs({ out: ${JSON.stringify(at('surfaces.bin'))} });
-`);
-    const step: ManualStep = {
-      name: 'build:bake', kind: 'bake', describes: true, language: 'ts', entry: at('steps/bake.ts'),
-      outputs: { module: at('steps/bake-outputs.ts'), name: 'OUT' },
-    };
-    const loaded = await loadTable({ steps: [step], registryFiles: [] }, { root, deriveInputs: async () => [] });
-    if (loaded.kind !== 'loaded') throw new Error(loaded.problems.join('; '));
-    const deriveInputs = async () => [at('steps/bake.ts'), at('clouds.json')];
-    const recordIt = () => recordStep(loaded, { root, step: step.name, force: false, args: [], deriveInputs, log: () => {} });
-    const tree = pipelineTree(root);
-    const freshness = () => manualFreshness(step, { files: [at('surfaces.bin')], families: [] }, tree, manualDescription(step, tree)).kind;
+`,
+    });
 
-    expect((await recordIt()).kind).toBe('recorded');
-    expect(stamp(step.name)).toEqual({
-      inputs: { 'steps/bake.ts': expect.any(String) },
+    expect((await fixture.record()).kind).toBe('recorded');
+    expect(stamp('build:bake')).toEqual({
+      inputs: { 'steps/build-bake.ts': expect.any(String) },
       outputs: { 'surfaces.bin': expect.any(String) },
       request: requestHash(['ellipse']),
       requestFrom: ['clouds.json'],
     });
     write('clouds.json', '{"shape": "ellipse", "sid": 2}');
-    expect(freshness()).toBe('fresh');
+    expect(fixture.freshness().kind).toBe('fresh');
     write('clouds.json', '{"shape": "torus", "sid": 2}');
-    expect(freshness()).toBe('stale');
-    expect((await recordIt()).kind).toBe('recorded');
-    expect(freshness()).toBe('fresh');
+    expect(fixture.freshness().kind).toBe('stale');
+    expect((await fixture.record()).kind).toBe('recorded');
+    expect(fixture.freshness().kind).toBe('fresh');
   });
 });
