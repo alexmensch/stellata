@@ -151,7 +151,9 @@ the others once, and that rebuild appends nothing.
   TypeScript outputs module's imports (`walkOutputsModules`, its import-time
   rule `importTimeProblems`) before importing any, imports the `declareOutputs` constants, rejects a build output
   through a symlink (the path or any folder above it, up to the root), reads
-  each manual step's record for its inputs, then `deriveGraph`. A
+  each manual step's record for its inputs and the files it projects
+  (`requestFrom`), so a pull or bake orders after their writers, then
+  `deriveGraph`. A
   TypeScript step's inputs come from the injected `deriveInputs`, so a
   fixture table can load under a temporary root.
 - `repo-table.ts` — the repo's table loaded against this checkout, its
