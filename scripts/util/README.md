@@ -230,8 +230,9 @@ same thing — single-use helpers stay with their consumer.
   ([Counts fold from lineage](../catalog/lineage/README.md#counts-fold-from-lineage)).
   `tally-pure.test.ts` pins the fold and all four cascades' key coverage.
 - `count-stages-pure.ts` (+ test) — the staged count snapshot,
-  `{"stages": {<stage>: {<count>: …}}}`: `nestByStage(flat, stageOf)`
-  groups a flat count record under each key's stage, and `flattenStages`
+  `{"stages": {<stage>: {<count>: …}}}`: `nestByStage(flat, {order, of})`
+  groups a flat count record under each key's stage, stages in the declared
+  pipeline order and a stage no key reaches left out, and `flattenStages`
   drops the stage level again — a key two stages share throws — and hands
   any other JSON back as it is, so every reader takes both shapes. A count
   is addressed by its name alone (`build-catalog/recordCount`), never its

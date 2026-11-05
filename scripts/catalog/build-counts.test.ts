@@ -7,7 +7,6 @@ import { emptyTallyPartition } from '../util/tally-pure';
 import {
   BUILD_COUNTS_EXPECTED_FILE,
   CATALOG_COUNT_STAGE,
-  CATALOG_COUNT_STAGES,
   compareBuildCounts,
   compareCountSnapshot,
   driftedRows,
@@ -432,10 +431,6 @@ describe('the committed count snapshot', () => {
       .flatMap(([stage, counts]) => Object.keys(counts).map((key) => [key, stage]));
     expect(Object.fromEntries(filed)).toEqual(CATALOG_COUNT_STAGE);
     expect(filed).toHaveLength(Object.keys(CATALOG_COUNT_STAGE).length);
-  });
-
-  it('lists its stages in CATALOG_COUNT_STAGES order', () => {
-    expect(Object.keys((committed as StagedCounts).stages)).toEqual(CATALOG_COUNT_STAGES);
   });
 });
 

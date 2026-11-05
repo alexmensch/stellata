@@ -43,6 +43,7 @@ import {
 import {
   BUILD_COUNTS_EXPECTED_FILE,
   CATALOG_COUNT_STAGE,
+  CATALOG_COUNT_STAGES,
   compareCountSnapshot,
   formatPartition,
   spectralSimbadPartitionError,
@@ -1317,7 +1318,7 @@ export async function main() {
 function buildCountsCheck(counts: BuildCounts): Check {
   return snapshotCheck<StagedCounts>({
     snapshotPath: EXPECTED_COUNTS,
-    actual: nestByStage(counts, CATALOG_COUNT_STAGE),
+    actual: nestByStage(counts, { order: CATALOG_COUNT_STAGES, of: CATALOG_COUNT_STAGE }),
     compare: compareCountSnapshot,
     failureLabel: 'build-catalog count',
     script: 'build:catalog',

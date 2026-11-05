@@ -4,19 +4,26 @@ export interface StagedCounts<V = unknown> {
   readonly stages: Readonly<Record<string, Readonly<Record<string, V>>>>;
 }
 
-/** `flat` grouped under each key's stage: stages in `stageOf`'s order, keys in `flat`'s. */
-export function nestByStage<K extends string, V>(
+/** Where each count of a staged snapshot is filed: the stages in pipeline order, and each key's stage. */
+export interface CountStages<K extends string, S extends string> {
+  readonly order: readonly S[];
+  readonly of: Readonly<Record<K, S>>;
+}
+
+/** `flat` grouped under each key's stage: stages in `stages.order` (one no key reaches left out), keys in `flat`'s order. */
+export function nestByStage<K extends string, S extends string, V>(
   flat: Readonly<Record<K, V>>,
-  stageOf: Readonly<Record<K, string>>,
+  stages: CountStages<K, S>,
 ): StagedCounts<V> {
-  const stages: Record<string, Record<string, V>> = {};
-  for (const stage of Object.values<string>(stageOf)) stages[stage] ??= {};
+  const nested = new Map<string, Record<string, V>>(stages.order.map((stage) => [stage, {}]));
   for (const [key, value] of Object.entries(flat) as [K, V][]) {
-    const stage = stageOf[key];
+    const stage = stages.of[key];
     if (stage === undefined) throw new Error(`count ${key} has no stage`);
-    stages[stage][key] = value;
+    const counts = nested.get(stage);
+    if (counts === undefined) throw new Error(`count ${key} is filed under ${stage}, which is not a declared stage`);
+    counts[key] = value;
   }
-  return { stages };
+  return { stages: Object.fromEntries([...nested].filter(([, counts]) => Object.keys(counts).length > 0)) };
 }
 
 export function isStaged(json: unknown): json is StagedCounts {
