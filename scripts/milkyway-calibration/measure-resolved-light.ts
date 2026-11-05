@@ -29,7 +29,7 @@ import {
   type CapSurfaceBrightness,
   MIN_STARS_PER_CELL,
   type Rotation3,
-  type StarColumns,
+  STAR_FIELDS,
   buildHoleCells,
   capSurfaceBrightness,
   holeLight,
@@ -94,7 +94,7 @@ export async function main(): Promise<void> {
   const manifestArg = process.argv.indexOf('--manifest');
   const manifestPath =
     manifestArg >= 0 ? resolve(process.argv[manifestArg + 1]) : publicFile(CATALOG_MANIFEST_FILENAME);
-  const stars: StarColumns = await readCatalogColumns(['x', 'y', 'z', 'absmag'], manifestPath);
+  const stars = await readCatalogColumns(STAR_FIELDS, manifestPath);
   const manifest = JSON.parse(await readFile(manifestPath, 'utf-8')) as { totalBytes: number };
   console.log(`catalogue: ${stars.count.toLocaleString()} records, ${manifest.totalBytes.toLocaleString()} bytes\n`);
 
