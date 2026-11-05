@@ -2,7 +2,7 @@
 // See README.md#spectralinfo-is-a-variant.
 
 import {
-  type LumClass,
+  type MkLumClass,
   type MkLetter,
   type SpectralInfo,
 } from './spectral-classify';
@@ -45,6 +45,6 @@ export function decodeSpectralBytes({ spectClass, lumClass }: SpectralBytes): Sp
     kind: 'mk',
     letter: spectClass as MkLetter,
     subclass: null,
-    lumClass: lumClass === LUM_CLASS_UNKNOWN ? null : (lumClass as LumClass),
+    lumClass: lumClass === LUM_CLASS_UNKNOWN ? null : (lumClass as MkLumClass),
   };
 }

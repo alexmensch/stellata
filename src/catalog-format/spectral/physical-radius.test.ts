@@ -4,7 +4,7 @@ import {
   SPECTRAL_UNKNOWN,
   classifyFromGspspec,
   classifyFromSimbad,
-  type LumClass,
+  type MkLumClass,
   type MkLetter,
   type SpectralInfo,
 } from './spectral-classify';
@@ -19,7 +19,7 @@ import {
   tempKelvin,
 } from './physical-radius';
 
-function info(letter: MkLetter, subclass: number, lumClass: LumClass | null = 2): SpectralInfo {
+function info(letter: MkLetter, subclass: number, lumClass: MkLumClass | null = 2): SpectralInfo {
   return { kind: 'mk', letter, subclass, lumClass };
 }
 

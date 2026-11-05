@@ -11,13 +11,15 @@ export type MkLetter = 0 | 1 | 2 | 3 | 4 | 5 | 6;
 //   3 = IV       (subgiant)           8 = Ia        (luminous supergiant)
 //   4 = III      (giant)              9 = Ia+ / 0   (hypergiant)
 export type LumClass = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9;
+/** VII is a white dwarf, which is its own kind. */
+export type MkLumClass = Exclude<LumClass, 0>;
 
 /** The subclass the tables read a class at when its source states none. */
 export const DEFAULT_SUBCLASS = 5;
 
 /** `null` subclass / index / luminosity class: the source stated none. */
 export type SpectralInfo =
-  | { kind: 'mk'; letter: MkLetter; subclass: number | null; lumClass: LumClass | null }
+  | { kind: 'mk'; letter: MkLetter; subclass: number | null; lumClass: MkLumClass | null }
   | { kind: 'carbon'; subclass: number | null }
   /** WN/WC: rides the WR Teff/BC ramps — the carbon row misizes a ~40-140 kK
    *  WR photosphere by ~(T ratio)² ≈ 1000×. */
@@ -185,7 +187,10 @@ export function classifyFromSimbad(rawSpType: string | null | undefined): MkSpec
   if (!lumWindow) {
     lumWindow = body.substring(afterSub);
   }
-  return { kind: 'mk', letter, subclass, lumClass: lookupLumClass(lumWindow) };
+  const lumClass = lookupLumClass(lumWindow);
+  return lumClass === 0
+    ? { kind: 'white-dwarf', wdSubclass: null }
+    : { kind: 'mk', letter, subclass, lumClass };
 }
 
 /** Gaia DR3 ESP-ELS's letter-only `spectraltype_esphs` enum (Creevey 2023

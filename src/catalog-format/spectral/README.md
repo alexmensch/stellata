@@ -27,8 +27,8 @@ src/catalog-format/spectral/
 ## `SpectralInfo` is a variant
 
 A class is one of `mk` (an O–M letter, a subclass, a luminosity class),
-`carbon` (C/S/N/R), `wolf-rayet`, `white-dwarf` (its Sion temperature index)
-or `unknown`. Every consumer matches on `kind`; nothing compares a class
+`carbon` (C/S/N/R), `wolf-rayet`, `white-dwarf` (its Sion temperature index;
+a luminosity class of VII parses as one) or `unknown`. Every consumer matches on `kind`; nothing compares a class
 number. **A subclass, index or luminosity class the source did not state is
 `null`**, never a filled-in number: ESP-ELS's letter enum and a bare SIMBAD
 `K` are the same `mk` with both null, and the radius and absolute-magnitude

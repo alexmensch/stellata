@@ -29,6 +29,7 @@ describe('encodeSpectralBytes', () => {
 
   it('writes a white dwarf as the unknown class with the WD luminosity code', () => {
     expect(bytesOf('DA1.9')).toEqual({ spectClass: SPECT_CLASS_UNKNOWN, lumClass: LUM_CLASS_WHITE_DWARF });
+    expect(bytesOf('A0VII')).toEqual({ spectClass: SPECT_CLASS_UNKNOWN, lumClass: LUM_CLASS_WHITE_DWARF });
   });
 
   it('writes an ESP-ELS class with no luminosity class', () => {

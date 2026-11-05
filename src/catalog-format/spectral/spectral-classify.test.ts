@@ -38,7 +38,6 @@ describe('classifyFromSimbad', () => {
     expect(lum('M1Ia')).toBe(8);  // Ia
     expect(lum('M1Iab')).toBe(7); // Iab
     expect(lum('B0Ib')).toBe(6);  // Ib
-    expect(lum('A0VII')).toBe(0); // VII (rare)
     expect(lum('K3VI')).toBe(1);  // VI (subdwarf)
     expect(lum('B5Ia+')).toBe(9); // Ia+ hypergiant
     expect(lum('M2 0')).toBe(9);  // 0 hypergiant
@@ -55,6 +54,10 @@ describe('classifyFromSimbad', () => {
   it('parses subdwarfs (sdB, sdO) with lumClass=1', () => {
     expect(classifyFromSimbad('sdB5')).toEqual(mk(1, 5, 1));
     expect(classifyFromSimbad('sdO')).toEqual(mk(0, null, 1));
+  });
+
+  it('reads luminosity class VII as a white dwarf, not an MK type', () => {
+    expect(classifyFromSimbad('A0VII')).toEqual({ kind: 'white-dwarf', wdSubclass: null });
   });
 
   it('parses white dwarfs (DA, DB, DA2, DAH)', () => {

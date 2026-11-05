@@ -5,8 +5,8 @@ import { ballesterosBvFromTeff } from '../../astro-core/colour/blackbody-lut-pur
 import { SOLAR_BV_FALLBACK, type ApsisRow } from '../record/catalog-pure';
 import {
   DEFAULT_SUBCLASS,
-  type LumClass,
   type MkLetter,
+  type MkLumClass,
   type SpectralInfo,
 } from './spectral-classify';
 
@@ -228,10 +228,9 @@ const MV_BY_SUPERGIANT_LUMCLASS: Record<5 | 6 | 7 | 8 | 9, number> = {
 
 const MV_SUBDWARF_OFFSET = 1.5;
 
-function mkAbsmag(letter: MkLetter, subclass: number, lumClass: LumClass | null): number | null {
+function mkAbsmag(letter: MkLetter, subclass: number, lumClass: MkLumClass | null): number {
   const mvMs = interpolate(MV_MS_TABLE[letter], subclass);
   switch (lumClass) {
-    case 0: return null;                                              // VII/D without WD form
     case 1: return mvMs + MV_SUBDWARF_OFFSET;                         // VI/sd
     case 3: return (mvMs + interpolate(MV_GIANT_TABLE[letter], subclass)) / 2;  // IV
     case 4: return interpolate(MV_GIANT_TABLE[letter], subclass);     // III
