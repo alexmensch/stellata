@@ -47,8 +47,9 @@ these inputs.
 [the runner](../pipeline/README.md#the-runner--runts)), which fails on any
 committed output the build moves: the SID registry partitions, the
 membership and classic-id tables, `multiples.tsv`, both astrometry requests
-and the rest. A cold build takes about ten minutes on a runner, about six of
-them `build:catalog`.
+and the rest. On the catalogue stage's misses from 2026-11-03 to 2026-11-05,
+the stage's median was 554 s on a runner, `build:catalog`'s 346 s of it
+(runner log timestamps).
 
 **The cache holds a whole build and the step stamps decide what is reused.**
 A pull request restores the newest saved build whose key starts with the
