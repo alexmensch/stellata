@@ -26,7 +26,7 @@ the clouds both cover.
   through it, and lineage cites a cloud as `clouds:<slug>`.
 - `clouds-inputs.test.ts` — pins the step's derived input set,
   `stepInputPaths('build:clouds')`.
-- `clouds-json.test.ts` pins the emitted payload (11 calibrated clouds, class
+- `clouds-payload.test.ts` pins the emitted payload (11 calibrated clouds, class
   defaults, noiseModel, in-grid split, the alias / canonical-name table); it
   self-skips until `public/clouds.json` is built.
 

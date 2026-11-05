@@ -183,7 +183,7 @@ numerically with the envelope cutoff, never analytically to infinity.
    [§ 7.3](#73-cavities-designed-not-yet-shipped)).
 
 All 11 calibrated `n0_cal` + `u_env` values are pinned in
-`scripts/clouds/clouds-json.test.ts` (`toBe`) so table or constant
+`scripts/clouds/clouds-payload.test.ts` (`toBe`) so table or constant
 drift is caught.
 
 ### 4.3 The sphere clouds (Zucker 2020) + Corona Australis
