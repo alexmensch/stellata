@@ -23,7 +23,7 @@ const STARS: PullTable = {
 const PAIRS: PullTable = {
   from: 'gaiadr3.nss_two_body_orbit',
   columns: [{ name: 'source_id' }, { name: 'period' }],
-  scope: { kind: 'request', key: 'source_id', ids: ['1', '2', '3'], batchSize: 2, rowsPerId: 1 },
+  scope: { kind: 'request', key: 'source_id', idColumn: 'source_id', ids: ['1', '2', '3'], batchSize: 2, rowsPerId: 1 },
   band: { min: 1, max: 3 },
   spotRows: [{ key: 'source_id', value: '2', cells: { period: '10' } }],
 };

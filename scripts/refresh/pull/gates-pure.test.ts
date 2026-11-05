@@ -37,14 +37,18 @@ describe('spotRowCheck', () => {
 });
 
 describe('coverageCheck', () => {
-  const rows = [row({ geo: '1', photo: null }), row({ geo: null, photo: '2' }), row({ geo: null, photo: null })];
+  const rows = [
+    row({ id: 'a', geo: '1', photo: null }),
+    row({ id: 'b', geo: null, photo: '2' }),
+    row({ id: 'c', geo: null, photo: null }),
+  ];
   const groups = [
     { name: 'geo', has: (c: Cell) => c('geo') !== null },
     { name: 'photo', has: (c: Cell) => c('photo') !== null },
   ] as const;
 
   it('reports each group and the union over the request', () => {
-    const check = coverageCheck('t', rows, 4, { groups: [...groups] });
+    const check = coverageCheck('t', rows, 'id', 4, { groups: [...groups] });
     expect(check).toEqual({
       kind: 'pass',
       report: 't: coverage of 4 requested\n  row present 3 (75.0%)\n  geo 1 (25.0%)\n  photo 1 (25.0%)\n  union 2 (50.0%)',
@@ -52,7 +56,14 @@ describe('coverageCheck', () => {
   });
 
   it('fails under the floor and passes at it', () => {
-    expect(coverageCheck('t', rows, 4, { groups: [...groups], floor: 0.6 }).kind).toBe('fail');
-    expect(coverageCheck('t', rows, 4, { groups: [...groups], floor: 0.5 }).kind).toBe('pass');
+    expect(coverageCheck('t', rows, 'id', 4, { groups: [...groups], floor: 0.6 }).kind).toBe('fail');
+    expect(coverageCheck('t', rows, 'id', 4, { groups: [...groups], floor: 0.5 }).kind).toBe('pass');
+  });
+
+  it('counts an id that answers several rows once, so its extra rows cannot stand in for a missing id', () => {
+    const many = [row({ id: 'a', geo: '1' }), row({ id: 'a', geo: '2' }), row({ id: 'a', geo: '3' })];
+    const check = coverageCheck('t', many, 'id', 2, { groups: [groups[0]], floor: 0.6 });
+    expect(check.kind).toBe('fail');
+    expect(check.kind === 'fail' && check.report).toBe('t: coverage of 2 requested\n  row present 1 (50.0%)\n  geo 1 (50.0%)\n  union 1 (50.0%)');
   });
 });

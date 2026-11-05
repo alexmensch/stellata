@@ -68,14 +68,15 @@ export function spotRowCheck(label: string, cells: Iterable<Cell>, spotRows: rea
     : fail(`${label}: spot rows drifted:\n  ${problems.join('\n  ')}`);
 }
 
-/** Each group's and the union's share of `requested`; fails under the floor. */
-export function coverageCheck(label: string, cells: readonly Cell[], requested: number, coverage: Coverage): Check {
+/** Each group's and the union's share of `requested`, counted in distinct `idColumn` values, since one id may answer several rows; fails under the floor. */
+export function coverageCheck(label: string, cells: readonly Cell[], idColumn: string, requested: number, coverage: Coverage): Check {
   const share = (n: number): string => `${n} (${((100 * n) / requested).toFixed(1)}%)`;
-  const union = cells.filter((cell) => coverage.groups.some((g) => g.has(cell))).length;
+  const ids = (has: (cell: Cell) => boolean): number => new Set(cells.filter(has).map((cell) => cell(idColumn))).size;
+  const union = ids((cell) => coverage.groups.some((g) => g.has(cell)));
   const report = [
     `${label}: coverage of ${requested} requested`,
-    `  row present ${share(cells.length)}`,
-    ...coverage.groups.map((g) => `  ${g.name} ${share(cells.filter(g.has).length)}`),
+    `  row present ${share(ids(() => true))}`,
+    ...coverage.groups.map((g) => `  ${g.name} ${share(ids(g.has))}`),
     `  union ${share(union)}`,
   ].join('\n');
   const floor = coverage.floor;

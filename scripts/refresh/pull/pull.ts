@@ -15,6 +15,8 @@ export type Scope =
     readonly kind: 'request';
     /** The ADQL column the request ids match. */
     readonly key: string;
+    /** The declared column that answers with the request id. */
+    readonly idColumn: string;
     /** ADQL literals, quoted where the column is text. */
     readonly ids: readonly string[];
     readonly batchSize: number;
@@ -99,7 +101,7 @@ function tableChecks(label: string, table: PullTable, rows: readonly Row[]): Che
   return [
     bandCheck(label, rows.length, table.band),
     spotRowCheck(label, cells, table.spotRows),
-    ...(scope.kind === 'request' && scope.coverage ? [coverageCheck(label, cells, scope.ids.length, scope.coverage)] : []),
+    ...(scope.kind === 'request' && scope.coverage ? [coverageCheck(label, cells, scope.idColumn, scope.ids.length, scope.coverage)] : []),
   ];
 }
 

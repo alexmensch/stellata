@@ -31,7 +31,7 @@ columns, a scope, and its gates. **A table without a row band or at least one
 spot row does not compile.** Scopes:
 
 - `whole-table` — one query, limit `band.max × LIMIT_HEADROOM`.
-- `request` — the ids (ADQL literals) ANDed onto `where` as
+- `request` — the ids (ADQL literals, answering in `idColumn`) ANDed onto `where` as
   `<key> IN (…)`, `batchSize` per query, limit
   `batchSize × rowsPerId × LIMIT_HEADROOM`; optional coverage over the ids.
 
@@ -130,5 +130,6 @@ emission before a byte is written, every output of the pull included.
   or `null` for empty. A missing row and every drifted cell are reported
   together.
 - **Coverage** (`coverageCheck`), request-scoped tables only: the share of
-  the request each group and their union reach, always reported, failing
-  under `floor` when one is set.
+  the request each group and their union reach, counted in distinct values of
+  the scope's `idColumn` (an id may answer several rows, as DR2 neighbours
+  do), always reported, failing under `floor` when one is set.
