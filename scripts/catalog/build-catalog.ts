@@ -209,7 +209,8 @@ function walkManifest(inputs: ReadStarsOptions, stepInputs: FileHashes) {
 
 const PLACEMENT_EFFECTS = codeEffects([PLACEMENT_CODES]);
 
-// A function of its own for the same reason as walkManifest: a line per record.
+// A function of its own so its line per record is unreachable once it returns:
+// inlined into main, the lines outlive promotion and raise the build's peak heap.
 function coherenceLineage(verdicts: readonly SystemVerdict[], stars: readonly Star[], stepInputs: FileHashes) {
   return stageLineage({
     layout: LINEAGE_LAYOUT,
