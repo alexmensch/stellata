@@ -11,7 +11,7 @@ import { identityRows } from './identity-pure';
 import { gzipText } from './lineage-io';
 import { lineageRows } from './lineage-row-pure';
 import { matchName, parseTraceQuery, queryTerms, traceRecords, traceText, type TraceLookups } from './trace-pure';
-import { stageFile } from '../../../src/catalog-format/pipeline-outputs/lineage-files';
+import { CLOUDS_ALLOCATION_LINEAGE, stageFile } from '../../../src/catalog-format/pipeline-outputs/lineage-files';
 
 const REFUSED_ONLY = '4000000000000000009';
 const PARKED = '5000000000000000001';
@@ -198,8 +198,20 @@ describe('traceRecords through allocation', () => {
   });
 });
 
+const CLOUD_IDENTITY = [
+  'key\ttyc\thip\thd\tgl\tgaia_source_id\tdesignations',
+  'clouds:orion-a\t\t\t\t\t\tcloud:orion-a',
+].join('\n') + '\n';
+
+const CLOUD_ALLOCATION = [
+  'stage\tkey\trole\tcode\tparams\tevidence',
+  'allocation-clouds\tclouds:orion-a\toutcome\tallocation-clouds.resolved\t\t',
+].join('\n') + '\n';
+
 describe('pnpm run trace', () => {
   const dir = mkdtempSync(join(tmpdir(), 'lineage-trace-'));
+  writeFileSync(stageFile(dir, CLOUDS_ALLOCATION_LINEAGE.identity!), gzipText(CLOUD_IDENTITY));
+  writeFileSync(stageFile(dir, CLOUDS_ALLOCATION_LINEAGE.stage), gzipText(CLOUD_ALLOCATION));
   writeFileSync(stageFile(dir, 'identity'), gzipText(IDENTITY));
   writeFileSync(stageFile(dir, 'membership'), gzipText(MEMBERSHIP));
   writeFileSync(stageFile(dir, 'placement'), gzipText(PLACEMENT));
@@ -226,5 +238,11 @@ describe('pnpm run trace', () => {
 
   it('reads the promotion stage and its identity file', () => {
     expect(run(MINTED).split('\n')[0]).toBe('multiples:S-AB/B');
+  });
+
+  it('finds a cloud by its slug and prints its allocation row', () => {
+    const out = run('cloud:orion-a').split('\n');
+    expect(out[0]).toBe('clouds:orion-a');
+    expect(out).toContain('  outcome  allocation-clouds.resolved  ');
   });
 });

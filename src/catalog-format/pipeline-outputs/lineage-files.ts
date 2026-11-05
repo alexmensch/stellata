@@ -46,6 +46,14 @@ export const ALLOCATION_LINEAGE: StageLineageSpec<'allocation' | typeof ALLOCATI
   files: ['allocation', ALLOCATION_IDENTITY_STEM],
 };
 
+/** A sibling build's allocation stage: its rows, and identity rows carrying each object's designation. */
+export function siblingAllocationLineage<S extends string>(stage: S): StageLineageSpec<S | `${S}.identity`, S> {
+  return { stage, files: [stage, `${stage}.identity`], identity: `${stage}.identity` };
+}
+
+export const CLOUDS_ALLOCATION_LINEAGE = siblingAllocationLineage('allocation-clouds');
+export const LOCAL_GROUP_ALLOCATION_LINEAGE = siblingAllocationLineage('allocation-local-group');
+
 /** Keyed by stage as well as stem, so two stages can share one emitArtifacts call. */
 export type StageOutputKey<F extends string, S extends string = string> = `lineage:${F}` | `lineage:${S}.header`;
 

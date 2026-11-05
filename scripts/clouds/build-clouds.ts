@@ -1,6 +1,6 @@
 // `pnpm run build:clouds`. See README.md.
 
-import { allocateSibling, emitSibling } from '../sid/sibling-allocation';
+import { allocateSibling, emitSibling, siblingLineage } from '../sid/sibling-allocation';
 import { SIBLING_ARTIFACTS } from '../sid/sibling-artifacts-pure';
 import { sweepStaged } from '../util/emit-artifacts';
 import { buildClouds, cloudsPayload, zuckerProfiledPayload } from './build-clouds-pure';
@@ -16,11 +16,11 @@ export async function main(): Promise<void> {
   const profiled = profiledClouds(extents, ZUCKER_2021_FITS.read(), masses);
   const { clouds, ellipsoids, spheres } = buildClouds({ sightlines: ZUCKER_2020.read(), extents, masses, profiled });
 
-  const allocation = allocateSibling(SIBLING_ARTIFACTS.clouds, clouds);
+  const allocation = allocateSibling(SIBLING_ARTIFACTS.clouds, CLOUDS_JSON, clouds);
   emitSibling(CLOUDS_OUTPUTS, {
     clouds: CLOUDS_JSON.serialize(cloudsPayload(clouds, allocation.sids)),
     zuckerProfiled: `${JSON.stringify(zuckerProfiledPayload(profiled), null, 2)}\n`,
-  }, allocation);
+  }, allocation, siblingLineage(SIBLING_ARTIFACTS.clouds, allocation));
   console.log(
     `wrote ${CLOUDS_JSON.file} (${ellipsoids} ellipsoids from Z2021, ${spheres} spheres from Z2020, `
       + `${clouds.length} total; ${allocation.minted} cloud SIDs minted) and ${profiled.length} profiled clouds' column-check inputs`,

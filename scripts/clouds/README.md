@@ -49,8 +49,10 @@ entry's import closure, its sibling files and the declarations it reads,
 
 ## Outputs
 
-One `emitArtifacts` call lands `clouds.json`, `zucker-profiled.json` and,
-on a run that mints, the `cloud` SID registry partition.
+One `emitArtifacts` call lands `clouds.json`, `zucker-profiled.json`, the
+`allocation-clouds` lineage stage (`build/lineage/`,
+[SID events](/scripts/sid/README.md#sid-events)) and, on a run that mints,
+the `cloud` SID registry partition.
 
 `zucker-profiled.json` (committed; name and version are `artifacts.zuckerProfiled`
 in `src/astro-core/baker-constants.json`) is

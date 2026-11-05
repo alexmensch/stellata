@@ -3,13 +3,17 @@
 // /scripts/sid/README.md#sibling-artifact-stamping.
 
 import type { SidObject } from './allocate-pure';
-import { ALLOCATION_CODES } from './allocation-lineage-pure';
+import { ALLOCATION_CODES, objectOutcomeCodes, type ObjectOutcomeCodes } from './allocation-lineage-pure';
 import type { SidKind } from './sid-pure';
+import { sourceRowRef, sourceRowRefText, type RowKeyed } from '../util/sources/row-ref-pure';
 import {
   CLOUD_PARTITION, LOCAL_GROUP_PARTITION, SIBLING_PARTITIONS, type SiblingPartition,
 } from '../../src/catalog-format/pipeline-outputs/data-files';
+import {
+  CLOUDS_ALLOCATION_LINEAGE, LOCAL_GROUP_ALLOCATION_LINEAGE, type StageLineageSpec,
+} from '../../src/catalog-format/pipeline-outputs/lineage-files';
 
-export interface SiblingArtifactSpec {
+export interface SiblingArtifactSpec<S extends string = string> {
   /** Top-level array property holding the objects. */
   arrayKey: string;
   /** Designation namespace the ledger keys these objects on (/docs/sid.md#3-designation-namespaces). */
@@ -19,6 +23,9 @@ export interface SiblingArtifactSpec {
   buildHint: string;
   /** The allocation code a new object of this artifact mints under. */
   mintCode: string;
+  /** The build's own allocation stage. */
+  lineage: StageLineageSpec<S | `${S}.identity`, S>;
+  codes: ObjectOutcomeCodes;
 }
 
 export const SIBLING_ARTIFACTS = {
@@ -28,6 +35,8 @@ export const SIBLING_ARTIFACTS = {
     kind: 'cloud',
     buildHint: 'pnpm run build:clouds',
     mintCode: ALLOCATION_CODES.code('mint.cloud'),
+    lineage: CLOUDS_ALLOCATION_LINEAGE,
+    codes: objectOutcomeCodes(CLOUDS_ALLOCATION_LINEAGE.stage),
   },
   'local-group': {
     arrayKey: 'objects',
@@ -35,6 +44,8 @@ export const SIBLING_ARTIFACTS = {
     kind: 'galaxy',
     buildHint: 'pnpm run build:local-group',
     mintCode: ALLOCATION_CODES.code('mint.local-group'),
+    lineage: LOCAL_GROUP_ALLOCATION_LINEAGE,
+    codes: objectOutcomeCodes(LOCAL_GROUP_ALLOCATION_LINEAGE.stage),
   },
 } as const satisfies Record<string, SiblingArtifactSpec>;
 
@@ -58,13 +69,18 @@ export interface SiblingItem {
   name?: string;
 }
 
-/** The SidObjects one sibling artifact's records allocate as. */
-export function siblingArtifactObjects(spec: SiblingArtifactSpec, items: SiblingItem[]): SidObject[] {
+/** A sibling artifact's records, cited by their slug. */
+export type SiblingArtifact = RowKeyed<{ readonly id: string }>;
+
+/** The SidObjects one sibling artifact's records allocate as, each founded on its own record. */
+export function siblingArtifactObjects(
+  spec: SiblingArtifactSpec, artifact: SiblingArtifact, items: readonly SiblingItem[],
+): SidObject[] {
   return items.map((o) => ({
     designations: [`${spec.ns}:${o.id}`],
     kind: spec.kind,
     label: `${spec.ns} ${o.name ?? o.id}`,
-    admission: { kind: 'declared', code: spec.mintCode, origin: null },
+    admission: { kind: 'declared', code: spec.mintCode, origin: sourceRowRefText(sourceRowRef(artifact, o)) },
   }));
 }
 

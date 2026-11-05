@@ -2,7 +2,7 @@
 // layer. See scripts/local-group/README.md for inputs, output schema,
 // idempotency, and the LVDB-refresh protocol.
 
-import { allocateSibling, emitSibling } from '../sid/sibling-allocation';
+import { allocateSibling, emitSibling, siblingLineage } from '../sid/sibling-allocation';
 import { SIBLING_ARTIFACTS } from '../sid/sibling-artifacts-pure';
 import { sweepStaged } from '../util/emit-artifacts';
 import { roundHalfEven, roundSignificant } from '../util/round-pure';
@@ -156,13 +156,16 @@ export async function main(): Promise<void> {
   // byte-identical artifacts.
   objects.sort((a, b) => a.name.localeCompare(b.name, 'en', { sensitivity: 'base' }));
 
-  const allocation = allocateSibling(SIBLING_ARTIFACTS['local-group'], objects);
+  const allocation = allocateSibling(SIBLING_ARTIFACTS['local-group'], LOCAL_GROUP_JSON, objects);
   const payload = {
     version: LOCAL_GROUP_VERSION,
     count: objects.length,
     objects: objects.map((o, i) => ({ ...toJsonObject(o), sid: allocation.sids[i] })),
   };
-  emitSibling(LOCAL_GROUP_OUTPUTS, { localGroup: LOCAL_GROUP_JSON.serialize(payload) }, allocation);
+  emitSibling(
+    LOCAL_GROUP_OUTPUTS, { localGroup: LOCAL_GROUP_JSON.serialize(payload) }, allocation,
+    siblingLineage(SIBLING_ARTIFACTS['local-group'], allocation),
+  );
 
   console.log(
     `wrote ${LOCAL_GROUP_JSON.file} ` +

@@ -81,6 +81,7 @@ source row that founded the record.
 | an addition group | the group anchor's source row — its IV/25 star, else its I/239 HIP, else its CNS5 row; the other members are evidence |
 | a magnitude-term row | its Gaia DR3 `source_id` |
 | a promoted companion | its `multiples.tsv` `(system_id, comp)` |
+| a cloud or Local Group object | its record in `clouds.json` / `local-group.json`, by slug (`clouds:<slug>`, `local-group:<slug>`) |
 
 The spine's line number is stable because the file is frozen and
 byte-guarded, and it covers Sol, whose identifier cells are empty; its
@@ -227,9 +228,10 @@ Membership's (`MEMBERSHIP_INVARIANTS`): no `admit.magnitude` row whose
 
 ## SID events
 
-SID allocation is the fourth stage, run inside `build:catalog`,
-`build:local-group` and `build:clouds`. Its rows, its events and its fail-closed
-rule live beside its modules, in [SID events](/scripts/sid/README.md#sid-events).
+SID allocation is the fourth stage, run inside `build:catalog`; each sibling
+build allocates as a stage of its own, `allocation-clouds` in `build:clouds`
+and `allocation-local-group` in `build:local-group`. Their rows, events and
+fail-closed rule live beside their modules, in [SID events](/scripts/sid/README.md#sid-events).
 
 ## Storage and cost
 
@@ -275,7 +277,11 @@ per `multiples.tsv` row, plus 31,908 identity rows (<!-- count:build-catalog/com
 `PROMOTION_LINEAGE_BUDGET` pins 1.04 MB and 5 s. Allocation, measured
 2026-11-01: 980,151 rows (979,712 objects plus 439 parked SIDs, 62.6 MB plain)
 and 979,712 identity rows (29.1 MB), 17.6 MB gzipped in 4.7 s without a diff;
-`ALLOCATION_LINEAGE_BUDGET` pins 19.3 MB and 15 s. Placement, measured 2026-10-30: 3,872,657 rows (349 MB plain, 31.0 MB
+`ALLOCATION_LINEAGE_BUDGET` pins 19.3 MB and 15 s. The sibling allocation
+stages, measured 2026-11-05: 96 cloud rows in 1,455 bytes and 123 Local
+Group rows in 1,720 bytes gzipped, identity files included, each in about
+0.1 s; `SIBLING_LINEAGE_BUDGET` (`../../sid/sibling-allocation.ts`) pins
+1,900 bytes and 5 s for either. Placement, measured 2026-10-30: 3,872,657 rows (349 MB plain, 31.0 MB
 gzipped) in 3.2 s without a diff and 8.1 s with one against a full
 baseline; `PLACEMENT_LINEAGE_BUDGET` pins 34 MB and 30 s. A file that size outruns
 V8's longest string, so stage files and diffs are written and read as UTF-8

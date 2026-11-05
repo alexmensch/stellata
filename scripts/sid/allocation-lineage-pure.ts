@@ -24,9 +24,10 @@ const OBJECT_OUTCOMES = {
 };
 
 type ObjectBranch = keyof typeof OBJECT_OUTCOMES;
+export type ObjectOutcomeCodes = StageCodes<ObjectBranch>;
 
 /** A stage that allocates objects and settles no orphan: its object outcomes' codes. */
-export function objectOutcomeCodes(stage: string): StageCodes<ObjectBranch> {
+export function objectOutcomeCodes(stage: string): ObjectOutcomeCodes {
   return stageCodes(stage, OBJECT_OUTCOMES);
 }
 
@@ -91,7 +92,7 @@ const lineageRow = <B extends Branch>(
 
 /** One row per object with an origin key, under it. An object's SID rides the stage's key -> SID or identity file, not its row; `via` appears only when the object reached its ledger key through a designation it does not carry itself. */
 export function objectOutcomeRows(
-  codes: StageCodes<ObjectBranch>, objects: readonly SidObject[], outcomes: readonly ObjectOutcome[],
+  codes: ObjectOutcomeCodes, objects: readonly SidObject[], outcomes: readonly ObjectOutcome[],
 ): LineageRow[] {
   return objects.flatMap((obj, i): LineageRow[] => {
     const key = obj.admission.origin;

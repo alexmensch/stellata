@@ -35,8 +35,9 @@ required:
   optional `canonical` name promotion) merged into each object's `name` /
   `type` / `aliases` output fields; unmatched rows fail the build.
 
-Emits `public/local-group.json` and the `lg` SID registry partition through
-one `emitArtifacts` call (`../util/README.md`; the declaration is
+Emits `public/local-group.json`, the `allocation-local-group` lineage stage
+(`build/lineage/`, [SID events](/scripts/sid/README.md#sid-events)) and the
+`lg` SID registry partition through one `emitArtifacts` call (`../util/README.md`; the declaration is
 `local-group-outputs.ts`), with one entry per renderable object
 within `MAX_DISTANCE_PC` of Sol. The output schema is
 `/src/catalog-format/local-group/local-group-schema.ts` (`LgObjectRow`,
