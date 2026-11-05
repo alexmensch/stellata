@@ -142,7 +142,7 @@ import { syntheticGaiaBridges } from '../sid/sid-pure';
 import { sidSuccessorPairs } from '../sid/events-pure';
 import { allocate } from '../sid/allocate-pure';
 import {
-  ALLOCATION_CODES, ALLOCATION_LINEAGE_BUDGET, allocationIdentityRows, allocationIdentityText,
+  ALLOCATION_CODES, ALLOCATION_LINEAGE_BUDGET, allocationSidRows, allocationSidsText,
   allocationLineageRows,
 } from '../sid/allocation-lineage-pure';
 import { catalogSidObjects } from '../sid/catalog-objects';
@@ -153,7 +153,7 @@ import { allocationRun, loadRegistry, registryTexts } from '../sid/registry-io';
 import { loadStoredEdges } from '../sid/stored-edges';
 import { CATALOG_PARTITION } from '../../src/catalog-format/pipeline-outputs/data-files';
 import {
-  PROMOTION_LINEAGE, PLACEMENT_LINEAGE, ALLOCATION_LINEAGE, MEMBERSHIP_LINEAGE,
+  PROMOTION_LINEAGE, PLACEMENT_LINEAGE, ALLOCATION_LINEAGE, ALLOCATION_SIDS_STEM, MEMBERSHIP_LINEAGE,
 } from '../../src/catalog-format/pipeline-outputs/lineage-files';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -1275,7 +1275,7 @@ export async function main() {
     lines: allocationLineageRows(sidObjects, allocation).map((row) => stageLineageLine(ALLOCATION_CODES, row)),
     render: (sorted) => ({
       allocation: stageLineageText(ALLOCATION_CODES, sorted),
-      'allocation.identity': allocationIdentityText(allocationIdentityRows(sidObjects, allocation.outcomes)),
+      [ALLOCATION_SIDS_STEM]: allocationSidsText(allocationSidRows(sidObjects, allocation.outcomes)),
     }),
     joins: () => [],
     budget: ALLOCATION_LINEAGE_BUDGET,

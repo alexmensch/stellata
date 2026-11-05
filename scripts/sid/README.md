@@ -53,7 +53,7 @@ allocation-lineage-pure.ts  Allocation as a lineage stage: its reason
   (+ test)                codes (live, plus the historical legacy.*
                           codes the migrated retirement rows carry), the
                           one serialiser over its outcomes, and
-                          allocation.identity (key -> SID), its own codec.
+                          allocation.sids (key -> SID), its own codec.
                           objectOutcomeCodes / objectOutcomeRows: the
                           resolved / minted / reinstated codes and rows
                           under any stage name, which the sibling stages
@@ -230,8 +230,8 @@ the object reached it through a designation it does not carry),
 `allocation.minted` or `allocation.reinstated` (with the admitting code),
 keyed on the object's origin; per SID no object keeps,
 `allocation.retired`, `.parked` or `.merged`, keyed on the origin of the
-upstream decision that settled it, with that code as `cause`. Its identity
-file `allocation.identity.tsv.gz` maps each origin key to its SID. Each sibling
+upstream decision that settled it, with that code as `cause`. Its key -> SID
+file `allocation.sids.tsv.gz` maps each origin key to its SID. Each sibling
 build allocates as a stage of its own (`allocation-clouds`,
 `allocation-local-group`), writing the object rows under its own codes, keyed
 on the object's record in its artifact (`clouds:<slug>`,

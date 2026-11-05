@@ -123,31 +123,31 @@ export function allocationLineageRows(
   return rows;
 }
 
-export const ALLOCATION_IDENTITY_COLUMNS = ['key', 'sid'] as const;
+export const ALLOCATION_SIDS_COLUMNS = ['key', 'sid'] as const;
 
-export interface AllocationIdentityRow {
+export interface AllocationSidRow {
   readonly key: string;
   readonly sid: number;
 }
 
-export function allocationIdentityRows(
+export function allocationSidRows(
   objects: readonly SidObject[], outcomes: readonly ObjectOutcome[],
-): AllocationIdentityRow[] {
+): AllocationSidRow[] {
   return objects.map((obj, i) => ({ key: obj.origin, sid: outcomes[i].sid }));
 }
 
-export function allocationIdentityText(rows: readonly AllocationIdentityRow[]): string {
+export function allocationSidsText(rows: readonly AllocationSidRow[]): string {
   const sorted = [...rows].sort((a, b) => compareUtf8(a.key, b.key));
   for (let i = 1; i < sorted.length; i++) {
     if (sorted[i].key === sorted[i - 1].key) throw new Error(`allocation identity: two objects keyed ${sorted[i].key}`);
   }
-  return `${[ALLOCATION_IDENTITY_COLUMNS.join('\t'), ...sorted.map((r) => `${r.key}\t${r.sid}`)].join('\n')}\n`;
+  return `${[ALLOCATION_SIDS_COLUMNS.join('\t'), ...sorted.map((r) => `${r.key}\t${r.sid}`)].join('\n')}\n`;
 }
 
-function identitySpec(file: string): TableSpec<(typeof ALLOCATION_IDENTITY_COLUMNS)[number]> {
-  return { file, columns: ALLOCATION_IDENTITY_COLUMNS, hint: 'Rebuild the catalogue.', exact: true };
+function sidsSpec(file: string): TableSpec<(typeof ALLOCATION_SIDS_COLUMNS)[number]> {
+  return { file, columns: ALLOCATION_SIDS_COLUMNS, hint: 'Rebuild the catalogue.', exact: true };
 }
 
-export function* allocationIdentity(text: string, file: string): Generator<AllocationIdentityRow> {
-  for (const row of readTable(identitySpec(file), text)) yield { key: row.raw('key'), sid: row.requiredId('sid') };
+export function* allocationSids(text: string, file: string): Generator<AllocationSidRow> {
+  for (const row of readTable(sidsSpec(file), text)) yield { key: row.raw('key'), sid: row.requiredId('sid') };
 }

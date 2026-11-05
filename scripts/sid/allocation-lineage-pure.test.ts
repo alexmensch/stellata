@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { allocate, type SidObject } from './allocate-pure';
 import {
-  ALLOCATION_CODES, allocationIdentity, allocationIdentityRows, allocationIdentityText, allocationLineageRows,
+  ALLOCATION_CODES, allocationSids, allocationSidRows, allocationSidsText, allocationLineageRows,
 } from './allocation-lineage-pure';
 import { stageLineageLine } from '../catalog/lineage/lineage-row-pure';
 
@@ -45,10 +45,10 @@ describe('allocation lineage', () => {
   });
 
   it('round-trips its identity file, key to SID', () => {
-    const rows = allocationIdentityRows(objects, allocation.outcomes);
-    const text = allocationIdentityText(rows);
+    const rows = allocationSidRows(objects, allocation.outcomes);
+    const text = allocationSidsText(rows);
     expect(text).toBe('key\tsid\nclouds:x\t3\nsol-objects:pluto\t4\nspine:1\t1\n');
-    expect([...allocationIdentity(text, 'fixture')]).toEqual([
+    expect([...allocationSids(text, 'fixture')]).toEqual([
       { key: 'clouds:x', sid: 3 }, { key: 'sol-objects:pluto', sid: 4 }, { key: 'spine:1', sid: 1 },
     ]);
   });

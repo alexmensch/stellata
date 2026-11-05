@@ -39,11 +39,11 @@ export const PROMOTION_LINEAGE: StageLineageSpec<'promotion' | 'promotion.identi
 };
 
 /** Allocation's key -> SID file: not `identity`, which names the rows of records a stage founds. */
-export const ALLOCATION_IDENTITY_STEM = 'allocation.identity';
+export const ALLOCATION_SIDS_STEM = 'allocation.sids';
 
-export const ALLOCATION_LINEAGE: StageLineageSpec<'allocation' | typeof ALLOCATION_IDENTITY_STEM, 'allocation'> = {
+export const ALLOCATION_LINEAGE: StageLineageSpec<'allocation' | typeof ALLOCATION_SIDS_STEM, 'allocation'> = {
   stage: 'allocation',
-  files: ['allocation', ALLOCATION_IDENTITY_STEM],
+  files: ['allocation', ALLOCATION_SIDS_STEM],
 };
 
 /** A sibling build's allocation stage: its rows, and identity rows carrying each object's designation. */

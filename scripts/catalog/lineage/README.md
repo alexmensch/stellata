@@ -103,8 +103,8 @@ origin key, the manifest's current five-cell tuple
 full designation set, all written by membership. Each column lands with the
 stage that computes it, never as a placeholder: the record index (after the
 apparent-V sort) arrives when the sort stage gains lineage, the SID with
-allocation's. A later stage writes its columns to an identity file of its
-own (`allocation.identity.tsv.gz`: key → SID), rotated with that stage and
+allocation's. A later stage writes its columns to a file of its
+own (`allocation.sids.tsv.gz`: key → SID), rotated with that stage and
 never by rewriting membership's; the identity row is the join of those files
 on the origin key. A record membership does not admit — a folded spine row, a
 component group — still gets one, keyed on the cells it arrived with, so
@@ -113,7 +113,7 @@ this row, never re-deriving them — except where the deciding stage's input
 cells ARE the ledger's key: `binding-review.tsv` keys on the spine cells
 the derivation weighed, which its curated dispositions join on, so those
 ride the binding row's `params`. A parked or dropped record never gets an
-index or a SID: it has no `allocation.identity` row, and a SID it once held
+index or a SID: it has no `allocation.sids` row, and a SID it once held
 is carried by allocation's parked, retired or merged row under the deciding
 origin, with that decision's code as `cause`.
 
@@ -276,7 +276,7 @@ per `multiples.tsv` row, plus 31,908 identity rows (<!-- count:build-catalog/com
 17,232 rows it retires, parks or merges), 0.95 MB gzipped in 0.2 s;
 `PROMOTION_LINEAGE_BUDGET` pins 1.04 MB and 5 s. Allocation, measured
 2026-11-01: 980,151 rows (979,712 objects plus 439 parked SIDs, 62.6 MB plain)
-and 979,712 identity rows (29.1 MB), 17.6 MB gzipped in 4.7 s without a diff;
+and 979,712 key → SID rows (29.1 MB), 17.6 MB gzipped in 4.7 s without a diff;
 `ALLOCATION_LINEAGE_BUDGET` pins 19.3 MB and 15 s. The sibling allocation
 stages, measured 2026-11-05: 96 cloud rows in 1,455 bytes and 123 Local
 Group rows in 1,720 bytes gzipped, identity files included, each in about
