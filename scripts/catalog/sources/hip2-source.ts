@@ -1,4 +1,4 @@
-// HIP2 (van Leeuwen 2007) astrometry: the row schema, its parse, and the declared table.
+// HIP2 astrometry: the row schema, its parse, and the declared table.
 
 import { defineSource, type Declared } from '../../util/sources/source';
 import {
