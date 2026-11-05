@@ -21,7 +21,12 @@ scripts/util/sources/
                        import closure reaches, by importing its declaring
                        modules, each classified read / written / both /
                        unused; isRead, the step's data inputs among them;
-                       declaredFiles, their repo-relative files.
+                       declaredFiles, their repo-relative files. It may
+                       import any module its name matches, an entry
+                       script included: every package-script and step
+                       entry only exports main and runs through the one
+                       launcher, so importing it runs nothing
+                       (../README.md, emit-artifacts.ts entry).
   row-ref-pure.ts      SourceRowRef, RowKey — a cited source row
                        (#sourcerowref).
 ```

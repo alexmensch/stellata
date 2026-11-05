@@ -4,7 +4,7 @@ import { REPO_ROOT } from '../util/paths';
 import { deriveRepoInputs, loadRepoTable } from './step-table/repo-table';
 import { recordStep } from './record-step';
 
-async function main(): Promise<number> {
+export async function main(): Promise<number> {
   const [step, ...rest] = process.argv.slice(2);
   if (!step || step.startsWith('--')) {
     console.error('usage: record.ts <manual step> [--force] [args…]');
@@ -38,8 +38,3 @@ async function main(): Promise<number> {
       return 1;
   }
 }
-
-main().then((status) => process.exit(status), (err: unknown) => {
-  console.error(err);
-  process.exit(1);
-});

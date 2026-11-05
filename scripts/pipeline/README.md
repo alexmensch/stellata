@@ -116,7 +116,7 @@ The pull's code is not an input: a refactor of the plumbing, or its port to
 TypeScript, does not make a pull stale; a changed column list or `WHERE` does.
 Each pull states its query as data, so the runner can hash the current query
 without a network call: every pull prints it under `--describe` (a
-TypeScript pull through `runStep(main, describe)`). A Python pull's describe
+TypeScript pull through its exported `describe`, which the launcher prints). A Python pull's describe
 path imports the standard library only, since every build runs it and a
 worktree has no refresh virtualenv (`steps.test.ts`, [step-table/README.md](step-table/README.md#files)).
 

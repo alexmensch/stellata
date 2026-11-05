@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url';
 
 import { allocateSibling, emitSibling } from '../sid/sibling-allocation';
 import { SIBLING_ARTIFACTS } from '../sid/sibling-artifacts-pure';
-import { runStep, sweepStaged } from '../util/emit-artifacts';
+import { sweepStaged } from '../util/emit-artifacts';
 import { roundHalfEven, roundSignificant } from '../util/round-pure';
 import { LOCAL_GROUP_OUTPUTS } from './local-group-outputs';
 import { LG_ALIASES, LG_OVERRIDES, LVDB } from './local-group-source';
@@ -80,7 +80,7 @@ function toJsonObject(o: LgObjectRow) {
   };
 }
 
-async function main(): Promise<void> {
+export async function main(): Promise<void> {
   sweepStaged(LOCAL_GROUP_OUTPUTS);
   const lvdb = LVDB.read();
   const overrides = LG_OVERRIDES.read();
@@ -176,10 +176,4 @@ async function main(): Promise<void> {
     `${skippedOutOfRange} standalone overrides skipped — past MAX_DISTANCE_PC; ` +
     `${allocation.minted} lg SIDs minted)`,
   );
-}
-
-// Run as a script. ESM doesn't have require.main; gate on the entry-point
-// path being our own filename instead.
-if (process.argv[1] && resolve(process.argv[1]) === __filename) {
-  runStep(main);
 }

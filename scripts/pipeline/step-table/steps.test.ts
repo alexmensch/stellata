@@ -9,6 +9,7 @@ import { CNS5 as CNS5_SOURCE } from '../../catalog/classic-ids/cns5-source';
 import { REASON_CODES } from '../../catalog/lineage/reason-codes-tsv';
 import { MEMBERSHIP_MANIFEST } from '../../catalog/membership/membership-manifest-tsv';
 import { entryClosure, packageScripts } from '../../util/import-closure';
+import { LAUNCHER } from '../../util/import-closure-pure';
 import { lfsContentReadable, publicFile, PUBLIC_DIR, REPO_ROOT } from '../../util/paths';
 import { PUBLIC_FILES } from '../../../src/catalog-format/public-artifacts/public-artifacts';
 import { describeStep } from '../freshness';
@@ -109,7 +110,7 @@ describe('the step table', () => {
     const scripts = packageScripts();
     const manual = STEPS.steps.filter((s) => !isBuild(s));
     expect(manual.map((s) => [s.name, scripts[s.name]])).toEqual(
-      manual.map((s) => [s.name, `tsx scripts/pipeline/record.ts ${s.name}`]),
+      manual.map((s) => [s.name, `tsx ${LAUNCHER} scripts/pipeline/record.ts ${s.name}`]),
     );
   });
 

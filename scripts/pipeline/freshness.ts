@@ -7,7 +7,7 @@ import {
   asStamp, changedSince, fileHashes, inputHashes, readStamp, readStampJson, recordedChanges,
   type FileHashes, type Stamp,
 } from '../util/build-stamp';
-import { TSX } from './processes';
+import { launchArgs, TSX } from './processes';
 import { stampedMembers, type PullDescription } from '../util/emit-artifacts';
 import { landStaged, writeStaged } from '../util/staged-write';
 import { hashBytes } from '../util/stamp-hash';
@@ -145,7 +145,7 @@ const DESCRIBE_MAX_BYTES = 1 << 30;
 /** Python describes under `-I -S`, so its describe path imports the standard library only. */
 export function describeStep(step: ManualStep, tree: PipelineTree): Description {
   const entry = tree.abs(step.entry);
-  const [command, args] = step.language === 'python' ? ['python3', ['-I', '-S', entry]] : [TSX, [entry]];
+  const [command, args] = step.language === 'python' ? ['python3', ['-I', '-S', entry]] : [TSX, launchArgs(entry)];
   const run = spawnSync(command, [...args, '--describe'], { encoding: 'utf8', maxBuffer: DESCRIBE_MAX_BYTES });
   if (run.status !== 0) {
     throw new Error(`${step.entry} --describe exited ${run.status ?? run.signal}: ${run.error?.message ?? run.stderr.trim()}`);

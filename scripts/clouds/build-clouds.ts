@@ -2,13 +2,13 @@
 
 import { allocateSibling, emitSibling } from '../sid/sibling-allocation';
 import { SIBLING_ARTIFACTS } from '../sid/sibling-artifacts-pure';
-import { runStep, sweepStaged } from '../util/emit-artifacts';
+import { sweepStaged } from '../util/emit-artifacts';
 import { buildClouds, cloudsPayload, zuckerProfiledPayload } from './build-clouds-pure';
 import { CLOUDS_OUTPUTS } from './clouds-outputs';
 import { profiledClouds } from './cloud-model-pure';
 import { ZUCKER_2020, ZUCKER_2021_EXTENTS, ZUCKER_2021_FITS, ZUCKER_2021_MASSES } from './zucker-source';
 
-async function main(): Promise<void> {
+export async function main(): Promise<void> {
   sweepStaged(CLOUDS_OUTPUTS);
   const extents = ZUCKER_2021_EXTENTS.read();
   const masses = ZUCKER_2021_MASSES.read();
@@ -26,4 +26,3 @@ async function main(): Promise<void> {
   );
 }
 
-runStep(main);

@@ -2,7 +2,7 @@
 // grid, verifies the reconstruction off-grid, and writes
 // data/ephemerides/{id}.json. See README.md#cadence.
 
-import { emitEach, runStep, type Check, type PullDescription } from '../util/emit-artifacts';
+import { emitEach, type Check, type PullDescription } from '../util/emit-artifacts';
 import { serializeRowFile } from '../util/frozen-json';
 import { roundSignificant } from '../util/round-pure';
 import {
@@ -215,7 +215,7 @@ async function buildTarget(target: PlanetElementTarget): Promise<{ text: string;
   };
 }
 
-async function main(): Promise<void> {
+export async function main(): Promise<void> {
   const only = new Set(process.argv.slice(2));
   const targets = only.size === 0
     ? ELEMENT_TARGETS
@@ -229,7 +229,7 @@ async function main(): Promise<void> {
   });
 }
 
-function describe(): PullDescription {
+export function describe(): PullDescription {
   const windowQuery = (params: URLSearchParams): string => `${HORIZONS_API}?${params}`;
   return {
     query: ELEMENT_TARGETS.flatMap((t) => {
@@ -243,4 +243,3 @@ function describe(): PullDescription {
   };
 }
 
-runStep(main, describe);

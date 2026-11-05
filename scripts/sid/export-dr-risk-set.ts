@@ -3,7 +3,7 @@
 // request TSV a refresh:gaia-*-neighbourhood pull reads. /docs/sid.md#61-procedure.
 
 import { serialiseSourceIdRequest } from '../catalog/astrometry-request/export-astrometry-request-pure';
-import { emitArtifacts, runStep } from '../util/emit-artifacts';
+import { emitArtifacts } from '../util/emit-artifacts';
 import { DR_RISK_SET_OUTPUTS } from './dr-risk-set-outputs';
 import { LEDGERS } from './ledger-tsv';
 import { readArtifact } from '../util/sources/source';
@@ -12,7 +12,7 @@ import { EVENTS } from './events-tsv';
 import { parseDesignation } from './sid-pure';
 import { CATALOG_PARTITION } from '../../src/catalog-format/pipeline-outputs/data-files';
 
-function main(): void {
+export function main(): void {
   const ledger = readArtifact(LEDGERS[CATALOG_PARTITION]);
   const retired = retiredSids(readArtifact(EVENTS[CATALOG_PARTITION]));
   const ids = new Set<string>();
@@ -27,5 +27,3 @@ function main(): void {
   });
   console.log(`wrote ${DR_RISK_SET_OUTPUTS.files.request} (${ids.size} gaia_*-keyed ledger rows at risk)`);
 }
-
-runStep(main);

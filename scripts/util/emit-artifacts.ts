@@ -192,13 +192,28 @@ export interface PullDescription {
   readonly release?: string;
 }
 
-export function runStep(main: () => void | Promise<void>, describe?: () => PullDescription): void {
-  if (describe && process.argv.includes('--describe')) {
-    console.log(JSON.stringify(describe()));
+/** What a launched entry exports: `main`, whose number is the exit status; a pull's `describe`, printed under `--describe` instead. */
+export interface StepModule {
+  readonly main: () => void | number | Promise<void | number>;
+  readonly describe?: () => PullDescription;
+}
+
+/** Imports `entry` and runs its `main`: the one way a script runs, so importing any module runs nothing. */
+export async function runStep(entry: string, args: readonly string[]): Promise<void> {
+  const path = resolve(REPO_ROOT, entry);
+  // A launched entry reads process.argv exactly as if tsx had started it.
+  process.argv = [process.argv[0], path, ...args];
+  const step = await import(path) as Partial<StepModule>;
+  if (typeof step.main !== 'function') throw new Error(`${entry} exports no main, so it cannot be launched`);
+  if (step.describe && args.includes('--describe')) {
+    console.log(JSON.stringify(step.describe()));
     return;
   }
-  Promise.resolve().then(main).catch((err: unknown) => {
+  try {
+    const status = await step.main();
+    if (typeof status === 'number') process.exitCode = status;
+  } catch (err) {
     console.error(err instanceof EmissionRefused ? err.message : err);
     process.exit(1);
-  });
+  }
 }

@@ -89,7 +89,7 @@ function reportMipped(grid: Grid, params: DustParams, fillStepPc: number): void 
   console.log(row(grid, '-', texels, fill));
 }
 
-function run(): void {
+export function main(): void {
   const { params } = loadDustField();
   const coverage = coverageRadiusPc(params);
   const fillStepPc = params.voxelPc / PINNED_FILL_STEPS_PER_VOXEL;
@@ -139,5 +139,3 @@ function run(): void {
     console.log(`  ${degPerFrame}°/frame → ${((degPerFrame / 50) * 100).toFixed(1)}% of the cone`);
   }
 }
-
-run();

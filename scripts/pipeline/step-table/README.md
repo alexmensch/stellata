@@ -177,8 +177,8 @@ the others once, and that rebuild appends nothing.
   import closure clear of `util/step-inputs.ts` (a step takes its input
   hashes from the runner, `util/step-input-hashes.ts`), each mirror's family
   folders to that mirror alone (`strays()` deletes anything else there), every manual step's
-  `package.json` target to `tsx scripts/pipeline/record.ts <name>`, and every
+  `package.json` target to `record.ts <name>` through the launcher, and every
   pull's and describing bake's `--describe` to running (Python under
-  `python3 -I -S`, TypeScript through `tsx`; skipped while the manifest is
+  `python3 -I -S`, TypeScript through `tsx` and the launcher; skipped while the manifest is
   an unsmudged LFS pointer, or before `build:clouds` has written
   `public/clouds.json`).

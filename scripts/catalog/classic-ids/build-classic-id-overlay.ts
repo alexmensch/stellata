@@ -17,7 +17,7 @@ import { REJECTED_BINDINGS } from './rejected-bindings-tsv';
 import { ROUTE_DISAGREEMENTS } from './route-disagreements-tsv';
 import { CLASSIC_ID_OVERLAY, overlayRows } from './classic-id-overlay-tsv';
 import { REPO_ROOT as ROOT } from '../../util/paths';
-import { emitArtifacts, runStep } from '../../util/emit-artifacts';
+import { emitArtifacts } from '../../util/emit-artifacts';
 import { CLASSIC_ID_OUTPUTS } from './classic-id-overlay-outputs';
 import { snapshotCheck } from '../../util/snapshot-check';
 
@@ -53,7 +53,7 @@ function logOverlay(overlay: ClassicIdOverlay, counts: OverlayJoinCounts): void 
   );
 }
 
-async function main(): Promise<void> {
+export async function main(): Promise<void> {
   const { evidence } = loadBindingEvidence(
     printedVLookups(loadHipVMag(), TYCHO2.read(), GLIESE.read()),
   );
@@ -88,4 +88,3 @@ async function main(): Promise<void> {
   console.log(`wrote ${OUT_REJECTED} (${rejectedBindings.length} rows)`);
 }
 
-runStep(main);

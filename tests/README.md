@@ -218,7 +218,11 @@ source-declarations.test.ts
                          and a DATA_FILES path in none of them, outputs
                          and declaring modules included;
                          defineSource / defineArtifact only
-                         in a *-source.ts / *-tsv.ts module.
+                         in a *-source.ts / *-tsv.ts module; every
+                         package.json tsx command goes through the
+                         launcher, and an entry named like a declaring
+                         module runs nothing when the walk imports it
+                         (entry-fixture.ts).
 site-claims.test.ts      The homepage against what it states: figures are
                          published tokens, never literals · every saved-view
                          link decodes, and each sight's two anchors share
@@ -316,6 +320,11 @@ pipe-buffer.ts           Not a test — `pastPipeBuffer`, multi-line input
 git-fixture.ts           Not a test — `gitIn` and `commitFile`, a throwaway
                          repo's git runner and one-file commit, for suites
                          that drive a script over real history.
+entry-fixture.ts         Not a test — `writeEntryFixture`, a throwaway
+                         launchable entry (exports main and describe) whose
+                         main logs each run's arguments, for the launcher
+                         suites (emit-artifacts.test.ts and
+                         source-declarations.test.ts).
 import-specifiers.ts     Not a test — `importSpecifiers` (every specifier,
                          its form, and whether it is type-only) and
                          `isShippedSource` (not a test, `.d.ts` or

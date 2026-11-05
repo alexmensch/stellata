@@ -2,7 +2,7 @@
 // pull per /docs/sid.md#61-procedure and emit the churn report, plus the carried-1:1
 // bridge edges for review. See scripts/sid/README.md.
 
-import { emitArtifacts, runStep } from '../util/emit-artifacts';
+import { emitArtifacts } from '../util/emit-artifacts';
 import { DR_RECONCILE_OUTPUTS } from './dr-reconcile-outputs';
 import {
   DR2_NEIGHBOURHOOD,
@@ -43,7 +43,7 @@ function parseArgs(argv: string[]): CliArgs {
   };
 }
 
-function main(): void {
+export function main(): void {
   const args = parseArgs(process.argv.slice(2));
   const request = args.request === null
     ? DR2_NEIGHBOURHOOD_REQUEST
@@ -102,5 +102,3 @@ function main(): void {
     `wrote ${DR_RECONCILE_OUTPUTS.files.bridges} (${c.carried.length} bridge edges — human review before commit)`,
   );
 }
-
-runStep(main);

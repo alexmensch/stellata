@@ -12,6 +12,7 @@ import { STEPS } from '../scripts/pipeline/step-table/steps';
 import { stepEntries } from '../scripts/util/step-inputs';
 import { REPO_ROOT } from '../scripts/util/paths';
 import { DATA_FILES } from '../src/catalog-format/pipeline-outputs/data-files';
+import { writeEntryFixture } from './entry-fixture';
 import { isProductionTs, walkFiles } from './walk-files';
 
 const OUT_OF_PIPELINE = /^scripts\/(perf|release|hooks|ci)\//;
@@ -89,10 +90,17 @@ describe('source declarations', () => {
     expect(offenders).toEqual([]);
   });
 
-  it('names no script entry like a declaring module, which the input-set walk imports', () => {
-    const entries = Object.keys(scripts).flatMap((name) => scriptParts(scripts, name))
-      .flatMap((p) => (p.kind === 'tsx' ? [p.entry] : []));
-    expect(entries.filter((entry) => DECLARING_MODULE.test(entry))).toEqual([]);
+  it('starts every package.json tsx command through the launcher', () => {
+    const bypassing = Object.keys(scripts).flatMap((name) => scriptParts(scripts, name))
+      .flatMap((p) => (p.kind === 'other' && /^tsx\s/.test(p.command) ? [p.command] : []));
+    expect(bypassing).toEqual([]);
+  });
+
+  it('runs nothing when the input-set walk imports an entry named like a declaring module', async () => {
+    const entry = writeEntryFixture('foo-tsv.ts');
+    expect(DECLARING_MODULE.test(entry.path)).toBe(true);
+    await declaredInputs([entry.path]);
+    expect(entry.runs()).toEqual([]);
   });
 
   it('declares sources only in a module named for it', () => {

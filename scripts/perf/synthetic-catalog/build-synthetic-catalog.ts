@@ -174,7 +174,7 @@ function gaussian(rng: () => number): number {
   return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * rng());
 }
 
-function main(): void {
+export function main(): void {
   const { values } = parseArgs({
     args: withoutPassthroughDash(process.argv.slice(2)),
     options: {
@@ -367,5 +367,3 @@ function main(): void {
       `in ${plan.length} chunks, ${outBytes} bytes`,
   );
 }
-
-main();

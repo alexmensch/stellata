@@ -4,7 +4,7 @@ import { execFileSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 
-import { emitArtifacts, runStep } from '../util/emit-artifacts';
+import { emitArtifacts } from '../util/emit-artifacts';
 import { EXPECTED_A1_ROWS, EXPECTED_A2_ROWS, attachGaiaSourceIds, extractTables } from './build-vaidman-table-pure';
 import { VAIDMAN_OUTPUTS } from './vaidman-outputs';
 import { VAIDMAN_2025_PDF } from './vaidman-paper-source';
@@ -18,7 +18,7 @@ function paperPdf(): string {
   return pdf;
 }
 
-function main(): void {
+export function main(): void {
   const pdf = paperPdf();
   const { a1, a2 } = extractTables(execFileSync('pdftotext', ['-layout', pdf, '-'], { encoding: 'utf8' }));
   console.log(`  Table A1 (EDSD_new): ${a1.length} rows (expect ${EXPECTED_A1_ROWS})`);
@@ -40,4 +40,3 @@ function main(): void {
   console.log(`wrote ${VAIDMAN_SUPERGIANTS.file} (${joined.rows.length} rows)`);
 }
 
-runStep(main);

@@ -416,7 +416,7 @@ function writePin(args: RunArgs, file: PerfFile, against: PinDiff | null): boole
   return false;
 }
 
-async function main(): Promise<number> {
+export async function main(): Promise<number> {
   let args: RunArgs;
   try {
     args = parseRunArgs(process.argv.slice(2));
@@ -533,5 +533,3 @@ async function main(): Promise<number> {
     ? EXIT.failed
     : EXIT.ok;
 }
-
-process.exitCode = await main();

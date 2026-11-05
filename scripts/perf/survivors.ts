@@ -42,7 +42,7 @@ function survivorTable(rows: readonly SurvivorsRecord[]): string {
   );
 }
 
-async function main(): Promise<number> {
+export async function main(): Promise<number> {
   let args: SurvivorsArgs;
   try {
     args = parseSurvivorsArgs(process.argv.slice(2));
@@ -115,5 +115,3 @@ async function main(): Promise<number> {
   }
   return 0;
 }
-
-process.exitCode = await main();

@@ -4,6 +4,9 @@ import { dirname, extname } from 'node:path';
 
 export const CODE_FILE = /\.(py|ts|mts)$/;
 
+/** The one `tsx` entry a script names: it runs the entry after it (`runStep`). */
+export const LAUNCHER = 'scripts/util/launch.ts';
+
 /** One `&&`-joined command of a package.json script. */
 export type ScriptPart =
   | { readonly kind: 'tsx'; readonly entry: string; readonly args: readonly string[] }
@@ -13,7 +16,7 @@ export type ScriptPart =
 
 function part(command: string): ScriptPart {
   const words = command.trim().split(/\s+/);
-  if (words[0] === 'tsx' && /\.ts$/.test(words[1] ?? '')) return { kind: 'tsx', entry: words[1], args: words.slice(2) };
+  if (words[0] === 'tsx' && words[1] === LAUNCHER && /\.ts$/.test(words[2] ?? '')) return { kind: 'tsx', entry: words[2], args: words.slice(3) };
   if (words[0] === 'python3' && /\.py$/.test(words[1] ?? '')) return { kind: 'python', entry: words[1] };
   if (words[0] === 'pnpm' && words[1] === 'run' && words.length === 3) return { kind: 'pnpm', script: words[2] };
   return { kind: 'other', command: command.trim() };

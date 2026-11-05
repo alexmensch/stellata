@@ -53,7 +53,7 @@ describe('describeStep', () => {
   });
 
   it('describes a TypeScript step through tsx', () => {
-    writeFileSync(join(root, 'x.ts'), 'if (process.argv.includes(\'--describe\')) console.log(JSON.stringify({ query: \'Q\', services: [\'Horizons\'] }));\n');
+    writeFileSync(join(root, 'x.ts'), 'export const main = () => {};\nexport const describe = () => ({ query: \'Q\', services: [\'Horizons\'] });\n');
     expect(describeStep({ ...pull, language: 'ts', entry: 'x.ts', outputs: { module: 'm.ts', name: 'OUT' } }, pipelineTree(root)))
       .toMatchObject({ kind: 'pull', query: 'Q', services: ['Horizons'] });
   });

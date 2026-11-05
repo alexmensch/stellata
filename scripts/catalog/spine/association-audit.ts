@@ -14,7 +14,7 @@ import { loadPrimaryTables } from './primaries-tables';
 
 const ID_COLS = ['tyc', 'hip', 'hd', 'hr', 'gl', 'flam', 'bayer', 'proper', 'gaia_source_id'] as const;
 
-async function main(): Promise<void> {
+export async function main(): Promise<void> {
   const outDir = process.argv.find((a) => a.startsWith('--out='))?.slice('--out='.length) ?? null;
   const spine = readArtifact(INHERITED_SPINE);
   const tables = await loadPrimaryTables(spine.map((r) => r.tyc).filter((t) => t !== ''));
@@ -32,8 +32,3 @@ async function main(): Promise<void> {
   writeFileSync(resolve(outDir, 'disconnected.tsv'), `${[header.join('\t'), ...lines].join('\n')}\n`);
   console.log(`wrote ${outDir}`);
 }
-
-main().catch((err: unknown) => {
-  console.error(err);
-  process.exit(1);
-});

@@ -6,12 +6,15 @@ import { mkdirSync, readFileSync, rmSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 
 import type { FileHashes } from '../util/build-stamp';
+import { LAUNCHER } from '../util/import-closure-pure';
 import { REPO_ROOT } from '../util/paths';
 import { STEP_INPUTS_ENV, writeStepInputs } from '../util/step-input-hashes';
 import type { PipelineTree } from './pipeline-tree';
 import type { RunRecord } from './python-run-pure';
 
 export const TSX = resolve(REPO_ROOT, 'node_modules/.bin/tsx');
+/** `tsx`'s arguments for a TypeScript entry: through the launcher, which runs its `main`. */
+export const launchArgs = (entry: string, args: readonly string[] = []): string[] => [resolve(REPO_ROOT, LAUNCHER), entry, ...args];
 const RUN_PYTHON_STEP = resolve(REPO_ROOT, 'scripts/pipeline/run_python_step.py');
 
 export async function exec(command: string, args: readonly string[], env: NodeJS.ProcessEnv): Promise<number | null> {
@@ -28,7 +31,7 @@ export async function runTs(
   mkdirSync(dirname(handed), { recursive: true });
   writeStepInputs(handed, inputs);
   try {
-    return await exec(TSX, [entry, ...args], { ...env, [STEP_INPUTS_ENV]: handed });
+    return await exec(TSX, launchArgs(entry, args), { ...env, [STEP_INPUTS_ENV]: handed });
   } finally {
     rmSync(handed, { force: true });
   }

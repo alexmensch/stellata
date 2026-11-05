@@ -5,7 +5,7 @@
 import { resolve } from 'node:path';
 
 import { REPO_ROOT as ROOT } from '../../util/paths';
-import { emitArtifacts, runStep } from '../../util/emit-artifacts';
+import { emitArtifacts } from '../../util/emit-artifacts';
 import { watchHeap } from '../../util/heap-budget';
 import { stepInputHashes } from '../../util/step-input-hashes';
 import { artifactRows, readArtifact } from '../../util/sources/source';
@@ -82,7 +82,7 @@ function reportLabelCoverage(c: MembershipCounts): void {
   }
 }
 
-async function main(): Promise<void> {
+export async function main(): Promise<void> {
   const heap = watchHeap('build:membership');
   const spine = readArtifact(INHERITED_SPINE);
   const multiples = readMultiplesTsv();
@@ -198,4 +198,3 @@ async function main(): Promise<void> {
   for (const f of Object.values(MEMBERSHIP_OUTPUTS.files)) console.log(`wrote ${f}`);
 }
 
-runStep(main);

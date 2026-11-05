@@ -263,11 +263,22 @@ same thing — single-use helpers stay with their consumer.
   that produces and passes its checks lands by itself, a failing one is
   reported and skipped, and the run throws naming the refused targets once
   all have been tried.
-  `runStep(main)` is every step's entry point: a refused emission has
-  already printed its failed checks, so it exits 1 with one line and no
-  stack; any other error keeps its stack. A TypeScript pull (the two
-  Horizons fetchers) passes `runStep(main, describe)`, and `--describe`
-  then prints its `PullDescription` instead of running.
+  `runStep(entry, args)` is how every script runs, and `launch.ts` its one
+  command line: `package.json` names `tsx scripts/util/launch.ts <entry>`
+  (`import-closure-pure.ts`'s `LAUNCHER`; `scriptParts` reads any other
+  `tsx` command as unclassified, which `/tests/source-declarations.test.ts`
+  fails), and the runner and `record.ts` start a TypeScript step the same
+  way (`../pipeline/processes.ts`'s `launchArgs`). An entry exports `main`
+  and never calls it, so **importing a package-script or step entry runs
+  nothing** — the input-set walk (`sources/declared-inputs.ts`) can import
+  whatever its name matches. A script CI or a hook starts with a bare `tsx`
+  (`scripts/ci/`, `scripts/release/`, the commit-sweep figure check) is
+  neither, and no step's closure reaches one. `runStep` imports the entry, hands it `process.argv` as
+  `tsx` would have, and runs `main`: a number it returns is the exit
+  status; a refused emission has already printed its failed checks, so it
+  exits 1 with one line and no stack; any other error keeps its stack. A
+  TypeScript pull (the two Horizons fetchers) also exports `describe`, and
+  `--describe` then prints its `PullDescription` instead of running.
   `horizons-response.ts`' `HORIZONS_SERVICE` is the service both state.
 - `heap-budget.ts` / `heap-budget-pure.ts` (+ test) — `watchHeap(step)`,
   started first thing in a step's `main`, and its `check()`, the step's peak

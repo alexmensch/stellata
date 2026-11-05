@@ -4,7 +4,7 @@ import { resolve } from 'node:path';
 
 import { CROSS_INDEX } from '../classic-ids/cross-index-source';
 import { REPO_ROOT } from '../../util/paths';
-import { emitArtifacts, runStep } from '../../util/emit-artifacts';
+import { emitArtifacts } from '../../util/emit-artifacts';
 import { snapshotCheck } from '../../util/snapshot-check';
 import { compareCountSnapshot } from '../build-counts';
 import { WGSN_FAINTS } from './wgsn-faints-source';
@@ -56,7 +56,7 @@ export interface WgsnCounts {
   nameDuplicateRows: number;
 }
 
-async function main(): Promise<void> {
+export async function main(): Promise<void> {
   const nec = WGSN_NEC.read();
   const faints = WGSN_FAINTS.read();
   const rows = [...nec, ...faints];
@@ -149,4 +149,3 @@ async function main(): Promise<void> {
   console.log(`wgsn_designations.tsv: ${designations.length} rows`);
 }
 
-runStep(main);

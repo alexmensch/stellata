@@ -22,9 +22,7 @@ reference.
   `--pdf` names another.
   `build-vaidman-table-pure.ts` (+ test) parses the appendix and joins each
   name to its hand-resolved source_id. A hand-run writer, so it is an `on-demand`
-  entry in the step table's `NON_STEP_WRITERS`. An entry's
-  name never ends in `-tsv.ts` or `-source.ts`: the input-set walk imports
-  every module so named, and an entry runs its step on import.
+  entry in the step table's `NON_STEP_WRITERS`.
 - `vaidman-tsv.ts` — the reference table's codec, which the builder writes
   through and the validator reads through; the builder's test round-trips the
   committed file byte for byte. `vaidman-outputs.ts` is the builder's
