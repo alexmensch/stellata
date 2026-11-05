@@ -145,8 +145,7 @@ describe('readStars build-time de-extinction of ci', () => {
     // a hot-blue colour on dusty sightlines.
     expect(blank.ci).toBe(SOLAR_BV_FALLBACK);
     // No tier classifies it either: the walk renders spectral `none` as unknown.
-    expect(blank.spectClass).toBe(SPECTRAL_UNKNOWN.classIdx);
-    expect(blank.lumClass).toBe(SPECTRAL_UNKNOWN.lumClass);
+    expect(blank.spectral).toEqual(SPECTRAL_UNKNOWN);
     expect(blank.spectDisplay).toBeNull();
     expect(observed.ci).toBeCloseTo(0.5 - av / R_V, 12);
     // absmag is observed-convention on both rows and always de-extincts.

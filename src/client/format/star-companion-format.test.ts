@@ -1,10 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { J2000_JD } from '../../astro-core/astronomy-constants';
 import {
-  FLAG_HAS_ORBIT,
-  FLAG_HAS_INCLINATION,
   type BinaryRelation,
 } from '../binaries/binaries-loader';
+import { FLAG_HAS_ORBIT, FLAG_HAS_INCLINATION } from '../../catalog-format/binaries/binaries-format';
 import { makeBinaries, makeRelation } from '../binaries/binary-relation-fixture';
 import { lateReady } from '../util/late/late-fixture';
 import {

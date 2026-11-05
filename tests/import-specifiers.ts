@@ -12,6 +12,8 @@ const STATIC_IMPORT_RE = /(?:^|\n)\s*(?:import|export)\s+(type\s+)?[^;'"]*?from\
 const BARE_IMPORT_RE = /(?:^|\n)\s*import\s*['"]([^'"]+)['"]/g;
 const DYNAMIC_IMPORT_RE = /import\s*\(\s*['"]([^'"]+)['"]\s*\)/g;
 
+export const isRelativeSpecifier = (spec: string) => spec.startsWith('.');
+
 export function importSpecifiers(src: string): ImportSpecifier[] {
   const out: ImportSpecifier[] = [];
   for (const [, typeKw, spec] of src.matchAll(STATIC_IMPORT_RE)) {

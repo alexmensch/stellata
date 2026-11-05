@@ -1,6 +1,11 @@
 // Runtime spectral-type display formatting — primary-component label
 // cleanup + plain-language descriptor. See ./README.md.
 
+import {
+  LUM_CLASS_WHITE_DWARF,
+  SPECT_CLASS_CARBON,
+} from '../../catalog-format/spectral/spectral-record-bytes';
+
 export interface SpectralDisplay {
   /** Cleaned classification label, e.g. "K0 III". Empty when the source
    *  catalog carried no spectral string. */
@@ -10,10 +15,8 @@ export interface SpectralDisplay {
   descriptor: string;
 }
 
-// spectClass byte → colour word (indices per spectral-classify
-// spectClassIndex: O B A F G K M). Index 7 (carbon / S / Wolf-Rayet
-// bucket) branches in descriptorFor; index 8 (unknown) falls off the end
-// of this array, so the descriptor drops its colour word.
+// spectClass byte → colour word, O B A F G K M. The carbon / unknown codes
+// fall off the end, so the descriptor drops its colour word.
 const COLOUR_BY_CLASS = [
   'blue',
   'blue-white',
@@ -24,8 +27,9 @@ const COLOUR_BY_CLASS = [
   'red',
 ] as const;
 
-// luminosityClass byte → descriptor noun (encoding per catalog-pure:
-// 0 = VII/WD handled separately, 6–8 = Ib/Iab/Ia all read "supergiant").
+// luminosityClass byte → descriptor noun (encoding per spectral-classify's
+// LumClass: 0 = VII/WD handled separately, 6–8 = Ib/Iab/Ia all read
+// "supergiant").
 const DESCRIPTOR_BY_LUM: ReadonlyMap<number, string> = new Map([
   [1, 'subdwarf'],
   [2, 'main-sequence star'],
@@ -76,8 +80,8 @@ function descriptorFor(
   spectClass: number,
   luminosityClass: number,
 ): string {
-  if (luminosityClass === 0) return 'white dwarf';
-  if (spectClass === 7) {
+  if (luminosityClass === LUM_CLASS_WHITE_DWARF) return 'white dwarf';
+  if (spectClass === SPECT_CLASS_CARBON) {
     return raw.startsWith('W') ? 'Wolf-Rayet star' : 'carbon star';
   }
   const noun = DESCRIPTOR_BY_LUM.get(luminosityClass);

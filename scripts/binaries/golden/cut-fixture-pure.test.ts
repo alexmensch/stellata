@@ -5,7 +5,8 @@ import { describe, expect, it } from 'vitest';
 import { REPO_ROOT } from '../../util/paths';
 import { readTable } from '../../util/tsv/table-pure';
 import { MULTIPLES_COLUMNS, MULTIPLES_TSV } from '../multiples-tsv';
-import { FIXTURE_SYSTEMS, cutMultiples, cutRowIndexMap, wdsIdOf } from './cut-fixture-pure';
+import { FIXTURE_SYSTEMS, cutMultiples, cutRowIndexMap } from './cut-fixture-pure';
+import { wdsRootOf } from '../component-tokens-pure';
 
 const DEFAULTS: Record<string, string> = {
   source: 'wds', regime: '0', resolve_via: 'unresolved', astrometry_via: 'gaia_5p', orbit_via: 'none',
@@ -37,7 +38,8 @@ describe('cutRowIndexMap', () => {
       bySynth: { 'synth-00001+0001-B': 7, 'synth-00002-0002-B': 8 },
     };
     const cut = cutMultiples(RECORDS, ['00001+0001']);
-    expect(cutRowIndexMap(map, cut, ['00001+0001'])).toEqual({
+    expect(cutRowIndexMap(map, cut, ['00001+0001'], 'f'.repeat(40))).toEqual({
+      multiplesSha1: 'f'.repeat(40),
       byGaia: { 100: 1, 101: 2 },
       byHip: { 10: 4, 12: 5 },
       bySynth: { 'synth-00001+0001-B': 7 },
@@ -49,7 +51,7 @@ describe('committed fixture', () => {
   it('holds exactly the FIXTURE_SYSTEMS', () => {
     const tsv = readFileSync(resolve(REPO_ROOT, 'scripts/binaries/golden/fixture-multiples.tsv'), 'utf8');
     const fixture = { file: 'scripts/binaries/golden/fixture-multiples.tsv', columns: ['system_id'] as const, hint: 'Re-cut it.' };
-    const systems = new Set([...readTable(fixture, tsv)].map((r) => wdsIdOf(r.raw('system_id'))));
+    const systems = new Set([...readTable(fixture, tsv)].map((r) => wdsRootOf(r.raw('system_id'))));
     expect([...systems].sort()).toEqual([...FIXTURE_SYSTEMS].sort());
   });
 });
