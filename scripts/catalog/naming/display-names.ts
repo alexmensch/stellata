@@ -55,8 +55,8 @@ export function designationConUse(star: Pick<DisplayNameSource, 'desigCon' | 'co
 export function designationSetOf(
   star: DisplayNameSource,
   constellations: readonly { code: string }[],
+  dc: DesignationConUse,
   override?: string,
-  dc: DesignationConUse = designationConUse(star),
 ): DesignationSet {
   const con = dc.from === 'none' ? undefined
     : constellations[dc.from === 'designation' ? dc.con.index : dc.index];
@@ -150,7 +150,7 @@ export function assignDisplayNames(
     const component = components.get(i);
     const input: DisplayNameInput<number> = {
       key: i,
-      set: designationSetOf(star, constellations, overrides.get(recordSids[i]), dcs[i]),
+      set: designationSetOf(star, constellations, dcs[i], overrides.get(recordSids[i])),
     };
     if (component !== undefined) {
       input.component = component.comp;
