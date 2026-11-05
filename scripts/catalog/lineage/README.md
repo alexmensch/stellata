@@ -259,7 +259,11 @@ membership on a branch where 9 of its 163 inputs differ (2026-11-04,
 changed 204 MB LFS input adds its own hash of the local object. The header's input map is not in it: a stage hands
 `stageLineage` the input hashes the runner took for its step's stamp before
 starting it (`stepInputHashes`, `../../util/step-input-hashes.ts`), so no
-step hashes its own input set.
+step hashes its own input set. `build:catalog` does hash membership's inputs
+from disk, once per build (`upstreamLineage`), to judge membership's header
+against the base: 153 paths in 275–352 ms (2026-11-05,
+`onDiskHashes(stepInputPaths('build:membership'), {})`), inside the first
+catalogue stage's timed window.
 A spine derivation's row carries only its winner, route and component
 letters; the binding-review columns ride the rows the queue lists — a
 contested or collision verdict and a disposition — since the candidates and
