@@ -9,6 +9,12 @@ owns how they are read and what a consumer may conclude from them.
 
 ```
 scripts/catalog/simbad/
+  simbad-namespace-ladder-pure.ts The namespace ladder both pulls index and
+    (+ test)                      join through: SIMBAD_NAMESPACE_VALUES (the
+                                  walk order), indexSimbadRow,
+                                  walkSimbadNamespaces, and the GJ and HIP
+                                  key folds. Pure
+                                  (../spectral/README.md#the-ladder-is-ordered-by-what-an-identifier-names).
   simbad-values-source.ts         SIMBAD_VALUES, the pull declared
                                   (../../util/sources/).
   simbad-values-parse.ts          data/simbad/simbad_values.tsv indexed by

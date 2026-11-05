@@ -35,7 +35,7 @@ layout, its codec, the chunk plan and the search-index wire entry — is
   Stellarium stick figures.
 - `spectral/` — Morgan-Keenan parsing of SIMBAD `sp_type`, the seven-tier
   spectral resolver, and the Stefan-Boltzmann radius chain. Imports the
-  namespace ladder from `record/record-build-pure.ts`; nothing there imports back.
+  namespace ladder from `simbad/simbad-namespace-ladder-pure.ts`; nothing there imports back.
 - `boundaries/` — `public/constellation-boundaries.json`: the IAU boundary
   arcs resampled and precessed to ICRS, the per-region label anchors, the
   resolved cell grid the runtime resolves membership against, and the

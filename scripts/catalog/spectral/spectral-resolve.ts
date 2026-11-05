@@ -10,7 +10,7 @@ import {
   type SimbadNamespace,
   type SimbadNamespaceIndex,
   type SimbadRecordKeys,
-} from '../record/record-build-pure';
+} from '../simbad/simbad-namespace-ladder-pure';
 import type { Declared } from '../../util/sources/source';
 import { readTable } from '../../util/tsv/table-pure';
 import {

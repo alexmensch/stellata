@@ -10,7 +10,7 @@ import {
   readTable, tableLineReader, type TableRow,
 } from '../../util/tsv/table-pure';
 import { gaiaHas5pSolution } from './gaia-distrust';
-import type { SimbadRecordKeys } from '../record/record-build-pure';
+import type { SimbadRecordKeys } from '../simbad/simbad-namespace-ladder-pure';
 import type { Tycho2Row } from '../tycho2-parse';
 import type { Declared } from '../../util/sources/source';
 import {

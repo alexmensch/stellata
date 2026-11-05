@@ -19,7 +19,7 @@ import {
   SIMBAD_NAMESPACE_VALUES,
   type SimbadNamespace,
   type SimbadRecordKeys,
-} from '../record/record-build-pure';
+} from '../simbad/simbad-namespace-ladder-pure';
 import { classifyFromSimbad, SPECTRAL_UNKNOWN } from '../../../src/catalog-format/spectral/spectral-classify';
 import {
   type SimbadSpectralIndex,
