@@ -17,23 +17,12 @@ supplies alongside its own position.
 
 ```
 scripts/catalog/distance/
-  gaia-astrometry-source.ts       GAIA_ASTROMETRY, GAIA_NSS, HIP2: the
-  gaia-nss-source.ts              direction tiers' inputs declared
-  hip2-source.ts                  (../../util/sources/), each calling
-                                  direction-cascade.ts's parse. HIP2's parse
-                                  also lists every HIP the table publishes,
-                                  positioned or not, for
-                                  ../spine/primaries-tables.ts.
   direction-cascade.ts (+ test)   Per-row sky-direction resolution cascade
                                   (which position source wins, and the
                                   precision each carries) plus the
-                                  space-motion velocity assembly. Owns the
-                                  one Gaia astrometry row fold: tier 1's own
-                                  table reads it whole
-                                  (parseGaiaAstrometryCatalogTsv), and the
-                                  magnitude term streams its pull through it
-                                  with a keep-set (gaiaAstrometryAccumulator,
-                                  `../parse/README.md#streaming-a-committed-table`).
+                                  space-motion velocity assembly. Its tiers'
+                                  Gaia, HIP2 and NSS rows are read in
+                                  ../sources/.
   gaia-distrust.ts (+ test)       `gaiaHas5pSolution`, `gaiaRowIs2p` and
                                   `isGaiaCatalogueBibcode` — one predicate per
                                   way this build refuses a Gaia value on a
@@ -66,12 +55,6 @@ scripts/catalog/distance/
   radial-velocity/                The radial-velocity cascade and the
                                   Gaia-bibcode skip rule, with its own
                                   README.
-  astrometry-fixture.ts           Test-only GaiaAstrometryCatalogRow
-                                  builder. A module, not an export from a
-                                  test file: three suites across two
-                                  folders build these rows, and the point
-                                  is that a column added to the interface
-                                  lands in one place.
   placement-lineage-pure.ts       Placement as a lineage stage: its codes,
     (+ test)                      the Placement each manifest row's walk
                                   hands on, its one serialiser (rows, or

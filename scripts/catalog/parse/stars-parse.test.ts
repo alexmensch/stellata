@@ -8,9 +8,9 @@ import {
   CATALOG_SCENE_EPOCH,
   directionAtEpoch,
   type DirectionSources,
-  type GaiaAstrometryCatalogRow,
 } from '../distance/direction-cascade';
-import { gaiaAstrometryRow } from '../distance/astrometry-fixture';
+import { type GaiaAstrometryCatalogRow } from '../sources/gaia-astrometry-source';
+import { gaiaAstrometryRow } from '../sources/gaia-astrometry-fixture';
 import { cns5Astrometry } from '../classic-ids/cns5-fixture';
 import { TYCHO2_ICRS_EPOCH } from '../tycho2-parse';
 import { emptySimbadValueIndex, type SimbadValueIndex } from '../simbad/simbad-values-parse';

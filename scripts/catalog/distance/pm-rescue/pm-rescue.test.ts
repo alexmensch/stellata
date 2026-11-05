@@ -8,7 +8,7 @@ import {
   type PmRescueSources,
 } from './pm-rescue';
 import type { CitedProperMotion } from '../../cited-proper-motion';
-import { gaiaAstrometryRow } from '../astrometry-fixture';
+import { gaiaAstrometryRow } from '../../sources/gaia-astrometry-fixture';
 import { TYCHO2_MEAN_EPOCH, type Tycho2Row } from '../../tycho2-parse';
 import { TYCHO2 } from '../../tycho2-source';
 import { SIMBAD_VALUES } from '../../simbad/simbad-values-source';

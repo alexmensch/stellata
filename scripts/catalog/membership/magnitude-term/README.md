@@ -292,7 +292,7 @@ floor, 5.9 MiB today.
 The pull carries full 5p astrometry and `radial_velocity` for every row, on
 `gaia_astrometry_pull.TSV_COLUMNS` — the same schema
 `gaia_dr3_astrometry_catalog.tsv` uses. `readMagnitudeTermAstrometry` therefore
-feeds `gaiaAstrometryAccumulator` (`../../distance/direction-cascade.ts`), the
+feeds `gaiaAstrometryAccumulator` (`../../sources/gaia-astrometry-source.ts`), the
 fold behind the same parser, so the direction cascade stays single-sourced and
 the overlap between the two files cannot drift. No request-file extension
 reaches these sources, and none is needed.

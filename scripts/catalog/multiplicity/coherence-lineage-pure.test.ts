@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { paramsOf, sortLineageLines, stageLineageText } from '../lineage/lineage-row-pure';
-import { gaiaAstrometryRow } from '../distance/astrometry-fixture';
+import { gaiaAstrometryRow } from '../sources/gaia-astrometry-fixture';
 import { makeStar } from '../parse/star-fixture';
 import { sourceRowRefText } from '../../util/sources/row-ref-pure';
 import { COHERENCE_CODES, coherenceLineageLines, coherenceLineageRows } from './coherence-lineage-pure';

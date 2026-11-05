@@ -108,7 +108,7 @@ entry point folds rows through the same function — `readTable` feeding it
 where the accumulator's `line` is a `tableLineReader` — so the two paths
 cannot diverge on what a row means:
 `bestNeighbourAccumulator` (`gaia-xmatch.ts`),
-`gaiaAstrometryAccumulator` (`../distance/direction-cascade.ts`),
+`gaiaAstrometryAccumulator` (`../sources/gaia-astrometry-source.ts`),
 `magnitudeTermAccumulator` (`../membership/magnitude-term/`) and
 `MEMBERSHIP_MANIFEST.lineReader` (`../membership/membership-manifest-tsv.ts`) are the
 four, each paired with its whole-text sibling.

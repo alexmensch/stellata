@@ -7,9 +7,9 @@ import {
   unpulledSiblingsMessage,
 } from './pair-member-parallax';
 import { PARALLAX_SN_FLOOR } from './parallax-cascade';
-import { gaiaAstrometryRow } from '../astrometry-fixture';
+import { gaiaAstrometryRow } from '../../sources/gaia-astrometry-fixture';
 import { multiplesRow } from '../../companions/multiples-fixture';
-import type { GaiaAstrometryCatalogRow } from '../direction-cascade';
+import type { GaiaAstrometryCatalogRow } from '../../sources/gaia-astrometry-source';
 
 // σ Ori's real shape: the WDS root holds the blended Aa/Ab/A/B rows on one
 // source that publishes no parallax, and HIP 26551 D on its own clean fit.

@@ -3,7 +3,8 @@
 // README.md.
 
 import { gaiaRefusals, refusedPublicationCited } from '../gaia-distrust';
-import type { GaiaAstrometryCatalogRow, VelocityVia } from '../direction-cascade';
+import type { VelocityVia } from '../direction-cascade';
+import type { GaiaAstrometryCatalogRow } from '../../sources/gaia-astrometry-source';
 import type { Tycho2Row } from '../../tycho2-parse';
 import type { CitedProperMotion } from '../../cited-proper-motion';
 import type { CitedCascadeResult, CitedRefusal, UniformValues } from '../../cascade-result';

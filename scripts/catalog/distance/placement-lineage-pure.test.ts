@@ -2,8 +2,8 @@ import { describe, expect, it } from 'vitest';
 
 import { sourceRowRef } from '../../util/sources/row-ref-pure';
 import { MAGNITUDE_PULL } from '../membership/magnitude-term/magnitude-pull-source';
-import { GAIA_ASTROMETRY } from './gaia-astrometry-source';
-import { HIP2 } from './hip2-source';
+import { GAIA_ASTROMETRY } from '../sources/gaia-astrometry-source';
+import { HIP2 } from '../sources/hip2-source';
 import { BAILER_JONES } from './refinement/bailer-jones-source';
 import { SIMBAD_VALUES } from '../simbad/simbad-values-source';
 import { encodeLineageLine, stageLineageLine } from '../lineage/lineage-row-pure';

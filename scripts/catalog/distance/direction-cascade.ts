@@ -6,16 +6,12 @@ import {
   equatorialTangentBasis,
   type UnitVector,
 } from '../../../src/astro-core/equatorial-basis';
-import {
-  readTable, tableLineReader, type TableRow,
-} from '../../util/tsv/table-pure';
 import { gaiaHas5pSolution } from './gaia-distrust';
 import type { SimbadRecordKeys } from '../simbad/simbad-namespace-ladder-pure';
 import type { Tycho2Row } from '../tycho2-parse';
-import type { Declared } from '../../util/sources/source';
-import {
-  sourceRowRef, type AnySourceRowRef, type RowKeyed, type SourceRowRef,
-} from '../../util/sources/row-ref-pure';
+import type { AnySourceRowRef, SourceRowRef } from '../../util/sources/row-ref-pure';
+import type { GaiaAstrometryCatalogRow } from '../sources/gaia-astrometry-source';
+import type { Hip2AstrometryRow } from '../sources/hip2-source';
 import {
   lookupCns5Astrometry,
   type Cns5Astrometry,
@@ -47,45 +43,6 @@ export const HIP2_PM_DELTA_THRESHOLD_MASYR = 50.0;
 
 const MAS_TO_RAD = Math.PI / (180 * 3600 * 1000);
 
-/** 5p astrometry row from `data/gaia/gaia_dr3_astrometry_catalog.tsv`.
- *  ra/dec are at J2016.0. `parallaxMas === null` marks a 2p
- *  (position-only) solution — Gaia detected the source but could not
- *  fit parallax + PM. */
-export interface GaiaAstrometryCatalogRow {
-  raDeg: number;
-  decDeg: number;
-  parallaxMas: number | null;
-  parallaxErrorMas: number | null;
-  pmraMasyr: number | null;
-  pmdecMasyr: number | null;
-  ruwe: number | null;
-  ipdFracMultiPeak: number | null;
-  gMag: number | null;
-  bpMag: number | null;
-  rpMag: number | null;
-  /** DR3 `radial_velocity` (km/s), the RVS median. Null on the ~2/3 of
-   *  sources RVS did not reach — magnitude-limited to G_RVS ≲ 14. */
-  radialVelocityKmS: number | null;
-  /** DR3 `radial_velocity_error` (km/s) — the uncertainty on that median.
-   *  Non-null wherever `radial_velocity` is, in the published catalogue. */
-  radialVelocityErrorKmS: number | null;
-  /** The row of whichever Gaia file supplied it: the catalogue table, or the
-   *  magnitude pull for a source only that term admitted. */
-  ref: SourceRowRef<string>;
-}
-
-/** van Leeuwen 2007 (/data/papers/index.md#vanleeuwen2007) reduction row from
- *  `data/hipparcos/hip2_van_leeuwen.tsv`. ra/dec are at the Hipparcos epoch
- *  J1991.25 (ESA 1997, /data/papers/index.md#esa1997). */
-export interface Hip2AstrometryRow {
-  raDeg: number;
-  decDeg: number;
-  plxMas: number | null;
-  plxErrorMas: number | null;
-  pmRaMasyr: number | null;
-  pmDeMasyr: number | null;
-  ref: SourceRowRef<number>;
-}
 
 /** The reference datasets this cascade routes between. It is not their only
  *  reader — `gaiaAstrometry` also carries the photometry the V and ci cascades
@@ -423,119 +380,4 @@ export function resolveDirection(
   }
 
   return { via: 'none', refusals };
-}
-
-// ---- TSV parsers ----------------------------------------------------------
-
-const ASTROMETRY_COLUMNS = [
-  'source_id', 'ra', 'dec', 'parallax', 'parallax_error', 'pmra', 'pmdec',
-  'ruwe', 'ipd_frac_multi_peak', 'phot_g_mean_mag', 'phot_bp_mean_mag',
-  'phot_rp_mean_mag', 'radial_velocity', 'radial_velocity_error',
-] as const;
-
-type AstrometryRow = TableRow<(typeof ASTROMETRY_COLUMNS)[number]>;
-
-/** source_id stays a string — Gaia IDs exceed Number.MAX_SAFE_INTEGER, so a
- *  numeric parse would corrupt the key. */
-function foldAstrometryRow(
-  row: AstrometryRow,
-  out: Map<string, GaiaAstrometryCatalogRow>,
-  from: RowKeyed<string>,
-  keep?: ReadonlySet<string>,
-): void {
-  const sourceId = row.sourceId('source_id');
-  if (sourceId === null) return;
-  if (keep && !keep.has(sourceId)) return;
-  const raDeg = row.float('ra');
-  const decDeg = row.float('dec');
-  if (raDeg === null || decDeg === null) return;
-  out.set(sourceId, {
-    raDeg,
-    decDeg,
-    parallaxMas: row.float('parallax'),
-    parallaxErrorMas: row.float('parallax_error'),
-    pmraMasyr: row.float('pmra'),
-    pmdecMasyr: row.float('pmdec'),
-    ruwe: row.float('ruwe'),
-    ipdFracMultiPeak: row.float('ipd_frac_multi_peak'),
-    gMag: row.float('phot_g_mean_mag'),
-    bpMag: row.float('phot_bp_mean_mag'),
-    rpMag: row.float('phot_rp_mean_mag'),
-    radialVelocityKmS: row.float('radial_velocity'),
-    radialVelocityErrorKmS: row.float('radial_velocity_error'),
-    ref: sourceRowRef(from, sourceId),
-  });
-}
-
-/** Line-fed, so a streaming read over the magnitude pull folds rows exactly
- *  as the whole-text parse does. `keep` filters to a subset without holding
- *  the table. */
-export function gaiaAstrometryAccumulator(
-  from: Declared & RowKeyed<string>,
-  keep?: ReadonlySet<string>,
-): {
-  line: (raw: string) => void;
-  result: () => Map<string, GaiaAstrometryCatalogRow>;
-} {
-  const out = new Map<string, GaiaAstrometryCatalogRow>();
-  const spec = { ...from, columns: ASTROMETRY_COLUMNS };
-  return {
-    line: tableLineReader(spec, (row) => foldAstrometryRow(row, out, from, keep)),
-    result: () => out,
-  };
-}
-
-export function parseGaiaAstrometryCatalogTsv(
-  text: string,
-  from: Declared & RowKeyed<string>,
-): Map<string, GaiaAstrometryCatalogRow> {
-  const out = new Map<string, GaiaAstrometryCatalogRow>();
-  for (const row of readTable({ ...from, columns: ASTROMETRY_COLUMNS }, text)) foldAstrometryRow(row, out, from);
-  return out;
-}
-
-const HIP2_COLUMNS = ['hip', 'ra_icrs', 'de_icrs', 'plx', 'e_plx', 'pm_ra', 'pm_de'] as const;
-
-/** `hips` is every HIP the table publishes, positioned or not — what the
- *  primaries audit attests a cell against. */
-export interface Hip2Table {
-  astrometry: Map<number, Hip2AstrometryRow>;
-  hips: Set<number>;
-}
-
-export function parseHip2Tsv(text: string, from: Declared & RowKeyed<number>): Hip2Table {
-  const out = new Map<number, Hip2AstrometryRow>();
-  const hips = new Set<number>();
-  for (const row of readTable({ ...from, columns: HIP2_COLUMNS }, text)) {
-    const hip = row.int('hip');
-    if (hip !== null) hips.add(hip);
-    if (hip === null || hip <= 0) continue;
-    const raDeg = row.float('ra_icrs');
-    const decDeg = row.float('de_icrs');
-    if (raDeg === null || decDeg === null) continue;
-    out.set(hip, {
-      raDeg,
-      decDeg,
-      plxMas: row.float('plx'),
-      plxErrorMas: row.float('e_plx'),
-      pmRaMasyr: row.float('pm_ra'),
-      pmDeMasyr: row.float('pm_de'),
-      ref: sourceRowRef(from, hip),
-    });
-  }
-  return { astrometry: out, hips };
-}
-
-const GAIA_NSS_COLUMNS = ['source_id'] as const;
-
-/** Only the first column is read — membership is the only signal the cascade needs. */
-export function parseNssIndex(
-  text: string, from: Declared & RowKeyed<string>,
-): Map<string, SourceRowRef<string>> {
-  const out = new Map<string, SourceRowRef<string>>();
-  for (const row of readTable({ ...from, columns: GAIA_NSS_COLUMNS }, text)) {
-    const sourceId = row.sourceId('source_id');
-    if (sourceId !== null) out.set(sourceId, sourceRowRef(from, sourceId));
-  }
-  return out;
 }

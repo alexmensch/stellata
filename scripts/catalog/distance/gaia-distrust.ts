@@ -2,7 +2,7 @@
 // condition, and the bibcode naming Gaia's own reduction returning through a
 // second-order index. Both terms of the space-motion velocity share them.
 
-import type { GaiaAstrometryCatalogRow } from './direction-cascade';
+import type { GaiaAstrometryCatalogRow } from '../sources/gaia-astrometry-source';
 
 /** Whether the row carries the full five-parameter solution. A 2p row is
  *  position-only — Gaia fitted neither parallax nor PM, which on a close pair is

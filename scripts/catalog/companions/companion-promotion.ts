@@ -40,7 +40,7 @@ import { ARCSEC_TO_RAD } from '../../../src/astro-core/astronomy-constants';
 import { equatorialTangentBasisAt } from '../../../src/astro-core/equatorial-basis';
 import type { ConstellationAssignment } from '../parse/constellations/constellations';
 import type { Star } from '../parse/stars-parse';
-import type { GaiaAstrometryCatalogRow } from '../distance/direction-cascade';
+import type { GaiaAstrometryCatalogRow } from '../sources/gaia-astrometry-source';
 import { isCoherenceAnchorGrade } from '../multiplicity/anchor-grade-pure';
 import {
   parseStage6Offset, rebasedAnchorOffset, tangentOffset, type Stage6Offset,

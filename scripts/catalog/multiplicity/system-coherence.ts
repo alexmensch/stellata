@@ -3,10 +3,8 @@
  *  /scripts/catalog/multiplicity/README.md#system-distance-coherence. */
 
 import type { Star } from '../parse/stars-parse';
-import type {
-  GaiaAstrometryCatalogRow,
-  Hip2AstrometryRow,
-} from '../distance/direction-cascade';
+import type { Hip2AstrometryRow } from '../sources/hip2-source';
+import type { GaiaAstrometryCatalogRow } from '../sources/gaia-astrometry-source';
 import type { MultiplesTsvRow } from '../companions/companion-promotion';
 import { wdsRootOf } from '../../binaries/component-tokens-pure';
 import type { BailerJonesIndex } from '../distance/refinement/distance-overrides-pure';

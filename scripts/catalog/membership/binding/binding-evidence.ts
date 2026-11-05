@@ -2,8 +2,8 @@
 // cascade's three printed tiers, SIMBAD's WDS component cross-IDs.
 // See ../../classic-ids/README.md#the-gates-evidence-has-to-be-pulled.
 
-import type { GaiaAstrometryCatalogRow } from '../../distance/direction-cascade';
-import { GAIA_ASTROMETRY } from '../../distance/gaia-astrometry-source';
+import type { GaiaAstrometryCatalogRow } from '../../sources/gaia-astrometry-source';
+import { GAIA_ASTROMETRY } from '../../sources/gaia-astrometry-source';
 import { HIP_PHOTOMETRY } from '../../photometry/hip-photometry-source';
 import type { PrintedVLookups } from '../../photometry/v-magnitude-pure';
 import { bindingEvidence, type BindingEvidence } from './binding-gate-pure';

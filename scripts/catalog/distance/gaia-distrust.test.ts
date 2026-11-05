@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 
-import { gaiaAstrometryRow } from './astrometry-fixture';
+import { gaiaAstrometryRow } from '../sources/gaia-astrometry-fixture';
 import {
   gaiaHas5pSolution,
   gaiaRowIs2p,

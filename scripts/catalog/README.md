@@ -62,6 +62,9 @@ layout, its codec, the chunk plan and the search-index wire entry — is
   (`pnpm run build:classic-ids` → `data/classic-ids/`) and the per-identifier
   label merge `build:membership` runs and writes the queue for. The record
   build takes only the designation-constellation cascade, over `readStars`.
+- `sources/` — the Gaia DR3 astrometry, HIP2 and Gaia NSS tables: each row
+  schema with its parse and declaration, imported by every cascade that reads
+  those rows.
 - `simbad/` — the readers for the two per-source SIMBAD pulls the build joins
   on, and the identifier rule the TYC → HD witness settles: which of a close
   pair's two components a record's cells name.

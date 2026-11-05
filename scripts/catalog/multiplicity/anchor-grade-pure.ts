@@ -1,6 +1,6 @@
 /** The anchor-grade bar. See README.md#system-distance-coherence. */
 
-import type { GaiaAstrometryCatalogRow } from '../distance/direction-cascade';
+import type { GaiaAstrometryCatalogRow } from '../sources/gaia-astrometry-source';
 import { GAIA_RUWE_UNRELIABLE_THRESHOLD } from '../distance/direction-cascade';
 
 /** Gaia saturates brighter than G ≈ 3; a brighter source's 5p parallax
