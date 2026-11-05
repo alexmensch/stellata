@@ -166,10 +166,14 @@ same thing — single-use helpers stay with their consumer.
   re-hashed from `commit`'s copy (code by identity; LFS content read from the
   local object its pointer names, never fetched, so no network call and no
   `GIT_LFS_SKIP_SMUDGE` pointer read as content), `unknown` where git holds
-  no copy — a git-ignored input, or LFS content not stored locally. Kept out of `git-provenance.ts` so the
-  perf instruments reading that do not load the TypeScript compiler. The
-  lineage baseline verdict reads it
-  ([The header and the refusal](../catalog/lineage/baseline/README.md#the-header-and-the-refusal)).
+  no copy — a git-ignored input, or LFS content not stored locally;
+  `onDiskHashes(paths, hashed)`, a map over `paths` taking what it is handed
+  and hashing the rest from disk; and `deletedSiblingsSince(commit, inputs)`,
+  the files deleted since `commit` that sat beside a code input — the
+  siblings a build at `commit` read (`closureWithSiblings`'s rule). Kept out
+  of `git-provenance.ts` so the perf instruments reading that do not load the
+  TypeScript compiler. The lineage baseline verdict reads it
+  ([The verdict](../catalog/lineage/baseline/README.md#the-verdict--one-map-comparison)).
 - `source-trees.ts` — `TREE_ROOTS` and `treeOf`, which tree a repo path
   belongs to, and `BROWSER_TREES`: the one list both import-boundary tests
   (`/tests/README.md#pipeline-viewer-boundary`) and the step table's

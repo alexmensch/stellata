@@ -1,16 +1,15 @@
 // A stage's lineage header — what its files were built from — and whether a baseline may be diffed against. See README.md.
 
 import type { FileHashes } from '../../../util/build-stamp';
+import type { HashesAt } from '../../../util/input-hashes-at';
 
 export interface StageHeader {
   readonly stage: string;
   /** package.json's version: the build version the README keeps off every row. */
   readonly version: string;
   readonly commit: string;
-  /** Uncommitted edits: `commit` then does not say what the files were built from. */
-  readonly dirty: boolean;
-  /** sha1 over the stage's input-file hashes. */
-  readonly inputHash: string;
+  /** What the stage read: the runner's pre-run input map, path → hash. */
+  readonly inputs: FileHashes;
   /** Each stage file's name → sha1 of its bytes as written. */
   readonly files: Readonly<Record<string, string>>;
 }
@@ -22,18 +21,18 @@ export function headerText(header: StageHeader): string {
   return `${JSON.stringify(header, null, 2)}\n`;
 }
 
+const isHashMap = (value: unknown, allowNull: boolean): boolean =>
+  typeof value === 'object' && value !== null && !Array.isArray(value)
+  && Object.values(value).every((hash) => (typeof hash === 'string' && hash !== '') || (allowNull && hash === null));
+
 export function parseHeader(text: string, file: string): StageHeader {
   const h = JSON.parse(text) as Partial<StageHeader>;
-  const strings = ['stage', 'version', 'commit', 'inputHash'] as const;
+  const strings = ['stage', 'version', 'commit'] as const;
   for (const field of strings) {
     if (typeof h[field] !== 'string' || h[field] === '') throw new Error(`${file}: header has no ${field}`);
   }
-  if (typeof h.dirty !== 'boolean') throw new Error(`${file}: header has no dirty flag`);
-  const files: unknown = h.files;
-  if (typeof files !== 'object' || files === null || Array.isArray(files)
-    || Object.values(files).some((hash) => typeof hash !== 'string' || hash === '')) {
-    throw new Error(`${file}: header has no file hashes`);
-  }
+  if (!isHashMap(h.inputs, true)) throw new Error(`${file}: header has no input map`);
+  if (!isHashMap(h.files, false)) throw new Error(`${file}: header has no file hashes`);
   return h as StageHeader;
 }
 
@@ -54,8 +53,11 @@ export type BaselineSource =
   | { readonly kind: 'against'; readonly dir: string }
   | { readonly kind: 'absent' };
 
+/** `matched`: its input map is the base's. `accepted`: --any-baseline. */
+export type DiffWhy = 'matched' | 'accepted' | 'against';
+
 export type BaselineVerdict =
-  | { readonly kind: 'diff'; readonly why: MergeBaseMatch | 'main-build' | 'accepted' | 'against' }
+  | { readonly kind: 'diff'; readonly why: DiffWhy }
   | { readonly kind: 'none' }
   | { readonly kind: 'refused'; readonly message: string };
 
@@ -69,125 +71,129 @@ export function mismatchedFiles(read: ReadHeader): string[] {
   return Object.keys(read.onDisk).filter((name) => read.onDisk[name] !== read.header.files[name]);
 }
 
-/** The stage's input hash over its input files as the merge-base holds them. */
-export type InputHashAt =
-  | { readonly kind: 'hashed'; readonly hash: string }
-  | { readonly kind: 'unknown'; readonly reason: string };
+/** The inputs as `commit` holds them, over `paths`. */
+export type InputsAt = (commit: string, paths: readonly string[]) => HashesAt;
 
-export interface MergeBase {
-  readonly commit: string;
-  /** Evaluated only for a clean, intact header from another commit. */
-  readonly inputHash: () => InputHashAt;
+/** What a header's input map is compared with: see README.md#the-verdict--one-map-comparison. */
+export type Base =
+  | { readonly kind: 'fixed'; readonly commit: string; readonly paths: readonly string[] }
+  | { readonly kind: 'recorded'; readonly inHistory: (commit: string) => boolean };
+
+export interface BaselineContext {
+  readonly base: Base;
+  readonly inputsAt: InputsAt;
 }
 
-/** `main`: the main branch, at its merge-base with origin/main. A branch with no commits of its own is `branch`. */
-export type Checkout =
-  | { readonly kind: 'branch' }
-  | { readonly kind: 'main'; readonly inHistory: (commit: string) => boolean };
-
-export interface CheckoutBase extends MergeBase {
-  readonly checkout: Checkout;
+/** `recorded` exactly when on the `main` branch with HEAD at its merge-base with origin/main. */
+export function baseAt(
+  head: { readonly onMainBranch: boolean; readonly commit: string }, mergeBase: string,
+  inHistory: (commit: string) => boolean, branchPaths: () => readonly string[],
+): Base {
+  return head.onMainBranch && head.commit === mergeBase
+    ? { kind: 'recorded', inHistory }
+    : { kind: 'fixed', commit: mergeBase, paths: branchPaths() };
 }
 
-export function checkoutAt(
-  head: { readonly onMainBranch: boolean; readonly commit: string }, mergeBaseCommit: string,
-  inHistory: (commit: string) => boolean,
-): Checkout {
-  return head.onMainBranch && head.commit === mergeBaseCommit ? { kind: 'main', inHistory } : { kind: 'branch' };
+type Comparison =
+  | { readonly kind: 'match' }
+  | { readonly kind: 'files'; readonly mismatched: readonly string[] }
+  | { readonly kind: 'no-merge-base' }
+  | { readonly kind: 'outside-history' }
+  | { readonly kind: 'unknown'; readonly base: string; readonly reason: string }
+  | { readonly kind: 'differs'; readonly base: string; readonly paths: readonly string[] };
+
+/** An input a header does not name was not read, which matches one the commit does not hold. */
+export function differingInputs(recorded: FileHashes, at: FileHashes, paths: readonly string[]): string[] {
+  return paths.filter((path) => (recorded[path] ?? null) !== (at[path] ?? null));
 }
 
-/** `merge-base`: built at it. `merge-base-inputs`: built at another commit from the inputs it holds. */
-export type MergeBaseMatch = 'merge-base' | 'merge-base-inputs';
-
-/** Built over a clean tree and still beside the files it recorded: its commit and input hash say what it is. */
-function intact(read: HeaderRead): read is ReadHeader {
-  return read.kind === 'read' && !read.header.dirty && mismatchedFiles(read).length === 0;
+function compare(read: ReadHeader, context: BaselineContext | null): Comparison {
+  const mismatched = mismatchedFiles(read);
+  if (mismatched.length > 0) return { kind: 'files', mismatched };
+  if (context === null) return { kind: 'no-merge-base' };
+  const { header } = read;
+  const { base } = context;
+  if (base.kind === 'recorded' && !base.inHistory(header.commit)) return { kind: 'outside-history' };
+  const commit = base.kind === 'fixed' ? base.commit : header.commit;
+  const paths = [...new Set([...Object.keys(header.inputs), ...(base.kind === 'fixed' ? base.paths : [])])].sort();
+  const at = context.inputsAt(commit, paths);
+  const named = base.kind === 'fixed' ? `the merge-base ${commit}` : `its commit ${commit}`;
+  if (at.kind === 'unknown') return { kind: 'unknown', base: named, reason: at.reason };
+  const differing = differingInputs(header.inputs, at.hashes, paths);
+  return differing.length === 0 ? { kind: 'match' } : { kind: 'differs', base: named, paths: differing };
 }
 
-/** A header whose verdict turns on the merge-base's input hash. */
-export function comparesInputs(read: HeaderRead, mergeBaseCommit: string): read is ReadHeader {
-  return intact(read) && read.header.commit !== mergeBaseCommit;
-}
+const matches = (read: HeaderRead, context: BaselineContext | null): read is ReadHeader =>
+  read.kind === 'read' && compare(read, context).kind === 'match';
 
-export function mergeBaseMatch(read: HeaderRead, mergeBase: MergeBase | null): MergeBaseMatch | null {
-  if (mergeBase === null || !intact(read)) return null;
-  if (!comparesInputs(read, mergeBase.commit)) return 'merge-base';
-  const at = mergeBase.inputHash();
-  return at.kind === 'hashed' && at.hash === read.header.inputHash ? 'merge-base-inputs' : null;
-}
-
-/** The file hashes of the first header that stands for the merge-base: what its files are at it. */
+/** The file hashes of the first header whose inputs are the base's: what its files are there. */
 export function acceptedFiles(
-  headers: readonly HeaderRead[], mergeBase: MergeBase,
+  headers: readonly HeaderRead[], context: BaselineContext,
 ): Readonly<Record<string, string>> | null {
-  const accepted = headers.find((read): read is ReadHeader => mergeBaseMatch(read, mergeBase) !== null);
-  return accepted === undefined ? null : accepted.header.files;
+  return headers.find((read): read is ReadHeader => matches(read, context))?.header.files ?? null;
 }
 
-export interface BaselinePlan {
-  readonly verdict: BaselineVerdict;
-  /** Which directory the diff reads, when it runs. */
-  readonly from: 'previous' | 'current' | 'against' | null;
-  readonly rotate: boolean;
-}
-
-/** On main every verdict is this one: the merge-base's input hash is never asked. */
-function mainBuild(read: HeaderRead, inHistory: (commit: string) => boolean): 'main-build' | null {
-  return intact(read) && inHistory(read.header.commit) ? 'main-build' : null;
-}
-
-export function planBaseline(
-  previous: HeaderRead, source: BaselineSource, mergeBase: CheckoutBase | null, acceptAny: boolean,
-): BaselinePlan {
-  const pinned = mergeBase?.checkout.kind === 'main' ? null : mergeBaseMatch(previous, mergeBase);
-  if (source.kind === 'against') {
-    return { verdict: { kind: 'diff', why: 'against' }, from: 'against', rotate: pinned === null };
+export type BaselinePlan =
+  | {
+    readonly kind: 'diff';
+    readonly why: DiffWhy;
+    /** Which directory the diff reads. */
+    readonly from: 'previous' | 'current' | 'against';
+    readonly rotate: boolean;
   }
-  if (pinned !== null) return { verdict: { kind: 'diff', why: pinned }, from: 'previous', rotate: false };
-  const verdict = judgeBaseline(source, mergeBase, acceptAny);
-  return { verdict, from: verdict.kind === 'diff' ? 'current' : null, rotate: true };
+  | { readonly kind: 'none'; readonly rotate: true }
+  | { readonly kind: 'refused'; readonly message: string; readonly rotate: true };
+
+/** On main nothing is pinned: every build rotates, so each landing diffs against the one before it. */
+export function planBaseline(
+  previous: HeaderRead, source: BaselineSource, context: BaselineContext | null, acceptAny: boolean,
+): BaselinePlan {
+  const pinned = context?.base.kind === 'fixed' && matches(previous, context);
+  if (source.kind === 'against') return { kind: 'diff', why: 'against', from: 'against', rotate: !pinned };
+  if (pinned) return { kind: 'diff', why: 'matched', from: 'previous', rotate: false };
+  const verdict = judgeBaseline(source, context, acceptAny);
+  return verdict.kind === 'diff' ? { ...verdict, from: 'current', rotate: true } : { ...verdict, rotate: true };
 }
 
 export function judgeBaseline(
-  source: BaselineSource, mergeBase: CheckoutBase | null, acceptAny: boolean,
+  source: BaselineSource, context: BaselineContext | null, acceptAny: boolean,
 ): BaselineVerdict {
   if (source.kind === 'absent') return { kind: 'none' };
   if (source.kind === 'against') return { kind: 'diff', why: 'against' };
   const read = source.header;
-  const match = mergeBase?.checkout.kind === 'main'
-    ? mainBuild(read, mergeBase.checkout.inHistory)
-    : mergeBaseMatch(read, mergeBase);
-  if (match !== null) return { kind: 'diff', why: match };
+  if (read.kind !== 'read') {
+    if (acceptAny) return { kind: 'diff', why: 'accepted' };
+    return refused(read.kind === 'missing'
+      ? 'a baseline with no header'
+      : `a baseline whose header does not read (${read.reason})`);
+  }
+  const comparison = compare(read, context);
+  if (comparison.kind === 'match') return { kind: 'diff', why: 'matched' };
   if (acceptAny) return { kind: 'diff', why: 'accepted' };
-  const built = read.kind === 'missing'
-    ? 'a baseline with no header'
-    : read.kind === 'unreadable'
-      ? `a baseline whose header does not read (${read.reason})`
-      : builtAt(read);
-  const base = mergeBase === null
-    ? 'no merge-base with origin/main'
-    : mergeBase.checkout.kind === 'main'
-      ? `a clean build on main at or before ${mergeBase.commit}`
-      : `the merge-base ${mergeBase.commit}${inputsClause(read, mergeBase)}`;
-  return {
-    kind: 'refused',
-    message: `lineage diff refused: ${built}, not ${base}. Build the stage at the merge-base for a `
-      + `matching baseline, or re-run with ${ACCEPT_ANY_BASELINE_FLAG} or ${AGAINST_FLAG} <dir>.`,
-  };
+  return refused(refusal(read.header.commit, comparison));
 }
 
-function builtAt(read: ReadHeader): string {
-  const built = `built at ${read.header.commit}${read.header.dirty ? ' with uncommitted edits' : ''}`;
-  const mismatched = mismatchedFiles(read);
-  if (mismatched.length === 0) return `a baseline ${built}`;
-  return `a baseline whose ${mismatched.join(', ')} ${mismatched.length === 1 ? 'is not the file' : 'are not the files'} `
-    + `its header (${built}) recorded`;
-}
+const refused = (why: string): BaselineVerdict => ({
+  kind: 'refused',
+  message: `lineage diff refused: ${why}. Build the stage at the merge-base for a matching baseline, or re-run `
+    + `with ${ACCEPT_ANY_BASELINE_FLAG} or ${AGAINST_FLAG} <dir>.`,
+});
 
-function inputsClause(read: HeaderRead, mergeBase: MergeBase): string {
-  if (!comparesInputs(read, mergeBase.commit)) return '';
-  const at = mergeBase.inputHash();
-  return at.kind === 'unknown'
-    ? ` (its inputs could not be compared with the merge-base's: ${at.reason})`
-    : ' or a build from the inputs it holds';
+function refusal(commit: string, comparison: Exclude<Comparison, { kind: 'match' }>): string {
+  const built = `a baseline built at ${commit}`;
+  switch (comparison.kind) {
+    case 'files': {
+      const { mismatched } = comparison;
+      return `a baseline whose ${mismatched.join(', ')} ${mismatched.length === 1 ? 'is not the file' : 'are not the files'} `
+        + `its header (built at ${commit}) recorded`;
+    }
+    case 'no-merge-base':
+      return `${built}, and no merge-base with origin/main`;
+    case 'outside-history':
+      return `${built}, not a build from HEAD's history`;
+    case 'unknown':
+      return `${built}, whose inputs could not be compared with ${comparison.base}'s: ${comparison.reason}`;
+    case 'differs':
+      return `${built}, whose inputs differ from ${comparison.base}'s: ${comparison.paths.join(', ')}`;
+  }
 }

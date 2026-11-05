@@ -5,11 +5,11 @@ import { join, resolve } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { declareOutputs, emitArtifacts, EmissionRefused } from '../../util/emit-artifacts';
-import { judgeBaseline, type CheckoutBase, type StageProvenance } from './baseline/lineage-header-pure';
+import { judgeBaseline, type BaselineContext, type StageProvenance } from './baseline/lineage-header-pure';
 import { baselineMembers, readLineage, readStageHeader, stageEmission } from './lineage-io';
 import { lineageInvariant, NO_EXCEPTIONS } from './lineage-invariant-pure';
 import { paramsText, stageLineageLine, stageLineageText } from './lineage-row-pure';
-import { mergeBaseAt, stageLineage } from './stage-lineage';
+import { inputsAtFrom, stageLineage } from './stage-lineage';
 import { LIVE, stageCodes } from './reason-codes-pure';
 import {
   lineageLayout, stageFamilies, stageFile, stageOutputFiles, type LineageLayout,
@@ -22,11 +22,11 @@ let dir: string;
 let layout: LineageLayout;
 
 const header = (commit: string): StageProvenance => ({
-  stage: 'demo', version: '1.0.0', commit, dirty: false, inputHash: 'h',
+  stage: 'demo', version: '1.0.0', commit, inputs: { 'demo.in': 'h' },
 });
-const BRANCH = { kind: 'branch' } as const;
-const BASE: CheckoutBase = {
-  commit: 'base', inputHash: () => ({ kind: 'hashed', hash: 'other inputs' }), checkout: BRANCH,
+const BASE: BaselineContext = {
+  base: { kind: 'fixed', commit: 'base', paths: [] },
+  inputsAt: (_commit, paths) => ({ kind: 'hashed', hashes: Object.fromEntries(paths.map((p) => [p, 'h'])) }),
 };
 
 function text(source: string): Uint8Array {
@@ -104,7 +104,7 @@ describe('stage rotation', () => {
     const theirs = readFileSync(stageFile(layout.current, 'demo'));
     run('base');
     expect(judgeBaseline({ kind: 'checkout', header: readStageHeader(layout.current, SPEC) }, BASE, false))
-      .toEqual({ kind: 'diff', why: 'merge-base' });
+      .toEqual({ kind: 'diff', why: 'matched' });
     writeFileSync(stageFile(layout.current, 'demo'), theirs);
     const verdict = judgeBaseline({ kind: 'checkout', header: readStageHeader(layout.current, SPEC) }, BASE, false);
     expect(verdict.kind === 'refused' && verdict.message)
@@ -159,16 +159,18 @@ describe('stage rotation', () => {
   it('a git failure while hashing the merge-base\'s inputs refuses the baseline, once, and fails nothing', () => {
     run('old');
     let calls = 0;
-    const failing = {
-      ...mergeBaseAt('base', () => {
+    const failing: BaselineContext = {
+      base: BASE.base,
+      inputsAt: inputsAtFrom({}, () => {
         calls += 1;
         throw new Error('git exited 128');
       }),
-      checkout: BRANCH,
     };
     const source = { kind: 'checkout' as const, header: readStageHeader(layout.current, SPEC) };
-    const verdict = judgeBaseline(source, failing, false);
-    expect(verdict.kind === 'refused' && verdict.message).toMatch(/hashing them failed: git exited 128/);
+    for (let i = 0; i < 2; i++) {
+      const verdict = judgeBaseline(source, failing, false);
+      expect(verdict.kind === 'refused' && verdict.message).toMatch(/hashing them failed: git exited 128/);
+    }
     expect(calls).toBe(1);
   });
 });

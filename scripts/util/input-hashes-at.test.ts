@@ -8,7 +8,7 @@ import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 
 import { inputHashes } from './build-stamp';
 import { tsIdentity } from './code-identity';
-import { inputHashesAt } from './input-hashes-at';
+import { deletedSiblingsSince, inputHashesAt, onDiskHashes } from './input-hashes-at';
 import { hashBytes } from './stamp-hash';
 
 describe('inputHashesAt', () => {
@@ -88,5 +88,17 @@ describe('inputHashesAt', () => {
       .toEqual({ kind: 'hashed', hashes: { 'stored.bin': hashBytes('payload') } });
     expect(inputHashesAt(commit, hashesOf(['missing.bin']), root))
       .toEqual({ kind: 'unknown', reason: `missing.bin: its LFS content at ${commit} is not stored locally` });
+  });
+
+  it('onDiskHashes takes each path it is handed and hashes the rest from disk, code by identity, absent as null', () => {
+    expect(onDiskHashes(['kept.tsv', 'data.tsv', 'code.ts', 'nowhere.tsv'], { 'kept.tsv': 'handed' }, root)).toEqual({
+      'kept.tsv': 'handed', 'data.tsv': hashBytes('b\n'), 'code.ts': tsIdentity('export const x = 2;\n'), 'nowhere.tsv': null,
+    });
+  });
+
+  it('deletedSiblingsSince lists a file deleted since the commit beside a code input, and none beside no code input', () => {
+    rmSync(join(root, 'gone.tsv'), { force: true });
+    expect(deletedSiblingsSince(commit, ['code.ts', 'data.tsv'], root)).toEqual(['gone.tsv']);
+    expect(deletedSiblingsSince(commit, ['data.tsv'], root)).toEqual([]);
   });
 });

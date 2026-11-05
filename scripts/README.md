@@ -135,8 +135,8 @@ branch), the stamp mismatches and the step rebuilds. Only stamped outputs
 belong in that list, since a stamp is what tells a copy apart from the
 worktree's own build. The one other kind allowed is a diff baseline
 that no step reads to decide whether to rebuild and that records what it was
-built from — `build/lineage/`, whose header the lineage diff checks against
-the merge-base ([The header and the refusal](catalog/lineage/baseline/README.md#the-header-and-the-refusal)).
+built from — `build/lineage/`, whose header's input map the lineage diff
+checks against the merge-base's ([The verdict](catalog/lineage/baseline/README.md#the-verdict--one-map-comparison)).
 Every listed file is an output of a step `build:seed` runs
 ([Seeding builds](#seeding-builds--buildseed)), so refreshing the main
 checkout's seed is that one command. `worktree-seed.test.ts` holds each
@@ -190,8 +190,9 @@ Nothing is forced — the step that was interrupted has no stamp and reruns,
 every step that finished skips ([Preprocessor idempotency](#preprocessor-idempotency)).
 A TypeScript step's outputs land all or none (`emitArtifacts`), so an
 interrupted run leaves the previous set whole. On a dirty main membership's
-lineage header records the edits and a branch's diff refuses that baseline
-([The header and the refusal](catalog/lineage/baseline/README.md#the-header-and-the-refusal)). The
+lineage header's input map records the edited inputs, and a branch's diff
+refuses that baseline when an edit touched one
+([The verdict](catalog/lineage/baseline/README.md#the-verdict--one-map-comparison)). The
 client is never run. Newest-run-wins covers `build:seed` runs only; a plain
 `pnpm run build` or `pnpm run dev` in the same checkout is never stopped, and
 the runner's per-step locks serialise it with a seed run step by step
