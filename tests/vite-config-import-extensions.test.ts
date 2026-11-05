@@ -13,8 +13,10 @@ const isFile = (p: string) => existsSync(p) && statSync(p).isFile();
 const staticRelativeImports = (src: string) =>
   importSpecifiers(src).filter(({ spec, kind }) => kind !== 'dynamic import' && isRelativeSpecifier(spec));
 
-function extensionlessSpecifiers(src: string): string[] {
-  return staticRelativeImports(src).map(({ spec }) => spec).filter((spec) => extname(spec) === '');
+function unwrittenPaths(fromFile: string, src: string): string[] {
+  return staticRelativeImports(src)
+    .map(({ spec }) => spec)
+    .filter((spec) => !isFile(resolve(dirname(fromFile), spec)));
 }
 
 const loadedSpecifiers = (src: string) =>
@@ -36,7 +38,7 @@ function walkImportGraph(entry: string): { modules: string[]; offenders: string[
     if (seen.has(file)) continue;
     seen.add(file);
     const src = readFileSync(file, 'utf8');
-    for (const spec of extensionlessSpecifiers(src)) offenders.push(`${relative(ROOT, file)}: ${spec}`);
+    for (const spec of unwrittenPaths(file, src)) offenders.push(`${relative(ROOT, file)}: ${spec}`);
     for (const spec of loadedSpecifiers(src)) {
       const target = resolveModule(file, spec);
       if (isWalkable(target)) queue.push(target);
@@ -48,7 +50,7 @@ function walkImportGraph(entry: string): { modules: string[]; offenders: string[
 describe('vite config import extensions', () => {
   const { modules, offenders } = walkImportGraph(CONFIG);
 
-  it('every relative specifier the config reaches carries its file extension', () => {
+  it('every relative specifier the config reaches names its file as written', () => {
     expect(offenders).toEqual([]);
   });
 
@@ -59,17 +61,24 @@ describe('vite config import extensions', () => {
 });
 
 describe('the detector itself', () => {
+  const flagged = (src: string) => unwrittenPaths(CONFIG, src);
+
   it('flags an extensionless relative specifier in every static form, type-only included', () => {
-    expect(extensionlessSpecifiers("import { REPO_ROOT } from '../util/paths';")).toEqual(['../util/paths']);
-    expect(extensionlessSpecifiers("import type { Artifact } from '../tsv/artifact-pure';"))
-      .toEqual(['../tsv/artifact-pure']);
-    expect(extensionlessSpecifiers("export { x } from './x';")).toEqual(['./x']);
-    expect(extensionlessSpecifiers("import './side-effect';")).toEqual(['./side-effect']);
+    expect(flagged("import { PUBLIC_DIR } from './scripts/util/paths';")).toEqual(['./scripts/util/paths']);
+    expect(flagged("import type { Artifact } from './scripts/util/tsv/artifact-pure';"))
+      .toEqual(['./scripts/util/tsv/artifact-pure']);
+    expect(flagged("export { x } from './vite.env';")).toEqual(['./vite.env']);
+    expect(flagged("import './vite.site-dev';")).toEqual(['./vite.site-dev']);
+  });
+
+  it('flags a dotted module name that only looks extensioned', () => {
+    expect(flagged("import type { Figures } from './vite.env';")).toEqual(['./vite.env']);
   });
 
   it('leaves extensioned, package and builtin specifiers alone', () => {
-    expect(extensionlessSpecifiers("import { REPO_ROOT } from '../util/paths.ts';")).toEqual([]);
-    expect(extensionlessSpecifiers("import { defineConfig } from 'vite';")).toEqual([]);
-    expect(extensionlessSpecifiers("import { resolve } from 'node:path';")).toEqual([]);
+    expect(flagged("import { PUBLIC_DIR } from './scripts/util/paths.ts';")).toEqual([]);
+    expect(flagged("import type { Figures } from './vite.env.ts';")).toEqual([]);
+    expect(flagged("import { defineConfig } from 'vite';")).toEqual([]);
+    expect(flagged("import { resolve } from 'node:path';")).toEqual([]);
   });
 });

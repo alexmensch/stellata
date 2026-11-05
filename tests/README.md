@@ -519,8 +519,9 @@ those trees, which the pipeline-viewer boundary already forbids.
 
 `vite-config-import-extensions.test.ts` walks the modules `vite.config.ts`
 loads, following static relative imports, and fails on any relative
-specifier without a file extension: Vite's `configLoader: 'native'` loads
-the config through Node, which resolves no extensionless relative path. A
+specifier that does not name an existing file exactly as written: Vite's
+`configLoader: 'native'` loads the config through Node, which adds no
+extension, so `./vite.env` misses `vite.env.ts` despite its dot. A
 type-only import's specifier is checked, since Vite flags it, but the walk
 does not follow it — Node strips the import, so its target never loads.
 Dynamic imports, and the rest of the repo, are out of scope. The walk is
