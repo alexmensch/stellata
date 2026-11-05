@@ -16,9 +16,9 @@ Plumbing reference: [Gaia TAP](/scripts/refresh/README.md#gaia-tap-synchronous-e
 
 `rl.gaia_sync_client(maxrec)` for `gaiadr3.*` (ESA, ARI Heidelberg fallback),
 `rl.cds_client()` for VizieR-only tables (CDS alone, no fallback),
-`rl.simbad_client()` for SIMBAD (CDS, Harvard CfA fallback). All three retry;
-only the Gaia client also detects overflow and lifts the error body, both
-below. An ad-hoc probe gets them by adding `scripts/refresh` to `sys.path` and
+`rl.simbad_client()` for SIMBAD (CDS, Harvard CfA fallback). All three retry and
+surface the archive's `QUERY_STATUS` message; only the Gaia client also detects
+overflow and fails fast on a parse complaint, both below. An ad-hoc probe gets them by adding `scripts/refresh` to `sys.path` and
 importing `refresh_lib` — cheaper than re-deriving any of it, and a probe that
 works becomes a pull without a rewrite.
 
@@ -149,9 +149,12 @@ On the Gaia sync path `refresh_lib` lifts the VOTable `QUERY_STATUS` message
 into the exception for any non-2xx response, so a Gaia pull names the rejected
 clause — and a complaint naming one fails fast instead of spending the backoff
 schedule on both mirrors. Only the parsed message is read that way: a proxy's
-HTML page saying "not found" must still fail over to the mirror. Outside that
-path, POST directly and print `resp.text`: the status line never names the
-fault, and `raise_for_status()` discards the body that does.
+HTML page saying "not found" must still fail over to the mirror. On CDS and
+SIMBAD, pyvo raises `DALQueryError` carrying the same message, but
+`is_transient_http_error` counts it transient, so it arrives only after every
+backend's retries are spent. Code that bypasses both `refresh_lib` and pyvo
+POSTs directly and prints `resp.text`: the status line never names the fault,
+and `raise_for_status()` discards the body that does.
 
 Empty result, no error, is the other shape. Check the obvious first: a
 magnitude or colour column that is NULL satisfies neither `>` nor `<=`, so a
