@@ -1,6 +1,6 @@
 # Astrometry sources — row schemas and their reads
 
-The three astrometry tables the catalogue build reads, each as one module: the
+The Gaia DR3 astrometry, HIP2 and Gaia NSS tables, each as one module: the
 row type, the parse, and the declared input
 ([Declaring a source](../../util/sources/README.md#declaring-a-source)). The
 cascades that decide what to do with a row live with their topic —
