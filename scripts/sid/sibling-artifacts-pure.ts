@@ -21,6 +21,8 @@ export interface SiblingArtifactSpec<S extends string = string> {
   buildHint: string;
   /** The allocation code a new object of this artifact mints under. */
   mintCode: string;
+  /** The `<source>` its artifact's records are cited under: `<rowId>:<slug>`. */
+  rowId: string;
   /** The build's own allocation stage. */
   lineage: StageLineageSpec<S | `${S}.identity`, S>;
   codes: ObjectOutcomeCodes;
@@ -32,6 +34,7 @@ export const SIBLING_ARTIFACTS = {
     kind: 'cloud',
     buildHint: 'pnpm run build:clouds',
     mintCode: ALLOCATION_CODES.code('mint.cloud'),
+    rowId: 'clouds',
     lineage: CLOUDS_ALLOCATION_LINEAGE,
     codes: objectOutcomeCodes(CLOUDS_ALLOCATION_LINEAGE.stage),
   },
@@ -40,6 +43,7 @@ export const SIBLING_ARTIFACTS = {
     kind: 'galaxy',
     buildHint: 'pnpm run build:local-group',
     mintCode: ALLOCATION_CODES.code('mint.local-group'),
+    rowId: 'local-group',
     lineage: LOCAL_GROUP_ALLOCATION_LINEAGE,
     codes: objectOutcomeCodes(LOCAL_GROUP_ALLOCATION_LINEAGE.stage),
   },
@@ -65,8 +69,10 @@ export interface SiblingItem {
   name?: string;
 }
 
-/** A sibling artifact's records, cited by their slug. */
-export type SiblingArtifact = RowKeyed<{ readonly id: string }>;
+/** A sibling artifact's records, cited by their slug under its spec's `rowId`. */
+export type SiblingArtifact<I extends string = string> = RowKeyed<{ readonly id: string }> & {
+  readonly rowKey: { readonly id: I };
+};
 
 /** The SidObjects one sibling artifact's records allocate as, each founded on its own record. */
 export function siblingArtifactObjects(

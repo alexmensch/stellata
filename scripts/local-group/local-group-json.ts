@@ -6,8 +6,10 @@ import { publicRepoPath } from '../util/paths';
 import type { LocalGroupFile } from '../../src/catalog-format/local-group/local-group-schema';
 import { PUBLIC_FILES } from '../../src/catalog-format/public-artifacts/public-artifacts';
 
-export const LOCAL_GROUP_JSON = defineJsonArtifact<LocalGroupFile, { readonly id: string }>({
+const { rowId, buildHint } = SIBLING_ARTIFACTS['local-group'];
+
+export const LOCAL_GROUP_JSON = defineJsonArtifact<LocalGroupFile, { readonly id: string }, typeof rowId>({
   file: publicRepoPath(PUBLIC_FILES.localGroup),
-  hint: SIBLING_ARTIFACTS['local-group'].buildHint,
-  rowKey: { id: 'local-group', text: (galaxy) => galaxy.id },
+  hint: buildHint,
+  rowKey: { id: rowId, text: (galaxy) => galaxy.id },
 });

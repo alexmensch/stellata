@@ -32,9 +32,9 @@ export interface SiblingAllocation<N extends SiblingPartition> {
   readonly identity: readonly IdentityRow[];
 }
 
-export function allocateSibling<N extends SiblingPartition>(
-  spec: SiblingArtifactSpec & { readonly ns: N },
-  artifact: SiblingArtifact,
+export function allocateSibling<N extends SiblingPartition, I extends string>(
+  spec: SiblingArtifactSpec & { readonly ns: N; readonly rowId: I },
+  artifact: SiblingArtifact<NoInfer<I>>,
   items: readonly SiblingItem[],
 ): SiblingAllocation<N> {
   const registry = loadRegistry();

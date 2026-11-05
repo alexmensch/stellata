@@ -6,8 +6,10 @@ import { publicRepoPath } from '../util/paths';
 import type { CloudsFile } from '../../src/catalog-format/clouds/clouds-schema';
 import { PUBLIC_FILES } from '../../src/catalog-format/public-artifacts/public-artifacts';
 
-export const CLOUDS_JSON = defineJsonArtifact<CloudsFile, { readonly id: string }>({
+const { rowId, buildHint } = SIBLING_ARTIFACTS.clouds;
+
+export const CLOUDS_JSON = defineJsonArtifact<CloudsFile, { readonly id: string }, typeof rowId>({
   file: publicRepoPath(PUBLIC_FILES.clouds),
-  hint: SIBLING_ARTIFACTS.clouds.buildHint,
-  rowKey: { id: 'clouds', text: (cloud) => cloud.id },
+  hint: buildHint,
+  rowKey: { id: rowId, text: (cloud) => cloud.id },
 });

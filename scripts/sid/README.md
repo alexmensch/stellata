@@ -174,11 +174,14 @@ sibling-allocation.ts     allocateSibling: one sibling namespace allocated
                           call. Called by build:local-group and
                           build:clouds.
 sibling-artifacts-pure.ts SIBLING_ARTIFACTS spec (ns / kind /
-                          mint code / lineage stage and its codes
-                          per sibling) + siblingArtifactObjects, each
-                          object founded on its record of the artifact
-                          the caller hands in, so the namespace→kind
-                          mapping is defined once. Each namespace is its
+                          mint code / rowId / lineage stage and its
+                          codes per sibling) + siblingArtifactObjects,
+                          each object founded on its record of the
+                          artifact the caller hands in, so the
+                          namespace→kind mapping is defined once. Each
+                          JSON declaration takes its row-key id from
+                          rowId, and allocateSibling's types refuse an
+                          artifact whose id is another sibling's. Each namespace is its
                           own registry partition: ns is typed by
                           SIBLING_PARTITIONS, and
                           EVERY_SIBLING_PARTITION_CLAIMED fails typecheck

@@ -58,6 +58,16 @@ describe.skipIf(committed.length === 0)('allocateSibling over the committed regi
     expect(allocation.registry![keys.ledger]).toContain('\tlg:probe-new-slug\tgalaxy\t');
   });
 
+  it('refuses, at typecheck, an artifact whose rows another sibling cites', () => {
+    const mismatched = () => allocateSibling(
+      SIBLING_ARTIFACTS.clouds,
+      // @ts-expect-error: local-group.json's rows are not clouds:<slug>
+      LOCAL_GROUP_JSON,
+      [],
+    );
+    expect(typeof mismatched).toBe('function');
+  });
+
   it('fails closed on a vanished slug, naming the bridge remedy', () => {
     expect(() => allocateSibling(spec, LOCAL_GROUP_JSON, committed.slice(1))).toThrow(/lg SID allocation failed[\s\S]*sameas-overrides/);
   });
