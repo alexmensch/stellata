@@ -24,6 +24,7 @@ from scripts.binaries.component_tokens import (  # noqa: E402
 )
 from scripts.util.paths import REPO_ROOT  # noqa: E402
 from scripts.util.snapshot_assert import (  # noqa: E402
+    CountStages,
     assert_or_update_counts,
 )
 
@@ -32,6 +33,7 @@ SRC_MULTIPLES = ROOT / "data" / "binaries" / "multiples.tsv"
 SRC_ROW_INDEX_MAP = ROOT / "build" / "catalog-row-index-map.json"
 OUT_BIN = ROOT / "public" / "binaries.bin"
 EXPECTED_COUNTS = SCRIPT.parent / "build-runtime-binaries-expected.json"
+COUNT_STAGES = CountStages(order=("encode",), of=lambda _key: "encode")
 
 
 # ─── Binary format ──────────────────────────────────────────────────
@@ -680,6 +682,7 @@ def run() -> int:
         stats_to_counts(stats), EXPECTED_COUNTS,
         label="build-runtime-binaries",
         script="build:binaries-runtime",
+        stages=COUNT_STAGES,
     ):
         return 1
     return 0

@@ -109,6 +109,7 @@ from scripts.binaries.stage6_multiples import (  # noqa: E402
     write_multiples_tsv,
 )
 from scripts.binaries.stage7_counts import (  # noqa: E402
+    COUNT_STAGES,
     LABEL,
     SNAPSHOT_SCRIPT,
     assert_or_update_rates,
@@ -640,6 +641,7 @@ def run() -> int:
     )
     counts_match = assert_or_update_counts(
         counts, EXPECTED_COUNTS, label=LABEL, script=SNAPSHOT_SCRIPT,
+        stages=COUNT_STAGES,
     )
     rates = build_binaries_rates(counts)
     rates_match = assert_or_update_rates(rates, EXPECTED_RATES)

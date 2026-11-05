@@ -99,6 +99,11 @@ scripts/binaries/
                                   assert / refresh they share with
                                   build-runtime-binaries.py is
                                   scripts/util/snapshot_assert.py.
+                                  COUNT_STAGES / RATE_STAGES file each key
+                                  under the stage module that counts it
+                                  (ingest, subdivide, resolve, astrometry,
+                                  orbits, optical, multiples); a key with no
+                                  stage fails the refresh.
   mass_estimate.py                Spectral-class-aware mass-ratio q backfill
                                   (Cox 2000
                                   (/data/papers/index.md#cox2000) Sect. 15.2; dwarf
@@ -131,7 +136,10 @@ scripts/binaries/
                                   duplicates across them.
   __init__.py                     Package marker (see above).
   *-expected.json                 Snapshot pins refreshed with
-                                  --update-snapshots: build-binaries
+                                  --update-snapshots, staged by pipeline
+                                  stage (../util/count-stages-pure.ts;
+                                  build-runtime-binaries' one stage is
+                                  `encode`): build-binaries
                                   (per-strategy / per-tier counts),
                                   build-binaries-rates (per-strategy rates —
                                   catches population-mix shifts that don't move

@@ -35,9 +35,11 @@ from .stage6_multiples import (
     SPECT_VIA_VALUES, MultiplesRow,
 )
 from scripts.util.snapshot_assert import (
+    CountStages,
     SnapshotDiff,
     assert_or_update_snapshot,
     compare_snapshot,
+    flatten_stages,
     format_diff,
 )
 
@@ -45,6 +47,59 @@ LABEL = "build-binaries"
 SNAPSHOT_SCRIPT = "build:binaries"
 
 # ─── Stage 7: build-time stats ───────────────────────────────────────
+
+PIPELINE_STAGES: tuple[str, ...] = (
+    "ingest", "subdivide", "resolve", "astrometry", "orbits", "optical", "multiples",
+)
+
+_COUNT_STAGE: dict[str, str] = {
+    "wds_pairs_total": "ingest",
+    "wds_duplicate_pair_rows_dropped": "ingest",
+    "xwalk_hip_mag_rejected": "ingest",
+    "athyg_gaia_mag_rejected": "ingest",
+    "msc_orbits_unmapped": "ingest",
+    "blank_components_rescued": "resolve",
+    "blank_components_deferred": "resolve",
+    "ccdm_sibling_owned_rejected": "resolve",
+    "athyg_match_sibling_claimed_rejected": "resolve",
+    "decomposing_pairs": "resolve",
+    "components_total": "resolve",
+    "msc_pair_mags_filled": "multiples",
+    **{key: "resolve" for key in BINDING_INTEGRITY_COUNT_KEYS},
+}
+
+_COUNT_STAGE_BY_PREFIX: tuple[tuple[str, str], ...] = (
+    ("synthesized_", "subdivide"),
+    ("resolution_", "resolve"),
+    ("astrometry_", "astrometry"),
+    ("orbit_", "orbits"),
+    ("optical_", "optical"),
+    ("multiples_", "multiples"),
+    ("a_via_", "multiples"),
+    ("spect_", "multiples"),
+)
+
+
+def count_stage(key: str) -> str:
+    """The pipeline stage whose module counts ``key``."""
+    if key in _COUNT_STAGE:
+        return _COUNT_STAGE[key]
+    for prefix, stage in _COUNT_STAGE_BY_PREFIX:
+        if key.startswith(prefix):
+            return stage
+    raise KeyError(f"build-binaries count {key} has no stage")
+
+
+COUNT_STAGES = CountStages(order=PIPELINE_STAGES, of=count_stage)
+
+_RATE_STAGE: dict[str, str] = {
+    "gaia_resolve_rate": "resolve",
+    "hip2_fallback_rate": "astrometry",
+    "nss_orbit_rate": "orbits",
+    "optical_rejected_rate": "optical",
+}
+
+RATE_STAGES = CountStages(order=PIPELINE_STAGES, of=lambda key: _RATE_STAGE[key])
 
 
 def build_binaries_counts(
@@ -295,7 +350,7 @@ def _rates_snapshot_payload(
     resets a hand-edited tolerance."""
     existing: dict[str, dict[str, float]] = {}
     if expected_path.exists():
-        existing = json.loads(expected_path.read_text())
+        existing = flatten_stages(json.loads(expected_path.read_text()))
     return {
         k: {
             "value": round(v, 6),
@@ -315,6 +370,7 @@ def assert_or_update_rates(
         actual, expected_path,
         label=LABEL,
         script=SNAPSHOT_SCRIPT,
+        stages=RATE_STAGES,
         build_payload=_rates_snapshot_payload,
         compare=compare_build_rates,
         render=format_rate_diff,

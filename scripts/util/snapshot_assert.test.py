@@ -16,15 +16,42 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from scripts.util.snapshot_assert import (  # noqa: E402
     PIPELINE_STEP_ENV_VAR,
     UPDATE_SNAPSHOTS_ENV_VAR,
+    CountStages,
     assert_or_update_counts,
     compare_build_counts,
+    flatten_stages,
     format_count_diff,
+    nest_by_stage,
     refresh_command,
 )
 
 LABEL = "test"
 REFRESH = "UPDATE_SNAPSHOTS=1 pnpm run build:test"
-KW = {"label": LABEL, "script": "build:test"}
+STAGES = CountStages(order=("read", "filter"), of=lambda key: "read" if key == "x" else "filter")
+KW = {"label": LABEL, "script": "build:test", "stages": STAGES}
+
+
+class StagedSnapshotTests(unittest.TestCase):
+    def test_nests_each_key_under_its_stage_in_stage_order(self) -> None:
+        staged = nest_by_stage({"y": 2, "x": 1}, STAGES)
+        self.assertEqual(list(staged["stages"]), ["read", "filter"])
+        self.assertEqual(staged, {"stages": {"read": {"x": 1}, "filter": {"y": 2}}})
+
+    def test_leaves_out_a_stage_no_key_reaches(self) -> None:
+        self.assertEqual(nest_by_stage({"x": 1}, STAGES), {"stages": {"read": {"x": 1}}})
+
+    def test_refuses_a_stage_outside_the_order(self) -> None:
+        with self.assertRaisesRegex(ValueError, "count x is filed under elsewhere"):
+            nest_by_stage({"x": 1}, CountStages(order=("read",), of=lambda _key: "elsewhere"))
+
+    def test_flattens_back_and_leaves_a_flat_payload_alone(self) -> None:
+        flat = {"x": 1, "y": {"value": 0.5, "tolerance": 0.2}}
+        self.assertEqual(flatten_stages(nest_by_stage(flat, STAGES)), flat)
+        self.assertIs(flatten_stages(flat), flat)
+
+    def test_refuses_a_key_two_stages_share(self) -> None:
+        with self.assertRaisesRegex(ValueError, "count x is under two stages, read and filter"):
+            flatten_stages({"stages": {"read": {"x": 1}, "filter": {"x": 2}}})
 
 
 class CompareBuildCountsTests(unittest.TestCase):
@@ -93,12 +120,19 @@ class AssertOrUpdateCountsTests(unittest.TestCase):
                 _os.environ.pop(UPDATE_SNAPSHOTS_ENV_VAR, None)
             self.assertTrue(ok)
             written = _json.loads(p.read_text())
-        self.assertEqual(written, {"x": 1, "y": 2})
+        self.assertEqual(written, {"stages": {"read": {"x": 1}, "filter": {"y": 2}}})
 
     def test_compares_against_existing_snapshot_match(self) -> None:
         with tempfile.TemporaryDirectory() as td:
             p = Path(td) / "snapshot.json"
             p.write_text('{"x": 1, "y": 2}\n')
+            ok = assert_or_update_counts({"x": 1, "y": 2}, p, **KW)
+        self.assertTrue(ok)
+
+    def test_compares_a_staged_snapshot_by_its_counts(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            p = Path(td) / "snapshot.json"
+            p.write_text('{"stages": {"read": {"x": 1}, "filter": {"y": 2}}}\n')
             ok = assert_or_update_counts({"x": 1, "y": 2}, p, **KW)
         self.assertTrue(ok)
 
@@ -127,7 +161,7 @@ class AssertOrUpdateCountsTests(unittest.TestCase):
                 _os.environ.pop(UPDATE_SNAPSHOTS_ENV_VAR, None)
             self.assertTrue(ok)
             written = _json.loads(p.read_text())
-        self.assertEqual(written, {"x": 2})
+        self.assertEqual(written, {"stages": {"read": {"x": 2}}})
 
 
 if __name__ == "__main__":

@@ -23,7 +23,9 @@ from scripts.binaries.stage5_optical import (  # noqa: E402
     OpticalClassification,
 )
 from scripts.binaries.stage7_counts import (  # noqa: E402
+    COUNT_STAGES,
     DEFAULT_RATE_TOLERANCE,
+    RATE_STAGES,
     assert_or_update_rates,
     build_binaries_counts,
     build_binaries_rates,
@@ -65,6 +67,22 @@ class BuildBinariesCountsTests(unittest.TestCase):
         self.assertEqual(counts["decomposing_pairs"], 1)
         self.assertEqual(counts["components_total"], 2)
         self.assertEqual(counts["optical_wds_notes_kept"], 1)
+
+    def test_files_every_count_under_a_pipeline_stage(self) -> None:
+        counts = build_binaries_counts(
+            pairs=[], components=[], astrometry=[], orbits=[],
+            classifications=[], multiples_rows=[],
+        )
+        for key in counts:
+            self.assertIn(COUNT_STAGES.of(key), COUNT_STAGES.order, key)
+        self.assertEqual(COUNT_STAGES.of("resolution_simbad_xid"), "resolve")
+        self.assertEqual(COUNT_STAGES.of("msc_pair_mags_filled"), "multiples")
+        with self.assertRaisesRegex(KeyError, "count stray has no stage"):
+            COUNT_STAGES.of("stray")
+
+    def test_files_every_rate_under_a_pipeline_stage(self) -> None:
+        for key in build_binaries_rates({}):
+            self.assertIn(RATE_STAGES.of(key), RATE_STAGES.order, key)
 
 
 class BuildBinariesRatesTests(unittest.TestCase):
@@ -154,7 +172,7 @@ class AssertOrUpdateRatesTests(unittest.TestCase):
     def test_a_missing_snapshot_fails_and_writes_nothing(self) -> None:
         with tempfile.TemporaryDirectory() as td:
             p = Path(td) / "rates.json"
-            self.assertFalse(assert_or_update_rates({"r": 0.42}, p))
+            self.assertFalse(assert_or_update_rates({"nss_orbit_rate": 0.42}, p))
             self.assertFalse(p.exists())
 
     def test_writes_a_missing_snapshot_with_default_tolerance_under_the_env_var(self) -> None:
@@ -164,37 +182,37 @@ class AssertOrUpdateRatesTests(unittest.TestCase):
             p = Path(td) / "rates.json"
             try:
                 _os.environ[UPDATE_SNAPSHOTS_ENV_VAR] = "1"
-                ok = assert_or_update_rates({"r": 0.42}, p)
+                ok = assert_or_update_rates({"nss_orbit_rate": 0.42}, p)
             finally:
                 _os.environ.pop(UPDATE_SNAPSHOTS_ENV_VAR, None)
             self.assertTrue(ok)
             written = _json.loads(p.read_text())
-        self.assertEqual(written["r"]["value"], 0.42)
-        self.assertEqual(written["r"]["tolerance"], DEFAULT_RATE_TOLERANCE)
+        self.assertEqual(written["stages"]["orbits"]["nss_orbit_rate"]["value"], 0.42)
+        self.assertEqual(written["stages"]["orbits"]["nss_orbit_rate"]["tolerance"], DEFAULT_RATE_TOLERANCE)
 
     def test_preserves_hand_edited_tolerance_on_refresh(self) -> None:
         import json as _json
         import os as _os
         with tempfile.TemporaryDirectory() as td:
             p = Path(td) / "rates.json"
-            p.write_text(_json.dumps({"r": {"value": 0.30, "tolerance": 0.05}}))
+            p.write_text(_json.dumps({"stages": {"orbits": {"nss_orbit_rate": {"value": 0.30, "tolerance": 0.05}}}}))
             try:
                 _os.environ[UPDATE_SNAPSHOTS_ENV_VAR] = "1"
-                ok = assert_or_update_rates({"r": 0.42}, p)
+                ok = assert_or_update_rates({"nss_orbit_rate": 0.42}, p)
             finally:
                 _os.environ.pop(UPDATE_SNAPSHOTS_ENV_VAR, None)
             self.assertTrue(ok)
             written = _json.loads(p.read_text())
-        self.assertEqual(written["r"]["value"], 0.42)
+        self.assertEqual(written["stages"]["orbits"]["nss_orbit_rate"]["value"], 0.42)
         # Hand-edited tolerance must survive the refresh.
-        self.assertEqual(written["r"]["tolerance"], 0.05)
+        self.assertEqual(written["stages"]["orbits"]["nss_orbit_rate"]["tolerance"], 0.05)
 
     def test_returns_false_on_drift_without_rewriting_snapshot(self) -> None:
         with tempfile.TemporaryDirectory() as td:
             p = Path(td) / "rates.json"
-            body = '{"r": {"value": 0.50, "tolerance": 0.10}}'
+            body = '{"stages": {"orbits": {"nss_orbit_rate": {"value": 0.50, "tolerance": 0.10}}}}'
             p.write_text(body)
-            ok = assert_or_update_rates({"r": 0.80}, p)
+            ok = assert_or_update_rates({"nss_orbit_rate": 0.80}, p)
             self.assertFalse(ok)
             self.assertEqual(p.read_text(), body)
 
