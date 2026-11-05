@@ -21,6 +21,7 @@ import { loadedRepoTable } from './repo-table';
 import { describesItself, isBuild, selectSteps, type Edge, type ReadsEdge } from './step-table-pure';
 import { MIRROR_STEPS, STEPS } from './steps';
 
+const SLOW_TIMEOUT_MS = 60_000;
 const CNS5 = CNS5_SOURCE.file;
 const MANIFEST = resolve(REPO_ROOT, MEMBERSHIP_MANIFEST.file);
 
@@ -28,7 +29,7 @@ let loaded: LoadedTable;
 
 beforeAll(async () => {
   loaded = await loadedRepoTable();
-}, 60_000);
+}, SLOW_TIMEOUT_MS);
 
 const edgeFiles = (from: string, to: string): string[] => loaded.graph.edges
   .filter((e: Edge): e is ReadsEdge => e.kind === 'reads' && e.from === from && e.to === to)
@@ -125,7 +126,7 @@ describe('the step table', () => {
     for (const step of MANUAL_STEPS.filter((s) => s.kind === 'pull')) {
       expect(describeStep(step, tree), step.name).toMatchObject({ kind: 'pull', query: expect.any(String) });
     }
-  }, 60_000);
+  }, SLOW_TIMEOUT_MS);
 
   it.skipIf(![PUBLIC_FILES.clouds, CATALOG_MANIFEST_FILENAME].every((f) => existsSync(publicFile(f))))(
     'describes every describing bake: Python under python3 -I -S, TypeScript through tsx',
@@ -137,6 +138,6 @@ describe('the step table', () => {
         expect(describeStep(step, tree), step.name).toMatchObject({ kind: 'bake', request: expect.any(Array) });
       }
     },
-    60_000,
+    SLOW_TIMEOUT_MS,
   );
 });
