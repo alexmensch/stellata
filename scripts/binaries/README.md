@@ -254,10 +254,10 @@ inputs from either the TS import closure or the Python run record, and a
 subprocess in the other language is invisible to both
 ([The step table](/scripts/pipeline/step-table/README.md#the-step-table--stepsts)), so a
 half-TS, half-Python step would miss inputs. Until the switch lands, a
-behaviour change to this step waits for it and is written once, in TS. The switch also waits for the other importers of this
-package — `build-runtime-binaries.py` (`component_tokens.py`) and
-`scripts/refresh/refresh-simbad-wds-xids.py` (`parsers`, `stage2_resolve`)
-— to port first.
+behaviour change to this step waits for it and is written once, in TS.
+The switch also waits for the package's one other importer,
+`scripts/refresh/refresh-simbad-wds-xids.py` (`parsers`,
+`stage2_resolve`), to port first.
 
 
 ## Stage 2 — WDS component → Gaia DR3 source_id
