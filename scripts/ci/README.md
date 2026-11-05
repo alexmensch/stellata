@@ -2,16 +2,6 @@
 
 Scripts that `.github/workflows/` runs.
 
-- `catalog-stage-pure.ts` (+ test) — the catalogue build stage's steps
-  (`CATALOG_STAGE`: each package script and the committed paths it must
-  regenerate unchanged), which tracked files the stage can depend on
-  (`keyedPaths`), `package.json`'s version-free digest
-  (`withVersionlessPackageJson`), and the cache key they digest to
-  (`catalogCacheKey`).
-- `catalog-stage.ts` — the CLI `test.yml` calls. `key` prints the key;
-  `paths` prints the keyed files instead, which is how to audit a surprising
-  miss or hit; `run` runs each step, then fails on any diff in its pinned
-  paths.
 - `python_tests.py` (+ test) — the Python suites' runner, below; locally
   `pnpm run test:py`.
 - `vitest-no-skip.ts`, `vitest-skips-pure.ts` (+ test) — the whole vitest
@@ -50,59 +40,38 @@ A suite that can never run in CI — the private paper store in
 than skipped. The bare `test` job still allows skips; it has none of
 these inputs.
 
-## The catalogue build cache
+## The data build cache
 
-`test.yml`'s `build-catalog` job runs `CATALOG_STAGE` — `build:classic-ids`,
-`build:wgsn`, `build:membership` and `build:catalog`, each run through the
-step table's runner and followed by its regenerate-and-diff gate. The runner
-also runs whatever is upstream of each, so `build:binaries` runs ahead of
-`build:membership` and `lineage:codes` ahead of `build:catalog`, and it writes
-every step's stamp, which the cached set carries to `build:data`:
-about five minutes, most of it `build:catalog`. The stage is a pure function
-of committed files, so on a pull request whose key matches a saved build the
-job restores that build's outputs and skips the stage — gates included,
-since the committed files they compare against are keyed too.
+`test.yml`'s `build-catalog` job builds every step on the table
+(`build:data --verify-committed`,
+[the runner](../pipeline/README.md#the-runner--runts)), which fails on any
+committed output the build moves: the SID registry partitions, the
+membership and classic-id tables, `multiples.tsv`, both astrometry requests
+and the rest. A cold build takes about ten minutes on a runner, about six of
+them `build:catalog`.
 
-**The key is every file the stage can read, digested by git blob id**, plus
-the Node version. A code file is digested by its identity instead
-(`withCodeIdentities`, over `../util/build-stamp.ts`'s `inputHashes`), the
-same digest the local stamp records, so a comment-only edit hits the cache:
+**The cache holds a whole build and the step stamps decide what is reused.**
+A pull request restores the newest saved build whose key starts with the
+prefix: its own previous push's first, else main's latest. The runner then
+rebuilds exactly the steps whose stamp no longer matches. A stamp hashes
+everything the step read and wrote, so a step hits on whatever build last
+made it from the same inputs, whatever commit that was, and a file no step
+reads (a workflow, a `package.json` script, a README) moves nothing.
+Python steps are covered the same way, through their recorded inputs.
 
-- the TypeScript import closure of each entry, read from an esbuild
-  metafile, so a new import is keyed without anyone listing it;
-- every tracked file beside a closure module except code and `.md` — the
-  build reads its `*-expected.json` count snapshots by path, not by import.
-  These two are `../util/import-closure.ts`, which the local catalogue stamp
-  keys too;
-- all of `data/`, `package.json`, `pnpm-lock.yaml`, `tsconfig.json`,
-  `test.yml` and this folder.
+**The prefix carries what no stamp records**: the runner OS, the Node and
+Python versions, and `pnpm-lock.yaml`'s hash. A change to any of these starts
+from a cold build. The full key adds the run id and attempt, so every run
+saves a build of its own.
 
-**`package.json` is keyed without its `version`**
-(`withVersionlessPackageJson`): a digest of every other field stands in for
-its blob id. Most pull requests bump the version, so keying it would miss
-main's build on every first run. No stage step reads the version, and `run`
-starts each step as `tsx scripts/pipeline/run.ts <step>` rather than through
-`pnpm run`, so `npm_package_version` never reaches its environment.
+**Main is forced.** A push to `main` restores nothing and runs
+`--verify-committed --force`, so every merged commit is still built from
+scratch and its committed outputs compared; that bounds a stamp that misses
+an input to one merge. Pull requests run unforced.
 
-The stage reads nothing outside that set, with one exception that holds:
-`build:binaries`, which the runner runs ahead of `build:membership`, is
-Python, and its modules are in no TypeScript closure. Every file of its that a
-stage step reads (`multiples.tsv`) is committed under `data/`, so a code
-change that moves it moves the key, and `build-binaries` fails a PR whose
-committed copy is stale. **A new read outside it is the one
-way to get a stale hit:** a build that reads a file by path from a folder
-holding none of its modules must add that folder to `ALWAYS_KEYED_DIRS`, and
-a step that starts reading `package.json`'s `version` must drop
-`withVersionlessPackageJson`. The key errs the other way everywhere else —
-any `data/` change misses.
-
-**What is cached** is the stage's untracked files under `public/` and
-`build/`, found with `git ls-files --others --ignored`. On a fresh checkout
-those are exactly its outputs, so the cached set follows whatever the build
-writes; `public/`'s tracked icons and manifest are never cached.
-
-**Exact key only, no `restore-keys`** — a partial match is a stale build.
-Push to `main` never restores: it rebuilds and saves, so every merged commit
-is verified uncached and pull requests branched from it start warm. A pull
-request that misses saves its own build, so its later pushes hit until an
-input changes.
+**What is cached** is every untracked file under `public/` and `build/`,
+found with `git ls-files --others --ignored`, stamps among them; `public/`'s
+tracked icons and manifest are never cached. A run saves even when a step
+fails: a crashed step's stamp is already cleared, and a step that failed
+verification recorded the outputs it built, so a committed copy that still
+differs stales it again on the next push.

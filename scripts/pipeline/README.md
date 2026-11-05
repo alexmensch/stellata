@@ -167,7 +167,9 @@ A target is a step name, or `data` for every build step on the table.
   committed mark. It does not force: a fresh step's stamp already vouches
   that its outputs are what its inputs build, since a committed output that
   differs from the recorded hash stales the step, and the rebuild then
-  shows the diff. With `--force` every selected step is rebuilt first.
+  shows the diff. With `--force` every selected step is rebuilt first. CI
+  runs it over `data` on every push, forced on main
+  ([The data build cache](../ci/README.md#the-data-build-cache)).
 
 ## Recording a manual step — `record.ts`
 
@@ -296,8 +298,8 @@ The table's own files are in [step-table/](step-table/README.md#files).
 - **Q1, one owner per fact.** Step order: the data flow. Outputs: each step's
   declaration. Code inputs: the import closure (TS) or the run record
   (Python). Data inputs: the source constants (TS) or the run record (Python).
-  Freshness: the stamp. Force and snapshot updating: two runner flags.
-  Committed-output verification: one runner mode.
+  Freshness, locally and in CI's cache: the stamp. Force, snapshot updating
+  and committed-output verification: three runner flags.
 - **Q2, wrong states.** Fresh, stale, failed and skipped-behind-a-stale-or-
   failed-step are the variants of one verdict union the runner matches on
   exhaustively; a missing stamp reads as stale, never fresh.
@@ -312,5 +314,4 @@ The table's own files are in [step-table/](step-table/README.md#files).
   Step kinds exist because two runner behaviours (run it; check it and stop)
   each hold several cases today.
 - **Q7, copies.** The two stamp helpers stay one per language with one JSON
-  shape; `refresh_lib.is_up_to_date`, the mtime gates, `CATALOG_STAGE` and
-  the inline YAML diff are deleted, not wrapped.
+  shape, and CI keys no input set of its own.

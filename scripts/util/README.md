@@ -148,9 +148,7 @@ same thing — single-use helpers stay with their consumer.
   script's `&&`-chained commands (`tsx`, `python3`, `pnpm run`, or `other`)
   and `tsxEntries` every `tsx` entry among them; `closureWithSiblings(closure, files)` adds every file beside a
   closure module except code (`CODE_FILE`) and `.md`, which is how the `*-expected.json`
-  snapshots a build reads by path get keyed. Shared by the catalogue stamp and
-  CI's catalogue cache key ([The catalogue build cache](../ci/README.md#the-catalogue-build-cache)), so the two
-  cannot disagree on what the build reads. `trackedFiles()` is the listing the
+  snapshots a build reads by path get keyed. `trackedFiles()` is the listing the
   stamp passes as `files`.
 - `git-provenance.ts` — what a build or instrument records about its
   checkout: `packageVersion`, `headCommit`, `headState` (HEAD and whether
@@ -190,7 +188,7 @@ same thing — single-use helpers stay with their consumer.
   on the table (`package.json` then names only `run.ts`), else each `tsx` entry
   its `package.json` script chains; `stepInputPaths(name)` is
   `entryInputPaths` over it, which the catalogue and membership lineage
-  headers key on, and CI's catalogue cache key reads `stepEntries` too.
+  headers key on.
   Each step's own suite pins its set (`../catalog/catalog-inputs.test.ts`,
   `../local-group/local-group-inputs.test.ts`, `../clouds/clouds-inputs.test.ts`).
 - `tsv/` — the one TSV reader (`readTable`, typed columns, cells that keep
