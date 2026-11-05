@@ -83,6 +83,9 @@ owes a manual smoke in the browser, against the dev server the owner runs on the
 branch: named stars to focus, slider values, mode transitions, debug HUDs to
 open, and what each should look like. Tests passing is not that. Pure
 pipeline, data with no drawn effect, docs and CI owe none; say which.
+A check that can only run after the merge — CI on main, a deploy, a cache a
+later run saves — is not a smoke either: `pickup-task`'s Do the work says how
+it is filed and what the line then reads.
 
 A Tier 1 perf run owed under `stellata-perf` is a precondition like a smoke:
 the PR opens as a draft and goes through review while it waits.
