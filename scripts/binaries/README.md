@@ -209,6 +209,13 @@ after the count checks, every Python module here is deleted, and
 ([Proving a restructuring byte-identical](/scripts/util/README.md#proving-a-restructuring-byte-identical))
 proves byte identity once.
 
+Each slice also carries one vitest case that runs TS Stages 1..N over
+the committed inputs and asserts that stage's keys in the committed
+`build-binaries-expected.json` (and `build-binaries-rates-expected.json`
+where the stage has keys there). The Python writes those snapshots
+until the switch; the test reads them and never restates a count, so a
+diff at the switch is already narrowed to the stage whose counts held.
+
 Values never cross between the languages. The runner records a step's
 inputs from either the TS import closure or the Python run record, and a
 subprocess in the other language is invisible to both
