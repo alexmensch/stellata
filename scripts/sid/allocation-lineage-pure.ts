@@ -1,7 +1,9 @@
 // SID allocation as a lineage stage: its reason codes, live and historical, the one serialiser over its outcomes, and its key -> SID identity file. See README.md#sid-events.
 
 import { compareUtf8, paramsText, type LineageParams, type LineageRow } from '../catalog/lineage/lineage-row-pure';
-import { LIVE, stageCodes, type CodeDeclaration, type CodeEffect } from '../catalog/lineage/reason-codes-pure';
+import {
+  LIVE, stageCodes, type CodeDeclaration, type CodeEffect, type StageCodes,
+} from '../catalog/lineage/reason-codes-pure';
 import { readTable, type TableSpec } from '../util/tsv/table-pure';
 import type { Allocation, ObjectOutcome, SidObject } from './allocate-pure';
 import { PUBLIC_FILES } from '../../src/catalog-format/public-artifacts/public-artifacts';
@@ -15,10 +17,21 @@ const historical = (effect: CodeEffect, description: string): CodeDeclaration =>
   { description, effect, status: { kind: 'historical' } }
 );
 
-export const ALLOCATION_CODES = stageCodes(ALLOCATION_LINEAGE.stage, {
+const OBJECT_OUTCOMES = {
   resolved: live('none', 'The object\'s same-as class reaches one SID in service, which it keeps.'),
   minted: live('none', 'The object\'s same-as class reaches no ledger row, so it takes the next SID under its canonical key.'),
   reinstated: live('none', 'The object\'s same-as class reaches only one retired SID, which returns to service.'),
+};
+
+type ObjectBranch = keyof typeof OBJECT_OUTCOMES;
+
+/** A stage that allocates objects and settles no orphan: its object outcomes' codes. */
+export function objectOutcomeCodes(stage: string): StageCodes<ObjectBranch> {
+  return stageCodes(stage, OBJECT_OUTCOMES);
+}
+
+export const ALLOCATION_CODES = stageCodes(ALLOCATION_LINEAGE.stage, {
+  ...OBJECT_OUTCOMES,
   merged: live('merge', 'A SID no object keeps any more merges into the SID of the record its upstream decision names.'),
   retired: live('retire', 'A SID no object keeps any more leaves service under its upstream decision\'s code.'),
   parked: live('park', 'A SID no object keeps any more stays in service, absent from this build, under its upstream decision\'s code.'),
@@ -69,34 +82,43 @@ type ParamsOf<B extends Branch> =
   : B extends 'retired' | 'parked' ? { sid: string; canonical_key: string; cause: string }
   : never;
 
-const lineageRow = <B extends Branch>(key: string, branch: B, params: ParamsOf<B>): LineageRow => ({
-  stage: ALLOCATION_LINEAGE.stage, key, role: 'outcome', code: ALLOCATION_CODES.code(branch),
+const lineageRow = <B extends Branch>(
+  codes: StageCodes<B>, key: string, branch: B, params: ParamsOf<B>,
+): LineageRow => ({
+  stage: codes.stage, key, role: 'outcome', code: codes.code(branch),
   params: paramsText(params as LineageParams), evidence: [],
 });
 
-/** One row per object with an origin key, under it, and one per SID that left the build, under the origin of the decision that settled it. An object's SID rides allocation.identity, not its row; `via` appears only when the object reached its ledger key through a designation it does not carry itself. */
-export function allocationLineageRows(
-  objects: readonly SidObject[], allocation: Extract<Allocation, { kind: 'allocated' }>,
+/** One row per object with an origin key, under it. An object's SID rides the stage's key -> SID or identity file, not its row; `via` appears only when the object reached its ledger key through a designation it does not carry itself. */
+export function objectOutcomeRows(
+  codes: StageCodes<ObjectBranch>, objects: readonly SidObject[], outcomes: readonly ObjectOutcome[],
 ): LineageRow[] {
-  const rows = objects.flatMap((obj, i): LineageRow[] => {
+  return objects.flatMap((obj, i): LineageRow[] => {
     const key = obj.admission.origin;
     if (key === null) return [];
-    const o = allocation.outcomes[i];
+    const o = outcomes[i];
     switch (o.kind) {
-      case 'resolved': return [lineageRow(key, 'resolved', obj.designations.includes(o.via) ? {} : { via: o.via })];
-      case 'minted': return [lineageRow(key, 'minted', { canonical_key: o.canonicalKey, route: o.code })];
-      case 'reinstated': return [lineageRow(key, 'reinstated', { route: o.code })];
+      case 'resolved': return [lineageRow(codes, key, 'resolved', obj.designations.includes(o.via) ? {} : { via: o.via })];
+      case 'minted': return [lineageRow(codes, key, 'minted', { canonical_key: o.canonicalKey, route: o.code })];
+      case 'reinstated': return [lineageRow(codes, key, 'reinstated', { route: o.code })];
       default: {
         const unmapped: never = o;
         throw new Error(`allocation outcome with no row mapping: ${JSON.stringify(unmapped)}`);
       }
     }
   });
+}
+
+/** objectOutcomeRows, plus one row per SID that left the build, under the origin of the decision that settled it. */
+export function allocationLineageRows(
+  objects: readonly SidObject[], allocation: Extract<Allocation, { kind: 'allocated' }>,
+): LineageRow[] {
+  const rows = objectOutcomeRows(ALLOCATION_CODES, objects, allocation.outcomes);
   for (const r of allocation.removals) {
     const base = { sid: String(r.sid), canonical_key: r.canonicalKey, cause: r.decision.code };
     rows.push(r.kind === 'merged'
-      ? lineageRow(r.decision.origin, 'merged', { ...base, successor: String(r.into) })
-      : lineageRow(r.decision.origin, r.kind, base));
+      ? lineageRow(ALLOCATION_CODES, r.decision.origin, 'merged', { ...base, successor: String(r.into) })
+      : lineageRow(ALLOCATION_CODES, r.decision.origin, r.kind, base));
   }
   return rows;
 }
