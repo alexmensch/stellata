@@ -191,7 +191,9 @@ export function classifyFromSimbad(rawSpType: string | null | undefined): MkSpec
 /** Gaia DR3 ESP-ELS's letter-only `spectraltype_esphs` enum (Creevey 2023
  *  (/data/papers/index.md#creevey2023)). Null for "unknown" and unrecognised
  *  letters. */
-export function classifyFromGspspec(esphs: string | null | undefined): SpectralInfo | null {
+export function classifyFromGspspec(
+  esphs: string | null | undefined,
+): Extract<SpectralInfo, { kind: 'mk' | 'carbon' }> | null {
   if (!esphs) return null;
   const s = esphs.trim().toUpperCase();
   if (!s || s === 'UNKNOWN') return null;
