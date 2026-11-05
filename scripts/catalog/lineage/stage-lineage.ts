@@ -30,8 +30,7 @@ export interface LineageBudget {
 export interface StageLineageRun<F extends string, S extends string> {
   readonly layout: LineageLayout;
   readonly spec: StageLineageSpec<F, S>;
-  /** The content hashes of the step's inputs (`stepInputPaths`), as the step
-   *  already computed them for its stamp or its own use. */
+  /** The step's input hashes as the runner handed them (`stepInputHashes`). */
   readonly inputs: FileHashes;
   /** The stage's own file: the one its diff reads. */
   readonly diffed: F;
@@ -51,7 +50,7 @@ export interface StageLineageRun<F extends string, S extends string> {
 
 export interface UpstreamLineage {
   readonly spec: StageLineageSpec<string>;
-  /** The upstream step's own input hashes, as its header's input hash covers them. */
+  /** The upstream step's input hashes, as its stamp records them. */
   readonly inputs: () => Promise<FileHashes>;
 }
 

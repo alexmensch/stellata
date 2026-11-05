@@ -158,7 +158,9 @@ the others once, and that rebuild appends nothing.
   steps `MANUAL_STEPS` and its six mirrors `MIRROR_STEPS` (one `mirrorStep(layer)`
   each: `scripts/<layer>/sync-<layer>.ts` over `<layer>-mirror-outputs.ts`'s
   `MIRROR_OUTPUTS`).
-  The test holds the table to the load-time rules, each mirror's family
+  The test holds the table to the load-time rules, every TypeScript step's
+  import closure clear of `util/step-inputs.ts` (a step takes its input
+  hashes from the runner, `util/step-input-hashes.ts`), each mirror's family
   folders to that mirror alone (`strays()` deletes anything else there), every manual step's
   `package.json` target to `tsx scripts/pipeline/record.ts <name>`, and every
   pull's and describing bake's `--describe` to running (Python under

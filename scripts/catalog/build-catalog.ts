@@ -128,7 +128,9 @@ import { SIMBAD_SAMPLE } from './validate/simbad-sample-source';
 import { MEMBERSHIP_MANIFEST, manifestDesignations } from './membership/membership-manifest-tsv';
 import { artifactRows } from '../util/sources/source';
 import { REPO_ROOT as ROOT } from '../util/paths';
-import { inputHashes, type FileHashes } from '../util/build-stamp';
+import { readStamp, type FileHashes } from '../util/build-stamp';
+import { stampPath } from '../util/stamp-path-pure';
+import { stepInputHashes } from '../util/step-input-hashes';
 import {
   CATALOG_CHUNK_DIR, CATALOG_OUTPUTS,
 } from './catalog-outputs';
@@ -150,7 +152,6 @@ import { catalogUpstream } from '../sid/catalog-upstream';
 import { synthChurnReport } from '../sid/synth-churn-pure';
 import { allocationRun, loadRegistry, registryTexts } from '../sid/registry-io';
 import { loadStoredEdges } from '../sid/stored-edges';
-import { stepInputPaths } from '../util/step-inputs';
 import { CATALOG_PARTITION } from '../../src/catalog-format/pipeline-outputs/data-files';
 import {
   PROMOTION_LINEAGE, PLACEMENT_LINEAGE, ALLOCATION_LINEAGE, MEMBERSHIP_LINEAGE,
@@ -160,8 +161,14 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 const UPSTREAM_LINEAGE: readonly UpstreamLineage[] = [
-  { spec: MEMBERSHIP_LINEAGE, inputs: async () => inputHashes(await stepInputPaths('build:membership')) },
+  { spec: MEMBERSHIP_LINEAGE, inputs: async () => stampedInputs('build:membership') },
 ];
+
+function stampedInputs(step: string): FileHashes {
+  const stamp = readStamp(stampPath(step));
+  if (stamp === null) throw new Error(`${step} has no stamp: run pnpm run ${step}`);
+  return stamp.inputs;
+}
 
 const EXPECTED_COUNTS = resolve(ROOT, BUILD_COUNTS_EXPECTED_FILE);
 const EXPECTED_OUTLIERS = resolve(
@@ -226,7 +233,7 @@ function simbadSourcedDistancesTsv(stars: readonly Star[]): string {
 async function main() {
   const heap = watchHeap('build:catalog');
   sweepStaged(CATALOG_OUTPUTS);
-  const inputHashesAtStart = inputHashes(await stepInputPaths('build:catalog'));
+  const inputHashesAtStart = stepInputHashes();
 
   // Accumulator for the headline counts asserted against
   // scripts/catalog/build-catalog-expected.json at the end of the

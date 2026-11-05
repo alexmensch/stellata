@@ -8,7 +8,7 @@ import { MULTIPLES_TSV } from '../../binaries/multiples-tsv';
 import { CNS5 as CNS5_SOURCE } from '../../catalog/classic-ids/cns5-source';
 import { REASON_CODES } from '../../catalog/lineage/reason-codes-tsv';
 import { MEMBERSHIP_MANIFEST } from '../../catalog/membership/membership-manifest-tsv';
-import { packageScripts } from '../../util/import-closure';
+import { entryClosure, packageScripts } from '../../util/import-closure';
 import { lfsContentReadable, publicFile, PUBLIC_DIR, REPO_ROOT } from '../../util/paths';
 import { PUBLIC_FILES } from '../../../src/catalog-format/public-artifacts/public-artifacts';
 import { entryInputPaths } from '../../util/step-inputs';
@@ -37,6 +37,15 @@ const edgeFiles = (from: string, to: string): string[] => loaded.graph.edges
 const isBuildStep = (name: string): boolean => isBuild(loaded.steps.get(name)!.step);
 
 describe('the step table', () => {
+  it('hands every TypeScript step its input hashes: no step\'s import closure reaches util/step-inputs.ts', async () => {
+    const reaching: string[] = [];
+    for (const { step } of loaded.steps.values()) {
+      if (step.language !== 'ts') continue;
+      if ((await entryClosure([step.entry])).has('scripts/util/step-inputs.ts')) reaching.push(step.name);
+    }
+    expect(reaching).toEqual([]);
+  }, 120_000);
+
   it('runs the build steps in their data-flow order', () => {
     expect(loaded.graph.order.filter(isBuildStep)).toEqual([
       'lineage:codes', 'build:clouds', 'build:local-group', 'build:wgsn', 'build:binaries',
