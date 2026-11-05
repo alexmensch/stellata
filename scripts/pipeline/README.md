@@ -37,7 +37,7 @@ then Vite.
 |---|---|---|---|---|
 | `build` | yes | `build/stamps/<step>.json` (gitignored) | an input or an output hash moved | the catalogue chain, the four generators, binaries, clouds, local-group, the mirrors |
 | `pull` | never | `data/stamps/<step>.json` (committed) | its request rows, a data input, its query or an output hash moved | every `refresh:*` (the two Edenhofer variants among them); both `fetch:*` |
-| `bake` | never | `data/stamps/<step>.json` (committed) | an input, its projection of a file it reads, or an output hash moved | dust, local-bubble, cloud-surfaces, textures, icons, og (all Python; a TypeScript bake declares itself as a TypeScript pull does) |
+| `bake` | never | `data/stamps/<step>.json` (committed) | an input, its projection of a file it reads, or an output hash moved | dust, local-bubble, cloud-surfaces, textures, icons, og (Python); `measure:band-resolved` (TypeScript, declared as a TypeScript pull is) |
 
 A step the runner never runs is a **manual** step. When one is stale, the
 runner skips every step that reads its outputs (transitively), still builds
@@ -111,7 +111,9 @@ A TypeScript bake that reads the built catalogue describes itself the same
 way, through `catalogColumnsProjection` (`../catalog/columns/`):
 its record holds a hash of each float32 record column it reads, and
 `requestFrom` names `public/catalog-manifest.json`, ordering it after
-`build:catalog`. The catalogue's bytes are never an input, so a rebuild
+`build:catalog`. The catalogue's bytes are never an input, nor is the
+catalogue's count snapshot (the readers' folder holds code only, so no
+snapshot sits beside them), so a rebuild
 that moves a name or any column the bake does not read leaves it fresh, and
 a committed record needs only those columns, not the whole build, to come
 out identical on another machine. The bake passes the same field list to
@@ -245,8 +247,6 @@ Hand-kept lists become derivations over the table:
   there and its stamp, sorted. No copy is committed, so a step added to the
   table is seeded from the next `build:seed` on.
 - `tests/bundle-content.test.ts` reads the mirror steps' declarations.
-- `resolved-hole-table.ts`'s record count is tested against
-  `build-catalog-expected.json`'s `recordCount`.
 
 ## Migration
 
@@ -352,7 +352,7 @@ The table's own files are in [step-table/](step-table/README.md#files).
 - **Q6, the force.** One table absorbs 3 stamped steps, 2 emitters, 6
   mirrors, 3 CI-only generators and 1 that runs nowhere, 26 pulls (24
   `refresh:*`, two of them the Edenhofer variants, and 2 `fetch:*`, all in
-  `MANUAL_STEPS`) and 6 bakes; recount with
+  `MANUAL_STEPS`) and 7 bakes; recount with
   `MANUAL_STEPS.filter((s) => s.kind === 'pull').length`.
   Step kinds exist because two runner behaviours (run it; check it and stop)
   each hold several cases today.

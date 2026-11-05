@@ -110,8 +110,8 @@ against the previous paragraph's over-count.
 The band's density solve is anchored to the Galaxy's integrated
 M_V = −21.37 from [Bland-Hawthorn 2016](/data/papers/index.md#blandhawthorn2016), the light of
 resolved and unresolved stars alike. The resolution hole takes the drawn
-stars' share back out, but it is measured on the real catalogue
-(`RESOLVED_HOLE_CATALOGUE_RECORDS`), so every synthetic star appended here is
+stars' share back out, but it is measured on the real catalogue,
+so every synthetic star appended here is
 drawn twice — once as a point, once in the band. Even on the real catalogue,
 band plus catalogue reads 23.42 mag/arcsec² at the pole against
 [Leinert 1998](/data/papers/index.md#leinert1998)'s 23.83

@@ -21,8 +21,7 @@ comes out* is here.
   brackets off `m52` / `m72`.
 - `resolved-hole-table.ts` — **generated** by
   `scripts/milkyway-calibration/` off the built catalogue: the two cap
-  rows, the record count they were measured on, and the resolution-hole
-  table ([The resolution hole](#the-resolution-hole--the-band-marches-the-model-minus-the-drawn-stars)). Never edited by hand.
+  rows and the resolution-hole table ([The resolution hole](#the-resolution-hole--the-band-marches-the-model-minus-the-drawn-stars)). Never edited by hand.
 - `resolved-fraction-pure.ts` (+ test) — the table's layout constants, the
   rule the table is sampled with, the cube it is resampled onto, the
   CPU mirror of the trilinear fetch both shaders make.
@@ -313,9 +312,9 @@ Half rather than single: `r16float` is core-filterable, where `r32float`
 needs the optional `float32-filterable` device feature.
 
 Regenerate the underlying table with `pnpm run measure:band-resolved` on a
-floor-on build whenever the catalogue's membership or photometry moves
-inside 15 kpc; the script refuses a shallower catalogue than the table was
-measured on. `MilkyWay.setResolvedHoleStrength(0)` — the `resolvedHole`
+floor-on build when the build stops on it: the bake's record holds the
+catalogue columns it measured, so a membership or photometry change
+stales it ([Band calibration measurements](/scripts/milkyway-calibration/README.md)). `MilkyWay.setResolvedHoleStrength(0)` — the `resolvedHole`
 slider in the debug panel — switches the hole off for an A/B, rebuilding the
 cube, at which point the band draws the resolved stars' light a second time.
 The one writer clamps it to [0, 1] rather than the slider doing it: past 1

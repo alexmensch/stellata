@@ -12,6 +12,7 @@ import { entryClosure, packageScripts } from '../../util/import-closure';
 import { LAUNCHER } from '../../util/import-closure-pure';
 import { lfsContentReadable, publicFile, publicRepoPath, PUBLIC_DIR, REPO_ROOT } from '../../util/paths';
 import { PUBLIC_FILES } from '../../../src/catalog-format/public-artifacts/public-artifacts';
+import { CATALOG_MANIFEST_FILENAME } from '../../../src/catalog-format/record/catalog-pure';
 import { describeStep } from '../freshness';
 import type { LoadedTable } from './load-table';
 import { MANUAL_STEPS } from './manual-step-outputs';
@@ -64,6 +65,7 @@ describe('the step table', () => {
 
   it('orders a describing bake after the writer of the file it projects', () => {
     expect(edgeFiles('build:clouds', 'build:cloud-surfaces')).toEqual([publicRepoPath(PUBLIC_FILES.clouds)]);
+    expect(edgeFiles('build:catalog', 'measure:band-resolved')).toEqual([publicRepoPath(CATALOG_MANIFEST_FILENAME)]);
   });
 
   it('is the one place a table step\'s entry is named: no package.json script or workflow runs one directly', () => {
@@ -125,12 +127,16 @@ describe('the step table', () => {
     }
   }, 60_000);
 
-  it.skipIf(!existsSync(publicFile(PUBLIC_FILES.clouds)))('describes every describing bake under python3 -I -S', () => {
-    const tree = pipelineTree(REPO_ROOT);
-    const bakes = MANUAL_STEPS.filter((s) => s.kind === 'bake' && describesItself(s));
-    expect(bakes.map((s) => s.name)).toEqual(['build:cloud-surfaces']);
-    for (const step of bakes) {
-      expect(describeStep(step, tree), step.name).toMatchObject({ kind: 'bake', request: expect.any(Array) });
-    }
-  });
+  it.skipIf(![PUBLIC_FILES.clouds, CATALOG_MANIFEST_FILENAME].every((f) => existsSync(publicFile(f))))(
+    'describes every describing bake: Python under python3 -I -S, TypeScript through tsx',
+    () => {
+      const tree = pipelineTree(REPO_ROOT);
+      const bakes = MANUAL_STEPS.filter((s) => s.kind === 'bake' && describesItself(s));
+      expect(bakes.map((s) => s.name)).toEqual(['measure:band-resolved', 'build:cloud-surfaces']);
+      for (const step of bakes) {
+        expect(describeStep(step, tree), step.name).toMatchObject({ kind: 'bake', request: expect.any(Array) });
+      }
+    },
+    60_000,
+  );
 });
