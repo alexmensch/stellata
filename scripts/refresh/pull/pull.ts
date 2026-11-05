@@ -48,6 +48,8 @@ export interface Pull<K extends string> {
 
 /** A query's limit over the rows it should return, so the band, not the overflow, reports a moved table. */
 export const LIMIT_HEADROOM = 2;
+/** The most cells one whole-table reply may hold within the CI heap budget: README.md#how-big-a-whole-table-query-may-be. */
+export const MAX_WHOLE_TABLE_CELLS = 37_000_000;
 const REQUEST = '{request}';
 const SYNC_TIMEOUT_MS = 300_000;
 
@@ -117,7 +119,19 @@ function tableChecks(label: string, table: PullTable, rows: readonly Row[]): Che
 }
 
 /** The resume cache sits beside the first output and goes only once every output has landed. */
+/** Refuses, before any query, a whole-table table whose reply at its limit could exceed `MAX_WHOLE_TABLE_CELLS`. */
+export function assertWholeTablesFit<K extends string>(pull: Pull<K>): void {
+  for (const key of keysOf(pull)) {
+    const table = pull.tables[key];
+    const cells = queryLimit(table) * table.columns.length;
+    if (table.scope.kind === 'whole-table' && cells > MAX_WHOLE_TABLE_CELLS) {
+      throw new Error(`${key}: a whole-table reply of up to ${cells} cells exceeds ${MAX_WHOLE_TABLE_CELLS}; batch the query`);
+    }
+  }
+}
+
 export async function runPull<K extends string>(pull: Pull<K>, deps: TapClientDeps = LIVE): Promise<void> {
+  assertWholeTablesFit(pull);
   const keys = keysOf(pull);
   const cache = checkpoint(`${pull.outputs.files[keys[0]]}.ckpt`);
   const client = tapClient(pull.archive, deps);

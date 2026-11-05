@@ -39,7 +39,8 @@ unit), an empty cell first (`sortRows`). A re-pull of unchanged data writes
 the same bytes. `orderBy` is only for a query that needs a server order, such
 as one under `TOP`. Scopes:
 
-- `whole-table` — one query, limit `band.max × LIMIT_HEADROOM`.
+- `whole-table` — one query, limit `band.max × LIMIT_HEADROOM`, within
+  [How big a whole-table query may be](#how-big-a-whole-table-query-may-be).
 - `request` — the ids (ADQL literals, answering in `idColumn`) ANDed onto `where` as
   `<key> IN (…)`, `batchSize` per query, limit
   `batchSize × rowsPerId × LIMIT_HEADROOM`; optional coverage over the ids.
@@ -57,6 +58,27 @@ changed id list does not, except through the pull's inputs.
 `runPull` queries every table, gates every one, then makes one
 `emitArtifacts` emission of all its outputs: a failed gate, query or schema
 check anywhere leaves every prior output byte-identical.
+
+### How big a whole-table query may be
+
+A whole-table table is one reply, held whole: its text, its parsed cells and
+the TSV written from them are all live at once. `runPull` refuses, before any
+query, a whole-table table whose limit (`band.max × LIMIT_HEADROOM`) times its
+column count exceeds `MAX_WHOLE_TABLE_CELLS` (37,000,000): batch it instead.
+Measured 2026-11-05 under Node 26, the committed `gaia_dr3_tyc_xmatch.tsv` (5
+columns) replayed through `runPull` and a fake transport, peak live heap by
+`watchHeap` ([CI heap budget](../../util/README.md#ci-heap-budget)):
+
+| Rows | Cells | Reply | Peak live heap | Wall |
+|---|---|---|---|---|
+| 2,518,330 | 12.6 M | 106 MiB | 1,855 MiB | 5.7 s |
+| 5,036,660 | 25.2 M | 212 MiB | 2,681 MiB | 11.6 s |
+
+That is about 69 bytes per cell over about 1,029 MiB fixed (the harness's own
+copies of the reply among it), so the CI budget of 3,482 MiB holds about 37 M
+cells. tyc-xmatch, the largest whole-table pull, reaches 25.3 M at its limit.
+A table with wider text cells costs more per cell, so a pull near the cap is
+re-measured, not assumed.
 
 ## The checkpoint
 

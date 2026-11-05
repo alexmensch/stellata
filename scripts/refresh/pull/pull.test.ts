@@ -6,7 +6,10 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { pullQueryHash } from '../../pipeline/freshness';
 import { EmissionRefused, declareOutputs } from '../../util/emit-artifacts';
-import { batchQueries, describePull, queryLimit, runPull, type Pull, type PullTable } from './pull';
+import {
+  LIMIT_HEADROOM, MAX_WHOLE_TABLE_CELLS, assertWholeTablesFit, batchQueries, describePull, queryLimit, runPull,
+  type Pull, type PullTable,
+} from './pull';
 import { GAIA, SIMBAD, TapOverflow, VIZIER, type TapArchive, type TapClientDeps } from './tap-pure';
 
 let dir: string;
@@ -120,6 +123,15 @@ describe('runPull', () => {
     const failingQuery = deps((adql) => (adql.includes('IN (3)') ? new Error('connect ETIMEDOUT') : GOOD(adql)));
     await expect(runPull(pullOf({ stars: STARS, pairs: PAIRS }), failingQuery.deps)).rejects.toThrow('ETIMEDOUT');
     expect([read('stars.tsv'), read('pairs.tsv')]).toEqual(['old stars\n', 'old pairs\n']);
+  });
+
+  it('refuses, before asking anything, a whole-table query too large for one reply', async () => {
+    const fits = Math.floor(MAX_WHOLE_TABLE_CELLS / (LIMIT_HEADROOM * STARS.columns.length));
+    const { deps: d, asked } = deps(GOOD);
+    const huge = { ...STARS, band: { min: 0, max: fits + 1 } };
+    await expect(runPull(pullOf({ stars: huge, pairs: PAIRS }), d)).rejects.toThrow(/exceeds 37000000; batch the query/);
+    expect(asked).toEqual([]);
+    expect(() => assertWholeTablesFit(pullOf({ stars: { ...STARS, band: { min: 0, max: fits } }, pairs: PAIRS }))).not.toThrow();
   });
 
   it('refuses a reply whose columns are not the declared ones', async () => {
