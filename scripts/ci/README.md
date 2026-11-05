@@ -9,6 +9,8 @@ Scripts that `.github/workflows/` runs.
 - `vitest-no-skip.ts`, `vitest-skips-pure.ts` (+ test) — the whole vitest
   suite, failing on any test that did not run, below; locally
   `pnpm run test:no-skip`.
+- `toolchain-pins.test.ts` — `.python-version` and `.nvmrc` each name an
+  exact patch release ([The data build cache](#the-data-build-cache)).
 
 ## Python suites
 
@@ -70,6 +72,18 @@ the commit that reused it.
 Python versions, and `pnpm-lock.yaml`'s hash. A change to any of these starts
 from a cold build. The full key adds the run id and attempt, so a run that
 saves gets an entry of its own.
+
+**`.python-version` and `.nvmrc` name exact patch releases**
+(`toolchain-pins.test.ts`). `setup-python` and `setup-node` otherwise
+resolve a partial pin to whatever patch the runner image carries or the
+newest release, which differs between runners, so two runs of one commit
+would key different prefixes and miss each other's builds. Pinned, every job
+resolves the same toolchain (downloading it when the image lacks it), the
+prefix's versions name the toolchain that built the entry, and an upgrade is
+an explicit commit that starts from a cold build. Locally, the checks that
+compare runtimes read only part of each pin (`code_identity.py` the
+major.minor, the heap budget the Node major), but a version manager reading
+these files (pyenv, nvm, uv) wants the exact release installed.
 
 **A run saves only when a step built** (`run.ts` writes `built=true|false`
 to the job's `GITHUB_OUTPUT`). A run that rebuilt nothing would upload a copy
