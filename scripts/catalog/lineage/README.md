@@ -289,13 +289,13 @@ The sibling allocation stages, measured 2026-11-05: 96 cloud rows in 1,455
 bytes and 123 Local Group rows in 1,720 bytes gzipped, identity files
 included, each in about 0.1 s; `SIBLING_LINEAGE_BUDGET`
 (`../../sid/sibling-allocation.ts`) pins 1,900 bytes and 5 s for either.
-Placement, measured 2026-10-30: 3,872,657 rows (349 MB plain, 31.0 MB
-gzipped) in 3.2 s without a diff and 8.1 s with one against a full
-baseline; `PLACEMENT_LINEAGE_BUDGET` pins 34 MB and 60 s: a CI run that diffs against a restored merge-base baseline took 36.5 s (2026-11-05).
 Coherence, measured 2026-11-05: one row per record that exists before
 promotion mints companions, all but about 4,600 of them `not-applicable`
-(66 MB plain), 7.5 MB gzipped in 0.7 s
-without a diff; `COHERENCE_LINEAGE_BUDGET` pins 8.2 MB and 15 s. A file that size outruns
+(66 MB plain), 7.5 MB gzipped in 0.7 s without a diff;
+`COHERENCE_LINEAGE_BUDGET` pins 8.2 MB and 15 s.
+Placement, measured 2026-10-30: 3,872,657 rows (349 MB plain, 31.0 MB
+gzipped) in 3.2 s without a diff and 8.1 s with one against a full
+baseline; `PLACEMENT_LINEAGE_BUDGET` pins 34 MB and 60 s: a CI run that diffs against a restored merge-base baseline took 36.5 s (2026-11-05). A file that size outruns
 V8's longest string, so stage files and diffs are written and read as UTF-8
 bytes in chunks, and the diff walks the baseline a key at a time
 (`streamLineage`) rather than holding it.
