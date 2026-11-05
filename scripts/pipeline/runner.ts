@@ -7,6 +7,7 @@ import {
   clearStamp, inputHashes, listingHashes, recordedInputs, writeStamp, type FileHashes, type RecordedReads,
 } from '../util/build-stamp';
 import { PIPELINE_STEP_ENV, UPDATE_SNAPSHOTS_ENV } from '../util/snapshot-check';
+import { stampedInputMap } from '../util/step-input-hashes';
 import { buildFreshness, manualDescription, manualFreshness, stampedOutputs } from './freshness';
 import type { Loaded } from './step-table/load-table';
 import { holdStepLocks } from './locks';
@@ -40,7 +41,7 @@ const blocks = (v: Verdict): boolean => v.kind === 'stale' || v.kind === 'failed
 
 function rehashed(inputs: FileHashes, paths: readonly string[] | 'all', tree: PipelineTree): FileHashes {
   const keys = paths === 'all' ? Object.keys(inputs) : paths.map(tree.rel).filter((k) => k in inputs);
-  return { ...inputs, ...inputHashes(keys.map(tree.abs), tree.root) };
+  return stampedInputMap(inputs, inputHashes(keys.map(tree.abs), tree.root));
 }
 
 class Run {
