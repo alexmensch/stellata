@@ -85,7 +85,8 @@ scripts/binaries/
                                   (system_id, comp) for lineage
                                   (../util/sources/README.md#sourcerowref).
   component-tokens-pure.ts        The TypeScript side of component_tokens.py:
-    (+ test)                      composeSyntheticId (the synth-<wds>-<comp>
+    (+ test)                      wdsRootOf (a system_id's WDS id, the one
+                                  spelling), composeSyntheticId (the synth-<wds>-<comp>
                                   key promotion mints and every resolver
                                   looks up), canonicalCompLetter (WDS
                                   truncation re-anchored: Aa1,2 → Aa2),

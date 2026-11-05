@@ -4,7 +4,7 @@
 
 import type { GaiaAstrometryCatalogRow } from '../direction-cascade';
 import type { MultiplesTsvRow } from '../../companions/companion-promotion';
-import { wdsRootOf } from '../../companions/companion-promotion';
+import { wdsRootOf } from '../../../binaries/component-tokens-pure';
 import { isCoherenceAnchorGrade } from '../../multiplicity/anchor-grade-pure';
 import { belowParallaxSnFloor } from './parallax-cascade';
 import { parallaxSignalToNoise, type MeasuredParallax } from '../../cited-parallax';

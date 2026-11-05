@@ -1,18 +1,22 @@
 // WDS component-letter tokens on the TypeScript side. See README.md#files-in-this-area.
 
-/** `synth-<wds_id>-<comp>` from a Stage 6 `system_id` (`<wds_id>-<components>`,
- *  split on its last dash so a negative-Dec WDS id survives); null when the
- *  comp is blank or the system_id has no WDS id. */
+/** The WDS id of a Stage 6 `system_id` (`<wds_id>-<components>`), or of a
+ *  synth key's `<wds_id>-<comp>` body: everything before the last dash, so a
+ *  negative-Dec id (`04153-0739-BC`) survives. Null when there is none. */
+export function wdsRootOf(systemId: string): string | null {
+  const dash = systemId.lastIndexOf('-');
+  if (dash < 0) return null;
+  return systemId.slice(0, dash) || null;
+}
+
+/** `synth-<wds_id>-<comp>`; null when the comp is blank or the system_id has no WDS id. */
 export function composeSyntheticId(
   systemId: string,
   comp: string,
 ): string | null {
   const c = comp.trim();
-  if (!c) return null;
-  const dash = systemId.lastIndexOf('-');
-  if (dash < 0) return null;
-  const wdsId = systemId.slice(0, dash);
-  if (!wdsId) return null;
+  const wdsId = wdsRootOf(systemId);
+  if (!c || wdsId === null) return null;
   return `synth-${wdsId}-${c}`;
 }
 

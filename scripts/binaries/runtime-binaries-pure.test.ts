@@ -5,7 +5,7 @@ import {
 } from '../../src/catalog-format/binaries/binaries-format';
 import type { CatalogRowIndexMap } from '../catalog/companions/record-index/catalog-row-index-map-pure';
 import { multiplesRow } from '../catalog/companions/multiples-fixture';
-import { canonicalCompLetter } from './component-tokens-pure';
+import { canonicalCompLetter, wdsRootOf } from './component-tokens-pure';
 import {
   assignParentRelations,
   multiplesHandshake,
@@ -25,7 +25,8 @@ function pair(systemId = '00000+0000-AB', over: Partial<MultiplesPair> = {}): Mu
     ? components.split(',')
     : [components[0], components[1] ?? ''];
   return {
-    systemId, primaryComp, secondaryComp: canonicalCompLetter(primaryComp, secondaryCell),
+    systemId, wdsId: wdsRootOf(systemId) as string,
+    primaryComp, secondaryComp: canonicalCompLetter(primaryComp, secondaryCell),
     primaryGaia: '1', primaryHip: null, secondaryGaia: '2', secondaryHip: null,
     pDays: null, tJd: null, e: null, aAU: null, iRad: null, omegaRad: null, OmegaRad: null, q: null,
     sepArcsec: null, paDeg: null, sepPaEpochJd: null,

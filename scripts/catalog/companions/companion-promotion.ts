@@ -33,7 +33,7 @@ import {
 } from '../photometry/v-magnitude-pure';
 import { MULTIPLES_TSV, type MultiplesRecord, type PhotometryVia } from '../../binaries/multiples-tsv';
 import {
-  canonicalCompLetter, composeSyntheticId, parentComponentToken,
+  canonicalCompLetter, composeSyntheticId, parentComponentToken, wdsRootOf,
 } from '../../binaries/component-tokens-pure';
 import { hasRenderableOrbit } from '../../../src/catalog-format/binaries/binaries-format';
 import { readArtifact } from '../../util/sources/source';
@@ -1095,17 +1095,6 @@ function athygDoubleProbeNames(
     systemAnchorStar?.proper ?? '',
   ].map((b) => b.trim()).filter((b) => b !== '');
   return [...new Set(bases.map((base) => `${base} ${canonicalComp}`))];
-}
-
-/** Extracts the WDS positional ID from a Stage 6 system_id. The system_id
- *  is `<wds_id>-<pair_components>` (e.g. `04153-0739-BC`), so the WDS
- *  root is everything before the last dash. Matches composeSyntheticId's
- *  split so both promotion and synthetic-ID paths see the same root. */
-export function wdsRootOf(systemId: string): string | null {
-  const dash = systemId.lastIndexOf('-');
-  if (dash < 0) return null;
-  const root = systemId.slice(0, dash);
-  return root || null;
 }
 
 /** Single-character comp letters per WDS root — the resolved components

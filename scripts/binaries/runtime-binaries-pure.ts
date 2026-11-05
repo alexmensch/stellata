@@ -9,6 +9,7 @@ import {
 } from '../catalog/companions/record-index/catalog-row-index-map-pure';
 import {
   canonicalCompLetter, composeSyntheticId, compoundContains, parentComponentToken, relatedHier,
+  wdsRootOf,
 } from './component-tokens-pure';
 import type { MultiplesRecord } from './multiples-tsv';
 import type { Check } from '../util/emit-artifacts';
@@ -17,6 +18,7 @@ import type { Check } from '../util/emit-artifacts';
  *  and WDS geometry are the primary row's. */
 export interface MultiplesPair {
   readonly systemId: string;
+  readonly wdsId: string;
   readonly primaryComp: string;
   /** Canonical (`canonicalCompLetter`), so `Aa1,2`'s secondary is `Aa2`. */
   readonly secondaryComp: string;
@@ -75,11 +77,12 @@ export function pairsFromRows(rows: readonly PairRow[]): MultiplesPair[] {
   for (const [systemId, p] of primaries) {
     const s = secondaries.get(systemId);
     if (s === undefined) continue;
-    const dash = systemId.lastIndexOf('-');
-    if (dash < 0) continue;
+    const wdsId = wdsRootOf(systemId);
+    if (wdsId === null) continue;
     const primaryComp = p.comp.trim();
     pairs.push({
       systemId,
+      wdsId,
       primaryComp,
       secondaryComp: canonicalCompLetter(primaryComp, s.comp),
       primaryGaia: p.gaiaSourceId,
@@ -102,10 +105,6 @@ export function pairsFromRows(rows: readonly PairRow[]): MultiplesPair[] {
   return pairs;
 }
 
-function wdsIdOf(pair: MultiplesPair): string {
-  return pair.systemId.slice(0, pair.systemId.lastIndexOf('-'));
-}
-
 function parentRank(pair: MultiplesPair): readonly [number, number] {
   return [hasRenderableOrbit(pair) ? 0 : 1, pair.sepArcsec ?? Infinity];
 }
@@ -120,9 +119,8 @@ function ranksBefore(a: readonly [number, number], b: readonly [number, number])
 export function assignParentRelations(pairs: readonly MultiplesPair[]): number[] {
   const bySystem = new Map<string, Map<string, number[]>>();
   pairs.forEach((pair, i) => {
-    const wds = wdsIdOf(pair);
-    let bucket = bySystem.get(wds);
-    if (!bucket) bySystem.set(wds, (bucket = new Map()));
+    let bucket = bySystem.get(pair.wdsId);
+    if (!bucket) bySystem.set(pair.wdsId, (bucket = new Map()));
     for (const tok of [pair.primaryComp, pair.secondaryComp]) {
       const list = bucket.get(tok);
       if (list) list.push(i);
@@ -133,7 +131,7 @@ export function assignParentRelations(pairs: readonly MultiplesPair[]): number[]
   return pairs.map((pair, i) => {
     const parentTok = parentComponentToken(pair.primaryComp);
     if (parentTok === null) return NO_PARENT;
-    const candidates = (bySystem.get(wdsIdOf(pair))?.get(parentTok) ?? []).filter((j) => j !== i);
+    const candidates = (bySystem.get(pair.wdsId)?.get(parentTok) ?? []).filter((j) => j !== i);
     if (candidates.length === 0) return NO_PARENT;
     return candidates.reduce((best, j) =>
       (ranksBefore(parentRank(pairs[j]), parentRank(pairs[best])) ? j : best));

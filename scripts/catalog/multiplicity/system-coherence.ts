@@ -8,7 +8,7 @@ import type {
   Hip2AstrometryRow,
 } from '../distance/direction-cascade';
 import type { MultiplesTsvRow } from '../companions/companion-promotion';
-import { wdsRootOf } from '../companions/companion-promotion';
+import { wdsRootOf } from '../../binaries/component-tokens-pure';
 import { isCoherenceAnchorGrade } from './anchor-grade-pure';
 
 /** A member snaps to the anchor distance only when the radial gap is

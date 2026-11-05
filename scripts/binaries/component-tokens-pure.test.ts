@@ -6,7 +6,20 @@ import {
   compoundContains,
   parentComponentToken,
   relatedHier,
+  wdsRootOf,
 } from './component-tokens-pure';
+
+describe('wdsRootOf', () => {
+  it('is everything before the last dash, a negative-Dec id intact', () => {
+    expect(wdsRootOf('04153-0739-BC')).toBe('04153-0739');
+    expect(wdsRootOf('03082+4057-Aa1,2')).toBe('03082+4057');
+  });
+
+  it('is null with no dash or nothing before it', () => {
+    expect(wdsRootOf('NODASH')).toBeNull();
+    expect(wdsRootOf('-AB')).toBeNull();
+  });
+});
 
 describe('composeSyntheticId', () => {
   it('builds "synth-<wds_id>-<comp>" from a Stage 6 system_id', () => {

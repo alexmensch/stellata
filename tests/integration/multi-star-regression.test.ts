@@ -33,7 +33,8 @@ import {
 import { evaluateOrbitSkyAU } from '../../src/client/binaries/binary-orbit-pure';
 import { BinaryOrbitField } from '../../src/client/binaries/binary-orbit-field';
 import { AU_PC, AU_PER_PC } from '../../src/astro-core/astronomy-constants';
-import { readMultiplesTsv, wdsRootOf } from '../../scripts/catalog/companions/companion-promotion';
+import { readMultiplesTsv } from '../../scripts/catalog/companions/companion-promotion';
+import { wdsRootOf } from '../../scripts/binaries/component-tokens-pure';
 import { MULTIPLES_TSV, MULTIPLES_TSV_PATH } from '../../scripts/binaries/multiples-tsv';
 import { NAMING_DUPLICATES } from '../../scripts/catalog/naming/naming-duplicates-tsv';
 import { REPO_ROOT, publicFile } from '../../scripts/util/paths';
@@ -853,9 +854,8 @@ function buildWdsRootToIndices(): Map<string, number[]> {
   const bySynth = (JSON.parse(readFileSync(resolve(REPO_ROOT, BUILD_FILES.catalogRowIndexMap), 'utf-8')) as
     { bySynth: Record<string, number> }).bySynth;
   for (const [key, idx] of Object.entries(bySynth)) {
-    const body = key.slice('synth-'.length);
-    const dash = body.lastIndexOf('-');
-    if (dash > 0) bindRoot(body.slice(0, dash), idx);
+    const root = wdsRootOf(key.slice('synth-'.length));
+    if (root !== null) bindRoot(root, idx);
   }
   return rootToIndices;
 }
