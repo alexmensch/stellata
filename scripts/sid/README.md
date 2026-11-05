@@ -53,7 +53,11 @@ allocation-lineage-pure.ts  Allocation as a lineage stage: its reason
   (+ test)                codes (live, plus the historical legacy.*
                           codes the migrated retirement rows carry), the
                           one serialiser over its outcomes, and
-                          allocation.identity (key -> SID), its own codec.
+                          allocation.sids (key -> SID), its own codec.
+                          objectOutcomeCodes / objectOutcomeRows: the
+                          resolved / minted / reinstated codes and rows
+                          under any stage name, which the sibling stages
+                          declare as theirs.
 lineage-upstream-pure.ts  lineageCauses: each ledger key joined, through
   (+ test)                every identity row carrying it, to the retire /
                           park / merge outcomes recorded under those
@@ -159,17 +163,25 @@ dr-reconcile-pure.ts      Pure classifier + request/neighbourhood TSV
                           readers. ACCEPT_MAS / MAG_REVIEW_DELTA live
                           here.
 sibling-allocation.ts     allocateSibling: one sibling namespace allocated
-  (+ test)                over the registry, giving each record's sid and
-                          the partition's files only when the allocation
+  (+ test)                over the registry, giving each record's sid, its
+                          lineage lines and identity rows, and the
+                          partition's files only when the allocation
                           appended, so a run that mints nothing rewrites
                           no registry file (null otherwise, never a
-                          partial set); emitSibling, the artifact plus
-                          those files in one emitArtifacts call. Called by
-                          build:local-group and build:clouds.
-sibling-artifacts-pure.ts SIBLING_ARTIFACTS spec (file / arrayKey / ns /
-                          kind / mint code per sibling) +
-                          siblingArtifactObjects, so the namespace→kind
-                          mapping is defined once. Each namespace is its
+                          partial set); siblingLineage, its stage's
+                          emission; emitSibling, the artifact, that
+                          emission and those files in one emitArtifacts
+                          call. Called by build:local-group and
+                          build:clouds.
+sibling-artifacts-pure.ts SIBLING_ARTIFACTS spec (ns / kind /
+                          mint code / rowId / lineage stage and its
+                          codes per sibling) + siblingArtifactObjects,
+                          each object founded on its record of the
+                          artifact the caller hands in, so the
+                          namespace→kind mapping is defined once. Each
+                          JSON declaration takes its row-key id from
+                          rowId, and allocateSibling's types refuse an
+                          artifact whose id is another sibling's. Each namespace is its
                           own registry partition: ns is typed by
                           SIBLING_PARTITIONS, and
                           EVERY_SIBLING_PARTITION_CLAIMED fails typecheck
@@ -218,9 +230,14 @@ the object reached it through a designation it does not carry),
 `allocation.minted` or `allocation.reinstated` (with the admitting code),
 keyed on the object's origin; per SID no object keeps,
 `allocation.retired`, `.parked` or `.merged`, keyed on the origin of the
-upstream decision that settled it, with that code as `cause`. Its identity
-file `allocation.identity.tsv.gz` maps each origin key to its SID. The two sibling
-allocations write events but no lineage rows yet (stellata-hhaw.45.32.12).
+upstream decision that settled it, with that code as `cause`. Its key -> SID
+file `allocation.sids.tsv.gz` maps each origin key to its SID. Each sibling
+build allocates as a stage of its own (`allocation-clouds`,
+`allocation-local-group`), writing the object rows under its own codes, keyed
+on the object's record in its artifact (`clouds:<slug>`,
+`local-group:<slug>`), and an identity file carrying each object's one
+designation, which trace finds it by. A sibling SID rides its artifact, so
+these stages keep no key -> SID file.
 
 An orphan inherits its cause from the upstream decisions on its record,
 joined on the origin key (`lineageCauses`, `lineage-upstream-pure.ts`):
@@ -229,7 +246,7 @@ under those origins whose code removes or re-binds.
 
 Its rows follow the lineage row contract
 ([Row contract](/scripts/catalog/lineage/README.md#row-contract)): one per
-object with an origin key, under that key, and one per SID that left the
+object, under its origin key, and one per SID that left the
 build under its deciding origin.
 
 Allocation is the sole writer of each partition's events file, apart from the
@@ -331,9 +348,11 @@ each allocated over its own namespace by `allocateSibling`
 `cloud:<id>`, each landing its artifact and its partition in one
 `emitArtifacts` call, so every file has one writer and none is rewritten
 after the fact. A new slug mints under
-`allocation.mint.cloud` / `.local-group` and appends to its partition;
-neither emitter writes lineage, so a vanished slug has no decision and fails
-its step (a renamed slug needs a `sameas-overrides.tsv` bridge). The
+`allocation.mint.cloud` / `.local-group` and appends to its partition, and
+the same `emitArtifacts` call lands the build's allocation stage. No stage
+upstream of a sibling build decides anything about its objects, so a
+vanished slug has no decision and fails its step (a renamed slug needs a
+`sameas-overrides.tsv` bridge). The
 catalog's stellar sids are allocated in-record at build time
 ([SID allocation](/scripts/catalog/README.md#sid-allocation)); the Sol
 system's are pinned client-side in

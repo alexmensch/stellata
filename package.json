@@ -1,6 +1,6 @@
 {
   "name": "stellata",
-  "version": "7.1.11",
+  "version": "7.1.12",
   "private": true,
   "type": "module",
   "packageManager": "pnpm@11.24.0",
@@ -39,7 +39,7 @@
     "audit:spine-associations": "tsx scripts/util/launch.ts scripts/catalog/spine/association-audit.ts",
     "build:membership": "tsx scripts/util/launch.ts scripts/pipeline/run.ts build:membership",
     "lineage:codes": "tsx scripts/util/launch.ts scripts/pipeline/run.ts lineage:codes",
-    "trace": "tsx scripts/util/launch.ts scripts/catalog/lineage/trace.ts",
+    "trace": "tsx scripts/util/launch.ts scripts/catalog/lineage/trace/trace.ts",
     "refresh:iau-wgsn": "tsx scripts/util/launch.ts scripts/pipeline/record.ts refresh:iau-wgsn",
     "sid:risk-set": "tsx scripts/util/launch.ts scripts/sid/export-dr-risk-set.ts",
     "sid:dr-reconcile": "tsx scripts/util/launch.ts scripts/sid/dr-reconcile.ts",

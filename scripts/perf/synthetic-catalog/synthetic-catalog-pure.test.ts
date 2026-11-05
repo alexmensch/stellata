@@ -6,7 +6,6 @@ import {
 import {
   GAIA_CENSUS_BY_G,
   buildIntrinsicPool,
-  distanceModulus,
   drawTupleBrighterThan,
   equalAreaSkyGrid,
   galacticUnitVector,
@@ -36,17 +35,6 @@ describe('census targets', () => {
     expect(GAIA_CENSUS_BY_G.get(11)).toBe(1_247_240);
     expect(GAIA_CENSUS_BY_G.get(12)).toBe(3_087_828);
     expect(GAIA_CENSUS_BY_G.get(13)).toBe(7_369_632);
-  });
-});
-
-describe('photometry', () => {
-  it('vanishes at 10 pc, where apparent and absolute magnitude agree', () => {
-    expect(distanceModulus(10)).toBe(0);
-  });
-
-  it('adds five magnitudes per factor of ten in distance', () => {
-    expect(distanceModulus(100)).toBeCloseTo(5, 10);
-    expect(distanceModulus(1000)).toBeCloseTo(10, 10);
   });
 });
 

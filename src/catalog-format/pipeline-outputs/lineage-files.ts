@@ -39,12 +39,20 @@ export const PROMOTION_LINEAGE: StageLineageSpec<'promotion' | 'promotion.identi
 };
 
 /** Allocation's key -> SID file: not `identity`, which names the rows of records a stage founds. */
-export const ALLOCATION_IDENTITY_STEM = 'allocation.identity';
+export const ALLOCATION_SIDS_STEM = 'allocation.sids';
 
-export const ALLOCATION_LINEAGE: StageLineageSpec<'allocation' | typeof ALLOCATION_IDENTITY_STEM, 'allocation'> = {
+export const ALLOCATION_LINEAGE: StageLineageSpec<'allocation' | typeof ALLOCATION_SIDS_STEM, 'allocation'> = {
   stage: 'allocation',
-  files: ['allocation', ALLOCATION_IDENTITY_STEM],
+  files: ['allocation', ALLOCATION_SIDS_STEM],
 };
+
+/** A sibling build's allocation stage: its rows, and identity rows carrying each object's designation. */
+export function siblingAllocationLineage<S extends string>(stage: S): StageLineageSpec<S | `${S}.identity`, S> {
+  return { stage, files: [stage, `${stage}.identity`], identity: `${stage}.identity` };
+}
+
+export const CLOUDS_ALLOCATION_LINEAGE = siblingAllocationLineage('allocation-clouds');
+export const LOCAL_GROUP_ALLOCATION_LINEAGE = siblingAllocationLineage('allocation-local-group');
 
 /** Keyed by stage as well as stem, so two stages can share one emitArtifacts call. */
 export type StageOutputKey<F extends string, S extends string = string> = `lineage:${F}` | `lineage:${S}.header`;

@@ -22,7 +22,7 @@ import {
   type Vec3,
 } from './cloud-model-pure';
 import { siblingSlug } from '../sid/sibling-artifacts-pure';
-import { roundHalfEven } from '../util/round-pure';
+import { roundEach, roundHalfEven } from '../util/round-pure';
 import type { Sightline, Z2021Extent, Z2021Mass } from './zucker-parse';
 
 /** Singleton Zucker 2020 sightlines: the small end of the 5–30 pc effective radii of local SF clouds. */
@@ -93,7 +93,6 @@ const Z2021_TO_Z2020_SUPPRESS: Readonly<Record<string, string>> = {
 };
 
 const DEG = Math.PI / 180;
-const round2 = (v: Vec3): [number, number, number] => [roundHalfEven(v[0], 2), roundHalfEven(v[1], 2), roundHalfEven(v[2], 2)];
 const norm = (v: Vec3): number => Math.sqrt(v[0] * v[0] + v[1] * v[1] + v[2] * v[2]);
 
 export function inGrid(centreIcrs: Vec3, halfExtentsIcrs: readonly number[]): boolean {
@@ -146,9 +145,9 @@ export function z2021Clouds(
     return {
       name,
       id: siblingSlug(name, 'cloud'),
-      center: round2(centre),
-      axes: round2(axesGal),
-      quat: [roundHalfEven(quat.x, 6), roundHalfEven(quat.y, 6), roundHalfEven(quat.z, 6), roundHalfEven(quat.w, 6)],
+      center: roundEach(centre, 2),
+      axes: roundEach(axesGal, 2),
+      quat: roundEach([quat.x, quat.y, quat.z, quat.w] as const, 6),
       source: 'Z2021T1',
       distance: roundHalfEven(norm(centre), 1),
       inGrid: inGrid(centre, half),
@@ -178,7 +177,7 @@ export function z2020Clouds(
     return {
       name,
       id: siblingSlug(name, 'cloud'),
-      center: round2(centre),
+      center: roundEach(centre, 2),
       axes: [r, r, r],
       quat: [0, 0, 0, 1],
       source: 'Z2020',

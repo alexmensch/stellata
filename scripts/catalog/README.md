@@ -172,7 +172,7 @@ scripts/catalog/
                                   primary and a Gaia-only companion);
                                   `nameTable` hands
                                   trace the same table for its folded one
-                                  (lineage/README.md#trace).
+                                  (lineage/trace/README.md).
   catalog-columns.ts (+ test)     readCatalogColumns: float32 record columns
                                   of a built catalogue, each decoded whole
                                   (decodeRecordColumn) — the reader for a

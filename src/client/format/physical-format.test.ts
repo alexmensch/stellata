@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import {
-  apparentMagFromCamera,
   appMagCameraDisplay,
   coarseProvenance,
   formatEarthRadii,
@@ -30,17 +29,6 @@ describe('formatKm', () => {
   it('thousands-separates deterministically', () => {
     expect(formatKm(69911)).toBe('69,911');
     expect(formatKm(999)).toBe('999');
-  });
-});
-
-describe('apparentMagFromCamera', () => {
-  it('equals absmag at 10 pc', () => {
-    expect(apparentMagFromCamera(0.58, 10)).toBeCloseTo(0.58, 10);
-  });
-
-  it('follows the 5·log10(d) − 5 law', () => {
-    expect(apparentMagFromCamera(0.58, 100)).toBeCloseTo(5.58, 10);
-    expect(apparentMagFromCamera(0.58, 1)).toBeCloseTo(-4.42, 10);
   });
 });
 

@@ -5,13 +5,15 @@ import { resolve } from 'node:path';
 
 import { escapeRegExp } from '../escape-regexp';
 import type { Artifact } from '../tsv/artifact-pure';
+import type { JsonArtifact } from './json-artifact-pure';
 import { REPO_ROOT } from '../paths';
 import { listingFiles, type Source } from './source';
 
-/** The only module names a `defineSource` / `defineArtifact` may live in. */
-export const DECLARING_MODULE = /-(source|tsv)\.ts$/;
+/** The only module names a `defineSource` / `defineArtifact` / `defineJsonArtifact` may live in. */
+export const DECLARING_MODULE = /-(source|tsv|json)\.ts$/;
 
-export type DeclaredValue = Source<unknown, unknown[], unknown> | Artifact<string, unknown, unknown>;
+export type DeclaredValue =
+  | Source<unknown, unknown[], unknown> | Artifact<string, unknown, unknown> | JsonArtifact<unknown, unknown>;
 
 export type DeclaredUse = 'read' | 'written' | 'both' | 'unused';
 
