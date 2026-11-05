@@ -8,14 +8,11 @@ import { describe, it, expect } from 'vitest';
 import { buildFreshness, manualFreshness, readManualRecord } from '../scripts/pipeline/freshness';
 import { pipelineTree } from '../scripts/pipeline/pipeline-tree';
 import { rerunCommand } from '../scripts/pipeline/runner';
-import { loadTable } from '../scripts/pipeline/step-table/load-table';
+import { loadedRepoTable } from '../scripts/pipeline/step-table/repo-table';
 import { isBuild, type ManualStep } from '../scripts/pipeline/step-table/step-table-pure';
-import { STEPS } from '../scripts/pipeline/step-table/steps';
 import { isLfsPointerFile, REPO_ROOT } from '../scripts/util/paths';
-import { entryInputPaths } from '../scripts/util/step-inputs';
 
-const loaded = await loadTable(STEPS, { root: REPO_ROOT, deriveInputs: (entry) => entryInputPaths([entry]) });
-if (loaded.kind !== 'loaded') throw new Error(loaded.problems.join('\n'));
+const loaded = await loadedRepoTable();
 const tree = pipelineTree(REPO_ROOT);
 const resolved = [...loaded.steps.values()];
 const builds = resolved.flatMap((r) => (isBuild(r.step) ? [{ step: r.step, resolved: r }] : []));
