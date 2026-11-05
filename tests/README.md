@@ -143,8 +143,8 @@ node-import-boundary.test.ts
                          runs. README.md#node-import-boundary below carries the
                          one limit it cannot see.
 vite-config-import-extensions.test.ts
-                         Every relative import specifier in
-                         vite.config.ts's static import graph carries its
+                         Every relative import specifier in the root
+                         Vite / Vitest configs' static import graphs carries its
                          file extension, which Vite's native config
                          loader needs. README.md#vite-config-import-extensions
                          below.
@@ -517,8 +517,8 @@ those trees, which the pipeline-viewer boundary already forbids.
 
 ## Vite config import extensions
 
-`vite-config-import-extensions.test.ts` walks the modules `vite.config.ts`
-loads, following static relative imports, and fails on any relative
+`vite-config-import-extensions.test.ts` walks the modules each root config
+loads — every `vite*.config.ts` and `vitest*.config.ts` — following static relative imports, and fails on any relative
 specifier that does not name an existing file exactly as written: Vite's
 `configLoader: 'native'` loads the config through Node, which adds no
 extension, so `./vite.env` misses `vite.env.ts` despite its dot. A

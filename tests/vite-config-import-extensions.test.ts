@@ -1,11 +1,12 @@
 // See /tests/README.md#vite-config-import-extensions.
 import { describe, expect, it } from 'vitest';
-import { existsSync, readFileSync, statSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { dirname, extname, relative, resolve } from 'node:path';
 import { importSpecifiers, isRelativeSpecifier } from './import-specifiers';
 
 const ROOT = resolve(__dirname, '..');
 const CONFIG = resolve(ROOT, 'vite.config.ts');
+const CONFIG_ENTRIES = readdirSync(ROOT).filter((name) => /^vite(st)?(\.[\w-]+)?\.config\.m?ts$/.test(name)).sort();
 
 const isWalkable = (p: string) => /\.m?[jt]s$/.test(p);
 const isFile = (p: string) => existsSync(p) && statSync(p).isFile();
@@ -48,13 +49,17 @@ function walkImportGraph(entry: string): { modules: string[]; offenders: string[
 }
 
 describe('vite config import extensions', () => {
-  const { modules, offenders } = walkImportGraph(CONFIG);
+  it('finds every config Vite or Vitest loads from the repo root', () => {
+    expect(CONFIG_ENTRIES).toContain('vite.config.ts');
+    expect(CONFIG_ENTRIES).toContain('vite.site.config.ts');
+  });
 
-  it('every relative specifier the config reaches names its file as written', () => {
-    expect(offenders).toEqual([]);
+  it.each(CONFIG_ENTRIES)('every relative specifier %s reaches names its file as written', (entry) => {
+    expect(walkImportGraph(resolve(ROOT, entry)).offenders).toEqual([]);
   });
 
   it('the walk reaches past the config into the pipeline modules it imports', () => {
+    const { modules } = walkImportGraph(CONFIG);
     expect(modules).toContain('scripts/catalog/build-counts.ts');
     expect(modules).toContain('scripts/util/sources/source.ts');
   });
