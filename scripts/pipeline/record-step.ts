@@ -10,7 +10,7 @@ import {
   manualDescription, manualFreshness, pullQueryHash, requestHash, stampedOutputs, writeManualRecord,
   type Description, type ManualRecord,
 } from './freshness';
-import type { Loaded } from './step-table/load-table';
+import type { LoadedTable } from './step-table/load-table';
 import { holdStepLocks } from './locks';
 import { pipelineTree, type PipelineTree } from './pipeline-tree';
 import { runRecorded, runTs } from './processes';
@@ -35,7 +35,6 @@ export type RecordOutcome =
   | { readonly kind: 'partial' }
   | { readonly kind: 'failed'; readonly reason: string };
 
-type Loads = Extract<Loaded, { kind: 'loaded' }>;
 
 function inputFilter(resolved: ResolvedStep, described: Description | null, skip: ReadonlySet<string>, tree: PipelineTree) {
   const projected = new Set((described?.requestFrom ?? []).map(tree.abs));
@@ -97,7 +96,7 @@ async function runAndRead(
   return recordedReads(run, inputFilter(resolved, described, scratch, tree), tree);
 }
 
-export async function recordStep(loaded: Loads, options: RecordOptions): Promise<RecordOutcome> {
+export async function recordStep(loaded: LoadedTable, options: RecordOptions): Promise<RecordOutcome> {
   const resolved = loaded.steps.get(options.step);
   if (!resolved) throw new Error(`no step named ${options.step}`);
   const { step } = resolved;

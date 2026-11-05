@@ -155,7 +155,8 @@ the others once, and that rebuild appends nothing.
   `deriveInputs` `util/step-inputs.ts`'s `entryInputPaths`: `loadRepoTable`
   for `run.ts` and `record.ts`, `loadedRepoTable` (a rejected table throws)
   for the suites that read the real table — `steps.test.ts`,
-  `/scripts/worktree-seed.test.ts`, `/tests/artifact-freshness.test.ts`.
+  `.worktreeinclude`'s generator (`../worktree-include.ts`),
+  `/tests/artifact-freshness.test.ts`.
 - `manual-step-outputs.ts` — `MANUAL_STEPS`, every pull and bake with the
   files it writes, as an outputs module. Which modules may spell a `data/`
   path is `/tests/source-declarations.test.ts`'s rule.

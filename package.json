@@ -81,6 +81,7 @@
     "dev:site": "vite --config vite.site.config.ts",
     "check:asset-sizes": "tsx scripts/util/launch.ts scripts/release/check-asset-sizes.ts",
     "docs:figures": "tsx scripts/util/launch.ts scripts/doc-figures/rewrite-doc-figures.ts",
+    "worktree:include": "tsx scripts/util/launch.ts scripts/pipeline/write-worktree-include.ts",
     "deploy": "pnpm run build && pnpm run check:asset-sizes && wrangler deploy",
     "typecheck": "tsc --noEmit",
     "perf": "tsx scripts/util/launch.ts scripts/perf/run.ts",
