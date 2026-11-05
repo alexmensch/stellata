@@ -1,6 +1,7 @@
 import { mkdtempSync, readdirSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { gunzipSync } from 'node:zlib';
 
 import { afterAll, describe, expect, it } from 'vitest';
 
@@ -10,8 +11,10 @@ import { artifactText, isReadable, readArtifact } from '../util/sources/source';
 import { retiredSids } from './events-pure';
 import { EVENTS } from './events-tsv';
 import { LEDGERS } from './ledger-tsv';
+import { identityRows } from '../catalog/lineage/identity-pure';
+import { lineageRows, stageLineageLine } from '../catalog/lineage/lineage-row-pure';
 import { LOCAL_GROUP_JSON } from '../local-group/local-group-json';
-import { allocateSibling, emitSibling } from './sibling-allocation';
+import { allocateSibling, emitSibling, siblingLineage } from './sibling-allocation';
 import { SIBLING_ARTIFACTS } from './sibling-artifacts-pure';
 import { CATALOG_PARTITION, registryKeys } from '../../src/catalog-format/pipeline-outputs/data-files';
 import {
@@ -70,6 +73,24 @@ describe.skipIf(committed.length === 0)('allocateSibling over the committed regi
 
   it('fails closed on a vanished slug, naming the bridge remedy', () => {
     expect(() => allocateSibling(spec, LOCAL_GROUP_JSON, committed.slice(1))).toThrow(/lg SID allocation failed[\s\S]*sameas-overrides/);
+  });
+});
+
+describe('siblingLineage', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'sibling-lineage-'));
+  afterAll(() => rmSync(dir, { recursive: true, force: true }));
+  const stage = LOCAL_GROUP_ALLOCATION_LINEAGE.stage;
+  const lines = [stageLineageLine(spec.codes, {
+    stage, key: 'local-group:a', role: 'outcome', code: spec.codes.code('resolved'), params: '', evidence: [],
+  })];
+  const identity = [{ key: 'local-group:a', tyc: '', hip: '', hd: '', gl: '', gaia_source_id: '', designations: ['lg:a'] }];
+
+  it('renders the stage file and its identity file, each decoding back to what the allocation held', () => {
+    const { files, checks } = siblingLineage(spec, { lines, identity }, lineageLayout(dir), {});
+    const text = (key: keyof typeof files): string => gunzipSync(files[key] as Uint8Array).toString('utf8');
+    expect([...lineageRows(text(`lineage:${stage}`), 'fixture')].map((r) => r.code)).toEqual([`${stage}.resolved`]);
+    expect([...identityRows(text(`lineage:${stage}.identity`), 'fixture')]).toEqual(identity);
+    expect(checks.map((c) => c.kind)).toEqual(['pass']);
   });
 });
 

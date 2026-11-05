@@ -1,5 +1,6 @@
 // One sibling artifact's namespace allocated over the committed registry: each record's SID, its partition's registry files, and its allocation stage's lineage. See README.md#sibling-artifact-stamping.
 
+import type { FileHashes } from '../util/build-stamp';
 import { emitArtifacts, type ArtifactContents, type DeclaredOutputs } from '../util/emit-artifacts';
 import { stepInputHashes } from '../util/step-input-hashes';
 import { identityText, type IdentityRow } from '../catalog/lineage/identity-pure';
@@ -14,7 +15,7 @@ import {
   siblingArtifactObjects, type SiblingArtifact, type SiblingArtifactSpec, type SiblingItem,
 } from './sibling-artifacts-pure';
 import type { RegistryKey, SiblingPartition } from '../../src/catalog-format/pipeline-outputs/data-files';
-import type { StageOutputKey } from '../../src/catalog-format/pipeline-outputs/lineage-files';
+import type { LineageLayout, StageOutputKey } from '../../src/catalog-format/pipeline-outputs/lineage-files';
 
 const NO_LINEAGE: Upstream = { causes: () => new Map(), admissions: () => new Map() };
 
@@ -69,13 +70,16 @@ type SiblingStem<S extends string> = S | `${S}.identity`;
 
 /** The sibling's allocation stage, ready for emitSibling: header, baseline, diff and budget as every stage has them. */
 export function siblingLineage<S extends string>(
-  spec: SiblingArtifactSpec<S>, allocation: Pick<SiblingAllocation<SiblingPartition>, 'lines' | 'identity'>,
+  spec: SiblingArtifactSpec<S>,
+  allocation: Pick<SiblingAllocation<SiblingPartition>, 'lines' | 'identity'>,
+  layout: LineageLayout = LINEAGE_LAYOUT,
+  inputs: FileHashes = stepInputHashes(),
 ): StageLineageEmission<SiblingStem<S>, S> {
   const { stage } = spec.lineage;
   return stageLineage<SiblingStem<S>, S>({
-    layout: LINEAGE_LAYOUT,
+    layout,
     spec: spec.lineage,
-    inputs: stepInputHashes(),
+    inputs,
     diffed: stage,
     lines: allocation.lines,
     render: (sorted) => ({
@@ -88,7 +92,6 @@ export function siblingLineage<S extends string>(
     argv: process.argv.slice(2),
   });
 }
-
 
 /** Lands the artifact and its lineage, and the registry partition when the allocation appended, in one emitArtifacts call. */
 export function emitSibling<K extends string, N extends SiblingPartition, S extends string>(
