@@ -59,13 +59,18 @@ export type PairRow = Pick<MultiplesRecord,
   | 'sepArcsec' | 'paDeg' | 'sepPaEpochJd'>;
 
 /** Joins each system's primary and secondary rows; a system missing either,
- *  or whose system_id has no WDS id, is skipped, as are standalone rows. */
+ *  or whose system_id has no WDS id, is skipped, as are standalone rows. A
+ *  system with two rows in one role throws. */
 export function pairsFromRows(rows: readonly PairRow[]): MultiplesPair[] {
   const primaries = new Map<string, PairRow>();
   const secondaries = new Map<string, PairRow>();
   for (const row of rows) {
-    if (row.orbitRole === 'primary') primaries.set(row.systemId, row);
-    else if (row.orbitRole === 'secondary') secondaries.set(row.systemId, row);
+    if (row.orbitRole === 'standalone') continue;
+    const byRole = row.orbitRole === 'primary' ? primaries : secondaries;
+    if (byRole.has(row.systemId)) {
+      throw new Error(`multiples.tsv: system ${row.systemId} has two ${row.orbitRole} rows`);
+    }
+    byRole.set(row.systemId, row);
   }
   const pairs: MultiplesPair[] = [];
   for (const [systemId, p] of primaries) {

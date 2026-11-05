@@ -10,9 +10,22 @@ export interface CatalogRowIndexMap {
   bySynth: Record<string, number>;
 }
 
+/** Throws on a missing section or an entry that is not a record index. */
 export function parseCatalogRowIndexMap(text: string): CatalogRowIndexMap {
-  const raw = JSON.parse(text) as Partial<CatalogRowIndexMap>;
-  return { byGaia: raw.byGaia ?? {}, byHip: raw.byHip ?? {}, bySynth: raw.bySynth ?? {} };
+  const raw = JSON.parse(text) as Record<string, unknown>;
+  const section = (name: keyof CatalogRowIndexMap): Record<string, number> => {
+    const value = raw[name];
+    if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+      throw new Error(`catalog row-index map: section ${name} is missing`);
+    }
+    for (const [key, idx] of Object.entries(value)) {
+      if (!Number.isInteger(idx) || (idx as number) < 0) {
+        throw new Error(`catalog row-index map: ${name}[${key}] is ${JSON.stringify(idx)}, not a record index`);
+      }
+    }
+    return value as Record<string, number>;
+  };
+  return { byGaia: section('byGaia'), byHip: section('byHip'), bySynth: section('bySynth') };
 }
 
 /** gaia → hip → synth, the first section that holds the component's key. */

@@ -22,7 +22,8 @@ scripts/catalog/companions/record-index/
                              resolveMultiplesIdx (gaia → hip → synth) and
                              synthSlotIdx (the blended-sibling retry): how
                              one multiples.tsv component resolves to a
-                             record; parseCatalogRowIndexMap.
+                             record; parseCatalogRowIndexMap, which throws
+                             on a missing section or a non-index entry.
   catalog-row-index-map-source.ts
                              CATALOG_ROW_INDEX_MAP, the sidecar declared.
 ```

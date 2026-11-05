@@ -58,6 +58,11 @@ describe('pairsFromRows', () => {
     });
   });
 
+  it('throws on a system with two rows in one role', () => {
+    const row = multiplesRow({ systemId: '00000+0000-AB', comp: 'A', orbitRole: 'primary' });
+    expect(() => pairsFromRows([row, { ...row }])).toThrow(/two primary rows/);
+  });
+
   it('skips a system missing a side, and standalone rows', () => {
     expect(pairsFromRows([
       multiplesRow({ systemId: '00000+0000-AB', comp: 'A', orbitRole: 'primary' }),
