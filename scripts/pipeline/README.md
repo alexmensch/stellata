@@ -102,7 +102,9 @@ A bake follows the same rule. `cloud-surfaces` reads `public/clouds.json`
 only for the geometry it traces (positions and extents) and the SID it keys
 each surface by, so its record holds the hash of that projection: a name
 change in `clouds.json` leaves it fresh, a geometry or SID change stops the
-build. The bake record is the only owner of that fact.
+build. The bake record is the only owner of that fact. Its `requestFrom`
+orders the bake after `build:clouds` as a pull's orders the pull, so the
+check reads the `clouds.json` this run rebuilt.
 
 An **external dataset** a baker reads from outside the repo is a pull of its
 own, whose query is the dataset's identity and version: the two variants of
