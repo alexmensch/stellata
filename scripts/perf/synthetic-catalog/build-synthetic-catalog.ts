@@ -32,10 +32,10 @@ import {
 import { withoutPassthroughDash } from '../args';
 import { GAL_TO_ICRS } from '../../../src/astro-core/galactic-coords';
 import { DISC_RADIUS_PC } from '../../../src/astro-core/milkyway/column/milkyway-column-pure';
+import { apparentMagnitude, distanceModulus } from '../../../src/astro-core/perceptual-magnitude';
 import {
   GAIA_CENSUS_BY_G,
   buildIntrinsicPool,
-  distanceModulus,
   drawTupleBrighterThan,
   equalAreaSkyGrid,
   galacticUnitVector,
@@ -214,7 +214,7 @@ export function main(): void {
   const conByCell = constellationByCell(real, icrsToGal);
 
   const alreadyAtLimit = real.filter(
-    (r) => r.distPc > 0 && r.absMag + distanceModulus(r.distPc) <= limitMag,
+    (r) => r.distPc > 0 && apparentMagnitude(r.absMag, r.distPc) <= limitMag,
   ).length;
   const cap =
     values['max-records'] !== undefined
