@@ -9,6 +9,8 @@ SIMBAD. A pull is a `pull` step on the step table
 
 - `tap-pure.ts` (+ test) — the backend: the three archives, the sync query,
   the reply's classification, and `tapClient`.
+- `unverified-mirrors.test.ts` — no committed `data/stamps/` record answered by
+  a mirror whose `verified` flag is false.
 - `columns-pure.ts` (+ test) — a table's `Column` list and everything derived
   from it: the projection, the reply's schema check, the TSV.
 - `gates-pure.ts` (+ test) — the row band, spot rows and coverage, each an
@@ -137,11 +139,13 @@ describe states.
 answers verifies that mirror before it lands.** CDS Strasbourg was unreachable
 from 2026-11-05, and Harvard mirrors SIMBAD's TAP but not VizieR's, so their CSV dialect (quoting,
 a BOM, the empty cell), `/capabilities` limit and error body are unmeasured.
-The two are separate hosts and may return apart, so the rule is per mirror: a
-PR in which a pull is answered by one (its record's `answeredBy`) runs that
-mirror's group of live checks in stellata-hhaw.45.29.9, records the result
-here, and fixes whatever they find, in that same PR. The bead closes once both
-groups pass.
+Each mirror's `verified` flag is the gate: `unverified-mirrors.test.ts` fails
+on any committed `data/stamps/` record whose `answeredBy` names an unverified
+mirror, a Python pull's included, so the PR that first reaches one cannot
+land until it runs that mirror's group of live checks in
+stellata-hhaw.45.29.9, records its limit here, fixes whatever the checks find
+and sets the flag. The two are separate hosts and may return apart, so each
+mirror passes on its own; the bead closes once both have.
 
 ## Columns
 

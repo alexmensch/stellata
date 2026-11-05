@@ -5,6 +5,8 @@ import { parse } from 'csv-parse/sync';
 export interface TapMirror {
   readonly name: string;
   readonly url: string;
+  /** False until the live checks in README.md#the-tap-backend pass against it; a committed record it answered fails the suite. */
+  readonly verified: boolean;
 }
 
 export interface TapArchive {
@@ -17,23 +19,23 @@ const bare = (identifier: string): string => identifier;
 
 export const GAIA: TapArchive = {
   mirrors: [
-    { name: 'ESA-sync', url: 'https://gea.esac.esa.int/tap-server/tap' },
-    { name: 'ARI-sync', url: 'https://gaia.ari.uni-heidelberg.de/tap' },
+    { name: 'ESA-sync', verified: true, url: 'https://gea.esac.esa.int/tap-server/tap' },
+    { name: 'ARI-sync', verified: true, url: 'https://gaia.ari.uni-heidelberg.de/tap' },
   ],
   retryDelaysMs: [2_000, 4_000, 8_000, 16_000],
   quote: bare,
 };
 
 export const VIZIER: TapArchive = {
-  mirrors: [{ name: 'CDS', url: 'https://tapvizier.u-strasbg.fr/TAPVizieR/tap' }],
+  mirrors: [{ name: 'CDS', verified: false, url: 'https://tapvizier.u-strasbg.fr/TAPVizieR/tap' }],
   retryDelaysMs: [1_000, 2_000, 4_000],
   quote: (identifier) => `"${identifier}"`,
 };
 
 export const SIMBAD: TapArchive = {
   mirrors: [
-    { name: 'SIMBAD-CDS', url: 'https://simbad.cds.unistra.fr/simbad/sim-tap' },
-    { name: 'SIMBAD-Harvard', url: 'https://simbad.cfa.harvard.edu/simbad/sim-tap' },
+    { name: 'SIMBAD-CDS', verified: false, url: 'https://simbad.cds.unistra.fr/simbad/sim-tap' },
+    { name: 'SIMBAD-Harvard', verified: true, url: 'https://simbad.cfa.harvard.edu/simbad/sim-tap' },
   ],
   retryDelaysMs: [1_000, 2_000, 4_000],
   quote: bare,
@@ -194,4 +196,11 @@ export function tapClient(archive: TapArchive, deps: TapClientDeps): TapClient {
       throw new TapOverflow(`no mirror returns ${limit + 1} rows from one query (hard limits: ${tooSmall.join(', ')}); batch the query`);
     },
   };
+}
+
+const UNVERIFIED = new Set([GAIA, VIZIER, SIMBAD].flatMap((a) => a.mirrors).filter((m) => !m.verified).map((m) => m.name));
+
+/** The mirrors in a record's `answeredBy` that have not passed their live checks. */
+export function unverifiedAnswers(answeredBy: readonly string[]): string[] {
+  return answeredBy.filter((name) => UNVERIFIED.has(name));
 }
