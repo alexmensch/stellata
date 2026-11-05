@@ -71,7 +71,6 @@ export function mismatchedFiles(read: ReadHeader): string[] {
   return Object.keys(read.onDisk).filter((name) => read.onDisk[name] !== read.header.files[name]);
 }
 
-/** The inputs as `commit` holds them, over `paths`. */
 export type InputsAt = (commit: string, paths: () => readonly string[]) => HashesAt;
 
 /** What a header's input map is compared with: see README.md#the-verdict--one-map-comparison. */
@@ -84,7 +83,6 @@ export interface BaselineContext {
   readonly inputsAt: InputsAt;
 }
 
-/** `recorded` exactly when on the `main` branch with HEAD at its merge-base with origin/main. */
 export function baseAt(
   head: { readonly onMainBranch: boolean; readonly commit: string }, mergeBase: string,
   inHistory: (commit: string) => boolean, branchPaths: () => readonly string[],
@@ -150,7 +148,6 @@ export type BaselinePlan =
   | { readonly kind: 'none'; readonly rotate: true }
   | { readonly kind: 'refused'; readonly message: string; readonly rotate: true };
 
-/** On main nothing is pinned: every build rotates, so each landing diffs against the one before it. */
 export function planBaseline(
   previous: HeaderRead, source: BaselineSource, context: BaselineContext | null, acceptAny: boolean,
 ): BaselinePlan {
