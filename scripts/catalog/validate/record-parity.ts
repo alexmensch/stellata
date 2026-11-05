@@ -2,7 +2,7 @@
 // catalogue and the current build. README.md#additive-mode-record-parity.
 
 import { resolve } from 'node:path';
-import { readCatalogBuffer } from '../catalog-lookup';
+import { readCatalogBuffer } from '../columns/catalog-buffer';
 import { CATALOG_MANIFEST_FILENAME } from '../../../src/catalog-format/record/catalog-pure';
 import { compareRecordParity, formatParityReport, parityHolds } from './record-parity-pure';
 import { publicFile } from '../../util/paths';

@@ -6,10 +6,7 @@ import {
   type BandMaterials, type BandSharedSlots,
 } from './band-materials';
 import type { DustField } from '../loaders/dust-loader';
-import {
-  clampResolvedHoleStrength,
-  resolvedHoleCatalogueMismatch,
-} from '../../astro-core/milkyway/calibration/resolved-fraction-pure';
+import { clampResolvedHoleStrength } from '../../astro-core/milkyway/calibration/resolved-fraction-pure';
 import { writeResolvedHoleTexture } from './resolved-hole-texture';
 import {
   BandPeakCache,
@@ -120,12 +117,7 @@ export class MilkyWay {
   private isobar = false;
   private readonly peakCache = new BandPeakCache();
 
-  constructor(materials: BandMaterials, catalogRecords: number) {
-    const holeMismatch = resolvedHoleCatalogueMismatch(catalogRecords);
-    if (holeMismatch !== null) {
-      // eslint-disable-next-line no-console
-      console.warn(`[milkyway] ${holeMismatch}`);
-    }
+  constructor(materials: BandMaterials) {
     this.materials = materials;
     this.shared = this.materials.shared;
 

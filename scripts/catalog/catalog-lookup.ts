@@ -3,7 +3,6 @@
 // surface, same as the runtime SoA loader.
 
 import { readFile } from 'node:fs/promises';
-import { resolve, dirname } from 'node:path';
 import {
   AMP_MAG_PER_UNIT,
   APSIS_FIELDS,
@@ -15,39 +14,22 @@ import {
   PERIOD_DAYS_PER_UNIT,
   RECORD_SIZE,
   recordsOffset,
-  catalogChunkFilename,
-  assembleCatalogChunks,
   readCatalogHeader,
   readNameTable,
   readRecordField,
   buildAliasedIdIndex,
   readRecordFieldBig,
   type CatalogHeaderFields,
-  type CatalogManifest,
   type SearchEntry,
 } from '../../src/catalog-format/record/catalog-pure';
 import { displayNamesFromSearchIndex } from '../../src/catalog-format/naming/star-naming-pure';
 import type { RecordRef } from './parse/corpus-tsv';
 import { publicFile } from '../util/paths';
 import { PUBLIC_FILES } from '../../src/catalog-format/public-artifacts/public-artifacts';
+import { readCatalogBuffer } from './columns/catalog-buffer';
 
 /** The client loader's Node-side twin — same `assembleCatalogChunks`
  *  contract, fs instead of fetch. */
-export async function readCatalogBuffer(
-  manifestPath: string = publicFile(CATALOG_MANIFEST_FILENAME),
-): Promise<ArrayBuffer> {
-  const manifest = JSON.parse(await readFile(manifestPath, 'utf-8')) as CatalogManifest;
-  const dir = dirname(manifestPath);
-  const chunks = await Promise.all(
-    manifest.chunkBytes.map((_, i) =>
-      readFile(resolve(dir, catalogChunkFilename(i))).then(
-        (b) => new Uint8Array(b.buffer, b.byteOffset, b.byteLength),
-      ),
-    ),
-  );
-  return assembleCatalogChunks(chunks, manifest);
-}
-
 export interface CatalogRecord {
   i: number;
   x: number; y: number; z: number;

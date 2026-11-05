@@ -22,7 +22,7 @@ import {
   resolvedLightFraction,
 } from '../../src/astro-core/milkyway/calibration/resolved-fraction-pure';
 import { ARCSEC_TO_RAD } from '../../src/astro-core/astronomy-constants';
-import type { CatalogColumns } from '../catalog/catalog-columns';
+import type { CatalogColumns } from '../catalog/columns/catalog-columns';
 
 /** The record columns the measurement reads: position (Sol at the origin, ICRS
  *  axes) and absmag, intrinsic — the build already subtracted the Sol→star A_V. */

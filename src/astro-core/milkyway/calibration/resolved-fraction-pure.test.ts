@@ -9,7 +9,6 @@ import {
   type ResolvedHoleTable,
   clampResolvedHoleStrength,
   resolvedHoleBandEdges,
-  resolvedHoleCatalogueMismatch,
   resolvedHoleIndex,
   resolvedHoleShellEdgesPc,
   resolvedHoleUv,
@@ -17,10 +16,7 @@ import {
   sampleTexelCentres,
   unresolvedHoleVoxels,
 } from './resolved-fraction-pure';
-import {
-  RESOLVED_HOLE_CATALOGUE_RECORDS,
-  RESOLVED_HOLE_VALUES,
-} from './resolved-hole-table';
+import { RESOLVED_HOLE_VALUES } from './resolved-hole-table';
 
 /** A table whose value is its own (shell, band) pair, so a sample reads
  *  back which cells it blended. */
@@ -152,20 +148,5 @@ describe('the table sampler the cube is resampled with', () => {
         expect(got).toBeLessThanOrEqual(1);
       }
     }
-  });
-});
-
-describe('resolvedHoleCatalogueMismatch', () => {
-  it('says nothing when the loaded catalogue is the measured one', () => {
-    expect(resolvedHoleCatalogueMismatch(RESOLVED_HOLE_CATALOGUE_RECORDS))
-      .toBeNull();
-  });
-
-  it('names both counts when a shallower build loads', () => {
-    const warning = resolvedHoleCatalogueMismatch(388071);
-    expect(warning).not.toBeNull();
-    expect(warning).toContain('388,071');
-    expect(warning).toContain(RESOLVED_HOLE_CATALOGUE_RECORDS.toLocaleString());
-    expect(warning).toContain('measure:band-resolved');
   });
 });
