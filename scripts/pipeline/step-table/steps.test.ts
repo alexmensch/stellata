@@ -44,7 +44,7 @@ describe('the step table', () => {
       if ((await entryClosure([step.entry])).has('scripts/util/step-inputs.ts')) reaching.push(step.name);
     }
     expect(reaching).toEqual([]);
-  }, 120_000);
+  });
 
   it('runs the build steps in their data-flow order', () => {
     expect(loaded.graph.order.filter(isBuildStep)).toEqual([
