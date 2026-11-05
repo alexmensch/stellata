@@ -20,8 +20,11 @@ import {
   type SimbadNamespace,
   type SimbadRecordKeys,
 } from '../record/record-build-pure';
-import { classifyFromSimbad, SPECTRAL_UNKNOWN } from '../../../src/catalog-format/spectral/spectral-classify';
-import { encodeSpectralBytes } from '../../../src/catalog-format/spectral/spectral-record-bytes';
+import {
+  classifyFromSimbad,
+  SPECTRAL_UNKNOWN,
+  type SpectralInfo,
+} from '../../../src/catalog-format/spectral/spectral-classify';
 import {
   type SimbadSpectralIndex,
   type SpectralResolution,
@@ -139,8 +142,8 @@ export interface Star {
   vx: number; vy: number; vz: number;
   absmag: number;
   ci: number;
-  spectClass: number;
-  lumClass: number;
+  /** Build-time only: the record write packs it into its two class bytes. */
+  spectral: SpectralInfo;
   physicalRadius: number;  // solar radii
   /** IAU-positional membership, computed from this record's own resolved
    *  position — catalog byte 34. Only Sol carries
@@ -716,7 +719,7 @@ export function readStars(
       x, y, z,
       vx: vel.x, vy: vel.y, vz: vel.z,
       absmag, ci,
-      ...encodeSpectralBytes(spectInfo),
+      spectral: spectInfo,
       physicalRadius: physRadius,
       conIndex,
       // Left unset here: three later passes fill it, and everything else

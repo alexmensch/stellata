@@ -1050,9 +1050,10 @@ function anchorAloneMagnitude(cands: AnchorDimCandidate[]): number | null {
   return best?.mag ?? null;
 }
 
+// Not `star.spectral`: see README.md#reading-a-records-class-back.
 function recordSpectralInfo(star: Star): SpectralInfo {
   return (star.spectDisplay ? classifyFromSimbad(star.spectDisplay) : null)
-    ?? decodeSpectralBytes(star);
+    ?? decodeSpectralBytes(encodeSpectralBytes(star.spectral));
 }
 
 // Re-runs the strict SIMBAD parser rather than taking the string as-is, so the
@@ -1708,7 +1709,7 @@ function promoteRow(
     x: position.x, y: position.y, z: position.z,
     vx: anchorVel.x, vy: anchorVel.y, vz: anchorVel.z,
     absmag, ci,
-    ...encodeSpectralBytes(spectral.info),
+    spectral: spectral.info,
     physicalRadius: physicalRadius(absmag, spectral.info),
     conIndex,
     desigConIndex,
