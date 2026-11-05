@@ -2,10 +2,8 @@
 
 import { readFile, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
-import {
-  decodeRecordColumn, readCatalogHeader, wholeRecordSpan, CATALOG_MANIFEST_FILENAME,
-} from '../../src/catalog-format/record/catalog-pure';
-import { readCatalogBuffer } from '../catalog/catalog-lookup';
+import { CATALOG_MANIFEST_FILENAME } from '../../src/catalog-format/record/catalog-pure';
+import { readCatalogColumns } from '../catalog/catalog-columns';
 import { REPO_ROOT, publicFile } from '../util/paths';
 import {
   GALACTIC_CENTRE_PC,
@@ -31,7 +29,7 @@ import {
   type CapSurfaceBrightness,
   MIN_STARS_PER_CELL,
   type Rotation3,
-  type StarColumns,
+  STAR_FIELDS,
   buildHoleCells,
   capSurfaceBrightness,
   holeLight,
@@ -42,19 +40,6 @@ import {
 } from './resolved-light-pure';
 
 const TABLE_MODULE = 'src/astro-core/milkyway/calibration/resolved-hole-table.ts';
-
-async function loadColumns(manifestPath: string): Promise<StarColumns> {
-  const buffer = await readCatalogBuffer(manifestPath);
-  const header = readCatalogHeader(buffer);
-  const view = new DataView(buffer);
-  const span = wholeRecordSpan(header);
-  const column = (field: 'x' | 'y' | 'z' | 'absmag') => {
-    const out = new Float32Array(header.count);
-    decodeRecordColumn(view, span, field, out);
-    return out;
-  };
-  return { x: column('x'), y: column('y'), z: column('z'), absmag: column('absmag'), count: header.count };
-}
 
 function unit(v: { x: number; y: number; z: number }): Vec3 {
   const n = Math.hypot(v.x, v.y, v.z);
@@ -109,7 +94,7 @@ export async function main(): Promise<void> {
   const manifestArg = process.argv.indexOf('--manifest');
   const manifestPath =
     manifestArg >= 0 ? resolve(process.argv[manifestArg + 1]) : publicFile(CATALOG_MANIFEST_FILENAME);
-  const stars = await loadColumns(manifestPath);
+  const stars = await readCatalogColumns(STAR_FIELDS, manifestPath);
   const manifest = JSON.parse(await readFile(manifestPath, 'utf-8')) as { totalBytes: number };
   console.log(`catalogue: ${stars.count.toLocaleString()} records, ${manifest.totalBytes.toLocaleString()} bytes\n`);
 

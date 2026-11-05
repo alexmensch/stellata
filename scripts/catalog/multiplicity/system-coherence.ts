@@ -8,7 +8,7 @@ import type {
   Hip2AstrometryRow,
 } from '../distance/direction-cascade';
 import type { MultiplesTsvRow } from '../companions/companion-promotion';
-import { wdsRootOf } from '../companions/companion-promotion';
+import { wdsRootOf } from '../../binaries/component-tokens-pure';
 import type { BailerJonesIndex } from '../distance/refinement/distance-overrides-pure';
 import { sourceRowRef, type AnySourceRowRef } from '../../util/sources/row-ref-pure';
 import { isCoherenceAnchorGrade } from './anchor-grade-pure';

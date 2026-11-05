@@ -2,7 +2,7 @@
 
 Runtime support for binary / multiple-star systems. The loader here
 parses `public/binaries.bin` (written by
-`scripts/binaries/build-runtime-binaries.py`) into a typed record-set
+`scripts/binaries/build-runtime-binaries.ts`) into a typed record-set
 that `BinaryOrbitField` walks per frame to apply orbital motion to
 star catalog records.
 
@@ -108,31 +108,10 @@ frame's last camera write ([How the shell uses it](../scene/README.md#how-the-sh
 
 ## Format contract
 
-The v1 wire format is the single contract between the Python writer
-(`scripts/binaries/build-runtime-binaries.py`) and this loader:
-
-- Header (16 B): `BIN1` magic + uint32 version + uint32 count + 4 B
-  reserved.
-- Record (72 B): see `RECORD_LAYOUT` in `binaries-loader.ts` for the
-  per-field byte offsets. Float64 fields land on 8-byte boundaries.
-  Trailing 8 bytes are reserved for forward-compat.
-
-Flag bits on each record (`flags` uint32):
-- `0x1` has_orbit — every element BinaryOrbitField consumes is finite:
-  P, T, e, a, ω, q. (Ω is optional — `relationToElements` falls back
-  to 0 when absent; only Tier 1 reads it.) `build-runtime-binaries.py`
-  refuses to set this bit when any required element is `None`, so a
-  pair surfacing this flag is guaranteed Kepler-evaluable.
-- `0x2` has_inclination — inclination i_rad is valid (Tier-1 canonical
-  Kepler). When unset, runtime uses the galactic-Z fallback orbit normal
-  (Tier 2).
-- `0x4` is_inner_of_hierarchy — pair sits inside another pair (Algol
-  Aa1,Aa2 inside Aa,Ab). `parentRelation` then points at the outer
-  pair's record index.
-
-Records are walked in topological (outer-before-inner) order, so a
-single forward pass through `relations` is enough for the runtime to
-evaluate parents before children.
+The v1 wire layout — header, record offsets, flag bits, and the
+outer-before-inner record order a single forward pass relies on — is
+`/src/catalog-format/binaries/`'s, which the writer imports too. The loader
+reads every offset and flag from there.
 
 ## Tier mapping
 
@@ -258,8 +237,9 @@ ride their baked velocity directly, so a promoted companion with no own PM
 inherits its primary's systemic velocity at build time
 (`scripts/catalog/companions/companion-promotion.ts`) or it would freeze at `v=0` and
 shear from a drifting primary. Full systemic coherence for *every*
-binaries.bin pair — keyed on this file's authoritative resolved pairing,
-which the catalog build can't replicate — is `stellata-zau1`; until it
+binaries.bin pair — keyed on this file's authoritative resolved pairing
+(`planRecords`, `/scripts/binaries/runtime-binaries-pure.ts`) — is deferred
+to `stellata-zau1`; until it
 lands, the ~950 divergent-velocity Tier-3 wide pairs shear up to tens of
 arcminutes at the scrub-range extremes ([Current-epoch star](/docs/science-catalog-ingestion.md#current-epoch-star-positions--space-motion-propagation-to-t)
 positions).

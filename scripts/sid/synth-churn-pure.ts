@@ -1,5 +1,7 @@
 // The candidate report for synthetic keys that left the build with no decision: every live synth key under the same WDS root, with its row's geometry. See README.md#ownership-pin--synth-churn-resolves-here.
 
+import { wdsRootOf } from '../binaries/component-tokens-pure';
+
 export interface PairGeometry {
   readonly systemId: string;
   readonly comp: string;
@@ -7,7 +9,11 @@ export interface PairGeometry {
   readonly paDeg: number | null;
 }
 
-const wdsOf = (systemIdOrKey: string): string => systemIdOrKey.slice(0, systemIdOrKey.lastIndexOf('-'));
+function wdsOf(systemIdOrKey: string): string {
+  const root = wdsRootOf(systemIdOrKey);
+  if (root === null) throw new Error(`${systemIdOrKey} names no WDS id`);
+  return root;
+}
 
 /** `orphans` and `live` are synth keys without their `synth:` namespace, `<wds>-<comp>`. */
 export function synthChurnReport(

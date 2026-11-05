@@ -2,6 +2,8 @@
 // limits, the retrying fetch, and the header / data-block readers the typed
 // per-ephemeris-type parsers sit on top of.
 
+import { reportService } from './answered-by';
+
 export const HORIZONS_API = 'https://ssd.jpl.nasa.gov/api/horizons.api';
 export const HORIZONS_SERVICE = new URL(HORIZONS_API).host;
 
@@ -27,6 +29,7 @@ export async function fetchHorizonsText(params: URLSearchParams): Promise<string
     const response = await fetch(url);
     if (response.ok) {
       const text = await response.text();
+      reportService(HORIZONS_SERVICE);
       await sleep(PACING_MS);
       return text;
     }

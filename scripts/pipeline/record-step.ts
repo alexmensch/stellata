@@ -1,7 +1,9 @@
 // Runs one manual step by hand and writes its committed record. See README.md#recording-a-manual-step--recordts.
 
-import { existsSync } from 'node:fs';
+import { existsSync, mkdirSync, rmSync } from 'node:fs';
+import { dirname } from 'node:path';
 
+import { ANSWERED_BY_ENV, readAnsweredBy } from '../util/answered-by';
 import {
   fileHashes, ignoredPaths, inputHashes, listingHashes, recordedInputs, type FileHashes, type RecordedReads,
 } from '../util/build-stamp';
@@ -83,8 +85,15 @@ async function runAndRead(
     const derived = await options.deriveInputs(entry);
     const keep = inputFilter(resolved, described, ignoredPaths(derived, tree.root), tree);
     const inputs = inputHashes(derived.filter(keep), tree.root);
-    const code = await runTs(tree, step.name, entry, options.args, inputs, process.env);
-    return code === 0 ? { inputs, services: [] } : `exited ${code}`;
+    const answeredBy = tree.answeredBy(step.name);
+    mkdirSync(dirname(answeredBy), { recursive: true });
+    rmSync(answeredBy, { force: true });
+    try {
+      const code = await runTs(tree, step.name, entry, options.args, inputs, { ...process.env, [ANSWERED_BY_ENV]: answeredBy });
+      return code === 0 ? { inputs, services: readAnsweredBy(answeredBy) } : `exited ${code}`;
+    } finally {
+      rmSync(answeredBy, { force: true });
+    }
   }
   const recorded = await runRecorded(tree, step.name, entry, options.args, process.env);
   if (recorded.kind === 'exited') return `exited ${recorded.code}`;
@@ -103,9 +112,11 @@ export async function recordStep(loaded: LoadedTable, options: RecordOptions): P
   if (isBuild(step)) throw new Error(`${step.name} is a build step: run it with run.ts`);
   const manual = { ...resolved, step };
   const tree = pipelineTree(options.root);
-  const held = await holdStepLocks(tree.locks, loaded, step.name, true, options.log);
+  const projects = (manualDescription(step, tree)?.requestFrom ?? []).map(tree.abs);
+  const held = await holdStepLocks(tree.locks, loaded, step.name, true, options.log, projects);
   try {
     const partial = options.args.length > 0;
+    // Described again under the locks: the first answer only names the files to lock.
     const described = manualDescription(step, tree);
     if (!partial && !options.force && manualFreshness(step, resolved.outputs, tree, described).kind === 'fresh') return { kind: 'fresh' };
     const reads = await runAndRead(manual, described, options, tree);

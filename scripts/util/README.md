@@ -181,8 +181,10 @@ same thing — single-use helpers stay with their consumer.
   (`/tests/README.md#pipeline-viewer-boundary`) and the step table's
   outputs-module walk ([Load-time rules](../pipeline/step-table/README.md#load-time-rules)) read.
 - `round-pure.ts` (+ test) — `roundHalfEven(x, digits)`, Python's
-  `round`: half to even on the double's exact decimal value, and
-  `roundEach`, the same over each element of a tuple; and
+  `round`: half to even on the double's exact decimal value;
+  `roundEach`, the same over each element of a tuple;
+  `formatFixed(x, digits)`, Python's `f"{x:.{digits}f}"` text on the same
+  rounding (a refresh pull's fixed-decimal column format); and
   `roundSignificant(v, digits)`, significant figures through
   `toPrecision`. Every number a TypeScript build rounds into a JSON
   artifact goes through one of them, never `Math.round(x · 10ⁿ) / 10ⁿ`,
@@ -211,7 +213,9 @@ same thing — single-use helpers stay with their consumer.
   and `build:catalog`, which rewrite inputs, the two differ on those entries;
   the runner builds every stamp's inputs through it. A step that needs its
   own input hashes (a lineage header's input map) reads the handed map here
-  and never re-derives them.
+  and never re-derives them; `handedFileHash(hashes, file)` is one entry,
+  throwing when the map holds none (`build:catalog` records `multiples.tsv`'s
+  in the row-index map, and `build:binaries-runtime` checks it with its own).
 - `tsv/` — the one TSV reader (`readTable`, typed columns, cells that keep
   empty and malformed apart) and `defineArtifact`, the codec of every table
   this repo writes. Own README.
@@ -286,9 +290,18 @@ same thing — single-use helpers stay with their consumer.
   `tsx` would have, and runs `main`: a number it returns is the exit
   status; a refused emission has already printed its failed checks, so it
   exits 1 with one line and no stack; any other error keeps its stack. A
-  TypeScript pull (the two Horizons fetchers) also exports `describe`, and
-  `--describe` then prints its `PullDescription` instead of running.
+  TypeScript manual step that describes itself also exports `describe`,
+  sync or async — a pull's `PullDescription` (the two Horizons fetchers),
+  or a bake's `Projection` of a file it reads — and `--describe` then
+  prints what it returns instead of running.
   `horizons-response.ts`' `HORIZONS_SERVICE` is the service both state.
+- `answered-by.ts` — `reportService(name)`, the TypeScript sibling of
+  `build_stamp.report_service`: appends `name`, once, to the file
+  `ANSWERED_BY_ENV` names, which `../pipeline/record-step.ts` creates for a
+  TypeScript manual step and copies into its record as `answeredBy`. Outside
+  `record.ts` it records nothing. Its callers: the refresh pulls' TAP client
+  (`../refresh/pull/`) and `fetchHorizonsText`, so both Horizons fetchers
+  record `HORIZONS_SERVICE`.
 - `heap-budget.ts` / `heap-budget-pure.ts` (+ test) — `watchHeap(step)`,
   started first thing in a step's `main`, and its `check()`, the step's peak
   live heap against the CI runner's as an `emitArtifacts` check
@@ -306,16 +319,14 @@ same thing — single-use helpers stay with their consumer.
   when `PIPELINE_STEP` is set (the runner sets it to each step it runs, and
   drops an inherited `UPDATE_SNAPSHOTS`), the variable form otherwise;
   `snapshot_assert.py` does the same. Used by
-  `build-catalog.ts` (build counts and distance outliers) and the classic-ID
-  overlay, membership and WGSN builds. The count snapshots all pass
+  `build-catalog.ts` (build counts and distance outliers), the classic-ID
+  overlay, membership and WGSN builds, and `build:binaries-runtime`'s pair
+  counts. The count snapshots all pass
   `compareCountSnapshot` (`catalog/build-counts.ts`) as the compare.
   `snapshot-check.test.ts` pins pass, drift, missing and refresh.
-- `snapshot_assert.py` — the Python sibling, for the two binaries steps
-  (`build-binaries.py`'s counts, `build-runtime-binaries.py`'s pair
-  counts; `binaries/stage7_counts.py` builds its rates snapshot on the same
-  primitives). A leaf on purpose: `build_stamp.py` hashes every module a
-  step imports, so the runtime step reaching this through `stage7_counts`
-  would restamp `binaries.bin` on every pipeline-stage edit. Same rule
+- `snapshot_assert.py` — the Python sibling, for `build-binaries.py`'s
+  counts (`binaries/stage7_counts.py` builds its rates snapshot on the same
+  primitives). Same rule
   on a missing snapshot: it fails, and only `UPDATE_SNAPSHOTS=1`
   writes one. Returns a bool where the TS sibling returns an `emitArtifacts` check, since the Python
   drivers own their exit. Every snapshot it writes is staged: a caller

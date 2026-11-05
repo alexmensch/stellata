@@ -14,15 +14,15 @@ import {
   buildComponentDesignations,
   renderableOrbitRelations,
   wingRenderablePrimaries,
-  type CatalogRowIndexMap,
 } from './record-index';
+import type { CatalogRowIndexMap } from './catalog-row-index-map-pure';
 import { REPO_ROOT } from '../../../util/paths';
 import { BUILD_FILES } from '../../../../src/catalog-format/pipeline-outputs/build-files';
 import { resolve } from 'node:path';
 
 function makeStar(overrides: Partial<Star> = {}): Star {
   return makeStarWithDefaults({
-    absmag: 5.0, ci: 0.65, spectClass: 4, lumClass: 2, ...overrides,
+    absmag: 5.0, ci: 0.65, spectral: { kind: 'mk', letter: 4, subclass: null, lumClass: 2 }, ...overrides,
   });
 }
 

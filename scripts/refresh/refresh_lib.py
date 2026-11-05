@@ -646,9 +646,7 @@ SIMBAD_HARVARD_TAP_URL = "https://simbad.cfa.harvard.edu/simbad/sim-tap"
 GAIA_ESA_SYNC_TAP_URL = "https://gea.esac.esa.int/tap-server/tap"
 GAIA_ARI_SYNC_TAP_URL = "https://gaia.ari.uni-heidelberg.de/tap"
 
-# ESA caps TAP output at 3,000,000 rows (hard == default, per its
-# /capabilities); ARI's hard cap is 10,000,000. A whole-table sync pull
-# has to fit the smaller of the two, since either mirror may serve it.
+# Not ESA's current limit: see README.md#gaia-tap-synchronous-endpoints-only.
 GAIA_SYNC_MAX_ROWS = 3_000_000
 
 GAIA_DR3_RELEASE = "Gaia DR3"

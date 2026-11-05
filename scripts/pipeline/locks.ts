@@ -5,7 +5,7 @@ import { resolve } from 'node:path';
 
 import { stepFileName } from '../util/stamp-path-pure';
 import { REPO_ROOT } from '../util/paths';
-import { isBuild, writersOf, type ResolvedStep, type StepGraph } from './step-table/step-table-pure';
+import { claims, isBuild, writersOf, type ResolvedStep, type StepGraph } from './step-table/step-table-pure';
 
 const HOLDER = resolve(REPO_ROOT, 'scripts/pipeline/lock_holder.py');
 const WAIT_NOTICE_MS = 1000;
@@ -64,13 +64,25 @@ export async function holdLocks(lockDir: string, locks: StepLocks, onWait: () =>
   };
 }
 
+type LockTable = { readonly graph: StepGraph; readonly steps: ReadonlyMap<string, ResolvedStep> };
+
+/** The build steps whose locks `name` shares: the writers the graph orders it
+ *  after, and the writer of each of `reads`, which no record may name yet. */
+export function sharedLocks(table: LockTable, name: string, reads: readonly string[]): string[] {
+  const builds = [...table.steps.values()].filter(({ step }) => isBuild(step));
+  const writing = builds.filter(({ outputs }) => reads.some((path) => claims(outputs, path))).map(({ step }) => step.name);
+  const ordered = writersOf(table.graph, name).filter((w) => isBuild(table.steps.get(w)!.step));
+  return [...new Set([...ordered, ...writing])];
+}
+
 export function holdStepLocks(
   lockDir: string,
-  table: { readonly graph: StepGraph; readonly steps: ReadonlyMap<string, ResolvedStep> },
+  table: LockTable,
   name: string,
   exclusive: boolean,
   log: (line: string) => void,
+  reads: readonly string[] = [],
 ): Promise<HeldLocks> {
-  const shared = writersOf(table.graph, name).filter((w) => isBuild(table.steps.get(w)!.step));
+  const shared = sharedLocks(table, name, reads);
   return holdLocks(lockDir, { step: name, exclusive, shared }, () => log(`… ${name} waits for another run's lock`));
 }

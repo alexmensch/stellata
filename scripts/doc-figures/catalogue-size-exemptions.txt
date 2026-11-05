@@ -5,8 +5,6 @@
 # Every entry must still match a figure, so the list can only shrink.
 data/gaia/README.md	311,071	stale
 data/gaia/README.md	313,257	stale
-docs/pipeline-flowchart.md	310,939	stale
-docs/pipeline-flowchart.md	313,257	stale
 docs/science-galactic-structure.md	390k	stale
 scripts/catalog/boundaries/README.md	390k	stale
 src/client/webgpu/extinction/README.md	983,068	stale

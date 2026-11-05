@@ -31,10 +31,9 @@ numeric thresholds, provenance fields.
 `scripts/binaries/` is the orchestration shell + per-stage modules, and
 an importable Python package (`from scripts.binaries import parsers,
 stage4_orbits, …`): stage modules import their siblings relatively
-(`from .parsers import …`), while the hyphenated entry scripts
-(`build-binaries.py`, `build-runtime-binaries.py`) run as `__main__`, so
-they bootstrap the repo root onto `sys.path` and use absolute `scripts.*`
-imports.
+(`from .parsers import …`), while the hyphenated entry script
+`build-binaries.py` runs as `__main__`, so it bootstraps the repo root
+onto `sys.path` and uses absolute `scripts.*` imports.
 
 The seven stages form a strictly linear chain — stage N consumes every
 earlier stage — which is why they share one folder rather than splitting
@@ -77,14 +76,27 @@ scripts/binaries/
                                   binaries + SIMBAD standalone augmentation.
   multiples-tsv.ts (+ test)       MULTIPLES_TSV: the TypeScript codec for
                                   multiples.tsv — column roster, closed
-                                  value sets, per-column decimal places —
-                                  and the only parse of the file on the TS
+                                  value sets, per-column decimal places,
+                                  P and a positive and 0 ≤ e < 1 — and
+                                  the only parse of the file on the TS
                                   side. Its test round-trips the committed
                                   file byte for byte, which is what holds it
-                                  to the Python writer until Stage 6 ports.
+                                  to the Python writer until the switch
+                                  (README.md#porting-to-typescript--one-stack-one-switch).
                                   Its rowKey cites a row by
                                   (system_id, comp) for lineage
                                   (../util/sources/README.md#sourcerowref).
+  component-tokens-pure.ts        The TypeScript side of component_tokens.py:
+    (+ test)                      wdsRootOf (a system_id's WDS id, the one
+                                  spelling), composeSyntheticId (the synth-<wds>-<comp>
+                                  key promotion mints and every resolver
+                                  looks up), canonicalCompLetter (WDS
+                                  truncation re-anchored: Aa1,2 → Aa2),
+                                  parentComponentToken, isComponentToken,
+                                  and relatedHier / compoundContains — the
+                                  test planRecords uses to tell one link
+                                  named twice from two stars collapsed onto
+                                  one record.
   multiples-row-key-pure.ts       MULTIPLES_ROW_KEY, that rowKey, for code
                                   that cites a row without reading the file
                                   (promotion's origin keys), so it never
@@ -95,9 +107,8 @@ scripts/binaries/
                                   See Stage 6 below.
   wds_pair_photometry.py          A pair row's magnitudes (WDS, else MSC)
                                   and their Δmag.
-  stage7_counts.py                Build-counts + build-rates snapshots. The
-                                  assert / refresh they share with
-                                  build-runtime-binaries.py is
+  stage7_counts.py                Build-counts + build-rates snapshots,
+                                  asserted / refreshed through
                                   scripts/util/snapshot_assert.py.
                                   build_binaries_counts / _rates build each
                                   key inside the block of the stage module
@@ -110,12 +121,22 @@ scripts/binaries/
                                   anchors disagree with the online table of
                                   Mamajek 2022
                                   (/data/papers/index.md#mamajek2022)).
-  build-runtime-binaries.py       multiples.tsv + catalog-row-index-map.json →
-                                  public/binaries.bin. Detects hierarchical
-                                  chains via component-letter prefix matching
-                                  and writes outer-before-inner. See
-                                  README.md#pipeline-at-a-glance, step 3.
-  golden/                         binaries.bin golden test: encode() on a
+  build-runtime-binaries.ts        build:binaries-runtime: multiples.tsv +
+                                  the catalogue row-index map →
+                                  public/binaries.bin through emitArtifacts,
+                                  after its pair-count snapshot check
+                                  (#runtime-side-artifact).
+  runtime-binaries-pure.ts        The writer itself: pairs joined from the
+    (+ test)                      rows (a system with a role missing or
+                                  doubled, or no WDS id, throws), parents by
+                                  component-letter prefix,
+                                  outer-before-inner walk, and planRecords —
+                                  both ends resolved, unaddressable pairs
+                                  dropped and counted, flags set — whose
+                                  records the format's encodeBinaries
+                                  writes.
+  runtime-binaries-outputs.ts     RUNTIME_BINARIES_OUTPUTS, its declaration.
+  golden/                         binaries.bin golden test: the writer on a
                                   committed non-LFS fixture, byte for byte.
                                   Own README.
   build-binaries-spotcheck.py     pnpm run test:spotcheck — runs Stage 1+2 and
@@ -180,11 +201,16 @@ Three build steps in order, with `data/binaries/multiples.tsv` and
    code change. Gates, identifier minting, placement, and the
    field-inheritance contract:
    [Companion promotion](/scripts/catalog/companions/README.md#companion-promotion).
-3. <a id="runtime-side-artifact"></a>**Runtime side artifact** (`build-runtime-binaries.py`). Reads
+3. <a id="runtime-side-artifact"></a>**Runtime side artifact** (`build-runtime-binaries.ts`). Reads
    multiples.tsv + `catalog-row-index-map.json` (whose `bySynth` section
    sits alongside `byGaia` / `byHip`), emits `public/binaries.bin` — one
    fixed-size record per physical pair carrying Kepler elements + sep/PA
-   + a hierarchical parent-relation index. `resolve_idx` walks
+   + a hierarchical parent-relation index, in the layout
+   `/src/catalog-format/binaries/` owns. It refuses to emit when the map's
+   `multiplesSha1` is not the `multiples.tsv` it reads (a catalogue built
+   from another copy). Each end resolves through
+   `catalog-row-index-map-pure.ts` (`../catalog/companions/record-index/`),
+   the functions the catalogue's wings pass calls too:
    gaia → hip → synth; the synth key composes from the pair's expanded
    `comp` tokens (`Aa1,2` resolves through the same `synth-…-Aa2` key the
    catalog minted). Both pair ends then prefer a distinct synth slot over
@@ -201,6 +227,41 @@ absmag-from-Δmag).
 
 Build-time statistics for every phase land in snapshot JSONs, each
 gating the next build via an `UPDATE_SNAPSHOTS=1` refresh.
+
+## Porting to TypeScript — one stack, one switch
+
+The port of this step to TypeScript (Stage 1 and the shell, then Stages
+2–7) lands as one stack of PRs merged together. Each slice adds its TS
+stage and the vitest ports of its `*.test.py` cases **beside** the
+Python, called only from tests: the step table keeps running
+`build-binaries.py`, so every PR in the stack builds and `multiples.tsv`
+cannot move. The last slice is the switch: `build:binaries` becomes a TS
+step on the shell, `multiples.tsv` lands only through `emitArtifacts`
+after the count checks, every Python module here is deleted, and
+`pnpm run identity:snapshot` / `identity:diff`
+([Proving a restructuring byte-identical](/scripts/util/README.md#proving-a-restructuring-byte-identical))
+proves byte identity once.
+
+Each slice before the switch also carries one vitest case that runs TS
+Stages 1..N over the committed inputs and asserts the keys its own
+ported code counts in the committed `build-binaries-expected.json` (and
+`build-binaries-rates-expected.json` where it has keys there). A key
+belongs to the slice whose code produces it, not to the stage the
+snapshot files it under: `subdivide`'s orphan and MSC inner-pair counts
+are Stage 1's, its NSS inner-pair count Stage 3's. The Python writes those snapshots
+until the switch; the test reads them and never restates a count, so a
+count divergence fails in the slice that introduces it, and a byte diff
+at the switch is one the counts do not see.
+
+Values never cross between the languages. The runner records a step's
+inputs from either the TS import closure or the Python run record, and a
+subprocess in the other language is invisible to both
+([The step table](/scripts/pipeline/step-table/README.md#the-step-table--stepsts)), so a
+half-TS, half-Python step would miss inputs. Until the switch lands, a
+behaviour change to this step waits for it and is written once, in TS.
+The switch also waits for the package's one other importer,
+`scripts/refresh/refresh-simbad-wds-xids.py` (`parsers`,
+`stage2_resolve`), to port first.
 
 
 ## Stage 2 — WDS component → Gaia DR3 source_id
@@ -494,7 +555,7 @@ Synthesized pairs then flow through Stages 4-7 like any WDS pair:
 Stage 4 attaches the orbit through its normal routes, Stage 5 keeps
 them (both-Gaia tier for blended children, orbit-on-file otherwise),
 Stage 6 emits them with system-anchor positions, and
-`build-runtime-binaries.py` nests them under their outer pair via the
+`build:binaries-runtime` nests them under their outer pair via the
 component-letter hierarchy. Build counters:
 `synthesized_orb6_orphan_pairs`, `synthesized_nss_inner_pairs`.
 
@@ -505,21 +566,21 @@ invariant the runtime walk + focal-frame ride depend on (see
 shares its identifier with the system primary (Castor A & B blend to one
 Gaia source; A & B of 02398-4254 share a HIP Gaia later split), the inner
 pair's own id-first resolve lands on the wrong sibling. Two coupled
-corrections in `build-runtime-binaries.py`: `assign_parent_relations`
+corrections in `runtime-binaries-pure.ts`: `assignParentRelations`
 picks the *bound* parent (has-orbit, then tightest sep) over a
-coincidental element-less wide pair, and `override_inner_primary_indices`
+coincidental element-less wide pair, and `overrideInnerPrimaryIndices`
 re-homes each inner pair's primary onto that parent's member slot.
 `companion-promotion.ts`'s post-pass makes the baked catalog placement
 agree (see [Companion promotion](/scripts/catalog/companions/README.md#companion-promotion)).
 
 A blended primary the synth re-home can't reach (its component was dropped
 by promotion, or it's a compound / secondary-side collapse) still resolves
-onto the anchor, producing a duplicate `(primary, secondary)`. `write_binary`
+onto the anchor, producing a duplicate `(primary, secondary)`. `planRecords`
 emits one record per relation, and when duplicates collide it keeps the
-orbit-bearing member (`pair_has_orbit`; ties keep first in walk order) so the
+orbit-bearing member (`hasRenderableOrbit`; ties keep first in walk order) so the
 system's live motion survives the dedup rather than an element-less wide
 pair winning by walk position. Each drop is classified
-(`same_relation_alias`): when on each side the two pairs' canonical comp
+(`sameRelationAlias`): when on each side the two pairs' canonical comp
 tokens are equal, hierarchy-related, or compound-contained, the two rows
 name the SAME physical link at different granularity (18025+4414 `AB` vs
 `Aa,B`) — a correct, permanent dedup counted
@@ -625,8 +686,8 @@ shears a static (Tier-3) pair. `scripts/catalog/companions/companion-promotion.t
 uses this `q` for the barycentric blend `v_sys = (1−q)·v_p + q·v_s` on a
 lone renderable-orbit pair, and a promoted companion with no own PM
 inherits its primary's velocity. **Full** systemic coherence for every
-`binaries.bin` pair — keyed on `build-runtime-binaries.py`'s authoritative
-resolved pairing (which the catalog build can't replicate) — is
+`binaries.bin` pair — keyed on the authoritative resolved pairing,
+`planRecords` in `runtime-binaries-pure.ts` — is deferred to
 `stellata-zau1`; v1 ships the promoted-companion + lone-pair subset.
 
 ## Stage 5 — Optical-pair filter cascade

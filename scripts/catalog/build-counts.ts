@@ -4,11 +4,11 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
-import type { DistVia } from '../../src/catalog-format/record/catalog-pure';
-import { flattenStages, stageOfCounts } from '../util/counts/count-stages-pure';
-import { REPO_ROOT } from '../util/paths';
-import type { RvErrorBandPartition } from './distance/radial-velocity/radial-velocity';
-import type { RecuratedBrightness } from './companions/companion-promotion';
+import type { DistVia } from '../../src/catalog-format/record/catalog-pure.ts';
+import { flattenStages, stageOfCounts } from '../util/counts/count-stages-pure.ts';
+import { REPO_ROOT } from '../util/paths.ts';
+import type { RvErrorBandPartition } from './distance/radial-velocity/radial-velocity.ts';
+import type { RecuratedBrightness } from './companions/companion-promotion.ts';
 
 /** Repo-relative path of the snapshot `BuildCounts` is pinned against, so the
  *  build and every consumer that reads the shipped figures back resolve one
@@ -181,8 +181,7 @@ export interface BuildCounts {
    *  (CURATED_SPTYPE_BY_HIP) — saturated stars whose SIMBAD entry
    *  carries neither hip nor source_id (Castor). */
   spectralByCurated: number;
-  /** Records whose spectral classification (classIdx + subclass + lumClass)
-   *  came from SIMBAD's `sp_type` — the canonical Morgan-Keenan tier. */
+  /** Records whose spectral classification came from SIMBAD's `sp_type` — the canonical Morgan-Keenan tier. */
   spectralBySimbad: number;
   /** The four SIMBAD tiers split by the namespace that found the row, summing
    *  to `spectralBySimbad` — enforced by `spectralSimbadPartitionError`, not
@@ -197,8 +196,8 @@ export interface BuildCounts {
   /** Records that fell through to Gaia DR3 GSP-Spec's
    *  `spectraltype_esphs` enum — second-tier letter-only classification. */
   spectralByGspspec: number;
-  /** Records with neither SIMBAD sp_type nor GSP-Spec coverage — packed
-   *  as classIdx=8 (unknown) / lumClass=255 (no luminosity-class ramp). */
+  /** Records with neither SIMBAD sp_type nor GSP-Spec coverage — the
+   *  `unknown` class. */
   spectralFallback: number;
   /** Records whose `ci` came from the Gaia BP−RP relation. */
   ciGaiaRelation: number;

@@ -13,8 +13,11 @@ runs) and its outputs. A manual step is named for its `package.json` script,
 which is what the stop message prints and what runs it by hand, so the three
 pulls with no target before (`refresh-simbad-sptype.py`,
 `refresh-simbad-wds-xids.py`, `refresh-msc.py`) gain one. A TypeScript manual
-step (the two Horizons fetchers) names its `declareOutputs` constant as a
-TypeScript build does; a Python one lists its files, plus any families.
+step, pull or bake (`manual-step-outputs.ts`'s `tsManual`; the two Horizons
+fetchers today), names its `declareOutputs` constant as a TypeScript build
+does, and one that describes itself exports `describe`
+([util/README.md](../../util/README.md), `emit-artifacts.ts` entry); a Python
+one lists its files, plus any families.
 `package.json` keeps one-line targets that call the runner (`build:catalog` →
 `run.ts build:catalog`, `build:data` → `run.ts
 data`, every build step on the table) or `record.ts` (every manual step), and
@@ -78,8 +81,8 @@ a loop is a kept loop ([Loops through committed files](../README.md#loops-throug
 and covers its own outputs only, never a step
 reached through it. The converse fails it too: an `after` entry none of
 whose outputs the run read, listed or probed is a false ordering edge
-(Reachable must mean read, above). The two binaries steps are the only
-Python `build` steps on the runner; their TypeScript ports retire both
+(Reachable must mean read, above). `build:binaries` is the only Python
+`build` step on the runner; its TypeScript port retires these
 declarations.
 
 ## Load-time rules
@@ -148,7 +151,9 @@ the others once, and that rebuild appends nothing.
   TypeScript outputs module's imports (`walkOutputsModules`, its import-time
   rule `importTimeProblems`) before importing any, imports the `declareOutputs` constants, rejects a build output
   through a symlink (the path or any folder above it, up to the root), reads
-  each manual step's record for its inputs, then `deriveGraph`. A
+  each manual step's record for its inputs and the files it projects
+  (`requestFrom`), so a pull or bake orders after their writers, then
+  `deriveGraph`. A
   TypeScript step's inputs come from the injected `deriveInputs`, so a
   fixture table can load under a temporary root.
 - `repo-table.ts` — the repo's table loaded against this checkout, its

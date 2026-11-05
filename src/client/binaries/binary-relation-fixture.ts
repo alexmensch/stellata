@@ -1,7 +1,8 @@
 // Test-only builders: a BinaryRelation with sane defaults (overridable
 // per field) and a BinariesData assembled from a relation list.
 
-import { NO_PARENT, type BinariesData, type BinaryRelation } from './binaries-loader';
+import { type BinariesData, type BinaryRelation } from './binaries-loader';
+import { NO_PARENT } from '../../catalog-format/binaries/binaries-format';
 
 export function makeRelation(overrides: Partial<BinaryRelation> = {}): BinaryRelation {
   return {
