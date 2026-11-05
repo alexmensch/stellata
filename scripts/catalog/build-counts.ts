@@ -5,6 +5,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 import type { DistVia } from '../../src/catalog-format/record/catalog-pure';
+import { flattenStages, stageOfCounts } from '../util/counts/count-stages-pure';
 import { REPO_ROOT } from '../util/paths';
 import type { RvErrorBandPartition } from './distance/radial-velocity/radial-velocity';
 import type { RecuratedBrightness } from './companions/companion-promotion';
@@ -16,7 +17,7 @@ export const BUILD_COUNTS_EXPECTED_FILE = 'scripts/catalog/build-catalog-expecte
 
 /** The committed snapshot's figures: what the catalogue build last pinned. */
 export function committedBuildCounts(): BuildCounts {
-  return JSON.parse(readFileSync(resolve(REPO_ROOT, BUILD_COUNTS_EXPECTED_FILE), 'utf8')) as BuildCounts;
+  return flattenStages(JSON.parse(readFileSync(resolve(REPO_ROOT, BUILD_COUNTS_EXPECTED_FILE), 'utf8'))) as BuildCounts;
 }
 
 export interface BuildCounts {
@@ -675,13 +676,227 @@ export interface BuildCounts {
   crossIndexUnknownCst: number;
 }
 
+export const CATALOG_COUNT_STAGES = [
+  'inputs', 'placement', 'desigCon', 'naming', 'coherence', 'promotion',
+  'multiplicity', 'gcvs', 'records', 'search', 'boundaries', 'figures',
+] as const;
+export type CatalogCountStage = (typeof CATALOG_COUNT_STAGES)[number];
+
+/** The stage each count is filed under in the snapshot: the step that computes it. */
+export const CATALOG_COUNT_STAGE: Readonly<Record<keyof BuildCounts, CatalogCountStage>> = {
+  bjEntries: 'inputs',
+  apsisEntries: 'inputs',
+  gspcEntries: 'inputs',
+  simbadSptypeEntries: 'inputs',
+  simbadValuesEntries: 'inputs',
+  gaiaAstrometryEntries: 'inputs',
+  hip2Entries: 'inputs',
+  hipVMagEntries: 'inputs',
+  hipBvEntries: 'inputs',
+  nssSourceIdEntries: 'inputs',
+  tycho2Entries: 'inputs',
+  cns5AstrometryEntries: 'inputs',
+  glieseEntries: 'inputs',
+  pairMemberParallaxEntries: 'inputs',
+  pairMemberSiblingNoParallax: 'inputs',
+  pairMemberSiblingNotAnchorGrade: 'inputs',
+  pairMemberSiblingBelowSnFloor: 'inputs',
+  bjEligible: 'placement',
+  bjOverridden: 'placement',
+  lmcCandidates: 'placement',
+  lmcOverridden: 'placement',
+  lmcParallaxRefusedByDistVia: 'placement',
+  lmcOverriddenByDistVia: 'placement',
+  spectralByCurated: 'placement',
+  spectralBySimbad: 'placement',
+  spectralSimbadBySourceId: 'placement',
+  spectralSimbadByHip: 'placement',
+  spectralSimbadByTyc: 'placement',
+  spectralSimbadByGj: 'placement',
+  spectralByGspspec: 'placement',
+  spectralFallback: 'placement',
+  ciGaiaRelation: 'placement',
+  ciPrintedHipBv: 'placement',
+  ciGspc: 'placement',
+  ciGspcValidatedRange: 'placement',
+  ciSpectralDerived: 'placement',
+  ciSolarFallback: 'placement',
+  distBailerJones: 'placement',
+  distLmcKinematic: 'placement',
+  distGaiaDr3Inversion: 'placement',
+  distHip2Parallax: 'placement',
+  distCns5Plx: 'placement',
+  distGliesePlx: 'placement',
+  distSimbadPlx: 'placement',
+  distGliesePhotometricPlx: 'placement',
+  distPairMemberParallax: 'placement',
+  distCurated: 'placement',
+  distNone: 'placement',
+  distLowPrecisionParallax: 'placement',
+  parkedRefusedNoDefensibleParallax: 'placement',
+  parkedNoParallaxPublished: 'placement',
+  parkedNoVMagnitude: 'placement',
+  parkedNoPosition: 'placement',
+  directionGaia5p: 'placement',
+  directionGaia2p: 'placement',
+  directionGaiaNssSystemic: 'placement',
+  directionHip2Saturated: 'placement',
+  directionHip2PmDiscrepant: 'placement',
+  directionTycho2: 'placement',
+  directionTycho2FromIcrs: 'placement',
+  directionTycho2Photocentre: 'placement',
+  directionCns5: 'placement',
+  directionSimbad: 'placement',
+  directionCurated: 'placement',
+  vGaiaRiello: 'placement',
+  vPrintedHip: 'placement',
+  vTycho2: 'placement',
+  vTycho2OutsideBtVtRange: 'placement',
+  vGliese: 'placement',
+  vCurated: 'placement',
+  vNone: 'placement',
+  velocityGaiaPm: 'placement',
+  velocityHip2Pm: 'placement',
+  velocityTycho2Pm: 'placement',
+  velocityCns5Pm: 'placement',
+  velocitySimbadPm: 'placement',
+  velocityZero: 'placement',
+  pmRescueTycho2: 'placement',
+  pmRescueCns5: 'placement',
+  pmRescueSimbad: 'placement',
+  pmRescueGaiaBibcodeSkipped: 'placement',
+  pmRescueNone: 'placement',
+  velocityClamped: 'placement',
+  velocityAboveEscape: 'placement',
+  velocityRvApplied: 'placement',
+  rvGaiaDr3: 'placement',
+  rvSimbad: 'placement',
+  rvSimbadGaiaBibcode: 'placement',
+  rvGaiaBibcodeSkipped: 'placement',
+  rvNone: 'placement',
+  rvRadialRejected: 'placement',
+  rvGaiaErrorBands: 'placement',
+  rvGaiaErrorMaxKmS: 'placement',
+  desigConFromCrossIndex: 'desigCon',
+  crossIndexUnknownCst: 'desigCon',
+  namingIauNamed: 'naming',
+  namingIauNamedByProper: 'naming',
+  namingIauUnreached: 'naming',
+  namingEponym: 'naming',
+  namingBayer: 'naming',
+  namingBayerAdded: 'naming',
+  namingBayerComponent: 'naming',
+  namingBayerDropped: 'naming',
+  namingGould: 'naming',
+  namingAliases: 'naming',
+  namingAliasRecords: 'naming',
+  namingDesigConFromWgsn: 'naming',
+  namingDesigConWgsnConflict: 'naming',
+  namingTierOverride: 'naming',
+  namingTierIau: 'naming',
+  namingTierEponym: 'naming',
+  namingTierBayer: 'naming',
+  namingTierFlamsteed: 'naming',
+  namingTierBayerLatin: 'naming',
+  namingTierGould: 'naming',
+  namingTierGcvs: 'naming',
+  namingTierCatalogue: 'naming',
+  namingBorrowed: 'naming',
+  namingLettered: 'naming',
+  namingNameTable: 'naming',
+  namingOverrides: 'naming',
+  namingUnlabelled: 'naming',
+  namingDuplicateLabels: 'naming',
+  namingDuplicateRecords: 'naming',
+  nameTableEntries: 'naming',
+  systemCoherenceSystems: 'coherence',
+  systemCoherenceRepositioned: 'coherence',
+  systemCoherenceMemberAnchorWins: 'coherence',
+  systemCoherenceSignificantDepthKept: 'coherence',
+  systemCoherenceAnchorInconsistent: 'coherence',
+  systemCoherenceMemberAnchorPrecisionVetoed: 'coherence',
+  companionRowsScanned: 'promotion',
+  companionPromoted: 'promotion',
+  companionPromotedSynthetic: 'promotion',
+  companionAlreadyInCatalog: 'promotion',
+  companionDroppedNoIdentifier: 'promotion',
+  companionDroppedNoPosition: 'promotion',
+  companionDroppedBeyondTidalLimit: 'promotion',
+  companionDroppedNoAbsmag: 'promotion',
+  companionDroppedCompoundComp: 'promotion',
+  companionDroppedCollocatedPrimary: 'promotion',
+  companionAnchorIsComponent: 'promotion',
+  companionDroppedParkedRecord: 'promotion',
+  companionDroppedParkedViaGaia5p: 'promotion',
+  companionDroppedParkedOwnedFit: 'promotion',
+  companionAbsmagSpectralDerived: 'promotion',
+  companionSpectMsFromOwnAbsmag: 'promotion',
+  companionAbsmagWdsMagDerived: 'promotion',
+  companionAbsmagAnchorCollocated: 'promotion',
+  companionAbsmagInheritedTwinOrbital: 'promotion',
+  companionBlendSplit: 'promotion',
+  companionBlendDimmedAnchors: 'promotion',
+  companionBlendDimSkipped: 'promotion',
+  companionBlendDimUnfit: 'promotion',
+  companionBlendDimOutside: 'promotion',
+  companionBlendDimGaiaResolved: 'promotion',
+  companionBlendDimBeyondSeparation: 'promotion',
+  companionBlendDimMisfit: 'promotion',
+  companionRepositionedCollocatedDouble: 'promotion',
+  physicalOverlaps: 'promotion',
+  companionConstellationSplitFromAnchor: 'promotion',
+  companionExistingDesigConFromAnchor: 'promotion',
+  companionExistingMemberRecurated: 'promotion',
+  companionExistingViaSameasBridge: 'promotion',
+  binaryPairs: 'multiplicity',
+  binaryMutualPairs: 'multiplicity',
+  ccdmGroups: 'multiplicity',
+  ccdmResolved: 'multiplicity',
+  ccdmFlagged: 'multiplicity',
+  ccdmSuppressedOptical: 'multiplicity',
+  eclipsingWinged: 'multiplicity',
+  renderableCompanionWinged: 'multiplicity',
+  multiplicityResolved: 'multiplicity',
+  multiplicityUnresolved: 'multiplicity',
+  componentDesignations: 'multiplicity',
+  gcvsEntries: 'gcvs',
+  gcvsHipXrefs: 'gcvs',
+  gcvsHdXrefs: 'gcvs',
+  gcvsGaiaXrefs: 'gcvs',
+  gcvsMatched: 'gcvs',
+  gcvsMatchedByGaia: 'gcvs',
+  gcvsMatchedByHip: 'gcvs',
+  gcvsMatchedByHd: 'gcvs',
+  gcvsNamed: 'gcvs',
+  gcvsDesignationCon: 'gcvs',
+  recordCount: 'records',
+  recordsInFirstChunk: 'records',
+  apsisSourcesUnpulled: 'records',
+  gspcSourcesUnpulled: 'records',
+  variableCount: 'records',
+  solIndex: 'records',
+  gaiaSourceIdResolved: 'records',
+  apsisMatched: 'records',
+  apsisTeffEither: 'records',
+  searchEntries: 'search',
+  designationConMismatch: 'search',
+  boundarySegments: 'boundaries',
+  boundaryDirections: 'boundaries',
+  boundaryRegionRuns: 'boundaries',
+  boundaryArtifactKb: 'boundaries',
+  figureCount: 'figures',
+  figureConstellations: 'figures',
+};
+
 export type CountDiff =
   | { key: string; status: 'match'; value: number }
   | { key: string; status: 'mismatch'; expected: number; actual: number }
+  | { key: string; status: 'moved'; value: number; from: string; to: string }
   | { key: string; status: 'absent-from-snapshot'; actual: number }
   | { key: string; status: 'absent-from-build'; expected: number };
 
-/** Partition-valued entries (a `Record<tier, number>`) expand to one
+/** Staged snapshots: ../util/counts/README.md.
+ *  Partition-valued entries (a `Record<tier, number>`) expand to one
  *  `parent.bucket` row each, so a single drifting bucket names itself.
  *  Walks the union of both sides' rows: a count the build stopped
  *  producing is as much drift as one the snapshot never had. Rows come in
@@ -696,31 +911,37 @@ export function compareBuildCounts<T extends object>(
 ): CountDiff[] {
   const e = flattenCounts(expected);
   const a = flattenCounts(actual);
+  const eStage = stageOfCounts(expected);
+  const aStage = stageOfCounts(actual);
   const diff: CountDiff[] = [];
-  for (const [key, av] of a) {
-    const ev = e.get(key);
+  for (const [key, { n: av, count }] of a) {
+    const ev = e.get(key)?.n;
+    const from = eStage?.get(count);
+    const to = aStage?.get(count);
     if (ev === undefined) diff.push({ key, status: 'absent-from-snapshot', actual: av });
-    else if (ev === av) diff.push({ key, status: 'match', value: av });
-    else diff.push({ key, status: 'mismatch', expected: ev, actual: av });
+    else if (ev !== av) diff.push({ key, status: 'mismatch', expected: ev, actual: av });
+    else if (from !== undefined && to !== undefined && from !== to) diff.push({ key, status: 'moved', value: av, from, to });
+    else diff.push({ key, status: 'match', value: av });
   }
-  for (const [key, ev] of e) {
+  for (const [key, { n: ev }] of e) {
     if (!a.has(key)) diff.push({ key, status: 'absent-from-build', expected: ev });
   }
   return diff;
 }
 
-function flattenCounts(counts: object): Map<string, number> {
-  const rows = new Map<string, number>();
-  for (const [key, value] of Object.entries(counts as Record<string, unknown>)) {
+/** Each row with the count it belongs to: a partition's buckets share their parent's. */
+function flattenCounts(counts: object): Map<string, { n: number; count: string }> {
+  const rows = new Map<string, { n: number; count: string }>();
+  for (const [count, value] of Object.entries(flattenStages(counts) as Record<string, unknown>)) {
     if (typeof value === 'number') {
-      rows.set(key, value);
+      rows.set(count, { n: value, count });
       continue;
     }
     if (value === null || typeof value !== 'object') {
-      throw new Error(`count ${key} is ${JSON.stringify(value)}, not a number or a partition`);
+      throw new Error(`count ${count} is ${JSON.stringify(value)}, not a number or a partition`);
     }
     for (const [bucket, n] of Object.entries(value as Record<string, number>)) {
-      rows.set(`${key}.${bucket}`, n);
+      rows.set(`${count}.${bucket}`, { n, count });
     }
   }
   return rows;
@@ -753,6 +974,9 @@ export function formatCountDiff(diff: CountDiff[]): string {
         break;
       case 'absent-from-build':
         lines.push(`${label} expected ${d.expected}, absent from build`);
+        break;
+      case 'moved':
+        lines.push(`${label} ${d.value} moved from stage ${d.from} to ${d.to}`);
         break;
       case 'mismatch': {
         const delta = d.actual - d.expected;

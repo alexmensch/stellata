@@ -18,8 +18,10 @@ doc-figures-pure.test.ts   Grammar, masking, resolution, format and size-scan
                            cases.
 catalogue-size-exemptions.txt
                            The size scan's shrink-only exemption list.
-doc-figures.ts             loadSnapshots (every *-expected.json, keyed by stem;
-                           a repeated stem throws) and docFiles (every *.md).
+doc-figures.ts             loadSnapshots (every *-expected.json, keyed by stem,
+                           a staged one flattened so a count's path skips its
+                           stage — ../util/counts/count-stages-pure.ts; a repeated
+                           stem throws) and docFiles (every *.md).
                            Both take tracked and untracked-but-not-ignored
                            files, so a snapshot just written by
                            UPDATE_SNAPSHOTS=1 resolves before its git add,

@@ -36,8 +36,11 @@ from .stage6_multiples import (
 )
 from scripts.util.snapshot_assert import (
     SnapshotDiff,
+    Staged,
     assert_or_update_snapshot,
     compare_snapshot,
+    flatten_staged,
+    flatten_stages,
     format_diff,
 )
 
@@ -45,7 +48,6 @@ LABEL = "build-binaries"
 SNAPSHOT_SCRIPT = "build:binaries"
 
 # ─── Stage 7: build-time stats ───────────────────────────────────────
-
 
 def build_binaries_counts(
     *,
@@ -69,12 +71,11 @@ def build_binaries_counts(
     blank_components_deferred: int = 0,
     ccdm_sibling_owned_rejected: int = 0,
     athyg_match_sibling_claimed_rejected: int = 0,
-) -> dict[str, int]:
-    """Collect every headline number the run emits into a flat
-    ``{key: int}`` dict, suitable for JSON serialisation and per-key
-    comparison. Keys flatten the per-strategy + per-tier counters via
-    ``<section>_<tag>`` so the JSON stays grep-friendly and the
-    snapshot diff is a flat dict-diff.
+) -> Staged:
+    """Collect every headline number the run emits, each under the
+    pipeline stage that counts it, stages in pipeline order. Keys name the
+    per-strategy + per-tier counters ``<section>_<tag>``, unique across
+    stages, so the flattened snapshot diff is a per-key dict-diff.
 
     Decomposing-pair count is the number of WDS pairs whose components
     string split into two; aligns with ``len(orbits) ==
@@ -131,48 +132,48 @@ def build_binaries_counts(
         if r.orbit_via != "none" and r.q is not None
     )
 
-    out: dict[str, int] = {
-        "wds_pairs_total": len(pairs),
-        "wds_duplicate_pair_rows_dropped": wds_duplicate_pair_rows_dropped,
-        "blank_components_rescued": blank_components_rescued,
-        "blank_components_deferred": blank_components_deferred,
-        "ccdm_sibling_owned_rejected": ccdm_sibling_owned_rejected,
-        "athyg_match_sibling_claimed_rejected": athyg_match_sibling_claimed_rejected,
-        "decomposing_pairs": len(orbits),
-        "components_total": len(components),
-        "synthesized_orb6_orphan_pairs": synthesized_orb6_pairs,
-        "synthesized_nss_inner_pairs": synthesized_nss_pairs,
-        "synthesized_msc_inner_pairs": synthesized_msc_pairs,
-        "msc_pair_mags_filled": msc_pair_mags_filled,
-        "msc_orbits_unmapped": msc_orbits_unmapped,
-        "xwalk_hip_mag_rejected": xwalk_mag_rejected,
-        "athyg_gaia_mag_rejected": athyg_gaia_mag_rejected,
-        "multiples_rows_emitted": len(multiples_rows),
-        "multiples_pairs_dropped_no_position": multiples_pairs_dropped_no_position,
-        "multiples_astrometry_system_inherited": multiples_inherited,
-        "multiples_standalone_emitted": standalone_emitted,
-        "multiples_hd_populated": hd_populated,
-        "multiples_sep_arcsec_populated": sep_arcsec_populated,
-        "multiples_pa_deg_populated": pa_deg_populated,
-        "multiples_sep_pa_epoch_populated": sep_pa_epoch_populated,
-        "multiples_dmag_populated": dmag_populated,
-        "multiples_orbit_q_populated": orbit_q_populated,
+    return {
+        "ingest": {
+            "wds_pairs_total": len(pairs),
+            "wds_duplicate_pair_rows_dropped": wds_duplicate_pair_rows_dropped,
+            "msc_orbits_unmapped": msc_orbits_unmapped,
+            "xwalk_hip_mag_rejected": xwalk_mag_rejected,
+            "athyg_gaia_mag_rejected": athyg_gaia_mag_rejected,
+        },
+        "subdivide": {
+            "synthesized_orb6_orphan_pairs": synthesized_orb6_pairs,
+            "synthesized_nss_inner_pairs": synthesized_nss_pairs,
+            "synthesized_msc_inner_pairs": synthesized_msc_pairs,
+        },
+        "resolve": {
+            "blank_components_rescued": blank_components_rescued,
+            "blank_components_deferred": blank_components_deferred,
+            "ccdm_sibling_owned_rejected": ccdm_sibling_owned_rejected,
+            "athyg_match_sibling_claimed_rejected": athyg_match_sibling_claimed_rejected,
+            "decomposing_pairs": len(orbits),
+            "components_total": len(components),
+            **{f"resolution_{tag}": res[tag] for tag in RESOLVE_VIA_VALUES},
+            **{key: (binding_integrity or {}).get(key, 0) for key in BINDING_INTEGRITY_COUNT_KEYS},
+        },
+        "astrometry": {f"astrometry_{tag}": ast[tag] for tag in ASTROMETRY_VIA_VALUES},
+        "orbits": {f"orbit_{tag}": orb[tag] for tag in ORBIT_VIA_VALUES},
+        "optical": {f"optical_{tag}": opt[tag] for tag in OPTICAL_VIA_VALUES},
+        "multiples": {
+            "msc_pair_mags_filled": msc_pair_mags_filled,
+            "multiples_rows_emitted": len(multiples_rows),
+            "multiples_pairs_dropped_no_position": multiples_pairs_dropped_no_position,
+            "multiples_astrometry_system_inherited": multiples_inherited,
+            "multiples_standalone_emitted": standalone_emitted,
+            "multiples_hd_populated": hd_populated,
+            "multiples_sep_arcsec_populated": sep_arcsec_populated,
+            "multiples_pa_deg_populated": pa_deg_populated,
+            "multiples_sep_pa_epoch_populated": sep_pa_epoch_populated,
+            "multiples_dmag_populated": dmag_populated,
+            "multiples_orbit_q_populated": orbit_q_populated,
+            **{f"a_via_{tag}": a_via_counts[tag] for tag in A_VIA_VALUES},
+            **{f"spect_{tag}": spect_counts[tag] for tag in SPECT_VIA_VALUES},
+        },
     }
-    for tag in A_VIA_VALUES:
-        out[f"a_via_{tag}"] = a_via_counts[tag]
-    for tag in SPECT_VIA_VALUES:
-        out[f"spect_{tag}"] = spect_counts[tag]
-    for tag in RESOLVE_VIA_VALUES:
-        out[f"resolution_{tag}"] = res[tag]
-    for tag in ASTROMETRY_VIA_VALUES:
-        out[f"astrometry_{tag}"] = ast[tag]
-    for tag in ORBIT_VIA_VALUES:
-        out[f"orbit_{tag}"] = orb[tag]
-    for tag in OPTICAL_VIA_VALUES:
-        out[f"optical_{tag}"] = opt[tag]
-    for key in BINDING_INTEGRITY_COUNT_KEYS:
-        out[key] = (binding_integrity or {}).get(key, 0)
-    return out
 
 
 # ─── Stage 7B — derived rate snapshot ────────────────────────────────
@@ -203,11 +204,12 @@ ORBIT_RESOLVED_TAGS: tuple[str, ...] = (
 )
 
 
-def build_binaries_rates(counts: dict[str, int]) -> dict[str, float]:
-    """Derive headline rates from the int counters. Each rate is
-    dimensionless and bounded [0, 1]; denominators that would divide
-    by zero return 0.0 so a half-populated build doesn't NaN the
-    snapshot diff. Pure — no I/O."""
+def build_binaries_rates(staged: Staged) -> Staged:
+    """Derive headline rates from the int counters, each under the stage
+    whose counts it rates. Each rate is dimensionless and bounded [0, 1];
+    denominators that would divide by zero return 0.0 so a half-populated
+    build doesn't NaN the snapshot diff. Pure — no I/O."""
+    counts = flatten_staged(staged)
     components_total = counts.get("components_total", 0)
     decomposing_pairs = counts.get("decomposing_pairs", 0)
 
@@ -237,10 +239,10 @@ def build_binaries_rates(counts: dict[str, int]) -> dict[str, float]:
     )
 
     return {
-        "gaia_resolve_rate": gaia_resolve_rate,
-        "optical_rejected_rate": optical_rejected_rate,
-        "nss_orbit_rate": nss_orbit_rate,
-        "hip2_fallback_rate": hip2_fallback_rate,
+        "resolve": {"gaia_resolve_rate": gaia_resolve_rate},
+        "astrometry": {"hip2_fallback_rate": hip2_fallback_rate},
+        "orbits": {"nss_orbit_rate": nss_orbit_rate},
+        "optical": {"optical_rejected_rate": optical_rejected_rate},
     }
 
 
@@ -295,7 +297,7 @@ def _rates_snapshot_payload(
     resets a hand-edited tolerance."""
     existing: dict[str, dict[str, float]] = {}
     if expected_path.exists():
-        existing = json.loads(expected_path.read_text())
+        existing = flatten_stages(json.loads(expected_path.read_text()))
     return {
         k: {
             "value": round(v, 6),
@@ -308,7 +310,7 @@ def _rates_snapshot_payload(
 
 
 def assert_or_update_rates(
-    actual: dict[str, float], expected_path: Path,
+    actual: Staged, expected_path: Path,
 ) -> bool:
     """Tolerance-aware sibling of ``assert_or_update_counts``."""
     return assert_or_update_snapshot(
