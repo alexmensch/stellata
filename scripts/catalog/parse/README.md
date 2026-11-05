@@ -51,8 +51,9 @@ scripts/catalog/parse/
                                   addresses a record — hip / gaia / name / hd.
   star-fixture.ts                 Test-only star-record builder.
   spectral-encoding-parity.test.ts
-                                  Pins the spectral encode/decode round-trip
-                                  against the runtime decoder.
+                                  Pins the spectral byte encoding against
+                                  scripts/binaries/mass_estimate.py's own
+                                  parser.
 ```
 
 ## TSV header resolution

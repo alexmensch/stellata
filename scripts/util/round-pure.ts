@@ -15,6 +15,17 @@ export function roundHalfEven(x: number, digits: number): number {
   return Math.sign(x) * magnitude;
 }
 
+/** Python's `f"{x:.{digits}f}"`: half-to-even on the exact value, and a negative that rounds to zero keeps its sign. */
+export function formatFixed(x: number, digits: number): string {
+  const text = roundHalfEven(x, digits).toFixed(digits);
+  return (x < 0 || Object.is(x, -0)) && !text.startsWith('-') ? `-${text}` : text;
+}
+
+/** Each element through roundHalfEven, keeping a tuple's length in its type. */
+export function roundEach<T extends readonly number[]>(v: T, digits: number): { -readonly [I in keyof T]: number } {
+  return v.map((x) => roundHalfEven(x, digits)) as { -readonly [I in keyof T]: number };
+}
+
 /** `v` to `digits` significant figures, rounded on the double's exact decimal value. */
 export function roundSignificant(v: number, digits: number): number {
   return Number(v.toPrecision(digits));

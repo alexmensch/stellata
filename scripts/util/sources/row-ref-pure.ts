@@ -11,7 +11,7 @@ export type RowKeyOf<K> = [K] extends [never] ? undefined : RowKey<K>;
 
 declare const declaration: unique symbol;
 
-/** Carried only by `defineSource` / `defineFolder` / `defineArtifact` results:
+/** Carried only by `defineSource` / `defineFolder` / `defineArtifact` / `defineJsonArtifact` results:
  *  a hand-written `{file, rowKey}` cannot stand in for a declaration. */
 export interface Declaration {
   readonly [declaration]: true;

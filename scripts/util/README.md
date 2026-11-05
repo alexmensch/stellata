@@ -181,7 +181,10 @@ same thing — single-use helpers stay with their consumer.
   (`/tests/README.md#pipeline-viewer-boundary`) and the step table's
   outputs-module walk ([Load-time rules](../pipeline/step-table/README.md#load-time-rules)) read.
 - `round-pure.ts` (+ test) — `roundHalfEven(x, digits)`, Python's
-  `round`: half to even on the double's exact decimal value; and
+  `round`: half to even on the double's exact decimal value;
+  `roundEach`, the same over each element of a tuple;
+  `formatFixed(x, digits)`, Python's `f"{x:.{digits}f}"` text on the same
+  rounding (a refresh pull's fixed-decimal column format); and
   `roundSignificant(v, digits)`, significant figures through
   `toPrecision`. Every number a TypeScript build rounds into a JSON
   artifact goes through one of them, never `Math.round(x · 10ⁿ) / 10ⁿ`,
@@ -287,9 +290,18 @@ same thing — single-use helpers stay with their consumer.
   `tsx` would have, and runs `main`: a number it returns is the exit
   status; a refused emission has already printed its failed checks, so it
   exits 1 with one line and no stack; any other error keeps its stack. A
-  TypeScript pull (the two Horizons fetchers) also exports `describe`, and
-  `--describe` then prints its `PullDescription` instead of running.
+  TypeScript manual step that describes itself also exports `describe`,
+  sync or async — a pull's `PullDescription` (the two Horizons fetchers),
+  or a bake's `Projection` of a file it reads — and `--describe` then
+  prints what it returns instead of running.
   `horizons-response.ts`' `HORIZONS_SERVICE` is the service both state.
+- `answered-by.ts` — `reportService(name)`, the TypeScript sibling of
+  `build_stamp.report_service`: appends `name`, once, to the file
+  `ANSWERED_BY_ENV` names, which `../pipeline/record-step.ts` creates for a
+  TypeScript manual step and copies into its record as `answeredBy`. Outside
+  `record.ts` it records nothing. Its callers: the refresh pulls' TAP client
+  (`../refresh/pull/`) and `fetchHorizonsText`, so both Horizons fetchers
+  record `HORIZONS_SERVICE`.
 - `heap-budget.ts` / `heap-budget-pure.ts` (+ test) — `watchHeap(step)`,
   started first thing in a step's `main`, and its `check()`, the step's peak
   live heap against the CI runner's as an `emitArtifacts` check

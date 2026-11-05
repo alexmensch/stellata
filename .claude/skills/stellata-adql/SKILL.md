@@ -14,17 +14,17 @@ Plumbing reference: [Gaia TAP](/scripts/refresh/README.md#gaia-tap-synchronous-e
 
 ## Reach the services through `refresh_lib`, never a bare POST
 
-`rl.gaia_sync_client(maxrec)` for `gaiadr3.*`, `rl.cds_backend()` for VizieR-only
-tables, `rl.simbad_client()` for SIMBAD. They carry retry, mirror fallback,
-overflow detection and the error-body lift below. An ad-hoc probe gets them by
-adding `scripts/refresh` to `sys.path` and importing `refresh_lib` — that is
-cheaper than re-deriving any of it, and it means a probe that works becomes a
-pull without a rewrite.
+`rl.gaia_sync_client(maxrec)` for `gaiadr3.*` (ESA, ARI Heidelberg fallback),
+`rl.cds_client()` for VizieR-only tables (CDS alone, no fallback),
+`rl.simbad_client()` for SIMBAD (CDS, Harvard CfA fallback). All three retry and
+surface the archive's `QUERY_STATUS` message; only the Gaia client also detects
+overflow and fails fast on a parse complaint, both below. An ad-hoc probe gets them by adding `scripts/refresh` to `sys.path` and
+importing `refresh_lib` — cheaper than re-deriving any of it, and a probe that
+works becomes a pull without a rewrite.
 
-**Which service hosts what is a property of the table, not a preference.** CDS
-does not host `gaiadr3.*`, so an ESA→CDS fallback reports "table not found"
-and hides the real fault. `TapClient` takes `backends=` with no default for
-exactly this reason.
+**Which service hosts what is a property of the table, not a preference** —
+an ESA→CDS fallback on `gaiadr3.*` reports "table not found" and hides the
+real fault, which is why `TapClient` takes `backends=` with no default.
 
 It runs the other way too: ESA carries `external.*` copies of catalogues you
 may reach for on VizieR, and the copy you pick decides what you can ASK. The
@@ -68,11 +68,9 @@ FROM (SELECT FLOOR(phot_g_mean_mag * 4) AS gbin
 GROUP BY gbin ORDER BY gbin
 ```
 
-**Grouping by the SELECT alias instead answers 500, not 400.** `refresh_lib`
-classifies on the archive's `QUERY_STATUS` complaint rather than on the status
-code, so a rejected query fails fast under a 5xx instead of spending the whole
-backoff schedule on both mirrors. That holds only for pulls that go through it
-— a bare POST sees the status code and nothing else.
+**Grouping by the SELECT alias instead answers 500, not 400** — a parse fault
+under a transient-looking status, which only the error body exposes
+([Reading the real error](#reading-the-real-error)).
 
 There is no `CASE`, so a conditional aggregate has no one-query form. Count
 the subset with a second query carrying the extra predicate rather than
@@ -96,15 +94,34 @@ which quotes for you, and `vizier_slice.py` for the whole-table-subset case.
 
 ## MAXREC, and the truncation that answers 200
 
-A sync endpoint flags an over-long result in a VOTable `QUERY_STATUS` INFO and
-still returns HTTP 200, so a MAXREC below the result size silently shortens a
-pull. `refresh_lib` raises `SyncOverflowError` for it and deliberately does
-not classify it transient. The three sizing rules — whole-table, batched, and
-value-range — are in [Gaia TAP](/scripts/refresh/README.md#gaia-tap-synchronous-endpoints-only); never replace one
-with a bare literal.
+A MAXREC below the result size silently shortens a sync result: HTTP 200, no
+error. `FORMAT=votable` flags it only in a trailing `QUERY_STATUS=OVERFLOW`
+INFO; **a `FORMAT=csv` reply carries no status at all**, just MAXREC rows
+(ESA, ARI, SIMBAD-Harvard, 2026-11-05). Error replies stay VOTable under
+`FORMAT=csv`, so the archive's message is still readable.
 
-MAXREC is not load-bearing on CDS, whose default is ~1e9. There the row-count
-band is what catches an upstream row loss.
+So every query that cannot read the flag checks its own row count: ask for
+`limit + 1` rows and refuse more than `limit`. The TS backend does this on
+every query ([The TAP backend](/scripts/refresh/pull/README.md#the-tap-backend)).
+In `refresh_lib`, only `gaia_sync_client` reads the flag, raising
+`SyncOverflowError`, which is deliberately not transient; `cds_client` and
+`simbad_client` run through pyvo, which demotes it to a `DALOverflowWarning`
+and returns the truncated table. A raw POST, or pyvo's `search(maxrec=)`, asks
+with `MAXREC = limit + 1` — pyvo gives no warning for a result exactly at its
+`maxrec`. `cds_client` and `simbad_client` take no MAXREC and run at the server
+default, so ask with `TOP limit + 1` in the ADQL.
+
+**A mirror also truncates at its own hard output limit**, whatever MAXREC asks:
+read `<outputLimit><hard>` from `<url>/capabilities` before trusting a count.
+2026-11-05: ESA 50,000, ARI 10,000,000, SIMBAD-Harvard 2,000,000. The three
+Python Gaia sizing rules — whole-table, batched, value-range — are in
+[Gaia TAP](/scripts/refresh/README.md#gaia-tap-synchronous-endpoints-only);
+never replace one with a bare literal.
+
+MAXREC is not load-bearing on CDS, whose default is ~1e9; there the row-count
+band is what catches an upstream row loss. SIMBAD's is: its default is 50,000
+rows, so a `simbad_client` query over 50,000 rows comes back truncated with
+only a warning.
 
 ## Batching a selection with no request set
 
@@ -119,9 +136,8 @@ slices where equal magnitude steps give a 27x spread.
 spacing rule and the partition discipline (share the edge as a formatted
 literal, gate that no row is returned twice).
 
-`phot_g_mean_mag` is indexed on ESA — a `COUNT(*)` under a magnitude bound
-over the 1.8-billion-row table returns in ~2 s — which is what makes
-magnitude slicing cheap rather than a full scan per slice.
+`phot_g_mean_mag` is indexed on ESA (a bounded `COUNT(*)` over the
+1.8-billion-row table returns in ~2 s), so a slice is no full scan.
 
 **A table with no magnitude of its own is still sliceable: join to
 `gaiadr3.gaia_source` for the bound.** Both sides key on the indexed
@@ -140,14 +156,17 @@ coverage fraction does not need the whole table to be trustworthy.
 
 ## Reading the real error
 
-`refresh_lib` lifts the VOTable `QUERY_STATUS` message into the raised
-exception for any non-2xx response, so an in-repo pull already tells you which
-clause was rejected — and a complaint naming one escapes the retry rather than
-being mistaken for a degraded service. Only the parsed message is read that
-way: a proxy's HTML page saying "not found" must still fail over to the mirror.
-Outside that path, POST directly and print `resp.text`:
-the status line alone never names the fault, and `raise_for_status()` discards
-the body that does.
+The TS backend, and `refresh_lib` on the Gaia sync path, lift the VOTable
+`QUERY_STATUS` message into the raised error for any non-2xx response, so a
+pull names the rejected clause — and a complaint naming one fails fast instead
+of spending the backoff schedule on every mirror. Only the parsed message is
+read that way: a proxy's HTML page saying "not found" must still fail over to
+the next mirror. On `refresh_lib`'s CDS and SIMBAD clients, pyvo raises
+`DALQueryError` carrying the same message, but `is_transient_http_error`
+counts it transient, so it arrives only after every backend's retries are
+spent. Code that bypasses all of these POSTs directly and prints `resp.text`:
+the status line never names the fault, and `raise_for_status()` discards the
+body that does.
 
 Empty result, no error, is the other shape. Check the obvious first: a
 magnitude or colour column that is NULL satisfies neither `>` nor `<=`, so a
@@ -176,9 +195,8 @@ While writing or debugging a TAP query, if you ever:
 then **edit this file in that same session.** Do not ask permission and do not
 defer it; an unrecorded rejection is a round trip every future session repeats.
 
-That last trigger is the one that gets skipped, because the rule usually *does*
-exist somewhere and the miss reads as carelessness rather than a documentation
-gap. Treat a correction as a defect in this file until proven otherwise.
+The last trigger is the one skipped: treat a correction as a defect in this
+file until proven otherwise.
 
 How to edit it well:
 

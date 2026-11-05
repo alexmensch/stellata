@@ -221,7 +221,7 @@ consumer spells out a `view.get*` / `view.set*` byte read of its own:
 | --- | --- | --- |
 | write | `writeStarRecord`, `writeCatalogHeader` | `../../../scripts/catalog/build-catalog.ts`, loader round-trip tests |
 | read, one record | `readRecordField`, `readRecordFieldBig` | `../../../scripts/catalog/catalog-lookup.ts` (AoS) |
-| read, one column × all records | `decodeRecordColumn`, `decodeRecordColumnBig` | `catalog-loader.ts` (SoA) |
+| read, one column × all records | `decodeRecordColumn`, `decodeRecordColumnBig` | `catalog-loader.ts` (SoA), `../../../scripts/catalog/catalog-columns.ts` |
 | read, header / name table | `readCatalogHeader`, `readNameTable` | both readers |
 
 Each picks its `view.get*` call from `RECORD_FIELD_KINDS`, so a field's

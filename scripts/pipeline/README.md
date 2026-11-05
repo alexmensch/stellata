@@ -37,7 +37,7 @@ then Vite.
 |---|---|---|---|---|
 | `build` | yes | `build/stamps/<step>.json` (gitignored) | an input or an output hash moved | the catalogue chain, the four generators, binaries, clouds, local-group, the mirrors |
 | `pull` | never | `data/stamps/<step>.json` (committed) | its request rows, a data input, its query or an output hash moved | every `refresh:*` (the two Edenhofer variants among them); both `fetch:*` |
-| `bake` | never | `data/stamps/<step>.json` (committed) | an input or an output hash moved | dust, local-bubble, cloud-surfaces, textures, icons, og |
+| `bake` | never | `data/stamps/<step>.json` (committed) | an input, its projection of a file it reads, or an output hash moved | dust, local-bubble, cloud-surfaces, textures, icons, og (all Python; a TypeScript bake declares itself as a TypeScript pull does) |
 
 A step the runner never runs is a **manual** step. When one is stale, the
 runner skips every step that reads its outputs (transitively), still builds
@@ -73,8 +73,9 @@ same. For a TypeScript step the input set is computed now; for a Python step
 it is the recorded set, re-hashed. A missing or unparseable stamp is stale.
 Hashing costs about a second per gigabyte on a warm page cache, measured over
 today's stamped steps (about 1.1 GB) on a fast workstation. The runner also
-re-hashes every manual step's record (`data/` is about 1.5 GB) and starts each
-Python pull's `--describe` on every run; the runner core quotes a no-op data
+re-hashes every manual step's record (`data/` is about 1.5 GB) and starts the
+`--describe` of every manual step that describes itself (every pull, and a
+bake that reads a projection) on every run; the runner core quotes a no-op data
 phase before and after, warm and cold, on that machine and on a GitHub Actions
 runner, which is much slower, and optimises only if that number warrants it.
 
@@ -102,7 +103,22 @@ A bake follows the same rule. `cloud-surfaces` reads `public/clouds.json`
 only for the geometry it traces (positions and extents) and the SID it keys
 each surface by, so its record holds the hash of that projection: a name
 change in `clouds.json` leaves it fresh, a geometry or SID change stops the
-build. The bake record is the only owner of that fact.
+build. The bake record is the only owner of that fact. Its `requestFrom`
+orders the bake after `build:clouds` as a pull's orders the pull, so the
+check reads the `clouds.json` this run rebuilt.
+
+A TypeScript bake that reads the built catalogue describes itself the same
+way, through `catalogColumnsProjection` (`../catalog/catalog-columns.ts`):
+its record holds a hash of each float32 record column it reads, and
+`requestFrom` names `public/catalog-manifest.json`, ordering it after
+`build:catalog`. The catalogue's bytes are never an input, so a rebuild
+that moves a name or any column the bake does not read leaves it fresh, and
+a committed record needs only those columns, not the whole build, to come
+out identical on another machine. The bake passes the same field list to
+`readCatalogColumns` and to the projection, so what it hashes is what it
+measures. Each run's describe reads the whole catalogue in one `tsx`
+process: four columns of the 93 MB catalogue took about 0.3 s and 300 MB
+peak memory on a fast workstation (2026-11-05); unmeasured on a CI runner.
 
 An **external dataset** a baker reads from outside the repo is a pull of its
 own, whose query is the dataset's identity and version: the two variants of
@@ -178,7 +194,9 @@ A target is a step name, or `data` for every build step on the table.
 `record.ts <step> [--force] [args…]` is every pull's and bake's
 `package.json` target, so a hand re-run is what keeps its record fresh. It
 takes the step's lock, and the shared locks on the steps writing its inputs,
-as the runner does; skips a step whose record is fresh unless `--force`;
+as the runner does, plus those on the writers of the files its describe
+names (`requestFrom`; `locks.ts`'s `sharedLocks`), which a step with no
+record yet has no graph edge from; skips a step whose record is fresh unless `--force`;
 describes it; runs it (a Python step under `build_stamp.record_run`, a
 TypeScript one through `tsx`, its inputs derived and hashed before the run, as a TypeScript build's
 are); then writes `data/stamps/<step>.json` with `writeManualRecord`. Extra
@@ -193,8 +211,11 @@ request), an ignored file (a `.ckpt` batch cache, the dust bake's
 `.voxels-*.npy`: no other checkout has one, so no listing counts it either),
 and, for a pull, code. An ignored
 write is scratch; any other write the step does not declare fails the run
-and leaves the record as it was. `answeredBy` is the run record's services,
-in first-answer order; `release` is the description's.
+and leaves the record as it was. `answeredBy` is the services that answered,
+in first-answer order: a Python pull's run record carries them; a TypeScript
+pull writes them to the file `PIPELINE_ANSWERED_BY` names
+(`build/answered-by/<step>.json`, `../util/answered-by.ts`), which `record.ts`
+reads once the step exits 0 and then removes. `release` is the description's.
 
 ## Loops through committed files
 
@@ -309,6 +330,10 @@ The table's own files are in [step-table/](step-table/README.md#files).
 - `record.ts` / `record-step.ts` (+ test) — [Recording a manual
   step](#recording-a-manual-step--recordts): `recordStep` and the
   `RecordOutcome` union (`fresh`, `recorded`, `failed`).
+- `manual-step-fixture.ts` — test support: `tsManualFixture` writes a
+  TypeScript pull or bake and its outputs module under a fixture root and
+  hands back its `record()` and `freshness()`, for every suite that records
+  one (`record-step.test.ts`, `../catalog/catalog-columns.test.ts`).
 - `processes.ts` — how the runner and `record.ts` start a step: `runTs`, a
   TypeScript step under `tsx`, handed the input hashes taken before it
   started (`util/step-input-hashes.ts`), or `runRecorded`, a Python step

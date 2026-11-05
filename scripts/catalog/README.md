@@ -172,7 +172,15 @@ scripts/catalog/
                                   primary and a Gaia-only companion);
                                   `nameTable` hands
                                   trace the same table for its folded one
-                                  (lineage/README.md#trace).
+                                  (lineage/trace/README.md).
+  catalog-columns.ts (+ test)     readCatalogColumns: float32 record columns
+                                  of a built catalogue, each decoded whole
+                                  (decodeRecordColumn) — the reader for a
+                                  bake that measures the catalogue
+                                  (../milkyway-calibration/); and
+                                  catalogColumnsProjection, the same
+                                  columns hashed as that bake's describe
+                                  ([../pipeline/README.md](../pipeline/README.md#freshness--one-mechanism)).
   build-counts.ts (+ test)        Per-strategy / per-tier count snapshot
                                   comparator, pinned by
                                   build-catalog-expected.json, which

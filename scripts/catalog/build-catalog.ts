@@ -34,6 +34,7 @@ import {
   type CatalogManifest,
   DIST_VIA_VALUES,
 } from '../../src/catalog-format/record/catalog-pure';
+import { encodeSpectralBytes } from '../../src/catalog-format/spectral/spectral-record-bytes';
 import { buildHipToIndex, inferBinaries, SIMBAD_OTYPE_MULTIPLE } from './record/record-build-pure';
 import { apparentVFromSol } from './record/record-order-pure';
 import { avSolToStar } from './distance/dust/dust-deextinction-pure';
@@ -147,7 +148,7 @@ import { syntheticGaiaBridges } from '../sid/sid-pure';
 import { sidSuccessorPairs } from '../sid/events-pure';
 import { allocate } from '../sid/allocate-pure';
 import {
-  ALLOCATION_CODES, ALLOCATION_LINEAGE_BUDGET, allocationIdentityRows, allocationIdentityText,
+  ALLOCATION_CODES, ALLOCATION_LINEAGE_BUDGET, allocationSidRows, allocationSidsText,
   allocationLineageRows,
 } from '../sid/allocation-lineage-pure';
 import { catalogSidObjects } from '../sid/catalog-objects';
@@ -158,7 +159,7 @@ import { allocationRun, loadRegistry, registryTexts } from '../sid/registry-io';
 import { loadStoredEdges } from '../sid/stored-edges';
 import { CATALOG_PARTITION } from '../../src/catalog-format/pipeline-outputs/data-files';
 import {
-  PROMOTION_LINEAGE, PLACEMENT_LINEAGE, ALLOCATION_LINEAGE, MEMBERSHIP_LINEAGE,
+  PROMOTION_LINEAGE, PLACEMENT_LINEAGE, ALLOCATION_LINEAGE, ALLOCATION_SIDS_STEM, MEMBERSHIP_LINEAGE,
 } from '../../src/catalog-format/pipeline-outputs/lineage-files';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -1092,8 +1093,7 @@ export async function main() {
       physRadius: s.physicalRadius,
       companionIdx: s.companionIdx >= 0 ? s.companionIdx : NO_COMPANION,
       nameOffset: s.proper ? nameOffsets[i] : 0,
-      spectClass: s.spectClass,
-      lumClass: s.lumClass,
+      ...encodeSpectralBytes(s.spectral),
       conIndex: s.conIndex,
       flags: s.flags,
       ampUnits,
@@ -1276,7 +1276,7 @@ export async function main() {
     lines: allocationLineageRows(sidObjects, allocation).map((row) => stageLineageLine(ALLOCATION_CODES, row)),
     render: (sorted) => ({
       allocation: stageLineageText(ALLOCATION_CODES, sorted),
-      'allocation.identity': allocationIdentityText(allocationIdentityRows(sidObjects, allocation.outcomes)),
+      [ALLOCATION_SIDS_STEM]: allocationSidsText(allocationSidRows(sidObjects, allocation.outcomes)),
     }),
     joins: () => [],
     budget: ALLOCATION_LINEAGE_BUDGET,
