@@ -2,7 +2,10 @@ import { describe, expect, it } from 'vitest';
 
 import { paramsOf, type LineageRow } from '../lineage/lineage-row-pure';
 import type { NamedRecord } from './display-names';
-import { namingLabels, namingLineageRows, type NamingLineageRecord } from './naming-lineage-pure';
+import { invariantViolations } from '../lineage/lineage-invariant-pure';
+import {
+  namingLabels, namingLineageLines, namingLineageRows, NAMING_INVARIANTS, type NamingLineageRecord,
+} from './naming-lineage-pure';
 
 const CONS = [{ code: 'Dra' }, { code: 'Her' }];
 const DRA = 0;
@@ -99,5 +102,16 @@ describe('namingLabels', () => {
       nameRow('spine:1', 'naming.name.unlabelled', ''),
       nameRow('spine:1', 'naming.name.own', '{"tier":"iau","label":"Alrakis"}'),
     ])).toThrow(/two name rows/);
+  });
+});
+
+describe('NAMING_INVARIANTS', () => {
+  it('names a record whose sky designation has no constellation to render against', () => {
+    const records: NamedRecord[] = [
+      { name: { kind: 'own', label: 'HIP 1', tier: 'catalogue', letter: null }, set: { flamsteed: 21, hip: 1 }, dc: { from: 'none' } },
+      { name: { kind: 'own', label: 'HIP 2', tier: 'catalogue', letter: null }, set: { hip: 2 }, dc: { from: 'none' } },
+    ];
+    const [none] = invariantViolations(NAMING_INVARIANTS, namingLineageLines(records, [rec('spine:1'), rec('spine:2')], CONS));
+    expect(none.rows.map((r) => r.key)).toEqual(['spine:1']);
   });
 });

@@ -2,6 +2,7 @@
 
 import { paramsOf, paramsText, stageLineageLine, type LineageLine, type LineageParams, type LineageRole, type LineageRow } from '../lineage/lineage-row-pure';
 import { LIVE, stageCodes, type CodeDeclaration } from '../lineage/reason-codes-pure';
+import { lineageInvariant, NO_EXCEPTIONS, type LineageInvariant } from '../lineage/lineage-invariant-pure';
 import type { NamedRecord } from './display-names';
 import {
   designationAtTier,
@@ -37,6 +38,14 @@ export const NAMING_CODES = stageCodes(NAMING_LINEAGE.stage, {
 });
 
 type Branch = Parameters<typeof NAMING_CODES.code>[0];
+
+export const NAMING_INVARIANTS: readonly LineageInvariant[] = [
+  lineageInvariant(
+    NAMING_CODES, 'dc.none',
+    'every record carrying a Bayer, Flamsteed or Gould designation has a constellation to render it against',
+    NO_EXCEPTIONS,
+  ),
+];
 
 /** Structural subset of `Star` the serialiser reads. */
 export interface NamingLineageRecord {

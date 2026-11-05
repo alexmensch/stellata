@@ -220,6 +220,7 @@ declares its invariants beside its codes and hands them to `stageLineage`,
 which checks every line before emission: a violation is a failed check, so
 nothing lands, and the message lists the offending rows' keys and params.
 Placement's (`PLACEMENT_INVARIANTS`): no `distance.bailer-jones-absent` row.
+Naming's (`NAMING_INVARIANTS`): no `dc.none` row.
 Membership's (`MEMBERSHIP_INVARIANTS`): no `admit.magnitude` row whose
 `own_candidate` is outside `ALLOWED_OWN_CANDIDATE_REASONS`
 ([The additions](../membership/additions/README.md#grouping-and-admission)), and no

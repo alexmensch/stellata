@@ -96,7 +96,7 @@ scripts/catalog/
                                   allocation's and naming's lineage through
                                   emitArtifacts once its two snapshot
                                   checks, the five lineage budgets,
-                                  placement's lineage
+                                  placement's and naming's lineage
                                   invariants (lineage/README.md#invariants)
                                   and the CI heap budget
                                   (../util/README.md#ci-heap-budget) pass.

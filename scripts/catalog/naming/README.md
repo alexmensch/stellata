@@ -297,7 +297,8 @@ override keys on SIDs. `namingLineageRows` serialises each record's
 - a record carrying a Bayer, Flamsteed or Gould designation adds the
   constellation it renders against: the cascade tier that wrote it
   (`desigCon`, [The designation constellation](../classic-ids/README.md#the-designation-constellation)),
-  `dc.positional` or `dc.none`, and a `refused` `dc.displaced` row for the
+  `dc.positional` or `dc.none` (pinned at zero rows by `NAMING_INVARIANTS`,
+  [Invariants](../lineage/README.md#invariants)), and a `refused` `dc.displaced` row for the
   IV/27A constellation an authority tier overwrote.
 
 The stage founds no record, so it writes no identity rows, and every code's

@@ -115,7 +115,7 @@ import {
   loadStarNamingInputs,
 } from './naming/apply-star-names';
 import { assignDisplayNames, type NamedRecord } from './naming/display-names';
-import { NAMING_CODES, NAMING_LINEAGE_BUDGET, namingLineageLines } from './naming/naming-lineage-pure';
+import { NAMING_CODES, NAMING_INVARIANTS, NAMING_LINEAGE_BUDGET, namingLineageLines } from './naming/naming-lineage-pure';
 import { readStars, type ReadStarsOptions, type Star } from './parse/stars-parse';
 import {
   PARKED_COUNT_KEY,
@@ -242,7 +242,7 @@ function namingLineage(records: readonly NamedRecord[], stars: readonly Star[], 
     render: (sorted) => ({ naming: stageLineageText(NAMING_CODES, sorted) }),
     joins: () => [],
     budget: NAMING_LINEAGE_BUDGET,
-    invariants: [],
+    invariants: NAMING_INVARIANTS,
     argv: process.argv.slice(2),
     upstream: UPSTREAM_LINEAGE,
   });
