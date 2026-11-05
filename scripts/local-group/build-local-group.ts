@@ -5,7 +5,7 @@
 import { allocateSibling, emitSibling, siblingLineage } from '../sid/sibling-allocation';
 import { SIBLING_ARTIFACTS } from '../sid/sibling-artifacts-pure';
 import { sweepStaged } from '../util/emit-artifacts';
-import { roundHalfEven, roundSignificant } from '../util/round-pure';
+import { roundEach, roundHalfEven, roundSignificant } from '../util/round-pure';
 import { LOCAL_GROUP_JSON } from './local-group-json';
 import { LOCAL_GROUP_OUTPUTS } from './local-group-outputs';
 import { LG_ALIASES, LG_OVERRIDES, LVDB } from './local-group-source';
@@ -21,10 +21,6 @@ import {
   type LgEmission,
   type SersicParams,
 } from '../../src/catalog-format/local-group/local-group-schema';
-
-const roundEach = <T extends readonly number[]>(v: T, digits: number): T => (
-  v.map((x) => roundHalfEven(x, digits)) as unknown as T
-);
 
 /** Trims numeric precision so repeat builds produce stable diffs. */
 function sersicParamsToJson(p: SersicParams): SersicParams {

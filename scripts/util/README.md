@@ -181,7 +181,8 @@ same thing — single-use helpers stay with their consumer.
   (`/tests/README.md#pipeline-viewer-boundary`) and the step table's
   outputs-module walk ([Load-time rules](../pipeline/step-table/README.md#load-time-rules)) read.
 - `round-pure.ts` (+ test) — `roundHalfEven(x, digits)`, Python's
-  `round`: half to even on the double's exact decimal value; and
+  `round`: half to even on the double's exact decimal value, and
+  `roundEach`, the same over each element of a tuple; and
   `roundSignificant(v, digits)`, significant figures through
   `toPrecision`. Every number a TypeScript build rounds into a JSON
   artifact goes through one of them, never `Math.round(x · 10ⁿ) / 10ⁿ`,
