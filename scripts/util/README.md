@@ -146,7 +146,9 @@ same thing — single-use helpers stay with their consumer.
   the runner also reads for an outputs module's imports), so a new import joins
   without anyone listing it. `scriptParts` is the one parser of a
   script's `&&`-chained commands (`tsx`, `python3`, `pnpm run`, or `other`)
-  and `tsxEntries` every `tsx` entry among them; `closureWithSiblings(closure, files)` adds every file beside a
+  and `tsxEntries` every `tsx` entry among them; `runnerTargets` the
+  targets of a script that is one `run.ts` call (`RUNNER`), else `null`;
+  `closureWithSiblings(closure, files)` adds every file beside a
   closure module except code (`CODE_FILE`) and `.md`, which is how the `*-expected.json`
   snapshots a build reads by path get keyed. `trackedFiles()` is the listing the
   stamp passes as `files`.

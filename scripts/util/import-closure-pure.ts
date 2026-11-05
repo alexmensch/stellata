@@ -7,6 +7,8 @@ export const CODE_FILE = /\.(py|ts|mts)$/;
 /** The one `tsx` entry a script names: it runs the entry after it (`runStep`). */
 export const LAUNCHER = 'scripts/util/launch.ts';
 
+export const RUNNER = 'scripts/pipeline/run.ts';
+
 /** One `&&`-joined command of a package.json script. */
 export type ScriptPart =
   | { readonly kind: 'tsx'; readonly entry: string; readonly args: readonly string[] }
@@ -26,6 +28,12 @@ export function scriptParts(scripts: Readonly<Record<string, string>>, name: str
   const script = scripts[name];
   if (script === undefined) throw new Error(`package.json has no script ${name}`);
   return script.split('&&').map(part);
+}
+
+/** A script that is one `run.ts` call: its targets. */
+export function runnerTargets(parts: readonly ScriptPart[]): readonly string[] | null {
+  const [only] = parts;
+  return parts.length === 1 && only.kind === 'tsx' && only.entry === RUNNER ? only.args : null;
 }
 
 /** Every `tsx` entry a script runs, chained ones included. */

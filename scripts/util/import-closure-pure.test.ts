@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { closureWithSiblings, LAUNCHER, scriptParts, tsxEntries } from './import-closure-pure';
+import { closureWithSiblings, LAUNCHER, RUNNER, runnerTargets, scriptParts, tsxEntries } from './import-closure-pure';
 
 describe('scriptParts / tsxEntries', () => {
   const scripts = {
@@ -24,6 +24,13 @@ describe('scriptParts / tsxEntries', () => {
   it('lists every tsx entry a chained script runs', () => {
     expect(tsxEntries(scripts, 'build:lg')).toEqual(['scripts/lg/build.ts', 'scripts/sid/stamp.ts']);
     expect(tsxEntries(scripts, 'build:data')).toEqual([]);
+  });
+
+  it('reads the targets of a script that is one run.ts call, and of no other', () => {
+    const runs = { one: `tsx ${LAUNCHER} ${RUNNER} data`, two: `tsx ${LAUNCHER} ${RUNNER} a && tsx ${LAUNCHER} ${RUNNER} b` };
+    expect(runnerTargets(scriptParts(runs, 'one'))).toEqual(['data']);
+    expect(runnerTargets(scriptParts(runs, 'two'))).toBeNull();
+    expect(runnerTargets(scriptParts(scripts, 'build:lg'))).toBeNull();
   });
 
   it('refuses a missing script', () => {

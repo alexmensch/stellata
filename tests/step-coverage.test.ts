@@ -7,7 +7,7 @@ import { describe, expect, it } from 'vitest';
 import { NON_STEP_WRITERS, outputsOwners } from '../scripts/pipeline/step-table/non-step-writers';
 import { STEPS } from '../scripts/pipeline/step-table/steps';
 import { packageScripts } from '../scripts/util/import-closure';
-import { scriptParts } from '../scripts/util/import-closure-pure';
+import { runnerTargets, scriptParts } from '../scripts/util/import-closure-pure';
 import { REPO_ROOT } from '../scripts/util/paths';
 import { isProductionTs, walkFiles } from './walk-files';
 
@@ -16,7 +16,6 @@ type Ref = `${string}#${string}`;
 const DEFINITION = 'scripts/util/emit-artifacts.ts';
 const OUTPUTS_MODULE = /-outputs\.ts$/;
 const CALL = /\bdeclareOutputs\(/g;
-const RUNNER = 'scripts/pipeline/run.ts';
 
 const isDeclaredOutputs = (value: unknown): boolean => typeof value === 'object' && value !== null
   && 'files' in value && 'families' in value && Array.isArray(value.families);
@@ -60,8 +59,7 @@ describe('declareOutputs coverage', () => {
   it('places every step-named script on the table, among the non-step writers, or as a run of the runner', () => {
     const scripts = packageScripts();
     const tableNames = new Set(STEPS.steps.map((s) => s.name));
-    const runsRunner = (name: string): boolean => scriptParts(scripts, name)
-      .every((p) => p.kind === 'tsx' && p.entry === RUNNER);
+    const runsRunner = (name: string): boolean => runnerTargets(scriptParts(scripts, name)) !== null;
     const unplaced = Object.keys(scripts).filter((name) => /^(build|fetch|refresh):/.test(name))
       .filter((name) => !tableNames.has(name) && !(name in NON_STEP_WRITERS) && !runsRunner(name));
     expect(unplaced).toEqual([]);

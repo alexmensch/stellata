@@ -6,7 +6,7 @@ import { describe, expect, it } from 'vitest';
 
 import { declaredInputs, DECLARING_MODULE } from '../scripts/util/sources/declared-inputs';
 import { entryClosure, packageScripts } from '../scripts/util/import-closure';
-import { scriptParts } from '../scripts/util/import-closure-pure';
+import { RUNNER, scriptParts } from '../scripts/util/import-closure-pure';
 import { closureReadingWriters } from '../scripts/pipeline/step-table/non-step-writers';
 import { STEPS } from '../scripts/pipeline/step-table/steps';
 import { stepEntries } from '../scripts/util/step-inputs';
@@ -37,7 +37,6 @@ const DECLARATION_FACTORIES = ['scripts/util/mirror-to-public.ts'];
 
 const scripts = packageScripts();
 const WRITERS = closureReadingWriters();
-const RUNNER = 'scripts/pipeline/run.ts';
 /** Every step and non-step writer with TypeScript in it: an all-Python step records its reads at run time. */
 const TS_STEPS = [...STEPS.steps.map((s) => s.name), ...WRITERS]
   .filter((name) => stepEntries(name).some((entry) => entry !== RUNNER));
