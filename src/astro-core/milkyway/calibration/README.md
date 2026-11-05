@@ -342,15 +342,15 @@ The 25.44 is *not* published; `diffuse-reference.ts` builds it:
 | The <!-- count:build-catalog/recordCount -->979,678<!-- /count --> catalogue stars Stellata draws at V ≤ 11 | 24.110 |
 | Residual left for the diffuse band | **25.44** |
 
-**The catalogue rows are measured per build, into `resolved-hole-table.ts`
-beside the hole** (`scripts/milkyway-calibration/`), and the residual moves
+**The catalogue rows are measured by the `measure:band-resolved` bake, into
+`resolved-hole-table.ts` beside the hole** (`scripts/milkyway-calibration/`), and the residual moves
 with them. The 388k catalogue before the floor read 24.271 at the pole over
 1,155 stars and 22.368 toward the centre over 11,776; V ≤ 11 takes the pole
 to 24.110 over 2,763 and the centre to 22.191 over 16,869, so the star field's
 share of [Leinert 1998](/data/papers/index.md#leinert1998)'s pole total goes from two thirds to **77 %**. **A record
-has to land INSIDE a 10° cap to move a row**, so `recordCount` can move
-without moving either: re-derive when a record lands within 10° of a centre,
-not whenever the count changes.
+has to land INSIDE a 10° cap to move a row**, so a re-run the build demands
+can leave both rows where they were; when to re-run is the build's stop, not
+the caps.
 
 [Leinert 1998](/data/papers/index.md#leinert1998)'s table is a sky model ([Wainscoat 1992](/data/papers/index.md#wainscoat1992)) for *all* stars,
 resolved or not, so pinning the published figure would double-count the
