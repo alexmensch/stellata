@@ -15,7 +15,7 @@ import {
   importTimeProblems, loadTable, TABLE_LOAD_BUILTINS, WALKABLE, walkOutputsModules, type Loaded,
 } from './step-table/load-table';
 import { pipelineTree } from './pipeline-tree';
-import { runSteps, type Verdict } from './runner';
+import { runSteps, type RunOptions, type Verdict } from './runner';
 import type { StepEntry, StepTable } from './step-table/step-table-pure';
 
 let root: string;
@@ -124,7 +124,7 @@ async function load(steps: StepEntry[], registryFiles: string[] = []): Promise<L
   return loadTable(table, { root, deriveInputs: async (entry) => reads.get(entry) ?? [] });
 }
 
-interface Flags { force?: boolean; updateSnapshots?: boolean; verifyCommitted?: boolean }
+type Flags = Partial<Pick<RunOptions, 'force' | 'updateSnapshots' | 'verifyCommitted'>>;
 
 async function run(steps: StepEntry[], targets: string[], flags: Flags = {}) {
   const loaded = await load(steps);
