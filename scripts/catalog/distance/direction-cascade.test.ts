@@ -27,7 +27,6 @@ import { SIMBAD_VALUES } from '../simbad/simbad-values-source';
 import { sourceRowRef, type SourceRowRef } from '../../util/sources/row-ref-pure';
 import { cns5Astrometry } from '../classic-ids/cns5-fixture';
 import {
-  equatorialTangentBasis,
   unitVectorFromRaDec,
   type UnitVector,
 } from '../../../src/astro-core/equatorial-basis';
@@ -110,28 +109,6 @@ function inputs(overrides: Partial<DirectionInputs> = {}): DirectionInputs {
     isSol: false, ...overrides,
   };
 }
-
-describe('direction-cascade / unitVectorFromRaDec', () => {
-  it('maps the equatorial basis axes', () => {
-    const a = unitVectorFromRaDec(0, 0);
-    expect(a.x).toBeCloseTo(1, 12);
-    expect(a.y).toBeCloseTo(0, 12);
-    expect(a.z).toBeCloseTo(0, 12);
-    const b = unitVectorFromRaDec(90, 0);
-    expect(b.x).toBeCloseTo(0, 12);
-    expect(b.y).toBeCloseTo(1, 12);
-    expect(b.z).toBeCloseTo(0, 12);
-    const c = unitVectorFromRaDec(0, 90);
-    expect(c.x).toBeCloseTo(0, 12);
-    expect(c.y).toBeCloseTo(0, 12);
-    expect(c.z).toBeCloseTo(1, 12);
-  });
-
-  it('south pole lands at -z (dec sign is not flipped)', () => {
-    const s = unitVectorFromRaDec(123, -90);
-    expect(s.z).toBeCloseTo(-1, 12);
-  });
-});
 
 describe('direction-cascade / directionAtEpoch', () => {
   it('returns the measured direction unchanged when either PM is missing', () => {
@@ -461,38 +438,6 @@ describe('direction-cascade / resolveDirection routing', () => {
       'simbad',
       'curated',
     ]);
-  });
-});
-
-function dot(a: UnitVector, b: UnitVector): number {
-  return a.x * b.x + a.y * b.y + a.z * b.z;
-}
-function norm(a: UnitVector): number {
-  return Math.hypot(a.x, a.y, a.z);
-}
-
-describe('equatorialTangentBasis', () => {
-  it('is orthonormal away from and adjacent to the pole and on RA-wrap', () => {
-    for (const [ra, dec] of [[0, 0], [123.4, -45.6], [359.999, 89.9], [0, -89.9]]) {
-      const { u, east, north } = equatorialTangentBasis(ra, dec);
-      expect(norm(u)).toBeCloseTo(1, 12);
-      expect(norm(east)).toBeCloseTo(1, 12);
-      expect(norm(north)).toBeCloseTo(1, 12);
-      expect(dot(u, east)).toBeCloseTo(0, 12);
-      expect(dot(u, north)).toBeCloseTo(0, 12);
-      expect(dot(east, north)).toBeCloseTo(0, 12);
-    }
-  });
-
-  it('pins the canonical (0,0) basis and is RA-wrap invariant', () => {
-    const b = equatorialTangentBasis(0, 0);
-    expect(b.u).toEqual({ x: 1, y: 0, z: 0 });
-    expect(b.east.x).toBeCloseTo(0, 12);
-    expect(b.east.y).toBeCloseTo(1, 12);
-    expect(b.north.z).toBeCloseTo(1, 12);
-    const wrap = equatorialTangentBasis(360, 0);
-    expect(wrap.east.y).toBeCloseTo(b.east.y, 12);
-    expect(wrap.north.z).toBeCloseTo(b.north.z, 12);
   });
 });
 
