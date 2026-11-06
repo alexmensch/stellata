@@ -195,17 +195,17 @@ export async function emitEach<K extends string>(
 
 /** A manual step's `--describe` answer: its query, the services it may ask,
  *  and the upstream release, with no network call (`pipeline/freshness.ts`). */
+export interface PullDescription {
+  readonly query: string;
+  readonly services: readonly string[];
+  readonly release?: string;
+}
+
 /** The part of a file a manual step reads, as the request its record hashes,
  *  and the files it is derived from, which are never hashed themselves. */
 export interface Projection {
   readonly request?: readonly string[];
   readonly requestFrom: readonly string[];
-}
-
-export interface PullDescription extends Partial<Projection> {
-  readonly query: string;
-  readonly services: readonly string[];
-  readonly release?: string;
 }
 
 export type StepDescription = PullDescription | Projection;

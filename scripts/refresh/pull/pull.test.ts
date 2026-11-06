@@ -228,7 +228,7 @@ describe('a phased pull', () => {
   });
 
   it('describes every phase\'s query, each table\'s formats and order, and the request it derives', () => {
-    const pull = typesPull(twoPhases, { request: { request: ['hip:1', 'hip:2'], requestFrom: ['data/membership/membership-manifest.tsv'] } });
+    const pull = typesPull(twoPhases, { request: { request: ['hip:1', 'hip:2'], requestFrom: ['manifest.tsv'] } });
     expect(describePhasedPull(pull)).toEqual({
       query: JSON.stringify({
         phases: { resolve: 'SELECT oidref, id FROM ident WHERE id IN ({request})', basic: 'SELECT oid, sp_type FROM basic WHERE oid IN ({request})' },
@@ -236,7 +236,7 @@ describe('a phased pull', () => {
       }),
       services: ['SIMBAD-CDS', 'SIMBAD-Harvard'],
       request: ['hip:1', 'hip:2'],
-      requestFrom: ['data/membership/membership-manifest.tsv'],
+      requestFrom: ['manifest.tsv'],
     });
   });
 

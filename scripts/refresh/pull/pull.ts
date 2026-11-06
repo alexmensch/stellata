@@ -171,7 +171,7 @@ export function describePull<K extends string>(pull: Pull<K>): PullDescription {
   return { query: JSON.stringify(queries), ...archiveDescription(pull.archive, pull.release) };
 }
 
-export function describePhasedPull<K extends string>(pull: PhasedPull<K>): PullDescription {
+export function describePhasedPull<K extends string>(pull: PhasedPull<K>): PullDescription & Partial<Projection> {
   const phases = Object.fromEntries(Object.entries(pull.phases).map(([name, p]) => [name, phaseTemplate(p, pull.archive.quote)]));
   const tables = Object.fromEntries(keysOf(pull.tables).map((k) => [k, { formats: formatsOf(pull.tables[k]), sortBy: pull.tables[k].sortBy }]));
   const query = { phases, tables, ...(pull.parameters === undefined ? {} : { parameters: pull.parameters }) };

@@ -296,9 +296,9 @@ same thing — single-use helpers stay with their consumer.
   exits 1 with one line and no stack; any other error keeps its stack. A
   TypeScript manual step that describes itself also exports `describe`,
   sync or async — a pull's `PullDescription` (the two Horizons fetchers,
-  the refresh pulls), carrying a `Projection`'s `request` and `requestFrom`
-  when the pull derives its request from a file, or a bake's `Projection`
-  of a file it reads — and `--describe` then
+  the refresh pulls), with a `Projection`'s `request` and `requestFrom`
+  beside it when the pull derives its request from a file, or a bake's
+  `Projection` of a file it reads — and `--describe` then
   prints what it returns instead of running.
   `horizons-response.ts`' `HORIZONS_SERVICE` is the service both state.
 - `answered-by.ts` — `reportService(name)`, the TypeScript sibling of

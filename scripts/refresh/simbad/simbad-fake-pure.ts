@@ -1,4 +1,4 @@
-// An in-memory SIMBAD answering a pull's declared phases, for the suites and the committed-table replay. See README.md#the-replay.
+// An in-memory SIMBAD answering a pull's declared phases, for the suites and the committed-table replay. See README.md.
 
 import type { Row } from '../pull/columns-pure';
 import { phaseTemplate, type Ask, type Phase } from '../pull/pull';
