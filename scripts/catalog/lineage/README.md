@@ -26,8 +26,9 @@ scripts/catalog/lineage/
   lineage-row-pure.ts            The envelope and LineageLine, its TSV line:
                                  stageLineageLine, the one encoder, which
                                  refuses a code the stage does not declare;
-                                 sortUtf8, the one order every lineage,
-                                 identity and SID list sorts by; and
+                                 sortUtf8, the one order the stage lines,
+                                 identity and SID files, reason-code list
+                                 and trace keys sort by; and
                                  stageLineageText, the writer, which refuses
                                  another stage's line or lines out of order.
   reason-codes-pure.ts           stageCodes: a stage's codes with their
