@@ -338,10 +338,11 @@ re-typing is the expected cost of the tier, not a regression — and the
 corpus is where each one gets caught, since `known-stars.test.ts` pins
 `primary_spect` per row.
 
-**A re-pull is not done when the file lands.** `simbad_sptype.tsv` feeds two
-pipelines — [Consumed by](#consumed-by) names both — and they pin separate count snapshots.
-Refreshing the file means three builds, and **`build:binaries-runtime` goes
-last, not in the middle**:
+**A re-pull is not done when the file lands.** The two sp_type files feed
+pipelines that pin separate count snapshots — `simbad_wds_sptype.tsv`
+`build:binaries`, `simbad_sptype.tsv` membership and the catalogue
+([Consumed by](#consumed-by)). Refreshing either means the builds below,
+and **`build:binaries-runtime` goes last, not in the middle**:
 
 ```bash
 pnpm run build:binaries          # data/binaries/multiples.tsv + spect provenance
@@ -362,8 +363,10 @@ which is exactly what `tests/artifact-freshness.test.ts` fails on.
 - `simbad_sptype.tsv` → `scripts/catalog/build-catalog.ts` (Tier-1
   spectral classifier + the `otype = '**'` unresolved-multiplicity
   flag, [Multiplicity status](/scripts/catalog/multiplicity/README.md#multiplicity-status)) +
-  `scripts/binaries/build-binaries.py` Stage 6 (per-component sp_type,
-  beats AT-HYG's system-inherited string).
+  `build:membership` and `build:astrometry-request`, whose binding
+  derivation reads its cross-IDs (`scripts/catalog/spine/primaries-tables.ts`).
+- `simbad_wds_sptype.tsv` → `scripts/binaries/build-binaries.py` Stage 6
+  (per-component sp_type, beats AT-HYG's system-inherited string).
 - `simbad_wds_xids.tsv` → `scripts/binaries/build-binaries.py`
   Stage 2 (`simbad_xid` tier of the WDS-component → Gaia source_id
   cascade) + `scripts/catalog/classic-ids/build-classic-id-overlay.ts`
@@ -418,7 +421,10 @@ which is exactly what `tests/artifact-freshness.test.ts` fails on.
   [`scripts/refresh/refresh-simbad-tyc-hd.py`](../../scripts/refresh/README.md).
 - `pnpm run refresh:simbad-sptype` →
   [`scripts/refresh/refresh-simbad-sptype.py`](../../scripts/refresh/README.md).
+- `pnpm run refresh:simbad-wds-sptype` →
+  [`scripts/refresh/simbad-wds-sptype/`](../../scripts/refresh/simbad-wds-sptype/README.md).
 - `pnpm run refresh:simbad-wds-xids` →
   [`scripts/refresh/refresh-simbad-wds-xids.py`](../../scripts/refresh/README.md).
 
-All share the `scripts/refresh/simbad/` plumbing.
+The Python ones share the `scripts/refresh/simbad/` plumbing; the WDS-keyed
+one runs on the TypeScript pull runtime.

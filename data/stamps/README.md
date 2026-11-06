@@ -26,6 +26,14 @@ affected hashes in every record, starting from a base where every manual
 step reads fresh, so no record turns fresh that was stale. CI's
 stale-manual-step stop catches a record the re-key missed.
 
+The other is a pull split in two, its output's rows divided between them
+with no query sent: the new pull records through its target from a
+checkpoint seeded with its share of the rows, and the old one, its output
+unchanged, takes the request hash and `requestFrom` its `--describe` now
+prints. The old one holds rows its query no longer asks for until its next
+real run — `refresh:simbad-sptype` still carries the WDS-only objects
+`refresh:simbad-wds-sptype` took over.
+
 ## Bootstrap
 
 The first records were written without re-running anything: each adopted
