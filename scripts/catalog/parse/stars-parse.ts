@@ -514,8 +514,6 @@ export function readStars(
     // one. Where it does not — the 2p Gaia cohort, Tycho-2's rows with no mean
     // solution — the tangential term re-keys on the record's own designations
     // rather than shipping static. See ../distance/README.md#the-proper-motion-rescue-cascade.
-    // A record at the origin is curated whole: no motion to rescue, no
-    // distance modulus, no sky direction.
     const origin = plxRes.via === 'curated' ? plxRes.value : null;
     const pmRescue = origin === null && dirRes.velVia === 'zero'
       ? resolvePmRescue({
