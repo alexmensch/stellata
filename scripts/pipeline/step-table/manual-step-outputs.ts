@@ -24,9 +24,11 @@ const bake = (
 const textures = (dir: string, member: RegExp): OutputFamily => ({ dir: `data/textures${dir}`, member, stamped: true });
 
 export const MANUAL_STEPS: readonly ManualStep[] = [
-  pull('refresh:gaia-hip', 'refresh-gaia-hip-xmatch.py', ['data/gaia/gaia_dr3_hip_xmatch.tsv']),
-  pull('refresh:gaia-tyc', 'refresh-gaia-tyc-xmatch.py', ['data/gaia/gaia_dr3_tyc_xmatch.tsv']),
-  pull('refresh:gaia-nss', 'refresh-gaia-nss.py', ['data/gaia/gaia_dr3_nss_two_body.tsv']),
+  ...([['refresh:gaia-hip', 'hip-xmatch', 'GAIA_HIP_XMATCH_OUTPUTS'], ['refresh:gaia-tyc', 'tyc-xmatch', 'GAIA_TYC_XMATCH_OUTPUTS'], ['refresh:gaia-nss', 'nss', 'GAIA_NSS_OUTPUTS']] as const)
+    .map(([name, stem, constant]) => tsManual(
+      { kind: 'pull' }, name, `scripts/refresh/gaia-whole-table/refresh-gaia-${stem}.ts`,
+      'scripts/refresh/gaia-whole-table/gaia-whole-table-outputs.ts', constant,
+    )),
   pull('refresh:gaia-astrometry', 'refresh-gaia-astrometry.py', ['data/gaia/gaia_dr3_astrometry.tsv']),
   pull('refresh:gaia-astrometry-catalog', 'refresh-gaia-astrometry-catalog.py', ['data/gaia/gaia_dr3_astrometry_catalog.tsv']),
   pull('refresh:gaia-magnitude', 'refresh-gaia-magnitude.py', ['data/gaia/gaia_dr3_magnitude_pull.tsv']),

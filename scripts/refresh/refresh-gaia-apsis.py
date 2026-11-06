@@ -104,9 +104,6 @@ DEX_DECIMALS = 4
 #   - PHOT_ONLY : gspphot populated, gspspec masked  (BP/RP only)
 #   - ALL_NULL  : astrophysical_parameters row exists but every Apsis
 #                 cell is masked (no Apsis processing for this source)
-#
-# Pattern matches refresh-gaia-nss.py's 3-rows × 3-solution-type
-# robustness extension, applied to the Apsis coverage axis instead.
 SPOT_CHECKS: list[dict[str, Any]] = [
     {
         "source_id":     164919361120841856,  # JOINT — gspphot + gspspec

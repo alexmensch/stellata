@@ -170,8 +170,44 @@ describe('batchQueries and queryLimit', () => {
     expect(batchQueries(table, VIZIER.quote)[0]).toBe('SELECT "HIP" FROM "I/311/hip2" WHERE ("Plx" > 0) AND source_id IN (1, 2)');
   });
 
-  it('sizes a whole-table query off its band and a batch off its request', () => {
-    expect([queryLimit(STARS), queryLimit(PAIRS)]).toEqual([6, 4]);
+  it('sizes a whole-table query off its band, a batch off its request and a slice off its sliceRows', () => {
+    expect([queryLimit(STARS), queryLimit(PAIRS), queryLimit(SLICED)]).toEqual([6, 4, 4]);
+  });
+
+  it('asks one query per slice, ANDed onto a stated WHERE', () => {
+    expect(batchQueries({ ...SLICED, where: 'period > 0' }, GAIA.quote)).toEqual([
+      'SELECT source_id, period FROM gaiadr3.nss_two_body_orbit WHERE (period > 0) AND source_id < 2',
+      'SELECT source_id, period FROM gaiadr3.nss_two_body_orbit WHERE (period > 0) AND source_id >= 2',
+    ]);
+  });
+});
+
+const SLICED: PullTable = { ...PAIRS, scope: { kind: 'sliced', key: 'source_id', edges: [2n], sliceRows: 2 } };
+
+describe('a sliced table', () => {
+  it('pulls every slice into one sorted output', async () => {
+    const { deps: d, asked } = deps((adql) => (adql.includes('gaia_source')
+      ? GOOD(adql)
+      : `source_id,period\n${adql.includes('< 2') ? '1,5' : '3,7\n2,10'}\n`));
+    await runPull(pullOf({ stars: STARS, pairs: SLICED }), d);
+    expect(read('pairs.tsv')).toBe('source_id\tperiod\n1\t5\n2\t10\n3\t7\n');
+    expect(asked.slice(1)).toEqual([
+      'SELECT source_id, period FROM gaiadr3.nss_two_body_orbit WHERE source_id < 2',
+      'SELECT source_id, period FROM gaiadr3.nss_two_body_orbit WHERE source_id >= 2',
+    ]);
+  });
+
+  it('states its slices in the description, so a re-cut stales the pull', () => {
+    const hash = (edges: readonly [bigint, ...bigint[]]) => pullQueryHash(describePull(
+      pullOf({ stars: STARS, pairs: { ...SLICED, scope: { kind: 'sliced', key: 'source_id', edges, sliceRows: 2 } } }),
+    ));
+    expect(hash([2n])).not.toBe(hash([3n]));
+    expect(JSON.parse(describePull(pullOf({ stars: STARS, pairs: SLICED })).query).pairs).toEqual({
+      query: 'SELECT source_id, period FROM gaiadr3.nss_two_body_orbit WHERE {slice}',
+      slices: ['source_id < 2', 'source_id >= 2'],
+      formats: {},
+      sortBy: SLICED.sortBy,
+    });
   });
 });
 
