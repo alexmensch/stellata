@@ -54,6 +54,8 @@ scripts/catalog/lineage/
                                  baseline plan, diff, budget and invariant
                                  checks, ready for the stage's emitArtifacts
                                  call.
+  phase-clock-pure.ts            phaseClock: the budget line's per-phase
+    (+ test)                     split of the timed window.
   lineage-invariant-pure.ts      LineageInvariant and its check (#invariants).
     (+ test)
   lineage-layout-pure.ts         LINEAGE_LAYOUT, the lineage folders,
