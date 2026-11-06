@@ -1,6 +1,6 @@
 ---
 name: stellata-pr-cleanup
-description: Stellata's extension of the user-level `pr-cleanup` skill — bead IDs and closing, the pnpm gates, landing through the merge queue with a derived version, the ruleset that gates merges, and rebuilding main's seeded artifacts after landing. `pr-cleanup` loads it for every landing of a stellata PR; load it directly only if `pr-cleanup` is already in context without it.
+description: Stellata's extension of the user-level `pr-cleanup` skill — bead IDs and closing, the pnpm gates, the derived version, the ruleset that gates merges, and rebuilding main's seeded artifacts after landing. `pr-cleanup` loads it for every landing of a stellata PR; load it directly only if `pr-cleanup` is already in context without it.
 ---
 
 # Landing a stellata PR
@@ -26,24 +26,13 @@ Read each with `bd show <id>`.
 
 The gates are `pnpm run typecheck && pnpm test`.
 
-**Bring main in only when the PR conflicts with it.** Landing goes through
-the merge queue ([The merge queue](/RELEASING.md#the-merge-queue)), which
-tests the PR on main plus every entry ahead, so a PR merely behind main
-lands without a sync. No version is ever in conflict: the PR carries a
-release level label and the version is derived when it lands
+The ruleset requires a PR up to date with main before it merges
+([Merge gating](/RELEASING.md#merge-gating)), so a PR behind main always
+syncs. No version is ever in conflict: the PR carries a release level label
+and the version is derived when it lands
 ([Version policy](/RELEASING.md#version-policy)). A PR with no level label,
 or two, fails `version-guard`; that is `pr-cleanup`'s deviation, not a
 label to pick here.
-
-## Squash-merge — through the queue
-
-`pr-cleanup`'s merge command queues the PR rather than merging it:
-`gh pr merge <N> --squash --match-head-commit <sha>`. It lands when its
-merge group's checks pass. The queue drops an entry whose group fails a
-check or no longer merges onto the entries ahead: `gh pr view <N> --json
-state,mergeStateStatus` shows it open again. A failed check is a fix on the
-branch; a conflict is a sync with main. Either way it is queued again with
-the new head.
 
 ## Close the tickets — bd
 

@@ -5,7 +5,6 @@ on:
     branches: [main]
   push:
     branches: [main]
-  merge_group:
 
 permissions:
   contents: read
@@ -126,12 +125,6 @@ jobs:
                 echo "own-older=${PREFIX}pr-"
               } >> "$GITHUB_OUTPUT"
               ;;
-            merge_group)
-              {
-                echo "key=${PREFIX}main-${RUN}"
-                echo "restore-keys=${PREFIX}main-"
-              } >> "$GITHUB_OUTPUT"
-              ;;
             *)
               echo "key=${PREFIX}main-${RUN}" >> "$GITHUB_OUTPUT"
               ;;
@@ -157,11 +150,11 @@ jobs:
       # A tracked file must never come from a cache: only untracked files are
       # saved, and the restore skips any path the checkout already has, which
       # covers a file tracked since the build was saved.
-      - if: ${{ !cancelled() && steps.built.outputs.built == 'true' && github.event_name != 'merge_group' }}
+      - if: ${{ !cancelled() && steps.built.outputs.built == 'true' }}
         run: |
           set -o pipefail
           pnpm exec tsx scripts/ci/saved-build.ts | tar --null -T - -cf "$RUNNER_TEMP/data-build.tar"
-      - if: ${{ !cancelled() && steps.built.outputs.built == 'true' && github.event_name != 'merge_group' }}
+      - if: ${{ !cancelled() && steps.built.outputs.built == 'true' }}
         uses: actions/cache/save@v6
         with:
           path: ${{ runner.temp }}/data-build.tar

@@ -5,7 +5,6 @@ on:
     branches: [main]
     # `edited` so the check re-runs when the body is updated.
     types: [opened, synchronize, reopened, edited]
-  merge_group:
 
 permissions:
   contents: read
@@ -26,13 +25,11 @@ jobs:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
-      - id: pr
-        uses: ./.github/actions/pr-under-test
       - name: Check the `## Perf` section
         env:
           GH_TOKEN: ${{ github.token }}
-          PR: ${{ steps.pr.outputs.number }}
-          BASE: ${{ steps.pr.outputs.base }}
+          PR: ${{ github.event.pull_request.number }}
+          BASE: origin/${{ github.event.pull_request.base.ref }}
           REPO: ${{ github.repository }}
         run: |
           set -euo pipefail

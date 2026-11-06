@@ -10,9 +10,8 @@ file in the tree states a version: each PR declares a **release level**
 by label, and a push to `main` derives each landed commit's version from
 the release before it plus its PR's level, then builds, checks and
 deploys at HEAD and cuts a `v<version>` tag and a GitHub release for
-**each** releasing commit. A PR that declares a level therefore releases
-on merge — including every PR in a merge-queue group, which lands as
-several commits in one push. The work below is mostly about getting the
+**each** releasing commit since the last release pushed. A PR that
+declares a level therefore releases on merge. The work below is mostly about getting the
 level *and the release notes section* right on the PR.
 
 ## Release notes per PR
@@ -43,8 +42,9 @@ view --json body`, extracts the `## Release notes` section, and passes
 it to `gh release create`. If the section can't be found (non-squash
 merge, body fetch fails) it falls back to GitHub's `--generate-notes`.
 
-Notes are per PR, not per push: a merge group of six releasing PRs
-produces six release pages, each with its own author's prose.
+Notes are per PR, not per deploy: a run whose range holds several
+releasing PRs produces one release page for each, each with its own
+author's prose.
 
 ## Version policy
 
@@ -62,8 +62,8 @@ Every PR carries exactly one release level label:
 
 The version is derived when the PR lands, never written by hand: the
 release before it on `main`, bumped by its level (`7.1.15` + minor →
-`7.2.0`). Two PRs landing in one merge group each declaring patch ship
-`7.1.16` and `7.1.17`, in queue order. A build's version is the newest
+`7.2.0`). Two PRs each declaring patch ship `7.1.16` and `7.1.17`, in the
+order they land. A build's version is the newest
 release tag reachable from its commit (`releaseAt()`,
 `scripts/util/release-version.ts`), so a branch builds as the release it
 stands on. Cutting a release is just merging — the deploy workflow
@@ -72,7 +72,7 @@ deploy. A push of only `skip-version-bump` PRs doesn't redeploy. Detail:
 [Derived versions](scripts/release/README.md#derived-versions).
 
 The `version-guard` workflow (`.github/workflows/version-guard.yml`)
-runs on every PR and merge-group entry and fails unless exactly one
+runs on every PR and fails unless exactly one
 level label is on.
 
 ### The live-app consumer test
@@ -507,8 +507,8 @@ PR, so the pin always describes what the release deploys. A `✗` is
 fixed in the PR or accepted with a bead; an accepted `✗` becomes the new
 pinned value, and the ceiling is the only thing stopping accepted marks
 from ratcheting the frame upward one PR at a time. Two Tier 2 PRs in
-flight re-take one file: whichever is queued second conflicts on it, drops
-out of the merge queue, and re-takes after syncing — another armed run, so
+flight re-take one file: whichever lands second conflicts on it and
+re-takes after syncing — another armed run, so
 check for an open Tier 2 PR before arming. A three bump or the cutover re-pins every row under its
 own bead. Tiers 0 and 1 leave the pin where they found it, which is the
 point of them: the pin advances when the answer would change.
@@ -650,45 +650,26 @@ fix PR hits the same block.
   `release-notes-guard` passes with its check step skipped. They never
   read a label from the triggering event: `gh pr create --label` attaches
   it after the `opened` event fires, so that event's payload has no label,
-  a re-run replays the same payload, and a `merge_group` event carries no
-  PR at all. The body guards read the PR body live for the same reason,
+  and a re-run replays the same payload. The body guards read the PR body live for the same reason,
   so a re-run judges the body as it is now. The live read relies on runner
   startup (seconds) outlasting the label attach (about one second after
   `opened`): a run that queried inside that gap would fail, and a push or
   label toggle re-runs it.
 
-### The merge queue
+### Landing
 
-Approved PRs land through GitHub's merge queue. Queueing a PR (`gh pr
-merge <N> --squash --match-head-commit <sha>`, which queues rather than
-merges once the queue is on) builds a **merge group**: a temporary
-`gh-readonly-queue/main/pr-<N>-<sha>` branch holding main plus every entry
-ahead plus this PR. Every required check runs on it (`merge_group`
-event), entries' checks run concurrently, and the queue lands them in
-order, each as its own squash commit. A failing entry is dropped and only
-the entries behind it re-test. A PR that no longer merges onto the group
-ahead is refused the same way: sync it with main and queue it again.
-
-Every required workflow runs on `merge_group`, or the queue waits forever
-on the check it never reports: `test.yml`, `version-guard`,
-`release-notes-guard`, `perf-section-guard`. A guard in a group judges the
-PR the entry adds ([The PR a guard judges](.github/workflows/README.md#the-pr-a-guard-judges-in-a-pr-or-a-merge-group));
-the catalogue job's cache in a group: [The data build cache](scripts/ci/README.md#the-data-build-cache).
+Approved PRs land one at a time: synced with main, checks green, then
+squash-merged (`gh pr merge <N> --squash`). The `(#N)` subject suffix is how
+the deploy finds each commit's PR. GitHub's merge queue is unavailable: it
+is offered only on organization-owned repositories, and
+`alexmensch/stellata` is user-owned.
 
 **Ruleset settings** (ruleset 15843287; branch rules are the owner's to
 change, by `gh api --method PUT` as above, preserving every rule):
 
-- Add a `merge_queue` rule: `merge_method: SQUASH` (the `(#N)` subject
-  suffix is how the deploy finds each commit's PR), `grouping_strategy:
-  ALLGREEN`, `max_entries_to_build: 5`, `max_entries_to_merge: 5`,
-  `min_entries_to_merge: 1`, `min_entries_to_merge_wait_minutes: 0`,
-  `check_response_timeout_minutes: 60` (the longest check on a merge group
-  is the unforced catalogue build on a cache miss, about 9 min).
-- `required_status_checks.strict_required_status_checks_policy: false`.
-  The queue tests each PR on the newest main, so requiring it up to date
-  first only forces the serial re-sync the queue removes.
-- `required_signatures` stays: the queue's squash commits are made and
-  signed by GitHub.
+- `required_status_checks.strict_required_status_checks_policy: true`: a
+  PR is tested on the newest main before it merges.
+- `required_signatures`: GitHub signs the squash commits it makes.
 - The labels `release:major`, `release:minor` and `release:patch` exist
   beside `skip-version-bump` (`gh label create release:minor`, …).
 
@@ -728,7 +709,8 @@ On every push to `main`, `deploy.yml`:
    body. Falls back to `--generate-notes` where the section is missing,
    and skips any version already released.
 
-Step 4 is what makes a merge group of several PRs correct: one deploy at
+Step 4 is what makes a range of several releasing commits correct (a
+cancelled or failed run leaves its commits to the next): one deploy at
 HEAD, and one tag and release page per releasing commit, so no
 intermediate version's notes are dropped. See `scripts/release/README.md`.
 
