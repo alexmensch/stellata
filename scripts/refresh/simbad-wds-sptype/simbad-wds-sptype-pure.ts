@@ -5,7 +5,7 @@ import { readTable } from '../../util/tsv/table-pure';
 import type { PullTable } from '../pull/pull';
 import { SIMBAD_BATCH_SIZE } from '../pull/tap-pure';
 
-/** The least share of the requested oids SIMBAD must still hold: 23,604 of 23,607 held, measured 2026-11-06. */
+/** The least share of the requested oids SIMBAD must still hold: 23,604 of 23,607 in the committed simbad_sptype.tsv at the split, 2026-11-06. */
 export const MIN_OID_REACH = 0.99;
 
 /** Every distinct SIMBAD oid simbad_wds_xids.tsv binds a WDS component to, ascending. */
