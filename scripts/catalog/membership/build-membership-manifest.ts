@@ -16,7 +16,7 @@ import { LINEAGE_LAYOUT } from '../lineage/lineage-layout-pure';
 import { stageLineageLine, stageLineageText } from '../lineage/lineage-row-pure';
 import { stageLineage } from '../lineage/stage-lineage';
 import {
-  MEMBERSHIP_CODES, MEMBERSHIP_INVARIANTS, MEMBERSHIP_LINEAGE_BUDGET, multiplesComponentJoin,
+  MEMBERSHIP_CODES, MEMBERSHIP_INVARIANTS, MEMBERSHIP_LINEAGE_BUDGET, identityLookup, multiplesComponentJoin,
 } from './membership-lineage-pure';
 import { snapshotCheck } from '../../util/snapshot-check';
 import { compareCountSnapshot } from '../build-counts';
@@ -162,11 +162,10 @@ export async function main(): Promise<void> {
       membership: stageLineageText(MEMBERSHIP_CODES, sorted),
       identity: identityText(result.identity),
     }),
-    joins: (baselineDir) => {
-      const baseline = readIdentity(stageFile(baselineDir, MEMBERSHIP_LINEAGE.identity!));
-      const identity = new Map([...baseline, ...result.identity].map((r) => [r.key, r]));
-      return [multiplesComponentJoin(identity, multiples)];
-    },
+    joins: (baselineDir) => [multiplesComponentJoin(
+      identityLookup(result.identity, () => readIdentity(stageFile(baselineDir, MEMBERSHIP_LINEAGE.identity!))),
+      multiples,
+    )],
     budget: MEMBERSHIP_LINEAGE_BUDGET,
     invariants: MEMBERSHIP_INVARIANTS,
     argv: process.argv.slice(2),
