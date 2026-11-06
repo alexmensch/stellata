@@ -35,7 +35,11 @@ export function paramsText(params: LineageParams): string {
 }
 
 export function paramsOf(row: LineageRow): LineageParams {
-  return row.params === '' ? {} : JSON.parse(row.params) as LineageParams;
+  return parseParams(row.params);
+}
+
+export function parseParams(text: string): LineageParams {
+  return text === '' ? {} : JSON.parse(text) as LineageParams;
 }
 
 function isSurrogate(unit: number): boolean {
@@ -150,6 +154,10 @@ export function lineageLineKey(line: LineageLine): string {
 
 export function lineageLineCode(line: LineageLine): string {
   return lineCell(line, 'code');
+}
+
+export function lineageLineParams(line: LineageLine): string {
+  return lineCell(line, 'params');
 }
 
 /** How many of a stage's lines in `role` carry each of its codes, every code present; a line of another stage throws. */

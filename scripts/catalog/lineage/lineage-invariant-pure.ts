@@ -2,7 +2,8 @@
 
 import type { Check } from '../../util/emit-artifacts';
 import {
-  decodeLineageLine, lineageLineCode, paramsOf, type LineageLine, type LineageParams, type LineageRow,
+  decodeLineageLine, lineageLineCode, lineageLineParams, parseParams, type LineageLine, type LineageParams,
+  type LineageRow,
 } from './lineage-row-pure';
 import type { StageCodes } from './reason-codes-pure';
 
@@ -11,7 +12,8 @@ export interface LineageInvariant {
   readonly holds: string;
   /** The full code whose rows break it. */
   readonly code: string;
-  /** The declared exceptions: a row of `code` whose params this accepts is not a violation. */
+  /** The declared exceptions: a row of `code` whose params this accepts is not a violation.
+   *  A function of the params alone: it is asked once per distinct params text. */
   readonly allows: (params: LineageParams) => boolean;
 }
 
@@ -31,15 +33,21 @@ export interface InvariantViolations {
 export function invariantViolations(
   invariants: readonly LineageInvariant[], lines: Iterable<LineageLine>,
 ): InvariantViolations[] {
+  if (invariants.length === 0) return [];
   const byCode = new Map<string, LineageInvariant[]>();
   for (const inv of invariants) byCode.set(inv.code, [...byCode.get(inv.code) ?? [], inv]);
   const found = new Map<LineageInvariant, LineageRow[]>(invariants.map((inv) => [inv, []]));
+  const verdicts = new Map<LineageInvariant, Map<string, boolean>>(invariants.map((inv) => [inv, new Map()]));
   for (const line of lines) {
     const watching = byCode.get(lineageLineCode(line));
     if (watching === undefined) continue;
-    const row = decodeLineageLine(line);
-    const params = paramsOf(row);
-    for (const inv of watching) if (!inv.allows(params)) found.get(inv)!.push(row);
+    const params = lineageLineParams(line);
+    for (const inv of watching) {
+      const asked = verdicts.get(inv)!;
+      let allowed = asked.get(params);
+      if (allowed === undefined) asked.set(params, allowed = inv.allows(parseParams(params)));
+      if (!allowed) found.get(inv)!.push(decodeLineageLine(line));
+    }
   }
   return invariants.map((invariant) => ({ invariant, rows: found.get(invariant)! }));
 }
