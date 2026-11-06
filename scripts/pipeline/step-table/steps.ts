@@ -30,7 +30,7 @@ export const STEPS: StepTable = {
       ],
       after: [
         'refresh:gaia-astrometry', 'refresh:gaia-hip', 'refresh:gaia-nss', 'refresh:gaia-tyc',
-        'refresh:hip2', 'refresh:msc', 'refresh:simbad-sptype', 'refresh:simbad-wds-xids',
+        'refresh:hip2', 'refresh:msc', 'refresh:simbad-wds-sptype', 'refresh:simbad-wds-xids',
       ],
       snapshots: ['scripts/binaries/build-binaries-expected.json', 'scripts/binaries/build-binaries-rates-expected.json'],
     },

@@ -908,7 +908,9 @@ provenance in `spect_via`: `curated` →
 `data/binaries/component_sptype_overrides.tsv`, hand-curated
 literature types for components no machine source carries (SIMBAD's
 WDS cross-IDs never enumerate Algol's Aa2, so its K0IV can only come
-from here); `simbad` → SIMBAD's per-component sp_type, which beats
+from here); `simbad` → SIMBAD's per-component sp_type
+(`data/simbad/simbad_wds_sptype.tsv`, joined to the WDS cross-IDs on
+`simbad_oid`), which beats
 AT-HYG because AT-HYG inherits the same system-level spectral string
 across all components (incorrect for mixed-class pairs like Sirius
 A0V + DA1.9); `msc` → the MSC's pair-side types, covering the

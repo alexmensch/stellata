@@ -8,7 +8,8 @@ SIMBAD. A pull is a `pull` step on the step table
 ## Files
 
 - `tap-pure.ts` (+ test) — the backend: the three archives, the sync query,
-  the reply's classification, and `tapClient`.
+  the reply's classification, `tapClient`, and `SIMBAD_BATCH_SIZE`, the ids
+  one SIMBAD `IN (…)` batch may carry.
 - `unverified-mirrors.test.ts` — no committed `data/stamps/` record answered by
   a mirror whose `verified` flag is false.
 - `columns-pure.ts` (+ test) — a table's `Column` list and everything derived
