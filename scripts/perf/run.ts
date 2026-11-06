@@ -15,7 +15,7 @@ import { ArgError, parseRunArgs, usage, type RunArgs } from './args';
 import {
   REPO_ROOT, gitMeta, printAgainstPin, readJsonFlag, writePinFile,
 } from './checkout';
-import { packageVersion } from '../util/git-provenance';
+import { releaseAt } from '../util/release-version';
 import { diffRuns } from './diff/diff-pure';
 import { computeClock, cpuClock, type DwellSummary } from './dwell/dwell-pure';
 import {
@@ -401,7 +401,7 @@ function preflightPaths(args: RunArgs): Preflight {
 function writePin(args: RunArgs, file: PerfFile, against: PinDiff | null): boolean {
   const { pin, refusals } = pinFromRuns(
     [{ file, sourceRun: citeRunPath(args.json!, REPO_ROOT) }],
-    { version: packageVersion(), accepted: acceptedMarks(args.accept) },
+    { version: releaseAt(), accepted: acceptedMarks(args.accept) },
   );
   if (pin === null) {
     console.error(`perf: no pin written —\n  ${refusals.join('\n  ')}`);

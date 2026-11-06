@@ -7,7 +7,7 @@ from __future__ import annotations
 import csv
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import AbstractSet, Callable, Iterator, Mapping
+from typing import AbstractSet, Callable, Mapping
 
 import sys
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
@@ -199,19 +199,3 @@ def simbad_value_cohort(gaia_complete: AbstractSet[str]) -> RowFilter:
 
     return in_cohort
 
-
-def iter_wds_xids_oids(tsv_path: Path) -> Iterator[int]:
-    """Yield SIMBAD oids from simbad_wds_xids.tsv. Blank cells are
-    skipped — the cross-walk doesn't resolve every WDS component."""
-    with tsv_path.open(newline="") as fh:
-        reader = csv.reader(fh, delimiter="\t")
-        header = next(reader)
-        oi = header.index("simbad_oid")
-        for row in reader:
-            cell = row[oi].strip()
-            if not cell:
-                continue
-            try:
-                yield int(cell)
-            except ValueError:
-                continue

@@ -185,12 +185,13 @@ self-checking against it.
 
 ## How pr-body-guard works
 
-`PreToolUse` on `Bash`. The two body guards judge only the PR body and the
-branch's diff, so both can run before the body leaves the machine — and
-without this, a missing section surfaced only as a red CI check on every
-push. The hook runs the **same scripts** the workflows run
-(`scripts/release/release-notes-check.ts`,
-`scripts/perf/perf-section-guard.sh`), so there is no second copy of either
+`PreToolUse` on `Bash`. The two body guards and `version-guard` judge only
+the PR body, its labels and the branch's diff, so all three can run before
+the PR leaves the machine — and without this, a missing section or level
+surfaced only as a red CI check on every push. The hook runs the **same
+scripts** the workflows run (`scripts/release/release-level.ts`,
+`scripts/release/release-notes-check.ts`,
+`scripts/perf/perf-section-guard.sh`), so there is no second copy of any
 rule; a test fails when a workflow stops calling its script. They are
 taken from the checkout the command runs in, falling back to the hook's own
 copies only when that checkout has none: hooks load from the main
@@ -198,18 +199,19 @@ checkout, so without that a PR changing a check would be judged locally by
 main's old rule while CI ran the branch's new one.
 
 It mirrors each workflow's triggers rather than the checks alone. The base
-branch and the exempting label are the hook's `ci_base` and `skip_label`,
-and a test fails when a workflow's `branches:` filter, or the label match
-in `.github/actions/skip-version-bump`, stops naming the same values:
+branch is the hook's `ci_base`, and a test fails when a workflow's
+`branches:` filter stops naming it:
 
 - **Base `main` only**, both workflows' `branches:` filter. `-B/--base`
   decides; otherwise `create` resolves it as gh does — the current branch's
   `gh-merge-base` git config, else the default branch — and `edit` asks
   `gh pr view` for the PR's current base.
-- **`skip-version-bump` exempts the release notes.** The label set is what
-  the PR will carry after this call: `-l/--label`/`--add-label` add,
-  `--remove-label` removes, and on `edit` the PR's existing labels (again
-  from `gh pr view`) start the set.
+- **The release level is the labels the PR will carry after this call**:
+  `-l/--label`/`--add-label` add, `--remove-label` removes, and on `edit`
+  the PR's existing labels (again from `gh pr view`) start the set. That
+  set goes through `release-level.ts`, so no level label or two is a
+  `version-guard` deny, and level `none` (`skip-version-bump`) exempts the
+  release notes, as in CI.
 - **The diff is the PR's head against its merge base with
   `origin/<base>`**, files and record count alike, as CI reads the PR. The
   head is the checkout's `HEAD` on a bare `create`; `create -H <branch>`

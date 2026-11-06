@@ -59,10 +59,10 @@ describe('release-notes-check', () => {
 });
 
 describe('runs under plain node, with nothing installed', () => {
-  it.each(['release-notes-check.ts', 'release-plan-pure.ts'])('%s imports only node builtins and siblings', (file) => {
+  it.each(['release-notes-check.ts', 'release-plan-pure.ts', 'release-level.ts', 'cut-releases.ts'])('%s imports only node builtins and siblings', (file) => {
     const source = readFileSync(resolve(__dirname, file), 'utf-8');
     for (const [, spec] of source.matchAll(/^import\s[^'"]*['"]([^'"]+)['"]/gm)) {
-      expect(spec, `${file} imports ${spec}`).toMatch(/^(node:|\.\/[\w-]+\.ts$)/);
+      expect(spec, `${file} imports ${spec}`).toMatch(/^(node:|\.\/[\w-]+\.ts$|\.\.\/util\/release-version\.ts$)/);
     }
   });
 });

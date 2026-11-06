@@ -130,7 +130,7 @@ SRC_GAIA_TYC_XM = DATA / "gaia" / "gaia_dr3_tyc_xmatch.tsv"
 SRC_GAIA_NSS = DATA / "gaia" / "gaia_dr3_nss_two_body.tsv"
 SRC_GAIA_ASTROMETRY = DATA / "gaia" / "gaia_dr3_astrometry.tsv"
 SRC_SIMBAD_WDS_XIDS = DATA / "simbad" / "simbad_wds_xids.tsv"
-SRC_SIMBAD_SPTYPE = DATA / "simbad" / "simbad_sptype.tsv"
+SRC_SIMBAD_WDS_SPTYPE = DATA / "simbad" / "simbad_wds_sptype.tsv"
 SRC_COMPONENT_SPTYPE_OVERRIDES = (
     DATA / "binaries" / "component_sptype_overrides.tsv"
 )
@@ -350,7 +350,7 @@ def resolve_through_stage2() -> Stage2Resolution:
     )
 
     simbad_wds_spectra = parse_simbad_wds_spectra(
-        SRC_SIMBAD_SPTYPE, SRC_SIMBAD_WDS_XIDS,
+        SRC_SIMBAD_WDS_SPTYPE, SRC_SIMBAD_WDS_XIDS,
     )
     log(
         f"loaded SIMBAD per-component sp_type for "

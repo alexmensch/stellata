@@ -1,6 +1,6 @@
-// A build step's peak live heap against the CI runner's V8 heap limit, as an emitArtifacts check. See README.md#ci-heap-budget.
+// A build step's peak live heap against the CI runner's V8 heap limit, as an emitArtifacts check. See README.md.
 
-import type { Check } from './emit-artifacts';
+import type { Check } from '../emit-artifacts';
 
 export const CI_HEAP_LIMIT_BYTES = 4096 * 2 ** 20;
 
@@ -34,12 +34,12 @@ export function heapBudgetCheck(step: string, peak: number, node: NodeRuntime): 
     return {
       kind: 'fail',
       message: `${step} ran under Node ${node.running}, but CI runs Node ${node.pinned} (.nvmrc), whose heap differs: `
-        + 'run it under the pinned Node to judge it. See /scripts/util/README.md#ci-heap-budget.',
+        + 'run it under the pinned Node to judge it. See /scripts/util/heap-budget/README.md.',
     };
   }
   const budget = CI_HEAP_LIMIT_BYTES * CI_HEAP_HEADROOM;
   const measured = `${step} peak live heap: ${mib(peak)}, budget ${mib(budget)} (${CI_HEAP_HEADROOM} of the CI runner's ${mib(CI_HEAP_LIMIT_BYTES)})`;
   return peak > budget
-    ? { kind: 'fail', message: `${measured}: CI would run out of heap. See /scripts/util/README.md#ci-heap-budget.` }
+    ? { kind: 'fail', message: `${measured}: CI would run out of heap. See /scripts/util/heap-budget/README.md.` }
     : { kind: 'pass', report: measured };
 }

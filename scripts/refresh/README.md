@@ -95,13 +95,15 @@ script directly writes no record, so the build then stops on that pull.
 | `refresh:simbad` | `refresh-simbad-sample.py` | `data/simbad/simbad_sample.tsv` | Stratified random 50k SIMBAD sample (validation corpus). |
 | `refresh:simbad-values` | `refresh-simbad-values.py` | `data/simbad/simbad_values.tsv` | Bibcoded rv / parallax / PM / coordinates + B/V fluxes for the [§ 5](/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers) value cohort — the manifest rows a SIMBAD value tier can reach. Cohort predicate and coverage: [The values pull](/data/simbad/README.md#the-values-pull). The cohort is manifest rows less those `gaia_dr3_astrometry_catalog.tsv` already completes, and `build:membership` reads that same table, so it runs AFTER `refresh:gaia-astrometry-catalog` and the `build:membership` that follows it. |
 | `refresh:simbad-tyc-hd` | `refresh-simbad-tyc-hd.py` | `data/simbad/simbad_tyc_hd.tsv` | SIMBAD's own HD identification per Tycho-2 entry, keyed on TYC — the witness independent of IV/25 that a close pair's crossed HD cells need ([The TYC → HD pull](/data/simbad/README.md#the-tyc--hd-pull)). Request set is `refresh_lib.read_mentioned_tycs` — IV/25's Tycho ids union the manifest's — shared with `refresh:tycho2` rather than restated, so both cover the same entries by construction. Composes the `simbad/` plumbing and states no ADQL of its own. |
+| `refresh:simbad-wds-sptype` | `simbad-wds-sptype/refresh-simbad-wds-sptype.ts` | `data/simbad/simbad_wds_sptype.tsv` | SIMBAD `sp_type` for every oid `simbad_wds_xids.tsv` binds a WDS component to — the rows `build:binaries` Stage 6 reads. Keyed on that file alone, never the manifest, so run it AFTER `refresh:simbad-wds-xids`. TypeScript, on `pull/`; own README. |
 | `refresh:edenhofer2024-main` / `-2kpc` | `refresh-edenhofer2024-{main,2kpc}.py` | `data/dust/edenhofer2024-{main,2kpc}.json` | The [Edenhofer 2024](/data/papers/index.md#edenhofer2024) dust map's two variants into `dustmaps`' cache, each recorded as a committed identity file the bakes read — [The Edenhofer 2024 pulls](/scripts/dust/README.md#the-edenhofer-2024-pulls). |
 | `validate:simbad` | `scripts/catalog/validate/validate-simbad-sample.ts` | (report only) | Tier C — cross-check `public/catalog.bin` against the committed SIMBAD sample. The build-time subset of the same check is `distance-regression-check.ts`, gated on `build-distance-outliers-expected.json`. |
 
 `refresh:simbad-sptype`, `refresh:simbad-wds-xids` and `refresh:msc` run
 `refresh-simbad-sptype.py`, `refresh-simbad-wds-xids.py` and
-`refresh-msc.py` (outputs `data/simbad/simbad_sptype.tsv`,
-`data/simbad/simbad_wds_xids.tsv`, `data/msc/msc_*.tsv`). The SIMBAD
+`refresh-msc.py` (outputs `data/simbad/simbad_sptype.tsv`, the
+manifest-keyed spectral types membership and the catalogue read,
+`data/simbad/simbad_wds_xids.tsv`, `data/msc/msc_*.tsv`). The Python SIMBAD
 scripts share `scripts/refresh/simbad/` plumbing (`specs.py`,
 `inputs.py`, `request.py`, `query.py`, `union.py`, `coverage.py`,
 `tsv.py`) so adding new SIMBAD-anchored pulls reuses the entire stack —

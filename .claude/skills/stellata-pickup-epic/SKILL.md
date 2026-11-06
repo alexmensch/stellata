@@ -1,6 +1,6 @@
 ---
 name: stellata-pickup-epic
-description: Stellata's extension of the user-level `pickup-epic` skill, for the coordinator and for every `pickup-task` worker it launches — the GPU pause protocol (a worker, or any session that finds the coordinator's field, pauses the whole pipeline for a perf run so the machine is idle), `build:seed` as the post-landing step, and what a stellata `SMOKE:` line names. `pickup-epic` and coordinated `pickup-task` load it in stellata; load it directly only if one of them is already in context without it.
+description: Stellata's extension of the user-level `pickup-epic` skill, for the coordinator and for every `pickup-task` worker it launches — the GPU pause protocol (a worker, or any session that finds the coordinator's field, pauses the whole pipeline for a perf run so the machine is idle), landing through the merge queue, `build:seed` as the post-landing step, and what a stellata `SMOKE:` line names. `pickup-epic` and coordinated `pickup-task` load it in stellata; load it directly only if one of them is already in context without it.
 ---
 
 # Coordinating a stellata epic
@@ -62,6 +62,25 @@ send `GPU_DONE` when no further run is planned. `await-go.sh` gives up after
 work that needs no run, and send a new `GPU_REQUEST` when the owner says
 they are ready. On `PAUSE`, reply `PAUSED` once the current command ends —
 never kill a build part-way.
+
+## Landing goes through the merge queue
+
+`pickup-epic`'s Land, narrowed for stellata's merge queue
+([The merge queue](/RELEASING.md#the-merge-queue)):
+
+- **No sync before landing.** The queue tests each entry on main plus the
+  entries ahead, so a `READY_TO_LAND` PR merely behind main is queued as it
+  is. `SYNC #N` goes only to a PR that conflicts with main, or that the
+  queue dropped for a conflict.
+- **Queue every approved PR; land none in turn.** Each still needs the
+  owner's approval for that PR. The landing subagent queues it with
+  `gh pr merge <N> --squash --match-head-commit <sha>` and watches it to
+  `MERGED`; several can be in the queue at once.
+- **A dropped entry goes back to its worker:** a failing check as
+  `LANDING_FIX #N <failed checks>`, a conflict as `SYNC #N`, and its
+  worker's reply brings it back to Land with the new head.
+- **Versions are derived.** No worker edits a version and no landing
+  resolves one; every PR carries one release level label.
 
 ## The post-landing step is `build:seed`
 

@@ -18,7 +18,7 @@ inputs.py    Manifest-driven feeders — membership_request_keys partitions rows
              source_id-keyed row's other designations in the same pass,
              simbad_value_cohort builds the /docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers value-tier predicate
              over gaia_complete_source_ids, gl_suffix normalises the
-             GJ/Gl spellings. Plus the WDS-component oid iterator.
+             GJ/Gl spellings.
              Cost: the designation map is a dict per source_id-keyed row —
              ~98 MB over the whole manifest against ~46 MB for three flat
              per-namespace dicts. Bought deliberately: it is what lets the

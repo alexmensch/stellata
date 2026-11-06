@@ -10,7 +10,7 @@ import { BUILD_COUNTS_EXPECTED_FILE as COUNT_SNAPSHOT } from '../catalog/build-c
 import type { IndexEntry } from '../util/citation-index-pure.ts';
 import { flattenStages } from '../util/counts/count-stages-pure.ts';
 import { parseHtml } from '../util/parse-html.ts';
-import { PACKAGE_JSON, REPO_ROOT, publicFile, publicRepoPath } from '../util/paths.ts';
+import { REPO_ROOT, publicFile, publicRepoPath } from '../util/paths.ts';
 import { CITATION_INDEX } from './citation-index-source.ts';
 
 const APP_DOC = 'src/client/app/index.html';
@@ -74,18 +74,6 @@ export function citationEntries(): IndexEntry[] {
     throw new Error(`site metrics: no entries found in ${CITATION_INDEX.file}`);
   }
   return entries;
-}
-
-export function appVersion(): string {
-  return versionOf(readFileSync(resolve(REPO_ROOT, PACKAGE_JSON), 'utf8'));
-}
-
-export function versionOf(manifestJson: string): string {
-  const { version } = JSON.parse(manifestJson) as { version?: unknown };
-  if (typeof version !== 'string' || version === '') {
-    throw new Error('site metrics: package.json states no version');
-  }
-  return version;
 }
 
 export function citedReferenceCount(): number {

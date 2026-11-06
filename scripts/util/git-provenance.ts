@@ -1,10 +1,8 @@
-// What a build or instrument records about the checkout it ran in: the package version, HEAD, a dirty tree, the merge-base with main. See README.md.
+// What a build or instrument records about the checkout it ran in: HEAD, a dirty tree, the merge-base with main. See README.md.
 
 import { execFileSync } from 'node:child_process';
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
 
-import { PACKAGE_JSON, REPO_ROOT } from './paths';
+import { REPO_ROOT } from './paths';
 
 const MAIN_BRANCH = 'main';
 export const MAIN_REF = `origin/${MAIN_BRANCH}`;
@@ -17,10 +15,6 @@ export function gitIn(cwd: string, ...argv: string[]): string {
 }
 
 const git = (...argv: string[]): string => gitIn(REPO_ROOT, ...argv);
-
-export function packageVersion(): string {
-  return (JSON.parse(readFileSync(resolve(REPO_ROOT, PACKAGE_JSON), 'utf-8')) as { version: string }).version;
-}
 
 export const headCommit = (): string => git('rev-parse', 'HEAD');
 

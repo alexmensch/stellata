@@ -74,7 +74,7 @@ scripts/catalog/membership/
                                   lineage budget, the lineage invariants
                                   (../lineage/README.md#invariants) and the
                                   CI heap budget
-                                  (../../util/README.md#ci-heap-budget) pass.
+                                  (../../util/heap-budget/README.md) pass.
   membership-manifest-outputs.ts  MEMBERSHIP_OUTPUTS — every file the
                                   generator writes, as its emitArtifacts
                                   declaration (../../util/README.md), its

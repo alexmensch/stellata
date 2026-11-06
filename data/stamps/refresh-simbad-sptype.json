@@ -5,9 +5,8 @@
   },
   "query": "2676e36814c1c92534c02e50bbf94e2865db33b2",
   "answeredBy": [],
-  "request": "8d2259388ebd679999d86e4eca0fc2f8538f0593",
+  "request": "694cd51219bce69f77950acc7c8c5473e6fd0744",
   "requestFrom": [
-    "data/membership/membership-manifest.tsv",
-    "data/simbad/simbad_wds_xids.tsv"
+    "data/membership/membership-manifest.tsv"
   ]
 }
