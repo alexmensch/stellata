@@ -5,7 +5,6 @@ import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import {
-  FLAG_IS_SOL,
   FLAG_BINARY_PRIMARY,
   VAR_TYPE_ECLIPSING,
   encodeAmpUnits,
@@ -36,7 +35,7 @@ import {
 import { encodeSpectralBytes } from '../../src/catalog-format/spectral/spectral-record-bytes';
 import { buildHipToIndex, inferBinaries } from './multiplicity/binary-flags-pure';
 import { SIMBAD_OTYPE_MULTIPLE } from './spectral/spectral-resolve';
-import { apparentVFromSol } from './record/record-order-pure';
+import { apparentVFromSol, solRecordIndex } from './record/record-order-pure';
 import { avSolToStar } from './distance/dust/dust-deextinction-pure';
 import {
   orbitChainExemption, overlapLabel, physicalOverlaps,
@@ -274,9 +273,9 @@ export async function main() {
   // Accumulator for the headline counts asserted against
   // scripts/catalog/build-catalog-expected.json at the end of the
   // build. Every field has a default so a code path that legitimately
-  // skips a section (missing GCVS files, no Sol) doesn't leave the
+  // skips a section (missing GCVS files) doesn't leave the
   // field undefined.
-  const counts: BuildCounts = {
+  const counts: Omit<BuildCounts, 'solIndex'> = {
     recordCount: 0,
     binaryPairs: 0,
     binaryMutualPairs: 0,
@@ -348,7 +347,6 @@ export async function main() {
     boundaryDirections: 0,
     boundaryRegionRuns: 0,
     boundaryArtifactKb: 0,
-    solIndex: -1,
     figureCount: 0,
     figureConstellations: 0,
     gaiaSourceIdResolved: 0,
@@ -831,6 +829,7 @@ export async function main() {
   const order = Array.from(stars.keys()).sort((a, b) => sortKey[a] - sortKey[b]);
   const sorted = order.map((i) => stars[i]);
   for (let i = 0; i < sorted.length; i++) stars[i] = sorted[i];
+  const solIndex = solRecordIndex(stars);
 
   const hipToIndex = buildHipToIndex(stars);
 
@@ -1071,7 +1070,6 @@ export async function main() {
   let off = HEADER_SIZE + nameTableLength;
 
   // Records.
-  let solIndex = -1;
   const unclassifiedCon: number[] = [];
   let variableCount = 0;
   let gaiaSourceIdResolved = 0;
@@ -1129,7 +1127,6 @@ export async function main() {
       multiplicityStatus: multiplicityStatus[i],
     });
 
-    if (s.flags & FLAG_IS_SOL) solIndex = i;
     if (s.conIndex === NO_CONSTELLATION_INDEX) unclassifiedCon.push(i);
     off += RECORD_SIZE;
   }
@@ -1246,18 +1243,13 @@ export async function main() {
   );
   const searchMb = (Buffer.byteLength(searchJson) / 1024 / 1024).toFixed(2);
   console.log(`Built ${CATALOG_OUTPUTS.files.searchIndex} (${searchEntries.length} searchable entries, ${searchMb} MB)`);
-  if (solIndex >= 0) {
-    console.log(
-      `Sol at record index ${solIndex} (absmag=${stars[solIndex].absmag}, R=${stars[solIndex].physicalRadius.toFixed(3)} R☉)`,
-    );
-  } else {
-    console.warn(`Warning: Sol not found in catalog.`);
-  }
+  console.log(
+    `Sol at record index ${solIndex} (absmag=${stars[solIndex].absmag}, R=${stars[solIndex].physicalRadius.toFixed(3)} R☉)`,
+  );
 
   counts.variableCount = variableCount;
   counts.searchEntries = searchEntries.length;
   counts.designationConMismatch = searchEntries.filter((e) => e.dc !== undefined).length;
-  counts.solIndex = solIndex;
   counts.figureCount = figureCount;
   counts.figureConstellations = figureLines.size;
   counts.gaiaSourceIdResolved = gaiaSourceIdResolved;
@@ -1334,7 +1326,7 @@ export async function main() {
     checks: [
       ...placementEmission.checks, ...coherenceEmission.checks, ...lineage.checks, ...allocationLineage.checks,
       ...namingEmission.checks,
-      buildCountsCheck(counts), distanceOutliersCheck(stars),
+      buildCountsCheck({ ...counts, solIndex }), distanceOutliersCheck(stars),
       heap.check(),
     ],
   });

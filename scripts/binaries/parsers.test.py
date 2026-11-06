@@ -719,9 +719,7 @@ class ParseSimbadWdsXidsTests(unittest.TestCase):
 
 
 class ParseSimbadWdsSpectraTests(unittest.TestCase):
-    SPTYPE_HEADER = (
-        "simbad_oid\tsimbad_main_id\tsp_type\tsp_qual\tsp_bibcode\totype\thip\tsource_id"
-    )
+    SPTYPE_HEADER = "simbad_oid\tsp_type"
     XIDS_HEADER = (
         "wds_id\tcomponent\tsimbad_oid\tsimbad_main_id\tgaia_source_id\thip"
     )
@@ -732,9 +730,9 @@ class ParseSimbadWdsSpectraTests(unittest.TestCase):
         # sp_type strings.
         sptype = (
             f"{self.SPTYPE_HEADER}\n"
-            "702026\t* omi02 Eri\tK0V\tB\tref1\tPM*\t19849\t3195919528989223040\n"
-            "701944\t* omi02 Eri B\tDA2.9\tC\tref2\tWD*\t\t3195919254111315712\n"
-            "701829\t* omi02 Eri C\tM4.5V\tB\tref3\tPM*\t\t3195919254111314816\n"
+            "701829\tM4.5V\n"
+            "701944\tDA2.9\n"
+            "702026\tK0V\n"
         )
         xids = (
             f"{self.XIDS_HEADER}\n"
@@ -743,7 +741,7 @@ class ParseSimbadWdsSpectraTests(unittest.TestCase):
             "04153-0739\tC\t701829\t* omi02 Eri C\t3195919254111314816\t\n"
         )
         with tempfile.TemporaryDirectory() as td:
-            sp = _write(Path(td), "simbad_sptype.tsv", sptype)
+            sp = _write(Path(td), "simbad_wds_sptype.tsv", sptype)
             xd = _write(Path(td), "simbad_wds_xids.tsv", xids)
             out = parse_simbad_wds_spectra(sp, xd)
         self.assertEqual(out[("04153-0739", "A")], "K0V")
@@ -758,8 +756,8 @@ class ParseSimbadWdsSpectraTests(unittest.TestCase):
         # overwriting with an empty string.
         sptype = (
             f"{self.SPTYPE_HEADER}\n"
-            "8399845\t* alf CMa\tA0mA1Va\tC\tref\tSB*\t32349\t\n"
-            "8399846\t* alf CMa B\t\t\t\tWD*\t\t\n"      # blank sp_type
+            "8399845\tA0mA1Va\n"
+            "8399846\t\n"      # blank sp_type
         )
         xids = (
             f"{self.XIDS_HEADER}\n"
@@ -767,7 +765,7 @@ class ParseSimbadWdsSpectraTests(unittest.TestCase):
             "06451-1643\tB\t8399846\t* alf CMa B\t\t\n"
         )
         with tempfile.TemporaryDirectory() as td:
-            sp = _write(Path(td), "simbad_sptype.tsv", sptype)
+            sp = _write(Path(td), "simbad_wds_sptype.tsv", sptype)
             xd = _write(Path(td), "simbad_wds_xids.tsv", xids)
             out = parse_simbad_wds_spectra(sp, xd)
         self.assertEqual(out, {("06451-1643", "A"): "A0mA1Va"})
@@ -777,14 +775,14 @@ class ParseSimbadWdsSpectraTests(unittest.TestCase):
         # row at that oid — defensive fallthrough.
         sptype = (
             f"{self.SPTYPE_HEADER}\n"
-            "1\tmain\tG2V\t\t\t\t\t\n"
+            "1\tG2V\n"
         )
         xids = (
             f"{self.XIDS_HEADER}\n"
             "X\tA\t999\tnomatch\t\t\n"
         )
         with tempfile.TemporaryDirectory() as td:
-            sp = _write(Path(td), "simbad_sptype.tsv", sptype)
+            sp = _write(Path(td), "simbad_wds_sptype.tsv", sptype)
             xd = _write(Path(td), "simbad_wds_xids.tsv", xids)
             out = parse_simbad_wds_spectra(sp, xd)
         self.assertEqual(out, {})
@@ -794,16 +792,15 @@ class ParseSimbadWdsSpectraTests(unittest.TestCase):
         # this consumer. Verify reordered columns parse cleanly by
         # name, not by position.
         sptype = (
-            "source_id\thip\tsimbad_main_id\tsimbad_oid\totype\t"
-            "sp_bibcode\tsp_qual\tsp_type\n"
-            "\t1\tmain\t42\t**\t\t\tF5V\n"
+            "sp_type\tsimbad_oid\n"
+            "F5V\t42\n"
         )
         xids = (
             f"{self.XIDS_HEADER}\n"
             "X\tA\t42\tmain\t\t1\n"
         )
         with tempfile.TemporaryDirectory() as td:
-            sp = _write(Path(td), "simbad_sptype.tsv", sptype)
+            sp = _write(Path(td), "simbad_wds_sptype.tsv", sptype)
             xd = _write(Path(td), "simbad_wds_xids.tsv", xids)
             out = parse_simbad_wds_spectra(sp, xd)
         self.assertEqual(out, {("X", "A"): "F5V"})

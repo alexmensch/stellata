@@ -1,6 +1,11 @@
 import { describe, it, expect } from 'vitest';
 
-import { NO_CONSTELLATION_INDEX, SOLAR_BV_FALLBACK } from '../../../src/catalog-format/record/catalog-pure';
+import {
+  FLAG_IS_SOL,
+  NO_CONSTELLATION_INDEX,
+  SOL_ABSOLUTE_V_MAGNITUDE,
+  SOLAR_BV_FALLBACK,
+} from '../../../src/catalog-format/record/catalog-pure';
 import { SPECTRAL_UNKNOWN } from '../../../src/catalog-format/spectral/spectral-classify';
 import { avSolToStar, type DustGrid } from '../distance/dust/dust-deextinction-pure';
 import { R_V } from '../../../src/astro-core/extinction/dust-raymarch-pure';
@@ -32,6 +37,7 @@ import { CONSTELLATIONS, createConstellationAssignment, iauEdgeRecords } from '.
 import { STELLARIUM } from './constellations/stellarium-source';
 import type { Placement } from '../distance/placement-lineage-pure';
 import { MAX_DIST_PC, readStars } from './stars-parse';
+import { CURATED_RECORDS } from '../record/curated-records';
 import { AV_PER_EZGR } from '../../../src/astro-core/baker-constants';
 
 const readStarsDiscarding = (
@@ -329,11 +335,34 @@ describe('readStars constellation assignment', () => {
   it('leaves Sol unclassified — the origin has no sky direction', () => {
     const { stars } = readStarsDiscarding(
       manifestRows([{ proper: 'Sol' }]),
-      { conAssignment: CON_ASSIGNMENT },
+      { conAssignment: CON_ASSIGNMENT, curatedRecords: CURATED_RECORDS },
     );
     expect(stars).toHaveLength(1);
     expect(stars[0].conIndex).toBe(NO_CONSTELLATION_INDEX);
     expect(stars[0]).toMatchObject({ plxDistPc: null, plxVia: 'curated', distVia: 'curated' });
+  });
+
+  it('builds Sol from its curated record alone: origin, at rest, G2V, every tier curated', () => {
+    const { stars, stats } = readStarsDiscarding(
+      manifestRows([{ proper: 'Sol' }]),
+      { conAssignment: CON_ASSIGNMENT, curatedRecords: CURATED_RECORDS },
+    );
+    expect(stars[0]).toMatchObject({
+      x: 0, y: 0, z: 0, vx: 0, vy: 0, vz: 0,
+      absmag: SOL_ABSOLUTE_V_MAGNITUDE, spectDisplay: 'G2V', vVia: 'curated',
+    });
+    expect(stars[0].flags & FLAG_IS_SOL).toBe(FLAG_IS_SOL);
+    expect(stats).toMatchObject({
+      directionVia: { curated: 1 }, vVia: { curated: 1 }, distVia: { curated: 1 },
+      spectralVia: { curated: 1 }, velocityVia: { zero: 1 }, rvApplied: 0,
+    });
+    expect(Object.values(stats.pmRescueOutcome).every((n) => n === 0)).toBe(true);
+  });
+
+  it('parks Sol where no curated record answers for it', () => {
+    const { stars, stats } = readStarsDiscarding(manifestRows([{ proper: 'Sol' }]), { conAssignment: CON_ASSIGNMENT });
+    expect(stars).toEqual([]);
+    expect(stats.parked).toHaveLength(1);
   });
 });
 

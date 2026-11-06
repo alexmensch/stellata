@@ -1,0 +1,11 @@
+{
+  "inputs": {
+    "data/simbad/simbad_wds_xids.tsv": "08bd1f5b5f7a101f1f8afc4db02c30579ea17366"
+  },
+  "outputs": {
+    "data/simbad/simbad_wds_sptype.tsv": "10c22027935a2d8a9fd123a63df0dbd4df79778c"
+  },
+  "query": "8980082c43f882680adccd0f6e6a8e0040fab705",
+  "answeredBy": [],
+  "requestFrom": []
+}

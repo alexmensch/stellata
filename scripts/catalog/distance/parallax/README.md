@@ -158,9 +158,11 @@ every component row of a sub-arcsec pair, so a root's rows routinely repeat the
 primary's id; reading the astrometry table on it twice would hand a member back
 the fit it already carries, dressed as a sibling's.
 
-**Sol needs a curated tier** for the third time in this epic: it carries no
-identifier any tier keys on, and its distance is zero rather than a parallax.
-Direction and V each hit the same wall.
+**Sol takes the curated tier**: it carries no identifier any tier keys on,
+and its distance is zero rather than a parallax. The tier answers with the
+`OriginPlacement` its curated record states, the one record that supplies the
+direction, V and spectral cascades' curated tiers too
+([Curated records](../../record/README.md#curated-records)).
 
 ## Two precision lines, and why only one is a gate
 

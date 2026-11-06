@@ -150,7 +150,7 @@ export interface BuildCounts {
    *  manifest carries no editorial `con` cell. See `parse/constellations/README.md#positional-constellation-membership`.
    * */
   gcvsDesignationCon: number;
-  /** Record index of Sol after sort. -1 if Sol is not found in source. */
+  /** Record index of Sol after sort; a build without exactly one Sol throws. */
   solIndex: number;
   /** Total stick-figure polylines across all constellations. */
   figureCount: number;
@@ -177,9 +177,7 @@ export interface BuildCounts {
   simbadSptypeEntries: number;
   /** Rows in `data/simbad/simbad_values.tsv` — the per-field value cohort (/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers). */
   simbadValuesEntries: number;
-  /** Records classified via the curated HIP→sp_type override tier
-   *  (CURATED_SPTYPE_BY_HIP) — saturated stars whose SIMBAD entry
-   *  carries neither hip nor source_id (Castor). */
+  /** Records the spectral resolver's curated tier classified (spectral/README.md#the-resolver). */
   spectralByCurated: number;
   /** Records whose spectral classification came from SIMBAD's `sp_type` — the canonical Morgan-Keenan tier. */
   spectralBySimbad: number;
@@ -1005,7 +1003,9 @@ export function compareCountSnapshot<T extends object>(
  *  shortfall means a tier returned a row without naming its key and the
  *  per-namespace figures understate silently. Returns the message to fail the
  *  build with, or null when the partition holds. */
-export function spectralSimbadPartitionError(counts: BuildCounts): string | null {
+export function spectralSimbadPartitionError(
+  counts: Pick<BuildCounts, 'spectralBySimbad' | `spectralSimbadBy${'SourceId' | 'Hip' | 'Tyc' | 'Gj'}`>,
+): string | null {
   const sum = counts.spectralSimbadBySourceId + counts.spectralSimbadByHip
     + counts.spectralSimbadByTyc + counts.spectralSimbadByGj;
   if (sum === counts.spectralBySimbad) return null;

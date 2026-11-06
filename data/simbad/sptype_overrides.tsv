@@ -1,0 +1,11 @@
+# Hand-curated MK spectral types by HIP, for saturated stars whose SIMBAD
+# entry is a component-lettered main_id carrying neither hip nor source_id,
+# so no SIMBAD tier of the spectral resolver reaches it. Read as the
+# resolver's curated tier (/scripts/catalog/spectral/README.md#the-resolver).
+#
+# Schema (3 tab-separated columns):
+#   hip      — the record's HIP number.
+#   sp_type  — SIMBAD-canonical MK string (classifyFromSimbad must parse it).
+#   source   — literature reference for the classification.
+hip	sp_type	source
+36850	A1.5IV+	Castor A (alf Gem) — SIMBAD * alf Gem A sp_type=A1.5IV+, Gray 2003 (/data/papers/index.md#gray2003)

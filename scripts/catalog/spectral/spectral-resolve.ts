@@ -123,7 +123,27 @@ export interface SpectralValue {
 /** A typed row a tier reached and did not take: a SIMBAD row stating another
  *  star's Gaia id, or a type string the classifier cannot parse. */
 export type SpectralRefusal =
-  CascadeRefusal<'curated' | 'simbad' | 'gspspec', 'gaia_id_contradicts' | 'unclassifiable'>;
+  CascadeRefusal<'simbad' | 'gspspec', 'gaia_id_contradicts' | 'unclassifiable'>;
+
+/** A curated MK string, classified where it is curated: one that does not
+ *  classify is a curation fault, so the curated tier never refuses. */
+export function curatedSpectralValue(spType: string, fail: (message: string) => never): SpectralValue {
+  const info = classifyFromSimbad(spType);
+  return info ? { info, spectDisplay: spType } : fail(`curated sp_type "${spType}" does not classify`);
+}
+
+/** One record's designations, plus its curated type
+ *  (`../record/curated-records.ts`), which outranks a HIP-keyed one. */
+export interface SpectralInputs extends SimbadRecordKeys {
+  curated: SpectralValue | null;
+}
+
+export interface SpectralSources {
+  simbad: SimbadSpectralIndex;
+  apsis: ReadonlyMap<string, ApsisRow>;
+  /** `SPTYPE_OVERRIDES`. */
+  sptypeOverrides: ReadonlyMap<number, SpectralValue>;
+}
 
 export type SpectralResolution = CascadeResult<
   {
@@ -152,37 +172,18 @@ function matchSimbadRow(
   return info ? { info, spectDisplay: row.spType } : 'unclassifiable';
 }
 
-/** Curated HIP → MK type for saturated stars whose SIMBAD entry is a
- *  component-lettered main_id ("* alf Gem A") carrying neither hip nor
- *  source_id, so both machine tiers miss and the record would fall to
- *  the 5000 K unknown class (inflating physicalRadius ~3×). Mirrors the
- *  binaries pipeline's component_sptype_overrides.tsv curated tier;
- *  literature citation per entry. */
-export const CURATED_SPTYPE_BY_HIP: ReadonlyMap<number, string> = new Map([
-  // Castor A (α Gem) — SIMBAD * alf Gem A sp_type=A1.5IV+ (Gray 2003
-  // (/data/papers/index.md#gray2003)).
-  [36850, 'A1.5IV+'],
-]);
-
 /** Seven-tier spectral resolver: a curated HIP override, the four SIMBAD
  *  namespaces in ladder order, Gaia DR3 GSP-Spec, else `none`.
  *  Which tier exists for which population is in `./README.md#the-resolver`.
  * */
 export function resolveSpectralInfo(
-  keys: SimbadRecordKeys,
-  simbad: SimbadSpectralIndex,
-  apsisMap: Map<string, ApsisRow>,
+  keys: SpectralInputs,
+  { simbad, apsis: apsisMap, sptypeOverrides }: SpectralSources,
 ): SpectralResolution {
   const refusals: SpectralRefusal[] = [];
   const hip = simbadHipKey(keys.hip);
-  if (hip !== null) {
-    const curated = CURATED_SPTYPE_BY_HIP.get(hip);
-    if (curated !== undefined) {
-      const info = classifyFromSimbad(curated);
-      if (info) return { via: 'curated', value: { info, spectDisplay: curated }, refusals };
-      refusals.push({ tier: 'curated', reason: 'unclassifiable' });
-    }
-  }
+  const curated = keys.curated ?? (hip === null ? undefined : sptypeOverrides.get(hip));
+  if (curated !== undefined) return { via: 'curated', value: curated, refusals };
   const hit = walkSimbadNamespaces(simbad, keys, (row) => {
     const match = matchSimbadRow(row, keys.sourceId);
     if (typeof match !== 'string') return match;

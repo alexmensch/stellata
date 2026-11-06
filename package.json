@@ -52,6 +52,7 @@
     "refresh:simbad-values": "tsx scripts/util/launch.ts scripts/pipeline/record.ts refresh:simbad-values",
     "refresh:simbad-tyc-hd": "tsx scripts/util/launch.ts scripts/pipeline/record.ts refresh:simbad-tyc-hd",
     "refresh:simbad-sptype": "tsx scripts/util/launch.ts scripts/pipeline/record.ts refresh:simbad-sptype",
+    "refresh:simbad-wds-sptype": "tsx scripts/util/launch.ts scripts/pipeline/record.ts refresh:simbad-wds-sptype",
     "refresh:simbad-wds-xids": "tsx scripts/util/launch.ts scripts/pipeline/record.ts refresh:simbad-wds-xids",
     "refresh:edenhofer2024-main": "tsx scripts/util/launch.ts scripts/pipeline/record.ts refresh:edenhofer2024-main",
     "refresh:edenhofer2024-2kpc": "tsx scripts/util/launch.ts scripts/pipeline/record.ts refresh:edenhofer2024-2kpc",
