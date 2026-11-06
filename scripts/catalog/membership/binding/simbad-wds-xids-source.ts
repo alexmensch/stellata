@@ -6,6 +6,6 @@ import { parseSimbadWdsXidsTsv } from './binding-gate-pure';
 
 export const SIMBAD_WDS_XIDS = defineSource({
   file: DATA_FILES.simbadWdsXids,
-  hint: 'Re-run `python3 scripts/refresh/refresh-simbad-wds-xids.py`.',
+  hint: 'Run `pnpm run refresh:simbad-wds-xids`.',
   parse: (input) => parseSimbadWdsXidsTsv(input.text(), input),
 });
