@@ -395,7 +395,7 @@ row. `BRIGHTNESS_COLOUR_LINEAGE_BUDGET` pins 42.4 MB and 60 s, placement's
 time allowance, since a CI diff against a restored baseline runs several
 times slower than a local build. The walk holds these lines beside
 placement's: `build:catalog`'s peak live heap read 3,451 MiB against its
-3,482 MiB budget on that run ([CI heap budget](../../util/README.md#ci-heap-budget)).
+3,482 MiB budget on that run ([CI heap budget](../../util/heap-budget/README.md)).
 
 ## Citation
 
