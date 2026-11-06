@@ -75,6 +75,13 @@ describe('releaseAt', () => {
   });
 });
 
+describe('the release tags are the one source of the version', () => {
+  it('package.json states none', () => {
+    const manifest = JSON.parse(readFileSync(resolve(__dirname, '../../package.json'), 'utf-8')) as object;
+    expect(manifest).not.toHaveProperty('version');
+  });
+});
+
 describe('runs under plain node, with nothing installed', () => {
   it('imports only node builtins', () => {
     const source = readFileSync(resolve(__dirname, 'release-version.ts'), 'utf-8');
