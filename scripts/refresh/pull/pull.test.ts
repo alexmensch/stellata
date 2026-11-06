@@ -240,6 +240,11 @@ describe('a phased pull', () => {
     });
   });
 
+  it('states its parameters, so a changed seed or target stales the record', () => {
+    const hash = (seed: number) => pullQueryHash(describePhasedPull(typesPull(twoPhases, { parameters: { seed } })));
+    expect(hash(1)).not.toBe(hash(2));
+  });
+
   it('sizes a whole-table phase off its stated rows and a request batch off its ids', () => {
     expect([phaseLimit({ ...BASIC, scope: { kind: 'whole-table', maxRows: 5 } }), phaseLimit(BASIC)]).toEqual([10, 4]);
     expect(phaseQueries(BASIC, ['1', '2', '3'], SIMBAD.quote)).toHaveLength(2);

@@ -81,6 +81,8 @@ export interface PhasedPull<K extends string> {
   readonly release?: string;
   /** The keys the run derives its first request from, and the files they come off (../../pipeline/README.md#freshness--one-mechanism). */
   readonly request?: Projection;
+  /** What decides the bytes besides the queries and formats (a seed, a draw's targets), so a change to it stales the record. */
+  readonly parameters?: object;
   run(ask: Ask, log: (line: string) => void): Promise<PhasedResult<K>>;
 }
 
@@ -172,7 +174,8 @@ export function describePull<K extends string>(pull: Pull<K>): PullDescription {
 export function describePhasedPull<K extends string>(pull: PhasedPull<K>): PullDescription {
   const phases = Object.fromEntries(Object.entries(pull.phases).map(([name, p]) => [name, phaseTemplate(p, pull.archive.quote)]));
   const tables = Object.fromEntries(keysOf(pull.tables).map((k) => [k, { formats: formatsOf(pull.tables[k]), sortBy: pull.tables[k].sortBy }]));
-  return { query: JSON.stringify({ phases, tables }), ...archiveDescription(pull.archive, pull.release), ...pull.request };
+  const query = { phases, tables, ...(pull.parameters === undefined ? {} : { parameters: pull.parameters }) };
+  return { query: JSON.stringify(query), ...archiveDescription(pull.archive, pull.release), ...pull.request };
 }
 
 const fetchTransport: Transport = async (url, form) => {

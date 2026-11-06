@@ -71,11 +71,12 @@ oid → columns). It declares its `phases` (a `Phase` is a table's query without
 its ids: whole-table with the most rows it should return, or request-scoped by
 key, batch size and rows per id), its written `tables` (columns, sort key,
 band, spot rows), optionally the `request` it derives and the files it comes
-off, and a `run(ask)` that composes the rows. `ask(phase, ids)` is the same
+off and the `parameters` that decide its bytes besides its queries (a seed,
+a draw's targets), and a `run(ask)` that composes the rows. `ask(phase, ids)` is the same
 batched, checkpointed, header-checked query a static table gets, and it
 **refuses a phase the pull does not declare**, so `describePhasedPull`, which
-states every phase's template, each table's formats and order, and the
-request, covers every query the run can send. `runPhasedPull` gates and emits
+states every phase's template, each table's formats and order, the
+parameters and the request, covers every query the run can send. `runPhasedPull` gates and emits
 as `runPull` does, plus whatever checks `run` returns; `runPull` is a phased
 pull of one phase per table.
 
