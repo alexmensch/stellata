@@ -185,8 +185,8 @@ same thing — single-use helpers stay with their consumer.
   `roundEach`, the same over each element of a tuple;
   `formatFixed(x, digits)`, Python's `f"{x:.{digits}f}"` text on the same
   rounding (a refresh pull's fixed-decimal column format);
-  `formatRepr(x)`, Python's `repr(x)` (a refresh pull's shortest-digits
-  column format); and
+  `formatRepr(x, width)`, Python's `repr(x)` of a double or numpy's `str`
+  of a float32 (a refresh pull's shortest-digits column format); and
   `roundSignificant(v, digits)`, significant figures through
   `toPrecision`. Every number a TypeScript build rounds into a JSON
   artifact goes through one of them, never `Math.round(x · 10ⁿ) / 10ⁿ`,

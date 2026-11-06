@@ -21,15 +21,28 @@ export function formatFixed(x: number, digits: number): string {
   return (x < 0 || Object.is(x, -0)) && !text.startsWith('-') ? `-${text}` : text;
 }
 
-/** Python's `repr(x)`: the shortest digits that round-trip, positional for exponents -4 to 15, else `d.ddde±XX`. */
-export function formatRepr(x: number): string {
+export type FloatWidth = 'double' | 'float32';
+
+const POSITIONAL_BELOW: Record<FloatWidth, number> = { double: 1e16, float32: 1e6 };
+
+/** The fewest significant digits, as `toExponential` text, that read back to `x` at `width`. */
+function shortest(x: number, width: FloatWidth): string {
+  if (width === 'double') return x.toExponential();
+  for (let digits = 1; ; digits++) {
+    const text = x.toExponential(digits - 1);
+    if (Math.fround(Number(text)) === x) return text;
+  }
+}
+
+/** Python's `repr(x)` of a double, or numpy's `str` of a float32 (`x` already `Math.fround`ed): shortest round-trip digits, positional from 1e-4 up to 1e16 (float32: 1e6), else `d.ddde±XX`. */
+export function formatRepr(x: number, width: FloatWidth = 'double'): string {
   if (!Number.isFinite(x)) throw new Error(`formatRepr: ${x} is not finite`);
   if (x === 0) return Object.is(x, -0) ? '-0.0' : '0.0';
-  const [mantissa, exponent] = x.toExponential().split('e');
+  const [mantissa, exponent] = shortest(x, width).split('e');
   const sign = x < 0 ? '-' : '';
   const digits = mantissa.replace(/^-/, '').replace('.', '');
   const e = Number(exponent);
-  if (e < -4 || e >= 16) {
+  if (Math.abs(x) < 1e-4 || Math.abs(x) >= POSITIONAL_BELOW[width]) {
     const lead = digits.length === 1 ? digits : `${digits[0]}.${digits.slice(1)}`;
     return `${sign}${lead}e${e < 0 ? '-' : '+'}${String(Math.abs(e)).padStart(2, '0')}`;
   }

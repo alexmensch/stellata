@@ -35,7 +35,16 @@ describe('formatRepr', () => {
       '0.0', '-0.0', '1.0', '-2.5', '0.0001', '0.00012345', '1e-05', '9.045827e-05', '-1.5e-07', '123456789.0',
       '1000000000000000.0', '1e+16', '1.2345e+16', '1e+22', '773.0921101652751', '27.351328', '0.385854572057724', '5e-324',
     ];
-    expect(values.map(formatRepr)).toEqual(python3);
+    expect(values.map((v) => formatRepr(v))).toEqual(python3);
+  });
+
+  it('writes what numpy str(np.float32(x)) writes for a float32', () => {
+    const values = [1e-4, 0.000100001, 9.999e-5, 9999999, 1e7, 1234567, 999999, 999999.94, 123456.7, 27.351328, 9.045827e-5, 0.1248893];
+    const numpy = [
+      '1e-04', '0.000100001', '9.999e-05', '9.999999e+06', '1e+07', '1.234567e+06', '999999.0', '999999.94', '123456.7',
+      '27.351328', '9.045827e-05', '0.1248893',
+    ];
+    expect(values.map((v) => formatRepr(Math.fround(v), 'float32'))).toEqual(numpy);
   });
 
   it('reads the archives\' Java-style text back to the same repr', () => {
