@@ -17,7 +17,7 @@ const FROM = { file: 'fixture.tsv', hint: 'h' };
 const resolve = (
   keys: SimbadRecordKeys, simbad: SimbadSpectralIndex, apsis: ReadonlyMap<string, ApsisRow>,
   curated: SpectralValue | null = null,
-) => resolveSpectralInfo({ ...keys, curated }, { simbad, apsis, curatedByHip: SPTYPE_OVERRIDES.read() });
+) => resolveSpectralInfo({ ...keys, curated }, { simbad, apsis, sptypeOverrides: SPTYPE_OVERRIDES.read() });
 
 /** A resolution expected to land on a tier, flattened; `none` fails the test. */
 const flatSp = (...args: Parameters<typeof resolve>) => {

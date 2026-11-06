@@ -2,12 +2,12 @@
 
 import { defineSource } from '../../util/sources/source';
 import { readTable } from '../../util/tsv/table-pure';
-import { curatedSpectralValue, type SpectralValue } from './spectral-resolve';
+import { curatedSpectralValue, type SpectralSources, type SpectralValue } from './spectral-resolve';
 
 export const SPTYPE_OVERRIDES = defineSource({
   file: 'data/simbad/sptype_overrides.tsv',
   hint: 'It is committed and hand-curated (/data/simbad/README.md#provenance).',
-  parse: (input): ReadonlyMap<number, SpectralValue> => {
+  parse: (input): SpectralSources['sptypeOverrides'] => {
     const byHip = new Map<number, SpectralValue>();
     for (const row of readTable({ ...input, columns: ['hip', 'sp_type', 'source'], comments: true }, input.text())) {
       const hip = row.requiredId('hip');

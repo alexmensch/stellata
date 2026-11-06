@@ -142,7 +142,7 @@ export interface SpectralSources {
   simbad: SimbadSpectralIndex;
   apsis: ReadonlyMap<string, ApsisRow>;
   /** `SPTYPE_OVERRIDES`. */
-  curatedByHip: ReadonlyMap<number, SpectralValue>;
+  sptypeOverrides: ReadonlyMap<number, SpectralValue>;
 }
 
 export type SpectralResolution = CascadeResult<
@@ -178,11 +178,11 @@ function matchSimbadRow(
  * */
 export function resolveSpectralInfo(
   keys: SpectralInputs,
-  { simbad, apsis: apsisMap, curatedByHip }: SpectralSources,
+  { simbad, apsis: apsisMap, sptypeOverrides }: SpectralSources,
 ): SpectralResolution {
   const refusals: SpectralRefusal[] = [];
   const hip = simbadHipKey(keys.hip);
-  const curated = keys.curated ?? (hip === null ? undefined : curatedByHip.get(hip));
+  const curated = keys.curated ?? (hip === null ? undefined : sptypeOverrides.get(hip));
   if (curated !== undefined) return { via: 'curated', value: curated, refusals };
   const hit = walkSimbadNamespaces(simbad, keys, (row) => {
     const match = matchSimbadRow(row, keys.sourceId);

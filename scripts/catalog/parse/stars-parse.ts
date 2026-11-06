@@ -25,7 +25,6 @@ import {
 import {
   type SimbadSpectralIndex,
   type SpectralSources,
-  type SpectralValue,
   type SpectralVia,
   emptySimbadSpectralIndex,
   resolveSpectralInfo,
@@ -253,7 +252,7 @@ export interface ReadStarsOptions {
   bailerJones?: BailerJonesIndex;
   simbadSpectral?: SimbadSpectralIndex;
   /** `SPTYPE_OVERRIDES` — the spectral resolver's curated tier. */
-  sptypeOverrides?: ReadonlyMap<number, SpectralValue>;
+  sptypeOverrides?: SpectralSources['sptypeOverrides'];
   /** Bibcoded SIMBAD values over the per-field value cohort (/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers) — the rv cascade's bottom
    *  tier. Absent leaves its rows on a zero radial term. */
   simbadValues?: SimbadValueIndex;
@@ -403,7 +402,7 @@ export function readStars(
 
   const printedVLookup = printedVLookups(hipVMag, directions.tycho2, gliese);
   const spectralSources: SpectralSources = {
-    simbad: simbadSpectral, apsis: apsisMap, curatedByHip: sptypeOverrides,
+    simbad: simbadSpectral, apsis: apsisMap, sptypeOverrides,
   };
   // Every exit returns its row's Placement, so the compiler refuses one that
   // would drop a record from lineage.
