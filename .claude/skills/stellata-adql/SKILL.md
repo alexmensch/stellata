@@ -113,8 +113,11 @@ default, so ask with `TOP limit + 1` in the ADQL.
 
 **A mirror also truncates at its own hard output limit**, whatever MAXREC asks:
 read `<outputLimit><hard>` from `<url>/capabilities` before trusting a count.
-2026-11-05: ESA 50,000, ARI 10,000,000, SIMBAD-Harvard 2,000,000. The three
-Python Gaia sizing rules — whole-table, batched, value-range — are in
+2026-11-05: ESA 50,000, ARI 10,000,000, SIMBAD-Harvard 2,000,000. A whole
+table past a mirror's limit is cut into committed `source_id` ranges
+([Sliced scope](/scripts/refresh/pull/README.md#sliced-scope)); ESA answered
+a 24,000-row range of `tycho2tdsc_merge_best_neighbour` in 75 s
+(2026-11-06). The two Python Gaia sizing rules — batched, value-range — are in
 [Gaia TAP](/scripts/refresh/README.md#gaia-tap-synchronous-endpoints-only);
 never replace one with a bare literal.
 

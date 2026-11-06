@@ -824,28 +824,6 @@ class SyncErrorClassificationTests(unittest.TestCase):
         self.assertTrue(rl.is_transient_http_error(exc))
 
 
-class WholeTableSyncMaxrecTests(unittest.TestCase):
-    def test_doubles_the_pinned_ceiling(self) -> None:
-        self.assertEqual(rl.whole_table_sync_maxrec(99_600), 199_200)
-
-    def test_clamps_to_the_output_cap(self) -> None:
-        self.assertEqual(
-            rl.whole_table_sync_maxrec(2_530_000), rl.GAIA_SYNC_MAX_ROWS
-        )
-
-    def test_always_leaves_headroom_over_the_live_ceilings(self) -> None:
-        # hip-xmatch, nss, tyc-xmatch pinned ceilings. MAXREC at or below a
-        # ceiling would overflow exactly when the row-count guard should be
-        # the one reporting.
-        for ceiling in (99_600, 446_000, 2_530_000):
-            self.assertGreater(rl.whole_table_sync_maxrec(ceiling), ceiling)
-
-    def test_ceiling_past_the_cap_demands_batching(self) -> None:
-        with self.assertRaises(SystemExit) as cm:
-            rl.whole_table_sync_maxrec(rl.GAIA_SYNC_MAX_ROWS + 1)
-        self.assertIn("batch it", str(cm.exception))
-
-
 # ─── coerce_masked ────────────────────────────────────────────────────
 
 class CoerceMaskedTests(unittest.TestCase):
@@ -1110,8 +1088,7 @@ class ReadSourceIdRequestTests(unittest.TestCase):
 # ─── check_spot_row ──────────────────────────────────────────────────
 
 class CheckSpotRowTests(unittest.TestCase):
-    """Pinned-row drift detector lifted from refresh-gaia-nss /
-    refresh-gaia-apsis. Covers the exact-match /
+    """Pinned-row drift detector. Covers the exact-match /
     numeric-tolerance / NULL branches and the present-vs-missing
     return contract."""
 
@@ -1169,9 +1146,6 @@ class CheckSpotRowTests(unittest.TestCase):
         self.assertIn("  v:", str(cm.exception))
 
     def test_default_key_field_is_source_id(self) -> None:
-        # The xmatch scripts override key_field; nss / apsis rely on
-        # the default. Pin the default so a future rename doesn't
-        # silently break those callers.
         ok = rl.check_spot_row(
             {42: {"a": 1}},
             {"source_id": 42, "a": 1},
