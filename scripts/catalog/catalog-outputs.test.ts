@@ -22,6 +22,7 @@ describe('CATALOG_OUTPUTS', () => {
     expect(CATALOG_OUTPUTS.families.map((f) => repoRelative(f.dir))).toEqual([
       'public', 'build/lineage.previous', 'build/lineage-diff', 'build/lineage.previous', 'build/lineage-diff',
       'build/lineage.previous', 'build/lineage-diff', 'build/lineage.previous', 'build/lineage-diff',
+      'build/lineage.previous', 'build/lineage-diff',
     ]);
     const families = (name: string) => CATALOG_OUTPUTS.families
       .filter((f) => isMemberName(f, name)).map((f) => repoRelative(f.dir));
@@ -30,6 +31,8 @@ describe('CATALOG_OUTPUTS', () => {
     expect(families('promotion.tsv.gz')).toEqual(['build/lineage.previous']);
     expect(families('coherence.tsv.gz')).toEqual(['build/lineage.previous']);
     expect(families('coherence.tsv')).toEqual(['build/lineage-diff']);
+    expect(families('naming.tsv.gz')).toEqual(['build/lineage.previous']);
+    expect(families('naming.tsv')).toEqual(['build/lineage-diff']);
     const [chunks, ...lineage] = CATALOG_OUTPUTS.families;
     expect(repoRelative(chunks.dir)).toBe('public');
     expect(chunks.stamped).toBe(true);

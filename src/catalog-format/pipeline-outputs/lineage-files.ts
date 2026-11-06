@@ -51,6 +51,11 @@ export const ALLOCATION_LINEAGE: StageLineageSpec<'allocation' | typeof ALLOCATI
   files: ['allocation', ALLOCATION_SIDS_STEM],
 };
 
+export const NAMING_LINEAGE: StageLineageSpec<'naming', 'naming'> = {
+  stage: 'naming',
+  files: ['naming'],
+};
+
 /** A sibling build's allocation stage: its rows, and identity rows carrying each object's designation. */
 export function siblingAllocationLineage<S extends string>(stage: S): StageLineageSpec<S | `${S}.identity`, S> {
   return { stage, files: [stage, `${stage}.identity`], identity: `${stage}.identity` };

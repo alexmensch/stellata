@@ -39,7 +39,7 @@ export function applyDesignationConstellations(
   for (const star of stars) {
     const conIndex = resolveDesignationConIndex(inputs.desigCon, star.hd, star.hip);
     if (conIndex === NO_CONSTELLATION_INDEX) continue;
-    star.desigConIndex = conIndex;
+    star.desigCon = { via: 'iv27a', index: conIndex };
     desigConFromCrossIndex++;
   }
   return { desigConFromCrossIndex, crossIndexUnknownCst: inputs.crossIndexUnknownCst };

@@ -179,15 +179,59 @@ export interface DisplayNameInput<K> {
   anchorKey?: K;
 }
 
-export interface DisplayName {
-  label: string;
-  /** Tier of the designation the base came from — the anchor's when
-   *  `borrowed`. */
-  tier: NameTier;
-  /** The base came from the system's naming anchor, not this star. */
-  borrowed: boolean;
-  /** A component letter is part of the label. */
-  lettered: boolean;
+/** Why a component took its system anchor's base over its own designation. */
+export type BorrowReason =
+  /** It carries no designation of its own. */
+  | 'no-own-designation'
+  /** Its own designation is one the anchor also carries (ξ UMa B's 53 UMa). */
+  | 'system-designation'
+  /** Its own is an identifier (GCVS, catalogue) ranked below the anchor's tier. */
+  | 'outranked-identifier';
+
+/** Where the label's component letter came from: the authority's attribution
+ *  of the designation to a component, or the WDS letter, rendered because a
+ *  sibling owns the same designation. */
+export type OwnLetter = { source: 'stated' | 'sibling-owns'; comp: string };
+
+export type DisplayName<K = unknown> =
+  | {
+    kind: 'own';
+    label: string;
+    tier: NameTier;
+    letter: OwnLetter | null;
+  }
+  | {
+    kind: 'borrowed';
+    label: string;
+    /** The anchor's tier. */
+    tier: NameTier;
+    anchorKey: K;
+    reason: BorrowReason;
+    /** The WDS component letter, always rendered. */
+    comp: string;
+  };
+
+/** A component letter is part of the label. */
+export function isLettered(name: DisplayName): boolean {
+  return name.kind === 'borrowed' || name.letter !== null;
+}
+
+function borrowReason(
+  own: { base: string; tier: NameTier } | undefined,
+  anchorSet: DesignationSet,
+  anchorTier: NameTier,
+): BorrowReason | null {
+  if (own === undefined) return 'no-own-designation';
+  // A designation the SYSTEM also carries names the system, not this
+  // component: ξ UMa B's Flamsteed number 53 is ξ UMa's, so it reads
+  // "Alula Australis B" rather than "53 UMa" — and the same holds of
+  // a catalogue number the anchor displays too.
+  if (designationAtTier(anchorSet, own.tier) === own.base) return 'system-designation';
+  if (!SKY_DESIGNATION_TIERS.has(own.tier)
+      && (TIER_RANK.get(anchorTier) ?? 0) < (TIER_RANK.get(own.tier) ?? 0)) {
+    return 'outranked-identifier';
+  }
+  return null;
 }
 
 /** The letter turns on OWNERSHIP, not on label uniqueness: a sibling that
@@ -196,7 +240,7 @@ export interface DisplayName {
  *  than reverting to the bare designation its siblings no longer claim. */
 export function resolveDisplayNames<K>(
   inputs: readonly DisplayNameInput<K>[],
-): Map<K, DisplayName> {
+): Map<K, DisplayName<K>> {
   const own = new Map<K, { base: string; tier: NameTier }>();
   const byKey = new Map<K, DisplayNameInput<K>>();
   const owners = new Map<string, number>();
@@ -208,7 +252,7 @@ export function resolveDisplayNames<K>(
     owners.set(o.base, (owners.get(o.base) ?? 0) + 1);
   }
 
-  const out = new Map<K, DisplayName>();
+  const out = new Map<K, DisplayName<K>>();
   for (const input of inputs) {
     const o = own.get(input.key);
     // Two DIFFERENT identifiers of one tier trade nothing. The anchor is
@@ -217,38 +261,44 @@ export function resolveDisplayNames<K>(
     const anchorKey = input.anchorKey === input.key ? undefined : input.anchorKey;
     const anchorInput = anchorKey === undefined ? undefined : byKey.get(anchorKey);
     const anchor = anchorKey === undefined ? undefined : own.get(anchorKey);
-    const borrows = anchor !== undefined && anchorInput !== undefined
-      && (o === undefined
-        // A designation the SYSTEM also carries names the system, not this
-        // component: ξ UMa B's Flamsteed number 53 is ξ UMa's, so it reads
-        // "Alula Australis B" rather than "53 UMa" — and the same holds of
-        // a catalogue number the anchor displays too.
-        || designationAtTier(anchorInput.set, o.tier) === o.base
-        || (!SKY_DESIGNATION_TIERS.has(o.tier)
-          && (TIER_RANK.get(anchor.tier) ?? 0) < (TIER_RANK.get(o.tier) ?? 0)));
-    if (borrows && anchor !== undefined && input.component !== undefined) {
-      const base = systemBaseOf(anchor.base, anchorInput.component);
+    const reason = anchor !== undefined && anchorInput !== undefined
+      ? borrowReason(o, anchorInput.set, anchor.tier) : null;
+    if (reason !== null && anchor !== undefined && anchorKey !== undefined
+        && input.component !== undefined) {
+      const base = systemBaseOf(anchor.base, anchorInput?.component);
       out.set(input.key, {
+        kind: 'borrowed',
         label: `${base} ${input.component}`,
         tier: anchor.tier,
-        borrowed: true,
-        lettered: true,
+        anchorKey,
+        reason,
+        comp: input.component,
       });
       continue;
     }
     if (o === undefined) continue;
-    const letter = input.statedComponent ?? input.component;
-    const lettered = !isApprovedName(o.tier)
-      && letter !== undefined
-      && (input.statedComponent !== undefined || (owners.get(o.base) ?? 0) > 1);
+    const letter = ownLetter(input, o, owners);
     out.set(input.key, {
-      label: lettered ? `${o.base} ${letter}` : o.base,
+      kind: 'own',
+      label: letter === null ? o.base : `${o.base} ${letter.comp}`,
       tier: o.tier,
-      borrowed: false,
-      lettered,
+      letter,
     });
   }
   return out;
+}
+
+function ownLetter<K>(
+  input: DisplayNameInput<K>,
+  own: { base: string; tier: NameTier },
+  owners: ReadonlyMap<string, number>,
+): OwnLetter | null {
+  if (isApprovedName(own.tier)) return null;
+  if (input.statedComponent !== undefined) return { source: 'stated', comp: input.statedComponent };
+  if (input.component !== undefined && (owners.get(own.base) ?? 0) > 1) {
+    return { source: 'sibling-owns', comp: input.component };
+  }
+  return null;
 }
 
 /** `p` enters as the name tier — the build wrote it from this same ladder —
@@ -281,7 +331,7 @@ export function designationSetOfEntry(
 export function displayNamesFromSearchIndex(
   raw: readonly SearchEntry[],
   constellations: readonly { code: string }[],
-): Map<number, DisplayName> {
+): Map<number, DisplayName<number>> {
   return resolveDisplayNames(raw.map((entry): DisplayNameInput<number> => {
     const input: DisplayNameInput<number> = {
       key: entry.i,

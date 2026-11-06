@@ -397,7 +397,7 @@ describe('catalog-pure / search-index wire contract', () => {
     gould: null, gouldHalf: null,
     aliases: [], flam: null, hip: null, hd: null, hr: null,
     hdAlt: [], hrAlt: [], gl: null, gcvsName: null, conIndex: NO_CONSTELLATION_INDEX,
-    desigConIndex: NO_CONSTELLATION_INDEX, spectDisplay: null, ...over,
+    desigCon: { via: 'none' }, spectDisplay: null, ...over,
   });
 
   it('buildSearchEntry emits every populated wire key', () => {
@@ -408,7 +408,7 @@ describe('catalog-pure / search-index wire contract', () => {
         gouldHalf: 'Cau', aliases: ['Alhabor'], hip: 32349, hd: 48915,
         hr: 2491, hdAlt: [48916], hrAlt: [2492],
         gl: 'GJ 244', gcvsName: 'R CrB', conIndex: 34,
-        desigConIndex: 3, spectDisplay: 'A1V',
+        desigCon: { index: 3 }, spectDisplay: 'A1V',
       }),
       0,
       { comp: 'B', primaryIdx: 5 },
@@ -439,16 +439,16 @@ describe('catalog-pure / search-index wire contract', () => {
     // Agreeing (the overwhelming majority) and unknown-designation records
     // both ride the reader's `dc ?? c` fallback, so neither pays wire cost.
     const agreeing = buildSearchEntry(
-      source({ flam: 67, conIndex: 34, desigConIndex: 34 }), 0, undefined,
+      source({ flam: 67, conIndex: 34, desigCon: { index: 34 } }), 0, undefined,
     );
     expect(agreeing).not.toHaveProperty('dc');
     const unknown = buildSearchEntry(
-      source({ flam: 67, conIndex: 34, desigConIndex: NO_CONSTELLATION_INDEX }), 0, undefined,
+      source({ flam: 67, conIndex: 34, desigCon: { via: 'none' } }), 0, undefined,
     );
     expect(unknown).not.toHaveProperty('dc');
     // ρ Aql's shape: positional Delphinus, designation Aquila.
     const diverging = buildSearchEntry(
-      source({ bayer: 'Rho', flam: 67, hip: 99742, conIndex: 31, desigConIndex: 3 }),
+      source({ bayer: 'Rho', flam: 67, hip: 99742, conIndex: 31, desigCon: { index: 3 } }),
       0, undefined,
     );
     expect(diverging?.c).toBe(31);
@@ -460,14 +460,14 @@ describe('catalog-pure / search-index wire contract', () => {
     // <Con>", so carrying the field would be 60-odd bytes of wire for a
     // reader that cannot consult it.
     const byNumber = buildSearchEntry(
-      source({ hip: 7, hd: 9, conIndex: 31, desigConIndex: 3 }), 0, undefined,
+      source({ hip: 7, hd: 9, conIndex: 31, desigCon: { index: 3 } }), 0, undefined,
     );
     expect(byNumber).not.toHaveProperty('dc');
     // A component alias composes "<primary designation> <letter>" against
     // this entry's constellation, so it does need it (Fomalhaut C sits in
     // Aquarius but is "α PsA C").
     const component = buildSearchEntry(
-      source({ proper: 'Fomalhaut C', conIndex: 4, desigConIndex: 65 }),
+      source({ proper: 'Fomalhaut C', conIndex: 4, desigCon: { index: 65 } }),
       0, { comp: 'C', primaryIdx: 5 },
     );
     expect(component?.dc).toBe(65);

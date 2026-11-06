@@ -59,3 +59,19 @@ export function resolveDesignationConIndex(
   const byHip = hip === null ? undefined : index.byHip.get(hip);
   return byHip ?? NO_CONSTELLATION_INDEX;
 }
+
+/** A record's designation constellation and the cascade tier that wrote it.
+ *  An authority tier names the IV/27A value it overwrote with a different one. */
+export type DesignationCon =
+  | { via: 'none' }
+  | { via: 'iv27a' | 'gcvs' | 'anchor'; index: number }
+  | { via: 'wgsn-bayer' | 'wgsn-gould'; index: number; displaced: number | null };
+
+export type StatedDesignationCon = Exclude<DesignationCon, { via: 'none' }>;
+
+export const NO_DESIGNATION_CON: DesignationCon = { via: 'none' };
+
+/** A companion's designation constellation, taken from its system anchor. */
+export function inheritedDesignationCon(anchor: DesignationCon): DesignationCon {
+  return anchor.via === 'none' ? NO_DESIGNATION_CON : { via: 'anchor', index: anchor.index };
+}

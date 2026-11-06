@@ -5,7 +5,8 @@ import { describe, expect, it } from 'vitest';
 
 import { FLAG_HAS_NAME, NO_CONSTELLATION_INDEX } from '../../../src/catalog-format/record/catalog-pure';
 import type { ComponentDesignation } from '../companions/record-index/record-index';
-import { assignDisplayNames, type DisplayNameSource } from './display-names';
+import { NO_DESIGNATION_CON } from '../classic-ids/designation-constellation-pure';
+import { assignDisplayNames, type DisplayNameResult, type DisplayNameSource } from './display-names';
 
 const CONSTELLATIONS = [{ code: 'Ori' }, { code: 'Cep' }, { code: 'CMa' }];
 const ORI = 0;
@@ -28,13 +29,18 @@ function star(over: Partial<DisplayNameSource> = {}): DisplayNameSource {
     hr: null,
     gl: null,
     conIndex: NO_CONSTELLATION_INDEX,
-    desigConIndex: NO_CONSTELLATION_INDEX,
+    desigCon: NO_DESIGNATION_CON,
     flags: 0,
     ...over,
   };
 }
 
 const noComponents = new Map<number, ComponentDesignation>();
+
+function labelOf(out: DisplayNameResult, i: number): string | undefined {
+  const { name } = out.records[i];
+  return name.kind === 'unlabelled' ? undefined : name.label;
+}
 
 describe('assignDisplayNames', () => {
   it('writes only the NAME tiers into proper, and FLAG_HAS_NAME with them', () => {
@@ -43,7 +49,7 @@ describe('assignDisplayNames', () => {
     // the runtime composes it off the search index.
     const stars = [
       star({ iauName: 'Sirius', hip: 32349 }),
-      star({ bayer: 'θ', bayerSup: 1, desigConIndex: ORI, flags: FLAG_HAS_NAME }),
+      star({ bayer: 'θ', bayerSup: 1, desigCon: { via: 'iv27a', index: ORI }, flags: FLAG_HAS_NAME }),
       star({ hip: 11767 }),
     ];
     const out = assignDisplayNames(stars, noComponents, CONSTELLATIONS, new Map(), [1, 2, 3]);
@@ -52,24 +58,24 @@ describe('assignDisplayNames', () => {
     expect(stars.map((s) => (s.flags & FLAG_HAS_NAME) !== 0)).toEqual([true, false, false]);
     expect(out.counts.namingNameTable).toBe(1);
     expect(out.counts.namingTier).toMatchObject({ iau: 1, bayer: 1, catalogue: 1 });
-    expect(out.labels.get(1)?.label).toBe('θ¹ Ori');
+    expect(labelOf(out, 1)).toBe('θ¹ Ori');
   });
 
   it('renders a designation against dc, never the positional constellation', () => {
     // ρ Aql sits in Delphinus and is ρ Aquilae permanently; the positional
     // index would rename it (/docs/star-naming.md#6-rendering--glyphs-everywhere-no-fallback-path).
-    const stars = [star({ bayer: 'δ', conIndex: CMA, desigConIndex: 1 })];
+    const stars = [star({ bayer: 'δ', conIndex: CMA, desigCon: { via: 'iv27a', index: 1 } })];
     assignDisplayNames(stars, noComponents, CONSTELLATIONS, new Map(), [1]);
     expect(
-      assignDisplayNames(stars, noComponents, CONSTELLATIONS, new Map(), [1])
-        .labels.get(0)?.label,
+      labelOf(assignDisplayNames(stars, noComponents, CONSTELLATIONS, new Map(), [1]), 0),
     ).toBe('δ Cep');
   });
 
   it('falls back to the positional constellation where no dc is stated', () => {
     const stars = [star({ bayer: 'δ', conIndex: CMA })];
     const out = assignDisplayNames(stars, noComponents, CONSTELLATIONS, new Map(), [1]);
-    expect(out.labels.get(0)?.label).toBe('δ CMa');
+    expect(labelOf(out, 0)).toBe('δ CMa');
+    expect(out.records[0].dc).toEqual({ from: 'positional', index: CMA });
   });
 
   it('counts a record with nothing to display as unlabelled', () => {
@@ -78,7 +84,7 @@ describe('assignDisplayNames', () => {
     expect(out.counts.namingUnlabelled).toBe(1);
     expect(stars[0].proper).toBeNull();
     expect(stars[0].flags & FLAG_HAS_NAME).toBe(0);
-    expect(out.labels.has(0)).toBe(false);
+    expect(out.records[0].name).toEqual({ kind: 'unlabelled' });
   });
 
   it('applies a curated override above the authority name, keyed on SID', () => {
@@ -122,7 +128,7 @@ describe('assignDisplayNames', () => {
     ]);
     const out = assignDisplayNames(stars, components, CONSTELLATIONS, new Map(), [1, 2]);
     expect(stars[0].proper).toBe('Sirius');
-    expect(out.labels.get(1)?.label).toBe('Sirius B');
+    expect(labelOf(out, 1)).toBe('Sirius B');
     expect(out.counts.namingBorrowed).toBe(1);
     // A borrowed label carries the ANCHOR's tier, so a component borrowing
     // an approved name reaches the name table too — which is why the table
@@ -135,12 +141,12 @@ describe('assignDisplayNames', () => {
   it('keeps a borrowed DESIGNATION base out of the name table', () => {
     // The same borrow off a Bayer anchor composes at runtime instead: only
     // the NAME tiers reach catalog.bin.
-    const stars = [star({ bayer: 'θ', bayerSup: 1, desigConIndex: ORI }), star()];
+    const stars = [star({ bayer: 'θ', bayerSup: 1, desigCon: { via: 'iv27a', index: ORI } }), star()];
     const components = new Map<number, ComponentDesignation>([
       [1, { comp: 'C', primaryIdx: 0 }],
     ]);
     const out = assignDisplayNames(stars, components, CONSTELLATIONS, new Map(), [1, 2]);
-    expect(out.labels.get(1)?.label).toBe('θ¹ Ori C');
+    expect(labelOf(out, 1)).toBe('θ¹ Ori C');
     expect(stars.map((s) => s.proper)).toEqual([null, null]);
     expect(out.counts.namingNameTable).toBe(0);
   });

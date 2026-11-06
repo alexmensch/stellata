@@ -27,6 +27,7 @@ import {
 } from '../../../../src/catalog-format/record/catalog-pure';
 import { CONSTELLATIONS } from '../constellations/constellations';
 import { makeStar } from '../star-fixture';
+import { NO_DESIGNATION_CON } from '../../classic-ids/designation-constellation-pure';
 
 const conIndexOf = (code: string): number =>
   CONSTELLATIONS.findIndex((c) => c.code.toLowerCase() === code);
@@ -312,15 +313,15 @@ describe('gcvs-parse / the designation as its own constellation authority', () =
     // check reading a positional or editorial cell can see. Neither carries a
     // Bayer or Flamsteed designation, so IV/27A has no row and the variable
     // name is the only nomenclature there is.
-    const ltVul = makeStar({ hip: 93603, desigConIndex: NO_CONSTELLATION_INDEX });
-    const ryCen = makeStar({ hip: 71, desigConIndex: NO_CONSTELLATION_INDEX });
+    const ltVul = makeStar({ hip: 93603, desigCon: NO_DESIGNATION_CON });
+    const ryCen = makeStar({ hip: 71, desigCon: NO_DESIGNATION_CON });
     const r = applyVariability([ltVul, ryCen], new Map<string, VarStarData>(), {
       byHip: new Map([[93603, 'LT Vul'], [71, 'RY Cen']]),
       byHd: new Map(),
       byGaia: new Map(),
     });
-    expect(ltVul.desigConIndex).toBe(conIndexOf('vul'));
-    expect(ryCen.desigConIndex).toBe(conIndexOf('cen'));
+    expect(ltVul.desigCon).toEqual({ via: 'gcvs', index: conIndexOf('vul') });
+    expect(ryCen.desigCon).toEqual({ via: 'gcvs', index: conIndexOf('cen') });
     expect(r.desigConSupplied).toBe(2);
   });
 
@@ -331,36 +332,36 @@ describe('gcvs-parse / the designation as its own constellation authority', () =
     // consumers compose the label out of this field, while a GCVS label reads
     // the constellation out of the designation string and loses only its
     // expanded alias.
-    const tyCrv = makeStar({ hip: 58587, desigConIndex: conIndexOf('crt') });
+    const tyCrv = makeStar({ hip: 58587, desigCon: { via: 'iv27a', index: conIndexOf('crt') } });
     const r = applyVariability([tyCrv], new Map<string, VarStarData>(), {
       byHip: new Map([[58587, 'TY Crv']]), byHd: new Map(), byGaia: new Map(),
     });
-    expect(tyCrv.desigConIndex).toBe(conIndexOf('crt'));
+    expect(tyCrv.desigCon).toEqual({ via: 'iv27a', index: conIndexOf('crt') });
     expect(r.desigConSupplied).toBe(0);
   });
 
   it('fills an absent designation constellation rather than only correcting one', () => {
     // The shape every spine-driven record now arrives in: the walk sets no
     // designation constellation, so the GCVS name is the only source there is.
-    const orphan = makeStar({ hip: 74, desigConIndex: NO_CONSTELLATION_INDEX });
+    const orphan = makeStar({ hip: 74, desigCon: NO_DESIGNATION_CON });
     const r = applyVariability([orphan], new Map<string, VarStarData>(), {
       byHip: new Map([[74, 'DX Aqr']]), byHd: new Map(), byGaia: new Map(),
     });
-    expect(orphan.desigConIndex).toBe(conIndexOf('aqr'));
+    expect(orphan.desigCon).toEqual({ via: 'gcvs', index: conIndexOf('aqr') });
     expect(r.desigConSupplied).toBe(1);
   });
 
   it('leaves an already-set index alone when the designation agrees or is silent', () => {
     // The dominant post-IV/27A shape: 698 records where the two agree.
-    const agreeing = makeStar({ hip: 72, desigConIndex: conIndexOf('and') });
-    const silent = makeStar({ hip: 73, desigConIndex: conIndexOf('dor') });
+    const agreeing = makeStar({ hip: 72, desigCon: { via: 'iv27a', index: conIndexOf('and') } });
+    const silent = makeStar({ hip: 73, desigCon: { via: 'iv27a', index: conIndexOf('dor') } });
     const r = applyVariability([agreeing, silent], new Map<string, VarStarData>(), {
       byHip: new Map([[72, 'R And'], [73, 'LMC V0471']]),
       byHd: new Map(),
       byGaia: new Map(),
     });
-    expect(agreeing.desigConIndex).toBe(conIndexOf('and'));
-    expect(silent.desigConIndex).toBe(conIndexOf('dor'));
+    expect(agreeing.desigCon).toEqual({ via: 'iv27a', index: conIndexOf('and') });
+    expect(silent.desigCon).toEqual({ via: 'iv27a', index: conIndexOf('dor') });
     expect(r.desigConSupplied).toBe(0);
   });
 });

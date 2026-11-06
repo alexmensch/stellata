@@ -112,7 +112,8 @@ import {
   applyStarNames,
   loadStarNamingInputs,
 } from './naming/apply-star-names';
-import { assignDisplayNames } from './naming/display-names';
+import { assignDisplayNames, type NamedRecord } from './naming/display-names';
+import { NAMING_CODES, NAMING_INVARIANTS, NAMING_LINEAGE_BUDGET, namingLineageLines } from './naming/naming-lineage-pure';
 import { readStars, type ReadStarsOptions, type Star } from './parse/stars-parse';
 import {
   PARKED_COUNT_KEY,
@@ -162,6 +163,7 @@ import { loadStoredEdges } from '../sid/stored-edges';
 import { CATALOG_PARTITION } from '../../src/catalog-format/pipeline-outputs/data-files';
 import {
   PROMOTION_LINEAGE, PLACEMENT_LINEAGE, COHERENCE_LINEAGE, ALLOCATION_LINEAGE, ALLOCATION_SIDS_STEM, MEMBERSHIP_LINEAGE,
+  NAMING_LINEAGE,
 } from '../../src/catalog-format/pipeline-outputs/lineage-files';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -222,6 +224,23 @@ function coherenceLineage(verdicts: readonly SystemVerdict[], stars: readonly St
     joins: () => [],
     budget: COHERENCE_LINEAGE_BUDGET,
     invariants: [],
+    argv: process.argv.slice(2),
+    upstream: UPSTREAM_LINEAGE,
+  });
+}
+
+// A function of its own so its lines are unreachable once it returns, as coherence's are.
+function namingLineage(records: readonly NamedRecord[], stars: readonly Star[], stepInputs: FileHashes) {
+  return stageLineage({
+    layout: LINEAGE_LAYOUT,
+    spec: NAMING_LINEAGE,
+    inputs: stepInputs,
+    diffed: 'naming',
+    lines: namingLineageLines(records, stars, CONSTELLATIONS),
+    render: (sorted) => ({ naming: stageLineageText(NAMING_CODES, sorted) }),
+    joins: () => [],
+    budget: NAMING_LINEAGE_BUDGET,
+    invariants: NAMING_INVARIANTS,
     argv: process.argv.slice(2),
     upstream: UPSTREAM_LINEAGE,
   });
@@ -992,6 +1011,7 @@ export async function main() {
   const display = assignDisplayNames(
     stars, componentDesignations, CONSTELLATIONS, NAME_OVERRIDES.read(), recordSids,
   );
+  const namingEmission = namingLineage(display.records, stars, inputHashesAtStart);
   Object.assign(counts, {
     namingTierOverride: display.counts.namingTier.override,
     namingTierIau: display.counts.namingTier.iau,
@@ -1011,7 +1031,7 @@ export async function main() {
     namingDuplicateRecords: display.counts.namingDuplicateRecords,
   });
   console.log(
-    `Display names: ${display.labels.size} composed ` +
+    `Display names: ${stars.length - display.counts.namingUnlabelled} composed ` +
       `(${display.counts.namingNameTable} names in catalog.bin, ` +
       `${display.counts.namingBorrowed} borrowed from a system anchor, ` +
       `${display.counts.namingLettered} lettered, ` +
@@ -1299,10 +1319,12 @@ export async function main() {
     ...coherenceEmission.files,
     ...lineage.files,
     ...allocationLineage.files,
+    ...namingEmission.files,
     ...registryTexts(CATALOG_PARTITION, allocation.minted, allocation.events),
   };
   const members = new Map([
     ...chunks, ...placementEmission.members, ...coherenceEmission.members, ...lineage.members, ...allocationLineage.members,
+    ...namingEmission.members,
   ]);
 
   emitArtifacts({
@@ -1311,6 +1333,7 @@ export async function main() {
     members,
     checks: [
       ...placementEmission.checks, ...coherenceEmission.checks, ...lineage.checks, ...allocationLineage.checks,
+      ...namingEmission.checks,
       buildCountsCheck(counts), distanceOutliersCheck(stars),
       heap.check(),
     ],

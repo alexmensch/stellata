@@ -10,7 +10,7 @@ import { DATA_FILES, registryFiles, CATALOG_PARTITION } from '../../src/catalog-
 import { PUBLIC_FILES } from '../../src/catalog-format/public-artifacts/public-artifacts';
 import {
   PROMOTION_LINEAGE, PLACEMENT_LINEAGE, LINEAGE_REPO_LAYOUT, stageFamilies, stageOutputFiles,
-  ALLOCATION_LINEAGE, COHERENCE_LINEAGE,
+  ALLOCATION_LINEAGE, COHERENCE_LINEAGE, NAMING_LINEAGE,
 } from '../../src/catalog-format/pipeline-outputs/lineage-files';
 
 const MANIFEST = publicFile(CATALOG_MANIFEST_FILENAME);
@@ -29,6 +29,7 @@ export const CATALOG_OUTPUTS = declareOutputs(
     ...stageOutputFiles(LINEAGE_REPO_LAYOUT, COHERENCE_LINEAGE),
     ...stageOutputFiles(LINEAGE_REPO_LAYOUT, PROMOTION_LINEAGE),
     ...stageOutputFiles(LINEAGE_REPO_LAYOUT, ALLOCATION_LINEAGE),
+    ...stageOutputFiles(LINEAGE_REPO_LAYOUT, NAMING_LINEAGE),
     ...registryFiles(CATALOG_PARTITION),
   },
   [
@@ -37,5 +38,6 @@ export const CATALOG_OUTPUTS = declareOutputs(
     ...stageFamilies(LINEAGE_REPO_LAYOUT, COHERENCE_LINEAGE),
     ...stageFamilies(LINEAGE_REPO_LAYOUT, PROMOTION_LINEAGE),
     ...stageFamilies(LINEAGE_REPO_LAYOUT, ALLOCATION_LINEAGE),
+    ...stageFamilies(LINEAGE_REPO_LAYOUT, NAMING_LINEAGE),
   ],
 );

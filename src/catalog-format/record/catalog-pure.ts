@@ -697,7 +697,8 @@ export interface SearchEntrySource {
   gl: string | null;
   gcvsName: string | null;
   conIndex: number;
-  desigConIndex: number;
+  /** The constellation the record's designations are named for, where one is stated. */
+  desigCon: { readonly index: number } | { readonly via: 'none' };
   spectDisplay: string | null;
 }
 
@@ -807,10 +808,8 @@ export function buildSearchEntry(
   const hasConRelativeDesignation =
     Boolean(entry.b) || entry.f !== undefined || entry.gd !== undefined
     || Boolean(entry.g) || component !== undefined;
-  if (hasConRelativeDesignation
-      && s.desigConIndex !== NO_CONSTELLATION_INDEX
-      && s.desigConIndex !== s.conIndex) {
-    entry.dc = s.desigConIndex;
+  if (hasConRelativeDesignation && 'index' in s.desigCon && s.desigCon.index !== s.conIndex) {
+    entry.dc = s.desigCon.index;
   }
   return entry;
 }

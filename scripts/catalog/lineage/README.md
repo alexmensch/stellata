@@ -15,7 +15,9 @@ derivation, admission and component counters are still kept by hand beside
 them (stellata-hhaw.45.23). Promotion's per-row counters all fold from its
 outcomes; its post-passes act on records and keep their own. Coherence's
 counters fold from its verdicts, still under their `systemCoherence*` keys
-until those keys become its codes (stellata-hhaw.45.23).
+until those keys become its codes (stellata-hhaw.45.23). Naming's display
+counters fold from its outcomes the same way, under their `naming*` keys
+(stellata-hhaw.45.23).
 
 ## Files in this area
 
@@ -219,6 +221,7 @@ declares its invariants beside its codes and hands them to `stageLineage`,
 which checks every line before emission: a violation is a failed check, so
 nothing lands, and the message lists the offending rows' keys and params.
 Placement's (`PLACEMENT_INVARIANTS`): no `distance.bailer-jones-absent` row.
+Naming's (`NAMING_INVARIANTS`): no `dc.none` row.
 Membership's (`MEMBERSHIP_INVARIANTS`): no `admit.magnitude` row whose
 `own_candidate` is outside `ALLOWED_OWN_CANDIDATE_REASONS`
 ([The additions](../membership/additions/README.md#grouping-and-admission)), and no
@@ -295,6 +298,9 @@ Coherence, measured 2026-11-05: one row per record that exists before
 promotion mints companions, all but about 4,600 of them `not-applicable`
 (66 MB plain), 7.5 MB gzipped in 0.7 s without a diff;
 `COHERENCE_LINEAGE_BUDGET` pins 8.2 MB and 15 s.
+Naming, measured 2026-11-05: 1,017,955 rows, one name row per record plus its
+refused tiers, letter and designation constellation (78 MB plain), 9.7 MB
+gzipped in 2.7 s without a diff; `NAMING_LINEAGE_BUDGET` pins 10.6 MB and 15 s.
 Placement, measured 2026-10-30: 3,872,657 rows (349 MB plain, 31.0 MB
 gzipped) in 3.2 s without a diff and 8.1 s with one against a full
 baseline; `PLACEMENT_LINEAGE_BUDGET` pins 34 MB and 60 s: a CI run that diffs against a restored merge-base baseline took 36.5 s (2026-11-05). A file that size outruns
@@ -401,6 +407,11 @@ its module, in [Placement lineage](../distance/README.md#placement-lineage).
 
 `build:catalog`'s system distance coherence is the third stage; its contract
 lives beside its module, in [Coherence lineage](../multiplicity/README.md#coherence-lineage).
+
+## The naming stage
+
+`build:catalog`'s display-name pass is the sixth stage, after allocation; its
+contract lives beside its module, in [Naming lineage](../naming/README.md#naming-lineage).
 
 ## The promotion stage
 

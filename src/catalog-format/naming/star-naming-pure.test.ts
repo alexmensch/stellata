@@ -228,6 +228,37 @@ describe('component letters', () => {
   });
 });
 
+describe('how a label was reached', () => {
+  const name = (inputs: DisplayNameInput<string>[], key: string) => resolveDisplayNames(inputs).get(key);
+
+  it('names the reason a component borrowed', () => {
+    const inputs: DisplayNameInput<string>[] = [
+      { key: 'a', set: { iauName: 'Alula Australis', bayer: 'ξ', flamsteed: 53, dc: 'UMa' }, component: 'A', anchorKey: 'a' },
+      { key: 'b', set: { flamsteed: 53, dc: 'UMa' }, component: 'B', anchorKey: 'a' },
+      { key: 'c', set: { hip: 45064 }, component: 'C', anchorKey: 'a' },
+      { key: 'd', set: {}, component: 'D', anchorKey: 'a' },
+    ];
+    expect(name(inputs, 'b')).toEqual({
+      kind: 'borrowed', label: 'Alula Australis B', tier: 'iau', anchorKey: 'a', reason: 'system-designation', comp: 'B',
+    });
+    expect(name(inputs, 'c')).toMatchObject({ kind: 'borrowed', reason: 'outranked-identifier' });
+    expect(name(inputs, 'd')).toMatchObject({ kind: 'borrowed', reason: 'no-own-designation' });
+    expect(name(inputs, 'a')).toEqual({ kind: 'own', label: 'Alula Australis', tier: 'iau', letter: null });
+  });
+
+  it('names where an own label\'s letter came from', () => {
+    const owned: DisplayNameInput<string>[] = ['Aa', 'B'].map((comp) => ({
+      key: comp, set: { bayer: 'θ', bayerSup: 1, dc: 'Ori' }, component: comp, anchorKey: 'Aa',
+    }));
+    expect(name(owned, 'Aa')).toMatchObject({ kind: 'own', letter: { source: 'sibling-owns', comp: 'Aa' } });
+    expect(name(owned, 'B')).toMatchObject({ kind: 'borrowed', reason: 'system-designation', comp: 'B' });
+    const stated: DisplayNameInput<string>[] = [
+      { key: 'b', set: { bayer: 'p', dc: 'Eri' }, component: 'A', statedComponent: 'B', anchorKey: 'b' },
+    ];
+    expect(name(stated, 'b')).toMatchObject({ kind: 'own', letter: { source: 'stated', comp: 'B' } });
+  });
+});
+
 describe('borrowing the system base', () => {
   it('takes the anchor designation over a bare catalogue number (σ² UMa C)', () => {
     const inputs: DisplayNameInput<string>[] = [
@@ -321,8 +352,10 @@ describe('displayNamesFromSearchIndex', () => {
       { i: 2, b: 'θ', bx: 1, bc: 'C', c: 1, cl: 'C', cp: 2 },
     ], CONS);
     expect(composed.get(0)?.label).toBe('Sirius');
-    expect(composed.get(1)).toMatchObject({ label: 'Sirius B', borrowed: true });
-    expect(composed.get(2)).toMatchObject({ label: 'θ¹ Ori C', lettered: true });
+    expect(composed.get(1)).toMatchObject({ kind: 'borrowed', label: 'Sirius B', anchorKey: 0 });
+    expect(composed.get(2)).toMatchObject({
+      kind: 'own', label: 'θ¹ Ori C', letter: { source: 'stated', comp: 'C' },
+    });
   });
 
   it('renders against dc, never the positional constellation', () => {

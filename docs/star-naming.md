@@ -339,8 +339,9 @@ committed as a test fixture:
    today still resolves the same star. A displaced name becomes an alias or
    the gate fails. This is the hard invariant.
 2. <a id="82-display-changes-are-enumerated"></a>**Display changes are enumerated, not counted.** Every record whose
-   displayed name changes appears with old name, new name, and the tier that
-   won. Reviewed once, then pinned.
+   displayed name changes appears with old name and new name, reviewed once,
+   then pinned; the tier that won, and the tiers it refused, are the record's
+   [naming lineage](/scripts/catalog/naming/README.md#naming-lineage) rows.
 3. <a id="83-tier-routing-counts-pinned"></a>**Tier routing counts pinned** in build-counts: records named per tier,
    IAU names matched / unmatched / unreachable, override rows, alias count,
    and the [§ 2](#2-authority--one-source-approves-names-everything-else-compiles-them) residual classes.

@@ -94,6 +94,24 @@ membership.label.overlay-wins	membership	none	live		7.1.6	The overlay and the sp
 membership.label.override-spine	membership	none	live		7.1.6	A curated override keeps the spine's designation over the overlay's.
 membership.label.override-value	membership	none	live		7.1.6	A curated override sets the designation.
 membership.label.suppressed-collision	membership	none	live		7.1.6	The overlay's designation already names another record, so it is not added.
+naming.dc.anchor	naming	none	live		7.1.12	The record's designations render against the designation constellation of its system anchor.
+naming.dc.displaced	naming	none	live		7.1.12	The IV/27A constellation, refused because the IAU WGSN designation names a different one.
+naming.dc.gcvs	naming	none	live		7.1.12	The record's designations render against the constellation its GCVS designation names.
+naming.dc.iv27a	naming	none	live		7.1.12	The record's designations render against the constellation IV/27A gives its HD or HIP number.
+naming.dc.none	naming	none	live		7.1.12	No tier states a designation constellation and the record has no positional one, so its Bayer, Flamsteed and Gould designations cannot render.
+naming.dc.positional	naming	none	live		7.1.12	No tier states a designation constellation, so the record's designations render against the constellation its position lies in.
+naming.dc.wgsn-bayer	naming	none	live		7.1.12	The record's designations render against the constellation the IAU WGSN Bayer designation is named for.
+naming.dc.wgsn-gould	naming	none	live		7.1.12	The record's designations render against the constellation the IAU WGSN Gould designation is named for.
+naming.letter.borrowed	naming	none	live		7.1.12	The label carries the record's WDS component letter after its system anchor's borrowed base.
+naming.letter.sibling-owns	naming	none	live		7.1.12	The label carries the record's WDS component letter because another record owns the same designation.
+naming.letter.stated	naming	none	live		7.1.12	The label carries the component letter the naming authority attributes the record's designation to.
+naming.name.borrowed-over	naming	none	live		7.1.12	A designation the record carries, refused because it displays its system anchor's base instead.
+naming.name.borrowed.no-own-designation	naming	none	live		7.1.12	The record is a WDS component with no designation of its own, so it displays its system anchor's base with its component letter.
+naming.name.borrowed.outranked-identifier	naming	none	live		7.1.12	The record's own designation is a GCVS serial or catalogue number ranked below its system anchor's tier, so it displays the anchor's base with its component letter.
+naming.name.borrowed.system-designation	naming	none	live		7.1.12	The record's own designation is one its system anchor also carries, so it displays the anchor's base with its component letter.
+naming.name.lower-tier	naming	none	live		7.1.12	A designation the record carries, refused because a higher tier of the ladder supplied its label.
+naming.name.own	naming	none	live		7.1.12	The record displays the highest tier of the naming ladder it carries in its own right.
+naming.name.unlabelled	naming	none	live		7.1.12	The record carries nothing the ladder renders and has no anchor to borrow from, so the runtime displays its Gaia DR3 or SID fallback.
 placement.direction.cns5	placement	none	live		7.1.6	The record's own GJ in CNS5, which no tier above reaches.
 placement.direction.curated	placement	none	live		7.1.6	Sol: the direction is arbitrary at distance zero.
 placement.direction.gaia-2p	placement	none	live		7.1.6	The record's own Gaia DR3 position-only solution, which no Hipparcos-2 row covers.

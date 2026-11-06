@@ -12,6 +12,7 @@ import {
   bayerDesignation,
   displayNamesFromSearchIndex,
   gouldDesignation,
+  isLettered,
 } from './star-naming-pure';
 import { formatGcvsDesignation } from './star-designations';
 export interface FuzzyEntry<Kind extends string = 'star'> {
@@ -162,7 +163,7 @@ export interface SearchIndex<Kind extends string = 'star'> {
 // its superscript to disambiguate α¹ / α² even though the search labels
 // drop it (see buildBayerLabels).
 export function buildSearchIndex<Kind extends string = 'star'>(
-  raw: SearchEntry[],
+  raw: readonly SearchEntry[],
   constellations: { code: string; name: string }[],
   /** `../../client/typeahead/README.md#the-search-index-worker`. */
   precomposed?: ReturnType<typeof displayNamesFromSearchIndex>,
@@ -216,7 +217,7 @@ export function buildSearchIndex<Kind extends string = 'star'>(
     // component composite ("θ¹ Ori C", "HIP 82676 Ab") that exists nowhere
     // else.
     const indexedLabel = display !== undefined
-      && (properName !== null || display.lettered || display.borrowed)
+      && (properName !== null || isLettered(display))
       ? display.label : null;
     const hasNamedDisplay = properName !== null || bayerDisplay !== null;
 

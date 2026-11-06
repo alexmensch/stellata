@@ -46,6 +46,7 @@ function makeRecord(over: Partial<CatalogRecord>): CatalogRecord {
     mhGspspec: null,
     name: null,
     conCode: null,
+    sid: 1,
     ...over,
   };
 }

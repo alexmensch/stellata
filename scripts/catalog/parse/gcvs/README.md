@@ -38,7 +38,7 @@ looks up the period+amp. Two independent gates:
 - **Naming** (search) — the resolved designation is attached as
   `gcvsName` whenever a name resolves (~<!-- count:build-catalog/gcvsNamed k3 -->15.2k<!-- /count --> stars, `gcvsNamed`). This
   is the `search-index.json` `g` field. The designation's trailing
-  abbreviation also **supplies** `desigConIndex`, but only where IV/27A's
+  abbreviation also **supplies** `desigCon`, but only where IV/27A's
   Bayer/Flamsteed cross index left it empty (`gcvsDesignationCon` pins <!-- count:build-catalog/gcvsDesignationCon -->7,929<!-- /count -->;
   [Positional constellation membership](../constellations/README.md#positional-constellation-membership)). On the 8 records where
   the two disagree the star carries both kinds of designation in different

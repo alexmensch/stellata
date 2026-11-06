@@ -78,7 +78,7 @@ scripts/catalog/naming/
                                 `membershipProperKey` is the one place its
                                 join key is built.
   apply-star-names.ts           I/O + the record pass: loads the committed
-                                tables and writes each record's authority
+    (+ test)                    tables and writes each record's authority
                                 tiers, aliases and designation
                                 constellation. Also loads the curated
                                 override table (`data/naming/`).
@@ -86,10 +86,16 @@ scripts/catalog/naming/
   name-overrides-source.ts      two curated tables, declared
                                 (../../util/sources/).
   display-names.ts (+ test)     The build's half of the composer: every
-                                record's designation set → its display
-                                name, with the NAME tiers written into
-                                `proper`. Also the curated override's join,
-                                which hard-fails on an unmatched SID.
+                                record's designation set → its naming
+                                outcome (`NamedRecord`), with the NAME
+                                tiers written into `proper` and the counts
+                                folded from the outcomes. Also the curated
+                                override's join, which hard-fails on an
+                                unmatched SID.
+  naming-lineage-pure.ts        The display-name pass as a lineage stage:
+    (+ test)                    its reason codes and the serialiser over
+                                each record's naming outcome
+                                (#naming-lineage).
   naming-parity-pure.ts         Ledger row types, the record-identity key
                                 and the shared label resolver.
   naming-parity-tsv.ts          NAMING_PARITY / NAMING_DUPLICATES — the
@@ -97,6 +103,8 @@ scripts/catalog/naming/
     (+ naming-ledgers-tsv.test) key and by label.
   committed-artifacts.test.ts   serialize(parse(committed)) === committed
                                 for all four artifacts this folder writes.
+  built-labels.ts               builtLabels: every built record's label,
+                                off the naming lineage, by record index.
   build-naming-parity.ts        Refreshes the ledger and the duplicate
                                 list from the built artifacts, both in
                                 one emitArtifacts call.
@@ -245,8 +253,8 @@ Flamsteed form ships as an alias rather than going unsearchable.
   have typed, and `resolves` records whether it still reaches that record.
   A record the catalogue no longer carries reads `resolves = absent` with
   an empty `new`; an empty `new` on a `yes` / `no` row is a record that now
-  displays the runtime's identifier fallback. 3,680 changes: 26 absent
-  records, 74 fallbacks.
+  displays the runtime's identifier fallback. 3,680 changes: 6 absent
+  records, 92 fallbacks.
 - **`naming-duplicates.tsv`** — every display label two or more records
   compose, with its claimants. A RATCHET: each row is a curation finding
   upstream, and `../../../tests/integration/multi-star-regression.test.ts` additionally
@@ -255,11 +263,43 @@ Flamsteed form ships as an alias rather than going unsearchable.
 The gate is stated over strings with EXTERNAL provenance — every name the
 authority approves and every name the manifest carries must reach a record.
 A string the build composed itself has no external existence, so [§ 5](/docs/star-naming.md#5-aliases--ship-what-cannot-be-derived-derive-what-can) lets
-it disappear with the composition that made it; 1,955 do, and the ledger's
+it disappear with the composition that made it; 1,974 do, and the ledger's
 `resolves` column is where each one is reviewable.
 
 `pnpm run build:naming-parity` refreshes `new`, `resolves` and the
-duplicate list from the built artifacts, and prints the figures above. `key` and `old` carry forward from
+duplicate list, and prints the figures above. `new` and the duplicates are
+a view of the [naming lineage](#naming-lineage): `builtLabels` reads each
+record's label off its name row, joined to its record index through its
+SID (`allocation.sids` and catalog.bin's SID column), so no reader
+re-composes a label. `resolves` asks the search corpus.
+`naming-parity.test.ts` reads the same labels, and checks that the runtime's
+composition off `search-index.json` reaches every one of them. `key` and `old` carry forward from
 the committed file; `NAMING_PARITY_SEED=<key/old TSV>` re-seeds them, which
 is what a deliberate wholesale naming change needs and nothing else should
 touch.
+
+## Naming lineage
+
+The display-name pass is the sixth stage of the [lineage](../lineage/README.md)
+contract (`naming-lineage-pure.ts`), after SID allocation, since the curated
+override keys on SIDs. `namingLineageRows` serialises each record's
+`NamedRecord` through an exhaustive `switch`:
+
+- every record gets one name row: `name.own` (the highest tier it carries),
+  one of three `name.borrowed.*` codes naming the borrowing rule that fired,
+  or `name.unlabelled`, where the runtime's Gaia DR3 / SID fallback takes over.
+  `params` carry the tier and the label; a borrowed row names its anchor by
+  origin key (`params.anchor`) and its component letter;
+- each other tier the record carries is a `refused` row: `name.lower-tier`
+  below an own label, `name.borrowed-over` for a borrowed one;
+- a lettered label adds its letter's source: `letter.stated` (the authority's
+  attribution), `letter.sibling-owns`, or `letter.borrowed`;
+- a record carrying a Bayer, Flamsteed or Gould designation adds the
+  constellation it renders against: the cascade tier that wrote it
+  (`desigCon`, [The designation constellation](../classic-ids/README.md#the-designation-constellation)),
+  `dc.positional` or `dc.none` (pinned at zero rows by `NAMING_INVARIANTS`,
+  [Invariants](../lineage/README.md#invariants)), and a `refused` `dc.displaced` row for the
+  IV/27A constellation an authority tier overwrote.
+
+The stage founds no record, so it writes no identity rows, and every code's
+effect is `none`.

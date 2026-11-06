@@ -24,6 +24,11 @@ src/catalog-format/naming/
                                 rules, the wire adapter. Imported by the
                                 build AND by the runtime
                                 ([Two callers, one composer](#two-callers-one-composer)).
+                                Each label is a `DisplayName`: `own` (its
+                                tier, and its letter's source — the
+                                authority's statement or a sibling owning
+                                the designation) or `borrowed` (the anchor,
+                                its tier, and which borrowing rule fired).
   star-designations.ts          The per-entry designation list
                                 (`starDesignations`) plus the wire adapter
                                 onto the composer (`designationSetOfEntry`).

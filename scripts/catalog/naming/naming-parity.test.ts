@@ -13,6 +13,7 @@ import { foldNameKey } from './wgsn-normalise-pure';
 import { WGSN_NAMES } from './wgsn-names-tsv';
 import {
   labelIndexOf,
+  ledgerLabel,
   labelResolvesTo,
   ledgerKeys,
   type RowIndexMap,
@@ -20,6 +21,9 @@ import {
 import { NAMING_DUPLICATES } from './naming-duplicates-tsv';
 import { NAMING_PARITY } from './naming-parity-tsv';
 import { MEMBERSHIP_MANIFEST } from '../membership/membership-manifest-tsv';
+import { loadCatalog } from '../catalog-lookup';
+import { LINEAGE_LAYOUT } from '../lineage/lineage-layout-pure';
+import { builtLabels, builtLabelsReady } from './built-labels';
 import { PUBLIC_FILES } from '../../../src/catalog-format/public-artifacts/public-artifacts';
 import { BUILD_FILES } from '../../../src/catalog-format/pipeline-outputs/build-files';
 
@@ -34,7 +38,8 @@ const MANIFEST = resolve(REPO_ROOT, MEMBERSHIP_MANIFEST.file);
 const PUBLISHED_NAMES_UNREACHED = 54;
 const FIXTURES_READY = existsSync(publicFile(PUBLIC_FILES.searchIndex))
   && existsSync(resolve(REPO_ROOT, BUILD_FILES.catalogRowIndexMap))
-  && existsSync(publicFile(PUBLIC_FILES.constellations));
+  && existsSync(publicFile(PUBLIC_FILES.constellations))
+  && builtLabelsReady(LINEAGE_LAYOUT.current);
 
 const readJson = <T>(path: string): T => JSON.parse(readFileSync(path, 'utf8')) as T;
 
@@ -42,33 +47,47 @@ const parity = NAMING_PARITY.parse(readFileSync(resolve(REPO_ROOT, NAMING_PARITY
 const duplicates = NAMING_DUPLICATES.parse(readFileSync(resolve(REPO_ROOT, NAMING_DUPLICATES.file), 'utf8'));
 
 interface Fixtures {
-  raw: SearchEntry[];
+  raw: readonly SearchEntry[];
   constellations: { code: string; name: string }[];
+  /** Indexed by record, read off the naming lineage. */
+  labels: readonly (string | null)[];
   labelByKey: Map<string, string>;
-  entryByKey: Map<string, SearchEntry>;
+  indexByKey: Map<string, number>;
 }
 
-function loadFixtures(): Fixtures {
-  const raw = readJson<SearchEntry[]>(publicFile(PUBLIC_FILES.searchIndex));
+async function loadFixtures(): Promise<Fixtures> {
+  const catalog = await loadCatalog({ withSearchIndex: true });
   const constellations = readJson<{ code: string; name: string }[]>(publicFile(PUBLIC_FILES.constellations));
   const keys = ledgerKeys(readJson<RowIndexMap>(resolve(REPO_ROOT, BUILD_FILES.catalogRowIndexMap)));
-  const composed = displayNamesFromSearchIndex(raw, constellations);
+  const labels = builtLabels(catalog, LINEAGE_LAYOUT.current);
   const labelByKey = new Map<string, string>();
-  const entryByKey = new Map<string, SearchEntry>();
-  for (const entry of raw) {
-    const key = keys.get(entry.i);
-    if (key === undefined) continue;
-    labelByKey.set(key, composed.get(entry.i)?.label ?? '');
-    entryByKey.set(key, entry);
+  const indexByKey = new Map<string, number>();
+  for (const [i, key] of keys) {
+    labelByKey.set(key, ledgerLabel(labels[i]));
+    indexByKey.set(key, i);
   }
-  return { raw, constellations, labelByKey, entryByKey };
+  return { raw: catalog.searchIndex, constellations, labels, labelByKey, indexByKey };
 }
 
 // Read here, not in the describe body: vitest runs a skipped suite's factory
 // to collect its tests, so a read inside it throws whatever the gate says.
-const FIXTURES: Fixtures | null = FIXTURES_READY ? loadFixtures() : null;
+const FIXTURES: Fixtures | null = FIXTURES_READY ? await loadFixtures() : null;
 
 describe.runIf(FIXTURES_READY)('naming parity ledger', () => {
+  it('the runtime composes, off the search index, every label the build decided', () => {
+    // The browser composes designations at boot, so the wire must carry
+    // enough to reach the build's decision; a record outside the search
+    // index displays the runtime's Gaia DR3 / SID fallback.
+    const { raw, constellations, labels } = FIXTURES!;
+    const composed = displayNamesFromSearchIndex(raw, constellations);
+    const inIndex = new Set(raw.map((e) => e.i));
+    const drifted = labels.flatMap((built, i) => {
+      const runtime = inIndex.has(i) ? composed.get(i)?.label ?? null : null;
+      return runtime === built ? [] : [`record ${i}: built ${JSON.stringify(built)}, runtime ${JSON.stringify(runtime)}`];
+    });
+    expect(drifted.slice(0, 20)).toEqual([]);
+  });
+
   it('every enumerated display change is exactly what the ladder composes', () => {
     const { labelByKey } = FIXTURES!;
     // Display changes are enumerated (/docs/star-naming.md#82-display-changes-are-enumerated), not counted. Reviewed once,
@@ -109,7 +128,7 @@ describe.runIf(FIXTURES_READY)('naming parity ledger', () => {
     // itself has none, so the alias rule (/docs/star-naming.md#5-aliases--ship-what-cannot-be-derived-derive-what-can) lets it disappear with the composition —
     // which is what the ledger's `resolves` column enumerates, reviewed
     // once and pinned so a later change cannot quietly widen the set.
-    const { raw, constellations, entryByKey } = FIXTURES!;
+    const { raw, constellations, indexByKey } = FIXTURES!;
     const index = buildSearchIndex(raw, constellations);
     const byLabel = labelIndexOf(index);
     const anyRecord = (label: string): boolean =>
@@ -133,9 +152,9 @@ describe.runIf(FIXTURES_READY)('naming parity ledger', () => {
 
     const drifted: string[] = [];
     for (const row of parity) {
-      const entry = entryByKey.get(row.key);
-      if (!row.record.present || entry === undefined) continue;
-      const resolves = labelResolvesTo(index, byLabel, normalizeGlKey, row.old, entry.i);
+      const idx = indexByKey.get(row.key);
+      if (!row.record.present || idx === undefined) continue;
+      const resolves = labelResolvesTo(index, byLabel, normalizeGlKey, row.old, idx);
       if (resolves !== row.record.resolves) {
         drifted.push(`${row.key}: "${row.old}" resolves=${resolves}, pinned ${row.record.resolves}`);
       }

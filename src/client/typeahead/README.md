@@ -201,7 +201,7 @@ the 14,148 GCVS-named entries end in something else — NSV serials
 that token emitted "NSV Lupus" / "LMC Dorado": a designation that does not
 exist, in a constellation the number has nothing to do with. Gating on the
 entry's own code rather than on "is some IAU abbreviation" is equivalent
-today (zero entries disagree, since `desigConIndex` is set *from* the
+today (zero entries disagree, since the build's `desigCon` is set *from* the
 designation) and stays correct if they ever diverge.
 
 **Multiple-star component aliases.** A component whose SearchEntry carries

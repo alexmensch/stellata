@@ -3,9 +3,10 @@
 // See README.md#the-record-side-join.
 
 import { readArtifact } from '../../util/sources/source';
-import { FLAG_IS_SOL, NO_CONSTELLATION_INDEX } from '../../../src/catalog-format/record/catalog-pure';
+import { FLAG_IS_SOL } from '../../../src/catalog-format/record/catalog-pure';
 import { CON_INDEX } from '../parse/constellations/constellations';
 import { foldNameKey } from './wgsn-normalise-pure';
+import type { DesignationCon } from '../classic-ids/designation-constellation-pure';
 import {
   buildWgsnIndex,
   routeDisposedProper,
@@ -46,7 +47,7 @@ export interface NamingTarget {
   hip: number | null;
   hd: number | null;
   hr: number | null;
-  desigConIndex: number;
+  desigCon: DesignationCon;
   flam: number | null;
 }
 
@@ -144,7 +145,7 @@ export function applyStarNames(
       if (bayer.component !== null) counts.namingBayerComponent++;
       counts.namingBayer++;
       if (spineBayer === null) counts.namingBayerAdded++;
-      applyDesignationConstellation(star, bayer.dc, constellations, counts);
+      applyDesignationConstellation(star, bayer.dc, 'wgsn-bayer', constellations, counts);
     } else if (spineBayer !== null) {
       counts.namingBayerDropped++;
     }
@@ -155,7 +156,7 @@ export function applyStarNames(
       star.gouldHalf = gould.half;
       counts.namingGould++;
       if (star.bayer === null) {
-        applyDesignationConstellation(star, gould.dc, constellations, counts);
+        applyDesignationConstellation(star, gould.dc, 'wgsn-gould', constellations, counts);
       }
     }
 
@@ -174,18 +175,21 @@ export function applyStarNames(
 function applyDesignationConstellation(
   star: NamingTarget,
   dc: string,
+  via: 'wgsn-bayer' | 'wgsn-gould',
   constellations: readonly { code: string }[],
   counts: StarNamingCounts,
 ): void {
   const idx = CON_INDEX.get(dc.toLowerCase());
   if (idx === undefined) return;
-  if (star.desigConIndex !== NO_CONSTELLATION_INDEX && star.desigConIndex !== idx) {
+  const prior = star.desigCon;
+  const displaced = prior.via !== 'none' && prior.index !== idx ? prior.index : null;
+  if (displaced !== null) {
     counts.namingDesigConWgsnConflict++;
-    const displaced = constellations[star.desigConIndex]?.code;
-    if (star.flam !== null && displaced !== undefined) {
-      star.aliases.push(`${star.flam} ${displaced}`);
+    const code = constellations[displaced]?.code;
+    if (star.flam !== null && code !== undefined) {
+      star.aliases.push(`${star.flam} ${code}`);
     }
   }
-  star.desigConIndex = idx;
+  star.desigCon = { via, index: idx, displaced };
   counts.namingDesigConFromWgsn++;
 }

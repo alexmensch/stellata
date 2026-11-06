@@ -95,11 +95,11 @@ scripts/catalog/
                                   allocates every record's SID, then
                                   emits the chunked binary, manifests,
                                   both committed ledgers, the SID registry
-                                  and placement's, coherence's, promotion's
-                                  and allocation's lineage through
+                                  and placement's, coherence's, promotion's,
+                                  allocation's and naming's lineage through
                                   emitArtifacts once its two snapshot
-                                  checks, the four lineage budgets,
-                                  placement's lineage
+                                  checks, the five lineage budgets,
+                                  placement's and naming's lineage
                                   invariants (lineage/README.md#invariants)
                                   and the CI heap budget
                                   (../util/README.md#ci-heap-budget) pass.
@@ -120,8 +120,8 @@ scripts/catalog/
                                   the row-index map, the two committed
                                   ledgers, the catalogue's SID registry
                                   partition (registryFiles), placement's,
-                                  coherence's, promotion's and allocation's
-                                  lineage files, and
+                                  coherence's, promotion's, allocation's and
+                                  naming's lineage files, and
                                   the transport chunks and the lineage
                                   baseline and diff as families, the last
                                   two unstamped. Side-effect free, so a reader can
@@ -221,8 +221,8 @@ admits — throws before anything is staged, so nothing lands.
 The runtime reader (`catalog-loader.ts`) decodes the column into
 `Catalog.sid`, the star domain of the runtime SID resolver
 (`src/client/util/sid-resolver/README.md`); the Node reader
-(`catalog-lookup.ts`) inherits the field off `RECORD_LAYOUT` without
-decoding it.
+(`catalog-lookup.ts`) decodes it into `CatalogRecord.sid`, which is how
+`naming/built-labels.ts` joins a record to its lineage rows.
 
 ## Gaia DR3 Apsis surfacing
 

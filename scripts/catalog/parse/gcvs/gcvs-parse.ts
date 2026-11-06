@@ -271,7 +271,7 @@ export interface ApplyVariabilityResult {
    *  period (flare stars, RCB, irregular, novae — Proxima = V0645 Cen,
    *  R CrB, T Tau, V1500 Cyg) is searchable by name but has no pulsation. */
   named: number;
-  /** Stars whose `desigConIndex` came from their GCVS designation — the ones
+  /** Stars whose `desigCon` came from their GCVS designation — the ones
    *  IV/27A's Bayer/Flamsteed cross index carries no row for. */
   desigConSupplied: number;
 }
@@ -315,7 +315,7 @@ export function applyVariability(
     s.gcvsName = gcvsName;
     named++;
     // A GCVS designation names its own constellation (LT Vul is Vulpecula's
-    // whatever any catalogue column says), but it fills `desigConIndex` only
+    // whatever any catalogue column says), but it fills `desigCon` only
     // where IV/27A left it empty. On the 8 records where the two disagree the
     // star carries BOTH a Bayer/Flamsteed designation and a variable name, in
     // different constellations (TY Crv is Crater's 'N Crt'), and one uint8
@@ -324,8 +324,8 @@ export function applyVariability(
     // designation string itself and only loses its expanded alias.
     const desigCon = gcvsDesignationConIndex(gcvsName);
     if (desigCon !== NO_CONSTELLATION_INDEX
-        && s.desigConIndex === NO_CONSTELLATION_INDEX) {
-      s.desigConIndex = desigCon;
+        && s.desigCon.via === 'none') {
+      s.desigCon = { via: 'gcvs', index: desigCon };
       desigConSupplied++;
     }
     const data = gcvsData.get(gcvsName);

@@ -214,7 +214,7 @@ to. Two carry **GCVS** designations, and they are different cases:
   Vulpecula; AT-HYG's cell says **Sagitta** and is simply wrong. The
   designation and the boundaries agree with each other against the
   catalogue column, which is why the designation — not the column — is
-  the authority for `desigConIndex`
+  the authority for the record's designation constellation (`desigCon`)
   ([Positional constellation membership](/scripts/catalog/parse/constellations/README.md#positional-constellation-membership)).
 
 The CSV has no GCVS column — that cross-match happens later in the build
