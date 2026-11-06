@@ -40,10 +40,11 @@ jobs:
     name: Unit tests
     runs-on: ubuntu-latest
     steps:
-      # Full history and tags: the site figures read the release a commit builds on.
+      # Full history and tags, not past file contents: the site figures read the release a commit builds on.
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
+          filter: blob:none
       - uses: pnpm/action-setup@v6
       - uses: actions/setup-node@v7
         with:
