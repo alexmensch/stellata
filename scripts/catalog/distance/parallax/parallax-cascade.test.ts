@@ -313,7 +313,7 @@ describe('parallax-cascade / V/70A\'s two tiers straddle SIMBAD', () => {
   });
 
   it('parks a row whose only V/70A parallax is photometric and absent', () => {
-    const res = resolveParallax({ ...NONE, gliese: gliese(null) });
+    const res = resolveParallax({ ...NONE, gliese: gliese(null, false) });
     expect(res.via).toBe('none');
   });
 
