@@ -25,6 +25,20 @@ describe('invariantViolations', () => {
     expect(v.rows.map((r) => r.key)).toEqual(['a:3']);
   });
 
+  it('asks each invariant once per distinct params text, and still names every row it does not allow', () => {
+    const asked: string[] = [];
+    const inv = lineageInvariant(CODES, 'gap', 'no gap but a reviewed one', (p) => {
+      asked.push(p.why ?? '');
+      return p.why === 'reviewed';
+    });
+    const [v] = invariantViolations([inv], [
+      line('a:1', 'gap', { why: 'new' }), line('a:2', 'gap', { why: 'reviewed' }), line('a:3', 'gap', { why: 'new' }),
+      line('a:4', 'gap'), line('a:5', 'gap', { why: 'reviewed' }),
+    ]);
+    expect(asked).toEqual(['new', 'reviewed', '']);
+    expect(v.rows.map((r) => r.key)).toEqual(['a:1', 'a:3', 'a:4']);
+  });
+
   it('passes, reporting what holds, when no row breaks it', () => {
     const inv = lineageInvariant(CODES, 'gap', 'no gap', NO_EXCEPTIONS);
     expect(invariantCheck(invariantViolations([inv], [line('a:1', 'ok')])[0]))

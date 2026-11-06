@@ -213,10 +213,37 @@ function headerIndex<C extends string>(spec: TableSpec<C>, headerLine: string): 
 
 const COMMENT = /^\s*#/;
 
+type RowOf<C extends string, R> = (line: string, lineNo: number, idx: Readonly<Record<C, number>>) => R;
+
+function checkCellCount(spec: TableSpec<string>, cells: number, lineNo: number): void {
+  if (spec.exact && cells !== spec.columns.length) {
+    throw new Error(`${spec.file}:${lineNo}: row has ${cells} cells, expected ${spec.columns.length}. ${spec.hint}`);
+  }
+}
+
+function tableRowOf<C extends string>(spec: TableSpec<C>): RowOf<C, TableRow<C>> {
+  return (line, lineNo, idx) => {
+    const cells = line.split('\t');
+    checkCellCount(spec, cells.length, lineNo);
+    return new TableRow(spec, idx, cells, lineNo, line);
+  };
+}
+
+function rawLineOf<C extends string>(spec: TableSpec<C>): RowOf<C, string> {
+  return (line, lineNo) => {
+    if (spec.exact) {
+      let cells = 1;
+      for (let i = line.indexOf('\t'); i !== -1; i = line.indexOf('\t', i + 1)) cells++;
+      checkCellCount(spec, cells, lineNo);
+    }
+    return line;
+  };
+}
+
 /** Every line fed counts toward the line number an error names, so it must
  *  be fed every physical line. */
-function lineParser<C extends string>(spec: TableSpec<C>): {
-  parse(line: string): TableRow<C> | null;
+function lineParser<C extends string, R>(spec: TableSpec<C>, rowOf: RowOf<C, R>): {
+  parse(line: string): R | null;
   finish(): void;
 } {
   let idx: Record<C, number> | null = null;
@@ -235,13 +262,7 @@ function lineParser<C extends string>(spec: TableSpec<C>): {
       }
       if (spec.exact && line === '') throw new Error(`${spec.file}:${lineNo}: blank line. ${spec.hint}`);
       if (!spec.exact && line.trim() === '') return null;
-      const cells = line.split('\t');
-      if (spec.exact && cells.length !== spec.columns.length) {
-        throw new Error(
-          `${spec.file}:${lineNo}: row has ${cells.length} cells, expected ${spec.columns.length}. ${spec.hint}`,
-        );
-      }
-      return new TableRow(spec, idx, cells, lineNo, line);
+      return rowOf(line, lineNo, idx);
     },
     finish() {
       if (idx === null) {
@@ -261,7 +282,7 @@ export function tableLineReader<C extends string>(
   spec: TableSpec<C>,
   onRow: (row: TableRow<C>) => void,
 ): TableLineReader {
-  const { parse, finish } = lineParser(spec);
+  const { parse, finish } = lineParser(spec, tableRowOf(spec));
   return Object.assign((line: string) => {
     const row = parse(line);
     if (row !== null) onRow(row);
@@ -287,12 +308,30 @@ function* utf8Chunks(bytes: Uint8Array, spec: TableSpec<string>, chunk: number):
 }
 
 /** Every data row, walked rather than split. README.md#reading-a-table. */
-export function* readTable<C extends string>(
+export function readTable<C extends string>(
   spec: TableSpec<C>,
   input: string | Uint8Array,
   chunk = TABLE_BYTE_CHUNK,
 ): Generator<TableRow<C>> {
-  const { parse, finish } = lineParser(spec);
+  return walkTable(spec, input, chunk, tableRowOf(spec));
+}
+
+/** Every data row's line as written, checked as `readTable` checks it but never split into cells. */
+export function readTableLines<C extends string>(
+  spec: TableSpec<C>,
+  input: string | Uint8Array,
+  chunk = TABLE_BYTE_CHUNK,
+): Generator<string> {
+  return walkTable(spec, input, chunk, rawLineOf(spec));
+}
+
+function* walkTable<C extends string, R>(
+  spec: TableSpec<C>,
+  input: string | Uint8Array,
+  chunk: number,
+  rowOf: RowOf<C, R>,
+): Generator<R> {
+  const { parse, finish } = lineParser(spec, rowOf);
   const texts = typeof input === 'string' ? [input] : utf8Chunks(input, spec, chunk);
   for (const text of texts) {
     for (let start = 0; start < text.length;) {

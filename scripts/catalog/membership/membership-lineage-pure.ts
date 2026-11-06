@@ -327,11 +327,26 @@ export interface MultiplesComponent {
   readonly hip: number | null;
 }
 
+/** A key's identity row: the current build's, else the baseline's, read only on the first key the build lacks. */
+export function identityLookup(
+  current: readonly IdentityRow[], baseline: () => Iterable<IdentityRow>,
+): (key: string) => IdentityRow | undefined {
+  let now: Map<string, IdentityRow> | undefined;
+  let before: Map<string, IdentityRow> | undefined;
+  return (key) => {
+    now ??= new Map(current.map((r) => [r.key, r]));
+    const row = now.get(key);
+    if (row !== undefined) return row;
+    before ??= new Map([...baseline()].map((r) => [r.key, r]));
+    return before.get(key);
+  };
+}
+
 /** The change report's `multiples` column: the multiples.tsv components the
  *  record's HIP names, read off its columns until binaries' Binding
  *  provenance carries the join. */
 export function multiplesComponentJoin(
-  identity: ReadonlyMap<string, IdentityRow>, multiples: readonly MultiplesComponent[],
+  identityOf: (key: string) => IdentityRow | undefined, multiples: readonly MultiplesComponent[],
 ): DiffJoin {
   const byHip = new Map<string, string[]>();
   for (const m of multiples) {
@@ -343,7 +358,7 @@ export function multiplesComponentJoin(
   return {
     name: 'multiples',
     of: (key) => {
-      const hip = identity.get(key)?.hip ?? '';
+      const hip = identityOf(key)?.hip ?? '';
       return hip === '' ? '' : (byHip.get(hip) ?? []).join('|');
     },
   };

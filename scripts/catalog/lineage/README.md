@@ -26,7 +26,9 @@ scripts/catalog/lineage/
   lineage-row-pure.ts            The envelope and LineageLine, its TSV line:
                                  stageLineageLine, the one encoder, which
                                  refuses a code the stage does not declare;
-                                 sortLineageLines, the one order; and
+                                 sortUtf8, the one order the stage lines,
+                                 identity and SID files, reason-code list
+                                 and trace keys sort by; and
                                  stageLineageText, the writer, which refuses
                                  another stage's line or lines out of order.
   reason-codes-pure.ts           stageCodes: a stage's codes with their
@@ -54,6 +56,8 @@ scripts/catalog/lineage/
                                  baseline plan, diff, budget and invariant
                                  checks, ready for the stage's emitArtifacts
                                  call.
+  phase-clock-pure.ts            phaseClock: the budget line's per-phase
+    (+ test)                     split of the timed window.
   lineage-invariant-pure.ts      LineageInvariant and its check (#invariants).
     (+ test)
   lineage-layout-pure.ts         LINEAGE_LAYOUT, the lineage folders,
