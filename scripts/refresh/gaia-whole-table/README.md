@@ -20,11 +20,13 @@ the same names the catalogue's sources read.
 - `gaia-whole-table.ts` — the three `Pull`s; `gaia-whole-table-outputs.ts`,
   their `declareOutputs`.
 - `refresh-gaia-{hip-xmatch,tyc-xmatch,nss}.ts` — one entry per step.
-- `gaia-whole-table.test.ts` with `{hip-xmatch,tyc-xmatch,nss}.fixture.csv`,
-  replies recorded from ESA on 2026-11-06 for the spot rows and the hard
-  cases (float32 near-ties at six decimals, scientific notation, an NSS
-  source with two solutions): each formats to lines of the committed table,
-  byte for byte.
+- `gaia-whole-table.test.ts` — replies recorded from ESA on 2026-11-06 for
+  the spot rows and the hard cases (float32 near-ties at six decimals,
+  scientific notation, an NSS source with two solutions): each formats to
+  lines of the committed table, byte for byte. The replies are inline, not
+  files: a non-code file beside an entry's modules is one of the step's
+  inputs ([`step-inputs.ts`](../../util/README.md)), so a fixture there
+  would stale the pull when edited.
 
 ## Slices
 
