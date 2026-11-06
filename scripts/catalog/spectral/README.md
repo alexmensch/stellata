@@ -36,8 +36,8 @@ via a seven-tier priority chain:
 0. **Curated HIP → sp_type override** (`data/simbad/sptype_overrides.tsv`,
    declared as `SPTYPE_OVERRIDES`) — saturated stars whose SIMBAD entry is a
    component-lettered main_id carrying neither hip nor source_id, so both
-   machine tiers below miss (Castor: '* alf Gem A' A1.5IV+, curated as Gray
-   2003's A1.5 IV+). Mirrors the binaries pipeline's
+   machine tiers below miss (Castor: '* alf Gem A' A1.5IV+, curated as
+   [Gray 2003](/data/papers/index.md#gray2003)'s A1.5 IV+). Mirrors the binaries pipeline's
    `component_sptype_overrides.tsv` curated tier. Each type is classified
    where it is read (`curatedSpectralValue`), so one that does not classify
    fails the read and the tier never refuses. A curated record's own type
