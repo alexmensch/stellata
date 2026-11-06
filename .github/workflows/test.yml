@@ -5,6 +5,7 @@ on:
     branches: [main]
   push:
     branches: [main]
+  merge_group:
 
 permissions:
   contents: read
@@ -115,18 +116,27 @@ jobs:
           PREFIX: data-build-${{ runner.os }}-node${{ steps.node.outputs.node-version }}-py${{ steps.python.outputs.python-version }}-${{ hashFiles('pnpm-lock.yaml') }}-
           RUN: ${{ github.run_id }}-${{ github.run_attempt }}
         run: |
-          if [ "$GITHUB_EVENT_NAME" = pull_request ]; then
-            own="${PREFIX}pr-$(git rev-parse HEAD^1)-"
-            {
-              echo "key=${own}${RUN}"
-              printf 'restore-keys<<EOF\n%s\n%s\nEOF\n' "$own" "${PREFIX}main-"
-              echo "own-older=${PREFIX}pr-"
-            } >> "$GITHUB_OUTPUT"
-          else
-            echo "key=${PREFIX}main-${RUN}" >> "$GITHUB_OUTPUT"
-          fi
+          case "$GITHUB_EVENT_NAME" in
+            pull_request)
+              own="${PREFIX}pr-$(git rev-parse HEAD^1)-"
+              {
+                echo "key=${own}${RUN}"
+                printf 'restore-keys<<EOF\n%s\n%s\nEOF\n' "$own" "${PREFIX}main-"
+                echo "own-older=${PREFIX}pr-"
+              } >> "$GITHUB_OUTPUT"
+              ;;
+            merge_group)
+              {
+                echo "key=${PREFIX}main-${RUN}"
+                echo "restore-keys=${PREFIX}main-"
+              } >> "$GITHUB_OUTPUT"
+              ;;
+            *)
+              echo "key=${PREFIX}main-${RUN}" >> "$GITHUB_OUTPUT"
+              ;;
+          esac
       - id: restore
-        if: github.event_name == 'pull_request'
+        if: github.event_name != 'push'
         uses: actions/cache/restore@v6
         with:
           path: ${{ runner.temp }}/data-build.tar
@@ -146,11 +156,11 @@ jobs:
       # A tracked file must never come from a cache: only untracked files are
       # saved, and the restore skips any path the checkout already has, which
       # covers a file tracked since the build was saved.
-      - if: ${{ !cancelled() && steps.built.outputs.built == 'true' }}
+      - if: ${{ !cancelled() && steps.built.outputs.built == 'true' && github.event_name != 'merge_group' }}
         run: |
           set -o pipefail
           pnpm exec tsx scripts/ci/saved-build.ts | tar --null -T - -cf "$RUNNER_TEMP/data-build.tar"
-      - if: ${{ !cancelled() && steps.built.outputs.built == 'true' }}
+      - if: ${{ !cancelled() && steps.built.outputs.built == 'true' && github.event_name != 'merge_group' }}
         uses: actions/cache/save@v6
         with:
           path: ${{ runner.temp }}/data-build.tar

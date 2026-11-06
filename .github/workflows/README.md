@@ -117,7 +117,7 @@ main's builds among them.
 
 ## `test.yml`
 
-CI pipeline on every PR (and push to `main`). Required for merge. A
+CI pipeline on every PR, merge-group entry and push to `main`. Required for merge. A
 fan-out of jobs beyond the bare checks:
 
 - `lfs-data` — warms the shared LFS object cache
@@ -139,7 +139,7 @@ fan-out of jobs beyond the bare checks:
   --verify-committed` (every build step on the table, failing on any
   committed output the build moves: a SID mint the PR did not commit, a
   stale `multiples.tsv`, either astrometry request), then every check that
-  reads the built artifacts, as named steps. A pull request restores
+  reads the built artifacts, as named steps. A pull request or merge group restores
   a saved build and rebuilds only the steps whose stamps moved; a push
   to `main` rebuilds everything: [The data build cache](/scripts/ci/README.md#the-data-build-cache).
   The checks:
