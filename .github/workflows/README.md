@@ -20,8 +20,8 @@ upload`), checks it on its preview URL, then moves traffic to it
 custom domain (`wrangler triggers deploy`). A failed check leaves the
 previous version live and pushes no tag
 ([The pre-traffic check](/scripts/release/README.md#the-pre-traffic-check)).
-Last, `cut-releases.ts publish` pushes each tag and creates its GitHub
-release, carrying the `## Release notes` block from its own PR body in
+Last, `cut-releases.ts publish` creates each GitHub release, and its tag
+with it, carrying the `## Release notes` block from its own PR body in
 place of the flat auto-generated notes.
 
 One push can therefore ship several releases: the merge queue lands a

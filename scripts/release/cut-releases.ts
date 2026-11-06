@@ -93,15 +93,13 @@ function publish(release: PlannedRelease, isNewest: boolean): void {
     console.log(`${release.tag} already released — skipping.`);
     return;
   }
-  tag(release);
-  run('git', ['push', 'origin', `refs/tags/${release.tag}`]);
-
   const notes = notesFor(release);
   console.log(`${release.tag} → ${release.sha.slice(0, 7)}, ${notes === null ? 'generated notes' : `notes from PR #${release.prNumber}`}`);
+  // GitHub makes the tag with the release, so origin never holds a release tag without its page.
   run('gh', [
     'release', 'create', release.tag,
+    '--target', release.sha,
     '--title', release.tag,
-    '--verify-tag',
     `--latest=${isNewest}`,
     ...(notes === null ? ['--generate-notes'] : ['--notes', notes]),
   ]);

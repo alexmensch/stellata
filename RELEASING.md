@@ -722,8 +722,8 @@ On every push to `main`, `deploy.yml`:
    but untagged: re-run the job (it re-uploads, re-checks and re-deploys)
    or cut the tag by [Manual release](#manual-release-fallback). Detail:
    [The pre-traffic check](scripts/release/README.md#the-pre-traffic-check).
-4. Runs `cut-releases.ts publish`, which pushes each planned
-   `v<version>` tag and creates its release from that commit's own PR
+4. Runs `cut-releases.ts publish`, which creates each planned
+   release, and with it its `v<version>` tag, from that commit's own PR
    body. Falls back to `--generate-notes` where the section is missing,
    and skips any version already released.
 

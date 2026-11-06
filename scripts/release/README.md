@@ -23,7 +23,7 @@ usable by hand (see [Manual release](/RELEASING.md#manual-release-fallback)).
   <file>]` plans the releases up to `--head` and writes them as JSON (to
   `--out`, and with their count to `GITHUB_OUTPUT`); `tag --plan <file>`
   makes each planned release's annotated tag locally; `publish --plan
-  <file>` pushes each tag and creates its release. `parsePlan()` refuses a
+  <file>` creates each release, and with it its tag on origin. `parsePlan()` refuses a
   malformed plan before either acts. Reads each commit's PR labels and
   body with `gh`.
 - `asset-size-pure.ts` (+ test) — the Cloudflare Workers per-asset
@@ -98,12 +98,16 @@ commit** in the range. The two halves of "release"
 answer different questions — what runs in production, versus what each
 version shipped. `--first-parent` keeps the walk on `main`'s own line.
 
-**The tags are made before the build and pushed after the deploy.** The
-build's version is `releaseAt('HEAD')`, the newest release tag reachable
-from HEAD, so `deploy.yml` runs `tag` first and the build, the footer
-and the pre-traffic check all read the release being deployed. A failed
-deploy discards the runner and its tags; only `publish`, after traffic has
-moved, pushes them.
+**The tags are made locally before the build and on origin after the
+deploy.** The build's version is `releaseAt('HEAD')`, the newest release
+tag reachable from HEAD, so `deploy.yml` runs `tag` first and the build,
+the footer and the pre-traffic check all read the release being deployed.
+A failed deploy discards the runner and its tags. Only `publish`, after
+traffic has moved, puts a tag on origin, and only as part of creating its
+release (`gh release create --target`), so origin never holds a release
+tag without its page: a tag the next plan starts from has always been
+published. The tags GitHub makes are lightweight, which `releaseAt` reads
+the same (`describe --tags`).
 
 ## The pre-traffic check
 
