@@ -7,8 +7,8 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { pullQueryHash } from '../../pipeline/freshness';
 import { EmissionRefused, declareOutputs } from '../../util/emit-artifacts';
 import {
-  LIMIT_HEADROOM, MAX_WHOLE_TABLE_CELLS, assertWholeTablesFit, batchQueries, describePull, queryLimit, runPull,
-  type Pull, type PullTable,
+  LIMIT_HEADROOM, MAX_WHOLE_TABLE_CELLS, assertWholeTablesFit, batchQueries, describePhasedPull, describePull, phaseLimit,
+  phaseQueries, queryLimit, runPhasedPull, runPull, type Phase, type PhasedPull, type Pull, type PullTable, type WrittenTable,
 } from './pull';
 import { GAIA, SIMBAD, TapOverflow, VIZIER, type TapArchive, type TapClientDeps } from './tap-pure';
 
@@ -161,6 +161,88 @@ describe('describePull', () => {
     const rounded = (fixed: number): PullTable => ({ ...STARS, columns: [{ name: 'source_id' }, { name: 'parallax', format: { fixed } }] });
     const hash = (fixed: number) => pullQueryHash(describePull(pullOf({ stars: rounded(fixed), pairs: PAIRS })));
     expect(hash(3)).not.toBe(hash(4));
+  });
+});
+
+describe('a phased pull', () => {
+  const RESOLVE: Phase = {
+    from: 'ident', columns: [{ name: 'oidref' }, { name: 'id' }], scope: { kind: 'request', key: 'id', batchSize: 2, rowsPerId: 1 },
+  };
+  const BASIC: Phase = {
+    from: 'basic', columns: [{ name: 'oid' }, { name: 'sp_type' }], scope: { kind: 'request', key: 'oid', batchSize: 2, rowsPerId: 1 },
+  };
+  const TYPES: WrittenTable = {
+    columns: [{ name: 'simbad_oid' }, { name: 'sp_type' }],
+    sortBy: [{ column: 'simbad_oid', as: 'integer' }],
+    band: { min: 1, max: 3 },
+    spotRows: [{ key: 'simbad_oid', value: '7', cells: { sp_type: 'G2V' } }],
+  };
+  const SIMBAD_ANSWER = (adql: string): string => (adql.includes('FROM ident')
+    ? 'oidref,id\n7,HIP 1\n9,HIP 2\n'
+    : 'oid,sp_type\n9,K0\n7,G2V\n');
+
+  const typesPull = (run: PhasedPull<'types'>['run'], extra: Partial<PhasedPull<'types'>> = {}): PhasedPull<'types'> => ({
+    archive: SIMBAD,
+    outputs: declareOutputs({ types: join(dir, 'types.tsv') }),
+    phases: { resolve: RESOLVE, basic: BASIC },
+    tables: { types: TYPES },
+    run,
+    ...extra,
+  });
+
+  const twoPhases: PhasedPull<'types'>['run'] = async (ask) => {
+    const oids = (await ask(RESOLVE, ["'HIP 1'", "'HIP 2'"])).map((row) => row[0] ?? '');
+    return { rows: { types: await ask(BASIC, oids) }, checks: [] };
+  };
+
+  it('asks a later phase with ids an earlier one answered, and writes the gated table', async () => {
+    const { deps: d, asked } = deps(SIMBAD_ANSWER);
+    await runPhasedPull(typesPull(twoPhases), d);
+    expect(asked).toEqual(["SELECT oidref, id FROM ident WHERE id IN ('HIP 1', 'HIP 2')", 'SELECT oid, sp_type FROM basic WHERE oid IN (7, 9)']);
+    expect(read('types.tsv')).toBe('simbad_oid\tsp_type\n7\tG2V\n9\tK0\n');
+  });
+
+  it('refuses a phase it does not declare, so its describe states every query it sends', async () => {
+    const undeclared: Phase = { ...BASIC, from: 'flux' };
+    const pull = typesPull(async (ask) => ({ rows: { types: await ask(undeclared, ['7']) }, checks: [] }));
+    await expect(runPhasedPull(pull, deps(SIMBAD_ANSWER).deps)).rejects.toThrow(/does not declare/);
+  });
+
+  it('asks nothing for an empty request, and refuses ids on a whole-table phase', async () => {
+    const { deps: d, asked } = deps(SIMBAD_ANSWER);
+    const whole: Phase = { ...BASIC, scope: { kind: 'whole-table', maxRows: 3 } };
+    await expect(runPhasedPull(typesPull(async (ask) => {
+      expect(await ask(RESOLVE, [])).toEqual([]);
+      return { rows: { types: await ask(whole, ['7']) }, checks: [] };
+    }, { phases: { resolve: RESOLVE, whole } }), d)).rejects.toThrow(/takes no request ids/);
+    expect(asked).toEqual([]);
+  });
+
+  it('a failing check the run computed refuses the emission', async () => {
+    const failing: PhasedPull<'types'>['run'] = async (ask) => ({
+      ...(await twoPhases(ask, () => {})),
+      checks: [{ kind: 'fail', message: 'resolution under its floor' }],
+    });
+    await expect(runPhasedPull(typesPull(failing), deps(SIMBAD_ANSWER).deps)).rejects.toThrow(EmissionRefused);
+    expect(existsSync(join(dir, 'types.tsv'))).toBe(false);
+  });
+
+  it('describes every phase\'s query, each table\'s formats and order, and the request it derives', () => {
+    const pull = typesPull(twoPhases, { request: { request: ['hip:1', 'hip:2'], requestFrom: ['data/membership/membership-manifest.tsv'] } });
+    expect(describePhasedPull(pull)).toEqual({
+      query: JSON.stringify({
+        phases: { resolve: 'SELECT oidref, id FROM ident WHERE id IN ({request})', basic: 'SELECT oid, sp_type FROM basic WHERE oid IN ({request})' },
+        tables: { types: { formats: {}, sortBy: TYPES.sortBy } },
+      }),
+      services: ['SIMBAD-CDS', 'SIMBAD-Harvard'],
+      request: ['hip:1', 'hip:2'],
+      requestFrom: ['data/membership/membership-manifest.tsv'],
+    });
+  });
+
+  it('sizes a whole-table phase off its stated rows and a request batch off its ids', () => {
+    expect([phaseLimit({ ...BASIC, scope: { kind: 'whole-table', maxRows: 5 } }), phaseLimit(BASIC)]).toEqual([10, 4]);
+    expect(phaseQueries(BASIC, ['1', '2', '3'], SIMBAD.quote)).toHaveLength(2);
   });
 });
 
