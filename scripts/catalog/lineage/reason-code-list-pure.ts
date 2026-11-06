@@ -1,7 +1,7 @@
 // The committed reason-code list: generated from every stage's declarations, append-only against its merge-base copy. See README.md#reason-codes--closed-append-only-generated.
 
 import type { CodeEffect, StageCodes } from './reason-codes-pure';
-import { compareUtf8 } from './lineage-row-pure';
+import { sortUtf8 } from './lineage-row-pure';
 
 export const CODE_STATUSES = ['live', 'retired', 'historical'] as const;
 export type CodeStatusName = (typeof CODE_STATUSES)[number];
@@ -42,7 +42,7 @@ export function reasonCodeList(
       });
     }
   }
-  return entries.sort((a, b) => compareUtf8(a.code, b.code));
+  return sortUtf8(entries, (e) => e.code);
 }
 
 /** Every code the merge-base listed is still listed with the same stage,

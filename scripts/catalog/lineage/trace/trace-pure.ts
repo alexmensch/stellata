@@ -4,7 +4,7 @@ import { ALLOCATION_CODES, type AllocationSidRow } from '../../../sid/allocation
 import { isValidDesignation } from '../../../sid/sid-pure';
 import { foldNameKey } from '../../naming/wgsn-normalise-pure';
 import type { IdentityRow } from '../identity-pure';
-import { compareUtf8, type LineageRow } from '../lineage-row-pure';
+import { sortUtf8, type LineageRow } from '../lineage-row-pure';
 
 /** Gaia DR3 source_ids run to 10 digits and more; a SID never does. */
 const GAIA_ID = /^[0-9]{10,}$/;
@@ -154,7 +154,7 @@ export function traceRecords(
     }
   }
   const byKey = new Map(identity.map((r) => [r.key, r]));
-  return [...keys].sort(compareUtf8).map((key) => ({
+  return sortUtf8([...keys], (key) => key).map((key) => ({
     key,
     identity: byKey.get(key) ?? null,
     rows: stages.flatMap(({ rows }) => rows.filter((r) => r.key === key)),

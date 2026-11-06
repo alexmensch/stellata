@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { diffLineage, stageDiffText } from './lineage-diff-pure';
 import {
   compareUtf8, decodeLineageLine, encodeLineageLine, foldStageLines, lineageLineKey, lineageLines, lineageRows, paramsOf,
-  paramsText, sortLineageLines, stageLineageLine, stageLineageText, type LineageLine, type LineageRow,
+  paramsText, sortLineageLines, sortUtf8, stageLineageLine, stageLineageText, type LineageLine, type LineageRow,
 } from './lineage-row-pure';
 import { LIVE, stageCodes } from './reason-codes-pure';
 
@@ -79,6 +79,17 @@ describe('the lineage order', () => {
     expect(compareUtf8('b', 'a')).toBe(1);
     expect(sortLineageLines([row('spine:\u{1F600}'), row('spine:�')].map(line)).map(lineageLineKey))
       .toEqual(['spine:�', 'spine:\u{1F600}']);
+  });
+
+  it('compareUtf8 and sortUtf8 agree with UTF-8 byte order, with and without units at or above U+D800', () => {
+    const ascii = ['spine:2', 'spine:10', 'gaia-dr3:9', 'gaia-dr3:18014398509481985', 'a', 'ab', '', '߿', '퟿'];
+    const high = [...ascii, '\u{1F600}', '￿', '', '�', 'spine:\u{10000}', 'spine:￿'];
+    const byBytes = (x: string, y: string): number => Buffer.compare(Buffer.from(x), Buffer.from(y));
+    for (const set of [ascii, high]) {
+      for (const x of set) for (const y of set) expect(Math.sign(compareUtf8(x, y))).toBe(byBytes(x, y));
+      expect(sortUtf8([...set].reverse(), (s) => s)).toEqual([...set].sort(byBytes));
+      expect(sortUtf8(set.map((key) => ({ key })), (r) => r.key).map((r) => r.key)).toEqual([...set].sort(byBytes));
+    }
   });
 
   it('round-trips params through their canonical text, read as rows or as lines', () => {

@@ -1,7 +1,7 @@
 // Identity rows: one per record, its origin key with the attributes the ledger views and trace key on. See README.md#identity--the-origin-source-row.
 
 import { readTable, type TableSpec } from '../../util/tsv/table-pure';
-import { compareUtf8 } from './lineage-row-pure';
+import { sortUtf8 } from './lineage-row-pure';
 
 export const IDENTITY_COLUMNS = ['key', 'tyc', 'hip', 'hd', 'gl', 'gaia_source_id', 'designations'] as const;
 
@@ -18,7 +18,7 @@ export interface IdentityRow {
 const DESIGNATION_SEPARATOR = '|';
 
 export function identityText(rows: readonly IdentityRow[]): string {
-  const sorted = [...rows].sort((a, b) => compareUtf8(a.key, b.key));
+  const sorted = sortUtf8([...rows], (r) => r.key);
   for (let i = 1; i < sorted.length; i++) {
     if (sorted[i].key === sorted[i - 1].key) throw new Error(`identity: two records keyed ${sorted[i].key}`);
   }
