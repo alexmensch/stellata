@@ -6,6 +6,7 @@ import { GAIA_ASTROMETRY } from '../sources/gaia-astrometry-source';
 import { TYCHO2 } from '../tycho2-source';
 import { sourceRowRef } from '../../util/sources/row-ref-pure';
 import { HIP_PHOTOMETRY } from './hip-photometry-source';
+import type { PrintedHipValue } from './hip-photometry-parse-pure';
 import type { CitedPhotometry, PrintedVLookups } from './v-magnitude-pure';
 
 export const PHOTOMETRY_SOURCE_ID = '1000';
@@ -22,6 +23,11 @@ export function photometry(overrides: Partial<CitedPhotometry> = {}): CitedPhoto
  *  pick band values that happen to differ by it. */
 export function atColour(bpMinusRp: number): CitedPhotometry {
   return { gMag: 10, bpMag: 10 + bpMinusRp, rpMag: 10, ref: PHOTOMETRY_REF };
+}
+
+/** A HIP-keyed printed table, as the I/239 parse yields it. */
+export function printedHipTable(entries: Iterable<readonly [number, number]>): Map<number, PrintedHipValue> {
+  return new Map([...entries].map(([hip, value]) => [hip, { value, ref: sourceRowRef(HIP_PHOTOMETRY, hip) }]));
 }
 
 /** Every printed tier silent, spelled out so a suite says so instead of

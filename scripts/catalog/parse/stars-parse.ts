@@ -113,7 +113,7 @@ import {
   type CiVia,
 } from '../photometry/colour-index-pure';
 import type { GspcColour } from '../photometry/gspc-parse';
-import { printedByHip } from '../photometry/hip-photometry-parse-pure';
+import { printedByHip, type PrintedHipValue } from '../photometry/hip-photometry-parse-pure';
 import { emptyTallyPartition } from '../../util/counts/tally-pure';
 import type { ManifestRecord } from '../membership/membership-manifest-tsv';
 import type { CuratedRecords } from '../record/curated-records';
@@ -264,10 +264,10 @@ export interface ReadStarsOptions {
   /** Printed Johnson V per HIP — the V cascade's bright tier. Absent leaves
    *  every saturated row on the tier below, which shows up as vVia drift
    *  against the pinned count snapshot. */
-  hipVMag?: Map<number, number>;
+  hipVMag?: Map<number, PrintedHipValue>;
   /** Printed Johnson B−V per HIP — the ci cascade's printed tier, and the
    *  only measured colour reaching rows with no Gaia source at all. */
-  hipBv?: Map<number, number>;
+  hipBv?: Map<number, PrintedHipValue>;
   /** Printed Gliese 1991 (/data/papers/index.md#gliese1991) V/70A
    *  values keyed on the record's own `gl` — the V cascade's tier below
    *  Tycho-2, and the only one reaching the GJ-only cohort. Absent parks those rows. */
@@ -680,7 +680,7 @@ export function readStars(
     const ciRes = resolveColourIndex({
       photometry: gaiaRow,
       gspc,
-      printedHipBv: printedByHip(hipBv, hip),
+      printedHipBv: printedByHip(hipBv, hip)?.value ?? null,
       apsisTeff,
       spectralCi: spectralClassColorIsDerivable(spectInfo)
         ? spectralClassCi(spectInfo)

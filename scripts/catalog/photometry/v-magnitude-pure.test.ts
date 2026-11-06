@@ -21,7 +21,7 @@ import {
   type PrintedV,
 } from './v-magnitude-pure';
 import { GAIA_PHOTOMETRY_SATURATION_G } from './gaia-photometry-pure';
-import { PHOTOMETRY_REF, photometry, printedVOf } from './photometry-fixture';
+import { PHOTOMETRY_REF, photometry, printedHipTable, printedVOf } from './photometry-fixture';
 import { HIP_PHOTOMETRY } from './hip-photometry-source';
 import { GLIESE } from '../gliese-source';
 import { TYCHO2 } from '../tycho2-source';
@@ -248,7 +248,7 @@ describe('printedVLookups', () => {
   // reachable evidence (/docs/catalog-driver.md#4-how-hd-reaches-gaia).
   it('reduces a Tycho-2 row through the published VT relation', () => {
     const lookups = printedVLookups(
-      new Map([[7, 3.1]]),
+      printedHipTable([[7, 3.1]]),
       new Map([['a-1-1', { btMag: 9.5, vtMag: 8.9, ref: sourceRowRef(TYCHO2, 'a-1-1') }]]),
       { byKey: new Map(), rowCount: 0 },
     );

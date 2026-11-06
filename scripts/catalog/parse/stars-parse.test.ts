@@ -39,6 +39,7 @@ import type { Placement } from '../distance/placement-lineage-pure';
 import { MAX_DIST_PC, readStars } from './stars-parse';
 import { CURATED_RECORDS } from '../record/curated-records';
 import { AV_PER_EZGR } from '../../../src/astro-core/baker-constants';
+import { printedHipTable } from '../photometry/photometry-fixture';
 
 const readStarsDiscarding = (
   manifest: Parameters<typeof readStars>[0], options: Parameters<typeof readStars>[1],
@@ -137,7 +138,7 @@ describe('readStars build-time de-extinction of ci', () => {
       {
         conAssignment: CON_ASSIGNMENT,
         dustGrid: grid,
-        hipBv: new Map([[11111, 0.5]]),
+        hipBv: printedHipTable([[11111, 0.5]]),
         directions: AT_ORIGIN_DIRECTIONS(),
         gliese: glieseParallaxes([{ gl: ORIGIN_GL, distPc: 100 }]),
       },
@@ -241,7 +242,7 @@ describe('readStars manifest labels', () => {
         conAssignment: CON_ASSIGNMENT,
         directions: tycho2Sources([]),
         gliese: glieseParallaxes([{ gl: ORIGIN_GL, distPc: 100 }]),
-        hipVMag: new Map([[4242, 7.5]]),
+        hipVMag: printedHipTable([[4242, 7.5]]),
       },
     );
     expect(stars).toHaveLength(0);
@@ -266,7 +267,7 @@ describe('readStars manifest labels', () => {
         conAssignment: CON_ASSIGNMENT,
         directions: tycho2Sources([{ tyc: ORIGIN_TYC, raDeg: 0, decDeg: 0, vMag: null }]),
         gliese: glieseParallaxes([{ gl: ORIGIN_GL, distPc: 100 }]),
-        hipVMag: new Map([[4242, 7.5]]),
+        hipVMag: printedHipTable([[4242, 7.5]]),
       },
       (p) => placements.push(p),
     );

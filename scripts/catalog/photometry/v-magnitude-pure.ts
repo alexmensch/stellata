@@ -10,10 +10,9 @@ import {
 } from './gaia-photometry-pure';
 import type { CitedCascadeResult, CitedRefusal, UniformValues } from '../cascade-result';
 import { lookupGliese, type GlieseIndex } from '../gliese-parse-pure';
-import { printedByHip } from './hip-photometry-parse-pure';
-import { HIP_PHOTOMETRY } from './hip-photometry-source';
+import { printedByHip, type PrintedHipValue } from './hip-photometry-parse-pure';
 import type { Tycho2Row } from '../tycho2-parse';
-import { sourceRowRef, type AnySourceRowRef } from '../../util/sources/row-ref-pure';
+import type { AnySourceRowRef } from '../../util/sources/row-ref-pure';
 
 /** Riello 2021 (/data/papers/index.md#riello2021) App. C,
  *  Table C.2 — `G − V` as a cubic in `BP − RP`. Ascending powers. The DR3 photometry is unchanged from EDR3, so the EDR3 calibration
@@ -154,14 +153,14 @@ export type PrintedV = {
 }[PrintedVVia];
 
 export function printedVLookups(
-  hipVMag: ReadonlyMap<number, number>,
+  hipVMag: ReadonlyMap<number, PrintedHipValue>,
   tycho2: ReadonlyMap<string, Pick<Tycho2Row, 'btMag' | 'vtMag' | 'ref'>>,
   gliese: GlieseIndex,
 ): PrintedVLookups {
   return {
     printed_hip: (hip) => {
-      const vMag = printedByHip(hipVMag, hip);
-      return vMag === null ? null : { vMag, ref: sourceRowRef(HIP_PHOTOMETRY, hip) };
+      const printed = printedByHip(hipVMag, hip);
+      return printed === null ? null : { vMag: printed.value, ref: printed.ref };
     },
     tycho2: (tyc) => {
       const row = tycho2.get(tyc);
