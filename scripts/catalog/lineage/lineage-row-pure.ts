@@ -47,7 +47,7 @@ function isSurrogate(unit: number): boolean {
 }
 
 /** Below U+D800 a UTF-16 unit is its own code point, so the engine's native unit order is UTF-8 order. */
-const UNIT_ORDER_MAY_DIFFER = /[\uD800-￿]/;
+const UNIT_ORDER_MAY_DIFFER = /[\uD800-\uFFFF]/;
 
 function nativeOrder(a: string, b: string): number {
   return a < b ? -1 : a > b ? 1 : 0;
