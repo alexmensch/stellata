@@ -27,7 +27,7 @@ so the loop is gone. `refresh:simbad-sptype` keeps the manifest-keyed rows.
 ## The request and the gates
 
 Every distinct `simbad_oid` in `simbad_wds_xids.tsv`, `oid IN (…)` against
-SIMBAD's `basic` table, `SIMBAD_BATCH_SIZE` per query. An oid answers one
+SIMBAD's `basic` table, `SIMBAD_BATCH_SIZE` (`../pull/tap-pure.ts`) per query. An oid answers one
 row, so the band's ceiling is the request; its floor is `MIN_OID_REACH` of
 it, since an oid SIMBAD has merged away answers nothing. An object with no
 type ships with an empty `sp_type`, so the file's row count is the reach

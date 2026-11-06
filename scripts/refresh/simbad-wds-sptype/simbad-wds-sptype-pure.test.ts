@@ -6,8 +6,8 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { EmissionRefused, declareOutputs } from '../../util/emit-artifacts';
 import { batchQueries, runPull } from '../pull/pull';
-import { SIMBAD, type TapClientDeps } from '../pull/tap-pure';
-import { MIN_OID_REACH, SIMBAD_BATCH_SIZE, wdsOids, wdsSptypeTable } from './simbad-wds-sptype-pure';
+import { SIMBAD, SIMBAD_BATCH_SIZE, type TapClientDeps } from '../pull/tap-pure';
+import { MIN_OID_REACH, wdsOids, wdsSptypeTable } from './simbad-wds-sptype-pure';
 
 const FROM = { file: 'wds.tsv', hint: 'test' };
 

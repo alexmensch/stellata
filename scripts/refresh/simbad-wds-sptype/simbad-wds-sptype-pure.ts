@@ -3,8 +3,8 @@
 import type { Declared } from '../../util/sources/source';
 import { readTable } from '../../util/tsv/table-pure';
 import type { PullTable } from '../pull/pull';
+import { SIMBAD_BATCH_SIZE } from '../pull/tap-pure';
 
-export const SIMBAD_BATCH_SIZE = 1_000;
 /** The least share of the requested oids SIMBAD must still hold: 23,604 of 23,607 held, measured 2026-11-06. */
 export const MIN_OID_REACH = 0.99;
 

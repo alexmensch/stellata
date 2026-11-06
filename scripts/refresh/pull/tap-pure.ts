@@ -32,6 +32,9 @@ export const VIZIER: TapArchive = {
   quote: (identifier) => `"${identifier}"`,
 };
 
+/** Ids per `IN (…)` batch: SIMBAD's TAP accepts about a 64 KB POST body, and 1,000 integer ids are about 20 KB. */
+export const SIMBAD_BATCH_SIZE = 1_000;
+
 export const SIMBAD: TapArchive = {
   mirrors: [
     { name: 'SIMBAD-CDS', verified: false, url: 'https://simbad.cds.unistra.fr/simbad/sim-tap' },
