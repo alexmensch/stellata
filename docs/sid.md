@@ -195,7 +195,11 @@ code from the generated list (`data/lineage/reason-codes.tsv`) whose
 declared effect matches the event, and `params` its per-row detail.
 `successor` is set on a merge only, so a merged SID arriving on the
 wire can still resolve; a retired SID with none resolves to nothing and
-wire consumers skip it gracefully. Rows from before allocation wrote
+wire consumers skip it gracefully. `build_version` is the release the
+allocating build stood on (`releaseAt()`, the newest release tag reachable
+from its HEAD, as of that build), not the release that ships the row: no
+version exists for a commit until it lands, so a row minted on a branch
+names the release before it. Rows from before allocation wrote
 this file carry `historical` codes (`allocation.legacy.*`), one per
 legacy cause, never mapped onto live ones
 ([SID events](/scripts/sid/README.md#sid-events)).

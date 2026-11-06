@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { creditCount, recordCountOf, versionOf } from './site-metrics';
+import { creditCount, recordCountOf } from './site-metrics';
 
 describe('the catalogue size with no built artifact', () => {
   it('is the count snapshot beside the build', () => {
@@ -34,17 +34,6 @@ describe('a figure that cannot be read stops the build', () => {
   it('refuses a Credits tab it finds no sources in', () => {
     const html = '<div class="modal-credits"><div class="credit-entry"><div class="credit-label">Stars</div></div></div>';
     expect(() => creditCount(html)).toThrow(/no credited sources/);
-  });
-
-  it.each([
-    ['no version', '{}'],
-    ['an empty version', '{"version":""}'],
-  ])('refuses a package.json with %s', (_, manifest) => {
-    expect(() => versionOf(manifest)).toThrow(/states no version/);
-  });
-
-  it('reads the version package.json states', () => {
-    expect(versionOf('{"version":"7.0.0"}')).toBe('7.0.0');
   });
 });
 

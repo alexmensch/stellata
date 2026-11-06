@@ -153,7 +153,10 @@ Every stage writes the same envelope:
   that stage, never a silent pass-through; identical-code rows cost almost
   nothing compressed.
 - SID, record index and designations live on the identity row only; the
-  build version lives in a per-build header file. Repeating them on every
+  build version — the release the build stood on as it ran (`releaseAt()`),
+  which for a releasing commit can be the release before it or its own,
+  depending on whether its tag was pushed yet — lives in a per-build header
+  file. Repeating them on every
   stage row roughly doubles each stage file.
 
 ### SourceRowRef
@@ -194,8 +197,9 @@ one text; `evidence` is its references' text forms joined by `|`.
 - An entry carries the code, its stage, its declared effect (removal and
   re-bind codes: retire, park or merge; `none` for every other code), a
   one-line description, `first_version` — the release current when the code
-  was added (the tree's package version; a lineage-only PR bumps none, so
-  `7.1.6` reads "added after 7.1.6 shipped") — and its status — `live`,
+  was added (`releaseAt()`, the newest release tag the tree builds on, so
+  `7.1.6` reads "added after 7.1.6 shipped"; read only for a code the list
+  does not yet hold) — and its status — `live`,
   `retired` (with
   the version that retired it) or `historical`, declared beside the code as
   a closed union. Historical codes carry legacy causes and are never mapped

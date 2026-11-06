@@ -4,7 +4,6 @@ import { resolve } from 'node:path';
 import { setTimeout as sleep } from 'node:timers/promises';
 
 import { catalogChunkFilename } from '../../src/catalog-format/record/catalog-pure.ts';
-import { appVersion } from '../site/site-metrics.ts';
 import { APP_PATH } from '../../src/client/util/url-state/share-path-pure.ts';
 import { ROUTING_CASES, documentIdentifiers } from '../../src/routing-cases-fixture.ts';
 import {
@@ -19,11 +18,12 @@ import {
   type Verdict,
 } from './pre-traffic-check-pure.ts';
 import { rawGet, type RawAnswer } from './raw-get.ts';
+import { releaseAt } from '../util/release-version.ts';
 
 const ROOT = resolve(import.meta.dirname, '../..');
 const origin = process.argv[2];
 if (origin === undefined) throw new Error('usage: pre-traffic-check.ts <origin>');
-const version = appVersion();
+const version = releaseAt();
 const identifies = documentIdentifiers(ROOT);
 const at = (path: string) => new URL(path, origin);
 
