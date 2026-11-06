@@ -2,8 +2,8 @@ import { describe, expect, it } from 'vitest';
 
 import { diffLineage, stageDiffText } from './lineage-diff-pure';
 import {
-  blocksLines, compareUtf8, decodeLineageLine, encodeLineageLine, foldStageLines, lineageBlock, lineageLineKey, lineageLines,
-  lineageRows, paramsOf, paramsText, sortLineageLines, stageLineageLine, stageLineageText, type LineageLine, type LineageRow,
+  compareUtf8, decodeLineageLine, encodeLineageLine, foldStageLines, lineageLineKey, lineageLines, lineageRows, paramsOf,
+  paramsText, sortLineageLines, stageLineageLine, stageLineageText, type LineageLine, type LineageRow,
 } from './lineage-row-pure';
 import { LIVE, stageCodes } from './reason-codes-pure';
 
@@ -35,24 +35,6 @@ describe('foldStageLines', () => {
     const other = stageCodes('other', { kept: { description: 'kept', effect: 'none', status: LIVE } });
     const foreign = stageLineageLine(other, { ...row('spine:1', 'other.kept'), stage: 'other' });
     expect(() => foldStageLines(CODES, [foreign], 'outcome')).toThrow(/"other.kept" is not one of the declared variants/);
-  });
-});
-
-describe('lineage blocks', () => {
-  const refused = (key: string): LineageRow => ({ ...row(key, 'demo.gate.refused', { tier: 'a' }), role: 'refused' });
-
-  it('hold one key\'s lines, its shared prefix written once, and give them back unchanged', () => {
-    const one = [row('spine:1'), refused('spine:1')].map(line);
-    const two = [row('gaia-dr3:4295806720123456789')].map(line);
-    const block = lineageBlock(one);
-    expect(block.split('demo\tspine:1\t')).toHaveLength(2);
-    expect(blocksLines([block, lineageBlock(two)])).toEqual([...one, ...two]);
-  });
-
-  it('refuse an empty block and lines of two keys', () => {
-    expect(() => lineageBlock([])).toThrow(/a block of no lines/);
-    expect(() => lineageBlock([row('spine:1'), row('spine:2')].map(line)))
-      .toThrow(/one block holds demo\tspine:1 and demo\tspine:2/);
   });
 });
 

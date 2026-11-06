@@ -85,39 +85,6 @@ export function sortLineageLines(lines: readonly LineageLine[]): LineageLine[] {
   return [...lines].sort(compareUtf8);
 }
 
-declare const LINEAGE_BLOCK: unique symbol;
-
-/** One key's lines as one string, the `stage\tkey\t` prefix they share written once. See README.md#storage-and-cost. */
-export type LineageBlock = string & { readonly [LINEAGE_BLOCK]: true };
-
-function linePrefix(line: string): string {
-  return line.slice(0, line.indexOf('\t', line.indexOf('\t') + 1) + 1);
-}
-
-/** Refuses no lines, and lines of two stages or keys. */
-export function lineageBlock(lines: readonly LineageLine[]): LineageBlock {
-  if (lines.length === 0) throw new Error('lineage: a block of no lines');
-  const prefix = linePrefix(lines[0]);
-  const tails = lines.slice(1).map((line) => {
-    if (!line.startsWith(prefix)) {
-      throw new Error(`lineage: one block holds ${prefix.trimEnd()} and ${linePrefix(line).trimEnd()}`);
-    }
-    return line.slice(prefix.length);
-  });
-  return [lines[0], ...tails].join('\n') as LineageBlock;
-}
-
-export function blocksLines(blocks: Iterable<LineageBlock>): LineageLine[] {
-  const out: LineageLine[] = [];
-  for (const block of blocks) {
-    const [first, ...tails] = block.split('\n');
-    const prefix = linePrefix(first);
-    out.push(first as LineageLine);
-    for (const tail of tails) out.push(`${prefix}${tail}` as LineageLine);
-  }
-  return out;
-}
-
 export const ENCODE_BATCH = 100_000;
 
 /** See README.md#storage-and-cost. */
