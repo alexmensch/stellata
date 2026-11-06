@@ -12,13 +12,14 @@ import {
   type SimbadRecordKeys,
 } from '../simbad/simbad-namespace-ladder-pure';
 import type { Declared } from '../../util/sources/source';
+import { sourceRowRef, type AnySourceRowRef, type RowKeyed } from '../../util/sources/row-ref-pure';
 import { readTable } from '../../util/tsv/table-pure';
 import {
   classifyFromGspspec,
   classifyFromSimbad,
   type SpectralInfo,
 } from '../../../src/catalog-format/spectral/spectral-classify';
-import type { CascadeRefusal, CascadeResult } from '../cascade-result';
+import type { CitedCascadeResult, CitedRefusal } from '../cascade-result';
 
 /** SIMBAD's object-type code for a confirmed double/multiple star — the
  *  otype value that marks a record `unresolved` when nothing resolves. */
@@ -48,6 +49,8 @@ export interface SimbadSpectralRow {
    *  row that states a DIFFERENT one has reached another star — see
    *  README.md#a-stated-gaia-id-the-record-contradicts-ends-the-walk. */
   sourceId: string | null;
+  /** The pull row, by its SIMBAD oid. */
+  ref: AnySourceRowRef;
 }
 
 /** SIMBAD sp_type under all four namespaces. */
@@ -62,14 +65,14 @@ export function emptySimbadSpectralIndex(): SimbadSpectralIndex {
  *  reason `parseGaiaApsisTsv` uses. A row is indexed under every namespace it
  *  carries; the rows the pull enumerated by SIMBAD oid alone carry none and
  *  index nowhere. */
-const SPTYPE_TABLE_COLUMNS = ['source_id', 'sp_type', 'hip', 'tyc', 'gj', 'sp_qual', 'otype'] as const;
+const SPTYPE_TABLE_COLUMNS = ['simbad_oid', 'source_id', 'sp_type', 'hip', 'tyc', 'gj', 'sp_qual', 'otype'] as const;
 
 export interface SimbadSptype {
   spectral: SimbadSpectralIndex;
   xids: Map<string, SimbadXids>;
 }
 
-export function parseSimbadSptypeTsv(text: string, from: Declared): SimbadSptype {
+export function parseSimbadSptypeTsv(text: string, from: Declared & RowKeyed<number>): SimbadSptype {
   const index = emptySimbadSpectralIndex();
   const xids = new Map<string, SimbadXids>();
   for (const row of readTable({ ...from, columns: SPTYPE_TABLE_COLUMNS }, text)) {
@@ -83,7 +86,7 @@ export function parseSimbadSptypeTsv(text: string, from: Declared): SimbadSptype
       gl: row.text('gj'),
     };
     indexSimbadRow(
-      index, keys, { spType, spQual, otype, sourceId: keys.sourceId },
+      index, keys, { spType, spQual, otype, sourceId: keys.sourceId, ref: sourceRowRef(from, row.requiredId('simbad_oid')) },
       // No key repeats in the committed file (../naming/README.md#the-union-policy
       // adds rows,
       // never a second row under one key). On a designation key the row stating
@@ -121,9 +124,14 @@ export interface SpectralValue {
 }
 
 /** A typed row a tier reached and did not take: a SIMBAD row stating another
- *  star's Gaia id, or a type string the classifier cannot parse. */
+ *  star's Gaia id, or a type string the classifier cannot parse. A SIMBAD
+ *  refusal names the namespace that reached the row. */
 export type SpectralRefusal =
-  CascadeRefusal<'simbad' | 'gspspec', 'gaia_id_contradicts' | 'unclassifiable'>;
+  | CitedRefusal<'simbad', 'gaia_id_contradicts' | 'unclassifiable'> & { readonly namespace: SimbadNamespace }
+  | CitedRefusal<'gspspec', 'unclassifiable'>;
+
+/** A curated type with the `SPTYPE_OVERRIDES` row it was read from. */
+export type CuratedSpectral = SpectralValue & { readonly ref: AnySourceRowRef };
 
 /** A curated MK string, classified where it is curated: one that does not
  *  classify is a curation fault, so the curated tier never refuses. */
@@ -141,11 +149,14 @@ export interface SpectralInputs extends SimbadRecordKeys {
 export interface SpectralSources {
   simbad: SimbadSpectralIndex;
   apsis: ReadonlyMap<string, ApsisRow>;
+  /** `GAIA_APSIS`, which the ESP-ELS tier cites. Handed in rather than
+   *  imported: steps that read only the SIMBAD index import this module. */
+  apsisSource: RowKeyed<string>;
   /** `SPTYPE_OVERRIDES`. */
-  sptypeOverrides: ReadonlyMap<number, SpectralValue>;
+  sptypeOverrides: ReadonlyMap<number, CuratedSpectral>;
 }
 
-export type SpectralResolution = CascadeResult<
+export type SpectralResolution = CitedCascadeResult<
   {
     curated: SpectralValue;
     simbad: SpectralValue & { namespace: SimbadNamespace };
@@ -163,7 +174,7 @@ export type SpectralResolution = CascadeResult<
 function matchSimbadRow(
   row: SimbadSpectralRow,
   recordSourceId: string | null,
-): SpectralValue | SpectralRefusal['reason'] | null {
+): SpectralValue | 'gaia_id_contradicts' | 'unclassifiable' | null {
   if (!row.spType) return null;
   if (recordSourceId && row.sourceId && row.sourceId !== recordSourceId) {
     return 'gaia_id_contradicts';
@@ -178,31 +189,38 @@ function matchSimbadRow(
  * */
 export function resolveSpectralInfo(
   keys: SpectralInputs,
-  { simbad, apsis: apsisMap, sptypeOverrides }: SpectralSources,
+  { simbad, apsis: apsisMap, apsisSource, sptypeOverrides }: SpectralSources,
 ): SpectralResolution {
   const refusals: SpectralRefusal[] = [];
+  if (keys.curated !== null) return { via: 'curated', value: keys.curated, evidence: [], refusals };
   const hip = simbadHipKey(keys.hip);
-  const curated = keys.curated ?? (hip === null ? undefined : sptypeOverrides.get(hip));
-  if (curated !== undefined) return { via: 'curated', value: curated, refusals };
-  const hit = walkSimbadNamespaces(simbad, keys, (row) => {
+  const override = hip === null ? undefined : sptypeOverrides.get(hip);
+  if (override !== undefined) {
+    const { ref, ...value } = override;
+    return { via: 'curated', value, evidence: [ref], refusals };
+  }
+  const hit = walkSimbadNamespaces(simbad, keys, (row, namespace) => {
     const match = matchSimbadRow(row, keys.sourceId);
-    if (typeof match !== 'string') return match;
-    refusals.push({ tier: 'simbad', reason: match });
+    if (typeof match !== 'string') return match === null ? null : { value: match, ref: row.ref };
+    refusals.push({ tier: 'simbad', reason: match, ref: row.ref, namespace });
     return null;
   });
   if (hit) {
-    return { via: 'simbad', value: { ...hit.value, namespace: hit.namespace }, refusals };
+    return {
+      via: 'simbad', value: { ...hit.value.value, namespace: hit.namespace }, evidence: [hit.value.ref], refusals,
+    };
   }
   if (keys.sourceId) {
     const apsis = apsisMap.get(keys.sourceId);
     if (apsis?.spectraltypeEsphs) {
+      const ref = sourceRowRef(apsisSource, keys.sourceId);
       const info = classifyFromGspspec(apsis.spectraltypeEsphs);
       if (info) {
         return {
-          via: 'gspspec', value: { info, spectDisplay: apsis.spectraltypeEsphs }, refusals,
+          via: 'gspspec', value: { info, spectDisplay: apsis.spectraltypeEsphs }, evidence: [ref], refusals,
         };
       }
-      refusals.push({ tier: 'gspspec', reason: 'unclassifiable' });
+      refusals.push({ tier: 'gspspec', reason: 'unclassifiable', ref });
     }
   }
   return { via: 'none', refusals };

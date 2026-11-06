@@ -97,12 +97,16 @@ via a seven-tier priority chain:
 6. **`none`** — no upstream covers the row, and the walk renders it as
    `SPECTRAL_UNKNOWN`, the `unknown` kind.
 
-`resolveSpectralInfo` returns the shared cascade shape (`../cascade-result.ts`)
-over `SPECTRAL_VIA_VALUES` — `curated`, `simbad` (with the namespace that found
-it), `gspspec`, `none` — the tuple the walk tallies `spectralBy*` over. A typed
-SIMBAD or ESP-ELS row it reaches and does not take is a refusal on the result:
+`resolveSpectralInfo` returns the shared cited cascade shape
+(`CitedCascadeResult`, `../cascade-result.ts`) over `SPECTRAL_VIA_VALUES` —
+`curated`, `simbad` (with the namespace that found it), `gspspec`, `none` — the
+tuple the walk tallies `spectralBy*` over. A typed SIMBAD or ESP-ELS row it
+reaches and does not take is a refusal on the result:
 `gaia_id_contradicts` ([below](#a-stated-gaia-id-the-record-contradicts-ends-the-walk))
-or `unclassifiable`.
+or `unclassifiable`, a SIMBAD one naming the namespace that reached it. Answer
+and refusal cite their row: a SIMBAD row by its `simbad_oid`, an override by
+its HIP, an ESP-ELS type by its Apsis row; a curated record's own type cites
+none.
 
 AT-HYG's contaminated `spect` cell is no longer consulted for
 classification (build-counts over the walked records: SIMBAD

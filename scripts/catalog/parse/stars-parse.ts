@@ -88,6 +88,7 @@ import {
   type RvErrorBand,
 } from '../distance/radial-velocity/radial-velocity';
 import { avSolToStar, type DustGrid } from '../distance/dust/dust-deextinction-pure';
+import { GAIA_APSIS } from '../record/gaia-apsis-source';
 import { R_V } from '../../../src/astro-core/extinction/dust-raymarch-pure';
 import {
   emptySimbadValueIndex,
@@ -402,7 +403,7 @@ export function readStars(
 
   const printedVLookup = printedVLookups(hipVMag, directions.tycho2, gliese);
   const spectralSources: SpectralSources = {
-    simbad: simbadSpectral, apsis: apsisMap, sptypeOverrides,
+    simbad: simbadSpectral, apsis: apsisMap, apsisSource: GAIA_APSIS, sptypeOverrides,
   };
   // Every exit returns its row's Placement, so the compiler refuses one that
   // would drop a record from lineage.
