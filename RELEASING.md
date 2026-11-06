@@ -698,8 +698,7 @@ On every push to `main`, `deploy.yml`:
 
 1. Plans the releases since the last one pushed
    (`scripts/release/cut-releases.ts plan`): walks from the commit the
-   newest release tag reachable from HEAD was cut at, so a cancelled or
-   failed earlier run's commits are planned here, and derives each
+   newest release tag reachable from HEAD was cut at, and derives each
    commit's version from the release before it and its PR's level label
    ([Derived versions](scripts/release/README.md#derived-versions)). The
    plan is handed to steps 2 and 4 as it was printed. No release in the
