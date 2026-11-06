@@ -20,9 +20,10 @@ usable by hand (see [Manual release](/RELEASING.md#manual-release-fallback)).
   `::error::` and exit 1 unless exactly one level label is on. Run by
   `.github/actions/release-level`.
 - `cut-releases.ts` — the CLI, three steps over `--base..--head`:
-  `plan` prints the releases and writes their count to `GITHUB_OUTPUT`;
-  `tag` makes each release's annotated tag locally; `publish` pushes each
-  tag and creates its release. Reads each commit's PR labels and body with
+  `plan` derives the base (`releaseCommitAt`), prints the releases and
+  writes their count and the base to `GITHUB_OUTPUT`; `tag` makes each
+  release's annotated tag locally; `publish` pushes each tag and creates
+  its release. `tag` and `publish` refuse to run without `--base`. Reads each commit's PR labels and body with
   `gh`.
 - `asset-size-pure.ts` (+ test) — the Cloudflare Workers per-asset
   ceiling (`WORKERS_MAX_ASSET_BYTES`, 25 MiB) and `judgeAssetSizes()`,
@@ -67,8 +68,19 @@ exact commit its checks ran on, so nothing can write a version into the
 tree once the queue has ordered the PRs, and two PRs that each hand-picked
 the next version would claim the same one.
 
-`planReleases()` walks the push range oldest-first from the newest
-release tag reachable from the push's base (`releaseAt(base)`). Each
+**The plan starts at the last release pushed, never at the push's
+`before`.** Its base is the commit the newest release tag reachable from
+HEAD was cut at (`releaseCommitAt`, `../util/release-version.ts`): the tags
+on origin are the one record of what has shipped. A push's `before` is
+not: GitHub keeps one pending run per concurrency group and cancels the
+rest, and a failed deploy pushes no tag, so a range starting at `before`
+would skip those commits for good and hand their version to the next PR.
+`plan` computes the base once and `deploy.yml` hands it to `tag` and
+`publish`, which take it as `--base`: re-derived after `tag`, it would be
+the release this run just made.
+
+`planReleases()` walks that range oldest-first from the base's release
+(`releaseAt(base)`). Each
 commit's PR level bumps the version before it; `skip-version-bump` ships
 nothing; a commit that already carries a release tag keeps it, so a rerun
 over a released range re-derives nothing. A commit whose PR declares no
@@ -79,7 +91,7 @@ label edit and a rerun.
 **A push is not a commit.** The merge queue lands a group of PRs as one
 push of several commits. **Cloudflare is deployed once, at HEAD** (the code
 that should be live), while **tags and releases are cut per releasing
-commit** across `github.event.before..HEAD`. The two halves of "release"
+commit** in the range. The two halves of "release"
 answer different questions — what runs in production, versus what each
 version shipped. `--first-parent` keeps the walk on `main`'s own line.
 

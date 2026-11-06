@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import { releaseAt, versionOfTag } from './release-version';
+import { releaseAt, releaseCommitAt, versionOfTag } from './release-version';
 
 describe('versionOfTag', () => {
   it('strips the prefix of a release tag', () => {
@@ -49,6 +49,19 @@ describe('releaseAt', () => {
   it('throws where no release tag is reachable', () => {
     commit('one');
     expect(() => releaseAt('HEAD', repo)).toThrow(/^no release tag reachable from HEAD: fetch tags/);
+    expect(() => releaseCommitAt('HEAD', repo)).toThrow(/^no release tag reachable from HEAD/);
+  });
+
+  it('names the commit the newest reachable release was cut at, past any unreleased commits', () => {
+    commit('one');
+    tag('v1.0.0');
+    commit('two');
+    const released = git('rev-parse', 'HEAD');
+    tag('v1.0.1');
+    commit('three');
+    commit('four');
+    expect(releaseCommitAt('HEAD', repo)).toBe(released);
+    expect(releaseCommitAt('HEAD~2', repo)).toBe(released);
   });
 });
 

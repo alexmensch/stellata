@@ -13,29 +13,31 @@ import {
   type PlannedRelease,
   type RangeCommit,
 } from './release-plan-pure.ts';
-import { releaseAt, versionOfTag, TAG_GLOB } from '../util/release-version.ts';
+import { releaseAt, releaseCommitAt, versionOfTag, TAG_GLOB } from '../util/release-version.ts';
 
 const STEPS = ['plan', 'tag', 'publish'] as const;
 type Step = (typeof STEPS)[number];
 
 interface Options {
   step: Step;
-  base: string;
+  base: string | null;
   head: string;
 }
 
-const USAGE = `Usage: cut-releases.ts <${STEPS.join('|')}> --base <sha> [--head <sha>]`;
+const USAGE = `Usage: cut-releases.ts plan [--head <sha>] | cut-releases.ts <tag|publish> --base <the base plan printed> [--head <sha>]`;
 
 function parseArgs(argv: string[]): Options {
   const [step, ...rest] = argv;
   if (!(STEPS as readonly string[]).includes(step)) throw new Error(USAGE);
-  const opts: Options = { step: step as Step, base: '', head: 'HEAD' };
+  const opts: Options = { step: step as Step, base: null, head: 'HEAD' };
   for (let i = 0; i < rest.length; i++) {
     const arg = rest[i];
-    if (arg === '--base') opts.base = rest[++i] ?? '';
+    if (arg === '--base') opts.base = rest[++i] ?? null;
     else if (arg === '--head') opts.head = rest[++i] ?? 'HEAD';
     else throw new Error(`Unknown argument: ${arg}\n${USAGE}`);
   }
+  // After `tag`, the newest reachable release is one this run made, so only `plan` may derive the base.
+  if (opts.step !== 'plan' && opts.base === null) throw new Error(`${opts.step} needs --base\n${USAGE}`);
   return opts;
 }
 
@@ -49,10 +51,6 @@ function tryRun(command: string, args: string[]): string | null {
   } catch {
     return null;
   }
-}
-
-function commitExists(ref: string): boolean {
-  return tryRun('git', ['cat-file', '-e', `${ref}^{commit}`]) !== null;
 }
 
 function prLabels(prNumber: number): string[] {
@@ -113,15 +111,17 @@ function publish(release: PlannedRelease, isNewest: boolean): void {
 function main(): void {
   const opts = parseArgs(process.argv.slice(2));
   const head = run('git', ['rev-parse', opts.head]);
-  const base = opts.base && commitExists(opts.base) ? opts.base : `${head}^`;
-  const plan = commitExists(base) ? planReleases(releaseAt(base), rangeCommits(base, head)) : [];
+  const base = run('git', ['rev-parse', opts.base ?? releaseCommitAt(head)]);
+  const plan = planReleases(releaseAt(base), rangeCommits(base, head));
 
-  console.log(`${plan.length} release(s) from ${base.slice(0, 7)}..${head.slice(0, 7)}:`);
+  console.log(`${plan.length} release(s) from base ${base} to ${head.slice(0, 7)}:`);
   for (const release of plan) console.log(`  ${release.tag} → ${release.sha.slice(0, 7)} (PR #${release.prNumber})`);
 
   switch (opts.step) {
     case 'plan':
-      if (process.env.GITHUB_OUTPUT) appendFileSync(process.env.GITHUB_OUTPUT, `releases=${plan.length}\n`);
+      if (process.env.GITHUB_OUTPUT) {
+        appendFileSync(process.env.GITHUB_OUTPUT, `releases=${plan.length}\nbase=${base}\n`);
+      }
       return;
     case 'tag':
       plan.forEach(tag);

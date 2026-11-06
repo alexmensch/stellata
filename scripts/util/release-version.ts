@@ -23,17 +23,25 @@ export function versionOfTag(tag: string): string {
   return version;
 }
 
+const git = (cwd: string, ...argv: string[]): string =>
+  execFileSync('git', argv, { cwd, encoding: 'utf-8', stdio: ['ignore', 'pipe', 'pipe'] }).trim();
+
 /** Throws where git has no release tag to reach: a shallow clone, or tags never fetched. */
-export function releaseAt(ref = 'HEAD', cwd = ROOT): string {
-  let tag: string;
+function releaseTagAt(ref: string, cwd: string): string {
   try {
-    tag = execFileSync('git', ['describe', '--tags', '--abbrev=0', '--match', TAG_GLOB, ref], {
-      cwd, encoding: 'utf-8', stdio: ['ignore', 'pipe', 'pipe'],
-    }).trim();
+    return git(cwd, 'describe', '--tags', '--abbrev=0', '--match', TAG_GLOB, ref);
   } catch (err) {
     throw new Error(
       `no release tag reachable from ${ref}: fetch tags and full history (git fetch --tags --unshallow)\n${(err as Error).message}`,
     );
   }
-  return versionOfTag(tag);
+}
+
+export function releaseAt(ref = 'HEAD', cwd = ROOT): string {
+  return versionOfTag(releaseTagAt(ref, cwd));
+}
+
+/** The commit the newest release reachable from `ref` was cut at: where the next release plan starts. */
+export function releaseCommitAt(ref = 'HEAD', cwd = ROOT): string {
+  return git(cwd, 'rev-list', '-n', '1', releaseTagAt(ref, cwd));
 }

@@ -12,18 +12,21 @@ concurrency:
   group: deploy-cloudflare
   cancel-in-progress: false
 
-# Every push to main plans its releases: scripts/release/cut-releases.ts
-# derives each pushed commit's version from the newest release tag before it
-# plus the release level its PR's label declares, and the deploy runs only
-# when the range ships one. The tags are made locally before the build, which
-# reads its version from the newest of them, and pushed with each release
-# only once the checked version is live. Rationale: /scripts/release/README.md.
+# Every push to main plans the releases since the last one pushed:
+# scripts/release/cut-releases.ts walks from the newest release tag's commit
+# and derives each commit's version from the release before it plus the
+# level its PR's label declares, so a cancelled or failed run's commits are
+# planned by the next. The deploy runs only when the range ships one. The
+# tags are made locally before the build, which reads its version from the
+# newest of them, and pushed with each release only once the checked version
+# is live. Rationale: /scripts/release/README.md.
 
 jobs:
   plan-releases:
     runs-on: ubuntu-latest
     outputs:
       releases: ${{ steps.plan.outputs.releases }}
+      base: ${{ steps.plan.outputs.base }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -39,8 +42,7 @@ jobs:
       - id: plan
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          BEFORE: ${{ github.event.before }}
-        run: node scripts/release/cut-releases.ts plan --base "$BEFORE" --head "$GITHUB_SHA"
+        run: node scripts/release/cut-releases.ts plan --head "$GITHUB_SHA"
 
   deploy:
     needs: plan-releases
@@ -69,12 +71,12 @@ jobs:
       - name: Tag releases locally
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          BEFORE: ${{ github.event.before }}
+          BASE: ${{ needs.plan-releases.outputs.base }}
         run: |
           set -euo pipefail
           git config user.name 'github-actions[bot]'
           git config user.email 'github-actions[bot]@users.noreply.github.com'
-          node scripts/release/cut-releases.ts tag --base "$BEFORE" --head "$GITHUB_SHA"
+          node scripts/release/cut-releases.ts tag --base "$BASE" --head "$GITHUB_SHA"
 
       - run: pnpm run build
 
@@ -111,5 +113,5 @@ jobs:
       - name: Publish releases
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          BEFORE: ${{ github.event.before }}
-        run: node scripts/release/cut-releases.ts publish --base "$BEFORE" --head "$GITHUB_SHA"
+          BASE: ${{ needs.plan-releases.outputs.base }}
+        run: node scripts/release/cut-releases.ts publish --base "$BASE" --head "$GITHUB_SHA"

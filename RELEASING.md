@@ -696,12 +696,14 @@ change, by `gh api --method PUT` as above, preserving every rule):
 
 On every push to `main`, `deploy.yml`:
 
-1. Plans the push's releases (`scripts/release/cut-releases.ts plan`):
-   walks `github.event.before..HEAD` (falling back to `HEAD~1` when that
-   commit isn't in the clone) and derives each commit's version from the
-   release before it and its PR's level label
-   ([Derived versions](scripts/release/README.md#derived-versions)). No
-   release in the range → exits silently. A commit whose PR declares no
+1. Plans the releases since the last one pushed
+   (`scripts/release/cut-releases.ts plan`): walks from the commit the
+   newest release tag reachable from HEAD was cut at, so a cancelled or
+   failed earlier run's commits are planned here, and derives each
+   commit's version from the release before it and its PR's level label
+   ([Derived versions](scripts/release/README.md#derived-versions)). The
+   base it walked from is handed to steps 2 and 4. No release in the
+   range → exits silently. A commit whose PR declares no
    level, or two, fails the plan: fix the label and re-run the job.
 2. Checks out with LFS, sets up Node and Python from `.nvmrc` /
    `.python-version`, runs `pnpm install --frozen-lockfile`, makes the
@@ -749,14 +751,14 @@ If the workflow needs to be bypassed (e.g. infrastructure outage), run
 the same three steps by hand, on an up-to-date `main` with tags fetched:
 
 ```sh
-node scripts/release/cut-releases.ts plan --base <base-sha>   # touches nothing
-node scripts/release/cut-releases.ts tag --base <base-sha>    # local tags, so the build reads the new version
+node scripts/release/cut-releases.ts plan                     # touches nothing; prints the base
+node scripts/release/cut-releases.ts tag --base <that base>    # local tags, so the build reads the new version
 pnpm run deploy
-node scripts/release/cut-releases.ts publish --base <base-sha>
+node scripts/release/cut-releases.ts publish --base <that base>
 ```
 
-`--base` is the last commit that was already released; `--head`
-defaults to `HEAD`. A commit already tagged keeps its version and an
-already-released version is skipped, so re-running after a partial
-failure is safe. To back-fill releases the workflow missed entirely,
-pass the tag it last cut as `--base`.
+`plan` walks from the commit of the newest release tag reachable from
+`--head` (default `HEAD`) and prints that base; `tag` and `publish` take it
+explicitly, because once `tag` has run the newest reachable release is one
+it made. A commit already tagged keeps its version and an already-released
+version is skipped, so re-running after a partial failure is safe.

@@ -156,7 +156,9 @@ same thing — single-use helpers stay with their consumer.
   (`TAG_PREFIX`, `TAG_GLOB`, `tagOf`, `versionOfTag`, `parseVersion`), and
   `releaseAt(ref)`, the newest release tag reachable from `ref`: the
   version every build, site figure and recorded provenance names, since no
-  file in the tree states one ([Derived versions](/scripts/release/README.md#derived-versions)).
+  file in the tree states one; and `releaseCommitAt(ref)`, the commit that
+  release was cut at, where the deploy's release plan starts
+  ([Derived versions](/scripts/release/README.md#derived-versions)).
   It throws where no tag is reachable, so a checkout reading it needs full
   history and tags (`fetch-depth: 0` in CI). Imports only `node:`
   builtins, because `../release/`'s plain-`node` scripts import it too.
