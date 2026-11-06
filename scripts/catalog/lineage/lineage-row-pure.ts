@@ -1,7 +1,7 @@
 // The lineage envelope every stage writes, its TSV line, and the one sort order over lines. See README.md#row-contract.
 
 import { fold } from '../../util/counts/tally-pure';
-import { readTable, type TableSpec } from '../../util/tsv/table-pure';
+import { readTable, readTableLines, type TableSpec } from '../../util/tsv/table-pure';
 import type { StageCode, StageCodes } from './reason-codes-pure';
 
 export const LINEAGE_ROLES = ['outcome', 'refused'] as const;
@@ -182,7 +182,7 @@ function lineageSpec(file: string): TableSpec<(typeof LINEAGE_COLUMNS)[number]> 
 }
 
 export function* lineageLines(text: string | Uint8Array, file: string): Generator<LineageLine> {
-  for (const row of readTable(lineageSpec(file), text)) yield row.rawLine as LineageLine;
+  for (const line of readTableLines(lineageSpec(file), text)) yield line as LineageLine;
 }
 
 export function* lineageRows(text: string | Uint8Array, file: string): Generator<LineageRow> {

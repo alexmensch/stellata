@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
-  compareSourceIds, floatCell, idCell, idListCell, intCell, readTable, tableLineReader, textCell, type TableSpec,
+  compareSourceIds, floatCell, idCell, idListCell, intCell, readTable, readTableLines, tableLineReader, textCell, type TableSpec,
 } from './table-pure';
 
 const SPEC: TableSpec<'id' | 'v'> = { file: 'fixture/t.tsv', columns: ['id', 'v'], hint: 'Re-run x.' };
@@ -130,20 +130,26 @@ describe('readTable', () => {
     expect(() => row.float('v')).toThrow('fixture/t.tsv:3: v: "1x" is not a decimal number. Re-run x.');
   });
 
-  it('checks an exact table byte for byte', () => {
+  const readers = [
+    ['readTable', (spec: TableSpec<'id' | 'v'>, text: string) => [...readTable(spec, text)].map((r) => r.rawLine)],
+    ['readTableLines', (spec: TableSpec<'id' | 'v'>, text: string) => [...readTableLines(spec, text)]],
+  ] as const;
+
+  it.each(readers)('%s checks an exact table byte for byte', (_, read) => {
     const exact = { ...SPEC, exact: true };
-    expect(() => [...readTable(exact, 'v\tid\n')]).toThrow(/header mismatch/);
-    expect(() => [...readTable(exact, 'id\tv\nA\n')]).toThrow(/row has 1 cells, expected 2/);
-    expect([...readTable(exact, 'id\tv\nA\t\n')]).toHaveLength(1);
+    expect(() => read(exact, 'v\tid\n')).toThrow(/header mismatch/);
+    expect(() => read(exact, 'id\tv\nA\n')).toThrow('fixture/t.tsv:2: row has 1 cells, expected 2. Re-run x.');
+    expect(() => read(exact, 'id\tv\nA\t1\t\n')).toThrow(/:2: row has 3 cells, expected 2/);
+    expect(read(exact, 'id\tv\nA\t\n')).toEqual(['A\t']);
   });
 
-  it('holds an exact table to its layout: LF only, no blank line, a final newline', () => {
+  it.each(readers)('%s holds an exact table to its layout: LF only, no blank line, a final newline', (_, read) => {
     const exact = { ...SPEC, exact: true };
-    expect(() => [...readTable(exact, 'id\tv\r\nA\t1\r\n')]).toThrow('fixture/t.tsv:1: CR line ending. Re-run x.');
-    expect(() => [...readTable(exact, 'id\tv\nA\t1\r\n')]).toThrow(/fixture\/t\.tsv:2: CR line ending/);
-    expect(() => [...readTable(exact, 'id\tv\nA\t1\n\nB\t2\n')]).toThrow('fixture/t.tsv:3: blank line. Re-run x.');
-    expect(() => [...readTable(exact, 'id\tv\nA\t1')]).toThrow('fixture/t.tsv: missing final newline. Re-run x.');
-    expect([...readTable(SPEC, 'id\tv\r\nA\t1\r\n\nB\t2')].map((r) => r.raw('id'))).toEqual(['A', 'B']);
+    expect(() => read(exact, 'id\tv\r\nA\t1\r\n')).toThrow('fixture/t.tsv:1: CR line ending. Re-run x.');
+    expect(() => read(exact, 'id\tv\nA\t1\r\n')).toThrow(/fixture\/t\.tsv:2: CR line ending/);
+    expect(() => read(exact, 'id\tv\nA\t1\n\nB\t2\n')).toThrow('fixture/t.tsv:3: blank line. Re-run x.');
+    expect(() => read(exact, 'id\tv\nA\t1')).toThrow('fixture/t.tsv: missing final newline. Re-run x.');
+    expect(read(SPEC, 'id\tv\r\nA\t1\r\n\nB\t2')).toEqual(['A\t1', 'B\t2']);
   });
 
   it('keeps each row\'s line as written', () => {
