@@ -9,6 +9,7 @@ import {
   cellReader, checkedRows, formatTsv, projection, sortRows, type Column, type Row, type SortKey,
 } from './columns-pure';
 import { bandCheck, coverageCheck, spotRowCheck, type Coverage, type RowBand, type SpotRow } from './gates-pure';
+import { sliceConditions } from './slices-pure';
 import { readCsv, tapClient, type TapArchive, type TapClientDeps, type Transport } from './tap-pure';
 
 export type Scope =
@@ -24,6 +25,15 @@ export type Scope =
     readonly batchSize: number;
     readonly rowsPerId: number;
     readonly coverage?: Coverage;
+  }
+  | {
+    readonly kind: 'sliced';
+    /** The integer ADQL column the slices partition; a row whose key is null is in no slice. */
+    readonly key: string;
+    /** Strictly increasing, cut from the table by `cutEdges`. */
+    readonly edges: readonly [bigint, ...bigint[]];
+    /** The most rows any slice is expected to hold. */
+    readonly sliceRows: number;
   };
 
 export interface PullTable {
@@ -51,11 +61,17 @@ export const LIMIT_HEADROOM = 2;
 /** The most cells one whole-table reply may hold within the CI heap budget: README.md#how-big-a-whole-table-query-may-be. */
 export const MAX_WHOLE_TABLE_CELLS = 37_000_000;
 const REQUEST = '{request}';
+const SLICE = '{slice}';
 const SYNC_TIMEOUT_MS = 300_000;
 
-/** The table's ADQL with the request ids left as `{request}`: the text a pull's query hash covers. */
+function batchCondition(scope: Scope): string | undefined {
+  if (scope.kind === 'request') return `${scope.key} IN (${REQUEST})`;
+  return scope.kind === 'sliced' ? SLICE : undefined;
+}
+
+/** The table's ADQL with the request ids left as `{request}` and a slice's range as `{slice}`: the text a pull's query hash covers. */
 export function queryTemplate(table: PullTable, quote: TapArchive['quote']): string {
-  const scoped = table.scope.kind === 'request' ? `${table.scope.key} IN (${REQUEST})` : undefined;
+  const scoped = batchCondition(table.scope);
   const where = table.where && scoped ? `(${table.where}) AND ${scoped}` : table.where ?? scoped;
   return [
     `SELECT ${projection(table.columns, quote)} FROM ${table.from}`,
@@ -65,7 +81,9 @@ export function queryTemplate(table: PullTable, quote: TapArchive['quote']): str
 }
 
 export function queryLimit(table: PullTable): number {
-  const expected = table.scope.kind === 'request' ? table.scope.batchSize * table.scope.rowsPerId : table.band.max;
+  const { scope } = table;
+  const expected = scope.kind === 'request' ? scope.batchSize * scope.rowsPerId
+    : scope.kind === 'sliced' ? scope.sliceRows : table.band.max;
   return expected * LIMIT_HEADROOM;
 }
 
@@ -73,6 +91,7 @@ export function batchQueries(table: PullTable, quote: TapArchive['quote']): stri
   const template = queryTemplate(table, quote);
   const { scope } = table;
   if (scope.kind === 'whole-table') return [template];
+  if (scope.kind === 'sliced') return sliceConditions(scope.key, scope.edges).map((range) => template.replace(SLICE, range));
   const batches: string[] = [];
   for (let at = 0; at < scope.ids.length; at += scope.batchSize) {
     batches.push(template.replace(REQUEST, scope.ids.slice(at, at + scope.batchSize).join(', ')));
@@ -85,7 +104,8 @@ const keysOf = <K extends string>(pull: Pull<K>): K[] => Object.keys(pull.tables
 /** Everything besides the data that decides a table's bytes, so a change to any of it stales the pull's record. */
 function tableDescription(table: PullTable, quote: TapArchive['quote']): object {
   const formats = Object.fromEntries(table.columns.flatMap((c) => (c.format ? [[c.name, c.format]] : [])));
-  return { query: queryTemplate(table, quote), formats, sortBy: table.sortBy };
+  const slices = table.scope.kind === 'sliced' ? { slices: sliceConditions(table.scope.key, table.scope.edges) } : {};
+  return { query: queryTemplate(table, quote), ...slices, formats, sortBy: table.sortBy };
 }
 
 export function describePull<K extends string>(pull: Pull<K>): PullDescription {
@@ -118,7 +138,6 @@ function tableChecks(label: string, table: PullTable, rows: readonly Row[]): Che
   ];
 }
 
-/** The resume cache sits beside the first output and goes only once every output has landed. */
 /** Refuses, before any query, a whole-table table whose reply at its limit could exceed `MAX_WHOLE_TABLE_CELLS`. */
 export function assertWholeTablesFit<K extends string>(pull: Pull<K>): void {
   for (const key of keysOf(pull)) {
@@ -130,6 +149,7 @@ export function assertWholeTablesFit<K extends string>(pull: Pull<K>): void {
   }
 }
 
+/** The resume cache sits beside the first output and goes only once every output has landed. */
 export async function runPull<K extends string>(pull: Pull<K>, deps: TapClientDeps = LIVE): Promise<void> {
   assertWholeTablesFit(pull);
   const keys = keysOf(pull);
