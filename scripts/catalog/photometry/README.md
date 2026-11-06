@@ -156,9 +156,12 @@ ourselves ([§ 5](/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers)
 alone reached a measured colour and hands them to the derived tiers. That is
 the trade the residual policy asks for.
 
-`resolveColourIndex` returns the shared cascade shape (`../cascade-result.ts`):
-the tier, its value, and every candidate it passed over with the gate that
-refused it. **Whether the value is observed-convention is a function of the
+`resolveColourIndex` returns the shared cited cascade shape
+(`../cascade-result.ts`): the tier, its value with the rows it rests on (the
+spectral-derived tier cites the rows its class came from), and every candidate
+it passed over with the gate that refused it and the row it read — the derived
+tier's `apsis_teff_renders` cites the Apsis row whose Teff the shader renders
+instead. **Whether the value is observed-convention is a function of the
 tier**, `ciIsObserved(via)`, and not a convenience: build-time de-extinction
 subtracts `A_V / R_V` from an observed B−V and must leave an intrinsic one
 alone, and deciding that at the dust integral from anything but the tier

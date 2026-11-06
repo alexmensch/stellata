@@ -89,6 +89,7 @@ import {
 } from '../distance/radial-velocity/radial-velocity';
 import { avSolToStar, type DustGrid } from '../distance/dust/dust-deextinction-pure';
 import { GAIA_APSIS } from '../record/gaia-apsis-source';
+import { sourceRowRef } from '../../util/sources/row-ref-pure';
 import { R_V } from '../../../src/astro-core/extinction/dust-raymarch-pure';
 import {
   emptySimbadValueIndex,
@@ -671,6 +672,9 @@ export function readStars(
     const apsisTeff = resolveApsisTeff(
       gaiaSourceId ? apsisMap.get(gaiaSourceId) : null,
     );
+    const citedApsisTeff = apsisTeff === null || gaiaSourceId === null
+      ? null
+      : { value: apsisTeff, ref: sourceRowRef(GAIA_APSIS, gaiaSourceId) };
 
     // B−V through the Gaia relation → printed I/239 B−V → synthetic
     // photometry → intrinsic spectral class, else solar. Printed above synthetic
@@ -681,10 +685,10 @@ export function readStars(
     const ciRes = resolveColourIndex({
       photometry: gaiaRow,
       gspc,
-      printedHipBv: printedByHip(hipBv, hip)?.value ?? null,
-      apsisTeff,
+      printedHipBv: printedByHip(hipBv, hip),
+      apsisTeff: citedApsisTeff,
       spectralCi: spectralClassColorIsDerivable(spectInfo)
-        ? spectralClassCi(spectInfo)
+        ? { value: spectralClassCi(spectInfo), evidence: spectral.via === 'none' ? [] : spectral.evidence }
         : null,
     });
     let ci = ciRes.via === 'none' ? SOLAR_BV_FALLBACK : ciRes.value;

@@ -1,16 +1,14 @@
 // Printed Johnson V and B−V per HIP from the I/239/hip_main slice. See README.md.
 
 import type { Declared } from '../../util/sources/source';
-import { sourceRowRef, type RowKeyed, type SourceRowRef } from '../../util/sources/row-ref-pure';
+import { sourceRowRef, type RowKeyed } from '../../util/sources/row-ref-pure';
+import type { CitedValue } from '../cascade-result';
 import { readTable } from '../../util/tsv/table-pure';
 
 const HIP_PHOTOMETRY_COLUMNS = ['hip', 'vmag', 'bv', 'hd'] as const;
 
 /** A printed value with the I/239 row it was read from. */
-export interface PrintedHipValue {
-  readonly value: number;
-  readonly ref: SourceRowRef<number>;
-}
+export type PrintedHipValue = CitedValue<number>;
 
 /** The two HIP-keyed printed values, as separate maps rather than one map of
  *  pairs: their consumers are disjoint, and 1,281 rows carry a V with no B−V,

@@ -11,6 +11,12 @@ export interface CascadeRefusal<Tier extends string, Reason extends string> {
   readonly reason: Reason;
 }
 
+/** A value with the source row it was read from. */
+export interface CitedValue<T> {
+  readonly value: T;
+  readonly ref: AnySourceRowRef;
+}
+
 /** A refused candidate read from a source row, which it cites. */
 export interface CitedRefusal<Tier extends string, Reason extends string> extends CascadeRefusal<Tier, Reason> {
   readonly ref: AnySourceRowRef;
