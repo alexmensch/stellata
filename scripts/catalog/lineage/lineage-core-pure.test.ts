@@ -139,4 +139,11 @@ describe('diffLineage', () => {
       .toBe('changed\t-\tdemo\tspine:4\toutcome\tdemo.kept\t{"source":"1"}\t\tn:spine:4');
     expect(Buffer.from(stageDiffText(changes, note, 1)).toString('utf8')).toBe(text);
   });
+
+  it('diffs a key\'s lines as a set, so a repeated line is no change', () => {
+    const once = [line(row('spine:2')), line(row('spine:3'))];
+    const twice = [line(row('spine:2')), line(row('spine:2')), line(row('spine:3'))];
+    expect(diffLineage(once, twice)).toEqual([]);
+    expect(diffLineage(twice, once)).toEqual([]);
+  });
 });
