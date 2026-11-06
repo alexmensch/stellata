@@ -189,6 +189,10 @@ same thing — single-use helpers stay with their consumer.
   `toPrecision`. Every number a TypeScript build rounds into a JSON
   artifact goes through one of them, never `Math.round(x · 10ⁿ) / 10ⁿ`,
   whose multiply moves near-ties.
+- `seeded-random-pure.ts` (+ test) — `mulberry32(seed)`, the one seeded
+  uniform generator: the synthetic faint catalogue's draws
+  (`../perf/synthetic-catalog/`) and the SIMBAD validation sample's
+  (`../refresh/simbad-sample/`). A changed algorithm redraws both.
 - `step-inputs.ts` — `entryInputPaths(entries)`, every file a TypeScript
   step reads: the closure of its entry files, the closure's siblings, and
   every declaration the closure reads (`sources/`); the runner derives each

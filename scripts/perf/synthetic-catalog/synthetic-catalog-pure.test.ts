@@ -12,7 +12,6 @@ import {
   galactocentricRz,
   marchSightline,
   marchStepPc,
-  mulberry32,
   numberDensityAt,
   poolCountBrighterThan,
   sampleCdf,
@@ -21,6 +20,7 @@ import {
   toCdf,
   type IntrinsicTuple,
 } from './synthetic-catalog-pure';
+import { mulberry32 } from '../../util/seeded-random-pure';
 
 const tuple = (absMag: number): IntrinsicTuple => ({
   absMag,
@@ -190,22 +190,5 @@ describe('equal-area sky grid', () => {
   it('spreads latitudes symmetrically about the plane', () => {
     const bs = equalAreaSkyGrid(1, 6).map((c) => c.bRad);
     expect(bs.reduce((a, b) => a + b, 0)).toBeCloseTo(0, 10);
-  });
-});
-
-describe('prng', () => {
-  it('is deterministic for a seed', () => {
-    const a = mulberry32(42);
-    const b = mulberry32(42);
-    expect([a(), a(), a()]).toEqual([b(), b(), b()]);
-  });
-
-  it('stays in the unit interval', () => {
-    const rng = mulberry32(5);
-    for (let i = 0; i < 1000; i++) {
-      const v = rng();
-      expect(v).toBeGreaterThanOrEqual(0);
-      expect(v).toBeLessThan(1);
-    }
   });
 });
