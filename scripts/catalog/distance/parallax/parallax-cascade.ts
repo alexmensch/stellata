@@ -49,6 +49,11 @@ export const PARALLAX_SN_FLOOR = 1.0;
  *  Gaia DR4 revisit. */
 export const PARALLAX_LOW_PRECISION_SN = 5.0;
 
+/** A curated record at the world origin (../../record/README.md#curated-records). */
+export interface OriginPlacement {
+  readonly absoluteVMagnitude: number;
+}
+
 export interface ParallaxSources {
   gaia: GaiaAstrometryCatalogRow | null;
   hip2: Hip2AstrometryRow | null;
@@ -58,6 +63,8 @@ export interface ParallaxSources {
   /** The best anchor-grade parallax this record's own bound siblings measured
    *  — `lookupPairMemberParallax`. */
   pairMember: SiblingParallax | null;
+  /** The record's curated placement (`../../record/curated-records.ts`). */
+  curated: OriginPlacement | null;
 }
 
 /** The tiers `resolveParallax` answers on: every `DistVia` but the two override
@@ -73,10 +80,10 @@ export type ParallaxTier = Exclude<DistVia, 'bailer_jones' | 'lmc_kinematic' | '
 export type ParallaxRefusal =
   CitedRefusal<ParallaxTier, 'below_sn_floor' | RefusedPublication> & { readonly mas: number };
 
-/** `mas` always > 0. Sol's curated exit carries none: its distance is zero by
- *  construction. */
+/** `mas` always > 0. The curated exit carries no parallax: its record sits at
+ *  the origin. */
 export type ParallaxResolution = CitedCascadeResult<
-  Record<Exclude<ParallaxTier, 'curated'>, MeasuredParallax> & { curated: null },
+  Record<Exclude<ParallaxTier, 'curated'>, MeasuredParallax> & { curated: OriginPlacement },
   ParallaxRefusal
 >;
 
@@ -118,8 +125,7 @@ export function belowParallaxSnFloor(plx: number, err: number | null): boolean {
  *  for exactly the low-S/N case, and a gate here would strip a record of a
  *  posterior that exists for it. */
 export function resolveParallax(
-  { gaia, hip2, cns5, gliese, simbad, pairMember }: ParallaxSources,
-  isSol: boolean,
+  { gaia, hip2, cns5, gliese, simbad, pairMember, curated }: ParallaxSources,
 ): ParallaxResolution {
   const refusals: ParallaxRefusal[] = [];
   const refused = new Set<RefusedPublication>(gaiaRefusals(gaia));
@@ -194,9 +200,7 @@ export function resolveParallax(
   const photometric = glieseHit(false, 'gliese_photometric_plx');
   if (photometric !== null) return photometric;
 
-  // Sol's distance is zero rather than a parallax — the same curated exit the
-  // direction and V cascades take.
-  if (isSol) return { via: 'curated', value: null, evidence: [], refusals };
+  if (curated !== null) return { via: 'curated', value: curated, evidence: [], refusals };
 
   return { via: 'none', refusals };
 }

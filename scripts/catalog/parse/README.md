@@ -184,9 +184,9 @@ never a membership decision — so the walk throws, naming the row.
    the step-2 solution to the scene epoch on the motion the row ends up
    carrying, and `xyz = direction × distance` in float64; then **velocity**
    assembly ([Space-motion velocity](../distance/README.md#space-motion-velocity)).
-7. **Spectral classification** (`resolveSpectralInfo`; Sol special-cased
-   to curated G2V in `stars-parse.ts` — no HIP/Gaia/SIMBAD key reaches
-   it). See `../spectral/README.md`.
+7. **Spectral classification** (`resolveSpectralInfo`; Sol's G2V is its
+   curated record's — no HIP/Gaia/SIMBAD key reaches it). See
+   `../spectral/README.md`.
 8. **B−V** (`resolveColourIndex`) — the Gaia relation, else printed
    `I/239` B−V, else Gaia's synthetic B−V, else the intrinsic
    spectral-class colour, else `none`, which bakes solar. See
@@ -226,6 +226,13 @@ The manifest carries no `x0/y0/z0`, and AT-HYG's was never consumed: it is a
 mixed-epoch merge artifact, tabulated at ~3 dp (a 206 AU grid) and internally
 inconsistent with the same row's printed ra/dec by up to tens of arcsec on
 high-PM stars ([Driver astrometry](/docs/science-catalog-ingestion.md#driver-astrometry--at-hyg-precision-findings-and-the-direct-sourcing-decision)).
+
+**Sol walks the same steps as every row.** Its curated record
+([Curated records](../record/README.md#curated-records)) supplies the
+`curated` tier of parallax, V, direction and spectral class; its placement is
+the origin, which is what zeroes its velocity, skips the PM rescue and
+leaves its constellation unclassified. `readStars` reads `isSol` only to set
+`FLAG_IS_SOL`.
 
 ## Space-motion velocity
 
