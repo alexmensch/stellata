@@ -163,11 +163,12 @@ export function stageLineage<F extends string, S extends string>(
   });
   const sorted = clock.lap('sort', () => sortLineageLines(run.lines));
   let changes: KeyChange[] | null = null;
-  let joins: readonly DiffJoin[] = [];
+  let diff: Uint8Array | null = null;
   if (plan.kind === 'diff') {
     const dir = source.kind === 'against' ? source.dir : run.layout[plan.from === 'previous' ? 'previous' : 'current'];
-    changes = clock.lap('diff', () => diffLineage(streamLineage(stageFile(dir, run.diffed)), sorted));
-    joins = clock.lap('joins', () => run.joins(dir));
+    const found = clock.lap('diff', () => diffLineage(streamLineage(stageFile(dir, run.diffed)), sorted));
+    changes = found;
+    diff = clock.lap('joins and diff text', () => stageDiffText(found, run.joins(dir)));
   } else if (plan.kind === 'refused') {
     console.log(plan.message);
   } else {
@@ -175,7 +176,6 @@ export function stageLineage<F extends string, S extends string>(
   }
 
   const texts = clock.lap('render', () => run.render(sorted));
-  const diff = changes === null ? null : clock.lap('diff text', () => stageDiffText(changes, joins));
   const { files, members } = clock.lap('gzip and baseline copy', () => stageEmission(
     run.layout, run.spec, texts, stageProvenance(run.spec, run.inputs), diff, plan.rotate,
   ));
