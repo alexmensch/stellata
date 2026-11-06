@@ -5,7 +5,6 @@ import { chmodSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, 
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { LEVEL_LABELS, SKIP_LABEL } from '../scripts/release/release-plan-pure';
 import { commitFile, gitIn } from './git-fixture';
 
 const HOOK = resolve(__dirname, '../scripts/hooks/pr-body-guard.sh');
@@ -24,7 +23,7 @@ interface PrView {
 }
 
 /** `gh pr view` answers with this PR as JSON; the head defaults to the checkout's. */
-function ghView({ base = 'main', labels = [], head, isDraft = false, body = '' }: PrView = {}): void {
+function ghView({ base = 'main', labels = ['release:patch'], head, isDraft = false, body = '' }: PrView = {}): void {
   const view = {
     baseRefName: base,
     headRefOid: head ?? git('rev-parse', 'HEAD').stdout.trim(),
@@ -92,7 +91,24 @@ describe('pr-body-guard', { timeout: 120_000 }, () => {
   });
 
   it('passes a conforming body', () => {
-    expect(decision(`gh pr create --body-file ${body(PERF, NOTES)}`).denied).toBe(false);
+    expect(decision(`gh pr create --body-file ${body(PERF, NOTES)} --label release:patch`).denied).toBe(false);
+  });
+
+  describe('version-guard: exactly one release level, as CI requires', () => {
+    it('denies a PR with no level label, naming the choices', () => {
+      const d = decision(`gh pr create --body-file ${body(PERF, NOTES)} -l docs`);
+      expect(d.denied).toBe(true);
+      expect(d.reason).toContain('version-guard: no release level declared: attach exactly one of release:major');
+    });
+
+    it('denies two level labels, counting the ones the PR already carries', () => {
+      const d = decision(`gh pr create --body-file ${body(PERF, NOTES)} -l release:minor,skip-version-bump`);
+      expect(d.reason).toContain('version-guard: release:minor and skip-version-bump conflict');
+      ghView({ labels: ['release:patch'] });
+      expect(decision(`gh pr edit 12 -F ${body(PERF, NOTES)} --add-label release:major`).denied).toBe(true);
+      expect(decision(`gh pr edit 12 -F ${body(PERF, NOTES)} --add-label release:major --remove-label release:patch`).denied)
+        .toBe(false);
+    });
   });
 
   it('reads every spelling of the body file, anywhere in a chain', () => {
@@ -220,7 +236,7 @@ describe('pr-body-guard', { timeout: 120_000 }, () => {
 
     it('on create -H, from that branch or its origin copy', () => {
       const file = body(NOTES);
-      expect(decision(`gh pr create -F ${file}`).denied).toBe(false);
+      expect(decision(`gh pr create -F ${file} -l release:patch`).denied).toBe(false);
       expect(decision(`gh pr create -H ${PR_HEAD} -F ${file}`).denied).toBe(true);
       git('update-ref', `refs/remotes/origin/${PR_HEAD}`, PR_HEAD);
       git('branch', '-q', '-D', PR_HEAD);
@@ -313,11 +329,6 @@ describe('the hook triggers where the workflows do', () => {
 
   it.each(['release-notes-guard.yml', 'perf-section-guard.yml'])('%s runs on the base the hook gates', (name) => {
     expect(workflow(name)).toMatch(new RegExp(`^\\s+branches: \\[${hookValue('ci_base')}\\]$`, 'm'));
-  });
-
-  it('the release level the guards read as none is the label the hook exempts', () => {
-    expect(LEVEL_LABELS[hookValue('skip_label')]).toEqual({ kind: 'none' });
-    expect(hookValue('skip_label')).toBe(SKIP_LABEL);
   });
 
   it('release-notes-guard.yml judges the live PR body, not the event payload’s', () => {
