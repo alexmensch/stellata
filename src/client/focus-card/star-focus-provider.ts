@@ -5,10 +5,7 @@ import {
   FLAG_BINARY_COMPANION_SYNTHETIC,
   NO_CONSTELLATION_INDEX,
 } from '../../catalog-format/record/catalog-pure';
-import {
-  UNKNOWN_CLASS_IDX,
-  classifyFromSimbad,
-} from '../../catalog-format/spectral/spectral-classify';
+import { classifyFromSimbad } from '../../catalog-format/spectral/spectral-classify';
 import {
   tempKelvin,
 } from '../../catalog-format/spectral/physical-radius';
@@ -162,8 +159,6 @@ function temperatureRow(
   }
   if (!rawSpectral) return null;
   const info = classifyFromSimbad(rawSpectral.split(/[+/]/)[0].trim());
-  // Unparseable classes route to the build's neutral 5000 K row — a
-  // fabricated temperature; omit the row instead.
-  if (!info || (info.classIdx === UNKNOWN_CLASS_IDX && !info.isWhiteDwarf)) return null;
+  if (!info) return null;
   return { label: 'Temperature', value: `~${formatKelvin(tempKelvin(info))}` };
 }

@@ -25,7 +25,7 @@ function coherence(rows: MultiplesTsvRow[], stars: Star[], src: CoherenceSources
 
 function star(overrides: Partial<Star>): Star {
   return makeStar({
-    absmag: 5, ci: 0.65, spectClass: 4, lumClass: 2, conIndex: 0, ...overrides,
+    absmag: 5, ci: 0.65, spectral: { kind: 'mk', letter: 4, subclass: null, lumClass: 2 }, conIndex: 0, ...overrides,
   });
 }
 

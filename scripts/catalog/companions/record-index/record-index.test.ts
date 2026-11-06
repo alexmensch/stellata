@@ -22,7 +22,7 @@ import { resolve } from 'node:path';
 
 function makeStar(overrides: Partial<Star> = {}): Star {
   return makeStarWithDefaults({
-    absmag: 5.0, ci: 0.65, spectClass: 4, lumClass: 2, ...overrides,
+    absmag: 5.0, ci: 0.65, spectral: { kind: 'mk', letter: 4, subclass: null, lumClass: 2 }, ...overrides,
   });
 }
 

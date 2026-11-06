@@ -16,6 +16,7 @@ export interface PipelineTree {
   readonly manualStamps: string;
   readonly record: (step: string) => string;
   readonly handedInputs: (step: string) => string;
+  readonly answeredBy: (step: string) => string;
   readonly locks: string;
 }
 
@@ -33,6 +34,7 @@ export function pipelineTree(root: string): PipelineTree {
     manualStamps: resolve(root, MANUAL_STAMP_FOLDER),
     record: perStep('build/records'),
     handedInputs: perStep('build/step-inputs'),
+    answeredBy: perStep('build/answered-by'),
     locks: resolve(root, 'build/locks'),
   };
 }

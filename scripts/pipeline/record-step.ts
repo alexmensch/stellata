@@ -1,7 +1,9 @@
 // Runs one manual step by hand and writes its committed record. See README.md#recording-a-manual-step--recordts.
 
-import { existsSync } from 'node:fs';
+import { existsSync, mkdirSync, rmSync } from 'node:fs';
+import { dirname } from 'node:path';
 
+import { ANSWERED_BY_ENV, readAnsweredBy } from '../util/answered-by';
 import {
   fileHashes, ignoredPaths, inputHashes, listingHashes, recordedInputs, type FileHashes, type RecordedReads,
 } from '../util/build-stamp';
@@ -83,8 +85,15 @@ async function runAndRead(
     const derived = await options.deriveInputs(entry);
     const keep = inputFilter(resolved, described, ignoredPaths(derived, tree.root), tree);
     const inputs = inputHashes(derived.filter(keep), tree.root);
-    const code = await runTs(tree, step.name, entry, options.args, inputs, process.env);
-    return code === 0 ? { inputs, services: [] } : `exited ${code}`;
+    const answeredBy = tree.answeredBy(step.name);
+    mkdirSync(dirname(answeredBy), { recursive: true });
+    rmSync(answeredBy, { force: true });
+    try {
+      const code = await runTs(tree, step.name, entry, options.args, inputs, { ...process.env, [ANSWERED_BY_ENV]: answeredBy });
+      return code === 0 ? { inputs, services: readAnsweredBy(answeredBy) } : `exited ${code}`;
+    } finally {
+      rmSync(answeredBy, { force: true });
+    }
   }
   const recorded = await runRecorded(tree, step.name, entry, options.args, process.env);
   if (recorded.kind === 'exited') return `exited ${recorded.code}`;

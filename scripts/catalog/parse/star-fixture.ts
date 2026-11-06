@@ -1,6 +1,7 @@
 // Default-valued Star factory for catalog-pipeline tests.
 
 import { NO_CONSTELLATION_INDEX } from '../../../src/catalog-format/record/catalog-pure';
+import { SPECTRAL_UNKNOWN } from '../../../src/catalog-format/spectral/spectral-classify';
 import type { Star } from './stars-parse';
 import { NO_DESIGNATION_CON } from '../classic-ids/designation-constellation-pure';
 
@@ -14,8 +15,7 @@ export function makeStar(overrides: Partial<Star> = {}): Star {
     vz: 0,
     absmag: 0,
     ci: 0,
-    spectClass: 0,
-    lumClass: 0,
+    spectral: SPECTRAL_UNKNOWN,
     physicalRadius: 1,
     conIndex: NO_CONSTELLATION_INDEX,
     desigCon: NO_DESIGNATION_CON,

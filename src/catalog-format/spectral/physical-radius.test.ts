@@ -2,7 +2,10 @@ import { describe, it, expect } from 'vitest';
 import { SOLAR_BV_FALLBACK, type ApsisRow } from '../record/catalog-pure';
 import {
   SPECTRAL_UNKNOWN,
+  classifyFromGspspec,
   classifyFromSimbad,
+  type MkLumClass,
+  type MkLetter,
   type SpectralInfo,
 } from './spectral-classify';
 import {
@@ -15,6 +18,10 @@ import {
   spectralFromAbsmag,
   tempKelvin,
 } from './physical-radius';
+
+function info(letter: MkLetter, subclass: number, lumClass: MkLumClass | null = 2): SpectralInfo {
+  return { kind: 'mk', letter, subclass, lumClass };
+}
 
 describe('spectralClassCi', () => {
   it('derives a hot-blue B−V for an early-type class (tier 4)', () => {
@@ -50,9 +57,6 @@ describe('spectralClassCi', () => {
 });
 
 describe('tempKelvin', () => {
-  function info(classIdx: number, subclass: number, lumClass = 2): SpectralInfo {
-    return { classIdx, subclass, lumClass, isWhiteDwarf: false, wdSubclass: 0 };
-  }
 
   it('returns Sun-like temperature for G2 (~5778 K target)', () => {
     // Sun is G2V — interpolated table value should be in the right neighbourhood.
@@ -64,23 +68,25 @@ describe('tempKelvin', () => {
   it('is hotter for O than for B than for A...', () => {
     // Spectral class O is the hottest, M the coolest. Monotone non-increasing
     // along the canonical OBAFGKM order (subclass=5 across the board).
-    const Ts = [0, 1, 2, 3, 4, 5, 6].map(c => tempKelvin(info(c, 5)));
+    const Ts = ([0, 1, 2, 3, 4, 5, 6] as const).map(c => tempKelvin(info(c, 5)));
     for (let i = 1; i < Ts.length; i++) {
       expect(Ts[i]).toBeLessThan(Ts[i - 1]);
     }
   });
 
   it('white dwarf temperature scales as 50400 / wdSubclass', () => {
-    const wd: SpectralInfo = { classIdx: 8, subclass: 5, lumClass: 0, isWhiteDwarf: true, wdSubclass: 2 };
-    expect(tempKelvin(wd)).toBeCloseTo(25200, 1);
-
-    const wd5: SpectralInfo = { ...wd, wdSubclass: 5 };
-    expect(tempKelvin(wd5)).toBeCloseTo(10080, 1);
+    expect(tempKelvin({ kind: 'white-dwarf', wdSubclass: 2 })).toBeCloseTo(25200, 1);
+    expect(tempKelvin({ kind: 'white-dwarf', wdSubclass: 5 })).toBeCloseTo(10080, 1);
   });
 
-  it('uses the unknown-class neutral table when classIdx is out of range', () => {
-    // classIdx=999 → falls back to T_TABLE[8] (5000 K flat).
-    expect(tempKelvin(info(999, 5))).toBe(5000);
+  it('reads the neutral 5000 K default for an unknown class', () => {
+    expect(tempKelvin(SPECTRAL_UNKNOWN)).toBe(5000);
+    expect(boloCorr(SPECTRAL_UNKNOWN)).toBe(0);
+  });
+
+  it('reads a class with no stated subclass at DEFAULT_SUBCLASS', () => {
+    expect(tempKelvin(classifyFromGspspec('K')!)).toBe(4410);
+    expect(tempKelvin(classifyFromGspspec('CSTAR')!)).toBe(3000);
   });
 
   it('routes Wolf-Rayets through the WR table, not the carbon-star row', () => {
@@ -92,9 +98,6 @@ describe('tempKelvin', () => {
 });
 
 describe('physicalRadius', () => {
-  function info(classIdx: number, subclass: number, lumClass = 2): SpectralInfo {
-    return { classIdx, subclass, lumClass, isWhiteDwarf: false, wdSubclass: 0 };
-  }
 
   it('returns ~1 R☉ for the Sun (G2V, absmag=4.83)', () => {
     // Sun is the calibration point of the whole magnitude system. Within
@@ -106,7 +109,7 @@ describe('physicalRadius', () => {
   });
 
   it('returns a tiny radius for white dwarfs (~0.013 R☉, hardcoded)', () => {
-    const wd: SpectralInfo = { classIdx: 8, subclass: 5, lumClass: 0, isWhiteDwarf: true, wdSubclass: 2 };
+    const wd: SpectralInfo = { kind: 'white-dwarf', wdSubclass: 2 };
     // WDs ignore absmag and return a fixed small radius — the catalog's
     // absmag for WDs doesn't translate reliably into physical radius via
     // Stefan-Boltzmann.
@@ -152,14 +155,14 @@ describe('physicalRadius', () => {
     // A real K0 star classified letter-only lands on subclass 5
     // (T_TABLE 4410 K); its measured Teff 5150 K must win. R ∝ T⁻² so
     // the ratio is exact for a fixed absmag + BC.
-    const gspspecK = info(5, 5, 255);
+    const gspspecK = classifyFromGspspec('K')!;
     const tableR = physicalRadius(5.9, gspspecK);
     const apsisR = physicalRadius(5.9, gspspecK, 5150);
     expect(apsisR).toBeCloseTo(tableR * (4410 / 5150) ** 2, 6);
   });
 
   it('ignores the Teff override for white dwarfs and Wolf-Rayets', () => {
-    const wd: SpectralInfo = { classIdx: 8, subclass: 5, lumClass: 0, isWhiteDwarf: true, wdSubclass: 2 };
+    const wd: SpectralInfo = { kind: 'white-dwarf', wdSubclass: 2 };
     expect(physicalRadius(11, wd, 5000)).toBeCloseTo(0.013, 5);
     const wr = classifyFromSimbad('WN5')!;
     expect(physicalRadius(-4.0, wr, 5000)).toBeCloseTo(physicalRadius(-4.0, wr), 9);
@@ -188,9 +191,6 @@ describe('resolveApsisTeff', () => {
 });
 
 describe('boloCorr', () => {
-  function info(classIdx: number, subclass: number, lumClass = 2): SpectralInfo {
-    return { classIdx, subclass, lumClass, isWhiteDwarf: false, wdSubclass: 0 };
-  }
 
   it('is near zero for solar-type stars', () => {
     // BC for G2V should be a few hundredths — the Sun is the reference.
@@ -234,37 +234,38 @@ describe('absmagFromSpectral', () => {
   });
 
   it('unknown luminosity class defaults to main sequence', () => {
-    expect(absmagFromSpectral(
-      { classIdx: 5, subclass: 0, lumClass: 255, isWhiteDwarf: false, wdSubclass: 0 },
-    )).toBeCloseTo(5.9, 2);
+    expect(absmagFromSpectral(info(5, 0, null))).toBeCloseTo(5.9, 2);
+    expect(absmagFromSpectral(classifyFromGspspec('K')!)).toBeCloseTo(7.4, 2);
   });
 
   it('returns null where a single calibration would be fiction', () => {
     expect(mv('DA1.9')).toBeNull();                      // white dwarf
     expect(mv('C5,2e')).toBeNull();                      // carbon
+    expect(mv('WN5')).toBeNull();                        // Wolf-Rayet
+    expect(absmagFromSpectral(classifyFromGspspec('CSTAR')!)).toBeNull();
     expect(absmagFromSpectral(SPECTRAL_UNKNOWN)).toBeNull();
   });
 });
 
 describe('spectralFromAbsmag', () => {
   it('inverts the MS calibration at the table anchors', () => {
-    expect(spectralFromAbsmag(0.65)).toMatchObject({ classIdx: 2, lumClass: 2 });
+    expect(spectralFromAbsmag(0.65)).toMatchObject({ kind: 'mk', letter: 2, lumClass: 2 });
     expect(spectralFromAbsmag(0.65).subclass).toBeCloseTo(0, 5);   // A0
     expect(spectralFromAbsmag(1.9).subclass).toBeCloseTo(5, 5);    // A5
     const g5 = spectralFromAbsmag(5.1);
-    expect(g5.classIdx).toBe(4);
+    expect(g5.letter).toBe(4);
     expect(g5.subclass).toBeCloseTo(5, 5);                          // G5
   });
 
   it('lands Algol Ab (own M_V ~2.2) in the A range, not the inherited B8', () => {
     const info = spectralFromAbsmag(2.225);
-    expect(info.classIdx).toBe(2);
+    expect(info.letter).toBe(2);
     expect(info.subclass).toBeCloseTo(7, 0);
   });
 
   it('clamps outside the [O0, M9] span', () => {
-    expect(spectralFromAbsmag(-9)).toMatchObject({ classIdx: 0, subclass: 0 });
-    expect(spectralFromAbsmag(20)).toMatchObject({ classIdx: 6, subclass: 9 });
+    expect(spectralFromAbsmag(-9)).toMatchObject({ letter: 0, subclass: 0 });
+    expect(spectralFromAbsmag(20)).toMatchObject({ letter: 6, subclass: 9 });
   });
 
   it('round-trips through absmagFromSpectral inside every class span', () => {

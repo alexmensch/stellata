@@ -213,8 +213,11 @@ request), an ignored file (a `.ckpt` batch cache, the dust bake's
 `.voxels-*.npy`: no other checkout has one, so no listing counts it either),
 and, for a pull, code. An ignored
 write is scratch; any other write the step does not declare fails the run
-and leaves the record as it was. `answeredBy` is the run record's services,
-in first-answer order; `release` is the description's.
+and leaves the record as it was. `answeredBy` is the services that answered,
+in first-answer order: a Python pull's run record carries them; a TypeScript
+pull writes them to the file `PIPELINE_ANSWERED_BY` names
+(`build/answered-by/<step>.json`, `../util/answered-by.ts`), which `record.ts`
+reads once the step exits 0 and then removes. `release` is the description's.
 
 ## Loops through committed files
 

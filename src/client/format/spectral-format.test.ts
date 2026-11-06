@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { formatSpectral, spectralLine } from './spectral-format';
-
-const UNKNOWN_LUM = 255;
-const UNKNOWN_CLASS = 8;
+import {
+  LUM_CLASS_UNKNOWN as UNKNOWN_LUM,
+  SPECT_CLASS_UNKNOWN as UNKNOWN_CLASS,
+} from '../../catalog-format/spectral/spectral-record-bytes';
 
 describe('formatSpectral', () => {
   it('normalises spacing between class and luminosity tokens', () => {
