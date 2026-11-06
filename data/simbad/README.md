@@ -23,6 +23,9 @@ simbad_wds_xids.tsv        ~1.2 MB, LFS. Per-WDS-component (Gaia DR3,
                            73 changed rows stellata-hooj.30 tracks (44 Gaia
                            sources leave multiples.tsv, mu Cas A-E among
                            them); land it only with those resolved.
+simbad_wds_sptype.tsv      ~0.25 MB, LFS. 23,604 rows. sp_type per WDS
+                           component oid, the rows build:binaries reads —
+                           see README.md#the-wds-keyed-sp_type-pull.
 simbad_tyc_hd.tsv          ~11 MB, LFS. 332,320 rows. SIMBAD's own HD
                            attribution per Tycho-2 entry, keyed on TYC —
                            see README.md#the-tyc--hd-pull.
@@ -147,6 +150,17 @@ the 10 it vindicates against IV/25, and the four-witness split of the 15 it
 still contradicts: [What the TYC → HD pull adjudicates](/scripts/catalog/simbad/README.md#what-the-tyc--hd-pull-adjudicates)
 and [Which witness decides a close pair's HD](/scripts/catalog/simbad/README.md#which-witness-decides-a-close-pairs-hd). That folder owns
 what a consumer may conclude from these tables; this one owns what they are.
+
+## The WDS-keyed sp_type pull
+
+`simbad_wds_sptype.tsv` is SIMBAD's `sp_type` for every object
+`simbad_wds_xids.tsv` binds a WDS component to — columns `simbad_oid`,
+`sp_type`, one row per oid SIMBAD still holds, an untyped object with an
+empty `sp_type`. Its request is `simbad_wds_xids.tsv` alone, so unlike
+`simbad_sptype.tsv` nothing in it moves when the membership manifest does,
+and `build:binaries` reads it and nothing manifest-keyed. The two pulls
+overlap: an oid both requests reach has a row in each file. Pull and gates:
+[scripts/refresh/simbad-wds-sptype/](/scripts/refresh/simbad-wds-sptype/README.md).
 
 ## Provenance
 

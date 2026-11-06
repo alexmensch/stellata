@@ -16,6 +16,7 @@ export const DATA_FILES = {
   binariesAstrometryRequest: 'data/gaia/gaia_astrometry_source_id_request.tsv',
   simbadSourcedDistances: 'data/athyg/simbad_sourced_distances.tsv',
   simbadWdsXids: 'data/simbad/simbad_wds_xids.tsv',
+  simbadWdsSptype: 'data/simbad/simbad_wds_sptype.tsv',
   reasonCodes: 'data/lineage/reason-codes.tsv',
   vaidmanSupergiants: 'data/distance-validation/vaidman-2025-supergiants.tsv',
 } as const;

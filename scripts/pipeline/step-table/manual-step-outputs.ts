@@ -43,6 +43,10 @@ export const MANUAL_STEPS: readonly ManualStep[] = [
   pull('refresh:msc', 'refresh-msc.py', ['systems', 'orbits', 'components'].map((s) => `data/msc/msc_${s}.tsv`)),
   pull('refresh:simbad', 'refresh-simbad-sample.py', ['data/simbad/simbad_sample.tsv']),
   pull('refresh:simbad-wds-xids', 'refresh-simbad-wds-xids.py', [DATA_FILES.simbadWdsXids]),
+  tsManual(
+    { kind: 'pull' }, 'refresh:simbad-wds-sptype', 'scripts/refresh/simbad-wds-sptype/refresh-simbad-wds-sptype.ts',
+    'scripts/refresh/simbad-wds-sptype/simbad-wds-sptype-outputs.ts', 'SIMBAD_WDS_SPTYPE_OUTPUTS',
+  ),
   pull('refresh:simbad-sptype', 'refresh-simbad-sptype.py', ['data/simbad/simbad_sptype.tsv']),
   pull('refresh:simbad-values', 'refresh-simbad-values.py', ['data/simbad/simbad_values.tsv']),
   pull('refresh:simbad-tyc-hd', 'refresh-simbad-tyc-hd.py', ['data/simbad/simbad_tyc_hd.tsv']),

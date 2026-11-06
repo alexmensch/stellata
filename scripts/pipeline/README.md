@@ -353,7 +353,7 @@ The table's own files are in [step-table/](step-table/README.md#files).
   pass and its outputs land (`emitArtifacts`); the lock is taken before the
   stamp is read.
 - **Q6, the force.** One table absorbs 3 stamped steps, 2 emitters, 6
-  mirrors, 3 CI-only generators and 1 that runs nowhere, 26 pulls (24
+  mirrors, 3 CI-only generators and 1 that runs nowhere, 27 pulls (25
   `refresh:*`, two of them the Edenhofer variants, and 2 `fetch:*`, all in
   `MANUAL_STEPS`) and 7 bakes; recount each with
   `MANUAL_STEPS.filter((s) => s.kind === 'pull').length` (`'bake'` for the
