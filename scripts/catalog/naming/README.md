@@ -280,7 +280,7 @@ touch.
 
 ## Naming lineage
 
-The display-name pass is the sixth stage of the [lineage](../lineage/README.md)
+The display-name pass is the seventh stage of the [lineage](../lineage/README.md)
 contract (`naming-lineage-pure.ts`), after SID allocation, since the curated
 override keys on SIDs. `namingLineageRows` serialises each record's
 `NamedRecord` through an exhaustive `switch`:

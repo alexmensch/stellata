@@ -47,6 +47,7 @@ name.
    (`LINEAGE_STAGES`, `../lineage-stages.ts`).
 
 `trace.test.ts` runs the command over a small committed fixture: it finds a
-record the catalogue parks, the record that refused a source no identity
-row carries, every component row of a promoted system from its anchor's
+record the catalogue parks, prints a record's placement and
+brightness-colour rows with their refused tiers, finds the record that
+refused a source no identity row carries, every component row of a promoted system from its anchor's
 designation, and a cloud from its `cloud:` slug.

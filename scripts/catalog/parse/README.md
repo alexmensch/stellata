@@ -217,10 +217,12 @@ Both are null on Sol, which sits at distance zero by construction, and on
 records minted rather than walked. `originKey` is build-time-only too: the
 row's `origin_key`, which a later stage's lineage cites the record by
 ([Identity](../lineage/README.md#identity--the-origin-source-row)). Beside
-the records the walk hands `readStars`' `onPlacement` one `Placement` per
-manifest row, parked or shipped, and keeps none of them: the caller turns
-each into what [placement lineage](../distance/README.md#placement-lineage)
-writes, and the park counts fold from them as they pass.
+the records the walk hands `readStars`' `onRow` one `WalkedRow` per manifest
+row, parked or shipped — its `Placement`, and its `BrightnessColour` wherever
+the row reached V — and keeps none of them: the caller turns each into what
+[placement lineage](../distance/README.md#placement-lineage) and
+[brightness-colour lineage](../photometry/README.md#brightness-colour-lineage)
+write, and the park counts fold from them as they pass.
 
 The manifest carries no `x0/y0/z0`, and AT-HYG's was never consumed: it is a
 mixed-epoch merge artifact, tabulated at ~3 dp (a 206 AU grid) and internally

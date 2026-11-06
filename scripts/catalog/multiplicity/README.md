@@ -332,7 +332,7 @@ carries the science framing.
 
 ### Coherence lineage
 
-The pass is the third stage of the [lineage](../lineage/README.md) contract
+The pass is the fourth stage of the [lineage](../lineage/README.md) contract
 (`coherence-lineage-pure.ts`), between placement and promotion.
 `coherenceLineageRows` serialises each `SystemVerdict` through an exhaustive
 `switch`. A system's anchor gets `coherence.anchor`, or `anchor.inconsistent` /

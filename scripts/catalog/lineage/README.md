@@ -240,7 +240,7 @@ lineage.
 
 ## SID events
 
-SID allocation is the fifth stage, run inside `build:catalog`; each sibling
+SID allocation is the sixth stage, run inside `build:catalog`; each sibling
 build allocates as a stage of its own, `allocation-clouds` in `build:clouds`
 and `allocation-local-group` in `build:local-group`. Their rows, events and
 fail-closed rule live beside their modules, in [SID events](/scripts/sid/README.md#sid-events).
@@ -301,6 +301,7 @@ promotion mints companions, all but about 4,600 of them `not-applicable`
 Naming, measured 2026-11-05: 1,017,955 rows, one name row per record plus its
 refused tiers, letter and designation constellation (78 MB plain), 9.7 MB
 gzipped in 2.7 s without a diff; `NAMING_LINEAGE_BUDGET` pins 10.6 MB and 15 s.
+Brightness-colour's budget: [Brightness-colour lineage](../photometry/README.md#brightness-colour-lineage).
 Placement, measured 2026-10-30: 3,872,657 rows (349 MB plain, 31.0 MB
 gzipped) in 3.2 s without a diff and 8.1 s with one against a full
 baseline; `PLACEMENT_LINEAGE_BUDGET` pins 34 MB and 60 s: a CI run that diffs against a restored merge-base baseline took 36.5 s (2026-11-05). A file that size outruns
@@ -403,19 +404,25 @@ against reinstates per SID, as it was over the two files.
 `build:catalog`'s record walk is the second stage; its contract lives beside
 its module, in [Placement lineage](../distance/README.md#placement-lineage).
 
+## The brightness-colour stage
+
+`build:catalog`'s V, spectral class, B−V and de-extinction are the third
+stage, written from the same record walk as placement; its contract lives
+beside its module, in [Brightness-colour lineage](../photometry/README.md#brightness-colour-lineage).
+
 ## The coherence stage
 
-`build:catalog`'s system distance coherence is the third stage; its contract
+`build:catalog`'s system distance coherence is the fourth stage; its contract
 lives beside its module, in [Coherence lineage](../multiplicity/README.md#coherence-lineage).
 
 ## The naming stage
 
-`build:catalog`'s display-name pass is the sixth stage, after allocation; its
+`build:catalog`'s display-name pass is the seventh stage, after allocation; its
 contract lives beside its module, in [Naming lineage](../naming/README.md#naming-lineage).
 
 ## The promotion stage
 
-`build:catalog`'s companion promotion is the fourth stage
+`build:catalog`'s companion promotion is the fifth stage
 (`../companions/promotion-lineage-pure.ts`). `promoteCompanions` returns one
 `PromotedRow` per `multiples.tsv` row, keyed on that row
 (`multiples:<system_id>/<comp>`), and `promotionLineageRow` serialises its

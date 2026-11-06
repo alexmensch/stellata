@@ -33,6 +33,12 @@ scripts/catalog/photometry/
                                  synthetic tier's measured colour bound, and
                                  the five-tier ci cascade with its
                                  observed-vs-intrinsic verdict. Pure.
+  brightness-colour-lineage-pure.ts
+    (+ test)                     V, spectral class, B−V and de-extinction
+                                 as a lineage stage: its codes, the
+                                 BrightnessColour each walked row hands
+                                 on, and its one serialiser
+                                 (#brightness-colour-lineage).
   gspc-source.ts                 GAIA_GSPC and HIP_PHOTOMETRY, the two
   hip-photometry-source.ts       tables declared (../../util/sources/).
   gspc-parse.ts (+ test)         data/gaia/gaia_dr3_gspc.tsv → source_id →
@@ -352,6 +358,44 @@ generator, and the record build reads the surviving binding off the
 manifest column rather than re-deciding it ([The identifier columns are read, never re-derived](../membership/README.md#the-identifier-columns-are-read-never-re-derived);
 [The binding gate](/data/classic-ids/README.md#the-binding-gate)
 for the same gate on the label side).
+
+## Brightness-colour lineage
+
+`build:catalog`'s record walk writes a second [lineage](../lineage/README.md)
+stage beside placement (`brightness-colour-lineage-pure.ts`). `readStars`
+hands on one `BrightnessColour` per manifest row that reached V, keyed on
+its origin key, and `brightnessColourLineageRows` serialises it through an
+exhaustive `switch`:
+
+- a row a later placement step parked (`no_v_magnitude`, `no_position`)
+  writes the V cascade alone; one parked on parallax never reached V and
+  writes nothing here;
+- a shipped record writes V, spectral class, B−V and the de-extinction, in
+  walk order;
+- each cascade writes its outcome code and a `refused` row per candidate
+  it passed over, the candidate's tier in `params` (a SIMBAD spectral
+  refusal adds the `namespace` that reached the row); a refusal code names
+  the rule, never the tier. A printed V tier is its own outcome code;
+  `spectral.simbad` carries its `namespace`;
+- every row cites, as evidence, the source rows its cascade read
+  (`CitedCascadeResult`, `../cascade-result.ts`), and no measured value;
+- the dust row names the map in its code and which values it corrected
+  (`absmag-and-ci`, or `absmag-only` where the B−V is intrinsic), with
+  `params.av` the A_V subtracted, to `AV_PARAM_DECIMALS` places. Its
+  source row is the whole grid, so it cites none.
+
+The stage founds no record, writes no identity rows, and every code's
+effect is `none`. It covers the walked records: a promoted companion's V
+and colour come from its `multiples.tsv` row (`../companions/`).
+
+Measured 2026-11-06 on the full tree: 4,004,719 rows (444 MB plain), 38.6 MB
+gzipped in 7.1 s without a diff — larger than placement's, since nearly every
+record cites its Gaia row on both its V and its colour row and writes a dust
+row. `BRIGHTNESS_COLOUR_LINEAGE_BUDGET` pins 42.4 MB and 60 s, placement's
+time allowance, since a CI diff against a restored baseline runs several
+times slower than a local build. The walk holds these lines beside
+placement's: `build:catalog`'s peak live heap read 3,451 MiB against its
+3,482 MiB budget on that run ([CI heap budget](../../util/README.md#ci-heap-budget)).
 
 ## Citation
 

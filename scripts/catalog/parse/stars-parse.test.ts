@@ -40,6 +40,7 @@ import { MAX_DIST_PC, readStars } from './stars-parse';
 import { CURATED_RECORDS } from '../record/curated-records';
 import { AV_PER_EZGR } from '../../../src/astro-core/baker-constants';
 import { printedHipTable } from '../photometry/photometry-fixture';
+import type { BrightnessColour, DustStep } from '../photometry/brightness-colour-lineage-pure';
 
 const readStarsDiscarding = (
   manifest: Parameters<typeof readStars>[0], options: Parameters<typeof readStars>[1],
@@ -128,9 +129,10 @@ function uniformDustGrid(): DustGrid {
 describe('readStars build-time de-extinction of ci', () => {
   it('de-reddens an observed ci but never the solar fallback', () => {
     const grid = uniformDustGrid();
+    const dust: (DustStep | null)[] = [];
     // The observed colour arrives through the printed I/239 tier — the one
     // measured colour a row with no Gaia source can reach.
-    const { stars } = readStarsDiscarding(
+    const { stars } = readStars(
       manifestRows([
         { ...AT_ORIGIN_SIGHTLINE, proper: 'BlankCi' },
         { ...AT_ORIGIN_SIGHTLINE, proper: 'ObservedCi', hip: '11111' },
@@ -142,9 +144,12 @@ describe('readStars build-time de-extinction of ci', () => {
         directions: AT_ORIGIN_DIRECTIONS(),
         gliese: glieseParallaxes([{ gl: ORIGIN_GL, distPc: 100 }]),
       },
+      ({ brightness }) => dust.push(brightness?.kind === 'shipped' ? brightness.dust : null),
     );
     expect(stars).toHaveLength(2);
     const av = avSolToStar(grid, 100, 0, 0);
+    // Lineage records the same A_V, and which of the two values it corrected.
+    expect(dust).toEqual([{ av, ciDereddened: false }, { av, ciDereddened: true }]);
     expect(av).toBeGreaterThan(1); // the gate must have something to bite on
 
     const blank = stars.find((s) => s.proper === 'BlankCi')!;
@@ -258,6 +263,7 @@ describe('readStars manifest labels', () => {
   // count, as claimed in ./README.md#per-row-pipeline.
   it('counts a park in the park partition alone', () => {
     const placements: Placement[] = [];
+    const brightness: (BrightnessColour | null)[] = [];
     const { stars, stats } = readStars(
       manifestRows([
         { ...AT_ORIGIN_SIGHTLINE, hd: '55' },
@@ -269,7 +275,10 @@ describe('readStars manifest labels', () => {
         gliese: glieseParallaxes([{ gl: ORIGIN_GL, distPc: 100 }]),
         hipVMag: printedHipTable([[4242, 7.5]]),
       },
-      (p) => placements.push(p),
+      (row) => {
+        placements.push(row.placement);
+        brightness.push(row.brightness);
+      },
     );
     expect(stars).toHaveLength(0);
     const sum = (p: Record<string, number>): number =>
@@ -280,6 +289,8 @@ describe('readStars manifest labels', () => {
     expect(sum(stats.directionVia)).toBe(stars.length);
     expect(placements.map((p) => p.kind)).toEqual(['parked-no-v', 'parked-no-position']);
     expect(placements).toHaveLength(stats.total);
+    // Both rows reached V, so both carry the V cascade's outcome; neither got further.
+    expect(brightness.map((b) => (b?.kind === 'v-only' ? b.v.via : b?.kind))).toEqual(['none', 'printed_hip']);
   });
 
   it('fails the walk on a row the overrides leave past MAX_DIST_PC, naming it', () => {
