@@ -61,8 +61,7 @@ export type VMagnitudeResolution = CascadeResult<UniformValues<VVia, number>, VM
 export interface VMagnitudeSources {
   photometry: GaiaPhotometry | null;
   printed: PrintedV | null;
-  /** Sol only: it carries no identifier any tier above can key on, and V is a
-   *  membership gate. See `SOL_APPARENT_V_MAGNITUDE`. */
+  /** The record's curated V (`../record/curated-records.ts`). */
   curatedV: number | null;
 }
 

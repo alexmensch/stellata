@@ -3,8 +3,6 @@
 // builder step. See scripts/catalog/README.md.
 
 import {
-  SOL_ABSOLUTE_V_MAGNITUDE,
-  SOL_APPARENT_V_MAGNITUDE,
   FLAG_HAS_NAME,
   FLAG_IS_SOL,
   FLAG_HAS_BAYER,
@@ -21,13 +19,11 @@ import {
   type SimbadRecordKeys,
 } from '../simbad/simbad-namespace-ladder-pure';
 import {
-  classifyFromSimbad,
   SPECTRAL_UNKNOWN,
   type SpectralInfo,
 } from '../../../src/catalog-format/spectral/spectral-classify';
 import {
   type SimbadSpectralIndex,
-  type SpectralResolution,
   type SpectralSources,
   type SpectralValue,
   type SpectralVia,
@@ -121,6 +117,7 @@ import type { GspcColour } from '../photometry/gspc-parse';
 import { printedByHip } from '../photometry/hip-photometry-parse-pure';
 import { emptyTallyPartition } from '../../util/counts/tally-pure';
 import type { ManifestRecord } from '../membership/membership-manifest-tsv';
+import type { CuratedRecords } from '../record/curated-records';
 import { type ConstellationAssignment } from './constellations/constellations';
 import { NO_DESIGNATION_CON, type DesignationCon } from '../classic-ids/designation-constellation-pure';
 import {
@@ -251,6 +248,8 @@ export interface Star {
  *  needs and the rest degrade to empty. */
 export interface ReadStarsOptions {
   conAssignment: ConstellationAssignment;
+  /** `CURATED_RECORDS` — every cascade's curated tier. Absent parks Sol. */
+  curatedRecords?: CuratedRecords;
   bailerJones?: BailerJonesIndex;
   simbadSpectral?: SimbadSpectralIndex;
   /** `SPTYPE_OVERRIDES` — the spectral resolver's curated tier. */
@@ -285,6 +284,7 @@ export function readStars(
   manifest: Iterable<ManifestRecord>,
   {
     conAssignment,
+    curatedRecords = () => null,
     bailerJones,
     simbadSpectral = emptySimbadSpectralIndex(),
     sptypeOverrides = new Map(),
@@ -408,7 +408,8 @@ export function readStars(
   // Every exit returns its row's Placement, so the compiler refuses one that
   // would drop a record from lineage.
   const walk = (row: ManifestRecord): { placement: Placement; star: Star | null } => {
-    const { hip, gaiaSourceId, isSol } = row;
+    const { hip, gaiaSourceId } = row;
+    const curated = curatedRecords(row);
     // Read off the manifest column, never re-derived: the binding is the one
     // the manifest justified (/docs/catalog-driver.md#31-retiring-the-spine--the-membership-rule-measured-against-the-primaries), and re-deciding
     // it here would re-run a cross-walk against reference tables that have
@@ -465,8 +466,8 @@ export function readStars(
         pairMember: lookupPairMemberParallax(
           pairMemberParallax, gaiaSourceId, hip,
         ),
+        curated: curated?.placement ?? null,
       },
-      isSol,
     );
     // Not a `dropped` gate: a park is a deliberate record-parity ledger entry (/docs/catalog-driver.md#61-record-parity).
     if (plxRes.via === 'none') {
@@ -485,7 +486,7 @@ export function readStars(
     const vRes = resolveVMagnitude({
       photometry: gaiaRow,
       printed,
-      curatedV: isSol ? SOL_APPARENT_V_MAGNITUDE : null,
+      curatedV: curated?.vMagnitude ?? null,
     });
     if (vRes.via === 'none') {
       return { placement: { kind: 'parked-no-v', key, ids, parallax: plxRes }, star: null };
@@ -496,7 +497,7 @@ export function readStars(
     // the row carries is known; position is that direction × distance, both
     // float64 until the float32 pack at write time.
     const direction = resolveDirection(
-      { ...simbadKeys, simbad: simbadRow?.astrometry ?? null, isSol },
+      { ...simbadKeys, simbad: simbadRow?.astrometry ?? null, curated: curated?.direction ?? null },
       directions,
     );
     // A record-parity park (/docs/catalog-driver.md#61-record-parity), not a drop: no tier states where this row is, so its
@@ -513,7 +514,10 @@ export function readStars(
     // one. Where it does not — the 2p Gaia cohort, Tycho-2's rows with no mean
     // solution — the tangential term re-keys on the record's own designations
     // rather than shipping static. See ../distance/README.md#the-proper-motion-rescue-cascade.
-    const pmRescue = !isSol && dirRes.velVia === 'zero'
+    // A record at the origin is curated whole: no motion to rescue, no
+    // distance modulus, no sky direction.
+    const origin = plxRes.via === 'curated' ? plxRes.value : null;
+    const pmRescue = origin === null && dirRes.velVia === 'zero'
       ? resolvePmRescue({
           tycho2: tycho2Row,
           cns5: lookupCns5Astrometry(directions.cns5, simbadKeys.gl)?.pm ?? null,
@@ -533,8 +537,7 @@ export function readStars(
     // cascade settled on is Gaia's own — its Bayesian posterior treats exactly
     // that measurement, and a non-Gaia parallax must not be regressed onto
     // B-J's Galactic-density prior tail (~10–40 kpc). A null parallax here is
-    // the curated exit (Sol, distance zero by construction); `none` returned
-    // above.
+    // the curated exit, at the origin; `none` returned above.
     const measuredPlx = plxRes.via === 'curated' ? null : plxRes.value;
     const plxDistPc = measuredPlx === null ? null : 1000 / measuredPlx.mas;
     let dist = plxDistPc ?? 0;
@@ -605,10 +608,9 @@ export function readStars(
     }
 
     // absmag derives from that V and the distance the whole override stack
-    // settled on — except for Sol, which sits at distance zero where the
-    // modulus is undefined and takes SOL_ABSOLUTE_V_MAGNITUDE instead.
-    let absmag = isSol
-      ? SOL_ABSOLUTE_V_MAGNITUDE
+    // settled on.
+    let absmag = origin !== null
+      ? origin.absoluteVMagnitude
       : absoluteMagnitude(vRes.value, dist);
 
     // Must follow the PM rescue: the position advances on the motion the row
@@ -620,9 +622,9 @@ export function readStars(
 
     // Space-motion velocity from the direction tier's own position + the PM
     // resolved above + the final stack distance + the rv cascade's radial
-    // term. Sol carries no PM row and sits at the origin — force it to exactly
-    // zero so the advance pass leaves the world origin fixed.
-    let vel = isSol
+    // term. The origin is forced to exactly zero so the advance pass leaves the
+    // world origin fixed.
+    let vel = origin !== null
       ? { x: 0, y: 0, z: 0 }
       : velocityPcPerYr(
           dirRes.srcRaDeg, dirRes.srcDecDeg, pmRaMasyr, pmDecMasyr, dist, rvKmS,
@@ -630,7 +632,7 @@ export function readStars(
     // Physical sanity: a space velocity past the ceiling is a PM×distance
     // artifact (spurious PM on a faint distant star). Drop to zero — kept
     // at J2016.0, the same fall-through as no-PM rows — so it doesn't
-    // streak under the epoch-advance. Sol is already zero.
+    // streak under the epoch-advance.
     let velClamped = false;
     const speedPcYr = Math.hypot(vel.x, vel.y, vel.z);
     const idLabel = (): string => proper
@@ -647,7 +649,7 @@ export function readStars(
       );
       vel = { x: 0, y: 0, z: 0 };
       velClamped = true;
-    } else if (!isSol && speedPcYr > GALACTIC_ESCAPE_VELOCITY_PC_YR) {
+    } else if (speedPcYr > GALACTIC_ESCAPE_VELOCITY_PC_YR) {
       // Kept (a proven escaper must survive) but tracked — this band is
       // almost all PM×distance / bad-RV artifacts.
       velocityAboveEscape++;
@@ -657,20 +659,14 @@ export function readStars(
         );
       }
     }
-    velocityVia[isSol || velClamped ? 'zero' : velVia]++;
+    const velZeroed = origin !== null || velClamped;
+    velocityVia[velZeroed ? 'zero' : velVia]++;
     if (velClamped) velocityClamped++;
-    if (!isSol && !velClamped && rvKmS !== null && rvKmS !== 0) rvApplied++;
+    if (!velZeroed && rvKmS !== null && rvKmS !== 0) rvApplied++;
 
-    // Sol carries no HIP, no Gaia source_id, and no SIMBAD row, so every
-    // machine tier misses and the unknown-class 5000 K row misizes it
-    // (R 1.27 instead of ~1.03) — the one record addressable only by name.
-    const spectral: SpectralResolution = isSol
-      ? {
-          via: 'curated',
-          value: { info: classifyFromSimbad('G2V')!, spectDisplay: 'G2V' },
-          refusals: [],
-        }
-      : resolveSpectralInfo(simbadKeys, spectralSources);
+    const spectral = resolveSpectralInfo(
+      { ...simbadKeys, curated: curated?.spectral ?? null }, spectralSources,
+    );
     const spectInfo = spectral.via === 'none' ? SPECTRAL_UNKNOWN : spectral.value.info;
     spectralVia[spectral.via]++;
     if (spectral.via === 'simbad') spectralSimbadKey[spectral.value.namespace]++;
@@ -713,9 +709,8 @@ export function readStars(
     const physRadius = physicalRadius(absmag, spectInfo, apsisTeff);
 
     // Byte 34 is positional: the IAU boundaries partition the whole sphere,
-    // so it resolves for any direction, catalogued or not. Sol is the one
-    // record with no direction to resolve.
-    const conIndex = isSol
+    // so it resolves for any direction, catalogued or not.
+    const conIndex = origin !== null
       ? NO_CONSTELLATION_INDEX
       : conAssignment.indexAt(x, y, z);
 
@@ -723,7 +718,7 @@ export function readStars(
 
     let flags = 0;
     if (proper) flags |= FLAG_HAS_NAME;
-    if (isSol) flags |= FLAG_IS_SOL;
+    if (row.isSol) flags |= FLAG_IS_SOL;
     if (bayer) flags |= FLAG_HAS_BAYER;
 
     const star: Star = {

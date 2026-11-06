@@ -40,8 +40,9 @@ via a seven-tier priority chain:
    2003's A1.5 IV+). Mirrors the binaries pipeline's
    `component_sptype_overrides.tsv` curated tier. Each type is classified
    where it is read (`curatedSpectralValue`), so one that does not classify
-   fails the read and the tier never refuses. Sol takes the same curated route
-   via a proper-name special case in `stars-parse.ts`.
+   fails the read and the tier never refuses. A curated record's own type
+   (Sol's G2V, [Curated records](../record/README.md#curated-records))
+   outranks a HIP-keyed one.
 1. **SIMBAD `sp_type` by Gaia source_id** (`data/simbad/simbad_sptype.tsv`
    from `scripts/refresh/refresh-simbad-sptype.py`). SIMBAD canonicalises
    sp_type to Morgan-Keenan only — variability annotations live in `otype`,

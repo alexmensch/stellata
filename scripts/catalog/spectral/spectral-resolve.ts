@@ -132,6 +132,12 @@ export function curatedSpectralValue(spType: string, fail: (message: string) => 
   return info ? { info, spectDisplay: spType } : fail(`curated sp_type "${spType}" does not classify`);
 }
 
+/** One record's designations, plus its curated type
+ *  (`../record/curated-records.ts`), which outranks a HIP-keyed one. */
+export interface SpectralInputs extends SimbadRecordKeys {
+  curated: SpectralValue | null;
+}
+
 export interface SpectralSources {
   simbad: SimbadSpectralIndex;
   apsis: ReadonlyMap<string, ApsisRow>;
@@ -171,12 +177,12 @@ function matchSimbadRow(
  *  Which tier exists for which population is in `./README.md#the-resolver`.
  * */
 export function resolveSpectralInfo(
-  keys: SimbadRecordKeys,
+  keys: SpectralInputs,
   { simbad, apsis: apsisMap, curatedByHip }: SpectralSources,
 ): SpectralResolution {
   const refusals: SpectralRefusal[] = [];
   const hip = simbadHipKey(keys.hip);
-  const curated = hip === null ? undefined : curatedByHip.get(hip);
+  const curated = keys.curated ?? (hip === null ? undefined : curatedByHip.get(hip));
   if (curated !== undefined) return { via: 'curated', value: curated, refusals };
   const hit = walkSimbadNamespaces(simbad, keys, (row) => {
     const match = matchSimbadRow(row, keys.sourceId);

@@ -109,7 +109,7 @@ describe('placementLineageRows', () => {
     const p: Placement = {
       kind: 'placed',
       key: 'spine:2',
-      parallax: { via: 'curated', value: null, evidence: [], refusals: [] },
+      parallax: { via: 'curated', value: { absoluteVMagnitude: 4.85 }, evidence: [], refusals: [] },
       direction: { via: 'curated', value: SOLUTION, evidence: [], refusals: [] },
       pmRescue: null,
       bailerJones: { kind: 'absent' },

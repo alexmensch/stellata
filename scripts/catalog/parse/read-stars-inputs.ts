@@ -11,6 +11,7 @@ import { HIP2 } from '../sources/hip2-source';
 import { GAIA_APSIS } from '../record/gaia-apsis-source';
 import { SIMBAD_SPTYPE } from '../spectral/simbad-sptype-source';
 import { SPTYPE_OVERRIDES } from '../spectral/sptype-overrides-source';
+import { CURATED_RECORDS } from '../record/curated-records';
 import { SIMBAD_VALUES } from '../simbad/simbad-values-source';
 import { GAIA_GSPC } from '../photometry/gspc-source';
 import { HIP_PHOTOMETRY } from '../photometry/hip-photometry-source';
@@ -163,6 +164,7 @@ export async function loadReadStarsInputs(): Promise<ReadStarsInputs> {
   };
 
   return {
+    curatedRecords: CURATED_RECORDS,
     bailerJones, apsisMap, gspcMap, simbadSpectral, sptypeOverrides, simbadValues, directions,
     hipVMag, hipBv, gliese, pairMemberParallax, dustGrid, conAssignment, sizes,
   };

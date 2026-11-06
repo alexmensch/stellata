@@ -6,6 +6,7 @@ import {
   curatedSpectralValue,
   type SimbadSpectralIndex,
   type SimbadSpectralRow,
+  type SpectralValue,
   parseSimbadSptypeTsv,
   resolveSpectralInfo,
 } from './spectral-resolve';
@@ -15,7 +16,8 @@ const FROM = { file: 'fixture.tsv', hint: 'h' };
 
 const resolve = (
   keys: SimbadRecordKeys, simbad: SimbadSpectralIndex, apsis: ReadonlyMap<string, ApsisRow>,
-) => resolveSpectralInfo(keys, { simbad, apsis, curatedByHip: SPTYPE_OVERRIDES.read() });
+  curated: SpectralValue | null = null,
+) => resolveSpectralInfo({ ...keys, curated }, { simbad, apsis, curatedByHip: SPTYPE_OVERRIDES.read() });
 
 /** A resolution expected to land on a tier, flattened; `none` fails the test. */
 const flatSp = (...args: Parameters<typeof resolve>) => {
@@ -66,6 +68,13 @@ describe('resolveSpectralInfo — tier priority', () => {
     expect(out.info).toMatchObject({ letter: 2 }); // A
     expect(out.info).toMatchObject({ lumClass: 3 }); // IV
     expect(out.spectDisplay).toBe('A1.5IV+');
+  });
+
+  it('tier 0: a curated record\'s own type outranks the HIP-keyed curation', () => {
+    const g2v: SpectralValue = { info: classifyFromSimbad('G2V')!, spectDisplay: 'G2V' };
+    expect(flatSp(keys(null, 36850), idx(), new Map(), g2v)).toMatchObject({
+      source: 'curated', spectDisplay: 'G2V',
+    });
   });
 
   it('tier 1: SIMBAD-by-source_id wins when present and parseable', () => {
