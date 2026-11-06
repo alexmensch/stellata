@@ -682,8 +682,8 @@ change, by `gh api --method PUT` as above, preserving every rule):
   suffix is how the deploy finds each commit's PR), `grouping_strategy:
   ALLGREEN`, `max_entries_to_build: 5`, `max_entries_to_merge: 5`,
   `min_entries_to_merge: 1`, `min_entries_to_merge_wait_minutes: 0`,
-  `check_response_timeout_minutes: 60` (the forced catalogue build is the
-  longest check, about 14 min).
+  `check_response_timeout_minutes: 60` (the longest check on a merge group
+  is the unforced catalogue build on a cache miss, about 9 min).
 - `required_status_checks.strict_required_status_checks_policy: false`.
   The queue tests each PR on the newest main, so requiring it up to date
   first only forces the serial re-sync the queue removes.
