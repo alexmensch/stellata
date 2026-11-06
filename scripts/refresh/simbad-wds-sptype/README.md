@@ -40,3 +40,21 @@ whose oid this request names, replayed through `runPull` from a checkpoint
 with no query sent, so its record's `answeredBy` is empty. Its first live
 run is a re-pull like any other: SIMBAD re-types objects with no release to
 pin, so expect a few `sp_type` cells, and `multiples.tsv` with them, to move.
+
+## What the split left in `simbad_sptype.tsv`
+
+`simbad_sptype.tsv` kept its bytes, so it still holds the objects only the
+WDS oids reached; they leave at its next real run, which therefore moves
+membership on its own, SIMBAD drift aside. Measured offline on 2026-11-06
+by dropping the upper bound (the 11,101 rows with a WDS oid whose
+`source_id`, `hip` and `tyc` are all absent from the manifest) and running
+the membership build:
+
+- three `binding-review-dispositions.tsv` rows reopen — GJ 1001, GJ 3527 and
+  GJ 4032 each derive a source where their disposition recorded none — so
+  the build stops until they are re-reviewed;
+- derivation via SIMBAD 12,488 → 12,491, contested 231 → 232, refused 616
+  → 613.
+
+Rows also reachable through an HD or GJ designation stay, so the real set is
+smaller; the catalogue's counts were not measured past the membership stop.

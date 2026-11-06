@@ -13,6 +13,9 @@ simbad_sample.tsv          ~5.7 MB, LFS. Stratified random 50k stars.
 simbad_sptype.tsv          ~29 MB, LFS. 395,543 rows. Per-source sp_type /
                            sp_qual / sp_bibcode / otype + HIP / Gaia DR3 /
                            TYC / GJ cross-IDs; the resolver keys all four.
+                           Still holds WDS-only rows its request no longer
+                           asks for, and what dropping them moves:
+                           /scripts/refresh/simbad-wds-sptype/README.md#what-the-split-left-in-simbad_sptypetsv.
 simbad_values.tsv          ~18 MB, LFS. 74,446 rows. Bibcoded rv,
                            parallax, PM, coordinates and B/V fluxes for
                            the /docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers value cohort — see README.md#the-values-pull.

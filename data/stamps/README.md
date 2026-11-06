@@ -31,8 +31,7 @@ with no query sent: the new pull records through its target from a
 checkpoint seeded with its share of the rows, and the old one, its output
 unchanged, takes the request hash and `requestFrom` its `--describe` now
 prints. The old one holds rows its query no longer asks for until its next
-real run — `refresh:simbad-sptype` still carries the WDS-only objects
-`refresh:simbad-wds-sptype` took over.
+real run, and its data README says what that run will move.
 
 ## Bootstrap
 
