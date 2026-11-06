@@ -11,7 +11,7 @@ import { CNS5 } from '../classic-ids/cns5-source';
 import { CROSS_INDEX } from '../classic-ids/cross-index-source';
 import { GLIESE } from '../gliese-source';
 import { SIMBAD_SPTYPE } from '../spectral/simbad-sptype-source';
-import { HIP2 } from '../distance/hip2-source';
+import { HIP2 } from '../sources/hip2-source';
 import { HIP_PHOTOMETRY } from '../photometry/hip-photometry-source';
 import { artifactRows } from '../../util/sources/source';
 import { TYCHO2 } from '../tycho2-source';

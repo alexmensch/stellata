@@ -12,7 +12,9 @@ scripts/catalog/parse/gcvs/
   gcvs-source.ts           GCVS / GCVS_CROSSID, the two frozen files
                            declared (../../../util/sources/).
   gcvs-parse.ts (+ test)   parseGcvsMain / parseGcvsCrossref (the two
-                           frozen-file readers), bridgeGcvsByGaia, and
+                           frozen-file readers) with their cell parsers,
+                           classifyGcvsVarType and isPlanetaryTransitOnly,
+                           bridgeGcvsByGaia, and
                            applyVariability — the post-sort walk that
                            attaches names and pulsation.
 ```
@@ -53,7 +55,7 @@ looks up the period+amp. Two independent gates:
 Most catalog stars aren't variable, but the ones that are tend to be the
 astronomically interesting ones (Betelgeuse, Mira, Algol, Cepheids, etc.).
 
-Each row's `varType` comes from `classifyGcvsVarType` (`../../record/record-build-pure.ts`):
+Each row's `varType` comes from `classifyGcvsVarType` (`gcvs-parse.ts`):
 GCVS EA/EB/EW/ELL/E → `VAR_TYPE_ECLIPSING`, the pulsator families →
 `VAR_TYPE_PULSATING`, everything else → `VAR_TYPE_OTHER`. A bare
 transiting-planet host (GCVS EP with no superimposed intrinsic

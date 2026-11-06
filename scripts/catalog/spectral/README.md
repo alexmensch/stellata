@@ -19,7 +19,7 @@ scripts/catalog/spectral/
   spectral-resolve.ts (+ test)    The seven-tier resolver and the SIMBAD
                                   sp_type index it walks, through the
                                   namespace ladder in
-                                  `../record/record-build-pure.ts`
+                                  `../simbad/simbad-namespace-ladder-pure.ts`
                                   (`walkSimbadNamespaces`, `indexSimbadRow`,
                                   `simbadHipKey`) both SIMBAD pulls share.
 ```
@@ -63,7 +63,7 @@ via a seven-tier priority chain:
    key](/scripts/refresh/simbad/README.md#the-union-adds-rows-never-a-second-row-under-one-key)). The walk passes over the typeless one on its own: `accept` returns
    null and the ladder keeps going.
 3. **SIMBAD `sp_type` by GJ**, folded through `normaliseGjKey`
-   (`../record/record-build-pure.ts`) so `Gl 165A` / `GJ 165A` / `165 A` meet as one
+   (`../simbad/simbad-namespace-ladder-pure.ts`) so `Gl 165A` / `GJ 165A` / `165 A` meet as one
    key. Above TYC per [The ladder is ordered by what an identifier names](#the-ladder-is-ordered-by-what-an-identifier-names).
 4. **SIMBAD `sp_type` by TYC** — the only namespace that reaches an object
    SIMBAD holds no Gaia id and no HIP for, which is exactly the population

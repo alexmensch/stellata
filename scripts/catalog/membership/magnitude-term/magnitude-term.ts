@@ -4,7 +4,7 @@ import { streamArtifact } from '../../../util/sources/source';
 import {
   gaiaAstrometryAccumulator,
   type GaiaAstrometryCatalogRow,
-} from '../../distance/direction-cascade';
+} from '../../sources/gaia-astrometry-source';
 import { MEMBERSHIP_MANIFEST } from '../membership-manifest-tsv';
 import { MAGNITUDE_PULL } from './magnitude-pull-source';
 import {

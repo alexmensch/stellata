@@ -8,12 +8,10 @@ import {
 } from './system-coherence';
 import type { Star } from '../parse/stars-parse';
 import { makeStar } from '../parse/star-fixture';
-import type {
-  GaiaAstrometryCatalogRow,
-  Hip2AstrometryRow,
-} from '../distance/direction-cascade';
-import { gaiaAstrometryRow } from '../distance/astrometry-fixture';
-import { HIP2 } from '../distance/hip2-source';
+import type { Hip2AstrometryRow } from '../sources/hip2-source';
+import type { GaiaAstrometryCatalogRow } from '../sources/gaia-astrometry-source';
+import { gaiaAstrometryRow } from '../sources/gaia-astrometry-fixture';
+import { HIP2 } from '../sources/hip2-source';
 import { sourceRowRef } from '../../util/sources/row-ref-pure';
 import type { MultiplesTsvRow } from '../companions/companion-promotion';
 import { multiplesRow } from '../companions/multiples-fixture';

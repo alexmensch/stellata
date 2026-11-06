@@ -24,8 +24,7 @@ import {
   type ApsisField,
   writeStarRecord,
   writeCatalogHeader,
-  NAME_TABLE_PADDING,
-  NAME_LENGTH_PREFIX_BYTES,
+  encodeNameTable,
   catalogChunkFilename,
   planCatalogChunks,
   recordsInChunkPrefix,
@@ -35,7 +34,8 @@ import {
   DIST_VIA_VALUES,
 } from '../../src/catalog-format/record/catalog-pure';
 import { encodeSpectralBytes } from '../../src/catalog-format/spectral/spectral-record-bytes';
-import { buildHipToIndex, inferBinaries, SIMBAD_OTYPE_MULTIPLE } from './record/record-build-pure';
+import { buildHipToIndex, inferBinaries } from './multiplicity/binary-flags-pure';
+import { SIMBAD_OTYPE_MULTIPLE } from './spectral/spectral-resolve';
 import { apparentVFromSol } from './record/record-order-pure';
 import { avSolToStar } from './distance/dust/dust-deextinction-pure';
 import {
@@ -101,10 +101,7 @@ import {
   bridgeGcvsByGaia,
   applyVariability,
 } from './parse/gcvs/gcvs-parse';
-import {
-  VELOCITY_SANITY_CEILING_KM_S,
-  GALACTIC_ESCAPE_VELOCITY_KM_S,
-} from './distance/direction-cascade';
+import { VELOCITY_SANITY_CEILING_KM_S, GALACTIC_ESCAPE_VELOCITY_KM_S } from './distance/velocity';
 import { RV_ERROR_BANDS } from './distance/radial-velocity/radial-velocity';
 import { emptyTallyPartition } from '../util/counts/tally-pure';
 import {
@@ -1030,27 +1027,10 @@ export async function main() {
 
   // Build name table — the NAME tiers only. Every designation is composed
   // at runtime off search-index.json so the main binary stays compact.
-  const encoder = new TextEncoder();
-  const nameChunks: Uint8Array[] = [];
-  const nameOffsets = new Uint32Array(stars.length);
-  // Offset 0 is reserved as the "no name" sentinel. Real names start at
-  // offset >= NAME_TABLE_PADDING after the leading zero-bytes.
-  let nameTableLength = NAME_TABLE_PADDING;
-  nameChunks.push(new Uint8Array(NAME_TABLE_PADDING));
-  for (let i = 0; i < stars.length; i++) {
-    if (!stars[i].proper) continue;
-    const bytes = encoder.encode(stars[i].proper!);
-    if (bytes.length > 0xffff) {
-      throw new Error(`Name too long: ${stars[i].proper}`);
-    }
-    nameOffsets[i] = nameTableLength;
-    const lenHeader = new Uint8Array(NAME_LENGTH_PREFIX_BYTES);
-    new DataView(lenHeader.buffer).setUint16(0, bytes.length, true);
-    nameChunks.push(lenHeader);
-    nameChunks.push(bytes);
-    nameTableLength += NAME_LENGTH_PREFIX_BYTES + bytes.length;
-    counts.nameTableEntries++;
-  }
+  const nameTable = encodeNameTable(stars.map((s) => s.proper));
+  const nameOffsets = nameTable.offsets;
+  const nameTableLength = nameTable.bytes.length;
+  counts.nameTableEntries += nameTable.entries;
 
   // Allocate output buffer.
   const recordsLength = stars.length * RECORD_SIZE;
@@ -1067,11 +1047,8 @@ export async function main() {
     nameTableLength,
   });
 
-  let off = HEADER_SIZE;
-  for (const chunk of nameChunks) {
-    bytes.set(chunk, off);
-    off += chunk.length;
-  }
+  bytes.set(nameTable.bytes, HEADER_SIZE);
+  let off = HEADER_SIZE + nameTableLength;
 
   // Records.
   let solIndex = -1;

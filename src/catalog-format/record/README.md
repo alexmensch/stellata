@@ -5,7 +5,8 @@ layout with both directions of its codec, the record order, the transport chunk
 plan, and the
 `search-index.json` wire entry. `catalog-pure.ts` is the single statement of
 all three, which is why the catalogue build, `src/client/loaders/` and the
-viewer's readers all import it, and it imports nothing.
+viewer's readers all import it, and it imports nothing
+([Record codec imports](/tests/README.md#record-codec-imports) holds it there).
 
 ## Files in this area
 
@@ -19,9 +20,8 @@ src/catalog-format/record/
 ```
 
 The build-side halves stay in `/scripts/catalog/record/`: the record-order
-key (`record-order-pure.ts`, [Record order](#record-order)), the `GAIA_APSIS`
-source, and the record logic only the build runs (`record-build-pure.ts`:
-the SIMBAD namespace ladder, GCVS parsing, binary inference).
+key (`record-order-pure.ts`, [Record order](#record-order)) and the
+`GAIA_APSIS` source.
 
 ## Record order
 
@@ -75,7 +75,7 @@ ahead of the records and changed no record byte; v9 appended a `uint8`
 `multiplicity_status` at byte 96 (bytes 97–99 reserved, zero-filled, so
 the stride stays a multiple of 4) — see [Multiplicity status](../../../scripts/catalog/multiplicity/README.md#multiplicity-status). v8
 appended three `float32` space-motion velocity components (`vx/vy/vz`,
-pc/yr) at bytes 84–95 — see [Space-motion velocity](../../../scripts/catalog/parse/README.md#space-motion-velocity). v7 appended a `uint32` `sid` (Stellata ID)
+pc/yr) at bytes 84–95 — see [Space-motion velocity](../../../scripts/catalog/distance/README.md#space-motion-velocity). v7 appended a `uint32` `sid` (Stellata ID)
 at byte 80 — see [SID allocation](/scripts/catalog/README.md#sid-allocation). v5 appended a `uint64` Gaia
 DR3 `source_id` at bytes 44–51 so downstream cross-match (GCVS, CCDM,
 NSS, Apsis) can anchor on the same Gaia ID Stellata's source-ID-anchored
@@ -176,7 +176,7 @@ for its coverage and the runtime colour-LUT re-key it enables.
                           (`NO_SID`) is reserved as the none sentinel.
   - 84–87 `float32`      **vx** — space-motion velocity x (pc/yr, equatorial
                           Cartesian, Sol at origin). See
-                          [Space-motion velocity](../../../scripts/catalog/parse/README.md#space-motion-velocity).
+                          [Space-motion velocity](../../../scripts/catalog/distance/README.md#space-motion-velocity).
   - 88–91 `float32`      **vy** — space-motion velocity y (pc/yr).
   - 92–95 `float32`      **vz** — space-motion velocity z (pc/yr).
   - 96    `uint8`        **multiplicity_status** (`MULTIPLICITY_*`:
@@ -219,7 +219,7 @@ consumer spells out a `view.get*` / `view.set*` byte read of its own:
 
 | Direction | Surface | Consumers |
 | --- | --- | --- |
-| write | `writeStarRecord`, `writeCatalogHeader` | `../../../scripts/catalog/build-catalog.ts`, loader round-trip tests |
+| write | `writeStarRecord`, `writeCatalogHeader`, `encodeNameTable` | `../../../scripts/catalog/build-catalog.ts`, loader round-trip tests |
 | read, one record | `readRecordField`, `readRecordFieldBig` | `../../../scripts/catalog/catalog-lookup.ts` (AoS) |
 | read, one column × all records | `decodeRecordColumn`, `decodeRecordColumnBig` | `catalog-loader.ts` (SoA), `../../../scripts/catalog/columns/catalog-columns.ts` |
 | read, header / name table | `readCatalogHeader`, `readNameTable` | both readers |

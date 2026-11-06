@@ -13,7 +13,7 @@ import { floatCell } from '../../scripts/util/tsv/table-pure';
 import {
   KM_S_TO_PC_YR,
   VELOCITY_SANITY_CEILING_PC_YR,
-} from '../../scripts/catalog/distance/direction-cascade';
+} from '../../scripts/catalog/distance/velocity';
 import { equatorialTangentBasisAt } from '../../src/astro-core/equatorial-basis';
 import {
   FLAG_BINARY_COMPANION_ONLY, FLAG_BINARY_PRIMARY, VAR_TYPE_ECLIPSING, CATALOG_MANIFEST_FILENAME,

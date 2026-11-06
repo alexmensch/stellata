@@ -19,7 +19,7 @@ import {
   SIMBAD_NAMESPACE_VALUES,
   type SimbadNamespace,
   type SimbadRecordKeys,
-} from '../record/record-build-pure';
+} from '../simbad/simbad-namespace-ladder-pure';
 import {
   classifyFromSimbad,
   SPECTRAL_UNKNOWN,
@@ -42,16 +42,18 @@ import {
 import {
   resolveDirection,
   directionOnPm,
-  velocityPcPerYr,
   DIRECTION_VIA_VALUES,
+  type DirectionSources,
+  type DirectionVia,
+} from '../distance/direction-cascade';
+import {
+  velocityPcPerYr,
   VELOCITY_VIA_VALUES,
   KM_S_TO_PC_YR,
   VELOCITY_SANITY_CEILING_PC_YR,
   GALACTIC_ESCAPE_VELOCITY_PC_YR,
-  type DirectionSources,
-  type DirectionVia,
   type VelocityVia,
-} from '../distance/direction-cascade';
+} from '../distance/velocity';
 import { lookupCns5Astrometry } from '../classic-ids/classic-ids-parse';
 import { isGaiaCatalogueBibcode } from '../distance/gaia-distrust';
 import { isLowPrecisionParallax, resolveParallax } from '../distance/parallax/parallax-cascade';

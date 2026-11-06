@@ -43,8 +43,9 @@ Each has its own README.
   half-turn, does not.
 - `astronomy-constants.ts` (+ test) — `AU_PER_PC` / `AU_PC` / `AU_KM` /
   `KM_PC` / `R_SUN_PC` / `SUN_ABSMAG_V` / `MIN_PHYSICAL_RADIUS_R_SUN` /
-  `ARCSEC_TO_RAD` / `J2000_JD` / `J2000_OBLIQUITY_RAD` /
-  `DAYS_PER_JULIAN_YEAR` / `LIGHT_TIME_PER_AU_S` / `RA_HOURS_TO_DEG`.
+  `ARCSEC_TO_RAD` / `MAS_TO_RAD` / `J2000_JD` / `J2000_OBLIQUITY_RAD` /
+  `DAYS_PER_JULIAN_YEAR` / `SECONDS_PER_DAY` / `LIGHT_TIME_PER_AU_S` /
+  `RA_HOURS_TO_DEG`.
   Canonical values, one definition each, so client / build-script /
   shader consumers can't drift on precision — import from here rather
   than re-derive. `RA_HOURS_TO_DEG` is the hours→degrees factor every
@@ -64,8 +65,9 @@ Each has its own README.
   so it stays a unit vector through the poles. `unitVectorFromRaDec` is
   the `u` component alone and `raDecFromUnitVector` its inverse (ra
   wrapped to [0, 360)); `SkyPosition` is the `{raDeg, decDeg}` pair both
-  sides speak. Shared by the catalog build's PM propagation +
-  space-motion velocity (`scripts/catalog/distance/direction-cascade.ts`), the
+  sides speak. Shared by the catalog build's PM propagation
+  (`scripts/catalog/distance/direction-cascade.ts`) and space-motion velocity
+  (`scripts/catalog/distance/velocity.ts`), the
   companion tangent-projection (`scripts/catalog/companions/companion-promotion.ts`),
   and the runtime Tier-1 sky→ICRS orbit projection
   (`src/client/binaries/binary-orbit-pure.ts`). `scripts/local-group/`'s

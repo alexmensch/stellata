@@ -38,6 +38,7 @@ import {
   decodeRecordColumnBig,
   readCatalogHeader,
   readNameTable,
+  encodeNameTable,
   readRecordField,
   readRecordFieldBig,
   writeCatalogHeader,
@@ -215,6 +216,15 @@ describe('catalog-pure / binary-format constants', () => {
     expect([...recovered.values()]).toEqual(names);
     expect([...recovered.keys()]).toEqual(expectedOffsets);
     expect(recovered.has(0)).toBe(false); // offset 0 stays the no-name sentinel
+
+    const encoded = encodeNameTable([names[0], null, names[1], '', names[2]]);
+    expect(encoded.bytes).toEqual(table);
+    expect([...encoded.offsets]).toEqual([expectedOffsets[0], 0, expectedOffsets[1], 0, expectedOffsets[2]]);
+    expect(encoded.entries).toBe(3);
+  });
+
+  it('encodeNameTable refuses a name past the uint16 length prefix', () => {
+    expect(() => encodeNameTable(['x'.repeat(0x10000)])).toThrow(/Name too long/);
   });
 });
 

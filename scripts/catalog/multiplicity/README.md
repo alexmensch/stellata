@@ -13,6 +13,11 @@ see `../companions/README.md`.
 scripts/catalog/multiplicity/
   hip-ccdm-source.ts              HIP_CCDM, the I/239 CCDM slice declared
                                   (../../util/sources/).
+  binary-flags-pure.ts (+ test)   The FLAG_BINARY_PRIMARY writers: the
+                                  geometric mutual-pair pass
+                                  (inferBinaries), the per-group CCDM walk
+                                  and the optical-double gate it consults.
+                                  Pure.
   visual-doubles.ts (+ test)      The CCDM cross-match: parseHipCcdm,
                                   KNOWN_VISUAL_DOUBLES and the tiered
                                   optical-double suppression cascade.
@@ -57,7 +62,7 @@ surface consuming it is tracked separately (stellata-lo5.10).
 
 ## Geometric binary inference
 
-`inferBinaries` in `../record/record-build-pure.ts`, called from
+`inferBinaries` in `binary-flags-pure.ts`, called from
 `build-catalog.ts`, runs after the record sort so record
 indices are final. Spatial grid keyed at `BINARY_MAX_SEP_PC = 0.005 pc`
 (≈1030 AU) using a three-axis hash; for each star, check own cell + 26
@@ -168,7 +173,7 @@ CCDM+MultFlag=C/G/O still keeps a tail of wide line-of-sight
 optical pairs Gaia can now split in 3D — HIP pairs sharing one
 CCDM identifier that sit hundreds of pc apart along the sightline.
 Flagging their brightest member paints wings on a star with no
-bound companion. `isOpticalDoublePrimary` (`../record/record-build-pure.ts`)
+bound companion. `isOpticalDoublePrimary` (`binary-flags-pure.ts`)
 vetoes that flag, but only on **positive** evidence the asserted
 pair is optical, never on mere absence of physical evidence — so a
 noisy parallax can never strip real wings:
@@ -204,8 +209,8 @@ noisy parallax can never strip real wings:
 only** — it skips any HIP the curated list already claims, and mints no
 key of its own for one. `applyDoublesFlag` is what unions the two, and it
 does so as bare component lists rather than keyed groups, so a curated
-system never needs a CCDM identifier it does not have. That wrapper then
-walks each group, picks the **brightest** catalog member (lowest
+system never needs a CCDM identifier it does not have.
+`flagGroupPrimaries` (`binary-flags-pure.ts`) then walks each group, picks the **brightest** catalog member (lowest
 `absmag`), and — unless the optical-double gate above vetoes it —
 ORs `0x10` onto only that one, so each Hipparcos-resolved system
 contributes exactly one chart-mode wings glyph, matching the
@@ -244,9 +249,10 @@ Per WDS root with ≥2 resolved own-record members:
 - **Anchor pick — purpose-aware, not recency-aware.** Best tier wins:
   clean unsaturated Gaia 5p (`isCoherenceAnchorGrade`, in
   `anchor-grade-pure.ts` — parallax > 0,
-  RUWE ≤ 1.4, ipd_frac_multi_peak ≤ 2 **percent**, the column being
-  0–100 here unlike direction-cascade's fraction-scale threshold, and
-  G ≥ 3.0), then HIP2 coverage, then
+  RUWE ≤ 1.4 and ipd_frac_multi_peak ≤ 2 **percent** — the fit
+  `gaia5pUnreliable` (`../distance/gaia-distrust.ts`) passes, the same
+  predicate the direction cascade routes on — and G ≥ 3.0), then HIP2
+  coverage, then
   [Bailer-Jones 2021](/data/papers/index.md#bailerjones2021) membership, then
   inherited. That predicate is exported: the parallax cascade's
   `pair_member_parallax` tier lends the same grade of fit to a member

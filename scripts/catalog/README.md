@@ -21,21 +21,20 @@ layout, its codec, the chunk plan and the search-index wire entry — is
 
 ## Subfolders
 
-- `record/` — the on-disk contract: the v10 `catalog.bin` layout with both
-  directions of its codec, the record order, the transport chunk plan, and
-  the `SearchEntry` wire shape. `catalog-pure.ts` alone, imported by every other subfolder and
-  by `src/client/loaders/`, importing back from none of them.
+- `record/` — the build's halves of the record contract: the record-order
+  key and the `GAIA_APSIS` source. The on-disk contract itself is
+  `/src/catalog-format/record/`.
 - `astrometry-request/` — the Gaia 5p pull's source_id list: both binding
   gates' candidates (overlay and derivation), the bound-pair siblings and the
   review dispositions' kept ids. Input prep, off `build:catalog`.
-- `parse/` — the per-row pipeline (`readStars`), reference-catalogue
-  parsers and space-motion velocity. Its `gcvs/` subfolder owns the
+- `parse/` — the per-row pipeline (`readStars`) and reference-catalogue
+  parsers. Its `gcvs/` subfolder owns the
   variable-star parsing and the variability cross-match; `constellations/`
   owns the IAU-88 table, byte 34's positional membership and the
   Stellarium stick figures.
 - `spectral/` — Morgan-Keenan parsing of SIMBAD `sp_type`, the seven-tier
   spectral resolver, and the Stefan-Boltzmann radius chain. Imports the
-  namespace ladder from `record/record-build-pure.ts`; nothing there imports back.
+  namespace ladder from `simbad/simbad-namespace-ladder-pure.ts`; nothing there imports back.
 - `boundaries/` — `public/constellation-boundaries.json`: the IAU boundary
   arcs resampled and precessed to ICRS, the per-region label anchors, the
   resolved cell grid the runtime resolves membership against, and the
@@ -53,7 +52,8 @@ layout, its codec, the chunk plan and the search-index wire entry — is
 - `multiplicity/` — multiplicity status, geometric binary inference, the
   CCDM double-star cross-match with its optical-double suppression
   cascade, and system distance coherence.
-- `distance/` — direction resolution, build-time de-extinction, and the
+- `distance/` — direction resolution, space-motion velocity, build-time
+  de-extinction, and the
   multi-layer distance-refinement override stack with its authoring
   discipline and post-build regression check. Its `radial-velocity/` and
   `pm-rescue/` subfolders own the velocity's two fall-back cascades.
@@ -63,6 +63,9 @@ layout, its codec, the chunk plan and the search-index wire entry — is
   (`pnpm run build:classic-ids` → `data/classic-ids/`) and the per-identifier
   label merge `build:membership` runs and writes the queue for. The record
   build takes only the designation-constellation cascade, over `readStars`.
+- `sources/` — the Gaia DR3 astrometry, HIP2 and Gaia NSS tables: each row
+  schema with its parse and declaration, imported by every cascade that reads
+  those rows.
 - `simbad/` — the readers for the two per-source SIMBAD pulls the build joins
   on, and the identifier rule the TYC → HD witness settles: which of a close
   pair's two components a record's cells name.
@@ -147,9 +150,7 @@ scripts/catalog/
                                   `MeasuredParallax`, the value + error pair
                                   every parallax source and the cascade's
                                   resolution share, lives beside it with
-                                  `parallaxSignalToNoise` — a leaf, so the
-                                  record codec can import it without pulling
-                                  the cascade into vite.config.ts's graph.
+                                  `parallaxSignalToNoise`.
   tycho2-source.ts                TYCHO2: main and supplement 1 as one
                                   declared source (../util/sources/).
   tycho2-parse.ts (+ test)        data/tycho2/ indexed on the full TYC, with

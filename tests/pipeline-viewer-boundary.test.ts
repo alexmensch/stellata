@@ -1,9 +1,11 @@
 // See /tests/README.md#pipeline-viewer-boundary.
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { dirname, join, relative, resolve } from 'node:path';
+import { join, relative, resolve } from 'node:path';
 import { walkFiles } from './walk-files';
-import { importSpecifiers, isRelativeSpecifier, isTypeScript } from './import-specifiers';
+import {
+  importSpecifiers, isRelativeSpecifier, isTypeScript, resolveImportTarget,
+} from './import-specifiers';
 import { TREE_ROOTS, treeOf, type Tree } from '../scripts/util/source-trees';
 
 const ROOT = resolve(__dirname, '..');
@@ -23,7 +25,7 @@ function relativeSpecifiers(src: string): string[] {
 }
 
 function importTargets(repoPath: string, src: string): string[] {
-  return relativeSpecifiers(src).map((spec) => relative(ROOT, resolve(ROOT, dirname(repoPath), spec)));
+  return relativeSpecifiers(src).map((spec) => resolveImportTarget(ROOT, repoPath, spec));
 }
 
 function violations(repoPath: string, src: string): string[] {

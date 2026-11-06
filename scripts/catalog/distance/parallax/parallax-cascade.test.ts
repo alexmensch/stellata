@@ -10,14 +10,14 @@ import {
   type ParallaxSources,
 } from './parallax-cascade';
 import { DIST_VIA_VALUES } from '../../../../src/catalog-format/record/catalog-pure';
-import { gaiaAstrometryRow } from '../astrometry-fixture';
+import { gaiaAstrometryRow } from '../../sources/gaia-astrometry-fixture';
 import type { CitedParallax } from '../../cited-parallax';
 import type { SiblingParallax } from './pair-member-parallax';
 import type { GlieseRow } from '../../gliese-parse-pure';
 import { GLIESE } from '../../gliese-source';
 import { CNS5 } from '../../classic-ids/cns5-source';
 import { SIMBAD_VALUES } from '../../simbad/simbad-values-source';
-import { HIP2 } from '../hip2-source';
+import { HIP2 } from '../../sources/hip2-source';
 import { sourceRowRef, type AnySourceRowRef } from '../../../util/sources/row-ref-pure';
 
 const GAIA_DR2 = '2018yCat.1345....0G';

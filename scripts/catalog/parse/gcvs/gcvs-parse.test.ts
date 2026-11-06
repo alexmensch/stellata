@@ -3,12 +3,28 @@ import { describe, it, expect, vi } from 'vitest';
 import {
   applyVariability,
   bridgeGcvsByGaia,
+  classifyGcvsVarType,
   gcvsDesignationConIndex,
+  isPlanetaryTransitOnly,
+  normalizeGcvsName,
   parseGcvsMain,
+  parseGcvsNumber,
+  splitPipeDelimited,
   type VarStarData,
   type VarStarXref,
 } from './gcvs-parse';
-import { NO_CONSTELLATION_INDEX, VAR_TYPE_DSCT, VAR_TYPE_MIRA } from '../../../../src/catalog-format/record/catalog-pure';
+import {
+  NO_CONSTELLATION_INDEX,
+  VAR_TYPE_CEPHEID,
+  VAR_TYPE_DSCT,
+  VAR_TYPE_ECLIPSING,
+  VAR_TYPE_MIRA,
+  VAR_TYPE_OTHER,
+  VAR_TYPE_PULSATING,
+  VAR_TYPE_RR_LYRAE,
+  VAR_TYPE_SEMIREGULAR,
+  VAR_TYPE_UNKNOWN,
+} from '../../../../src/catalog-format/record/catalog-pure';
 import { CONSTELLATIONS } from '../constellations/constellations';
 import { makeStar } from '../star-fixture';
 
@@ -346,5 +362,177 @@ describe('gcvs-parse / the designation as its own constellation authority', () =
     expect(agreeing.desigConIndex).toBe(conIndexOf('and'));
     expect(silent.desigConIndex).toBe(conIndexOf('dor'));
     expect(r.desigConSupplied).toBe(0);
+  });
+});
+
+describe('gcvs-parse / splitPipeDelimited', () => {
+  it('splits lines on | and trims each cell', () => {
+    expect(splitPipeDelimited('R     And  |M   | 5.8 ')).toEqual([['R     And', 'M', '5.8']]);
+  });
+
+  it('skips blank and whitespace-only lines', () => {
+    expect(splitPipeDelimited('a|b\n\n   \nc|d')).toEqual([
+      ['a', 'b'],
+      ['c', 'd'],
+    ]);
+  });
+
+  it('accepts CRLF line endings', () => {
+    expect(splitPipeDelimited('a|b\r\nc|d\r\n')).toEqual([
+      ['a', 'b'],
+      ['c', 'd'],
+    ]);
+  });
+
+  it('returns empty for empty input', () => {
+    expect(splitPipeDelimited('')).toEqual([]);
+  });
+
+  it('keeps empty interior cells', () => {
+    expect(splitPipeDelimited('a| |b||')).toEqual([['a', '', 'b', '', '']]);
+  });
+});
+
+describe('gcvs-parse / normalizeGcvsName', () => {
+  it('collapses internal whitespace to a single space', () => {
+    expect(normalizeGcvsName('R     And')).toBe('R And');
+    expect(normalizeGcvsName('V0640    Cas')).toBe('V0640 Cas');
+  });
+
+  it('strips trailing asterisks', () => {
+    expect(normalizeGcvsName('R And *')).toBe('R And');
+    expect(normalizeGcvsName('R And **')).toBe('R And');
+  });
+
+  it('trims leading and trailing whitespace', () => {
+    expect(normalizeGcvsName('  R And  ')).toBe('R And');
+  });
+
+  it('returns empty string for whitespace-only input', () => {
+    expect(normalizeGcvsName('   ')).toBe('');
+  });
+});
+
+describe('gcvs-parse / parseGcvsNumber', () => {
+  it('parses a plain number', () => {
+    expect(parseGcvsNumber('5.5')).toBe(5.5);
+    expect(parseGcvsNumber('100')).toBe(100);
+  });
+
+  it('strips uncertainty markers and brackets', () => {
+    expect(parseGcvsNumber('<5.5')).toBe(5.5);
+    expect(parseGcvsNumber('5.5:')).toBe(5.5);
+    expect(parseGcvsNumber('(5.5)')).toBe(5.5);
+    expect(parseGcvsNumber('5.5*')).toBe(5.5);
+    expect(parseGcvsNumber('>5.5')).toBe(5.5);
+  });
+
+  it('returns null for empty / whitespace input', () => {
+    expect(parseGcvsNumber('')).toBeNull();
+    expect(parseGcvsNumber('   ')).toBeNull();
+  });
+
+  it('returns null for non-numeric input', () => {
+    expect(parseGcvsNumber('abc')).toBeNull();
+    expect(parseGcvsNumber('---')).toBeNull();
+  });
+
+  it('returns null for input that strips down to nothing', () => {
+    expect(parseGcvsNumber('()')).toBeNull();
+    expect(parseGcvsNumber(':*')).toBeNull();
+  });
+});
+
+describe('gcvs-parse / classifyGcvsVarType', () => {
+  it('classifies eclipsing prefixes: EA / EB / EW / ELL / E', () => {
+    expect(classifyGcvsVarType('EA')).toBe(VAR_TYPE_ECLIPSING);
+    expect(classifyGcvsVarType('EB')).toBe(VAR_TYPE_ECLIPSING);
+    expect(classifyGcvsVarType('EW')).toBe(VAR_TYPE_ECLIPSING);
+    expect(classifyGcvsVarType('ELL')).toBe(VAR_TYPE_ECLIPSING);
+    expect(classifyGcvsVarType('E')).toBe(VAR_TYPE_ECLIPSING);
+  });
+
+  it('classifies EP (eclipsing-by-planet) as OTHER, not eclipsing', () => {
+    // A transiting-planet host is not a stellar multiple: it must earn
+    // no wings and no cosmetic-pulsation suppression as a "binary".
+    expect(classifyGcvsVarType('EP')).toBe(VAR_TYPE_OTHER);
+  });
+
+  it('flags bare EP hosts as planetary-transit-only; keeps a superimposed pulsator', () => {
+    expect(isPlanetaryTransitOnly('EP')).toBe(true);
+    expect(isPlanetaryTransitOnly('EP:')).toBe(true);
+    // A real intrinsic pulsator superimposed keeps its ring/pulse.
+    expect(isPlanetaryTransitOnly('EP+DSCT')).toBe(false);
+    // Non-EP types are never dropped by this gate.
+    expect(isPlanetaryTransitOnly('EA')).toBe(false);
+    expect(isPlanetaryTransitOnly('M')).toBe(false);
+  });
+
+  it('classifies composite eclipsing-+-rotational/RS as eclipsing', () => {
+    // Algol's "EA/RS" should keep the eclipsing tag — the geometric
+    // occlusion is the dominant photometric signal, and superimposing
+    // GCVS-amplitude pulsation would double-count the eclipse.
+    expect(classifyGcvsVarType('EA/RS')).toBe(VAR_TYPE_ECLIPSING);
+    expect(classifyGcvsVarType('EA+RS')).toBe(VAR_TYPE_ECLIPSING);
+    expect(classifyGcvsVarType('EB/DM')).toBe(VAR_TYPE_ECLIPSING);
+  });
+
+  it('refines intrinsic pulsators into families: M / SR / DCEP / RRAB / RV / DSCT', () => {
+    expect(classifyGcvsVarType('M')).toBe(VAR_TYPE_MIRA);
+    expect(classifyGcvsVarType('SR')).toBe(VAR_TYPE_SEMIREGULAR);
+    expect(classifyGcvsVarType('SRA')).toBe(VAR_TYPE_SEMIREGULAR);
+    expect(classifyGcvsVarType('DCEP')).toBe(VAR_TYPE_CEPHEID);
+    expect(classifyGcvsVarType('CEP')).toBe(VAR_TYPE_CEPHEID);
+    expect(classifyGcvsVarType('RR')).toBe(VAR_TYPE_RR_LYRAE);
+    expect(classifyGcvsVarType('RRAB')).toBe(VAR_TYPE_RR_LYRAE);
+    // RV Tauri has no dedicated family bucket → generic pulsating fallback.
+    expect(classifyGcvsVarType('RV')).toBe(VAR_TYPE_PULSATING);
+    expect(classifyGcvsVarType('DSCT')).toBe(VAR_TYPE_DSCT);
+  });
+
+  it('maps pulsator subtypes with trailing letters to their family (DCEPS/Polaris, CWA, RVA, LB, DSCTC)', () => {
+    // Subtype letters after the family prefix — the tail gate must accept
+    // them, not fall through to OTHER.
+    expect(classifyGcvsVarType('DCEPS')).toBe(VAR_TYPE_CEPHEID);   // Polaris
+    expect(classifyGcvsVarType('DSCTC')).toBe(VAR_TYPE_DSCT);
+    expect(classifyGcvsVarType('CWA')).toBe(VAR_TYPE_CEPHEID);     // Type II Cepheid
+    expect(classifyGcvsVarType('CWB')).toBe(VAR_TYPE_CEPHEID);
+    expect(classifyGcvsVarType('RVA')).toBe(VAR_TYPE_PULSATING);
+    expect(classifyGcvsVarType('RVB')).toBe(VAR_TYPE_PULSATING);
+    expect(classifyGcvsVarType('LB')).toBe(VAR_TYPE_SEMIREGULAR);  // slow irregular red giant
+    expect(classifyGcvsVarType('LC')).toBe(VAR_TYPE_SEMIREGULAR);
+    expect(classifyGcvsVarType('ZZA')).toBe(VAR_TYPE_DSCT);        // ZZ Ceti (low-amp)
+    expect(classifyGcvsVarType('BCEP')).toBe(VAR_TYPE_DSCT);       // β Cep (low-amp p-mode)
+    // Uncertainty-flagged subtype (GCVS ':' after the subtype letter).
+    expect(classifyGcvsVarType('SRA:')).toBe(VAR_TYPE_SEMIREGULAR);
+    // Composite: rotating + pulsator → the pulsator component wins.
+    expect(classifyGcvsVarType('ACV+DSCTC')).toBe(VAR_TYPE_DSCT);
+  });
+
+  it('classifies cataclysmic / eruptive / rotating as OTHER', () => {
+    expect(classifyGcvsVarType('UGSU')).toBe(VAR_TYPE_OTHER);
+    expect(classifyGcvsVarType('ZAND')).toBe(VAR_TYPE_OTHER);
+    expect(classifyGcvsVarType('GCAS')).toBe(VAR_TYPE_OTHER);
+    expect(classifyGcvsVarType('ACV')).toBe(VAR_TYPE_OTHER);
+    expect(classifyGcvsVarType('BY')).toBe(VAR_TYPE_OTHER);
+    expect(classifyGcvsVarType('CST')).toBe(VAR_TYPE_OTHER);
+    // Non-pulsators that share an initial with a pulsator family must not
+    // be promoted by the letter-tail gate (RCB≠RR/RV, RS≠RR, SDOR≠SR).
+    expect(classifyGcvsVarType('RCB')).toBe(VAR_TYPE_OTHER);
+    expect(classifyGcvsVarType('RS')).toBe(VAR_TYPE_OTHER);
+    expect(classifyGcvsVarType('SDOR')).toBe(VAR_TYPE_OTHER);
+    expect(classifyGcvsVarType('ACVO')).toBe(VAR_TYPE_OTHER);
+  });
+
+  it('returns UNKNOWN for blank, null, or whitespace input', () => {
+    expect(classifyGcvsVarType(null)).toBe(VAR_TYPE_UNKNOWN);
+    expect(classifyGcvsVarType(undefined)).toBe(VAR_TYPE_UNKNOWN);
+    expect(classifyGcvsVarType('')).toBe(VAR_TYPE_UNKNOWN);
+    expect(classifyGcvsVarType('   ')).toBe(VAR_TYPE_UNKNOWN);
+  });
+
+  it('is case-insensitive', () => {
+    expect(classifyGcvsVarType('ea')).toBe(VAR_TYPE_ECLIPSING);
+    expect(classifyGcvsVarType('dcep')).toBe(VAR_TYPE_CEPHEID);
   });
 });

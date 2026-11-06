@@ -3,7 +3,8 @@
 // README.md.
 
 import { gaiaRefusals, refusedPublicationCited, type RefusedPublication } from '../gaia-distrust';
-import type { GaiaAstrometryCatalogRow, Hip2AstrometryRow } from '../direction-cascade';
+import type { Hip2AstrometryRow } from '../../sources/hip2-source';
+import type { GaiaAstrometryCatalogRow } from '../../sources/gaia-astrometry-source';
 import { parallaxSignalToNoise } from '../../cited-parallax';
 import type { CitedParallax, MeasuredParallax } from '../../cited-parallax';
 import type { CitedCascadeResult, CitedRefusal } from '../../cascade-result';
