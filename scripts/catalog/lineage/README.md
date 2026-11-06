@@ -153,7 +153,10 @@ Every stage writes the same envelope:
   that stage, never a silent pass-through; identical-code rows cost almost
   nothing compressed.
 - SID, record index and designations live on the identity row only; the
-  build version lives in a per-build header file. Repeating them on every
+  build version — the release the build stood on as it ran (`releaseAt()`),
+  which for a releasing commit can be the release before it or its own,
+  depending on whether its tag was pushed yet — lives in a per-build header
+  file. Repeating them on every
   stage row roughly doubles each stage file.
 
 ### SourceRowRef
