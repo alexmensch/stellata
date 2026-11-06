@@ -8,10 +8,12 @@ import {
   type GatedValue,
   type PhotometryRefusal,
 } from './gaia-photometry-pure';
-import type { CascadeRefusal, CascadeResult, UniformValues } from '../cascade-result';
+import type { CitedCascadeResult, CitedRefusal, UniformValues } from '../cascade-result';
 import { lookupGliese, type GlieseIndex } from '../gliese-parse-pure';
 import { printedByHip } from './hip-photometry-parse-pure';
+import { HIP_PHOTOMETRY } from './hip-photometry-source';
 import type { Tycho2Row } from '../tycho2-parse';
+import { sourceRowRef, type AnySourceRowRef } from '../../util/sources/row-ref-pure';
 
 /** Riello 2021 (/data/papers/index.md#riello2021) App. C,
  *  Table C.2 — `G − V` as a cubic in `BP − RP`. Ascending powers. The DR3 photometry is unchanged from EDR3, so the EDR3 calibration
@@ -53,13 +55,16 @@ export const V_VIA_VALUES = ['gaia_riello', ...PRINTED_V_TIERS, 'curated', 'none
 export type VVia = (typeof V_VIA_VALUES)[number];
 
 /** The Riello relation refusing the row's Gaia photometry. */
-export type VMagnitudeRefusal = CascadeRefusal<'gaia_riello', PhotometryRefusal>;
+export type VMagnitudeRefusal = CitedRefusal<'gaia_riello', PhotometryRefusal>;
 
 /** Johnson V. `none` is a row no tier lights — a /docs/catalog-driver.md#61-record-parity park. */
-export type VMagnitudeResolution = CascadeResult<UniformValues<VVia, number>, VMagnitudeRefusal>;
+export type VMagnitudeResolution = CitedCascadeResult<UniformValues<VVia, number>, VMagnitudeRefusal>;
+
+/** A Gaia photometry row with the source row it was read from. */
+export type CitedPhotometry = GaiaPhotometry & { readonly ref: AnySourceRowRef };
 
 export interface VMagnitudeSources {
-  photometry: GaiaPhotometry | null;
+  photometry: CitedPhotometry | null;
   printed: PrintedV | null;
   /** The record's curated V (`../record/curated-records.ts`). */
   curatedV: number | null;
@@ -130,12 +135,13 @@ export type PrintedVLookups = {
   readonly [V in PrintedVVia]: (key: PrintedVKey[V]) => PrintedVAnswer[V] | null;
 };
 
-/** What a tier answers for one key. Tycho-2's reduction also says whether
- *  BT − VT sat outside the published range, which only that tier can know. */
+/** What a tier answers for one key, citing the row it read. Tycho-2's
+ *  reduction also says whether BT − VT sat outside the published range, which
+ *  only that tier can know. */
 interface PrintedVAnswer {
-  printed_hip: { vMag: number };
-  tycho2: { vMag: number; outsideRange: boolean };
-  gliese: { vMag: number };
+  printed_hip: { vMag: number; ref: AnySourceRowRef };
+  tycho2: { vMag: number; ref: AnySourceRowRef; outsideRange: boolean };
+  gliese: { vMag: number; ref: AnySourceRowRef };
 }
 
 /** The keys a row offers each printed tier. */
@@ -149,19 +155,24 @@ export type PrintedV = {
 
 export function printedVLookups(
   hipVMag: ReadonlyMap<number, number>,
-  tycho2: ReadonlyMap<string, Pick<Tycho2Row, 'btMag' | 'vtMag'>>,
+  tycho2: ReadonlyMap<string, Pick<Tycho2Row, 'btMag' | 'vtMag' | 'ref'>>,
   gliese: GlieseIndex,
 ): PrintedVLookups {
-  const answer = (vMag: number | null) => (vMag === null ? null : { vMag });
   return {
-    printed_hip: (hip) => answer(printedByHip(hipVMag, hip)),
+    printed_hip: (hip) => {
+      const vMag = printedByHip(hipVMag, hip);
+      return vMag === null ? null : { vMag, ref: sourceRowRef(HIP_PHOTOMETRY, hip) };
+    },
     tycho2: (tyc) => {
       const row = tycho2.get(tyc);
       if (row === undefined) return null;
       const { v, outsideRange } = tycho2VMagnitude(row.btMag, row.vtMag);
-      return v === null ? null : { vMag: v, outsideRange };
+      return v === null ? null : { vMag: v, ref: row.ref, outsideRange };
     },
-    gliese: (gj) => answer(lookupGliese(gliese, gj)?.vMag ?? null),
+    gliese: (gj) => {
+      const row = lookupGliese(gliese, gj);
+      return row === null || row.vMag === null ? null : { vMag: row.vMag, ref: row.ref };
+    },
   };
 }
 
@@ -204,15 +215,15 @@ export function resolveVMagnitude(
   if (photometry !== null) {
     const transformed = rielloVMagnitude(photometry);
     if (transformed.kind === 'value') {
-      return { via: 'gaia_riello', value: transformed.value, refusals };
+      return { via: 'gaia_riello', value: transformed.value, evidence: [photometry.ref], refusals };
     }
-    refusals.push({ tier: 'gaia_riello', reason: transformed.reason });
+    refusals.push({ tier: 'gaia_riello', reason: transformed.reason, ref: photometry.ref });
   }
   if (printed !== null) {
-    return { via: printed.vVia, value: printed.vMag, refusals };
+    return { via: printed.vVia, value: printed.vMag, evidence: [printed.ref], refusals };
   }
   if (curatedV !== null && Number.isFinite(curatedV)) {
-    return { via: 'curated', value: curatedV, refusals };
+    return { via: 'curated', value: curatedV, evidence: [], refusals };
   }
   return { via: 'none', refusals };
 }

@@ -98,11 +98,13 @@ Per-tier routing, pinned in build-counts: `gaia_riello` **<!-- count:build-catal
 `printed_hip` **<!-- count:build-catalog/vPrintedHip -->1,417<!-- /count -->** · `tycho2` **<!-- count:build-catalog/vTycho2 -->189<!-- /count -->** · `gliese` **<!-- count:build-catalog/vGliese -->20<!-- /count -->** · `curated`
 **<!-- count:build-catalog/vCurated -->1<!-- /count -->**, residual `none` **<!-- count:build-catalog/vNone -->0<!-- /count -->**.
 
-`resolveVMagnitude` returns the shared cascade shape (`../cascade-result.ts`):
-the value **and** the tier that produced it, so `vVia` routing counts are
-pinned in build-counts the same way the direction cascade pins `directionVia`,
+`resolveVMagnitude` returns the shared cited cascade shape
+(`CitedCascadeResult`, `../cascade-result.ts`): the value **and** the tier that
+produced it, so `vVia` routing counts are pinned in build-counts the same way
+the direction cascade pins `directionVia`, the source row it read (the Gaia
+row, or the HIP, Tycho-2 or Gliese row each `printedVLookups` answer cites),
 and on any result the Riello transform's refusal of the row's Gaia photometry
-(`uncalibrated` or `colour_out_of_range`). The tier also rides on the record,
+(`uncalibrated` or `colour_out_of_range`), citing that row. The tier also rides on the record,
 because it answers a question no consumer can answer from the magnitude alone.
 
 **There is no SIMBAD tier**, though [§ 5](/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers) projected
