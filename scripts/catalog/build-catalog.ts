@@ -35,8 +35,7 @@ import {
 import { encodeSpectralBytes } from '../../src/catalog-format/spectral/spectral-record-bytes';
 import { buildHipToIndex, inferBinaries } from './multiplicity/binary-flags-pure';
 import { SIMBAD_OTYPE_MULTIPLE } from './spectral/spectral-resolve';
-import { apparentVFromSol } from './record/record-order-pure';
-import { solRecordIndex } from './record/curated-records';
+import { apparentVFromSol, solRecordIndex } from './record/record-order-pure';
 import { avSolToStar } from './distance/dust/dust-deextinction-pure';
 import {
   orbitChainExemption, overlapLabel, physicalOverlaps,

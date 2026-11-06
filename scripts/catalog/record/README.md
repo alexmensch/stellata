@@ -9,8 +9,10 @@ This folder holds the build's own halves of it.
 scripts/catalog/record/
   gaia-apsis-source.ts (+ test)   GAIA_APSIS with its parse, declared
                                   (../../util/sources/).
-  record-order-pure.ts            `apparentVFromSol` — the key the build sorts
-                                  records on. Pure.
+  record-order-pure.ts (+ test)   `apparentVFromSol` — the key the build sorts
+                                  records on — and `solRecordIndex`, Sol's
+                                  index once sorted, throwing unless exactly
+                                  one record carries FLAG_IS_SOL. Pure.
                                   /src/catalog-format/record/README.md#record-order.
   curated-records.ts (+ test)     CURATED_RECORDS — the curated-records
                                   source (#curated-records).
