@@ -3,10 +3,11 @@
  */
 
 import { execFileSync } from 'node:child_process';
-import { appendFileSync } from 'node:fs';
+import { appendFileSync, readFileSync, writeFileSync } from 'node:fs';
 import {
   declarationOf,
   extractReleaseNotes,
+  parsePlan,
   planReleases,
   prNumberFromSubject,
   type CommitRelease,
@@ -15,30 +16,28 @@ import {
 } from './release-plan-pure.ts';
 import { releaseAt, releaseCommitAt, releaseOn } from '../util/release-version.ts';
 
-const STEPS = ['plan', 'tag', 'publish'] as const;
-type Step = (typeof STEPS)[number];
+type Options =
+  | { readonly step: 'plan'; readonly head: string; readonly out: string | null }
+  | { readonly step: 'tag' | 'publish'; readonly plan: string };
 
-interface Options {
-  step: Step;
-  base: string | null;
-  head: string;
-}
-
-const USAGE = `Usage: cut-releases.ts plan [--head <sha>] | cut-releases.ts <tag|publish> --base <the base plan printed> [--head <sha>]`;
+const USAGE = 'Usage: cut-releases.ts plan [--head <sha>] [--out <plan.json>] | cut-releases.ts <tag|publish> --plan <plan.json>';
 
 function parseArgs(argv: string[]): Options {
   const [step, ...rest] = argv;
-  if (!(STEPS as readonly string[]).includes(step)) throw new Error(USAGE);
-  const opts: Options = { step: step as Step, base: null, head: 'HEAD' };
-  for (let i = 0; i < rest.length; i++) {
-    const arg = rest[i];
-    if (arg === '--base') opts.base = rest[++i] ?? null;
-    else if (arg === '--head') opts.head = rest[++i] ?? 'HEAD';
-    else throw new Error(`Unknown argument: ${arg}\n${USAGE}`);
+  const flags = new Map<string, string>();
+  for (let i = 0; i < rest.length; i += 2) {
+    const value = rest[i + 1];
+    if (!['--head', '--out', '--plan'].includes(rest[i]) || value === undefined) {
+      throw new Error(`Bad argument: ${rest[i]}\n${USAGE}`);
+    }
+    flags.set(rest[i], value);
   }
-  // After `tag`, the newest reachable release is one this run made, so only `plan` may derive the base.
-  if (opts.step !== 'plan' && opts.base === null) throw new Error(`${opts.step} needs --base\n${USAGE}`);
-  return opts;
+  if (step === 'plan' && !flags.has('--plan')) {
+    return { step, head: flags.get('--head') ?? 'HEAD', out: flags.get('--out') ?? null };
+  }
+  const plan = flags.get('--plan');
+  if ((step === 'tag' || step === 'publish') && plan !== undefined && flags.size === 1) return { step, plan };
+  throw new Error(USAGE);
 }
 
 function run(command: string, args: string[]): string {
@@ -108,27 +107,27 @@ function publish(release: PlannedRelease, isNewest: boolean): void {
   ]);
 }
 
+function plan(head: string): PlannedRelease[] {
+  const headSha = run('git', ['rev-parse', head]);
+  const base = releaseCommitAt(headSha);
+  const releases = planReleases(releaseAt(base), rangeCommits(base, headSha));
+  console.log(`${releases.length} release(s) from base ${base} to ${headSha.slice(0, 7)}:`);
+  for (const release of releases) console.log(`  ${release.tag} → ${release.sha.slice(0, 7)} (PR #${release.prNumber})`);
+  return releases;
+}
+
 function main(): void {
   const opts = parseArgs(process.argv.slice(2));
-  const head = run('git', ['rev-parse', opts.head]);
-  const base = run('git', ['rev-parse', opts.base ?? releaseCommitAt(head)]);
-  const plan = planReleases(releaseAt(base), rangeCommits(base, head));
-
-  console.log(`${plan.length} release(s) from base ${base} to ${head.slice(0, 7)}:`);
-  for (const release of plan) console.log(`  ${release.tag} → ${release.sha.slice(0, 7)} (PR #${release.prNumber})`);
-
-  switch (opts.step) {
-    case 'plan':
-      if (process.env.GITHUB_OUTPUT) {
-        appendFileSync(process.env.GITHUB_OUTPUT, `releases=${plan.length}\nbase=${base}\n`);
-      }
-      return;
-    case 'tag':
-      plan.forEach(tag);
-      return;
-    case 'publish':
-      plan.forEach((release, i) => publish(release, i === plan.length - 1));
+  if (opts.step === 'plan') {
+    const releases = plan(opts.head);
+    const json = JSON.stringify(releases);
+    if (opts.out !== null) writeFileSync(opts.out, `${json}\n`);
+    if (process.env.GITHUB_OUTPUT) appendFileSync(process.env.GITHUB_OUTPUT, `releases=${releases.length}\nplan=${json}\n`);
+    return;
   }
+  const releases = parsePlan(readFileSync(opts.plan, 'utf8'));
+  if (opts.step === 'tag') releases.forEach(tag);
+  else releases.forEach((release, i) => publish(release, i === releases.length - 1));
 }
 
 main();

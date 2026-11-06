@@ -84,6 +84,24 @@ export function planReleases(baseVersion: string, commits: readonly RangeCommit[
   return plan;
 }
 
+/** A plan handed from the `plan` step to `tag` and `publish`, parsed so neither acts on a malformed one. */
+export function parsePlan(json: string): PlannedRelease[] {
+  const raw: unknown = JSON.parse(json);
+  if (!Array.isArray(raw)) throw new Error('release plan: not an array');
+  return raw.map((entry: unknown, i): PlannedRelease => {
+    const { sha, tag, version, prNumber } = (entry ?? {}) as Record<string, unknown>;
+    const problem =
+      typeof sha !== 'string' || !/^[0-9a-f]{40}$/.test(sha) ? 'sha is not a full commit hash'
+        : typeof version !== 'string' ? 'version is not a string'
+          : tag !== tagOf(version) ? `tag is not ${tagOf(version)}`
+            : prNumber !== null && !Number.isInteger(prNumber) ? 'prNumber is neither an integer nor null'
+              : null;
+    if (problem !== null) throw new Error(`release plan entry ${i}: ${problem}`);
+    parseVersion(version as string);
+    return { sha: sha as string, tag: tag as string, version: version as string, prNumber: prNumber as number | null };
+  });
+}
+
 export function prNumberFromSubject(subject: string): number | null {
   const refs = subject.match(/#(\d+)/g);
   if (!refs) return null;

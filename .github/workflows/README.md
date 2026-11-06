@@ -11,7 +11,7 @@ Runs on push to `main`. Its `plan-releases` job derives the version of
 every commit since the last release pushed (from the newest release tag's
 commit to HEAD, so a cancelled or failed run's commits are not skipped)
 from its PR's release level label (`scripts/release/cut-releases.ts
-plan`), and hands that base to the `deploy` job's steps; a
+plan`), and hands that plan to the `deploy` job's steps; a
 range that ships no release stops there. Otherwise `deploy` makes those
 release tags locally, builds — the build's version is the newest of them
 — and deploys **once, at HEAD**: uploads the version (`wrangler versions

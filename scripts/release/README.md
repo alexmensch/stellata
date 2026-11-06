@@ -19,12 +19,13 @@ usable by hand (see [Manual release](/RELEASING.md#manual-release-fallback)).
   stdin, one per line, out comes `major|minor|patch|none`, or a
   `::error::` and exit 1 unless exactly one level label is on. Run by
   `.github/actions/release-level`.
-- `cut-releases.ts` — the CLI, three steps over `--base..--head`:
-  `plan` derives the base (`releaseCommitAt`), prints the releases and
-  writes their count and the base to `GITHUB_OUTPUT`; `tag` makes each
-  release's annotated tag locally; `publish` pushes each tag and creates
-  its release. `tag` and `publish` refuse to run without `--base`. Reads each commit's PR labels and body with
-  `gh`.
+- `cut-releases.ts` — the CLI, three steps: `plan [--head] [--out
+  <file>]` plans the releases up to `--head` and writes them as JSON (to
+  `--out`, and with their count to `GITHUB_OUTPUT`); `tag --plan <file>`
+  makes each planned release's annotated tag locally; `publish --plan
+  <file>` pushes each tag and creates its release. `parsePlan()` refuses a
+  malformed plan before either acts. Reads each commit's PR labels and
+  body with `gh`.
 - `asset-size-pure.ts` (+ test) — the Cloudflare Workers per-asset
   ceiling (`WORKERS_MAX_ASSET_BYTES`, 25 MiB) and `judgeAssetSizes()`,
   which ranks a file list largest first and splits out oversize and
@@ -75,9 +76,11 @@ on origin are the one record of what has shipped. A push's `before` is
 not: GitHub keeps one pending run per concurrency group and cancels the
 rest, and a failed deploy pushes no tag, so a range starting at `before`
 would skip those commits for good and hand their version to the next PR.
-`plan` computes the base once and `deploy.yml` hands it to `tag` and
-`publish`, which take it as `--base`: re-derived after `tag`, it would be
-the release this run just made.
+**The plan is made once and handed on.** `plan` writes it as JSON and
+`deploy.yml` hands it to `tag` and `publish`, which act on exactly the
+releases `plan` printed: re-planned after `tag`, the base would be the
+release this run just made, and a label edited mid-run would tag one thing
+and publish another.
 
 `planReleases()` walks that range oldest-first from the base's release
 (`releaseAt(base)`). Each

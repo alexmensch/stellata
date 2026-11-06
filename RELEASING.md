@@ -702,7 +702,7 @@ On every push to `main`, `deploy.yml`:
    failed earlier run's commits are planned here, and derives each
    commit's version from the release before it and its PR's level label
    ([Derived versions](scripts/release/README.md#derived-versions)). The
-   base it walked from is handed to steps 2 and 4. No release in the
+   plan is handed to steps 2 and 4 as it was printed. No release in the
    range → exits silently. A commit whose PR declares no
    level, or two, fails the plan: fix the label and re-run the job.
 2. Checks out with LFS, sets up Node and Python from `.nvmrc` /
@@ -751,14 +751,13 @@ If the workflow needs to be bypassed (e.g. infrastructure outage), run
 the same three steps by hand, on an up-to-date `main` with tags fetched:
 
 ```sh
-node scripts/release/cut-releases.ts plan                     # touches nothing; prints the base
-node scripts/release/cut-releases.ts tag --base <that base>    # local tags, so the build reads the new version
+node scripts/release/cut-releases.ts plan --out plan.json     # touches nothing
+node scripts/release/cut-releases.ts tag --plan plan.json     # local tags, so the build reads the new version
 pnpm run deploy
-node scripts/release/cut-releases.ts publish --base <that base>
+node scripts/release/cut-releases.ts publish --plan plan.json
 ```
 
 `plan` walks from the commit of the newest release tag reachable from
-`--head` (default `HEAD`) and prints that base; `tag` and `publish` take it
-explicitly, because once `tag` has run the newest reachable release is one
-it made. A commit already tagged keeps its version and an already-released
+`--head` (default `HEAD`); `tag` and `publish` act on the plan it wrote,
+because once `tag` has run the newest reachable release is one it made. A commit already tagged keeps its version and an already-released
 version is skipped, so re-running after a partial failure is safe.

@@ -6,6 +6,7 @@ import {
   planReleases,
   prNumberFromSubject,
   extractReleaseNotes,
+  parsePlan,
   type CommitRelease,
   type RangeCommit,
 } from './release-plan-pure';
@@ -105,6 +106,27 @@ describe('planReleases', () => {
       .toThrow(/^bbb7654 \(PR #2\): no release level declared/);
     expect(() => planReleases('3.9.0', [commit('ccc7654321', { kind: 'undeclared' }, null)]))
       .toThrow(/^ccc7654 \(no PR in its subject\)/);
+  });
+});
+
+describe('parsePlan', () => {
+  const sha = 'a'.repeat(40);
+  const entry = { sha, tag: 'v7.1.16', version: '7.1.16', prNumber: 760 };
+
+  it('round-trips the plan the plan step writes', () => {
+    const plan = [entry, { ...entry, tag: 'v7.1.17', version: '7.1.17', prNumber: null }];
+    expect(parsePlan(JSON.stringify(plan))).toEqual(plan);
+    expect(parsePlan('[]')).toEqual([]);
+  });
+
+  it.each([
+    ['not an array', '{}', /not an array/],
+    ['a short sha', JSON.stringify([{ ...entry, sha: 'abc' }]), /entry 0: sha is not a full commit hash/],
+    ['a tag that is not the version’s', JSON.stringify([{ ...entry, tag: 'v7.1.15' }]), /entry 0: tag is not v7\.1\.16/],
+    ['a version that is not one', JSON.stringify([{ ...entry, tag: 'v7.1', version: '7.1' }]), /not a release version/],
+    ['a fractional PR number', JSON.stringify([{ ...entry, prNumber: 1.5 }]), /prNumber is neither/],
+  ])('refuses %s', (_, json, error) => {
+    expect(() => parsePlan(json)).toThrow(error);
   });
 });
 

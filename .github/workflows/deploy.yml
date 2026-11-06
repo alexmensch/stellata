@@ -26,7 +26,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       releases: ${{ steps.plan.outputs.releases }}
-      base: ${{ steps.plan.outputs.base }}
+      plan: ${{ steps.plan.outputs.plan }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -70,13 +70,13 @@ jobs:
 
       - name: Tag releases locally
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          BASE: ${{ needs.plan-releases.outputs.base }}
+          PLAN: ${{ needs.plan-releases.outputs.plan }}
         run: |
           set -euo pipefail
+          printf '%s\n' "$PLAN" > "$RUNNER_TEMP/release-plan.json"
           git config user.name 'github-actions[bot]'
           git config user.email 'github-actions[bot]@users.noreply.github.com'
-          node scripts/release/cut-releases.ts tag --base "$BASE" --head "$GITHUB_SHA"
+          node scripts/release/cut-releases.ts tag --plan "$RUNNER_TEMP/release-plan.json"
 
       - run: pnpm run build
 
@@ -113,5 +113,4 @@ jobs:
       - name: Publish releases
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          BASE: ${{ needs.plan-releases.outputs.base }}
-        run: node scripts/release/cut-releases.ts publish --base "$BASE" --head "$GITHUB_SHA"
+        run: node scripts/release/cut-releases.ts publish --plan "$RUNNER_TEMP/release-plan.json"
