@@ -24,9 +24,9 @@ Last, `cut-releases.ts publish` creates each GitHub release, and its tag
 with it, carrying the `## Release notes` block from its own PR body in
 place of the flat auto-generated notes.
 
-One push can therefore ship several releases: the merge queue lands a
-group of PRs as several commits in a single push event, each releasing at
-its own derived version. Rationale and invariants:
+The range can hold several releasing commits — a failed deploy leaves its
+commit untagged for the next push's run — and each releases at its own
+derived version. Rationale and invariants:
 [Derived versions](/scripts/release/README.md#derived-versions).
 
 The PR-body extraction is the reason `release-notes-guard.yml` exists
@@ -37,18 +37,11 @@ composite action (same as the data-consuming jobs in `test.yml`)
 rather than an `lfs: true` checkout, so a deploy reuses the cached
 objects instead of pulling ~600 MB from the LFS store every push.
 
-## The PR a guard judges, in a PR or a merge group
+## The PR a guard judges
 
-The guards and `test.yml` run on `pull_request` and on `merge_group`, the
-event the merge queue fires for each entry's group commit (main plus every
-PR ahead of it plus this one); a required check must report there or the
-queue waits on it. A merge-group event carries no PR, so every guard asks
-`.github/actions/pr-under-test` for the PR it judges — the one in the
-group ref's `pr-<N>-<sha>` suffix — and the base its own changes are
-diffed against: `origin/<base>` for a PR, `merge_group.base_sha` (the entry
-ahead, or main) in a group, so a group diff is that PR's alone. Each guard
-then reads the PR's labels and body live through `gh`, never the event
-payload ([why](/RELEASING.md#merge-gating)).
+Each guard runs on `pull_request`, takes the PR's number from the event and
+reads its labels and body live through `gh`, never the event payload
+([why](/RELEASING.md#merge-gating)).
 
 ## The release level, and the `skip-version-bump` exemption
 
@@ -61,7 +54,7 @@ unless exactly one release level label is on —
 
 ## `release-notes-guard.yml`
 
-CI check on every PR and merge-group entry. Fails it if the
+CI check on every PR. Fails it if the
 `## Release notes` block in the PR body is empty (HTML comments don't
 count); the body is read live from the PR. Exempt under
 [the `skip-version-bump` exemption](#the-release-level-and-the-skip-version-bump-exemption).
@@ -70,8 +63,8 @@ The check is `scripts/release/release-notes-check.ts`, run by plain `node`, test
 
 ## `perf-section-guard.yml`
 
-CI check on every PR and merge-group entry, reading the body live and the
-diff against [the PR's own base](#the-pr-a-guard-judges-in-a-pr-or-a-merge-group).
+CI check on every PR, reading the body live and the diff against
+`origin/<base branch>`.
 Fails it unless the body carries a non-empty
 `## Perf` section with an `accepted:` line for every `✗` row — and, when
 the section claims Tier 1 or 2, at least one `--against-pin` table row —
@@ -101,7 +94,7 @@ sends the body: [How pr-body-guard works](/scripts/hooks/README.md#how-pr-body-g
 
 ## `version-guard.yml`
 
-CI check on every PR and merge-group entry. Fails it unless the PR
+CI check on every PR. Fails it unless the PR
 carries exactly one [release level](#the-release-level-and-the-skip-version-bump-exemption),
 the level `deploy.yml` derives its version from. Which level is
 [the version policy](/RELEASING.md#version-policy) and
@@ -119,7 +112,7 @@ main's builds among them.
 
 ## `test.yml`
 
-CI pipeline on every PR, merge-group entry and push to `main`. Required for merge. A
+CI pipeline on every PR and push to `main`. Required for merge. A
 fan-out of jobs beyond the bare checks:
 
 - `lfs-data` — warms the shared LFS object cache
@@ -141,7 +134,7 @@ fan-out of jobs beyond the bare checks:
   --verify-committed` (every build step on the table, failing on any
   committed output the build moves: a SID mint the PR did not commit, a
   stale `multiples.tsv`, either astrometry request), then every check that
-  reads the built artifacts, as named steps. A pull request or merge group restores
+  reads the built artifacts, as named steps. A pull request restores
   a saved build and rebuilds only the steps whose stamps moved; a push
   to `main` rebuilds everything: [The data build cache](/scripts/ci/README.md#the-data-build-cache).
   The checks:

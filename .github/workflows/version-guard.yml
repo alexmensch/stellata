@@ -5,7 +5,6 @@ on:
     branches: [main]
     # `labeled` / `unlabeled` so the check re-runs when a level label changes.
     types: [opened, synchronize, reopened, labeled, unlabeled]
-  merge_group:
 
 permissions:
   contents: read
@@ -23,8 +22,6 @@ jobs:
             scripts/release
             scripts/util
             .github/actions
-      - id: pr
-        uses: ./.github/actions/pr-under-test
       - uses: ./.github/actions/release-level
         with:
-          pr: ${{ steps.pr.outputs.number }}
+          pr: ${{ github.event.pull_request.number }}
