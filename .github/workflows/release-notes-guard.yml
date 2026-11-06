@@ -12,11 +12,7 @@ permissions:
   contents: read
   pull-requests: read
 
-# Asserts the PR body contains a non-empty `## Release notes` section.
-# `deploy.yml` extracts that section and uses it as the GitHub release
-# notes for the version this PR ships, so an empty section means an
-# empty release page. PRs labelled `skip-version-bump` don't ship a
-# release and are exempt.
+# see /.github/workflows/README.md#release-notes-guardyml
 
 jobs:
   release-notes-guard:

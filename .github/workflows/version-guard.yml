@@ -11,9 +11,7 @@ permissions:
   contents: read
   pull-requests: read
 
-# Asserts the PR declares exactly one release level label — release:major,
-# release:minor, release:patch or skip-version-bump. deploy.yml derives each
-# landed PR's version from it (RELEASING.md's Version policy).
+# see /.github/workflows/README.md#version-guardyml
 
 jobs:
   version-guard:

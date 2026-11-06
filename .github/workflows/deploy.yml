@@ -12,14 +12,7 @@ concurrency:
   group: deploy-cloudflare
   cancel-in-progress: false
 
-# Every push to main plans the releases since the last one pushed:
-# scripts/release/cut-releases.ts walks from the newest release tag's commit
-# and derives each commit's version from the release before it plus the
-# level its PR's label declares, so a cancelled or failed run's commits are
-# planned by the next. The deploy runs only when the range ships one. The
-# tags are made locally before the build, which reads its version from the
-# newest of them, and pushed with each release only once the checked version
-# is live. Rationale: /scripts/release/README.md.
+# see /scripts/release/README.md#derived-versions
 
 jobs:
   plan-releases:
