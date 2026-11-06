@@ -7,7 +7,7 @@ import { ArgError, parsePinArgs, pinUsage, type PinArgs } from './args';
 import {
   REPO_ROOT, printAgainstPin, readJsonFlag, writePinFile,
 } from './checkout';
-import { packageVersion } from '../util/git-provenance';
+import { releaseAt } from '../util/release-version';
 import {
   acceptedMarks, assertPinFile, pinFromRuns, pinPathFor, pinWriteRefusal,
   type PinDiff, type RunSource,
@@ -61,7 +61,7 @@ export function main(): number {
     return EXIT.usage;
   }
 
-  const summary = pinFromRuns(sources, { version: packageVersion(), accepted: acceptedMarks(args.accept) });
+  const summary = pinFromRuns(sources, { version: releaseAt(), accepted: acceptedMarks(args.accept) });
   if (summary.dropped.length > 0) {
     console.warn(
       `perf pin: ${summary.dropped.length} row(s) at no canon position, left out `

@@ -798,14 +798,14 @@ def parse_orb6_component_overrides(path: Path) -> dict[tuple[str, str], str]:
 
 
 def parse_simbad_wds_spectra(
-    simbad_sptype_path: Path, simbad_wds_xids_path: Path,
+    simbad_wds_sptype_path: Path, simbad_wds_xids_path: Path,
 ) -> dict[tuple[str, str], str]:
-    """Join ``simbad_sptype.tsv`` against ``simbad_wds_xids.tsv`` on
+    """Join ``simbad_wds_sptype.tsv`` against ``simbad_wds_xids.tsv`` on
     ``simbad_oid``, returning a ``(wds_id, component) -> sp_type`` map.
     See /scripts/binaries/README.md#stage-6--multiplestsv-emit for the AT-HYG fallback
     contract."""
     sp_by_oid: dict[int, str] = {}
-    with simbad_sptype_path.open(newline="") as fh:
+    with simbad_wds_sptype_path.open(newline="") as fh:
         reader = csv.DictReader(fh, delimiter="\t")
         for r in reader:
             oid = safe_int(r.get("simbad_oid") or "")

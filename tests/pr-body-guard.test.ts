@@ -23,7 +23,7 @@ interface PrView {
 }
 
 /** `gh pr view` answers with this PR as JSON; the head defaults to the checkout's. */
-function ghView({ base = 'main', labels = [], head, isDraft = false, body = '' }: PrView = {}): void {
+function ghView({ base = 'main', labels = ['release:patch'], head, isDraft = false, body = '' }: PrView = {}): void {
   const view = {
     baseRefName: base,
     headRefOid: head ?? git('rev-parse', 'HEAD').stdout.trim(),
@@ -91,7 +91,24 @@ describe('pr-body-guard', { timeout: 120_000 }, () => {
   });
 
   it('passes a conforming body', () => {
-    expect(decision(`gh pr create --body-file ${body(PERF, NOTES)}`).denied).toBe(false);
+    expect(decision(`gh pr create --body-file ${body(PERF, NOTES)} --label release:patch`).denied).toBe(false);
+  });
+
+  describe('version-guard: exactly one release level, as CI requires', () => {
+    it('denies a PR with no level label, naming the choices', () => {
+      const d = decision(`gh pr create --body-file ${body(PERF, NOTES)} -l docs`);
+      expect(d.denied).toBe(true);
+      expect(d.reason).toContain('version-guard: no release level declared: attach exactly one of release:major');
+    });
+
+    it('denies two level labels, counting the ones the PR already carries', () => {
+      const d = decision(`gh pr create --body-file ${body(PERF, NOTES)} -l release:minor,skip-version-bump`);
+      expect(d.reason).toContain('version-guard: release:minor and skip-version-bump conflict');
+      ghView({ labels: ['release:patch'] });
+      expect(decision(`gh pr edit 12 -F ${body(PERF, NOTES)} --add-label release:major`).denied).toBe(true);
+      expect(decision(`gh pr edit 12 -F ${body(PERF, NOTES)} --add-label release:major --remove-label release:patch`).denied)
+        .toBe(false);
+    });
   });
 
   it('reads every spelling of the body file, anywhere in a chain', () => {
@@ -219,7 +236,7 @@ describe('pr-body-guard', { timeout: 120_000 }, () => {
 
     it('on create -H, from that branch or its origin copy', () => {
       const file = body(NOTES);
-      expect(decision(`gh pr create -F ${file}`).denied).toBe(false);
+      expect(decision(`gh pr create -F ${file} -l release:patch`).denied).toBe(false);
       expect(decision(`gh pr create -H ${PR_HEAD} -F ${file}`).denied).toBe(true);
       git('update-ref', `refs/remotes/origin/${PR_HEAD}`, PR_HEAD);
       git('branch', '-q', '-D', PR_HEAD);
@@ -314,26 +331,21 @@ describe('the hook triggers where the workflows do', () => {
     expect(workflow(name)).toMatch(new RegExp(`^\\s+branches: \\[${hookValue('ci_base')}\\]$`, 'm'));
   });
 
-  it('the skip action reads the label the hook exempts', () => {
-    const action = readFileSync(resolve(__dirname, '../.github/actions/skip-version-bump/action.yml'), 'utf-8');
-    expect(action).toContain(`.name == "${hookValue('skip_label')}"`);
-  });
-
   it('release-notes-guard.yml judges the live PR body, not the event payload’s', () => {
     const yml = workflow('release-notes-guard.yml');
     expect(yml).not.toContain('github.event.pull_request.body');
     expect(yml).toContain('gh pr view "$PR" --repo "$REPO" --json body -q .body');
   });
 
-  it.each(['release-notes-guard.yml', 'version-guard.yml'])('%s gates every step after the skip action on it', (name) => {
-    const yml = workflow(name);
+  it('release-notes-guard.yml gates every step after the release-level action on it', () => {
+    const yml = workflow('release-notes-guard.yml');
     expect(yml).not.toContain('github.event.pull_request.labels');
     const steps = yml.split(/^ {6}- /m).slice(1);
-    const skip = steps.findIndex((step) => /^ *uses: \.\/\.github\/actions\/skip-version-bump$/m.test(step));
-    expect(skip, 'no step uses the skip-version-bump action').toBeGreaterThanOrEqual(0);
-    expect(steps[skip]).toMatch(/^ *id: skip$/m);
-    const after = steps.slice(skip + 1);
+    const level = steps.findIndex((step) => /^ *uses: \.\/\.github\/actions\/release-level$/m.test(step));
+    expect(level, 'no step uses the release-level action').toBeGreaterThanOrEqual(0);
+    expect(steps[level]).toMatch(/^ *id: level$/m);
+    const after = steps.slice(level + 1);
     expect(after.length).toBeGreaterThan(0);
-    for (const step of after) expect(step).toMatch(/^ *if: steps\.skip\.outputs\.skip != 'true'$/m);
+    for (const step of after) expect(step).toMatch(/^ *if: steps\.level\.outputs\.level != 'none'$/m);
   });
 });

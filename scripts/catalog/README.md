@@ -103,7 +103,7 @@ scripts/catalog/
                                   placement's and naming's lineage
                                   invariants (lineage/README.md#invariants)
                                   and the CI heap budget
-                                  (../util/README.md#ci-heap-budget) pass.
+                                  (../util/heap-budget/README.md) pass.
                                   A failed allocation throws before
                                   anything is staged
                                   ([SID allocation](#sid-allocation)).

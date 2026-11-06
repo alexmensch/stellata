@@ -79,8 +79,9 @@ step hits on whatever build last made it from the same inputs, whatever
 commit that was, and a file no step reads that way (a workflow, a
 `package.json` script, a README) moves nothing. Python steps are covered the
 same way, through their recorded inputs. Build provenance is not an input:
-the package version and HEAD that lineage and registry headers record
-(`../util/git-provenance.ts`) name the build that made a reused output, not
+the release and HEAD that lineage and registry headers record
+(`releaseAt()` in `../util/release-version.ts`, `../util/git-provenance.ts`)
+name the build that made a reused output, not
 the commit that reused it.
 
 **The prefix carries what no stamp records**: the runner OS, the Node and
@@ -108,6 +109,15 @@ of what it restored, and its next push still finds the same entry.
 `--verify-committed --force`, so every merged commit is still built from
 scratch and its committed outputs compared; that bounds a stamp that misses
 an input to one merge. Pull requests run unforced.
+
+**A merge group restores main's newest build, runs unforced and saves
+nothing.** Its commit is main plus the queued PRs ahead plus its own, so
+main's build is the nearest one, and only the steps those PRs touch rebuild.
+It saves nothing because no later run would restore it: the group's branch
+is deleted once the entry lands or drops, and the commit that lands is
+built again, forced, by main's push. That forced build sits off the
+landing's critical path: no required check waits on main's push run. Until
+it saves, the next merge group restores main's previous build.
 
 **What is cached** is what the step table owns on disk and git does not
 track: each build step's declared outputs, family members and stamp

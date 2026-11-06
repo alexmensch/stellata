@@ -1,0 +1,30 @@
+name: release-level
+description: The release level a PR declares, read live from its labels rather than the triggering event's payload. Fails unless it carries exactly one level label. Needs scripts/release in the checkout.
+
+inputs:
+  pr:
+    description: The PR's number.
+    required: true
+
+outputs:
+  level:
+    description: "major, minor, patch, or none (skip-version-bump)"
+    value: ${{ steps.level.outputs.level }}
+
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-node@v7
+      with:
+        node-version-file: .nvmrc
+    - id: level
+      shell: bash
+      env:
+        GH_TOKEN: ${{ github.token }}
+        PR: ${{ inputs.pr }}
+        REPO: ${{ github.repository }}
+      run: |
+        set -euo pipefail
+        level=$(gh pr view "$PR" --repo "$REPO" --json labels -q '.labels[].name' | node scripts/release/release-level.ts)
+        echo "level=$level" >> "$GITHUB_OUTPUT"
+        echo "PR #$PR declares release level: $level"

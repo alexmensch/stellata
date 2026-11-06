@@ -67,6 +67,8 @@ shape — drop sub-sections that don't apply, add ones that do:
 Markdown — bullets, links, code spans all render on the release
 page.
 
-For `skip-version-bump` PRs (RELEASING.md's live-app consumer test)
-you can leave this section empty.
+The version is derived from this PR's release level label
+(release:major / release:minor / release:patch); never edit one by
+hand. For `skip-version-bump` PRs (RELEASING.md's live-app consumer
+test) you can leave this section empty.
 -->

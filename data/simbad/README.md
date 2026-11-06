@@ -13,6 +13,9 @@ simbad_sample.tsv          ~5.7 MB, LFS. Stratified random 50k stars.
 simbad_sptype.tsv          ~29 MB, LFS. 395,543 rows. Per-source sp_type /
                            sp_qual / sp_bibcode / otype + HIP / Gaia DR3 /
                            TYC / GJ cross-IDs; the resolver keys all four.
+                           Still holds WDS-only rows its request no longer
+                           asks for, and what dropping them moves:
+                           /scripts/refresh/simbad-wds-sptype/README.md#what-the-split-left-in-simbad_sptypetsv.
 simbad_values.tsv          ~18 MB, LFS. 74,446 rows. Bibcoded rv,
                            parallax, PM, coordinates and B/V fluxes for
                            the /docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers value cohort — see README.md#the-values-pull.
@@ -23,6 +26,9 @@ simbad_wds_xids.tsv        ~1.2 MB, LFS. Per-WDS-component (Gaia DR3,
                            73 changed rows stellata-hooj.30 tracks (44 Gaia
                            sources leave multiples.tsv, mu Cas A-E among
                            them); land it only with those resolved.
+simbad_wds_sptype.tsv      ~0.25 MB, LFS. 23,604 rows. sp_type per WDS
+                           component oid, the rows build:binaries reads —
+                           see README.md#the-wds-keyed-sp_type-pull.
 simbad_tyc_hd.tsv          ~11 MB, LFS. 332,320 rows. SIMBAD's own HD
                            attribution per Tycho-2 entry, keyed on TYC —
                            see README.md#the-tyc--hd-pull.
@@ -149,6 +155,17 @@ the 10 it vindicates against IV/25, and the four-witness split of the 15 it
 still contradicts: [What the TYC → HD pull adjudicates](/scripts/catalog/simbad/README.md#what-the-tyc--hd-pull-adjudicates)
 and [Which witness decides a close pair's HD](/scripts/catalog/simbad/README.md#which-witness-decides-a-close-pairs-hd). That folder owns
 what a consumer may conclude from these tables; this one owns what they are.
+
+## The WDS-keyed sp_type pull
+
+`simbad_wds_sptype.tsv` is SIMBAD's `sp_type` for every object
+`simbad_wds_xids.tsv` binds a WDS component to — columns `simbad_oid`,
+`sp_type`, one row per oid SIMBAD still holds, an untyped object with an
+empty `sp_type`. Its request is `simbad_wds_xids.tsv` alone, so unlike
+`simbad_sptype.tsv` nothing in it moves when the membership manifest does,
+and `build:binaries` reads it and nothing manifest-keyed. The two pulls
+overlap: an oid both requests reach has a row in each file. Pull and gates:
+[scripts/refresh/simbad-wds-sptype/](/scripts/refresh/simbad-wds-sptype/README.md).
 
 ## Provenance
 
@@ -332,10 +349,11 @@ re-typing is the expected cost of the tier, not a regression — and the
 corpus is where each one gets caught, since `known-stars.test.ts` pins
 `primary_spect` per row.
 
-**A re-pull is not done when the file lands.** `simbad_sptype.tsv` feeds two
-pipelines — [Consumed by](#consumed-by) names both — and they pin separate count snapshots.
-Refreshing the file means three builds, and **`build:binaries-runtime` goes
-last, not in the middle**:
+**A re-pull is not done when the file lands.** The two sp_type files feed
+pipelines that pin separate count snapshots — `simbad_wds_sptype.tsv`
+`build:binaries`, `simbad_sptype.tsv` membership and the catalogue
+([Consumed by](#consumed-by)). Refreshing either means the builds below,
+and **`build:binaries-runtime` goes last, not in the middle**:
 
 ```bash
 pnpm run build:binaries          # data/binaries/multiples.tsv + spect provenance
@@ -356,8 +374,10 @@ which is exactly what `tests/artifact-freshness.test.ts` fails on.
 - `simbad_sptype.tsv` → `scripts/catalog/build-catalog.ts` (Tier-1
   spectral classifier + the `otype = '**'` unresolved-multiplicity
   flag, [Multiplicity status](/scripts/catalog/multiplicity/README.md#multiplicity-status)) +
-  `scripts/binaries/build-binaries.py` Stage 6 (per-component sp_type,
-  beats AT-HYG's system-inherited string).
+  `build:membership` and `build:astrometry-request`, whose binding
+  derivation reads its cross-IDs (`scripts/catalog/spine/primaries-tables.ts`).
+- `simbad_wds_sptype.tsv` → `scripts/binaries/build-binaries.py` Stage 6
+  (per-component sp_type, beats AT-HYG's system-inherited string).
 - `sptype_overrides.tsv` → `scripts/catalog/spectral/sptype-overrides-source.ts`,
   the spectral resolver's curated tier.
 - `simbad_wds_xids.tsv` → `scripts/binaries/build-binaries.py`
@@ -414,7 +434,10 @@ which is exactly what `tests/artifact-freshness.test.ts` fails on.
   [`scripts/refresh/refresh-simbad-tyc-hd.py`](../../scripts/refresh/README.md).
 - `pnpm run refresh:simbad-sptype` →
   [`scripts/refresh/refresh-simbad-sptype.py`](../../scripts/refresh/README.md).
+- `pnpm run refresh:simbad-wds-sptype` →
+  [`scripts/refresh/simbad-wds-sptype/`](../../scripts/refresh/simbad-wds-sptype/README.md).
 - `pnpm run refresh:simbad-wds-xids` →
   [`scripts/refresh/refresh-simbad-wds-xids.py`](../../scripts/refresh/README.md).
 
-All share the `scripts/refresh/simbad/` plumbing.
+The Python ones share the `scripts/refresh/simbad/` plumbing; the WDS-keyed
+one runs on the TypeScript pull runtime.

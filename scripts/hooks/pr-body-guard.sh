@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
-# pr-body-guard: PreToolUse hook on Bash. Runs release-notes-guard's and
-# perf-section-guard's checks on `gh pr create|edit --body-file <file>` and on
-# `gh pr ready`, before GitHub sees them. README.md#how-pr-body-guard-works.
+# pr-body-guard: PreToolUse hook on Bash. Runs version-guard's,
+# release-notes-guard's and perf-section-guard's checks on `gh pr
+# create|edit --body-file <file>` and on `gh pr ready`, before GitHub sees
+# them. README.md#how-pr-body-guard-works.
 
 here="$(cd "$(dirname "$0")" && pwd)"
 . "$here/command-match.sh"
 ci_base=main
-skip_label=skip-version-bump
 input="$(cat)"
 
 cmd="$(printf '%s' "$input" | jq -r '.tool_input.command // "" | gsub("\\\\\n"; " ")' 2>/dev/null | tr '\n' ';')" || exit 0
@@ -114,9 +114,12 @@ fi
 [ -n "$base" ] || base="$ci_base"
 [ "$base" = "$ci_base" ] || exit 0
 
-has_label() { [[ ",$1," == *",${skip_label},"* ]]; }
-skip=false
-if { has_label "$labels" || has_label "$added"; } && ! has_label "$removed"; then skip=true; fi
+label_set=''
+IFS=, read -ra carried <<< "${labels},${added}"
+for label in "${carried[@]}"; do
+  [ -n "$label" ] && [[ ",${removed}," != *",${label},"* ]] && label_set="${label_set}${label}
+"
+done
 
 failures=''
 record() {
@@ -133,7 +136,10 @@ check() {
   if [ -n "$root" ] && [ -f "$root/scripts/$1" ]; then echo "$root/scripts/$1"; else echo "$here/../$1"; fi
 }
 
-if [ "$skip" = false ]; then record release-notes-guard node "$(check release/release-notes-check.ts)" "$body"; fi
+level_of() { printf '%s' "$label_set" | node "$(check release/release-level.ts)"; }
+record version-guard level_of
+level="$(level_of 2>/dev/null)" || level=''
+if [ "$level" != none ]; then record release-notes-guard node "$(check release/release-notes-check.ts)" "$body"; fi
 record perf-section-guard bash "$(check perf/perf-section-guard.sh)" "$body" "origin/${base}" ${head:+"$head"}
 
 [ -z "$failures" ] && exit 0
@@ -141,7 +147,7 @@ record perf-section-guard bash "$(check perf/perf-section-guard.sh)" "$body" "or
 reason="Refusing gh pr ${sub}: ${subject} fails the CI guard it would meet on GitHub.
 ${failures}
 
-${remedy} The checks are the ones CI runs: scripts/release/release-notes-check.ts and scripts/perf/perf-section-guard.sh."
+${remedy} The checks are the ones CI runs: scripts/release/release-level.ts, scripts/release/release-notes-check.ts and scripts/perf/perf-section-guard.sh."
 
 jq -n --arg reason "$reason" '{
   hookSpecificOutput: {

@@ -145,7 +145,7 @@ import {
 } from '../util/emit-artifacts';
 import { snapshotCheck } from '../util/snapshot-check';
 import { nestByStage, type StagedCounts } from '../util/counts/count-stages-pure';
-import { watchHeap } from '../util/heap-budget';
+import { watchHeap } from '../util/heap-budget/heap-budget';
 import { syntheticGaiaBridges } from '../sid/sid-pure';
 import { sidSuccessorPairs } from '../sid/events-pure';
 import { allocate } from '../sid/allocate-pure';

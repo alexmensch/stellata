@@ -21,7 +21,6 @@ from simbad.specs import (  # noqa: E402
 
 ROOT = REPO_ROOT
 MEMBERSHIP = rl.MEMBERSHIP_MANIFEST
-WDS_XIDS_TSV = ROOT / "data" / "simbad" / "simbad_wds_xids.tsv"
 OUT = ROOT / "data" / "simbad" / "simbad_sptype.tsv"
 
 
@@ -40,9 +39,9 @@ RECOVERED_SAMPLE = 25
 
 
 def collect_oid_requests(client: rl.TapClient) -> request.OidRequest:
-    """Compose every input source, resolve non-oid identifiers via the
-    ident table, union into a deduplicated oid set."""
-    print("[1/2] manifest identifier keys → SIMBAD oid (via ident)…")
+    """Resolve the manifest's identifier keys to a deduplicated oid set
+    via the ident table."""
+    print("manifest identifier keys → SIMBAD oid (via ident)…")
     keys = inputs.membership_request_keys(MEMBERSHIP)
     print(f"      manifest rows: {keys.total} ({keys.keyless} carrying no key)")
     resolved = request.resolve_membership_keys(client, keys)
@@ -50,14 +49,6 @@ def collect_oid_requests(client: rl.TapClient) -> request.OidRequest:
         print(line)
     print(f"      oids from the manifest: {len(resolved.oids)} "
           f"(+{resolved.total_gained_by_widening} the widening reached alone)")
-
-    print("[2/2] simbad_wds_xids.tsv simbad_oid → direct…")
-    wds_oids = list(inputs.iter_wds_xids_oids(WDS_XIDS_TSV))
-    new_from_wds = len(set(wds_oids) - resolved.oids)
-    print(f"      WDS-xref oids: {len(wds_oids)}; "
-          f"{new_from_wds} not already covered by the manifest")
-    resolved.oids.update(wds_oids)
-
     return resolved
 
 
@@ -126,11 +117,9 @@ def main() -> None:
 
 def describe() -> dict:
     keys = inputs.membership_request_keys(MEMBERSHIP)
-    wds_oids = [f"oid:{oid}" for oid in inputs.iter_wds_xids_oids(WDS_XIDS_TSV)]
     return query.describe_pull(
         basic=BASIC_COLUMNS, idents=IDENT_LOOKUPS,
-        request=[*keys.request_lines(), *wds_oids],
-        request_from=[MEMBERSHIP, WDS_XIDS_TSV],
+        request=keys.request_lines(), request_from=[MEMBERSHIP],
     )
 
 

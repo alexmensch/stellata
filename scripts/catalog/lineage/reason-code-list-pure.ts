@@ -18,10 +18,9 @@ export interface ReasonCodeEntry {
 }
 
 
-/** A code already listed keeps the version it first shipped in; a new one
- *  takes `version`, the tree's own. */
+/** `version` is called only for a code `committed` lacks; README.md#reason-codes--closed-append-only-generated. */
 export function reasonCodeList(
-  stages: readonly StageCodes<string>[], committed: readonly ReasonCodeEntry[], version: string,
+  stages: readonly StageCodes<string>[], committed: readonly ReasonCodeEntry[], version: () => string,
 ): ReasonCodeEntry[] {
   const shipped = new Map(committed.map((e) => [e.code, e.firstVersion]));
   const entries: ReasonCodeEntry[] = [];
@@ -37,7 +36,7 @@ export function reasonCodeList(
         effect: d.effect,
         status: d.status.kind,
         retiredIn: d.status.kind === 'retired' ? d.status.retiredIn : '',
-        firstVersion: shipped.get(code) ?? version,
+        firstVersion: shipped.get(code) ?? version(),
         description: d.description,
       });
     }

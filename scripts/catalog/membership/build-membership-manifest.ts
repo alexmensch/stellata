@@ -6,7 +6,7 @@ import { resolve } from 'node:path';
 
 import { REPO_ROOT as ROOT } from '../../util/paths';
 import { emitArtifacts } from '../../util/emit-artifacts';
-import { watchHeap } from '../../util/heap-budget';
+import { watchHeap } from '../../util/heap-budget/heap-budget';
 import { stepInputHashes } from '../../util/step-input-hashes';
 import { artifactRows, readArtifact } from '../../util/sources/source';
 import { MEMBERSHIP_OUTPUTS } from './membership-manifest-outputs';

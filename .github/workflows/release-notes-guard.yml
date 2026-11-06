@@ -4,18 +4,15 @@ on:
   pull_request:
     branches: [main]
     # `edited` so the check re-runs when the body is updated;
-    # `labeled` / `unlabeled` so it re-runs when the label changes.
+    # `labeled` / `unlabeled` so it re-runs when a level label changes.
     types: [opened, synchronize, reopened, edited, labeled, unlabeled]
+  merge_group:
 
 permissions:
   contents: read
   pull-requests: read
 
-# Asserts the PR body contains a non-empty `## Release notes` section.
-# `deploy.yml` extracts that section and uses it as the GitHub release
-# notes for the version this PR ships, so an empty section means an
-# empty release page. PRs labelled `skip-version-bump` don't ship a
-# release and are exempt.
+# see /.github/workflows/README.md#release-notes-guardyml
 
 jobs:
   release-notes-guard:
@@ -25,18 +22,19 @@ jobs:
         with:
           sparse-checkout: |
             scripts/release
-            .github/actions/skip-version-bump
-      - id: skip
-        uses: ./.github/actions/skip-version-bump
-      - if: steps.skip.outputs.skip != 'true'
-        uses: actions/setup-node@v7
+            scripts/util
+            .github/actions
+      - id: pr
+        uses: ./.github/actions/pr-under-test
+      - id: level
+        uses: ./.github/actions/release-level
         with:
-          node-version-file: .nvmrc
+          pr: ${{ steps.pr.outputs.number }}
       - name: Check `## Release notes` section is present and non-empty
-        if: steps.skip.outputs.skip != 'true'
+        if: steps.level.outputs.level != 'none'
         env:
           GH_TOKEN: ${{ github.token }}
-          PR: ${{ github.event.pull_request.number }}
+          PR: ${{ steps.pr.outputs.number }}
           REPO: ${{ github.repository }}
         run: |
           set -euo pipefail

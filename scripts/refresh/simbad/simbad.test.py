@@ -698,21 +698,6 @@ class CoverageTests(unittest.TestCase):
         )
 
 
-class IterWdsXidsOidsTests(unittest.TestCase):
-
-    def test_skips_blank_and_non_integer_cells(self):
-        d = self.enterContext(tempfile.TemporaryDirectory())
-        p = Path(d) / "wds.tsv"
-        p.write_text(
-            "simbad_oid\tother\n"
-            "100\tx\n"       # → 100
-            "\ty\n"          # blank → skip
-            "abc\tz\n"       # non-integer → skip
-            " 200 \tw\n"     # whitespace-padded → 200
-        )
-        self.assertEqual(list(inputs.iter_wds_xids_oids(p)), [100, 200])
-
-
 class ResolveMembershipKeysTests(unittest.TestCase):
 
     TYC_WIDENING = request.widening_label(TYC)
@@ -883,7 +868,7 @@ class ResolveMembershipKeysTests(unittest.TestCase):
 
 class CollectOidRequestsTests(unittest.TestCase):
 
-    def test_unions_membership_keys_and_wds_oids(self):
+    def test_resolves_membership_keys_to_oids(self):
         sptype = load_kebab_sibling(
             __file__, "refresh_simbad_sptype", "../refresh-simbad-sptype.py",
         )
@@ -898,12 +883,9 @@ class CollectOidRequestsTests(unittest.TestCase):
             ])),
             ("HIP 777", ident_table([{"oidref": 300, "id": "HIP 777"}])),
         ])
-        with mock.patch.object(sptype, "MEMBERSHIP", manifest), \
-             mock.patch.object(sptype.inputs, "iter_wds_xids_oids",
-                               return_value=iter([200, 100])):
+        with mock.patch.object(sptype, "MEMBERSHIP", manifest):
             resolved = sptype.collect_oid_requests(FakeClient(backend))
-        # gaia oid 100 ∪ hip oid 300 ∪ wds {200, 100} → deduped.
-        self.assertEqual(sorted(resolved.oids), [100, 200, 300])
+        self.assertEqual(sorted(resolved.oids), [100, 300])
         # The bindings the union pass reads back are per NAMESPACE, so a
         # widening rung folds into the namespace it asked under.
         self.assertEqual(resolved.bindings["source_id"], {12345: 100})

@@ -1,12 +1,12 @@
-// Watches a build step's heap from the call on; `check()` stops and judges it. See README.md#ci-heap-budget.
+// Watches a build step's heap from the call on; `check()` stops and judges it. See README.md.
 
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { GCProfiler, getHeapStatistics } from 'node:v8';
 
-import type { Check } from './emit-artifacts';
+import type { Check } from '../emit-artifacts';
 import { heapBudgetCheck, peakLiveHeap } from './heap-budget-pure';
-import { REPO_ROOT } from './paths';
+import { REPO_ROOT } from '../paths';
 
 function nodeMajor(version: string, source: string): number {
   const major = Number(/^v?(\d+)/.exec(version.trim())?.[1]);

@@ -5,15 +5,15 @@ release is its own changelog — the GitHub release page is populated
 from a `## Release notes` section in the merging PR's body. There is
 no separate `CHANGELOG.md`.
 
-Releases are cut automatically by `.github/workflows/deploy.yml`:
-a push to `main` that changes `package.json#version` triggers a build,
-a checked upload and deploy of that version at HEAD, then a
-`v<version>` tag and a GitHub release for **each** bumped commit in the
-push. PRs that bump the
-version therefore release on merge — including every PR in a merged
-stack, which lands as several commits in one push. The work below is
-mostly about getting the bump *and the release notes section* right on
-the PR.
+Releases are cut automatically by `.github/workflows/deploy.yml`. No
+file in the tree states a version: each PR declares a **release level**
+by label, and a push to `main` derives each landed commit's version from
+the release before it plus its PR's level, then builds, checks and
+deploys at HEAD and cuts a `v<version>` tag and a GitHub release for
+**each** releasing commit. A PR that declares a level therefore releases
+on merge — including every PR in a merge-queue group, which lands as
+several commits in one push. The work below is mostly about getting the
+level *and the release notes section* right on the PR.
 
 ## Release notes per PR
 
@@ -43,41 +43,43 @@ view --json body`, extracts the `## Release notes` section, and passes
 it to `gh release create`. If the section can't be found (non-squash
 merge, body fetch fails) it falls back to GitHub's `--generate-notes`.
 
-Notes are per PR, not per push: a stack of six bumping PRs merged
-together produces six release pages, each with its own author's prose.
+Notes are per PR, not per push: a merge group of six releasing PRs
+produces six release pages, each with its own author's prose.
 
 ## Version policy
 
-- **Major** — incompatible changes to the URL state format, the
+Every PR carries exactly one release level label:
+
+- **`release:major`** — incompatible changes to the URL state format, the
   binary catalogue layout, the Worker route, or anything else that
   breaks bookmarks / saved links.
-- **Minor** — new user-visible features (rendering modes, overlays,
-  data sources), backward-compatible.
-- **Patch** — bug fixes, copy tweaks, dependency bumps with no
+- **`release:minor`** — new user-visible features (rendering modes,
+  overlays, data sources), backward-compatible.
+- **`release:patch`** — bug fixes, copy tweaks, dependency bumps with no
   user-visible behaviour change.
+- **`skip-version-bump`** — no release
+  ([the live-app consumer test](#the-live-app-consumer-test)).
 
-Every PR that changes what the deployed site serves
-([the live-app consumer test](#the-live-app-consumer-test)) bumps
-`package.json`, so the version on `main` is always the *next*
-release. Cutting a release is then just merging — the deploy workflow
-handles tag, GitHub release, and Cloudflare deploy. PRs without a bump
-don't redeploy.
+The version is derived when the PR lands, never written by hand: the
+release before it on `main`, bumped by its level (`7.1.15` + minor →
+`7.2.0`). Two PRs landing in one merge group each declaring patch ship
+`7.1.16` and `7.1.17`, in queue order. A build's version is the newest
+release tag reachable from its commit (`releaseAt()`,
+`scripts/util/release-version.ts`), so a branch builds as the release it
+stands on. Cutting a release is just merging — the deploy workflow
+derives the version and handles tag, GitHub release, and Cloudflare
+deploy. A push of only `skip-version-bump` PRs doesn't redeploy. Detail:
+[Derived versions](scripts/release/README.md#derived-versions).
 
 The `version-guard` workflow (`.github/workflows/version-guard.yml`)
-runs on every PR without the `skip-version-bump` label and asserts:
-
-1. `package.json#version` is strictly greater (per semver) than the
-   base branch's version.
-2. The new version is not already a published git tag.
-
-Concurrent PRs can't silently both claim the same bump: whichever
-merges second fails the guard until rebased and re-bumped.
+runs on every PR and merge-group entry and fails unless exactly one
+level label is on.
 
 ### The live-app consumer test
 
 At commit time, ask: **does merging this PR change anything the
-deployed site serves by the next push to main?** Yes → bump. No →
-`skip-version-bump`. No covers docs, CI, `.beads`, repo config, and
+deployed site serves by the next push to main?** Yes → a release level.
+No → `skip-version-bump`. No covers docs, CI, `.beads`, repo config, and
 build scripts whose output to the site is unchanged — data-pipeline
 output unused by the current `build-catalog.ts` / `catalog-loader.ts`,
 refresh-script work producing a TSV the build doesn't yet read,
@@ -85,26 +87,22 @@ partial multi-stage rewrites mid-stream.
 
 "Patch" is not the floor for a code change: pipeline, build-script or
 tooling work whose output is **not yet wired into the live deployed
-app** skips. The bump rides the PR that wires new code into its live
+app** skips. The release rides the PR that wires new code into its live
 consumer, not the PR that adds it in isolation.
 
-For a skip:
-
-1. Do NOT bump `package.json#version`.
-2. Attach the `skip-version-bump` label (`gh pr create --label
-   skip-version-bump`, or `gh pr edit <N> --add-label
-   skip-version-bump`).
-3. `release-notes-guard` skips the `## Release notes` check when the
-   label is on, so the section may stay empty.
+Attach the label at creation (`gh pr create --label release:minor`, or
+`gh pr edit <N> --add-label skip-version-bump`). Under
+`skip-version-bump`, `release-notes-guard` skips the `## Release notes`
+check, so the section may stay empty.
 
 When the wiring lands (a later stage wires earlier-stage output into
-the build → new binary version), **that** PR carries the bump for
-whichever semver tier the cumulative user-visible change deserves.
+the build → new binary version), **that** PR declares the level the
+cumulative user-visible change deserves.
 
 Multi-bead PRs that mix internal pipeline work with one user-visible
-change: the user-visible change drives the bump tier. Pipeline PR
-that ALSO touches a renderer knob → bump. Pipeline PR that only
-touches scripts / data files unused by the deployed bundle → skip.
+change: the user-visible change drives the level. Pipeline PR that ALSO
+touches a renderer knob → a level. Pipeline PR that only touches scripts
+/ data files unused by the deployed bundle → skip.
 
 ## Perf pin
 
@@ -505,14 +503,13 @@ reported in words. A code span that also names a row (`` `lg|webgpu +0.4 ✗` ``
 still marks it. This bites hardest at Tier 0, whose section is prose only.
 
 **How the pin advances.** A Tier 2 PR commits its re-taken pin in the same
-PR, so the pin always describes what the version bump deploys. A `✗` is
+PR, so the pin always describes what the release deploys. A `✗` is
 fixed in the PR or accepted with a bead; an accepted `✗` becomes the new
 pinned value, and the ceiling is the only thing stopping accepted marks
 from ratcheting the frame upward one PR at a time. Two Tier 2 PRs in
-flight re-take one file: whichever merges second rebases and re-takes,
-the same way `version-guard` ([Version policy](#version-policy)) makes the second bump
-rebase — and here that is another armed run, so check for an open Tier 2
-PR before arming. A three bump or the cutover re-pins every row under its
+flight re-take one file: whichever is queued second conflicts on it, drops
+out of the merge queue, and re-takes after syncing — another armed run, so
+check for an open Tier 2 PR before arming. A three bump or the cutover re-pins every row under its
 own bead. Tiers 0 and 1 leave the pin where they found it, which is the
 point of them: the pin advances when the answer would change.
 
@@ -610,9 +607,9 @@ upstream catalogue release:
 The full refresh recipe + ordering constraints + post-refresh
 validation steps are in [Refreshing data when DR4 / new AT-HYG lands](scripts/refresh/README.md#refreshing-data-when-dr4--new-at-hyg-lands).
 
-**Version bump on catalogue refresh.** A catalogue refresh PR that
+**Release level on catalogue refresh.** A catalogue refresh PR that
 changes the user-visible scene (e.g. star count, per-star distance
-distribution, new variable-star matches) bumps `package.json#version`
+distribution, new variable-star matches) declares a release level
 per [Version policy](#version-policy) above — minor when the change is significant
 (new layer / new ingest source / numerical drift visible at default
 magnitude preset), patch when the refresh is mechanical and the diff
@@ -647,28 +644,73 @@ fix PR hits the same block.
   display names plus `version-guard`, `release-notes-guard` and
   `perf-section-guard` — enumerate it live rather than trusting a
   written-down list.
-- **The label exemption is read live, from the PR.** `version-guard` and
+- **Labels and body are read live, from the PR.** `version-guard` and
   `release-notes-guard` ask for the PR's current labels when they run
-  (`.github/actions/skip-version-bump`) and, under `skip-version-bump`,
-  pass with their check steps skipped. They never read the label from the
-  triggering event: `gh pr create --label` attaches it after the `opened`
-  event fires, so that event's payload has no label, and a re-run replays
-  the same payload. `release-notes-guard` reads the PR body live for the
-  same reason, so a re-run judges the body as it is now. The live read
-  relies on runner startup (seconds) outlasting the label attach (about
-  one second after `opened`): a run that queried inside that gap would
-  fail, and a push or label toggle re-runs it.
+  (`.github/actions/release-level`); under `skip-version-bump`,
+  `release-notes-guard` passes with its check step skipped. They never
+  read a label from the triggering event: `gh pr create --label` attaches
+  it after the `opened` event fires, so that event's payload has no label,
+  a re-run replays the same payload, and a `merge_group` event carries no
+  PR at all. The body guards read the PR body live for the same reason,
+  so a re-run judges the body as it is now. The live read relies on runner
+  startup (seconds) outlasting the label attach (about one second after
+  `opened`): a run that queried inside that gap would fail, and a push or
+  label toggle re-runs it.
+
+### The merge queue
+
+Approved PRs land through GitHub's merge queue. Queueing a PR (`gh pr
+merge <N> --squash --match-head-commit <sha>`, which queues rather than
+merges once the queue is on) builds a **merge group**: a temporary
+`gh-readonly-queue/main/pr-<N>-<sha>` branch holding main plus every entry
+ahead plus this PR. Every required check runs on it (`merge_group`
+event), entries' checks run concurrently, and the queue lands them in
+order, each as its own squash commit. A failing entry is dropped and only
+the entries behind it re-test. A PR that no longer merges onto the group
+ahead is refused the same way: sync it with main and queue it again.
+
+Every required workflow runs on `merge_group`, or the queue waits forever
+on the check it never reports: `test.yml`, `version-guard`,
+`release-notes-guard`, `perf-section-guard`. A guard in a group judges the
+PR the entry adds ([The PR a guard judges](.github/workflows/README.md#the-pr-a-guard-judges-in-a-pr-or-a-merge-group));
+the catalogue job's cache in a group: [The data build cache](scripts/ci/README.md#the-data-build-cache).
+
+**Ruleset settings** (ruleset 15843287; branch rules are the owner's to
+change, by `gh api --method PUT` as above, preserving every rule):
+
+- Add a `merge_queue` rule: `merge_method: SQUASH` (the `(#N)` subject
+  suffix is how the deploy finds each commit's PR), `grouping_strategy:
+  ALLGREEN`, `max_entries_to_build: 5`, `max_entries_to_merge: 5`,
+  `min_entries_to_merge: 1`, `min_entries_to_merge_wait_minutes: 0`,
+  `check_response_timeout_minutes: 60` (the longest check on a merge group
+  is the unforced catalogue build on a cache miss, about 9 min).
+- `required_status_checks.strict_required_status_checks_policy: false`.
+  The queue tests each PR on the newest main, so requiring it up to date
+  first only forces the serial re-sync the queue removes.
+- `required_signatures` stays: the queue's squash commits are made and
+  signed by GitHub.
+- The labels `release:major`, `release:minor` and `release:patch` exist
+  beside `skip-version-bump` (`gh label create release:minor`, …).
 
 ## What the deploy workflow does
 
 On every push to `main`, `deploy.yml`:
 
-1. Compares `HEAD:package.json#version` against the version at the
-   push's base commit (`github.event.before`, falling back to `HEAD~1`
-   when that commit isn't in the clone). No change → exits silently.
-2. Checks out with LFS, sets up Node and Python from `.nvmrc` / `.python-version`, runs `pnpm install --frozen-lockfile`
-   and `pnpm run build` (binaries + catalog + binaries-runtime +
-   clouds + local-group + dust-sync + client).
+1. Plans the releases since the last one pushed
+   (`scripts/release/cut-releases.ts plan`): walks from the commit the
+   newest release tag reachable from HEAD was cut at, and derives each
+   commit's version from the release before it and its PR's level label
+   ([Derived versions](scripts/release/README.md#derived-versions)). The
+   plan is handed to steps 2 and 4 as it was printed. No release in the
+   range → exits silently. A commit whose PR declares no
+   level, or two, fails the plan: fix the label and re-run the job. A
+   commit with no PR at all needs a hand-made tag instead
+   ([Derived versions](scripts/release/README.md#derived-versions)).
+2. Checks out with LFS, sets up Node and Python from `.nvmrc` /
+   `.python-version`, runs `pnpm install --frozen-lockfile`, makes the
+   planned release tags locally (`cut-releases.ts tag`), then `pnpm run
+   build` (binaries + catalog + binaries-runtime + clouds + local-group +
+   dust-sync + client), whose version is the newest of those tags.
 3. Deploys to Cloudflare once, at HEAD, in three steps: `wrangler
    versions upload` (no traffic), the pre-traffic check against that
    version's preview URL, then `wrangler versions deploy` and `wrangler
@@ -681,17 +723,14 @@ On every push to `main`, `deploy.yml`:
    but untagged: re-run the job (it re-uploads, re-checks and re-deploys)
    or cut the tag by [Manual release](#manual-release-fallback). Detail:
    [The pre-traffic check](scripts/release/README.md#the-pre-traffic-check).
-4. Runs `scripts/release/cut-releases.ts`, which walks the pushed range
-   and, for each commit whose version differs from its predecessor's,
-   pushes a `v<version>` tag at that commit and creates its release
-   from that commit's own PR body. Falls back to `--generate-notes`
-   where the section is missing, and skips any version already
-   released.
+4. Runs `cut-releases.ts publish`, which creates each planned
+   release, and with it its `v<version>` tag, from that commit's own PR
+   body. Falls back to `--generate-notes` where the section is missing,
+   and skips any version already released.
 
-Step 4 is what makes a merged stack correct: the base-commit
-comparison in step 1 means the push still deploys when its tip commit
-carries no bump, and the per-commit walk means no intermediate
-version's notes are dropped. See `scripts/release/README.md`.
+Step 4 is what makes a merge group of several PRs correct: one deploy at
+HEAD, and one tag and release page per releasing commit, so no
+intermediate version's notes are dropped. See `scripts/release/README.md`.
 
 Required repository secrets:
 
@@ -706,22 +745,20 @@ Required repository secrets:
 
 - Verify `https://stellata.xyz` serves the new version (visible in the
   homepage footer, and at the bottom-right of the About modal at `/app`).
-- Bump `package.json` on the next PR to the version that release
-  will carry.
 
 ## Manual release (fallback)
 
-If the workflow needs to be bypassed (e.g. infrastructure outage):
+If the workflow needs to be bypassed (e.g. infrastructure outage), run
+the same three steps by hand, on an up-to-date `main` with tags fetched:
 
 ```sh
+node scripts/release/cut-releases.ts plan --out plan.json     # touches nothing
+node scripts/release/cut-releases.ts tag --plan plan.json     # local tags, so the build reads the new version
 pnpm run deploy
-# Same planner the workflow uses: --dry-run first to see which tags
-# it would cut, from which commits and PRs, then drop the flag.
-pnpm exec tsx scripts/release/cut-releases.ts --base <base-sha> --dry-run
-pnpm exec tsx scripts/release/cut-releases.ts --base <base-sha>
+node scripts/release/cut-releases.ts publish --plan plan.json
 ```
 
-`--base` is the last commit that was already released; `--head`
-defaults to `HEAD`. Already-released versions are skipped, so
-re-running after a partial failure is safe. To back-fill releases the
-workflow missed entirely, pass the tag it last cut as `--base`.
+`plan` walks from the commit of the newest release tag reachable from
+`--head` (default `HEAD`); `tag` and `publish` act on the plan it wrote,
+because once `tag` has run the newest reachable release is one it made. A commit already tagged keeps its version and an already-released
+version is skipped, so re-running after a partial failure is safe.
