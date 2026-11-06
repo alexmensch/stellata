@@ -1,6 +1,7 @@
 // CURATED_RECORDS, the curated-records source. See README.md#curated-records.
 
 import {
+  FLAG_IS_SOL,
   SOL_ABSOLUTE_V_MAGNITUDE,
   SOL_APPARENT_V_MAGNITUDE,
 } from '../../../src/catalog-format/record/catalog-pure';
@@ -35,3 +36,13 @@ const SOL: CuratedRecord = {
 };
 
 export const CURATED_RECORDS: CuratedRecords = (row) => (row.isSol ? SOL : null);
+
+/** The index of the one record flagged Sol. Throws on none or several: every
+ *  build ships exactly one. */
+export function solRecordIndex(records: readonly { readonly flags: number }[]): number {
+  const found = records.flatMap((r, i) => ((r.flags & FLAG_IS_SOL) !== 0 ? [i] : []));
+  if (found.length !== 1) {
+    throw new Error(`Expected exactly one record flagged Sol; found ${found.length} (${found.slice(0, 10).join(', ')})`);
+  }
+  return found[0];
+}
