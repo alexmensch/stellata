@@ -1,7 +1,7 @@
 # Hand-curated MK spectral types by HIP, for saturated stars whose SIMBAD
 # entry is a component-lettered main_id carrying neither hip nor source_id,
 # so no SIMBAD tier of the spectral resolver reaches it. Read as the
-# resolver's curated tier (scripts/catalog/spectral/README.md#the-resolver).
+# resolver's curated tier (/scripts/catalog/spectral/README.md#the-resolver).
 #
 # Schema (3 tab-separated columns):
 #   hip      — the record's HIP number.

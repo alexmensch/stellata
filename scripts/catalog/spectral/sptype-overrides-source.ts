@@ -6,7 +6,7 @@ import { curatedSpectralValue, type SpectralValue } from './spectral-resolve';
 
 export const SPTYPE_OVERRIDES = defineSource({
   file: 'data/simbad/sptype_overrides.tsv',
-  hint: 'It is committed and hand-curated (data/simbad/README.md#provenance).',
+  hint: 'It is committed and hand-curated (/data/simbad/README.md#provenance).',
   parse: (input): ReadonlyMap<number, SpectralValue> => {
     const byHip = new Map<number, SpectralValue>();
     for (const row of readTable({ ...input, columns: ['hip', 'sp_type', 'source'], comments: true }, input.text())) {
