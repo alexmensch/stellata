@@ -55,6 +55,29 @@ simbad.test.py   stdlib unittest pins covering spec definitions,
 __init__.py      Package marker.
 ```
 
+## The TypeScript core
+
+The same stack on the pull runtime's phased pulls
+([A phased pull](../pull/README.md#a-phased-pull)), which the sptype, values
+and sample pulls move onto:
+
+```
+simbad-specs-pure.ts        Namespace (parseIdent: suffix, component-lettered
+                            skip, or unparsed), basic columns, bibcoded groups,
+                            flux bands, WIDENING_LADDER, GAIA_RELEASES.
+simbad-fetch-pure.ts        The four query shapes as phases (resolve, basic,
+                            idents, releases, flux) and their fetchers. A
+                            suffix answering under two oids is an error; an
+                            unparsable id fails the parse ledger's check.
+membership-keys-pure.ts     inputs.py: request keys, designations, cohort.
+resolve-membership-pure.ts  request.py: Phase A, the widening, corroborate.
+union-pure.ts               union.py.
+simbad-rows-pure.ts         tsv.py and coverage.py: written rows, fill gates.
+simbad-fake-pure.ts         An in-memory SIMBAD answering declared phases, as
+                            an ask or a TAP transport.
+simbad-test-fixtures.ts     Manifest-record and fake builders for the suites.
+```
+
 ## The cohort is two questions, and the manifest answers one
 
 `simbad_value_cohort` takes a set of source_ids and returns the [§ 5](/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers) value-tier
