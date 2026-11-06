@@ -247,10 +247,12 @@ needs markup of its own for it.
 ## Numbers in copy
 
 **No figure on these pages is a literal.** `scripts/site/site-metrics.ts`
-counts each off the thing it describes and `vite.env.ts` publishes it, so
-the page carries `%VITE_STAR_COUNT%`, `%VITE_SOURCE_COUNT%`,
-`%VITE_REFERENCE_COUNT%` and `%VITE_APP_VERSION%` and the build fills them
-in. That module's README is the authority on where each count comes from.
+counts each off the thing it describes, the version is `releaseAt()`
+(`scripts/util/release-version.ts`, the release the build stands on), and
+`vite.env.ts` publishes them, so the page carries `%VITE_STAR_COUNT%`,
+`%VITE_SOURCE_COUNT%`, `%VITE_REFERENCE_COUNT%` and `%VITE_APP_VERSION%`
+and the build fills them in. `scripts/site/README.md` is the authority on
+where each count comes from.
 
 `tests/site-claims.test.ts` holds the pages to it: every readout cell is a
 substitution unless it carries **`data-literal`**, no counted figure appears
