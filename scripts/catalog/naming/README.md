@@ -303,3 +303,7 @@ override keys on SIDs. `namingLineageRows` serialises each record's
 
 The stage founds no record, so it writes no identity rows, and every code's
 effect is `none`.
+
+Measured 2026-11-05: 1,017,955 rows, one name row per record plus its refused
+tiers, letter and designation constellation (78 MB plain), 9.7 MB gzipped in
+2.7 s without a diff; `NAMING_LINEAGE_BUDGET` pins 10.6 MB and 15 s.

@@ -258,7 +258,7 @@ A design-time probe on 1M synthetic rows (2026-10-21) chose the format: the
 bulk is Gaia ids, which no format compresses much, and Parquet with zstd
 came out about 15% smaller at five to nine times the write cost and the
 loss of `zgrep`. Its per-stage size is not a sizing figure: plan a new
-stage from the measured budget below, and every build prints its own
+stage from the measured budgets below, and every build prints its own
 (`<stage> lineage: N bytes gzipped`). With `build/lineage.previous/` a
 checkout holds about twice the current build, and each new worktree copies
 one build's worth in.
@@ -290,35 +290,22 @@ refusals are rows of their own. `MEMBERSHIP_LINEAGE_BUDGET` pins 41 MB and
 13.6–19.7 s (2026-11-05, 9 runs), against 5.3–7.5 s with no diff. Promotion, measured 2026-11-01: <!-- count:build-binaries/multiples_rows_emitted -->47,021<!-- /count --> rows, one
 per `multiples.tsv` row, plus 31,908 identity rows (<!-- count:build-catalog/companionPromoted -->14,676<!-- /count --> minted companions,
 17,232 rows it retires, parks or merges), 0.95 MB gzipped in 0.2 s;
-`PROMOTION_LINEAGE_BUDGET` pins 1.04 MB and 5 s. Allocation, measured
-2026-11-01: 980,151 rows (979,712 objects plus 439 parked SIDs, 62.6 MB plain)
-and 979,712 key → SID rows (29.1 MB), 17.6 MB gzipped in 4.7 s without a diff;
-`ALLOCATION_LINEAGE_BUDGET` pins 19.3 MB and 30 s: a workstation at load average 28–46 took 18.1–31.4 s (2026-11-05).
-The sibling allocation stages, measured 2026-11-05: 96 cloud rows in 1,455
-bytes and 123 Local Group rows in 1,720 bytes gzipped, identity files
-included, each in about 0.1 s; `SIBLING_LINEAGE_BUDGET`
-(`../../sid/sibling-allocation.ts`) pins 1,900 bytes and 5 s for either.
-Coherence, measured 2026-11-05: one row per record that exists before
-promotion mints companions, all but about 4,600 of them `not-applicable`
-(66 MB plain), 7.5 MB gzipped in 0.7 s without a diff;
-`COHERENCE_LINEAGE_BUDGET` pins 8.2 MB and 15 s.
-Naming, measured 2026-11-05: 1,017,955 rows, one name row per record plus its
-refused tiers, letter and designation constellation (78 MB plain), 9.7 MB
-gzipped in 2.7 s without a diff; `NAMING_LINEAGE_BUDGET` pins 10.6 MB and 15 s.
-Brightness-colour's budget: [Brightness-colour lineage](../photometry/README.md#brightness-colour-lineage).
-Placement, measured 2026-10-30: 3,872,657 rows (349 MB plain, 31.0 MB
-gzipped) in 3.2 s without a diff and 8.1 s with one against a full
-baseline; `PLACEMENT_LINEAGE_BUDGET` pins 34 MB and 60 s: a CI run that diffs against a restored merge-base baseline took 36.5 s (2026-11-05). A file that size outruns
+`PROMOTION_LINEAGE_BUDGET` pins 1.04 MB and 5 s. Every other stage's
+measured budget sits beside its contract: [allocation's](/scripts/sid/README.md#sid-events),
+[placement's](../distance/README.md#placement-lineage),
+[brightness-colour's](../photometry/README.md#brightness-colour-lineage),
+[coherence's](../multiplicity/README.md#coherence-lineage) and
+[naming's](../naming/README.md#naming-lineage). Placement's 349 MB plain outruns
 V8's longest string, so stage files and diffs are written and read as UTF-8
 bytes in chunks, and the diff walks the baseline a key at a time
 (`streamLineage`) rather than holding it.
 
 A stage that size cannot hold its rows as objects either: 3.9 million
 `LineageRow`s, beside the `Placement`s they came from, are about 1.7 GB of
-heap. So a stage hands `stageLineage` lines, never rows, and placement
-serialises each record to its lines inside the walk, keeping only the
-strings; the diff reads the baseline as lines too, and only a reader that
-needs fields (trace, a ledger view) decodes them.
+heap. So a stage hands `stageLineage` lines, never rows, and placement and
+brightness-colour serialise each record to their lines inside the walk,
+keeping only the strings; the diff reads the baseline as lines too, and
+only a reader that needs fields (trace, a ledger view) decodes them.
 
 The committed form of lineage is `data/sid/events.tsv` plus the ledger views
 below; the derivation itself is a build artifact, regenerated every build.
