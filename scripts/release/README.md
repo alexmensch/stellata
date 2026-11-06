@@ -89,7 +89,13 @@ nothing; a commit that already carries a release tag keeps it, so a rerun
 over a released range re-derives nothing. A commit whose PR declares no
 level, or two, stops the plan before any version past it is derived: the
 guards make that unreachable for a PR the queue landed, and a fix is a
-label edit and a rerun.
+label edit and a rerun. **Only the merge queue lands on `main`**, and its
+squash subjects always end `(#N)`; a commit without one (a push that
+bypassed the ruleset) stops every later plan, and no label clears it.
+Recover by tagging that commit by hand at the version it ships
+(`git tag v<version> <sha> && git push origin v<version>`, the release
+before it bumped by the level it deserves): it then reads as already
+released.
 
 **A push is not a commit.** The merge queue lands a group of PRs as one
 push of several commits. **Cloudflare is deployed once, at HEAD** (the code

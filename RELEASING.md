@@ -703,7 +703,9 @@ On every push to `main`, `deploy.yml`:
    ([Derived versions](scripts/release/README.md#derived-versions)). The
    plan is handed to steps 2 and 4 as it was printed. No release in the
    range → exits silently. A commit whose PR declares no
-   level, or two, fails the plan: fix the label and re-run the job.
+   level, or two, fails the plan: fix the label and re-run the job. A
+   commit with no PR at all needs a hand-made tag instead
+   ([Derived versions](scripts/release/README.md#derived-versions)).
 2. Checks out with LFS, sets up Node and Python from `.nvmrc` /
    `.python-version`, runs `pnpm install --frozen-lockfile`, makes the
    planned release tags locally (`cut-releases.ts tag`), then `pnpm run
