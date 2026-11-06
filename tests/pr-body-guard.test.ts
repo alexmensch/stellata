@@ -5,6 +5,7 @@ import { chmodSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, 
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { LEVEL_LABELS, SKIP_LABEL } from '../scripts/release/release-plan-pure';
 import { commitFile, gitIn } from './git-fixture';
 
 const HOOK = resolve(__dirname, '../scripts/hooks/pr-body-guard.sh');
@@ -314,9 +315,9 @@ describe('the hook triggers where the workflows do', () => {
     expect(workflow(name)).toMatch(new RegExp(`^\\s+branches: \\[${hookValue('ci_base')}\\]$`, 'm'));
   });
 
-  it('the skip action reads the label the hook exempts', () => {
-    const action = readFileSync(resolve(__dirname, '../.github/actions/skip-version-bump/action.yml'), 'utf-8');
-    expect(action).toContain(`.name == "${hookValue('skip_label')}"`);
+  it('the release level the guards read as none is the label the hook exempts', () => {
+    expect(LEVEL_LABELS[hookValue('skip_label')]).toEqual({ kind: 'none' });
+    expect(hookValue('skip_label')).toBe(SKIP_LABEL);
   });
 
   it('release-notes-guard.yml judges the live PR body, not the event payload’s', () => {
@@ -325,15 +326,15 @@ describe('the hook triggers where the workflows do', () => {
     expect(yml).toContain('gh pr view "$PR" --repo "$REPO" --json body -q .body');
   });
 
-  it.each(['release-notes-guard.yml', 'version-guard.yml'])('%s gates every step after the skip action on it', (name) => {
-    const yml = workflow(name);
+  it('release-notes-guard.yml gates every step after the release-level action on it', () => {
+    const yml = workflow('release-notes-guard.yml');
     expect(yml).not.toContain('github.event.pull_request.labels');
     const steps = yml.split(/^ {6}- /m).slice(1);
-    const skip = steps.findIndex((step) => /^ *uses: \.\/\.github\/actions\/skip-version-bump$/m.test(step));
-    expect(skip, 'no step uses the skip-version-bump action').toBeGreaterThanOrEqual(0);
-    expect(steps[skip]).toMatch(/^ *id: skip$/m);
-    const after = steps.slice(skip + 1);
+    const level = steps.findIndex((step) => /^ *uses: \.\/\.github\/actions\/release-level$/m.test(step));
+    expect(level, 'no step uses the release-level action').toBeGreaterThanOrEqual(0);
+    expect(steps[level]).toMatch(/^ *id: level$/m);
+    const after = steps.slice(level + 1);
     expect(after.length).toBeGreaterThan(0);
-    for (const step of after) expect(step).toMatch(/^ *if: steps\.skip\.outputs\.skip != 'true'$/m);
+    for (const step of after) expect(step).toMatch(/^ *if: steps\.level\.outputs\.level != 'none'$/m);
   });
 });
