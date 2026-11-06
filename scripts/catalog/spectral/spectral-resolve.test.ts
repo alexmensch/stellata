@@ -3,18 +3,23 @@ import type { ApsisRow } from '../../../src/catalog-format/record/catalog-pure';
 import type { SimbadRecordKeys } from '../simbad/simbad-namespace-ladder-pure';
 import { classifyFromSimbad } from '../../../src/catalog-format/spectral/spectral-classify';
 import {
-  CURATED_SPTYPE_BY_HIP,
+  curatedSpectralValue,
   type SimbadSpectralIndex,
   type SimbadSpectralRow,
   parseSimbadSptypeTsv,
   resolveSpectralInfo,
 } from './spectral-resolve';
+import { SPTYPE_OVERRIDES } from './sptype-overrides-source';
 
 const FROM = { file: 'fixture.tsv', hint: 'h' };
 
+const resolve = (
+  keys: SimbadRecordKeys, simbad: SimbadSpectralIndex, apsis: ReadonlyMap<string, ApsisRow>,
+) => resolveSpectralInfo(keys, { simbad, apsis, curatedByHip: SPTYPE_OVERRIDES.read() });
+
 /** A resolution expected to land on a tier, flattened; `none` fails the test. */
-const flatSp = (...args: Parameters<typeof resolveSpectralInfo>) => {
-  const r = resolveSpectralInfo(...args);
+const flatSp = (...args: Parameters<typeof resolve>) => {
+  const r = resolve(...args);
   if (r.via === 'none') throw new Error('resolved to none');
   return {
     source: r.via,
@@ -148,7 +153,7 @@ describe('resolveSpectralInfo — tier priority', () => {
     // pair — so a record holding both takes the component type, not the blend.
     expect(key(null, null, '1-2-1', 'Gl 165A')).toBe('gj');
     expect(key(null, null, '1-2-1', null)).toBe('tyc');
-    expect(resolveSpectralInfo(keys(null, null, null, null), simbad, new Map()).via).toBe('none');
+    expect(resolve(keys(null, null, null, null), simbad, new Map()).via).toBe('none');
   });
 
   it('tier 5: GSP-Spec when SIMBAD is absent or unparseable', () => {
@@ -171,14 +176,14 @@ describe('resolveSpectralInfo — tier priority', () => {
     expect(out.info).toMatchObject({ letter: 3 }); // F
   });
 
-  it('every curated sp_type classifies', () => {
-    for (const [hip, spType] of CURATED_SPTYPE_BY_HIP) {
-      expect(classifyFromSimbad(spType), `HIP ${hip}`).not.toBeNull();
-    }
+  it('a curated sp_type that does not classify fails where it is curated', () => {
+    const fail = (m: string): never => { throw new Error(m); };
+    expect(curatedSpectralValue('A1.5IV+', fail).info).toEqual(classifyFromSimbad('A1.5IV+'));
+    expect(() => curatedSpectralValue('not-a-type', fail)).toThrow('does not classify');
   });
 
   it('tier 6: none when every upstream tier misses', () => {
-    expect(resolveSpectralInfo(keys(GAIA_ID, HIP), idx(), new Map()))
+    expect(resolve(keys(GAIA_ID, HIP), idx(), new Map()))
       .toEqual({ via: 'none', refusals: [] });
   });
 
@@ -187,7 +192,7 @@ describe('resolveSpectralInfo — tier priority', () => {
       [GAIA_ID, { ...APSIS_NONE, spectraltypeEsphs: 'not-a-letter' }],
     ]);
     const simbad = idx([], [[HIP, row('B2V', 'C', '*', '999888777')]]);
-    expect(resolveSpectralInfo(keys(GAIA_ID, HIP), simbad, apsis)).toEqual({
+    expect(resolve(keys(GAIA_ID, HIP), simbad, apsis)).toEqual({
       via: 'none',
       refusals: [
         { tier: 'simbad', reason: 'gaia_id_contradicts' },
@@ -198,7 +203,7 @@ describe('resolveSpectralInfo — tier priority', () => {
 
   it('tier 6: no source_id and no HIP falls straight through to none', () => {
     const simbad = idx([['9999', row('A0V', 'C', 'PM*', '9999')]]);
-    expect(resolveSpectralInfo(keys(null, null), simbad, new Map()))
+    expect(resolve(keys(null, null), simbad, new Map()))
       .toEqual({ via: 'none', refusals: [] });
   });
 

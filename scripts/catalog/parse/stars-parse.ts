@@ -28,6 +28,8 @@ import {
 import {
   type SimbadSpectralIndex,
   type SpectralResolution,
+  type SpectralSources,
+  type SpectralValue,
   type SpectralVia,
   emptySimbadSpectralIndex,
   resolveSpectralInfo,
@@ -251,6 +253,8 @@ export interface ReadStarsOptions {
   conAssignment: ConstellationAssignment;
   bailerJones?: BailerJonesIndex;
   simbadSpectral?: SimbadSpectralIndex;
+  /** `SPTYPE_OVERRIDES` — the spectral resolver's curated tier. */
+  sptypeOverrides?: ReadonlyMap<number, SpectralValue>;
   /** Bibcoded SIMBAD values over the per-field value cohort (/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers) — the rv cascade's bottom
    *  tier. Absent leaves its rows on a zero radial term. */
   simbadValues?: SimbadValueIndex;
@@ -283,6 +287,7 @@ export function readStars(
     conAssignment,
     bailerJones,
     simbadSpectral = emptySimbadSpectralIndex(),
+    sptypeOverrides = new Map(),
     simbadValues = emptySimbadValueIndex(),
     apsisMap = new Map(),
     gspcMap = new Map(),
@@ -397,6 +402,9 @@ export function readStars(
   const spectralVia = emptyTallyPartition(SPECTRAL_VIA_VALUES);
 
   const printedVLookup = printedVLookups(hipVMag, directions.tycho2, gliese);
+  const spectralSources: SpectralSources = {
+    simbad: simbadSpectral, apsis: apsisMap, curatedByHip: sptypeOverrides,
+  };
   // Every exit returns its row's Placement, so the compiler refuses one that
   // would drop a record from lineage.
   const walk = (row: ManifestRecord): { placement: Placement; star: Star | null } => {
@@ -662,7 +670,7 @@ export function readStars(
           value: { info: classifyFromSimbad('G2V')!, spectDisplay: 'G2V' },
           refusals: [],
         }
-      : resolveSpectralInfo(simbadKeys, simbadSpectral, apsisMap);
+      : resolveSpectralInfo(simbadKeys, spectralSources);
     const spectInfo = spectral.via === 'none' ? SPECTRAL_UNKNOWN : spectral.value.info;
     spectralVia[spectral.via]++;
     if (spectral.via === 'simbad') spectralSimbadKey[spectral.value.namespace]++;
