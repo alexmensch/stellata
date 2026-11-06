@@ -20,8 +20,8 @@ so these files are how a build knows a pull or bake is stale, and the stop
 message names the command to re-run.
 
 **Never edit one by hand.** Re-run the step through its target, which
-rewrites the record; hand edits are what the record exists to catch. The one
-exception is a change to how an input is hashed: that commit re-keys the
+rewrites the record; hand edits are what the record exists to catch. Two
+exceptions. One is a change to how an input is hashed: that commit re-keys the
 affected hashes in every record, starting from a base where every manual
 step reads fresh, so no record turns fresh that was stale. CI's
 stale-manual-step stop catches a record the re-key missed.
@@ -31,7 +31,7 @@ with no query sent: the new pull records through its target from a
 checkpoint seeded with its share of the rows, and the old one, its output
 unchanged, takes the request hash and `requestFrom` its `--describe` now
 prints. The old one holds rows its query no longer asks for until its next
-real run, and its data README says what that run will move.
+real run; the split's README measures what that run will move.
 
 ## Bootstrap
 
