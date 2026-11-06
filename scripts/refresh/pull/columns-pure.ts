@@ -1,13 +1,11 @@
 // A pulled table's columns: the ADQL projection, the reply's schema check, the write order, and the TSV it writes. See README.md#columns.
 
-import { formatFixed } from '../../util/round-pure';
+import { formatFixed, formatRepr } from '../../util/round-pure';
 import { nullableCell, tsvLine, tsvText } from '../../util/tsv/artifact-pure';
 import type { TapResult } from './tap-pure';
 
-/** Python's `f"{x:.{fixed}f}"`, the rounding every pull writes with today. */
-export interface Format {
-  readonly fixed: number;
-}
+/** Python's `f"{x:.{fixed}f}"`, or its `repr(x)`: the two ways a Python pull wrote a float. */
+export type Format = { readonly fixed: number } | { readonly repr: true };
 
 export interface Column {
   /** The header the archive answers with and the TSV writes. */
@@ -78,7 +76,7 @@ function formatted(file: string, column: Column, cell: string | null): string {
   if (cell === null || column.format === undefined) return nullableCell(cell);
   const value = Number(cell);
   if (!Number.isFinite(value)) throw new Error(`${file}: ${column.name}="${cell}" has a numeric format but is not a number`);
-  return formatFixed(value, column.format.fixed);
+  return 'fixed' in column.format ? formatFixed(value, column.format.fixed) : formatRepr(value);
 }
 
 export function formatTsv(file: string, columns: readonly Column[], rows: readonly Row[]): string {

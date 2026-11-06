@@ -21,6 +21,22 @@ export function formatFixed(x: number, digits: number): string {
   return (x < 0 || Object.is(x, -0)) && !text.startsWith('-') ? `-${text}` : text;
 }
 
+/** Python's `repr(x)`: the shortest digits that round-trip, positional for exponents -4 to 15, else `d.ddde±XX`. */
+export function formatRepr(x: number): string {
+  if (!Number.isFinite(x)) throw new Error(`formatRepr: ${x} is not finite`);
+  if (x === 0) return Object.is(x, -0) ? '-0.0' : '0.0';
+  const [mantissa, exponent] = x.toExponential().split('e');
+  const sign = x < 0 ? '-' : '';
+  const digits = mantissa.replace(/^-/, '').replace('.', '');
+  const e = Number(exponent);
+  if (e < -4 || e >= 16) {
+    const lead = digits.length === 1 ? digits : `${digits[0]}.${digits.slice(1)}`;
+    return `${sign}${lead}e${e < 0 ? '-' : '+'}${String(Math.abs(e)).padStart(2, '0')}`;
+  }
+  if (e < 0) return `${sign}0.${'0'.repeat(-e - 1)}${digits}`;
+  return `${sign}${digits.slice(0, e + 1).padEnd(e + 1, '0')}.${digits.slice(e + 1) || '0'}`;
+}
+
 /** Each element through roundHalfEven, keeping a tuple's length in its type. */
 export function roundEach<T extends readonly number[]>(v: T, digits: number): { -readonly [I in keyof T]: number } {
   return v.map((x) => roundHalfEven(x, digits)) as { -readonly [I in keyof T]: number };

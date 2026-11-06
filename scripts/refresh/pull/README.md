@@ -174,9 +174,12 @@ A table's `Column` list is the one statement of its schema. Each column's
 `name` is the header the archive answers with and the TSV writes; `select`
 is its projection when that is not the quoted name (a qualified `t.source_id`,
 which still answers as `source_id`, or an aliased expression); `format`
-is the one place a pull rounds, and it is data, `{fixed: n}`: Python's
-`f"{x:.nf}"` text (`formatFixed`, `../../util/round-pure.ts`), the rounding
-every Python pull writes with. Being data, it is part of what `describePull`
+is the one place a pull rounds, and it is data: `{fixed: n}`, Python's
+`f"{x:.nf}"` text (`formatFixed`), or `{repr: true}`, Python's `repr(x)`
+(`formatRepr`, both `../../util/round-pure.ts`) — the two ways a Python pull
+wrote a float. An unformatted cell is written as the archive's text, which
+for a float is Java's (`9.045827E-5` where Python wrote `9.045827e-05`). Being
+data, it is part of what `describePull`
 states, so a changed rounding stales the pull. So the projection, the schema check and the header order cannot
 disagree: a reply whose header is not exactly the declared names, in order,
 is refused (`checkedRows`).

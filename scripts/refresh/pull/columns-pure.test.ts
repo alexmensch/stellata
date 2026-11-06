@@ -67,6 +67,11 @@ describe('formatTsv', () => {
       .toBe('source_id\tRA(ICRS)\tplx\n1\t10.5\t3.14\n2\t11\t\n');
   });
 
+  it('writes a repr column as Python repr() of the archive\'s number', () => {
+    const columns: Column[] = [{ name: 'source_id' }, { name: 'period_error', format: { repr: true } }];
+    expect(formatTsv('f.tsv', columns, [['1', '9.045827E-5'], ['2', null]])).toBe('source_id\tperiod_error\n1\t9.045827e-05\n2\t\n');
+  });
+
   it('rounds as Python does, and refuses a formatted cell that is not a number', () => {
     expect(formatTsv('f.tsv', COLUMNS, [['1', 'x', '0.125']])).toBe('source_id\tRA(ICRS)\tplx\n1\tx\t0.12\n');
     expect(() => formatTsv('f.tsv', COLUMNS, [['1', 'x', 'n/a']])).toThrow('f.tsv: plx="n/a" has a numeric format but is not a number');
