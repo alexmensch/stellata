@@ -1,28 +1,40 @@
 /**
- * Tags and publishes a GitHub release for every version bump in a push range.
+ * Derives the version each commit in a push range ships from its PR's release level, then tags and publishes it.
  */
 
 import { execFileSync } from 'node:child_process';
-import { planReleases, extractReleaseNotes, type RangeCommit, type PlannedRelease } from './release-plan-pure';
+import { appendFileSync } from 'node:fs';
+import {
+  declarationOf,
+  extractReleaseNotes,
+  planReleases,
+  prNumberFromSubject,
+  type CommitRelease,
+  type PlannedRelease,
+  type RangeCommit,
+} from './release-plan-pure.ts';
+import { releaseAt, versionOfTag, TAG_GLOB } from '../util/release-version.ts';
+
+const STEPS = ['plan', 'tag', 'publish'] as const;
+type Step = (typeof STEPS)[number];
 
 interface Options {
+  step: Step;
   base: string;
   head: string;
-  dryRun: boolean;
 }
 
+const USAGE = `Usage: cut-releases.ts <${STEPS.join('|')}> --base <sha> [--head <sha>]`;
+
 function parseArgs(argv: string[]): Options {
-  const opts: Options = { base: '', head: 'HEAD', dryRun: false };
-  for (let i = 0; i < argv.length; i++) {
-    const arg = argv[i];
-    if (arg === '--base') opts.base = argv[++i] ?? '';
-    else if (arg === '--head') opts.head = argv[++i] ?? 'HEAD';
-    else if (arg === '--dry-run') opts.dryRun = true;
-    else {
-      console.error(`Unknown argument: ${arg}`);
-      console.error('Usage: cut-releases.ts [--base <sha>] [--head <sha>] [--dry-run]');
-      process.exit(1);
-    }
+  const [step, ...rest] = argv;
+  if (!(STEPS as readonly string[]).includes(step)) throw new Error(USAGE);
+  const opts: Options = { step: step as Step, base: '', head: 'HEAD' };
+  for (let i = 0; i < rest.length; i++) {
+    const arg = rest[i];
+    if (arg === '--base') opts.base = rest[++i] ?? '';
+    else if (arg === '--head') opts.head = rest[++i] ?? 'HEAD';
+    else throw new Error(`Unknown argument: ${arg}\n${USAGE}`);
   }
   return opts;
 }
@@ -39,25 +51,32 @@ function tryRun(command: string, args: string[]): string | null {
   }
 }
 
-function versionAt(ref: string): string {
-  return JSON.parse(run('git', ['show', `${ref}:package.json`])).version;
-}
-
 function commitExists(ref: string): boolean {
   return tryRun('git', ['cat-file', '-e', `${ref}^{commit}`]) !== null;
 }
 
+function prLabels(prNumber: number): string[] {
+  return run('gh', ['pr', 'view', String(prNumber), '--json', 'labels', '--jq', '.labels[].name'])
+    .split('\n')
+    .filter(Boolean);
+}
+
+function releaseOf(sha: string, subject: string): CommitRelease {
+  const tags = run('git', ['tag', '--points-at', sha, '--list', TAG_GLOB]).split('\n').filter(Boolean);
+  if (tags.length > 0) return { kind: 'tagged', version: versionOfTag(tags[0]) };
+  const prNumber = prNumberFromSubject(subject);
+  return prNumber === null ? { kind: 'undeclared' } : declarationOf(prLabels(prNumber));
+}
+
 function rangeCommits(base: string, head: string): RangeCommit[] {
-  // --first-parent keeps the walk on main's own line, so a merged
-  // branch's internal commits never each look like a version change.
+  // --first-parent keeps the walk on main's own line.
   const shas = run('git', ['rev-list', '--reverse', '--first-parent', `${base}..${head}`])
     .split('\n')
     .filter(Boolean);
-  return shas.map((sha) => ({
-    sha,
-    subject: run('git', ['log', '-1', '--pretty=%s', sha]),
-    version: versionAt(sha),
-  }));
+  return shas.map((sha) => {
+    const subject = run('git', ['log', '-1', '--pretty=%s', sha]);
+    return { sha, subject, release: releaseOf(sha, subject) };
+  });
 }
 
 function notesFor(release: PlannedRelease): string | null {
@@ -67,24 +86,21 @@ function notesFor(release: PlannedRelease): string | null {
   return extractReleaseNotes(body);
 }
 
-function cut(release: PlannedRelease, isNewest: boolean, dryRun: boolean): void {
+function tag(release: PlannedRelease): void {
+  if (tryRun('git', ['rev-parse', '-q', '--verify', `refs/tags/${release.tag}`]) !== null) return;
+  run('git', ['tag', '-a', release.tag, '-m', release.tag, release.sha]);
+}
+
+function publish(release: PlannedRelease, isNewest: boolean): void {
   if (tryRun('gh', ['release', 'view', release.tag]) !== null) {
     console.log(`${release.tag} already released — skipping.`);
     return;
   }
+  tag(release);
+  run('git', ['push', 'origin', `refs/tags/${release.tag}`]);
 
   const notes = notesFor(release);
-  const source = notes === null
-    ? 'generated notes (no usable "## Release notes" section)'
-    : `notes from PR #${release.prNumber}`;
-  console.log(`${release.tag} → ${release.sha.slice(0, 7)}, ${source}`);
-  if (dryRun) return;
-
-  if (!tryRun('git', ['rev-parse', '-q', '--verify', `refs/tags/${release.tag}`])) {
-    run('git', ['tag', '-a', release.tag, '-m', release.tag, release.sha]);
-    run('git', ['push', 'origin', release.tag]);
-  }
-
+  console.log(`${release.tag} → ${release.sha.slice(0, 7)}, ${notes === null ? 'generated notes' : `notes from PR #${release.prNumber}`}`);
   run('gh', [
     'release', 'create', release.tag,
     '--title', release.tag,
@@ -97,23 +113,22 @@ function cut(release: PlannedRelease, isNewest: boolean, dryRun: boolean): void 
 function main(): void {
   const opts = parseArgs(process.argv.slice(2));
   const head = run('git', ['rev-parse', opts.head]);
-
-  // No usable base (first push, or a force-push whose `before` is gone):
-  // fall back to the single-commit comparison this replaced.
   const base = opts.base && commitExists(opts.base) ? opts.base : `${head}^`;
-  if (!commitExists(base)) {
-    console.log('No parent commit to compare against — nothing to release.');
-    return;
-  }
+  const plan = commitExists(base) ? planReleases(releaseAt(base), rangeCommits(base, head)) : [];
 
-  const plan = planReleases(versionAt(base), rangeCommits(base, head));
-  if (plan.length === 0) {
-    console.log('No version change in the pushed range — nothing to release.');
-    return;
-  }
+  console.log(`${plan.length} release(s) from ${base.slice(0, 7)}..${head.slice(0, 7)}:`);
+  for (const release of plan) console.log(`  ${release.tag} → ${release.sha.slice(0, 7)} (PR #${release.prNumber})`);
 
-  console.log(`${plan.length} release(s) to cut from ${base.slice(0, 7)}..${head.slice(0, 7)}:`);
-  plan.forEach((release, i) => cut(release, i === plan.length - 1, opts.dryRun));
+  switch (opts.step) {
+    case 'plan':
+      if (process.env.GITHUB_OUTPUT) appendFileSync(process.env.GITHUB_OUTPUT, `releases=${plan.length}\n`);
+      return;
+    case 'tag':
+      plan.forEach(tag);
+      return;
+    case 'publish':
+      plan.forEach((release, i) => publish(release, i === plan.length - 1));
+  }
 }
 
 main();

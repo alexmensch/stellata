@@ -2,9 +2,9 @@
 
 import type { ConfigEnv, Plugin } from 'vite';
 import { type Figures, substituteFigures } from './scripts/site/figures-pure.ts';
+import { releaseAt } from './scripts/util/release-version.ts';
 import {
   type AbsentCatalogue,
-  appVersion,
   catalogueRecordCount,
   citedReferenceCount,
   creditedSourceCount,
@@ -18,7 +18,7 @@ export function absentCatalogueFor(env: Pick<ConfigEnv, 'mode'>): AbsentCatalogu
 
 export function buildFigures(absent: AbsentCatalogue): Figures {
   return {
-    VITE_APP_VERSION: appVersion(),
+    VITE_APP_VERSION: releaseAt(),
     VITE_STAR_COUNT: catalogueRecordCount(absent).toLocaleString('en-US'),
     VITE_SOURCE_COUNT: String(creditedSourceCount()),
     VITE_REFERENCE_COUNT: String(citedReferenceCount()),

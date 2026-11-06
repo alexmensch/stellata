@@ -6,73 +6,45 @@ on:
 
 permissions:
   contents: write
+  pull-requests: read
 
 concurrency:
   group: deploy-cloudflare
   cancel-in-progress: false
 
-# Triggered on every push to main (i.e. PR merge), but the deploy job
-# only runs when package.json#version changed across the pushed range.
-# This pairs with version-guard.yml on PRs: PRs that change what the site
-# serves (RELEASING.md's live-app consumer test) bump the version, and
-# that bump is what fires the deploy. `skip-version-bump` PRs leave the
-# version alone and therefore don't redeploy.
-#
-# The comparison is against the push's base commit, not HEAD~1: merging
-# a stack lands N commits in ONE push event, and each of those commits
-# may carry its own bump. Cloudflare gets one deploy, at HEAD, but
-# scripts/release/cut-releases.ts then cuts a tag + GitHub release for
-# EVERY bumped commit in the range, each with its own PR's `## Release
-# notes` section (enforced by release-notes-guard.yml). Falls back to
-# GitHub's auto-generated notes when a PR body has no usable section.
+# Every push to main plans its releases: scripts/release/cut-releases.ts
+# derives each pushed commit's version from the newest release tag before it
+# plus the release level its PR's label declares, and the deploy runs only
+# when the range ships one. The tags are made locally before the build, which
+# reads its version from the newest of them, and pushed with each release
+# only once the checked version is live. Rationale: /scripts/release/README.md.
 
 jobs:
-  detect-version-change:
+  plan-releases:
     runs-on: ubuntu-latest
     outputs:
-      should_deploy: ${{ steps.check.outputs.should_deploy }}
-      base: ${{ steps.check.outputs.base }}
+      releases: ${{ steps.plan.outputs.releases }}
     steps:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
+          sparse-checkout: |
+            scripts/release
+            scripts/util
 
-      - id: check
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+
+      - id: plan
         env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           BEFORE: ${{ github.event.before }}
-        run: |
-          set -euo pipefail
-          new=$(jq -r .version package.json)
-
-          # A force-push (or the branch's first push) leaves `before`
-          # pointing at a commit this clone doesn't have; fall back to
-          # the single-commit comparison.
-          base=""
-          if [ -n "${BEFORE:-}" ] && git cat-file -e "${BEFORE}^{commit}" 2>/dev/null; then
-            base="$BEFORE"
-          elif git rev-parse -q --verify HEAD~1 >/dev/null; then
-            base=$(git rev-parse HEAD~1)
-          fi
-          echo "base=$base" >> "$GITHUB_OUTPUT"
-
-          if [ -n "$base" ]; then
-            old=$(git show "$base:package.json" | jq -r .version)
-          else
-            old=""
-          fi
-          echo "Current version: $new"
-          echo "Base version: ${old:-<none>} (base: ${base:-<none>})"
-          if [ "$new" = "$old" ]; then
-            echo "Version unchanged — skipping deploy."
-            echo "should_deploy=false" >> "$GITHUB_OUTPUT"
-          else
-            echo "Version changed — deploying."
-            echo "should_deploy=true" >> "$GITHUB_OUTPUT"
-          fi
+        run: node scripts/release/cut-releases.ts plan --base "$BEFORE" --head "$GITHUB_SHA"
 
   deploy:
-    needs: detect-version-change
-    if: needs.detect-version-change.outputs.should_deploy == 'true'
+    needs: plan-releases
+    if: needs.plan-releases.outputs.releases != '0'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -93,6 +65,16 @@ jobs:
           python-version-file: .python-version
 
       - run: pnpm install --frozen-lockfile
+
+      - name: Tag releases locally
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BEFORE: ${{ github.event.before }}
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email 'github-actions[bot]@users.noreply.github.com'
+          node scripts/release/cut-releases.ts tag --base "$BEFORE" --head "$GITHUB_SHA"
 
       - run: pnpm run build
 
@@ -126,13 +108,8 @@ jobs:
           pnpm exec wrangler versions deploy "$VERSION_ID@100%" --message "$GITHUB_SHA" --yes
           pnpm exec wrangler triggers deploy
 
-      - name: Tag and release
+      - name: Publish releases
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          BASE: ${{ needs.detect-version-change.outputs.base }}
-        run: |
-          set -euo pipefail
-          git config user.name 'github-actions[bot]'
-          git config user.email 'github-actions[bot]@users.noreply.github.com'
-          pnpm exec tsx scripts/release/cut-releases.ts \
-            --base "$BASE" --head "$GITHUB_SHA"
+          BEFORE: ${{ github.event.before }}
+        run: node scripts/release/cut-releases.ts publish --base "$BEFORE" --head "$GITHUB_SHA"

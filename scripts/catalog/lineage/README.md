@@ -194,8 +194,9 @@ one text; `evidence` is its references' text forms joined by `|`.
 - An entry carries the code, its stage, its declared effect (removal and
   re-bind codes: retire, park or merge; `none` for every other code), a
   one-line description, `first_version` — the release current when the code
-  was added (the tree's package version; a lineage-only PR bumps none, so
-  `7.1.6` reads "added after 7.1.6 shipped") — and its status — `live`,
+  was added (`releaseAt()`, the newest release tag the tree builds on, so
+  `7.1.6` reads "added after 7.1.6 shipped"; read only for a code the list
+  does not yet hold) — and its status — `live`,
   `retired` (with
   the version that retired it) or `historical`, declared beside the code as
   a closed union. Historical codes carry legacy causes and are never mapped

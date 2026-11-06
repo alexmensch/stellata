@@ -7,23 +7,25 @@ file's inline comments.
 
 ## `deploy.yml`
 
-Runs on push to `main`. Builds and deploys **once, at HEAD**: uploads
-the version (`wrangler versions upload`), checks it on its preview URL,
-then moves traffic to it (`wrangler versions deploy`) and applies
-`wrangler.toml`'s routes and custom domain (`wrangler triggers deploy`).
-A failed check leaves the previous version live
+Runs on push to `main`. Its `plan-releases` job derives the version of
+every commit in the pushed range (`github.event.before..HEAD`) from its
+PR's release level label (`scripts/release/cut-releases.ts plan`); a
+range that ships no release stops there. Otherwise `deploy` makes those
+release tags locally, builds — the build's version is the newest of them
+— and deploys **once, at HEAD**: uploads the version (`wrangler versions
+upload`), checks it on its preview URL, then moves traffic to it
+(`wrangler versions deploy`) and applies `wrangler.toml`'s routes and
+custom domain (`wrangler triggers deploy`). A failed check leaves the
+previous version live and pushes no tag
 ([The pre-traffic check](/scripts/release/README.md#the-pre-traffic-check)).
-Then it hands off to `scripts/release/cut-releases.ts`, which cuts a tag
-and a GitHub release for **every** commit in the pushed range whose
-`package.json#version` differs from its predecessor — each carrying the
-`## Release notes` block from its own PR body, in place of the flat
-auto-generated notes.
+Last, `cut-releases.ts publish` pushes each tag and creates its GitHub
+release, carrying the `## Release notes` block from its own PR body in
+place of the flat auto-generated notes.
 
-One push can therefore ship several releases: merging a stack lands N
-PRs as N commits in a single push event. The version comparison that
-gates the deploy runs against `github.event.before`, not `HEAD~1`, so a
-stack whose *tip* commit doesn't bump still deploys and still releases
-its earlier bumps. Rationale and invariants: `scripts/release/README.md`.
+One push can therefore ship several releases: the merge queue lands a
+group of PRs as several commits in a single push event, each releasing at
+its own derived version. Rationale and invariants:
+[Derived versions](/scripts/release/README.md#derived-versions).
 
 The PR-body extraction is the reason `release-notes-guard.yml` exists
 (below) — a missing block would land an empty release page.

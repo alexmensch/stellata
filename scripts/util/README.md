@@ -152,8 +152,16 @@ same thing — single-use helpers stay with their consumer.
   closure module except code (`CODE_FILE`) and `.md`, which is how the `*-expected.json`
   snapshots a build reads by path get keyed. `trackedFiles()` is the listing the
   stamp passes as `files`.
+- `release-version.ts` (+ test) — the release version and its tag
+  (`TAG_PREFIX`, `TAG_GLOB`, `tagOf`, `versionOfTag`, `parseVersion`), and
+  `releaseAt(ref)`, the newest release tag reachable from `ref`: the
+  version every build, site figure and recorded provenance names, since no
+  file in the tree states one ([Derived versions](/scripts/release/README.md#derived-versions)).
+  It throws where no tag is reachable, so a checkout reading it needs full
+  history and tags (`fetch-depth: 0` in CI). Imports only `node:`
+  builtins, because `../release/`'s plain-`node` scripts import it too.
 - `git-provenance.ts` — what a build or instrument records about its
-  checkout: `packageVersion`, `headCommit`, `headState` (HEAD and whether
+  checkout: `headCommit`, `headState` (HEAD and whether
   the tree is dirty), `onMainBranch` (HEAD is on the branch `MAIN_REF`
   tracks; false when detached), `inHeadHistory` (whether a commit is HEAD or an
   ancestor of it) and `mergeBaseWithMain` (null with no `origin/main` or in a
