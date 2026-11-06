@@ -62,8 +62,8 @@ export interface DirectionSources {
  *  same way — one lookup per record serves both terms of the velocity. */
 export interface DirectionInputs extends SimbadRecordKeys {
   simbad: SimbadAstrometry | null;
-  /** Sol, the one record carrying no identifier any tier can key on. */
-  isSol: boolean;
+  /** The record's curated solution (`../record/curated-records.ts`). */
+  curated: DirectionSolution | null;
 }
 
 export const DIRECTION_VIA_VALUES = [
@@ -190,7 +190,7 @@ function pmVelVia(
  *  membership event rather than a silent keep — the walk parks it as
  *  `no_position`. */
 export function resolveDirection(
-  { sourceId, hip, tyc, gl, simbad, isSol }: DirectionInputs,
+  { sourceId, hip, tyc, gl, simbad, curated }: DirectionInputs,
   sources: DirectionSources,
 ): DirectionResolution {
   const gaia = sourceId !== null
@@ -276,16 +276,7 @@ export function resolveDirection(
     }, [simbad.ref]);
   }
 
-  // The vector is arbitrary and unobservable: Sol's distance is zero, so the
-  // walk multiplies it to the origin whatever it points at.
-  if (isSol) {
-    return hit('curated', {
-      srcRaDeg: 0, srcDecDeg: 0,
-      srcEpoch: CATALOG_SCENE_EPOCH,
-      srcPmraMasyr: null, srcPmdecMasyr: null,
-      velVia: 'zero',
-    }, []);
-  }
+  if (curated !== null) return hit('curated', curated, []);
 
   return { via: 'none', refusals };
 }

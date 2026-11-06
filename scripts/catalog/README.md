@@ -22,7 +22,8 @@ layout, its codec, the chunk plan and the search-index wire entry — is
 ## Subfolders
 
 - `record/` — the build's halves of the record contract: the record-order
-  key and the `GAIA_APSIS` source. The on-disk contract itself is
+  key, the `GAIA_APSIS` source and the curated-records source every
+  cascade's curated tier reads. The on-disk contract itself is
   `/src/catalog-format/record/`.
 - `astrometry-request/` — the Gaia 5p pull's source_id list: both binding
   gates' candidates (overlay and derivation), the bound-pair siblings and the

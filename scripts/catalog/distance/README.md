@@ -93,7 +93,7 @@ same trust cascade the binaries pipeline implements in
 | `tycho2` | No Gaia astrometry row AND no HIP2 row, but the record carries a TYC. Tycho-2's **mean** position (`ra_mdeg`/`de_mdeg`), which the catalogue states at J2000. | <!-- count:build-catalog/directionTycho2 -->80<!-- /count --> |
 | `cns5` | The above, with no TYC but a `gl` CNS5 carries. CNS5's own coordinates, advanced from the row's own `pos_epoch`. | <!-- count:build-catalog/directionCns5 -->2<!-- /count --> |
 | `simbad` | The bottom tier: SIMBAD's bibcoded J2000 coordinates advanced 16 yr on its own bibcoded PM. Gl 863.1A is the corpus exemplar, and the tier's worst mover at 1372 mas/yr. | <!-- count:build-catalog/directionSimbad -->94<!-- /count --> |
-| `curated` | Sol alone — it carries no identifier any tier above can key on. The vector is arbitrary and unobservable: Sol's distance is zero, so the walk multiplies it to the origin whatever it points at. | <!-- count:build-catalog/directionCurated -->1<!-- /count --> |
+| `curated` | Sol alone — it carries no identifier any tier above can key on, so its curated record ([Curated records](../record/README.md#curated-records)) supplies the solution. The vector is arbitrary and unobservable: Sol's distance is zero, so the walk multiplies it to the origin whatever it points at. | <!-- count:build-catalog/directionCurated -->1<!-- /count --> |
 
 Epoch propagation advances the measured unit vector to the
 `CATALOG_SCENE_EPOCH` (J2016.0) linearly along the local east/north
@@ -236,9 +236,9 @@ row with a 5p solution, else a bibcoded SIMBAD `rvz_radvel`
 (`radial-velocity/README.md`) — and is zero where neither tier
 carries one. The 5p condition is the same one the PM rescue turns on: a 2p
 row's RVS spectrum is as blended as its astrometry, and both cascades read it
-off `gaia-distrust.ts`. **Sol** carries
-no PM row and sits at the origin, so its velocity is forced to exactly zero
-(the advance pass must leave the world origin fixed).
+off `gaia-distrust.ts`. A record at the **origin** (Sol, whose parallax
+resolves `curated`) has its velocity forced to exactly zero (the advance pass
+must leave the world origin fixed).
 
 **Sanity ceiling + escape-velocity ratchet.** `v = d·μ` inflates a noisy
 sub-arcsec/yr PM on a faint distant star into thousands of km/s, and a bad

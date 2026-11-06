@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
+import { SOL_ABSOLUTE_V_MAGNITUDE } from '../../../src/catalog-format/record/catalog-pure';
 import { sourceRowRef } from '../../util/sources/row-ref-pure';
 import { MAGNITUDE_PULL } from '../membership/magnitude-term/magnitude-pull-source';
 import { GAIA_ASTROMETRY } from '../sources/gaia-astrometry-source';
@@ -109,7 +110,7 @@ describe('placementLineageRows', () => {
     const p: Placement = {
       kind: 'placed',
       key: 'spine:2',
-      parallax: { via: 'curated', value: null, evidence: [], refusals: [] },
+      parallax: { via: 'curated', value: { absoluteVMagnitude: SOL_ABSOLUTE_V_MAGNITUDE }, evidence: [], refusals: [] },
       direction: { via: 'curated', value: SOLUTION, evidence: [], refusals: [] },
       pmRescue: null,
       bailerJones: { kind: 'absent' },

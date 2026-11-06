@@ -31,6 +31,8 @@ simbad_tyc_hd.tsv          ~11 MB, LFS. 332,320 rows. SIMBAD's own HD
                            see README.md#the-tyc--hd-pull.
 wds_xids_overrides.tsv     ~1.5 KB, regular git. Hand-curated SIMBAD oids
                            for components no WDS-J ident or alias reaches.
+sptype_overrides.tsv       <1 KB, regular git. Hand-curated MK types by
+                           HIP for stars no SIMBAD key reaches.
 ```
 
 ## The values pull
@@ -187,6 +189,12 @@ overlap: an oid both requests reach has a row in each file. Pull and gates:
   [`scripts/refresh/wds_xids_overrides.py`](../../scripts/refresh/README.md).
   An oid letter need not match the WDS letter: SIMBAD names HAT-P-7 C
   `BD+47 2846B`.
+- **`sptype_overrides.tsv`** is the same kind of escape hatch for a spectral
+  type: a saturated star whose SIMBAD entry is a component-lettered main_id
+  carrying neither `hip` nor `source_id` (Castor A, `* alf Gem A`), so no
+  namespace of the resolver reaches it. Each row cites its literature type;
+  it is the resolver's curated tier
+  ([The resolver](/scripts/catalog/spectral/README.md#the-resolver)).
 
 ## Request sets come off the membership term
 
@@ -367,6 +375,8 @@ which is exactly what `tests/artifact-freshness.test.ts` fails on.
   derivation reads its cross-IDs (`scripts/catalog/spine/primaries-tables.ts`).
 - `simbad_wds_sptype.tsv` → `scripts/binaries/build-binaries.py` Stage 6
   (per-component sp_type, beats AT-HYG's system-inherited string).
+- `sptype_overrides.tsv` → `scripts/catalog/spectral/sptype-overrides-source.ts`,
+  the spectral resolver's curated tier.
 - `simbad_wds_xids.tsv` → `scripts/binaries/build-binaries.py`
   Stage 2 (`simbad_xid` tier of the WDS-component → Gaia source_id
   cascade) + `scripts/catalog/classic-ids/build-classic-id-overlay.ts`

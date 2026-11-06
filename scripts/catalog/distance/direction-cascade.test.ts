@@ -106,7 +106,7 @@ function sources(overrides: Partial<DirectionSources> = {}): DirectionSources {
 function inputs(overrides: Partial<DirectionInputs> = {}): DirectionInputs {
   return {
     sourceId: null, hip: null, tyc: null, gl: null, simbad: null,
-    isSol: false, ...overrides,
+    curated: null, ...overrides,
   };
 }
 
@@ -309,6 +309,19 @@ describe('direction-cascade / resolveDirection routing', () => {
 
   it('returns none, not a placeholder solution, where no tier reaches the row', () => {
     expect(resolveDirection(inputs(), sources())).toEqual({ via: 'none', refusals: [] });
+  });
+
+  it('answers a curated solution only once every tier has missed', () => {
+    const curated = {
+      srcRaDeg: 0, srcDecDeg: 0, srcEpoch: CATALOG_SCENE_EPOCH,
+      srcPmraMasyr: null, srcPmdecMasyr: null, velVia: 'zero' as const,
+    };
+    expect(resolveDirection(inputs({ curated }), sources())).toEqual({
+      via: 'curated', value: curated, evidence: [], refusals: [],
+    });
+    expect(resolveDirection(inputs({ sourceId: SID, curated }), sources({
+      gaiaAstrometry: new Map([[SID, gaiaRow()]]),
+    })).via).toBe('gaia_5p');
   });
 
   it('2p Gaia row without HIP2 falls through to gaia_2p, unpropagated when PM is null', () => {
