@@ -12,10 +12,10 @@ from dataclasses import dataclass
 # ─── Spectral-string parser ──────────────────────────────────────────
 
 
-# Spectral first-letter → class index. Mirrors catalog-pure.ts's
-# spectClassIndex so a future reader sees the same encoding on both
-# sides of the pipeline. 7 collects carbon / S / Wolf-Rayet (off the
-# main MK grid); 8 is unknown.
+# Spectral first-letter → class index. Mirrors the record's spectClass byte
+# (src/catalog-format/spectral/spectral-record-bytes.ts) so a future reader
+# sees the same encoding on both sides of the pipeline. 7 collects carbon /
+# S / Wolf-Rayet (off the main MK grid); 8 is unknown.
 _CLASS_IDX: dict[str, int] = {
     "O": 0, "B": 1, "A": 2, "F": 3, "G": 4, "K": 5, "M": 6,
     "C": 7, "S": 7, "W": 7, "N": 7, "R": 7,

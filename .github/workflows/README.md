@@ -120,8 +120,8 @@ fan-out of jobs beyond the bare checks:
   --verify-committed` (every build step on the table, failing on any
   committed output the build moves: a SID mint the PR did not commit, a
   stale `multiples.tsv`, either astrometry request), then every check that
-  reads the built artifacts, as named steps. A pull request restores the
-  newest saved build and rebuilds only the steps whose stamps moved; a push
+  reads the built artifacts, as named steps. A pull request restores
+  a saved build and rebuilds only the steps whose stamps moved; a push
   to `main` rebuilds everything: [The data build cache](/scripts/ci/README.md#the-data-build-cache).
   The checks:
   - `Full vitest, smudged and built` — `pnpm test` again, now with LFS

@@ -6,6 +6,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
+import { REPO_ROOT } from '../util/paths';
 import { manualDescription, manualFreshness, pullQueryHash, requestHash } from './freshness';
 import { loadTable } from './step-table/load-table';
 import { pipelineTree } from './pipeline-tree';
@@ -145,13 +146,17 @@ Path(${JSON.stringify(at('derived.tsv'))}).write_text("\\n".join(keys))
     expect(fresh(step)).toBe('fresh');
   });
 
-  it('records a TypeScript pull: its derived data inputs, never its code', async () => {
+  it('records a TypeScript pull: its derived data inputs, never its code, and the services that answered it', async () => {
     write('roster.json', '["a"]');
     const fixture = await tsManualFixture(root, {
       name: 'fetch:x', kind: { kind: 'pull' }, out: at('fetched.json'), inputs: [at('roster.json')], source: `
 import { writeFileSync } from 'node:fs';
+import { reportService } from ${JSON.stringify(join(REPO_ROOT, 'scripts/util/answered-by'))};
 export const describe = () => ({ query: 'Q', services: ['ssd.jpl.nasa.gov'] });
-export function main(): void { writeFileSync(${JSON.stringify(at('fetched.json'))}, 'rows'); }
+export function main(): void {
+  for (const name of ['mirror-b', 'mirror-a', 'mirror-b']) reportService(name);
+  writeFileSync(${JSON.stringify(at('fetched.json'))}, 'rows');
+}
 `,
     });
     expect((await fixture.record()).kind).toBe('recorded');
@@ -159,6 +164,7 @@ export function main(): void { writeFileSync(${JSON.stringify(at('fetched.json')
       inputs: { 'roster.json': expect.any(String) },
       outputs: { 'fetched.json': expect.any(String) },
       query: pullQueryHash({ query: 'Q', services: ['ssd.jpl.nasa.gov'] }),
+      answeredBy: ['mirror-b', 'mirror-a'],
     });
     expect(Object.keys(stamp('fetch:x').inputs)).toEqual(['roster.json']);
   });

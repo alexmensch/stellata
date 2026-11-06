@@ -20,7 +20,11 @@ import {
   type SimbadNamespace,
   type SimbadRecordKeys,
 } from '../simbad/simbad-namespace-ladder-pure';
-import { classifyFromSimbad, SPECTRAL_UNKNOWN } from '../../../src/catalog-format/spectral/spectral-classify';
+import {
+  classifyFromSimbad,
+  SPECTRAL_UNKNOWN,
+  type SpectralInfo,
+} from '../../../src/catalog-format/spectral/spectral-classify';
 import {
   type SimbadSpectralIndex,
   type SpectralResolution,
@@ -140,8 +144,8 @@ export interface Star {
   vx: number; vy: number; vz: number;
   absmag: number;
   ci: number;
-  spectClass: number;
-  lumClass: number;
+  /** Build-time only: the record write packs it into its two class bytes. */
+  spectral: SpectralInfo;
   physicalRadius: number;  // solar radii
   /** IAU-positional membership, computed from this record's own resolved
    *  position — catalog byte 34. Only Sol carries
@@ -348,7 +352,7 @@ export function readStars(
     rvGaiaErrorBand: Record<RvErrorBand, number>; // gaia_dr3-tier rows by stated rv uncertainty
     rvGaiaErrorMaxKmS: number;     // largest stated rv uncertainty on a gaia_dr3-tier row
     rvApplied: number;             // rows whose velocity carries a non-zero radial velocity
-    spectralVia: Record<SpectralVia, number>; // per-tier spectral resolver routing; none renders classIdx=8/lumClass=255
+    spectralVia: Record<SpectralVia, number>; // per-tier spectral resolver routing; none renders as SPECTRAL_UNKNOWN
     spectralSimbadKey: Record<SimbadNamespace, number>; // which namespace found a SIMBAD-tier row
     ciVia: Record<CiVia, number>;  // per-tier B−V cascade routing
     ciGspcValidatedRange: number;  // gspc-tier rows the archive calls in-range
@@ -717,8 +721,7 @@ export function readStars(
       x, y, z,
       vx: vel.x, vy: vel.y, vz: vel.z,
       absmag, ci,
-      spectClass: spectInfo.classIdx,
-      lumClass: spectInfo.lumClass,
+      spectral: spectInfo,
       physicalRadius: physRadius,
       conIndex,
       // Left unset here: three later passes fill it, and everything else

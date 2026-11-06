@@ -14,8 +14,8 @@ magnitude and an effective temperature:
 
 ```
 T       = Apsis Teff (gspphot → gspspec) when measured,
-          else interp(T_TABLE[classIdx], subclass)
-BC      = interp(BC_TABLE[classIdx], subclass)
+          else interp(T_TABLE[class], subclass)
+BC      = interp(BC_TABLE[class], subclass)
 Mbol    = absmag + BC
 L/L☉    = 10^((4.74 − Mbol) / 2.5)
 R/R☉    = sqrt(L/L☉) × (T_sun/T)²

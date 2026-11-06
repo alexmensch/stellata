@@ -33,6 +33,7 @@ import {
   type CatalogManifest,
   DIST_VIA_VALUES,
 } from '../../src/catalog-format/record/catalog-pure';
+import { encodeSpectralBytes } from '../../src/catalog-format/spectral/spectral-record-bytes';
 import { buildHipToIndex, inferBinaries } from './multiplicity/binary-flags-pure';
 import { SIMBAD_OTYPE_MULTIPLE } from './spectral/spectral-resolve';
 import { apparentVFromSol } from './record/record-order-pure';
@@ -1095,8 +1096,7 @@ export async function main() {
       physRadius: s.physicalRadius,
       companionIdx: s.companionIdx >= 0 ? s.companionIdx : NO_COMPANION,
       nameOffset: s.proper ? nameOffsets[i] : 0,
-      spectClass: s.spectClass,
-      lumClass: s.lumClass,
+      ...encodeSpectralBytes(s.spectral),
       conIndex: s.conIndex,
       flags: s.flags,
       ampUnits,

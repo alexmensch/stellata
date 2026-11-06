@@ -68,7 +68,7 @@ const reached = (sepArcsec: number, paDeg: number): Stage6Offset =>
 
 function makeStar(overrides: Partial<Star> = {}): Star {
   return makeStarWithDefaults({
-    absmag: 5.0, ci: 0.65, spectClass: 4, lumClass: 2, ...overrides,
+    absmag: 5.0, ci: 0.65, spectral: { kind: 'mk', letter: 4, subclass: null, lumClass: 2 }, ...overrides,
   });
 }
 
@@ -1150,14 +1150,6 @@ describe('imputeCompanionCi', () => {
     });
     expect(imputeCompanionCi(sec, SPECTRAL_UNKNOWN)).toBe(SOLAR_BV_FALLBACK);
   });
-
-  it('falls through to SOLAR_BV_FALLBACK when spectral classIdx is 8 and not a WD', () => {
-    const sec = multiplesRow({
-      comp: 'B', ci: null, photometryVia: 'none',
-    });
-    const unknownButLumClass = { ...SPECTRAL_UNKNOWN, lumClass: 2 };
-    expect(imputeCompanionCi(sec, unknownButLumClass)).toBe(SOLAR_BV_FALLBACK);
-  });
 });
 
 describe('promoteCompanions rows', () => {
@@ -1251,7 +1243,7 @@ describe('promoteCompanions', () => {
   const sirius_a_existing: Star = makeStar({
     x: -0.494, y: 2.477, z: -0.758,
     absmag: 1.45, ci: 0.01,
-    spectClass: 2, lumClass: 2,
+    spectral: { kind: 'mk', letter: 2, subclass: null, lumClass: 2 },
     proper: 'Sirius',
     hip: 32349,
     gaiaSourceId: null,
@@ -1300,10 +1292,7 @@ describe('promoteCompanions', () => {
     // collapses both records in URL-state's HIP-keyed encoding.
     expect(b.hip).toBeNull();
     expect(b.flags & FLAG_BINARY_COMPANION_ONLY).toBeTruthy();
-    // White dwarf parsing: classifyFromSimbad("DA1.9") → classIdx=8 (the
-    // "other / white dwarf" bucket), lumClass=0 (D).
-    expect(b.spectClass).toBe(8);
-    expect(b.lumClass).toBe(0);
+    expect(b.spectral).toEqual({ kind: 'white-dwarf', wdSubclass: 2 });
     // ci is recomputed from the WD's blackbody temperature rather
     // than inherited from Sirius A. T(DA1.9)=25200 K → the inverse of Ballesteros 2012
     // (/data/papers/index.md#ballesteros2012) eq. 14 ~-0.44; the LUT clamps at lookup, the stored value is uncapped.
@@ -1316,7 +1305,7 @@ describe('promoteCompanions', () => {
     // shear from a drifting primary under the epoch-advance.
     const primary = makeStar({
       x: -0.494, y: 2.477, z: -0.758, absmag: 1.45, ci: 0.01,
-      spectClass: 2, lumClass: 2, proper: 'Sirius', hip: 32349,
+      spectral: { kind: 'mk', letter: 2, subclass: null, lumClass: 2 }, proper: 'Sirius', hip: 32349,
       gaiaSourceId: null,
       vx: 1.1e-5, vy: -2.3e-5, vz: 3.7e-6,
     });
@@ -1334,7 +1323,7 @@ describe('promoteCompanions', () => {
     expect(cma).toBeGreaterThanOrEqual(0);
     const primary = makeStar({
       x: -0.494, y: 2.477, z: -0.758, absmag: 1.45, ci: 0.01,
-      spectClass: 2, lumClass: 2, proper: 'Sirius', hip: 32349,
+      spectral: { kind: 'mk', letter: 2, subclass: null, lumClass: 2 }, proper: 'Sirius', hip: 32349,
       gaiaSourceId: null, conIndex: cma,
     });
     const { newStars, stats } = promoteCompanions(siriusRows(), [primary], inputs());

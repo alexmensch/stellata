@@ -81,7 +81,8 @@ scripts/binaries/
                                   the only parse of the file on the TS
                                   side. Its test round-trips the committed
                                   file byte for byte, which is what holds it
-                                  to the Python writer until Stage 6 ports.
+                                  to the Python writer until the switch
+                                  (README.md#porting-to-typescript--one-stack-one-switch).
                                   Its rowKey cites a row by
                                   (system_id, comp) for lineage
                                   (../util/sources/README.md#sourcerowref).
@@ -226,6 +227,41 @@ absmag-from-Δmag).
 
 Build-time statistics for every phase land in snapshot JSONs, each
 gating the next build via an `UPDATE_SNAPSHOTS=1` refresh.
+
+## Porting to TypeScript — one stack, one switch
+
+The port of this step to TypeScript (Stage 1 and the shell, then Stages
+2–7) lands as one stack of PRs merged together. Each slice adds its TS
+stage and the vitest ports of its `*.test.py` cases **beside** the
+Python, called only from tests: the step table keeps running
+`build-binaries.py`, so every PR in the stack builds and `multiples.tsv`
+cannot move. The last slice is the switch: `build:binaries` becomes a TS
+step on the shell, `multiples.tsv` lands only through `emitArtifacts`
+after the count checks, every Python module here is deleted, and
+`pnpm run identity:snapshot` / `identity:diff`
+([Proving a restructuring byte-identical](/scripts/util/README.md#proving-a-restructuring-byte-identical))
+proves byte identity once.
+
+Each slice before the switch also carries one vitest case that runs TS
+Stages 1..N over the committed inputs and asserts the keys its own
+ported code counts in the committed `build-binaries-expected.json` (and
+`build-binaries-rates-expected.json` where it has keys there). A key
+belongs to the slice whose code produces it, not to the stage the
+snapshot files it under: `subdivide`'s orphan and MSC inner-pair counts
+are Stage 1's, its NSS inner-pair count Stage 3's. The Python writes those snapshots
+until the switch; the test reads them and never restates a count, so a
+count divergence fails in the slice that introduces it, and a byte diff
+at the switch is one the counts do not see.
+
+Values never cross between the languages. The runner records a step's
+inputs from either the TS import closure or the Python run record, and a
+subprocess in the other language is invisible to both
+([The step table](/scripts/pipeline/step-table/README.md#the-step-table--stepsts)), so a
+half-TS, half-Python step would miss inputs. Until the switch lands, a
+behaviour change to this step waits for it and is written once, in TS.
+The switch also waits for the package's one other importer,
+`scripts/refresh/refresh-simbad-wds-xids.py` (`parsers`,
+`stage2_resolve`), to port first.
 
 
 ## Stage 2 — WDS component → Gaia DR3 source_id

@@ -476,6 +476,18 @@ The Tier A regression corpus in `known-stars.tsv` pins Sirius B's
 record specifically (addressed by gaia_source_id, no HIP) as a
 stand-in for the broader category.
 
+#### Reading a record's class back
+
+The re-curation, blend-split and anchor-dim passes re-derive a radius from a
+record already held, and take its class from `recordSpectralInfo`: the
+display string re-parsed, else the class **as the record's two bytes keep
+it** — `decodeSpectralBytes(encodeSpectralBytes(star.spectral))`, which drops
+the subclass, the WD index and the Wolf-Rayet kind. That is deliberate and
+temporary: reading `star.spectral` itself is the right source, and it moves
+the radius of every member whose class the bytes coarsen (a main-sequence
+estimate's fractional subclass reads back as not stated), so it lands as its
+own behaviour change, `stellata-hooj.36`.
+
 #### Overlap gate
 
 After the record sort, build-catalog counts every pair of records whose
@@ -539,7 +551,7 @@ holds its star unlinked — placing it would mint a twin of that record.
 | `hip`, `gaiaSourceId` | per-component | the row's own id — stripped to `null` (→ `synth-<wds_id>-<comp>`) when it equals the anchor's shared id, per the inheritance gates above. |
 | `absmag` | per-component | Stage-5 decomposition / dmag / blend split. |
 | `ci` | per-component | own observed B–V, else [Ballesteros 2012](/data/papers/index.md#ballesteros2012) from the resolved spectral type. |
-| `spectClass`, `lumClass`, `spectDisplay` | per-component | SIMBAD/curated type, else a main-sequence estimate from the own M_V. |
+| `spectral`, `spectDisplay` | per-component | SIMBAD/curated type, else a main-sequence estimate from the own M_V. |
 | `physicalRadius` | per-component | Stefan-Boltzmann from the per-component absmag + Teff. |
 | `flags` | per-component | `FLAG_BINARY_COMPANION_ONLY` (+ `_SYNTHETIC`). |
 | `syntheticId` | per-component | `synth-<wds_id>-<comp>` when no own id survives the gates. |

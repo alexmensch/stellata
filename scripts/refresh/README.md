@@ -261,6 +261,10 @@ partial-write protection so a mid-run failure never leaves a
 half-written TSV under `data/`. `assert_row_count` is also imported by
 `scripts/binaries/build-binaries.py` for its Stage-1 parser bounds.
 
+The pulls port onto `pull/`, the TypeScript runtime: one CSV TAP backend whose
+overflow check is a row count, a query-keyed resume cache, required gates and
+an all-or-none write ([pull/README.md](pull/README.md)).
+
 ### VizieR
 
 The declarative whole-table case — `VizierSlice` / `pull_slices()`, CDS's
@@ -319,10 +323,16 @@ rules, and none may be replaced with a bare literal:
 
 - Whole-table pulls (hip-xmatch, tyc-xmatch, nss) call
   `whole_table_sync_maxrec(EXPECTED_ROW_COUNT_MAX)` — double the pinned
-  ceiling, clamped to the mirrors' 3 M-row output cap. It exits rather
-  than clamp below the ceiling, so a table that outgrows one sync query
-  demands batching instead of failing quietly. tyc-xmatch is the pull
-  that clamps: 2.52 M rows leaves ~19% headroom, not 2x.
+  ceiling, clamped to `GAIA_SYNC_MAX_ROWS` (3 M). It exits rather than clamp
+  below the ceiling, so a table that outgrows one sync query demands
+  batching instead of failing quietly. **That 3 M is no longer ESA's
+  limit**: its `/capabilities` declares a hard output limit of 50,000 rows
+  (ARI 10,000,000; measured 2026-11-05), and a mirror truncates at its own
+  hard limit whatever MAXREC asks. Whether ESA flags that truncation as a
+  `QUERY_STATUS` overflow, which `refresh_lib` raises on, is unmeasured, so
+  a Python whole-table pull ESA answers may come back at 50,000 rows with
+  only its row band to catch it. The TypeScript runtime reads each
+  mirror's limit and routes around it ([The TAP backend](pull/README.md#the-tap-backend)).
 - Batched pulls size MAXREC off their batch size (`BATCH_SIZE * 2`),
   except `refresh-gaia-dr2-neighbourhood.py`, where one requested id can
   return several rows.

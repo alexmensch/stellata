@@ -13,6 +13,7 @@ import {
   type ApsisField,
   type WireStarRecord,
 } from '../../catalog-format/record/catalog-pure';
+import { LUM_CLASS_UNKNOWN } from '../../catalog-format/spectral/spectral-record-bytes';
 
 export type StarRecord = Omit<WireStarRecord, 'apsis'> & { apsis: Record<ApsisField, number> };
 
@@ -31,7 +32,7 @@ export const baseStar: StarRecord = {
   companionIdx: NO_COMPANION,
   nameOffset: 0,
   spectClass: 0,
-  lumClass: 255,
+  lumClass: LUM_CLASS_UNKNOWN,
   conIndex: 0,
   flags: 0,
   ampUnits: 0,

@@ -2,7 +2,9 @@
 
 Every tab-separated table a TypeScript build step reads goes through this
 folder: an external input through `readTable`, a file this repo writes itself
-through its `defineArtifact` codec. Two places stand outside it, named so a
+through its `defineArtifact` codec. A refresh pull's output is an external
+table, written by `../../refresh/pull/`'s `formatTsv` through the codec's own
+layout (`tsvLine`, `tsvText`) and read like any input. Two places stand outside it, named so a
 third is a finding rather than precedent. The WGSN tables
 (`../../catalog/naming/wgsn-parse-pure.ts`) are comma-separated CSV, not TSV,
 so that module splits their lines itself — and parses each cell through this
@@ -21,7 +23,10 @@ scripts/util/tsv/
                               cell parsers (textCell, floatCell, intCell,
                               idCell, idListCell, sourceIdCell,
                               oneOfCell).
-  artifact-pure.ts (+ test)   defineArtifact — a self-written table's codec.
+  artifact-pure.ts (+ test)   defineArtifact — a self-written table's codec;
+                              tsvLine / tsvText, its line and file layout,
+                              which the refresh pulls' formatter writes
+                              through too.
   committed-round-trip.ts     Test support: describeCommittedRoundTrip, an
                               artifact's codec over its committed file, byte
                               for byte; a failure names the first line
