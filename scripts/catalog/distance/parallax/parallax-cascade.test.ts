@@ -9,7 +9,7 @@ import {
   type ParallaxResolution,
   type ParallaxSources,
 } from './parallax-cascade';
-import { DIST_VIA_VALUES } from '../../../../src/catalog-format/record/catalog-pure';
+import { DIST_VIA_VALUES, SOL_ABSOLUTE_V_MAGNITUDE } from '../../../../src/catalog-format/record/catalog-pure';
 import { gaiaAstrometryRow } from '../../sources/gaia-astrometry-fixture';
 import type { CitedParallax } from '../../cited-parallax';
 import type { SiblingParallax } from './pair-member-parallax';
@@ -95,7 +95,7 @@ describe('parallax-cascade / tier order', () => {
   });
 
   it('answers a curated placement only once every measured tier has missed', () => {
-    const origin = { absoluteVMagnitude: 4.85 };
+    const origin = { absoluteVMagnitude: SOL_ABSOLUTE_V_MAGNITUDE };
     expect(resolveParallax({ ...NONE, curated: origin })).toEqual({
       via: 'curated', value: origin, evidence: [], refusals: [],
     });
