@@ -1,5 +1,6 @@
 // Every pull and bake in the step table, each with the files it writes. See README.md#the-step-table--stepsts.
 
+import { DATA_FILES } from '../../../src/catalog-format/pipeline-outputs/data-files';
 import {
   DUST_CHUNK, DUST_MANIFEST, PUBLIC_FILES, TEXTURE_MEMBERS,
 } from '../../../src/catalog-format/public-artifacts/public-artifacts';
@@ -41,7 +42,7 @@ export const MANUAL_STEPS: readonly ManualStep[] = [
   pull('refresh:gliese', 'refresh-gliese.py', ['data/gliese/gliese_v70a.tsv']),
   pull('refresh:msc', 'refresh-msc.py', ['systems', 'orbits', 'components'].map((s) => `data/msc/msc_${s}.tsv`)),
   pull('refresh:simbad', 'refresh-simbad-sample.py', ['data/simbad/simbad_sample.tsv']),
-  pull('refresh:simbad-wds-xids', 'refresh-simbad-wds-xids.py', ['data/simbad/simbad_wds_xids.tsv']),
+  pull('refresh:simbad-wds-xids', 'refresh-simbad-wds-xids.py', [DATA_FILES.simbadWdsXids]),
   pull('refresh:simbad-sptype', 'refresh-simbad-sptype.py', ['data/simbad/simbad_sptype.tsv']),
   pull('refresh:simbad-values', 'refresh-simbad-values.py', ['data/simbad/simbad_values.tsv']),
   pull('refresh:simbad-tyc-hd', 'refresh-simbad-tyc-hd.py', ['data/simbad/simbad_tyc_hd.tsv']),
