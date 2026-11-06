@@ -41,6 +41,13 @@ export function releaseAt(ref = 'HEAD', cwd = ROOT): string {
   return versionOfTag(releaseTagAt(ref, cwd));
 }
 
+/** The newest release `commit` itself was tagged as; null for a commit no release was cut at. */
+export function releaseOn(commit: string, cwd = ROOT): string | null {
+  const tags = git(cwd, 'tag', '--points-at', commit, '--list', TAG_GLOB, '--sort=-v:refname');
+  const newest = tags.split('\n').find(Boolean);
+  return newest === undefined ? null : versionOfTag(newest);
+}
+
 /** The commit the newest release reachable from `ref` was cut at: where the next release plan starts. */
 export function releaseCommitAt(ref = 'HEAD', cwd = ROOT): string {
   return git(cwd, 'rev-list', '-n', '1', releaseTagAt(ref, cwd));

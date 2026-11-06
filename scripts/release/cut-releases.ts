@@ -13,7 +13,7 @@ import {
   type PlannedRelease,
   type RangeCommit,
 } from './release-plan-pure.ts';
-import { releaseAt, releaseCommitAt, versionOfTag, TAG_GLOB } from '../util/release-version.ts';
+import { releaseAt, releaseCommitAt, releaseOn } from '../util/release-version.ts';
 
 const STEPS = ['plan', 'tag', 'publish'] as const;
 type Step = (typeof STEPS)[number];
@@ -60,8 +60,8 @@ function prLabels(prNumber: number): string[] {
 }
 
 function releaseOf(sha: string, subject: string): CommitRelease {
-  const tags = run('git', ['tag', '--points-at', sha, '--list', TAG_GLOB]).split('\n').filter(Boolean);
-  if (tags.length > 0) return { kind: 'tagged', version: versionOfTag(tags[0]) };
+  const released = releaseOn(sha);
+  if (released !== null) return { kind: 'tagged', version: released };
   const prNumber = prNumberFromSubject(subject);
   return prNumber === null ? { kind: 'undeclared' } : declarationOf(prLabels(prNumber));
 }
