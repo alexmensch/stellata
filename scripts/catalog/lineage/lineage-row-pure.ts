@@ -1,7 +1,7 @@
 // The lineage envelope every stage writes, its TSV line, and the one sort order over lines. See README.md#row-contract.
 
 import { fold } from '../../util/counts/tally-pure';
-import { readTable, type TableSpec } from '../../util/tsv/table-pure';
+import { readTable, readTableLines, type TableSpec } from '../../util/tsv/table-pure';
 import type { StageCode, StageCodes } from './reason-codes-pure';
 
 export const LINEAGE_ROLES = ['outcome', 'refused'] as const;
@@ -35,16 +35,40 @@ export function paramsText(params: LineageParams): string {
 }
 
 export function paramsOf(row: LineageRow): LineageParams {
-  return row.params === '' ? {} : JSON.parse(row.params) as LineageParams;
+  return parseParams(row.params);
+}
+
+export function parseParams(text: string): LineageParams {
+  return text === '' ? {} : JSON.parse(text) as LineageParams;
 }
 
 function isSurrogate(unit: number): boolean {
   return unit >= 0xd800 && unit <= 0xdfff;
 }
 
+/** Below U+D800 a UTF-16 unit is its own code point, so the engine's native unit order is UTF-8 order. */
+const UNIT_ORDER_MAY_DIFFER = /[\uD800-\uFFFF]/;
+
+function nativeOrder(a: string, b: string): number {
+  return a < b ? -1 : a > b ? 1 : 0;
+}
+
 /** UTF-8 byte order, which is code-point order: a surrogate unit stands for a
  *  code point above every BMP unit, though `<` would put U+E000–U+FFFF after it. */
 export function compareUtf8(a: string, b: string): number {
+  if (!UNIT_ORDER_MAY_DIFFER.test(a) && !UNIT_ORDER_MAY_DIFFER.test(b)) return nativeOrder(a, b);
+  return compareCodePoints(a, b);
+}
+
+/** `items` sorted in place by `keyOf` in UTF-8 byte order; the native order whenever no key needs the slow one. */
+export function sortUtf8<T>(items: T[], keyOf: (item: T) => string): T[] {
+  if (items.every((item) => !UNIT_ORDER_MAY_DIFFER.test(keyOf(item)))) {
+    return items.sort((x, y) => nativeOrder(keyOf(x), keyOf(y)));
+  }
+  return items.sort((x, y) => compareCodePoints(keyOf(x), keyOf(y)));
+}
+
+function compareCodePoints(a: string, b: string): number {
   const n = Math.min(a.length, b.length);
   for (let i = 0; i < n; i++) {
     const x = a.charCodeAt(i);
@@ -82,7 +106,7 @@ export function stageLineageLine(codes: StageCodes<string>, row: LineageRow): Li
 }
 
 export function sortLineageLines(lines: readonly LineageLine[]): LineageLine[] {
-  return [...lines].sort(compareUtf8);
+  return sortUtf8([...lines], (line) => line);
 }
 
 export const ENCODE_BATCH = 100_000;
@@ -132,6 +156,10 @@ export function lineageLineCode(line: LineageLine): string {
   return lineCell(line, 'code');
 }
 
+export function lineageLineParams(line: LineageLine): string {
+  return lineCell(line, 'params');
+}
+
 /** How many of a stage's lines in `role` carry each of its codes, every code present; a line of another stage throws. */
 export function foldStageLines<B extends string, S extends string>(
   codes: StageCodes<B, S>, lines: Iterable<LineageLine>, role: LineageRole,
@@ -162,7 +190,7 @@ function lineageSpec(file: string): TableSpec<(typeof LINEAGE_COLUMNS)[number]> 
 }
 
 export function* lineageLines(text: string | Uint8Array, file: string): Generator<LineageLine> {
-  for (const row of readTable(lineageSpec(file), text)) yield row.rawLine as LineageLine;
+  for (const line of readTableLines(lineageSpec(file), text)) yield line as LineageLine;
 }
 
 export function* lineageRows(text: string | Uint8Array, file: string): Generator<LineageRow> {

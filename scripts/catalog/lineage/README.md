@@ -26,7 +26,9 @@ scripts/catalog/lineage/
   lineage-row-pure.ts            The envelope and LineageLine, its TSV line:
                                  stageLineageLine, the one encoder, which
                                  refuses a code the stage does not declare;
-                                 sortLineageLines, the one order; and
+                                 sortUtf8, the one order the stage lines,
+                                 identity and SID files, reason-code list
+                                 and trace keys sort by; and
                                  stageLineageText, the writer, which refuses
                                  another stage's line or lines out of order.
   reason-codes-pure.ts           stageCodes: a stage's codes with their
@@ -54,6 +56,8 @@ scripts/catalog/lineage/
                                  baseline plan, diff, budget and invariant
                                  checks, ready for the stage's emitArtifacts
                                  call.
+  phase-clock-pure.ts            phaseClock: the budget line's per-phase
+    (+ test)                     split of the timed window.
   lineage-invariant-pure.ts      LineageInvariant and its check (#invariants).
     (+ test)
   lineage-layout-pure.ts         LINEAGE_LAYOUT, the lineage folders,
@@ -286,8 +290,8 @@ A spine derivation's row carries only its winner, route and component
 letters; the binding-review columns ride the rows the queue lists — a
 contested or collision verdict and a disposition — since the candidates and
 refusals are rows of their own. `MEMBERSHIP_LINEAGE_BUDGET` pins 41 MB and
-30 s: a CI run that diffs against a restored merge-base baseline took
-13.6–19.7 s (2026-11-05, 9 runs), against 5.3–7.5 s with no diff. Promotion, measured 2026-11-01: <!-- count:build-binaries/multiples_rows_emitted -->47,021<!-- /count --> rows, one
+20 s: a CI run that diffs against a restored merge-base baseline took
+11.2 s (2026-11-06), against 6.8 s with no diff. Promotion, measured 2026-11-01: <!-- count:build-binaries/multiples_rows_emitted -->47,021<!-- /count --> rows, one
 per `multiples.tsv` row, plus 31,908 identity rows (<!-- count:build-catalog/companionPromoted -->14,676<!-- /count --> minted companions,
 17,232 rows it retires, parks or merges), 0.95 MB gzipped in 0.2 s;
 `PROMOTION_LINEAGE_BUDGET` pins 1.04 MB and 5 s. Every other stage's
