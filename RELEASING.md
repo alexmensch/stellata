@@ -11,8 +11,8 @@ by label, and a push to `main` derives each landed commit's version from
 the release before it plus its PR's level, then builds, checks and
 deploys at HEAD and cuts a `v<version>` tag and a GitHub release for
 **each** releasing commit since the last release pushed. A PR that
-declares a level therefore releases on merge. The work below is mostly about getting the
-level *and the release notes section* right on the PR.
+declares a level therefore releases on merge. The work below is mostly
+about getting the level *and the release notes section* right on the PR.
 
 ## Release notes per PR
 
@@ -650,11 +650,11 @@ fix PR hits the same block.
   `release-notes-guard` passes with its check step skipped. They never
   read a label from the triggering event: `gh pr create --label` attaches
   it after the `opened` event fires, so that event's payload has no label,
-  and a re-run replays the same payload. The body guards read the PR body live for the same reason,
-  so a re-run judges the body as it is now. The live read relies on runner
-  startup (seconds) outlasting the label attach (about one second after
-  `opened`): a run that queried inside that gap would fail, and a push or
-  label toggle re-runs it.
+  and a re-run replays the same payload. The body guards read the PR body
+  live for the same reason, so a re-run judges the body as it is now. The
+  live read relies on runner startup (seconds) outlasting the label attach
+  (about one second after `opened`): a run that queried inside that gap
+  would fail, and a push or label toggle re-runs it.
 
 ### Landing
 
