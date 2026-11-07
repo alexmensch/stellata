@@ -19,7 +19,7 @@ import {
   classifyFromSimbad,
   type SpectralInfo,
 } from '../../../src/catalog-format/spectral/spectral-classify';
-import type { CascadeResult, CascadeRefusal } from '../cascade-result';
+import type { CascadeResult, CascadeRefusal, CitedValue } from '../cascade-result';
 
 /** SIMBAD's object-type code for a confirmed double/multiple star — the
  *  otype value that marks a record `unresolved` when nothing resolves. */
@@ -141,17 +141,15 @@ export function curatedSpectralValue(spType: string, fail: (message: string) => 
 }
 
 /** One record's designations, plus its curated type
- *  (`../record/curated-records.ts`), which outranks a HIP-keyed one. */
+ *  (`../record/curated-records.ts`), which outranks a HIP-keyed one, and its
+ *  own Apsis row. */
 export interface SpectralInputs extends SimbadRecordKeys {
   curated: SpectralValue | null;
+  apsis: CitedValue<ApsisRow> | null;
 }
 
 export interface SpectralSources {
   simbad: SimbadSpectralIndex;
-  apsis: ReadonlyMap<string, ApsisRow>;
-  /** `GAIA_APSIS`, which the ESP-ELS tier cites. Handed in rather than
-   *  imported: steps that read only the SIMBAD index import this module. */
-  apsisSource: RowKeyed<string>;
   /** `SPTYPE_OVERRIDES`. */
   sptypeOverrides: ReadonlyMap<number, CuratedSpectral>;
 }
@@ -189,7 +187,7 @@ function matchSimbadRow(
  * */
 export function resolveSpectralInfo(
   keys: SpectralInputs,
-  { simbad, apsis: apsisMap, apsisSource, sptypeOverrides }: SpectralSources,
+  { simbad, sptypeOverrides }: SpectralSources,
 ): SpectralResolution {
   const refusals: SpectralRefusal[] = [];
   if (keys.curated !== null) return { via: 'curated', value: keys.curated, evidence: [], refusals };
@@ -210,18 +208,12 @@ export function resolveSpectralInfo(
       via: 'simbad', value: { ...hit.value.value, namespace: hit.namespace }, evidence: [hit.value.ref], refusals,
     };
   }
-  if (keys.sourceId) {
-    const apsis = apsisMap.get(keys.sourceId);
-    if (apsis?.spectraltypeEsphs) {
-      const ref = sourceRowRef(apsisSource, keys.sourceId);
-      const info = classifyFromGspspec(apsis.spectraltypeEsphs);
-      if (info) {
-        return {
-          via: 'gspspec', value: { info, spectDisplay: apsis.spectraltypeEsphs }, evidence: [ref], refusals,
-        };
-      }
-      refusals.push({ tier: 'gspspec', reason: 'unclassifiable', ref });
-    }
+  const esphs = keys.apsis?.value.spectraltypeEsphs;
+  if (keys.apsis !== null && esphs) {
+    const { ref } = keys.apsis;
+    const info = classifyFromGspspec(esphs);
+    if (info) return { via: 'gspspec', value: { info, spectDisplay: esphs }, evidence: [ref], refusals };
+    refusals.push({ tier: 'gspspec', reason: 'unclassifiable', ref });
   }
   return { via: 'none', refusals };
 }

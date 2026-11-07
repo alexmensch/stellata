@@ -411,7 +411,7 @@ export function readStars(
 
   const printedVLookup = printedVLookups(hipVMag, directions.tycho2, gliese);
   const spectralSources: SpectralSources = {
-    simbad: simbadSpectral, apsis: apsisMap, apsisSource: GAIA_APSIS, sptypeOverrides,
+    simbad: simbadSpectral, sptypeOverrides,
   };
   // Every exit returns its row's Placement, so the compiler refuses one that
   // would drop a record from lineage.
@@ -678,18 +678,16 @@ export function readStars(
     if (velClamped) velocityClamped++;
     if (!velZeroed && rvKmS !== null && rvKmS !== 0) rvApplied++;
 
+    const apsisRow = gaiaSourceId ? apsisMap.get(gaiaSourceId) : undefined;
+    const apsis = gaiaSourceId && apsisRow ? { value: apsisRow, ref: sourceRowRef(GAIA_APSIS, gaiaSourceId) } : null;
     const spectral = resolveSpectralInfo(
-      { ...simbadKeys, curated: curated?.spectral ?? null }, spectralSources,
+      { ...simbadKeys, curated: curated?.spectral ?? null, apsis }, spectralSources,
     );
     const spectInfo = spectral.via === 'none' ? SPECTRAL_UNKNOWN : spectral.value.info;
     spectralVia[spectral.via]++;
     if (spectral.via === 'simbad') spectralSimbadKey[spectral.value.namespace]++;
-    const apsisTeff = resolveApsisTeff(
-      gaiaSourceId ? apsisMap.get(gaiaSourceId) : null,
-    );
-    const citedApsisTeff = apsisTeff === null || gaiaSourceId === null
-      ? null
-      : { value: apsisTeff, ref: sourceRowRef(GAIA_APSIS, gaiaSourceId) };
+    const apsisTeff = resolveApsisTeff(apsis?.value);
+    const citedApsisTeff = apsis === null || apsisTeff === null ? null : { value: apsisTeff, ref: apsis.ref };
 
     // B−V through the Gaia relation → printed I/239 B−V → synthetic
     // photometry → intrinsic spectral class, else solar. Printed above synthetic

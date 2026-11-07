@@ -20,7 +20,11 @@ const FROM = { ...SIMBAD_SPTYPE, file: 'fixture.tsv', hint: 'h' };
 const resolve = (
   keys: SimbadRecordKeys, simbad: SimbadSpectralIndex, apsis: ReadonlyMap<string, ApsisRow>,
   curated: SpectralValue | null = null,
-) => resolveSpectralInfo({ ...keys, curated }, { simbad, apsis, apsisSource: GAIA_APSIS, sptypeOverrides: SPTYPE_OVERRIDES.read() });
+) => {
+  const row = keys.sourceId ? apsis.get(keys.sourceId) : undefined;
+  const cited = keys.sourceId && row ? { value: row, ref: sourceRowRef(GAIA_APSIS, keys.sourceId) } : null;
+  return resolveSpectralInfo({ ...keys, curated, apsis: cited }, { simbad, sptypeOverrides: SPTYPE_OVERRIDES.read() });
+};
 
 /** A resolution expected to land on a tier, flattened; `none` fails the test. */
 const flatSp = (...args: Parameters<typeof resolve>) => {
