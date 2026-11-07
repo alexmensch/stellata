@@ -13,13 +13,16 @@ folder's strict cell parsers. Record lineage's stage and identity files
 gzipped build artifacts, one per stage, read from whichever directory a
 diff or `trace` names; an artifact codec declares one fixed file, and that
 declaration is what a step's input set is derived from, so they write their
-own lines and read them through `readTable`.
+own lines and read them through `readTable`, or `readTableLines` where a
+reader wants only the lines.
 
 ## Files in this area
 
 ```
 scripts/util/tsv/
-  table-pure.ts (+ test)      readTable / tableLineReader, TableRow and the
+  table-pure.ts (+ test)      readTable / tableLineReader, TableRow,
+                              readTableLines (each row's line as written,
+                              checked but never split), and the
                               cell parsers (textCell, floatCell, intCell,
                               idCell, idListCell, sourceIdCell,
                               oneOfCell).

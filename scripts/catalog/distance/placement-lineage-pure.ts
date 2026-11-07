@@ -18,7 +18,7 @@ import type { RadialVelocityResolution, RvVia } from './radial-velocity/radial-v
 import type { LmcKinematicVerdict } from './refinement/distance-overrides-pure';
 import { PLACEMENT_LINEAGE } from '../../../src/catalog-format/pipeline-outputs/lineage-files';
 
-export const PLACEMENT_LINEAGE_BUDGET = { gzipBytes: 34_000_000, writeMs: 60_000 };
+export const PLACEMENT_LINEAGE_BUDGET = { gzipBytes: 34_000_000, writeMs: 40_000 };
 
 const live = (description: string, effect: CodeDeclaration['effect'] = 'none'): CodeDeclaration => (
   { description, effect, status: LIVE }

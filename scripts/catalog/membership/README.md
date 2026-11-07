@@ -46,9 +46,12 @@ scripts/catalog/membership/
                                   built from the declarations it is founded
                                   on; the build and the unit suite share it.
   membership-lineage-pure.ts      This stage's lineage: reason codes, the
-                                  outcome union and its serialiser, and the
+    (+ test)                      outcome union and its serialiser, the
                                   four ledgers as views of it
-                                  (#membership-lineage).
+                                  (#membership-lineage), and the change
+                                  report's multiples join, which reads the
+                                  baseline's identity file only for a key
+                                  the build lacks.
   membership-manifest-pure.ts     Row assembly (spine side, additions), the
     (+ test)                      review queue and the dispositions settling
                                   it, the admission rule, the label drops, and
