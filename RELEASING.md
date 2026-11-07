@@ -669,6 +669,8 @@ change, by `gh api --method PUT` as above, preserving every rule):
 
 - `required_status_checks.strict_required_status_checks_policy: true`: a
   PR is tested on the newest main before it merges.
+- `pull_request.allowed_merge_methods: [squash]`: the `(#N)` subject
+  suffix the deploy reads exists only on squash commits.
 - `required_signatures`: GitHub signs the squash commits it makes.
 - The labels `release:major`, `release:minor` and `release:patch` exist
   beside `skip-version-bump` (`gh label create release:minor`, …).
