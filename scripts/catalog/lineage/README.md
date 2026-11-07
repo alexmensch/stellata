@@ -290,14 +290,14 @@ A spine derivation's row carries only its winner, route and component
 letters; the binding-review columns ride the rows the queue lists — a
 contested or collision verdict and a disposition — since the candidates and
 refusals are rows of their own. `MEMBERSHIP_LINEAGE_BUDGET` pins 41 MB and
-30 s: a CI run that diffs against a restored merge-base baseline took
-13.6–19.7 s (2026-11-05, 9 runs), against 5.3–7.5 s with no diff. Promotion, measured 2026-11-01: <!-- count:build-binaries/multiples_rows_emitted -->47,021<!-- /count --> rows, one
+20 s: a CI run that diffs against a restored merge-base baseline took
+11.2 s (2026-11-06), against 6.8 s with no diff. Promotion, measured 2026-11-01: <!-- count:build-binaries/multiples_rows_emitted -->47,021<!-- /count --> rows, one
 per `multiples.tsv` row, plus 31,908 identity rows (<!-- count:build-catalog/companionPromoted -->14,676<!-- /count --> minted companions,
 17,232 rows it retires, parks or merges), 0.95 MB gzipped in 0.2 s;
 `PROMOTION_LINEAGE_BUDGET` pins 1.04 MB and 5 s. Allocation, measured
 2026-11-01: 980,151 rows (979,712 objects plus 439 parked SIDs, 62.6 MB plain)
 and 979,712 key → SID rows (29.1 MB), 17.6 MB gzipped in 4.7 s without a diff;
-`ALLOCATION_LINEAGE_BUDGET` pins 19.3 MB and 30 s: a workstation at load average 28–46 took 18.1–31.4 s (2026-11-05).
+`ALLOCATION_LINEAGE_BUDGET` pins 19.3 MB and 20 s: a CI run with a diff took 13.2 s (2026-11-06).
 The sibling allocation stages, measured 2026-11-05: 96 cloud rows in 1,455
 bytes and 123 Local Group rows in 1,720 bytes gzipped, identity files
 included, each in about 0.1 s; `SIBLING_LINEAGE_BUDGET`
@@ -311,7 +311,7 @@ refused tiers, letter and designation constellation (78 MB plain), 9.7 MB
 gzipped in 2.7 s without a diff; `NAMING_LINEAGE_BUDGET` pins 10.6 MB and 15 s.
 Placement, measured 2026-10-30: 3,872,657 rows (349 MB plain, 31.0 MB
 gzipped) in 3.2 s without a diff and 8.1 s with one against a full
-baseline; `PLACEMENT_LINEAGE_BUDGET` pins 34 MB and 60 s: a CI run that diffs against a restored merge-base baseline took 36.5 s (2026-11-05). A file that size outruns
+baseline; `PLACEMENT_LINEAGE_BUDGET` pins 34 MB and 40 s: a CI run with a diff took 26.5 s (2026-11-06). A file that size outruns
 V8's longest string, so stage files and diffs are written and read as UTF-8
 bytes in chunks, and the diff walks the baseline a key at a time
 (`streamLineage`) rather than holding it.
