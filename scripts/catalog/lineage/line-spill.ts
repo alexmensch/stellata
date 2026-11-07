@@ -7,7 +7,7 @@ import { join } from 'node:path';
 import { ENCODE_BATCH, LINEAGE_COLUMNS, lineageLines, utf8Batch, type LineageLine } from './lineage-row-pure';
 
 export class LineSpill {
-  private readonly dir = mkdtempSync(join(tmpdir(), 'stellata-lineage-'));
+  readonly dir = mkdtempSync(join(tmpdir(), 'stellata-lineage-'));
   private readonly path = join(this.dir, 'lines.tsv');
   private pending: LineageLine[] = [];
   private read = false;

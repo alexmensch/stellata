@@ -1,6 +1,4 @@
-import { existsSync, readdirSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { existsSync } from 'node:fs';
 
 import { afterEach, describe, expect, it } from 'vitest';
 
@@ -10,8 +8,6 @@ import { encodeLineageLine, paramsText, type LineageLine } from './lineage-row-p
 const line = (key: string, params: Record<string, string> = {}): LineageLine => encodeLineageLine({
   stage: 'demo', key, role: 'outcome', code: 'demo.kept', params: paramsText(params), evidence: ['gaia:1'],
 }) as LineageLine;
-
-const spillDirs = (): string[] => readdirSync(tmpdir()).filter((name) => name.startsWith('stellata-lineage-'));
 
 describe('LineSpill', () => {
   const spills: LineSpill[] = [];
@@ -49,12 +45,10 @@ describe('LineSpill', () => {
   });
 
   it('dispose deletes its file and may be called again', () => {
-    const before = new Set(spillDirs());
     const s = new LineSpill();
-    const created = spillDirs().filter((name) => !before.has(name));
-    expect(created).toHaveLength(1);
+    expect(existsSync(s.dir)).toBe(true);
     s.dispose();
     s.dispose();
-    expect(existsSync(join(tmpdir(), created[0]))).toBe(false);
+    expect(existsSync(s.dir)).toBe(false);
   });
 });
