@@ -111,12 +111,16 @@ export function sortLineageLines(lines: readonly LineageLine[]): LineageLine[] {
 
 export const ENCODE_BATCH = 100_000;
 
+export function utf8Batch(lines: readonly string[]): Buffer {
+  return Buffer.from(`${lines.join('\n')}\n`);
+}
+
 /** See README.md#storage-and-cost. */
 export function utf8Lines(header: string, lines: Iterable<string>, batch = ENCODE_BATCH): Uint8Array {
-  const parts: Buffer[] = [Buffer.from(`${header}\n`)];
+  const parts: Buffer[] = [utf8Batch([header])];
   let pending: string[] = [];
   const flush = (): void => {
-    if (pending.length > 0) parts.push(Buffer.from(`${pending.join('\n')}\n`));
+    if (pending.length > 0) parts.push(utf8Batch(pending));
     pending = [];
   };
   for (const line of lines) {
