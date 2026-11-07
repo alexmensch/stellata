@@ -393,9 +393,11 @@ gzipped in 7.1 s without a diff — larger than placement's, since nearly every
 record cites its Gaia row on both its V and its colour row and writes a dust
 row. `BRIGHTNESS_COLOUR_LINEAGE_BUDGET` pins 42.4 MB and 60 s, placement's
 time allowance, since a CI diff against a restored baseline runs several
-times slower than a local build. The walk holds these lines beside
-placement's: `build:catalog`'s peak live heap read 3,451 MiB against its
-3,482 MiB budget on that run ([CI heap budget](../../util/heap-budget/README.md)).
+times slower than a local build. Held in memory beside placement's, these
+lines took `build:catalog` to 3,543 MiB against its 3,482 MiB budget
+([CI heap budget](../../util/heap-budget/README.md)), so the walk spills them
+to a `LineSpill` ([Storage and cost](../lineage/README.md#storage-and-cost)):
+3,325 MiB on 2026-11-07, against 3,312 MiB with this stage's lines not kept.
 
 ## Citation
 

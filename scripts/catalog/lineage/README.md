@@ -64,6 +64,8 @@ scripts/catalog/lineage/
                                  absolute. Their names, the stage specs and
                                  their output declarations:
                                  /src/catalog-format/pipeline-outputs/.
+  line-spill.ts (+ test)         LineSpill: a stage's lines in a temporary
+                                 file while another's are held (#storage-and-cost).
   lineage-io.ts                  The baseline members and a stage's emission,
                                  gzip, and the header with its input map
                                  and file hashes, re-checked on read.
@@ -309,7 +311,10 @@ A stage that size cannot hold its rows as objects either: 3.9 million
 heap. So a stage hands `stageLineage` lines, never rows, and placement and
 brightness-colour serialise each record to their lines inside the walk,
 keeping only the strings; the diff reads the baseline as lines too, and
-only a reader that needs fields (trace, a ledger view) decodes them.
+only a reader that needs fields (trace, a ledger view) decodes them. Even as
+strings the two stages' 7.9 million lines overrun the heap budget together,
+so brightness-colour's go to a `LineSpill` during the walk and are read
+back once placement's lines are released.
 
 The committed form of lineage is `data/sid/events.tsv` plus the ledger views
 below; the derivation itself is a build artifact, regenerated every build.
