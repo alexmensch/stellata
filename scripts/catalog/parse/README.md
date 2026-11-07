@@ -85,8 +85,9 @@ Two deliberate departures:
   name in any order. A header that merely parses is a file nobody meant to
   ship.
 
-`parseSimbadSptypeTsv` (`../spectral/spectral-resolve.ts`) requires all seven
-columns it reads, `hip` / `tyc` / `gj` / `sp_qual` / `otype` included. Four of
+`parseSimbadSptypeTsv` (`../spectral/spectral-resolve.ts`) requires all eight
+columns it reads, `hip` / `tyc` / `gj` / `sp_qual` / `otype` included, and
+`simbad_oid`, the row key a spectral answer's lineage cites. Four of
 those ARE the SIMBAD ladder's designation tiers, so an optional one vanishing
 from a re-pull would zero a tier silently and surface only as a count drift in
 `../build-catalog-expected.json`; required, it fails at the read with the
