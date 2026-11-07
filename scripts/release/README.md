@@ -65,9 +65,9 @@ usable by hand (see [Manual release](/RELEASING.md#manual-release-fallback)).
 
 **No commit states its own version.** A PR declares a release *level* by
 label, and the version is derived when it lands: which version a PR ships
-depends on what lands before it, two PRs in flight that each hand-picked
-the next version would claim the same one, and the one landing second would
-need a version-only re-sync and a fresh CI run.
+depends on what lands before it. Two PRs in flight that each hand-picked
+the next version would claim the same one, so the one landing second would
+hit a version-file conflict in its sync with main and have to re-pick.
 
 **The plan starts at the last release pushed, never at the push's
 `before`.** Its base is the commit the newest release tag reachable from
