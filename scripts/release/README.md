@@ -64,10 +64,10 @@ usable by hand (see [Manual release](/RELEASING.md#manual-release-fallback)).
 ## Derived versions
 
 **No commit states its own version.** A PR declares a release *level* by
-label, and the version is derived when it lands: the merge queue lands the
-exact commit its checks ran on, so nothing can write a version into the
-tree once the queue has ordered the PRs, and two PRs that each hand-picked
-the next version would claim the same one.
+label, and the version is derived when it lands: which version a PR ships
+depends on what lands before it. Two PRs in flight that each hand-picked
+the next version would claim the same one, so the one landing second would
+hit a version-file conflict in its sync with main and have to re-pick.
 
 **The plan starts at the last release pushed, never at the push's
 `before`.** Its base is the commit the newest release tag reachable from
@@ -88,17 +88,19 @@ commit's PR level bumps the version before it; `skip-version-bump` ships
 nothing; a commit that already carries a release tag keeps it, so a rerun
 over a released range re-derives nothing. A commit whose PR declares no
 level, or two, stops the plan before any version past it is derived: the
-guards make that unreachable for a PR the queue landed, and a fix is a
-label edit and a rerun. **Only the merge queue lands on `main`**, and its
-squash subjects always end `(#N)`; a commit without one (a push that
-bypassed the ruleset) stops every later plan, and no label clears it.
+guards make that unreachable for a PR that landed through the ruleset, and
+a fix is a label edit and a rerun. **Only squash-merged PRs land on
+`main`** ([Landing](../../RELEASING.md#landing)), and their subjects always
+end `(#N)`; a commit without one (a push that bypassed the ruleset) stops
+every later plan, and no label clears it.
 Recover by tagging that commit by hand at the version it ships
 (`git tag v<version> <sha> && git push origin v<version>`, the release
 before it bumped by the level it deserves): it then reads as already
 released.
 
-**A push is not a commit.** The merge queue lands a group of PRs as one
-push of several commits. **Cloudflare is deployed once, at HEAD** (the code
+**A run's range is not one commit.** It holds every commit since the last
+release pushed — a cancelled or failed run leaves its commits to the next.
+**Cloudflare is deployed once, at HEAD** (the code
 that should be live), while **tags and releases are cut per releasing
 commit** in the range. The two halves of "release"
 answer different questions — what runs in production, versus what each

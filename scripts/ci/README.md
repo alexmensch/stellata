@@ -110,15 +110,6 @@ of what it restored, and its next push still finds the same entry.
 scratch and its committed outputs compared; that bounds a stamp that misses
 an input to one merge. Pull requests run unforced.
 
-**A merge group restores main's newest build, runs unforced and saves
-nothing.** Its commit is main plus the queued PRs ahead plus its own, so
-main's build is the nearest one, and only the steps those PRs touch rebuild.
-It saves nothing because no later run would restore it: the group's branch
-is deleted once the entry lands or drops, and the commit that lands is
-built again, forced, by main's push. That forced build sits off the
-landing's critical path: no required check waits on main's push run. Until
-it saves, the next merge group restores main's previous build.
-
 **What is cached** is what the step table owns on disk and git does not
 track: each build step's declared outputs, family members and stamp
 (`saved-build.ts`, over `../pipeline/build-files.ts`). A file no current step

@@ -6,7 +6,6 @@ on:
     # `edited` so the check re-runs when the body is updated;
     # `labeled` / `unlabeled` so it re-runs when a level label changes.
     types: [opened, synchronize, reopened, edited, labeled, unlabeled]
-  merge_group:
 
 permissions:
   contents: read
@@ -24,17 +23,15 @@ jobs:
             scripts/release
             scripts/util
             .github/actions
-      - id: pr
-        uses: ./.github/actions/pr-under-test
       - id: level
         uses: ./.github/actions/release-level
         with:
-          pr: ${{ steps.pr.outputs.number }}
+          pr: ${{ github.event.pull_request.number }}
       - name: Check `## Release notes` section is present and non-empty
         if: steps.level.outputs.level != 'none'
         env:
           GH_TOKEN: ${{ github.token }}
-          PR: ${{ steps.pr.outputs.number }}
+          PR: ${{ github.event.pull_request.number }}
           REPO: ${{ github.repository }}
         run: |
           set -euo pipefail
