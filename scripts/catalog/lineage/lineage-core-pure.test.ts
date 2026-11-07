@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { diffLineage, stageDiffText } from './lineage-diff-pure';
 import {
-  compareUtf8, decodeLineageLine, encodeLineageLine, foldStageLines, lineageLineKey, lineageLines, lineageRows, paramsOf,
+  compareUtf8, decodeLineageLine, encodeLineageLine, evidenceTexts, foldStageLines, lineageLineKey, lineageLines, lineageRows, paramsOf,
   paramsText, sortLineageLines, sortUtf8, stageLineageLine, stageLineageText, type LineageLine, type LineageRow,
 } from './lineage-row-pure';
 import { LIVE, stageCodes } from './reason-codes-pure';
@@ -17,6 +17,16 @@ function row(key: string, code = 'demo.kept', params: Record<string, string> = {
 }
 
 const line = (r: LineageRow): LineageLine => stageLineageLine(CODES, r);
+
+describe('evidenceTexts', () => {
+  it('cites each row once, in first-seen order, and never the origin row', () => {
+    expect(evidenceTexts('spine:1', ['gaia:2', 'spine:1', 'hip:3', 'gaia:2'])).toEqual(['gaia:2', 'hip:3']);
+  });
+
+  it('cites nothing when every row is the origin', () => {
+    expect(evidenceTexts('spine:1', ['spine:1'])).toEqual([]);
+  });
+});
 
 describe('foldStageLines', () => {
   const refused = (key: string): LineageRow => ({ ...row(key, 'demo.gate.refused'), role: 'refused' });

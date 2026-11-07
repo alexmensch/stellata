@@ -94,6 +94,11 @@ export function encodeLineageLine(row: LineageRow): string {
   return cells.join('\t');
 }
 
+/** A row's evidence: each cited row once, never the origin row the key already names. */
+export function evidenceTexts(key: string, refTexts: readonly string[]): string[] {
+  return [...new Set(refTexts)].filter((t) => t !== key);
+}
+
 /** The row's line, refused when the stage does not write it or does not declare its code. */
 export function stageLineageLine(codes: StageCodes<string>, row: LineageRow): LineageLine {
   if (row.stage !== codes.stage) {

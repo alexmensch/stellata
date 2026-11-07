@@ -4,7 +4,7 @@ import { MULTIPLES_ROW_KEY } from '../../binaries/multiples-row-key-pure';
 import { starDesignations } from '../../sid/sid-pure';
 import { rowKeyText } from '../../util/sources/row-ref-pure';
 import type { IdentityRow } from '../lineage/identity-pure';
-import { paramsText, type LineageParams, type LineageRow } from '../lineage/lineage-row-pure';
+import { evidenceTexts, paramsText, type LineageParams, type LineageRow } from '../lineage/lineage-row-pure';
 import { LIVE, codeEffects, stageCodes, type CodeDeclaration, type CodeStatus } from '../lineage/reason-codes-pure';
 import type { Star } from '../parse/stars-parse';
 import type { MintedBrightness, MultiplesTsvRow, PromotedRow, RowOutcome } from './companion-promotion';
@@ -79,8 +79,7 @@ export function promotionLineageRow(r: PromotedRow, recordKey: (idx: number) => 
   const key = promotionOriginKey(r.row);
   const o: RowOutcome = r.outcome;
   const cited = o.kind === 'dropped' && o.reason === 'parked-record' ? o.parked : null;
-  const evidence = [...new Set([r.anchor, r.systemAnchor, cited])]
-    .filter((k): k is string => k !== null && k !== key);
+  const evidence = evidenceTexts(key, [r.anchor, r.systemAnchor, cited].filter((k): k is string => k !== null));
   const via = r.via;
   const row = <B extends Branch>(branch: B, params: ParamsOf<B>): LineageRow => ({
     stage: PROMOTION_LINEAGE.stage, key, role: 'outcome', code: PROMOTION_CODES.code(branch),
