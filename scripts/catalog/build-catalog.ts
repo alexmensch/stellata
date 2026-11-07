@@ -181,7 +181,7 @@ const EXPECTED_OUTLIERS = resolve(
 
 /** A build:catalog stage whose lineage is one file named for the stage. */
 function catalogStageLineage<S extends string>(
-  spec: StageLineageSpec<S, S>, codes: StageCodes<string>, lines: () => readonly LineageLine[],
+  spec: StageLineageSpec<S, S>, codes: StageCodes<string, NoInfer<S>>, lines: () => readonly LineageLine[],
   budget: LineageBudget, invariants: readonly LineageInvariant[], stepInputs: FileHashes,
 ) {
   return stageLineage({
