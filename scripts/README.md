@@ -43,8 +43,8 @@ cross-script policy and pointers.
 - `release/` — `deploy.yml`'s release steps: checks each uploaded version
   on its preview URL before it takes traffic, and derives one version
   + tag + GitHub release per
-  releasing commit in a pushed range (a merge group is one push carrying
-  several). Not part of `pnpm run build`.
+  releasing commit since the last release pushed. Not part of
+  `pnpm run build`.
 - `sid/` — SID registry tools: the allocation `build:catalog` runs over its
   records (the writer of the catalogue's registry partition,
   `data/sid/ledger.tsv` and `events.tsv`; `build:local-group` and
