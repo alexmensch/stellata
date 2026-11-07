@@ -97,8 +97,8 @@ via a seven-tier priority chain:
 6. **`none`** — no upstream covers the row, and the walk renders it as
    `SPECTRAL_UNKNOWN`, the `unknown` kind.
 
-`resolveSpectralInfo` returns the shared cited cascade shape
-(`CitedCascadeResult`, `../cascade-result.ts`) over `SPECTRAL_VIA_VALUES` —
+`resolveSpectralInfo` returns the shared cascade shape
+(`CascadeResult`, `../cascade-result.ts`) over `SPECTRAL_VIA_VALUES` —
 `curated`, `simbad` (with the namespace that found it), `gspspec`, `none` — the
 tuple the walk tallies `spectralBy*` over. A typed SIMBAD or ESP-ELS row it
 reaches and does not take is a refusal on the result:

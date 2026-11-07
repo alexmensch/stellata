@@ -137,15 +137,14 @@ scripts/catalog/
                                   never reaches this declaration.
   cascade-result.ts               `CascadeResult`, the one shape every
                                   per-field cascade returns: the tier that
-                                  answered with its value, or `none`, and on
-                                  both the candidates it refused, each a
-                                  `CascadeRefusal` (tier + coded reason, the
-                                  tier checked against the cascade's own) —
-                                  what the stage lineage projects.
-                                  `CitedCascadeResult` adds the source rows
-                                  the answer rests on (`evidence`) and the
-                                  row each `CitedRefusal` refused (`ref`):
-                                  the four placement cascades return it.
+                                  answered with its value and the source
+                                  rows it rests on (`evidence`), or `none`,
+                                  and on both the candidates it refused,
+                                  each a `CascadeRefusal` (tier + coded
+                                  reason, the tier checked against the
+                                  cascade's own, + the row it read) — what
+                                  the stage lineage projects. `CitedValue`:
+                                  a value with the row it was read from.
   cited-proper-motion.ts (+ test) `CitedProperMotion` and `CitedParallax`,
   cited-parallax.ts               with their only constructors: a value is
                                   admitted only with the bibcode that sourced

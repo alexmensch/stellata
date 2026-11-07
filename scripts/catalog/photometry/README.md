@@ -104,8 +104,8 @@ Per-tier routing, pinned in build-counts: `gaia_riello` **<!-- count:build-catal
 `printed_hip` **<!-- count:build-catalog/vPrintedHip -->1,417<!-- /count -->** · `tycho2` **<!-- count:build-catalog/vTycho2 -->189<!-- /count -->** · `gliese` **<!-- count:build-catalog/vGliese -->20<!-- /count -->** · `curated`
 **<!-- count:build-catalog/vCurated -->1<!-- /count -->**, residual `none` **<!-- count:build-catalog/vNone -->0<!-- /count -->**.
 
-`resolveVMagnitude` returns the shared cited cascade shape
-(`CitedCascadeResult`, `../cascade-result.ts`): the value **and** the tier that
+`resolveVMagnitude` returns the shared cascade shape
+(`CascadeResult`, `../cascade-result.ts`): the value **and** the tier that
 produced it, so `vVia` routing counts are pinned in build-counts the same way
 the direction cascade pins `directionVia`, the source row it read (the Gaia
 row, or the HIP, Tycho-2 or Gliese row each `printedVLookups` answer cites),
@@ -162,7 +162,7 @@ ourselves ([§ 5](/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers)
 alone reached a measured colour and hands them to the derived tiers. That is
 the trade the residual policy asks for.
 
-`resolveColourIndex` returns the shared cited cascade shape
+`resolveColourIndex` returns the shared cascade shape
 (`../cascade-result.ts`): the tier, its value with the rows it rests on (the
 spectral-derived tier cites the rows its class came from), and every candidate
 it passed over with the gate that refused it and the row it read — the derived
@@ -378,7 +378,7 @@ exhaustive `switch`:
   the rule, never the tier. A printed V tier is its own outcome code;
   `spectral.simbad` carries its `namespace`;
 - every row cites, as evidence, the source rows its cascade read
-  (`CitedCascadeResult`, `../cascade-result.ts`), and no measured value;
+  (`CascadeResult`, `../cascade-result.ts`), and no measured value;
 - the dust row names the map in its code and which values it corrected
   (`absmag-and-ci`, or `absmag-only` where the B−V is intrinsic), with
   `params.av` the A_V subtracted, to `AV_PARAM_DECIMALS` places. Its

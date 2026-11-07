@@ -8,7 +8,7 @@ import {
   type GatedValue,
   type PhotometryRefusal,
 } from './gaia-photometry-pure';
-import type { CitedCascadeResult, CitedRefusal, UniformValues } from '../cascade-result';
+import type { CascadeResult, CascadeRefusal, UniformValues } from '../cascade-result';
 import { lookupGliese, type GlieseIndex } from '../gliese-parse-pure';
 import { printedByHip, type PrintedHipValue } from './hip-photometry-parse-pure';
 import type { Tycho2Row } from '../tycho2-parse';
@@ -54,10 +54,10 @@ export const V_VIA_VALUES = ['gaia_riello', ...PRINTED_V_TIERS, 'curated', 'none
 export type VVia = (typeof V_VIA_VALUES)[number];
 
 /** The Riello relation refusing the row's Gaia photometry. */
-export type VMagnitudeRefusal = CitedRefusal<'gaia_riello', PhotometryRefusal>;
+export type VMagnitudeRefusal = CascadeRefusal<'gaia_riello', PhotometryRefusal>;
 
 /** Johnson V. `none` is a row no tier lights — a /docs/catalog-driver.md#61-record-parity park. */
-export type VMagnitudeResolution = CitedCascadeResult<UniformValues<VVia, number>, VMagnitudeRefusal>;
+export type VMagnitudeResolution = CascadeResult<UniformValues<VVia, number>, VMagnitudeRefusal>;
 
 /** A Gaia photometry row with the source row it was read from. */
 export type CitedPhotometry = GaiaPhotometry & { readonly ref: AnySourceRowRef };

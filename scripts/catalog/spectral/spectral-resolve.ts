@@ -19,7 +19,7 @@ import {
   classifyFromSimbad,
   type SpectralInfo,
 } from '../../../src/catalog-format/spectral/spectral-classify';
-import type { CitedCascadeResult, CitedRefusal } from '../cascade-result';
+import type { CascadeResult, CascadeRefusal } from '../cascade-result';
 
 /** SIMBAD's object-type code for a confirmed double/multiple star — the
  *  otype value that marks a record `unresolved` when nothing resolves. */
@@ -127,8 +127,8 @@ export interface SpectralValue {
  *  star's Gaia id, or a type string the classifier cannot parse. A SIMBAD
  *  refusal names the namespace that reached the row. */
 export type SpectralRefusal =
-  | CitedRefusal<'simbad', 'gaia_id_contradicts' | 'unclassifiable'> & { readonly namespace: SimbadNamespace }
-  | CitedRefusal<'gspspec', 'unclassifiable'>;
+  | CascadeRefusal<'simbad', 'gaia_id_contradicts' | 'unclassifiable'> & { readonly namespace: SimbadNamespace }
+  | CascadeRefusal<'gspspec', 'unclassifiable'>;
 
 /** A curated type with the `SPTYPE_OVERRIDES` row it was read from. */
 export type CuratedSpectral = SpectralValue & { readonly ref: AnySourceRowRef };
@@ -156,7 +156,7 @@ export interface SpectralSources {
   sptypeOverrides: ReadonlyMap<number, CuratedSpectral>;
 }
 
-export type SpectralResolution = CitedCascadeResult<
+export type SpectralResolution = CascadeResult<
   {
     curated: SpectralValue;
     simbad: SpectralValue & { namespace: SimbadNamespace };

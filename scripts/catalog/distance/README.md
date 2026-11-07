@@ -323,7 +323,7 @@ ran, in walk order, up to the park that stopped it or the record it shipped.
   row adds the PM rescue where it ran, Bailer-Jones and the LMC snap where
   they fired, and its radial velocity;
 - each row cites, as evidence, the source rows its cascade read
-  (`CitedCascadeResult`, `../cascade-result.ts`), and no measured value;
+  (`CascadeResult`, `../cascade-result.ts`), and no measured value;
 - the four park codes declare effect `park`, so a SID the build stops
   producing stays in the ledger, absent.
 

@@ -8,7 +8,7 @@ import {
   type GatedValue,
   type PhotometryRefusal,
 } from './gaia-photometry-pure';
-import type { CitedCascadeResult, CitedRefusal, CitedValue, UniformValues } from '../cascade-result';
+import type { CascadeResult, CascadeRefusal, CitedValue, UniformValues } from '../cascade-result';
 import type { GspcColour } from './gspc-parse';
 import type { PrintedHipValue } from './hip-photometry-parse-pure';
 import { RIELLO_BP_RP_MIN, rielloGMinusV, type CitedPhotometry } from './v-magnitude-pure';
@@ -117,13 +117,13 @@ export function ciIsObserved(via: CiVia): boolean {
 /** A candidate colour a tier did not take. `apsis_teff_renders` is the derived
  *  tier standing down for a star whose colour the shader takes from its Apsis
  *  Teff instead; that refusal cites the Apsis row. */
-export type ColourIndexRefusal = CitedRefusal<
+export type ColourIndexRefusal = CascadeRefusal<
   Exclude<CiVia, 'none'>,
   PhotometryRefusal | 'non_finite' | 'apsis_teff_renders'
 >;
 
 /** B−V. `none` is a row no tier colours; the record takes `SOLAR_BV_FALLBACK`. */
-export type ColourIndexResolution = CitedCascadeResult<UniformValues<CiVia, number>, ColourIndexRefusal>;
+export type ColourIndexResolution = CascadeResult<UniformValues<CiVia, number>, ColourIndexRefusal>;
 
 /** One row's candidate colours, one per tier below the relation. Named rather
  *  than positional because three of them are nullable and a swap would

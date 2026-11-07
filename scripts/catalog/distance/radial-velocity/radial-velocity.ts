@@ -9,7 +9,7 @@ import {
   refusedPublicationCited,
 } from '../gaia-distrust';
 import type { SimbadRadialVelocity } from '../../simbad/simbad-values-parse';
-import type { CitedCascadeResult, CitedRefusal } from '../../cascade-result';
+import type { CascadeResult, CascadeRefusal } from '../../cascade-result';
 
 // Which source supplied the radial term of the space-motion velocity. Pinned
 // per-tier in build-counts alongside `velocityVia`, which covers the
@@ -67,11 +67,11 @@ export type RvTier = Exclude<RvVia, 'none'>;
 
 /** A Gaia rv on a row with no 5p solution, or a SIMBAD value the
  *  Gaia-bibcode skip rule rejected. */
-export type RadialVelocityRefusal = CitedRefusal<RvTier, 'no_5p_solution' | 'gaia_release'>;
+export type RadialVelocityRefusal = CascadeRefusal<RvTier, 'no_5p_solution' | 'gaia_release'>;
 
 /** The Gaia tier's citation is the release itself, so only SIMBAD's value
  *  carries a bibcode. `none` is a zero radial term. */
-export type RadialVelocityResolution = CitedCascadeResult<
+export type RadialVelocityResolution = CascadeResult<
   { gaia_dr3: { kmS: number }; simbad: SimbadRadialVelocity },
   RadialVelocityRefusal
 >;
