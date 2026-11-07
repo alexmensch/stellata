@@ -123,7 +123,7 @@ describe('brightnessColourLineageRows', () => {
     expect(decodeLineageLine(line).stage).toBe(BRIGHTNESS_COLOUR_CODES.stage);
   });
 
-  it('rounds A_V to its declared decimals', () => {
+  it('pins A_V at four decimal places', () => {
     expect(AV_PARAM_DECIMALS).toBe(4);
   });
 });
