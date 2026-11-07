@@ -94,8 +94,11 @@ export const BRIGHTNESS_COLOUR_CODES = stageCodes(BRIGHTNESS_COLOUR_LINEAGE.stag
 
 type Branch = Parameters<typeof BRIGHTNESS_COLOUR_CODES.code>[0];
 
+type SimbadRefusalParams = { tier: 'simbad'; namespace: string };
+
 type ParamsOf<B extends Branch> =
-  B extends 'spectral.refused.gaia-id-contradicts' | 'spectral.refused.unclassifiable' ? { tier: string; namespace?: string }
+  B extends 'spectral.refused.gaia-id-contradicts' ? SimbadRefusalParams
+  : B extends 'spectral.refused.unclassifiable' ? SimbadRefusalParams | { tier: 'gspspec' }
   : B extends `${string}.refused.${string}` ? { tier: string }
   : B extends 'spectral.simbad' ? { namespace: string }
   : B extends `dust.${string}` ? { av: string }
