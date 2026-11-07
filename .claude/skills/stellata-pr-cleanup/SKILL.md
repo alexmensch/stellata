@@ -26,9 +26,8 @@ Read each with `bd show <id>`.
 
 The gates are `pnpm run typecheck && pnpm test`.
 
-The ruleset requires a PR up to date with main before it merges
-([Merge gating](/RELEASING.md#merge-gating)), so a PR behind main always
-syncs. No version is ever in conflict: the PR carries a release level label
+Syncing is required by the ruleset
+([Merge gating](/RELEASING.md#merge-gating)). No version is ever in conflict: the PR carries a release level label
 and the version is derived when it lands
 ([Version policy](/RELEASING.md#version-policy)). A PR with no level label,
 or two, fails `version-guard`; that is `pr-cleanup`'s deviation, not a
