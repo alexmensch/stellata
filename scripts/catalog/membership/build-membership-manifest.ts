@@ -157,7 +157,7 @@ export async function main(): Promise<void> {
     spec: MEMBERSHIP_LINEAGE,
     inputs: stepInputHashes(),
     diffed: 'membership',
-    lines: result.lineage.map((row) => stageLineageLine(MEMBERSHIP_CODES, row)),
+    lines: () => result.lineage.map((row) => stageLineageLine(MEMBERSHIP_CODES, row)),
     render: (sorted) => ({
       membership: stageLineageText(MEMBERSHIP_CODES, sorted),
       identity: identityText(result.identity),

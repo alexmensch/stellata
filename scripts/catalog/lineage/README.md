@@ -275,7 +275,8 @@ it fails its emission. Membership, measured 2026-10-29 on the full tree:
 1,355,182 rows (128 MB plain, 15.1 MB gzipped) plus 976,040 identity rows
 (85 MB, 22.3 MB), 37.4 MB together. The timed window is everything lineage
 adds to the build — the baseline headers' file re-hash, the base's input
-re-hash each verdict asks for, the diff, rendering,
+re-hash each verdict asks for, producing the lines (`lines`, a function the
+window calls: a spill reads back there), the diff, rendering,
 gzip and invariants: about 5.8 s with a diff
 against a full baseline. The merge-base input re-hash measured 128 ms for
 membership on a branch where 9 of its 163 inputs differ (2026-11-04,

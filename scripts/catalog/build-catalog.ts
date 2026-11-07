@@ -181,7 +181,7 @@ const EXPECTED_OUTLIERS = resolve(
 
 /** A build:catalog stage whose lineage is one file named for the stage. */
 function catalogStageLineage<S extends string>(
-  spec: StageLineageSpec<S, S>, codes: StageCodes<string>, lines: readonly LineageLine[],
+  spec: StageLineageSpec<S, S>, codes: StageCodes<string>, lines: () => readonly LineageLine[],
   budget: LineageBudget, invariants: readonly LineageInvariant[], stepInputs: FileHashes,
 ) {
   return stageLineage({
@@ -219,12 +219,12 @@ function walkManifest(inputs: ReadStarsOptions, stepInputs: FileHashes) {
     const parkedLedger = parkedLedgerTsv(placementLines);
     const placementRemovals = placementLines.filter((line) => PLACEMENT_EFFECTS.get(lineageLineCode(line)) !== 'none');
     const placementEmission = catalogStageLineage(
-      PLACEMENT_LINEAGE, PLACEMENT_CODES, placementLines, PLACEMENT_LINEAGE_BUDGET, PLACEMENT_INVARIANTS, stepInputs,
+      PLACEMENT_LINEAGE, PLACEMENT_CODES, () => placementLines, PLACEMENT_LINEAGE_BUDGET, PLACEMENT_INVARIANTS, stepInputs,
     );
     // Released before brightness-colour's lines are read back, or both stages' lines are held at once.
     placementLines = [];
     const brightnessEmission = catalogStageLineage(
-      BRIGHTNESS_COLOUR_LINEAGE, BRIGHTNESS_COLOUR_CODES, brightnessSpill.lines(), BRIGHTNESS_COLOUR_LINEAGE_BUDGET, [],
+      BRIGHTNESS_COLOUR_LINEAGE, BRIGHTNESS_COLOUR_CODES, () => brightnessSpill.lines(), BRIGHTNESS_COLOUR_LINEAGE_BUDGET, [],
       stepInputs,
     );
     return { stars, stats, parkedLedger, placementEmission, brightnessEmission, manifestFounded, placementRemovals };
@@ -239,14 +239,15 @@ const PLACEMENT_EFFECTS = codeEffects([PLACEMENT_CODES]);
 // inlined into main, the lines outlive promotion and raise the build's peak heap.
 function coherenceLineage(verdicts: readonly SystemVerdict[], stars: readonly Star[], stepInputs: FileHashes) {
   return catalogStageLineage(
-    COHERENCE_LINEAGE, COHERENCE_CODES, coherenceLineageLines(verdicts, stars), COHERENCE_LINEAGE_BUDGET, [], stepInputs,
+    COHERENCE_LINEAGE, COHERENCE_CODES, () => coherenceLineageLines(verdicts, stars), COHERENCE_LINEAGE_BUDGET, [],
+    stepInputs,
   );
 }
 
 // A function of its own so its lines are unreachable once it returns, as coherence's are.
 function namingLineage(records: readonly NamedRecord[], stars: readonly Star[], stepInputs: FileHashes) {
   return catalogStageLineage(
-    NAMING_LINEAGE, NAMING_CODES, namingLineageLines(records, stars, CONSTELLATIONS), NAMING_LINEAGE_BUDGET,
+    NAMING_LINEAGE, NAMING_CODES, () => namingLineageLines(records, stars, CONSTELLATIONS), NAMING_LINEAGE_BUDGET,
     NAMING_INVARIANTS, stepInputs,
   );
 }
@@ -1278,7 +1279,7 @@ export async function main() {
     spec: PROMOTION_LINEAGE,
     inputs: inputHashesAtStart,
     diffed: 'promotion',
-    lines: promotionLines,
+    lines: () => promotionLines,
     render: (sorted) => ({
       promotion: stageLineageText(PROMOTION_CODES, sorted),
       'promotion.identity': identityText(promotionIdentity),
@@ -1294,7 +1295,7 @@ export async function main() {
     spec: ALLOCATION_LINEAGE,
     inputs: inputHashesAtStart,
     diffed: 'allocation',
-    lines: allocationLineageRows(sidObjects, allocation).map((row) => stageLineageLine(ALLOCATION_CODES, row)),
+    lines: () => allocationLineageRows(sidObjects, allocation).map((row) => stageLineageLine(ALLOCATION_CODES, row)),
     render: (sorted) => ({
       allocation: stageLineageText(ALLOCATION_CODES, sorted),
       [ALLOCATION_SIDS_STEM]: allocationSidsText(allocationSidRows(sidObjects, allocation.outcomes)),

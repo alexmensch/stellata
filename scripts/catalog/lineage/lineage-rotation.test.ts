@@ -135,7 +135,7 @@ describe('stage rotation', () => {
       stage: 'demo', key: 'spine:9', role: 'outcome', code: 'demo.kept', params: '', evidence: [],
     });
     const emission = stageLineage({
-      layout, spec: SPEC, inputs: {}, diffed: 'demo', lines: [line],
+      layout, spec: SPEC, inputs: {}, diffed: 'demo', lines: () => [line],
       render: (sorted) => ({ demo: stageLineageText(CODES, sorted), identity: stageLineageText(CODES, sorted) }),
       joins: () => [],
       budget: { gzipBytes: 1e9, writeMs: 1e9 },
