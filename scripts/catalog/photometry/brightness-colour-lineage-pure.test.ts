@@ -80,7 +80,7 @@ describe('brightnessColourLineageRows', () => {
       spectral: { via: 'gspspec', value: G2V, evidence: [APSIS_REF], refusals: [] },
       ci: {
         via: 'printed_hip_bv', value: 0.65, evidence: [HIP_REF],
-        refusals: [{ tier: 'gaia_relation', reason: 'uncalibrated', ref: sourceRowRef(GAIA_GSPC, '9') }],
+        refusals: [{ tier: 'gaia_relation', reason: 'uncalibrated', ref: PHOTOMETRY_REF }],
       },
       dust,
     });
