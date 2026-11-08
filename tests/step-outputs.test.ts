@@ -13,6 +13,8 @@ const DECLARED: [string, DeclaredOutputs][] = await Promise.all(outputsOwners(ST
   [step, (await import(resolve(REPO_ROOT, module)) as Record<string, DeclaredOutputs>)[name]]
 )));
 
+const DR2_NEIGHBOURHOOD_PULL = 'refresh:gaia-dr2-neighbourhood';
+
 describe('step output declarations', () => {
   it('declare at least one file or family, each absolute and inside the repo', () => {
     for (const [step, outputs] of DECLARED) {
@@ -35,9 +37,11 @@ describe('step output declarations', () => {
     expect(shared).toEqual([]);
   });
 
-  it('never cover the frozen DR2 dry-run pair, as a file or inside a family', () => {
-    const frozen = [DR2_NEIGHBOURHOOD_REQUEST, DR2_NEIGHBOURHOOD].map((src) => resolve(REPO_ROOT, src.file));
+  it('cover the frozen DR2 dry-run pair, as a file or inside a family, only where its own pull re-pulls the neighbourhood', () => {
+    const request = resolve(REPO_ROOT, DR2_NEIGHBOURHOOD_REQUEST.file);
+    const neighbourhood = resolve(REPO_ROOT, DR2_NEIGHBOURHOOD.file);
     for (const [step, outputs] of DECLARED) {
+      const frozen = step === DR2_NEIGHBOURHOOD_PULL ? [request] : [request, neighbourhood];
       for (const p of frozen) {
         expect(Object.values(outputs.files), step).not.toContain(p);
         for (const { dir } of outputs.families) {

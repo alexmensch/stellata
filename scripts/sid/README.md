@@ -143,7 +143,9 @@ export-dr-risk-set.ts     pnpm run sid:risk-set — source_ids of the
                           half of the dry-run pair
                           (dr2-neighbourhood-source.ts), and
                           tests/step-outputs.test.ts fails if any step's
-                          declared outputs cover either file.
+                          declared outputs cover either file, but for
+                          refresh:gaia-dr2-neighbourhood re-pulling the
+                          neighbourhood against the frozen request.
 dr-reconcile.ts           pnpm run sid:dr-reconcile — churn report for a
                           DR transition (/docs/sid.md#61-procedure classes),
                           plus the carried-1:1 same-as edges for human
