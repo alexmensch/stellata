@@ -13,6 +13,7 @@ import {
   type DistVia,
 } from '../../../src/catalog-format/record/catalog-pure';
 import { absoluteMagnitude } from '../../../src/astro-core/perceptual-magnitude';
+import type { CitedValue } from '../cascade-result';
 import {
   SIMBAD_NAMESPACE_VALUES,
   type SimbadNamespace,
@@ -678,8 +679,11 @@ export function readStars(
     if (velClamped) velocityClamped++;
     if (!velZeroed && rvKmS !== null && rvKmS !== 0) rvApplied++;
 
-    const apsisRow = gaiaSourceId ? apsisMap.get(gaiaSourceId) : undefined;
-    const apsis = gaiaSourceId && apsisRow ? { value: apsisRow, ref: sourceRowRef(GAIA_APSIS, gaiaSourceId) } : null;
+    let apsis: CitedValue<ApsisRow> | null = null;
+    if (gaiaSourceId) {
+      const row = apsisMap.get(gaiaSourceId);
+      if (row !== undefined) apsis = { value: row, ref: sourceRowRef(GAIA_APSIS, gaiaSourceId) };
+    }
     const spectral = resolveSpectralInfo(
       { ...simbadKeys, curated: curated?.spectral ?? null, apsis }, spectralSources,
     );

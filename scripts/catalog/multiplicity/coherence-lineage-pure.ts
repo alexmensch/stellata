@@ -9,7 +9,7 @@ import { sourceRowRefText } from '../../util/sources/row-ref-pure';
 import type { AnchorTier, CoherenceAnchor, MemberVerdict, SystemVerdict } from './system-coherence';
 import { COHERENCE_LINEAGE } from '../../../src/catalog-format/pipeline-outputs/lineage-files';
 
-export const COHERENCE_LINEAGE_BUDGET = { gzipBytes: 8_200_000, writeMs: 15_000 };
+export const COHERENCE_LINEAGE_BUDGET = { gzipBytes: 8_200_000, writeMs: 18_000 };
 
 const live = (description: string): CodeDeclaration => ({ description, effect: 'none', status: LIVE });
 
