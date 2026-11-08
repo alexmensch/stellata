@@ -355,4 +355,5 @@ effect is `none`.
 Measured 2026-11-05: one row per record that exists before promotion mints
 companions, all but about 4,600 of them `not-applicable` (66 MB plain),
 7.5 MB gzipped in 0.7 s without a diff; `COHERENCE_LINEAGE_BUDGET` pins
-8.2 MB and 15 s.
+8.2 MB and 18 s: a CI run with a diff, building the lines inside the window,
+took 11.8 s (2026-11-08).

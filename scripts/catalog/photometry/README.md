@@ -393,9 +393,10 @@ gzipped in 4.1 s without a diff, 1.1 s of it reading the spill back — larger
 than placement's, since nearly every record cites its Gaia row on both its V
 and its colour row and writes a dust row. The walk's spill writes (~0.2 s)
 fall outside that window. `BRIGHTNESS_COLOUR_LINEAGE_BUDGET` pins 42.4 MB and
-60 s: a diff took placement's local write from 3.2 s to 8.1 s, and CI ran that
-diffed write ~3.3× slower again (26.5 s, [Placement lineage](../distance/README.md#placement-lineage));
-the same two factors put this stage near 34 s in CI. Held in memory beside placement's, these
+60 s: a CI run took 25.3 s with no diff, main holding no baseline for the
+stage yet (2026-11-08). Its first diffed run adds a diff phase CI has not
+measured; placement's, over a file of similar size, takes 12.5 s in CI
+([Placement lineage](../distance/README.md#placement-lineage)), which puts it near 38 s. Held in memory beside placement's, these
 lines took `build:catalog` to 3,543 MiB against its 3,482 MiB budget
 ([CI heap budget](../../util/heap-budget/README.md)), so the walk spills them
 to a `LineSpill` ([Storage and cost](../lineage/README.md#storage-and-cost)):
