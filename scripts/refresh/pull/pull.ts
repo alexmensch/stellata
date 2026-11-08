@@ -58,8 +58,8 @@ export interface Pull<K extends string> {
 
 /** A query's limit over the rows it should return, so the band, not the overflow, reports a moved table. */
 export const LIMIT_HEADROOM = 2;
-/** The most cells one whole-table reply may hold within the CI heap budget: README.md#how-big-a-whole-table-query-may-be. */
-export const MAX_WHOLE_TABLE_CELLS = 37_000_000;
+/** The most cells one whole or sliced table may hold within the CI heap budget: README.md#how-big-a-table-may-be. */
+export const MAX_TABLE_CELLS = 37_000_000;
 const REQUEST = '{request}';
 const SLICE = '{slice}';
 const SYNC_TIMEOUT_MS = 300_000;
@@ -138,20 +138,21 @@ function tableChecks(label: string, table: PullTable, rows: readonly Row[]): Che
   ];
 }
 
-/** Refuses, before any query, a whole-table table whose reply at its limit could exceed `MAX_WHOLE_TABLE_CELLS`. */
-export function assertWholeTablesFit<K extends string>(pull: Pull<K>): void {
+/** Refuses, before any query, a whole or sliced table whose rows at every query's limit could exceed `MAX_TABLE_CELLS`. */
+export function assertTablesFit<K extends string>(pull: Pull<K>): void {
   for (const key of keysOf(pull)) {
     const table = pull.tables[key];
-    const cells = queryLimit(table) * table.columns.length;
-    if (table.scope.kind === 'whole-table' && cells > MAX_WHOLE_TABLE_CELLS) {
-      throw new Error(`${key}: a whole-table reply of up to ${cells} cells exceeds ${MAX_WHOLE_TABLE_CELLS}; batch the query`);
+    if (table.scope.kind === 'request') continue;
+    const cells = batchQueries(table, pull.archive.quote).length * queryLimit(table) * table.columns.length;
+    if (cells > MAX_TABLE_CELLS) {
+      throw new Error(`${key}: ${table.scope.kind} rows of up to ${cells} cells exceed ${MAX_TABLE_CELLS}; slice the table finer or narrow its columns`);
     }
   }
 }
 
 /** The resume cache sits beside the first output and goes only once every output has landed. */
 export async function runPull<K extends string>(pull: Pull<K>, deps: TapClientDeps = LIVE): Promise<void> {
-  assertWholeTablesFit(pull);
+  assertTablesFit(pull);
   const keys = keysOf(pull);
   const cache = checkpoint(`${pull.outputs.files[keys[0]]}.ckpt`);
   const client = tapClient(pull.archive, deps);

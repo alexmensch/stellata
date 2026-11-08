@@ -7,9 +7,10 @@ import { DATA_FILES } from '../../../src/catalog-format/pipeline-outputs/data-fi
 import { REPO_ROOT } from '../../util/paths';
 import { cellReader, checkedRows, formatTsv, sortRows } from '../pull/columns-pure';
 import { spotRowCheck } from '../pull/gates-pure';
-import { batchQueries, queryLimit, type PullTable } from '../pull/pull';
+import { assertTablesFit, batchQueries, queryLimit, type PullTable } from '../pull/pull';
 import { cutEdges, sliceCounts } from '../pull/slices-pure';
 import { GAIA, readCsv } from '../pull/tap-pure';
+import { HIP_XMATCH_PULL, TYC_XMATCH_PULL } from './gaia-whole-table';
 import { GAIA_SLICE_ROWS, HIP_XMATCH, TYC_XMATCH } from './gaia-whole-table-pure';
 
 const replyHeader = (table: PullTable): string => table.columns.map((c) => c.name).join(',');
@@ -71,6 +72,10 @@ describe.each(PULLS)('$name', ({ name, table, file, key, reply }) => {
 describe('the sliced queries', () => {
   it('ask at most 48,000 rows each, so ESA\'s 50,000-row hard limit holds every slice', () => {
     expect(PULLS.map(({ table }) => queryLimit(table))).toEqual([48_000, 48_000]);
+  });
+
+  it('hold every row within the table cell cap', () => {
+    for (const pull of [HIP_XMATCH_PULL, TYC_XMATCH_PULL]) expect(() => assertTablesFit(pull)).not.toThrow();
   });
 
   it('cut HIP into 5 slices and TYC into 105', () => {

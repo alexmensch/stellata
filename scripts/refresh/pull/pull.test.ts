@@ -7,7 +7,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { pullQueryHash } from '../../pipeline/freshness';
 import { EmissionRefused, declareOutputs } from '../../util/emit-artifacts';
 import {
-  LIMIT_HEADROOM, MAX_WHOLE_TABLE_CELLS, assertWholeTablesFit, batchQueries, describePull, queryLimit, runPull,
+  LIMIT_HEADROOM, MAX_TABLE_CELLS, assertTablesFit, batchQueries, describePull, queryLimit, runPull,
   type Pull, type PullTable,
 } from './pull';
 import { GAIA, SIMBAD, TapOverflow, VIZIER, type TapArchive, type TapClientDeps } from './tap-pure';
@@ -125,13 +125,20 @@ describe('runPull', () => {
     expect([read('stars.tsv'), read('pairs.tsv')]).toEqual(['old stars\n', 'old pairs\n']);
   });
 
-  it('refuses, before asking anything, a whole-table query too large for one reply', async () => {
-    const fits = Math.floor(MAX_WHOLE_TABLE_CELLS / (LIMIT_HEADROOM * STARS.columns.length));
+  it('refuses, before asking anything, a whole-table query too large to hold', async () => {
+    const fits = Math.floor(MAX_TABLE_CELLS / (LIMIT_HEADROOM * STARS.columns.length));
     const { deps: d, asked } = deps(GOOD);
     const huge = { ...STARS, band: { min: 0, max: fits + 1 } };
-    await expect(runPull(pullOf({ stars: huge, pairs: PAIRS }), d)).rejects.toThrow(/exceeds 37000000; batch the query/);
+    await expect(runPull(pullOf({ stars: huge, pairs: PAIRS }), d)).rejects.toThrow(/whole-table rows of up to \d+ cells exceed 37000000/);
     expect(asked).toEqual([]);
-    expect(() => assertWholeTablesFit(pullOf({ stars: { ...STARS, band: { min: 0, max: fits } }, pairs: PAIRS }))).not.toThrow();
+    expect(() => assertTablesFit(pullOf({ stars: { ...STARS, band: { min: 0, max: fits } }, pairs: PAIRS }))).not.toThrow();
+  });
+
+  it('refuses a sliced table whose slices together could hold too many cells', () => {
+    const sliced = (sliceRows: number): PullTable => ({ ...STARS, scope: { kind: 'sliced', key: 'source_id', edges: [2n], sliceRows } });
+    const fits = Math.floor(MAX_TABLE_CELLS / (2 * LIMIT_HEADROOM * STARS.columns.length));
+    expect(() => assertTablesFit(pullOf({ stars: sliced(fits + 1), pairs: PAIRS }))).toThrow(/sliced rows of up to \d+ cells exceed 37000000/);
+    expect(() => assertTablesFit(pullOf({ stars: sliced(fits), pairs: PAIRS }))).not.toThrow();
   });
 
   it('refuses a reply whose columns are not the declared ones', async () => {

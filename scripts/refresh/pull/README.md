@@ -45,12 +45,13 @@ the same bytes. `orderBy` is only for a query that needs a server order, such
 as one under `TOP`. Scopes:
 
 - `whole-table` — one query, limit `band.max × LIMIT_HEADROOM`, within
-  [How big a whole-table query may be](#how-big-a-whole-table-query-may-be).
+  [How big a table may be](#how-big-a-table-may-be).
 - `request` — the ids (ADQL literals, answering in `idColumn`) ANDed onto `where` as
   `<key> IN (…)`, `batchSize` per query, limit
   `batchSize × rowsPerId × LIMIT_HEADROOM`; optional coverage over the ids.
 - `sliced` — a whole table too big for one mirror's reply, one query per
-  key range ([Sliced scope](#sliced-scope)), limit `sliceRows × LIMIT_HEADROOM`.
+  key range ([Sliced scope](#sliced-scope)), limit `sliceRows × LIMIT_HEADROOM`,
+  within the same bound.
 
 `LIMIT_HEADROOM` (2) leaves room for a moved table to reach the band gate,
 which reports its count, rather than the overflow, which cannot.
@@ -66,12 +67,14 @@ changed id list does not, except through the pull's inputs.
 `emitArtifacts` emission of all its outputs: a failed gate, query or schema
 check anywhere leaves every prior output byte-identical.
 
-### How big a whole-table query may be
+### How big a table may be
 
-A whole-table table is one reply, held whole: its text, its parsed cells and
-the TSV written from them are all live at once. `runPull` refuses, before any
-query, a whole-table table whose limit (`band.max × LIMIT_HEADROOM`) times its
-column count exceeds `MAX_WHOLE_TABLE_CELLS` (37,000,000): batch it instead.
+`runPull` holds every row of a table at once — its parsed cells, their sorted
+copy and the TSV written from them — and for a whole-table table the reply
+text too. It refuses, before any query, a whole-table or sliced table whose
+queries at their limits (query count × limit × column count) could hold more
+than `MAX_TABLE_CELLS` (37,000,000). A request-scoped table is not bounded
+this way.
 Measured 2026-11-05 under Node 26, the committed `gaia_dr3_tyc_xmatch.tsv` (5
 columns) replayed through `runPull` and a fake transport, peak live heap by
 `watchHeap` ([CI heap budget](../../util/README.md#ci-heap-budget)):
@@ -83,9 +86,10 @@ columns) replayed through `runPull` and a fake transport, peak live heap by
 
 That is about 69 bytes per cell over about 1,029 MiB fixed (the harness's own
 copies of the reply among it), so the CI budget of 3,482 MiB holds about 37 M
-cells. tyc-xmatch, the largest whole-table pull, reaches 25.3 M at its limit.
-A table with wider text cells costs more per cell, so a pull near the cap is
-re-measured, not assumed.
+cells; a sliced table holds one slice's reply text at a time, so the same cap
+is conservative for it. tyc-xmatch, sliced, reaches 25.2 M (105 slices ×
+48,000 × 5 columns). A table with wider text cells costs more per cell, so a
+pull near the cap is re-measured, not assumed.
 
 ### Sliced scope
 
