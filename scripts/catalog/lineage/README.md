@@ -261,7 +261,8 @@ refusals are rows of their own. `MEMBERSHIP_LINEAGE_BUDGET` pins 41 MB and
 11.2 s (2026-11-06), against 6.8 s with no diff. Promotion, measured 2026-11-01: <!-- count:build-binaries/multiples_rows_emitted -->47,021<!-- /count --> rows, one
 per `multiples.tsv` row, plus 31,908 identity rows (<!-- count:build-catalog/companionPromoted -->14,676<!-- /count --> minted companions,
 17,232 rows it retires, parks or merges), 0.95 MB gzipped in 0.2 s;
-`PROMOTION_LINEAGE_BUDGET` pins 1.04 MB and 5 s. Every other stage's
+`PROMOTION_LINEAGE_BUDGET` pins 1.04 MB and 10 s: a CI run with a diff took
+6.9 s (2026-11-07), almost all of it the baseline phase. Every other stage's
 measured budget sits beside its contract: [allocation's](/scripts/sid/README.md#sid-events),
 [placement's](../distance/README.md#placement-lineage),
 [brightness-colour's](../photometry/README.md#brightness-colour-lineage),
