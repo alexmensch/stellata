@@ -75,6 +75,11 @@ export function compoundContains(a: string, b: string): boolean {
   return within(lb, la) || within(la, lb);
 }
 
+/** The map key for one component of one WDS system, `(wds_id, token)`. */
+export function componentKey(wdsId: string, token: string): string {
+  return `${wdsId}\t${token}`;
+}
+
 /** A WDS `components` field as its (primary, secondary) tokens: `AB` → A, B;
  *  `Aa,Ab` → Aa, Ab; `BC,D` → BC, D. Null for a blank field — WDS's implied
  *  single A,B, which the blank-components rescue promotes upstream — and for

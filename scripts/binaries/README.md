@@ -43,6 +43,17 @@ into per-stage subfolders.
 scripts/binaries/
   build-binaries.py               Orchestration shell for Stages 1-7 →
                                   data/binaries/multiples.tsv.
+  build-binaries.ts (+ test)      The TypeScript shell, wiring only:
+                                  runStages calls each ported stage in
+                                  order. Called only from its test until
+                                  the switch; the test runs it over the
+                                  committed inputs and holds each ported
+                                  stage's keys to the committed count
+                                  snapshot.
+  load/                           Stage 1 in TypeScript: every reference
+                                  catalogue read through its declaration,
+                                  then the Stage 1 passes, as a frozen
+                                  ReferenceCatalogs. Own README.
   parsers.py                      Row dataclasses + parse functions for every
                                   reference catalogue (Stage 1).
   indices.py                      IdentifierIndices builder (HIP/Tyc → Gaia,
