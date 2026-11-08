@@ -175,18 +175,14 @@ A table's `Column` list is the one statement of its schema. Each column's
 is its projection when that is not the quoted name (a qualified `t.source_id`,
 which still answers as `source_id`, or an aliased expression); `format`
 is the one place a pull rounds, and it is data: `{fixed: n}`, Python's
-`f"{x:.nf}"` text (`formatFixed`), or `{repr: true}`, Python's `repr(x)`
-(`formatRepr`, both `../../util/round-pure.ts`) — the two ways a Python pull
-wrote a float. A column the archive stores as a REAL adds `float32: true`:
-its value is the float32 nearest the reply's text, and Python formatted that
-value, so `{fixed: 6}` on the text alone disagrees with it on about 1 cell in
-230 (measured on a 24,000-row slice of `tycho2tdsc_merge_best_neighbour`),
-and a float32 `repr` is numpy's (shortest float32 digits, positional only
-from 1e-4 up to 1e6). An unformatted cell is written as the archive's text,
-which for a float is Java's (`9.045827E-5` where Python wrote
-`9.045827e-05`). Being
-data, it is part of what `describePull`
-states, so a changed rounding stales the pull. So the projection, the schema check and the header order cannot
+`f"{x:.nf}"` text (`formatFixed`, `../../util/round-pure.ts`). A column the
+archive stores as a REAL adds `float32: true`: its value is the float32
+nearest the reply's text, and Python formatted that value, so `{fixed: 6}` on
+the text alone disagrees with it on about 1 cell in 230 (measured on a
+24,000-row slice of `tycho2tdsc_merge_best_neighbour`). An unformatted cell
+is written as the archive's text, which for a float is Java's (`9.045827E-5`
+where Python wrote `9.045827e-05`). Being data, it is part of what
+`describePull` states, so a changed rounding stales the pull. So the projection, the schema check and the header order cannot
 disagree: a reply whose header is not exactly the declared names, in order,
 is refused (`checkedRows`).
 

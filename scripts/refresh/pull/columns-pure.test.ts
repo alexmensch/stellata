@@ -67,17 +67,10 @@ describe('formatTsv', () => {
       .toBe('source_id\tRA(ICRS)\tplx\n1\t10.5\t3.14\n2\t11\t\n');
   });
 
-  it('writes a repr column as Python repr() of the archive\'s number', () => {
-    const columns: Column[] = [{ name: 'source_id' }, { name: 'period_error', format: { repr: true } }];
-    expect(formatTsv('f.tsv', columns, [['1', '9.045827E-5'], ['2', null]])).toBe('source_id\tperiod_error\n1\t9.045827e-05\n2\t\n');
-  });
-
   it('formats a float32 column\'s float32 value, as Python did, not the reply\'s text', () => {
     const fixed: Column[] = [{ name: 'd', format: { fixed: 6, float32: true } }];
     expect(formatTsv('f.tsv', fixed, [['0.1570405'], ['1.0490755']])).toBe('d\n0.157041\n1.049075\n');
     expect(formatTsv('f.tsv', [{ name: 'd', format: { fixed: 6 } }], [['0.1570405'], ['1.0490755']])).toBe('d\n0.157040\n1.049076\n');
-    const repr: Column[] = [{ name: 'e', format: { repr: true, float32: true } }];
-    expect(formatTsv('f.tsv', repr, [['1.0E-4'], ['1234567.0']])).toBe('e\n1e-04\n1.234567e+06\n');
   });
 
   it('rounds as Python does, and refuses a formatted cell that is not a number', () => {
