@@ -480,11 +480,10 @@ export function enforceBindingVerdicts(
   return smearIfSeeded(inheritDownwardParentBindings(propagateIdentities(out), enforced));
 }
 
-export const BINDING_INTEGRITY_COUNT_KEYS = [
-  'binding_conflicts_source_letters', 'binding_conflicts_letter_sources',
-  'arbitrated_geometric', 'arbitrated_identity_refuted', 'arbitrated_unbound_ambiguous',
-  'arbitration_skipped_no_reference', 'arbitration_skipped_photocentre_blend',
-] as const;
+const SHAPE_COUNT_KEY = {
+  source_letters: 'binding_conflicts_source_letters',
+  letter_sources: 'binding_conflicts_letter_sources',
+} as const satisfies Record<BindingShape, string>;
 
 const VERDICT_COUNT_KEY = {
   geometric: 'arbitrated_geometric',
@@ -492,18 +491,28 @@ const VERDICT_COUNT_KEY = {
   unbound_ambiguous: 'arbitrated_unbound_ambiguous',
   skipped_no_reference: 'arbitration_skipped_no_reference',
   skipped_photocentre_blend: 'arbitration_skipped_photocentre_blend',
-} as const satisfies Record<BindingVerdictKind, (typeof BINDING_INTEGRITY_COUNT_KEYS)[number]>;
+} as const satisfies Record<BindingVerdictKind, string>;
 
-export function bindingIntegrityCounts(
-  verdicts: readonly BindingVerdict[],
-): Record<(typeof BINDING_INTEGRITY_COUNT_KEYS)[number], number> {
-  const shapes = fold(BINDING_SHAPES, verdicts, (v) => v.shape);
-  const kinds = fold(BINDING_VERDICTS, verdicts, (v) => v.verdict);
+export type BindingIntegrityCountKey =
+  (typeof SHAPE_COUNT_KEY)[BindingShape] | (typeof VERDICT_COUNT_KEY)[BindingVerdictKind];
+
+/** The snapshot's order: the two shape totals, then the outcomes. */
+export const BINDING_INTEGRITY_COUNT_KEYS: readonly BindingIntegrityCountKey[] = [
+  ...BINDING_SHAPES.map((s) => SHAPE_COUNT_KEY[s]),
+  ...BINDING_VERDICTS.map((k) => VERDICT_COUNT_KEY[k]),
+];
+
+function rekey<K extends string, V extends string>(table: Readonly<Record<K, V>>, tally: Record<K, number>): Record<V, number> {
+  const out = {} as Record<V, number>;
+  for (const k of Object.keys(tally) as K[]) out[table[k]] = tally[k];
+  return out;
+}
+
+export function bindingIntegrityCounts(verdicts: readonly BindingVerdict[]): Record<BindingIntegrityCountKey, number> {
   return {
-    binding_conflicts_source_letters: shapes.source_letters,
-    binding_conflicts_letter_sources: shapes.letter_sources,
-    ...Object.fromEntries(BINDING_VERDICTS.map((k) => [VERDICT_COUNT_KEY[k], kinds[k]])),
-  } as Record<(typeof BINDING_INTEGRITY_COUNT_KEYS)[number], number>;
+    ...rekey(SHAPE_COUNT_KEY, fold(BINDING_SHAPES, verdicts, (v) => v.shape)),
+    ...rekey(VERDICT_COUNT_KEY, fold(BINDING_VERDICTS, verdicts, (v) => v.verdict)),
+  };
 }
 
 /** Every source the audit weighed, kept or unbound. */
