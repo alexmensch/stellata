@@ -54,6 +54,7 @@ export interface BindingTables {
   tycToSource: ReadonlyMap<string, string>;
   hipToSource: ReadonlyMap<number, string>;
   simbadBySourceId: ReadonlyMap<string, SimbadXids>;
+  simbadSourceless: readonly SimbadXids[];
 }
 
 export interface PrimaryTables extends BindingTables {

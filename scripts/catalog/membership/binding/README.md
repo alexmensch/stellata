@@ -50,7 +50,9 @@ committed sources, in precedence order:
 4. **SIMBAD** — the Gaia source SIMBAD's frozen cross-IDs
    (`data/simbad/simbad_sptype.tsv`) hold under the record's HIP, then TYC,
    then GJ (exact, with its bridged spellings, before bare). A key two SIMBAD
-   objects claim proposes nothing. The bare GJ key is what lets a lettered
+   objects claim proposes nothing, counting an object SIMBAD holds with no
+   Gaia id: it proposes no source but still contests the key, so 44 Boo's
+   system object (`GJ 575`) keeps the bare number from reaching `575 B`. The bare GJ key is what lets a lettered
    cell reach an unresolved pair's one object — the pull keeps a single GJ
    ident per object, so EZ Aqr sits under `866 C` whatever letter the record
    names — and the two-claimants guard is what stops a resolved pair's

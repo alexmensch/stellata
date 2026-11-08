@@ -374,7 +374,7 @@ type RowDeriver =(row: BindingCells) => { derived: DerivedBinding; gate: RowGate
 
 /** The one derivation every primaries row — spine or addition — binds through. */
 function rowDeriver(tables: PrimaryTables, idx: PrimaryIndex, evidence: BindingEvidence): RowDeriver {
-  const simbad = indexSimbadSources(tables.simbadBySourceId);
+  const simbad = indexSimbadSources(tables.simbadBySourceId, tables.simbadSourceless);
   return (row) => {
     const gate = rowGateEvidence(row, evidence, simbad);
     return { derived: deriveBinding(bindingCandidates(row, tables, idx.cns5ByOwnKey, simbad), gate), gate };

@@ -14,8 +14,10 @@ scripts/catalog/spectral/
                                   (../../util/sources/). One parse yields the
                                   spectral index and each source_id's
                                   hip / tyc / gj cross-IDs, which the binding
-                                  derivation and the spine audits read; a
-                                  repeated source_id fails it.
+                                  derivation and the spine audits read, plus
+                                  the cross-IDs of the objects carrying no
+                                  source_id, which contest the derivation's
+                                  keys; a repeated source_id fails it.
   sptype-overrides-source.ts      SPTYPE_OVERRIDES, the curated tier's MK
                                   types by HIP, declared; each classified
                                   at the read.
@@ -87,7 +89,7 @@ via a seven-tier priority chain:
    each tier wins**, pinned as `spectralSimbadBySourceId` / `ByHip` /
    `ByTyc` / `ByGj` in `../build-catalog-expected.json` and summing to
    `spectralBySimbad` — so a tier that stops firing shows up as its own
-   count rather than as noise inside a <!-- count:build-catalog/spectralBySimbad k2 -->340k<!-- /count --> total. Read the per-tier figures
+   count rather than as noise inside a <!-- count:build-catalog/spectralBySimbad k2 -->460k<!-- /count --> total. Read the per-tier figures
    there rather than restating them here, which is how the ones this section
    used to carry went stale.
 5. **Gaia DR3 ESP-ELS `spectraltype_esphs`** ([Creevey 2023](/data/papers/index.md#creevey2023); a column on
@@ -110,7 +112,7 @@ none.
 
 AT-HYG's contaminated `spect` cell is no longer consulted for
 classification (build-counts over the walked records: SIMBAD
-**<!-- count:build-catalog/spectralBySimbad -->341,203<!-- /count -->** / ESP-ELS **<!-- count:build-catalog/spectralByGspspec -->617,169<!-- /count -->** / `none` **<!-- count:build-catalog/spectralFallback -->6,628<!-- /count -->**); it is still used as a
+**<!-- count:build-catalog/spectralBySimbad -->464,424<!-- /count -->** / ESP-ELS **<!-- count:build-catalog/spectralByGspspec -->494,467<!-- /count -->** / `none` **<!-- count:build-catalog/spectralFallback -->6,065<!-- /count -->**); it is still used as a
 last-resort hover-display fallback when both upstream sources are blank.
 
 The class it resolves feeds the radius chain:

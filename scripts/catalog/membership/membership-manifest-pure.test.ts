@@ -170,6 +170,7 @@ const tables: PrimaryTables = {
     ['2-8-1', '1010'], ['3-1-1', '1212'], ['3-2-1', '1212'], ['3-3-1', '1313'],
   ]),
   hipToSource: new Map([[10, '111'], [20, '333'], [30, '444'], [40, '999'], [50, '1414']]),
+  simbadSourceless: [],
   simbadBySourceId: new Map([
     ['222', { hip: null, tyc: '1-2-1', gj: null }],
     ['888', { hip: null, tyc: '9-9-9', gj: null }],

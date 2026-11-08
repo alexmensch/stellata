@@ -70,11 +70,13 @@ const SPTYPE_TABLE_COLUMNS = ['simbad_oid', 'source_id', 'sp_type', 'hip', 'tyc'
 export interface SimbadSptype {
   spectral: SimbadSpectralIndex;
   xids: Map<string, SimbadXids>;
+  sourcelessXids: SimbadXids[];
 }
 
 export function parseSimbadSptypeTsv(text: string, from: Declared & RowKeyed<number>): SimbadSptype {
   const index = emptySimbadSpectralIndex();
   const xids = new Map<string, SimbadXids>();
+  const sourcelessXids: SimbadXids[] = [];
   for (const row of readTable({ ...from, columns: SPTYPE_TABLE_COLUMNS }, text)) {
     const spType = row.text('sp_type');
     const spQual = row.text('sp_qual');
@@ -105,11 +107,11 @@ export function parseSimbadSptypeTsv(text: string, from: Declared & RowKeyed<num
         );
       },
     );
-    if (keys.sourceId !== null) {
-      xids.set(keys.sourceId, { hip: keys.hip, tyc: row.raw('tyc') || null, gj: row.raw('gj') || null });
-    }
+    const rowXids: SimbadXids = { hip: keys.hip, tyc: row.raw('tyc') || null, gj: row.raw('gj') || null };
+    if (keys.sourceId !== null) xids.set(keys.sourceId, rowXids);
+    else sourcelessXids.push(rowXids);
   }
-  return { spectral: index, xids };
+  return { spectral: index, xids, sourcelessXids };
 }
 
 /** The resolver's tiers in priority order — the one statement of them, and the
