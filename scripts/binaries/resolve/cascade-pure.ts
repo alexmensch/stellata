@@ -7,7 +7,7 @@ import {
 import type { AthygRow } from '../load/athyg-pure';
 import type { IdentifierIndices } from '../load/indices-pure';
 import type { SimbadWdsXid } from '../load/simbad-pure';
-import type { Orb6Entry, WdsPair } from '../load/wds-pure';
+import { measuredOffset, type Orb6Entry, type WdsPair } from '../load/wds-pure';
 import {
   WDS_PRECISE_COORD_EPOCH, chordSq, chordSqForTolerance, positionsWithin, predictSecondaryPosition, propagatePosition,
 } from '../sky-geometry-pure';
@@ -138,8 +138,9 @@ export function buildSystemLetterPositions(
       letters.set(primary, pair.precise);
       predicted.delete(primaryKey);
     }
-    if (!letters.has(secondary) && pair.rhoLast !== null && pair.thetaLast !== null && pair.rhoLast > 0) {
-      letters.set(secondary, predictSecondaryPosition(pair.precise, pair.rhoLast, pair.thetaLast));
+    const offset = measuredOffset(pair);
+    if (!letters.has(secondary) && offset !== null) {
+      letters.set(secondary, predictSecondaryPosition(pair.precise, offset));
       predicted.add(componentKey(pair.wdsId, secondary));
     }
   }
@@ -247,9 +248,8 @@ export function resolveViaCcdm(
   for (const c of out) {
     if (c.gaiaSourceId !== null || c.isPrimary) continue;
     const pair = findOwningPair(c, index);
-    if (pair === null || pair.precise === null || pair.rhoLast === null || pair.thetaLast === null || pair.rhoLast <= 0) {
-      continue;
-    }
+    const offset = pair === null ? null : measuredOffset(pair);
+    if (pair === null || pair.precise === null || offset === null) continue;
     const candidates = indices.ccdmToHips.get(pair.wdsId);
     if (!candidates || candidates.length === 0) continue;
     const primaryHip = primaryHipByPair.get(pair);
@@ -262,7 +262,7 @@ export function resolveViaCcdm(
     const [primaryToken] = splitComponents(pair.components)!;
     const hip = ccdmCandidateHip(
       {
-        target: predictSecondaryPosition(pair.precise, pair.rhoLast, pair.thetaLast),
+        target: predictSecondaryPosition(pair.precise, offset),
         candidates: narrowed, wdsId: c.wdsId,
         token: canonicalCompLetter(primaryToken, c.component), partner: primaryToken,
       },

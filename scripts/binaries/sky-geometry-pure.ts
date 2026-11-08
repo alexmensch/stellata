@@ -2,6 +2,7 @@
 
 import { ARCSEC_PER_DEG, DEG_TO_RAD, HIPPARCOS_EPOCH_JYEAR } from '../../src/astro-core/astronomy-constants';
 import { unitVectorFromRaDec, type SkyPosition, type UnitVector } from '../../src/astro-core/equatorial-basis';
+import type { MeasuredOffset } from './load/wds-pure';
 
 /** AT-HYG documents J2000.0, but its HIP-sourced rows sit at HIP1's J1991.25
  *  (α Cen A's stored RA is HIP1's 219.92041, not J2000's 219.9020); a row
@@ -83,7 +84,7 @@ export function positionsWithin(a: SkyPosition, b: SkyPosition, toleranceArcsec:
 }
 
 /** `primary` offset by a WDS (ρ, θ): θ east of north, ρ in arcsec, small-angle. */
-export function predictSecondaryPosition(primary: SkyPosition, rhoArcsec: number, thetaDeg: number): SkyPosition {
+export function predictSecondaryPosition(primary: SkyPosition, { rhoArcsec, thetaDeg }: MeasuredOffset): SkyPosition {
   const thetaRad = thetaDeg * DEG_TO_RAD;
   const rhoDeg = rhoArcsec / ARCSEC_PER_DEG;
   const cosDec = Math.max(Math.cos(primary.decDeg * DEG_TO_RAD), COS_DEC_FLOOR);

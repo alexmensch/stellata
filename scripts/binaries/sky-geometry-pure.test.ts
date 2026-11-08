@@ -48,13 +48,13 @@ describe('tangentOffset', () => {
 
 describe('predictSecondaryPosition', () => {
   it('puts θ = 0 due north', () => {
-    const { raDeg, decDeg } = predictSecondaryPosition({ raDeg: 100, decDeg: 0 }, 3600, 0);
+    const { raDeg, decDeg } = predictSecondaryPosition({ raDeg: 100, decDeg: 0 }, { rhoArcsec: 3600, thetaDeg: 0 });
     expect(raDeg).toBeCloseTo(100, 6);
     expect(decDeg).toBeCloseTo(1, 6);
   });
 
   it('widens an eastward offset by 1 / cos δ', () => {
-    const { raDeg, decDeg } = predictSecondaryPosition({ raDeg: 100, decDeg: 60 }, 3600, 90);
+    const { raDeg, decDeg } = predictSecondaryPosition({ raDeg: 100, decDeg: 60 }, { rhoArcsec: 3600, thetaDeg: 90 });
     expect(raDeg).toBeCloseTo(102, 3);
     expect(decDeg).toBeCloseTo(60, 6);
   });

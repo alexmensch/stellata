@@ -23,7 +23,9 @@ scripts/binaries/load/
   stage1-report-pure.ts        The build-log lines, read off the result;
                                the AT-HYG Gaia-coverage warning band.
   wds-pure.ts (+ test)         The WDS summary and ORB6 fixed-width
-                               formats, and the duplicate-row collapse.
+                               formats, the duplicate-row collapse, and
+                               measuredOffset (a row's ρ > 0 and θ, or
+                               null), which every (ρ, θ) consumer reads.
   wds-source.ts                WDS_SUMM, ORB6.
   msc-pure.ts (+ test)         The MSC tables, the label → WDS token map,
                                the MscLookup, and the MSC element checks

@@ -4,7 +4,7 @@ import { canonicalCompLetter, componentKey, compoundContains, relatedHier, type 
 import type { GaiaAstrometryRow } from '../load/gaia-pure';
 import type { IdentifierIndices } from '../load/indices-pure';
 import type { SimbadWdsXid } from '../load/simbad-pure';
-import type { WdsPair } from '../load/wds-pure';
+import { measuredOffset, type WdsPair } from '../load/wds-pure';
 import { fold } from '../../util/counts/tally-pure';
 import { compareSourceIds } from '../../util/tsv/table-pure';
 import { DEG_TO_RAD } from '../../../src/astro-core/astronomy-constants';
@@ -57,9 +57,10 @@ export function addNewestEdge<E>(
 
 /** The secondary's (E, N) offset, or null without a measured ρ > 0 and θ. */
 export function pairVector(pair: WdsPair): TangentOffset | null {
-  if (pair.rhoLast === null || pair.rhoLast <= 0 || pair.thetaLast === null) return null;
-  const theta = pair.thetaLast * DEG_TO_RAD;
-  return { eastArcsec: pair.rhoLast * Math.sin(theta), northArcsec: pair.rhoLast * Math.cos(theta) };
+  const offset = measuredOffset(pair);
+  if (offset === null) return null;
+  const theta = offset.thetaDeg * DEG_TO_RAD;
+  return { eastArcsec: offset.rhoArcsec * Math.sin(theta), northArcsec: offset.rhoArcsec * Math.cos(theta) };
 }
 
 /** One WDS system's bindings, as the audit weighs them. */

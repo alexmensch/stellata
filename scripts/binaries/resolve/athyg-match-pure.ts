@@ -10,7 +10,7 @@ import {
 import {
   componentsOf, findOwningPair, pairRows, pairsByDiscoverer, type DecomposedPair, type ResolvedComponent,
 } from './components-pure';
-import type { WdsPair } from '../load/wds-pure';
+import { measuredOffset, type WdsPair } from '../load/wds-pure';
 import { buildSystemHipClaims, hipClaimedByDisjointLetter } from './sibling-identity-pure';
 import { pushTo } from '../../util/map-buckets-pure';
 
@@ -138,8 +138,9 @@ export function pairAthygMatches(
     if (pair === null || pair.precise === null) return;
     const primaryIdx = primaryIdxByPair.get(pair) ?? null;
     let match: number | null = null;
-    if (pair.rhoLast !== null && pair.thetaLast !== null && pair.rhoLast > 0) {
-      const predicted = predictSecondaryPosition(pair.precise, pair.rhoLast, pair.thetaLast);
+    const offset = measuredOffset(pair);
+    if (offset !== null) {
+      const predicted = predictSecondaryPosition(pair.precise, offset);
       match = matchAthygEitherEpoch(predicted, grid, athyg, ATHYG_POSITION_MATCH_TOLERANCE_ARCSEC, primaryIdx);
     }
     if (match !== null) {
