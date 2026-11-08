@@ -78,9 +78,9 @@ export function sortRows(columns: readonly Column[], rows: readonly Row[], keys:
 function formatted(file: string, column: Column, cell: string | null): string {
   if (cell === null || column.format === undefined) return nullableCell(cell);
   const { format } = column;
-  const text = Number(cell);
-  if (!Number.isFinite(text)) throw new Error(`${file}: ${column.name}="${cell}" has a numeric format but is not a number`);
-  const value = format.float32 ? Math.fround(text) : text;
+  const parsed = Number(cell);
+  if (!Number.isFinite(parsed)) throw new Error(`${file}: ${column.name}="${cell}" has a numeric format but is not a number`);
+  const value = format.float32 ? Math.fround(parsed) : parsed;
   return formatFixed(value, format.fixed);
 }
 
