@@ -224,8 +224,7 @@ export function resolveViaCcdm(
   const index = pairsByDiscoverer(rows);
   const letterPositions = buildSystemLetterPositions(rows);
   const claims = buildSystemHipClaims(out);
-  const primaryHipByPair = new Map<string, number>();
-  const pairKey = (c: Draft, p: WdsPair): string => `${c.wdsId}\t${c.discoverer}\t${p.components}`;
+  const primaryHipByPair = new Map<WdsPair, number>();
 
   for (const c of out) {
     if (c.gaiaSourceId !== null || !c.isPrimary) continue;
@@ -234,7 +233,7 @@ export function resolveViaCcdm(
     const candidates = indices.ccdmToHips.get(pair.wdsId);
     if (!candidates || candidates.length === 0) continue;
     if (c.hip !== null && candidates.includes(c.hip)) {
-      primaryHipByPair.set(pairKey(c, pair), c.hip);
+      primaryHipByPair.set(pair, c.hip);
       bindCcdmHip(c, c.hip, indices);
       continue;
     }
@@ -244,7 +243,7 @@ export function resolveViaCcdm(
       indices, letterPositions.get(c.wdsId), claims, rejected,
     );
     if (hip === null) continue;
-    primaryHipByPair.set(pairKey(c, pair), hip);
+    primaryHipByPair.set(pair, hip);
     bindCcdmHip(c, hip, indices);
     claimHip(claims, c.wdsId, hip, c.component);
   }
@@ -257,7 +256,7 @@ export function resolveViaCcdm(
     }
     const candidates = indices.ccdmToHips.get(pair.wdsId);
     if (!candidates || candidates.length === 0) continue;
-    const primaryHip = primaryHipByPair.get(pairKey(c, pair));
+    const primaryHip = primaryHipByPair.get(pair);
     const narrowed = candidates.filter((h) => h !== primaryHip);
     if (narrowed.length === 0) continue;
     if (c.hip !== null && narrowed.includes(c.hip)) {

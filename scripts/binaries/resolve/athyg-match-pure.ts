@@ -121,8 +121,7 @@ export function pairAthygMatches(
   const components = componentsOf(pairs);
   const index = pairsByDiscoverer(pairRows(pairs));
   const claims = buildSystemHipClaims(components);
-  const primaryIdxByPair = new Map<string, number>();
-  const pairKey = (c: ResolvedComponent, p: WdsPair): string => `${c.wdsId}\t${c.discoverer}\t${p.components}`;
+  const primaryIdxByPair = new Map<WdsPair, number>();
   const matches: AthygMatch[] = [];
   const siblingClaimed: SiblingClaimedMatch[] = [];
 
@@ -142,7 +141,7 @@ export function pairAthygMatches(
     if (match === null) return;
     const [, partner] = pairComponentTokens(pair.components)!;
     if (claimedBySibling(i, match, c.component, partner)) return;
-    primaryIdxByPair.set(pairKey(c, pair), match);
+    primaryIdxByPair.set(pair, match);
     matches.push({ componentIdx: i, athygIdx: match, blendInherit: false });
   });
 
@@ -150,7 +149,7 @@ export function pairAthygMatches(
     if (opts.skip(i, c) || c.isPrimary) return;
     const pair = findOwningPair(c, index);
     if (pair === null || pair.precise === null) return;
-    const primaryIdx = primaryIdxByPair.get(pairKey(c, pair)) ?? null;
+    const primaryIdx = primaryIdxByPair.get(pair) ?? null;
     let match: number | null = null;
     if (pair.rhoLast !== null && pair.thetaLast !== null && pair.rhoLast > 0) {
       const predicted = predictSecondaryPosition(pair.precise, pair.rhoLast, pair.thetaLast);

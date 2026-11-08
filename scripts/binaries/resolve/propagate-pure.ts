@@ -120,7 +120,7 @@ export function seedSynthesizedComponentBindings(
     const cur = donors.get(key);
     if (cur === undefined || strength(c) > strength(cur)) donors.set(key, c);
   }
-  const primaryByPair = new Map<string, Draft>();
+  const primaryByPair = new Map<WdsPair, Draft>();
   for (const c of out) {
     if (!c.isPrimary) continue;
     const pair = findOwningPair(c, index);
@@ -130,13 +130,13 @@ export function seedSynthesizedComponentBindings(
       const donor = parent === null ? undefined : donors.get(componentKey(c.wdsId, parent));
       if (donor !== undefined && copyBinding(c, donor)) seeded.push(c);
     }
-    primaryByPair.set(`${c.wdsId}\t${c.discoverer}\t${pair.components}`, c);
+    primaryByPair.set(pair, c);
   }
   for (const c of out) {
     if (c.isPrimary) continue;
     const pair = findOwningPair(c, index);
     if (pair === null || c.gaiaSourceId !== null) continue;
-    const primary = primaryByPair.get(`${c.wdsId}\t${c.discoverer}\t${pair.components}`);
+    const primary = primaryByPair.get(pair);
     if (primary !== undefined && copyBinding(c, primary)) seeded.push(c);
   }
   return { pairs: w.pairs, seeded };
