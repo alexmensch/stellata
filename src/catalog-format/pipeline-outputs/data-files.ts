@@ -18,6 +18,7 @@ export const DATA_FILES = {
   simbadWdsXids: 'data/simbad/simbad_wds_xids.tsv',
   simbadWdsSptype: 'data/simbad/simbad_wds_sptype.tsv',
   simbadSample: 'data/simbad/simbad_sample.tsv',
+  simbadValues: 'data/simbad/simbad_values.tsv',
   reasonCodes: 'data/lineage/reason-codes.tsv',
   vaidmanSupergiants: 'data/distance-validation/vaidman-2025-supergiants.tsv',
 } as const;

@@ -281,7 +281,7 @@ job and is finished; only the second is the union's.
 
 - [`refresh-simbad-sptype.py`](../README.md) — per-source `sp_type` /
   `sp_qual` / `sp_bibcode` / `otype` + cross-IDs, over the whole manifest.
-- [`refresh-simbad-values.py`](../README.md) — bibcoded rv / parallax /
+- [`refresh:simbad-values`](../simbad-values/README.md) — bibcoded rv / parallax /
   PM / coordinates + B/V fluxes, over the [§ 5](/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers) value cohort.
 - [`refresh-simbad-wds-xids.py`](../README.md) — per-WDS-component
   (Gaia DR3, HIP) cross-IDs via a two-phase WDS-id → SIMBAD-oid →

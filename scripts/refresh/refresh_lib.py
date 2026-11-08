@@ -109,12 +109,7 @@ MEMBERSHIP_MANIFEST = REPO_ROOT / "data" / "membership" / "membership-manifest.t
 
 def iter_membership_rows(path: Path) -> Iterator[Mapping[str, str]]:
     """Stream a membership table as raw cell mappings — the one place a
-    membership table is opened.
-
-    Takes the path rather than reading ``MEMBERSHIP_MANIFEST`` directly:
-    ``refresh-simbad-values.py`` still passes the spine for its cohort
-    predicate.
-    """
+    membership table is opened."""
     with path.open(newline="") as fh:
         yield from csv.DictReader(fh, delimiter="\t")
 

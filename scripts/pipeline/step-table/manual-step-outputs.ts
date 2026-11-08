@@ -51,7 +51,10 @@ export const MANUAL_STEPS: readonly ManualStep[] = [
     'scripts/refresh/simbad-wds-sptype/simbad-wds-sptype-outputs.ts', 'SIMBAD_WDS_SPTYPE_OUTPUTS',
   ),
   pull('refresh:simbad-sptype', 'refresh-simbad-sptype.py', ['data/simbad/simbad_sptype.tsv']),
-  pull('refresh:simbad-values', 'refresh-simbad-values.py', ['data/simbad/simbad_values.tsv']),
+  tsManual(
+    { kind: 'pull' }, 'refresh:simbad-values', 'scripts/refresh/simbad-values/refresh-simbad-values.ts',
+    'scripts/refresh/simbad-values/simbad-values-outputs.ts', 'SIMBAD_VALUES_OUTPUTS',
+  ),
   pull('refresh:simbad-tyc-hd', 'refresh-simbad-tyc-hd.py', ['data/simbad/simbad_tyc_hd.tsv']),
   pull('refresh:edenhofer2024-main', 'refresh-edenhofer2024-main.py', ['data/dust/edenhofer2024-main.json']),
   pull('refresh:edenhofer2024-2kpc', 'refresh-edenhofer2024-2kpc.py', ['data/dust/edenhofer2024-2kpc.json']),
