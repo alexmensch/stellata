@@ -124,11 +124,16 @@ scripts/binaries/
                                   propagatePosition (linear in RA/Dec
                                   degrees, cos δ floored at 1e-3),
                                   tangentOffset, distancePc (1000 /
-                                  parallax), and the AT-HYG / WDS
+                                  parallax), chordSq / positionsWithin
+                                  (a tolerance test without trig),
+                                  predictSecondaryPosition (a WDS ρ, θ
+                                  offset), and the AT-HYG / WDS
                                   reference epochs. Not the catalogue's
                                   tangent-basis propagation
                                   (../catalog/distance/direction-cascade.ts):
                                   the switch proves byte identity first.
+  build-log-pure.ts               count: how a build-log line prints a
+                                  number, for every TS stage's report.
   multiples-row-key-pure.ts       MULTIPLES_ROW_KEY, that rowKey, for code
                                   that cites a row without reading the file
                                   (promotion's origin keys), so it never

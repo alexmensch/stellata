@@ -1,7 +1,7 @@
 // Sky geometry the binaries stages share: proper-motion propagation, tangent-plane offsets, parallax distance.
 
 import { DEG_TO_RAD, HIPPARCOS_EPOCH_JYEAR } from '../../src/astro-core/astronomy-constants';
-import type { SkyPosition } from '../../src/astro-core/equatorial-basis';
+import { unitVectorFromRaDec, type SkyPosition } from '../../src/astro-core/equatorial-basis';
 
 /** AT-HYG documents J2000.0, but its HIP-sourced rows sit at HIP1's J1991.25
  *  (α Cen A's stored RA is HIP1's 219.92041, not J2000's 219.9020); a row
@@ -56,6 +56,37 @@ export function tangentOffset(pos: SkyPosition, ref: SkyPosition): TangentOffset
   return {
     eastArcsec: dRa * Math.cos(ref.decDeg * DEG_TO_RAD) * 3600,
     northArcsec: (pos.decDeg - ref.decDeg) * 3600,
+  };
+}
+
+/** Squared chord between two directions on the unit sphere: monotone in
+ *  their angular separation, so it compares against a tolerance without trig. */
+export function chordSq(a: SkyPosition, b: SkyPosition): number {
+  const u = unitVectorFromRaDec(a.raDeg, a.decDeg);
+  const v = unitVectorFromRaDec(b.raDeg, b.decDeg);
+  const dx = u.x - v.x;
+  const dy = u.y - v.y;
+  const dz = u.z - v.z;
+  return dx * dx + dy * dy + dz * dz;
+}
+
+/** The squared chord subtending `toleranceArcsec`. */
+export function chordSqForTolerance(toleranceArcsec: number): number {
+  return (2 * Math.sin(((toleranceArcsec / 3600) * DEG_TO_RAD) / 2)) ** 2;
+}
+
+export function positionsWithin(a: SkyPosition, b: SkyPosition, toleranceArcsec: number): boolean {
+  return chordSq(a, b) <= chordSqForTolerance(toleranceArcsec);
+}
+
+/** `primary` offset by a WDS (ρ, θ): θ east of north, ρ in arcsec, small-angle. */
+export function predictSecondaryPosition(primary: SkyPosition, rhoArcsec: number, thetaDeg: number): SkyPosition {
+  const thetaRad = thetaDeg * DEG_TO_RAD;
+  const rhoDeg = rhoArcsec / 3600;
+  const cosDec = Math.max(Math.cos(primary.decDeg * DEG_TO_RAD), COS_DEC_FLOOR);
+  return {
+    raDeg: pyMod(primary.raDeg + (rhoDeg * Math.sin(thetaRad)) / cosDec, 360),
+    decDeg: primary.decDeg + rhoDeg * Math.cos(thetaRad),
   };
 }
 
