@@ -6,6 +6,7 @@ import { columnTable } from '../../../util/tsv/table-pure';
 
 import {
   GAIA_BINDING_G_MINUS_V_REJECT_MAG,
+  gMinusVRejects,
   bindingEvidence,
   isSiblingLetterAttribution,
   parseSimbadWdsXidsTsv,
@@ -80,6 +81,14 @@ describe('weighBinding', () => {
       expect(weighBinding('1420101696285626624', { hip: null, printedV: null }, sibling).siblingRefused)
         .toBe(false);
     });
+  });
+});
+
+describe('gMinusVRejects', () => {
+  it('refuses only a source strictly past the threshold fainter than V', () => {
+    expect(gMinusVRejects(1.5 + GAIA_BINDING_G_MINUS_V_REJECT_MAG, 1.5)).toBe(false);
+    expect(gMinusVRejects(1.51 + GAIA_BINDING_G_MINUS_V_REJECT_MAG, 1.5)).toBe(true);
+    expect(gMinusVRejects(0.0, 1.5)).toBe(false);
   });
 });
 

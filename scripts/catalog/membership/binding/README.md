@@ -11,7 +11,9 @@ scripts/catalog/membership/binding/
   binding-gate-pure.ts (+ test) The binding gate both the derivation and
                                 ../../classic-ids/' overlay weigh a candidate
                                 through: `BindingEvidence`, the G − V threshold
-                                (pinned against scripts/binaries/indices.py),
+                                (pinned against scripts/binaries/indices.py)
+                                and `gMinusVRejects`, the one comparison the
+                                binaries load stage's gate calls too,
                                 SIMBAD's WDS cross-ID index and the
                                 sibling-letter check over it, and
                                 `weighBinding`'s verdict. Pure.

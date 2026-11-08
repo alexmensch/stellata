@@ -1,7 +1,7 @@
 // The identifier indices every later stage looks up through, and the magnitude gate on HIP-anchored Gaia bindings.
 
 import type { Hip2AstrometryRow } from '../../catalog/sources/hip2-source';
-import { GAIA_BINDING_G_MINUS_V_REJECT_MAG } from '../../catalog/membership/binding/binding-gate-pure';
+import { gMinusVRejects } from '../../catalog/membership/binding/binding-gate-pure';
 import type { ColumnTable } from '../../util/tsv/table-pure';
 import type { AthygRow } from './athyg-pure';
 import type { GaiaAstrometryRow, NssOrbitRow } from './gaia-pure';
@@ -44,7 +44,7 @@ function magInconsistent(
 ): boolean {
   if (vMag === null) return false;
   const gMag = astrometry.get(sourceId)?.gMag ?? null;
-  return gMag !== null && gMag - vMag > GAIA_BINDING_G_MINUS_V_REJECT_MAG;
+  return gMag !== null && gMinusVRejects(gMag, vMag);
 }
 
 export function scrubAthygGaia(

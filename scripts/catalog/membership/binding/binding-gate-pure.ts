@@ -14,6 +14,10 @@ import type { PrintedV, PrintedVLookups } from '../../photometry/v-magnitude-pur
  *  Castor → Castor B's source). */
 export const GAIA_BINDING_G_MINUS_V_REJECT_MAG = 1.0;
 
+export function gMinusVRejects(gMag: number, vMag: number): boolean {
+  return gMag - vMag > GAIA_BINDING_G_MINUS_V_REJECT_MAG;
+}
+
 /** One (wds_id, component) attribution parsed from
  *  data/simbad/simbad_wds_xids.tsv. */
 export interface WdsComponentAttribution {
@@ -208,5 +212,5 @@ function magnitudeOutcome(
   if (printedV === null) return 'no_printed_v';
   const g = evidence.gMagOf(sourceId);
   if (g === null) return evidence.hasPulledRow(sourceId) ? 'null_g' : 'no_pulled_row';
-  return g - printedV.vMag > GAIA_BINDING_G_MINUS_V_REJECT_MAG ? 'rejected' : 'consistent';
+  return gMinusVRejects(g, printedV.vMag) ? 'rejected' : 'consistent';
 }
