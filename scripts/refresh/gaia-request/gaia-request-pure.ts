@@ -4,9 +4,7 @@ import type { Column, Format } from '../pull/columns-pure';
 import type { CoverageGroup, SpotRow } from '../pull/gates-pure';
 import type { PullTable } from '../pull/pull';
 
-/** At rowsPerId 1 and LIMIT_HEADROOM 2 a batch asks 10,001 rows, inside ESA's 50,000-row hard limit. */
 export const GAIA_REQUEST_BATCH = 5_000;
-/** At rowsPerId 4 a batch asks 20,001 rows. */
 export const DR2_REQUEST_BATCH = 2_500;
 /** The most rows one DR3 id answers in the committed DR2 neighbourhood. */
 export const DR2_ROWS_PER_ID = 4;
