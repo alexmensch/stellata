@@ -60,10 +60,6 @@ export const KNOWN_VISUAL_DOUBLE_HIPS: Set<number> = new Set(
 // that would share a type with a real CCDM ID.
 const HIP_CCDM_COLUMNS = ['HIP', 'CCDM', 'MultFlag'] as const;
 
-/** VizieR rules a dash line under its header (after a units line the reader
- *  already skips as blank); no TableSpec option expresses it. */
-const VIZIER_SEPARATOR = /^-+$/;
-
 export function parseHipCcdm(table: ColumnTable): Map<string, number[]> {
   const groups = new Map<string, number[]>();
 
@@ -71,7 +67,6 @@ export function parseHipCcdm(table: ColumnTable): Map<string, number[]> {
   let droppedNoHip = 0, droppedNoCcdm = 0, droppedMultFlag = 0;
 
   for (const row of table(HIP_CCDM_COLUMNS)) {
-    if (VIZIER_SEPARATOR.test(row.raw('HIP'))) continue;
     scanned++;
     const hip = row.int('HIP');
     if (hip === null || hip <= 0) { droppedNoHip++; continue; }
