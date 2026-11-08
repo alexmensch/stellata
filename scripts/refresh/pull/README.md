@@ -104,9 +104,13 @@ re-measured, not assumed.
 ## The checkpoint
 
 Each answered query's CSV reply is cached as it lands, under
-`<first output>.ckpt/`, named by the hash of the query's text; a re-run
-replays a cached reply (re-checked against the limit and the columns) and
-asks only what is missing. Keying on the text is what makes **a changed
+`<first output>.ckpt/`, named by the hash of the query's text, beside the
+mirror that answered it; a re-run replays a cached reply (re-checked against
+the limit and the columns) and asks only what is missing. **A replay reports
+its cached mirror**, so the record's `answeredBy` names who answered whichever
+run fetched the rows, and a reply first answered by an unverified mirror stays
+caught after a gate-fix re-run. A reply seeded from committed rows records no
+mirror; one with no record of its mirror is refused. Keying on the text is what makes **a changed
 query never replay an old answer**: a new column, `WHERE`, batch or id hashes
 to a new file. The folder is removed only after the outputs commit, so **a
 failed gate keeps it**, and the fix re-run costs no network. It is

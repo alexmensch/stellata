@@ -10,6 +10,7 @@ import {
   LIMIT_HEADROOM, MAX_WHOLE_TABLE_CELLS, assertWholeTablesFit, batchQueries, describePhasedPull, describePull, phaseLimit,
   phaseQueries, queryLimit, runPhasedPull, runPull, type Phase, type PhasedPull, type Pull, type PullTable, type WrittenTable,
 } from './pull';
+import { checkpoint } from './checkpoint';
 import { GAIA, SIMBAD, TapOverflow, VIZIER, type TapArchive, type TapClientDeps } from './tap-pure';
 
 let dir: string;
@@ -45,6 +46,7 @@ function pullOf(tables: Record<'stars' | 'pairs', PullTable>, archive: TapArchiv
 /** Answers each sync query with the CSV `answer` gives for its ADQL; counts the queries asked. */
 function deps(answer: (adql: string) => string | Error) {
   const asked: string[] = [];
+  const reported: string[] = [];
   const d: TapClientDeps = {
     transport: async (_url, form) => {
       if (!form) return { status: 200, contentType: 'text/xml', body: '<capabilities/>' };
@@ -55,10 +57,10 @@ function deps(answer: (adql: string) => string | Error) {
       return { status: 200, contentType: 'text/csv', body };
     },
     sleep: async () => {},
-    report: () => {},
+    report: (service) => reported.push(service),
     log: () => {},
   };
-  return { deps: d, asked };
+  return { deps: d, asked, reported };
 }
 
 const GOOD = (adql: string): string => (adql.includes('nss_two_body_orbit')
@@ -92,16 +94,30 @@ describe('runPull', () => {
     },
   );
 
-  it('a failing gate keeps the checkpoint, and a re-run replays it without asking again', async () => {
+  it('a failing gate keeps the checkpoint, and a re-run replays it without asking again, reporting who answered', async () => {
     const drifted = { ...STARS, spotRows: [{ key: 'source_id', value: '1', cells: { parallax: '0.6' } }] } as const;
     const first = deps(GOOD);
     await expect(runPull(pullOf({ stars: drifted, pairs: PAIRS }), first.deps)).rejects.toThrow(EmissionRefused);
-    expect(readdirSync(ckpt())).toHaveLength(3);
+    expect(readdirSync(ckpt()).filter((f) => f.endsWith('.csv'))).toHaveLength(3);
 
     const second = deps(GOOD);
     await runPull(pullOf({ stars: STARS, pairs: PAIRS }), second.deps);
     expect(second.asked).toEqual([]);
+    expect(second.reported).toEqual(['ESA-sync', 'ESA-sync', 'ESA-sync']);
     expect(existsSync(ckpt())).toBe(false);
+  });
+
+  it('a seeded reply replays reporting no service, and a cached reply with no service record is refused', async () => {
+    const seeded = checkpoint(ckpt());
+    for (const adql of batchQueries(STARS, GAIA.quote)) seeded.save(adql, { body: GOOD(adql), service: null });
+    for (const adql of batchQueries(PAIRS, GAIA.quote)) seeded.save(adql, { body: GOOD(adql), service: null });
+    const replay = deps(GOOD);
+    await runPull(pullOf({ stars: STARS, pairs: PAIRS }), replay.deps);
+    expect([replay.asked, replay.reported]).toEqual([[], []]);
+
+    seeded.save('SELECT 1', { body: 'x\n', service: null });
+    rmSync(join(ckpt(), readdirSync(ckpt()).find((f) => f.endsWith('.json')) as string));
+    expect(() => seeded.load('SELECT 1')).toThrow(/no record of the service/);
   });
 
   it('a changed query invalidates its checkpointed answer', async () => {
