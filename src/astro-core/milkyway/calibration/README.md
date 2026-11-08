@@ -219,7 +219,7 @@ model's light at that point**, read out of `resolved-hole-table.ts`:
   through the per-star extinction prepass, the band's remainder through its
   march.
 
-**Measured on the V ≤ 11 catalogue (<!-- count:build-catalog/recordCount -->979,678<!-- /count --> records), not authored.**
+**Measured on the V ≤ 11 catalogue (<!-- count:build-catalog/recordCount -->979,634<!-- /count --> records), not authored.**
 Within 200 pc the catalogue carries the whole of the model's light — the
 model's emissivity at Sol is right to a few percent, which is the one
 sightline-free check the solve has. From there the share falls: half the
@@ -339,7 +339,7 @@ The 25.44 is *not* published; `diffuse-reference.ts` builds it:
 | | mag/arcsec² |
 | --- | --- |
 | [Leinert 1998](/data/papers/index.md#leinert1998) Table 24, NGP — **total** starlight | 23.83 |
-| The <!-- count:build-catalog/recordCount -->979,678<!-- /count --> catalogue stars Stellata draws at V ≤ 11 | 24.110 |
+| The <!-- count:build-catalog/recordCount -->979,634<!-- /count --> catalogue stars Stellata draws at V ≤ 11 | 24.110 |
 | Residual left for the diffuse band | **25.44** |
 
 **The catalogue rows are measured by the `measure:band-resolved` bake, into

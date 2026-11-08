@@ -50,7 +50,9 @@ committed sources, in precedence order:
 4. **SIMBAD** — the Gaia source SIMBAD's frozen cross-IDs
    (`data/simbad/simbad_sptype.tsv`) hold under the record's HIP, then TYC,
    then GJ (exact, with its bridged spellings, before bare). A key two SIMBAD
-   objects claim proposes nothing. The bare GJ key is what lets a lettered
+   objects claim proposes nothing, counting an object SIMBAD holds with no
+   Gaia id: it proposes no source but still contests the key, so 44 Boo's
+   system object (`GJ 575`) keeps the bare number from reaching `575 B`. The bare GJ key is what lets a lettered
    cell reach an unresolved pair's one object — the pull keeps a single GJ
    ident per object, so EZ Aqr sits under `866 C` whatever letter the record
    names — and the two-claimants guard is what stops a resolved pair's
@@ -80,7 +82,7 @@ The Tycho-2 arm is what reaches
 the HD-only rows: a best-neighbour walk landing on a faint neighbour of a
 Tycho star has no HIP to be caught by, and 32 fills sat more than a magnitude
 below their own star's Tycho-2 V — 14 of them by two to nine magnitudes. The
-gates refuse <!-- count:membership-manifest/derivedRejected.mag -->317<!-- /count --> candidates on G − V and <!-- count:membership-manifest/derivedRejected.sibling -->116<!-- /count --> on sibling-letter attribution
+gates refuse <!-- count:membership-manifest/derivedRejected.mag -->319<!-- /count --> candidates on G − V and <!-- count:membership-manifest/derivedRejected.sibling -->115<!-- /count --> on sibling-letter attribution
 (`derivedRejected`); falling off the end is a derived refusal.
 `derivedUngateable` (<!-- count:membership-manifest/derivedUngateable -->7<!-- /count -->) is the rows that reached a candidate with no printed V
 under any tier, so only the sibling arm weighs its candidates — the same

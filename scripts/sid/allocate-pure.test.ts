@@ -266,10 +266,46 @@ describe('allocate: two active SIDs in one class', () => {
     expect(a.events.map((e) => [e.sid, e.event, e.successor])).toEqual([[2, 'merge', 1]]);
   });
 
-  it('fails closed when the loser has no merge decision', () => {
-    expect(failed(run({ objects, ledger }))[0]).toBe(
-      'sid 2 (gaia_dr3:2) shares class {hip:1, gaia_dr3:2} with sid 1: no lineage stage holds a record carrying it',
-    );
+  it('merges the loser under the same-class code, keyed on the record carrying its key, when no stage decided', () => {
+    const noDecision: Record<string, Causes>[] = [{}, { 'gaia_dr3:2': { decisions: [], seenBy: ['membership'] } }];
+    for (const causes of noDecision) {
+      const a = allocated(run({ objects, ledger }, upstream(causes)));
+      expect(a.outcomes.map((o) => o.sid)).toEqual([1]);
+      expect(a.events.map((e) => [e.sid, e.event, e.code, e.params, e.successor])).toEqual([
+        [2, 'merge', 'allocation.merged.same-class', '{"key":"spine:1"}', 1],
+      ]);
+      expect(a.removals).toMatchObject([{ kind: 'merged', sid: 2, into: 1, decision: { stage: 'allocation', origin: 'spine:1' } }]);
+    }
+  });
+
+  it('keys the same-class merge on the class member that carries the loser\'s key', () => {
+    const a = allocated(run({
+      objects: [star('spine:1', 'hip:1'), star('spine:7', 'hd:7', 'gaia_dr3:2')],
+      storedEdges: [{ a: 'hip:1', b: 'hd:7' }],
+      ledger,
+    }));
+    expect(a.events.map((e) => [e.sid, e.params, e.successor])).toEqual([[2, '{"key":"spine:7"}', 1]]);
+  });
+
+  it('keys the same-class merge on the stored edge when no class member carries the loser\'s key', () => {
+    const a = allocated(run({
+      objects: [star('spine:1', 'hip:1')],
+      storedEdges: [{ a: 'hip:1', b: 'gaia_dr3:2' }],
+      ledger,
+    }));
+    expect(a.events.map((e) => [e.sid, e.event, e.code, e.params, e.successor])).toEqual([
+      [2, 'merge', 'allocation.merged.same-class', '{"key":"sameas:hip:1|gaia_dr3:2"}', 1],
+    ]);
+    expect(a.removals).toMatchObject([{ decision: { origin: 'sameas:hip:1|gaia_dr3:2', into: 'spine:1' } }]);
+  });
+
+  it('fails closed when a stage retires or parks a loser the class keeps in service', () => {
+    for (const effect of ['retire', 'park'] as const) {
+      const errors = failed(run({ objects, ledger }, upstream({
+        'gaia_dr3:2': { decisions: [decision('magnitude:2', 'placement.park.no-position', effect)], seenBy: ['placement'] },
+      })));
+      expect(errors[0]).toMatch(/^sid 2 \(gaia_dr3:2\) shares class \{hip:1, gaia_dr3:2\} with sid 1, but placement\.park\.no-position on magnitude:2 does not merge it into 1$/);
+    }
   });
 
   it('a recorded merge event resolves to the survivor with no new event', () => {

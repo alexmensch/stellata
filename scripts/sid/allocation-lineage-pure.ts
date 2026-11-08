@@ -36,6 +36,7 @@ export function objectOutcomeCodes(stage: string): ObjectOutcomeCodes {
 export const ALLOCATION_CODES = stageCodes(ALLOCATION_LINEAGE.stage, {
   ...OBJECT_OUTCOMES,
   merged: live('merge', 'A SID no object keeps any more merges into the SID of the record its upstream decision names.'),
+  'merged.same-class': live('merge', 'One record now carries the keys of two SIDs in service and no stage decided the merge, so the same-as class is the decision: the SID that loses the canonical-key ladder merges into the one that wins.'),
   retired: live('retire', 'A SID no object keeps any more leaves service under its upstream decision\'s code.'),
   parked: live('park', 'A SID no object keeps any more stays in service, absent from this build, under its upstream decision\'s code.'),
   'mint.sol-list': live('none', 'The object is a row of data/sid/sol-objects.tsv.'),

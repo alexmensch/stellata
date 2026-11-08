@@ -169,6 +169,23 @@ export function main(): void {
     expect(Object.keys(stamp('fetch:x').inputs)).toEqual(['roster.json']);
   });
 
+  it('records no file beside a TypeScript pull\'s modules: a count snapshot there is no input of the pull', async () => {
+    write('roster.json', '["a"]');
+    write('steps/fetch-x-expected.json', '{"rows":1}');
+    const fixture = await tsManualFixture(root, {
+      name: 'fetch:x', kind: { kind: 'pull' }, out: at('fetched.json'),
+      inputs: [at('roster.json'), at('steps/fetch-x-expected.json')], source: `
+import { writeFileSync } from 'node:fs';
+export const describe = () => ({ query: 'Q', services: ['ssd.jpl.nasa.gov'] });
+export function main(): void { writeFileSync(${JSON.stringify(at('fetched.json'))}, 'rows'); }
+`,
+    });
+    expect((await fixture.record()).kind).toBe('recorded');
+    expect(Object.keys(stamp('fetch:x').inputs)).toEqual(['roster.json']);
+    write('steps/fetch-x-expected.json', '{"rows":2}');
+    expect(fixture.freshness()).toEqual({ kind: 'fresh' });
+  });
+
   it('hashes a TypeScript step\'s inputs before it runs, so an input edited mid-run reads stale', async () => {
     write('roster.json', '["a"]');
     const fixture = await tsManualFixture(root, {

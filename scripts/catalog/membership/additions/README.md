@@ -115,7 +115,11 @@ candidate, by why it was not shipped. Each such row's `admit.magnitude`
 lineage row carries the reason as `own_candidate` and cites the proposing
 row's origin, and `MEMBERSHIP_INVARIANTS` fails the build on any reason
 outside `ALLOWED_OWN_CANDIDATE_REASONS`
-([Invariants](../../lineage/README.md#invariants)). `runner_up` and `component`
+([Invariants](../../lineage/README.md#invariants)). A derived source a
+`pair_component` disposition declines counts as `component`, since the review
+names it the other star of the pair (44 Boo A's derivation reaching i Boo B);
+any other disposition that declines it leaves it `withheld`, which fails.
+`runner_up` and `component`
 are allowed because most of their rows are a resolved pair's second star; the
 defects inside them — a star drawn twice, a designation on the wrong
 component, an unrelated star ledgered as a component, a pair's light counted

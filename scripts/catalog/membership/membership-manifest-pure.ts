@@ -360,13 +360,13 @@ function bindingOutcome(derived: DerivedBinding, withheld: boolean): BindingOutc
 /** Every candidate a row's derivation proposed other than the value it ships,
  *  with why it was not shipped. */
 function unshippedCandidates(
-  d: DerivedBinding, shipped: string | null,
+  d: DerivedBinding, shipped: string | null, withheldAs: OwnCandidateReason = 'withheld',
 ): Array<[string, OwnCandidateReason]> {
   return d.ranked.flatMap((c): Array<[string, OwnCandidateReason]> => {
     if (c.sourceId === shipped) return [];
     const refusal = d.rejected.find((r) => r.sourceId === c.sourceId);
     if (refusal !== undefined) return [[c.sourceId, `refused_${refusal.reason}`]];
-    return [[c.sourceId, c.sourceId === d.sourceId ? 'withheld' : 'runner_up']];
+    return [[c.sourceId, c.sourceId === d.sourceId ? withheldAs : 'runner_up']];
   });
 }
 
@@ -374,7 +374,7 @@ type RowDeriver =(row: BindingCells) => { derived: DerivedBinding; gate: RowGate
 
 /** The one derivation every primaries row — spine or addition — binds through. */
 function rowDeriver(tables: PrimaryTables, idx: PrimaryIndex, evidence: BindingEvidence): RowDeriver {
-  const simbad = indexSimbadSources(tables.simbadBySourceId);
+  const simbad = indexSimbadSources(tables.simbadBySourceId, tables.simbadSourceless);
   return (row) => {
     const gate = rowGateEvidence(row, evidence, simbad);
     return { derived: deriveBinding(bindingCandidates(row, tables, idx.cns5ByOwnKey, simbad), gate), gate };
@@ -984,7 +984,8 @@ export function buildMembership(input: MembershipInput): MembershipResult {
         if (d.via.length > 1) derivedConsensus++;
       }
     }
-    return { value, binding };
+    const withheldAs: OwnCandidateReason = dispositions.get(bindingReviewKey(spineRow))?.basis === 'pair_component' ? 'component' : 'withheld';
+    return { value, binding, withheldAs };
   });
   for (const key of dispositions.keys()) {
     if (!applied.has(key)) {
@@ -1095,13 +1096,15 @@ export function buildMembership(input: MembershipInput): MembershipResult {
   let additionsWithBlockedDesignation = 0;
   let additionContested = 0;
   const ownCandidates = new Map<string, OwnCandidate>();
-  const noteUnshipped = (of: string, d: DerivedBinding, shipped: string | null): void => {
-    for (const [id, reason] of unshippedCandidates(d, shipped)) {
+  const noteUnshipped = (
+    of: string, d: DerivedBinding, shipped: string | null, withheldAs?: OwnCandidateReason,
+  ): void => {
+    for (const [id, reason] of unshippedCandidates(d, shipped, withheldAs)) {
       if (!ownCandidates.has(id)) ownCandidates.set(id, { reason, of });
     }
   };
   spineBindings.forEach((b, i) => {
-    if (b.derived !== null) noteUnshipped(spineKey(i), b.derived, settled[i].value);
+    if (b.derived !== null) noteUnshipped(spineKey(i), b.derived, settled[i].value, settled[i].withheldAs);
   });
   for (const g of groups) {
     const a = admitGroup(g, claims, index);

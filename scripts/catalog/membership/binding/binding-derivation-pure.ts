@@ -49,19 +49,31 @@ function claim<K>(index: Map<K, string | null>, key: K, sourceId: string): void 
   else if (held !== sourceId) index.set(key, null);
 }
 
+function contest<K>(index: Map<K, string | null>, key: K): void {
+  if (index.has(key)) index.set(key, null);
+}
+
+function forEachKey(
+  xids: SimbadXids, index: SimbadSourceIndex,
+  each: <K>(map: Map<K, string | null>, key: K) => void,
+): void {
+  if (xids.hip !== null) each(index.byHip, xids.hip);
+  if (xids.tyc !== null) each(index.byTyc, xids.tyc);
+  const gj = normaliseGjKey(xids.gj);
+  if (gj === null) return;
+  each(index.byGj, gj);
+  const bare = bareGjKey(gj);
+  if (bare !== gj) each(index.byGj, bare);
+}
+
+/** An object SIMBAD holds with no Gaia id proposes nothing, but it is still a
+ *  second claimant of every key it carries. */
 export function indexSimbadSources(
-  bySourceId: ReadonlyMap<string, SimbadXids>,
+  bySourceId: ReadonlyMap<string, SimbadXids>, sourceless: readonly SimbadXids[],
 ): SimbadSourceIndex {
   const out: SimbadSourceIndex = { byHip: new Map(), byTyc: new Map(), byGj: new Map() };
-  for (const [sourceId, xids] of bySourceId) {
-    if (xids.hip !== null) claim(out.byHip, xids.hip, sourceId);
-    if (xids.tyc !== null) claim(out.byTyc, xids.tyc, sourceId);
-    const gj = normaliseGjKey(xids.gj);
-    if (gj === null) continue;
-    claim(out.byGj, gj, sourceId);
-    const bare = bareGjKey(gj);
-    if (bare !== gj) claim(out.byGj, bare, sourceId);
-  }
+  for (const [sourceId, xids] of bySourceId) forEachKey(xids, out, (map, key) => claim(map, key, sourceId));
+  for (const xids of sourceless) forEachKey(xids, out, contest);
   return out;
 }
 

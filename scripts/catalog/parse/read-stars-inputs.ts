@@ -83,8 +83,10 @@ export async function loadReadStarsInputs(): Promise<ReadStarsInputs> {
   );
   const apsisMap = timed('Parsing Gaia DR3 Apsis astrophysical parameters', () => GAIA_APSIS.read(), entries);
   const gspcMap = timed('Parsing Gaia DR3 synthetic photometry', () => GAIA_GSPC.read(), entries);
-  const simbadSpectral = timed(
-    'Parsing SIMBAD sp_type catalogue', () => SIMBAD_SPTYPE.read().spectral, (i) => entries(i.bySourceId),
+  const { spectral: simbadSpectral, sourcedRows: simbadSptypeEntries } = timed(
+    'Parsing SIMBAD sp_type catalogue',
+    () => { const { spectral, xids } = SIMBAD_SPTYPE.read(); return { spectral, sourcedRows: xids.size }; },
+    (s) => `${s.sourcedRows} source_id rows`,
   );
   const sptypeOverrides = SPTYPE_OVERRIDES.read();
   const simbadValues = timed(
@@ -147,7 +149,7 @@ export async function loadReadStarsInputs(): Promise<ReadStarsInputs> {
     bjEntries: bailerJones.distPc.size,
     apsisEntries: apsisMap.size,
     gspcEntries: gspcMap.size,
-    simbadSptypeEntries: simbadSpectral.bySourceId.size,
+    simbadSptypeEntries,
     simbadValuesEntries: simbadValues.rowCount,
     gaiaAstrometryEntries: directions.gaiaAstrometry.size,
     hip2Entries: directions.hip2.size,

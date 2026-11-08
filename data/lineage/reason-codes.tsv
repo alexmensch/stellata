@@ -37,6 +37,7 @@ allocation.legacy.synth-duplicate-of-named-star	allocation	merge	historical		7.1
 allocation.legacy.unnamed-gaia-twin	allocation	merge	historical		7.1.8	unnamed Gaia-only twin of a named record: the V <= 11 magnitude term re-admitted a source the named record failed to bind (an addition with no SIMBAD route, or a component the sibling gate refused on a shared HIP); the named record now binds that source, so the sid merges into the named record’s and old refs follow the successor
 allocation.legacy.xid-loss-twin	allocation	merge	historical		7.1.8	A synthetic component minted after its pair rows lost their SIMBAD id, while the same star had already shipped on its own Gaia source; a same-as edge joins them and the gaia_dr3 key outranks synth on the canonical-key ladder.
 allocation.merged	allocation	merge	live		7.1.8	A SID no object keeps any more merges into the SID of the record its upstream decision names.
+allocation.merged.same-class	allocation	merge	live		7.1.15	One record now carries the keys of two SIDs in service and no stage decided the merge, so the same-as class is the decision: the SID that loses the canonical-key ladder merges into the one that wins.
 allocation.mint.cloud	allocation	none	live		7.1.8	The object is a cloud clouds.json carries.
 allocation.mint.local-group	allocation	none	live		7.1.8	The object is a galaxy local-group.json carries.
 allocation.mint.shell-list	allocation	none	live		7.1.8	The object is a row of data/sid/shell-objects.tsv.

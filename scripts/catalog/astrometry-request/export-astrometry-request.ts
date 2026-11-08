@@ -54,7 +54,7 @@ export async function main(): Promise<void> {
 
   const derivation = derivationCandidateSourceIds(
     [...kept, ...additionItemCells(tables, kept)], tables, indexCns5(tables.cns5).cns5ByOwnKey,
-    indexSimbadSources(tables.simbadBySourceId),
+    indexSimbadSources(tables.simbadBySourceId, tables.simbadSourceless),
   );
   for (const id of derivation) ids.add(id);
   const afterDerivation = ids.size;

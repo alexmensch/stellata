@@ -12,8 +12,8 @@ membership-manifest.tsv  LFS. One row per admitted record: final
                          the primary attesting each cell, `term` — which
                          side of /docs/catalog-driver.md#1-the-driver-model's union admitted
                          the row — and `origin_key`, the record's lineage
-                         key. 975,573 rows: 376,909 `primaries` and
-                         598,664 `magnitude` at the V <= 11 floor
+                         key. 975,373 rows: 376,909 `primaries` and
+                         598,464 `magnitude` at the V <= 11 floor
                          (scripts/catalog/membership/magnitude-term/README.md).
 additions-ledger.tsv     LFS. The /docs/catalog-driver.md#61-record-parity ledger for everything the
                          primaries admit that the spine lacked: one row per
@@ -33,7 +33,7 @@ parked-ledger.tsv        Regular git. The /docs/catalog-driver.md#61-record-pari
                          the record walk. The parity gate subtracts exactly these
                          rows and no more, so a park that is not on this list
                          fails the build rather than vanishing.
-binding-review.tsv       Regular git. The 280 spine rows the derivation
+binding-review.tsv       Regular git. The 375 spine rows the derivation
                          cannot settle alone or a review already settled —
                          contested · collision · disposed — with every
                          source's candidate, the gate rejections, the printed V
@@ -50,8 +50,9 @@ binding-review-dispositions.tsv
                          empty), a basis from the closed enum
                          (tycho2_position · v70a_astrometry ·
                          simbad_dr2_object · gaia_photometry · pair_component
-                         · shared_source) and the measured evidence. 53 rows:
-                         6 take the derived id, 47 another — 36 of those an id
+                         · shared_source) and the measured evidence. 54 rows:
+                         9 take the derived id, 1 ships none (44 Boo), 44
+                         another — 33 of those an id
                          only the cited basis stands behind
                          (dispositionAsserted). A kept value rides the manifest
                          as binding=reviewed.

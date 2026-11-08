@@ -119,6 +119,8 @@ const isCsv = (reply: HttpReply): boolean => reply.status >= 200 && reply.status
 export interface TapAnswer {
   readonly body: string;
   readonly result: TapResult;
+  /** The mirror that answered. */
+  readonly service: string;
 }
 
 export interface TapClientDeps {
@@ -169,7 +171,7 @@ export function tapClient(archive: TapArchive, deps: TapClientDeps): TapClient {
   const ask = async (mirror: TapMirror, adql: string, limit: number): Promise<TapAnswer> => {
     const reply = await deps.transport(`${mirror.url}/sync`, syncForm(adql, limit));
     if (!isCsv(reply)) throw replyError(reply, mirror.name);
-    return { body: reply.body, result: readCsv(reply.body, limit, mirror.name) };
+    return { body: reply.body, result: readCsv(reply.body, limit, mirror.name), service: mirror.name };
   };
 
   return {

@@ -253,8 +253,11 @@ Flamsteed form ships as an alias rather than going unsearchable.
   have typed, and `resolves` records whether it still reaches that record.
   A record the catalogue no longer carries reads `resolves = absent` with
   an empty `new`; an empty `new` on a `yes` / `no` row is a record that now
-  displays the runtime's identifier fallback. 3,680 changes: 6 absent
-  records, 92 fallbacks.
+  displays the runtime's identifier fallback. 3,680 changes: 11 absent
+  records, 92 fallbacks. `absent` is read off the frozen key, so a record
+  that gains a Gaia binding after its row was seeded reads `absent` under
+  its old `hip:` key while the catalogue still carries it (λ Equ,
+  107 Aqr A, 59 G. Cet, τ Scl A, γ¹ CrA).
 - **`naming-duplicates.tsv`** — every display label two or more records
   compose, with its claimants. A RATCHET: each row is a curation finding
   upstream, and `../../../tests/integration/multi-star-regression.test.ts` additionally
