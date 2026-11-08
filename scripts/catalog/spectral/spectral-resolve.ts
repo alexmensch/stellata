@@ -126,8 +126,10 @@ export interface SpectralValue {
 /** A typed row a tier reached and did not take: a SIMBAD row stating another
  *  star's Gaia id, or a type string the classifier cannot parse. A SIMBAD
  *  refusal names the namespace that reached the row. */
+type SimbadSpectralRefusalReason = 'gaia_id_contradicts' | 'unclassifiable';
+
 export type SpectralRefusal =
-  | CascadeRefusal<'simbad', 'gaia_id_contradicts' | 'unclassifiable'> & { readonly namespace: SimbadNamespace }
+  | CascadeRefusal<'simbad', SimbadSpectralRefusalReason> & { readonly namespace: SimbadNamespace }
   | CascadeRefusal<'gspspec', 'unclassifiable'>;
 
 /** A curated type with the `SPTYPE_OVERRIDES` row it was read from. */
@@ -172,7 +174,7 @@ export type SpectralResolution = CascadeResult<
 function matchSimbadRow(
   row: SimbadSpectralRow,
   recordSourceId: string | null,
-): SpectralValue | 'gaia_id_contradicts' | 'unclassifiable' | null {
+): SpectralValue | SimbadSpectralRefusalReason | null {
   if (!row.spType) return null;
   if (recordSourceId && row.sourceId && row.sourceId !== recordSourceId) {
     return 'gaia_id_contradicts';
