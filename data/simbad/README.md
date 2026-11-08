@@ -61,7 +61,7 @@ costs is visible in the pull's own report, which prints values reached
 before it prints values shipped.
 
 **The request set is an enumerated cohort, not the catalogue.** It is the
-**membership manifest** rows a [§ 5](/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers) value tier can reach — 121,249 of <!-- count:membership-manifest/rows -->975,372<!-- /count -->
+**membership manifest** rows a [§ 5](/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers) value tier can reach — 121,249 of <!-- count:membership-manifest/rows -->975,373<!-- /count -->
 (12.4%, 2026-11-08), keyed `gaia_source_id` → HIP → TYC → GJ. That first number is the
 row count of `membershipKeys(manifest, valueCohort(…))`
 over the committed manifest and both Gaia 5p tables, so calling the predicate
@@ -401,9 +401,9 @@ which is exactly what `tests/artifact-freshness.test.ts` fails on.
   adds a field per bead.
 
   **The `pm_bibcode` is a gate, not a label.** The PM rescue cascade
-  (`scripts/catalog/distance/pm-rescue/README.md`) reaches **<!-- count:build-catalog/pmRescueSimbad -->22<!-- /count -->** rows the
+  (`scripts/catalog/distance/pm-rescue/README.md`) reaches **<!-- count:build-catalog/pmRescueSimbad -->113<!-- /count -->** rows the
   direction cascade states no motion for, and refuses the pull's PM on
-  **<!-- count:build-catalog/pmRescueGaiaBibcodeSkipped -->17<!-- /count -->** more because that bibcode names a Gaia release: on a row whose own
+  **<!-- count:build-catalog/pmRescueGaiaBibcodeSkipped -->63<!-- /count -->** more because that bibcode names a Gaia release: on a row whose own
   Gaia solution is 2p, serving Gaia's earlier fit back through this index
   would return the motion DR3 declined to state. Same rule the rv tier
   applies to `rvz_bibcode`, same predicate.

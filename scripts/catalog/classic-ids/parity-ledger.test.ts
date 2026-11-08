@@ -165,7 +165,7 @@ describe.skipIf(!isReadable(MEMBERSHIP_MANIFEST))('override-freed HD numbers', (
     '68255': '1381-1641-1',    // ζ¹ Cnc B, on its own source through SIMBAD
   };
   const PARKS: Record<string, string> = {
-    '213051': '5226-1605-2',   // ζ¹ Aqr, on a Gaia source with no parallax
+    '213051': '5226-1605-2',   // ζ¹ Aqr: a 2p Gaia source, SIMBAD's parallax Gaia DR2's
   };
   // No second Tycho entry names it, so no primary admits it.
   const NO_ROW = ['330122'];
@@ -215,7 +215,7 @@ describe.skipIf(!isReadable(MEMBERSHIP_MANIFEST))('override-freed HD numbers', (
   it('leaves two resolving nowhere — one parked, one on no row at all', () => {
     for (const [hd, tyc] of Object.entries(PARKS)) {
       expect(rowsByHd.get(hd)?.tyc, `HD ${hd}`).toBe(tyc);
-      expect(parkedReason.get(tyc), `HD ${hd}`).toBe('no_parallax_published');
+      expect(parkedReason.get(tyc), `HD ${hd}`).toBe('refused_no_defensible_parallax');
     }
     for (const hd of NO_ROW) expect(rowsByHd.has(hd), `HD ${hd}`).toBe(false);
     expect(Object.keys(SHIPS).length + Object.keys(PARKS).length + NO_ROW.length)

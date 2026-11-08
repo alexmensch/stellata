@@ -41,8 +41,8 @@ an AT-HYG transcription we cannot re-pull, so [§ 5](/docs/catalog-driver.md#5-p
 retires it. Its 871 `rv_src=OTHER` cells were unattributable even by that
 standard and drop unconditionally — EZ Aqr's −60.0 among them.
 
-Per-tier counts are pinned as `rvGaiaDr3` **<!-- count:build-catalog/rvGaiaDr3 -->869,112<!-- /count -->** / `rvSimbad` **<!-- count:build-catalog/rvSimbad -->22,048<!-- /count -->** /
-`rvNone` **<!-- count:build-catalog/rvNone -->84,413<!-- /count -->**, the same discipline the direction cascade pins
+Per-tier counts are pinned as `rvGaiaDr3` **<!-- count:build-catalog/rvGaiaDr3 -->869,112<!-- /count -->** / `rvSimbad` **<!-- count:build-catalog/rvSimbad -->36,948<!-- /count -->** /
+`rvNone` **<!-- count:build-catalog/rvNone -->69,313<!-- /count -->**, the same discipline the direction cascade pins
 `directionVia` under. The SIMBAD tier is not the printed cell renamed:
 against the 7,126 rows that cell used to cover it drops 689 (562 the pull
 does not reach or holds no usable `rvz_radvel`, 127 the skip rule rejects)
@@ -75,7 +75,7 @@ The gate above refuses a 2p row's spectrum for a physical reason, and SIMBAD
 serves Gaia's own reduction of that same spectrum back under a Gaia catalogue
 bibcode — so on **every** 2p row, the SIMBAD tier **skips** candidates whose
 `rvz_bibcode` names a Gaia release (`isGaiaCatalogueBibcode`), falling to zero
-rather than laundering the distrusted value in. It fires on **<!-- count:build-catalog/rvGaiaBibcodeSkipped -->1,062<!-- /count -->** rows
+rather than laundering the distrusted value in. It fires on **<!-- count:build-catalog/rvGaiaBibcodeSkipped -->2,405<!-- /count -->** rows
 (`rvGaiaBibcodeSkipped`); the breakdowns below were measured on the build
 before the V ≤ 11 magnitude term, when it fired on 307.
 
@@ -104,7 +104,7 @@ instrument and literature is an independent measurement, which is why the
 rule keys on the bibcode rather than on agreement.
 
 **A row with no 2p blend behind it is a different case**, and a Gaia catalogue
-bibcode there is an ordinary citation rather than laundering: **<!-- count:build-catalog/rvSimbadGaiaBibcode -->5,545<!-- /count -->** shipped
+bibcode there is an ordinary citation rather than laundering: **<!-- count:build-catalog/rvSimbadGaiaBibcode -->14,579<!-- /count -->** shipped
 rows carry one (`rvSimbadGaiaBibcode`) and the skip rule leaves them alone.
 Before the magnitude term they were 363 — 278 DR2 and 85 DR3 — and every one
 of the 85 was a record the spine carried no `gaia_source_id` for, so

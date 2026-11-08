@@ -281,7 +281,7 @@ enough to see it.
   enumerated cohort (the spine rows whose printed cell is non-first-order,
   plus the no-Gaia tier — the one request set still keyed on the spine rather
   than the manifest), keyed `gaia_source_id` → HIP → TYC → GJ, and committed
-  as `data/simbad/simbad_values.tsv` (<!-- count:build-catalog/simbadValuesEntries -->74,446<!-- /count --> rows, ~18 MB, LFS).
+  as `data/simbad/simbad_values.tsv` (<!-- count:build-catalog/simbadValuesEntries -->115,743<!-- /count --> rows, ~18 MB, LFS).
   Refresh: `pnpm run refresh:simbad-values`. Fluxes come from the
   long-format `flux` table rather than the `allfluxes` view, which
   publishes no bibcode. Retrieved 2026-08-15; per-cohort coverage in
