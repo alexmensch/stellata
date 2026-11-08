@@ -36,6 +36,8 @@ export const MIN_PHYSICAL_RADIUS_R_SUN = 1e-9;
 // π / (180 × 3600). Same magnitude as 1 / AU_PER_PC (1 AU subtends 1 arcsec
 // at 1 pc by definition) but written out here so the unit conversion reads as
 // the angular operation it is.
+export const DEG_TO_RAD = Math.PI / 180;
+
 export const ARCSEC_TO_RAD = Math.PI / (180.0 * 3600.0);
 // Written out rather than ARCSEC_TO_RAD / 1000, which rounds one ulp apart.
 export const MAS_TO_RAD = Math.PI / (180.0 * 3600.0 * 1000.0);
@@ -51,6 +53,8 @@ export const J2000_JD = 2451545.0;
 // identical value; the Standish 1992 (/data/papers/index.md#standish1992) accuracy
 // budget does not need the time-varying obliquity term.
 export const J2000_OBLIQUITY_RAD = (23.4392911 * Math.PI) / 180;
+
+export const HIPPARCOS_EPOCH_JYEAR = 1991.25;
 
 export const DAYS_PER_JULIAN_YEAR = 365.25;
 export const SECONDS_PER_DAY = 86400;

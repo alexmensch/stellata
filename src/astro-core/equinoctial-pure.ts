@@ -1,7 +1,7 @@
 // Non-singular equinoctial elements, the representation every planet element
 // source is expressed in before a position is solved. See /src/client/solar-system/ephemerides/README.md#equinoctial-elements.
 
-const DEG = Math.PI / 180;
+import { DEG_TO_RAD } from './astronomy-constants';
 
 /** Equinoctial elements: `h/k` carry eccentricity and perihelion together,
  *  `p/q` carry inclination and node together, so neither pair goes singular
@@ -53,9 +53,9 @@ export function equinoctialFromAngles(
   lambdaDeg: number,
   out: EquinoctialElements,
 ): void {
-  const longperi = longperiDeg * DEG;
-  const node = longnodeDeg * DEG;
-  const tanHalfI = Math.tan((iDeg * DEG) / 2);
+  const longperi = longperiDeg * DEG_TO_RAD;
+  const node = longnodeDeg * DEG_TO_RAD;
+  const tanHalfI = Math.tan((iDeg * DEG_TO_RAD) / 2);
   out.aAu = aAu;
   out.h = e * Math.sin(longperi);
   out.k = e * Math.cos(longperi);
@@ -82,7 +82,7 @@ export function equinoctialToClassical(
   out.incRad = 2 * Math.atan(Math.hypot(eq.p, eq.q));
   out.nodeRad = node;
   out.argPeriRad = longperi - node;
-  out.mRad = eq.lambdaDeg * DEG - longperi;
+  out.mRad = eq.lambdaDeg * DEG_TO_RAD - longperi;
 }
 
 /**

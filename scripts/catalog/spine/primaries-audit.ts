@@ -16,6 +16,10 @@ import {
 } from './primaries-audit-pure';
 import { loadPrimaryTables } from './primaries-tables';
 
+function* athygHdCells(): Generator<{ hd: string; hyg: string }> {
+  for (const row of ATHYG_CLASSIC_IDS.read()(['hd', 'hyg'])) yield { hd: row.raw('hd'), hyg: row.raw('hyg') };
+}
+
 /** Rows buffered before the per-row attestation file is appended to. */
 const ATTESTATION_FLUSH_ROWS = 50_000;
 
@@ -71,7 +75,7 @@ export async function main(): Promise<void> {
 
   const spine = readArtifact(INHERITED_SPINE);
   const tables = await loadPrimaryTables(spine.map((r) => r.tyc).filter((t) => t !== ''));
-  const athygHd: AthygHdProvenance = tallyAthygHdProvenance(ATHYG_CLASSIC_IDS.read());
+  const athygHd: AthygHdProvenance = tallyAthygHdProvenance(athygHdCells());
 
   if (outDir !== null) mkdirSync(outDir, { recursive: true });
   const attestation = outDir === null

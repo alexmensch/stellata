@@ -25,9 +25,10 @@ scripts/catalog/naming/
   wgsn-faints-source.ts         (../../util/sources/); the faints source
                                 applies its curated corrections file, a
                                 member of the declaration.
-  wgsn-parse-pure.ts (+ test)   NEC.csv / wgsnFaints.csv parsers — the
-                                pipeline's one comma-CSV source (quoted
-                                cells), null spellings `_` / `~` / `-` /
+  wgsn-parse-pure.ts (+ test)   NEC.csv / wgsnFaints.csv parsers — comma
+                                CSV with quoted cells, split through
+                                ../../util/tsv/'s splitCsvLine against a
+                                fixed header; null spellings `_` / `~` / `-` /
                                 `null`, and both key columns' inline
                                 component letters (`HIP 518A`, `62264AB`).
                                 A key shape covered by neither throws, and

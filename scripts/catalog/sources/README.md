@@ -22,9 +22,11 @@ scripts/catalog/sources/
                                   lists every HIP the table publishes,
                                   positioned or not, for
                                   ../spine/primaries-tables.ts.
-  gaia-nss-source.ts (+ test)     GAIA_NSS: the source_ids carrying an NSS
-                                  two-body orbit. Membership is the only
-                                  signal read.
+  gaia-nss-source.ts (+ test)     GAIA_NSS, a column table
+                                  (../../util/tsv/README.md#reading-a-table),
+                                  and parseNssIndex: the source_ids carrying
+                                  an NSS two-body orbit, the only signal the
+                                  catalogue reads.
   gaia-astrometry-fixture.ts      Test-only GaiaAstrometryCatalogRow builder.
                                   A module, not an export from a test file:
                                   suites in distance/, multiplicity/, parse/

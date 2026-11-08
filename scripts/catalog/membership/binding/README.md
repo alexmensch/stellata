@@ -11,12 +11,17 @@ scripts/catalog/membership/binding/
   binding-gate-pure.ts (+ test) The binding gate both the derivation and
                                 ../../classic-ids/' overlay weigh a candidate
                                 through: `BindingEvidence`, the G − V threshold
-                                (pinned against scripts/binaries/indices.py),
+                                (pinned against scripts/binaries/indices.py)
+                                and `gMinusVRejects`, the one comparison the
+                                binaries load stage's gate calls too,
                                 SIMBAD's WDS cross-ID index and the
                                 sibling-letter check over it, and
                                 `weighBinding`'s verdict. Pure.
   simbad-wds-xids-source.ts     SIMBAD_WDS_XIDS, declared
-                                (../../../util/sources/).
+                                (../../../util/sources/) as a column
+                                table: this gate's index, the
+                                simbad-wds-sptype pull's oid request and
+                                the binaries load stage each read it.
   binding-evidence.ts           Loads the gate's own evidence — G per source
                                 and SIMBAD's WDS component cross-IDs — and
                                 `loadHipVMag`. The printed-V lookups come from
