@@ -10,10 +10,10 @@ exactly the gap AT-HYG (system-level spectra) and Gaia DR3
 
 ```
 simbad_sample.tsv          ~5.7 MB, LFS. Stratified random 50k stars.
-simbad_sptype.tsv          ~66 MB, LFS. 966,869 rows. Per-source sp_type /
+simbad_sptype.tsv          ~66 MB, LFS. 966,847 rows. Per-source sp_type /
                            sp_qual / sp_bibcode / otype + HIP / Gaia DR3 /
                            TYC / GJ cross-IDs; the resolver keys all four.
-simbad_values.tsv          ~29 MB, LFS. 115,871 rows. Bibcoded rv,
+simbad_values.tsv          ~29 MB, LFS. 115,743 rows. Bibcoded rv,
                            parallax, PM, coordinates and B/V fluxes for
                            the /docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers value cohort — see README.md#the-values-pull.
 simbad_wds_xids.tsv        ~1.2 MB, LFS. Per-WDS-component (Gaia DR3,
@@ -61,7 +61,7 @@ costs is visible in the pull's own report, which prints values reached
 before it prints values shipped.
 
 **The request set is an enumerated cohort, not the catalogue.** It is the
-**membership manifest** rows a [§ 5](/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers) value tier can reach — 121,249 of <!-- count:membership-manifest/rows -->975,373<!-- /count -->
+**membership manifest** rows a [§ 5](/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers) value tier can reach — 121,109 of <!-- count:membership-manifest/rows -->975,373<!-- /count -->
 (12.4%, 2026-11-08), keyed `gaia_source_id` → HIP → TYC → GJ. That first number is the
 row count of `membershipKeys(manifest, valueCohort(…))`
 over the committed manifest and both Gaia 5p tables, so calling the predicate
@@ -78,37 +78,37 @@ tables state every [§ 5](/docs/catalog-driver.md#5-per-field-cascades-and-rescu
 and what an identity-only predicate loses — is
 [The cohort is two questions](/scripts/refresh/simbad/README.md#the-cohort-is-two-questions-and-the-manifest-answers-one).
 
-Coverage over the cohort, measured at the 2026-11-08 pull (115,871 oids, up
+Coverage over the cohort, measured at the 2026-11-08 pull (<!-- count:build-catalog/simbadValuesEntries -->115,743<!-- /count --> oids, up
 from 74,446 at the 2026-09-08 pull, before the magnitude term). Every count below is
 what **ships**, i.e. post-policy — the file holds no unbibcoded value, so each
 field's value count equals its bibcode count.
 
 | Field | Reaches a shipped value |
 |---|---|
-| coordinates | 115,870 (100.0%) |
-| proper motion | 115,445 (99.6%) |
-| parallax | 108,959 (94.0%) |
-| flux V | 100,861 (87.0%) |
-| flux B | 100,587 (86.8%) |
-| radial velocity | 50,855 (43.9%) |
+| coordinates | 115,742 (100.0%) |
+| proper motion | 115,326 (99.6%) |
+| parallax | 108,849 (94.0%) |
+| flux V | 100,855 (87.1%) |
+| flux B | 100,584 (86.9%) |
+| radial velocity | 50,802 (43.9%) |
 
 **The two fluxes are the sparsest fields after rv, and the bibcode policy is
-why.** They sit at 87.0% and 86.8% against parallax's 94.0% and PM's 99.6%,
+why.** They sit at 87.1% and 86.9% against parallax's 94.0% and PM's 99.6%,
 because `allfluxes` — the view whose B/V coverage is wider — carries no bibcode
 at all, so the long-format `flux` table is the only consumable source and an
 unattributable value is dropped whole: the 2026-11-08 pull's report counts
-10,599 B and 9,302 V values reached and dropped. The committed file holds no
+10,597 B and 9,300 V values reached and dropped. The committed file holds no
 unbibcoded value by construction, so the pull's own report is the only place
 that number is ever read.
 
-**rv Gaia-bibcode skip rule** ([§ 5](/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers)): of the 50,855 rv values in the pull,
-**25,105 carry a Gaia catalogue bibcode** — 23,623 `2018yCat.1345....0G`
-([Gaia Collaboration 2018](/data/papers/index.md#gaiacollab2018cat)) and 1,482 `2022yCat.1355....0G` ([Gaia Collaboration 2022](/data/papers/index.md#gaiacollab2022cat)). Those are the values the rv
+**rv Gaia-bibcode skip rule** ([§ 5](/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers)): of the 50,802 rv values in the pull,
+**25,141 carry a Gaia catalogue bibcode** — 23,633 `2018yCat.1345....0G`
+([Gaia Collaboration 2018](/data/papers/index.md#gaiacollab2018cat)) and 1,508 `2022yCat.1355....0G` ([Gaia Collaboration 2022](/data/papers/index.md#gaiacollab2022cat)). Those are the values the rv
 cascade must skip on rows whose own 5p gate withheld Gaia rv, so the pull
 cannot launder a withheld value back in. The rest are literature, led by
-`2020AJ....160..120J` ([Jönsson 2020](/data/papers/index.md#jonsson2020), 5,516),
-`2006AstL...32..759G` ([Gontcharov 2006](/data/papers/index.md#gontcharov2006), 3,716) and
-`2020AJ....160...83S` ([Steinmetz 2020](/data/papers/index.md#steinmetz2020), 3,241).
+`2020AJ....160..120J` ([Jönsson 2020](/data/papers/index.md#jonsson2020), 5,510),
+`2006AstL...32..759G` ([Gontcharov 2006](/data/papers/index.md#gontcharov2006), 3,667) and
+`2020AJ....160...83S` ([Steinmetz 2020](/data/papers/index.md#steinmetz2020), 3,236).
 
 ## The TYC → HD pull
 
@@ -282,9 +282,9 @@ those 34: measured on the spine-scoped pull that introduced it, 280,676 of
 objects. That ratio is what the union is for; the rebase onto the manifest
 re-ran it over a larger request without changing the rule, and the pull's
 own report is where its figures come from. `simbad_sptype.tsv` is now
-**966,869 rows** (2026-11-08, the whole manifest, magnitude term included)
+**966,847 rows** (2026-11-08, the whole manifest, magnitude term included)
 and reads 48.5% `sp_type`-filled
-(`awk -F'\t' 'NR>1{t++; if($3!="") f++} END{print f/t}'`): 90.7% over the
+(`awk -F'\t' 'NR>1{t++; if($3!="") f++} END{print f/t}'`): 90.6% over the
 primaries' objects, 21.4% over the magnitude term's fainter stars.
 
 Every one of those bindings rests on a designation alone, so every one goes

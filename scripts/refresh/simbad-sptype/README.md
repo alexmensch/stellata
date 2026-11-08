@@ -30,7 +30,7 @@ union's counts and a sample of `RECOVERED_SAMPLE` recovered rows.
 - **Floors**: `sp_type` filled per membership term (`SP_TYPE_FLOORS`), over
   the objects that term's rows' Gaia ids bound: 80% for the primaries and 15%
   for the magnitude term, whose fainter stars SIMBAD seldom types (measured
-  2026-11-08: 90.7% and 21.4%), so the magnitude term cannot mask a primaries
+  2026-11-08: 90.6% and 21.4%), so the magnitude term cannot mask a primaries
   regression.
 - **Spot rows**: Arcturus (oid 2252964) and alf Cen A (oid 3396054), main_id,
   `sp_type` and HIP exact, alf Cen A's GJ too.

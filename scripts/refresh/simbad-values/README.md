@@ -37,7 +37,7 @@ and each bibcoded group ships only beside its bibcode
 - **Floors**: Gaia DR3 ident resolution per population
   (`GAIA_RESOLUTION_FLOORS`): 95% over the primaries' source_ids and 87% over
   the `gaia_native` rows', which SIMBAD indexes less often (measured 2026-11-08:
-  96.2% and 89.6%), so the magnitude term's lower rate cannot hide a drop among
+  96.3% and 89.6%), so the magnitude term's lower rate cannot hide a drop among
   the primaries; coordinate fill 99% (every SIMBAD object has coordinates).
 - **Spot rows**: tau Cyg (oid 747) and lam And (oid 6222), main_id and HIP
   exact, parallax within 0.5 mas, radial velocity within 1 km/s.

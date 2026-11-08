@@ -31,7 +31,7 @@ export const VALUES_PHASES = simbadPhases({ basic: BASIC, idents: IDENTS, fluxes
 export const COORD_FLOOR = 0.99;
 /** README.md#the-request-and-the-gates. */
 export const GAIA_RESOLUTION_FLOORS = { primaries: 0.95, gaiaNative: 0.87 } as const;
-/** The least share of the cohort's keyed rows that must reach an object: 115,871 of 121,248 (95.6%) on 2026-11-08. */
+/** The least share of the cohort's keyed rows that must reach an object (README.md#the-request-and-the-gates). */
 export const MIN_ROW_REACH = 0.94;
 
 /** Each population's share of its source_ids the Gaia rung bound, against its floor. */
