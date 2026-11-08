@@ -36,8 +36,8 @@ const REPLIES = {
 };
 
 const PULLS = [
-  { name: 'hip-xmatch', table: HIP_XMATCH, file: DATA_FILES.gaiaHipXmatch, key: 'gaia_source_id', reply: REPLIES.hip },
-  { name: 'tyc-xmatch', table: TYC_XMATCH, file: DATA_FILES.gaiaTycXmatch, key: 'gaia_source_id', reply: REPLIES.tyc },
+  { name: 'hip-xmatch', table: HIP_XMATCH, file: DATA_FILES.gaiaHipXmatch, reply: REPLIES.hip },
+  { name: 'tyc-xmatch', table: TYC_XMATCH, file: DATA_FILES.gaiaTycXmatch, reply: REPLIES.tyc },
 ] as const;
 
 const committed = (file: string): string => readFileSync(join(REPO_ROOT, file), 'utf8');
@@ -47,7 +47,9 @@ function sliced(table: PullTable) {
   return table.scope;
 }
 
-describe.each(PULLS)('$name', ({ name, table, file, key, reply }) => {
+const SLICE_KEY = 'gaia_source_id';
+
+describe.each(PULLS)('$name', ({ name, table, file, reply }) => {
   it('writes a recorded reply\'s rows as the committed table\'s lines, and its spot rows match', () => {
     const csv = `${[replyHeader(table), ...reply].join('\n')}\n`;
     const rows = checkedRows(table.columns, readCsv(csv, queryLimit(table), name), name);
@@ -60,7 +62,7 @@ describe.each(PULLS)('$name', ({ name, table, file, key, reply }) => {
 
   it('holds every slice of the committed table within GAIA_SLICE_ROWS', () => {
     const lines = committed(file).trimEnd().split('\n');
-    const at = lines[0].split('\t').indexOf(key);
+    const at = lines[0].split('\t').indexOf(SLICE_KEY);
     const keys = lines.slice(1).map((line) => BigInt(line.split('\t')[at]));
     const { edges } = sliced(table);
     const over = sliceCounts(keys, edges).filter((n) => n > GAIA_SLICE_ROWS);
