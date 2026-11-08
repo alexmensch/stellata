@@ -5,8 +5,10 @@
   "outputs": {
     "data/gaia/gaia_dr3_astrometry_catalog.tsv": "657b16344d15efef8c69791d33df8cc5ae69278c"
   },
-  "query": "9e6d8a3cc5c4850ea239c27f6810ab064dc941de",
-  "answeredBy": [],
+  "query": "f2e070f7d20c5703d4e8a57b397fde4ed4821620",
+  "answeredBy": [
+    "ESA-sync"
+  ],
   "release": "Gaia DR3",
   "requestFrom": []
 }
