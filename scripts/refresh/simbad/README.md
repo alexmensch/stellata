@@ -76,6 +76,7 @@ simbad-rows-pure.ts         tsv.py and coverage.py: written rows, fill gates.
 simbad-fake-pure.ts         An in-memory SIMBAD answering declared phases, as
                             an ask or a TAP transport.
 simbad-test-fixtures.ts     Manifest-record and fake builders for the suites.
+*-pure.test.ts              Each module's vitest suite, beside it.
 ```
 
 ## The cohort is two questions, and the manifest answers one
