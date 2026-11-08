@@ -294,7 +294,7 @@ job and is finished; only the second is the union's.
   the ambiguity a consumer is asking about, and the single-valued fetcher
   would pick a winner and hide it.
 
-`refresh-simbad-sample.py` predates this folder and drives its TAP
-queries directly via the shared
-[`scripts/refresh/refresh_lib.py`](../README.md). New SIMBAD pulls
-should compose the modules here instead of inlining their own ADQL.
+`refresh:simbad` ([`../simbad-sample/`](../simbad-sample/README.md)) asks its
+own whole-table bins and takes its HIP and Gaia ids through `fetchIdents`
+here. New SIMBAD pulls compose the modules here instead of inlining their
+own ADQL.

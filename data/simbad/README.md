@@ -427,7 +427,7 @@ which is exactly what `tests/artifact-freshness.test.ts` fails on.
 ## Refresh
 
 - `pnpm run refresh:simbad` →
-  [`scripts/refresh/refresh-simbad-sample.py`](../../scripts/refresh/README.md).
+  [`scripts/refresh/simbad-sample/`](../../scripts/refresh/simbad-sample/README.md).
 - `pnpm run refresh:simbad-values` →
   [`scripts/refresh/refresh-simbad-values.py`](../../scripts/refresh/README.md).
 - `pnpm run refresh:simbad-tyc-hd` →
@@ -439,5 +439,5 @@ which is exactly what `tests/artifact-freshness.test.ts` fails on.
 - `pnpm run refresh:simbad-wds-xids` →
   [`scripts/refresh/refresh-simbad-wds-xids.py`](../../scripts/refresh/README.md).
 
-The Python ones share the `scripts/refresh/simbad/` plumbing; the WDS-keyed
-one runs on the TypeScript pull runtime.
+The Python ones share the `scripts/refresh/simbad/` plumbing; the sample and
+the WDS-keyed one run on the TypeScript pull runtime.

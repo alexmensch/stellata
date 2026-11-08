@@ -15,7 +15,7 @@ repo-relative, so an outputs module passes them as they are.
   step-table outputs modules declare: the membership manifest and its three
   ledgers, the parked and SIMBAD-sourced distance ledgers, SIMBAD's WDS
   component cross-IDs (which a pull writes and two sources read) and the
-  WDS-keyed SIMBAD spectral types, the label-merge
+  WDS-keyed SIMBAD spectral types, the SIMBAD validation sample, the label-merge
   queue, the classic-ID overlay and its two gate queues, the two WGSN
   tables, the two Gaia astrometry requests (the catalogue's, and the one
   `build:binaries` writes, which the step table names), the generated
