@@ -88,6 +88,13 @@ export type Allocation =
 const CLASSICAL = new Set(['sol', 'hip', 'hd', 'hr', 'gl']);
 const SAME_CLASS_MERGE = ALLOCATION_CODES.code('merged.same-class');
 
+type KeyCarrier =
+  | { readonly kind: 'record'; readonly record: SidObject }
+  | { readonly kind: 'edge'; readonly edge: SameasEdge };
+
+/** A same-class merge whose key only a stored edge carries is keyed on that edge, never on a record that lacks the key. */
+export const sameasEdgeOrigin = (edge: SameasEdge): string => `sameas:${edge.a}|${edge.b}`;
+
 /** /docs/sid.md#43-ledger--datasidledgertsv: the classical key the merged record keys on survives; with none, the oldest SID. */
 export function mergeSurvivor(active: readonly LedgerRow[]): LedgerRow {
   const key = canonicalKeyOf(active.map((r) => r.canonicalKey));
@@ -176,9 +183,13 @@ export function allocate(input: AllocateInput, upstream: Upstream): Allocation {
     }
   }
   const firstObject = (root: string): SidObject => objects[objectsByClass.get(root)![0]];
-  const carrierOf = (root: string, key: string): SidObject => (
-    objectsByClass.get(root)!.map((i) => objects[i]).find((o) => o.designations.includes(key)) ?? firstObject(root)
-  );
+  const carrierOf = (root: string, key: string): KeyCarrier => {
+    const record = objectsByClass.get(root)!.map((i) => objects[i]).find((o) => o.designations.includes(key));
+    if (record !== undefined) return { kind: 'record', record };
+    const edge = input.storedEdges.find((e) => e.a === key || e.b === key);
+    if (edge === undefined) throw new Error(`${key} is in class ${classText(root)} through no record and no stored edge`);
+    return { kind: 'edge', edge };
+  };
 
   const orphans = ledger.filter((row) => !retired.has(row.sid)
     && !objectsByClass.has(uf.find(row.canonicalKey))
@@ -243,8 +254,11 @@ export function allocate(input: AllocateInput, upstream: Upstream): Allocation {
   ));
   for (const { root, loser, survivor } of losersByRoot) {
     if (causesOf(loser.canonicalKey).decisions.length === 0) {
-      const origin = carrierOf(root, loser.canonicalKey).origin;
-      const decision: Decision = { stage: ALLOCATION_CODES.stage, origin, code: SAME_CLASS_MERGE, effect: 'merge', into: origin };
+      const carrier = carrierOf(root, loser.canonicalKey);
+      const [origin, into] = carrier.kind === 'record'
+        ? [carrier.record.origin, carrier.record.origin]
+        : [sameasEdgeOrigin(carrier.edge), firstObject(root).origin];
+      const decision: Decision = { stage: ALLOCATION_CODES.stage, origin, code: SAME_CLASS_MERGE, effect: 'merge', into };
       removals.push({ kind: 'merged', sid: loser.sid, canonicalKey: loser.canonicalKey, into: survivor.sid, decision });
       continue;
     }

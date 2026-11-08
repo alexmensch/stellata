@@ -234,8 +234,9 @@ the object reached it through a designation it does not carry),
 keyed on the object's origin; per SID no object keeps,
 `allocation.retired`, `.parked` or `.merged`, keyed on the origin of the
 upstream decision that settled it, with that code as `cause` — for a
-same-class merge, the origin of the record carrying the losing key, with
-`allocation.merged.same-class` as `cause`. Its key -> SID
+same-class merge, the origin of the record carrying the losing key, or the
+stored edge that brought the key into the class (`sameas:<a>|<b>`) where no
+record carries it, with `allocation.merged.same-class` as `cause`. Its key -> SID
 file `allocation.sids.tsv.gz` maps each origin key to its SID. Each sibling
 build allocates as a stage of its own (`allocation-clouds`,
 `allocation-local-group`), writing the object rows under its own codes, keyed

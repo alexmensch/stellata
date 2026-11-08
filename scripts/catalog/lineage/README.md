@@ -81,6 +81,7 @@ source row that founded the record.
 | a magnitude-term row | its Gaia DR3 `source_id` |
 | a promoted companion | its `multiples.tsv` `(system_id, comp)` |
 | a cloud or Local Group object | its record in `clouds.json` / `local-group.json`, by slug (`clouds:<slug>`, `local-group:<slug>`) |
+| (no record) a same-class SID merge whose key only a stored same-as edge carries | that edge, `sameas:<a>\|<b>` ([SID events](/scripts/sid/README.md#sid-events)) |
 
 The spine's line number is stable because the file is frozen and
 byte-guarded, and it covers Sol, whose identifier cells are empty; its

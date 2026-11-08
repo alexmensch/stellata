@@ -287,6 +287,18 @@ describe('allocate: two active SIDs in one class', () => {
     expect(a.events.map((e) => [e.sid, e.params, e.successor])).toEqual([[2, '{"key":"spine:7"}', 1]]);
   });
 
+  it('keys the same-class merge on the stored edge when no class member carries the loser\'s key', () => {
+    const a = allocated(run({
+      objects: [star('spine:1', 'hip:1')],
+      storedEdges: [{ a: 'hip:1', b: 'gaia_dr3:2' }],
+      ledger,
+    }));
+    expect(a.events.map((e) => [e.sid, e.event, e.code, e.params, e.successor])).toEqual([
+      [2, 'merge', 'allocation.merged.same-class', '{"key":"sameas:hip:1|gaia_dr3:2"}', 1],
+    ]);
+    expect(a.removals).toMatchObject([{ decision: { origin: 'sameas:hip:1|gaia_dr3:2', into: 'spine:1' } }]);
+  });
+
   it('fails closed when a stage retires or parks a loser the class keeps in service', () => {
     for (const effect of ['retire', 'park'] as const) {
       const errors = failed(run({ objects, ledger }, upstream({

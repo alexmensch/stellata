@@ -234,7 +234,9 @@ Gaia source onto the classically-keyed record it belongs to, the label
 merge moving an HD onto the HIP record it names, a curated same-as edge
 — and the same-as class is itself the decision: allocation merges the
 SID the ladder loses into the one it keeps, under
-`allocation.merged.same-class`, whichever stage moved the key. Or a stage
+`allocation.merged.same-class`, whichever stage moved the key, keyed on the
+record carrying the losing key or, where only a curated same-as edge brings
+it into the class, on that edge (`sameas:<a>|<b>`). Or a stage
 decides the merge itself: a `fold` row in
 `data/membership/spine-corrections.tsv` saying AT-HYG carried one star
 twice, or promotion adopting a record as the component it names. The
