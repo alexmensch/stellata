@@ -197,7 +197,10 @@ same thing — single-use helpers stay with their consumer.
   `round`: half to even on the double's exact decimal value;
   `roundEach`, the same over each element of a tuple;
   `formatFixed(x, digits)`, Python's `f"{x:.{digits}f}"` text on the same
-  rounding (a refresh pull's fixed-decimal column format); and
+  rounding (a refresh pull's fixed-decimal column format);
+  `formatExponent(x, digits)`, Python's `f"{x:.{digits}e}"` on the same
+  rounding, over the double's exact value as a `BigInt` (the exponent
+  format); and
   `roundSignificant(v, digits)`, significant figures through
   `toPrecision`. Every number a TypeScript build rounds into a JSON
   artifact goes through one of them, never `Math.round(x · 10ⁿ) / 10ⁿ`,

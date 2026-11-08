@@ -73,6 +73,21 @@ describe('formatTsv', () => {
     expect(formatTsv('f.tsv', [{ name: 'd', format: { fixed: 6 } }], [['0.1570405'], ['1.0490755']])).toBe('d\n0.157040\n1.049076\n');
   });
 
+  it('writes an exponent column as Python .Ne did, on its float32 value', () => {
+    expect(formatTsv('f.tsv', [{ name: 'f', format: { exp: 6, float32: true } }], [['1.2345675E-10'], ['6.512287E-17']]))
+      .toBe('f\n1.234567e-10\n6.512287e-17\n');
+    expect(formatTsv('f.tsv', [{ name: 'f', format: { exp: 6 } }], [['1.2345675E-10']])).toBe('f\n1.234568e-10\n');
+  });
+
+  it('writes a flag as 0/1 from either archive\'s spelling and refuses any third value', () => {
+    const flag: Column[] = [{ name: 'b', format: { flag: true } }];
+    expect(formatTsv('f.tsv', flag, [['true'], ['false'], ['1'], ['0'], [null]])).toBe('b\n1\n0\n1\n0\n\n');
+    for (const bad of ['2', 'TRUE', 't', 'toString']) {
+      const rows = [bad].map((cell) => [cell]);
+      expect(() => formatTsv('f.tsv', flag, rows)).toThrow(`f.tsv: b="${bad}" is not a two-valued flag (0/1 or false/true)`);
+    }
+  });
+
   it('rounds as Python does, and refuses a formatted cell that is not a number', () => {
     expect(formatTsv('f.tsv', COLUMNS, [['1', 'x', '0.125']])).toBe('source_id\tRA(ICRS)\tplx\n1\tx\t0.12\n');
     expect(() => formatTsv('f.tsv', COLUMNS, [['1', 'x', 'n/a']])).toThrow('f.tsv: plx="n/a" has a numeric format but is not a number');

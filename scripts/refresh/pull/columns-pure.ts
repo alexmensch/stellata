@@ -1,14 +1,16 @@
 // A pulled table's columns: the ADQL projection, the reply's schema check, the write order, and the TSV it writes. See README.md#columns.
 
-import { formatFixed } from '../../util/round-pure';
+import { formatExponent, formatFixed } from '../../util/round-pure';
 import { nullableCell, tsvLine, tsvText } from '../../util/tsv/artifact-pure';
 import type { TapResult } from './tap-pure';
 
 /** See README.md#columns. */
-export interface Format {
-  readonly fixed: number;
-  readonly float32?: true;
-}
+export type Format =
+  | { readonly fixed: number; readonly float32?: true }
+  | { readonly exp: number; readonly float32?: true }
+  | { readonly flag: true };
+
+const FLAG_TEXT: Readonly<Record<string, '0' | '1'>> = { 0: '0', 1: '1', false: '0', true: '1' };
 
 export interface Column {
   /** The header the archive answers with and the TSV writes. */
@@ -78,10 +80,14 @@ export function sortRows(columns: readonly Column[], rows: readonly Row[], keys:
 function formatted(file: string, column: Column, cell: string | null): string {
   if (cell === null || column.format === undefined) return nullableCell(cell);
   const { format } = column;
+  if ('flag' in format) {
+    if (!Object.hasOwn(FLAG_TEXT, cell)) throw new Error(`${file}: ${column.name}="${cell}" is not a two-valued flag (0/1 or false/true)`);
+    return FLAG_TEXT[cell];
+  }
   const parsed = Number(cell);
   if (!Number.isFinite(parsed)) throw new Error(`${file}: ${column.name}="${cell}" has a numeric format but is not a number`);
   const value = format.float32 ? Math.fround(parsed) : parsed;
-  return formatFixed(value, format.fixed);
+  return 'fixed' in format ? formatFixed(value, format.fixed) : formatExponent(value, format.exp);
 }
 
 export function formatTsv(file: string, columns: readonly Column[], rows: readonly Row[]): string {
