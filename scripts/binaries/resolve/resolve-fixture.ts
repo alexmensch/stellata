@@ -9,13 +9,14 @@ import type { SimbadWdsXid } from '../load/simbad-pure';
 import type { WdsPair } from '../load/wds-pure';
 import { componentsOf, type DecomposedPair, type ResolvedComponent } from './components-pure';
 import { ARCSEC_PER_DEG } from '../../../src/astro-core/astronomy-constants';
+import { pushTo } from '../../util/map-buckets-pure';
 
 export function ccdmIndex(rows: readonly { hip: number; ccdm: string }[]): CcdmIndex {
   const hipToCcdm = new Map<number, string>();
   const ccdmToHips = new Map<string, number[]>();
   for (const { hip, ccdm } of rows) {
     hipToCcdm.set(hip, ccdm);
-    ccdmToHips.set(ccdm, [...(ccdmToHips.get(ccdm) ?? []), hip]);
+    pushTo(ccdmToHips, ccdm, hip);
   }
   return { hipToCcdm, ccdmToHips, rows: rows.length };
 }

@@ -11,6 +11,7 @@ import { DEG_TO_RAD } from '../../../src/astro-core/astronomy-constants';
 import { propagatePosition, tangentOffset, type TangentOffset } from '../sky-geometry-pure';
 import { working, type DecomposedPair, type Draft, type DraftPair } from './components-pure';
 import { inheritDownwardParentBindings, propagateIdentities, smearIfSeeded } from './propagate-pure';
+import { addTo, groupBy, pushTo } from '../../util/map-buckets-pure';
 
 export const BINDING_SHAPES = ['source_letters', 'letter_sources'] as const;
 export type BindingShape = (typeof BINDING_SHAPES)[number];
@@ -95,15 +96,9 @@ export function buildSystemContexts(pairs: readonly DecomposedPair[]): ReadonlyM
     if (pair.rhoLast === null || pair.rhoLast === 0) ctx.blendPairs.push([pTok, sTok]);
     else if (p.gaiaSourceId !== null && p.gaiaSourceId === s.gaiaSourceId) ctx.blendSources.add(p.gaiaSourceId);
     for (const [tok, side, mag] of [[pTok, 'primary', pair.magPri], [sTok, 'secondary', pair.magSec]] as const) {
-      const inst = ctx.instances.get(tok);
-      if (inst) inst.push({ pairIdx, side });
-      else ctx.instances.set(tok, [{ pairIdx, side }]);
+      pushTo(ctx.instances, tok, { pairIdx, side });
       const src = (side === 'primary' ? p : s).gaiaSourceId;
-      if (src !== null) {
-        const set = ctx.tokenSources.get(tok);
-        if (set) set.add(src);
-        else ctx.tokenSources.set(tok, new Set([src]));
-      }
+      if (src !== null) addTo(ctx.tokenSources, tok, src);
       if (mag !== null && mag < (ctx.tokenMag.get(tok) ?? Infinity)) ctx.tokenMag.set(tok, mag);
     }
     const v = pairVector(pair);
@@ -242,14 +237,7 @@ function clusterTokens(tokens: ReadonlySet<string>, blendPairs: SystemContext['b
       if (tokensRelated(toks[i], toks[j], blendPairs)) parent.set(find(toks[i]), find(toks[j]));
     }
   }
-  const clusters = new Map<string, string[]>();
-  for (const t of toks) {
-    const root = find(t);
-    const c = clusters.get(root);
-    if (c) c.push(t);
-    else clusters.set(root, [t]);
-  }
-  return [...clusters.values()];
+  return [...groupBy(toks, find).values()];
 }
 
 /** The ancestor, or shortest token: `{A, Aa}` → `A`. */
@@ -349,9 +337,7 @@ function auditSystem(
   const sourceTokens = new Map<string, Set<string>>();
   for (const [tok, sources] of ctx.tokenSources) {
     for (const src of sources) {
-      const set = sourceTokens.get(src);
-      if (set) set.add(tok);
-      else sourceTokens.set(src, new Set([tok]));
+      addTo(sourceTokens, src, tok);
     }
   }
   for (const src of [...sourceTokens.keys()].sort(compareSourceIds)) {

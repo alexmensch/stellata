@@ -4,6 +4,7 @@ import { discovererKey, splitComponents, type DiscovererKey } from '../component
 import type { AthygRow } from '../load/athyg-pure';
 import type { WdsPair } from '../load/wds-pure';
 import { RESOLVE_VIA } from '../multiples-tsv';
+import { groupBy } from '../../util/map-buckets-pure';
 
 export type ResolveVia = (typeof RESOLVE_VIA)[number];
 
@@ -42,14 +43,7 @@ export function unresolvedComponent(pair: WdsPair, component: string, isPrimary:
 export type PairsByDiscoverer = ReadonlyMap<DiscovererKey, readonly WdsPair[]>;
 
 export function pairsByDiscoverer(pairs: readonly WdsPair[]): PairsByDiscoverer {
-  const out = new Map<DiscovererKey, WdsPair[]>();
-  for (const p of pairs) {
-    const key = discovererKey(p.wdsId, p.discoverer);
-    const bucket = out.get(key);
-    if (bucket) bucket.push(p);
-    else out.set(key, [p]);
-  }
-  return out;
+  return groupBy(pairs, (p) => discovererKey(p.wdsId, p.discoverer));
 }
 
 /** Not necessarily the row that produced `c`: README.md#byte-identity-with-the-python-stage */

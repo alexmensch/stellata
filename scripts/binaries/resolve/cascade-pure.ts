@@ -18,6 +18,7 @@ import {
   type DecomposedPair, type Draft, type ResolvedComponent,
 } from './components-pure';
 import { buildSystemHipClaims, claimHip, hipClaimedByDisjointLetter, tokensShareIdentity } from './sibling-identity-pure';
+import { groupBy } from '../../util/map-buckets-pure';
 
 /** A sibling-identity rejection, one per candidate refused. */
 export interface SiblingRejection {
@@ -30,14 +31,7 @@ export const SIBLING_REJECTION_TIERS = ['ccdm_sibling_owned', 'athyg_match_sibli
 export type SiblingRejectionTier = (typeof SIBLING_REJECTION_TIERS)[number];
 
 export function groupOrb6ByPair(orb6: readonly Orb6Entry[]): ReadonlyMap<PairRowKey, readonly Orb6Entry[]> {
-  const out = new Map<PairRowKey, Orb6Entry[]>();
-  for (const e of orb6) {
-    const key = pairRowKey(e.wdsId, e.components);
-    const bucket = out.get(key);
-    if (bucket) bucket.push(e);
-    else out.set(key, [e]);
-  }
-  return out;
+  return groupBy(orb6, (e) => pairRowKey(e.wdsId, e.components));
 }
 
 function gaiaFromAthygViaHip(hip: number, indices: IdentifierIndices): string | null {

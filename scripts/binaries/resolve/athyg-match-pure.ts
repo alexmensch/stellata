@@ -12,6 +12,7 @@ import {
 } from './components-pure';
 import type { WdsPair } from '../load/wds-pure';
 import { buildSystemHipClaims, hipClaimedByDisjointLetter } from './sibling-identity-pure';
+import { pushTo } from '../../util/map-buckets-pure';
 
 /** Below the typical AT-HYG inter-source separation outside the densest clusters. */
 export const ATHYG_POSITION_MATCH_TOLERANCE_ARCSEC = 2.0;
@@ -31,12 +32,7 @@ const cellKey = (raCell: number, decCell: number): number => raCell * 1000 + dec
 
 export function buildAthygGrid(athyg: readonly AthygRow[]): AthygGrid {
   const grid = new Map<number, number[]>();
-  athyg.forEach((row, i) => {
-    const key = cellKey(Math.trunc(row.raDeg) % 360, Math.trunc(row.decDeg) + 90);
-    const cell = grid.get(key);
-    if (cell) cell.push(i);
-    else grid.set(key, [i]);
-  });
+  athyg.forEach((row, i) => pushTo(grid, cellKey(Math.trunc(row.raDeg) % 360, Math.trunc(row.decDeg) + 90), i));
   return grid;
 }
 
