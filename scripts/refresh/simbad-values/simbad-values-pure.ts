@@ -87,7 +87,7 @@ export function valuesPull(outputs: DeclaredOutputs<'values'>, inputs: ValuesInp
     request,
     async run(ask, log) {
       log(`value cohort: ${keyedRows(keys) + keys.keyless} manifest rows (${keys.keyless} carrying no key); `
-        + `Gaia 5p states every cascade value for ${inputs.gaiaComplete.size} source_ids`);
+        + `the Gaia 5p tables (primaries' astrometry and the whole magnitude pull) state every cascade value for ${inputs.gaiaComplete.size} source_ids`);
       const gaiaNative = new Set<string>();
       for (const r of inputs.records()) if (r.binding === GAIA_NATIVE_BINDING && r.gaiaSourceId !== null && inCohort(r)) gaiaNative.add(r.gaiaSourceId);
       const ledger = parseLedger();
