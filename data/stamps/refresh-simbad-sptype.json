@@ -1,15 +1,15 @@
 {
   "inputs": {
-    "scripts/catalog/membership/membership-manifest-expected.json": "ec3595cb6786c7f1673abd290cc291602f990595"
+    "scripts/catalog/membership/membership-manifest-expected.json": "b6462b022c85255e98ed32fe6585ad02ce59fa6a"
   },
   "outputs": {
-    "data/simbad/simbad_sptype.tsv": "8a0f797520aee7c882a79335d0d9c506787236ec"
+    "data/simbad/simbad_sptype.tsv": "a305409c0abcf3547a9501be6ea93bb336089d11"
   },
   "query": "c61f729b18f71761e5bd9bae27a40e68fdabce69",
   "answeredBy": [
     "SIMBAD-Harvard"
   ],
-  "request": "694cd51219bce69f77950acc7c8c5473e6fd0744",
+  "request": "cf6f26dabe3c28fb29fad4a88c8744bf6f347409",
   "requestFrom": [
     "data/membership/membership-manifest.tsv"
   ]
