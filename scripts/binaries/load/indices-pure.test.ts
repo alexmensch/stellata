@@ -10,7 +10,7 @@ import type { GaiaAstrometryRow } from './gaia-pure';
 function indices(over: Partial<IndexInputs> = {}) {
   return buildIndices({
     athyg: [], hip2: new Map(), hipToGaia: new Map(), tycToGaia: new Map(), srcToNss: new Map(),
-    srcToAstrometry: new Map(), ccdm: { hipToCcdm: new Map(), ccdmToHips: new Map() },
+    srcToAstrometry: new Map(), ccdm: { hipToCcdm: new Map(), ccdmToHips: new Map(), rows: 0 },
     simbadWdsSpectra: new Map(), componentSptypeOverrides: new Map(), athygGaiaMagRejected: [],
     msc: buildMscLookup([], [], []),
     ...over,
@@ -45,12 +45,13 @@ describe('buildIndices', () => {
 
 describe('parseCcdmIndex', () => {
   it('keys every HIP with a CCDM identifier and gathers its siblings (α Cen)', () => {
-    const { hipToCcdm, ccdmToHips } = parseCcdmIndex(columnTable(FIXTURE, [
+    const { hipToCcdm, ccdmToHips, rows } = parseCcdmIndex(columnTable(FIXTURE, [
       'HIP\tCCDM\tMultFlag', '71683\t14396-6050\t', '71681\t14396-6050\t', '70890\t14396-6050\t', '99999\t          \tO',
     ].join('\n')));
     expect(hipToCcdm.get(71683)).toBe('14396-6050');
     expect(ccdmToHips.get('14396-6050')).toEqual([71683, 71681, 70890]);
     expect(hipToCcdm.has(99999)).toBe(false);
+    expect(rows).toBe(4);
   });
 });
 

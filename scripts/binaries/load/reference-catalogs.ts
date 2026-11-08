@@ -19,7 +19,7 @@ import {
 import { ASTROMETRY_EXCLUSIONS, COMPONENT_SPTYPE_OVERRIDES, ORB6_COMPONENT_OVERRIDES } from './curated-source';
 import { parseNssOrbits, type GaiaAstrometryRow, type NssOrbitRow } from './gaia-pure';
 import {
-  buildIndices, parseCcdmIndex, scrubAthygGaia, type IdentifierIndices,
+  buildIndices, parseCcdmIndex, scrubAthygGaia, type CcdmIndex, type IdentifierIndices,
 } from './indices-pure';
 import {
   buildMscLookup, type MscComponentRow, type MscOrbitRow, type MscSystemRow,
@@ -51,7 +51,7 @@ export interface Stage1Inputs {
   readonly orb6: Orb6Parse;
   readonly orb6ComponentOverrides: ReadonlyMap<string, string>;
   readonly athyg: readonly AthygRow[];
-  readonly ccdm: ReturnType<typeof parseCcdmIndex> & { readonly rows: number };
+  readonly ccdm: CcdmIndex;
   readonly hip2: ReadonlyMap<number, Hip2AstrometryRow>;
   readonly hipToGaia: ReadonlyMap<number, string>;
   readonly tycToGaia: ReadonlyMap<string, string>;
@@ -152,14 +152,13 @@ export function assembleReferenceCatalogs(inputs: Stage1Inputs): ReferenceCatalo
 
 /** Reads every Stage 1 input through its declaration, then assembles. */
 export async function loadReferenceCatalogs(): Promise<ReferenceCatalogs> {
-  const ccdmTable = HIP_CCDM.read();
   const simbadXids = parseSimbadWdsXids(SIMBAD_WDS_XIDS.read());
   return assembleReferenceCatalogs({
     wdsSumm: WDS_SUMM.read(),
     orb6: ORB6.read(),
     orb6ComponentOverrides: ORB6_COMPONENT_OVERRIDES.read(),
     athyg: parseAthygRows(ATHYG_CLASSIC_IDS.read()),
-    ccdm: { ...parseCcdmIndex(ccdmTable), rows: countRows(ccdmTable(['HIP'] as const)) },
+    ccdm: parseCcdmIndex(HIP_CCDM.read()),
     hip2: HIP2.read().astrometry,
     hipToGaia: GAIA_HIP_XMATCH.read(),
     tycToGaia: await GAIA_TYC_XMATCH.read(),
@@ -171,12 +170,6 @@ export async function loadReferenceCatalogs(): Promise<ReferenceCatalogs> {
     componentSptypeOverrides: COMPONENT_SPTYPE_OVERRIDES.read(),
     msc: { systems: MSC_SYSTEMS.read(), orbits: MSC_ORBITS.read(), components: MSC_COMPONENTS.read() },
   });
-}
-
-function countRows(rows: Iterable<unknown>): number {
-  let n = 0;
-  for (const _ of rows) n++;
-  return n;
 }
 
 /** README.md#checks-and-counts */

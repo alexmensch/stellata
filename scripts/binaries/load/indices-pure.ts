@@ -59,20 +59,30 @@ export function scrubAthygGaia(
   return { rows, rejected };
 }
 
-/** Every HIP → CCDM row with a CCDM identifier, in file order. */
-export function parseCcdmIndex(table: ColumnTable): { hipToCcdm: Map<number, string>; ccdmToHips: Map<string, number[]> } {
+export interface CcdmIndex {
+  /** Every HIP with a CCDM identifier, in file order. */
+  readonly hipToCcdm: ReadonlyMap<number, string>;
+  readonly ccdmToHips: ReadonlyMap<string, readonly number[]>;
+  /** Rows carrying a HIP, identifier or not: the row band's count. */
+  readonly rows: number;
+}
+
+export function parseCcdmIndex(table: ColumnTable): CcdmIndex {
   const hipToCcdm = new Map<number, string>();
   const ccdmToHips = new Map<string, number[]>();
+  let rows = 0;
   for (const row of table(['HIP', 'CCDM'] as const)) {
     const hip = row.int('HIP');
+    if (hip === null) continue;
+    rows++;
     const ccdm = row.text('CCDM');
-    if (hip === null || ccdm === null) continue;
+    if (ccdm === null) continue;
     hipToCcdm.set(hip, ccdm);
     const hips = ccdmToHips.get(ccdm);
     if (hips) hips.push(hip);
     else ccdmToHips.set(ccdm, [hip]);
   }
-  return { hipToCcdm, ccdmToHips };
+  return { hipToCcdm, ccdmToHips, rows };
 }
 
 export interface IndexInputs {
@@ -83,7 +93,7 @@ export interface IndexInputs {
   readonly tycToGaia: ReadonlyMap<string, string>;
   readonly srcToNss: ReadonlyMap<string, NssOrbitRow>;
   readonly srcToAstrometry: ReadonlyMap<string, GaiaAstrometryRow>;
-  readonly ccdm: { readonly hipToCcdm: ReadonlyMap<number, string>; readonly ccdmToHips: ReadonlyMap<string, readonly number[]> };
+  readonly ccdm: CcdmIndex;
   readonly simbadWdsSpectra: ReadonlyMap<string, string>;
   readonly componentSptypeOverrides: ReadonlyMap<string, string>;
   readonly athygGaiaMagRejected: readonly RejectedBinding[];
