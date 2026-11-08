@@ -14,50 +14,45 @@ interface SourceBinding {
   readonly via: ResolveVia;
 }
 
-function keepStronger(map: Map<ComponentKey, SourceBinding>, key: ComponentKey, c: Draft): void {
-  if (c.gaiaSourceId === null) return;
-  const cur = map.get(key);
-  if (cur === undefined || priorityOf(c.resolveVia) < priorityOf(cur.via)) map.set(key, { gaia: c.gaiaSourceId, via: c.resolveVia });
-}
-
-function inherit(
-  c: Draft, key: ComponentKey, sources: ReadonlyMap<ComponentKey, SourceBinding>, hips: ReadonlyMap<ComponentKey, number>,
+/** Each donor's strongest-tier source and first HIP, grouped under `donorKey`
+ *  (null: no donor), filled into every heir's gaps under its own key. */
+function inheritWithin(
+  out: readonly Draft[], donorKey: (c: Draft) => ComponentKey | null, isHeir: (c: Draft) => boolean,
 ): void {
-  if (c.gaiaSourceId === null) {
+  const sources = new Map<ComponentKey, SourceBinding>();
+  const hips = new Map<ComponentKey, number>();
+  for (const c of out) {
+    const key = donorKey(c);
+    if (key === null) continue;
+    const cur = sources.get(key);
+    if (c.gaiaSourceId !== null && (cur === undefined || priorityOf(c.resolveVia) < priorityOf(cur.via))) {
+      sources.set(key, { gaia: c.gaiaSourceId, via: c.resolveVia });
+    }
+    if (c.hip !== null && !hips.has(key)) hips.set(key, c.hip);
+  }
+  for (const c of out) {
+    if (!isHeir(c)) continue;
+    const key = componentKey(c.wdsId, c.component);
     const binding = sources.get(key);
-    if (binding !== undefined) {
+    if (c.gaiaSourceId === null && binding !== undefined) {
       c.gaiaSourceId = binding.gaia;
       c.resolveVia = binding.via;
     }
+    if (c.hip === null) c.hip = hips.get(key) ?? null;
   }
-  if (c.hip === null) c.hip = hips.get(key) ?? null;
 }
 
 export function propagateWithinSystem(pairs: readonly DecomposedPair[]): readonly DecomposedPair[] {
   const w = working(pairs);
-  const out = w.components;
-  const sources = new Map<ComponentKey, SourceBinding>();
-  const hips = new Map<ComponentKey, number>();
-  for (const c of out) {
-    const key = componentKey(c.wdsId, c.component);
-    keepStronger(sources, key, c);
-    if (c.hip !== null && !hips.has(key)) hips.set(key, c.hip);
-  }
-  for (const c of out) inherit(c, componentKey(c.wdsId, c.component), sources, hips);
-
-  const subSources = new Map<ComponentKey, SourceBinding>();
-  const subHips = new Map<ComponentKey, number>();
-  for (const c of out) {
-    const top = subcomponentTopLetter(c.component);
-    if (top === null) continue;
-    const key = componentKey(c.wdsId, top);
-    keepStronger(subSources, key, c);
-    if (c.hip !== null && !subHips.has(key)) subHips.set(key, c.hip);
-  }
-  for (const c of out) {
-    if (c.component !== c.component.toUpperCase() || c.component.length !== 1) continue;
-    inherit(c, componentKey(c.wdsId, c.component), subSources, subHips);
-  }
+  inheritWithin(w.components, (c) => componentKey(c.wdsId, c.component), () => true);
+  inheritWithin(
+    w.components,
+    (c) => {
+      const top = subcomponentTopLetter(c.component);
+      return top === null ? null : componentKey(c.wdsId, top);
+    },
+    (c) => c.component === c.component.toUpperCase() && c.component.length === 1,
+  );
   return w.pairs;
 }
 
