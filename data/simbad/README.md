@@ -170,8 +170,11 @@ overlap: an oid both requests reach has a row in each file. Pull and gates:
   maintained by CDS Strasbourg.
 - **TAP endpoint**:
   https://simbad.cds.unistra.fr/simbad/sim-tap, with the Harvard CfA
-  mirror https://simbad.cfa.harvard.edu/simbad/sim-tap as fallback
-  (`refresh_lib.simbad_client`).
+  mirror https://simbad.cfa.harvard.edu/simbad/sim-tap as fallback: the
+  TypeScript pulls' `SIMBAD` archive in `scripts/refresh/pull/tap-pure.ts`
+  ([The TAP backend](/scripts/refresh/pull/README.md#the-tap-backend)), and
+  `refresh_lib.simbad_client` for the two Python pulls left, wds-xids and
+  tyc-hd.
 - **Licence**: SIMBAD content is publicly accessible per CDS policy
   (academic / non-commercial); cite the
   [Wenger 2000](/data/papers/index.md#wenger2000) paper.
