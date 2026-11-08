@@ -1,5 +1,6 @@
 // The AT-HYG v3.3 classic-ID rows the binaries stages read.
 
+import { RA_HOURS_TO_DEG } from '../../../src/astro-core/astronomy-constants';
 import type { ColumnTable, TableRow } from '../../util/tsv/table-pure';
 
 export interface AthygRow {
@@ -30,8 +31,6 @@ const COLUMNS = [
 ] as const;
 type Column = (typeof COLUMNS)[number];
 
-const HOURS_TO_DEG = 15.0;
-
 /** AT-HYG writes an absent identifier as empty or `0`. */
 function identifier(row: TableRow<Column>, column: Column): string | null {
   const t = row.text(column);
@@ -61,7 +60,7 @@ export function parseAthygRows(table: ColumnTable): AthygRow[] {
       tyc: identifier(row, 'tyc'),
       gaia: identifier(row, 'gaia') === null ? null : row.sourceId('gaia'),
       hd: intIdentifier(row, 'hd'),
-      raDeg: ra * HOURS_TO_DEG,
+      raDeg: ra * RA_HOURS_TO_DEG,
       decDeg, xPc, yPc, zPc, distPc, absmag,
       vMag: row.float('mag'),
       ci: row.float('ci'),

@@ -1,5 +1,6 @@
 // The WDS summary and ORB6 fixed-width formats: pair rows, orbit rows, and the duplicate-row collapse.
 
+import { RA_HOURS_TO_DEG } from '../../../src/astro-core/astronomy-constants';
 import type { SkyPosition } from '../../../src/astro-core/equatorial-basis';
 import type { Declared } from '../../util/sources/source';
 import { floatCell, intCell } from '../../util/tsv/table-pure';
@@ -140,7 +141,7 @@ export function parsePreciseCoord(field: string): SkyPosition | null {
   const [raS, decS] = parsed as number[];
   const sign = s[9] === '-' ? -1 : 1;
   return {
-    raDeg: (raH + raM / 60.0 + raS / 3600.0) * 15.0,
+    raDeg: (raH + raM / 60.0 + raS / 3600.0) * RA_HOURS_TO_DEG,
     decDeg: sign * (decD + decM / 60.0 + decS / 3600.0),
   };
 }
