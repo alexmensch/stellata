@@ -17,7 +17,7 @@ import {
   type SiblingRejection,
 } from './cascade-pure';
 import { decompose, freezePairs, type DecomposedPair, type ResolvedComponent } from './components-pure';
-import { propagateBlendIdentity, propagateWithinSystem, seedSynthesizedComponentBindings } from './propagate-pure';
+import { propagateIdentities, seedSynthesizedComponentBindings } from './propagate-pure';
 
 export interface CascadeInputs {
   readonly pairs: readonly WdsPair[];
@@ -37,10 +37,8 @@ export function resolveCascade(
   const simbad = resolveViaSimbad(first, inputs.simbadWdsXids);
   const ccdm = resolveViaCcdm(simbad, inputs.indices);
   const position = resolveViaPosition(ccdm.pairs, inputs.athyg);
-  const smeared = propagateWithinSystem(position.pairs);
-  const blend = propagateBlendIdentity(smeared);
   return {
-    pairs: blend.seeded.length > 0 ? propagateWithinSystem(blend.pairs) : blend.pairs,
+    pairs: propagateIdentities(position.pairs),
     siblingRejections: [...ccdm.rejected, ...position.rejected],
   };
 }

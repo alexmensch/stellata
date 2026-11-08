@@ -10,7 +10,7 @@ import { compareSourceIds } from '../../util/tsv/table-pure';
 import { DEG_TO_RAD } from '../../../src/astro-core/astronomy-constants';
 import { propagatePosition, tangentOffset, type TangentOffset } from '../sky-geometry-pure';
 import { working, type DecomposedPair, type Draft, type DraftPair } from './components-pure';
-import { inheritDownwardParentBindings, propagateBlendIdentity, propagateWithinSystem } from './propagate-pure';
+import { inheritDownwardParentBindings, propagateIdentities, smearIfSeeded } from './propagate-pure';
 
 export const BINDING_SHAPES = ['source_letters', 'letter_sources'] as const;
 export type BindingShape = (typeof BINDING_SHAPES)[number];
@@ -477,11 +477,7 @@ export function enforceBindingVerdicts(
     }
   }
   if (enforced.size === 0) return out;
-  let next = propagateWithinSystem(out);
-  const blend = propagateBlendIdentity(next);
-  next = blend.seeded.length > 0 ? propagateWithinSystem(blend.pairs) : blend.pairs;
-  const downward = inheritDownwardParentBindings(next, enforced);
-  return downward.seeded.length > 0 ? propagateWithinSystem(downward.pairs) : downward.pairs;
+  return smearIfSeeded(inheritDownwardParentBindings(propagateIdentities(out), enforced));
 }
 
 export const BINDING_INTEGRITY_COUNT_KEYS = [

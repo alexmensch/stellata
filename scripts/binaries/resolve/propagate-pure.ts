@@ -173,3 +173,13 @@ export function inheritDownwardParentBindings(
   }
   return { pairs: w.pairs, seeded };
 }
+
+/** Re-spreads within each system when a seeding pass moved anything. */
+export function smearIfSeeded(result: { pairs: readonly DecomposedPair[]; seeded: readonly ResolvedComponent[] }): readonly DecomposedPair[] {
+  return result.seeded.length > 0 ? propagateWithinSystem(result.pairs) : result.pairs;
+}
+
+/** One letter one star across each system, then the ρ = 0 blend convention. */
+export function propagateIdentities(pairs: readonly DecomposedPair[]): readonly DecomposedPair[] {
+  return smearIfSeeded(propagateBlendIdentity(propagateWithinSystem(pairs)));
+}
