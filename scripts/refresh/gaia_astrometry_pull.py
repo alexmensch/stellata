@@ -1,12 +1,9 @@
 #!/usr/bin/env python3
-"""Shared batched Gaia DR3 5-parameter astrometry pull for the binaries
-and full-catalog request lists, and the schema the magnitude pull shares.
-See scripts/refresh/README.md."""
+"""The Gaia DR3 5p astrometry schema and row writer the magnitude pull
+projects. See scripts/refresh/README.md."""
 
 from __future__ import annotations
 
-import time
-from pathlib import Path
 from typing import Any
 
 import refresh_lib as rl
@@ -35,8 +32,6 @@ TSV_COLUMNS = [
 
 SELECT_CLAUSE = "SELECT " + ", ".join(TSV_COLUMNS) + " FROM gaiadr3.gaia_source"
 
-ADQL_TEMPLATE = SELECT_CLAUSE + " WHERE source_id IN ({inlist})"
-
 # Gaia DR3 dtype shape: ``ipd_frac_multi_peak`` is a short (0-100
 # percent) integer; everything else is float64 except ``source_id``
 # (int64) and the photometry magnitudes (float32). The
@@ -62,15 +57,6 @@ EXPECTED_SCHEMA: dict[str, type | tuple[type, ...]] = {
     "radial_velocity": float,
     "radial_velocity_error": float,
 }
-
-# 5000 ids per IN-clause — Gaia archive's IN-list cap and the empirical
-# bailer-jones / apsis sweet spot.
-BATCH_SIZE = 5_000
-
-# Coverage floor — output row count must match input ±5%, i.e. ≥ 95% of
-# input ids resolve. The shortfall captures retracted DR3 sources + the
-# rare ID-only-in-cross-match-table edge cases.
-EXPECTED_COVERAGE_MIN = 0.95
 
 # Astrometric precision retained. Gaia DR3 angular astrometry is sub-mas
 # (~1e-3 arcsec); 9 decimals on ra/dec (degrees) preserves the full
@@ -112,20 +98,6 @@ EXPECTED_REF_EPOCH = 2016.0
 REF_EPOCH_TOL = 0.01
 
 
-def sync_client() -> rl.TapClient:
-    return rl.gaia_sync_client(BATCH_SIZE * 2)
-
-
-def describe() -> dict:
-    """Both scopes send the same query; the request file each reads is a data input."""
-    return rl.description(ADQL_TEMPLATE, sync_client().services, release=rl.GAIA_DR3_RELEASE)
-
-
-def query_batch(client: rl.TapClient, ids: list[int]):
-    inlist = ",".join(str(i) for i in ids)
-    return client.run(ADQL_TEMPLATE.format(inlist=inlist))
-
-
 def write_row(row: Any) -> dict[str, Any]:
     """Build one output dict — coerce_masked every cell, pre-round
     floats per COLUMN_DECIMALS so write_tsv emits stable widths."""
@@ -140,78 +112,3 @@ def write_row(row: Any) -> dict[str, Any]:
             out[col] = v
     return out
 
-
-def run_pull(
-    *,
-    request: Path,
-    out: Path,
-    spot_checks: list[dict[str, Any]],
-    script_name: str,
-    root: Path,
-    coverage_min: float = EXPECTED_COVERAGE_MIN,
-) -> None:
-    """Pull 5p astrometry for every source_id in ``request`` and write it
-    to ``out`` in request order.
-    """
-    if not request.exists():
-        raise SystemExit(
-            f"{script_name}: request file {request.relative_to(root)} is missing "
-            f"— generate it first (see scripts/refresh/README.md)."
-        )
-
-    source_ids = rl.read_source_id_request(request)
-    total = len(source_ids)
-    if total == 0:
-        raise SystemExit(f"{script_name}: no source_ids in {request.relative_to(root)}")
-    n_batches = (total + BATCH_SIZE - 1) // BATCH_SIZE
-    print(
-        f"reading {total} source_ids → {n_batches} batches of "
-        f"{BATCH_SIZE} on Gaia TAP (gaiadr3.gaia_source)"
-    )
-
-    client = sync_client()
-    rows_by_id: dict[int, Any] = {}
-
-    def collect(table: Any) -> None:
-        for row in table:
-            rows_by_id[int(row["source_id"])] = row
-
-    start = time.time()
-    rl.run_in_batches(
-        source_ids, BATCH_SIZE, lambda b: query_batch(client, b), collect,
-        schema=EXPECTED_SCHEMA, schema_label="gaiadr3.gaia_source",
-        checkpoint=rl.BatchCheckpoint(out.with_suffix(out.suffix + ".ckpt")),
-    )
-
-    matched = len(rows_by_id)
-    coverage = matched / total
-    # Report the shortfall as a count, not only a percentage: a handful of
-    # unreturned ids rounds to 100.0% and reads as complete, while for the
-    # catalog scope every unreturned candidate is a binding the gate will accept
-    # without weighing (scripts/catalog/astrometry-request/README.md).
-    print(
-        f"matched {matched}/{total} = {coverage*100:.1f}% "
-        f"({total - matched} requested ids returned no row) in "
-        f"{(time.time()-start)/60:.1f}m"
-    )
-    if coverage < coverage_min:
-        raise SystemExit(
-            f"{script_name}: coverage {coverage:.1%} below floor {coverage_min:.0%} "
-            f"— the request emitted source_ids the live gaia_source table no longer "
-            f"carries; investigate before re-pinning."
-        )
-
-    for spec in spot_checks:
-        if not rl.check_spot_row(rows_by_id, spec, script_name=script_name):
-            raise SystemExit(
-                f"{script_name}: spot-check source_id {spec['source_id']} missing "
-                f"from query result — upstream selection has changed."
-            )
-
-    # Emit in the request file's order — stable across runs because the
-    # request file is itself sorted by source_id. Rows present in the
-    # request but missing from gaia_source are dropped silently; the
-    # coverage check above gates.
-    rows = (write_row(rows_by_id[sid]) for sid in source_ids if sid in rows_by_id)
-    written = rl.write_tsv(rows, columns=TSV_COLUMNS, output=out)
-    print(f"wrote {out.relative_to(root)} ({written} rows)")

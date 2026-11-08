@@ -315,7 +315,7 @@ magnitude
 
 **MAXREC is load-bearing.** A sync endpoint answers HTTP 200 and flags
 truncation in a VOTable `QUERY_STATUS` INFO rather than erroring, so a
-MAXREC below the result size would silently short a pull. Three sizing
+MAXREC below the result size would silently short a pull. Two sizing
 rules for the Python pulls, and none may be replaced with a bare literal.
 **ESA's `/capabilities` declares a hard output limit of 50,000 rows** (ARI
 10,000,000; measured 2026-11-05), and a mirror truncates at its own hard
@@ -333,7 +333,6 @@ cross-walk pulls are TypeScript and sliced to fit ESA
   rather than clamp below the ceiling. Its 440,000–446,000-row band is past
   ESA's limit, so only ARI can answer it whole; an ESA answer is left to the
   row band to refuse.
-- Batched pulls size MAXREC off their batch size (`BATCH_SIZE * 2`).
 - Pulls that batch on a **value range** rather than a count have no batch
   size to multiply, so all three call `slice_sync_maxrec(<the pinned
   ceiling>)` — four times the nominal slice population. The factor is
