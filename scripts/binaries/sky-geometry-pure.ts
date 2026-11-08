@@ -1,7 +1,7 @@
 // Sky geometry the binaries stages share: proper-motion propagation, tangent-plane offsets, parallax distance.
 
 import { DEG_TO_RAD, HIPPARCOS_EPOCH_JYEAR } from '../../src/astro-core/astronomy-constants';
-import { unitVectorFromRaDec, type SkyPosition } from '../../src/astro-core/equatorial-basis';
+import { unitVectorFromRaDec, type SkyPosition, type UnitVector } from '../../src/astro-core/equatorial-basis';
 
 /** AT-HYG documents J2000.0, but its HIP-sourced rows sit at HIP1's J1991.25
  *  (α Cen A's stored RA is HIP1's 219.92041, not J2000's 219.9020); a row
@@ -13,7 +13,7 @@ export const ATHYG_REFERENCE_EPOCH = HIPPARCOS_EPOCH_JYEAR;
 export const WDS_PRECISE_COORD_EPOCH = 2000.0;
 
 const MAS_PER_DEG = 3600 * 1000;
-const COS_DEC_FLOOR = 1e-3;
+export const COS_DEC_FLOOR = 1e-3;
 
 /** Proper motion in mas/yr, μ_α* already cos δ-applied. */
 export interface ProperMotion {
@@ -62,8 +62,11 @@ export function tangentOffset(pos: SkyPosition, ref: SkyPosition): TangentOffset
 /** Squared chord between two directions on the unit sphere: monotone in
  *  their angular separation, so it compares against a tolerance without trig. */
 export function chordSq(a: SkyPosition, b: SkyPosition): number {
-  const u = unitVectorFromRaDec(a.raDeg, a.decDeg);
-  const v = unitVectorFromRaDec(b.raDeg, b.decDeg);
+  return unitChordSq(unitVectorFromRaDec(a.raDeg, a.decDeg), unitVectorFromRaDec(b.raDeg, b.decDeg));
+}
+
+/** `chordSq` for directions already on the unit sphere. */
+export function unitChordSq(u: UnitVector, v: UnitVector): number {
   const dx = u.x - v.x;
   const dy = u.y - v.y;
   const dz = u.z - v.z;

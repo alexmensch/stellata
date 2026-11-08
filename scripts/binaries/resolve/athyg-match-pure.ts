@@ -1,11 +1,11 @@
 // The WDS-pair → AT-HYG position match Stages 2 and 3 share. See README.md#the-at-hyg-position-match.
 
-import { unitVectorFromRaDec, type SkyPosition, type UnitVector } from '../../../src/astro-core/equatorial-basis';
+import { unitVectorFromRaDec, type SkyPosition } from '../../../src/astro-core/equatorial-basis';
 import { DEG_TO_RAD } from '../../../src/astro-core/astronomy-constants';
 import { canonicalCompLetter, pairComponentTokens, splitComponents } from '../component-tokens-pure';
 import type { AthygRow } from '../load/athyg-pure';
 import {
-  ATHYG_REFERENCE_EPOCH, WDS_PRECISE_COORD_EPOCH, chordSqForTolerance, predictSecondaryPosition, propagatePosition,
+  ATHYG_REFERENCE_EPOCH, COS_DEC_FLOOR, WDS_PRECISE_COORD_EPOCH, chordSqForTolerance, unitChordSq, predictSecondaryPosition, propagatePosition,
 } from '../sky-geometry-pure';
 import {
   componentsOf, findOwningPair, pairRows, pairsByDiscoverer, type DecomposedPair, type ResolvedComponent,
@@ -40,18 +40,11 @@ export function buildAthygGrid(athyg: readonly AthygRow[]): AthygGrid {
   return grid;
 }
 
-function chordSqBetween(a: UnitVector, b: UnitVector): number {
-  const dx = a.x - b.x;
-  const dy = a.y - b.y;
-  const dz = a.z - b.z;
-  return dx * dx + dy * dy + dz * dz;
-}
-
 export function findNearestAthyg(
   pos: SkyPosition, grid: AthygGrid, athyg: readonly AthygRow[], toleranceArcsec: number,
   excludeIdx: number | null, targetEpoch: number | null,
 ): number | null {
-  const cosDec = Math.max(Math.cos(pos.decDeg * DEG_TO_RAD), 1e-3);
+  const cosDec = Math.max(Math.cos(pos.decDeg * DEG_TO_RAD), COS_DEC_FLOOR);
   const epochPad = targetEpoch === null ? 0 : 1;
   const raWindow = Math.max(1, Math.ceil(1 / cosDec)) + epochPad;
   const decPad = 1 + epochPad;
@@ -68,7 +61,7 @@ export function findNearestAthyg(
         if (i === excludeIdx) continue;
         const row = athyg[i];
         const cand = targetEpoch === null ? row : athygPositionAtEpoch(row, targetEpoch);
-        const d = chordSqBetween(unitVectorFromRaDec(cand.raDeg, cand.decDeg), q);
+        const d = unitChordSq(unitVectorFromRaDec(cand.raDeg, cand.decDeg), q);
         if (d < best) {
           best = d;
           bestIdx = i;
