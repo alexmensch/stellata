@@ -1,4 +1,4 @@
-// Sky geometry the binaries stages share: proper-motion propagation, tangent-plane offsets, parallax distance.
+// Sky geometry the binaries stages share: proper-motion propagation, tangent-plane offsets, chord tolerance tests, WDS (ρ, θ) prediction, parallax distance.
 
 import { ARCSEC_PER_DEG, DEG_TO_RAD, HIPPARCOS_EPOCH_JYEAR } from '../../src/astro-core/astronomy-constants';
 import { unitVectorFromRaDec, type SkyPosition, type UnitVector } from '../../src/astro-core/equatorial-basis';
