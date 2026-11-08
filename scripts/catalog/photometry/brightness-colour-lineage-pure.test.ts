@@ -10,6 +10,8 @@ import { PHOTOMETRY_REF } from './photometry-fixture';
 import { GAIA_GSPC } from './gspc-source';
 import { HIP_PHOTOMETRY } from './hip-photometry-source';
 import { GAIA_APSIS } from '../record/gaia-apsis-source';
+import { GLIESE } from '../gliese-source';
+import { TYCHO2 } from '../tycho2-source';
 import { SIMBAD_SPTYPE } from '../spectral/simbad-sptype-source';
 import { curatedSpectralValue } from '../spectral/spectral-resolve';
 import { decodeLineageLine, paramsOf } from '../lineage/lineage-row-pure';
@@ -21,6 +23,8 @@ const SIMBAD_REF = sourceRowRef(SIMBAD_SPTYPE, 42);
 const OTHER_SIMBAD_REF = sourceRowRef(SIMBAD_SPTYPE, 43);
 const APSIS_REF = sourceRowRef(GAIA_APSIS, '1000');
 const GSPC_REF = sourceRowRef(GAIA_GSPC, '1000');
+const GLIESE_REF = sourceRowRef(GLIESE, '423A');
+const TYCHO2_REF = sourceRowRef(TYCHO2, '1-1-1');
 const G2V = curatedSpectralValue('G2V', (m) => { throw new Error(m); });
 
 const summary = (b: BrightnessColour) => brightnessColourLineageRows(b).map((r) => ({
@@ -93,7 +97,7 @@ describe('brightnessColourLineageRows', () => {
   it('writes the outcome codes of a record nothing classifies or colours', () => {
     expect(summary({
       kind: 'shipped', key: KEY,
-      v: { via: 'gliese', value: 11, evidence: [], refusals: [] },
+      v: { via: 'gliese', value: 11, evidence: [GLIESE_REF], refusals: [] },
       spectral: {
         via: 'none',
         refusals: [{ tier: 'gspspec', reason: 'unclassifiable', ref: APSIS_REF }],
@@ -104,7 +108,7 @@ describe('brightnessColourLineageRows', () => {
       },
       dust: null,
     })).toEqual([
-      { role: 'outcome', code: 'v.gliese', params: {}, evidence: [] },
+      { role: 'outcome', code: 'v.gliese', params: {}, evidence: [sourceRowRefText(GLIESE_REF)] },
       { role: 'refused', code: 'spectral.refused.unclassifiable', params: { tier: 'gspspec' }, evidence: [sourceRowRefText(APSIS_REF)] },
       { role: 'outcome', code: 'spectral.none', params: {}, evidence: [] },
       {
@@ -116,7 +120,7 @@ describe('brightnessColourLineageRows', () => {
   });
 
   it('encodes its rows as stage lines that decode back', () => {
-    const b: BrightnessColour = { kind: 'v-only', key: 'spine:9', v: { via: 'tycho2', value: 9, evidence: [], refusals: [] } };
+    const b: BrightnessColour = { kind: 'v-only', key: 'spine:9', v: { via: 'tycho2', value: 9, evidence: [TYCHO2_REF], refusals: [] } };
     const [line] = brightnessColourLineageLines(b);
     expect(decodeLineageLine(line)).toEqual(brightnessColourLineageRows(b)[0]);
     expect(decodeLineageLine(line).stage).toBe(BRIGHTNESS_COLOUR_CODES.stage);
