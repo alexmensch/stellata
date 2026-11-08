@@ -42,7 +42,6 @@ export const coverage = (request: OidRequest, label: string): number => share(re
 export const verdictLine = (v: Verdicts): string =>
   `${v.corroborated} corroborated by a Gaia cross-ID, ${v.vetoed} vetoed on a contradicting DR3 id, ${v.uncorroborated} kept with no DR3 id to contradict them`;
 
-
 export function requestReport(request: OidRequest): string[] {
   return [...request.requested].flatMap(([label, asked]) => {
     const got = request.resolved.get(label) ?? 0;
