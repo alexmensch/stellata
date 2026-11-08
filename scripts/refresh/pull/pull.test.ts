@@ -7,7 +7,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { pullQueryHash } from '../../pipeline/freshness';
 import { EmissionRefused, declareOutputs } from '../../util/emit-artifacts';
 import {
-  LIMIT_HEADROOM, MAX_WHOLE_TABLE_CELLS, assertWholeTablesFit, batchQueries, describePhasedPull, describePull, phaseLimit,
+  LIMIT_HEADROOM, MAX_TABLE_CELLS, assertTablesFit, batchQueries, describePhasedPull, describePull, phaseLimit,
   phaseQueries, queryLimit, runPhasedPull, runPull, type Phase, type PhasedPull, type Pull, type PullTable, type WrittenTable,
 } from './pull';
 import { checkpoint } from './checkpoint';
@@ -141,13 +141,20 @@ describe('runPull', () => {
     expect([read('stars.tsv'), read('pairs.tsv')]).toEqual(['old stars\n', 'old pairs\n']);
   });
 
-  it('refuses, before asking anything, a whole-table query too large for one reply', async () => {
-    const fits = Math.floor(MAX_WHOLE_TABLE_CELLS / (LIMIT_HEADROOM * STARS.columns.length));
+  it('refuses, before asking anything, a whole-table query too large to hold', async () => {
+    const fits = Math.floor(MAX_TABLE_CELLS / (LIMIT_HEADROOM * STARS.columns.length));
     const { deps: d, asked } = deps(GOOD);
     const huge = { ...STARS, band: { min: 0, max: fits + 1 } };
-    await expect(runPull(pullOf({ stars: huge, pairs: PAIRS }), d)).rejects.toThrow(/exceeds 37000000; batch the query/);
+    await expect(runPull(pullOf({ stars: huge, pairs: PAIRS }), d)).rejects.toThrow(/whole-table rows of up to \d+ cells exceed 37000000/);
     expect(asked).toEqual([]);
-    expect(() => assertWholeTablesFit(pullOf({ stars: { ...STARS, band: { min: 0, max: fits } }, pairs: PAIRS }))).not.toThrow();
+    expect(() => assertTablesFit(pullOf({ stars: { ...STARS, band: { min: 0, max: fits } }, pairs: PAIRS }))).not.toThrow();
+  });
+
+  it('refuses a sliced table whose slices together could hold too many cells', () => {
+    const sliced = (sliceRows: number): PullTable => ({ ...STARS, scope: { kind: 'sliced', key: 'source_id', edges: [2n], sliceRows } });
+    const fits = Math.floor(MAX_TABLE_CELLS / (2 * LIMIT_HEADROOM * STARS.columns.length));
+    expect(() => assertTablesFit(pullOf({ stars: sliced(fits + 1), pairs: PAIRS }))).toThrow(/sliced rows of up to \d+ cells exceed 37000000/);
+    expect(() => assertTablesFit(pullOf({ stars: sliced(fits), pairs: PAIRS }))).not.toThrow();
   });
 
   it('refuses a reply whose columns are not the declared ones', async () => {
@@ -273,8 +280,44 @@ describe('batchQueries and queryLimit', () => {
     expect(batchQueries(table, VIZIER.quote)[0]).toBe('SELECT "HIP" FROM "I/311/hip2" WHERE ("Plx" > 0) AND source_id IN (1, 2)');
   });
 
-  it('sizes a whole-table query off its band and a batch off its request', () => {
-    expect([queryLimit(STARS), queryLimit(PAIRS)]).toEqual([6, 4]);
+  it('sizes a whole-table query off its band, a batch off its request and a slice off its sliceRows', () => {
+    expect([queryLimit(STARS), queryLimit(PAIRS), queryLimit(SLICED)]).toEqual([6, 4, 4]);
+  });
+
+  it('asks one query per slice, ANDed onto a stated WHERE', () => {
+    expect(batchQueries({ ...SLICED, where: 'period > 0' }, GAIA.quote)).toEqual([
+      'SELECT source_id, period FROM gaiadr3.nss_two_body_orbit WHERE (period > 0) AND source_id < 2',
+      'SELECT source_id, period FROM gaiadr3.nss_two_body_orbit WHERE (period > 0) AND source_id >= 2',
+    ]);
+  });
+});
+
+const SLICED: PullTable = { ...PAIRS, scope: { kind: 'sliced', key: 'source_id', edges: [2n], sliceRows: 2 } };
+
+describe('a sliced table', () => {
+  it('pulls every slice into one sorted output', async () => {
+    const { deps: d, asked } = deps((adql) => (adql.includes('gaia_source')
+      ? GOOD(adql)
+      : `source_id,period\n${adql.includes('< 2') ? '1,5' : '3,7\n2,10'}\n`));
+    await runPull(pullOf({ stars: STARS, pairs: SLICED }), d);
+    expect(read('pairs.tsv')).toBe('source_id\tperiod\n1\t5\n2\t10\n3\t7\n');
+    expect(asked.slice(1)).toEqual([
+      'SELECT source_id, period FROM gaiadr3.nss_two_body_orbit WHERE source_id < 2',
+      'SELECT source_id, period FROM gaiadr3.nss_two_body_orbit WHERE source_id >= 2',
+    ]);
+  });
+
+  it('states its slices in the description, so a re-cut stales the pull', () => {
+    const hash = (edges: readonly [bigint, ...bigint[]]) => pullQueryHash(describePull(
+      pullOf({ stars: STARS, pairs: { ...SLICED, scope: { kind: 'sliced', key: 'source_id', edges, sliceRows: 2 } } }),
+    ));
+    expect(hash([2n])).not.toBe(hash([3n]));
+    expect(JSON.parse(describePull(pullOf({ stars: STARS, pairs: SLICED })).query).pairs).toEqual({
+      query: 'SELECT source_id, period FROM gaiadr3.nss_two_body_orbit WHERE {slice}',
+      slices: ['source_id < 2', 'source_id >= 2'],
+      formats: {},
+      sortBy: SLICED.sortBy,
+    });
   });
 });
 

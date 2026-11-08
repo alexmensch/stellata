@@ -9,6 +9,7 @@ import {
   cellReader, checkedRows, formatTsv, projection, sortRows, type Column, type Row, type SortKey,
 } from './columns-pure';
 import { bandCheck, coverageCheck, spotRowCheck, type Coverage, type RowBand, type SpotRow } from './gates-pure';
+import { sliceConditions } from './slices-pure';
 import { readCsv, tapClient, type TapArchive, type TapClientDeps, type Transport } from './tap-pure';
 
 export type Scope =
@@ -24,7 +25,19 @@ export type Scope =
     readonly batchSize: number;
     readonly rowsPerId: number;
     readonly coverage?: Coverage;
-  };
+  }
+  | SlicedScope;
+
+/** A table partitioned into half-open key ranges (README.md#sliced-scope). */
+export interface SlicedScope {
+  readonly kind: 'sliced';
+  /** The integer ADQL column the slices partition; a row whose key is null is in no slice. */
+  readonly key: string;
+  /** Strictly increasing, cut from the table by `cutEdges`. */
+  readonly edges: readonly [bigint, ...bigint[]];
+  /** The most rows any slice is expected to hold. */
+  readonly sliceRows: number;
+}
 
 /** What a written table is held to and written in. */
 export interface WrittenTable {
@@ -53,7 +66,8 @@ export interface Pull<K extends string> {
 /** A phase's ids come at run time, from earlier answers; a whole-table phase states the most rows it should return. */
 export type PhaseScope =
   | { readonly kind: 'whole-table'; readonly maxRows: number }
-  | { readonly kind: 'request'; readonly key: string; readonly batchSize: number; readonly rowsPerId: number };
+  | { readonly kind: 'request'; readonly key: string; readonly batchSize: number; readonly rowsPerId: number }
+  | SlicedScope;
 
 export interface Phase {
   readonly from: string;
@@ -88,9 +102,10 @@ export interface PhasedPull<K extends string> {
 
 /** A query's limit over the rows it should return, so the band, not the overflow, reports a moved table. */
 export const LIMIT_HEADROOM = 2;
-/** The most cells one whole-table reply may hold within the CI heap budget: README.md#how-big-a-whole-table-query-may-be. */
-export const MAX_WHOLE_TABLE_CELLS = 37_000_000;
+/** The most cells one whole or sliced table may hold within the CI heap budget: README.md#how-big-a-table-may-be. */
+export const MAX_TABLE_CELLS = 37_000_000;
 const REQUEST = '{request}';
+const SLICE = '{slice}';
 const SYNC_TIMEOUT_MS = 300_000;
 
 interface QueryText {
@@ -100,8 +115,13 @@ interface QueryText {
   readonly columns: readonly Column[];
 }
 
-function template(query: QueryText, requestKey: string | undefined, quote: TapArchive['quote']): string {
-  const scoped = requestKey === undefined ? undefined : `${requestKey} IN (${REQUEST})`;
+function batchCondition(scope: PhaseScope): string | undefined {
+  if (scope.kind === 'request') return `${scope.key} IN (${REQUEST})`;
+  return scope.kind === 'sliced' ? SLICE : undefined;
+}
+
+function template(query: QueryText, scope: PhaseScope, quote: TapArchive['quote']): string {
+  const scoped = batchCondition(scope);
   const where = query.where && scoped ? `(${query.where}) AND ${scoped}` : query.where ?? scoped;
   return [
     `SELECT ${projection(query.columns, quote)} FROM ${query.from}`,
@@ -116,40 +136,45 @@ function batches(text: string, ids: readonly string[], batchSize: number): strin
   return out;
 }
 
-/** The table's ADQL with the request ids left as `{request}`: the text a pull's query hash covers. */
-export function queryTemplate(table: PullTable, quote: TapArchive['quote']): string {
-  return template(table, table.scope.kind === 'request' ? table.scope.key : undefined, quote);
+/** A static table as the phase that asks it: a whole table expects at most its band's ceiling. */
+function phaseOf(table: PullTable): Phase {
+  const { scope } = table;
+  return {
+    ...table,
+    scope: scope.kind === 'whole-table' ? { kind: 'whole-table', maxRows: table.band.max }
+      : scope.kind === 'sliced' ? scope
+        : { kind: 'request', key: scope.key, batchSize: scope.batchSize, rowsPerId: scope.rowsPerId },
+  };
 }
 
+/** The phase's ADQL with the request ids left as `{request}` and a slice's range as `{slice}`: the text a pull's query hash covers. */
 export function phaseTemplate(phase: Phase, quote: TapArchive['quote']): string {
-  return template(phase, phase.scope.kind === 'request' ? phase.scope.key : undefined, quote);
+  return template(phase, phase.scope, quote);
 }
 
-export function queryLimit(table: PullTable): number {
-  const expected = table.scope.kind === 'request' ? table.scope.batchSize * table.scope.rowsPerId : table.band.max;
-  return expected * LIMIT_HEADROOM;
-}
+export const queryTemplate = (table: PullTable, quote: TapArchive['quote']): string => phaseTemplate(phaseOf(table), quote);
 
 export function phaseLimit(phase: Phase): number {
   const { scope } = phase;
-  return (scope.kind === 'request' ? scope.batchSize * scope.rowsPerId : scope.maxRows) * LIMIT_HEADROOM;
+  const expected = scope.kind === 'request' ? scope.batchSize * scope.rowsPerId : scope.kind === 'sliced' ? scope.sliceRows : scope.maxRows;
+  return expected * LIMIT_HEADROOM;
 }
 
-export function batchQueries(table: PullTable, quote: TapArchive['quote']): string[] {
-  const text = queryTemplate(table, quote);
-  const { scope } = table;
-  return scope.kind === 'whole-table' ? [text] : batches(text, scope.ids, scope.batchSize);
-}
+export const queryLimit = (table: PullTable): number => phaseLimit(phaseOf(table));
 
 export function phaseQueries(phase: Phase, ids: readonly string[] | undefined, quote: TapArchive['quote']): string[] {
   const text = phaseTemplate(phase, quote);
   const { scope } = phase;
-  if (scope.kind === 'whole-table') {
-    if (ids !== undefined) throw new Error(`a whole-table phase takes no request ids: ${text}`);
-    return [text];
+  if (scope.kind !== 'request') {
+    if (ids !== undefined) throw new Error(`a ${scope.kind} phase takes no request ids: ${text}`);
+    return scope.kind === 'sliced' ? sliceConditions(scope.key, scope.edges).map((range) => text.replace(SLICE, range)) : [text];
   }
   if (ids === undefined) throw new Error(`a request-scoped phase needs its ids: ${text}`);
   return batches(text, ids, scope.batchSize);
+}
+
+export function batchQueries(table: PullTable, quote: TapArchive['quote']): string[] {
+  return phaseQueries(phaseOf(table), table.scope.kind === 'request' ? table.scope.ids : undefined, quote);
 }
 
 const keysOf = <K extends string>(record: Readonly<Record<K, unknown>>): K[] => Object.keys(record) as K[];
@@ -158,7 +183,8 @@ const formatsOf = (table: WrittenTable): object => Object.fromEntries(table.colu
 
 /** Everything besides the data that decides a table's bytes, so a change to any of it stales the pull's record. */
 function tableDescription(table: PullTable, quote: TapArchive['quote']): object {
-  return { query: queryTemplate(table, quote), formats: formatsOf(table), sortBy: table.sortBy };
+  const slices = table.scope.kind === 'sliced' ? { slices: sliceConditions(table.scope.key, table.scope.edges) } : {};
+  return { query: queryTemplate(table, quote), ...slices, formats: formatsOf(table), sortBy: table.sortBy };
 }
 
 const archiveDescription = (archive: TapArchive, release: string | undefined): Pick<PullDescription, 'services' | 'release'> => ({
@@ -172,7 +198,9 @@ export function describePull<K extends string>(pull: Pull<K>): PullDescription {
 }
 
 export function describePhasedPull<K extends string>(pull: PhasedPull<K>): PullDescription & Partial<Projection> {
-  const phases = Object.fromEntries(Object.entries(pull.phases).map(([name, p]) => [name, phaseTemplate(p, pull.archive.quote)]));
+  const phases = Object.fromEntries(Object.entries(pull.phases).map(([name, p]) => [name, p.scope.kind === 'sliced'
+    ? { query: phaseTemplate(p, pull.archive.quote), slices: sliceConditions(p.scope.key, p.scope.edges) }
+    : phaseTemplate(p, pull.archive.quote)]));
   const tables = Object.fromEntries(keysOf(pull.tables).map((k) => [k, { formats: formatsOf(pull.tables[k]), sortBy: pull.tables[k].sortBy }]));
   const query = { phases, tables, ...(pull.parameters === undefined ? {} : { parameters: pull.parameters }) };
   return { query: JSON.stringify(query), ...archiveDescription(pull.archive, pull.release), ...pull.request };
@@ -189,29 +217,23 @@ const fetchTransport: Transport = async (url, form) => {
 
 export const LIVE: TapClientDeps = { transport: fetchTransport, sleep: (ms) => sleep(ms), report: reportService, log: console.log };
 
-function assertFits(label: string, limit: number, columns: number): void {
-  const cells = limit * columns;
-  if (cells > MAX_WHOLE_TABLE_CELLS) {
-    throw new Error(`${label}: a whole-table reply of up to ${cells} cells exceeds ${MAX_WHOLE_TABLE_CELLS}; batch the query`);
+/** Refuses, before any query, a whole or sliced phase whose rows at every query's limit could exceed `MAX_TABLE_CELLS`; a request-scoped one is bounded per batch. */
+function assertPhasesFit(phases: Readonly<Record<string, Phase>>, quote: TapArchive['quote']): void {
+  for (const [name, phase] of Object.entries(phases)) {
+    if (phase.scope.kind === 'request') continue;
+    const cells = phaseQueries(phase, undefined, quote).length * phaseLimit(phase) * phase.columns.length;
+    if (cells > MAX_TABLE_CELLS) {
+      throw new Error(`${name}: ${phase.scope.kind} rows of up to ${cells} cells exceed ${MAX_TABLE_CELLS}; slice the table finer or narrow its columns`);
+    }
   }
 }
 
-/** Refuses, before any query, a whole-table table whose reply at its limit could exceed `MAX_WHOLE_TABLE_CELLS`. */
-export function assertWholeTablesFit<K extends string>(pull: Pull<K>): void {
-  for (const key of keysOf(pull.tables)) {
-    const table = pull.tables[key];
-    if (table.scope.kind === 'whole-table') assertFits(key, queryLimit(table), table.columns.length);
-  }
+export function assertTablesFit<K extends string>(pull: Pull<K>): void {
+  assertPhasesFit(phased(pull).phases, pull.archive.quote);
 }
 
 /** The static pull as phases: one per table, each asked once with its own ids, its coverage computed over them. */
 function phased<K extends string>(pull: Pull<K>): PhasedPull<K> {
-  const phaseOf = (table: PullTable): Phase => ({
-    ...table,
-    scope: table.scope.kind === 'whole-table'
-      ? { kind: 'whole-table', maxRows: table.band.max }
-      : { kind: 'request', key: table.scope.key, batchSize: table.scope.batchSize, rowsPerId: table.scope.rowsPerId },
-  });
   const phases = Object.fromEntries(keysOf(pull.tables).map((k) => [k, phaseOf(pull.tables[k])])) as Record<K, Phase>;
   return {
     ...pull,
@@ -235,8 +257,8 @@ export const runPull = <K extends string>(pull: Pull<K>, deps: TapClientDeps = L
 
 /** The resume cache sits beside the first output and goes only once every output has landed. */
 export async function runPhasedPull<K extends string>(pull: PhasedPull<K>, deps: TapClientDeps = LIVE): Promise<void> {
+  assertPhasesFit(pull.phases, pull.archive.quote);
   const named = new Map(Object.entries(pull.phases).map(([name, phase]) => [phase, name]));
-  for (const [phase, name] of named) if (phase.scope.kind === 'whole-table') assertFits(name, phaseLimit(phase), phase.columns.length);
   const keys = keysOf(pull.tables);
   const cache = checkpoint(`${pull.outputs.files[keys[0]]}.ckpt`);
   const client = tapClient(pull.archive, deps);
