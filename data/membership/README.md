@@ -33,7 +33,7 @@ parked-ledger.tsv        Regular git. The /docs/catalog-driver.md#61-record-pari
                          the record walk. The parity gate subtracts exactly these
                          rows and no more, so a park that is not on this list
                          fails the build rather than vanishing.
-binding-review.tsv       Regular git. The 280 spine rows the derivation
+binding-review.tsv       Regular git. The 374 spine rows the derivation
                          cannot settle alone or a review already settled —
                          contested · collision · disposed — with every
                          source's candidate, the gate rejections, the printed V
@@ -51,7 +51,7 @@ binding-review-dispositions.tsv
                          (tycho2_position · v70a_astrometry ·
                          simbad_dr2_object · gaia_photometry · pair_component
                          · shared_source) and the measured evidence. 53 rows:
-                         6 take the derived id, 47 another — 36 of those an id
+                         10 take the derived id, 43 another — 32 of those an id
                          only the cited basis stands behind
                          (dispositionAsserted). A kept value rides the manifest
                          as binding=reviewed.

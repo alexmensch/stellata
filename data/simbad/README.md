@@ -61,7 +61,7 @@ costs is visible in the pull's own report, which prints values reached
 before it prints values shipped.
 
 **The request set is an enumerated cohort, not the catalogue.** It is the
-**membership manifest** rows a [§ 5](/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers) value tier can reach — 121,249 of <!-- count:membership-manifest/rows -->975,573<!-- /count -->
+**membership manifest** rows a [§ 5](/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers) value tier can reach — 121,249 of <!-- count:membership-manifest/rows -->975,372<!-- /count -->
 (12.4%, 2026-11-08), keyed `gaia_source_id` → HIP → TYC → GJ. That first number is the
 row count of `membershipKeys(manifest, valueCohort(…))`
 over the committed manifest and both Gaia 5p tables, so calling the predicate

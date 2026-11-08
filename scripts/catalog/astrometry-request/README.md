@@ -56,15 +56,15 @@ through the astrometry pull back into `build:membership`
 The derivation's candidates cover every binding it can reach, since a binding
 is one of its candidates; what they leave out is a reviewed id no committed
 source proposes
-(<!-- count:membership-manifest/dispositionAsserted -->36<!-- /count --> today), which is why the dispositions file is the fourth
+(<!-- count:membership-manifest/dispositionAsserted -->32<!-- /count --> today), which is why the dispositions file is the fourth
 contribution. `membership-manifest-gate.test.ts` asserts the result: every
 `term = primaries` manifest row's `gaia_source_id` is in the request.
 
-The <!-- count:membership-manifest/bindingByClass.none -->1,977<!-- /count --> primaries rows carrying none are the no-Gaia tier. The
+The <!-- count:membership-manifest/bindingByClass.none -->1,777<!-- /count --> primaries rows carrying none are the no-Gaia tier. The
 `term = magnitude` rows are not requested: their astrometry is the magnitude
 pull's own
 ([The astrometry comes with it](../membership/magnitude-term/README.md#the-astrometry-comes-with-it)),
-and requesting them would re-pull <!-- count:membership-manifest/magnitudeRows -->598,664<!-- /count --> rows that file already holds.
+and requesting them would re-pull <!-- count:membership-manifest/magnitudeRows -->598,463<!-- /count --> rows that file already holds.
 
 ## The request is a union, and why that is not a compromise
 
