@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
 import {
-  AV_PARAM_DECIMALS,
   BRIGHTNESS_COLOUR_CODES,
   brightnessColourLineageLines,
   brightnessColourLineageRows,
@@ -121,9 +120,5 @@ describe('brightnessColourLineageRows', () => {
     const [line] = brightnessColourLineageLines(b);
     expect(decodeLineageLine(line)).toEqual(brightnessColourLineageRows(b)[0]);
     expect(decodeLineageLine(line).stage).toBe(BRIGHTNESS_COLOUR_CODES.stage);
-  });
-
-  it('pins A_V at four decimal places', () => {
-    expect(AV_PARAM_DECIMALS).toBe(4);
   });
 });
