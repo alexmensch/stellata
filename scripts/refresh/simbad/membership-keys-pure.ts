@@ -77,12 +77,13 @@ export const GATE_REPRODUCED_BINDING = 'crosswalk_gated';
 /** The magnitude term's binding: the row is Gaia's own source. */
 export const GAIA_NATIVE_BINDING = 'gaia_native';
 
-/** Source_ids Gaia's 5p table states a parallax, both proper-motion components and a radial velocity for. */
+/** Gaia states a parallax, both proper-motion components and a radial velocity for the row. */
+export const statesEveryCascadeValue = (row: GaiaAstrometryCatalogRow): boolean =>
+  [row.parallaxMas, row.pmraMasyr, row.pmdecMasyr, row.radialVelocityKmS].every((v) => v !== null);
+
 export function gaiaCompleteSourceIds(catalog: ReadonlyMap<string, GaiaAstrometryCatalogRow>): Set<string> {
   const complete = new Set<string>();
-  for (const [sourceId, row] of catalog) {
-    if ([row.parallaxMas, row.pmraMasyr, row.pmdecMasyr, row.radialVelocityKmS].every((v) => v !== null)) complete.add(sourceId);
-  }
+  for (const [sourceId, row] of catalog) if (statesEveryCascadeValue(row)) complete.add(sourceId);
   return complete;
 }
 

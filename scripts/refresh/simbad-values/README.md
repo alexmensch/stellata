@@ -12,7 +12,10 @@ A phased pull on the [pull runtime](../pull/README.md#a-phased-pull) over the
 
 - `refresh-simbad-values.ts` (+ test, the committed table replayed through
   the pull) — the entry: reads the manifest and both Gaia 5p tables (the
-  catalogue's and the magnitude pull's), `describe` and `main`.
+  catalogue's whole, the magnitude pull's streamed row by row into the set
+  of complete ids, with no keep-set since an id outside the manifest is never
+  asked about), `describe` and `main`. The runner calls `describe` on every
+  build: 3.0 s and 861 MiB resident, measured 2026-11-08.
 - `simbad-values-pure.ts` (+ test) — the columns, phases, floors and
   `valuesPull`.
 - `simbad-values-replay-pure.ts` — `valuesFake`, a fake SIMBAD holding a

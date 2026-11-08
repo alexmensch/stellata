@@ -78,8 +78,6 @@ export interface ValuesInputs {
 export function valuesPull(outputs: DeclaredOutputs<'values'>, inputs: ValuesInputs): PhasedPull<'values'> {
   const inCohort = valueCohort(inputs.gaiaComplete);
   const keys = membershipKeys(inputs.records(), inCohort);
-  const gaiaNative = new Set<string>();
-  for (const r of inputs.records()) if (r.binding === GAIA_NATIVE_BINDING && r.gaiaSourceId !== null && inCohort(r)) gaiaNative.add(r.gaiaSourceId);
   const request: Projection = { request: requestLines(keys), requestFrom: inputs.requestFrom };
   return {
     archive: SIMBAD,
@@ -90,6 +88,8 @@ export function valuesPull(outputs: DeclaredOutputs<'values'>, inputs: ValuesInp
     async run(ask, log) {
       log(`value cohort: ${keyedRows(keys) + keys.keyless} manifest rows (${keys.keyless} carrying no key); `
         + `Gaia 5p states every cascade value for ${inputs.gaiaComplete.size} source_ids`);
+      const gaiaNative = new Set<string>();
+      for (const r of inputs.records()) if (r.binding === GAIA_NATIVE_BINDING && r.gaiaSourceId !== null && inCohort(r)) gaiaNative.add(r.gaiaSourceId);
       const ledger = parseLedger();
       const resolved = await resolveMembershipKeys(ask, VALUES_PHASES, keys, ledger);
       for (const line of requestReport(resolved)) log(line);
