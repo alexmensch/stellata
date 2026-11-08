@@ -8,6 +8,7 @@ import { athygRow, gaiaAstrometryRow, wdsPair } from '../load/load-fixture';
 import type { SimbadWdsXid } from '../load/simbad-pure';
 import type { WdsPair } from '../load/wds-pure';
 import { componentsOf, type DecomposedPair, type ResolvedComponent } from './components-pure';
+import { ARCSEC_PER_DEG } from '../../../src/astro-core/astronomy-constants';
 
 export function ccdmIndex(rows: readonly { hip: number; ccdm: string }[]): CcdmIndex {
   const hipToCcdm = new Map<number, string>();
@@ -109,7 +110,7 @@ function biSide(gaia: string | null, hip: number | null): Side {
 /** A Gaia row (E, N) arcsec from RA 180°, Dec 0°. */
 export function biAstro(sourceId: string, eArcsec: number, nArcsec: number): GaiaAstrometryRow {
   return gaiaAstrometryRow({
-    sourceId, raDeg: 180 + eArcsec / 3600, decDeg: nArcsec / 3600, parallaxErrorMas: 0.1,
+    sourceId, raDeg: 180 + eArcsec / ARCSEC_PER_DEG, decDeg: nArcsec / ARCSEC_PER_DEG, parallaxErrorMas: 0.1,
     pmraErrorMasyr: 0.1, pmdecErrorMasyr: 0.1, gMag: 5, bpMag: 5, rpMag: 5,
   });
 }

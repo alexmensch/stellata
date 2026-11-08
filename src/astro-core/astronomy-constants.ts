@@ -33,11 +33,13 @@ export const SUN_ABSMAG_V = 4.83;
 // that divide by it or take its log.
 export const MIN_PHYSICAL_RADIUS_R_SUN = 1e-9;
 
+export const DEG_TO_RAD = Math.PI / 180;
+
+export const ARCSEC_PER_DEG = 3600;
+
 // π / (180 × 3600). Same magnitude as 1 / AU_PER_PC (1 AU subtends 1 arcsec
 // at 1 pc by definition) but written out here so the unit conversion reads as
 // the angular operation it is.
-export const DEG_TO_RAD = Math.PI / 180;
-
 export const ARCSEC_TO_RAD = Math.PI / (180.0 * 3600.0);
 // Written out rather than ARCSEC_TO_RAD / 1000, which rounds one ulp apart.
 export const MAS_TO_RAD = Math.PI / (180.0 * 3600.0 * 1000.0);
