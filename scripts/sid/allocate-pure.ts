@@ -93,7 +93,7 @@ type KeyCarrier =
   | { readonly kind: 'edge'; readonly edge: SameasEdge };
 
 /** A same-class merge whose key only a stored edge carries is keyed on that edge, never on a record that lacks the key. */
-export const sameasEdgeOrigin = (edge: SameasEdge): string => `sameas:${edge.a}|${edge.b}`;
+const sameasEdgeOrigin =(edge: SameasEdge): string => `sameas:${edge.a}|${edge.b}`;
 
 /** /docs/sid.md#43-ledger--datasidledgertsv: the classical key the merged record keys on survives; with none, the oldest SID. */
 export function mergeSurvivor(active: readonly LedgerRow[]): LedgerRow {
