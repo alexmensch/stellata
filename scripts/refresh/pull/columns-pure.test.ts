@@ -67,6 +67,12 @@ describe('formatTsv', () => {
       .toBe('source_id\tRA(ICRS)\tplx\n1\t10.5\t3.14\n2\t11\t\n');
   });
 
+  it('formats a float32 column\'s float32 value, as Python did, not the reply\'s text', () => {
+    const fixed: Column[] = [{ name: 'd', format: { fixed: 6, float32: true } }];
+    expect(formatTsv('f.tsv', fixed, [['0.1570405'], ['1.0490755']])).toBe('d\n0.157041\n1.049075\n');
+    expect(formatTsv('f.tsv', [{ name: 'd', format: { fixed: 6 } }], [['0.1570405'], ['1.0490755']])).toBe('d\n0.157040\n1.049076\n');
+  });
+
   it('rounds as Python does, and refuses a formatted cell that is not a number', () => {
     expect(formatTsv('f.tsv', COLUMNS, [['1', 'x', '0.125']])).toBe('source_id\tRA(ICRS)\tplx\n1\tx\t0.12\n');
     expect(() => formatTsv('f.tsv', COLUMNS, [['1', 'x', 'n/a']])).toThrow('f.tsv: plx="n/a" has a numeric format but is not a number');
