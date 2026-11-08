@@ -6,10 +6,7 @@
     "data/gaia/gaia_dr3_apsis.tsv": "7548a8ac28c14e3496ff64d663041e1d3fbaf583"
   },
   "recorded": {
-    "listings": {
-      "data/gaia/gaia_dr3_apsis.tsv.ckpt-magnitude": "da39a3ee5e6b4b0d3255bfef95601890afd80709",
-      "data/gaia/gaia_dr3_apsis.tsv.ckpt-request": "da39a3ee5e6b4b0d3255bfef95601890afd80709"
-    },
+    "listings": {},
     "probes": {}
   },
   "query": "9a2ee6745a019049636bbe0d2a11eef71206f8b5",

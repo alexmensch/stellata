@@ -6,9 +6,7 @@
     "data/gaia/gaia_dr3_gspc.tsv": "985046c164f3ffc0d89f6e6310f298e1446aa8e6"
   },
   "recorded": {
-    "listings": {
-      "data/gaia/gaia_dr3_gspc.tsv.ckpt": "da39a3ee5e6b4b0d3255bfef95601890afd80709"
-    },
+    "listings": {},
     "probes": {}
   },
   "query": "687eb65e41f3ebac373983f5726f1f898f185213",

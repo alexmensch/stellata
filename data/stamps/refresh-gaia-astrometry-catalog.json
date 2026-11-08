@@ -6,9 +6,7 @@
     "data/gaia/gaia_dr3_astrometry_catalog.tsv": "b2078e6b28f4cf49daa19d439011788863820a3d"
   },
   "recorded": {
-    "listings": {
-      "data/gaia/gaia_dr3_astrometry_catalog.tsv.ckpt": "da39a3ee5e6b4b0d3255bfef95601890afd80709"
-    },
+    "listings": {},
     "probes": {}
   },
   "query": "9e6d8a3cc5c4850ea239c27f6810ab064dc941de",
