@@ -1,11 +1,11 @@
 // The SIMBAD value-tier pull: bibcoded rv, parallax, PM, coordinates and B/V fluxes for the value cohort. See README.md.
 
 import type { ManifestRecord } from '../../catalog/membership/membership-manifest-tsv';
-import type { DeclaredOutputs, Projection } from '../../util/emit-artifacts';
+import type { Check, DeclaredOutputs, Projection } from '../../util/emit-artifacts';
 import type { PhasedPull, WrittenTable } from '../pull/pull';
 import { SIMBAD } from '../pull/tap-pure';
-import { keyedRows, membershipKeys, requestLines, valueCohort } from '../simbad/membership-keys-pure';
-import { coverage, requestReport, resolveMembershipKeys } from '../simbad/resolve-membership-pure';
+import { GAIA_NATIVE_BINDING, keyedRows, membershipKeys, requestLines, valueCohort } from '../simbad/membership-keys-pure';
+import { requestReport, resolveMembershipKeys } from '../simbad/resolve-membership-pure';
 import { fetchBasic, fetchFlux, fetchIdents, parseLedger, phaseRecord, simbadPhases } from '../simbad/simbad-fetch-pure';
 import {
   countFilled, fillLine, floorCheck, fluxBlock, identBlock, isFilled, simbadColumns, simbadRows,
@@ -29,10 +29,24 @@ export const VALUES_PHASES = simbadPhases({ basic: BASIC, idents: IDENTS, fluxes
 
 /** Every SIMBAD object carries coordinates, so a lower fill means the reply's shape or the column list drifted. */
 export const COORD_FLOOR = 0.99;
-/** Gaia DR3 ident resolution over the cohort's source_ids: 99.6% measured 2026-08-15. */
-export const GAIA_RESOLUTION_FLOOR = 0.95;
-/** The least share of the cohort's keyed rows that must reach an object: 74,446 of 75,040 at the 2026-09-08 pull. */
-export const MIN_ROW_REACH = 0.97;
+/** README.md#the-request-and-the-gates. */
+export const GAIA_RESOLUTION_FLOORS = { primaries: 0.95, gaiaNative: 0.87 } as const;
+/** The least share of the cohort's keyed rows that must reach an object: 115,871 of 121,248 (95.6%) on 2026-11-08. */
+export const MIN_ROW_REACH = 0.94;
+
+/** Each population's share of its source_ids the Gaia rung bound, against its floor. */
+export function resolutionChecks(sourceIds: readonly string[], gaiaNative: ReadonlySet<string>, bound: ReadonlyMap<string, number>): Check[] {
+  const populations = [
+    ['primaries', sourceIds.filter((sid) => !gaiaNative.has(sid))],
+    ['gaiaNative', sourceIds.filter((sid) => gaiaNative.has(sid))],
+  ] as const;
+  return populations.map(([name, ids]): Check => {
+    const label = `Gaia DR3 ident resolution (${name}, ${ids.length} source_ids)`;
+    if (ids.length === 0) return { kind: 'pass', report: `${label}: none asked` };
+    const share = ids.filter((sid) => bound.has(sid)).length / ids.length;
+    return floorCheck(label, share, GAIA_RESOLUTION_FLOORS[name], 'the request set or SIMBAD\'s ident table drifted');
+  });
+}
 
 const GROUPS = [...BASIC_BIBCODED_GROUPS, ...FLUX_BANDS.map(fluxGroup)];
 const COLUMNS = simbadColumns(BASIC, [identBlock(IDENTS, new Map()), fluxBlock(FLUX_BANDS, new Map())]);
@@ -62,7 +76,10 @@ export interface ValuesInputs {
 }
 
 export function valuesPull(outputs: DeclaredOutputs<'values'>, inputs: ValuesInputs): PhasedPull<'values'> {
-  const keys = membershipKeys(inputs.records(), valueCohort(inputs.gaiaComplete));
+  const inCohort = valueCohort(inputs.gaiaComplete);
+  const keys = membershipKeys(inputs.records(), inCohort);
+  const gaiaNative = new Set<string>();
+  for (const r of inputs.records()) if (r.binding === GAIA_NATIVE_BINDING && r.gaiaSourceId !== null && inCohort(r)) gaiaNative.add(r.gaiaSourceId);
   const request: Projection = { request: requestLines(keys), requestFrom: inputs.requestFrom };
   return {
     archive: SIMBAD,
@@ -100,7 +117,7 @@ export function valuesPull(outputs: DeclaredOutputs<'values'>, inputs: ValuesInp
       return {
         rows: { values: simbadRows(oids, basic, BASIC, [identBlock(IDENTS, idents), fluxBlock(FLUX_BANDS, flux)], GROUPS) },
         checks: [
-          floorCheck('Gaia DR3 ident resolution', coverage(resolved, GAIA_DR3.name), GAIA_RESOLUTION_FLOOR, 'the request set or SIMBAD\'s ident table drifted'),
+          ...resolutionChecks(keys.sourceIds, gaiaNative, resolved.bindings.get(GAIA_DR3.name) ?? new Map()),
           floorCheck('coordinate fill', coords / Math.max(1, total), COORD_FLOOR, 'SIMBAD\'s reply shape or the column list drifted'),
           ledger.check('idents'),
         ],

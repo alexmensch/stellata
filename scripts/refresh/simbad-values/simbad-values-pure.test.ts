@@ -3,13 +3,38 @@ import { describe, expect, it } from 'vitest';
 import { declareOutputs } from '../../util/emit-artifacts';
 import { fakeAsk } from '../simbad/simbad-fake-pure';
 import { record } from '../simbad/simbad-test-fixtures';
-import { MIN_ROW_REACH, valuesPull, valuesTable } from './simbad-values-pure';
+import { GAIA_RESOLUTION_FLOORS, MIN_ROW_REACH, resolutionChecks, valuesPull, valuesTable } from './simbad-values-pure';
 
 const BIBCODE = '2020yCat.1350....0G';
 
 describe('valuesTable', () => {
   it('bands the rows between the reach floor and the keyed rows', () => {
     expect(valuesTable(1000).band).toEqual({ min: Math.ceil(1000 * MIN_ROW_REACH), max: 1000 });
+  });
+});
+
+describe('resolutionChecks', () => {
+  const ids = (n: number, prefix: string) => Array.from({ length: n }, (_, i) => `${prefix}${i}`);
+  const bound = (sids: string[]) => new Map(sids.map((sid, i) => [sid, i]));
+
+  it('holds the primaries to their own floor, whatever the magnitude term resolves', () => {
+    const primaries = ids(100, 'p');
+    const native = ids(100, 'n');
+    const [p, n] = resolutionChecks([...primaries, ...native], new Set(native), bound([...primaries.slice(0, 94), ...native]));
+    expect([p.kind, n.kind]).toEqual(['fail', 'pass']);
+  });
+
+  it('passes a population with no source_ids, since it asked nothing', () => {
+    expect(resolutionChecks(['p0'], new Set(), new Map([['p0', 1]]))[1]).toEqual({ kind: 'pass', report: 'Gaia DR3 ident resolution (gaiaNative, 0 source_ids): none asked' });
+  });
+
+  it('passes each population at its floor', () => {
+    const primaries = ids(100, 'p');
+    const native = ids(100, 'n');
+    const at = (sids: string[], floor: number) => sids.slice(0, Math.round(floor * 100));
+    const checks = resolutionChecks([...primaries, ...native], new Set(native),
+      bound([...at(primaries, GAIA_RESOLUTION_FLOORS.primaries), ...at(native, GAIA_RESOLUTION_FLOORS.gaiaNative)]));
+    expect(checks.map((c) => c.kind)).toEqual(['pass', 'pass']);
   });
 });
 
@@ -39,12 +64,12 @@ describe('valuesPull', () => {
     expect(a.slice(10, 14)).toEqual([null, null, null, null]);
     expect(a.slice(19)).toEqual(['7', '1', null, null, null, null, null, '7.1', '0.01', BIBCODE]);
     expect(b.slice(19, 26)).toEqual(['8', null, null, null, null, null, null]);
-    expect(checks.map((c) => c.kind)).toEqual(['pass', 'pass', 'pass']);
+    expect(checks.map((c) => c.kind)).toEqual(['pass', 'pass', 'pass', 'pass']);
   });
 
   it('fails the Gaia resolution floor when the cohort\'s source_ids stop resolving', async () => {
     const { ask } = fakeAsk({ idents: [{ oid: 200, id: 'HIP 8' }], basic: new Map([[200, { ra: '1', coo_bibcode: BIBCODE }]]) });
     const { checks } = await pull().run(ask, () => {});
-    expect(checks[0]).toMatchObject({ kind: 'fail', message: expect.stringContaining('Gaia DR3 ident resolution 0.0%') });
+    expect(checks[0]).toMatchObject({ kind: 'fail', message: expect.stringContaining('Gaia DR3 ident resolution (primaries, 1 source_ids) 0.0%') });
   });
 });
