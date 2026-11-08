@@ -1,13 +1,13 @@
 // The manifest-keyed SIMBAD spectral-type pull: Phase A, the basic table, the value-keyed union, cross-IDs. See README.md.
 
-import type { ManifestRecord } from '../../catalog/membership/membership-manifest-tsv';
-import type { DeclaredOutputs } from '../../util/emit-artifacts';
+import type { ManifestRecord, MembershipTerm } from '../../catalog/membership/membership-manifest-tsv';
+import type { Check, DeclaredOutputs } from '../../util/emit-artifacts';
 import type { PhasedPull, WrittenTable } from '../pull/pull';
 import type { SpotRow } from '../pull/gates-pure';
 import { SIMBAD } from '../pull/tap-pure';
 import { keyedRows, membershipKeys, requestLines } from '../simbad/membership-keys-pure';
 import { requestReport, resolveMembershipKeys } from '../simbad/resolve-membership-pure';
-import { fetchBasic, fetchIdents, parseLedger, phaseRecord, simbadPhases } from '../simbad/simbad-fetch-pure';
+import { fetchBasic, fetchIdents, parseLedger, phaseRecord, simbadPhases, type BasicCells } from '../simbad/simbad-fetch-pure';
 import { countFilled, fillLine, floorCheck, identBlock, isFilled, simbadColumns, simbadRows } from '../simbad/simbad-rows-pure';
 import { GAIA_DR3, GJ, HIP, MAIN_ID, OID, OTYPE, SP_BIBCODE, SP_QUAL, SP_TYPE, TYC } from '../simbad/simbad-specs-pure';
 import { recoveredRows, unionReportLines, unionUnanswered } from '../simbad/union-pure';
@@ -16,8 +16,8 @@ export const BASIC = [OID, MAIN_ID, SP_TYPE, SP_QUAL, SP_BIBCODE, OTYPE] as cons
 export const IDENTS = [HIP, GAIA_DR3, TYC, GJ];
 export const SPTYPE_PHASES = simbadPhases({ basic: BASIC, idents: IDENTS });
 
-/** sp_type fill drops sharply in the faint tail; under this the pull is broken, not sparse. */
-export const SP_TYPE_FLOOR = 0.5;
+/** README.md#the-request-and-the-gates. */
+export const SP_TYPE_FLOORS: Readonly<Record<MembershipTerm, number>> = { primaries: 0.8, magnitude: 0.15 };
 /** Recovered rows printed per run: a sample of what the union added, beside its counts. */
 export const RECOVERED_SAMPLE = 25;
 
@@ -39,6 +39,23 @@ export function sptypeTable(keyed: number): WrittenTable {
     band: { min: Math.ceil(keyed * ROW_BAND.minOfKeyed), max: Math.floor(keyed * ROW_BAND.maxOfKeyed) },
     spotRows: SPOT_ROWS,
   };
+}
+
+/** Each term's share of typed objects among those its rows' Gaia ids bound, against its floor; a term binding none asked nothing. */
+export function typedByTerm(
+  records: Iterable<ManifestRecord>, bound: ReadonlyMap<string, number>, cells: ReadonlyMap<number, BasicCells>,
+): Check[] {
+  const objects = new Map<MembershipTerm, Set<number>>(Object.keys(SP_TYPE_FLOORS).map((t) => [t as MembershipTerm, new Set()]));
+  for (const record of records) {
+    const oid = record.gaiaSourceId === null ? undefined : bound.get(record.gaiaSourceId);
+    if (oid !== undefined && cells.has(oid)) objects.get(record.term)?.add(oid);
+  }
+  return [...objects].map(([term, oids]): Check => {
+    const label = `sp_type coverage (${term}, ${oids.size} objects)`;
+    if (oids.size === 0) return { kind: 'pass', report: `${label}: none bound` };
+    const typed = countFilled(oids, (oid) => isFilled(cells.get(oid)?.[SP_TYPE.column]));
+    return floorCheck(label, typed / oids.size, SP_TYPE_FLOORS[term], 'SIMBAD\'s reply shape or the column list drifted');
+  });
 }
 
 export function sptypePull(
@@ -72,7 +89,7 @@ export function sptypePull(
       return {
         rows: { sptype: simbadRows(oids, merged, BASIC, [identBlock(IDENTS, idents)]) },
         checks: [
-          floorCheck('sp_type coverage', typed / Math.max(1, merged.size), SP_TYPE_FLOOR, 'SIMBAD\'s reply shape or the column list drifted'),
+          ...typedByTerm(records(), resolved.bindings.get(GAIA_DR3.name) ?? new Map(), merged),
           ledger.check('idents'),
         ],
       };

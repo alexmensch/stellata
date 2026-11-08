@@ -27,7 +27,11 @@ union's counts and a sample of `RECOVERED_SAMPLE` recovered rows.
 
 - **Band**: 90% to 110% of the manifest's keyed rows: a key binds at most one
   object, and the union adds objects beyond them.
-- **Floor**: `sp_type` filled on at least half the objects.
+- **Floors**: `sp_type` filled per membership term (`SP_TYPE_FLOORS`), over
+  the objects that term's rows' Gaia ids bound: 80% for the primaries and 15%
+  for the magnitude term, whose fainter stars SIMBAD seldom types (measured
+  2026-11-08: 90.7% and 21.4%), so the magnitude term cannot mask a primaries
+  regression.
 - **Spot rows**: Arcturus (oid 2252964) and alf Cen A (oid 3396054), main_id,
   `sp_type` and HIP exact, alf Cen A's GJ too.
 - **Parse ledger**: an id shape the namespace rules do not know fails the pull.
