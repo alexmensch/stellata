@@ -2,12 +2,9 @@
 // dry-run pair (/docs/sid.md#62-dr2dr3-dry-run-measured-2026-07-07).
 
 import { DATA_FILES } from '../../src/catalog-format/pipeline-outputs/data-files';
+import { sourceIdRequestSource } from '../catalog/astrometry-request/source-id-request-source';
 import { defineSource, type Declared } from '../util/sources/source';
-import { readNeighbourhoodRows, readSourceIdRequest } from './dr-reconcile-pure';
-
-export function sourceIdRequestSource(declared: Declared) {
-  return defineSource({ ...declared, parse: (input) => readSourceIdRequest(input.text(), input) });
-}
+import { readNeighbourhoodRows } from './dr-reconcile-pure';
 
 export function neighbourhoodSource(declared: Declared) {
   return defineSource({

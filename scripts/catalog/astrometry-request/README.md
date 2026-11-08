@@ -26,11 +26,17 @@ scripts/catalog/astrometry-request/
                                   serialiseSourceIdRequest (header, then ids
                                   in sortSourceIdsNumeric's order, over
                                   ../../util/tsv/'s compareSourceIds) and
-                                  parseSourceIdRequest, which checks the
-                                  header. Also used by
+                                  readSourceIdRequest, the one parse of
+                                  every such file (this one, the binaries
+                                  request, the DR2 risk set). Also used by
                                   scripts/sid/export-dr-risk-set.ts and the
                                   membership gate test, whose coverage
                                   filter, unrequestedBindings, lives here.
+  source-id-request-source.ts     sourceIdRequestSource — a request file
+                                  declared through defineSource on that
+                                  parse; scripts/sid/ and the request-scoped
+                                  Gaia pulls (../../refresh/gaia-request/)
+                                  declare theirs through it.
 ```
 
 Each contribution lives with the consumer that defines it, not here — this

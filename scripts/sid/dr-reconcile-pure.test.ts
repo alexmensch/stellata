@@ -5,7 +5,6 @@ import {
   MAG_REVIEW_DELTA,
   classifyDrTransition,
   readNeighbourhoodRows,
-  readSourceIdRequest,
   type NeighbourhoodRow,
 } from './dr-reconcile-pure';
 import { DR2_NEIGHBOURHOOD, DR2_NEIGHBOURHOOD_REQUEST } from './dr2-neighbourhood-source';
@@ -61,21 +60,7 @@ describe('classifyDrTransition', () => {
   });
 });
 
-const R = { file: 'r.tsv', hint: 'h' };
 const N = { file: 'n.tsv', hint: 'h' };
-
-describe('readSourceIdRequest', () => {
-  it('reads the request column as source_ids, naming file and line on a bad one', () => {
-    expect(readSourceIdRequest('gaia_source_id\n12\n34\n', R)).toEqual([12n, 34n]);
-    expect(() => readSourceIdRequest('gaia_source_id\n12\n\t\n-3\n', R)).toThrow(/^r\.tsv:4: gaia_source_id: "-3" is not a source_id/);
-    expect(() => readSourceIdRequest('source_id\n12\n', R)).toThrow(/r\.tsv is missing required columns: gaia_source_id/);
-  });
-
-  it("ends each error with the caller's recovery hint", () => {
-    expect(() => readSourceIdRequest('source_id\n12\n', { file: 'r.tsv', hint: 'Restore it from git.' }))
-      .toThrow(/\. Restore it from git\.$/);
-  });
-});
 
 describe('readNeighbourhoodRows', () => {
   const header = 'dr3_source_id\tdr2_source_id\tangular_distance\tmagnitude_difference';
