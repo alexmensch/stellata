@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { WDS_PRECISE_COORD_EPOCH } from '../sky-geometry-pure';
 import { athygPositionAtEpoch, buildAthygGrid, findNearestAthyg, pairAthygMatches } from './athyg-match-pure';
-import { athygAt, pairAt, resolved } from './resolve-fixture';
+import { athygAt, decomposed, pairAt } from './resolve-fixture';
 
 describe('findNearestAthyg', () => {
   const east = (arcsec: number, decDeg: number) => 100 + arcsec / 3600 / Math.cos((decDeg * Math.PI) / 180);
@@ -40,20 +40,16 @@ describe('athygPositionAtEpoch', () => {
 });
 
 describe('pairAthygMatches', () => {
-  const pair = pairAt({ components: 'AB', ra: 100, dec: 0, rhoLast: 0.0, thetaLast: 0 });
-  const comps = [
-    resolved({ wdsId: pair.wdsId, discoverer: pair.discoverer }),
-    resolved({ wdsId: pair.wdsId, discoverer: pair.discoverer, component: 'B', isPrimary: false }),
-  ];
+  const pairs = [decomposed(pairAt({ components: 'AB', ra: 100, dec: 0, rhoLast: 0.0, thetaLast: 0 }), { primary: {}, secondary: {} })];
   const athyg = [athygAt({ ra: 100, dec: 0, gaia: '111' })];
 
   it('gives a ρ = 0 secondary its primary\'s row only when blend inheritance is allowed', () => {
-    const allowed = pairAthygMatches(comps, [pair], athyg, { skip: () => false, allowBlendInherit: true });
+    const allowed = pairAthygMatches(pairs, athyg, { skip: () => false, allowBlendInherit: true });
     expect(allowed.matches).toEqual([
       { componentIdx: 0, athygIdx: 0, blendInherit: false },
       { componentIdx: 1, athygIdx: 0, blendInherit: true },
     ]);
-    const refused = pairAthygMatches(comps, [pair], athyg, { skip: () => false, allowBlendInherit: false });
+    const refused = pairAthygMatches(pairs, athyg, { skip: () => false, allowBlendInherit: false });
     expect(refused.matches).toEqual([{ componentIdx: 0, athygIdx: 0, blendInherit: false }]);
   });
 });

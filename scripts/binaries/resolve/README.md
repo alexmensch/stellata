@@ -19,10 +19,9 @@ scripts/binaries/resolve/
                                resolveCascade (the tiers and propagations
                                alone), Stage2Result, astrometryRequestIds,
                                stage2Counts.
-  components-pure.ts           ResolvedComponent, DecomposedPair and
-                               toDecomposedPairs, the pair walk
-                               (decomposingPairs), findOwningPair,
-                               RESOLVE_VIA_PRIORITY.
+  components-pure.ts           ResolvedComponent, DecomposedPair,
+                               decompose (the split), working (a pass's
+                               copy), findOwningPair, RESOLVE_VIA_PRIORITY.
   cascade-pure.ts              The tiers: resolveComponent (ORB6 HIP,
                                AT-HYG-native), resolveViaSimbad,
                                resolveViaCcdm, resolveViaPosition; the
@@ -61,10 +60,10 @@ parent folder's `build-binaries.test.ts`.
 ## The order of the passes
 
 `resolveStage2` runs them in the Python shell's order, each reading the one
-before; every pass takes the components and returns new ones:
+before; every pass takes `DecomposedPair`s and returns new ones:
 
-1. `resolveComponent` per pair side, pairs in `ReferenceCatalogs.pairs`
-   order, primary then secondary.
+1. `decompose` splits each pair row and `resolveComponent` binds each side,
+   pairs in `ReferenceCatalogs.pairs` order, primary then secondary.
 2. `resolveViaSimbad`, `resolveViaCcdm`, `resolveViaPosition`.
 3. `propagateWithinSystem`; `propagateBlendIdentity`, and
    `propagateWithinSystem` again only when that seeded anything.
@@ -74,9 +73,10 @@ before; every pass takes the components and returns new ones:
    `enforceBindingVerdicts`, which re-runs the propagations over the systems
    it touched.
 
-The components are two per decomposing pair, in pair order, until
-`toDecomposedPairs` joins each pair row to its two; `decomposingPairs` throws
-if the two ever fall out of step.
+A pass reaches a component through its pair. One that works per component
+iterates `working(pairs).components`, a view of the same drafts in the
+Python's list order (pair order, primary then secondary), so pairing never
+rests on position.
 
 ## Byte identity with the Python stage
 

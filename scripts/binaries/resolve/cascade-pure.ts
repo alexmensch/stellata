@@ -13,7 +13,8 @@ import {
 } from '../sky-geometry-pure';
 import { athygPositionAtEpoch, pairAthygMatches } from './athyg-match-pure';
 import {
-  drafts, findOwningPair, pairsByDiscoverer, unresolvedComponent, type Draft, type ResolvedComponent,
+  findOwningPair, pairRows, pairsByDiscoverer, unresolvedComponent, working,
+  type DecomposedPair, type Draft, type ResolvedComponent,
 } from './components-pure';
 import { buildSystemHipClaims, claimHip, hipClaimedByDisjointLetter, tokensShareIdentity } from './sibling-identity-pure';
 
@@ -97,10 +98,10 @@ export function resolveComponent(
 /** A SIMBAD cross-ID for a still-unbound component: its DR3 source binds as
  *  `simbad_xid`; a HIP with no source (α Cen's saturation gap) binds the HIP only. */
 export function resolveViaSimbad(
-  components: readonly ResolvedComponent[], xids: ReadonlyMap<ComponentKey, SimbadWdsXid>,
-): ResolvedComponent[] {
-  const out = drafts(components);
-  for (const c of out) {
+  pairs: readonly DecomposedPair[], xids: ReadonlyMap<ComponentKey, SimbadWdsXid>,
+): readonly DecomposedPair[] {
+  const w = working(pairs);
+  for (const c of w.components) {
     if (c.gaiaSourceId !== null) continue;
     const xid = xids.get(componentKey(c.wdsId, c.component));
     if (xid === undefined) continue;
@@ -112,7 +113,7 @@ export function resolveViaSimbad(
       c.hip = xid.hip;
     }
   }
-  return out;
+  return w.pairs;
 }
 
 /** CCDM's candidates are a system's few HIPs, so a window wider than the
@@ -213,13 +214,15 @@ function bindCcdmHip(c: Draft, hip: number, indices: IdentifierIndices): void {
  *  component already carrying one of them keeps it. ρ = 0 secondaries are
  *  skipped: their prediction sits on the primary. */
 export function resolveViaCcdm(
-  components: readonly ResolvedComponent[], pairs: readonly WdsPair[], indices: IdentifierIndices,
-): { components: ResolvedComponent[]; rejected: readonly SiblingRejection[] } {
-  const out = drafts(components);
+  pairs: readonly DecomposedPair[], indices: IdentifierIndices,
+): { pairs: readonly DecomposedPair[]; rejected: readonly SiblingRejection[] } {
+  const w = working(pairs);
+  const out = w.components;
   const rejected: SiblingRejection[] = [];
-  if (indices.ccdmToHips.size === 0) return { components: out, rejected };
-  const index = pairsByDiscoverer(pairs);
-  const letterPositions = buildSystemLetterPositions(pairs);
+  if (indices.ccdmToHips.size === 0) return { pairs: w.pairs, rejected };
+  const rows = pairRows(pairs);
+  const index = pairsByDiscoverer(rows);
+  const letterPositions = buildSystemLetterPositions(rows);
   const claims = buildSystemHipClaims(out);
   const primaryHipByPair = new Map<string, number>();
   const pairKey = (c: Draft, p: WdsPair): string => `${c.wdsId}\t${c.discoverer}\t${p.components}`;
@@ -274,17 +277,18 @@ export function resolveViaCcdm(
     bindCcdmHip(c, hip, indices);
     claimHip(claims, c.wdsId, hip, c.component);
   }
-  return { components: out, rejected };
+  return { pairs: w.pairs, rejected };
 }
 
 export function resolveViaPosition(
-  components: readonly ResolvedComponent[], pairs: readonly WdsPair[], athyg: readonly AthygRow[],
-): { components: ResolvedComponent[]; rejected: readonly SiblingRejection[] } {
-  const { matches, siblingClaimed } = pairAthygMatches(components, pairs, athyg, {
+  pairs: readonly DecomposedPair[], athyg: readonly AthygRow[],
+): { pairs: readonly DecomposedPair[]; rejected: readonly SiblingRejection[] } {
+  const { matches, siblingClaimed } = pairAthygMatches(pairs, athyg, {
     skip: (_i, c) => c.gaiaSourceId !== null,
     allowBlendInherit: false,
   });
-  const out = drafts(components);
+  const w = working(pairs);
+  const out = w.components;
   for (const m of matches) {
     const c = out[m.componentIdx];
     const row = athyg[m.athygIdx];
@@ -298,5 +302,5 @@ export function resolveViaPosition(
   const rejected = siblingClaimed.map((s): SiblingRejection => ({
     tier: 'athyg_match_sibling_claimed', wdsId: out[s.componentIdx].wdsId, component: out[s.componentIdx].component, hip: s.hip,
   }));
-  return { components: out, rejected };
+  return { pairs: w.pairs, rejected };
 }

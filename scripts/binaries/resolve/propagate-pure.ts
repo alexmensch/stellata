@@ -5,8 +5,8 @@ import {
 } from '../component-tokens-pure';
 import type { WdsPair } from '../load/wds-pure';
 import {
-  decomposingPairs, drafts, findOwningPair, pairsByDiscoverer, priorityOf,
-  type Draft, type ResolvedComponent, type ResolveVia,
+  findOwningPair, pairsByDiscoverer, priorityOf, working,
+  type DecomposedPair, type Draft, type ResolvedComponent, type ResolveVia,
 } from './components-pure';
 
 interface SourceBinding {
@@ -33,8 +33,9 @@ function inherit(
   if (c.hip === null) c.hip = hips.get(key) ?? null;
 }
 
-export function propagateWithinSystem(components: readonly ResolvedComponent[]): ResolvedComponent[] {
-  const out = drafts(components);
+export function propagateWithinSystem(pairs: readonly DecomposedPair[]): readonly DecomposedPair[] {
+  const w = working(pairs);
+  const out = w.components;
   const sources = new Map<ComponentKey, SourceBinding>();
   const hips = new Map<ComponentKey, number>();
   for (const c of out) {
@@ -57,18 +58,16 @@ export function propagateWithinSystem(components: readonly ResolvedComponent[]):
     if (c.component !== c.component.toUpperCase() || c.component.length !== 1) continue;
     inherit(c, componentKey(c.wdsId, c.component), subSources, subHips);
   }
-  return out;
+  return w.pairs;
 }
 
 export function propagateBlendIdentity(
-  components: readonly ResolvedComponent[], pairs: readonly WdsPair[],
-): { components: ResolvedComponent[]; seeded: readonly ResolvedComponent[] } {
-  const out = drafts(components);
+  pairs: readonly DecomposedPair[],
+): { pairs: readonly DecomposedPair[]; seeded: readonly ResolvedComponent[] } {
+  const w = working(pairs);
   const seeded: Draft[] = [];
-  for (const { pair, primary, secondary } of decomposingPairs(pairs, out)) {
+  for (const { pair, primary: p, secondary: s } of w.pairs) {
     if (pair.rhoLast === null || pair.rhoLast > 0) continue;
-    const p = out[primary];
-    const s = out[secondary];
     if (s.gaiaSourceId !== null || s.hip !== null || s.athygRow !== null) continue;
     if (p.gaiaSourceId === null && p.hip === null && p.athygRow === null) continue;
     s.gaiaSourceId = p.gaiaSourceId;
@@ -77,7 +76,7 @@ export function propagateBlendIdentity(
     if (p.gaiaSourceId !== null) s.resolveVia = p.resolveVia;
     seeded.push(s);
   }
-  return { components: out, seeded };
+  return { pairs: w.pairs, seeded };
 }
 
 /** Gaia, then HIP, then AT-HYG row: what an in-system donor is ranked by. */
@@ -106,11 +105,12 @@ function copyBinding(dst: Draft, src: ResolvedComponent): boolean {
 
 /** A donor is read as the pass has left it: one seeded earlier in the walk donates what it was just given. */
 export function seedSynthesizedComponentBindings(
-  components: readonly ResolvedComponent[], synthesizedPairs: readonly WdsPair[],
-): { components: ResolvedComponent[]; seeded: readonly ResolvedComponent[] } {
-  const out = drafts(components);
+  pairs: readonly DecomposedPair[], synthesizedPairs: readonly WdsPair[],
+): { pairs: readonly DecomposedPair[]; seeded: readonly ResolvedComponent[] } {
+  const w = working(pairs);
+  const out = w.components;
   const seeded: Draft[] = [];
-  if (synthesizedPairs.length === 0) return { components: out, seeded };
+  if (synthesizedPairs.length === 0) return { pairs: w.pairs, seeded };
   const index = pairsByDiscoverer(synthesizedPairs);
 
   const donors = new Map<ComponentKey, Draft>();
@@ -139,7 +139,7 @@ export function seedSynthesizedComponentBindings(
     const primary = primaryByPair.get(`${c.wdsId}\t${c.discoverer}\t${pair.components}`);
     if (primary !== undefined && copyBinding(c, primary)) seeded.push(c);
   }
-  return { components: out, seeded };
+  return { pairs: w.pairs, seeded };
 }
 
 /** A sub-letter left unbound inherits its parent token's binding (20312's
@@ -147,15 +147,13 @@ export function seedSynthesizedComponentBindings(
  *  enforcement touched: across untouched systems it would seat siblings on
  *  one source, which the writer cannot place twice. */
 export function inheritDownwardParentBindings(
-  pairs: readonly WdsPair[], components: readonly ResolvedComponent[], onlyWdsIds: ReadonlySet<string>,
-): { components: ResolvedComponent[]; seeded: readonly ResolvedComponent[] } {
-  const out = drafts(components);
+  pairs: readonly DecomposedPair[], onlyWdsIds: ReadonlySet<string>,
+): { pairs: readonly DecomposedPair[]; seeded: readonly ResolvedComponent[] } {
+  const w = working(pairs);
   const bound = new Map<ComponentKey, { gaia: string; via: ResolveVia; hip: number | null }>();
   const canon: { token: string; c: Draft }[] = [];
-  for (const { pair, primary, secondary } of decomposingPairs(pairs, out)) {
+  for (const { pair, primary: p, secondary: s } of w.pairs) {
     if (!onlyWdsIds.has(pair.wdsId)) continue;
-    const p = out[primary];
-    const s = out[secondary];
     for (const [token, c] of [[p.component, p], [canonicalCompLetter(p.component, s.component), s]] as const) {
       canon.push({ token, c });
       const key = componentKey(pair.wdsId, token);
@@ -173,5 +171,5 @@ export function inheritDownwardParentBindings(
     if (c.hip === null && binding.hip !== null) c.hip = binding.hip;
     seeded.push(c);
   }
-  return { components: out, seeded };
+  return { pairs: w.pairs, seeded };
 }

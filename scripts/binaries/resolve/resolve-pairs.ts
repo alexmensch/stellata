@@ -1,7 +1,7 @@
 // Stage 2: every decomposing WDS pair's two components bound to Gaia DR3 / HIP, audited, as DecomposedPairs. See README.md.
 
 import type { ComponentKey } from '../component-tokens-pure';
-import { pairRowKey, splitComponents } from '../component-tokens-pure';
+import { pairRowKey } from '../component-tokens-pure';
 import type { AthygRow } from '../load/athyg-pure';
 import type { IdentifierIndices } from '../load/indices-pure';
 import type { ReferenceCatalogs } from '../load/reference-catalogs';
@@ -16,7 +16,7 @@ import {
   SIBLING_REJECTION_TIERS, groupOrb6ByPair, resolveComponent, resolveViaCcdm, resolveViaPosition, resolveViaSimbad,
   type SiblingRejection,
 } from './cascade-pure';
-import { toDecomposedPairs, type DecomposedPair, type ResolvedComponent } from './components-pure';
+import { decompose, freezePairs, type DecomposedPair, type ResolvedComponent } from './components-pure';
 import { propagateBlendIdentity, propagateWithinSystem, seedSynthesizedComponentBindings } from './propagate-pure';
 
 export interface CascadeInputs {
@@ -29,23 +29,18 @@ export interface CascadeInputs {
 
 export function resolveCascade(
   inputs: CascadeInputs,
-): { components: readonly ResolvedComponent[]; siblingRejections: readonly SiblingRejection[] } {
+): { pairs: readonly DecomposedPair[]; siblingRejections: readonly SiblingRejection[] } {
   const orb6ByPair = groupOrb6ByPair(inputs.orb6);
-  const first: ResolvedComponent[] = [];
-  for (const pair of inputs.pairs) {
-    const split = splitComponents(pair.components);
-    if (split === null) continue;
-    const orb6ForPair = orb6ByPair.get(pairRowKey(pair.wdsId, pair.components)) ?? [];
-    first.push(resolveComponent(pair, split[0], true, orb6ForPair, inputs.indices));
-    first.push(resolveComponent(pair, split[1], false, orb6ForPair, inputs.indices));
-  }
+  const first = decompose(inputs.pairs, (pair, token, isPrimary) => resolveComponent(
+    pair, token, isPrimary, orb6ByPair.get(pairRowKey(pair.wdsId, pair.components)) ?? [], inputs.indices,
+  ));
   const simbad = resolveViaSimbad(first, inputs.simbadWdsXids);
-  const ccdm = resolveViaCcdm(simbad, inputs.pairs, inputs.indices);
-  const position = resolveViaPosition(ccdm.components, inputs.pairs, inputs.athyg);
-  const smeared = propagateWithinSystem(position.components);
-  const blend = propagateBlendIdentity(smeared, inputs.pairs);
+  const ccdm = resolveViaCcdm(simbad, inputs.indices);
+  const position = resolveViaPosition(ccdm.pairs, inputs.athyg);
+  const smeared = propagateWithinSystem(position.pairs);
+  const blend = propagateBlendIdentity(smeared);
   return {
-    components: blend.seeded.length > 0 ? propagateWithinSystem(blend.components) : blend.components,
+    pairs: blend.seeded.length > 0 ? propagateWithinSystem(blend.pairs) : blend.pairs,
     siblingRejections: [...ccdm.rejected, ...position.rejected],
   };
 }
@@ -59,16 +54,14 @@ export interface Stage2Result {
   readonly verdicts: readonly BindingVerdict[];
 }
 
-/** The cascade, the synthesized-pair seeds, then the binding audit and its enforcement. */
 export function resolveStage2(reference: ReferenceCatalogs): Stage2Result {
   const cascade = resolveCascade(reference);
   const seeds = seedSynthesizedComponentBindings(
-    cascade.components, [...reference.synthesizedOrb6Pairs, ...reference.synthesizedMscPairs],
+    cascade.pairs, [...reference.synthesizedOrb6Pairs, ...reference.synthesizedMscPairs],
   );
-  const verdicts = auditBindingIntegrity(reference.pairs, seeds.components, reference.indices, reference.simbadWdsXids);
-  const enforced = enforceBindingVerdicts(reference.pairs, seeds.components, verdicts, reference.indices);
+  const verdicts = auditBindingIntegrity(seeds.pairs, reference.indices, reference.simbadWdsXids);
   return Object.freeze({
-    pairs: toDecomposedPairs(reference.pairs, enforced),
+    pairs: freezePairs(enforceBindingVerdicts(seeds.pairs, verdicts, reference.indices)),
     siblingRejections: Object.freeze([...cascade.siblingRejections]),
     synthesizedSeeds: Object.freeze([...seeds.seeded]),
     verdicts: Object.freeze([...verdicts]),

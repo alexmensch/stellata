@@ -5,12 +5,12 @@ import { BINDING_VERDICTS_TSV, bindingVerdictRow } from './binding-verdicts-tsv'
 import { astrometryMap, biAstro, biSystem, indices } from './resolve-fixture';
 
 describe('binding-integrity-verdicts.tsv', () => {
-  const { pairs, components } = biSystem([
+  const pairs = biSystem([
     ['AB', 3.0, 0.0, ['100', null], ['200', null]],
     ['AC', 10.0, 0.0, ['100', null], ['200', null]],
   ]);
   const verdicts = auditBindingIntegrity(
-    pairs, components, indices({ srcToAstrometry: astrometryMap([biAstro('100', 0, 0), biAstro('200', 0, 3)]) }), new Map(),
+    pairs, indices({ srcToAstrometry: astrometryMap([biAstro('100', 0, 0), biAstro('200', 0, 3)]) }), new Map(),
   );
 
   it('writes the header then one line per verdict, and reads back what it wrote', () => {

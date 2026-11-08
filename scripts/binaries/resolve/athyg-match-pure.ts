@@ -7,7 +7,9 @@ import type { AthygRow } from '../load/athyg-pure';
 import {
   ATHYG_REFERENCE_EPOCH, WDS_PRECISE_COORD_EPOCH, chordSqForTolerance, predictSecondaryPosition, propagatePosition,
 } from '../sky-geometry-pure';
-import { findOwningPair, pairsByDiscoverer, type ResolvedComponent } from './components-pure';
+import {
+  componentsOf, findOwningPair, pairRows, pairsByDiscoverer, type DecomposedPair, type ResolvedComponent,
+} from './components-pure';
 import type { WdsPair } from '../load/wds-pure';
 import { buildSystemHipClaims, hipClaimedByDisjointLetter } from './sibling-identity-pure';
 
@@ -86,6 +88,7 @@ export function matchAthygEitherEpoch(
 }
 
 export interface AthygMatch {
+  /** Into `componentsOf(pairs)`. */
   readonly componentIdx: number;
   readonly athygIdx: number;
   /** A secondary riding its primary's row because its own predicted match missed. */
@@ -111,12 +114,12 @@ export interface AthygMatchOptions {
  *  nothing: the prediction would sit on the primary, and with its row
  *  excluded only a different component's row could win. */
 export function pairAthygMatches(
-  components: readonly ResolvedComponent[], pairs: readonly WdsPair[], athyg: readonly AthygRow[],
-  opts: AthygMatchOptions,
+  pairs: readonly DecomposedPair[], athyg: readonly AthygRow[], opts: AthygMatchOptions,
 ): { matches: readonly AthygMatch[]; siblingClaimed: readonly SiblingClaimedMatch[] } {
   const tolerance = opts.toleranceArcsec ?? ATHYG_POSITION_MATCH_TOLERANCE_ARCSEC;
   const grid = buildAthygGrid(athyg);
-  const index = pairsByDiscoverer(pairs);
+  const components = componentsOf(pairs);
+  const index = pairsByDiscoverer(pairRows(pairs));
   const claims = buildSystemHipClaims(components);
   const primaryIdxByPair = new Map<string, number>();
   const pairKey = (c: ResolvedComponent, p: WdsPair): string => `${c.wdsId}\t${c.discoverer}\t${p.components}`;

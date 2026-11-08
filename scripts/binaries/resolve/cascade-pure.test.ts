@@ -6,7 +6,8 @@ import type { Orb6Entry, WdsPair } from '../load/wds-pure';
 import {
   buildSystemLetterPositions, groupOrb6ByPair, resolveComponent, resolveViaCcdm, resolveViaPosition, resolveViaSimbad,
 } from './cascade-pure';
-import { athygAt, indices, pairAt, resolved, xid } from './resolve-fixture';
+import { componentsOf } from './components-pure';
+import { alone, athygAt, decomposed, indices, lone, pairAt, resolved, xid } from './resolve-fixture';
 
 const orb6 = (wdsId: string, components: string, hip: number | null): Orb6Entry =>
   orb6Entry({ wdsId, components, hip, grade: 5 });
@@ -118,41 +119,36 @@ describe('groupOrb6ByPair', () => {
 
 describe('resolveViaSimbad', () => {
   const one = (wdsId: string, comp: string, x: ReturnType<typeof xid>) => new Map([[componentKey(wdsId, comp), x]]);
+  const run = (c: ReturnType<typeof resolved>, xids: ReturnType<typeof one> | Map<never, never>) => lone(resolveViaSimbad([alone(c)], xids))[0];
 
   it('binds gaia and HIP when SIMBAD carries both', () => {
-    const c = resolved({ wdsId: '00491+5749', discoverer: 'STF   60' });
-    const [r] = resolveViaSimbad([c], one('00491+5749', 'A', xid('00491+5749', 'A', '425040000962559616', 3821)));
+    const r = run(resolved({ wdsId: '00491+5749', discoverer: 'STF   60' }), one('00491+5749', 'A', xid('00491+5749', 'A', '425040000962559616', 3821)));
     expect(r).toMatchObject({ resolveVia: 'simbad_xid', gaiaSourceId: '425040000962559616', hip: 3821 });
   });
 
   it('binds the HIP alone when SIMBAD has no DR3 source (α Cen A)', () => {
-    const c = resolved({ wdsId: '14396-6050', discoverer: 'RHD   1' });
-    const [r] = resolveViaSimbad([c], one('14396-6050', 'A', xid('14396-6050', 'A', null, 71683)));
+    const r = run(resolved({ wdsId: '14396-6050', discoverer: 'RHD   1' }), one('14396-6050', 'A', xid('14396-6050', 'A', null, 71683)));
     expect(r).toMatchObject({ resolveVia: 'unresolved', gaiaSourceId: null, hip: 71683 });
   });
 
   it('leaves an already-bound component alone', () => {
-    const c = resolved({ wdsId: 'X', discoverer: 'D', gaiaSourceId: '42', resolveVia: 'orb6_hip', hip: 99 });
-    const [r] = resolveViaSimbad([c], one('X', 'A', xid('X', 'A', '999', 999)));
+    const r = run(resolved({ wdsId: 'X', discoverer: 'D', gaiaSourceId: '42', resolveVia: 'orb6_hip', hip: 99 }), one('X', 'A', xid('X', 'A', '999', 999)));
     expect(r).toMatchObject({ resolveVia: 'orb6_hip', gaiaSourceId: '42', hip: 99 });
   });
 
   it('does not override a HIP already carried', () => {
-    const c = resolved({ wdsId: 'X', discoverer: 'D', hip: 32349 });
-    const [r] = resolveViaSimbad([c], one('X', 'A', xid('X', 'A', null, 99)));
+    const r = run(resolved({ wdsId: 'X', discoverer: 'D', hip: 32349 }), one('X', 'A', xid('X', 'A', null, 99)));
     expect(r).toMatchObject({ resolveVia: 'unresolved', hip: 32349 });
   });
 
   it('skips a component SIMBAD does not list', () => {
-    const [r] = resolveViaSimbad([resolved({ wdsId: 'X', discoverer: 'D' })], new Map());
-    expect(r).toMatchObject({ resolveVia: 'unresolved', gaiaSourceId: null, hip: null });
+    expect(run(resolved({ wdsId: 'X', discoverer: 'D' }), new Map())).toMatchObject({ resolveVia: 'unresolved', gaiaSourceId: null, hip: null });
   });
 
   it('returns new records and leaves its input as it was', () => {
-    const c = resolved({ wdsId: 'X' });
-    const [r] = resolveViaSimbad([c], one('X', 'A', xid('X', 'A', '7')));
-    expect(r.gaiaSourceId).toBe('7');
-    expect(c.gaiaSourceId).toBeNull();
+    const input = [alone(resolved({ wdsId: 'X' }))];
+    expect(lone(resolveViaSimbad(input, one('X', 'A', xid('X', 'A', '7'))))[0].gaiaSourceId).toBe('7');
+    expect(input[0].primary.gaiaSourceId).toBeNull();
   });
 });
 
@@ -163,12 +159,10 @@ describe('resolveViaCcdm', () => {
       athyg: [athygAt({ ra: 100, dec: 10 / 3600, gaia: '5877748442128924544', hip: 71681 })],
       ccdm: [{ hip: 71683, ccdm: '14396-6050' }, { hip: 71681, ccdm: '14396-6050' }],
     });
-    const primary = resolved({ wdsId: pair.wdsId, discoverer: pair.discoverer, hip: 71683 });
-    const secondary = resolved({ wdsId: pair.wdsId, discoverer: pair.discoverer, component: 'B', isPrimary: false });
-    const { components: [p, s] } = resolveViaCcdm([primary, secondary], [pair], idx);
-    expect(s).toMatchObject({ hip: 71681, gaiaSourceId: '5877748442128924544', resolveVia: 'ccdm_hip' });
-    expect(p.hip).toBe(71683);
-    expect(p.gaiaSourceId).toBeNull();
+    const { pairs: [r] } = resolveViaCcdm([decomposed(pair, { primary: { hip: 71683 }, secondary: {} })], idx);
+    expect(r.secondary).toMatchObject({ hip: 71681, gaiaSourceId: '5877748442128924544', resolveVia: 'ccdm_hip' });
+    expect(r.primary.hip).toBe(71683);
+    expect(r.primary.gaiaSourceId).toBeNull();
   });
 
   it('binds the primary to the one sibling near the pair coord', () => {
@@ -178,8 +172,8 @@ describe('resolveViaCcdm', () => {
       ccdm: [{ hip: 42, ccdm: '00000+0000' }],
       hipToGaia: new Map([[42, '5000']]),
     });
-    const { components: [r] } = resolveViaCcdm([resolved({ wdsId: pair.wdsId, discoverer: pair.discoverer })], [pair], idx);
-    expect(r).toMatchObject({ hip: 42, gaiaSourceId: '5000', resolveVia: 'ccdm_hip' });
+    const { pairs: [r] } = resolveViaCcdm([decomposed(pair, { primary: {} })], idx);
+    expect(r.primary).toMatchObject({ hip: 42, gaiaSourceId: '5000', resolveVia: 'ccdm_hip' });
   });
 
   it('binds no secondary of a pair whose ρ overflowed', () => {
@@ -188,10 +182,8 @@ describe('resolveViaCcdm', () => {
       athyg: [athygAt({ ra: 219.9141, dec: -60.83948, gaia: '999', hip: 71681 })],
       ccdm: [{ hip: 71683, ccdm: '14396-6050' }, { hip: 71681, ccdm: '14396-6050' }],
     });
-    const c = resolved({ wdsId: pair.wdsId, discoverer: pair.discoverer, component: 'C', isPrimary: false });
-    const { components: [r] } = resolveViaCcdm([c], [pair], idx);
-    expect(r.gaiaSourceId).toBeNull();
-    expect(r.hip).toBeNull();
+    const { pairs: [r] } = resolveViaCcdm([decomposed(pair, { secondary: {} })], idx);
+    expect(r.secondary).toMatchObject({ gaiaSourceId: null, hip: null });
   });
 
   it('refuses a candidate a disjoint letter sits on, for both sides (Rigel)', () => {
@@ -202,20 +194,17 @@ describe('resolveViaCcdm', () => {
       ccdm: [{ hip: 24436, ccdm: '05145-0812' }],
       hipToGaia: new Map([[24436, '7777']]),
     });
-    const b = resolved({ wdsId: bc.wdsId, discoverer: bc.discoverer, component: 'B' });
-    const c = resolved({ wdsId: bc.wdsId, discoverer: bc.discoverer, component: 'C', isPrimary: false });
-    const r = resolveViaCcdm([b, c], [ab, bc], idx);
-    expect(r.components[0]).toMatchObject({ hip: null, gaiaSourceId: null, resolveVia: 'unresolved' });
-    expect(r.components[1]).toMatchObject({ hip: null, gaiaSourceId: null });
+    const r = resolveViaCcdm([decomposed(ab), decomposed(bc, { primary: {}, secondary: {} })], idx);
+    expect(r.pairs[1].primary).toMatchObject({ hip: null, gaiaSourceId: null, resolveVia: 'unresolved' });
+    expect(r.pairs[1].secondary).toMatchObject({ hip: null, gaiaSourceId: null });
     expect(r.rejected.filter((x) => x.tier === 'ccdm_sibling_owned')).toHaveLength(2);
   });
 
   it('never refuses for the pair partner (σ Ori blend convention)', () => {
     const pair = pairAt({ wdsId: '00000+0000', components: 'AB', ra: 100, dec: 0, rhoLast: 2, thetaLast: 180 });
     const idx = indices({ athyg: [athygAt({ ra: 100, dec: -1.2 / 3600, hip: 99 })], ccdm: [{ hip: 99, ccdm: '00000+0000' }] });
-    const s = resolved({ wdsId: pair.wdsId, discoverer: pair.discoverer, component: 'B', isPrimary: false });
-    const r = resolveViaCcdm([s], [pair], idx);
-    expect(r.components[0].hip).toBe(99);
+    const r = resolveViaCcdm([decomposed(pair, { secondary: {} })], idx);
+    expect(r.pairs[0].secondary.hip).toBe(99);
     expect(r.rejected).toHaveLength(0);
   });
 
@@ -223,9 +212,8 @@ describe('resolveViaCcdm', () => {
     const ab = pairAt({ wdsId: '00000+0000', components: 'AB', ra: 100, dec: 0, rhoLast: 2, thetaLast: 180 });
     const ac = pairAt({ wdsId: '00000+0000', components: 'AC', ra: 100, dec: 0, rhoLast: 2.4, thetaLast: 180 });
     const idx = indices({ athyg: [athygAt({ ra: 100, dec: -2.2 / 3600, hip: 99 })], ccdm: [{ hip: 99, ccdm: '00000+0000' }] });
-    const s = resolved({ wdsId: ac.wdsId, discoverer: ac.discoverer, component: 'C', isPrimary: false });
-    const r = resolveViaCcdm([s], [ab, ac], idx);
-    expect(r.components[0].hip).toBe(99);
+    const r = resolveViaCcdm([decomposed(ab), decomposed(ac, { secondary: {} })], idx);
+    expect(r.pairs[1].secondary.hip).toBe(99);
     expect(r.rejected).toHaveLength(0);
   });
 
@@ -237,17 +225,15 @@ describe('resolveViaCcdm', () => {
       ccdm: [{ hip: 24436, ccdm: '05145-0812' }],
       hipToGaia: new Map([[24436, '7777']]),
     });
-    const a = resolved({ wdsId: aBc.wdsId, discoverer: aBc.discoverer, hip: 24436 });
-    const b = resolved({ wdsId: bc.wdsId, discoverer: bc.discoverer, component: 'B' });
-    const r = resolveViaCcdm([a, b], [aBc, bc], idx);
-    expect(r.components[1]).toMatchObject({ hip: null, gaiaSourceId: null });
+    const r = resolveViaCcdm([decomposed(aBc, { primary: { hip: 24436 } }), decomposed(bc, { primary: {} })], idx);
+    expect(r.pairs[1].primary).toMatchObject({ hip: null, gaiaSourceId: null });
     expect(r.rejected).toHaveLength(1);
   });
 
   it('skips a system with no CCDM candidates', () => {
     const pair = pairAt({ wdsId: 'UNKNOWN', components: 'AB', ra: 0, dec: 0 });
-    const { components: [r] } = resolveViaCcdm([resolved({ wdsId: 'UNKNOWN', discoverer: pair.discoverer })], [pair], indices());
-    expect(r).toMatchObject({ resolveVia: 'unresolved', gaiaSourceId: null });
+    const { pairs: [r] } = resolveViaCcdm([decomposed(pair, { primary: {} })], indices());
+    expect(r.primary).toMatchObject({ resolveVia: 'unresolved', gaiaSourceId: null });
   });
 
   it('PM-propagates a high-PM sibling\'s stored position before matching', () => {
@@ -257,8 +243,8 @@ describe('resolveViaCcdm', () => {
       ccdm: [{ hip: 42, ccdm: '00000+0000' }],
       hipToGaia: new Map([[42, '5000']]),
     });
-    const { components: [r] } = resolveViaCcdm([resolved({ wdsId: pair.wdsId, discoverer: pair.discoverer })], [pair], idx);
-    expect(r).toMatchObject({ hip: 42, gaiaSourceId: '5000', resolveVia: 'ccdm_hip' });
+    const { pairs: [r] } = resolveViaCcdm([decomposed(pair, { primary: {} })], idx);
+    expect(r.primary).toMatchObject({ hip: 42, gaiaSourceId: '5000', resolveVia: 'ccdm_hip' });
   });
 
   it('prefers a carried HIP among the candidates over a position match', () => {
@@ -267,8 +253,8 @@ describe('resolveViaCcdm', () => {
       athyg: [athygAt({ ra: 100, dec: 0, gaia: '8000', hip: 8 }), athygAt({ ra: 100, dec: 0, gaia: '9000', hip: 9 })],
       ccdm: [{ hip: 8, ccdm: '00000+0000' }, { hip: 9, ccdm: '00000+0000' }],
     });
-    const { components: [r] } = resolveViaCcdm([resolved({ wdsId: pair.wdsId, discoverer: pair.discoverer, hip: 9 })], [pair], idx);
-    expect(r).toMatchObject({ hip: 9, gaiaSourceId: '9000', resolveVia: 'ccdm_hip' });
+    const { pairs: [r] } = resolveViaCcdm([decomposed(pair, { primary: { hip: 9 } })], idx);
+    expect(r.primary).toMatchObject({ hip: 9, gaiaSourceId: '9000', resolveVia: 'ccdm_hip' });
   });
 });
 
@@ -287,53 +273,45 @@ describe('resolveViaPosition', () => {
   it('binds a primary to the AT-HYG row at its coord', () => {
     const pair = pairAt({ components: 'Ca,Cb', ra: 217.4296, dec: -62.6795 });
     const athyg = [athygAt({ ra: 217.4296, dec: -62.6795, gaia: '5853498713190525696' })];
-    const c = resolved({ wdsId: pair.wdsId, discoverer: pair.discoverer, component: 'Ca' });
-    const { components: [r] } = resolveViaPosition([c], [pair], athyg);
-    expect(r).toMatchObject({ resolveVia: 'athyg_gaia_native', gaiaSourceId: '5853498713190525696' });
+    const { pairs: [r] } = resolveViaPosition([decomposed(pair, { primary: {} })], athyg);
+    expect(r.primary).toMatchObject({ resolveVia: 'athyg_gaia_native', gaiaSourceId: '5853498713190525696' });
   });
 
   it('binds a secondary at its predicted position', () => {
     const pair = pairAt({ components: 'AB', ra: 100, dec: 0, rhoLast: 360, thetaLast: 0 });
     const athyg = [athygAt({ ra: 100, dec: 0, gaia: '111' }), athygAt({ ra: 100, dec: 0.1, gaia: '222' })];
-    const comps = [
-      resolved({ wdsId: pair.wdsId, discoverer: pair.discoverer }),
-      resolved({ wdsId: pair.wdsId, discoverer: pair.discoverer, component: 'B', isPrimary: false }),
-    ];
-    const { components: [p, s] } = resolveViaPosition(comps, [pair], athyg);
-    expect(p.gaiaSourceId).toBe('111');
-    expect(s).toMatchObject({ gaiaSourceId: '222', resolveVia: 'athyg_gaia_native' });
+    const { pairs: [r] } = resolveViaPosition([decomposed(pair, { primary: {}, secondary: {} })], athyg);
+    expect(r.primary.gaiaSourceId).toBe('111');
+    expect(r.secondary).toMatchObject({ gaiaSourceId: '222', resolveVia: 'athyg_gaia_native' });
   });
 
   it('leaves a bound component alone', () => {
     const pair = pairAt({ components: 'AB', ra: 100, dec: 0 });
-    const c = resolved({ wdsId: pair.wdsId, discoverer: pair.discoverer, gaiaSourceId: '100', resolveVia: 'orb6_hip' });
-    const { components: [r] } = resolveViaPosition([c], [pair], [athygAt({ ra: 100, dec: 0, gaia: '999' })]);
-    expect(r).toMatchObject({ resolveVia: 'orb6_hip', gaiaSourceId: '100' });
+    const { pairs: [r] } = resolveViaPosition(
+      [decomposed(pair, { primary: { gaiaSourceId: '100', resolveVia: 'orb6_hip' } })], [athygAt({ ra: 100, dec: 0, gaia: '999' })],
+    );
+    expect(r.primary).toMatchObject({ resolveVia: 'orb6_hip', gaiaSourceId: '100' });
   });
 
   it('invents no gaia when the matched row has none', () => {
     const pair = pairAt({ components: 'AB', ra: 100, dec: 0 });
-    const { components: [r] } = resolveViaPosition(
-      [resolved({ wdsId: pair.wdsId, discoverer: pair.discoverer })], [pair], [athygAt({ ra: 100, dec: 0 })],
-    );
-    expect(r).toMatchObject({ resolveVia: 'unresolved', gaiaSourceId: null });
+    const { pairs: [r] } = resolveViaPosition([decomposed(pair, { primary: {} })], [athygAt({ ra: 100, dec: 0 })]);
+    expect(r.primary).toMatchObject({ resolveVia: 'unresolved', gaiaSourceId: null });
   });
 
   it('refuses a row whose HIP a disjoint letter binds (Rigel)', () => {
+    const ad = pairAt({ wdsId: '05145-0812', components: 'AD' });
     const bc = pairAt({ wdsId: '05145-0812', components: 'BC', ra: 100, dec: 0, rhoLast: 0.1, thetaLast: 30 });
     const athyg = [athygAt({ ra: 100, dec: 0, gaia: '555', hip: 24436 })];
-    const a = resolved({ wdsId: '05145-0812', discoverer: bc.discoverer, hip: 24436 });
-    const b = resolved({ wdsId: '05145-0812', discoverer: bc.discoverer, component: 'B' });
-    const r = resolveViaPosition([a, b], [bc], athyg);
-    expect(r.components[1]).toMatchObject({ hip: null, gaiaSourceId: null, resolveVia: 'unresolved' });
+    const r = resolveViaPosition([decomposed(ad, { primary: { hip: 24436 } }), decomposed(bc, { primary: {} })], athyg);
+    expect(r.pairs[1].primary).toMatchObject({ hip: null, gaiaSourceId: null, resolveVia: 'unresolved' });
     expect(r.rejected.filter((x) => x.tier === 'athyg_match_sibling_claimed')).toHaveLength(1);
   });
 
   it('lets a letter match a row carrying its own HIP', () => {
     const pair = pairAt({ wdsId: '00000+0000', components: 'AB', ra: 100, dec: 0, rhoLast: 0.5, thetaLast: 0 });
-    const a = resolved({ wdsId: pair.wdsId, discoverer: pair.discoverer, hip: 42 });
-    const r = resolveViaPosition([a], [pair], [athygAt({ ra: 100, dec: 0, gaia: '555', hip: 42 })]);
-    expect(r.components[0]).toMatchObject({ gaiaSourceId: '555', resolveVia: 'athyg_gaia_native' });
+    const r = resolveViaPosition([decomposed(pair, { primary: { hip: 42 } })], [athygAt({ ra: 100, dec: 0, gaia: '555', hip: 42 })]);
+    expect(r.pairs[0].primary).toMatchObject({ gaiaSourceId: '555', resolveVia: 'athyg_gaia_native' });
     expect(r.rejected).toHaveLength(0);
   });
 
@@ -342,22 +320,19 @@ describe('resolveViaPosition', () => {
     const athyg = [athygAt({
       ra: 219.92041, dec: -60.83515, gaia: '5877748442128924544', hip: 71683, pmRaMasyr: -3678.19, pmDecMasyr: 481.84,
     })];
-    const { components: [r] } = resolveViaPosition([resolved({ wdsId: pair.wdsId, discoverer: pair.discoverer })], [pair], athyg);
-    expect(r).toMatchObject({ gaiaSourceId: '5877748442128924544', hip: 71683, resolveVia: 'athyg_gaia_native' });
+    const { pairs: [r] } = resolveViaPosition([decomposed(pair, { primary: {} })], athyg);
+    expect(r.primary).toMatchObject({ gaiaSourceId: '5877748442128924544', hip: 71683, resolveVia: 'athyg_gaia_native' });
   });
 
   it('predicts no secondary position when ρ overflowed', () => {
     const pair = pairAt({ wdsId: 'X', components: 'AC', ra: 100, dec: 0, rhoLast: null, thetaLast: 225 });
-    const c = resolved({ wdsId: 'X', discoverer: pair.discoverer, component: 'C', isPrimary: false });
-    const { components: [r] } = resolveViaPosition([c], [pair], [athygAt({ ra: 99.96, dec: -0.04, gaia: '777' })]);
-    expect(r).toMatchObject({ resolveVia: 'unresolved', gaiaSourceId: null });
+    const { pairs: [r] } = resolveViaPosition([decomposed(pair, { secondary: {} })], [athygAt({ ra: 99.96, dec: -0.04, gaia: '777' })]);
+    expect(r.secondary).toMatchObject({ resolveVia: 'unresolved', gaiaSourceId: null });
   });
 
   it('records the matched row\'s HIP', () => {
     const pair = pairAt({ components: 'AB', ra: 100, dec: 0 });
-    const { components: [r] } = resolveViaPosition(
-      [resolved({ wdsId: pair.wdsId, discoverer: pair.discoverer })], [pair], [athygAt({ ra: 100, dec: 0, hip: 99, gaia: '42' })],
-    );
-    expect(r).toMatchObject({ gaiaSourceId: '42', hip: 99 });
+    const { pairs } = resolveViaPosition([decomposed(pair, { primary: {} })], [athygAt({ ra: 100, dec: 0, hip: 99, gaia: '42' })]);
+    expect(componentsOf(pairs)[0]).toMatchObject({ gaiaSourceId: '42', hip: 99 });
   });
 });

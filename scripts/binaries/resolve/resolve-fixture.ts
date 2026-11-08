@@ -7,7 +7,7 @@ import { buildIndices, type CcdmIndex, type IdentifierIndices } from '../load/in
 import { athygRow, gaiaAstrometryRow, wdsPair } from '../load/load-fixture';
 import type { SimbadWdsXid } from '../load/simbad-pure';
 import type { WdsPair } from '../load/wds-pure';
-import type { ResolvedComponent } from './components-pure';
+import { componentsOf, type DecomposedPair, type ResolvedComponent } from './components-pure';
 
 export function ccdmIndex(rows: readonly { hip: number; ccdm: string }[]): CcdmIndex {
   const hipToCcdm = new Map<number, string>();
@@ -69,6 +69,32 @@ export function xid(wdsId: string, component: string, gaiaSourceId: string | nul
 
 export const BI_WDS = '10000+0000';
 
+/** Bound to a source no test asks about, so the cascade passes skip it. */
+export const BYSTANDER_SOURCE = '0';
+
+export type Side = Partial<ResolvedComponent>;
+
+/** `pair` with its split tokens; a side not given is a bound bystander. */
+export function decomposed(pair: WdsPair, sides: { primary?: Side; secondary?: Side } = {}): DecomposedPair {
+  const tokens = splitComponents(pair.components)!;
+  const side = (i: 0 | 1, over: Side | undefined): ResolvedComponent => resolved({
+    wdsId: pair.wdsId, discoverer: pair.discoverer, component: tokens[i], isPrimary: i === 0,
+    ...(over ?? { gaiaSourceId: BYSTANDER_SOURCE, resolveVia: 'orb6_hip' }),
+  });
+  return { pair, tokens, primary: side(0, sides.primary), secondary: side(1, sides.secondary) };
+}
+
+/** One component on a pair row of its own, partnered by a bound bystander `Q`. */
+export function alone(c: ResolvedComponent): DecomposedPair {
+  const pair = wdsPair({ wdsId: c.wdsId, discoverer: c.discoverer, components: c.isPrimary ? `${c.component},Q` : `Q,${c.component}` });
+  return c.isPrimary ? decomposed(pair, { primary: c }) : decomposed(pair, { secondary: c });
+}
+
+/** The components `alone` wrapped, without their bystanders. */
+export function lone(pairs: readonly DecomposedPair[]): ResolvedComponent[] {
+  return componentsOf(pairs).filter((c) => c.component !== 'Q');
+}
+
 export function biPair(wdsId: string, components: string, rho: number | null, theta: number | null, date = 2016): WdsPair {
   return wdsPair({
     wdsId, discoverer: 'X 1', components, dateLast: date, rhoLast: rho, thetaLast: theta,
@@ -76,13 +102,8 @@ export function biPair(wdsId: string, components: string, rho: number | null, th
   });
 }
 
-export function biComp(
-  wdsId: string, component: string, isPrimary: boolean, gaia: string | null, hip: number | null = null,
-): ResolvedComponent {
-  return resolved({
-    wdsId, discoverer: 'X 1', component, isPrimary, gaiaSourceId: gaia,
-    resolveVia: gaia === null ? 'unresolved' : 'simbad_xid', hip,
-  });
+function biSide(gaia: string | null, hip: number | null): Side {
+  return { gaiaSourceId: gaia, resolveVia: gaia === null ? 'unresolved' : 'simbad_xid', hip };
 }
 
 /** A Gaia row (E, N) arcsec from RA 180°, Dec 0°. */
@@ -98,16 +119,10 @@ export type BiRow = readonly [
   primary: readonly [string | null, number | null], secondary: readonly [string | null, number | null],
 ];
 
-/** Pairs and their components in pair order, one WDS system. */
-export function biSystem(rows: readonly BiRow[], wdsId = BI_WDS): { pairs: WdsPair[]; components: ResolvedComponent[] } {
-  const pairs: WdsPair[] = [];
-  const components: ResolvedComponent[] = [];
-  for (const [comps, rho, theta, p, s] of rows) {
-    const [pTok, sTok] = splitComponents(comps)!;
-    pairs.push(biPair(wdsId, comps, rho, theta));
-    components.push(biComp(wdsId, pTok, true, p[0], p[1]), biComp(wdsId, sTok, false, s[0], s[1]));
-  }
-  return { pairs, components };
+/** One WDS system's pairs, each side bound as the row gives it. */
+export function biSystem(rows: readonly BiRow[], wdsId = BI_WDS): DecomposedPair[] {
+  return rows.map(([comps, rho, theta, p, s]) =>
+    decomposed(biPair(wdsId, comps, rho, theta), { primary: biSide(p[0], p[1]), secondary: biSide(s[0], s[1]) }));
 }
 
 export function astrometryMap(rows: readonly GaiaAstrometryRow[]): Map<string, GaiaAstrometryRow> {

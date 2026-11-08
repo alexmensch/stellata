@@ -9,7 +9,7 @@ import { fold } from '../../util/counts/tally-pure';
 import { compareSourceIds } from '../../util/tsv/table-pure';
 import { DEG_TO_RAD } from '../../../src/astro-core/astronomy-constants';
 import { propagatePosition, tangentOffset, type TangentOffset } from '../sky-geometry-pure';
-import { decomposingPairs, drafts, type Draft, type ResolvedComponent } from './components-pure';
+import { working, type DecomposedPair, type Draft, type DraftPair } from './components-pure';
 import { inheritDownwardParentBindings, propagateBlendIdentity, propagateWithinSystem } from './propagate-pure';
 
 export const BINDING_SHAPES = ['source_letters', 'letter_sources'] as const;
@@ -70,15 +70,18 @@ export interface SystemContext {
   /** Sources bound to both sides of a measured pair: Gaia blends. */
   readonly blendSources: Set<string>;
   readonly adj: Map<string, Map<string, Edge>>;
-  /** Canonical token → its instances' indices in the components. */
-  readonly instances: Map<string, number[]>;
+  /** Canonical token → its instances, as (pair index, side). */
+  readonly instances: Map<string, Instance[]>;
 }
 
-export function buildSystemContexts(
-  pairs: readonly WdsPair[], components: readonly ResolvedComponent[],
-): ReadonlyMap<string, SystemContext> {
+export interface Instance {
+  readonly pairIdx: number;
+  readonly side: 'primary' | 'secondary';
+}
+
+export function buildSystemContexts(pairs: readonly DecomposedPair[]): ReadonlyMap<string, SystemContext> {
   const systems = new Map<string, SystemContext>();
-  for (const { pair, primary, secondary } of decomposingPairs(pairs, components)) {
+  pairs.forEach(({ pair, primary: p, secondary: s }, pairIdx) => {
     let ctx = systems.get(pair.wdsId);
     if (!ctx) {
       ctx = {
@@ -87,17 +90,15 @@ export function buildSystemContexts(
       };
       systems.set(pair.wdsId, ctx);
     }
-    const p = components[primary];
-    const s = components[secondary];
     const pTok = p.component;
     const sTok = canonicalCompLetter(pTok, s.component);
     if (pair.rhoLast === null || pair.rhoLast === 0) ctx.blendPairs.push([pTok, sTok]);
     else if (p.gaiaSourceId !== null && p.gaiaSourceId === s.gaiaSourceId) ctx.blendSources.add(p.gaiaSourceId);
-    for (const [tok, idx, mag] of [[pTok, primary, pair.magPri], [sTok, secondary, pair.magSec]] as const) {
+    for (const [tok, side, mag] of [[pTok, 'primary', pair.magPri], [sTok, 'secondary', pair.magSec]] as const) {
       const inst = ctx.instances.get(tok);
-      if (inst) inst.push(idx);
-      else ctx.instances.set(tok, [idx]);
-      const src = components[idx].gaiaSourceId;
+      if (inst) inst.push({ pairIdx, side });
+      else ctx.instances.set(tok, [{ pairIdx, side }]);
+      const src = (side === 'primary' ? p : s).gaiaSourceId;
       if (src !== null) {
         const set = ctx.tokenSources.get(tok);
         if (set) set.add(src);
@@ -115,7 +116,7 @@ export function buildSystemContexts(
         epoch, (e) => e.epoch,
       );
     }
-  }
+  });
   return systems;
 }
 
@@ -422,21 +423,27 @@ function auditSystem(
 /** Every contradiction the cascade and propagation left, per system in
  *  wds_id order, arbitrated against WDS (ρ, θ) geometry. */
 export function auditBindingIntegrity(
-  pairs: readonly WdsPair[], components: readonly ResolvedComponent[],
-  indices: IdentifierIndices, xids: ReadonlyMap<ComponentKey, SimbadWdsXid>,
+  pairs: readonly DecomposedPair[], indices: IdentifierIndices, xids: ReadonlyMap<ComponentKey, SimbadWdsXid>,
 ): readonly BindingVerdict[] {
-  const systems = buildSystemContexts(pairs, components);
+  const systems = buildSystemContexts(pairs);
   return [...systems.keys()].sort().flatMap((wdsId) => auditSystem(systems.get(wdsId)!, indices, xids));
 }
 
 /** Every HIP the winning cluster carries, read as enforcement has left them,
  *  plus the winner source's cross-walk HIP. */
-function winnerHips(v: BindingVerdict, ctx: SystemContext, out: readonly Draft[], indices: IdentifierIndices): Set<number> {
+const instance = (pairs: readonly DraftPair[], i: Instance): Draft => pairs[i.pairIdx][i.side];
+
+function winnerHips(v: BindingVerdict, ctx: SystemContext, out: readonly DraftPair[], indices: IdentifierIndices): Set<number> {
   const hips = new Set<number>();
   if (v.winner === null) return hips;
   const srcHip = indices.srcToHip.get(v.winner.sourceId);
   if (srcHip !== undefined) hips.add(srcHip);
-  for (const tok of v.winner.tokens) for (const i of ctx.instances.get(tok) ?? []) if (out[i].hip !== null) hips.add(out[i].hip!);
+  for (const tok of v.winner.tokens) {
+    for (const i of ctx.instances.get(tok) ?? []) {
+      const hip = instance(out, i).hip;
+      if (hip !== null) hips.add(hip);
+    }
+  }
   return hips;
 }
 
@@ -449,30 +456,32 @@ function unbindComponent(c: Draft, winner: ReadonlySet<number>, indices: Identif
 }
 
 export function enforceBindingVerdicts(
-  pairs: readonly WdsPair[], components: readonly ResolvedComponent[],
-  verdicts: readonly BindingVerdict[], indices: IdentifierIndices,
-): ResolvedComponent[] {
-  const systems = buildSystemContexts(pairs, components);
-  const out = drafts(components);
+  pairs: readonly DecomposedPair[], verdicts: readonly BindingVerdict[], indices: IdentifierIndices,
+): readonly DecomposedPair[] {
+  const systems = buildSystemContexts(pairs);
+  const out = working(pairs).pairs;
   const enforced = new Set<string>();
   for (const v of verdicts) {
     const ctx = systems.get(v.wdsId)!;
     if (v.unbind.length > 0 || v.rebind !== null) enforced.add(v.wdsId);
     if (v.rebind !== null) {
-      for (const i of ctx.instances.get(v.rebind.letter) ?? []) out[i].gaiaSourceId = v.rebind.sourceId;
+      for (const i of ctx.instances.get(v.rebind.letter) ?? []) instance(out, i).gaiaSourceId = v.rebind.sourceId;
       continue;
     }
     const winner = winnerHips(v, ctx, out, indices);
     for (const { token, sourceId } of v.unbind) {
-      for (const i of ctx.instances.get(token) ?? []) if (out[i].gaiaSourceId === sourceId) unbindComponent(out[i], winner, indices);
+      for (const i of ctx.instances.get(token) ?? []) {
+        const c = instance(out, i);
+        if (c.gaiaSourceId === sourceId) unbindComponent(c, winner, indices);
+      }
     }
   }
   if (enforced.size === 0) return out;
   let next = propagateWithinSystem(out);
-  const blend = propagateBlendIdentity(next, pairs);
-  next = blend.seeded.length > 0 ? propagateWithinSystem(blend.components) : blend.components;
-  const downward = inheritDownwardParentBindings(pairs, next, enforced);
-  return downward.seeded.length > 0 ? propagateWithinSystem(downward.components) : downward.components;
+  const blend = propagateBlendIdentity(next);
+  next = blend.seeded.length > 0 ? propagateWithinSystem(blend.pairs) : blend.pairs;
+  const downward = inheritDownwardParentBindings(next, enforced);
+  return downward.seeded.length > 0 ? propagateWithinSystem(downward.pairs) : downward.pairs;
 }
 
 export const BINDING_INTEGRITY_COUNT_KEYS = [
