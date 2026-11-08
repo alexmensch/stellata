@@ -348,7 +348,27 @@ the slice partition, `slice_sync_maxrec`, and the two-leg deep population
 [Bailer-Jones 2021](/data/papers/index.md#bailerjones2021) and Apsis
 are pulled over — lives in `scripts/refresh/magnitude/` with its own README.
 
+### The astrometry schema
+
+Both astrometry scopes (`refresh:gaia-astrometry`, binaries; and
+`refresh:gaia-astrometry-catalog`, full catalogue) are one `PullTable` over
+`ASTROMETRY_COLUMNS` ([gaia-request/](gaia-request/README.md)), so **a column
+added to it lands in both scopes** — but only in whichever output is
+actually re-pulled. The column list is part of both scopes' query, so an
+added column stales both records and the build names both refreshes.
+
+Both scopes carry `radial_velocity` and `radial_velocity_error`. The catalog
+scope's rv cascade reads them, and `parseGaiaAstrometryCatalogTsv` requires
+the error column; its consumer is the build-counts ratchet, not a filter —
+the cascade takes DR3's value whatever error it states
+(`../catalog/distance/radial-velocity/README.md`). Nothing reads rv from the
+binaries-scope `gaia_dr3_astrometry.tsv`.
+
 ### Resuming a long pull
+
+A TypeScript pull resumes through its query-keyed cache
+([The checkpoint](pull/README.md#the-checkpoint)); this section is the Python
+pulls'.
 
 `run_in_batches(..., checkpoint=rl.BatchCheckpoint(out.with_suffix(
 out.suffix + '.ckpt')))` makes a batched pull resumable: each batch is
@@ -366,20 +386,6 @@ resume would replay the magnitude leg's batches as the request leg's. So
 Apsis and [Bailer-Jones 2021](/data/papers/index.md#bailerjones2021)
 resume at 48 slices plus the request batches (~8 for Apsis), not the ~63 id
 batches the manifest-keyed pulls ran.
-
-Both astrometry scopes (`refresh:gaia-astrometry`, binaries; and
-`refresh:gaia-astrometry-catalog`, full catalogue) are one `PullTable` over
-`ASTROMETRY_COLUMNS` ([gaia-request/](gaia-request/README.md)), so **a column
-added to it lands in both scopes** — but only in whichever output is
-actually re-pulled. The column list is part of both scopes' query, so an
-added column stales both records and the build names both refreshes.
-
-Both scopes carry `radial_velocity` and `radial_velocity_error`. The catalog
-scope's rv cascade reads them, and `parseGaiaAstrometryCatalogTsv` requires
-the error column; its consumer is the build-counts ratchet, not a filter —
-the cascade takes DR3's value whatever error it states
-(`../catalog/distance/radial-velocity/README.md`). Nothing reads rv from the
-binaries-scope `gaia_dr3_astrometry.tsv`.
 
 See [Catalogue refresh policy](/RELEASING.md#catalogue-refresh-policy) for the cadence
 (event-driven, not scheduled) and the version-bump policy for a
