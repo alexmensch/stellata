@@ -44,6 +44,11 @@ function inputFilter(resolved: ResolvedStep, described: Description | null, skip
     && !(resolved.step.kind === 'pull' && CODE_FILE.test(path));
 }
 
+function filesBesideCode(paths: readonly string[]): Set<string> {
+  const codeDirs = new Set(paths.filter((p) => CODE_FILE.test(p)).map((p) => dirname(p)));
+  return new Set(paths.filter((p) => !CODE_FILE.test(p) && codeDirs.has(dirname(p))));
+}
+
 interface Reads {
   readonly inputs: FileHashes;
   readonly recorded?: RecordedReads;
@@ -84,7 +89,8 @@ async function runAndRead(
   if (step.language === 'ts') {
     const derived = await options.deriveInputs(entry);
     const keep = inputFilter(resolved, described, ignoredPaths(derived, tree.root), tree);
-    const inputs = inputHashes(derived.filter(keep), tree.root);
+    const besideCode = step.kind === 'pull' ? filesBesideCode(derived) : new Set<string>();
+    const inputs = inputHashes(derived.filter((p) => keep(p) && !besideCode.has(p)), tree.root);
     const answeredBy = tree.answeredBy(step.name);
     mkdirSync(dirname(answeredBy), { recursive: true });
     rmSync(answeredBy, { force: true });
