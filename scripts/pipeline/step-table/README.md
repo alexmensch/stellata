@@ -10,11 +10,9 @@ folder and import from here.
 
 One entry per step: `name`, `kind`, `language`, `entry` (the file the step
 runs) and its outputs. A manual step is named for its `package.json` script,
-which is what the stop message prints and what runs it by hand, so the three
-pulls with no target before (`refresh-simbad-sptype.py`,
-`refresh-simbad-wds-xids.py`, `refresh-msc.py`) gain one. A TypeScript manual
+which is what the stop message prints and what runs it by hand. A TypeScript manual
 step, pull or bake (`manual-step-outputs.ts`'s `tsManual`; the two Horizons
-fetchers, `refresh:simbad`, `refresh:simbad-values`, `refresh:simbad-wds-sptype` and `measure:band-resolved` today), names its `declareOutputs` constant as a TypeScript build
+fetchers, `refresh:simbad`, `refresh:simbad-values`, `refresh:simbad-sptype`, `refresh:simbad-wds-sptype` and `measure:band-resolved` today), names its `declareOutputs` constant as a TypeScript build
 does, and one that describes itself exports `describe`
 ([util/README.md](../../util/README.md), `emit-artifacts.ts` entry); a Python
 one lists its files, plus any families.

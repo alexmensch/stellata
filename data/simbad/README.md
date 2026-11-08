@@ -433,11 +433,11 @@ which is exactly what `tests/artifact-freshness.test.ts` fails on.
 - `pnpm run refresh:simbad-tyc-hd` →
   [`scripts/refresh/refresh-simbad-tyc-hd.py`](../../scripts/refresh/README.md).
 - `pnpm run refresh:simbad-sptype` →
-  [`scripts/refresh/refresh-simbad-sptype.py`](../../scripts/refresh/README.md).
+  [`scripts/refresh/simbad-sptype/`](../../scripts/refresh/simbad-sptype/README.md).
 - `pnpm run refresh:simbad-wds-sptype` →
   [`scripts/refresh/simbad-wds-sptype/`](../../scripts/refresh/simbad-wds-sptype/README.md).
 - `pnpm run refresh:simbad-wds-xids` →
   [`scripts/refresh/refresh-simbad-wds-xids.py`](../../scripts/refresh/README.md).
 
 The Python ones share the `scripts/refresh/simbad/` plumbing; the sample, the
-values and the WDS-keyed one run on the TypeScript pull runtime.
+values and both sp_type pulls run on the TypeScript pull runtime.

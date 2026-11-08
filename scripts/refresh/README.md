@@ -99,15 +99,14 @@ script directly writes no record, so the build then stops on that pull.
 | `refresh:edenhofer2024-main` / `-2kpc` | `refresh-edenhofer2024-{main,2kpc}.py` | `data/dust/edenhofer2024-{main,2kpc}.json` | The [Edenhofer 2024](/data/papers/index.md#edenhofer2024) dust map's two variants into `dustmaps`' cache, each recorded as a committed identity file the bakes read — [The Edenhofer 2024 pulls](/scripts/dust/README.md#the-edenhofer-2024-pulls). |
 | `validate:simbad` | `scripts/catalog/validate/validate-simbad-sample.ts` | (report only) | Tier C — cross-check `public/catalog.bin` against the committed SIMBAD sample. The build-time subset of the same check is `distance-regression-check.ts`, gated on `build-distance-outliers-expected.json`. |
 
-`refresh:simbad-sptype`, `refresh:simbad-wds-xids` and `refresh:msc` run
-`refresh-simbad-sptype.py`, `refresh-simbad-wds-xids.py` and
-`refresh-msc.py` (outputs `data/simbad/simbad_sptype.tsv`, the
-manifest-keyed spectral types membership and the catalogue read,
-`data/simbad/simbad_wds_xids.tsv`, `data/msc/msc_*.tsv`). The Python SIMBAD
-scripts share `scripts/refresh/simbad/` plumbing (`specs.py`,
-`inputs.py`, `request.py`, `query.py`, `union.py`, `coverage.py`,
-`tsv.py`) so adding new SIMBAD-anchored pulls reuses the entire stack —
-that folder's own README carries the per-module roster. `refresh-msc.py` pulls the
+`refresh:simbad-sptype` (`simbad-sptype/`, TypeScript, own README) writes
+`data/simbad/simbad_sptype.tsv`, the manifest-keyed spectral types membership
+and the catalogue read. `refresh:simbad-wds-xids` and `refresh:msc` run
+`refresh-simbad-wds-xids.py` and `refresh-msc.py` (outputs
+`data/simbad/simbad_wds_xids.tsv`, `data/msc/msc_*.tsv`). The TypeScript
+SIMBAD pulls share `scripts/refresh/simbad/`'s core, and the two Python ones
+left (wds-xids, tyc-hd) its `specs.py` and `query.py`; that folder's own
+README carries the roster. `refresh-msc.py` pulls the
 three Multiple Star Catalog (MSC) tables (VizieR `J/ApJS/235/6`) into `data/msc/` with
 per-table schema validation and row bounds — source detail in
 `data/msc/README.md`.

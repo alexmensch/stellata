@@ -50,7 +50,10 @@ export const MANUAL_STEPS: readonly ManualStep[] = [
     { kind: 'pull' }, 'refresh:simbad-wds-sptype', 'scripts/refresh/simbad-wds-sptype/refresh-simbad-wds-sptype.ts',
     'scripts/refresh/simbad-wds-sptype/simbad-wds-sptype-outputs.ts', 'SIMBAD_WDS_SPTYPE_OUTPUTS',
   ),
-  pull('refresh:simbad-sptype', 'refresh-simbad-sptype.py', ['data/simbad/simbad_sptype.tsv']),
+  tsManual(
+    { kind: 'pull' }, 'refresh:simbad-sptype', 'scripts/refresh/simbad-sptype/refresh-simbad-sptype.ts',
+    'scripts/refresh/simbad-sptype/simbad-sptype-outputs.ts', 'SIMBAD_SPTYPE_OUTPUTS',
+  ),
   tsManual(
     { kind: 'pull' }, 'refresh:simbad-values', 'scripts/refresh/simbad-values/refresh-simbad-values.ts',
     'scripts/refresh/simbad-values/simbad-values-outputs.ts', 'SIMBAD_VALUES_OUTPUTS',

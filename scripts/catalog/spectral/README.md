@@ -44,7 +44,7 @@ via a seven-tier priority chain:
    (Sol's G2V, [Curated records](../record/README.md#curated-records))
    outranks a HIP-keyed one.
 1. **SIMBAD `sp_type` by Gaia source_id** (`data/simbad/simbad_sptype.tsv`
-   from `scripts/refresh/refresh-simbad-sptype.py`). SIMBAD canonicalises
+   from `refresh:simbad-sptype`, `scripts/refresh/simbad-sptype/`). SIMBAD canonicalises
    sp_type to Morgan-Keenan only — variability annotations live in `otype`,
    never in sp_type — so the parser (`classifyFromSimbad`, `/src/catalog-format/spectral/spectral-classify.ts`) is a strict MK
    walker covering plain MK (`G2V`, `K0III`, `M1.5Iab-b`), white dwarfs

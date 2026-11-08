@@ -60,7 +60,7 @@ export function emptySimbadSpectralIndex(): SimbadSpectralIndex {
   return emptySimbadNamespaceIndex<SimbadSpectralRow>();
 }
 
-/** Parses the TSV `scripts/refresh/refresh-simbad-sptype.py` produces.
+/** Parses the TSV `refresh:simbad-sptype` produces.
  *  source_id is kept as a string for the same > Number.MAX_SAFE_INTEGER
  *  reason `parseGaiaApsisTsv` uses. A row is indexed under every namespace it
  *  carries; the rows the pull enumerated by SIMBAD oid alone carry none and
