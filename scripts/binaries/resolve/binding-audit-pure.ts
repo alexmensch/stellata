@@ -411,11 +411,19 @@ function auditSystem(
 
 /** Every contradiction the cascade and propagation left, per system in
  *  wds_id order, arbitrated against WDS (ρ, θ) geometry. */
+/** The pairs audited, their per-system contexts, and the verdicts: what enforcement acts on. */
+export interface BindingAudit {
+  readonly pairs: readonly DecomposedPair[];
+  readonly systems: ReadonlyMap<string, SystemContext>;
+  readonly verdicts: readonly BindingVerdict[];
+}
+
 export function auditBindingIntegrity(
   pairs: readonly DecomposedPair[], indices: IdentifierIndices, xids: ReadonlyMap<ComponentKey, SimbadWdsXid>,
-): readonly BindingVerdict[] {
+): BindingAudit {
   const systems = buildSystemContexts(pairs);
-  return [...systems.keys()].sort().flatMap((wdsId) => auditSystem(systems.get(wdsId)!, indices, xids));
+  const verdicts = [...systems.keys()].sort().flatMap((wdsId) => auditSystem(systems.get(wdsId)!, indices, xids));
+  return { pairs, systems, verdicts };
 }
 
 /** Every HIP the winning cluster carries, read as enforcement has left them,
@@ -445,9 +453,8 @@ function unbindComponent(c: Draft, winner: ReadonlySet<number>, indices: Identif
 }
 
 export function enforceBindingVerdicts(
-  pairs: readonly DecomposedPair[], verdicts: readonly BindingVerdict[], indices: IdentifierIndices,
+  { pairs, systems, verdicts }: BindingAudit, indices: IdentifierIndices,
 ): readonly DecomposedPair[] {
-  const systems = buildSystemContexts(pairs);
   const out = working(pairs).pairs;
   const enforced = new Set<string>();
   for (const v of verdicts) {

@@ -57,12 +57,12 @@ export function resolveStage2(reference: ReferenceCatalogs): Stage2Result {
   const seeds = seedSynthesizedComponentBindings(
     cascade.pairs, [...reference.synthesizedOrb6Pairs, ...reference.synthesizedMscPairs],
   );
-  const verdicts = auditBindingIntegrity(seeds.pairs, reference.indices, reference.simbadWdsXids);
+  const audit = auditBindingIntegrity(seeds.pairs, reference.indices, reference.simbadWdsXids);
   return Object.freeze({
-    pairs: freezePairs(enforceBindingVerdicts(seeds.pairs, verdicts, reference.indices)),
+    pairs: freezePairs(enforceBindingVerdicts(audit, reference.indices)),
     siblingRejections: Object.freeze([...cascade.siblingRejections]),
     synthesizedSeeds: Object.freeze([...seeds.seeded]),
-    verdicts: Object.freeze([...verdicts]),
+    verdicts: Object.freeze([...audit.verdicts]),
   });
 }
 

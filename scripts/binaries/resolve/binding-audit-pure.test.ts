@@ -31,8 +31,8 @@ function audit(rows: readonly BiRow[], astro: ReturnType<typeof biAstro>[], opts
 } = {}) {
   const pairs = biSystem(rows);
   const idx = indices({ srcToAstrometry: astrometryMap(astro), hipToGaia: opts.hipToGaia });
-  const verdicts = auditBindingIntegrity(pairs, idx, opts.xids ?? new Map());
-  return { verdicts, pairs, idx };
+  const audited = auditBindingIntegrity(pairs, idx, opts.xids ?? new Map());
+  return { verdicts: audited.verdicts, audited, pairs, idx };
 }
 
 const ofShape = (verdicts: readonly BindingVerdict[], shape: BindingVerdict['shape']) => verdicts.filter((v) => v.shape === shape);
@@ -146,21 +146,21 @@ describe('auditBindingIntegrity', () => {
 
   it('refutes a blend by SIMBAD identity and rebinds the loser to its own source (36 Oph)', () => {
     const x = xids(xid(BI_WDS, 'A', SA), xid(BI_WDS, 'B', SX));
-    const { verdicts, pairs, idx } = audit(refutable, refutableAstro(), { xids: x });
+    const { verdicts, audited, idx } = audit(refutable, refutableAstro(), { xids: x });
     const v = ofShape(verdicts, 'source_letters');
     expect(v).toHaveLength(1);
     expect(v[0].verdict).toBe('identity_refuted');
     expect(v[0].winner?.label).toBe('B');
     expect(v[0].action).toEqual({ kind: 'rebind', letter: 'A', sourceId: SA });
     expect(ofShape(verdicts, 'letter_sources')).toEqual([]);
-    const after = componentsOf(enforceBindingVerdicts(pairs, verdicts, idx));
+    const after = componentsOf(enforceBindingVerdicts(audited, idx));
     expect(after.find((c) => c.component === 'A' && c.isPrimary)?.gaiaSourceId).toBe(SA);
     expect(after.find((c) => c.component === 'B' && !c.isPrimary)?.gaiaSourceId).toBe(SX);
   });
 
   it('refutes with a hierarchy cluster as the owner (μ Dra)', () => {
     const x = xids(xid(BI_WDS, 'A', SA), xid(BI_WDS, 'B', SX));
-    const { verdicts, pairs, idx } = audit(
+    const { verdicts, audited, idx } = audit(
       [...refutable, ['Ba,Bb', 0.0, 0.0, [SX, null], [SX, null]]], refutableAstro(), { xids: x },
     );
     const v = ofShape(verdicts, 'source_letters');
@@ -169,7 +169,7 @@ describe('auditBindingIntegrity', () => {
     expect(v[0].winner?.label).toBe('B');
     expect([...v[0].winner!.tokens].sort()).toEqual(['B', 'Ba', 'Bb']);
     expect(v[0].action).toMatchObject({ kind: 'rebind', letter: 'A' });
-    const after = componentsOf(enforceBindingVerdicts(pairs, verdicts, idx));
+    const after = componentsOf(enforceBindingVerdicts(audited, idx));
     expect(after.find((c) => c.component === 'A' && c.isPrimary)?.gaiaSourceId).toBe(SA);
     expect(after.find((c) => c.component === 'Ba' && c.isPrimary)?.gaiaSourceId).toBe(SX);
   });
@@ -238,7 +238,7 @@ describe('auditBindingIntegrity', () => {
     const pairs = biSystem([['AB', 3.0, 0.0, [SA, null], [SX, null]], ['AC', 10.0, 0.0, [SA, null], [SX, null]]]);
     const before = componentsOf(pairs).map((c) => [c.gaiaSourceId, c.hip, c.resolveVia]);
     const idx = indices({ srcToAstrometry: astrometryMap([biAstro(SA, 0, 0), biAstro(SX, 0, 3)]) });
-    expect(auditBindingIntegrity(pairs, idx, new Map())).toHaveLength(1);
+    expect(auditBindingIntegrity(pairs, idx, new Map()).verdicts).toHaveLength(1);
     expect(componentsOf(pairs).map((c) => [c.gaiaSourceId, c.hip, c.resolveVia])).toEqual(before);
   });
 });
@@ -249,17 +249,17 @@ describe('enforceBindingVerdicts', () => {
   ];
 
   it('clears the loser\'s gaia, and its HIP when that cross-walks to the contested source', () => {
-    const { verdicts, pairs, idx } = audit(
+    const { audited, idx } = audit(
       rows(55, 55), [biAstro(SA, 0, 0), biAstro(SX, 0, 3)], { hipToGaia: new Map([[55, SX]]) },
     );
-    const after = componentsOf(enforceBindingVerdicts(pairs, verdicts, idx));
+    const after = componentsOf(enforceBindingVerdicts(audited, idx));
     expect(after.find((c) => c.component === 'C')).toMatchObject({ gaiaSourceId: null, hip: null, resolveVia: 'unresolved' });
     expect(after.find((c) => c.component === 'B')?.gaiaSourceId).toBe(SX);
   });
 
   it('keeps a loser\'s independently distinct HIP for Stage 3', () => {
-    const { verdicts, pairs, idx } = audit(rows(99, null), [biAstro(SA, 0, 0), biAstro(SX, 0, 3)]);
-    const after = componentsOf(enforceBindingVerdicts(pairs, verdicts, idx));
+    const { audited, idx } = audit(rows(99, null), [biAstro(SA, 0, 0), biAstro(SX, 0, 3)]);
+    const after = componentsOf(enforceBindingVerdicts(audited, idx));
     expect(after.find((c) => c.component === 'C')).toMatchObject({ gaiaSourceId: null, hip: 99 });
   });
 });

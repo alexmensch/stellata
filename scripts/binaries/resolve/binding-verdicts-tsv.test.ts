@@ -9,7 +9,7 @@ describe('binding-integrity-verdicts.tsv', () => {
     ['AB', 3.0, 0.0, ['100', null], ['200', null]],
     ['AC', 10.0, 0.0, ['100', null], ['200', null]],
   ]);
-  const verdicts = auditBindingIntegrity(
+  const { verdicts } = auditBindingIntegrity(
     pairs, indices({ srcToAstrometry: astrometryMap([biAstro('100', 0, 0), biAstro('200', 0, 3)]) }), new Map(),
   );
 
