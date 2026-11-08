@@ -95,7 +95,6 @@ export interface AthygMatchOptions {
   readonly skip: (i: number, c: ResolvedComponent) => boolean;
   /** Stage 3 opts in; Stage 2 does not, since the row's Gaia source would bind to the secondary too. */
   readonly allowBlendInherit: boolean;
-  readonly toleranceArcsec?: number;
 }
 
 /** Primaries match the pair's precise coord; secondaries the (ρ, θ)-predicted
@@ -105,7 +104,6 @@ export interface AthygMatchOptions {
 export function pairAthygMatches(
   pairs: readonly DecomposedPair[], athyg: readonly AthygRow[], opts: AthygMatchOptions,
 ): { matches: readonly AthygMatch[]; siblingClaimed: readonly SiblingClaimedMatch[] } {
-  const tolerance = opts.toleranceArcsec ?? ATHYG_POSITION_MATCH_TOLERANCE_ARCSEC;
   const grid = buildAthygGrid(athyg);
   const components = componentsOf(pairs);
   const index = pairsByDiscoverer(pairRows(pairs));
@@ -126,7 +124,7 @@ export function pairAthygMatches(
     if (opts.skip(i, c) || !c.isPrimary) return;
     const pair = findOwningPair(c, index);
     if (pair === null || pair.precise === null) return;
-    const match = matchAthygEitherEpoch(pair.precise, grid, athyg, tolerance, null);
+    const match = matchAthygEitherEpoch(pair.precise, grid, athyg, ATHYG_POSITION_MATCH_TOLERANCE_ARCSEC, null);
     if (match === null) return;
     const [, partner] = pairComponentTokens(pair.components)!;
     if (claimedBySibling(i, match, c.component, partner)) return;
@@ -142,7 +140,7 @@ export function pairAthygMatches(
     let match: number | null = null;
     if (pair.rhoLast !== null && pair.thetaLast !== null && pair.rhoLast > 0) {
       const predicted = predictSecondaryPosition(pair.precise, pair.rhoLast, pair.thetaLast);
-      match = matchAthygEitherEpoch(predicted, grid, athyg, tolerance, primaryIdx);
+      match = matchAthygEitherEpoch(predicted, grid, athyg, ATHYG_POSITION_MATCH_TOLERANCE_ARCSEC, primaryIdx);
     }
     if (match !== null) {
       const [primaryToken] = splitComponents(pair.components)!;
