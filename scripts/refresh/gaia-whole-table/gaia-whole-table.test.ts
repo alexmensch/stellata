@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 import { DATA_FILES } from '../../../src/catalog-format/pipeline-outputs/data-files';
-import { REPO_ROOT } from '../../util/paths';
+import { REPO_ROOT, lfsContentReadable } from '../../util/paths';
 import { cellReader, checkedRows, formatTsv, sortRows } from '../pull/columns-pure';
 import { spotRowCheck } from '../pull/gates-pure';
 import { assertTablesFit, batchQueries, queryLimit, type PullTable } from '../pull/pull';
@@ -50,7 +50,9 @@ function sliced(table: PullTable) {
 const SLICE_KEY = 'gaia_source_id';
 
 describe.each(PULLS)('$name', ({ name, table, file, reply }) => {
-  it('writes a recorded reply\'s rows as the committed table\'s lines, and its spot rows match', () => {
+  const readable = lfsContentReadable(join(REPO_ROOT, file));
+
+  it.skipIf(!readable)('writes a recorded reply\'s rows as the committed table\'s lines, and its spot rows match', () => {
     const csv = `${[replyHeader(table), ...reply].join('\n')}\n`;
     const rows = checkedRows(table.columns, readCsv(csv, queryLimit(table), name), name);
     const [header, ...lines] = formatTsv(file, table.columns, sortRows(table.columns, rows, table.sortBy, name)).trimEnd().split('\n');
@@ -60,7 +62,7 @@ describe.each(PULLS)('$name', ({ name, table, file, reply }) => {
     expect(spotRowCheck(name, rows.map(cellReader(table.columns, name)), table.spotRows).kind).toBe('pass');
   });
 
-  it('holds every slice of the committed table within GAIA_SLICE_ROWS', () => {
+  it.skipIf(!readable)('holds every slice of the committed table within GAIA_SLICE_ROWS', () => {
     const lines = committed(file).trimEnd().split('\n');
     const at = lines[0].split('\t').indexOf(SLICE_KEY);
     const keys = lines.slice(1).map((line) => BigInt(line.split('\t')[at]));
