@@ -25,7 +25,7 @@ SIMBAD. A pull is a `pull` step on the step table
 ## A pull
 
 ```ts
-export const pull: Pull<'xmatch'> = { archive: GAIA, outputs: XMATCH_OUTPUTS, release: 'Gaia DR3', tables: { xmatch: {…} } };
+export const pull: Pull<'xmatch'> = { archive: GAIA, outputs: XMATCH_OUTPUTS, release: GAIA_DR3_RELEASE, tables: { xmatch: {…} } };
 export const describe = () => describePull(pull);
 export const main = () => runPull(pull);
 ```
