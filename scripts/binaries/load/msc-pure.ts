@@ -4,7 +4,7 @@ import { DAYS_PER_JULIAN_YEAR, J2000_JD } from '../../../src/astro-core/astronom
 import { readTable } from '../../util/tsv/table-pure';
 import type { Declared } from '../../util/sources/source';
 import {
-  childComponentTokens, componentKey, isComponentToken, tokenLetters,
+  childComponentTokens, componentKey, isComponentToken, tokenLetters, type ComponentKey,
 } from '../component-tokens-pure';
 
 export interface MscSystemRow {
@@ -60,12 +60,10 @@ export interface MscPairMags {
 }
 
 export interface MscLookup {
-  /** Keyed `mscPairKey`. */
-  readonly orbitsByPair: ReadonlyMap<string, MscPairOrbits>;
-  /** Keyed `mscPairKey`. */
-  readonly pairMags: ReadonlyMap<string, MscPairMags>;
-  /** Keyed `componentKey`: the MK type of one component. */
-  readonly spectByComp: ReadonlyMap<string, string>;
+  readonly orbitsByPair: ReadonlyMap<MscPairKey, MscPairOrbits>;
+  readonly pairMags: ReadonlyMap<MscPairKey, MscPairMags>;
+  /** The MK type of one component. */
+  readonly spectByComp: ReadonlyMap<ComponentKey, string>;
   readonly nOrbitsUnmapped: number;
 }
 
@@ -80,8 +78,12 @@ export const TRUNCATED_JD_TO_JD_OFFSET = 2400000.0;
 export const T0_MIN_PLAUSIBLE_JD = J2000_JD + (1700.0 - 2000.0) * DAYS_PER_JULIAN_YEAR;
 export const T0_MAX_PLAUSIBLE_JD = J2000_JD + (2600.0 - 2000.0) * DAYS_PER_JULIAN_YEAR;
 
-export function mscPairKey(wdsId: string, primary: string, secondary: string): string {
-  return `${wdsId}\t${primary}\t${secondary}`;
+declare const MSC_PAIR: unique symbol;
+/** An MSC pair by the WDS tokens of its sides, in order. */
+export type MscPairKey = string & { readonly [MSC_PAIR]: true };
+
+export function mscPairKey(wdsId: string, primary: string, secondary: string): MscPairKey {
+  return `${wdsId}\t${primary}\t${secondary}` as MscPairKey;
 }
 
 function orEmpty(v: string | null): string {
@@ -214,7 +216,7 @@ export function buildMscLookup(
   for (const [wdsId, rows] of systemsByWds) labelMaps.set(wdsId, mapMscLabels(rows));
   const tokenOf = (wdsId: string, label: string): string | undefined => labelMaps.get(wdsId)?.get(label);
 
-  const orbitsByPair = new Map<string, { wdsId: string; primary: string; secondary: string; rows: MscOrbitRow[] }>();
+  const orbitsByPair = new Map<MscPairKey, { wdsId: string; primary: string; secondary: string; rows: MscOrbitRow[] }>();
   let nOrbitsUnmapped = 0;
   for (const row of orbits) {
     const parts = row.syst.split(',');
@@ -230,8 +232,8 @@ export function buildMscLookup(
     else orbitsByPair.set(key, { wdsId: row.wdsId, primary, secondary, rows: [row] });
   }
 
-  const pairMags = new Map<string, MscPairMags>();
-  const spectByComp = new Map<string, string>();
+  const pairMags = new Map<MscPairKey, MscPairMags>();
+  const spectByComp = new Map<ComponentKey, string>();
   for (const row of systems) {
     const primary = tokenOf(row.wdsId, row.prim);
     const secondary = tokenOf(row.wdsId, row.sec);

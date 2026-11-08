@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { componentKey } from '../component-tokens-pure';
+import { discovererKey } from '../component-tokens-pure';
 import { mscOrbit, orb6Entry, wdsPair } from './load-fixture';
 import { mscPairKey, type MscLookup, type MscOrbitRow } from './msc-pure';
 import {
@@ -16,7 +16,7 @@ describe('applyOrb6ComponentOverrides', () => {
     const target = orb6Entry({ wdsId: '07346+3153', discoverer: 'YY Gem', components: '', grade: 7 });
     const untouched = orb6Entry({ grade: 3 });
     const { entries, applied } = applyOrb6ComponentOverrides(
-      [target, untouched], new Map([[componentKey('07346+3153', 'YY Gem'), 'Ca,Cb']]),
+      [target, untouched], new Map([[discovererKey('07346+3153', 'YY Gem'), 'Ca,Cb']]),
     );
     expect(applied).toBe(1);
     expect(entries.map((e) => e.components)).toEqual(['Ca,Cb', 'AB']);

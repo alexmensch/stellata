@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { componentKey } from '../component-tokens-pure';
+import { discovererKey } from '../component-tokens-pure';
 import { athygRow, gaiaAstrometryRow, mscOrbit, mscSystem, orb6Entry, wdsPair, blankPair } from './load-fixture';
 import { assembleReferenceCatalogs, stage1Counts, type Stage1Inputs } from './reference-catalogs';
 import { stage1Report } from './stage1-report-pure';
@@ -20,7 +20,7 @@ function inputs(over: Partial<Stage1Inputs> = {}): Stage1Inputs {
       ],
       gradeFallbacks: 0,
     },
-    orb6ComponentOverrides: new Map([[componentKey('30000+0000', 'TST   2'), 'Aa,Ab']]),
+    orb6ComponentOverrides: new Map([[discovererKey('30000+0000', 'TST   2'), 'Aa,Ab']]),
     athyg: [athygRow({ hip: 1, gaia: '11', vMag: 1 }), athygRow({ hip: 2, gaia: '22', vMag: 5 })],
     ccdm: { hipToCcdm: new Map(), ccdmToHips: new Map(), rows: 0 },
     hip2: new Map(),

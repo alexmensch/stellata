@@ -2,7 +2,8 @@
 
 import type { SkyPosition } from '../../../src/astro-core/equatorial-basis';
 import {
-  componentKey, isComponentToken, pairComponentTokens, parentComponentToken, tokenLetters,
+  discovererKey, isComponentToken, pairComponentTokens, pairRowKey, parentComponentToken, tokenLetters,
+  type DiscovererKey, type PairRowKey,
 } from '../component-tokens-pure';
 import { mscRenderable, type MscLookup, type MscPairOrbits } from './msc-pure';
 import type { Orb6Entry, WdsPair } from './wds-pure';
@@ -26,11 +27,11 @@ export const MSC_SYNTHESIS_OUTCOMES = [
 export type MscSynthesisOutcome = (typeof MSC_SYNTHESIS_OUTCOMES)[number];
 
 export function applyOrb6ComponentOverrides(
-  orb6: readonly Orb6Entry[], overrides: ReadonlyMap<string, string>,
+  orb6: readonly Orb6Entry[], overrides: ReadonlyMap<DiscovererKey, string>,
 ): { entries: readonly Orb6Entry[]; applied: number } {
   let applied = 0;
   const entries = orb6.map((e) => {
-    const mapped = overrides.get(componentKey(e.wdsId, e.discoverer));
+    const mapped = overrides.get(discovererKey(e.wdsId, e.discoverer));
     if (mapped === undefined || mapped === e.components) return e;
     applied++;
     return { ...e, components: mapped };
@@ -75,21 +76,21 @@ function firstPreciseByWds(pairs: readonly WdsPair[]): Map<string, SkyPosition> 
  *  geometry, magnitudes and notes; with none the pair is sub-resolution. The
  *  coordinate falls back donor → ORB6's own → any row of the system. */
 export function synthesizeOrb6OrphanPairs(wdsPairs: readonly WdsPair[], orb6: readonly Orb6Entry[]): WdsPair[] {
-  const wdsKeys = new Set(wdsPairs.map((p) => componentKey(p.wdsId, p.components)));
-  const blankByWdsDisc = new Map<string, WdsPair>();
+  const wdsKeys = new Set(wdsPairs.map((p) => pairRowKey(p.wdsId, p.components)));
+  const blankByWdsDisc = new Map<DiscovererKey, WdsPair>();
   for (const p of wdsPairs) {
-    const key = componentKey(p.wdsId, p.discoverer);
+    const key = discovererKey(p.wdsId, p.discoverer);
     if (p.components === '' && !blankByWdsDisc.has(key)) blankByWdsDisc.set(key, p);
   }
   const systemPrecise = firstPreciseByWds(wdsPairs);
 
   const out: WdsPair[] = [];
-  const seen = new Set<string>();
+  const seen = new Set<PairRowKey>();
   for (const e of orb6) {
-    const key = componentKey(e.wdsId, e.components);
+    const key = pairRowKey(e.wdsId, e.components);
     if (wdsKeys.has(key) || seen.has(key) || !isSynthesizableSubpair(e.components)) continue;
     seen.add(key);
-    const donor = blankByWdsDisc.get(componentKey(e.wdsId, e.discoverer));
+    const donor = blankByWdsDisc.get(discovererKey(e.wdsId, e.discoverer));
     const precise = donor?.precise ?? e.precise ?? systemPrecise.get(e.wdsId) ?? null;
     out.push(donor === undefined
       ? subResolutionPair(e.wdsId, e.discoverer, e.components, precise)

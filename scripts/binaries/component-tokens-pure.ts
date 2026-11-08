@@ -75,9 +75,27 @@ export function compoundContains(a: string, b: string): boolean {
   return within(lb, la) || within(la, lb);
 }
 
-/** The map key for one component of one WDS system, `(wds_id, token)`. */
-export function componentKey(wdsId: string, token: string): string {
-  return `${wdsId}\t${token}`;
+declare const KEY_SPACE: unique symbol;
+/** A tab-joined map key, branded by what it keys so one space cannot look up another's map. */
+type Key<Space extends string> = string & { readonly [KEY_SPACE]: Space };
+
+/** One component of one WDS system: `(wds_id, token)`. */
+export type ComponentKey = Key<'component'>;
+/** One discoverer's rows in one WDS system: `(wds_id, discoverer)`. */
+export type DiscovererKey = Key<'discoverer'>;
+/** A pair row by its system and `components` field as written. */
+export type PairRowKey = Key<'pair-row'>;
+
+export function componentKey(wdsId: string, token: string): ComponentKey {
+  return `${wdsId}\t${token}` as ComponentKey;
+}
+
+export function discovererKey(wdsId: string, discoverer: string): DiscovererKey {
+  return `${wdsId}\t${discoverer}` as DiscovererKey;
+}
+
+export function pairRowKey(wdsId: string, components: string): PairRowKey {
+  return `${wdsId}\t${components}` as PairRowKey;
 }
 
 /** A WDS `components` field as its (primary, secondary) tokens: `AB` → A, B;

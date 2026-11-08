@@ -113,7 +113,12 @@ scripts/binaries/
                                   tokenLetters and subcomponentTopLetter
                                   (the root letter, where
                                   parentComponentToken is the immediate
-                                  parent).
+                                  parent). And the map keys, one branded
+                                  type per key space so one cannot look up
+                                  another's map: componentKey
+                                  (wds_id, token), discovererKey
+                                  (wds_id, discoverer), pairRowKey
+                                  (wds_id, components field).
   sky-geometry-pure.ts (+ test)   The geometry the stages share, in the
                                   Python stages' own arithmetic:
                                   propagatePosition (linear in RA/Dec

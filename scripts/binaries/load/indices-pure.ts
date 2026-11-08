@@ -3,6 +3,7 @@
 import type { Hip2AstrometryRow } from '../../catalog/sources/hip2-source';
 import { gMinusVRejects } from '../../catalog/membership/binding/binding-gate-pure';
 import type { ColumnTable } from '../../util/tsv/table-pure';
+import type { ComponentKey } from '../component-tokens-pure';
 import type { AthygRow } from './athyg-pure';
 import type { GaiaAstrometryRow, NssOrbitRow } from './gaia-pure';
 import type { MscLookup } from './msc-pure';
@@ -27,10 +28,10 @@ export interface IdentifierIndices {
    *  most systems, which is what the `ccdm_hip` tier keys on. */
   readonly hipToCcdm: ReadonlyMap<number, string>;
   readonly ccdmToHips: ReadonlyMap<string, readonly number[]>;
-  /** `componentKey` → SIMBAD's per-component sp_type. */
-  readonly simbadWdsSpectra: ReadonlyMap<string, string>;
-  /** `componentKey` (raw multiples.tsv comp form) → curated MK type. */
-  readonly componentSptypeOverrides: ReadonlyMap<string, string>;
+  /** SIMBAD's per-component sp_type. */
+  readonly simbadWdsSpectra: ReadonlyMap<ComponentKey, string>;
+  /** Curated MK type, keyed on the raw multiples.tsv comp form. */
+  readonly componentSptypeOverrides: ReadonlyMap<ComponentKey, string>;
   readonly xwalkMagRejected: readonly RejectedBinding[];
   readonly athygGaiaMagRejected: readonly RejectedBinding[];
   readonly msc: MscLookup;
@@ -94,8 +95,8 @@ export interface IndexInputs {
   readonly srcToNss: ReadonlyMap<string, NssOrbitRow>;
   readonly srcToAstrometry: ReadonlyMap<string, GaiaAstrometryRow>;
   readonly ccdm: CcdmIndex;
-  readonly simbadWdsSpectra: ReadonlyMap<string, string>;
-  readonly componentSptypeOverrides: ReadonlyMap<string, string>;
+  readonly simbadWdsSpectra: ReadonlyMap<ComponentKey, string>;
+  readonly componentSptypeOverrides: ReadonlyMap<ComponentKey, string>;
   readonly athygGaiaMagRejected: readonly RejectedBinding[];
   readonly msc: MscLookup;
 }

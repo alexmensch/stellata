@@ -1,6 +1,6 @@
 // The blank-components rescue: a blank WDS row an ORB6 orbit or a SIMBAD cross-ID confirms becomes its implied AB pair. ../README.md#blank-components-rescue-stage-12-boundary.
 
-import { componentKey } from '../component-tokens-pure';
+import { discovererKey } from '../component-tokens-pure';
 import type { Orb6Entry, WdsPair } from './wds-pure';
 
 /** WDS's blank `components` is the implied single pair of a one-pair system. */
@@ -25,14 +25,14 @@ export function rescueBlankComponents(
   simbadWdsIds: ReadonlySet<string>,
   synthesizedOrb6Pairs: readonly WdsPair[],
 ): BlankRescue {
-  const donorKeys = new Set(synthesizedOrb6Pairs.map((p) => componentKey(p.wdsId, p.discoverer)));
+  const donorKeys = new Set(synthesizedOrb6Pairs.map((p) => discovererKey(p.wdsId, p.discoverer)));
   const orb6WdsIds = new Set(orb6.map((e) => e.wdsId));
   const enumerated = new Set(pairs.filter((p) => p.components === IMPLIED_AB_COMPONENTS).map((p) => p.wdsId));
 
   const rescuedWdsIds = new Set<string>();
   const outcomes: BlankRescueOutcome[] = [];
   const outcome = (p: WdsPair): BlankRescueOutcome => {
-    if (donorKeys.has(componentKey(p.wdsId, p.discoverer))) return 'donor';
+    if (donorKeys.has(discovererKey(p.wdsId, p.discoverer))) return 'donor';
     if (enumerated.has(p.wdsId) || rescuedWdsIds.has(p.wdsId)) return 'enumerated';
     return orb6WdsIds.has(p.wdsId) || simbadWdsIds.has(p.wdsId) ? 'rescued' : 'deferred';
   };

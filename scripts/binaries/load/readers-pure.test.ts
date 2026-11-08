@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { columnTable } from '../../util/tsv/table-pure';
-import { componentKey } from '../component-tokens-pure';
+import { componentKey, discovererKey } from '../component-tokens-pure';
 import { parseAthygRows } from './athyg-pure';
 import {
   parseAstrometryExclusions, parseComponentSptypeOverrides, parseOrb6ComponentOverrides,
@@ -61,7 +61,7 @@ describe('curated tables', () => {
     const out = parseOrb6ComponentOverrides(
       '# preamble\nwds_id\tdiscoverer\tcomponents\tsource\n07346+3153\tYY Gem\tCa,Cb\tTorres & Ribas 2002\n', FIXTURE,
     );
-    expect(out.get(componentKey('07346+3153', 'YY Gem'))).toBe('Ca,Cb');
+    expect(out.get(discovererKey('07346+3153', 'YY Gem'))).toBe('Ca,Cb');
   });
 
   it('reads component sp_type overrides keyed on the raw comp form', () => {

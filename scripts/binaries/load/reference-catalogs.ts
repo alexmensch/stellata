@@ -11,6 +11,7 @@ import { SIMBAD_WDS_XIDS } from '../../catalog/membership/binding/simbad-wds-xid
 import { bandCheck, type RowBand } from '../../refresh/pull/gates-pure';
 import type { Check } from '../../util/emit-artifacts';
 import { fold } from '../../util/counts/tally-pure';
+import type { ComponentKey, DiscovererKey } from '../component-tokens-pure';
 import { parseAthygRows, type AthygRow } from './athyg-pure';
 import { BINARIES_ASTROMETRY } from './binaries-astrometry-source';
 import {
@@ -49,7 +50,7 @@ export const ROW_BANDS = {
 export interface Stage1Inputs {
   readonly wdsSumm: readonly WdsPair[];
   readonly orb6: Orb6Parse;
-  readonly orb6ComponentOverrides: ReadonlyMap<string, string>;
+  readonly orb6ComponentOverrides: ReadonlyMap<DiscovererKey, string>;
   readonly athyg: readonly AthygRow[];
   readonly ccdm: CcdmIndex;
   readonly hip2: ReadonlyMap<number, Hip2AstrometryRow>;
@@ -58,9 +59,9 @@ export interface Stage1Inputs {
   readonly nss: ReadonlyMap<string, NssOrbitRow>;
   readonly astrometry: ReadonlyMap<string, GaiaAstrometryRow>;
   readonly astrometryExclusions: ReadonlyMap<string, string>;
-  readonly simbadWdsXids: ReadonlyMap<string, SimbadWdsXid>;
+  readonly simbadWdsXids: ReadonlyMap<ComponentKey, SimbadWdsXid>;
   readonly simbadSptypeByOid: ReadonlyMap<number, string>;
-  readonly componentSptypeOverrides: ReadonlyMap<string, string>;
+  readonly componentSptypeOverrides: ReadonlyMap<ComponentKey, string>;
   readonly msc: {
     readonly systems: readonly MscSystemRow[];
     readonly orbits: readonly MscOrbitRow[];
@@ -79,8 +80,7 @@ export interface ReferenceCatalogs {
   /** `gaia` emptied where the magnitude gate refused it. */
   readonly athyg: readonly AthygRow[];
   readonly indices: IdentifierIndices;
-  /** Keyed `componentKey`. */
-  readonly simbadWdsXids: ReadonlyMap<string, SimbadWdsXid>;
+  readonly simbadWdsXids: ReadonlyMap<ComponentKey, SimbadWdsXid>;
   readonly wdsDuplicatePairRowsDropped: number;
   readonly orb6OverridesApplied: number;
   readonly orb6GradeFallbacks: number;
