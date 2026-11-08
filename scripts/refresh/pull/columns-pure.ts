@@ -4,9 +4,10 @@ import { formatFixed } from '../../util/round-pure';
 import { nullableCell, tsvLine, tsvText } from '../../util/tsv/artifact-pure';
 import type { TapResult } from './tap-pure';
 
-/** Python's `f"{x:.{fixed}f}"`, the rounding every pull writes with today. */
+/** See README.md#columns. */
 export interface Format {
   readonly fixed: number;
+  readonly float32?: true;
 }
 
 export interface Column {
@@ -76,9 +77,11 @@ export function sortRows(columns: readonly Column[], rows: readonly Row[], keys:
 
 function formatted(file: string, column: Column, cell: string | null): string {
   if (cell === null || column.format === undefined) return nullableCell(cell);
-  const value = Number(cell);
-  if (!Number.isFinite(value)) throw new Error(`${file}: ${column.name}="${cell}" has a numeric format but is not a number`);
-  return formatFixed(value, column.format.fixed);
+  const { format } = column;
+  const parsed = Number(cell);
+  if (!Number.isFinite(parsed)) throw new Error(`${file}: ${column.name}="${cell}" has a numeric format but is not a number`);
+  const value = format.float32 ? Math.fround(parsed) : parsed;
+  return formatFixed(value, format.fixed);
 }
 
 export function formatTsv(file: string, columns: readonly Column[], rows: readonly Row[]): string {

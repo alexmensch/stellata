@@ -1,5 +1,6 @@
 // Gaia DR3 NSS two-body source_ids: the parse and the declared table.
 
+import { DATA_FILES } from '../../../src/catalog-format/pipeline-outputs/data-files';
 import { defineSource, type Declared } from '../../util/sources/source';
 import {
   sourceRowRef, type RowKeyed, type SourceRowRef,
@@ -21,7 +22,7 @@ export function parseNssIndex(
 }
 
 export const GAIA_NSS = defineSource({
-  file: 'data/gaia/gaia_dr3_nss_two_body.tsv',
+  file: DATA_FILES.gaiaNssTwoBody,
   hint: 'Re-run `pnpm run refresh:gaia-nss`.',
   rowKey: { id: 'gaia-dr3-nss', text: (sourceId: string) => sourceId },
   parse: (input): Map<string, SourceRowRef<string>> => parseNssIndex(input.text(), GAIA_NSS),
