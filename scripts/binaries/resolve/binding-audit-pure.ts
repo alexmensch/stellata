@@ -131,7 +131,7 @@ function tokensRelated(x: string, y: string, blendPairs: readonly (readonly [str
 
 /** The tangent-plane offset along the shortest-hop chain of pair rows, with
  *  the epoch of the edge reaching `goal`; null when no chain connects them. */
-function bfsOffset(adj: SystemContext['adj'], start: string, goal: string): Edge | null {
+export function bfsOffset(adj: SystemContext['adj'], start: string, goal: string): Edge | null {
   if (start === goal) return { eastArcsec: 0, northArcsec: 0, epoch: null };
   const visited = new Set([start]);
   const queue: [string, number, number][] = [[start, 0, 0]];

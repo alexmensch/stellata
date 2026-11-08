@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
 import {
-  WDS_PRECISE_COORD_EPOCH, distancePc, propagatePosition, tangentOffset,
+  WDS_PRECISE_COORD_EPOCH, chordSqForTolerance, distancePc, positionsWithin, predictSecondaryPosition, propagatePosition,
+  tangentOffset,
 } from './sky-geometry-pure';
 
 describe('propagatePosition', () => {
@@ -42,6 +43,30 @@ describe('tangentOffset', () => {
   it('takes the short way across RA 0h', () => {
     expect(tangentOffset({ raDeg: 359.999, decDeg: 0 }, { raDeg: 0.001, decDeg: 0 }).eastArcsec)
       .toBeCloseTo(-7.2, 6);
+  });
+});
+
+describe('predictSecondaryPosition', () => {
+  it('puts θ = 0 due north', () => {
+    const { raDeg, decDeg } = predictSecondaryPosition({ raDeg: 100, decDeg: 0 }, 3600, 0);
+    expect(raDeg).toBeCloseTo(100, 6);
+    expect(decDeg).toBeCloseTo(1, 6);
+  });
+
+  it('widens an eastward offset by 1 / cos δ', () => {
+    const { raDeg, decDeg } = predictSecondaryPosition({ raDeg: 100, decDeg: 60 }, 3600, 90);
+    expect(raDeg).toBeCloseTo(102, 3);
+    expect(decDeg).toBeCloseTo(60, 6);
+  });
+});
+
+describe('positionsWithin', () => {
+  it('compares the chord against the tolerance\'s chord', () => {
+    const at = { raDeg: 100, decDeg: 20 };
+    const east = (arcsec: number) => ({ raDeg: 100 + arcsec / 3600 / Math.cos((20 * Math.PI) / 180), decDeg: 20 });
+    expect(positionsWithin(at, east(1), 2)).toBe(true);
+    expect(positionsWithin(at, east(5), 2)).toBe(false);
+    expect(chordSqForTolerance(0)).toBe(0);
   });
 });
 

@@ -49,10 +49,14 @@ scripts/binaries/resolve/
                                check (#the-spot-check).
   spot-check-source.ts         SPOT_CHECK_GROUND_TRUTH
                                (data/binaries/spot_check_ground_truth.tsv).
+  resolve-fixture.ts           Test-only builders: components, indices,
+                               the audit's one-system fixtures.
 ```
 
-The real-data cases and the spot-check are the parent folder's
-`build-binaries.test.ts`.
+Each `*-pure.ts` but `sibling-identity-pure.ts` and `stage2-report-pure.ts`,
+and `resolve-pairs.ts` and `binding-verdicts-tsv.ts`, has a co-located
+`.test.ts` over fixtures. The real-data cases and the spot-check are the
+parent folder's `build-binaries.test.ts`.
 
 ## The order of the passes
 
