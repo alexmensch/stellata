@@ -1,6 +1,6 @@
 // Tokovinin's Multiple Star Catalogue: its three tables, the label → WDS token map, and the lookups Stages 2/4/6 join on.
 
-import { J2000_JD } from '../../../src/astro-core/astronomy-constants';
+import { DAYS_PER_JULIAN_YEAR, J2000_JD } from '../../../src/astro-core/astronomy-constants';
 import { readTable } from '../../util/tsv/table-pure';
 import type { Declared } from '../../util/sources/source';
 import {
@@ -76,10 +76,9 @@ export const MSC_ROOT_PARENT_LABELS: ReadonlySet<string> = new Set(['*', 't', 'X
 /** A year reading is at most this; a larger `t0` can only be a truncated JD. */
 export const MSC_T0_YEAR_MAX = 3000.0;
 export const TRUNCATED_JD_TO_JD_OFFSET = 2400000.0;
-const DAYS_PER_YEAR = 365.25;
 /** A fitted periastron epoch outside Besselian ≈1700-2600 is a misread unit. */
-export const T0_MIN_PLAUSIBLE_JD = J2000_JD + (1700.0 - 2000.0) * DAYS_PER_YEAR;
-export const T0_MAX_PLAUSIBLE_JD = J2000_JD + (2600.0 - 2000.0) * DAYS_PER_YEAR;
+export const T0_MIN_PLAUSIBLE_JD = J2000_JD + (1700.0 - 2000.0) * DAYS_PER_JULIAN_YEAR;
+export const T0_MAX_PLAUSIBLE_JD = J2000_JD + (2600.0 - 2000.0) * DAYS_PER_JULIAN_YEAR;
 
 export function mscPairKey(wdsId: string, primary: string, secondary: string): string {
   return `${wdsId}\t${primary}\t${secondary}`;
@@ -257,7 +256,7 @@ export function buildMscLookup(
 export function mscPeriodDays(row: MscOrbitRow): number | null {
   if (row.per === null || row.per <= 0.0) return null;
   if (row.perUnit === 'd') return row.per;
-  if (row.perUnit === 'y') return row.per * DAYS_PER_YEAR;
+  if (row.perUnit === 'y') return row.per * DAYS_PER_JULIAN_YEAR;
   return null;
 }
 
@@ -266,7 +265,7 @@ export function mscPeriodDays(row: MscOrbitRow): number | null {
 export function mscT0Jd(t0: number | null): number | null {
   if (t0 === null) return null;
   if (t0 <= MSC_T0_YEAR_MAX) {
-    const yearJd = J2000_JD + (t0 - 2000.0) * DAYS_PER_YEAR;
+    const yearJd = J2000_JD + (t0 - 2000.0) * DAYS_PER_JULIAN_YEAR;
     if (T0_MIN_PLAUSIBLE_JD <= yearJd && yearJd <= T0_MAX_PLAUSIBLE_JD) return yearJd;
   }
   const truncatedJd = t0 + TRUNCATED_JD_TO_JD_OFFSET;
