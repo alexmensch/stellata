@@ -228,13 +228,22 @@ HD 2094 as a row of its own beside the HIP record it names, and the
 label merge moving onto the derived binding put the designation back
 on that record.
 
-A merge under [§ 4.3](#43-ledger--datasidledgertsv) reaches the build two ways: the derived binding
-moving a Gaia source onto the classically-keyed record it belongs to,
-or a `fold` row in `data/membership/spine-corrections.tsv` saying AT-HYG
-carried one star twice. Both retire the same way; the fold is for the
-duplicate the derivation cannot dissolve on its own, because the twin
-holds the very source the survivor would otherwise derive (VV Lyn,
-SID 324680 → 324702).
+A merge under [§ 4.3](#43-ledger--datasidledgertsv) reaches the build two ways. **One record comes to
+carry the keys of two SIDs in service** — the derived binding moving a
+Gaia source onto the classically-keyed record it belongs to, the label
+merge moving an HD onto the HIP record it names, a curated same-as edge
+— and the same-as class is itself the decision: allocation merges the
+SID the ladder loses into the one it keeps, under
+`allocation.merged.same-class`, whichever stage moved the key. Or a stage
+decides the merge itself: a `fold` row in
+`data/membership/spine-corrections.tsv` saying AT-HYG carried one star
+twice, or promotion adopting a record as the component it names. The
+fold is for the duplicate the derivation cannot dissolve on its own,
+because the twin holds the very source the survivor would otherwise
+derive (VV Lyn, SID 324680 → 324702). A stage's decision on the losing
+SID outranks the class: a merge into another record, or a retire or
+park while its key still names a record in service, fails the
+allocation.
 
 A `reinstate` is the reverse operation for a retired object that
 reappears — a pipeline refinement restores an honestly-derived record
@@ -287,12 +296,14 @@ its own namespaces:
    each stamp mints in its artifact's order.
 4. Settle every SID in the caller's namespaces that no object keeps any
    more, by the upstream lineage decision on its record
-   ([SID events](/scripts/sid/README.md#sid-events)).
+   ([SID events](/scripts/sid/README.md#sid-events)); a SID whose class
+   another SID in service keeps merges into it ([§ 4.3](#43-ledger--datasidledgertsv)).
 5. Land the caller's partition — its appended ledger, events and head —
    with the step's other outputs.
 
 A failed allocation — an orphan no decision explains, a new object no
-stage admits — fails the step before anything lands. Builds stay
+stage admits, a stage retiring a SID whose key a record in service still
+carries — fails the step before anything lands. Builds stay
 deterministic and network-free, and every allocation is a reviewable diff
 in the PR that causes it.
 

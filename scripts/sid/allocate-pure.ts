@@ -1,6 +1,7 @@
-// SID allocation: every object resolved, minted or reinstated against the ledger, every SID no object reaches settled by the upstream decision that removed it, and the events that follow. See /docs/sid.md#44-allocation.
+// SID allocation: every object resolved, minted or reinstated against the ledger, every SID no object reaches settled by the upstream decision that removed it, a SID whose class another holds merged into it, and the events that follow. See /docs/sid.md#44-allocation.
 
 import type { CodeEffect } from '../catalog/lineage/reason-codes/reason-codes-pure';
+import { ALLOCATION_CODES } from './allocation-lineage-pure';
 import { retiredSids, type EventRow } from './events-pure';
 import {
   canonicalKeyOf, parseDesignation, sameAsClasses,
@@ -85,6 +86,7 @@ export type Allocation =
   };
 
 const CLASSICAL = new Set(['sol', 'hip', 'hd', 'hr', 'gl']);
+const SAME_CLASS_MERGE = ALLOCATION_CODES.code('merged.same-class');
 
 /** /docs/sid.md#43-ledger--datasidledgertsv: the classical key the merged record keys on survives; with none, the oldest SID. */
 export function mergeSurvivor(active: readonly LedgerRow[]): LedgerRow {
@@ -174,6 +176,9 @@ export function allocate(input: AllocateInput, upstream: Upstream): Allocation {
     }
   }
   const firstObject = (root: string): SidObject => objects[objectsByClass.get(root)![0]];
+  const carrierOf = (root: string, key: string): SidObject => (
+    objectsByClass.get(root)!.map((i) => objects[i]).find((o) => o.designations.includes(key)) ?? firstObject(root)
+  );
 
   const orphans = ledger.filter((row) => !retired.has(row.sid)
     && !objectsByClass.has(uf.find(row.canonicalKey))
@@ -237,6 +242,12 @@ export function allocate(input: AllocateInput, upstream: Upstream): Allocation {
     p.kind === 'resolved' ? p.losers.map((loser) => ({ root, loser, survivor: p.survivor })) : []
   ));
   for (const { root, loser, survivor } of losersByRoot) {
+    if (causesOf(loser.canonicalKey).decisions.length === 0) {
+      const origin = carrierOf(root, loser.canonicalKey).origin;
+      const decision: Decision = { stage: ALLOCATION_CODES.stage, origin, code: SAME_CLASS_MERGE, effect: 'merge', into: origin };
+      removals.push({ kind: 'merged', sid: loser.sid, canonicalKey: loser.canonicalKey, into: survivor.sid, decision });
+      continue;
+    }
     const settled = settle(loser, `shares class ${classText(root)} with sid ${survivor.sid}`);
     if (settled.kind === 'refused') continue;
     if (settled.kind !== 'merged' || settled.into !== survivor.sid) {
