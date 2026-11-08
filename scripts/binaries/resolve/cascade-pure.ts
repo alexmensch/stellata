@@ -17,7 +17,9 @@ import {
   findOwningPair, pairRows, pairsByDiscoverer, unresolvedComponent, working,
   type DecomposedPair, type Draft, type ResolvedComponent,
 } from './components-pure';
-import { buildSystemHipClaims, claimHip, hipClaimedByDisjointLetter, tokensShareIdentity } from './sibling-identity-pure';
+import {
+  buildSystemHipClaims, claimHip, hipClaimedByDisjointLetter, tokensShareIdentity, type HipClaims,
+} from './sibling-identity-pure';
 import { groupBy } from '../../util/map-buckets-pure';
 
 /** A sibling-identity rejection, one per candidate refused. */
@@ -168,7 +170,7 @@ interface CcdmQuery {
  *  by geometry or by an existing binding. */
 function ccdmCandidateHip(
   q: CcdmQuery, indices: IdentifierIndices, letterPositions: ReadonlyMap<string, SkyPosition> | undefined,
-  claims: ReturnType<typeof buildSystemHipClaims>, rejected: SiblingRejection[],
+  claims: HipClaims, rejected: SiblingRejection[],
 ): number | null {
   const threshold = chordSqForTolerance(CCDM_POSITION_MATCH_TOLERANCE_ARCSEC);
   let bestHip: number | null = null;
