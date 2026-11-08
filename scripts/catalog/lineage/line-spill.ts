@@ -13,7 +13,12 @@ export class LineSpill {
   private read = false;
 
   constructor(private readonly batch = ENCODE_BATCH) {
-    writeFileSync(this.path, utf8Batch([LINEAGE_COLUMNS.join('\t')]));
+    try {
+      writeFileSync(this.path, utf8Batch([LINEAGE_COLUMNS.join('\t')]));
+    } catch (e) {
+      this.dispose();
+      throw e;
+    }
   }
 
   push(line: LineageLine): void {
