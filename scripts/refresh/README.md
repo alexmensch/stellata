@@ -39,9 +39,9 @@ at all) — a judgement about scope, not about effort.
 Every refresh script is **manually invoked**, never wired into
 `pnpm run build`. The freshness policy (above) drives the split: build
 reads committed files, refresh writes them. Each script lives under
-`scripts/refresh/`, takes no required arguments (the request-scoped Gaia
-pulls read a request file a build writes — [gaia-request/](gaia-request/README.md)),
-and atomically replaces its output TSV under `data/`.
+`scripts/refresh/`, takes no required arguments (a pull scoped by a request
+reads a request file a build writes, or for the DR2 neighbourhood a frozen
+one), and atomically replaces its output TSV under `data/`.
 
 ### One-time setup
 
