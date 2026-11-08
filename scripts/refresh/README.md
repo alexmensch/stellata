@@ -39,10 +39,9 @@ at all) — a judgement about scope, not about effort.
 Every refresh script is **manually invoked**, never wired into
 `pnpm run build`. The freshness policy (above) drives the split: build
 reads committed files, refresh writes them. Each script lives under
-`scripts/refresh/`, takes no required arguments (the deduped source_id
-request file is the one exception — `refresh-gaia-astrometry.py` reads
-the file Stage 2 writes), and atomically replaces its output TSV under
-`data/`.
+`scripts/refresh/`, takes no required arguments (the request-scoped Gaia
+pulls read a request file a build writes — [gaia-request/](gaia-request/README.md)),
+and atomically replaces its output TSV under `data/`.
 
 ### One-time setup
 
@@ -129,7 +128,8 @@ see `read_source_id_request` below), whose coverage of the manifest's
 bindings the membership gate test holds.
 `refresh_lib.MEMBERSHIP_MANIFEST` is the one statement of where that table
 lives, `refresh_lib.TYC2_HD_CROSS_INDEX` the same for IV/25 and
-`refresh_lib.CATALOG_SOURCE_ID_REQUEST` for the request file; a script
+`refresh_lib.CATALOG_SOURCE_ID_REQUEST` for the request file (the
+TypeScript pulls read `DATA_FILES.astrometryRequest`); a script
 naming any of these paths itself has drifted from it. The two pulls scoped to Tycho
 entries share the whole request set, not just the paths —
 `refresh_lib.read_mentioned_tycs`, [The request set](/data/tycho2/README.md#the-request-set--manifest--iv25).
@@ -219,10 +219,10 @@ and the generator hard-fails when either moves. Re-pull it deliberately, as
 its own change, expecting to re-review the queue — never as a step folded
 into unrelated work.
 
-`read_source_id_request` lives in `refresh_lib` rather than beside any
-one pull, because three scopes now read the same one-column TSV contract:
-the binaries astrometry list, the full-catalog list, and the DR2
-neighbourhood risk set.
+The one-column request format has one parse per language:
+`readSourceIdRequest` (`../catalog/astrometry-request/`), beside its writer,
+for every TypeScript pull, and `refresh_lib.read_source_id_request` for the
+Python deep-population pulls.
 
 **`refresh:gaia-magnitude` is scoped by a selection, not a request set**, and
 so sits outside this whole section: membership's magnitude term is defined by
@@ -230,9 +230,10 @@ a bound on `phot_g_mean_mag`, not by a list of ids, so the pull reads nothing
 under `data/`, derives from nothing, and cannot go stale against a column
 that moved. Its shortfall gate is a row-count band rather than a coverage
 fraction — there is no numerator, because there was no request. What it
-shares with the two request-scoped pulls is the schema: all three project
-`gaia_astrometry_pull.TSV_COLUMNS` through `SELECT_CLAUSE`, so one added
-column reaches all three and one parser reads all three outputs.
+shares with the two astrometry pulls is the schema: it projects
+`gaia_astrometry_pull.TSV_COLUMNS`, which `gaia-request/gaia-request.test.ts`
+holds equal to their `ASTROMETRY_COLUMNS`, so one parser reads all three
+outputs.
 
 Non-network dependency: `refresh-simbad-tyc-hd.test.py` covers that pull's
 request-set union, the space-padded ident join, its compose gates and the
@@ -247,12 +248,6 @@ partition (shared edge literals, the open bright end, the floor as the last
 edge, near-equal populations), the per-slice ADQL shape, and both gates
 against an in-memory TAP backend. Run it with
 `python3 scripts/refresh/refresh-gaia-magnitude.test.py`.
-
-Non-network dependency: `refresh-gaia-gspc.test.py` covers that pull's
-write widths, the per-band-null shape a both-bands-or-nothing writer
-would corrupt, and `assert_flag_domain` — the only automated guard on the
-`0`/`1` flag domain whose polarity the ci cascade reads. Run it with
-`python3 scripts/refresh/refresh-gaia-gspc.test.py`.
 
 `scripts/refresh/refresh_lib.py` is the shared TAP / Astroquery /
 atomic-rename plumbing every refresh script imports — handles retry,
@@ -338,9 +333,7 @@ cross-walk pulls are TypeScript and sliced to fit ESA
   rather than clamp below the ceiling. Its 440,000–446,000-row band is past
   ESA's limit, so only ARI can answer it whole; an ESA answer is left to the
   row band to refuse.
-- Batched pulls size MAXREC off their batch size (`BATCH_SIZE * 2`),
-  except `refresh-gaia-dr2-neighbourhood.py`, where one requested id can
-  return several rows.
+- Batched pulls size MAXREC off their batch size (`BATCH_SIZE * 2`).
 - Pulls that batch on a **value range** rather than a count have no batch
   size to multiply, so all three call `slice_sync_maxrec(<the pinned
   ceiling>)` — four times the nominal slice population. The factor is
@@ -375,14 +368,9 @@ Apsis and [Bailer-Jones 2021](/data/papers/index.md#bailerjones2021)
 resume at 48 slices plus the request batches (~8 for Apsis), not the ~63 id
 batches the manifest-keyed pulls ran.
 
-`scripts/refresh/gaia_astrometry_pull.py` is the shared 5p-astrometry
-pull (schema, ADQL, batching, coverage + spot-check gates, atomic
-write); `refresh-gaia-astrometry.py` (binaries scope) and
-`refresh-gaia-astrometry-catalog.py` (full-catalog scope) are thin
-wrappers that only define their request/output paths and pinned
-spot-check rows.
-
-`TSV_COLUMNS` there is the one place the schema is stated, so **a column
+Both astrometry scopes (`refresh:gaia-astrometry`, binaries; and
+`refresh:gaia-astrometry-catalog`, full catalogue) are one `PullTable` over
+`ASTROMETRY_COLUMNS` ([gaia-request/](gaia-request/README.md)), so **a column
 added to it lands in both scopes** — but only in whichever output is
 actually re-pulled. The column list is part of both scopes' query, so an
 added column stales both records and the build names both refreshes.

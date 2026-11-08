@@ -170,7 +170,8 @@ What no request can fix is `gateSkippedNullGMag` (<!-- count:classic-id-overlay/
 
 ## What the pulled set feeds
 
-The request drives `scripts/refresh/refresh-gaia-astrometry-catalog.py` →
+The request drives `refresh:gaia-astrometry-catalog`
+(`scripts/refresh/gaia-request/`) →
 the astrometry catalog, which is tier 1 of the direction cascade and the rv
 cascade, the source of the BP/RP the V and ci cascades transform, and both
 gates' evidence above. `pnpm run build:classic-ids` and `pnpm run

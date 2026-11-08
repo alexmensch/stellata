@@ -10,7 +10,7 @@ import { spotRowCheck } from '../pull/gates-pure';
 import { queryLimit, type PullTable } from '../pull/pull';
 import { readCsv } from '../pull/tap-pure';
 import {
-  BINARIES_ASTROMETRY_SPOTS, CATALOG_ASTROMETRY_SPOTS, DR2_ROWS_PER_ID, astrometryTable, dr2NeighbourhoodTable, gspcTable,
+  ASTROMETRY_COLUMNS, BINARIES_ASTROMETRY_SPOTS, CATALOG_ASTROMETRY_SPOTS, DR2_ROWS_PER_ID, astrometryTable, dr2NeighbourhoodTable, gspcTable,
 } from './gaia-request-pure';
 
 /** Replies recorded from ESA on 2026-11-08 for each table's spot rows; ARI answered the same text except the boolean, written 1/0. */
@@ -107,9 +107,15 @@ describe('the request queries', () => {
   );
 });
 
-describe('the astrometry band', () => {
-  it('carries the 0.95 coverage floor: at least ceil(0.95 n) rows, at most n', () => {
+describe('the astrometry schema', () => {
+  it('carries the 0.95 coverage floor in its band: at least ceil(0.95 n) rows, at most n', () => {
     const ids = Array.from({ length: 383_059 }, (_, i) => BigInt(i + 1));
     expect(astrometryTable(ids, CATALOG_ASTROMETRY_SPOTS).band).toEqual({ min: 363_907, max: 383_059 });
+  });
+
+  it('is the column list the Python magnitude pull projects, in order', () => {
+    const python = readFileSync(join(REPO_ROOT, 'scripts/refresh/gaia_astrometry_pull.py'), 'utf8');
+    const list = /^TSV_COLUMNS = \[([^\]]*)\]/m.exec(python)?.[1] ?? '';
+    expect([...list.matchAll(/"([^"]+)"/g)].map((m) => m[1])).toEqual(ASTROMETRY_COLUMNS.map((c) => c.name));
   });
 });

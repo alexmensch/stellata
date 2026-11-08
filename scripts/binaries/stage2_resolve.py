@@ -1530,7 +1530,7 @@ def write_astrometry_request(
     (``indices.xwalk_mag_rejected`` / ``athyg_gaia_mag_rejected``) and the
     binding audit's candidates, kept or unbound.
 
-    ``scripts/refresh/refresh-gaia-astrometry.py`` reads this file to
+    ``refresh:gaia-astrometry`` (``scripts/refresh/gaia-request/``) reads this file to
     drive its ADQL ``WHERE source_id IN (...)`` query. Weighed candidates
     MUST stay in the request: a gate can only refuse a binding whose
     astrometry is in the pull, so a request built from post-refusal

@@ -32,7 +32,9 @@ of the frozen dry-run pair.
 - `gaia-request.test.ts` — replies recorded from ESA on 2026-11-08 for each
   table's spot rows, and ARI's for the DR2 boolean: each formats to lines of
   the committed table, byte for byte, and passes its spot rows. It also
-  holds each committed table in its sort key's order. Replies are inline,
+  holds each committed table in its sort key's order, and
+  `ASTROMETRY_COLUMNS` equal to `gaia_astrometry_pull.TSV_COLUMNS`, the list
+  the Python magnitude pull projects. Replies are inline,
   not files, for the reason [gaia-whole-table/](../gaia-whole-table/README.md)
   gives.
 
