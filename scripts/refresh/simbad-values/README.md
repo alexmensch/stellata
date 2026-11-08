@@ -11,8 +11,8 @@ A phased pull on the [pull runtime](../pull/README.md#a-phased-pull) over the
 ## Files
 
 - `refresh-simbad-values.ts` (+ test, the committed table replayed through
-  the pull) — the entry: reads the manifest and the Gaia 5p table, `describe`
-  and `main`.
+  the pull) — the entry: reads the manifest and both Gaia 5p tables (the
+  catalogue's and the magnitude pull's), `describe` and `main`.
 - `simbad-values-pure.ts` (+ test) — the columns, phases, floors and
   `valuesPull`.
 - `simbad-values-replay-pure.ts` — `valuesFake`, a fake SIMBAD holding a
@@ -24,7 +24,7 @@ A phased pull on the [pull runtime](../pull/README.md#a-phased-pull) over the
 The request is the value cohort's keys (`membershipKeys` under `valueCohort`,
 `../simbad/membership-keys-pure.ts`), resolved to oids by Phase A with the
 widening ladder (`resolveMembershipKeys`); its describe states every key, off
-the manifest and the Gaia 5p table, so a moved cohort stales the record. The
+the manifest and both Gaia 5p tables, so a moved cohort stales the record. The
 basic columns, the four namespaces' ids and the B/V fluxes are asked per oid,
 and each bibcoded group ships only beside its bibcode
 ([An unbibcoded value never reaches the file](../simbad/README.md#an-unbibcoded-value-never-reaches-the-file)).

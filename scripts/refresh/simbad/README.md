@@ -81,12 +81,18 @@ simbad-test-fixtures.ts     Manifest-record and fake builders for the suites.
 
 ## The cohort is two questions, and the manifest answers one
 
-`simbad_value_cohort` takes a set of source_ids and returns the [§ 5](/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers) value-tier
-predicate. The set is `gaia_complete_source_ids` over
-`data/gaia/gaia_dr3_astrometry_catalog.tsv` — the ids Gaia's own 5p table
-states a parallax AND a proper motion AND a radial velocity for. A row is OUT
-of the cohort only where that holds **and** its identity is first-hand too: a
-`crosswalk_gated` binding plus a TYC or a HIP.
+`valueCohort` takes a set of source_ids and returns the [§ 5](/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers) value-tier
+predicate. The set is `gaiaCompleteSourceIds` over both Gaia 5p tables —
+`data/gaia/gaia_dr3_astrometry_catalog.tsv` for the primaries' sources and
+`data/gaia/gaia_dr3_magnitude_pull.tsv` for the magnitude term's, which the
+first does not hold — the ids Gaia states a parallax AND a proper motion AND
+a radial velocity for. A row is OUT of the cohort only where that holds
+**and** its identity is first-hand too: a `gaia_native` binding (the row is
+Gaia's own source), or a `crosswalk_gated` binding plus a TYC or a HIP.
+Read off the astrometry table alone, every magnitude-term row looked
+incomplete and the cohort was 673,679 rows; with both tables and
+`gaia_native` first-hand it is 121,249 of the manifest's <!-- count:membership-manifest/rows -->975,573<!-- /count -->
+rows (measured 2026-11-08).
 
 **Both halves, because the manifest carries value provenance for neither.**
 The predicate this replaced read the spine's `pos_src` / `dist_src` /

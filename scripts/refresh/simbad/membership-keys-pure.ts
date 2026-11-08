@@ -74,6 +74,8 @@ export function requestLines(keys: MembershipKeys): string[] {
 
 /** The binding a raw cross-walk reproduces (../../catalog/membership/README.md#the-spine-side). */
 export const GATE_REPRODUCED_BINDING = 'crosswalk_gated';
+/** The magnitude term's binding: the row is Gaia's own source. */
+export const GAIA_NATIVE_BINDING = 'gaia_native';
 
 /** Source_ids Gaia's 5p table states a parallax, both proper-motion components and a radial velocity for. */
 export function gaiaCompleteSourceIds(catalog: ReadonlyMap<string, GaiaAstrometryCatalogRow>): Set<string> {
@@ -84,10 +86,10 @@ export function gaiaCompleteSourceIds(catalog: ReadonlyMap<string, GaiaAstrometr
   return complete;
 }
 
+const firstHandIdentity = (record: ManifestRecord): boolean => record.binding === GAIA_NATIVE_BINDING
+  || (record.binding === GATE_REPRODUCED_BINDING && (record.tyc !== null || record.hip !== null));
+
 /** In unless both halves of the first-hand claim hold: README.md#the-cohort-is-two-questions-and-the-manifest-answers-one. */
 export function valueCohort(gaiaComplete: ReadonlySet<string>): RowFilter {
-  return (record) => record.gaiaSourceId === null
-    || !gaiaComplete.has(record.gaiaSourceId)
-    || record.binding !== GATE_REPRODUCED_BINDING
-    || (record.tyc === null && record.hip === null);
+  return (record) => record.gaiaSourceId === null || !gaiaComplete.has(record.gaiaSourceId) || !firstHandIdentity(record);
 }

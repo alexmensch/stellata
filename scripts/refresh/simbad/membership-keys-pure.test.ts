@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import type { GaiaAstrometryCatalogRow } from '../../catalog/sources/gaia-astrometry-source';
 import {
-  GATE_REPRODUCED_BINDING, gaiaCompleteSourceIds, glSuffix, keyedRows, membershipKeys, requestLines, valueCohort,
+  GAIA_NATIVE_BINDING, GATE_REPRODUCED_BINDING, gaiaCompleteSourceIds, glSuffix, keyedRows, membershipKeys, requestLines, valueCohort,
 } from './membership-keys-pure';
 import { WIDENING_LADDER } from './simbad-specs-pure';
 import { record } from './simbad-test-fixtures';
@@ -88,8 +88,13 @@ describe('valueCohort', () => {
     expect(valueCohort(new Set())(row)).toBe(true);
   });
 
-  it.each(['simbad_corroborated', 'reviewed', 'gaia_native', 'none'] as const)('admits a %s binding', (binding) => {
+  it.each(['simbad_corroborated', 'reviewed', 'none'] as const)('admits a %s binding', (binding) => {
     expect(inCohort(record({ gaiaSourceId: '1', binding, hip: 7 }))).toBe(true);
+  });
+
+  it('keeps out a magnitude-term row Gaia completes, printed ids or none: the row is Gaia\'s own source', () => {
+    expect(inCohort(record({ gaiaSourceId: '1', binding: GAIA_NATIVE_BINDING, term: 'magnitude' }))).toBe(false);
+    expect(valueCohort(new Set())(record({ gaiaSourceId: '1', binding: GAIA_NATIVE_BINDING, term: 'magnitude' }))).toBe(true);
   });
 
   it('admits a row carrying no printed identifier, and every row without a source_id', () => {

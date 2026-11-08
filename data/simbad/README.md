@@ -64,20 +64,20 @@ costs is visible in the pull's own report, which prints values reached
 before it prints values shipped.
 
 **The request set is an enumerated cohort, not the catalogue.** It is the
-**membership manifest** rows a [§ 5](/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers) value tier can reach — 75,040 of 376,932
-(19.9%), keyed `gaia_source_id` → HIP → TYC → GJ. That first number is the
+**membership manifest** rows a [§ 5](/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers) value tier can reach — 121,249 of <!-- count:membership-manifest/rows -->975,573<!-- /count -->
+(12.4%, 2026-11-08), keyed `gaia_source_id` → HIP → TYC → GJ. That first number is the
 row count of `membershipKeys(manifest, valueCohort(…))`
-over the committed manifest and astrometry table, so calling the predicate
+over the committed manifest and both Gaia 5p tables, so calling the predicate
 directly re-derives it in seconds and costs no network.
 `refresh:simbad-values` prints the same figure as its `value cohort:` line,
 but only under `--force` and only on its way into the pull — the up-to-date
-guard returns before it otherwise. Four rows in five are
+guard returns before it otherwise. Seven rows in eight are
 absent by construction, so a consumer cannot quietly reach for SIMBAD where a
 first-hand catalogue already serves. **Widening the cohort is a re-pull**, not
 a filter change: the predicate is `valueCohort` in
 `scripts/refresh/simbad/membership-keys-pure.ts`, and a row is OUT only where Gaia's own 5p
-table states every [§ 5](/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers) value for it AND its identity is first-hand too (a
-`crosswalk_gated` binding plus a TYC or a HIP). Why it takes both halves —
+tables state every [§ 5](/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers) value for it AND its identity is first-hand too (a
+`gaia_native` binding, or `crosswalk_gated` plus a TYC or a HIP). Why it takes both halves —
 and what an identity-only predicate loses — is
 [The cohort is two questions](/scripts/refresh/simbad/README.md#the-cohort-is-two-questions-and-the-manifest-answers-one).
 
