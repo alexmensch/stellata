@@ -166,8 +166,9 @@ export async function runPull<K extends string>(pull: Pull<K>, deps: TapClientDe
     for (const [i, adql] of batches.entries()) {
       const cached = cache.load(adql);
       const result = cached === null ? await client.query(adql, limit) : { body: cached, result: readCsv(cached, limit, key) };
+      const checked = checkedRows(table.columns, result.result, key);
       if (cached === null) cache.save(adql, result.body);
-      for (const row of checkedRows(table.columns, result.result, key)) rows.push(row);
+      for (const row of checked) rows.push(row);
       deps.log(`  ${key} batch ${i + 1}/${batches.length}: ${result.result.rows.length} rows${cached === null ? '' : ' from checkpoint'} (total ${rows.length})`);
     }
     checks.push(...tableChecks(key, table, rows));

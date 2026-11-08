@@ -141,9 +141,10 @@ describe('runPull', () => {
     expect(() => assertTablesFit(pullOf({ stars: sliced(fits), pairs: PAIRS }))).not.toThrow();
   });
 
-  it('refuses a reply whose columns are not the declared ones', async () => {
+  it('refuses a reply whose columns are not the declared ones, and caches no refused reply', async () => {
     const { deps: d } = deps((adql) => (adql.includes('gaia_source') ? 'source_id,plx\n1,0.5\n' : GOOD(adql)));
     await expect(runPull(pullOf({ stars: STARS, pairs: PAIRS }), d)).rejects.toThrow(/are not the declared/);
+    expect(existsSync(ckpt()) ? readdirSync(ckpt()) : []).toEqual([]);
   });
 });
 

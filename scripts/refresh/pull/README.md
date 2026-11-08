@@ -109,7 +109,7 @@ limit, so a pull sized for ESA's 50,000 keeps `sliceRows` at most 24,999.
 
 ## The checkpoint
 
-Each answered query's CSV reply is cached as it lands, under
+Each answered query's CSV reply is cached once it passes the column check, under
 `<first output>.ckpt/`, named by the hash of the query's text; a re-run
 replays a cached reply (re-checked against the limit and the columns) and
 asks only what is missing. Keying on the text is what makes **a changed
