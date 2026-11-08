@@ -728,6 +728,25 @@ describe('buildMembership — the additions', () => {
     expect(own.rows).toEqual([]);
   });
 
+  // 44 Boo's shape: the derivation reaches the companion's source, review
+  // declines it as the other component, and the companion keeps its own record.
+  it('reads a source a pair_component disposition declines as the record\'s component, not a withheld binding', () => {
+    const key = bindingReviewKey({ tyc: '1-2-1', hip: '', hd: '5', gl: '' });
+    const declined = (basis: BindingDispositionRow['basis']) => buildMembership({
+      ...input,
+      dispositions: new Map([[key, disposition({
+        tyc: '1-2-1', hd: '5', derived_source_id: '222', keep_source_id: '', basis,
+      })]]),
+      magnitudeTerm: { keptSourceIds: new Set(['222']), counts: { rows: 1, kept: 1, above_floor: 0, no_v: 0 } },
+    });
+    const component = declined('pair_component');
+    expect(component.rows.filter((r) => r.gaiaSourceId === '222')).toHaveLength(1);
+    expect(component.counts.magnitudeRowsOwnCandidate.component).toBe(1);
+    const lines = component.lineage.map((r) => stageLineageLine(MEMBERSHIP_CODES, r));
+    expect(invariantViolations(MEMBERSHIP_INVARIANTS, lines)[0].rows).toEqual([]);
+    expect(declined('tycho2_position').counts.magnitudeRowsOwnCandidate.withheld).toBe(1);
+  });
+
   it('fails the own-candidate invariant on a reason it does not allow, naming the row', () => {
     const seeded = stageLineageLine(MEMBERSHIP_CODES, membershipLineageRow({
       key: 'gaia-dr3:42', outcome: { kind: 'admit-magnitude', ownCandidate: { reason: 'withheld', of: 'spine:7' } },
