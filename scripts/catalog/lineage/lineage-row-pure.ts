@@ -2,7 +2,7 @@
 
 import { fold } from '../../util/counts/tally-pure';
 import { readTable, readTableLines, type TableSpec } from '../../util/tsv/table-pure';
-import type { StageCode, StageCodes } from './reason-codes-pure';
+import type { StageCode, StageCodes } from './reason-codes/reason-codes-pure';
 
 export const LINEAGE_ROLES = ['outcome', 'refused'] as const;
 export type LineageRole = (typeof LINEAGE_ROLES)[number];
@@ -94,6 +94,11 @@ export function encodeLineageLine(row: LineageRow): string {
   return cells.join('\t');
 }
 
+/** A row's evidence: each cited row once, never the origin row the key already names. */
+export function evidenceTexts(key: string, refTexts: readonly string[]): string[] {
+  return [...new Set(refTexts)].filter((t) => t !== key);
+}
+
 /** The row's line, refused when the stage does not write it or does not declare its code. */
 export function stageLineageLine(codes: StageCodes<string>, row: LineageRow): LineageLine {
   if (row.stage !== codes.stage) {
@@ -111,12 +116,16 @@ export function sortLineageLines(lines: readonly LineageLine[]): LineageLine[] {
 
 export const ENCODE_BATCH = 100_000;
 
+export function utf8Batch(lines: readonly string[]): Buffer {
+  return Buffer.from(`${lines.join('\n')}\n`);
+}
+
 /** See README.md#storage-and-cost. */
 export function utf8Lines(header: string, lines: Iterable<string>, batch = ENCODE_BATCH): Uint8Array {
-  const parts: Buffer[] = [Buffer.from(`${header}\n`)];
+  const parts: Buffer[] = [utf8Batch([header])];
   let pending: string[] = [];
   const flush = (): void => {
-    if (pending.length > 0) parts.push(Buffer.from(`${pending.join('\n')}\n`));
+    if (pending.length > 0) parts.push(utf8Batch(pending));
     pending = [];
   };
   for (const line of lines) {

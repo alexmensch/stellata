@@ -15,7 +15,17 @@ import {
 } from './colour-index-pure';
 import { RIELLO_BP_RP_MIN, rielloGMinusV } from './v-magnitude-pure';
 import { GAIA_PHOTOMETRY_SATURATION_G, type GatedValue } from './gaia-photometry-pure';
-import { atColour, photometry } from './photometry-fixture';
+import { PHOTOMETRY_REF, atColour, photometry, printedHipTable } from './photometry-fixture';
+import { GAIA_GSPC } from './gspc-source';
+import { HIP_PHOTOMETRY } from './hip-photometry-source';
+import { GAIA_APSIS } from '../record/gaia-apsis-source';
+import { SIMBAD_SPTYPE } from '../spectral/simbad-sptype-source';
+import { sourceRowRef } from '../../util/sources/row-ref-pure';
+
+const GSPC_REF = sourceRowRef(GAIA_GSPC, '1000');
+const HIP_REF = sourceRowRef(HIP_PHOTOMETRY, 7);
+const APSIS_REF = sourceRowRef(GAIA_APSIS, '1000');
+const SPECTRAL_REF = sourceRowRef(SIMBAD_SPTYPE, 3);
 
 const UNCALIBRATED = { kind: 'refused', reason: 'uncalibrated' } as const;
 const OUT_OF_RANGE = { kind: 'refused', reason: 'colour_out_of_range' } as const;
@@ -100,7 +110,7 @@ describe('gaiaBMinusV', () => {
 
 describe('gspcBMinusV', () => {
   const synthetic = (bMinusV: number, inValidatedRange = false) =>
-    ({ bMinusV, inValidatedRange });
+    ({ bMinusV, inValidatedRange, ref: GSPC_REF });
   const value = (bMinusV: number) => ({ kind: 'value', value: bMinusV });
 
   it('carries the measured colour bound, which is NOT the archive flag bound', () => {
@@ -140,16 +150,16 @@ describe('gspcBMinusV', () => {
 describe('resolveColourIndex cascade', () => {
   const sources = (overrides: Partial<Parameters<typeof resolveColourIndex>[0]> = {}) => ({
     photometry: null,
-    gspc: { bMinusV: 2.1, inValidatedRange: false },
-    printedHipBv: 1.2,
+    gspc: { bMinusV: 2.1, inValidatedRange: false, ref: GSPC_REF },
+    printedHipBv: printedHipTable([[7, 1.2]]).get(7)!,
     apsisTeff: null,
-    spectralCi: 1.4,
+    spectralCi: { value: 1.4, evidence: [SPECTRAL_REF] },
     ...overrides,
   });
 
   it('takes the Gaia relation when it applies, marked observed', () => {
     const r = resolveColourIndex(sources({ photometry: atColour(0.8) }));
-    expect(r).toEqual({ via: 'gaia_relation', value: expect.any(Number), refusals: [] });
+    expect(r).toEqual({ via: 'gaia_relation', value: expect.any(Number), evidence: [PHOTOMETRY_REF], refusals: [] });
     expect(r).toMatchObject({ value: valueOf(gaiaBMinusV(atColour(0.8))) });
     expect(ciIsObserved(r.via)).toBe(true);
   });
@@ -159,19 +169,19 @@ describe('resolveColourIndex cascade', () => {
     // outside the standardisation that ties it to the ground system, and
     // every corpus row carrying both prefers printed.
     expect(resolveColourIndex(sources({ photometry: atColour(2.5) }))).toMatchObject({
-      via: 'printed_hip_bv', value: 1.2,
+      via: 'printed_hip_bv', value: 1.2, evidence: [HIP_REF],
     });
     expect(ciIsObserved('printed_hip_bv')).toBe(true);
   });
 
   it('falls to the synthetic colour where no printed one exists', () => {
     expect(resolveColourIndex(sources({ photometry: atColour(2.5), printedHipBv: null })))
-      .toMatchObject({ via: 'gspc', value: 2.1 });
+      .toMatchObject({ via: 'gspc', value: 2.1, evidence: [GSPC_REF] });
     expect(ciIsObserved('gspc')).toBe(true);
   });
 
   it('skips a non-finite printed colour rather than propagating it', () => {
-    expect(resolveColourIndex(sources({ photometry: atColour(2.5), printedHipBv: NaN })))
+    expect(resolveColourIndex(sources({ photometry: atColour(2.5), printedHipBv: { value: NaN, ref: HIP_REF } })))
       .toMatchObject({ via: 'gspc', value: 2.1 });
   });
 
@@ -188,12 +198,12 @@ describe('resolveColourIndex cascade', () => {
   // time (companionCiIsObserved gates on the same contract).
   it('derives the spectral colour only for a no-Apsis star, marked intrinsic', () => {
     expect(resolveColourIndex(sources({ gspc: null, printedHipBv: null })))
-      .toEqual({ via: 'spectral_derived', value: 1.4, refusals: [] });
+      .toEqual({ via: 'spectral_derived', value: 1.4, evidence: [SPECTRAL_REF], refusals: [] });
     expect(ciIsObserved('spectral_derived')).toBe(false);
-    expect(resolveColourIndex(sources({ gspc: null, printedHipBv: null, apsisTeff: 5200 })))
+    expect(resolveColourIndex(sources({ gspc: null, printedHipBv: null, apsisTeff: { value: 5200, ref: APSIS_REF } })))
       .toEqual({
         via: 'none',
-        refusals: [{ tier: 'spectral_derived', reason: 'apsis_teff_renders' }],
+        refusals: [{ tier: 'spectral_derived', reason: 'apsis_teff_renders', ref: APSIS_REF }],
       });
   });
 
@@ -205,12 +215,12 @@ describe('resolveColourIndex cascade', () => {
 
   it('names every candidate it passed over, on whichever tier it lands', () => {
     expect(resolveColourIndex(sources({
-      photometry: atColour(3.5), printedHipBv: NaN, apsisTeff: 5200,
+      photometry: atColour(3.5), printedHipBv: { value: NaN, ref: HIP_REF }, apsisTeff: { value: 5200, ref: APSIS_REF },
     })).refusals).toEqual([
-      { tier: 'gaia_relation', reason: 'colour_out_of_range' },
-      { tier: 'printed_hip_bv', reason: 'non_finite' },
-      { tier: 'gspc', reason: 'colour_out_of_range' },
-      { tier: 'spectral_derived', reason: 'apsis_teff_renders' },
+      { tier: 'gaia_relation', reason: 'colour_out_of_range', ref: PHOTOMETRY_REF },
+      { tier: 'printed_hip_bv', reason: 'non_finite', ref: HIP_REF },
+      { tier: 'gspc', reason: 'colour_out_of_range', ref: GSPC_REF },
+      { tier: 'spectral_derived', reason: 'apsis_teff_renders', ref: APSIS_REF },
     ]);
   });
 });

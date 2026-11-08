@@ -1,7 +1,9 @@
 // System distance coherence as a lineage stage: its reason codes and the one serialiser over its verdicts. See README.md#coherence-lineage.
 
-import { paramsText, stageLineageLine, type LineageLine, type LineageParams, type LineageRow } from '../lineage/lineage-row-pure';
-import { LIVE, stageCodes, type CodeDeclaration } from '../lineage/reason-codes-pure';
+import {
+  evidenceTexts, paramsText, stageLineageLine, type LineageLine, type LineageParams, type LineageRow,
+} from '../lineage/lineage-row-pure';
+import { LIVE, stageCodes, type CodeDeclaration } from '../lineage/reason-codes/reason-codes-pure';
 import type { Star } from '../parse/stars-parse';
 import { sourceRowRefText } from '../../util/sources/row-ref-pure';
 import type { AnchorTier, CoherenceAnchor, MemberVerdict, SystemVerdict } from './system-coherence';
@@ -56,7 +58,7 @@ export function* coherenceLineageRows(verdicts: readonly SystemVerdict[], stars:
       stage: COHERENCE_LINEAGE.stage, key, role: 'outcome', code: COHERENCE_CODES.code(branch),
       params: paramsText(params as LineageParams),
       evidence: anchor === null || anchor.tier === 'inherited'
-        ? [] : [sourceRowRefText(anchor.ref)].filter((t) => t !== key),
+        ? [] : evidenceTexts(key, [sourceRowRefText(anchor.ref)]),
     };
   };
   const byIdx = new Map<number, LineageRow[]>();

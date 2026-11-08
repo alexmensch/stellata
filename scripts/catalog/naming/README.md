@@ -281,7 +281,7 @@ touch.
 
 ## Naming lineage
 
-The display-name pass is the sixth stage of the [lineage](../lineage/README.md)
+The display-name pass is the seventh stage of the [lineage](../lineage/README.md)
 contract (`naming-lineage-pure.ts`), after SID allocation, since the curated
 override keys on SIDs. `namingLineageRows` serialises each record's
 `NamedRecord` through an exhaustive `switch`:
@@ -304,3 +304,8 @@ override keys on SIDs. `namingLineageRows` serialises each record's
 
 The stage founds no record, so it writes no identity rows, and every code's
 effect is `none`.
+
+Measured 2026-11-05: 1,017,955 rows, one name row per record plus its refused
+tiers, letter and designation constellation (78 MB plain), 9.7 MB gzipped in
+2.7 s without a diff; `NAMING_LINEAGE_BUDGET` pins 10.6 MB and 28 s: a CI run
+with a diff, building the lines inside the window, took 18.9 s (2026-11-08).

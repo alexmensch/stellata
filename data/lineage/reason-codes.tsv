@@ -46,6 +46,31 @@ allocation.parked	allocation	park	live		7.1.8	A SID no object keeps any more sta
 allocation.reinstated	allocation	none	live		7.1.8	The object's same-as class reaches only one retired SID, which returns to service.
 allocation.resolved	allocation	none	live		7.1.8	The object's same-as class reaches one SID in service, which it keeps.
 allocation.retired	allocation	retire	live		7.1.8	A SID no object keeps any more leaves service under its upstream decision's code.
+brightness-colour.ci.gaia-relation	brightness-colour	none	live		7.1.15	B−V as the difference of the Gaia DR3 Table 5.9 G−V and G−B relations on the record's own photometry.
+brightness-colour.ci.gspc	brightness-colour	none	live		7.1.15	B−V from Gaia DR3 synthetic photometry of the record's own source, inside its measured colour bound.
+brightness-colour.ci.none	brightness-colour	none	live		7.1.15	No tier colours the record, so it bakes the solar B−V.
+brightness-colour.ci.printed-hip-bv	brightness-colour	none	live		7.1.15	The printed Hipparcos B−V of the record's own HIP (I/239).
+brightness-colour.ci.refused.apsis-teff-renders	brightness-colour	none	live		7.1.15	The spectral-class colour stands down: the shader colours the record from its Apsis Teff instead.
+brightness-colour.ci.refused.colour-out-of-range	brightness-colour	none	live		7.1.15	The record's Gaia BP−RP lies outside the range the colour tier holds over.
+brightness-colour.ci.refused.non-finite	brightness-colour	none	live		7.1.15	The printed Hipparcos B−V is not a finite number.
+brightness-colour.ci.refused.uncalibrated	brightness-colour	none	live		7.1.15	The record's Gaia photometry has a band missing or non-finite, or G is brighter than the saturation bound, so a Gaia colour does not apply.
+brightness-colour.ci.spectral-derived	brightness-colour	none	live		7.1.15	The intrinsic colour of the record's spectral class, for a record with no Apsis Teff.
+brightness-colour.dust.edenhofer2024.absmag-and-ci	brightness-colour	none	live		7.1.15	The Sol-to-star A_V through the Edenhofer 2024 (/data/papers/index.md#edenhofer2024) dust grid is subtracted from absmag, and A_V/R_V from the observed B−V.
+brightness-colour.dust.edenhofer2024.absmag-only	brightness-colour	none	live		7.1.15	The Sol-to-star A_V through the Edenhofer 2024 (/data/papers/index.md#edenhofer2024) dust grid is subtracted from absmag; the B−V is intrinsic, so it is left as it is.
+brightness-colour.spectral.curated	brightness-colour	none	live		7.1.15	The curated MK type: the record's own (Sol) or the hand-curated override for its HIP.
+brightness-colour.spectral.gspspec	brightness-colour	none	live		7.1.15	The Gaia DR3 ESP-ELS spectral letter for the record's own source, where no SIMBAD row classifies it.
+brightness-colour.spectral.none	brightness-colour	none	live		7.1.15	No tier classifies the record, so it renders as spectral type unknown.
+brightness-colour.spectral.refused.gaia-id-contradicts	brightness-colour	none	live		7.1.15	A SIMBAD row states a Gaia DR3 id other than the record's own, so it describes another star.
+brightness-colour.spectral.refused.unclassifiable	brightness-colour	none	live		7.1.15	A typed row's spectral string does not parse as a Morgan-Keenan class.
+brightness-colour.spectral.simbad	brightness-colour	none	live		7.1.15	SIMBAD's MK sp_type, on the first namespace of the ladder that reaches a typed row for the record.
+brightness-colour.v.curated	brightness-colour	none	live		7.1.15	Sol: the curated record's V.
+brightness-colour.v.gaia-riello	brightness-colour	none	live		7.1.15	Johnson V transformed from the record's own Gaia DR3 photometry through the Riello 2021 (/data/papers/index.md#riello2021) relation.
+brightness-colour.v.gliese	brightness-colour	none	live		7.1.15	The printed V/70A V of the record's own GJ, where no tier above answers.
+brightness-colour.v.none	brightness-colour	none	live		7.1.15	No V tier lights the record.
+brightness-colour.v.printed-hip	brightness-colour	none	live		7.1.15	The printed Hipparcos V of the record's own HIP (I/239), where the Gaia relation does not apply.
+brightness-colour.v.refused.colour-out-of-range	brightness-colour	none	live		7.1.15	The record's Gaia BP−RP lies outside the range the Riello relation is published over.
+brightness-colour.v.refused.uncalibrated	brightness-colour	none	live		7.1.15	The record's Gaia photometry has a band missing or non-finite, or G is brighter than the saturation bound, so the Riello relation does not apply.
+brightness-colour.v.tycho2	brightness-colour	none	live		7.1.15	Johnson V reduced from the record's own Tycho-2 BT and VT, where no tier above answers.
 coherence.anchor	coherence	none	live		7.1.12	The record is its WDS system's distance anchor, the best-tier member, and the system's snapped members move onto its distance.
 coherence.anchor.inconsistent	coherence	none	live		7.1.12	The record wins its system's anchor pick, but its catalogue distance contradicts its own parallax by more than 3 sigma and 20%, so the system is skipped.
 coherence.anchor.unplaced	coherence	none	live		7.1.12	The record wins its system's anchor pick but has no positive finite distance, so the system is skipped.

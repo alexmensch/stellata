@@ -1,8 +1,10 @@
 import { describe, it, expect } from 'vitest';
 
 import { parseGspcTsv } from './gspc-parse';
+import { GAIA_GSPC } from './gspc-source';
+import { sourceRowRef } from '../../util/sources/row-ref-pure';
 
-const FROM = { file: 'fixture.tsv', hint: 'h' };
+const FROM = { ...GAIA_GSPC, file: 'fixture.tsv', hint: 'h' };
 
 describe('gspc-parse / parseGspcTsv', () => {
   const GSPC = [
@@ -22,6 +24,7 @@ describe('gspc-parse / parseGspcTsv', () => {
     // The ids exceed Number.MAX_SAFE_INTEGER, so the key must stay a string.
     expect(m.get('4472832130942575872')?.bMinusV).toBeCloseTo(1.694035, 6);
     expect(m.get('36747057287093632')?.bMinusV).toBeCloseTo(0.665726, 6);
+    expect(m.get('36747057287093632')?.ref).toEqual(sourceRowRef(FROM, '36747057287093632'));
   });
 
   it('skips a row missing either band rather than entering a partial colour', () => {

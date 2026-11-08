@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import type { IdentityRow } from '../catalog/lineage/identity-pure';
 import { stageLineageLine, type LineageLine, type LineageRow } from '../catalog/lineage/lineage-row-pure';
-import { LIVE, codeEffects, stageCodes } from '../catalog/lineage/reason-codes-pure';
+import { LIVE, codeEffects, stageCodes } from '../catalog/lineage/reason-codes/reason-codes-pure';
 import { lineageAdmissions, lineageCauses } from './lineage-upstream-pure';
 
 const FIRST = stageCodes('first', {

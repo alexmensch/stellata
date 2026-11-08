@@ -88,6 +88,9 @@ import {
   type RvErrorBand,
 } from '../distance/radial-velocity/radial-velocity';
 import { avSolToStar, type DustGrid } from '../distance/dust/dust-deextinction-pure';
+import { GAIA_APSIS } from '../record/gaia-apsis-source';
+import type { BrightnessColour, DustStep } from '../photometry/brightness-colour-lineage-pure';
+import { sourceRowRef } from '../../util/sources/row-ref-pure';
 import { R_V } from '../../../src/astro-core/extinction/dust-raymarch-pure';
 import {
   emptySimbadValueIndex,
@@ -113,7 +116,7 @@ import {
   type CiVia,
 } from '../photometry/colour-index-pure';
 import type { GspcColour } from '../photometry/gspc-parse';
-import { printedByHip } from '../photometry/hip-photometry-parse-pure';
+import { printedByHip, type PrintedHipValue } from '../photometry/hip-photometry-parse-pure';
 import { emptyTallyPartition } from '../../util/counts/tally-pure';
 import type { ManifestRecord } from '../membership/membership-manifest-tsv';
 import type { CuratedRecords } from '../record/curated-records';
@@ -238,6 +241,13 @@ export interface Star {
   originKey: string;
 }
 
+/** One manifest row's decisions: its placement, and its brightness and colour
+ *  wherever the walk reached V. */
+export interface WalkedRow {
+  readonly placement: Placement;
+  readonly brightness: BrightnessColour | null;
+}
+
 /** Every reference table a readStars walk consumes, as one bundle.
  *
  *  `loadReadStarsInputs` assembles the production set and satisfies this whole
@@ -264,10 +274,10 @@ export interface ReadStarsOptions {
   /** Printed Johnson V per HIP — the V cascade's bright tier. Absent leaves
    *  every saturated row on the tier below, which shows up as vVia drift
    *  against the pinned count snapshot. */
-  hipVMag?: Map<number, number>;
+  hipVMag?: Map<number, PrintedHipValue>;
   /** Printed Johnson B−V per HIP — the ci cascade's printed tier, and the
    *  only measured colour reaching rows with no Gaia source at all. */
-  hipBv?: Map<number, number>;
+  hipBv?: Map<number, PrintedHipValue>;
   /** Printed Gliese 1991 (/data/papers/index.md#gliese1991) V/70A
    *  values keyed on the record's own `gl` — the V cascade's tier below
    *  Tycho-2, and the only one reaching the GJ-only cohort. Absent parks those rows. */
@@ -303,9 +313,8 @@ export function readStars(
     pairMemberParallax = emptyPairMemberParallaxIndex(),
     dustGrid = null,
   }: ReadStarsOptions,
-  /** Handed each manifest row's Placement, in walk order: what placement
-   *  lineage serialises. The walk keeps none of them. */
-  onPlacement: (placement: Placement) => void,
+  /** See README.md#per-row-pipeline. */
+  onRow: (row: WalkedRow) => void,
 ): {
   stars: Star[];
   stats: {
@@ -402,11 +411,11 @@ export function readStars(
 
   const printedVLookup = printedVLookups(hipVMag, directions.tycho2, gliese);
   const spectralSources: SpectralSources = {
-    simbad: simbadSpectral, apsis: apsisMap, sptypeOverrides,
+    simbad: simbadSpectral, sptypeOverrides,
   };
   // Every exit returns its row's Placement, so the compiler refuses one that
   // would drop a record from lineage.
-  const walk = (row: ManifestRecord): { placement: Placement; star: Star | null } => {
+  const walk = (row: ManifestRecord): WalkedRow & { star: Star | null } => {
     const { hip, gaiaSourceId } = row;
     const curated = curatedRecords(row);
     // Read off the manifest column, never re-derived: the binding is the one
@@ -470,7 +479,7 @@ export function readStars(
     );
     // Not a `dropped` gate: a park is a deliberate record-parity ledger entry (/docs/catalog-driver.md#61-record-parity).
     if (plxRes.via === 'none') {
-      return { placement: { kind: 'parked-parallax', key, ids, parallax: plxRes }, star: null };
+      return { placement: { kind: 'parked-parallax', key, ids, parallax: plxRes }, brightness: null, star: null };
     }
 
     // V through the Riello 2021 (/data/papers/index.md#riello2021)
@@ -488,7 +497,11 @@ export function readStars(
       curatedV: curated?.vMagnitude ?? null,
     });
     if (vRes.via === 'none') {
-      return { placement: { kind: 'parked-no-v', key, ids, parallax: plxRes }, star: null };
+      return {
+        placement: { kind: 'parked-no-v', key, ids, parallax: plxRes },
+        brightness: { kind: 'v-only', key, v: vRes },
+        star: null,
+      };
     }
 
     // Astrometric solution through the Gaia 5p → HIP2 → Tycho-2 → CNS5 →
@@ -505,7 +518,11 @@ export function readStars(
     // reaches — the SIMBAD values cohort is still keyed on the spine and holds
     // no row for them.
     if (direction.via === 'none') {
-      return { placement: { kind: 'parked-no-position', key, ids, parallax: plxRes, direction }, star: null };
+      return {
+        placement: { kind: 'parked-no-position', key, ids, parallax: plxRes, direction },
+        brightness: { kind: 'v-only', key, v: vRes },
+        star: null,
+      };
     }
     const dirRes = direction.value;
 
@@ -661,15 +678,16 @@ export function readStars(
     if (velClamped) velocityClamped++;
     if (!velZeroed && rvKmS !== null && rvKmS !== 0) rvApplied++;
 
+    const apsisRow = gaiaSourceId ? apsisMap.get(gaiaSourceId) : undefined;
+    const apsis = gaiaSourceId && apsisRow ? { value: apsisRow, ref: sourceRowRef(GAIA_APSIS, gaiaSourceId) } : null;
     const spectral = resolveSpectralInfo(
-      { ...simbadKeys, curated: curated?.spectral ?? null }, spectralSources,
+      { ...simbadKeys, curated: curated?.spectral ?? null, apsis }, spectralSources,
     );
     const spectInfo = spectral.via === 'none' ? SPECTRAL_UNKNOWN : spectral.value.info;
     spectralVia[spectral.via]++;
     if (spectral.via === 'simbad') spectralSimbadKey[spectral.value.namespace]++;
-    const apsisTeff = resolveApsisTeff(
-      gaiaSourceId ? apsisMap.get(gaiaSourceId) : null,
-    );
+    const apsisTeff = resolveApsisTeff(apsis?.value);
+    const citedApsisTeff = apsis === null || apsisTeff === null ? null : { value: apsisTeff, ref: apsis.ref };
 
     // B−V through the Gaia relation → printed I/239 B−V → synthetic
     // photometry → intrinsic spectral class, else solar. Printed above synthetic
@@ -681,9 +699,9 @@ export function readStars(
       photometry: gaiaRow,
       gspc,
       printedHipBv: printedByHip(hipBv, hip),
-      apsisTeff,
+      apsisTeff: citedApsisTeff,
       spectralCi: spectralClassColorIsDerivable(spectInfo)
-        ? spectralClassCi(spectInfo)
+        ? { value: spectralClassCi(spectInfo), evidence: spectral.via === 'none' ? [] : spectral.evidence }
         : null,
     });
     let ci = ciRes.via === 'none' ? SOLAR_BV_FALLBACK : ciRes.value;
@@ -697,10 +715,13 @@ export function readStars(
     // de-extincted (brighter) absmag. A spectral-derived or solar-fallback
     // ci is already intrinsic and must not be de-reddened (the same
     // contract companion-promotion's companionCiIsObserved gates on).
+    let dust: DustStep | null = null;
     if (dustGrid) {
       const av = avSolToStar(dustGrid, x, y, z);
+      const ciDereddened = ciIsObserved(ciRes.via);
       absmag -= av;
-      if (ciIsObserved(ciRes.via)) ci -= av / R_V;
+      if (ciDereddened) ci -= av / R_V;
+      dust = { av, ciDereddened };
     }
 
     const physRadius = physicalRadius(absmag, spectInfo, apsisTeff);
@@ -770,14 +791,15 @@ export function readStars(
         rv: rvRejected && rvRes.via !== 'none' ? { kind: 'rejected', rv: rvRes } : { kind: 'kept', rv: rvRes },
         velocityClamped: velClamped,
       },
+      brightness: { kind: 'shipped', key, v: vRes, spectral, ci: ciRes, dust },
       star,
     };
   };
 
   for (const row of rows) {
     total++;
-    const { placement, star } = walk(row);
-    onPlacement(placement);
+    const { placement, brightness, star } = walk(row);
+    onRow({ placement, brightness });
     const park = parkedRecord(placement);
     if (park !== null) parked.push(park);
     if (star !== null) stars.push(star);

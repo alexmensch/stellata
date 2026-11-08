@@ -335,8 +335,8 @@ carries the science framing.
 
 ### Coherence lineage
 
-The pass is the third stage of the [lineage](../lineage/README.md) contract
-(`coherence-lineage-pure.ts`), between placement and promotion.
+The pass is the fourth stage of the [lineage](../lineage/README.md) contract
+(`coherence-lineage-pure.ts`), between brightness-colour and promotion.
 `coherenceLineageRows` serialises each `SystemVerdict` through an exhaustive
 `switch`. A system's anchor gets `coherence.anchor`, or `anchor.inconsistent` /
 `anchor.unplaced` when the pass skips the system. Each member the system decides
@@ -351,3 +351,8 @@ The evidence is the row the anchor's tier rests on: its Gaia DR3 or Hipparcos-2
 astrometry row, or its Bailer-Jones posterior. The inherited tier cites none.
 Coherence founds no record, so it writes no identity rows, and every code's
 effect is `none`.
+
+Measured 2026-11-05: one row per record that exists before promotion mints
+companions, all but about 4,600 of them `not-applicable` (66 MB plain),
+7.5 MB gzipped in 0.7 s without a diff; `COHERENCE_LINEAGE_BUDGET` pins
+8.2 MB and 15 s.

@@ -19,7 +19,7 @@ import {
   type Cns5Astrometry,
 } from '../classic-ids/classic-ids-parse';
 import type { SimbadAstrometry } from '../simbad/simbad-values-parse';
-import type { CitedCascadeResult, CitedRefusal, UniformValues } from '../cascade-result';
+import type { CascadeResult, CascadeRefusal, UniformValues } from '../cascade-result';
 
 export const GAIA_DR3_REF_EPOCH = 2016.0;
 export const HIP2_REF_EPOCH = 1991.25;
@@ -97,10 +97,10 @@ export interface DirectionSolution {
 
 /** A Gaia 5p solution passed over: its PM disagrees with HIP2's (orbit
  *  corruption), or the fit is 2p and HIP2 covers the star. */
-export type DirectionRefusal = CitedRefusal<'gaia_5p', 'pm_disagrees_with_hip2' | 'no_5p_solution'>;
+export type DirectionRefusal = CascadeRefusal<'gaia_5p', 'pm_disagrees_with_hip2' | 'no_5p_solution'>;
 
 /** `none` is a record no tier states a position for — a /docs/catalog-driver.md#61-record-parity park. */
-export type DirectionResolution = CitedCascadeResult<
+export type DirectionResolution = CascadeResult<
   UniformValues<DirectionVia, DirectionSolution>,
   DirectionRefusal
 >;

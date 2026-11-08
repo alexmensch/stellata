@@ -35,8 +35,8 @@ export interface StageLineageRun<F extends string, S extends string> {
   readonly inputs: FileHashes;
   /** The stage's own file: the one its diff reads. */
   readonly diffed: F;
-  /** Each row's `stageLineageLine`, in any order. */
-  readonly lines: readonly LineageLine[];
+  /** Each row's `stageLineageLine`, in any order; called once, inside the timed window. */
+  readonly lines: () => readonly LineageLine[];
   /** Handed `lines` in lineage order. */
   readonly render: (sorted: readonly LineageLine[]) => Readonly<Record<F, string | Uint8Array>>;
   /** Built only when a diff runs, from the baseline directory it reads. */
@@ -161,7 +161,8 @@ export function stageLineage<F extends string, S extends string>(
     const previous = readStageHeader(run.layout.previous, run.spec);
     return { source, plan: planBaseline(previous, source, baselineContext(run), run.argv.includes(ACCEPT_ANY_BASELINE_FLAG)) };
   });
-  const sorted = clock.lap('sort', () => sortLineageLines(run.lines));
+  const lines = clock.lap('lines', run.lines);
+  const sorted = clock.lap('sort', () => sortLineageLines(lines));
   let changes: KeyChange[] | null = null;
   let diff: Uint8Array | null = null;
   if (plan.kind === 'diff') {

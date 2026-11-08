@@ -78,11 +78,14 @@ import {
 import { PROMOTION_CODES, PROMOTION_LINEAGE_BUDGET, promotionLineage } from './companions/promotion-lineage-pure';
 import { identityText } from './lineage/identity-pure';
 import { LINEAGE_LAYOUT } from './lineage/lineage-layout-pure';
+import { LineSpill } from './lineage/line-spill';
 import {
   lineageLineCode, stageLineageLine, stageLineageText, type LineageLine,
 } from './lineage/lineage-row-pure';
-import { codeEffects } from './lineage/reason-codes-pure';
-import { stageLineage, upstreamLineage } from './lineage/stage-lineage';
+import { codeEffects, type StageCodes } from './lineage/reason-codes/reason-codes-pure';
+import { stageLineage, upstreamLineage, type LineageBudget } from './lineage/stage-lineage';
+import type { LineageInvariant } from './lineage/lineage-invariant-pure';
+import { BRIGHTNESS_COLOUR_CODES, BRIGHTNESS_COLOUR_LINEAGE_BUDGET, brightnessColourLineageLines } from './photometry/brightness-colour-lineage-pure';
 import {
   buildCatalogRowIndexMap,
   buildComponentDesignations,
@@ -163,7 +166,7 @@ import { loadStoredEdges } from '../sid/stored-edges';
 import { CATALOG_PARTITION } from '../../src/catalog-format/pipeline-outputs/data-files';
 import {
   PROMOTION_LINEAGE, PLACEMENT_LINEAGE, COHERENCE_LINEAGE, ALLOCATION_LINEAGE, ALLOCATION_SIDS_STEM, MEMBERSHIP_LINEAGE,
-  NAMING_LINEAGE,
+  NAMING_LINEAGE, BRIGHTNESS_COLOUR_LINEAGE, type StageLineageSpec,
 } from '../../src/catalog-format/pipeline-outputs/lineage-files';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -177,36 +180,58 @@ const EXPECTED_OUTLIERS = resolve(
   'distance/refinement/build-distance-outliers-expected.json',
 );
 
-// A function of its own so the placement lines are unreachable once it returns:
-// inlined into main, they outlive the walk and the build runs out of heap.
-function walkManifest(inputs: ReadStarsOptions, stepInputs: FileHashes) {
-  const lines: LineageLine[] = [];
-  const manifestFounded = new Set<string>();
-  const manifest = function* () {
-    for (const r of artifactRows(MEMBERSHIP_MANIFEST)) {
-      for (const d of manifestDesignations(r)) manifestFounded.add(d);
-      yield r;
-    }
-  };
-  const { stars, stats } = readStars(manifest(), inputs, (placement) => {
-    for (const line of placementLineageLines(placement)) lines.push(line);
-  });
-  const parkedLedger = parkedLedgerTsv(lines);
-  const placementRemovals = lines.filter((line) => PLACEMENT_EFFECTS.get(lineageLineCode(line)) !== 'none');
-  const placementEmission = stageLineage({
+/** A build:catalog stage whose lineage is one file named for the stage. */
+function catalogStageLineage<S extends string>(
+  spec: StageLineageSpec<S, S>, codes: StageCodes<string, NoInfer<S>>, lines: () => readonly LineageLine[],
+  budget: LineageBudget, invariants: readonly LineageInvariant[], stepInputs: FileHashes,
+) {
+  return stageLineage({
     layout: LINEAGE_LAYOUT,
-    spec: PLACEMENT_LINEAGE,
+    spec,
     inputs: stepInputs,
-    diffed: 'placement',
+    diffed: spec.stage,
     lines,
-    render: (sorted) => ({ placement: stageLineageText(PLACEMENT_CODES, sorted) }),
+    render: (sorted) => ({ [spec.stage]: stageLineageText(codes, sorted) }) as Record<S, Uint8Array>,
     joins: () => [],
-    budget: PLACEMENT_LINEAGE_BUDGET,
-    invariants: PLACEMENT_INVARIANTS,
+    budget,
+    invariants,
     argv: process.argv.slice(2),
     upstream: UPSTREAM_LINEAGE,
   });
-  return { stars, stats, parkedLedger, placementEmission, manifestFounded, placementRemovals };
+}
+
+// A function of its own so the walk's lines are unreachable once it returns:
+// inlined into main, they outlive the walk and the build runs out of heap.
+function walkManifest(inputs: ReadStarsOptions, stepInputs: FileHashes) {
+  let placementLines: LineageLine[] = [];
+  const brightnessSpill = new LineSpill();
+  try {
+    const manifestFounded = new Set<string>();
+    const manifest = function* () {
+      for (const r of artifactRows(MEMBERSHIP_MANIFEST)) {
+        for (const d of manifestDesignations(r)) manifestFounded.add(d);
+        yield r;
+      }
+    };
+    const { stars, stats } = readStars(manifest(), inputs, ({ placement, brightness }) => {
+      for (const line of placementLineageLines(placement)) placementLines.push(line);
+      if (brightness !== null) for (const line of brightnessColourLineageLines(brightness)) brightnessSpill.push(line);
+    });
+    const parkedLedger = parkedLedgerTsv(placementLines);
+    const placementRemovals = placementLines.filter((line) => PLACEMENT_EFFECTS.get(lineageLineCode(line)) !== 'none');
+    const placementEmission = catalogStageLineage(
+      PLACEMENT_LINEAGE, PLACEMENT_CODES, () => placementLines, PLACEMENT_LINEAGE_BUDGET, PLACEMENT_INVARIANTS, stepInputs,
+    );
+    // Released before brightness-colour's lines are read back, or both stages' lines are held at once.
+    placementLines = [];
+    const brightnessEmission = catalogStageLineage(
+      BRIGHTNESS_COLOUR_LINEAGE, BRIGHTNESS_COLOUR_CODES, () => brightnessSpill.lines(), BRIGHTNESS_COLOUR_LINEAGE_BUDGET, [],
+      stepInputs,
+    );
+    return { stars, stats, parkedLedger, placementEmission, brightnessEmission, manifestFounded, placementRemovals };
+  } finally {
+    brightnessSpill.dispose();
+  }
 }
 
 const PLACEMENT_EFFECTS = codeEffects([PLACEMENT_CODES]);
@@ -214,36 +239,18 @@ const PLACEMENT_EFFECTS = codeEffects([PLACEMENT_CODES]);
 // A function of its own so its line per record is unreachable once it returns:
 // inlined into main, the lines outlive promotion and raise the build's peak heap.
 function coherenceLineage(verdicts: readonly SystemVerdict[], stars: readonly Star[], stepInputs: FileHashes) {
-  return stageLineage({
-    layout: LINEAGE_LAYOUT,
-    spec: COHERENCE_LINEAGE,
-    inputs: stepInputs,
-    diffed: 'coherence',
-    lines: coherenceLineageLines(verdicts, stars),
-    render: (sorted) => ({ coherence: stageLineageText(COHERENCE_CODES, sorted) }),
-    joins: () => [],
-    budget: COHERENCE_LINEAGE_BUDGET,
-    invariants: [],
-    argv: process.argv.slice(2),
-    upstream: UPSTREAM_LINEAGE,
-  });
+  return catalogStageLineage(
+    COHERENCE_LINEAGE, COHERENCE_CODES, () => coherenceLineageLines(verdicts, stars), COHERENCE_LINEAGE_BUDGET, [],
+    stepInputs,
+  );
 }
 
 // A function of its own so its lines are unreachable once it returns, as coherence's are.
 function namingLineage(records: readonly NamedRecord[], stars: readonly Star[], stepInputs: FileHashes) {
-  return stageLineage({
-    layout: LINEAGE_LAYOUT,
-    spec: NAMING_LINEAGE,
-    inputs: stepInputs,
-    diffed: 'naming',
-    lines: namingLineageLines(records, stars, CONSTELLATIONS),
-    render: (sorted) => ({ naming: stageLineageText(NAMING_CODES, sorted) }),
-    joins: () => [],
-    budget: NAMING_LINEAGE_BUDGET,
-    invariants: NAMING_INVARIANTS,
-    argv: process.argv.slice(2),
-    upstream: UPSTREAM_LINEAGE,
-  });
+  return catalogStageLineage(
+    NAMING_LINEAGE, NAMING_CODES, () => namingLineageLines(records, stars, CONSTELLATIONS), NAMING_LINEAGE_BUDGET,
+    NAMING_INVARIANTS, stepInputs,
+  );
 }
 
 function parkedLedgerTsv(placementLines: readonly LineageLine[]): string {
@@ -490,7 +497,7 @@ export async function main() {
   console.log(`Reading ${MEMBERSHIP_MANIFEST.file}...`);
   const t0 = Date.now();
   const {
-    stars, stats, parkedLedger, placementEmission, manifestFounded, placementRemovals,
+    stars, stats, parkedLedger, placementEmission, brightnessEmission, manifestFounded, placementRemovals,
   } = walkManifest(inputs, inputHashesAtStart);
   console.log(`  parsed ${stats.total} rows in ${Date.now() - t0}ms`);
   console.log(`  kept ${stars.length} stars; parked ${stats.parked.length}`);
@@ -1273,7 +1280,7 @@ export async function main() {
     spec: PROMOTION_LINEAGE,
     inputs: inputHashesAtStart,
     diffed: 'promotion',
-    lines: promotionLines,
+    lines: () => promotionLines,
     render: (sorted) => ({
       promotion: stageLineageText(PROMOTION_CODES, sorted),
       'promotion.identity': identityText(promotionIdentity),
@@ -1289,7 +1296,7 @@ export async function main() {
     spec: ALLOCATION_LINEAGE,
     inputs: inputHashesAtStart,
     diffed: 'allocation',
-    lines: allocationLineageRows(sidObjects, allocation).map((row) => stageLineageLine(ALLOCATION_CODES, row)),
+    lines: () => allocationLineageRows(sidObjects, allocation).map((row) => stageLineageLine(ALLOCATION_CODES, row)),
     render: (sorted) => ({
       allocation: stageLineageText(ALLOCATION_CODES, sorted),
       [ALLOCATION_SIDS_STEM]: allocationSidsText(allocationSidRows(sidObjects, allocation.outcomes)),
@@ -1309,6 +1316,7 @@ export async function main() {
     parkedLedger,
     simbadSourcedDistances,
     ...placementEmission.files,
+    ...brightnessEmission.files,
     ...coherenceEmission.files,
     ...lineage.files,
     ...allocationLineage.files,
@@ -1316,7 +1324,7 @@ export async function main() {
     ...registryTexts(CATALOG_PARTITION, allocation.minted, allocation.events),
   };
   const members = new Map([
-    ...chunks, ...placementEmission.members, ...coherenceEmission.members, ...lineage.members, ...allocationLineage.members,
+    ...chunks, ...placementEmission.members, ...brightnessEmission.members, ...coherenceEmission.members, ...lineage.members, ...allocationLineage.members,
     ...namingEmission.members,
   ]);
 
@@ -1325,7 +1333,7 @@ export async function main() {
     files,
     members,
     checks: [
-      ...placementEmission.checks, ...coherenceEmission.checks, ...lineage.checks, ...allocationLineage.checks,
+      ...placementEmission.checks, ...brightnessEmission.checks, ...coherenceEmission.checks, ...lineage.checks, ...allocationLineage.checks,
       ...namingEmission.checks,
       buildCountsCheck({ ...counts, solIndex }), distanceOutliersCheck(stars),
       heap.check(),

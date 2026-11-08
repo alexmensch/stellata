@@ -272,6 +272,15 @@ whose target carries no SID; a new or reappearing object no stage admits.
 `tests/sid-ledger-guard.test.ts` checks every event row's code is in the
 list and declares that effect.
 
+Allocation, measured 2026-11-01: 980,151 rows (979,712 objects plus 439
+parked SIDs, 62.6 MB plain) and 979,712 key → SID rows (29.1 MB), 17.6 MB
+gzipped in 4.7 s without a diff; `ALLOCATION_LINEAGE_BUDGET` pins 19.3 MB and
+20 s: a CI run with a diff took 13.2 s (2026-11-06). The
+sibling allocation stages, measured 2026-11-05: 96 cloud rows in 1,455 bytes
+and 123 Local Group rows in 1,720 bytes gzipped, identity files included,
+each in about 0.1 s; `SIBLING_LINEAGE_BUDGET` (`sibling-allocation.ts`) pins
+1,900 bytes and 5 s for either.
+
 ## Designation extraction — where each namespace comes from
 
 `catalogRecordDesignations` (`catalog-designations.ts`) owns the catalog

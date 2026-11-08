@@ -6,7 +6,7 @@ import { beforeAll, describe, expect, it } from 'vitest';
 
 import { MULTIPLES_TSV } from '../../binaries/multiples-tsv';
 import { CNS5 as CNS5_SOURCE } from '../../catalog/classic-ids/cns5-source';
-import { REASON_CODES } from '../../catalog/lineage/reason-codes-tsv';
+import { REASON_CODES } from '../../catalog/lineage/reason-codes/reason-codes-tsv';
 import { MEMBERSHIP_MANIFEST } from '../../catalog/membership/membership-manifest-tsv';
 import { entryClosure, packageScripts } from '../../util/import-closure';
 import { LAUNCHER } from '../../util/import-closure-pure';

@@ -8,7 +8,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
-import { REASON_CODES } from '../scripts/catalog/lineage/reason-codes-tsv';
+import { REASON_CODES } from '../scripts/catalog/lineage/reason-codes/reason-codes-tsv';
 import { fileAtMergeBase } from '../scripts/util/git-provenance';
 import { REPO_ROOT } from '../scripts/util/paths';
 import { artifactText, isReadable, readArtifact } from '../scripts/util/sources/source';

@@ -13,6 +13,8 @@ import {
   weighBinding,
 } from './binding-gate-pure';
 import { NO_PRINTED_V } from '../../photometry/photometry-fixture';
+import { HIP_PHOTOMETRY } from '../../photometry/hip-photometry-source';
+import { sourceRowRef } from '../../../util/sources/row-ref-pure';
 
 const FROM = { file: 'fixture.tsv', hint: 'h' };
 
@@ -22,7 +24,7 @@ describe('weighBinding', () => {
   const evidence = bindingEvidence(
     new Map([[TOLIMAN_BAD_SRC, 20.95], ['777', 1.6]]), null, NO_PRINTED_V, new Set(['nullg']),
   );
-  const printedAt = (vMag: number) => ({ vVia: 'printed_hip' as const, vMag, key: 1 });
+  const printedAt = (vMag: number) => ({ vVia: 'printed_hip' as const, vMag, key: 1, ref: sourceRowRef(HIP_PHOTOMETRY, 1) });
 
   it('rejects a candidate fainter in G than the printed V beyond the gate', () => {
     const v = weighBinding(TOLIMAN_BAD_SRC, { hip: null, printedV: printedAt(1.33) }, evidence);
