@@ -54,6 +54,10 @@ scripts/binaries/
                                   catalogue read through its declaration,
                                   then the Stage 1 passes, as a frozen
                                   ReferenceCatalogs. Own README.
+  resolve/                        Stage 2 in TypeScript: the cascade, the
+                                  identity propagations and the binding
+                                  audit, as frozen DecomposedPairs; the
+                                  spot-check's port. Own README.
   parsers.py                      Row dataclasses + parse functions for every
                                   reference catalogue (Stage 1).
   indices.py                      IdentifierIndices builder (HIP/Tyc → Gaia,
@@ -182,6 +186,9 @@ scripts/binaries/
                                   data/binaries/spot_check_ground_truth.tsv.
                                   Its own CI check; also run locally before
                                   merging any Stage 2-7 change (~20 s).
+                                  build-binaries.test.ts runs the same
+                                  check over the TS Stages 1-2
+                                  (resolve/README.md#the-spot-check).
   probe-blank-components-tail.py  Read-only instrumentation for the blank→AB
                                   ingest decision. Touches nothing.
   <module>.test.py                stdlib unittest pins co-located per source

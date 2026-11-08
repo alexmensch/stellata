@@ -1,0 +1,302 @@
+// The Stage 2 cascade's tiers: ORB6 HIP, AT-HYG-native, SIMBAD cross-ID, CCDM sibling, AT-HYG position. See README.md.
+
+import type { SkyPosition } from '../../../src/astro-core/equatorial-basis';
+import {
+  canonicalCompLetter, componentKey, pairComponentTokens, pairRowKey, splitComponents, type ComponentKey, type PairRowKey,
+} from '../component-tokens-pure';
+import type { AthygRow } from '../load/athyg-pure';
+import type { IdentifierIndices } from '../load/indices-pure';
+import type { SimbadWdsXid } from '../load/simbad-pure';
+import type { Orb6Entry, WdsPair } from '../load/wds-pure';
+import {
+  WDS_PRECISE_COORD_EPOCH, chordSq, chordSqForTolerance, positionsWithin, predictSecondaryPosition, propagatePosition,
+} from '../sky-geometry-pure';
+import { athygPositionAtEpoch, pairAthygMatches } from './athyg-match-pure';
+import {
+  drafts, findOwningPair, pairsByDiscoverer, unresolvedComponent, type Draft, type ResolvedComponent,
+} from './components-pure';
+import { buildSystemHipClaims, claimHip, hipClaimedByDisjointLetter, tokensShareIdentity } from './sibling-identity-pure';
+
+/** A sibling-identity rejection, one per candidate refused. */
+export interface SiblingRejection {
+  readonly tier: SiblingRejectionTier;
+  readonly wdsId: string;
+  readonly component: string;
+  readonly hip: number;
+}
+export const SIBLING_REJECTION_TIERS = ['ccdm_sibling_owned', 'athyg_match_sibling_claimed'] as const;
+export type SiblingRejectionTier = (typeof SIBLING_REJECTION_TIERS)[number];
+
+export function groupOrb6ByPair(orb6: readonly Orb6Entry[]): ReadonlyMap<PairRowKey, readonly Orb6Entry[]> {
+  const out = new Map<PairRowKey, Orb6Entry[]>();
+  for (const e of orb6) {
+    const key = pairRowKey(e.wdsId, e.components);
+    const bucket = out.get(key);
+    if (bucket) bucket.push(e);
+    else out.set(key, [e]);
+  }
+  return out;
+}
+
+function gaiaFromAthygViaHip(hip: number, indices: IdentifierIndices): string | null {
+  return indices.hipToAthyg.get(hip)?.gaia ?? null;
+}
+
+/** ε Equ's ORB6 row lists HIP 103579, ~40° away, for its HIP 103569: 5′
+ *  clears any PM / epoch residual and is far inside the smallest such typo. */
+export const ORB6_HIP_COORD_SANITY_TOLERANCE_ARCSEC = 300.0;
+
+/** The HIP's AT-HYG row, else its Gaia source, at the WDS coordinate epoch. */
+function hipSkyPosition(hip: number, indices: IdentifierIndices): SkyPosition | null {
+  const row = indices.hipToAthyg.get(hip);
+  if (row !== undefined) return athygPositionAtEpoch(row, WDS_PRECISE_COORD_EPOCH);
+  const gaia = indices.hipToGaia.get(hip);
+  const astro = gaia === undefined ? undefined : indices.srcToAstrometry.get(gaia);
+  if (astro === undefined) return null;
+  return propagatePosition(
+    { raDeg: astro.raDeg, decDeg: astro.decDeg },
+    { pmRaMasyr: astro.pmraMasyr, pmDecMasyr: astro.pmdecMasyr },
+    astro.refEpoch, WDS_PRECISE_COORD_EPOCH,
+  );
+}
+
+/** Only a positive mismatch refutes: no pair coord or no HIP position trusts ORB6. */
+function orb6HipMatchesPairCoord(hip: number, pair: WdsPair, indices: IdentifierIndices): boolean {
+  if (pair.precise === null) return true;
+  const pos = hipSkyPosition(hip, indices);
+  return pos === null || positionsWithin(pos, pair.precise, ORB6_HIP_COORD_SANITY_TOLERANCE_ARCSEC);
+}
+
+/** The HIP-anchored prefix: `orb6_hip` (primaries only — ORB6's one HIP per
+ *  row is the primary's), then `athyg_gaia_native` through the HIP. A HIP
+ *  failing the coordinate check is dropped outright, so it rides no later
+ *  tier either. Unresolved keeps the first surviving HIP for Stage 3. */
+export function resolveComponent(
+  pair: WdsPair, component: string, isPrimary: boolean,
+  orb6ForPair: readonly Orb6Entry[], indices: IdentifierIndices,
+): ResolvedComponent {
+  const base = unresolvedComponent(pair, component, isPrimary);
+  const candidates: number[] = [];
+  const hdByHip = new Map<number, number | null>();
+  if (isPrimary) {
+    for (const e of orb6ForPair) {
+      if (e.hip === null || !orb6HipMatchesPairCoord(e.hip, pair, indices)) continue;
+      candidates.push(e.hip);
+      if (!hdByHip.has(e.hip)) hdByHip.set(e.hip, e.hd);
+      const gaia = indices.hipToGaia.get(e.hip);
+      if (gaia !== undefined) return { ...base, gaiaSourceId: gaia, resolveVia: 'orb6_hip', hip: e.hip, hd: hdByHip.get(e.hip)! };
+    }
+  }
+  for (const hip of candidates) {
+    const gaia = gaiaFromAthygViaHip(hip, indices);
+    if (gaia !== null) return { ...base, gaiaSourceId: gaia, resolveVia: 'athyg_gaia_native', hip, hd: hdByHip.get(hip)! };
+  }
+  return candidates.length === 0 ? base : { ...base, hip: candidates[0], hd: hdByHip.get(candidates[0])! };
+}
+
+/** A SIMBAD cross-ID for a still-unbound component: its DR3 source binds as
+ *  `simbad_xid`; a HIP with no source (α Cen's saturation gap) binds the HIP only. */
+export function resolveViaSimbad(
+  components: readonly ResolvedComponent[], xids: ReadonlyMap<ComponentKey, SimbadWdsXid>,
+): ResolvedComponent[] {
+  const out = drafts(components);
+  for (const c of out) {
+    if (c.gaiaSourceId !== null) continue;
+    const xid = xids.get(componentKey(c.wdsId, c.component));
+    if (xid === undefined) continue;
+    if (xid.gaiaSourceId !== null) {
+      c.gaiaSourceId = xid.gaiaSourceId;
+      c.resolveVia = 'simbad_xid';
+      if (c.hip === null && xid.hip !== null) c.hip = xid.hip;
+    } else if (xid.hip !== null && c.hip === null) {
+      c.hip = xid.hip;
+    }
+  }
+  return out;
+}
+
+/** CCDM's candidates are a system's few HIPs, so a window wider than the
+ *  position tier's stays unambiguous and absorbs AT-HYG's residual PM error. */
+export const CCDM_POSITION_MATCH_TOLERANCE_ARCSEC = 10.0;
+
+/** The binding audit's runner-up ratio, so a near-tie never rejects. */
+export const CCDM_SIBLING_OWNERSHIP_DECISIVENESS = 2.0;
+
+/** wds_id → letter → its best-known position: a primary's precise coord
+ *  over a (ρ, θ)-predicted secondary. ρ = 0 predicts nothing. */
+export function buildSystemLetterPositions(
+  pairs: readonly WdsPair[],
+): ReadonlyMap<string, ReadonlyMap<string, SkyPosition>> {
+  const out = new Map<string, Map<string, SkyPosition>>();
+  const predicted = new Set<string>();
+  for (const pair of pairs) {
+    if (pair.precise === null) continue;
+    const tokens = pairComponentTokens(pair.components);
+    if (tokens === null) continue;
+    const [primary, secondary] = tokens;
+    let letters = out.get(pair.wdsId);
+    if (!letters) out.set(pair.wdsId, (letters = new Map()));
+    const primaryKey = componentKey(pair.wdsId, primary);
+    if (!letters.has(primary) || predicted.has(primaryKey)) {
+      letters.set(primary, pair.precise);
+      predicted.delete(primaryKey);
+    }
+    if (!letters.has(secondary) && pair.rhoLast !== null && pair.thetaLast !== null && pair.rhoLast > 0) {
+      letters.set(secondary, predictSecondaryPosition(pair.precise, pair.rhoLast, pair.thetaLast));
+      predicted.add(componentKey(pair.wdsId, secondary));
+    }
+  }
+  return out;
+}
+
+function siblingLetterOwnsCandidate(
+  cand: SkyPosition, queryChordSq: number, token: string, partner: string,
+  letterPositions: ReadonlyMap<string, SkyPosition>,
+): boolean {
+  const decisivenessSq = CCDM_SIBLING_OWNERSHIP_DECISIVENESS * CCDM_SIBLING_OWNERSHIP_DECISIVENESS;
+  for (const [letter, pos] of letterPositions) {
+    if (tokensShareIdentity(letter, token) || tokensShareIdentity(letter, partner)) continue;
+    if (chordSq(pos, cand) * decisivenessSq < queryChordSq) return true;
+  }
+  return false;
+}
+
+interface CcdmQuery {
+  readonly target: SkyPosition;
+  readonly candidates: readonly number[];
+  readonly wdsId: string;
+  readonly token: string;
+  readonly partner: string;
+}
+
+/** The candidate HIP nearest the target, skipping one a disjoint letter owns
+ *  by geometry or by an existing binding. */
+function ccdmCandidateHip(
+  q: CcdmQuery, indices: IdentifierIndices, letterPositions: ReadonlyMap<string, SkyPosition> | undefined,
+  claims: ReturnType<typeof buildSystemHipClaims>, rejected: SiblingRejection[],
+): number | null {
+  const threshold = chordSqForTolerance(CCDM_POSITION_MATCH_TOLERANCE_ARCSEC);
+  let bestHip: number | null = null;
+  let best = Infinity;
+  for (const hip of q.candidates) {
+    const row = indices.hipToAthyg.get(hip);
+    if (row === undefined) continue;
+    const cand = athygPositionAtEpoch(row, WDS_PRECISE_COORD_EPOCH);
+    const d = chordSq(cand, q.target);
+    if (d > threshold) continue;
+    const owned = (letterPositions !== undefined && siblingLetterOwnsCandidate(cand, d, q.token, q.partner, letterPositions))
+      || hipClaimedByDisjointLetter(claims, q.wdsId, hip, q.token, q.partner);
+    if (owned) {
+      rejected.push({ tier: 'ccdm_sibling_owned', wdsId: q.wdsId, component: q.token, hip });
+      continue;
+    }
+    if (d < best) {
+      best = d;
+      bestHip = hip;
+    }
+  }
+  return bestHip;
+}
+
+/** Binds the HIP if none is bound yet; a Gaia source through it tags `ccdm_hip`. */
+function bindCcdmHip(c: Draft, hip: number, indices: IdentifierIndices): void {
+  if (c.hip === null) c.hip = hip;
+  const gaia = indices.hipToGaia.get(hip) ?? gaiaFromAthygViaHip(hip, indices);
+  if (gaia !== null) {
+    c.gaiaSourceId = gaia;
+    c.resolveVia = 'ccdm_hip';
+  }
+}
+
+/** The CCDM-sibling tier: the system's CCDM HIPs, nearest the primary's coord
+ *  and then the secondary's predicted position, the primary's HIP excluded. A
+ *  component already carrying one of them keeps it. ρ = 0 secondaries are
+ *  skipped: their prediction sits on the primary. */
+export function resolveViaCcdm(
+  components: readonly ResolvedComponent[], pairs: readonly WdsPair[], indices: IdentifierIndices,
+): { components: ResolvedComponent[]; rejected: readonly SiblingRejection[] } {
+  const out = drafts(components);
+  const rejected: SiblingRejection[] = [];
+  if (indices.ccdmToHips.size === 0) return { components: out, rejected };
+  const index = pairsByDiscoverer(pairs);
+  const letterPositions = buildSystemLetterPositions(pairs);
+  const claims = buildSystemHipClaims(out);
+  const primaryHipByPair = new Map<string, number>();
+  const pairKey = (c: Draft, p: WdsPair): string => `${c.wdsId}\t${c.discoverer}\t${p.components}`;
+
+  for (const c of out) {
+    if (c.gaiaSourceId !== null || !c.isPrimary) continue;
+    const pair = findOwningPair(c, index);
+    if (pair === null || pair.precise === null) continue;
+    const candidates = indices.ccdmToHips.get(pair.wdsId);
+    if (!candidates || candidates.length === 0) continue;
+    if (c.hip !== null && candidates.includes(c.hip)) {
+      primaryHipByPair.set(pairKey(c, pair), c.hip);
+      bindCcdmHip(c, c.hip, indices);
+      continue;
+    }
+    const [, partner] = pairComponentTokens(pair.components)!;
+    const hip = ccdmCandidateHip(
+      { target: pair.precise, candidates, wdsId: c.wdsId, token: c.component, partner },
+      indices, letterPositions.get(c.wdsId), claims, rejected,
+    );
+    if (hip === null) continue;
+    primaryHipByPair.set(pairKey(c, pair), hip);
+    bindCcdmHip(c, hip, indices);
+    claimHip(claims, c.wdsId, hip, c.component);
+  }
+
+  for (const c of out) {
+    if (c.gaiaSourceId !== null || c.isPrimary) continue;
+    const pair = findOwningPair(c, index);
+    if (pair === null || pair.precise === null || pair.rhoLast === null || pair.thetaLast === null || pair.rhoLast <= 0) {
+      continue;
+    }
+    const candidates = indices.ccdmToHips.get(pair.wdsId);
+    if (!candidates || candidates.length === 0) continue;
+    const primaryHip = primaryHipByPair.get(pairKey(c, pair));
+    const narrowed = candidates.filter((h) => h !== primaryHip);
+    if (narrowed.length === 0) continue;
+    if (c.hip !== null && narrowed.includes(c.hip)) {
+      bindCcdmHip(c, c.hip, indices);
+      continue;
+    }
+    const [primaryToken] = splitComponents(pair.components)!;
+    const hip = ccdmCandidateHip(
+      {
+        target: predictSecondaryPosition(pair.precise, pair.rhoLast, pair.thetaLast),
+        candidates: narrowed, wdsId: c.wdsId,
+        token: canonicalCompLetter(primaryToken, c.component), partner: primaryToken,
+      },
+      indices, letterPositions.get(c.wdsId), claims, rejected,
+    );
+    if (hip === null) continue;
+    bindCcdmHip(c, hip, indices);
+    claimHip(claims, c.wdsId, hip, c.component);
+  }
+  return { components: out, rejected };
+}
+
+export function resolveViaPosition(
+  components: readonly ResolvedComponent[], pairs: readonly WdsPair[], athyg: readonly AthygRow[],
+): { components: ResolvedComponent[]; rejected: readonly SiblingRejection[] } {
+  const { matches, siblingClaimed } = pairAthygMatches(components, pairs, athyg, {
+    skip: (_i, c) => c.gaiaSourceId !== null,
+    allowBlendInherit: false,
+  });
+  const out = drafts(components);
+  for (const m of matches) {
+    const c = out[m.componentIdx];
+    const row = athyg[m.athygIdx];
+    if (c.athygRow === null) c.athygRow = row;
+    if (c.hip === null && row.hip !== null) c.hip = row.hip;
+    if (row.gaia !== null) {
+      c.gaiaSourceId = row.gaia;
+      c.resolveVia = 'athyg_gaia_native';
+    }
+  }
+  const rejected = siblingClaimed.map((s): SiblingRejection => ({
+    tier: 'athyg_match_sibling_claimed', wdsId: out[s.componentIdx].wdsId, component: out[s.componentIdx].component, hip: s.hip,
+  }));
+  return { components: out, rejected };
+}
