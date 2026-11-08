@@ -98,7 +98,7 @@ async function runAndRead(
   const recorded = await runRecorded(tree, step.name, entry, options.args, process.env);
   if (recorded.kind === 'exited') return `exited ${recorded.code}`;
   const { run } = recorded;
-  const touched = [...Object.keys(run.reads), ...Object.keys(run.listings), ...Object.keys(run.probes), ...run.writes];
+  const touched = [...Object.keys(run.reads), ...Object.keys(run.probes), ...run.writes];
   const scratch = ignoredPaths(touched, tree.root);
   const problems = undeclaredWrites(resolved, run.writes.filter((p) => !scratch.has(p)));
   if (problems.length > 0) return problems.join('; ');

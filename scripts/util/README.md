@@ -89,9 +89,11 @@ same thing — single-use helpers stay with their consumer.
   A stamp the runner writes for a Python step also carries `recorded`: the
   folders it listed (`listingHash`, over the sorted names git does not
   ignore, so a local cache in a listed folder reads the same in every
-  checkout) and the paths it probed, which `recordedChanges` re-checks.
-  `ignoredPaths` is the one `git check-ignore` call, which `listingHash` and
-  `../pipeline/record-step.ts` both make.
+  checkout) and the paths it probed, which `recordedChanges` re-checks; a
+  listed folder git ignores is dropped (`ignoredDirs`, asked with a trailing
+  slash, so a `.ckpt` folder the pull deleted before exiting still matches
+  its directory-only pattern). `ignoredPaths` is the one `git check-ignore`
+  call, which `listingHash`, `ignoredDirs` and `../pipeline/record-step.ts` make.
   `record_run` is how the runner runs a Python step
   (`../pipeline/run_python_step.py`): Python's audit hook records, under a
   root, every file the process opens for reading, hashed at its first read
