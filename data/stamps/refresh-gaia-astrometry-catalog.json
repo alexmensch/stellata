@@ -1,12 +1,20 @@
 {
   "inputs": {
-    "data/gaia/gaia_catalog_source_id_request.tsv": "58d08db948e98c660e7abffc6b5e4dfeb5cdf671"
+    "data/gaia/gaia_catalog_source_id_request.tsv": "0e6a61fc047974f927cceac9cf6c0615ed9a9fb7"
   },
   "outputs": {
-    "data/gaia/gaia_dr3_astrometry_catalog.tsv": "657b16344d15efef8c69791d33df8cc5ae69278c"
+    "data/gaia/gaia_dr3_astrometry_catalog.tsv": "b2078e6b28f4cf49daa19d439011788863820a3d"
+  },
+  "recorded": {
+    "listings": {
+      "data/gaia/gaia_dr3_astrometry_catalog.tsv.ckpt": "da39a3ee5e6b4b0d3255bfef95601890afd80709"
+    },
+    "probes": {}
   },
   "query": "9e6d8a3cc5c4850ea239c27f6810ab064dc941de",
-  "answeredBy": [],
+  "answeredBy": [
+    "ESA-sync"
+  ],
   "release": "Gaia DR3",
   "requestFrom": []
 }
