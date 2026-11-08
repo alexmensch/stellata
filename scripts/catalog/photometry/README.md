@@ -388,12 +388,14 @@ The stage founds no record, writes no identity rows, and every code's
 effect is `none`. It covers the walked records: a promoted companion's V
 and colour come from its `multiples.tsv` row (`../companions/`).
 
-Measured 2026-11-06 on the full tree: 4,004,719 rows (444 MB plain), 38.6 MB
-gzipped in 7.1 s without a diff — larger than placement's, since nearly every
-record cites its Gaia row on both its V and its colour row and writes a dust
-row. `BRIGHTNESS_COLOUR_LINEAGE_BUDGET` pins 42.4 MB and 60 s, placement's
-time allowance, since a CI diff against a restored baseline runs several
-times slower than a local build. Held in memory beside placement's, these
+Measured 2026-11-08 on the full tree: 4,004,719 rows (444 MB plain), 38.6 MB
+gzipped in 4.1 s without a diff, 1.1 s of it reading the spill back — larger
+than placement's, since nearly every record cites its Gaia row on both its V
+and its colour row and writes a dust row. The walk's spill writes (~0.2 s)
+fall outside that window. `BRIGHTNESS_COLOUR_LINEAGE_BUDGET` pins 42.4 MB and
+60 s: a diff took placement's local write from 3.2 s to 8.1 s, and CI ran that
+diffed write ~3.3× slower again (26.5 s, [Placement lineage](../distance/README.md#placement-lineage));
+the same two factors put this stage near 34 s in CI. Held in memory beside placement's, these
 lines took `build:catalog` to 3,543 MiB against its 3,482 MiB budget
 ([CI heap budget](../../util/heap-budget/README.md)), so the walk spills them
 to a `LineSpill` ([Storage and cost](../lineage/README.md#storage-and-cost)):
