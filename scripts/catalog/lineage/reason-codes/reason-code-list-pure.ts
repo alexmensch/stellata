@@ -1,7 +1,7 @@
-// The committed reason-code list: generated from every stage's declarations, append-only against its merge-base copy. See README.md#reason-codes--closed-append-only-generated.
+// The committed reason-code list: generated from every stage's declarations, append-only against its merge-base copy. See README.md.
 
 import type { CodeEffect, StageCodes } from './reason-codes-pure';
-import { sortUtf8 } from './lineage-row-pure';
+import { sortUtf8 } from '../lineage-row-pure';
 
 export const CODE_STATUSES = ['live', 'retired', 'historical'] as const;
 export type CodeStatusName = (typeof CODE_STATUSES)[number];
@@ -18,7 +18,7 @@ export interface ReasonCodeEntry {
 }
 
 
-/** `version` is called only for a code `committed` lacks; README.md#reason-codes--closed-append-only-generated. */
+/** `version` is called only for a code `committed` lacks: README.md, `first_version`. */
 export function reasonCodeList(
   stages: readonly StageCodes<string>[], committed: readonly ReasonCodeEntry[], version: () => string,
 ): ReasonCodeEntry[] {

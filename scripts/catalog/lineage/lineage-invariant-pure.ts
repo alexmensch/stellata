@@ -5,7 +5,7 @@ import {
   decodeLineageLine, lineageLineCode, lineageLineParams, parseParams, type LineageLine, type LineageParams,
   type LineageRow,
 } from './lineage-row-pure';
-import type { StageCodes } from './reason-codes-pure';
+import type { StageCodes } from './reason-codes/reason-codes-pure';
 
 export interface LineageInvariant {
   /** What holds, as one line; every violation report leads with it. */

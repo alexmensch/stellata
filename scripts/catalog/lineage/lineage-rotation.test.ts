@@ -13,7 +13,7 @@ import { baselineMembers, readLineage, readStageHeader, stageEmission } from './
 import { lineageInvariant, NO_EXCEPTIONS } from './lineage-invariant-pure';
 import { paramsText, stageLineageLine, stageLineageText } from './lineage-row-pure';
 import { inputsAtFrom, stageLineage, upstreamLineage } from './stage-lineage';
-import { LIVE, stageCodes } from './reason-codes-pure';
+import { LIVE, stageCodes } from './reason-codes/reason-codes-pure';
 import {
   lineageLayout, stageFamilies, stageFile, stageFileName, stageOutputFiles, type LineageLayout,
 } from '../../../src/catalog-format/pipeline-outputs/lineage-files';
@@ -135,7 +135,7 @@ describe('stage rotation', () => {
       stage: 'demo', key: 'spine:9', role: 'outcome', code: 'demo.kept', params: '', evidence: [],
     });
     const emission = stageLineage({
-      layout, spec: SPEC, inputs: {}, diffed: 'demo', lines: [line],
+      layout, spec: SPEC, inputs: {}, diffed: 'demo', lines: () => [line],
       render: (sorted) => ({ demo: stageLineageText(CODES, sorted), identity: stageLineageText(CODES, sorted) }),
       joins: () => [],
       budget: { gzipBytes: 1e9, writeMs: 1e9 },

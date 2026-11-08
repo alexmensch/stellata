@@ -11,7 +11,9 @@ import { identityRows } from '../identity-pure';
 import { gzipText } from '../lineage-io';
 import { lineageRows } from '../lineage-row-pure';
 import { matchName, parseTraceQuery, queryTerms, traceRecords, traceText, type TraceLookups } from './trace-pure';
-import { CLOUDS_ALLOCATION_LINEAGE, stageFile } from '../../../../src/catalog-format/pipeline-outputs/lineage-files';
+import {
+  BRIGHTNESS_COLOUR_LINEAGE, CLOUDS_ALLOCATION_LINEAGE, stageFile,
+} from '../../../../src/catalog-format/pipeline-outputs/lineage-files';
 
 const REFUSED_ONLY = '4000000000000000009';
 const PARKED = '5000000000000000001';
@@ -44,6 +46,19 @@ const PLACEMENT = [
   'placement\tspine:3\toutcome\tplacement.parallax.gaia-dr3-inversion\t\tgaia-dr3-astrometry:222',
   'placement\tspine:3\toutcome\tplacement.rv.none\t\t',
   'placement\tspine:3\trefused\tplacement.direction.refused.pm-disagrees-with-hip2\t{"tier":"gaia_5p"}\tgaia-dr3-astrometry:222',
+].join('\n') + '\n';
+
+/** spine:3's brightness and colour: V printed by Hipparcos past a saturated
+ *  Gaia row, a SIMBAD type after one row refused on another star's Gaia id,
+ *  a printed colour, and the A_V it was de-extincted by. */
+const BRIGHTNESS_COLOUR = [
+  'stage\tkey\trole\tcode\tparams\tevidence',
+  'brightness-colour\tspine:3\toutcome\tbrightness-colour.ci.printed-hip-bv\t\ti239:37',
+  'brightness-colour\tspine:3\toutcome\tbrightness-colour.dust.edenhofer2024.absmag-and-ci\t{"av":"0.0412"}\t',
+  'brightness-colour\tspine:3\toutcome\tbrightness-colour.spectral.simbad\t{"namespace":"hip"}\tsimbad-sptype:42',
+  'brightness-colour\tspine:3\toutcome\tbrightness-colour.v.printed-hip\t\ti239:37',
+  'brightness-colour\tspine:3\trefused\tbrightness-colour.spectral.refused.gaia-id-contradicts\t{"tier":"simbad","namespace":"source_id"}\tsimbad-sptype:43',
+  'brightness-colour\tspine:3\trefused\tbrightness-colour.v.refused.uncalibrated\t{"tier":"gaia_riello"}\tgaia-dr3-astrometry:222',
 ].join('\n') + '\n';
 
 const identity = [...identityRows(IDENTITY, 'fixture/identity.tsv')];
@@ -215,6 +230,7 @@ describe('pnpm run trace', () => {
   writeFileSync(stageFile(dir, 'identity'), gzipText(IDENTITY));
   writeFileSync(stageFile(dir, 'membership'), gzipText(MEMBERSHIP));
   writeFileSync(stageFile(dir, 'placement'), gzipText(PLACEMENT));
+  writeFileSync(stageFile(dir, BRIGHTNESS_COLOUR_LINEAGE.stage), gzipText(BRIGHTNESS_COLOUR));
   writeFileSync(stageFile(dir, 'promotion'), gzipText(PROMOTION));
   writeFileSync(stageFile(dir, 'promotion.identity'), gzipText(PROMOTION_IDENTITY));
   afterAll(() => rmSync(dir, { recursive: true, force: true }));
@@ -234,6 +250,15 @@ describe('pnpm run trace', () => {
     expect(out).toMatch(/membership\.admit\.spine[\s\S]*placement\.direction\.hip2-pm-discrepant/);
     expect(out).toMatch(/refused  placement\.direction\.refused\.pm-disagrees-with-hip2/);
     expect(out).toMatch(/placement\.parallax\.gaia-dr3-inversion/);
+  });
+
+  it('prints a record\'s V, spectral and colour provenance after its placement, refused tiers included', () => {
+    const out = run('hd:5');
+    expect(out).toMatch(/placement\.rv\.none[\s\S]*brightness-colour\.v\.printed-hip/);
+    expect(out).toMatch(/refused  brightness-colour\.v\.refused\.uncalibrated/);
+    expect(out).toMatch(/refused  brightness-colour\.spectral\.refused\.gaia-id-contradicts/);
+    expect(out).toMatch(/brightness-colour\.ci\.printed-hip-bv/);
+    expect(out).toMatch(/brightness-colour\.dust\.edenhofer2024\.absmag-and-ci/);
   });
 
   it('reads the promotion stage and its identity file', () => {

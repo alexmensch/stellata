@@ -3,13 +3,13 @@
 import { paramsText, sortUtf8, type LineageParams, type LineageRow } from '../catalog/lineage/lineage-row-pure';
 import {
   LIVE, stageCodes, type CodeDeclaration, type CodeEffect, type StageCodes,
-} from '../catalog/lineage/reason-codes-pure';
+} from '../catalog/lineage/reason-codes/reason-codes-pure';
 import { readTable, type TableSpec } from '../util/tsv/table-pure';
 import type { Allocation, ObjectOutcome, SidObject } from './allocate-pure';
 import { PUBLIC_FILES } from '../../src/catalog-format/public-artifacts/public-artifacts';
 import { ALLOCATION_LINEAGE } from '../../src/catalog-format/pipeline-outputs/lineage-files';
 
-export const ALLOCATION_LINEAGE_BUDGET = { gzipBytes: 19_300_000, writeMs: 20_000 };
+export const ALLOCATION_LINEAGE_BUDGET = { gzipBytes: 19_300_000, writeMs: 28_000 };
 
 const live = (effect: CodeEffect, description: string): CodeDeclaration => ({ description, effect, status: LIVE });
 

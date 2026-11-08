@@ -44,6 +44,8 @@ import {
 import { invariantViolations } from '../lineage/lineage-invariant-pure';
 import { MEMBERSHIP_CODES, MEMBERSHIP_INVARIANTS, membershipLineageRow } from './membership-lineage-pure';
 import { ORIGIN_KEYS } from './origin-keys';
+import { printedHipTable } from '../photometry/photometry-fixture';
+import type { PrintedHipValue } from '../photometry/hip-photometry-parse-pure';
 
 const FROM = { file: 'fixture.tsv', hint: 'h' };
 
@@ -191,7 +193,7 @@ const overlay: ClassicIdOverlay = new Map([
 function gateEvidence(
   t: PrimaryTables,
   gMag: ReadonlyMap<string, number> = new Map([['777', 14.0]]),
-  hipVMag: ReadonlyMap<number, number> = new Map(),
+  hipVMag: ReadonlyMap<number, PrintedHipValue> = new Map(),
   pulled: ReadonlySet<string> | null = new Set(['888', '6060', '777']),
 ) {
   return bindingEvidence(gMag, null, printedVLookups(hipVMag, t.tycho2, t.gliese), pulled);
@@ -358,7 +360,7 @@ describe('buildMembership — the spine side', () => {
         hipToSource: new Map([...tables.hipToSource, [70, '7070']]),
         simbadBySourceId: new Map([...tables.simbadBySourceId, ['7071', { hip: 70, tyc: null, gj: null }]]),
       },
-      evidence: gateEvidence(tables, new Map([['7070', 5.0], ['7071', 12.0]]), new Map([[70, 5.0]]), null),
+      evidence: gateEvidence(tables, new Map([['7070', 5.0], ['7071', 12.0]]), printedHipTable([[70, 5.0]]), null),
     });
     expect(settled.rows.find((r) => r.hip === 70))
       .toMatchObject({ gaiaSourceId: '7070', binding: 'crosswalk_gated' });
@@ -393,7 +395,7 @@ describe('buildMembership — the spine side', () => {
         tycToSource: new Map([...tables.tycToSource, ['6-6-1', '6061']]),
         hipToSource: new Map([...tables.hipToSource, [60, '6062']]),
       },
-      evidence: gateEvidence(tables, new Map([['6061', 12.0], ['6062', 5.1], ['333', 8.5]]), new Map([[60, 5.0]]), null),
+      evidence: gateEvidence(tables, new Map([['6061', 12.0], ['6062', 5.1], ['333', 8.5]]), printedHipTable([[60, 5.0]]), null),
     });
     expect(gated.rows.find((r) => r.tyc === '6-6-1'))
       .toMatchObject({ gaiaSourceId: '6062', binding: 'crosswalk_gated' });
@@ -778,7 +780,7 @@ describe('buildMembership — the additions', () => {
       tycho2: new Map([...tables.tycho2, ['5-6-1', { ...tycho2(9), btMag: 9.2 }]]),
       simbadBySourceId: new Map([...tables.simbadBySourceId, ['5151', { hip: 61, tyc: '5-6-1', gj: null }]]),
     };
-    const oneStar = buildMembership({ ...withTables(t), evidence: gateEvidence(t, undefined, new Map([[61, 9.0]])) });
+    const oneStar = buildMembership({ ...withTables(t), evidence: gateEvidence(t, undefined, printedHipTable([[61, 9.0]])) });
     const rows = oneStar.lineage
       .filter((r) => r.code === 'membership.binding.unweighed-no-pulled-row' && paramsOf(r).source_id === '5151');
     expect(rows.map((r) => [r.key, r.evidence])).toEqual([['iv25:5-6-1', ['i239:61']]]);

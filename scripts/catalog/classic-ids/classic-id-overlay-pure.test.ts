@@ -1,4 +1,6 @@
 import { describe, it, expect } from 'vitest';
+import { HIP_PHOTOMETRY } from '../photometry/hip-photometry-source';
+import { sourceRowRef } from '../../util/sources/row-ref-pure';
 
 import {
   applyBindingGate,
@@ -166,7 +168,7 @@ describe('applyBindingGate', () => {
     expect(rejectedBindings).toEqual([{
       sourceId: TOLIMAN_BAD_SRC,
       hip: TOLIMAN_HIP,
-      printedV: { vVia: 'printed_hip', vMag: 1.33, key: TOLIMAN_HIP },
+      printedV: { vVia: 'printed_hip', vMag: 1.33, key: TOLIMAN_HIP, ref: sourceRowRef(HIP_PHOTOMETRY, TOLIMAN_HIP) },
       gMag: 20.95,
       reason: 'mag',
       designations: 'HD 128621 · HR 5460 · alf Cen',

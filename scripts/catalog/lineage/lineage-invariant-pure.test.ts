@@ -4,7 +4,7 @@ import {
   invariantCheck, invariantViolations, lineageInvariant, NO_EXCEPTIONS, VIOLATIONS_LISTED,
 } from './lineage-invariant-pure';
 import { paramsText, stageLineageLine, type LineageLine } from './lineage-row-pure';
-import { LIVE, stageCodes } from './reason-codes-pure';
+import { LIVE, stageCodes } from './reason-codes/reason-codes-pure';
 
 const CODES = stageCodes('demo', {
   ok: { description: 'Fine.', effect: 'none', status: LIVE },
