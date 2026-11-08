@@ -1,6 +1,6 @@
 {
   "inputs": {
-    "data/gaia/gaia_catalog_source_id_request.tsv": "0e6a61fc047974f927cceac9cf6c0615ed9a9fb7"
+    "data/gaia/gaia_catalog_source_id_request.tsv": "054110df19c50010bd57e2133b61226d5f7028fc"
   },
   "outputs": {
     "data/gaia/gaia_dr3_apsis.tsv": "7548a8ac28c14e3496ff64d663041e1d3fbaf583"
@@ -11,7 +11,8 @@
   },
   "query": "9a2ee6745a019049636bbe0d2a11eef71206f8b5",
   "answeredBy": [
-    "ESA-sync"
+    "ESA-sync",
+    "ARI-sync"
   ],
   "release": "Gaia DR3",
   "requestFrom": []
