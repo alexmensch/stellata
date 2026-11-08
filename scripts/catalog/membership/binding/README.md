@@ -16,7 +16,10 @@ scripts/catalog/membership/binding/
                                 sibling-letter check over it, and
                                 `weighBinding`'s verdict. Pure.
   simbad-wds-xids-source.ts     SIMBAD_WDS_XIDS, declared
-                                (../../../util/sources/).
+                                (../../../util/sources/) as a column
+                                table: this gate's index, the
+                                simbad-wds-sptype pull's oid request and
+                                the binaries load stage each read it.
   binding-evidence.ts           Loads the gate's own evidence — G per source
                                 and SIMBAD's WDS component cross-IDs — and
                                 `loadHipVMag`. The printed-V lookups come from

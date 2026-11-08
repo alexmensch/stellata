@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
+import { columnTable } from '../../../util/tsv/table-pure';
+
 import { bindingEvidence, parseSimbadWdsXidsTsv } from './binding-gate-pure';
 import { cns5Row } from '../../classic-ids/cns5-fixture';
 import { indexCns5, type BindingTables } from '../../spine/primaries-audit-pure';
@@ -121,11 +123,11 @@ describe('bindingClassOf', () => {
   });
 });
 
-const WDS_XIDS = parseSimbadWdsXidsTsv([
+const WDS_XIDS = parseSimbadWdsXidsTsv(columnTable(FROM, [
   'wds_id\tcomponent\tgaia_source_id\thip',
   '00001+0000\tA\t500\t50',
   '00001+0000\tB\t501\t',
-].join('\n'), FROM);
+].join('\n')));
 
 describe('deriveBinding', () => {
   const gMag = new Map([['a', 12.0], ['b', 5.05], ['c', 5.1]]);
@@ -192,11 +194,11 @@ describe('deriveBinding', () => {
 
   describe('the component witness', () => {
     // HIP 60 sits on both letters, so the gate reads a HIP 60 row as the system.
-    const xids = parseSimbadWdsXidsTsv([
+    const xids = parseSimbadWdsXidsTsv(columnTable(FROM, [
       'wds_id\tcomponent\tgaia_source_id\thip',
       '00002+0000\tA\t600\t60',
       '00002+0000\tB\t601\t60',
-    ].join('\n'), FROM);
+    ].join('\n')));
     const witnessed = bindingEvidence(
       new Map([['600', 5.0], ['601', 5.2]]),
       xids,

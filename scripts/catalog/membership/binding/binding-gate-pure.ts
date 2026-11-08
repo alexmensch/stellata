@@ -1,7 +1,6 @@
 // See README.md#both-gates-weigh-every-candidate.
 
-import type { Declared } from '../../../util/sources/source';
-import { readTable } from '../../../util/tsv/table-pure';
+import type { ColumnTable } from '../../../util/tsv/table-pure';
 import type { PrintedV, PrintedVLookups } from '../../photometry/v-magnitude-pure';
 
 /** Magnitude-consistency gate for Gaia source bindings, shared with the
@@ -39,11 +38,11 @@ const SIMBAD_WDS_XIDS_COLUMNS = ['wds_id', 'component', 'gaia_source_id', 'hip']
 /** Parse data/simbad/simbad_wds_xids.tsv (refresh-simbad-wds-xids.py)
  *  into per-source and per-HIP WDS-component attribution maps. Source
  *  ids stay strings — they exceed Number.MAX_SAFE_INTEGER. */
-export function parseSimbadWdsXidsTsv(text: string, from: Declared): SimbadWdsXidIndex {
+export function parseSimbadWdsXidsTsv(table: ColumnTable): SimbadWdsXidIndex {
   const bySource = new Map<string, WdsComponentAttribution[]>();
   const byHip = new Map<number, WdsComponentAttribution[]>();
   const primarySourceLetterByWds = new Map<string, string>();
-  for (const row of readTable({ ...from, columns: SIMBAD_WDS_XIDS_COLUMNS }, text)) {
+  for (const row of table(SIMBAD_WDS_XIDS_COLUMNS)) {
     const wdsId = row.text('wds_id');
     const component = row.text('component');
     if (wdsId === null || component === null) continue;
