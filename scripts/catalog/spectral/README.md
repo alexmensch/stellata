@@ -194,8 +194,8 @@ EOF
 ```
 
 **The pull's own order still decides something else: which rung spends the
-request.** `membership_request_keys` (`scripts/refresh/simbad/inputs.py`) is a
-strict fall-through — `elif tyc … elif gl` — so a no-Gaia row carrying
+request.** `membershipKeys` (`scripts/refresh/simbad/membership-keys-pure.ts`) is a
+strict fall-through down `WIDENING_LADDER` — HIP, then TYC, then GJ — so a no-Gaia row carrying
 **both** ids is requested by TYC alone and its GJ is never asked for; no
 record-side reorder can reach a row the pull did not fetch. Of the 54 spine
 rows with neither source_id nor HIP, 41 go by TYC and 5 of those also carry a

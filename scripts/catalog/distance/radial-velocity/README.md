@@ -133,10 +133,12 @@ the same number from two directions.
 
 ## What the tier reaches is decided by other fields
 
-`simbad_value_cohort` (`scripts/refresh/simbad/inputs.py`) enumerates a
-manifest row unless Gaia's own 5p table states every [§ 5](/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers) value for its
-source_id **and** its identity is first-hand (a `crosswalk_gated` binding
-plus a TYC or a HIP). So this tier's reach is the union cohort, not an
+`valueCohort` (`scripts/refresh/simbad/membership-keys-pure.ts`) enumerates a
+manifest row unless Gaia's own 5p tables state every [§ 5](/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers) value for its
+source_id **and** its identity is first-hand (a `gaia_native` binding, or
+`crosswalk_gated` plus a TYC or a HIP;
+[The cohort is two questions](/scripts/refresh/simbad/README.md#the-cohort-is-two-questions-and-the-manifest-answers-one)).
+So this tier's reach is the union cohort, not an
 rv-specific one — but the value half now includes Gaia's own `radial_velocity`
 column, so a row Gaia published no velocity for is in the pull whatever its
 identity says. That is what the spine-scoped predicate could not express: it

@@ -208,7 +208,7 @@ consumer of a per-source table.
 
 **`simbad_sptype.tsv` is a cycle, not a line, and cannot be gated this
 way.** Its request keys come off the manifest's binding column
-(`membership_request_keys` keys a row on its `gaia_source_id` where it has
+(`membershipKeys` keys a row on its `gaia_source_id` where it has
 one), and its cross-IDs are the derivation's fourth binding source — so
 re-pulling it can change the very column that decided what to request.
 Re-running it is a fixpoint iteration with no convergence guarantee, and it
