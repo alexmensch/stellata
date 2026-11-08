@@ -18,9 +18,10 @@ repo-relative, so an outputs module passes them as they are.
   WDS-keyed SIMBAD spectral types, the label-merge
   queue, the classic-ID overlay and its two gate queues, the two WGSN
   tables, the two Gaia astrometry requests (the catalogue's, and the one
-  `build:binaries` writes, which the step table names), the four
-  request-scoped Gaia pulls' tables (both astrometry scopes, GSPC synthetic
-  photometry and the DR2 neighbourhood), the generated
+  `build:binaries` writes, which the step table names), the three
+  whole-table Gaia pulls' tables (HIP and TYC cross-matches, NSS two-body
+  orbits), the four request-scoped Gaia pulls' tables (both astrometry
+  scopes, GSPC synthetic photometry and the DR2 neighbourhood), the generated
   reason-code list, and the Vaidman 2025 reference table the hand-run
   `build:vaidman-table` writes; and `MANUAL_STAMP_FOLDER`, where the manual
   steps' committed records live (`/scripts/pipeline/pipeline-tree.ts`). The Horizons fetchers' per-target families are spelled beside
