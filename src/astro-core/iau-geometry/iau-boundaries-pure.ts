@@ -2,7 +2,7 @@
 // boundary edge set at equinox B1875, its decomposition into named regions,
 // and positional lookup against them. See README.md.
 
-import { RA_HOURS_TO_DEG } from '../astronomy-constants';
+import { DEG_TO_RAD, RA_HOURS_TO_DEG } from '../astronomy-constants';
 import {
   raDecFromUnitVector,
   unitVectorFromRaDec,
@@ -50,7 +50,6 @@ export interface IauBoundaryEdges {
  *  half-resolved sky. */
 export const IAU_REGION_COUNT = 89;
 
-const DEG_TO_RAD = Math.PI / 180;
 const RAD_TO_DEG = 180 / Math.PI;
 
 /** Source coordinates are whole arcseconds on a grid whose finest step is

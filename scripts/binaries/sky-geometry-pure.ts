@@ -1,5 +1,6 @@
 // Sky geometry the binaries stages share: proper-motion propagation, tangent-plane offsets, parallax distance.
 
+import { DEG_TO_RAD } from '../../src/astro-core/astronomy-constants';
 import type { SkyPosition } from '../../src/astro-core/equatorial-basis';
 
 /** AT-HYG documents J2000.0, but its HIP-sourced rows sit at HIP1's J1991.25
@@ -13,7 +14,6 @@ export const WDS_PRECISE_COORD_EPOCH = 2000.0;
 
 const MAS_PER_DEG = 3600 * 1000;
 const COS_DEC_FLOOR = 1e-3;
-const DEG_TO_RAD = Math.PI / 180;
 
 /** Proper motion in mas/yr, μ_α* already cos δ-applied. */
 export interface ProperMotion {
