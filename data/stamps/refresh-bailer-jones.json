@@ -1,6 +1,6 @@
 {
   "inputs": {
-    "data/gaia/gaia_catalog_source_id_request.tsv": "0e6a61fc047974f927cceac9cf6c0615ed9a9fb7"
+    "data/gaia/gaia_catalog_source_id_request.tsv": "054110df19c50010bd57e2133b61226d5f7028fc"
   },
   "outputs": {
     "data/bailer-jones/bailer-jones-dr3.tsv": "7ad2fc043de8c995b24174de69be737108ef8ca8"
