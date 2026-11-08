@@ -79,8 +79,9 @@ step hits on whatever build last made it from the same inputs, whatever
 commit that was, and a file no step reads that way (a workflow, a
 `package.json` script, a README) moves nothing. Python steps are covered the
 same way, through their recorded inputs. Build provenance is not an input:
-the package version and HEAD that lineage and registry headers record
-(`../util/git-provenance.ts`) name the build that made a reused output, not
+the release and HEAD that lineage and registry headers record
+(`releaseAt()` in `../util/release-version.ts`, `../util/git-provenance.ts`)
+name the build that made a reused output, not
 the commit that reused it.
 
 **The prefix carries what no stamp records**: the runner OS, the Node and

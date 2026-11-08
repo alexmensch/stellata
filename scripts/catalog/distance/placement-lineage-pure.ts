@@ -2,10 +2,10 @@
 
 import { lineageInvariant, NO_EXCEPTIONS, type LineageInvariant } from '../lineage/lineage-invariant-pure';
 import {
-  decodeLineageLine, lineageLineCode, paramsOf, paramsText, stageLineageLine,
+  decodeLineageLine, evidenceTexts, lineageLineCode, paramsOf, paramsText, stageLineageLine,
   type LineageLine, type LineageParams, type LineageRow,
 } from '../lineage/lineage-row-pure';
-import { LIVE, stageCodes, type CodeDeclaration } from '../lineage/reason-codes-pure';
+import { LIVE, stageCodes, type CodeDeclaration } from '../lineage/reason-codes/reason-codes-pure';
 import { sourceRowRefText, type AnySourceRowRef } from '../../util/sources/row-ref-pure';
 import type { DirectionResolution, DirectionVia } from './direction-cascade';
 import type { ParallaxResolution, ParallaxTier } from './parallax/parallax-cascade';
@@ -18,7 +18,7 @@ import type { RadialVelocityResolution, RvVia } from './radial-velocity/radial-v
 import type { LmcKinematicVerdict } from './refinement/distance-overrides-pure';
 import { PLACEMENT_LINEAGE } from '../../../src/catalog-format/pipeline-outputs/lineage-files';
 
-export const PLACEMENT_LINEAGE_BUDGET = { gzipBytes: 34_000_000, writeMs: 60_000 };
+export const PLACEMENT_LINEAGE_BUDGET = { gzipBytes: 34_000_000, writeMs: 40_000 };
 
 const live = (description: string, effect: CodeDeclaration['effect'] = 'none'): CodeDeclaration => (
   { description, effect, status: LIVE }
@@ -227,7 +227,7 @@ export function placementLineageRows(p: Placement): LineageRow[] {
   const { key } = p;
   const out: LineageRow[] = [];
   const evidence = (refs: readonly AnySourceRowRef[]): string[] =>
-    [...new Set(refs.map(sourceRowRefText))].filter((t) => t !== key);
+    evidenceTexts(key, refs.map(sourceRowRefText));
   const row = <B extends Branch>(
     role: LineageRow['role'], branch: B, params: ParamsOf<B>, refs: readonly AnySourceRowRef[],
   ): void => {

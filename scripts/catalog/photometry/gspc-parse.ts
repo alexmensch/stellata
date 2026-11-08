@@ -2,6 +2,7 @@
 // See README.md#the-ci-cascade.
 
 import type { Declared } from '../../util/sources/source';
+import { sourceRowRef, type RowKeyed, type SourceRowRef } from '../../util/sources/row-ref-pure';
 import { readTable } from '../../util/tsv/table-pure';
 
 const GSPC_COLUMNS = ['source_id', 'b_jkc_mag', 'b_jkc_flag', 'v_jkc_mag', 'v_jkc_flag'] as const;
@@ -23,13 +24,14 @@ export interface GspcColour {
    *  the measured one (README.md#why-the-gspc-tier-does-not-gate-on-the-flag).
    * Its count is pinned so an upstream polarity flip surfaces. */
   inValidatedRange: boolean;
+  ref: SourceRowRef<string>;
 }
 
 /** Rows with either band absent yield no colour and are skipped, so a
  *  present entry always carries a usable B−V. Keyed by the `source_id`
  *  string for the same > `Number.MAX_SAFE_INTEGER` reason every other Gaia
  *  side-table is. */
-export function parseGspcTsv(text: string, from: Declared): Map<string, GspcColour> {
+export function parseGspcTsv(text: string, from: Declared & RowKeyed<string>): Map<string, GspcColour> {
   const out = new Map<string, GspcColour>();
   for (const row of readTable({ ...from, columns: GSPC_COLUMNS }, text)) {
     const sourceId = row.sourceId('source_id');
@@ -42,6 +44,7 @@ export function parseGspcTsv(text: string, from: Declared): Map<string, GspcColo
       inValidatedRange:
         row.text('b_jkc_flag') === FLAG_IN_VALIDATED_RANGE &&
         row.text('v_jkc_flag') === FLAG_IN_VALIDATED_RANGE,
+      ref: sourceRowRef(from, sourceId),
     });
   }
   return out;

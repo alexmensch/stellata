@@ -26,11 +26,13 @@ scripts/catalog/lineage/
   lineage-row-pure.ts            The envelope and LineageLine, its TSV line:
                                  stageLineageLine, the one encoder, which
                                  refuses a code the stage does not declare;
-                                 sortLineageLines, the one order; and
+                                 sortUtf8, the one order the stage lines,
+                                 identity and SID files, reason-code list
+                                 and trace keys sort by; and
                                  stageLineageText, the writer, which refuses
                                  another stage's line or lines out of order.
-  reason-codes-pure.ts           stageCodes: a stage's codes with their
-                                 effect and status.
+  reason-codes/                  stageCodes, the generated code list and its
+                                 codec, `pnpm run lineage:codes`. Own README.
   lineage-diff-pure.ts           diffLineage, the merge-join of two stage
                                  files' lines; stageDiffText, the diff file.
   baseline/                      StageHeader, planBaseline and judgeBaseline:
@@ -41,25 +43,21 @@ scripts/catalog/lineage/
   lineage-stages.ts              LINEAGE_STAGES, every stage's codes and
                                  files in pipeline order: the one list the
                                  code generator and trace/ read.
-  reason-code-list-pure.ts       reasonCodeList, the generated list, and
-                                 appendOnlyViolations.
-  reason-codes-tsv.ts            REASON_CODES, the list's codec.
-  reason-codes-outputs.ts        REASON_CODES_OUTPUTS, the generator's
-                                 output declaration.
-  generate-reason-codes.ts       `pnpm run lineage:codes`.
-  reason-codes.test.ts           The list equals its generation, and is
-                                 append-only against the merge-base.
   trace/                         `pnpm run trace`. Own README.
   stage-lineage.ts               stageLineage: one stage's files, header,
                                  baseline plan, diff, budget and invariant
                                  checks, ready for the stage's emitArtifacts
                                  call.
+  phase-clock-pure.ts            phaseClock: the budget line's per-phase
+    (+ test)                     split of the timed window.
   lineage-invariant-pure.ts      LineageInvariant and its check (#invariants).
     (+ test)
   lineage-layout-pure.ts         LINEAGE_LAYOUT, the lineage folders,
                                  absolute. Their names, the stage specs and
                                  their output declarations:
                                  /src/catalog-format/pipeline-outputs/.
+  line-spill.ts (+ test)         LineSpill: a stage's lines in a temporary
+                                 file while another's are held (#storage-and-cost).
   lineage-io.ts                  The baseline members and a stage's emission,
                                  gzip, and the header with its input map
                                  and file hashes, re-checked on read.
@@ -138,7 +136,7 @@ Every stage writes the same envelope:
 | `role` | `outcome`, or `refused` for an alternative the stage weighed and rejected |
 | `code` | a reason code from the generated list |
 | `params` | per-instance detail (source id, component letter, sibling) |
-| `evidence` | `SourceRowRef`s cited, written only when they name something other than the origin row |
+| `evidence` | `SourceRowRef`s cited, each once and never the origin row (`evidenceTexts`) |
 
 - Each stage declares its own payload columns next to its reason codes and
   serialises its outcome union through one function, so a variant with no
@@ -153,7 +151,10 @@ Every stage writes the same envelope:
   that stage, never a silent pass-through; identical-code rows cost almost
   nothing compressed.
 - SID, record index and designations live on the identity row only; the
-  build version lives in a per-build header file. Repeating them on every
+  build version — the release the build stood on as it ran (`releaseAt()`),
+  which for a releasing commit can be the release before it or its own,
+  depending on whether its tag was pushed yet — lives in a per-build header
+  file. Repeating them on every
   stage row roughly doubles each stage file.
 
 ### SourceRowRef
@@ -178,37 +179,10 @@ changed means the set of rows under one key differs. `params` is empty or a
 JSON object whose keys keep the stage's declared order, so one payload has
 one text; `evidence` is its references' text forms joined by `|`.
 
-## Reason codes — closed, append-only, generated
+## Reason codes
 
-- One code per outcome-producing branch: two records with one code were
-  decided for the same reason by the same code path. Per-instance detail goes
-  in `params`, never the code.
-- Each stage declares its codes in its own module as `stage.rule-branch`
-  (`stageCodes`), and `lineage-stages.ts` lists every stage. The committed
-  code list, `data/lineage/reason-codes.tsv`, is generated from those
-  declarations by `pnpm run lineage:codes` and checked by CI
-  (`reason-codes.test.ts`), never hand-edited.
-- A Python stage, with no compiler to force the mapping, declares its codes
-  in a small data file beside it that the generator also reads, and a
-  Python test checks that every outcome value it can emit maps to a row.
-- An entry carries the code, its stage, its declared effect (removal and
-  re-bind codes: retire, park or merge; `none` for every other code), a
-  one-line description, `first_version` — the release current when the code
-  was added (the tree's package version; a lineage-only PR bumps none, so
-  `7.1.6` reads "added after 7.1.6 shipped") — and its status — `live`,
-  `retired` (with
-  the version that retired it) or `historical`, declared beside the code as
-  a closed union. Historical codes carry legacy causes and are never mapped
-  onto live ones.
-- Codes are added and marked retired, never edited or reused. A behaviour
-  change — the rule now picks different records — mints a new code; a fix
-  that leaves the picked set unchanged keeps its code. CI diffs the
-  generated list against its merge-base copy and fails if any code there is
-  missing, renamed, or has a changed stage, effect, description or first
-  version, or a status moving any way but live to retired.
-- No placeholder codes. A stage gets its real codes before any change
-  orphans a SID through it; an `*.unrecorded` code would be written into
-  append-only `events.tsv` for good.
+Every row's `code` is on one closed, append-only list generated from the
+stages' declarations: [reason-codes/](reason-codes/README.md).
 
 ## Invariants
 
@@ -240,7 +214,7 @@ lineage.
 
 ## SID events
 
-SID allocation is the fifth stage, run inside `build:catalog`; each sibling
+SID allocation is the sixth stage, run inside `build:catalog`; each sibling
 build allocates as a stage of its own, `allocation-clouds` in `build:clouds`
 and `allocation-local-group` in `build:local-group`. Their rows, events and
 fail-closed rule live beside their modules, in [SID events](/scripts/sid/README.md#sid-events).
@@ -254,7 +228,7 @@ A design-time probe on 1M synthetic rows (2026-10-21) chose the format: the
 bulk is Gaia ids, which no format compresses much, and Parquet with zstd
 came out about 15% smaller at five to nine times the write cost and the
 loss of `zgrep`. Its per-stage size is not a sizing figure: plan a new
-stage from the measured budget below, and every build prints its own
+stage from the measured budgets below, and every build prints its own
 (`<stage> lineage: N bytes gzipped`). With `build/lineage.previous/` a
 checkout holds about twice the current build, and each new worktree copies
 one build's worth in.
@@ -265,7 +239,8 @@ it fails its emission. Membership, measured 2026-10-29 on the full tree:
 1,355,182 rows (128 MB plain, 15.1 MB gzipped) plus 976,040 identity rows
 (85 MB, 22.3 MB), 37.4 MB together. The timed window is everything lineage
 adds to the build — the baseline headers' file re-hash, the base's input
-re-hash each verdict asks for, the diff, rendering,
+re-hash each verdict asks for, producing the lines (`lines`, a function the
+window calls: a spill reads back there), the diff, rendering,
 gzip and invariants: about 5.8 s with a diff
 against a full baseline. The merge-base input re-hash measured 128 ms for
 membership on a branch where 9 of its 163 inputs differ (2026-11-04,
@@ -282,38 +257,30 @@ A spine derivation's row carries only its winner, route and component
 letters; the binding-review columns ride the rows the queue lists — a
 contested or collision verdict and a disposition — since the candidates and
 refusals are rows of their own. `MEMBERSHIP_LINEAGE_BUDGET` pins 41 MB and
-30 s: a CI run that diffs against a restored merge-base baseline took
-13.6–19.7 s (2026-11-05, 9 runs), against 5.3–7.5 s with no diff. Promotion, measured 2026-11-01: <!-- count:build-binaries/multiples_rows_emitted -->47,021<!-- /count --> rows, one
+20 s: a CI run that diffs against a restored merge-base baseline took
+11.2 s (2026-11-06), against 6.8 s with no diff. Promotion, measured 2026-11-01: <!-- count:build-binaries/multiples_rows_emitted -->47,021<!-- /count --> rows, one
 per `multiples.tsv` row, plus 31,908 identity rows (<!-- count:build-catalog/companionPromoted -->14,676<!-- /count --> minted companions,
 17,232 rows it retires, parks or merges), 0.95 MB gzipped in 0.2 s;
-`PROMOTION_LINEAGE_BUDGET` pins 1.04 MB and 5 s. Allocation, measured
-2026-11-01: 980,151 rows (979,712 objects plus 439 parked SIDs, 62.6 MB plain)
-and 979,712 key → SID rows (29.1 MB), 17.6 MB gzipped in 4.7 s without a diff;
-`ALLOCATION_LINEAGE_BUDGET` pins 19.3 MB and 30 s: a workstation at load average 28–46 took 18.1–31.4 s (2026-11-05).
-The sibling allocation stages, measured 2026-11-05: 96 cloud rows in 1,455
-bytes and 123 Local Group rows in 1,720 bytes gzipped, identity files
-included, each in about 0.1 s; `SIBLING_LINEAGE_BUDGET`
-(`../../sid/sibling-allocation.ts`) pins 1,900 bytes and 5 s for either.
-Coherence, measured 2026-11-05: one row per record that exists before
-promotion mints companions, all but about 4,600 of them `not-applicable`
-(66 MB plain), 7.5 MB gzipped in 0.7 s without a diff;
-`COHERENCE_LINEAGE_BUDGET` pins 8.2 MB and 15 s.
-Naming, measured 2026-11-05: 1,017,955 rows, one name row per record plus its
-refused tiers, letter and designation constellation (78 MB plain), 9.7 MB
-gzipped in 2.7 s without a diff; `NAMING_LINEAGE_BUDGET` pins 10.6 MB and 15 s.
-Placement, measured 2026-10-30: 3,872,657 rows (349 MB plain, 31.0 MB
-gzipped) in 3.2 s without a diff and 8.1 s with one against a full
-baseline; `PLACEMENT_LINEAGE_BUDGET` pins 34 MB and 60 s: a CI run that diffs against a restored merge-base baseline took 36.5 s (2026-11-05). A file that size outruns
+`PROMOTION_LINEAGE_BUDGET` pins 1.04 MB and 10 s: a CI run with a diff took
+6.9 s (2026-11-07), almost all of it the baseline phase. Every other stage's
+measured budget sits beside its contract: [allocation's](/scripts/sid/README.md#sid-events),
+[placement's](../distance/README.md#placement-lineage),
+[brightness-colour's](../photometry/README.md#brightness-colour-lineage),
+[coherence's](../multiplicity/README.md#coherence-lineage) and
+[naming's](../naming/README.md#naming-lineage). Placement's 349 MB plain outruns
 V8's longest string, so stage files and diffs are written and read as UTF-8
 bytes in chunks, and the diff walks the baseline a key at a time
 (`streamLineage`) rather than holding it.
 
 A stage that size cannot hold its rows as objects either: 3.9 million
 `LineageRow`s, beside the `Placement`s they came from, are about 1.7 GB of
-heap. So a stage hands `stageLineage` lines, never rows, and placement
-serialises each record to its lines inside the walk, keeping only the
-strings; the diff reads the baseline as lines too, and only a reader that
-needs fields (trace, a ledger view) decodes them.
+heap. So a stage hands `stageLineage` lines, never rows, and placement and
+brightness-colour serialise each record to their lines inside the walk,
+keeping only the strings; the diff reads the baseline as lines too, and
+only a reader that needs fields (trace, a ledger view) decodes them. Even as
+strings the two stages' 7.9 million lines overrun the heap budget together,
+so brightness-colour's go to a `LineSpill` during the walk and are read
+back once placement's lines are released.
 
 The committed form of lineage is `data/sid/events.tsv` plus the ledger views
 below; the derivation itself is a build artifact, regenerated every build.
@@ -403,19 +370,25 @@ against reinstates per SID, as it was over the two files.
 `build:catalog`'s record walk is the second stage; its contract lives beside
 its module, in [Placement lineage](../distance/README.md#placement-lineage).
 
+## The brightness-colour stage
+
+`build:catalog`'s V, spectral class, B−V and de-extinction are the third
+stage, written from the same record walk as placement; its contract lives
+beside its module, in [Brightness-colour lineage](../photometry/README.md#brightness-colour-lineage).
+
 ## The coherence stage
 
-`build:catalog`'s system distance coherence is the third stage; its contract
+`build:catalog`'s system distance coherence is the fourth stage; its contract
 lives beside its module, in [Coherence lineage](../multiplicity/README.md#coherence-lineage).
 
 ## The naming stage
 
-`build:catalog`'s display-name pass is the sixth stage, after allocation; its
+`build:catalog`'s display-name pass is the seventh stage, after allocation; its
 contract lives beside its module, in [Naming lineage](../naming/README.md#naming-lineage).
 
 ## The promotion stage
 
-`build:catalog`'s companion promotion is the fourth stage
+`build:catalog`'s companion promotion is the fifth stage
 (`../companions/promotion-lineage-pure.ts`). `promoteCompanions` returns one
 `PromotedRow` per `multiples.tsv` row, keyed on that row
 (`multiples:<system_id>/<comp>`), and `promotionLineageRow` serialises its

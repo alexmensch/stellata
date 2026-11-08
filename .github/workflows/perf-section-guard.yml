@@ -8,6 +8,7 @@ on:
 
 permissions:
   contents: read
+  pull-requests: read
 
 # Asserts that a PR whose diff touches a render path, or moves catalogue
 # membership by more than 1 %, carries a non-empty `## Perf` section with an
@@ -26,9 +27,11 @@ jobs:
           fetch-depth: 0
       - name: Check the `## Perf` section
         env:
-          PR_BODY: ${{ github.event.pull_request.body }}
-          BASE_REF: ${{ github.base_ref }}
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number }}
+          BASE: origin/${{ github.event.pull_request.base.ref }}
+          REPO: ${{ github.repository }}
         run: |
           set -euo pipefail
-          printf '%s\n' "${PR_BODY:-}" > "$RUNNER_TEMP/body.md"
-          bash scripts/perf/perf-section-guard.sh "$RUNNER_TEMP/body.md" "origin/${BASE_REF}"
+          gh pr view "$PR" --repo "$REPO" --json body -q .body > "$RUNNER_TEMP/body.md"
+          bash scripts/perf/perf-section-guard.sh "$RUNNER_TEMP/body.md" "$BASE"

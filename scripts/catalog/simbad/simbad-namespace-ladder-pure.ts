@@ -144,32 +144,25 @@ export function indexSimbadRow<T>(
   }
 }
 
-function takeSimbadRow<T, R>(
-  row: T | undefined,
-  namespace: SimbadNamespace,
-  accept: (row: T) => R | null,
-): { value: R; namespace: SimbadNamespace } | null {
-  if (row === undefined) return null;
-  const value = accept(row);
-  return value === null ? null : { value, namespace };
-}
-
 /** Walk `SIMBAD_NAMESPACE_VALUES` in order — source_id → HIP → GJ → TYC — and
  *  return the first row `accept` takes, with the namespace that found it.
  *  `accept` returning null continues the walk, so a row that exists but carries
  *  nothing usable does not end it — which is why the spectral resolver can fall
- *  past a row whose sp_type will not parse. */
+ *  past a row whose sp_type will not parse, and record which namespace reached
+ *  the row it passed over. */
 export function walkSimbadNamespaces<T, R>(
   index: SimbadNamespaceIndex<T>,
   keys: SimbadRecordKeys,
-  accept: (row: T) => R | null,
+  accept: (row: T, namespace: SimbadNamespace) => R | null,
 ): { value: R; namespace: SimbadNamespace } | null {
   for (const namespace of SIMBAD_NAMESPACE_VALUES) {
     const binding = SIMBAD_NAMESPACE_BINDINGS[namespace];
     const key = binding.key(keys);
     if (key === null) continue;
-    const hit = takeSimbadRow(binding.map(index).get(key), namespace, accept);
-    if (hit) return hit;
+    const row = binding.map(index).get(key);
+    if (row === undefined) continue;
+    const value = accept(row, namespace);
+    if (value !== null) return { value, namespace };
   }
   return null;
 }

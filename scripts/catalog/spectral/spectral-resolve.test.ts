@@ -11,13 +11,20 @@ import {
   resolveSpectralInfo,
 } from './spectral-resolve';
 import { SPTYPE_OVERRIDES } from './sptype-overrides-source';
+import { SIMBAD_SPTYPE } from './simbad-sptype-source';
+import { sourceRowRef } from '../../util/sources/row-ref-pure';
+import { GAIA_APSIS } from '../record/gaia-apsis-source';
 
-const FROM = { file: 'fixture.tsv', hint: 'h' };
+const FROM = { ...SIMBAD_SPTYPE, file: 'fixture.tsv', hint: 'h' };
 
 const resolve = (
   keys: SimbadRecordKeys, simbad: SimbadSpectralIndex, apsis: ReadonlyMap<string, ApsisRow>,
   curated: SpectralValue | null = null,
-) => resolveSpectralInfo({ ...keys, curated }, { simbad, apsis, sptypeOverrides: SPTYPE_OVERRIDES.read() });
+) => {
+  const row = keys.sourceId ? apsis.get(keys.sourceId) : undefined;
+  const cited = keys.sourceId && row ? { value: row, ref: sourceRowRef(GAIA_APSIS, keys.sourceId) } : null;
+  return resolveSpectralInfo({ ...keys, curated, apsis: cited }, { simbad, sptypeOverrides: SPTYPE_OVERRIDES.read() });
+};
 
 /** A resolution expected to land on a tier, flattened; `none` fails the test. */
 const flatSp = (...args: Parameters<typeof resolve>) => {
@@ -56,7 +63,7 @@ describe('resolveSpectralInfo — tier priority', () => {
   const row = (
     spType: string | null, spQual: string | null, otype: string | null,
     sourceId: string | null = null,
-  ): SimbadSpectralRow => ({ spType, spQual, otype, sourceId });
+  ): SimbadSpectralRow => ({ spType, spQual, otype, sourceId, ref: sourceRowRef(SIMBAD_SPTYPE, 1) });
 
   it('tier 0: curated HIP override outranks every machine tier (Castor)', () => {
     // HIP 36850 (Castor A) — SIMBAD '* alf Gem A' carries neither hip
@@ -204,10 +211,25 @@ describe('resolveSpectralInfo — tier priority', () => {
     expect(resolve(keys(GAIA_ID, HIP), simbad, apsis)).toEqual({
       via: 'none',
       refusals: [
-        { tier: 'simbad', reason: 'gaia_id_contradicts' },
-        { tier: 'gspspec', reason: 'unclassifiable' },
+        { tier: 'simbad', reason: 'gaia_id_contradicts', ref: sourceRowRef(SIMBAD_SPTYPE, 1), namespace: 'hip' },
+        { tier: 'gspspec', reason: 'unclassifiable', ref: sourceRowRef(GAIA_APSIS, GAIA_ID) },
       ],
     });
+  });
+
+  it('cites the row each tier answered from', () => {
+    const simbadRow = { ...row('B2V', 'C', '*'), ref: sourceRowRef(SIMBAD_SPTYPE, 7) };
+    expect(resolve(keys(null, HIP), idx([], [[HIP, simbadRow]]), new Map()))
+      .toMatchObject({ via: 'simbad', evidence: [sourceRowRef(SIMBAD_SPTYPE, 7)] });
+    const apsis = new Map<string, ApsisRow>([[GAIA_ID, { ...APSIS_NONE, spectraltypeEsphs: 'K' }]]);
+    expect(resolve(keys(GAIA_ID, null), idx(), apsis))
+      .toMatchObject({ via: 'gspspec', evidence: [sourceRowRef(GAIA_APSIS, GAIA_ID)] });
+    const castor = resolve(keys(null, 36850), idx(), new Map());
+    expect(castor).toMatchObject({ via: 'curated', evidence: [sourceRowRef(SPTYPE_OVERRIDES, 36850)] });
+    expect(castor.via === 'none' ? null : Object.keys(castor.value).sort()).toEqual(['info', 'spectDisplay']);
+    const sol = curatedSpectralValue('G2V', (m) => { throw new Error(m); });
+    expect(resolve(keys(null, null), idx(), new Map(), sol))
+      .toEqual({ via: 'curated', value: sol, evidence: [], refusals: [] });
   });
 
   it('tier 6: no source_id and no HIP falls straight through to none', () => {

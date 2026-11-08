@@ -152,8 +152,21 @@ same thing — single-use helpers stay with their consumer.
   closure module except code (`CODE_FILE`) and `.md`, which is how the `*-expected.json`
   snapshots a build reads by path get keyed. `trackedFiles()` is the listing the
   stamp passes as `files`.
+- `release-version.ts` (+ test) — the release version and its tag
+  (`TAG_PREFIX`, `TAG_GLOB`, `tagOf`, `versionOfTag`, `parseVersion`), and
+  `releaseAt(ref)`, the newest release tag reachable from `ref`: the
+  version every build, site figure and recorded provenance names, since no
+  file in the tree states one; `releaseCommitAt(ref)`, the commit that
+  release was cut at, where the deploy's release plan starts; and
+  `releaseOn(commit)`, the newest release a commit itself was tagged as
+  (null where none was cut), which keeps a released commit's version on a
+  rerun
+  ([Derived versions](/scripts/release/README.md#derived-versions)).
+  It throws where no tag is reachable, so a checkout reading it needs full
+  history and tags (`fetch-depth: 0` in CI). Imports only `node:`
+  builtins, because `../release/`'s plain-`node` scripts import it too.
 - `git-provenance.ts` — what a build or instrument records about its
-  checkout: `packageVersion`, `headCommit`, `headState` (HEAD and whether
+  checkout: `headCommit`, `headState` (HEAD and whether
   the tree is dirty), `onMainBranch` (HEAD is on the branch `MAIN_REF`
   tracks; false when detached), `inHeadHistory` (whether a commit is HEAD or an
   ancestor of it) and `mergeBaseWithMain` (null with no `origin/main` or in a
@@ -302,11 +315,9 @@ same thing — single-use helpers stay with their consumer.
   `record.ts` it records nothing. Its callers: the refresh pulls' TAP client
   (`../refresh/pull/`) and `fetchHorizonsText`, so both Horizons fetchers
   record `HORIZONS_SERVICE`.
-- `heap-budget.ts` / `heap-budget-pure.ts` (+ test) — `watchHeap(step)`,
-  started first thing in a step's `main`, and its `check()`, the step's peak
-  live heap against the CI runner's as an `emitArtifacts` check
-  ([CI heap budget](#ci-heap-budget)). `build:catalog` and
-  `build:membership` carry it.
+- `heap-budget/` — `watchHeap(step)`, a heavy step's peak live heap judged
+  against the CI runner's V8 heap limit as an `emitArtifacts` check. Own
+  README.
 - `snapshot-check.ts` — `snapshotCheck(spec)`: a build script's computed
   snapshot against its committed JSON, answered as an `emitArtifacts`
   check — `pass`, `fail`, or `refresh` (the rewritten JSON) when
@@ -377,42 +388,6 @@ same thing — single-use helpers stay with their consumer.
   `public/` (`data/textures/relief/`). A name two of
   them share fails the step: the copy is by name. `tests/bundle-content.test.ts` asserts
   `strays` is empty for every mirror over the built tree.
-
-## CI heap budget
-
-A workstation build is no evidence that CI can run the same step: the
-catalogue job's `ubuntu-latest` runner gives Node a V8 heap of about 4 GiB,
-and a step whose live data nears that fails there with `JavaScript heap out
-of memory` while passing locally. So a heavy step judges itself against the
-runner, not the machine it runs on. `CI_HEAP_LIMIT_BYTES`
-(`heap-budget-pure.ts`) is the runner's limit, V8's 4,096 MiB old-space
-default there (a Node 24 OOM log reports 4,104.1 MiB committed, as "MB");
-`CI_HEAP_HEADROOM` is the share a step may use. Figures print in MiB, the
-unit V8's own log uses.
-
-**The runtime is part of the measurement.** The same `build:catalog` holds
-about 45% more live heap under Node 24 than under Node 26 (measured
-2026-10-30: 4,042 MiB against 2,782 MiB), so a reading taken under one
-major says nothing about another. `.nvmrc` is the one place the Node
-version is named: every workflow's `setup-node` reads it
-(`node-version-file`), and the check fails, without judging the heap, when
-the step runs under a different major. Run heavy steps locally under the
-pinned Node.
-
-The measure is **live** heap — what a full (mark-compact) collection leaves
-— because that is what runs out: garbage a roomier machine has not yet
-collected is not. V8's `GCProfiler` records the heap after every collection
-from `watchHeap` on, and `peakLiveHeap` takes the largest a full collection
-left, or the heap in use at the check if that is larger. It samples only at
-full collections, which is what the headroom covers. Over budget, the check
-fails the emission like any other, so nothing lands; the build log prints
-the peak beside the budget either way.
-
-When the step is legitimately bigger, shrink what it holds first — the
-placement lineage keeps lines, not objects
-([Storage and cost](../catalog/lineage/README.md#storage-and-cost)). Raising
-the runner's heap (`--max-old-space-size`) is the owner's call, and moves
-`CI_HEAP_LIMIT_BYTES` with it.
 
 ## Proving a restructuring byte-identical
 

@@ -96,14 +96,15 @@ scripts/catalog/
                                   allocates every record's SID, then
                                   emits the chunked binary, manifests,
                                   both committed ledgers, the SID registry
-                                  and placement's, coherence's, promotion's,
-                                  allocation's and naming's lineage through
+                                  and placement's, brightness-colour's,
+                                  coherence's, promotion's, allocation's and
+                                  naming's lineage through
                                   emitArtifacts once its two snapshot
-                                  checks, the five lineage budgets,
+                                  checks, the six lineage budgets,
                                   placement's and naming's lineage
                                   invariants (lineage/README.md#invariants)
                                   and the CI heap budget
-                                  (../util/README.md#ci-heap-budget) pass.
+                                  (../util/heap-budget/README.md) pass.
                                   A failed allocation throws before
                                   anything is staged
                                   ([SID allocation](#sid-allocation)).
@@ -121,8 +122,9 @@ scripts/catalog/
                                   the row-index map, the two committed
                                   ledgers, the catalogue's SID registry
                                   partition (registryFiles), placement's,
-                                  coherence's, promotion's, allocation's and
-                                  naming's lineage files, and
+                                  brightness-colour's, coherence's,
+                                  promotion's, allocation's and naming's
+                                  lineage files, and
                                   the transport chunks and the lineage
                                   baseline and diff as families, the last
                                   two unstamped. Side-effect free, so a reader can
@@ -135,15 +137,14 @@ scripts/catalog/
                                   never reaches this declaration.
   cascade-result.ts               `CascadeResult`, the one shape every
                                   per-field cascade returns: the tier that
-                                  answered with its value, or `none`, and on
-                                  both the candidates it refused, each a
-                                  `CascadeRefusal` (tier + coded reason, the
-                                  tier checked against the cascade's own) —
-                                  what the stage lineage projects.
-                                  `CitedCascadeResult` adds the source rows
-                                  the answer rests on (`evidence`) and the
-                                  row each `CitedRefusal` refused (`ref`):
-                                  the four placement cascades return it.
+                                  answered with its value and the source
+                                  rows it rests on (`evidence`), or `none`,
+                                  and on both the candidates it refused,
+                                  each a `CascadeRefusal` (tier + coded
+                                  reason, the tier checked against the
+                                  cascade's own, + the row it read) — what
+                                  the stage lineage projects. `CitedValue`:
+                                  a value with the row it was read from.
   cited-proper-motion.ts (+ test) `CitedProperMotion` and `CitedParallax`,
   cited-parallax.ts               with their only constructors: a value is
                                   admitted only with the bibcode that sourced

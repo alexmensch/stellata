@@ -6,7 +6,8 @@ import { gunzipSync, gzipSync } from 'node:zlib';
 
 import { fileHashes, type FileHashes } from '../../util/build-stamp';
 import type { ArtifactContents } from '../../util/emit-artifacts';
-import { headCommit, packageVersion } from '../../util/git-provenance';
+import { headCommit } from '../../util/git-provenance';
+import { releaseAt } from '../../util/release-version';
 import { hashBytes } from '../../util/stamp-hash';
 import { identityRows, type IdentityRow } from './identity-pure';
 import { lineageLines, lineageRows, type LineageLine, type LineageRow } from './lineage-row-pure';
@@ -90,7 +91,7 @@ export function stageProvenance<F extends string>(
 ): StageProvenance {
   return {
     stage: spec.stage,
-    version: packageVersion(),
+    version: releaseAt(),
     commit: headCommit(),
     inputs,
   };

@@ -1,8 +1,10 @@
 import { describe, it, expect } from 'vitest';
 
 import { parseHipPhotometryTsv, printedByHip } from './hip-photometry-parse-pure';
+import { HIP_PHOTOMETRY as SOURCE } from './hip-photometry-source';
+import { sourceRowRef } from '../../util/sources/row-ref-pure';
 
-const FROM = { file: 'fixture.tsv', hint: 'h' };
+const FROM = { ...SOURCE, file: 'fixture.tsv', hint: 'h' };
 
 describe('hip-photometry-parse-pure / parseHipPhotometryTsv', () => {
   const HIP_PHOTOMETRY = [
@@ -16,8 +18,8 @@ describe('hip-photometry-parse-pure / parseHipPhotometryTsv', () => {
 
   it('maps HIP to printed V, dropping null-V and non-positive HIP rows', () => {
     const { vmag } = parseHipPhotometryTsv(HIP_PHOTOMETRY, FROM);
-    expect(vmag.get(32349)).toBe(-1.44);
-    expect(vmag.get(71681)).toBe(1.33);
+    expect(vmag.get(32349)).toEqual({ value: -1.44, ref: sourceRowRef(FROM, 32349) });
+    expect(vmag.get(71681)?.value).toBe(1.33);
     expect(vmag.has(99999)).toBe(false);
     expect(vmag.has(0)).toBe(false);
     expect(vmag.size).toBe(3);
@@ -25,10 +27,10 @@ describe('hip-photometry-parse-pure / parseHipPhotometryTsv', () => {
 
   it('maps HIP to printed B−V independently of V', () => {
     const { bv } = parseHipPhotometryTsv(HIP_PHOTOMETRY, FROM);
-    expect(bv.get(32349)).toBe(0.009);
+    expect(bv.get(32349)?.value).toBe(0.009);
     // A row with no V still contributes its colour, and vice versa — the
     // 1,281 null-B−V rows must not cost the V map an entry.
-    expect(bv.get(99999)).toBe(1.1);
+    expect(bv.get(99999)?.value).toBe(1.1);
     expect(bv.has(88888)).toBe(false);
     expect(bv.has(0)).toBe(false);
     expect(bv.size).toBe(3);
@@ -36,7 +38,7 @@ describe('hip-photometry-parse-pure / parseHipPhotometryTsv', () => {
 
   it('reads a value for a record HIP, and null for both kinds of miss', () => {
     const { bv } = parseHipPhotometryTsv(HIP_PHOTOMETRY, FROM);
-    expect(printedByHip(bv, 32349)).toBe(0.009);
+    expect(printedByHip(bv, 32349)).toEqual({ value: 0.009, ref: sourceRowRef(FROM, 32349) });
     expect(printedByHip(bv, 88888)).toBeNull();
     expect(printedByHip(bv, null)).toBeNull();
   });

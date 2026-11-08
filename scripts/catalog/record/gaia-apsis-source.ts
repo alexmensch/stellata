@@ -38,5 +38,6 @@ export function parseGaiaApsisTsv(text: string, from: Declared): Map<string, Aps
 export const GAIA_APSIS = defineSource({
   file: 'data/gaia/gaia_dr3_apsis.tsv',
   hint: 'Re-run `pnpm run refresh:gaia-apsis`.',
+  rowKey: { id: 'gaia-dr3-apsis', text: (sourceId: string) => sourceId },
   parse: (input) => parseGaiaApsisTsv(input.text(), input),
 });

@@ -1,11 +1,11 @@
 // The committed SID registry: every partition read and structurally validated, and one partition's files rewritten with an allocation's appends.
 
-import { packageVersion } from '../util/git-provenance';
+import { releaseAt } from '../util/release-version';
 import { artifactText, readArtifact } from '../util/sources/source';
 import { LEDGERS } from './ledger-tsv';
 import type { EventRow } from './events-pure';
 import { EVENTS } from './events-tsv';
-import { REASON_CODES } from '../catalog/lineage/reason-codes-tsv';
+import { REASON_CODES } from '../catalog/lineage/reason-codes/reason-codes-tsv';
 import { unionLedger, validateRegistry, type PartitionRows } from './registry-pure';
 import { computeLedgerHead, type LedgerRow, type SameasEdge } from './sid-pure';
 import { loadStoredEdges } from './stored-edges';
@@ -50,7 +50,7 @@ export function loadRegistry(): Registry {
 
 /** The date and build version this run's mints and events carry. */
 export function allocationRun(): { date: string; version: string } {
-  return { date: new Date().toISOString().slice(0, 10), version: packageVersion() };
+  return { date: new Date().toISOString().slice(0, 10), version: releaseAt() };
 }
 
 /** One partition's ledger and events with the allocation's rows appended, never a committed line rewritten, and its head recomputed over both. */

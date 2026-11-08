@@ -46,9 +46,12 @@ scripts/catalog/membership/
                                   built from the declarations it is founded
                                   on; the build and the unit suite share it.
   membership-lineage-pure.ts      This stage's lineage: reason codes, the
-                                  outcome union and its serialiser, and the
+    (+ test)                      outcome union and its serialiser, the
                                   four ledgers as views of it
-                                  (#membership-lineage).
+                                  (#membership-lineage), and the change
+                                  report's multiples join, which reads the
+                                  baseline's identity file only for a key
+                                  the build lacks.
   membership-manifest-pure.ts     Row assembly (spine side, additions), the
     (+ test)                      review queue and the dispositions settling
                                   it, the admission rule, the label drops, and
@@ -74,7 +77,7 @@ scripts/catalog/membership/
                                   lineage budget, the lineage invariants
                                   (../lineage/README.md#invariants) and the
                                   CI heap budget
-                                  (../../util/README.md#ci-heap-budget) pass.
+                                  (../../util/heap-budget/README.md) pass.
   membership-manifest-outputs.ts  MEMBERSHIP_OUTPUTS — every file the
                                   generator writes, as its emitArtifacts
                                   declaration (../../util/README.md), its

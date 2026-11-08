@@ -5,11 +5,12 @@
 import type { GaiaAstrometryCatalogRow } from '../../sources/gaia-astrometry-source';
 import { GAIA_ASTROMETRY } from '../../sources/gaia-astrometry-source';
 import { HIP_PHOTOMETRY } from '../../photometry/hip-photometry-source';
+import type { PrintedHipValue } from '../../photometry/hip-photometry-parse-pure';
 import type { PrintedVLookups } from '../../photometry/v-magnitude-pure';
 import { bindingEvidence, type BindingEvidence } from './binding-gate-pure';
 import { SIMBAD_WDS_XIDS } from './simbad-wds-xids-source';
 
-export function loadHipVMag(): Map<number, number> {
+export function loadHipVMag(): Map<number, PrintedHipValue> {
   return HIP_PHOTOMETRY.read().vmag;
 }
 

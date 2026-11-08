@@ -5,7 +5,7 @@ import type { HashesAt } from '../../../util/input-hashes-at';
 
 export interface StageHeader {
   readonly stage: string;
-  /** package.json's version: the build version the README keeps off every row. */
+  /** The release the build stands on (`releaseAt()`): the build version the README keeps off every row. */
   readonly version: string;
   readonly commit: string;
   /** What the stage read: the runner's pre-run input map, path → hash. */

@@ -1,86 +1,132 @@
 import { describe, it, expect } from 'vitest';
 import {
+  bumped,
+  declarationOf,
+  declarationProblem,
   planReleases,
   prNumberFromSubject,
   extractReleaseNotes,
+  parsePlan,
+  type CommitRelease,
   type RangeCommit,
 } from './release-plan-pure';
 
-function commit(sha: string, version: string, pr: number | null): RangeCommit {
-  return { sha, version, subject: pr === null ? `Some change` : `Some change (#${pr})` };
+const patch: CommitRelease = { kind: 'release', level: 'patch' };
+const minor: CommitRelease = { kind: 'release', level: 'minor' };
+const major: CommitRelease = { kind: 'release', level: 'major' };
+const none: CommitRelease = { kind: 'none' };
+
+function commit(sha: string, release: CommitRelease, pr: number | null): RangeCommit {
+  return { sha, release, subject: pr === null ? `Some change` : `Some change (#${pr})` };
 }
 
+describe('declarationOf', () => {
+  it('reads each level label', () => {
+    expect(declarationOf(['release:major'])).toEqual(major);
+    expect(declarationOf(['bug', 'release:minor'])).toEqual(minor);
+    expect(declarationOf(['release:patch', 'release:patch'])).toEqual(patch);
+    expect(declarationOf(['skip-version-bump'])).toEqual(none);
+  });
+
+  it('is undeclared with no level label', () => {
+    expect(declarationOf([])).toEqual({ kind: 'undeclared' });
+    expect(declarationOf(['release:huge', 'docs'])).toEqual({ kind: 'undeclared' });
+  });
+
+  it('is conflicting with two level labels, skip included', () => {
+    expect(declarationOf(['release:minor', 'skip-version-bump'])).toEqual({
+      kind: 'conflicting', labels: ['release:minor', 'skip-version-bump'],
+    });
+  });
+
+  it('names a problem only for an undeclared or conflicting PR', () => {
+    expect(declarationProblem(minor)).toBeNull();
+    expect(declarationProblem(none)).toBeNull();
+    expect(declarationProblem({ kind: 'undeclared' }))
+      .toMatch(/^no release level declared: attach exactly one of release:major, /);
+    expect(declarationProblem(declarationOf(['release:patch', 'release:major'])))
+      .toMatch(/^release:patch and release:major conflict/);
+  });
+});
+
+describe('bumped', () => {
+  it('bumps each level and resets the ones below it', () => {
+    expect(bumped('7.1.15', 'patch')).toBe('7.1.16');
+    expect(bumped('7.1.15', 'minor')).toBe('7.2.0');
+    expect(bumped('7.1.15', 'major')).toBe('8.0.0');
+  });
+
+  it('refuses anything but major.minor.patch', () => {
+    expect(() => bumped('7.1', 'patch')).toThrow(/not a release version: '7.1'/);
+    expect(() => bumped('7.1.15-rc.1', 'patch')).toThrow(/not a release version/);
+  });
+});
+
 describe('planReleases', () => {
-  it('plans one release for a single-commit push that bumps', () => {
-    const plan = planReleases('3.9.0', [commit('aaa', '3.10.0', 1)]);
+  it('plans one release for a single commit that declares a level', () => {
+    const plan = planReleases('3.9.0', [commit('aaa', minor, 1)]);
     expect(plan).toEqual([{ sha: 'aaa', tag: 'v3.10.0', version: '3.10.0', prNumber: 1 }]);
   });
 
-  it('plans nothing when the push changes no version', () => {
-    const plan = planReleases('3.9.0', [commit('aaa', '3.9.0', 1), commit('bbb', '3.9.0', 2)]);
-    expect(plan).toEqual([]);
+  it('plans nothing when every commit skips', () => {
+    expect(planReleases('3.9.0', [commit('aaa', none, 1), commit('bbb', none, 2)])).toEqual([]);
   });
 
-  it('plans one release per bump in a stacked push, oldest first', () => {
+  it('derives each queued PR’s version from the ones ahead of it, oldest first', () => {
     const plan = planReleases('3.9.0', [
-      commit('aaa', '3.10.0', 1),
-      commit('bbb', '3.10.1', 2),
-      commit('ccc', '3.11.0', 3),
+      commit('aaa', patch, 1),
+      commit('bbb', none, 2),
+      commit('ccc', minor, 3),
+      commit('ddd', patch, 4),
+      commit('eee', major, 5),
     ]);
-    expect(plan.map((r) => r.tag)).toEqual(['v3.10.0', 'v3.10.1', 'v3.11.0']);
-    expect(plan.map((r) => r.sha)).toEqual(['aaa', 'bbb', 'ccc']);
-    expect(plan.map((r) => r.prNumber)).toEqual([1, 2, 3]);
-  });
-
-  it('skips a no-bump commit without disturbing the surrounding bumps', () => {
-    const plan = planReleases('3.9.0', [
-      commit('aaa', '3.10.0', 1),
-      commit('bbb', '3.10.0', 2),
-      commit('ccc', '3.10.1', 3),
-    ]);
-    expect(plan.map((r) => [r.tag, r.sha])).toEqual([
-      ['v3.10.0', 'aaa'],
-      ['v3.10.1', 'ccc'],
+    expect(plan.map((r) => [r.tag, r.sha, r.prNumber])).toEqual([
+      ['v3.9.1', 'aaa', 1],
+      ['v3.10.0', 'ccc', 3],
+      ['v3.10.1', 'ddd', 4],
+      ['v4.0.0', 'eee', 5],
     ]);
   });
 
-  it('still plans earlier bumps when the tip commit does not bump', () => {
-    const plan = planReleases('3.9.0', [
-      commit('aaa', '3.10.0', 1),
-      commit('bbb', '3.11.0', 2),
-      commit('ccc', '3.11.0', 3),
-    ]);
-    expect(plan.map((r) => r.tag)).toEqual(['v3.10.0', 'v3.11.0']);
+  it('lands two queued PRs that each declare patch as two distinct versions', () => {
+    const plan = planReleases('7.1.15', [commit('aaa', patch, 760), commit('bbb', patch, 761)]);
+    expect(plan.map((r) => r.version)).toEqual(['7.1.16', '7.1.17']);
   });
 
-  it('emits each tag once, at its newest commit, if a version is re-reached', () => {
+  it('keeps a commit’s existing tag and derives the rest from it, so a rerun re-derives nothing', () => {
     const plan = planReleases('3.9.0', [
-      commit('aaa', '3.10.0', 1),
-      commit('bbb', '3.9.0', 2),
-      commit('ccc', '3.10.0', 3),
+      commit('aaa', { kind: 'tagged', version: '3.9.1' }, 1),
+      commit('bbb', minor, 2),
     ]);
-    expect(plan).toEqual([
-      { sha: 'bbb', tag: 'v3.9.0', version: '3.9.0', prNumber: 2 },
-      { sha: 'ccc', tag: 'v3.10.0', version: '3.10.0', prNumber: 3 },
-    ]);
+    expect(plan.map((r) => [r.tag, r.sha])).toEqual([['v3.9.1', 'aaa'], ['v3.10.0', 'bbb']]);
   });
 
-  it('reproduces the seven-PR stack that lost five releases', () => {
-    const plan = planReleases('3.9.0', [
-      commit('fba2427', '3.10.0', 312),
-      commit('1ddf22c', '3.10.1', 326),
-      commit('ce6393c', '3.10.2', 329),
-      commit('3621008', '3.10.2', 331),
-      commit('daace91', '3.10.3', 332),
-      commit('510cb86', '3.11.0', 330),
-      commit('9d82a0d', '3.12.0', 333),
-    ]);
-    expect(plan.length).toBe(6);
-    expect(plan.map((r) => r.tag)).toEqual([
-      'v3.10.0', 'v3.10.1', 'v3.10.2', 'v3.10.3', 'v3.11.0', 'v3.12.0',
-    ]);
-    expect(plan.map((r) => r.prNumber)).toEqual([312, 326, 329, 332, 330, 333]);
-    expect(plan[2].sha).toBe('ce6393c');
+  it('throws on a commit that declares no level, naming it', () => {
+    expect(() => planReleases('3.9.0', [commit('aaa1234567', patch, 1), commit('bbb7654321', { kind: 'undeclared' }, 2)]))
+      .toThrow(/^bbb7654 \(PR #2\): no release level declared/);
+    expect(() => planReleases('3.9.0', [commit('ccc7654321', { kind: 'undeclared' }, null)]))
+      .toThrow(/^ccc7654 \(no PR in its subject\)/);
+  });
+});
+
+describe('parsePlan', () => {
+  const sha = 'a'.repeat(40);
+  const entry = { sha, tag: 'v7.1.16', version: '7.1.16', prNumber: 760 };
+
+  it('round-trips the plan the plan step writes', () => {
+    const plan = [entry, { ...entry, tag: 'v7.1.17', version: '7.1.17', prNumber: null }];
+    expect(parsePlan(JSON.stringify(plan))).toEqual(plan);
+    expect(parsePlan('[]')).toEqual([]);
+  });
+
+  it.each([
+    ['not an array', '{}', /not an array/],
+    ['a short sha', JSON.stringify([{ ...entry, sha: 'abc' }]), /entry 0: sha is not a full commit hash/],
+    ['a tag that is not the version’s', JSON.stringify([{ ...entry, tag: 'v7.1.15' }]), /entry 0: tag is not v7\.1\.16/],
+    ['a version that is not one', JSON.stringify([{ ...entry, tag: 'v7.1', version: '7.1' }]), /not a release version/],
+    ['a fractional PR number', JSON.stringify([{ ...entry, prNumber: 1.5 }]), /prNumber is neither/],
+  ])('refuses %s', (_, json, error) => {
+    expect(() => parsePlan(json)).toThrow(error);
   });
 });
 

@@ -323,7 +323,7 @@ ran, in walk order, up to the park that stopped it or the record it shipped.
   row adds the PM rescue where it ran, Bailer-Jones and the LMC snap where
   they fired, and its radial velocity;
 - each row cites, as evidence, the source rows its cascade read
-  (`CitedCascadeResult`, `../cascade-result.ts`), and no measured value;
+  (`CascadeResult`, `../cascade-result.ts`), and no measured value;
 - the four park codes declare effect `park`, so a SID the build stops
   producing stays in the ledger, absent.
 
@@ -332,3 +332,8 @@ those cells are the parked ledger's key and the parity gate's join, and
 `parkedLedgerView` generates `data/membership/parked-ledger.tsv` from the
 park rows alone, decoding only the lines whose code is a park code. Placement
 founds no record, so it writes no identity rows.
+
+Measured 2026-10-30: 3,872,657 rows (349 MB plain, 31.0 MB gzipped) in 3.2 s
+without a diff and 8.1 s with one against a full baseline;
+`PLACEMENT_LINEAGE_BUDGET` pins 34 MB and 40 s: a CI run with a diff took
+26.5 s (2026-11-06).

@@ -109,6 +109,20 @@ describe('simbad-namespace-ladder-pure / SIMBAD namespace ladder', () => {
     expect(walkSimbadNamespaces(index, ALL_KEYS, (row) => row)?.value).toBe('second');
   });
 
+  it('hands accept the namespace that reached each row it passes over', () => {
+    const index = emptySimbadNamespaceIndex<string>();
+    indexSimbadRow(index, ALL_KEYS, 'row', () => {
+      throw new Error('unexpected duplicate');
+    });
+    const reached: SimbadNamespace[] = [];
+    const hit = walkSimbadNamespaces(index, ALL_KEYS, (row, namespace) => {
+      reached.push(namespace);
+      return namespace === 'gj' ? row : null;
+    });
+    expect(reached).toEqual(['source_id', 'hip', 'gj']);
+    expect(hit).toEqual({ value: 'row', namespace: 'gj' });
+  });
+
   // A bogus HIP cell must be no key at all rather than a key nothing looks
   // up, which is what would make an indexed row unreachable but present.
   it('takes only a positive integer HIP as a key', () => {

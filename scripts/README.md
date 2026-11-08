@@ -41,10 +41,10 @@ cross-script policy and pointers.
   `src/astro-core/milkyway/calibration/`. A manual bake: the build stops
   when a catalogue rebuild moves a column it measures.
 - `release/` — `deploy.yml`'s release steps: checks each uploaded version
-  on its preview URL before it takes traffic, then plans and cuts one tag
-  + GitHub release per
-  version bump in a pushed range (a merged stack is one push carrying
-  several). Not part of `pnpm run build`.
+  on its preview URL before it takes traffic, and derives one version
+  + tag + GitHub release per
+  releasing commit since the last release pushed. Not part of
+  `pnpm run build`.
 - `sid/` — SID registry tools: the allocation `build:catalog` runs over its
   records (the writer of the catalogue's registry partition,
   `data/sid/ledger.tsv` and `events.tsv`; `build:local-group` and

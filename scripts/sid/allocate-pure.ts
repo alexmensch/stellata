@@ -1,6 +1,6 @@
 // SID allocation: every object resolved, minted or reinstated against the ledger, every SID no object reaches settled by the upstream decision that removed it, and the events that follow. See /docs/sid.md#44-allocation.
 
-import type { CodeEffect } from '../catalog/lineage/reason-codes-pure';
+import type { CodeEffect } from '../catalog/lineage/reason-codes/reason-codes-pure';
 import { retiredSids, type EventRow } from './events-pure';
 import {
   canonicalKeyOf, parseDesignation, sameAsClasses,

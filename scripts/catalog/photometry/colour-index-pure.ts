@@ -8,9 +8,11 @@ import {
   type GatedValue,
   type PhotometryRefusal,
 } from './gaia-photometry-pure';
-import type { CascadeRefusal, CascadeResult, UniformValues } from '../cascade-result';
+import type { CascadeResult, CascadeRefusal, CitedValue, UniformValues } from '../cascade-result';
 import type { GspcColour } from './gspc-parse';
-import { RIELLO_BP_RP_MIN, rielloGMinusV } from './v-magnitude-pure';
+import type { PrintedHipValue } from './hip-photometry-parse-pure';
+import { RIELLO_BP_RP_MIN, rielloGMinusV, type CitedPhotometry } from './v-magnitude-pure';
+import type { AnySourceRowRef } from '../../util/sources/row-ref-pure';
 
 /** Gaia DR3 documentation, Carrasco 2022 (/data/papers/index.md#gaiadr3doc) Sect. 5.5.1
  *  Table 5.9 — `G − B` as a quartic in `BP − RP`, ascending powers; a DR3-era
@@ -114,7 +116,7 @@ export function ciIsObserved(via: CiVia): boolean {
 
 /** A candidate colour a tier did not take. `apsis_teff_renders` is the derived
  *  tier standing down for a star whose colour the shader takes from its Apsis
- *  Teff instead. */
+ *  Teff instead; that refusal cites the Apsis row. */
 export type ColourIndexRefusal = CascadeRefusal<
   Exclude<CiVia, 'none'>,
   PhotometryRefusal | 'non_finite' | 'apsis_teff_renders'
@@ -127,16 +129,17 @@ export type ColourIndexResolution = CascadeResult<UniformValues<CiVia, number>, 
  *  than positional because three of them are nullable and a swap would
  *  silently reorder the cascade while still typechecking. */
 export interface ColourIndexSources {
-  photometry: GaiaPhotometry | null;
+  photometry: CitedPhotometry | null;
   /** Gaia synthetic photometry for this source, or null where the pull has
    *  no row for it (9% of the request set) or only one band. */
   gspc: GspcColour | null;
   /** Printed `I/239` B−V keyed on the record's own HIP. */
-  printedHipBv: number | null;
+  printedHipBv: PrintedHipValue | null;
   /** Non-null suppresses the derived tier — see below. */
-  apsisTeff: number | null;
-  /** `spectralClassCi`, or null where the class yields no real colour. */
-  spectralCi: number | null;
+  apsisTeff: CitedValue<number> | null;
+  /** `spectralClassCi`, or null where the class yields no real colour, with
+   *  the rows the spectral class rests on. */
+  spectralCi: { readonly value: number; readonly evidence: readonly AnySourceRowRef[] } | null;
 }
 
 /** B−V through the cascade: the Gaia relation, else printed `I/239` B−V, else
@@ -157,26 +160,27 @@ export function resolveColourIndex(
   { photometry, gspc, printedHipBv, apsisTeff, spectralCi }: ColourIndexSources,
 ): ColourIndexResolution {
   const refusals: ColourIndexRefusal[] = [];
-  const hit = (via: Exclude<CiVia, 'none'>, value: number): ColourIndexResolution =>
-    ({ via, value, refusals });
+  const hit = (
+    via: Exclude<CiVia, 'none'>, value: number, evidence: readonly AnySourceRowRef[],
+  ): ColourIndexResolution => ({ via, value, evidence, refusals });
 
   if (photometry !== null) {
     const transformed = gaiaBMinusV(photometry);
-    if (transformed.kind === 'value') return hit('gaia_relation', transformed.value);
-    refusals.push({ tier: 'gaia_relation', reason: transformed.reason });
+    if (transformed.kind === 'value') return hit('gaia_relation', transformed.value, [photometry.ref]);
+    refusals.push({ tier: 'gaia_relation', reason: transformed.reason, ref: photometry.ref });
   }
   if (printedHipBv !== null) {
-    if (Number.isFinite(printedHipBv)) return hit('printed_hip_bv', printedHipBv);
-    refusals.push({ tier: 'printed_hip_bv', reason: 'non_finite' });
+    if (Number.isFinite(printedHipBv.value)) return hit('printed_hip_bv', printedHipBv.value, [printedHipBv.ref]);
+    refusals.push({ tier: 'printed_hip_bv', reason: 'non_finite', ref: printedHipBv.ref });
   }
   if (gspc !== null) {
     const synthetic = gspcBMinusV(photometry, gspc);
-    if (synthetic.kind === 'value') return hit('gspc', synthetic.value);
-    refusals.push({ tier: 'gspc', reason: synthetic.reason });
+    if (synthetic.kind === 'value') return hit('gspc', synthetic.value, [gspc.ref]);
+    refusals.push({ tier: 'gspc', reason: synthetic.reason, ref: gspc.ref });
   }
   if (spectralCi !== null) {
-    if (apsisTeff === null) return hit('spectral_derived', spectralCi);
-    refusals.push({ tier: 'spectral_derived', reason: 'apsis_teff_renders' });
+    if (apsisTeff === null) return hit('spectral_derived', spectralCi.value, spectralCi.evidence);
+    refusals.push({ tier: 'spectral_derived', reason: 'apsis_teff_renders', ref: apsisTeff.ref });
   }
   return { via: 'none', refusals };
 }

@@ -33,6 +33,12 @@ scripts/catalog/photometry/
                                  synthetic tier's measured colour bound, and
                                  the five-tier ci cascade with its
                                  observed-vs-intrinsic verdict. Pure.
+  brightness-colour-lineage-pure.ts
+    (+ test)                     V, spectral class, B−V and de-extinction
+                                 as a lineage stage: its codes, the
+                                 BrightnessColour each walked row hands
+                                 on, and its one serialiser
+                                 (#brightness-colour-lineage).
   gspc-source.ts                 GAIA_GSPC and HIP_PHOTOMETRY, the two
   hip-photometry-source.ts       tables declared (../../util/sources/).
   gspc-parse.ts (+ test)         data/gaia/gaia_dr3_gspc.tsv → source_id →
@@ -98,11 +104,13 @@ Per-tier routing, pinned in build-counts: `gaia_riello` **<!-- count:build-catal
 `printed_hip` **<!-- count:build-catalog/vPrintedHip -->1,417<!-- /count -->** · `tycho2` **<!-- count:build-catalog/vTycho2 -->189<!-- /count -->** · `gliese` **<!-- count:build-catalog/vGliese -->20<!-- /count -->** · `curated`
 **<!-- count:build-catalog/vCurated -->1<!-- /count -->**, residual `none` **<!-- count:build-catalog/vNone -->0<!-- /count -->**.
 
-`resolveVMagnitude` returns the shared cascade shape (`../cascade-result.ts`):
-the value **and** the tier that produced it, so `vVia` routing counts are
-pinned in build-counts the same way the direction cascade pins `directionVia`,
+`resolveVMagnitude` returns the shared cascade shape
+(`CascadeResult`, `../cascade-result.ts`): the value **and** the tier that
+produced it, so `vVia` routing counts are pinned in build-counts the same way
+the direction cascade pins `directionVia`, the source row it read (the Gaia
+row, or the HIP, Tycho-2 or Gliese row each `printedVLookups` answer cites),
 and on any result the Riello transform's refusal of the row's Gaia photometry
-(`uncalibrated` or `colour_out_of_range`). The tier also rides on the record,
+(`uncalibrated` or `colour_out_of_range`), citing that row. The tier also rides on the record,
 because it answers a question no consumer can answer from the magnitude alone.
 
 **There is no SIMBAD tier**, though [§ 5](/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers) projected
@@ -154,9 +162,12 @@ ourselves ([§ 5](/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers)
 alone reached a measured colour and hands them to the derived tiers. That is
 the trade the residual policy asks for.
 
-`resolveColourIndex` returns the shared cascade shape (`../cascade-result.ts`):
-the tier, its value, and every candidate it passed over with the gate that
-refused it. **Whether the value is observed-convention is a function of the
+`resolveColourIndex` returns the shared cascade shape
+(`../cascade-result.ts`): the tier, its value with the rows it rests on (the
+spectral-derived tier cites the rows its class came from), and every candidate
+it passed over with the gate that refused it and the row it read — the derived
+tier's `apsis_teff_renders` cites the Apsis row whose Teff the shader renders
+instead. **Whether the value is observed-convention is a function of the
 tier**, `ciIsObserved(via)`, and not a convenience: build-time de-extinction
 subtracts `A_V / R_V` from an observed B−V and must leave an intrinsic one
 alone, and deciding that at the dust integral from anything but the tier
@@ -347,6 +358,49 @@ generator, and the record build reads the surviving binding off the
 manifest column rather than re-deciding it ([The identifier columns are read, never re-derived](../membership/README.md#the-identifier-columns-are-read-never-re-derived);
 [The binding gate](/data/classic-ids/README.md#the-binding-gate)
 for the same gate on the label side).
+
+## Brightness-colour lineage
+
+`build:catalog`'s record walk writes a second [lineage](../lineage/README.md)
+stage beside placement (`brightness-colour-lineage-pure.ts`). `readStars`
+hands on one `BrightnessColour` per manifest row that reached V, keyed on
+its origin key, and `brightnessColourLineageRows` serialises it through an
+exhaustive `switch`:
+
+- a row a later placement step parked (`no_v_magnitude`, `no_position`)
+  writes the V cascade alone; one parked on parallax never reached V and
+  writes nothing here;
+- a shipped record writes V, spectral class, B−V and the de-extinction, in
+  walk order;
+- each cascade writes its outcome code and a `refused` row per candidate
+  it passed over, the candidate's tier in `params` (a SIMBAD spectral
+  refusal adds the `namespace` that reached the row); a refusal code names
+  the rule, never the tier. A printed V tier is its own outcome code;
+  `spectral.simbad` carries its `namespace`;
+- every row cites, as evidence, the source rows its cascade read
+  (`CascadeResult`, `../cascade-result.ts`), and no measured value;
+- the dust row names the map in its code and which values it corrected
+  (`absmag-and-ci`, or `absmag-only` where the B−V is intrinsic), with
+  `params.av` the A_V subtracted, to `AV_PARAM_DECIMALS` places. Its
+  source row is the whole grid, so it cites none.
+
+The stage founds no record, writes no identity rows, and every code's
+effect is `none`. It covers the walked records: a promoted companion's V
+and colour come from its `multiples.tsv` row (`../companions/`).
+
+Measured 2026-11-08 on the full tree: 4,004,719 rows (444 MB plain), 38.6 MB
+gzipped in 4.1 s without a diff, 1.1 s of it reading the spill back — larger
+than placement's, since nearly every record cites its Gaia row on both its V
+and its colour row and writes a dust row. The walk's spill writes (~0.2 s)
+fall outside that window. `BRIGHTNESS_COLOUR_LINEAGE_BUDGET` pins 42.4 MB and
+60 s: a CI run took 25.3 s with no diff, main holding no baseline for the
+stage yet (2026-11-08). Its first diffed run adds a diff phase CI has not
+measured; placement's, over a file of similar size, takes 12.5 s in CI
+([Placement lineage](../distance/README.md#placement-lineage)), which puts it near 38 s. Held in memory beside placement's, these
+lines took `build:catalog` to 3,543 MiB against its 3,482 MiB budget
+([CI heap budget](../../util/heap-budget/README.md)), so the walk spills them
+to a `LineSpill` ([Storage and cost](../lineage/README.md#storage-and-cost)):
+3,325 MiB on 2026-11-07, against 3,312 MiB with this stage's lines not kept.
 
 ## Citation
 

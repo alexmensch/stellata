@@ -2,9 +2,10 @@
 
 ```
 site-metrics.ts        Counts the catalogue records, the credited sources
-                       and the cited references off the things themselves,
-                       and reads the version off package.json; a figure it
-                       cannot read stops the build.
+                       and the cited references off the things themselves;
+                       a figure it cannot read stops the build. The version
+                       figure is ../util/release-version.ts's releaseAt(),
+                       the release HEAD builds on.
 citation-index-source.ts
                        CITATION_INDEX — data/papers/index.md, declared
                        (../util/sources/); the reference count and the

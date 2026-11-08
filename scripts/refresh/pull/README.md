@@ -77,7 +77,7 @@ than `MAX_TABLE_CELLS` (37,000,000). A request-scoped table is not bounded
 this way.
 Measured 2026-11-05 under Node 26, the committed `gaia_dr3_tyc_xmatch.tsv` (5
 columns) replayed through `runPull` and a fake transport, peak live heap by
-`watchHeap` ([CI heap budget](../../util/README.md#ci-heap-budget)):
+`watchHeap` ([CI heap budget](../../util/heap-budget/README.md)):
 
 | Rows | Cells | Reply | Peak live heap | Wall |
 |---|---|---|---|---|

@@ -33,7 +33,7 @@ whether its frame drew two classes, its dwell length and pacing
 ([Pacing](../dwell/README.md#pacing)), its throughput and main-thread
 clocks ([CPU and GPU, apart](../dwell/README.md#cpu-and-gpu-apart)),
 cadence, adapter probe, commit pair,
-package version and the run file the row came from. **Any refused row
+release the build stands on (`releaseAt()`) and the run file the row came from. **Any refused row
 refuses the whole pin** — failed,
 tainted, not dwell, not `raf-delta`, trending at a *gated* vantage, a round
 trip, a headed run, no record count, no position, or **taken under a setup
