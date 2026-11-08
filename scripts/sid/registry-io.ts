@@ -5,7 +5,7 @@ import { artifactText, readArtifact } from '../util/sources/source';
 import { LEDGERS } from './ledger-tsv';
 import type { EventRow } from './events-pure';
 import { EVENTS } from './events-tsv';
-import { REASON_CODES } from '../catalog/lineage/reason-codes-tsv';
+import { REASON_CODES } from '../catalog/lineage/reason-codes/reason-codes-tsv';
 import { unionLedger, validateRegistry, type PartitionRows } from './registry-pure';
 import { computeLedgerHead, type LedgerRow, type SameasEdge } from './sid-pure';
 import { loadStoredEdges } from './stored-edges';

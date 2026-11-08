@@ -4,7 +4,7 @@ import type { IdentityRow } from '../catalog/lineage/identity-pure';
 import {
   decodeLineageLine, lineageLineCode, lineageLineKey, paramsOf, type LineageLine,
 } from '../catalog/lineage/lineage-row-pure';
-import type { CodeEffect } from '../catalog/lineage/reason-codes-pure';
+import type { CodeEffect } from '../catalog/lineage/reason-codes/reason-codes-pure';
 import type { Causes, Decision } from './allocate-pure';
 
 export interface IdentitySource {

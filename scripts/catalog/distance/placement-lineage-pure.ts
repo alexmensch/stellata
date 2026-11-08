@@ -5,7 +5,7 @@ import {
   decodeLineageLine, evidenceTexts, lineageLineCode, paramsOf, paramsText, stageLineageLine,
   type LineageLine, type LineageParams, type LineageRow,
 } from '../lineage/lineage-row-pure';
-import { LIVE, stageCodes, type CodeDeclaration } from '../lineage/reason-codes-pure';
+import { LIVE, stageCodes, type CodeDeclaration } from '../lineage/reason-codes/reason-codes-pure';
 import { sourceRowRefText, type AnySourceRowRef } from '../../util/sources/row-ref-pure';
 import type { DirectionResolution, DirectionVia } from './direction-cascade';
 import type { ParallaxResolution, ParallaxTier } from './parallax/parallax-cascade';

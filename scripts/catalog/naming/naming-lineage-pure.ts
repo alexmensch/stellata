@@ -1,7 +1,7 @@
 // Display naming as a lineage stage: its reason codes and the one serialiser over each record's naming outcome. See README.md#naming-lineage.
 
 import { paramsOf, paramsText, stageLineageLine, type LineageLine, type LineageParams, type LineageRole, type LineageRow } from '../lineage/lineage-row-pure';
-import { LIVE, stageCodes, type CodeDeclaration } from '../lineage/reason-codes-pure';
+import { LIVE, stageCodes, type CodeDeclaration } from '../lineage/reason-codes/reason-codes-pure';
 import { lineageInvariant, NO_EXCEPTIONS, type LineageInvariant } from '../lineage/lineage-invariant-pure';
 import type { NamedRecord } from './display-names';
 import {

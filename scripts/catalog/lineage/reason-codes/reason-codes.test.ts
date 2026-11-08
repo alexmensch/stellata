@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
-import { artifactText, readArtifact } from '../../util/sources/source';
-import { describeCommittedRoundTrip, firstDifferingLine } from '../../util/tsv/committed-round-trip';
-import { fileAtMergeBase } from '../../util/git-provenance';
-import { releaseAt } from '../../util/release-version';
-import { LINEAGE_STAGES } from './lineage-stages';
+import { artifactText, readArtifact } from '../../../util/sources/source';
+import { describeCommittedRoundTrip, firstDifferingLine } from '../../../util/tsv/committed-round-trip';
+import { fileAtMergeBase } from '../../../util/git-provenance';
+import { releaseAt } from '../../../util/release-version';
+import { LINEAGE_STAGES } from '../lineage-stages';
 import { appendOnlyViolations, reasonCodeList, type ReasonCodeEntry } from './reason-code-list-pure';
 import { LIVE, stageCodes } from './reason-codes-pure';
 import { REASON_CODES } from './reason-codes-tsv';

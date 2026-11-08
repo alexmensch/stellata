@@ -3,7 +3,7 @@
 import { paramsText, sortUtf8, type LineageParams, type LineageRow } from '../catalog/lineage/lineage-row-pure';
 import {
   LIVE, stageCodes, type CodeDeclaration, type CodeEffect, type StageCodes,
-} from '../catalog/lineage/reason-codes-pure';
+} from '../catalog/lineage/reason-codes/reason-codes-pure';
 import { readTable, type TableSpec } from '../util/tsv/table-pure';
 import type { Allocation, ObjectOutcome, SidObject } from './allocate-pure';
 import { PUBLIC_FILES } from '../../src/catalog-format/public-artifacts/public-artifacts';

@@ -13,7 +13,7 @@ import { baselineMembers, readLineage, readStageHeader, stageEmission } from './
 import { lineageInvariant, NO_EXCEPTIONS } from './lineage-invariant-pure';
 import { paramsText, stageLineageLine, stageLineageText } from './lineage-row-pure';
 import { inputsAtFrom, stageLineage, upstreamLineage } from './stage-lineage';
-import { LIVE, stageCodes } from './reason-codes-pure';
+import { LIVE, stageCodes } from './reason-codes/reason-codes-pure';
 import {
   lineageLayout, stageFamilies, stageFile, stageFileName, stageOutputFiles, type LineageLayout,
 } from '../../../src/catalog-format/pipeline-outputs/lineage-files';

@@ -1,9 +1,9 @@
-// REASON_CODES, the committed reason-code list's codec. See README.md#reason-codes--closed-append-only-generated.
+// REASON_CODES, the committed reason-code list's codec. See README.md.
 
-import { byText, defineArtifact } from '../../util/tsv/artifact-pure';
+import { byText, defineArtifact } from '../../../util/tsv/artifact-pure';
 import { CODE_STATUSES, type ReasonCodeEntry } from './reason-code-list-pure';
 import { CODE_EFFECTS } from './reason-codes-pure';
-import { DATA_FILES } from '../../../src/catalog-format/pipeline-outputs/data-files';
+import { DATA_FILES } from '../../../../src/catalog-format/pipeline-outputs/data-files';
 
 export const REASON_CODES = defineArtifact({
   file: DATA_FILES.reasonCodes,

@@ -5,7 +5,7 @@ import { starDesignations } from '../../sid/sid-pure';
 import { rowKeyText } from '../../util/sources/row-ref-pure';
 import type { IdentityRow } from '../lineage/identity-pure';
 import { evidenceTexts, paramsText, type LineageParams, type LineageRow } from '../lineage/lineage-row-pure';
-import { LIVE, codeEffects, stageCodes, type CodeDeclaration, type CodeStatus } from '../lineage/reason-codes-pure';
+import { LIVE, codeEffects, stageCodes, type CodeDeclaration, type CodeStatus } from '../lineage/reason-codes/reason-codes-pure';
 import type { Star } from '../parse/stars-parse';
 import type { MintedBrightness, MultiplesTsvRow, PromotedRow, RowOutcome } from './companion-promotion';
 import { PROMOTION_LINEAGE } from '../../../src/catalog-format/pipeline-outputs/lineage-files';

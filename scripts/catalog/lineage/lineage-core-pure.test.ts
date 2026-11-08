@@ -5,7 +5,7 @@ import {
   compareUtf8, decodeLineageLine, encodeLineageLine, evidenceTexts, foldStageLines, lineageLineKey, lineageLines, lineageRows, paramsOf,
   paramsText, sortLineageLines, sortUtf8, stageLineageLine, stageLineageText, type LineageLine, type LineageRow,
 } from './lineage-row-pure';
-import { LIVE, stageCodes } from './reason-codes-pure';
+import { LIVE, stageCodes } from './reason-codes/reason-codes-pure';
 
 const CODES = stageCodes('demo', {
   kept: { description: 'kept', effect: 'none', status: LIVE },

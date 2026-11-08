@@ -81,7 +81,7 @@ import { LineSpill } from './lineage/line-spill';
 import {
   lineageLineCode, stageLineageLine, stageLineageText, type LineageLine,
 } from './lineage/lineage-row-pure';
-import { codeEffects, type StageCodes } from './lineage/reason-codes-pure';
+import { codeEffects, type StageCodes } from './lineage/reason-codes/reason-codes-pure';
 import { stageLineage, upstreamLineage, type LineageBudget } from './lineage/stage-lineage';
 import type { LineageInvariant } from './lineage/lineage-invariant-pure';
 import { BRIGHTNESS_COLOUR_CODES, BRIGHTNESS_COLOUR_LINEAGE_BUDGET, brightnessColourLineageLines } from './photometry/brightness-colour-lineage-pure';

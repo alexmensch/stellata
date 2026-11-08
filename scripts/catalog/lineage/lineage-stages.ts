@@ -1,4 +1,4 @@
-// Every stage that writes lineage, in pipeline order, with its codes and its files: what the code list is generated from and trace reads, in that order. See README.md#reason-codes--closed-append-only-generated.
+// Every stage that writes lineage, in pipeline order, with its codes and its files: what the code list is generated from and trace reads, in that order. See reason-codes/README.md.
 
 import { ALLOCATION_CODES } from '../../sid/allocation-lineage-pure';
 import { SIBLING_ARTIFACTS } from '../../sid/sibling-artifacts-pure';
@@ -8,7 +8,7 @@ import { MEMBERSHIP_CODES } from '../membership/membership-lineage-pure';
 import { COHERENCE_CODES } from '../multiplicity/coherence-lineage-pure';
 import { NAMING_CODES } from '../naming/naming-lineage-pure';
 import { BRIGHTNESS_COLOUR_CODES } from '../photometry/brightness-colour-lineage-pure';
-import type { StageCodes } from './reason-codes-pure';
+import type { StageCodes } from './reason-codes/reason-codes-pure';
 import {
   ALLOCATION_LINEAGE, BRIGHTNESS_COLOUR_LINEAGE, COHERENCE_LINEAGE, PROMOTION_LINEAGE, PLACEMENT_LINEAGE, MEMBERSHIP_LINEAGE,
   NAMING_LINEAGE,

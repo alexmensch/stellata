@@ -38,8 +38,8 @@ export const STEPS: StepTable = {
       name: 'lineage:codes',
       kind: 'build',
       language: 'ts',
-      entry: 'scripts/catalog/lineage/generate-reason-codes.ts',
-      outputs: { module: 'scripts/catalog/lineage/reason-codes-outputs.ts', name: 'REASON_CODES_OUTPUTS' },
+      entry: 'scripts/catalog/lineage/reason-codes/generate-reason-codes.ts',
+      outputs: { module: 'scripts/catalog/lineage/reason-codes/reason-codes-outputs.ts', name: 'REASON_CODES_OUTPUTS' },
     },
     {
       name: 'build:classic-ids',

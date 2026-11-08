@@ -2,7 +2,7 @@
 
 import { fold } from '../../util/counts/tally-pure';
 import { readTable, readTableLines, type TableSpec } from '../../util/tsv/table-pure';
-import type { StageCode, StageCodes } from './reason-codes-pure';
+import type { StageCode, StageCodes } from './reason-codes/reason-codes-pure';
 
 export const LINEAGE_ROLES = ['outcome', 'refused'] as const;
 export type LineageRole = (typeof LINEAGE_ROLES)[number];
