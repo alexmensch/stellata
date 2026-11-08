@@ -13,6 +13,34 @@ export interface TableSpec<C extends string> {
    *  that many cells: the contract for a file this repo writes itself. */
   readonly exact?: boolean;
   readonly comments?: true;
+  /** Comma-separated with quoted cells (`splitCsvLine`) instead of tabs. */
+  readonly csv?: true;
+}
+
+/** One CSV record: handles quoted cells with doubled-quote escapes. Callers
+ *  split lines first, so a quoted cell must not carry a newline. */
+export function splitCsvLine(line: string): string[] {
+  const out: string[] = [];
+  let cell = '';
+  let quoted = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (quoted) {
+      if (ch === '"') {
+        if (line[i + 1] === '"') { cell += '"'; i++; } else quoted = false;
+      } else cell += ch;
+    } else if (ch === '"') {
+      quoted = true;
+    } else if (ch === ',') {
+      out.push(cell); cell = '';
+    } else cell += ch;
+  }
+  out.push(cell);
+  return out;
+}
+
+function splitCells(spec: TableSpec<string>, line: string): string[] {
+  return spec.csv ? splitCsvLine(line) : line.split('\t');
 }
 
 const DECIMAL = /^[+-]?(\d+\.?\d*|\.\d+)([eE][+-]?\d+)?$/;
@@ -196,7 +224,7 @@ function headerIndex<C extends string>(spec: TableSpec<C>, headerLine: string): 
     }
     return Object.fromEntries(spec.columns.map((c, i) => [c, i])) as Record<C, number>;
   }
-  const header = headerLine.split('\t').map((h) => h.trim());
+  const header = splitCells(spec, headerLine).map((h) => h.trim());
   const repeated = [...spec.columns, ...(spec.optional ?? [])]
     .filter((c) => header.indexOf(c) !== header.lastIndexOf(c));
   if (repeated.length) {
@@ -223,7 +251,7 @@ function checkCellCount(spec: TableSpec<string>, cells: number, lineNo: number):
 
 function tableRowOf<C extends string>(spec: TableSpec<C>): RowOf<C, TableRow<C>> {
   return (line, lineNo, idx) => {
-    const cells = line.split('\t');
+    const cells = splitCells(spec, line);
     checkCellCount(spec, cells.length, lineNo);
     return new TableRow(spec, idx, cells, lineNo, line);
   };

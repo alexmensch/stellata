@@ -4,10 +4,13 @@ Every tab-separated table a TypeScript build step reads goes through this
 folder: an external input through `readTable`, a file this repo writes itself
 through its `defineArtifact` codec. A refresh pull's output is an external
 table, written by `../../refresh/pull/`'s `formatTsv` through the codec's own
-layout (`tsvLine`, `tsvText`) and read like any input. Two places stand outside it, named so a
+layout (`tsvLine`, `tsvText`) and read like any input. A comma-separated table
+reads through the same reader with `csv: true` (the AT-HYG classic-ID CSV).
+Two places stand outside it, named so a
 third is a finding rather than precedent. The WGSN tables
-(`../../catalog/naming/wgsn-parse-pure.ts`) are comma-separated CSV, not TSV,
-so that module splits their lines itself — and parses each cell through this
+(`../../catalog/naming/wgsn-parse-pure.ts`) check their header against a
+fixed spelling, so that module splits their lines itself through
+`splitCsvLine` — and parses each cell through this
 folder's strict cell parsers. Record lineage's stage and identity files
 (`../../catalog/lineage/lineage-row-pure.ts`, `identity-pure.ts`) are
 gzipped build artifacts, one per stage, read from whichever directory a
@@ -22,7 +25,8 @@ reader wants only the lines.
 scripts/util/tsv/
   table-pure.ts (+ test)      readTable / tableLineReader, TableRow,
                               readTableLines (each row's line as written,
-                              checked but never split), and the
+                              checked but never split), splitCsvLine
+                              (the `csv: true` cell split), and the
                               cell parsers (textCell, floatCell, intCell,
                               idCell, idListCell, sourceIdCell,
                               oneOfCell).
