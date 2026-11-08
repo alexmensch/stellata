@@ -35,6 +35,10 @@ function* keyGroups(lines: Iterable<LineageLine>, side: string): Generator<{ key
   if (group.length > 0) yield { key: prevKey, lines: group };
 }
 
+function sameLines(x: readonly LineageLine[], y: readonly LineageLine[]): boolean {
+  return x.length === y.length && x.every((line, i) => line === y[i]);
+}
+
 /** A key's lines diff as a set: changed means the set under one key differs. */
 export function diffLineage(baseline: Iterable<LineageLine>, current: Iterable<LineageLine>): KeyChange[] {
   const before = keyGroups(baseline, 'baseline');
@@ -49,6 +53,9 @@ export function diffLineage(baseline: Iterable<LineageLine>, current: Iterable<L
       b = before.next();
     } else if (order > 0 && !a.done) {
       changes.push({ kind: 'added', key: a.value.key, removed: [], added: a.value.lines });
+      a = after.next();
+    } else if (!b.done && !a.done && sameLines(b.value.lines, a.value.lines)) {
+      b = before.next();
       a = after.next();
     } else if (!b.done && !a.done) {
       const was = new Set(b.value.lines);

@@ -1,6 +1,6 @@
 ---
 name: stellata-pr-cleanup
-description: Stellata's extension of the user-level `pr-cleanup` skill — bead IDs and closing, the pnpm gates, the package.json version conflict and release notes, the ruleset that gates merges, and rebuilding main's seeded artifacts after landing. `pr-cleanup` loads it for every landing of a stellata PR; load it directly only if `pr-cleanup` is already in context without it.
+description: Stellata's extension of the user-level `pr-cleanup` skill — bead IDs and closing, the pnpm gates, the derived version, the ruleset that gates merges, and rebuilding main's seeded artifacts after landing. `pr-cleanup` loads it for every landing of a stellata PR; load it directly only if `pr-cleanup` is already in context without it.
 ---
 
 # Landing a stellata PR
@@ -22,19 +22,16 @@ gh pr view <N> --json title,body,commits \
 
 Read each with `bd show <id>`.
 
-## Bring main in — gates, version, release notes
+## Bring main in — gates, release level
 
 The gates are `pnpm run typecheck && pnpm test`.
 
-**`package.json` conflicts whenever main shipped a release since this branch
-bumped.** Resolve to a patch *above* main's version — never keep the branch's
-stale number, never keep main's unchanged. It is the one conflict this skill
-gives a rule for; any other is `pr-cleanup`'s deviation.
-
-If the version moved, re-read the PR body's `## Release notes` block: it
-ships to the GitHub release page for whatever version this PR lands
-([Version policy](/RELEASING.md#version-policy)), and `release-notes-guard`
-fails an empty one.
+Syncing is required by the ruleset
+([Merge gating](/RELEASING.md#merge-gating)). No version is ever in conflict: the PR carries a release level label
+and the version is derived when it lands
+([Version policy](/RELEASING.md#version-policy)). A PR with no level label,
+or two, fails `version-guard`; that is `pr-cleanup`'s deviation, not a
+label to pick here.
 
 ## Close the tickets — bd
 
@@ -88,5 +85,4 @@ it on your own.
 - **Blocked with no failing check:** merge gating lives in ruleset
   `15843287`, not branch protection ([Merge gating](/RELEASING.md#merge-gating)).
 - A bead that is an epic with open children.
-- The PR bumps the version but `## Release notes` is empty, or still describes
-  the pre-merge version.
+- The PR declares a release level but `## Release notes` is empty.

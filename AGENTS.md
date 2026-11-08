@@ -284,10 +284,11 @@ The worktree → feature branch → `push -u` → PR → approval-gated-merge fl
 a standing global rule; **never push or commit to main**, and diff size is
 never a justification. What this project adds:
 
-- **`skip-version-bump` label** on `gh pr create` when merging changes
-  nothing the deployed site serves — [the live-app consumer test](RELEASING.md#the-live-app-consumer-test).
-- **`## Release notes` is required whenever the version bumps.** Every PR with
-  a `package.json` version bump fills that block in the PR body (Summary /
+- **One release level label** on `gh pr create` — `release:major|minor|patch`,
+  or `skip-version-bump` if the site is unchanged; the version is derived
+  on landing ([Version policy](RELEASING.md#version-policy)).
+- **`## Release notes` is required whenever the PR releases.** Every PR
+  with a level fills that block in the PR body (Summary /
   New features / Bugfixes / Changes). The deploy workflow extracts it and
   publishes it to the GitHub release page for the version this PR ships,
   replacing the flat auto-generated notes. `release-notes-guard` CI fails the

@@ -1,15 +1,15 @@
 // SID allocation as a lineage stage: its reason codes, live and historical, the one serialiser over its outcomes, and its key -> SID identity file. See README.md#sid-events.
 
-import { compareUtf8, paramsText, type LineageParams, type LineageRow } from '../catalog/lineage/lineage-row-pure';
+import { paramsText, sortUtf8, type LineageParams, type LineageRow } from '../catalog/lineage/lineage-row-pure';
 import {
   LIVE, stageCodes, type CodeDeclaration, type CodeEffect, type StageCodes,
-} from '../catalog/lineage/reason-codes-pure';
+} from '../catalog/lineage/reason-codes/reason-codes-pure';
 import { readTable, type TableSpec } from '../util/tsv/table-pure';
 import type { Allocation, ObjectOutcome, SidObject } from './allocate-pure';
 import { PUBLIC_FILES } from '../../src/catalog-format/public-artifacts/public-artifacts';
 import { ALLOCATION_LINEAGE } from '../../src/catalog-format/pipeline-outputs/lineage-files';
 
-export const ALLOCATION_LINEAGE_BUDGET = { gzipBytes: 19_300_000, writeMs: 30_000 };
+export const ALLOCATION_LINEAGE_BUDGET = { gzipBytes: 19_300_000, writeMs: 20_000 };
 
 const live = (effect: CodeEffect, description: string): CodeDeclaration => ({ description, effect, status: LIVE });
 
@@ -139,7 +139,7 @@ export function allocationSidRows(
 }
 
 export function allocationSidsText(rows: readonly AllocationSidRow[]): string {
-  const sorted = [...rows].sort((a, b) => compareUtf8(a.key, b.key));
+  const sorted = sortUtf8([...rows], (r) => r.key);
   for (let i = 1; i < sorted.length; i++) {
     if (sorted[i].key === sorted[i - 1].key) throw new Error(`allocation identity: two objects keyed ${sorted[i].key}`);
   }

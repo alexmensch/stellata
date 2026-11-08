@@ -1,16 +1,31 @@
 # Release cutting
 
-Turns a push to `main` into GitHub releases, and gates the size and the
-behaviour of what the deploy uploads. Release cutting is invoked by
-`.github/workflows/deploy.yml` after a successful Cloudflare deploy;
-also usable by hand (see [Manual release](/RELEASING.md#manual-release-fallback)).
+Turns a push to `main` into versioned GitHub releases, and gates the size
+and the behaviour of what the deploy uploads. Release cutting is invoked
+by `.github/workflows/deploy.yml` around its Cloudflare deploy; also
+usable by hand (see [Manual release](/RELEASING.md#manual-release-fallback)).
 
-- `release-plan-pure.ts` — the decision layer. `planReleases()` walks a
-  push range oldest-first and emits one release per version change;
+- `release-plan-pure.ts` — the decision layer. `declarationOf()` reads
+  the release level a PR's labels declare (`LEVEL_LABELS`: `release:major`,
+  `release:minor`, `release:patch`, or `SKIP_LABEL`, `skip-version-bump`),
+  as a variant that is `undeclared` or `conflicting` unless exactly one is
+  on; `bumped()` applies a level; `planReleases()` derives every pushed
+  commit's version ([Derived versions](#derived-versions));
   `extractReleaseNotes()` pulls the `## Release notes` section out of a
   PR body; `prNumberFromSubject()` reads the squash-merge `(#NN)` suffix.
-- `cut-releases.ts` — the CLI. Resolves the range with `git`, plans,
-  then tags and publishes with `gh`.
+  The version and tag grammar and `releaseAt()` are
+  `../util/release-version.ts`, which the build reads too.
+- `release-level.ts` (+ test) — the guards' level read: a PR's labels on
+  stdin, one per line, out comes `major|minor|patch|none`, or a
+  `::error::` and exit 1 unless exactly one level label is on. Run by
+  `.github/actions/release-level`.
+- `cut-releases.ts` — the CLI, three steps: `plan [--head] [--out
+  <file>]` plans the releases up to `--head` and writes them as JSON (to
+  `--out`, and with their count to `GITHUB_OUTPUT`); `tag --plan <file>`
+  makes each planned release's annotated tag locally; `publish --plan
+  <file>` creates each release, and with it its tag on origin. `parsePlan()` refuses a
+  malformed plan before either acts. Reads each commit's PR labels and
+  body with `gh`.
 - `asset-size-pure.ts` (+ test) — the Cloudflare Workers per-asset
   ceiling (`WORKERS_MAX_ASSET_BYTES`, 25 MiB) and `judgeAssetSizes()`,
   which ranks a file list largest first and splits out oversize and
@@ -22,10 +37,13 @@ also usable by hand (see [Manual release](/RELEASING.md#manual-release-fallback)
   `node release-notes-check.ts <body-file>` fails unless
   `extractReleaseNotes()` finds the `## Release notes` section non-empty,
   so the guard and the deploy cannot disagree on what counts. Run by plain
-  `node` (built-in TypeScript support, the `.nvmrc` Node in CI), which is why it and
+  `node` (built-in TypeScript support, the `.nvmrc` Node in CI), as are
+  `release-level.ts` and `cut-releases.ts`, which is why they and
   `release-plan-pure.ts` must import no package and no path that needs a
-  bundler — the job checks out `scripts/release` alone and installs nothing.
-  The test holds both to `node:` builtins and `./sibling.ts` imports.
+  bundler — the jobs check out `scripts/release` and `scripts/util` alone and
+  install nothing. The test holds them to `node:` builtins, `./sibling.ts`
+  imports and `../util/release-version.ts`, whose own test holds it to
+  builtins.
 - `pre-traffic-check.ts` — `deploy.yml`'s step between `wrangler versions
   upload` and `wrangler versions deploy`:
   [The pre-traffic check](#the-pre-traffic-check). Its verdicts are
@@ -43,22 +61,61 @@ also usable by hand (see [Manual release](/RELEASING.md#manual-release-fallback)
   `Deploy asset sizes` step, by `deploy.yml` before `wrangler versions upload`, and
   by `pnpm run deploy`.
 
-## One deploy, N releases
+## Derived versions
 
-**A push is not a commit.** GitHub's merge-a-stack feature lands every
-PR in a stack as its own commit in a *single* push event, and each of
-those commits can carry its own `package.json` bump. Comparing HEAD to
-HEAD~1 therefore sees only the top of the stack and silently drops
-every intermediate version's tag, release, and release notes.
+**No commit states its own version.** A PR declares a release *level* by
+label, and the version is derived when it lands: which version a PR ships
+depends on what lands before it. Two PRs in flight that each hand-picked
+the next version would claim the same one, so the one landing second would
+hit a version-file conflict in its sync with main and have to re-pick.
 
-The split that resolves it: **Cloudflare is deployed once, at HEAD**
-(that is the code that should be live), while **tags and releases are
-cut per bumped commit** across `github.event.before..HEAD`. The two
-halves of "release" answer different questions — what runs in
-production, versus what each version shipped.
+**The plan starts at the last release pushed, never at the push's
+`before`.** Its base is the commit the newest release tag reachable from
+HEAD was cut at (`releaseCommitAt`, `../util/release-version.ts`): the tags
+on origin are the one record of what has shipped. A push's `before` is
+not: GitHub keeps one pending run per concurrency group and cancels the
+rest, and a failed deploy pushes no tag, so a range starting at `before`
+would skip those commits for good and hand their version to the next PR.
+**The plan is made once and handed on.** `plan` writes it as JSON and
+`deploy.yml` hands it to `tag` and `publish`, which act on exactly the
+releases `plan` printed: re-planned after `tag`, the base would be the
+release this run just made, and a label edited mid-run would tag one thing
+and publish another.
 
-`--first-parent` keeps the walk on `main`'s own line, so a merge
-commit's incoming branch never contributes phantom version changes.
+`planReleases()` walks that range oldest-first from the base's release
+(`releaseAt(base)`). Each
+commit's PR level bumps the version before it; `skip-version-bump` ships
+nothing; a commit that already carries a release tag keeps it, so a rerun
+over a released range re-derives nothing. A commit whose PR declares no
+level, or two, stops the plan before any version past it is derived: the
+guards make that unreachable for a PR that landed through the ruleset, and
+a fix is a label edit and a rerun. **Only squash-merged PRs land on
+`main`** ([Landing](../../RELEASING.md#landing)), and their subjects always
+end `(#N)`; a commit without one (a push that bypassed the ruleset) stops
+every later plan, and no label clears it.
+Recover by tagging that commit by hand at the version it ships
+(`git tag v<version> <sha> && git push origin v<version>`, the release
+before it bumped by the level it deserves): it then reads as already
+released.
+
+**A run's range is not one commit.** It holds every commit since the last
+release pushed — a cancelled or failed run leaves its commits to the next.
+**Cloudflare is deployed once, at HEAD** (the code
+that should be live), while **tags and releases are cut per releasing
+commit** in the range. The two halves of "release"
+answer different questions — what runs in production, versus what each
+version shipped. `--first-parent` keeps the walk on `main`'s own line.
+
+**The tags are made locally before the build and on origin after the
+deploy.** The build's version is `releaseAt('HEAD')`, the newest release
+tag reachable from HEAD, so `deploy.yml` runs `tag` first and the build,
+the footer and the pre-traffic check all read the release being deployed.
+A failed deploy discards the runner and its tags. Only `publish`, after
+traffic has moved, puts a tag on origin, and only as part of creating its
+release (`gh release create --target`), so origin never holds a release
+tag without its page: a tag the next plan starts from has always been
+published. The tags GitHub makes are lightweight, which `releaseAt` reads
+the same (`describe --tags`).
 
 ## The pre-traffic check
 
@@ -84,8 +141,7 @@ request's host, and redirects are judged by path and query alone
   would otherwise hide;
 - `catalog.bin.0` answers with the catalogue's own header, read by the
   catalogue's reader, so an HTML body or a stale binary fails;
-- the homepage footer shows `package.json`'s version, the one being
-  deployed.
+- the homepage footer shows `releaseAt()`, the release being deployed.
 
 What the `stellata.xyz` zone adds on top — its own rules, caching and the
 custom-domain binding — is outside the check;
@@ -111,8 +167,7 @@ preview URL.
 - **`--latest` goes to the newest planned release only.** Back-filling
   older versions must not move the repo's "Latest" pointer backwards.
 - **A missing notes section is not an error.** Falls back to
-  `--generate-notes`, which is what a `skip-version-bump` PR merged
-  alongside bumped siblings will hit.
+  `--generate-notes`.
 
-`--dry-run` prints the plan — which tags, at which commits, from which
-PRs — and touches nothing. Use it before any manual invocation.
+`plan` prints the plan — which tags, at which commits, from which PRs —
+and touches nothing. Use it before any manual invocation.

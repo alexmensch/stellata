@@ -7,23 +7,27 @@ file's inline comments.
 
 ## `deploy.yml`
 
-Runs on push to `main`. Builds and deploys **once, at HEAD**: uploads
-the version (`wrangler versions upload`), checks it on its preview URL,
-then moves traffic to it (`wrangler versions deploy`) and applies
-`wrangler.toml`'s routes and custom domain (`wrangler triggers deploy`).
-A failed check leaves the previous version live
+Runs on push to `main`. Its `plan-releases` job derives the version of
+every commit since the newest release tag's commit
+([why there](/scripts/release/README.md#derived-versions))
+from its PR's release level label (`scripts/release/cut-releases.ts
+plan`), and hands that plan to the `deploy` job's steps; a
+range that ships no release stops there. Otherwise `deploy` makes those
+release tags locally, builds — the build's version is the newest of them
+— and deploys **once, at HEAD**: uploads the version (`wrangler versions
+upload`), checks it on its preview URL, then moves traffic to it
+(`wrangler versions deploy`) and applies `wrangler.toml`'s routes and
+custom domain (`wrangler triggers deploy`). A failed check leaves the
+previous version live and pushes no tag
 ([The pre-traffic check](/scripts/release/README.md#the-pre-traffic-check)).
-Then it hands off to `scripts/release/cut-releases.ts`, which cuts a tag
-and a GitHub release for **every** commit in the pushed range whose
-`package.json#version` differs from its predecessor — each carrying the
-`## Release notes` block from its own PR body, in place of the flat
-auto-generated notes.
+Last, `cut-releases.ts publish` creates each GitHub release, and its tag
+with it, carrying the `## Release notes` block from its own PR body in
+place of the flat auto-generated notes.
 
-One push can therefore ship several releases: merging a stack lands N
-PRs as N commits in a single push event. The version comparison that
-gates the deploy runs against `github.event.before`, not `HEAD~1`, so a
-stack whose *tip* commit doesn't bump still deploys and still releases
-its earlier bumps. Rationale and invariants: `scripts/release/README.md`.
+The range can hold several releasing commits — a failed deploy leaves its
+commit untagged for the next push's run — and each releases at its own
+derived version. Rationale and invariants:
+[Derived versions](/scripts/release/README.md#derived-versions).
 
 The PR-body extraction is the reason `release-notes-guard.yml` exists
 (below) — a missing block would land an empty release page.
@@ -33,26 +37,35 @@ composite action (same as the data-consuming jobs in `test.yml`)
 rather than an `lfs: true` checkout, so a deploy reuses the cached
 objects instead of pulling ~600 MB from the LFS store every push.
 
-## The `skip-version-bump` exemption
+## The PR a guard judges
 
-`release-notes-guard` and `version-guard` pass without checking on a PR
-labelled `skip-version-bump`. Both ask the PR for its current labels
-through the `.github/actions/skip-version-bump` composite action and gate
-every step after it on the answer — never the triggering event's label
-list ([why](/RELEASING.md#merge-gating)).
+Each guard runs on `pull_request`, takes the PR's number from the event and
+reads its labels and body live through `gh`, never the event payload
+([why](/RELEASING.md#merge-gating)).
+
+## The release level, and the `skip-version-bump` exemption
+
+`.github/actions/release-level` reads the PR's labels live and fails
+unless exactly one release level label is on —
+`release:major`, `release:minor`, `release:patch` or `skip-version-bump`
+(`scripts/release/release-level.ts`). `version-guard` is that check alone;
+`release-notes-guard` gates every step after it on the level not being
+`none`, so a `skip-version-bump` PR passes without its notes checked.
 
 ## `release-notes-guard.yml`
 
-CI check on every PR. Fails the PR if the `## Release notes` block in
-the PR body is empty (HTML comments don't count); the body is read live
-from the PR, never the event payload. Exempt under
-[the `skip-version-bump` exemption](#the-skip-version-bump-exemption).
+CI check on every PR. Fails it if the
+`## Release notes` block in the PR body is empty (HTML comments don't
+count); the body is read live from the PR. Exempt under
+[the `skip-version-bump` exemption](#the-release-level-and-the-skip-version-bump-exemption).
 See `RELEASING.md` for the block format.
 The check is `scripts/release/release-notes-check.ts`, run by plain `node`, tested in vitest.
 
 ## `perf-section-guard.yml`
 
-CI check on every PR. Fails the PR unless the body carries a non-empty
+CI check on every PR, reading the body live and the diff against
+`origin/<base branch>`.
+Fails it unless the body carries a non-empty
 `## Perf` section with an `accepted:` line for every `✗` row — and, when
 the section claims Tier 1 or 2, at least one `--against-pin` table row —
 whenever the diff does either of:
@@ -81,11 +94,12 @@ sends the body: [How pr-body-guard works](/scripts/hooks/README.md#how-pr-body-g
 
 ## `version-guard.yml`
 
-CI check on every PR. Fails the PR unless `package.json#version` is
-above the base branch's and not already a tag. Whether a PR bumps or
-takes `skip-version-bump` is
-[the live-app consumer test](/RELEASING.md#the-live-app-consumer-test). Exempt under
-[the `skip-version-bump` exemption](#the-skip-version-bump-exemption).
+CI check on every PR. Fails it unless the PR
+carries exactly one [release level](#the-release-level-and-the-skip-version-bump-exemption),
+the level `deploy.yml` derives its version from. Which level is
+[the version policy](/RELEASING.md#version-policy) and
+[the live-app consumer test](/RELEASING.md#the-live-app-consumer-test). The
+job keeps its `version-guard` name, the ruleset's required context.
 
 ## `cache-cleanup.yml`
 
@@ -98,7 +112,7 @@ main's builds among them.
 
 ## `test.yml`
 
-CI pipeline on every PR (and push to `main`). Required for merge. A
+CI pipeline on every PR and push to `main`. Required for merge. A
 fan-out of jobs beyond the bare checks:
 
 - `lfs-data` — warms the shared LFS object cache

@@ -32,6 +32,11 @@ export const PLACEMENT_LINEAGE: StageLineageSpec<'placement', 'placement'> = {
   files: ['placement'],
 };
 
+export const BRIGHTNESS_COLOUR_LINEAGE: StageLineageSpec<'brightness-colour', 'brightness-colour'> = {
+  stage: 'brightness-colour',
+  files: ['brightness-colour'],
+};
+
 export const COHERENCE_LINEAGE: StageLineageSpec<'coherence', 'coherence'> = {
   stage: 'coherence',
   files: ['coherence'],

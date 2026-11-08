@@ -7,7 +7,7 @@ import type { VelocityVia } from '../velocity';
 import type { GaiaAstrometryCatalogRow } from '../../sources/gaia-astrometry-source';
 import type { Tycho2Row } from '../../tycho2-parse';
 import type { CitedProperMotion } from '../../cited-proper-motion';
-import type { CitedCascadeResult, CitedRefusal, UniformValues } from '../../cascade-result';
+import type { CascadeResult, CascadeRefusal, UniformValues } from '../../cascade-result';
 
 export const PM_RESCUE_VIA_VALUES = [
   'tycho2',
@@ -40,10 +40,10 @@ export interface PmRescueSources {
 }
 
 /** A courier's PM the Gaia-bibcode skip rule rejected. */
-export type PmRescueRefusal = CitedRefusal<'cns5' | 'simbad', 'gaia_release'>;
+export type PmRescueRefusal = CascadeRefusal<'cns5' | 'simbad', 'gaia_release'>;
 
 /** mas/yr, μ_α* cos δ-applied. */
-export type PmRescueResolution = CitedCascadeResult<
+export type PmRescueResolution = CascadeResult<
   UniformValues<PmRescueVia, { pmRaMasyr: number; pmDecMasyr: number }>,
   PmRescueRefusal
 >;

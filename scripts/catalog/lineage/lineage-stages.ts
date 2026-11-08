@@ -1,4 +1,4 @@
-// Every stage that writes lineage, in pipeline order, with its codes and its files: what the code list is generated from and trace reads, in that order. See README.md#reason-codes--closed-append-only-generated.
+// Every stage that writes lineage, in pipeline order, with its codes and its files: what the code list is generated from and trace reads, in that order. See reason-codes/README.md.
 
 import { ALLOCATION_CODES } from '../../sid/allocation-lineage-pure';
 import { SIBLING_ARTIFACTS } from '../../sid/sibling-artifacts-pure';
@@ -7,9 +7,11 @@ import { PLACEMENT_CODES } from '../distance/placement-lineage-pure';
 import { MEMBERSHIP_CODES } from '../membership/membership-lineage-pure';
 import { COHERENCE_CODES } from '../multiplicity/coherence-lineage-pure';
 import { NAMING_CODES } from '../naming/naming-lineage-pure';
-import type { StageCodes } from './reason-codes-pure';
+import { BRIGHTNESS_COLOUR_CODES } from '../photometry/brightness-colour-lineage-pure';
+import type { StageCodes } from './reason-codes/reason-codes-pure';
 import {
-  ALLOCATION_LINEAGE, COHERENCE_LINEAGE, PROMOTION_LINEAGE, PLACEMENT_LINEAGE, MEMBERSHIP_LINEAGE, NAMING_LINEAGE,
+  ALLOCATION_LINEAGE, BRIGHTNESS_COLOUR_LINEAGE, COHERENCE_LINEAGE, PROMOTION_LINEAGE, PLACEMENT_LINEAGE, MEMBERSHIP_LINEAGE,
+  NAMING_LINEAGE,
   type StageLineageSpec,
 } from '../../../src/catalog-format/pipeline-outputs/lineage-files';
 
@@ -21,6 +23,7 @@ export interface LineageStage {
 export const LINEAGE_STAGES: readonly LineageStage[] = [
   { codes: MEMBERSHIP_CODES, spec: MEMBERSHIP_LINEAGE },
   { codes: PLACEMENT_CODES, spec: PLACEMENT_LINEAGE },
+  { codes: BRIGHTNESS_COLOUR_CODES, spec: BRIGHTNESS_COLOUR_LINEAGE },
   { codes: COHERENCE_CODES, spec: COHERENCE_LINEAGE },
   { codes: PROMOTION_CODES, spec: PROMOTION_LINEAGE },
   { codes: ALLOCATION_CODES, spec: ALLOCATION_LINEAGE },

@@ -6,7 +6,7 @@ import { resolve } from 'node:path';
 
 import { REPO_ROOT as ROOT } from '../../util/paths';
 import { emitArtifacts } from '../../util/emit-artifacts';
-import { watchHeap } from '../../util/heap-budget';
+import { watchHeap } from '../../util/heap-budget/heap-budget';
 import { stepInputHashes } from '../../util/step-input-hashes';
 import { artifactRows, readArtifact } from '../../util/sources/source';
 import { MEMBERSHIP_OUTPUTS } from './membership-manifest-outputs';
@@ -16,7 +16,7 @@ import { LINEAGE_LAYOUT } from '../lineage/lineage-layout-pure';
 import { stageLineageLine, stageLineageText } from '../lineage/lineage-row-pure';
 import { stageLineage } from '../lineage/stage-lineage';
 import {
-  MEMBERSHIP_CODES, MEMBERSHIP_INVARIANTS, MEMBERSHIP_LINEAGE_BUDGET, multiplesComponentJoin,
+  MEMBERSHIP_CODES, MEMBERSHIP_INVARIANTS, MEMBERSHIP_LINEAGE_BUDGET, identityLookup, multiplesComponentJoin,
 } from './membership-lineage-pure';
 import { snapshotCheck } from '../../util/snapshot-check';
 import { compareCountSnapshot } from '../build-counts';
@@ -157,16 +157,15 @@ export async function main(): Promise<void> {
     spec: MEMBERSHIP_LINEAGE,
     inputs: stepInputHashes(),
     diffed: 'membership',
-    lines: result.lineage.map((row) => stageLineageLine(MEMBERSHIP_CODES, row)),
+    lines: () => result.lineage.map((row) => stageLineageLine(MEMBERSHIP_CODES, row)),
     render: (sorted) => ({
       membership: stageLineageText(MEMBERSHIP_CODES, sorted),
       identity: identityText(result.identity),
     }),
-    joins: (baselineDir) => {
-      const baseline = readIdentity(stageFile(baselineDir, MEMBERSHIP_LINEAGE.identity!));
-      const identity = new Map([...baseline, ...result.identity].map((r) => [r.key, r]));
-      return [multiplesComponentJoin(identity, multiples)];
-    },
+    joins: (baselineDir) => [multiplesComponentJoin(
+      identityLookup(result.identity, () => readIdentity(stageFile(baselineDir, MEMBERSHIP_LINEAGE.identity!))),
+      multiples,
+    )],
     budget: MEMBERSHIP_LINEAGE_BUDGET,
     invariants: MEMBERSHIP_INVARIANTS,
     argv: process.argv.slice(2),

@@ -7,7 +7,7 @@ import type { Hip2AstrometryRow } from '../../sources/hip2-source';
 import type { GaiaAstrometryCatalogRow } from '../../sources/gaia-astrometry-source';
 import { parallaxSignalToNoise } from '../../cited-parallax';
 import type { CitedParallax, MeasuredParallax } from '../../cited-parallax';
-import type { CitedCascadeResult, CitedRefusal } from '../../cascade-result';
+import type { CascadeResult, CascadeRefusal } from '../../cascade-result';
 import type { AnySourceRowRef } from '../../../util/sources/row-ref-pure';
 import type { SiblingParallax } from './pair-member-parallax';
 import type { GlieseRow } from '../../gliese-parse-pure';
@@ -78,11 +78,11 @@ export type ParallaxTier = Exclude<DistVia, 'bailer_jones' | 'lmc_kinematic' | '
  *  two apart — and `mas` is what companion promotion matches a pair row's
  *  stated distance against (`../../companions/README.md#refused-parallax-refusal`). */
 export type ParallaxRefusal =
-  CitedRefusal<ParallaxTier, 'below_sn_floor' | RefusedPublication> & { readonly mas: number };
+  CascadeRefusal<ParallaxTier, 'below_sn_floor' | RefusedPublication> & { readonly mas: number };
 
 /** `mas` always > 0. The curated exit carries no parallax: its record sits at
  *  the origin. */
-export type ParallaxResolution = CitedCascadeResult<
+export type ParallaxResolution = CascadeResult<
   Record<Exclude<ParallaxTier, 'curated'>, MeasuredParallax> & { curated: OriginPlacement },
   ParallaxRefusal
 >;

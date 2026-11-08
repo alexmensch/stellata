@@ -59,7 +59,7 @@ describe('the pages ask for their figures rather than quoting them', () => {
   it.each([
     ['homepage', HOME],
     ['404 page', NOT_FOUND],
-  ])('the %s reads its own version off package.json', (_, page) => {
+  ])('the %s asks for its version as a figure rather than quoting one', (_, page) => {
     expect(textOf(select('body', page))).toContain('%VITE_APP_VERSION%');
   });
 });

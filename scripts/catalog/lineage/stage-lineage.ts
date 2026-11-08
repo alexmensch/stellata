@@ -16,6 +16,7 @@ import {
 } from './baseline/lineage-header-pure';
 import { readStageHeader, stageEmission, stageProvenance, streamLineage } from './lineage-io';
 import { invariantCheck, invariantViolations, type LineageInvariant } from './lineage-invariant-pure';
+import { phaseClock } from './phase-clock-pure';
 import { sortLineageLines, type LineageLine } from './lineage-row-pure';
 import {
   stageFile, stageFileName, type LineageLayout, type StageLineageSpec, type StageOutputKey,
@@ -34,8 +35,8 @@ export interface StageLineageRun<F extends string, S extends string> {
   readonly inputs: FileHashes;
   /** The stage's own file: the one its diff reads. */
   readonly diffed: F;
-  /** Each row's `stageLineageLine`, in any order. */
-  readonly lines: readonly LineageLine[];
+  /** Each row's `stageLineageLine`, in any order; called once, inside the timed window. */
+  readonly lines: () => readonly LineageLine[];
   /** Handed `lines` in lineage order. */
   readonly render: (sorted: readonly LineageLine[]) => Readonly<Record<F, string | Uint8Array>>;
   /** Built only when a diff runs, from the baseline directory it reads. */
@@ -154,34 +155,37 @@ function baselineContext<F extends string, S extends string>(run: StageLineageRu
 export function stageLineage<F extends string, S extends string>(
   run: StageLineageRun<F, S>,
 ): StageLineageEmission<F, S> {
-  const started = performance.now();
-  const source = baselineSource(run);
-  const previous = readStageHeader(run.layout.previous, run.spec);
-  const plan = planBaseline(previous, source, baselineContext(run), run.argv.includes(ACCEPT_ANY_BASELINE_FLAG));
-  const sorted = sortLineageLines(run.lines);
+  const clock = phaseClock(() => performance.now());
+  const { source, plan } = clock.lap('baseline', () => {
+    const source = baselineSource(run);
+    const previous = readStageHeader(run.layout.previous, run.spec);
+    return { source, plan: planBaseline(previous, source, baselineContext(run), run.argv.includes(ACCEPT_ANY_BASELINE_FLAG)) };
+  });
+  const lines = clock.lap('lines', run.lines);
+  const sorted = clock.lap('sort', () => sortLineageLines(lines));
   let changes: KeyChange[] | null = null;
-  let joins: readonly DiffJoin[] = [];
+  let diff: Uint8Array | null = null;
   if (plan.kind === 'diff') {
     const dir = source.kind === 'against' ? source.dir : run.layout[plan.from === 'previous' ? 'previous' : 'current'];
-    changes = diffLineage(streamLineage(stageFile(dir, run.diffed)), sorted);
-    joins = run.joins(dir);
+    const found = clock.lap('diff', () => diffLineage(streamLineage(stageFile(dir, run.diffed)), sorted));
+    changes = found;
+    diff = clock.lap('joins and diff text', () => stageDiffText(found, run.joins(dir)));
   } else if (plan.kind === 'refused') {
     console.log(plan.message);
   } else {
     console.log(`lineage: no ${run.spec.stage} baseline in this checkout, so no diff`);
   }
 
-  const texts = run.render(sorted);
-  const diff = changes === null ? null : stageDiffText(changes, joins);
-  const { files, members } = stageEmission(
+  const texts = clock.lap('render', () => run.render(sorted));
+  const { files, members } = clock.lap('gzip and baseline copy', () => stageEmission(
     run.layout, run.spec, texts, stageProvenance(run.spec, run.inputs), diff, plan.rotate,
-  );
-  const invariantChecks = invariantViolations(run.invariants, sorted).map(invariantCheck);
-  const writeMs = performance.now() - started;
+  ));
+  const invariantChecks = clock.lap('invariants', () => invariantViolations(run.invariants, sorted).map(invariantCheck));
+  const writeMs = clock.totalMs();
   const gzipBytes = run.spec.files.reduce(
     (n, f) => n + (files[`lineage:${f}` as StageOutputKey<F, S>] as Uint8Array).byteLength, 0,
   );
-  const measured = `${run.spec.stage} lineage: ${gzipBytes} bytes gzipped; header, diff, write and invariants took ${writeMs.toFixed(0)} ms`;
+  const measured = `${run.spec.stage} lineage: ${gzipBytes} bytes gzipped; header, diff, write and invariants took ${writeMs.toFixed(0)} ms (${clock.report()})`;
   const over = gzipBytes > run.budget.gzipBytes || writeMs > run.budget.writeMs;
   const checks: Check[] = [over
     ? {

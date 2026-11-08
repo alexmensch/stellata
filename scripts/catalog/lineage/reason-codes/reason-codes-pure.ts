@@ -1,4 +1,4 @@
-// Reason codes: each stage declares its own, closed and append-only; the committed list is generated from them. See README.md#reason-codes--closed-append-only-generated.
+// Reason codes: each stage declares its own, closed and append-only; the committed list is generated from them. See README.md.
 
 /** What a removal or re-bind does to the record's SID; `none` for every other code. */
 export const CODE_EFFECTS = ['retire', 'park', 'merge', 'none'] as const;

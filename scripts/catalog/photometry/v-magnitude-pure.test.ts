@@ -17,13 +17,15 @@ import {
   printedVLookups,
   tycho2VMagnitude,
   vTierIsSystemBlend,
+  type CitedPhotometry,
   type PrintedV,
 } from './v-magnitude-pure';
-import {
-  GAIA_PHOTOMETRY_SATURATION_G,
-  type GaiaPhotometry,
-} from './gaia-photometry-pure';
-import { photometry, printedVOf } from './photometry-fixture';
+import { GAIA_PHOTOMETRY_SATURATION_G } from './gaia-photometry-pure';
+import { PHOTOMETRY_REF, photometry, printedHipTable, printedVOf } from './photometry-fixture';
+import { HIP_PHOTOMETRY } from './hip-photometry-source';
+import { GLIESE } from '../gliese-source';
+import { TYCHO2 } from '../tycho2-source';
+import { sourceRowRef } from '../../util/sources/row-ref-pure';
 
 describe('Riello 2021 G−V relation', () => {
   // The literals ARE the assertion: these are the published Table 5.9 values
@@ -106,9 +108,10 @@ describe('rielloVMagnitude', () => {
 });
 
 describe('resolveVMagnitude cascade', () => {
-  const PRINTED_HIP = { vVia: 'printed_hip', vMag: 2.5, key: 1 } as const;
+  const HIP_REF = sourceRowRef(HIP_PHOTOMETRY, 1);
+  const PRINTED_HIP = { vVia: 'printed_hip', vMag: 2.5, key: 1, ref: HIP_REF } as const;
   const resolve = (
-    p: GaiaPhotometry | null, printed: PrintedV | null, curatedV: number | null = null,
+    p: CitedPhotometry | null, printed: PrintedV | null, curatedV: number | null = null,
   ) => resolveVMagnitude({ photometry: p, printed, curatedV });
 
   it('transforms Gaia photometry when the relation applies', () => {
@@ -121,23 +124,24 @@ describe('resolveVMagnitude cascade', () => {
   // full photometry row exists — and the result names the refused transform.
   it('falls to the printed V when Gaia saturates the source', () => {
     expect(resolve(photometry({ gMag: 2.1 }), PRINTED_HIP)).toEqual({
-      via: 'printed_hip', value: 2.5,
-      refusals: [{ tier: 'gaia_riello', reason: 'uncalibrated' }],
+      via: 'printed_hip', value: 2.5, evidence: [HIP_REF],
+      refusals: [{ tier: 'gaia_riello', reason: 'uncalibrated', ref: PHOTOMETRY_REF }],
     });
   });
 
   it('falls to the printed V when a band is missing', () => {
-    expect(resolve(photometry({ bpMag: null }), { vVia: 'gliese', vMag: 11.7, key: '914' }))
+    const glieseRef = sourceRowRef(GLIESE, '914');
+    expect(resolve(photometry({ bpMag: null }), { vVia: 'gliese', vMag: 11.7, key: '914', ref: glieseRef }))
       .toEqual({
-        via: 'gliese', value: 11.7,
-        refusals: [{ tier: 'gaia_riello', reason: 'uncalibrated' }],
+        via: 'gliese', value: 11.7, evidence: [glieseRef],
+        refusals: [{ tier: 'gaia_riello', reason: 'uncalibrated', ref: PHOTOMETRY_REF }],
       });
   });
 
   it('takes the curated value only where nothing else answers', () => {
-    expect(resolve(null, null, -26.74)).toEqual({ via: 'curated', value: -26.74, refusals: [] });
+    expect(resolve(null, null, -26.74)).toEqual({ via: 'curated', value: -26.74, evidence: [], refusals: [] });
     expect(resolve(null, PRINTED_HIP, -26.74))
-      .toEqual({ via: 'printed_hip', value: 2.5, refusals: [] });
+      .toEqual({ via: 'printed_hip', value: 2.5, evidence: [HIP_REF], refusals: [] });
   });
 
   it('reports no tier when every source is absent', () => {
@@ -207,11 +211,11 @@ describe('printedV', () => {
 
   it('answers from the highest tier that has a key with a value', () => {
     expect(printedV(keys([1], ['a-1-1'], ['914']), LOOKUPS))
-      .toEqual({ vVia: 'printed_hip', vMag: 6.0, key: 1 });
+      .toEqual({ vVia: 'printed_hip', vMag: 6.0, key: 1, ref: sourceRowRef(HIP_PHOTOMETRY, 1) });
     expect(printedV(keys([99], ['a-1-1'], ['914']), LOOKUPS))
-      .toEqual({ vVia: 'tycho2', vMag: 7.0, key: 'a-1-1', outsideRange: false });
+      .toEqual({ vVia: 'tycho2', vMag: 7.0, key: 'a-1-1', ref: sourceRowRef(TYCHO2, 'a-1-1'), outsideRange: false });
     expect(printedV(keys([], ['nope-1-1'], ['914']), LOOKUPS))
-      .toEqual({ vVia: 'gliese', vMag: 9.0, key: '914' });
+      .toEqual({ vVia: 'gliese', vMag: 9.0, key: '914', ref: sourceRowRef(GLIESE, '914') });
   });
 
   // An overlay entry is keyed on a Gaia source several HIPs or Tycho entries
@@ -219,9 +223,9 @@ describe('printedV', () => {
   // fainter sibling must not raise the V a binding gate answers for.
   it('takes the brightest of several keys within a tier, and names that key', () => {
     expect(printedV(keys([1, 2], [], []), LOOKUPS))
-      .toEqual({ vVia: 'printed_hip', vMag: 4.0, key: 2 });
+      .toEqual({ vVia: 'printed_hip', vMag: 4.0, key: 2, ref: sourceRowRef(HIP_PHOTOMETRY, 2) });
     expect(printedV(keys([], ['a-1-2', 'a-1-1'], []), LOOKUPS))
-      .toEqual({ vVia: 'tycho2', vMag: 5.5, key: 'a-1-2', outsideRange: false });
+      .toEqual({ vVia: 'tycho2', vMag: 5.5, key: 'a-1-2', ref: sourceRowRef(TYCHO2, 'a-1-2'), outsideRange: false });
   });
 
   it('is null where no tier answers', () => {
@@ -234,7 +238,7 @@ describe('printedV', () => {
   it('treats a non-finite tier value as no answer', () => {
     const nan = printedVOf({ hip: new Map([[1, Number.NaN]]), tycho2: { 'a-1-1': Number.NaN }, gliese: { 914: 9.0 } });
     expect(printedV(keys([1], ['a-1-1'], ['914']), nan))
-      .toEqual({ vVia: 'gliese', vMag: 9.0, key: '914' });
+      .toEqual({ vVia: 'gliese', vMag: 9.0, key: '914', ref: sourceRowRef(GLIESE, '914') });
   });
 });
 
@@ -244,11 +248,12 @@ describe('printedVLookups', () => {
   // reachable evidence (/docs/catalog-driver.md#4-how-hd-reaches-gaia).
   it('reduces a Tycho-2 row through the published VT relation', () => {
     const lookups = printedVLookups(
-      new Map([[7, 3.1]]),
-      new Map([['a-1-1', { btMag: 9.5, vtMag: 8.9 }]]),
+      printedHipTable([[7, 3.1]]),
+      new Map([['a-1-1', { btMag: 9.5, vtMag: 8.9, ref: sourceRowRef(TYCHO2, 'a-1-1') }]]),
       { byKey: new Map(), rowCount: 0 },
     );
-    expect(lookups.printed_hip(7)).toEqual({ vMag: 3.1 });
+    expect(lookups.printed_hip(7)).toEqual({ vMag: 3.1, ref: sourceRowRef(HIP_PHOTOMETRY, 7) });
+    expect(lookups.tycho2('a-1-1')?.ref).toEqual(sourceRowRef(TYCHO2, 'a-1-1'));
     expect(lookups.printed_hip(8)).toBeNull();
     expect(lookups.tycho2('a-1-1')?.vMag).toBeCloseTo(tycho2VMagnitude(9.5, 8.9).v!, 12);
     expect(lookups.tycho2('missing')).toBeNull();
@@ -259,7 +264,10 @@ describe('printedVLookups', () => {
   it('carries the BT−VT range verdict on the Tycho-2 answer', () => {
     const lookups = printedVLookups(
       new Map(),
-      new Map([['in-1-1', { btMag: 9.5, vtMag: 8.9 }], ['out-1-1', { btMag: 12.0, vtMag: 8.9 }]]),
+      new Map([
+        ['in-1-1', { btMag: 9.5, vtMag: 8.9, ref: sourceRowRef(TYCHO2, 'in-1-1') }],
+        ['out-1-1', { btMag: 12.0, vtMag: 8.9, ref: sourceRowRef(TYCHO2, 'out-1-1') }],
+      ]),
       { byKey: new Map(), rowCount: 0 },
     );
     expect(lookups.tycho2('in-1-1')?.outsideRange).toBe(false);
@@ -272,12 +280,12 @@ describe('printedVLookups', () => {
     // exists for (/data/gliese/README.md#the-join-key).
     const lookups = printedVLookups(new Map(), new Map(), {
       byKey: new Map([['914', {
-        vMag: 9.0, bv: null, parallax: null, spectralType: null,
+        vMag: 9.0, bv: null, parallax: null, spectralType: null, ref: sourceRowRef(GLIESE, '914'),
       } as never]]),
       rowCount: 1,
     });
-    expect(lookups.gliese('Gl 914')).toEqual({ vMag: 9.0 });
-    expect(lookups.gliese('GJ 914B')).toEqual({ vMag: 9.0 });
+    expect(lookups.gliese('Gl 914')).toEqual({ vMag: 9.0, ref: sourceRowRef(GLIESE, '914') });
+    expect(lookups.gliese('GJ 914B')).toEqual({ vMag: 9.0, ref: sourceRowRef(GLIESE, '914') });
     expect(lookups.gliese('Gl 915')).toBeNull();
   });
 });

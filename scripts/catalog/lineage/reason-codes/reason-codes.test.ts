@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
-import { artifactText, readArtifact } from '../../util/sources/source';
-import { describeCommittedRoundTrip, firstDifferingLine } from '../../util/tsv/committed-round-trip';
-import { fileAtMergeBase, packageVersion } from '../../util/git-provenance';
-import { LINEAGE_STAGES } from './lineage-stages';
+import { artifactText, readArtifact } from '../../../util/sources/source';
+import { describeCommittedRoundTrip, firstDifferingLine } from '../../../util/tsv/committed-round-trip';
+import { fileAtMergeBase } from '../../../util/git-provenance';
+import { releaseAt } from '../../../util/release-version';
+import { LINEAGE_STAGES } from '../lineage-stages';
 import { appendOnlyViolations, reasonCodeList, type ReasonCodeEntry } from './reason-code-list-pure';
 import { LIVE, stageCodes } from './reason-codes-pure';
 import { REASON_CODES } from './reason-codes-tsv';
@@ -22,7 +23,7 @@ describe('the committed reason-code list', () => {
   it('is what every stage\'s declarations generate', () => {
     const committed = artifactText(REASON_CODES);
     const generated = REASON_CODES.serialize(
-      reasonCodeList(LINEAGE_STAGES.map((s) => s.codes), readArtifact(REASON_CODES), packageVersion()),
+      reasonCodeList(LINEAGE_STAGES.map((s) => s.codes), readArtifact(REASON_CODES), releaseAt),
     );
     const diff = firstDifferingLine(committed, generated);
     expect(diff, 'run `pnpm run lineage:codes`').toBeNull();
@@ -44,22 +45,22 @@ describe('reasonCodeList and appendOnlyViolations', () => {
   });
 
   it('keeps a listed code\'s first version and gives a new one the tree\'s', () => {
-    const first = reasonCodeList([demo('kept')], [], '1.0.0');
+    const first = reasonCodeList([demo('kept')], [], () => '1.0.0');
     expect(first[0]).toMatchObject({ code: 'demo.kept', firstVersion: '1.0.0', status: 'live' });
-    expect(reasonCodeList([demo('kept')], first, '2.0.0')[0].firstVersion).toBe('1.0.0');
+    expect(reasonCodeList([demo('kept')], first, () => '2.0.0')[0].firstVersion).toBe('1.0.0');
   });
 
   it('allows live → retired and refuses removal, an edited description and un-retiring', () => {
-    const base = reasonCodeList([demo('kept')], [], '1.0.0');
-    expect(appendOnlyViolations(base, reasonCodeList([demo('kept', true)], base, '2.0.0'))).toEqual([]);
+    const base = reasonCodeList([demo('kept')], [], () => '1.0.0');
+    expect(appendOnlyViolations(base, reasonCodeList([demo('kept', true)], base, () => '2.0.0'))).toEqual([]);
     expect(appendOnlyViolations(base, [])).toEqual(['demo.kept was removed or renamed; mark it retired instead']);
-    expect(appendOnlyViolations(base, reasonCodeList([demo('edited')], base, '2.0.0'))[0])
+    expect(appendOnlyViolations(base, reasonCodeList([demo('edited')], base, () => '2.0.0'))[0])
       .toMatch(/description changed/);
-    const retired = reasonCodeList([demo('kept', true)], base, '2.0.0');
+    const retired = reasonCodeList([demo('kept', true)], base, () => '2.0.0');
     expect(appendOnlyViolations(retired, base)[0]).toMatch(/status may only move live → retired/);
   });
 
   it('refuses one code declared by two stages', () => {
-    expect(() => reasonCodeList([demo('a'), demo('b')], [], '1.0.0')).toThrow(/declared twice/);
+    expect(() => reasonCodeList([demo('a'), demo('b')], [], () => '1.0.0')).toThrow(/declared twice/);
   });
 });

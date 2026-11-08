@@ -1,7 +1,7 @@
-// The committed reason-code list: generated from every stage's declarations, append-only against its merge-base copy. See README.md#reason-codes--closed-append-only-generated.
+// The committed reason-code list: generated from every stage's declarations, append-only against its merge-base copy. See README.md.
 
 import type { CodeEffect, StageCodes } from './reason-codes-pure';
-import { compareUtf8 } from './lineage-row-pure';
+import { sortUtf8 } from '../lineage-row-pure';
 
 export const CODE_STATUSES = ['live', 'retired', 'historical'] as const;
 export type CodeStatusName = (typeof CODE_STATUSES)[number];
@@ -18,10 +18,9 @@ export interface ReasonCodeEntry {
 }
 
 
-/** A code already listed keeps the version it first shipped in; a new one
- *  takes `version`, the tree's own. */
+/** `version` is called only for a code `committed` lacks: README.md, `first_version`. */
 export function reasonCodeList(
-  stages: readonly StageCodes<string>[], committed: readonly ReasonCodeEntry[], version: string,
+  stages: readonly StageCodes<string>[], committed: readonly ReasonCodeEntry[], version: () => string,
 ): ReasonCodeEntry[] {
   const shipped = new Map(committed.map((e) => [e.code, e.firstVersion]));
   const entries: ReasonCodeEntry[] = [];
@@ -37,12 +36,12 @@ export function reasonCodeList(
         effect: d.effect,
         status: d.status.kind,
         retiredIn: d.status.kind === 'retired' ? d.status.retiredIn : '',
-        firstVersion: shipped.get(code) ?? version,
+        firstVersion: shipped.get(code) ?? version(),
         description: d.description,
       });
     }
   }
-  return entries.sort((a, b) => compareUtf8(a.code, b.code));
+  return sortUtf8(entries, (e) => e.code);
 }
 
 /** Every code the merge-base listed is still listed with the same stage,

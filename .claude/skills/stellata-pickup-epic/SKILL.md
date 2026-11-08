@@ -1,6 +1,6 @@
 ---
 name: stellata-pickup-epic
-description: Stellata's extension of the user-level `pickup-epic` skill, for the coordinator and for every `pickup-task` worker it launches — the GPU pause protocol (a worker, or any session that finds the coordinator's field, pauses the whole pipeline for a perf run so the machine is idle), `build:seed` as the post-landing step, and what a stellata `SMOKE:` line names. `pickup-epic` and coordinated `pickup-task` load it in stellata; load it directly only if one of them is already in context without it.
+description: Stellata's extension of the user-level `pickup-epic` skill, for the coordinator and for every `pickup-task` worker it launches — the GPU pause protocol (a worker, or any session that finds the coordinator's field, pauses the whole pipeline for a perf run so the machine is idle), derived versions, `build:seed` as the post-landing step, and what a stellata `SMOKE:` line names. `pickup-epic` and coordinated `pickup-task` load it in stellata; load it directly only if one of them is already in context without it.
 ---
 
 # Coordinating a stellata epic
@@ -62,6 +62,14 @@ send `GPU_DONE` when no further run is planned. `await-go.sh` gives up after
 work that needs no run, and send a new `GPU_REQUEST` when the owner says
 they are ready. On `PAUSE`, reply `PAUSED` once the current command ends —
 never kill a build part-way.
+
+## Versions are derived
+
+`pickup-epic`'s Land runs unnarrowed: one approved PR at a time, synced with
+main (the ruleset requires it up to date,
+[Merge gating](/RELEASING.md#merge-gating)), then squash-merged. No worker
+edits a version and no landing resolves one; every PR carries one release
+level label ([Version policy](/RELEASING.md#version-policy)).
 
 ## The post-landing step is `build:seed`
 

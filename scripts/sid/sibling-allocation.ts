@@ -81,7 +81,7 @@ export function siblingLineage<S extends string>(
     spec: spec.lineage,
     inputs,
     diffed: stage,
-    lines: allocation.lines,
+    lines: () => allocation.lines,
     render: (sorted) => ({
       [stage]: stageLineageText(spec.codes, sorted),
       [`${stage}.identity`]: identityText(allocation.identity),

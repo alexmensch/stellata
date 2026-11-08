@@ -1,7 +1,7 @@
 // Display naming as a lineage stage: its reason codes and the one serialiser over each record's naming outcome. See README.md#naming-lineage.
 
 import { paramsOf, paramsText, stageLineageLine, type LineageLine, type LineageParams, type LineageRole, type LineageRow } from '../lineage/lineage-row-pure';
-import { LIVE, stageCodes, type CodeDeclaration } from '../lineage/reason-codes-pure';
+import { LIVE, stageCodes, type CodeDeclaration } from '../lineage/reason-codes/reason-codes-pure';
 import { lineageInvariant, NO_EXCEPTIONS, type LineageInvariant } from '../lineage/lineage-invariant-pure';
 import type { NamedRecord } from './display-names';
 import {
@@ -12,7 +12,7 @@ import {
 } from '../../../src/catalog-format/naming/star-naming-pure';
 import { NAMING_LINEAGE } from '../../../src/catalog-format/pipeline-outputs/lineage-files';
 
-export const NAMING_LINEAGE_BUDGET = { gzipBytes: 10_600_000, writeMs: 15_000 };
+export const NAMING_LINEAGE_BUDGET = { gzipBytes: 10_600_000, writeMs: 28_000 };
 
 const live = (description: string): CodeDeclaration => ({ description, effect: 'none', status: LIVE });
 

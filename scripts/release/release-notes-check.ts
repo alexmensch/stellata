@@ -11,7 +11,7 @@ if (!/\S/.test(body)) {
 }
 
 if (extractReleaseNotes(body) === null) {
-  console.log("::error::PR body must include a non-empty '## Release notes' section (HTML comments don't count). Add bullets describing user-visible changes — they will appear on the GitHub release page for this version. Or attach the 'skip-version-bump' label for metadata-only PRs.");
+  console.log("::error::PR body must include a non-empty '## Release notes' section (HTML comments don't count). Add bullets describing user-visible changes — they will appear on the GitHub release page for this version. Or, for a PR that ships no release, swap its release level label for 'skip-version-bump'.");
   process.exit(1);
 }
 

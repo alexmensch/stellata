@@ -4,7 +4,7 @@ import { PROMOTION_CODES } from '../catalog/companions/promotion-lineage-pure';
 import type { IdentityRow } from '../catalog/lineage/identity-pure';
 import type { LineageLine } from '../catalog/lineage/lineage-row-pure';
 import { LINEAGE_STAGES } from '../catalog/lineage/lineage-stages';
-import { codeEffects } from '../catalog/lineage/reason-codes-pure';
+import { codeEffects } from '../catalog/lineage/reason-codes/reason-codes-pure';
 import { MEMBERSHIP_ADMISSION_CODES } from '../catalog/membership/membership-lineage-pure';
 import { MEMBERSHIP_IDENTITY, MEMBERSHIP_STAGE_LINES } from '../catalog/membership/membership-lineage-source';
 import type { Upstream } from './allocate-pure';
