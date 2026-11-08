@@ -10,12 +10,9 @@ exactly the gap AT-HYG (system-level spectra) and Gaia DR3
 
 ```
 simbad_sample.tsv          ~5.7 MB, LFS. Stratified random 50k stars.
-simbad_sptype.tsv          ~29 MB, LFS. 395,543 rows. Per-source sp_type /
+simbad_sptype.tsv          ~66 MB, LFS. 966,869 rows. Per-source sp_type /
                            sp_qual / sp_bibcode / otype + HIP / Gaia DR3 /
                            TYC / GJ cross-IDs; the resolver keys all four.
-                           Still holds WDS-only rows its request no longer
-                           asks for, and what dropping them moves:
-                           /scripts/refresh/simbad-wds-sptype/README.md#what-the-split-left-in-simbad_sptypetsv.
 simbad_values.tsv          ~29 MB, LFS. 115,871 rows. Bibcoded rv,
                            parallax, PM, coordinates and B/V fluxes for
                            the /docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers value cohort — see README.md#the-values-pull.
@@ -285,8 +282,10 @@ those 34: measured on the spine-scoped pull that introduced it, 280,676 of
 objects. That ratio is what the union is for; the rebase onto the manifest
 re-ran it over a larger request without changing the rule, and the pull's
 own report is where its figures come from. `simbad_sptype.tsv` is now
-**395,543 rows** and reads 87.6% `sp_type`-filled
-(`awk -F'\t' 'NR>1{t++; if($3!="") f++} END{print f/t}'`).
+**966,869 rows** (2026-11-08, the whole manifest, magnitude term included)
+and reads 48.5% `sp_type`-filled
+(`awk -F'\t' 'NR>1{t++; if($3!="") f++} END{print f/t}'`): 90.7% over the
+primaries' objects, 21.4% over the magnitude term's fainter stars.
 
 Every one of those bindings rests on a designation alone, so every one goes
 through the corroboration rule above — the guard the union does NOT get to
