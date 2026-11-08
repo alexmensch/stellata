@@ -1,5 +1,6 @@
 // Gaia DR3 5p astrometry: the row schema, its parse, and the declared table.
 
+import { DATA_FILES } from '../../../src/catalog-format/pipeline-outputs/data-files';
 import { defineSource, type Declared } from '../../util/sources/source';
 import {
   sourceRowRef, type RowKeyed, type SourceRowRef,
@@ -101,7 +102,7 @@ export function parseGaiaAstrometryCatalogTsv(
 }
 
 export const GAIA_ASTROMETRY = defineSource({
-  file: 'data/gaia/gaia_dr3_astrometry_catalog.tsv',
+  file: DATA_FILES.gaiaAstrometryCatalog,
   hint: 'Re-run `pnpm run refresh:gaia-astrometry-catalog`.',
   rowKey: { id: 'gaia-dr3-astrometry', text: (sourceId: string) => sourceId },
   parse: (input): Map<string, GaiaAstrometryCatalogRow> =>
