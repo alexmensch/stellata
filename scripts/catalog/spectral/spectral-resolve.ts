@@ -87,8 +87,15 @@ export function parseSimbadSptypeTsv(text: string, from: Declared & RowKeyed<num
       tyc: row.text('tyc'),
       gl: row.text('gj'),
     };
+    const rowXids: SimbadXids = { hip: keys.hip, tyc: row.raw('tyc') || null, gj: row.raw('gj') || null };
+    if (keys.sourceId !== null) {
+      if (xids.has(keys.sourceId)) throw new Error(`${from.file} has two rows keyed source_id=${keys.sourceId}. ${from.hint}`);
+      xids.set(keys.sourceId, rowXids);
+    } else sourcelessXids.push(rowXids);
+    const indexed = indexedKeys(keys, spType, otype);
+    if (indexed === null) continue;
     indexSimbadRow(
-      index, keys, { spType, spQual, otype, sourceId: keys.sourceId, ref: sourceRowRef(from, row.requiredId('simbad_oid')) },
+      index, indexed, { spType, spQual, otype, sourceId: keys.sourceId, ref: sourceRowRef(from, row.requiredId('simbad_oid')) },
       // No key repeats in the committed file (../naming/README.md#the-union-policy
       // adds rows,
       // never a second row under one key). On a designation key the row stating
@@ -107,11 +114,17 @@ export function parseSimbadSptypeTsv(text: string, from: Declared & RowKeyed<num
         );
       },
     );
-    const rowXids: SimbadXids = { hip: keys.hip, tyc: row.raw('tyc') || null, gj: row.raw('gj') || null };
-    if (keys.sourceId !== null) xids.set(keys.sourceId, rowXids);
-    else sourcelessXids.push(rowXids);
   }
   return { spectral: index, xids, sourcelessXids };
+}
+
+/** A typeless row is never a match and loses every tie, so only the multiple-star
+ *  flag build-catalog reads off `bySourceId` keeps one in the index: about half
+ *  the manifest-wide table carries no type. */
+function indexedKeys(keys: SimbadRecordKeys, spType: string | null, otype: string | null): SimbadRecordKeys | null {
+  if (spType) return keys;
+  if (otype !== SIMBAD_OTYPE_MULTIPLE || keys.sourceId === null) return null;
+  return { sourceId: keys.sourceId, hip: null, tyc: null, gl: null };
 }
 
 /** The resolver's tiers in priority order — the one statement of them, and the

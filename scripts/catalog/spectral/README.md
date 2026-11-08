@@ -12,7 +12,10 @@ are read by the viewer's focus card too, so they live in
 scripts/catalog/spectral/
   simbad-sptype-source.ts         SIMBAD_SPTYPE, the pull declared
                                   (../../util/sources/). One parse yields the
-                                  spectral index and each source_id's
+                                  spectral index (typed rows, plus a typeless
+                                  row only under its source_id and only where
+                                  its otype is `**`, the one flag
+                                  build-catalog reads off one) and each source_id's
                                   hip / tyc / gj cross-IDs, which the binding
                                   derivation and the spine audits read, plus
                                   the cross-IDs of the objects carrying no
