@@ -100,12 +100,15 @@ AT-HYG spells an absent identifier `0` as well as empty.
 
 `checks` are the row-band checks (`ROW_BANDS`, the pull runtime's
 `bandCheck`), which the shell hands to `emitArtifacts` once it writes
-multiples.tsv, so a truncated input fails before any write. ORB6 rows whose
-grade cell is not a digit read as grade 5 and are counted
-(`orb6GradeFallbacks`).
+multiples.tsv, so a truncated input fails before any write. An ORB6 row whose
+grade cell is not a digit reads as grade 5 (outcome `fallback`).
 
-`stage1Counts` names the count-snapshot keys this stage's code produces, the
-rescue's and the MSC synthesis's folded from their per-row outcomes. The
+Each pass returns one outcome per row it weighed — duplicate collapse, ORB6
+grades, curated ORB6 letters, astrometry exclusions, the rescue, MSC synthesis
+— and every count, in `stage1Counts` and in the build log, folds from those
+through the one tally helper ([The tally](../../util/counts/README.md#the-tally));
+no pass returns a bare number.
+`stage1Counts` names the count-snapshot keys this stage's code produces. The
 snapshot's `wds_pairs_total` is not one of them: Stage 3 appends its NSS
 inner pairs to the same list, so `build-binaries.test.ts` holds `pairs` to
 that total less `synthesized_nss_inner_pairs`.

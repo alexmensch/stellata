@@ -65,7 +65,7 @@ describe.skipIf(!INPUTS.every(isReadable))('Stages 1..1 through the shell, over 
 
   it('carries the curated showcases: Algol Aa2\'s type, Sirius B\'s exclusion, AR Cas\'s MSC orbit', () => {
     expect(c.indices.componentSptypeOverrides.get(componentKey('03082+4057', '2'))).toBe('K0IV');
-    expect(c.astrometryExcluded).toBe(1);
+    expect(c.astrometryExclusion.filter((o) => o === 'excluded')).toHaveLength(1);
     expect(c.indices.srcToAstrometry.has('2947050466531873024')).toBe(false);
     expect(c.indices.msc.orbitsByPair.get(mscPairKey('23300+5833', 'Aa', 'Ab'))?.rows.map((r) => r.per)).toEqual([6.0663]);
   });

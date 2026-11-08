@@ -52,11 +52,18 @@ export interface Orb6Entry {
   readonly precise: SkyPosition | null;
 }
 
+/** `fallback`: a grade cell that is not a digit, read as grade 5. */
+export const ORB6_GRADE_OUTCOMES = ['graded', 'fallback'] as const;
+export type Orb6GradeOutcome = (typeof ORB6_GRADE_OUTCOMES)[number];
+
 export interface Orb6Parse {
   readonly entries: readonly Orb6Entry[];
-  /** Rows whose grade cell is not a digit, read as grade 5. */
-  readonly gradeFallbacks: number;
+  /** One per entry. */
+  readonly grades: readonly Orb6GradeOutcome[];
 }
+
+export const WDS_DEDUP_OUTCOMES = ['kept', 'dropped'] as const;
+export type WdsDedupOutcome = (typeof WDS_DEDUP_OUTCOMES)[number];
 
 /** ρ's field-overflow sentinel: WDS writes exactly 999.9 when the separation
  *  outruns the 5-character field (α Cen A–Proxima), so it cannot place the
@@ -193,13 +200,13 @@ export function parseOrb6(text: string, from: Declared): Orb6Parse {
     return /^\d/.test(line.slice(0, 9).trim());
   };
   const entries: Orb6Entry[] = [];
-  let gradeFallbacks = 0;
+  const grades: Orb6GradeOutcome[] = [];
   for (const l of fixedWidthLines(text, from, ORB6_LINE_WIDTH, keep)) {
     const wdsId = l.slice(19, 29).trim();
     if (!wdsId) continue;
     const gradeCell = l.slice(233, 234).trim();
     const graded = /^\d$/.test(gradeCell);
-    if (!graded) gradeFallbacks++;
+    grades.push(graded ? 'graded' : 'fallback');
     entries.push({
       wdsId,
       discoverer: l.slice(30, 37).trim(),
@@ -224,10 +231,11 @@ export function parseOrb6(text: string, from: Declared): Orb6Parse {
     });
   }
   assertCoverage(entries, from, 'P', (e) => e.pVal !== null, ORB6_PERIOD_COVERAGE_FLOOR);
-  return { entries, gradeFallbacks };
+  return { entries, grades };
 }
 
-export function dedupWdsPairRows(pairs: readonly WdsPair[]): { pairs: readonly WdsPair[]; dropped: number } {
+/** `outcomes` is one per input row. */
+export function dedupWdsPairRows(pairs: readonly WdsPair[]): { pairs: readonly WdsPair[]; outcomes: readonly WdsDedupOutcome[] } {
   const best = new Map<string, number>();
   pairs.forEach((p, i) => {
     const key = `${p.wdsId}\u0000${p.discoverer}\u0000${p.components}`;
@@ -235,6 +243,8 @@ export function dedupWdsPairRows(pairs: readonly WdsPair[]): { pairs: readonly W
     if (j === undefined || (p.nObs ?? 0) > (pairs[j].nObs ?? 0)) best.set(key, i);
   });
   const keep = new Set(best.values());
-  if (keep.size === pairs.length) return { pairs, dropped: 0 };
-  return { pairs: pairs.filter((_, i) => keep.has(i)), dropped: pairs.length - keep.size };
+  return {
+    pairs: pairs.filter((_, i) => keep.has(i)),
+    outcomes: pairs.map((_, i) => (keep.has(i) ? 'kept' : 'dropped')),
+  };
 }

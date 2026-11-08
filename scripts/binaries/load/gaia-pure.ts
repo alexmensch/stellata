@@ -70,6 +70,23 @@ export function parseGaiaAstrometry(text: string, from: Declared): Map<string, G
   return out;
 }
 
+export const ASTROMETRY_EXCLUSION_OUTCOMES = ['kept', 'excluded'] as const;
+export type AstrometryExclusionOutcome = (typeof ASTROMETRY_EXCLUSION_OUTCOMES)[number];
+
+/** The pull less the curated exclusions; `outcomes` is one per pulled source. */
+export function applyAstrometryExclusions(
+  astrometry: ReadonlyMap<string, GaiaAstrometryRow>, exclusions: ReadonlyMap<string, string>,
+): { kept: Map<string, GaiaAstrometryRow>; outcomes: readonly AstrometryExclusionOutcome[] } {
+  const kept = new Map<string, GaiaAstrometryRow>();
+  const outcomes: AstrometryExclusionOutcome[] = [];
+  for (const [sourceId, row] of astrometry) {
+    const excluded = exclusions.has(sourceId);
+    outcomes.push(excluded ? 'excluded' : 'kept');
+    if (!excluded) kept.set(sourceId, row);
+  }
+  return { kept, outcomes };
+}
+
 const NSS_COLUMNS = [
   'source_id', 'nss_solution_type', 'period', 't_periastron', 'eccentricity',
   'a_thiele_innes', 'b_thiele_innes', 'f_thiele_innes', 'g_thiele_innes',

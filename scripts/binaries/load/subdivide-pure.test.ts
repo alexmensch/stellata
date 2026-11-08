@@ -15,10 +15,10 @@ describe('applyOrb6ComponentOverrides', () => {
   it('stamps curated letters on the keyed row only', () => {
     const target = orb6Entry({ wdsId: '07346+3153', discoverer: 'YY Gem', components: '', grade: 7 });
     const untouched = orb6Entry({ grade: 3 });
-    const { entries, applied } = applyOrb6ComponentOverrides(
+    const { entries, outcomes } = applyOrb6ComponentOverrides(
       [target, untouched], new Map([[discovererKey('07346+3153', 'YY Gem'), 'Ca,Cb']]),
     );
-    expect(applied).toBe(1);
+    expect(outcomes).toEqual(['applied', 'unchanged']);
     expect(entries.map((e) => e.components)).toEqual(['Ca,Cb', 'AB']);
     expect(target.components).toBe('');
   });

@@ -18,7 +18,7 @@ function inputs(over: Partial<Stage1Inputs> = {}): Stage1Inputs {
         orb6Entry({ wdsId: '20000+0000', components: '' }),
         orb6Entry({ wdsId: '30000+0000', discoverer: 'TST   2', components: 'YY' }),
       ],
-      gradeFallbacks: 0,
+      grades: ['graded', 'graded'],
     },
     orb6ComponentOverrides: new Map([[discovererKey('30000+0000', 'TST   2'), 'Aa,Ab']]),
     athyg: [athygRow({ hip: 1, gaia: '11', vMag: 1 }), athygRow({ hip: 2, gaia: '22', vMag: 5 })],
@@ -53,10 +53,12 @@ describe('assembleReferenceCatalogs', () => {
     ]);
     expect(c.orb6.map((e) => e.components)).toEqual(['AB', 'Aa,Ab']);
     expect(c.blankRescue).toEqual(['rescued', 'donor']);
+    expect(c.wdsDedup).toEqual(['dropped', 'kept', 'kept', 'kept']);
+    expect(c.orb6Overrides).toEqual(['unchanged', 'applied']);
   });
 
   it('drops excluded astrometry before the magnitude gate weighs AT-HYG', () => {
-    expect(c.astrometryExcluded).toBe(1);
+    expect(c.astrometryExclusion).toEqual(['kept', 'excluded']);
     expect(c.athyg.map((r) => r.gaia)).toEqual([null, '22']);
   });
 

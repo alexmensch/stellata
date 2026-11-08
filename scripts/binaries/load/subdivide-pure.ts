@@ -26,17 +26,21 @@ export const MSC_SYNTHESIS_OUTCOMES = [
 ] as const;
 export type MscSynthesisOutcome = (typeof MSC_SYNTHESIS_OUTCOMES)[number];
 
+export const ORB6_OVERRIDE_OUTCOMES = ['applied', 'unchanged'] as const;
+export type Orb6OverrideOutcome = (typeof ORB6_OVERRIDE_OUTCOMES)[number];
+
+/** `outcomes` is one per entry. */
 export function applyOrb6ComponentOverrides(
   orb6: readonly Orb6Entry[], overrides: ReadonlyMap<DiscovererKey, string>,
-): { entries: readonly Orb6Entry[]; applied: number } {
-  let applied = 0;
+): { entries: readonly Orb6Entry[]; outcomes: readonly Orb6OverrideOutcome[] } {
+  const outcomes: Orb6OverrideOutcome[] = [];
   const entries = orb6.map((e) => {
     const mapped = overrides.get(discovererKey(e.wdsId, e.discoverer));
-    if (mapped === undefined || mapped === e.components) return e;
-    applied++;
-    return { ...e, components: mapped };
+    const applies = mapped !== undefined && mapped !== e.components;
+    outcomes.push(applies ? 'applied' : 'unchanged');
+    return applies ? { ...e, components: mapped } : e;
   });
-  return { entries, applied };
+  return { entries, outcomes };
 }
 
 /** Splits into two distinct single-component tokens once WDS truncation is

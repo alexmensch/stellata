@@ -18,7 +18,9 @@ import {
   BLANK_RESCUE_OUTCOMES, rescueBlankComponents, type BlankRescueOutcome,
 } from './blank-rescue-pure';
 import { ASTROMETRY_EXCLUSIONS, COMPONENT_SPTYPE_OVERRIDES, ORB6_COMPONENT_OVERRIDES } from './curated-source';
-import { parseNssOrbits, type GaiaAstrometryRow, type NssOrbitRow } from './gaia-pure';
+import {
+  applyAstrometryExclusions, parseNssOrbits, type AstrometryExclusionOutcome, type GaiaAstrometryRow, type NssOrbitRow,
+} from './gaia-pure';
 import {
   buildIndices, parseCcdmIndex, scrubAthygGaia, type CcdmIndex, type IdentifierIndices,
 } from './indices-pure';
@@ -30,9 +32,12 @@ import { joinSimbadWdsSpectra, parseSimbadWdsXids, type SimbadWdsXid } from './s
 import { SIMBAD_WDS_SPTYPE } from './simbad-wds-sptype-source';
 import {
   MSC_SYNTHESIS_OUTCOMES, applyOrb6ComponentOverrides, synthesizeMscInnerPairs, synthesizeOrb6OrphanPairs,
-  type MscSynthesisOutcome,
+  type MscSynthesisOutcome, type Orb6OverrideOutcome,
 } from './subdivide-pure';
-import { dedupWdsPairRows, type Orb6Entry, type Orb6Parse, type WdsPair } from './wds-pure';
+import {
+  WDS_DEDUP_OUTCOMES, dedupWdsPairRows, type Orb6Entry, type Orb6GradeOutcome, type Orb6Parse, type WdsDedupOutcome,
+  type WdsPair,
+} from './wds-pure';
 import { ORB6, WDS_SUMM } from './wds-source';
 
 /** Expected parse cardinalities, about 10% either side of the frozen
@@ -81,11 +86,11 @@ export interface ReferenceCatalogs {
   readonly athyg: readonly AthygRow[];
   readonly indices: IdentifierIndices;
   readonly simbadWdsXids: ReadonlyMap<ComponentKey, SimbadWdsXid>;
-  readonly wdsDuplicatePairRowsDropped: number;
-  readonly orb6OverridesApplied: number;
-  readonly orb6GradeFallbacks: number;
-  /** Excluded sources that were in the astrometry pull. */
-  readonly astrometryExcluded: number;
+  readonly wdsDedup: readonly WdsDedupOutcome[];
+  readonly orb6Grades: readonly Orb6GradeOutcome[];
+  readonly orb6Overrides: readonly Orb6OverrideOutcome[];
+  /** One per source in the astrometry pull. */
+  readonly astrometryExclusion: readonly AstrometryExclusionOutcome[];
   readonly blankRescue: readonly BlankRescueOutcome[];
   readonly mscSynthesis: readonly MscSynthesisOutcome[];
   /** The row-band checks; the shell hands them to emitArtifacts. */
@@ -103,9 +108,8 @@ export function assembleReferenceCatalogs(inputs: Stage1Inputs): ReferenceCatalo
   const overridden = applyOrb6ComponentOverrides(inputs.orb6.entries, inputs.orb6ComponentOverrides);
   const orphans = synthesizeOrb6OrphanPairs(deduped.pairs, overridden.entries);
 
-  const srcToAstrometry = new Map(
-    [...inputs.astrometry].filter(([sourceId]) => !inputs.astrometryExclusions.has(sourceId)),
-  );
+  const exclusion = applyAstrometryExclusions(inputs.astrometry, inputs.astrometryExclusions);
+  const srcToAstrometry = exclusion.kept;
   const scrubbed = scrubAthygGaia(inputs.athyg, srcToAstrometry);
   const msc = buildMscLookup(inputs.msc.systems, inputs.msc.orbits, inputs.msc.components);
   const indices = buildIndices({
@@ -134,10 +138,10 @@ export function assembleReferenceCatalogs(inputs: Stage1Inputs): ReferenceCatalo
     athyg: freezeAll([...scrubbed.rows]),
     indices: Object.freeze(indices),
     simbadWdsXids: inputs.simbadWdsXids,
-    wdsDuplicatePairRowsDropped: deduped.dropped,
-    orb6OverridesApplied: overridden.applied,
-    orb6GradeFallbacks: inputs.orb6.gradeFallbacks,
-    astrometryExcluded: inputs.astrometry.size - srcToAstrometry.size,
+    wdsDedup: Object.freeze([...deduped.outcomes]),
+    orb6Grades: Object.freeze([...inputs.orb6.grades]),
+    orb6Overrides: Object.freeze([...overridden.outcomes]),
+    astrometryExclusion: Object.freeze([...exclusion.outcomes]),
     blankRescue: Object.freeze([...rescue.outcomes]),
     mscSynthesis: Object.freeze(mscPairs.outcomes),
     checks: Object.freeze([
@@ -177,7 +181,7 @@ export function stage1Counts(c: ReferenceCatalogs): Record<string, number> {
   const rescue = fold(BLANK_RESCUE_OUTCOMES, c.blankRescue, (o) => o);
   const msc = fold(MSC_SYNTHESIS_OUTCOMES, c.mscSynthesis, (o) => o);
   return {
-    wds_duplicate_pair_rows_dropped: c.wdsDuplicatePairRowsDropped,
+    wds_duplicate_pair_rows_dropped: fold(WDS_DEDUP_OUTCOMES, c.wdsDedup, (o) => o).dropped,
     msc_orbits_unmapped: c.indices.msc.nOrbitsUnmapped,
     xwalk_hip_mag_rejected: c.indices.xwalkMagRejected.length,
     athyg_gaia_mag_rejected: c.indices.athygGaiaMagRejected.length,

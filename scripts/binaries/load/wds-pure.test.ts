@@ -68,17 +68,17 @@ describe('dedupWdsPairRows', () => {
   it('keeps the most-observed duplicate', () => {
     const low = cd(3, 1.5);
     const high = cd(7, 3.5);
-    expect(dedupWdsPairRows([low, high])).toEqual({ pairs: [high], dropped: 1 });
+    expect(dedupWdsPairRows([low, high])).toEqual({ pairs: [high], outcomes: ['dropped', 'kept'] });
   });
 
   it('keeps the first of a tie', () => {
     const first = cd(3, 3.5);
-    expect(dedupWdsPairRows([first, cd(3, 1.5)])).toEqual({ pairs: [first], dropped: 1 });
+    expect(dedupWdsPairRows([first, cd(3, 1.5)])).toEqual({ pairs: [first], outcomes: ['kept', 'dropped'] });
   });
 
   it('passes distinct keys through in order', () => {
     const rows = [cd(3, 1.0), wdsPair({ wdsId: '17247-3412', discoverer: 'WSI  62', components: 'AB', nObs: 2 })];
-    expect(dedupWdsPairRows(rows)).toEqual({ pairs: rows, dropped: 0 });
+    expect(dedupWdsPairRows(rows)).toEqual({ pairs: rows, outcomes: ['kept', 'kept'] });
   });
 });
 
@@ -118,8 +118,8 @@ describe('parseOrb6', () => {
 
   it('reads a non-digit grade as 5 and counts it', () => {
     const ungraded = ORB6_HDS.slice(0, 233) + 'x' + ORB6_HDS.slice(234);
-    const { entries, gradeFallbacks } = parseOrb6(`banner\n${ungraded}\n`, FIXTURE);
+    const { entries, grades } = parseOrb6(`banner\n${ungraded}\n`, FIXTURE);
     expect(entries[0].grade).toBe(5);
-    expect(gradeFallbacks).toBe(1);
+    expect(grades).toEqual(['fallback']);
   });
 });
