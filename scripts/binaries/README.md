@@ -96,7 +96,13 @@ scripts/binaries/
                                   and relatedHier / compoundContains — the
                                   test planRecords uses to tell one link
                                   named twice from two stars collapsed onto
-                                  one record.
+                                  one record. Also the one parse of a WDS
+                                  `components` field (splitComponents,
+                                  pairComponentTokens), childComponentTokens,
+                                  tokenLetters and subcomponentTopLetter
+                                  (the root letter, where
+                                  parentComponentToken is the immediate
+                                  parent).
   multiples-row-key-pure.ts       MULTIPLES_ROW_KEY, that rowKey, for code
                                   that cites a row without reading the file
                                   (promotion's origin keys), so it never
