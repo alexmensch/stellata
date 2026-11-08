@@ -7,8 +7,8 @@ instead of inlining its own ADQL.
 ## The TypeScript core
 
 The SIMBAD pulls on the pull runtime's phased pulls
-([A phased pull](../pull/README.md#a-phased-pull)): sample, values, sp_type
-and the WDS-keyed sp_type.
+([A phased pull](../pull/README.md#a-phased-pull)): sample, values and
+sp_type.
 
 ```
 simbad-specs-pure.ts        Namespace (parseIdent: suffix, component-lettered
