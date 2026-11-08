@@ -225,14 +225,14 @@ proper motion against it), `simbad_dr2_object` (SIMBAD holds the id in the DR2
 namespace), `gaia_photometry` (G against the record's printed V on each
 candidate), `pair_component` (a resolved pair's components bound crosswise,
 the HIP and SIMBAD's letters deciding), `shared_source` (one source two records
-reach). Today `bindingDispositions` reads <!-- count:membership-manifest/bindingDispositions.derived -->10<!-- /count --> `derived` and <!-- count:membership-manifest/bindingDispositions.other -->43<!-- /count --> `other`. The ten
+reach). Today `bindingDispositions` reads <!-- count:membership-manifest/bindingDispositions.derived -->9<!-- /count --> `derived` and <!-- count:membership-manifest/bindingDispositions.other -->44<!-- /count --> `other`. The nine
 are the four DR2 ids SIMBAD carries a DR3 successor for, HD 2094 (the HIP
 record follows its canonical key onto the primary), Gl 225.2 A, HD 199461
 (SIMBAD names the brighter of a blended pair whose fainter member the TYC
-cross-match picks), and GJ 1001, GJ 3527 and GJ 4032 — bare cells the
-SIMBAD route binds to component A only while `simbad_sptype.tsv` holds no
-companion object under the number, so the review stays the authority should
-a pull bring one back. A kept value ships as `reviewed`.
+cross-match picks), and GJ 1001 and GJ 3527 — bare cells the SIMBAD route
+binds to component A only while `simbad_sptype.tsv` holds no companion
+object under the number, so the review stays the authority should a pull
+bring one back. A kept value ships as `reviewed`.
 
 How a row reaches its `gaia_source_id` — the four committed sources, the
 precedence and consensus ranking, both gates, and the `contested` /

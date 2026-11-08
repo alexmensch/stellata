@@ -63,7 +63,7 @@
     "gl": 1,
     "flam": 0
   },
-  "rows": 975372,
+  "rows": 975373,
   "spineRows": 313257,
   "spineRowsFolded": 1,
   "spineCellsCorrected": {
@@ -76,9 +76,9 @@
     "above_floor": 312475,
     "no_v": 4836
   },
-  "magnitudeRows": 598463,
+  "magnitudeRows": 598464,
   "magnitudeRowsOwnCandidate": {
-    "refused_mag": 207,
+    "refused_mag": 206,
     "refused_sibling": 100,
     "withheld": 0,
     "runner_up": 280,
@@ -93,25 +93,25 @@
   "componentRows": 465,
   "bindingByClass": {
     "crosswalk_gated": 358465,
-    "simbad_corroborated": 16614,
+    "simbad_corroborated": 16613,
     "reviewed": 53,
-    "gaia_native": 598463,
-    "none": 1777
+    "gaia_native": 598464,
+    "none": 1778
   },
-  "bindingReviewRows": 374,
+  "bindingReviewRows": 375,
   "bindingReviewByVerdict": {
     "contested": 326,
     "collision": 0,
-    "disposed": 48
+    "disposed": 49
   },
   "bindingDispositions": {
-    "derived": 10,
-    "other": 43,
-    "none": 0
+    "derived": 9,
+    "other": 44,
+    "none": 1
   },
   "derivationOutcome": {
-    "bound": 312492,
-    "refused": 437,
+    "bound": 312490,
+    "refused": 439,
     "contested": 326,
     "collision": 0,
     "sol": 1
@@ -120,12 +120,12 @@
     "tyc": 298401,
     "hip": 907,
     "cns5": 839,
-    "simbad": 12667
+    "simbad": 12665
   },
-  "derivedConsensus": 295222,
-  "dispositionAsserted": 32,
+  "derivedConsensus": 295221,
+  "dispositionAsserted": 33,
   "derivedRejected": {
-    "mag": 320,
+    "mag": 319,
     "sibling": 115
   },
   "derivedUngateable": 7,
@@ -153,7 +153,7 @@
   "sharedDesignations": 68,
   "rowsWithHdAlt": 102,
   "rowsWithHrAlt": 0,
-  "spineRowsWithoutSourceId": 399,
+  "spineRowsWithoutSourceId": 400,
   "spineBrightRows": 178,
   "spineBrightRowsWithoutOverlayEntry": 114
 }
