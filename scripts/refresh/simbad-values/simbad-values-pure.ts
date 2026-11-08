@@ -8,7 +8,7 @@ import { GAIA_NATIVE_BINDING, keyedRows, membershipKeys, requestLines, valueCoho
 import { requestReport, resolveMembershipKeys } from '../simbad/resolve-membership-pure';
 import { fetchBasic, fetchFlux, fetchIdents, parseLedger, phaseRecord, simbadPhases } from '../simbad/simbad-fetch-pure';
 import {
-  countFilled, fillLine, floorCheck, fluxBlock, identBlock, isFilled, simbadColumns, simbadRows,
+  countFilled, fillLine, floorCheck, fluxBlock, fluxNames, identBlock, identNames, isFilled, simbadColumns, simbadRows,
 } from '../simbad/simbad-rows-pure';
 import {
   BASIC_BIBCODED_GROUPS, COO_BIBCODE, COO_QUAL, DEC, GAIA_DR3, GJ, HIP, MAIN_ID, OID, PLX_BIBCODE, PLX_ERR, PLX_QUAL,
@@ -49,7 +49,7 @@ export function resolutionChecks(sourceIds: readonly string[], gaiaNative: Reado
 }
 
 const GROUPS = [...BASIC_BIBCODED_GROUPS, ...FLUX_BANDS.map(fluxGroup)];
-const COLUMNS = simbadColumns(BASIC, [identBlock(IDENTS, new Map()), fluxBlock(FLUX_BANDS, new Map())]);
+const COLUMNS = simbadColumns(BASIC, [identNames(IDENTS), fluxNames(FLUX_BANDS)]);
 
 export function valuesTable(keyed: number): WrittenTable {
   return {

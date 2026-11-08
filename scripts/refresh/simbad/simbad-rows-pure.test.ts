@@ -16,7 +16,7 @@ const flux = (rows: Record<number, Record<string, string | null>>, bands = [V]) 
 
 describe('simbadColumns', () => {
   it('writes the basic columns, then each block in order', () => {
-    expect(simbadColumns([OID, SP_TYPE, OTYPE], [idents({}), flux({})]).map((c) => c.name)).toEqual([
+    expect(simbadColumns([OID, SP_TYPE, OTYPE], [idents({}).names, flux({}).names]).map((c) => c.name)).toEqual([
       'simbad_oid', 'sp_type', 'otype', 'hip', 'source_id', 'flux_V', 'flux_V_err', 'flux_V_bibcode',
     ]);
   });

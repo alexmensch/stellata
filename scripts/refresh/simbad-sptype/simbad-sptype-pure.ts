@@ -8,7 +8,7 @@ import { SIMBAD } from '../pull/tap-pure';
 import { keyedRows, membershipKeys, requestLines } from '../simbad/membership-keys-pure';
 import { requestReport, resolveMembershipKeys } from '../simbad/resolve-membership-pure';
 import { fetchBasic, fetchIdents, parseLedger, phaseRecord, simbadPhases, type BasicCells } from '../simbad/simbad-fetch-pure';
-import { countFilled, fillLine, floorCheck, identBlock, isFilled, simbadColumns, simbadRows } from '../simbad/simbad-rows-pure';
+import { countFilled, fillLine, floorCheck, identBlock, identNames, isFilled, simbadColumns, simbadRows } from '../simbad/simbad-rows-pure';
 import { GAIA_DR3, GJ, HIP, MAIN_ID, OID, OTYPE, SP_BIBCODE, SP_QUAL, SP_TYPE, TYC } from '../simbad/simbad-specs-pure';
 import { recoveredRows, unionReportLines, unionUnanswered } from '../simbad/union-pure';
 
@@ -24,7 +24,7 @@ export const RECOVERED_SAMPLE = 25;
 /** The written rows against the manifest's keyed rows: a key binds at most one object, and the union adds objects beyond them. */
 export const ROW_BAND = { minOfKeyed: 0.9, maxOfKeyed: 1.1 };
 
-const COLUMNS = simbadColumns(BASIC, [identBlock(IDENTS, new Map())]);
+const COLUMNS = simbadColumns(BASIC, [identNames(IDENTS)]);
 
 /** Arcturus, and alf Cen A, a component SIMBAD types apart from its system. */
 const SPOT_ROWS: readonly [SpotRow, ...SpotRow[]] = [

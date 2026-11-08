@@ -14,17 +14,20 @@ export interface Block {
   readonly cell: (oid: number, name: string) => string | null;
 }
 
+export const identNames = (namespaces: readonly Namespace[]): string[] => namespaces.map((ns) => ns.name);
+export const fluxNames = (bands: readonly FluxBand[]): string[] => bands.flatMap((b) => fluxColumns(b).map((c) => c.tsv));
+
 export function identBlock(namespaces: readonly Namespace[], idents: ReadonlyMap<number, ReadonlyMap<string, string>>): Block {
-  return { names: namespaces.map((ns) => ns.name), cell: (oid, name) => idents.get(oid)?.get(name) ?? null };
+  return { names: identNames(namespaces), cell: (oid, name) => idents.get(oid)?.get(name) ?? null };
 }
 
 export function fluxBlock(bands: readonly FluxBand[], flux: ReadonlyMap<number, Readonly<Record<string, string | null>>>): Block {
-  return { names: bands.flatMap((b) => fluxColumns(b).map((c) => c.tsv)), cell: (oid, name) => flux.get(oid)?.[name] ?? null };
+  return { names: fluxNames(bands), cell: (oid, name) => flux.get(oid)?.[name] ?? null };
 }
 
-export function simbadColumns(basic: readonly [typeof OID, ...BasicColumn[]], blocks: readonly Block[]): [Column, ...Column[]] {
+export function simbadColumns(basic: readonly [typeof OID, ...BasicColumn[]], blockNames: readonly (readonly string[])[]): [Column, ...Column[]] {
   const [first, ...rest] = basic;
-  return [{ name: first.tsv }, ...rest.map((c) => ({ name: c.tsv })), ...blocks.flatMap((b) => b.names.map((name) => ({ name })))];
+  return [{ name: first.tsv }, ...rest.map((c) => ({ name: c.tsv })), ...blockNames.flat().map((name) => ({ name }))];
 }
 
 /** One row per oid; an oid with no basic row still carries its key, and a group whose bibcode is empty takes its values down with it. */
@@ -32,7 +35,7 @@ export function simbadRows(
   oids: Iterable<number>, basicRows: ReadonlyMap<number, BasicCells>, basic: readonly [typeof OID, ...BasicColumn[]],
   blocks: readonly Block[], groups: readonly BibcodedGroup[] = [],
 ): Row[] {
-  const names = simbadColumns(basic, blocks).map((c) => c.name);
+  const names = simbadColumns(basic, blocks.map((b) => b.names)).map((c) => c.name);
   const at = new Map(names.map((name, i) => [name, i]));
   const index = (name: string): number => {
     const i = at.get(name);
