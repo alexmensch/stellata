@@ -1,16 +1,16 @@
 {
   "inputs": {
     "scripts/catalog/build-catalog-expected.json": "2bff2dcd5f92e244ef97147917a8692cc6653884",
-    "scripts/catalog/membership/membership-manifest-expected.json": "ec3595cb6786c7f1673abd290cc291602f990595"
+    "scripts/catalog/membership/membership-manifest-expected.json": "b6462b022c85255e98ed32fe6585ad02ce59fa6a"
   },
   "outputs": {
-    "data/simbad/simbad_values.tsv": "0dfaef7e6605a162c2aa5752ec5227ce983bb5a4"
+    "data/simbad/simbad_values.tsv": "98b71ac579d757d40e6db6d7351ed8acc457c0cb"
   },
   "query": "9824f09ba2af64af04b6ff4be993b96036c97dc4",
   "answeredBy": [
     "SIMBAD-Harvard"
   ],
-  "request": "144dfedf495dd47410ce9907d903d392d486b4d3",
+  "request": "55bea33fcdcab7409e0bc533d5b6b6b569dcf3c7",
   "requestFrom": [
     "data/membership/membership-manifest.tsv",
     "data/gaia/gaia_dr3_astrometry_catalog.tsv",
