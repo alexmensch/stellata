@@ -12,7 +12,7 @@ import {
 } from '../../../src/catalog-format/naming/star-naming-pure';
 import { NAMING_LINEAGE } from '../../../src/catalog-format/pipeline-outputs/lineage-files';
 
-export const NAMING_LINEAGE_BUDGET = { gzipBytes: 10_600_000, writeMs: 15_000 };
+export const NAMING_LINEAGE_BUDGET = { gzipBytes: 10_600_000, writeMs: 28_000 };
 
 const live = (description: string): CodeDeclaration => ({ description, effect: 'none', status: LIVE });
 

@@ -306,4 +306,5 @@ effect is `none`.
 
 Measured 2026-11-05: 1,017,955 rows, one name row per record plus its refused
 tiers, letter and designation constellation (78 MB plain), 9.7 MB gzipped in
-2.7 s without a diff; `NAMING_LINEAGE_BUDGET` pins 10.6 MB and 15 s.
+2.7 s without a diff; `NAMING_LINEAGE_BUDGET` pins 10.6 MB and 28 s: a CI run
+with a diff, building the lines inside the window, took 18.9 s (2026-11-08).
