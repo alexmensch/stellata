@@ -182,8 +182,9 @@ is the one place a pull rounds, and it is data: `{fixed: n}`, Python's
 `f"{x:.nf}"` text (`formatFixed`, `../../util/round-pure.ts`), or `{exp: n}`,
 Python's `f"{x:.ne}"` (`formatExponent`). `{flag: true}` is a two-valued
 column written `0`/`1`: ESA prints a BOOLEAN as `true`/`false` and ARI as
-`1`/`0`, and ARI rejects a `CAST`, so the mapping cannot be server-side; any
-third value refuses the write. A column the
+`1`/`0`, and ARI rejects a `CAST`, so the mapping cannot be server-side. It
+maps when the reply is checked (`checkedRows`), so gates, sort and TSV all see
+`0`/`1` whichever mirror answered, and any third value refuses the reply. A column the
 archive stores as a REAL adds `float32: true`: its value is the float32
 nearest the reply's text, and Python formatted that value, so `{fixed: 6}` on
 the text alone disagrees with it on about 1 cell in 230 (measured on a
