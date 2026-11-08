@@ -16,6 +16,8 @@ SIMBAD. A pull is a `pull` step on the step table
   from it: the projection, the reply's schema check, the TSV.
 - `gates-pure.ts` (+ test) — the row band, spot rows and coverage, each an
   `emitArtifacts` check.
+- `slices-pure.ts` (+ test) — the sliced scope's key ranges: their ADQL
+  conditions, per-slice counts, and cutting edges from a table.
 - `checkpoint.ts` — the resume cache.
 - `pull.ts` (+ test, the faked-transport acceptance cases) — the `Pull` type,
   `describePull`, `runPull`, and `LIVE`, the network transport.
@@ -43,10 +45,13 @@ the same bytes. `orderBy` is only for a query that needs a server order, such
 as one under `TOP`. Scopes:
 
 - `whole-table` — one query, limit `band.max × LIMIT_HEADROOM`, within
-  [How big a whole-table query may be](#how-big-a-whole-table-query-may-be).
+  [How big a table may be](#how-big-a-table-may-be).
 - `request` — the ids (ADQL literals, answering in `idColumn`) ANDed onto `where` as
   `<key> IN (…)`, `batchSize` per query, limit
   `batchSize × rowsPerId × LIMIT_HEADROOM`; optional coverage over the ids.
+- `sliced` — a whole table too big for one mirror's reply, one query per
+  key range ([Sliced scope](#sliced-scope)), limit `sliceRows × LIMIT_HEADROOM`,
+  within the same bound.
 
 `LIMIT_HEADROOM` (2) leaves room for a moved table to reach the band gate,
 which reports its count, rather than the overflow, which cannot.
@@ -62,12 +67,14 @@ changed id list does not, except through the pull's inputs.
 `emitArtifacts` emission of all its outputs: a failed gate, query or schema
 check anywhere leaves every prior output byte-identical.
 
-### How big a whole-table query may be
+### How big a table may be
 
-A whole-table table is one reply, held whole: its text, its parsed cells and
-the TSV written from them are all live at once. `runPull` refuses, before any
-query, a whole-table table whose limit (`band.max × LIMIT_HEADROOM`) times its
-column count exceeds `MAX_WHOLE_TABLE_CELLS` (37,000,000): batch it instead.
+`runPull` holds every row of a table at once — its parsed cells, their sorted
+copy and the TSV written from them — and for a whole-table table the reply
+text too. It refuses, before any query, a whole-table or sliced table whose
+queries at their limits (query count × limit × column count) could hold more
+than `MAX_TABLE_CELLS` (37,000,000). A request-scoped table is not bounded
+this way.
 Measured 2026-11-05 under Node 26, the committed `gaia_dr3_tyc_xmatch.tsv` (5
 columns) replayed through `runPull` and a fake transport, peak live heap by
 `watchHeap` ([CI heap budget](../../util/heap-budget/README.md)):
@@ -79,9 +86,26 @@ columns) replayed through `runPull` and a fake transport, peak live heap by
 
 That is about 69 bytes per cell over about 1,029 MiB fixed (the harness's own
 copies of the reply among it), so the CI budget of 3,482 MiB holds about 37 M
-cells. tyc-xmatch, the largest whole-table pull, reaches 25.3 M at its limit.
-A table with wider text cells costs more per cell, so a pull near the cap is
-re-measured, not assumed.
+cells; a sliced table holds one slice's reply text at a time, so the same cap
+is conservative for it. tyc-xmatch, sliced, reaches 25.2 M (105 slices ×
+48,000 × 5 columns). A table with wider text cells costs more per cell, so a
+pull near the cap is re-measured, not assumed.
+
+### Sliced scope
+
+A table no list of ids scopes, cut into half-open ranges of an integer
+`key` between committed `edges`, open at both ends (`key < e0`, `e0 ≤ key <
+e1`, …, `key ≥ eN`), so every non-null key falls in exactly one slice and no
+row is asked for twice. The edges are part of the description: a re-cut
+stales the pull, and its next run asks the new ranges.
+
+`sliceRows` is the most rows any slice holds, and the edges are
+`cutEdges(<the table's keys, ascending>, sliceRows)`, which never splits equal
+keys across an edge. A pull's own test counts its committed table into its
+slices (`sliceCounts`) and fails, printing the re-cut edges, when one outgrows
+`sliceRows`. Whether a mirror can serve a slice is the TAP backend's
+per-mirror check below: `sliceRows × LIMIT_HEADROOM + 1` must fit its hard
+limit, so a pull sized for ESA's 50,000 keeps `sliceRows` at most 24,999.
 
 ## The checkpoint
 
@@ -154,10 +178,15 @@ A table's `Column` list is the one statement of its schema. Each column's
 `name` is the header the archive answers with and the TSV writes; `select`
 is its projection when that is not the quoted name (a qualified `t.source_id`,
 which still answers as `source_id`, or an aliased expression); `format`
-is the one place a pull rounds, and it is data, `{fixed: n}`: Python's
-`f"{x:.nf}"` text (`formatFixed`, `../../util/round-pure.ts`), the rounding
-every Python pull writes with. Being data, it is part of what `describePull`
-states, so a changed rounding stales the pull. So the projection, the schema check and the header order cannot
+is the one place a pull rounds, and it is data: `{fixed: n}`, Python's
+`f"{x:.nf}"` text (`formatFixed`, `../../util/round-pure.ts`). A column the
+archive stores as a REAL adds `float32: true`: its value is the float32
+nearest the reply's text, and Python formatted that value, so `{fixed: 6}` on
+the text alone disagrees with it on about 1 cell in 230 (measured on a
+24,000-row slice of `tycho2tdsc_merge_best_neighbour`). An unformatted cell
+is written as the archive's text, which for a float is Java's (`9.045827E-5`
+where Python wrote `9.045827e-05`). Being data, it is part of what
+`describePull` states, so a changed rounding stales the pull. So the projection, the schema check and the header order cannot
 disagree: a reply whose header is not exactly the declared names, in order,
 is refused (`checkedRows`).
 
