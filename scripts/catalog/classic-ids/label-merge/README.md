@@ -220,7 +220,7 @@ star:
 | HD 24071 · HR 1189 | `7570-1586-1`, f Eri B | a record |
 | HD 138917 · HR 5788 | `933-1239-1`, δ Ser B | a record |
 | HD 200496 · HR 8058 | `5204-1584-2`, 12 Aqr B | a record |
-| HD 68255 · HR 3210 | `1381-1641-1`, ζ¹ Cnc B, its own source through SIMBAD | a record |
+| HD 68255 · HR 3210 | `1381-1641-1`, ζ² Cnc (Tegmine C), its own source through SIMBAD | a record |
 | HD 213051 · HR 8558 | `5226-1605-2`, ζ¹ Aqr: a 2p Gaia source whose only other parallax is SIMBAD's Gaia DR2 value, refused | parked |
 | HD 330122 | no manifest row — no Tycho entry names it | nothing |
 
