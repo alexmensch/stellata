@@ -54,6 +54,8 @@ export const J2000_JD = 2451545.0;
 // budget does not need the time-varying obliquity term.
 export const J2000_OBLIQUITY_RAD = (23.4392911 * Math.PI) / 180;
 
+export const HIPPARCOS_EPOCH_JYEAR = 1991.25;
+
 export const DAYS_PER_JULIAN_YEAR = 365.25;
 export const SECONDS_PER_DAY = 86400;
 

@@ -1,12 +1,12 @@
 // Sky geometry the binaries stages share: proper-motion propagation, tangent-plane offsets, parallax distance.
 
-import { DEG_TO_RAD } from '../../src/astro-core/astronomy-constants';
+import { DEG_TO_RAD, HIPPARCOS_EPOCH_JYEAR } from '../../src/astro-core/astronomy-constants';
 import type { SkyPosition } from '../../src/astro-core/equatorial-basis';
 
 /** AT-HYG documents J2000.0, but its HIP-sourced rows sit at HIP1's J1991.25
  *  (α Cen A's stored RA is HIP1's 219.92041, not J2000's 219.9020); a row
  *  genuinely at J2000 moves under tolerance when propagated from here. */
-export const ATHYG_REFERENCE_EPOCH = 1991.25;
+export const ATHYG_REFERENCE_EPOCH = HIPPARCOS_EPOCH_JYEAR;
 
 /** WDS precise_coord (cols 113-130) is one J2000 system coordinate shared by
  *  every pair row of a system, whatever each row's `date_last`. */
