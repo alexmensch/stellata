@@ -5,6 +5,7 @@ import {
 } from '../lineage/lineage-row-pure';
 import { LIVE, stageCodes, type CodeDeclaration } from '../lineage/reason-codes/reason-codes-pure';
 import { sourceRowRefText, type AnySourceRowRef } from '../../util/sources/row-ref-pure';
+import type { CascadeRefusal } from '../cascade-result';
 import type { ColourIndexResolution, CiVia } from './colour-index-pure';
 import type { PhotometryRefusal } from './gaia-photometry-pure';
 import type { VMagnitudeResolution, VVia } from './v-magnitude-pure';
@@ -94,13 +95,8 @@ export const BRIGHTNESS_COLOUR_CODES = stageCodes(BRIGHTNESS_COLOUR_LINEAGE.stag
 
 type Branch = Parameters<typeof BRIGHTNESS_COLOUR_CODES.code>[0];
 
-type SimbadRefusalParams = { tier: 'simbad'; namespace: string };
-
 type ParamsOf<B extends Branch> =
-  B extends 'spectral.refused.gaia-id-contradicts' ? SimbadRefusalParams
-  : B extends 'spectral.refused.unclassifiable' ? SimbadRefusalParams | { tier: 'gspspec' }
-  : B extends `${string}.refused.${string}` ? { tier: string }
-  : B extends 'spectral.simbad' ? { namespace: string }
+  B extends 'spectral.simbad' ? { namespace: string }
   : B extends `dust.${string}` ? { av: string }
   : Record<string, never>;
 
@@ -133,14 +129,22 @@ export type BrightnessColour =
 export function brightnessColourLineageRows(b: BrightnessColour): LineageRow[] {
   const { key } = b;
   const out: LineageRow[] = [];
-  const row = <B extends Branch>(
-    role: LineageRole, branch: B, params: ParamsOf<B>, refs: readonly AnySourceRowRef[],
-  ): void => {
+  const push = (role: LineageRole, branch: Branch, params: LineageParams, refs: readonly AnySourceRowRef[]): void => {
     out.push({
       stage: BRIGHTNESS_COLOUR_LINEAGE.stage, key, role, code: BRIGHTNESS_COLOUR_CODES.code(branch),
-      params: paramsText(params as LineageParams),
+      params: paramsText(params),
       evidence: evidenceTexts(key, refs.map(sourceRowRefText)),
     });
+  };
+  const row = <B extends Branch>(branch: B, params: ParamsOf<B>, refs: readonly AnySourceRowRef[]): void => {
+    push('outcome', branch, params, refs);
+  };
+  const refused = <R extends CascadeRefusal<string, string> & Readonly<Record<Exclude<keyof R, 'ref'>, string>>>(
+    refusals: readonly R[], branches: Readonly<Record<R['reason'], Branch>>,
+  ): void => {
+    for (const { reason, ref, ...params } of refusals) {
+      push('refused', branches[reason as R['reason']], params as unknown as LineageParams, [ref]);
+    }
   };
   const none = {} as Record<string, never>;
   const answered = (
@@ -148,8 +152,8 @@ export function brightnessColourLineageRows(b: BrightnessColour): LineageRow[] {
   ): readonly AnySourceRowRef[] => ('evidence' in res ? res.evidence : []);
 
   const v = (res: VMagnitudeResolution): void => {
-    for (const r of res.refusals) row('refused', PHOTOMETRY_REFUSAL_BRANCHES.v[r.reason], { tier: r.tier }, [r.ref]);
-    row('outcome', V_BRANCHES[res.via], none, answered(res));
+    refused(res.refusals, PHOTOMETRY_REFUSAL_BRANCHES.v);
+    row(V_BRANCHES[res.via], none, answered(res));
   };
 
   switch (b.kind) {
@@ -159,19 +163,16 @@ export function brightnessColourLineageRows(b: BrightnessColour): LineageRow[] {
     case 'shipped': {
       v(b.v);
       const { spectral, ci, dust } = b;
-      for (const r of spectral.refusals) {
-        row('refused', SPECTRAL_REFUSAL_BRANCHES[r.reason],
-          r.tier === 'simbad' ? { tier: r.tier, namespace: r.namespace } : { tier: r.tier }, [r.ref]);
-      }
+      refused(spectral.refusals, SPECTRAL_REFUSAL_BRANCHES);
       if (spectral.via === 'simbad') {
-        row('outcome', 'spectral.simbad', { namespace: spectral.value.namespace }, spectral.evidence);
+        row('spectral.simbad', { namespace: spectral.value.namespace }, spectral.evidence);
       } else {
-        row('outcome', SPECTRAL_BRANCHES[spectral.via], none, answered(spectral));
+        row(SPECTRAL_BRANCHES[spectral.via], none, answered(spectral));
       }
-      for (const r of ci.refusals) row('refused', CI_REFUSAL_BRANCHES[r.reason], { tier: r.tier }, [r.ref]);
-      row('outcome', CI_BRANCHES[ci.via], none, answered(ci));
+      refused(ci.refusals, CI_REFUSAL_BRANCHES);
+      row(CI_BRANCHES[ci.via], none, answered(ci));
       if (dust !== null) {
-        row('outcome', dust.ciDereddened ? 'dust.edenhofer2024.absmag-and-ci' : 'dust.edenhofer2024.absmag-only',
+        row(dust.ciDereddened ? 'dust.edenhofer2024.absmag-and-ci' : 'dust.edenhofer2024.absmag-only',
           { av: dust.av.toFixed(AV_PARAM_DECIMALS) }, []);
       }
       return out;
