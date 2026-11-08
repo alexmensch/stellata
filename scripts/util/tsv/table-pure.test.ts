@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
-  compareSourceIds, floatCell, idCell, idListCell, intCell, readTable, readTableLines, splitCsvLine, tableLineReader, textCell,
+  compareSourceIds, floatCell, idCell, idListCell, intCell, readTable, readTableLines, splitCsvLine, tableLineReader, textCell, columnTable,
   type TableSpec,
 } from './table-pure';
 
@@ -209,6 +209,14 @@ describe('readTable csv', () => {
 
   it('throws on a missing column', () => {
     expect(() => [...readTable(CSV, '"id"\n1\n')]).toThrow(/missing required columns: name/);
+  });
+});
+
+describe('columnTable', () => {
+  it('reads each caller its own columns under the declared format', () => {
+    const table = columnTable({ file: 'fixture/t.tsv', hint: 'h', comments: true }, '# note\na\tb\n1\t2\n');
+    expect([...table(['b'])].map((r) => r.int('b'))).toEqual([2]);
+    expect([...table(['a', 'b'])].map((r) => r.int('a'))).toEqual([1]);
   });
 });
 

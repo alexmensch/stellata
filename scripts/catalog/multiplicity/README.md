@@ -12,7 +12,8 @@ see `../companions/README.md`.
 ```
 scripts/catalog/multiplicity/
   hip-ccdm-source.ts              HIP_CCDM, the I/239 CCDM slice declared
-                                  (../../util/sources/).
+                                  (../../util/sources/) as a column table
+                                  parseHipCcdm groups.
   binary-flags-pure.ts (+ test)   The FLAG_BINARY_PRIMARY writers: the
                                   geometric mutual-pair pass
                                   (inferBinaries), the per-group CCDM walk

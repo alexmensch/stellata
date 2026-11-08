@@ -26,7 +26,8 @@ scripts/util/tsv/
   table-pure.ts (+ test)      readTable / tableLineReader, TableRow,
                               readTableLines (each row's line as written,
                               checked but never split), splitCsvLine
-                              (the `csv: true` cell split), and the
+                              (the `csv: true` cell split), columnTable
+                              (#reading-a-table), and the
                               cell parsers (textCell, floatCell, intCell,
                               idCell, idListCell, sourceIdCell,
                               oneOfCell).
@@ -91,6 +92,11 @@ the target that rebuilds or re-pulls the file.
   `compareSourceIds` is the one order over them: absent
   first, then by `BigInt` value.
   `oneOf(column, values)` returns the cell typed to a closed set or throws.
+- **A declared table several readers share** returns a `ColumnTable` from its
+  parse (`columnTable(format, text)`): the declaration owns the format
+  (`csv`, `comments`), each reader names its own columns and keeps its own
+  parse over the rows. AT-HYG's CSV, HIP↔CCDM and the NSS two-body table read
+  this way, since their readers want different columns of one file.
 - `raw` is the cell exactly as written, for a reader whose meaning depends on
   untrimmed text; `cells()` is every spec column's `raw` cell as one record.
 - **`optional` columns may be absent from the header.** An absent one reads as

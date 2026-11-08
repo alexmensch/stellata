@@ -344,6 +344,14 @@ export function readTable<C extends string>(
   return walkTable(spec, input, chunk, tableRowOf(spec));
 }
 
+/** A declared table each reader takes its own columns from; the
+ *  declaration owns the format (`csv`, `comments`). */
+export type ColumnTable = <C extends string>(columns: readonly C[]) => Generator<TableRow<C>>;
+
+export function columnTable(format: Omit<TableSpec<never>, 'columns'>, text: string): ColumnTable {
+  return (columns) => readTable({ ...format, columns }, text);
+}
+
 /** Every data row's line as written, checked as `readTable` checks it but never split into cells. */
 export function readTableLines<C extends string>(
   spec: TableSpec<C>,
