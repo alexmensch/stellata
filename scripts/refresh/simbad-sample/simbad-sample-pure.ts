@@ -7,7 +7,7 @@ import type { SpotRow } from '../pull/gates-pure';
 import type { PhasedPull, Phase, WrittenTable } from '../pull/pull';
 import { SIMBAD } from '../pull/tap-pure';
 import { fetchIdents, oidOf, parseLedger, simbadPhases } from '../simbad/simbad-fetch-pure';
-import { countFilled, floorCheck } from '../simbad/simbad-rows-pure';
+import { countFilled, floorCheck, share } from '../simbad/simbad-rows-pure';
 import { GAIA_DR3, HIP, OID } from '../simbad/simbad-specs-pure';
 
 /** The draw's seed, `YYYYMMDD` of the day the corpus was first cut; a new one redraws every row. */
@@ -169,7 +169,7 @@ export function samplePull(outputs: DeclaredOutputs<'sample'>): PhasedPull<'samp
         rows: { sample: rows },
         checks: [
           ledger.check('idents'),
-          floorCheck('Gaia DR3 ident coverage', gaia / Math.max(1, rows.length), GAIA_COVERAGE_FLOOR, 'SIMBAD\'s ident table or the strata\'s Gaia rate regressed'),
+          floorCheck('Gaia DR3 ident coverage', share(gaia, rows.length), GAIA_COVERAGE_FLOOR, 'SIMBAD\'s ident table or the strata\'s Gaia rate regressed'),
         ],
       };
     },

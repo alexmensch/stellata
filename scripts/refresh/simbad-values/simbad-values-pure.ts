@@ -8,7 +8,7 @@ import { GAIA_NATIVE_BINDING, keyedRows, membershipKeys, requestLines, valueCoho
 import { requestReport, resolveMembershipKeys } from '../simbad/resolve-membership-pure';
 import { fetchBasic, fetchFlux, fetchIdents, parseLedger, phaseRecord, simbadPhases } from '../simbad/simbad-fetch-pure';
 import {
-  countFilled, fillLine, floorCheck, fluxBlock, fluxNames, identBlock, identNames, isFilled, simbadColumns, simbadRows,
+  countFilled, fillLine, floorCheck, fluxBlock, fluxNames, identBlock, identNames, isFilled, share, simbadColumns, simbadRows,
 } from '../simbad/simbad-rows-pure';
 import {
   BASIC_BIBCODED_GROUPS, COO_BIBCODE, COO_QUAL, DEC, GAIA_DR3, GJ, HIP, MAIN_ID, OID, PLX_BIBCODE, PLX_ERR, PLX_QUAL,
@@ -118,7 +118,7 @@ export function valuesPull(outputs: DeclaredOutputs<'values'>, inputs: ValuesInp
         rows: { values: simbadRows(oids, basic, BASIC, [identBlock(IDENTS, idents), fluxBlock(FLUX_BANDS, flux)], GROUPS) },
         checks: [
           ...resolutionChecks(keys.sourceIds, gaiaNative, resolved.bindings.get(GAIA_DR3.name) ?? new Map()),
-          floorCheck('coordinate fill', coords / Math.max(1, total), COORD_FLOOR, 'SIMBAD\'s reply shape or the column list drifted'),
+          floorCheck('coordinate fill', share(coords, total), COORD_FLOOR, 'SIMBAD\'s reply shape or the column list drifted'),
           ledger.check('idents'),
         ],
       };

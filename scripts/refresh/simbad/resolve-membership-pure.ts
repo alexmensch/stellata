@@ -3,6 +3,7 @@
 import type { Ask } from '../pull/pull';
 import { fetchReleaseIds, resolveOids, type ParseLedger, type SimbadPhases } from './simbad-fetch-pure';
 import type { MembershipKeys } from './membership-keys-pure';
+import { percent, share } from './simbad-rows-pure';
 import { GAIA_DR3, WIDENING_LADDER, type Namespace } from './simbad-specs-pure';
 
 export interface Verdicts {
@@ -36,19 +37,18 @@ function add(request: OidRequest, label: string, requested: number, resolved: Re
   for (const [key, oid] of resolved) bound.set(key, oid);
 }
 
-export const coverage = (request: OidRequest, label: string): number => (request.resolved.get(label) ?? 0) / Math.max(1, request.requested.get(label) ?? 0);
+export const coverage = (request: OidRequest, label: string): number => share(request.resolved.get(label) ?? 0, request.requested.get(label) ?? 0);
 
 export const verdictLine = (v: Verdicts): string =>
   `${v.corroborated} corroborated by a Gaia cross-ID, ${v.vetoed} vetoed on a contradicting DR3 id, ${v.uncorroborated} kept with no DR3 id to contradict them`;
 
-const pct = (n: number, d: number): string => `${((100 * n) / Math.max(1, d)).toFixed(1)}%`;
 
 export function requestReport(request: OidRequest): string[] {
   return [...request.requested].flatMap(([label, asked]) => {
     const got = request.resolved.get(label) ?? 0;
     const verdict = request.verdicts.get(label);
     return [
-      `  ${label.padEnd(14)} requested ${String(asked).padStart(7)} → resolved ${String(got).padStart(7)} (${pct(got, asked)})`,
+      `  ${label.padEnd(14)} requested ${String(asked).padStart(7)} → resolved ${String(got).padStart(7)} (${percent(share(got, asked))})`,
       ...(verdict ? [`  ${''.padEnd(14)} of the widened: ${verdictLine(verdict)}`] : []),
     ];
   });

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
-  countFilled, fillLine, floorCheck, fluxBlock, identBlock, isFilled, simbadColumns, simbadRows,
+  countFilled, fillLine, floorCheck, fluxBlock, identBlock, isFilled, percent, share, simbadColumns, simbadRows,
 } from './simbad-rows-pure';
 import {
   BASIC_BIBCODED_GROUPS, GAIA_DR3, HIP, OID, OTYPE, PLX_BIBCODE, PLX_ERR, PLX_QUAL, PLX_VALUE,
@@ -66,6 +66,12 @@ describe('fill gates', () => {
 
   it('prints a fill as count over total and a percentage', () => {
     expect(fillLine('sp_type', 1, 4)).toBe('  sp_type               1/4 = 25.0%');
+  });
+
+  it('reads an empty population as 0%, never NaN', () => {
+    expect(share(0, 0)).toBe(0);
+    expect(percent(share(0, 0))).toBe('0.0%');
+    expect(percent(0.8, 0)).toBe('80%');
   });
 
   it('fails below the floor and passes at it', () => {

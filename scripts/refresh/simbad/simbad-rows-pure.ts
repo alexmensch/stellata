@@ -61,11 +61,15 @@ export const countFilled = <T>(rows: Iterable<T>, filled: (row: T) => boolean): 
   return n;
 };
 
+/** `n` of `d`; a zero `d` divides by 1, so an empty population reads 0, never NaN. */
+export const share = (n: number, d: number): number => n / Math.max(1, d);
+export const percent = (fraction: number, digits = 1): string => `${(100 * fraction).toFixed(digits)}%`;
+
 export const fillLine = (label: string, filled: number, total: number): string =>
-  `  ${label.padEnd(16)} ${String(filled).padStart(6)}/${total} = ${((100 * filled) / Math.max(1, total)).toFixed(1)}%`;
+  `  ${label.padEnd(16)} ${String(filled).padStart(6)}/${total} = ${percent(share(filled, total))}`;
 
 /** A fill below its floor means the response shape or the request drifted, not a sparse cohort. */
 export function floorCheck(label: string, fraction: number, floor: number, diagnosis: string): Check {
-  const line = `${label} ${(100 * fraction).toFixed(1)}%, floor ${(100 * floor).toFixed(0)}%`;
+  const line = `${label} ${percent(fraction)}, floor ${percent(floor, 0)}`;
   return fraction >= floor ? { kind: 'pass', report: line } : { kind: 'fail', message: `${line}: ${diagnosis}; investigate before pinning` };
 }
