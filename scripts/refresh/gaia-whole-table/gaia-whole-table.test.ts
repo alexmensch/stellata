@@ -10,7 +10,7 @@ import { spotRowCheck } from '../pull/gates-pure';
 import { batchQueries, queryLimit, type PullTable } from '../pull/pull';
 import { cutEdges, sliceCounts } from '../pull/slices-pure';
 import { GAIA, readCsv } from '../pull/tap-pure';
-import { GAIA_SLICE_ROWS, HIP_XMATCH, NSS_TWO_BODY, TYC_XMATCH } from './gaia-whole-table-pure';
+import { GAIA_SLICE_ROWS, HIP_XMATCH, TYC_XMATCH } from './gaia-whole-table-pure';
 
 const replyHeader = (table: PullTable): string => table.columns.map((c) => c.name).join(',');
 
@@ -32,31 +32,11 @@ const REPLIES = {
     '2893-1482-1,199637162322750336,1.0490755,1,16',
     '2393-1410-1,181738139518381824,0.1410765,1,8',
   ],
-  nss: [
-    '5823248090239625088,OrbitalTargetedSearch,488.4291679390102,3.1467,11.430366554337581,52.44574,0.1495367617275547,0.043536834,'
-      + '0.11556221913471246,0.42908052,-0.17102784494711115,0.7109712,1.2353209871073731,0.07389782,2.1120883476810928,0.06517179,'
-      + ',,,,,,,,,,1.4451202,36.06349',
-    '33711199137024,Orbital,773.0921101652751,27.351328,143.01267303924104,35.11744,0.3274445911851798,0.098035514,'
-      + '-0.8305162402672168,0.13799927,-0.6875868770647713,0.19882414,0.45371707337300843,0.25382182,-0.9858676354099775,0.286759,'
-      + ',,,,,,,,,,0.8528669,6.981612',
-    '4648984790038560256,SB1,524.0654050701588,7.3522487,89.8681259923026,53.676945,0.08154041909126154,0.049620762,'
-      + ',,,,,,,,,,,,,,202.65396589295548,37.26105,,,-0.04594423,17.899855',
-    '6360853029303982592,Orbital,466.2104463609643,0.7293173,-143.47613441634357,2.3760302,0.7917730371002119,0.037649486,'
-      + '-4.639335582468894,0.11858249,-0.08086474698096051,0.025754647,3.524529362911686,0.49702537,1.1595702397837646,0.11008447,'
-      + ',,,,,,,,,,6.091029,14.677704',
-    '138577120584320,EclipsingBinary,0.385854572057724,,0.1390818953514099,9.045827E-5,0.0,,,,,,,,,,,,,,66.64820727941904,0.1248893,0.0,,,,18.19693,0.0',
-    '2747576478880512,Orbital,227.31967370212286,2.8379035,-13.368635977247948,27.471853,0.2483719980794645,0.12195197,'
-      + '0.024504066398540757,0.56414735,-0.3610163385647766,0.10647808,0.880535290150256,0.034179732,-0.1741942859021553,0.18594255,'
-      + ',,,,,,,,,,6.420549,23.53201',
-    '2747576478880512,SB1,0.6214878186210907,2.0509997E-5,0.20049215971450943,0.0992019,0.0766246658597285,0.08542621,'
-      + ',,,,,,,,,,,,,,252.79000223673825,57.788853,,,-0.60351914,13.752674',
-  ],
 };
 
 const PULLS = [
   { name: 'hip-xmatch', table: HIP_XMATCH, file: DATA_FILES.gaiaHipXmatch, key: 'gaia_source_id', reply: REPLIES.hip },
   { name: 'tyc-xmatch', table: TYC_XMATCH, file: DATA_FILES.gaiaTycXmatch, key: 'gaia_source_id', reply: REPLIES.tyc },
-  { name: 'nss', table: NSS_TWO_BODY, file: DATA_FILES.gaiaNssTwoBody, key: 'source_id', reply: REPLIES.nss },
 ] as const;
 
 const committed = (file: string): string => readFileSync(join(REPO_ROOT, file), 'utf8');
@@ -90,10 +70,10 @@ describe.each(PULLS)('$name', ({ name, table, file, key, reply }) => {
 
 describe('the sliced queries', () => {
   it('ask at most 48,000 rows each, so ESA\'s 50,000-row hard limit holds every slice', () => {
-    expect(PULLS.map(({ table }) => queryLimit(table))).toEqual([48_000, 48_000, 48_000]);
+    expect(PULLS.map(({ table }) => queryLimit(table))).toEqual([48_000, 48_000]);
   });
 
-  it('cut HIP into 5 slices, TYC into 105 and NSS into 19', () => {
-    expect(PULLS.map(({ table }) => batchQueries(table, GAIA.quote).length)).toEqual([5, 105, 19]);
+  it('cut HIP into 5 slices and TYC into 105', () => {
+    expect(PULLS.map(({ table }) => batchQueries(table, GAIA.quote).length)).toEqual([5, 105]);
   });
 });

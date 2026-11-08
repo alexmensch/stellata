@@ -824,6 +824,21 @@ class SyncErrorClassificationTests(unittest.TestCase):
         self.assertTrue(rl.is_transient_http_error(exc))
 
 
+class WholeTableSyncMaxrecTests(unittest.TestCase):
+    def test_doubles_the_pinned_ceiling(self) -> None:
+        self.assertEqual(rl.whole_table_sync_maxrec(446_000), 892_000)
+
+    def test_clamps_to_the_output_cap(self) -> None:
+        self.assertEqual(
+            rl.whole_table_sync_maxrec(2_530_000), rl.GAIA_SYNC_MAX_ROWS
+        )
+
+    def test_ceiling_past_the_cap_demands_batching(self) -> None:
+        with self.assertRaises(SystemExit) as cm:
+            rl.whole_table_sync_maxrec(rl.GAIA_SYNC_MAX_ROWS + 1)
+        self.assertIn("batch it", str(cm.exception))
+
+
 # ─── coerce_masked ────────────────────────────────────────────────────
 
 class CoerceMaskedTests(unittest.TestCase):

@@ -77,7 +77,7 @@ script directly writes no record, so the build then stops on that pull.
 |---|---|---|---|
 | `refresh:gaia-hip` | `gaia-whole-table/refresh-gaia-hip-xmatch.ts` | `data/gaia/gaia_dr3_hip_xmatch.tsv` | HIP → Gaia DR3 source_id cross-walk from `hipparcos2_best_neighbour`. |
 | `refresh:gaia-tyc` | `gaia-whole-table/refresh-gaia-tyc-xmatch.ts` | `data/gaia/gaia_dr3_tyc_xmatch.tsv` | Tycho-2 → Gaia DR3 cross-walk from `tycho2tdsc_merge_best_neighbour`. |
-| `refresh:gaia-nss` | `gaia-whole-table/refresh-gaia-nss.ts` | `data/gaia/gaia_dr3_nss_two_body.tsv` | Gaia DR3 `nss_two_body_orbit` (binary orbits Gaia detected astrometrically). |
+| `refresh:gaia-nss` | `refresh-gaia-nss.py` | `data/gaia/gaia_dr3_nss_two_body.tsv` | Gaia DR3 `nss_two_body_orbit` (binary orbits Gaia detected astrometrically). |
 | `refresh:gaia-astrometry` | `refresh-gaia-astrometry.py` | `data/gaia/gaia_dr3_astrometry.tsv` | Gaia DR3 5-parameter astrometry for the binaries request (`data/gaia/gaia_astrometry_source_id_request.tsv`): the source_ids Stage 2 resolved plus every candidate a Stage-2 gate weighed — `write_astrometry_request` owns the list. Run AFTER `refresh:gaia-hip` + `refresh:gaia-tyc` + a fresh `pnpm run build:binaries`. |
 | `build:astrometry-request` | `scripts/catalog/astrometry-request/export-astrometry-request.ts` | `data/gaia/gaia_catalog_source_id_request.tsv` | Full-catalog deduped Gaia DR3 source_id request list — the union of four contributions ([The request is a union](../catalog/astrometry-request/README.md#the-request-is-a-union-and-why-that-is-not-a-compromise)). Not a network pull. Reads both Gaia cross-walks and `multiples.tsv`'s kept pairs, which Stage 5 decides from `gaia_dr3_astrometry.tsv`, so it runs AFTER `refresh:gaia-hip` / `refresh:gaia-tyc` and a `build:binaries` that follows `refresh:gaia-astrometry`. |
 | `refresh:gaia-astrometry-catalog` | `refresh-gaia-astrometry-catalog.py` | `data/gaia/gaia_dr3_astrometry_catalog.tsv` | Gaia DR3 5p astrometry + `radial_velocity` for every catalog source_id ([the request](../catalog/astrometry-request/README.md)) — tier 1 of the direction, rv, V and ci cascades. Same schema/query as `refresh:gaia-astrometry`; reads `gaia_catalog_source_id_request.tsv`. Run AFTER `build:astrometry-request`. |
@@ -320,7 +320,7 @@ magnitude
 
 **MAXREC is load-bearing.** A sync endpoint answers HTTP 200 and flags
 truncation in a VOTable `QUERY_STATUS` INFO rather than erroring, so a
-MAXREC below the result size would silently short a pull. Two sizing
+MAXREC below the result size would silently short a pull. Three sizing
 rules for the Python pulls, and none may be replaced with a bare literal.
 **ESA's `/capabilities` declares a hard output limit of 50,000 rows** (ARI
 10,000,000; measured 2026-11-05), and a mirror truncates at its own hard
@@ -329,9 +329,15 @@ limit whatever MAXREC asks. Whether ESA flags that truncation as a
 Python query ESA answers past 50,000 rows may come back short with only its
 row band to catch it. The TypeScript runtime reads each mirror's limit and
 routes around it ([The TAP backend](pull/README.md#the-tap-backend)); the
-whole-table pulls are TypeScript and sliced to fit ESA
+cross-walk pulls are TypeScript and sliced to fit ESA
 ([gaia-whole-table/](gaia-whole-table/README.md)).
 
+- `refresh-gaia-nss.py`, the one Python whole-table pull, calls
+  `whole_table_sync_maxrec(EXPECTED_ROW_COUNT_MAX)` — double the pinned
+  ceiling, clamped to `GAIA_SYNC_MAX_ROWS` (3 M, not ESA's limit). It exits
+  rather than clamp below the ceiling. Its 440,000–446,000-row band is past
+  ESA's limit, so only ARI can answer it whole; an ESA answer is left to the
+  row band to refuse.
 - Batched pulls size MAXREC off their batch size (`BATCH_SIZE * 2`),
   except `refresh-gaia-dr2-neighbourhood.py`, where one requested id can
   return several rows.

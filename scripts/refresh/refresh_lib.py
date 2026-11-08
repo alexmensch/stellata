@@ -646,6 +646,9 @@ SIMBAD_HARVARD_TAP_URL = "https://simbad.cfa.harvard.edu/simbad/sim-tap"
 GAIA_ESA_SYNC_TAP_URL = "https://gea.esac.esa.int/tap-server/tap"
 GAIA_ARI_SYNC_TAP_URL = "https://gaia.ari.uni-heidelberg.de/tap"
 
+# Not ESA's current limit: see README.md#gaia-tap-synchronous-endpoints-only.
+GAIA_SYNC_MAX_ROWS = 3_000_000
+
 GAIA_DR3_RELEASE = "Gaia DR3"
 
 GAIA_SYNC_RETRY_KWARGS: Mapping[str, Any] = {"max_attempts": 5, "base_delay_s": 2.0}
@@ -840,6 +843,28 @@ def gaia_sync_client(
         ],
         retry_kwargs=GAIA_SYNC_RETRY_KWARGS if retry_kwargs is None else retry_kwargs,
     )
+
+
+def whole_table_sync_maxrec(
+    expected_row_count_max: int, *, cap: int = GAIA_SYNC_MAX_ROWS
+) -> int:
+    """MAXREC for a pull that fetches a whole table in ONE sync query:
+    double the pinned row-count ceiling, clamped to the mirrors' output
+    cap. Doubling keeps an upstream re-index from silently overflowing
+    before the row-count guard can report it.
+
+    Raises SystemExit when the ceiling itself exceeds the cap — that pull
+    no longer fits one sync query and needs batching, which is a code
+    change rather than a re-pin. Batched pulls size MAXREC off their batch
+    size instead and don't use this.
+    """
+    if expected_row_count_max > cap:
+        raise SystemExit(
+            f"whole_table_sync_maxrec: pinned ceiling {expected_row_count_max} "
+            f"exceeds the sync output cap {cap} — this pull can no longer be "
+            f"served in one sync query; batch it (see run_in_batches)."
+        )
+    return min(expected_row_count_max * 2, cap)
 
 
 # ─── Spot-check pin helper ────────────────────────────────────────────

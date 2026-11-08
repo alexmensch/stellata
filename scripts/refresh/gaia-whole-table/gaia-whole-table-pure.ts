@@ -1,9 +1,9 @@
-// The whole-table Gaia DR3 pulls: the HIP and TYC best-neighbour cross-walks and the NSS two-body orbits. See README.md.
+// The whole-table Gaia DR3 pulls: the HIP and TYC best-neighbour cross-walks. See README.md.
 
-import type { Column, SortKey } from '../pull/columns-pure';
+import type { SortKey } from '../pull/columns-pure';
 import type { RowBand, SpotRow } from '../pull/gates-pure';
 import type { PullTable } from '../pull/pull';
-import { HIP_XMATCH_EDGES, NSS_EDGES, TYC_XMATCH_EDGES } from './slice-edges';
+import { HIP_XMATCH_EDGES, TYC_XMATCH_EDGES } from './slice-edges';
 
 /** At LIMIT_HEADROOM 2 a slice asks 48,001 rows, inside ESA's hard output limit of 50,000. */
 export const GAIA_SLICE_ROWS = 24_000;
@@ -54,57 +54,3 @@ export const TYC_XMATCH = xmatchTable(
     xmatchSpot('tyc', '6455-874-1', '5083243951169606016', 0.046136),
   ],
 );
-
-const NSS_ELEMENTS = [
-  'period', 't_periastron', 'eccentricity', 'a_thiele_innes', 'b_thiele_innes', 'f_thiele_innes', 'g_thiele_innes',
-  'c_thiele_innes', 'h_thiele_innes', 'inclination', 'arg_periastron', 'mass_ratio',
-] as const;
-
-/** Each element a DOUBLE and its error a REAL; the two fit statistics are REALs. */
-const NSS_COLUMNS: readonly [Column, ...Column[]] = [
-  { name: 'source_id' },
-  { name: 'nss_solution_type' },
-  ...NSS_ELEMENTS.flatMap((element): Column[] => [
-    { name: element, format: { repr: true } },
-    { name: `${element}_error`, format: { repr: true, float32: true } },
-  ]),
-  { name: 'goodness_of_fit', format: { repr: true, float32: true } },
-  { name: 'significance', format: { repr: true, float32: true } },
-];
-
-const THIELE_INNES = ['a_thiele_innes', 'b_thiele_innes', 'f_thiele_innes', 'g_thiele_innes'] as const;
-
-/** One row per solution family a DR4 rename or re-routing would touch: astrometric, targeted-search, and SB1 with no Thiele-Innes. */
-export const NSS_TWO_BODY: PullTable = {
-  from: 'gaiadr3.nss_two_body_orbit',
-  columns: NSS_COLUMNS,
-  sortBy: [{ column: 'source_id', as: 'integer' }, { column: 'nss_solution_type', as: 'text' }],
-  scope: bySourceId(NSS_EDGES),
-  band: { min: 440_000, max: 446_000 },
-  spotRows: [
-    {
-      key: 'source_id',
-      value: '6360853029303982592',
-      cells: {
-        nss_solution_type: 'Orbital', period: near(466.2104), eccentricity: near(0.7918), a_thiele_innes: near(-4.6393),
-        b_thiele_innes: near(-0.0809), f_thiele_innes: near(3.5245), g_thiele_innes: near(1.1596), mass_ratio: null,
-      },
-    },
-    {
-      key: 'source_id',
-      value: '5823248090239625088',
-      cells: {
-        nss_solution_type: 'OrbitalTargetedSearch', period: near(488.4292), eccentricity: near(0.1495), a_thiele_innes: near(0.1156),
-        b_thiele_innes: near(-0.171), f_thiele_innes: near(1.2353), g_thiele_innes: near(2.1121), mass_ratio: null,
-      },
-    },
-    {
-      key: 'source_id',
-      value: '4648984790038560256',
-      cells: {
-        nss_solution_type: 'SB1', period: near(524.0654), eccentricity: near(0.0815), mass_ratio: null,
-        ...Object.fromEntries(THIELE_INNES.map((c) => [c, null])),
-      },
-    },
-  ],
-};

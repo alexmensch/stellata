@@ -14,7 +14,7 @@ which is what the stop message prints and what runs it by hand, so the three
 pulls with no target before (`refresh-simbad-sptype.py`,
 `refresh-simbad-wds-xids.py`, `refresh-msc.py`) gain one. A TypeScript manual
 step, pull or bake (`manual-step-outputs.ts`'s `tsManual`; the two Horizons
-fetchers, `refresh:simbad-wds-sptype` and `measure:band-resolved` today), names its `declareOutputs` constant as a TypeScript build
+fetchers, `refresh:gaia-hip`, `refresh:gaia-tyc`, `refresh:simbad-wds-sptype` and `measure:band-resolved` today), names its `declareOutputs` constant as a TypeScript build
 does, and one that describes itself exports `describe`
 ([util/README.md](../../util/README.md), `emit-artifacts.ts` entry); a Python
 one lists its files, plus any families.
