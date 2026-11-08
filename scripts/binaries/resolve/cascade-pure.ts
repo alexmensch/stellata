@@ -12,6 +12,7 @@ import {
   WDS_PRECISE_COORD_EPOCH, chordSq, chordSqForTolerance, positionsWithin, predictSecondaryPosition, propagatePosition,
 } from '../sky-geometry-pure';
 import { athygPositionAtEpoch, pairAthygMatches } from './athyg-match-pure';
+import { ARBITRATION_RUNNERUP_FACTOR } from './binding-audit-pure';
 import {
   findOwningPair, pairRows, pairsByDiscoverer, unresolvedComponent, working,
   type DecomposedPair, type Draft, type ResolvedComponent,
@@ -120,8 +121,7 @@ export function resolveViaSimbad(
  *  position tier's stays unambiguous and absorbs AT-HYG's residual PM error. */
 export const CCDM_POSITION_MATCH_TOLERANCE_ARCSEC = 10.0;
 
-/** The binding audit's runner-up ratio, so a near-tie never rejects. */
-export const CCDM_SIBLING_OWNERSHIP_DECISIVENESS = 2.0;
+export const CCDM_SIBLING_OWNERSHIP_DECISIVENESS = 1 / ARBITRATION_RUNNERUP_FACTOR;
 
 /** wds_id → letter → its best-known position: a primary's precise coord
  *  over a (ρ, θ)-predicted secondary. ρ = 0 predicts nothing. */
