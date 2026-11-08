@@ -3,10 +3,10 @@
 
 import { DATA_FILES } from '../../src/catalog-format/pipeline-outputs/data-files';
 import { defineSource, type Declared } from '../util/sources/source';
-import { readNeighbourhoodRows, readRiskIds } from './dr-reconcile-pure';
+import { readNeighbourhoodRows, readSourceIdRequest } from './dr-reconcile-pure';
 
-export function riskRequestSource(declared: Declared) {
-  return defineSource({ ...declared, parse: (input) => readRiskIds(input.text(), input) });
+export function sourceIdRequestSource(declared: Declared) {
+  return defineSource({ ...declared, parse: (input) => readSourceIdRequest(input.text(), input) });
 }
 
 export function neighbourhoodSource(declared: Declared) {
@@ -20,7 +20,7 @@ export function neighbourhoodSource(declared: Declared) {
 export const RISK_REQUEST_HINT = 'Re-export it with `pnpm run sid:risk-set`.';
 export const NEIGHBOURHOOD_HINT = 'Re-pull it per /docs/sid.md#61-procedure.';
 
-export const DR2_NEIGHBOURHOOD_REQUEST = riskRequestSource({
+export const DR2_NEIGHBOURHOOD_REQUEST = sourceIdRequestSource({
   file: 'data/gaia/gaia_dr2_neighbourhood_request.tsv',
   hint: 'It is the frozen dry-run snapshot: restore it from git.',
 });

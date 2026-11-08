@@ -157,7 +157,7 @@ dr-reconcile.ts           pnpm run sid:dr-reconcile — churn report for a
                           --request= (a fresh sid:risk-set export) /
                           --neighbourhood= declare another transition's
                           files through the same module's
-                          riskRequestSource / neighbourhoodSource, so
+                          sourceIdRequestSource / neighbourhoodSource, so
                           each file kind has one parse.
 dr-reconcile-pure.ts      Pure classifier + request/neighbourhood TSV
                           readers. ACCEPT_MAS / MAG_REVIEW_DELTA live

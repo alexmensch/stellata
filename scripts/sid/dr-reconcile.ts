@@ -10,7 +10,7 @@ import {
   NEIGHBOURHOOD_HINT,
   RISK_REQUEST_HINT,
   neighbourhoodSource,
-  riskRequestSource,
+  sourceIdRequestSource,
 } from './dr2-neighbourhood-source';
 import {
   ACCEPT_MAS,
@@ -47,7 +47,7 @@ export function main(): void {
   const args = parseArgs(process.argv.slice(2));
   const request = args.request === null
     ? DR2_NEIGHBOURHOOD_REQUEST
-    : riskRequestSource({ file: args.request, hint: RISK_REQUEST_HINT });
+    : sourceIdRequestSource({ file: args.request, hint: RISK_REQUEST_HINT });
   const neighbourhood = args.neighbourhood === null
     ? DR2_NEIGHBOURHOOD
     : neighbourhoodSource({ file: args.neighbourhood, hint: NEIGHBOURHOOD_HINT });
