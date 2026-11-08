@@ -1,7 +1,5 @@
 {
-  "inputs": {
-    "scripts/catalog/membership/membership-manifest-expected.json": "b6462b022c85255e98ed32fe6585ad02ce59fa6a"
-  },
+  "inputs": {},
   "outputs": {
     "data/simbad/simbad_sptype.tsv": "a305409c0abcf3547a9501be6ea93bb336089d11"
   },
