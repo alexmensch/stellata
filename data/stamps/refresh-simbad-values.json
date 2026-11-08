@@ -1,13 +1,19 @@
 {
-  "inputs": {},
-  "outputs": {
-    "data/simbad/simbad_values.tsv": "c16d7d1cc0cef87c33784636b20184c8816eb987"
+  "inputs": {
+    "scripts/catalog/build-catalog-expected.json": "2bff2dcd5f92e244ef97147917a8692cc6653884",
+    "scripts/catalog/membership/membership-manifest-expected.json": "ec3595cb6786c7f1673abd290cc291602f990595"
   },
-  "query": "28951bbde290ea7e900cf1ec6d9102be01b97b13",
-  "answeredBy": [],
-  "request": "ac0191ec2cc60dd81a152b9109878172ba4fbb2d",
+  "outputs": {
+    "data/simbad/simbad_values.tsv": "0dfaef7e6605a162c2aa5752ec5227ce983bb5a4"
+  },
+  "query": "9824f09ba2af64af04b6ff4be993b96036c97dc4",
+  "answeredBy": [
+    "SIMBAD-Harvard"
+  ],
+  "request": "144dfedf495dd47410ce9907d903d392d486b4d3",
   "requestFrom": [
     "data/membership/membership-manifest.tsv",
-    "data/gaia/gaia_dr3_astrometry_catalog.tsv"
+    "data/gaia/gaia_dr3_astrometry_catalog.tsv",
+    "data/gaia/gaia_dr3_magnitude_pull.tsv"
   ]
 }

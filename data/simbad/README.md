@@ -16,7 +16,7 @@ simbad_sptype.tsv          ~29 MB, LFS. 395,543 rows. Per-source sp_type /
                            Still holds WDS-only rows its request no longer
                            asks for, and what dropping them moves:
                            /scripts/refresh/simbad-wds-sptype/README.md#what-the-split-left-in-simbad_sptypetsv.
-simbad_values.tsv          ~18 MB, LFS. 74,446 rows. Bibcoded rv,
+simbad_values.tsv          ~29 MB, LFS. 115,871 rows. Bibcoded rv,
                            parallax, PM, coordinates and B/V fluxes for
                            the /docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers value cohort — see README.md#the-values-pull.
 simbad_wds_xids.tsv        ~1.2 MB, LFS. Per-WDS-component (Gaia DR3,
@@ -81,37 +81,37 @@ tables state every [§ 5](/docs/catalog-driver.md#5-per-field-cascades-and-rescu
 and what an identity-only predicate loses — is
 [The cohort is two questions](/scripts/refresh/simbad/README.md#the-cohort-is-two-questions-and-the-manifest-answers-one).
 
-Coverage over the cohort, measured at the 2026-09-08 pull (74,446 oids, up
-from 11,045 rows on the spine-scoped one it replaced). Every count below is
+Coverage over the cohort, measured at the 2026-11-08 pull (115,871 oids, up
+from 74,446 at the 2026-09-08 pull, before the magnitude term). Every count below is
 what **ships**, i.e. post-policy — the file holds no unbibcoded value, so each
 field's value count equals its bibcode count.
 
 | Field | Reaches a shipped value |
 |---|---|
-| coordinates | 74,446 (100.0%) |
-| proper motion | 74,267 (99.8%) |
-| parallax | 69,904 (93.9%) |
-| flux B | 62,542 (84.0%) |
-| flux V | 62,488 (83.9%) |
-| radial velocity | 34,520 (46.4%) |
+| coordinates | 115,870 (100.0%) |
+| proper motion | 115,445 (99.6%) |
+| parallax | 108,959 (94.0%) |
+| flux V | 100,861 (87.0%) |
+| flux B | 100,587 (86.8%) |
+| radial velocity | 50,855 (43.9%) |
 
 **The two fluxes are the sparsest fields after rv, and the bibcode policy is
-why.** They sit at 84.0% and 83.9% against parallax's 93.9% and PM's 99.8%,
+why.** They sit at 87.0% and 86.8% against parallax's 94.0% and PM's 99.6%,
 because `allfluxes` — the view whose B/V coverage is wider — carries no bibcode
 at all, so the long-format `flux` table is the only consumable source and an
-unattributable value is dropped whole. How many the cohort reached *before* the
-policy is not recoverable from the committed file, which holds no unbibcoded
-value by construction, so the pull's own report is the only place that number
-is ever read.
+unattributable value is dropped whole: the 2026-11-08 pull's report counts
+10,599 B and 9,302 V values reached and dropped. The committed file holds no
+unbibcoded value by construction, so the pull's own report is the only place
+that number is ever read.
 
-**rv Gaia-bibcode skip rule** ([§ 5](/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers)): of the 34,520 rv values in the pull,
-**14,725 carry a Gaia catalogue bibcode** — 13,381 `2018yCat.1345....0G`
-([Gaia Collaboration 2018](/data/papers/index.md#gaiacollab2018cat)) and 1,344 `2022yCat.1355....0G` ([Gaia Collaboration 2022](/data/papers/index.md#gaiacollab2022cat)). Those are the values the rv
+**rv Gaia-bibcode skip rule** ([§ 5](/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers)): of the 50,855 rv values in the pull,
+**25,105 carry a Gaia catalogue bibcode** — 23,623 `2018yCat.1345....0G`
+([Gaia Collaboration 2018](/data/papers/index.md#gaiacollab2018cat)) and 1,482 `2022yCat.1355....0G` ([Gaia Collaboration 2022](/data/papers/index.md#gaiacollab2022cat)). Those are the values the rv
 cascade must skip on rows whose own 5p gate withheld Gaia rv, so the pull
 cannot launder a withheld value back in. The rest are literature, led by
-`2020AJ....160..120J` ([Jönsson 2020](/data/papers/index.md#jonsson2020), 4,007),
-`2006AstL...32..759G` ([Gontcharov 2006](/data/papers/index.md#gontcharov2006), 3,764) and
-`2020AJ....160...83S` ([Steinmetz 2020](/data/papers/index.md#steinmetz2020), 1,618).
+`2020AJ....160..120J` ([Jönsson 2020](/data/papers/index.md#jonsson2020), 5,516),
+`2006AstL...32..759G` ([Gontcharov 2006](/data/papers/index.md#gontcharov2006), 3,716) and
+`2020AJ....160...83S` ([Steinmetz 2020](/data/papers/index.md#steinmetz2020), 3,241).
 
 ## The TYC → HD pull
 
