@@ -136,5 +136,6 @@ stored in a neighbouring cell is still a candidate. Stage 2 calls
 `auditBindingIntegrity` answers and `enforceBindingVerdicts` acts: the
 verdicts are data (counts, the review TSV, the request's audit candidates),
 and enforcement is a separate pass over the components. Each verdict carries
-its `unbind` targets and, for a decisive letter→sources verdict or an
-identity refutation, a `rebind`.
+one `action`: a `rebind` (a decisive letter→sources verdict, an identity
+refutation), an `unbind` of its losing bindings, or none (a skipped
+conflict).

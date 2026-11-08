@@ -36,7 +36,7 @@ function audit(rows: readonly BiRow[], astro: ReturnType<typeof biAstro>[], opts
 }
 
 const ofShape = (verdicts: readonly BindingVerdict[], shape: BindingVerdict['shape']) => verdicts.filter((v) => v.shape === shape);
-const sortedUnbind = (v: BindingVerdict) => v.unbind.map((u) => `${u.token}:${u.sourceId}`).sort();
+const sortedUnbind = (v: BindingVerdict) => (v.action?.kind === 'unbind' ? v.action.targets : []).map((u) => `${u.token}:${u.sourceId}`).sort();
 const xids = (a: SimbadWdsXid, b: SimbadWdsXid) =>
   new Map([[componentKey(BI_WDS, 'A'), a], [componentKey(BI_WDS, 'B'), b]]);
 
@@ -50,7 +50,7 @@ describe('auditBindingIntegrity', () => {
     expect(v).toHaveLength(1);
     expect(v[0].verdict).toBe('geometric');
     expect(v[0].winner?.label).toBe('B');
-    expect(v[0].unbind).toEqual([{ token: 'C', sourceId: SX }]);
+    expect(v[0].action).toEqual({ kind: 'unbind', targets: [{ token: 'C', sourceId: SX }] });
   });
 
   it('rebinds a letter carrying two sources to the one at its measured position', () => {
@@ -67,7 +67,7 @@ describe('auditBindingIntegrity', () => {
     expect(v).toHaveLength(1);
     expect(v[0].verdict).toBe('geometric');
     expect(v[0].winner?.sourceId).toBe(SB);
-    expect(v[0].rebind).toEqual({ letter: 'B', sourceId: SB });
+    expect(v[0].action).toEqual({ kind: 'rebind', letter: 'B', sourceId: SB });
   });
 
   it('finds no conflict in a source bound along one ancestry', () => {
@@ -121,7 +121,7 @@ describe('auditBindingIntegrity', () => {
     const v = ofShape(verdicts, 'source_letters');
     expect(v).toHaveLength(1);
     expect(v[0].verdict).toBe('skipped_photocentre_blend');
-    expect(v[0].unbind).toEqual([]);
+    expect(v[0].action).toBeNull();
   });
 
   it('unbinds a measured blend whose source sits on one component', () => {
@@ -130,7 +130,7 @@ describe('auditBindingIntegrity', () => {
     expect(v).toHaveLength(1);
     expect(v[0].verdict).toBe('geometric');
     expect(v[0].winner?.label).toBe('A');
-    expect(v[0].unbind).toEqual([{ token: 'B', sourceId: SX }]);
+    expect(v[0].action).toEqual({ kind: 'unbind', targets: [{ token: 'B', sourceId: SX }] });
   });
 
   it('skips, never unbinds, an ambiguous blend', () => {
@@ -138,7 +138,7 @@ describe('auditBindingIntegrity', () => {
     const v = ofShape(verdicts, 'source_letters');
     expect(v).toHaveLength(1);
     expect(v[0].verdict).toBe('skipped_photocentre_blend');
-    expect(v[0].unbind).toEqual([]);
+    expect(v[0].action).toBeNull();
   });
 
   const refutable: BiRow[] = [['AB', 5.0, 0.0, [SX, null], [SX, null]], ['AC', 10.0, 0.0, [SA, null], [SC, null]]];
@@ -151,7 +151,7 @@ describe('auditBindingIntegrity', () => {
     expect(v).toHaveLength(1);
     expect(v[0].verdict).toBe('identity_refuted');
     expect(v[0].winner?.label).toBe('B');
-    expect(v[0].rebind).toEqual({ letter: 'A', sourceId: SA });
+    expect(v[0].action).toEqual({ kind: 'rebind', letter: 'A', sourceId: SA });
     expect(ofShape(verdicts, 'letter_sources')).toEqual([]);
     const after = componentsOf(enforceBindingVerdicts(pairs, verdicts, idx));
     expect(after.find((c) => c.component === 'A' && c.isPrimary)?.gaiaSourceId).toBe(SA);
@@ -168,7 +168,7 @@ describe('auditBindingIntegrity', () => {
     expect(v[0].verdict).toBe('identity_refuted');
     expect(v[0].winner?.label).toBe('B');
     expect([...v[0].winner!.tokens].sort()).toEqual(['B', 'Ba', 'Bb']);
-    expect(v[0].rebind?.letter).toBe('A');
+    expect(v[0].action).toMatchObject({ kind: 'rebind', letter: 'A' });
     const after = componentsOf(enforceBindingVerdicts(pairs, verdicts, idx));
     expect(after.find((c) => c.component === 'A' && c.isPrimary)?.gaiaSourceId).toBe(SA);
     expect(after.find((c) => c.component === 'Ba' && c.isPrimary)?.gaiaSourceId).toBe(SX);
@@ -196,7 +196,7 @@ describe('auditBindingIntegrity', () => {
     const v = ofShape(verdicts, 'source_letters');
     expect(v).toHaveLength(1);
     expect(v[0].verdict).toBe('identity_refuted');
-    expect(v[0].rebind?.sourceId).toBe(SA);
+    expect(v[0].action).toMatchObject({ kind: 'rebind', sourceId: SA });
   });
 
   it('holds a wide pair to the flat floor', () => {
@@ -266,7 +266,7 @@ describe('enforceBindingVerdicts', () => {
 
 describe('bindingIntegrityCounts', () => {
   const v = (shape: BindingVerdict['shape'], verdict: BindingVerdict['verdict']): BindingVerdict => ({
-    wdsId: 'w', shape, verdict, contested: 'c', reference: null, winner: null, candidates: [], unbind: [], rebind: null,
+    wdsId: 'w', shape, verdict, contested: 'c', reference: null, winner: null, candidates: [], action: null,
   });
 
   it('counts each shape and each outcome', () => {
@@ -294,11 +294,11 @@ describe('bindingAuditSourceIds', () => {
       {
         wdsId: 'X', shape: 'letter_sources', verdict: 'unbound_ambiguous', contested: 'A', reference: null, winner: null,
         candidates: [cand('444'), cand('555')],
-        unbind: [{ token: 'A', sourceId: '444' }, { token: 'A', sourceId: '555' }], rebind: null,
+        action: { kind: 'unbind', targets: [{ token: 'A', sourceId: '444' }, { token: 'A', sourceId: '555' }] },
       },
       {
         wdsId: 'Y', shape: 'source_letters', verdict: 'geometric', contested: '666', reference: { token: 'A', sourceId: '777' },
-        winner: cand('666'), candidates: [cand('666')], unbind: [], rebind: null,
+        winner: cand('666'), candidates: [cand('666')], action: null,
       },
     ];
     expect(bindingAuditSourceIds(verdicts)).toEqual(new Set(['444', '555', '666']));

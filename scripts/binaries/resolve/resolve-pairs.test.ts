@@ -57,7 +57,7 @@ describe('astrometryRequestIds', () => {
     const verdict: BindingVerdict = {
       wdsId: 'X', shape: 'letter_sources', verdict: 'unbound_ambiguous', contested: 'A', reference: null, winner: null,
       candidates: [{ label: '555', tokens: ['A'], sourceId: '555', errArcsec: Infinity, predictedSepArcsec: 0 }],
-      unbind: [{ token: 'A', sourceId: '555' }], rebind: null,
+      action: { kind: 'unbind', targets: [{ token: 'A', sourceId: '555' }] },
     };
     const ids = astrometryRequestIds(
       result([pair('X', { gaiaSourceId: '111', resolveVia: 'orb6_hip' }, {})], [verdict]),

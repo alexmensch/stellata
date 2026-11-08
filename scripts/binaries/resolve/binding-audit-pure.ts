@@ -188,10 +188,14 @@ export interface BindingVerdict {
   readonly reference: { readonly token: string; readonly sourceId: string } | null;
   readonly winner: BindingCandidate | null;
   readonly candidates: readonly BindingCandidate[];
-  readonly unbind: readonly UnbindTarget[];
-  /** Every instance of the letter rebinds to the source. */
-  readonly rebind: { readonly letter: string; readonly sourceId: string } | null;
+  /** What enforcement does; null for a skipped conflict. */
+  readonly action: VerdictAction | null;
 }
+
+export type VerdictAction =
+  /** Every instance of the letter rebinds to the source. */
+  | { readonly kind: 'rebind'; readonly letter: string; readonly sourceId: string }
+  | { readonly kind: 'unbind'; readonly targets: readonly UnbindTarget[] };
 
 interface Reference {
   readonly token: string;
@@ -331,13 +335,12 @@ function auditSystem(
   const verdicts: BindingVerdict[] = [];
   const verdict = (
     shape: BindingShape, kind: BindingVerdictKind, contested: string, ref: Reference | null,
-    winner: BindingCandidate | null, candidates: readonly BindingCandidate[], unbind: readonly UnbindTarget[],
-    rebind: BindingVerdict['rebind'] = null,
+    winner: BindingCandidate | null, candidates: readonly BindingCandidate[], action: VerdictAction | null,
   ): void => {
     verdicts.push({
       wdsId: ctx.wdsId, shape, verdict: kind, contested,
       reference: ref === null ? null : { token: ref.token, sourceId: ref.sourceId },
-      winner, candidates, unbind, rebind,
+      winner, candidates, action,
     });
   };
   const blendLetters = new Set<string>();
@@ -358,7 +361,7 @@ function auditSystem(
     const contested = `${src}:${clusters.map(clusterRepresentative).sort().join('/')}`;
     const ref = selectReference(ctx, tokens, new Set([src]), indices);
     if (ref === null) {
-      verdict('source_letters', 'skipped_no_reference', contested, null, null, [], []);
+      verdict('source_letters', 'skipped_no_reference', contested, null, null, [], null);
       continue;
     }
     const cands = clusters.map((cluster): BindingCandidate => {
@@ -370,24 +373,23 @@ function auditSystem(
     const decisive = winner !== null
       && (!isBlend || (Number.isFinite(winner.errArcsec) && winner.errArcsec <= ARBITRATION_BLEND_FLOOR_ARCSEC));
     if (decisive) {
-      const unbind = cands.filter((c) => c !== winner).flatMap((c) => c.tokens.map((token) => ({ token, sourceId: src })));
-      verdict('source_letters', 'geometric', contested, ref, winner, cands, unbind);
+      const targets = cands.filter((c) => c !== winner).flatMap((c) => c.tokens.map((token) => ({ token, sourceId: src })));
+      verdict('source_letters', 'geometric', contested, ref, winner, cands, { kind: 'unbind', targets });
     } else if (isBlend) {
       const refutation = refutePhotocentreBlend(ctx, cands, src, indices, xids);
       if (refutation !== null) {
         identityRebound.add(refutation.loserToken);
         verdict(
           'source_letters', 'identity_refuted', contested, ref, refutation.owner, cands,
-          [{ token: refutation.loserToken, sourceId: src }],
-          { letter: refutation.loserToken, sourceId: refutation.loserSource },
+          { kind: 'rebind', letter: refutation.loserToken, sourceId: refutation.loserSource },
         );
       } else {
         for (const c of cands) for (const t of c.tokens) blendLetters.add(t);
-        verdict('source_letters', 'skipped_photocentre_blend', contested, ref, winner, cands, []);
+        verdict('source_letters', 'skipped_photocentre_blend', contested, ref, winner, cands, null);
       }
     } else {
-      const unbind = cands.flatMap((c) => c.tokens.map((token) => ({ token, sourceId: src })));
-      verdict('source_letters', 'unbound_ambiguous', contested, ref, null, cands, unbind);
+      const targets = cands.flatMap((c) => c.tokens.map((token) => ({ token, sourceId: src })));
+      verdict('source_letters', 'unbound_ambiguous', contested, ref, null, cands, { kind: 'unbind', targets });
     }
   }
 
@@ -397,12 +399,12 @@ function auditSystem(
     const contested = `${tok}:${sources.join('/')}`;
     if (identityRebound.has(tok)) continue;
     if (blendLetters.has(tok)) {
-      verdict('letter_sources', 'skipped_photocentre_blend', contested, null, null, [], []);
+      verdict('letter_sources', 'skipped_photocentre_blend', contested, null, null, [], null);
       continue;
     }
     const ref = selectReference(ctx, new Set([tok]), new Set(), indices);
     if (ref === null) {
-      verdict('letter_sources', 'skipped_no_reference', contested, null, null, [], []);
+      verdict('letter_sources', 'skipped_no_reference', contested, null, null, [], null);
       continue;
     }
     const cands = sources.map((s): BindingCandidate => {
@@ -411,10 +413,11 @@ function auditSystem(
     });
     const winner = decide(cands);
     if (winner !== null) {
-      const unbind = sources.filter((s) => s !== winner.sourceId).map((sourceId) => ({ token: tok, sourceId }));
-      verdict('letter_sources', 'geometric', contested, ref, winner, cands, unbind, { letter: tok, sourceId: winner.sourceId });
+      verdict('letter_sources', 'geometric', contested, ref, winner, cands, { kind: 'rebind', letter: tok, sourceId: winner.sourceId });
     } else {
-      verdict('letter_sources', 'unbound_ambiguous', contested, ref, null, cands, sources.map((sourceId) => ({ token: tok, sourceId })));
+      verdict('letter_sources', 'unbound_ambiguous', contested, ref, null, cands, {
+        kind: 'unbind', targets: sources.map((sourceId) => ({ token: tok, sourceId })),
+      });
     }
   }
   return verdicts;
@@ -463,13 +466,15 @@ export function enforceBindingVerdicts(
   const enforced = new Set<string>();
   for (const v of verdicts) {
     const ctx = systems.get(v.wdsId)!;
-    if (v.unbind.length > 0 || v.rebind !== null) enforced.add(v.wdsId);
-    if (v.rebind !== null) {
-      for (const i of ctx.instances.get(v.rebind.letter) ?? []) instance(out, i).gaiaSourceId = v.rebind.sourceId;
+    const { action } = v;
+    if (action === null) continue;
+    enforced.add(v.wdsId);
+    if (action.kind === 'rebind') {
+      for (const i of ctx.instances.get(action.letter) ?? []) instance(out, i).gaiaSourceId = action.sourceId;
       continue;
     }
     const winner = winnerHips(v, ctx, out, indices);
-    for (const { token, sourceId } of v.unbind) {
+    for (const { token, sourceId } of action.targets) {
       for (const i of ctx.instances.get(token) ?? []) {
         const c = instance(out, i);
         if (c.gaiaSourceId === sourceId) unbindComponent(c, winner, indices);
