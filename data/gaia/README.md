@@ -33,7 +33,7 @@ gaia_dr3_magnitude_pull.tsv            ~200 MB, LFS. Every gaia_source row at
 gaia_dr3_nss_two_body.tsv              ~90 MB, LFS. NSS two-body orbits.
 gaia_dr3_apsis.tsv                     ~70 MB, LFS. gspphot ∪ gspspec
                                        Teff/logg/[M/H]/A0 + spectraltype_esphs,
-                                       over the deep population (1,284,983).
+                                       over the deep population (1,284,985).
 gaia_dr3_gspc.tsv                      ~31 MB, LFS. Johnson-Kron-Cousins B and
                                        V synthesised from each source's BP/RP
                                        spectrum, + fluxes, flux errors and the
