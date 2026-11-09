@@ -30,7 +30,7 @@ busy-session warning, so keep it current.
 | `PAUSE` | coordinator → every other worker | on a `GPU_REQUEST` |
 | `HOLD` | coordinator → the landing subagent, if one is running | on a `GPU_REQUEST`; the hold in `pickup-epic`'s Land step, unchanged |
 | `PAUSED` | worker → coordinator | its current command has finished and it will start nothing heavier than reading files — no build, test run, `pnpm run perf`, `survivors`, or data pull |
-| `GPU_GRANTED` | coordinator → requester | every other worker has replied `PAUSED` or is idle, no worker is in a pull wait (a `PULL_WAIT` with no later `PULL_DONE`), the landing subagent, if one is running, has replied to `HOLD`, and no `build:seed` is running |
+| `GPU_GRANTED` | coordinator → requester | every other worker has replied `PAUSED` or is idle, no worker is in a pull wait (as `pickup-epic`'s run state defines it), the landing subagent, if one is running, has replied to `HOLD`, and no `build:seed` is running |
 | `GPU_DONE` | requester → coordinator | the runner has exited, whatever its result; or `GPU_DONE unarmed` when `await-go.sh` timed out with no arm |
 | `RESUME` | coordinator → every paused worker and the held landing subagent | on `GPU_DONE` |
 
