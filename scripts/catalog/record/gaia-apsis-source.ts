@@ -1,5 +1,6 @@
 // Gaia DR3 Apsis astrophysical parameters, declared.
 
+import { DATA_FILES } from '../../../src/catalog-format/pipeline-outputs/data-files';
 import { defineSource, type Declared } from '../../util/sources/source';
 import { readTable } from '../../util/tsv/table-pure';
 import type { ApsisRow } from '../../../src/catalog-format/record/catalog-pure';
@@ -36,7 +37,7 @@ export function parseGaiaApsisTsv(text: string, from: Declared): Map<string, Aps
 }
 
 export const GAIA_APSIS = defineSource({
-  file: 'data/gaia/gaia_dr3_apsis.tsv',
+  file: DATA_FILES.gaiaApsis,
   hint: 'Re-run `pnpm run refresh:gaia-apsis`.',
   rowKey: { id: 'gaia-dr3-apsis', text: (sourceId: string) => sourceId },
   parse: (input) => parseGaiaApsisTsv(input.text(), input),

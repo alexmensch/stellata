@@ -1,5 +1,6 @@
 // Bailer-Jones 2021 (/data/papers/index.md#bailerjones2021) DR3 distance posteriors, declared.
 
+import { DATA_FILES } from '../../../../src/catalog-format/pipeline-outputs/data-files';
 import type { RowKeyed } from '../../../util/sources/row-ref-pure';
 import { defineSource, type Declared } from '../../../util/sources/source';
 import { readTable } from '../../../util/tsv/table-pure';
@@ -31,7 +32,7 @@ export function parseBailerJonesTsv(text: string, from: Declared & RowKeyed<stri
 }
 
 export const BAILER_JONES = defineSource({
-  file: 'data/bailer-jones/bailer-jones-dr3.tsv',
+  file: DATA_FILES.bailerJones,
   hint: 'Re-run `pnpm run refresh:bailer-jones`.',
   rowKey: { id: 'i352', text: (sourceId: string) => sourceId },
   parse: (input): BailerJonesIndex => parseBailerJonesTsv(input.text(), BAILER_JONES),
