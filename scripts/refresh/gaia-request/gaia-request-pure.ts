@@ -48,21 +48,15 @@ const requestOn = (key: string, ids: readonly bigint[], batchSize: number, rowsP
 
 const present = (column: string): CoverageGroup['has'] => (cell) => cell(column) !== null;
 
-/** A DR4 swap-in changes ref_epoch to 2017.5, which epoch propagation downstream does not assume. */
+/** A DR4 swap-in changes ref_epoch to 2017.5, which epoch propagation downstream does not assume. `motion` is null for a 2-parameter solution. */
 export function astrometrySpot(
-  sourceId: string, [parallax, pmra, pmdec]: readonly [number, number, number], g: number, extra: SpotRow['cells'] = {},
+  sourceId: string, motion: readonly [number, number, number] | null, g: number, extra: SpotRow['cells'] = {},
 ): SpotRow {
+  const [parallax, pmra, pmdec] = motion === null ? [null, null, null] : motion.map((v) => near(v, 0.001));
   return {
     key: 'source_id',
     value: sourceId,
-    cells: {
-      ref_epoch: '2016.0',
-      parallax: near(parallax, 0.001),
-      pmra: near(pmra, 0.001),
-      pmdec: near(pmdec, 0.001),
-      phot_g_mean_mag: near(g, 0.0001),
-      ...extra,
-    },
+    cells: { ref_epoch: '2016.0', parallax, pmra, pmdec, phot_g_mean_mag: near(g, 0.0001), ...extra },
   };
 }
 
