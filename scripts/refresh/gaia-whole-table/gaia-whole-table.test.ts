@@ -9,9 +9,9 @@ import { cellReader, checkedRows, formatTsv, sortRows } from '../pull/columns-pu
 import { spotRowCheck } from '../pull/gates-pure';
 import { assertTablesFit, batchQueries, queryLimit, type PullTable } from '../pull/pull';
 import { cutEdges, sliceCounts } from '../pull/slices-pure';
-import { GAIA, readCsv } from '../pull/tap-pure';
+import { GAIA, GAIA_SLICE_ROWS, readCsv } from '../pull/tap-pure';
 import { HIP_XMATCH_PULL, TYC_XMATCH_PULL } from './gaia-whole-table';
-import { GAIA_SLICE_ROWS, HIP_XMATCH, TYC_XMATCH } from './gaia-whole-table-pure';
+import { HIP_XMATCH, TYC_XMATCH } from './gaia-whole-table-pure';
 
 const replyHeader = (table: PullTable): string => table.columns.map((c) => c.name).join(',');
 

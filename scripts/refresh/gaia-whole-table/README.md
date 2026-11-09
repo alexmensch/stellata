@@ -14,7 +14,7 @@ the same names the catalogue's sources read.
 ## Files
 
 - `gaia-whole-table-pure.ts` — the two `PullTable`s: columns, formats,
-  sort keys, bands, spot rows, and `GAIA_SLICE_ROWS`.
+  sort keys, bands and spot rows.
 - `slice-edges.ts` — each table's slice edges on `source_id`.
 - `gaia-whole-table.ts` — the two `Pull`s; `gaia-whole-table-outputs.ts`,
   their `declareOutputs`.
@@ -32,7 +32,8 @@ the same names the catalogue's sources read.
 Every table is asked in `sliced` scope on `source_id`
 ([Sliced scope](../pull/README.md#sliced-scope)) so that ESA, whose hard
 output limit is 50,000 rows, can serve it when ARI is down. At
-`GAIA_SLICE_ROWS` (24,000) each slice asks 48,001 rows: HIP is 5 slices,
+`GAIA_SLICE_ROWS` (24,000, the Gaia archive's in `../pull/tap-pure.ts`,
+shared with the magnitude-sliced pulls) each slice asks 48,001 rows: HIP is 5 slices,
 TYC 105. One TYC slice took 75 s on ESA (2026-11-06).
 
 The edges are `cutEdges` over each committed table's Gaia `source_id`

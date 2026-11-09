@@ -3,10 +3,8 @@
 import type { SortKey } from '../pull/columns-pure';
 import type { RowBand, SpotRow } from '../pull/gates-pure';
 import type { PullTable } from '../pull/pull';
+import { GAIA_SLICE_ROWS } from '../pull/tap-pure';
 import { HIP_XMATCH_EDGES, TYC_XMATCH_EDGES } from './slice-edges';
-
-/** At LIMIT_HEADROOM 2 a slice asks 48,001 rows, inside ESA's hard output limit of 50,000. */
-export const GAIA_SLICE_ROWS = 24_000;
 
 const bySourceId = (edges: readonly [bigint, ...bigint[]]): PullTable['scope'] => (
   { kind: 'sliced', key: 'source_id', edges, sliceRows: GAIA_SLICE_ROWS }
