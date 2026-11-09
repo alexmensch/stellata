@@ -98,7 +98,7 @@ hold over all its queries (a static table's is its band's `max`), and `ask`
 refuses it, naming the count, once its rows pass that. So it holds at most
 `min(query count × limit, maxRows + limit)` rows, and `runPull` refuses,
 before any query, one whose held rows × column count could exceed
-`MAX_TABLE_CELLS` (37,000,000). A request-scoped table is not bounded this
+`MAX_TABLE_CELLS` (30,000,000). A request-scoped table is not bounded this
 way.
 Measured 2026-11-05 under Node 26, the committed `gaia_dr3_tyc_xmatch.tsv` (5
 columns) replayed through `runPull` and a fake transport, peak live heap by
@@ -110,20 +110,15 @@ columns) replayed through `runPull` and a fake transport, peak live heap by
 | 5,036,660 | 25.2 M | 212 MiB | 2,681 MiB | 11.6 s |
 
 That is about 69 bytes per cell over about 1,029 MiB fixed (the harness's own
-copies of the reply among it), so the CI budget of 3,482 MiB holds about 37 M
-cells; a sliced table holds one slice's reply text at a time, so the same cap
-is conservative for it. tyc-xmatch, sliced, is bounded at 12.9 M ((2,530,000
-+ 48,000) × 5 columns). A table with wider text cells costs more per cell, so a
-pull near the cap is re-measured, not assumed.
-
-The magnitude pull, sliced, is bounded at 25.1 M ((1,273,000 + 48,000) × 19
-columns). Its committed table replayed the same way on 2026-11-09 (Node 26,
-its 52 slices served from the committed rows): 1,247,240 rows, 23.7 M cells,
-peak live heap **2,949 MiB** of the 3,482 MiB budget, 17.3 s. The harness
-held the committed text and a CSV copy of every slice throughout, so that
-peak overstates the pull's own; it is still more per cell than tyc-xmatch's
-table measured, so the cap is not a guarantee for wider tables and one past
-25 M cells is measured before it lands.
+copies of the reply among it). The magnitude table (19 numeric columns),
+replayed the same way on 2026-11-09 from its 52 slices: 1,247,240 rows, 23.7 M
+cells, peak live heap **2,949 MiB**, 17.3 s — about 85 bytes per cell over the
+same fixed cost, though that harness also held the committed text and a CSV
+copy of every slice. At 85 bytes per cell the 3,482 MiB budget holds about
+30.3 M cells, so the cap is **30 M**, the widest measured table's figure.
+Bounds today: magnitude 25.1 M ((1,273,000 + 48,000) × 19), tyc-xmatch
+12.9 M ((2,530,000 + 48,000) × 5). A table with wider text cells costs more
+per cell, so a pull near the cap is re-measured, not assumed.
 
 ### Sliced scope
 

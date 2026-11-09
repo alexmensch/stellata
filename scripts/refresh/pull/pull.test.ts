@@ -143,11 +143,15 @@ describe('runPull', () => {
     expect([read('stars.tsv'), read('pairs.tsv')]).toEqual(['old stars\n', 'old pairs\n']);
   });
 
+  it('caps a whole or sliced table at the 30 M cells the widest measured table fits in the CI heap budget', () => {
+    expect(MAX_TABLE_CELLS).toBe(30_000_000);
+  });
+
   it('refuses, before asking anything, a whole-table query too large to hold', async () => {
     const fits = Math.floor(MAX_TABLE_CELLS / (LIMIT_HEADROOM * STARS.columns.length));
     const { deps: d, asked } = deps(GOOD);
     const huge = { ...STARS, band: { min: 0, max: fits + 1 } };
-    await expect(runPull(pullOf({ stars: huge, pairs: PAIRS }), d)).rejects.toThrow(/whole-table rows of up to \d+ cells exceed 37000000/);
+    await expect(runPull(pullOf({ stars: huge, pairs: PAIRS }), d)).rejects.toThrow(new RegExp(`whole-table rows of up to \\d+ cells exceed ${MAX_TABLE_CELLS}`));
     expect(asked).toEqual([]);
     expect(() => assertTablesFit(pullOf({ stars: { ...STARS, band: { min: 0, max: fits } }, pairs: PAIRS }))).not.toThrow();
   });
@@ -157,7 +161,7 @@ describe('runPull', () => {
       ...STARS, scope: { kind: 'sliced', key: 'source_id', edges: [2n], sliceRows }, band: { min: 0, max: MAX_TABLE_CELLS },
     });
     const fits = Math.floor(MAX_TABLE_CELLS / (2 * LIMIT_HEADROOM * STARS.columns.length));
-    expect(() => assertTablesFit(pullOf({ stars: sliced(fits + 1), pairs: PAIRS }))).toThrow(/sliced rows of up to \d+ cells exceed 37000000/);
+    expect(() => assertTablesFit(pullOf({ stars: sliced(fits + 1), pairs: PAIRS }))).toThrow(new RegExp(`sliced rows of up to \\d+ cells exceed ${MAX_TABLE_CELLS}`));
     expect(() => assertTablesFit(pullOf({ stars: sliced(fits), pairs: PAIRS }))).not.toThrow();
   });
 
@@ -167,7 +171,7 @@ describe('runPull', () => {
     const sliced = (max: number): PullTable => ({ ...STARS, scope: { kind: 'sliced', key: 'source_id', edges, sliceRows }, band: { min: 0, max } });
     const fits = MAX_TABLE_CELLS / STARS.columns.length - sliceRows * LIMIT_HEADROOM;
     expect(() => assertTablesFit(pullOf({ stars: sliced(fits), pairs: PAIRS }))).not.toThrow();
-    expect(() => assertTablesFit(pullOf({ stars: sliced(fits + 1), pairs: PAIRS }))).toThrow(/sliced rows of up to 37000002 cells/);
+    expect(() => assertTablesFit(pullOf({ stars: sliced(fits + 1), pairs: PAIRS }))).toThrow(`sliced rows of up to ${MAX_TABLE_CELLS + STARS.columns.length} cells`);
   });
 
   it('refuses a sliced table once its rows pass the band ceiling, naming the count, and writes nothing', async () => {
