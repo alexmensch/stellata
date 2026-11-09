@@ -6,10 +6,12 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { DATA_FILES } from '../../../src/catalog-format/pipeline-outputs/data-files';
 import { EmissionRefused, declareOutputs } from '../../util/emit-artifacts';
+import type { Cell } from '../pull/columns-pure';
 import { describePhasedPull, runPhasedPull } from '../pull/pull';
 import { recordedTableCases } from '../pull/recorded-reply';
 import { GAIA, type TapClientDeps } from '../pull/tap-pure';
 import { deepPopulationPull, type DeepPopulationTable } from './deep-population-pure';
+import { APSIS_TABLE, MIN_APSIS_SPECTRAL_TYPE, MIN_APSIS_TEFF_LOGG } from './deep-population-tables-pure';
 import { bailerJonesPull } from './refresh-bailer-jones';
 import { apsisPull } from './refresh-gaia-apsis';
 
@@ -93,6 +95,35 @@ describe('the Apsis and Bailer-Jones pulls', () => {
   it('ask Bailer-Jones of ESA alone, whose archive names external.gaiaedr3_distance, and Apsis of both mirrors', () => {
     expect(describePhasedPull(bailerJonesPull([1n])).services).toEqual(['ESA-sync']);
     expect(describePhasedPull(apsisPull([1n])).services).toEqual(['ESA-sync', 'ARI-sync']);
+  });
+});
+
+/** Ten Apsis rows: the first `both` with gspphot Teff and log g, each with spectral type `types[i]` (resolved 'K' past the list). */
+function apsisCells(both: number, types: readonly (string | null)[] = []): Cell[] {
+  return Array.from({ length: 10 }, (_, i) => (column: string) => {
+    if (column === 'source_id') return String(i + 1);
+    if (column === 'teff_gspphot' || column === 'logg_gspphot') return i < both ? '1' : null;
+    if (column === 'spectraltype_esphs') return i < types.length ? types[i] : 'K';
+    return null;
+  });
+}
+
+const apsisVerdicts = (cells: Cell[]) => (APSIS_TABLE.checks?.('apsis', cells) ?? []).map((check) => check.kind);
+
+describe('the Apsis gates', () => {
+  it('floor Teff and log g at 0.80 and a resolved spectral type at 0.90', () => {
+    expect([MIN_APSIS_TEFF_LOGG, MIN_APSIS_SPECTRAL_TYPE]).toEqual([0.8, 0.9]);
+  });
+
+  it('pass Teff and log g from either pipeline at the floor, and fail one row under it', () => {
+    expect(apsisVerdicts(apsisCells(8))).toEqual(['pass', 'pass']);
+    expect(apsisVerdicts(apsisCells(7))).toEqual(['fail', 'pass']);
+  });
+
+  it('count an empty, a null and an unknown spectral type, however cased or padded, as unresolved', () => {
+    expect(apsisVerdicts(apsisCells(10, ['unknown']))).toEqual(['pass', 'pass']);
+    expect(apsisVerdicts(apsisCells(10, [' Unknown ', '']))).toEqual(['pass', 'fail']);
+    expect(apsisVerdicts(apsisCells(10, [null, 'UNKNOWN']))).toEqual(['pass', 'fail']);
   });
 });
 
