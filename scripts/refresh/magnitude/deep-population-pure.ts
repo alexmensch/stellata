@@ -1,4 +1,4 @@
-// A table pulled over the catalogue's deep population: a magnitude leg joined to gaia_source, plus the request's remainder. See README.md#the-deep-population.
+// A table pulled over the catalogue's deep population: a magnitude leg joined to gaia_source, plus the request's remainder. See README.md#the-deep-population--a-bounded-leg-plus-a-request-leg.
 
 import type { Check, DeclaredOutputs } from '../../util/emit-artifacts';
 import { GAIA_REQUEST_BATCH } from '../gaia-request/gaia-request-pure';

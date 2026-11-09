@@ -28,8 +28,8 @@ repo-relative, so an outputs module passes them as they are.
   `build:vaidman-table` writes; and `MANUAL_STAMP_FOLDER`, where the manual
   steps' committed records live (`/scripts/pipeline/pipeline-tree.ts`). The Horizons fetchers' per-target families are spelled beside
   their own outputs modules. Python cannot import this module, so the
-  Python `scripts/refresh/` pulls left take the manifest's and the request's
-  paths from `refresh_lib.py`, Python's one spelling of each. Each file's codec (a `defineArtifact` in
+  Python `scripts/refresh/` pulls left take the manifest's path from
+  `refresh_lib.py`, Python's one spelling of it. Each file's codec (a `defineArtifact` in
   `scripts/`) takes its `file` from here. Also the SID registry's
   partitions (`REGISTRY_PARTITIONS`: the catalogue's and one per sibling
   artifact, `SIBLING_PARTITIONS`, each named here — `CLOUD_PARTITION`,

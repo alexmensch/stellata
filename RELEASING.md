@@ -597,7 +597,8 @@ upstream catalogue release:
   ([Consumed by](data/athyg/README.md#consumed-by) lists every reader).
   `build:catalog` reads neither it nor the frozen spine.
 - **Bailer-Jones republication** — re-run `pnpm run refresh:bailer-jones`
-  against the republished ESA table (`TABLE` in `refresh-bailer-jones.py`),
+  against the republished ESA table (`BAILER_JONES_TABLE.from` in
+  `scripts/refresh/magnitude/deep-population-tables-pure.ts`),
   then rebuild. Runs independently of any other refresh; the override still
   fires only on records the parallax cascade placed by `gaia_dr3_inversion`
   ([Consumed by](data/bailer-jones/README.md#consumed-by)).

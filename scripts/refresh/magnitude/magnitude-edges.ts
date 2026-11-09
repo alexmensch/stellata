@@ -1,4 +1,4 @@
-// The magnitude slices' edges on phot_g_mean_mag: cutEdges over the committed magnitude pull at GAIA_SLICE_ROWS. See README.md#slices.
+// The magnitude slices' edges on phot_g_mean_mag: cutEdges over the committed magnitude pull at GAIA_SLICE_ROWS. See README.md#slicing-a-magnitude-bounded-pull.
 
 export const MAGNITUDE_EDGES: readonly [number, ...number[]] = [
   7.108325, 7.750253, 8.127345, 8.40132, 8.61726, 8.794356, 8.945274, 9.076612,

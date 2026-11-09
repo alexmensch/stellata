@@ -21,7 +21,7 @@ of the frozen dry-run pair.
 ## Files
 
 - `gaia-request-pure.ts` — the `PullTable`s: `ASTROMETRY_COLUMNS`, the one
-  astrometry schema both scopes write, each scope's spot rows, GSPC's and
+  astrometry schema both scopes and the magnitude pull (`../magnitude/`) write, each scope's spot rows, GSPC's and
   the DR2 neighbourhood's tables, batch sizes and reach floors.
 - `binaries-astrometry-request-source.ts`, `catalog-astrometry-request-source.ts`
   — one request declaration each, so an entry reaches only the request it
@@ -32,9 +32,7 @@ of the frozen dry-run pair.
 - `gaia-request.test.ts` — replies recorded from ESA on 2026-11-08 for each
   table's spot rows, and ARI's for the DR2 boolean: each formats to lines of
   the committed table, byte for byte, and passes its spot rows. It also
-  holds each committed table in its sort key's order, and
-  `ASTROMETRY_COLUMNS` equal to `gaia_astrometry_pull.TSV_COLUMNS`, the list
-  the Python magnitude pull projects. Replies are inline,
+  holds each committed table in its sort key's order. Replies are inline,
   not files, for the reason [gaia-whole-table/](../gaia-whole-table/README.md)
   gives.
 

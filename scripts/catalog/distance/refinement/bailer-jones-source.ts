@@ -8,7 +8,7 @@ import type { BailerJonesIndex } from './distance-overrides-pure';
 
 const BAILER_JONES_COLUMNS = ['source_id', 'r_med_geo', 'r_med_photogeo'] as const;
 
-/** Parse the TSV produced by `scripts/refresh/refresh-bailer-jones.py` into a
+/** Parse the TSV produced by `refresh:bailer-jones` into a
  *  Gaia DR3 source_id → distance (pc) map. `source_id` is kept as a
  *  string: Gaia source_ids exceed `Number.MAX_SAFE_INTEGER`, so any
  *  numeric parse would silently corrupt the join key.

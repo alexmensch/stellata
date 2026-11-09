@@ -1,4 +1,4 @@
-// The two tables pulled over the deep population: Apsis astrophysical parameters and Bailer-Jones distances. See README.md#the-deep-population.
+// The two tables pulled over the deep population: Apsis astrophysical parameters and Bailer-Jones distances. See README.md#the-deep-population--a-bounded-leg-plus-a-request-leg.
 
 import type { Cell, Format } from '../pull/columns-pure';
 import { coverageCheck, type CoverageGroup, type SpotRow } from '../pull/gates-pure';

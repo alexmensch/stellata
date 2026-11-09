@@ -413,7 +413,7 @@ from the module, so a transcription slip fails rather than round-trips.
 
 The test also pins the relation's **maximum, −0.02680**, which is a contract
 with a consumer outside this folder rather than anything read here:
-`scripts/refresh/refresh-gaia-magnitude.py` selects catalogue membership on
+`refresh:gaia-magnitude` (`scripts/refresh/magnitude/`) selects catalogue membership on
 `G` alone, and that selection is complete for a `V` floor only while the
 relation keeps `V` fainter than `G` everywhere it applies. A successor
 calibration whose peak went positive would oblige that pull to carry a margin
