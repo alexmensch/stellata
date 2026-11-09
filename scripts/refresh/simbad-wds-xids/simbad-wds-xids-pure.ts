@@ -1,7 +1,7 @@
 // The SIMBAD WDS cross-ID pull: each WDS component's object, with its main_id, Gaia DR3 source_id and HIP. See README.md.
 
 import type { DeclaredOutputs } from '../../util/emit-artifacts';
-import type { Row } from '../pull/columns-pure';
+import type { Column, Row } from '../pull/columns-pure';
 import type { Ask, Phase, PhasedPull, WrittenTable } from '../pull/pull';
 import { SIMBAD } from '../pull/tap-pure';
 import { fetchBasic, identPhase, oidOf, parseLedger, resolveOids, simbadPhases, type ParseLedger } from '../simbad/simbad-fetch-pure';
@@ -26,17 +26,22 @@ export const XIDS_PHASES = {
   xrefs: CORE.idents,
 } as const satisfies Record<string, Phase>;
 
-const COLUMNS = ['wds_id', 'component', 'simbad_oid', 'simbad_main_id', 'gaia_source_id', 'hip'] as const;
+/** The written columns' names; `XIDS_COLUMNS` is their order. */
+export const XIDS = { wdsId: 'wds_id', component: 'component', oid: OID.tsv, mainId: MAIN_ID.tsv, gaia: 'gaia_source_id', hip: 'hip' } as const;
+
+export const XIDS_COLUMNS: readonly [Column, ...Column[]] = [
+  { name: XIDS.wdsId }, { name: XIDS.component }, { name: XIDS.oid }, { name: XIDS.mainId }, { name: XIDS.gaia }, { name: XIDS.hip },
+];
 
 export function xidsTable(components: number): WrittenTable {
   return {
-    columns: [{ name: COLUMNS[0] }, ...COLUMNS.slice(1).map((name) => ({ name }))],
-    sortBy: [{ column: 'wds_id', as: 'text' }, { column: 'component', as: 'text' }],
+    columns: XIDS_COLUMNS,
+    sortBy: [{ column: XIDS.wdsId, as: 'text' }, { column: XIDS.component, as: 'text' }],
     band: { min: Math.ceil(components * MIN_COMPONENT_REACH), max: components },
     spotRows: [
-      { key: 'simbad_oid', value: '930049', cells: { wds_id: '06451-1643', component: 'B', simbad_main_id: '* alf CMa B', gaia_source_id: '2947050466531873024', hip: null } },
-      { key: 'simbad_oid', value: '1800871', cells: { wds_id: '11182+3132', component: 'B', gaia_source_id: '756853643637996160', hip: '55203' } },
-      { key: 'simbad_oid', value: '3396054', cells: { wds_id: '14396-6050', component: 'A', simbad_main_id: '* alf Cen A', gaia_source_id: null, hip: '71683' } },
+      { key: XIDS.oid, value: '930049', cells: { [XIDS.wdsId]: '06451-1643', [XIDS.component]: 'B', [XIDS.mainId]: '* alf CMa B', [XIDS.gaia]: '2947050466531873024', [XIDS.hip]: null } },
+      { key: XIDS.oid, value: '1800871', cells: { [XIDS.wdsId]: '11182+3132', [XIDS.component]: 'B', [XIDS.gaia]: '756853643637996160', [XIDS.hip]: '55203' } },
+      { key: XIDS.oid, value: '3396054', cells: { [XIDS.wdsId]: '14396-6050', [XIDS.component]: 'A', [XIDS.mainId]: '* alf Cen A', [XIDS.gaia]: null, [XIDS.hip]: '71683' } },
     ],
   };
 }
@@ -137,13 +142,18 @@ export function xidsPull(outputs: DeclaredOutputs<'xids'>, inputs: XidsInputs): 
       }
 
       const rows: Row[] = [];
+      let withGaia = 0;
+      let withHip = 0;
       for (const c of components) {
         const oid = oids.get(componentId(c));
         if (oid === undefined) continue;
         const hip = resolveHip(hipAliases.get(oid) ?? [], letters.get(oid) ?? new Set());
-        rows.push([c.wdsId, c.component, String(oid), basic.get(oid)?.[MAIN_ID.column] ?? null, gaia.get(oid) ?? null, hip]);
+        const sourceId = gaia.get(oid) ?? null;
+        if (sourceId !== null) withGaia++;
+        if (hip !== null) withHip++;
+        rows.push([c.wdsId, c.component, String(oid), basic.get(oid)?.[MAIN_ID.column] ?? null, sourceId, hip]);
       }
-      log(`rows: ${rows.length}, ${rows.filter((r) => r[4] !== null).length} with a Gaia DR3 source_id, ${rows.filter((r) => r[5] !== null).length} with a HIP`);
+      log(`rows: ${rows.length}, ${withGaia} with a Gaia DR3 source_id, ${withHip} with a HIP`);
       return { rows: { xids: rows }, checks: [ledger.check('idents')] };
     },
   };
