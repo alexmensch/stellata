@@ -63,11 +63,11 @@ export interface Pull<K extends string> {
   readonly release?: string;
 }
 
-/** A phase's ids come at run time, from earlier answers; a whole-table phase states the most rows it should return. */
+/** A phase's ids come at run time, from earlier answers; a whole-table or sliced phase states the most rows it may return, all queries together. */
 export type PhaseScope =
   | { readonly kind: 'whole-table'; readonly maxRows: number }
   | { readonly kind: 'request'; readonly key: string; readonly batchSize: number; readonly rowsPerId: number }
-  | SlicedScope;
+  | SlicedScope & { readonly maxRows: number };
 
 export interface Phase {
   readonly from: string;
@@ -136,13 +136,13 @@ function batches(text: string, ids: readonly string[], batchSize: number): strin
   return out;
 }
 
-/** A static table as the phase that asks it: a whole table expects at most its band's ceiling. */
+/** A static table as the phase that asks it: a whole or sliced table holds at most its band's ceiling. */
 function phaseOf(table: PullTable): Phase {
   const { scope } = table;
   return {
     ...table,
     scope: scope.kind === 'whole-table' ? { kind: 'whole-table', maxRows: table.band.max }
-      : scope.kind === 'sliced' ? scope
+      : scope.kind === 'sliced' ? { ...scope, maxRows: table.band.max }
         : { kind: 'request', key: scope.key, batchSize: scope.batchSize, rowsPerId: scope.rowsPerId },
   };
 }
@@ -217,11 +217,17 @@ const fetchTransport: Transport = async (url, form) => {
 
 export const LIVE: TapClientDeps = { transport: fetchTransport, sleep: (ms) => sleep(ms), report: reportService, log: console.log };
 
-/** Refuses, before any query, a whole or sliced phase whose rows at every query's limit could exceed `MAX_TABLE_CELLS`; a request-scoped one is bounded per batch. */
+/** The most rows a whole or sliced phase can hold: every query at its limit, or `ask`'s refusal past `maxRows`, which lets at most one more query's limit in. */
+function heldRows(phase: Phase, scope: Exclude<PhaseScope, { kind: 'request' }>, quote: TapArchive['quote']): number {
+  const limit = phaseLimit(phase);
+  return Math.min(phaseQueries(phase, undefined, quote).length * limit, scope.maxRows + limit);
+}
+
+/** Refuses, before any query, a whole or sliced phase whose held rows could exceed `MAX_TABLE_CELLS`; a request-scoped one is bounded per batch. */
 function assertPhasesFit(phases: Readonly<Record<string, Phase>>, quote: TapArchive['quote']): void {
   for (const [name, phase] of Object.entries(phases)) {
     if (phase.scope.kind === 'request') continue;
-    const cells = phaseQueries(phase, undefined, quote).length * phaseLimit(phase) * phase.columns.length;
+    const cells = heldRows(phase, phase.scope, quote) * phase.columns.length;
     if (cells > MAX_TABLE_CELLS) {
       throw new Error(`${name}: ${phase.scope.kind} rows of up to ${cells} cells exceed ${MAX_TABLE_CELLS}; slice the table finer or narrow its columns`);
     }
@@ -277,6 +283,9 @@ export async function runPhasedPull<K extends string>(pull: PhasedPull<K>, deps:
       if (cached === null) cache.save(adql, result);
       for (const row of checked) rows.push(row);
       deps.log(`  ${name} batch ${i + 1}/${queries.length}: ${result.result.rows.length} rows${cached === null ? '' : ' from checkpoint'} (total ${rows.length})`);
+      if (phase.scope.kind !== 'request' && rows.length > phase.scope.maxRows) {
+        throw new Error(`${name}: ${rows.length} rows after query ${i + 1} of ${queries.length}, past the ${phase.scope.maxRows} it may hold; the upstream table or the query moved`);
+      }
     }
     return rows;
   };

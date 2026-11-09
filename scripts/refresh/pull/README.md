@@ -74,8 +74,8 @@ check anywhere leaves every prior output byte-identical.
 A `PhasedPull` is for a pull whose later queries take their ids from earlier
 answers, as every manifest-keyed SIMBAD pull does (identifier → oid, then
 oid → columns). It declares its `phases` (a `Phase` is a table's query without
-its ids: whole-table with the most rows it should return, sliced as a static
-table is, or request-scoped by key, batch size and rows per id), its written `tables` (columns, sort key,
+its ids: whole-table with the most rows it may return, sliced as a static
+table is plus that same `maxRows`, or request-scoped by key, batch size and rows per id), its written `tables` (columns, sort key,
 band, spot rows), optionally the `request` it derives and the files it comes
 off and the `parameters` that decide its bytes besides its queries (a seed,
 a draw's targets), and a `run(ask)` that composes the rows. `ask(phase, ids)` is the same
@@ -90,10 +90,13 @@ pull of one phase per table.
 
 `runPull` holds every row of a table at once — its parsed cells, their sorted
 copy and the TSV written from them — and for a whole-table table the reply
-text too. It refuses, before any query, a whole-table or sliced table whose
-queries at their limits (query count × limit × column count) could hold more
-than `MAX_TABLE_CELLS` (37,000,000). A request-scoped table is not bounded
-this way.
+text too. A whole-table or sliced phase states `maxRows`, the most rows it may
+hold over all its queries (a static table's is its band's `max`), and `ask`
+refuses it, naming the count, once its rows pass that. So it holds at most
+`min(query count × limit, maxRows + limit)` rows, and `runPull` refuses,
+before any query, one whose held rows × column count could exceed
+`MAX_TABLE_CELLS` (37,000,000). A request-scoped table is not bounded this
+way.
 Measured 2026-11-05 under Node 26, the committed `gaia_dr3_tyc_xmatch.tsv` (5
 columns) replayed through `runPull` and a fake transport, peak live heap by
 `watchHeap` ([CI heap budget](../../util/heap-budget/README.md)):
@@ -106,8 +109,8 @@ columns) replayed through `runPull` and a fake transport, peak live heap by
 That is about 69 bytes per cell over about 1,029 MiB fixed (the harness's own
 copies of the reply among it), so the CI budget of 3,482 MiB holds about 37 M
 cells; a sliced table holds one slice's reply text at a time, so the same cap
-is conservative for it. tyc-xmatch, sliced, reaches 25.2 M (105 slices ×
-48,000 × 5 columns). A table with wider text cells costs more per cell, so a
+is conservative for it. tyc-xmatch, sliced, is bounded at 12.9 M ((2,530,000
++ 48,000) × 5 columns). A table with wider text cells costs more per cell, so a
 pull near the cap is re-measured, not assumed.
 
 ### Sliced scope
