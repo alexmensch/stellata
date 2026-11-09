@@ -8,7 +8,7 @@ import { fetchBasic, identPhase, oidOf, parseLedger, resolveOids, simbadPhases, 
 import { GAIA_DR3, HD, HIP, MAIN_ID, OID, WDS, parseIdent } from '../simbad/simbad-specs-pure';
 import { componentId, identSuffix, type WdsComponent } from './wds-components-pure';
 import {
-  cascadeCandidates, cascadeRecoveries, parseCatalogueIdent, resolveHip, type CatalogueIdent,
+  cascadeCandidates, cascadeRecoveries, catalogueAlias, resolveHip, type CatalogueAlias,
 } from './wds-xids-cascade-pure';
 import { assertOverridesOnComponents, type WdsXidOverride } from './wds-xids-overrides-pure';
 
@@ -62,14 +62,15 @@ async function resolveByIdent(ask: Ask, components: readonly WdsComponent[], led
 }
 
 /** Each HD and HIP number an object holds, the first in id order; a lettered alias gives its number too. */
-function firstNumbers(rows: readonly Row[]): { hd: Map<number, number>; hip: Map<number, number> } {
-  const out = { hd: new Map<number, number>(), hip: new Map<number, number>() };
-  for (const [oidCell, id] of rows) {
-    const parsed = parseCatalogueIdent(id ?? '');
-    if (parsed === null) continue;
-    const into = parsed.catalogue === 'HD' ? out.hd : out.hip;
+function firstNumbers(rows: readonly Row[], ledger: ParseLedger): { hd: Map<number, string>; hip: Map<number, string> } {
+  const out = { hd: new Map<number, string>(), hip: new Map<number, string>() };
+  for (const [oidCell, idCell] of rows) {
+    const id = idCell ?? '';
+    const [ns, into] = id.startsWith(HD.prefix) ? [HD, out.hd] : [HIP, out.hip];
+    const alias = catalogueAlias(ns, id, ledger);
+    if (alias === null) continue;
     const oid = oidOf(oidCell);
-    if (!into.has(oid)) into.set(oid, parsed.number);
+    if (!into.has(oid)) into.set(oid, alias.number);
   }
   return out;
 }
@@ -100,7 +101,7 @@ export function xidsPull(outputs: DeclaredOutputs<'xids'>, inputs: XidsInputs): 
       const unresolved = components.filter((c) => !oids.has(componentId(c)) && siblings.has(c.wdsId));
       if (unresolved.length > 0) {
         const primaries = [...new Set(unresolved.flatMap((c) => siblings.get(c.wdsId) ?? []))].sort((a, b) => a - b);
-        const numbers = firstNumbers(await ask(XIDS_PHASES.aliases, primaries.map(String)));
+        const numbers = firstNumbers(await ask(XIDS_PHASES.aliases, primaries.map(String)), ledger);
         log(`aliases: ${numbers.hd.size} HD and ${numbers.hip.size} HIP over ${primaries.length} resolved siblings of ${unresolved.length} unresolved components`);
         const candidates = cascadeCandidates(unresolved, siblings, numbers.hd, numbers.hip);
         const ids = [...candidates.keys()].sort();
@@ -119,14 +120,14 @@ export function xidsPull(outputs: DeclaredOutputs<'xids'>, inputs: XidsInputs): 
       }
       const unique = [...letters.keys()].sort((a, b) => a - b);
       const basic = await fetchBasic(ask, CORE, unique);
-      const hipAliases = new Map<number, CatalogueIdent[]>();
+      const hipAliases = new Map<number, CatalogueAlias[]>();
       const gaia = new Map<number, string>();
       for (const [oidCell, idCell] of await ask(XIDS_PHASES.xrefs, unique.map(String))) {
         const id = idCell ?? '';
         const oid = oidOf(oidCell);
-        const hip = id.startsWith(HIP.prefix) ? parseCatalogueIdent(id) : null;
-        if (hip !== null) {
-          hipAliases.set(oid, [...(hipAliases.get(oid) ?? []), hip]);
+        if (id.startsWith(HIP.prefix)) {
+          const hip = catalogueAlias(HIP, id, ledger);
+          if (hip !== null) hipAliases.set(oid, [...(hipAliases.get(oid) ?? []), hip]);
           continue;
         }
         const parsed = parseIdent(GAIA_DR3, id);
@@ -139,7 +140,7 @@ export function xidsPull(outputs: DeclaredOutputs<'xids'>, inputs: XidsInputs): 
         const oid = oids.get(componentId(c));
         if (oid === undefined) continue;
         const hip = resolveHip(hipAliases.get(oid) ?? [], letters.get(oid) ?? new Set());
-        rows.push([c.wdsId, c.component, String(oid), basic.get(oid)?.[MAIN_ID.column] ?? null, gaia.get(oid) ?? null, hip === null ? null : String(hip)]);
+        rows.push([c.wdsId, c.component, String(oid), basic.get(oid)?.[MAIN_ID.column] ?? null, gaia.get(oid) ?? null, hip]);
       }
       log(`rows: ${rows.length}, ${rows.filter((r) => r[4] !== null).length} with a Gaia DR3 source_id, ${rows.filter((r) => r[5] !== null).length} with a HIP`);
       return { rows: { xids: rows }, checks: [ledger.check('idents')] };

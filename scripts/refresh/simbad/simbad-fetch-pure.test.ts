@@ -23,10 +23,10 @@ describe('namespaces', () => {
     expect([compose(HIP, '12345'), compose(TYC, '144-1004-1'), likePattern(GAIA_DR3)]).toEqual(['HIP 12345', 'TYC 144-1004-1', 'Gaia DR3 %']);
   });
 
-  it('read a numeric suffix canonically, and skip a component-lettered one', () => {
+  it('read a numeric suffix canonically, and a component-lettered one as its number and letter', () => {
     expect(parseIdent(HIP, 'HIP 012345')).toEqual({ kind: 'suffix', suffix: '12345' });
-    expect(parseIdent(HIP, 'HIP 12345 A')).toEqual({ kind: 'component' });
-    expect(parseIdent(HIP, 'HIP 55203A')).toEqual({ kind: 'component' });
+    expect(parseIdent(HIP, 'HIP 12345 A')).toEqual({ kind: 'component', number: '12345', letter: 'A' });
+    expect(parseIdent(HIP, 'HIP 055203Aa')).toEqual({ kind: 'component', number: '55203', letter: 'Aa' });
     expect(parseIdent(HIP, 'Gaia DR3 12345')).toEqual({ kind: 'other' });
     expect(parseIdent(HIP, 'HIP 12-34')).toEqual({ kind: 'unparsed', id: 'HIP 12-34' });
   });

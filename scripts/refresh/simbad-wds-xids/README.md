@@ -63,8 +63,8 @@ changed override stales the record.
   61,867 (38.3%).
 - **Spot rows**: Sirius B (reached only through the cascade), ξ UMa B (a
   lettered HIP) and α Cen A (no Gaia DR3 id).
-- **Parse ledger**: a Gaia DR3 id the namespace rules cannot read fails the
-  pull.
+- **Parse ledger**: an HD, HIP or Gaia DR3 id the namespace rules
+  (`parseIdent`) cannot read fails the pull.
 - An override naming a component the summary does not decompose into fails
   before any query.
 
