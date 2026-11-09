@@ -5,10 +5,10 @@ import { describe, expect, it } from 'vitest';
 import { DATA_FILES } from '../../../src/catalog-format/pipeline-outputs/data-files';
 import { REPO_ROOT, lfsContentReadable } from '../../util/paths';
 import { assertTablesFit, batchQueries, queryLimit } from '../pull/pull';
-import { oversizedSlices, recordedTableCases } from '../pull/recorded-reply';
+import { committedRows, oversizedSlices, recordedTableCases } from '../pull/recorded-reply';
 import { GAIA, GAIA_SLICE_ROWS } from '../pull/tap-pure';
 import { MAGNITUDE_EDGES } from './magnitude-edges';
-import { MAGNITUDE_TABLE } from './magnitude-pure';
+import { G_MAG_FLOOR, MAGNITUDE_TABLE } from './magnitude-pure';
 import { MAGNITUDE_PULL } from './refresh-gaia-magnitude';
 
 /** Replies recorded from ESA on 2026-11-09: the spot rows, plus the table's first two rows. */
@@ -27,6 +27,14 @@ describe('the magnitude pull', () => {
   it.skipIf(!lfsContentReadable(join(REPO_ROOT, file)))('holds every magnitude slice of the committed table within GAIA_SLICE_ROWS', () => {
     const { over, recut } = oversizedSlices(file, 'phot_g_mean_mag', MAGNITUDE_EDGES, GAIA_SLICE_ROWS, Number);
     expect(over, over.length === 0 ? '' : `re-cut the edges: ${recut().join(', ')}`).toEqual([]);
+  });
+
+  it.skipIf(!lfsContentReadable(join(REPO_ROOT, file)))('reaches G_MAG_FLOOR and no further, so its edges cover the floor\'s range', () => {
+    const { rows } = committedRows(file);
+    const at = MAGNITUDE_TABLE.columns.findIndex((c) => c.name === 'phot_g_mean_mag');
+    const faintest = rows.reduce((max, row) => Math.max(max, Number(row[at])), -Infinity);
+    expect(faintest).toBeLessThanOrEqual(G_MAG_FLOOR);
+    expect(G_MAG_FLOOR - faintest, 'G_MAG_FLOOR moved past the committed table: cut edges from an archive count first (README.md#moving-the-floor)').toBeLessThan(0.001);
   });
 
   it('asks 52 slices of at most 48,000 rows, under the floor, within the table cell cap', () => {

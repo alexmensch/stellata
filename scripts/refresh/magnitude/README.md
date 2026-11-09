@@ -52,8 +52,20 @@ legs join each slice to `gaiadr3.gaia_source` and select the same sources, so
 no slice of theirs holds more rows than the magnitude pull's. A floor that
 drifted between them would leave the enrichment tables covering a different set
 of records than the magnitude term admits, so `G_MAG_FLOOR` and the edges are
-stated once, here. Why the floor carries no margin:
-[Why the floor carries no margin](/data/gaia/README.md#why-the-floor-carries-no-margin).
+stated once, here ([Why the floor carries no margin](/data/gaia/README.md#why-the-floor-carries-no-margin)).
+
+### Moving the floor
+
+The edges are cut from the committed table, which holds no row past the floor,
+so they cannot cover a deeper one: at `G_MAG_FLOOR` 11.5 the last slice would
+ask about 360,000 rows against a 48,000 limit and every mirror would refuse it.
+`magnitude.test.ts` holds the committed table's faintest G within 0.001 mag of
+`G_MAG_FLOOR`, so a moved floor fails there first. To move it, count the new
+range on the archive in bins (`SELECT FLOOR(phot_g_mean_mag * 1000) AS bin,
+COUNT(*) FROM gaiadr3.gaia_source WHERE phot_g_mean_mag > 11 AND
+phot_g_mean_mag <= <floor> GROUP BY bin`), cut edges past the last one so no
+slice passes `GAIA_SLICE_ROWS`, re-pull all three tables, then re-cut the whole
+list from the new committed table.
 
 The 52 slices at their limits would hold 47.4 M cells over 19 columns; the
 pull is bounded instead by its band ceiling plus one slice, 25.1 M

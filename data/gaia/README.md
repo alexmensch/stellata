@@ -165,8 +165,10 @@ pull over-reaches the floor rather than falling short of it: the filter in
 would carry **725,768** rows past the floor — every one of them `V > 11` by
 construction, and ~120 MB of LFS to hold them.
 
-Moving the floor is a re-pull, not a redesign, and costs about four minutes
-of wall clock — which is the other half of why no margin is warranted.
+Moving the floor is a re-pull, not a redesign — which is the other half of why
+no margin is warranted. A deeper floor first needs slice edges past G 11,
+which the committed table cannot supply:
+[Moving the floor](/scripts/refresh/magnitude/README.md#moving-the-floor).
 
 ### What the filter keeps, and what falls through it
 
