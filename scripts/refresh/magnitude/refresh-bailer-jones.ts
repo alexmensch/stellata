@@ -1,4 +1,4 @@
-// refresh:bailer-jones — Bailer-Jones 2021 distance posteriors over the catalogue's deep population. See README.md.
+// refresh:bailer-jones — Bailer-Jones 2021 (/data/papers/index.md#bailerjones2021) distance posteriors over the catalogue's deep population. See README.md.
 
 import type { PullDescription } from '../../util/emit-artifacts';
 import { CATALOG_ASTROMETRY_REQUEST } from '../gaia-request/catalog-astrometry-request-source';
