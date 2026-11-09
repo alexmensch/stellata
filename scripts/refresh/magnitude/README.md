@@ -69,7 +69,11 @@ list from the new committed table.
 
 The 52 slices at their limits would hold 47.4 M cells over 19 columns; the
 pull is bounded instead by its band ceiling plus one slice, 25.1 M
-([How big a table may be](../pull/README.md#how-big-a-table-may-be)).
+([How big a table may be](../pull/README.md#how-big-a-table-may-be)). The
+deep-population magnitude legs are bounded the same way, Apsis at 11.8 M cells
+(9 columns) and Bailer-Jones at 10.5 M (8); their runs also hold every row's
+cell reader and the magnitude leg's `source_id` set, and that cost is
+unmeasured.
 
 ## The deep population — a bounded leg plus a request leg
 
