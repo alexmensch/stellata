@@ -1,10 +1,8 @@
 // The two tables pulled over the deep population: Apsis astrophysical parameters and Bailer-Jones distances. See README.md#the-deep-population--a-bounded-leg-plus-a-request-leg.
 
 import type { Cell, Format } from '../pull/columns-pure';
-import { coverageCheck, type CoverageGroup, type SpotRow } from '../pull/gates-pure';
+import { coverageCheck, near, present, type CoverageGroup, type SpotRow } from '../pull/gates-pure';
 import type { DeepPopulationTable } from './deep-population-pure';
-
-const near = (value: number, within: number) => ({ near: value, within });
 
 const coverageOfPulled = (label: string, cells: readonly Cell[], groups: readonly [CoverageGroup, ...CoverageGroup[]], floor?: number) => (
   coverageCheck(label, cells, 'source_id', cells.length, { groups, ...(floor === undefined ? {} : { floor }) })
@@ -72,8 +70,6 @@ export const APSIS_TABLE: DeepPopulationTable = {
 };
 
 const DISTANCE: Format = { fixed: 3, float32: true };
-
-const present = (column: string): CoverageGroup => ({ name: column, has: (cell) => cell(column) !== null });
 
 const bailerJonesSpot = (sourceId: string, geo: number, photogeo: number, flag: string): SpotRow => ({
   key: 'source_id', value: sourceId, cells: { r_med_geo: near(geo, 0.5), r_med_photogeo: near(photogeo, 0.5), flag },

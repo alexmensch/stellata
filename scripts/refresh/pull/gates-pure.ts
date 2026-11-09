@@ -12,6 +12,9 @@ export interface RowBand {
 /** A cell's pinned value: exact text, a number within a tolerance, or `null` for an empty cell. */
 export type Pinned = string | null | { readonly near: number; readonly within: number };
 
+/** A pinned number: within `within` of `value`. */
+export const near = (value: number, within: number): Pinned => ({ near: value, within });
+
 export interface SpotRow {
   readonly key: string;
   readonly value: string;
@@ -22,6 +25,9 @@ export interface CoverageGroup {
   readonly name: string;
   readonly has: (cell: Cell) => boolean;
 }
+
+/** The rows whose `column` is not empty. */
+export const present = (column: string): CoverageGroup => ({ name: column, has: (cell) => cell(column) !== null });
 
 export interface Coverage {
   readonly groups: readonly [CoverageGroup, ...CoverageGroup[]];

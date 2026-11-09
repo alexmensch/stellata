@@ -1,7 +1,7 @@
 // The whole-table Gaia DR3 pulls: the HIP and TYC best-neighbour cross-walks. See README.md.
 
 import type { SortKey } from '../pull/columns-pure';
-import type { RowBand, SpotRow } from '../pull/gates-pure';
+import { near, type RowBand, type SpotRow } from '../pull/gates-pure';
 import type { PullTable } from '../pull/pull';
 import { GAIA_SLICE_ROWS } from '../pull/tap-pure';
 import { HIP_XMATCH_EDGES, TYC_XMATCH_EDGES } from './slice-edges';
@@ -9,8 +9,6 @@ import { HIP_XMATCH_EDGES, TYC_XMATCH_EDGES } from './slice-edges';
 const bySourceId = (edges: readonly [bigint, ...bigint[]]): PullTable['scope'] => (
   { kind: 'sliced', key: 'source_id', edges, sliceRows: GAIA_SLICE_ROWS }
 );
-
-const near = (value: number) => ({ near: value, within: 0.001 });
 
 function xmatchTable(
   from: string, id: SortKey, edges: readonly [bigint, ...bigint[]], band: RowBand, spotRows: readonly [SpotRow, ...SpotRow[]],
@@ -33,7 +31,7 @@ function xmatchTable(
 }
 
 const xmatchSpot = (key: 'hip' | 'tyc', value: string, gaiaSourceId: string, angularDistance: number): SpotRow => ({
-  key, value, cells: { gaia_source_id: gaiaSourceId, angular_distance: near(angularDistance), number_of_neighbours: '1', xm_flag: '8' },
+  key, value, cells: { gaia_source_id: gaiaSourceId, angular_distance: near(angularDistance, 0.001), number_of_neighbours: '1', xm_flag: '8' },
 });
 
 export const HIP_XMATCH = xmatchTable(
