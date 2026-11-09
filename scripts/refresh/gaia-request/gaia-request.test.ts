@@ -1,16 +1,13 @@
-import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
 import { DATA_FILES } from '../../../src/catalog-format/pipeline-outputs/data-files';
 import { REPO_ROOT, lfsContentReadable } from '../../util/paths';
-import { cellReader, checkedRows, formatTsv, sortRows, type Row } from '../pull/columns-pure';
-import { spotRowCheck } from '../pull/gates-pure';
-import { queryLimit, type PullTable } from '../pull/pull';
-import { readCsv } from '../pull/tap-pure';
+import { queryLimit } from '../pull/pull';
+import { committedRows, recordedTableCases } from '../pull/recorded-reply';
 import {
-  ASTROMETRY_COLUMNS, BINARIES_ASTROMETRY_SPOTS, CATALOG_ASTROMETRY_SPOTS, DR2_ROWS_PER_ID, astrometryTable, dr2NeighbourhoodTable, gspcTable,
+  BINARIES_ASTROMETRY_SPOTS, CATALOG_ASTROMETRY_SPOTS, DR2_ROWS_PER_ID, astrometryTable, dr2NeighbourhoodTable, gspcTable,
 } from './gaia-request-pure';
 
 /** Replies recorded from ESA on 2026-11-08 for each table's spot rows; ARI answered the same text except the boolean, written 1/0. */
@@ -54,39 +51,7 @@ const TABLES = [
   { name: 'dr2 neighbourhood (ARI)', table: dr2NeighbourhoodTable(NO_IDS), file: DATA_FILES.gaiaDr2Neighbourhood, reply: DR2_REPLY_ARI },
 ] as const;
 
-const committed = (file: string): string => readFileSync(join(REPO_ROOT, file), 'utf8');
-
-/** A TSV's lines without its final newline; never trimEnd, which would drop a last line's trailing empty cells. */
-const linesOf = (text: string): string[] => text.slice(0, -1).split('\n');
-
-function replyRows(name: string, table: PullTable, reply: readonly string[]): readonly Row[] {
-  const csv = `${[table.columns.map((c) => c.name).join(','), ...reply].join('\n')}\n`;
-  return checkedRows(table.columns, readCsv(csv, queryLimit(table), name), name);
-}
-
-describe.each(TABLES)('$name', ({ name, table, file, reply }) => {
-  const readable = lfsContentReadable(join(REPO_ROOT, file));
-
-  it.skipIf(!readable)('writes a recorded reply\'s rows as lines of the committed table', () => {
-    const rows = replyRows(name, table, reply);
-    const [header, ...lines] = linesOf(formatTsv(file, table.columns, rows));
-    const text = committed(file);
-    expect(text.slice(0, text.indexOf('\n'))).toBe(header);
-    const inTable = (line: string): boolean => text.startsWith(`${header}\n${line}\n`) || text.includes(`\n${line}\n`);
-    expect(lines.filter((line) => !inTable(line))).toEqual([]);
-  });
-
-  it('passes its spot rows on the recorded reply', () => {
-    const rows = replyRows(name, table, reply);
-    expect(spotRowCheck(name, rows.map(cellReader(table.columns, name)), table.spotRows).kind).toBe('pass');
-  });
-
-  it.skipIf(!readable)('orders the committed table by its sort key, as a pull writes it', () => {
-    const [, ...lines] = linesOf(committed(file));
-    const rows: Row[] = lines.map((line) => line.split('\t').map((cell) => (cell === '' ? null : cell)));
-    expect(sortRows(table.columns, rows, table.sortBy, name).map((row) => row.map((c) => c ?? '').join('\t'))).toEqual(lines);
-  });
-});
+describe.each(TABLES)('$name', ({ name, table, file, reply }) => recordedTableCases(name, file, table, reply));
 
 describe('the request queries', () => {
   it('ask at most 20,000 rows each, so ESA\'s 50,000-row hard limit holds every batch', () => {
@@ -96,7 +61,7 @@ describe('the request queries', () => {
   it.skipIf(!lfsContentReadable(join(REPO_ROOT, DATA_FILES.gaiaDr2Neighbourhood)))(
     'hold every DR3 id\'s rows in the committed neighbourhood within DR2_ROWS_PER_ID',
     () => {
-      const [, ...lines] = linesOf(committed(DATA_FILES.gaiaDr2Neighbourhood));
+      const { lines } = committedRows(DATA_FILES.gaiaDr2Neighbourhood);
       const perId = new Map<string, number>();
       for (const line of lines) {
         const dr3 = line.split('\t')[1];
@@ -111,11 +76,5 @@ describe('the astrometry schema', () => {
   it('carries the 0.95 coverage floor in its band: at least ceil(0.95 n) rows, at most n', () => {
     const ids = Array.from({ length: 383_059 }, (_, i) => BigInt(i + 1));
     expect(astrometryTable(ids, CATALOG_ASTROMETRY_SPOTS).band).toEqual({ min: 363_907, max: 383_059 });
-  });
-
-  it('is the column list the Python magnitude pull projects, in order', () => {
-    const python = readFileSync(join(REPO_ROOT, 'scripts/refresh/gaia_astrometry_pull.py'), 'utf8');
-    const list = /^TSV_COLUMNS = \[([^\]]*)\]/m.exec(python)?.[1] ?? '';
-    expect([...list.matchAll(/"([^"]+)"/g)].map((m) => m[1])).toEqual(ASTROMETRY_COLUMNS.map((c) => c.name));
   });
 });

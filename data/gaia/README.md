@@ -33,7 +33,7 @@ gaia_dr3_magnitude_pull.tsv            ~200 MB, LFS. Every gaia_source row at
 gaia_dr3_nss_two_body.tsv              ~90 MB, LFS. NSS two-body orbits.
 gaia_dr3_apsis.tsv                     ~70 MB, LFS. gspphot ∪ gspspec
                                        Teff/logg/[M/H]/A0 + spectraltype_esphs,
-                                       over the deep population (1,284,983).
+                                       over the deep population (1,284,985).
 gaia_dr3_gspc.tsv                      ~31 MB, LFS. Johnson-Kron-Cousins B and
                                        V synthesised from each source's BP/RP
                                        spectrum, + fluxes, flux errors and the
@@ -165,8 +165,10 @@ pull over-reaches the floor rather than falling short of it: the filter in
 would carry **725,768** rows past the floor — every one of them `V > 11` by
 construction, and ~120 MB of LFS to hold them.
 
-Moving the floor is a re-pull, not a redesign, and costs about four minutes
-of wall clock — which is the other half of why no margin is warranted.
+Moving the floor is a re-pull, not a redesign — which is the other half of why
+no margin is warranted. A deeper floor first needs slice edges past G 11,
+which the committed table cannot supply:
+[Moving the floor](/scripts/refresh/magnitude/README.md#moving-the-floor).
 
 ### What the filter keeps, and what falls through it
 

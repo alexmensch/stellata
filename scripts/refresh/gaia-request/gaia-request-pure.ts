@@ -1,8 +1,10 @@
 // The request-scoped Gaia DR3 pulls: astrometry in both scopes, GSPC synthetic photometry, the DR2 neighbourhood. See README.md.
 
 import type { Column, Format } from '../pull/columns-pure';
-import type { CoverageGroup, SpotRow } from '../pull/gates-pure';
+import { near, present, type SpotRow } from '../pull/gates-pure';
 import type { PullTable } from '../pull/pull';
+
+export const GAIA_SOURCE = 'gaiadr3.gaia_source';
 
 export const GAIA_REQUEST_BATCH = 5_000;
 export const DR2_REQUEST_BATCH = 2_500;
@@ -40,38 +42,28 @@ export const ASTROMETRY_COLUMNS: readonly [Column, ...Column[]] = [
   { name: 'radial_velocity_error', format: REAL_4 },
 ];
 
-const near = (value: number, within: number) => ({ near: value, within });
-
 const requestOn = (key: string, ids: readonly bigint[], batchSize: number, rowsPerId: number) => ({
   kind: 'request' as const, key, idColumn: key, ids: ids.map(String), batchSize, rowsPerId,
 });
 
-const present = (column: string): CoverageGroup['has'] => (cell) => cell(column) !== null;
-
-/** A DR4 swap-in changes ref_epoch to 2017.5, which epoch propagation downstream does not assume. */
+/** A DR4 swap-in changes ref_epoch to 2017.5, which epoch propagation downstream does not assume. `motion` is null for a 2-parameter solution. */
 export function astrometrySpot(
-  sourceId: string, [parallax, pmra, pmdec]: readonly [number, number, number], g: number, extra: SpotRow['cells'] = {},
+  sourceId: string, motion: readonly [number, number, number] | null, g: number, extra: SpotRow['cells'] = {},
 ): SpotRow {
+  const [parallax, pmra, pmdec] = motion === null ? [null, null, null] : motion.map((v) => near(v, 0.001));
   return {
     key: 'source_id',
     value: sourceId,
-    cells: {
-      ref_epoch: '2016.0',
-      parallax: near(parallax, 0.001),
-      pmra: near(pmra, 0.001),
-      pmdec: near(pmdec, 0.001),
-      phot_g_mean_mag: near(g, 0.0001),
-      ...extra,
-    },
+    cells: { ref_epoch: '2016.0', parallax, pmra, pmdec, phot_g_mean_mag: near(g, 0.0001), ...extra },
   };
 }
 
 export function astrometryTable(ids: readonly bigint[], spotRows: readonly [SpotRow, ...SpotRow[]]): PullTable {
   return {
-    from: 'gaiadr3.gaia_source',
+    from: GAIA_SOURCE,
     columns: ASTROMETRY_COLUMNS,
     sortBy: [{ column: 'source_id', as: 'integer' }],
-    scope: { ...requestOn('source_id', ids, GAIA_REQUEST_BATCH, 1), coverage: { groups: [{ name: 'phot_g_mean_mag', has: present('phot_g_mean_mag') }] } },
+    scope: { ...requestOn('source_id', ids, GAIA_REQUEST_BATCH, 1), coverage: { groups: [present('phot_g_mean_mag')] } },
     band: { min: Math.ceil(ids.length * MIN_ASTROMETRY_REACH), max: ids.length },
     spotRows,
   };
@@ -116,7 +108,7 @@ export function gspcTable(ids: readonly bigint[]): PullTable {
       ...requestOn('source_id', ids, GAIA_REQUEST_BATCH, 1),
       coverage: {
         groups: [
-          { name: 'B and V both present', has: (cell) => present('b_jkc_mag')(cell) && present('v_jkc_mag')(cell) },
+          { name: 'B and V both present', has: (cell) => present('b_jkc_mag').has(cell) && present('v_jkc_mag').has(cell) },
           { name: 'B and V both in validated range', has: (cell) => cell('b_jkc_flag') === '1' && cell('v_jkc_flag') === '1' },
         ],
       },

@@ -21,6 +21,18 @@ describe('sliceConditions', () => {
   it('refuses edges that do not strictly increase', () => {
     expect(() => sliceConditions('k', [5n, 5n])).toThrow(/strictly increase: 5 then 5/);
   });
+
+  it('writes a decimal key\'s edges as their shortest text', () => {
+    expect(sliceConditions('g.phot_g_mean_mag', [6.5, 10.999999])).toEqual([
+      'g.phot_g_mean_mag < 6.5',
+      'g.phot_g_mean_mag >= 6.5 AND g.phot_g_mean_mag < 10.999999',
+      'g.phot_g_mean_mag >= 10.999999',
+    ]);
+  });
+
+  it('refuses a decimal edge that is not finite', () => {
+    expect(() => sliceConditions('k', [1, Number.NaN])).toThrow(/must be finite: NaN/);
+  });
 });
 
 describe('sliceCounts', () => {
@@ -46,6 +58,13 @@ describe('cutEdges', () => {
 
   it('needs no edge for a table that fits one slice', () => {
     expect(cutEdges([1n, 2n], 3)).toEqual([]);
+  });
+
+  it('cuts a decimal key the same way', () => {
+    const keys = [1.5, 2.25, 2.25, 3.125, 4];
+    const edges = cutEdges(keys, 2);
+    expect(edges).toEqual([2.25, 3.125]);
+    expect(sliceCounts(keys, edges)).toEqual([1, 2, 2]);
   });
 
   it('refuses a key shared by more rows than a slice holds', () => {

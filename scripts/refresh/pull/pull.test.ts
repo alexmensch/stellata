@@ -143,20 +143,43 @@ describe('runPull', () => {
     expect([read('stars.tsv'), read('pairs.tsv')]).toEqual(['old stars\n', 'old pairs\n']);
   });
 
+  it('caps a whole or sliced table at the 30 M cells the widest measured table fits in the CI heap budget', () => {
+    expect(MAX_TABLE_CELLS).toBe(30_000_000);
+  });
+
   it('refuses, before asking anything, a whole-table query too large to hold', async () => {
     const fits = Math.floor(MAX_TABLE_CELLS / (LIMIT_HEADROOM * STARS.columns.length));
     const { deps: d, asked } = deps(GOOD);
     const huge = { ...STARS, band: { min: 0, max: fits + 1 } };
-    await expect(runPull(pullOf({ stars: huge, pairs: PAIRS }), d)).rejects.toThrow(/whole-table rows of up to \d+ cells exceed 37000000/);
+    await expect(runPull(pullOf({ stars: huge, pairs: PAIRS }), d)).rejects.toThrow(new RegExp(`whole-table rows of up to \\d+ cells exceed ${MAX_TABLE_CELLS}`));
     expect(asked).toEqual([]);
     expect(() => assertTablesFit(pullOf({ stars: { ...STARS, band: { min: 0, max: fits } }, pairs: PAIRS }))).not.toThrow();
   });
 
   it('refuses a sliced table whose slices together could hold too many cells', () => {
-    const sliced = (sliceRows: number): PullTable => ({ ...STARS, scope: { kind: 'sliced', key: 'source_id', edges: [2n], sliceRows } });
+    const sliced = (sliceRows: number): PullTable => ({
+      ...STARS, scope: { kind: 'sliced', key: 'source_id', edges: [2n], sliceRows }, band: { min: 0, max: MAX_TABLE_CELLS },
+    });
     const fits = Math.floor(MAX_TABLE_CELLS / (2 * LIMIT_HEADROOM * STARS.columns.length));
-    expect(() => assertTablesFit(pullOf({ stars: sliced(fits + 1), pairs: PAIRS }))).toThrow(/sliced rows of up to \d+ cells exceed 37000000/);
+    expect(() => assertTablesFit(pullOf({ stars: sliced(fits + 1), pairs: PAIRS }))).toThrow(new RegExp(`sliced rows of up to \\d+ cells exceed ${MAX_TABLE_CELLS}`));
     expect(() => assertTablesFit(pullOf({ stars: sliced(fits), pairs: PAIRS }))).not.toThrow();
+  });
+
+  it('bounds a sliced table by its band ceiling plus one slice, however many slices it asks', () => {
+    const sliceRows = 1_000_000;
+    const edges: readonly [bigint, ...bigint[]] = [1n, ...Array.from({ length: 98 }, (_, i) => BigInt(i + 2))];
+    const sliced = (max: number): PullTable => ({ ...STARS, scope: { kind: 'sliced', key: 'source_id', edges, sliceRows }, band: { min: 0, max } });
+    const fits = MAX_TABLE_CELLS / STARS.columns.length - sliceRows * LIMIT_HEADROOM;
+    expect(() => assertTablesFit(pullOf({ stars: sliced(fits), pairs: PAIRS }))).not.toThrow();
+    expect(() => assertTablesFit(pullOf({ stars: sliced(fits + 1), pairs: PAIRS }))).toThrow(`sliced rows of up to ${MAX_TABLE_CELLS + STARS.columns.length} cells`);
+  });
+
+  it('refuses a sliced table once its rows pass the band ceiling, naming the count, and writes nothing', async () => {
+    const { deps: d, asked } = deps((adql) => (adql.includes('gaia_source') ? GOOD(adql) : 'source_id,period\n1,5\n2,10\n'));
+    const capped = { ...SLICED, band: { min: 1, max: 3 } };
+    await expect(runPull(pullOf({ stars: STARS, pairs: capped }), d)).rejects.toThrow(/pairs: 4 rows after query 2 of 2, past the 3 it may hold/);
+    expect(asked).toHaveLength(3);
+    expect(readdirSync(dir).filter((f) => f.endsWith('.tsv'))).toEqual([]);
   });
 
   it('refuses a reply whose columns are not the declared ones, and caches no refused reply', async () => {
