@@ -26,11 +26,13 @@ const STARS: PullTable = {
   spotRows: [{ key: 'source_id', value: '1', cells: { parallax: '0.5' } }],
 };
 
+const PAIRS_REQUEST = { kind: 'request', key: 'source_id', idColumn: 'source_id', ids: ['1', '2', '3'], batchSize: 2, rowsPerId: 1 } as const;
+
 const PAIRS: PullTable = {
   from: 'gaiadr3.nss_two_body_orbit',
   columns: [{ name: 'source_id' }, { name: 'period' }],
   sortBy: [{ column: 'source_id', as: 'integer' }],
-  scope: { kind: 'request', key: 'source_id', idColumn: 'source_id', ids: ['1', '2', '3'], batchSize: 2, rowsPerId: 1 },
+  scope: PAIRS_REQUEST,
   band: { min: 1, max: 3 },
   spotRows: [{ key: 'source_id', value: '2', cells: { period: '10' } }],
 };
@@ -161,6 +163,19 @@ describe('runPull', () => {
     const { deps: d } = deps((adql) => (adql.includes('gaia_source') ? 'source_id,plx\n1,0.5\n' : GOOD(adql)));
     await expect(runPull(pullOf({ stars: STARS, pairs: PAIRS }), d)).rejects.toThrow(/are not the declared/);
     expect(existsSync(ckpt()) ? readdirSync(ckpt()) : []).toEqual([]);
+  });
+
+  it('a request-scoped table under its coverage floor writes nothing; at a floor it meets, it writes', async () => {
+    const missingThree = (adql: string): string => (adql.includes('IN (3)') ? 'source_id,period\n' : GOOD(adql));
+    const withFloor = (floor: number): PullTable => ({
+      ...PAIRS,
+      scope: { ...PAIRS_REQUEST, coverage: { groups: [{ name: 'answered', has: () => true }], floor } },
+    });
+    await expect(runPull(pullOf({ stars: STARS, pairs: withFloor(0.7) }), deps(missingThree).deps)).rejects.toThrow(EmissionRefused);
+    expect(readdirSync(dir).filter((f) => f.endsWith('.tsv'))).toEqual([]);
+
+    await runPull(pullOf({ stars: STARS, pairs: withFloor(0.6) }), deps(missingThree).deps);
+    expect([read('stars.tsv'), read('pairs.tsv')]).toEqual(['source_id\tparallax\n1\t0.5\n2\t\n', 'source_id\tperiod\n1\t5\n2\t10\n']);
   });
 });
 
