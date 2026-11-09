@@ -46,7 +46,7 @@ type AstrometryRow = TableRow<(typeof ASTROMETRY_COLUMNS)[number]>;
  *  numeric parse would corrupt the key. */
 function foldAstrometryRow(
   row: AstrometryRow,
-  out: Map<string, GaiaAstrometryCatalogRow>,
+  onRow: (sourceId: string, row: GaiaAstrometryCatalogRow) => void,
   from: RowKeyed<string>,
   keep?: ReadonlySet<string>,
 ): void {
@@ -56,7 +56,7 @@ function foldAstrometryRow(
   const raDeg = row.float('ra');
   const decDeg = row.float('dec');
   if (raDeg === null || decDeg === null) return;
-  out.set(sourceId, {
+  onRow(sourceId, {
     raDeg,
     decDeg,
     parallaxMas: row.float('parallax'),
@@ -75,8 +75,16 @@ function foldAstrometryRow(
 }
 
 /** Line-fed, so a streaming read over the magnitude pull folds rows exactly
- *  as the whole-text parse does. `keep` filters to a subset without holding
- *  the table. */
+ *  as the whole-text parse does, handing each to `onRow` without holding the
+ *  table. `keep` filters to a subset. */
+export function gaiaAstrometryLineReader(
+  from: Declared & RowKeyed<string>,
+  onRow: (sourceId: string, row: GaiaAstrometryCatalogRow) => void,
+  keep?: ReadonlySet<string>,
+): (raw: string) => void {
+  return tableLineReader({ ...from, columns: ASTROMETRY_COLUMNS }, (row) => foldAstrometryRow(row, onRow, from, keep));
+}
+
 export function gaiaAstrometryAccumulator(
   from: Declared & RowKeyed<string>,
   keep?: ReadonlySet<string>,
@@ -85,9 +93,8 @@ export function gaiaAstrometryAccumulator(
   result: () => Map<string, GaiaAstrometryCatalogRow>;
 } {
   const out = new Map<string, GaiaAstrometryCatalogRow>();
-  const spec = { ...from, columns: ASTROMETRY_COLUMNS };
   return {
-    line: tableLineReader(spec, (row) => foldAstrometryRow(row, out, from, keep)),
+    line: gaiaAstrometryLineReader(from, (sourceId, row) => out.set(sourceId, row), keep),
     result: () => out,
   };
 }
@@ -97,7 +104,8 @@ export function parseGaiaAstrometryCatalogTsv(
   from: Declared & RowKeyed<string>,
 ): Map<string, GaiaAstrometryCatalogRow> {
   const out = new Map<string, GaiaAstrometryCatalogRow>();
-  for (const row of readTable({ ...from, columns: ASTROMETRY_COLUMNS }, text)) foldAstrometryRow(row, out, from);
+  const keepRow = (sourceId: string, row: GaiaAstrometryCatalogRow): void => { out.set(sourceId, row); };
+  for (const row of readTable({ ...from, columns: ASTROMETRY_COLUMNS }, text)) foldAstrometryRow(row, keepRow, from);
   return out;
 }
 

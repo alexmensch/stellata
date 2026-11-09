@@ -53,8 +53,8 @@ describe.skipIf(!available)('sid ledger guard', () => {
 
   it('retired state carries over from the migrated retirement files', () => {
     const rows = allEvents();
-    expect(retiredSids(rows).size).toBe(3645);
-    expect(sidSuccessorPairs(rows).length).toBe(3401);
+    expect(retiredSids(rows).size).toBe(3835);
+    expect(sidSuccessorPairs(rows).length).toBe(3591);
     expect(new Set(rows.filter((e) => e.event === 'reinstate').map((e) => e.sid)).size).toBe(18);
   });
 

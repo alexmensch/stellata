@@ -34,8 +34,7 @@ OUT = ROOT / "data" / "simbad" / "simbad_wds_xids.tsv"
 
 # Per-batch IN-clause size for SIMBAD's TAP. 1000 ``WDS J…`` idents ≈ 17
 # chars each + quoting + commas → ~20 KB POST body, well under SIMBAD's
-# ~64 KB ceiling. Matches refresh-simbad-sample.py's IDENT_BATCH so the
-# two scripts share the same scaling constants.
+# ~64 KB ceiling.
 IDENT_BATCH = 1_000
 
 # Output column order — matches the docstring schema block.

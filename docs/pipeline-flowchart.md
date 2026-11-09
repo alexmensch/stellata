@@ -267,7 +267,7 @@ visual magnitude 11 or brighter. The first term starts from AT-HYG's
 <!-- count:inherited-spine/rows -->313,257<!-- /count --> rows, re-keyed on the designations the primaries publish for each,
 and adds the <!-- count:membership-manifest/additionRows -->63,653<!-- /count --> stars those primaries name that AT-HYG never carried —
 most of them HD stars a defect in AT-HYG's own cross-matching dropped. The
-second term adds <!-- count:membership-manifest/magnitudeRows -->598,664<!-- /count --> Gaia stars no classical catalogue names. Both
+second term adds <!-- count:membership-manifest/magnitudeRows -->598,464<!-- /count --> Gaia stars no classical catalogue names. Both
 are written to one committed membership list, regenerated and compared on
 every change, and every addition carries a stated reason.
 
@@ -323,8 +323,8 @@ across the model.
 **Brightness and colour index.** A star's visual (Johnson V) magnitude is
 transformed from Gaia's own broadband measurements through a published
 relation ([Riello 2021](/data/papers/index.md#riello2021)), which covers
-<!-- count:build-catalog/vGaiaRiello -->963,375<!-- /count --> stars. Gaia's detectors saturate on the brightest stars, so
-those fall back to Hipparcos's printed V (<!-- count:build-catalog/vPrintedHip -->1,417<!-- /count -->), then Tycho-2 (<!-- count:build-catalog/vTycho2 -->189<!-- /count -->)
+<!-- count:build-catalog/vGaiaRiello -->963,505<!-- /count --> stars. Gaia's detectors saturate on the brightest stars, so
+those fall back to Hipparcos's printed V (<!-- count:build-catalog/vPrintedHip -->1,242<!-- /count -->), then Tycho-2 (<!-- count:build-catalog/vTycho2 -->190<!-- /count -->)
 and the Gliese catalogue (<!-- count:build-catalog/vGliese -->20<!-- /count -->). The B−V colour index follows a similar
 ladder: a published Gaia colour relation, then Hipparcos's printed B−V,
 then Gaia's synthetic photometry, then the colour implied by the

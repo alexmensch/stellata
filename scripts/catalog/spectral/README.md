@@ -12,10 +12,15 @@ are read by the viewer's focus card too, so they live in
 scripts/catalog/spectral/
   simbad-sptype-source.ts         SIMBAD_SPTYPE, the pull declared
                                   (../../util/sources/). One parse yields the
-                                  spectral index and each source_id's
+                                  spectral index (typed rows, plus a typeless
+                                  row only under its source_id and only where
+                                  its otype is `**`, the one flag
+                                  build-catalog reads off one) and each source_id's
                                   hip / tyc / gj cross-IDs, which the binding
-                                  derivation and the spine audits read; a
-                                  repeated source_id fails it.
+                                  derivation and the spine audits read, plus
+                                  the cross-IDs of the objects carrying no
+                                  source_id, which contest the derivation's
+                                  keys; a repeated source_id fails it.
   sptype-overrides-source.ts      SPTYPE_OVERRIDES, the curated tier's MK
                                   types by HIP, declared; each classified
                                   at the read.
@@ -44,7 +49,7 @@ via a seven-tier priority chain:
    (Sol's G2V, [Curated records](../record/README.md#curated-records))
    outranks a HIP-keyed one.
 1. **SIMBAD `sp_type` by Gaia source_id** (`data/simbad/simbad_sptype.tsv`
-   from `scripts/refresh/refresh-simbad-sptype.py`). SIMBAD canonicalises
+   from `refresh:simbad-sptype`, `scripts/refresh/simbad-sptype/`). SIMBAD canonicalises
    sp_type to Morgan-Keenan only — variability annotations live in `otype`,
    never in sp_type — so the parser (`classifyFromSimbad`, `/src/catalog-format/spectral/spectral-classify.ts`) is a strict MK
    walker covering plain MK (`G2V`, `K0III`, `M1.5Iab-b`), white dwarfs
@@ -87,7 +92,7 @@ via a seven-tier priority chain:
    each tier wins**, pinned as `spectralSimbadBySourceId` / `ByHip` /
    `ByTyc` / `ByGj` in `../build-catalog-expected.json` and summing to
    `spectralBySimbad` — so a tier that stops firing shows up as its own
-   count rather than as noise inside a <!-- count:build-catalog/spectralBySimbad k2 -->340k<!-- /count --> total. Read the per-tier figures
+   count rather than as noise inside a <!-- count:build-catalog/spectralBySimbad k2 -->460k<!-- /count --> total. Read the per-tier figures
    there rather than restating them here, which is how the ones this section
    used to carry went stale.
 5. **Gaia DR3 ESP-ELS `spectraltype_esphs`** ([Creevey 2023](/data/papers/index.md#creevey2023); a column on
@@ -110,7 +115,7 @@ none.
 
 AT-HYG's contaminated `spect` cell is no longer consulted for
 classification (build-counts over the walked records: SIMBAD
-**<!-- count:build-catalog/spectralBySimbad -->341,203<!-- /count -->** / ESP-ELS **<!-- count:build-catalog/spectralByGspspec -->617,169<!-- /count -->** / `none` **<!-- count:build-catalog/spectralFallback -->6,628<!-- /count -->**); it is still used as a
+**<!-- count:build-catalog/spectralBySimbad -->464,424<!-- /count -->** / ESP-ELS **<!-- count:build-catalog/spectralByGspspec -->494,467<!-- /count -->** / `none` **<!-- count:build-catalog/spectralFallback -->6,065<!-- /count -->**); it is still used as a
 last-resort hover-display fallback when both upstream sources are blank.
 
 The class it resolves feeds the radius chain:
@@ -192,8 +197,8 @@ EOF
 ```
 
 **The pull's own order still decides something else: which rung spends the
-request.** `membership_request_keys` (`scripts/refresh/simbad/inputs.py`) is a
-strict fall-through — `elif tyc … elif gl` — so a no-Gaia row carrying
+request.** `membershipKeys` (`scripts/refresh/simbad/membership-keys-pure.ts`) is a
+strict fall-through down `WIDENING_LADDER` — HIP, then TYC, then GJ — so a no-Gaia row carrying
 **both** ids is requested by TYC alone and its GJ is never asked for; no
 record-side reorder can reach a row the pull did not fetch. Of the 54 spine
 rows with neither source_id nor HIP, 41 go by TYC and 5 of those also carry a

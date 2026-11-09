@@ -299,14 +299,22 @@ describe('parseSimbadSptypeTsv', () => {
   });
 
   it('indexes a blank-source_id row by HIP (Gaia-saturated bright stars)', () => {
-    const tsv = HDR +
-      '51431\t* bet Per\tB8V\tC\t\tSB*\t14576\t\n' +
-      '999\tBlank\t\t\t\t\t\t1234\n';
+    const tsv = HDR + '51431\t* bet Per\tB8V\tC\t\tSB*\t14576\t\n';
     const { bySourceId, byHip } = parseSimbadSptypeTsv(tsv, FROM).spectral;
-    expect(bySourceId.size).toBe(1);
-    expect(bySourceId.has('1234')).toBe(true);
-    expect(byHip.size).toBe(1);
+    expect(bySourceId.size).toBe(0);
     expect(byHip.get(14576)?.spType).toBe('B8V');
+  });
+
+  it('keeps a typeless row only as a multiple star, under its source_id alone', () => {
+    const tsv = HDR +
+      '111\tPair\t\t\t\t**\t5\t9876\t1-2-1\n' +
+      '999\tBlank\t\t\t\t*\t6\t1234\n';
+    const { spectral, xids } = parseSimbadSptypeTsv(tsv, FROM);
+    expect([...spectral.bySourceId.keys()]).toEqual(['9876']);
+    expect(spectral.bySourceId.get('9876')?.otype).toBe('**');
+    expect(spectral.byHip.size).toBe(0);
+    expect(spectral.byTyc.size).toBe(0);
+    expect([...xids.keys()]).toEqual(['9876', '1234']);
   });
 
   it('drops rows with no source_id, HIP or TYC', () => {
@@ -381,11 +389,9 @@ describe('parseSimbadSptypeTsv', () => {
     expect([...xids]).toEqual([['9876', { hip: 14576, tyc: '1-2-1', gj: 'Gl 165A' }]]);
   });
 
-  it('decodes blank sp_type / sp_qual / otype cells as null', () => {
-    const tsv = HDR + '111\t*\t\t\t\t\t\t9876\n';
-    const { bySourceId } = parseSimbadSptypeTsv(tsv, FROM).spectral;
-    const r = bySourceId.get('9876');
-    expect(r?.spType).toBeNull();
+  it('decodes blank sp_qual / otype cells as null', () => {
+    const tsv = HDR + '111\t*\tG2V\t\t\t\t\t9876\n';
+    const r = parseSimbadSptypeTsv(tsv, FROM).spectral.bySourceId.get('9876');
     expect(r?.spQual).toBeNull();
     expect(r?.otype).toBeNull();
   });

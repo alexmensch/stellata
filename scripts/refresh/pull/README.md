@@ -19,8 +19,9 @@ SIMBAD. A pull is a `pull` step on the step table
 - `slices-pure.ts` (+ test) — the sliced scope's key ranges: their ADQL
   conditions, per-slice counts, and cutting edges from a table.
 - `checkpoint.ts` — the resume cache.
-- `pull.ts` (+ test, the faked-transport acceptance cases) — the `Pull` type,
-  `describePull`, `runPull`, and `LIVE`, the network transport.
+- `pull.ts` (+ test, the faked-transport acceptance cases) — the `Pull` and
+  `PhasedPull` types, `describePull` / `describePhasedPull`, `runPull` /
+  `runPhasedPull`, and `LIVE`, the network transport.
 
 ## A pull
 
@@ -67,6 +68,23 @@ changed id list does not, except through the pull's inputs.
 `emitArtifacts` emission of all its outputs: a failed gate, query or schema
 check anywhere leaves every prior output byte-identical.
 
+### A phased pull
+
+A `PhasedPull` is for a pull whose later queries take their ids from earlier
+answers, as every manifest-keyed SIMBAD pull does (identifier → oid, then
+oid → columns). It declares its `phases` (a `Phase` is a table's query without
+its ids: whole-table with the most rows it should return, sliced as a static
+table is, or request-scoped by key, batch size and rows per id), its written `tables` (columns, sort key,
+band, spot rows), optionally the `request` it derives and the files it comes
+off and the `parameters` that decide its bytes besides its queries (a seed,
+a draw's targets), and a `run(ask)` that composes the rows. `ask(phase, ids)` is the same
+batched, checkpointed, header-checked query a static table gets, and it
+**refuses a phase the pull does not declare**, so `describePhasedPull`, which
+states every phase's template, each table's formats and order, the
+parameters and the request, covers every query the run can send. `runPhasedPull` gates and emits
+as `runPull` does, plus whatever checks `run` returns; `runPull` is a phased
+pull of one phase per table.
+
 ### How big a table may be
 
 `runPull` holds every row of a table at once — its parsed cells, their sorted
@@ -110,9 +128,13 @@ limit, so a pull sized for ESA's 50,000 keeps `sliceRows` at most 24,999.
 ## The checkpoint
 
 Each answered query's CSV reply is cached once it passes the column check, under
-`<first output>.ckpt/`, named by the hash of the query's text; a re-run
-replays a cached reply (re-checked against the limit and the columns) and
-asks only what is missing. Keying on the text is what makes **a changed
+`<first output>.ckpt/`, named by the hash of the query's text, beside the
+mirror that answered it; a re-run replays a cached reply (re-checked against
+the limit and the columns) and asks only what is missing. **A replay reports
+its cached mirror**, so the record's `answeredBy` names who answered whichever
+run fetched the rows, and a reply first answered by an unverified mirror stays
+caught after a gate-fix re-run. A reply seeded from committed rows records no
+mirror; one with no record of its mirror is refused. Keying on the text is what makes **a changed
 query never replay an old answer**: a new column, `WHERE`, batch or id hashes
 to a new file. The folder is removed only after the outputs commit, so **a
 failed gate keeps it**, and the fix re-run costs no network. It is

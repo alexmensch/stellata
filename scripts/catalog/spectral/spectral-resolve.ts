@@ -60,7 +60,7 @@ export function emptySimbadSpectralIndex(): SimbadSpectralIndex {
   return emptySimbadNamespaceIndex<SimbadSpectralRow>();
 }
 
-/** Parses the TSV `scripts/refresh/refresh-simbad-sptype.py` produces.
+/** Parses the TSV `refresh:simbad-sptype` produces.
  *  source_id is kept as a string for the same > Number.MAX_SAFE_INTEGER
  *  reason `parseGaiaApsisTsv` uses. A row is indexed under every namespace it
  *  carries; the rows the pull enumerated by SIMBAD oid alone carry none and
@@ -70,11 +70,13 @@ const SPTYPE_TABLE_COLUMNS = ['simbad_oid', 'source_id', 'sp_type', 'hip', 'tyc'
 export interface SimbadSptype {
   spectral: SimbadSpectralIndex;
   xids: Map<string, SimbadXids>;
+  sourcelessXids: SimbadXids[];
 }
 
 export function parseSimbadSptypeTsv(text: string, from: Declared & RowKeyed<number>): SimbadSptype {
   const index = emptySimbadSpectralIndex();
   const xids = new Map<string, SimbadXids>();
+  const sourcelessXids: SimbadXids[] = [];
   for (const row of readTable({ ...from, columns: SPTYPE_TABLE_COLUMNS }, text)) {
     const spType = row.text('sp_type');
     const spQual = row.text('sp_qual');
@@ -85,8 +87,15 @@ export function parseSimbadSptypeTsv(text: string, from: Declared & RowKeyed<num
       tyc: row.text('tyc'),
       gl: row.text('gj'),
     };
+    const rowXids: SimbadXids = { hip: keys.hip, tyc: row.raw('tyc') || null, gj: row.raw('gj') || null };
+    if (keys.sourceId !== null) {
+      if (xids.has(keys.sourceId)) throw new Error(`${from.file} has two rows keyed source_id=${keys.sourceId}. ${from.hint}`);
+      xids.set(keys.sourceId, rowXids);
+    } else sourcelessXids.push(rowXids);
+    const indexed = indexedKeys(keys, spType, otype);
+    if (indexed === null) continue;
     indexSimbadRow(
-      index, keys, { spType, spQual, otype, sourceId: keys.sourceId, ref: sourceRowRef(from, row.requiredId('simbad_oid')) },
+      index, indexed, { spType, spQual, otype, sourceId: keys.sourceId, ref: sourceRowRef(from, row.requiredId('simbad_oid')) },
       // No key repeats in the committed file (../naming/README.md#the-union-policy
       // adds rows,
       // never a second row under one key). On a designation key the row stating
@@ -105,11 +114,17 @@ export function parseSimbadSptypeTsv(text: string, from: Declared & RowKeyed<num
         );
       },
     );
-    if (keys.sourceId !== null) {
-      xids.set(keys.sourceId, { hip: keys.hip, tyc: row.raw('tyc') || null, gj: row.raw('gj') || null });
-    }
   }
-  return { spectral: index, xids };
+  return { spectral: index, xids, sourcelessXids };
+}
+
+/** A typeless row is never a match and loses every tie, so only the multiple-star
+ *  flag build-catalog reads off `bySourceId` keeps one in the index: about half
+ *  the manifest-wide table carries no type. */
+function indexedKeys(keys: SimbadRecordKeys, spType: string | null, otype: string | null): SimbadRecordKeys | null {
+  if (spType) return keys;
+  if (otype !== SIMBAD_OTYPE_MULTIPLE || keys.sourceId === null) return null;
+  return { sourceId: keys.sourceId, hip: null, tyc: null, gl: null };
 }
 
 /** The resolver's tiers in priority order — the one statement of them, and the

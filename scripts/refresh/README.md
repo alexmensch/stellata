@@ -91,22 +91,21 @@ script directly writes no record, so the build then stops on that pull.
 | `refresh:iau-wgsn` | `refresh-iau-wgsn.py` | `data/iau-wgsn/{NEC,wgsnFaints}.csv` | The IAU WGSN naked-eye catalogue + faint approved names (plain HTTP, not TAP; schema / row-band / spot-row gates). Follow with `pnpm run build:wgsn`. |
 | `refresh:tycho2` | `refresh-tycho2.py` | `data/tycho2/{tycho2_main,tycho2_suppl1}.tsv` | Tycho-2 (`I/259` `tyc2` + `suppl_1`) mean positions with per-star mean epochs, PM, BT/VT — filtered to the TYCs the manifest and IV/25 mention. Range-batched over TYC1 and filtered locally; VizieR can express no server-side filter on the full identifier ([Why the pull is range-batched](/data/tycho2/README.md#why-the-pull-is-range-batched-rather-than-key-filtered)). |
 | `refresh:gliese` | `refresh-gliese.py` | `data/gliese/gliese_v70a.tsv` | [Gliese 1991](/data/papers/index.md#gliese1991) third catalogue of nearby stars (`V/70A`, whole table) — printed Johnson V + B−V, spectral type, parallax and rv, plus the B1950 position, proper motion and cross-names the binding review measures against. The V cascade's tier under Tycho-2, and the first-order source behind every `mag_src=GJ` cell (`data/gliese/README.md`). |
-| `refresh:simbad` | `refresh-simbad-sample.py` | `data/simbad/simbad_sample.tsv` | Stratified random 50k SIMBAD sample (validation corpus). |
-| `refresh:simbad-values` | `refresh-simbad-values.py` | `data/simbad/simbad_values.tsv` | Bibcoded rv / parallax / PM / coordinates + B/V fluxes for the [§ 5](/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers) value cohort — the manifest rows a SIMBAD value tier can reach. Cohort predicate and coverage: [The values pull](/data/simbad/README.md#the-values-pull). The cohort is manifest rows less those `gaia_dr3_astrometry_catalog.tsv` already completes, and `build:membership` reads that same table, so it runs AFTER `refresh:gaia-astrometry-catalog` and the `build:membership` that follows it. |
+| `refresh:simbad` | `simbad-sample/refresh-simbad-sample.ts` | `data/simbad/simbad_sample.tsv` | V-stratified seeded 50k SIMBAD sample (validation corpus). TypeScript, on `pull/`; own README. |
+| `refresh:simbad-values` | `simbad-values/refresh-simbad-values.ts` | `data/simbad/simbad_values.tsv` | Bibcoded rv / parallax / PM / coordinates + B/V fluxes for the [§ 5](/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers) value cohort — the manifest rows a SIMBAD value tier can reach. Cohort predicate and coverage: [The values pull](/data/simbad/README.md#the-values-pull). The cohort is manifest rows less those Gaia's 5p tables (`gaia_dr3_astrometry_catalog.tsv`, `gaia_dr3_magnitude_pull.tsv`) already complete, and `build:membership` reads both, so it runs AFTER `refresh:gaia-astrometry-catalog`, `refresh:gaia-magnitude` and the `build:membership` that follows them. |
 | `refresh:simbad-tyc-hd` | `refresh-simbad-tyc-hd.py` | `data/simbad/simbad_tyc_hd.tsv` | SIMBAD's own HD identification per Tycho-2 entry, keyed on TYC — the witness independent of IV/25 that a close pair's crossed HD cells need ([The TYC → HD pull](/data/simbad/README.md#the-tyc--hd-pull)). Request set is `refresh_lib.read_mentioned_tycs` — IV/25's Tycho ids union the manifest's — shared with `refresh:tycho2` rather than restated, so both cover the same entries by construction. Composes the `simbad/` plumbing and states no ADQL of its own. |
 | `refresh:simbad-wds-sptype` | `simbad-wds-sptype/refresh-simbad-wds-sptype.ts` | `data/simbad/simbad_wds_sptype.tsv` | SIMBAD `sp_type` for every oid `simbad_wds_xids.tsv` binds a WDS component to — the rows `build:binaries` Stage 6 reads. Keyed on that file alone, never the manifest, so run it AFTER `refresh:simbad-wds-xids`. TypeScript, on `pull/`; own README. |
 | `refresh:edenhofer2024-main` / `-2kpc` | `refresh-edenhofer2024-{main,2kpc}.py` | `data/dust/edenhofer2024-{main,2kpc}.json` | The [Edenhofer 2024](/data/papers/index.md#edenhofer2024) dust map's two variants into `dustmaps`' cache, each recorded as a committed identity file the bakes read — [The Edenhofer 2024 pulls](/scripts/dust/README.md#the-edenhofer-2024-pulls). |
 | `validate:simbad` | `scripts/catalog/validate/validate-simbad-sample.ts` | (report only) | Tier C — cross-check `public/catalog.bin` against the committed SIMBAD sample. The build-time subset of the same check is `distance-regression-check.ts`, gated on `build-distance-outliers-expected.json`. |
 
-`refresh:simbad-sptype`, `refresh:simbad-wds-xids` and `refresh:msc` run
-`refresh-simbad-sptype.py`, `refresh-simbad-wds-xids.py` and
-`refresh-msc.py` (outputs `data/simbad/simbad_sptype.tsv`, the
-manifest-keyed spectral types membership and the catalogue read,
-`data/simbad/simbad_wds_xids.tsv`, `data/msc/msc_*.tsv`). The Python SIMBAD
-scripts share `scripts/refresh/simbad/` plumbing (`specs.py`,
-`inputs.py`, `request.py`, `query.py`, `union.py`, `coverage.py`,
-`tsv.py`) so adding new SIMBAD-anchored pulls reuses the entire stack —
-that folder's own README carries the per-module roster. `refresh-msc.py` pulls the
+`refresh:simbad-sptype` (`simbad-sptype/`, TypeScript, own README) writes
+`data/simbad/simbad_sptype.tsv`, the manifest-keyed spectral types membership
+and the catalogue read. `refresh:simbad-wds-xids` and `refresh:msc` run
+`refresh-simbad-wds-xids.py` and `refresh-msc.py` (outputs
+`data/simbad/simbad_wds_xids.tsv`, `data/msc/msc_*.tsv`). The TypeScript
+SIMBAD pulls share `scripts/refresh/simbad/`'s core, and the two Python ones
+left (wds-xids, tyc-hd) its `specs.py` and `query.py`; that folder's own
+README carries the roster. `refresh-msc.py` pulls the
 three Multiple Star Catalog (MSC) tables (VizieR `J/ApJS/235/6`) into `data/msc/` with
 per-table schema validation and row bounds — source detail in
 `data/msc/README.md`.
@@ -185,7 +184,7 @@ stays a pinned count:
 | Shortfall | Gate | What a move means |
 |---|---|---|
 | `placement.distance.bailer-jones-absent` rows | **none**: a lineage invariant fails the build naming each one ([Invariants](/scripts/catalog/lineage/README.md#invariants)) | an eligible row has its own DR3 parallax, so [Bailer-Jones 2021](/data/papers/index.md#bailerjones2021) publishes a posterior for it; an absence is only ever this request set drifting |
-| `apsisSourcesUnpulled` | reviewed residual | **<!-- count:build-catalog/apsisSourcesUnpulled -->485<!-- /count -->**, down from 5,126 when the request was manifest-keyed and 5,076 of it was promoted companions — RECORDS but not manifest rows, so unrequestable at any magnitude. The union reaches all but <!-- count:build-catalog/apsisSourcesUnpulled -->485<!-- /count --> of them; that remainder plus genuine upstream absence is what the pin now holds |
+| `apsisSourcesUnpulled` | reviewed residual | **<!-- count:build-catalog/apsisSourcesUnpulled -->484<!-- /count -->**, down from 5,126 when the request was manifest-keyed and 5,076 of it was promoted companions — RECORDS but not manifest rows, so unrequestable at any magnitude. The union reaches all but <!-- count:build-catalog/apsisSourcesUnpulled -->484<!-- /count --> of them; that remainder plus genuine upstream absence is what the pin now holds |
 | `gspcSourcesUnpulled` | reviewed residual | Gaia genuinely lacks parameters for part of the catalogue; its request is the exported union, which does cover pair members |
 | `gateSkippedNoGMag` · `membership.binding.unweighed-no-pulled-row` rows | **0** · **none**, a lineage invariant | the original instance of this rule, on the two binding gates ([The request is a union](/scripts/catalog/astrometry-request/README.md#the-request-is-a-union-and-why-that-is-not-a-compromise)) |
 
@@ -209,7 +208,7 @@ consumer of a per-source table.
 
 **`simbad_sptype.tsv` is a cycle, not a line, and cannot be gated this
 way.** Its request keys come off the manifest's binding column
-(`membership_request_keys` keys a row on its `gaia_source_id` where it has
+(`membershipKeys` keys a row on its `gaia_source_id` where it has
 one), and its cross-IDs are the derivation's fourth binding source — so
 re-pulling it can change the very column that decided what to request.
 Re-running it is a fixpoint iteration with no convergence guarantee, and it
@@ -431,6 +430,6 @@ catalogue inconsistent. Order matters:
    per-row source_id updates if Gaia DR4's source_ids changed for the
    tracked stars (Gaia publishes a DR3↔DR4 cross-walk during the
    transition window). Tier C's `simbad_sample.tsv` should be
-   refreshed via `refresh-simbad-sample.py`, which re-stratifies over
+   refreshed via `refresh:simbad`, which re-stratifies over
    SIMBAD's own V-magnitude populations and so tracks SIMBAD growth rather
    than the DR transition.

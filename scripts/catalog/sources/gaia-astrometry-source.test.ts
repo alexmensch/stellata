@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
-  GAIA_ASTROMETRY, gaiaAstrometryAccumulator, parseGaiaAstrometryCatalogTsv,
+  GAIA_ASTROMETRY, gaiaAstrometryAccumulator, gaiaAstrometryLineReader, parseGaiaAstrometryCatalogTsv,
 } from './gaia-astrometry-source';
 import { MAGNITUDE_PULL } from '../membership/magnitude-term/magnitude-pull-source';
 import { sourceRowRef } from '../../util/sources/row-ref-pure';
@@ -52,6 +52,18 @@ describe('gaia-astrometry-source', () => {
     const map = acc.result();
     expect([...map.keys()]).toEqual(['456']);
     expect(map.get('456')?.raDeg).toBe(200.0);
+  });
+
+  it('gaiaAstrometryLineReader hands every row on, and the whole-text parse folds the same rows', () => {
+    const lines = [
+      'source_id\tra\tra_error\tdec\tdec_error\tparallax\tparallax_error\tpmra\tpmra_error\tpmdec\tpmdec_error\tref_epoch\truwe\tipd_frac_multi_peak\tphot_g_mean_mag\tphot_bp_mean_mag\tphot_rp_mean_mag\tradial_velocity\tradial_velocity_error',
+      '123\t100.5\t0.1\t-20.25\t0.1\t50.0\t0.1\t10.5\t0.1\t-3.5\t0.1\t2016.0\t1.2\t0\t8.0\t8.6\t7.3\t-110.51\t0.22',
+      '456\t200.0\t\t30.0\t\t\t\t\t\t\t\t2016.0\t\t\t9.0\t\t\t\t',
+    ];
+    const seen = new Map<string, unknown>();
+    const read = gaiaAstrometryLineReader(GAIA_ASTROMETRY, (sourceId, row) => seen.set(sourceId, row));
+    for (const line of lines) read(line);
+    expect(seen).toEqual(parseGaiaAstrometryCatalogTsv(lines.join('\n'), GAIA_ASTROMETRY));
   });
 
   it('gaiaAstrometryAccumulator resolves source_id by name, not by position', () => {

@@ -151,8 +151,8 @@ describe.skipIf(!ADJUDICATION_INPUTS.every(lfsContentReadable))(
     });
 
     it('answers for the stated share of the rows carrying both cells', () => {
-      expect(counts.bothCells).toBe(353352);
-      expect(counts.answered).toBe(331739);
+      expect(counts.bothCells).toBe(353351);
+      expect(counts.answered).toBe(331738);
       expect(counts.silent).toBe(21613);
     });
 
@@ -169,8 +169,8 @@ describe.skipIf(!ADJUDICATION_INPUTS.every(lfsContentReadable))(
 
     // 23 before the eight rows the four-witness rule licensed were asserted
     // (README.md#which-witness-decides-a-close-pairs-hd). What is left is
-    // the twelve the rule refuses, the two it cannot answer for, and α Psc,
-    // whose correction is held back — see the move set's own comment.
+    // the twelve the rule refuses and the three it licenses but no override
+    // asserts yet — see the move set's own comment.
     it('finds 15 rows both witnesses contradict', () => {
       expect(counts.bothAgainst).toBe(15);
     });
@@ -195,17 +195,18 @@ const SIMBAD_SPTYPE_OBJECTS = {
  *  HD cell names. Enumerated rather than counted, because the assertion those
  *  rows license moves canonical SID keys and each has to be inspected.
  *
- *  **Eight of the nine are asserted and so no longer contested.** α Psc is the
- *  one left, and it stays until promotion's twin guard stops keying on the
- *  anchor's Bayer letter: correcting the record to HD 12447 letters the anchor
- *  A, the guard stops firing on the 02020+0246-AB row, and the row mints a copy
- *  of its own anchor. An empty set here means that landed and the rule has no
- *  remaining reach. */
-const FOUR_WITNESS_MOVE = ['40-1338-1'];
+ *  **Eight of the eleven are asserted and so no longer contested.** α Psc
+ *  (40-1338-1) stays until promotion's twin guard stops keying on the anchor's
+ *  Bayer letter: correcting the record to HD 12447 letters the anchor A, the
+ *  guard stops firing on the 02020+0246-AB row, and the row mints a copy of its
+ *  own anchor. HD 157778 (2604-1777-1) and HD 72737 (8568-3121-1) entered the
+ *  set when their records first bound a source SIMBAD names, and await review.
+ *  An empty set here means the rule has no remaining reach. */
+const FOUR_WITNESS_MOVE = ['2604-1777-1', '40-1338-1', '8568-3121-1'];
 
-/** No SIMBAD object for the record's own source, so the fourth witness is
- *  silent and the rule leaves the row alone. */
-const FOUR_WITNESS_SILENT = ['2604-1777-1', '8568-3121-1'].sort();
+/** Rows with no SIMBAD object for the record's own source: the fourth witness
+ *  is silent and the rule leaves them alone. */
+const FOUR_WITNESS_SILENT: string[] = [];
 
 describe.skipIf(!SPLIT_INPUTS.every(lfsContentReadable))('the four-witness split', () => {
   let move: string[];
@@ -260,7 +261,7 @@ describe.skipIf(!SPLIT_INPUTS.every(lfsContentReadable))('the four-witness split
     for (const list of [move, refuse, silent]) list.sort();
   });
 
-  it('splits the remaining contested rows one / twelve / two', () => {
+  it('splits the remaining contested rows three / twelve / none', () => {
     expect(move.length + refuse.length + silent.length).toBe(15);
     expect(move).toEqual(FOUR_WITNESS_MOVE);
     expect(silent).toEqual(FOUR_WITNESS_SILENT);

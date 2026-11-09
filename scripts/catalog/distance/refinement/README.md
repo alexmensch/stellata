@@ -195,7 +195,7 @@ Constants in `distance-overrides-pure.ts`:
 of the PM gate so `readStars` can count cone-membership candidates
 (`lmcCandidates` in `build-catalog-expected.json`) separately from
 PM-passing overrides (`lmcOverridden`). At `V ≤ 11` it fires for **<!-- count:build-catalog/lmcOverridden -->111<!-- /count -->
-of <!-- count:build-catalog/lmcCandidates -->14,552<!-- /count -->** cone candidates; most of the rest fail the PM tolerance (MW
+of <!-- count:build-catalog/lmcCandidates -->14,553<!-- /count -->** cone candidates; most of the rest fail the PM tolerance (MW
 halo / runaway stars whose PMs sit far from the LMC bulk centroid).
 
 **The PM gate is not a membership test, and the cone is crowded**, so

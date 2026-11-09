@@ -1,13 +1,16 @@
 {
   "inputs": {},
   "outputs": {
-    "data/simbad/simbad_values.tsv": "c16d7d1cc0cef87c33784636b20184c8816eb987"
+    "data/simbad/simbad_values.tsv": "7fe8bb3b63584824775d9783f9c2fc11612d8641"
   },
-  "query": "28951bbde290ea7e900cf1ec6d9102be01b97b13",
-  "answeredBy": [],
-  "request": "ac0191ec2cc60dd81a152b9109878172ba4fbb2d",
+  "query": "9824f09ba2af64af04b6ff4be993b96036c97dc4",
+  "answeredBy": [
+    "SIMBAD-Harvard"
+  ],
+  "request": "e4b2e3bd15214d8cf83be6ed9a2bb9b4561e3795",
   "requestFrom": [
     "data/membership/membership-manifest.tsv",
-    "data/gaia/gaia_dr3_astrometry_catalog.tsv"
+    "data/gaia/gaia_dr3_astrometry_catalog.tsv",
+    "data/gaia/gaia_dr3_magnitude_pull.tsv"
   ]
 }

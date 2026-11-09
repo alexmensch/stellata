@@ -1,12 +1,18 @@
 {
   "inputs": {
-    "data/gaia/gaia_catalog_source_id_request.tsv": "58d08db948e98c660e7abffc6b5e4dfeb5cdf671"
+    "data/gaia/gaia_catalog_source_id_request.tsv": "054110df19c50010bd57e2133b61226d5f7028fc"
   },
   "outputs": {
-    "data/bailer-jones/bailer-jones-dr3.tsv": "237ac2f45154fb031d08243c8fea264fb4378c47"
+    "data/bailer-jones/bailer-jones-dr3.tsv": "7ad2fc043de8c995b24174de69be737108ef8ca8"
+  },
+  "recorded": {
+    "listings": {},
+    "probes": {}
   },
   "query": "787f9c03bc3ecd7ef0e7dc2c62b990eb326cfe65",
-  "answeredBy": [],
+  "answeredBy": [
+    "ESA-sync"
+  ],
   "release": "Bailer-Jones 2021 (Gaia EDR3)",
   "requestFrom": []
 }

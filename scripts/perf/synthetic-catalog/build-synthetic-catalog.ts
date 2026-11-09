@@ -41,7 +41,6 @@ import {
   galacticUnitVector,
   marchSightline,
   marchStepPc,
-  mulberry32,
   sampleCdf,
   sightlineWeights,
   skyCellSolidAngle,
@@ -49,6 +48,7 @@ import {
   type IntrinsicTuple,
   type SightlineStep,
 } from './synthetic-catalog-pure';
+import { mulberry32 } from '../../util/seeded-random-pure';
 
 const N_LON = 128;
 const N_SIN_B = 64;
