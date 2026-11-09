@@ -1,15 +1,11 @@
 // The hand-curated SIMBAD oid overrides for WDS components the ident lookup and the cascade miss. See README.md#overrides.
 
 import type { Declared } from '../../util/sources/source';
-import { readTable, type TableRow } from '../../util/tsv/table-pure';
+import { readTable } from '../../util/tsv/table-pure';
 import { componentId, type WdsComponent } from './wds-components-pure';
 
 export interface WdsXidOverride extends WdsComponent {
   readonly oid: number;
-}
-
-function required<C extends string>(row: TableRow<C>, column: C): string {
-  return row.text(column) ?? row.fail(`${column} is empty. A curated row skipped in silence does nothing; complete it or comment it with \`#\``);
 }
 
 /** One override per component: a second row for the same component is refused, never last-wins. */
@@ -17,8 +13,8 @@ export function parseWdsXidsOverrides(text: string, from: Declared): WdsXidOverr
   const columns = ['wds_id', 'component', 'simbad_oid', 'reason'] as const;
   const out = new Map<string, WdsXidOverride>();
   for (const row of readTable({ ...from, columns, comments: true }, text)) {
-    const override = { wdsId: required(row, 'wds_id'), component: required(row, 'component'), oid: row.id('simbad_oid') ?? row.fail('simbad_oid is empty') };
-    required(row, 'reason');
+    const override = { wdsId: row.requiredText('wds_id'), component: row.requiredText('component'), oid: row.requiredId('simbad_oid') };
+    row.requiredText('reason');
     const id = componentId(override);
     const held = out.get(id);
     if (held !== undefined) row.fail(`a second override for ${id} (oid ${held.oid}, then ${override.oid})`);
