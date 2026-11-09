@@ -34,8 +34,10 @@ offsets moved.
 
 ## The components field
 
-`splitComponents` is the only split of it. A blank field is WDS's implied
-single A,B pair and answers null, as does a form with no confident split
-(`ABC`, three comma-separated tokens), so both steps decompose the same rows.
+`splitComponents` is the TypeScript side's one split of it; Python's
+`stage2_resolve.split_components` is its twin until the binaries switch. A
+blank field is WDS's implied single A,B pair and answers null, as does a form
+with no confident split (`ABC`, three comma-separated tokens), so a summary
+row splits the same way in both steps.
 The truncated secondary (`Aa1,2`) comes back as written; re-anchoring it is
 `pairComponentTokens` in `../binaries/component-tokens-pure.ts`.

@@ -30,8 +30,10 @@ tier reads it, as do the membership binding and `refresh:simbad-wds-sptype`
 
 Both sides of every WDS summary row whose `components` field splits
 (`splitComponents`, [`../../wds/`](../../wds/README.md#the-components-field)),
-each once: the components binaries Stage 2 decomposes, so the file answers
-the same set. Each is asked as `WDS J<wds_id><component>`, the one form
+each once. That is the summary's own splitting rows only: Stage 2 also walks
+blank-components rows it rescues to `AB`, ORB6 orphan pairs and MSC inner
+pairs ([The order of the passes](../../binaries/load/README.md#the-order-of-the-passes)),
+and their components are not asked. Each is asked as `WDS J<wds_id><component>`, the one form
 SIMBAD stores. Its describe states every ident and every override, off
 `data/wds/wds_summ.txt` and the overrides file, so a moved summary or a
 changed override stales the record.
