@@ -9,7 +9,7 @@ import {
   cellReader, checkedRows, formatTsv, projection, sortRows, type Column, type Row, type SortKey,
 } from './columns-pure';
 import { bandCheck, coverageCheck, spotRowCheck, type Coverage, type RowBand, type SpotRow } from './gates-pure';
-import { sliceConditions } from './slices-pure';
+import { sliceConditions, type SliceEdges } from './slices-pure';
 import { readCsv, tapClient, type TapArchive, type TapClientDeps, type Transport } from './tap-pure';
 
 export type Scope =
@@ -31,10 +31,10 @@ export type Scope =
 /** A table partitioned into half-open key ranges (README.md#sliced-scope). */
 export interface SlicedScope {
   readonly kind: 'sliced';
-  /** The integer ADQL column the slices partition; a row whose key is null is in no slice. */
+  /** The ADQL column the slices partition; a row whose key is null is in no slice. */
   readonly key: string;
   /** Strictly increasing, cut from the table by `cutEdges`. */
-  readonly edges: readonly [bigint, ...bigint[]];
+  readonly edges: SliceEdges;
   /** The most rows any slice is expected to hold. */
   readonly sliceRows: number;
 }

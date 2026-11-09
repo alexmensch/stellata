@@ -12,6 +12,7 @@ import { cutEdges, sliceCounts } from '../pull/slices-pure';
 import { GAIA, GAIA_SLICE_ROWS, readCsv } from '../pull/tap-pure';
 import { HIP_XMATCH_PULL, TYC_XMATCH_PULL } from './gaia-whole-table';
 import { HIP_XMATCH, TYC_XMATCH } from './gaia-whole-table-pure';
+import { HIP_XMATCH_EDGES, TYC_XMATCH_EDGES } from './slice-edges';
 
 const replyHeader = (table: PullTable): string => table.columns.map((c) => c.name).join(',');
 
@@ -36,20 +37,15 @@ const REPLIES = {
 };
 
 const PULLS = [
-  { name: 'hip-xmatch', table: HIP_XMATCH, file: DATA_FILES.gaiaHipXmatch, reply: REPLIES.hip },
-  { name: 'tyc-xmatch', table: TYC_XMATCH, file: DATA_FILES.gaiaTycXmatch, reply: REPLIES.tyc },
+  { name: 'hip-xmatch', table: HIP_XMATCH, edges: HIP_XMATCH_EDGES, file: DATA_FILES.gaiaHipXmatch, reply: REPLIES.hip },
+  { name: 'tyc-xmatch', table: TYC_XMATCH, edges: TYC_XMATCH_EDGES, file: DATA_FILES.gaiaTycXmatch, reply: REPLIES.tyc },
 ] as const;
 
 const committed = (file: string): string => readFileSync(join(REPO_ROOT, file), 'utf8');
 
-function sliced(table: PullTable) {
-  if (table.scope.kind !== 'sliced') throw new Error('not a sliced table');
-  return table.scope;
-}
-
 const SLICE_KEY = 'gaia_source_id';
 
-describe.each(PULLS)('$name', ({ name, table, file, reply }) => {
+describe.each(PULLS)('$name', ({ name, table, edges, file, reply }) => {
   const readable = lfsContentReadable(join(REPO_ROOT, file));
 
   it.skipIf(!readable)('writes a recorded reply\'s rows as the committed table\'s lines, and its spot rows match', () => {
@@ -66,7 +62,6 @@ describe.each(PULLS)('$name', ({ name, table, file, reply }) => {
     const lines = committed(file).trimEnd().split('\n');
     const at = lines[0].split('\t').indexOf(SLICE_KEY);
     const keys = lines.slice(1).map((line) => BigInt(line.split('\t')[at]));
-    const { edges } = sliced(table);
     const over = sliceCounts(keys, edges).filter((n) => n > GAIA_SLICE_ROWS);
     const recut = (): string => cutEdges(keys.sort((a, b) => (a < b ? -1 : a > b ? 1 : 0)), GAIA_SLICE_ROWS).join(', ');
     expect(over, over.length === 0 ? '' : `re-cut the edges: ${recut()}`).toEqual([]);

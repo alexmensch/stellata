@@ -112,11 +112,19 @@ pull near the cap is re-measured, not assumed.
 
 ### Sliced scope
 
-A table no list of ids scopes, cut into half-open ranges of an integer
-`key` between committed `edges`, open at both ends (`key < e0`, `e0 ≤ key <
-e1`, …, `key ≥ eN`), so every non-null key falls in exactly one slice and no
-row is asked for twice. The edges are part of the description: a re-cut
-stales the pull, and its next run asks the new ranges.
+A table no list of ids scopes, cut into half-open ranges of a `key` between
+committed `edges`, open at both ends (`key < e0`, `e0 ≤ key < e1`, …, `key ≥
+eN`), so every non-null key falls in exactly one slice and no row is asked for
+twice. The edges are part of the description: a re-cut stales the pull, and
+its next run asks the new ranges.
+
+An integer key's edges are `bigint`s, so a `source_id` past 2^53 is written
+exactly; a decimal key's (`phot_g_mean_mag`) are `number`s, written as their
+shortest text. The archive compares a decimal edge against the column's own
+value, a float32 for a REAL, so a row whose committed six-decimal text equals
+an edge may fall on either side of it. That moves a slice's count by the rows
+sitting on the edge, never the partition: adjacent conditions share one
+literal.
 
 `sliceRows` is the most rows any slice holds, and the edges are
 `cutEdges(<the table's keys, ascending>, sliceRows)`, which never splits equal
