@@ -20,6 +20,9 @@ SIMBAD. A pull is a `pull` step on the step table
 - `slices-pure.ts` (+ test) — the sliced scope's key ranges: their ADQL
   conditions, per-slice counts, and cutting edges from a table.
 - `checkpoint.ts` — the resume cache.
+- `recorded-reply.ts` — for a pull's own tests: a reply recorded from the
+  archive replayed into a committed table's lines, the committed table's rows,
+  and its slices measured against `sliceRows`.
 - `pull.ts` (+ test, the faked-transport acceptance cases) — the `Pull` and
   `PhasedPull` types, `describePull` / `describePhasedPull`, `runPull` /
   `runPhasedPull`, and `LIVE`, the network transport.

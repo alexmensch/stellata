@@ -5,10 +5,10 @@ import { describe, expect, it } from 'vitest';
 
 import { DATA_FILES } from '../../../src/catalog-format/pipeline-outputs/data-files';
 import { REPO_ROOT, lfsContentReadable } from '../../util/paths';
-import { cellReader, checkedRows, formatTsv, sortRows, type Row } from '../pull/columns-pure';
+import { cellReader, sortRows } from '../pull/columns-pure';
 import { spotRowCheck } from '../pull/gates-pure';
-import { queryLimit, type PullTable } from '../pull/pull';
-import { readCsv } from '../pull/tap-pure';
+import { queryLimit } from '../pull/pull';
+import { committedRows, linesNotCommitted, replyRows } from '../pull/recorded-reply';
 import {
   ASTROMETRY_COLUMNS, BINARIES_ASTROMETRY_SPOTS, CATALOG_ASTROMETRY_SPOTS, DR2_ROWS_PER_ID, astrometryTable, dr2NeighbourhoodTable, gspcTable,
 } from './gaia-request-pure';
@@ -54,36 +54,20 @@ const TABLES = [
   { name: 'dr2 neighbourhood (ARI)', table: dr2NeighbourhoodTable(NO_IDS), file: DATA_FILES.gaiaDr2Neighbourhood, reply: DR2_REPLY_ARI },
 ] as const;
 
-const committed = (file: string): string => readFileSync(join(REPO_ROOT, file), 'utf8');
-
-/** A TSV's lines without its final newline; never trimEnd, which would drop a last line's trailing empty cells. */
-const linesOf = (text: string): string[] => text.slice(0, -1).split('\n');
-
-function replyRows(name: string, table: PullTable, reply: readonly string[]): readonly Row[] {
-  const csv = `${[table.columns.map((c) => c.name).join(','), ...reply].join('\n')}\n`;
-  return checkedRows(table.columns, readCsv(csv, queryLimit(table), name), name);
-}
-
 describe.each(TABLES)('$name', ({ name, table, file, reply }) => {
   const readable = lfsContentReadable(join(REPO_ROOT, file));
 
   it.skipIf(!readable)('writes a recorded reply\'s rows as lines of the committed table', () => {
-    const rows = replyRows(name, table, reply);
-    const [header, ...lines] = linesOf(formatTsv(file, table.columns, rows));
-    const text = committed(file);
-    expect(text.slice(0, text.indexOf('\n'))).toBe(header);
-    const inTable = (line: string): boolean => text.startsWith(`${header}\n${line}\n`) || text.includes(`\n${line}\n`);
-    expect(lines.filter((line) => !inTable(line))).toEqual([]);
+    expect(linesNotCommitted(file, table.columns, replyRows(name, table.columns, reply))).toEqual([]);
   });
 
   it('passes its spot rows on the recorded reply', () => {
-    const rows = replyRows(name, table, reply);
+    const rows = replyRows(name, table.columns, reply);
     expect(spotRowCheck(name, rows.map(cellReader(table.columns, name)), table.spotRows).kind).toBe('pass');
   });
 
   it.skipIf(!readable)('orders the committed table by its sort key, as a pull writes it', () => {
-    const [, ...lines] = linesOf(committed(file));
-    const rows: Row[] = lines.map((line) => line.split('\t').map((cell) => (cell === '' ? null : cell)));
+    const { lines, rows } = committedRows(file);
     expect(sortRows(table.columns, rows, table.sortBy, name).map((row) => row.map((c) => c ?? '').join('\t'))).toEqual(lines);
   });
 });
@@ -96,7 +80,7 @@ describe('the request queries', () => {
   it.skipIf(!lfsContentReadable(join(REPO_ROOT, DATA_FILES.gaiaDr2Neighbourhood)))(
     'hold every DR3 id\'s rows in the committed neighbourhood within DR2_ROWS_PER_ID',
     () => {
-      const [, ...lines] = linesOf(committed(DATA_FILES.gaiaDr2Neighbourhood));
+      const { lines } = committedRows(DATA_FILES.gaiaDr2Neighbourhood);
       const perId = new Map<string, number>();
       for (const line of lines) {
         const dr3 = line.split('\t')[1];
