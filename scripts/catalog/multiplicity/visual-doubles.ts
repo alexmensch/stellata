@@ -1,7 +1,6 @@
 // Hipparcos CCDM parser plus curated visual-double overrides, feeding
 // the chart-mode wings glyph. See /scripts/catalog/multiplicity/README.md#ccdm-double-star-cross-match.
-import type { Declared } from '../../util/sources/source';
-import { readTable } from '../../util/tsv/table-pure';
+import type { ColumnTable } from '../../util/tsv/table-pure';
 import {
   flagGroupPrimaries,
   isOpticalDoublePrimary,
@@ -61,18 +60,13 @@ export const KNOWN_VISUAL_DOUBLE_HIPS: Set<number> = new Set(
 // that would share a type with a real CCDM ID.
 const HIP_CCDM_COLUMNS = ['HIP', 'CCDM', 'MultFlag'] as const;
 
-/** VizieR rules a dash line under its header (after a units line the reader
- *  already skips as blank); no TableSpec option expresses it. */
-const VIZIER_SEPARATOR = /^-+$/;
-
-export function parseHipCcdm(text: string, from: Declared): Map<string, number[]> {
+export function parseHipCcdm(table: ColumnTable): Map<string, number[]> {
   const groups = new Map<string, number[]>();
 
   let scanned = 0, kept = 0, viaOverride = 0;
   let droppedNoHip = 0, droppedNoCcdm = 0, droppedMultFlag = 0;
 
-  for (const row of readTable({ ...from, columns: HIP_CCDM_COLUMNS, comments: true }, text)) {
-    if (VIZIER_SEPARATOR.test(row.raw('HIP'))) continue;
+  for (const row of table(HIP_CCDM_COLUMNS)) {
     scanned++;
     const hip = row.int('HIP');
     if (hip === null || hip <= 0) { droppedNoHip++; continue; }

@@ -7,7 +7,6 @@ import {
   parseFaintsCorrections,
   parseNecCsv,
   parseWgsnFaintsCsv,
-  splitCsvLine,
 } from './wgsn-parse-pure';
 import { WGSN_FAINTS } from './wgsn-faints-source';
 
@@ -15,17 +14,6 @@ const NEC = { file: 'fixture/iau-wgsn/NEC.csv', hint: 'Re-run the refresh.' };
 const FAINTS = { file: 'fixture/iau-wgsn/wgsnFaints.csv', hint: 'Re-run the refresh.' };
 const CORRECTIONS = { file: 'fixture/iau-wgsn/wgsn_faints_corrections.tsv', hint: 'h' };
 const NO_CORRECTIONS = { sets: [], file: CORRECTIONS.file };
-
-describe('splitCsvLine', () => {
-  it('splits plain cells and preserves empties', () => {
-    expect(splitCsvLine('a,,c')).toEqual(['a', '', 'c']);
-  });
-
-  it('keeps commas inside quoted cells and unescapes doubled quotes', () => {
-    expect(splitCsvLine('1,"C5,5",x')).toEqual(['1', 'C5,5', 'x']);
-    expect(splitCsvLine('1,"say ""hi""",x')).toEqual(['1', 'say "hi"', 'x']);
-  });
-});
 
 describe('parseNecCsv', () => {
   it('decodes keys, null spellings, and HD component letters', () => {

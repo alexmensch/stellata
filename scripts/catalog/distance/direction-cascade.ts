@@ -8,7 +8,7 @@ import {
 } from '../../../src/astro-core/equatorial-basis';
 import { gaia5pUnreliable, gaiaHas5pSolution } from './gaia-distrust';
 import { type VelocityVia } from './velocity';
-import { MAS_TO_RAD } from '../../../src/astro-core/astronomy-constants';
+import { HIPPARCOS_EPOCH_JYEAR, MAS_TO_RAD } from '../../../src/astro-core/astronomy-constants';
 import type { SimbadRecordKeys } from '../simbad/simbad-namespace-ladder-pure';
 import type { Tycho2Row } from '../tycho2-parse';
 import type { AnySourceRowRef, SourceRowRef } from '../../util/sources/row-ref-pure';
@@ -22,7 +22,7 @@ import type { SimbadAstrometry } from '../simbad/simbad-values-parse';
 import type { CascadeResult, CascadeRefusal, UniformValues } from '../cascade-result';
 
 export const GAIA_DR3_REF_EPOCH = 2016.0;
-export const HIP2_REF_EPOCH = 1991.25;
+export const HIP2_REF_EPOCH = HIPPARCOS_EPOCH_JYEAR;
 /** SIMBAD states `basic.ra` / `basic.dec` at J2000.0 whatever epoch the
  *  citation measured them at. The pull carries no epoch column, so this is
  *  measured rather than assumed — README.md#direction-resolution. */

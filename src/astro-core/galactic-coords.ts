@@ -1,12 +1,12 @@
 import * as THREE from 'three';
 
+import { DEG_TO_RAD } from './astronomy-constants';
 import { GALACTIC_FRAME } from './baker-constants';
 
-const DEG = Math.PI / 180;
-const ALPHA_GC = GALACTIC_FRAME.centreRaDeg * DEG;
-const DELTA_GC = GALACTIC_FRAME.centreDecDeg * DEG;
-const ALPHA_NGP = GALACTIC_FRAME.northPoleRaDeg * DEG;
-const DELTA_NGP = GALACTIC_FRAME.northPoleDecDeg * DEG;
+const ALPHA_GC = GALACTIC_FRAME.centreRaDeg * DEG_TO_RAD;
+const DELTA_GC = GALACTIC_FRAME.centreDecDeg * DEG_TO_RAD;
+const ALPHA_NGP = GALACTIC_FRAME.northPoleRaDeg * DEG_TO_RAD;
+const DELTA_NGP = GALACTIC_FRAME.northPoleDecDeg * DEG_TO_RAD;
 
 // Distance from Sol to the galactic centre. R₀ = 8.122 kpc per GRAVITY 2018
 // (/data/papers/index.md#gravity2018), adopted here so the Milky Way analytic background can reuse this

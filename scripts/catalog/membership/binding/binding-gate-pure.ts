@@ -1,7 +1,6 @@
 // See README.md#both-gates-weigh-every-candidate.
 
-import type { Declared } from '../../../util/sources/source';
-import { readTable } from '../../../util/tsv/table-pure';
+import type { ColumnTable } from '../../../util/tsv/table-pure';
 import type { PrintedV, PrintedVLookups } from '../../photometry/v-magnitude-pure';
 
 /** Magnitude-consistency gate for Gaia source bindings, shared with the
@@ -14,6 +13,10 @@ import type { PrintedV, PrintedVLookups } from '../../photometry/v-magnitude-pur
  *  companion or background star instead (Toliman → a G=20.95 source,
  *  Castor → Castor B's source). */
 export const GAIA_BINDING_G_MINUS_V_REJECT_MAG = 1.0;
+
+export function gMinusVRejects(gMag: number, vMag: number): boolean {
+  return gMag - vMag > GAIA_BINDING_G_MINUS_V_REJECT_MAG;
+}
 
 /** One (wds_id, component) attribution parsed from
  *  data/simbad/simbad_wds_xids.tsv. */
@@ -39,11 +42,11 @@ const SIMBAD_WDS_XIDS_COLUMNS = ['wds_id', 'component', 'gaia_source_id', 'hip']
 /** Parse data/simbad/simbad_wds_xids.tsv (refresh-simbad-wds-xids.py)
  *  into per-source and per-HIP WDS-component attribution maps. Source
  *  ids stay strings — they exceed Number.MAX_SAFE_INTEGER. */
-export function parseSimbadWdsXidsTsv(text: string, from: Declared): SimbadWdsXidIndex {
+export function parseSimbadWdsXidsTsv(table: ColumnTable): SimbadWdsXidIndex {
   const bySource = new Map<string, WdsComponentAttribution[]>();
   const byHip = new Map<number, WdsComponentAttribution[]>();
   const primarySourceLetterByWds = new Map<string, string>();
-  for (const row of readTable({ ...from, columns: SIMBAD_WDS_XIDS_COLUMNS }, text)) {
+  for (const row of table(SIMBAD_WDS_XIDS_COLUMNS)) {
     const wdsId = row.text('wds_id');
     const component = row.text('component');
     if (wdsId === null || component === null) continue;
@@ -209,5 +212,5 @@ function magnitudeOutcome(
   if (printedV === null) return 'no_printed_v';
   const g = evidence.gMagOf(sourceId);
   if (g === null) return evidence.hasPulledRow(sourceId) ? 'null_g' : 'no_pulled_row';
-  return g - printedV.vMag > GAIA_BINDING_G_MINUS_V_REJECT_MAG ? 'rejected' : 'consistent';
+  return gMinusVRejects(g, printedV.vMag) ? 'rejected' : 'consistent';
 }

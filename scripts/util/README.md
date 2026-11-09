@@ -25,6 +25,10 @@ same thing — single-use helpers stay with their consumer.
   the site suites; a hand-rolled character class beside it is the defect
   CodeQL's `js/incomplete-sanitization` flags.
 
+- `map-buckets-pure.ts` (+ test) — `groupBy`, `pushTo` and `addTo`: a
+  list or set per map key, created on first use, in first-seen key order.
+  The binaries stages' indexes and grids group through it.
+
 - `astronomy_constants.py` — Python mirror of two values from
   `src/astro-core/astronomy-constants.ts`, `J2000_JD` and
   `DAYS_PER_JULIAN_YEAR`; `tests/astronomy-constants-sync.test.ts` pins

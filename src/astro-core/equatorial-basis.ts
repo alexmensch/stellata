@@ -2,6 +2,8 @@
 // proper-motion propagation, space-motion velocity, and sky-offset
 // projection all resolve their components along.
 
+import { DEG_TO_RAD } from './astronomy-constants';
+
 export interface UnitVector {
   x: number;
   y: number;
@@ -22,7 +24,6 @@ export interface SkyPosition {
   decDeg: number;
 }
 
-const DEG_TO_RAD = Math.PI / 180;
 const RAD_TO_DEG = 180 / Math.PI;
 
 export function equatorialTangentBasisRad(raRad: number, decRad: number): TangentBasis {

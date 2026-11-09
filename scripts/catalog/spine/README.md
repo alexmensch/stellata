@@ -72,8 +72,11 @@ scripts/catalog/spine/
                                   build reads too (HIP2, HIP_PHOTOMETRY for
                                   I/239, TYC2_HD, BSC5, SIMBAD_SPTYPE's
                                   cross-IDs, …), so one file has one parse.
-  athyg-classic-ids-source.ts     AT-HYG's classic-ID CSV, declared: the
-                                  hd / hyg cells the primaries audit tallies.
+  athyg-classic-ids-source.ts     AT-HYG's classic-ID CSV, declared. Its
+                                  read is a table each reader takes its
+                                  own columns from: the primaries audit's
+                                  hd / hyg cells, and the binaries
+                                  pipeline's Stage 1 AT-HYG rows.
   association-audit-pure.ts       Per row, whether the primaries' own
     (+ test)                      cross-references connect every identifier
                                   it carries (README.md#the-association-audit).
@@ -266,8 +269,9 @@ own. The value check is what makes the Flamsteed residual 120 rather than
 115 — [§ 3.1](/docs/catalog-driver.md#31-retiring-the-spine--the-membership-rule-measured-against-the-primaries) names the five it separates.
 
 The audit also reads `data/athyg/athyg_33_classic_ids.csv` for one
-measurement, the HD-provenance split behind the link defect. It is the only
-reader of that file outside CI, and it is not on the `build:catalog` path.
+measurement, the HD-provenance split behind the link defect. It is not on the
+`build:catalog` path; the binaries pipeline's Stage 1 reads the same file
+(`../../binaries/`).
 
 The counts are measured, not pinned: the audit is a design-gate instrument
 and the swap's own gate ([§ 3.1](/docs/catalog-driver.md#31-retiring-the-spine--the-membership-rule-measured-against-the-primaries)'s manifest) is what will hold them. Re-run it

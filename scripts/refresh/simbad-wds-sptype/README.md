@@ -9,9 +9,9 @@ TypeScript pull on the [pull runtime](../pull/README.md).
 
 - `refresh-simbad-wds-sptype.ts` (+ test, the table through `runPull` on a
   faked transport) — the entry: `describe` and `main`.
-- `simbad-wds-sptype-pure.ts` (+ test) — `wdsOids`, the request, and
+- `simbad-wds-sptype-pure.ts` (+ test) — `wdsOids`, the request, read off
+  `SIMBAD_WDS_XIDS` (`../../catalog/membership/binding/`), and
   `wdsSptypeTable`, the table: query, sort, row band and spot rows.
-- `simbad-wds-oids-source.ts` — `SIMBAD_WDS_OIDS`, the request's source.
 - `simbad-wds-sptype-outputs.ts` — the step's output declaration.
 
 ## Why it is its own pull

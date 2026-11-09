@@ -4,10 +4,13 @@ Every tab-separated table a TypeScript build step reads goes through this
 folder: an external input through `readTable`, a file this repo writes itself
 through its `defineArtifact` codec. A refresh pull's output is an external
 table, written by `../../refresh/pull/`'s `formatTsv` through the codec's own
-layout (`tsvLine`, `tsvText`) and read like any input. Two places stand outside it, named so a
+layout (`tsvLine`, `tsvText`) and read like any input. A comma-separated table
+reads through the same reader with `csv: true` (the AT-HYG classic-ID CSV).
+Two places stand outside it, named so a
 third is a finding rather than precedent. The WGSN tables
-(`../../catalog/naming/wgsn-parse-pure.ts`) are comma-separated CSV, not TSV,
-so that module splits their lines itself — and parses each cell through this
+(`../../catalog/naming/wgsn-parse-pure.ts`) check their header against a
+fixed spelling, so that module splits their lines itself through
+`splitCsvLine` — and parses each cell through this
 folder's strict cell parsers. Record lineage's stage and identity files
 (`../../catalog/lineage/lineage-row-pure.ts`, `identity-pure.ts`) are
 gzipped build artifacts, one per stage, read from whichever directory a
@@ -22,7 +25,9 @@ reader wants only the lines.
 scripts/util/tsv/
   table-pure.ts (+ test)      readTable / tableLineReader, TableRow,
                               readTableLines (each row's line as written,
-                              checked but never split), and the
+                              checked but never split), splitCsvLine
+                              (the `csv: true` cell split), columnTable
+                              (#reading-a-table), and the
                               cell parsers (textCell, floatCell, intCell,
                               idCell, idListCell, sourceIdCell,
                               oneOfCell).
@@ -87,6 +92,11 @@ the target that rebuilds or re-pulls the file.
   `compareSourceIds` is the one order over them: absent
   first, then by `BigInt` value.
   `oneOf(column, values)` returns the cell typed to a closed set or throws.
+- **A declared table several readers share** returns a `ColumnTable` from its
+  parse (`columnTable(format, text)`): the declaration owns the format
+  (`csv`, `comments`), each reader names its own columns and keeps its own
+  parse over the rows. AT-HYG's CSV, HIP↔CCDM and the NSS two-body table read
+  this way, since their readers want different columns of one file.
 - `raw` is the cell exactly as written, for a reader whose meaning depends on
   untrimmed text; `cells()` is every spec column's `raw` cell as one record.
 - **`optional` columns may be absent from the header.** An absent one reads as
