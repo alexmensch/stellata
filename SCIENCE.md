@@ -264,8 +264,9 @@ enough to see it.
   well-known multi-component systems (η Cas A/B/C, ξ UMa A/B,
   ζ Cnc A/B/C, α Cen A/B/Proxima).
   Refresh: `refresh:simbad-wds-xids` (`scripts/refresh/simbad-wds-xids/`)
-  runs a two-phase TAP pull (WDS identifiers → SIMBAD oids, then oids →
-  cross-IDs) and commits `data/simbad/simbad_wds_xids.tsv` (~23k
+  runs a TAP pull (WDS identifiers → SIMBAD oids, an HD / CCDM / HIP alias
+  cascade and curated overrides for the misses, then oids → cross-IDs) and
+  commits `data/simbad/simbad_wds_xids.tsv` (~23k
   components, ~1.2 MB,
   regular git). Public access policy: SIMBAD is open via CDS's TAP
   service at `simbad.cds.unistra.fr/simbad/sim-tap`; cite

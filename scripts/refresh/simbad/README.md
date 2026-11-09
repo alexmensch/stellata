@@ -267,8 +267,9 @@ job and is finished; only the second is the union's.
 - [`refresh:simbad-values`](../simbad-values/README.md) — bibcoded rv / parallax /
   PM / coordinates + B/V fluxes, over the [§ 5](/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers) value cohort.
 - [`refresh:simbad-wds-xids`](../simbad-wds-xids/README.md) — per-WDS-component
-  (Gaia DR3, HIP) cross-IDs via a two-phase WDS-id → SIMBAD-oid →
-  cross-IDs walk, taking `resolveOids`, `fetchBasic` and `identPhase`.
+  (Gaia DR3, HIP) cross-IDs: WDS-id → SIMBAD oid, an HD / CCDM / HIP alias
+  cascade, curated overrides, then cross-IDs; taking `resolveOids`,
+  `fetchBasic` and `identPhase`.
 - [`refresh-simbad-tyc-hd.py`](../README.md) — SIMBAD's HD attribution per
   Tycho-2 entry, keyed on TYC. Pure composition of `resolve_oids_by_prefix`
   → `fetch_ident_sets` → `fetch_basic_columns`, so the padding rule above is
