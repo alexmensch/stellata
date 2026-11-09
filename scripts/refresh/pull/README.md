@@ -116,6 +116,15 @@ is conservative for it. tyc-xmatch, sliced, is bounded at 12.9 M ((2,530,000
 + 48,000) × 5 columns). A table with wider text cells costs more per cell, so a
 pull near the cap is re-measured, not assumed.
 
+The magnitude pull, sliced, is bounded at 25.1 M ((1,273,000 + 48,000) × 19
+columns). Its committed table replayed the same way on 2026-11-09 (Node 26,
+its 52 slices served from the committed rows): 1,247,240 rows, 23.7 M cells,
+peak live heap **2,949 MiB** of the 3,482 MiB budget, 17.3 s. The harness
+held the committed text and a CSV copy of every slice throughout, so that
+peak overstates the pull's own; it is still more per cell than tyc-xmatch's
+table measured, so the cap is not a guarantee for wider tables and one past
+25 M cells is measured before it lands.
+
 ### Sliced scope
 
 A table no list of ids scopes, cut into half-open ranges of a `key` between
