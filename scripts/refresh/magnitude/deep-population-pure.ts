@@ -1,12 +1,12 @@
 // A table pulled over the catalogue's deep population: a magnitude leg joined to gaia_source, plus the request's remainder. See README.md#the-deep-population--a-bounded-leg-plus-a-request-leg.
 
 import type { Check, DeclaredOutputs } from '../../util/emit-artifacts';
-import { GAIA_REQUEST_BATCH } from '../gaia-request/gaia-request-pure';
+import { GAIA_REQUEST_BATCH, GAIA_SOURCE } from '../gaia-request/gaia-request-pure';
 import { cellReader, type Cell, type Column } from '../pull/columns-pure';
 import { bandCheck, coverageCheck, type RowBand, type SpotRow } from '../pull/gates-pure';
 import type { Phase, PhasedPull } from '../pull/pull';
 import type { TapArchive } from '../pull/tap-pure';
-import { GAIA_SOURCE, magnitudeBound } from './magnitude-pure';
+import { magnitudeBound } from './magnitude-pure';
 
 /** The least share of the request either leg answers: the magnitude leg's band says nothing about the request leg. */
 export const MIN_REQUEST_COVERAGE = 0.9;

@@ -1,6 +1,6 @@
 // The magnitude-bounded selection: every gaia_source row at G <= 11, sliced on G. See README.md.
 
-import { ASTROMETRY_COLUMNS, astrometrySpot } from '../gaia-request/gaia-request-pure';
+import { ASTROMETRY_COLUMNS, GAIA_SOURCE, astrometrySpot } from '../gaia-request/gaia-request-pure';
 import { near } from '../pull/gates-pure';
 import type { PullTable, SlicedScope } from '../pull/pull';
 import { GAIA_SLICE_ROWS } from '../pull/tap-pure';
@@ -8,8 +8,6 @@ import { MAGNITUDE_EDGES } from './magnitude-edges';
 
 /** Why the floor carries no margin: /data/gaia/README.md#why-the-floor-carries-no-margin. */
 export const G_MAG_FLOOR = 11;
-
-export const GAIA_SOURCE = 'gaiadr3.gaia_source';
 
 /** The bound and its slices on `column`, the G magnitude as the query names it. */
 export const magnitudeBound = (column: string): { readonly where: string; readonly scope: SlicedScope } => ({

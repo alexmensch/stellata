@@ -4,6 +4,8 @@ import type { Column, Format } from '../pull/columns-pure';
 import { near, present, type SpotRow } from '../pull/gates-pure';
 import type { PullTable } from '../pull/pull';
 
+export const GAIA_SOURCE = 'gaiadr3.gaia_source';
+
 export const GAIA_REQUEST_BATCH = 5_000;
 export const DR2_REQUEST_BATCH = 2_500;
 /** The most rows one DR3 id answers in the committed DR2 neighbourhood. */
@@ -58,7 +60,7 @@ export function astrometrySpot(
 
 export function astrometryTable(ids: readonly bigint[], spotRows: readonly [SpotRow, ...SpotRow[]]): PullTable {
   return {
-    from: 'gaiadr3.gaia_source',
+    from: GAIA_SOURCE,
     columns: ASTROMETRY_COLUMNS,
     sortBy: [{ column: 'source_id', as: 'integer' }],
     scope: { ...requestOn('source_id', ids, GAIA_REQUEST_BATCH, 1), coverage: { groups: [present('phot_g_mean_mag')] } },
