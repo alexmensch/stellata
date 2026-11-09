@@ -28,6 +28,9 @@ export const WIDENING_LADDER = [HIP, TYC, GJ] as const;
 export type LadderName = (typeof WIDENING_LADDER)[number]['name'];
 
 export const compose = (ns: Namespace, suffix: string): string => `${ns.prefix}${suffix}`;
+
+/** What SIMBAD matches an id on: README.md#two-invariants-the-adql-depends-on. */
+export const identKey = (id: string): string => id.replace(/\s+/g, '');
 export const likePattern = (ns: Namespace): string => `${ns.prefix}%`;
 
 /** A numeric namespace's id with a component letter after its number (`HIP 55203A`, `HIP 12345 A`): SIMBAD also holds the bare number for the same object. */

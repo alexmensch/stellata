@@ -44,8 +44,10 @@ changed override stales the record.
 2. **The cascade**, only for a component the lookup missed in a system where
    it found another. The found siblings' HD and HIP numbers (the first of
    each in id order), then the missed component's letter on each, plus its
-   CCDM id: `HD  48915B` (the HD number right-aligned in seven characters),
-   `HIP 32349B`, `HIP 32349 B`, `CCDM J06451-1643B`. An alias naming an
+   CCDM id: `HD 48915B`, `HIP 32349B`, `CCDM J06451-1643B`. SIMBAD answers in
+   its stored spelling (`HD  48915B`), so a reply joins back on `identKey`
+   ([Two invariants](../simbad/README.md#two-invariants-the-adql-depends-on)).
+   An answered WDS ident naming no asked component fails the pull. An alias naming an
    object the lookup already found names that object again and is dropped;
    two aliases naming different objects keep the first in SIMBAD's id
    order, and the run log prints each such conflict.

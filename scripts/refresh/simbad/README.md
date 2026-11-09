@@ -81,11 +81,15 @@ half off Gaia's own table is what recovers them.
 
 ## Two invariants the ADQL depends on
 
-**Stored ident ids are space-padded.** SIMBAD right-aligns a TYC's first
-field, so `TYC 144-1004-1` is stored as `TYC  144-1004-1` — while matching
-the unpadded request that found it. Anything joining a returned id back to
-its request must go through `parseIdent` (Python: `IdentLookup.parse_suffix`), which strips;
-keying on the raw returned id silently loses those rows.
+**SIMBAD matches an id whatever its whitespace, and answers in its stored
+spelling.** It pads some fields — `TYC 144-1004-1` is stored as
+`TYC  144-1004-1`, an HD number right-aligned in seven characters
+(`HD  48915B`) — yet `HD48915B`, `HD 48915B` and `HIP  55203B` each find the
+stored id (measured on SIMBAD-Harvard, 2026-11-09). Anything joining a
+returned id back to its request goes through `parseIdent` (Python:
+`IdentLookup.parse_suffix`), or, for an id asked whole, `identKey`, which
+drops all whitespace as SIMBAD does; keying on the raw returned id silently
+loses those rows. The fake matches the same way.
 
 **A suffix is interpolated into an ADQL string literal**, so
 `resolveOids` (Python: `resolve_oids_by_prefix`) refuses any suffix outside

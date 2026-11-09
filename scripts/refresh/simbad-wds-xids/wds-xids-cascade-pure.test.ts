@@ -54,47 +54,36 @@ describe('resolveHip', () => {
 
 describe('cascadeCandidates', () => {
   const siriusB = { wdsId: SIRIUS, component: 'B' };
+  const asked = (out: ReturnType<typeof cascadeCandidates>): string[] => [...out.values()].map((c) => c.id).sort();
 
-  it('asks Sirius B under its CCDM id and its letter on Sirius A\'s HD and HIP', () => {
+  it('asks Sirius B under its CCDM id and its letter on Sirius A\'s HD and HIP, one spelling each', () => {
     const out = cascadeCandidates([siriusB], new Map([[SIRIUS, [8399845]]]), new Map([[8399845, '48915']]), new Map([[8399845, '32349']]));
-    expect([...out.keys()].sort()).toEqual(['CCDM J06451-1643B', 'HD  48915B', 'HIP 32349 B', 'HIP 32349B']);
-    expect(out.get('HD  48915B')).toEqual({ component: siriusB, strategy: 'HD' });
-    expect(out.get('CCDM J06451-1643B')?.strategy).toBe('CCDM');
-    expect(out.get('HIP 32349B')?.strategy).toBe('HIP');
+    expect(asked(out)).toEqual(['CCDM J06451-1643B', 'HD 48915B', 'HIP 32349B']);
+    expect(out.get('HD48915B')).toEqual({ id: 'HD 48915B', component: siriusB, strategy: 'HD' });
+    expect(out.get('CCDM J06451-1643B'.replace(' ', ''))?.strategy).toBe('CCDM');
+    expect(out.get('HIP32349B')?.strategy).toBe('HIP');
   });
 
   it('asks an id two components share once, and only CCDM where no sibling holds an HD or HIP', () => {
-    const shared = cascadeCandidates(
-      [siriusB, { wdsId: SIRIUS, component: 'B' }], new Map([[SIRIUS, [1]]]), new Map([[1, '48915']]), new Map(),
-    );
-    expect([...shared.keys()]).toEqual(['CCDM J06451-1643B', 'HD  48915B']);
-    expect([...cascadeCandidates([siriusB], new Map([[SIRIUS, [1]]]), new Map(), new Map()).keys()]).toEqual(['CCDM J06451-1643B']);
-    expect([...cascadeCandidates([siriusB], new Map(), new Map(), new Map()).keys()]).toEqual(['CCDM J06451-1643B']);
-  });
-
-  it('pads every HD number to SIMBAD\'s seven characters', () => {
-    for (const [hd, id] of [['113', 'HD    113A'], ['1202', 'HD   1202A'], ['48915', 'HD  48915A'], ['225220', 'HD 225220A']] as const) {
-      const out = cascadeCandidates([{ wdsId: '00000+0000', component: 'A' }], new Map([['00000+0000', [999]]]), new Map([[999, hd]]), new Map());
-      expect(out.has(id)).toBe(true);
-    }
+    const shared = cascadeCandidates([siriusB, { wdsId: SIRIUS, component: 'B' }], new Map([[SIRIUS, [1]]]), new Map([[1, '48915']]), new Map());
+    expect(asked(shared)).toEqual(['CCDM J06451-1643B', 'HD 48915B']);
+    expect(asked(cascadeCandidates([siriusB], new Map([[SIRIUS, [1]]]), new Map(), new Map()))).toEqual(['CCDM J06451-1643B']);
+    expect(asked(cascadeCandidates([siriusB], new Map(), new Map(), new Map()))).toEqual(['CCDM J06451-1643B']);
   });
 });
 
 describe('cascadeRecoveries', () => {
   const b = { wdsId: '00000+0000', component: 'B' };
-  const candidates = new Map([
-    ['HD  12345B', { component: b, strategy: 'HD' as const }],
-    ['CCDM J00000+0000B', { component: b, strategy: 'CCDM' as const }],
-  ]);
+  const candidates = cascadeCandidates([b], new Map([[b.wdsId, [1]]]), new Map([[1, '12345']]), new Map());
 
-  it('recovers a component onto the object its alias names', () => {
+  it('joins a reply in SIMBAD\'s stored spelling back to the id asked, whatever its whitespace', () => {
     const out = cascadeRecoveries([{ id: 'HD  12345B', oid: 930049 }], candidates, new Set([8399845]));
     expect([...out.recoveries.values()]).toEqual([{ component: b, oid: 930049 }]);
     expect(out.hits).toEqual({ HD: 1, CCDM: 0, HIP: 0 });
   });
 
   it('drops an alias naming an object an ident already resolved, and an id nobody asked', () => {
-    expect(cascadeRecoveries([{ id: 'HD  12345B', oid: 555 }], candidates, new Set([555])).recoveries.size).toBe(0);
+    expect(cascadeRecoveries([{ id: 'HD 12345B', oid: 555 }], candidates, new Set([555])).recoveries.size).toBe(0);
     const stray = cascadeRecoveries([{ id: 'Unexpected', oid: 999 }], candidates, new Set());
     expect(stray.recoveries.size).toBe(0);
     expect(stray.hits).toEqual({ HD: 0, CCDM: 0, HIP: 0 });

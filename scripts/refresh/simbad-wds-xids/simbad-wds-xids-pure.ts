@@ -5,7 +5,7 @@ import type { Row } from '../pull/columns-pure';
 import type { Ask, Phase, PhasedPull, WrittenTable } from '../pull/pull';
 import { SIMBAD } from '../pull/tap-pure';
 import { fetchBasic, identPhase, oidOf, parseLedger, resolveOids, simbadPhases, type ParseLedger } from '../simbad/simbad-fetch-pure';
-import { GAIA_DR3, HD, HIP, MAIN_ID, OID, WDS, parseIdent } from '../simbad/simbad-specs-pure';
+import { GAIA_DR3, HD, HIP, MAIN_ID, OID, WDS, compose, identKey, parseIdent } from '../simbad/simbad-specs-pure';
 import { componentId, identSuffix, type WdsComponent } from './wds-components-pure';
 import {
   cascadeCandidates, cascadeRecoveries, catalogueAlias, resolveHip, type CatalogueAlias,
@@ -50,13 +50,14 @@ export interface XidsInputs {
 
 const share = (n: number, of: number): string => `${n}/${of} (${of === 0 ? '0.0' : ((100 * n) / of).toFixed(1)}%)`;
 
-/** Each component's object by its WDS ident: Phase A. */
+/** Each component's object by its WDS ident: Phase A. An answer naming no asked component is refused, never dropped. */
 async function resolveByIdent(ask: Ask, components: readonly WdsComponent[], ledger: ParseLedger): Promise<Map<string, number>> {
-  const bySuffix = new Map(components.map((c) => [identSuffix(c), c]));
+  const byKey = new Map(components.map((c) => [identKey(compose(WDS, identSuffix(c))), c]));
   const oids = new Map<string, number>();
-  for (const [suffix, oid] of await resolveOids(ask, CORE, WDS, [...bySuffix.keys()], ledger)) {
-    const c = bySuffix.get(suffix);
-    if (c !== undefined) oids.set(componentId(c), oid);
+  for (const [suffix, oid] of await resolveOids(ask, CORE, WDS, components.map(identSuffix), ledger)) {
+    const c = byKey.get(identKey(compose(WDS, suffix)));
+    if (c === undefined) throw new Error(`SIMBAD answered ${compose(WDS, suffix)}, which names no component the request asked`);
+    oids.set(componentId(c), oid);
   }
   return oids;
 }
@@ -104,7 +105,7 @@ export function xidsPull(outputs: DeclaredOutputs<'xids'>, inputs: XidsInputs): 
         const numbers = firstNumbers(await ask(XIDS_PHASES.aliases, primaries.map(String)), ledger);
         log(`aliases: ${numbers.hd.size} HD and ${numbers.hip.size} HIP over ${primaries.length} resolved siblings of ${unresolved.length} unresolved components`);
         const candidates = cascadeCandidates(unresolved, siblings, numbers.hd, numbers.hip);
-        const ids = [...candidates.keys()].sort();
+        const ids = [...candidates.values()].map((cand) => cand.id).sort();
         const rows = await ask(XIDS_PHASES.cascade, ids.map((id) => `'${id}'`));
         const cascade = cascadeRecoveries(rows.map(([oid, id]) => ({ id: id ?? '', oid: oidOf(oid) })), candidates, new Set(oids.values()));
         for (const [key, { oid }] of cascade.recoveries) oids.set(key, oid);

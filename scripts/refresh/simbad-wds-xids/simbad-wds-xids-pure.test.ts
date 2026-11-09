@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { declareOutputs } from '../../util/emit-artifacts';
-import { describePhasedPull } from '../pull/pull';
+import { describePhasedPull, type Ask } from '../pull/pull';
 import { fakeAsk, type FakeSimbad } from '../simbad/simbad-fake-pure';
 import { MIN_COMPONENT_REACH, XIDS_PHASES, xidsPull, xidsTable } from './simbad-wds-xids-pure';
 import type { WdsComponent } from './wds-components-pure';
@@ -46,6 +46,12 @@ describe('xidsPull', () => {
     await expect(run(simbad, [c('06451-1643', 'A')])).rejects.toThrow(/WDS J06451-1643A → 1 and 2/);
   });
 
+  it('refuses a WDS ident answer that names no component the request asked', async () => {
+    const pull = xidsPull(OUTPUTS, { components: [c('06451-1643', 'A')], overrides: [], overridesFile: 'o.tsv', requestFrom: [] });
+    const stray: Ask = async () => [['1', 'WDS J06451-1643A'], ['2', 'WDS J99999+9999Z']];
+    await expect(pull.run(stray, () => {})).rejects.toThrow(/WDS J99999\+9999Z, which names no component/);
+  });
+
   it('recovers Sirius B through its letter on Sirius A\'s HD, asking aliases only of a system with an unresolved component', async () => {
     const simbad = fake({
       8399845: { mainId: '* alf CMa', ids: ['WDS J06451-1643A', 'HD  48915', 'HIP 32349'] },
@@ -59,7 +65,7 @@ describe('xidsPull', () => {
       ['06451-1643', 'B', '930049', '* alf CMa B', '2947050466531873024'],
     ]);
     expect(asked.find((a) => a.phase === XIDS_PHASES.aliases)?.ids).toEqual(['8399845']);
-    expect(log).toContain('cascade: 4 candidates, 1 components recovered (alias hits HD 1, CCDM 0, HIP 0)');
+    expect(log).toContain('cascade: 3 candidates, 1 components recovered (alias hits HD 1, CCDM 0, HIP 0)');
   });
 
   it('lets an override replace what the ident lookup found', async () => {
