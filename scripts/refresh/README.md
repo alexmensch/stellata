@@ -274,18 +274,19 @@ The in-memory TAP backend every non-network suite here uses (`FakeTable`,
 
 ### Gaia TAP: synchronous endpoints only
 
-Every `gaiadr3.*` pull goes through `refresh_lib.gaia_sync_client()` —
-ESA `/sync` primary, ARI Heidelberg `/sync` fallback, both hosting the
-identical `gaiadr3.*` schema. The ESA archive's ASYNC path intermittently
-500s on result retrieval while its sync endpoint stays healthy, so
-nothing reaches Gaia any other way: the async client is gone, and with
-it the `astroquery` dependency.
+Every `gaiadr3.*` pull asks a `/sync` endpoint — ESA primary, ARI Heidelberg
+fallback, both hosting the identical `gaiadr3.*` schema. The ESA archive's
+ASYNC path intermittently 500s on result retrieval while its sync endpoint
+stays healthy, so nothing reaches Gaia any other way. The TypeScript pulls do
+it through `pull/`'s backend ([The TAP backend](pull/README.md#the-tap-backend));
+`refresh-gaia-nss.py`, the one Python Gaia pull left, through
+`refresh_lib.gaia_sync_client()`.
 
-A `TapClient` moves whichever backend answered to the front, so a mirror
-that is down costs its retry schedule (about 5 min of connect timeouts)
-once per run, not once per batch. It reports each answering backend through
-`build_stamp.report_service`, and `client.services` is its declared service
-list, the one a pull's `--describe` states.
+The Python `TapClient` moves whichever backend answered to the front, so a
+mirror that is down costs its retry schedule (about 5 min of connect
+timeouts) once per run, not once per batch. It reports each answering backend
+through `build_stamp.report_service`, and `client.services` is its declared
+service list, the one a pull's `--describe` states.
 
 `TapClient` takes `backends=` as a required argument — there is no
 default list, because which service can serve a query is a property of
