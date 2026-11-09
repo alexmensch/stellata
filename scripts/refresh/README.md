@@ -299,11 +299,10 @@ Harvard CfA mirror as fallback, both serving the same database and oids.
 Check ESA's
 `external.*` schema before concluding a catalogue is VizieR-only:
 [Bailer-Jones 2021](/data/papers/index.md#bailerjones2021) is on
-both, and `refresh:bailer-jones` takes the ESA copy precisely because only
-that one can be joined to a magnitude
-([Why the pull is ESA-side](/data/bailer-jones/README.md#why-the-pull-is-esa-side)).
-ARI hosts it too, as `gaiaedr3_complements.distances`; the pull asks ESA
-alone (`GAIA_ESA`) because one query names one of the two.
+both, and `refresh:bailer-jones` takes a Gaia archive's copy rather than
+VizieR's because only the Gaia archives join it to a magnitude, and ESA's
+alone (`GAIA_ESA`) because one query names one of the two archives' table
+names ([Why the pull is ESA-side](/data/bailer-jones/README.md#why-the-pull-is-esa-side)).
 
 **MAXREC is load-bearing.** A sync endpoint answers HTTP 200 and flags
 truncation in a VOTable `QUERY_STATUS` INFO rather than erroring, so a
