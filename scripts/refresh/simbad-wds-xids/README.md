@@ -68,7 +68,8 @@ changed override stales the record.
 - **Parse ledger**: an HD, HIP or Gaia DR3 id the namespace rules
   (`parseIdent`) cannot read fails the pull.
 - An override naming a component the summary does not decompose into fails
-  before any query.
+  before any query; one pinning an object SIMBAD's basic table does not hold
+  fails the pull.
 
 ## Overrides
 

@@ -1,6 +1,6 @@
 // The SIMBAD WDS cross-ID pull: each WDS component's object, with its main_id, Gaia DR3 source_id and HIP. See README.md.
 
-import type { DeclaredOutputs } from '../../util/emit-artifacts';
+import type { Check, DeclaredOutputs } from '../../util/emit-artifacts';
 import type { Column, Row } from '../pull/columns-pure';
 import type { Ask, Phase, PhasedPull, WrittenTable } from '../pull/pull';
 import { SIMBAD } from '../pull/tap-pure';
@@ -81,6 +81,15 @@ function firstNumbers(rows: readonly Row[], ledger: ParseLedger): { hd: Map<numb
   return out;
 }
 
+/** An override whose object SIMBAD's basic table does not hold would write a row with no main_id or ids: a typo passes every other gate. */
+export function overridesHeldCheck(overrides: readonly WdsXidOverride[], held: ReadonlySet<number>, file: string): Check {
+  const missing = overrides.filter((o) => !held.has(o.oid)).map((o) => `${componentId(o)} → ${o.oid}`);
+  const report = `overrides: ${overrides.length - missing.length}/${overrides.length} on an object SIMBAD holds`;
+  return missing.length === 0
+    ? { kind: 'pass', report }
+    : { kind: 'fail', message: `${file} pins ${missing.length} objects SIMBAD's basic table does not hold: ${missing.join(', ')}`, report };
+}
+
 export function xidsPull(outputs: DeclaredOutputs<'xids'>, inputs: XidsInputs): PhasedPull<'xids'> {
   const { components, overrides } = inputs;
   assertOverridesOnComponents(overrides, components, inputs.overridesFile);
@@ -154,7 +163,7 @@ export function xidsPull(outputs: DeclaredOutputs<'xids'>, inputs: XidsInputs): 
         rows.push([c.wdsId, c.component, String(oid), basic.get(oid)?.[MAIN_ID.column] ?? null, sourceId, hip]);
       }
       log(`rows: ${rows.length}, ${withGaia} with a Gaia DR3 source_id, ${withHip} with a HIP`);
-      return { rows: { xids: rows }, checks: [ledger.check('idents')] };
+      return { rows: { xids: rows }, checks: [ledger.check('idents'), overridesHeldCheck(overrides, new Set(basic.keys()), inputs.overridesFile)] };
     },
   };
 }

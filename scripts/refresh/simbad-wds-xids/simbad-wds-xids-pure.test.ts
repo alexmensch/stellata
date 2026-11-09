@@ -74,9 +74,14 @@ describe('xidsPull', () => {
     expect(rows).toEqual([['06451-1643', 'B', '2', 'curated', null, null]]);
   });
 
+  it('fails an override on an object SIMBAD\'s basic table does not hold', async () => {
+    const { checks } = await run(fake({ 1: { mainId: 'found', ids: ['WDS J06451-1643B'] } }), [c('06451-1643', 'B')], [{ wdsId: '06451-1643', component: 'B', oid: 999 }]);
+    expect(checks.find((check) => check.kind === 'fail')).toMatchObject({ message: expect.stringMatching(/o\.tsv pins 1 objects .*: 06451-1643 B → 999$/) });
+  });
+
   it('fails the parse ledger on a Gaia DR3 id no namespace rule reads', async () => {
     const { checks } = await run(fake({ 1: { mainId: 'x', ids: ['WDS J06451-1643A', 'Gaia DR3 1.5'] } }), [c('06451-1643', 'A')]);
-    expect(checks.map((check) => check.kind)).toEqual(['fail']);
+    expect(checks.map((check) => check.kind)).toEqual(['fail', 'pass']);
   });
 
   it('refuses an override on no WDS component before asking anything', () => {
