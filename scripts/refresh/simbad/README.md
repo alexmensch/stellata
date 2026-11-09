@@ -7,15 +7,18 @@ instead of inlining its own ADQL.
 ## The TypeScript core
 
 The SIMBAD pulls on the pull runtime's phased pulls
-([A phased pull](../pull/README.md#a-phased-pull)): sample, values and
-sp_type.
+([A phased pull](../pull/README.md#a-phased-pull)): sample, values, sp_type
+and the WDS cross-IDs.
 
 ```
 simbad-specs-pure.ts        Namespace (parseIdent: suffix, component-lettered
                             skip, or unparsed), basic columns, bibcoded groups,
-                            flux bands, WIDENING_LADDER, GAIA_RELEASES.
+                            flux bands, WIDENING_LADDER, GAIA_RELEASES, and
+                            HD and WDS, which only the WDS cross-ID pull asks.
 simbad-fetch-pure.ts        The four query shapes as phases (resolve, basic,
-                            idents, releases, flux) and their fetchers. A
+                            idents, releases, flux; identPhase builds an
+                            idents phase over any namespaces) and their
+                            fetchers. A
                             suffix answering under two oids is an error; an
                             unparsable id fails the parse ledger's check.
 membership-keys-pure.ts     The manifest's request keys, each source_id-keyed
@@ -27,15 +30,16 @@ union-pure.ts               The value-keyed union and its recovered-row sample.
 simbad-rows-pure.ts         Written rows (basic columns, then ident and flux
                             blocks, bibcode policy applied) and fill gates.
 simbad-fake-pure.ts         An in-memory SIMBAD answering declared phases, as
-                            an ask or a TAP transport.
+                            an ask or a TAP transport; an id lookup matches
+                            whatever either side's space padding.
 simbad-test-fixtures.ts     Manifest-record and fake builders for the suites.
 *-pure.test.ts              Each module's vitest suite, beside it.
 ```
 
 ## The Python modules left
 
-`refresh-simbad-wds-xids.py` and `refresh-simbad-tyc-hd.py` stay Python until
-their ports, and import only these:
+`refresh-simbad-tyc-hd.py` stays Python until its port, and imports only
+these:
 
 ```
 specs.py         ColumnSpec, IdentLookup, FluxBand, the instances.
@@ -257,9 +261,9 @@ job and is finished; only the second is the union's.
   `sp_qual` / `sp_bibcode` / `otype` + cross-IDs, over the whole manifest.
 - [`refresh:simbad-values`](../simbad-values/README.md) — bibcoded rv / parallax /
   PM / coordinates + B/V fluxes, over the [§ 5](/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers) value cohort.
-- [`refresh-simbad-wds-xids.py`](../README.md) — per-WDS-component
+- [`refresh:simbad-wds-xids`](../simbad-wds-xids/README.md) — per-WDS-component
   (Gaia DR3, HIP) cross-IDs via a two-phase WDS-id → SIMBAD-oid →
-  cross-IDs walk.
+  cross-IDs walk, taking `resolveOids`, `fetchBasic` and `identPhase`.
 - [`refresh-simbad-tyc-hd.py`](../README.md) — SIMBAD's HD attribution per
   Tycho-2 entry, keyed on TYC. Pure composition of `resolve_oids_by_prefix`
   → `fetch_ident_sets` → `fetch_basic_columns`, so the padding rule above is

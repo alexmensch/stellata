@@ -4,8 +4,8 @@ The TypeScript readers of the Washington Double Star summary and the Sixth
 Orbit Catalog (`data/wds/`, [their provenance](/data/wds/README.md)), and the
 one parse of a WDS pair's `components` field. Two steps read them: the
 binaries pipeline's Stage 1 ([`../binaries/load/`](../binaries/load/README.md))
-and the SIMBAD WDS cross-ID pull (`refresh:simbad-wds-xids`,
-[`../refresh/`](../refresh/README.md)), so
+and the SIMBAD WDS cross-ID pull
+([`../refresh/simbad-wds-xids/`](../refresh/simbad-wds-xids/README.md)), so
 they live in neither step's folder and import nothing from either.
 
 ## Files in this area

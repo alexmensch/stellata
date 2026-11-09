@@ -51,7 +51,10 @@ export const MANUAL_STEPS: readonly ManualStep[] = [
     { kind: 'pull' }, 'refresh:simbad', 'scripts/refresh/simbad-sample/refresh-simbad-sample.ts',
     'scripts/refresh/simbad-sample/simbad-sample-outputs.ts', 'SIMBAD_SAMPLE_OUTPUTS',
   ),
-  pull('refresh:simbad-wds-xids', 'refresh-simbad-wds-xids.py', [DATA_FILES.simbadWdsXids]),
+  tsManual(
+    { kind: 'pull' }, 'refresh:simbad-wds-xids', 'scripts/refresh/simbad-wds-xids/refresh-simbad-wds-xids.ts',
+    'scripts/refresh/simbad-wds-xids/simbad-wds-xids-outputs.ts', 'SIMBAD_WDS_XIDS_OUTPUTS',
+  ),
   tsManual(
     { kind: 'pull' }, 'refresh:simbad-wds-sptype', 'scripts/refresh/simbad-wds-sptype/refresh-simbad-wds-sptype.ts',
     'scripts/refresh/simbad-wds-sptype/simbad-wds-sptype-outputs.ts', 'SIMBAD_WDS_SPTYPE_OUTPUTS',

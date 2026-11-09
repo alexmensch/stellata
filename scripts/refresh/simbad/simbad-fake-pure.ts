@@ -13,7 +13,7 @@ export interface FakeSimbad {
   readonly wholeTables?: ReadonlyMap<Phase, readonly Row[]>;
 }
 
-/** SIMBAD matches an unpadded request id to its space-padded stored id. */
+/** SIMBAD matches a request id to a stored id whatever either's space padding. */
 const unpadded = (id: string): string => id.replace(/ +/g, ' ');
 const literal = (id: string): string => id.replace(/^'(.*)'$/, '$1');
 const likePrefixes = (where: string | undefined): string[] => [...(where ?? '').matchAll(/LIKE '([^']*)%'/g)].map((m) => m[1]);
@@ -28,7 +28,7 @@ export function answer(fake: FakeSimbad, phase: Phase, ids: readonly string[] | 
   const asked = ids ?? [];
   const names = phase.columns.map((c) => c.name);
   if (phase.from === 'ident' && phase.scope.key === 'id') {
-    const wanted = new Set(asked.map(literal));
+    const wanted = new Set(asked.map((id) => unpadded(literal(id))));
     return fake.idents.filter((i) => wanted.has(unpadded(i.id))).map((i) => [String(i.oid), i.id]);
   }
   const oids = new Set(asked.map(Number));

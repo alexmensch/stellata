@@ -701,7 +701,7 @@ def parse_gaia_nss(path: Path) -> dict[int, dict[str, str]]:
 class SimbadWdsXid:
     """One row of ``data/simbad/simbad_wds_xids.tsv`` — SIMBAD's curated
     ``WDS J<wds_id><component>`` cross-reference. Produced by
-    ``scripts/refresh/refresh-simbad-wds-xids.py``. ``gaia_source_id`` is
+    ``refresh:simbad-wds-xids``. ``gaia_source_id`` is
     ``None`` when SIMBAD resolves the component to an oid but has no
     Gaia DR3 cross-ID (α Cen A/B's saturation gap is the canonical
     case — HIP is still set, so Stage 3's HIP2 fallback can attach

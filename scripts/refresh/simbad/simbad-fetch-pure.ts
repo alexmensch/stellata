@@ -30,7 +30,8 @@ export interface PhaseSpec {
 
 const byOid = (rowsPerId: number) => ({ kind: 'request', key: 'oidref', batchSize: SIMBAD_BATCH_SIZE, rowsPerId }) as const;
 
-function identPhase(namespaces: readonly Namespace[]): Phase {
+/** Each oid's ids under `namespaces`, ordered by oid then id. */
+export function identPhase(namespaces: readonly Namespace[]): Phase {
   return {
     from: 'ident',
     where: namespaces.map((ns) => `id LIKE '${likePattern(ns)}'`).join(' OR '),

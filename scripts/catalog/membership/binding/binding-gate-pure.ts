@@ -39,7 +39,7 @@ export interface SimbadWdsXidIndex {
 
 const SIMBAD_WDS_XIDS_COLUMNS = ['wds_id', 'component', 'gaia_source_id', 'hip'] as const;
 
-/** Parse data/simbad/simbad_wds_xids.tsv (refresh-simbad-wds-xids.py)
+/** Parse data/simbad/simbad_wds_xids.tsv (refresh:simbad-wds-xids)
  *  into per-source and per-HIP WDS-component attribution maps. Source
  *  ids stay strings — they exceed Number.MAX_SAFE_INTEGER. */
 export function parseSimbadWdsXidsTsv(table: ColumnTable): SimbadWdsXidIndex {

@@ -18,6 +18,10 @@ export const GJ: Namespace = { prefix: 'GJ ', name: 'gj', numeric: false };
 export const GAIA_DR2: Namespace = { prefix: 'Gaia DR2 ', name: 'source_id_dr2', numeric: true };
 export const GAIA_DR1: Namespace = { prefix: 'Gaia DR1 ', name: 'source_id_dr1', numeric: true };
 export const GAIA_RELEASES: readonly Namespace[] = [GAIA_DR3, GAIA_DR2, GAIA_DR1];
+/** Read only by the WDS cross-ID pull's alias cascade. */
+export const HD: Namespace = { prefix: 'HD ', name: 'hd', numeric: true };
+/** One WDS component, `WDS J<wds_id><component>` with no space; SIMBAD holds no id for the bare system. */
+export const WDS: Namespace = { prefix: 'WDS J', name: 'wds', numeric: false };
 
 /** The namespaces a source_id-keyed row falls through to, in this order: the no-Gaia tier's ladder (README.md#the-widening-falls-through-on-resolution-not-on-cell-presence). */
 export const WIDENING_LADDER = [HIP, TYC, GJ] as const;
