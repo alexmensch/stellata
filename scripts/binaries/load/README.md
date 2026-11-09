@@ -22,11 +22,6 @@ scripts/binaries/load/
                                counts, bands.
   stage1-report-pure.ts        The build-log lines, read off the result;
                                the AT-HYG Gaia-coverage warning band.
-  wds-pure.ts (+ test)         The WDS summary and ORB6 fixed-width
-                               formats, the duplicate-row collapse, and
-                               measuredOffset (a row's ρ > 0 and θ, or
-                               null), which every (ρ, θ) consumer reads.
-  wds-source.ts                WDS_SUMM, ORB6.
   msc-pure.ts (+ test)         The MSC tables, the label → WDS token map,
                                the MscLookup, and the MSC element checks
                                (period, t0, renderable).
@@ -51,14 +46,17 @@ scripts/binaries/load/
                                pairs, the MSC inner pairs.
   blank-rescue-pure.ts         The blank-components rescue.
     (+ test)
-  load-fixture.ts              Test-only row builders.
+  load-fixture.ts              Test-only row builders (the WDS and ORB6
+                               ones are ../../wds/wds-fixture.ts).
 ```
 
 The real-data case is the parent folder's `build-binaries.test.ts`.
 
 ## Where each input comes from
 
-Seventeen inputs. Ten are declared here. Seven are files the catalogue build
+Seventeen inputs. Eight are declared here. The WDS summary and ORB6 are
+declared in [`../../wds/`](../../wds/README.md), which the SIMBAD WDS cross-ID
+pull reads too, with the duplicate-row collapse and `measuredOffset`. Seven are files the catalogue build
 reads too, read through **its** declaration, never a second one: AT-HYG
 (`../../catalog/spine/`), HIP↔CCDM (`../../catalog/multiplicity/`), HIP2 and
 the NSS table (`../../catalog/sources/`), the two Gaia best-neighbour walks
@@ -89,9 +87,8 @@ The cell rules are the one reader's
 ([Reading a table](../../util/tsv/README.md#reading-a-table)): a missing
 column throws, an empty cell is absent, and a non-empty cell that does not
 parse throws, naming file, line and column. The fixed-width WDS and ORB6
-fields read the same way, plus `.` — those catalogues' explicit "no value" —
-and the two ρ / θ sentinels (negative, and ρ's 999.9 overflow) read as no
-measurement. A row that is a rejected archive record or carries no key is
+fields read the same way, plus their own sentinels
+([How the readers read](../../wds/README.md#how-the-readers-read)). A row that is a rejected archive record or carries no key is
 skipped: a Gaia astrometry row with no position or epoch, an AT-HYG row with
 no position, distance or absolute magnitude, a SIMBAD cross-ID with no
 wds_id, component or oid. A curated row missing a cell it exists to state

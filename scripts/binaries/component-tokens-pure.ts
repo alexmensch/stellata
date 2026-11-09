@@ -1,5 +1,7 @@
 // WDS component-letter tokens on the TypeScript side. See README.md#files-in-this-area.
 
+import { splitComponents } from '../wds/wds-pure';
+
 /** The WDS id of a Stage 6 `system_id` (`<wds_id>-<components>`), or of a
  *  synth key's `<wds_id>-<comp>` body: everything before the last dash, so a
  *  negative-Dec id (`04153-0739-BC`) survives. Null when there is none. */
@@ -96,20 +98,6 @@ export function discovererKey(wdsId: string, discoverer: string): DiscovererKey 
 
 export function pairRowKey(wdsId: string, components: string): PairRowKey {
   return `${wdsId}\t${components}` as PairRowKey;
-}
-
-/** A WDS `components` field as its (primary, secondary) tokens: `AB` → A, B;
- *  `Aa,Ab` → Aa, Ab; `BC,D` → BC, D. Null for a blank field — WDS's implied
- *  single A,B, which the blank-components rescue promotes upstream — and for
- *  a form with no confident split (`ABC`). */
-export function splitComponents(components: string): readonly [string, string] | null {
-  const s = components.trim();
-  if (s === '') return null;
-  if (s.includes(',')) {
-    const parts = s.split(',').map((p) => p.trim()).filter((p) => p !== '');
-    return parts.length === 2 ? [parts[0], parts[1]] : null;
-  }
-  return s.length === 2 ? [s[0], s[1]] : null;
 }
 
 /** `splitComponents` with the secondary's WDS truncation re-anchored

@@ -1,6 +1,6 @@
 // The WDS summary and the Sixth Orbit Catalog, declared.
 
-import { defineSource } from '../../util/sources/source';
+import { defineSource } from '../util/sources/source';
 import { parseOrb6, parseWdsSumm } from './wds-pure';
 
 const HINT = 'It is frozen; restore it from git (data/wds/README.md).';

@@ -24,7 +24,7 @@ import { astrometryRequestIds, stage2Counts, type Stage2Result } from './resolve
 import { spotCheckProblems, strongestComponents } from './resolve/spot-check-pure';
 import { SPOT_CHECK_GROUND_TRUTH } from './resolve/spot-check-source';
 import { SIMBAD_WDS_SPTYPE } from './load/simbad-wds-sptype-source';
-import { ORB6, WDS_SUMM } from './load/wds-source';
+import { ORB6, WDS_SUMM } from '../wds/wds-source';
 
 const INPUTS = [
   WDS_SUMM, ORB6, ORB6_COMPONENT_OVERRIDES, COMPONENT_SPTYPE_OVERRIDES, ASTROMETRY_EXCLUSIONS,

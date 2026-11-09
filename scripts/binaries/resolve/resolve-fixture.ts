@@ -1,12 +1,12 @@
 // Test-only builders for Stage 2's inputs and records.
 
-import { splitComponents } from '../component-tokens-pure';
 import type { AthygRow } from '../load/athyg-pure';
 import type { GaiaAstrometryRow } from '../load/gaia-pure';
 import { buildIndices, type CcdmIndex, type IdentifierIndices } from '../load/indices-pure';
-import { athygRow, gaiaAstrometryRow, wdsPair } from '../load/load-fixture';
+import { wdsPair } from '../../wds/wds-fixture';
+import { athygRow, gaiaAstrometryRow } from '../load/load-fixture';
 import type { SimbadWdsXid } from '../load/simbad-pure';
-import type { WdsPair } from '../load/wds-pure';
+import { splitComponents, type WdsPair } from '../../wds/wds-pure';
 import { componentsOf, type DecomposedPair, type ResolvedComponent } from './components-pure';
 import { ARCSEC_PER_DEG } from '../../../src/astro-core/astronomy-constants';
 import { pushTo } from '../../util/map-buckets-pure';

@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
 import { discovererKey } from '../component-tokens-pure';
-import { athygRow, gaiaAstrometryRow, mscOrbit, mscSystem, orb6Entry, wdsPair, blankPair } from './load-fixture';
+import { blankPair, orb6Entry, wdsPair } from '../../wds/wds-fixture';
+import { athygRow, gaiaAstrometryRow, mscOrbit, mscSystem } from './load-fixture';
 import { assembleReferenceCatalogs, stage1Counts, type Stage1Inputs } from './reference-catalogs';
 import { stage1Report } from './stage1-report-pure';
 

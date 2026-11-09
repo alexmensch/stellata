@@ -3,7 +3,7 @@
 import {
   canonicalCompLetter, componentKey, parentComponentToken, subcomponentTopLetter, type ComponentKey,
 } from '../component-tokens-pure';
-import type { WdsPair } from '../load/wds-pure';
+import type { WdsPair } from '../../wds/wds-pure';
 import {
   findOwningPair, pairsByDiscoverer, priorityOf, working,
   type DecomposedPair, type Draft, type ResolvedComponent, type ResolveVia,

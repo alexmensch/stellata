@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
-import { FIXTURE, wdsPair } from './load-fixture';
-import { dedupWdsPairRows, measuredOffset, parseOrb6, parsePreciseCoord, parseWdsSumm } from './wds-pure';
+import { wdsPair } from './wds-fixture';
+
+const FIXTURE = { file: 'fixture/wds.txt', hint: 'h' } as const;
+import { dedupWdsPairRows, measuredOffset, parseOrb6, parsePreciseCoord, parseWdsSumm, splitComponents } from './wds-pure';
 
 describe('measuredOffset', () => {
   it('is the last ρ and θ when ρ is measured and positive', () => {
@@ -52,7 +54,7 @@ describe('parseWdsSumm', () => {
   it('reads a lone `.` as no value and throws on any other non-number, naming the field', () => {
     expect(parseWdsSumm(`${withCells(WDS_LINE, 58, '    .')}\n`, FIXTURE)[0].magPri).toBeNull();
     expect(() => parseWdsSumm(`${withCells(WDS_LINE, 58, 'abcde')}\n`, FIXTURE))
-      .toThrow(/fixture\/binaries\.tsv:1: mag_pri: "abcde" is not a decimal number/);
+      .toThrow(/fixture\/wds\.txt:1: mag_pri: "abcde" is not a decimal number/);
   });
 
   it('passes with precise coordinates present and throws past the coverage floor', () => {
@@ -133,5 +135,18 @@ describe('parseOrb6', () => {
     const { entries, grades } = parseOrb6(`banner\n${ungraded}\n`, FIXTURE);
     expect(entries[0].grade).toBe(5);
     expect(grades).toEqual(['fallback']);
+  });
+});
+
+describe('splitComponents', () => {
+  it('splits a two-letter field and a comma-separated one', () => {
+    expect(splitComponents('AB')).toEqual(['A', 'B']);
+    expect(splitComponents('Aa,Ab')).toEqual(['Aa', 'Ab']);
+    expect(splitComponents('BC,D')).toEqual(['BC', 'D']);
+    expect(splitComponents(' Aa1, 2 ')).toEqual(['Aa1', '2']);
+  });
+
+  it('is null for a blank field and for a form with no confident split', () => {
+    for (const field of ['', '   ', 'ABC', 'A', 'A,B,C']) expect(splitComponents(field)).toBeNull();
   });
 });

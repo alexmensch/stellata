@@ -111,9 +111,10 @@ scripts/binaries/
                                   and relatedHier / compoundContains — the
                                   test planRecords uses to tell one link
                                   named twice from two stars collapsed onto
-                                  one record. Also the one parse of a WDS
-                                  `components` field (splitComponents,
-                                  pairComponentTokens), childComponentTokens,
+                                  one record. Also pairComponentTokens (a
+                                  `components` field split by ../wds/'s
+                                  splitComponents, its secondary
+                                  re-anchored), childComponentTokens,
                                   tokenLetters and subcomponentTopLetter
                                   (the root letter, where
                                   parentComponentToken is the immediate

@@ -7,7 +7,7 @@ import { BLANK_RESCUE_OUTCOMES } from './blank-rescue-pure';
 import type { ReferenceCatalogs } from './reference-catalogs';
 import { ASTROMETRY_EXCLUSION_OUTCOMES } from './gaia-pure';
 import { MSC_SYNTHESIS_OUTCOMES, ORB6_OVERRIDE_OUTCOMES } from './subdivide-pure';
-import { ORB6_GRADE_OUTCOMES, WDS_DEDUP_OUTCOMES } from './wds-pure';
+import { ORB6_GRADE_OUTCOMES, WDS_DEDUP_OUTCOMES } from '../../wds/wds-pure';
 
 /** AT-HYG documents ~98% Gaia coverage; outside this band its input drifted. */
 export const ATHYG_GAIA_COVERAGE_BAND = { min: 0.90, max: 1.00 } as const;

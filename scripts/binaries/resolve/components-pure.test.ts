@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { wdsPair } from '../load/load-fixture';
+import { wdsPair } from '../../wds/wds-fixture';
 import { RESOLVE_VIA } from '../multiples-tsv';
 import { RESOLVE_VIA_PRIORITY, componentsOf, decompose, freezePairs, unresolvedComponent } from './components-pure';
 

@@ -37,8 +37,8 @@ import {
 import {
   WDS_DEDUP_OUTCOMES, dedupWdsPairRows, type Orb6Entry, type Orb6GradeOutcome, type Orb6Parse, type WdsDedupOutcome,
   type WdsPair,
-} from './wds-pure';
-import { ORB6, WDS_SUMM } from './wds-source';
+} from '../../wds/wds-pure';
+import { ORB6, WDS_SUMM } from '../../wds/wds-source';
 
 /** Expected parse cardinalities, about 10% either side of the frozen
  *  catalogues; a new upstream release re-pins them deliberately. CCDM is the

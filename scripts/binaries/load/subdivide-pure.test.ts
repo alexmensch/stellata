@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
 import { discovererKey } from '../component-tokens-pure';
-import { mscOrbit, orb6Entry, wdsPair } from './load-fixture';
+import { orb6Entry, wdsPair } from '../../wds/wds-fixture';
+import { mscOrbit } from './load-fixture';
 import { mscPairKey, type MscLookup, type MscOrbitRow } from './msc-pure';
 import {
   SYNTH_MSC_DISCOVERER, applyOrb6ComponentOverrides, synthesizeMscInnerPairs, synthesizeOrb6OrphanPairs,

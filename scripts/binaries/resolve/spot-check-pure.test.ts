@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { componentKey } from '../component-tokens-pure';
-import { wdsPair } from '../load/load-fixture';
+import { wdsPair } from '../../wds/wds-fixture';
 import { readTable } from '../../util/tsv/table-pure';
 import { unresolvedComponent, type DecomposedPair, type ResolvedComponent } from './components-pure';
 import { SPOT_CHECK_COLUMNS, spotCheckProblems, strongestComponents, truthRow } from './spot-check-pure';

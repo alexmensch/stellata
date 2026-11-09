@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
-import { athygRow, wdsPair } from '../load/load-fixture';
+import { wdsPair } from '../../wds/wds-fixture';
+import { athygRow } from '../load/load-fixture';
 import {
   inheritDownwardParentBindings, propagateBlendIdentity, propagateWithinSystem, seedSynthesizedComponentBindings,
 } from './propagate-pure';

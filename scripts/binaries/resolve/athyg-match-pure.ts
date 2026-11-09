@@ -2,7 +2,7 @@
 
 import { unitVectorFromRaDec, type SkyPosition } from '../../../src/astro-core/equatorial-basis';
 import { DEG_TO_RAD } from '../../../src/astro-core/astronomy-constants';
-import { canonicalCompLetter, pairComponentTokens, splitComponents } from '../component-tokens-pure';
+import { canonicalCompLetter, pairComponentTokens } from '../component-tokens-pure';
 import type { AthygRow } from '../load/athyg-pure';
 import {
   ATHYG_REFERENCE_EPOCH, COS_DEC_FLOOR, WDS_PRECISE_COORD_EPOCH, chordSqForTolerance, unitChordSq, predictSecondaryPosition, propagatePosition,
@@ -10,7 +10,7 @@ import {
 import {
   componentsOf, findOwningPair, pairRows, pairsByDiscoverer, type DecomposedPair, type ResolvedComponent,
 } from './components-pure';
-import { measuredOffset, type WdsPair } from '../load/wds-pure';
+import { measuredOffset, splitComponents, type WdsPair } from '../../wds/wds-pure';
 import { buildSystemHipClaims, hipClaimedByDisjointLetter } from './sibling-identity-pure';
 import { pushTo } from '../../util/map-buckets-pure';
 
