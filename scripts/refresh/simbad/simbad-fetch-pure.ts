@@ -15,7 +15,7 @@ export interface SimbadPhases {
   /** Identifier → oid, by exact id. */
   readonly resolve: Phase;
   readonly basic: Phase;
-  /** The shipped namespaces' ids per oid, in table order, so a namespace's last id is SIMBAD's last. */
+  /** The shipped namespaces' ids per oid, in id order, so a namespace's last id is the last in that order. */
   readonly idents: Phase;
   /** Every Gaia release's ids per oid, read only by corroboration (README.md#the-corroboration-rule). */
   readonly releases: Phase;
@@ -158,7 +158,7 @@ function foldIdents<T>(rows: IdentRows, namespaces: readonly Namespace[], ledger
   return out;
 }
 
-/** One id per namespace per oid: the last in table order, since the shipped column holds one. */
+/** One id per namespace per oid: the last in id order, since the shipped column holds one. */
 export async function fetchIdents(
   ask: Ask, phases: SimbadPhases, namespaces: readonly Namespace[], oids: readonly number[], ledger: ParseLedger,
 ): Promise<Map<number, Map<string, string>>> {

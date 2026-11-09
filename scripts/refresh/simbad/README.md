@@ -134,7 +134,7 @@ that bound it, so `walkSimbadNamespaces` reaches it whichever rung matches
 first — which is what lets the read side order its own walk independently.
 The one binding that cannot recover is an object SIMBAD holds two ids for
 in the binding namespace: the shipped column is single-valued and
-`fetchIdents` keeps the last in table order, so the winner need not
+`fetchIdents` keeps the last in id order, so the winner need not
 be the id that asked. Pinned rather than assumed away in `simbad-fetch-pure.test.ts`.
 
 **HIP before TYC is load-bearing, not alphabetical.** A TYC names the
