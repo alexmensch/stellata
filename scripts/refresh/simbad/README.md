@@ -14,8 +14,8 @@ and the WDS cross-IDs.
 simbad-specs-pure.ts        Namespace (parseIdent: suffix, component-lettered
                             with its number and letter, or unparsed), basic
                             columns, bibcoded groups,
-                            flux bands, WIDENING_LADDER, GAIA_RELEASES, and
-                            HD and WDS, which only the WDS cross-ID pull asks.
+                            flux bands, WIDENING_LADDER, GAIA_RELEASES, HD and
+                            WDS.
 simbad-fetch-pure.ts        The four query shapes as phases (resolve, basic,
                             idents, releases, flux; identPhase builds an
                             idents phase over any namespaces) and their
