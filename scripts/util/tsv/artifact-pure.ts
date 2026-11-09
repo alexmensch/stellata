@@ -23,8 +23,12 @@ export function tsvText(columns: readonly string[], lines: readonly string[]): s
 }
 
 /** Code-unit order: the same on every machine, unlike `localeCompare`. */
+export function compareCodeUnits(a: string, b: string): number {
+  return a < b ? -1 : a > b ? 1 : 0;
+}
+
 export function byText<R>(text: (r: R) => string): (a: R, b: R) => number {
-  return (a, b) => (text(a) < text(b) ? -1 : text(a) > text(b) ? 1 : 0);
+  return (a, b) => compareCodeUnits(text(a), text(b));
 }
 
 /** `by-line` sorts the encoded lines; `as-given` keeps the caller's order. */

@@ -1,5 +1,6 @@
 // The WDS components the pull asks SIMBAD about, and the ident each is stored under. See README.md#the-request.
 
+import { compareCodeUnits } from '../../util/tsv/artifact-pure';
 import { splitComponents, type WdsPair } from '../../wds/wds-pure';
 
 export interface WdsComponent {
@@ -13,8 +14,6 @@ export const componentId = (c: WdsComponent): string => `${c.wdsId} ${c.componen
 /** The suffix SIMBAD stores the component under in its `WDS` namespace. */
 export const identSuffix = (c: WdsComponent): string => `${c.wdsId}${c.component}`;
 
-const compareText = (a: string, b: string): number => (a < b ? -1 : a > b ? 1 : 0);
-
 /** Both sides of every pair row whose components field splits, each once, by WDS id then component: the rows Stage 2 decomposes. */
 export function wdsComponents(pairs: readonly WdsPair[]): WdsComponent[] {
   const seen = new Map<string, WdsComponent>();
@@ -26,5 +25,5 @@ export function wdsComponents(pairs: readonly WdsPair[]): WdsComponent[] {
       seen.set(componentId(c), c);
     }
   }
-  return [...seen.values()].sort((a, b) => compareText(a.wdsId, b.wdsId) || compareText(a.component, b.component));
+  return [...seen.values()].sort((a, b) => compareCodeUnits(a.wdsId, b.wdsId) || compareCodeUnits(a.component, b.component));
 }
