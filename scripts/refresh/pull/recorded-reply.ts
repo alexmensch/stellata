@@ -3,8 +3,12 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-import { REPO_ROOT } from '../../util/paths';
-import { checkedRows, formatTsv, type Column, type Row } from './columns-pure';
+import { expect, it } from 'vitest';
+
+import { REPO_ROOT, lfsContentReadable } from '../../util/paths';
+import { cellReader, checkedRows, formatTsv, sortRows, type Column, type Row } from './columns-pure';
+import { spotRowCheck } from './gates-pure';
+import type { WrittenTable } from './pull';
 import { cutEdges, sliceCounts, type SliceKey } from './slices-pure';
 import { readCsv } from './tap-pure';
 
@@ -44,4 +48,23 @@ export function oversizedSlices<T extends SliceKey>(
     over: sliceCounts(keys, edges).filter((n) => n > sliceRows),
     recut: () => cutEdges(keys.sort((a, b) => (a < b ? -1 : a > b ? 1 : 0)), sliceRows),
   };
+}
+
+/** A written table's recorded reply against its committed `file`, as cases of the enclosing `describe`: its lines, its spot rows, its order. */
+export function recordedTableCases(name: string, file: string, table: WrittenTable, reply: readonly string[]): void {
+  const readable = lfsContentReadable(join(REPO_ROOT, file));
+
+  it.skipIf(!readable)('writes a recorded reply\'s rows as lines of the committed table', () => {
+    expect(linesNotCommitted(file, table.columns, replyRows(name, table.columns, reply))).toEqual([]);
+  });
+
+  it('passes its spot rows on the recorded reply', () => {
+    const rows = replyRows(name, table.columns, reply);
+    expect(spotRowCheck(name, rows.map(cellReader(table.columns, name)), table.spotRows).kind).toBe('pass');
+  });
+
+  it.skipIf(!readable)('orders the committed table by its sort key, as a pull writes it', () => {
+    const { lines, rows } = committedRows(file);
+    expect(sortRows(table.columns, rows, table.sortBy, name).map((row) => row.map((c) => c ?? '').join('\t'))).toEqual(lines);
+  });
 }

@@ -5,10 +5,8 @@ import { describe, expect, it } from 'vitest';
 
 import { DATA_FILES } from '../../../src/catalog-format/pipeline-outputs/data-files';
 import { REPO_ROOT, lfsContentReadable } from '../../util/paths';
-import { cellReader, sortRows } from '../pull/columns-pure';
-import { spotRowCheck } from '../pull/gates-pure';
 import { queryLimit } from '../pull/pull';
-import { committedRows, linesNotCommitted, replyRows } from '../pull/recorded-reply';
+import { committedRows, recordedTableCases } from '../pull/recorded-reply';
 import {
   ASTROMETRY_COLUMNS, BINARIES_ASTROMETRY_SPOTS, CATALOG_ASTROMETRY_SPOTS, DR2_ROWS_PER_ID, astrometryTable, dr2NeighbourhoodTable, gspcTable,
 } from './gaia-request-pure';
@@ -54,23 +52,7 @@ const TABLES = [
   { name: 'dr2 neighbourhood (ARI)', table: dr2NeighbourhoodTable(NO_IDS), file: DATA_FILES.gaiaDr2Neighbourhood, reply: DR2_REPLY_ARI },
 ] as const;
 
-describe.each(TABLES)('$name', ({ name, table, file, reply }) => {
-  const readable = lfsContentReadable(join(REPO_ROOT, file));
-
-  it.skipIf(!readable)('writes a recorded reply\'s rows as lines of the committed table', () => {
-    expect(linesNotCommitted(file, table.columns, replyRows(name, table.columns, reply))).toEqual([]);
-  });
-
-  it('passes its spot rows on the recorded reply', () => {
-    const rows = replyRows(name, table.columns, reply);
-    expect(spotRowCheck(name, rows.map(cellReader(table.columns, name)), table.spotRows).kind).toBe('pass');
-  });
-
-  it.skipIf(!readable)('orders the committed table by its sort key, as a pull writes it', () => {
-    const { lines, rows } = committedRows(file);
-    expect(sortRows(table.columns, rows, table.sortBy, name).map((row) => row.map((c) => c ?? '').join('\t'))).toEqual(lines);
-  });
-});
+describe.each(TABLES)('$name', ({ name, table, file, reply }) => recordedTableCases(name, file, table, reply));
 
 describe('the request queries', () => {
   it('ask at most 20,000 rows each, so ESA\'s 50,000-row hard limit holds every batch', () => {
