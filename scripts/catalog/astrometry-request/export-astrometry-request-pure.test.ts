@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
-  parseSourceIdRequest,
+  readSourceIdRequest,
   serialiseSourceIdRequest,
   sortSourceIdsNumeric,
   unrequestedBindings,
@@ -34,20 +34,24 @@ describe('export-astrometry-request-pure / sortSourceIdsNumeric', () => {
   });
 });
 
+const R = { file: 'r.tsv', hint: 'h' };
+
 describe('the source_id request file', () => {
   it('round-trips, numerically ordered under its header', () => {
     const text = serialiseSourceIdRequest(new Set(['30', '2', '4472832130942575872']));
     expect(text).toBe('gaia_source_id\n2\n30\n4472832130942575872\n');
-    expect(parseSourceIdRequest(text)).toEqual(new Set(['2', '30', '4472832130942575872']));
+    expect(readSourceIdRequest(text, R)).toEqual([2n, 30n, 4472832130942575872n]);
   });
 
   it('writes a header-only file for no ids, and reads it back empty', () => {
     expect(serialiseSourceIdRequest([])).toBe('gaia_source_id\n');
-    expect(parseSourceIdRequest('gaia_source_id\n')).toEqual(new Set());
+    expect(readSourceIdRequest('gaia_source_id\n', R)).toEqual([]);
   });
 
-  it('refuses a file whose first line is not the header', () => {
-    expect(() => parseSourceIdRequest('2\n30\n')).toThrow(/header/);
+  it('refuses a file without the header, and a bad id by file and line, ending with the hint', () => {
+    expect(() => readSourceIdRequest('2\n30\n', R)).toThrow(/r\.tsv is missing required columns: gaia_source_id/);
+    expect(() => readSourceIdRequest('gaia_source_id\n12\n\t\n-3\n', R)).toThrow(/^r\.tsv:4: gaia_source_id: "-3" is not a source_id/);
+    expect(() => readSourceIdRequest('source_id\n12\n', { file: 'r.tsv', hint: 'Restore it from git.' })).toThrow(/\. Restore it from git\.$/);
   });
 });
 

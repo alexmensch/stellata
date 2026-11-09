@@ -273,8 +273,9 @@ export async function runPhasedPull<K extends string>(pull: PhasedPull<K>, deps:
       const cached = cache.load(adql);
       if (cached?.service) deps.report(cached.service);
       const result = cached === null ? await client.query(adql, limit) : { ...cached, result: readCsv(cached.body, limit, name) };
+      const checked = checkedRows(phase.columns, result.result, name);
       if (cached === null) cache.save(adql, result);
-      for (const row of checkedRows(phase.columns, result.result, name)) rows.push(row);
+      for (const row of checked) rows.push(row);
       deps.log(`  ${name} batch ${i + 1}/${queries.length}: ${result.result.rows.length} rows${cached === null ? '' : ' from checkpoint'} (total ${rows.length})`);
     }
     return rows;

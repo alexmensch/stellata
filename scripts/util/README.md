@@ -195,11 +195,14 @@ same thing — single-use helpers stay with their consumer.
   belongs to, and `BROWSER_TREES`: the one list both import-boundary tests
   (`/tests/README.md#pipeline-viewer-boundary`) and the step table's
   outputs-module walk ([Load-time rules](../pipeline/step-table/README.md#load-time-rules)) read.
-- `round-pure.ts` (+ test) — `roundHalfEven(x, digits)`, Python's
-  `round`: half to even on the double's exact decimal value;
+- `round-pure.ts` (+ test) — one rounding, half to even on the double's
+  exact decimal value as a `BigInt`, behind four spellings:
+  `roundHalfEven(x, digits)`, Python's `round`;
   `roundEach`, the same over each element of a tuple;
-  `formatFixed(x, digits)`, Python's `f"{x:.{digits}f}"` text on the same
-  rounding (a refresh pull's fixed-decimal column format); and
+  `formatFixed(x, digits)`, Python's `f"{x:.{digits}f}"` text (a refresh
+  pull's fixed-decimal column format);
+  `formatExponent(x, digits)`, Python's `f"{x:.{digits}e}"` (the exponent
+  format); and
   `roundSignificant(v, digits)`, significant figures through
   `toPrecision`. Every number a TypeScript build rounds into a JSON
   artifact goes through one of them, never `Math.round(x · 10ⁿ) / 10ⁿ`,

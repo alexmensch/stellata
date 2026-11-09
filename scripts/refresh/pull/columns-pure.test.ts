@@ -21,6 +21,15 @@ describe('checkedRows', () => {
     expect(checkedRows(COLUMNS, result, 't')).toEqual([['1', '10.5', null]]);
   });
 
+  it('reads a flag as 0/1 from either archive\'s spelling and refuses any third value', () => {
+    const flag: Column[] = [{ name: 'b', format: { flag: true } }];
+    const reply = (cells: (string | null)[]) => ({ columns: ['b'], rows: cells.map((cell) => [cell]) });
+    expect(checkedRows(flag, reply(['true', 'false', '1', '0', null]), 't')).toEqual(['1', '0', '1', '0', null].map((cell) => [cell]));
+    for (const bad of ['2', 'TRUE', 't', 'toString']) {
+      expect(() => checkedRows(flag, reply([bad]), 't')).toThrow(`t: b="${bad}" is not a two-valued flag (0/1 or false/true)`);
+    }
+  });
+
   it('refuses a missing, extra or reordered column', () => {
     for (const columns of [['source_id', 'plx'], ['source_id', 'RA(ICRS)', 'plx', 'x'], ['RA(ICRS)', 'source_id', 'plx']]) {
       expect(() => checkedRows(COLUMNS, { ...result, columns }, 't')).toThrow(/are not the declared/);
@@ -71,6 +80,12 @@ describe('formatTsv', () => {
     const fixed: Column[] = [{ name: 'd', format: { fixed: 6, float32: true } }];
     expect(formatTsv('f.tsv', fixed, [['0.1570405'], ['1.0490755']])).toBe('d\n0.157041\n1.049075\n');
     expect(formatTsv('f.tsv', [{ name: 'd', format: { fixed: 6 } }], [['0.1570405'], ['1.0490755']])).toBe('d\n0.157040\n1.049076\n');
+  });
+
+  it('writes an exponent column as Python .Ne did, on its float32 value', () => {
+    expect(formatTsv('f.tsv', [{ name: 'f', format: { exp: 6, float32: true } }], [['1.2345675E-10'], ['6.512287E-17']]))
+      .toBe('f\n1.234567e-10\n6.512287e-17\n');
+    expect(formatTsv('f.tsv', [{ name: 'f', format: { exp: 6 } }], [['1.2345675E-10']])).toBe('f\n1.234568e-10\n');
   });
 
   it('rounds as Python does, and refuses a formatted cell that is not a number', () => {

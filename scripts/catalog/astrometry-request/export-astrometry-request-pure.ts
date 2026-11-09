@@ -1,7 +1,8 @@
 // Pure helpers for the full-catalog Gaia astrometry request export.
 // See README.md.
 
-import { compareSourceIds } from '../../util/tsv/table-pure';
+import type { Declared } from '../../util/sources/source';
+import { compareSourceIds, readTable } from '../../util/tsv/table-pure';
 
 /** The numeric order the binaries request file (`write_astrometry_request`)
  *  produces too. */
@@ -17,12 +18,9 @@ export function serialiseSourceIdRequest(ids: Iterable<string>): string {
   return `${REQUEST_HEADER}\n${sortSourceIdsNumeric(ids).map((id) => `${id}\n`).join('')}`;
 }
 
-export function parseSourceIdRequest(text: string): Set<string> {
-  const [header, ...ids] = text.trimEnd().split('\n');
-  if (header !== REQUEST_HEADER) {
-    throw new Error(`source_id request header is ${JSON.stringify(header)}, expected ${REQUEST_HEADER}`);
-  }
-  return new Set(ids);
+/** The ids of a source_id request file, in file order, naming the file and line of a bad one. */
+export function readSourceIdRequest(text: string, from: Declared): bigint[] {
+  return [...readTable({ ...from, columns: [REQUEST_HEADER] }, text)].map((row) => BigInt(row.requiredSourceId(REQUEST_HEADER)));
 }
 
 /** The primaries rows whose bound source the request leaves out — the

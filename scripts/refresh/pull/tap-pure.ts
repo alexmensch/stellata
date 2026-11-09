@@ -17,6 +17,8 @@ export interface TapArchive {
 
 const bare = (identifier: string): string => identifier;
 
+export const GAIA_DR3_RELEASE = 'Gaia DR3';
+
 export const GAIA: TapArchive = {
   mirrors: [
     { name: 'ESA-sync', verified: true, url: 'https://gea.esac.esa.int/tap-server/tap' },

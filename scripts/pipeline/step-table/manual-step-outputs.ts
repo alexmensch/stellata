@@ -33,12 +33,24 @@ export const MANUAL_STEPS: readonly ManualStep[] = [
     'scripts/refresh/gaia-whole-table/gaia-whole-table-outputs.ts', 'GAIA_TYC_XMATCH_OUTPUTS',
   ),
   pull('refresh:gaia-nss', 'refresh-gaia-nss.py', [DATA_FILES.gaiaNssTwoBody]),
-  pull('refresh:gaia-astrometry', 'refresh-gaia-astrometry.py', ['data/gaia/gaia_dr3_astrometry.tsv']),
-  pull('refresh:gaia-astrometry-catalog', 'refresh-gaia-astrometry-catalog.py', ['data/gaia/gaia_dr3_astrometry_catalog.tsv']),
+  tsManual(
+    { kind: 'pull' }, 'refresh:gaia-astrometry', 'scripts/refresh/gaia-request/refresh-gaia-astrometry.ts',
+    'scripts/refresh/gaia-request/gaia-request-outputs.ts', 'GAIA_ASTROMETRY_OUTPUTS',
+  ),
+  tsManual(
+    { kind: 'pull' }, 'refresh:gaia-astrometry-catalog', 'scripts/refresh/gaia-request/refresh-gaia-astrometry-catalog.ts',
+    'scripts/refresh/gaia-request/gaia-request-outputs.ts', 'GAIA_ASTROMETRY_CATALOG_OUTPUTS',
+  ),
   pull('refresh:gaia-magnitude', 'refresh-gaia-magnitude.py', ['data/gaia/gaia_dr3_magnitude_pull.tsv']),
   pull('refresh:gaia-apsis', 'refresh-gaia-apsis.py', ['data/gaia/gaia_dr3_apsis.tsv']),
-  pull('refresh:gaia-gspc', 'refresh-gaia-gspc.py', ['data/gaia/gaia_dr3_gspc.tsv']),
-  pull('refresh:gaia-dr2-neighbourhood', 'refresh-gaia-dr2-neighbourhood.py', ['data/gaia/gaia_dr2_neighbourhood.tsv']),
+  tsManual(
+    { kind: 'pull' }, 'refresh:gaia-gspc', 'scripts/refresh/gaia-request/refresh-gaia-gspc.ts',
+    'scripts/refresh/gaia-request/gaia-request-outputs.ts', 'GAIA_GSPC_OUTPUTS',
+  ),
+  tsManual(
+    { kind: 'pull' }, 'refresh:gaia-dr2-neighbourhood', 'scripts/refresh/gaia-request/refresh-gaia-dr2-neighbourhood.ts',
+    'scripts/refresh/gaia-request/gaia-request-outputs.ts', 'GAIA_DR2_NEIGHBOURHOOD_OUTPUTS',
+  ),
   pull('refresh:bailer-jones', 'refresh-bailer-jones.py', ['data/bailer-jones/bailer-jones-dr3.tsv']),
   pull('refresh:hip2', 'refresh-hipparcos2.py', ['data/hipparcos/hip2_van_leeuwen.tsv']),
   pull('refresh:hip-vmag', 'refresh-hipparcos-vmag.py', ['data/hipparcos/hip_main_vmag.tsv']),

@@ -26,7 +26,7 @@ SIMBAD. A pull is a `pull` step on the step table
 ## A pull
 
 ```ts
-export const pull: Pull<'xmatch'> = { archive: GAIA, outputs: XMATCH_OUTPUTS, release: 'Gaia DR3', tables: { xmatch: {…} } };
+export const pull: Pull<'xmatch'> = { archive: GAIA, outputs: XMATCH_OUTPUTS, release: GAIA_DR3_RELEASE, tables: { xmatch: {…} } };
 export const describe = () => describePull(pull);
 export const main = () => runPull(pull);
 ```
@@ -127,7 +127,7 @@ limit, so a pull sized for ESA's 50,000 keeps `sliceRows` at most 24,999.
 
 ## The checkpoint
 
-Each answered query's CSV reply is cached as it lands, under
+Each answered query's CSV reply is cached once it passes the column check, under
 `<first output>.ckpt/`, named by the hash of the query's text, beside the
 mirror that answered it; a re-run replays a cached reply (re-checked against
 the limit and the columns) and asks only what is missing. **A replay reports
@@ -201,7 +201,12 @@ A table's `Column` list is the one statement of its schema. Each column's
 is its projection when that is not the quoted name (a qualified `t.source_id`,
 which still answers as `source_id`, or an aliased expression); `format`
 is the one place a pull rounds, and it is data: `{fixed: n}`, Python's
-`f"{x:.nf}"` text (`formatFixed`, `../../util/round-pure.ts`). A column the
+`f"{x:.nf}"` text (`formatFixed`, `../../util/round-pure.ts`), or `{exp: n}`,
+Python's `f"{x:.ne}"` (`formatExponent`). `{flag: true}` is a two-valued
+column written `0`/`1`: ESA prints a BOOLEAN as `true`/`false` and ARI as
+`1`/`0`, and ARI rejects a `CAST`, so the mapping cannot be server-side. It
+maps when the reply is checked (`checkedRows`), so gates, sort and TSV all see
+`0`/`1` whichever mirror answered, and any third value refuses the reply. A column the
 archive stores as a REAL adds `float32: true`: its value is the float32
 nearest the reply's text, and Python formatted that value, so `{fixed: 6}` on
 the text alone disagrees with it on about 1 cell in 230 (measured on a

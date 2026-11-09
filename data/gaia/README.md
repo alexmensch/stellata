@@ -336,10 +336,11 @@ science-side rationale.
 `pnpm run refresh:gaia-{hip,tyc,astrometry,astrometry-catalog,nss,apsis,gspc,magnitude,dr2-neighbourhood}` →
 [`scripts/refresh/`](../../scripts/refresh/README.md). DR4 transition
 order is documented there. `refresh:gaia-magnitude` has no input beyond its
-own magnitude bound, so it runs at any point in that order. Three pulls read
-a source_id request file as input — `refresh:gaia-gspc` reads the same
-`gaia_catalog_source_id_request.tsv` as the catalog astrometry pull, so
-it has the same ordering constraint:
+own magnitude bound, so it runs at any point in that order. The pulls that
+read a source_id request file run after whatever writes it —
+`refresh:gaia-gspc`, `refresh:gaia-apsis` and `refresh:bailer-jones` read the
+same `gaia_catalog_source_id_request.tsv` as the catalog astrometry pull, so
+they share its ordering constraint:
 
 - `refresh:gaia-astrometry` reads `gaia_astrometry_source_id_request.tsv`,
   so it must run **after** a fresh `pnpm run build:binaries`.
