@@ -863,7 +863,7 @@ Measured exposure and expected coverage (2026-08-14; pins in
   **Validation independence is now real for this field.** A record whose
   distance came from `simbad_plx` is excluded from both SIMBAD-based
   distance validators — the sample harness reads
-  `data/athyg/simbad_sourced_distances.tsv`, the in-build regression check
+  `data/membership/simbad_sourced_distances.tsv`, the in-build regression check
   reads `distVia` directly. Until this cascade there was no SIMBAD
   distance tier for the rule to bite on.
 - **spect** — the spine cell is already display-only

@@ -14,21 +14,12 @@ inherited-spine.tsv        ~40 MB, LFS. Generated provenance data: AT-HYG's
 stale_gaia_source_ids.tsv  ~1 KB, regular git. Review queue: the 6 spine
                            rows whose gaia_source_id Gaia DR3 publishes no
                            row for — see README.md#six-dr2-ids-in-the-dr3-column.
-simbad_sourced_distances.tsv
-                           ~2 KB, regular git. The records whose distance
-                           came from the cascade's SIMBAD tier, excluded from
-                           SIMBAD-based validation of the same field. 297
-                           rows, of which 211 name a record and 86 carry
-                           neither cell and so address none — `stellata-hooj.15`.
 ```
 
-Three kinds of file: the CSV is frozen **external** data under the policy in
+The CSV is frozen **external** data under the policy in
 `../README.md` [Frozen external data](/data/README.md#frozen-external-data); the spine is a frozen
-**Stellata build artifact** that happens to live beside it; the last three are
-**emitted by every build** and committed so a reviewer and a test can read what
-the build decided. Regenerate them with `pnpm run build:catalog` — never by
-hand. `scripts/catalog/distance/parallax/README.md` owns what the two newest
-mean.
+**Stellata build artifact** that happens to live beside it, and
+`stale_gaia_source_ids.tsv` a committed review queue over it.
 
 **The small ones are exempted from LFS in `.gitattributes`, and must stay
 exempt.** `data/athyg/*.tsv` is a blanket LFS rule written for the 40 MB spine,

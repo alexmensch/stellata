@@ -118,7 +118,7 @@ Three tiers, all snapshot-pinned:
   in `data/simbad/simbad_sample.tsv`. Manual run; the
   distance-regression check above is the build-time automated subset
   of the same cross-check. **Both skip a record whose distance the SIMBAD
-  tier supplied** — `data/athyg/simbad_sourced_distances.tsv` names them,
+  tier supplied** — `data/membership/simbad_sourced_distances.tsv` names them,
   since this harness reads `catalog.bin` and cannot see a build-time tier.
   The list is a required input: without it no record would be excluded.
   Their residual is zero by construction, so including them would report
