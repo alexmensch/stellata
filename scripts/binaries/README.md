@@ -49,8 +49,8 @@ scripts/binaries/
                                   the switch; the test runs it over the
                                   committed inputs and holds each ported
                                   stage's keys to the committed count
-                                  snapshot, and its rates within the
-                                  rates snapshot's tolerance.
+                                  snapshot, and its rates to the rates
+                                  snapshot's committed values.
   load/                           Stage 1 in TypeScript: every reference
                                   catalogue read through its declaration,
                                   then the Stage 1 passes, as a frozen

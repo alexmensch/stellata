@@ -19,7 +19,7 @@ import { ASTROMETRY_EXCLUSIONS, COMPONENT_SPTYPE_OVERRIDES, ORB6_COMPONENT_OVERR
 import { mscPairKey } from './load/msc-pure';
 import { MSC_COMPONENTS, MSC_ORBITS, MSC_SYSTEMS } from './load/msc-source';
 import { runStages } from './build-binaries';
-import { stage3Counts, stage3Rates, type Stage3Result } from './astrometry/attach-astrometry';
+import { RATE_SNAPSHOT_DECIMALS, stage3Counts, stage3Rates, type Stage3Result } from './astrometry/attach-astrometry';
 import { stage1Counts, type ReferenceCatalogs } from './load/reference-catalogs';
 import { astrometryRequestIds, stage2Counts, type Stage2Result } from './resolve/resolve-pairs';
 import { spotCheckProblems, strongestComponents } from './resolve/spot-check-pure';
@@ -38,7 +38,7 @@ const readRepoFile = (file: string): string => readFileSync(resolve(__dirname, '
 
 const snapshot = (file: string): unknown => flattenStages(JSON.parse(readFileSync(resolve(__dirname, file), 'utf8')));
 const committed = snapshot('build-binaries-expected.json') as Record<string, number>;
-const committedRates = snapshot('build-binaries-rates-expected.json') as Record<string, { value: number; tolerance: number }>;
+const committedRates = snapshot('build-binaries-rates-expected.json') as Record<string, { value: number }>;
 
 describe.skipIf(![...INPUTS, REQUEST, SPOT_CHECK_GROUND_TRUTH].every(isReadable))('Stages 1..3 through the shell, over the committed inputs', () => {
   let c: ReferenceCatalogs;
@@ -103,10 +103,9 @@ describe.skipIf(![...INPUTS, REQUEST, SPOT_CHECK_GROUND_TRUTH].every(isReadable)
     for (const [key, value] of Object.entries(stage3Counts(c, r, s3))) expect([key, value]).toEqual([key, committed[key]]);
   });
 
-  it('rates within the committed rates snapshot\'s tolerance for Stage 3\'s keys', () => {
+  it('rates what the committed rates snapshot pins for Stage 3\'s keys, at its rounding', () => {
     for (const [key, rate] of Object.entries(stage3Rates(stage3Counts(c, r, s3)))) {
-      const { value, tolerance } = committedRates[key];
-      expect([key, Math.abs(rate - value) / Math.max(Math.abs(value), 1e-9) <= tolerance]).toEqual([key, true]);
+      expect([key, Number(rate.toFixed(RATE_SNAPSHOT_DECIMALS))]).toEqual([key, committedRates[key].value]);
     }
   });
 
