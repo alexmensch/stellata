@@ -100,8 +100,8 @@ V = G − f(BP−RP)      Riello 2021 (/data/papers/index.md#riello2021), inside
   → curated            Sol alone
 ```
 
-Per-tier routing, pinned in build-counts: `gaia_riello` **<!-- count:build-catalog/vGaiaRiello -->963,375<!-- /count -->** ·
-`printed_hip` **<!-- count:build-catalog/vPrintedHip -->1,417<!-- /count -->** · `tycho2` **<!-- count:build-catalog/vTycho2 -->189<!-- /count -->** · `gliese` **<!-- count:build-catalog/vGliese -->20<!-- /count -->** · `curated`
+Per-tier routing, pinned in build-counts: `gaia_riello` **<!-- count:build-catalog/vGaiaRiello -->963,505<!-- /count -->** ·
+`printed_hip` **<!-- count:build-catalog/vPrintedHip -->1,242<!-- /count -->** · `tycho2` **<!-- count:build-catalog/vTycho2 -->190<!-- /count -->** · `gliese` **<!-- count:build-catalog/vGliese -->20<!-- /count -->** · `curated`
 **<!-- count:build-catalog/vCurated -->1<!-- /count -->**, residual `none` **<!-- count:build-catalog/vNone -->0<!-- /count -->**.
 
 `resolveVMagnitude` returns the shared cascade shape
@@ -149,9 +149,9 @@ B−V = (G−V)(BP−RP) − (G−B)(BP−RP)    inside both relations' validity
   → none                              the record bakes SOLAR_BV_FALLBACK
 ```
 
-Per-tier routing, pinned in build-counts: `gaia_relation` **<!-- count:build-catalog/ciGaiaRelation -->881,769<!-- /count -->** ·
-`printed_hip_bv` **<!-- count:build-catalog/ciPrintedHipBv -->9,754<!-- /count -->** · `gspc` **<!-- count:build-catalog/ciGspc -->12,014<!-- /count -->** ·
-`spectral_derived` **<!-- count:build-catalog/ciSpectralDerived -->3,775<!-- /count -->** · `none` **<!-- count:build-catalog/ciSolarFallback -->57,690<!-- /count -->** (pinned as
+Per-tier routing, pinned in build-counts: `gaia_relation` **<!-- count:build-catalog/ciGaiaRelation -->881,895<!-- /count -->** ·
+`printed_hip_bv` **<!-- count:build-catalog/ciPrintedHipBv -->9,584<!-- /count -->** · `gspc` **<!-- count:build-catalog/ciGspc -->12,013<!-- /count -->** ·
+`spectral_derived` **<!-- count:build-catalog/ciSpectralDerived -->3,785<!-- /count -->** · `none` **<!-- count:build-catalog/ciSolarFallback -->57,681<!-- /count -->** (pinned as
 `ciSolarFallback`). The relation carries the bulk; the two measured tiers under
 it take the rows past its colour and saturation bounds, and the rest reach
 neither and take a derived colour or none.
@@ -413,7 +413,7 @@ from the module, so a transcription slip fails rather than round-trips.
 
 The test also pins the relation's **maximum, −0.02680**, which is a contract
 with a consumer outside this folder rather than anything read here:
-`scripts/refresh/refresh-gaia-magnitude.py` selects catalogue membership on
+`refresh:gaia-magnitude` (`scripts/refresh/magnitude/`) selects catalogue membership on
 `G` alone, and that selection is complete for a `V` floor only while the
 relation keeps `V` fainter than `G` everywhere it applies. A successor
 calibration whose peak went positive would oblige that pull to carry a margin

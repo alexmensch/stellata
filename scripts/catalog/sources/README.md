@@ -17,7 +17,10 @@ scripts/catalog/sources/
                                   (parseGaiaAstrometryCatalogTsv), and the
                                   magnitude term streams its pull through it
                                   with a keep-set (gaiaAstrometryAccumulator,
-                                  `../parse/README.md#streaming-a-committed-table`).
+                                  `../parse/README.md#streaming-a-committed-table`),
+                                  and the SIMBAD values pull streams it row by
+                                  row without holding it
+                                  (gaiaAstrometryLineReader).
   hip2-source.ts (+ test)         HIP2 and Hip2AstrometryRow. The parse also
                                   lists every HIP the table publishes,
                                   positioned or not, for

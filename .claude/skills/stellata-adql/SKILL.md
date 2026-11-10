@@ -130,14 +130,13 @@ only a warning.
 
 A selection defined by a value bound rather than an id list still needs
 batching past a few hundred thousand rows: one sync query has no resume point
-and a 300 s timeout. Slice on the bound itself, and space the slices so their
-**populations** are even rather than their widths — for a magnitude bound,
-counts grow geometrically, so equal steps in log-count space give near-equal
-slices where equal magnitude steps give a 27x spread.
-`refresh-gaia-magnitude.py` is the worked example;
-[Slicing a magnitude-bounded pull](/scripts/refresh/magnitude/README.md#slicing-a-magnitude-bounded-pull) carries the
-spacing rule and the partition discipline (share the edge as a formatted
-literal, gate that no row is returned twice).
+and a 300 s timeout. Slice on the bound itself, and size the slices by their
+**populations** rather than their widths — for a magnitude bound, counts grow
+geometrically, so equal magnitude steps give a 27x spread. The runtime's
+`sliced` scope does this: edges cut by `cutEdges` from the committed table's
+own values, half-open ranges sharing each edge literal, so no row is asked
+twice. `refresh:gaia-magnitude` is the worked example;
+[Slicing a magnitude-bounded pull](/scripts/refresh/magnitude/README.md#slicing-a-magnitude-bounded-pull) carries it.
 
 `phot_g_mean_mag` is indexed on ESA (a bounded `COUNT(*)` over the
 1.8-billion-row table returns in ~2 s), so a slice is no full scan.

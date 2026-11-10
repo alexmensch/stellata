@@ -203,7 +203,7 @@ posterior. Coverage next improves with Gaia DR4 and a B-J-successor
 republication, not with more cross-walk work.
 
 Data file: `data/bailer-jones/bailer-jones-dr3.tsv` (365,980 rows,
-refreshed by `scripts/refresh/refresh-bailer-jones.py`).
+refreshed by `pnpm run refresh:bailer-jones`).
 
 <a id="distance-override-validation-against-vaidman-et-al-2025"></a>**Distance-override validation against Vaidman 2025.**
 [Vaidman 2025](/data/papers/index.md#vaidman2025)

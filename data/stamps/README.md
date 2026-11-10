@@ -33,6 +33,10 @@ unchanged, takes the request hash and `requestFrom` its `--describe` now
 prints. The old one holds rows its query no longer asks for until its next
 real run; the split's README measures what that run will move.
 
+A pull ported to the TypeScript runtime is no exception: it records through
+its target too, from a checkpoint seeded with its committed rows, so no query
+is sent and its `answeredBy` is empty until its first live run.
+
 ## Bootstrap
 
 The first records were written without re-running anything: each adopted

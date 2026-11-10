@@ -83,6 +83,7 @@ const tables: PrimaryTables = {
   tycho2: new Map([['1-1-1', tycho2(8.5, 10)], ['1-2-1', tycho2(10.2)], ['9-9-1', tycho2(11.7)]]),
   tycToSource: new Map([['1-1-1', '111'], ['1-2-1', '222'], ['9-9-1', '999']]),
   hipToSource: new Map([[10, '111'], [20, '333']]),
+  simbadSourceless: [],
   simbadBySourceId: new Map([
     ['999', { hip: 20, tyc: null, gj: null }],
     ['777', { hip: 21, tyc: '5-5-5', gj: null }],

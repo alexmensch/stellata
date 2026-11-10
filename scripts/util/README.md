@@ -93,9 +93,11 @@ same thing — single-use helpers stay with their consumer.
   A stamp the runner writes for a Python step also carries `recorded`: the
   folders it listed (`listingHash`, over the sorted names git does not
   ignore, so a local cache in a listed folder reads the same in every
-  checkout) and the paths it probed, which `recordedChanges` re-checks.
-  `ignoredPaths` is the one `git check-ignore` call, which `listingHash` and
-  `../pipeline/record-step.ts` both make.
+  checkout) and the paths it probed, which `recordedChanges` re-checks; a
+  listed folder git ignores is dropped (`ignoredDirs`, asked with a trailing
+  slash, so a `.ckpt` folder the pull deleted before exiting still matches
+  its directory-only pattern). `ignoredPaths` is the one `git check-ignore`
+  call, which `listingHash`, `ignoredDirs` and `../pipeline/record-step.ts` make.
   `record_run` is how the runner runs a Python step
   (`../pipeline/run_python_step.py`): Python's audit hook records, under a
   root, every file the process opens for reading, hashed at its first read
@@ -197,15 +199,22 @@ same thing — single-use helpers stay with their consumer.
   belongs to, and `BROWSER_TREES`: the one list both import-boundary tests
   (`/tests/README.md#pipeline-viewer-boundary`) and the step table's
   outputs-module walk ([Load-time rules](../pipeline/step-table/README.md#load-time-rules)) read.
-- `round-pure.ts` (+ test) — `roundHalfEven(x, digits)`, Python's
-  `round`: half to even on the double's exact decimal value;
+- `round-pure.ts` (+ test) — one rounding, half to even on the double's
+  exact decimal value as a `BigInt`, behind four spellings:
+  `roundHalfEven(x, digits)`, Python's `round`;
   `roundEach`, the same over each element of a tuple;
-  `formatFixed(x, digits)`, Python's `f"{x:.{digits}f}"` text on the same
-  rounding (a refresh pull's fixed-decimal column format); and
+  `formatFixed(x, digits)`, Python's `f"{x:.{digits}f}"` text (a refresh
+  pull's fixed-decimal column format);
+  `formatExponent(x, digits)`, Python's `f"{x:.{digits}e}"` (the exponent
+  format); and
   `roundSignificant(v, digits)`, significant figures through
   `toPrecision`. Every number a TypeScript build rounds into a JSON
   artifact goes through one of them, never `Math.round(x · 10ⁿ) / 10ⁿ`,
   whose multiply moves near-ties.
+- `seeded-random-pure.ts` (+ test) — `mulberry32(seed)`, the one seeded
+  uniform generator: the synthetic faint catalogue's draws
+  (`../perf/synthetic-catalog/`) and the SIMBAD validation sample's
+  (`../refresh/simbad-sample/`). A changed algorithm redraws both.
 - `step-inputs.ts` — `entryInputPaths(entries)`, every file a TypeScript
   step reads: the closure of its entry files, the closure's siblings, and
   every declaration the closure reads (`sources/`); the runner derives each
@@ -308,8 +317,10 @@ same thing — single-use helpers stay with their consumer.
   status; a refused emission has already printed its failed checks, so it
   exits 1 with one line and no stack; any other error keeps its stack. A
   TypeScript manual step that describes itself also exports `describe`,
-  sync or async — a pull's `PullDescription` (the two Horizons fetchers),
-  or a bake's `Projection` of a file it reads — and `--describe` then
+  sync or async — a pull's `PullDescription` (the two Horizons fetchers,
+  the refresh pulls), with a `Projection`'s `request` and `requestFrom`
+  beside it when the pull derives its request from a file, or a bake's
+  `Projection` of a file it reads — and `--describe` then
   prints what it returns instead of running.
   `horizons-response.ts`' `HORIZONS_SERVICE` is the service both state.
 - `answered-by.ts` — `reportService(name)`, the TypeScript sibling of

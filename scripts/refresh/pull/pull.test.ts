@@ -7,9 +7,10 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { pullQueryHash } from '../../pipeline/freshness';
 import { EmissionRefused, declareOutputs } from '../../util/emit-artifacts';
 import {
-  LIMIT_HEADROOM, MAX_TABLE_CELLS, assertTablesFit, batchQueries, describePull, queryLimit, runPull,
-  type Pull, type PullTable,
+  LIMIT_HEADROOM, MAX_TABLE_CELLS, assertTablesFit, batchQueries, describePhasedPull, describePull, phaseLimit,
+  phaseQueries, queryLimit, runPhasedPull, runPull, type Phase, type PhasedPull, type Pull, type PullTable, type WrittenTable,
 } from './pull';
+import { checkpoint } from './checkpoint';
 import { GAIA, SIMBAD, TapOverflow, VIZIER, type TapArchive, type TapClientDeps } from './tap-pure';
 
 let dir: string;
@@ -25,11 +26,13 @@ const STARS: PullTable = {
   spotRows: [{ key: 'source_id', value: '1', cells: { parallax: '0.5' } }],
 };
 
+const PAIRS_REQUEST = { kind: 'request', key: 'source_id', idColumn: 'source_id', ids: ['1', '2', '3'], batchSize: 2, rowsPerId: 1 } as const;
+
 const PAIRS: PullTable = {
   from: 'gaiadr3.nss_two_body_orbit',
   columns: [{ name: 'source_id' }, { name: 'period' }],
   sortBy: [{ column: 'source_id', as: 'integer' }],
-  scope: { kind: 'request', key: 'source_id', idColumn: 'source_id', ids: ['1', '2', '3'], batchSize: 2, rowsPerId: 1 },
+  scope: PAIRS_REQUEST,
   band: { min: 1, max: 3 },
   spotRows: [{ key: 'source_id', value: '2', cells: { period: '10' } }],
 };
@@ -45,6 +48,7 @@ function pullOf(tables: Record<'stars' | 'pairs', PullTable>, archive: TapArchiv
 /** Answers each sync query with the CSV `answer` gives for its ADQL; counts the queries asked. */
 function deps(answer: (adql: string) => string | Error) {
   const asked: string[] = [];
+  const reported: string[] = [];
   const d: TapClientDeps = {
     transport: async (_url, form) => {
       if (!form) return { status: 200, contentType: 'text/xml', body: '<capabilities/>' };
@@ -55,10 +59,10 @@ function deps(answer: (adql: string) => string | Error) {
       return { status: 200, contentType: 'text/csv', body };
     },
     sleep: async () => {},
-    report: () => {},
+    report: (service) => reported.push(service),
     log: () => {},
   };
-  return { deps: d, asked };
+  return { deps: d, asked, reported };
 }
 
 const GOOD = (adql: string): string => (adql.includes('nss_two_body_orbit')
@@ -92,16 +96,30 @@ describe('runPull', () => {
     },
   );
 
-  it('a failing gate keeps the checkpoint, and a re-run replays it without asking again', async () => {
+  it('a failing gate keeps the checkpoint, and a re-run replays it without asking again, reporting who answered', async () => {
     const drifted = { ...STARS, spotRows: [{ key: 'source_id', value: '1', cells: { parallax: '0.6' } }] } as const;
     const first = deps(GOOD);
     await expect(runPull(pullOf({ stars: drifted, pairs: PAIRS }), first.deps)).rejects.toThrow(EmissionRefused);
-    expect(readdirSync(ckpt())).toHaveLength(3);
+    expect(readdirSync(ckpt()).filter((f) => f.endsWith('.csv'))).toHaveLength(3);
 
     const second = deps(GOOD);
     await runPull(pullOf({ stars: STARS, pairs: PAIRS }), second.deps);
     expect(second.asked).toEqual([]);
+    expect(second.reported).toEqual(['ESA-sync', 'ESA-sync', 'ESA-sync']);
     expect(existsSync(ckpt())).toBe(false);
+  });
+
+  it('a seeded reply replays reporting no service, and a cached reply with no service record is refused', async () => {
+    const seeded = checkpoint(ckpt());
+    for (const adql of batchQueries(STARS, GAIA.quote)) seeded.save(adql, { body: GOOD(adql), service: null });
+    for (const adql of batchQueries(PAIRS, GAIA.quote)) seeded.save(adql, { body: GOOD(adql), service: null });
+    const replay = deps(GOOD);
+    await runPull(pullOf({ stars: STARS, pairs: PAIRS }), replay.deps);
+    expect([replay.asked, replay.reported]).toEqual([[], []]);
+
+    seeded.save('SELECT 1', { body: 'x\n', service: null });
+    rmSync(join(ckpt(), readdirSync(ckpt()).find((f) => f.endsWith('.json')) as string));
+    expect(() => seeded.load('SELECT 1')).toThrow(/no record of the service/);
   });
 
   it('a changed query invalidates its checkpointed answer', async () => {
@@ -125,25 +143,62 @@ describe('runPull', () => {
     expect([read('stars.tsv'), read('pairs.tsv')]).toEqual(['old stars\n', 'old pairs\n']);
   });
 
+  it('caps a whole or sliced table at the 30 M cells the widest measured table fits in the CI heap budget', () => {
+    expect(MAX_TABLE_CELLS).toBe(30_000_000);
+  });
+
   it('refuses, before asking anything, a whole-table query too large to hold', async () => {
     const fits = Math.floor(MAX_TABLE_CELLS / (LIMIT_HEADROOM * STARS.columns.length));
     const { deps: d, asked } = deps(GOOD);
     const huge = { ...STARS, band: { min: 0, max: fits + 1 } };
-    await expect(runPull(pullOf({ stars: huge, pairs: PAIRS }), d)).rejects.toThrow(/whole-table rows of up to \d+ cells exceed 37000000/);
+    await expect(runPull(pullOf({ stars: huge, pairs: PAIRS }), d)).rejects.toThrow(new RegExp(`whole-table rows of up to \\d+ cells exceed ${MAX_TABLE_CELLS}`));
     expect(asked).toEqual([]);
     expect(() => assertTablesFit(pullOf({ stars: { ...STARS, band: { min: 0, max: fits } }, pairs: PAIRS }))).not.toThrow();
   });
 
   it('refuses a sliced table whose slices together could hold too many cells', () => {
-    const sliced = (sliceRows: number): PullTable => ({ ...STARS, scope: { kind: 'sliced', key: 'source_id', edges: [2n], sliceRows } });
+    const sliced = (sliceRows: number): PullTable => ({
+      ...STARS, scope: { kind: 'sliced', key: 'source_id', edges: [2n], sliceRows }, band: { min: 0, max: MAX_TABLE_CELLS },
+    });
     const fits = Math.floor(MAX_TABLE_CELLS / (2 * LIMIT_HEADROOM * STARS.columns.length));
-    expect(() => assertTablesFit(pullOf({ stars: sliced(fits + 1), pairs: PAIRS }))).toThrow(/sliced rows of up to \d+ cells exceed 37000000/);
+    expect(() => assertTablesFit(pullOf({ stars: sliced(fits + 1), pairs: PAIRS }))).toThrow(new RegExp(`sliced rows of up to \\d+ cells exceed ${MAX_TABLE_CELLS}`));
     expect(() => assertTablesFit(pullOf({ stars: sliced(fits), pairs: PAIRS }))).not.toThrow();
   });
 
-  it('refuses a reply whose columns are not the declared ones', async () => {
+  it('bounds a sliced table by its band ceiling plus one slice, however many slices it asks', () => {
+    const sliceRows = 1_000_000;
+    const edges: readonly [bigint, ...bigint[]] = [1n, ...Array.from({ length: 98 }, (_, i) => BigInt(i + 2))];
+    const sliced = (max: number): PullTable => ({ ...STARS, scope: { kind: 'sliced', key: 'source_id', edges, sliceRows }, band: { min: 0, max } });
+    const fits = MAX_TABLE_CELLS / STARS.columns.length - sliceRows * LIMIT_HEADROOM;
+    expect(() => assertTablesFit(pullOf({ stars: sliced(fits), pairs: PAIRS }))).not.toThrow();
+    expect(() => assertTablesFit(pullOf({ stars: sliced(fits + 1), pairs: PAIRS }))).toThrow(`sliced rows of up to ${MAX_TABLE_CELLS + STARS.columns.length} cells`);
+  });
+
+  it('refuses a sliced table once its rows pass the band ceiling, naming the count, and writes nothing', async () => {
+    const { deps: d, asked } = deps((adql) => (adql.includes('gaia_source') ? GOOD(adql) : 'source_id,period\n1,5\n2,10\n'));
+    const capped = { ...SLICED, band: { min: 1, max: 3 } };
+    await expect(runPull(pullOf({ stars: STARS, pairs: capped }), d)).rejects.toThrow(/pairs: 4 rows after query 2 of 2, past the 3 it may hold/);
+    expect(asked).toHaveLength(3);
+    expect(readdirSync(dir).filter((f) => f.endsWith('.tsv'))).toEqual([]);
+  });
+
+  it('refuses a reply whose columns are not the declared ones, and caches no refused reply', async () => {
     const { deps: d } = deps((adql) => (adql.includes('gaia_source') ? 'source_id,plx\n1,0.5\n' : GOOD(adql)));
     await expect(runPull(pullOf({ stars: STARS, pairs: PAIRS }), d)).rejects.toThrow(/are not the declared/);
+    expect(existsSync(ckpt()) ? readdirSync(ckpt()) : []).toEqual([]);
+  });
+
+  it('a request-scoped table under its coverage floor writes nothing; at a floor it meets, it writes', async () => {
+    const missingThree = (adql: string): string => (adql.includes('IN (3)') ? 'source_id,period\n' : GOOD(adql));
+    const withFloor = (floor: number): PullTable => ({
+      ...PAIRS,
+      scope: { ...PAIRS_REQUEST, coverage: { groups: [{ name: 'answered', has: () => true }], floor } },
+    });
+    await expect(runPull(pullOf({ stars: STARS, pairs: withFloor(0.7) }), deps(missingThree).deps)).rejects.toThrow(EmissionRefused);
+    expect(readdirSync(dir).filter((f) => f.endsWith('.tsv'))).toEqual([]);
+
+    await runPull(pullOf({ stars: STARS, pairs: withFloor(0.6) }), deps(missingThree).deps);
+    expect([read('stars.tsv'), read('pairs.tsv')]).toEqual(['source_id\tparallax\n1\t0.5\n2\t\n', 'source_id\tperiod\n1\t5\n2\t10\n']);
   });
 });
 
@@ -168,6 +223,93 @@ describe('describePull', () => {
     const rounded = (fixed: number): PullTable => ({ ...STARS, columns: [{ name: 'source_id' }, { name: 'parallax', format: { fixed } }] });
     const hash = (fixed: number) => pullQueryHash(describePull(pullOf({ stars: rounded(fixed), pairs: PAIRS })));
     expect(hash(3)).not.toBe(hash(4));
+  });
+});
+
+describe('a phased pull', () => {
+  const RESOLVE: Phase = {
+    from: 'ident', columns: [{ name: 'oidref' }, { name: 'id' }], scope: { kind: 'request', key: 'id', batchSize: 2, rowsPerId: 1 },
+  };
+  const BASIC: Phase = {
+    from: 'basic', columns: [{ name: 'oid' }, { name: 'sp_type' }], scope: { kind: 'request', key: 'oid', batchSize: 2, rowsPerId: 1 },
+  };
+  const TYPES: WrittenTable = {
+    columns: [{ name: 'simbad_oid' }, { name: 'sp_type' }],
+    sortBy: [{ column: 'simbad_oid', as: 'integer' }],
+    band: { min: 1, max: 3 },
+    spotRows: [{ key: 'simbad_oid', value: '7', cells: { sp_type: 'G2V' } }],
+  };
+  const SIMBAD_ANSWER = (adql: string): string => (adql.includes('FROM ident')
+    ? 'oidref,id\n7,HIP 1\n9,HIP 2\n'
+    : 'oid,sp_type\n9,K0\n7,G2V\n');
+
+  const typesPull = (run: PhasedPull<'types'>['run'], extra: Partial<PhasedPull<'types'>> = {}): PhasedPull<'types'> => ({
+    archive: SIMBAD,
+    outputs: declareOutputs({ types: join(dir, 'types.tsv') }),
+    phases: { resolve: RESOLVE, basic: BASIC },
+    tables: { types: TYPES },
+    run,
+    ...extra,
+  });
+
+  const twoPhases: PhasedPull<'types'>['run'] = async (ask) => {
+    const oids = (await ask(RESOLVE, ["'HIP 1'", "'HIP 2'"])).map((row) => row[0] ?? '');
+    return { rows: { types: await ask(BASIC, oids) }, checks: [] };
+  };
+
+  it('asks a later phase with ids an earlier one answered, and writes the gated table', async () => {
+    const { deps: d, asked } = deps(SIMBAD_ANSWER);
+    await runPhasedPull(typesPull(twoPhases), d);
+    expect(asked).toEqual(["SELECT oidref, id FROM ident WHERE id IN ('HIP 1', 'HIP 2')", 'SELECT oid, sp_type FROM basic WHERE oid IN (7, 9)']);
+    expect(read('types.tsv')).toBe('simbad_oid\tsp_type\n7\tG2V\n9\tK0\n');
+  });
+
+  it('refuses a phase it does not declare, so its describe states every query it sends', async () => {
+    const undeclared: Phase = { ...BASIC, from: 'flux' };
+    const pull = typesPull(async (ask) => ({ rows: { types: await ask(undeclared, ['7']) }, checks: [] }));
+    await expect(runPhasedPull(pull, deps(SIMBAD_ANSWER).deps)).rejects.toThrow(/does not declare/);
+  });
+
+  it('asks nothing for an empty request, and refuses ids on a whole-table phase', async () => {
+    const { deps: d, asked } = deps(SIMBAD_ANSWER);
+    const whole: Phase = { ...BASIC, scope: { kind: 'whole-table', maxRows: 3 } };
+    await expect(runPhasedPull(typesPull(async (ask) => {
+      expect(await ask(RESOLVE, [])).toEqual([]);
+      return { rows: { types: await ask(whole, ['7']) }, checks: [] };
+    }, { phases: { resolve: RESOLVE, whole } }), d)).rejects.toThrow(/takes no request ids/);
+    expect(asked).toEqual([]);
+  });
+
+  it('a failing check the run computed refuses the emission', async () => {
+    const failing: PhasedPull<'types'>['run'] = async (ask) => ({
+      ...(await twoPhases(ask, () => {})),
+      checks: [{ kind: 'fail', message: 'resolution under its floor' }],
+    });
+    await expect(runPhasedPull(typesPull(failing), deps(SIMBAD_ANSWER).deps)).rejects.toThrow(EmissionRefused);
+    expect(existsSync(join(dir, 'types.tsv'))).toBe(false);
+  });
+
+  it('describes every phase\'s query, each table\'s formats and order, and the request it derives', () => {
+    const pull = typesPull(twoPhases, { request: { request: ['hip:1', 'hip:2'], requestFrom: ['manifest.tsv'] } });
+    expect(describePhasedPull(pull)).toEqual({
+      query: JSON.stringify({
+        phases: { resolve: 'SELECT oidref, id FROM ident WHERE id IN ({request})', basic: 'SELECT oid, sp_type FROM basic WHERE oid IN ({request})' },
+        tables: { types: { formats: {}, sortBy: TYPES.sortBy } },
+      }),
+      services: ['SIMBAD-CDS', 'SIMBAD-Harvard'],
+      request: ['hip:1', 'hip:2'],
+      requestFrom: ['manifest.tsv'],
+    });
+  });
+
+  it('states its parameters, so a changed seed or target stales the record', () => {
+    const hash = (seed: number) => pullQueryHash(describePhasedPull(typesPull(twoPhases, { parameters: { seed } })));
+    expect(hash(1)).not.toBe(hash(2));
+  });
+
+  it('sizes a whole-table phase off its stated rows and a request batch off its ids', () => {
+    expect([phaseLimit({ ...BASIC, scope: { kind: 'whole-table', maxRows: 5 } }), phaseLimit(BASIC)]).toEqual([10, 4]);
+    expect(phaseQueries(BASIC, ['1', '2', '3'], SIMBAD.quote)).toHaveLength(2);
   });
 });
 

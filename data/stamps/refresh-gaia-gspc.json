@@ -1,12 +1,14 @@
 {
   "inputs": {
-    "data/gaia/gaia_catalog_source_id_request.tsv": "58d08db948e98c660e7abffc6b5e4dfeb5cdf671"
+    "data/gaia/gaia_catalog_source_id_request.tsv": "054110df19c50010bd57e2133b61226d5f7028fc"
   },
   "outputs": {
-    "data/gaia/gaia_dr3_gspc.tsv": "d48c434bd17b553cbcd2e2efecbdb52f90b13652"
+    "data/gaia/gaia_dr3_gspc.tsv": "985046c164f3ffc0d89f6e6310f298e1446aa8e6"
   },
-  "query": "687eb65e41f3ebac373983f5726f1f898f185213",
-  "answeredBy": [],
+  "query": "bd42830b694f7268870253eeefac224bd9a580bd",
+  "answeredBy": [
+    "ESA-sync"
+  ],
   "release": "Gaia DR3",
   "requestFrom": []
 }

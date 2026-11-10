@@ -87,6 +87,12 @@ export function ignoredPaths(paths: readonly string[], root: string): Set<string
   return new Set(run.stdout.split('\n').filter(Boolean));
 }
 
+/** The directories git ignores, each asked with a trailing slash: a directory-only pattern cannot match a deleted directory asked without one. */
+export function ignoredDirs(dirs: readonly string[], root: string): Set<string> {
+  const ignored = ignoredPaths(dirs.map((dir) => `${dir}/`), root);
+  return new Set(dirs.filter((dir) => ignored.has(`${dir}/`)));
+}
+
 /** A directory listing's hash over its sorted names, git-ignored names left out. */
 export function listingHash(dir: string, names: readonly string[], root: string): string {
   const skip = ignoredPaths(names.map((n) => join(dir, n)), root);
@@ -97,9 +103,9 @@ export function listingHash(dir: string, names: readonly string[], root: string)
 /** Absolute directory → its listed names, as `build_stamp.record_run` writes them, hashed;
  *  a git-ignored directory is no input and is dropped. */
 export function listingHashes(listed: Readonly<Record<string, readonly string[]>>, root: string): Record<string, string> {
-  const ignoredDirs = ignoredPaths(Object.keys(listed), root);
+  const ignored = ignoredDirs(Object.keys(listed), root);
   return Object.fromEntries(Object.entries(listed)
-    .filter(([dir]) => !ignoredDirs.has(dir))
+    .filter(([dir]) => !ignored.has(dir))
     .map(([dir, names]) => [dir, listingHash(dir, names, root)]));
 }
 

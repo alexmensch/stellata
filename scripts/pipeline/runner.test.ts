@@ -604,6 +604,18 @@ os.replace(tmp, ${JSON.stringify(at(out))})
     expect((await run(steps, ['p'])).kinds).toEqual({ p: 'fresh' });
   });
 
+  it('records no input for a git-ignored folder the step listed and then deleted', async () => {
+    write('.gitignore', 'scratch/\n');
+    write('scratch/one', '');
+    const listing = `${rename('p.out')}\nos.listdir(${JSON.stringify(at('scratch'))})\nimport shutil\nshutil.rmtree(${JSON.stringify(at('scratch'))})`;
+    write('p.in', 'x');
+    const steps = [pyStep('p', 'p.out', listing)];
+    await run(steps, ['p']);
+    const stamp = JSON.parse(readFileSync(pipelineTree(root).buildStamp('p'), 'utf8'));
+    expect(stamp.recorded.listings).toEqual({});
+    expect((await run(steps, ['p'])).kinds).toEqual({ p: 'fresh' });
+  });
+
   it('stales a step when a path it probed appears', async () => {
     write('p.in', 'x');
     const body = `${rename('p.out')}\nfrom scripts.util.build_stamp import probe\nprobe(Path(${JSON.stringify(at('maybe.txt'))}))`;

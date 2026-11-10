@@ -55,19 +55,19 @@ candidate is a refusal on the result, not a tier: `pmRescueOutcome` splits the
 |---|---|---|
 | `tycho2` | the record's own TYC | **<!-- count:build-catalog/pmRescueTycho2 -->71<!-- /count -->** |
 | `cns5` | its own GJ, non-Gaia citation only | **<!-- count:build-catalog/pmRescueCns5 -->22<!-- /count -->** |
-| `simbad` | bibcoded `pmra`/`pmdec`, non-Gaia citation only | **<!-- count:build-catalog/pmRescueSimbad -->22<!-- /count -->** |
-| `gaia_bibcode_skipped` | — | **<!-- count:build-catalog/pmRescueGaiaBibcodeSkipped -->17<!-- /count -->** |
-| `none` | — | **<!-- count:build-catalog/pmRescueNone -->81<!-- /count -->** |
+| `simbad` | bibcoded `pmra`/`pmdec`, non-Gaia citation only | **<!-- count:build-catalog/pmRescueSimbad -->113<!-- /count -->** |
+| `gaia_bibcode_skipped` | — | **<!-- count:build-catalog/pmRescueGaiaBibcodeSkipped -->63<!-- /count -->** |
+| `none` | — | **<!-- count:build-catalog/pmRescueNone -->21<!-- /count -->** |
 
 The order is the direction cascade's own designation-joined order, so a
 first-order catalogue always outranks the second-order index.
 
 **`velocityVia` credits the catalogue, not the route to it.** A row's PM came
 from Tycho-2 whether the direction tier or this cascade found it, so
-`velocityTycho2Pm` (**<!-- count:build-catalog/velocityTycho2Pm -->143<!-- /count -->**) counts the direction tier's own Tycho-2 motions
+`velocityTycho2Pm` (**<!-- count:build-catalog/velocityTycho2Pm -->144<!-- /count -->**) counts the direction tier's own Tycho-2 motions
 plus this cascade's `tycho2` row above, against a `directionTycho2` of
-**<!-- count:build-catalog/directionTycho2 -->80<!-- /count -->**, and the two counts answer different questions. `velocityZero`
-(**<!-- count:build-catalog/velocityZero -->105<!-- /count -->**) is Sol, the **<!-- count:build-catalog/velocityClamped -->6<!-- /count -->** rows the sanity ceiling clamped, and the
+**<!-- count:build-catalog/directionTycho2 -->81<!-- /count -->**, and the two counts answer different questions. `velocityZero`
+(**<!-- count:build-catalog/velocityZero -->91<!-- /count -->**) is Sol, the **<!-- count:build-catalog/velocityClamped -->6<!-- /count -->** rows the sanity ceiling clamped, and the
 rows this cascade leaves without a motion.
 
 **Neither join widens, and that is measured rather than argued.** A 2p row is
@@ -178,7 +178,7 @@ Gaia reduction can hide behind its citation.
 there is no Gaia fit at all there is no blend to distrust and a Gaia bibcode is
 an ordinary citation; all 3 Tycho-2-shaped rows route `simbad` on an
 EDR3-cited PM for exactly that reason. This mirrors the rv cascade, which
-keeps **<!-- count:build-catalog/rvSimbadGaiaBibcode -->5,545<!-- /count -->** ordinary Gaia citations while skipping **<!-- count:build-catalog/rvGaiaBibcodeSkipped -->1,062<!-- /count -->** on blended rows.
+keeps **<!-- count:build-catalog/rvSimbadGaiaBibcode -->14,579<!-- /count -->** ordinary Gaia citations while skipping **<!-- count:build-catalog/rvGaiaBibcodeSkipped -->2,405<!-- /count -->** on blended rows.
 
 **The cost is the `gaia_bibcode_skipped` rows, which stay static, concentrated
 where it hurts most** (13 before the magnitude term):

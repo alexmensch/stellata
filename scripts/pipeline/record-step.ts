@@ -44,6 +44,11 @@ function inputFilter(resolved: ResolvedStep, described: Description | null, skip
     && !(resolved.step.kind === 'pull' && CODE_FILE.test(path));
 }
 
+function filesBesideCode(paths: readonly string[]): Set<string> {
+  const codeDirs = new Set(paths.filter((p) => CODE_FILE.test(p)).map((p) => dirname(p)));
+  return new Set(paths.filter((p) => !CODE_FILE.test(p) && codeDirs.has(dirname(p))));
+}
+
 interface Reads {
   readonly inputs: FileHashes;
   readonly recorded?: RecordedReads;
@@ -84,7 +89,8 @@ async function runAndRead(
   if (step.language === 'ts') {
     const derived = await options.deriveInputs(entry);
     const keep = inputFilter(resolved, described, ignoredPaths(derived, tree.root), tree);
-    const inputs = inputHashes(derived.filter(keep), tree.root);
+    const besideCode = step.kind === 'pull' ? filesBesideCode(derived) : new Set<string>();
+    const inputs = inputHashes(derived.filter((p) => keep(p) && !besideCode.has(p)), tree.root);
     const answeredBy = tree.answeredBy(step.name);
     mkdirSync(dirname(answeredBy), { recursive: true });
     rmSync(answeredBy, { force: true });
@@ -98,7 +104,7 @@ async function runAndRead(
   const recorded = await runRecorded(tree, step.name, entry, options.args, process.env);
   if (recorded.kind === 'exited') return `exited ${recorded.code}`;
   const { run } = recorded;
-  const touched = [...Object.keys(run.reads), ...Object.keys(run.listings), ...Object.keys(run.probes), ...run.writes];
+  const touched = [...Object.keys(run.reads), ...Object.keys(run.probes), ...run.writes];
   const scratch = ignoredPaths(touched, tree.root);
   const problems = undeclaredWrites(resolved, run.writes.filter((p) => !scratch.has(p)));
   if (problems.length > 0) return problems.join('; ');
