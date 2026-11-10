@@ -1,6 +1,6 @@
-// Membership-manifest reader: per-row parallax cascade + its two override
-// layers × direction cascade → in-memory Star records for every downstream
-// builder step. See scripts/catalog/README.md.
+// Membership-manifest reader: one resolver per row — parallax cascade, its two
+// override layers, direction cascade and the rest — folded into the in-memory
+// Star records every downstream builder step reads. See scripts/catalog/README.md.
 
 import {
   FLAG_HAS_NAME,
@@ -9,16 +9,11 @@ import {
   NO_CONSTELLATION_INDEX,
   SOLAR_BV_FALLBACK,
   type ApsisRow,
-  DIST_VIA_VALUES,
   type DistVia,
 } from '../../../src/catalog-format/record/catalog-pure';
 import { absoluteMagnitude } from '../../../src/astro-core/perceptual-magnitude';
 import type { CitedValue } from '../cascade-result';
-import {
-  SIMBAD_NAMESPACE_VALUES,
-  type SimbadNamespace,
-  type SimbadRecordKeys,
-} from '../simbad/simbad-namespace-ladder-pure';
+import type { SimbadRecordKeys } from '../simbad/simbad-namespace-ladder-pure';
 import {
   SPECTRAL_UNKNOWN,
   type SpectralInfo,
@@ -26,10 +21,8 @@ import {
 import {
   type SimbadSpectralIndex,
   type SpectralSources,
-  type SpectralVia,
   emptySimbadSpectralIndex,
   resolveSpectralInfo,
-  SPECTRAL_VIA_VALUES,
 } from '../spectral/spectral-resolve';
 import {
   physicalRadius,
@@ -40,57 +33,40 @@ import {
 import {
   resolveDirection,
   directionOnPm,
-  DIRECTION_VIA_VALUES,
   type DirectionSources,
-  type DirectionVia,
 } from '../distance/direction-cascade';
 import {
   velocityPcPerYr,
-  VELOCITY_VIA_VALUES,
   KM_S_TO_PC_YR,
   VELOCITY_SANITY_CEILING_PC_YR,
   GALACTIC_ESCAPE_VELOCITY_PC_YR,
-  type VelocityVia,
 } from '../distance/velocity';
 import { lookupCns5Astrometry } from '../classic-ids/classic-ids-parse';
-import { isGaiaCatalogueBibcode } from '../distance/gaia-distrust';
-import { isLowPrecisionParallax, resolveParallax } from '../distance/parallax/parallax-cascade';
+import { resolveParallax } from '../distance/parallax/parallax-cascade';
+import type { ParkedIdentifiers } from '../distance/parallax/parked-ledger-pure';
 import {
-  PARKED_REASONS,
-  type ParkedIdentifiers,
-  type ParkedReason,
-  type ParkedRecord,
-} from '../distance/parallax/parked-ledger-pure';
-import {
-  parkedRecord,
+  shippedDistVia,
   type BailerJonesStep,
   type LmcStep,
-  type Placement,
+  type ParkedPlacement,
+  type PlacedPlacement,
 } from '../distance/placement-lineage-pure';
 import {
   emptyPairMemberParallaxIndex,
   lookupPairMemberParallax,
   type PairMemberParallaxIndex,
 } from '../distance/parallax/pair-member-parallax';
-import {
-  resolvePmRescue,
-  PM_RESCUE_OUTCOMES,
-  pmRescueOutcome,
-  VELOCITY_VIA_BY_PM_RESCUE,
-  type PmRescueOutcome,
-} from '../distance/pm-rescue/pm-rescue';
+import { resolvePmRescue } from '../distance/pm-rescue/pm-rescue';
 import {
   radialTermExceedsCeiling,
   resolveRadialVelocity,
   rvErrorBand,
-  RV_VIA_VALUES,
-  RV_ERROR_BANDS,
-  type RvVia,
+  type RadialVelocityResolution,
   type RvErrorBand,
 } from '../distance/radial-velocity/radial-velocity';
 import { avSolToStar, type DustGrid } from '../distance/dust/dust-deextinction-pure';
 import { GAIA_APSIS } from '../record/gaia-apsis-source';
-import type { BrightnessColour, DustStep } from '../photometry/brightness-colour-lineage-pure';
+import type { BrightnessColour, DustStep, ShippedBrightness } from '../photometry/brightness-colour-lineage-pure';
 import { sourceRowRef } from '../../util/sources/row-ref-pure';
 import { R_V } from '../../../src/astro-core/extinction/dust-raymarch-pure';
 import {
@@ -102,7 +78,6 @@ import {
   printedV,
   printedVLookups,
   resolveVMagnitude,
-  V_VIA_VALUES,
   type VVia,
 } from '../photometry/v-magnitude-pure';
 import {
@@ -110,15 +85,9 @@ import {
   lookupGliese,
   type GlieseIndex,
 } from '../gliese-parse-pure';
-import {
-  ciIsObserved,
-  resolveColourIndex,
-  CI_VIA_VALUES,
-  type CiVia,
-} from '../photometry/colour-index-pure';
+import { ciIsObserved, resolveColourIndex } from '../photometry/colour-index-pure';
 import type { GspcColour } from '../photometry/gspc-parse';
 import { printedByHip, type PrintedHipValue } from '../photometry/hip-photometry-parse-pure';
-import { emptyTallyPartition } from '../../util/counts/tally-pure';
 import type { ManifestRecord } from '../membership/membership-manifest-tsv';
 import type { CuratedRecords } from '../record/curated-records';
 import { type ConstellationAssignment } from './constellations/constellations';
@@ -130,6 +99,7 @@ import {
   isInLmcCone,
   type BailerJonesIndex,
 } from '../distance/refinement/distance-overrides-pure';
+import { walkStatsFold, type WalkStats } from './walk-stats-pure';
 
 // A row still farther than this after every override fails the walk. Every
 // kinematic-override target distance must stay below it or its population
@@ -242,12 +212,45 @@ export interface Star {
   originKey: string;
 }
 
-/** One manifest row's decisions: its placement, and its brightness and colour
- *  wherever the walk reached V. */
-export interface WalkedRow {
-  readonly placement: Placement;
-  readonly brightness: BrightnessColour | null;
+/** The radial-velocity cascade's answer, resolved on every row before any park. */
+export interface RvRouting {
+  readonly resolution: RadialVelocityResolution;
+  /** Null exactly when the Gaia DR3 tier did not answer. */
+  readonly gaiaError: { readonly band: RvErrorBand; readonly kmS: number | null } | null;
 }
+
+/** The per-row inputs a shipped row's counts fold from that no lineage type records. */
+export interface ShippedFacts {
+  readonly bailerJonesEligible: boolean;
+  /** Inside the LMC sky cone, whatever the PM gate made of the row. */
+  readonly inLmcCone: boolean;
+  readonly tycho2Direction: { readonly fromIcrs: boolean; readonly isPhotocentre: boolean } | null;
+  readonly vTycho2OutsideBtVtRange: boolean;
+  /** The distance the override stack settled on. */
+  readonly distPc: number;
+  /** The space velocity before any clamp, wherever it exceeded the Galactic
+   *  escape velocity — clamped or not, as the placement says. */
+  readonly fastKmS: number | null;
+  readonly ciGspcValidatedRange: boolean;
+}
+
+/** One manifest row resolved: parked, or a record with the provenance of each
+ *  field. No row is dropped — a row past MAX_DIST_PC throws. */
+export type RowOutcome =
+  | {
+    readonly kind: 'parked';
+    readonly placement: ParkedPlacement;
+    readonly brightness: BrightnessColour | null;
+    readonly rv: RvRouting;
+  }
+  | {
+    readonly kind: 'shipped';
+    readonly placement: PlacedPlacement;
+    readonly brightness: ShippedBrightness;
+    readonly rv: RvRouting;
+    readonly star: Star;
+    readonly facts: ShippedFacts;
+  };
 
 /** Every reference table a readStars walk consumes, as one bundle.
  *
@@ -290,133 +293,52 @@ export interface ReadStarsOptions {
   dustGrid?: DustGrid | null;
 }
 
+/** See README.md#per-row-pipeline. */
 export function readStars(
   manifest: Iterable<ManifestRecord>,
-  {
-    conAssignment,
-    curatedRecords = () => null,
-    bailerJones,
-    simbadSpectral = emptySimbadSpectralIndex(),
-    sptypeOverrides = new Map(),
-    simbadValues = emptySimbadValueIndex(),
-    apsisMap = new Map(),
-    gspcMap = new Map(),
-    directions = {
-      gaiaAstrometry: new Map(),
-      hip2: new Map(),
-      nss: new Map(),
-      tycho2: new Map(),
-      cns5: new Map(),
-    },
-    hipVMag = new Map(),
-    hipBv = new Map(),
-    gliese = emptyGlieseIndex(),
-    pairMemberParallax = emptyPairMemberParallaxIndex(),
-    dustGrid = null,
-  }: ReadStarsOptions,
-  /** See README.md#per-row-pipeline. */
-  onRow: (row: WalkedRow) => void,
-): {
-  stars: Star[];
-  stats: {
-    total: number;
-    /** Rows carrying a source_id whose parallax cascade resolved
-     *  `gaia_dr3_inversion` — the tier B-J publishes a posterior over. */
-    bjEligible: number;
-    bjOverridden: number;          // bjEligible rows that hit a B-J entry
-    /** The record-parity dropped list (/docs/catalog-driver.md#61-record-parity) — enumerated, because these rows leave the
-     *  catalogue and nothing else records that they existed. */
-    parked: ParkedRecord[];
-    /** The same rows counted per reason. The cascade partitions below run over
-     *  RECORDS, so a parked row is in none of them — this is the one place a
-     *  park is a number rather than a ledger line. */
-    parkedVia: Record<ParkedReason, number>;
-    /** Rows whose SHIPPED distance inverts a parallax with worse than 20%
-     *  fractional error, so the result is biased. They ship — no second source
-     *  reaches them — and this count is how they stay visible for a Gaia DR4
-     *  revisit. Bailer-Jones 2021
-     *  (/data/papers/index.md#bailerjones2021) rows are excluded: there the
-     *  posterior, not the inversion, handles the low-S/N case. */
-    distLowPrecisionParallax: number;
-    distVia: Record<DistVia, number>;
-    lmcCandidates: number;         // rows inside the LMC sky cone (any PM)
-    lmcOverridden: number;         // lmcCandidates passing the PM gate (snapped to LMC)
-    /** PM-gate passes whose own parallax rules the LMC out, by the tier kept. */
-    lmcParallaxRefusedByDistVia: Record<DistVia, number>;
-    /** lmcOverridden split by the tier the snap displaced — which populations
-     *  the override actually moves. */
-    lmcOverriddenByDistVia: Record<DistVia, number>;
-    directionVia: Record<DirectionVia, number>; // per-tier direction-cascade routing
-    vVia: Record<VVia, number>;    // per-tier V-magnitude cascade routing
-    // tycho2-tier rows outside BT−VT ∈ [−0.25, 2.0], wider than ESA 1997
-    // (/data/papers/index.md#esa1997) SP-1200's published −0.2 … 1.8
-    vTycho2OutsideBtVtRange: number;
-    directionTycho2FromIcrs: number;    // tycho2-tier rows placed at the J2000 cell, no mean solution
-    directionTycho2Photocentre: number; // tycho2-tier rows whose mean solution is a double's photocentre
-    velocityVia: Record<VelocityVia, number>;   // per-tier space-motion PM-source routing
-    pmRescueOutcome: Record<PmRescueOutcome, number>;   // rescue-cascade routing over the rows the direction tier left without a PM
-    velocityClamped: number;       // rows whose artifact velocity exceeded the sanity ceiling → zeroed
-    velocityClampedSample: string[]; // per-clamped-star "id: speed @ dist" for build-log review
-    velocityAboveEscape: number;   // kept rows above the Galactic escape velocity (tracked ratchet)
-    velocityAboveEscapeSample: string[]; // capped sample of above-escape stars for build-log review
-    rvVia: Record<RvVia, number>;  // per-tier radial-velocity cascade routing
-    rvSimbadGaiaBibcode: number;   // simbad-tier rows citing a Gaia catalogue release
-    rvGaiaBibcodeSkipped: number;  // 2p rows whose Gaia-bibcoded SIMBAD value the skip rule rejected
-    rvRadialRejected: number;      // rows whose radial term alone exceeded the sanity ceiling
-    rvRadialRejectedSample: string[]; // per-rejected-star "id: rv @ dist" for build-log review
-    rvGaiaErrorBand: Record<RvErrorBand, number>; // gaia_dr3-tier rows by stated rv uncertainty
-    rvGaiaErrorMaxKmS: number;     // largest stated rv uncertainty on a gaia_dr3-tier row
-    rvApplied: number;             // rows whose velocity carries a non-zero radial velocity
-    spectralVia: Record<SpectralVia, number>; // per-tier spectral resolver routing; none renders as SPECTRAL_UNKNOWN
-    spectralSimbadKey: Record<SimbadNamespace, number>; // which namespace found a SIMBAD-tier row
-    ciVia: Record<CiVia, number>;  // per-tier B−V cascade routing
-    ciGspcValidatedRange: number;  // gspc-tier rows the archive calls in-range
-  };
-} {
-  const rows = manifest;
-
+  options: ReadStarsOptions,
+  onRow: (outcome: RowOutcome) => void,
+): { stars: Star[]; stats: WalkStats } {
+  const resolveRow = rowResolver(options);
   const stars: Star[] = [];
-  let total = 0;
-  const parked: ParkedRecord[] = [];
-  let bjEligible = 0;
-  let distLowPrecisionParallax = 0;
-  let bjOverridden = 0;
-  let lmcCandidates = 0;
-  let lmcOverridden = 0;
-  const lmcParallaxRefusedByDistVia = emptyTallyPartition(DIST_VIA_VALUES);
-  const lmcOverriddenByDistVia = emptyTallyPartition(DIST_VIA_VALUES);
-  const distViaCounts = emptyTallyPartition(DIST_VIA_VALUES);
-  const directionVia = emptyTallyPartition(DIRECTION_VIA_VALUES);
-  const vVia = emptyTallyPartition(V_VIA_VALUES);
-  const velocityVia = emptyTallyPartition(VELOCITY_VIA_VALUES);
-  const pmRescueOutcomes = emptyTallyPartition(PM_RESCUE_OUTCOMES);
-  const rvVia = emptyTallyPartition(RV_VIA_VALUES);
-  const rvGaiaErrorBand = emptyTallyPartition(RV_ERROR_BANDS);
-  let rvGaiaErrorMaxKmS = 0;
-  let rvSimbadGaiaBibcode = 0;
-  let rvGaiaBibcodeSkipped = 0;
-  let rvRadialRejected = 0;
-  const rvRadialRejectedSample: string[] = [];
-  const ciVia = emptyTallyPartition(CI_VIA_VALUES);
-  const spectralSimbadKey = emptyTallyPartition(SIMBAD_NAMESPACE_VALUES);
-  let ciGspcValidatedRange = 0;
-  let vTycho2OutsideBtVtRange = 0;
-  let directionTycho2FromIcrs = 0;
-  let directionTycho2Photocentre = 0;
-  let rvApplied = 0;
-  let velocityClamped = 0;
-  const velocityClampedSample: string[] = [];
-  let velocityAboveEscape = 0;
-  const velocityAboveEscapeSample: string[] = [];
-  const spectralVia = emptyTallyPartition(SPECTRAL_VIA_VALUES);
+  const stats = walkStatsFold();
+  for (const row of manifest) {
+    const outcome = resolveRow(row);
+    onRow(outcome);
+    stats.add(outcome);
+    if (outcome.kind === 'shipped') stars.push(outcome.star);
+  }
+  return { stars, stats: stats.result() };
+}
 
+/** Every absent table degraded to empty and the derived lookups built once;
+ *  the resolver it returns takes one manifest row through every cascade
+ *  (README.md#per-row-pipeline), reading nothing but its row. */
+export function rowResolver({
+  conAssignment,
+  curatedRecords = () => null,
+  bailerJones,
+  simbadSpectral = emptySimbadSpectralIndex(),
+  sptypeOverrides = new Map(),
+  simbadValues = emptySimbadValueIndex(),
+  apsisMap = new Map(),
+  gspcMap = new Map(),
+  directions = {
+    gaiaAstrometry: new Map(),
+    hip2: new Map(),
+    nss: new Map(),
+    tycho2: new Map(),
+    cns5: new Map(),
+  },
+  hipVMag = new Map(),
+  hipBv = new Map(),
+  gliese = emptyGlieseIndex(),
+  pairMemberParallax = emptyPairMemberParallaxIndex(),
+  dustGrid = null,
+}: ReadStarsOptions): (row: ManifestRecord) => RowOutcome {
   const printedVLookup = printedVLookups(hipVMag, directions.tycho2, gliese);
-  const spectralSources: SpectralSources = {
-    simbad: simbadSpectral, sptypeOverrides,
-  };
-  // Every exit returns its row's Placement, so the compiler refuses one that
-  // would drop a record from lineage.
-  const walk = (row: ManifestRecord): WalkedRow & { star: Star | null } => {
+  const spectralSources: SpectralSources = { simbad: simbadSpectral, sptypeOverrides };
+  return (row) => {
     const { hip, gaiaSourceId } = row;
     const curated = curatedRecords(row);
     // Read off the manifest column, never re-derived: the binding is the one
@@ -438,22 +360,17 @@ export function readStars(
     };
     const simbadRow = lookupSimbadValues(simbadValues, simbadKeys);
     const rvRes = resolveRadialVelocity({ gaia: gaiaRow, simbad: simbadRow?.rv ?? null });
+    const gaiaRvErrorKmS = rvRes.via === 'gaia_dr3' && gaiaRow !== null ? gaiaRow.radialVelocityErrorKmS : undefined;
+    const rv: RvRouting = {
+      resolution: rvRes,
+      gaiaError: gaiaRvErrorKmS === undefined ? null : { band: rvErrorBand(gaiaRvErrorKmS), kmS: gaiaRvErrorKmS },
+    };
     const resolvedRvKmS = rvRes.via === 'none' ? null : rvRes.value.kmS;
     // A radial term past the sanity ceiling on its own is rejected here rather
     // than left to the whole-vector clamp below, which would drop the row's
     // measured proper motion with it.
     const rvRejected = radialTermExceedsCeiling(resolvedRvKmS);
     const rvKmS = rvRejected ? null : resolvedRvKmS;
-    rvVia[rvRes.via]++;
-    if (rvRes.via === 'simbad' && isGaiaCatalogueBibcode(rvRes.value.bibcode)) {
-      rvSimbadGaiaBibcode++;
-    }
-    if (rvRes.refusals.some((r) => r.tier === 'simbad')) rvGaiaBibcodeSkipped++;
-    if (rvRes.via === 'gaia_dr3' && gaiaRow !== null) {
-      const rvErr = gaiaRow.radialVelocityErrorKmS;
-      rvGaiaErrorBand[rvErrorBand(rvErr)]++;
-      if (rvErr !== null && rvErr > rvGaiaErrorMaxKmS) rvGaiaErrorMaxKmS = rvErr;
-    }
 
     const { proper } = row;
     const tycho2Row = simbadKeys.tyc !== null
@@ -480,7 +397,7 @@ export function readStars(
     );
     // Not a `dropped` gate: a park is a deliberate record-parity ledger entry (/docs/catalog-driver.md#61-record-parity).
     if (plxRes.via === 'none') {
-      return { placement: { kind: 'parked-parallax', key, ids, parallax: plxRes }, brightness: null, star: null };
+      return { kind: 'parked', placement: { kind: 'parked-parallax', key, ids, parallax: plxRes }, brightness: null, rv };
     }
 
     // V through the Riello 2021 (/data/papers/index.md#riello2021)
@@ -499,9 +416,10 @@ export function readStars(
     });
     if (vRes.via === 'none') {
       return {
+        kind: 'parked',
         placement: { kind: 'parked-no-v', key, ids, parallax: plxRes },
         brightness: { kind: 'v-only', key, v: vRes },
-        star: null,
+        rv,
       };
     }
 
@@ -520,9 +438,10 @@ export function readStars(
     // no row for them.
     if (direction.via === 'none') {
       return {
+        kind: 'parked',
         placement: { kind: 'parked-no-position', key, ids, parallax: plxRes, direction },
         brightness: { kind: 'v-only', key, v: vRes },
-        star: null,
+        rv,
       };
     }
     const dirRes = direction.value;
@@ -540,9 +459,6 @@ export function readStars(
           gaia: gaiaRow,
         })
       : null;
-    const velVia = pmRescue === null
-      ? dirRes.velVia
-      : VELOCITY_VIA_BY_PM_RESCUE[pmRescue.via];
     const { pmRaMasyr, pmDecMasyr } = pmRescue === null
       ? { pmRaMasyr: dirRes.srcPmraMasyr, pmDecMasyr: dirRes.srcPmdecMasyr }
       : pmRescue.via === 'none' ? { pmRaMasyr: null, pmDecMasyr: null } : pmRescue.value;
@@ -556,16 +472,12 @@ export function readStars(
     const measuredPlx = plxRes.via === 'curated' ? null : plxRes.value;
     const plxDistPc = measuredPlx === null ? null : 1000 / measuredPlx.mas;
     let dist = plxDistPc ?? 0;
-    let distVia: DistVia = plxRes.via;
-    const bjEligibleRow = isBailerJonesEligible(gaiaSourceId, plxRes.via);
-    if (bjEligibleRow) bjEligible++;
+    const bailerJonesEligible = isBailerJonesEligible(gaiaSourceId, plxRes.via);
     let bjStep: BailerJonesStep = { kind: 'not-applied' };
-    if (bjEligibleRow && bailerJones !== undefined) {
+    if (bailerJonesEligible && bailerJones !== undefined) {
       const ovr = applyBailerJonesOverride(gaiaSourceId, bailerJones);
       if (ovr !== null) {
         dist = ovr.distPc;
-        distVia = 'bailer_jones';
-        bjOverridden++;
         bjStep = { kind: 'override', ref: ovr.ref };
       } else {
         bjStep = { kind: 'absent' };
@@ -576,21 +488,15 @@ export function readStars(
     // same rows.
     const raHours = dirRes.srcRaDeg / 15;
     let lmcStep: LmcStep = 'not_member';
-    if (isInLmcCone(raHours, dirRes.srcDecDeg)) {
-      lmcCandidates++;
+    const inLmcCone = isInLmcCone(raHours, dirRes.srcDecDeg);
+    if (inLmcCone) {
       const lmc = applyLmcKinematicOverride(
         raHours, dirRes.srcDecDeg, pmRaMasyr, pmDecMasyr, measuredPlx,
       );
       lmcStep = lmc.kind;
-      if (lmc.kind === 'snap') {
-        lmcOverriddenByDistVia[distVia]++;
-        dist = lmc.distPc;
-        distVia = 'lmc_kinematic';
-        lmcOverridden++;
-      } else if (lmc.kind === 'parallax_rules_out') {
-        lmcParallaxRefusedByDistVia[distVia]++;
-      }
+      if (lmc.kind === 'snap') dist = lmc.distPc;
     }
+    const distVia = shippedDistVia({ parallax: plxRes, bailerJones: bjStep, lmc: lmcStep });
 
     if (dist > MAX_DIST_PC) {
       throw new Error(
@@ -598,28 +504,6 @@ export function readStars(
         `MAX_DIST_PC (${MAX_DIST_PC}) — a reference table disagrees with the tiers above it ` +
         '(../distance/refinement/README.md#layer-3--max_dist_pc-bounded-scope-cutoff).',
       );
-    }
-
-    // Tallies run once the row is known to ship, so every partition below
-    // sums to the record count.
-    distViaCounts[distVia]++;
-    // Counted against the SHIPPED tier, not the resolved parallax: where
-    // Bailer-Jones 2021 (/data/papers/index.md#bailerjones2021)
-    // supersedes the inversion its posterior is what handles a
-    // low-S/N parallax, so flagging those rows would report a bias the record
-    // does not carry. The LMC snap replaces the distance outright.
-    if (measuredPlx !== null && isLowPrecisionParallax(measuredPlx) && distVia === plxRes.via) {
-      distLowPrecisionParallax++;
-    }
-    directionVia[direction.via]++;
-    if (direction.via === 'tycho2' && tycho2Row !== null) {
-      if (tycho2Row.fromIcrs) directionTycho2FromIcrs++;
-      if (tycho2Row.isPhotocentre) directionTycho2Photocentre++;
-    }
-    if (pmRescue !== null) pmRescueOutcomes[pmRescueOutcome(pmRescue)]++;
-    vVia[vRes.via]++;
-    if (vRes.via === 'tycho2' && printed?.vVia === 'tycho2' && printed.outsideRange) {
-      vTycho2OutsideBtVtRange++;
     }
 
     // absmag derives from that V and the distance the whole override stack
@@ -647,49 +531,22 @@ export function readStars(
     // Physical sanity: a space velocity past the ceiling is a PM×distance
     // artifact (spurious PM on a faint distant star). Drop to zero — kept
     // at J2016.0, the same fall-through as no-PM rows — so it doesn't
-    // streak under the epoch-advance.
-    let velClamped = false;
+    // streak under the epoch-advance. Above the escape velocity a row is kept
+    // (a proven escaper must survive) but tracked: that band is almost all
+    // PM×distance / bad-RV artifacts.
     const speedPcYr = Math.hypot(vel.x, vel.y, vel.z);
-    const idLabel = (): string => proper
-      ?? (hip !== null ? `HIP ${hip}` : gaiaSourceId ? `Gaia ${gaiaSourceId}` : '(anon)');
-    if (rvRejected) {
-      rvRadialRejected++;
-      rvRadialRejectedSample.push(
-        `${idLabel()}: ${resolvedRvKmS?.toFixed(1)} km/s @ ${dist.toFixed(1)} pc`,
-      );
-    }
-    if (speedPcYr > VELOCITY_SANITY_CEILING_PC_YR) {
-      velocityClampedSample.push(
-        `${idLabel()}: ${(speedPcYr / KM_S_TO_PC_YR).toFixed(0)} km/s @ ${dist.toFixed(0)} pc`,
-      );
-      vel = { x: 0, y: 0, z: 0 };
-      velClamped = true;
-    } else if (speedPcYr > GALACTIC_ESCAPE_VELOCITY_PC_YR) {
-      // Kept (a proven escaper must survive) but tracked — this band is
-      // almost all PM×distance / bad-RV artifacts.
-      velocityAboveEscape++;
-      if (velocityAboveEscapeSample.length < 25) {
-        velocityAboveEscapeSample.push(
-          `${idLabel()}: ${(speedPcYr / KM_S_TO_PC_YR).toFixed(0)} km/s @ ${dist.toFixed(0)} pc`,
-        );
-      }
-    }
-    const velZeroed = origin !== null || velClamped;
-    velocityVia[velZeroed ? 'zero' : velVia]++;
-    if (velClamped) velocityClamped++;
-    if (!velZeroed && rvKmS !== null && rvKmS !== 0) rvApplied++;
+    const velocityClamped = speedPcYr > VELOCITY_SANITY_CEILING_PC_YR;
+    if (velocityClamped) vel = { x: 0, y: 0, z: 0 };
 
     let apsis: CitedValue<ApsisRow> | null = null;
     if (gaiaSourceId) {
-      const row = apsisMap.get(gaiaSourceId);
-      if (row !== undefined) apsis = { value: row, ref: sourceRowRef(GAIA_APSIS, gaiaSourceId) };
+      const apsisRow = apsisMap.get(gaiaSourceId);
+      if (apsisRow !== undefined) apsis = { value: apsisRow, ref: sourceRowRef(GAIA_APSIS, gaiaSourceId) };
     }
     const spectral = resolveSpectralInfo(
       { ...simbadKeys, curated: curated?.spectral ?? null, apsis }, spectralSources,
     );
     const spectInfo = spectral.via === 'none' ? SPECTRAL_UNKNOWN : spectral.value.info;
-    spectralVia[spectral.via]++;
-    if (spectral.via === 'simbad') spectralSimbadKey[spectral.value.namespace]++;
     const apsisTeff = resolveApsisTeff(apsis?.value);
     const citedApsisTeff = apsis === null || apsisTeff === null ? null : { value: apsisTeff, ref: apsis.ref };
 
@@ -709,8 +566,6 @@ export function readStars(
         : null,
     });
     let ci = ciRes.via === 'none' ? SOLAR_BV_FALLBACK : ciRes.value;
-    ciVia[ciRes.via]++;
-    if (ciRes.via === 'gspc' && gspc?.inValidatedRange) ciGspcValidatedRange++;
 
     // Build-time de-extinction: absmag and an observed ci are
     // observed-convention (embed the real Sol→star A_V), so subtract
@@ -784,6 +639,7 @@ export function readStars(
       originKey: row.originKey,
     };
     return {
+      kind: 'shipped',
       placement: {
         kind: 'placed',
         key,
@@ -793,62 +649,22 @@ export function readStars(
         bailerJones: bjStep,
         lmc: lmcStep,
         rv: rvRejected && rvRes.via !== 'none' ? { kind: 'rejected', rv: rvRes } : { kind: 'kept', rv: rvRes },
-        velocityClamped: velClamped,
+        velocityClamped,
       },
       brightness: { kind: 'shipped', key, v: vRes, spectral, ci: ciRes, dust },
+      rv,
       star,
+      facts: {
+        bailerJonesEligible,
+        inLmcCone,
+        tycho2Direction: direction.via === 'tycho2' && tycho2Row !== null
+          ? { fromIcrs: tycho2Row.fromIcrs, isPhotocentre: tycho2Row.isPhotocentre }
+          : null,
+        vTycho2OutsideBtVtRange: vRes.via === 'tycho2' && printed?.vVia === 'tycho2' && printed.outsideRange,
+        distPc: dist,
+        fastKmS: speedPcYr > GALACTIC_ESCAPE_VELOCITY_PC_YR ? speedPcYr / KM_S_TO_PC_YR : null,
+        ciGspcValidatedRange: ciRes.via === 'gspc' && gspc?.inValidatedRange === true,
+      },
     };
-  };
-
-  for (const row of rows) {
-    total++;
-    const { placement, brightness, star } = walk(row);
-    onRow({ placement, brightness });
-    const park = parkedRecord(placement);
-    if (park !== null) parked.push(park);
-    if (star !== null) stars.push(star);
-  }
-
-  const parkedVia = emptyTallyPartition(PARKED_REASONS);
-  for (const p of parked) parkedVia[p.reason]++;
-
-  return {
-    stars,
-    stats: {
-      total,
-      bjEligible,
-      bjOverridden,
-      parked,
-      parkedVia,
-      distLowPrecisionParallax,
-      distVia: distViaCounts,
-      lmcCandidates,
-      lmcOverridden,
-      lmcParallaxRefusedByDistVia,
-      lmcOverriddenByDistVia,
-      directionVia,
-      vVia,
-      velocityVia,
-      pmRescueOutcome: pmRescueOutcomes,
-      velocityClamped,
-      velocityClampedSample,
-      velocityAboveEscape,
-      velocityAboveEscapeSample,
-      rvVia,
-      rvSimbadGaiaBibcode,
-      rvGaiaBibcodeSkipped,
-      rvRadialRejected,
-      rvRadialRejectedSample,
-      rvGaiaErrorBand,
-      rvGaiaErrorMaxKmS,
-      rvApplied,
-      spectralVia,
-      spectralSimbadKey,
-      ciVia,
-      ciGspcValidatedRange,
-      vTycho2OutsideBtVtRange,
-      directionTycho2FromIcrs,
-      directionTycho2Photocentre,
-    },
   };
 }
