@@ -1,7 +1,8 @@
 // Test-only builders for Stage 2's inputs and records.
 
 import type { AthygRow } from '../load/athyg-pure';
-import type { GaiaAstrometryRow } from '../load/gaia-pure';
+import type { GaiaAstrometryRow, NssOrbitRow } from '../load/gaia-pure';
+import type { Hip2AstrometryRow } from '../../catalog/sources/hip2-source';
 import { buildIndices, type CcdmIndex, type IdentifierIndices } from '../load/indices-pure';
 import { wdsPair } from '../../wds/wds-fixture';
 import { athygRow, gaiaAstrometryRow } from '../load/load-fixture';
@@ -26,13 +27,15 @@ export function indices(over: {
   hipToGaia?: ReadonlyMap<number, string>;
   srcToAstrometry?: ReadonlyMap<string, GaiaAstrometryRow>;
   ccdm?: readonly { hip: number; ccdm: string }[];
+  hip2?: ReadonlyMap<number, Hip2AstrometryRow>;
+  srcToNss?: ReadonlyMap<string, NssOrbitRow>;
 } = {}): IdentifierIndices {
   return buildIndices({
     athyg: over.athyg ?? [],
-    hip2: new Map(),
+    hip2: over.hip2 ?? new Map(),
     hipToGaia: over.hipToGaia ?? new Map(),
     tycToGaia: new Map(),
-    srcToNss: new Map(),
+    srcToNss: over.srcToNss ?? new Map(),
     srcToAstrometry: over.srcToAstrometry ?? new Map(),
     ccdm: ccdmIndex(over.ccdm ?? []),
     simbadWdsSpectra: new Map(),

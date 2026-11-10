@@ -29,7 +29,8 @@ scripts/catalog/distance/
   gaia-distrust.ts (+ test)       `gaiaHas5pSolution`, `gaiaRowIs2p`,
                                   `gaia5pUnreliable` (with its RUWE and
                                   ipd_frac_multi_peak thresholds, which the
-                                  coherence anchor grade reuses) and
+                                  coherence anchor grade and the binaries'
+                                  Stage 3 reuse) and
                                   `isGaiaCatalogueBibcode` — one predicate per
                                   way this build refuses a Gaia value on a
                                   blended row — and `refusedPublicationCited`, the one skip

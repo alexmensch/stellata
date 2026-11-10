@@ -58,6 +58,9 @@ scripts/binaries/
                                   identity propagations and the binding
                                   audit, as frozen DecomposedPairs; the
                                   spot-check's port. Own README.
+  astrometry/                     Stage 3 in TypeScript: each component's
+                                  astrometry route, keyed by its
+                                  DecomposedPair. Own README.
   orbits/                         Stage 4's orbit knowledge in TypeScript:
                                   the NSS two-body conversion and its
                                   detectability regime, so far. Own README.
