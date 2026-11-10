@@ -34,8 +34,6 @@ export const SIMBAD_REF_EPOCH = 2000.0;
 // — keep the two in sync (see /data/README.md#reference-epoch-and-proper-motion).
 export const CATALOG_SCENE_EPOCH = 2016.0;
 
-// HIP2-preference threshold, mirrored from scripts/binaries/stage3_astrometry.py
-// so both pipelines route a shared star identically.
 export const HIP2_PM_DELTA_THRESHOLD_MASYR = 50.0;
 
 /** The reference datasets this cascade routes between. It is not their only
@@ -150,11 +148,12 @@ export function directionOnPm(
   );
 }
 
-/** |Δμ| > 50 mas/yr on either axis between the Gaia 5p and HIP2 PMs.
- *  Missing PM on either side → no comparison possible → false. */
+/** |Δμ| > 50 mas/yr on either axis between the Gaia 5p and HIP2 PMs — the
+ *  catalogue's and the binaries' Stage 3 one gate. Missing PM on either side →
+ *  no comparison possible → false. */
 export function hip2PmDisagrees(
-  gaia: GaiaAstrometryCatalogRow,
-  hip2: Hip2AstrometryRow,
+  gaia: Pick<GaiaAstrometryCatalogRow, 'pmraMasyr' | 'pmdecMasyr'>,
+  hip2: Pick<Hip2AstrometryRow, 'pmRaMasyr' | 'pmDeMasyr'>,
 ): boolean {
   if (
     gaia.pmraMasyr === null || gaia.pmdecMasyr === null
@@ -178,9 +177,7 @@ function pmVelVia(
 }
 
 /** Select the astrometric solution one spine row's sky direction comes from,
- *  through the trust cascade. Route semantics + priority order in ./README.md#direction-resolution;
- * the Gaia/HIP2 thresholds mirror
- *  scripts/binaries/stage3_astrometry.py.
+ *  through the trust cascade. Route semantics + priority order in ./README.md#direction-resolution.
  *
  *  The solution is NOT advanced here — `directionOnPm` is, once, at the caller,
  *  because the winning motion may be `pm-rescue/`'s rather than this tier's.
