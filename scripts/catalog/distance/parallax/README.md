@@ -241,7 +241,7 @@ no earlier cascade had a SIMBAD tier under a validator that checks the same
 quantity. Both validators honour it: `distance-regression-check` reads
 `distVia` in-process, and `validate-simbad-sample` reads
 `data/membership/simbad_sourced_distances.tsv`, because it runs off `catalog.bin`,
-which carries no tier. Without it 4,067 records would report a residual of zero
+which carries no tier. Without it <!-- count:build-catalog/distSimbadPlx -->404<!-- /count --> records would report a residual of zero
 against the parallax they were derived from and bias the metric toward
 agreement that was never measured.
 
