@@ -50,7 +50,6 @@ import {
   type BailerJonesStep,
   type LmcStep,
   type ParkedPlacement,
-  type Placement,
   type PlacedPlacement,
 } from '../distance/placement-lineage-pure';
 import {
@@ -215,14 +214,6 @@ export interface Star {
   originKey: string;
 }
 
-
-/** One manifest row's decisions: its placement, and its brightness and colour
- *  wherever the walk reached V. */
-export interface WalkedRow {
-  readonly placement: Placement;
-  readonly brightness: BrightnessColour | null;
-}
-
 /** The radial-velocity cascade's answer, resolved on every row before any park. */
 export interface RvRouting {
   readonly resolution: RadialVelocityResolution;
@@ -371,7 +362,7 @@ export function rowSources({
 export function readStars(
   manifest: Iterable<ManifestRecord>,
   options: ReadStarsOptions,
-  onRow: (row: WalkedRow) => void,
+  onRow: (outcome: RowOutcome) => void,
 ): { stars: Star[]; stats: WalkStats } {
   const sources = rowSources(options);
   const stars: Star[] = [];
