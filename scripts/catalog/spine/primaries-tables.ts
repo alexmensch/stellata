@@ -46,12 +46,14 @@ function readWgsn(): WgsnKeys {
 /** The binding derivation's inputs alone. `keepTycs` narrows the 2.5 M-row TYC
  *  cross-walk to the Tycho ids the caller will look up. */
 export async function loadBindingTables(keepTycs: ReadonlySet<string>): Promise<BindingTables> {
+  const sptype = SIMBAD_SPTYPE.read();
   return {
     cns5: CNS5.read(),
     glAliases: glAliasesFromEdges(loadStoredEdges()),
     tycToSource: await GAIA_TYC_XMATCH.read(keepTycs),
     hipToSource: GAIA_HIP_XMATCH.read(),
-    simbadBySourceId: SIMBAD_SPTYPE.read().xids,
+    simbadBySourceId: sptype.xids,
+    simbadSourceless: sptype.sourcelessXids,
   };
 }
 

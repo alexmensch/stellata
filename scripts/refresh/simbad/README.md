@@ -1,68 +1,66 @@
 # SIMBAD pull plumbing
 
-Reusable building blocks for SIMBAD TAP pulls. Modelled on
-[`scripts/binaries/`](../../binaries/README.md) (one module per
-phase, shared dataclasses) so every SIMBAD-anchored refresh reuses
-the entire stack.
+Reusable building blocks for SIMBAD TAP pulls, so every SIMBAD-anchored
+refresh composes the same phases, request keys, corroboration and writer
+instead of inlining its own ADQL.
+
+## The TypeScript core
+
+The SIMBAD pulls on the pull runtime's phased pulls
+([A phased pull](../pull/README.md#a-phased-pull)): sample, values and
+sp_type.
 
 ```
-specs.py     Declarative dataclasses — ColumnSpec for basic-table
-             columns (sp_type / otype / the /docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers value columns and
-             their bibcodes), IdentLookup for an identifier namespace
-             (HIP, Gaia DR3/DR2/DR1, TYC, GJ), FluxBand for one band of
-             the long-format flux table, BibcodedGroup for the columns
-             that ship only alongside their bibcode. Canonical catalogue
-             of instances, plus WIDENING_LADDER and GAIA_RELEASES.
-inputs.py    Manifest-driven feeders — membership_request_keys partitions rows
-             into per-namespace lookup keys AND collects each
-             source_id-keyed row's other designations in the same pass,
-             simbad_value_cohort builds the /docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers value-tier predicate
-             over gaia_complete_source_ids, gl_suffix normalises the
-             GJ/Gl spellings.
-             Cost: the designation map is a dict per source_id-keyed row —
-             ~98 MB over the whole manifest against ~46 MB for three flat
-             per-namespace dicts. Bought deliberately: it is what lets the
-             request side look a namespace up by IdentLookup.tsv_name and
-             stay generic over WIDENING_LADDER. Refresh-time only, never
-             build:catalog and never the browser.
-request.py   Phase A — resolve a MembershipRequestKeys partition to the
-             deduplicated oid set, with the widening ladder, its
-             corroboration rule, and the per-namespace coverage report.
-query.py     ADQL builders + batched TAP executor. Wraps each
-             ColumnSpec's adql fragment with `AS <alias>` so ORDER BY
-             can reference the alias (SIMBAD rejects qualified names
-             in ORDER BY). fetch_ident_lookups and fetch_ident_sets
-             share one query and differ only by an insert strategy —
-             rows must fold straight into their final shape, because at
-             manifest scope this accumulator is ~100 MB and an
-             intermediate copy doubles it.
-union.py     Phase B2 — the value-keyed union (README.md#the-union-asks-every-namespace-a-record-reaches). Reads Phase A's per-namespace
-             bindings and Phase B's rows, asks what no bound object
-             answered, and returns the objects that do — each binding
-             adjudicated by request.py's shared `corroborate`, because
-             every one of them rests on a designation alone.
-coverage.py  Fill counting and floor gates over a pull's
-             {oid: {alias: value}} rows — one definition of "this cell
-             is filled" (neither None nor blank) and one gate message,
-             shared by every shell's coverage phase.
-tsv.py       Spec-driven TSV writer — basic columns, then ordered
-             blocks (ident cross-IDs, pivoted flux bands); applies the
-             bibcode policy below; atomic rename via the shared
-             refresh_lib path.
-simbad.test.py   stdlib unittest pins covering spec definitions,
-                 manifest feeders, request composition, the widening
-                 veto, query builders, coverage gates and TSV emit.
+simbad-specs-pure.ts        Namespace (parseIdent: suffix, component-lettered
+                            skip, or unparsed), basic columns, bibcoded groups,
+                            flux bands, WIDENING_LADDER, GAIA_RELEASES.
+simbad-fetch-pure.ts        The four query shapes as phases (resolve, basic,
+                            idents, releases, flux) and their fetchers. A
+                            suffix answering under two oids is an error; an
+                            unparsable id fails the parse ledger's check.
+membership-keys-pure.ts     The manifest's request keys, each source_id-keyed
+                            row's designations in the same pass, glSuffix, and
+                            the value cohort (valueCohort, gaiaCompleteSourceIds).
+resolve-membership-pure.ts  Phase A: keys to oids, the widening ladder, the
+                            corroboration rule (corroborate), the report.
+union-pure.ts               The value-keyed union and its recovered-row sample.
+simbad-rows-pure.ts         Written rows (basic columns, then ident and flux
+                            blocks, bibcode policy applied) and fill gates.
+simbad-fake-pure.ts         An in-memory SIMBAD answering declared phases, as
+                            an ask or a TAP transport.
+simbad-test-fixtures.ts     Manifest-record and fake builders for the suites.
+*-pure.test.ts              Each module's vitest suite, beside it.
+```
+
+## The Python modules left
+
+`refresh-simbad-wds-xids.py` and `refresh-simbad-tyc-hd.py` stay Python until
+their ports, and import only these:
+
+```
+specs.py         ColumnSpec, IdentLookup, FluxBand, the instances.
+query.py         ADQL builders and the batched TAP executor:
+                 resolve_oids_by_prefix, fetch_basic_columns,
+                 fetch_ident_lookups / fetch_ident_sets (one query, two
+                 insert strategies), fetch_flux_bands.
+simbad.test.py   stdlib unittest pins of the two.
 __init__.py      Package marker.
 ```
 
 ## The cohort is two questions, and the manifest answers one
 
-`simbad_value_cohort` takes a set of source_ids and returns the [§ 5](/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers) value-tier
-predicate. The set is `gaia_complete_source_ids` over
-`data/gaia/gaia_dr3_astrometry_catalog.tsv` — the ids Gaia's own 5p table
-states a parallax AND a proper motion AND a radial velocity for. A row is OUT
-of the cohort only where that holds **and** its identity is first-hand too: a
-`crosswalk_gated` binding plus a TYC or a HIP.
+`valueCohort` takes a set of source_ids and returns the [§ 5](/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers) value-tier
+predicate. The set is `gaiaCompleteSourceIds` over both Gaia 5p tables —
+`data/gaia/gaia_dr3_astrometry_catalog.tsv` for the primaries' sources and
+`data/gaia/gaia_dr3_magnitude_pull.tsv` for the magnitude term's, which the
+first does not hold — the ids Gaia states a parallax AND a proper motion AND
+a radial velocity for. A row is OUT of the cohort only where that holds
+**and** its identity is first-hand too: a `gaia_native` binding (the row is
+Gaia's own source), or a `crosswalk_gated` binding plus a TYC or a HIP.
+Read off the astrometry table alone, every magnitude-term row looked
+incomplete and the cohort was 673,679 rows; with both tables and
+`gaia_native` first-hand it is 121,109 of the manifest's <!-- count:membership-manifest/rows -->975,373<!-- /count -->
+rows (measured 2026-11-08).
 
 **Both halves, because the manifest carries value provenance for neither.**
 The predicate this replaced read the spine's `pos_src` / `dist_src` /
@@ -81,11 +79,11 @@ half off Gaia's own table is what recovers them.
 **Stored ident ids are space-padded.** SIMBAD right-aligns a TYC's first
 field, so `TYC 144-1004-1` is stored as `TYC  144-1004-1` — while matching
 the unpadded request that found it. Anything joining a returned id back to
-its request must go through `IdentLookup.parse_suffix`, which strips;
+its request must go through `parseIdent` (Python: `IdentLookup.parse_suffix`), which strips;
 keying on the raw returned id silently loses those rows.
 
 **A suffix is interpolated into an ADQL string literal**, so
-`resolve_oids_by_prefix` refuses any suffix outside
+`resolveOids` (Python: `resolve_oids_by_prefix`) refuses any suffix outside
 `[A-Za-z0-9 .+-]` rather than composing a query it cannot quote.
 
 ## An unbibcoded value never reaches the file
@@ -93,7 +91,7 @@ keying on the raw returned id silently loses those rows.
 [§ 5](/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers) makes the bibcode the source and SIMBAD only
 the index that found it, so a value SIMBAD publishes without one is an
 orphan: nothing to cite, nothing to re-pull, nothing a cascade may
-defend. `write_simbad_tsv` therefore drops the whole quantity — value,
+defend. `simbadRows` therefore drops the whole quantity — value,
 error, quality flag — wherever its `BibcodedGroup`'s bibcode cell is
 empty or blank.
 
@@ -113,12 +111,12 @@ never invisible.
 
 A row's primary key is the first namespace it carries, so a populated
 `gaia_source_id` cell keeps it out of every other namespace's request —
-**even when SIMBAD's `ident` table has no such id**. `resolve_membership_keys`
+**even when SIMBAD's `ident` table has no such id**. `resolveMembershipKeys`
 therefore runs a second ladder over the source_ids the Gaia namespace did
 not reach, retrying each on the record's own HIP, then TYC, then GJ. Each
 rung asks only for what the rungs above left unbound, and the order is the
 one [§ 5](/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers) gives the no-Gaia tier — both read it off
-`WIDENING_LADDER`, and `membership_request_keys` partitions the no-Gaia rows by
+`WIDENING_LADDER`, and `membershipKeys` partitions the no-Gaia rows by
 iterating that same tuple, so the tier and the widening cannot drift apart.
 
 **Read-back does not depend on that order.** A widened row is joinable
@@ -127,8 +125,8 @@ that bound it, so `walkSimbadNamespaces` reaches it whichever rung matches
 first — which is what lets the read side order its own walk independently.
 The one binding that cannot recover is an object SIMBAD holds two ids for
 in the binding namespace: the shipped column is single-valued and
-`fetch_ident_lookups` keeps the last in table order, so the winner need not
-be the id that asked. Pinned rather than assumed away in `simbad.test.py`.
+`fetchIdents` keeps the last in table order, so the winner need not
+be the id that asked. Pinned rather than assumed away in `simbad-fetch-pure.test.ts`.
 
 **HIP before TYC is load-bearing, not alphabetical.** A TYC names the
 Tycho entry, which for a close pair is the system; SIMBAD frequently
@@ -148,7 +146,7 @@ HD/HIP-keyed one that has it (`HD 224738A` beside `HD 224738`, and ~4.7k
 more). A ladder that stops at the first BINDING cannot reach them; only a
 union over the namespaces the record itself carries can.
 
-`union.py` runs after the basic-table pull, because the question it asks is
+`unionUnanswered` runs after the basic-table pull, because the question it asks is
 about the VALUE and nothing before Phase B knows it:
 
 1. Walk the manifest. For each row, collect every namespace it can be asked
@@ -213,7 +211,7 @@ merge through instead of failing.
 ## The corroboration rule
 
 Shared by the widening ladder and the union — `corroborate` in
-`request.py`, one implementation, because both make the same kind of claim.
+`resolve-membership-pure.ts`, one implementation, because both make the same kind of claim.
 A binding made on a designation alone needs evidence before it may attach a
 value, whether that value is rv / parallax / PM / coordinates or a spectral
 type. It reads **every Gaia release SIMBAD keys a cross-ID under**, not DR3
@@ -255,9 +253,9 @@ job and is finished; only the second is the union's.
 
 ## Used by
 
-- [`refresh-simbad-sptype.py`](../README.md) — per-source `sp_type` /
+- [`refresh:simbad-sptype`](../simbad-sptype/README.md) — per-source `sp_type` /
   `sp_qual` / `sp_bibcode` / `otype` + cross-IDs, over the whole manifest.
-- [`refresh-simbad-values.py`](../README.md) — bibcoded rv / parallax /
+- [`refresh:simbad-values`](../simbad-values/README.md) — bibcoded rv / parallax /
   PM / coordinates + B/V fluxes, over the [§ 5](/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers) value cohort.
 - [`refresh-simbad-wds-xids.py`](../README.md) — per-WDS-component
   (Gaia DR3, HIP) cross-IDs via a two-phase WDS-id → SIMBAD-oid →
@@ -270,7 +268,7 @@ job and is finished; only the second is the union's.
   the ambiguity a consumer is asking about, and the single-valued fetcher
   would pick a winner and hide it.
 
-`refresh-simbad-sample.py` predates this folder and drives its TAP
-queries directly via the shared
-[`scripts/refresh/refresh_lib.py`](../README.md). New SIMBAD pulls
-should compose the modules here instead of inlining their own ADQL.
+`refresh:simbad` ([`../simbad-sample/`](../simbad-sample/README.md)) asks its
+own whole-table bins and takes its HIP and Gaia ids through `fetchIdents`
+here. New SIMBAD pulls compose the modules here instead of inlining their
+own ADQL.

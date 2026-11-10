@@ -98,7 +98,7 @@ the IV/25 TYCs that the union was widened to cover in the first place.
 
 It lives in `refresh_lib` rather than in `refresh-tycho2.py` because
 `refresh-simbad-tyc-hd.py` asks the same question of the same two tables —
-the terms `read_source_id_request` is shared on. Both parse each side into
+the terms `read_mentioned_tycs` is shared on. Both parse each side into
 integer triples, so the two pulls cover the same entries by construction and
 a differently-spelled cell cannot drift them apart.
 

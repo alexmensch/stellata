@@ -210,39 +210,40 @@ consumer reads it ([One designation, two HD numbers](../README.md#one-designatio
 is not guaranteed a record.** It reaches whatever the primaries admit for it,
 and admission is not a promise of a record
 ([Admission is not a promise of a record](../../membership/additions/README.md#admission-is-not-a-promise-of-a-record)). Five
-of the eight freed an HD the primaries then admitted as a row of its own; three
-of those five build a record and two park `no_parallax_published`. So the
-number ships nowhere, where before the correction it shipped on the WRONG star:
+of the eight freed an HD the primaries then admitted as a row of its own; four
+of those five build a record and one parks `refused_no_defensible_parallax`.
+Where a number ships nowhere, before the correction it shipped on the WRONG
+star:
 
 | Freed | Lands on | Ships |
 |---|---|---|
 | HD 24071 · HR 1189 | `7570-1586-1`, f Eri B | a record |
 | HD 138917 · HR 5788 | `933-1239-1`, δ Ser B | a record |
 | HD 200496 · HR 8058 | `5204-1584-2`, 12 Aqr B | a record |
-| HD 68255 · HR 3210 | `1381-1641-1`, no bound source | parked |
-| HD 213051 · HR 8558 | `5226-1605-2`, no bound source | parked |
+| HD 68255 · HR 3210 | `1381-1641-1`, Tegmine C (ζ² Cnc), its own source through SIMBAD | a record |
+| HD 213051 · HR 8558 | `5226-1605-2`, ζ¹ Aqr: a 2p Gaia source whose only other parallax is SIMBAD's Gaia DR2 value, refused | parked |
 | HD 330122 | no manifest row — no Tycho entry names it | nothing |
 
-**Five designations therefore leave the search index** — HD 68255, HD 213051,
-HD 330122, HR 3210 and HR 8558. A parked row builds no record, so its `hd` /
-`hr` become no key on `hdMap` / `hrMap`
+**Three designations therefore leave the search index** — HD 213051, HD 330122
+and HR 8558. A parked row builds no record, so its `hd` / `hr` become no key on
+`hdMap` / `hrMap`
 ([Star search](/src/client/typeahead/README.md#star-search)); checked against the built
 artifact rather than reasoned about, and re-checkable there:
 
 ```
-jq '[.[] | .hd] | index(68255)' public/search-index.json     # null
+jq '[.[] | .hd] | index(213051)' public/search-index.json     # null
 ```
  That is the correction's real
 price and it is paid knowingly: a number resolving to the wrong star is worse
-than one resolving to nothing, and the two parked rows are `stellata-hooj.13`'s
+than one resolving to nothing, and the parked row is `stellata-hooj.13`'s
 class — the number is unreachable for want of a distance, not for want of a
 label rule. HD 330122 is the other shape, the freed number no second Tycho
 entry names — the case [A withheld number attaches to no record](#a-withheld-number-attaches-to-no-record-and-that-is-the-answer) already
 describes for the withheld set.
 
 The split is a ratchet, not a note: the *override-freed HD numbers* case in
-`../parity-ledger.test.ts` pins which three ship and which three do not, so a seventh freed
-number, or one of these three changing side, fails rather than ageing this
+`../parity-ledger.test.ts` pins which four ship and which two do not, so a seventh freed
+number, or one of these six changing side, fails rather than ageing this
 table. It keys on the `override-value` disposition where the withheld ratchet
 keys on `extra-sibling-rendered`, which is why they are two suites and not one.
 

@@ -82,13 +82,13 @@ run's derivation moved.
 and loses precision silently as a float64, so a numeric key merges distinct
 sources without erroring.
 
-Against today's manifest the union measures 374,932 bound source_ids, 331,265
-of them in the kept set, so <!-- count:membership-manifest/magnitudeRows -->598,664<!-- /count --> rows are the term's own and the union is
-973,596 source_ids. The record total that implies, once promotion and parking
+Against today's manifest the union measures 375,131 bound source_ids, 331,465
+of them in the kept set, so <!-- count:membership-manifest/magnitudeRows -->598,464<!-- /count --> rows are the term's own and the union is
+973,595 source_ids. The record total that implies, once promotion and parking
 apply: [The record total the floor implies](#the-record-total-the-floor-implies--measured), below.
 
-At `V ≤ 11` the generator writes **<!-- count:membership-manifest/rows -->975,573<!-- /count -->** manifest rows — 376,909 plus
-those <!-- count:membership-manifest/magnitudeRows -->598,664<!-- /count --> — and every primaries-side count holds byte for byte, which is
+At `V ≤ 11` the generator writes **<!-- count:membership-manifest/rows -->975,373<!-- /count -->** manifest rows — 376,909 plus
+those <!-- count:membership-manifest/magnitudeRows -->598,464<!-- /count --> — and every primaries-side count holds byte for byte, which is
 what says the term adds and moves nothing on the manifest side. The record side
 is not additive: [What the floor moves that was already there](#what-the-floor-moves-that-was-already-there).
 
@@ -99,7 +99,7 @@ A magnitude-term row carries no classical cell, `binding` `gaia_native` and
 brightness rather than on a primary naming it, and it is the whole ledger for
 this cohort — every row of it has the same admission reason, and the manifest
 already names which rows those are. An `additions-ledger.tsv` entry per row
-would restate the column <!-- count:membership-manifest/magnitudeRows -->598,664<!-- /count --> times.
+would restate the column <!-- count:membership-manifest/magnitudeRows -->598,464<!-- /count --> times.
 
 `gaia_native` is a fifth binding class rather than `none`, which means an empty
 cell: these rows' `gaia_source_id` is the pull row itself, justified by nothing
@@ -122,13 +122,13 @@ the committed build (`recordCount` in `../../build-catalog-expected.json`):
 | term | projected | measured | now |
 |---|---|---|---|
 | `V <= 11` source_ids from the pull | 929,929 | 929,929 | <!-- count:membership-manifest/magnitudeTerm.kept -->929,929<!-- /count --> |
-| distinct `gaia_source_id` in the manifest | 370,994 | 370,994 | 374,932 |
-| in both | 327,701 | 327,701 | 331,265 |
-| source_id union | 973,222 | 973,222 | 973,596 |
-| manifest rows carrying no `gaia_source_id` | + 5,938 | + 5,938 | + <!-- count:membership-manifest/bindingByClass.none -->1,977<!-- /count --> |
+| distinct `gaia_source_id` in the manifest | 370,994 | 370,994 | 375,131 |
+| in both | 327,701 | 327,701 | 331,465 |
+| source_id union | 973,222 | 973,222 | 973,595 |
+| manifest rows carrying no `gaia_source_id` | + 5,938 | + 5,938 | + <!-- count:membership-manifest/bindingByClass.none -->1,778<!-- /count --> |
 | companions promoted to their own record | + 16,226 | **+ 14,656** | + <!-- count:build-catalog/companionPromoted -->14,676<!-- /count --> |
-| rows parked, so never a record | − 10,429 | **− 10,748** | − 10,571 |
-| **records** | ~984,957 | **983,068** | **<!-- count:build-catalog/recordCount -->979,678<!-- /count -->** |
+| rows parked, so never a record | − 10,429 | **− 10,748** | − 10,415 |
+| **records** | ~984,957 | **983,068** | **<!-- count:build-catalog/recordCount -->979,634<!-- /count -->** |
 
 The manifest side reproduced exactly: `build:membership` at the floor wrote
 979,160 rows and every primaries-side count held. Both build-side terms
@@ -150,8 +150,8 @@ rows reach the record only through a stored same-as edge
 
 | reason | today | at `V <= 11` | now |
 |---|---|---|---|
-| `no_parallax_published` | 3,423 | 9,032 | <!-- count:build-catalog/parkedNoParallaxPublished -->8,933<!-- /count --> |
-| `refused_no_defensible_parallax` | 975 | 1,027 | <!-- count:build-catalog/parkedRefusedNoDefensibleParallax -->1,000<!-- /count --> |
+| `no_parallax_published` | 3,423 | 9,032 | <!-- count:build-catalog/parkedNoParallaxPublished -->7,492<!-- /count --> |
+| `refused_no_defensible_parallax` | 975 | 1,027 | <!-- count:build-catalog/parkedRefusedNoDefensibleParallax -->2,285<!-- /count --> |
 | `no_v_magnitude` | 688 | 688 | <!-- count:build-catalog/parkedNoVMagnitude -->637<!-- /count --> |
 | `no_position` | 1 | 1 | <!-- count:build-catalog/parkedNoPosition -->1<!-- /count --> |
 
@@ -290,7 +290,7 @@ floor, 5.9 MiB today.
 ## The astrometry comes with it
 
 The pull carries full 5p astrometry and `radial_velocity` for every row, on
-`gaia_astrometry_pull.TSV_COLUMNS` — the same schema
+`ASTROMETRY_COLUMNS` (`/scripts/refresh/gaia-request/`) — the same schema
 `gaia_dr3_astrometry_catalog.tsv` uses. `readMagnitudeTermAstrometry` therefore
 feeds `gaiaAstrometryAccumulator` (`../../sources/gaia-astrometry-source.ts`), the
 fold behind the same parser, so the direction cascade stays single-sourced and
@@ -308,5 +308,5 @@ from the header by name; neither assumes a column's position.
 why a collect-then-rejoin reader defeats it.
 
 [Bailer-Jones 2021](/data/papers/index.md#bailerjones2021) distances and
-Apsis parameters for the same population arrive through `refresh_lib.pull_deep_population` (`scripts/refresh/README.md`), not
+Apsis parameters for the same population arrive through `deepPopulationPull` (`/scripts/refresh/magnitude/`), not
 through this folder.

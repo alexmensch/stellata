@@ -26,11 +26,17 @@ scripts/catalog/astrometry-request/
                                   serialiseSourceIdRequest (header, then ids
                                   in sortSourceIdsNumeric's order, over
                                   ../../util/tsv/'s compareSourceIds) and
-                                  parseSourceIdRequest, which checks the
-                                  header. Also used by
+                                  readSourceIdRequest, the one parse of
+                                  every such file (this one, the binaries
+                                  request, the DR2 risk set). Also used by
                                   scripts/sid/export-dr-risk-set.ts and the
                                   membership gate test, whose coverage
                                   filter, unrequestedBindings, lives here.
+  source-id-request-source.ts     sourceIdRequestSource — a request file
+                                  declared through defineSource on that
+                                  parse; scripts/sid/ and the request-scoped
+                                  Gaia pulls (../../refresh/gaia-request/)
+                                  declare theirs through it.
 ```
 
 Each contribution lives with the consumer that defines it, not here — this
@@ -56,15 +62,15 @@ through the astrometry pull back into `build:membership`
 The derivation's candidates cover every binding it can reach, since a binding
 is one of its candidates; what they leave out is a reviewed id no committed
 source proposes
-(<!-- count:membership-manifest/dispositionAsserted -->36<!-- /count --> today), which is why the dispositions file is the fourth
+(<!-- count:membership-manifest/dispositionAsserted -->33<!-- /count --> today), which is why the dispositions file is the fourth
 contribution. `membership-manifest-gate.test.ts` asserts the result: every
 `term = primaries` manifest row's `gaia_source_id` is in the request.
 
-The <!-- count:membership-manifest/bindingByClass.none -->1,977<!-- /count --> primaries rows carrying none are the no-Gaia tier. The
+The <!-- count:membership-manifest/bindingByClass.none -->1,778<!-- /count --> primaries rows carrying none are the no-Gaia tier. The
 `term = magnitude` rows are not requested: their astrometry is the magnitude
 pull's own
 ([The astrometry comes with it](../membership/magnitude-term/README.md#the-astrometry-comes-with-it)),
-and requesting them would re-pull <!-- count:membership-manifest/magnitudeRows -->598,664<!-- /count --> rows that file already holds.
+and requesting them would re-pull <!-- count:membership-manifest/magnitudeRows -->598,464<!-- /count --> rows that file already holds.
 
 ## The request is a union, and why that is not a compromise
 
@@ -164,7 +170,8 @@ What no request can fix is `gateSkippedNullGMag` (<!-- count:classic-id-overlay/
 
 ## What the pulled set feeds
 
-The request drives `scripts/refresh/refresh-gaia-astrometry-catalog.py` →
+The request drives `refresh:gaia-astrometry-catalog`
+(`scripts/refresh/gaia-request/`) →
 the astrometry catalog, which is tier 1 of the direction cascade and the rv
 cascade, the source of the BP/RP the V and ci cascades transform, and both
 gates' evidence above. `pnpm run build:classic-ids` and `pnpm run

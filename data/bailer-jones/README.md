@@ -9,7 +9,7 @@ fails.
 
 ```
 bailer-jones-dr3.tsv   ~95 MB, LFS. Keyed by Gaia DR3 source_id.
-                       1,273,966 rows.
+                       1,273,967 rows.
 ```
 
 ## Provenance
@@ -49,10 +49,12 @@ scope — [Refresh](#refresh) below — has moved since the table was pulled. Se
 The scope is the catalogue's deep population, whose larger half is defined by
 a magnitude bound rather than by a list of ids
 ([The deep population](/scripts/refresh/magnitude/README.md#the-deep-population--a-bounded-leg-plus-a-request-leg)). Expressing that bound
-takes a join against `gaiadr3.gaia_source`, and only the ESA archive hosts
-both tables: VizieR's `I/352/gedr3dis` carries no magnitude column, so there
-the same scope is 250 id batches and about five and a half hours against four
-minutes of sliced join.
+takes a join against `gaiadr3.gaia_source`, which only the Gaia archives host:
+VizieR's `I/352/gedr3dis` carries no magnitude column, so there the same scope
+is 250 id batches and about five and a half hours against minutes of sliced
+join. Both Gaia mirrors host both tables — ESA as `external.gaiaedr3_distance`,
+ARI as `gaiaedr3_complements.distances`, the same eight columns (verified
+2026-11-09) — but one query names one of them, so the pull asks ESA alone.
 
 The two copies agree. Sampling 2,034 committed rows across the file against
 ESA, 2,021 matched cell-for-cell and 13 differed — 12 in the last decimal
@@ -66,8 +68,9 @@ to the build and is gone from the ESA-side write.
 ## Refresh
 
 `pnpm run refresh:bailer-jones` →
-[`scripts/refresh/refresh-bailer-jones.py`](../../scripts/refresh/README.md).
+[`scripts/refresh/magnitude/refresh-bailer-jones.ts`](../../scripts/refresh/magnitude/README.md).
 Two legs — every source at `G ≤ 11`, plus what the exported catalog request
 adds below that floor — per [The deep population](/scripts/refresh/magnitude/README.md#the-deep-population--a-bounded-leg-plus-a-request-leg).
-Runs AFTER `pnpm run build:astrometry-request`. Each leg checkpoints per
-batch, so `--force` resumes rather than restarting.
+Runs AFTER `pnpm run build:astrometry-request`. Every answered query is
+checkpointed, so a failed run resumes rather than restarting
+([The checkpoint](/scripts/refresh/pull/README.md#the-checkpoint)).

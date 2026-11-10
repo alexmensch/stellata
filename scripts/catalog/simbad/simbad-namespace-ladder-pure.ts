@@ -44,8 +44,8 @@ export function emptySimbadNamespaceIndex<T>(): SimbadNamespaceIndex<T> {
  *  one spelling: `Gl 165A`, `GJ 165A` and `165 A` all yield `165A`. The two
  *  sides spell the same star differently — the spine carries both catalogue
  *  words and SIMBAD stores its own spacing — so both go through this before
- *  they meet. It folds strictly more than `gl_suffix` in
- *  `scripts/refresh/simbad/inputs.py`, which stripped only the catalogue word
+ *  they meet. It folds strictly more than `glSuffix` in
+ *  `scripts/refresh/simbad/membership-keys-pure.ts`, which strips only the catalogue word
  *  when composing the request: inner spacing and case are folded here because
  *  this is where the two spellings actually have to match. */
 export function normaliseGjKey(cell: string | null): string | null {

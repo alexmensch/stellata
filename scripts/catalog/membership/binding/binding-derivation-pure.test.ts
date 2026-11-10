@@ -29,8 +29,10 @@ const simbadBySourceId = new Map<string, SimbadXids>([
   ['301', { hip: 30, tyc: null, gj: null }],
   ['400', { hip: null, tyc: null, gj: '9140' }],
   ['866', { hip: null, tyc: null, gj: '866 C' }],
+  ['575', { hip: null, tyc: '3484-1580-2', gj: '575 B' }],
 ]);
-const simbad = indexSimbadSources(simbadBySourceId);
+const simbadSourceless: SimbadXids[] = [{ hip: 73695, tyc: null, gj: '575' }];
+const simbad = indexSimbadSources(simbadBySourceId, simbadSourceless);
 
 const tables: BindingTables = {
   cns5: [
@@ -43,6 +45,7 @@ const tables: BindingTables = {
   tycToSource: new Map([['1-1-1', '100'], ['2-2-1', '200']]),
   hipToSource: new Map([[10, '100'], [20, '999']]),
   simbadBySourceId,
+  simbadSourceless,
 };
 const { cns5ByKey, cns5ByOwnKey } = indexCns5(tables.cns5);
 
@@ -74,6 +77,18 @@ describe('simbadCandidate', () => {
   it('lets a bare number reach an unresolved pair\'s one object, never a resolved pair\'s', () => {
     expect(simbadCandidate({ tyc: '', hip: '', gl: 'Gl 866A' }, simbad, tables.glAliases)).toBe('866');
     expect(simbadCandidate({ tyc: '', hip: '', gl: 'GJ 820C' }, simbad, tables.glAliases)).toBeNull();
+  });
+
+  // 44 Boo: the system object `* i Boo` carries HIP 73695 and `GJ 575` with no
+  // Gaia id, and `* i Boo B` carries `575 B` with one.
+  it('counts an object with no Gaia id as a claimant, so the bare number reaches neither of 44 Boo\'s', () => {
+    expect(simbad.byGj.get('575')).toBeNull();
+    expect(simbadCandidate({ tyc: '3484-1580-1', hip: '73695', gl: 'Gl 575A' }, simbad, tables.glAliases)).toBeNull();
+    expect(simbadCandidate({ tyc: '', hip: '', gl: 'Gl 575B' }, simbad, tables.glAliases)).toBe('575');
+  });
+
+  it('lets a key only an object with no Gaia id claims fall through to the next', () => {
+    expect(simbad.byHip.has(73695)).toBe(false);
   });
 
   it('answers a contested HIP with nothing rather than falling to the next key', () => {
@@ -209,7 +224,7 @@ describe('deriveBinding', () => {
       ['700', { hip: null, tyc: '7-7-1', gj: null }],
       ['701', { hip: null, tyc: '8-8-1', gj: null }],
       ['702', { hip: null, tyc: '8-8-1', gj: null }],
-    ]));
+    ]), []);
     const gate = rowGateEvidence(
       { tyc: '6-6-1', hip: '60', gl: '' }, witnessed, witnessIndex,
     );

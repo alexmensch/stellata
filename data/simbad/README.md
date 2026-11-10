@@ -10,13 +10,10 @@ exactly the gap AT-HYG (system-level spectra) and Gaia DR3
 
 ```
 simbad_sample.tsv          ~5.7 MB, LFS. Stratified random 50k stars.
-simbad_sptype.tsv          ~29 MB, LFS. 395,543 rows. Per-source sp_type /
+simbad_sptype.tsv          ~66 MB, LFS. 966,847 rows. Per-source sp_type /
                            sp_qual / sp_bibcode / otype + HIP / Gaia DR3 /
                            TYC / GJ cross-IDs; the resolver keys all four.
-                           Still holds WDS-only rows its request no longer
-                           asks for, and what dropping them moves:
-                           /scripts/refresh/simbad-wds-sptype/README.md#what-the-split-left-in-simbad_sptypetsv.
-simbad_values.tsv          ~18 MB, LFS. 74,446 rows. Bibcoded rv,
+simbad_values.tsv          ~29 MB, LFS. 115,743 rows. Bibcoded rv,
                            parallax, PM, coordinates and B/V fluxes for
                            the /docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers value cohort — see README.md#the-values-pull.
 simbad_wds_xids.tsv        ~1.2 MB, LFS. Per-WDS-component (Gaia DR3,
@@ -57,61 +54,61 @@ carries no bibcode at all.
 whole quantity (value, error, quality flag) wherever its bibcode is
 empty, so every field's value count equals its bibcode count by
 construction rather than by observation (`BibcodedGroup`,
-`scripts/refresh/simbad/specs.py`). A consumer therefore cannot reach a
+`scripts/refresh/simbad/simbad-specs-pure.ts`). A consumer therefore cannot reach a
 cell it may not use, and admitting one would be a **re-pull, not a filter
 change** — the same terms the cohort itself is widened on. What that
 costs is visible in the pull's own report, which prints values reached
 before it prints values shipped.
 
 **The request set is an enumerated cohort, not the catalogue.** It is the
-**membership manifest** rows a [§ 5](/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers) value tier can reach — 75,040 of 376,932
-(19.9%), keyed `gaia_source_id` → HIP → TYC → GJ. That first number is the
-`.total` of `membership_request_keys(MEMBERSHIP, simbad_value_cohort(…))`
-over the committed manifest and astrometry table, so calling the predicate
+**membership manifest** rows a [§ 5](/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers) value tier can reach — 121,109 of <!-- count:membership-manifest/rows -->975,373<!-- /count -->
+(12.4%, 2026-11-08), keyed `gaia_source_id` → HIP → TYC → GJ. That first number is the
+row count of `membershipKeys(manifest, valueCohort(…))`
+over the committed manifest and both Gaia 5p tables, so calling the predicate
 directly re-derives it in seconds and costs no network.
-`refresh-simbad-values` prints the same figure as its `value cohort:` line,
+`refresh:simbad-values` prints the same figure as its `value cohort:` line,
 but only under `--force` and only on its way into the pull — the up-to-date
-guard returns before it otherwise. Four rows in five are
+guard returns before it otherwise. Seven rows in eight are
 absent by construction, so a consumer cannot quietly reach for SIMBAD where a
 first-hand catalogue already serves. **Widening the cohort is a re-pull**, not
-a filter change: the predicate is `simbad_value_cohort` in
-`scripts/refresh/simbad/inputs.py`, and a row is OUT only where Gaia's own 5p
-table states every [§ 5](/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers) value for it AND its identity is first-hand too (a
-`crosswalk_gated` binding plus a TYC or a HIP). Why it takes both halves —
+a filter change: the predicate is `valueCohort` in
+`scripts/refresh/simbad/membership-keys-pure.ts`, and a row is OUT only where Gaia's own 5p
+tables state every [§ 5](/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers) value for it AND its identity is first-hand too (a
+`gaia_native` binding, or `crosswalk_gated` plus a TYC or a HIP). Why it takes both halves —
 and what an identity-only predicate loses — is
 [The cohort is two questions](/scripts/refresh/simbad/README.md#the-cohort-is-two-questions-and-the-manifest-answers-one).
 
-Coverage over the cohort, measured at the 2026-09-08 pull (74,446 oids, up
-from 11,045 rows on the spine-scoped one it replaced). Every count below is
+Coverage over the cohort, measured at the 2026-11-08 pull (<!-- count:build-catalog/simbadValuesEntries -->115,743<!-- /count --> oids, up
+from 74,446 at the 2026-09-08 pull, before the magnitude term). Every count below is
 what **ships**, i.e. post-policy — the file holds no unbibcoded value, so each
 field's value count equals its bibcode count.
 
 | Field | Reaches a shipped value |
 |---|---|
-| coordinates | 74,446 (100.0%) |
-| proper motion | 74,267 (99.8%) |
-| parallax | 69,904 (93.9%) |
-| flux B | 62,542 (84.0%) |
-| flux V | 62,488 (83.9%) |
-| radial velocity | 34,520 (46.4%) |
+| coordinates | 115,742 (100.0%) |
+| proper motion | 115,326 (99.6%) |
+| parallax | 108,849 (94.0%) |
+| flux V | 100,855 (87.1%) |
+| flux B | 100,584 (86.9%) |
+| radial velocity | 50,802 (43.9%) |
 
 **The two fluxes are the sparsest fields after rv, and the bibcode policy is
-why.** They sit at 84.0% and 83.9% against parallax's 93.9% and PM's 99.8%,
+why.** They sit at 87.1% and 86.9% against parallax's 94.0% and PM's 99.6%,
 because `allfluxes` — the view whose B/V coverage is wider — carries no bibcode
 at all, so the long-format `flux` table is the only consumable source and an
-unattributable value is dropped whole. How many the cohort reached *before* the
-policy is not recoverable from the committed file, which holds no unbibcoded
-value by construction, so the pull's own report is the only place that number
-is ever read.
+unattributable value is dropped whole: the 2026-11-08 pull's report counts
+10,597 B and 9,300 V values reached and dropped. The committed file holds no
+unbibcoded value by construction, so the pull's own report is the only place
+that number is ever read.
 
-**rv Gaia-bibcode skip rule** ([§ 5](/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers)): of the 34,520 rv values in the pull,
-**14,725 carry a Gaia catalogue bibcode** — 13,381 `2018yCat.1345....0G`
-([Gaia Collaboration 2018](/data/papers/index.md#gaiacollab2018cat)) and 1,344 `2022yCat.1355....0G` ([Gaia Collaboration 2022](/data/papers/index.md#gaiacollab2022cat)). Those are the values the rv
+**rv Gaia-bibcode skip rule** ([§ 5](/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers)): of the 50,802 rv values in the pull,
+**25,141 carry a Gaia catalogue bibcode** — 23,633 `2018yCat.1345....0G`
+([Gaia Collaboration 2018](/data/papers/index.md#gaiacollab2018cat)) and 1,508 `2022yCat.1355....0G` ([Gaia Collaboration 2022](/data/papers/index.md#gaiacollab2022cat)). Those are the values the rv
 cascade must skip on rows whose own 5p gate withheld Gaia rv, so the pull
 cannot launder a withheld value back in. The rest are literature, led by
-`2020AJ....160..120J` ([Jönsson 2020](/data/papers/index.md#jonsson2020), 4,007),
-`2006AstL...32..759G` ([Gontcharov 2006](/data/papers/index.md#gontcharov2006), 3,764) and
-`2020AJ....160...83S` ([Steinmetz 2020](/data/papers/index.md#steinmetz2020), 1,618).
+`2020AJ....160..120J` ([Jönsson 2020](/data/papers/index.md#jonsson2020), 5,510),
+`2006AstL...32..759G` ([Gontcharov 2006](/data/papers/index.md#gontcharov2006), 3,667) and
+`2020AJ....160...83S` ([Steinmetz 2020](/data/papers/index.md#steinmetz2020), 3,236).
 
 ## The TYC → HD pull
 
@@ -173,8 +170,11 @@ overlap: an oid both requests reach has a row in each file. Pull and gates:
   maintained by CDS Strasbourg.
 - **TAP endpoint**:
   https://simbad.cds.unistra.fr/simbad/sim-tap, with the Harvard CfA
-  mirror https://simbad.cfa.harvard.edu/simbad/sim-tap as fallback
-  (`refresh_lib.simbad_client`).
+  mirror https://simbad.cfa.harvard.edu/simbad/sim-tap as fallback: the
+  TypeScript pulls' `SIMBAD` archive in `scripts/refresh/pull/tap-pure.ts`
+  ([The TAP backend](/scripts/refresh/pull/README.md#the-tap-backend)), and
+  `refresh_lib.simbad_client` for the two Python pulls left, wds-xids and
+  tyc-hd.
 - **Licence**: SIMBAD content is publicly accessible per CDS policy
   (academic / non-commercial); cite the
   [Wenger 2000](/data/papers/index.md#wenger2000) paper.
@@ -285,8 +285,10 @@ those 34: measured on the spine-scoped pull that introduced it, 280,676 of
 objects. That ratio is what the union is for; the rebase onto the manifest
 re-ran it over a larger request without changing the rule, and the pull's
 own report is where its figures come from. `simbad_sptype.tsv` is now
-**395,543 rows** and reads 87.6% `sp_type`-filled
-(`awk -F'\t' 'NR>1{t++; if($3!="") f++} END{print f/t}'`).
+**966,847 rows** (2026-11-08, the whole manifest, magnitude term included)
+and reads 48.5% `sp_type`-filled
+(`awk -F'\t' 'NR>1{t++; if($3!="") f++} END{print f/t}'`): 90.6% over the
+primaries' objects, 21.4% over the magnitude term's fainter stars.
 
 Every one of those bindings rests on a designation alone, so every one goes
 through the corroboration rule above — the guard the union does NOT get to
@@ -402,9 +404,9 @@ which is exactly what `tests/artifact-freshness.test.ts` fails on.
   adds a field per bead.
 
   **The `pm_bibcode` is a gate, not a label.** The PM rescue cascade
-  (`scripts/catalog/distance/pm-rescue/README.md`) reaches **<!-- count:build-catalog/pmRescueSimbad -->22<!-- /count -->** rows the
+  (`scripts/catalog/distance/pm-rescue/README.md`) reaches **<!-- count:build-catalog/pmRescueSimbad -->113<!-- /count -->** rows the
   direction cascade states no motion for, and refuses the pull's PM on
-  **<!-- count:build-catalog/pmRescueGaiaBibcodeSkipped -->17<!-- /count -->** more because that bibcode names a Gaia release: on a row whose own
+  **<!-- count:build-catalog/pmRescueGaiaBibcodeSkipped -->63<!-- /count -->** more because that bibcode names a Gaia release: on a row whose own
   Gaia solution is 2p, serving Gaia's earlier fit back through this index
   would return the motion DR3 declined to state. Same rule the rv tier
   applies to `rvz_bibcode`, same predicate.
@@ -427,17 +429,17 @@ which is exactly what `tests/artifact-freshness.test.ts` fails on.
 ## Refresh
 
 - `pnpm run refresh:simbad` →
-  [`scripts/refresh/refresh-simbad-sample.py`](../../scripts/refresh/README.md).
+  [`scripts/refresh/simbad-sample/`](../../scripts/refresh/simbad-sample/README.md).
 - `pnpm run refresh:simbad-values` →
-  [`scripts/refresh/refresh-simbad-values.py`](../../scripts/refresh/README.md).
+  [`scripts/refresh/simbad-values/`](../../scripts/refresh/simbad-values/README.md).
 - `pnpm run refresh:simbad-tyc-hd` →
   [`scripts/refresh/refresh-simbad-tyc-hd.py`](../../scripts/refresh/README.md).
 - `pnpm run refresh:simbad-sptype` →
-  [`scripts/refresh/refresh-simbad-sptype.py`](../../scripts/refresh/README.md).
+  [`scripts/refresh/simbad-sptype/`](../../scripts/refresh/simbad-sptype/README.md).
 - `pnpm run refresh:simbad-wds-sptype` →
   [`scripts/refresh/simbad-wds-sptype/`](../../scripts/refresh/simbad-wds-sptype/README.md).
 - `pnpm run refresh:simbad-wds-xids` →
   [`scripts/refresh/refresh-simbad-wds-xids.py`](../../scripts/refresh/README.md).
 
-The Python ones share the `scripts/refresh/simbad/` plumbing; the WDS-keyed
-one runs on the TypeScript pull runtime.
+The Python ones share the `scripts/refresh/simbad/` plumbing; the sample, the
+values and both sp_type pulls run on the TypeScript pull runtime.

@@ -1,5 +1,6 @@
 // Gaia DR3 Apsis astrophysical parameters, declared.
 
+import { DATA_FILES } from '../../../src/catalog-format/pipeline-outputs/data-files';
 import { defineSource, type Declared } from '../../util/sources/source';
 import { readTable } from '../../util/tsv/table-pure';
 import type { ApsisRow } from '../../../src/catalog-format/record/catalog-pure';
@@ -11,7 +12,7 @@ const GAIA_APSIS_COLUMNS = [
   'spectraltype_esphs',
 ] as const;
 
-/** Parse the TSV produced by `scripts/refresh/refresh-gaia-apsis.py` into
+/** Parse the TSV produced by `refresh:gaia-apsis` into
  *  a Gaia DR3 source_id → ApsisRow map. `source_id` is kept as a string:
  *  Gaia source_ids exceed Number.MAX_SAFE_INTEGER so any numeric parse
  *  would silently corrupt the join key. Blank cells decode to `null` —
@@ -36,7 +37,7 @@ export function parseGaiaApsisTsv(text: string, from: Declared): Map<string, Aps
 }
 
 export const GAIA_APSIS = defineSource({
-  file: 'data/gaia/gaia_dr3_apsis.tsv',
+  file: DATA_FILES.gaiaApsis,
   hint: 'Re-run `pnpm run refresh:gaia-apsis`.',
   rowKey: { id: 'gaia-dr3-apsis', text: (sourceId: string) => sourceId },
   parse: (input) => parseGaiaApsisTsv(input.text(), input),

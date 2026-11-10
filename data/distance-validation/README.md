@@ -69,7 +69,7 @@ mapping by the same procedure above and re-run.
 absent from `data/bailer-jones/bailer-jones-dr3.tsv` — those Gaia DR3
 sources are not in AT-HYG (typically because the BA supergiants in
 question are dimmer than AT-HYG's V cutoff) and so were never queried
-when `refresh-bailer-jones.py` populated the catalogue's distance
+when `refresh:bailer-jones` populated the catalogue's distance
 overrides. The validator reports them as `unresolved` rather than failing
 — they're outside the catalogue's coverage envelope, so the override
 mechanism dch.47 has nothing to override TO and there is nothing to

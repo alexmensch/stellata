@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest';
 
 import { outputsOwners } from '../scripts/pipeline/step-table/non-step-writers';
 import { STEPS } from '../scripts/pipeline/step-table/steps';
+import { GAIA_DR2_NEIGHBOURHOOD_OUTPUTS } from '../scripts/refresh/gaia-request/gaia-request-outputs';
 import { DR2_NEIGHBOURHOOD, DR2_NEIGHBOURHOOD_REQUEST } from '../scripts/sid/dr2-neighbourhood-source';
 import type { DeclaredOutputs } from '../scripts/util/emit-artifacts';
 import { REPO_ROOT } from '../scripts/util/paths';
@@ -35,9 +36,11 @@ describe('step output declarations', () => {
     expect(shared).toEqual([]);
   });
 
-  it('never cover the frozen DR2 dry-run pair, as a file or inside a family', () => {
-    const frozen = [DR2_NEIGHBOURHOOD_REQUEST, DR2_NEIGHBOURHOOD].map((src) => resolve(REPO_ROOT, src.file));
+  it('cover the frozen DR2 dry-run pair, as a file or inside a family, only where its own pull re-pulls the neighbourhood', () => {
+    const request = resolve(REPO_ROOT, DR2_NEIGHBOURHOOD_REQUEST.file);
+    const neighbourhood = resolve(REPO_ROOT, DR2_NEIGHBOURHOOD.file);
     for (const [step, outputs] of DECLARED) {
+      const frozen = outputs === GAIA_DR2_NEIGHBOURHOOD_OUTPUTS ? [request] : [request, neighbourhood];
       for (const p of frozen) {
         expect(Object.values(outputs.files), step).not.toContain(p);
         for (const { dir } of outputs.families) {

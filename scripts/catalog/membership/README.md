@@ -4,8 +4,8 @@
 primaries admit: the spine's <!-- count:inherited-spine/rows -->313,257<!-- /count --> rows re-keyed on the designations the
 primaries publish for them, less the one a correction folds
 ([Correcting a merge decision](#correcting-a-merge-decision)), plus the <!-- count:membership-manifest/additionRows -->63,653<!-- /count --> records the primaries name
-that AT-HYG's subset never carried — 376,909 rows, and the <!-- count:membership-manifest/magnitudeRows -->598,664<!-- /count --> the V <= 11
-magnitude term adds on top (`magnitude-term/README.md`), <!-- count:membership-manifest/rows -->975,573<!-- /count --> in
+that AT-HYG's subset never carried — 376,909 rows, and the <!-- count:membership-manifest/magnitudeRows -->598,464<!-- /count --> the V <= 11
+magnitude term adds on top (`magnitude-term/README.md`), <!-- count:membership-manifest/rows -->975,373<!-- /count --> in
 all. **`readStars` walks it, and
 membership is exactly these rows less the [§ 6.1](/docs/catalog-driver.md#61-record-parity) parks**
 ([Per-row pipeline](../parse/README.md#per-row-pipeline)). It is the artifact that retires
@@ -165,7 +165,7 @@ cells — the property replayed by [Parity is the manifest's gate now](../spine/
 The record build reads the manifest's cells as final and
 runs no merge of its own.
 
-Keying on the derivation is what lets a filled binding carry labels: <!-- count:membership-manifest/spineRowsWithoutSourceId -->574<!-- /count --> spine
+Keying on the derivation is what lets a filled binding carry labels: <!-- count:membership-manifest/spineRowsWithoutSourceId -->400<!-- /count --> spine
 rows reach no source against the frozen column's 1,371, and the difference is
 where the overlay can now speak. It moves five cells today — HD 2094 onto
 HIP 1997, whose own addition row folds away as a component (a [§ 7](/docs/catalog-driver.md#7-identity-and-ordering-rules) merge,
@@ -187,9 +187,9 @@ count snapshot pins what the derivation reached, over every spine row:
 
 | Outcome | Rows | What it is |
 |---|---|---|
-| `bound` | <!-- count:membership-manifest/derivationOutcome.bound -->312,408<!-- /count --> | one source survives both gates, with no passing rival |
-| `refused` | <!-- count:membership-manifest/derivationOutcome.refused -->616<!-- /count --> | no source binds — a derived refusal, not an absence |
-| `contested` | <!-- count:membership-manifest/derivationOutcome.contested -->231<!-- /count --> | the winner has a passing runner-up, so precedence chose and not the evidence. Ships the winner and queues the row |
+| `bound` | <!-- count:membership-manifest/derivationOutcome.bound -->312,490<!-- /count --> | one source survives both gates, with no passing rival |
+| `refused` | <!-- count:membership-manifest/derivationOutcome.refused -->439<!-- /count --> | no source binds — a derived refusal, not an absence |
+| `contested` | <!-- count:membership-manifest/derivationOutcome.contested -->326<!-- /count --> | the winner has a passing runner-up, so precedence chose and not the evidence. Ships the winner and queues the row |
 | `collision` | <!-- count:membership-manifest/derivationOutcome.collision -->0<!-- /count --> | a second row derives the same source; both withheld and queued |
 | `sol` | <!-- count:membership-manifest/derivationOutcome.sol -->1<!-- /count --> | |
 
@@ -204,7 +204,7 @@ the record's `tyc` / `hip` / `hd` / `gl` cells and restating the derived id it
 was taken over, so a re-pull that moves the derivation re-opens the review
 rather than carrying a stale verdict forward. `keep_source_id` is what the row
 ships: the derived id, any other candidate the queue row lists, an id **no
-committed source proposes at all**, or empty for none. That last case is <!-- count:membership-manifest/dispositionAsserted -->36<!-- /count --> of
+committed source proposes at all**, or empty for none. That last case is <!-- count:membership-manifest/dispositionAsserted -->33<!-- /count --> of
 the 53 today (`dispositionAsserted`) and is why the file exists — the review
 reached evidence the derivation cannot, and the count is what keeps the number
 of ids resting on it visible.
@@ -225,10 +225,14 @@ proper motion against it), `simbad_dr2_object` (SIMBAD holds the id in the DR2
 namespace), `gaia_photometry` (G against the record's printed V on each
 candidate), `pair_component` (a resolved pair's components bound crosswise,
 the HIP and SIMBAD's letters deciding), `shared_source` (one source two records
-reach). Today `bindingDispositions` reads <!-- count:membership-manifest/bindingDispositions.derived -->6<!-- /count --> `derived` and <!-- count:membership-manifest/bindingDispositions.other -->47<!-- /count --> `other`. The six
+reach). Today `bindingDispositions` reads <!-- count:membership-manifest/bindingDispositions.derived -->9<!-- /count --> `derived` and <!-- count:membership-manifest/bindingDispositions.other -->44<!-- /count --> `other`. The nine
 are the four DR2 ids SIMBAD carries a DR3 successor for, HD 2094 (the HIP
-record follows its canonical key onto the primary) and Gl 225.2 A. A kept
-value ships as `reviewed`.
+record follows its canonical key onto the primary), Gl 225.2 A, HD 199461
+(SIMBAD names the brighter of a blended pair whose fainter member the TYC
+cross-match picks), and GJ 1001 and GJ 3527 — bare cells the SIMBAD route
+binds to component A only while `simbad_sptype.tsv` holds no companion
+object under the number, so the review stays the authority should a pull
+bring one back. A kept value ships as `reviewed`.
 
 How a row reaches its `gaia_source_id` — the four committed sources, the
 precedence and consensus ranking, both gates, and the `contested` /

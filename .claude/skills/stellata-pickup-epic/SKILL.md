@@ -30,14 +30,17 @@ busy-session warning, so keep it current.
 | `PAUSE` | coordinator → every other worker | on a `GPU_REQUEST` |
 | `HOLD` | coordinator → the landing subagent, if one is running | on a `GPU_REQUEST`; the hold in `pickup-epic`'s Land step, unchanged |
 | `PAUSED` | worker → coordinator | its current command has finished and it will start nothing heavier than reading files — no build, test run, `pnpm run perf`, `survivors`, or data pull |
-| `GPU_GRANTED` | coordinator → requester | every other worker has replied `PAUSED` or is idle, the landing subagent, if one is running, has replied to `HOLD`, and no `build:seed` is running |
+| `GPU_GRANTED` | coordinator → requester | every other worker has replied `PAUSED` or is idle, no worker is in a pull wait (as `pickup-epic`'s run state defines it), the landing subagent, if one is running, has replied to `HOLD`, and no `build:seed` is running |
 | `GPU_DONE` | requester → coordinator | the runner has exited, whatever its result; or `GPU_DONE unarmed` when `await-go.sh` timed out with no arm |
 | `RESUME` | coordinator → every paused worker and the held landing subagent | on `GPU_DONE` |
 
 **Coordinator.** Serve a `GPU_REQUEST` from any session the same way, worker
 or not. On a `GPU_REQUEST`, hold every launch, start no step of
 `pickup-epic`'s Land that has not begun (the sync or the landing subagent),
-and run no `build:seed`.
+and run no `build:seed`. A worker in a pull wait is idle but its background
+command is not: the grant waits on its `PULL_DONE`. Tell the requester the
+blocking item and its ETA from the run state, and the requester tells the
+owner in one line: `waiting on <item>'s pull, ETA <time>`.
 Record the pause in the run state. Tell the user nothing: the requester's announcement is what
 the owner reads. One request is served at a time; a second waits in the run state
 until `GPU_DONE`.

@@ -44,10 +44,13 @@ allocate-pure.ts (+ test) allocate: every object resolved, minted or
                           lineage through Upstream's two batched lookups,
                           for orphans and merge-losing class-mates only
                           (every build asks about the parked SIDs) and
-                          for new or reappearing objects. A park
+                          for new or reappearing objects. A class-mate
+                          no stage decided merges into the survivor
+                          under merged.same-class. A park
                           outranks a retire; an orphan no decision
-                          explains, a merge mixed with another removal
-                          and a new object no stage admits each fail
+                          explains, a merge mixed with another removal,
+                          a class-mate a stage retires or parks, and a
+                          new object no stage admits each fail
                           closed. A failed allocation is its own variant.
 allocation-lineage-pure.ts  Allocation as a lineage stage: its reason
   (+ test)                codes (live, plus the historical legacy.*
@@ -143,7 +146,9 @@ export-dr-risk-set.ts     pnpm run sid:risk-set — source_ids of the
                           half of the dry-run pair
                           (dr2-neighbourhood-source.ts), and
                           tests/step-outputs.test.ts fails if any step's
-                          declared outputs cover either file.
+                          declared outputs cover either file, but for
+                          refresh:gaia-dr2-neighbourhood re-pulling the
+                          neighbourhood against the frozen request.
 dr-reconcile.ts           pnpm run sid:dr-reconcile — churn report for a
                           DR transition (/docs/sid.md#61-procedure classes),
                           plus the carried-1:1 same-as edges for human
@@ -156,11 +161,12 @@ dr-reconcile.ts           pnpm run sid:dr-reconcile — churn report for a
                           dr2-neighbourhood-source.ts declares that pair.
                           --request= (a fresh sid:risk-set export) /
                           --neighbourhood= declare another transition's
-                          files through the same module's
-                          riskRequestSource / neighbourhoodSource, so
-                          each file kind has one parse.
-dr-reconcile-pure.ts      Pure classifier + request/neighbourhood TSV
-                          readers. ACCEPT_MAS / MAG_REVIEW_DELTA live
+                          files through sourceIdRequestSource
+                          (../catalog/astrometry-request/) /
+                          neighbourhoodSource, so each file kind has one
+                          parse.
+dr-reconcile-pure.ts      Pure classifier + the neighbourhood TSV
+                          reader. ACCEPT_MAS / MAG_REVIEW_DELTA live
                           here.
 sibling-allocation.ts     allocateSibling: one sibling namespace allocated
   (+ test)                over the registry, giving each record's sid, its
@@ -230,7 +236,10 @@ the object reached it through a designation it does not carry),
 `allocation.minted` or `allocation.reinstated` (with the admitting code),
 keyed on the object's origin; per SID no object keeps,
 `allocation.retired`, `.parked` or `.merged`, keyed on the origin of the
-upstream decision that settled it, with that code as `cause`. Its key -> SID
+upstream decision that settled it, with that code as `cause` — for a
+same-class merge, the origin of the record carrying the losing key, or the
+stored edge that brought the key into the class (`sameas:<a>|<b>`) where no
+record carries it, with `allocation.merged.same-class` as `cause`. Its key -> SID
 file `allocation.sids.tsv.gz` maps each origin key to its SID. Each sibling
 build allocates as a stage of its own (`allocation-clouds`,
 `allocation-local-group`), writing the object rows under its own codes, keyed
@@ -262,13 +271,15 @@ effect of the upstream code:
 | a new object | `mint`, coded by the decision that admitted the record (`membership.admit.*`, `promotion.minted`, or allocation's own `allocation.mint.*` for the sol, shell, cloud and Local Group lists) |
 | upstream effect `retire` | `retire` |
 | upstream effect `merge` | `merge`, with the SID of the record the decision names (`params.record`, else its single evidence ref) |
+| a SID in service whose key a record keeping another SID now carries, no stage deciding | `merge` into that SID, coded `allocation.merged.same-class` ([§ 4.3](/docs/sid.md#43-ledger--datasidledgertsv)) |
 | upstream effect `park` | none: the SID stays in the ledger, absent from this build ([§ 4.4](/docs/sid.md#44-allocation)) |
 | park and retire together | none: a park outranks a retire, so the SID stays live while any stage only parks its record |
 | a retired class reappears | `reinstate`, coded like a mint |
 
 Fail closed, naming the stages that hold the record: an orphan with no
 retire, park or merge decision; a merge mixed with any other removal, or
-whose target carries no SID; a new or reappearing object no stage admits.
+whose target carries no SID; a SID a stage retires or parks while a record
+in service carries its key; a new or reappearing object no stage admits.
 `tests/sid-ledger-guard.test.ts` checks every event row's code is in the
 list and declares that effect.
 
