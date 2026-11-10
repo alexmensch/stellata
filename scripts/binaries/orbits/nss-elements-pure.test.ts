@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { DEG_TO_RAD } from '../../../src/astro-core/astronomy-constants';
+import { DAYS_PER_JULIAN_YEAR, DEG_TO_RAD } from '../../../src/astro-core/astronomy-constants';
 import {
   GAIA_DR3_REF_EPOCH_JD, NSS_PERIOD_THRESHOLD_DAYS, nssInRegime, nssToCanonicalElements, thieleInnesToCampbell,
 } from './nss-elements-pure';
@@ -122,8 +122,8 @@ describe('nssInRegime', () => {
   });
 
   it('admits a longer period whose photocentre orbit is under 1″', () => {
-    expect(nssInRegime(nssOrbitalRow({ periodDays: 10 * 365.25, aMas: 999 }))).toBe(true);
-    expect(nssInRegime(nssOrbitalRow({ periodDays: 10 * 365.25, aMas: 5000 }))).toBe(false);
+    expect(nssInRegime(nssOrbitalRow({ periodDays: 10 * DAYS_PER_JULIAN_YEAR, aMas: 999 }))).toBe(true);
+    expect(nssInRegime(nssOrbitalRow({ periodDays: 10 * DAYS_PER_JULIAN_YEAR, aMas: 5000 }))).toBe(false);
   });
 
   it('refuses a row stating neither', () => {

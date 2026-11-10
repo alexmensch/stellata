@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { DAYS_PER_JULIAN_YEAR } from '../../../src/astro-core/astronomy-constants';
 
 import { fold } from '../../util/counts/tally-pure';
 import { wdsPair } from '../../wds/wds-fixture';
@@ -69,7 +70,7 @@ describe('synthesizeNssInnerPairs', () => {
   });
 
   it('skips an orbit outside Gaia\'s detectability regime', () => {
-    const r = run([abPair()], nssOrbitalRow({ sourceId: '42', periodDays: 10 * 365.25, aMas: 5000 }));
+    const r = run([abPair()], nssOrbitalRow({ sourceId: '42', periodDays: 10 * DAYS_PER_JULIAN_YEAR, aMas: 5000 }));
     expect(r.pairs).toEqual([]);
     expect(r.tally.skipped_out_of_regime).toBe(1);
   });
