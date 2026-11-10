@@ -18,6 +18,11 @@ scripts/binaries/astrometry/
                                for one component), minRhoPerSource, and
                                routePairs: the cascade over every pair,
                                then the AT-HYG position fallback.
+  nss-inner-pairs-pure.ts      synthesizeNssInnerPairs: a component whose
+    (+ test)                   own source carries an NSS orbit while its
+                               partner is a different source hosts that
+                               orbit on a new sub-pair, one outcome per
+                               carrier.
 ```
 
 ## The shape of a result
@@ -49,6 +54,18 @@ none, so `routePairs` returns new pairs; a row with no positive distance is
 no parallax, and the component stays `unresolved`. The sibling-identity
 guard's refusals come back as `siblingClaimed`.
 
+## The NSS inner pairs
+
+What the pass decides, and its gates, is the parent README's
+([Sub-pair synthesis](../README.md#sub-pair-synthesis-subdividepy)); the NSS
+conversion and regime it gates on are `../orbits/`'s. Each new
+`DecomposedPair` is sub-resolution, named one hierarchy level below the
+carrier (`A` → `Aa,Ab`, `Aa` → `Aa1,Aa2`), placed at the carrier's position
+(none when the carrier has no astrometry), and both its sides take the
+carrier's identifiers and its `ComponentAstrometry`. A pair synthesized for
+one carrier counts as existing for the next, so two carriers never mint the
+same children.
+
 ## Byte identity with the Python stage
 
 - **`minRhoPerSource` reads `findOwningPair`'s row**, the first of the
@@ -57,3 +74,6 @@ guard's refusals come back as `siblingClaimed`.
 - **The fallback's matches are all found before any is applied.** Each
   component's skip reads only its own route, so this equals the Python's
   apply-as-you-go walk.
+- **NSS carriers are taken in pair order, primary then secondary**, the
+  first of equal depth kept, then synthesized in (WDS id, numeric source_id)
+  order.

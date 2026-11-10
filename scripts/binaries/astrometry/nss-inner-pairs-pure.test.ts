@@ -1,0 +1,86 @@
+import { describe, expect, it } from 'vitest';
+
+import { fold } from '../../util/counts/tally-pure';
+import { wdsPair } from '../../wds/wds-fixture';
+import type { NssOrbitRow } from '../load/gaia-pure';
+import { nssOrbitalRow, nssRow } from '../orbits/nss-fixture';
+import type { DecomposedPair, ResolvedComponent } from '../resolve/components-pure';
+import { decomposed, indices } from '../resolve/resolve-fixture';
+import { NSS_SYNTHESIS_OUTCOMES, SYNTH_NSS_DISCOVERER, synthesizeNssInnerPairs } from './nss-inner-pairs-pure';
+import type { ComponentAstrometry, PairAstrometry } from './routes-pure';
+
+const AST: ComponentAstrometry = {
+  astrometryVia: 'gaia_5p', raDeg: 100, decDeg: 0, parallaxMas: 50, parallaxErrorMas: 0.05, pmraMasyr: 1, pmdecMasyr: -1, refEpoch: 2016,
+};
+
+const side = (gaiaSourceId: string | null, over: Partial<ResolvedComponent> = {}): Partial<ResolvedComponent> =>
+  ({ gaiaSourceId, resolveVia: gaiaSourceId === null ? 'unresolved' : 'simbad_xid', ...over });
+
+const pairOf = (components: string, primary: Partial<ResolvedComponent>, secondary: Partial<ResolvedComponent>): DecomposedPair =>
+  decomposed(wdsPair({ wdsId: 'W1', components }), { primary, secondary });
+
+function run(pairs: readonly DecomposedPair[], nss: NssOrbitRow, ast: ComponentAstrometry = AST) {
+  const astrometry = new Map<DecomposedPair, PairAstrometry>(pairs.map((p) => [p, { primary: ast, secondary: ast }]));
+  const r = synthesizeNssInnerPairs(pairs, astrometry, indices({ srcToNss: new Map([[nss.sourceId, nss]]) }));
+  return { ...r, tally: fold(NSS_SYNTHESIS_OUTCOMES, r.outcomes, (o) => o) };
+}
+
+const inRegime = nssOrbitalRow({ sourceId: '42', periodDays: 200 });
+const abPair = (secondaryGaia = '99'): DecomposedPair => pairOf('AB', side('42', { hip: 7 }), side(secondaryGaia));
+
+describe('synthesizeNssInnerPairs', () => {
+  it('re-homes a carrier\'s orbit on a sub-resolution inner pair one level down, its identifiers and astrometry inherited', () => {
+    const r = run([abPair()], inRegime);
+    expect(r.pairs).toHaveLength(1);
+    const inner = r.pairs[0];
+    expect(inner.pair).toMatchObject({ wdsId: 'W1', components: 'Aa,Ab', discoverer: SYNTH_NSS_DISCOVERER, rhoLast: 0, precise: { raDeg: 100, decDeg: 0 } });
+    expect(inner.tokens).toEqual(['Aa', 'Ab']);
+    for (const c of [inner.primary, inner.secondary]) {
+      expect(c).toMatchObject({ gaiaSourceId: '42', resolveVia: 'simbad_xid', hip: 7, discoverer: SYNTH_NSS_DISCOVERER });
+    }
+    expect([inner.primary.isPrimary, inner.secondary.isPrimary]).toEqual([true, false]);
+    expect(r.astrometry.get(inner)).toEqual({ primary: AST, secondary: AST });
+    expect(r.astrometry.get(inner)!.primary).toBe(AST);
+  });
+
+  it('synthesizes nothing where the partner shares the blended source', () => {
+    expect(run([abPair('42')], inRegime).pairs).toEqual([]);
+  });
+
+  it('takes the deepest token carrying the source', () => {
+    const r = run([pairOf('AB', side('42'), side('99')), pairOf('Aa,Ab', side('42'), side('77'))], inRegime);
+    expect(r.pairs.map((p) => p.pair.components)).toEqual(['Aa1,Aa2']);
+  });
+
+  it('skips a system that already names the children', () => {
+    const r = run([pairOf('AB', side('42'), side('99')), pairOf('Aa,Ab', side('42'), side('42'))], inRegime);
+    expect(r.pairs).toEqual([]);
+    expect(r.tally.skipped_children_exist).toBe(1);
+  });
+
+  it('skips an orbit outside Gaia\'s detectability regime', () => {
+    const r = run([abPair()], nssOrbitalRow({ sourceId: '42', periodDays: 10 * 365.25, aMas: 5000 }));
+    expect(r.pairs).toEqual([]);
+    expect(r.tally.skipped_out_of_regime).toBe(1);
+  });
+
+  it('skips elements that can never animate, but accepts a circular fit stating no ω', () => {
+    const noE = run([abPair()], nssRow({ sourceId: '42', solutionType: 'SB1', period: 12.5, tPeriastron: 100 }));
+    expect(noE.pairs).toEqual([]);
+    expect(noE.tally.skipped_incomplete_elements).toBe(1);
+    const circular = run([abPair()], nssRow({
+      sourceId: '42', solutionType: 'EclipsingBinary', period: 0.81, tPeriastron: 100, eccentricity: 0, inclination: 86.5,
+    }));
+    expect(circular.pairs).toHaveLength(1);
+  });
+
+  it('skips a compound carrier token, which has no deeper WDS convention', () => {
+    const r = run([pairOf('AB,C', side('42'), side('99'))], inRegime);
+    expect(r.pairs).toEqual([]);
+    expect(r.tally.skipped_token_shape).toBe(1);
+  });
+
+  it('leaves the inner pair without a coordinate when the carrier has no astrometry', () => {
+    expect(run([abPair()], inRegime, { astrometryVia: 'unresolved' }).pairs[0].pair.precise).toBeNull();
+  });
+});

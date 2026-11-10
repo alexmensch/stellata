@@ -43,7 +43,9 @@ scripts/binaries/load/
                                magnitude gate (scrubAthygGaia, and the HIP
                                cross-walk's inside buildIndices).
   subdivide-pure.ts (+ test)   The curated ORB6 letters, the ORB6 orphan
-                               pairs, the MSC inner pairs.
+                               pairs, the MSC inner pairs; subResolutionPair,
+                               the row every synthesized pair is, Stage 3's
+                               NSS inner pairs included.
   blank-rescue-pure.ts         The blank-components rescue.
     (+ test)
   load-fixture.ts              Test-only row builders (the WDS and ORB6
