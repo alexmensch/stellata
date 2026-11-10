@@ -36,7 +36,7 @@ import {
 import { CONSTELLATIONS, createConstellationAssignment, iauEdgeRecords } from './constellations/constellations';
 import { STELLARIUM } from './constellations/stellarium-source';
 import type { Placement } from '../distance/placement-lineage-pure';
-import { MAX_DIST_PC, readStars, resolveRow, rowSources } from './stars-parse';
+import { MAX_DIST_PC, readStars, rowResolver } from './stars-parse';
 import { CURATED_RECORDS } from '../record/curated-records';
 import { LMC_CENTRE_DEC_DEG, LMC_CENTRE_RA_HOURS } from '../distance/refinement/distance-overrides-pure';
 import { AV_PER_EZGR } from '../../../src/astro-core/baker-constants';
@@ -303,7 +303,7 @@ describe('readStars manifest labels', () => {
       gliese: glieseParallaxes([{ gl: ORIGIN_GL, distPc: 100 }]),
     };
     const [row] = manifestRows([AT_ORIGIN_SIGHTLINE]);
-    const outcome = resolveRow(row, rowSources(options));
+    const outcome = rowResolver(options)(row);
     expect(outcome.kind).toBe('shipped');
     if (outcome.kind !== 'shipped') return;
     expect(outcome.star).toEqual(readStarsDiscarding([row], options).stars[0]);

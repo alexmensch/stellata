@@ -14,10 +14,12 @@ it walks is `../membership/README.md`.
 ```
 scripts/catalog/parse/
   stars-parse.ts (+ test)         readStars — the per-row pipeline, a map of
-                                  resolveRow over the manifest plus a fold.
-                                  resolveRow is pure: one row to a RowOutcome,
-                                  parked or shipped with its provenance. The
-                                  hub every other subfolder imports.
+                                  the resolver rowResolver builds over the
+                                  manifest plus a fold. The resolver reads
+                                  nothing but its row: one row to a
+                                  RowOutcome, parked or shipped with its
+                                  provenance. The hub every other subfolder
+                                  imports.
   walk-stats-pure.ts              walkStatsFold — the walk's counts, folded
                                   from each RowOutcome as it passes, so no
                                   outcome outlives its row.
