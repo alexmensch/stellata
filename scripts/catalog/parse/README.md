@@ -20,7 +20,7 @@ scripts/catalog/parse/
                                   RowOutcome, parked or shipped with its
                                   provenance. The hub every other subfolder
                                   imports.
-  walk-stats-pure.ts              walkStatsFold — the walk's counts, folded
+  walk-stats-pure.ts (+ test)     walkStatsFold — the walk's counts, folded
                                   from each RowOutcome as it passes, so no
                                   outcome outlives its row.
   read-stars-inputs.ts            loadReadStarsInputs — every reference
