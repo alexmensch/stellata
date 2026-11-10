@@ -226,10 +226,11 @@ export interface ShippedFacts {
   readonly inLmcCone: boolean;
   readonly tycho2Direction: { readonly fromIcrs: boolean; readonly isPhotocentre: boolean } | null;
   readonly vTycho2OutsideBtVtRange: boolean;
-  /** Present wherever the space velocity, before any clamp, exceeded the
-   *  Galactic escape velocity — clamped or not, as the placement says. */
-  readonly fastSample: string | null;
-  readonly rvRejectedSample: string | null;
+  /** The distance the override stack settled on. */
+  readonly distPc: number;
+  /** The space velocity before any clamp, wherever it exceeded the Galactic
+   *  escape velocity — clamped or not, as the placement says. */
+  readonly fastKmS: number | null;
   readonly ciGspcValidatedRange: boolean;
 }
 
@@ -534,10 +535,6 @@ export function rowResolver({
     // (a proven escaper must survive) but tracked: that band is almost all
     // PM×distance / bad-RV artifacts.
     const speedPcYr = Math.hypot(vel.x, vel.y, vel.z);
-    const idLabel = (): string => proper
-      ?? (hip !== null ? `HIP ${hip}` : gaiaSourceId ? `Gaia ${gaiaSourceId}` : '(anon)');
-    const speedSample = (): string =>
-      `${idLabel()}: ${(speedPcYr / KM_S_TO_PC_YR).toFixed(0)} km/s @ ${dist.toFixed(0)} pc`;
     const velocityClamped = speedPcYr > VELOCITY_SANITY_CEILING_PC_YR;
     if (velocityClamped) vel = { x: 0, y: 0, z: 0 };
 
@@ -664,10 +661,8 @@ export function rowResolver({
           ? { fromIcrs: tycho2Row.fromIcrs, isPhotocentre: tycho2Row.isPhotocentre }
           : null,
         vTycho2OutsideBtVtRange: vRes.via === 'tycho2' && printed?.vVia === 'tycho2' && printed.outsideRange,
-        fastSample: speedPcYr > GALACTIC_ESCAPE_VELOCITY_PC_YR ? speedSample() : null,
-        rvRejectedSample: rvRejected
-          ? `${idLabel()}: ${resolvedRvKmS?.toFixed(1)} km/s @ ${dist.toFixed(1)} pc`
-          : null,
+        distPc: dist,
+        fastKmS: speedPcYr > GALACTIC_ESCAPE_VELOCITY_PC_YR ? speedPcYr / KM_S_TO_PC_YR : null,
         ciGspcValidatedRange: ciRes.via === 'gspc' && gspc?.inValidatedRange === true,
       },
     };

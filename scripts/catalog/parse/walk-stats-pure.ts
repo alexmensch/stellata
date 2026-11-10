@@ -16,7 +16,7 @@ import { RV_VIA_VALUES, RV_ERROR_BANDS, type RvVia, type RvErrorBand } from '../
 import { V_VIA_VALUES, type VVia } from '../photometry/v-magnitude-pure';
 import { CI_VIA_VALUES, type CiVia } from '../photometry/colour-index-pure';
 import { emptyTallyPartition } from '../../util/counts/tally-pure';
-import type { RowOutcome } from './stars-parse';
+import type { RowOutcome, Star } from './stars-parse';
 
 export const VELOCITY_ABOVE_ESCAPE_SAMPLE_CAP = 25;
 
@@ -82,6 +82,10 @@ function shipsLowPrecisionParallax(p: PlacedPlacement): boolean {
     && isLowPrecisionParallax(p.parallax.value) && shippedDistVia(p) === p.parallax.via;
 }
 
+function sampleLabel({ proper, hip, gaiaSourceId }: Star): string {
+  return proper ?? (hip !== null ? `HIP ${hip}` : gaiaSourceId ? `Gaia ${gaiaSourceId}` : '(anon)');
+}
+
 /** A streaming fold, so the walk holds no outcome past its own row. */
 export function walkStatsFold(): { add(outcome: RowOutcome): void; result(): WalkStats } {
   const stats: WalkStats = {
@@ -133,6 +137,8 @@ export function walkStatsFold(): { add(outcome: RowOutcome): void; result(): Wal
 
   const addShipped = (o: Extract<RowOutcome, { kind: 'shipped' }>): void => {
     const { placement: p, brightness: b, facts: f } = o;
+    const fastSample = (kmS: number): string =>
+      `${sampleLabel(o.star)}: ${kmS.toFixed(0)} km/s @ ${f.distPc.toFixed(0)} pc`;
     if (f.bailerJonesEligible) stats.bjEligible++;
     if (p.bailerJones.kind === 'override') stats.bjOverridden++;
     if (f.inLmcCone) stats.lmcCandidates++;
@@ -152,18 +158,20 @@ export function walkStatsFold(): { add(outcome: RowOutcome): void; result(): Wal
     if (p.pmRescue !== null) stats.pmRescueOutcome[pmRescueOutcome(p.pmRescue)]++;
     stats.vVia[b.v.via]++;
     if (f.vTycho2OutsideBtVtRange) stats.vTycho2OutsideBtVtRange++;
-    if (f.rvRejectedSample !== null) {
+    if (p.rv.kind === 'rejected') {
       stats.rvRadialRejected++;
-      stats.rvRadialRejectedSample.push(f.rvRejectedSample);
+      stats.rvRadialRejectedSample.push(
+        `${sampleLabel(o.star)}: ${p.rv.rv.value.kmS.toFixed(1)} km/s @ ${f.distPc.toFixed(1)} pc`,
+      );
     }
     if (p.velocityClamped) {
-      if (f.fastSample === null) throw new Error(`walk stats: ${p.key} clamped below the escape velocity`);
+      if (f.fastKmS === null) throw new Error(`walk stats: ${p.key} clamped below the escape velocity`);
       stats.velocityClamped++;
-      stats.velocityClampedSample.push(f.fastSample);
-    } else if (f.fastSample !== null) {
+      stats.velocityClampedSample.push(fastSample(f.fastKmS));
+    } else if (f.fastKmS !== null) {
       stats.velocityAboveEscape++;
       if (stats.velocityAboveEscapeSample.length < VELOCITY_ABOVE_ESCAPE_SAMPLE_CAP) {
-        stats.velocityAboveEscapeSample.push(f.fastSample);
+        stats.velocityAboveEscapeSample.push(fastSample(f.fastKmS));
       }
     }
     stats.velocityVia[shippedVelocityVia(p)]++;
