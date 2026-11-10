@@ -290,7 +290,7 @@ floor, 5.9 MiB today.
 ## The astrometry comes with it
 
 The pull carries full 5p astrometry and `radial_velocity` for every row, on
-`gaia_astrometry_pull.TSV_COLUMNS` — the same schema
+`ASTROMETRY_COLUMNS` (`/scripts/refresh/gaia-request/`) — the same schema
 `gaia_dr3_astrometry_catalog.tsv` uses. `readMagnitudeTermAstrometry` therefore
 feeds `gaiaAstrometryAccumulator` (`../../sources/gaia-astrometry-source.ts`), the
 fold behind the same parser, so the direction cascade stays single-sourced and
@@ -308,5 +308,5 @@ from the header by name; neither assumes a column's position.
 why a collect-then-rejoin reader defeats it.
 
 [Bailer-Jones 2021](/data/papers/index.md#bailerjones2021) distances and
-Apsis parameters for the same population arrive through `refresh_lib.pull_deep_population` (`scripts/refresh/README.md`), not
+Apsis parameters for the same population arrive through `deepPopulationPull` (`/scripts/refresh/magnitude/`), not
 through this folder.

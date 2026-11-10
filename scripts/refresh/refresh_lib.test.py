@@ -1077,29 +1077,6 @@ class MembershipReaderTests(unittest.TestCase):
         self.assertEqual(rows[0]["rv_src"], "HYG")
 
 
-class ReadSourceIdRequestTests(unittest.TestCase):
-    def _write(self, text: str) -> Path:
-        f = tempfile.NamedTemporaryFile("w", suffix=".tsv", delete=False)
-        f.write(text)
-        f.close()
-        return Path(f.name)
-
-    def test_parses_ids_and_skips_header(self) -> None:
-        p = self._write("gaia_source_id\n7632157690368\n4472832130942575872\n")
-        self.assertEqual(
-            rl.read_source_id_request(p), [7632157690368, 4472832130942575872]
-        )
-
-    def test_ignores_blank_lines(self) -> None:
-        p = self._write("gaia_source_id\n1\n\n2\n")
-        self.assertEqual(rl.read_source_id_request(p), [1, 2])
-
-    def test_rejects_wrong_header(self) -> None:
-        p = self._write("source_id\n1\n")
-        with self.assertRaises(SystemExit):
-            rl.read_source_id_request(p)
-
-
 # ─── check_spot_row ──────────────────────────────────────────────────
 
 class CheckSpotRowTests(unittest.TestCase):
@@ -1220,63 +1197,6 @@ class ValidateSpotRowsTests(unittest.TestCase):
         msg = str(cm.exception)
         self.assertIn("pinned source_id=42", msg)
         self.assertIn("upstream selection has changed", msg)
-
-
-class CheckSpotRowsTolerantTests(unittest.TestCase):
-    """Soft-tolerance retirement tier (Bailer-Jones 2021,
-    /data/papers/index.md#bailerjones2021): 0 missing silent, ≤max_missing warns without
-    failing, >max_missing hard-fails."""
-
-    _KW = dict(
-        script_name="refresh-bailer-jones",
-        max_missing=1,
-        warn_template="  WARNING: pinned source_id {key} not in result",
-        fail_hint="VizieR I/352 has dropped more rows than expected.",
-    )
-
-    def test_zero_missing_no_warn_no_exit(self) -> None:
-        logs: list[str] = []
-        out = rl.check_spot_rows_tolerant(
-            {1: {"a": 1}, 2: {"a": 2}},
-            [{"source_id": 1, "a": 1}, {"source_id": 2, "a": 2}],
-            log=logs.append, **self._KW,
-        )
-        self.assertEqual(out, [])
-        self.assertEqual(logs, [])
-
-    def test_one_missing_warns_but_does_not_exit(self) -> None:
-        logs: list[str] = []
-        out = rl.check_spot_rows_tolerant(
-            {1: {"a": 1}},
-            [{"source_id": 1, "a": 1}, {"source_id": 999, "a": 1}],
-            log=logs.append, **self._KW,
-        )
-        self.assertEqual(out, [999])
-        self.assertEqual(len(logs), 1)
-        self.assertIn("pinned source_id 999 not in result", logs[0])
-
-    def test_two_missing_over_tolerance_exits(self) -> None:
-        with self.assertRaises(SystemExit) as cm:
-            rl.check_spot_rows_tolerant(
-                {},
-                [{"source_id": 111, "a": 1}, {"source_id": 222, "a": 1}],
-                log=lambda _: None, **self._KW,
-            )
-        msg = str(cm.exception)
-        self.assertIn("2 pinned source_ids missing", msg)
-        self.assertIn("tolerance 1", msg)
-        self.assertIn("111", msg)
-        self.assertIn("222", msg)
-
-    def test_present_but_drifted_still_hard_fails(self) -> None:
-        # A drift (present row, wrong value) is NOT a retirement — it must
-        # hard-fail via check_spot_row regardless of the missing tolerance.
-        with self.assertRaises(SystemExit) as cm:
-            rl.check_spot_rows_tolerant(
-                {1: {"a": 99}}, [{"source_id": 1, "a": 1}],
-                log=lambda _: None, **self._KW,
-            )
-        self.assertIn("field(s) outside tolerance", str(cm.exception))
 
 
 class ReportCoverageTests(unittest.TestCase):

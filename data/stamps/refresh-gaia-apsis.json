@@ -5,14 +5,9 @@
   "outputs": {
     "data/gaia/gaia_dr3_apsis.tsv": "7548a8ac28c14e3496ff64d663041e1d3fbaf583"
   },
-  "recorded": {
-    "listings": {},
-    "probes": {}
-  },
-  "query": "9a2ee6745a019049636bbe0d2a11eef71206f8b5",
+  "query": "524b8f27851dc4d14a50cdbdaedcf2ae5808e2a4",
   "answeredBy": [
-    "ESA-sync",
-    "ARI-sync"
+    "ESA-sync"
   ],
   "release": "Gaia DR3",
   "requestFrom": []

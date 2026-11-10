@@ -17,14 +17,21 @@ export interface TapArchive {
 
 const bare = (identifier: string): string => identifier;
 
+export const GAIA_DR3_RELEASE = 'Gaia DR3';
+
+/** The most rows a sliced Gaia pull puts in one slice: at LIMIT_HEADROOM 2 a slice asks 48,001 rows, inside ESA's hard output limit of 50,000. */
+export const GAIA_SLICE_ROWS = 24_000;
+
+const ESA_SYNC: TapMirror = { name: 'ESA-sync', verified: true, url: 'https://gea.esac.esa.int/tap-server/tap' };
+
 export const GAIA: TapArchive = {
-  mirrors: [
-    { name: 'ESA-sync', verified: true, url: 'https://gea.esac.esa.int/tap-server/tap' },
-    { name: 'ARI-sync', verified: true, url: 'https://gaia.ari.uni-heidelberg.de/tap' },
-  ],
+  mirrors: [ESA_SYNC, { name: 'ARI-sync', verified: true, url: 'https://gaia.ari.uni-heidelberg.de/tap' }],
   retryDelaysMs: [2_000, 4_000, 8_000, 16_000],
   quote: bare,
 };
+
+/** For a table only ESA publishes under its query's name: ARI hosts `external.*` under other schema names. */
+export const GAIA_ESA: TapArchive = { ...GAIA, mirrors: [ESA_SYNC] };
 
 export const VIZIER: TapArchive = {
   mirrors: [{ name: 'CDS', verified: false, url: 'https://tapvizier.u-strasbg.fr/TAPVizieR/tap' }],

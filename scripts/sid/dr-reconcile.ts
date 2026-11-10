@@ -2,6 +2,7 @@
 // pull per /docs/sid.md#61-procedure and emit the churn report, plus the carried-1:1
 // bridge edges for review. See scripts/sid/README.md.
 
+import { sourceIdRequestSource } from '../catalog/astrometry-request/source-id-request-source';
 import { emitArtifacts } from '../util/emit-artifacts';
 import { DR_RECONCILE_OUTPUTS } from './dr-reconcile-outputs';
 import {
@@ -10,7 +11,6 @@ import {
   NEIGHBOURHOOD_HINT,
   RISK_REQUEST_HINT,
   neighbourhoodSource,
-  riskRequestSource,
 } from './dr2-neighbourhood-source';
 import {
   ACCEPT_MAS,
@@ -47,7 +47,7 @@ export function main(): void {
   const args = parseArgs(process.argv.slice(2));
   const request = args.request === null
     ? DR2_NEIGHBOURHOOD_REQUEST
-    : riskRequestSource({ file: args.request, hint: RISK_REQUEST_HINT });
+    : sourceIdRequestSource({ file: args.request, hint: RISK_REQUEST_HINT });
   const neighbourhood = args.neighbourhood === null
     ? DR2_NEIGHBOURHOOD
     : neighbourhoodSource({ file: args.neighbourhood, hint: NEIGHBOURHOOD_HINT });

@@ -276,7 +276,9 @@ step-outputs.test.ts     Imports every TS emitArtifacts declaration the
                          every declared path inside the repo and one
                          producer per path; no file
                          or family may cover the frozen DR2 dry-run pair
-                         (scripts/sid/dr2-neighbourhood-source.ts).
+                         (scripts/sid/dr2-neighbourhood-source.ts) but
+                         refresh:gaia-dr2-neighbourhood's own re-pull of
+                         the neighbourhood half.
 three-version-audit.test.ts
                          Tripwire pinning the three version the runtime
                          audit below was last run against. Fails on any

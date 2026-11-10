@@ -53,11 +53,6 @@ export interface DrClassification {
   distanceQuantiles: { p50: number; p90: number; p99: number; max: number };
 }
 
-export function readRiskIds(text: string, from: Declared): bigint[] {
-  const spec = { ...from, columns: ['gaia_source_id'] };
-  return [...readTable(spec, text)].map((row) => BigInt(row.requiredSourceId('gaia_source_id')));
-}
-
 export function readNeighbourhoodRows(
   text: string,
   riskCol: string,
