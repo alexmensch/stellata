@@ -4,9 +4,8 @@ import { fold } from '../../util/counts/tally-pure';
 import type { ReferenceCatalogs } from '../load/reference-catalogs';
 import { RESOLVE_VIA } from '../multiples-tsv';
 import type { SiblingClaimedMatch } from '../resolve/athyg-match-pure';
-import { SIBLING_REJECTION_TIERS } from '../resolve/cascade-pure';
 import { componentsOf, freezePairs, type DecomposedPair } from '../resolve/components-pure';
-import type { Stage2Result } from '../resolve/resolve-pairs';
+import { siblingRejectionTally, type Stage2Result } from '../resolve/resolve-pairs';
 import { NSS_SYNTHESIS_OUTCOMES, synthesizeNssInnerPairs, type NssSynthesisOutcome } from './nss-inner-pairs-pure';
 import { ROUTED_VIA, routePairs, type PairAstrometry, type RoutedVia } from './routes-pure';
 
@@ -55,7 +54,7 @@ const prefixed = (prefix: string, tally: Record<string, number>): Record<string,
 /** README.md#counts */
 export function stage3Counts(reference: ReferenceCatalogs, resolved: Stage2Result, result: Stage3Result): Record<string, number> {
   const synthesized = nssTally(result).synthesized;
-  const stage2SiblingClaimed = fold(SIBLING_REJECTION_TIERS, resolved.siblingRejections, (r) => r.tier).athyg_match_sibling_claimed;
+  const stage2SiblingClaimed = siblingRejectionTally(resolved).athyg_match_sibling_claimed;
   return {
     wds_pairs_total: reference.pairs.length + synthesized,
     synthesized_nss_inner_pairs: synthesized,
