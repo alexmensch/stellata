@@ -3,7 +3,8 @@
 import { componentKey, type ComponentKey } from '../component-tokens-pure';
 import { RESOLVE_VIA } from '../multiples-tsv';
 import type { TableRow } from '../../util/tsv/table-pure';
-import { priorityOf, type DecomposedPair, type ResolvedComponent, type ResolveVia } from './components-pure';
+import { priorityOf, type DecomposedPair, type ResolvedComponent } from './components-pure';
+import type { ResolveVia } from '../multiples-tsv';
 
 export const SPOT_CHECK_COLUMNS = [
   'category', 'name', 'wds_id', 'component', 'expected_resolve_via', 'expected_gaia_source_id', 'note',

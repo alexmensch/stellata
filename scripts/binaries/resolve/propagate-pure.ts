@@ -6,8 +6,9 @@ import {
 import type { WdsPair } from '../../wds/wds-pure';
 import {
   findOwningPair, pairsByDiscoverer, priorityOf, working,
-  type DecomposedPair, type Draft, type ResolvedComponent, type ResolveVia,
+  type DecomposedPair, type Draft, type ResolvedComponent,
 } from './components-pure';
+import type { ResolveVia } from '../multiples-tsv';
 
 interface SourceBinding {
   readonly gaia: string;

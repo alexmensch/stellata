@@ -98,7 +98,10 @@ scripts/binaries/
                                   binaries + SIMBAD standalone augmentation.
   multiples-tsv.ts (+ test)       MULTIPLES_TSV: the TypeScript codec for
                                   multiples.tsv — column roster, closed
-                                  value sets, per-column decimal places,
+                                  value sets and the properties a set's
+                                  members carry (which resolve tiers
+                                  anchor on a Gaia source_id), per-column
+                                  decimal places,
                                   P and a positive and 0 ≤ e < 1 — and
                                   the only parse of the file on the TS
                                   side. Its test round-trips the committed

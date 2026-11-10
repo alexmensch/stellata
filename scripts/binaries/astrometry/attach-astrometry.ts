@@ -2,7 +2,7 @@
 
 import { fold } from '../../util/counts/tally-pure';
 import type { ReferenceCatalogs } from '../load/reference-catalogs';
-import { RESOLVE_VIA } from '../multiples-tsv';
+import { RESOLVE_VIA, RESOLVE_VIA_ANCHORS_SOURCE_ID, type ResolveVia } from '../multiples-tsv';
 import type { SiblingClaimedMatch } from '../resolve/athyg-match-pure';
 import { componentsOf, freezePairs, type DecomposedPair } from '../resolve/components-pure';
 import { siblingRejectionTally, type Stage2Result } from '../resolve/resolve-pairs';
@@ -40,7 +40,7 @@ export function routeTally(result: Stage3Result): Record<RoutedVia, number> {
   return fold(ROUTED_VIA, sides, (a) => a.astrometryVia);
 }
 
-export function resolutionTally(result: Stage3Result): Record<(typeof RESOLVE_VIA)[number], number> {
+export function resolutionTally(result: Stage3Result): Record<ResolveVia, number> {
   return fold(RESOLVE_VIA, componentsOf(result.pairs), (c) => c.resolveVia);
 }
 
@@ -48,11 +48,18 @@ export function nssTally(result: Stage3Result): Record<NssSynthesisOutcome, numb
   return fold(NSS_SYNTHESIS_OUTCOMES, result.nssOutcomes, (o) => o);
 }
 
-const prefixed = (prefix: string, tally: Record<string, number>): Record<string, number> =>
-  Object.fromEntries(Object.entries(tally).map(([k, v]) => [`${prefix}${k}`, v]));
+function prefixed<P extends string, K extends string>(prefix: P, tally: Record<K, number>): Record<`${P}${K}`, number> {
+  return Object.fromEntries(Object.entries(tally).map(([k, v]) => [`${prefix}${k}`, v])) as Record<`${P}${K}`, number>;
+}
+
+export type Stage3Counts = Record<
+  'wds_pairs_total' | 'synthesized_nss_inner_pairs' | 'athyg_match_sibling_claimed_rejected' | 'decomposing_pairs' | 'components_total'
+  | `resolution_${ResolveVia}` | `astrometry_${RoutedVia}`,
+  number
+>;
 
 /** README.md#counts */
-export function stage3Counts(reference: ReferenceCatalogs, resolved: Stage2Result, result: Stage3Result): Record<string, number> {
+export function stage3Counts(reference: ReferenceCatalogs, resolved: Stage2Result, result: Stage3Result): Stage3Counts {
   const synthesized = nssTally(result).synthesized;
   const stage2SiblingClaimed = siblingRejectionTally(resolved).athyg_match_sibling_claimed;
   return {
@@ -66,13 +73,10 @@ export function stage3Counts(reference: ReferenceCatalogs, resolved: Stage2Resul
   };
 }
 
-/** The tiers whose binding carries a Gaia source_id. */
-const GAIA_RESOLVE_TIERS = ['orb6_hip', 'athyg_gaia_native', 'simbad_xid'] as const;
-
 /** The rates-snapshot keys over `stage3Counts`. */
-export function stage3Rates(counts: Readonly<Record<string, number>>): Record<string, number> {
+export function stage3Rates(counts: Stage3Counts): Record<'gaia_resolve_rate' | 'hip2_fallback_rate', number> {
   const total = counts.components_total;
-  const anchored = GAIA_RESOLVE_TIERS.reduce((n, tier) => n + counts[`resolution_${tier}`], 0);
+  const anchored = RESOLVE_VIA.filter((tier) => RESOLVE_VIA_ANCHORS_SOURCE_ID[tier]).reduce((n, tier) => n + counts[`resolution_${tier}`], 0);
   return {
     gaia_resolve_rate: total > 0 ? anchored / total : 0,
     hip2_fallback_rate: total > 0 ? counts.astrometry_hip2_long_baseline / total : 0,

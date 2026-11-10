@@ -80,8 +80,9 @@ its NSS inner pairs and AT-HYG fallback add to — `wds_pairs_total`,
 `decomposing_pairs`, `components_total`, the `resolution_*` tiers (an inner
 pair's children inherit their carrier's tier) and
 `athyg_match_sibling_claimed_rejected` (Stage 2's position tier plus this
-fallback). `stage3Rates` derives `gaia_resolve_rate` and
-`hip2_fallback_rate` from them. The parent folder's `build-binaries.test.ts`
+fallback), typed `Stage3Counts` so a key read is a key returned.
+`stage3Rates` derives `gaia_resolve_rate`, over the tiers the codec's
+`RESOLVE_VIA_ANCHORS_SOURCE_ID` marks, and `hip2_fallback_rate`. The parent folder's `build-binaries.test.ts`
 holds each key to the committed snapshot exactly and each rate within its
 committed tolerance.
 
