@@ -13,7 +13,8 @@ import {
   PARKED_REASONS, parkedIdentifiersOf, parkedLedgerCells,
   type ParkedIdentifiers, type ParkedLedgerCells, type ParkedLedgerEntry, type ParkedReason, type ParkedRecord,
 } from './parallax/parked-ledger-pure';
-import type { PmRescueResolution, PmRescueVia } from './pm-rescue/pm-rescue';
+import { VELOCITY_VIA_BY_PM_RESCUE, type PmRescueResolution, type PmRescueVia } from './pm-rescue/pm-rescue';
+import type { VelocityVia } from './velocity';
 import type { RadialVelocityResolution, RvVia } from './radial-velocity/radial-velocity';
 import type { LmcKinematicVerdict } from './refinement/distance-overrides-pure';
 import { PLACEMENT_LINEAGE } from '../../../src/catalog-format/pipeline-outputs/lineage-files';
@@ -217,6 +218,22 @@ export function distViaBeforeLmc(p: DistanceLayers): DistVia {
 /** The tier a placed row's shipped distance came from. */
 export function shippedDistVia(p: DistanceLayers): DistVia {
   return p.lmc === 'snap' ? 'lmc_kinematic' : distViaBeforeLmc(p);
+}
+
+/** The origin ships at rest, and the sanity clamp zeroes an artifact velocity. */
+function velocityZeroed(p: PlacedPlacement): boolean {
+  return p.parallax.via === 'curated' || p.velocityClamped;
+}
+
+/** The source of a placed row's shipped proper motion; `zero` wherever its velocity was zeroed. */
+export function shippedVelocityVia(p: PlacedPlacement): VelocityVia {
+  if (velocityZeroed(p)) return 'zero';
+  return p.pmRescue === null ? p.direction.value.velVia : VELOCITY_VIA_BY_PM_RESCUE[p.pmRescue.via];
+}
+
+/** Whether a placed row's shipped velocity carries a non-zero radial term. */
+export function radialVelocityApplied(p: PlacedPlacement): boolean {
+  return !velocityZeroed(p) && p.rv.kind === 'kept' && p.rv.rv.via !== 'none' && p.rv.rv.value.kmS !== 0;
 }
 
 /** The park reason, read off which step stopped the walk: the one place it is decided. */

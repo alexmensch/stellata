@@ -66,9 +66,10 @@ scripts/catalog/distance/
                                   hands on, its one serialiser (rows, or
                                   their lines), the parked ledger as a
                                   view of its park rows
-                                  (#placement-lineage), and shippedDistVia,
-                                  the one place a placed row's distance
-                                  tier is read off its layers.
+                                  (#placement-lineage), and the one place
+                                  each shipped tier is read off a placed
+                                  row's layers: shippedDistVia,
+                                  shippedVelocityVia, radialVelocityApplied.
   dust/                           Build-time de-extinction against the
                                   dust grid of Edenhofer 2024
                                   (/data/papers/index.md#edenhofer2024), and

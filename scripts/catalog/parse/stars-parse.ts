@@ -40,7 +40,6 @@ import {
   KM_S_TO_PC_YR,
   VELOCITY_SANITY_CEILING_PC_YR,
   GALACTIC_ESCAPE_VELOCITY_PC_YR,
-  type VelocityVia,
 } from '../distance/velocity';
 import { lookupCns5Astrometry } from '../classic-ids/classic-ids-parse';
 import { resolveParallax } from '../distance/parallax/parallax-cascade';
@@ -57,7 +56,7 @@ import {
   lookupPairMemberParallax,
   type PairMemberParallaxIndex,
 } from '../distance/parallax/pair-member-parallax';
-import { resolvePmRescue, VELOCITY_VIA_BY_PM_RESCUE } from '../distance/pm-rescue/pm-rescue';
+import { resolvePmRescue } from '../distance/pm-rescue/pm-rescue';
 import {
   radialTermExceedsCeiling,
   resolveRadialVelocity,
@@ -220,24 +219,17 @@ export interface RvRouting {
   readonly gaiaError: { readonly band: RvErrorBand; readonly kmS: number | null } | null;
 }
 
-export type VelocityVerdict =
-  | { readonly kind: 'kept' }
-  | { readonly kind: 'clamped'; readonly sample: string }
-  | { readonly kind: 'above-escape'; readonly sample: string };
-
-/** What a shipped row decided that neither its placement nor its brightness
- *  carries: the per-row facts its counts fold from. */
+/** The per-row inputs a shipped row's counts fold from that no lineage type records. */
 export interface ShippedFacts {
   readonly bailerJonesEligible: boolean;
   /** Inside the LMC sky cone, whatever the PM gate made of the row. */
   readonly inLmcCone: boolean;
   readonly tycho2Direction: { readonly fromIcrs: boolean; readonly isPhotocentre: boolean } | null;
   readonly vTycho2OutsideBtVtRange: boolean;
-  /** `zero` wherever the origin or the sanity clamp zeroed the vector. */
-  readonly velocityVia: VelocityVia;
-  readonly velocity: VelocityVerdict;
+  /** Present wherever the space velocity, before any clamp, exceeded the
+   *  Galactic escape velocity — clamped or not, as the placement says. */
+  readonly fastSample: string | null;
   readonly rvRejectedSample: string | null;
-  readonly rvApplied: boolean;
   readonly ciGspcValidatedRange: boolean;
 }
 
@@ -466,9 +458,6 @@ export function rowResolver({
           gaia: gaiaRow,
         })
       : null;
-    const velVia = pmRescue === null
-      ? dirRes.velVia
-      : VELOCITY_VIA_BY_PM_RESCUE[pmRescue.via];
     const { pmRaMasyr, pmDecMasyr } = pmRescue === null
       ? { pmRaMasyr: dirRes.srcPmraMasyr, pmDecMasyr: dirRes.srcPmdecMasyr }
       : pmRescue.via === 'none' ? { pmRaMasyr: null, pmDecMasyr: null } : pmRescue.value;
@@ -549,13 +538,8 @@ export function rowResolver({
       ?? (hip !== null ? `HIP ${hip}` : gaiaSourceId ? `Gaia ${gaiaSourceId}` : '(anon)');
     const speedSample = (): string =>
       `${idLabel()}: ${(speedPcYr / KM_S_TO_PC_YR).toFixed(0)} km/s @ ${dist.toFixed(0)} pc`;
-    const velocity: VelocityVerdict = speedPcYr > VELOCITY_SANITY_CEILING_PC_YR
-      ? { kind: 'clamped', sample: speedSample() }
-      : speedPcYr > GALACTIC_ESCAPE_VELOCITY_PC_YR
-        ? { kind: 'above-escape', sample: speedSample() }
-        : { kind: 'kept' };
-    if (velocity.kind === 'clamped') vel = { x: 0, y: 0, z: 0 };
-    const velZeroed = origin !== null || velocity.kind === 'clamped';
+    const velocityClamped = speedPcYr > VELOCITY_SANITY_CEILING_PC_YR;
+    if (velocityClamped) vel = { x: 0, y: 0, z: 0 };
 
     let apsis: CitedValue<ApsisRow> | null = null;
     if (gaiaSourceId) {
@@ -668,7 +652,7 @@ export function rowResolver({
         bailerJones: bjStep,
         lmc: lmcStep,
         rv: rvRejected && rvRes.via !== 'none' ? { kind: 'rejected', rv: rvRes } : { kind: 'kept', rv: rvRes },
-        velocityClamped: velocity.kind === 'clamped',
+        velocityClamped,
       },
       brightness: { kind: 'shipped', key, v: vRes, spectral, ci: ciRes, dust },
       rv,
@@ -680,12 +664,10 @@ export function rowResolver({
           ? { fromIcrs: tycho2Row.fromIcrs, isPhotocentre: tycho2Row.isPhotocentre }
           : null,
         vTycho2OutsideBtVtRange: vRes.via === 'tycho2' && printed?.vVia === 'tycho2' && printed.outsideRange,
-        velocityVia: velZeroed ? 'zero' : velVia,
-        velocity,
+        fastSample: speedPcYr > GALACTIC_ESCAPE_VELOCITY_PC_YR ? speedSample() : null,
         rvRejectedSample: rvRejected
           ? `${idLabel()}: ${resolvedRvKmS?.toFixed(1)} km/s @ ${dist.toFixed(1)} pc`
           : null,
-        rvApplied: !velZeroed && rvKmS !== null && rvKmS !== 0,
         ciGspcValidatedRange: ciRes.via === 'gspc' && gspc?.inValidatedRange === true,
       },
     };

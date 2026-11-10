@@ -8,7 +8,9 @@ import { VELOCITY_VIA_VALUES, type VelocityVia } from '../distance/velocity';
 import { isGaiaCatalogueBibcode } from '../distance/gaia-distrust';
 import { isLowPrecisionParallax } from '../distance/parallax/parallax-cascade';
 import { PARKED_REASONS, type ParkedReason, type ParkedRecord } from '../distance/parallax/parked-ledger-pure';
-import { distViaBeforeLmc, parkedRecord, shippedDistVia, type PlacedPlacement } from '../distance/placement-lineage-pure';
+import {
+  distViaBeforeLmc, parkedRecord, radialVelocityApplied, shippedDistVia, shippedVelocityVia, type PlacedPlacement,
+} from '../distance/placement-lineage-pure';
 import { PM_RESCUE_OUTCOMES, pmRescueOutcome, type PmRescueOutcome } from '../distance/pm-rescue/pm-rescue';
 import { RV_VIA_VALUES, RV_ERROR_BANDS, type RvVia, type RvErrorBand } from '../distance/radial-velocity/radial-velocity';
 import { V_VIA_VALUES, type VVia } from '../photometry/v-magnitude-pure';
@@ -154,22 +156,18 @@ export function walkStatsFold(): { add(outcome: RowOutcome): void; result(): Wal
       stats.rvRadialRejected++;
       stats.rvRadialRejectedSample.push(f.rvRejectedSample);
     }
-    switch (f.velocity.kind) {
-      case 'clamped':
-        stats.velocityClamped++;
-        stats.velocityClampedSample.push(f.velocity.sample);
-        break;
-      case 'above-escape':
-        stats.velocityAboveEscape++;
-        if (stats.velocityAboveEscapeSample.length < VELOCITY_ABOVE_ESCAPE_SAMPLE_CAP) {
-          stats.velocityAboveEscapeSample.push(f.velocity.sample);
-        }
-        break;
-      case 'kept':
-        break;
+    if (p.velocityClamped) {
+      if (f.fastSample === null) throw new Error(`walk stats: ${p.key} clamped below the escape velocity`);
+      stats.velocityClamped++;
+      stats.velocityClampedSample.push(f.fastSample);
+    } else if (f.fastSample !== null) {
+      stats.velocityAboveEscape++;
+      if (stats.velocityAboveEscapeSample.length < VELOCITY_ABOVE_ESCAPE_SAMPLE_CAP) {
+        stats.velocityAboveEscapeSample.push(f.fastSample);
+      }
     }
-    stats.velocityVia[f.velocityVia]++;
-    if (f.rvApplied) stats.rvApplied++;
+    stats.velocityVia[shippedVelocityVia(p)]++;
+    if (radialVelocityApplied(p)) stats.rvApplied++;
     stats.spectralVia[b.spectral.via]++;
     if (b.spectral.via === 'simbad') stats.spectralSimbadKey[b.spectral.value.namespace]++;
     stats.ciVia[b.ci.via]++;

@@ -35,7 +35,7 @@ import {
 } from '../membership/membership-manifest-tsv';
 import { CONSTELLATIONS, createConstellationAssignment, iauEdgeRecords } from './constellations/constellations';
 import { STELLARIUM } from './constellations/stellarium-source';
-import type { Placement } from '../distance/placement-lineage-pure';
+import { shippedVelocityVia, type Placement } from '../distance/placement-lineage-pure';
 import { MAX_DIST_PC, readStars, rowResolver } from './stars-parse';
 import { CURATED_RECORDS } from '../record/curated-records';
 import { LMC_CENTRE_DEC_DEG, LMC_CENTRE_RA_HOURS } from '../distance/refinement/distance-overrides-pure';
@@ -309,7 +309,7 @@ describe('readStars manifest labels', () => {
     expect(outcome.star).toEqual(readStarsDiscarding([row], options).stars[0]);
     expect(outcome.placement.kind).toBe('placed');
     expect(outcome.brightness.v.via).toBe('tycho2');
-    expect(outcome.facts.velocityVia).toBe('tycho2_pm');
+    expect(shippedVelocityVia(outcome.placement)).toBe('tycho2_pm');
   });
 
   it('counts a row inside the LMC cone as a candidate even where the PM gate refuses it', () => {
