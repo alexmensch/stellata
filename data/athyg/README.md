@@ -21,8 +21,8 @@ The CSV is frozen **external** data under the policy in
 **Stellata build artifact** that happens to live beside it, and
 `stale_gaia_source_ids.tsv` a committed review queue over it.
 
-**The small ones are exempted from LFS in `.gitattributes`, and must stay
-exempt.** `data/athyg/*.tsv` is a blanket LFS rule written for the 40 MB spine,
+**`stale_gaia_source_ids.tsv` is exempted from LFS in `.gitattributes`, and
+must stay exempt.** `data/athyg/*.tsv` is a blanket LFS rule written for the 40 MB spine,
 so a new file here is LFS by default — which for a review queue defeats the
 point twice over: `git diff` shows an oid instead of the rows a reviewer is
 meant to check, and a checkout without LFS hands the parity gate a pointer
