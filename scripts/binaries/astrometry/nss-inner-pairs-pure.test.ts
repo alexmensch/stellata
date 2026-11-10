@@ -84,6 +84,19 @@ describe('synthesizeNssInnerPairs', () => {
     expect(circular.pairs).toHaveLength(1);
   });
 
+  it('skips elements missing P or T, or ω on a non-circular fit', () => {
+    const sb1 = (over: Partial<NssOrbitRow>): NssOrbitRow =>
+      nssRow({ sourceId: '42', solutionType: 'SB1', period: 12.5, tPeriastron: 100, eccentricity: 0.3, argPeriastron: 10, ...over });
+    expect(run([abPair()], sb1({})).pairs).toHaveLength(1);
+    for (const row of [
+      { ...inRegime, period: null },
+      sb1({ tPeriastron: null }),
+      sb1({ solutionType: 'SB1C', argPeriastron: null }),
+    ]) {
+      expect([row, run([abPair()], row).tally.skipped_incomplete_elements]).toEqual([row, 1]);
+    }
+  });
+
   it('skips a compound carrier token, which has no deeper WDS convention', () => {
     const r = run([pairOf('AB,C', side('42'), side('99'))], inRegime);
     expect(r.pairs).toEqual([]);
