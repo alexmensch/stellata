@@ -42,26 +42,26 @@ export interface PairAstrometry {
 export const HIP2_COMPANION_SEPARATION_ARCSEC = 5.0;
 
 function fromGaia(row: GaiaAstrometryRow, astrometryVia: 'gaia_5p' | 'gaia_nss_systemic'): MeasuredAstrometry {
-  return {
+  return Object.freeze({
     astrometryVia, raDeg: row.raDeg, decDeg: row.decDeg, parallaxMas: row.parallaxMas, parallaxErrorMas: row.parallaxErrorMas,
     pmraMasyr: row.pmraMasyr, pmdecMasyr: row.pmdecMasyr, refEpoch: row.refEpoch,
-  };
+  });
 }
 
 function fromHip2(row: Hip2AstrometryRow): MeasuredAstrometry {
-  return {
+  return Object.freeze({
     astrometryVia: 'hip2_long_baseline', raDeg: row.raDeg, decDeg: row.decDeg, parallaxMas: row.plxMas, parallaxErrorMas: row.plxErrorMas,
     pmraMasyr: row.pmRaMasyr, pmdecMasyr: row.pmDeMasyr, refEpoch: HIP2_REF_EPOCH,
-  };
+  });
 }
 
 /** Null for a row with no positive distance: it carries no parallax. */
 export function fromAthygPosition(row: AthygRow): MeasuredAstrometry | null {
   if (row.distPc <= 0) return null;
-  return {
+  return Object.freeze({
     astrometryVia: 'athyg_position', raDeg: row.raDeg, decDeg: row.decDeg, parallaxMas: 1000 / row.distPc, parallaxErrorMas: null,
     pmraMasyr: row.pmRaMasyr, pmdecMasyr: row.pmDecMasyr, refEpoch: ATHYG_REFERENCE_EPOCH,
-  };
+  });
 }
 
 function componentHip2(c: ResolvedComponent, indices: IdentifierIndices): Hip2AstrometryRow | null {

@@ -114,5 +114,8 @@ describe.skipIf(![...INPUTS, REQUEST, SPOT_CHECK_GROUND_TRUTH].every(isReadable)
     expect(s3.astrometry.size).toBe(s3.pairs.length);
     expect(Object.isFrozen(s3.pairs)).toBe(true);
     expect(Object.isFrozen(s3.pairs.at(-1)!.secondary)).toBe(true);
+    const inner = s3.astrometry.get(s3.pairs.at(-1)!)!;
+    expect(Object.isFrozen(inner)).toBe(true);
+    expect([inner.primary.astrometryVia, Object.isFrozen(inner.primary)]).toEqual([expect.not.stringMatching(/^unresolved$/), true]);
   });
 });
