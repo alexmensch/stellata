@@ -18,7 +18,7 @@ pinned spot rows; `pull_slices()` executes a list of them, and
 `slices_main(slices, name)` is a slice file's whole entry point.
 `refresh-classic-ids.py` (four slices), `refresh-hipparcos-vmag.py` (one) and
 `refresh-gliese.py` (one) are then spec files with no query logic of their
-own — the same split `gaia_astrometry_pull.py` uses for the 5p pulls.
+own.
 
 **MAXREC is not load-bearing on CDS.** VizieR's TAP default MAXREC is ~1e9,
 so a whole-table slice needs none of the sizing the Gaia sync endpoints demand

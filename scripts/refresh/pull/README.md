@@ -8,8 +8,9 @@ SIMBAD. A pull is a `pull` step on the step table
 ## Files
 
 - `tap-pure.ts` (+ test) — the backend: the three archives, the sync query,
-  the reply's classification, `tapClient`, and `SIMBAD_BATCH_SIZE`, the ids
-  one SIMBAD `IN (…)` batch may carry.
+  the reply's classification, `tapClient`, `SIMBAD_BATCH_SIZE`, the ids
+  one SIMBAD `IN (…)` batch may carry, and `GAIA_SLICE_ROWS`, the rows one
+  sliced Gaia query holds.
 - `unverified-mirrors.test.ts` — no committed `data/stamps/` record answered by
   a mirror whose `verified` flag is false.
 - `columns-pure.ts` (+ test) — a table's `Column` list and everything derived
@@ -19,6 +20,9 @@ SIMBAD. A pull is a `pull` step on the step table
 - `slices-pure.ts` (+ test) — the sliced scope's key ranges: their ADQL
   conditions, per-slice counts, and cutting edges from a table.
 - `checkpoint.ts` — the resume cache.
+- `recorded-reply.ts` — for a pull's own tests: a reply recorded from the
+  archive replayed into a committed table's lines, the committed table's rows,
+  and its slices measured against `sliceRows`.
 - `pull.ts` (+ test, the faked-transport acceptance cases) — the `Pull` and
   `PhasedPull` types, `describePull` / `describePhasedPull`, `runPull` /
   `runPhasedPull`, and `LIVE`, the network transport.
@@ -26,7 +30,7 @@ SIMBAD. A pull is a `pull` step on the step table
 ## A pull
 
 ```ts
-export const pull: Pull<'xmatch'> = { archive: GAIA, outputs: XMATCH_OUTPUTS, release: 'Gaia DR3', tables: { xmatch: {…} } };
+export const pull: Pull<'xmatch'> = { archive: GAIA, outputs: XMATCH_OUTPUTS, release: GAIA_DR3_RELEASE, tables: { xmatch: {…} } };
 export const describe = () => describePull(pull);
 export const main = () => runPull(pull);
 ```
@@ -73,8 +77,8 @@ check anywhere leaves every prior output byte-identical.
 A `PhasedPull` is for a pull whose later queries take their ids from earlier
 answers, as every manifest-keyed SIMBAD pull does (identifier → oid, then
 oid → columns). It declares its `phases` (a `Phase` is a table's query without
-its ids: whole-table with the most rows it should return, sliced as a static
-table is, or request-scoped by key, batch size and rows per id), its written `tables` (columns, sort key,
+its ids: whole-table with the most rows it may return, sliced as a static
+table is plus that same `maxRows`, or request-scoped by key, batch size and rows per id), its written `tables` (columns, sort key,
 band, spot rows), optionally the `request` it derives and the files it comes
 off and the `parameters` that decide its bytes besides its queries (a seed,
 a draw's targets), and a `run(ask)` that composes the rows. `ask(phase, ids)` is the same
@@ -89,10 +93,13 @@ pull of one phase per table.
 
 `runPull` holds every row of a table at once — its parsed cells, their sorted
 copy and the TSV written from them — and for a whole-table table the reply
-text too. It refuses, before any query, a whole-table or sliced table whose
-queries at their limits (query count × limit × column count) could hold more
-than `MAX_TABLE_CELLS` (37,000,000). A request-scoped table is not bounded
-this way.
+text too. A whole-table or sliced phase states `maxRows`, the most rows it may
+hold over all its queries (a static table's is its band's `max`), and `ask`
+refuses it, naming the count, once its rows pass that. So it holds at most
+`min(query count × limit, maxRows + limit)` rows, and `runPull` refuses,
+before any query, one whose held rows × column count could exceed
+`MAX_TABLE_CELLS` (30,000,000). A request-scoped table is not bounded this
+way.
 Measured 2026-11-05 under Node 26, the committed `gaia_dr3_tyc_xmatch.tsv` (5
 columns) replayed through `runPull` and a fake transport, peak live heap by
 `watchHeap` ([CI heap budget](../../util/heap-budget/README.md)):
@@ -103,19 +110,31 @@ columns) replayed through `runPull` and a fake transport, peak live heap by
 | 5,036,660 | 25.2 M | 212 MiB | 2,681 MiB | 11.6 s |
 
 That is about 69 bytes per cell over about 1,029 MiB fixed (the harness's own
-copies of the reply among it), so the CI budget of 3,482 MiB holds about 37 M
-cells; a sliced table holds one slice's reply text at a time, so the same cap
-is conservative for it. tyc-xmatch, sliced, reaches 25.2 M (105 slices ×
-48,000 × 5 columns). A table with wider text cells costs more per cell, so a
-pull near the cap is re-measured, not assumed.
+copies of the reply among it). The magnitude table (19 numeric columns),
+replayed the same way on 2026-11-09 from its 52 slices: 1,247,240 rows, 23.7 M
+cells, peak live heap **2,949 MiB**, 17.3 s — about 85 bytes per cell over the
+same fixed cost, though that harness also held the committed text and a CSV
+copy of every slice. At 85 bytes per cell the 3,482 MiB budget holds about
+30.3 M cells, so the cap is **30 M**, the widest measured table's figure.
+Bounds today: magnitude 25.1 M ((1,273,000 + 48,000) × 19), tyc-xmatch
+12.9 M ((2,530,000 + 48,000) × 5). A table with wider text cells costs more
+per cell, so a pull near the cap is re-measured, not assumed.
 
 ### Sliced scope
 
-A table no list of ids scopes, cut into half-open ranges of an integer
-`key` between committed `edges`, open at both ends (`key < e0`, `e0 ≤ key <
-e1`, …, `key ≥ eN`), so every non-null key falls in exactly one slice and no
-row is asked for twice. The edges are part of the description: a re-cut
-stales the pull, and its next run asks the new ranges.
+A table no list of ids scopes, cut into half-open ranges of a `key` between
+committed `edges`, open at both ends (`key < e0`, `e0 ≤ key < e1`, …, `key ≥
+eN`), so every non-null key falls in exactly one slice and no row is asked for
+twice. The edges are part of the description: a re-cut stales the pull, and
+its next run asks the new ranges.
+
+An integer key's edges are `bigint`s, so a `source_id` past 2^53 is written
+exactly; a decimal key's (`phot_g_mean_mag`) are `number`s, written as their
+shortest text. The archive compares a decimal edge against the column's own
+value, a float32 for a REAL, so a row whose committed six-decimal text equals
+an edge may fall on either side of it. That moves a slice's count by the rows
+sitting on the edge, never the partition: adjacent conditions share one
+literal.
 
 `sliceRows` is the most rows any slice holds, and the edges are
 `cutEdges(<the table's keys, ascending>, sliceRows)`, which never splits equal
@@ -127,7 +146,7 @@ limit, so a pull sized for ESA's 50,000 keeps `sliceRows` at most 24,999.
 
 ## The checkpoint
 
-Each answered query's CSV reply is cached as it lands, under
+Each answered query's CSV reply is cached once it passes the column check, under
 `<first output>.ckpt/`, named by the hash of the query's text, beside the
 mirror that answered it; a re-run replays a cached reply (re-checked against
 the limit and the columns) and asks only what is missing. **A replay reports
@@ -201,7 +220,12 @@ A table's `Column` list is the one statement of its schema. Each column's
 is its projection when that is not the quoted name (a qualified `t.source_id`,
 which still answers as `source_id`, or an aliased expression); `format`
 is the one place a pull rounds, and it is data: `{fixed: n}`, Python's
-`f"{x:.nf}"` text (`formatFixed`, `../../util/round-pure.ts`). A column the
+`f"{x:.nf}"` text (`formatFixed`, `../../util/round-pure.ts`), or `{exp: n}`,
+Python's `f"{x:.ne}"` (`formatExponent`). `{flag: true}` is a two-valued
+column written `0`/`1`: ESA prints a BOOLEAN as `true`/`false` and ARI as
+`1`/`0`, and ARI rejects a `CAST`, so the mapping cannot be server-side. It
+maps when the reply is checked (`checkedRows`), so gates, sort and TSV all see
+`0`/`1` whichever mirror answered, and any third value refuses the reply. A column the
 archive stores as a REAL adds `float32: true`: its value is the float32
 nearest the reply's text, and Python formatted that value, so `{fixed: 6}` on
 the text alone disagrees with it on about 1 cell in 230 (measured on a

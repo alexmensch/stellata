@@ -637,7 +637,7 @@ class GaiaAstrometryRow:
 
 def parse_gaia_astrometry(path: Path) -> dict[int, GaiaAstrometryRow]:
     """Returns ``source_id -> GaiaAstrometryRow``. The TSV is produced by
-    ``scripts/refresh/refresh-gaia-astrometry.py`` and contains one row
+    ``refresh:gaia-astrometry`` (``scripts/refresh/gaia-request/``) and contains one row
     per resolved source_id in
     ``data/gaia/gaia_astrometry_source_id_request.tsv``.
 

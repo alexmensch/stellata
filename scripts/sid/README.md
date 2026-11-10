@@ -146,7 +146,9 @@ export-dr-risk-set.ts     pnpm run sid:risk-set — source_ids of the
                           half of the dry-run pair
                           (dr2-neighbourhood-source.ts), and
                           tests/step-outputs.test.ts fails if any step's
-                          declared outputs cover either file.
+                          declared outputs cover either file, but for
+                          refresh:gaia-dr2-neighbourhood re-pulling the
+                          neighbourhood against the frozen request.
 dr-reconcile.ts           pnpm run sid:dr-reconcile — churn report for a
                           DR transition (/docs/sid.md#61-procedure classes),
                           plus the carried-1:1 same-as edges for human
@@ -159,11 +161,12 @@ dr-reconcile.ts           pnpm run sid:dr-reconcile — churn report for a
                           dr2-neighbourhood-source.ts declares that pair.
                           --request= (a fresh sid:risk-set export) /
                           --neighbourhood= declare another transition's
-                          files through the same module's
-                          riskRequestSource / neighbourhoodSource, so
-                          each file kind has one parse.
-dr-reconcile-pure.ts      Pure classifier + request/neighbourhood TSV
-                          readers. ACCEPT_MAS / MAG_REVIEW_DELTA live
+                          files through sourceIdRequestSource
+                          (../catalog/astrometry-request/) /
+                          neighbourhoodSource, so each file kind has one
+                          parse.
+dr-reconcile-pure.ts      Pure classifier + the neighbourhood TSV
+                          reader. ACCEPT_MAS / MAG_REVIEW_DELTA live
                           here.
 sibling-allocation.ts     allocateSibling: one sibling namespace allocated
   (+ test)                over the registry, giving each record's sid, its

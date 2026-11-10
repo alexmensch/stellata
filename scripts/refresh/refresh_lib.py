@@ -131,8 +131,6 @@ def read_membership_source_ids(path: Path) -> list[int]:
 
 TYC2_HD_CROSS_INDEX = REPO_ROOT / "data" / "classic-ids" / "tyc2_hd.tsv"
 
-CATALOG_SOURCE_ID_REQUEST = REPO_ROOT / "data" / "gaia" / "gaia_catalog_source_id_request.tsv"
-
 Tyc = tuple[int, int, int]
 
 
@@ -172,33 +170,6 @@ def read_mentioned_tycs(
         for row in csv.DictReader(f, delimiter="\t"):
             tycs.add((int(row["tyc1"]), int(row["tyc2"]), int(row["tyc3"])))
     return tycs
-
-
-# ─── source_id request files ──────────────────────────────────────────
-
-SOURCE_ID_REQUEST_HEADER = "gaia_source_id"
-
-
-def read_source_id_request(path: Path) -> list[int]:
-    """Read a one-column source_id request TSV; skip the header row.
-    Contract: one ``gaia_source_id`` column, sorted, unique, non-null —
-    produced by build-binaries Stage 2 or export-astrometry-request.ts,
-    and consumed by every pull scoped to a request list rather than to a
-    whole table.
-    """
-    ids: list[int] = []
-    with path.open() as f:
-        header = f.readline().strip()
-        if header != SOURCE_ID_REQUEST_HEADER:
-            raise SystemExit(
-                f"read_source_id_request: unexpected header {header!r} in "
-                f"{path} — expected {SOURCE_ID_REQUEST_HEADER!r}."
-            )
-        for line in f:
-            line = line.strip()
-            if line:
-                ids.append(int(line))
-    return ids
 
 
 # ─── Retry ────────────────────────────────────────────────────────────
@@ -947,40 +918,6 @@ def validate_spot_rows(
             raise SystemExit(
                 f"{script_name}: pinned {key_field}={spec[key_field]} {missing_hint}"
             )
-
-
-def check_spot_rows_tolerant(
-    rows_by_key: Mapping[Any, Any],
-    specs: Iterable[Mapping[str, Any]],
-    *,
-    script_name: str,
-    key_field: str = "source_id",
-    max_missing: int,
-    warn_template: str,
-    fail_hint: str,
-    log: Callable[[str], None] = print,
-) -> list[Any]:
-    """Soft-tolerance sibling of ``validate_spot_rows``. A present-but-drifted
-    row still hard-fails inside ``check_spot_row``; an ABSENT pinned row is
-    a warning (``warn_template.format(key=...)``) tolerated up to
-    ``max_missing`` — a Gaia DR4 maintenance reload can quietly retire a
-    source_id or two from a small pinned sample. More than ``max_missing``
-    absent raises SystemExit. Returns the list of missing keys.
-    """
-    missing: list[Any] = []
-    for spec in specs:
-        if not check_spot_row(
-            rows_by_key, spec, script_name=script_name, key_field=key_field
-        ):
-            key = spec[key_field]
-            missing.append(key)
-            log(warn_template.format(key=key))
-    if len(missing) > max_missing:
-        raise SystemExit(
-            f"{script_name}: {len(missing)} pinned {key_field}s missing "
-            f"(tolerance {max_missing}): {missing} — {fail_hint}"
-        )
-    return missing
 
 
 # ─── Coverage report ──────────────────────────────────────────────────
