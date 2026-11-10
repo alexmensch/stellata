@@ -36,8 +36,9 @@ import {
 import { CONSTELLATIONS, createConstellationAssignment, iauEdgeRecords } from './constellations/constellations';
 import { STELLARIUM } from './constellations/stellarium-source';
 import type { Placement } from '../distance/placement-lineage-pure';
-import { MAX_DIST_PC, readStars } from './stars-parse';
+import { MAX_DIST_PC, readStars, resolveRow, rowSources } from './stars-parse';
 import { CURATED_RECORDS } from '../record/curated-records';
+import { LMC_CENTRE_DEC_DEG, LMC_CENTRE_RA_HOURS } from '../distance/refinement/distance-overrides-pure';
 import { AV_PER_EZGR } from '../../../src/astro-core/baker-constants';
 import { printedHipTable } from '../photometry/photometry-fixture';
 import type { BrightnessColour, DustStep } from '../photometry/brightness-colour-lineage-pure';
@@ -287,10 +288,40 @@ describe('readStars manifest labels', () => {
     expect(sum(stats.distVia)).toBe(stars.length);
     expect(sum(stats.vVia)).toBe(stars.length);
     expect(sum(stats.directionVia)).toBe(stars.length);
+    // The rv cascade answers before any park, so its partition runs over rows.
+    expect(sum(stats.rvVia)).toBe(stats.total);
     expect(placements.map((p) => p.kind)).toEqual(['parked-no-v', 'parked-no-position']);
     expect(placements).toHaveLength(stats.total);
     // Both rows reached V, so both carry the V cascade's outcome; neither got further.
     expect(brightness.map((b) => (b?.kind === 'v-only' ? b.v.via : b?.kind))).toEqual(['none', 'printed_hip']);
+  });
+
+  it('resolves one row to the record readStars ships, its placement and brightness beside it', () => {
+    const options = {
+      conAssignment: CON_ASSIGNMENT,
+      directions: AT_ORIGIN_DIRECTIONS(),
+      gliese: glieseParallaxes([{ gl: ORIGIN_GL, distPc: 100 }]),
+    };
+    const [row] = manifestRows([AT_ORIGIN_SIGHTLINE]);
+    const outcome = resolveRow(row, rowSources(options));
+    expect(outcome.kind).toBe('shipped');
+    if (outcome.kind !== 'shipped') return;
+    expect(outcome.star).toEqual(readStarsDiscarding([row], options).stars[0]);
+    expect(outcome.placement.kind).toBe('placed');
+    expect(outcome.brightness.v.via).toBe('tycho2');
+    expect(outcome.facts.velocityVia).toBe('tycho2_pm');
+  });
+
+  it('counts a row inside the LMC cone as a candidate even where the PM gate refuses it', () => {
+    const { stats } = readStarsDiscarding(manifestRows([AT_ORIGIN_SIGHTLINE]), {
+      conAssignment: CON_ASSIGNMENT,
+      directions: tycho2Sources([{
+        tyc: ORIGIN_TYC, raDeg: LMC_CENTRE_RA_HOURS * 15, decDeg: LMC_CENTRE_DEC_DEG, vMag: 10,
+      }]),
+      gliese: glieseParallaxes([{ gl: ORIGIN_GL, distPc: 100 }]),
+    });
+    expect(stats.lmcCandidates).toBe(1);
+    expect(stats.lmcOverridden).toBe(0);
   });
 
   it('fails the walk on a row the overrides leave past MAX_DIST_PC, naming it', () => {

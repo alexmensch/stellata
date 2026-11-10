@@ -13,8 +13,14 @@ it walks is `../membership/README.md`.
 
 ```
 scripts/catalog/parse/
-  stars-parse.ts (+ test)         readStars — the per-row pipeline. The hub
-                                  every other subfolder imports.
+  stars-parse.ts (+ test)         readStars — the per-row pipeline, a map of
+                                  resolveRow over the manifest plus a fold.
+                                  resolveRow is pure: one row to a RowOutcome,
+                                  parked or shipped with its provenance. The
+                                  hub every other subfolder imports.
+  walk-stats-pure.ts              walkStatsFold — the walk's counts, folded
+                                  from each RowOutcome as it passes, so no
+                                  outcome outlives its row.
   read-stars-inputs.ts            loadReadStarsInputs — every reference
                                   table readStars consumes, each read through
                                   its declared source (../../util/sources/),
@@ -205,11 +211,14 @@ never a membership decision — so the walk throws, naming the row.
     ([Positional constellation membership](constellations/README.md#positional-constellation-membership)). Nothing here sets the
     DESIGNATION's constellation: the manifest carries no editorial `con` cell.
 
-Every cascade tally the walk returns is incremented **after** step 5, so each
-partition sums to the record count rather than to the rows entering the walk.
-A parked row is therefore in none of them — `parkedVia`, over the closed reason
-enum, is the one place it is a number, and `distNone` / `vNone` stay pinned at
-0 because a shipped record cannot have reached no tier.
+Every count the walk returns folds from the row's `RowOutcome`
+(`walk-stats-pure.ts`). A cascade partition counts shipped outcomes only, so it
+sums to the record count rather than to the rows entering the walk; a parked
+row is in none of them — `parkedVia`, over the closed reason enum, is the one
+place it is a number, and `distNone` / `vNone` stay pinned at 0 because a
+shipped record cannot have reached no tier. The radial-velocity counts are the
+exception: the rv cascade answers before any park, so `rvVia`, the Gaia error
+bands and the two bibcode counts run over every manifest row.
 
 `plxDistPc` / `plxVia` are build-time-only, like `vVia`: step 0's own inversion
 and the tier that supplied it, captured before any override layer fires so the
@@ -218,12 +227,12 @@ Both are null on Sol, which sits at distance zero by construction, and on
 records minted rather than walked. `originKey` is build-time-only too: the
 row's `origin_key`, which a later stage's lineage cites the record by
 ([Identity](../lineage/README.md#identity--the-origin-source-row)). Beside
-the records the walk hands `readStars`' `onRow` one `WalkedRow` per manifest
-row, parked or shipped — its `Placement`, and its `BrightnessColour` wherever
-the row reached V — and keeps none of them: the caller turns each into what
+the records the walk hands `readStars`' `onRow` each row's outcome, parked or
+shipped — its `Placement`, and its `BrightnessColour` wherever the row reached
+V — and keeps none of them: the caller turns each into what
 [placement lineage](../distance/README.md#placement-lineage) and
 [brightness-colour lineage](../photometry/README.md#brightness-colour-lineage)
-write, and the park counts fold from them as they pass.
+write.
 
 The manifest carries no `x0/y0/z0`, and AT-HYG's was never consumed: it is a
 mixed-epoch merge artifact, tabulated at ~3 dp (a 206 AU grid) and internally

@@ -124,6 +124,8 @@ export type BrightnessColour =
     readonly dust: DustStep | null;
   };
 
+export type ShippedBrightness = Extract<BrightnessColour, { kind: 'shipped' }>;
+
 /** Every row one record's BrightnessColour serialises to; the `switch` is
  *  exhaustive, so a new variant without rows fails typecheck. */
 export function brightnessColourLineageRows(b: BrightnessColour): LineageRow[] {

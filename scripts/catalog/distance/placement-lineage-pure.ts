@@ -17,6 +17,7 @@ import type { PmRescueResolution, PmRescueVia } from './pm-rescue/pm-rescue';
 import type { RadialVelocityResolution, RvVia } from './radial-velocity/radial-velocity';
 import type { LmcKinematicVerdict } from './refinement/distance-overrides-pure';
 import { PLACEMENT_LINEAGE } from '../../../src/catalog-format/pipeline-outputs/lineage-files';
+import type { DistVia } from '../../../src/catalog-format/record/catalog-pure';
 
 export const PLACEMENT_LINEAGE_BUDGET = { gzipBytes: 34_000_000, writeMs: 40_000 };
 
@@ -193,8 +194,8 @@ export type Placement =
   | {
     readonly kind: 'placed';
     readonly key: string;
-    readonly parallax: ParallaxResolution;
-    readonly direction: DirectionResolution;
+    readonly parallax: Exclude<ParallaxResolution, { via: 'none' }>;
+    readonly direction: Exclude<DirectionResolution, { via: 'none' }>;
     /** Null where the direction tier stated its own proper motion. */
     readonly pmRescue: PmRescueResolution | null;
     readonly bailerJones: BailerJonesStep;
@@ -204,6 +205,19 @@ export type Placement =
   };
 
 export type ParkedPlacement = Exclude<Placement, { kind: 'placed' }>;
+export type PlacedPlacement = Extract<Placement, { kind: 'placed' }>;
+
+type DistanceLayers = Pick<PlacedPlacement, 'parallax' | 'bailerJones' | 'lmc'>;
+
+/** The tier a placed row's distance stood on when the LMC override weighed it. */
+export function distViaBeforeLmc(p: DistanceLayers): DistVia {
+  return p.bailerJones.kind === 'override' ? 'bailer_jones' : p.parallax.via;
+}
+
+/** The tier a placed row's shipped distance came from. */
+export function shippedDistVia(p: DistanceLayers): DistVia {
+  return p.lmc === 'snap' ? 'lmc_kinematic' : distViaBeforeLmc(p);
+}
 
 /** The park reason, read off which step stopped the walk: the one place it is decided. */
 export function parkReason(p: ParkedPlacement): ParkedReason {
@@ -312,8 +326,7 @@ export function parkedLedgerView(lines: Iterable<LineageLine>): ParkedLedgerEntr
   return entries;
 }
 
-export function parkedRecord(p: Placement): ParkedRecord | null {
-  if (p.kind === 'placed') return null;
+export function parkedRecord(p: ParkedPlacement): ParkedRecord {
   const refusedPlxMas = p.kind === 'parked-parallax' ? p.parallax.refusals.map((r) => r.mas) : [];
   return { ...p.ids, reason: parkReason(p), refusedPlxMas, originKey: p.key };
 }

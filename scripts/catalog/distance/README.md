@@ -64,9 +64,11 @@ scripts/catalog/distance/
   placement-lineage-pure.ts       Placement as a lineage stage: its codes,
     (+ test)                      the Placement each manifest row's walk
                                   hands on, its one serialiser (rows, or
-                                  their lines), and the parked ledger as a
+                                  their lines), the parked ledger as a
                                   view of its park rows
-                                  (#placement-lineage).
+                                  (#placement-lineage), and shippedDistVia,
+                                  the one place a placed row's distance
+                                  tier is read off its layers.
   dust/                           Build-time de-extinction against the
                                   dust grid of Edenhofer 2024
                                   (/data/papers/index.md#edenhofer2024), and
