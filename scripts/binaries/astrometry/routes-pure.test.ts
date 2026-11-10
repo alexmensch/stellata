@@ -221,6 +221,8 @@ describe('routePairs — the AT-HYG position fallback', () => {
     });
     const r = routePairs([pairOf(100, 20, 3, 0, { primary: { gaiaSourceId: '99' } }), owner], indices({ athyg: [row] }), [row]);
     expect(r.siblingClaimed).toHaveLength(1);
+    expect(r.siblingClaimed[0].component).toBe(r.pairs[0].primary);
+    expect(r.siblingClaimed[0].hip).toBe(5);
     expect(r.astrometry.get(r.pairs[0])!.primary.astrometryVia).toBe('unresolved');
   });
 });

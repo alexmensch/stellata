@@ -57,7 +57,10 @@ with blend inheritance: a secondary whose own predicted match misses takes its
 primary's row. The matched row becomes the component's `athygRow` when it had
 none, so `routePairs` returns new pairs; a row with no positive distance is
 no parallax, and the component stays `unresolved`. The sibling-identity
-guard's refusals come back as `siblingClaimed`.
+guard's refusals come back as `siblingClaimed`, each naming the returned
+pair's component and the HIP another letter binds; `attachStage3` freezes the
+pairs in place, so those references, and the astrometry map's keys, stay the
+result's own.
 
 ## The NSS inner pairs
 

@@ -104,7 +104,13 @@ export interface RoutedPairs {
   readonly pairs: readonly DecomposedPair[];
   readonly astrometry: ReadonlyMap<DecomposedPair, PairAstrometry>;
   /** AT-HYG fallback matches the sibling-identity guard refused. */
-  readonly siblingClaimed: readonly SiblingClaimedMatch[];
+  readonly siblingClaimed: readonly SiblingClaimedComponent[];
+}
+
+/** A returned pair's component whose matched AT-HYG row another letter of its system binds by `hip`. */
+export interface SiblingClaimedComponent {
+  readonly component: ResolvedComponent;
+  readonly hip: number;
 }
 
 /** The cascade for every component, then the AT-HYG position fallback over
@@ -132,5 +138,7 @@ export function routePairs(pairs: readonly DecomposedPair[], indices: Identifier
     astrometry.set(next, { primary: routed[2 * k], secondary: routed[2 * k + 1] });
     return next;
   });
-  return { pairs: out, astrometry, siblingClaimed: fallback.siblingClaimed };
+  const outComponents = componentsOf(out);
+  const siblingClaimed = fallback.siblingClaimed.map((s: SiblingClaimedMatch) => ({ component: outComponents[s.componentIdx], hip: s.hip }));
+  return { pairs: out, astrometry, siblingClaimed };
 }

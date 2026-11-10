@@ -3,31 +3,35 @@
 import { fold } from '../../util/counts/tally-pure';
 import type { ReferenceCatalogs } from '../load/reference-catalogs';
 import { RESOLVE_VIA, RESOLVE_VIA_ANCHORS_SOURCE_ID, type ResolveVia } from '../multiples-tsv';
-import type { SiblingClaimedMatch } from '../resolve/athyg-match-pure';
-import { componentsOf, freezePairs, type DecomposedPair } from '../resolve/components-pure';
+import { componentsOf, type DecomposedPair } from '../resolve/components-pure';
 import { siblingRejectionTally, type Stage2Result } from '../resolve/resolve-pairs';
 import { NSS_SYNTHESIS_OUTCOMES, synthesizeNssInnerPairs, type NssSynthesisOutcome } from './nss-inner-pairs-pure';
-import { ROUTED_VIA, routePairs, type PairAstrometry, type RoutedVia } from './routes-pure';
+import { ROUTED_VIA, routePairs, type PairAstrometry, type RoutedVia, type SiblingClaimedComponent } from './routes-pure';
 
 export interface Stage3Result {
   /** Stage 2's pairs, then the NSS inner pairs: the list Stage 4 walks. */
   readonly pairs: readonly DecomposedPair[];
   readonly astrometry: ReadonlyMap<DecomposedPair, PairAstrometry>;
-  readonly siblingClaimed: readonly SiblingClaimedMatch[];
+  readonly siblingClaimed: readonly SiblingClaimedComponent[];
   /** One per NSS carrier. */
   readonly nssOutcomes: readonly NssSynthesisOutcome[];
+}
+
+/** In place, so the pairs stay the keys of their astrometry and the components the refusals name. */
+function frozen(p: DecomposedPair): DecomposedPair {
+  Object.freeze(p.primary);
+  Object.freeze(p.secondary);
+  return Object.freeze(p);
 }
 
 export function attachStage3(resolved: Stage2Result, reference: ReferenceCatalogs): Stage3Result {
   const routed = routePairs(resolved.pairs, reference.indices, reference.athyg);
   const nss = synthesizeNssInnerPairs(routed.pairs, routed.astrometry, reference.indices);
-  const all = [...routed.pairs, ...nss.pairs];
-  const astrometry = all.map((p) => routed.astrometry.get(p) ?? nss.astrometry.get(p)!);
-  const pairs = freezePairs(all);
+  const pairs = Object.freeze([...routed.pairs, ...nss.pairs].map(frozen));
   return Object.freeze({
     pairs,
-    astrometry: new Map(pairs.map((p, i) => [p, Object.freeze({ ...astrometry[i] })])),
-    siblingClaimed: Object.freeze([...routed.siblingClaimed]),
+    astrometry: new Map(pairs.map((p) => [p, Object.freeze({ ...(routed.astrometry.get(p) ?? nss.astrometry.get(p)!) })])),
+    siblingClaimed: Object.freeze(routed.siblingClaimed.map((s) => Object.freeze(s))),
     nssOutcomes: Object.freeze([...nss.outcomes]),
   });
 }
