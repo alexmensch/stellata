@@ -19,9 +19,10 @@ const side = (gaiaSourceId: string | null, over: Partial<ResolvedComponent> = {}
 const pairOf = (components: string, primary: Partial<ResolvedComponent>, secondary: Partial<ResolvedComponent>): DecomposedPair =>
   decomposed(wdsPair({ wdsId: 'W1', components }), { primary, secondary });
 
-function run(pairs: readonly DecomposedPair[], nss: NssOrbitRow, ast: ComponentAstrometry = AST) {
+function run(pairs: readonly DecomposedPair[], nss: NssOrbitRow | readonly NssOrbitRow[], ast: ComponentAstrometry = AST) {
   const astrometry = new Map<DecomposedPair, PairAstrometry>(pairs.map((p) => [p, { primary: ast, secondary: ast }]));
-  const r = synthesizeNssInnerPairs(pairs, astrometry, indices({ srcToNss: new Map([[nss.sourceId, nss]]) }));
+  const rows = Array.isArray(nss) ? nss : [nss as NssOrbitRow];
+  const r = synthesizeNssInnerPairs(pairs, astrometry, indices({ srcToNss: new Map(rows.map((n) => [n.sourceId, n])) }));
   return { ...r, tally: fold(NSS_SYNTHESIS_OUTCOMES, r.outcomes, (o) => o) };
 }
 
@@ -55,6 +56,15 @@ describe('synthesizeNssInnerPairs', () => {
   it('skips a system that already names the children', () => {
     const r = run([pairOf('AB', side('42'), side('99')), pairOf('Aa,Ab', side('42'), side('42'))], inRegime);
     expect(r.pairs).toEqual([]);
+    expect(r.tally.skipped_children_exist).toBe(1);
+  });
+
+  it('counts a pair synthesized for one carrier as existing for the next, in numeric source order', () => {
+    const r = run(
+      [pairOf('AC', side('100'), side('98')), pairOf('AB', side('42'), side('99'))],
+      [nssOrbitalRow({ sourceId: '100', periodDays: 200 }), inRegime],
+    );
+    expect(r.pairs.map((p) => [p.pair.components, p.primary.gaiaSourceId])).toEqual([['Aa,Ab', '42']]);
     expect(r.tally.skipped_children_exist).toBe(1);
   });
 
