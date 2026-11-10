@@ -102,12 +102,8 @@ Python stage's choices where a cleaner one would move a row:
 `stage2Counts` returns the count-snapshot keys this stage's code alone
 produces — `ccdm_sibling_owned_rejected` and the seven binding-integrity keys
 — folded from the sibling rejections and the verdicts. The snapshot's other
-`resolve` keys also count Stage 3's work: `decomposing_pairs` and
-`components_total` include the NSS inner pairs Stage 3 appends,
-`resolution_*` their inherited tiers, and
-`athyg_match_sibling_claimed_rejected` Stage 3's AT-HYG fallback. The
-real-data case holds the pair and component totals to the snapshot less the
-NSS inner pairs; the rest wait for Stage 3's slice.
+`resolve` keys also count Stage 3's work, so Stage 3's `stage3Counts` returns
+them ([Counts](../astrometry/README.md#counts)).
 
 `astrometryRequestIds` is the Gaia astrometry request's id set; the
 real-data case holds `serialiseSourceIdRequest` of it to the committed

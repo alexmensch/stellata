@@ -19,6 +19,7 @@ import { ASTROMETRY_EXCLUSIONS, COMPONENT_SPTYPE_OVERRIDES, ORB6_COMPONENT_OVERR
 import { mscPairKey } from './load/msc-pure';
 import { MSC_COMPONENTS, MSC_ORBITS, MSC_SYSTEMS } from './load/msc-source';
 import { runStages } from './build-binaries';
+import { stage3Counts, stage3Rates, type Stage3Result } from './astrometry/attach-astrometry';
 import { stage1Counts, type ReferenceCatalogs } from './load/reference-catalogs';
 import { astrometryRequestIds, stage2Counts, type Stage2Result } from './resolve/resolve-pairs';
 import { spotCheckProblems, strongestComponents } from './resolve/spot-check-pure';
@@ -35,16 +36,17 @@ const INPUTS = [
 const REQUEST = { file: DATA_FILES.binariesAstrometryRequest, hint: 'Re-run `pnpm run build:binaries`.' };
 const readRepoFile = (file: string): string => readFileSync(resolve(__dirname, '../..', file), 'utf8');
 
-const committed = flattenStages(
-  JSON.parse(readFileSync(resolve(__dirname, 'build-binaries-expected.json'), 'utf8')),
-) as Record<string, number>;
+const snapshot = (file: string): unknown => flattenStages(JSON.parse(readFileSync(resolve(__dirname, file), 'utf8')));
+const committed = snapshot('build-binaries-expected.json') as Record<string, number>;
+const committedRates = snapshot('build-binaries-rates-expected.json') as Record<string, { value: number; tolerance: number }>;
 
-describe.skipIf(![...INPUTS, REQUEST, SPOT_CHECK_GROUND_TRUTH].every(isReadable))('Stages 1..2 through the shell, over the committed inputs', () => {
+describe.skipIf(![...INPUTS, REQUEST, SPOT_CHECK_GROUND_TRUTH].every(isReadable))('Stages 1..3 through the shell, over the committed inputs', () => {
   let c: ReferenceCatalogs;
   let r: Stage2Result;
+  let s3: Stage3Result;
   const log: string[] = [];
   beforeAll(async () => {
-    ({ reference: c, resolved: r } = await runStages((line) => log.push(line)));
+    ({ reference: c, resolved: r, astrometry: s3 } = await runStages((line) => log.push(line)));
   }, 120_000);
 
   it('logs Stage 1 with no input-drift warning', () => {
@@ -58,10 +60,6 @@ describe.skipIf(![...INPUTS, REQUEST, SPOT_CHECK_GROUND_TRUTH].every(isReadable)
 
   it('counts what the committed count snapshot pins for its keys', () => {
     for (const [key, value] of Object.entries(stage1Counts(c))) expect([key, value]).toEqual([key, committed[key]]);
-  });
-
-  it('hands Stage 2 the snapshot\'s pair total less the NSS inner pairs Stage 3 adds', () => {
-    expect(c.pairs.length).toBe(committed.wds_pairs_total - committed.synthesized_nss_inner_pairs);
   });
 
   it('is frozen', () => {
@@ -83,11 +81,6 @@ describe.skipIf(![...INPUTS, REQUEST, SPOT_CHECK_GROUND_TRUTH].every(isReadable)
     for (const [key, value] of Object.entries(stage2Counts(r))) expect([key, value]).toEqual([key, committed[key]]);
   });
 
-  it('decomposes the snapshot\'s pairs and components less the NSS inner pairs Stage 3 adds', () => {
-    expect(r.pairs.length).toBe(committed.decomposing_pairs - committed.synthesized_nss_inner_pairs);
-    expect(r.pairs.length * 2).toBe(committed.components_total - 2 * committed.synthesized_nss_inner_pairs);
-  });
-
   it('requests exactly the committed Gaia astrometry request', () => {
     expect(serialiseSourceIdRequest(astrometryRequestIds(r, c.indices)) === readRepoFile(REQUEST.file)).toBe(true);
   });
@@ -104,5 +97,23 @@ describe.skipIf(![...INPUTS, REQUEST, SPOT_CHECK_GROUND_TRUTH].every(isReadable)
     expect(Object.isFrozen(r.pairs)).toBe(true);
     expect(Object.isFrozen(r.pairs[0])).toBe(true);
     expect(Object.isFrozen(r.pairs[0].primary)).toBe(true);
+  });
+
+  it('counts what the committed count snapshot pins for Stage 3\'s keys', () => {
+    for (const [key, value] of Object.entries(stage3Counts(c, r, s3))) expect([key, value]).toEqual([key, committed[key]]);
+  });
+
+  it('rates within the committed rates snapshot\'s tolerance for Stage 3\'s keys', () => {
+    for (const [key, rate] of Object.entries(stage3Rates(stage3Counts(c, r, s3)))) {
+      const { value, tolerance } = committedRates[key];
+      expect([key, Math.abs(rate - value) / Math.max(Math.abs(value), 1e-9) <= tolerance]).toEqual([key, true]);
+    }
+  });
+
+  it('routes every side of every pair, and hands Stage 4 frozen pairs', () => {
+    expect(s3.pairs.every((p) => s3.astrometry.has(p))).toBe(true);
+    expect(s3.astrometry.size).toBe(s3.pairs.length);
+    expect(Object.isFrozen(s3.pairs)).toBe(true);
+    expect(Object.isFrozen(s3.pairs.at(-1)!.secondary)).toBe(true);
   });
 });

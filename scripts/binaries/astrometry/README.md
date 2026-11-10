@@ -13,6 +13,11 @@ What each route's gate decides, and why, is the parent README's
 
 ```
 scripts/binaries/astrometry/
+  attach-astrometry.ts         attachStage3 (routePairs, then the NSS
+                               inner pairs), Stage3Result, stage3Counts,
+                               stage3Rates, and the tallies both they and
+                               the report read.
+  stage3-report-pure.ts        The build-log lines, read off the result.
   routes-pure.ts (+ test)      ComponentAstrometry, ROUTED_VIA,
                                routeAstrometry (the Gaia / HIP2 cascade
                                for one component), minRhoPerSource, and
@@ -65,6 +70,20 @@ carrier (`A` → `Aa,Ab`, `Aa` → `Aa1,Aa2`), placed at the carrier's position
 carrier's identifiers and its `ComponentAstrometry`. A pair synthesized for
 one carrier counts as existing for the next, so two carriers never mint the
 same children.
+
+## Counts
+
+`stage3Counts` returns the count-snapshot keys this stage completes, each
+folded from the result through the one tally helper: the `astrometry_*`
+routes and `synthesized_nss_inner_pairs`, which are its own, and the totals
+its NSS inner pairs and AT-HYG fallback add to — `wds_pairs_total`,
+`decomposing_pairs`, `components_total`, the `resolution_*` tiers (an inner
+pair's children inherit their carrier's tier) and
+`athyg_match_sibling_claimed_rejected` (Stage 2's position tier plus this
+fallback). `stage3Rates` derives `gaia_resolve_rate` and
+`hip2_fallback_rate` from them. The parent folder's `build-binaries.test.ts`
+holds each key to the committed snapshot exactly and each rate within its
+committed tolerance.
 
 ## Byte identity with the Python stage
 
