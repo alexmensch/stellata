@@ -58,6 +58,9 @@ scripts/binaries/
                                   identity propagations and the binding
                                   audit, as frozen DecomposedPairs; the
                                   spot-check's port. Own README.
+  orbits/                         Stage 4's orbit knowledge in TypeScript:
+                                  the NSS two-body conversion and its
+                                  detectability regime, so far. Own README.
   parsers.py                      Row dataclasses + parse functions for every
                                   reference catalogue (Stage 1).
   indices.py                      IdentifierIndices builder (HIP/Tyc → Gaia,
