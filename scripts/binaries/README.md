@@ -147,8 +147,9 @@ scripts/binaries/
                                   tangent-basis propagation
                                   (../catalog/distance/direction-cascade.ts):
                                   the switch proves byte identity first.
-  build-log-pure.ts               count: how a build-log line prints a
-                                  number, for every TS stage's report.
+  build-log-pure.ts               count and countsListed: how a build-log
+                                  line prints a number and a tally, for
+                                  every TS stage's report.
   multiples-row-key-pure.ts       MULTIPLES_ROW_KEY, that rowKey, for code
                                   that cites a row without reading the file
                                   (promotion's origin keys), so it never
