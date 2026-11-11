@@ -2,12 +2,57 @@ import { describe, expect, it } from 'vitest';
 
 import {
   canonicalCompLetter,
+  childComponentTokens,
   composeSyntheticId,
   compoundContains,
+  isComponentToken,
+  pairComponentTokens,
   parentComponentToken,
   relatedHier,
+  subcomponentTopLetter,
+  tokenLetters,
   wdsRootOf,
 } from './component-tokens-pure';
+
+describe('isComponentToken', () => {
+  it('admits one component and refuses compounds and fixed-width garbage', () => {
+    for (const tok of ['A', 'Aa', 'Aa1', 'B', 'Cb']) expect(isComponentToken(tok)).toBe(true);
+    for (const tok of ['', 'AB', 'Aab', 'a', '95', 'Aa12', 'r']) expect(isComponentToken(tok)).toBe(false);
+  });
+});
+
+describe('pairComponentTokens', () => {
+  it('re-anchors a truncated secondary', () => {
+    expect(pairComponentTokens('Aa1,2')).toEqual(['Aa1', 'Aa2']);
+    expect(pairComponentTokens('AB')).toEqual(['A', 'B']);
+    expect(pairComponentTokens('')).toBeNull();
+  });
+});
+
+describe('childComponentTokens', () => {
+  it('names the sub-pair one level down, and nothing below Aa1 or under a compound', () => {
+    expect(childComponentTokens('A')).toEqual(['Aa', 'Ab']);
+    expect(childComponentTokens('Ca')).toEqual(['Ca1', 'Ca2']);
+    expect(childComponentTokens('Aa1')).toBeNull();
+    expect(childComponentTokens('AB')).toBeNull();
+  });
+});
+
+describe('subcomponentTopLetter', () => {
+  it('is the root letter of a lowercase sub-component only', () => {
+    expect(subcomponentTopLetter('Aa')).toBe('A');
+    expect(subcomponentTopLetter('Bbc')).toBe('B');
+    expect(subcomponentTopLetter('A')).toBeNull();
+    expect(subcomponentTopLetter('Aa1')).toBeNull();
+  });
+});
+
+describe('tokenLetters', () => {
+  it('collects the capitals', () => {
+    expect([...tokenLetters('AB')]).toEqual(['A', 'B']);
+    expect([...tokenLetters('Aa1')]).toEqual(['A']);
+  });
+});
 
 describe('wdsRootOf', () => {
   it('is everything before the last dash, a negative-Dec id intact', () => {

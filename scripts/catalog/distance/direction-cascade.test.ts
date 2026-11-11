@@ -22,6 +22,7 @@ import { gaiaAstrometryRow } from '../sources/gaia-astrometry-fixture';
 import { type GaiaAstrometryCatalogRow } from '../sources/gaia-astrometry-source';
 import { GAIA_NSS } from '../sources/gaia-nss-source';
 import { HIP2, type Hip2AstrometryRow } from '../sources/hip2-source';
+import { hip2AstrometryRow } from '../sources/hip2-fixture';
 import { TYCHO2 } from '../tycho2-source';
 import { SIMBAD_VALUES } from '../simbad/simbad-values-source';
 import { sourceRowRef, type SourceRowRef } from '../../util/sources/row-ref-pure';
@@ -69,13 +70,9 @@ function gaiaRow(overrides: Partial<GaiaAstrometryCatalogRow> = {}): GaiaAstrome
 }
 
 function hip2Row(overrides: Partial<Hip2AstrometryRow> = {}): Hip2AstrometryRow {
-  return {
-    raDeg: 100.001, decDeg: 20.001,
-    plxMas: 50, plxErrorMas: null,
-    pmRaMasyr: 10, pmDeMasyr: -10,
-    ref: sourceRowRef(HIP2, 42),
-    ...overrides,
-  };
+  return hip2AstrometryRow({
+    raDeg: 100.001, decDeg: 20.001, plxMas: 50, pmRaMasyr: 10, pmDeMasyr: -10, ref: sourceRowRef(HIP2, 42), ...overrides,
+  });
 }
 
 const TYC = '3694-2544-1';

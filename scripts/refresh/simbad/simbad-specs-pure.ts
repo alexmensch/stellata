@@ -18,21 +18,27 @@ export const GJ: Namespace = { prefix: 'GJ ', name: 'gj', numeric: false };
 export const GAIA_DR2: Namespace = { prefix: 'Gaia DR2 ', name: 'source_id_dr2', numeric: true };
 export const GAIA_DR1: Namespace = { prefix: 'Gaia DR1 ', name: 'source_id_dr1', numeric: true };
 export const GAIA_RELEASES: readonly Namespace[] = [GAIA_DR3, GAIA_DR2, GAIA_DR1];
+export const HD: Namespace = { prefix: 'HD ', name: 'hd', numeric: true };
+/** One WDS component, `WDS J<wds_id><component>` with no space; SIMBAD holds no id for the bare system. */
+export const WDS: Namespace = { prefix: 'WDS J', name: 'wds', numeric: false };
 
 /** The namespaces a source_id-keyed row falls through to, in this order: the no-Gaia tier's ladder (README.md#the-widening-falls-through-on-resolution-not-on-cell-presence). */
 export const WIDENING_LADDER = [HIP, TYC, GJ] as const;
 export type LadderName = (typeof WIDENING_LADDER)[number]['name'];
 
 export const compose = (ns: Namespace, suffix: string): string => `${ns.prefix}${suffix}`;
+
+/** What SIMBAD matches an id on: README.md#two-invariants-the-adql-depends-on. */
+export const identKey = (id: string): string => id.replace(/\s+/g, '');
 export const likePattern = (ns: Namespace): string => `${ns.prefix}%`;
 
 /** A numeric namespace's id with a component letter after its number (`HIP 55203A`, `HIP 12345 A`): SIMBAD also holds the bare number for the same object. */
-const COMPONENT_SUFFIX = /^\d+ ?[A-Za-z]{1,3}$/;
+const COMPONENT_SUFFIX = /^(\d+) ?([A-Za-z]{1,3})$/;
 
 export type ParsedIdent =
   | { readonly kind: 'other' }
   | { readonly kind: 'suffix'; readonly suffix: string }
-  | { readonly kind: 'component' }
+  | { readonly kind: 'component'; readonly number: string; readonly letter: string }
   | { readonly kind: 'unparsed'; readonly id: string };
 
 /** An `ident` id read under `ns`: its suffix with SIMBAD's space padding stripped (README.md#two-invariants-the-adql-depends-on), an integer one in canonical digits. */
@@ -41,7 +47,8 @@ export function parseIdent(ns: Namespace, id: string): ParsedIdent {
   const suffix = id.slice(ns.prefix.length).trim();
   if (!ns.numeric) return suffix === '' ? { kind: 'unparsed', id } : { kind: 'suffix', suffix };
   if (/^\d+$/.test(suffix)) return { kind: 'suffix', suffix: BigInt(suffix).toString() };
-  return COMPONENT_SUFFIX.test(suffix) ? { kind: 'component' } : { kind: 'unparsed', id };
+  const component = COMPONENT_SUFFIX.exec(suffix);
+  return component === null ? { kind: 'unparsed', id } : { kind: 'component', number: BigInt(component[1]).toString(), letter: component[2] };
 }
 
 /** A basic-table column: what SIMBAD calls it, and what the TSV writes. */

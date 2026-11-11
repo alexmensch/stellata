@@ -32,7 +32,20 @@ export const PHOTOMETRY_VIA = ['athyg_own', 'athyg_system_inherited', 'gaia_phot
 export const A_VIA = ['catalog', 'kepler_mass_estimate', 'none'] as const;
 export const ORBIT_ROLES = ['primary', 'secondary', 'standalone'] as const;
 
+export type ResolveVia = (typeof RESOLVE_VIA)[number];
 export type AstrometryVia = (typeof ASTROMETRY_VIA)[number];
+
+/** Whether a tier anchors on a Gaia source_id: `ccdm_hip` anchors on a HIP
+ *  and reaches the source through it. */
+export const RESOLVE_VIA_ANCHORS_SOURCE_ID: Readonly<Record<ResolveVia, boolean>> = {
+  orb6_hip: true,
+  athyg_gaia_native: true,
+  simbad_xid: true,
+  ccdm_hip: false,
+  position_pm: true,
+  position_nopm: true,
+  unresolved: false,
+};
 export type SpectVia = (typeof SPECT_VIA)[number];
 export type PhotometryVia = (typeof PHOTOMETRY_VIA)[number];
 export type OrbitRole = (typeof ORBIT_ROLES)[number];
@@ -53,7 +66,7 @@ export interface MultiplesRecord {
   name: string;
   source: (typeof MULTIPLES_SOURCES)[number];
   regime: number;
-  resolveVia: (typeof RESOLVE_VIA)[number];
+  resolveVia: ResolveVia;
   astrometryVia: AstrometryVia;
   orbitVia: (typeof ORBIT_VIA)[number];
   spectVia: SpectVia;

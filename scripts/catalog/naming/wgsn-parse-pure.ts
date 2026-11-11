@@ -4,7 +4,7 @@
 
 import type { Declared } from '../../util/sources/source';
 import { applyCellSets, evidenceOf, type CellSet } from '../../util/tsv/cell-corrections-pure';
-import { floatCell, intCell, readTable, textCell } from '../../util/tsv/table-pure';
+import { floatCell, intCell, readTable, splitCsvLine, textCell } from '../../util/tsv/table-pure';
 
 export interface WgsnRow {
   /** NEC serial or WGSN-ID — provenance only, never a key. */
@@ -25,28 +25,6 @@ export interface WgsnRow {
    *  than silently withholding a component key. */
   wds: string | null;
   source: 'nec' | 'faints';
-}
-
-/** One CSV record: handles quoted cells with doubled-quote escapes. The
- *  files carry no embedded newlines, so line-splitting first is safe. */
-export function splitCsvLine(line: string): string[] {
-  const out: string[] = [];
-  let cell = '';
-  let quoted = false;
-  for (let i = 0; i < line.length; i++) {
-    const ch = line[i];
-    if (quoted) {
-      if (ch === '"') {
-        if (line[i + 1] === '"') { cell += '"'; i++; } else quoted = false;
-      } else cell += ch;
-    } else if (ch === '"') {
-      quoted = true;
-    } else if (ch === ',') {
-      out.push(cell); cell = '';
-    } else cell += ch;
-  }
-  out.push(cell);
-  return out;
 }
 
 const NULL_SPELLINGS = new Set(['', '_', '~', '-', 'null']);

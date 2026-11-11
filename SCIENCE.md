@@ -263,9 +263,10 @@ enough to see it.
   reliably stores Gaia DR3 source_ids per WDS component for the
   well-known multi-component systems (η Cas A/B/C, ξ UMa A/B,
   ζ Cnc A/B/C, α Cen A/B/Proxima).
-  Refresh: `scripts/refresh/refresh-simbad-wds-xids.py` runs a
-  two-phase TAP pull (WDS identifiers → SIMBAD oids, then oids →
-  cross-IDs) and commits `data/simbad/simbad_wds_xids.tsv` (~23k
+  Refresh: `refresh:simbad-wds-xids` (`scripts/refresh/simbad-wds-xids/`)
+  runs a TAP pull (WDS identifiers → SIMBAD oids, an HD / CCDM / HIP alias
+  cascade and curated overrides for the misses, then oids → cross-IDs) and
+  commits `data/simbad/simbad_wds_xids.tsv` (~23k
   components, ~1.2 MB,
   regular git). Public access policy: SIMBAD is open via CDS's TAP
   service at `simbad.cds.unistra.fr/simbad/sim-tap`; cite

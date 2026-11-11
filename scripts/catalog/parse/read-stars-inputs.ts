@@ -6,7 +6,7 @@ import type { DustGrid } from '../distance/dust/dust-deextinction-pure';
 import { DUST_GRID } from '../distance/dust/dust-grid-source';
 import { BAILER_JONES } from '../distance/refinement/bailer-jones-source';
 import { GAIA_ASTROMETRY } from '../sources/gaia-astrometry-source';
-import { GAIA_NSS } from '../sources/gaia-nss-source';
+import { GAIA_NSS, parseNssIndex } from '../sources/gaia-nss-source';
 import { HIP2 } from '../sources/hip2-source';
 import { GAIA_APSIS } from '../record/gaia-apsis-source';
 import { SIMBAD_SPTYPE } from '../spectral/simbad-sptype-source';
@@ -99,7 +99,7 @@ export async function loadReadStarsInputs(): Promise<ReadStarsInputs> {
     ),
     hip2: timed('Parsing HIP2 van Leeuwen astrometry', () => HIP2.read().astrometry, entries),
     nss: timed(
-      'Parsing Gaia DR3 NSS two-body source_ids', () => GAIA_NSS.read(), (s) => `${s.size} source_ids`,
+      'Parsing Gaia DR3 NSS two-body source_ids', () => parseNssIndex(GAIA_NSS.read(), GAIA_NSS), (s) => `${s.size} source_ids`,
     ),
     tycho2: timed('Parsing Tycho-2 astrometry and BT/VT photometry', () => TYCHO2.read(), entries),
     cns5: timed('Parsing CNS5 astrometry', () => cns5AstrometryByGj(CNS5.read()), entries),

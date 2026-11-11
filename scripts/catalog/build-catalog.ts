@@ -67,6 +67,7 @@ import { renderBoundaryArtifact } from './boundaries/build-boundaries-artifact';
 import {
   applyDoublesFlag,
   collectPhysicalPairKeys,
+  parseHipCcdm,
 } from './multiplicity/visual-doubles';
 import {
   promoteCompanions,
@@ -892,7 +893,7 @@ export async function main() {
   // sources without double-flagging components of the same system.
   console.log('Parsing Hipparcos CCDM double-star cross-reference...');
   const tCcdm = Date.now();
-  const ccdmGroups = HIP_CCDM.read();
+  const ccdmGroups = parseHipCcdm(HIP_CCDM.read());
   const { systems, flagged, suppressed } = applyDoublesFlag(
     stars,
     ccdmGroups,

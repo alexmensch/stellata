@@ -43,6 +43,28 @@ into per-stage subfolders.
 scripts/binaries/
   build-binaries.py               Orchestration shell for Stages 1-7 →
                                   data/binaries/multiples.tsv.
+  build-binaries.ts (+ test)      The TypeScript shell, wiring only:
+                                  runStages calls each ported stage in
+                                  order. Called only from its test until
+                                  the switch; the test runs it over the
+                                  committed inputs and holds each ported
+                                  stage's keys to the committed count
+                                  snapshot, and its rates to the rates
+                                  snapshot's committed values.
+  load/                           Stage 1 in TypeScript: every reference
+                                  catalogue read through its declaration,
+                                  then the Stage 1 passes, as a frozen
+                                  ReferenceCatalogs. Own README.
+  resolve/                        Stage 2 in TypeScript: the cascade, the
+                                  identity propagations and the binding
+                                  audit, as frozen DecomposedPairs; the
+                                  spot-check's port. Own README.
+  astrometry/                     Stage 3 in TypeScript: each component's
+                                  astrometry route, keyed by its
+                                  DecomposedPair. Own README.
+  orbits/                         Stage 4's orbit knowledge in TypeScript:
+                                  the NSS two-body conversion and its
+                                  detectability regime, so far. Own README.
   parsers.py                      Row dataclasses + parse functions for every
                                   reference catalogue (Stage 1).
   indices.py                      IdentifierIndices builder (HIP/Tyc → Gaia,
@@ -76,7 +98,10 @@ scripts/binaries/
                                   binaries + SIMBAD standalone augmentation.
   multiples-tsv.ts (+ test)       MULTIPLES_TSV: the TypeScript codec for
                                   multiples.tsv — column roster, closed
-                                  value sets, per-column decimal places,
+                                  value sets and the properties a set's
+                                  members carry (which resolve tiers
+                                  anchor on a Gaia source_id), per-column
+                                  decimal places,
                                   P and a positive and 0 ≤ e < 1 — and
                                   the only parse of the file on the TS
                                   side. Its test round-trips the committed
@@ -96,7 +121,35 @@ scripts/binaries/
                                   and relatedHier / compoundContains — the
                                   test planRecords uses to tell one link
                                   named twice from two stars collapsed onto
-                                  one record.
+                                  one record. Also pairComponentTokens (a
+                                  `components` field split by ../wds/'s
+                                  splitComponents, its secondary
+                                  re-anchored), childComponentTokens,
+                                  tokenLetters and subcomponentTopLetter
+                                  (the root letter, where
+                                  parentComponentToken is the immediate
+                                  parent). And the map keys, one branded
+                                  type per key space so one cannot look up
+                                  another's map: componentKey
+                                  (wds_id, token), discovererKey
+                                  (wds_id, discoverer), pairRowKey
+                                  (wds_id, components field).
+  sky-geometry-pure.ts (+ test)   The geometry the stages share, in the
+                                  Python stages' own arithmetic:
+                                  propagatePosition (linear in RA/Dec
+                                  degrees, cos δ floored at 1e-3),
+                                  tangentOffset, distancePc (1000 /
+                                  parallax), chordSq / positionsWithin
+                                  (a tolerance test without trig),
+                                  predictSecondaryPosition (a WDS ρ, θ
+                                  offset), and the AT-HYG / WDS
+                                  reference epochs. Not the catalogue's
+                                  tangent-basis propagation
+                                  (../catalog/distance/direction-cascade.ts):
+                                  the switch proves byte identity first.
+  build-log-pure.ts               count and countsListed: how a build-log
+                                  line prints a number and a tally, for
+                                  every TS stage's report.
   multiples-row-key-pure.ts       MULTIPLES_ROW_KEY, that rowKey, for code
                                   that cites a row without reading the file
                                   (promotion's origin keys), so it never
@@ -145,6 +198,9 @@ scripts/binaries/
                                   data/binaries/spot_check_ground_truth.tsv.
                                   Its own CI check; also run locally before
                                   merging any Stage 2-7 change (~20 s).
+                                  build-binaries.test.ts runs the same
+                                  check over the TS Stages 1-2
+                                  (resolve/README.md#the-spot-check).
   probe-blank-components-tail.py  Read-only instrumentation for the blank→AB
                                   ingest decision. Touches nothing.
   <module>.test.py                stdlib unittest pins co-located per source
@@ -259,9 +315,6 @@ subprocess in the other language is invisible to both
 ([The step table](/scripts/pipeline/step-table/README.md#the-step-table--stepsts)), so a
 half-TS, half-Python step would miss inputs. Until the switch lands, a
 behaviour change to this step waits for it and is written once, in TS.
-The switch also waits for the package's one other importer,
-`scripts/refresh/refresh-simbad-wds-xids.py` (`parsers`,
-`stage2_resolve`), to port first.
 
 
 ## Stage 2 — WDS component → Gaia DR3 source_id
