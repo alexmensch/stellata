@@ -234,6 +234,18 @@ function borrowReason(
   return null;
 }
 
+const LOWEST_IDENTIFIER_RANK = Math.max(
+  ...NAME_TIERS.filter((tier) => !SKY_DESIGNATION_TIERS.has(tier)).map((tier) => TIER_RANK.get(tier) ?? 0),
+);
+
+/** The tiers an anchor can lend a component under each borrowing rule: an
+ *  outranked identifier needs an anchor tier strictly above the record's own. */
+export const BORROWABLE_TIERS: Readonly<Record<BorrowReason, readonly NameTier[]>> = {
+  'no-own-designation': NAME_TIERS,
+  'system-designation': NAME_TIERS,
+  'outranked-identifier': NAME_TIERS.filter((tier) => (TIER_RANK.get(tier) ?? 0) < LOWEST_IDENTIFIER_RANK),
+};
+
 /** The letter turns on OWNERSHIP, not on label uniqueness: a sibling that
  *  owns the designation and then borrows a higher tier still displays a
  *  lettered form of it, so δ Cep A reads as such beside δ Cep C/D/E rather

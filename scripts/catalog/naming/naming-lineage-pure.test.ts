@@ -7,7 +7,6 @@ import { invariantViolations } from '../lineage/lineage-invariant-pure';
 import {
   NAMING_CODES, namingLabels, namingLineageLines, namingLineageRows, NAMING_INVARIANTS, namingSummary, type NamingLineageRecord,
 } from './naming-lineage-pure';
-import { NAME_TIERS } from '../../../src/catalog-format/naming/star-naming-pure';
 
 const CONS = [{ code: 'Dra' }, { code: 'Her' }];
 const DRA = 0;
@@ -76,11 +75,13 @@ describe('namingLineageRows', () => {
 });
 
 describe('the name row codes', () => {
-  it('carry the label\'s tier, one live code per tier for an own label and per borrowing rule and tier for a borrowed one', () => {
+  it('carry the label\'s tier, one live code per tier an own label or each borrowing rule can display', () => {
     const nameCodes = NAMING_CODES.live.filter((c) => /^naming\.name\.(own|borrowed)\./.test(c));
-    expect(nameCodes).toHaveLength(NAME_TIERS.length * 4);
+    expect(nameCodes).toHaveLength(35);
     expect(nameCodes).toContain('naming.name.own.bayer-latin');
     expect(nameCodes).toContain('naming.name.borrowed.system-designation.catalogue');
+    expect(nameCodes).toContain('naming.name.borrowed.outranked-identifier.gcvs');
+    expect(nameCodes).not.toContain('naming.name.borrowed.outranked-identifier.catalogue');
     expect(NAMING_CODES.live).not.toContain('naming.name.own');
     expect(NAMING_CODES.live).not.toContain('naming.name.borrowed.no-own-designation');
   });

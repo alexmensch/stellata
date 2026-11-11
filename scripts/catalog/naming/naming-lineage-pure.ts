@@ -9,6 +9,7 @@ import type { DisplayNameCounts, NamedRecord } from './display-names';
 import {
   designationAtTier,
   isApprovedName,
+  BORROWABLE_TIERS,
   NAME_TIERS,
   type BorrowReason,
   type DesignationSet,
@@ -46,11 +47,11 @@ const BORROWED: Record<BorrowReason, string> = {
 };
 const BORROW_REASONS = Object.keys(BORROWED) as BorrowReason[];
 
-/** One live code per ladder tier under `prefix`, the label's tier named in each description. */
+/** One live code per tier under `prefix`, the label's tier named in each description. */
 function perTier<P extends string>(
-  prefix: P, description: string, whose: string,
+  prefix: P, description: string, whose: string, tiers: readonly NameTier[] = NAME_TIERS,
 ): Record<`${P}.${TierCode}`, CodeDeclaration<typeof LIVE>> {
-  return Object.fromEntries(NAME_TIERS.map((tier) => [
+  return Object.fromEntries(tiers.map((tier) => [
     `${prefix}.${TIER_CODES[tier]}`, outcomeCode(`${description}: ${whose} ${TIER_DESIGNATIONS[tier]}.`),
   ])) as Record<`${P}.${TierCode}`, CodeDeclaration<typeof LIVE>>;
 }
@@ -59,11 +60,11 @@ export const NAMING_CODES = stageCodes(NAMING_LINEAGE.stage, {
   'name.own': outcomeCode(`${OWN}.`, 'none', RETIRED_7_1_17),
   ...perTier('name.own', OWN, 'its'),
   'name.borrowed.no-own-designation': outcomeCode(`${BORROWED['no-own-designation']}.`, 'none', RETIRED_7_1_17),
-  ...perTier('name.borrowed.no-own-designation', BORROWED['no-own-designation'], 'the anchor\'s'),
+  ...perTier('name.borrowed.no-own-designation', BORROWED['no-own-designation'], 'the anchor\'s', BORROWABLE_TIERS['no-own-designation']),
   'name.borrowed.system-designation': outcomeCode(`${BORROWED['system-designation']}.`, 'none', RETIRED_7_1_17),
-  ...perTier('name.borrowed.system-designation', BORROWED['system-designation'], 'the anchor\'s'),
+  ...perTier('name.borrowed.system-designation', BORROWED['system-designation'], 'the anchor\'s', BORROWABLE_TIERS['system-designation']),
   'name.borrowed.outranked-identifier': outcomeCode(`${BORROWED['outranked-identifier']}.`, 'none', RETIRED_7_1_17),
-  ...perTier('name.borrowed.outranked-identifier', BORROWED['outranked-identifier'], 'the anchor\'s'),
+  ...perTier('name.borrowed.outranked-identifier', BORROWED['outranked-identifier'], 'the anchor\'s', BORROWABLE_TIERS['outranked-identifier']),
   'name.unlabelled': outcomeCode('The record carries nothing the ladder renders and has no anchor to borrow from, so the runtime displays its Gaia DR3 or SID fallback.'),
   'name.lower-tier': refusalCode('A designation the record carries, refused because a higher tier of the ladder supplied its label.'),
   'name.borrowed-over': refusalCode('A designation the record carries, refused because it displays its system anchor\'s base instead.'),
@@ -188,8 +189,8 @@ export type NamingCodeCounts = Readonly<Record<LiveCode, number>>;
 const nameCode = (branch: `name.own.${TierCode}` | `name.borrowed.${BorrowReason}.${TierCode}`): LiveCode =>
   NAMING_CODES.code(branch) as LiveCode;
 const OWN_CODES: readonly LiveCode[] = NAME_TIERS.map((tier) => nameCode(`name.own.${TIER_CODES[tier]}`));
-const BORROWED_CODES: readonly LiveCode[] = NAME_TIERS.flatMap((tier) => (
-  BORROW_REASONS.map((reason) => nameCode(`name.borrowed.${reason}.${TIER_CODES[tier]}`))
+const BORROWED_CODES: readonly LiveCode[] = BORROW_REASONS.flatMap((reason) => (
+  BORROWABLE_TIERS[reason].map((tier) => nameCode(`name.borrowed.${reason}.${TIER_CODES[tier]}`))
 ));
 const LABELLED_CODES: ReadonlySet<string> = new Set([...OWN_CODES, ...BORROWED_CODES]);
 const NAME_TABLE_CODES: readonly LiveCode[] = NAME_TIERS.filter(isApprovedName).flatMap((tier) => [
