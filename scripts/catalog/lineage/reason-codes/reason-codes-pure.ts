@@ -23,9 +23,9 @@ export interface CodeDeclaration<St extends CodeStatus = CodeStatus> {
   readonly status: St;
 }
 
-export function outcomeCode<St extends CodeStatus = typeof LIVE>(
-  description: string, effect: CodeEffect = 'none', status: St = LIVE as St,
-): CodeDeclaration<St> {
+export function outcomeCode(description: string, effect?: CodeEffect): CodeDeclaration<typeof LIVE>;
+export function outcomeCode<St extends CodeStatus>(description: string, effect: CodeEffect, status: St): CodeDeclaration<St>;
+export function outcomeCode(description: string, effect: CodeEffect = 'none', status: CodeStatus = LIVE): CodeDeclaration {
   return { description, effect, role: 'outcome', status };
 }
 
