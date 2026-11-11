@@ -772,7 +772,7 @@ export async function main() {
     ...binaries, ...ccdm, ...eclipsing, ...renderableWings,
     ...componentCount, ...statuses.counts,
   };
-  console.log(multiplicitySummary(multiplicity));
+  console.log(`  ${multiplicitySummary(multiplicity)}`);
 
   const registry = loadRegistry();
   const sidObjects = catalogSidObjects(stars);

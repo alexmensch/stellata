@@ -66,7 +66,7 @@ export function multiplicityStatuses(
 }
 
 export function multiplicitySummary(c: MultiplicityCounts): string {
-  return `  multiplicity: ${c.binaryPairs} companion assignments, ${c.binaryMutualPairs} mutual pairs; `
+  return `multiplicity: ${c.binaryPairs} companion assignments, ${c.binaryMutualPairs} mutual pairs; `
     + `CCDM ${c.ccdmGroups} systems → ${c.ccdmResolved} resolved in catalog, ${c.ccdmFlagged} new primaries flagged, `
     + `${c.ccdmSuppressedOptical} suppressed as optical doubles; wings on ${c.eclipsingWinged} eclipsing binaries `
     + `and ${c.renderableCompanionWinged} renderable-companion primaries; ${c.componentDesignations} component designations; `

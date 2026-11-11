@@ -22,7 +22,7 @@ describe('multiplicitySummary', () => {
       eclipsingWinged: 7, renderableCompanionWinged: 8, componentDesignations: 9, multiplicityResolved: 10,
       multiplicityUnresolved: 11,
     })).toBe(
-      '  multiplicity: 1 companion assignments, 2 mutual pairs; CCDM 3 systems → 4 resolved in catalog, '
+      'multiplicity: 1 companion assignments, 2 mutual pairs; CCDM 3 systems → 4 resolved in catalog, '
         + '5 new primaries flagged, 6 suppressed as optical doubles; wings on 7 eclipsing binaries and '
         + "8 renderable-companion primaries; 9 component designations; 10 resolved, 11 unresolved (SIMBAD '**', nothing resolved)",
     );
