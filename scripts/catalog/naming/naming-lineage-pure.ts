@@ -190,7 +190,7 @@ export type NamingCodeCounts = Readonly<Record<LiveCode, number>>;
 export type NamingCounts = NamingCodeCounts & StarNamingCounts;
 
 const nameCode = (branch: `name.own.${TierCode}` | `name.borrowed.${BorrowReason}.${TierCode}`): LiveCode =>
-  NAMING_CODES.code(branch) as LiveCode;
+  NAMING_CODES.liveCode(branch);
 const OWN_CODES: readonly LiveCode[] = NAME_TIERS.map((tier) => nameCode(`name.own.${TIER_CODES[tier]}`));
 const BORROWED_CODES: readonly LiveCode[] = BORROW_REASONS.flatMap((reason) => (
   BORROWABLE_TIERS[reason].map((tier) => nameCode(`name.borrowed.${reason}.${TIER_CODES[tier]}`))

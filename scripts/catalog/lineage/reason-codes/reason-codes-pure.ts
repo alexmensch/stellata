@@ -52,6 +52,8 @@ export interface StageCodes<B extends string, S extends string = string, L exten
   /** The live codes, in declaration order: the keys a stage's count block carries. */
   readonly live: readonly StageCode<S, L>[];
   code(branch: B): StageCode<S, B>;
+  /** A live branch's code, typed as a key of the stage's count block; throws for a branch not declared live. */
+  liveCode(branch: L): StageCode<S, L>;
   has(code: string): boolean;
   /** The declared role of one of the stage's codes; throws for any other code. */
   roleOf(code: string): LineageRole;
@@ -79,6 +81,7 @@ export function stageCodes<D extends Record<string, CodeDeclaration>, S extends 
   const live = [...full]
     .filter(([branch]) => declarations[branch].status.kind === 'live')
     .map(([, code]) => code as StageCode<S, LiveBranch<D>>);
+  const liveSet = new Set<string>(live);
   return {
     stage,
     declarations,
@@ -88,6 +91,11 @@ export function stageCodes<D extends Record<string, CodeDeclaration>, S extends 
       const code = full.get(branch);
       if (code === undefined) throw new Error(`${stage}: "${branch}" is not a declared code branch`);
       return code;
+    },
+    liveCode: (branch) => {
+      const code = full.get(branch);
+      if (code === undefined || !liveSet.has(code)) throw new Error(`${stage}: "${branch}" is not a live code branch`);
+      return code as StageCode<S, LiveBranch<D>>;
     },
     has: (code) => known.has(code),
     roleOf: (code) => {
