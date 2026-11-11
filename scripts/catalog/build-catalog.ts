@@ -301,11 +301,6 @@ export async function main() {
   sweepStaged(CATALOG_OUTPUTS);
   const inputHashesAtStart = stepInputHashes();
 
-  // Accumulator for the headline counts asserted against
-  // scripts/catalog/build-catalog-expected.json at the end of the
-  // build. Every field has a default so a code path that legitimately
-  // skips a section (missing GCVS files) doesn't leave the
-  // field undefined.
   const counts: FiledCounts = {
     namingIauNamed: 0,
     namingIauNamedByProper: 0,
