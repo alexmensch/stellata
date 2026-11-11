@@ -43,7 +43,7 @@ rewrite-doc-figures.ts     pnpm run docs:figures. Rewrites stale figures in
 ## The marker
 
 ```
-<!-- count:<stem>/<json.path>[ sigN|kN] -->FIGURE<!-- /count -->
+<!-- count:<stem>/<json.path>[ sigN|kN|dN] -->FIGURE<!-- /count -->
 the manifest holds <!-- count:membership-manifest/rows -->975,573<!-- /count --> rows
 ```
 
@@ -55,7 +55,9 @@ the manifest holds <!-- count:membership-manifest/rows -->975,573<!-- /count -->
 - **Format** — optional, after the key: none quotes the exact value with
   thousands separators; `sigN` rounds to N significant figures (`sig2`:
   2,635 → 2,600); `kN` rounds thousands to N significant figures and
-  appends `k` (`k3`: 16,414 → 16.4k). Words around a rounded figure —
+  appends `k` (`k3`: 16,414 → 16.4k); `dN` fixes N decimal places, trailing
+  zeros and sign kept (`d3`: 0.38995 → 0.390, `d2`: −1.0671 → -1.07), for a
+  measured magnitude rather than a count. Words around a rounded figure —
   "about", "~" — sit outside the marker.
 - **One line** — the figure never wraps, and markers never nest.
 
