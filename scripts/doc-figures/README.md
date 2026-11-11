@@ -1,8 +1,10 @@
-# Doc figures — counts quoted in docs, generated from the snapshots
+# Doc figures — counts and measured figures quoted in docs, generated from the snapshots
 
 A count a build pins in a committed `*-expected.json` snapshot has one owner:
-that file. A doc that quotes the count wraps it in a marker, and
-`pnpm run docs:figures` rewrites every marked figure from the snapshots.
+that file — and so does a figure a test measures and pins through
+[`figurePins`](#measured-figures--a-tests-pins-as-a-snapshot). A doc that
+quotes either wraps it in a marker, and `pnpm run docs:figures` rewrites
+every marked figure from the snapshots.
 `tests/doc-figures.test.ts` fails when a marker names a value no snapshot has,
 or when a marked figure disagrees with its snapshot.
 
@@ -35,6 +37,11 @@ doc-figures.test.ts        Both listings over a throwaway repo.
 check-staged-figures.ts    The commit-time copy check (below): prints each
                            unmarked snapshot copy on a staged added line and
                            exits 1. Run by commit-sweep-guard.sh.
+figure-pins.ts             figurePins: a test's measured figures asserted
+                           against its snapshot, or recorded and written
+                           under UPDATE_SNAPSHOTS=1 (below).
+figure-pins.test.ts        Tolerance, malformed snapshot, missing key,
+                           double pin, unpinned keys, update-mode write.
 rewrite-doc-figures.ts     pnpm run docs:figures. Rewrites stale figures in
                            place; a file with a problem is left unwritten and
                            the run exits 1.
@@ -43,19 +50,23 @@ rewrite-doc-figures.ts     pnpm run docs:figures. Rewrites stale figures in
 ## The marker
 
 ```
-<!-- count:<stem>/<json.path>[ sigN|kN] -->FIGURE<!-- /count -->
+<!-- count:<stem>/<json.path>[ sigN|kN|dN] -->FIGURE<!-- /count -->
 the manifest holds <!-- count:membership-manifest/rows -->975,573<!-- /count --> rows
 ```
 
 - **Key** — the snapshot's stem (`membership-manifest` for
   `scripts/catalog/membership/membership-manifest-expected.json`), a `/`,
   then the JSON path, dot-separated
-  (`membership-manifest/additionsByReason.admitted:hd_omitted`). The value
-  must be a number.
+  (`membership-manifest/additionsByReason.admitted:hd_omitted`). A key that
+  itself holds dots, a reason code, is one step of the path: each step takes
+  the longest run of segments that is a key there
+  (`build-catalog/brightness-colour.v.gliese`). The value must be a number.
 - **Format** — optional, after the key: none quotes the exact value with
   thousands separators; `sigN` rounds to N significant figures (`sig2`:
   2,635 → 2,600); `kN` rounds thousands to N significant figures and
-  appends `k` (`k3`: 16,414 → 16.4k). Words around a rounded figure —
+  appends `k` (`k3`: 16,414 → 16.4k); `dN` fixes N decimal places, trailing
+  zeros and sign kept, the sign a typographic minus (`d3`: 0.38995 → 0.390,
+  `d2`: −1.0671 → −1.07), for a measured magnitude rather than a count. Words around a rounded figure —
   "about", "~" — sit outside the marker.
 - **One line** — the figure never wraps, and markers never nest.
 
@@ -90,6 +101,29 @@ else). An entry that no longer matches fails too, so the list only shrinks.
 
 Past a million records `k2` renders "1,000k"; that surfaces in the rewrite's
 output, and is the point to add a millions format.
+
+## Measured figures — a test's pins as a snapshot
+
+A figure a test computes from the shipped model (a sightline's surface
+brightness, a calibration check's disagreement) moves whenever an input it
+reads is re-measured. Written as a literal in both the test and the doc, it
+has two owners and the doc copy goes stale silently. `figurePins(path)`
+makes the snapshot the one owner:
+
+- `pin(key, actual)` throws unless `actual` matches the snapshot's value to
+  `FIGURE_PIN_RELATIVE_TOLERANCE` (1e-9 relative), far inside any digit a
+  marker quotes, so no re-measure can move a quoted figure and pass; a key the
+  snapshot lacks fails, naming the refresh. Rounding lives only in the
+  marker's format.
+- Under `UPDATE_SNAPSHOTS=1` it records instead, and `write()` (the suite's
+  `afterAll`) rewrites the snapshot, keys sorted, full precision.
+- The suite ends with a case asserting `unpinned()` is empty, so a pin
+  removed from the test cannot leave its figure behind for a doc to quote.
+
+After a re-measure fails the suite: `UPDATE_SNAPSHOTS=1 pnpm vitest run
+<the test>`, then `pnpm run docs:figures`, and read every sentence whose
+figure moved. One snapshot per test file, beside it:
+`/tests/integration/milkyway-sightlines-expected.json` is the instance.
 
 ## What gets a marker
 

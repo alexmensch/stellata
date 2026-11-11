@@ -842,6 +842,8 @@ export const FLAGS = {
 } as const;
 export const FLAG_HAS_NAME = FLAGS.hasName;
 export const FLAG_IS_SOL = FLAGS.isSol;
+/** The record the FLAG_IS_SOL record sorts to (README.md#record-order). */
+export const SOL_RECORD_INDEX = 0;
 export const FLAG_HAS_BAYER = FLAGS.hasBayer;
 export const FLAG_BINARY_COMPANION_ONLY = FLAGS.binaryCompanionOnly;
 export const FLAG_BINARY_PRIMARY = FLAGS.binaryPrimary;

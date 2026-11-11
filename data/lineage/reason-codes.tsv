@@ -1,201 +1,223 @@
-code	stage	effect	status	retired_in	first_version	description
-allocation-clouds.minted	allocation-clouds	none	live		7.1.11	The object's same-as class reaches no ledger row, so it takes the next SID under its canonical key.
-allocation-clouds.reinstated	allocation-clouds	none	live		7.1.11	The object's same-as class reaches only one retired SID, which returns to service.
-allocation-clouds.resolved	allocation-clouds	none	live		7.1.11	The object's same-as class reaches one SID in service, which it keeps.
-allocation-local-group.minted	allocation-local-group	none	live		7.1.11	The object's same-as class reaches no ledger row, so it takes the next SID under its canonical key.
-allocation-local-group.reinstated	allocation-local-group	none	live		7.1.11	The object's same-as class reaches only one retired SID, which returns to service.
-allocation-local-group.resolved	allocation-local-group	none	live		7.1.11	The object's same-as class reaches one SID in service, which it keeps.
-allocation.legacy.addition-admitted-twice	allocation	merge	historical		7.1.8	one star admitted twice: an I/239 HIP or CNS5 row with no HD link was a record of its own beside the Tycho-2 star SIMBAD holds under the same Gaia source; the additions group on the derived source, so the two are one record and the sid merges into the canonical-key sid; old refs follow the successor
-allocation.legacy.anchor-offset-unreached	allocation	retire	historical		7.1.8	companion no longer promoted: Stage 6 now anchors its WDS root on Aa (the anchor promotion resolves), no measured edge reaches it from Aa, so its anchor offset is blank and promotion drops it; reinstate when the Aa-to-A offset link restores it
-allocation.legacy.anchor-parked-no-parallax	allocation	retire	historical		7.1.8	A component that stops promoting because its anchor primary reaches no owned parallax and parks out of the catalogue: a presence event, filed as a retirement.
-allocation.legacy.anchor-parked-refused-parallax	allocation	retire	historical		7.1.8	A component that stops promoting because its anchor primary now reaches a SIMBAD parallax the cascade refuses as indefensible and parks: a presence event, filed as a retirement.
-allocation.legacy.astrometry-request-restored	allocation	none	historical		7.1.8	A component that promotes again once its blend-mate's Gaia source is in the binaries astrometry request, so its pair emits on gaia_5p.
-allocation.legacy.beyond-tidal-limit	allocation	retire	historical		7.1.8	A component whose projected separation exceeds the 1 pc tidal limit once system distance coherence re-anchored its cluster: a line-of-sight member, not a bound companion.
-allocation.legacy.claims-gate-no-brightness	allocation	retire	historical		7.1.8	dissolved: inner-pair member's inherited photometry came from a sibling-claimed identity; the Stage-2 sibling-identity claims gate unbound it and the record has no honest brightness source
-allocation.legacy.claims-gate-no-position	allocation	retire	historical		7.1.8	dissolved: the Stage-2 sibling-identity claims gate stripped the letter's stolen identity and no honest position source remains (no own astrometry, no anchor-offset chain)
-allocation.legacy.claims-gate-pair-reclassified	allocation	retire	historical		7.1.8	dissolved: component no longer emitted after the Stage-2 sibling-identity claims gate + system-PM CPM verdicts re-classified its pair
-allocation.legacy.claims-gate-restored	allocation	none	historical		7.1.8	component promotes again: the Stage-2 sibling-identity claims gate + id-less pair-row-primary promotion restored the honest record the earlier gates had dropped
-allocation.legacy.claims-gate-synth-twin	allocation	merge	historical		7.1.8	merged: synth twin and its first-class record are one star — the Stage-2 sibling-identity claims gate freed the member's own id (bridge in sameas-overrides.tsv)
-allocation.legacy.component-dissolved	allocation	retire	historical		7.1.8	A component the July 2026 re-pulls and promotion gates stopped emitting or promoting (re-paired, subsumed into an unpromoted aggregate, or its system no longer emitted), leaving no successor key.
-allocation.legacy.component-parked	allocation	retire	historical		7.1.8	A component whose record left the build while SIMBAD xids still name its own Gaia source: a presence gap filed as a retirement.
-allocation.legacy.derived-binding-twin	allocation	merge	historical		7.1.8	A Gaia-keyed row AT-HYG carried beside the HIP record it belongs to, merged when the manifest began deriving its Gaia binding.
-allocation.legacy.escape-gate-orbital-pm	allocation	none	historical		7.1.8	A component that reappears once the Stage 5 escape-velocity gate budgets for the host primary's orbital proper motion.
-allocation.legacy.escape-velocity-optical	allocation	retire	historical		7.1.8	A pair the Stage 5 escape-velocity gate reclassified optical once MSC per-component types replaced the default masses.
-allocation.legacy.fold-twin	allocation	merge	historical		7.1.8	A Gaia-keyed twin of a HIP record that held the very source the derivation would give that record, merged by a spine-corrections fold.
-allocation.legacy.label-merge-twin	allocation	merge	historical		7.1.8	An HD row the primaries admitted beside the HIP record it names, merged when the label merge keyed on the derived binding put its designation back on that record.
-allocation.legacy.magnitude-floor-no-identifier	allocation	retire	historical		7.1.8	A component that stops promoting at the V <= 11 magnitude floor: its pair row carries no identifier of its own and the build mints no record for it.
-allocation.legacy.magnitude-floor-own-record	allocation	merge	historical		7.1.8	A component that stops promoting at the V <= 11 magnitude floor because its own DR3 source is an ordinary record, which the pair row resolves onto.
-allocation.legacy.magnitude-term-anchor	allocation	none	historical		7.1.8	A component that promotes again at the V <= 11 magnitude floor because its pair anchor is a magnitude-term record.
-allocation.legacy.minted-twin-of-anchor	allocation	merge	historical		7.1.8	A promoted companion minted as a second copy of its own anchor, because its pair row carries the anchor's identifiers on both ends.
-allocation.legacy.optical-cpm-test	allocation	retire	historical		7.1.8	optical companion rejected by the Stage 5 WDS epoch-baseline CPM test (background star, not a physical companion)
-allocation.legacy.photocentre-link-restored	allocation	none	historical		7.1.8	A component that promotes again once Stage 6 links its Aa anchor to A at the Aa+Ab photocentre, so the A-branch offset reaches it.
-allocation.legacy.photocentre-link-twin	allocation	merge	historical		7.1.8	A synthetic component minted off its own record because its anchor cursor fell back onto that record; the Aa-to-A photocentre link resolves it onto the record.
-allocation.legacy.promoted-companion-twin	allocation	merge	historical		7.1.8	promoted-companion twin of a named record: the named record now binds the component’s own Gaia source, so the synthetic promotion is the same star and its sid merges into the named record’s; old refs follow the successor
-allocation.legacy.refused-parallax-by-measurement	allocation	none	historical		7.1.8	A component that promotes again once the refused-parallax refusal matches on the measurement rather than on the id.
-allocation.legacy.sibling-letter-twin	allocation	merge	historical		7.1.8	A Gaia-keyed twin of a HIP record, split off it by a sibling-letter crosswalk error in AT-HYG; the sibling-letter gate scrubbed the cell and the two rows are one star.
-allocation.legacy.synth-duplicate-of-named-star	allocation	merge	historical		7.1.8	A synthetic component a curated identification (ORB6 or a SIMBAD xid) names as a first-class catalogue star, bridged in sameas-overrides.tsv.
-allocation.legacy.unnamed-gaia-twin	allocation	merge	historical		7.1.8	unnamed Gaia-only twin of a named record: the V <= 11 magnitude term re-admitted a source the named record failed to bind (an addition with no SIMBAD route, or a component the sibling gate refused on a shared HIP); the named record now binds that source, so the sid merges into the named record’s and old refs follow the successor
-allocation.legacy.xid-loss-twin	allocation	merge	historical		7.1.8	A synthetic component minted after its pair rows lost their SIMBAD id, while the same star had already shipped on its own Gaia source; a same-as edge joins them and the gaia_dr3 key outranks synth on the canonical-key ladder.
-allocation.merged	allocation	merge	live		7.1.8	A SID no object keeps any more merges into the SID of the record its upstream decision names.
-allocation.merged.same-class	allocation	merge	live		7.1.15	One record now carries the keys of two SIDs in service and no stage decided the merge, so the same-as class is the decision: the SID that loses the canonical-key ladder merges into the one that wins.
-allocation.mint.cloud	allocation	none	live		7.1.8	The object is a cloud clouds.json carries.
-allocation.mint.local-group	allocation	none	live		7.1.8	The object is a galaxy local-group.json carries.
-allocation.mint.shell-list	allocation	none	live		7.1.8	The object is a row of data/sid/shell-objects.tsv.
-allocation.mint.sol-list	allocation	none	live		7.1.8	The object is a row of data/sid/sol-objects.tsv.
-allocation.minted	allocation	none	live		7.1.8	The object's same-as class reaches no ledger row, so it takes the next SID under its canonical key.
-allocation.parked	allocation	park	live		7.1.8	A SID no object keeps any more stays in service, absent from this build, under its upstream decision's code.
-allocation.reinstated	allocation	none	live		7.1.8	The object's same-as class reaches only one retired SID, which returns to service.
-allocation.resolved	allocation	none	live		7.1.8	The object's same-as class reaches one SID in service, which it keeps.
-allocation.retired	allocation	retire	live		7.1.8	A SID no object keeps any more leaves service under its upstream decision's code.
-brightness-colour.ci.gaia-relation	brightness-colour	none	live		7.1.15	B−V as the difference of the Gaia DR3 Table 5.9 G−V and G−B relations on the record's own photometry.
-brightness-colour.ci.gspc	brightness-colour	none	live		7.1.15	B−V from Gaia DR3 synthetic photometry of the record's own source, inside its measured colour bound.
-brightness-colour.ci.none	brightness-colour	none	live		7.1.15	No tier colours the record, so it bakes the solar B−V.
-brightness-colour.ci.printed-hip-bv	brightness-colour	none	live		7.1.15	The printed Hipparcos B−V of the record's own HIP (I/239).
-brightness-colour.ci.refused.apsis-teff-renders	brightness-colour	none	live		7.1.15	The spectral-class colour stands down: the shader colours the record from its Apsis Teff instead.
-brightness-colour.ci.refused.colour-out-of-range	brightness-colour	none	live		7.1.15	The record's Gaia BP−RP lies outside the range the colour tier holds over.
-brightness-colour.ci.refused.non-finite	brightness-colour	none	live		7.1.15	The printed Hipparcos B−V is not a finite number.
-brightness-colour.ci.refused.uncalibrated	brightness-colour	none	live		7.1.15	The record's Gaia photometry has a band missing or non-finite, or G is brighter than the saturation bound, so a Gaia colour does not apply.
-brightness-colour.ci.spectral-derived	brightness-colour	none	live		7.1.15	The intrinsic colour of the record's spectral class, for a record with no Apsis Teff.
-brightness-colour.dust.edenhofer2024.absmag-and-ci	brightness-colour	none	live		7.1.15	The Sol-to-star A_V through the Edenhofer 2024 (/data/papers/index.md#edenhofer2024) dust grid is subtracted from absmag, and A_V/R_V from the observed B−V.
-brightness-colour.dust.edenhofer2024.absmag-only	brightness-colour	none	live		7.1.15	The Sol-to-star A_V through the Edenhofer 2024 (/data/papers/index.md#edenhofer2024) dust grid is subtracted from absmag; the B−V is intrinsic, so it is left as it is.
-brightness-colour.spectral.curated	brightness-colour	none	live		7.1.15	The curated MK type: the record's own (Sol) or the hand-curated override for its HIP.
-brightness-colour.spectral.gspspec	brightness-colour	none	live		7.1.15	The Gaia DR3 ESP-ELS spectral letter for the record's own source, where no SIMBAD row classifies it.
-brightness-colour.spectral.none	brightness-colour	none	live		7.1.15	No tier classifies the record, so it renders as spectral type unknown.
-brightness-colour.spectral.refused.gaia-id-contradicts	brightness-colour	none	live		7.1.15	A SIMBAD row states a Gaia DR3 id other than the record's own, so it describes another star.
-brightness-colour.spectral.refused.unclassifiable	brightness-colour	none	live		7.1.15	A typed row's spectral string does not parse as a Morgan-Keenan class.
-brightness-colour.spectral.simbad	brightness-colour	none	live		7.1.15	SIMBAD's MK sp_type, on the first namespace of the ladder that reaches a typed row for the record.
-brightness-colour.v.curated	brightness-colour	none	live		7.1.15	Sol: the curated record's V.
-brightness-colour.v.gaia-riello	brightness-colour	none	live		7.1.15	Johnson V transformed from the record's own Gaia DR3 photometry through the Riello 2021 (/data/papers/index.md#riello2021) relation.
-brightness-colour.v.gliese	brightness-colour	none	live		7.1.15	The printed V/70A V of the record's own GJ, where no tier above answers.
-brightness-colour.v.none	brightness-colour	none	live		7.1.15	No V tier lights the record.
-brightness-colour.v.printed-hip	brightness-colour	none	live		7.1.15	The printed Hipparcos V of the record's own HIP (I/239), where the Gaia relation does not apply.
-brightness-colour.v.refused.colour-out-of-range	brightness-colour	none	live		7.1.15	The record's Gaia BP−RP lies outside the range the Riello relation is published over.
-brightness-colour.v.refused.uncalibrated	brightness-colour	none	live		7.1.15	The record's Gaia photometry has a band missing or non-finite, or G is brighter than the saturation bound, so the Riello relation does not apply.
-brightness-colour.v.tycho2	brightness-colour	none	live		7.1.15	Johnson V reduced from the record's own Tycho-2 BT and VT, where no tier above answers.
-coherence.anchor	coherence	none	live		7.1.12	The record is its WDS system's distance anchor, the best-tier member, and the system's snapped members move onto its distance.
-coherence.anchor.inconsistent	coherence	none	live		7.1.12	The record wins its system's anchor pick, but its catalogue distance contradicts its own parallax by more than 3 sigma and 20%, so the system is skipped.
-coherence.anchor.unplaced	coherence	none	live		7.1.12	The record wins its system's anchor pick but has no positive finite distance, so the system is skipped.
-coherence.kept.anchor-inconsistent	coherence	none	live		7.1.12	The record's system anchor contradicts its own parallax, so the system is skipped and the record keeps its own distance.
-coherence.kept.anchor-unplaced	coherence	none	live		7.1.12	The record's system anchor has no positive finite distance, so the system is skipped and the record keeps its own distance.
-coherence.kept.member-unplaced	coherence	none	live		7.1.12	The record has no positive finite distance to move from, so it keeps its own.
-coherence.kept.significant-depth	coherence	none	live		7.1.12	The record's parallax gap from its system anchor is more than 3 sigma of a nonzero combined error, a measured depth, so it keeps its own distance.
-coherence.kept.wide-gap	coherence	none	live		7.1.12	The record has no parallax error model and sits more than 20% and 1 pc from its system anchor, so it keeps its own distance.
-coherence.not-applicable	coherence	none	live		7.1.12	The record is in no kept-physical WDS system with two or more resolved catalogue records, so coherence decides nothing for it.
-coherence.snapped	coherence	none	live		7.1.12	The record moves radially onto its system anchor's distance: its parallax gap from the anchor is at most 3 sigma of the combined error, or that error is zero; with no parallax, its distance is within 20% or 1 pc of the anchor's.
-coherence.unmoved.at-anchor-distance	coherence	none	live		7.1.12	The record already sits at its system anchor's distance.
-membership.addition-binding.bound	membership	none	live		7.1.6	The admitted star's own Gaia source survives both gates and is no other record's.
-membership.addition-binding.no-candidate	membership	none	live		7.1.6	No catalogue proposes a Gaia source for the admitted star.
-membership.addition-binding.on-spine	membership	none	live		7.1.6	The admitted star's Gaia source is a spine record's, so the star ships unbound.
-membership.addition-binding.refused	membership	none	live		7.1.6	Every Gaia candidate of the admitted star failed a binding gate.
-membership.addition-binding.rescued	membership	none	live		7.1.6	The admitted star's candidates all failed a gate, and SIMBAD's witness under its TYC rescued one.
-membership.addition-binding.shared	membership	none	live		7.1.6	Two admitted stars reach the same Gaia source, so neither takes it.
-membership.admit.cns5-census	membership	none	live		7.1.6	A CNS5 nearby-star census row the spine lacks is admitted.
-membership.admit.hd-link-gap	membership	none	live		7.1.6	An IV/25 Tycho-2 star with an HD below 100,000 that AT-HYG never linked is admitted.
-membership.admit.hd-omitted	membership	none	live		7.1.6	An IV/25 Tycho-2 star with an HD of 100,000 or more, outside AT-HYG's subset, is admitted.
-membership.admit.hip-omitted	membership	none	live		7.1.6	An I/239 Hipparcos star with no IV/25 entry is admitted.
-membership.admit.magnitude	membership	none	live		7.1.6	A Gaia DR3 source at or brighter than the V floor that no primaries record binds is admitted.
-membership.admit.spine	membership	none	live		7.1.6	An AT-HYG spine row becomes a manifest row on the merge decision it records.
-membership.binding.bound	membership	none	live		7.1.6	One Gaia source survives both binding gates with no passing rival, and the record binds to it.
-membership.binding.collision	membership	none	live		7.1.6	Another spine row derives the same Gaia source, so both are withheld and queued for review.
-membership.binding.contested	membership	none	live		7.1.6	The binding winner has a runner-up that also passed both gates; precedence chose it and the row is queued for review.
-membership.binding.gate-mag	membership	none	live		7.1.6	A binding candidate refused because its Gaia G is more than a magnitude fainter than the record's printed V.
-membership.binding.gate-sibling	membership	none	live		7.1.6	A binding candidate refused because SIMBAD gives that Gaia source to a different component of the record's system.
-membership.binding.refused	membership	none	live		7.1.6	No Gaia source survives the binding gates; the record ships unbound.
-membership.binding.rescued	membership	none	live		7.1.6	Every candidate failed a gate, and SIMBAD files the record's own TYC under the one the sibling gate refused, so that one binds.
-membership.binding.runner-up	membership	none	live		7.1.6	A binding candidate that passed both gates but lost to a higher-ranked one.
-membership.binding.sol	membership	none	live		7.1.6	The Sun takes no Gaia binding.
-membership.binding.unweighed-no-pulled-row	membership	none	live		7.1.8	A binding candidate the magnitude gate passed unweighed, because the astrometry pull holds no row for it.
-membership.component	membership	none	live		7.1.6	Every designation the primaries give this star already names another record, so it is ledgered onto that record instead of admitted.
-membership.disposition.derived	membership	none	live		7.1.6	A committed review disposition confirms the derived Gaia source.
-membership.disposition.none	membership	none	live		7.1.6	A committed review disposition leaves the record unbound.
-membership.disposition.other	membership	none	live		7.1.6	A committed review disposition binds a Gaia source other than the derived one, on its stated evidence.
-membership.fold	membership	merge	live		7.1.6	Review found the spine row duplicates another spine row; it folds onto that row and its SID merges into the survivor's.
-membership.label-drop.flamsteed-unattested	membership	none	live		7.1.6	No primary publishes this Flamsteed number for the star, so it leaves the record.
-membership.label-drop.hd-unattested	membership	none	live		7.1.6	No HD primary publishes this HD number for the star, so it leaves the record.
-membership.label.added	membership	none	live		7.1.6	The classic-ID overlay adds a designation the spine row lacked.
-membership.label.extra-alias	membership	none	live		7.1.6	The overlay names a further value for a field, carried as an alias the record answers to.
-membership.label.extra-dropped	membership	none	live		7.1.6	The overlay names a further value for a single-valued field; it is dropped.
-membership.label.extra-sibling-rendered	membership	none	live		7.1.6	The overlay's further value belongs to a companion drawn as its own star, so it is left to that star.
-membership.label.overlay-wins	membership	none	live		7.1.6	The overlay and the spine disagree on a designation, and the overlay's value is taken.
-membership.label.override-spine	membership	none	live		7.1.6	A curated override keeps the spine's designation over the overlay's.
-membership.label.override-value	membership	none	live		7.1.6	A curated override sets the designation.
-membership.label.suppressed-collision	membership	none	live		7.1.6	The overlay's designation already names another record, so it is not added.
-naming.dc.anchor	naming	none	live		7.1.12	The record's designations render against the designation constellation of its system anchor.
-naming.dc.displaced	naming	none	live		7.1.12	The IV/27A constellation, refused because the IAU WGSN designation names a different one.
-naming.dc.gcvs	naming	none	live		7.1.12	The record's designations render against the constellation its GCVS designation names.
-naming.dc.iv27a	naming	none	live		7.1.12	The record's designations render against the constellation IV/27A gives its HD or HIP number.
-naming.dc.none	naming	none	live		7.1.12	No tier states a designation constellation and the record has no positional one, so its Bayer, Flamsteed and Gould designations cannot render.
-naming.dc.positional	naming	none	live		7.1.12	No tier states a designation constellation, so the record's designations render against the constellation its position lies in.
-naming.dc.wgsn-bayer	naming	none	live		7.1.12	The record's designations render against the constellation the IAU WGSN Bayer designation is named for.
-naming.dc.wgsn-gould	naming	none	live		7.1.12	The record's designations render against the constellation the IAU WGSN Gould designation is named for.
-naming.letter.borrowed	naming	none	live		7.1.12	The label carries the record's WDS component letter after its system anchor's borrowed base.
-naming.letter.sibling-owns	naming	none	live		7.1.12	The label carries the record's WDS component letter because another record owns the same designation.
-naming.letter.stated	naming	none	live		7.1.12	The label carries the component letter the naming authority attributes the record's designation to.
-naming.name.borrowed-over	naming	none	live		7.1.12	A designation the record carries, refused because it displays its system anchor's base instead.
-naming.name.borrowed.no-own-designation	naming	none	live		7.1.12	The record is a WDS component with no designation of its own, so it displays its system anchor's base with its component letter.
-naming.name.borrowed.outranked-identifier	naming	none	live		7.1.12	The record's own designation is a GCVS serial or catalogue number ranked below its system anchor's tier, so it displays the anchor's base with its component letter.
-naming.name.borrowed.system-designation	naming	none	live		7.1.12	The record's own designation is one its system anchor also carries, so it displays the anchor's base with its component letter.
-naming.name.lower-tier	naming	none	live		7.1.12	A designation the record carries, refused because a higher tier of the ladder supplied its label.
-naming.name.own	naming	none	live		7.1.12	The record displays the highest tier of the naming ladder it carries in its own right.
-naming.name.unlabelled	naming	none	live		7.1.12	The record carries nothing the ladder renders and has no anchor to borrow from, so the runtime displays its Gaia DR3 or SID fallback.
-placement.direction.cns5	placement	none	live		7.1.6	The record's own GJ in CNS5, which no tier above reaches.
-placement.direction.curated	placement	none	live		7.1.6	Sol: the direction is arbitrary at distance zero.
-placement.direction.gaia-2p	placement	none	live		7.1.6	The record's own Gaia DR3 position-only solution, which no Hipparcos-2 row covers.
-placement.direction.gaia-5p	placement	none	live		7.1.6	The record's own Gaia DR3 five-parameter solution.
-placement.direction.gaia-nss-systemic	placement	none	live		7.1.6	The record's Gaia DR3 solution, refitted to the centre of mass: an NSS two-body orbit and an unreliable five-parameter fit.
-placement.direction.hip2-pm-discrepant	placement	none	live		7.1.6	Hipparcos-2, where the Gaia proper motion disagrees with it by more than 50 mas/yr.
-placement.direction.hip2-saturated	placement	none	live		7.1.6	Hipparcos-2, where Gaia states no usable parallax for the record.
-placement.direction.refused.no-5p-solution	placement	none	live		7.1.6	The Gaia solution is position-only and Hipparcos-2 covers the star.
-placement.direction.refused.pm-disagrees-with-hip2	placement	none	live		7.1.6	The Gaia solution's proper motion disagrees with Hipparcos-2's by more than 50 mas/yr, the mark of an orbit-corrupted fit.
-placement.direction.simbad	placement	none	live		7.1.6	SIMBAD's bibcoded coordinates, the bottom tier.
-placement.direction.tycho2	placement	none	live		7.1.6	The record's own TYC in Tycho-2, which neither Gaia nor Hipparcos-2 reaches.
-placement.distance.bailer-jones	placement	none	live		7.1.6	The posterior distance of Bailer-Jones 2021 (/data/papers/index.md#bailerjones2021) replaces the inverted Gaia DR3 parallax.
-placement.distance.bailer-jones-absent	placement	none	live		7.1.6	The inverted Gaia DR3 parallax is eligible for a Bailer-Jones posterior that the committed pull lacks.
-placement.distance.lmc-kinematic	placement	none	live		7.1.6	Inside the LMC cone and sharing its proper motion, the record snaps to the LMC distance.
-placement.distance.lmc-refused-by-own-parallax	placement	none	live		7.1.6	The LMC snap is refused: the record's own parallax is more than 10 sigma above the LMC's.
-placement.parallax.cns5-plx	placement	none	live		7.1.6	The record's own GJ in CNS5, cited to a publication no tier above refused, above the S/N floor.
-placement.parallax.curated	placement	none	live		7.1.6	Sol: distance zero by construction.
-placement.parallax.gaia-dr3-inversion	placement	none	live		7.1.6	The record's own Gaia DR3 five-parameter parallax.
-placement.parallax.gliese-photometric-plx	placement	none	live		7.1.6	V/70A's photometric or spectroscopic parallax estimate, the bottom tier: nothing measured reaches the record.
-placement.parallax.gliese-plx	placement	none	live		7.1.6	The record's own GJ in V/70A, where the catalogue states its parallax is trigonometric.
-placement.parallax.hip2-parallax	placement	none	live		7.1.6	The record's own HIP in Hipparcos-2, van Leeuwen 2007 (/data/papers/index.md#vanleeuwen2007), above the S/N floor.
-placement.parallax.pair-member-parallax	placement	none	live		7.1.6	A bound sibling's anchor-grade Gaia DR3 parallax, lent because no measurement of the record itself survived.
-placement.parallax.refused.below-sn-floor	placement	none	live		7.1.6	A tier's parallax is below S/N 1, indistinguishable from zero, so its inverse is undefined.
-placement.parallax.refused.gaia-release	placement	none	live		7.1.6	A courier's parallax cites a Gaia release on a record whose own Gaia fit is position-only, so it is the withdrawn fit returning.
-placement.parallax.refused.hipparcos2	placement	none	live		7.1.6	A courier's parallax cites Hipparcos-2 on a record whose Hipparcos-2 parallax the S/N floor refused.
-placement.parallax.simbad-plx	placement	none	live		7.1.6	SIMBAD's bibcoded parallax, cited to a publication no tier above refused, above the S/N floor.
-placement.park.no-parallax-published	placement	park	live		7.1.6	No parallax tier reaches the record, so it cannot be placed.
-placement.park.no-position	placement	park	live		7.1.6	No direction tier states where the record is on the sky.
-placement.park.no-v-magnitude	placement	park	live		7.1.6	No V tier lights the record, so it has no brightness.
-placement.park.refused-no-defensible-parallax	placement	park	live		7.1.6	Every parallax reaching the record was refused, so it cannot be placed.
-placement.pm-rescue.cns5	placement	none	live		7.1.6	The direction tier states no proper motion; the record's own GJ in CNS5 supplies one.
-placement.pm-rescue.none	placement	none	live		7.1.6	The direction tier states no proper motion and no rescue tier supplies one, so the record ships static.
-placement.pm-rescue.refused.gaia-release	placement	none	live		7.1.6	A courier's proper motion cites a Gaia release on a record whose own Gaia fit is position-only.
-placement.pm-rescue.simbad	placement	none	live		7.1.6	The direction tier states no proper motion; SIMBAD's bibcoded one supplies it.
-placement.pm-rescue.tycho2	placement	none	live		7.1.6	The direction tier states no proper motion; the record's own TYC in Tycho-2 supplies one.
-placement.rv.gaia-dr3	placement	none	live		7.1.6	Gaia DR3's RVS radial velocity on a record with a five-parameter solution.
-placement.rv.none	placement	none	live		7.1.6	No tier states a radial velocity, so the radial term is zero.
-placement.rv.refused.gaia-release	placement	none	live		7.1.6	SIMBAD's radial velocity cites a Gaia release on a record whose own Gaia fit is position-only.
-placement.rv.refused.no-5p-solution	placement	none	live		7.1.6	Gaia's RVS velocity on a position-only solution, whose spectrum is a blend.
-placement.rv.rejected-above-ceiling	placement	none	live		7.1.6	The radial velocity a tier supplied exceeds the sanity ceiling on its own, so the radial term is dropped.
-placement.rv.simbad	placement	none	live		7.1.6	SIMBAD's bibcoded radial velocity.
-placement.velocity.clamped	placement	none	live		7.1.6	The space velocity exceeds the sanity ceiling, so it is zeroed.
-promotion.adopted.earlier-mint	promotion	merge	live		7.1.6	An earlier row of this build already minted the record this row names.
-promotion.adopted.own-hip	promotion	merge	live		7.1.6	The row's Gaia source names no record, but its own HIP names one other than the anchor, which is the component.
-promotion.adopted.own-id	promotion	merge	live		7.1.6	The row's own Gaia source or HIP names a record already in the catalogue, which is the component.
-promotion.adopted.sameas-bridge	promotion	merge	live		7.1.6	A same-as edge bridges the row's synthetic key to a Gaia source already in the catalogue, whose record is the component.
-promotion.dropped.anchor-is-component	promotion	merge	live		7.1.6	The row's ids resolve to its anchor's record, which the naming authority already letters as this component, so that record is the component.
-promotion.dropped.beyond-tidal-limit	promotion	retire	live		7.1.6	Projected at the anchor's distance, the pair is wider than the 1 pc tidal limit, so it cannot be bound.
-promotion.dropped.collocated-primary	promotion	retire	live		7.1.6	A pair's primary promoted as the system anchor's companion has neither its own fit nor a measured offset from the anchor, so it has no position.
-promotion.dropped.compound-comp	promotion	retire	live		7.1.6	The row's component letter is an unresolved aggregate of components that have rows of their own, so it is not one star.
-promotion.dropped.no-absmag	promotion	retire	live		7.1.6	The row has no brightness of its own: no photometry, magnitude difference, WDS magnitude or per-component spectral type, and no renderable orbit.
-promotion.dropped.no-identifier	promotion	retire	live		7.1.6	The row has no Gaia source, no HIP of its own and no composable synthetic key.
-promotion.dropped.no-position	promotion	retire	live		7.1.6	The row has neither an independent fit nor a measured separation and position angle off its anchor.
-promotion.dropped.parked-record	promotion	park	live		7.1.6	The distance the row states is a parallax a tier above refused, so promoting it would ship the parked record.
-promotion.minted	promotion	none	live		7.1.6	The row becomes a new catalogue record.
-promotion.not-applicable	promotion	none	retired	7.1.8	7.1.6	Promotion decides nothing for the row: a pair's primary that anchors it, or a row in no pair.
-promotion.not-applicable.pair-anchor	promotion	none	live		7.1.8	Promotion decides nothing for the row: it is a pair's primary that anchors the pair.
-promotion.parked.primary-unresolved	promotion	park	live		7.1.8	A pair's primary resolves to no catalogue record and no escape places it, so it ships no record of its own and its pair runs with no anchor.
-promotion.parked.unpaired	promotion	park	live		7.1.8	The row is in no pair, so promotion has no geometry to place it with and ships no record for it.
-promotion.primary-unresolved	promotion	none	retired	7.1.8	7.1.6	A pair's primary resolves to no catalogue record and no escape places it, so its pair runs with no anchor.
-promotion.repositioned	promotion	merge	live		7.1.6	An AT-HYG record sitting on the anchor under the anchor's name plus this letter is the component, and moves to the row's position.
+code	stage	effect	role	status	retired_in	first_version	description
+allocation-clouds.minted	allocation-clouds	none	outcome	live		7.1.11	The object's same-as class reaches no ledger row, so it takes the next SID under its canonical key.
+allocation-clouds.reinstated	allocation-clouds	none	outcome	live		7.1.11	The object's same-as class reaches only one retired SID, which returns to service.
+allocation-clouds.resolved	allocation-clouds	none	outcome	live		7.1.11	The object's same-as class reaches one SID in service, which it keeps.
+allocation-local-group.minted	allocation-local-group	none	outcome	live		7.1.11	The object's same-as class reaches no ledger row, so it takes the next SID under its canonical key.
+allocation-local-group.reinstated	allocation-local-group	none	outcome	live		7.1.11	The object's same-as class reaches only one retired SID, which returns to service.
+allocation-local-group.resolved	allocation-local-group	none	outcome	live		7.1.11	The object's same-as class reaches one SID in service, which it keeps.
+allocation.legacy.addition-admitted-twice	allocation	merge	outcome	historical		7.1.8	one star admitted twice: an I/239 HIP or CNS5 row with no HD link was a record of its own beside the Tycho-2 star SIMBAD holds under the same Gaia source; the additions group on the derived source, so the two are one record and the sid merges into the canonical-key sid; old refs follow the successor
+allocation.legacy.anchor-offset-unreached	allocation	retire	outcome	historical		7.1.8	companion no longer promoted: Stage 6 now anchors its WDS root on Aa (the anchor promotion resolves), no measured edge reaches it from Aa, so its anchor offset is blank and promotion drops it; reinstate when the Aa-to-A offset link restores it
+allocation.legacy.anchor-parked-no-parallax	allocation	retire	outcome	historical		7.1.8	A component that stops promoting because its anchor primary reaches no owned parallax and parks out of the catalogue: a presence event, filed as a retirement.
+allocation.legacy.anchor-parked-refused-parallax	allocation	retire	outcome	historical		7.1.8	A component that stops promoting because its anchor primary now reaches a SIMBAD parallax the cascade refuses as indefensible and parks: a presence event, filed as a retirement.
+allocation.legacy.astrometry-request-restored	allocation	none	outcome	historical		7.1.8	A component that promotes again once its blend-mate's Gaia source is in the binaries astrometry request, so its pair emits on gaia_5p.
+allocation.legacy.beyond-tidal-limit	allocation	retire	outcome	historical		7.1.8	A component whose projected separation exceeds the 1 pc tidal limit once system distance coherence re-anchored its cluster: a line-of-sight member, not a bound companion.
+allocation.legacy.claims-gate-no-brightness	allocation	retire	outcome	historical		7.1.8	dissolved: inner-pair member's inherited photometry came from a sibling-claimed identity; the Stage-2 sibling-identity claims gate unbound it and the record has no honest brightness source
+allocation.legacy.claims-gate-no-position	allocation	retire	outcome	historical		7.1.8	dissolved: the Stage-2 sibling-identity claims gate stripped the letter's stolen identity and no honest position source remains (no own astrometry, no anchor-offset chain)
+allocation.legacy.claims-gate-pair-reclassified	allocation	retire	outcome	historical		7.1.8	dissolved: component no longer emitted after the Stage-2 sibling-identity claims gate + system-PM CPM verdicts re-classified its pair
+allocation.legacy.claims-gate-restored	allocation	none	outcome	historical		7.1.8	component promotes again: the Stage-2 sibling-identity claims gate + id-less pair-row-primary promotion restored the honest record the earlier gates had dropped
+allocation.legacy.claims-gate-synth-twin	allocation	merge	outcome	historical		7.1.8	merged: synth twin and its first-class record are one star — the Stage-2 sibling-identity claims gate freed the member's own id (bridge in sameas-overrides.tsv)
+allocation.legacy.component-dissolved	allocation	retire	outcome	historical		7.1.8	A component the July 2026 re-pulls and promotion gates stopped emitting or promoting (re-paired, subsumed into an unpromoted aggregate, or its system no longer emitted), leaving no successor key.
+allocation.legacy.component-parked	allocation	retire	outcome	historical		7.1.8	A component whose record left the build while SIMBAD xids still name its own Gaia source: a presence gap filed as a retirement.
+allocation.legacy.derived-binding-twin	allocation	merge	outcome	historical		7.1.8	A Gaia-keyed row AT-HYG carried beside the HIP record it belongs to, merged when the manifest began deriving its Gaia binding.
+allocation.legacy.escape-gate-orbital-pm	allocation	none	outcome	historical		7.1.8	A component that reappears once the Stage 5 escape-velocity gate budgets for the host primary's orbital proper motion.
+allocation.legacy.escape-velocity-optical	allocation	retire	outcome	historical		7.1.8	A pair the Stage 5 escape-velocity gate reclassified optical once MSC per-component types replaced the default masses.
+allocation.legacy.fold-twin	allocation	merge	outcome	historical		7.1.8	A Gaia-keyed twin of a HIP record that held the very source the derivation would give that record, merged by a spine-corrections fold.
+allocation.legacy.label-merge-twin	allocation	merge	outcome	historical		7.1.8	An HD row the primaries admitted beside the HIP record it names, merged when the label merge keyed on the derived binding put its designation back on that record.
+allocation.legacy.magnitude-floor-no-identifier	allocation	retire	outcome	historical		7.1.8	A component that stops promoting at the V <= 11 magnitude floor: its pair row carries no identifier of its own and the build mints no record for it.
+allocation.legacy.magnitude-floor-own-record	allocation	merge	outcome	historical		7.1.8	A component that stops promoting at the V <= 11 magnitude floor because its own DR3 source is an ordinary record, which the pair row resolves onto.
+allocation.legacy.magnitude-term-anchor	allocation	none	outcome	historical		7.1.8	A component that promotes again at the V <= 11 magnitude floor because its pair anchor is a magnitude-term record.
+allocation.legacy.minted-twin-of-anchor	allocation	merge	outcome	historical		7.1.8	A promoted companion minted as a second copy of its own anchor, because its pair row carries the anchor's identifiers on both ends.
+allocation.legacy.optical-cpm-test	allocation	retire	outcome	historical		7.1.8	optical companion rejected by the Stage 5 WDS epoch-baseline CPM test (background star, not a physical companion)
+allocation.legacy.photocentre-link-restored	allocation	none	outcome	historical		7.1.8	A component that promotes again once Stage 6 links its Aa anchor to A at the Aa+Ab photocentre, so the A-branch offset reaches it.
+allocation.legacy.photocentre-link-twin	allocation	merge	outcome	historical		7.1.8	A synthetic component minted off its own record because its anchor cursor fell back onto that record; the Aa-to-A photocentre link resolves it onto the record.
+allocation.legacy.promoted-companion-twin	allocation	merge	outcome	historical		7.1.8	promoted-companion twin of a named record: the named record now binds the component’s own Gaia source, so the synthetic promotion is the same star and its sid merges into the named record’s; old refs follow the successor
+allocation.legacy.refused-parallax-by-measurement	allocation	none	outcome	historical		7.1.8	A component that promotes again once the refused-parallax refusal matches on the measurement rather than on the id.
+allocation.legacy.sibling-letter-twin	allocation	merge	outcome	historical		7.1.8	A Gaia-keyed twin of a HIP record, split off it by a sibling-letter crosswalk error in AT-HYG; the sibling-letter gate scrubbed the cell and the two rows are one star.
+allocation.legacy.synth-duplicate-of-named-star	allocation	merge	outcome	historical		7.1.8	A synthetic component a curated identification (ORB6 or a SIMBAD xid) names as a first-class catalogue star, bridged in sameas-overrides.tsv.
+allocation.legacy.unnamed-gaia-twin	allocation	merge	outcome	historical		7.1.8	unnamed Gaia-only twin of a named record: the V <= 11 magnitude term re-admitted a source the named record failed to bind (an addition with no SIMBAD route, or a component the sibling gate refused on a shared HIP); the named record now binds that source, so the sid merges into the named record’s and old refs follow the successor
+allocation.legacy.xid-loss-twin	allocation	merge	outcome	historical		7.1.8	A synthetic component minted after its pair rows lost their SIMBAD id, while the same star had already shipped on its own Gaia source; a same-as edge joins them and the gaia_dr3 key outranks synth on the canonical-key ladder.
+allocation.merged	allocation	merge	outcome	live		7.1.8	A SID no object keeps any more merges into the SID of the record its upstream decision names.
+allocation.merged.same-class	allocation	merge	outcome	live		7.1.15	One record now carries the keys of two SIDs in service and no stage decided the merge, so the same-as class is the decision: the SID that loses the canonical-key ladder merges into the one that wins.
+allocation.mint.cloud	allocation	none	outcome	live		7.1.8	The object is a cloud clouds.json carries.
+allocation.mint.local-group	allocation	none	outcome	live		7.1.8	The object is a galaxy local-group.json carries.
+allocation.mint.shell-list	allocation	none	outcome	live		7.1.8	The object is a row of data/sid/shell-objects.tsv.
+allocation.mint.sol-list	allocation	none	outcome	live		7.1.8	The object is a row of data/sid/sol-objects.tsv.
+allocation.minted	allocation	none	outcome	live		7.1.8	The object's same-as class reaches no ledger row, so it takes the next SID under its canonical key.
+allocation.parked	allocation	park	outcome	live		7.1.8	A SID no object keeps any more stays in service, absent from this build, under its upstream decision's code.
+allocation.reinstated	allocation	none	outcome	live		7.1.8	The object's same-as class reaches only one retired SID, which returns to service.
+allocation.resolved	allocation	none	outcome	live		7.1.8	The object's same-as class reaches one SID in service, which it keeps.
+allocation.retired	allocation	retire	outcome	live		7.1.8	A SID no object keeps any more leaves service under its upstream decision's code.
+brightness-colour.ci.gaia-relation	brightness-colour	none	outcome	live		7.1.15	B−V as the difference of the Gaia DR3 Table 5.9 G−V and G−B relations on the record's own photometry.
+brightness-colour.ci.gspc	brightness-colour	none	outcome	live		7.1.15	B−V from Gaia DR3 synthetic photometry of the record's own source, inside its measured colour bound.
+brightness-colour.ci.none	brightness-colour	none	outcome	live		7.1.15	No tier colours the record, so it bakes the solar B−V.
+brightness-colour.ci.printed-hip-bv	brightness-colour	none	outcome	live		7.1.15	The printed Hipparcos B−V of the record's own HIP (I/239).
+brightness-colour.ci.refused.apsis-teff-renders	brightness-colour	none	refused	live		7.1.15	The spectral-class colour stands down: the shader colours the record from its Apsis Teff instead.
+brightness-colour.ci.refused.colour-out-of-range	brightness-colour	none	refused	live		7.1.15	The record's Gaia BP−RP lies outside the range the colour tier holds over.
+brightness-colour.ci.refused.non-finite	brightness-colour	none	refused	live		7.1.15	The printed Hipparcos B−V is not a finite number.
+brightness-colour.ci.refused.uncalibrated	brightness-colour	none	refused	live		7.1.15	The record's Gaia photometry has a band missing or non-finite, or G is brighter than the saturation bound, so a Gaia colour does not apply.
+brightness-colour.ci.spectral-derived	brightness-colour	none	outcome	live		7.1.15	The intrinsic colour of the record's spectral class, for a record with no Apsis Teff.
+brightness-colour.dust.edenhofer2024.absmag-and-ci	brightness-colour	none	outcome	live		7.1.15	The Sol-to-star A_V through the Edenhofer 2024 (/data/papers/index.md#edenhofer2024) dust grid is subtracted from absmag, and A_V/R_V from the observed B−V.
+brightness-colour.dust.edenhofer2024.absmag-only	brightness-colour	none	outcome	live		7.1.15	The Sol-to-star A_V through the Edenhofer 2024 (/data/papers/index.md#edenhofer2024) dust grid is subtracted from absmag; the B−V is intrinsic, so it is left as it is.
+brightness-colour.spectral.curated	brightness-colour	none	outcome	live		7.1.15	The curated MK type: the record's own (Sol) or the hand-curated override for its HIP.
+brightness-colour.spectral.gspspec	brightness-colour	none	outcome	live		7.1.15	The Gaia DR3 ESP-ELS spectral letter for the record's own source, where no SIMBAD row classifies it.
+brightness-colour.spectral.none	brightness-colour	none	outcome	live		7.1.15	No tier classifies the record, so it renders as spectral type unknown.
+brightness-colour.spectral.refused.gaia-id-contradicts	brightness-colour	none	refused	live		7.1.15	A SIMBAD row states a Gaia DR3 id other than the record's own, so it describes another star.
+brightness-colour.spectral.refused.unclassifiable	brightness-colour	none	refused	live		7.1.15	A typed row's spectral string does not parse as a Morgan-Keenan class.
+brightness-colour.spectral.simbad	brightness-colour	none	outcome	retired	7.1.16	7.1.15	SIMBAD's MK sp_type, on the first namespace of the ladder that reaches a typed row for the record.
+brightness-colour.spectral.simbad.gj	brightness-colour	none	outcome	live		7.1.16	SIMBAD's MK sp_type, on the first namespace of the ladder that reaches a typed row for the record: its GJ.
+brightness-colour.spectral.simbad.hip	brightness-colour	none	outcome	live		7.1.16	SIMBAD's MK sp_type, on the first namespace of the ladder that reaches a typed row for the record: its HIP.
+brightness-colour.spectral.simbad.source-id	brightness-colour	none	outcome	live		7.1.16	SIMBAD's MK sp_type, on the first namespace of the ladder that reaches a typed row for the record: its Gaia DR3 source_id.
+brightness-colour.spectral.simbad.tyc	brightness-colour	none	outcome	live		7.1.16	SIMBAD's MK sp_type, on the first namespace of the ladder that reaches a typed row for the record: its TYC.
+brightness-colour.v.curated	brightness-colour	none	outcome	live		7.1.15	Sol: the curated record's V.
+brightness-colour.v.gaia-riello	brightness-colour	none	outcome	live		7.1.15	Johnson V transformed from the record's own Gaia DR3 photometry through the Riello 2021 (/data/papers/index.md#riello2021) relation.
+brightness-colour.v.gliese	brightness-colour	none	outcome	live		7.1.15	The printed V/70A V of the record's own GJ, where no tier above answers.
+brightness-colour.v.none	brightness-colour	none	outcome	live		7.1.15	No V tier lights the record.
+brightness-colour.v.printed-hip	brightness-colour	none	outcome	live		7.1.15	The printed Hipparcos V of the record's own HIP (I/239), where the Gaia relation does not apply.
+brightness-colour.v.refused.colour-out-of-range	brightness-colour	none	refused	live		7.1.15	The record's Gaia BP−RP lies outside the range the Riello relation is published over.
+brightness-colour.v.refused.uncalibrated	brightness-colour	none	refused	live		7.1.15	The record's Gaia photometry has a band missing or non-finite, or G is brighter than the saturation bound, so the Riello relation does not apply.
+brightness-colour.v.tycho2	brightness-colour	none	outcome	retired	7.1.16	7.1.15	Johnson V reduced from the record's own Tycho-2 BT and VT, where no tier above answers.
+brightness-colour.v.tycho2.inside-bt-vt-range	brightness-colour	none	outcome	live		7.1.16	Johnson V reduced from the record's own Tycho-2 BT and VT, where no tier above answers; BT−VT lies inside the [-0.25, 2.00] range the reduction is counted against.
+brightness-colour.v.tycho2.outside-bt-vt-range	brightness-colour	none	outcome	live		7.1.16	Johnson V reduced from the record's own Tycho-2 BT and VT, where no tier above answers; BT−VT lies outside the [-0.25, 2.00] range the reduction is counted against, and the reduction runs anyway since no tier below serves the record.
+coherence.anchor	coherence	none	outcome	retired	7.1.16	7.1.12	The record is its WDS system's distance anchor, the best-tier member, and the system's snapped members move onto its distance.
+coherence.anchor.anchor-won	coherence	none	outcome	live		7.1.16	The record is its WDS system's distance anchor, the best-tier member, and the system's snapped members move onto its distance: the pair primary, outranked by no member.
+coherence.anchor.inconsistent	coherence	none	outcome	retired	7.1.16	7.1.12	The record wins its system's anchor pick, but its catalogue distance contradicts its own parallax by more than 3 sigma and 20%, so the system is skipped.
+coherence.anchor.inconsistent.anchor-won	coherence	none	outcome	live		7.1.16	The record wins its system's anchor pick, but its catalogue distance contradicts its own parallax by more than 3 sigma and 20%, so the system is skipped: the pair primary, outranked by no member.
+coherence.anchor.inconsistent.member-won	coherence	none	outcome	live		7.1.16	The record wins its system's anchor pick, but its catalogue distance contradicts its own parallax by more than 3 sigma and 20%, so the system is skipped: a non-primary member that outranks the pair primary.
+coherence.anchor.inconsistent.precision-vetoed	coherence	none	outcome	live		7.1.16	The record wins its system's anchor pick, but its catalogue distance contradicts its own parallax by more than 3 sigma and 20%, so the system is skipped: the pair primary, kept because its parallax is more precise than the member that outranks it.
+coherence.anchor.member-won	coherence	none	outcome	live		7.1.16	The record is its WDS system's distance anchor, the best-tier member, and the system's snapped members move onto its distance: a non-primary member that outranks the pair primary.
+coherence.anchor.precision-vetoed	coherence	none	outcome	live		7.1.16	The record is its WDS system's distance anchor, the best-tier member, and the system's snapped members move onto its distance: the pair primary, kept because its parallax is more precise than the member that outranks it.
+coherence.anchor.unplaced	coherence	none	outcome	retired	7.1.16	7.1.12	The record wins its system's anchor pick but has no positive finite distance, so the system is skipped.
+coherence.anchor.unplaced.anchor-won	coherence	none	outcome	live		7.1.16	The record wins its system's anchor pick but has no positive finite distance, so the system is skipped: the pair primary, outranked by no member.
+coherence.anchor.unplaced.member-won	coherence	none	outcome	live		7.1.16	The record wins its system's anchor pick but has no positive finite distance, so the system is skipped: a non-primary member that outranks the pair primary.
+coherence.anchor.unplaced.precision-vetoed	coherence	none	outcome	live		7.1.16	The record wins its system's anchor pick but has no positive finite distance, so the system is skipped: the pair primary, kept because its parallax is more precise than the member that outranks it.
+coherence.kept.anchor-inconsistent	coherence	none	outcome	live		7.1.12	The record's system anchor contradicts its own parallax, so the system is skipped and the record keeps its own distance.
+coherence.kept.anchor-unplaced	coherence	none	outcome	live		7.1.12	The record's system anchor has no positive finite distance, so the system is skipped and the record keeps its own distance.
+coherence.kept.member-unplaced	coherence	none	outcome	live		7.1.12	The record has no positive finite distance to move from, so it keeps its own.
+coherence.kept.significant-depth	coherence	none	outcome	live		7.1.12	The record's parallax gap from its system anchor is more than 3 sigma of a nonzero combined error, a measured depth, so it keeps its own distance.
+coherence.kept.wide-gap	coherence	none	outcome	live		7.1.12	The record has no parallax error model and sits more than 20% and 1 pc from its system anchor, so it keeps its own distance.
+coherence.not-applicable	coherence	none	outcome	live		7.1.12	The record is in no kept-physical WDS system with two or more resolved catalogue records, so coherence decides nothing for it.
+coherence.snapped	coherence	none	outcome	live		7.1.12	The record moves radially onto its system anchor's distance: its parallax gap from the anchor is at most 3 sigma of the combined error, or that error is zero; with no parallax, its distance is within 20% or 1 pc of the anchor's.
+coherence.unmoved.at-anchor-distance	coherence	none	outcome	live		7.1.12	The record already sits at its system anchor's distance.
+membership.addition-binding.bound	membership	none	outcome	live		7.1.6	The admitted star's own Gaia source survives both gates and is no other record's.
+membership.addition-binding.no-candidate	membership	none	outcome	live		7.1.6	No catalogue proposes a Gaia source for the admitted star.
+membership.addition-binding.on-spine	membership	none	outcome	live		7.1.6	The admitted star's Gaia source is a spine record's, so the star ships unbound.
+membership.addition-binding.refused	membership	none	outcome	live		7.1.6	Every Gaia candidate of the admitted star failed a binding gate.
+membership.addition-binding.rescued	membership	none	outcome	live		7.1.6	The admitted star's candidates all failed a gate, and SIMBAD's witness under its TYC rescued one.
+membership.addition-binding.shared	membership	none	outcome	live		7.1.6	Two admitted stars reach the same Gaia source, so neither takes it.
+membership.admit.cns5-census	membership	none	outcome	live		7.1.6	A CNS5 nearby-star census row the spine lacks is admitted.
+membership.admit.hd-link-gap	membership	none	outcome	live		7.1.6	An IV/25 Tycho-2 star with an HD below 100,000 that AT-HYG never linked is admitted.
+membership.admit.hd-omitted	membership	none	outcome	live		7.1.6	An IV/25 Tycho-2 star with an HD of 100,000 or more, outside AT-HYG's subset, is admitted.
+membership.admit.hip-omitted	membership	none	outcome	live		7.1.6	An I/239 Hipparcos star with no IV/25 entry is admitted.
+membership.admit.magnitude	membership	none	outcome	live		7.1.6	A Gaia DR3 source at or brighter than the V floor that no primaries record binds is admitted.
+membership.admit.spine	membership	none	outcome	live		7.1.6	An AT-HYG spine row becomes a manifest row on the merge decision it records.
+membership.binding.bound	membership	none	outcome	live		7.1.6	One Gaia source survives both binding gates with no passing rival, and the record binds to it.
+membership.binding.collision	membership	none	outcome	live		7.1.6	Another spine row derives the same Gaia source, so both are withheld and queued for review.
+membership.binding.contested	membership	none	outcome	live		7.1.6	The binding winner has a runner-up that also passed both gates; precedence chose it and the row is queued for review.
+membership.binding.gate-mag	membership	none	refused	live		7.1.6	A binding candidate refused because its Gaia G is more than a magnitude fainter than the record's printed V.
+membership.binding.gate-sibling	membership	none	refused	live		7.1.6	A binding candidate refused because SIMBAD gives that Gaia source to a different component of the record's system.
+membership.binding.refused	membership	none	outcome	live		7.1.6	No Gaia source survives the binding gates; the record ships unbound.
+membership.binding.rescued	membership	none	outcome	live		7.1.6	Every candidate failed a gate, and SIMBAD files the record's own TYC under the one the sibling gate refused, so that one binds.
+membership.binding.runner-up	membership	none	refused	live		7.1.6	A binding candidate that passed both gates but lost to a higher-ranked one.
+membership.binding.sol	membership	none	outcome	live		7.1.6	The Sun takes no Gaia binding.
+membership.binding.unweighed-no-pulled-row	membership	none	outcome	live		7.1.8	A binding candidate the magnitude gate passed unweighed, because the astrometry pull holds no row for it.
+membership.component	membership	none	outcome	live		7.1.6	Every designation the primaries give this star already names another record, so it is ledgered onto that record instead of admitted.
+membership.disposition.derived	membership	none	outcome	live		7.1.6	A committed review disposition confirms the derived Gaia source.
+membership.disposition.none	membership	none	outcome	live		7.1.6	A committed review disposition leaves the record unbound.
+membership.disposition.other	membership	none	outcome	live		7.1.6	A committed review disposition binds a Gaia source other than the derived one, on its stated evidence.
+membership.fold	membership	merge	outcome	live		7.1.6	Review found the spine row duplicates another spine row; it folds onto that row and its SID merges into the survivor's.
+membership.label-drop.flamsteed-unattested	membership	none	outcome	live		7.1.6	No primary publishes this Flamsteed number for the star, so it leaves the record.
+membership.label-drop.hd-unattested	membership	none	outcome	live		7.1.6	No HD primary publishes this HD number for the star, so it leaves the record.
+membership.label.added	membership	none	outcome	live		7.1.6	The classic-ID overlay adds a designation the spine row lacked.
+membership.label.extra-alias	membership	none	outcome	live		7.1.6	The overlay names a further value for a field, carried as an alias the record answers to.
+membership.label.extra-dropped	membership	none	outcome	live		7.1.6	The overlay names a further value for a single-valued field; it is dropped.
+membership.label.extra-sibling-rendered	membership	none	outcome	live		7.1.6	The overlay's further value belongs to a companion drawn as its own star, so it is left to that star.
+membership.label.overlay-wins	membership	none	outcome	live		7.1.6	The overlay and the spine disagree on a designation, and the overlay's value is taken.
+membership.label.override-spine	membership	none	outcome	live		7.1.6	A curated override keeps the spine's designation over the overlay's.
+membership.label.override-value	membership	none	outcome	live		7.1.6	A curated override sets the designation.
+membership.label.suppressed-collision	membership	none	outcome	live		7.1.6	The overlay's designation already names another record, so it is not added.
+naming.dc.anchor	naming	none	outcome	live		7.1.12	The record's designations render against the designation constellation of its system anchor.
+naming.dc.displaced	naming	none	refused	live		7.1.12	The IV/27A constellation, refused because the IAU WGSN designation names a different one.
+naming.dc.gcvs	naming	none	outcome	live		7.1.12	The record's designations render against the constellation its GCVS designation names.
+naming.dc.iv27a	naming	none	outcome	live		7.1.12	The record's designations render against the constellation IV/27A gives its HD or HIP number.
+naming.dc.none	naming	none	outcome	live		7.1.12	No tier states a designation constellation and the record has no positional one, so its Bayer, Flamsteed and Gould designations cannot render.
+naming.dc.positional	naming	none	outcome	live		7.1.12	No tier states a designation constellation, so the record's designations render against the constellation its position lies in.
+naming.dc.wgsn-bayer	naming	none	outcome	live		7.1.12	The record's designations render against the constellation the IAU WGSN Bayer designation is named for.
+naming.dc.wgsn-gould	naming	none	outcome	live		7.1.12	The record's designations render against the constellation the IAU WGSN Gould designation is named for.
+naming.letter.borrowed	naming	none	outcome	live		7.1.12	The label carries the record's WDS component letter after its system anchor's borrowed base.
+naming.letter.sibling-owns	naming	none	outcome	live		7.1.12	The label carries the record's WDS component letter because another record owns the same designation.
+naming.letter.stated	naming	none	outcome	live		7.1.12	The label carries the component letter the naming authority attributes the record's designation to.
+naming.name.borrowed-over	naming	none	refused	live		7.1.12	A designation the record carries, refused because it displays its system anchor's base instead.
+naming.name.borrowed.no-own-designation	naming	none	outcome	live		7.1.12	The record is a WDS component with no designation of its own, so it displays its system anchor's base with its component letter.
+naming.name.borrowed.outranked-identifier	naming	none	outcome	live		7.1.12	The record's own designation is a GCVS serial or catalogue number ranked below its system anchor's tier, so it displays the anchor's base with its component letter.
+naming.name.borrowed.system-designation	naming	none	outcome	live		7.1.12	The record's own designation is one its system anchor also carries, so it displays the anchor's base with its component letter.
+naming.name.lower-tier	naming	none	refused	live		7.1.12	A designation the record carries, refused because a higher tier of the ladder supplied its label.
+naming.name.own	naming	none	outcome	live		7.1.12	The record displays the highest tier of the naming ladder it carries in its own right.
+naming.name.unlabelled	naming	none	outcome	live		7.1.12	The record carries nothing the ladder renders and has no anchor to borrow from, so the runtime displays its Gaia DR3 or SID fallback.
+placement.direction.cns5	placement	none	outcome	live		7.1.6	The record's own GJ in CNS5, which no tier above reaches.
+placement.direction.curated	placement	none	outcome	live		7.1.6	Sol: the direction is arbitrary at distance zero.
+placement.direction.gaia-2p	placement	none	outcome	live		7.1.6	The record's own Gaia DR3 position-only solution, which no Hipparcos-2 row covers.
+placement.direction.gaia-5p	placement	none	outcome	live		7.1.6	The record's own Gaia DR3 five-parameter solution.
+placement.direction.gaia-nss-systemic	placement	none	outcome	live		7.1.6	The record's Gaia DR3 solution, refitted to the centre of mass: an NSS two-body orbit and an unreliable five-parameter fit.
+placement.direction.hip2-pm-discrepant	placement	none	outcome	live		7.1.6	Hipparcos-2, where the Gaia proper motion disagrees with it by more than 50 mas/yr.
+placement.direction.hip2-saturated	placement	none	outcome	live		7.1.6	Hipparcos-2, where Gaia states no usable parallax for the record.
+placement.direction.refused.no-5p-solution	placement	none	refused	live		7.1.6	The Gaia solution is position-only and Hipparcos-2 covers the star.
+placement.direction.refused.pm-disagrees-with-hip2	placement	none	refused	live		7.1.6	The Gaia solution's proper motion disagrees with Hipparcos-2's by more than 50 mas/yr, the mark of an orbit-corrupted fit.
+placement.direction.simbad	placement	none	outcome	live		7.1.6	SIMBAD's bibcoded coordinates, the bottom tier.
+placement.direction.tycho2	placement	none	outcome	live		7.1.6	The record's own TYC in Tycho-2, which neither Gaia nor Hipparcos-2 reaches.
+placement.distance.bailer-jones	placement	none	outcome	live		7.1.6	The posterior distance of Bailer-Jones 2021 (/data/papers/index.md#bailerjones2021) replaces the inverted Gaia DR3 parallax.
+placement.distance.bailer-jones-absent	placement	none	outcome	live		7.1.6	The inverted Gaia DR3 parallax is eligible for a Bailer-Jones posterior that the committed pull lacks.
+placement.distance.lmc-kinematic	placement	none	outcome	live		7.1.6	Inside the LMC cone and sharing its proper motion, the record snaps to the LMC distance.
+placement.distance.lmc-refused-by-own-parallax	placement	none	refused	live		7.1.6	The LMC snap is refused: the record's own parallax is more than 10 sigma above the LMC's.
+placement.parallax.cns5-plx	placement	none	outcome	live		7.1.6	The record's own GJ in CNS5, cited to a publication no tier above refused, above the S/N floor.
+placement.parallax.curated	placement	none	outcome	live		7.1.6	Sol: distance zero by construction.
+placement.parallax.gaia-dr3-inversion	placement	none	outcome	live		7.1.6	The record's own Gaia DR3 five-parameter parallax.
+placement.parallax.gliese-photometric-plx	placement	none	outcome	live		7.1.6	V/70A's photometric or spectroscopic parallax estimate, the bottom tier: nothing measured reaches the record.
+placement.parallax.gliese-plx	placement	none	outcome	live		7.1.6	The record's own GJ in V/70A, where the catalogue states its parallax is trigonometric.
+placement.parallax.hip2-parallax	placement	none	outcome	live		7.1.6	The record's own HIP in Hipparcos-2, van Leeuwen 2007 (/data/papers/index.md#vanleeuwen2007), above the S/N floor.
+placement.parallax.pair-member-parallax	placement	none	outcome	live		7.1.6	A bound sibling's anchor-grade Gaia DR3 parallax, lent because no measurement of the record itself survived.
+placement.parallax.refused.below-sn-floor	placement	none	refused	live		7.1.6	A tier's parallax is below S/N 1, indistinguishable from zero, so its inverse is undefined.
+placement.parallax.refused.gaia-release	placement	none	refused	live		7.1.6	A courier's parallax cites a Gaia release on a record whose own Gaia fit is position-only, so it is the withdrawn fit returning.
+placement.parallax.refused.hipparcos2	placement	none	refused	live		7.1.6	A courier's parallax cites Hipparcos-2 on a record whose Hipparcos-2 parallax the S/N floor refused.
+placement.parallax.simbad-plx	placement	none	outcome	live		7.1.6	SIMBAD's bibcoded parallax, cited to a publication no tier above refused, above the S/N floor.
+placement.park.no-parallax-published	placement	park	outcome	live		7.1.6	No parallax tier reaches the record, so it cannot be placed.
+placement.park.no-position	placement	park	outcome	live		7.1.6	No direction tier states where the record is on the sky.
+placement.park.no-v-magnitude	placement	park	outcome	live		7.1.6	No V tier lights the record, so it has no brightness.
+placement.park.refused-no-defensible-parallax	placement	park	outcome	live		7.1.6	Every parallax reaching the record was refused, so it cannot be placed.
+placement.pm-rescue.cns5	placement	none	outcome	live		7.1.6	The direction tier states no proper motion; the record's own GJ in CNS5 supplies one.
+placement.pm-rescue.none	placement	none	outcome	live		7.1.6	The direction tier states no proper motion and no rescue tier supplies one, so the record ships static.
+placement.pm-rescue.refused.gaia-release	placement	none	refused	live		7.1.6	A courier's proper motion cites a Gaia release on a record whose own Gaia fit is position-only.
+placement.pm-rescue.simbad	placement	none	outcome	live		7.1.6	The direction tier states no proper motion; SIMBAD's bibcoded one supplies it.
+placement.pm-rescue.tycho2	placement	none	outcome	live		7.1.6	The direction tier states no proper motion; the record's own TYC in Tycho-2 supplies one.
+placement.rv.gaia-dr3	placement	none	outcome	live		7.1.6	Gaia DR3's RVS radial velocity on a record with a five-parameter solution.
+placement.rv.none	placement	none	outcome	live		7.1.6	No tier states a radial velocity, so the radial term is zero.
+placement.rv.refused.gaia-release	placement	none	refused	live		7.1.6	SIMBAD's radial velocity cites a Gaia release on a record whose own Gaia fit is position-only.
+placement.rv.refused.no-5p-solution	placement	none	refused	live		7.1.6	Gaia's RVS velocity on a position-only solution, whose spectrum is a blend.
+placement.rv.rejected-above-ceiling	placement	none	outcome	live		7.1.6	The radial velocity a tier supplied exceeds the sanity ceiling on its own, so the radial term is dropped.
+placement.rv.simbad	placement	none	outcome	live		7.1.6	SIMBAD's bibcoded radial velocity.
+placement.velocity.clamped	placement	none	outcome	live		7.1.6	The space velocity exceeds the sanity ceiling, so it is zeroed.
+promotion.adopted.earlier-mint	promotion	merge	outcome	live		7.1.6	An earlier row of this build already minted the record this row names.
+promotion.adopted.own-hip	promotion	merge	outcome	live		7.1.6	The row's Gaia source names no record, but its own HIP names one other than the anchor, which is the component.
+promotion.adopted.own-id	promotion	merge	outcome	live		7.1.6	The row's own Gaia source or HIP names a record already in the catalogue, which is the component.
+promotion.adopted.sameas-bridge	promotion	merge	outcome	live		7.1.6	A same-as edge bridges the row's synthetic key to a Gaia source already in the catalogue, whose record is the component.
+promotion.dropped.anchor-is-component	promotion	merge	outcome	live		7.1.6	The row's ids resolve to its anchor's record, which the naming authority already letters as this component, so that record is the component.
+promotion.dropped.beyond-tidal-limit	promotion	retire	outcome	live		7.1.6	Projected at the anchor's distance, the pair is wider than the 1 pc tidal limit, so it cannot be bound.
+promotion.dropped.collocated-primary	promotion	retire	outcome	live		7.1.6	A pair's primary promoted as the system anchor's companion has neither its own fit nor a measured offset from the anchor, so it has no position.
+promotion.dropped.compound-comp	promotion	retire	outcome	live		7.1.6	The row's component letter is an unresolved aggregate of components that have rows of their own, so it is not one star.
+promotion.dropped.no-absmag	promotion	retire	outcome	live		7.1.6	The row has no brightness of its own: no photometry, magnitude difference, WDS magnitude or per-component spectral type, and no renderable orbit.
+promotion.dropped.no-identifier	promotion	retire	outcome	live		7.1.6	The row has no Gaia source, no HIP of its own and no composable synthetic key.
+promotion.dropped.no-position	promotion	retire	outcome	live		7.1.6	The row has neither an independent fit nor a measured separation and position angle off its anchor.
+promotion.dropped.parked-record	promotion	park	outcome	live		7.1.6	The distance the row states is a parallax a tier above refused, so promoting it would ship the parked record.
+promotion.minted	promotion	none	outcome	live		7.1.6	The row becomes a new catalogue record.
+promotion.not-applicable	promotion	none	outcome	retired	7.1.8	7.1.6	Promotion decides nothing for the row: a pair's primary that anchors it, or a row in no pair.
+promotion.not-applicable.pair-anchor	promotion	none	outcome	live		7.1.8	Promotion decides nothing for the row: it is a pair's primary that anchors the pair.
+promotion.parked.primary-unresolved	promotion	park	outcome	live		7.1.8	A pair's primary resolves to no catalogue record and no escape places it, so it ships no record of its own and its pair runs with no anchor.
+promotion.parked.unpaired	promotion	park	outcome	live		7.1.8	The row is in no pair, so promotion has no geometry to place it with and ships no record for it.
+promotion.primary-unresolved	promotion	none	outcome	retired	7.1.8	7.1.6	A pair's primary resolves to no catalogue record and no escape places it, so its pair runs with no anchor.
+promotion.repositioned	promotion	merge	outcome	live		7.1.6	An AT-HYG record sitting on the anchor under the anchor's name plus this letter is the component, and moves to the row's position.
+size.apsis-teff	size	none	outcome	live		7.1.16	Stefan-Boltzmann from the record's de-extincted absmag and its own Gaia DR3 Apsis Teff, with the class-table bolometric correction.
+size.class-teff	size	none	outcome	live		7.1.16	Stefan-Boltzmann from the record's de-extincted absmag and the class-table Teff and bolometric correction.
+size.non-finite-luminosity	size	none	outcome	live		7.1.16	The absmag gives a luminosity no float holds, so the record ships the 1 R☉ stand-in.
+size.refused.apsis-teff-out-of-window	size	none	refused	live		7.1.16	An Apsis Teff solution lies outside the 2–60 kK sanity window the radius chain accepts.
+size.refused.apsis-teff-white-dwarf	size	none	refused	live		7.1.16	The record's Apsis Teff stands down: a white dwarf takes the fixed radius, and Apsis does not model its atmosphere.
+size.refused.apsis-teff-wolf-rayet	size	none	refused	live		7.1.16	The record's Apsis Teff stands down: a Wolf-Rayet keeps its own Teff ramp, and Apsis does not model its atmosphere.
+size.white-dwarf	size	none	outcome	live		7.1.16	A white dwarf: the fixed typical white-dwarf radius, since absmag does not translate into one.

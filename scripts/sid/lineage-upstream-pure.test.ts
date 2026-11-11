@@ -2,17 +2,18 @@ import { describe, expect, it } from 'vitest';
 
 import type { IdentityRow } from '../catalog/lineage/identity-pure';
 import { stageLineageLine, type LineageLine, type LineageRow } from '../catalog/lineage/lineage-row-pure';
-import { LIVE, codeEffects, stageCodes } from '../catalog/lineage/reason-codes/reason-codes-pure';
+import { codeEffects, outcomeCode, refusalCode, stageCodes } from '../catalog/lineage/reason-codes/reason-codes-pure';
 import { lineageAdmissions, lineageCauses } from './lineage-upstream-pure';
 
 const FIRST = stageCodes('first', {
-  admitted: { description: 'Admitted.', effect: 'none', status: LIVE },
-  parked: { description: 'Parked.', effect: 'park', status: LIVE },
-  folded: { description: 'Folded.', effect: 'merge', status: LIVE },
+  admitted: outcomeCode('Admitted.'),
+  parked: outcomeCode('Parked.', 'park'),
+  folded: outcomeCode('Folded.', 'merge'),
+  'parked.refused': refusalCode('Weighed and refused.'),
 });
 const SECOND = stageCodes('second', {
-  dropped: { description: 'Dropped.', effect: 'retire', status: LIVE },
-  adopted: { description: 'Adopted.', effect: 'merge', status: LIVE },
+  dropped: outcomeCode('Dropped.', 'retire'),
+  adopted: outcomeCode('Adopted.', 'merge'),
 });
 const effects = codeEffects([FIRST, SECOND]);
 const ORDER = ['first', 'second'];
@@ -56,7 +57,7 @@ describe('lineageCauses', () => {
     const causes = lineageCauses(
       ['gaia_dr3:1'],
       [{ stage: 'first', rows: [identityRow('a', ['gaia_dr3:1'])] }],
-      [line('first', 'a', 'parked', { role: 'refused' }), line('first', 'z', 'parked')],
+      [line('first', 'a', 'parked.refused', { role: 'refused' }), line('first', 'z', 'parked')],
       effects, ORDER,
     );
     expect(causes.get('gaia_dr3:1')).toEqual({ decisions: [], seenBy: ['first'] });

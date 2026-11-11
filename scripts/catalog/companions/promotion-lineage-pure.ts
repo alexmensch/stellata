@@ -4,46 +4,42 @@ import { MULTIPLES_ROW_KEY } from '../../binaries/multiples-row-key-pure';
 import { starDesignations } from '../../sid/sid-pure';
 import { rowKeyText } from '../../util/sources/row-ref-pure';
 import type { IdentityRow } from '../lineage/identity-pure';
-import { evidenceTexts, paramsText, type LineageParams, type LineageRow } from '../lineage/lineage-row-pure';
-import { LIVE, codeEffects, stageCodes, type CodeDeclaration, type CodeStatus } from '../lineage/reason-codes/reason-codes-pure';
+import { evidenceTexts, stageRow, type LineageParams, type LineageRow } from '../lineage/lineage-row-pure';
+import { codeEffects, outcomeCode, stageCodes, retired } from '../lineage/reason-codes/reason-codes-pure';
 import type { Star } from '../parse/stars-parse';
 import type { MintedBrightness, MultiplesTsvRow, PromotedRow, RowOutcome } from './companion-promotion';
 import { PROMOTION_LINEAGE } from '../../../src/catalog-format/pipeline-outputs/lineage-files';
 
 export const PROMOTION_LINEAGE_BUDGET = { gzipBytes: 1_040_000, writeMs: 10_000 };
 
-const live = (description: string, effect: CodeDeclaration['effect'] = 'none'): CodeDeclaration => (
-  { description, effect, status: LIVE }
-);
-
-const RETIRED_7_1_8: CodeStatus = { kind: 'retired', retiredIn: '7.1.8' };
+const RETIRED_7_1_8 = retired('7.1.8');
 
 export const PROMOTION_CODES = stageCodes(PROMOTION_LINEAGE.stage, {
-  'dropped.compound-comp': live('The row\'s component letter is an unresolved aggregate of components that have rows of their own, so it is not one star.', 'retire'),
-  'dropped.beyond-tidal-limit': live('Projected at the anchor\'s distance, the pair is wider than the 1 pc tidal limit, so it cannot be bound.', 'retire'),
-  'dropped.collocated-primary': live('A pair\'s primary promoted as the system anchor\'s companion has neither its own fit nor a measured offset from the anchor, so it has no position.', 'retire'),
-  'dropped.no-identifier': live('The row has no Gaia source, no HIP of its own and no composable synthetic key.', 'retire'),
-  'dropped.anchor-is-component': live('The row\'s ids resolve to its anchor\'s record, which the naming authority already letters as this component, so that record is the component.', 'merge'),
-  'dropped.parked-record': live('The distance the row states is a parallax a tier above refused, so promoting it would ship the parked record.', 'park'),
-  'dropped.no-position': live('The row has neither an independent fit nor a measured separation and position angle off its anchor.', 'retire'),
-  'dropped.no-absmag': live('The row has no brightness of its own: no photometry, magnitude difference, WDS magnitude or per-component spectral type, and no renderable orbit.', 'retire'),
-  'adopted.own-id': live('The row\'s own Gaia source or HIP names a record already in the catalogue, which is the component.', 'merge'),
-  'adopted.own-hip': live('The row\'s Gaia source names no record, but its own HIP names one other than the anchor, which is the component.', 'merge'),
-  'adopted.sameas-bridge': live('A same-as edge bridges the row\'s synthetic key to a Gaia source already in the catalogue, whose record is the component.', 'merge'),
-  'adopted.earlier-mint': live('An earlier row of this build already minted the record this row names.', 'merge'),
-  minted: live('The row becomes a new catalogue record.'),
-  repositioned: live('An AT-HYG record sitting on the anchor under the anchor\'s name plus this letter is the component, and moves to the row\'s position.', 'merge'),
-  'primary-unresolved': {
-    description: 'A pair\'s primary resolves to no catalogue record and no escape places it, so its pair runs with no anchor.',
-    effect: 'none', status: RETIRED_7_1_8,
-  },
-  'not-applicable': {
-    description: 'Promotion decides nothing for the row: a pair\'s primary that anchors it, or a row in no pair.',
-    effect: 'none', status: RETIRED_7_1_8,
-  },
-  'parked.primary-unresolved': live('A pair\'s primary resolves to no catalogue record and no escape places it, so it ships no record of its own and its pair runs with no anchor.', 'park'),
-  'parked.unpaired': live('The row is in no pair, so promotion has no geometry to place it with and ships no record for it.', 'park'),
-  'not-applicable.pair-anchor': live('Promotion decides nothing for the row: it is a pair\'s primary that anchors the pair.'),
+  'dropped.compound-comp': outcomeCode('The row\'s component letter is an unresolved aggregate of components that have rows of their own, so it is not one star.', 'retire'),
+  'dropped.beyond-tidal-limit': outcomeCode('Projected at the anchor\'s distance, the pair is wider than the 1 pc tidal limit, so it cannot be bound.', 'retire'),
+  'dropped.collocated-primary': outcomeCode('A pair\'s primary promoted as the system anchor\'s companion has neither its own fit nor a measured offset from the anchor, so it has no position.', 'retire'),
+  'dropped.no-identifier': outcomeCode('The row has no Gaia source, no HIP of its own and no composable synthetic key.', 'retire'),
+  'dropped.anchor-is-component': outcomeCode('The row\'s ids resolve to its anchor\'s record, which the naming authority already letters as this component, so that record is the component.', 'merge'),
+  'dropped.parked-record': outcomeCode('The distance the row states is a parallax a tier above refused, so promoting it would ship the parked record.', 'park'),
+  'dropped.no-position': outcomeCode('The row has neither an independent fit nor a measured separation and position angle off its anchor.', 'retire'),
+  'dropped.no-absmag': outcomeCode('The row has no brightness of its own: no photometry, magnitude difference, WDS magnitude or per-component spectral type, and no renderable orbit.', 'retire'),
+  'adopted.own-id': outcomeCode('The row\'s own Gaia source or HIP names a record already in the catalogue, which is the component.', 'merge'),
+  'adopted.own-hip': outcomeCode('The row\'s Gaia source names no record, but its own HIP names one other than the anchor, which is the component.', 'merge'),
+  'adopted.sameas-bridge': outcomeCode('A same-as edge bridges the row\'s synthetic key to a Gaia source already in the catalogue, whose record is the component.', 'merge'),
+  'adopted.earlier-mint': outcomeCode('An earlier row of this build already minted the record this row names.', 'merge'),
+  minted: outcomeCode('The row becomes a new catalogue record.'),
+  repositioned: outcomeCode('An AT-HYG record sitting on the anchor under the anchor\'s name plus this letter is the component, and moves to the row\'s position.', 'merge'),
+  'primary-unresolved': outcomeCode(
+    'A pair\'s primary resolves to no catalogue record and no escape places it, so its pair runs with no anchor.',
+    'none', RETIRED_7_1_8,
+  ),
+  'not-applicable': outcomeCode(
+    'Promotion decides nothing for the row: a pair\'s primary that anchors it, or a row in no pair.',
+    'none', RETIRED_7_1_8,
+  ),
+  'parked.primary-unresolved': outcomeCode('A pair\'s primary resolves to no catalogue record and no escape places it, so it ships no record of its own and its pair runs with no anchor.', 'park'),
+  'parked.unpaired': outcomeCode('The row is in no pair, so promotion has no geometry to place it with and ships no record for it.', 'park'),
+  'not-applicable.pair-anchor': outcomeCode('Promotion decides nothing for the row: it is a pair\'s primary that anchors the pair.'),
 });
 
 type Branch = Parameters<typeof PROMOTION_CODES.code>[0];
@@ -81,10 +77,9 @@ export function promotionLineageRow(r: PromotedRow, recordKey: (idx: number) => 
   const cited = o.kind === 'dropped' && o.reason === 'parked-record' ? o.parked : null;
   const evidence = evidenceTexts(key, [r.anchor, r.systemAnchor, cited].filter((k): k is string => k !== null));
   const via = r.via;
-  const row = <B extends Branch>(branch: B, params: ParamsOf<B>): LineageRow => ({
-    stage: PROMOTION_LINEAGE.stage, key, role: 'outcome', code: PROMOTION_CODES.code(branch),
-    params: paramsText(params as LineageParams), evidence,
-  });
+  const row = <B extends Branch>(branch: B, params: ParamsOf<B>): LineageRow => (
+    stageRow(PROMOTION_CODES, key, branch, params as LineageParams, evidence)
+  );
   switch (o.kind) {
     case 'dropped':
       if (o.reason === 'parked-record') {
