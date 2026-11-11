@@ -5,7 +5,7 @@ its source folders under `data/` so the binary-system pipeline's data
 stays in one place.
 
 ```
-multiples.tsv                   build-binaries.py output. Two rows per
+multiples.tsv                   build:binaries output. Two rows per
                                 kept physical WDS pair (incl. sub-pairs
                                 synthesized from ORB6 / Gaia NSS — see
                                 /scripts/binaries/README.md#sub-pair-synthesis-subdividepy),
@@ -50,8 +50,8 @@ spot_check_ground_truth.tsv     SIMBAD-verified expected Stage 2
 
 ## Schema
 
-Canonical column order is `MULTIPLES_TSV_COLUMNS` in
-`scripts/binaries/stage6_multiples.py`, the one owner; each column is
+Canonical column order is `MULTIPLES_COLUMNS` in
+`scripts/binaries/multiples-tsv.ts`, the one owner; each column is
 described in [Stage 6](../../scripts/binaries/README.md#stage-6--multiplestsv-emit).
 
 Per-component provenance columns (`resolve_via`, `astrometry_via`,
@@ -84,8 +84,8 @@ Assertion semantics (the contract the harness implements):
   `known_bug:<bead-id>` and states the SIMBAD-true value — fixing the
   bug flips the row, and the harness failure is the prompt to update
   it.
-- `expected_resolve_via` is one of `RESOLVE_VIA_VALUES`
-  (`scripts/binaries/stage2_resolve.py`) **plus `absent`**: Stage 2
+- `expected_resolve_via` is one of `RESOLVE_VIA`
+  (`scripts/binaries/multiples-tsv.ts`) **plus `absent`**: Stage 2
   emits no component at all for that `(wds_id, component)`. The
   stellata-dch.102 rescue tier decomposes blank-components WDS rows
   anchored by an ORB6 orbit or SIMBAD xid (Antares), so only the
@@ -122,7 +122,7 @@ Adding a star later = one appended line verified the same way.
 
 ## Produced by
 
-`scripts/binaries/build-binaries.py` (Stage 6 emits;
+`scripts/binaries/build-binaries.ts` (Stage 6 emits;
 `pnpm run build:binaries`). See
 [`scripts/binaries/README.md`](../../scripts/binaries/README.md) for
 the seven-stage pipeline + per-stage modules.

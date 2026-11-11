@@ -104,7 +104,7 @@ export type DirectionResolution = CascadeResult<
  *  `pmraMasyr` is the tier's own μ_α* — the cos δ-applied east-component
  *  rate. Do NOT divide by cos δ before calling. Either PM component
  *  missing → the measured position is returned unpropagated (best
- *  available estimate, matches stage2_resolve.py's convention). */
+ *  available estimate, as the binaries pipeline's propagatePosition does). */
 export function directionAtEpoch(
   raDeg: number,
   decDeg: number,

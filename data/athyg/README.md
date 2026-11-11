@@ -121,7 +121,7 @@ consumers that walk the upstream cells directly, all naming it through
 the TypeScript side: `pnpm run audit:spine-primaries` (the `hd` / `hyg`
 tallies), `scripts/catalog/parse/constellations/iau-athyg-agreement.test.ts`
 (the boundary-epoch cross-check against the editorial `con` column), and
-`scripts/binaries/build-binaries.py` (Stage 1's AT-HYG parse, on the
+`scripts/binaries/load/athyg-pure.ts` (Stage 1's AT-HYG reader, on the
 `build:binaries` path, not `build:catalog`).
 
 Every request set is derived from the membership term — the spine's own

@@ -42,9 +42,8 @@ scripts/catalog/parse/
                                   walk now serves the GCVS byGaia bridge in
                                   build-catalog.ts, not the record walk. The
                                   TYC reader streams and takes a keep-set —
-                                  its table is 2.5 M rows. Cross-language
-                                  parity with scripts/binaries/parsers.py is
-                                  pinned in ../validate/.
+                                  its table is 2.5 M rows. The binaries
+                                  pipeline's Stage 1 reads both walks too.
   gcvs/                           GCVS variable-star parsing and the
                                   variability cross-match, with its own
                                   README. Read by build-catalog only.
@@ -58,10 +57,6 @@ scripts/catalog/parse/
                                   is the one list of ways a corpus row
                                   addresses a record — hip / gaia / name / hd.
   star-fixture.ts                 Test-only star-record builder.
-  spectral-encoding-parity.test.ts
-                                  Pins the spectral byte encoding against
-                                  scripts/binaries/mass_estimate.py's own
-                                  parser.
 ```
 
 ## TSV header resolution

@@ -97,7 +97,7 @@ per connected component. Edges split by the
   (`gaia_dr3_hip_xmatch.tsv` via `gaia-xmatch.ts`), hip/hd/hr/gl
   co-designations (same AT-HYG row / search-index entry),
   synth↔WDS-component identity (`multiples.tsv`), WDS↔Gaia
-  per-component (`simbad_wds_xids.tsv`, `stage2_resolve.py`), GCVS
+  per-component (`simbad_wds_xids.tsv`, `scripts/binaries/resolve/`), GCVS
   bridging (`bridgeGcvsByGaia`).
 - **Stored** (committed, append-only): edges encoding a human or
   cross-release decision —

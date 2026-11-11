@@ -91,7 +91,7 @@
     "test": "vitest run",
     "test:py": "python3 scripts/ci/python_tests.py",
     "test:no-skip": "tsx scripts/util/launch.ts scripts/ci/vitest-no-skip.ts",
-    "test:spotcheck": "python3 scripts/binaries/build-binaries-spotcheck.py",
+    "test:spotcheck": "vitest run scripts/binaries/build-binaries.test.ts -t spot-check",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage"
   },

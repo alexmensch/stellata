@@ -38,5 +38,3 @@ crossid.txt    ~12 MB, LFS. Hip/HD/Tyc/etc. → GCVS name mappings.
 
 - `scripts/catalog/build-catalog.ts` (encodes period + amplitude
   into v6 record bytes 36–39).
-- `scripts/binaries/build-binaries.py` Stage 1 (variability flags
-  on per-component rows in `multiples.tsv`).

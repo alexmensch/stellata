@@ -37,7 +37,7 @@ consumers and refresh cadences differ.
   stars (V ≲ 3); WDS doesn't carry HIP.
 
 Consumed by `scripts/catalog/build-catalog.ts` (visual-doubles flag
-in v6 bit 4) and `scripts/binaries/build-binaries.py` Stage 2
+in v6 bit 4) and `scripts/binaries/build-binaries.ts` Stage 2
 (CCDM tier of the WDS-component → Gaia source_id cascade). See
 [CCDM double-star cross-match](/scripts/catalog/multiplicity/README.md#ccdm-double-star-cross-match) for the gate semantics.
 
@@ -84,7 +84,7 @@ in v6 bit 4) and `scripts/binaries/build-binaries.py` Stage 2
 - **Licence**: Public domain via CDS.
 - **Role**: long-baseline (≈1991.25 epoch) astrometry that complements
   Gaia DR3's 2014–2017 baseline. Two distinct fallback paths in
-  `scripts/binaries/build-binaries.py` Stage 3:
+  `scripts/binaries/build-binaries.ts` Stage 3:
   1. *Gaia-saturated bright primaries* (Sirius A, α Cen, Algol,
      Procyon) — no Gaia 5p row exists; HIP2 is the only astrometry.
   2. *Orbit-corrupted PMs in tight binaries* — when Hipparcos and

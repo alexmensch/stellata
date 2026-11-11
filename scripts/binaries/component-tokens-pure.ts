@@ -78,9 +78,7 @@ export function compoundContains(a: string, b: string): boolean {
 }
 
 /** The more canonical of two pair primaries under one WDS root: the
- *  top-level letter decides, then token length, then alphabetical order.
- *  `anchor_offsets.py`'s `anchor_token_rank` is its Python twin until the
- *  switch; change both. */
+ *  top-level letter decides, then token length, then alphabetical order. */
 export function isMoreCanonicalAnchor(candidateComp: string, incumbentComp: string): boolean {
   if (candidateComp === incumbentComp) return false;
   const branch = (comp: string) => comp.charAt(0);

@@ -423,7 +423,7 @@ direction cascade is what that swap inherits, not something it revisits.
 Each row's *sky direction* is resolved at build time through the same
 trust cascade the
 multiple-star pipeline already implements
-(`scripts/binaries/stage3_astrometry.py`), sharing its thresholds. The three
+(`scripts/binaries/astrometry/routes-pure.ts`), sharing its thresholds. The three
 tiers below are that research's snapshot; the shipped cascade has since grown
 Tycho-2, CNS5, SIMBAD and curated tiers in place of the printed one, and
 [Direction resolution](/scripts/catalog/distance/README.md#direction-resolution) is the live table
@@ -461,7 +461,7 @@ construction. **J2016.0 is the scene epoch** — Gaia DR3's native epoch,
 adopted catalogue-wide ([Reference epoch](/data/README.md#reference-epoch-and-proper-motion)) so the
 Gaia-dominant corpus needs no propagation and only the shrinking HIP2 /
 AT-HYG minority advances; the binary pipeline mirrors the same
-`CATALOG_SCENE_EPOCH` in `scripts/binaries/stage6_multiples.py`. Epoch
+`CATALOG_SCENE_EPOCH` in `scripts/binaries/multiples/multiples-rows-pure.ts`. Epoch
 propagation is the RV-free linear space-motion form (tangent-basis
 advance + renormalise): exact in cos δ, <0.002″ error at Barnard's-scale
 PM over the 24.75 yr HIP2→J2016 interval (Gaia routes are a zero-Δt

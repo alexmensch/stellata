@@ -50,9 +50,7 @@ Each has its own README.
   shader consumers can't drift on precision — import from here rather
   than re-derive. `RA_HOURS_TO_DEG` is the hours→degrees factor every
   catalogue RA column and sexagesimal boundary coordinate goes through;
-  tests import it rather than restating 15. The Python copy is
-  `scripts/util/astronomy_constants.py`, held to this one by
-  `tests/astronomy-constants-sync.test.ts`.
+  tests import it rather than restating 15.
   <a id="sun-absmag-v"></a>`SUN_ABSMAG_V` = 4.83 departs from the 4.81 (Vega) of
   [Willmer 2018](/data/papers/index.md#willmer2018) Table 3, and nothing records where 4.83 comes
   from: which value to adopt is an open decision (stellata-uadc.69.21, under
