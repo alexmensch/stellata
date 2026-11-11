@@ -265,13 +265,22 @@ export function mscPeriodDays(row: MscOrbitRow): number | null {
 /** MSC's periastron epoch as an absolute JD: a plausible year through the
  *  J2000 anchor, otherwise a truncated JD; null when neither reading is. */
 export function mscT0Jd(t0: number | null): number | null {
-  if (t0 === null) return null;
-  if (t0 <= MSC_T0_YEAR_MAX) {
+  return t0 === null ? null : yearElseTruncatedJd(t0, t0 <= MSC_T0_YEAR_MAX);
+}
+
+export function isPlausibleT0Jd(jd: number): boolean {
+  return T0_MIN_PLAUSIBLE_JD <= jd && jd <= T0_MAX_PLAUSIBLE_JD;
+}
+
+/** A periastron epoch as an absolute JD: the Julian-year reading when `tryYear`
+ *  and plausible, else the truncated-JD reading when plausible, else null. */
+export function yearElseTruncatedJd(t0: number, tryYear: boolean): number | null {
+  if (tryYear) {
     const yearJd = jdOfJulianYear(t0);
-    if (T0_MIN_PLAUSIBLE_JD <= yearJd && yearJd <= T0_MAX_PLAUSIBLE_JD) return yearJd;
+    if (isPlausibleT0Jd(yearJd)) return yearJd;
   }
   const truncatedJd = t0 + TRUNCATED_JD_TO_JD_OFFSET;
-  return T0_MIN_PLAUSIBLE_JD <= truncatedJd && truncatedJd <= T0_MAX_PLAUSIBLE_JD ? truncatedJd : null;
+  return isPlausibleT0Jd(truncatedJd) ? truncatedJd : null;
 }
 
 /** P, T and e present, and ω unless the fit is exactly circular — the
