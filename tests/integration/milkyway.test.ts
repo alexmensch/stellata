@@ -640,7 +640,7 @@ describe('MilkyWay surface-brightness calibration', () => {
     expect(displayLevel(L_THRESH) * 255).toBeCloseTo(38.25, 2);
 
     expect(bandDisplayLevel(sbAt(0, 5)) * 255).toBeCloseTo(63.67, 2);
-    expect(bandDisplayLevel(GC_SIGHTLINE_MAG_ARCSEC2) * 255).toBeCloseTo(21.695, 2);
+    expect(bandDisplayLevel(GC_SIGHTLINE_MAG_ARCSEC2) * 255).toBeCloseTo(21.695, 3);
     expect(bandDisplayLevel(sbAt(180, 0)) * 255).toBeCloseTo(15.66, 2);
     expect(bandDisplayLevel(sbAt(0, 30)) * 255).toBeCloseTo(3.64, 2);
     expect(bandDisplayLevel(sbAt(0, 90)) * 255).toBeCloseTo(0.003534, 3);
