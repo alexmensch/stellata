@@ -15,6 +15,7 @@ import type { InputsCounts } from './parse/read-stars-inputs.ts';
 import type { FiguresCounts } from './parse/constellations/constellations.ts';
 import type { BoundariesCounts } from './boundaries/build-boundaries-artifact.ts';
 import type { SearchCounts } from './record/search-index-pure.ts';
+import type { GcvsCounts } from './parse/gcvs/gcvs-parse.ts';
 
 /** Repo-relative path of the snapshot `BuildCounts` is pinned against, so the
  *  build and every consumer that reads the shipped figures back resolve one
@@ -27,7 +28,7 @@ export function committedBuildCounts(): BuildCounts {
 }
 
 /** Every count the snapshot holds, by name: the filed counts and each composed stage's block. */
-export type BuildCounts = FiledCounts & InputsCounts & BrightnessColourCounts & CoherenceCounts & SearchCounts & BoundariesCounts & FiguresCounts;
+export type BuildCounts = FiledCounts & InputsCounts & BrightnessColourCounts & CoherenceCounts & GcvsCounts & SearchCounts & BoundariesCounts & FiguresCounts;
 
 /** The counts of the stages not yet composed of a count block, each filed under its stage by CATALOG_COUNT_STAGE. */
 export interface FiledCounts {
@@ -37,27 +38,6 @@ export interface FiledCounts {
   binaryPairs: number;
   /** Pairs where both stars chose each other (sets FLAG_BINARY_PRIMARY). */
   binaryMutualPairs: number;
-  /** Entries in the GCVS main table at source. */
-  gcvsEntries: number;
-  /** GCVS cross-reference Hipparcos lookups. */
-  gcvsHipXrefs: number;
-  /** GCVS cross-reference Henry Draper lookups. */
-  gcvsHdXrefs: number;
-  /** GCVS xrefs bridged from byHip via gaia_dr3_hip_xmatch.tsv onto
-   *  gaia_source_id as primary key. */
-  gcvsGaiaXrefs: number;
-  /** Variables matched into the catalog after cross-reference resolution. */
-  gcvsMatched: number;
-  /** gcvsMatched component resolved via xref.byGaia (gaia_source_id). */
-  gcvsMatchedByGaia: number;
-  /** gcvsMatched component resolved via xref.byHip (HIP fallback). */
-  gcvsMatchedByHip: number;
-  /** gcvsMatched component resolved via xref.byHd (HD fallback). */
-  gcvsMatchedByHd: number;
-  /** Stars given a searchable GCVS designation (`gcvsName`) — superset of
-   *  gcvsMatched: aperiodic variables (flare/RCB/irregular/nova) are named
-   *  for search but carry no renderable period. */
-  gcvsNamed: number;
   /** Total CCDM systems in the source TSV. */
   ccdmGroups: number;
   /** CCDM systems resolved against catalog records. */
@@ -124,11 +104,6 @@ export interface FiledCounts {
   /** Stars with both nonzero amplitude and period after quantisation —
    *  drives the shader's "is variable" sentinel. */
   variableCount: number;
-  /** Stars whose designation constellation came from their own GCVS
-   *  designation — the only nomenclature source the build has left, since the
-   *  manifest carries no editorial `con` cell. See `parse/constellations/README.md#positional-constellation-membership`.
-   * */
-  gcvsDesignationCon: number;
   /** Record index of Sol after sort; a build without exactly one Sol throws. */
   solIndex: number;
   /** Records emitted with a non-zero Gaia DR3 source_id at
@@ -648,16 +623,6 @@ export const CATALOG_COUNT_STAGE: Readonly<Record<keyof FiledCounts, CatalogCoun
   multiplicityResolved: 'multiplicity',
   multiplicityUnresolved: 'multiplicity',
   componentDesignations: 'multiplicity',
-  gcvsEntries: 'gcvs',
-  gcvsHipXrefs: 'gcvs',
-  gcvsHdXrefs: 'gcvs',
-  gcvsGaiaXrefs: 'gcvs',
-  gcvsMatched: 'gcvs',
-  gcvsMatchedByGaia: 'gcvs',
-  gcvsMatchedByHip: 'gcvs',
-  gcvsMatchedByHd: 'gcvs',
-  gcvsNamed: 'gcvs',
-  gcvsDesignationCon: 'gcvs',
   recordCount: 'records',
   recordsInFirstChunk: 'records',
   apsisSourcesUnpulled: 'records',

@@ -108,6 +108,7 @@ import {
 import {
   bridgeGcvsByGaia,
   applyVariability,
+  gcvsSummary,
 } from './parse/gcvs/gcvs-parse';
 import { VELOCITY_SANITY_CEILING_KM_S, GALACTIC_ESCAPE_VELOCITY_KM_S } from './distance/velocity';
 import { RV_ERROR_BANDS } from './distance/radial-velocity/radial-velocity';
@@ -312,15 +313,6 @@ export async function main() {
     recordCount: 0,
     binaryPairs: 0,
     binaryMutualPairs: 0,
-    gcvsEntries: 0,
-    gcvsHipXrefs: 0,
-    gcvsHdXrefs: 0,
-    gcvsGaiaXrefs: 0,
-    gcvsMatched: 0,
-    gcvsMatchedByGaia: 0,
-    gcvsMatchedByHip: 0,
-    gcvsMatchedByHd: 0,
-    gcvsNamed: 0,
     ccdmGroups: 0,
     ccdmResolved: 0,
     ccdmFlagged: 0,
@@ -372,7 +364,6 @@ export async function main() {
     lmcOverriddenByDistVia: emptyTallyPartition(DIST_VIA_VALUES),
     nameTableEntries: 0,
     variableCount: 0,
-    gcvsDesignationCon: 0,
     gaiaSourceIdResolved: 0,
     apsisMatched: 0,
     apsisTeffEither: 0,
@@ -776,24 +767,8 @@ export async function main() {
   );
   bridgeGcvsByGaia(xref, hipToGaia);
 
-  const m = applyVariability(stars, gcvsData, xref);
-  console.log(
-    `  ${gcvsData.size} GCVS entries, ${xref.byHip.size} Hip + ` +
-      `${xref.byHd.size} HD + ${xref.byGaia.size} Gaia xrefs, ` +
-      `${m.named} named for search (${m.matched} with a renderable period: ` +
-      `gaia=${m.matchedByGaia}, hip=${m.matchedByHip}, hd=${m.matchedByHd}) ` +
-      `in ${Date.now() - tGcvs}ms`,
-  );
-  counts.gcvsEntries = gcvsData.size;
-  counts.gcvsHipXrefs = xref.byHip.size;
-  counts.gcvsHdXrefs = xref.byHd.size;
-  counts.gcvsGaiaXrefs = xref.byGaia.size;
-  counts.gcvsMatched = m.matched;
-  counts.gcvsMatchedByGaia = m.matchedByGaia;
-  counts.gcvsMatchedByHip = m.matchedByHip;
-  counts.gcvsMatchedByHd = m.matchedByHd;
-  counts.gcvsNamed = m.named;
-  counts.gcvsDesignationCon = m.desigConSupplied;
+  const gcvsCounts = applyVariability(stars, gcvsData, xref);
+  console.log(`  ${gcvsSummary(gcvsCounts)} in ${Date.now() - tGcvs}ms`);
 
   // Hipparcos CCDM double-star cross-match. Marks a primary on
   // the same FLAG_BINARY_PRIMARY bit the geometric pass uses, picking
@@ -1217,6 +1192,7 @@ export async function main() {
       ...namingEmission.checks,
       buildCountsCheck({ ...counts, solIndex }, [
         { stage: 'inputs', block: { kind: 'counted', counts: inputs.counts } },
+        { stage: 'gcvs', block: { kind: 'counted', counts: gcvsCounts } },
         { stage: 'search', block: { kind: 'counted', counts: search.counts } },
         { stage: 'boundaries', block: { kind: 'counted', counts: boundaries.counts } },
         { stage: 'figures', block: { kind: 'counted', counts: figures } },

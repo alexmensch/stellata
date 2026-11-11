@@ -16,7 +16,9 @@ scripts/catalog/parse/gcvs/
                            classifyGcvsVarType and isPlanetaryTransitOnly,
                            bridgeGcvsByGaia, and
                            applyVariability — the post-sort walk that
-                           attaches names and pulsation.
+                           attaches names and pulsation, returning
+                           GcvsCounts, the snapshot's gcvs count block
+                           (gcvsSummary is its log line).
 ```
 
 `parseGcvsMain` + `parseGcvsCrossref` in `build-catalog.ts` read two
