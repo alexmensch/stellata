@@ -223,9 +223,10 @@ function diffSection<T extends SelfConsistencyOutlier | SimbadOutlier>(
  *  survive an explicit rebaseline; a new outlier lands without one, for the
  *  committing human to fill in. */
 export function mergeReasonsFromSnapshot(
-  expected: RegressionReport,
+  expected: RegressionReport | null,
   actual: RegressionReport,
 ): RegressionReport {
+  if (expected === null) return actual;
   const expectedSc = new Map(expected.selfConsistency.map((o) => [o.id, o]));
   const expectedSb = new Map(expected.simbad.map((o) => [o.id, o]));
   return {
