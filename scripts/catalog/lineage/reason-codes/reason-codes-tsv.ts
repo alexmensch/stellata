@@ -10,8 +10,6 @@ import { DATA_FILES } from '../../../../src/catalog-format/pipeline-outputs/data
 const COLUMNS = ['code', 'stage', 'effect', 'role', 'status', 'retired_in', 'first_version', 'description'] as const;
 type Column = (typeof COLUMNS)[number];
 
-const LATER_COLUMNS = ['role'] as const satisfies readonly Column[];
-
 function listedCode(row: TableRow<Column>): Omit<ReasonCodeEntry, 'role'> {
   return {
     code: row.raw('code'),
@@ -42,11 +40,10 @@ export const REASON_CODES = defineArtifact({
   }),
 });
 
-/** An older copy of the list, read by its own header: a column it predates reads as absent. */
+/** An older copy of the list, read by its own header: one that predates the role column holds no role. */
 export function parseListedCodes(text: string): ListedCode[] {
-  const columns = COLUMNS.filter((c) => !(LATER_COLUMNS as readonly Column[]).includes(c));
-  const table = { file: REASON_CODES.file, columns, optional: LATER_COLUMNS, hint: REASON_CODES.hint };
-  return [...readTable<Column>(table, text)].map((row) => (
-    row.raw('role') === '' ? listedCode(row) : { ...listedCode(row), role: row.oneOf('role', LINEAGE_ROLES) }
-  ));
+  const header = text.slice(0, text.indexOf('\n')).split('\t');
+  if (header.includes('role')) return REASON_CODES.parse(text);
+  const columns = COLUMNS.filter((c) => c !== 'role');
+  return [...readTable<Column>({ file: REASON_CODES.file, columns, hint: REASON_CODES.hint }, text)].map(listedCode);
 }

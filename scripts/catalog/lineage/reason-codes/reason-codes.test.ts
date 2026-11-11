@@ -72,6 +72,9 @@ describe('reasonCodeList and appendOnlyViolations', () => {
       code: 'demo.kept', stage: 'demo', effect: 'none', status: 'live', retiredIn: '', firstVersion: '1.0.0', description: 'kept',
     }]);
     expect(appendOnlyViolations(listed, reasonCodeList([refusal], base, () => '2.0.0'))).toEqual([]);
+    const blankRole = 'code\tstage\teffect\trole\tstatus\tretired_in\tfirst_version\tdescription\n'
+      + 'demo.kept\tdemo\tnone\t\tlive\t\t1.0.0\tkept\n';
+    expect(() => parseListedCodes(blankRole)).toThrow();
   });
 
   it('refuses one code declared by two stages', () => {
