@@ -3,7 +3,7 @@
 import {
   evidenceTexts, stageLineageLine, type LineageLine, type LineageParams, type LineageRow, stageRow,
 } from '../lineage/lineage-row-pure';
-import { outcomeCode, refusalCode, stageCodes, type CodeStatus } from '../lineage/reason-codes/reason-codes-pure';
+import { outcomeCode, refusalCode, stageCodes, type CodeStatus, type StageCodes } from '../lineage/reason-codes/reason-codes-pure';
 import { sourceRowRefText, type AnySourceRowRef } from '../../util/sources/row-ref-pure';
 import type { CascadeRefusal } from '../cascade-result';
 import type { ColourIndexResolution, CiVia } from './colour-index-pure';
@@ -116,8 +116,10 @@ type Branch = Parameters<typeof BRIGHTNESS_COLOUR_CODES.code>[0];
 /** Brightness-colour's count block: its lines folded per live code. */
 export type BrightnessColourCounts = Readonly<Record<(typeof BRIGHTNESS_COLOUR_CODES.live)[number], number>>;
 
+type LiveBranch = typeof BRIGHTNESS_COLOUR_CODES extends StageCodes<string, string, infer L> ? L : never;
+
 export function brightnessColourSummary(counts: BrightnessColourCounts): string {
-  const n = (branch: Branch): number => counts[BRIGHTNESS_COLOUR_CODES.code(branch) as keyof BrightnessColourCounts];
+  const n = (branch: LiveBranch): number => counts[`${BRIGHTNESS_COLOUR_CODES.stage}.${branch}`];
   const simbad = (ns: SimbadNamespace): number => n(SPECTRAL_SIMBAD_BRANCHES[ns]);
   const simbadTotal = SIMBAD_NAMESPACE_VALUES.reduce((sum, ns) => sum + simbad(ns), 0);
   const records = n('spectral.curated') + simbadTotal + n('spectral.gspspec') + n('spectral.none');
