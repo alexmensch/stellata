@@ -43,16 +43,14 @@ Each has its own README.
   half-turn, does not.
 - `astronomy-constants.ts` (+ test) — `AU_PER_PC` / `AU_PC` / `AU_KM` /
   `KM_PC` / `R_SUN_PC` / `SUN_ABSMAG_V` / `MIN_PHYSICAL_RADIUS_R_SUN` /
-  `ARCSEC_TO_RAD` / `MAS_TO_RAD` / `J2000_JD` / `J2000_OBLIQUITY_RAD` /
-  `DAYS_PER_JULIAN_YEAR` / `SECONDS_PER_DAY` / `LIGHT_TIME_PER_AU_S` /
+  `DEG_TO_RAD` / `RAD_TO_DEG` / `ARCSEC_PER_DEG` / `ARCSEC_TO_RAD` / `MAS_TO_RAD` / `J2000_JD` / `J2000_OBLIQUITY_RAD` /
+  `HIPPARCOS_EPOCH_JYEAR` / `DAYS_PER_JULIAN_YEAR` / `SECONDS_PER_DAY` / `KM_S_PER_AU_YR` / `LIGHT_TIME_PER_AU_S` /
   `RA_HOURS_TO_DEG`.
   Canonical values, one definition each, so client / build-script /
   shader consumers can't drift on precision — import from here rather
   than re-derive. `RA_HOURS_TO_DEG` is the hours→degrees factor every
   catalogue RA column and sexagesimal boundary coordinate goes through;
-  tests import it rather than restating 15. The Python copy is
-  `scripts/util/astronomy_constants.py`, held to this one by
-  `tests/astronomy-constants-sync.test.ts`.
+  tests import it rather than restating 15.
   <a id="sun-absmag-v"></a>`SUN_ABSMAG_V` = 4.83 departs from the 4.81 (Vega) of
   [Willmer 2018](/data/papers/index.md#willmer2018) Table 3, and nothing records where 4.83 comes
   from: which value to adopt is an open decision (stellata-uadc.69.21, under
@@ -116,7 +114,9 @@ Each has its own README.
     both silent-failure modes, documented in
     [B1875](/src/astro-core/iau-geometry/README.md#b1875). Cubic
     polynomials: right for the 125 years back to B1875, arcminutes off at
-    the model clock's bounds.
+    the model clock's bounds. `besselianEpochToJd`'s Julian sibling,
+    `jdOfJulianYear`, and its inverse `julianYearOfJd` are the one spelling
+    of a Julian epoch year as a JD and back.
   - **[Vondrák 2011](/data/papers/index.md#vondrak2011)** — `longTermEclipticPole` /
     `longTermEquatorPole` / `longTermEquinox` and the two frames they
     build (`longTermEclipticRotationFromJ2000`,

@@ -2,12 +2,58 @@ import { describe, expect, it } from 'vitest';
 
 import {
   canonicalCompLetter,
+  childComponentTokens,
   composeSyntheticId,
   compoundContains,
+  isComponentToken,
+  isMoreCanonicalAnchor,
+  pairComponentTokens,
   parentComponentToken,
   relatedHier,
+  subcomponentTopLetter,
+  tokenLetters,
   wdsRootOf,
 } from './component-tokens-pure';
+
+describe('isComponentToken', () => {
+  it('admits one component and refuses compounds and fixed-width garbage', () => {
+    for (const tok of ['A', 'Aa', 'Aa1', 'B', 'Cb']) expect(isComponentToken(tok)).toBe(true);
+    for (const tok of ['', 'AB', 'Aab', 'a', '95', 'Aa12', 'r']) expect(isComponentToken(tok)).toBe(false);
+  });
+});
+
+describe('pairComponentTokens', () => {
+  it('re-anchors a truncated secondary', () => {
+    expect(pairComponentTokens('Aa1,2')).toEqual(['Aa1', 'Aa2']);
+    expect(pairComponentTokens('AB')).toEqual(['A', 'B']);
+    expect(pairComponentTokens('')).toBeNull();
+  });
+});
+
+describe('childComponentTokens', () => {
+  it('names the sub-pair one level down, and nothing below Aa1 or under a compound', () => {
+    expect(childComponentTokens('A')).toEqual(['Aa', 'Ab']);
+    expect(childComponentTokens('Ca')).toEqual(['Ca1', 'Ca2']);
+    expect(childComponentTokens('Aa1')).toBeNull();
+    expect(childComponentTokens('AB')).toBeNull();
+  });
+});
+
+describe('subcomponentTopLetter', () => {
+  it('is the root letter of a lowercase sub-component only', () => {
+    expect(subcomponentTopLetter('Aa')).toBe('A');
+    expect(subcomponentTopLetter('Bbc')).toBe('B');
+    expect(subcomponentTopLetter('A')).toBeNull();
+    expect(subcomponentTopLetter('Aa1')).toBeNull();
+  });
+});
+
+describe('tokenLetters', () => {
+  it('collects the capitals', () => {
+    expect([...tokenLetters('AB')]).toEqual(['A', 'B']);
+    expect([...tokenLetters('Aa1')]).toEqual(['A']);
+  });
+});
 
 describe('wdsRootOf', () => {
   it('is everything before the last dash, a negative-Dec id intact', () => {
@@ -61,8 +107,6 @@ describe('canonicalCompLetter', () => {
 });
 
 describe('parentComponentToken', () => {
-  // Fixtures mirror component_tokens.py:test_parent_component_token so
-  // the Python↔TS mirror can't silently drift.
   it('drops the rightmost designator', () => {
     expect(parentComponentToken('Aa1')).toBe('Aa');
     expect(parentComponentToken('Ba')).toBe('B');
@@ -91,5 +135,31 @@ describe('compoundContains', () => {
     expect(compoundContains('Aa', 'AB')).toBe(true);
     expect(compoundContains('AB', 'CD')).toBe(false);
     expect(compoundContains('A', 'A')).toBe(false);
+  });
+});
+
+describe('isMoreCanonicalAnchor', () => {
+  it('ranks the A branch above every other branch, at any depth', () => {
+    // 15 Mon (06410+0954): its only A-branch cursor is Aa,Ab, and the root
+    // also carries EP, FG, FO, GO, JI, MN. Ranking by length anchored it on E.
+    expect(isMoreCanonicalAnchor('Aa', 'E')).toBe(true);
+    expect(isMoreCanonicalAnchor('E', 'Aa')).toBe(false);
+    expect(isMoreCanonicalAnchor('Aa1', 'B')).toBe(true);
+  });
+
+  it('ranks by depth then alphabetically inside one branch', () => {
+    expect(isMoreCanonicalAnchor('A', 'Aa')).toBe(true);
+    expect(isMoreCanonicalAnchor('Aa', 'Ab')).toBe(true);
+    expect(isMoreCanonicalAnchor('Ab', 'Aa')).toBe(false);
+    expect(isMoreCanonicalAnchor('A', 'A')).toBe(false);
+  });
+
+  it('picks Aa over B: the branch letter decides before depth', () => {
+    expect(isMoreCanonicalAnchor('Aa', 'B')).toBe(true);
+    expect(isMoreCanonicalAnchor('B', 'Aa')).toBe(false);
+  });
+
+  it('ranks across branches alphabetically', () => {
+    expect(isMoreCanonicalAnchor('B', 'C')).toBe(true);
   });
 });

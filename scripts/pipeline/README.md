@@ -181,7 +181,7 @@ A target is a step name, or `data` for every build step on the table.
 - **`--update-snapshots`** is the one way a count snapshot is rewritten: it
   reruns each named target even when fresh (not the fresh steps upstream),
   and sets `UPDATE_SNAPSHOTS=1` for each step it runs, the one variable
-  `snapshotCheck` and `snapshot_assert.py` read. A forced rebuild therefore
+  `snapshotCheck` reads. A forced rebuild therefore
   still checks counts. Every step it runs also gets `PIPELINE_STEP` set to
   its name, so a drift message names this flag rather than the variable.
 - **`--verify-committed`** fails a step, fresh or built, whose declared

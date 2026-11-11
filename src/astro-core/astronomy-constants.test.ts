@@ -7,6 +7,7 @@ import {
   DAYS_PER_JULIAN_YEAR,
   J2000_JD,
   KM_PC,
+  KM_S_PER_AU_YR,
   R_SUN_PC,
 } from './astronomy-constants';
 
@@ -28,6 +29,10 @@ describe('astronomy-constants', () => {
 
   it('KM_PC composes AU_PC and AU_KM', () => {
     expect(KM_PC).toBe(AU_PC / AU_KM);
+  });
+
+  it('KM_S_PER_AU_YR is one AU per Julian year in km/s', () => {
+    expect(KM_S_PER_AU_YR).toBeCloseTo(4.74047, 5);
   });
 
   it('R_SUN_PC is one solar radius in parsecs', () => {

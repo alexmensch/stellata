@@ -237,7 +237,7 @@ enough to see it.
     - `data/wds/orb6_orbits.txt` — orbital elements
       (`orb6/orb6orbits.txt`).
   Field offsets are documented upstream in `wdsweb_format.txt` and
-  the ORB6 ReadMe; consulted by `scripts/binaries/build-binaries.py`
+  the ORB6 ReadMe; consulted by `scripts/wds/wds-pure.ts`
   but not committed. Retrieved 2026-05-11. Public-domain
   (U.S. Government work).
 - **Tokovinin's Multiple Star Catalog (MSC)**: [Tokovinin 2018](/data/papers/index.md#tokovinin2018)
@@ -252,20 +252,21 @@ enough to see it.
   refresh via `scripts/refresh/refresh-msc.py`. Because MSC compiles
   from the same primary literature the other orbit sources curate, its
   orbit route ranks below ORB6 and Gaia NSS and fires for
-  sub-resolution pairs only ([Stage 4](scripts/binaries/README.md#stage-4--orbital-element-selection-per-pair)).
+  sub-resolution pairs only ([Stage 4](scripts/binaries/orbits/README.md#what-each-route-decides)).
   Retrieved 2026-07-11. CDS/VizieR standard academic use; cite
   [Tokovinin 2018](/data/papers/index.md#tokovinin2018).
 - **SIMBAD WDS↔Gaia DR3 cross-identifications** (CDS Strasbourg).
   Curated per-component cross-IDs between WDS pair identifiers
   (`WDS J<id><comp>`) and Gaia DR3 source_ids, drawn from SIMBAD's
-  `ident` and `basic` tables. Stage 2 of `scripts/binaries/build-binaries.py`
+  `ident` and `basic` tables. Stage 2 of `scripts/binaries/build-binaries.ts`
   uses this as the principled cross-identification path — SIMBAD
   reliably stores Gaia DR3 source_ids per WDS component for the
   well-known multi-component systems (η Cas A/B/C, ξ UMa A/B,
   ζ Cnc A/B/C, α Cen A/B/Proxima).
-  Refresh: `scripts/refresh/refresh-simbad-wds-xids.py` runs a
-  two-phase TAP pull (WDS identifiers → SIMBAD oids, then oids →
-  cross-IDs) and commits `data/simbad/simbad_wds_xids.tsv` (~23k
+  Refresh: `refresh:simbad-wds-xids` (`scripts/refresh/simbad-wds-xids/`)
+  runs a TAP pull (WDS identifiers → SIMBAD oids, an HD / CCDM / HIP alias
+  cascade and curated overrides for the misses, then oids → cross-IDs) and
+  commits `data/simbad/simbad_wds_xids.tsv` (~23k
   components, ~1.2 MB,
   regular git). Public access policy: SIMBAD is open via CDS's TAP
   service at `simbad.cds.unistra.fr/simbad/sim-tap`; cite

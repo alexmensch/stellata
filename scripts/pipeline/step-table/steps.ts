@@ -1,9 +1,8 @@
 // The step table: one entry per producer of a file the build or a pull depends on. See README.md#the-step-table--stepsts.
 
-import { MULTIPLES_TSV } from '../../binaries/multiples-tsv';
 import { MANUAL_STEPS } from './manual-step-outputs';
 import type { StepTable, TsBuildStep } from './step-table-pure';
-import { DATA_FILES, registryPaths, REGISTRY_PARTITIONS } from '../../../src/catalog-format/pipeline-outputs/data-files';
+import { registryPaths, REGISTRY_PARTITIONS } from '../../../src/catalog-format/pipeline-outputs/data-files';
 
 /** A `data/<layer>` → `public/` copy: `scripts/<layer>/sync-<layer>.ts` over its `<layer>-mirror-outputs.ts`. */
 const mirrorStep = (layer: string): TsBuildStep => ({
@@ -21,18 +20,9 @@ export const STEPS: StepTable = {
     {
       name: 'build:binaries',
       kind: 'build',
-      language: 'python',
-      entry: 'scripts/binaries/build-binaries.py',
-      outputs: [
-        MULTIPLES_TSV.file,
-        DATA_FILES.binariesAstrometryRequest,
-        'build/binding-integrity-verdicts.tsv',
-      ],
-      after: [
-        'refresh:gaia-astrometry', 'refresh:gaia-hip', 'refresh:gaia-nss', 'refresh:gaia-tyc',
-        'refresh:hip2', 'refresh:msc', 'refresh:simbad-wds-sptype', 'refresh:simbad-wds-xids',
-      ],
-      snapshots: ['scripts/binaries/build-binaries-expected.json', 'scripts/binaries/build-binaries-rates-expected.json'],
+      language: 'ts',
+      entry: 'scripts/binaries/build-binaries.ts',
+      outputs: { module: 'scripts/binaries/binaries-outputs.ts', name: 'BINARIES_OUTPUTS' },
     },
     {
       name: 'lineage:codes',

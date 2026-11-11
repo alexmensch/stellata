@@ -1,18 +1,7 @@
 // Space-motion propagation of catalog positions off their fixed J2016.0
 // baseline to the scene's time base. See /docs/science-catalog-ingestion.md#current-epoch-star-positions--space-motion-propagation-to-t.
 
-import { DAYS_PER_JULIAN_YEAR, J2000_JD } from '../../astro-core/astronomy-constants';
-
-// catalog.bin positions ship at this fixed scene epoch (Julian year);
-// velocities are pc/yr, so the advance is p(t) = p(J2016) + v·(t − 2016).
-// Mirrors CATALOG_SCENE_EPOCH in scripts/catalog/distance/direction-cascade.ts.
-export const CATALOG_SCENE_EPOCH_JYR = 2016.0;
-
-/** Julian Date → Julian epoch year (e.g. 2451545.0 → 2000.0). The time
- *  base the linear space-motion propagation runs in. */
-export function jdeToJulianEpochYear(jde: number): number {
-  return 2000.0 + (jde - J2000_JD) / DAYS_PER_JULIAN_YEAR;
-}
+import { CATALOG_SCENE_EPOCH } from '../../catalog-format/record/catalog-pure';
 
 // Advance-epoch quantum: 1/20 Julian year. The worst catalog proper motion
 // (Barnard's Star, ~10.4″/yr) drifts ~0.5″ per bucket — sub-pixel at the
@@ -45,7 +34,7 @@ export function advancePositionsToEpoch(
   first = 0,
   end = basePositions.length / 3,
 ): void {
-  const dt = epochJyr - CATALOG_SCENE_EPOCH_JYR;
+  const dt = epochJyr - CATALOG_SCENE_EPOCH;
   const lo = first * 3;
   const hi = end * 3;
   if (dt === 0) {
@@ -78,7 +67,7 @@ export function writeAdvancedLocal(
   oz: number,
   localOut: Float32Array,
 ): void {
-  const dt = epochJyr - CATALOG_SCENE_EPOCH_JYR;
+  const dt = epochJyr - CATALOG_SCENE_EPOCH;
   localOut[i3] = basePositions[i3] + velocities[i3] * dt - ox;
   localOut[i3 + 1] = basePositions[i3 + 1] + velocities[i3 + 1] * dt - oy;
   localOut[i3 + 2] = basePositions[i3 + 2] + velocities[i3 + 2] * dt - oz;

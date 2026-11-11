@@ -15,7 +15,7 @@ export interface SimbadPhases {
   /** Identifier → oid, by exact id. */
   readonly resolve: Phase;
   readonly basic: Phase;
-  /** The shipped namespaces' ids per oid, in table order, so a namespace's last id is SIMBAD's last. */
+  /** The shipped namespaces' ids per oid, in id order, so a namespace's last id is the last in that order. */
   readonly idents: Phase;
   /** Every Gaia release's ids per oid, read only by corroboration (README.md#the-corroboration-rule). */
   readonly releases: Phase;
@@ -30,7 +30,8 @@ export interface PhaseSpec {
 
 const byOid = (rowsPerId: number) => ({ kind: 'request', key: 'oidref', batchSize: SIMBAD_BATCH_SIZE, rowsPerId }) as const;
 
-function identPhase(namespaces: readonly Namespace[]): Phase {
+/** Each oid's ids under `namespaces`, ordered by oid then id. */
+export function identPhase(namespaces: readonly Namespace[]): Phase {
   return {
     from: 'ident',
     where: namespaces.map((ns) => `id LIKE '${likePattern(ns)}'`).join(' OR '),
@@ -157,7 +158,7 @@ function foldIdents<T>(rows: IdentRows, namespaces: readonly Namespace[], ledger
   return out;
 }
 
-/** One id per namespace per oid: the last in table order, since the shipped column holds one. */
+/** One id per namespace per oid: the last in id order, since the shipped column holds one. */
 export async function fetchIdents(
   ask: Ask, phases: SimbadPhases, namespaces: readonly Namespace[], oids: readonly number[], ledger: ParseLedger,
 ): Promise<Map<number, Map<string, string>>> {

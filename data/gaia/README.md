@@ -43,8 +43,8 @@ gaia_dr3_gspc.tsv                      ~31 MB, LFS. Johnson-Kron-Cousins B and
                                        cascade's tier below the Table-5.9
                                        relation.
 gaia_astrometry_source_id_request.tsv  ~440 KB, LFS. Stage 2 → Stage 3 deduped
-                                       source_id request list (build-binaries.py output;
-                                       write_astrometry_request owns its contents).
+                                       source_id request list (build:binaries output;
+                                       astrometryRequestIds owns its contents).
 gaia_catalog_source_id_request.tsv     ~7.2 MB, LFS. Full-catalog deduped
                                        source_id request list — the classic-ID
                                        binding gate's candidates UNION the
@@ -321,7 +321,7 @@ re-deriving:
   (`scripts/catalog/photometry/README.md`). `gaia_dr3_gspc.tsv` is the ci
   cascade's tier below the Table-5.9 relation, for the red and saturated
   rows the relation's colour bound excludes.
-- `scripts/binaries/build-binaries.py` Stages 1–4 — HIP/Tyc
+- `scripts/binaries/build-binaries.ts` Stages 1–4 — HIP/Tyc
   cross-walks, per-component 5p astrometry, NSS orbital elements.
 - `scripts/sid/dr-reconcile.ts` (`pnpm run sid:dr-reconcile`) — replays
   the request + neighbourhood pair as the [§ 6.2](/docs/sid.md#62-dr2dr3-dry-run-measured-2026-07-07) dry run;

@@ -173,8 +173,7 @@ overlap: an oid both requests reach has a row in each file. Pull and gates:
   mirror https://simbad.cfa.harvard.edu/simbad/sim-tap as fallback: the
   TypeScript pulls' `SIMBAD` archive in `scripts/refresh/pull/tap-pure.ts`
   ([The TAP backend](/scripts/refresh/pull/README.md#the-tap-backend)), and
-  `refresh_lib.simbad_client` for the two Python pulls left, wds-xids and
-  tyc-hd.
+  `refresh_lib.simbad_client` for the one Python pull left, tyc-hd.
 - **Licence**: SIMBAD content is publicly accessible per CDS policy
   (academic / non-commercial); cite the
   [Wenger 2000](/data/papers/index.md#wenger2000) paper.
@@ -186,10 +185,10 @@ overlap: an oid both requests reach has a row in each file. Pull and gates:
   a strict MK walker.
 - **`wds_xids_overrides.tsv`** is the manual escape hatch for a component
   whose SIMBAD object carries no `WDS J<id><comp>` ident and no HD / CCDM /
-  HIP alias the Phase A.6 cascade can reach — HAT-P-7 A and C, whose WDS
+  HIP alias the cascade can reach — HAT-P-7 A and C, whose WDS
   idents SIMBAD dropped and which carry no HD or HIP. Each row pins an oid
-  with its reason; the override is applied inside
-  [`scripts/refresh/wds_xids_overrides.py`](../../scripts/refresh/README.md).
+  with its reason; the pull applies it
+  ([Overrides](../../scripts/refresh/simbad-wds-xids/README.md#overrides)).
   An oid letter need not match the WDS letter: SIMBAD names HAT-P-7 C
   `BD+47 2846B`.
 - **`sptype_overrides.tsv`** is the same kind of escape hatch for a spectral
@@ -378,11 +377,11 @@ which is exactly what `tests/artifact-freshness.test.ts` fails on.
   flag, [Multiplicity status](/scripts/catalog/multiplicity/README.md#multiplicity-status)) +
   `build:membership` and `build:astrometry-request`, whose binding
   derivation reads its cross-IDs (`scripts/catalog/spine/primaries-tables.ts`).
-- `simbad_wds_sptype.tsv` → `scripts/binaries/build-binaries.py` Stage 6
+- `simbad_wds_sptype.tsv` → `scripts/binaries/build-binaries.ts` Stage 6
   (per-component sp_type, beats AT-HYG's system-inherited string).
 - `sptype_overrides.tsv` → `scripts/catalog/spectral/sptype-overrides-source.ts`,
   the spectral resolver's curated tier.
-- `simbad_wds_xids.tsv` → `scripts/binaries/build-binaries.py`
+- `simbad_wds_xids.tsv` → `scripts/binaries/build-binaries.ts`
   Stage 2 (`simbad_xid` tier of the WDS-component → Gaia source_id
   cascade) + `scripts/catalog/classic-ids/build-classic-id-overlay.ts`
   (sibling-letter attribution gate on the overlay's bindings — see
@@ -439,7 +438,7 @@ which is exactly what `tests/artifact-freshness.test.ts` fails on.
 - `pnpm run refresh:simbad-wds-sptype` →
   [`scripts/refresh/simbad-wds-sptype/`](../../scripts/refresh/simbad-wds-sptype/README.md).
 - `pnpm run refresh:simbad-wds-xids` →
-  [`scripts/refresh/refresh-simbad-wds-xids.py`](../../scripts/refresh/README.md).
+  [`scripts/refresh/simbad-wds-xids/`](../../scripts/refresh/simbad-wds-xids/README.md).
 
-The Python ones share the `scripts/refresh/simbad/` plumbing; the sample, the
-values and both sp_type pulls run on the TypeScript pull runtime.
+All share the `scripts/refresh/simbad/` plumbing; every one but the TYC → HD
+pull runs on the TypeScript pull runtime.

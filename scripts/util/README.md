@@ -25,13 +25,10 @@ same thing — single-use helpers stay with their consumer.
   the site suites; a hand-rolled character class beside it is the defect
   CodeQL's `js/incomplete-sanitization` flags.
 
-- `astronomy_constants.py` — Python mirror of two values from
-  `src/astro-core/astronomy-constants.ts`, `J2000_JD` and
-  `DAYS_PER_JULIAN_YEAR`; `tests/astronomy-constants-sync.test.ts` pins
-  equality. It is not the home of every constant Python shares: the
-  binaries stages define their own (`AU_PER_PC` in `stage5_optical.py`,
-  `CATALOG_SCENE_EPOCH` in `stage6_multiples.py`), and the asset bakers
-  read theirs from `baker_constants.py`.
+- `map-buckets-pure.ts` (+ test) — `groupBy`, `pushTo` and `addTo`: a
+  list or set per map key, created on first use, in first-seen key order.
+  The binaries stages' indexes and grids group through it.
+
 - `baker_constants.py` (+ test) — `CONSTANTS`, `src/astro-core/baker-constants.json`
   loaded once: the facts the Python asset bakers share with TypeScript
   ([Baker constants](/src/astro-core/README.md#baker-constants)).
@@ -39,8 +36,7 @@ same thing — single-use helpers stay with their consumer.
   table and refuses unless the two name the same bodies; `dem_relief.py`'s
   `DEM_BODIES` and `build-textures.py`'s `RING_TABLES` are built with it.
 - `paths.py` — `REPO_ROOT`, the repo-root `Path` every top-level
-  Python build/refresh script under `scripts/binaries/` and
-  `scripts/refresh/` imports instead of independently walking
+  Python refresh script under `scripts/refresh/` imports instead of independently walking
   `Path(__file__).resolve().parent...`.
 - `paths.ts` — TypeScript sibling of `paths.py`: `REPO_ROOT` for
   `scripts/catalog/*.ts` scripts, and `PACKAGE_JSON`, the manifest's
@@ -339,25 +335,12 @@ same thing — single-use helpers stay with their consumer.
   included. One variable refreshes every snapshot a run reaches. A drift
   message names the refresh command: `pnpm run <step> --update-snapshots`
   when `PIPELINE_STEP` is set (the runner sets it to each step it runs, and
-  drops an inherited `UPDATE_SNAPSHOTS`), the variable form otherwise;
-  `snapshot_assert.py` does the same. Used by
+  drops an inherited `UPDATE_SNAPSHOTS`), the variable form otherwise. Used by
   `build-catalog.ts` (build counts and distance outliers), the classic-ID
-  overlay, membership and WGSN builds, and `build:binaries-runtime`'s pair
-  counts. The count snapshots all pass
-  `compareCountSnapshot` (`catalog/build-counts.ts`) as the compare.
-  `snapshot-check.test.ts` pins pass, drift, missing and refresh.
-- `snapshot_assert.py` — the Python sibling, for `build-binaries.py`'s
-  counts (`binaries/stage7_counts.py` builds its rates snapshot on the same
-  primitives). Same rule
-  on a missing snapshot: it fails, and only `UPDATE_SNAPSHOTS=1`
-  writes one. Returns a bool where the TS sibling returns an `emitArtifacts` check, since the Python
-  drivers own their exit. Every snapshot it writes is staged: a caller
-  hands it `Staged` counts (stage → count, each count built inside its
-  stage's block, stages in pipeline order, `ABSENT_STAGE` for a stage whose
-  input is missing), and it compares both sides through `flatten_stages`,
-  `counts/count-stages-pure.ts`'s twin, a stage absent on one side and
-  counted on the other reported as one row.
-  Pinned by `snapshot_assert.test.py`.
+  overlay, membership and WGSN builds, `build:binaries`' counts
+  (`binaries/counts/`) and `build:binaries-runtime`'s pair counts. The count
+  snapshots all pass `compareCountSnapshot` (`catalog/build-counts.ts`) as
+  the compare. `snapshot-check.test.ts` pins pass, drift, missing and refresh.
 - <a id="git-files"></a>`git-files.ts` — `gitFiles(root, pathspecs, { untracked })`,
   git's file list (tracked, optionally untracked-but-not-ignored), for a scan
   whose scope is the repo rather than a folder list; `presentFiles`, the names

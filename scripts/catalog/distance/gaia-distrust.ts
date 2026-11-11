@@ -20,14 +20,14 @@ export function gaiaRowIs2p(row: GaiaAstrometryCatalogRow | null): boolean {
   return row !== null && !gaiaHas5pSolution(row);
 }
 
-// Mirrored from scripts/binaries/stage3_astrometry.py so both pipelines route a
-// shared star identically. ipd_frac_multi_peak is a PERCENTAGE (0-100) in DR3.
+// ipd_frac_multi_peak is a PERCENTAGE (0-100) in DR3.
 export const GAIA_RUWE_UNRELIABLE_THRESHOLD = 1.4;
 export const GAIA_IPD_FRAC_MULTI_PEAK_THRESHOLD = 2.0;
 
-/** RUWE / ipd_frac_multi_peak orbit-corruption indicators on the 5p fit.
- *  Same pair of gates as stage3_astrometry.py's `gaia_5p_unreliable`. */
-export function gaia5pUnreliable(row: GaiaAstrometryCatalogRow): boolean {
+/** RUWE / ipd_frac_multi_peak orbit-corruption indicators on the 5p fit —
+ *  the catalogue's and the binaries' Stage 3 one gate, so a shared star routes
+ *  identically in both. */
+export function gaia5pUnreliable(row: Pick<GaiaAstrometryCatalogRow, 'ruwe' | 'ipdFracMultiPeak'>): boolean {
   if (row.ruwe !== null && row.ruwe > GAIA_RUWE_UNRELIABLE_THRESHOLD) return true;
   if (
     row.ipdFracMultiPeak !== null

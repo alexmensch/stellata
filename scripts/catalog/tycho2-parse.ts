@@ -2,6 +2,7 @@
 // — the first-order tier under HIP2 in the direction, PM and V cascades (/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers).
 // See data/tycho2/README.md.
 
+import { HIPPARCOS_EPOCH_JYEAR } from '../../src/astro-core/astronomy-constants';
 import type { Declared } from '../util/sources/source';
 import { sourceRowRef, type RowKeyed, type SourceRowRef } from '../util/sources/row-ref-pure';
 import { readTable } from '../util/tsv/table-pure';
@@ -33,7 +34,7 @@ export const TYCHO2_MEAN_EPOCH = 2000.0;
 
 /** The epoch a `ra_icrs` / `de_icrs` cell is stated at: Tycho-2's observed
  *  position, which the catalogue publishes at J1991.25 rather than J2000. */
-export const TYCHO2_ICRS_EPOCH = 1991.25;
+export const TYCHO2_ICRS_EPOCH = HIPPARCOS_EPOCH_JYEAR;
 
 /** One Tycho-2 entry, with the position choice already made — `raDeg` /
  *  `decDeg` is the position to propagate FROM, at `epoch`

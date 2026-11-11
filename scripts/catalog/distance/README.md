@@ -29,7 +29,8 @@ scripts/catalog/distance/
   gaia-distrust.ts (+ test)       `gaiaHas5pSolution`, `gaiaRowIs2p`,
                                   `gaia5pUnreliable` (with its RUWE and
                                   ipd_frac_multi_peak thresholds, which the
-                                  coherence anchor grade reuses) and
+                                  coherence anchor grade and the binaries'
+                                  Stage 3 reuse) and
                                   `isGaiaCatalogueBibcode` — one predicate per
                                   way this build refuses a Gaia value on a
                                   blended row — and `refusedPublicationCited`, the one skip
@@ -83,7 +84,7 @@ scripts/catalog/distance/
 the J2016.0 scene epoch — every tier propagates its own solution there, so
 the epoch of the output is the scene's, never the source's — through the
 same trust cascade the binaries pipeline implements in
-`scripts/binaries/stage3_astrometry.py`, sharing its thresholds
+`scripts/binaries/astrometry/routes-pure.ts`, sharing its thresholds
 (RUWE > 1.4, ipd_frac_multi_peak > 2%, |ΔPM| > 50 mas/yr):
 
 | Route | Gate | Rows |

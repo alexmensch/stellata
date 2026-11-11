@@ -233,8 +233,8 @@ export interface FiledCounts {
   /** Direction cascade: Gaia 2p position-only rows with no HIP2 cover. */
   directionGaia2p: number;
   /** Direction cascade: Gaia rows with an NSS orbit AND an unreliable
-   *  5p fit — same Gaia values, tagged for provenance parity with
-   *  scripts/binaries/stage3_astrometry.py. */
+   *  5p fit — same Gaia values, tagged as the binaries pipeline's Stage 3
+   *  tags them (`gaia_nss_systemic`). */
   directionGaiaNssSystemic: number;
   /** Direction cascade: rows with no usable Gaia parallax (saturated
    *  bright set / 2p solutions) whose direction came from HIP2. */

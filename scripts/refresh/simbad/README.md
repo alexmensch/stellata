@@ -7,15 +7,19 @@ instead of inlining its own ADQL.
 ## The TypeScript core
 
 The SIMBAD pulls on the pull runtime's phased pulls
-([A phased pull](../pull/README.md#a-phased-pull)): sample, values and
-sp_type.
+([A phased pull](../pull/README.md#a-phased-pull)): sample, values, sp_type
+and the WDS cross-IDs.
 
 ```
 simbad-specs-pure.ts        Namespace (parseIdent: suffix, component-lettered
-                            skip, or unparsed), basic columns, bibcoded groups,
-                            flux bands, WIDENING_LADDER, GAIA_RELEASES.
+                            with its number and letter, or unparsed), basic
+                            columns, bibcoded groups,
+                            flux bands, WIDENING_LADDER, GAIA_RELEASES, HD and
+                            WDS.
 simbad-fetch-pure.ts        The four query shapes as phases (resolve, basic,
-                            idents, releases, flux) and their fetchers. A
+                            idents, releases, flux; identPhase builds an
+                            idents phase over any namespaces) and their
+                            fetchers. A
                             suffix answering under two oids is an error; an
                             unparsable id fails the parse ledger's check.
 membership-keys-pure.ts     The manifest's request keys, each source_id-keyed
@@ -27,15 +31,16 @@ union-pure.ts               The value-keyed union and its recovered-row sample.
 simbad-rows-pure.ts         Written rows (basic columns, then ident and flux
                             blocks, bibcode policy applied) and fill gates.
 simbad-fake-pure.ts         An in-memory SIMBAD answering declared phases, as
-                            an ask or a TAP transport.
+                            an ask or a TAP transport; an id lookup matches
+                            whatever either side's space padding.
 simbad-test-fixtures.ts     Manifest-record and fake builders for the suites.
 *-pure.test.ts              Each module's vitest suite, beside it.
 ```
 
 ## The Python modules left
 
-`refresh-simbad-wds-xids.py` and `refresh-simbad-tyc-hd.py` stay Python until
-their ports, and import only these:
+`refresh-simbad-tyc-hd.py` stays Python until its port, and imports only
+these:
 
 ```
 specs.py         ColumnSpec, IdentLookup, FluxBand, the instances.
@@ -76,11 +81,15 @@ half off Gaia's own table is what recovers them.
 
 ## Two invariants the ADQL depends on
 
-**Stored ident ids are space-padded.** SIMBAD right-aligns a TYC's first
-field, so `TYC 144-1004-1` is stored as `TYC  144-1004-1` — while matching
-the unpadded request that found it. Anything joining a returned id back to
-its request must go through `parseIdent` (Python: `IdentLookup.parse_suffix`), which strips;
-keying on the raw returned id silently loses those rows.
+**SIMBAD matches an id whatever its whitespace, and answers in its stored
+spelling.** It pads some fields — `TYC 144-1004-1` is stored as
+`TYC  144-1004-1`, an HD number right-aligned in seven characters
+(`HD  48915B`) — yet `HD48915B`, `HD 48915B` and `HIP  55203B` each find the
+stored id (measured on SIMBAD-Harvard, 2026-11-09). Anything joining a
+returned id back to its request goes through `parseIdent` (Python:
+`IdentLookup.parse_suffix`), or, for an id asked whole, `identKey`, which
+drops all whitespace as SIMBAD does; keying on the raw returned id silently
+loses those rows. The fake matches the same way.
 
 **A suffix is interpolated into an ADQL string literal**, so
 `resolveOids` (Python: `resolve_oids_by_prefix`) refuses any suffix outside
@@ -125,7 +134,7 @@ that bound it, so `walkSimbadNamespaces` reaches it whichever rung matches
 first — which is what lets the read side order its own walk independently.
 The one binding that cannot recover is an object SIMBAD holds two ids for
 in the binding namespace: the shipped column is single-valued and
-`fetchIdents` keeps the last in table order, so the winner need not
+`fetchIdents` keeps the last in id order, so the winner need not
 be the id that asked. Pinned rather than assumed away in `simbad-fetch-pure.test.ts`.
 
 **HIP before TYC is load-bearing, not alphabetical.** A TYC names the
@@ -257,9 +266,10 @@ job and is finished; only the second is the union's.
   `sp_qual` / `sp_bibcode` / `otype` + cross-IDs, over the whole manifest.
 - [`refresh:simbad-values`](../simbad-values/README.md) — bibcoded rv / parallax /
   PM / coordinates + B/V fluxes, over the [§ 5](/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers) value cohort.
-- [`refresh-simbad-wds-xids.py`](../README.md) — per-WDS-component
-  (Gaia DR3, HIP) cross-IDs via a two-phase WDS-id → SIMBAD-oid →
-  cross-IDs walk.
+- [`refresh:simbad-wds-xids`](../simbad-wds-xids/README.md) — per-WDS-component
+  (Gaia DR3, HIP) cross-IDs: WDS-id → SIMBAD oid, an HD / CCDM / HIP alias
+  cascade, curated overrides, then cross-IDs; taking `resolveOids`,
+  `fetchBasic` and `identPhase`.
 - [`refresh-simbad-tyc-hd.py`](../README.md) — SIMBAD's HD attribution per
   Tycho-2 entry, keyed on TYC. Pure composition of `resolve_oids_by_prefix`
   → `fetch_ident_sets` → `fetch_basic_columns`, so the padding rule above is

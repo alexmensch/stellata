@@ -13,6 +13,7 @@ import type { Hip2AstrometryRow } from '../sources/hip2-source';
 import type { GaiaAstrometryCatalogRow } from '../sources/gaia-astrometry-source';
 import { gaiaAstrometryRow } from '../sources/gaia-astrometry-fixture';
 import { HIP2 } from '../sources/hip2-source';
+import { hip2AstrometryRow } from '../sources/hip2-fixture';
 import { sourceRowRef } from '../../util/sources/row-ref-pure';
 import type { MultiplesTsvRow } from '../companions/companion-promotion';
 import { multiplesRow } from '../companions/multiples-fixture';
@@ -52,12 +53,9 @@ function gaiaRow(
 }
 
 function hip2Row(overrides: Partial<Hip2AstrometryRow>): Hip2AstrometryRow {
-  return {
-    raDeg: 0, decDeg: 0, plxMas: 10, plxErrorMas: 0.5,
-    pmRaMasyr: 0, pmDeMasyr: 0,
-    ref: sourceRowRef(HIP2, 1),
-    ...overrides,
-  };
+  return hip2AstrometryRow({
+    plxMas: 10, plxErrorMas: 0.5, pmRaMasyr: 0, pmDeMasyr: 0, ref: sourceRowRef(HIP2, 1), ...overrides,
+  });
 }
 
 function sources(o: Partial<CoherenceSources> = {}): CoherenceSources {

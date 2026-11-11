@@ -12,7 +12,13 @@ see `../companions/README.md`.
 ```
 scripts/catalog/multiplicity/
   hip-ccdm-source.ts              HIP_CCDM, the I/239 CCDM slice declared
-                                  (../../util/sources/).
+                                  (../../util/sources/) as a column table
+                                  past VizieR's dash ruling, which
+                                  parseHipCcdm groups and the binaries
+                                  load stage indexes.
+  vizier-rule-pure.ts (+ test)    skipVizierRule: that table past the rule.
+                                  A reformatted rule (`=====`) reaches the
+                                  readers, whose HIP cell then throws.
   binary-flags-pure.ts (+ test)   The FLAG_BINARY_PRIMARY writers: the
                                   geometric mutual-pair pass
                                   (inferBinaries), the per-group CCDM walk

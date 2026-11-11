@@ -5,6 +5,8 @@ import { unitVectorFromRaDec } from './equatorial-basis';
 import {
   B1875_JD,
   besselianEpochToJd,
+  jdOfJulianYear,
+  julianYearOfJd,
   longTermEclipticPole,
   longTermEclipticRotationFromJ2000,
   longTermEquatorPole,
@@ -37,6 +39,19 @@ describe('Besselian epochs', () => {
     // JD 2405889.5 is 1875 Jan 1.0 UT.
     expect(B1875_JD).toBeLessThan(2405889.5);
     expect(B1875_JD).toBeGreaterThan(2405888.5);
+  });
+});
+
+describe('Julian epochs', () => {
+  it('anchors on J2000.0 and counts 365.25-day years (J2016.0 = JD 2457389)', () => {
+    expect(jdOfJulianYear(2000)).toBe(J2000_JD);
+    expect(jdOfJulianYear(2016)).toBe(2457389);
+    expect(jdOfJulianYear(1700)).toBe(2341970);
+  });
+
+  it('julianYearOfJd inverts it (JD 2451545.0 is 2000.0)', () => {
+    expect(julianYearOfJd(J2000_JD)).toBe(2000);
+    for (const y of [-2999, 1700, 1991.25, 2016, 2026.5, 3001]) expect(julianYearOfJd(jdOfJulianYear(y))).toBeCloseTo(y, 9);
   });
 });
 

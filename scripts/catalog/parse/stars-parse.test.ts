@@ -12,10 +12,10 @@ import { GAIA_APSIS } from '../record/gaia-apsis-source';
 import { avSolToStar, type DustGrid } from '../distance/dust/dust-deextinction-pure';
 import { R_V } from '../../../src/astro-core/extinction/dust-raymarch-pure';
 import {
-  CATALOG_SCENE_EPOCH,
   directionAtEpoch,
   type DirectionSources,
 } from '../distance/direction-cascade';
+import { CATALOG_SCENE_EPOCH } from '../../../src/catalog-format/record/catalog-pure';
 import { type GaiaAstrometryCatalogRow } from '../sources/gaia-astrometry-source';
 import { gaiaAstrometryRow } from '../sources/gaia-astrometry-fixture';
 import { cns5Astrometry } from '../classic-ids/cns5-fixture';

@@ -10,7 +10,6 @@ import {
   imputeCompanionAbsmag,
   imputeCompanionCi,
   isDisjointSingleLetter,
-  isMoreCanonicalAnchor,
   parseMultiplesTsv,
   projectFromSepPa,
   parkedRefusals,
@@ -2742,34 +2741,6 @@ describe('promoteCompanions', () => {
     const { stats } = promoteCompanions(rows, [], inputs());
     expect(stats.promoted).toBe(0);
     expect(stats.pairRowsScanned).toBe(0);
-  });
-});
-
-describe('isMoreCanonicalAnchor', () => {
-  it('ranks the A branch above every other branch, at any depth', () => {
-    // 15 Mon (06410+0954): its only A-branch cursor is Aa,Ab, and the root
-    // also carries EP, FG, FO, GO, JI, MN. Ranking by length anchored it on E.
-    expect(isMoreCanonicalAnchor('Aa', 'E')).toBe(true);
-    expect(isMoreCanonicalAnchor('E', 'Aa')).toBe(false);
-    expect(isMoreCanonicalAnchor('Aa1', 'B')).toBe(true);
-  });
-
-  it('ranks by depth then alphabetically inside one branch', () => {
-    expect(isMoreCanonicalAnchor('A', 'Aa')).toBe(true);
-    expect(isMoreCanonicalAnchor('Aa', 'Ab')).toBe(true);
-    expect(isMoreCanonicalAnchor('Ab', 'Aa')).toBe(false);
-    expect(isMoreCanonicalAnchor('A', 'A')).toBe(false);
-  });
-
-  it('picks Aa over B, as stage6_multiples.py _anchor_token_rank does', () => {
-    expect(isMoreCanonicalAnchor('Aa', 'B')).toBe(true);
-    expect(isMoreCanonicalAnchor('B', 'Aa')).toBe(false);
-  });
-
-  it('is the predicate the naming anchor uses', () => {
-    // record-index/ imports this one rather than keeping a twin: both want
-    // the branch the root is named for.
-    expect(isMoreCanonicalAnchor('B', 'C')).toBe(true);
   });
 });
 

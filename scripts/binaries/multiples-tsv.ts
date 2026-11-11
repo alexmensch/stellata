@@ -5,6 +5,7 @@ import { resolve } from 'node:path';
 import { REPO_ROOT } from '../util/paths';
 import { defineArtifact, nullableCell } from '../util/tsv/artifact-pure';
 import { MULTIPLES_ROW_KEY } from './multiples-row-key-pure';
+import { DATA_FILES } from '../../src/catalog-format/pipeline-outputs/data-files';
 
 export const MULTIPLES_COLUMNS = [
   'system_id', 'comp', 'hip', 'gaia_source_id', 'hd',
@@ -32,7 +33,42 @@ export const PHOTOMETRY_VIA = ['athyg_own', 'athyg_system_inherited', 'gaia_phot
 export const A_VIA = ['catalog', 'kepler_mass_estimate', 'none'] as const;
 export const ORBIT_ROLES = ['primary', 'secondary', 'standalone'] as const;
 
+export type ResolveVia = (typeof RESOLVE_VIA)[number];
 export type AstrometryVia = (typeof ASTROMETRY_VIA)[number];
+
+/** Whether a tier anchors on a Gaia source_id: `ccdm_hip` anchors on a HIP
+ *  and reaches the source through it. */
+export const RESOLVE_VIA_ANCHORS_SOURCE_ID: Readonly<Record<ResolveVia, boolean>> = {
+  orb6_hip: true,
+  athyg_gaia_native: true,
+  simbad_xid: true,
+  ccdm_hip: false,
+  position_pm: true,
+  position_nopm: true,
+  unresolved: false,
+};
+
+export type OrbitVia = (typeof ORBIT_VIA)[number];
+
+/** `hasElements`: the route selected orbital elements. `regime`: the legacy
+ *  column's 2 (a measured orbit) / 3 (spectroscopic or compiled) / 0 (none).
+ *  `estimatedElements`: Stage 6 backfills q, a circular ω and a Kepler a —
+ *  never on a visual orbit, whose pair carries a measured placement. */
+export const ORBIT_VIA_PROPERTIES = {
+  orb6: { hasElements: true, regime: 2, estimatedElements: false },
+  gaia_nss: { hasElements: true, regime: 2, estimatedElements: true },
+  orb6_spectroscopic: { hasElements: true, regime: 3, estimatedElements: true },
+  msc: { hasElements: true, regime: 3, estimatedElements: true },
+  none: { hasElements: false, regime: 0, estimatedElements: false },
+} as const satisfies Record<OrbitVia, { hasElements: boolean; regime: 0 | 2 | 3; estimatedElements: boolean }>;
+
+/** The routes that carry elements. */
+export type OrbitViaOnFile = {
+  [K in OrbitVia]: (typeof ORBIT_VIA_PROPERTIES)[K]['hasElements'] extends true ? K : never;
+}[OrbitVia];
+export const ORBIT_VIA_ON_FILE: readonly OrbitViaOnFile[] = ORBIT_VIA.filter(
+  (v): v is OrbitViaOnFile => ORBIT_VIA_PROPERTIES[v].hasElements,
+);
 export type SpectVia = (typeof SPECT_VIA)[number];
 export type PhotometryVia = (typeof PHOTOMETRY_VIA)[number];
 export type OrbitRole = (typeof ORBIT_ROLES)[number];
@@ -53,9 +89,9 @@ export interface MultiplesRecord {
   name: string;
   source: (typeof MULTIPLES_SOURCES)[number];
   regime: number;
-  resolveVia: (typeof RESOLVE_VIA)[number];
+  resolveVia: ResolveVia;
   astrometryVia: AstrometryVia;
-  orbitVia: (typeof ORBIT_VIA)[number];
+  orbitVia: OrbitVia;
   spectVia: SpectVia;
   photometryVia: PhotometryVia;
   aVia: (typeof A_VIA)[number];
@@ -95,7 +131,7 @@ function fixed(v: number | null, places: number): string {
 }
 
 export const MULTIPLES_TSV = defineArtifact({
-  file: 'data/binaries/multiples.tsv',
+  file: DATA_FILES.multiples,
   columns: MULTIPLES_COLUMNS,
   hint: 'Re-run `pnpm run build:binaries`.',
   order: 'as-given',

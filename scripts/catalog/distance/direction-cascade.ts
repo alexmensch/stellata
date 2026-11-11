@@ -8,7 +8,8 @@ import {
 } from '../../../src/astro-core/equatorial-basis';
 import { gaia5pUnreliable, gaiaHas5pSolution } from './gaia-distrust';
 import { type VelocityVia } from './velocity';
-import { MAS_TO_RAD } from '../../../src/astro-core/astronomy-constants';
+import { HIPPARCOS_EPOCH_JYEAR, MAS_TO_RAD } from '../../../src/astro-core/astronomy-constants';
+import { CATALOG_SCENE_EPOCH } from '../../../src/catalog-format/record/catalog-pure';
 import type { SimbadRecordKeys } from '../simbad/simbad-namespace-ladder-pure';
 import type { Tycho2Row } from '../tycho2-parse';
 import type { AnySourceRowRef, SourceRowRef } from '../../util/sources/row-ref-pure';
@@ -22,20 +23,11 @@ import type { SimbadAstrometry } from '../simbad/simbad-values-parse';
 import type { CascadeResult, CascadeRefusal, UniformValues } from '../cascade-result';
 
 export const GAIA_DR3_REF_EPOCH = 2016.0;
-export const HIP2_REF_EPOCH = 1991.25;
+export const HIP2_REF_EPOCH = HIPPARCOS_EPOCH_JYEAR;
 /** SIMBAD states `basic.ra` / `basic.dec` at J2000.0 whatever epoch the
  *  citation measured them at. The pull carries no epoch column, so this is
  *  measured rather than assumed — README.md#direction-resolution. */
 export const SIMBAD_REF_EPOCH = 2000.0;
-// Gaia DR3's native epoch: the catalogue-wide scene epoch every position
-// is normalised onto. The dominant Gaia set lands here with zero
-// propagation; only the HIP2 / Tycho-2 / CNS5 / SIMBAD minority advances.
-// The binaries pipeline mirrors this in scripts/binaries/stage6_multiples.py
-// — keep the two in sync (see /data/README.md#reference-epoch-and-proper-motion).
-export const CATALOG_SCENE_EPOCH = 2016.0;
-
-// HIP2-preference threshold, mirrored from scripts/binaries/stage3_astrometry.py
-// so both pipelines route a shared star identically.
 export const HIP2_PM_DELTA_THRESHOLD_MASYR = 50.0;
 
 /** The reference datasets this cascade routes between. It is not their only
@@ -112,7 +104,7 @@ export type DirectionResolution = CascadeResult<
  *  `pmraMasyr` is the tier's own μ_α* — the cos δ-applied east-component
  *  rate. Do NOT divide by cos δ before calling. Either PM component
  *  missing → the measured position is returned unpropagated (best
- *  available estimate, matches stage2_resolve.py's convention). */
+ *  available estimate, as the binaries pipeline's propagatePosition does). */
 export function directionAtEpoch(
   raDeg: number,
   decDeg: number,
@@ -150,11 +142,12 @@ export function directionOnPm(
   );
 }
 
-/** |Δμ| > 50 mas/yr on either axis between the Gaia 5p and HIP2 PMs.
- *  Missing PM on either side → no comparison possible → false. */
+/** |Δμ| > 50 mas/yr on either axis between the Gaia 5p and HIP2 PMs — the
+ *  catalogue's and the binaries' Stage 3 one gate. Missing PM on either side →
+ *  no comparison possible → false. */
 export function hip2PmDisagrees(
-  gaia: GaiaAstrometryCatalogRow,
-  hip2: Hip2AstrometryRow,
+  gaia: Pick<GaiaAstrometryCatalogRow, 'pmraMasyr' | 'pmdecMasyr'>,
+  hip2: Pick<Hip2AstrometryRow, 'pmRaMasyr' | 'pmDeMasyr'>,
 ): boolean {
   if (
     gaia.pmraMasyr === null || gaia.pmdecMasyr === null
@@ -178,9 +171,7 @@ function pmVelVia(
 }
 
 /** Select the astrometric solution one spine row's sky direction comes from,
- *  through the trust cascade. Route semantics + priority order in ./README.md#direction-resolution;
- * the Gaia/HIP2 thresholds mirror
- *  scripts/binaries/stage3_astrometry.py.
+ *  through the trust cascade. Route semantics + priority order in ./README.md#direction-resolution.
  *
  *  The solution is NOT advanced here — `directionOnPm` is, once, at the caller,
  *  because the winning motion may be `pm-rescue/`'s rather than this tier's.

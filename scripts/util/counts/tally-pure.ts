@@ -24,3 +24,20 @@ export function fold<T extends string, I>(
   }
   return tally as Record<T, number>;
 }
+
+/** A tally's keys under a snapshot prefix: `prefixed('orbit_', {msc: 3})` is `{orbit_msc: 3}`. */
+export function prefixed<P extends string, K extends string>(prefix: P, tally: Record<K, number>): Record<`${P}${K}`, number> {
+  return Object.fromEntries(Object.entries(tally).map(([k, v]) => [`${prefix}${k}`, v])) as Record<`${P}${K}`, number>;
+}
+
+/** The sum of `members`' counts under a snapshot prefix: `sumOf(counts, 'orbit_', ['msc', 'orb6'])`. */
+export function sumOf<P extends string, K extends string>(counts: Record<`${P}${K}`, number>, prefix: P, members: readonly K[]): number {
+  return members.reduce((n, m) => n + counts[`${prefix}${m}`], 0);
+}
+
+/** `part / whole` for a snapshot rate; throws on an empty whole, which is a
+ *  broken build, not a rate of 0. */
+export function share(part: number, whole: number, rate: string): number {
+  if (whole <= 0) throw new Error(`${rate}: nothing to rate (denominator ${whole})`);
+  return part / whole;
+}

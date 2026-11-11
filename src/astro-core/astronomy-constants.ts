@@ -33,6 +33,11 @@ export const SUN_ABSMAG_V = 4.83;
 // that divide by it or take its log.
 export const MIN_PHYSICAL_RADIUS_R_SUN = 1e-9;
 
+export const DEG_TO_RAD = Math.PI / 180;
+export const RAD_TO_DEG = 180 / Math.PI;
+
+export const ARCSEC_PER_DEG = 3600;
+
 // π / (180 × 3600). Same magnitude as 1 / AU_PER_PC (1 AU subtends 1 arcsec
 // at 1 pc by definition) but written out here so the unit conversion reads as
 // the angular operation it is.
@@ -52,8 +57,12 @@ export const J2000_JD = 2451545.0;
 // budget does not need the time-varying obliquity term.
 export const J2000_OBLIQUITY_RAD = (23.4392911 * Math.PI) / 180;
 
+export const HIPPARCOS_EPOCH_JYEAR = 1991.25;
+
 export const DAYS_PER_JULIAN_YEAR = 365.25;
 export const SECONDS_PER_DAY = 86400;
+
+export const KM_S_PER_AU_YR = AU_KM / (DAYS_PER_JULIAN_YEAR * SECONDS_PER_DAY);
 
 // Catalogue RA columns (AT-HYG's `ra`) and sexagesimal `hh:mm:ss` boundary
 // coordinates both arrive in hours; everything downstream of the parse works

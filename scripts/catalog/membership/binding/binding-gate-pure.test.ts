@@ -1,9 +1,10 @@
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
+
+import { columnTable } from '../../../util/tsv/table-pure';
 
 import {
   GAIA_BINDING_G_MINUS_V_REJECT_MAG,
+  gMinusVRejects,
   bindingEvidence,
   isSiblingLetterAttribution,
   parseSimbadWdsXidsTsv,
@@ -59,11 +60,11 @@ describe('weighBinding', () => {
   // μ Dra: HIP 83608 is filed under B's letter, and the source belongs to A
   // alone. The sibling arm keys on the HIP, so it needs neither a G nor a V.
   describe('the sibling-letter arm', () => {
-    const xids = parseSimbadWdsXidsTsv([
+    const xids = parseSimbadWdsXidsTsv(columnTable(FROM, [
       'wds_id\tcomponent\tgaia_source_id\thip',
       '17053+5428\tA\t1420101696285626624\t',
       '17053+5428\tB\t\t83608',
-    ].join('\n'), FROM);
+    ].join('\n')));
     const sibling = bindingEvidence(new Map(), xids, NO_PRINTED_V);
 
     it('refuses a source another letter owns, and still reports the magnitude arm', () => {
@@ -81,12 +82,11 @@ describe('weighBinding', () => {
   });
 });
 
-describe('GAIA_BINDING_G_MINUS_V_REJECT_MAG', () => {
-  it('matches the binaries pipeline threshold (scripts/binaries/indices.py)', () => {
-    const py = readFileSync(resolve(__dirname, '../../../binaries/indices.py'), 'utf8');
-    const m = py.match(/^GAIA_BINDING_G_MINUS_V_REJECT_MAG\s*=\s*([\d.]+)/m);
-    expect(m).not.toBeNull();
-    expect(parseFloat(m![1])).toBe(GAIA_BINDING_G_MINUS_V_REJECT_MAG);
+describe('gMinusVRejects', () => {
+  it('refuses only a source strictly past the threshold fainter than V', () => {
+    expect(gMinusVRejects(1.5 + GAIA_BINDING_G_MINUS_V_REJECT_MAG, 1.5)).toBe(false);
+    expect(gMinusVRejects(1.51 + GAIA_BINDING_G_MINUS_V_REJECT_MAG, 1.5)).toBe(true);
+    expect(gMinusVRejects(0.0, 1.5)).toBe(false);
   });
 });
 
@@ -111,7 +111,7 @@ describe('isSiblingLetterAttribution', () => {
     '22222+2222\tA\t7\tlineage A\t\t100',
     '22222+2222\tAa\t8\tlineage Aa\t999\t',
   ].join('\n');
-  const xids = parseSimbadWdsXidsTsv(XIDS_TSV, FROM);
+  const xids = parseSimbadWdsXidsTsv(columnTable(FROM, XIDS_TSV));
 
   it('parses source / HIP attributions and the primary source letter', () => {
     expect(xids.bySource.get('1420101696285626624')).toEqual([
@@ -126,7 +126,7 @@ describe('isSiblingLetterAttribution', () => {
   });
 
   it('rejects required-column drift', () => {
-    expect(() => parseSimbadWdsXidsTsv('wds_id\tcomponent\n', FROM)).toThrow(
+    expect(() => parseSimbadWdsXidsTsv(columnTable(FROM, 'wds_id\tcomponent\n'))).toThrow(
       /missing required columns/,
     );
   });

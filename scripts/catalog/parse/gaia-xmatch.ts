@@ -13,9 +13,6 @@ interface BestNeighbourSpec<K> {
   readonly parseKey: (raw: string) => K | null;
 }
 
-// HIP keys are positive integers; require pure-digit strings so a
-// partial-numeric hip ("12abc") can't slip through and diverge from the
-// Python parser (parity pinned in gaia-hip-xmatch-parity.test.ts).
 const HIP_SPEC: BestNeighbourSpec<number> = {
   keyColumn: 'hip',
   parseKey: (raw) => {
@@ -25,9 +22,9 @@ const HIP_SPEC: BestNeighbourSpec<number> = {
   },
 };
 
-// Tycho ids stay opaque strings ("1000-1006-1") — parsers.py's
-// parse_gaia_tyc_xmatch accepts any non-empty cell, and narrowing here
-// would drop rows the binaries pipeline still resolves.
+// Tycho ids stay opaque strings ("1000-1006-1"): the binaries pipeline's
+// Stage 1 reads this table too, and narrowing here would drop rows it
+// resolves.
 const TYC_SPEC: BestNeighbourSpec<string> = {
   keyColumn: 'tyc',
   parseKey: (raw) => (raw.length > 0 ? raw : null),

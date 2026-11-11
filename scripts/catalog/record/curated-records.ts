@@ -4,7 +4,8 @@ import {
   SOL_ABSOLUTE_V_MAGNITUDE,
   SOL_APPARENT_V_MAGNITUDE,
 } from '../../../src/catalog-format/record/catalog-pure';
-import { CATALOG_SCENE_EPOCH, type DirectionSolution } from '../distance/direction-cascade';
+import { CATALOG_SCENE_EPOCH } from '../../../src/catalog-format/record/catalog-pure';
+import { type DirectionSolution } from '../distance/direction-cascade';
 import type { OriginPlacement } from '../distance/parallax/parallax-cascade';
 import type { ManifestRecord } from '../membership/membership-manifest-tsv';
 import { curatedSpectralValue, type SpectralValue } from '../spectral/spectral-resolve';

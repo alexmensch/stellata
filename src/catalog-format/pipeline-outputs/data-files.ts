@@ -13,6 +13,7 @@ export const DATA_FILES = {
   wgsnNames: 'data/iau-wgsn/wgsn_names.tsv',
   wgsnDesignations: 'data/iau-wgsn/wgsn_designations.tsv',
   astrometryRequest: 'data/gaia/gaia_catalog_source_id_request.tsv',
+  multiples: 'data/binaries/multiples.tsv',
   binariesAstrometryRequest: 'data/gaia/gaia_astrometry_source_id_request.tsv',
   gaiaHipXmatch: 'data/gaia/gaia_dr3_hip_xmatch.tsv',
   gaiaTycXmatch: 'data/gaia/gaia_dr3_tyc_xmatch.tsv',

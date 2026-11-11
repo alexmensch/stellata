@@ -140,8 +140,8 @@ name before they were written:
   then token length. Comparing whole comps by length put "Aa" below every
   single-letter branch, so 15 Mon's root (`06410+0954`, whose only
   A-branch cursor is Aa,Ab) anchored on its E component and every letter
-  in it composed against HD 261938. Promotion's `isMoreCanonicalAnchor`
-  (`../companion-promotion.ts`) is the same predicate, imported: the
+  in it composed against HD 261938. `isMoreCanonicalAnchor`
+  (`/scripts/binaries/component-tokens-pure.ts`) is promotion's predicate too, imported: the
   position anchor and the naming anchor ask different questions of the
   same root, but both want the branch the root is named for, and the
   length rule got that wrong for either.

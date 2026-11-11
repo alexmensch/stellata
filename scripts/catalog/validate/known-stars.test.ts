@@ -632,7 +632,7 @@ describe.runIf(FIXTURES_READY)('known-stars corpus', () => {
 
     // catalog.bin's `periodDays` field carries GCVS variability periods;
     // ORB6 / Gaia NSS orbital periods land in multiples.tsv (P_days)
-    // via build-binaries.py.
+    // via build:binaries.
     it.each(ORBITED)('$systemName — orbital period matches multiples.tsv P_days', (row) => {
       expect(
         row.wdsId,

@@ -1,7 +1,6 @@
 // The WDS-keyed SIMBAD spectral-type pull: its request and its table. See README.md.
 
-import type { Declared } from '../../util/sources/source';
-import { readTable } from '../../util/tsv/table-pure';
+import type { ColumnTable } from '../../util/tsv/table-pure';
 import type { PullTable } from '../pull/pull';
 import { SIMBAD_BATCH_SIZE } from '../pull/tap-pure';
 
@@ -9,9 +8,9 @@ import { SIMBAD_BATCH_SIZE } from '../pull/tap-pure';
 export const MIN_OID_REACH = 0.99;
 
 /** Every distinct SIMBAD oid simbad_wds_xids.tsv binds a WDS component to, ascending. */
-export function wdsOids(text: string, from: Declared): number[] {
+export function wdsOids(table: ColumnTable): number[] {
   const oids = new Set<number>();
-  for (const row of readTable({ ...from, columns: ['simbad_oid'] }, text)) {
+  for (const row of table(['simbad_oid'])) {
     const oid = row.int('simbad_oid');
     if (oid !== null) oids.add(oid);
   }

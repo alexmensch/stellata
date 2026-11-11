@@ -15,8 +15,10 @@ src/catalog-format/record/
   catalog-pure.ts (+ test)        The v10 binary layout and its codec, the
                                   chunk plan, the SearchEntry wire shape, the
                                   DistVia enum, the record's field
-                                  encodings, and the aliased-id index the
-                                  runtime dispatches search on. Pure.
+                                  encodings, the aliased-id index the
+                                  runtime dispatches search on, and
+                                  CATALOG_SCENE_EPOCH, the J2016.0 every
+                                  stored position is stated at. Pure.
 ```
 
 The build-side halves stay in `/scripts/catalog/record/`: the record-order

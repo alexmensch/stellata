@@ -79,8 +79,9 @@ epoch-advance-pure.ts    space-motion propagation:
                          pass whenever the (scrubbed) model clock crosses a
                          `bucketEpochJyr` bucket (1/20 Julian year —
                          sub-pixel drift per bucket even for Barnard's).
-                         `jdeToJulianEpochYear` converts the model clock's
-                         JD to the propagation's Julian-year base;
+                         The model clock's JD reaches the propagation's
+                         Julian-year base through astro-core's
+                         `julianYearOfJd`;
                          `maxSpeedPcPerYr` bounds scrub-range drift for
                          the load-epoch distance-window consumers;
                          `writeAdvancedLocal` forms one star's local-frame
