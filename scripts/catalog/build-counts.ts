@@ -17,6 +17,7 @@ import type { BoundariesCounts } from './boundaries/build-boundaries-artifact.ts
 import type { SearchCounts } from './record/search-index-pure.ts';
 import type { GcvsCounts } from './parse/gcvs/gcvs-parse.ts';
 import type { MultiplicityCounts } from './multiplicity/multiplicity-stage-pure.ts';
+import type { RecordsCounts } from './record/records-stage-pure.ts';
 
 /** Repo-relative path of the snapshot `BuildCounts` is pinned against, so the
  *  build and every consumer that reads the shipped figures back resolve one
@@ -29,15 +30,10 @@ export function committedBuildCounts(): BuildCounts {
 }
 
 /** Every count the snapshot holds, by name: the filed counts and each composed stage's block. */
-export type BuildCounts = FiledCounts & InputsCounts & BrightnessColourCounts & CoherenceCounts & MultiplicityCounts & GcvsCounts & SearchCounts & BoundariesCounts & FiguresCounts;
+export type BuildCounts = FiledCounts & InputsCounts & BrightnessColourCounts & CoherenceCounts & MultiplicityCounts & GcvsCounts & RecordsCounts & SearchCounts & BoundariesCounts & FiguresCounts;
 
 /** The counts of the stages not yet composed of a count block, each filed under its stage by CATALOG_COUNT_STAGE. */
 export interface FiledCounts {
-  /** Records written to catalog.bin after filtering and sort. */
-  recordCount: number;
-  /** Records the first transport chunk carries — what first paint draws
-   *  (`/src/catalog-format/record/README.md#on-disk-transport-chunking`). */
-  recordsInFirstChunk: number;
   /** Rows the Bailer-Jones override is allowed to fire on: a Gaia DR3
    *  source_id present AND the parallax cascade resolved `gaia_dr3_inversion`
    *  (the Gaia inverse-parallax population the posterior is the principled
@@ -48,12 +44,6 @@ export interface FiledCounts {
   /** bjEligible rows whose source_id was also in the B-J catalogue —
    *  the count actually overridden. Coverage = bjOverridden / bjEligible. */
   bjOverridden: number;
-  /** Records carrying a source_id the committed Apsis / GSPC pull holds no row
-   *  for. Pinned at the reviewed residual rather than zero: Gaia genuinely
-   *  publishes no parameters for part of the catalogue, so what is gated is the
-   *  shortfall MOVING (../refresh/README.md#the-staleness-gate--pin-the-shortfall-never-the-numerator). */
-  apsisSourcesUnpulled: number;
-  gspcSourcesUnpulled: number;
   /** Rows whose resolved direction falls inside the LMC sky cone — the
    *  population the LMC kinematic PM gate is evaluated against. */
   lmcCandidates: number;
@@ -70,21 +60,6 @@ export interface FiledCounts {
   lmcOverriddenByDistVia: Record<DistVia, number>;
   /** Stars with a proper name written into the name table. */
   nameTableEntries: number;
-  /** Stars with both nonzero amplitude and period after quantisation —
-   *  drives the shader's "is variable" sentinel. */
-  variableCount: number;
-  /** Records emitted with a non-zero Gaia DR3 source_id at
-   *  RECORD_LAYOUT.gaiaSourceId. The manifest carries one on all but its
-   *  no-Gaia residual; a sharp drop here means the builder lost the
-   *  plumbing, since nothing re-derives the binding. */
-  gaiaSourceIdResolved: number;
-  /** Catalog records whose `gaia_source_id` resolves to an ApsisRow —
-   *  upper bound on per-record Apsis coverage. */
-  apsisMatched: number;
-  /** Records with a non-null Teff in either gspphot OR gspspec — the
-   *  population the downstream Tier 2 colour-LUT re-routing can use as
-   *  Apsis-direct Teff. Pinned against the 84.8% probe figure. */
-  apsisTeffEither: number;
   /** Pair rows in multiples.tsv scanned by the companion-promotion pass
    *  (excludes standalone rows). */
   companionRowsScanned: number;
@@ -574,14 +549,6 @@ export const CATALOG_COUNT_STAGE: Readonly<Record<keyof FiledCounts, CatalogCoun
   companionExistingDesigConFromAnchor: 'promotion',
   companionExistingMemberRecurated: 'promotion',
   companionExistingViaSameasBridge: 'promotion',
-  recordCount: 'records',
-  recordsInFirstChunk: 'records',
-  apsisSourcesUnpulled: 'records',
-  gspcSourcesUnpulled: 'records',
-  variableCount: 'records',
-  gaiaSourceIdResolved: 'records',
-  apsisMatched: 'records',
-  apsisTeffEither: 'records',
 };
 
 export type CountDiff =

@@ -5,8 +5,6 @@ import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import {
-  encodeAmpUnits,
-  encodePeriodUnits,
   HEADER_SIZE,
   RECORD_SIZE,
   BINARY_VERSION,
@@ -33,6 +31,7 @@ import {
 import { SIMBAD_OTYPE_MULTIPLE } from './spectral/spectral-resolve';
 import { apparentVFromSol, assertSolFirst, SOL_RECORD_INDEX } from './record/record-order-pure';
 import { buildSearchIndex, searchIndexSummary } from './record/search-index-pure';
+import { apsisCoverageSummary, recordsCounts, variabilityUnits } from './record/records-stage-pure';
 import { avSolToStar } from './distance/dust/dust-deextinction-pure';
 import {
   orbitChainExemption, overlapLabel, physicalOverlaps,
@@ -308,8 +307,6 @@ export async function main() {
   // skips a section (missing GCVS files) doesn't leave the
   // field undefined.
   const counts: FiledCounts = {
-    recordCount: 0,
-    recordsInFirstChunk: 0,
     namingIauNamed: 0,
     namingIauNamedByProper: 0,
     namingIauUnreached: 0,
@@ -343,17 +340,11 @@ export async function main() {
     crossIndexUnknownCst: 0,
     bjEligible: 0,
     bjOverridden: 0,
-    apsisSourcesUnpulled: 0,
-    gspcSourcesUnpulled: 0,
     lmcCandidates: 0,
     lmcOverridden: 0,
     lmcParallaxRefusedByDistVia: emptyTallyPartition(DIST_VIA_VALUES),
     lmcOverriddenByDistVia: emptyTallyPartition(DIST_VIA_VALUES),
     nameTableEntries: 0,
-    variableCount: 0,
-    gaiaSourceIdResolved: 0,
-    apsisMatched: 0,
-    apsisTeffEither: 0,
     companionRowsScanned: 0,
     companionPromoted: 0,
     companionPromotedSynthetic: 0,
@@ -535,8 +526,6 @@ export async function main() {
     );
   }
   const simbadSourcedDistances = simbadSourcedDistancesTsv(stars);
-  // recordCount is the final post-promotion count; populated after the
-  // companion-promotion pass below.
   counts.bjEligible = stats.bjEligible;
   counts.bjOverridden = stats.bjOverridden;
   counts.distLowPrecisionParallax = stats.distLowPrecisionParallax;
@@ -703,8 +692,6 @@ export async function main() {
   counts.companionExistingDesigConFromAnchor = ps.existingDesigConFromAnchor;
   counts.companionExistingMemberRecurated = ps.existingMemberRecurated;
   counts.companionExistingViaSameasBridge = ps.existingViaSameasBridge;
-
-  counts.recordCount = stars.length;
 
   // Sort by apparent V from Sol ascending (brightest-looking first), so any
   // prefix of the record array is a usable sky and the transport chunks can
@@ -892,25 +879,12 @@ export async function main() {
 
   // Records.
   const unclassifiedCon: number[] = [];
-  let variableCount = 0;
-  let gaiaSourceIdResolved = 0;
-  let apsisMatched = 0;
-  let apsisTeffEither = 0;
-  let apsisSourcesUnpulled = 0;
-  let gspcSourcesUnpulled = 0;
   for (let i = 0; i < stars.length; i++) {
     const s = stars[i];
-    // Variability: amplitude clamps at 12.75 mag (extreme Miras), period at
-    // 6553 days (rare long-period symbiotics). Period = 0 is the shader's
-    // "not variable" sentinel.
-    const isVariable = s.periodDays > 0 && s.amplitudeMag > 0;
-    const ampUnits = isVariable ? encodeAmpUnits(s.amplitudeMag) : 0;
-    const periodUnits = isVariable ? encodePeriodUnits(s.periodDays) : 0;
-    if (ampUnits > 0 && periodUnits > 0) variableCount++;
+    const { ampUnits, periodUnits } = variabilityUnits(s);
     // Gaia DR3 source_ids exceed Number.MAX_SAFE_INTEGER; parse the
     // manifest column as BigInt to preserve every bit before writing.
     const gaiaSourceId = s.gaiaSourceId ? BigInt(s.gaiaSourceId) : NO_GAIA_SOURCE_ID;
-    if (gaiaSourceId !== NO_GAIA_SOURCE_ID) gaiaSourceIdResolved++;
 
     // Apsis lookup keyed by gaia_source_id string (BigInt key would
     // require a parallel string map). NO_APSIS (NaN) fills every cell
@@ -918,14 +892,6 @@ export async function main() {
     const apsisRow = s.gaiaSourceId ? apsisMap.get(s.gaiaSourceId) : undefined;
     const apsis = {} as Record<ApsisField, number>;
     for (const name of APSIS_FIELDS) apsis[name] = apsisRow?.[name] ?? NO_APSIS;
-    if (apsisRow) apsisMatched++;
-    if (apsisRow && (apsisRow.teffGspphot !== null || apsisRow.teffGspspec !== null)) {
-      apsisTeffEither++;
-    }
-    if (s.gaiaSourceId) {
-      if (!apsisRow) apsisSourcesUnpulled++;
-      if (!inputs.gspcMap.has(s.gaiaSourceId)) gspcSourcesUnpulled++;
-    }
 
     writeStarRecord(view, off, {
       x: s.x, y: s.y, z: s.z,
@@ -973,10 +939,11 @@ export async function main() {
   // What first paint actually gets. Pinned because it is the number the
   // progressive load's whole latency argument rests on, and it moves with
   // the name table's length as well as the chunk target.
-  counts.recordsInFirstChunk = recordsInChunkPrefix(
+  const recordsInFirstChunk = recordsInChunkPrefix(
     chunkBytes, 1, HEADER_SIZE + nameTableLength, stars.length,
   );
-  assertFigureVerticesInFirstChunk(figureLines, counts.recordsInFirstChunk);
+  assertFigureVerticesInFirstChunk(figureLines, recordsInFirstChunk);
+  const records = recordsCounts(stars, apsisMap, inputs.gspcMap, recordsInFirstChunk);
   // /src/catalog-format/record/README.md#on-disk-transport-chunking is measured from this line.
   const sortedKey = order.map((i) => sortKey[i]);
   const chunkRows = chunkBytes.map((_, i) => {
@@ -1042,21 +1009,7 @@ export async function main() {
   const sol = stars[SOL_RECORD_INDEX];
   console.log(`Sol at record index ${SOL_RECORD_INDEX} (absmag=${sol.absmag}, R=${sol.physicalRadius.toFixed(3)} R☉)`);
 
-  counts.variableCount = variableCount;
-  counts.gaiaSourceIdResolved = gaiaSourceIdResolved;
-  counts.apsisMatched = apsisMatched;
-  counts.apsisTeffEither = apsisTeffEither;
-  counts.apsisSourcesUnpulled = apsisSourcesUnpulled;
-  counts.gspcSourcesUnpulled = gspcSourcesUnpulled;
-
-  if (apsisMap.size > 0) {
-    const matchedPct = ((apsisMatched / stars.length) * 100).toFixed(1);
-    const teffPct = ((apsisTeffEither / stars.length) * 100).toFixed(1);
-    console.log(
-      `Gaia DR3 Apsis: ${apsisMatched} / ${stars.length} records matched (${matchedPct}%), ` +
-        `Teff (gspphot OR gspspec) on ${apsisTeffEither} (${teffPct}%)`,
-    );
-  }
+  console.log(apsisCoverageSummary(records));
 
   const lineage = stageLineage({
     layout: LINEAGE_LAYOUT,
@@ -1123,6 +1076,7 @@ export async function main() {
         { stage: 'inputs', block: { kind: 'counted', counts: inputs.counts } },
         { stage: 'multiplicity', block: { kind: 'counted', counts: multiplicity } },
         { stage: 'gcvs', block: { kind: 'counted', counts: gcvsCounts } },
+        { stage: 'records', block: { kind: 'counted', counts: records } },
         { stage: 'search', block: { kind: 'counted', counts: search.counts } },
         { stage: 'boundaries', block: { kind: 'counted', counts: boundaries.counts } },
         { stage: 'figures', block: { kind: 'counted', counts: figures } },

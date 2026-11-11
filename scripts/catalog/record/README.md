@@ -22,6 +22,11 @@ scripts/catalog/record/
                                   (buildSearchEntry owns the wire shape),
                                   with SearchCounts, the snapshot's search
                                   count block. Pure.
+  records-stage-pure.ts (+ test)  recordsCounts — RecordsCounts, the
+                                  snapshot's records count block, over the
+                                  sorted records — and variabilityUnits,
+                                  the quantised period and amplitude each
+                                  record writes. Pure.
 ```
 
 ## Curated records
