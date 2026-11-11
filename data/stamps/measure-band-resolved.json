@@ -25,9 +25,9 @@
     "src/catalog-format/record/catalog-pure.ts": "a082749c701911f2f825031f068c795b0542f1a8"
   },
   "outputs": {
-    "src/astro-core/milkyway/calibration/resolved-hole-table.ts": "dac55b871c11d59ea7552a4f6b399953ac4a4300"
+    "src/astro-core/milkyway/calibration/resolved-hole-table.ts": "f617e243cc366de46ad3f15cf5177c1fa13eb87a"
   },
-  "request": "022d18b6aeb5e764921a7296b82ff2d862ef9b81",
+  "request": "a7ddcef5b11b10ed394ae61ccdb5c5a43f1f7021",
   "requestFrom": [
     "public/catalog-manifest.json"
   ]
