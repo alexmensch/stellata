@@ -13,7 +13,8 @@ import {
 } from '../../catalog-format/binaries/binaries-format';
 import { AU_PC, J2000_JD } from '../../astro-core/astronomy-constants';
 import { tToJdUt } from '../solar-system/time/time';
-import { advancePositionsToEpoch, jdeToJulianEpochYear } from '../loaders/epoch-advance-pure';
+import { julianYearOfJd } from '../../astro-core/precession';
+import { advancePositionsToEpoch } from '../loaders/epoch-advance-pure';
 import { SUB_PIXEL_THRESHOLD_PX } from './binary-tuning';
 import {
   evaluateOrbitSkyAU,
@@ -1040,7 +1041,7 @@ describe('BinaryOrbitField.update — epoch drift precision', () => {
     for (let k = 0; k <= 300; k++) {
       const years = 10 + k * (1.5 / 300);
       const tSec = (J2000_JD - 2440587.5) * 86400 + years * 365.25 * 86400;
-      advancePositionsToEpoch(base, vel, jdeToJulianEpochYear(tToJdUt(tSec)), positions);
+      advancePositionsToEpoch(base, vel, julianYearOfJd(tToJdUt(tSec)), positions);
       field.update(tSec, camera, 15, 1080, 0.8, null);
       const x = local[0];
       if (prevX !== null) maxStepAu = Math.max(maxStepAu, Math.abs(x - prevX) / AU_PC);

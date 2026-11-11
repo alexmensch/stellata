@@ -117,7 +117,8 @@ Each has its own README.
     [B1875](/src/astro-core/iau-geometry/README.md#b1875). Cubic
     polynomials: right for the 125 years back to B1875, arcminutes off at
     the model clock's bounds. `besselianEpochToJd`'s Julian sibling,
-    `jdOfJulianYear`, is the one spelling of a Julian epoch year as a JD.
+    `jdOfJulianYear`, and its inverse `julianYearOfJd` are the one spelling
+    of a Julian epoch year as a JD and back.
   - **[Vondrák 2011](/data/papers/index.md#vondrak2011)** — `longTermEclipticPole` /
     `longTermEquatorPole` / `longTermEquinox` and the two frames they
     build (`longTermEclipticRotationFromJ2000`,

@@ -1,7 +1,8 @@
 // Binary-companion card lines shared by the star hover formatter and the
 // star focus-card provider. See ./README.md.
 
-import { J2000_JD } from '../../astro-core/astronomy-constants';
+import { DAYS_PER_JULIAN_YEAR } from '../../astro-core/astronomy-constants';
+import { julianYearOfJd } from '../../astro-core/precession';
 import type { LateState } from '../util/late/late';
 import {
   type BinariesData,
@@ -208,15 +209,14 @@ function orbitCompanionOfLines(
 // Orbital period in days below one year, years above — spectroscopic
 // pairs (days) and visual pairs (decades-plus) both read naturally.
 function formatOrbitalPeriod(pDays: number): string {
-  return pDays < 365.25
+  return pDays < DAYS_PER_JULIAN_YEAR
     ? `${pDays.toFixed(2)} d`
-    : `${(pDays / 365.25).toFixed(2)} yr`;
+    : `${(pDays / DAYS_PER_JULIAN_YEAR).toFixed(2)} yr`;
 }
 
 // Julian-year epoch of the stored sep + PA. The catalog separation is
 // measured at Gaia J2016 / WDS date_last, not J2000, so quote the real
 // epoch rather than a hard-coded J2000.
 function formatEpoch(jd: number): string {
-  const year = 2000 + (jd - J2000_JD) / 365.25;
-  return `J${year.toFixed(1)}`;
+  return `J${julianYearOfJd(jd).toFixed(1)}`;
 }

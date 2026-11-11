@@ -4,7 +4,8 @@
 import * as THREE from 'three';
 import { ARCSEC_TO_RAD } from '../../astro-core/astronomy-constants';
 import { tToJdUt } from '../solar-system/time/time';
-import { jdeToJulianEpochYear, writeAdvancedLocal } from '../loaders/epoch-advance-pure';
+import { julianYearOfJd } from '../../astro-core/precession';
+import { writeAdvancedLocal } from '../loaders/epoch-advance-pure';
 import { type BinariesData, type BinaryRelation } from './binaries-loader';
 import { focalChainRelationSet } from './focal-chain';
 import {
@@ -224,7 +225,7 @@ export class BinaryOrbitField {
     const abs = this.opts.absolutePositions;
     const base = this.opts.basePositions;
     const vel = this.opts.velocities;
-    const epochJyr = jdeToJulianEpochYear(tJd);
+    const epochJyr = julianYearOfJd(tJd);
     const local = this.opts.localPositions;
     const suppress = this.opts.compositeSuppress;
     const absMags = this.opts.absoluteMags;

@@ -4,18 +4,9 @@ import {
   READVANCE_BUCKET_JYR,
   advancePositionsToEpoch,
   bucketEpochJyr,
-  jdeToJulianEpochYear,
   maxSpeedPcPerYr,
   writeAdvancedLocal,
 } from './epoch-advance-pure';
-
-describe('jdeToJulianEpochYear', () => {
-  it('maps J2000.0 and J2016.0 reference dates', () => {
-    expect(jdeToJulianEpochYear(2451545.0)).toBe(2000.0);
-    // J2016.0 = 2000 + 16 Julian years × 365.25 d.
-    expect(jdeToJulianEpochYear(2451545.0 + 16 * 365.25)).toBeCloseTo(2016.0, 12);
-  });
-});
 
 describe('advancePositionsToEpoch', () => {
   it('is a no-op at the scene epoch', () => {

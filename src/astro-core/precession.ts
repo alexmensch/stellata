@@ -26,6 +26,11 @@ export function jdOfJulianYear(julianYear: number): number {
   return J2000_JD + (julianYear - 2000) * DAYS_PER_JULIAN_YEAR;
 }
 
+/** JD → Julian epoch, `jdOfJulianYear`'s inverse (2451545.0 → 2000.0). */
+export function julianYearOfJd(jd: number): number {
+  return 2000 + (jd - J2000_JD) / DAYS_PER_JULIAN_YEAR;
+}
+
 /** Besselian epoch → JD (Lieske 1979, /data/papers/index.md#lieske1979):
  *  tropical years counted from B1900.0. */
 export function besselianEpochToJd(besselianYear: number): number {
@@ -146,10 +151,6 @@ const EQUATOR_POLE_POLY_Y = [-73750.930350, -0.7675452, -0.00018725, 0.000000231
 // series by 0.042″ for no gain, and the two are used for different things.
 const VONDRAK_EPS0_RAD = 84381.406 * ARCSEC_TO_RAD;
 
-function julianEpochOf(jd: number): number {
-  return 2000 + (jd - J2000_JD) / DAYS_PER_JULIAN_YEAR;
-}
-
 /** Evaluate one Vondrák 2011 (/data/papers/index.md#vondrak2011) pole pair
  *  (periodic + polynomial), arcsec. */
 function vondrakPair(
@@ -158,7 +159,7 @@ function vondrakPair(
   polyA: readonly number[],
   polyB: readonly number[],
 ): { a: number; b: number } {
-  const t = (julianEpochOf(jd) - 2000) / 100;
+  const t = (julianYearOfJd(jd) - 2000) / 100;
   const w = 2 * Math.PI * t;
   let a = 0;
   let b = 0;

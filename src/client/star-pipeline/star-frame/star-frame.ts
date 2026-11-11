@@ -3,13 +3,13 @@
 // queries. See ./README.md.
 
 import * as THREE from 'three';
+import { julianYearOfJd } from '../../../astro-core/precession';
 import { sortedDistRange } from '../../camera/controls/star-geometry';
 import type { Catalog } from '../../loaders/catalog-loader';
 import { mergeSortedByDistance } from './star-frame-pure';
 import {
   advancePositionsToEpoch,
   bucketEpochJyr,
-  jdeToJulianEpochYear,
   maxSpeedPcPerYr,
 } from '../../loaders/epoch-advance-pure';
 import { T_CLAMP_MAX_S, T_CLAMP_MIN_S, tToJdUt } from '../../solar-system/time/time';
@@ -122,7 +122,7 @@ export class StarFrame {
     // eclipse photometry all inherit current-epoch positions by construction.
     // See /docs/science-catalog-ingestion.md#current-epoch-star-positions--space-motion-propagation-to-t.
     this.basePositions = new Float32Array(catalog.count * 3);
-    this._advancedEpochJyr = bucketEpochJyr(jdeToJulianEpochYear(tToJdUt(t)));
+    this._advancedEpochJyr = bucketEpochJyr(julianYearOfJd(tToJdUt(t)));
 
     this.logRadii = new Float32Array(catalog.count);
     this.lumClassF32 = new Float32Array(catalog.count);
@@ -161,8 +161,8 @@ export class StarFrame {
     this.maxEpochDriftPc = Math.max(
       this.maxEpochDriftPc,
       maxSpeedPcPerYr(catalog.velocities, first, end) * Math.max(
-        this._advancedEpochJyr - jdeToJulianEpochYear(tToJdUt(T_CLAMP_MIN_S)),
-        jdeToJulianEpochYear(tToJdUt(T_CLAMP_MAX_S)) - this._advancedEpochJyr,
+        this._advancedEpochJyr - julianYearOfJd(tToJdUt(T_CLAMP_MIN_S)),
+        julianYearOfJd(tToJdUt(T_CLAMP_MAX_S)) - this._advancedEpochJyr,
       ),
     );
 
@@ -240,7 +240,7 @@ export class StarFrame {
     focalIdx: number | null,
     outDelta: THREE.Vector3,
   ): boolean {
-    const targetJyr = bucketEpochJyr(jdeToJulianEpochYear(tToJdUt(t)));
+    const targetJyr = bucketEpochJyr(julianYearOfJd(tToJdUt(t)));
     if (targetJyr === this._advancedEpochJyr) return false;
     const abs = this.catalog.positions;
     const fx = focalIdx === null ? 0 : abs[focalIdx * 3];
