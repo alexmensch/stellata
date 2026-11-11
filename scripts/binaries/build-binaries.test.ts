@@ -134,7 +134,7 @@ describe.skipIf(![...INPUTS, REQUEST, SPOT_CHECK_GROUND_TRUTH].every(isReadable)
     expect(MULTIPLES_TSV.serialize(s6.rows) === readFileSync(MULTIPLES_TSV_PATH, 'utf8')).toBe(true);
   });
 
-  it('hands the switch frozen rows, and logs the Stage 6 lines', () => {
+  it('hands main frozen rows, and logs the Stage 6 lines', () => {
     expect([Object.isFrozen(s6), Object.isFrozen(s6.rows), Object.isFrozen(s6.rows[0])]).toEqual([true, true, true]);
     expect(log.filter((line) => line.startsWith('multiples.tsv: ') || line.startsWith('spect provenance: '))).toHaveLength(2);
   });

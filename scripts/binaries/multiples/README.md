@@ -67,7 +67,7 @@ than the de-reddened colour, and the inverse of
 G − V with BP − RP clamped into its range where the catalogue's
 `rielloVMagnitude` refuses. Neither is the catalogue's published DR3 transform
 (`/scripts/catalog/photometry/colour-index-pure.ts`), and the two disagree on
-most rows; adopting the catalogue's is `stellata-hooj.43.1`, after the switch.
+most rows; adopting the catalogue's is `stellata-hooj.43.1`.
 
 ## Counts
 
