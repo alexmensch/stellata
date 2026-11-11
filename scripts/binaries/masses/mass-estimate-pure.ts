@@ -80,7 +80,8 @@ export function parseSpectralType(raw: string | null): ParsedSpect | null {
   return { classIdx, subclass, lumClass: lookupLumClass(lumWindow), isWhiteDwarf: false };
 }
 
-/** Main-sequence masses, rows O..M, columns subclass 0..9: Cox 2000 (/data/papers/index.md#cox2000) Sect. 15.2. */
+/** Main-sequence masses, rows O..M, columns subclass 0..9: Cox 2000 (/data/papers/index.md#cox2000) Sect. 15.2's
+ *  anchors, linearly interpolated between them — the subclasses between anchors are not Cox's values. */
 const MS_MASS: readonly (readonly number[])[] = [
   [60.0, 50.0, 40.0, 32.0, 28.0, 25.0, 22.0, 20.0, 18.0, 17.0],
   [17.0, 13.0, 9.0, 7.0, 6.5, 5.9, 4.5, 3.8, 3.3, 3.0],
@@ -91,7 +92,7 @@ const MS_MASS: readonly (readonly number[])[] = [
   [0.50, 0.42, 0.36, 0.32, 0.28, 0.20, 0.13, 0.09, 0.07, 0.05],
 ];
 
-/** Giant (III, and II) masses: Cox 2000 Table 15.7. */
+/** Giant (III, and II) masses: Cox 2000 Table 15.7; the O row is extrapolated, not read off the table. */
 const III_MASS: readonly (readonly number[])[] = [
   Array(10).fill(40.0),
   [15.0, 13.0, 11.0, 9.0, 8.0, 7.0, 6.5, 6.0, 5.5, 5.0],
