@@ -37,7 +37,8 @@ scripts/catalog/photometry/
     (+ test)                     V, spectral class, B−V and de-extinction
                                  as a lineage stage: its codes, the
                                  BrightnessColour each walked row hands
-                                 on, and its one serialiser
+                                 on, its one serialiser, its count block
+                                 type and the build-log summary over it
                                  (#brightness-colour-lineage).
   gspc-source.ts                 GAIA_GSPC and HIP_PHOTOMETRY, the two
   hip-photometry-source.ts       tables declared (../../util/sources/).
