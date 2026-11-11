@@ -14,18 +14,22 @@ its review-queue and label-drop counts fold from the outcomes, while the
 derivation, admission and component counters are still kept by hand beside
 them (stellata-hhaw.45.23). Promotion's per-row counters all fold from its
 outcomes; its post-passes act on records and keep their own. Coherence's
-counters fold from its verdicts, still under their `systemCoherence*` keys
-until those keys become its codes (stellata-hhaw.45.23). Naming's display
-counters fold from its outcomes the same way, under their `naming*` keys
-(stellata-hhaw.45.23).
+and brightness-colour's snapshot keys are their codes, folded from their
+lines. Naming's display counters fold from its outcomes the same way, under
+their `naming*` keys (stellata-hhaw.45.23). The record walk's placement
+counts fold from each row's outcome (`../parse/walk-stats-pure.ts`), still
+under their old keys (stellata-hhaw.45.23).
 
 ## Files in this area
 
 ```
 scripts/catalog/lineage/
   lineage-row-pure.ts            The envelope and LineageLine, its TSV line:
+                                 stageRow, the one row builder, which fills
+                                 a row's stage and role from its codes;
                                  stageLineageLine, the one encoder, which
-                                 refuses a code the stage does not declare;
+                                 refuses a code the stage does not declare
+                                 or a row in another role than its code's;
                                  sortUtf8, the one order the stage lines,
                                  identity and SID files, reason-code list
                                  and trace keys sort by; and
@@ -42,12 +46,15 @@ scripts/catalog/lineage/
                                  records on one key.
   lineage-stages.ts              LINEAGE_STAGES, every stage's codes and
                                  files in pipeline order: the one list the
-                                 code generator and trace/ read.
+                                 code generator and trace/ read, and the
+                                 owner of the stage order the sections
+                                 below name.
   trace/                         `pnpm run trace`. Own README.
   stage-lineage.ts               stageLineage: one stage's files, header,
                                  baseline plan, diff, budget and invariant
                                  checks, ready for the stage's emitArtifacts
-                                 call.
+                                 call; countedStageLineage, the same plus
+                                 its count block.
   phase-clock-pure.ts            phaseClock: the budget line's per-phase
     (+ test)                     split of the timed window.
   lineage-invariant-pure.ts      LineageInvariant and its check (#invariants).
@@ -61,6 +68,10 @@ scripts/catalog/lineage/
   lineage-io.ts                  The baseline members and a stage's emission,
                                  gzip, and the header with its input map
                                  and file hashes, re-checked on read.
+  count-block-fixture.ts         Test-only: seededCodeCheck, a stage's count
+                                 block against its snapshot before and after
+                                 a code is seeded, so each counted stage pins
+                                 that a new code reaches the snapshot.
   lineage-core-pure.test.ts      Order, writer refusal, diff.
   lineage-rotation.test.ts       Rotation over a scratch build/: a failed or
                                  absent emission moves nothing, another
@@ -134,7 +145,7 @@ Every stage writes the same envelope:
 |---|---|
 | `stage` | the stage that decided |
 | `key` | the origin `SourceRowRef` |
-| `role` | `outcome`, or `refused` for an alternative the stage weighed and rejected |
+| `role` | `outcome`, or `refused` for an alternative the stage weighed and rejected; declared once per code and filled from it by `stageRow`, never stated by a stage |
 | `code` | a reason code from the generated list |
 | `params` | per-instance detail (source id, component letter, sibling) |
 | `evidence` | `SourceRowRef`s cited, each once and never the origin row (`evidenceTexts`) |
@@ -206,16 +217,22 @@ Membership's (`MEMBERSHIP_INVARIANTS`): no `admit.magnitude` row whose
 ## Counts fold from lineage
 
 A stage's count-snapshot keys are its reason codes, so the code list is the
-one owner of every counted tier. `foldStageLines(codes, lines, role)`
+one owner of every counted tier. `foldStageLines(codes, lines)`
 (`lineage-row-pure.ts`, over `../../util/counts/tally-pure.ts`'s `fold`) counts a
-stage's lines per code in one role, every declared code present, typed
-`Record<code, number>` from the stage's `codes`; a line of another stage
-throws. A stage with no codes yet keeps its snapshot keys until it gains
+stage's lines per live code, every live code present, typed
+`Record<code, number>` from the stage's `live` codes — a retired or
+historical code is no key, and a line carrying one throws; each code is declared in
+one role, so a stage's outcomes and refusals fold into one record and no
+code is counted in both. A line of another stage, or in a role its code is
+not declared in, throws. `countedStageLineage` (`stage-lineage.ts`) is
+`stageLineage` plus that fold over the same lines, inside the timed window:
+its `counts` is the stage's count block, which the build composes into its
+snapshot ([The staged snapshot](../../util/counts/README.md#the-staged-snapshot)). A stage with no codes yet keeps its snapshot keys until it gains
 lineage.
 
 ## SID events
 
-SID allocation is the sixth stage, run inside `build:catalog`; each sibling
+SID allocation is a stage run inside `build:catalog`, after promotion; each sibling
 build allocates as a stage of its own, `allocation-clouds` in `build:clouds`
 and `allocation-local-group` in `build:local-group`. Their rows, events and
 fail-closed rule live beside their modules, in [SID events](/scripts/sid/README.md#sid-events).
@@ -267,6 +284,7 @@ per `multiples.tsv` row, plus 31,908 identity rows (<!-- count:build-catalog/com
 measured budget sits beside its contract: [allocation's](/scripts/sid/README.md#sid-events),
 [placement's](../distance/README.md#placement-lineage),
 [brightness-colour's](../photometry/README.md#brightness-colour-lineage),
+[size's](../spectral/README.md#size-lineage),
 [coherence's](../multiplicity/README.md#coherence-lineage) and
 [naming's](../naming/README.md#naming-lineage). Placement's 349 MB plain outruns
 V8's longest string, so stage files and diffs are written and read as UTF-8
@@ -275,13 +293,14 @@ bytes in chunks, and the diff walks the baseline a key at a time
 
 A stage that size cannot hold its rows as objects either: 3.9 million
 `LineageRow`s, beside the `Placement`s they came from, are about 1.7 GB of
-heap. So a stage hands `stageLineage` lines, never rows, and placement and
-brightness-colour serialise each record to their lines inside the walk,
-keeping only the strings; the diff reads the baseline as lines too, and
-only a reader that needs fields (trace, a ledger view) decodes them. Even as
-strings the two stages' 7.9 million lines overrun the heap budget together,
-so brightness-colour's go to a `LineSpill` during the walk and are read
-back once placement's lines are released.
+heap. So a stage hands `stageLineage` lines, never rows, and placement,
+brightness-colour and size serialise each record to their lines inside the
+walk, keeping only the strings; the diff reads the baseline as lines too,
+and only a reader that needs fields (trace, a ledger view) decodes them.
+Even as strings the three stages' 8.8 million lines (placement 3.9M,
+brightness-colour 4.0M, size 0.96M) overrun the heap budget together, so
+brightness-colour's and size's go to a `LineSpill` each during the walk and
+are read back one stage at a time, once placement's lines are released.
 
 The committed form of lineage is `data/sid/events.tsv` plus the ledger views
 below; the derivation itself is a build artifact, regenerated every build.
@@ -314,6 +333,13 @@ differs within a changed key: `change` (added / removed / changed), `side`
 (`-` baseline, `+` current), the six envelope columns, then any column the
 stage joins on from another stage's facts. A PR whose build leaves a
 non-empty diff puts that diff's summary in its PR body.
+
+**A stage's emission carries the diff's tally by kind, never its lines.**
+`build:catalog` holds every stage's emission until its one `emitArtifacts`
+call, so changed lines kept there would stay live through every later stage
+and count against the [CI heap budget](../../util/heap-budget/README.md):
+464,466 changed brightness-colour keys (929,228 lines) hold about 500 MiB
+(measured 2026-11-11). The lines live only between the diff and its text.
 
 ## Trace
 
@@ -368,28 +394,34 @@ against reinstates per SID, as it was over the two files.
 
 ## The placement stage
 
-`build:catalog`'s record walk is the second stage; its contract lives beside
+`build:catalog`'s record walk is the stage after membership; its contract lives beside
 its module, in [Placement lineage](../distance/README.md#placement-lineage).
 
 ## The brightness-colour stage
 
-`build:catalog`'s V, spectral class, B−V and de-extinction are the third
-stage, written from the same record walk as placement; its contract lives
+`build:catalog`'s V, spectral class, B−V and de-extinction are the stage
+after placement, written from the same record walk as placement; its contract lives
 beside its module, in [Brightness-colour lineage](../photometry/README.md#brightness-colour-lineage).
+
+## The size stage
+
+`build:catalog`'s physical radius is the stage after brightness-colour,
+written from the same record walk; its contract lives beside its module, in
+[Size lineage](../spectral/README.md#size-lineage).
 
 ## The coherence stage
 
-`build:catalog`'s system distance coherence is the fourth stage; its contract
+`build:catalog`'s system distance coherence is the stage after size; its contract
 lives beside its module, in [Coherence lineage](../multiplicity/README.md#coherence-lineage).
 
 ## The naming stage
 
-`build:catalog`'s display-name pass is the seventh stage, after allocation; its
+`build:catalog`'s display-name pass is the last stage, after allocation; its
 contract lives beside its module, in [Naming lineage](../naming/README.md#naming-lineage).
 
 ## The promotion stage
 
-`build:catalog`'s companion promotion is the fifth stage
+`build:catalog`'s companion promotion is the stage after coherence
 (`../companions/promotion-lineage-pure.ts`). `promoteCompanions` returns one
 `PromotedRow` per `multiples.tsv` row, keyed on that row
 (`multiples:<system_id>/<comp>`), and `promotionLineageRow` serialises its

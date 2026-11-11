@@ -37,7 +37,8 @@ scripts/catalog/photometry/
     (+ test)                     V, spectral class, B−V and de-extinction
                                  as a lineage stage: its codes, the
                                  BrightnessColour each walked row hands
-                                 on, and its one serialiser
+                                 on, its one serialiser, its count block
+                                 type and the build-log summary over it
                                  (#brightness-colour-lineage).
   gspc-source.ts                 GAIA_GSPC and HIP_PHOTOMETRY, the two
   hip-photometry-source.ts       tables declared (../../util/sources/).
@@ -100,14 +101,17 @@ V = G − f(BP−RP)      Riello 2021 (/data/papers/index.md#riello2021), inside
   → curated            Sol alone
 ```
 
-Per-tier routing, pinned in build-counts: `gaia_riello` **<!-- count:build-catalog/vGaiaRiello -->963,505<!-- /count -->** ·
-`printed_hip` **<!-- count:build-catalog/vPrintedHip -->1,242<!-- /count -->** · `tycho2` **<!-- count:build-catalog/vTycho2 -->190<!-- /count -->** · `gliese` **<!-- count:build-catalog/vGliese -->20<!-- /count -->** · `curated`
-**<!-- count:build-catalog/vCurated -->1<!-- /count -->**, residual `none` **<!-- count:build-catalog/vNone -->0<!-- /count -->**.
+Per-tier routing, the stage's count block over every row that reached the V step
+([Brightness-colour lineage](#brightness-colour-lineage)): `gaia_riello` **<!-- count:build-catalog/brightness-colour.v.gaia-riello -->963,505<!-- /count -->** ·
+`printed_hip` **<!-- count:build-catalog/brightness-colour.v.printed-hip -->1,243<!-- /count -->** · `tycho2` **<!-- count:build-catalog/brightness-colour.v.tycho2.inside-bt-vt-range -->184<!-- /count -->** inside its counted
+colour range and **<!-- count:build-catalog/brightness-colour.v.tycho2.outside-bt-vt-range -->6<!-- /count -->** outside · `gliese` **<!-- count:build-catalog/brightness-colour.v.gliese -->20<!-- /count -->** · `curated`
+**<!-- count:build-catalog/brightness-colour.v.curated -->1<!-- /count -->**, residual `none` **<!-- count:build-catalog/brightness-colour.v.none -->637<!-- /count -->** — rows no tier lights, which park
+as `no_v_magnitude`, so a shipped record never carries it (`ShippedBrightness`'s
+type rules it out).
 
 `resolveVMagnitude` returns the shared cascade shape
 (`CascadeResult`, `../cascade-result.ts`): the value **and** the tier that
-produced it, so `vVia` routing counts are pinned in build-counts the same way
-the direction cascade pins `directionVia`, the source row it read (the Gaia
+produced it, which the stage's lineage codes, the source row it read (the Gaia
 row, or the HIP, Tycho-2 or Gliese row each `printedVLookups` answer cites),
 and on any result the Riello transform's refusal of the row's Gaia photometry
 (`uncalibrated` or `colour_out_of_range`), citing that row. The tier also rides on the record,
@@ -125,11 +129,12 @@ to serve. Nor is CNS5 a candidate: it publishes no Johnson V either
 
 [ESA 1997](/data/papers/index.md#esa1997) (SP-1200) states
 `V = VT − 0.090(BT−VT)` over −0.2 < `BT−VT` < 1.8; the build counts against
-a wider [−0.25, 2.0], a bound with no recorded source — which to count
-against is an open decision (`stellata-uadc.69.5`). **44** of the tier's 3,784 rows sit outside that, on both the red and the blue
-side, where the linear form runs bright against the printed cell it replaces.
-`tycho2VMagnitude` transforms them anyway and `vTycho2OutsideBtVtRange` pins
-the count.
+a wider [−0.25, 2.0] (`TYCHO2_BT_MINUS_VT_MIN` / `MAX`), a bound with no
+recorded source — which to count against is an open decision
+(`stellata-uadc.69.5`). Rows outside it sit on both the red and the blue side,
+where the linear form runs bright against the printed cell it replaces.
+`tycho2VMagnitude` transforms them anyway, and the stage codes them apart,
+`v.tycho2.outside-bt-vt-range`, so a shift upstream moves the count snapshot.
 
 That is the opposite call from [Where the colour bound comes from](#where-the-colour-bound-comes-from), which
 refuses to extend Table 5.9 past Table 5.10 note (k). The difference is what sits
@@ -149,10 +154,10 @@ B−V = (G−V)(BP−RP) − (G−B)(BP−RP)    inside both relations' validity
   → none                              the record bakes SOLAR_BV_FALLBACK
 ```
 
-Per-tier routing, pinned in build-counts: `gaia_relation` **<!-- count:build-catalog/ciGaiaRelation -->881,895<!-- /count -->** ·
-`printed_hip_bv` **<!-- count:build-catalog/ciPrintedHipBv -->9,584<!-- /count -->** · `gspc` **<!-- count:build-catalog/ciGspc -->12,013<!-- /count -->** ·
-`spectral_derived` **<!-- count:build-catalog/ciSpectralDerived -->3,785<!-- /count -->** · `none` **<!-- count:build-catalog/ciSolarFallback -->57,681<!-- /count -->** (pinned as
-`ciSolarFallback`). The relation carries the bulk; the two measured tiers under
+Per-tier routing over the shipped records: `gaia_relation` **<!-- count:build-catalog/brightness-colour.ci.gaia-relation -->881,895<!-- /count -->** ·
+`printed_hip_bv` **<!-- count:build-catalog/brightness-colour.ci.printed-hip-bv -->9,584<!-- /count -->** · `gspc` **<!-- count:build-catalog/brightness-colour.ci.gspc -->12,013<!-- /count -->** ·
+`spectral_derived` **<!-- count:build-catalog/brightness-colour.ci.spectral-derived -->3,785<!-- /count -->** · `none` **<!-- count:build-catalog/brightness-colour.ci.none -->57,681<!-- /count -->**, which
+bakes the solar colour. The relation carries the bulk; the two measured tiers under
 it take the rows past its colour and saturation bounds, and the rest reach
 neither and take a derived colour or none.
 
@@ -190,7 +195,9 @@ it would leave the tier serving **zero** rows: the flag's region and this
 tier's window do not intersect anywhere in this catalogue, which is bright
 enough that 96% of it sits below the flag's own bright bound
 ([The GSPC validated-range flag](/data/gaia/README.md#the-gspc-validated-range-flag--1-means-in-range) has the measured
-region). `ciGspcValidatedRange` pins that zero as a tripwire.
+region). `gspcBMinusV` holds that as a tripwire: a flagged row the tier
+would serve fails the build, naming the row, since it means the flag moved
+upstream.
 
 Ignoring a published validity bound is what [Where the colour bound comes
 from](#where-the-colour-bound-comes-from) refuses to do for the Table-5.9 relation, so the difference matters:
@@ -376,7 +383,10 @@ exhaustive `switch`:
   it passed over, the candidate's tier in `params` (a SIMBAD spectral
   refusal adds the `namespace` that reached the row); a refusal code names
   the rule, never the tier. A printed V tier is its own outcome code;
-  `spectral.simbad` carries its `namespace`;
+  Tycho-2's splits by whether `BT−VT` sat inside the range the reduction
+  is counted against (`v.tycho2.inside-bt-vt-range` /
+  `outside-bt-vt-range`), and `spectral.simbad.*` by the namespace that
+  found the row;
 - every row cites, as evidence, the source rows its cascade read
   (`CascadeResult`, `../cascade-result.ts`), and no measured value;
 - the dust row names the map in its code and which values it corrected
@@ -387,6 +397,13 @@ exhaustive `switch`:
 The stage founds no record, writes no identity rows, and every code's
 effect is `none`. It covers the walked records: a promoted companion's V
 and colour come from its `multiples.tsv` row (`../companions/`).
+
+Its count block is its lines folded per live code (`countedStageLineage`,
+[Counts fold from lineage](../lineage/README.md#counts-fold-from-lineage)),
+filed in the count snapshot as stage `brightness-colour`; the V codes count
+every row that reached the V step, a parked one included, and the spectral, colour
+and dust codes the shipped records. `brightnessColourSummary` is the build
+log's lines over it.
 
 Measured 2026-11-08 on the full tree: 4,004,719 rows (444 MB plain), 38.6 MB
 gzipped in 4.1 s without a diff, 1.1 s of it reading the spill back — larger

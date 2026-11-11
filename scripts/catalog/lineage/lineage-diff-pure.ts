@@ -4,7 +4,16 @@ import {
   LINEAGE_COLUMNS, compareUtf8, lineageLineKey, utf8Lines, type LineageLine,
 } from './lineage-row-pure';
 
-export type KeyChangeKind = 'added' | 'removed' | 'changed';
+export const KEY_CHANGE_KINDS = ['added', 'removed', 'changed'] as const;
+export type KeyChangeKind = (typeof KEY_CHANGE_KINDS)[number];
+
+export type KeyChangeTally = Readonly<Record<KeyChangeKind, number>>;
+
+export function tallyKeyChanges(changes: readonly KeyChange[]): KeyChangeTally {
+  const tally = { added: 0, removed: 0, changed: 0 };
+  for (const change of changes) tally[change.kind]++;
+  return tally;
+}
 
 export interface KeyChange {
   readonly kind: KeyChangeKind;

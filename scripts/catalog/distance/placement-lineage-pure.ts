@@ -2,10 +2,10 @@
 
 import { lineageInvariant, NO_EXCEPTIONS, type LineageInvariant } from '../lineage/lineage-invariant-pure';
 import {
-  decodeLineageLine, evidenceTexts, lineageLineCode, paramsOf, paramsText, stageLineageLine,
-  type LineageLine, type LineageParams, type LineageRow,
+  decodeLineageLine, evidenceTexts, lineageLineCode, paramsOf, stageLineageLine,
+  type LineageLine, type LineageParams, type LineageRow, stageRow,
 } from '../lineage/lineage-row-pure';
-import { LIVE, stageCodes, type CodeDeclaration } from '../lineage/reason-codes/reason-codes-pure';
+import { outcomeCode, refusalCode, stageCodes } from '../lineage/reason-codes/reason-codes-pure';
 import { sourceRowRefText, type AnySourceRowRef } from '../../util/sources/row-ref-pure';
 import type { DirectionResolution, DirectionVia } from './direction-cascade';
 import type { ParallaxResolution, ParallaxTier } from './parallax/parallax-cascade';
@@ -13,16 +13,14 @@ import {
   PARKED_REASONS, parkedIdentifiersOf, parkedLedgerCells,
   type ParkedIdentifiers, type ParkedLedgerCells, type ParkedLedgerEntry, type ParkedReason, type ParkedRecord,
 } from './parallax/parked-ledger-pure';
-import type { PmRescueResolution, PmRescueVia } from './pm-rescue/pm-rescue';
+import { VELOCITY_VIA_BY_PM_RESCUE, type PmRescueResolution, type PmRescueVia } from './pm-rescue/pm-rescue';
+import type { VelocityVia } from './velocity';
 import type { RadialVelocityResolution, RvVia } from './radial-velocity/radial-velocity';
 import type { LmcKinematicVerdict } from './refinement/distance-overrides-pure';
 import { PLACEMENT_LINEAGE } from '../../../src/catalog-format/pipeline-outputs/lineage-files';
+import type { DistVia } from '../../../src/catalog-format/record/catalog-pure';
 
 export const PLACEMENT_LINEAGE_BUDGET = { gzipBytes: 34_000_000, writeMs: 40_000 };
-
-const live = (description: string, effect: CodeDeclaration['effect'] = 'none'): CodeDeclaration => (
-  { description, effect, status: LIVE }
-);
 
 const PARALLAX_BRANCHES = {
   gaia_dr3_inversion: 'parallax.gaia-dr3-inversion',
@@ -92,48 +90,48 @@ const PARK_BRANCHES = {
 const PARK = 'park';
 
 export const PLACEMENT_CODES = stageCodes(PLACEMENT_LINEAGE.stage, {
-  'parallax.gaia-dr3-inversion': live('The record\'s own Gaia DR3 five-parameter parallax.'),
-  'parallax.hip2-parallax': live('The record\'s own HIP in Hipparcos-2, van Leeuwen 2007 (/data/papers/index.md#vanleeuwen2007), above the S/N floor.'),
-  'parallax.cns5-plx': live('The record\'s own GJ in CNS5, cited to a publication no tier above refused, above the S/N floor.'),
-  'parallax.gliese-plx': live('The record\'s own GJ in V/70A, where the catalogue states its parallax is trigonometric.'),
-  'parallax.simbad-plx': live('SIMBAD\'s bibcoded parallax, cited to a publication no tier above refused, above the S/N floor.'),
-  'parallax.pair-member-parallax': live('A bound sibling\'s anchor-grade Gaia DR3 parallax, lent because no measurement of the record itself survived.'),
-  'parallax.gliese-photometric-plx': live('V/70A\'s photometric or spectroscopic parallax estimate, the bottom tier: nothing measured reaches the record.'),
-  'parallax.curated': live('Sol: distance zero by construction.'),
-  'parallax.refused.below-sn-floor': live('A tier\'s parallax is below S/N 1, indistinguishable from zero, so its inverse is undefined.'),
-  'parallax.refused.gaia-release': live('A courier\'s parallax cites a Gaia release on a record whose own Gaia fit is position-only, so it is the withdrawn fit returning.'),
-  'parallax.refused.hipparcos2': live('A courier\'s parallax cites Hipparcos-2 on a record whose Hipparcos-2 parallax the S/N floor refused.'),
-  'direction.gaia-5p': live('The record\'s own Gaia DR3 five-parameter solution.'),
-  'direction.gaia-2p': live('The record\'s own Gaia DR3 position-only solution, which no Hipparcos-2 row covers.'),
-  'direction.gaia-nss-systemic': live('The record\'s Gaia DR3 solution, refitted to the centre of mass: an NSS two-body orbit and an unreliable five-parameter fit.'),
-  'direction.hip2-saturated': live('Hipparcos-2, where Gaia states no usable parallax for the record.'),
-  'direction.hip2-pm-discrepant': live('Hipparcos-2, where the Gaia proper motion disagrees with it by more than 50 mas/yr.'),
-  'direction.tycho2': live('The record\'s own TYC in Tycho-2, which neither Gaia nor Hipparcos-2 reaches.'),
-  'direction.cns5': live('The record\'s own GJ in CNS5, which no tier above reaches.'),
-  'direction.simbad': live('SIMBAD\'s bibcoded coordinates, the bottom tier.'),
-  'direction.curated': live('Sol: the direction is arbitrary at distance zero.'),
-  'direction.refused.pm-disagrees-with-hip2': live('The Gaia solution\'s proper motion disagrees with Hipparcos-2\'s by more than 50 mas/yr, the mark of an orbit-corrupted fit.'),
-  'direction.refused.no-5p-solution': live('The Gaia solution is position-only and Hipparcos-2 covers the star.'),
-  'pm-rescue.tycho2': live('The direction tier states no proper motion; the record\'s own TYC in Tycho-2 supplies one.'),
-  'pm-rescue.cns5': live('The direction tier states no proper motion; the record\'s own GJ in CNS5 supplies one.'),
-  'pm-rescue.simbad': live('The direction tier states no proper motion; SIMBAD\'s bibcoded one supplies it.'),
-  'pm-rescue.none': live('The direction tier states no proper motion and no rescue tier supplies one, so the record ships static.'),
-  'pm-rescue.refused.gaia-release': live('A courier\'s proper motion cites a Gaia release on a record whose own Gaia fit is position-only.'),
-  'rv.gaia-dr3': live('Gaia DR3\'s RVS radial velocity on a record with a five-parameter solution.'),
-  'rv.simbad': live('SIMBAD\'s bibcoded radial velocity.'),
-  'rv.none': live('No tier states a radial velocity, so the radial term is zero.'),
-  'rv.rejected-above-ceiling': live('The radial velocity a tier supplied exceeds the sanity ceiling on its own, so the radial term is dropped.'),
-  'rv.refused.no-5p-solution': live('Gaia\'s RVS velocity on a position-only solution, whose spectrum is a blend.'),
-  'rv.refused.gaia-release': live('SIMBAD\'s radial velocity cites a Gaia release on a record whose own Gaia fit is position-only.'),
-  'distance.bailer-jones': live('The posterior distance of Bailer-Jones 2021 (/data/papers/index.md#bailerjones2021) replaces the inverted Gaia DR3 parallax.'),
-  'distance.bailer-jones-absent': live('The inverted Gaia DR3 parallax is eligible for a Bailer-Jones posterior that the committed pull lacks.'),
-  'distance.lmc-kinematic': live('Inside the LMC cone and sharing its proper motion, the record snaps to the LMC distance.'),
-  'distance.lmc-refused-by-own-parallax': live('The LMC snap is refused: the record\'s own parallax is more than 10 sigma above the LMC\'s.'),
-  'velocity.clamped': live('The space velocity exceeds the sanity ceiling, so it is zeroed.'),
-  'park.refused-no-defensible-parallax': live('Every parallax reaching the record was refused, so it cannot be placed.', PARK),
-  'park.no-parallax-published': live('No parallax tier reaches the record, so it cannot be placed.', PARK),
-  'park.no-v-magnitude': live('No V tier lights the record, so it has no brightness.', PARK),
-  'park.no-position': live('No direction tier states where the record is on the sky.', PARK),
+  'parallax.gaia-dr3-inversion': outcomeCode('The record\'s own Gaia DR3 five-parameter parallax.'),
+  'parallax.hip2-parallax': outcomeCode('The record\'s own HIP in Hipparcos-2, van Leeuwen 2007 (/data/papers/index.md#vanleeuwen2007), above the S/N floor.'),
+  'parallax.cns5-plx': outcomeCode('The record\'s own GJ in CNS5, cited to a publication no tier above refused, above the S/N floor.'),
+  'parallax.gliese-plx': outcomeCode('The record\'s own GJ in V/70A, where the catalogue states its parallax is trigonometric.'),
+  'parallax.simbad-plx': outcomeCode('SIMBAD\'s bibcoded parallax, cited to a publication no tier above refused, above the S/N floor.'),
+  'parallax.pair-member-parallax': outcomeCode('A bound sibling\'s anchor-grade Gaia DR3 parallax, lent because no measurement of the record itself survived.'),
+  'parallax.gliese-photometric-plx': outcomeCode('V/70A\'s photometric or spectroscopic parallax estimate, the bottom tier: nothing measured reaches the record.'),
+  'parallax.curated': outcomeCode('Sol: distance zero by construction.'),
+  'parallax.refused.below-sn-floor': refusalCode('A tier\'s parallax is below S/N 1, indistinguishable from zero, so its inverse is undefined.'),
+  'parallax.refused.gaia-release': refusalCode('A courier\'s parallax cites a Gaia release on a record whose own Gaia fit is position-only, so it is the withdrawn fit returning.'),
+  'parallax.refused.hipparcos2': refusalCode('A courier\'s parallax cites Hipparcos-2 on a record whose Hipparcos-2 parallax the S/N floor refused.'),
+  'direction.gaia-5p': outcomeCode('The record\'s own Gaia DR3 five-parameter solution.'),
+  'direction.gaia-2p': outcomeCode('The record\'s own Gaia DR3 position-only solution, which no Hipparcos-2 row covers.'),
+  'direction.gaia-nss-systemic': outcomeCode('The record\'s Gaia DR3 solution, refitted to the centre of mass: an NSS two-body orbit and an unreliable five-parameter fit.'),
+  'direction.hip2-saturated': outcomeCode('Hipparcos-2, where Gaia states no usable parallax for the record.'),
+  'direction.hip2-pm-discrepant': outcomeCode('Hipparcos-2, where the Gaia proper motion disagrees with it by more than 50 mas/yr.'),
+  'direction.tycho2': outcomeCode('The record\'s own TYC in Tycho-2, which neither Gaia nor Hipparcos-2 reaches.'),
+  'direction.cns5': outcomeCode('The record\'s own GJ in CNS5, which no tier above reaches.'),
+  'direction.simbad': outcomeCode('SIMBAD\'s bibcoded coordinates, the bottom tier.'),
+  'direction.curated': outcomeCode('Sol: the direction is arbitrary at distance zero.'),
+  'direction.refused.pm-disagrees-with-hip2': refusalCode('The Gaia solution\'s proper motion disagrees with Hipparcos-2\'s by more than 50 mas/yr, the mark of an orbit-corrupted fit.'),
+  'direction.refused.no-5p-solution': refusalCode('The Gaia solution is position-only and Hipparcos-2 covers the star.'),
+  'pm-rescue.tycho2': outcomeCode('The direction tier states no proper motion; the record\'s own TYC in Tycho-2 supplies one.'),
+  'pm-rescue.cns5': outcomeCode('The direction tier states no proper motion; the record\'s own GJ in CNS5 supplies one.'),
+  'pm-rescue.simbad': outcomeCode('The direction tier states no proper motion; SIMBAD\'s bibcoded one supplies it.'),
+  'pm-rescue.none': outcomeCode('The direction tier states no proper motion and no rescue tier supplies one, so the record ships static.'),
+  'pm-rescue.refused.gaia-release': refusalCode('A courier\'s proper motion cites a Gaia release on a record whose own Gaia fit is position-only.'),
+  'rv.gaia-dr3': outcomeCode('Gaia DR3\'s RVS radial velocity on a record with a five-parameter solution.'),
+  'rv.simbad': outcomeCode('SIMBAD\'s bibcoded radial velocity.'),
+  'rv.none': outcomeCode('No tier states a radial velocity, so the radial term is zero.'),
+  'rv.rejected-above-ceiling': outcomeCode('The radial velocity a tier supplied exceeds the sanity ceiling on its own, so the radial term is dropped.'),
+  'rv.refused.no-5p-solution': refusalCode('Gaia\'s RVS velocity on a position-only solution, whose spectrum is a blend.'),
+  'rv.refused.gaia-release': refusalCode('SIMBAD\'s radial velocity cites a Gaia release on a record whose own Gaia fit is position-only.'),
+  'distance.bailer-jones': outcomeCode('The posterior distance of Bailer-Jones 2021 (/data/papers/index.md#bailerjones2021) replaces the inverted Gaia DR3 parallax.'),
+  'distance.bailer-jones-absent': outcomeCode('The inverted Gaia DR3 parallax is eligible for a Bailer-Jones posterior that the committed pull lacks.'),
+  'distance.lmc-kinematic': outcomeCode('Inside the LMC cone and sharing its proper motion, the record snaps to the LMC distance.'),
+  'distance.lmc-refused-by-own-parallax': refusalCode('The LMC snap is refused: the record\'s own parallax is more than 10 sigma above the LMC\'s.'),
+  'velocity.clamped': outcomeCode('The space velocity exceeds the sanity ceiling, so it is zeroed.'),
+  'park.refused-no-defensible-parallax': outcomeCode('Every parallax reaching the record was refused, so it cannot be placed.', PARK),
+  'park.no-parallax-published': outcomeCode('No parallax tier reaches the record, so it cannot be placed.', PARK),
+  'park.no-v-magnitude': outcomeCode('No V tier lights the record, so it has no brightness.', PARK),
+  'park.no-position': outcomeCode('No direction tier states where the record is on the sky.', PARK),
 });
 
 type Branch = Parameters<typeof PLACEMENT_CODES.code>[0];
@@ -193,8 +191,8 @@ export type Placement =
   | {
     readonly kind: 'placed';
     readonly key: string;
-    readonly parallax: ParallaxResolution;
-    readonly direction: DirectionResolution;
+    readonly parallax: Exclude<ParallaxResolution, { via: 'none' }>;
+    readonly direction: Exclude<DirectionResolution, { via: 'none' }>;
     /** Null where the direction tier stated its own proper motion. */
     readonly pmRescue: PmRescueResolution | null;
     readonly bailerJones: BailerJonesStep;
@@ -204,6 +202,35 @@ export type Placement =
   };
 
 export type ParkedPlacement = Exclude<Placement, { kind: 'placed' }>;
+export type PlacedPlacement = Extract<Placement, { kind: 'placed' }>;
+
+type DistanceLayers = Pick<PlacedPlacement, 'parallax' | 'bailerJones' | 'lmc'>;
+
+/** The tier a placed row's distance stood on when the LMC override weighed it. */
+export function distViaBeforeLmc(p: DistanceLayers): DistVia {
+  return p.bailerJones.kind === 'override' ? 'bailer_jones' : p.parallax.via;
+}
+
+/** The tier a placed row's shipped distance came from. */
+export function shippedDistVia(p: DistanceLayers): DistVia {
+  return p.lmc === 'snap' ? 'lmc_kinematic' : distViaBeforeLmc(p);
+}
+
+/** The origin ships at rest, and the sanity clamp zeroes an artifact velocity. */
+function velocityZeroed(p: PlacedPlacement): boolean {
+  return p.parallax.via === 'curated' || p.velocityClamped;
+}
+
+/** The source of a placed row's shipped proper motion; `zero` wherever its velocity was zeroed. */
+export function shippedVelocityVia(p: PlacedPlacement): VelocityVia {
+  if (velocityZeroed(p)) return 'zero';
+  return p.pmRescue === null ? p.direction.value.velVia : VELOCITY_VIA_BY_PM_RESCUE[p.pmRescue.via];
+}
+
+/** Whether a placed row's shipped velocity carries a non-zero radial term. */
+export function radialVelocityApplied(p: PlacedPlacement): boolean {
+  return !velocityZeroed(p) && p.rv.kind === 'kept' && p.rv.rv.via !== 'none' && p.rv.rv.value.kmS !== 0;
+}
 
 /** The park reason, read off which step stopped the walk: the one place it is decided. */
 export function parkReason(p: ParkedPlacement): ParkedReason {
@@ -228,29 +255,24 @@ export function placementLineageRows(p: Placement): LineageRow[] {
   const out: LineageRow[] = [];
   const evidence = (refs: readonly AnySourceRowRef[]): string[] =>
     evidenceTexts(key, refs.map(sourceRowRefText));
-  const row = <B extends Branch>(
-    role: LineageRow['role'], branch: B, params: ParamsOf<B>, refs: readonly AnySourceRowRef[],
-  ): void => {
-    out.push({
-      stage: PLACEMENT_LINEAGE.stage, key, role, code: PLACEMENT_CODES.code(branch),
-      params: paramsText(params as LineageParams), evidence: evidence(refs),
-    });
+  const row = <B extends Branch>(branch: B, params: ParamsOf<B>, refs: readonly AnySourceRowRef[]): void => {
+    out.push(stageRow(PLACEMENT_CODES, key, branch, params as LineageParams, evidence(refs)));
   };
   const refused = <B extends Branch & `${string}.refused.${string}`>(
     branch: B, r: { tier: string; ref: AnySourceRowRef },
-  ): void => row('refused', branch, { tier: r.tier } as ParamsOf<B>, [r.ref]);
+  ): void => row(branch, { tier: r.tier } as ParamsOf<B>, [r.ref]);
   const none = {} as Record<string, never>;
 
   const parallax = (res: ParallaxResolution): void => {
     for (const r of res.refusals) refused(PARALLAX_REFUSAL_BRANCHES[r.reason], r);
-    if (res.via !== 'none') row('outcome', PARALLAX_BRANCHES[res.via], none, res.evidence);
+    if (res.via !== 'none') row(PARALLAX_BRANCHES[res.via], none, res.evidence);
   };
   const direction = (res: DirectionResolution): void => {
     for (const r of res.refusals) refused(DIRECTION_REFUSAL_BRANCHES[r.reason], r);
-    if (res.via !== 'none') row('outcome', DIRECTION_BRANCHES[res.via], none, res.evidence);
+    if (res.via !== 'none') row(DIRECTION_BRANCHES[res.via], none, res.evidence);
   };
   const park = (q: ParkedPlacement): void =>
-    row('outcome', PARK_BRANCHES[parkReason(q)], parkedLedgerCells(q.ids), []);
+    row(PARK_BRANCHES[parkReason(q)], parkedLedgerCells(q.ids), []);
 
   switch (p.kind) {
     case 'parked-parallax':
@@ -268,21 +290,21 @@ export function placementLineageRows(p: Placement): LineageRow[] {
       direction(p.direction);
       if (p.pmRescue !== null) {
         for (const r of p.pmRescue.refusals) refused(PM_RESCUE_REFUSAL_BRANCHES[r.reason], r);
-        row('outcome', PM_RESCUE_BRANCHES[p.pmRescue.via], none,
+        row(PM_RESCUE_BRANCHES[p.pmRescue.via], none,
           p.pmRescue.via === 'none' ? [] : p.pmRescue.evidence);
       }
-      if (p.bailerJones.kind === 'override') row('outcome', 'distance.bailer-jones', none, [p.bailerJones.ref]);
-      if (p.bailerJones.kind === 'absent') row('outcome', 'distance.bailer-jones-absent', none, []);
-      if (p.lmc === 'snap') row('outcome', 'distance.lmc-kinematic', none, []);
-      if (p.lmc === 'parallax_rules_out') row('refused', 'distance.lmc-refused-by-own-parallax', none, []);
+      if (p.bailerJones.kind === 'override') row('distance.bailer-jones', none, [p.bailerJones.ref]);
+      if (p.bailerJones.kind === 'absent') row('distance.bailer-jones-absent', none, []);
+      if (p.lmc === 'snap') row('distance.lmc-kinematic', none, []);
+      if (p.lmc === 'parallax_rules_out') row('distance.lmc-refused-by-own-parallax', none, []);
       const { rv } = p.rv;
       for (const r of rv.refusals) refused(RV_REFUSAL_BRANCHES[r.reason], r);
       if (p.rv.kind === 'rejected') {
-        row('outcome', 'rv.rejected-above-ceiling', { tier: p.rv.rv.via }, p.rv.rv.evidence);
+        row('rv.rejected-above-ceiling', { tier: p.rv.rv.via }, p.rv.rv.evidence);
       } else {
-        row('outcome', RV_BRANCHES[rv.via], none, rv.via === 'none' ? [] : rv.evidence);
+        row(RV_BRANCHES[rv.via], none, rv.via === 'none' ? [] : rv.evidence);
       }
-      if (p.velocityClamped) row('outcome', 'velocity.clamped', none, []);
+      if (p.velocityClamped) row('velocity.clamped', none, []);
       return out;
     }
     default: {
@@ -312,8 +334,7 @@ export function parkedLedgerView(lines: Iterable<LineageLine>): ParkedLedgerEntr
   return entries;
 }
 
-export function parkedRecord(p: Placement): ParkedRecord | null {
-  if (p.kind === 'placed') return null;
+export function parkedRecord(p: ParkedPlacement): ParkedRecord {
   const refusedPlxMas = p.kind === 'parked-parallax' ? p.parallax.refusals.map((r) => r.mas) : [];
   return { ...p.ids, reason: parkReason(p), refusedPlxMas, originKey: p.key };
 }

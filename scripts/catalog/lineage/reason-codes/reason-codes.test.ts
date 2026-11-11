@@ -5,18 +5,18 @@ import { describeCommittedRoundTrip, firstDifferingLine } from '../../../util/ts
 import { fileAtMergeBase } from '../../../util/git-provenance';
 import { releaseAt } from '../../../util/release-version';
 import { LINEAGE_STAGES } from '../lineage-stages';
-import { appendOnlyViolations, reasonCodeList, type ReasonCodeEntry } from './reason-code-list-pure';
-import { LIVE, stageCodes } from './reason-codes-pure';
-import { REASON_CODES } from './reason-codes-tsv';
+import { appendOnlyViolations, reasonCodeList, type ListedCode } from './reason-code-list-pure';
+import { LIVE, outcomeCode, refusalCode, stageCodes } from './reason-codes-pure';
+import { parseListedCodes, REASON_CODES } from './reason-codes-tsv';
 
 describeCommittedRoundTrip(REASON_CODES);
 
 /** A list new on this branch has an empty base; only a checkout with no
  *  merge-base to read has none. */
-function mergeBaseList(): ReasonCodeEntry[] | null {
+function mergeBaseList(): ListedCode[] | null {
   const base = fileAtMergeBase(REASON_CODES.file);
   if (base.kind === 'no-merge-base') return null;
-  return base.kind === 'absent' ? [] : REASON_CODES.parse(base.text);
+  return base.kind === 'absent' ? [] : parseListedCodes(base.text);
 }
 
 describe('the committed reason-code list', () => {
@@ -41,7 +41,7 @@ describe('the committed reason-code list', () => {
 
 describe('reasonCodeList and appendOnlyViolations', () => {
   const demo = (description: string, retired = false) => stageCodes('demo', {
-    kept: { description, effect: 'none', status: retired ? { kind: 'retired', retiredIn: '2.0.0' } : LIVE },
+    kept: outcomeCode(description, 'none', retired ? { kind: 'retired', retiredIn: '2.0.0' } : LIVE),
   });
 
   it('keeps a listed code\'s first version and gives a new one the tree\'s', () => {
@@ -58,6 +58,23 @@ describe('reasonCodeList and appendOnlyViolations', () => {
       .toMatch(/description changed/);
     const retired = reasonCodeList([demo('kept', true)], base, () => '2.0.0');
     expect(appendOnlyViolations(retired, base)[0]).toMatch(/status may only move live → retired/);
+  });
+
+  it('refuses a changed role, and reads an older list that predates the role column', () => {
+    const base = reasonCodeList([demo('kept')], [], () => '1.0.0');
+    const refusal = stageCodes('demo', { kept: refusalCode('kept') });
+    expect(appendOnlyViolations(base, reasonCodeList([refusal], base, () => '2.0.0')))
+      .toEqual(['demo.kept: role changed from "outcome" to "refused"']);
+    const older = 'code\tstage\teffect\tstatus\tretired_in\tfirst_version\tdescription\n'
+      + 'demo.kept\tdemo\tnone\tlive\t\t1.0.0\tkept\n';
+    const listed = parseListedCodes(older);
+    expect(listed).toEqual([{
+      code: 'demo.kept', stage: 'demo', effect: 'none', status: 'live', retiredIn: '', firstVersion: '1.0.0', description: 'kept',
+    }]);
+    expect(appendOnlyViolations(listed, reasonCodeList([refusal], base, () => '2.0.0'))).toEqual([]);
+    const blankRole = 'code\tstage\teffect\trole\tstatus\tretired_in\tfirst_version\tdescription\n'
+      + 'demo.kept\tdemo\tnone\t\tlive\t\t1.0.0\tkept\n';
+    expect(() => parseListedCodes(blankRole)).toThrow();
   });
 
   it('refuses one code declared by two stages', () => {
