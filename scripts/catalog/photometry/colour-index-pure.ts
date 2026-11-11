@@ -96,7 +96,7 @@ export function gspcBMinusV(
     throw new Error(
       `gspcBMinusV: ${sourceRowRefText(gspc.ref)} is inside the archive's validated range on a row this tier serves; `
       + 'the flag\'s region and the tier\'s window no longer miss each other, so the flag moved upstream '
-      + '(photometry/README.md#why-the-gspc-tier-does-not-gate-on-the-flag).',
+      + '(README.md#why-the-gspc-tier-does-not-gate-on-the-flag).',
     );
   }
   return { kind: 'value', value: gspc.bMinusV };
