@@ -208,6 +208,13 @@ function catalogStageLineage<S extends string>(...run: Parameters<typeof catalog
   return stageLineage(catalogStageRun(...run));
 }
 
+function catalogCountedStageLineage<S extends string, B extends string, L extends B>(
+  spec: StageLineageSpec<S, S>, codes: StageCodes<B, S, L>,
+  ...rest: Parameters<typeof catalogStageRun<S>> extends [unknown, unknown, ...infer R] ? R : never
+) {
+  return countedStageLineage(catalogStageRun(spec, codes, ...rest), codes);
+}
+
 // A function of its own so the walk's lines are unreachable once it returns:
 // inlined into main, they outlive the walk and the build runs out of heap.
 function walkManifest(inputs: ReadStarsOptions, stepInputs: FileHashes) {
@@ -235,10 +242,10 @@ function walkManifest(inputs: ReadStarsOptions, stepInputs: FileHashes) {
       );
       // Released before brightness-colour's lines are read back, or both stages' lines are held at once.
       placementLines = [];
-      const brightnessEmission = countedStageLineage(catalogStageRun(
+      const brightnessEmission = catalogCountedStageLineage(
         BRIGHTNESS_COLOUR_LINEAGE, BRIGHTNESS_COLOUR_CODES, () => brightnessSpill.lines(), BRIGHTNESS_COLOUR_LINEAGE_BUDGET, [],
         stepInputs,
-      ), BRIGHTNESS_COLOUR_CODES);
+      );
       const sizeEmission = catalogStageLineage(
         SIZE_LINEAGE, SIZE_CODES, () => sizeSpill.lines(), SIZE_LINEAGE_BUDGET, [], stepInputs,
       );
@@ -256,10 +263,10 @@ const PLACEMENT_EFFECTS = codeEffects([PLACEMENT_CODES]);
 // A function of its own so its line per record is unreachable once it returns:
 // inlined into main, the lines outlive promotion and raise the build's peak heap.
 function coherenceLineage(verdicts: readonly SystemVerdict[], stars: readonly Star[], stepInputs: FileHashes) {
-  return countedStageLineage(catalogStageRun(
+  return catalogCountedStageLineage(
     COHERENCE_LINEAGE, COHERENCE_CODES, () => coherenceLineageLines(verdicts, stars), COHERENCE_LINEAGE_BUDGET, [],
     stepInputs,
-  ), COHERENCE_CODES);
+  );
 }
 
 // A function of its own so its lines are unreachable once it returns, as coherence's are.
