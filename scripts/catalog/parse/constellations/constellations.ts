@@ -249,6 +249,24 @@ export function buildFigureLines(
   return out;
 }
 
+/** The figures stage's count block. */
+export type FiguresCounts = {
+  /** Total stick-figure polylines across all constellations. */
+  figureCount: number;
+  /** Constellations that carry at least one stick-figure polyline. */
+  figureConstellations: number;
+};
+
+export function figuresCounts(figureLines: ReadonlyMap<number, readonly (readonly number[])[]>): FiguresCounts {
+  let figureCount = 0;
+  for (const polylines of figureLines.values()) figureCount += polylines.length;
+  return { figureCount, figureConstellations: figureLines.size };
+}
+
+export function figuresSummary(counts: FiguresCounts): string {
+  return `${counts.figureCount} stick-figure polylines across ${counts.figureConstellations}`;
+}
+
 /** Throws unless every figure vertex decodes with the first transport chunk
  *  (README.md#stick-figures-from-stellarium). */
 export function assertFigureVerticesInFirstChunk(

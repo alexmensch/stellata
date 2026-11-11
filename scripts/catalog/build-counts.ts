@@ -12,6 +12,7 @@ import type { RecuratedBrightness } from './companions/companion-promotion.ts';
 import type { CoherenceCounts } from './multiplicity/coherence-lineage-pure.ts';
 import type { BrightnessColourCounts } from './photometry/brightness-colour-lineage-pure.ts';
 import type { InputsCounts } from './parse/read-stars-inputs.ts';
+import type { FiguresCounts } from './parse/constellations/constellations.ts';
 
 /** Repo-relative path of the snapshot `BuildCounts` is pinned against, so the
  *  build and every consumer that reads the shipped figures back resolve one
@@ -24,7 +25,7 @@ export function committedBuildCounts(): BuildCounts {
 }
 
 /** Every count the snapshot holds, by name: the filed counts and each composed stage's block. */
-export type BuildCounts = FiledCounts & InputsCounts & BrightnessColourCounts & CoherenceCounts;
+export type BuildCounts = FiledCounts & InputsCounts & BrightnessColourCounts & CoherenceCounts & FiguresCounts;
 
 /** The counts of the stages not yet composed of a count block, each filed under its stage by CATALOG_COUNT_STAGE. */
 export interface FiledCounts {
@@ -155,10 +156,6 @@ export interface FiledCounts {
   gcvsDesignationCon: number;
   /** Record index of Sol after sort; a build without exactly one Sol throws. */
   solIndex: number;
-  /** Total stick-figure polylines across all constellations. */
-  figureCount: number;
-  /** Constellations that carry at least one stick-figure polyline. */
-  figureConstellations: number;
   /** Records emitted with a non-zero Gaia DR3 source_id at
    *  RECORD_LAYOUT.gaiaSourceId. The manifest carries one on all but its
    *  no-Gaia residual; a sharp drop here means the builder lost the
@@ -701,8 +698,6 @@ export const CATALOG_COUNT_STAGE: Readonly<Record<keyof FiledCounts, CatalogCoun
   boundaryDirections: 'boundaries',
   boundaryRegionRuns: 'boundaries',
   boundaryArtifactKb: 'boundaries',
-  figureCount: 'figures',
-  figureConstellations: 'figures',
 };
 
 export type CountDiff =

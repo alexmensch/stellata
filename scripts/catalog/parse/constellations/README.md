@@ -11,7 +11,8 @@ scripts/catalog/parse/constellations/
   constellations.ts (+ test)      CONSTELLATIONS / CON_INDEX, the two
                                   readings of the Stellarium sky culture
                                   (stick figures, iauEdgeRecords), the
-                                  chunk-0 figure assert, and
+                                  chunk-0 figure assert, the figures
+                                  stage's count block (figuresCounts), and
                                   createConstellationAssignment, which binds
                                   the boundary lookup to the table's indices.
   stellarium-source.ts            STELLARIUM, the sky culture's declaration

@@ -62,6 +62,8 @@ import {
   CONSTELLATIONS,
   assertFigureVerticesInFirstChunk,
   buildFigureLines,
+  figuresCounts,
+  figuresSummary,
 } from './parse/constellations/constellations';
 import { renderBoundaryArtifact } from './boundaries/build-boundaries-artifact';
 import {
@@ -378,8 +380,6 @@ export async function main() {
     boundaryDirections: 0,
     boundaryRegionRuns: 0,
     boundaryArtifactKb: 0,
-    figureCount: 0,
-    figureConstellations: 0,
     gaiaSourceIdResolved: 0,
     apsisMatched: 0,
     apsisTeffEither: 0,
@@ -1152,17 +1152,14 @@ export async function main() {
       `${Object.keys(rowIndexMap.bySynth).length} synthetic entries)`,
   );
 
-  const figureCount = [...figureLines.values()].reduce(
-    (n, arr) => n + arr.length,
-    0,
-  );
+  const figures = figuresCounts(figureLines);
   const mb = (totalLength / 1024 / 1024).toFixed(2);
   console.log(
     `Built ${chunkBytes.length} catalog chunk(s) + ${CATALOG_OUTPUTS.files.manifest} ` +
       `(${mb} MB, ${stars.length} records, v${BINARY_VERSION})`,
   );
   console.log(
-    `Built ${CATALOG_OUTPUTS.files.constellations} (${CONSTELLATIONS.length} constellations, ${figureCount} stick-figure polylines across ${figureLines.size})`,
+    `Built ${CATALOG_OUTPUTS.files.constellations} (${CONSTELLATIONS.length} constellations, ${figuresSummary(figures)})`,
   );
   const searchMb = (Buffer.byteLength(searchJson) / 1024 / 1024).toFixed(2);
   console.log(`Built ${CATALOG_OUTPUTS.files.searchIndex} (${searchEntries.length} searchable entries, ${searchMb} MB)`);
@@ -1173,8 +1170,6 @@ export async function main() {
   counts.variableCount = variableCount;
   counts.searchEntries = searchEntries.length;
   counts.designationConMismatch = searchEntries.filter((e) => e.dc !== undefined).length;
-  counts.figureCount = figureCount;
-  counts.figureConstellations = figureLines.size;
   counts.gaiaSourceIdResolved = gaiaSourceIdResolved;
   counts.apsisMatched = apsisMatched;
   counts.apsisTeffEither = apsisTeffEither;
@@ -1253,6 +1248,7 @@ export async function main() {
       ...namingEmission.checks,
       buildCountsCheck({ ...counts, solIndex }, [
         { stage: 'inputs', block: { kind: 'counted', counts: inputs.counts } },
+        { stage: 'figures', block: { kind: 'counted', counts: figures } },
         { stage: 'brightness-colour', block: { kind: 'counted', counts: brightnessEmission.counts } },
         { stage: 'coherence', block: { kind: 'counted', counts: coherenceEmission.counts } },
       ]), distanceOutliersCheck(stars),
