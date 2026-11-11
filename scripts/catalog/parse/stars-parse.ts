@@ -512,7 +512,7 @@ export function rowResolver({
     // settled on.
     let absmag = origin !== null
       ? origin.absoluteVMagnitude
-      : absoluteMagnitude(vRes.value, dist);
+      : absoluteMagnitude(vRes.value.vMag, dist);
 
     // Must follow the PM rescue: the position advances on the motion the row
     // ends up carrying, which is the rescue's wherever the tier states none.
@@ -670,7 +670,7 @@ export function rowResolver({
         tycho2Direction: direction.via === 'tycho2' && tycho2Row !== null
           ? { fromIcrs: tycho2Row.fromIcrs, isPhotocentre: tycho2Row.isPhotocentre }
           : null,
-        vTycho2OutsideBtVtRange: vRes.via === 'tycho2' && printed?.vVia === 'tycho2' && printed.outsideRange,
+        vTycho2OutsideBtVtRange: vRes.via === 'tycho2' && vRes.value.outsideRange,
         distPc: dist,
         fastKmS: speedPcYr > GALACTIC_ESCAPE_VELOCITY_PC_YR ? speedPcYr / KM_S_TO_PC_YR : null,
         ciGspcValidatedRange: ciRes.via === 'gspc' && gspc?.inValidatedRange === true,

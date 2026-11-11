@@ -49,7 +49,7 @@ describe('brightnessColourLineageRows', () => {
     expect(summary({
       kind: 'shipped', key: KEY,
       v: {
-        via: 'printed_hip', value: 2.5, evidence: [HIP_REF],
+        via: 'printed_hip', value: { vMag: 2.5 }, evidence: [HIP_REF],
         refusals: [{ tier: 'gaia_riello', reason: 'colour_out_of_range', ref: PHOTOMETRY_REF }],
       },
       spectral: {
@@ -79,7 +79,7 @@ describe('brightnessColourLineageRows', () => {
   it('names the de-reddened colour, and writes no dust row where no grid ran', () => {
     const shipped = (dust: { av: number; ciDereddened: boolean } | null): BrightnessColour => ({
       kind: 'shipped', key: KEY,
-      v: { via: 'curated', value: -26.74, evidence: [], refusals: [] },
+      v: { via: 'curated', value: { vMag: -26.74 }, evidence: [], refusals: [] },
       spectral: { via: 'gspspec', value: G2V, evidence: [APSIS_REF], refusals: [] },
       ci: {
         via: 'printed_hip_bv', value: 0.65, evidence: [HIP_REF],
@@ -97,7 +97,7 @@ describe('brightnessColourLineageRows', () => {
   it('writes the outcome codes of a record nothing classifies or colours', () => {
     expect(summary({
       kind: 'shipped', key: KEY,
-      v: { via: 'gliese', value: 11, evidence: [GLIESE_REF], refusals: [] },
+      v: { via: 'gliese', value: { vMag: 11 }, evidence: [GLIESE_REF], refusals: [] },
       spectral: {
         via: 'none',
         refusals: [{ tier: 'gspspec', reason: 'unclassifiable', ref: APSIS_REF }],
@@ -120,7 +120,7 @@ describe('brightnessColourLineageRows', () => {
   });
 
   it('encodes its rows as stage lines that decode back', () => {
-    const b: BrightnessColour = { kind: 'v-only', key: 'spine:9', v: { via: 'tycho2', value: 9, evidence: [TYCHO2_REF], refusals: [] } };
+    const b: BrightnessColour = { kind: 'v-only', key: 'spine:9', v: { via: 'tycho2', value: { vMag: 9, outsideRange: false }, evidence: [TYCHO2_REF], refusals: [] } };
     const [line] = brightnessColourLineageLines(b);
     expect(decodeLineageLine(line)).toEqual(brightnessColourLineageRows(b)[0]);
     expect(decodeLineageLine(line).stage).toBe(BRIGHTNESS_COLOUR_CODES.stage);
