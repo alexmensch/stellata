@@ -666,8 +666,12 @@ is offered only on organization-owned repositories, and
 `alexmensch/stellata` is user-owned.
 
 **A GitHub stack lands through `gh stack merge <stack> --squash`**, never
-`gh pr merge` (refused on a stack member) and with no auto-merge. It
-releases exactly as that many PRs landed one at a time would:
+`gh pr merge` (refused on a stack member) and with no auto-merge. How it
+pushes is observed on stacks landed before versions were derived; that a
+deploy run tags, builds and publishes several releasing commits in one
+range follows from [What the deploy workflow does](#what-the-deploy-workflow-does)
+(every planned tag is made before the build, which reads the newest) and
+is first exercised by stack #768's landing:
 
 - **One squash commit per member**, bottom first, each subject
   `<PR title> (#N)` (the repo's squash title is `PR_TITLE`), signed by
