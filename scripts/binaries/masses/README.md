@@ -26,6 +26,13 @@ scripts/binaries/masses/
   pair-masses.test.ts              The sum.
 ```
 
+## The main-sequence anchors are an open decision
+
+The main-sequence row disagrees with the dwarf table of
+[Mamajek 2022](/data/papers/index.md#mamajek2022): A0V 2.9 against its
+2.18 M☉, K5V 0.65 against 0.70. Which source to adopt is open,
+`stellata-uadc.69.28`.
+
 ## `UNKNOWN_COMPONENT_MASS_MSUN` is high on purpose
 
 A component whose type does not parse counts 3.0 M☉, not a typical star's
