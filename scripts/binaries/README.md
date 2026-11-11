@@ -65,6 +65,10 @@ scripts/binaries/
   orbits/                         Stage 4 in TypeScript: each pair's
                                   orbit from ORB6, Gaia NSS or the MSC,
                                   keyed by its DecomposedPair. Own README.
+  masses/                         A component's mass from its spectral
+                                  type, the spectral-type cascade, and
+                                  each pair's total mass, which Stage 5
+                                  reads. Own README.
   parsers.py                      Row dataclasses + parse functions for every
                                   reference catalogue (Stage 1).
   indices.py                      IdentifierIndices builder (HIP/Tyc → Gaia,

@@ -11,6 +11,7 @@ import { splitComponents, type WdsPair } from '../../wds/wds-pure';
 import { componentsOf, type DecomposedPair, type ResolvedComponent } from './components-pure';
 import { ARCSEC_PER_DEG } from '../../../src/astro-core/astronomy-constants';
 import { pushTo } from '../../util/map-buckets-pure';
+import type { ComponentKey } from '../component-tokens-pure';
 
 export function ccdmIndex(rows: readonly { hip: number; ccdm: string }[]): CcdmIndex {
   const hipToCcdm = new Map<number, string>();
@@ -29,6 +30,9 @@ export function indices(over: {
   ccdm?: readonly { hip: number; ccdm: string }[];
   hip2?: ReadonlyMap<number, Hip2AstrometryRow>;
   srcToNss?: ReadonlyMap<string, NssOrbitRow>;
+  simbadWdsSpectra?: ReadonlyMap<ComponentKey, string>;
+  componentSptypeOverrides?: ReadonlyMap<ComponentKey, string>;
+  mscSpectByComp?: ReadonlyMap<ComponentKey, string>;
 } = {}): IdentifierIndices {
   return buildIndices({
     athyg: over.athyg ?? [],
@@ -38,10 +42,10 @@ export function indices(over: {
     srcToNss: over.srcToNss ?? new Map(),
     srcToAstrometry: over.srcToAstrometry ?? new Map(),
     ccdm: ccdmIndex(over.ccdm ?? []),
-    simbadWdsSpectra: new Map(),
-    componentSptypeOverrides: new Map(),
+    simbadWdsSpectra: over.simbadWdsSpectra ?? new Map(),
+    componentSptypeOverrides: over.componentSptypeOverrides ?? new Map(),
     athygGaiaMagRejected: [],
-    msc: { orbitsByPair: new Map(), pairMags: new Map(), spectByComp: new Map(), nOrbitsUnmapped: 0 },
+    msc: { orbitsByPair: new Map(), pairMags: new Map(), spectByComp: over.mscSpectByComp ?? new Map(), nOrbitsUnmapped: 0 },
   });
 }
 
