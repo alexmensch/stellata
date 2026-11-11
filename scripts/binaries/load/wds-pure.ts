@@ -26,6 +26,18 @@ export interface WdsPair {
   readonly rhoFirst: number | null;
 }
 
+/** A pair row's last measured separation and position angle (θ east of north). */
+export interface MeasuredOffset {
+  readonly rhoArcsec: number;
+  readonly thetaDeg: number;
+}
+
+/** Null for a ρ = 0 sub-resolution row and for one missing ρ or θ. */
+export function measuredOffset(pair: WdsPair): MeasuredOffset | null {
+  if (pair.rhoLast === null || pair.thetaLast === null || pair.rhoLast <= 0) return null;
+  return { rhoArcsec: pair.rhoLast, thetaDeg: pair.thetaLast };
+}
+
 /** A Sixth Orbit Catalog row; unit codes kept verbatim for Stage 4 to normalise. */
 export interface Orb6Entry {
   readonly wdsId: string;

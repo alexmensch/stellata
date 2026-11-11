@@ -1,7 +1,19 @@
 import { describe, expect, it } from 'vitest';
 
 import { FIXTURE, wdsPair } from './load-fixture';
-import { dedupWdsPairRows, parseOrb6, parsePreciseCoord, parseWdsSumm } from './wds-pure';
+import { dedupWdsPairRows, measuredOffset, parseOrb6, parsePreciseCoord, parseWdsSumm } from './wds-pure';
+
+describe('measuredOffset', () => {
+  it('is the last ρ and θ when ρ is measured and positive', () => {
+    expect(measuredOffset(wdsPair({ rhoLast: 5, thetaLast: 90 }))).toEqual({ rhoArcsec: 5, thetaDeg: 90 });
+  });
+
+  it('is null for a ρ = 0 row and for a missing ρ or θ', () => {
+    expect(measuredOffset(wdsPair({ rhoLast: 0, thetaLast: 90 }))).toBeNull();
+    expect(measuredOffset(wdsPair({ rhoLast: null, thetaLast: 90 }))).toBeNull();
+    expect(measuredOffset(wdsPair({ rhoLast: 5, thetaLast: null }))).toBeNull();
+  });
+});
 
 const WDS_BASE = '00000+7530A  1248      1904 1982    5 246 235   0.8   0.6 '
   + '10.27 11.5  A7IV      +034+005          +74 1056      ';

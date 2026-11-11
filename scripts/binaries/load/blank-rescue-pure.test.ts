@@ -28,6 +28,20 @@ describe('rescueBlankComponents', () => {
     expect(deferred.pairs[0].components).toBe('');
   });
 
+  it('defers a row anchored only by position (Deneb)', () => {
+    const positioned = { ...blankPair('20414+4517'), precise: { raDeg: 310.0, decDeg: 45.0 } };
+    const r = rescue([positioned]);
+    expect(r.outcomes).toEqual(['deferred']);
+    expect(r.pairs[0].components).toBe('');
+  });
+
+  it('leaves a blank row alone when its own discoverer already enumerates AB', () => {
+    const explicit = wdsPair({ wdsId: '16294-2626', components: 'AB' });
+    const r = rescue([blankPair('16294-2626'), explicit], { orb6: [orb6('16294-2626', 'AB')] });
+    expect(r.outcomes).toEqual(['enumerated']);
+    expect(r.pairs[0].components).toBe('');
+  });
+
   it('leaves an orphan donor row alone', () => {
     const donors = [wdsPair({ wdsId: '14296-6241', discoverer: 'RHD   1', components: 'Ca,Cb' })];
     const r = rescue([blankPair('14296-6241', 'RHD   1')], { orb6: [orb6('14296-6241', 'Ca,Cb')], donors });

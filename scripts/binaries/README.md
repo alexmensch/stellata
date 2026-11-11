@@ -54,6 +54,10 @@ scripts/binaries/
                                   catalogue read through its declaration,
                                   then the Stage 1 passes, as a frozen
                                   ReferenceCatalogs. Own README.
+  resolve/                        Stage 2 in TypeScript: the cascade, the
+                                  identity propagations and the binding
+                                  audit, as frozen DecomposedPairs; the
+                                  spot-check's port. Own README.
   parsers.py                      Row dataclasses + parse functions for every
                                   reference catalogue (Stage 1).
   indices.py                      IdentifierIndices builder (HIP/Tyc → Gaia,
@@ -124,11 +128,16 @@ scripts/binaries/
                                   propagatePosition (linear in RA/Dec
                                   degrees, cos δ floored at 1e-3),
                                   tangentOffset, distancePc (1000 /
-                                  parallax), and the AT-HYG / WDS
+                                  parallax), chordSq / positionsWithin
+                                  (a tolerance test without trig),
+                                  predictSecondaryPosition (a WDS ρ, θ
+                                  offset), and the AT-HYG / WDS
                                   reference epochs. Not the catalogue's
                                   tangent-basis propagation
                                   (../catalog/distance/direction-cascade.ts):
                                   the switch proves byte identity first.
+  build-log-pure.ts               count: how a build-log line prints a
+                                  number, for every TS stage's report.
   multiples-row-key-pure.ts       MULTIPLES_ROW_KEY, that rowKey, for code
                                   that cites a row without reading the file
                                   (promotion's origin keys), so it never
@@ -177,6 +186,9 @@ scripts/binaries/
                                   data/binaries/spot_check_ground_truth.tsv.
                                   Its own CI check; also run locally before
                                   merging any Stage 2-7 change (~20 s).
+                                  build-binaries.test.ts runs the same
+                                  check over the TS Stages 1-2
+                                  (resolve/README.md#the-spot-check).
   probe-blank-components-tail.py  Read-only instrumentation for the blank→AB
                                   ingest decision. Touches nothing.
   <module>.test.py                stdlib unittest pins co-located per source
