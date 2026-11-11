@@ -661,7 +661,11 @@ projection of exactly what the per-star march integrates.
 
 ### How the decision grades, and what it does not fix
 
-Graded against ESO eso0932a ([§ 8](/docs/science-hdr-pipeline.md#8-validation-contract-h7)), at l = 0,
+Measured 2026-08-09, before the band marched the resolution hole, so its
+slab column is not today's shipped sightline table
+([The gradient](/src/astro-core/milkyway/calibration/README.md#the-gradient-this-produces-and-what-it-reads-on-screen));
+the slab-to-cascade moves are what it records. Graded against ESO eso0932a
+([§ 8](/docs/science-hdr-pipeline.md#8-validation-contract-h7)), at l = 0,
 medians over 15.5° × 1.4° strips, floor-subtracted and inverted through the
 shipped operator. The panorama reads **2.60 mag** brighter at b = −3 than at
 b = +3 — the Great Rift above the plane, the Large Sagittarius Star Cloud
