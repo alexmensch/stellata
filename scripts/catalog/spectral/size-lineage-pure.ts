@@ -22,7 +22,7 @@ export const SIZE_CODES = stageCodes(SIZE_LINEAGE.stage, {
   'apsis-teff': live('Stefan-Boltzmann from the record\'s de-extincted absmag and its own Gaia DR3 Apsis Teff, with the class-table bolometric correction.'),
   'class-teff': live('Stefan-Boltzmann from the record\'s de-extincted absmag and the class-table Teff and bolometric correction.'),
   'non-finite-luminosity': live('The absmag gives a luminosity no float holds, so the record ships the 1 R☉ stand-in.'),
-  'refused.apsis-teff-out-of-window': live('An Apsis Teff solution lies outside the 2–60 kK sanity window, a fit that did not converge rather than a star.'),
+  'refused.apsis-teff-out-of-window': live('An Apsis Teff solution lies outside the 2–60 kK sanity window the radius chain accepts.'),
   'refused.apsis-teff-white-dwarf': live('The record\'s Apsis Teff stands down: a white dwarf takes the fixed radius, and Apsis does not model its atmosphere.'),
   'refused.apsis-teff-wolf-rayet': live('The record\'s Apsis Teff stands down: a Wolf-Rayet keeps its own Teff ramp, and Apsis does not model its atmosphere.'),
 });
