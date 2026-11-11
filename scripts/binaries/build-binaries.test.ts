@@ -24,6 +24,7 @@ import { stage1Counts, type ReferenceCatalogs } from './load/reference-catalogs'
 import { stage4Counts, stage4Rates, type Stage4Result } from './orbits/attach-orbits';
 import { stage5Counts, stage5Rates, type Stage5Result } from './optical/attach-optical';
 import { stage6Counts, type Stage6Result } from './multiples/attach-multiples';
+import { MULTIPLES_TSV, MULTIPLES_TSV_PATH } from './multiples-tsv';
 import { astrometryRequestIds, stage2Counts, type Stage2Result } from './resolve/resolve-pairs';
 import { spotCheckProblems, strongestComponents } from './resolve/spot-check-pure';
 import { SPOT_CHECK_GROUND_TRUTH } from './resolve/spot-check-source';
@@ -159,6 +160,10 @@ describe.skipIf(![...INPUTS, REQUEST, SPOT_CHECK_GROUND_TRUTH].every(isReadable)
 
   it('counts what the committed count snapshot pins for Stage 6\'s keys', () => {
     for (const [key, value] of Object.entries(stage6Counts(s6))) expect([key, value]).toEqual([key, committed[key]]);
+  });
+
+  it('encodes Stage 6\'s records to the committed multiples.tsv, byte for byte', () => {
+    expect(MULTIPLES_TSV.serialize(s6.rows) === readFileSync(MULTIPLES_TSV_PATH, 'utf8')).toBe(true);
   });
 
   it('hands the switch frozen rows, and logs the Stage 6 lines', () => {
