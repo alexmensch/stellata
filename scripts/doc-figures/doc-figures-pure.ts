@@ -95,18 +95,23 @@ export function parseMarkers(text: string): { markers: FigureMarker[]; problems:
   return { markers, problems };
 }
 
-/** `<stem>/<dot.path>`: the stem names the snapshot file, the path walks its JSON. */
+/** `<stem>/<dot.path>`: the stem names the snapshot file, the path walks its
+ *  JSON, each step taking the longest run of segments that is a key there, so
+ *  a key holding dots (a reason code) is one step. */
 export function resolveFigure(key: string, snapshots: Snapshots): Resolution {
   const slash = key.indexOf('/');
   if (slash === -1) return { ok: false, reason: `'${key}' has no '/' between snapshot and path` };
   const stem = key.slice(0, slash);
   if (!snapshots.has(stem)) return { ok: false, reason: `no snapshot ${stem}${SNAPSHOT_SUFFIX}` };
   let node: unknown = snapshots.get(stem);
-  for (const part of key.slice(slash + 1).split('.')) {
-    if (node === null || typeof node !== 'object' || !Object.hasOwn(node, part)) {
-      return { ok: false, reason: `${stem}${SNAPSHOT_SUFFIX} has no ${key.slice(slash + 1)}` };
-    }
-    node = (node as Record<string, unknown>)[part];
+  let parts = key.slice(slash + 1).split('.');
+  while (parts.length > 0) {
+    const here = node;
+    let take = here === null || typeof here !== 'object' ? 0 : parts.length;
+    while (take > 0 && !Object.hasOwn(here as object, parts.slice(0, take).join('.'))) take--;
+    if (take === 0) return { ok: false, reason: `${stem}${SNAPSHOT_SUFFIX} has no ${key.slice(slash + 1)}` };
+    node = (here as Record<string, unknown>)[parts.slice(0, take).join('.')];
+    parts = parts.slice(take);
   }
   if (typeof node !== 'number') return { ok: false, reason: `${key} is not a number` };
   return { ok: true, value: node };

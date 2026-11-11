@@ -50,8 +50,10 @@ the manifest holds <!-- count:membership-manifest/rows -->975,573<!-- /count -->
 - **Key** — the snapshot's stem (`membership-manifest` for
   `scripts/catalog/membership/membership-manifest-expected.json`), a `/`,
   then the JSON path, dot-separated
-  (`membership-manifest/additionsByReason.admitted:hd_omitted`). The value
-  must be a number.
+  (`membership-manifest/additionsByReason.admitted:hd_omitted`). A key that
+  itself holds dots, a reason code, is one step of the path: each step takes
+  the longest run of segments that is a key there
+  (`build-catalog/brightness-colour.v.gliese`). The value must be a number.
 - **Format** — optional, after the key: none quotes the exact value with
   thousands separators; `sigN` rounds to N significant figures (`sig2`:
   2,635 → 2,600); `kN` rounds thousands to N significant figures and
