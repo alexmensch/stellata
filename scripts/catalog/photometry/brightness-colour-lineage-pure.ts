@@ -1,7 +1,7 @@
 // Brightness and colour as a lineage stage: its reason codes and the one serialiser over each walked record's V, spectral class, B−V and de-extinction. See README.md#brightness-colour-lineage.
 
 import {
-  evidenceTexts, paramsText, stageLineageLine, type LineageLine, type LineageParams, type LineageRole, type LineageRow,
+  evidenceTexts, stageLineageLine, type LineageLine, type LineageParams, type LineageRow, stageRow,
 } from '../lineage/lineage-row-pure';
 import { outcomeCode, refusalCode, stageCodes } from '../lineage/reason-codes/reason-codes-pure';
 import { sourceRowRefText, type AnySourceRowRef } from '../../util/sources/row-ref-pure';
@@ -129,21 +129,17 @@ export type ShippedBrightness = Extract<BrightnessColour, { kind: 'shipped' }>;
 export function brightnessColourLineageRows(b: BrightnessColour): LineageRow[] {
   const { key } = b;
   const out: LineageRow[] = [];
-  const push = (role: LineageRole, branch: Branch, params: LineageParams, refs: readonly AnySourceRowRef[]): void => {
-    out.push({
-      stage: BRIGHTNESS_COLOUR_LINEAGE.stage, key, role, code: BRIGHTNESS_COLOUR_CODES.code(branch),
-      params: paramsText(params),
-      evidence: evidenceTexts(key, refs.map(sourceRowRefText)),
-    });
+  const push = (branch: Branch, params: LineageParams, refs: readonly AnySourceRowRef[]): void => {
+    out.push(stageRow(BRIGHTNESS_COLOUR_CODES, key, branch, params, evidenceTexts(key, refs.map(sourceRowRefText))));
   };
   const row = <B extends Branch>(branch: B, params: ParamsOf<B>, refs: readonly AnySourceRowRef[]): void => {
-    push('outcome', branch, params, refs);
+    push(branch, params, refs);
   };
   const refused = <R extends CascadeRefusal<string, string> & Readonly<Record<Exclude<keyof R, 'ref'>, string>>>(
     refusals: readonly R[], branches: Readonly<Record<R['reason'], Branch>>,
   ): void => {
     for (const { reason, ref, ...params } of refusals) {
-      push('refused', branches[reason as R['reason']], params as unknown as LineageParams, [ref]);
+      push(branches[reason as R['reason']], params as unknown as LineageParams, [ref]);
     }
   };
   const none = {} as Record<string, never>;

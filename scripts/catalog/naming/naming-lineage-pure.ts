@@ -1,6 +1,6 @@
 // Display naming as a lineage stage: its reason codes and the one serialiser over each record's naming outcome. See README.md#naming-lineage.
 
-import { paramsOf, paramsText, stageLineageLine, type LineageLine, type LineageParams, type LineageRole, type LineageRow } from '../lineage/lineage-row-pure';
+import { paramsOf, stageLineageLine, type LineageLine, type LineageParams, type LineageRow, stageRow } from '../lineage/lineage-row-pure';
 import { outcomeCode, refusalCode, stageCodes } from '../lineage/reason-codes/reason-codes-pure';
 import { lineageInvariant, NO_EXCEPTIONS, type LineageInvariant } from '../lineage/lineage-invariant-pure';
 import type { NamedRecord } from './display-names';
@@ -79,28 +79,27 @@ export function* namingLineageRows(
 ): Generator<LineageRow> {
   for (let i = 0; i < records.length; i++) {
     const key = stars[i].originKey;
-    const row = <B extends Branch>(role: LineageRole, branch: B, params: ParamsOf<B>): LineageRow => ({
-      stage: NAMING_LINEAGE.stage, key, role, code: NAMING_CODES.code(branch),
-      params: paramsText(params as LineageParams), evidence: [],
-    });
+    const row = <B extends Branch>(branch: B, params: ParamsOf<B>): LineageRow => (
+      stageRow(NAMING_CODES, key, branch, params as LineageParams, [])
+    );
     const { name, set, dc } = records[i];
     switch (name.kind) {
       case 'unlabelled':
-        yield row('outcome', 'name.unlabelled', {});
+        yield row('name.unlabelled', {});
         break;
       case 'own':
-        yield row('outcome', 'name.own', { tier: name.tier, label: name.label });
-        for (const t of carriedTiers(set, name.tier)) yield row('refused', 'name.lower-tier', t);
+        yield row('name.own', { tier: name.tier, label: name.label });
+        for (const t of carriedTiers(set, name.tier)) yield row('name.lower-tier', t);
         if (name.letter !== null) {
-          yield row('outcome', name.letter.source === 'stated' ? 'letter.stated' : 'letter.sibling-owns', { comp: name.letter.comp });
+          yield row(name.letter.source === 'stated' ? 'letter.stated' : 'letter.sibling-owns', { comp: name.letter.comp });
         }
         break;
       case 'borrowed':
-        yield row('outcome', `name.borrowed.${name.reason}`, {
+        yield row(`name.borrowed.${name.reason}`, {
           tier: name.tier, label: name.label, anchor: stars[name.anchorKey].originKey, comp: name.comp,
         });
-        for (const t of carriedTiers(set, null)) yield row('refused', 'name.borrowed-over', t);
-        yield row('outcome', 'letter.borrowed', { comp: name.comp });
+        for (const t of carriedTiers(set, null)) yield row('name.borrowed-over', t);
+        yield row('letter.borrowed', { comp: name.comp });
         break;
       default: {
         const unmapped: never = name;
@@ -109,23 +108,23 @@ export function* namingLineageRows(
     }
     if (!hasSkyDesignation(set)) continue;
     if (dc.from === 'none') {
-      yield row('outcome', 'dc.none', {});
+      yield row('dc.none', {});
       continue;
     }
     if (dc.from === 'positional') {
-      yield row('outcome', 'dc.positional', { con: constellations[dc.index].code });
+      yield row('dc.positional', { con: constellations[dc.index].code });
       continue;
     }
     const source = dc.con;
     const con = constellations[source.index].code;
     switch (source.via) {
       case 'iv27a': case 'gcvs': case 'anchor':
-        yield row('outcome', `dc.${source.via}`, { con });
+        yield row(`dc.${source.via}`, { con });
         break;
       case 'wgsn-bayer': case 'wgsn-gould':
-        yield row('outcome', `dc.${source.via}`, { con });
+        yield row(`dc.${source.via}`, { con });
         if (source.displaced !== null) {
-          yield row('refused', 'dc.displaced', { con: constellations[source.displaced].code });
+          yield row('dc.displaced', { con: constellations[source.displaced].code });
         }
         break;
       default: {

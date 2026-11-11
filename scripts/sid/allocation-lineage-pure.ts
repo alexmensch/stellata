@@ -1,6 +1,6 @@
 // SID allocation as a lineage stage: its reason codes, live and historical, the one serialiser over its outcomes, and its key -> SID identity file. See README.md#sid-events.
 
-import { paramsText, sortUtf8, type LineageParams, type LineageRow } from '../catalog/lineage/lineage-row-pure';
+import { sortUtf8, stageRow, type LineageParams, type LineageRow, type RowCoder } from '../catalog/lineage/lineage-row-pure';
 import {
   HISTORICAL, outcomeCode, stageCodes, type StageCodes,
 } from '../catalog/lineage/reason-codes/reason-codes-pure';
@@ -20,7 +20,6 @@ const OBJECT_OUTCOMES = {
 type ObjectBranch = keyof typeof OBJECT_OUTCOMES;
 export type ObjectOutcomeCodes = StageCodes<ObjectBranch>;
 
-type BranchCoder<B extends string> = { readonly stage: string; code(branch: B): string };
 
 /** A stage that allocates objects and settles no orphan: its object outcomes' codes. */
 export function objectOutcomeCodes(stage: string): ObjectOutcomeCodes {
@@ -81,15 +80,12 @@ type ParamsOf<B extends Branch> =
   : never;
 
 const lineageRow = <B extends Branch>(
-  codes: BranchCoder<B>, key: string, branch: B, params: ParamsOf<B>,
-): LineageRow => ({
-  stage: codes.stage, key, role: 'outcome', code: codes.code(branch),
-  params: paramsText(params as LineageParams), evidence: [],
-});
+  codes: RowCoder<B>, key: string, branch: B, params: ParamsOf<B>,
+): LineageRow => stageRow(codes, key, branch, params as LineageParams, []);
 
 /** One row per object, under its origin. An object's SID rides the stage's key -> SID or identity file, not its row; `via` appears only when the object reached its ledger key through a designation it does not carry itself. */
 export function objectOutcomeRows(
-  codes: BranchCoder<ObjectBranch>, objects: readonly SidObject[], outcomes: readonly ObjectOutcome[],
+  codes: RowCoder<ObjectBranch>, objects: readonly SidObject[], outcomes: readonly ObjectOutcome[],
 ): LineageRow[] {
   return objects.map((obj, i): LineageRow => {
     const key = obj.origin;

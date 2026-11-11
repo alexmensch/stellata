@@ -1,7 +1,7 @@
 // Size as a lineage stage: its reason codes and the one serialiser over each walked record's radius route. See README.md#size-lineage.
 
 import {
-  evidenceTexts, paramsText, stageLineageLine, type LineageLine, type LineageParams, type LineageRole, type LineageRow,
+  evidenceTexts, stageLineageLine, type LineageLine, type LineageParams, type LineageRow, stageRow,
 } from '../lineage/lineage-row-pure';
 import { outcomeCode, refusalCode, stageCodes } from '../lineage/reason-codes/reason-codes-pure';
 import { sourceRowRefText, type AnySourceRowRef } from '../../util/sources/row-ref-pure';
@@ -53,42 +53,38 @@ export interface Size {
  *  a new route without rows fails typecheck. */
 export function sizeLineageRows({ key, radius, apsis, classEvidence }: Size): LineageRow[] {
   const out: LineageRow[] = [];
-  const push = <B extends Branch>(role: LineageRole, branch: B, params: ParamsOf<B>, refs: readonly AnySourceRowRef[]): void => {
-    out.push({
-      stage: SIZE_LINEAGE.stage, key, role, code: SIZE_CODES.code(branch),
-      params: paramsText(params as LineageParams),
-      evidence: evidenceTexts(key, refs.map(sourceRowRefText)),
-    });
+  const push = <B extends Branch>(branch: B, params: ParamsOf<B>, refs: readonly AnySourceRowRef[]): void => {
+    out.push(stageRow(SIZE_CODES, key, branch, params as LineageParams, evidenceTexts(key, refs.map(sourceRowRefText))));
   };
   const absmag = (value: number): string => value.toFixed(ABSMAG_PARAM_DECIMALS);
   const apsisRefs = apsis === null ? [] : [apsis.ref];
   for (const solution of apsis?.outOfWindow ?? []) {
-    push('refused', 'refused.apsis-teff-out-of-window', { solution }, apsisRefs);
+    push('refused.apsis-teff-out-of-window', { solution }, apsisRefs);
   }
   const clamp = (c: RadiusClamp | null) => (c === null ? {} : { clamp: c });
 
   switch (radius.route) {
     case 'white-dwarf':
       if (radius.refusedTeff !== null) {
-        push('refused', 'refused.apsis-teff-white-dwarf', { solution: radius.refusedTeff.solution }, apsisRefs);
+        push('refused.apsis-teff-white-dwarf', { solution: radius.refusedTeff.solution }, apsisRefs);
       }
-      push('outcome', 'white-dwarf', {}, classEvidence);
+      push('white-dwarf', {}, classEvidence);
       return out;
     case 'apsis-teff':
-      push('outcome', 'apsis-teff', {
+      push('apsis-teff', {
         absmag: absmag(radius.absmag), solution: radius.teff.solution, class_index: radius.classIndex, ...clamp(radius.clamp),
       }, [...apsisRefs, ...classEvidence]);
       return out;
     case 'class-teff':
       if (radius.refusedTeff !== null) {
-        push('refused', 'refused.apsis-teff-wolf-rayet', { solution: radius.refusedTeff.solution }, apsisRefs);
+        push('refused.apsis-teff-wolf-rayet', { solution: radius.refusedTeff.solution }, apsisRefs);
       }
-      push('outcome', 'class-teff', {
+      push('class-teff', {
         absmag: absmag(radius.absmag), class_index: radius.classIndex, ...clamp(radius.clamp),
       }, classEvidence);
       return out;
     case 'non-finite-luminosity':
-      push('outcome', 'non-finite-luminosity', { absmag: absmag(radius.absmag) }, classEvidence);
+      push('non-finite-luminosity', { absmag: absmag(radius.absmag) }, classEvidence);
       return out;
     default: {
       const unmapped: never = radius;

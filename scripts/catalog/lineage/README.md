@@ -25,6 +25,8 @@ under their old keys (stellata-hhaw.45.23).
 ```
 scripts/catalog/lineage/
   lineage-row-pure.ts            The envelope and LineageLine, its TSV line:
+                                 stageRow, the one row builder, which fills
+                                 a row's stage and role from its codes;
                                  stageLineageLine, the one encoder, which
                                  refuses a code the stage does not declare
                                  or a row in another role than its code's;
@@ -139,7 +141,7 @@ Every stage writes the same envelope:
 |---|---|
 | `stage` | the stage that decided |
 | `key` | the origin `SourceRowRef` |
-| `role` | `outcome`, or `refused` for an alternative the stage weighed and rejected; declared once per code, and the encoder refuses a row in the other |
+| `role` | `outcome`, or `refused` for an alternative the stage weighed and rejected; declared once per code and filled from it by `stageRow`, never stated by a stage |
 | `code` | a reason code from the generated list |
 | `params` | per-instance detail (source id, component letter, sibling) |
 | `evidence` | `SourceRowRef`s cited, each once and never the origin row (`evidenceTexts`) |

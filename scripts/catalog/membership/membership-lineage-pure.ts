@@ -4,7 +4,7 @@ import { LABEL_DISPOSITIONS, type LabelDisposition, type LabelFlip } from '../cl
 import type { IdentityRow } from '../lineage/identity-pure';
 import type { DiffJoin } from '../lineage/lineage-diff-pure';
 import { lineageInvariant, NO_EXCEPTIONS, type LineageInvariant } from '../lineage/lineage-invariant-pure';
-import { paramsOf, paramsText, type LineageParams, type LineageRow } from '../lineage/lineage-row-pure';
+import { paramsOf, stageRow, type LineageParams, type LineageRow } from '../lineage/lineage-row-pure';
 import { outcomeCode, refusalCode, stageCodes } from '../lineage/reason-codes/reason-codes-pure';
 import type { GateReason } from './binding/binding-gate-pure';
 import {
@@ -200,14 +200,8 @@ export const MEMBERSHIP_INVARIANTS: readonly LineageInvariant[] = [
   ),
 ];
 
-function row<B extends Branch>(
-  key: string, branch: B, params: ParamsOf<B>, evidence: readonly string[] = [],
-  role: LineageRow['role'] = 'outcome',
-): LineageRow {
-  return {
-    stage: MEMBERSHIP_LINEAGE.stage, key, role, code: MEMBERSHIP_CODES.code(branch),
-    params: paramsText(params as LineageParams), evidence,
-  };
+function row<B extends Branch>(key: string, branch: B, params: ParamsOf<B>, evidence: readonly string[] = []): LineageRow {
+  return stageRow(MEMBERSHIP_CODES, key, branch, params as LineageParams, evidence);
 }
 
 function paramsAs<B extends Branch>(r: LineageRow, branch: B): ParamsOf<B> {
@@ -234,7 +228,7 @@ export function membershipLineageRow({ key, outcome: o }: KeyedOutcome): Lineage
         ...o.review, source_letters: o.sourceLetters, hip_letters: o.hipLetters,
       });
     case 'candidate-refused':
-      return row(key, REFUSAL_BRANCHES[o.refusal], { source_id: o.sourceId, via: o.via }, [], 'refused');
+      return row(key, REFUSAL_BRANCHES[o.refusal], { source_id: o.sourceId, via: o.via });
     case 'candidate-unweighed':
       return row(key, 'binding.unweighed-no-pulled-row', { source_id: o.sourceId, via: o.via }, o.items);
     case 'disposition':

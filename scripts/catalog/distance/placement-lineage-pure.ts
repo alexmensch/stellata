@@ -2,8 +2,8 @@
 
 import { lineageInvariant, NO_EXCEPTIONS, type LineageInvariant } from '../lineage/lineage-invariant-pure';
 import {
-  decodeLineageLine, evidenceTexts, lineageLineCode, paramsOf, paramsText, stageLineageLine,
-  type LineageLine, type LineageParams, type LineageRow,
+  decodeLineageLine, evidenceTexts, lineageLineCode, paramsOf, stageLineageLine,
+  type LineageLine, type LineageParams, type LineageRow, stageRow,
 } from '../lineage/lineage-row-pure';
 import { outcomeCode, refusalCode, stageCodes } from '../lineage/reason-codes/reason-codes-pure';
 import { sourceRowRefText, type AnySourceRowRef } from '../../util/sources/row-ref-pure';
@@ -255,29 +255,24 @@ export function placementLineageRows(p: Placement): LineageRow[] {
   const out: LineageRow[] = [];
   const evidence = (refs: readonly AnySourceRowRef[]): string[] =>
     evidenceTexts(key, refs.map(sourceRowRefText));
-  const row = <B extends Branch>(
-    role: LineageRow['role'], branch: B, params: ParamsOf<B>, refs: readonly AnySourceRowRef[],
-  ): void => {
-    out.push({
-      stage: PLACEMENT_LINEAGE.stage, key, role, code: PLACEMENT_CODES.code(branch),
-      params: paramsText(params as LineageParams), evidence: evidence(refs),
-    });
+  const row = <B extends Branch>(branch: B, params: ParamsOf<B>, refs: readonly AnySourceRowRef[]): void => {
+    out.push(stageRow(PLACEMENT_CODES, key, branch, params as LineageParams, evidence(refs)));
   };
   const refused = <B extends Branch & `${string}.refused.${string}`>(
     branch: B, r: { tier: string; ref: AnySourceRowRef },
-  ): void => row('refused', branch, { tier: r.tier } as ParamsOf<B>, [r.ref]);
+  ): void => row(branch, { tier: r.tier } as ParamsOf<B>, [r.ref]);
   const none = {} as Record<string, never>;
 
   const parallax = (res: ParallaxResolution): void => {
     for (const r of res.refusals) refused(PARALLAX_REFUSAL_BRANCHES[r.reason], r);
-    if (res.via !== 'none') row('outcome', PARALLAX_BRANCHES[res.via], none, res.evidence);
+    if (res.via !== 'none') row(PARALLAX_BRANCHES[res.via], none, res.evidence);
   };
   const direction = (res: DirectionResolution): void => {
     for (const r of res.refusals) refused(DIRECTION_REFUSAL_BRANCHES[r.reason], r);
-    if (res.via !== 'none') row('outcome', DIRECTION_BRANCHES[res.via], none, res.evidence);
+    if (res.via !== 'none') row(DIRECTION_BRANCHES[res.via], none, res.evidence);
   };
   const park = (q: ParkedPlacement): void =>
-    row('outcome', PARK_BRANCHES[parkReason(q)], parkedLedgerCells(q.ids), []);
+    row(PARK_BRANCHES[parkReason(q)], parkedLedgerCells(q.ids), []);
 
   switch (p.kind) {
     case 'parked-parallax':
@@ -295,21 +290,21 @@ export function placementLineageRows(p: Placement): LineageRow[] {
       direction(p.direction);
       if (p.pmRescue !== null) {
         for (const r of p.pmRescue.refusals) refused(PM_RESCUE_REFUSAL_BRANCHES[r.reason], r);
-        row('outcome', PM_RESCUE_BRANCHES[p.pmRescue.via], none,
+        row(PM_RESCUE_BRANCHES[p.pmRescue.via], none,
           p.pmRescue.via === 'none' ? [] : p.pmRescue.evidence);
       }
-      if (p.bailerJones.kind === 'override') row('outcome', 'distance.bailer-jones', none, [p.bailerJones.ref]);
-      if (p.bailerJones.kind === 'absent') row('outcome', 'distance.bailer-jones-absent', none, []);
-      if (p.lmc === 'snap') row('outcome', 'distance.lmc-kinematic', none, []);
-      if (p.lmc === 'parallax_rules_out') row('refused', 'distance.lmc-refused-by-own-parallax', none, []);
+      if (p.bailerJones.kind === 'override') row('distance.bailer-jones', none, [p.bailerJones.ref]);
+      if (p.bailerJones.kind === 'absent') row('distance.bailer-jones-absent', none, []);
+      if (p.lmc === 'snap') row('distance.lmc-kinematic', none, []);
+      if (p.lmc === 'parallax_rules_out') row('distance.lmc-refused-by-own-parallax', none, []);
       const { rv } = p.rv;
       for (const r of rv.refusals) refused(RV_REFUSAL_BRANCHES[r.reason], r);
       if (p.rv.kind === 'rejected') {
-        row('outcome', 'rv.rejected-above-ceiling', { tier: p.rv.rv.via }, p.rv.rv.evidence);
+        row('rv.rejected-above-ceiling', { tier: p.rv.rv.via }, p.rv.rv.evidence);
       } else {
-        row('outcome', RV_BRANCHES[rv.via], none, rv.via === 'none' ? [] : rv.evidence);
+        row(RV_BRANCHES[rv.via], none, rv.via === 'none' ? [] : rv.evidence);
       }
-      if (p.velocityClamped) row('outcome', 'velocity.clamped', none, []);
+      if (p.velocityClamped) row('velocity.clamped', none, []);
       return out;
     }
     default: {

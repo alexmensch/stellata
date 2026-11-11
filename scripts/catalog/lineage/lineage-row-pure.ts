@@ -99,6 +99,22 @@ export function evidenceTexts(key: string, refTexts: readonly string[]): string[
   return [...new Set(refTexts)].filter((t) => t !== key);
 }
 
+/** What `stageRow` needs of a stage's codes; a stage's StageCodes, or any subset of its branches. */
+export interface RowCoder<B extends string> {
+  readonly stage: string;
+  code(branch: B): string;
+  roleOf(code: string): LineageRole;
+}
+
+/** A row of `codes`' stage, its role its code's declared one: the one way a stage builds its rows. */
+export function stageRow<B extends string>(
+  codes: RowCoder<B>, key: string, branch: B, params: LineageParams,
+  evidence: readonly string[],
+): LineageRow {
+  const code = codes.code(branch);
+  return { stage: codes.stage, key, role: codes.roleOf(code), code, params: paramsText(params), evidence };
+}
+
 /** The row's line, refused when the stage does not write it, does not declare its code, or declares it in another role. */
 export function stageLineageLine(codes: StageCodes<string>, row: LineageRow): LineageLine {
   if (row.stage !== codes.stage) {
