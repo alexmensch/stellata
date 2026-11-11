@@ -34,7 +34,7 @@ _GeomAdj = dict[str, dict[str, tuple[float, float, float | None]]]
 
 
 def anchor_token_rank(tok: str) -> tuple[str, int, str]:
-    """Python twin of companion-promotion.ts ``isMoreCanonicalAnchor``,
+    """Python twin of component-tokens-pure.ts ``isMoreCanonicalAnchor``,
     same order: change both. Candidates differ: README.md#stage-6--multiplestsv-emit."""
     return (tok[:1], len(tok), tok)
 
