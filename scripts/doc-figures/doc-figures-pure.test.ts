@@ -121,10 +121,10 @@ describe('formatFigure', () => {
     expect(formatFigure(1247240, { kind: 'thousands', digits: 3 })).toBe('1,250k');
   });
 
-  it('fixes decimal places, trailing zeros and sign kept', () => {
+  it('fixes decimal places, trailing zeros and a typographic minus kept', () => {
     expect(formatFigure(0.38995, { kind: 'decimals', digits: 3 })).toBe('0.390');
     expect(formatFigure(22.5304, { kind: 'decimals', digits: 2 })).toBe('22.53');
-    expect(formatFigure(-1.0671, { kind: 'decimals', digits: 2 })).toBe('-1.07');
+    expect(formatFigure(-1.0671, { kind: 'decimals', digits: 2 })).toBe('\u22121.07');
     expect(formatFigure(4.743e-4, { kind: 'decimals', digits: 5 })).toBe('0.00047');
   });
 });

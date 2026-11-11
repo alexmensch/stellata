@@ -386,7 +386,7 @@ pole.
 
 | sightline | mag/arcsec² | Δ vs S_lim | /255 |
 | --- | --- | --- | --- |
-| l = 0, b = 5 | <!-- count:milkyway-sightlines/sbB5 d2 -->20.93<!-- /count --> | **<!-- count:milkyway-sightlines/gapB5 d2 -->-1.07<!-- /count -->** — the maximum | <!-- count:milkyway-sightlines/levelB5 d1 -->63.7<!-- /count --> |
+| l = 0, b = 5 | <!-- count:milkyway-sightlines/sbB5 d2 -->20.93<!-- /count --> | **<!-- count:milkyway-sightlines/gapB5 d2 -->−1.07<!-- /count -->** — the maximum | <!-- count:milkyway-sightlines/levelB5 d1 -->63.7<!-- /count --> |
 | l = 0, b = 0 (GC) | <!-- count:milkyway-sightlines/sbGc d2 -->22.53<!-- /count --> | <!-- count:milkyway-sightlines/gapGc d2 -->0.53<!-- /count --> | <!-- count:milkyway-sightlines/levelGc d1 -->21.7<!-- /count --> |
 | anticentre | <!-- count:milkyway-sightlines/sbAnticentre d2 -->22.69<!-- /count --> | <!-- count:milkyway-sightlines/gapAnticentre d2 -->0.69<!-- /count --> | <!-- count:milkyway-sightlines/levelAnticentre d1 -->15.7<!-- /count --> |
 | b = 30 | <!-- count:milkyway-sightlines/sbB30 d2 -->23.10<!-- /count --> | <!-- count:milkyway-sightlines/gapB30 d2 -->1.10<!-- /count --> | <!-- count:milkyway-sightlines/levelB30 d1 -->3.6<!-- /count --> |

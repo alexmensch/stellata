@@ -130,7 +130,9 @@ export function formatFigure(value: number, format: FigureFormat): string {
     case 'thousands':
       return `${grouped(roundSignificant(value / 1000, format.digits))}k`;
     case 'decimals':
-      return value.toLocaleString('en-US', { minimumFractionDigits: format.digits, maximumFractionDigits: format.digits });
+      return value
+        .toLocaleString('en-US', { minimumFractionDigits: format.digits, maximumFractionDigits: format.digits })
+        .replace(/^-/, '\u2212');
   }
 }
 
