@@ -6,7 +6,6 @@ import { UPDATE_SNAPSHOTS_ENV } from '../util/snapshot-check';
 export const FIGURE_PIN_RELATIVE_TOLERANCE = 1e-9;
 
 export interface FigurePins {
-  readonly updating: boolean;
   /** Throws unless `actual` matches the snapshot's value; records it instead when updating. */
   pin(key: string, actual: number): void;
   /** Snapshot keys no `pin` has reached; empty after a whole run of the suite. */
@@ -26,7 +25,6 @@ export function figurePins(
   const refresh = `${UPDATE_SNAPSHOTS_ENV}=1 pnpm vitest run <this test file>, then pnpm run docs:figures`;
 
   return {
-    updating,
     pin(key, actual) {
       if (recorded.has(key)) throw new Error(`figure ${key} is pinned twice`);
       recorded.set(key, actual);
