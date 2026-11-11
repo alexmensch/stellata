@@ -45,8 +45,7 @@ Each has its own README.
   `KM_PC` / `R_SUN_PC` / `SUN_ABSMAG_V` / `MIN_PHYSICAL_RADIUS_R_SUN` /
   `DEG_TO_RAD` / `ARCSEC_PER_DEG` / `ARCSEC_TO_RAD` / `MAS_TO_RAD` / `J2000_JD` / `J2000_OBLIQUITY_RAD` /
   `HIPPARCOS_EPOCH_JYEAR` / `DAYS_PER_JULIAN_YEAR` / `SECONDS_PER_DAY` / `LIGHT_TIME_PER_AU_S` /
-  `RA_HOURS_TO_DEG`, and `jdOfJulianYear`, the one spelling of a Julian
-  epoch year as a JD.
+  `RA_HOURS_TO_DEG`.
   Canonical values, one definition each, so client / build-script /
   shader consumers can't drift on precision — import from here rather
   than re-derive. `RA_HOURS_TO_DEG` is the hours→degrees factor every
@@ -115,7 +114,9 @@ Each has its own README.
     `besselianEpochToJd` supplies `B1875_JD`, the equinox the IAU
     constellation boundaries are drawn at — the θ sign and the epoch are
     both silent-failure modes, documented in
-    [B1875](/src/astro-core/iau-geometry/README.md#b1875). Cubic
+    [B1875](/src/astro-core/iau-geometry/README.md#b1875). Its Julian
+    sibling `jdOfJulianYear` is the one spelling of a Julian epoch year as
+    a JD. Cubic
     polynomials: right for the 125 years back to B1875, arcminutes off at
     the model clock's bounds.
   - **[Vondrák 2011](/data/papers/index.md#vondrak2011)** — `longTermEclipticPole` /

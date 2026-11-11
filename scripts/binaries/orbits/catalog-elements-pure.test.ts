@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
-import { DAYS_PER_JULIAN_YEAR, DEG_TO_RAD, jdOfJulianYear } from '../../../src/astro-core/astronomy-constants';
+import { DAYS_PER_JULIAN_YEAR, DEG_TO_RAD } from '../../../src/astro-core/astronomy-constants';
+import { jdOfJulianYear } from '../../../src/astro-core/precession';
 import { orb6Entry } from '../../wds/wds-fixture';
 import { mscOrbit } from '../load/load-fixture';
 import { TRUNCATED_JD_TO_JD_OFFSET } from '../load/msc-pure';

@@ -2,7 +2,7 @@
 // window every table spans. Authoring source for data/ephemerides/; editing a
 // cadence needs a re-run of `fetch:ephemerides`.
 
-import { jdOfJulianYear } from '../../astro-core/astronomy-constants';
+import { jdOfJulianYear } from '../../astro-core/precession';
 
 export type PlanetName =
   | 'mercury' | 'venus' | 'earth' | 'mars'

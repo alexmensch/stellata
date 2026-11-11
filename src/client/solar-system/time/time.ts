@@ -1,7 +1,7 @@
 // Simulation time `t` (Unix-seconds double) + UT ↔ Julian-day helpers.
 // See ./README.md#timescales.
 
-import { jdOfJulianYear } from '../../../astro-core/astronomy-constants';
+import { jdOfJulianYear } from '../../../astro-core/precession';
 import { deltaTSeconds } from './delta-t-pure';
 
 // Julian Date of the Unix epoch (1970-01-01T00:00:00Z).

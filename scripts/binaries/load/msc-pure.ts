@@ -1,6 +1,7 @@
 // Tokovinin's Multiple Star Catalogue: its three tables, the label → WDS token map, and the lookups Stages 2/4/6 join on.
 
-import { DAYS_PER_JULIAN_YEAR, jdOfJulianYear } from '../../../src/astro-core/astronomy-constants';
+import { DAYS_PER_JULIAN_YEAR } from '../../../src/astro-core/astronomy-constants';
+import { jdOfJulianYear } from '../../../src/astro-core/precession';
 import { readTable } from '../../util/tsv/table-pure';
 import type { Declared } from '../../util/sources/source';
 import {

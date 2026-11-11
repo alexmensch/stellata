@@ -21,6 +21,11 @@ export type Rotation3 = readonly [
   number, number, number,
 ];
 
+/** Julian epoch → JD: Julian years of 365.25 days counted from J2000.0. */
+export function jdOfJulianYear(julianYear: number): number {
+  return J2000_JD + (julianYear - 2000) * DAYS_PER_JULIAN_YEAR;
+}
+
 /** Besselian epoch → JD (Lieske 1979, /data/papers/index.md#lieske1979):
  *  tropical years counted from B1900.0. */
 export function besselianEpochToJd(besselianYear: number): number {

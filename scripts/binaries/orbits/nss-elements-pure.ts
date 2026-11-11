@@ -1,6 +1,7 @@
 // Gaia DR3 NSS two-body orbits as canonical orbital elements, and Gaia's astrometric-detectability regime. See README.md.
 
-import { DAYS_PER_JULIAN_YEAR, DEG_TO_RAD, jdOfJulianYear } from '../../../src/astro-core/astronomy-constants';
+import { DAYS_PER_JULIAN_YEAR, DEG_TO_RAD } from '../../../src/astro-core/astronomy-constants';
+import { jdOfJulianYear } from '../../../src/astro-core/precession';
 import { GAIA_DR3_REF_EPOCH } from '../../catalog/distance/direction-cascade';
 import type { NssOrbitRow } from '../load/gaia-pure';
 import { distancePc } from '../sky-geometry-pure';

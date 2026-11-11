@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
-import { DAYS_PER_JULIAN_YEAR, jdOfJulianYear } from '../../../src/astro-core/astronomy-constants';
+import { DAYS_PER_JULIAN_YEAR } from '../../../src/astro-core/astronomy-constants';
+import { jdOfJulianYear } from '../../../src/astro-core/precession';
 import { orb6Entry, wdsPair } from '../../wds/wds-fixture';
 import type { Orb6Entry } from '../../wds/wds-pure';
 import { UNRESOLVED_ASTROMETRY, type ComponentAstrometry, type PairAstrometry } from '../astrometry/routes-pure';
