@@ -30,6 +30,13 @@ const V_BRANCHES = {
   none: 'v.none',
 } as const satisfies Record<Exclude<VVia, 'tycho2'>, string>;
 
+const TYCHO2_RANGE_SIDES = ['inside', 'outside'] as const;
+
+const V_TYCHO2_BRANCHES = {
+  inside: 'v.tycho2.inside-bt-vt-range',
+  outside: 'v.tycho2.outside-bt-vt-range',
+} as const satisfies Record<(typeof TYCHO2_RANGE_SIDES)[number], string>;
+
 const PHOTOMETRY_REFUSAL_BRANCHES = {
   v: {
     uncalibrated: 'v.refused.uncalibrated',
@@ -122,12 +129,13 @@ export function brightnessColourSummary(counts: BrightnessColourCounts): string 
   const n = (branch: LiveBranch): number => counts[`${BRIGHTNESS_COLOUR_CODES.stage}.${branch}`];
   const simbad = (ns: SimbadNamespace): number => n(SPECTRAL_SIMBAD_BRANCHES[ns]);
   const simbadTotal = SIMBAD_NAMESPACE_VALUES.reduce((sum, ns) => sum + simbad(ns), 0);
+  const tycho2Total = TYCHO2_RANGE_SIDES.reduce((sum, side) => sum + n(V_TYCHO2_BRANCHES[side]), 0);
   const records = n('spectral.curated') + simbadTotal + n('spectral.gspspec') + n('spectral.none');
   const pct = (k: number): string => `${((k / records) * 100).toFixed(1)}%`;
   return [
     `  V cascade: gaia_riello ${n('v.gaia-riello')}, printed_hip ${n('v.printed-hip')}, `
-      + `tycho2 ${n('v.tycho2.inside-bt-vt-range') + n('v.tycho2.outside-bt-vt-range')} `
-      + `(${n('v.tycho2.outside-bt-vt-range')} outside the counted BT−VT range), gliese ${n('v.gliese')}, `
+      + `tycho2 ${tycho2Total} `
+      + `(${n(V_TYCHO2_BRANCHES.outside)} outside the counted BT−VT range), gliese ${n('v.gliese')}, `
       + `curated ${n('v.curated')}, none ${n('v.none')}`,
     `  ci cascade: gaia_relation ${n('ci.gaia-relation')}, printed_hip_bv ${n('ci.printed-hip-bv')}, `
       + `gspc ${n('ci.gspc')}, spectral_derived ${n('ci.spectral-derived')}, solar_fallback ${n('ci.none')}`,
@@ -194,7 +202,7 @@ export function brightnessColourLineageRows(b: BrightnessColour): LineageRow[] {
   const v = (res: VMagnitudeResolution): void => {
     refused(res.refusals, PHOTOMETRY_REFUSAL_BRANCHES.v);
     if (res.via === 'tycho2') {
-      row(res.value.outsideRange ? 'v.tycho2.outside-bt-vt-range' : 'v.tycho2.inside-bt-vt-range', none, res.evidence);
+      row(V_TYCHO2_BRANCHES[res.value.outsideRange ? 'outside' : 'inside'], none, res.evidence);
     } else {
       row(V_BRANCHES[res.via], none, answered(res));
     }
