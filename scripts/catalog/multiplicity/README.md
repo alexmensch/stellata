@@ -231,7 +231,8 @@ own coverage.
 kept-physical pair rows of `multiples.tsv`. `systemCoherenceVerdicts`
 decides and moves nothing: one `SystemVerdict` per system, naming its anchor
 and each member's verdict. `applySystemCoherence` then moves the snapped
-members, and `systemCoherenceStats` counts the verdicts. A later system
+members. The verdicts' count is their lineage folded per code
+([Coherence lineage](#coherence-lineage)). A later system
 anchored on a record an earlier system snapped is decided on that record's
 snapped distance, computed exactly as the applied record will read it, so
 the split leaves catalog.bin unchanged. The verdicts are also the pass's
@@ -287,8 +288,8 @@ Per WDS root with ≥2 resolved own-record members:
   anchor-grade bar counts — a fit that bar rejects publishes a formal
   sigma understating its own error — and `hostsSubsystem` bars the Gaia
   branch here exactly as it does in the tier pick, so a sub-pair's
-  photocentre wobble cannot be read as precision. Counted
-  `systemCoherenceMemberAnchorPrecisionVetoed`. Polaris is the case the
+  photocentre wobble cannot be read as precision. Coded
+  `coherence.anchor.precision-vetoed`. Polaris is the case the
   veto stands aside for: A is Gaia-saturated at HIP2's 1.46% while B, which
   a V ≤ 11 floor admits, measures 0.24% clean — the member is six times
   better and takes the anchor, moving the system to 136.965 pc. A member
@@ -303,8 +304,8 @@ Per WDS root with ≥2 resolved own-record members:
   [Bailer-Jones 2021](/data/papers/index.md#bailerjones2021)
   placement at 1685.7 pc while HIP2 measures ~154 pc; without this gate
   the corrupted parallax's huge σ made μ² Sco's honest 176.6 pc read as
-  a <3σ gap and dragged it out to 1.7 kpc. Counted
-  `systemCoherenceAnchorInconsistent`. (The μ¹ Sco record's own B-J
+  a <3σ gap and dragged it out to 1.7 kpc. Coded
+  `coherence.anchor.inconsistent.*`. (The μ¹ Sco record's own B-J
   placement is a separate open defect.)
 - **Radial snap with a significance gate.** Every other member moves
   radially to the anchor's distance (direction preserved — it is
@@ -322,11 +323,9 @@ Per WDS root with ≥2 resolved own-record members:
 
 Running before promotion means minted companions tangent-project off
 already-coherent anchors, and the baked pair geometry in catalog.bin
-matches what `binaries.bin` renders. Pinned in build-counts as
-`systemCoherenceSystems` / `systemCoherenceRepositioned` /
-`systemCoherenceMemberAnchorWins` /
-`systemCoherenceSignificantDepthKept` /
-`systemCoherenceMemberAnchorPrecisionVetoed`.
+matches what `binaries.bin` renders. Pinned in build-counts as the
+`coherence` stage's block: one key per live code
+([Coherence lineage](#coherence-lineage)).
 [Multiple-star pipeline](/docs/science-multiple-star-pipeline.md#multiple-star-pipeline)
 carries the science framing.
 
@@ -335,8 +334,12 @@ carries the science framing.
 The pass is a stage of the [lineage](../lineage/README.md) contract
 (`coherence-lineage-pure.ts`), between size and promotion.
 `coherenceLineageRows` serialises each `SystemVerdict` through an exhaustive
-`switch`. A system's anchor gets `coherence.anchor`, or `anchor.inconsistent` /
-`anchor.unplaced` when the pass skips the system. Each member the system decides
+`switch`. A system's anchor gets `coherence.anchor.*`, or `anchor.inconsistent.*` /
+`anchor.unplaced.*` when the pass skips the system; each ends in how the
+anchor was picked — `member-won` (a non-primary member outranked the pair
+primary), `precision-vetoed` (the primary kept it on a more precise
+parallax) or `anchor-won` (no member outranked the primary) — exclusive,
+since a veto leaves the member unwon. Each member the system decides
 gets a `snapped`, `unmoved.*` or `kept.*` row, and every other record gets
 `coherence.not-applicable`. A record two systems decide (an earlier system's
 snapped member that anchors a later one) carries a row from each, and
@@ -348,6 +351,13 @@ The evidence is the row the anchor's tier rests on: its Gaia DR3 or Hipparcos-2
 astrometry row, or its Bailer-Jones posterior. The inherited tier cites none.
 Coherence founds no record, so it writes no identity rows, and every code's
 effect is `none`.
+
+The stage's count block is its lines folded per live code
+(`countedStageLineage`, [Counts fold from lineage](../lineage/README.md#counts-fold-from-lineage)),
+filed in the count snapshot as stage `coherence`. `coherenceFigures` sums
+the codes into the pass's headline figures — systems, members repositioned,
+member-anchor wins, precision vetoes, depths kept — and `coherenceSummary`
+is the build log's line over them.
 
 Measured 2026-11-05: one row per record that exists before promotion mints
 companions, all but about 4,600 of them `not-applicable` (66 MB plain),

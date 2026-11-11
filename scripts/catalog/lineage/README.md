@@ -14,8 +14,7 @@ its review-queue and label-drop counts fold from the outcomes, while the
 derivation, admission and component counters are still kept by hand beside
 them (stellata-hhaw.45.23). Promotion's per-row counters all fold from its
 outcomes; its post-passes act on records and keep their own. Coherence's
-counters fold from its verdicts, still under their `systemCoherence*` keys
-until those keys become its codes (stellata-hhaw.45.23). Naming's display
+snapshot keys are its codes, folded from its lines. Naming's display
 counters fold from its outcomes the same way, under their `naming*` keys
 (stellata-hhaw.45.23). The record walk's placement and brightness-colour
 counts fold from each row's outcome (`../parse/walk-stats-pure.ts`), still
@@ -26,8 +25,11 @@ under their old keys (stellata-hhaw.45.23).
 ```
 scripts/catalog/lineage/
   lineage-row-pure.ts            The envelope and LineageLine, its TSV line:
+                                 stageRow, the one row builder, which fills
+                                 a row's stage and role from its codes;
                                  stageLineageLine, the one encoder, which
-                                 refuses a code the stage does not declare;
+                                 refuses a code the stage does not declare
+                                 or a row in another role than its code's;
                                  sortUtf8, the one order the stage lines,
                                  identity and SID files, reason-code list
                                  and trace keys sort by; and
@@ -51,7 +53,8 @@ scripts/catalog/lineage/
   stage-lineage.ts               stageLineage: one stage's files, header,
                                  baseline plan, diff, budget and invariant
                                  checks, ready for the stage's emitArtifacts
-                                 call.
+                                 call; countedStageLineage, the same plus
+                                 its count block.
   phase-clock-pure.ts            phaseClock: the budget line's per-phase
     (+ test)                     split of the timed window.
   lineage-invariant-pure.ts      LineageInvariant and its check (#invariants).
@@ -138,7 +141,7 @@ Every stage writes the same envelope:
 |---|---|
 | `stage` | the stage that decided |
 | `key` | the origin `SourceRowRef` |
-| `role` | `outcome`, or `refused` for an alternative the stage weighed and rejected |
+| `role` | `outcome`, or `refused` for an alternative the stage weighed and rejected; declared once per code and filled from it by `stageRow`, never stated by a stage |
 | `code` | a reason code from the generated list |
 | `params` | per-instance detail (source id, component letter, sibling) |
 | `evidence` | `SourceRowRef`s cited, each once and never the origin row (`evidenceTexts`) |
@@ -210,11 +213,17 @@ Membership's (`MEMBERSHIP_INVARIANTS`): no `admit.magnitude` row whose
 ## Counts fold from lineage
 
 A stage's count-snapshot keys are its reason codes, so the code list is the
-one owner of every counted tier. `foldStageLines(codes, lines, role)`
+one owner of every counted tier. `foldStageLines(codes, lines)`
 (`lineage-row-pure.ts`, over `../../util/counts/tally-pure.ts`'s `fold`) counts a
-stage's lines per code in one role, every declared code present, typed
-`Record<code, number>` from the stage's `codes`; a line of another stage
-throws. A stage with no codes yet keeps its snapshot keys until it gains
+stage's lines per live code, every live code present, typed
+`Record<code, number>` from the stage's `live` codes — a retired or
+historical code is no key, and a line carrying one throws; each code is declared in
+one role, so a stage's outcomes and refusals fold into one record and no
+code is counted in both. A line of another stage, or in a role its code is
+not declared in, throws. `countedStageLineage` (`stage-lineage.ts`) is
+`stageLineage` plus that fold over the same lines, inside the timed window:
+its `counts` is the stage's count block, which the build composes into its
+snapshot ([The staged snapshot](../../util/counts/README.md#the-staged-snapshot)). A stage with no codes yet keeps its snapshot keys until it gains
 lineage.
 
 ## SID events

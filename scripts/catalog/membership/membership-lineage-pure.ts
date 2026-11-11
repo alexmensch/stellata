@@ -4,8 +4,8 @@ import { LABEL_DISPOSITIONS, type LabelDisposition, type LabelFlip } from '../cl
 import type { IdentityRow } from '../lineage/identity-pure';
 import type { DiffJoin } from '../lineage/lineage-diff-pure';
 import { lineageInvariant, NO_EXCEPTIONS, type LineageInvariant } from '../lineage/lineage-invariant-pure';
-import { paramsOf, paramsText, type LineageParams, type LineageRow } from '../lineage/lineage-row-pure';
-import { LIVE, stageCodes, type CodeDeclaration } from '../lineage/reason-codes/reason-codes-pure';
+import { paramsOf, stageRow, type LineageParams, type LineageRow } from '../lineage/lineage-row-pure';
+import { outcomeCode, refusalCode, stageCodes } from '../lineage/reason-codes/reason-codes-pure';
 import type { GateReason } from './binding/binding-gate-pure';
 import {
   BINDING_REVIEW_COLUMNS, COMPONENT_REASON_PREFIX,
@@ -15,10 +15,6 @@ import {
 import { MEMBERSHIP_LINEAGE } from '../../../src/catalog-format/pipeline-outputs/lineage-files';
 
 export const MEMBERSHIP_LINEAGE_BUDGET = { gzipBytes: 41_000_000, writeMs: 20_000 };
-
-const live = (description: string, effect: CodeDeclaration['effect'] = 'none'): CodeDeclaration => (
-  { description, effect, status: LIVE }
-);
 
 const ADDITION_BRANCHES = {
   'admitted:hd_link_gap': 'admit.hd-link-gap',
@@ -53,43 +49,43 @@ const LABEL_DROP_BRANCHES = {
 } as const satisfies Record<LabelDropReason, string>;
 
 export const MEMBERSHIP_CODES = stageCodes(MEMBERSHIP_LINEAGE.stage, {
-  'admit.spine': live('An AT-HYG spine row becomes a manifest row on the merge decision it records.'),
-  fold: live('Review found the spine row duplicates another spine row; it folds onto that row and its SID merges into the survivor\'s.', 'merge'),
-  'admit.hd-link-gap': live('An IV/25 Tycho-2 star with an HD below 100,000 that AT-HYG never linked is admitted.'),
-  'admit.hd-omitted': live('An IV/25 Tycho-2 star with an HD of 100,000 or more, outside AT-HYG\'s subset, is admitted.'),
-  'admit.hip-omitted': live('An I/239 Hipparcos star with no IV/25 entry is admitted.'),
-  'admit.cns5-census': live('A CNS5 nearby-star census row the spine lacks is admitted.'),
-  component: live('Every designation the primaries give this star already names another record, so it is ledgered onto that record instead of admitted.'),
-  'admit.magnitude': live('A Gaia DR3 source at or brighter than the V floor that no primaries record binds is admitted.'),
-  'binding.bound': live('One Gaia source survives both binding gates with no passing rival, and the record binds to it.'),
-  'binding.rescued': live('Every candidate failed a gate, and SIMBAD files the record\'s own TYC under the one the sibling gate refused, so that one binds.'),
-  'binding.contested': live('The binding winner has a runner-up that also passed both gates; precedence chose it and the row is queued for review.'),
-  'binding.refused': live('No Gaia source survives the binding gates; the record ships unbound.'),
-  'binding.collision': live('Another spine row derives the same Gaia source, so both are withheld and queued for review.'),
-  'binding.sol': live('The Sun takes no Gaia binding.'),
-  'binding.gate-mag': live('A binding candidate refused because its Gaia G is more than a magnitude fainter than the record\'s printed V.'),
-  'binding.gate-sibling': live('A binding candidate refused because SIMBAD gives that Gaia source to a different component of the record\'s system.'),
-  'binding.runner-up': live('A binding candidate that passed both gates but lost to a higher-ranked one.'),
-  'binding.unweighed-no-pulled-row': live('A binding candidate the magnitude gate passed unweighed, because the astrometry pull holds no row for it.'),
-  'disposition.derived': live('A committed review disposition confirms the derived Gaia source.'),
-  'disposition.other': live('A committed review disposition binds a Gaia source other than the derived one, on its stated evidence.'),
-  'disposition.none': live('A committed review disposition leaves the record unbound.'),
-  'addition-binding.bound': live('The admitted star\'s own Gaia source survives both gates and is no other record\'s.'),
-  'addition-binding.rescued': live('The admitted star\'s candidates all failed a gate, and SIMBAD\'s witness under its TYC rescued one.'),
-  'addition-binding.on-spine': live('The admitted star\'s Gaia source is a spine record\'s, so the star ships unbound.'),
-  'addition-binding.shared': live('Two admitted stars reach the same Gaia source, so neither takes it.'),
-  'addition-binding.refused': live('Every Gaia candidate of the admitted star failed a binding gate.'),
-  'addition-binding.no-candidate': live('No catalogue proposes a Gaia source for the admitted star.'),
-  'label.added': live('The classic-ID overlay adds a designation the spine row lacked.'),
-  'label.overlay-wins': live('The overlay and the spine disagree on a designation, and the overlay\'s value is taken.'),
-  'label.override-spine': live('A curated override keeps the spine\'s designation over the overlay\'s.'),
-  'label.override-value': live('A curated override sets the designation.'),
-  'label.suppressed-collision': live('The overlay\'s designation already names another record, so it is not added.'),
-  'label.extra-alias': live('The overlay names a further value for a field, carried as an alias the record answers to.'),
-  'label.extra-sibling-rendered': live('The overlay\'s further value belongs to a companion drawn as its own star, so it is left to that star.'),
-  'label.extra-dropped': live('The overlay names a further value for a single-valued field; it is dropped.'),
-  'label-drop.flamsteed-unattested': live('No primary publishes this Flamsteed number for the star, so it leaves the record.'),
-  'label-drop.hd-unattested': live('No HD primary publishes this HD number for the star, so it leaves the record.'),
+  'admit.spine': outcomeCode('An AT-HYG spine row becomes a manifest row on the merge decision it records.'),
+  fold: outcomeCode('Review found the spine row duplicates another spine row; it folds onto that row and its SID merges into the survivor\'s.', 'merge'),
+  'admit.hd-link-gap': outcomeCode('An IV/25 Tycho-2 star with an HD below 100,000 that AT-HYG never linked is admitted.'),
+  'admit.hd-omitted': outcomeCode('An IV/25 Tycho-2 star with an HD of 100,000 or more, outside AT-HYG\'s subset, is admitted.'),
+  'admit.hip-omitted': outcomeCode('An I/239 Hipparcos star with no IV/25 entry is admitted.'),
+  'admit.cns5-census': outcomeCode('A CNS5 nearby-star census row the spine lacks is admitted.'),
+  component: outcomeCode('Every designation the primaries give this star already names another record, so it is ledgered onto that record instead of admitted.'),
+  'admit.magnitude': outcomeCode('A Gaia DR3 source at or brighter than the V floor that no primaries record binds is admitted.'),
+  'binding.bound': outcomeCode('One Gaia source survives both binding gates with no passing rival, and the record binds to it.'),
+  'binding.rescued': outcomeCode('Every candidate failed a gate, and SIMBAD files the record\'s own TYC under the one the sibling gate refused, so that one binds.'),
+  'binding.contested': outcomeCode('The binding winner has a runner-up that also passed both gates; precedence chose it and the row is queued for review.'),
+  'binding.refused': outcomeCode('No Gaia source survives the binding gates; the record ships unbound.'),
+  'binding.collision': outcomeCode('Another spine row derives the same Gaia source, so both are withheld and queued for review.'),
+  'binding.sol': outcomeCode('The Sun takes no Gaia binding.'),
+  'binding.gate-mag': refusalCode('A binding candidate refused because its Gaia G is more than a magnitude fainter than the record\'s printed V.'),
+  'binding.gate-sibling': refusalCode('A binding candidate refused because SIMBAD gives that Gaia source to a different component of the record\'s system.'),
+  'binding.runner-up': refusalCode('A binding candidate that passed both gates but lost to a higher-ranked one.'),
+  'binding.unweighed-no-pulled-row': outcomeCode('A binding candidate the magnitude gate passed unweighed, because the astrometry pull holds no row for it.'),
+  'disposition.derived': outcomeCode('A committed review disposition confirms the derived Gaia source.'),
+  'disposition.other': outcomeCode('A committed review disposition binds a Gaia source other than the derived one, on its stated evidence.'),
+  'disposition.none': outcomeCode('A committed review disposition leaves the record unbound.'),
+  'addition-binding.bound': outcomeCode('The admitted star\'s own Gaia source survives both gates and is no other record\'s.'),
+  'addition-binding.rescued': outcomeCode('The admitted star\'s candidates all failed a gate, and SIMBAD\'s witness under its TYC rescued one.'),
+  'addition-binding.on-spine': outcomeCode('The admitted star\'s Gaia source is a spine record\'s, so the star ships unbound.'),
+  'addition-binding.shared': outcomeCode('Two admitted stars reach the same Gaia source, so neither takes it.'),
+  'addition-binding.refused': outcomeCode('Every Gaia candidate of the admitted star failed a binding gate.'),
+  'addition-binding.no-candidate': outcomeCode('No catalogue proposes a Gaia source for the admitted star.'),
+  'label.added': outcomeCode('The classic-ID overlay adds a designation the spine row lacked.'),
+  'label.overlay-wins': outcomeCode('The overlay and the spine disagree on a designation, and the overlay\'s value is taken.'),
+  'label.override-spine': outcomeCode('A curated override keeps the spine\'s designation over the overlay\'s.'),
+  'label.override-value': outcomeCode('A curated override sets the designation.'),
+  'label.suppressed-collision': outcomeCode('The overlay\'s designation already names another record, so it is not added.'),
+  'label.extra-alias': outcomeCode('The overlay names a further value for a field, carried as an alias the record answers to.'),
+  'label.extra-sibling-rendered': outcomeCode('The overlay\'s further value belongs to a companion drawn as its own star, so it is left to that star.'),
+  'label.extra-dropped': outcomeCode('The overlay names a further value for a single-valued field; it is dropped.'),
+  'label-drop.flamsteed-unattested': outcomeCode('No primary publishes this Flamsteed number for the star, so it leaves the record.'),
+  'label-drop.hd-unattested': outcomeCode('No HD primary publishes this HD number for the star, so it leaves the record.'),
 });
 
 const LABEL_BRANCHES = Object.fromEntries(
@@ -204,14 +200,8 @@ export const MEMBERSHIP_INVARIANTS: readonly LineageInvariant[] = [
   ),
 ];
 
-function row<B extends Branch>(
-  key: string, branch: B, params: ParamsOf<B>, evidence: readonly string[] = [],
-  role: LineageRow['role'] = 'outcome',
-): LineageRow {
-  return {
-    stage: MEMBERSHIP_LINEAGE.stage, key, role, code: MEMBERSHIP_CODES.code(branch),
-    params: paramsText(params as LineageParams), evidence,
-  };
+function row<B extends Branch>(key: string, branch: B, params: ParamsOf<B>, evidence: readonly string[] = []): LineageRow {
+  return stageRow(MEMBERSHIP_CODES, key, branch, params as LineageParams, evidence);
 }
 
 function paramsAs<B extends Branch>(r: LineageRow, branch: B): ParamsOf<B> {
@@ -238,7 +228,7 @@ export function membershipLineageRow({ key, outcome: o }: KeyedOutcome): Lineage
         ...o.review, source_letters: o.sourceLetters, hip_letters: o.hipLetters,
       });
     case 'candidate-refused':
-      return row(key, REFUSAL_BRANCHES[o.refusal], { source_id: o.sourceId, via: o.via }, [], 'refused');
+      return row(key, REFUSAL_BRANCHES[o.refusal], { source_id: o.sourceId, via: o.via });
     case 'candidate-unweighed':
       return row(key, 'binding.unweighed-no-pulled-row', { source_id: o.sourceId, via: o.via }, o.items);
     case 'disposition':

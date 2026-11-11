@@ -187,11 +187,15 @@ scripts/catalog/
                                   committedBuildCounts reads back for
                                   every consumer of the pinned figures.
                                   The file is staged
-                                  (../util/counts/count-stages-pure.ts):
-                                  CATALOG_COUNT_STAGE files each count
-                                  under the step that computes it, typed
-                                  over every BuildCounts key, so a new
-                                  count without a stage fails to compile.
+                                  (../util/counts/README.md#the-staged-snapshot):
+                                  BuildCounts is FiledCounts plus each
+                                  composed stage's count block (coherence's
+                                  so far); CATALOG_COUNT_STAGE files each
+                                  filed count under the step that computes
+                                  it, typed over every FiledCounts key, so
+                                  a new one without a stage fails to
+                                  compile; CATALOG_COUNT_STAGES is the
+                                  stage order, pinned to LINEAGE_STAGES'.
                                   Generic over
                                   the count record: compareCountSnapshot is
                                   the compare every count snapshot passes

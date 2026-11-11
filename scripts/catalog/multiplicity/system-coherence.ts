@@ -36,15 +36,6 @@ export const COHERENCE_NO_SIGMA_MIN_GAP_PC = 1.0;
 export const ANCHOR_TIERS = ['gaia-clean', 'hip2', 'bailer-jones', 'inherited'] as const;
 export type AnchorTier = (typeof ANCHOR_TIERS)[number];
 
-export interface SystemCoherenceStats {
-  systemsProcessed: number;
-  membersRepositioned: number;
-  memberAnchorWins: number;
-  significantDepthKept: number;
-  anchorPlacementInconsistent: number;
-  memberAnchorPrecisionVetoed: number;
-}
-
 export interface CoherenceSources {
   gaiaAstrometry: Map<string, GaiaAstrometryCatalogRow>;
   hip2: Map<number, Hip2AstrometryRow>;
@@ -379,17 +370,4 @@ export function applySystemCoherence(stars: Star[], verdicts: readonly SystemVer
     if (v.kind !== 'coherent') continue;
     for (const m of v.members) if (m.kind === 'snapped') repositionRadially(stars[m.idx], m.toPc);
   }
-}
-
-export function systemCoherenceStats(verdicts: readonly SystemVerdict[]): SystemCoherenceStats {
-  const coherentMembers = verdicts.flatMap((v) => (v.kind === 'coherent' ? v.members : []));
-  const count = <T>(xs: readonly T[], p: (x: T) => boolean): number => xs.filter(p).length;
-  return {
-    systemsProcessed: verdicts.length,
-    membersRepositioned: count(coherentMembers, (m) => m.kind === 'snapped'),
-    memberAnchorWins: count(verdicts, (v) => v.kind !== 'anchor-unplaced' && v.anchor.memberWon),
-    significantDepthKept: count(coherentMembers, (m) => m.kind === 'significant-depth' || m.kind === 'wide-gap'),
-    anchorPlacementInconsistent: count(verdicts, (v) => v.kind === 'anchor-inconsistent'),
-    memberAnchorPrecisionVetoed: count(verdicts, (v) => v.anchor.precisionVetoed),
-  };
 }

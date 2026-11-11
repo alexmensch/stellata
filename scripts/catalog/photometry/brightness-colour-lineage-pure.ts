@@ -1,9 +1,9 @@
 // Brightness and colour as a lineage stage: its reason codes and the one serialiser over each walked record's V, spectral class, B−V and de-extinction. See README.md#brightness-colour-lineage.
 
 import {
-  evidenceTexts, paramsText, stageLineageLine, type LineageLine, type LineageParams, type LineageRole, type LineageRow,
+  evidenceTexts, stageLineageLine, type LineageLine, type LineageParams, type LineageRow, stageRow,
 } from '../lineage/lineage-row-pure';
-import { LIVE, stageCodes, type CodeDeclaration } from '../lineage/reason-codes/reason-codes-pure';
+import { outcomeCode, refusalCode, stageCodes } from '../lineage/reason-codes/reason-codes-pure';
 import { sourceRowRefText, type AnySourceRowRef } from '../../util/sources/row-ref-pure';
 import type { CascadeRefusal } from '../cascade-result';
 import type { ColourIndexResolution, CiVia } from './colour-index-pure';
@@ -16,8 +16,6 @@ export const BRIGHTNESS_COLOUR_LINEAGE_BUDGET = { gzipBytes: 42_400_000, writeMs
 
 /** Decimal places of `params.av`: 0.1 mmag, far below any V tier's own error. */
 export const AV_PARAM_DECIMALS = 4;
-
-const live = (description: string): CodeDeclaration => ({ description, effect: 'none', status: LIVE });
 
 const V_BRANCHES = {
   gaia_riello: 'v.gaia-riello',
@@ -66,31 +64,31 @@ const SPECTRAL_REFUSAL_BRANCHES = {
 } as const satisfies Record<SpectralRefusal['reason'], string>;
 
 export const BRIGHTNESS_COLOUR_CODES = stageCodes(BRIGHTNESS_COLOUR_LINEAGE.stage, {
-  'v.gaia-riello': live('Johnson V transformed from the record\'s own Gaia DR3 photometry through the Riello 2021 (/data/papers/index.md#riello2021) relation.'),
-  'v.printed-hip': live('The printed Hipparcos V of the record\'s own HIP (I/239), where the Gaia relation does not apply.'),
-  'v.tycho2': live('Johnson V reduced from the record\'s own Tycho-2 BT and VT, where no tier above answers.'),
-  'v.gliese': live('The printed V/70A V of the record\'s own GJ, where no tier above answers.'),
-  'v.curated': live('Sol: the curated record\'s V.'),
-  'v.none': live('No V tier lights the record.'),
-  'v.refused.uncalibrated': live('The record\'s Gaia photometry has a band missing or non-finite, or G is brighter than the saturation bound, so the Riello relation does not apply.'),
-  'v.refused.colour-out-of-range': live('The record\'s Gaia BP−RP lies outside the range the Riello relation is published over.'),
-  'ci.gaia-relation': live('B−V as the difference of the Gaia DR3 Table 5.9 G−V and G−B relations on the record\'s own photometry.'),
-  'ci.printed-hip-bv': live('The printed Hipparcos B−V of the record\'s own HIP (I/239).'),
-  'ci.gspc': live('B−V from Gaia DR3 synthetic photometry of the record\'s own source, inside its measured colour bound.'),
-  'ci.spectral-derived': live('The intrinsic colour of the record\'s spectral class, for a record with no Apsis Teff.'),
-  'ci.none': live('No tier colours the record, so it bakes the solar B−V.'),
-  'ci.refused.uncalibrated': live('The record\'s Gaia photometry has a band missing or non-finite, or G is brighter than the saturation bound, so a Gaia colour does not apply.'),
-  'ci.refused.colour-out-of-range': live('The record\'s Gaia BP−RP lies outside the range the colour tier holds over.'),
-  'ci.refused.non-finite': live('The printed Hipparcos B−V is not a finite number.'),
-  'ci.refused.apsis-teff-renders': live('The spectral-class colour stands down: the shader colours the record from its Apsis Teff instead.'),
-  'spectral.curated': live('The curated MK type: the record\'s own (Sol) or the hand-curated override for its HIP.'),
-  'spectral.simbad': live('SIMBAD\'s MK sp_type, on the first namespace of the ladder that reaches a typed row for the record.'),
-  'spectral.gspspec': live('The Gaia DR3 ESP-ELS spectral letter for the record\'s own source, where no SIMBAD row classifies it.'),
-  'spectral.none': live('No tier classifies the record, so it renders as spectral type unknown.'),
-  'spectral.refused.gaia-id-contradicts': live('A SIMBAD row states a Gaia DR3 id other than the record\'s own, so it describes another star.'),
-  'spectral.refused.unclassifiable': live('A typed row\'s spectral string does not parse as a Morgan-Keenan class.'),
-  'dust.edenhofer2024.absmag-and-ci': live('The Sol-to-star A_V through the Edenhofer 2024 (/data/papers/index.md#edenhofer2024) dust grid is subtracted from absmag, and A_V/R_V from the observed B−V.'),
-  'dust.edenhofer2024.absmag-only': live('The Sol-to-star A_V through the Edenhofer 2024 (/data/papers/index.md#edenhofer2024) dust grid is subtracted from absmag; the B−V is intrinsic, so it is left as it is.'),
+  'v.gaia-riello': outcomeCode('Johnson V transformed from the record\'s own Gaia DR3 photometry through the Riello 2021 (/data/papers/index.md#riello2021) relation.'),
+  'v.printed-hip': outcomeCode('The printed Hipparcos V of the record\'s own HIP (I/239), where the Gaia relation does not apply.'),
+  'v.tycho2': outcomeCode('Johnson V reduced from the record\'s own Tycho-2 BT and VT, where no tier above answers.'),
+  'v.gliese': outcomeCode('The printed V/70A V of the record\'s own GJ, where no tier above answers.'),
+  'v.curated': outcomeCode('Sol: the curated record\'s V.'),
+  'v.none': outcomeCode('No V tier lights the record.'),
+  'v.refused.uncalibrated': refusalCode('The record\'s Gaia photometry has a band missing or non-finite, or G is brighter than the saturation bound, so the Riello relation does not apply.'),
+  'v.refused.colour-out-of-range': refusalCode('The record\'s Gaia BP−RP lies outside the range the Riello relation is published over.'),
+  'ci.gaia-relation': outcomeCode('B−V as the difference of the Gaia DR3 Table 5.9 G−V and G−B relations on the record\'s own photometry.'),
+  'ci.printed-hip-bv': outcomeCode('The printed Hipparcos B−V of the record\'s own HIP (I/239).'),
+  'ci.gspc': outcomeCode('B−V from Gaia DR3 synthetic photometry of the record\'s own source, inside its measured colour bound.'),
+  'ci.spectral-derived': outcomeCode('The intrinsic colour of the record\'s spectral class, for a record with no Apsis Teff.'),
+  'ci.none': outcomeCode('No tier colours the record, so it bakes the solar B−V.'),
+  'ci.refused.uncalibrated': refusalCode('The record\'s Gaia photometry has a band missing or non-finite, or G is brighter than the saturation bound, so a Gaia colour does not apply.'),
+  'ci.refused.colour-out-of-range': refusalCode('The record\'s Gaia BP−RP lies outside the range the colour tier holds over.'),
+  'ci.refused.non-finite': refusalCode('The printed Hipparcos B−V is not a finite number.'),
+  'ci.refused.apsis-teff-renders': refusalCode('The spectral-class colour stands down: the shader colours the record from its Apsis Teff instead.'),
+  'spectral.curated': outcomeCode('The curated MK type: the record\'s own (Sol) or the hand-curated override for its HIP.'),
+  'spectral.simbad': outcomeCode('SIMBAD\'s MK sp_type, on the first namespace of the ladder that reaches a typed row for the record.'),
+  'spectral.gspspec': outcomeCode('The Gaia DR3 ESP-ELS spectral letter for the record\'s own source, where no SIMBAD row classifies it.'),
+  'spectral.none': outcomeCode('No tier classifies the record, so it renders as spectral type unknown.'),
+  'spectral.refused.gaia-id-contradicts': refusalCode('A SIMBAD row states a Gaia DR3 id other than the record\'s own, so it describes another star.'),
+  'spectral.refused.unclassifiable': refusalCode('A typed row\'s spectral string does not parse as a Morgan-Keenan class.'),
+  'dust.edenhofer2024.absmag-and-ci': outcomeCode('The Sol-to-star A_V through the Edenhofer 2024 (/data/papers/index.md#edenhofer2024) dust grid is subtracted from absmag, and A_V/R_V from the observed B−V.'),
+  'dust.edenhofer2024.absmag-only': outcomeCode('The Sol-to-star A_V through the Edenhofer 2024 (/data/papers/index.md#edenhofer2024) dust grid is subtracted from absmag; the B−V is intrinsic, so it is left as it is.'),
 });
 
 type Branch = Parameters<typeof BRIGHTNESS_COLOUR_CODES.code>[0];
@@ -131,21 +129,17 @@ export type ShippedBrightness = Extract<BrightnessColour, { kind: 'shipped' }>;
 export function brightnessColourLineageRows(b: BrightnessColour): LineageRow[] {
   const { key } = b;
   const out: LineageRow[] = [];
-  const push = (role: LineageRole, branch: Branch, params: LineageParams, refs: readonly AnySourceRowRef[]): void => {
-    out.push({
-      stage: BRIGHTNESS_COLOUR_LINEAGE.stage, key, role, code: BRIGHTNESS_COLOUR_CODES.code(branch),
-      params: paramsText(params),
-      evidence: evidenceTexts(key, refs.map(sourceRowRefText)),
-    });
+  const push = (branch: Branch, params: LineageParams, refs: readonly AnySourceRowRef[]): void => {
+    out.push(stageRow(BRIGHTNESS_COLOUR_CODES, key, branch, params, evidenceTexts(key, refs.map(sourceRowRefText))));
   };
   const row = <B extends Branch>(branch: B, params: ParamsOf<B>, refs: readonly AnySourceRowRef[]): void => {
-    push('outcome', branch, params, refs);
+    push(branch, params, refs);
   };
   const refused = <R extends CascadeRefusal<string, string> & Readonly<Record<Exclude<keyof R, 'ref'>, string>>>(
     refusals: readonly R[], branches: Readonly<Record<R['reason'], Branch>>,
   ): void => {
     for (const { reason, ref, ...params } of refusals) {
-      push('refused', branches[reason as R['reason']], params as unknown as LineageParams, [ref]);
+      push(branches[reason as R['reason']], params as unknown as LineageParams, [ref]);
     }
   };
   const none = {} as Record<string, never>;

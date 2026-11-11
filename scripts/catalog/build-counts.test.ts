@@ -1,26 +1,22 @@
 import { describe, it, expect } from 'vitest';
 import { emptyTallyPartition } from '../util/counts/tally-pure';
+import { LINEAGE_STAGES } from './lineage/lineage-stages';
 import {
+  CATALOG_COUNT_STAGES,
   compareBuildCounts,
   compareCountSnapshot,
   driftedRows,
   formatCountDiff,
   formatPartition,
   spectralSimbadPartitionError,
-  type BuildCounts,
+  type FiledCounts,
 } from './build-counts';
 import { RECURATED_BRIGHTNESS } from './companions/companion-promotion';
 import { DIST_VIA_VALUES } from '../../src/catalog-format/record/catalog-pure';
 
-function baseCounts(): BuildCounts {
+function baseCounts(): FiledCounts {
   return {
     recordCount: 313242,
-    systemCoherenceSystems: 0,
-    systemCoherenceRepositioned: 0,
-    systemCoherenceMemberAnchorWins: 0,
-    systemCoherenceSignificantDepthKept: 0,
-    systemCoherenceAnchorInconsistent: 0,
-    systemCoherenceMemberAnchorPrecisionVetoed: 0,
     binaryPairs: 100,
     binaryMutualPairs: 50,
     gcvsEntries: 60000,
@@ -227,14 +223,14 @@ function baseCounts(): BuildCounts {
 
 // Scalar keys contribute one diff row; a partition key contributes one per
 // bucket.
-function expectedDiffRows(counts: BuildCounts): number {
+function expectedDiffRows(counts: FiledCounts): number {
   return Object.values(counts).reduce<number>(
     (n, v) => n + (typeof v === 'number' ? 1 : Object.keys(v).length),
     0,
   );
 }
 
-function drifted(expected: BuildCounts, actual: BuildCounts) {
+function drifted(expected: FiledCounts, actual: FiledCounts) {
   return driftedRows(compareBuildCounts(expected, actual));
 }
 
@@ -287,7 +283,7 @@ describe('compareBuildCounts', () => {
   it('flags a new count the snapshot has no entry for', () => {
     const expected = baseCounts();
     const actual = baseCounts();
-    delete (expected as Partial<BuildCounts>).gcvsMatched;
+    delete (expected as Partial<FiledCounts>).gcvsMatched;
     expect(drifted(expected, actual)).toEqual([
       { key: 'gcvsMatched', status: 'absent-from-snapshot', actual: actual.gcvsMatched },
     ]);
@@ -296,7 +292,7 @@ describe('compareBuildCounts', () => {
   it('flags a count present in the snapshot but absent from the build', () => {
     const expected = baseCounts();
     const actual = baseCounts();
-    delete (actual as Partial<BuildCounts>).gcvsMatched;
+    delete (actual as Partial<FiledCounts>).gcvsMatched;
     expect(drifted(expected, actual)).toEqual([
       { key: 'gcvsMatched', status: 'absent-from-build', expected: expected.gcvsMatched },
     ]);
@@ -314,7 +310,7 @@ describe('compareBuildCounts', () => {
   });
 
   it('names a snapshot count that is null rather than a number', () => {
-    const expected = { ...baseCounts(), gcvsMatched: null } as unknown as BuildCounts;
+    const expected = { ...baseCounts(), gcvsMatched: null } as unknown as FiledCounts;
     expect(() => compareBuildCounts(expected, baseCounts()))
       .toThrow('count gcvsMatched is null, not a number or a partition');
   });
@@ -322,7 +318,7 @@ describe('compareBuildCounts', () => {
   it('lists snapshot-only rows after the actual rows', () => {
     const expected = baseCounts();
     const actual = baseCounts();
-    delete (actual as Partial<BuildCounts>).recordCount;
+    delete (actual as Partial<FiledCounts>).recordCount;
     const keys = compareBuildCounts(expected, actual).map((d) => d.key);
     expect(keys.at(-1)).toBe('recordCount');
   });
@@ -388,10 +384,19 @@ describe('formatCountDiff', () => {
   it('says "absent from build" for a count the build stopped producing', () => {
     const expected = baseCounts();
     const actual = baseCounts();
-    delete (actual as Partial<BuildCounts>).gcvsMatched;
+    delete (actual as Partial<FiledCounts>).gcvsMatched;
     const out = formatCountDiff(compareBuildCounts(expected, actual));
     expect(out).toMatch(/1 of \d+ counts differ/);
     expect(out).toMatch(/gcvsMatched\s+expected 3677, absent from build/);
+  });
+});
+
+describe('CATALOG_COUNT_STAGES', () => {
+  it('orders its lineage stages as LINEAGE_STAGES does', () => {
+    const lineageOrder = LINEAGE_STAGES.map((s) => s.spec.stage);
+    const filed = CATALOG_COUNT_STAGES.filter((stage) => (lineageOrder as readonly string[]).includes(stage));
+    expect(filed).toEqual(lineageOrder.filter((stage) => (filed as readonly string[]).includes(stage)));
+    expect(filed.length).toBeGreaterThan(1);
   });
 });
 
@@ -403,7 +408,7 @@ describe('compareCountSnapshot', () => {
   it('drifts on a count missing from either side', () => {
     const full = baseCounts();
     const short = baseCounts();
-    delete (short as Partial<BuildCounts>).gcvsMatched;
+    delete (short as Partial<FiledCounts>).gcvsMatched;
     expect(compareCountSnapshot(full, short).drifted).toBe(true);
     expect(compareCountSnapshot(short, full).drifted).toBe(true);
   });
@@ -421,6 +426,18 @@ describe('compareCountSnapshot', () => {
     const diff = compareBuildCounts<object>(staged, moved);
     expect(driftedRows(diff)).toEqual([{ key: 'tiers.a', status: 'moved', value: 1, from: 'filter', to: 'read' }]);
     expect(formatCountDiff(diff)).toContain('tiers.a 1 moved from stage filter to read');
+  });
+
+  it('drifts on a stage whose input went absent as one row, not a row per count it held', () => {
+    const counted = { stages: { read: { rows: 3 }, filter: { kept: 2, tiers: { a: 1 } } } };
+    const absent = { stages: { read: { rows: 3 }, filter: 'absent' } };
+    expect(driftedRows(compareBuildCounts<object>(counted, absent)))
+      .toEqual([{ key: 'filter', status: 'absent-input', side: 'build' }]);
+    expect(driftedRows(compareBuildCounts<object>(absent, counted)))
+      .toEqual([{ key: 'filter', status: 'absent-input', side: 'snapshot' }]);
+    expect(formatCountDiff(compareBuildCounts<object>(counted, absent)))
+      .toContain("filter stage's input is absent from the build, counted in the snapshot");
+    expect(compareCountSnapshot<object>(absent, absent).drifted).toBe(false);
   });
 });
 

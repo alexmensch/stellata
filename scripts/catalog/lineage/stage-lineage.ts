@@ -17,7 +17,8 @@ import {
 import { readStageHeader, stageEmission, stageProvenance, streamLineage } from './lineage-io';
 import { invariantCheck, invariantViolations, type LineageInvariant } from './lineage-invariant-pure';
 import { phaseClock } from './phase-clock-pure';
-import { sortLineageLines, type LineageLine } from './lineage-row-pure';
+import { foldStageLines, sortLineageLines, type LineageLine } from './lineage-row-pure';
+import type { StageCode, StageCodes } from './reason-codes/reason-codes-pure';
 import {
   stageFile, stageFileName, type LineageLayout, type StageLineageSpec, type StageOutputKey,
 } from '../../../src/catalog-format/pipeline-outputs/lineage-files';
@@ -195,4 +196,21 @@ export function stageLineage<F extends string, S extends string>(
     : { kind: 'pass', report: measured },
     ...invariantChecks];
   return { files, members, checks, changes };
+}
+
+/** stageLineage, plus the stage's count block folded from the same lines inside the timed window. See README.md#counts-fold-from-lineage. */
+export function countedStageLineage<F extends string, S extends string, B extends string, L extends B>(
+  run: StageLineageRun<F, S>, codes: StageCodes<B, S, L>,
+): StageLineageEmission<F, S> & { readonly counts: Readonly<Record<StageCode<S, L>, number>> } {
+  let counts: Record<StageCode<S, L>, number> | undefined;
+  const emission = stageLineage({
+    ...run,
+    lines: () => {
+      const lines = run.lines();
+      counts = foldStageLines(codes, lines);
+      return lines;
+    },
+  });
+  if (counts === undefined) throw new Error(`lineage: ${run.spec.stage}'s lines were never produced, so nothing was counted`);
+  return { ...emission, counts };
 }

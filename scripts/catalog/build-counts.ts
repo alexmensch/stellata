@@ -5,10 +5,11 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 import type { DistVia } from '../../src/catalog-format/record/catalog-pure.ts';
-import { flattenStages, stageOfCounts } from '../util/counts/count-stages-pure.ts';
+import { absentStages, flattenStages, stageOfCounts } from '../util/counts/count-stages-pure.ts';
 import { REPO_ROOT } from '../util/paths.ts';
 import type { RvErrorBandPartition } from './distance/radial-velocity/radial-velocity.ts';
 import type { RecuratedBrightness } from './companions/companion-promotion.ts';
+import type { CoherenceCounts } from './multiplicity/coherence-lineage-pure.ts';
 
 /** Repo-relative path of the snapshot `BuildCounts` is pinned against, so the
  *  build and every consumer that reads the shipped figures back resolve one
@@ -20,7 +21,11 @@ export function committedBuildCounts(): BuildCounts {
   return flattenStages(JSON.parse(readFileSync(resolve(REPO_ROOT, BUILD_COUNTS_EXPECTED_FILE), 'utf8'))) as BuildCounts;
 }
 
-export interface BuildCounts {
+/** Every count the snapshot holds, by name: the filed counts and each composed stage's block. */
+export type BuildCounts = FiledCounts & CoherenceCounts;
+
+/** The counts of the stages not yet composed of a count block, each filed under its stage by CATALOG_COUNT_STAGE. */
+export interface FiledCounts {
   /** Records written to catalog.bin after filtering and sort. */
   recordCount: number;
   /** `inferBinaries` companion assignments. */
@@ -218,26 +223,6 @@ export interface BuildCounts {
   ciSpectralDerived: number;
   /** Records no tier covers, taking `SOLAR_BV_FALLBACK`. */
   ciSolarFallback: number;
-  /** WDS systems with ≥2 distinct own-record members walked by the
-   *  intra-system radial-coherence pass (system-coherence.ts). */
-  systemCoherenceSystems: number;
-  /** Own-record members moved to their system's anchor distance along
-   *  their own direction (radial gap not a ≥3σ measurement). */
-  systemCoherenceRepositioned: number;
-  /** Systems whose distance anchor was a non-primary member (a clean
-   *  unsaturated Gaia 5p member outranking a saturated primary). */
-  systemCoherenceMemberAnchorWins: number;
-  /** Members whose radial gap IS a ≥3σ measurement — genuinely measured
-   *  depth kept (α Cen–Proxima, 61 Cyg A/B). */
-  systemCoherenceSignificantDepthKept: number;
-  /** Systems skipped because the anchor's rendered catalog distance
-   *  contradicts its own parallax evidence (μ¹ Sco's B-J placement of
-   *  a RUWE-corrupted source at 1.7 kpc) — members keep their own. */
-  systemCoherenceAnchorInconsistent: number;
-  /** Member-anchor wins vetoed because the member displacing the pair
-   *  primary carries no trusted fit as precise as the primary's — tier
-   *  ranks provenance, and the placement moved is the primary's. */
-  systemCoherenceMemberAnchorPrecisionVetoed: number;
   /** Pair rows in multiples.tsv scanned by the companion-promotion pass
    *  (excludes standalone rows). */
   companionRowsScanned: number;
@@ -673,14 +658,15 @@ export interface BuildCounts {
   crossIndexUnknownCst: number;
 }
 
+/** The snapshot's stage order, the build's pipeline order; its lineage stages keep LINEAGE_STAGES' order. */
 export const CATALOG_COUNT_STAGES = [
-  'inputs', 'placement', 'desigCon', 'naming', 'coherence', 'promotion',
-  'multiplicity', 'gcvs', 'records', 'search', 'boundaries', 'figures',
+  'inputs', 'placement', 'brightness-colour', 'desigCon', 'coherence', 'promotion',
+  'multiplicity', 'gcvs', 'naming', 'records', 'search', 'boundaries', 'figures',
 ] as const;
 export type CatalogCountStage = (typeof CATALOG_COUNT_STAGES)[number];
 
-/** The stage each count is filed under in the snapshot: the step that computes it. */
-export const CATALOG_COUNT_STAGE: Readonly<Record<keyof BuildCounts, CatalogCountStage>> = {
+/** The stage each filed count sits under in the snapshot: the step that computes it. */
+export const CATALOG_COUNT_STAGE: Readonly<Record<keyof FiledCounts, CatalogCountStage>> = {
   bjEntries: 'inputs',
   apsisEntries: 'inputs',
   gspcEntries: 'inputs',
@@ -806,12 +792,6 @@ export const CATALOG_COUNT_STAGE: Readonly<Record<keyof BuildCounts, CatalogCoun
   namingDuplicateLabels: 'naming',
   namingDuplicateRecords: 'naming',
   nameTableEntries: 'naming',
-  systemCoherenceSystems: 'coherence',
-  systemCoherenceRepositioned: 'coherence',
-  systemCoherenceMemberAnchorWins: 'coherence',
-  systemCoherenceSignificantDepthKept: 'coherence',
-  systemCoherenceAnchorInconsistent: 'coherence',
-  systemCoherenceMemberAnchorPrecisionVetoed: 'coherence',
   companionRowsScanned: 'promotion',
   companionPromoted: 'promotion',
   companionPromotedSynthetic: 'promotion',
@@ -890,7 +870,9 @@ export type CountDiff =
   | { key: string; status: 'mismatch'; expected: number; actual: number }
   | { key: string; status: 'moved'; value: number; from: string; to: string }
   | { key: string; status: 'absent-from-snapshot'; actual: number }
-  | { key: string; status: 'absent-from-build'; expected: number };
+  | { key: string; status: 'absent-from-build'; expected: number }
+  /** A stage one side records as absent (its input was missing) and the other counted; `key` is the stage. */
+  | { key: string; status: 'absent-input'; side: 'build' | 'snapshot' };
 
 /** Staged snapshots: ../util/counts/README.md.
  *  Partition-valued entries (a `Record<tier, number>`) expand to one
@@ -910,19 +892,25 @@ export function compareBuildCounts<T extends object>(
   const a = flattenCounts(actual);
   const eStage = stageOfCounts(expected);
   const aStage = stageOfCounts(actual);
+  const eAbsent = absentStages(expected);
+  const aAbsent = absentStages(actual);
   const diff: CountDiff[] = [];
   for (const [key, { n: av, count }] of a) {
     const ev = e.get(key)?.n;
     const from = eStage?.get(count);
     const to = aStage?.get(count);
+    if (ev === undefined && to !== undefined && eAbsent.has(to)) continue;
     if (ev === undefined) diff.push({ key, status: 'absent-from-snapshot', actual: av });
     else if (ev !== av) diff.push({ key, status: 'mismatch', expected: ev, actual: av });
     else if (from !== undefined && to !== undefined && from !== to) diff.push({ key, status: 'moved', value: av, from, to });
     else diff.push({ key, status: 'match', value: av });
   }
-  for (const [key, { n: ev }] of e) {
-    if (!a.has(key)) diff.push({ key, status: 'absent-from-build', expected: ev });
+  for (const [key, { n: ev, count }] of e) {
+    const from = eStage?.get(count);
+    if (!a.has(key) && !(from !== undefined && aAbsent.has(from))) diff.push({ key, status: 'absent-from-build', expected: ev });
   }
+  for (const stage of aAbsent) if (!eAbsent.has(stage)) diff.push({ key: stage, status: 'absent-input', side: 'build' });
+  for (const stage of eAbsent) if (!aAbsent.has(stage)) diff.push({ key: stage, status: 'absent-input', side: 'snapshot' });
   return diff;
 }
 
@@ -974,6 +962,9 @@ export function formatCountDiff(diff: CountDiff[]): string {
         break;
       case 'moved':
         lines.push(`${label} ${d.value} moved from stage ${d.from} to ${d.to}`);
+        break;
+      case 'absent-input':
+        lines.push(`${label} stage's input is absent from the ${d.side}, counted in the ${d.side === 'build' ? 'snapshot' : 'build'}`);
         break;
       case 'mismatch': {
         const delta = d.actual - d.expected;
