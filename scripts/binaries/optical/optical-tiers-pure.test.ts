@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { AU_PER_PC, KM_S_PER_AU_YR } from '../../../src/astro-core/astronomy-constants';
+import { AU_PER_PC } from '../../../src/astro-core/astronomy-constants';
 import { hip2AstrometryRow } from '../../catalog/sources/hip2-fixture';
 import { wdsPair } from '../../wds/wds-fixture';
 import type { WdsPair } from '../../wds/wds-pure';
@@ -14,7 +14,7 @@ import type { OrbitElements } from '../orbits/nss-elements-pure';
 import type { DecomposedPair } from '../resolve/components-pure';
 import { decomposed, indices } from '../resolve/resolve-fixture';
 import {
-  bothGaiaVerdict, classifyPairOptical, cpmBaselineVerdict, escapeVelocityKmS, OPTICAL_REJECT_VIA,
+  bothGaiaVerdict, CIRCULAR_KM_S_1AU_1MSUN, classifyPairOptical, cpmBaselineVerdict, escapeVelocityKmS, OPTICAL_REJECT_VIA,
   pairBeyondSeparationLimit, separationAu, separationExceedsLimit, transverseVelocityKmS, type PairContext,
 } from './optical-tiers-pure';
 import { orbitalPmBudgetKmS } from './pm-budget-pure';
@@ -275,7 +275,7 @@ describe('orbitalPmBudgetKmS', () => {
   const ANCHOR_PLX = 21.2;
 
   it('sums the tighter sub-pairs the components host, a sub-pair Gaia averages out contributing nothing', () => {
-    const expected = 2.0 * Math.PI * KM_S_PER_AU_YR * Math.sqrt(1.6 / (3.4 * (1000.0 / ANCHOR_PLX)));
+    const expected = CIRCULAR_KM_S_1AU_1MSUN * Math.sqrt(1.6 / (3.4 * (1000.0 / ANCHOR_PLX)));
     expect(orbitalPmBudgetKmS(ac, [ac, ab, aaAb], orbits, masses, ANCHOR_PLX)).toBeCloseTo(expected, 6);
   });
 
