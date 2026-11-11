@@ -94,12 +94,10 @@ via a seven-tier priority chain:
    pair, never a wrong star.
 
    **Which namespace found each SIMBAD-tier row is the authority on what
-   each tier wins**, pinned as `spectralSimbadBySourceId` / `ByHip` /
-   `ByTyc` / `ByGj` in `../build-catalog-expected.json` and summing to
-   `spectralBySimbad` — so a tier that stops firing shows up as its own
-   count rather than as noise inside a <!-- count:build-catalog/spectralBySimbad k2 -->460k<!-- /count --> total. Read the per-tier figures
-   there rather than restating them here, which is how the ones this section
-   used to carry went stale.
+   each tier wins**: the row's code is `spectral.simbad.source-id` / `hip` /
+   `gj` / `tyc`, each a key in `../build-catalog-expected.json` — so a tier
+   that stops firing shows up as its own count rather than as noise inside
+   the SIMBAD total. Read the per-tier figures there.
 5. **Gaia DR3 ESP-ELS `spectraltype_esphs`** ([Creevey 2023](/data/papers/index.md#creevey2023); a column on
    `data/gaia/gaia_dr3_apsis.tsv`, keyed by source_id). Letter-only enum;
    `classifyFromGspspec` (same module) maps each letter to an `mk` class
@@ -110,7 +108,8 @@ via a seven-tier priority chain:
 `resolveSpectralInfo` returns the shared cascade shape
 (`CascadeResult`, `../cascade-result.ts`) over `SPECTRAL_VIA_VALUES` —
 `curated`, `simbad` (with the namespace that found it), `gspspec`, `none` — the
-tuple the walk tallies `spectralBy*` over. A typed SIMBAD or ESP-ELS row it
+tuple the brightness-colour stage codes it by
+(`../photometry/README.md#brightness-colour-lineage`). A typed SIMBAD or ESP-ELS row it
 reaches and does not take is a refusal on the result:
 `gaia_id_contradicts` ([below](#a-stated-gaia-id-the-record-contradicts-ends-the-walk))
 or `unclassifiable`, a SIMBAD one naming the namespace that reached it. Answer
@@ -119,8 +118,9 @@ its HIP, an ESP-ELS type by its Apsis row; a curated record's own type cites
 none.
 
 AT-HYG's contaminated `spect` cell is no longer consulted for
-classification (build-counts over the walked records: SIMBAD
-**<!-- count:build-catalog/spectralBySimbad -->464,424<!-- /count -->** / ESP-ELS **<!-- count:build-catalog/spectralByGspspec -->494,467<!-- /count -->** / `none` **<!-- count:build-catalog/spectralFallback -->6,065<!-- /count -->**); it is still used as a
+classification (the brightness-colour count block over the walked records:
+SIMBAD by Gaia id **<!-- count:build-catalog/brightness-colour.spectral.simbad.source-id -->457,498<!-- /count -->**, the rest of SIMBAD under its other three
+namespace codes, ESP-ELS **<!-- count:build-catalog/brightness-colour.spectral.gspspec -->494,467<!-- /count -->** / `none` **<!-- count:build-catalog/brightness-colour.spectral.none -->6,065<!-- /count -->**); it is still used as a
 last-resort hover-display fallback when both upstream sources are blank.
 
 The class it resolves feeds the radius chain:

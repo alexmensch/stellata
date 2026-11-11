@@ -17,6 +17,7 @@ import {
 const snapshots = new Map<string, unknown>([
   ['membership-manifest', { rows: 975573, bindingByClass: { none: 1977 }, additionsByReason: { 'admitted:hd_omitted': 5063 } }],
   ['build-binaries-rates', { share: 0.125, label: 'x' }],
+  ['build-catalog', { 'stage.v.none': 637, stage: { v: { none: 1 } }, 'stage.ci': { none: 9 } }],
 ]);
 
 const mark = (key: string, body: string, format = '') =>
@@ -76,6 +77,12 @@ describe('resolveFigure', () => {
       ok: true,
       value: 5063,
     });
+  });
+
+  it('takes a key holding dots as one step, the longest such key first', () => {
+    expect(resolveFigure('build-catalog/stage.v.none', snapshots)).toEqual({ ok: true, value: 637 });
+    expect(resolveFigure('build-catalog/stage.ci.none', snapshots)).toEqual({ ok: true, value: 9 });
+    expect(resolveFigure('build-catalog/stage.v.gone', snapshots).ok).toBe(false);
   });
 
   it('names what is missing rather than yielding a number', () => {

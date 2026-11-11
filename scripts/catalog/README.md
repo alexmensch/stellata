@@ -189,8 +189,9 @@ scripts/catalog/
                                   The file is staged
                                   (../util/counts/README.md#the-staged-snapshot):
                                   BuildCounts is FiledCounts plus each
-                                  composed stage's count block (coherence's
-                                  so far); CATALOG_COUNT_STAGE files each
+                                  composed stage's count block
+                                  (brightness-colour's and coherence's so
+                                  far); CATALOG_COUNT_STAGE files each
                                   filed count under the step that computes
                                   it, typed over every FiledCounts key, so
                                   a new one without a stage fails to
@@ -256,7 +257,8 @@ consumers:
   build: a measured B−V from `photometry/`'s three-tier cascade, or the
   intrinsic spectral-class colour `spectralClassCi`
   (`/src/catalog-format/spectral/physical-radius.ts`) derives when a no-Apsis star has no
-  measured B−V but a parseable class (`ciSpectralDerived` in build-counts),
+  measured B−V but a parseable class (`brightness-colour.ci.spectral-derived`
+  in the brightness-colour count block),
   else the solar fallback.
 - **Spectral classification fall-through** — ESP-ELS's
   `spectraltype_esphs` enum is the tier above `SPECTRAL_UNKNOWN` in
