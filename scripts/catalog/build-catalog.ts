@@ -5,10 +5,6 @@ import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import {
-  FLAG_BINARY_PRIMARY,
-  VAR_TYPE_ECLIPSING,
-  encodeAmpUnits,
-  encodePeriodUnits,
   HEADER_SIZE,
   RECORD_SIZE,
   BINARY_VERSION,
@@ -16,9 +12,6 @@ import {
   NO_GAIA_SOURCE_ID,
   NO_APSIS,
   NO_CONSTELLATION_INDEX,
-  MULTIPLICITY_SINGLE,
-  MULTIPLICITY_RESOLVED,
-  MULTIPLICITY_UNRESOLVED,
   APSIS_FIELDS,
   type ApsisField,
   writeStarRecord,
@@ -27,15 +20,19 @@ import {
   catalogChunkFilename,
   planCatalogChunks,
   recordsInChunkPrefix,
-  buildSearchEntry,
-  type SearchEntry,
   type CatalogManifest,
   DIST_VIA_VALUES,
+  SOL_RECORD_INDEX,
 } from '../../src/catalog-format/record/catalog-pure';
 import { encodeSpectralBytes } from '../../src/catalog-format/spectral/spectral-record-bytes';
-import { buildHipToIndex, inferBinaries } from './multiplicity/binary-flags-pure';
+import { buildHipToIndex, inferBinaries, wingEclipsingBinaries } from './multiplicity/binary-flags-pure';
+import {
+  multiplicityStatuses, multiplicitySummary, type MultiplicityCounts,
+} from './multiplicity/multiplicity-stage-pure';
 import { SIMBAD_OTYPE_MULTIPLE } from './spectral/spectral-resolve';
-import { apparentVFromSol, solRecordIndex } from './record/record-order-pure';
+import { apparentVFromSol, assertSolFirst } from './record/record-order-pure';
+import { buildSearchIndex, searchIndexSummary } from './record/search-index-pure';
+import { apsisCoverageSummary, recordsCounts, variabilityUnits } from './record/records-stage-pure';
 import { avSolToStar } from './distance/dust/dust-deextinction-pure';
 import {
   orbitChainExemption, overlapLabel, physicalOverlaps,
@@ -62,8 +59,10 @@ import {
   CONSTELLATIONS,
   assertFigureVerticesInFirstChunk,
   buildFigureLines,
+  figuresCounts,
+  figuresSummary,
 } from './parse/constellations/constellations';
-import { renderBoundaryArtifact } from './boundaries/build-boundaries-artifact';
+import { boundaryArtifactSummary, renderBoundaryArtifact } from './boundaries/build-boundaries-artifact';
 import {
   applyDoublesFlag,
   collectPhysicalPairKeys,
@@ -107,6 +106,7 @@ import {
 import {
   bridgeGcvsByGaia,
   applyVariability,
+  gcvsSummary,
 } from './parse/gcvs/gcvs-parse';
 import { VELOCITY_SANITY_CEILING_KM_S, GALACTIC_ESCAPE_VELOCITY_KM_S } from './distance/velocity';
 import { RV_ERROR_BANDS } from './distance/radial-velocity/radial-velocity';
@@ -302,34 +302,7 @@ export async function main() {
   sweepStaged(CATALOG_OUTPUTS);
   const inputHashesAtStart = stepInputHashes();
 
-  // Accumulator for the headline counts asserted against
-  // scripts/catalog/build-catalog-expected.json at the end of the
-  // build. Every field has a default so a code path that legitimately
-  // skips a section (missing GCVS files) doesn't leave the
-  // field undefined.
-  const counts: Omit<FiledCounts, 'solIndex'> = {
-    recordCount: 0,
-    binaryPairs: 0,
-    binaryMutualPairs: 0,
-    gcvsEntries: 0,
-    gcvsHipXrefs: 0,
-    gcvsHdXrefs: 0,
-    gcvsGaiaXrefs: 0,
-    gcvsMatched: 0,
-    gcvsMatchedByGaia: 0,
-    gcvsMatchedByHip: 0,
-    gcvsMatchedByHd: 0,
-    gcvsNamed: 0,
-    ccdmGroups: 0,
-    ccdmResolved: 0,
-    ccdmFlagged: 0,
-    recordsInFirstChunk: 0,
-    ccdmSuppressedOptical: 0,
-    eclipsingWinged: 0,
-    renderableCompanionWinged: 0,
-    multiplicityResolved: 0,
-    multiplicityUnresolved: 0,
-    componentDesignations: 0,
+  const counts: FiledCounts = {
     namingIauNamed: 0,
     namingIauNamedByProper: 0,
     namingIauUnreached: 0,
@@ -361,33 +334,13 @@ export async function main() {
     namingDuplicateRecords: 0,
     desigConFromCrossIndex: 0,
     crossIndexUnknownCst: 0,
-    bjEntries: 0,
     bjEligible: 0,
     bjOverridden: 0,
-    apsisSourcesUnpulled: 0,
-    gspcSourcesUnpulled: 0,
     lmcCandidates: 0,
     lmcOverridden: 0,
     lmcParallaxRefusedByDistVia: emptyTallyPartition(DIST_VIA_VALUES),
     lmcOverriddenByDistVia: emptyTallyPartition(DIST_VIA_VALUES),
     nameTableEntries: 0,
-    variableCount: 0,
-    searchEntries: 0,
-    designationConMismatch: 0,
-    gcvsDesignationCon: 0,
-    boundarySegments: 0,
-    boundaryDirections: 0,
-    boundaryRegionRuns: 0,
-    boundaryArtifactKb: 0,
-    figureCount: 0,
-    figureConstellations: 0,
-    gaiaSourceIdResolved: 0,
-    apsisEntries: 0,
-    gspcEntries: 0,
-    apsisMatched: 0,
-    apsisTeffEither: 0,
-    simbadSptypeEntries: 0,
-    simbadValuesEntries: 0,
     companionRowsScanned: 0,
     companionPromoted: 0,
     companionPromotedSynthetic: 0,
@@ -421,18 +374,6 @@ export async function main() {
     companionExistingDesigConFromAnchor: 0,
     companionExistingMemberRecurated: emptyTallyPartition(RECURATED_BRIGHTNESS),
     companionExistingViaSameasBridge: 0,
-    gaiaAstrometryEntries: 0,
-    hip2Entries: 0,
-    hipVMagEntries: 0,
-    hipBvEntries: 0,
-    nssSourceIdEntries: 0,
-    tycho2Entries: 0,
-    cns5AstrometryEntries: 0,
-    glieseEntries: 0,
-    pairMemberParallaxEntries: 0,
-    pairMemberSiblingNoParallax: 0,
-    pairMemberSiblingNotAnchorGrade: 0,
-    pairMemberSiblingBelowSnFloor: 0,
     distBailerJones: 0,
     distLmcKinematic: 0,
     distGaiaDr3Inversion: 0,
@@ -487,9 +428,8 @@ export async function main() {
   const inputs = await loadReadStarsInputs();
   const {
     bailerJones, apsisMap, simbadSpectral, directions,
-    dustGrid, conAssignment, sizes,
+    dustGrid, conAssignment,
   } = inputs;
-  Object.assign(counts, sizes);
 
   console.log(`Reading ${MEMBERSHIP_MANIFEST.file}...`);
   const t0 = Date.now();
@@ -582,8 +522,6 @@ export async function main() {
     );
   }
   const simbadSourcedDistances = simbadSourcedDistancesTsv(stars);
-  // recordCount is the final post-promotion count; populated after the
-  // companion-promotion pass below.
   counts.bjEligible = stats.bjEligible;
   counts.bjOverridden = stats.bjOverridden;
   counts.distLowPrecisionParallax = stats.distLowPrecisionParallax;
@@ -751,8 +689,6 @@ export async function main() {
   counts.companionExistingMemberRecurated = ps.existingMemberRecurated;
   counts.companionExistingViaSameasBridge = ps.existingViaSameasBridge;
 
-  counts.recordCount = stars.length;
-
   // Sort by apparent V from Sol ascending (brightest-looking first), so any
   // prefix of the record array is a usable sky and the transport chunks can
   // stream one (/src/catalog-format/record/README.md#record-order). Record indices are final
@@ -770,7 +706,7 @@ export async function main() {
   const order = Array.from(stars.keys()).sort((a, b) => sortKey[a] - sortKey[b]);
   const sorted = order.map((i) => stars[i]);
   for (let i = 0; i < sorted.length; i++) stars[i] = sorted[i];
-  const solIndex = solRecordIndex(stars);
+  assertSolFirst(stars);
 
   const hipToIndex = buildHipToIndex(stars);
 
@@ -780,12 +716,8 @@ export async function main() {
   // Geometric binary inference.
   console.log('Inferring binary/multiple systems...');
   const tBin = Date.now();
-  const binStats = inferBinaries(stars);
-  console.log(
-    `  ${binStats.pairs} companion assignments, ${binStats.mutualPairs} mutual pairs in ${Date.now() - tBin}ms`,
-  );
-  counts.binaryPairs = binStats.pairs;
-  counts.binaryMutualPairs = binStats.mutualPairs;
+  const binaries = inferBinaries(stars);
+  console.log(`  in ${Date.now() - tBin}ms`);
 
   // GCVS variable-star cross-match. xref.byGaia is bridged from byHip via
   // gaia_dr3_hip_xmatch.tsv, so records that carry a gaia_source_id but no
@@ -801,24 +733,8 @@ export async function main() {
   );
   bridgeGcvsByGaia(xref, hipToGaia);
 
-  const m = applyVariability(stars, gcvsData, xref);
-  console.log(
-    `  ${gcvsData.size} GCVS entries, ${xref.byHip.size} Hip + ` +
-      `${xref.byHd.size} HD + ${xref.byGaia.size} Gaia xrefs, ` +
-      `${m.named} named for search (${m.matched} with a renderable period: ` +
-      `gaia=${m.matchedByGaia}, hip=${m.matchedByHip}, hd=${m.matchedByHd}) ` +
-      `in ${Date.now() - tGcvs}ms`,
-  );
-  counts.gcvsEntries = gcvsData.size;
-  counts.gcvsHipXrefs = xref.byHip.size;
-  counts.gcvsHdXrefs = xref.byHd.size;
-  counts.gcvsGaiaXrefs = xref.byGaia.size;
-  counts.gcvsMatched = m.matched;
-  counts.gcvsMatchedByGaia = m.matchedByGaia;
-  counts.gcvsMatchedByHip = m.matchedByHip;
-  counts.gcvsMatchedByHd = m.matchedByHd;
-  counts.gcvsNamed = m.named;
-  counts.gcvsDesignationCon = m.desigConSupplied;
+  const gcvsCounts = applyVariability(stars, gcvsData, xref);
+  console.log(`  ${gcvsSummary(gcvsCounts)} in ${Date.now() - tGcvs}ms`);
 
   // Hipparcos CCDM double-star cross-match. Marks a primary on
   // the same FLAG_BINARY_PRIMARY bit the geometric pass uses, picking
@@ -827,51 +743,16 @@ export async function main() {
   console.log('Parsing Hipparcos CCDM double-star cross-reference...');
   const tCcdm = Date.now();
   const ccdmGroups = HIP_CCDM.read();
-  const { systems, flagged, suppressed } = applyDoublesFlag(
-    stars,
-    ccdmGroups,
-    hipToIndex,
-    collectPhysicalPairKeys(multiplesRows),
-  );
-  console.log(
-    `  ${ccdmGroups.size} CCDM systems → ${systems} resolved in catalog, ${flagged} new primaries flagged, ${suppressed} suppressed as optical doubles in ${Date.now() - tCcdm}ms`,
-  );
-  counts.ccdmGroups = ccdmGroups.size;
-  counts.ccdmResolved = systems;
-  counts.ccdmFlagged = flagged;
-  counts.ccdmSuppressedOptical = suppressed;
+  const ccdm = applyDoublesFlag(stars, ccdmGroups, hipToIndex, collectPhysicalPairKeys(multiplesRows));
+  console.log(`  in ${Date.now() - tCcdm}ms`);
 
-  // Reuse FLAG_BINARY_PRIMARY (the wings bit) for every varType ==
-  // ECLIPSING record the geometric / CCDM passes didn't already flag —
-  // eclipsers surface as multi-star systems, not intrinsic-variable rings
-  // (see scripts/catalog/parse/gcvs/README.md).
-  // companionIdx stays unset where inference found no partner; the
-  // renderer guards on companionIdx >= 0, so a flagged-but-companionless
-  // primary is safe.
-  let eclipsingWinged = 0;
-  for (const s of stars) {
-    if (s.varType === VAR_TYPE_ECLIPSING && (s.flags & FLAG_BINARY_PRIMARY) === 0) {
-      s.flags |= FLAG_BINARY_PRIMARY;
-      eclipsingWinged++;
-    }
-  }
-  counts.eclipsingWinged = eclipsingWinged;
-  console.log(`  ${eclipsingWinged} eclipsing binaries flagged as multi-star (wings)`);
+  const eclipsing = wingEclipsingBinaries(stars);
 
   // Built here (not at the sidecar write below) so the wings pass resolves
   // multiples.tsv rows exactly as the runtime binaries loader will.
   const rowIndexMap = buildCatalogRowIndexMap(stars, synthGaiaBridges);
 
-  const { winged: renderableCompanionWinged, memberIndices } = wingRenderablePrimaries(
-    multiplesRows,
-    stars,
-    rowIndexMap,
-  );
-  const multiplesMemberIndices = memberIndices;
-  counts.renderableCompanionWinged = renderableCompanionWinged;
-  console.log(
-    `  ${renderableCompanionWinged} renderable-companion primaries flagged as multi-star (wings)`,
-  );
+  const { memberIndices, ...renderableWings } = wingRenderablePrimaries(multiplesRows, stars, rowIndexMap);
 
   const overlaps = physicalOverlaps(
     stars,
@@ -883,34 +764,16 @@ export async function main() {
     console.log(`    ${overlapLabel(stars[a], a)} | ${overlapLabel(stars[b], b)}`);
   }
 
-  const componentDesignations = buildComponentDesignations(multiplesRows, rowIndexMap);
-  counts.componentDesignations = componentDesignations.size;
-  console.log(
-    `  ${componentDesignations.size} component designations for "<system> <letter>" search`,
+  const { designations: componentDesignations, ...componentCount } = buildComponentDesignations(multiplesRows, rowIndexMap);
+  const statuses = multiplicityStatuses(
+    stars, memberIndices, (sourceId) => simbadSpectral.bySourceId.get(sourceId)?.otype === SIMBAD_OTYPE_MULTIPLE,
   );
-
-  // Per-record multiplicity status (v9): resolved = a multiples.tsv member
-  // row backs the record; unresolved = SIMBAD otype '**' by Gaia source_id
-  // with no resolved member row (spectroscopic binaries invisible to
-  // WDS/CCDM/NSS — 64 Vir).
-  const multiplicityStatus = new Uint8Array(stars.length);
-  for (const idx of multiplesMemberIndices) multiplicityStatus[idx] = MULTIPLICITY_RESOLVED;
-  for (let i = 0; i < stars.length; i++) {
-    if (multiplicityStatus[i] !== MULTIPLICITY_SINGLE) continue;
-    const srcId = stars[i].gaiaSourceId;
-    if (!srcId) continue;
-    if (simbadSpectral.bySourceId.get(srcId)?.otype === SIMBAD_OTYPE_MULTIPLE) {
-      multiplicityStatus[i] = MULTIPLICITY_UNRESOLVED;
-    }
-  }
-  counts.multiplicityResolved = multiplesMemberIndices.size;
-  counts.multiplicityUnresolved = multiplicityStatus.reduce(
-    (n, v) => n + (v === MULTIPLICITY_UNRESOLVED ? 1 : 0), 0,
-  );
-  console.log(
-    `  multiplicity: ${counts.multiplicityResolved} resolved, ` +
-      `${counts.multiplicityUnresolved} unresolved (SIMBAD '**', nothing resolved)`,
-  );
+  const multiplicityStatus = statuses.status;
+  const multiplicity: MultiplicityCounts = {
+    ...binaries, ...ccdm, ...eclipsing, ...renderableWings,
+    ...componentCount, ...statuses.counts,
+  };
+  console.log(`  ${multiplicitySummary(multiplicity)}`);
 
   const registry = loadRegistry();
   const sidObjects = catalogSidObjects(stars);
@@ -1012,40 +875,19 @@ export async function main() {
 
   // Records.
   const unclassifiedCon: number[] = [];
-  let variableCount = 0;
-  let gaiaSourceIdResolved = 0;
-  let apsisMatched = 0;
-  let apsisTeffEither = 0;
-  let apsisSourcesUnpulled = 0;
-  let gspcSourcesUnpulled = 0;
   for (let i = 0; i < stars.length; i++) {
     const s = stars[i];
-    // Variability: amplitude clamps at 12.75 mag (extreme Miras), period at
-    // 6553 days (rare long-period symbiotics). Period = 0 is the shader's
-    // "not variable" sentinel.
-    const isVariable = s.periodDays > 0 && s.amplitudeMag > 0;
-    const ampUnits = isVariable ? encodeAmpUnits(s.amplitudeMag) : 0;
-    const periodUnits = isVariable ? encodePeriodUnits(s.periodDays) : 0;
-    if (ampUnits > 0 && periodUnits > 0) variableCount++;
+    const { ampUnits, periodUnits } = variabilityUnits(s);
     // Gaia DR3 source_ids exceed Number.MAX_SAFE_INTEGER; parse the
     // manifest column as BigInt to preserve every bit before writing.
-    const gaiaSourceId = s.gaiaSourceId ? BigInt(s.gaiaSourceId) : NO_GAIA_SOURCE_ID;
-    if (gaiaSourceId !== NO_GAIA_SOURCE_ID) gaiaSourceIdResolved++;
+    const gaiaSourceId = s.gaiaSourceId !== null ? BigInt(s.gaiaSourceId) : NO_GAIA_SOURCE_ID;
 
     // Apsis lookup keyed by gaia_source_id string (BigInt key would
     // require a parallel string map). NO_APSIS (NaN) fills every cell
     // when the source_id is absent from the TSV or the row's cell is blank.
-    const apsisRow = s.gaiaSourceId ? apsisMap.get(s.gaiaSourceId) : undefined;
+    const apsisRow = s.gaiaSourceId !== null ? apsisMap.get(s.gaiaSourceId) : undefined;
     const apsis = {} as Record<ApsisField, number>;
     for (const name of APSIS_FIELDS) apsis[name] = apsisRow?.[name] ?? NO_APSIS;
-    if (apsisRow) apsisMatched++;
-    if (apsisRow && (apsisRow.teffGspphot !== null || apsisRow.teffGspspec !== null)) {
-      apsisTeffEither++;
-    }
-    if (s.gaiaSourceId) {
-      if (!apsisRow) apsisSourcesUnpulled++;
-      if (!inputs.gspcMap.has(s.gaiaSourceId)) gspcSourcesUnpulled++;
-    }
 
     writeStarRecord(view, off, {
       x: s.x, y: s.y, z: s.z,
@@ -1077,9 +919,9 @@ export async function main() {
   // the one record that has none — any other holder means an assignment path
   // was skipped, which surfaces downstream as a blank constellation row
   // rather than an error.
-  if (unclassifiedCon.length !== 1 || unclassifiedCon[0] !== solIndex) {
+  if (unclassifiedCon.length !== 1 || unclassifiedCon[0] !== SOL_RECORD_INDEX) {
     throw new Error(
-      `Expected Sol (record ${solIndex}) to be the only record without a `
+      `Expected Sol (record ${SOL_RECORD_INDEX}) to be the only record without a `
       + `constellation; got ${unclassifiedCon.length}: `
       + `${unclassifiedCon.slice(0, 10).join(', ')}`,
     );
@@ -1093,10 +935,11 @@ export async function main() {
   // What first paint actually gets. Pinned because it is the number the
   // progressive load's whole latency argument rests on, and it moves with
   // the name table's length as well as the chunk target.
-  counts.recordsInFirstChunk = recordsInChunkPrefix(
+  const recordsInFirstChunk = recordsInChunkPrefix(
     chunkBytes, 1, HEADER_SIZE + nameTableLength, stars.length,
   );
-  assertFigureVerticesInFirstChunk(figureLines, counts.recordsInFirstChunk);
+  assertFigureVerticesInFirstChunk(figureLines, recordsInFirstChunk);
+  const records = recordsCounts(stars, apsisMap, inputs.gspcMap, recordsInFirstChunk);
   // /src/catalog-format/record/README.md#on-disk-transport-chunking is measured from this line.
   const sortedKey = order.map((i) => sortKey[i]);
   const chunkRows = chunkBytes.map((_, i) => {
@@ -1135,31 +978,10 @@ export async function main() {
   // and measured over the shipped population, so this runs against the same
   // `stars` the binary was written from.
   const boundaries = renderBoundaryArtifact(stars, conAssignment.lookup);
-  counts.boundarySegments = boundaries.segments;
-  counts.boundaryDirections = boundaries.directions;
-  counts.boundaryRegionRuns = boundaries.regionRuns;
-  counts.boundaryArtifactKb = Math.round(boundaries.bytes / 1024);
-  const fade = boundaries.artifact.fade;
-  console.log(
-    `Built ${CATALOG_OUTPUTS.files.boundaries} (${boundaries.segments} arcs, `
-      + `${boundaries.directions} directions, `
-      + `${boundaries.artifact.labels.length} labels, `
-      + `${boundaries.regionRuns} region runs, `
-      + `${(boundaries.bytes / 1024).toFixed(1)} KB); fade window at `
-      + `V<=${fade.magLimits[fade.magLimits.length - 1]}: `
-      + fade.quantilePcts
-        .map((pct, j) => `${pct}%=${fade.offsetsPc[fade.offsetsPc.length - 1][j].toFixed(2)} pc`)
-        .join(', '),
-  );
+  console.log(`Built ${CATALOG_OUTPUTS.files.boundaries} ${boundaryArtifactSummary(boundaries)}`);
 
-  // Search index — one entry per star with at least one identifier the
-  // user might type. buildSearchEntry owns the wire shape (catalog-pure.ts).
-  const searchEntries: SearchEntry[] = [];
-  for (let i = 0; i < stars.length; i++) {
-    const entry = buildSearchEntry(stars[i], i, componentDesignations.get(i));
-    if (entry) searchEntries.push(entry);
-  }
-  const searchJson = JSON.stringify(searchEntries) + '\n';
+  const search = buildSearchIndex(stars, componentDesignations);
+  const searchJson = JSON.stringify(search.entries) + '\n';
 
   const rowIndexMapJson = serializeCatalogRowIndexSidecar(
     handedFileHash(inputHashesAtStart, MULTIPLES_TSV.file), rowIndexMap,
@@ -1170,43 +992,20 @@ export async function main() {
       `${Object.keys(rowIndexMap.bySynth).length} synthetic entries)`,
   );
 
-  const figureCount = [...figureLines.values()].reduce(
-    (n, arr) => n + arr.length,
-    0,
-  );
+  const figures = figuresCounts(figureLines);
   const mb = (totalLength / 1024 / 1024).toFixed(2);
   console.log(
     `Built ${chunkBytes.length} catalog chunk(s) + ${CATALOG_OUTPUTS.files.manifest} ` +
       `(${mb} MB, ${stars.length} records, v${BINARY_VERSION})`,
   );
   console.log(
-    `Built ${CATALOG_OUTPUTS.files.constellations} (${CONSTELLATIONS.length} constellations, ${figureCount} stick-figure polylines across ${figureLines.size})`,
+    `Built ${CATALOG_OUTPUTS.files.constellations} (${CONSTELLATIONS.length} constellations, ${figuresSummary(figures)})`,
   );
-  const searchMb = (Buffer.byteLength(searchJson) / 1024 / 1024).toFixed(2);
-  console.log(`Built ${CATALOG_OUTPUTS.files.searchIndex} (${searchEntries.length} searchable entries, ${searchMb} MB)`);
-  console.log(
-    `Sol at record index ${solIndex} (absmag=${stars[solIndex].absmag}, R=${stars[solIndex].physicalRadius.toFixed(3)} R☉)`,
-  );
+  console.log(`Built ${CATALOG_OUTPUTS.files.searchIndex} (${searchIndexSummary(search.counts, Buffer.byteLength(searchJson))})`);
+  const sol = stars[SOL_RECORD_INDEX];
+  console.log(`Sol at record index ${SOL_RECORD_INDEX} (absmag=${sol.absmag}, R=${sol.physicalRadius.toFixed(3)} R☉)`);
 
-  counts.variableCount = variableCount;
-  counts.searchEntries = searchEntries.length;
-  counts.designationConMismatch = searchEntries.filter((e) => e.dc !== undefined).length;
-  counts.figureCount = figureCount;
-  counts.figureConstellations = figureLines.size;
-  counts.gaiaSourceIdResolved = gaiaSourceIdResolved;
-  counts.apsisMatched = apsisMatched;
-  counts.apsisTeffEither = apsisTeffEither;
-  counts.apsisSourcesUnpulled = apsisSourcesUnpulled;
-  counts.gspcSourcesUnpulled = gspcSourcesUnpulled;
-
-  if (apsisMap.size > 0) {
-    const matchedPct = ((apsisMatched / stars.length) * 100).toFixed(1);
-    const teffPct = ((apsisTeffEither / stars.length) * 100).toFixed(1);
-    console.log(
-      `Gaia DR3 Apsis: ${apsisMatched} / ${stars.length} records matched (${matchedPct}%), ` +
-        `Teff (gspphot OR gspspec) on ${apsisTeffEither} (${teffPct}%)`,
-    );
-  }
+  console.log(apsisCoverageSummary(records));
 
   const lineage = stageLineage({
     layout: LINEAGE_LAYOUT,
@@ -1269,7 +1068,14 @@ export async function main() {
     checks: [
       ...placementEmission.checks, ...brightnessEmission.checks, ...sizeEmission.checks, ...coherenceEmission.checks, ...lineage.checks, ...allocationLineage.checks,
       ...namingEmission.checks,
-      buildCountsCheck({ ...counts, solIndex }, [
+      buildCountsCheck(counts, [
+        { stage: 'inputs', block: { kind: 'counted', counts: inputs.counts } },
+        { stage: 'multiplicity', block: { kind: 'counted', counts: multiplicity } },
+        { stage: 'gcvs', block: { kind: 'counted', counts: gcvsCounts } },
+        { stage: 'records', block: { kind: 'counted', counts: records } },
+        { stage: 'search', block: { kind: 'counted', counts: search.counts } },
+        { stage: 'boundaries', block: { kind: 'counted', counts: boundaries.counts } },
+        { stage: 'figures', block: { kind: 'counted', counts: figures } },
         { stage: 'brightness-colour', block: { kind: 'counted', counts: brightnessEmission.counts } },
         { stage: 'coherence', block: { kind: 'counted', counts: coherenceEmission.counts } },
       ]), distanceOutliersCheck(stars),

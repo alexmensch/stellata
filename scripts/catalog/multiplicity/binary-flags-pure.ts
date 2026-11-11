@@ -6,6 +6,7 @@ import {
   VAR_TYPE_ECLIPSING,
   type DistVia,
 } from '../../../src/catalog-format/record/catalog-pure';
+import type { MultiplicityCounts } from './multiplicity-stage-pure';
 
 // Pairs within this 3D distance are flagged as a physical binary/multiple
 // system. 0.005 pc ≈ 1030 AU — wide-binary territory. Gaia resolves most
@@ -263,14 +264,9 @@ export function isOpticalDoublePrimary(
 // be a third star that's actually paired with someone else.
 //
 // Mutates `stars[i].companionIdx` and `stars[i].flags` in place.
-// Returns counts for the build-time log line:
-//   pairs        — total directed companion assignments
-//   mutualPairs  — undirected mutual pairs (each counted once); also
-//                  equals the count of FLAG_BINARY_PRIMARY bits set,
-//                  since we mark exactly one primary per mutual pair
 export function inferBinaries(
   stars: BinaryStar[],
-): { pairs: number; mutualPairs: number } {
+): Pick<MultiplicityCounts, 'binaryPairs' | 'binaryMutualPairs'> {
   const cell = BINARY_MAX_SEP_PC;
   const cellInv = 1 / cell;
   const grid = new Map<number, number[]>();
@@ -338,5 +334,21 @@ export function inferBinaries(
     markPrimary(stars, [i, j]);
   }
 
-  return { pairs, mutualPairs };
+  return { binaryPairs: pairs, binaryMutualPairs: mutualPairs };
+}
+
+/** ORs FLAG_BINARY_PRIMARY onto every eclipsing record the earlier passes
+ *  left unflagged (../parse/gcvs/README.md): eclipsers surface as multi-star
+ *  systems, not intrinsic-variable rings. */
+export function wingEclipsingBinaries(
+  stars: readonly { flags: number; readonly varType: number }[],
+): Pick<MultiplicityCounts, 'eclipsingWinged'> {
+  let eclipsingWinged = 0;
+  for (const s of stars) {
+    if (s.varType === VAR_TYPE_ECLIPSING && (s.flags & FLAG_BINARY_PRIMARY) === 0) {
+      s.flags |= FLAG_BINARY_PRIMARY;
+      eclipsingWinged++;
+    }
+  }
+  return { eclipsingWinged };
 }

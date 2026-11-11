@@ -8,12 +8,11 @@ import {
   driftedRows,
   formatCountDiff,
   formatPartition,
-  type FiledCounts,
 } from './build-counts';
 import { RECURATED_BRIGHTNESS } from './companions/companion-promotion';
 import { DIST_VIA_VALUES } from '../../src/catalog-format/record/catalog-pure';
 
-function baseCounts(): FiledCounts {
+function baseCounts() {
   return {
     recordCount: 313242,
     binaryPairs: 100,
@@ -199,16 +198,18 @@ function baseCounts(): FiledCounts {
   };
 }
 
+type FixtureCounts = ReturnType<typeof baseCounts>;
+
 // Scalar keys contribute one diff row; a partition key contributes one per
 // bucket.
-function expectedDiffRows(counts: FiledCounts): number {
+function expectedDiffRows(counts: FixtureCounts): number {
   return Object.values(counts).reduce<number>(
     (n, v) => n + (typeof v === 'number' ? 1 : Object.keys(v).length),
     0,
   );
 }
 
-function drifted(expected: FiledCounts, actual: FiledCounts) {
+function drifted(expected: FixtureCounts, actual: FixtureCounts) {
   return driftedRows(compareBuildCounts(expected, actual));
 }
 
@@ -261,7 +262,7 @@ describe('compareBuildCounts', () => {
   it('flags a new count the snapshot has no entry for', () => {
     const expected = baseCounts();
     const actual = baseCounts();
-    delete (expected as Partial<FiledCounts>).gcvsMatched;
+    delete (expected as Partial<FixtureCounts>).gcvsMatched;
     expect(drifted(expected, actual)).toEqual([
       { key: 'gcvsMatched', status: 'absent-from-snapshot', actual: actual.gcvsMatched },
     ]);
@@ -270,7 +271,7 @@ describe('compareBuildCounts', () => {
   it('flags a count present in the snapshot but absent from the build', () => {
     const expected = baseCounts();
     const actual = baseCounts();
-    delete (actual as Partial<FiledCounts>).gcvsMatched;
+    delete (actual as Partial<FixtureCounts>).gcvsMatched;
     expect(drifted(expected, actual)).toEqual([
       { key: 'gcvsMatched', status: 'absent-from-build', expected: expected.gcvsMatched },
     ]);
@@ -288,7 +289,7 @@ describe('compareBuildCounts', () => {
   });
 
   it('names a snapshot count that is null rather than a number', () => {
-    const expected = { ...baseCounts(), gcvsMatched: null } as unknown as FiledCounts;
+    const expected = { ...baseCounts(), gcvsMatched: null } as unknown as FixtureCounts;
     expect(() => compareBuildCounts(expected, baseCounts()))
       .toThrow('count gcvsMatched is null, not a number or a partition');
   });
@@ -296,7 +297,7 @@ describe('compareBuildCounts', () => {
   it('lists snapshot-only rows after the actual rows', () => {
     const expected = baseCounts();
     const actual = baseCounts();
-    delete (actual as Partial<FiledCounts>).recordCount;
+    delete (actual as Partial<FixtureCounts>).recordCount;
     const keys = compareBuildCounts(expected, actual).map((d) => d.key);
     expect(keys.at(-1)).toBe('recordCount');
   });
@@ -362,7 +363,7 @@ describe('formatCountDiff', () => {
   it('says "absent from build" for a count the build stopped producing', () => {
     const expected = baseCounts();
     const actual = baseCounts();
-    delete (actual as Partial<FiledCounts>).gcvsMatched;
+    delete (actual as Partial<FixtureCounts>).gcvsMatched;
     const out = formatCountDiff(compareBuildCounts(expected, actual));
     expect(out).toMatch(/1 of \d+ counts differ/);
     expect(out).toMatch(/gcvsMatched\s+expected 3677, absent from build/);
@@ -386,7 +387,7 @@ describe('compareCountSnapshot', () => {
   it('drifts on a count missing from either side', () => {
     const full = baseCounts();
     const short = baseCounts();
-    delete (short as Partial<FiledCounts>).gcvsMatched;
+    delete (short as Partial<FixtureCounts>).gcvsMatched;
     expect(compareCountSnapshot(full, short).drifted).toBe(true);
     expect(compareCountSnapshot(short, full).drifted).toBe(true);
   });

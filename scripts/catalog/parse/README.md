@@ -34,6 +34,8 @@ scripts/catalog/parse/
                                   loaded here. Async, because the 5p tier has
                                   a second source once the magnitude term is
                                   on (README.md#the-direction-tiers-two-gaia-files).
+                                  Its InputsCounts, each table's size, is
+                                  the snapshot's inputs count block.
   gaia-hip-xmatch-source.ts       GAIA_HIP_XMATCH / GAIA_TYC_XMATCH, the two
   gaia-tyc-xmatch-source.ts       cross-walks declared one per module, so a
                                   step reaches only the one it reads.

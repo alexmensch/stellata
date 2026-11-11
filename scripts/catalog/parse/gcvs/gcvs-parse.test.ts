@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 
 import {
   applyVariability,
+  gcvsSummary,
   bridgeGcvsByGaia,
   classifyGcvsVarType,
   gcvsDesignationConIndex,
@@ -158,10 +159,10 @@ describe('gcvs-parse / applyVariability priority', () => {
       byGaia: new Map([['11111111', 'R And']]),
     };
     const r = applyVariability([star], GCVS, xref);
-    expect(r.matched).toBe(1);
-    expect(r.matchedByGaia).toBe(1);
-    expect(r.matchedByHip).toBe(0);
-    expect(r.matchedByHd).toBe(0);
+    expect(r.gcvsMatched).toBe(1);
+    expect(r.gcvsMatchedByGaia).toBe(1);
+    expect(r.gcvsMatchedByHip).toBe(0);
+    expect(r.gcvsMatchedByHd).toBe(0);
     // The gaia path won, so the star's period matches R And.
     expect(star.periodDays).toBe(409.2);
   });
@@ -177,9 +178,9 @@ describe('gcvs-parse / applyVariability priority', () => {
       byGaia: new Map([['11111111', 'R And']]),
     };
     const r = applyVariability([star], GCVS, xref);
-    expect(r.matchedByGaia).toBe(1);
-    expect(r.matchedByHip).toBe(0);
-    expect(r.matchedByHd).toBe(0);
+    expect(r.gcvsMatchedByGaia).toBe(1);
+    expect(r.gcvsMatchedByHip).toBe(0);
+    expect(r.gcvsMatchedByHd).toBe(0);
     expect(star.gcvsName).toBe('R And');
     expect(star.periodDays).toBe(409.2);
     expect(star.amplitudeMag).toBe(9.4);
@@ -193,9 +194,9 @@ describe('gcvs-parse / applyVariability priority', () => {
       byGaia: new Map(),
     };
     const r = applyVariability([star], GCVS, xref);
-    expect(r.matchedByGaia).toBe(0);
-    expect(r.matchedByHip).toBe(1);
-    expect(r.matchedByHd).toBe(0);
+    expect(r.gcvsMatchedByGaia).toBe(0);
+    expect(r.gcvsMatchedByHip).toBe(1);
+    expect(r.gcvsMatchedByHd).toBe(0);
     expect(star.periodDays).toBe(146.5); // S Aql
   });
 
@@ -207,9 +208,9 @@ describe('gcvs-parse / applyVariability priority', () => {
       byGaia: new Map(),
     };
     const r = applyVariability([star], GCVS, xref);
-    expect(r.matchedByGaia).toBe(0);
-    expect(r.matchedByHip).toBe(0);
-    expect(r.matchedByHd).toBe(1);
+    expect(r.gcvsMatchedByGaia).toBe(0);
+    expect(r.gcvsMatchedByHip).toBe(0);
+    expect(r.gcvsMatchedByHd).toBe(1);
     expect(star.periodDays).toBe(4.4);
   });
 
@@ -223,8 +224,8 @@ describe('gcvs-parse / applyVariability priority', () => {
       byGaia: new Map([['7777', 'S Aql']]),
     };
     const r = applyVariability([star], GCVS, xref);
-    expect(r.matchedByGaia).toBe(0);
-    expect(r.matchedByHip).toBe(1);
+    expect(r.gcvsMatchedByGaia).toBe(0);
+    expect(r.gcvsMatchedByHip).toBe(1);
     expect(star.periodDays).toBe(409.2);
   });
 
@@ -236,7 +237,7 @@ describe('gcvs-parse / applyVariability priority', () => {
       byGaia: new Map(),
     };
     const r = applyVariability([star], GCVS, xref);
-    expect(r.matched).toBe(0);
+    expect(r.gcvsMatched).toBe(0);
     expect(star.periodDays).toBe(0);
     expect(star.amplitudeMag).toBe(0);
   });
@@ -268,8 +269,8 @@ describe('gcvs-parse / applyVariability priority', () => {
     expect(aperiodic.gcvsName).toBe('V0645 Cen');
     expect(aperiodic.periodDays).toBe(0);
     expect(aperiodic.varType).toBe(0);
-    expect(r.named).toBe(1);
-    expect(r.matched).toBe(0);
+    expect(r.gcvsNamed).toBe(1);
+    expect(r.gcvsMatched).toBe(0);
   });
 
   it('returns disjoint per-source counts that sum to total matched', () => {
@@ -285,10 +286,10 @@ describe('gcvs-parse / applyVariability priority', () => {
       byGaia: new Map([['11111111', 'R And']]),
     };
     const r = applyVariability(stars, GCVS, xref);
-    expect(r.matchedByGaia).toBe(1);
-    expect(r.matchedByHip).toBe(1);
-    expect(r.matchedByHd).toBe(1);
-    expect(r.matched).toBe(3);
+    expect(r.gcvsMatchedByGaia).toBe(1);
+    expect(r.gcvsMatchedByHip).toBe(1);
+    expect(r.gcvsMatchedByHd).toBe(1);
+    expect(r.gcvsMatched).toBe(3);
   });
 });
 
@@ -322,7 +323,7 @@ describe('gcvs-parse / the designation as its own constellation authority', () =
     });
     expect(ltVul.desigCon).toEqual({ via: 'gcvs', index: conIndexOf('vul') });
     expect(ryCen.desigCon).toEqual({ via: 'gcvs', index: conIndexOf('cen') });
-    expect(r.desigConSupplied).toBe(2);
+    expect(r.gcvsDesignationCon).toBe(2);
   });
 
   it('yields to IV/27A where a Bayer/Flamsteed designation disagrees (TY Crv)', () => {
@@ -337,7 +338,7 @@ describe('gcvs-parse / the designation as its own constellation authority', () =
       byHip: new Map([[58587, 'TY Crv']]), byHd: new Map(), byGaia: new Map(),
     });
     expect(tyCrv.desigCon).toEqual({ via: 'iv27a', index: conIndexOf('crt') });
-    expect(r.desigConSupplied).toBe(0);
+    expect(r.gcvsDesignationCon).toBe(0);
   });
 
   it('fills an absent designation constellation rather than only correcting one', () => {
@@ -348,7 +349,7 @@ describe('gcvs-parse / the designation as its own constellation authority', () =
       byHip: new Map([[74, 'DX Aqr']]), byHd: new Map(), byGaia: new Map(),
     });
     expect(orphan.desigCon).toEqual({ via: 'gcvs', index: conIndexOf('aqr') });
-    expect(r.desigConSupplied).toBe(1);
+    expect(r.gcvsDesignationCon).toBe(1);
   });
 
   it('leaves an already-set index alone when the designation agrees or is silent', () => {
@@ -362,7 +363,7 @@ describe('gcvs-parse / the designation as its own constellation authority', () =
     });
     expect(agreeing.desigCon).toEqual({ via: 'iv27a', index: conIndexOf('and') });
     expect(silent.desigCon).toEqual({ via: 'iv27a', index: conIndexOf('dor') });
-    expect(r.desigConSupplied).toBe(0);
+    expect(r.gcvsDesignationCon).toBe(0);
   });
 });
 
@@ -535,5 +536,20 @@ describe('gcvs-parse / classifyGcvsVarType', () => {
   it('is case-insensitive', () => {
     expect(classifyGcvsVarType('ea')).toBe(VAR_TYPE_ECLIPSING);
     expect(classifyGcvsVarType('dcep')).toBe(VAR_TYPE_CEPHEID);
+  });
+});
+
+describe('applyVariability count block', () => {
+  it('states the table sizes it was handed', () => {
+    const xref: VarStarXref = {
+      byHip: new Map([[99, 'S Aql'], [98, 'T Vul']]),
+      byHd: new Map([[88, 'T Vul']]),
+      byGaia: new Map(),
+    };
+    const r = applyVariability([], GCVS, xref);
+    expect([r.gcvsEntries, r.gcvsHipXrefs, r.gcvsHdXrefs, r.gcvsGaiaXrefs]).toEqual([GCVS.size, 2, 1, 0]);
+    expect(gcvsSummary(r)).toBe(
+      `${GCVS.size} GCVS entries, 2 Hip + 1 HD + 0 Gaia xrefs, 0 named for search (0 with a renderable period: gaia=0, hip=0, hd=0)`,
+    );
   });
 });
