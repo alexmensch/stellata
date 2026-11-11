@@ -114,7 +114,7 @@ import { RV_ERROR_BANDS } from './distance/radial-velocity/radial-velocity';
 import { emptyTallyPartition } from '../util/counts/tally-pure';
 import {
   applyDesignationConstellations,
-  loadDesignationConstellationInputs,
+  loadDesignationConstellationIndex,
 } from './classic-ids/apply-designation-constellation';
 import {
   applyStarNames,
@@ -307,8 +307,6 @@ export async function main() {
   const inputHashesAtStart = stepInputHashes();
 
   const counts: FiledCounts = {
-    desigConFromCrossIndex: 0,
-    crossIndexUnknownCst: 0,
     bjEligible: 0,
     bjOverridden: 0,
     lmcCandidates: 0,
@@ -544,13 +542,7 @@ export async function main() {
   // classic-ID tables still supply per record is IV/27A's constellation for
   // each Bayer / Flamsteed designation.
   console.log('Resolving designation constellations from IV/27A...');
-  const desigConCounts = applyDesignationConstellations(
-    stars, loadDesignationConstellationInputs(),
-  );
-  Object.assign(counts, desigConCounts);
-  console.log(
-    `  designation constellation from IV/27A on ${desigConCounts.desigConFromCrossIndex}`,
-  );
+  applyDesignationConstellations(stars, loadDesignationConstellationIndex());
 
   // Naming ladder, authority half: the IAU WGSN approved name and the
   // glyph-bearing Bayer / Gould designations, keyed on the record's

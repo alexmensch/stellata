@@ -106,7 +106,10 @@ scripts/catalog/classic-ids/
                                   constellation a Bayer / Flamsteed
                                   designation is NAMED for — and
                                   `DesignationCon`, a record's value with
-                                  the cascade tier that wrote it. Pure.
+                                  the cascade tier that wrote it. A `cst`
+                                  naming no IAU-88 constellation fails the
+                                  build: the table's abbreviations are the
+                                  IAU set. Pure.
   apply-designation-constellation.ts
     (+ test)                      The record build's one remaining classic-ID
                                   pass: loads IV/27A's cross-index and applies

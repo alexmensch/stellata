@@ -434,8 +434,7 @@ describe('designation constellation from IV/27A', () => {
   ];
 
   it('resolves by HD, then by HIP', () => {
-    const { index, counts } = buildDesignationConIndex(rows);
-    expect(counts.crossIndexUnknownCst).toBe(0);
+    const index = buildDesignationConIndex(rows);
     // ρ Aql crossed into Delphinus in 1992 and keeps its Aquila designation.
     expect(resolveDesignationConIndex(index, 192425, null))
       .toBe(CON_INDEX.get('aql'));
@@ -444,15 +443,12 @@ describe('designation constellation from IV/27A', () => {
   });
 
   it('answers NO_CONSTELLATION_INDEX where IV/27A has no row', () => {
-    const { index } = buildDesignationConIndex(rows);
+    const index = buildDesignationConIndex(rows);
     expect(resolveDesignationConIndex(index, 1, 2)).toBe(NO_CONSTELLATION_INDEX);
   });
 
-  it('counts a cst naming no IAU-88 constellation instead of guessing', () => {
-    const { index, counts } = buildDesignationConIndex(
-      [{ hd: 1, hip: 1, bayer: 'alf', flamsteed: null, cst: 'Xyz' }],
-    );
-    expect(counts.crossIndexUnknownCst).toBe(1);
-    expect(resolveDesignationConIndex(index, 1, 1)).toBe(NO_CONSTELLATION_INDEX);
+  it('refuses a cst naming no IAU-88 constellation, naming the row, instead of guessing', () => {
+    expect(() => buildDesignationConIndex([{ hd: 1, hip: 1, bayer: 'alf', flamsteed: null, cst: 'Xyz' }]))
+      .toThrow(/HD 1 names cst "Xyz", which is no IAU-88 constellation/);
   });
 });

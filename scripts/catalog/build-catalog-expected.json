@@ -138,10 +138,6 @@
       "brightness-colour.dust.edenhofer2024.absmag-and-ci": 903492,
       "brightness-colour.dust.edenhofer2024.absmag-only": 61466
     },
-    "desigCon": {
-      "desigConFromCrossIndex": 3648,
-      "crossIndexUnknownCst": 0
-    },
     "coherence": {
       "coherence.anchor.member-won": 464,
       "coherence.anchor.anchor-won": 1698,

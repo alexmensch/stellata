@@ -351,20 +351,11 @@ export interface FiledCounts {
    *  carries. Below DR3's own publication ceiling of 40 by construction; a
    *  refresh that moves it forces this snapshot to be reviewed. */
   rvGaiaErrorMaxKmS: number;
-  /** Records whose designation constellation came from IV/27A keyed on their
-   *  own HD / HIP — the nomenclature authority for the field. The GCVS pass
-   *  overwrites it where a variable designation carries its own
-   *  (`gcvsDesignationCon`). */
-  desigConFromCrossIndex: number;
-  /** IV/27A rows whose `cst` names no IAU-88 constellation. **Pinned at 0** —
-   *  the table's abbreviations ARE the IAU set, so a non-zero value is an
-   *  upstream convention change, not a tolerable miss. */
-  crossIndexUnknownCst: number;
 }
 
 /** The snapshot's stage order, the build's pipeline order; its lineage stages keep LINEAGE_STAGES' order. */
 export const CATALOG_COUNT_STAGES = [
-  'inputs', 'placement', 'brightness-colour', 'desigCon', 'coherence', 'promotion',
+  'inputs', 'placement', 'brightness-colour', 'coherence', 'promotion',
   'multiplicity', 'gcvs', 'naming', 'records', 'search', 'boundaries', 'figures',
 ] as const;
 export type CatalogCountStage = (typeof CATALOG_COUNT_STAGES)[number];
@@ -426,8 +417,6 @@ export const CATALOG_COUNT_STAGE: Readonly<Record<keyof FiledCounts, CatalogCoun
   rvRadialRejected: 'placement',
   rvGaiaErrorBands: 'placement',
   rvGaiaErrorMaxKmS: 'placement',
-  desigConFromCrossIndex: 'desigCon',
-  crossIndexUnknownCst: 'desigCon',
   companionRowsScanned: 'promotion',
   companionPromoted: 'promotion',
   companionPromotedSynthetic: 'promotion',

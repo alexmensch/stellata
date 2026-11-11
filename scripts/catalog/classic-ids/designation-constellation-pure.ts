@@ -12,36 +12,25 @@ export interface DesignationConIndex {
   byHip: Map<number, number>;
 }
 
-export interface DesignationConIndexCounts {
-  /** IV/27A rows whose `cst` names no IAU-88 constellation. Pinned at 0 — the
-   *  table's own abbreviations are the IAU set, so a non-zero value is an
-   *  upstream convention change, not a tolerable miss. */
-  crossIndexUnknownCst: number;
-}
-
 /** Carries NO astrometric claim, so unlike the source_id-keyed label overlay
  *  it needs no binding gate and may key on HD/HIP where the overlay may not.
  *  That is also what lets it reach the bright tier, where Gaia saturates and
  *  most records have no overlay row at all
  *  (`spineBrightRowsWithoutOverlayEntry` is the count). */
-export function buildDesignationConIndex(
-  rows: readonly CrossIndexRow[],
-): { index: DesignationConIndex; counts: DesignationConIndexCounts } {
+export function buildDesignationConIndex(rows: readonly CrossIndexRow[]): DesignationConIndex {
   const index: DesignationConIndex = { byHd: new Map(), byHip: new Map() };
-  let unknown = 0;
   for (const row of rows) {
     if (row.cst === null) continue;
     const conIndex = CON_INDEX.get(row.cst.toLowerCase());
     if (conIndex === undefined) {
-      unknown++;
-      continue;
+      throw new Error(`IV/27A row HD ${row.hd} names cst ${JSON.stringify(row.cst)}, which is no IAU-88 constellation`);
     }
     if (!index.byHd.has(row.hd)) index.byHd.set(row.hd, conIndex);
     if (row.hip !== null && !index.byHip.has(row.hip)) {
       index.byHip.set(row.hip, conIndex);
     }
   }
-  return { index, counts: { crossIndexUnknownCst: unknown } };
+  return index;
 }
 
 /** The record's designation constellation, or `NO_CONSTELLATION_INDEX` where
