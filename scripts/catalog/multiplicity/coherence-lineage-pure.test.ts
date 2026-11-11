@@ -49,7 +49,7 @@ describe('coherenceLineageRows', () => {
       ['spine:3', 'coherence.unmoved.at-anchor-distance'],
       ['spine:3', 'coherence.kept.anchor-inconsistent'],
       ['spine:4', 'coherence.kept.significant-depth'],
-      ['spine:4', 'coherence.anchor.unplaced'],
+      ['spine:4', 'coherence.anchor.unplaced.anchor-won'],
       ['spine:5', 'coherence.kept.wide-gap'],
       ['spine:5', 'coherence.kept.anchor-unplaced'],
       ['spine:6', 'coherence.kept.member-unplaced'],
@@ -72,14 +72,24 @@ describe('coherenceLineageRows', () => {
 
   it('codes the anchor row by how the anchor was picked, a veto over the member that lost it', () => {
     const picks = [{ memberWon: true }, {}, { precisionVetoed: true }];
-    const code = (kind: 'coherent' | 'anchor-inconsistent') => picks.map((o) => [...coherenceLineageRows([kind === 'coherent'
-      ? { kind, root: '00001+0001', anchor: anchor(0, o), anchorPc: 50, members: [] }
-      : { kind, root: '00001+0001', anchor: anchor(0, o), anchorPc: 50, parallaxPc: 9, sigmaPc: 1, members: [] },
-    ], stars.slice(0, 1))][0].code);
+    const verdict = (kind: SystemVerdict['kind'], a: CoherenceAnchor): SystemVerdict => {
+      switch (kind) {
+        case 'coherent': return { kind, root: '00001+0001', anchor: a, anchorPc: 50, members: [] };
+        case 'anchor-inconsistent': return { kind, root: '00001+0001', anchor: a, anchorPc: 50, parallaxPc: 9, sigmaPc: 1, members: [] };
+        case 'anchor-unplaced': return { kind, root: '00001+0001', anchor: a, members: [] };
+      }
+    };
+    const code = (kind: SystemVerdict['kind']) => picks.map((o) => [...coherenceLineageRows(
+      [verdict(kind, anchor(0, o))], stars.slice(0, 1),
+    )][0].code);
     expect(code('coherent')).toEqual(['coherence.anchor.member-won', 'coherence.anchor.anchor-won', 'coherence.anchor.precision-vetoed']);
     expect(code('anchor-inconsistent')).toEqual([
       'coherence.anchor.inconsistent.member-won', 'coherence.anchor.inconsistent.anchor-won',
       'coherence.anchor.inconsistent.precision-vetoed',
+    ]);
+    expect(code('anchor-unplaced')).toEqual([
+      'coherence.anchor.unplaced.member-won', 'coherence.anchor.unplaced.anchor-won',
+      'coherence.anchor.unplaced.precision-vetoed',
     ]);
     const [anchorRow] = coherenceLineageRows([{
       kind: 'coherent', root: '00001+0001', anchor: anchor(0, { memberWon: true }), anchorPc: 50, members: [],

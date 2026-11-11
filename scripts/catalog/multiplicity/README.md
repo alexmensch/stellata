@@ -335,12 +335,11 @@ The pass is a stage of the [lineage](../lineage/README.md) contract
 (`coherence-lineage-pure.ts`), between size and promotion.
 `coherenceLineageRows` serialises each `SystemVerdict` through an exhaustive
 `switch`. A system's anchor gets `coherence.anchor.*`, or `anchor.inconsistent.*` /
-`anchor.unplaced` when the pass skips the system; the first two end in how
-the anchor was picked — `member-won` (a non-primary member outranked the pair
+`anchor.unplaced.*` when the pass skips the system; each ends in how the
+anchor was picked — `member-won` (a non-primary member outranked the pair
 primary), `precision-vetoed` (the primary kept it on a more precise
 parallax) or `anchor-won` (no member outranked the primary) — exclusive,
-since a veto leaves the member unwon. `anchor.unplaced` carries the same two
-facts as `params.member_won` and `params.precision_vetoed`. Each member the system decides
+since a veto leaves the member unwon. Each member the system decides
 gets a `snapped`, `unmoved.*` or `kept.*` row, and every other record gets
 `coherence.not-applicable`. A record two systems decide (an earlier system's
 snapped member that anchors a later one) carries a row from each, and
