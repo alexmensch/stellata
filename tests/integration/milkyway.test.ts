@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { afterAll, describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import * as THREE from 'three';
@@ -30,6 +30,7 @@ import {
   LOCAL_DUST_RATE_MAG_PER_KPC,
   MAG_PER_TAU,
   SOL_GALACTOCENTRIC_PC,
+  STEPS,
   type Vec3,
   componentLuminanceShare,
   discVerticalProfile,
@@ -60,6 +61,7 @@ import {
   unresolvedHoleVoxels,
 } from '../../src/astro-core/milkyway/calibration/resolved-fraction-pure';
 import { buildHoleCells, holeLight } from '../../scripts/milkyway-calibration/resolved-light-pure';
+import { figurePins } from '../../scripts/doc-figures/figure-pins';
 import { linearSrgbFromColourIndex } from '../../src/astro-core/colour/blackbody-lut-pure';
 import { fakeBandMaterials } from '../../src/client/milkyway/band-materials-mock';
 import { expectSlotsServedBy } from '../../src/client/scene/emitter-material-mock';
@@ -91,6 +93,13 @@ import {
   relativeLuminance,
   tonemapWhitePoint,
 } from '../../src/astro-core/tonemap/tonemap-pure';
+
+const figures = figurePins(
+  fileURLToPath(new URL('./milkyway-sightlines-expected.json', import.meta.url)),
+  (actual, expected, digits) => expect(actual).toBeCloseTo(expected, digits),
+);
+afterAll(() => figures.write());
+const pin = figures.pin;
 
 function build() {
   const materials = fakeBandMaterials();
@@ -330,7 +339,15 @@ describe('MilkyWay luminosity solve', () => {
             dustEnabled: false,
           }),
         );
-    expect(NGP_DIFFUSE_RESIDUAL_MAG_ARCSEC2 - dustFree).toBeCloseTo(1.3074, 4);
+    pin('ngpResidualOverModel', NGP_DIFFUSE_RESIDUAL_MAG_ARCSEC2 - dustFree, 4);
+    pin('ngpDustFreeModel', dustFree, 3);
+    pin('ngpResidual', NGP_DIFFUSE_RESIDUAL_MAG_ARCSEC2, 4);
+    pin(
+      'catalogueShareOfPoleTotalPct',
+      (fluxNumber(RESOLVED_CATALOGUE_MAG_ARCSEC2.northGalacticPole) /
+        fluxNumber(LEINERT_TOTAL_STARLIGHT_MAG_ARCSEC2.northGalacticPole)) * 100,
+      2,
+    );
   });
 
   // Check 2, the sightline the ORIGINAL anchor used. Compared against
@@ -341,10 +358,7 @@ describe('MilkyWay luminosity solve', () => {
   // Same species of disagreement as the pole, which is what says it is a
   // scale difference between two published sources and not a shape error.
   it('states the Galactic-centre sightline against Leinert’s total', () => {
-    expect(
-      LEINERT_TOTAL_STARLIGHT_MAG_ARCSEC2.galacticCentre -
-        GC_SIGHTLINE_MAG_ARCSEC2,
-    ).toBeCloseTo(0.390, 3);
+    pin('gcUnderLeinertTotal', LEINERT_TOTAL_STARLIGHT_MAG_ARCSEC2.galacticCentre - GC_SIGHTLINE_MAG_ARCSEC2, 3);
   });
 
   // Light moved, none made or lost, to the 0.017 mag the grid's resampling
@@ -359,9 +373,11 @@ describe('MilkyWay luminosity solve', () => {
       { resolvedHole: null },
     );
     const doubleCounted = -2.5 * Math.log10(fluxNumber(bandWithoutHole) + catalogue);
-    expect(LEINERT_TOTAL_STARLIGHT_MAG_ARCSEC2.northGalacticPole - sky).toBeCloseTo(0.4121, 4);
+    pin('poleBandPlusCatalogue', sky, 3);
+    pin('poleBandPlusCatalogueOverTotal', LEINERT_TOTAL_STARLIGHT_MAG_ARCSEC2.northGalacticPole - sky, 4);
     expect(sky - bandWithoutHole).toBeCloseTo(0.017, 3);
-    expect(LEINERT_TOTAL_STARLIGHT_MAG_ARCSEC2.northGalacticPole - doubleCounted).toBeCloseTo(0.883, 3);
+    pin('poleDoubleCountedOverTotal', LEINERT_TOTAL_STARLIGHT_MAG_ARCSEC2.northGalacticPole - doubleCounted, 3);
+    pin('poleDoubleCount', sky - doubleCounted, 3);
   });
 
   // The cross-layer symptom the epic opened on: the Galaxy seen from M31
@@ -377,12 +393,12 @@ describe('MilkyWay luminosity solve', () => {
     }
     const m31DistancePc = row.distanceKpc * 1000;
     const m31ApparentV = row.mV;
-    expect(m31ApparentV).toBeCloseTo(3.44, 6);
+    pin('m31FromSol', m31ApparentV, 6);
 
     const galaxyFromM31 =
       modelAbsMagV +
       5 * Math.log10(m31DistancePc / ABSOLUTE_MAGNITUDE_DISTANCE_PC);
-    expect(galaxyFromM31).toBeCloseTo(3.079, 3);
+    pin('galaxyFromM31', galaxyFromM31, 3);
     expect(galaxyFromM31).toBeLessThan(m31ApparentV);
     expect(m31ApparentV - galaxyFromM31).toBeCloseTo(0.361, 3);
 
@@ -393,9 +409,10 @@ describe('MilkyWay luminosity solve', () => {
     const holeShare =
       cells.reduce((s, c) => s + holeLight(c, SHIPPED_RESOLVED_HOLE), 0) /
       cells.reduce((s, c) => s + c.model, 0);
-    expect(holeShare).toBeCloseTo(3.49e-3, 5);
+    pin('holeShareOfModelPct', holeShare * 100, 3);
     const bandFromM31 = galaxyFromM31 - 2.5 * Math.log10(1 - holeShare);
     expect(bandFromM31).toBeCloseTo(3.083, 3);
+    pin('holeDimsBandFromM31', bandFromM31 - galaxyFromM31, 4);
     expect(bandFromM31).toBeLessThan(m31ApparentV);
   });
 
@@ -421,16 +438,20 @@ describe('MilkyWay luminosity solve', () => {
       return componentLuminanceShare(BULGE_COMPONENT, originPc, toCentre);
     };
 
-    expect(centrePixelBulgeShare([0, 0, 100_000])).toBeCloseTo(0.305, 3);
+    pin('faceOnCentreBulgePct', centrePixelBulgeShare([0, 0, 100_000]) * 100, 1);
     expect(centrePixelBulgeShare([-100_000, 0, 0])).toBeCloseTo(5.6538e-5, 8);
 
     // The integrated ratio the density0 split sets, which the face-on
     // number above is the marched consequence of. Under the mass B/T it
     // was 0.176 and the face-on centre pixel read 0.480 bulge.
-    expect(
-      (BULGE_DENSITY0 * BULGE_VOLUME_INTEGRAL) /
-        (DISC_DENSITY0 * DISC_VOLUME_INTEGRAL),
-    ).toBeCloseTo(0.0840, 4);
+    pin('bulgeToDiscLight', (BULGE_DENSITY0 * BULGE_VOLUME_INTEGRAL) / (DISC_DENSITY0 * DISC_VOLUME_INTEGRAL), 4);
+  });
+
+  it('pins how little of the Sol sightlines the bulge carries', () => {
+    const share = (bDeg: number) =>
+      componentLuminanceShare(BULGE_COMPONENT, SOL_GALACTOCENTRIC_PC, galacticDirection(0, bDeg));
+    pin('bulgeShareGcColumnPct', share(0) * 100, 3);
+    pin('bulgeShareB5ColumnPct', share(5) * 100, 1);
   });
 });
 
@@ -530,7 +551,7 @@ describe('MilkyWay surface-brightness calibration', () => {
   // are what catch a profile / quadrature change.
   it('derives the GC column and the surface brightness it implies', () => {
     expect(GC_SIGHTLINE_COLUMN).toBeCloseTo(41.373, 3);
-    expect(GC_SIGHTLINE_MAG_ARCSEC2).toBeCloseTo(22.530, 3);
+    pin('sbGc', GC_SIGHTLINE_MAG_ARCSEC2, 3);
   });
 
   // The mirror marches the exact voxels, so this is the one place the
@@ -545,7 +566,7 @@ describe('MilkyWay surface-brightness calibration', () => {
         sightlineSurfaceBrightness(SB_ZERO_POINT, SOL_GALACTOCENTRIC_PC, dir, { resolvedHole: quantised })
         - sightlineSurfaceBrightness(SB_ZERO_POINT, SOL_GALACTOCENTRIC_PC, dir)));
     }
-    expect(worst).toBeCloseTo(4.743e-4, 6);
+    pin('halfFloatLossMag', worst, 6);
   });
 
   it('gives the resolved stars’ share of the column back', () => {
@@ -556,7 +577,31 @@ describe('MilkyWay surface-brightness calibration', () => {
       { resolvedHole: null },
     );
     expect(whole).toBeCloseTo(21.877, 3);
-    expect(GC_SIGHTLINE_MAG_ARCSEC2 - whole).toBeCloseTo(0.653, 3);
+  });
+
+  it('dims each sightline by the share of its column the drawn stars carry', () => {
+    for (const [key, l, b] of [['Gc', 0, 0], ['Anticentre', 180, 0], ['B30', 0, 30], ['Ngp', 0, 90], ['B5', 0, 5]] as const) {
+      const whole = sightlineSurfaceBrightness(SB_ZERO_POINT, SOL_GALACTOCENTRIC_PC, galacticDirection(l, b), {
+        resolvedHole: null,
+      });
+      pin(`holeDims${key}`, sbAt(l, b) - whole, 3);
+    }
+  });
+
+  // Dust-free, so each is commensurable with the de-extincted catalogue cap
+  // on the same pole (/src/astro-core/milkyway/calibration/README.md#the-resolution-hole--the-band-marches-the-model-minus-the-drawn-stars).
+  it('removes about the cap\u2019s own light along each cap\u2019s central ray', () => {
+    const removed = (b: number) => {
+      const dir = galacticDirection(0, b);
+      const whole = sightlineColumn(SOL_GALACTOCENTRIC_PC, dir, { dustEnabled: false, resolvedHole: null });
+      const band = sightlineColumn(SOL_GALACTOCENTRIC_PC, dir, { dustEnabled: false });
+      return { removed: SB_ZERO_POINT - 2.5 * Math.log10(whole - band), dims: -2.5 * Math.log10(band / whole) };
+    };
+    pin('holeColumnNgp', removed(90).removed, 3);
+    pin('holeColumnGc', removed(0).removed, 3);
+    pin('gcDustFreeHoleDims', removed(0).dims, 4);
+    pin('capNgp', RESOLVED_CATALOGUE_MAG_ARCSEC2.northGalacticPole, 4);
+    pin('capGc', RESOLVED_CATALOGUE_MAG_ARCSEC2.galacticCentre, 4);
   });
 
   // The emissivity is solved against a luminosity, not a sightline, so the
@@ -577,7 +622,7 @@ describe('MilkyWay surface-brightness calibration', () => {
       { dustEnabled: false },
     );
     expect(s(0, 90) - dustFree).toBeCloseTo(0.1056, 4);
-    expect(s(180, 0)).toBeCloseTo(22.689, 3);
+    pin('sbAnticentre', s(180, 0), 3);
     expect(s(0, 0)).toBeCloseTo(GC_SIGHTLINE_MAG_ARCSEC2, 6);
   });
 
@@ -592,8 +637,8 @@ describe('MilkyWay surface-brightness calibration', () => {
         galacticDirection(0, bDeg),
       );
     expect(s(5)).toBeLessThan(s(0));
-    expect(s(5)).toBeCloseTo(20.933, 3);
-    expect(s(0)).toBeCloseTo(22.530, 3);
+    pin('sbB5', s(5), 3);
+    expect(s(0)).toBe(GC_SIGHTLINE_MAG_ARCSEC2);
   });
 
   // The whole point of the rework: extinction attenuates, it does not
@@ -627,7 +672,14 @@ describe('MilkyWay surface-brightness calibration', () => {
         SOL_GALACTOCENTRIC_PC,
         galacticDirection(lDeg, bDeg),
       );
-    expect(s(0, 90) - s(0, 0)).toBeCloseTo(1.703, 3);
+    pin('planeToPoleContrast', s(0, 90) - s(0, 0), 3);
+    pin('sbB30', s(0, 30), 3);
+    pin('sbNgp', s(0, 90), 3);
+  });
+
+  it('under-counts the GC column at the shipped step count', () => {
+    const column = (steps: number) => sightlineColumn(SOL_GALACTOCENTRIC_PC, galacticDirection(0, 0), { steps });
+    pin('gcMarchUnderCountPct', (1 - column(STEPS) / column(4096)) * 100, 2);
   });
 
   // The whole band, in 8-bit display levels at the base epoch with no EV
@@ -637,13 +689,13 @@ describe('MilkyWay surface-brightness calibration', () => {
   // 2.19 mag under — sits on the dither floor because a patch the modelled
   // eye cannot detect must not read plainly visible (/src/astro-core/milkyway/calibration/README.md).
   it('pins the band against a threshold star at the base epoch', () => {
-    expect(displayLevel(L_THRESH) * 255).toBeCloseTo(38.25, 2);
+    pin('levelThreshold', displayLevel(L_THRESH) * 255, 2);
 
-    expect(bandDisplayLevel(sbAt(0, 5)) * 255).toBeCloseTo(63.67, 2);
-    expect(bandDisplayLevel(GC_SIGHTLINE_MAG_ARCSEC2) * 255).toBeCloseTo(21.695, 3);
-    expect(bandDisplayLevel(sbAt(180, 0)) * 255).toBeCloseTo(15.66, 2);
-    expect(bandDisplayLevel(sbAt(0, 30)) * 255).toBeCloseTo(3.64, 2);
-    expect(bandDisplayLevel(sbAt(0, 90)) * 255).toBeCloseTo(0.003534, 3);
+    pin('levelB5', bandDisplayLevel(sbAt(0, 5)) * 255, 2);
+    pin('levelGc', bandDisplayLevel(GC_SIGHTLINE_MAG_ARCSEC2) * 255, 3);
+    pin('levelAnticentre', bandDisplayLevel(sbAt(180, 0)) * 255, 2);
+    pin('levelB30', bandDisplayLevel(sbAt(0, 30)) * 255, 2);
+    pin('levelNgp', bandDisplayLevel(sbAt(0, 90)) * 255, 3);
   });
 
   // How far under threshold each sightline sits, which is the photometric
@@ -656,11 +708,11 @@ describe('MilkyWay surface-brightness calibration', () => {
     const sLim = extendedThresholdSbFor(DEFAULT_INSTRUMENT);
     expect(sLim).toBe(22);
 
-    expect(sbAt(0, 5) - sLim).toBeCloseTo(-1.067, 3);
-    expect(GC_SIGHTLINE_MAG_ARCSEC2 - sLim).toBeCloseTo(0.530, 3);
-    expect(sbAt(180, 0) - sLim).toBeCloseTo(0.689, 3);
-    expect(sbAt(0, 30) - sLim).toBeCloseTo(1.100, 3);
-    expect(sbAt(0, 90) - sLim).toBeCloseTo(2.234, 3);
+    pin('gapB5', sbAt(0, 5) - sLim, 3);
+    pin('gapGc', GC_SIGHTLINE_MAG_ARCSEC2 - sLim, 3);
+    pin('gapAnticentre', sbAt(180, 0) - sLim, 3);
+    pin('gapB30', sbAt(0, 30) - sLim, 3);
+    pin('gapNgp', sbAt(0, 90) - sLim, 3);
 
     // Negative is OVER threshold. Nothing pins the band to it any more —
     // the solve is against a luminosity, and where the plane lands against
@@ -727,7 +779,7 @@ describe('MilkyWay surface-brightness calibration', () => {
     }
     // Pinned rather than bounded: the figure the READMEs quote is this one,
     // and a two-place tolerance would have let 0.005 through.
-    expect(worst).toBeCloseTo(0.00420, 5);
+    pin('footprintWorstMag', worst, 5);
   });
 
   // What the concession is worth at the reference viewport, stated as the
@@ -810,5 +862,11 @@ describe('isDrawn is the whole conjunction, not the user toggle', () => {
     expect(drawnWith({ isobar: true }, (layer) => {
       expect(layer.group.visible, 'the group carries the isobar treatment').toBe(true);
     })).toBe(false);
+  });
+});
+
+describe('the figures the calibration docs quote', () => {
+  it('pins every figure the snapshot carries', () => {
+    expect(figures.unpinned()).toEqual([]);
   });
 });
