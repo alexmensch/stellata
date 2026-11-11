@@ -18,7 +18,8 @@ export interface Stage4Result {
 }
 
 function frozen(orbit: PairOrbit): PairOrbit {
-  return orbit.orbitVia === 'none' ? orbit : Object.freeze({ ...orbit, elements: Object.freeze({ ...orbit.elements }) });
+  if (orbit.orbitVia !== 'none') Object.freeze(orbit.elements);
+  return Object.freeze(orbit);
 }
 
 export function attachStage4(stage3: Stage3Result, reference: ReferenceCatalogs): Stage4Result {

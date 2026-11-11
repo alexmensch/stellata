@@ -133,6 +133,7 @@ describe.skipIf(![...INPUTS, REQUEST, SPOT_CHECK_GROUND_TRUTH].every(isReadable)
 
   it('selects one frozen orbit for every Stage 3 pair', () => {
     expect([...s4.orbits.keys()]).toEqual(s3.pairs);
-    expect(Object.isFrozen(s4.orbits.get(s3.pairs[0]))).toBe(true);
+    const withElements = [...s4.orbits.values()].flatMap((o) => (o.orbitVia === 'none' ? [] : [o]))[0];
+    expect([Object.isFrozen(withElements), Object.isFrozen(withElements.elements)]).toEqual([true, true]);
   });
 });
