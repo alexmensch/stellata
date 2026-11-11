@@ -5,7 +5,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 import type { DistVia } from '../../src/catalog-format/record/catalog-pure.ts';
-import { flattenStages, stageOfCounts } from '../util/counts/count-stages-pure.ts';
+import { absentStages, flattenStages, stageOfCounts } from '../util/counts/count-stages-pure.ts';
 import { REPO_ROOT } from '../util/paths.ts';
 import type { RvErrorBandPartition } from './distance/radial-velocity/radial-velocity.ts';
 import type { RecuratedBrightness } from './companions/companion-promotion.ts';
@@ -673,9 +673,10 @@ export interface BuildCounts {
   crossIndexUnknownCst: number;
 }
 
+/** The snapshot's stage order, the build's pipeline order; its lineage stages keep LINEAGE_STAGES' order. */
 export const CATALOG_COUNT_STAGES = [
-  'inputs', 'placement', 'desigCon', 'naming', 'coherence', 'promotion',
-  'multiplicity', 'gcvs', 'records', 'search', 'boundaries', 'figures',
+  'inputs', 'placement', 'brightness-colour', 'desigCon', 'coherence', 'promotion',
+  'multiplicity', 'gcvs', 'naming', 'records', 'search', 'boundaries', 'figures',
 ] as const;
 export type CatalogCountStage = (typeof CATALOG_COUNT_STAGES)[number];
 
@@ -890,7 +891,9 @@ export type CountDiff =
   | { key: string; status: 'mismatch'; expected: number; actual: number }
   | { key: string; status: 'moved'; value: number; from: string; to: string }
   | { key: string; status: 'absent-from-snapshot'; actual: number }
-  | { key: string; status: 'absent-from-build'; expected: number };
+  | { key: string; status: 'absent-from-build'; expected: number }
+  /** A stage one side records as absent (its input was missing) and the other counted; `key` is the stage. */
+  | { key: string; status: 'absent-input'; side: 'build' | 'snapshot' };
 
 /** Staged snapshots: ../util/counts/README.md.
  *  Partition-valued entries (a `Record<tier, number>`) expand to one
@@ -910,19 +913,25 @@ export function compareBuildCounts<T extends object>(
   const a = flattenCounts(actual);
   const eStage = stageOfCounts(expected);
   const aStage = stageOfCounts(actual);
+  const eAbsent = absentStages(expected);
+  const aAbsent = absentStages(actual);
   const diff: CountDiff[] = [];
   for (const [key, { n: av, count }] of a) {
     const ev = e.get(key)?.n;
     const from = eStage?.get(count);
     const to = aStage?.get(count);
+    if (ev === undefined && to !== undefined && eAbsent.has(to)) continue;
     if (ev === undefined) diff.push({ key, status: 'absent-from-snapshot', actual: av });
     else if (ev !== av) diff.push({ key, status: 'mismatch', expected: ev, actual: av });
     else if (from !== undefined && to !== undefined && from !== to) diff.push({ key, status: 'moved', value: av, from, to });
     else diff.push({ key, status: 'match', value: av });
   }
-  for (const [key, { n: ev }] of e) {
-    if (!a.has(key)) diff.push({ key, status: 'absent-from-build', expected: ev });
+  for (const [key, { n: ev, count }] of e) {
+    const from = eStage?.get(count);
+    if (!a.has(key) && !(from !== undefined && aAbsent.has(from))) diff.push({ key, status: 'absent-from-build', expected: ev });
   }
+  for (const stage of aAbsent) if (!eAbsent.has(stage)) diff.push({ key: stage, status: 'absent-input', side: 'build' });
+  for (const stage of eAbsent) if (!aAbsent.has(stage)) diff.push({ key: stage, status: 'absent-input', side: 'snapshot' });
   return diff;
 }
 
@@ -974,6 +983,9 @@ export function formatCountDiff(diff: CountDiff[]): string {
         break;
       case 'moved':
         lines.push(`${label} ${d.value} moved from stage ${d.from} to ${d.to}`);
+        break;
+      case 'absent-input':
+        lines.push(`${label} stage's input is absent from the ${d.side}, counted in the ${d.side === 'build' ? 'snapshot' : 'build'}`);
         break;
       case 'mismatch': {
         const delta = d.actual - d.expected;

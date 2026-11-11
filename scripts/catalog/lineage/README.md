@@ -52,7 +52,8 @@ scripts/catalog/lineage/
   stage-lineage.ts               stageLineage: one stage's files, header,
                                  baseline plan, diff, budget and invariant
                                  checks, ready for the stage's emitArtifacts
-                                 call.
+                                 call; countedStageLineage, the same plus
+                                 its count block.
   phase-clock-pure.ts            phaseClock: the budget line's per-phase
     (+ test)                     split of the timed window.
   lineage-invariant-pure.ts      LineageInvariant and its check (#invariants).
@@ -218,7 +219,10 @@ stage's lines per live code, every live code present, typed
 historical code is no key, and a line carrying one throws; each code is declared in
 one role, so a stage's outcomes and refusals fold into one record and no
 code is counted in both. A line of another stage, or in a role its code is
-not declared in, throws. A stage with no codes yet keeps its snapshot keys until it gains
+not declared in, throws. `countedStageLineage` (`stage-lineage.ts`) is
+`stageLineage` plus that fold over the same lines, inside the timed window:
+its `counts` is the stage's count block, which the build composes into its
+snapshot ([The staged snapshot](../../util/counts/README.md#the-staged-snapshot)). A stage with no codes yet keeps its snapshot keys until it gains
 lineage.
 
 ## SID events

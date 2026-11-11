@@ -1,6 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { emptyTallyPartition } from '../util/counts/tally-pure';
+import { LINEAGE_STAGES } from './lineage/lineage-stages';
 import {
+  CATALOG_COUNT_STAGES,
   compareBuildCounts,
   compareCountSnapshot,
   driftedRows,
@@ -395,6 +397,15 @@ describe('formatCountDiff', () => {
   });
 });
 
+describe('CATALOG_COUNT_STAGES', () => {
+  it('orders its lineage stages as LINEAGE_STAGES does', () => {
+    const lineageOrder = LINEAGE_STAGES.map((s) => s.spec.stage);
+    const filed = CATALOG_COUNT_STAGES.filter((stage) => (lineageOrder as readonly string[]).includes(stage));
+    expect(filed).toEqual(lineageOrder.filter((stage) => (filed as readonly string[]).includes(stage)));
+    expect(filed.length).toBeGreaterThan(1);
+  });
+});
+
 describe('compareCountSnapshot', () => {
   it('is clean only when every row matches', () => {
     expect(compareCountSnapshot(baseCounts(), baseCounts()).drifted).toBe(false);
@@ -421,6 +432,18 @@ describe('compareCountSnapshot', () => {
     const diff = compareBuildCounts<object>(staged, moved);
     expect(driftedRows(diff)).toEqual([{ key: 'tiers.a', status: 'moved', value: 1, from: 'filter', to: 'read' }]);
     expect(formatCountDiff(diff)).toContain('tiers.a 1 moved from stage filter to read');
+  });
+
+  it('drifts on a stage whose input went absent as one row, not a row per count it held', () => {
+    const counted = { stages: { read: { rows: 3 }, filter: { kept: 2, tiers: { a: 1 } } } };
+    const absent = { stages: { read: { rows: 3 }, filter: 'absent' } };
+    expect(driftedRows(compareBuildCounts<object>(counted, absent)))
+      .toEqual([{ key: 'filter', status: 'absent-input', side: 'build' }]);
+    expect(driftedRows(compareBuildCounts<object>(absent, counted)))
+      .toEqual([{ key: 'filter', status: 'absent-input', side: 'snapshot' }]);
+    expect(formatCountDiff(compareBuildCounts<object>(counted, absent)))
+      .toContain("filter stage's input is absent from the build, counted in the snapshot");
+    expect(compareCountSnapshot<object>(absent, absent).drifted).toBe(false);
   });
 });
 

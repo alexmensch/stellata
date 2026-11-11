@@ -12,7 +12,7 @@ import { judgeBaseline, type BaselineContext, type StageProvenance } from './bas
 import { baselineMembers, readLineage, readStageHeader, stageEmission } from './lineage-io';
 import { lineageInvariant, NO_EXCEPTIONS } from './lineage-invariant-pure';
 import { paramsText, stageLineageLine, stageLineageText } from './lineage-row-pure';
-import { inputsAtFrom, stageLineage, upstreamLineage } from './stage-lineage';
+import { countedStageLineage, inputsAtFrom, stageLineage, upstreamLineage } from './stage-lineage';
 import { outcomeCode, stageCodes } from './reason-codes/reason-codes-pure';
 import {
   lineageLayout, stageFamilies, stageFile, stageFileName, stageOutputFiles, type LineageLayout,
@@ -148,6 +148,22 @@ describe('stage rotation', () => {
     expect(() => emitArtifacts({ outputs, files: emission.files, members: emission.members, checks: emission.checks }))
       .toThrow(EmissionRefused);
     expect(snapshot()).toEqual(before);
+  });
+
+  it('a counted stage hands back its count block, folded from the lines it wrote', () => {
+    const line = stageLineageLine(CODES, {
+      stage: 'demo', key: 'spine:9', role: 'outcome', code: 'demo.kept', params: '', evidence: [],
+    });
+    const emission = countedStageLineage({
+      layout, spec: SPEC, inputs: {}, diffed: 'demo', lines: () => [line, line],
+      render: (sorted) => ({ demo: stageLineageText(CODES, sorted), identity: stageLineageText(CODES, sorted) }),
+      joins: () => [],
+      budget: { gzipBytes: 1e9, writeMs: 1e9 },
+      invariants: [],
+      argv: [],
+    }, CODES);
+    expect(emission.counts).toEqual({ 'demo.kept': 2 });
+    expect(emission.checks.every((c) => c.kind === 'pass')).toBe(true);
   });
 
   it('a build that never emits moves nothing: reading the rotation writes no file', () => {

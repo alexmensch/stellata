@@ -14,6 +14,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from scripts.util.snapshot_assert import (  # noqa: E402
+    ABSENT_STAGE,
     PIPELINE_STEP_ENV_VAR,
     UPDATE_SNAPSHOTS_ENV_VAR,
     assert_or_update_counts,
@@ -125,6 +126,29 @@ class AssertOrUpdateCountsTests(unittest.TestCase):
         self.assertFalse(ok)
         self.assertIn("1 of 2 counts differ", out.getvalue())
         self.assertIn("moved from stage filter to read", out.getvalue())
+
+    def test_a_stage_whose_input_went_absent_is_one_drift_row(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            p = Path(td) / "snapshot.json"
+            p.write_text('{"stages": {"read": {"x": 1}, "filter": {"y": 2, "z": 0}}}\n')
+            out = io.StringIO()
+            with contextlib.redirect_stdout(out):
+                ok = assert_or_update_counts({"read": {"x": 1}, "filter": ABSENT_STAGE}, p, **KW)
+        self.assertFalse(ok)
+        self.assertIn("1 of 2 counts differ", out.getvalue())
+        self.assertIn("filter", out.getvalue())
+        self.assertIn("stage's input is absent from the build", out.getvalue())
+        self.assertNotIn("missing in actual", out.getvalue())
+
+    def test_an_absent_stage_matches_and_is_written_as_absent(self) -> None:
+        import json as _json
+        with tempfile.TemporaryDirectory() as td:
+            p = Path(td) / "snapshot.json"
+            p.write_text('{"stages": {"read": {"x": 1}, "filter": "absent"}}\n')
+            self.assertTrue(assert_or_update_counts({"read": {"x": 1}, "filter": ABSENT_STAGE}, p, **KW))
+            with unittest.mock.patch.dict(os.environ, {UPDATE_SNAPSHOTS_ENV_VAR: "1"}):
+                assert_or_update_counts({"read": {"x": 1}, "filter": ABSENT_STAGE}, p, **KW)
+            self.assertEqual(_json.loads(p.read_text()), {"stages": {"read": {"x": 1}, "filter": "absent"}})
 
     def test_compares_a_staged_snapshot_by_its_counts(self) -> None:
         with tempfile.TemporaryDirectory() as td:
