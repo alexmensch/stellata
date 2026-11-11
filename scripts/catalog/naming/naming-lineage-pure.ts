@@ -14,7 +14,6 @@ import { NAMING_LINEAGE } from '../../../src/catalog-format/pipeline-outputs/lin
 
 export const NAMING_LINEAGE_BUDGET = { gzipBytes: 10_600_000, writeMs: 28_000 };
 
-
 export const NAMING_CODES = stageCodes(NAMING_LINEAGE.stage, {
   'name.own': outcomeCode('The record displays the highest tier of the naming ladder it carries in its own right.'),
   'name.borrowed.no-own-designation': outcomeCode('The record is a WDS component with no designation of its own, so it displays its system anchor\'s base with its component letter.'),

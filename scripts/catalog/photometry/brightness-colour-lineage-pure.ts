@@ -17,7 +17,6 @@ export const BRIGHTNESS_COLOUR_LINEAGE_BUDGET = { gzipBytes: 42_400_000, writeMs
 /** Decimal places of `params.av`: 0.1 mmag, far below any V tier's own error. */
 export const AV_PARAM_DECIMALS = 4;
 
-
 const V_BRANCHES = {
   gaia_riello: 'v.gaia-riello',
   printed_hip: 'v.printed-hip',

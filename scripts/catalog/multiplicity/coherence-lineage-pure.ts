@@ -11,7 +11,6 @@ import { COHERENCE_LINEAGE } from '../../../src/catalog-format/pipeline-outputs/
 
 export const COHERENCE_LINEAGE_BUDGET = { gzipBytes: 8_200_000, writeMs: 18_000 };
 
-
 const RETIRED_7_1_16 = { kind: 'retired', retiredIn: '7.1.16' } as const satisfies CodeStatus;
 
 const ANCHOR = 'The record is its WDS system\'s distance anchor, the best-tier member, and the system\'s snapped members move onto its distance';

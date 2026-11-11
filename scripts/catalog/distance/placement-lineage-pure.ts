@@ -22,7 +22,6 @@ import type { DistVia } from '../../../src/catalog-format/record/catalog-pure';
 
 export const PLACEMENT_LINEAGE_BUDGET = { gzipBytes: 34_000_000, writeMs: 40_000 };
 
-
 const PARALLAX_BRANCHES = {
   gaia_dr3_inversion: 'parallax.gaia-dr3-inversion',
   hip2_parallax: 'parallax.hip2-parallax',

@@ -16,7 +16,6 @@ import { MEMBERSHIP_LINEAGE } from '../../../src/catalog-format/pipeline-outputs
 
 export const MEMBERSHIP_LINEAGE_BUDGET = { gzipBytes: 41_000_000, writeMs: 20_000 };
 
-
 const ADDITION_BRANCHES = {
   'admitted:hd_link_gap': 'admit.hd-link-gap',
   'admitted:hd_omitted': 'admit.hd-omitted',
