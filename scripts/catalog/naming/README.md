@@ -288,10 +288,12 @@ contract (`naming-lineage-pure.ts`), after SID allocation, since the curated
 override keys on SIDs. `namingLineageRows` serialises each record's
 `NamedRecord` through an exhaustive `switch`:
 
-- every record gets one name row: `name.own` (the highest tier it carries),
-  one of three `name.borrowed.*` codes naming the borrowing rule that fired,
-  or `name.unlabelled`, where the runtime's Gaia DR3 / SID fallback takes over.
-  `params` carry the tier and the label; a borrowed row names its anchor by
+- every record gets one name row: `name.own.<tier>` (the highest tier it
+  carries), `name.borrowed.<rule>.<tier>` naming the borrowing rule that
+  fired and the anchor's tier, or `name.unlabelled`, where the runtime's
+  Gaia DR3 / SID fallback takes over. The tier is the ladder's, kebab-cased
+  (`bayer-latin`), so the count block folds each tier from its codes.
+  `params` carry the label; a borrowed row names its anchor by
   origin key (`params.anchor`) and its component letter;
 - each other tier the record carries is a `refused` row: `name.lower-tier`
   below an own label, `name.borrowed-over` for a borrowed one;

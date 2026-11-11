@@ -4,8 +4,9 @@ import { paramsOf, type LineageRow } from '../lineage/lineage-row-pure';
 import type { NamedRecord } from './display-names';
 import { invariantViolations } from '../lineage/lineage-invariant-pure';
 import {
-  namingLabels, namingLineageLines, namingLineageRows, NAMING_INVARIANTS, type NamingLineageRecord,
+  NAMING_CODES, namingLabels, namingLineageLines, namingLineageRows, NAMING_INVARIANTS, type NamingLineageRecord,
 } from './naming-lineage-pure';
+import { NAME_TIERS } from '../../../src/catalog-format/naming/star-naming-pure';
 
 const CONS = [{ code: 'Dra' }, { code: 'Her' }];
 const DRA = 0;
@@ -24,7 +25,7 @@ describe('namingLineageRows', () => {
       dc: { from: 'designation', con: { via: 'wgsn-bayer', index: DRA, displaced: HER } },
     }];
     expect(brief(records, [rec('spine:1')])).toEqual([
-      { key: 'spine:1', role: 'outcome', code: 'naming.name.own', params: { tier: 'iau', label: 'Alrakis' } },
+      { key: 'spine:1', role: 'outcome', code: 'naming.name.own.iau', params: { label: 'Alrakis' } },
       { key: 'spine:1', role: 'refused', code: 'naming.name.lower-tier', params: { tier: 'bayer', label: 'μ¹ Dra' } },
       { key: 'spine:1', role: 'refused', code: 'naming.name.lower-tier', params: { tier: 'flamsteed', label: '21 Dra' } },
       { key: 'spine:1', role: 'refused', code: 'naming.name.lower-tier', params: { tier: 'catalogue', label: 'HIP 83608' } },
@@ -44,8 +45,8 @@ describe('namingLineageRows', () => {
     ];
     expect(brief(records, [rec('spine:1'), rec('multiples:17053+5408/C')]).slice(1)).toEqual([
       {
-        key: 'multiples:17053+5408/C', role: 'outcome', code: 'naming.name.borrowed.outranked-identifier',
-        params: { tier: 'iau', label: 'Alrakis C', anchor: 'spine:1', comp: 'C' },
+        key: 'multiples:17053+5408/C', role: 'outcome', code: 'naming.name.borrowed.outranked-identifier.iau',
+        params: { label: 'Alrakis C', anchor: 'spine:1', comp: 'C' },
       },
       { key: 'multiples:17053+5408/C', role: 'refused', code: 'naming.name.borrowed-over', params: { tier: 'catalogue', label: 'HIP 83609' } },
       { key: 'multiples:17053+5408/C', role: 'outcome', code: 'naming.letter.borrowed', params: { comp: 'C' } },
@@ -59,7 +60,7 @@ describe('namingLineageRows', () => {
       dc: { from: 'positional', index: DRA },
     }];
     expect(brief(records, [rec('spine:2')]).map((r) => [r.code, r.params])).toEqual([
-      ['naming.name.own', { tier: 'bayer', label: 'μ¹ Dra B' }],
+      ['naming.name.own.bayer', { label: 'μ¹ Dra B' }],
       ['naming.letter.stated', { comp: 'B' }],
       ['naming.dc.positional', { con: 'Dra' }],
     ]);
@@ -70,6 +71,25 @@ describe('namingLineageRows', () => {
     expect(brief(records, [rec('gaia_dr3:1')])).toEqual([
       { key: 'gaia_dr3:1', role: 'outcome', code: 'naming.name.unlabelled', params: {} },
     ]);
+  });
+});
+
+describe('the name row codes', () => {
+  it('carry the label\'s tier, one live code per tier for an own label and per borrowing rule and tier for a borrowed one', () => {
+    const nameCodes = NAMING_CODES.live.filter((c) => /^naming\.name\.(own|borrowed)\./.test(c));
+    expect(nameCodes).toHaveLength(NAME_TIERS.length * 4);
+    expect(nameCodes).toContain('naming.name.own.bayer-latin');
+    expect(nameCodes).toContain('naming.name.borrowed.system-designation.catalogue');
+    expect(NAMING_CODES.live).not.toContain('naming.name.own');
+    expect(NAMING_CODES.live).not.toContain('naming.name.borrowed.no-own-designation');
+  });
+
+  it('writes a Latin-letter Bayer label under its kebab-case tier', () => {
+    const records: NamedRecord[] = [{
+      name: { kind: 'own', label: 'p Eri', tier: 'bayer_latin', letter: null },
+      set: { bayer: 'p', dc: 'Dra' }, dc: { from: 'designation', con: { via: 'iv27a', index: DRA } },
+    }];
+    expect(brief(records, [rec('spine:1')])[0].code).toBe('naming.name.own.bayer-latin');
   });
 });
 
@@ -121,13 +141,13 @@ describe('namingLabels', () => {
     ({ stage: 'naming', key, role: 'outcome', code, params, evidence: [] });
 
   it('refuses a labelled name row that carries no label', () => {
-    expect(() => namingLabels([nameRow('spine:1', 'naming.name.own', '{"tier":"iau"}')])).toThrow(/carries no label/);
+    expect(() => namingLabels([nameRow('spine:1', 'naming.name.own.iau', '{}')])).toThrow(/carries no label/);
   });
 
   it('refuses two name rows for one record', () => {
     expect(() => namingLabels([
       nameRow('spine:1', 'naming.name.unlabelled', ''),
-      nameRow('spine:1', 'naming.name.own', '{"tier":"iau","label":"Alrakis"}'),
+      nameRow('spine:1', 'naming.name.own.iau', '{"label":"Alrakis"}'),
     ])).toThrow(/two name rows/);
   });
 });
