@@ -7,7 +7,7 @@ import type { ComponentAstrometry, PairAstrometry } from '../astrometry/routes-p
 import type { Parallax, PmAnchor } from '../astrometry/system-anchors-pure';
 import type { GaiaAstrometryRow } from '../load/gaia-pure';
 import type { IdentifierIndices } from '../load/indices-pure';
-import { ORBIT_VIA_ON_FILE, type OrbitVia } from '../multiples-tsv';
+import { ORBIT_VIA_PROPERTIES, type OrbitVia } from '../multiples-tsv';
 import type { DecomposedPair, ResolvedComponent } from '../resolve/components-pure';
 
 /** Each tag, in the cascade's order, and whether it keeps the pair. */
@@ -190,8 +190,6 @@ export interface PairContext {
   readonly orbitalPmBudgetKmS: number;
 }
 
-const ORBIT_ON_FILE: ReadonlySet<OrbitVia> = new Set(ORBIT_VIA_ON_FILE);
-
 /** The tiers in order; the first verdict wins. */
 export function classifyPairOptical(p: DecomposedPair, ctx: PairContext, indices: IdentifierIndices): OpticalVia {
   const { pair, primary, secondary } = p;
@@ -199,7 +197,7 @@ export function classifyPairOptical(p: DecomposedPair, ctx: PairContext, indices
   if (notes.some((ch) => WDS_NOTES_OPTICAL_CHARS.has(ch))) return 'wds_notes_rejected';
   if (notes.some((ch) => WDS_NOTES_PHYSICAL_CHARS.has(ch))) return 'wds_notes_kept';
 
-  if (ORBIT_ON_FILE.has(ctx.orbitVia)) return 'orbit_kept';
+  if (ORBIT_VIA_PROPERTIES[ctx.orbitVia].hasElements) return 'orbit_kept';
 
   if (pairBeyondSeparationLimit(primary, secondary, ctx.systemParallax, pair.rhoLast, indices)) return 'sep_limit_rejected';
 
