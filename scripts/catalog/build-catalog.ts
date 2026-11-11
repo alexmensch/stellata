@@ -205,38 +205,41 @@ function catalogStageLineage<S extends string>(
 function walkManifest(inputs: ReadStarsOptions, stepInputs: FileHashes) {
   let placementLines: LineageLine[] = [];
   const brightnessSpill = new LineSpill();
-  const sizeSpill = new LineSpill();
   try {
-    const manifestFounded = new Set<string>();
-    const manifest = function* () {
-      for (const r of artifactRows(MEMBERSHIP_MANIFEST)) {
-        for (const d of manifestDesignations(r)) manifestFounded.add(d);
-        yield r;
-      }
-    };
-    const { stars, stats } = readStars(manifest(), inputs, (outcome) => {
-      for (const line of placementLineageLines(outcome.placement)) placementLines.push(line);
-      if (outcome.brightness !== null) for (const line of brightnessColourLineageLines(outcome.brightness)) brightnessSpill.push(line);
-      if (outcome.kind === 'shipped') for (const line of sizeLineageLines(outcome.size)) sizeSpill.push(line);
-    });
-    const parkedLedger = parkedLedgerTsv(placementLines);
-    const placementRemovals = placementLines.filter((line) => PLACEMENT_EFFECTS.get(lineageLineCode(line)) !== 'none');
-    const placementEmission = catalogStageLineage(
-      PLACEMENT_LINEAGE, PLACEMENT_CODES, () => placementLines, PLACEMENT_LINEAGE_BUDGET, PLACEMENT_INVARIANTS, stepInputs,
-    );
-    // Released before brightness-colour's lines are read back, or both stages' lines are held at once.
-    placementLines = [];
-    const brightnessEmission = catalogStageLineage(
-      BRIGHTNESS_COLOUR_LINEAGE, BRIGHTNESS_COLOUR_CODES, () => brightnessSpill.lines(), BRIGHTNESS_COLOUR_LINEAGE_BUDGET, [],
-      stepInputs,
-    );
-    const sizeEmission = catalogStageLineage(
-      SIZE_LINEAGE, SIZE_CODES, () => sizeSpill.lines(), SIZE_LINEAGE_BUDGET, [], stepInputs,
-    );
-    return { stars, stats, parkedLedger, placementEmission, brightnessEmission, sizeEmission, manifestFounded, placementRemovals };
+    const sizeSpill = new LineSpill();
+    try {
+      const manifestFounded = new Set<string>();
+      const manifest = function* () {
+        for (const r of artifactRows(MEMBERSHIP_MANIFEST)) {
+          for (const d of manifestDesignations(r)) manifestFounded.add(d);
+          yield r;
+        }
+      };
+      const { stars, stats } = readStars(manifest(), inputs, (outcome) => {
+        for (const line of placementLineageLines(outcome.placement)) placementLines.push(line);
+        if (outcome.brightness !== null) for (const line of brightnessColourLineageLines(outcome.brightness)) brightnessSpill.push(line);
+        if (outcome.kind === 'shipped') for (const line of sizeLineageLines(outcome.size)) sizeSpill.push(line);
+      });
+      const parkedLedger = parkedLedgerTsv(placementLines);
+      const placementRemovals = placementLines.filter((line) => PLACEMENT_EFFECTS.get(lineageLineCode(line)) !== 'none');
+      const placementEmission = catalogStageLineage(
+        PLACEMENT_LINEAGE, PLACEMENT_CODES, () => placementLines, PLACEMENT_LINEAGE_BUDGET, PLACEMENT_INVARIANTS, stepInputs,
+      );
+      // Released before brightness-colour's lines are read back, or both stages' lines are held at once.
+      placementLines = [];
+      const brightnessEmission = catalogStageLineage(
+        BRIGHTNESS_COLOUR_LINEAGE, BRIGHTNESS_COLOUR_CODES, () => brightnessSpill.lines(), BRIGHTNESS_COLOUR_LINEAGE_BUDGET, [],
+        stepInputs,
+      );
+      const sizeEmission = catalogStageLineage(
+        SIZE_LINEAGE, SIZE_CODES, () => sizeSpill.lines(), SIZE_LINEAGE_BUDGET, [], stepInputs,
+      );
+      return { stars, stats, parkedLedger, placementEmission, brightnessEmission, sizeEmission, manifestFounded, placementRemovals };
+    } finally {
+      sizeSpill.dispose();
+    }
   } finally {
     brightnessSpill.dispose();
-    sizeSpill.dispose();
   }
 }
 
