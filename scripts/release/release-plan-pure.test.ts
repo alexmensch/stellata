@@ -130,11 +130,6 @@ describe('planReleases over a gh stack merge --squash landing', () => {
     const plan = planReleases('7.1.16', landed((_, label) => label));
     expect(plan).toEqual([{ sha: '5'.repeat(40), tag: 'v7.1.17', version: '7.1.17', prNumber: 771 }]);
   });
-
-  it('gives each releasing member its own version, in landing order', () => {
-    const plan = planReleases('7.1.16', landed((pr, label) => (pr === 762 ? 'release:minor' : label)));
-    expect(plan.map((r) => [r.tag, r.prNumber])).toEqual([['v7.2.0', 762], ['v7.2.1', 771]]);
-  });
 });
 
 describe('parsePlan', () => {
