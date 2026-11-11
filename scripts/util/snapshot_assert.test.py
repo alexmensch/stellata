@@ -137,7 +137,7 @@ class AssertOrUpdateCountsTests(unittest.TestCase):
         self.assertFalse(ok)
         self.assertIn("1 of 2 counts differ", out.getvalue())
         self.assertIn("filter", out.getvalue())
-        self.assertIn("stage's input is absent from the build", out.getvalue())
+        self.assertIn("stage's input is absent from the build, counted in the snapshot", out.getvalue())
         self.assertNotIn("missing in actual", out.getvalue())
 
     def test_an_absent_stage_matches_and_is_written_as_absent(self) -> None:

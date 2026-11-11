@@ -160,7 +160,11 @@ def format_diff(
     lines += [render_missing_actual(d) for d in missing_actual]
     lines += [render_missing_expected(d) for d in missing_expected]
     lines += [f"  {d.key:<40} moved from stage {d.moved[0]} to {d.moved[1]}" for d in moved if d.moved]
-    lines += [f"  {d.key:<40} stage's input is absent from the {d.absent_in}" for d in absent]
+    lines += [
+        f"  {d.key:<40} stage's input is absent from the {d.absent_in}, counted in the "
+        f"{'snapshot' if d.absent_in == 'build' else 'build'}"
+        for d in absent
+    ]
     return "\n".join(lines)
 
 
