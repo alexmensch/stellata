@@ -10,7 +10,7 @@ import {
 } from './catalog-elements-pure';
 
 describe('orb6ToCanonicalElements', () => {
-  it('reads years, arcseconds and a Julian-year T0 (α Cen: a = 23.17 AU at 755 mas)', () => {
+  it('reads years, arcseconds and a year-form T0 (α Cen: a = 23.17 AU at 755 mas)', () => {
     const o = orb6ToCanonicalElements(orb6Entry({
       pVal: 79.762, pUnit: 'y', aVal: 17.493, aUnit: 'a', iDeg: 79, nodeDeg: 204, periastronDeg: 232,
       e: 0.5179, t0Val: 1875.66, t0Unit: 'y',

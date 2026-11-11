@@ -716,11 +716,16 @@ The periastron epoch `T0` needs the same care, with a twist. Per
 `orb6format.txt` its `T0_unit` code is `d` = truncated JD (the file
 stores JD − 2,400,000, **not** a full JD — Algol Aa1,Aa2 carries
 `41771.353` = HJD 2441771.353), `m` = MJD (JD − 2,400,000.5), or `y` =
-fractional Besselian year. The twist: ORB6 mislabels ~50 truncated-JD
+fractional Besselian year. <a id="year-form-epochs"></a>**A year-form epoch — ORB6's `y` and
+the MSC's year-valued `t0` — is read on the Julian formula**
+(J2000 + (y − 2000) × 365.25 d, `jdOfJulianYear`), not the Besselian one
+(`besselianEpochToJd`): −0.31 d at 1900, +0.47 d at 2000, +0.70 d at
+2030, a fixed phase offset of that fraction of the period at every date
+on the clock. The twist: ORB6 mislabels ~50 truncated-JD
 epochs with the `y` flag (e.g. WDS 04227+1503 Aa,Ab stores
 `59501.496 y` for a 4-day pair), and the year formula throws those out
 past JD 2e7. `_orb6_T0_jd` therefore validates a `y` conversion against
-a physically-possible epoch window (Besselian years ≈1700–2600) and
+a physically-possible epoch window (years 1700–2600, read the same way) and
 retries the truncated-JD reading when it falls outside; unrecoverable
 rows (and the non-conforming `c` / blank flags) get a `None` epoch and
 place statically at the WDS observation epoch. `select_orbits_all`
