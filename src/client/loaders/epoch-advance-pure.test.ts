@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
+import { CATALOG_SCENE_EPOCH } from '../../catalog-format/record/catalog-pure';
 import {
-  CATALOG_SCENE_EPOCH_JYR,
   READVANCE_BUCKET_JYR,
   advancePositionsToEpoch,
   bucketEpochJyr,
@@ -12,14 +12,14 @@ describe('advancePositionsToEpoch', () => {
   it('is a no-op at the scene epoch', () => {
     const pos = new Float32Array([1, 2, 3]);
     const vel = new Float32Array([1e-3, -2e-3, 5e-4]);
-    advancePositionsToEpoch(pos, vel, CATALOG_SCENE_EPOCH_JYR);
+    advancePositionsToEpoch(pos, vel, CATALOG_SCENE_EPOCH);
     expect(Array.from(pos)).toEqual([1, 2, 3]);
   });
 
   it('advances p(t) = p(J2016) + v·Δt', () => {
     const pos = new Float32Array([10, 20, 30]);
     const vel = new Float32Array([0.5, -0.25, 0.1]);
-    advancePositionsToEpoch(pos, vel, CATALOG_SCENE_EPOCH_JYR + 10);
+    advancePositionsToEpoch(pos, vel, CATALOG_SCENE_EPOCH + 10);
     expect(pos[0]).toBeCloseTo(10 + 0.5 * 10, 4);
     expect(pos[1]).toBeCloseTo(20 - 0.25 * 10, 4);
     expect(pos[2]).toBeCloseTo(30 + 0.1 * 10, 4);
@@ -28,14 +28,14 @@ describe('advancePositionsToEpoch', () => {
   it('leaves zero-velocity records (Sol, no-PM rows) fixed', () => {
     const pos = new Float32Array([0, 0, 0, 5, -5, 5]);
     const vel = new Float32Array([0, 0, 0, 0, 0, 0]);
-    advancePositionsToEpoch(pos, vel, CATALOG_SCENE_EPOCH_JYR + 50);
+    advancePositionsToEpoch(pos, vel, CATALOG_SCENE_EPOCH + 50);
     expect(Array.from(pos)).toEqual([0, 0, 0, 5, -5, 5]);
   });
 
   it('advances backward for epochs before the scene epoch', () => {
     const pos = new Float32Array([100]);
     const vel = new Float32Array([2]);
-    advancePositionsToEpoch(pos, vel, CATALOG_SCENE_EPOCH_JYR - 25);
+    advancePositionsToEpoch(pos, vel, CATALOG_SCENE_EPOCH - 25);
     expect(pos[0]).toBeCloseTo(100 - 2 * 25, 4);
   });
 
@@ -43,7 +43,7 @@ describe('advancePositionsToEpoch', () => {
     const base = new Float32Array([10, 20, 30]);
     const vel = new Float32Array([0.5, -0.25, 0.1]);
     const out = new Float32Array(3);
-    advancePositionsToEpoch(base, vel, CATALOG_SCENE_EPOCH_JYR + 4, out);
+    advancePositionsToEpoch(base, vel, CATALOG_SCENE_EPOCH + 4, out);
     expect(Array.from(base)).toEqual([10, 20, 30]);
     expect(out[0]).toBeCloseTo(12, 5);
     expect(out[1]).toBeCloseTo(19, 5);
@@ -54,7 +54,7 @@ describe('advancePositionsToEpoch', () => {
     const base = new Float32Array([1, 2, 3]);
     const vel = new Float32Array([9, 9, 9]);
     const out = new Float32Array([-1, -1, -1]);
-    advancePositionsToEpoch(base, vel, CATALOG_SCENE_EPOCH_JYR, out);
+    advancePositionsToEpoch(base, vel, CATALOG_SCENE_EPOCH, out);
     expect(Array.from(out)).toEqual([1, 2, 3]);
   });
 
@@ -62,10 +62,10 @@ describe('advancePositionsToEpoch', () => {
     const base = new Float32Array([10]);
     const vel = new Float32Array([1]);
     const out = new Float32Array(1);
-    advancePositionsToEpoch(base, vel, CATALOG_SCENE_EPOCH_JYR + 100, out);
-    advancePositionsToEpoch(base, vel, CATALOG_SCENE_EPOCH_JYR + 50, out);
+    advancePositionsToEpoch(base, vel, CATALOG_SCENE_EPOCH + 100, out);
+    advancePositionsToEpoch(base, vel, CATALOG_SCENE_EPOCH + 50, out);
     const fresh = new Float32Array(1);
-    advancePositionsToEpoch(base, vel, CATALOG_SCENE_EPOCH_JYR + 50, fresh);
+    advancePositionsToEpoch(base, vel, CATALOG_SCENE_EPOCH + 50, fresh);
     expect(out[0]).toBe(fresh[0]);
     expect(out[0]).toBeCloseTo(60, 4);
   });
@@ -97,7 +97,7 @@ describe('writeAdvancedLocal', () => {
     const base = new Float32Array([0, 0, 0, 10, 20, 30]);
     const vel = new Float32Array([0, 0, 0, 0.5, -0.25, 0.1]);
     const out = new Float32Array(6);
-    writeAdvancedLocal(base, vel, CATALOG_SCENE_EPOCH_JYR + 4, 3, 1, 2, 3, out);
+    writeAdvancedLocal(base, vel, CATALOG_SCENE_EPOCH + 4, 3, 1, 2, 3, out);
     expect(out[3]).toBeCloseTo(10 + 0.5 * 4 - 1, 5);
     expect(out[4]).toBeCloseTo(20 - 0.25 * 4 - 2, 5);
     expect(out[5]).toBeCloseTo(30 + 0.1 * 4 - 3, 5);
@@ -113,7 +113,7 @@ describe('writeAdvancedLocal', () => {
     const base = new Float32Array([28.5, 0, 0]);
     const vel = new Float32Array([1e-7, 0, 0]);
     const out = new Float32Array(3);
-    writeAdvancedLocal(base, vel, CATALOG_SCENE_EPOCH_JYR + 5, 0, 28.5, 0, 0, out);
+    writeAdvancedLocal(base, vel, CATALOG_SCENE_EPOCH + 5, 0, 28.5, 0, 0, out);
     expect(out[0]).toBeCloseTo(5e-7, 12);
     // Contrast: rounding the advanced absolute to float32 first loses it.
     const roundedAbs = Math.fround(28.5 + 1e-7 * 5);

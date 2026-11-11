@@ -9,6 +9,7 @@ import {
 import { gaia5pUnreliable, gaiaHas5pSolution } from './gaia-distrust';
 import { type VelocityVia } from './velocity';
 import { HIPPARCOS_EPOCH_JYEAR, MAS_TO_RAD } from '../../../src/astro-core/astronomy-constants';
+import { CATALOG_SCENE_EPOCH } from '../../../src/catalog-format/record/catalog-pure';
 import type { SimbadRecordKeys } from '../simbad/simbad-namespace-ladder-pure';
 import type { Tycho2Row } from '../tycho2-parse';
 import type { AnySourceRowRef, SourceRowRef } from '../../util/sources/row-ref-pure';
@@ -27,13 +28,6 @@ export const HIP2_REF_EPOCH = HIPPARCOS_EPOCH_JYEAR;
  *  citation measured them at. The pull carries no epoch column, so this is
  *  measured rather than assumed — README.md#direction-resolution. */
 export const SIMBAD_REF_EPOCH = 2000.0;
-// Gaia DR3's native epoch: the catalogue-wide scene epoch every position
-// is normalised onto. The dominant Gaia set lands here with zero
-// propagation; only the HIP2 / Tycho-2 / CNS5 / SIMBAD minority advances.
-// The binaries pipeline mirrors this in scripts/binaries/stage6_multiples.py
-// — keep the two in sync (see /data/README.md#reference-epoch-and-proper-motion).
-export const CATALOG_SCENE_EPOCH = 2016.0;
-
 export const HIP2_PM_DELTA_THRESHOLD_MASYR = 50.0;
 
 /** The reference datasets this cascade routes between. It is not their only

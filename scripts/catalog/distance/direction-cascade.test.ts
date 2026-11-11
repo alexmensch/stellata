@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
+import { CATALOG_SCENE_EPOCH } from '../../../src/catalog-format/record/catalog-pure';
 import {
-  CATALOG_SCENE_EPOCH,
   DIRECTION_VIA_VALUES,
   GAIA_DR3_REF_EPOCH,
   HIP2_PM_DELTA_THRESHOLD_MASYR,

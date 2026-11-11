@@ -7,6 +7,10 @@
 // vitest cover the rest of scripts/, and neither fails without them: dropping
 // these breaks `vite build` and `pnpm run dev` alone.
 
+/** The Julian year every catalog.bin and multiples.tsv position is stated at:
+ *  Gaia DR3's own epoch, so the Gaia-routed majority needs no propagation. */
+export const CATALOG_SCENE_EPOCH = 2016.0;
+
 // The two override layers sit above the cascade rather than inside it — each
 // replaces the inverted distance wholesale, so they are outcomes of the routing
 // and not parallax tiers. `resolveParallax` never returns either.

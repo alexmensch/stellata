@@ -10,12 +10,9 @@ import { describe, it, beforeAll, expect } from 'vitest';
 import { type Catalog, type CatalogRecord, loadCatalog, lookupByRef } from '../../scripts/catalog/catalog-lookup';
 import { parseRef, type RecordRef } from '../../scripts/catalog/parse/corpus-tsv';
 import { unitVectorFromRaDec, type UnitVector } from '../../src/astro-core/equatorial-basis';
-import {
-  CATALOG_SCENE_EPOCH_JYR,
-  advancePositionsToEpoch,
-} from '../../src/client/loaders/epoch-advance-pure';
+import { advancePositionsToEpoch } from '../../src/client/loaders/epoch-advance-pure';
 import { publicFile } from '../../scripts/util/paths';
-import { CATALOG_MANIFEST_FILENAME } from '../../src/catalog-format/record/catalog-pure';
+import { CATALOG_MANIFEST_FILENAME, CATALOG_SCENE_EPOCH } from '../../src/catalog-format/record/catalog-pure';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const CORPUS_TSV = resolve(__dirname, '../../scripts/catalog/validate/sky-position-corpus.tsv');
@@ -110,8 +107,8 @@ describe.skipIf(!CATALOG_BIN_PRESENT)('sky-position corpus', () => {
   // check the on-sky angular displacement matches published total PM × Δt.
   // A wrong tier, distance scale, unit, or sign misses by ≫ tolerance at a
   // 34 yr baseline (Barnard's alone moves ~350″).
-  const ADVANCE_EPOCH_JYR = CATALOG_SCENE_EPOCH_JYR + 34; // J2050.0
-  const dt = ADVANCE_EPOCH_JYR - CATALOG_SCENE_EPOCH_JYR;
+  const ADVANCE_EPOCH_JYR = CATALOG_SCENE_EPOCH + 34; // J2050.0
+  const dt = ADVANCE_EPOCH_JYR - CATALOG_SCENE_EPOCH;
   for (const row of corpus) {
     if (row.totalPmMasyr === null) continue;
     it(`${row.name} advances by its published proper motion (${row.totalPmMasyr} mas/yr) over ${dt} yr`, () => {
