@@ -280,13 +280,14 @@ bytes in chunks, and the diff walks the baseline a key at a time
 
 A stage that size cannot hold its rows as objects either: 3.9 million
 `LineageRow`s, beside the `Placement`s they came from, are about 1.7 GB of
-heap. So a stage hands `stageLineage` lines, never rows, and placement and
-brightness-colour serialise each record to their lines inside the walk,
-keeping only the strings; the diff reads the baseline as lines too, and
-only a reader that needs fields (trace, a ledger view) decodes them. Even as
-strings the two stages' 7.9 million lines overrun the heap budget together,
-so brightness-colour's and size's go to a `LineSpill` each during the walk
-and are read back one stage at a time, once placement's lines are released.
+heap. So a stage hands `stageLineage` lines, never rows, and placement,
+brightness-colour and size serialise each record to their lines inside the
+walk, keeping only the strings; the diff reads the baseline as lines too,
+and only a reader that needs fields (trace, a ledger view) decodes them.
+Even as strings the three stages' 8.8 million lines (placement 3.9M,
+brightness-colour 4.0M, size 0.96M) overrun the heap budget together, so
+brightness-colour's and size's go to a `LineSpill` each during the walk and
+are read back one stage at a time, once placement's lines are released.
 
 The committed form of lineage is `data/sid/events.tsv` plus the ledger views
 below; the derivation itself is a build artifact, regenerated every build.
@@ -378,8 +379,8 @@ its module, in [Placement lineage](../distance/README.md#placement-lineage).
 
 ## The brightness-colour stage
 
-`build:catalog`'s V, spectral class, B−V and de-extinction are the third
-stage, written from the same record walk as placement; its contract lives
+`build:catalog`'s V, spectral class, B−V and de-extinction are the stage
+after placement, written from the same record walk as placement; its contract lives
 beside its module, in [Brightness-colour lineage](../photometry/README.md#brightness-colour-lineage).
 
 ## The size stage
