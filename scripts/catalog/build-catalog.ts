@@ -45,7 +45,6 @@ import {
   formatPartition,
   type CatalogCountStage,
   type FiledCounts,
-  type NamingCounts,
 } from './build-counts';
 import { DIST_VIA_COUNT_KEY } from './distance/parallax/parallax-cascade';
 import {
@@ -123,7 +122,7 @@ import {
 } from './naming/apply-star-names';
 import { assignDisplayNames, type NamedRecord, type NamingDerivedCounts } from './naming/display-names';
 import {
-  NAMING_CODES, NAMING_INVARIANTS, NAMING_LINEAGE_BUDGET, namingLineageLines, namingSummary,
+  NAMING_CODES, NAMING_INVARIANTS, NAMING_LINEAGE_BUDGET, namingLineageLines, namingSummary, type NamingCounts,
 } from './naming/naming-lineage-pure';
 import { readStars, type ReadStarsOptions, type Star } from './parse/stars-parse';
 import {

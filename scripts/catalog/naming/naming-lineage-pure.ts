@@ -6,6 +6,7 @@ import {
 } from '../lineage/reason-codes/reason-codes-pure';
 import { lineageInvariant, NO_EXCEPTIONS, type LineageInvariant } from '../lineage/lineage-invariant-pure';
 import type { NamedRecord, NamingDerivedCounts } from './display-names';
+import type { StarNamingCounts } from './apply-star-names';
 import {
   designationAtTier,
   BORROWABLE_TIERS,
@@ -182,8 +183,11 @@ export function* namingLineageRows(
 
 type LiveCode = (typeof NAMING_CODES.live)[number];
 
-/** Naming's count block from its lines: one count per live code. */
+/** Naming's lines folded per live code. */
 export type NamingCodeCounts = Readonly<Record<LiveCode, number>>;
+
+/** Naming's count block: its code counts and the authority pass's tally, which has no codes. */
+export type NamingCounts = NamingCodeCounts & StarNamingCounts;
 
 const nameCode = (branch: `name.own.${TierCode}` | `name.borrowed.${BorrowReason}.${TierCode}`): LiveCode =>
   NAMING_CODES.code(branch) as LiveCode;

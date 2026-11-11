@@ -18,8 +18,7 @@ import type { SearchCounts } from './record/search-index-pure.ts';
 import type { GcvsCounts } from './parse/gcvs/gcvs-parse.ts';
 import type { MultiplicityCounts } from './multiplicity/multiplicity-stage-pure.ts';
 import type { RecordsCounts } from './record/records-stage-pure.ts';
-import type { NamingCodeCounts } from './naming/naming-lineage-pure.ts';
-import type { StarNamingCounts } from './naming/apply-star-names.ts';
+import type { NamingCounts } from './naming/naming-lineage-pure.ts';
 import type { NamingDerivedCounts } from './naming/display-names.ts';
 
 /** Repo-relative path of the snapshot `BuildCounts` is pinned against, so the
@@ -35,9 +34,6 @@ export function committedBuildCounts(): BuildCounts {
 /** Every count the snapshot holds, by name: the filed counts and each composed stage's block. */
 export type BuildCounts = FiledCounts & InputsCounts & BrightnessColourCounts & CoherenceCounts & MultiplicityCounts & GcvsCounts
   & NamingCounts & NamingDerivedCounts & RecordsCounts & SearchCounts & BoundariesCounts & FiguresCounts;
-
-/** Naming's count block: its lines folded per live code, and the authority pass's tally, which has no codes. */
-export type NamingCounts = NamingCodeCounts & StarNamingCounts;
 
 /** The counts of the stages not yet composed of a count block, each filed under its stage by CATALOG_COUNT_STAGE. */
 export interface FiledCounts {
