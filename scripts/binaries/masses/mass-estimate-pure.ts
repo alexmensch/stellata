@@ -92,7 +92,7 @@ const MS_MASS: readonly (readonly number[])[] = [
   [0.50, 0.42, 0.36, 0.32, 0.28, 0.20, 0.13, 0.09, 0.07, 0.05],
 ];
 
-/** Giant (III, and II) masses: Cox 2000 Table 15.7; the O row is extrapolated, not read off the table. */
+/** Giant (III, and II) masses: Cox 2000 (/data/papers/index.md#cox2000) Table 15.7; the O row is extrapolated, not read off the table. */
 const III_MASS: readonly (readonly number[])[] = [
   Array(10).fill(40.0),
   [15.0, 13.0, 11.0, 9.0, 8.0, 7.0, 6.5, 6.0, 5.5, 5.0],
@@ -103,7 +103,7 @@ const III_MASS: readonly (readonly number[])[] = [
   [1.5, 1.4, 1.4, 1.3, 1.3, 1.3, 1.3, 1.3, 1.3, 1.3],
 ];
 
-/** Supergiant (Ia+, Ia, Iab, Ib) masses: Cox 2000 Table 15.7, one row for every tier. */
+/** Supergiant (Ia+, Ia, Iab, Ib) masses: Cox 2000 (/data/papers/index.md#cox2000) Table 15.7, one row for every tier. */
 const I_MASS: readonly (readonly number[])[] = [
   [70.0, 60.0, 50.0, 45.0, 40.0, 35.0, 32.0, 30.0, 28.0, 27.0],
   [25.0, 22.0, 20.0, 18.0, 16.0, 14.0, 13.0, 12.0, 11.0, 10.0],
