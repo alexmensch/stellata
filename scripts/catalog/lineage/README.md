@@ -68,6 +68,10 @@ scripts/catalog/lineage/
   lineage-io.ts                  The baseline members and a stage's emission,
                                  gzip, and the header with its input map
                                  and file hashes, re-checked on read.
+  count-block-fixture.ts         Test-only: seededCodeCheck, a stage's count
+                                 block against its snapshot before and after
+                                 a code is seeded, so each counted stage pins
+                                 that a new code reaches the snapshot.
   lineage-core-pure.test.ts      Order, writer refusal, diff.
   lineage-rotation.test.ts       Rotation over a scratch build/: a failed or
                                  absent emission moves nothing, another
