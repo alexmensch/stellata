@@ -5,6 +5,17 @@ import { UPDATE_SNAPSHOTS_ENV } from '../util/snapshot-check';
 /** Far tighter than any doc quotes a figure, so a re-measure that could move a quoted digit always fails. */
 export const FIGURE_PIN_RELATIVE_TOLERANCE = 1e-9;
 
+function parseFigures(path: string, text: string): Record<string, number> {
+  const parsed: unknown = JSON.parse(text);
+  if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    throw new Error(`${path} must be one flat object of figures`);
+  }
+  for (const [key, value] of Object.entries(parsed)) {
+    if (typeof value !== 'number' || !Number.isFinite(value)) throw new Error(`${path}: figure ${key} is not a finite number`);
+  }
+  return parsed as Record<string, number>;
+}
+
 export interface FigurePins {
   /** Throws unless `actual` matches the snapshot's value; records it instead when updating. */
   pin(key: string, actual: number): void;
@@ -18,9 +29,7 @@ export function figurePins(
   snapshotPath: string,
   updating = process.env[UPDATE_SNAPSHOTS_ENV] === '1',
 ): FigurePins {
-  const expected: Record<string, number> = existsSync(snapshotPath)
-    ? (JSON.parse(readFileSync(snapshotPath, 'utf8')) as Record<string, number>)
-    : {};
+  const expected = existsSync(snapshotPath) ? parseFigures(snapshotPath, readFileSync(snapshotPath, 'utf8')) : {};
   const recorded = new Map<string, number>();
   const refresh = `${UPDATE_SNAPSHOTS_ENV}=1 pnpm vitest run <this test file>, then pnpm run docs:figures`;
 

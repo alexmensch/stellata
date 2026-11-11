@@ -4,9 +4,9 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { FIGURE_PIN_RELATIVE_TOLERANCE, figurePins } from './figure-pins';
 
-const snapshot = (figures: Record<string, number> | null): string => {
+const snapshot = (figures: unknown): string => {
   const path = join(mkdtempSync(join(tmpdir(), 'figure-pins-')), 'x-expected.json');
-  if (figures) writeFileSync(path, JSON.stringify(figures));
+  if (figures !== null) writeFileSync(path, JSON.stringify(figures));
   return path;
 };
 
@@ -22,6 +22,12 @@ describe('figurePins', () => {
   it('fails on a figure the snapshot lacks, naming the refresh', () => {
     expect(() => figurePins(snapshot({}), false).pin('a', 1)).toThrow(/no figure a.*UPDATE_SNAPSHOTS=1/);
     expect(() => figurePins(snapshot(null), false).pin('a', 1)).toThrow(/no figure a/);
+  });
+
+  it('refuses a snapshot holding anything but finite numbers, naming the key', () => {
+    expect(() => figurePins(snapshot({ a: 1, b: '2' }), false)).toThrow(/figure b is not a finite number/);
+    expect(() => figurePins(snapshot({ a: { nested: 1 } }), false)).toThrow(/figure a is not a finite number/);
+    expect(() => figurePins(snapshot([1]), false)).toThrow(/one flat object/);
   });
 
   it('refuses one key pinned twice', () => {

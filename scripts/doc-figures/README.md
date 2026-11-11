@@ -40,8 +40,8 @@ check-staged-figures.ts    The commit-time copy check (below): prints each
 figure-pins.ts             figurePins: a test's measured figures asserted
                            against its snapshot, or recorded and written
                            under UPDATE_SNAPSHOTS=1 (below).
-figure-pins.test.ts        Tolerance, missing key, double pin, unpinned keys,
-                           update-mode write.
+figure-pins.test.ts        Tolerance, malformed snapshot, missing key,
+                           double pin, unpinned keys, update-mode write.
 rewrite-doc-figures.ts     pnpm run docs:figures. Rewrites stale figures in
                            place; a file with a problem is left unwritten and
                            the run exits 1.
