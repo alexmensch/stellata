@@ -25,6 +25,9 @@ scripts/binaries/orbits/
     (+ test)                     unit codes, the T0 readings), and
                                  pickBestOrb6 / pickBestMsc among one
                                  pair's rows.
+  select-orbit-pure.ts (+ test)  PairOrbit; selectOrbit, the cascade for
+                                 one pair; nssSeparationConsistent and
+                                 keplerSemimajorAxisAu.
 ```
 
 ## Conventions the port keeps
