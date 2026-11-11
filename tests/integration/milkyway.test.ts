@@ -586,7 +586,7 @@ describe('MilkyWay surface-brightness calibration', () => {
 
   // Dust-free, so each is commensurable with the de-extincted catalogue cap
   // on the same pole (/src/astro-core/milkyway/calibration/README.md#the-resolution-hole--the-band-marches-the-model-minus-the-drawn-stars).
-  it('removes about the cap\u2019s own light along each cap\u2019s central ray', () => {
+  it('removes about the cap’s own light along each cap’s central ray', () => {
     const removed = (b: number) => {
       const dir = galacticDirection(0, b);
       const whole = sightlineColumn(SOL_GALACTOCENTRIC_PC, dir, { dustEnabled: false, resolvedHole: null });
