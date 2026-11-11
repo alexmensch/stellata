@@ -16,8 +16,8 @@ const minor: CommitRelease = { kind: 'release', level: 'minor' };
 const major: CommitRelease = { kind: 'release', level: 'major' };
 const none: CommitRelease = { kind: 'none' };
 
-function commit(sha: string, release: CommitRelease, pr: number | null): RangeCommit {
-  return { sha, release, subject: pr === null ? `Some change` : `Some change (#${pr})` };
+function commit(sha: string, release: CommitRelease, pr: number | null, title = 'Some change'): RangeCommit {
+  return { sha, release, subject: pr === null ? title : `${title} (#${pr})` };
 }
 
 describe('declarationOf', () => {
@@ -118,16 +118,9 @@ describe('planReleases over a gh stack merge --squash landing', () => {
     ['Binaries Stage 4 (orbits) ported to TypeScript, unwired (ticket-17.3)', 771, 'release:patch'],
   ];
 
-  function landed(labelOf: (pr: number, label: string) => string): RangeCommit[] {
-    return stack768.map(([title, pr, label], i) => ({
-      sha: `${i + 1}`.repeat(40),
-      subject: `${title} (#${pr})`,
-      release: declarationOf([labelOf(pr, label)]),
-    }));
-  }
-
   it('maps every member to its PR and releases only the release:patch one', () => {
-    const plan = planReleases('7.1.16', landed((_, label) => label));
+    const landed = stack768.map(([title, pr, label], i) => commit(`${i + 1}`.repeat(40), declarationOf([label]), pr, title));
+    const plan = planReleases('7.1.16', landed);
     expect(plan).toEqual([{ sha: '5'.repeat(40), tag: 'v7.1.17', version: '7.1.17', prNumber: 771 }]);
   });
 });
