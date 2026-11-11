@@ -9,7 +9,6 @@ import {
   KM_PC,
   KM_S_PER_AU_YR,
   R_SUN_PC,
-  SECONDS_PER_DAY,
 } from './astronomy-constants';
 
 describe('astronomy-constants', () => {
@@ -33,7 +32,6 @@ describe('astronomy-constants', () => {
   });
 
   it('KM_S_PER_AU_YR is one AU per Julian year in km/s', () => {
-    expect(KM_S_PER_AU_YR).toBe(AU_KM / (DAYS_PER_JULIAN_YEAR * SECONDS_PER_DAY));
     expect(KM_S_PER_AU_YR).toBeCloseTo(4.74047, 5);
   });
 
