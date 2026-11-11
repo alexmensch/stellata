@@ -879,12 +879,12 @@ export async function main() {
     const { ampUnits, periodUnits } = variabilityUnits(s);
     // Gaia DR3 source_ids exceed Number.MAX_SAFE_INTEGER; parse the
     // manifest column as BigInt to preserve every bit before writing.
-    const gaiaSourceId = s.gaiaSourceId ? BigInt(s.gaiaSourceId) : NO_GAIA_SOURCE_ID;
+    const gaiaSourceId = s.gaiaSourceId !== null ? BigInt(s.gaiaSourceId) : NO_GAIA_SOURCE_ID;
 
     // Apsis lookup keyed by gaia_source_id string (BigInt key would
     // require a parallel string map). NO_APSIS (NaN) fills every cell
     // when the source_id is absent from the TSV or the row's cell is blank.
-    const apsisRow = s.gaiaSourceId ? apsisMap.get(s.gaiaSourceId) : undefined;
+    const apsisRow = s.gaiaSourceId !== null ? apsisMap.get(s.gaiaSourceId) : undefined;
     const apsis = {} as Record<ApsisField, number>;
     for (const name of APSIS_FIELDS) apsis[name] = apsisRow?.[name] ?? NO_APSIS;
 
