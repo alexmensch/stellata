@@ -13,13 +13,13 @@ import { baselineMembers, readLineage, readStageHeader, stageEmission } from './
 import { lineageInvariant, NO_EXCEPTIONS } from './lineage-invariant-pure';
 import { paramsText, stageLineageLine, stageLineageText } from './lineage-row-pure';
 import { inputsAtFrom, stageLineage, upstreamLineage } from './stage-lineage';
-import { LIVE, stageCodes } from './reason-codes/reason-codes-pure';
+import { outcomeCode, stageCodes } from './reason-codes/reason-codes-pure';
 import {
   lineageLayout, stageFamilies, stageFile, stageFileName, stageOutputFiles, type LineageLayout,
 } from '../../../src/catalog-format/pipeline-outputs/lineage-files';
 
 const SPEC = { stage: 'demo', files: ['demo', 'identity'] as const };
-const CODES = stageCodes('demo', { kept: { description: 'kept', effect: 'none', status: LIVE } });
+const CODES = stageCodes('demo', { kept: outcomeCode('kept') });
 
 let dir: string;
 let layout: LineageLayout;

@@ -5,7 +5,7 @@ import {
   decodeLineageLine, evidenceTexts, lineageLineCode, paramsOf, paramsText, stageLineageLine,
   type LineageLine, type LineageParams, type LineageRow,
 } from '../lineage/lineage-row-pure';
-import { LIVE, stageCodes, type CodeDeclaration } from '../lineage/reason-codes/reason-codes-pure';
+import { outcomeCode, refusalCode, stageCodes } from '../lineage/reason-codes/reason-codes-pure';
 import { sourceRowRefText, type AnySourceRowRef } from '../../util/sources/row-ref-pure';
 import type { DirectionResolution, DirectionVia } from './direction-cascade';
 import type { ParallaxResolution, ParallaxTier } from './parallax/parallax-cascade';
@@ -22,9 +22,6 @@ import type { DistVia } from '../../../src/catalog-format/record/catalog-pure';
 
 export const PLACEMENT_LINEAGE_BUDGET = { gzipBytes: 34_000_000, writeMs: 40_000 };
 
-const live = (description: string, effect: CodeDeclaration['effect'] = 'none'): CodeDeclaration => (
-  { description, effect, status: LIVE }
-);
 
 const PARALLAX_BRANCHES = {
   gaia_dr3_inversion: 'parallax.gaia-dr3-inversion',
@@ -94,48 +91,48 @@ const PARK_BRANCHES = {
 const PARK = 'park';
 
 export const PLACEMENT_CODES = stageCodes(PLACEMENT_LINEAGE.stage, {
-  'parallax.gaia-dr3-inversion': live('The record\'s own Gaia DR3 five-parameter parallax.'),
-  'parallax.hip2-parallax': live('The record\'s own HIP in Hipparcos-2, van Leeuwen 2007 (/data/papers/index.md#vanleeuwen2007), above the S/N floor.'),
-  'parallax.cns5-plx': live('The record\'s own GJ in CNS5, cited to a publication no tier above refused, above the S/N floor.'),
-  'parallax.gliese-plx': live('The record\'s own GJ in V/70A, where the catalogue states its parallax is trigonometric.'),
-  'parallax.simbad-plx': live('SIMBAD\'s bibcoded parallax, cited to a publication no tier above refused, above the S/N floor.'),
-  'parallax.pair-member-parallax': live('A bound sibling\'s anchor-grade Gaia DR3 parallax, lent because no measurement of the record itself survived.'),
-  'parallax.gliese-photometric-plx': live('V/70A\'s photometric or spectroscopic parallax estimate, the bottom tier: nothing measured reaches the record.'),
-  'parallax.curated': live('Sol: distance zero by construction.'),
-  'parallax.refused.below-sn-floor': live('A tier\'s parallax is below S/N 1, indistinguishable from zero, so its inverse is undefined.'),
-  'parallax.refused.gaia-release': live('A courier\'s parallax cites a Gaia release on a record whose own Gaia fit is position-only, so it is the withdrawn fit returning.'),
-  'parallax.refused.hipparcos2': live('A courier\'s parallax cites Hipparcos-2 on a record whose Hipparcos-2 parallax the S/N floor refused.'),
-  'direction.gaia-5p': live('The record\'s own Gaia DR3 five-parameter solution.'),
-  'direction.gaia-2p': live('The record\'s own Gaia DR3 position-only solution, which no Hipparcos-2 row covers.'),
-  'direction.gaia-nss-systemic': live('The record\'s Gaia DR3 solution, refitted to the centre of mass: an NSS two-body orbit and an unreliable five-parameter fit.'),
-  'direction.hip2-saturated': live('Hipparcos-2, where Gaia states no usable parallax for the record.'),
-  'direction.hip2-pm-discrepant': live('Hipparcos-2, where the Gaia proper motion disagrees with it by more than 50 mas/yr.'),
-  'direction.tycho2': live('The record\'s own TYC in Tycho-2, which neither Gaia nor Hipparcos-2 reaches.'),
-  'direction.cns5': live('The record\'s own GJ in CNS5, which no tier above reaches.'),
-  'direction.simbad': live('SIMBAD\'s bibcoded coordinates, the bottom tier.'),
-  'direction.curated': live('Sol: the direction is arbitrary at distance zero.'),
-  'direction.refused.pm-disagrees-with-hip2': live('The Gaia solution\'s proper motion disagrees with Hipparcos-2\'s by more than 50 mas/yr, the mark of an orbit-corrupted fit.'),
-  'direction.refused.no-5p-solution': live('The Gaia solution is position-only and Hipparcos-2 covers the star.'),
-  'pm-rescue.tycho2': live('The direction tier states no proper motion; the record\'s own TYC in Tycho-2 supplies one.'),
-  'pm-rescue.cns5': live('The direction tier states no proper motion; the record\'s own GJ in CNS5 supplies one.'),
-  'pm-rescue.simbad': live('The direction tier states no proper motion; SIMBAD\'s bibcoded one supplies it.'),
-  'pm-rescue.none': live('The direction tier states no proper motion and no rescue tier supplies one, so the record ships static.'),
-  'pm-rescue.refused.gaia-release': live('A courier\'s proper motion cites a Gaia release on a record whose own Gaia fit is position-only.'),
-  'rv.gaia-dr3': live('Gaia DR3\'s RVS radial velocity on a record with a five-parameter solution.'),
-  'rv.simbad': live('SIMBAD\'s bibcoded radial velocity.'),
-  'rv.none': live('No tier states a radial velocity, so the radial term is zero.'),
-  'rv.rejected-above-ceiling': live('The radial velocity a tier supplied exceeds the sanity ceiling on its own, so the radial term is dropped.'),
-  'rv.refused.no-5p-solution': live('Gaia\'s RVS velocity on a position-only solution, whose spectrum is a blend.'),
-  'rv.refused.gaia-release': live('SIMBAD\'s radial velocity cites a Gaia release on a record whose own Gaia fit is position-only.'),
-  'distance.bailer-jones': live('The posterior distance of Bailer-Jones 2021 (/data/papers/index.md#bailerjones2021) replaces the inverted Gaia DR3 parallax.'),
-  'distance.bailer-jones-absent': live('The inverted Gaia DR3 parallax is eligible for a Bailer-Jones posterior that the committed pull lacks.'),
-  'distance.lmc-kinematic': live('Inside the LMC cone and sharing its proper motion, the record snaps to the LMC distance.'),
-  'distance.lmc-refused-by-own-parallax': live('The LMC snap is refused: the record\'s own parallax is more than 10 sigma above the LMC\'s.'),
-  'velocity.clamped': live('The space velocity exceeds the sanity ceiling, so it is zeroed.'),
-  'park.refused-no-defensible-parallax': live('Every parallax reaching the record was refused, so it cannot be placed.', PARK),
-  'park.no-parallax-published': live('No parallax tier reaches the record, so it cannot be placed.', PARK),
-  'park.no-v-magnitude': live('No V tier lights the record, so it has no brightness.', PARK),
-  'park.no-position': live('No direction tier states where the record is on the sky.', PARK),
+  'parallax.gaia-dr3-inversion': outcomeCode('The record\'s own Gaia DR3 five-parameter parallax.'),
+  'parallax.hip2-parallax': outcomeCode('The record\'s own HIP in Hipparcos-2, van Leeuwen 2007 (/data/papers/index.md#vanleeuwen2007), above the S/N floor.'),
+  'parallax.cns5-plx': outcomeCode('The record\'s own GJ in CNS5, cited to a publication no tier above refused, above the S/N floor.'),
+  'parallax.gliese-plx': outcomeCode('The record\'s own GJ in V/70A, where the catalogue states its parallax is trigonometric.'),
+  'parallax.simbad-plx': outcomeCode('SIMBAD\'s bibcoded parallax, cited to a publication no tier above refused, above the S/N floor.'),
+  'parallax.pair-member-parallax': outcomeCode('A bound sibling\'s anchor-grade Gaia DR3 parallax, lent because no measurement of the record itself survived.'),
+  'parallax.gliese-photometric-plx': outcomeCode('V/70A\'s photometric or spectroscopic parallax estimate, the bottom tier: nothing measured reaches the record.'),
+  'parallax.curated': outcomeCode('Sol: distance zero by construction.'),
+  'parallax.refused.below-sn-floor': refusalCode('A tier\'s parallax is below S/N 1, indistinguishable from zero, so its inverse is undefined.'),
+  'parallax.refused.gaia-release': refusalCode('A courier\'s parallax cites a Gaia release on a record whose own Gaia fit is position-only, so it is the withdrawn fit returning.'),
+  'parallax.refused.hipparcos2': refusalCode('A courier\'s parallax cites Hipparcos-2 on a record whose Hipparcos-2 parallax the S/N floor refused.'),
+  'direction.gaia-5p': outcomeCode('The record\'s own Gaia DR3 five-parameter solution.'),
+  'direction.gaia-2p': outcomeCode('The record\'s own Gaia DR3 position-only solution, which no Hipparcos-2 row covers.'),
+  'direction.gaia-nss-systemic': outcomeCode('The record\'s Gaia DR3 solution, refitted to the centre of mass: an NSS two-body orbit and an unreliable five-parameter fit.'),
+  'direction.hip2-saturated': outcomeCode('Hipparcos-2, where Gaia states no usable parallax for the record.'),
+  'direction.hip2-pm-discrepant': outcomeCode('Hipparcos-2, where the Gaia proper motion disagrees with it by more than 50 mas/yr.'),
+  'direction.tycho2': outcomeCode('The record\'s own TYC in Tycho-2, which neither Gaia nor Hipparcos-2 reaches.'),
+  'direction.cns5': outcomeCode('The record\'s own GJ in CNS5, which no tier above reaches.'),
+  'direction.simbad': outcomeCode('SIMBAD\'s bibcoded coordinates, the bottom tier.'),
+  'direction.curated': outcomeCode('Sol: the direction is arbitrary at distance zero.'),
+  'direction.refused.pm-disagrees-with-hip2': refusalCode('The Gaia solution\'s proper motion disagrees with Hipparcos-2\'s by more than 50 mas/yr, the mark of an orbit-corrupted fit.'),
+  'direction.refused.no-5p-solution': refusalCode('The Gaia solution is position-only and Hipparcos-2 covers the star.'),
+  'pm-rescue.tycho2': outcomeCode('The direction tier states no proper motion; the record\'s own TYC in Tycho-2 supplies one.'),
+  'pm-rescue.cns5': outcomeCode('The direction tier states no proper motion; the record\'s own GJ in CNS5 supplies one.'),
+  'pm-rescue.simbad': outcomeCode('The direction tier states no proper motion; SIMBAD\'s bibcoded one supplies it.'),
+  'pm-rescue.none': outcomeCode('The direction tier states no proper motion and no rescue tier supplies one, so the record ships static.'),
+  'pm-rescue.refused.gaia-release': refusalCode('A courier\'s proper motion cites a Gaia release on a record whose own Gaia fit is position-only.'),
+  'rv.gaia-dr3': outcomeCode('Gaia DR3\'s RVS radial velocity on a record with a five-parameter solution.'),
+  'rv.simbad': outcomeCode('SIMBAD\'s bibcoded radial velocity.'),
+  'rv.none': outcomeCode('No tier states a radial velocity, so the radial term is zero.'),
+  'rv.rejected-above-ceiling': outcomeCode('The radial velocity a tier supplied exceeds the sanity ceiling on its own, so the radial term is dropped.'),
+  'rv.refused.no-5p-solution': refusalCode('Gaia\'s RVS velocity on a position-only solution, whose spectrum is a blend.'),
+  'rv.refused.gaia-release': refusalCode('SIMBAD\'s radial velocity cites a Gaia release on a record whose own Gaia fit is position-only.'),
+  'distance.bailer-jones': outcomeCode('The posterior distance of Bailer-Jones 2021 (/data/papers/index.md#bailerjones2021) replaces the inverted Gaia DR3 parallax.'),
+  'distance.bailer-jones-absent': outcomeCode('The inverted Gaia DR3 parallax is eligible for a Bailer-Jones posterior that the committed pull lacks.'),
+  'distance.lmc-kinematic': outcomeCode('Inside the LMC cone and sharing its proper motion, the record snaps to the LMC distance.'),
+  'distance.lmc-refused-by-own-parallax': refusalCode('The LMC snap is refused: the record\'s own parallax is more than 10 sigma above the LMC\'s.'),
+  'velocity.clamped': outcomeCode('The space velocity exceeds the sanity ceiling, so it is zeroed.'),
+  'park.refused-no-defensible-parallax': outcomeCode('Every parallax reaching the record was refused, so it cannot be placed.', PARK),
+  'park.no-parallax-published': outcomeCode('No parallax tier reaches the record, so it cannot be placed.', PARK),
+  'park.no-v-magnitude': outcomeCode('No V tier lights the record, so it has no brightness.', PARK),
+  'park.no-position': outcomeCode('No direction tier states where the record is on the sky.', PARK),
 });
 
 type Branch = Parameters<typeof PLACEMENT_CODES.code>[0];

@@ -1,7 +1,7 @@
 // Display naming as a lineage stage: its reason codes and the one serialiser over each record's naming outcome. See README.md#naming-lineage.
 
 import { paramsOf, paramsText, stageLineageLine, type LineageLine, type LineageParams, type LineageRole, type LineageRow } from '../lineage/lineage-row-pure';
-import { LIVE, stageCodes, type CodeDeclaration } from '../lineage/reason-codes/reason-codes-pure';
+import { outcomeCode, refusalCode, stageCodes } from '../lineage/reason-codes/reason-codes-pure';
 import { lineageInvariant, NO_EXCEPTIONS, type LineageInvariant } from '../lineage/lineage-invariant-pure';
 import type { NamedRecord } from './display-names';
 import {
@@ -14,27 +14,26 @@ import { NAMING_LINEAGE } from '../../../src/catalog-format/pipeline-outputs/lin
 
 export const NAMING_LINEAGE_BUDGET = { gzipBytes: 10_600_000, writeMs: 28_000 };
 
-const live = (description: string): CodeDeclaration => ({ description, effect: 'none', status: LIVE });
 
 export const NAMING_CODES = stageCodes(NAMING_LINEAGE.stage, {
-  'name.own': live('The record displays the highest tier of the naming ladder it carries in its own right.'),
-  'name.borrowed.no-own-designation': live('The record is a WDS component with no designation of its own, so it displays its system anchor\'s base with its component letter.'),
-  'name.borrowed.system-designation': live('The record\'s own designation is one its system anchor also carries, so it displays the anchor\'s base with its component letter.'),
-  'name.borrowed.outranked-identifier': live('The record\'s own designation is a GCVS serial or catalogue number ranked below its system anchor\'s tier, so it displays the anchor\'s base with its component letter.'),
-  'name.unlabelled': live('The record carries nothing the ladder renders and has no anchor to borrow from, so the runtime displays its Gaia DR3 or SID fallback.'),
-  'name.lower-tier': live('A designation the record carries, refused because a higher tier of the ladder supplied its label.'),
-  'name.borrowed-over': live('A designation the record carries, refused because it displays its system anchor\'s base instead.'),
-  'letter.stated': live('The label carries the component letter the naming authority attributes the record\'s designation to.'),
-  'letter.sibling-owns': live('The label carries the record\'s WDS component letter because another record owns the same designation.'),
-  'letter.borrowed': live('The label carries the record\'s WDS component letter after its system anchor\'s borrowed base.'),
-  'dc.wgsn-bayer': live('The record\'s designations render against the constellation the IAU WGSN Bayer designation is named for.'),
-  'dc.wgsn-gould': live('The record\'s designations render against the constellation the IAU WGSN Gould designation is named for.'),
-  'dc.iv27a': live('The record\'s designations render against the constellation IV/27A gives its HD or HIP number.'),
-  'dc.gcvs': live('The record\'s designations render against the constellation its GCVS designation names.'),
-  'dc.anchor': live('The record\'s designations render against the designation constellation of its system anchor.'),
-  'dc.positional': live('No tier states a designation constellation, so the record\'s designations render against the constellation its position lies in.'),
-  'dc.none': live('No tier states a designation constellation and the record has no positional one, so its Bayer, Flamsteed and Gould designations cannot render.'),
-  'dc.displaced': live('The IV/27A constellation, refused because the IAU WGSN designation names a different one.'),
+  'name.own': outcomeCode('The record displays the highest tier of the naming ladder it carries in its own right.'),
+  'name.borrowed.no-own-designation': outcomeCode('The record is a WDS component with no designation of its own, so it displays its system anchor\'s base with its component letter.'),
+  'name.borrowed.system-designation': outcomeCode('The record\'s own designation is one its system anchor also carries, so it displays the anchor\'s base with its component letter.'),
+  'name.borrowed.outranked-identifier': outcomeCode('The record\'s own designation is a GCVS serial or catalogue number ranked below its system anchor\'s tier, so it displays the anchor\'s base with its component letter.'),
+  'name.unlabelled': outcomeCode('The record carries nothing the ladder renders and has no anchor to borrow from, so the runtime displays its Gaia DR3 or SID fallback.'),
+  'name.lower-tier': refusalCode('A designation the record carries, refused because a higher tier of the ladder supplied its label.'),
+  'name.borrowed-over': refusalCode('A designation the record carries, refused because it displays its system anchor\'s base instead.'),
+  'letter.stated': outcomeCode('The label carries the component letter the naming authority attributes the record\'s designation to.'),
+  'letter.sibling-owns': outcomeCode('The label carries the record\'s WDS component letter because another record owns the same designation.'),
+  'letter.borrowed': outcomeCode('The label carries the record\'s WDS component letter after its system anchor\'s borrowed base.'),
+  'dc.wgsn-bayer': outcomeCode('The record\'s designations render against the constellation the IAU WGSN Bayer designation is named for.'),
+  'dc.wgsn-gould': outcomeCode('The record\'s designations render against the constellation the IAU WGSN Gould designation is named for.'),
+  'dc.iv27a': outcomeCode('The record\'s designations render against the constellation IV/27A gives its HD or HIP number.'),
+  'dc.gcvs': outcomeCode('The record\'s designations render against the constellation its GCVS designation names.'),
+  'dc.anchor': outcomeCode('The record\'s designations render against the designation constellation of its system anchor.'),
+  'dc.positional': outcomeCode('No tier states a designation constellation, so the record\'s designations render against the constellation its position lies in.'),
+  'dc.none': outcomeCode('No tier states a designation constellation and the record has no positional one, so its Bayer, Flamsteed and Gould designations cannot render.'),
+  'dc.displaced': refusalCode('The IV/27A constellation, refused because the IAU WGSN designation names a different one.'),
 });
 
 type Branch = Parameters<typeof NAMING_CODES.code>[0];

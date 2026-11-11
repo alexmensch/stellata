@@ -27,7 +27,8 @@ under their old keys (stellata-hhaw.45.23).
 scripts/catalog/lineage/
   lineage-row-pure.ts            The envelope and LineageLine, its TSV line:
                                  stageLineageLine, the one encoder, which
-                                 refuses a code the stage does not declare;
+                                 refuses a code the stage does not declare
+                                 or a row in another role than its code's;
                                  sortUtf8, the one order the stage lines,
                                  identity and SID files, reason-code list
                                  and trace keys sort by; and
@@ -138,7 +139,7 @@ Every stage writes the same envelope:
 |---|---|
 | `stage` | the stage that decided |
 | `key` | the origin `SourceRowRef` |
-| `role` | `outcome`, or `refused` for an alternative the stage weighed and rejected |
+| `role` | `outcome`, or `refused` for an alternative the stage weighed and rejected; declared once per code, and the encoder refuses a row in the other |
 | `code` | a reason code from the generated list |
 | `params` | per-instance detail (source id, component letter, sibling) |
 | `evidence` | `SourceRowRef`s cited, each once and never the origin row (`evidenceTexts`) |
@@ -210,11 +211,13 @@ Membership's (`MEMBERSHIP_INVARIANTS`): no `admit.magnitude` row whose
 ## Counts fold from lineage
 
 A stage's count-snapshot keys are its reason codes, so the code list is the
-one owner of every counted tier. `foldStageLines(codes, lines, role)`
+one owner of every counted tier. `foldStageLines(codes, lines)`
 (`lineage-row-pure.ts`, over `../../util/counts/tally-pure.ts`'s `fold`) counts a
-stage's lines per code in one role, every declared code present, typed
-`Record<code, number>` from the stage's `codes`; a line of another stage
-throws. A stage with no codes yet keeps its snapshot keys until it gains
+stage's lines per code, every declared code present, typed
+`Record<code, number>` from the stage's `codes`; each code is declared in
+one role, so a stage's outcomes and refusals fold into one record and no
+code is counted in both. A line of another stage, or in a role its code is
+not declared in, throws. A stage with no codes yet keeps its snapshot keys until it gains
 lineage.
 
 ## SID events

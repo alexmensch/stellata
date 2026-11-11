@@ -3,7 +3,7 @@
 import {
   evidenceTexts, paramsText, stageLineageLine, type LineageLine, type LineageParams, type LineageRole, type LineageRow,
 } from '../lineage/lineage-row-pure';
-import { LIVE, stageCodes, type CodeDeclaration } from '../lineage/reason-codes/reason-codes-pure';
+import { outcomeCode, refusalCode, stageCodes } from '../lineage/reason-codes/reason-codes-pure';
 import { sourceRowRefText, type AnySourceRowRef } from '../../util/sources/row-ref-pure';
 import {
   APSIS_TEFF_MAX_K, APSIS_TEFF_MIN_K, NON_FINITE_LUMINOSITY_RADIUS_R_SUN,
@@ -16,16 +16,15 @@ export const SIZE_LINEAGE_BUDGET = { gzipBytes: 26_700_000, writeMs: 30_000 };
 /** Decimal places of `params.absmag`: 0.1 mmag, below every V tier's own error. */
 export const ABSMAG_PARAM_DECIMALS = 4;
 
-const live = (description: string): CodeDeclaration => ({ description, effect: 'none', status: LIVE });
 
 export const SIZE_CODES = stageCodes(SIZE_LINEAGE.stage, {
-  'white-dwarf': live('A white dwarf: the fixed typical white-dwarf radius, since absmag does not translate into one.'),
-  'apsis-teff': live('Stefan-Boltzmann from the record\'s de-extincted absmag and its own Gaia DR3 Apsis Teff, with the class-table bolometric correction.'),
-  'class-teff': live('Stefan-Boltzmann from the record\'s de-extincted absmag and the class-table Teff and bolometric correction.'),
-  'non-finite-luminosity': live(`The absmag gives a luminosity no float holds, so the record ships the ${NON_FINITE_LUMINOSITY_RADIUS_R_SUN} R☉ stand-in.`),
-  'refused.apsis-teff-out-of-window': live(`An Apsis Teff solution lies outside the ${APSIS_TEFF_MIN_K / 1000}–${APSIS_TEFF_MAX_K / 1000} kK sanity window the radius chain accepts.`),
-  'refused.apsis-teff-white-dwarf': live('The record\'s Apsis Teff stands down: a white dwarf takes the fixed radius, and Apsis does not model its atmosphere.'),
-  'refused.apsis-teff-wolf-rayet': live('The record\'s Apsis Teff stands down: a Wolf-Rayet keeps its own Teff ramp, and Apsis does not model its atmosphere.'),
+  'white-dwarf': outcomeCode('A white dwarf: the fixed typical white-dwarf radius, since absmag does not translate into one.'),
+  'apsis-teff': outcomeCode('Stefan-Boltzmann from the record\'s de-extincted absmag and its own Gaia DR3 Apsis Teff, with the class-table bolometric correction.'),
+  'class-teff': outcomeCode('Stefan-Boltzmann from the record\'s de-extincted absmag and the class-table Teff and bolometric correction.'),
+  'non-finite-luminosity': outcomeCode(`The absmag gives a luminosity no float holds, so the record ships the ${NON_FINITE_LUMINOSITY_RADIUS_R_SUN} R☉ stand-in.`),
+  'refused.apsis-teff-out-of-window': refusalCode(`An Apsis Teff solution lies outside the ${APSIS_TEFF_MIN_K / 1000}–${APSIS_TEFF_MAX_K / 1000} kK sanity window the radius chain accepts.`),
+  'refused.apsis-teff-white-dwarf': refusalCode('The record\'s Apsis Teff stands down: a white dwarf takes the fixed radius, and Apsis does not model its atmosphere.'),
+  'refused.apsis-teff-wolf-rayet': refusalCode('The record\'s Apsis Teff stands down: a Wolf-Rayet keeps its own Teff ramp, and Apsis does not model its atmosphere.'),
 });
 
 type Branch = Parameters<typeof SIZE_CODES.code>[0];

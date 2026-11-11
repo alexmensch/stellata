@@ -3,7 +3,7 @@
 import {
   evidenceTexts, paramsText, stageLineageLine, type LineageLine, type LineageParams, type LineageRow,
 } from '../lineage/lineage-row-pure';
-import { LIVE, stageCodes, type CodeDeclaration } from '../lineage/reason-codes/reason-codes-pure';
+import { outcomeCode, stageCodes } from '../lineage/reason-codes/reason-codes-pure';
 import type { Star } from '../parse/stars-parse';
 import { sourceRowRefText } from '../../util/sources/row-ref-pure';
 import type { AnchorTier, CoherenceAnchor, MemberVerdict, SystemVerdict } from './system-coherence';
@@ -11,20 +11,19 @@ import { COHERENCE_LINEAGE } from '../../../src/catalog-format/pipeline-outputs/
 
 export const COHERENCE_LINEAGE_BUDGET = { gzipBytes: 8_200_000, writeMs: 18_000 };
 
-const live = (description: string): CodeDeclaration => ({ description, effect: 'none', status: LIVE });
 
 export const COHERENCE_CODES = stageCodes(COHERENCE_LINEAGE.stage, {
-  anchor: live('The record is its WDS system\'s distance anchor, the best-tier member, and the system\'s snapped members move onto its distance.'),
-  'anchor.inconsistent': live('The record wins its system\'s anchor pick, but its catalogue distance contradicts its own parallax by more than 3 sigma and 20%, so the system is skipped.'),
-  'anchor.unplaced': live('The record wins its system\'s anchor pick but has no positive finite distance, so the system is skipped.'),
-  snapped: live('The record moves radially onto its system anchor\'s distance: its parallax gap from the anchor is at most 3 sigma of the combined error, or that error is zero; with no parallax, its distance is within 20% or 1 pc of the anchor\'s.'),
-  'unmoved.at-anchor-distance': live('The record already sits at its system anchor\'s distance.'),
-  'kept.significant-depth': live('The record\'s parallax gap from its system anchor is more than 3 sigma of a nonzero combined error, a measured depth, so it keeps its own distance.'),
-  'kept.wide-gap': live('The record has no parallax error model and sits more than 20% and 1 pc from its system anchor, so it keeps its own distance.'),
-  'kept.member-unplaced': live('The record has no positive finite distance to move from, so it keeps its own.'),
-  'kept.anchor-inconsistent': live('The record\'s system anchor contradicts its own parallax, so the system is skipped and the record keeps its own distance.'),
-  'kept.anchor-unplaced': live('The record\'s system anchor has no positive finite distance, so the system is skipped and the record keeps its own distance.'),
-  'not-applicable': live('The record is in no kept-physical WDS system with two or more resolved catalogue records, so coherence decides nothing for it.'),
+  anchor: outcomeCode('The record is its WDS system\'s distance anchor, the best-tier member, and the system\'s snapped members move onto its distance.'),
+  'anchor.inconsistent': outcomeCode('The record wins its system\'s anchor pick, but its catalogue distance contradicts its own parallax by more than 3 sigma and 20%, so the system is skipped.'),
+  'anchor.unplaced': outcomeCode('The record wins its system\'s anchor pick but has no positive finite distance, so the system is skipped.'),
+  snapped: outcomeCode('The record moves radially onto its system anchor\'s distance: its parallax gap from the anchor is at most 3 sigma of the combined error, or that error is zero; with no parallax, its distance is within 20% or 1 pc of the anchor\'s.'),
+  'unmoved.at-anchor-distance': outcomeCode('The record already sits at its system anchor\'s distance.'),
+  'kept.significant-depth': outcomeCode('The record\'s parallax gap from its system anchor is more than 3 sigma of a nonzero combined error, a measured depth, so it keeps its own distance.'),
+  'kept.wide-gap': outcomeCode('The record has no parallax error model and sits more than 20% and 1 pc from its system anchor, so it keeps its own distance.'),
+  'kept.member-unplaced': outcomeCode('The record has no positive finite distance to move from, so it keeps its own.'),
+  'kept.anchor-inconsistent': outcomeCode('The record\'s system anchor contradicts its own parallax, so the system is skipped and the record keeps its own distance.'),
+  'kept.anchor-unplaced': outcomeCode('The record\'s system anchor has no positive finite distance, so the system is skipped and the record keeps its own distance.'),
+  'not-applicable': outcomeCode('The record is in no kept-physical WDS system with two or more resolved catalogue records, so coherence decides nothing for it.'),
 });
 
 type Branch = Parameters<typeof COHERENCE_CODES.code>[0];
