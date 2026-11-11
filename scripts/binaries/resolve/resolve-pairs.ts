@@ -14,7 +14,7 @@ import {
 } from './binding-audit-pure';
 import {
   SIBLING_REJECTION_TIERS, groupOrb6ByPair, resolveComponent, resolveViaCcdm, resolveViaPosition, resolveViaSimbad,
-  type SiblingRejection,
+  type SiblingRejection, type SiblingRejectionTier,
 } from './cascade-pure';
 import { decompose, freezePairs, type DecomposedPair, type ResolvedComponent } from './components-pure';
 import { propagateIdentities, seedSynthesizedComponentBindings } from './propagate-pure';
@@ -77,10 +77,14 @@ export function astrometryRequestIds(result: Stage2Result, indices: IdentifierIn
   return ids;
 }
 
+export function siblingRejectionTally(result: Stage2Result): Record<SiblingRejectionTier, number> {
+  return fold(SIBLING_REJECTION_TIERS, result.siblingRejections, (r) => r.tier);
+}
+
 /** The count-snapshot keys Stage 2's code alone produces. */
 export function stage2Counts(result: Stage2Result): Record<string, number> {
   return {
-    ccdm_sibling_owned_rejected: fold(SIBLING_REJECTION_TIERS, result.siblingRejections, (r) => r.tier).ccdm_sibling_owned,
+    ccdm_sibling_owned_rejected: siblingRejectionTally(result).ccdm_sibling_owned,
     ...bindingIntegrityCounts(result.verdicts),
   };
 }

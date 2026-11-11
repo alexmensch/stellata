@@ -50,7 +50,8 @@ function isSynthesizableSubpair(components: string): boolean {
   return tokens !== null && tokens[0] !== tokens[1] && isComponentToken(tokens[0]) && isComponentToken(tokens[1]);
 }
 
-function subResolutionPair(wdsId: string, discoverer: string, components: string, precise: SkyPosition | null): WdsPair {
+/** A synthesized pair row: sub-resolution, no date, photometry or notes. */
+export function subResolutionPair(wdsId: string, discoverer: string, components: string, precise: SkyPosition | null): WdsPair {
   return {
     wdsId, discoverer, components, precise,
     dateLast: null,

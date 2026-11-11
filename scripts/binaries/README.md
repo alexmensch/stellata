@@ -49,7 +49,8 @@ scripts/binaries/
                                   the switch; the test runs it over the
                                   committed inputs and holds each ported
                                   stage's keys to the committed count
-                                  snapshot.
+                                  snapshot, and its rates to the rates
+                                  snapshot's committed values.
   load/                           Stage 1 in TypeScript: every reference
                                   catalogue read through its declaration,
                                   then the Stage 1 passes, as a frozen
@@ -58,6 +59,12 @@ scripts/binaries/
                                   identity propagations and the binding
                                   audit, as frozen DecomposedPairs; the
                                   spot-check's port. Own README.
+  astrometry/                     Stage 3 in TypeScript: each component's
+                                  astrometry route, keyed by its
+                                  DecomposedPair. Own README.
+  orbits/                         Stage 4's orbit knowledge in TypeScript:
+                                  the NSS two-body conversion and its
+                                  detectability regime, so far. Own README.
   parsers.py                      Row dataclasses + parse functions for every
                                   reference catalogue (Stage 1).
   indices.py                      IdentifierIndices builder (HIP/Tyc → Gaia,
@@ -91,7 +98,10 @@ scripts/binaries/
                                   binaries + SIMBAD standalone augmentation.
   multiples-tsv.ts (+ test)       MULTIPLES_TSV: the TypeScript codec for
                                   multiples.tsv — column roster, closed
-                                  value sets, per-column decimal places,
+                                  value sets and the properties a set's
+                                  members carry (which resolve tiers
+                                  anchor on a Gaia source_id), per-column
+                                  decimal places,
                                   P and a positive and 0 ≤ e < 1 — and
                                   the only parse of the file on the TS
                                   side. Its test round-trips the committed
@@ -137,8 +147,9 @@ scripts/binaries/
                                   tangent-basis propagation
                                   (../catalog/distance/direction-cascade.ts):
                                   the switch proves byte identity first.
-  build-log-pure.ts               count: how a build-log line prints a
-                                  number, for every TS stage's report.
+  build-log-pure.ts               count and countsListed: how a build-log
+                                  line prints a number and a tally, for
+                                  every TS stage's report.
   multiples-row-key-pure.ts       MULTIPLES_ROW_KEY, that rowKey, for code
                                   that cites a row without reading the file
                                   (promotion's origin keys), so it never

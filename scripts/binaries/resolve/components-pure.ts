@@ -3,10 +3,8 @@
 import { discovererKey, type DiscovererKey } from '../component-tokens-pure';
 import type { AthygRow } from '../load/athyg-pure';
 import { splitComponents, type WdsPair } from '../../wds/wds-pure';
-import { RESOLVE_VIA } from '../multiples-tsv';
+import { RESOLVE_VIA, type ResolveVia } from '../multiples-tsv';
 import { groupBy } from '../../util/map-buckets-pure';
-
-export type ResolveVia = (typeof RESOLVE_VIA)[number];
 
 /** Lower is stronger evidence. */
 export const RESOLVE_VIA_PRIORITY: ReadonlyMap<ResolveVia, number> = new Map(RESOLVE_VIA.map((tag, i) => [tag, i]));

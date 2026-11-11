@@ -43,7 +43,9 @@ scripts/binaries/load/
                                magnitude gate (scrubAthygGaia, and the HIP
                                cross-walk's inside buildIndices).
   subdivide-pure.ts (+ test)   The curated ORB6 letters, the ORB6 orphan
-                               pairs, the MSC inner pairs.
+                               pairs, the MSC inner pairs; subResolutionPair,
+                               the row every synthesized pair is, Stage 3's
+                               NSS inner pairs included.
   blank-rescue-pure.ts         The blank-components rescue.
     (+ test)
   load-fixture.ts              Test-only row builders (the WDS and ORB6
@@ -109,5 +111,5 @@ through the one tally helper ([The tally](../../util/counts/README.md#the-tally)
 no pass returns a bare number.
 `stage1Counts` names the count-snapshot keys this stage's code produces. The
 snapshot's `wds_pairs_total` is not one of them: Stage 3 appends its NSS
-inner pairs to the same list, so `build-binaries.test.ts` holds `pairs` to
-that total less `synthesized_nss_inner_pairs`.
+inner pairs to the same list, so its `stage3Counts` returns the total
+([Counts](../astrometry/README.md#counts)).

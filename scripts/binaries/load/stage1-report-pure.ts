@@ -2,7 +2,7 @@
 
 import { GAIA_BINDING_G_MINUS_V_REJECT_MAG } from '../../catalog/membership/binding/binding-gate-pure';
 import { fold } from '../../util/counts/tally-pure';
-import { count } from '../build-log-pure';
+import { count, countsListed } from '../build-log-pure';
 import { BLANK_RESCUE_OUTCOMES } from './blank-rescue-pure';
 import type { ReferenceCatalogs } from './reference-catalogs';
 import { ASTROMETRY_EXCLUSION_OUTCOMES } from './gaia-pure';
@@ -39,8 +39,7 @@ export function stage1Report(c: ReferenceCatalogs): string[] {
       + `hip -> hip2 ${count(indices.hipToHip2.size)}, ccdm systems ${count(indices.ccdmToHips.size)}`,
     `MSC: ${count(indices.msc.orbitsByPair.size)} WDS-mapped orbit pairs (${count(indices.msc.nOrbitsUnmapped)} unmappable)`,
     `rescued ${count(rescue.rescued)} blank-components WDS pairs as implied A,B; ${count(rescue.deferred)} deferred`,
-    `synthesized ${count(synthesized)} MSC inner pairs (skipped: `
-      + Object.entries(mscSkips).map(([k, v]) => `${k}=${count(v)}`).join(', ') + ')',
+    `synthesized ${count(synthesized)} MSC inner pairs (skipped: ${countsListed(mscSkips)})`,
   ];
   if (coverage < ATHYG_GAIA_COVERAGE_BAND.min || coverage > ATHYG_GAIA_COVERAGE_BAND.max) {
     lines.push(`WARNING: AT-HYG gaia coverage ${pct(coverage)} outside [${pct(ATHYG_GAIA_COVERAGE_BAND.min)}, `

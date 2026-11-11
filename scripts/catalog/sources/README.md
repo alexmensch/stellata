@@ -36,4 +36,8 @@ scripts/catalog/sources/
                                   and companions/ build these rows, and a
                                   column added to the interface lands here
                                   once.
+  hip2-fixture.ts                 Test-only Hip2AstrometryRow builder, for
+                                  the same reason: suites in distance/,
+                                  multiplicity/ and the binaries' Stage 3
+                                  build these rows.
 ```
