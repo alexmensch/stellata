@@ -29,14 +29,14 @@ export const PROMOTION_CODES = stageCodes(PROMOTION_LINEAGE.stage, {
   'adopted.earlier-mint': outcomeCode('An earlier row of this build already minted the record this row names.', 'merge'),
   minted: outcomeCode('The row becomes a new catalogue record.'),
   repositioned: outcomeCode('An AT-HYG record sitting on the anchor under the anchor\'s name plus this letter is the component, and moves to the row\'s position.', 'merge'),
-  'primary-unresolved': {
-    description: 'A pair\'s primary resolves to no catalogue record and no escape places it, so its pair runs with no anchor.',
-    effect: 'none', role: 'outcome', status: RETIRED_7_1_8,
-  },
-  'not-applicable': {
-    description: 'Promotion decides nothing for the row: a pair\'s primary that anchors it, or a row in no pair.',
-    effect: 'none', role: 'outcome', status: RETIRED_7_1_8,
-  },
+  'primary-unresolved': outcomeCode(
+    'A pair\'s primary resolves to no catalogue record and no escape places it, so its pair runs with no anchor.',
+    'none', RETIRED_7_1_8,
+  ),
+  'not-applicable': outcomeCode(
+    'Promotion decides nothing for the row: a pair\'s primary that anchors it, or a row in no pair.',
+    'none', RETIRED_7_1_8,
+  ),
   'parked.primary-unresolved': outcomeCode('A pair\'s primary resolves to no catalogue record and no escape places it, so it ships no record of its own and its pair runs with no anchor.', 'park'),
   'parked.unpaired': outcomeCode('The row is in no pair, so promotion has no geometry to place it with and ships no record for it.', 'park'),
   'not-applicable.pair-anchor': outcomeCode('Promotion decides nothing for the row: it is a pair\'s primary that anchors the pair.'),
