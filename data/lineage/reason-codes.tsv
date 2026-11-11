@@ -199,3 +199,10 @@ promotion.parked.primary-unresolved	promotion	park	live		7.1.8	A pair's primary 
 promotion.parked.unpaired	promotion	park	live		7.1.8	The row is in no pair, so promotion has no geometry to place it with and ships no record for it.
 promotion.primary-unresolved	promotion	none	retired	7.1.8	7.1.6	A pair's primary resolves to no catalogue record and no escape places it, so its pair runs with no anchor.
 promotion.repositioned	promotion	merge	live		7.1.6	An AT-HYG record sitting on the anchor under the anchor's name plus this letter is the component, and moves to the row's position.
+size.apsis-teff	size	none	live		7.1.16	Stefan-Boltzmann from the record's de-extincted absmag and its own Gaia DR3 Apsis Teff, with the class-table bolometric correction.
+size.class-teff	size	none	live		7.1.16	Stefan-Boltzmann from the record's de-extincted absmag and the class-table Teff and bolometric correction.
+size.non-finite-luminosity	size	none	live		7.1.16	The absmag gives a luminosity no float holds, so the record ships the 1 R☉ stand-in.
+size.refused.apsis-teff-out-of-window	size	none	live		7.1.16	An Apsis Teff solution lies outside the 2–60 kK sanity window the radius chain accepts.
+size.refused.apsis-teff-white-dwarf	size	none	live		7.1.16	The record's Apsis Teff stands down: a white dwarf takes the fixed radius, and Apsis does not model its atmosphere.
+size.refused.apsis-teff-wolf-rayet	size	none	live		7.1.16	The record's Apsis Teff stands down: a Wolf-Rayet keeps its own Teff ramp, and Apsis does not model its atmosphere.
+size.white-dwarf	size	none	live		7.1.16	A white dwarf: the fixed typical white-dwarf radius, since absmag does not translate into one.

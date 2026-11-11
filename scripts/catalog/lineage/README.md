@@ -44,7 +44,9 @@ scripts/catalog/lineage/
                                  records on one key.
   lineage-stages.ts              LINEAGE_STAGES, every stage's codes and
                                  files in pipeline order: the one list the
-                                 code generator and trace/ read.
+                                 code generator and trace/ read, and the
+                                 owner of the stage order the sections
+                                 below name.
   trace/                         `pnpm run trace`. Own README.
   stage-lineage.ts               stageLineage: one stage's files, header,
                                  baseline plan, diff, budget and invariant
@@ -217,7 +219,7 @@ lineage.
 
 ## SID events
 
-SID allocation is the sixth stage, run inside `build:catalog`; each sibling
+SID allocation is a stage run inside `build:catalog`, after promotion; each sibling
 build allocates as a stage of its own, `allocation-clouds` in `build:clouds`
 and `allocation-local-group` in `build:local-group`. Their rows, events and
 fail-closed rule live beside their modules, in [SID events](/scripts/sid/README.md#sid-events).
@@ -269,6 +271,7 @@ per `multiples.tsv` row, plus 31,908 identity rows (<!-- count:build-catalog/com
 measured budget sits beside its contract: [allocation's](/scripts/sid/README.md#sid-events),
 [placement's](../distance/README.md#placement-lineage),
 [brightness-colour's](../photometry/README.md#brightness-colour-lineage),
+[size's](../spectral/README.md#size-lineage),
 [coherence's](../multiplicity/README.md#coherence-lineage) and
 [naming's](../naming/README.md#naming-lineage). Placement's 349 MB plain outruns
 V8's longest string, so stage files and diffs are written and read as UTF-8
@@ -277,13 +280,14 @@ bytes in chunks, and the diff walks the baseline a key at a time
 
 A stage that size cannot hold its rows as objects either: 3.9 million
 `LineageRow`s, beside the `Placement`s they came from, are about 1.7 GB of
-heap. So a stage hands `stageLineage` lines, never rows, and placement and
-brightness-colour serialise each record to their lines inside the walk,
-keeping only the strings; the diff reads the baseline as lines too, and
-only a reader that needs fields (trace, a ledger view) decodes them. Even as
-strings the two stages' 7.9 million lines overrun the heap budget together,
-so brightness-colour's go to a `LineSpill` during the walk and are read
-back once placement's lines are released.
+heap. So a stage hands `stageLineage` lines, never rows, and placement,
+brightness-colour and size serialise each record to their lines inside the
+walk, keeping only the strings; the diff reads the baseline as lines too,
+and only a reader that needs fields (trace, a ledger view) decodes them.
+Even as strings the three stages' 8.8 million lines (placement 3.9M,
+brightness-colour 4.0M, size 0.96M) overrun the heap budget together, so
+brightness-colour's and size's go to a `LineSpill` each during the walk and
+are read back one stage at a time, once placement's lines are released.
 
 The committed form of lineage is `data/sid/events.tsv` plus the ledger views
 below; the derivation itself is a build artifact, regenerated every build.
@@ -370,28 +374,34 @@ against reinstates per SID, as it was over the two files.
 
 ## The placement stage
 
-`build:catalog`'s record walk is the second stage; its contract lives beside
+`build:catalog`'s record walk is the stage after membership; its contract lives beside
 its module, in [Placement lineage](../distance/README.md#placement-lineage).
 
 ## The brightness-colour stage
 
-`build:catalog`'s V, spectral class, B−V and de-extinction are the third
-stage, written from the same record walk as placement; its contract lives
+`build:catalog`'s V, spectral class, B−V and de-extinction are the stage
+after placement, written from the same record walk as placement; its contract lives
 beside its module, in [Brightness-colour lineage](../photometry/README.md#brightness-colour-lineage).
+
+## The size stage
+
+`build:catalog`'s physical radius is the stage after brightness-colour,
+written from the same record walk; its contract lives beside its module, in
+[Size lineage](../spectral/README.md#size-lineage).
 
 ## The coherence stage
 
-`build:catalog`'s system distance coherence is the fourth stage; its contract
+`build:catalog`'s system distance coherence is the stage after size; its contract
 lives beside its module, in [Coherence lineage](../multiplicity/README.md#coherence-lineage).
 
 ## The naming stage
 
-`build:catalog`'s display-name pass is the seventh stage, after allocation; its
+`build:catalog`'s display-name pass is the last stage, after allocation; its
 contract lives beside its module, in [Naming lineage](../naming/README.md#naming-lineage).
 
 ## The promotion stage
 
-`build:catalog`'s companion promotion is the fifth stage
+`build:catalog`'s companion promotion is the stage after coherence
 (`../companions/promotion-lineage-pure.ts`). `promoteCompanions` returns one
 `PromotedRow` per `multiples.tsv` row, keyed on that row
 (`multiples:<system_id>/<comp>`), and `promotionLineageRow` serialises its

@@ -37,6 +37,11 @@ export const BRIGHTNESS_COLOUR_LINEAGE: StageLineageSpec<'brightness-colour', 'b
   files: ['brightness-colour'],
 };
 
+export const SIZE_LINEAGE: StageLineageSpec<'size', 'size'> = {
+  stage: 'size',
+  files: ['size'],
+};
+
 export const COHERENCE_LINEAGE: StageLineageSpec<'coherence', 'coherence'> = {
   stage: 'coherence',
   files: ['coherence'],

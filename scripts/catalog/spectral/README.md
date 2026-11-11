@@ -1,7 +1,8 @@
-# Spectral resolution
+# Spectral resolution and size lineage
 
 The seven-tier resolver over SIMBAD's `sp_type` that picks each record's
-Morgan-Keenan class. The MK parser it walks with and the Stefan-Boltzmann
+Morgan-Keenan class, and the lineage stage recording how each record was
+sized from it. The MK parser it walks with and the Stefan-Boltzmann
 chain that turns a class plus an absolute magnitude into a rendered radius
 are read by the viewer's focus card too, so they live in
 [`/src/catalog-format/spectral/`](/src/catalog-format/spectral/README.md).
@@ -30,6 +31,10 @@ scripts/catalog/spectral/
                                   `../simbad/simbad-namespace-ladder-pure.ts`
                                   (`walkSimbadNamespaces`, `indexSimbadRow`,
                                   `simbadHipKey`) both SIMBAD pulls share.
+  size-lineage-pure.ts (+ test)   The physical radius as a lineage stage:
+                                  its codes, the Size each shipped walked
+                                  record hands on, and its one serialiser
+                                  (#size-lineage).
 ```
 
 ## The resolver
@@ -205,3 +210,41 @@ rows with neither source_id nor HIP, 41 go by TYC and 5 of those also carry a
 GJ (TYC 3694-2544-1 / Gl 92.1 · 1269-128-1 / GJ 3281 · 2409-737-1 / GJ 3363 ·
 2488-121-1 / GJ 3516 · 1043-1399-1 / Gl 734A), reachable by GJ only because
 the TYC-keyed request returned an object carrying a GJ cross-id.
+
+## Size lineage
+
+`build:catalog`'s record walk writes the size stage of the
+[lineage](../lineage/README.md) contract (`size-lineage-pure.ts`), after
+brightness-colour. `readStars` hands on one `Size` per shipped record, keyed
+on its origin key: the `RadiusResolution` the radius pass returned
+([The radius chain](/src/catalog-format/spectral/README.md#the-radius-chain)),
+the record's Apsis row with the solutions it offered outside the sanity window, and the source
+rows its spectral class rests on. `sizeLineageRows` serialises it through an
+exhaustive `switch`:
+
+- one outcome row per record, its code the route — `size.class-teff`,
+  `size.apsis-teff`, `size.white-dwarf` or `size.non-finite-luminosity`;
+- a Stefan–Boltzmann row carries the de-extincted `absmag` it used, to
+  `ABSMAG_PARAM_DECIMALS` places, `class_index` (`stated`, `default` where
+  the tables read `DEFAULT_SUBCLASS`, `unknown-class`), `clamp` where a bound
+  clamped it, and on the Apsis route the `solution` (gspphot or gspspec);
+- a `refused` row per Apsis solution outside the sanity window, and one where
+  a white dwarf's or Wolf-Rayet's own treatment overrides the Teff, each
+  naming its `solution` and citing the Apsis row;
+- the outcome cites the class's source rows, and the Apsis row on that route.
+
+A parked row writes nothing here: it never reached a radius. The stage founds
+no record, writes no identity rows, and every code's effect is `none`. It
+describes the walk's radius only: coherence rescales a snapped member's,
+promotion re-derives some walked records' and sizes every minted companion
+(`stellata-hhaw.45.32.5.10`).
+
+Measured 2026-11-11 on the full tree: 964,982 rows (152 MB plain), 24.2 MB
+gzipped in 1.3 s without a diff — 863,562 `apsis-teff`, 101,117 `class-teff`,
+279 `white-dwarf`, 24 refusals, 692 clamped. Nearly every row cites its Apsis
+row's Gaia id and carries its own absmag, which is what the gzip cannot
+shrink. `SIZE_LINEAGE_BUDGET` pins 26.7 MB and 30 s; CI has not timed it yet.
+Its lines spill to a `LineSpill` during the walk like brightness-colour's
+([Storage and cost](../lineage/README.md#storage-and-cost)): `build:catalog`
+peaked at 3,335 MiB against its 3,482 MiB budget
+([CI heap budget](../../util/heap-budget/README.md)).

@@ -33,8 +33,9 @@ layout, its codec, the chunk plan and the search-index wire entry — is
   variable-star parsing and the variability cross-match; `constellations/`
   owns the IAU-88 table, byte 34's positional membership and the
   Stellarium stick figures.
-- `spectral/` — Morgan-Keenan parsing of SIMBAD `sp_type`, the seven-tier
-  spectral resolver, and the Stefan-Boltzmann radius chain. Imports the
+- `spectral/` — the seven-tier spectral resolver over SIMBAD `sp_type`, and
+  the size lineage stage over the Stefan-Boltzmann radius chain; the MK
+  parser and the chain itself are `/src/catalog-format/spectral/`. Imports the
   namespace ladder from `simbad/simbad-namespace-ladder-pure.ts`; nothing there imports back.
 - `boundaries/` — `public/constellation-boundaries.json`: the IAU boundary
   arcs resampled and precessed to ICRS, the per-region label anchors, the
@@ -97,10 +98,10 @@ scripts/catalog/
                                   emits the chunked binary, manifests,
                                   both committed ledgers, the SID registry
                                   and placement's, brightness-colour's,
-                                  coherence's, promotion's, allocation's and
-                                  naming's lineage through
+                                  size's, coherence's, promotion's,
+                                  allocation's and naming's lineage through
                                   emitArtifacts once its two snapshot
-                                  checks, the six lineage budgets,
+                                  checks, the seven lineage budgets,
                                   placement's and naming's lineage
                                   invariants (lineage/README.md#invariants)
                                   and the CI heap budget
@@ -122,7 +123,7 @@ scripts/catalog/
                                   the row-index map, the two committed
                                   ledgers, the catalogue's SID registry
                                   partition (registryFiles), placement's,
-                                  brightness-colour's, coherence's,
+                                  brightness-colour's, size's, coherence's,
                                   promotion's, allocation's and naming's
                                   lineage files, and
                                   the transport chunks and the lineage

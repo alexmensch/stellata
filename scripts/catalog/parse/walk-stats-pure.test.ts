@@ -7,6 +7,7 @@ import { BAILER_JONES } from '../distance/refinement/bailer-jones-source';
 import type { ParkedPlacement, PlacedPlacement } from '../distance/placement-lineage-pure';
 import type { ShippedBrightness } from '../photometry/brightness-colour-lineage-pure';
 import { SPECTRAL_UNKNOWN } from '../../../src/catalog-format/spectral/spectral-classify';
+import { physicalRadius } from '../../../src/catalog-format/spectral/physical-radius';
 import { makeStar } from './star-fixture';
 import type { RowOutcome, RvRouting, ShippedFacts } from './stars-parse';
 import { VELOCITY_ABOVE_ESCAPE_SAMPLE_CAP, walkStatsFold, type WalkStats } from './walk-stats-pure';
@@ -60,6 +61,9 @@ const shipped = (
   kind: 'shipped',
   placement: { ...PLACED, ...placement },
   brightness: BRIGHTNESS,
+  size: {
+    key: 'spine:1', radius: physicalRadius(4.83, SPECTRAL_UNKNOWN), apsis: null, classEvidence: [],
+  },
   rv: NO_RV,
   star: makeStar({ proper: 'Fixture', spectral: SPECTRAL_UNKNOWN }),
   facts: { ...FACTS, ...facts },
