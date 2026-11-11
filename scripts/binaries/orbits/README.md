@@ -21,6 +21,10 @@ scripts/binaries/orbits/
                                  detectability regime (P < 3 yr or a0 < 1″).
   nss-fixture.ts                 Test-only: tiFromCampbell (the forward
                                  transform) and NSS row builders.
+  catalog-elements-pure.ts       ORB6 and MSC rows as OrbitElements (the
+    (+ test)                     unit codes, the T0 readings), and
+                                 pickBestOrb6 / pickBestMsc among one
+                                 pair's rows.
 ```
 
 ## Conventions the port keeps
