@@ -62,10 +62,14 @@ that Gaia row (`gaia_photometry`), unless the pair partner carries an AT-HYG
 row and the same source: Stage 2 copied the partner's blended source onto this
 side, and the partner already carries the system's light.
 
-The route is the Python's, ported unchanged: B−V through Montalto's Teff and
-the inverse of Ballesteros, not the catalogue's published DR3 transform
-(`/scripts/catalog/photometry/colour-index-pure.ts`). The two disagree on most
-rows; adopting the catalogue's is `stellata-hooj.43.1`, after the switch.
+The route is the Python's, ported unchanged: B−V through the Teff of
+[Montalto 2021](/data/papers/index.md#montalto2021), fed the observed rather
+than the de-reddened colour, and the inverse of
+[Ballesteros 2012](/data/papers/index.md#ballesteros2012); V through Riello's
+G − V with BP − RP clamped into its range where the catalogue's
+`rielloVMagnitude` refuses. Neither is the catalogue's published DR3 transform
+(`/scripts/catalog/photometry/colour-index-pure.ts`), and the two disagree on
+most rows; adopting the catalogue's is `stellata-hooj.43.1`, after the switch.
 
 ## Counts
 
