@@ -179,14 +179,11 @@ export function lineageLineParams(line: LineageLine): string {
 export function foldStageLines<B extends string, S extends string, L extends B>(
   codes: StageCodes<B, S, L>, lines: Iterable<LineageLine>,
 ): Record<StageCode<S, L>, number> {
-  function* checked(): Generator<LineageLine> {
-    for (const line of lines) {
-      const code = lineageLineCode(line);
-      if (codes.has(code)) assertDeclaredRole(codes, code, lineCell(line, 'role'), lineageLineKey(line));
-      yield line;
-    }
-  }
-  return fold(codes.live, checked(), lineageLineCode);
+  return fold(codes.live, lines, (line) => {
+    const code = lineageLineCode(line);
+    if (codes.has(code)) assertDeclaredRole(codes, code, lineCell(line, 'role'), lineageLineKey(line));
+    return code;
+  });
 }
 
 function rowOfCells(cells: readonly string[], where: string): LineageRow {
