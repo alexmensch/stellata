@@ -17,8 +17,8 @@ repo-relative, so an outputs module passes them as they are.
   component cross-IDs (which a pull writes and two sources read) and the
   WDS-keyed SIMBAD spectral types, the SIMBAD validation sample, value tier and manifest-keyed spectral types, the label-merge
   queue, the classic-ID overlay and its two gate queues, the two WGSN
-  tables, the two Gaia astrometry requests (the catalogue's, and the one
-  `build:binaries` writes, which the step table names), the three
+  tables, `build:binaries`' `multiples.tsv`, the two Gaia astrometry requests
+  (the catalogue's, and the one `build:binaries` writes), the three
   whole-table Gaia pulls' tables (HIP and TYC cross-matches, NSS two-body
   orbits), the four request-scoped Gaia pulls' tables (both astrometry
   scopes, GSPC synthetic photometry and the DR2 neighbourhood), the three
@@ -43,8 +43,8 @@ repo-relative, so an outputs module passes them as they are.
   `tests/source-declarations.test.ts`'s `DATA_PATH_SPELLERS` names it, and
   pins it as the list's only production entry.
 - `build-files.ts` — `BUILD_FILES`, the build-only hand-offs under
-  `build/` a declaration and its readers both name: today
-  `build/catalog-row-index-map.json`.
+  `build/` a declaration and its readers both name: the catalogue's
+  row-index map and the binaries binding audit's verdicts.
 - `lineage-files.ts` — the lineage layout under a build folder
   (`lineage/`, `lineage.previous/`, `lineage-diff/`; `LINEAGE_REPO_LAYOUT`
   is the checkout's own), each stage's spec (`MEMBERSHIP_LINEAGE`,

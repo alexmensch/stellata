@@ -5,6 +5,7 @@ import { resolve } from 'node:path';
 import { REPO_ROOT } from '../util/paths';
 import { defineArtifact, nullableCell } from '../util/tsv/artifact-pure';
 import { MULTIPLES_ROW_KEY } from './multiples-row-key-pure';
+import { DATA_FILES } from '../../src/catalog-format/pipeline-outputs/data-files';
 
 export const MULTIPLES_COLUMNS = [
   'system_id', 'comp', 'hip', 'gaia_source_id', 'hd',
@@ -130,7 +131,7 @@ function fixed(v: number | null, places: number): string {
 }
 
 export const MULTIPLES_TSV = defineArtifact({
-  file: 'data/binaries/multiples.tsv',
+  file: DATA_FILES.multiples,
   columns: MULTIPLES_COLUMNS,
   hint: 'Re-run `pnpm run build:binaries`.',
   order: 'as-given',
