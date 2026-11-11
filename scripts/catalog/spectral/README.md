@@ -218,7 +218,7 @@ the TYC-keyed request returned an object carrying a GJ cross-id.
 brightness-colour. `readStars` hands on one `Size` per shipped record, keyed
 on its origin key: the `RadiusResolution` the radius pass returned
 ([The radius chain](/src/catalog-format/spectral/README.md#the-radius-chain)),
-the record's Apsis row with the Teff resolution read from it, and the source
+the record's Apsis row with the solutions it offered outside the sanity window, and the source
 rows its spectral class rests on. `sizeLineageRows` serialises it through an
 exhaustive `switch`:
 

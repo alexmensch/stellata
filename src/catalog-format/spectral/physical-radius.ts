@@ -196,16 +196,25 @@ export type RadiusResolution =
   | {
     readonly route: 'white-dwarf';
     readonly rSun: number;
-    readonly teffRefused: 'white-dwarf' | null;
+    readonly refusedTeff: ApsisTeff | null;
   }
   | {
-    readonly route: 'apsis-teff' | 'class-teff';
+    readonly route: 'apsis-teff';
+    readonly rSun: number;
+    readonly absmag: number;
+    readonly teff: ApsisTeff;
+    readonly classIndex: ClassIndex;
+    readonly clamp: RadiusClamp | null;
+  }
+  | {
+    readonly route: 'class-teff';
     readonly rSun: number;
     readonly absmag: number;
     readonly teffK: number;
     readonly classIndex: ClassIndex;
     readonly clamp: RadiusClamp | null;
-    readonly teffRefused: 'wolf-rayet' | null;
+    /** A Wolf-Rayet's: it keeps its own Teff ramp. */
+    readonly refusedTeff: ApsisTeff | null;
   }
   | {
     readonly route: 'non-finite-luminosity';
@@ -223,15 +232,15 @@ function classIndex(info: Exclude<SpectralInfo, { kind: 'white-dwarf' }>): Class
 // gspphot doesn't model either atmosphere, so a published value there is
 // the companion's or a misfit.
 export function physicalRadius(
-  absmag: number, info: SpectralInfo, teffOverride: number | null = null,
+  absmag: number, info: SpectralInfo, measuredTeff: ApsisTeff | null = null,
 ): RadiusResolution {
   if (info.kind === 'white-dwarf') {
     // White dwarfs cluster tightly around 0.01 R☉; absmag doesn't translate
     // reliably into a radius for them.
-    return { route: 'white-dwarf', rSun: WHITE_DWARF_RADIUS_R_SUN, teffRefused: teffOverride === null ? null : 'white-dwarf' };
+    return { route: 'white-dwarf', rSun: WHITE_DWARF_RADIUS_R_SUN, refusedTeff: measuredTeff };
   }
-  const measured = teffOverride !== null && info.kind !== 'wolf-rayet';
-  const T = measured ? teffOverride : tempKelvin(info);
+  const teff = info.kind === 'wolf-rayet' ? null : measuredTeff;
+  const T = teff !== null ? teff.kelvin : tempKelvin(info);
   const BC = boloCorr(info);
   const Mbol = absmag + BC;
   const L = Math.pow(10, (MBOL_SUN - Mbol) / 2.5); // L/L☉
@@ -242,15 +251,10 @@ export function physicalRadius(
   // Empirical stellar range: red dwarfs bottom around 0.08 R☉, extreme
   // supergiants top around ~2000 R☉. Beyond these is bad catalog data.
   const clamp: RadiusClamp | null = R < RADIUS_FLOOR_R_SUN ? 'floor' : R > RADIUS_CEILING_R_SUN ? 'ceiling' : null;
-  return {
-    route: measured ? 'apsis-teff' : 'class-teff',
-    rSun: clamp === 'floor' ? RADIUS_FLOOR_R_SUN : clamp === 'ceiling' ? RADIUS_CEILING_R_SUN : R,
-    absmag,
-    teffK: T,
-    classIndex: classIndex(info),
-    clamp,
-    teffRefused: teffOverride !== null && !measured ? 'wolf-rayet' : null,
-  };
+  const rSun = clamp === 'floor' ? RADIUS_FLOOR_R_SUN : clamp === 'ceiling' ? RADIUS_CEILING_R_SUN : R;
+  return teff !== null
+    ? { route: 'apsis-teff', rSun, absmag, teff, classIndex: classIndex(info), clamp }
+    : { route: 'class-teff', rSun, absmag, teffK: T, classIndex: classIndex(info), clamp, refusedTeff: measuredTeff };
 }
 
 // Absolute visual magnitude M_V by spectral class + subclass, calibrated

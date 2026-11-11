@@ -116,7 +116,7 @@ describe('physicalRadius', () => {
 
   it('sizes a white dwarf at the fixed typical radius, whatever its absmag', () => {
     const wd: SpectralInfo = { kind: 'white-dwarf', wdSubclass: 2 };
-    expect(physicalRadius(11, wd)).toEqual({ route: 'white-dwarf', rSun: WHITE_DWARF_RADIUS_R_SUN, teffRefused: null });
+    expect(physicalRadius(11, wd)).toEqual({ route: 'white-dwarf', rSun: WHITE_DWARF_RADIUS_R_SUN, refusedTeff: null });
     expect(rSun(0, wd)).toBe(WHITE_DWARF_RADIUS_R_SUN);
   });
 
@@ -170,17 +170,19 @@ describe('physicalRadius', () => {
     // the ratio is exact for a fixed absmag + BC.
     const gspspecK = classifyFromGspspec('K')!;
     const tableR = rSun(5.9, gspspecK);
-    const apsis = physicalRadius(5.9, gspspecK, 5150);
-    expect(apsis).toMatchObject({ route: 'apsis-teff', teffK: 5150, classIndex: 'default', teffRefused: null });
+    const teff = { kelvin: 5150, solution: 'gspphot' } as const;
+    const apsis = physicalRadius(5.9, gspspecK, teff);
+    expect(apsis).toMatchObject({ route: 'apsis-teff', teff, classIndex: 'default' });
     expect(apsis.rSun).toBeCloseTo(tableR * (4410 / 5150) ** 2, 6);
   });
 
-  it('refuses the Teff override for white dwarfs and Wolf-Rayets, naming why', () => {
+  it('refuses the measured Teff for white dwarfs and Wolf-Rayets, carrying it on the route', () => {
+    const teff = { kelvin: 5000, solution: 'gspspec' } as const;
     const wd: SpectralInfo = { kind: 'white-dwarf', wdSubclass: 2 };
-    expect(physicalRadius(11, wd, 5000)).toMatchObject({ rSun: WHITE_DWARF_RADIUS_R_SUN, teffRefused: 'white-dwarf' });
+    expect(physicalRadius(11, wd, teff)).toEqual({ route: 'white-dwarf', rSun: WHITE_DWARF_RADIUS_R_SUN, refusedTeff: teff });
     const wr = classifyFromSimbad('WN5')!;
-    const refused = physicalRadius(-4.0, wr, 5000);
-    expect(refused).toMatchObject({ route: 'class-teff', teffRefused: 'wolf-rayet' });
+    const refused = physicalRadius(-4.0, wr, teff);
+    expect(refused).toMatchObject({ route: 'class-teff', refusedTeff: teff });
     expect(refused.rSun).toBeCloseTo(rSun(-4.0, wr), 9);
   });
 });

@@ -8,7 +8,7 @@ import { GAIA_APSIS } from '../record/gaia-apsis-source';
 import { decodeLineageLine, paramsOf } from '../lineage/lineage-row-pure';
 import { sourceRowRef, sourceRowRefText } from '../../util/sources/row-ref-pure';
 import {
-  physicalRadius, resolveApsisTeff, type ApsisTeffResolution,
+  physicalRadius, resolveApsisTeff,
 } from '../../../src/catalog-format/spectral/physical-radius';
 import { classifyFromGspspec, classifyFromSimbad, SPECTRAL_UNKNOWN } from '../../../src/catalog-format/spectral/spectral-classify';
 import type { ApsisRow } from '../../../src/catalog-format/record/catalog-pure';
@@ -21,9 +21,10 @@ const APSIS_NONE: ApsisRow = {
   teffGspspec: null, loggGspspec: null, mhGspspec: null, spectraltypeEsphs: null,
 };
 
-const apsis = (row: Partial<ApsisRow>): { ref: typeof APSIS_REF; teff: ApsisTeffResolution } => ({
-  ref: APSIS_REF, teff: resolveApsisTeff({ ...APSIS_NONE, ...row }),
-});
+const apsis = (row: Partial<ApsisRow>) => {
+  const { teff, outOfWindow } = resolveApsisTeff({ ...APSIS_NONE, ...row });
+  return { size: { ref: APSIS_REF, outOfWindow }, teff };
+};
 
 const summary = (s: Size) => sizeLineageRows(s).map((r) => ({
   role: r.role, code: r.code.slice(`${SIZE_CODES.stage}.`.length), params: paramsOf(r), evidence: r.evidence,
@@ -41,8 +42,8 @@ describe('sizeLineageRows', () => {
   it('writes the Apsis route naming its solution, after each solution refused as out of window', () => {
     const a = apsis({ teffGspphot: 1500, teffGspspec: 5150 });
     const info = classifyFromGspspec('K')!;
-    const radius = physicalRadius(5.9, info, a.teff.teff!.kelvin);
-    expect(summary({ key: KEY, radius, apsis: a, classEvidence: [APSIS_REF] })).toEqual([
+    const radius = physicalRadius(5.9, info, a.teff);
+    expect(summary({ key: KEY, radius, apsis: a.size, classEvidence: [APSIS_REF] })).toEqual([
       {
         role: 'refused', code: 'refused.apsis-teff-out-of-window', params: { solution: 'gspphot' },
         evidence: [sourceRowRefText(APSIS_REF)],
@@ -57,13 +58,13 @@ describe('sizeLineageRows', () => {
 
   it('refuses an Apsis Teff a Wolf-Rayet or white dwarf overrides, naming the solution', () => {
     const a = apsis({ teffGspphot: 5000 });
-    const wr = physicalRadius(-4, classifyFromSimbad('WN5')!, 5000);
-    expect(summary({ key: KEY, radius: wr, apsis: a, classEvidence: [SIMBAD_REF] }).map((r) => [r.code, r.params])).toEqual([
+    const wr = physicalRadius(-4, classifyFromSimbad('WN5')!, a.teff);
+    expect(summary({ key: KEY, radius: wr, apsis: a.size, classEvidence: [SIMBAD_REF] }).map((r) => [r.code, r.params])).toEqual([
       ['refused.apsis-teff-wolf-rayet', { solution: 'gspphot' }],
       ['class-teff', { absmag: '-4.0000', class_index: 'stated' }],
     ]);
-    const wd = physicalRadius(11, classifyFromSimbad('DA2')!, 5000);
-    expect(summary({ key: KEY, radius: wd, apsis: a, classEvidence: [SIMBAD_REF] }).map((r) => [r.code, r.params])).toEqual([
+    const wd = physicalRadius(11, classifyFromSimbad('DA2')!, a.teff);
+    expect(summary({ key: KEY, radius: wd, apsis: a.size, classEvidence: [SIMBAD_REF] }).map((r) => [r.code, r.params])).toEqual([
       ['refused.apsis-teff-white-dwarf', { solution: 'gspphot' }],
       ['white-dwarf', {}],
     ]);
@@ -77,11 +78,6 @@ describe('sizeLineageRows', () => {
       .toEqual([['class-teff', { absmag: '4.0000', class_index: 'unknown-class' }]]);
     expect(codeParams({ key: KEY, radius: physicalRadius(-2000, SPECTRAL_UNKNOWN), apsis: null, classEvidence: [] }))
       .toEqual([['non-finite-luminosity', { absmag: '-2000.0000' }]]);
-  });
-
-  it('throws on a refusal with no Apsis Teff behind it', () => {
-    const wd = physicalRadius(11, classifyFromSimbad('DA2')!, 5000);
-    expect(() => sizeLineageRows({ key: KEY, radius: wd, apsis: null, classEvidence: [] })).toThrow(/never handed/);
   });
 
   it('round-trips through its lines', () => {

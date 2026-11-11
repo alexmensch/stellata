@@ -587,7 +587,7 @@ export function rowResolver({
       dust = { av, ciDereddened };
     }
 
-    const radius = physicalRadius(absmag, spectInfo, apsisTeff.teff?.kelvin ?? null);
+    const radius = physicalRadius(absmag, spectInfo, apsisTeff.teff);
 
     // Byte 34 is positional: the IAU boundaries partition the whole sphere,
     // so it resolves for any direction, catalogued or not.
@@ -659,7 +659,7 @@ export function rowResolver({
       size: {
         key,
         radius,
-        apsis: apsis === null ? null : { ref: apsis.ref, teff: apsisTeff },
+        apsis: apsis === null ? null : { ref: apsis.ref, outOfWindow: apsisTeff.outOfWindow },
         classEvidence: spectral.via === 'none' ? [] : spectral.evidence,
       },
       rv,

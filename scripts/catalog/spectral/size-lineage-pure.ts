@@ -6,7 +6,7 @@ import {
 import { LIVE, stageCodes, type CodeDeclaration } from '../lineage/reason-codes/reason-codes-pure';
 import { sourceRowRefText, type AnySourceRowRef } from '../../util/sources/row-ref-pure';
 import type {
-  ApsisSolution, ApsisTeffResolution, ClassIndex, RadiusClamp, RadiusResolution,
+  ApsisSolution, ClassIndex, RadiusClamp, RadiusResolution,
 } from '../../../src/catalog-format/spectral/physical-radius';
 import { SIZE_LINEAGE } from '../../../src/catalog-format/pipeline-outputs/lineage-files';
 
@@ -42,12 +42,11 @@ type ParamsOf<B extends Branch> =
   : B extends `refused.${string}` ? { solution: ApsisSolution }
   : Record<string, never>;
 
-/** One walked record's radius: the route, the Apsis row it weighed, and the
- *  source rows its spectral class rests on. */
+/** See README.md#size-lineage. */
 export interface Size {
   readonly key: string;
   readonly radius: RadiusResolution;
-  readonly apsis: { readonly ref: AnySourceRowRef; readonly teff: ApsisTeffResolution } | null;
+  readonly apsis: { readonly ref: AnySourceRowRef; readonly outOfWindow: readonly ApsisSolution[] } | null;
   readonly classEvidence: readonly AnySourceRowRef[];
 }
 
@@ -64,37 +63,31 @@ export function sizeLineageRows({ key, radius, apsis, classEvidence }: Size): Li
   };
   const absmag = (value: number): string => value.toFixed(ABSMAG_PARAM_DECIMALS);
   const apsisRefs = apsis === null ? [] : [apsis.ref];
-  for (const solution of apsis?.teff.outOfWindow ?? []) {
+  for (const solution of apsis?.outOfWindow ?? []) {
     push('refused', 'refused.apsis-teff-out-of-window', { solution }, apsisRefs);
   }
-  const apsisSolution = (): ApsisSolution => {
-    const solution = apsis?.teff.teff?.solution;
-    if (solution === undefined) throw new Error(`size: ${key} weighed an Apsis Teff it was never handed`);
-    return solution;
-  };
+  const clamp = (c: RadiusClamp | null) => (c === null ? {} : { clamp: c });
 
   switch (radius.route) {
     case 'white-dwarf':
-      if (radius.teffRefused !== null) {
-        push('refused', 'refused.apsis-teff-white-dwarf', { solution: apsisSolution() }, apsisRefs);
+      if (radius.refusedTeff !== null) {
+        push('refused', 'refused.apsis-teff-white-dwarf', { solution: radius.refusedTeff.solution }, apsisRefs);
       }
       push('outcome', 'white-dwarf', {}, classEvidence);
       return out;
     case 'apsis-teff':
-    case 'class-teff': {
-      if (radius.teffRefused !== null) {
-        push('refused', 'refused.apsis-teff-wolf-rayet', { solution: apsisSolution() }, apsisRefs);
-      }
-      const clamp = radius.clamp === null ? {} : { clamp: radius.clamp };
-      if (radius.route === 'apsis-teff') {
-        push('outcome', 'apsis-teff', {
-          absmag: absmag(radius.absmag), solution: apsisSolution(), class_index: radius.classIndex, ...clamp,
-        }, [...apsisRefs, ...classEvidence]);
-      } else {
-        push('outcome', 'class-teff', { absmag: absmag(radius.absmag), class_index: radius.classIndex, ...clamp }, classEvidence);
-      }
+      push('outcome', 'apsis-teff', {
+        absmag: absmag(radius.absmag), solution: radius.teff.solution, class_index: radius.classIndex, ...clamp(radius.clamp),
+      }, [...apsisRefs, ...classEvidence]);
       return out;
-    }
+    case 'class-teff':
+      if (radius.refusedTeff !== null) {
+        push('refused', 'refused.apsis-teff-wolf-rayet', { solution: radius.refusedTeff.solution }, apsisRefs);
+      }
+      push('outcome', 'class-teff', {
+        absmag: absmag(radius.absmag), class_index: radius.classIndex, ...clamp(radius.clamp),
+      }, classEvidence);
+      return out;
     case 'non-finite-luminosity':
       push('outcome', 'non-finite-luminosity', { absmag: absmag(radius.absmag) }, classEvidence);
       return out;
