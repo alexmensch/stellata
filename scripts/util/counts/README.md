@@ -8,7 +8,8 @@ snapshot checks that read the files are the parent folder's
 `../../catalog/build-counts.ts`'s `compareCountSnapshot`.
 
 ```
-tally-pure.ts (+ test)          fold and its zero case, emptyTallyPartition.
+tally-pure.ts (+ test)          fold and its zero case, emptyTallyPartition;
+                                prefixed, a tally's keys as snapshot keys.
 count-stages-pure.ts (+ test)   The staged snapshot: nestByStage,
                                 flattenStages, isStaged, stageOfCounts.
 ```

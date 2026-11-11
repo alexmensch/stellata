@@ -4,7 +4,7 @@ import { DIRECTION_VIA_VALUES } from '../../catalog/distance/direction-cascade';
 import { VELOCITY_VIA_VALUES } from '../../catalog/distance/velocity';
 import { DIST_VIA_VALUES } from '../../../src/catalog-format/record/catalog-pure';
 import { V_VIA_VALUES } from '../../catalog/photometry/v-magnitude-pure';
-import { emptyTallyPartition, fold } from './tally-pure';
+import { emptyTallyPartition, fold, prefixed } from './tally-pure';
 
 describe('util/tally / fold', () => {
   const OUTCOMES = ['kept', 'parked', 'dropped'] as const;
@@ -52,5 +52,11 @@ describe('util/tally / emptyTallyPartition', () => {
     const partition = emptyTallyPartition(values);
     expect(Object.keys(partition).sort()).toEqual([...values].sort());
     expect(Object.values(partition)).toEqual(values.map(() => 0));
+  });
+});
+
+describe('util/tally / prefixed', () => {
+  it('prefixes every key, values kept', () => {
+    expect(prefixed('orbit_', fold(['msc', 'none'] as const, ['msc', 'msc'], (v) => v))).toEqual({ orbit_msc: 2, orbit_none: 0 });
   });
 });

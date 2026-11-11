@@ -24,3 +24,8 @@ export function fold<T extends string, I>(
   }
   return tally as Record<T, number>;
 }
+
+/** A tally's keys under a snapshot prefix: `prefixed('orbit_', {msc: 3})` is `{orbit_msc: 3}`. */
+export function prefixed<P extends string, K extends string>(prefix: P, tally: Record<K, number>): Record<`${P}${K}`, number> {
+  return Object.fromEntries(Object.entries(tally).map(([k, v]) => [`${prefix}${k}`, v])) as Record<`${P}${K}`, number>;
+}

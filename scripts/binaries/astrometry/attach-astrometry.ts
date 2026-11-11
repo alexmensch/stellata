@@ -1,6 +1,6 @@
 // Stage 3: each component's astrometry, then the NSS inner pairs, keyed by DecomposedPair. See README.md.
 
-import { fold } from '../../util/counts/tally-pure';
+import { fold, prefixed } from '../../util/counts/tally-pure';
 import type { ReferenceCatalogs } from '../load/reference-catalogs';
 import { RESOLVE_VIA, RESOLVE_VIA_ANCHORS_SOURCE_ID, type ResolveVia } from '../multiples-tsv';
 import { componentsOf, type DecomposedPair } from '../resolve/components-pure';
@@ -50,10 +50,6 @@ export function resolutionTally(result: Stage3Result): Record<ResolveVia, number
 
 export function nssTally(result: Stage3Result): Record<NssSynthesisOutcome, number> {
   return fold(NSS_SYNTHESIS_OUTCOMES, result.nssOutcomes, (o) => o);
-}
-
-function prefixed<P extends string, K extends string>(prefix: P, tally: Record<K, number>): Record<`${P}${K}`, number> {
-  return Object.fromEntries(Object.entries(tally).map(([k, v]) => [`${prefix}${k}`, v])) as Record<`${P}${K}`, number>;
 }
 
 export type Stage3Counts = Record<
