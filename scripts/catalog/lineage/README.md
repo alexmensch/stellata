@@ -13,10 +13,9 @@ so the snapshot is a projection of lineage, never kept in step with it. Membersh
 its review-queue and label-drop counts fold from the outcomes, while the
 derivation, admission and component counters are still kept by hand beside
 them (stellata-hhaw.45.23). Promotion's per-row counters all fold from its
-outcomes; its post-passes act on records and keep their own. Coherence's
-and brightness-colour's snapshot keys are their codes, folded from their
-lines. Naming's display counters fold from its outcomes the same way, under
-their `naming*` keys (stellata-hhaw.45.23). The record walk's placement
+outcomes; its post-passes act on records and keep their own. Coherence's,
+brightness-colour's and naming's snapshot keys are their codes, folded from
+their lines. The record walk's placement
 counts fold from each row's outcome (`../parse/walk-stats-pure.ts`), still
 under their old keys (stellata-hhaw.45.23).
 

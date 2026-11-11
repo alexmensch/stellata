@@ -18,17 +18,16 @@ const apply = (stars: ReturnType<typeof makeStar>[], designations: DesignationRo
 describe('applyStarNames: the designation constellation', () => {
   it('records the IV/27A constellation the authority\'s Bayer designation displaced (16 Lyn is ψ¹⁰ Aur)', () => {
     const star = makeStar({ hd: 49878, flam: 16, desigCon: { via: 'iv27a', index: con('Lyn') } });
-    const counts = apply([star], [row({ letter: 'ψ', sup: 10, dc: 'Aur', hd: 49878 })]);
+    apply([star], [row({ letter: 'ψ', sup: 10, dc: 'Aur', hd: 49878 })]);
     expect(star.desigCon).toEqual({ via: 'wgsn-bayer', index: con('Aur'), displaced: con('Lyn') });
     expect(star.aliases).toContain('16 Lyn');
-    expect(counts.namingDesigConWgsnConflict).toBe(1);
   });
 
   it('displaces nothing where the authority agrees with IV/27A', () => {
     const star = makeStar({ hd: 1, desigCon: { via: 'iv27a', index: con('Dra') } });
-    const counts = apply([star], [row({ letter: 'μ', dc: 'Dra', hd: 1 })]);
+    apply([star], [row({ letter: 'μ', dc: 'Dra', hd: 1 })]);
     expect(star.desigCon).toEqual({ via: 'wgsn-bayer', index: con('Dra'), displaced: null });
-    expect(counts.namingDesigConWgsnConflict).toBe(0);
+    expect(star.aliases).toEqual([]);
   });
 
   it('takes the Gould designation\'s constellation where the authority states no Bayer', () => {

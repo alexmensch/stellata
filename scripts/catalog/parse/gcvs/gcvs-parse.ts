@@ -283,9 +283,6 @@ export type GcvsCounts = {
    *  period (flare stars, RCB, irregular, novae — Proxima = V0645 Cen,
    *  R CrB, T Tau, V1500 Cyg) is searchable by name but has no pulsation. */
   gcvsNamed: number;
-  /** Stars whose `desigCon` came from their GCVS designation — the ones
-   *  IV/27A's Bayer/Flamsteed cross index carries no row for. */
-  gcvsDesignationCon: number;
 };
 
 export function gcvsSummary(c: GcvsCounts): string {
@@ -313,7 +310,6 @@ export function applyVariability(
   let matchedByHip = 0;
   let matchedByHd = 0;
   let named = 0;
-  let desigConSupplied = 0;
   for (const s of stars) {
     let gcvsName: string | undefined;
     let source: 'gaia' | 'hip' | 'hd' | null = null;
@@ -344,7 +340,6 @@ export function applyVariability(
     if (desigCon !== NO_CONSTELLATION_INDEX
         && s.desigCon.via === 'none') {
       s.desigCon = { via: 'gcvs', index: desigCon };
-      desigConSupplied++;
     }
     const data = gcvsData.get(gcvsName);
     if (!data) continue;
@@ -365,6 +360,5 @@ export function applyVariability(
     gcvsMatchedByHip: matchedByHip,
     gcvsMatchedByHd: matchedByHd,
     gcvsNamed: named,
-    gcvsDesignationCon: desigConSupplied,
   };
 }

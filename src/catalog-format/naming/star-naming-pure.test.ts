@@ -126,7 +126,7 @@ describe('the Bayer tier split', () => {
 
   it('keeps the Latin letter where no Flamsteed number exists to lose to', () => {
     // Flamsteed catalogued only what Greenwich could see, so the far-southern
-    // series has nothing above it — `namingTierBayerLatin`.
+    // series has nothing above it.
     expect(ownDesignation({ bayer: 'p', dc: 'Eri' }))
       .toEqual({ base: 'p Eri', tier: 'bayer_latin' });
   });

@@ -51,16 +51,20 @@ export interface NamingTarget {
   flam: number | null;
 }
 
+/** The authority pass's share of naming's count block. */
 export interface StarNamingCounts {
-  /** Records the authority names, and how the name reached them. */
+  /** Records the IAU WGSN names, and how many of those the identifier join
+   *  missed and the record's own printed spelling rescued. */
   namingIauNamed: number;
   namingIauNamedByProper: number;
-  /** Approved names no record carries an identifier or spelling for. */
+  /** Approved names no record carries an identifier or spelling for —
+   *  overwhelmingly the wgsnFaints hosts whose only key was a survey id
+   *  the normaliser drops, naming stars the catalogue does not hold. */
   namingIauUnreached: number;
   /** Records carrying a string designation (`Ross 128`; /docs/star-naming.md#2-authority--one-source-approves-names-everything-else-compiles-them). */
   namingEponym: number;
-  /** Records the authority gives a glyph-bearing Bayer designation, and how
-   *  many of them the spine printed no Bayer cell for at all. */
+  /** Records the authority gives a glyph-bearing Bayer designation, of
+   *  which `Added` had no spine Bayer cell at all. */
   namingBayer: number;
   namingBayerAdded: number;
   /** Bayer designations the authority attributes to a named component. */
@@ -70,13 +74,22 @@ export interface StarNamingCounts {
    *  system's instead. */
   namingBayerDropped: number;
   namingGould: number;
-  /** Published spellings shipped as search-only aliases. */
+  /** Published spellings shipped as search-only aliases (`al`), and the
+   *  records carrying them. */
   namingAliases: number;
   namingAliasRecords: number;
-  /** Designation constellations the authority states, and how many of those
-   *  contradict the IV/27A cascade the label merge had already set. */
-  namingDesigConFromWgsn: number;
-  namingDesigConWgsnConflict: number;
+}
+
+export function starNamingSummary(counts: StarNamingCounts): string {
+  return `  ${counts.namingIauNamed} IAU names `
+    + `(${counts.namingIauNamedByProper} via the record's own spelling, `
+    + `${counts.namingIauUnreached} approved names unreached), `
+    + `${counts.namingEponym} string designations\n`
+    + `  ${counts.namingBayer} Bayer designations `
+    + `(${counts.namingBayerAdded} added, `
+    + `${counts.namingBayerDropped} spine cells the authority does not reach), `
+    + `${counts.namingGould} Gould, `
+    + `${counts.namingAliases} aliases on ${counts.namingAliasRecords} records`;
 }
 
 export function applyStarNames(
@@ -97,8 +110,6 @@ export function applyStarNames(
     namingGould: 0,
     namingAliases: 0,
     namingAliasRecords: 0,
-    namingDesigConFromWgsn: 0,
-    namingDesigConWgsnConflict: 0,
   };
   const named = new Set<WgsnNameRow>();
 
@@ -145,7 +156,7 @@ export function applyStarNames(
       if (bayer.component !== null) counts.namingBayerComponent++;
       counts.namingBayer++;
       if (spineBayer === null) counts.namingBayerAdded++;
-      applyDesignationConstellation(star, bayer.dc, 'wgsn-bayer', constellations, counts);
+      applyDesignationConstellation(star, bayer.dc, 'wgsn-bayer', constellations);
     } else if (spineBayer !== null) {
       counts.namingBayerDropped++;
     }
@@ -156,7 +167,7 @@ export function applyStarNames(
       star.gouldHalf = gould.half;
       counts.namingGould++;
       if (star.bayer === null) {
-        applyDesignationConstellation(star, gould.dc, 'wgsn-gould', constellations, counts);
+        applyDesignationConstellation(star, gould.dc, 'wgsn-gould', constellations);
       }
     }
 
@@ -177,19 +188,16 @@ function applyDesignationConstellation(
   dc: string,
   via: 'wgsn-bayer' | 'wgsn-gould',
   constellations: readonly { code: string }[],
-  counts: StarNamingCounts,
 ): void {
   const idx = CON_INDEX.get(dc.toLowerCase());
   if (idx === undefined) return;
   const prior = star.desigCon;
   const displaced = prior.via !== 'none' && prior.index !== idx ? prior.index : null;
   if (displaced !== null) {
-    counts.namingDesigConWgsnConflict++;
     const code = constellations[displaced]?.code;
     if (star.flam !== null && code !== undefined) {
       star.aliases.push(`${star.flam} ${code}`);
     }
   }
   star.desigCon = { via, index: idx, displaced };
-  counts.namingDesigConFromWgsn++;
 }

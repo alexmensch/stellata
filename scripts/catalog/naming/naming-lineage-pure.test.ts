@@ -1,10 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
-import { paramsOf, type LineageRow } from '../lineage/lineage-row-pure';
+import { foldStageLines, paramsOf, type LineageRow } from '../lineage/lineage-row-pure';
+import { SEEDED_BRANCH, seededCodeCheck } from '../lineage/count-block-fixture';
 import type { NamedRecord } from './display-names';
 import { invariantViolations } from '../lineage/lineage-invariant-pure';
 import {
-  NAMING_CODES, namingLabels, namingLineageLines, namingLineageRows, NAMING_INVARIANTS, type NamingLineageRecord,
+  NAMING_CODES, namingLabels, namingLineageLines, namingLineageRows, NAMING_INVARIANTS, namingSummary, type NamingLineageRecord,
 } from './naming-lineage-pure';
 import { NAME_TIERS } from '../../../src/catalog-format/naming/star-naming-pure';
 
@@ -90,6 +91,56 @@ describe('the name row codes', () => {
       set: { bayer: 'p', dc: 'Dra' }, dc: { from: 'designation', con: { via: 'iv27a', index: DRA } },
     }];
     expect(brief(records, [rec('spine:1')])[0].code).toBe('naming.name.own.bayer-latin');
+  });
+});
+
+describe('the naming count block', () => {
+  const records: NamedRecord[] = [
+    {
+      name: { kind: 'own', label: 'Sirius', tier: 'iau', letter: null },
+      set: { iauName: 'Sirius', bayer: 'α', dc: 'CMa' }, dc: { from: 'designation', con: { via: 'wgsn-bayer', index: DRA, displaced: null } },
+    },
+    {
+      name: { kind: 'borrowed', label: 'Sirius B', tier: 'iau', anchorKey: 0, reason: 'no-own-designation', comp: 'B' },
+      set: {}, dc: { from: 'none' },
+    },
+    {
+      name: { kind: 'own', label: 'θ¹ Ori C', tier: 'bayer', letter: { source: 'sibling-owns', comp: 'C' } },
+      set: { bayer: 'θ', bayerSup: 1, dc: 'Dra' }, dc: { from: 'designation', con: { via: 'gcvs', index: DRA } },
+    },
+    { name: { kind: 'unlabelled' }, set: {}, dc: { from: 'none' } },
+  ];
+  const lines = namingLineageLines(records, [rec('spine:1'), rec('spine:2'), rec('spine:3'), rec('gaia_dr3:4')], CONS);
+
+  it('keys every live code, zeros included, and no retired one', () => {
+    const counts = foldStageLines(NAMING_CODES, lines);
+    expect(Object.keys(counts)).toEqual(NAMING_CODES.live);
+    expect(counts).toMatchObject({
+      'naming.name.own.iau': 1,
+      'naming.name.borrowed.no-own-designation.iau': 1,
+      'naming.name.own.bayer': 1,
+      'naming.name.unlabelled': 1,
+      'naming.name.own.override': 0,
+      'naming.dc.gcvs': 1,
+      'naming.dc.wgsn-bayer': 1,
+    });
+  });
+
+  it('logs the composed, name-table, borrowed, lettered and unlabelled figures off the codes', () => {
+    const summary = namingSummary(foldStageLines(NAMING_CODES, lines), {
+      namingDuplicateLabels: 1, namingDuplicateRecords: 2, namingOverrides: 0,
+    });
+    expect(summary).toBe(
+      'Display names: 3 composed (2 names in catalog.bin, 1 borrowed from a system anchor, 1 lettered, 1 unlabelled)\n'
+        + '  1 duplicate label(s) across 2 records — see naming/naming-parity.test.ts',
+    );
+  });
+
+  it('a new code reaches the snapshot as a key, and fails the check until the snapshot is refreshed', () => {
+    const { drift, refreshed } = seededCodeCheck(NAMING_CODES, lines);
+    expect(drift.drifted).toBe(true);
+    expect(drift.report).toContain(`naming.${SEEDED_BRANCH}`);
+    expect(refreshed.drifted).toBe(false);
   });
 });
 

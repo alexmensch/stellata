@@ -5,9 +5,10 @@ import {
   outcomeCode, refusalCode, retired, stageCodes, type CodeDeclaration, type LIVE,
 } from '../lineage/reason-codes/reason-codes-pure';
 import { lineageInvariant, NO_EXCEPTIONS, type LineageInvariant } from '../lineage/lineage-invariant-pure';
-import type { NamedRecord } from './display-names';
+import type { DisplayNameCounts, NamedRecord } from './display-names';
 import {
   designationAtTier,
+  isApprovedName,
   NAME_TIERS,
   type BorrowReason,
   type DesignationSet,
@@ -179,11 +180,40 @@ export function* namingLineageRows(
   }
 }
 
-const LABELLED_CODES: ReadonlySet<string> = new Set(NAME_TIERS.flatMap((tier) => [
-  NAMING_CODES.code(`name.own.${TIER_CODES[tier]}`),
-  ...BORROW_REASONS.map((reason) => NAMING_CODES.code(`name.borrowed.${reason}.${TIER_CODES[tier]}`)),
-]));
+type LiveCode = (typeof NAMING_CODES.live)[number];
+
+/** Naming's count block from its lines: one count per live code. */
+export type NamingCodeCounts = Readonly<Record<LiveCode, number>>;
+
+const nameCode = (branch: `name.own.${TierCode}` | `name.borrowed.${BorrowReason}.${TierCode}`): LiveCode =>
+  NAMING_CODES.code(branch) as LiveCode;
+const OWN_CODES: readonly LiveCode[] = NAME_TIERS.map((tier) => nameCode(`name.own.${TIER_CODES[tier]}`));
+const BORROWED_CODES: readonly LiveCode[] = NAME_TIERS.flatMap((tier) => (
+  BORROW_REASONS.map((reason) => nameCode(`name.borrowed.${reason}.${TIER_CODES[tier]}`))
+));
+const LABELLED_CODES: ReadonlySet<string> = new Set([...OWN_CODES, ...BORROWED_CODES]);
+const NAME_TABLE_CODES: readonly LiveCode[] = NAME_TIERS.filter(isApprovedName).flatMap((tier) => [
+  nameCode(`name.own.${TIER_CODES[tier]}`),
+  ...BORROW_REASONS.map((reason) => nameCode(`name.borrowed.${reason}.${TIER_CODES[tier]}`)),
+]);
 const UNLABELLED_CODE = NAMING_CODES.code('name.unlabelled');
+
+export function namingSummary(counts: NamingCodeCounts, derived: DisplayNameCounts): string {
+  const sum = (codes: readonly LiveCode[]): number => codes.reduce((n, code) => n + counts[code], 0);
+  const lettered = counts['naming.letter.stated'] + counts['naming.letter.sibling-owns'];
+  const lines = [
+    `Display names: ${sum([...OWN_CODES, ...BORROWED_CODES])} composed `
+      + `(${sum(NAME_TABLE_CODES)} names in catalog.bin, ${sum(BORROWED_CODES)} borrowed from a system anchor, `
+      + `${lettered} lettered, ${counts['naming.name.unlabelled']} unlabelled)`,
+  ];
+  if (derived.namingDuplicateLabels > 0) {
+    lines.push(
+      `  ${derived.namingDuplicateLabels} duplicate label(s) across ${derived.namingDuplicateRecords} records — `
+        + 'see naming/naming-parity.test.ts',
+    );
+  }
+  return lines.join('\n');
+}
 
 /** By origin key; `null` for an unlabelled record. */
 export function namingLabels(rows: Iterable<LineageRow>): Map<string, string | null> {

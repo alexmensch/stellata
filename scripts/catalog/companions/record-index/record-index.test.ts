@@ -331,7 +331,7 @@ describe('buildComponentDesignations', () => {
 // legitimately dropped (unresolved compound, refused parallax) is
 // indistinguishable from one it silently failed to key. That half is guarded by
 // the promotion unit tests and by the `componentDesignations` /
-// `namingUnlabelled` build counts, which is why their snapshot diff is read
+// `naming.name.unlabelled` build counts, which is why their snapshot diff is read
 // rather than refreshed.
 const BRIDGE_FIXTURES_READY = existsSync(resolve(REPO_ROOT, BUILD_FILES.catalogRowIndexMap));
 if (!BRIDGE_FIXTURES_READY) {

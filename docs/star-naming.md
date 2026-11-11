@@ -141,8 +141,8 @@ Display resolution order, first hit wins:
    for α UMa, while atlases and observing lists print `15 UMa` rather than
    `f UMa`. Splitting the tier moves the 550 Latin-letter records off tier 3:
    **313** take a Flamsteed number back and **237** keep their letter, having
-   none to lose to (`namingTierBayerLatin`; the <!-- count:build-catalog/namingTierBayer -->1,712<!-- /count --> Greek records are
-   untouched, and `build-catalog-expected.json` is authoritative for all
+   none to lose to (the `bayer-latin` name codes; the Greek records, <!-- count:build-catalog/naming.name.own.bayer -->1,232<!-- /count -->
+   displaying their own letter, are untouched, and `build-catalog-expected.json` is authoritative for all
    three). Below Flamsteed rather than out of the ladder, because Flamsteed
    catalogued only what Greenwich could see — which is what leaves the far
    southern `p Eri` / `f Pup` series with nothing above it. Both forms stay
@@ -311,7 +311,7 @@ Two couplings the composer gets right, both latent bugs before it:
   attribute (hover line, focus-card Constellation row, `highlightCon`,
   chart centroids).
 - **One composer, both sides.** `catalog.bin`'s name table carries the
-  authority tiers — <!-- count:build-catalog/namingNameTable -->729<!-- /count --> records, so first paint has names — and the
+  authority tiers — <!-- count:build-catalog/nameTableEntries -->729<!-- /count --> records, so first paint has names — and the
   runtime composes every designation below them off `search-index.json`
   through the same pure function, so the two cannot drift.
 

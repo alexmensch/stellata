@@ -7,12 +7,10 @@ import type { ComponentDesignation } from '../companions/record-index/record-ind
 import type { DesignationCon, StatedDesignationCon } from '../classic-ids/designation-constellation-pure';
 import {
   isApprovedName,
-  NAME_TIERS,
   resolveDisplayNames,
   type DesignationSet,
   type DisplayName,
   type DisplayNameInput,
-  type NameTier,
 } from '../../../src/catalog-format/naming/star-naming-pure';
 
 /** Structural subset of `Star` the display-name pass reads. */
@@ -78,26 +76,24 @@ export function designationSetOf(
   return set;
 }
 
-export interface DisplayNameCounts {
-  /** Records displaying each tier's designation. */
-  namingTier: Record<NameTier, number>;
-  /** Records whose base came from their system's naming anchor. */
-  namingBorrowed: number;
-  /** Records carrying a component letter because a sibling owns the same
-   *  designation (θ¹ Ori A/B/C/D). */
-  namingLettered: number;
-  /** Records whose name reaches catalog.bin's name table. */
-  namingNameTable: number;
-  namingOverrides: number;
-  /** Records with no composed label — no designation of their own and no
-   *  anchor to borrow from. They display the runtime's `Gaia DR3` /
-   *  `SID #` last resort. */
-  namingUnlabelled: number;
-  /** Labels two or more records both compose. Every one is a data finding:
-   *  two catalogue entries claiming one designation (/docs/star-naming.md#84-known-duplicate-display-names). */
+/** Naming's derived count block: its counts with no per-record decision. */
+export type NamingDerivedCounts = {
+  /** Display labels two or more records both compose, and the records
+   *  claiming them. Ratchet DOWN: the composer is injective given (naming
+   *  anchor, component letter), so every survivor is two catalogue entries
+   *  claiming one designation — a data finding, never something the
+   *  renderer should qualify away (/docs/star-naming.md#84-known-duplicate-display-names). */
   namingDuplicateLabels: number;
   namingDuplicateRecords: number;
-}
+  /** Curated override rows applied (/docs/star-naming.md#7-curation-seam). Expected to
+   *  stay at zero; growth is a signal the ingest is wrong. */
+  namingOverrides: number;
+  /** Records with a proper name written into catalog.bin's name table. */
+  nameTableEntries: number;
+};
+
+/** The derived counts the display-name pass tallies; the name table's is the encoder's. */
+export type DisplayNameCounts = Omit<NamingDerivedCounts, 'nameTableEntries'>;
 
 export type NameOutcome = DisplayName<number> | { kind: 'unlabelled' };
 
@@ -115,12 +111,6 @@ export interface DisplayNameResult {
   records: NamedRecord[];
   /** Duplicate label → the records claiming it, for the parity ledger. */
   duplicates: Map<string, number[]>;
-}
-
-function zeroedTiers(): Record<NameTier, number> {
-  const out = {} as Record<NameTier, number>;
-  for (const tier of NAME_TIERS) out[tier] = 0;
-  return out;
 }
 
 export function assignDisplayNames(
@@ -168,7 +158,12 @@ export function assignDisplayNames(
   }));
   for (let i = 0; i < stars.length; i++) writeName(stars[i], records[i].name);
   const duplicates = duplicateLabels(records);
-  return { counts: displayNameCounts(records, duplicates, overrides.size), records, duplicates };
+  const counts: DisplayNameCounts = {
+    namingDuplicateLabels: duplicates.size,
+    namingDuplicateRecords: [...duplicates.values()].reduce((n, idxs) => n + idxs.length, 0),
+    namingOverrides: overrides.size,
+  };
+  return { counts, records, duplicates };
 }
 
 /** A name attaches to a star; a designation is compiled for it. Only the
@@ -190,32 +185,4 @@ function duplicateLabels(records: readonly NamedRecord[]): Map<string, number[]>
     else claimants.set(name.label, [i]);
   });
   return new Map([...claimants].filter(([, idxs]) => idxs.length > 1));
-}
-
-function displayNameCounts(
-  records: readonly NamedRecord[],
-  duplicates: ReadonlyMap<string, number[]>,
-  overrides: number,
-): DisplayNameCounts {
-  const counts: DisplayNameCounts = {
-    namingTier: zeroedTiers(),
-    namingBorrowed: 0,
-    namingLettered: 0,
-    namingNameTable: 0,
-    namingOverrides: overrides,
-    namingUnlabelled: 0,
-    namingDuplicateLabels: duplicates.size,
-    namingDuplicateRecords: [...duplicates.values()].reduce((n, idxs) => n + idxs.length, 0),
-  };
-  for (const { name } of records) {
-    if (name.kind === 'unlabelled') {
-      counts.namingUnlabelled++;
-      continue;
-    }
-    counts.namingTier[name.tier]++;
-    if (name.kind === 'borrowed') counts.namingBorrowed++;
-    else if (name.letter !== null) counts.namingLettered++;
-    if (isApprovedName(name.tier)) counts.namingNameTable++;
-  }
-  return counts;
 }
