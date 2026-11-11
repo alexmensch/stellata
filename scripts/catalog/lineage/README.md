@@ -334,6 +334,13 @@ differs within a changed key: `change` (added / removed / changed), `side`
 stage joins on from another stage's facts. A PR whose build leaves a
 non-empty diff puts that diff's summary in its PR body.
 
+**A stage's emission carries the diff's tally by kind, never its lines.**
+`build:catalog` holds every stage's emission until its one `emitArtifacts`
+call, so changed lines kept there would stay live through every later stage
+and count against the [CI heap budget](../../util/heap-budget/README.md):
+464,466 changed brightness-colour keys (929,228 lines) hold about 500 MiB
+(measured 2026-11-11). The lines live only between the diff and its text.
+
 ## Trace
 
 `pnpm run trace`, every stage's rows for the records a query names, lives in

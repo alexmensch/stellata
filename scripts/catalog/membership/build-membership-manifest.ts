@@ -11,6 +11,7 @@ import { stepInputHashes } from '../../util/step-input-hashes';
 import { artifactRows, readArtifact } from '../../util/sources/source';
 import { MEMBERSHIP_OUTPUTS } from './membership-manifest-outputs';
 import { identityText } from '../lineage/identity-pure';
+import { KEY_CHANGE_KINDS } from '../lineage/lineage-diff-pure';
 import { readIdentity } from '../lineage/lineage-io';
 import { LINEAGE_LAYOUT } from '../lineage/lineage-layout-pure';
 import { stageLineageLine, stageLineageText } from '../lineage/lineage-row-pure';
@@ -171,8 +172,8 @@ export async function main(): Promise<void> {
     argv: process.argv.slice(2),
   });
   if (lineage.changes !== null) {
-    const kinds = ['added', 'removed', 'changed'] as const;
-    console.log(`lineage diff: ${kinds.map((k) => `${lineage.changes!.filter((x) => x.kind === k).length} ${k}`).join(', ')} keys`);
+    const tally = lineage.changes;
+    console.log(`lineage diff: ${KEY_CHANGE_KINDS.map((k) => `${tally[k]} ${k}`).join(', ')} keys`);
   }
 
   emitArtifacts({
