@@ -4,8 +4,9 @@ import { J2000_JD } from '../../../src/astro-core/astronomy-constants';
 import { componentKey } from '../component-tokens-pure';
 import { mscOrbit, mscSystem } from './load-fixture';
 import {
-  TRUNCATED_JD_TO_JD_OFFSET, buildMscLookup, mapMscLabels, mscPairKey, mscPeriodDays, mscRenderable, mscT0Jd,
+  buildMscLookup, mapMscLabels, mscPairKey, mscPeriodDays, mscRenderable, mscT0Jd,
 } from './msc-pure';
+import { TRUNCATED_JD_TO_JD_OFFSET } from '../epochs-pure';
 
 describe('mapMscLabels', () => {
   it('maps root ties, compound constituents and WDS-convention sub-pairs to themselves (AR Cas)', () => {

@@ -1,7 +1,7 @@
 // Tokovinin's Multiple Star Catalogue: its three tables, the label → WDS token map, and the lookups Stages 2/4/6 join on.
 
 import { DAYS_PER_JULIAN_YEAR } from '../../../src/astro-core/astronomy-constants';
-import { jdOfJulianYear } from '../../../src/astro-core/precession';
+import { plausibleTruncatedJd, yearElseTruncatedJd } from '../epochs-pure';
 import { readTable } from '../../util/tsv/table-pure';
 import type { Declared } from '../../util/sources/source';
 import {
@@ -74,11 +74,6 @@ export const MSC_ROOT_PARENT_LABELS: ReadonlySet<string> = new Set(['*', 't', 'X
 
 /** A year reading is at most this; a larger `t0` can only be a truncated JD. */
 export const MSC_T0_YEAR_MAX = 3000.0;
-export const TRUNCATED_JD_TO_JD_OFFSET = 2400000.0;
-/** A fitted periastron epoch outside Besselian ≈1700-2600 is a misread unit. */
-export const T0_MIN_PLAUSIBLE_JD = jdOfJulianYear(1700.0);
-export const T0_MAX_PLAUSIBLE_JD = jdOfJulianYear(2600.0);
-
 declare const MSC_PAIR: unique symbol;
 /** An MSC pair by the WDS tokens of its sides, in order. */
 export type MscPairKey = string & { readonly [MSC_PAIR]: true };
@@ -266,22 +261,8 @@ export function mscPeriodDays(row: MscOrbitRow): number | null {
 /** MSC's periastron epoch as an absolute JD: a plausible year through the
  *  J2000 anchor, otherwise a truncated JD; null when neither reading is. */
 export function mscT0Jd(t0: number | null): number | null {
-  return t0 === null ? null : yearElseTruncatedJd(t0, t0 <= MSC_T0_YEAR_MAX);
-}
-
-export function isPlausibleT0Jd(jd: number): boolean {
-  return T0_MIN_PLAUSIBLE_JD <= jd && jd <= T0_MAX_PLAUSIBLE_JD;
-}
-
-/** A periastron epoch as an absolute JD: the Julian-year reading when `tryYear`
- *  and plausible, else the truncated-JD reading when plausible, else null. */
-export function yearElseTruncatedJd(t0: number, tryYear: boolean): number | null {
-  if (tryYear) {
-    const yearJd = jdOfJulianYear(t0);
-    if (isPlausibleT0Jd(yearJd)) return yearJd;
-  }
-  const truncatedJd = t0 + TRUNCATED_JD_TO_JD_OFFSET;
-  return isPlausibleT0Jd(truncatedJd) ? truncatedJd : null;
+  if (t0 === null) return null;
+  return t0 <= MSC_T0_YEAR_MAX ? yearElseTruncatedJd(t0) : plausibleTruncatedJd(t0);
 }
 
 /** P, T and e present, and ω unless the fit is exactly circular — the

@@ -149,6 +149,10 @@ scripts/binaries/
                                   tangent-basis propagation
                                   (../catalog/distance/direction-cascade.ts):
                                   the switch proves byte identity first.
+  epochs-pure.ts (+ test)         How ORB6 and the MSC's periastron
+                                  epochs read as a JD: the truncated-JD
+                                  and MJD offsets, the plausible window
+                                  (isPlausibleT0Jd), yearElseTruncatedJd.
   build-log-pure.ts               count and countsListed: how a build-log
                                   line prints a number and a tally, for
                                   every TS stage's report.

@@ -4,9 +4,9 @@ import { DAYS_PER_JULIAN_YEAR, DEG_TO_RAD } from '../../../src/astro-core/astron
 import { jdOfJulianYear } from '../../../src/astro-core/precession';
 import { orb6Entry } from '../../wds/wds-fixture';
 import { mscOrbit } from '../load/load-fixture';
-import { TRUNCATED_JD_TO_JD_OFFSET } from '../load/msc-pure';
+import { MJD_TO_JD_OFFSET, TRUNCATED_JD_TO_JD_OFFSET } from '../epochs-pure';
 import {
-  MJD_TO_JD_OFFSET, mscToCanonicalElements, orb6ToCanonicalElements, pickBestMsc, pickBestOrb6,
+  mscToCanonicalElements, orb6ToCanonicalElements, pickBestMsc, pickBestOrb6,
 } from './catalog-elements-pure';
 
 describe('orb6ToCanonicalElements', () => {

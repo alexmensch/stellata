@@ -51,7 +51,7 @@ components field), its MSC rows by its tokens with the secondary's WDS
 truncation re-anchored (`canonicalCompLetter`), and its system's parallax
 ([System anchors](../astrometry/README.md#system-anchors)), which the NSS
 separation gate reads when neither side measured one. An emitted periastron
-epoch outside the plausible window (`isPlausibleT0Jd`, Julian years
+epoch outside the plausible window (`../epochs-pure.ts`'s `isPlausibleT0Jd`,
 1700–2600) throws: every reading refuses one, so it is a bug.
 
 ## Counts

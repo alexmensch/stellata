@@ -2,11 +2,10 @@
 
 import { DAYS_PER_JULIAN_YEAR, DEG_TO_RAD } from '../../../src/astro-core/astronomy-constants';
 import type { Orb6Entry } from '../../wds/wds-pure';
-import { TRUNCATED_JD_TO_JD_OFFSET, mscPeriodDays, mscT0Jd, yearElseTruncatedJd, type MscOrbitRow } from '../load/msc-pure';
+import { MJD_TO_JD_OFFSET, TRUNCATED_JD_TO_JD_OFFSET, yearElseTruncatedJd } from '../epochs-pure';
+import { mscPeriodDays, mscT0Jd, type MscOrbitRow } from '../load/msc-pure';
 import { distancePc } from '../sky-geometry-pure';
 import type { OrbitElements } from './nss-elements-pure';
-
-export const MJD_TO_JD_OFFSET = 2400000.5;
 
 /** Grades 1-5 are visual orbits; 7 (photometric / eclipsing, undocumented in
  *  the format text), 8 (interferometric) and 9 (astrometric / spectroscopic) are not. */
@@ -50,7 +49,7 @@ export function orb6T0Jd(entry: Orb6Entry): number | null {
     case 'm':
       return val + MJD_TO_JD_OFFSET;
     case 'y':
-      return yearElseTruncatedJd(val, true);
+      return yearElseTruncatedJd(val);
     default:
       return null;
   }
