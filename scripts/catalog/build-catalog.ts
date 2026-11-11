@@ -5,8 +5,6 @@ import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import {
-  FLAG_BINARY_PRIMARY,
-  VAR_TYPE_ECLIPSING,
   encodeAmpUnits,
   encodePeriodUnits,
   HEADER_SIZE,
@@ -16,9 +14,6 @@ import {
   NO_GAIA_SOURCE_ID,
   NO_APSIS,
   NO_CONSTELLATION_INDEX,
-  MULTIPLICITY_SINGLE,
-  MULTIPLICITY_RESOLVED,
-  MULTIPLICITY_UNRESOLVED,
   APSIS_FIELDS,
   type ApsisField,
   writeStarRecord,
@@ -31,7 +26,10 @@ import {
   DIST_VIA_VALUES,
 } from '../../src/catalog-format/record/catalog-pure';
 import { encodeSpectralBytes } from '../../src/catalog-format/spectral/spectral-record-bytes';
-import { buildHipToIndex, inferBinaries } from './multiplicity/binary-flags-pure';
+import { buildHipToIndex, inferBinaries, wingEclipsingBinaries } from './multiplicity/binary-flags-pure';
+import {
+  multiplicityStatuses, multiplicitySummary, type MultiplicityCounts,
+} from './multiplicity/multiplicity-stage-pure';
 import { SIMBAD_OTYPE_MULTIPLE } from './spectral/spectral-resolve';
 import { apparentVFromSol, solRecordIndex } from './record/record-order-pure';
 import { buildSearchIndex, searchIndexSummary } from './record/search-index-pure';
@@ -311,18 +309,7 @@ export async function main() {
   // field undefined.
   const counts: Omit<FiledCounts, 'solIndex'> = {
     recordCount: 0,
-    binaryPairs: 0,
-    binaryMutualPairs: 0,
-    ccdmGroups: 0,
-    ccdmResolved: 0,
-    ccdmFlagged: 0,
     recordsInFirstChunk: 0,
-    ccdmSuppressedOptical: 0,
-    eclipsingWinged: 0,
-    renderableCompanionWinged: 0,
-    multiplicityResolved: 0,
-    multiplicityUnresolved: 0,
-    componentDesignations: 0,
     namingIauNamed: 0,
     namingIauNamedByProper: 0,
     namingIauUnreached: 0,
@@ -746,12 +733,8 @@ export async function main() {
   // Geometric binary inference.
   console.log('Inferring binary/multiple systems...');
   const tBin = Date.now();
-  const binStats = inferBinaries(stars);
-  console.log(
-    `  ${binStats.pairs} companion assignments, ${binStats.mutualPairs} mutual pairs in ${Date.now() - tBin}ms`,
-  );
-  counts.binaryPairs = binStats.pairs;
-  counts.binaryMutualPairs = binStats.mutualPairs;
+  const binaries = inferBinaries(stars);
+  console.log(`  in ${Date.now() - tBin}ms`);
 
   // GCVS variable-star cross-match. xref.byGaia is bridged from byHip via
   // gaia_dr3_hip_xmatch.tsv, so records that carry a gaia_source_id but no
@@ -777,51 +760,16 @@ export async function main() {
   console.log('Parsing Hipparcos CCDM double-star cross-reference...');
   const tCcdm = Date.now();
   const ccdmGroups = HIP_CCDM.read();
-  const { systems, flagged, suppressed } = applyDoublesFlag(
-    stars,
-    ccdmGroups,
-    hipToIndex,
-    collectPhysicalPairKeys(multiplesRows),
-  );
-  console.log(
-    `  ${ccdmGroups.size} CCDM systems → ${systems} resolved in catalog, ${flagged} new primaries flagged, ${suppressed} suppressed as optical doubles in ${Date.now() - tCcdm}ms`,
-  );
-  counts.ccdmGroups = ccdmGroups.size;
-  counts.ccdmResolved = systems;
-  counts.ccdmFlagged = flagged;
-  counts.ccdmSuppressedOptical = suppressed;
+  const ccdm = applyDoublesFlag(stars, ccdmGroups, hipToIndex, collectPhysicalPairKeys(multiplesRows));
+  console.log(`  in ${Date.now() - tCcdm}ms`);
 
-  // Reuse FLAG_BINARY_PRIMARY (the wings bit) for every varType ==
-  // ECLIPSING record the geometric / CCDM passes didn't already flag —
-  // eclipsers surface as multi-star systems, not intrinsic-variable rings
-  // (see scripts/catalog/parse/gcvs/README.md).
-  // companionIdx stays unset where inference found no partner; the
-  // renderer guards on companionIdx >= 0, so a flagged-but-companionless
-  // primary is safe.
-  let eclipsingWinged = 0;
-  for (const s of stars) {
-    if (s.varType === VAR_TYPE_ECLIPSING && (s.flags & FLAG_BINARY_PRIMARY) === 0) {
-      s.flags |= FLAG_BINARY_PRIMARY;
-      eclipsingWinged++;
-    }
-  }
-  counts.eclipsingWinged = eclipsingWinged;
-  console.log(`  ${eclipsingWinged} eclipsing binaries flagged as multi-star (wings)`);
+  const eclipsing = wingEclipsingBinaries(stars);
 
   // Built here (not at the sidecar write below) so the wings pass resolves
   // multiples.tsv rows exactly as the runtime binaries loader will.
   const rowIndexMap = buildCatalogRowIndexMap(stars, synthGaiaBridges);
 
-  const { winged: renderableCompanionWinged, memberIndices } = wingRenderablePrimaries(
-    multiplesRows,
-    stars,
-    rowIndexMap,
-  );
-  const multiplesMemberIndices = memberIndices;
-  counts.renderableCompanionWinged = renderableCompanionWinged;
-  console.log(
-    `  ${renderableCompanionWinged} renderable-companion primaries flagged as multi-star (wings)`,
-  );
+  const { memberIndices, ...renderableWings } = wingRenderablePrimaries(multiplesRows, stars, rowIndexMap);
 
   const overlaps = physicalOverlaps(
     stars,
@@ -834,33 +782,15 @@ export async function main() {
   }
 
   const componentDesignations = buildComponentDesignations(multiplesRows, rowIndexMap);
-  counts.componentDesignations = componentDesignations.size;
-  console.log(
-    `  ${componentDesignations.size} component designations for "<system> <letter>" search`,
+  const statuses = multiplicityStatuses(
+    stars, memberIndices, (sourceId) => simbadSpectral.bySourceId.get(sourceId)?.otype === SIMBAD_OTYPE_MULTIPLE,
   );
-
-  // Per-record multiplicity status (v9): resolved = a multiples.tsv member
-  // row backs the record; unresolved = SIMBAD otype '**' by Gaia source_id
-  // with no resolved member row (spectroscopic binaries invisible to
-  // WDS/CCDM/NSS — 64 Vir).
-  const multiplicityStatus = new Uint8Array(stars.length);
-  for (const idx of multiplesMemberIndices) multiplicityStatus[idx] = MULTIPLICITY_RESOLVED;
-  for (let i = 0; i < stars.length; i++) {
-    if (multiplicityStatus[i] !== MULTIPLICITY_SINGLE) continue;
-    const srcId = stars[i].gaiaSourceId;
-    if (!srcId) continue;
-    if (simbadSpectral.bySourceId.get(srcId)?.otype === SIMBAD_OTYPE_MULTIPLE) {
-      multiplicityStatus[i] = MULTIPLICITY_UNRESOLVED;
-    }
-  }
-  counts.multiplicityResolved = multiplesMemberIndices.size;
-  counts.multiplicityUnresolved = multiplicityStatus.reduce(
-    (n, v) => n + (v === MULTIPLICITY_UNRESOLVED ? 1 : 0), 0,
-  );
-  console.log(
-    `  multiplicity: ${counts.multiplicityResolved} resolved, ` +
-      `${counts.multiplicityUnresolved} unresolved (SIMBAD '**', nothing resolved)`,
-  );
+  const multiplicityStatus = statuses.status;
+  const multiplicity: MultiplicityCounts = {
+    ...binaries, ...ccdm, ...eclipsing, ...renderableWings,
+    componentDesignations: componentDesignations.size, ...statuses.counts,
+  };
+  console.log(multiplicitySummary(multiplicity));
 
   const registry = loadRegistry();
   const sidObjects = catalogSidObjects(stars);
@@ -1192,6 +1122,7 @@ export async function main() {
       ...namingEmission.checks,
       buildCountsCheck({ ...counts, solIndex }, [
         { stage: 'inputs', block: { kind: 'counted', counts: inputs.counts } },
+        { stage: 'multiplicity', block: { kind: 'counted', counts: multiplicity } },
         { stage: 'gcvs', block: { kind: 'counted', counts: gcvsCounts } },
         { stage: 'search', block: { kind: 'counted', counts: search.counts } },
         { stage: 'boundaries', block: { kind: 'counted', counts: boundaries.counts } },

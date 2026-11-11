@@ -5,6 +5,7 @@ import {
   FLAG_BINARY_PRIMARY,
 } from '../../../../src/catalog-format/record/catalog-pure';
 import type { Star } from '../../parse/stars-parse';
+import type { MultiplicityCounts } from '../../multiplicity/multiplicity-stage-pure';
 import {
   groupBySystem,
   isMoreCanonicalAnchor,
@@ -231,7 +232,7 @@ export function wingRenderablePrimaries(
   rows: MultiplesTsvRow[],
   stars: Star[],
   rowIndexMap: CatalogRowIndexMap,
-): { winged: number; memberIndices: Set<number> } {
+): Pick<MultiplicityCounts, 'renderableCompanionWinged'> & { memberIndices: Set<number> } {
   const memberIndices = new Set<number>();
   const cursors = [...groupBySystem(rows).values()];
   for (const cursor of cursors) {
@@ -250,7 +251,7 @@ export function wingRenderablePrimaries(
     for (const { idx } of secondaries) set.add(idx);
   }
 
-  let winged = 0;
+  let renderableCompanionWinged = 0;
   for (const indices of perSystem.values()) {
     let anchor = -1;
     let alreadyWinged = false;
@@ -263,9 +264,9 @@ export function wingRenderablePrimaries(
     }
     if (alreadyWinged || anchor < 0) continue;
     stars[anchor].flags |= FLAG_BINARY_PRIMARY;
-    winged++;
+    renderableCompanionWinged++;
   }
-  return { winged, memberIndices };
+  return { renderableCompanionWinged, memberIndices };
 }
 
 // ---- Component-letter search designations ------------------------------

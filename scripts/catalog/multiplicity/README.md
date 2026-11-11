@@ -16,8 +16,14 @@ scripts/catalog/multiplicity/
   binary-flags-pure.ts (+ test)   The FLAG_BINARY_PRIMARY writers: the
                                   geometric mutual-pair pass
                                   (inferBinaries), the per-group CCDM walk
-                                  and the optical-double gate it consults.
-                                  Pure.
+                                  and the optical-double gate it consults,
+                                  and the eclipsing sweep
+                                  (wingEclipsingBinaries). Pure.
+  multiplicity-stage-pure.ts      MultiplicityCounts, the snapshot's
+    (+ test)                      multiplicity count block, which each pass
+                                  returns its share of under its snapshot
+                                  key; its log line; and
+                                  multiplicityStatuses (#multiplicity-status).
   visual-doubles.ts (+ test)      The CCDM cross-match: parseHipCcdm,
                                   KNOWN_VISUAL_DOUBLES and the tiered
                                   optical-double suppression cascade.
@@ -55,8 +61,9 @@ binary" even when no companion renders:
   Am star — the class is ~75% short-period SBs) is the canonical pin.
 - **`MULTIPLICITY_SINGLE` (0)** — neither signal; the default.
 
-Counted `multiplicityResolved` / `multiplicityUnresolved` in
-build-counts; pinned per-star in `known-stars.test.ts`. The runtime
+`multiplicityStatuses` writes the byte and counts
+`multiplicityResolved` / `multiplicityUnresolved` in the multiplicity count
+block; pinned per-star in `known-stars.test.ts`. The runtime
 loader exposes `Catalog.multiplicityStatus` (Uint8Array); the hover
 surface consuming it is tracked separately (stellata-lo5.10).
 
@@ -221,9 +228,8 @@ the secondary often isn't a catalog record at all, and
 the renderer's zoom-fit code at `stellata.ts` already guards on
 `companion ≥ 0`, so a flagged-but-unpaired primary is fine.
 
-If the CCDM file is absent the build logs and continues — the
-geometric pass still runs and chart mode still works, at that pass's
-own coverage.
+`HIP_CCDM` is a declared source, so a missing CCDM file fails the build
+with its re-fetch hint.
 
 ## System distance coherence
 

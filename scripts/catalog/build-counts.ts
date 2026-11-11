@@ -16,6 +16,7 @@ import type { FiguresCounts } from './parse/constellations/constellations.ts';
 import type { BoundariesCounts } from './boundaries/build-boundaries-artifact.ts';
 import type { SearchCounts } from './record/search-index-pure.ts';
 import type { GcvsCounts } from './parse/gcvs/gcvs-parse.ts';
+import type { MultiplicityCounts } from './multiplicity/multiplicity-stage-pure.ts';
 
 /** Repo-relative path of the snapshot `BuildCounts` is pinned against, so the
  *  build and every consumer that reads the shipped figures back resolve one
@@ -28,47 +29,15 @@ export function committedBuildCounts(): BuildCounts {
 }
 
 /** Every count the snapshot holds, by name: the filed counts and each composed stage's block. */
-export type BuildCounts = FiledCounts & InputsCounts & BrightnessColourCounts & CoherenceCounts & GcvsCounts & SearchCounts & BoundariesCounts & FiguresCounts;
+export type BuildCounts = FiledCounts & InputsCounts & BrightnessColourCounts & CoherenceCounts & MultiplicityCounts & GcvsCounts & SearchCounts & BoundariesCounts & FiguresCounts;
 
 /** The counts of the stages not yet composed of a count block, each filed under its stage by CATALOG_COUNT_STAGE. */
 export interface FiledCounts {
   /** Records written to catalog.bin after filtering and sort. */
   recordCount: number;
-  /** `inferBinaries` companion assignments. */
-  binaryPairs: number;
-  /** Pairs where both stars chose each other (sets FLAG_BINARY_PRIMARY). */
-  binaryMutualPairs: number;
-  /** Total CCDM systems in the source TSV. */
-  ccdmGroups: number;
-  /** CCDM systems resolved against catalog records. */
-  ccdmResolved: number;
-  /** New FLAG_BINARY_PRIMARY bits set by the CCDM pass (excludes ones
-   *  already set by `inferBinaries`). */
-  ccdmFlagged: number;
   /** Records the first transport chunk carries — what first paint draws
    *  (`/src/catalog-format/record/README.md#on-disk-transport-chunking`). */
   recordsInFirstChunk: number;
-  /** CCDM primaries the optical-double gate vetoed: nearest same-group
-   *  sibling >1 pc away in 3D at Gaia-quality distances, with no physical
-   *  pair / eclipsing / geometric evidence. See isOpticalDoublePrimary. */
-  ccdmSuppressedOptical: number;
-  /** FLAG_BINARY_PRIMARY bits newly set by the eclipsing-binary pass:
-   *  varType == ECLIPSING records not already flagged by the geometric
-   *  or CCDM passes. */
-  eclipsingWinged: number;
-  /** FLAG_BINARY_PRIMARY bits newly set by the renderable-companion pass:
-   *  physical systems whose primary/secondary resolve to distinct catalog
-   *  records (a promoted companion or a binaries.bin orbit) but which the
-   *  geometric, CCDM, and eclipsing passes all left unflagged. One per WDS
-   *  system anchor; excludes systems already flagged. Canopus, 16 Cyg A. */
-  renderableCompanionWinged: number;
-  /** Records backed by a resolved multiples.tsv member row —
-   *  multiplicityStatus = MULTIPLICITY_RESOLVED. */
-  multiplicityResolved: number;
-  /** Records SIMBAD flags as multiple (otype '**') with no resolved
-   *  multiples.tsv member row — multiplicityStatus =
-   *  MULTIPLICITY_UNRESOLVED (spectroscopic binaries, 64 Vir class). */
-  multiplicityUnresolved: number;
   /** Rows the Bailer-Jones override is allowed to fire on: a Gaia DR3
    *  source_id present AND the parallax cascade resolved `gaia_dr3_inversion`
    *  (the Gaia inverse-parallax population the posterior is the principled
@@ -244,11 +213,6 @@ export interface FiledCounts {
    *  a Gaia source the catalogue already holds — without it one physical star
    *  ships twice. Ratchets DOWN. */
   companionExistingViaSameasBridge: number;
-  /** Catalog records carrying a multiples.tsv component designation
-   *  (`cl`/`cp` on their SearchEntry) — the WDS root's naming anchor plus
-   *  the letter, which both the display-name composer and the
-   *  "<system> <letter>" search aliases build from. */
-  componentDesignations: number;
 
   // ---- Naming ladder (docs/star-naming.md, naming/README.md) ----------
   /** Records the IAU WGSN names, and how many of those the identifier join
@@ -612,17 +576,6 @@ export const CATALOG_COUNT_STAGE: Readonly<Record<keyof FiledCounts, CatalogCoun
   companionExistingDesigConFromAnchor: 'promotion',
   companionExistingMemberRecurated: 'promotion',
   companionExistingViaSameasBridge: 'promotion',
-  binaryPairs: 'multiplicity',
-  binaryMutualPairs: 'multiplicity',
-  ccdmGroups: 'multiplicity',
-  ccdmResolved: 'multiplicity',
-  ccdmFlagged: 'multiplicity',
-  ccdmSuppressedOptical: 'multiplicity',
-  eclipsingWinged: 'multiplicity',
-  renderableCompanionWinged: 'multiplicity',
-  multiplicityResolved: 'multiplicity',
-  multiplicityUnresolved: 'multiplicity',
-  componentDesignations: 'multiplicity',
   recordCount: 'records',
   recordsInFirstChunk: 'records',
   apsisSourcesUnpulled: 'records',
