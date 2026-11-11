@@ -5,7 +5,6 @@ import type { Orb6Entry } from '../../wds/wds-pure';
 import type { Stage3Result } from '../astrometry/attach-astrometry';
 import { systemParallaxes } from '../astrometry/system-anchors-pure';
 import { canonicalCompLetter, pairRowKey, type PairRowKey } from '../component-tokens-pure';
-import { isPlausibleT0Jd } from '../epochs-pure';
 import { mscPairKey } from '../load/msc-pure';
 import type { ReferenceCatalogs } from '../load/reference-catalogs';
 import { ORBIT_VIA, ORBIT_VIA_ON_FILE, type OrbitVia } from '../multiples-tsv';
@@ -18,16 +17,10 @@ export interface Stage4Result {
   readonly orbits: ReadonlyMap<DecomposedPair, PairOrbit>;
 }
 
-function checkedEpoch(p: DecomposedPair, orbit: PairOrbit): PairOrbit {
-  if (orbit.orbitVia === 'none') return orbit;
-  const { pDays, tJd } = orbit.elements;
-  if (pDays !== null && tJd !== null && !isPlausibleT0Jd(tJd)) {
-    throw new Error(`Stage 4 periastron epoch out of range for ${p.pair.wdsId}/${p.pair.components} via ${orbit.orbitVia}: T_jd=${tJd}`);
-  }
-  return Object.freeze({ ...orbit, elements: Object.freeze({ ...orbit.elements }) });
+function frozen(orbit: PairOrbit): PairOrbit {
+  return orbit.orbitVia === 'none' ? orbit : Object.freeze({ ...orbit, elements: Object.freeze({ ...orbit.elements }) });
 }
 
-/** Throws on an emitted epoch outside the plausible window: every reading refuses one, so it is a bug. */
 export function attachStage4(stage3: Stage3Result, reference: ReferenceCatalogs): Stage4Result {
   const orb6ByPair: ReadonlyMap<PairRowKey, readonly Orb6Entry[]> = groupOrb6ByPair(reference.orb6);
   const systemParallax = systemParallaxes(stage3.pairs, stage3.astrometry);
@@ -40,7 +33,7 @@ export function attachStage4(stage3: Stage3Result, reference: ReferenceCatalogs)
       msc: msc.orbitsByPair.get(mscPairKey(p.pair.wdsId, primary, canonicalCompLetter(primary, secondary)))?.rows ?? [],
       systemParallaxMas: systemParallax.get(p.pair.wdsId) ?? null,
     };
-    orbits.set(p, checkedEpoch(p, selectOrbit(p, stage3.astrometry.get(p)!, candidates, srcToNss)));
+    orbits.set(p, frozen(selectOrbit(p, stage3.astrometry.get(p)!, candidates, srcToNss)));
   }
   return Object.freeze({ orbits });
 }

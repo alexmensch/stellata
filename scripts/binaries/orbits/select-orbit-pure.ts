@@ -2,6 +2,7 @@
 
 import { DAYS_PER_JULIAN_YEAR } from '../../../src/astro-core/astronomy-constants';
 import type { Orb6Entry } from '../../wds/wds-pure';
+import { isPlausibleT0Jd } from '../epochs-pure';
 import { positiveParallaxMas } from '../astrometry/system-anchors-pure';
 import type { PairAstrometry } from '../astrometry/routes-pure';
 import type { NssOrbitRow } from '../load/gaia-pure';
@@ -75,7 +76,8 @@ function nssRoute(
 
 const subResolution = (rho: number | null): boolean => rho === null || rho <= 0;
 
-/** ../README.md#stage-4--orbital-element-selection-per-pair */
+/** ../README.md#stage-4--orbital-element-selection-per-pair. Throws on an
+ *  emitted epoch outside the plausible window: README.md#the-shape-of-a-result */
 export function selectOrbit(
   p: DecomposedPair, astrometry: PairAstrometry, candidates: OrbitCandidates, srcToNss: ReadonlyMap<string, NssOrbitRow>,
 ): PairOrbit {
@@ -90,7 +92,11 @@ export function selectOrbit(
   };
   for (const orbitVia of ORBIT_VIA_ON_FILE) {
     const elements = route[orbitVia]();
-    if (elements !== null) return { orbitVia, elements };
+    if (elements === null) continue;
+    if (elements.pDays !== null && elements.tJd !== null && !isPlausibleT0Jd(elements.tJd)) {
+      throw new Error(`Stage 4 periastron epoch out of range for ${p.pair.wdsId}/${p.pair.components} via ${orbitVia}: T_jd=${elements.tJd}`);
+    }
+    return { orbitVia, elements };
   }
   return NO_ORBIT;
 }

@@ -729,7 +729,9 @@ a physically-possible epoch window (years 1700–2600, read the same way) and
 retries the truncated-JD reading when it falls outside; unrecoverable
 rows (and the non-conforming `c` / blank flags) get a `None` epoch and
 place statically at the WDS observation epoch. `select_orbits_all`
-asserts every emitted `T_jd` stays inside the window. A wrong epoch
+asserts every emitted `T_jd` stays inside the window — and since the `d` /
+`m` flags and NSS epochs are taken as stated, a refresh carrying one outside
+it stops the build there. A wrong epoch
 isn't visible in a rendered orbit — baseline cancellation at
 `sep_pa_epoch_jd` hides it — but it shifts the pair's configuration at
 any *other* date, so conjunction / eclipse timing (Algol's minima

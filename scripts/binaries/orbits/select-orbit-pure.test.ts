@@ -103,6 +103,11 @@ describe('selectOrbit', () => {
     expect(via(select({ orb6: [orb6Entry({ grade: 1, pUnit: '0' })], nss: [nss()] }))).toBe('gaia_nss');
   });
 
+  it('throws on an epoch a reading takes as stated outside the window: an ORB6 d row, an NSS t_periastron', () => {
+    expect(() => select({ orb6: [orb6Entry({ t0Val: 900000, t0Unit: 'd' })] })).toThrow(/WDS-1\/AB via orb6: T_jd=3300000/);
+    expect(() => select({ nss: [nss({ tPeriastronRelDays: 1e7 })] })).toThrow(/via gaia_nss/);
+  });
+
   it('routes a pair with nothing on file to none', () => {
     expect(select({})).toEqual({ orbitVia: 'none' });
   });
