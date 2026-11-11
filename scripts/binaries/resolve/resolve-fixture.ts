@@ -6,6 +6,7 @@ import type { Hip2AstrometryRow } from '../../catalog/sources/hip2-source';
 import { buildIndices, type CcdmIndex, type IdentifierIndices } from '../load/indices-pure';
 import { wdsPair } from '../../wds/wds-fixture';
 import { athygRow, gaiaAstrometryRow } from '../load/load-fixture';
+import type { MscPairKey, MscPairMags } from '../load/msc-pure';
 import type { SimbadWdsXid } from '../load/simbad-pure';
 import { splitComponents, type WdsPair } from '../../wds/wds-pure';
 import { componentsOf, type DecomposedPair, type ResolvedComponent } from './components-pure';
@@ -33,6 +34,7 @@ export function indices(over: {
   simbadWdsSpectra?: ReadonlyMap<ComponentKey, string>;
   componentSptypeOverrides?: ReadonlyMap<ComponentKey, string>;
   mscSpectByComp?: ReadonlyMap<ComponentKey, string>;
+  mscPairMags?: ReadonlyMap<MscPairKey, MscPairMags>;
 } = {}): IdentifierIndices {
   return buildIndices({
     athyg: over.athyg ?? [],
@@ -45,7 +47,7 @@ export function indices(over: {
     simbadWdsSpectra: over.simbadWdsSpectra ?? new Map(),
     componentSptypeOverrides: over.componentSptypeOverrides ?? new Map(),
     athygGaiaMagRejected: [],
-    msc: { orbitsByPair: new Map(), pairMags: new Map(), spectByComp: over.mscSpectByComp ?? new Map(), nOrbitsUnmapped: 0 },
+    msc: { orbitsByPair: new Map(), pairMags: over.mscPairMags ?? new Map(), spectByComp: over.mscSpectByComp ?? new Map(), nOrbitsUnmapped: 0 },
   });
 }
 

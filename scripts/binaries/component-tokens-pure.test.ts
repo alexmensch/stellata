@@ -6,6 +6,7 @@ import {
   composeSyntheticId,
   compoundContains,
   isComponentToken,
+  isMoreCanonicalAnchor,
   pairComponentTokens,
   parentComponentToken,
   relatedHier,
@@ -136,5 +137,31 @@ describe('compoundContains', () => {
     expect(compoundContains('Aa', 'AB')).toBe(true);
     expect(compoundContains('AB', 'CD')).toBe(false);
     expect(compoundContains('A', 'A')).toBe(false);
+  });
+});
+
+describe('isMoreCanonicalAnchor', () => {
+  it('ranks the A branch above every other branch, at any depth', () => {
+    // 15 Mon (06410+0954): its only A-branch cursor is Aa,Ab, and the root
+    // also carries EP, FG, FO, GO, JI, MN. Ranking by length anchored it on E.
+    expect(isMoreCanonicalAnchor('Aa', 'E')).toBe(true);
+    expect(isMoreCanonicalAnchor('E', 'Aa')).toBe(false);
+    expect(isMoreCanonicalAnchor('Aa1', 'B')).toBe(true);
+  });
+
+  it('ranks by depth then alphabetically inside one branch', () => {
+    expect(isMoreCanonicalAnchor('A', 'Aa')).toBe(true);
+    expect(isMoreCanonicalAnchor('Aa', 'Ab')).toBe(true);
+    expect(isMoreCanonicalAnchor('Ab', 'Aa')).toBe(false);
+    expect(isMoreCanonicalAnchor('A', 'A')).toBe(false);
+  });
+
+  it('picks Aa over B, as anchor_offsets.py anchor_token_rank does', () => {
+    expect(isMoreCanonicalAnchor('Aa', 'B')).toBe(true);
+    expect(isMoreCanonicalAnchor('B', 'Aa')).toBe(false);
+  });
+
+  it('ranks across branches alphabetically', () => {
+    expect(isMoreCanonicalAnchor('B', 'C')).toBe(true);
   });
 });

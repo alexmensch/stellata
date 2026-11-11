@@ -41,7 +41,7 @@ export interface PairAstrometry {
 /** A source in any pair this close routes through HIP2 when the two catalogues' PMs disagree. */
 export const HIP2_COMPANION_SEPARATION_ARCSEC = 5.0;
 
-function fromGaia(row: GaiaAstrometryRow, astrometryVia: 'gaia_5p' | 'gaia_nss_systemic'): MeasuredAstrometry {
+export function fromGaia(row: GaiaAstrometryRow, astrometryVia: 'gaia_5p' | 'gaia_nss_systemic'): MeasuredAstrometry {
   return Object.freeze({
     astrometryVia, raDeg: row.raDeg, decDeg: row.decDeg, parallaxMas: row.parallaxMas, parallaxErrorMas: row.parallaxErrorMas,
     pmraMasyr: row.pmraMasyr, pmdecMasyr: row.pmdecMasyr, refEpoch: row.refEpoch,

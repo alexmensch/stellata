@@ -34,6 +34,7 @@ export const SUN_ABSMAG_V = 4.83;
 export const MIN_PHYSICAL_RADIUS_R_SUN = 1e-9;
 
 export const DEG_TO_RAD = Math.PI / 180;
+export const RAD_TO_DEG = 180 / Math.PI;
 
 export const ARCSEC_PER_DEG = 3600;
 

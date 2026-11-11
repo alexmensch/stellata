@@ -77,6 +77,18 @@ export function compoundContains(a: string, b: string): boolean {
   return within(lb, la) || within(la, lb);
 }
 
+/** The more canonical of two pair primaries under one WDS root: the
+ *  top-level letter decides, then token length, then alphabetical order.
+ *  `anchor_offsets.py`'s `anchor_token_rank` is its Python twin until the
+ *  switch; change both. */
+export function isMoreCanonicalAnchor(candidateComp: string, incumbentComp: string): boolean {
+  if (candidateComp === incumbentComp) return false;
+  const branch = (comp: string) => comp.charAt(0);
+  if (branch(candidateComp) !== branch(incumbentComp)) return branch(candidateComp) < branch(incumbentComp);
+  if (candidateComp.length !== incumbentComp.length) return candidateComp.length < incumbentComp.length;
+  return candidateComp < incumbentComp;
+}
+
 declare const KEY_SPACE: unique symbol;
 /** A tab-joined map key, branded by what it keys so one space cannot look up another's map. */
 type Key<Space extends string> = string & { readonly [KEY_SPACE]: Space };

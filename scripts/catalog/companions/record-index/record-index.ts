@@ -8,12 +8,11 @@ import type { Star } from '../../parse/stars-parse';
 import type { MultiplicityCounts } from '../../multiplicity/multiplicity-stage-pure';
 import {
   groupBySystem,
-  isMoreCanonicalAnchor,
   type MultiplesTsvRow,
   type PairCursor,
 } from '../companion-promotion';
 import {
-  canonicalCompLetter, composeSyntheticId, parentComponentToken, wdsRootOf,
+  canonicalCompLetter, composeSyntheticId, isMoreCanonicalAnchor, parentComponentToken, wdsRootOf,
 } from '../../../binaries/component-tokens-pure';
 import { hasRenderableOrbit } from '../../../../src/catalog-format/binaries/binaries-format';
 import {

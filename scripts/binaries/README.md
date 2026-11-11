@@ -75,6 +75,11 @@ scripts/binaries/
                                   physical or optical, tagged with the
                                   deciding tier, keyed by its
                                   DecomposedPair. Own README.
+  multiples/                      Stage 6 in TypeScript: the
+                                  multiples.tsv records, kept pairs then
+                                  standalone components, with the anchor
+                                  offsets and the Gaia photometry. Own
+                                  README.
   parsers.py                      Row dataclasses + parse functions for every
                                   reference catalogue (Stage 1).
   indices.py                      IdentifierIndices builder (HIP/Tyc → Gaia,
@@ -140,7 +145,10 @@ scripts/binaries/
                                   tokenLetters and subcomponentTopLetter
                                   (the root letter, where
                                   parentComponentToken is the immediate
-                                  parent). And the map keys, one branded
+                                  parent); isMoreCanonicalAnchor, the
+                                  order Stage 6 and companion promotion
+                                  rank a root's anchor letter by. And the
+                                  map keys, one branded
                                   type per key space so one cannot look up
                                   another's map: componentKey
                                   (wds_id, token), discovererKey
@@ -161,6 +169,10 @@ scripts/binaries/
                                   tangent-basis propagation
                                   (../catalog/distance/direction-cascade.ts):
                                   the switch proves byte identity first.
+  python-float-pure.ts (+ test)   Python's float arithmetic where
+                                  JavaScript's differs: pyMod, `%` with
+                                  the divisor's sign; pySum, the
+                                  compensated `sum()`.
   epochs-pure.ts (+ test)         How ORB6 and the MSC's periastron
                                   epochs read as a JD: the truncated-JD
                                   and MJD offsets, the plausible window
@@ -326,8 +338,10 @@ belongs to the slice whose code produces it, not to the stage the
 snapshot files it under: `subdivide`'s orphan and MSC inner-pair counts
 are Stage 1's, its NSS inner-pair count Stage 3's. The Python writes those snapshots
 until the switch; the test reads them and never restates a count, so a
-count divergence fails in the slice that introduces it, and a byte diff
-at the switch is one the counts do not see.
+count divergence fails in the slice that introduces it. From Stage 6 on,
+the same case also encodes the TS records with `MULTIPLES_TSV` and holds
+them to the committed `multiples.tsv` byte for byte, so a row the counts
+do not see fails before the switch too.
 
 Values never cross between the languages. The runner records a step's
 inputs from either the TS import closure or the Python run record, and a
