@@ -688,7 +688,9 @@ is first exercised by stack #768's landing:
   They run only on an event that fires while the PR is in the stack: a PR
   opened with `--base <parent>` and linked afterwards has none on its
   first head, and reads `BLOCKED` until its next push or a label toggle.
-  The landing's sync pushes every member, which runs them.
+  Before `gh stack merge`, read each member's head for both guard check
+  runs (`gh api repos/alexmensch/stellata/commits/<head>/check-runs`); a
+  member without them needs a push first.
 
 **Ruleset settings** (ruleset 15843287; branch rules are the owner's to
 change, by `gh api --method PUT` as above, preserving every rule):
