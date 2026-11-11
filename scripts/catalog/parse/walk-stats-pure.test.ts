@@ -40,7 +40,7 @@ const PLACED: PlacedPlacement = {
 };
 const BRIGHTNESS: ShippedBrightness = {
   kind: 'shipped', key: 'spine:1',
-  v: { via: 'tycho2', value: 10, evidence: [TYC_REF], refusals: [] },
+  v: { via: 'tycho2', value: { vMag: 10, outsideRange: false }, evidence: [TYC_REF], refusals: [] },
   spectral: { via: 'none', refusals: [] },
   ci: { via: 'none', refusals: [] },
   dust: null,
@@ -49,8 +49,6 @@ const FACTS: ShippedFacts = {
   bailerJonesEligible: false,
   inLmcCone: false,
   tycho2Direction: null,
-  vTycho2OutsideBtVtRange: false,
-  ciGspcValidatedRange: false,
   distPc: 100,
   fastKmS: null,
 };

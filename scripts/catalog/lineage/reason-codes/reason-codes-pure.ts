@@ -14,6 +14,10 @@ export type CodeStatus =
 export const LIVE = { kind: 'live' } as const satisfies CodeStatus;
 export const HISTORICAL = { kind: 'historical' } as const satisfies CodeStatus;
 
+export function retired(retiredIn: string): Extract<CodeStatus, { kind: 'retired' }> {
+  return { kind: 'retired', retiredIn };
+}
+
 /** Generic over its status, so a stage's live codes are known to the compiler. */
 export interface CodeDeclaration<St extends CodeStatus = CodeStatus> {
   readonly description: string;

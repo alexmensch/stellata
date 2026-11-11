@@ -1,9 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
-import { compareCountSnapshot } from '../build-counts';
 import { foldStageLines, paramsOf, sortLineageLines, stageLineageText } from '../lineage/lineage-row-pure';
-import { outcomeCode, stageCodes } from '../lineage/reason-codes/reason-codes-pure';
-import { nestByStage } from '../../util/counts/count-stages-pure';
+import { SEEDED_BRANCH, seededCodeCheck } from '../lineage/count-block-fixture';
 import { gaiaAstrometryRow } from '../sources/gaia-astrometry-fixture';
 import { makeStar } from '../parse/star-fixture';
 import { sourceRowRefText } from '../../util/sources/row-ref-pure';
@@ -111,9 +109,6 @@ describe('the coherence count block', () => {
     members: [{ kind: 'snapped', idx: 1, fromPc: 52, toPc: 50 }],
   }];
   const lines = coherenceLineageLines(verdicts, stars.slice(0, 3));
-  const snapshot = (counts: Readonly<Record<string, number>>) => nestByStage(
-    {}, { order: ['coherence'], of: {} }, [{ stage: 'coherence', block: { kind: 'counted', counts } }],
-  );
 
   it('keys every live code, zeros included, and no retired one', () => {
     const counts = foldStageLines(COHERENCE_CODES, lines);
@@ -128,12 +123,9 @@ describe('the coherence count block', () => {
   });
 
   it('a new code reaches the snapshot as a key, and fails the check until the snapshot is refreshed', () => {
-    const committed = snapshot(foldStageLines(COHERENCE_CODES, lines));
-    const seeded = stageCodes(COHERENCE_CODES.stage, { ...COHERENCE_CODES.declarations, seeded: outcomeCode('A new rule.') });
-    const built = snapshot(foldStageLines(seeded, lines));
-    const check = compareCountSnapshot<object>(committed, built);
-    expect(check.drifted).toBe(true);
-    expect(check.report).toContain('coherence.seeded');
-    expect(compareCountSnapshot<object>(built, built).drifted).toBe(false);
+    const { drift, refreshed } = seededCodeCheck(COHERENCE_CODES, lines);
+    expect(drift.drifted).toBe(true);
+    expect(drift.report).toContain(`coherence.${SEEDED_BRANCH}`);
+    expect(refreshed.drifted).toBe(false);
   });
 });

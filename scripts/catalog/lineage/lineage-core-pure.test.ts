@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { diffLineage, stageDiffText } from './lineage-diff-pure';
+import { diffLineage, stageDiffText, tallyKeyChanges } from './lineage-diff-pure';
 import {
   compareUtf8, decodeLineageLine, encodeLineageLine, evidenceTexts, foldStageLines, lineageLineKey, lineageLines, lineageRows, paramsOf,
   paramsText, sortLineageLines, sortUtf8, stageLineageLine, stageLineageText, type LineageLine, type LineageRow,
@@ -166,6 +166,7 @@ describe('diffLineage', () => {
     expect(text.split('\n')[2])
       .toBe('changed\t-\tdemo\tspine:4\toutcome\tdemo.kept\t{"source":"1"}\t\tn:spine:4');
     expect(Buffer.from(stageDiffText(changes, note, 1)).toString('utf8')).toBe(text);
+    expect(tallyKeyChanges(changes)).toEqual({ added: 1, removed: 1, changed: 1 });
   });
 
   it('diffs a key\'s lines as a set, so a repeated line is no change', () => {

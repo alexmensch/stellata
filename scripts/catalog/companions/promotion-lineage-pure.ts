@@ -5,14 +5,14 @@ import { starDesignations } from '../../sid/sid-pure';
 import { rowKeyText } from '../../util/sources/row-ref-pure';
 import type { IdentityRow } from '../lineage/identity-pure';
 import { evidenceTexts, stageRow, type LineageParams, type LineageRow } from '../lineage/lineage-row-pure';
-import { codeEffects, outcomeCode, stageCodes, type CodeStatus } from '../lineage/reason-codes/reason-codes-pure';
+import { codeEffects, outcomeCode, stageCodes, retired } from '../lineage/reason-codes/reason-codes-pure';
 import type { Star } from '../parse/stars-parse';
 import type { MintedBrightness, MultiplesTsvRow, PromotedRow, RowOutcome } from './companion-promotion';
 import { PROMOTION_LINEAGE } from '../../../src/catalog-format/pipeline-outputs/lineage-files';
 
 export const PROMOTION_LINEAGE_BUDGET = { gzipBytes: 1_040_000, writeMs: 10_000 };
 
-const RETIRED_7_1_8 = { kind: 'retired', retiredIn: '7.1.8' } as const satisfies CodeStatus;
+const RETIRED_7_1_8 = retired('7.1.8');
 
 export const PROMOTION_CODES = stageCodes(PROMOTION_LINEAGE.stage, {
   'dropped.compound-comp': outcomeCode('The row\'s component letter is an unresolved aggregate of components that have rows of their own, so it is not one star.', 'retire'),

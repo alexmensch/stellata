@@ -11,7 +11,8 @@ scripts/catalog/lineage/reason-codes/
   reason-codes-pure.ts           stageCodes: a stage's codes, its live ones
                                  typed apart, with their
                                  effect, role and status; outcomeCode and
-                                 refusalCode, the two declaration shapes.
+                                 refusalCode, the two declaration shapes;
+                                 retired, a retired code's status.
   reason-code-list-pure.ts       reasonCodeList, the generated list, and
                                  appendOnlyViolations.
   reason-codes-tsv.ts            REASON_CODES, the list's codec;

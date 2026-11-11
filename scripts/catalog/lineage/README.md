@@ -14,9 +14,9 @@ its review-queue and label-drop counts fold from the outcomes, while the
 derivation, admission and component counters are still kept by hand beside
 them (stellata-hhaw.45.23). Promotion's per-row counters all fold from its
 outcomes; its post-passes act on records and keep their own. Coherence's
-snapshot keys are its codes, folded from its lines. Naming's display
-counters fold from its outcomes the same way, under their `naming*` keys
-(stellata-hhaw.45.23). The record walk's placement and brightness-colour
+and brightness-colour's snapshot keys are their codes, folded from their
+lines. Naming's display counters fold from its outcomes the same way, under
+their `naming*` keys (stellata-hhaw.45.23). The record walk's placement
 counts fold from each row's outcome (`../parse/walk-stats-pure.ts`), still
 under their old keys (stellata-hhaw.45.23).
 
@@ -68,6 +68,10 @@ scripts/catalog/lineage/
   lineage-io.ts                  The baseline members and a stage's emission,
                                  gzip, and the header with its input map
                                  and file hashes, re-checked on read.
+  count-block-fixture.ts         Test-only: seededCodeCheck, a stage's count
+                                 block against its snapshot before and after
+                                 a code is seeded, so each counted stage pins
+                                 that a new code reaches the snapshot.
   lineage-core-pure.test.ts      Order, writer refusal, diff.
   lineage-rotation.test.ts       Rotation over a scratch build/: a failed or
                                  absent emission moves nothing, another
@@ -329,6 +333,13 @@ differs within a changed key: `change` (added / removed / changed), `side`
 (`-` baseline, `+` current), the six envelope columns, then any column the
 stage joins on from another stage's facts. A PR whose build leaves a
 non-empty diff puts that diff's summary in its PR body.
+
+**A stage's emission carries the diff's tally by kind, never its lines.**
+`build:catalog` holds every stage's emission until its one `emitArtifacts`
+call, so changed lines kept there would stay live through every later stage
+and count against the [CI heap budget](../../util/heap-budget/README.md):
+464,466 changed brightness-colour keys (929,228 lines) hold about 500 MiB
+(measured 2026-11-11). The lines live only between the diff and its text.
 
 ## Trace
 

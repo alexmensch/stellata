@@ -226,13 +226,11 @@ export interface ShippedFacts {
   /** Inside the LMC sky cone, whatever the PM gate made of the row. */
   readonly inLmcCone: boolean;
   readonly tycho2Direction: { readonly fromIcrs: boolean; readonly isPhotocentre: boolean } | null;
-  readonly vTycho2OutsideBtVtRange: boolean;
   /** The distance the override stack settled on. */
   readonly distPc: number;
   /** The space velocity before any clamp, wherever it exceeded the Galactic
    *  escape velocity — clamped or not, as the placement says. */
   readonly fastKmS: number | null;
-  readonly ciGspcValidatedRange: boolean;
 }
 
 /** One manifest row resolved: parked, or a record with the provenance of each
@@ -512,7 +510,7 @@ export function rowResolver({
     // settled on.
     let absmag = origin !== null
       ? origin.absoluteVMagnitude
-      : absoluteMagnitude(vRes.value, dist);
+      : absoluteMagnitude(vRes.value.vMag, dist);
 
     // Must follow the PM rescue: the position advances on the motion the row
     // ends up carrying, which is the rescue's wherever the tier states none.
@@ -670,10 +668,8 @@ export function rowResolver({
         tycho2Direction: direction.via === 'tycho2' && tycho2Row !== null
           ? { fromIcrs: tycho2Row.fromIcrs, isPhotocentre: tycho2Row.isPhotocentre }
           : null,
-        vTycho2OutsideBtVtRange: vRes.via === 'tycho2' && printed?.vVia === 'tycho2' && printed.outsideRange,
         distPc: dist,
         fastKmS: speedPcYr > GALACTIC_ESCAPE_VELOCITY_PC_YR ? speedPcYr / KM_S_TO_PC_YR : null,
-        ciGspcValidatedRange: ciRes.via === 'gspc' && gspc?.inValidatedRange === true,
       },
     };
   };
