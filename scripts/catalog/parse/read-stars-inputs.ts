@@ -79,7 +79,7 @@ export type InputsCounts = {
    *  plus `pairMemberParallaxEntries` are every source the index's per-root
    *  dedup admits, since a source the pull lacks fails the build, so the
    *  tier's reach is a partition rather than prose
-   *  (`distance/parallax/README.md#the-tiers-reach-is-bounded-by-measurement-quality-not-by-our-request`). */
+   *  (`../distance/parallax/README.md#the-tiers-reach-is-bounded-by-measurement-quality-not-by-our-request`). */
   pairMemberSiblingNoParallax: number;
   pairMemberSiblingNotAnchorGrade: number;
   pairMemberSiblingBelowSnFloor: number;
