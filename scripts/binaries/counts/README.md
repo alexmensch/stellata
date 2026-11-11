@@ -27,8 +27,11 @@ its code produces, folded through the one tally helper
 a code stage: `subdivide` holds Stage 1's ORB6 orphan and MSC inner-pair
 counts and Stage 3's NSS inner pairs; `ingest` holds Stage 3's
 `wds_pairs_total`, which its inner pairs add to. `binariesCounts` places each
-key by name, in the snapshot's order, so a refresh rewrites the file
-unchanged. `filed` takes the stages with a second argument that is `true`
+key by name, in the snapshot's order, and hands each snapshot stage to
+`nestByStage` as a counted block in `BINARIES_STAGES` order
+([The staged snapshot](../../util/counts/README.md#the-staged-snapshot)), so
+a refresh rewrites the file unchanged. Every input is required, so no block is
+ever `absent`. `filed` takes the stages with a second argument that is `true`
 only when they hold exactly the keys the six `stageNCounts` return, so a key
 left out or invented fails to compile, naming it.
 

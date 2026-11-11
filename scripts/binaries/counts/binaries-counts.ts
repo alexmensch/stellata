@@ -1,6 +1,6 @@
 // Stage 7: every stage's counts, filed under the stage of the snapshot that pins them. See README.md.
 
-import type { StagedCounts } from '../../util/counts/count-stages-pure';
+import { nestByStage, type StagedCounts } from '../../util/counts/count-stages-pure';
 import { stage3Counts } from '../astrometry/attach-astrometry';
 import type { StageResults } from '../build-binaries';
 import { stage1Counts } from '../load/reference-catalogs';
@@ -13,15 +13,19 @@ type StageCountKey = keyof (
   ReturnType<typeof stage1Counts> & ReturnType<typeof stage2Counts> & ReturnType<typeof stage3Counts>
   & ReturnType<typeof stage4Counts> & ReturnType<typeof stage5Counts> & ReturnType<typeof stage6Counts>
 );
+const BINARIES_STAGES = ['ingest', 'subdivide', 'resolve', 'astrometry', 'orbits', 'optical', 'multiples'] as const;
+type BinariesStage = (typeof BINARIES_STAGES)[number];
+
 type Filed<T> = { [S in keyof T]: keyof T[S] }[keyof T];
 type Unfiled<T> = Exclude<StageCountKey, Filed<T>> | Exclude<Filed<T>, StageCountKey>;
 
 /** `_everyKeyOnce` is `true` only when the stages file exactly the keys the stages count; otherwise its type names the stray keys. */
-function filed<T extends Readonly<Record<string, Readonly<Record<string, number>>>>>(
+function filed<T extends Readonly<Record<BinariesStage, Readonly<Record<string, number>>>>>(
   stages: T,
   _everyKeyOnce: [Unfiled<T>] extends [never] ? true : Unfiled<T>,
 ): StagedCounts<number> {
-  return { stages };
+  const blocks = BINARIES_STAGES.map((stage) => ({ stage, block: { kind: 'counted' as const, counts: stages[stage] } }));
+  return nestByStage<never, BinariesStage, number>({}, { order: BINARIES_STAGES, of: {} }, blocks);
 }
 
 function withPrefix<K extends string, P extends string>(counts: Readonly<Record<K, number>>, prefix: P): Record<Extract<K, `${P}${string}`>, number> {
