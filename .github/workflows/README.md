@@ -41,7 +41,9 @@ objects instead of pulling ~600 MB from the LFS store every push.
 
 Each guard runs on `pull_request`, takes the PR's number from the event and
 reads its labels and body live through `gh`, never the event payload
-([why](/RELEASING.md#merge-gating)).
+([why](/RELEASING.md#merge-gating)). A stack member whose base is
+another stack branch is judged too, on events that fire once it is in
+the stack ([Landing](/RELEASING.md#landing)).
 
 ## The release level, and the `skip-version-bump` exemption
 
