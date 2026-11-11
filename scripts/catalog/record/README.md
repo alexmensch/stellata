@@ -13,7 +13,8 @@ scripts/catalog/record/
                                   records on — and `assertSolFirst`, throwing
                                   unless exactly one record carries
                                   FLAG_IS_SOL and it sorted to
-                                  SOL_RECORD_INDEX, record 0. Pure.
+                                  SOL_RECORD_INDEX (record 0, stated in
+                                  catalog-pure.ts). Pure.
                                   /src/catalog-format/record/README.md#record-order.
   curated-records.ts (+ test)     CURATED_RECORDS — the curated-records
                                   source (#curated-records).

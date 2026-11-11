@@ -41,7 +41,7 @@ its own record, so the key is the only thing worth asserting on.
 then the brightest-looking sky, which is exactly what the progressive load
 paints from its first transport chunk ([On-disk transport chunking](#on-disk-transport-chunking),
 [Progressive catalog load](/src/client/loaders/README.md#progressive-catalog-load)). It also puts Sol at
-index 0 by some twenty-two magnitudes, which the build asserts
+index 0 (`SOL_RECORD_INDEX`) by some twenty-two magnitudes, which the build asserts
 (`assertSolFirst`, `/scripts/catalog/record/`) — and `catalog.solIndex` gates the boot
 focus, the floating-origin seed and the whole solar system, none of which could
 exist in a prefix under the absolute-magnitude order this replaced.

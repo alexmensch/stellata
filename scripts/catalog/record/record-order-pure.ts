@@ -2,7 +2,7 @@
 // brightest first — and Sol's place first once they are. See ../../../src/catalog-format/record/README.md#record-order.
 
 import { apparentMagnitude } from '../../../src/astro-core/perceptual-magnitude';
-import { FLAG_IS_SOL } from '../../../src/catalog-format/record/catalog-pure';
+import { FLAG_IS_SOL, SOL_RECORD_INDEX } from '../../../src/catalog-format/record/catalog-pure';
 
 export interface ApparentOrderStar {
   x: number;
@@ -19,10 +19,6 @@ export interface ApparentOrderStar {
 export function apparentVFromSol(star: ApparentOrderStar, avSolToStar: number): number {
   return apparentMagnitude(star.absmag, Math.hypot(star.x, star.y, star.z)) + avSolToStar;
 }
-
-/** Sol's record index once sorted. The runtime's boot focus, floating-origin
- *  seed and solar system read Sol off the first transport chunk. */
-export const SOL_RECORD_INDEX = 0;
 
 /** Throws unless exactly one record is flagged Sol and it sorted to SOL_RECORD_INDEX. */
 export function assertSolFirst(records: readonly { readonly flags: number }[]): void {

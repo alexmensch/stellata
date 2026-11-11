@@ -22,6 +22,7 @@ import {
   recordsInChunkPrefix,
   type CatalogManifest,
   DIST_VIA_VALUES,
+  SOL_RECORD_INDEX,
 } from '../../src/catalog-format/record/catalog-pure';
 import { encodeSpectralBytes } from '../../src/catalog-format/spectral/spectral-record-bytes';
 import { buildHipToIndex, inferBinaries, wingEclipsingBinaries } from './multiplicity/binary-flags-pure';
@@ -29,7 +30,7 @@ import {
   multiplicityStatuses, multiplicitySummary, type MultiplicityCounts,
 } from './multiplicity/multiplicity-stage-pure';
 import { SIMBAD_OTYPE_MULTIPLE } from './spectral/spectral-resolve';
-import { apparentVFromSol, assertSolFirst, SOL_RECORD_INDEX } from './record/record-order-pure';
+import { apparentVFromSol, assertSolFirst } from './record/record-order-pure';
 import { buildSearchIndex, searchIndexSummary } from './record/search-index-pure';
 import { apsisCoverageSummary, recordsCounts, variabilityUnits } from './record/records-stage-pure';
 import { avSolToStar } from './distance/dust/dust-deextinction-pure';
