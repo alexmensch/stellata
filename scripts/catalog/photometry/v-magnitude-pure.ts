@@ -56,8 +56,14 @@ export type VVia = (typeof V_VIA_VALUES)[number];
 /** The Riello relation refusing the row's Gaia photometry. */
 export type VMagnitudeRefusal = CascadeRefusal<'gaia_riello', PhotometryRefusal>;
 
+interface VMagnitude { readonly vMag: number }
+
+type VMagnitudeValues = UniformValues<Exclude<VVia, 'tycho2'>, VMagnitude> & {
+  readonly tycho2: VMagnitude & Pick<Tycho2VResolution, 'outsideRange'>;
+};
+
 /** Johnson V. `none` is a row no tier lights — a /docs/catalog-driver.md#61-record-parity park. */
-export type VMagnitudeResolution = CascadeResult<UniformValues<VVia, number>, VMagnitudeRefusal>;
+export type VMagnitudeResolution = CascadeResult<VMagnitudeValues, VMagnitudeRefusal>;
 
 /** A Gaia photometry row with the source row it was read from. */
 export type CitedPhotometry = GaiaPhotometry & { readonly ref: AnySourceRowRef };
@@ -96,7 +102,7 @@ export interface Tycho2VResolution {
    *  over. The transform runs anyway — nothing below this tier could serve
    *  the row, and V is a membership gate, so gating would cost it its record
    *  (README.md#the-tycho-2-tier-runs-outside-its-published-colour-range).
-   *  Pinned as `vTycho2OutsideBtVtRange` so an upstream shift is reviewed. */
+   *  Its own lineage code, so an upstream shift is reviewed. */
   outsideRange: boolean;
 }
 
@@ -214,15 +220,18 @@ export function resolveVMagnitude(
   if (photometry !== null) {
     const transformed = rielloVMagnitude(photometry);
     if (transformed.kind === 'value') {
-      return { via: 'gaia_riello', value: transformed.value, evidence: [photometry.ref], refusals };
+      return { via: 'gaia_riello', value: { vMag: transformed.value }, evidence: [photometry.ref], refusals };
     }
     refusals.push({ tier: 'gaia_riello', reason: transformed.reason, ref: photometry.ref });
   }
   if (printed !== null) {
-    return { via: printed.vVia, value: printed.vMag, evidence: [printed.ref], refusals };
+    const evidence = [printed.ref];
+    return printed.vVia === 'tycho2'
+      ? { via: 'tycho2', value: { vMag: printed.vMag, outsideRange: printed.outsideRange }, evidence, refusals }
+      : { via: printed.vVia, value: { vMag: printed.vMag }, evidence, refusals };
   }
   if (curatedV !== null && Number.isFinite(curatedV)) {
-    return { via: 'curated', value: curatedV, evidence: [], refusals };
+    return { via: 'curated', value: { vMag: curatedV }, evidence: [], refusals };
   }
   return { via: 'none', refusals };
 }

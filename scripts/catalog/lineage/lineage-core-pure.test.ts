@@ -1,15 +1,16 @@
 import { describe, expect, it } from 'vitest';
 
-import { diffLineage, stageDiffText } from './lineage-diff-pure';
+import { diffLineage, stageDiffText, tallyKeyChanges } from './lineage-diff-pure';
 import {
   compareUtf8, decodeLineageLine, encodeLineageLine, evidenceTexts, foldStageLines, lineageLineKey, lineageLines, lineageRows, paramsOf,
   paramsText, sortLineageLines, sortUtf8, stageLineageLine, stageLineageText, type LineageLine, type LineageRow,
 } from './lineage-row-pure';
-import { LIVE, stageCodes } from './reason-codes/reason-codes-pure';
+import { outcomeCode, refusalCode, stageCodes } from './reason-codes/reason-codes-pure';
 
 const CODES = stageCodes('demo', {
-  kept: { description: 'kept', effect: 'none', status: LIVE },
-  'gate.refused': { description: 'refused by the gate', effect: 'none', status: LIVE },
+  also: outcomeCode('also'),
+  kept: outcomeCode('kept'),
+  'gate.refused': refusalCode('refused by the gate'),
 });
 
 function row(key: string, code = 'demo.kept', params: Record<string, string> = {}): LineageRow {
@@ -28,23 +29,39 @@ describe('evidenceTexts', () => {
   });
 });
 
-describe('foldStageLines', () => {
-  const refused = (key: string): LineageRow => ({ ...row(key, 'demo.gate.refused'), role: 'refused' });
+const refusedRow = (key: string): LineageRow => ({ ...row(key, 'demo.gate.refused'), role: 'refused' });
 
-  it('counts the outcome lines per code, every declared code present', () => {
-    const lines = [row('spine:1'), row('spine:2'), refused('spine:2')].map(line);
-    expect(foldStageLines(CODES, lines, 'outcome')).toEqual({ 'demo.kept': 2, 'demo.gate.refused': 0 });
+describe('foldStageLines', () => {
+  it('counts every line per code, both roles in one record, every declared code present', () => {
+    const lines = [row('spine:1'), row('spine:2'), refusedRow('spine:2'), refusedRow('spine:3')].map(line);
+    expect(foldStageLines(CODES, lines)).toEqual({ 'demo.also': 0, 'demo.kept': 2, 'demo.gate.refused': 2 });
   });
 
-  it('counts the refused lines apart from the outcomes', () => {
-    const lines = [row('spine:1'), refused('spine:1'), refused('spine:2')].map(line);
-    expect(foldStageLines(CODES, lines, 'refused')).toEqual({ 'demo.kept': 0, 'demo.gate.refused': 2 });
+  it('refuses a line in a role its code is not declared in', () => {
+    const misfiled = [...lineageLines(
+      `stage\tkey\trole\tcode\tparams\tevidence\ndemo\tspine:1\trefused\tdemo.kept\t\t\n`, 'fixture/demo.tsv',
+    )];
+    expect(() => foldStageLines(CODES, misfiled)).toThrow(/demo.kept is declared outcome, written refused \(key spine:1\)/);
   });
 
   it('refuses a line of another stage', () => {
-    const other = stageCodes('other', { kept: { description: 'kept', effect: 'none', status: LIVE } });
+    const other = stageCodes('other', { kept: outcomeCode('kept') });
     const foreign = stageLineageLine(other, { ...row('spine:1', 'other.kept'), stage: 'other' });
-    expect(() => foldStageLines(CODES, [foreign], 'outcome')).toThrow(/"other.kept" is not one of the declared variants/);
+    expect(() => foldStageLines(CODES, [foreign])).toThrow(/"other.kept" is not one of the declared variants/);
+  });
+
+  it('keys on live codes only, and refuses a line under a retired code', () => {
+    const codes = stageCodes('demo', {
+      kept: outcomeCode('kept'),
+      gone: outcomeCode('gone', 'none', { kind: 'retired', retiredIn: '1.0.0' } as const),
+    });
+    const kept = stageLineageLine(codes, row('spine:1'));
+    const counts = foldStageLines(codes, [kept]);
+    expect(counts).toEqual({ 'demo.kept': 1 });
+    // @ts-expect-error a retired code is not a key of the stage's counts
+    expect(counts['demo.gone']).toBeUndefined();
+    const retired = stageLineageLine(codes, row('spine:2', 'demo.gone'));
+    expect(() => foldStageLines(codes, [retired])).toThrow(/"demo.gone" is not one of the declared variants/);
   });
 });
 
@@ -68,12 +85,12 @@ describe('the lineage order', () => {
     const lines = [
       { ...row('spine:1'), evidence: ['tyc:1-2'] }, row('spine:10'),
       { ...row('spine:1'), evidence: ['tyc:1', 'tyc:1-2'] }, row('spine:1', 'demo.kept', { source: 'a' }),
-      row('spine:1', 'demo.gate.refused'), { ...row('spine:1'), role: 'refused' as const }, row('spine:1'),
+      row('spine:1', 'demo.also'), refusedRow('spine:1'), row('spine:1'),
     ].map(line);
     expect(sortLineageLines(lines).map(decodeLineageLine)).toEqual([
-      row('spine:1', 'demo.gate.refused'), row('spine:1'), { ...row('spine:1'), evidence: ['tyc:1-2'] },
+      row('spine:1', 'demo.also'), row('spine:1'), { ...row('spine:1'), evidence: ['tyc:1-2'] },
       { ...row('spine:1'), evidence: ['tyc:1', 'tyc:1-2'] }, row('spine:1', 'demo.kept', { source: 'a' }),
-      { ...row('spine:1'), role: 'refused' }, row('spine:10'),
+      refusedRow('spine:1'), row('spine:10'),
     ]);
   });
 
@@ -111,20 +128,21 @@ describe('the lineage order', () => {
 });
 
 describe('the writer', () => {
-  it('refuses a code the stage does not declare, and another stage\'s row', () => {
+  it('refuses a code the stage does not declare, one in another role than declared, and another stage\'s row', () => {
     expect(() => line(row('spine:2', 'demo.unrecorded'))).toThrow(/demo.unrecorded is not a declared demo code/);
+    expect(() => line(row('spine:2', 'demo.gate.refused'))).toThrow(/demo.gate.refused is declared refused, written outcome/);
     expect(() => line({ ...row('spine:2'), stage: 'other' })).toThrow(/a row of stage other in the demo file/);
   });
 
   it('refuses another stage\'s line, and a cell holding a character below tab', () => {
-    const otherCodes = stageCodes('other', { kept: { description: 'kept', effect: 'none', status: LIVE } });
+    const otherCodes = stageCodes('other', { kept: outcomeCode('kept') });
     const other = stageLineageLine(otherCodes, { ...row('spine:2'), stage: 'other', code: 'other.kept' });
     expect(() => stageLineageText(CODES, [other])).toThrow(/a line of another stage in the demo file/);
     expect(() => encodeLineageLine(row('spine:\u0001'))).toThrow(/control character below tab/);
   });
 
   it('refuses an undeclarable code name', () => {
-    expect(() => stageCodes('demo', { 'Bad Name': { description: 'x', effect: 'none', status: LIVE } }))
+    expect(() => stageCodes('demo', { 'Bad Name': outcomeCode('x') }))
       .toThrow(/not lowercase dotted words/);
   });
 });
@@ -148,6 +166,7 @@ describe('diffLineage', () => {
     expect(text.split('\n')[2])
       .toBe('changed\t-\tdemo\tspine:4\toutcome\tdemo.kept\t{"source":"1"}\t\tn:spine:4');
     expect(Buffer.from(stageDiffText(changes, note, 1)).toString('utf8')).toBe(text);
+    expect(tallyKeyChanges(changes)).toEqual({ added: 1, removed: 1, changed: 1 });
   });
 
   it('diffs a key\'s lines as a set, so a repeated line is no change', () => {
