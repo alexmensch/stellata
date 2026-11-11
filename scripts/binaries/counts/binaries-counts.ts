@@ -17,7 +17,10 @@ const BINARIES_STAGES = ['ingest', 'subdivide', 'resolve', 'astrometry', 'orbits
 type BinariesStage = (typeof BINARIES_STAGES)[number];
 
 type Filed<T> = { [S in keyof T]: keyof T[S] }[keyof T];
-type Unfiled<T> = Exclude<StageCountKey, Filed<T>> | Exclude<Filed<T>, StageCountKey>;
+type FiledTwice<T> = { [S in keyof T]: keyof T[S] & Filed<Omit<T, S>> }[keyof T];
+type Unfiled<T> =
+  | Exclude<StageCountKey, Filed<T>> | Exclude<Filed<T>, StageCountKey>
+  | Exclude<keyof T, BinariesStage> | FiledTwice<T>;
 
 /** `_everyKeyOnce` is `true` only when the stages file exactly the keys the stages count; otherwise its type names the stray keys. */
 function filed<T extends Readonly<Record<BinariesStage, Readonly<Record<string, number>>>>>(

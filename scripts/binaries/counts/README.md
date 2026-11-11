@@ -31,9 +31,11 @@ key by name, in the snapshot's order, and hands each snapshot stage to
 `nestByStage` as a counted block in `BINARIES_STAGES` order
 ([The staged snapshot](../../util/counts/README.md#the-staged-snapshot)), so
 a refresh rewrites the file unchanged. Every input is required, so no block is
-ever `absent`. `filed` takes the stages with a second argument that is `true`
-only when they hold exactly the keys the six `stageNCounts` return, so a key
-left out or invented fails to compile, naming it.
+ever `absent`. `filed` takes
+the stages with a second argument that is `true` only when they are exactly
+`BINARIES_STAGES` and hold each key the six `stageNCounts` return exactly
+once, so a key left out, invented or filed twice, or a stage outside the list,
+fails to compile, naming it.
 
 A rate's denominator is never empty on real data; `share` throws if it is
 (`stellata-hhaw.45.17.19`). `pnpm run build:binaries --update-snapshots`
