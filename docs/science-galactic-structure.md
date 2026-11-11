@@ -100,7 +100,7 @@ catalogue carries **77 %** of [Leinert 1998](/data/papers/index.md#leinert1998)'
 the column is almost entirely local. In the plane the hole keeps half the
 model's light resolved out to 500 pc and a third at 1 kpc, and the dusty
 column toward the centre — the nearest two kiloparsecs, the dust takes the
-rest — dims 0.68 mag when that share comes out.
+rest — dims 0.65 mag when that share comes out.
 
 **The model cannot also satisfy the sightline it used to be anchored on,
 and no shape parameter bridges the gap.** The earlier calibration pinned
@@ -111,7 +111,7 @@ which the catalogue is a third of a percent. A single emissivity field
 anchored on the subtracted pole therefore runs a factor of three low
 everywhere else. With the hole taking the resolved share out of both
 sides, the shipped solve is 1.31 mag brighter than that residual at the
-pole and 0.389 mag brighter toward the Galactic centre than
+pole and 0.390 mag brighter toward the Galactic centre than
 [Leinert 1998](/data/papers/index.md#leinert1998)'s total at b = 30°, the column that check grades against; band plus catalogue at the pole is 0.41 mag over [Leinert 1998](/data/papers/index.md#leinert1998)'s total,
 where band-without-hole plus catalogue was 0.88 over.
 
