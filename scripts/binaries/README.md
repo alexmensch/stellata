@@ -100,7 +100,9 @@ scripts/binaries/
                                   multiples.tsv — column roster, closed
                                   value sets and the properties a set's
                                   members carry (which resolve tiers
-                                  anchor on a Gaia source_id), per-column
+                                  anchor on a Gaia source_id; each
+                                  orbit route's elements, regime and
+                                  Stage 6 estimates), per-column
                                   decimal places,
                                   P and a positive and 0 ≤ e < 1 — and
                                   the only parse of the file on the TS
