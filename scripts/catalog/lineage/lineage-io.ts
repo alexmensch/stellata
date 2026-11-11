@@ -61,7 +61,12 @@ export function gzipText(text: string | Uint8Array): Uint8Array {
 }
 
 export function readLineage(path: string): LineageRow[] {
-  return [...lineageRows(gunzipSync(readFileSync(path)), path)];
+  return [...streamLineageRows(path)];
+}
+
+/** A stage file's rows one at a time, for a reader that keeps only some. */
+export function streamLineageRows(path: string): Generator<LineageRow> {
+  return lineageRows(gunzipSync(readFileSync(path)), path);
 }
 
 /** A stage file's lines one at a time, for a reader that need not hold them all. */

@@ -101,9 +101,11 @@ export function queryTerms(
   };
 }
 
+/** `rows` is read twice and its rows are never held together: every stage's
+ *  rows at once overrun the heap. */
 export interface StageRows {
   readonly stage: string;
-  readonly rows: readonly LineageRow[];
+  readonly rows: () => Iterable<LineageRow>;
 }
 
 export interface TracedRecord {
@@ -149,15 +151,19 @@ export function traceRecords(
   ]);
   const keys = new Set(named);
   for (const { rows } of stages) {
-    for (const row of rows) {
+    for (const row of rows()) {
       if (names(row, termSet) || names(row, named) || settles(row, sidText)) keys.add(row.key);
     }
+  }
+  const rowsByKey = new Map([...keys].map((key) => [key, [] as LineageRow[]]));
+  for (const { rows } of stages) {
+    for (const row of rows()) rowsByKey.get(row.key)?.push(row);
   }
   const byKey = new Map(identity.map((r) => [r.key, r]));
   return sortUtf8([...keys], (key) => key).map((key) => ({
     key,
     identity: byKey.get(key) ?? null,
-    rows: stages.flatMap(({ rows }) => rows.filter((r) => r.key === key)),
+    rows: rowsByKey.get(key) ?? [],
   }));
 }
 

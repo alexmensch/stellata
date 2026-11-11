@@ -38,8 +38,10 @@ name.
    row that cites one of those identity-row records by origin key, as a
    companion's promotion row cites its anchor. Identity rows come from every
    stage that writes them (`StageLineageSpec.identity`,
-   [Identity](../README.md#identity--the-origin-source-row)). A full scan of
-   the stage files, about two seconds today, so no index is kept.
+   [Identity](../README.md#identity--the-origin-source-row)). No index is
+   kept: trace streams the stage files twice, once to find the keys and once
+   to collect their rows, and never holds a stage's rows whole — every
+   stage's rows decoded at once overrun the 4 GB heap.
 3. Widen through allocation's rows: a SID query also finds the origin keys
    allocation filed it under — the record it resolved to, or the decision
    that retired, parked or merged it — and a merged SID's successor.

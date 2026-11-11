@@ -68,7 +68,7 @@ const SIZE = [
 ].join('\n') + '\n';
 
 const identity = [...identityRows(IDENTITY, 'fixture/identity.tsv')];
-const stages = [{ stage: 'membership', rows: [...lineageRows(MEMBERSHIP, 'fixture/membership.tsv')] }];
+const stages = [{ stage: 'membership', rows: () => lineageRows(MEMBERSHIP, 'fixture/membership.tsv') }];
 /** SID 7's canonical key is HD 5; record 0, "Fixture Star", "Yunü" or "Yunu", is the
  *  record on HD 5; records 1 and 2 are case-only designation twins; records 3
  *  and 4 both display "54 Leo". */
@@ -174,7 +174,7 @@ const PROMOTION_IDENTITY = [
 
 describe('traceRecords over a promoted system', () => {
   const withPromotion = [
-    ...stages, { stage: 'promotion', rows: [...lineageRows(PROMOTION, 'fixture/promotion.tsv')] },
+    ...stages, { stage: 'promotion', rows: () => lineageRows(PROMOTION, 'fixture/promotion.tsv') },
   ];
   const promotionIdentity = [...identityRows(PROMOTION_IDENTITY, 'fixture/promotion.identity.tsv')];
   const traceSystem = (query: string) => traceRecords(
@@ -203,7 +203,7 @@ const ALLOCATION = [
 ].join('\n') + '\n';
 
 describe('traceRecords through allocation', () => {
-  const withAllocation = [...stages, { stage: 'allocation', rows: [...lineageRows(ALLOCATION, 'fixture/allocation.tsv')] }];
+  const withAllocation = [...stages, { stage: 'allocation', rows: () => lineageRows(ALLOCATION, 'fixture/allocation.tsv') }];
   const traceSid = (query: string) => traceRecords(
     queryTerms(parseTraceQuery(query), LOOKUPS), identity, [{ key: 'spine:3', sid: 7 }], withAllocation,
   );
