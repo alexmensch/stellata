@@ -19,7 +19,8 @@ scripts/binaries/masses/
                                    massFromSpectralClass: the main-sequence,
                                    giant and supergiant tables (Cox 2000),
                                    the subgiant weighting, the white-dwarf
-                                   and carbon / Wolf-Rayet defaults.
+                                   and carbon / Wolf-Rayet defaults;
+                                   massRatioFromComponents, a pair's q.
   pair-masses.ts                   pairMasses: both sides summed, an
                                    unparseable type at
                                    UNKNOWN_COMPONENT_MASS_MSUN.

@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { CARBON_WR_MASS_DEFAULT, massFromSpectralClass, parseSpectralType, WD_MASS_DEFAULT } from './mass-estimate-pure';
+import {
+  CARBON_WR_MASS_DEFAULT, massFromSpectralClass, massRatioFromComponents, parseSpectralType, WD_MASS_DEFAULT,
+} from './mass-estimate-pure';
 
 const triple = (s: string) => {
   const p = parseSpectralType(s)!;
@@ -83,5 +85,24 @@ describe('massFromSpectralClass', () => {
 
   it('is null for an unparseable string', () => {
     for (const s of ['', null, '???']) expect(massFromSpectralClass(s)).toBeNull();
+  });
+});
+
+describe('massRatioFromComponents', () => {
+  it('reads Sirius (A1V + DA1.9) at 0.6 / (2.6 + 0.6)', () => {
+    expect(massRatioFromComponents('A1V', 'DA1.9')).toBeCloseTo(0.1875, 3);
+  });
+
+  it('reads Procyon (F5IV-V + DQZ) with the subgiant weighting', () => {
+    expect(massRatioFromComponents('F5IV-V', 'DQZ')).toBeCloseTo(0.2703, 4);
+  });
+
+  it('reads α Cen (G2V + K1V)', () => {
+    expect(massRatioFromComponents('G2V', 'K1V')).toBeCloseTo(0.4318, 4);
+  });
+
+  it('is null when either type is unparseable', () => {
+    expect(massRatioFromComponents('', 'K1V')).toBeNull();
+    expect(massRatioFromComponents('G2V', '')).toBeNull();
   });
 });

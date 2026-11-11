@@ -139,3 +139,11 @@ export function massFromSpectralClass(spect: string | null): number | null {
     default: return MS_MASS[c][sub];
   }
 }
+
+/** q = M₂ / (M₁ + M₂) from both components' types; null when either has no mass. */
+export function massRatioFromComponents(primarySpect: string | null, secondarySpect: string | null): number | null {
+  const mA = massFromSpectralClass(primarySpect);
+  const mB = massFromSpectralClass(secondarySpect);
+  if (mA === null || mB === null || mA + mB <= 0) return null;
+  return mB / (mA + mB);
+}
