@@ -8,7 +8,8 @@ declarations. The row contract the codes sit in is [../README.md](../README.md#r
 
 ```
 scripts/catalog/lineage/reason-codes/
-  reason-codes-pure.ts           stageCodes: a stage's codes with their
+  reason-codes-pure.ts           stageCodes: a stage's codes, its live ones
+                                 typed apart, with their
                                  effect, role and status; outcomeCode and
                                  refusalCode, the two declaration shapes.
   reason-code-list-pure.ts       reasonCodeList, the generated list, and

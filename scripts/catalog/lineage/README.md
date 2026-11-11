@@ -213,8 +213,9 @@ Membership's (`MEMBERSHIP_INVARIANTS`): no `admit.magnitude` row whose
 A stage's count-snapshot keys are its reason codes, so the code list is the
 one owner of every counted tier. `foldStageLines(codes, lines)`
 (`lineage-row-pure.ts`, over `../../util/counts/tally-pure.ts`'s `fold`) counts a
-stage's lines per code, every declared code present, typed
-`Record<code, number>` from the stage's `codes`; each code is declared in
+stage's lines per live code, every live code present, typed
+`Record<code, number>` from the stage's `live` codes — a retired or
+historical code is no key, and a line carrying one throws; each code is declared in
 one role, so a stage's outcomes and refusals fold into one record and no
 code is counted in both. A line of another stage, or in a role its code is
 not declared in, throws. A stage with no codes yet keeps its snapshot keys until it gains

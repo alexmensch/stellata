@@ -13,7 +13,7 @@ import { PROMOTION_LINEAGE } from '../../../src/catalog-format/pipeline-outputs/
 export const PROMOTION_LINEAGE_BUDGET = { gzipBytes: 1_040_000, writeMs: 10_000 };
 
 
-const RETIRED_7_1_8: CodeStatus = { kind: 'retired', retiredIn: '7.1.8' };
+const RETIRED_7_1_8 = { kind: 'retired', retiredIn: '7.1.8' } as const satisfies CodeStatus;
 
 export const PROMOTION_CODES = stageCodes(PROMOTION_LINEAGE.stage, {
   'dropped.compound-comp': outcomeCode('The row\'s component letter is an unresolved aggregate of components that have rows of their own, so it is not one star.', 'retire'),

@@ -175,11 +175,10 @@ export function lineageLineParams(line: LineageLine): string {
   return lineCell(line, 'params');
 }
 
-/** How many of a stage's lines carry each of its codes, every code present; a line of another
- *  stage, or in a role its code is not declared in, throws. */
-export function foldStageLines<B extends string, S extends string>(
-  codes: StageCodes<B, S>, lines: Iterable<LineageLine>,
-): Record<StageCode<S, B>, number> {
+/** see README.md#counts-fold-from-lineage */
+export function foldStageLines<B extends string, S extends string, L extends B>(
+  codes: StageCodes<B, S, L>, lines: Iterable<LineageLine>,
+): Record<StageCode<S, L>, number> {
   function* checked(): Generator<LineageLine> {
     for (const line of lines) {
       const code = lineageLineCode(line);
@@ -187,7 +186,7 @@ export function foldStageLines<B extends string, S extends string>(
       yield line;
     }
   }
-  return fold(codes.codes, checked(), lineageLineCode);
+  return fold(codes.live, checked(), lineageLineCode);
 }
 
 function rowOfCells(cells: readonly string[], where: string): LineageRow {

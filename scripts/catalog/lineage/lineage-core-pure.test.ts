@@ -32,7 +32,6 @@ describe('evidenceTexts', () => {
 const refusedRow = (key: string): LineageRow => ({ ...row(key, 'demo.gate.refused'), role: 'refused' });
 
 describe('foldStageLines', () => {
-
   it('counts every line per code, both roles in one record, every declared code present', () => {
     const lines = [row('spine:1'), row('spine:2'), refusedRow('spine:2'), refusedRow('spine:3')].map(line);
     expect(foldStageLines(CODES, lines)).toEqual({ 'demo.also': 0, 'demo.kept': 2, 'demo.gate.refused': 2 });
@@ -49,6 +48,20 @@ describe('foldStageLines', () => {
     const other = stageCodes('other', { kept: outcomeCode('kept') });
     const foreign = stageLineageLine(other, { ...row('spine:1', 'other.kept'), stage: 'other' });
     expect(() => foldStageLines(CODES, [foreign])).toThrow(/"other.kept" is not one of the declared variants/);
+  });
+
+  it('keys on live codes only, and refuses a line under a retired code', () => {
+    const codes = stageCodes('demo', {
+      kept: outcomeCode('kept'),
+      gone: outcomeCode('gone', 'none', { kind: 'retired', retiredIn: '1.0.0' } as const),
+    });
+    const kept = stageLineageLine(codes, row('spine:1'));
+    const counts = foldStageLines(codes, [kept]);
+    expect(counts).toEqual({ 'demo.kept': 1 });
+    // @ts-expect-error a retired code is not a key of the stage's counts
+    expect(counts['demo.gone']).toBeUndefined();
+    const retired = stageLineageLine(codes, row('spine:2', 'demo.gone'));
+    expect(() => foldStageLines(codes, [retired])).toThrow(/"demo.gone" is not one of the declared variants/);
   });
 });
 
