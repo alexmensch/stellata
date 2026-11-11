@@ -20,8 +20,8 @@ src/catalog-format/record/
 ```
 
 The build-side halves stay in `/scripts/catalog/record/`: the record-order
-key (`record-order-pure.ts`, [Record order](#record-order)) and the
-`GAIA_APSIS` source.
+key and Sol's place first (`record-order-pure.ts`, [Record order](#record-order)), the
+search index's build (`search-index-pure.ts`) and the `GAIA_APSIS` source.
 
 ## Record order
 
@@ -41,7 +41,8 @@ its own record, so the key is the only thing worth asserting on.
 then the brightest-looking sky, which is exactly what the progressive load
 paints from its first transport chunk ([On-disk transport chunking](#on-disk-transport-chunking),
 [Progressive catalog load](/src/client/loaders/README.md#progressive-catalog-load)). It also puts Sol at
-index 0 by some twenty-two magnitudes — and `catalog.solIndex` gates the boot
+index 0 by some twenty-two magnitudes, which the build asserts
+(`assertSolFirst`, `/scripts/catalog/record/`) — and `catalog.solIndex` gates the boot
 focus, the floating-origin seed and the whole solar system, none of which could
 exist in a prefix under the absolute-magnitude order this replaced.
 

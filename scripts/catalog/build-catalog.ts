@@ -31,7 +31,7 @@ import {
   multiplicityStatuses, multiplicitySummary, type MultiplicityCounts,
 } from './multiplicity/multiplicity-stage-pure';
 import { SIMBAD_OTYPE_MULTIPLE } from './spectral/spectral-resolve';
-import { apparentVFromSol, solRecordIndex } from './record/record-order-pure';
+import { apparentVFromSol, assertSolFirst, SOL_RECORD_INDEX } from './record/record-order-pure';
 import { buildSearchIndex, searchIndexSummary } from './record/search-index-pure';
 import { avSolToStar } from './distance/dust/dust-deextinction-pure';
 import {
@@ -307,7 +307,7 @@ export async function main() {
   // build. Every field has a default so a code path that legitimately
   // skips a section (missing GCVS files) doesn't leave the
   // field undefined.
-  const counts: Omit<FiledCounts, 'solIndex'> = {
+  const counts: FiledCounts = {
     recordCount: 0,
     recordsInFirstChunk: 0,
     namingIauNamed: 0,
@@ -723,7 +723,7 @@ export async function main() {
   const order = Array.from(stars.keys()).sort((a, b) => sortKey[a] - sortKey[b]);
   const sorted = order.map((i) => stars[i]);
   for (let i = 0; i < sorted.length; i++) stars[i] = sorted[i];
-  const solIndex = solRecordIndex(stars);
+  assertSolFirst(stars);
 
   const hipToIndex = buildHipToIndex(stars);
 
@@ -957,9 +957,9 @@ export async function main() {
   // the one record that has none — any other holder means an assignment path
   // was skipped, which surfaces downstream as a blank constellation row
   // rather than an error.
-  if (unclassifiedCon.length !== 1 || unclassifiedCon[0] !== solIndex) {
+  if (unclassifiedCon.length !== 1 || unclassifiedCon[0] !== SOL_RECORD_INDEX) {
     throw new Error(
-      `Expected Sol (record ${solIndex}) to be the only record without a `
+      `Expected Sol (record ${SOL_RECORD_INDEX}) to be the only record without a `
       + `constellation; got ${unclassifiedCon.length}: `
       + `${unclassifiedCon.slice(0, 10).join(', ')}`,
     );
@@ -1039,9 +1039,8 @@ export async function main() {
     `Built ${CATALOG_OUTPUTS.files.constellations} (${CONSTELLATIONS.length} constellations, ${figuresSummary(figures)})`,
   );
   console.log(`Built ${CATALOG_OUTPUTS.files.searchIndex} (${searchIndexSummary(search.counts, Buffer.byteLength(searchJson))})`);
-  console.log(
-    `Sol at record index ${solIndex} (absmag=${stars[solIndex].absmag}, R=${stars[solIndex].physicalRadius.toFixed(3)} R☉)`,
-  );
+  const sol = stars[SOL_RECORD_INDEX];
+  console.log(`Sol at record index ${SOL_RECORD_INDEX} (absmag=${sol.absmag}, R=${sol.physicalRadius.toFixed(3)} R☉)`);
 
   counts.variableCount = variableCount;
   counts.gaiaSourceIdResolved = gaiaSourceIdResolved;
@@ -1120,7 +1119,7 @@ export async function main() {
     checks: [
       ...placementEmission.checks, ...brightnessEmission.checks, ...sizeEmission.checks, ...coherenceEmission.checks, ...lineage.checks, ...allocationLineage.checks,
       ...namingEmission.checks,
-      buildCountsCheck({ ...counts, solIndex }, [
+      buildCountsCheck(counts, [
         { stage: 'inputs', block: { kind: 'counted', counts: inputs.counts } },
         { stage: 'multiplicity', block: { kind: 'counted', counts: multiplicity } },
         { stage: 'gcvs', block: { kind: 'counted', counts: gcvsCounts } },

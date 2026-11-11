@@ -73,8 +73,6 @@ export interface FiledCounts {
   /** Stars with both nonzero amplitude and period after quantisation —
    *  drives the shader's "is variable" sentinel. */
   variableCount: number;
-  /** Record index of Sol after sort; a build without exactly one Sol throws. */
-  solIndex: number;
   /** Records emitted with a non-zero Gaia DR3 source_id at
    *  RECORD_LAYOUT.gaiaSourceId. The manifest carries one on all but its
    *  no-Gaia residual; a sharp drop here means the builder lost the
@@ -581,7 +579,6 @@ export const CATALOG_COUNT_STAGE: Readonly<Record<keyof FiledCounts, CatalogCoun
   apsisSourcesUnpulled: 'records',
   gspcSourcesUnpulled: 'records',
   variableCount: 'records',
-  solIndex: 'records',
   gaiaSourceIdResolved: 'records',
   apsisMatched: 'records',
   apsisTeffEither: 'records',
