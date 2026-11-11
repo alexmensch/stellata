@@ -109,6 +109,35 @@ describe('planReleases', () => {
   });
 });
 
+describe('planReleases over a gh stack merge --squash landing', () => {
+  // GitHub's squash title for stack #768's members, bottom first: PR_TITLE plus ` (#N)`, one commit per member.
+  const stack768: ReadonlyArray<readonly [string, number, string]> = [
+    ['Binaries to TS, slice 1: Stage 1 load and a wiring-only shell, unwired (ticket-16)', 761, 'skip-version-bump'],
+    ['Binaries Stage 2 (resolve) in TypeScript, unwired (ticket-17.1)', 762, 'skip-version-bump'],
+    ['refresh:simbad-wds-xids on the TypeScript pull runtime; WDS reader to scripts/wds/ (ticket-29.12)', 765, 'skip-version-bump'],
+    ['Binaries Stage 3 (astrometry) and NSS inner-pair synthesis ported to TypeScript, unwired (ticket-17.2)', 769, 'skip-version-bump'],
+    ['Binaries Stage 4 (orbits) ported to TypeScript, unwired (ticket-17.3)', 771, 'release:patch'],
+  ];
+
+  function landed(labelOf: (pr: number, label: string) => string): RangeCommit[] {
+    return stack768.map(([title, pr, label], i) => ({
+      sha: `${i + 1}`.repeat(40),
+      subject: `${title} (#${pr})`,
+      release: declarationOf([labelOf(pr, label)]),
+    }));
+  }
+
+  it('maps every member to its PR and releases only the release:patch one', () => {
+    const plan = planReleases('7.1.16', landed((_, label) => label));
+    expect(plan).toEqual([{ sha: '5'.repeat(40), tag: 'v7.1.17', version: '7.1.17', prNumber: 771 }]);
+  });
+
+  it('gives each releasing member its own version, in landing order', () => {
+    const plan = planReleases('7.1.16', landed((pr, label) => (pr === 762 ? 'release:minor' : label)));
+    expect(plan.map((r) => [r.tag, r.prNumber])).toEqual([['v7.2.0', 762], ['v7.2.1', 771]]);
+  });
+});
+
 describe('parsePlan', () => {
   const sha = 'a'.repeat(40);
   const entry = { sha, tag: 'v7.1.16', version: '7.1.16', prNumber: 760 };
