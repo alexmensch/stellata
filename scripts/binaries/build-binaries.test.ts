@@ -66,7 +66,6 @@ describe.skipIf(![...INPUTS, REQUEST, SPOT_CHECK_GROUND_TRUTH].every(isReadable)
     expect(c.checks.filter((check) => check.kind === 'fail')).toEqual([]);
   });
 
-
   it('is frozen', () => {
     expect(Object.isFrozen(c)).toBe(true);
     expect(Object.isFrozen(c.pairs)).toBe(true);
@@ -81,7 +80,6 @@ describe.skipIf(![...INPUTS, REQUEST, SPOT_CHECK_GROUND_TRUTH].every(isReadable)
     expect(c.indices.srcToAstrometry.has('2947050466531873024')).toBe(false);
     expect(c.indices.msc.orbitsByPair.get(mscPairKey('23300+5833', 'Aa', 'Ab'))?.rows.map((r) => r.per)).toEqual([6.0663]);
   });
-
 
   it('requests exactly the committed Gaia astrometry request', () => {
     expect(serialiseSourceIdRequest(astrometryRequestIds(r, c.indices)) === readRepoFile(REQUEST.file)).toBe(true);
@@ -101,8 +99,6 @@ describe.skipIf(![...INPUTS, REQUEST, SPOT_CHECK_GROUND_TRUTH].every(isReadable)
     expect(Object.isFrozen(r.pairs[0].primary)).toBe(true);
   });
 
-
-
   it('routes every side of every pair, and hands Stage 4 frozen pairs', () => {
     expect(s3.pairs.every((p) => s3.astrometry.has(p))).toBe(true);
     expect(s3.astrometry.size).toBe(s3.pairs.length);
@@ -113,22 +109,17 @@ describe.skipIf(![...INPUTS, REQUEST, SPOT_CHECK_GROUND_TRUTH].every(isReadable)
     expect([inner.primary.astrometryVia, Object.isFrozen(inner.primary)]).toEqual([expect.not.stringMatching(/^unresolved$/), true]);
   });
 
-
-
   it('selects one frozen orbit for every Stage 3 pair', () => {
     expect([...s4.orbits.keys()]).toEqual(s3.pairs);
     const withElements = [...s4.orbits.values()].flatMap((o) => (o.orbitVia === 'none' ? [] : [o]))[0];
     expect([Object.isFrozen(withElements), Object.isFrozen(withElements.elements)]).toEqual([true, true]);
   });
 
-
-
   it('classifies every Stage 3 pair, and logs the Stage 5 lines', () => {
     expect([...s5.optical.keys()]).toEqual(s3.pairs);
     expect(Object.isFrozen(s5)).toBe(true);
     expect(log.filter((line) => line.startsWith('optical-pair cascade: ') || line.startsWith('separation-limit rejections: '))).toHaveLength(2);
   });
-
 
   it('encodes Stage 6\'s records to the committed multiples.tsv, byte for byte', () => {
     expect(MULTIPLES_TSV.serialize(s6.rows) === readFileSync(MULTIPLES_TSV_PATH, 'utf8')).toBe(true);
