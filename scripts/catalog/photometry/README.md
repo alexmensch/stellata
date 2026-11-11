@@ -376,7 +376,10 @@ exhaustive `switch`:
   it passed over, the candidate's tier in `params` (a SIMBAD spectral
   refusal adds the `namespace` that reached the row); a refusal code names
   the rule, never the tier. A printed V tier is its own outcome code;
-  `spectral.simbad` carries its `namespace`;
+  Tycho-2's splits by whether `BT−VT` sat inside the range the reduction
+  is counted against (`v.tycho2.inside-bt-vt-range` /
+  `outside-bt-vt-range`), and `spectral.simbad.*` by the namespace that
+  found the row;
 - every row cites, as evidence, the source rows its cascade read
   (`CascadeResult`, `../cascade-result.ts`), and no measured value;
 - the dust row names the map in its code and which values it corrected

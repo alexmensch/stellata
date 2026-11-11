@@ -63,7 +63,11 @@ brightness-colour.spectral.gspspec	brightness-colour	none	outcome	live		7.1.15	T
 brightness-colour.spectral.none	brightness-colour	none	outcome	live		7.1.15	No tier classifies the record, so it renders as spectral type unknown.
 brightness-colour.spectral.refused.gaia-id-contradicts	brightness-colour	none	refused	live		7.1.15	A SIMBAD row states a Gaia DR3 id other than the record's own, so it describes another star.
 brightness-colour.spectral.refused.unclassifiable	brightness-colour	none	refused	live		7.1.15	A typed row's spectral string does not parse as a Morgan-Keenan class.
-brightness-colour.spectral.simbad	brightness-colour	none	outcome	live		7.1.15	SIMBAD's MK sp_type, on the first namespace of the ladder that reaches a typed row for the record.
+brightness-colour.spectral.simbad	brightness-colour	none	outcome	retired	7.1.16	7.1.15	SIMBAD's MK sp_type, on the first namespace of the ladder that reaches a typed row for the record.
+brightness-colour.spectral.simbad.gj	brightness-colour	none	outcome	live		7.1.16	SIMBAD's MK sp_type, on the first namespace of the ladder that reaches a typed row for the record: its GJ.
+brightness-colour.spectral.simbad.hip	brightness-colour	none	outcome	live		7.1.16	SIMBAD's MK sp_type, on the first namespace of the ladder that reaches a typed row for the record: its HIP.
+brightness-colour.spectral.simbad.source-id	brightness-colour	none	outcome	live		7.1.16	SIMBAD's MK sp_type, on the first namespace of the ladder that reaches a typed row for the record: its Gaia DR3 source_id.
+brightness-colour.spectral.simbad.tyc	brightness-colour	none	outcome	live		7.1.16	SIMBAD's MK sp_type, on the first namespace of the ladder that reaches a typed row for the record: its TYC.
 brightness-colour.v.curated	brightness-colour	none	outcome	live		7.1.15	Sol: the curated record's V.
 brightness-colour.v.gaia-riello	brightness-colour	none	outcome	live		7.1.15	Johnson V transformed from the record's own Gaia DR3 photometry through the Riello 2021 (/data/papers/index.md#riello2021) relation.
 brightness-colour.v.gliese	brightness-colour	none	outcome	live		7.1.15	The printed V/70A V of the record's own GJ, where no tier above answers.
@@ -71,7 +75,9 @@ brightness-colour.v.none	brightness-colour	none	outcome	live		7.1.15	No V tier l
 brightness-colour.v.printed-hip	brightness-colour	none	outcome	live		7.1.15	The printed Hipparcos V of the record's own HIP (I/239), where the Gaia relation does not apply.
 brightness-colour.v.refused.colour-out-of-range	brightness-colour	none	refused	live		7.1.15	The record's Gaia BP−RP lies outside the range the Riello relation is published over.
 brightness-colour.v.refused.uncalibrated	brightness-colour	none	refused	live		7.1.15	The record's Gaia photometry has a band missing or non-finite, or G is brighter than the saturation bound, so the Riello relation does not apply.
-brightness-colour.v.tycho2	brightness-colour	none	outcome	live		7.1.15	Johnson V reduced from the record's own Tycho-2 BT and VT, where no tier above answers.
+brightness-colour.v.tycho2	brightness-colour	none	outcome	retired	7.1.16	7.1.15	Johnson V reduced from the record's own Tycho-2 BT and VT, where no tier above answers.
+brightness-colour.v.tycho2.inside-bt-vt-range	brightness-colour	none	outcome	live		7.1.16	Johnson V reduced from the record's own Tycho-2 BT and VT, where no tier above answers; BT−VT lies inside the [-0.25, 2.00] range the reduction is counted against.
+brightness-colour.v.tycho2.outside-bt-vt-range	brightness-colour	none	outcome	live		7.1.16	Johnson V reduced from the record's own Tycho-2 BT and VT, where no tier above answers; BT−VT lies outside the [-0.25, 2.00] range the reduction is counted against, and the reduction runs anyway since no tier below serves the record.
 coherence.anchor	coherence	none	outcome	retired	7.1.16	7.1.12	The record is its WDS system's distance anchor, the best-tier member, and the system's snapped members move onto its distance.
 coherence.anchor.anchor-won	coherence	none	outcome	live		7.1.16	The record is its WDS system's distance anchor, the best-tier member, and the system's snapped members move onto its distance: the pair primary, outranked by no member.
 coherence.anchor.inconsistent	coherence	none	outcome	retired	7.1.16	7.1.12	The record wins its system's anchor pick, but its catalogue distance contradicts its own parallax by more than 3 sigma and 20%, so the system is skipped.

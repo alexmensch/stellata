@@ -69,7 +69,7 @@ describe('brightnessColourLineageRows', () => {
         role: 'refused', code: 'spectral.refused.gaia-id-contradicts',
         params: { tier: 'simbad', namespace: 'source_id' }, evidence: [sourceRowRefText(OTHER_SIMBAD_REF)],
       },
-      { role: 'outcome', code: 'spectral.simbad', params: { namespace: 'hip' }, evidence: [sourceRowRefText(SIMBAD_REF)] },
+      { role: 'outcome', code: 'spectral.simbad.hip', params: {}, evidence: [sourceRowRefText(SIMBAD_REF)] },
       { role: 'refused', code: 'ci.refused.colour-out-of-range', params: { tier: 'gspc' }, evidence: [sourceRowRefText(GSPC_REF)] },
       { role: 'outcome', code: 'ci.spectral-derived', params: {}, evidence: [sourceRowRefText(SIMBAD_REF)] },
       { role: 'outcome', code: 'dust.edenhofer2024.absmag-only', params: { av: '0.1235' }, evidence: [] },
@@ -117,6 +117,15 @@ describe('brightnessColourLineageRows', () => {
       },
       { role: 'outcome', code: 'ci.none', params: {}, evidence: [] },
     ]);
+  });
+
+  it('codes a Tycho-2 V by whether BT−VT sat inside the range the reduction is counted against', () => {
+    const tycho2 = (outsideRange: boolean) => summary({
+      kind: 'v-only', key: 'spine:9',
+      v: { via: 'tycho2', value: { vMag: 9, outsideRange }, evidence: [TYCHO2_REF], refusals: [] },
+    }).map((r) => r.code);
+    expect(tycho2(false)).toEqual(['v.tycho2.inside-bt-vt-range']);
+    expect(tycho2(true)).toEqual(['v.tycho2.outside-bt-vt-range']);
   });
 
   it('encodes its rows as stage lines that decode back', () => {
