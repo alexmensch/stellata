@@ -43,13 +43,16 @@ into per-stage subfolders.
 scripts/binaries/
   build-binaries.py               Orchestration shell for Stages 1-7 →
                                   data/binaries/multiples.tsv.
-  build-binaries.ts (+ test)      The TypeScript shell, wiring only:
-                                  runStages calls each ported stage in
-                                  order. Called only from its test until
-                                  the switch; the test runs it over the
-                                  committed inputs and holds Stage 7's
-                                  counts and rates to both committed
-                                  snapshots byte for byte.
+  build-binaries.ts (+ test)      build:binaries: runStages calls Stages
+                                  1-6 in order, then main hands
+                                  multiples.tsv, the Gaia astrometry
+                                  request and the binding verdicts to
+                                  emitArtifacts behind the row bands and
+                                  Stage 7's two snapshot checks. The test
+                                  runs the stages over the committed
+                                  inputs and holds Stage 7's counts and
+                                  rates to both snapshots byte for byte.
+  binaries-outputs.ts             BINARIES_OUTPUTS, its declaration.
   load/                           Stage 1 in TypeScript: every reference
                                   catalogue read through its declaration,
                                   then the Stage 1 passes, as a frozen
