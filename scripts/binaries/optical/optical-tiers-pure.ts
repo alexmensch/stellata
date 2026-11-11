@@ -2,8 +2,9 @@
 
 import type { Hip2AstrometryRow } from '../../catalog/sources/hip2-source';
 import type { WdsPair } from '../../wds/wds-pure';
-import { AU_PER_PC, DEG_TO_RAD, KM_S_PER_AU_YR } from '../../../src/astro-core/astronomy-constants';
+import { AU_PER_PC, KM_S_PER_AU_YR } from '../../../src/astro-core/astronomy-constants';
 import type { ComponentAstrometry, PairAstrometry } from '../astrometry/routes-pure';
+import { polarToTangent } from '../sky-geometry-pure';
 import type { Parallax, PmAnchor } from '../astrometry/system-anchors-pure';
 import type { GaiaAstrometryRow } from '../load/gaia-pure';
 import type { IdentifierIndices } from '../load/indices-pure';
@@ -59,11 +60,6 @@ const INHERITED_SECONDARY_ASTROMETRY_VIAS: ReadonlySet<ComponentAstrometry['astr
 
 type TierVerdict = 'kept' | 'rejected' | null;
 
-function polarToTangent(rhoArcsec: number, thetaDeg: number): readonly [number, number] {
-  const th = thetaDeg * DEG_TO_RAD;
-  return [rhoArcsec * Math.sin(th), rhoArcsec * Math.cos(th)];
-}
-
 export function cpmBaselineVerdict(pair: WdsPair, pmraMasyr: number | null, pmdecMasyr: number | null): TierVerdict {
   const { dateFirst, dateLast, rhoFirst, rhoLast, thetaFirst, thetaLast } = pair;
   if (
@@ -74,9 +70,9 @@ export function cpmBaselineVerdict(pair: WdsPair, pmraMasyr: number | null, pmde
   if (dtYr <= 0) return null;
   const predictedSlip = (Math.hypot(pmraMasyr, pmdecMasyr) / 1000.0) * dtYr;
   if (predictedSlip < CPM_SLIP_MIN_ARCSEC) return null;
-  const [e0, n0] = polarToTangent(rhoFirst, thetaFirst);
-  const [e1, n1] = polarToTangent(rhoLast, thetaLast);
-  const observedDrift = Math.hypot(e1 - e0, n1 - n0);
+  const first = polarToTangent(rhoFirst, thetaFirst);
+  const last = polarToTangent(rhoLast, thetaLast);
+  const observedDrift = Math.hypot(last.eastArcsec - first.eastArcsec, last.northArcsec - first.northArcsec);
   if (observedDrift >= CPM_DRIFT_REJECT_FRACTION * predictedSlip) return 'rejected';
   if (observedDrift <= CPM_DRIFT_KEEP_FLOOR_ARCSEC) return 'kept';
   return null;

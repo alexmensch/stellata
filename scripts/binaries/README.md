@@ -150,7 +150,9 @@ scripts/binaries/
                                   Python stages' own arithmetic:
                                   propagatePosition (linear in RA/Dec
                                   degrees, cos δ floored at 1e-3),
-                                  tangentOffset, distancePc (1000 /
+                                  tangentOffset, polarToTangent (a WDS
+                                  ρ, θ as an east / north offset),
+                                  distancePc (1000 /
                                   parallax), chordSq / positionsWithin
                                   (a tolerance test without trig),
                                   predictSecondaryPosition (a WDS ρ, θ

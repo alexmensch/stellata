@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   WDS_PRECISE_COORD_EPOCH, chordSqForTolerance, distancePc, positionsWithin, predictSecondaryPosition, propagatePosition,
-  tangentOffset,
+  polarToTangent, tangentOffset,
 } from './sky-geometry-pure';
 
 describe('propagatePosition', () => {
@@ -30,6 +30,15 @@ describe('propagatePosition', () => {
   it('floors cos δ at the pole so RA motion stays finite', () => {
     const { raDeg } = propagatePosition({ raDeg: 10, decDeg: 90 }, { pmRaMasyr: 3.6, pmDecMasyr: 0 }, 2000, 2001);
     expect(raDeg).toBeCloseTo(10 + 3.6 / (3600 * 1000 * 1e-3), 12);
+  });
+});
+
+describe('polarToTangent', () => {
+  it('puts θ = 0 due north and θ = 90° due east', () => {
+    expect(polarToTangent(5, 0)).toEqual({ eastArcsec: 0, northArcsec: 5 });
+    const east = polarToTangent(5, 90);
+    expect(east.eastArcsec).toBe(5);
+    expect(east.northArcsec).toBeCloseTo(0, 12);
   });
 });
 
