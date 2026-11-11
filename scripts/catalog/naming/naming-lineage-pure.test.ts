@@ -127,12 +127,12 @@ describe('the naming count block', () => {
     });
   });
 
-  it('logs the composed, name-table, borrowed, lettered and unlabelled figures off the codes', () => {
+  it('logs the name-table entries the encoder counted and the other figures off the codes', () => {
     const summary = namingSummary(foldStageLines(NAMING_CODES, lines), {
-      namingDuplicateLabels: 1, namingDuplicateRecords: 2, namingOverrides: 0,
+      namingDuplicateLabels: 1, namingDuplicateRecords: 2, namingOverrides: 0, nameTableEntries: 7,
     });
     expect(summary).toBe(
-      'Display names: 3 composed (2 names in catalog.bin, 1 borrowed from a system anchor, 1 lettered, 1 unlabelled)\n'
+      'Display names: 3 composed (7 names in catalog.bin, 1 borrowed from a system anchor, 1 lettered, 1 unlabelled)\n'
         + '  1 duplicate label(s) across 2 records — see naming/naming-parity.test.ts',
     );
   });

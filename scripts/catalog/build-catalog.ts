@@ -767,7 +767,6 @@ export async function main() {
     stars, componentDesignations, CONSTELLATIONS, NAME_OVERRIDES.read(), recordSids,
   );
   const namingEmission = namingLineage(display.records, stars, inputHashesAtStart);
-  console.log(namingSummary(namingEmission.counts, display.counts));
 
   // Build name table — the NAME tiers only. Every designation is composed
   // at runtime off search-index.json so the main binary stays compact.
@@ -775,6 +774,7 @@ export async function main() {
   const nameOffsets = nameTable.offsets;
   const nameTableLength = nameTable.bytes.length;
   const namingDerived: NamingDerivedCounts = { ...display.counts, nameTableEntries: nameTable.entries };
+  console.log(namingSummary(namingEmission.counts, namingDerived));
 
   // Allocate output buffer.
   const recordsLength = stars.length * RECORD_SIZE;

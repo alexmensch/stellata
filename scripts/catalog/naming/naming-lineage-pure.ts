@@ -5,10 +5,9 @@ import {
   outcomeCode, refusalCode, retired, stageCodes, type CodeDeclaration, type LIVE,
 } from '../lineage/reason-codes/reason-codes-pure';
 import { lineageInvariant, NO_EXCEPTIONS, type LineageInvariant } from '../lineage/lineage-invariant-pure';
-import type { DisplayNameCounts, NamedRecord } from './display-names';
+import type { NamedRecord, NamingDerivedCounts } from './display-names';
 import {
   designationAtTier,
-  isApprovedName,
   BORROWABLE_TIERS,
   NAME_TIERS,
   type BorrowReason,
@@ -193,18 +192,14 @@ const BORROWED_CODES: readonly LiveCode[] = BORROW_REASONS.flatMap((reason) => (
   BORROWABLE_TIERS[reason].map((tier) => nameCode(`name.borrowed.${reason}.${TIER_CODES[tier]}`))
 ));
 const LABELLED_CODES: ReadonlySet<string> = new Set([...OWN_CODES, ...BORROWED_CODES]);
-const NAME_TABLE_CODES: readonly LiveCode[] = NAME_TIERS.filter(isApprovedName).flatMap((tier) => [
-  nameCode(`name.own.${TIER_CODES[tier]}`),
-  ...BORROW_REASONS.map((reason) => nameCode(`name.borrowed.${reason}.${TIER_CODES[tier]}`)),
-]);
 const UNLABELLED_CODE = NAMING_CODES.code('name.unlabelled');
 
-export function namingSummary(counts: NamingCodeCounts, derived: DisplayNameCounts): string {
+export function namingSummary(counts: NamingCodeCounts, derived: NamingDerivedCounts): string {
   const sum = (codes: readonly LiveCode[]): number => codes.reduce((n, code) => n + counts[code], 0);
   const lettered = counts['naming.letter.stated'] + counts['naming.letter.sibling-owns'];
   const lines = [
     `Display names: ${sum([...OWN_CODES, ...BORROWED_CODES])} composed `
-      + `(${sum(NAME_TABLE_CODES)} names in catalog.bin, ${sum(BORROWED_CODES)} borrowed from a system anchor, `
+      + `(${derived.nameTableEntries} names in catalog.bin, ${sum(BORROWED_CODES)} borrowed from a system anchor, `
       + `${lettered} lettered, ${counts['naming.name.unlabelled']} unlabelled)`,
   ];
   if (derived.namingDuplicateLabels > 0) {
