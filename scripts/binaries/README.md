@@ -43,6 +43,17 @@ into per-stage subfolders.
 scripts/binaries/
   build-binaries.py               Orchestration shell for Stages 1-7 →
                                   data/binaries/multiples.tsv.
+  build-binaries.ts (+ test)      The TypeScript shell, wiring only:
+                                  runStages calls each ported stage in
+                                  order. Called only from its test until
+                                  the switch; the test runs it over the
+                                  committed inputs and holds each ported
+                                  stage's keys to the committed count
+                                  snapshot.
+  load/                           Stage 1 in TypeScript: every reference
+                                  catalogue read through its declaration,
+                                  then the Stage 1 passes, as a frozen
+                                  ReferenceCatalogs. Own README.
   parsers.py                      Row dataclasses + parse functions for every
                                   reference catalogue (Stage 1).
   indices.py                      IdentifierIndices builder (HIP/Tyc → Gaia,
@@ -96,7 +107,28 @@ scripts/binaries/
                                   and relatedHier / compoundContains — the
                                   test planRecords uses to tell one link
                                   named twice from two stars collapsed onto
-                                  one record.
+                                  one record. Also the one parse of a WDS
+                                  `components` field (splitComponents,
+                                  pairComponentTokens), childComponentTokens,
+                                  tokenLetters and subcomponentTopLetter
+                                  (the root letter, where
+                                  parentComponentToken is the immediate
+                                  parent). And the map keys, one branded
+                                  type per key space so one cannot look up
+                                  another's map: componentKey
+                                  (wds_id, token), discovererKey
+                                  (wds_id, discoverer), pairRowKey
+                                  (wds_id, components field).
+  sky-geometry-pure.ts (+ test)   The geometry the stages share, in the
+                                  Python stages' own arithmetic:
+                                  propagatePosition (linear in RA/Dec
+                                  degrees, cos δ floored at 1e-3),
+                                  tangentOffset, distancePc (1000 /
+                                  parallax), and the AT-HYG / WDS
+                                  reference epochs. Not the catalogue's
+                                  tangent-basis propagation
+                                  (../catalog/distance/direction-cascade.ts):
+                                  the switch proves byte identity first.
   multiples-row-key-pure.ts       MULTIPLES_ROW_KEY, that rowKey, for code
                                   that cites a row without reading the file
                                   (promotion's origin keys), so it never

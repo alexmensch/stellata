@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
 import {
-  compareSourceIds, floatCell, idCell, idListCell, intCell, readTable, readTableLines, tableLineReader, textCell, type TableSpec,
+  compareSourceIds, floatCell, idCell, idListCell, intCell, readTable, readTableLines, splitCsvLine, tableLineReader, textCell, columnTable,
+  type TableSpec,
 } from './table-pure';
 
 const SPEC: TableSpec<'id' | 'v'> = { file: 'fixture/t.tsv', columns: ['id', 'v'], hint: 'Re-run x.' };
@@ -184,6 +185,38 @@ describe('readTable', () => {
     const [row] = readTable(SPEC, 'id\tv\nA\tq\n');
     expect(row.oneOf('id', ['A', 'B'] as const)).toBe('A');
     expect(() => row.oneOf('v', ['p'] as const)).toThrow(/v: "q" is not one of p/);
+  });
+});
+
+describe('splitCsvLine', () => {
+  it('splits plain cells and preserves empties', () => {
+    expect(splitCsvLine('a,,c')).toEqual(['a', '', 'c']);
+  });
+
+  it('keeps commas inside quoted cells and unescapes doubled quotes', () => {
+    expect(splitCsvLine('1,"C5,5",x')).toEqual(['1', 'C5,5', 'x']);
+    expect(splitCsvLine('1,"say ""hi""",x')).toEqual(['1', 'say "hi"', 'x']);
+  });
+});
+
+describe('readTable csv', () => {
+  const CSV: TableSpec<'id' | 'name'> = { file: 'fixture/t.csv', columns: ['id', 'name'], hint: 'h', csv: true };
+
+  it('resolves a quoted header and splits quoted cells', () => {
+    const rows = [...readTable(CSV, '"name","id"\n"a,b",1\n,2\n')];
+    expect(rows.map((r) => [r.int('id'), r.text('name')])).toEqual([[1, 'a,b'], [2, null]]);
+  });
+
+  it('throws on a missing column', () => {
+    expect(() => [...readTable(CSV, '"id"\n1\n')]).toThrow(/missing required columns: name/);
+  });
+});
+
+describe('columnTable', () => {
+  it('reads each caller its own columns under the declared format', () => {
+    const table = columnTable({ file: 'fixture/t.tsv', hint: 'h', comments: true }, '# note\na\tb\n1\t2\n');
+    expect([...table(['b'])].map((r) => r.int('b'))).toEqual([2]);
+    expect([...table(['a', 'b'])].map((r) => r.int('a'))).toEqual([1]);
   });
 });
 
