@@ -82,25 +82,27 @@ Both sides of the ratio are luminosities in the band's own flux unit,
 
 The shell average is over the whole sky, so the table cannot see structure in
 longitude — the Gould Belt, Sco–Cen, the dust toward the centre. It shows as
-plane cells reading over 1 within 200 pc (clamped) and as the 0.25 mag by
-which the hole column toward the centre exceeds the centre cap.
+plane cells reading over 1 within 200 pc (clamped) and as the hole column
+toward the centre outshining the centre cap.
 
 ## What the run says, and what it does not
 
 The run prints the raw shares and the star counts per cell, the all-sky shell
 table with the table's own sampled share beside the observed one, the light
-budget (the hole removes 1.03× the catalogue's light over the tabulated
-volume, 0.35 % of the model's), and the two dust-free columns from Sol with
-and without the hole against the catalogue caps. Those figures are the
+budget (the hole's light against the catalogue's over the tabulated volume,
+and against the model's), and the two dust-free columns from Sol with and
+without the hole against the catalogue caps. Those figures are the
 acceptance for a regeneration: the hole's column at the pole has to land on
 the pole cap inside about a tenth of a magnitude, and the whole-model share
 has to stay well under a hundredth. The centre's hole column is NOT a
-tolerance — dust-free, the GC's total and unresolved columns differ by a
-hundredth of a magnitude, so their difference amplifies any error some
-fiftyfold ([The resolution hole](/src/astro-core/milkyway/calibration/README.md#the-resolution-hole--the-band-marches-the-model-minus-the-drawn-stars)).
+tolerance — dust-free, the GC's total and unresolved columns differ by so
+little that their difference amplifies any error many times over
+([The resolution hole](/src/astro-core/milkyway/calibration/README.md#the-resolution-hole--the-band-marches-the-model-minus-the-drawn-stars)).
 
 It does **not** re-pin anything. Every consumer test (`/tests/integration/milkyway.test.ts`,
-`band-peak-pure.test.ts`, `diffuse-reference.test.ts`,
-`scene-adaptation-pure.test.ts`, `march-plan.test.ts`) pins the sightline
-table the shipped hole produces, and moves when the table does. Run the
-suite after a regeneration and re-pin deliberately.
+`band-peak-pure.test.ts`, `scene-adaptation-pure.test.ts`,
+`march-plan.test.ts`) pins the sightline table the shipped hole produces,
+and moves when the table does. Run the suite after a regeneration and
+re-pin deliberately: the figures the calibration docs quote re-pin through
+their snapshot ([Measured figures](/scripts/doc-figures/README.md#measured-figures--a-tests-pins-as-a-snapshot)),
+the rest by hand.

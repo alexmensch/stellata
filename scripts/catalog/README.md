@@ -33,8 +33,9 @@ layout, its codec, the chunk plan and the search-index wire entry — is
   variable-star parsing and the variability cross-match; `constellations/`
   owns the IAU-88 table, byte 34's positional membership and the
   Stellarium stick figures.
-- `spectral/` — Morgan-Keenan parsing of SIMBAD `sp_type`, the seven-tier
-  spectral resolver, and the Stefan-Boltzmann radius chain. Imports the
+- `spectral/` — the seven-tier spectral resolver over SIMBAD `sp_type`, and
+  the size lineage stage over the Stefan-Boltzmann radius chain; the MK
+  parser and the chain itself are `/src/catalog-format/spectral/`. Imports the
   namespace ladder from `simbad/simbad-namespace-ladder-pure.ts`; nothing there imports back.
 - `boundaries/` — `public/constellation-boundaries.json`: the IAU boundary
   arcs resampled and precessed to ICRS, the per-region label anchors, the
@@ -97,10 +98,10 @@ scripts/catalog/
                                   emits the chunked binary, manifests,
                                   both committed ledgers, the SID registry
                                   and placement's, brightness-colour's,
-                                  coherence's, promotion's, allocation's and
-                                  naming's lineage through
+                                  size's, coherence's, promotion's,
+                                  allocation's and naming's lineage through
                                   emitArtifacts once its two snapshot
-                                  checks, the six lineage budgets,
+                                  checks, the seven lineage budgets,
                                   placement's and naming's lineage
                                   invariants (lineage/README.md#invariants)
                                   and the CI heap budget
@@ -122,7 +123,7 @@ scripts/catalog/
                                   the row-index map, the two committed
                                   ledgers, the catalogue's SID registry
                                   partition (registryFiles), placement's,
-                                  brightness-colour's, coherence's,
+                                  brightness-colour's, size's, coherence's,
                                   promotion's, allocation's and naming's
                                   lineage files, and
                                   the transport chunks and the lineage
@@ -186,11 +187,16 @@ scripts/catalog/
                                   committedBuildCounts reads back for
                                   every consumer of the pinned figures.
                                   The file is staged
-                                  (../util/counts/count-stages-pure.ts):
-                                  CATALOG_COUNT_STAGE files each count
-                                  under the step that computes it, typed
-                                  over every BuildCounts key, so a new
-                                  count without a stage fails to compile.
+                                  (../util/counts/README.md#the-staged-snapshot):
+                                  BuildCounts is FiledCounts plus each
+                                  composed stage's count block, typed and
+                                  owned by the stage that tallies it;
+                                  CATALOG_COUNT_STAGE files each
+                                  filed count under the step that computes
+                                  it, typed over every FiledCounts key, so
+                                  a new one without a stage fails to
+                                  compile; CATALOG_COUNT_STAGES is the
+                                  stage order, pinned to LINEAGE_STAGES'.
                                   Generic over
                                   the count record: compareCountSnapshot is
                                   the compare every count snapshot passes
@@ -251,7 +257,8 @@ consumers:
   build: a measured B−V from `photometry/`'s three-tier cascade, or the
   intrinsic spectral-class colour `spectralClassCi`
   (`/src/catalog-format/spectral/physical-radius.ts`) derives when a no-Apsis star has no
-  measured B−V but a parseable class (`ciSpectralDerived` in build-counts),
+  measured B−V but a parseable class (`brightness-colour.ci.spectral-derived`
+  in the brightness-colour count block),
   else the solar fallback.
 - **Spectral classification fall-through** — ESP-ELS's
   `spectraltype_esphs` enum is the tier above `SPECTRAL_UNKNOWN` in

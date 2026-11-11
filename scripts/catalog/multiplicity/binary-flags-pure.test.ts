@@ -19,6 +19,7 @@ import {
   BINARY_MAX_SEP_PC,
   type BinaryStar,
   type DoublesStar,
+  wingEclipsingBinaries,
 } from './binary-flags-pure';
 
 describe('binary-flags-pure / inferBinaries', () => {
@@ -33,8 +34,8 @@ describe('binary-flags-pure / inferBinaries', () => {
       makeStar({ x: 0.001, y: 0, z: 0, absmag: 6 }),
     ];
     const stats = inferBinaries(stars);
-    expect(stats.pairs).toBe(2); // both record the other as companion
-    expect(stats.mutualPairs).toBe(1);
+    expect(stats.binaryPairs).toBe(2); // both record the other as companion
+    expect(stats.binaryMutualPairs).toBe(1);
     expect(stars[0].companionIdx).toBe(1);
     expect(stars[1].companionIdx).toBe(0);
   });
@@ -55,7 +56,7 @@ describe('binary-flags-pure / inferBinaries', () => {
       makeStar({ x: BINARY_MAX_SEP_PC * 2, y: 0, z: 0, absmag: 6 }),
     ];
     const stats = inferBinaries(stars);
-    expect(stats.pairs).toBe(0);
+    expect(stats.binaryPairs).toBe(0);
     expect(stars[0].companionIdx).toBe(-1);
     expect(stars[1].companionIdx).toBe(-1);
   });
@@ -84,7 +85,7 @@ describe('binary-flags-pure / inferBinaries', () => {
       makeStar({ x: 0, y: 0, z: 0, absmag: 4 }),
     ];
     const stats = inferBinaries(stars);
-    expect(stats.pairs).toBe(0);
+    expect(stats.binaryPairs).toBe(0);
     expect(stars[0].companionIdx).toBe(-1);
   });
 
@@ -101,7 +102,7 @@ describe('binary-flags-pure / inferBinaries', () => {
     expect(stars[0].companionIdx).toBe(2);
     expect(stars[1].companionIdx).toBe(2);
     expect(stars[2].companionIdx).toBe(1);
-    expect(stats.mutualPairs).toBe(1);
+    expect(stats.binaryMutualPairs).toBe(1);
     // Primary = brighter of mutual pair B↔C → B (absmag=5 < C's 6).
     expect(stars[1].flags & FLAG_BINARY_PRIMARY).toBeTruthy();
     // A is not part of any mutual pair, so it is NOT flagged primary
@@ -131,7 +132,7 @@ describe('binary-flags-pure / inferBinaries', () => {
     expect(stars[1].companionIdx).toBe(2);
     expect(stars[2].companionIdx).toBe(1);
     expect(stars[3].companionIdx).toBe(2);
-    expect(stats.mutualPairs).toBe(1);
+    expect(stats.binaryMutualPairs).toBe(1);
     // Primary = brighter of B↔C → B (absmag=4).
     expect(stars[1].flags & FLAG_BINARY_PRIMARY).toBeTruthy();
     expect(stars[0].flags & FLAG_BINARY_PRIMARY).toBeFalsy();
@@ -148,7 +149,7 @@ describe('binary-flags-pure / inferBinaries', () => {
       makeStar({ x: 100.001,   y: 0, z: 0, absmag: 6 }),
     ];
     const stats = inferBinaries(stars);
-    expect(stats.mutualPairs).toBe(2);
+    expect(stats.binaryMutualPairs).toBe(2);
     expect(stars[0].flags & FLAG_BINARY_PRIMARY).toBeTruthy(); // pair 1 brighter
     expect(stars[1].flags & FLAG_BINARY_PRIMARY).toBeFalsy();
     expect(stars[2].flags & FLAG_BINARY_PRIMARY).toBeTruthy(); // pair 2 brighter
@@ -156,7 +157,7 @@ describe('binary-flags-pure / inferBinaries', () => {
   });
 
   it('returns zero counts for an empty input', () => {
-    expect(inferBinaries([])).toEqual({ pairs: 0, mutualPairs: 0 });
+    expect(inferBinaries([])).toEqual({ binaryPairs: 0, binaryMutualPairs: 0 });
   });
 
   it('uses 3D distance, not 2D', () => {
@@ -506,5 +507,17 @@ describe('binary-flags-pure / isOpticalDoublePrimary', () => {
       { absmag: 2, x: 900, y: 0, z: 0, hip: 300, gaiaSourceId: null, distVia: 'bailer_jones', varType: 0 }, // background
     ];
     expect(isOpticalDoublePrimary(0, [0, 1, 2], stars, ctx())).toBe(false);
+  });
+});
+
+describe('binary-flags-pure / wingEclipsingBinaries', () => {
+  it('wings each unflagged eclipsing record and counts only those', () => {
+    const stars = [
+      { flags: 0, varType: VAR_TYPE_ECLIPSING },
+      { flags: FLAG_BINARY_PRIMARY, varType: VAR_TYPE_ECLIPSING },
+      { flags: 0, varType: 0 },
+    ];
+    expect(wingEclipsingBinaries(stars)).toEqual({ eclipsingWinged: 1 });
+    expect(stars.map((s) => s.flags)).toEqual([FLAG_BINARY_PRIMARY, FLAG_BINARY_PRIMARY, 0]);
   });
 });

@@ -130,7 +130,7 @@ function indexedKeys(keys: SimbadRecordKeys, spType: string | null, otype: strin
 /** The resolver's tiers in priority order — the one statement of them, and the
  *  partition the walk tallies `spectralBy*` over. `none` is a record no tier
  *  classifies; it renders as `SPECTRAL_UNKNOWN`. */
-export const SPECTRAL_VIA_VALUES = ['curated', 'simbad', 'gspspec', 'none'] as const;
+const SPECTRAL_VIA_VALUES = ['curated', 'simbad', 'gspspec', 'none'] as const;
 export type SpectralVia = (typeof SPECTRAL_VIA_VALUES)[number];
 
 export interface SpectralValue {

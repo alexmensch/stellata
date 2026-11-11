@@ -7,6 +7,7 @@ import { BAILER_JONES } from '../distance/refinement/bailer-jones-source';
 import type { ParkedPlacement, PlacedPlacement } from '../distance/placement-lineage-pure';
 import type { ShippedBrightness } from '../photometry/brightness-colour-lineage-pure';
 import { SPECTRAL_UNKNOWN } from '../../../src/catalog-format/spectral/spectral-classify';
+import { physicalRadius } from '../../../src/catalog-format/spectral/physical-radius';
 import { makeStar } from './star-fixture';
 import type { RowOutcome, RvRouting, ShippedFacts } from './stars-parse';
 import { VELOCITY_ABOVE_ESCAPE_SAMPLE_CAP, walkStatsFold, type WalkStats } from './walk-stats-pure';
@@ -39,7 +40,7 @@ const PLACED: PlacedPlacement = {
 };
 const BRIGHTNESS: ShippedBrightness = {
   kind: 'shipped', key: 'spine:1',
-  v: { via: 'tycho2', value: 10, evidence: [TYC_REF], refusals: [] },
+  v: { via: 'tycho2', value: { vMag: 10, outsideRange: false }, evidence: [TYC_REF], refusals: [] },
   spectral: { via: 'none', refusals: [] },
   ci: { via: 'none', refusals: [] },
   dust: null,
@@ -48,8 +49,6 @@ const FACTS: ShippedFacts = {
   bailerJonesEligible: false,
   inLmcCone: false,
   tycho2Direction: null,
-  vTycho2OutsideBtVtRange: false,
-  ciGspcValidatedRange: false,
   distPc: 100,
   fastKmS: null,
 };
@@ -60,6 +59,9 @@ const shipped = (
   kind: 'shipped',
   placement: { ...PLACED, ...placement },
   brightness: BRIGHTNESS,
+  size: {
+    key: 'spine:1', radius: physicalRadius(4.83, SPECTRAL_UNKNOWN), apsis: null, classEvidence: [],
+  },
   rv: NO_RV,
   star: makeStar({ proper: 'Fixture', spectral: SPECTRAL_UNKNOWN }),
   facts: { ...FACTS, ...facts },

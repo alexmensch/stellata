@@ -8,7 +8,7 @@ import { retiredSids } from '../../../sid/events-pure';
 import { allocationSids } from '../../../sid/allocation-lineage-pure';
 import { catalogRecordDesignations } from '../../../sid/catalog-designations';
 import { loadCatalog, nameTable, type SearchableCatalog } from '../../catalog-lookup';
-import { readIdentity, readLineage } from '../lineage-io';
+import { readIdentity, streamLineageRows } from '../lineage-io';
 import { LINEAGE_LAYOUT } from '../lineage-layout-pure';
 import { LINEAGE_STAGES } from '../lineage-stages';
 import { parseTraceQuery, queryTerms, traceRecords, traceText, type TraceLookups } from './trace-pure';
@@ -66,7 +66,7 @@ export async function main(): Promise<void> {
     : [];
   const stages = LINEAGE_STAGES
     .filter(({ spec }) => existsSync(stageFile(dir, spec.stage)))
-    .map(({ spec }) => ({ stage: spec.stage, rows: readLineage(stageFile(dir, spec.stage)) }));
+    .map(({ spec }) => ({ stage: spec.stage, rows: () => streamLineageRows(stageFile(dir, spec.stage)) }));
   process.stdout.write(traceText(traceRecords(terms, identity, sidsOf, stages)));
 }
 

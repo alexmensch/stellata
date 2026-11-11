@@ -22,11 +22,13 @@ def refresh_command(script: str) -> str:
 
 
 STAGES_KEY = "stages"
+ABSENT_STAGE = "absent"
+"""What a stage whose input is missing holds, in place of its counts."""
 
-Staged = dict[str, dict[str, Any]]
+Staged = dict[str, dict[str, Any] | str]
 """Stage → count → value, stages in pipeline order: what a build step
 hands the snapshot, each count written inside the block of the stage that
-computes it."""
+computes it, or ``ABSENT_STAGE`` for a stage whose input is missing."""
 
 
 def flatten_staged(staged: Staged) -> dict[str, Any]:
@@ -39,7 +41,18 @@ def stage_of_counts(payload: Any) -> dict[str, str] | None:
     """Each count's stage in a staged snapshot; None for any other payload."""
     if not _is_staged(payload):
         return None
-    return {key: stage for stage, counts in payload[STAGES_KEY].items() for key in counts}
+    return {key: stage for stage, counts in _counted_stages(payload) for key in counts}
+
+
+def absent_stages(payload: Any) -> set[str]:
+    """The stages a staged snapshot records as absent; empty for any other payload."""
+    if not _is_staged(payload):
+        return set()
+    return {stage for stage, counts in payload[STAGES_KEY].items() if counts == ABSENT_STAGE}
+
+
+def _counted_stages(payload: Any) -> list[tuple[str, dict[str, Any]]]:
+    return [(stage, counts) for stage, counts in payload[STAGES_KEY].items() if counts != ABSENT_STAGE]
 
 
 def _is_staged(payload: Any) -> bool:
@@ -50,13 +63,14 @@ def _is_staged(payload: Any) -> bool:
 
 
 def flatten_stages(payload: Any) -> Any:
-    """A staged snapshot with its stage level dropped; any other payload
-    as it is. A key two stages share raises."""
+    """A staged snapshot with its stage level dropped, an absent stage
+    contributing no key; any other payload as it is. A key two stages share
+    raises."""
     if not _is_staged(payload):
         return payload
     flat: dict[str, Any] = {}
     owner: dict[str, str] = {}
-    for stage, counts in payload[STAGES_KEY].items():
+    for stage, counts in _counted_stages(payload):
         for key, value in counts.items():
             if key in owner:
                 raise ValueError(f"count {key} is under two stages, {owner[key]} and {stage}")
@@ -71,7 +85,9 @@ class SnapshotDiff:
     ``"missing_actual"`` (key in expected but not in actual),
     ``"missing_expected"`` (key in actual but not in expected — typically
     a newly-introduced entry), ``"moved"`` (a matching value filed under
-    another stage, ``moved`` naming the two), or the snapshot-specific
+    another stage, ``moved`` naming the two), ``"absent_input"`` (``key`` is
+    a stage one side records as absent and the other counted, ``absent_in``
+    naming the side), or the snapshot-specific
     mismatch status (``"mismatch"`` for exact-match counts, ``"drift"`` for
     tolerance-checked rates). ``tolerance`` is populated only for the
     tolerance-checked snapshot; ``None`` for exact-match counts."""
@@ -82,6 +98,7 @@ class SnapshotDiff:
     actual: float | None
     tolerance: float | None = None
     moved: tuple[str, str] | None = None
+    absent_in: str | None = None
 
 
 def compare_snapshot(
@@ -134,7 +151,8 @@ def format_diff(
     missing_actual = [d for d in diff if d.status == "missing_actual"]
     missing_expected = [d for d in diff if d.status == "missing_expected"]
     moved = [d for d in diff if d.status == "moved"]
-    total_diffs = len(mismatches) + len(missing_actual) + len(missing_expected) + len(moved)
+    absent = [d for d in diff if d.status == "absent_input"]
+    total_diffs = len(mismatches) + len(missing_actual) + len(missing_expected) + len(moved) + len(absent)
     if total_diffs == 0:
         return f"{label} {noun}: all {len(diff)} {ok_suffix}"
     lines = [f"{label} {noun}: {total_diffs} of {len(diff)} {diff_verb}"]
@@ -142,6 +160,11 @@ def format_diff(
     lines += [render_missing_actual(d) for d in missing_actual]
     lines += [render_missing_expected(d) for d in missing_expected]
     lines += [f"  {d.key:<40} moved from stage {d.moved[0]} to {d.moved[1]}" for d in moved if d.moved]
+    lines += [
+        f"  {d.key:<40} stage's input is absent from the {d.absent_in}, counted in the "
+        f"{'snapshot' if d.absent_in == 'build' else 'build'}"
+        for d in absent
+    ]
     return "\n".join(lines)
 
 
@@ -168,7 +191,7 @@ def assert_or_update_snapshot(
 
     if os.environ.get(UPDATE_SNAPSHOTS_ENV_VAR) == "1":
         payload = {STAGES_KEY: {
-            stage: build_payload(counts, expected_path)
+            stage: counts if counts == ABSENT_STAGE else build_payload(counts, expected_path)
             for stage, counts in actual.items() if counts
         }}
         expected_path.write_text(json.dumps(payload, indent=2) + "\n")
@@ -180,10 +203,14 @@ def assert_or_update_snapshot(
         return False
 
     committed = json.loads(expected_path.read_text())
-    diff = _with_moves(
-        compare(flatten_stages(committed), flatten_staged(actual)),
-        stage_of_counts(committed),
-        stage_of_counts({STAGES_KEY: actual}) or {},
+    built = {STAGES_KEY: actual}
+    diff = _with_absent_inputs(
+        _with_moves(
+            compare(flatten_stages(committed), flatten_staged(actual)),
+            stage_of_counts(committed),
+            stage_of_counts(built) or {},
+        ),
+        committed, built,
     )
     print(f"[{label}] {render(diff)}")
     if all(d.status == "match" for d in diff):
@@ -205,6 +232,21 @@ def _with_moves(
         if d.status == "match" and was is not None and now is not None and was != now:
             d.status, d.moved = "moved", (was, now)
     return diff
+
+
+def _with_absent_inputs(diff: list[SnapshotDiff], committed: Any, built: Any) -> list[SnapshotDiff]:
+    """A stage absent on one side and counted on the other is one row, in
+    place of a missing row per key it counts."""
+    was_absent, now_absent = absent_stages(committed), absent_stages(built)
+    was_stage, now_stage = stage_of_counts(committed) or {}, stage_of_counts(built) or {}
+    kept = [
+        d for d in diff
+        if not (d.status == "missing_actual" and was_stage.get(d.key) in now_absent)
+        and not (d.status == "missing_expected" and now_stage.get(d.key) in was_absent)
+    ]
+    kept += [SnapshotDiff(s, "absent_input", None, None, absent_in="build") for s in sorted(now_absent - was_absent)]
+    kept += [SnapshotDiff(s, "absent_input", None, None, absent_in="snapshot") for s in sorted(was_absent - now_absent)]
+    return kept
 
 
 def compare_build_counts(
