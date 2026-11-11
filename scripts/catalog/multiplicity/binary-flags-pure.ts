@@ -264,9 +264,6 @@ export function isOpticalDoublePrimary(
 // be a third star that's actually paired with someone else.
 //
 // Mutates `stars[i].companionIdx` and `stars[i].flags` in place.
-// Returns the multiplicity block's two geometric counts: binaryPairs, the
-// directed companion assignments, and binaryMutualPairs, each undirected
-// mutual pair once — also the FLAG_BINARY_PRIMARY bits this pass sets.
 export function inferBinaries(
   stars: BinaryStar[],
 ): Pick<MultiplicityCounts, 'binaryPairs' | 'binaryMutualPairs'> {
