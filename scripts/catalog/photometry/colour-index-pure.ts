@@ -102,7 +102,7 @@ export function gspcBMinusV(
   return { kind: 'value', value: gspc.bMinusV };
 }
 
-export const CI_VIA_VALUES = [
+const CI_VIA_VALUES = [
   'gaia_relation',
   'printed_hip_bv',
   'gspc',
