@@ -23,6 +23,7 @@ import { RATE_SNAPSHOT_DECIMALS, stage3Counts, stage3Rates, type Stage3Result } 
 import { stage1Counts, type ReferenceCatalogs } from './load/reference-catalogs';
 import { stage4Counts, stage4Rates, type Stage4Result } from './orbits/attach-orbits';
 import { stage5Counts, stage5Rates, type Stage5Result } from './optical/attach-optical';
+import { stage6Counts, type Stage6Result } from './multiples/attach-multiples';
 import { astrometryRequestIds, stage2Counts, type Stage2Result } from './resolve/resolve-pairs';
 import { spotCheckProblems, strongestComponents } from './resolve/spot-check-pure';
 import { SPOT_CHECK_GROUND_TRUTH } from './resolve/spot-check-source';
@@ -42,15 +43,16 @@ const snapshot = (file: string): unknown => flattenStages(JSON.parse(readFileSyn
 const committed = snapshot('build-binaries-expected.json') as Record<string, number>;
 const committedRates = snapshot('build-binaries-rates-expected.json') as Record<string, { value: number }>;
 
-describe.skipIf(![...INPUTS, REQUEST, SPOT_CHECK_GROUND_TRUTH].every(isReadable))('Stages 1..5 through the shell, over the committed inputs', () => {
+describe.skipIf(![...INPUTS, REQUEST, SPOT_CHECK_GROUND_TRUTH].every(isReadable))('Stages 1..6 through the shell, over the committed inputs', () => {
   let c: ReferenceCatalogs;
   let r: Stage2Result;
   let s3: Stage3Result;
   let s4: Stage4Result;
   let s5: Stage5Result;
+  let s6: Stage6Result;
   const log: string[] = [];
   beforeAll(async () => {
-    ({ reference: c, resolved: r, astrometry: s3, orbits: s4, optical: s5 } = await runStages((line) => log.push(line)));
+    ({ reference: c, resolved: r, astrometry: s3, orbits: s4, optical: s5, multiples: s6 } = await runStages((line) => log.push(line)));
   }, 120_000);
 
   it('logs Stage 1 with no input-drift warning', () => {
@@ -153,5 +155,14 @@ describe.skipIf(![...INPUTS, REQUEST, SPOT_CHECK_GROUND_TRUTH].every(isReadable)
     expect([...s5.optical.keys()]).toEqual(s3.pairs);
     expect(Object.isFrozen(s5)).toBe(true);
     expect(log.filter((line) => line.startsWith('optical-pair cascade: ') || line.startsWith('separation-limit rejections: '))).toHaveLength(2);
+  });
+
+  it('counts what the committed count snapshot pins for Stage 6\'s keys', () => {
+    for (const [key, value] of Object.entries(stage6Counts(s6))) expect([key, value]).toEqual([key, committed[key]]);
+  });
+
+  it('hands the switch frozen rows, and logs the Stage 6 lines', () => {
+    expect([Object.isFrozen(s6), Object.isFrozen(s6.rows), Object.isFrozen(s6.rows[0])]).toEqual([true, true, true]);
+    expect(log.filter((line) => line.startsWith('multiples.tsv: ') || line.startsWith('spect provenance: '))).toHaveLength(2);
   });
 });

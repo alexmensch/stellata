@@ -75,6 +75,11 @@ scripts/binaries/
                                   physical or optical, tagged with the
                                   deciding tier, keyed by its
                                   DecomposedPair. Own README.
+  multiples/                      Stage 6 in TypeScript: the
+                                  multiples.tsv records, kept pairs then
+                                  standalone components, with the anchor
+                                  offsets and the Gaia photometry. Own
+                                  README.
   parsers.py                      Row dataclasses + parse functions for every
                                   reference catalogue (Stage 1).
   indices.py                      IdentifierIndices builder (HIP/Tyc → Gaia,
@@ -166,7 +171,8 @@ scripts/binaries/
                                   the switch proves byte identity first.
   python-float-pure.ts (+ test)   Python's float arithmetic where
                                   JavaScript's differs: pyMod, `%` with
-                                  the divisor's sign.
+                                  the divisor's sign; pySum, the
+                                  compensated `sum()`.
   epochs-pure.ts (+ test)         How ORB6 and the MSC's periastron
                                   epochs read as a JD: the truncated-JD
                                   and MJD offsets, the plausible window
