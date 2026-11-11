@@ -7,8 +7,7 @@ import type { SimbadWdsXid } from '../load/simbad-pure';
 import { measuredOffset, type WdsPair } from '../../wds/wds-pure';
 import { fold } from '../../util/counts/tally-pure';
 import { compareSourceIds } from '../../util/tsv/table-pure';
-import { DEG_TO_RAD } from '../../../src/astro-core/astronomy-constants';
-import { propagatePosition, tangentOffset, type TangentOffset } from '../sky-geometry-pure';
+import { polarToTangent, propagatePosition, tangentOffset, type TangentOffset } from '../sky-geometry-pure';
 import { working, type DecomposedPair, type Draft, type DraftPair } from './components-pure';
 import { inheritDownwardParentBindings, propagateIdentities, smearIfSeeded } from './propagate-pure';
 import { addTo, groupBy, pushTo } from '../../util/map-buckets-pure';
@@ -59,8 +58,7 @@ export function addNewestEdge<E>(
 export function pairVector(pair: WdsPair): TangentOffset | null {
   const offset = measuredOffset(pair);
   if (offset === null) return null;
-  const theta = offset.thetaDeg * DEG_TO_RAD;
-  return { eastArcsec: offset.rhoArcsec * Math.sin(theta), northArcsec: offset.rhoArcsec * Math.cos(theta) };
+  return polarToTangent(offset.rhoArcsec, offset.thetaDeg);
 }
 
 /** One WDS system's bindings, as the audit weighs them. */

@@ -3,11 +3,10 @@
 
 import * as THREE from 'three';
 import { ICRS_TO_GAL_M3 } from '../../astro-core/galactic-coords';
-import { AU_KM, AU_PER_PC, DAYS_PER_JULIAN_YEAR } from '../../astro-core/astronomy-constants';
+import { AU_PER_PC, KM_S_PER_AU_YR } from '../../astro-core/astronomy-constants';
 
 /** km/s per pc/yr — the catalog `velocities` unit onto the display unit. */
-export const KMS_PER_PC_YR =
-  (AU_PER_PC * AU_KM) / (DAYS_PER_JULIAN_YEAR * 86400);
+export const KMS_PER_PC_YR = AU_PER_PC * KM_S_PER_AU_YR;
 
 export interface SpaceVelocity {
   /** Speed, km/s. */

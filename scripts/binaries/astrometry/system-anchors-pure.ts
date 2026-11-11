@@ -8,7 +8,7 @@ export function positiveParallaxMas(a: ComponentAstrometry): number | null {
   return a.astrometryVia !== 'unresolved' && a.parallaxMas !== null && a.parallaxMas > 0 ? a.parallaxMas : null;
 }
 
-export interface ParallaxAnchor {
+export interface Parallax {
   readonly parallaxMas: number;
   /** Null where the catalogue states none (some HIP2 rows). */
   readonly parallaxErrorMas: number | null;
@@ -43,7 +43,7 @@ function firstPerSystem<T>(
 
 export function systemParallaxAnchors(
   pairs: readonly DecomposedPair[], astrometry: ReadonlyMap<DecomposedPair, PairAstrometry>,
-): ReadonlyMap<string, ParallaxAnchor> {
+): ReadonlyMap<string, Parallax> {
   return firstPerSystem(pairs, astrometry, (a) => {
     const parallaxMas = positiveParallaxMas(a);
     return parallaxMas === null ? null : { parallaxMas, parallaxErrorMas: a.parallaxErrorMas };

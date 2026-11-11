@@ -1,4 +1,4 @@
-// Sky geometry the binaries stages share: proper-motion propagation, tangent-plane offsets, chord tolerance tests, WDS (ρ, θ) prediction, parallax distance.
+// Sky geometry the binaries stages share: proper-motion propagation, tangent-plane offsets and the (ρ, θ) one, chord tolerance tests, WDS (ρ, θ) prediction, parallax distance.
 
 import { ARCSEC_PER_DEG, DEG_TO_RAD, HIPPARCOS_EPOCH_JYEAR } from '../../src/astro-core/astronomy-constants';
 import { unitVectorFromRaDec, type SkyPosition, type UnitVector } from '../../src/astro-core/equatorial-basis';
@@ -49,6 +49,12 @@ export function propagatePosition(
 export interface TangentOffset {
   eastArcsec: number;
   northArcsec: number;
+}
+
+/** A WDS (ρ, θ) as a tangent-plane offset: θ east of north, ρ in arcsec. */
+export function polarToTangent(rhoArcsec: number, thetaDeg: number): TangentOffset {
+  const theta = thetaDeg * DEG_TO_RAD;
+  return { eastArcsec: rhoArcsec * Math.sin(theta), northArcsec: rhoArcsec * Math.cos(theta) };
 }
 
 /** Small-angle tangent-plane offset of `pos` from `ref`, RA wrapped to ±180°. */

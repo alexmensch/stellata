@@ -61,6 +61,8 @@ export const HIPPARCOS_EPOCH_JYEAR = 1991.25;
 export const DAYS_PER_JULIAN_YEAR = 365.25;
 export const SECONDS_PER_DAY = 86400;
 
+export const KM_S_PER_AU_YR = AU_KM / (DAYS_PER_JULIAN_YEAR * SECONDS_PER_DAY);
+
 // Catalogue RA columns (AT-HYG's `ra`) and sexagesimal `hh:mm:ss` boundary
 // coordinates both arrive in hours; everything downstream of the parse works
 // in degrees.
