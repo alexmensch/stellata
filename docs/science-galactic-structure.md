@@ -126,10 +126,10 @@ SDSS-vs-colour-index inconsistency.
 
 The total wins because it is what the camera sees from outside: the
 Galaxy viewed from M31 has to be at least as bright as M31 viewed from
-here, and under the sightline anchor it was 1.11 mag fainter. The hole
-costs the band 0.004 mag from M31, so the ordering stands at the deeper
-floor, and the residual anchor re-run there would put the Galaxy a
-magnitude *fainter* than M31. A vertical-profile change cannot substitute
+here, and under the sightline anchor it was fainter. The hole costs the
+band <!-- count:milkyway-sightlines/holeDimsBandFromM31 d3 -->0.004<!-- /count --> mag from M31, so the ordering stands at the deeper
+floor, and the residual anchor re-run there would put the Galaxy *fainter*
+than M31. A vertical-profile change cannot substitute
 — the pole column and the integrated total are both vertical integrals,
 and adding the thick disc moved their ratio by 0.09 mag.
 [Two checks](/src/astro-core/milkyway/calibration/README.md#two-checks-and-both-disagree-by-the-same-sign-and-order) carries the
