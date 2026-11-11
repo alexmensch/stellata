@@ -261,19 +261,37 @@ export function gcvsDesignationConIndex(gcvsName: string): number {
   return CON_INDEX.get(suffix.toLowerCase()) ?? NO_CONSTELLATION_INDEX;
 }
 
-export interface ApplyVariabilityResult {
-  matched: number;
-  matchedByGaia: number;
-  matchedByHip: number;
-  matchedByHd: number;
+/** The gcvs stage's count block. */
+export type GcvsCounts = {
+  /** Entries in the GCVS main table at source. */
+  gcvsEntries: number;
+  /** GCVS cross-reference Hipparcos lookups. */
+  gcvsHipXrefs: number;
+  /** GCVS cross-reference Henry Draper lookups. */
+  gcvsHdXrefs: number;
+  /** GCVS xrefs bridged from byHip via gaia_dr3_hip_xmatch.tsv onto
+   *  gaia_source_id as primary key. */
+  gcvsGaiaXrefs: number;
+  /** Variables matched into the catalog with a renderable period, by the
+   *  cross-reference that resolved them. */
+  gcvsMatched: number;
+  gcvsMatchedByGaia: number;
+  gcvsMatchedByHip: number;
+  gcvsMatchedByHd: number;
   /** Stars that resolved a GCVS designation (attached as `gcvsName` for
-   *  search), a superset of `matched`: a variable with no renderable
+   *  search), a superset of `gcvsMatched`: a variable with no renderable
    *  period (flare stars, RCB, irregular, novae — Proxima = V0645 Cen,
    *  R CrB, T Tau, V1500 Cyg) is searchable by name but has no pulsation. */
-  named: number;
+  gcvsNamed: number;
   /** Stars whose `desigCon` came from their GCVS designation — the ones
    *  IV/27A's Bayer/Flamsteed cross index carries no row for. */
-  desigConSupplied: number;
+  gcvsDesignationCon: number;
+};
+
+export function gcvsSummary(c: GcvsCounts): string {
+  return `${c.gcvsEntries} GCVS entries, ${c.gcvsHipXrefs} Hip + ${c.gcvsHdXrefs} HD + ${c.gcvsGaiaXrefs} Gaia xrefs, `
+    + `${c.gcvsNamed} named for search (${c.gcvsMatched} with a renderable period: `
+    + `gaia=${c.gcvsMatchedByGaia}, hip=${c.gcvsMatchedByHip}, hd=${c.gcvsMatchedByHd})`;
 }
 
 // Cross-match each star against GCVS via gaia_source_id (first; bridged
@@ -290,7 +308,7 @@ export function applyVariability(
   stars: Star[],
   gcvsData: Map<string, VarStarData>,
   xref: VarStarXref,
-): ApplyVariabilityResult {
+): GcvsCounts {
   let matchedByGaia = 0;
   let matchedByHip = 0;
   let matchedByHd = 0;
@@ -338,11 +356,15 @@ export function applyVariability(
     else matchedByHd++;
   }
   return {
-    matched: matchedByGaia + matchedByHip + matchedByHd,
-    matchedByGaia,
-    matchedByHip,
-    matchedByHd,
-    named,
-    desigConSupplied,
+    gcvsEntries: gcvsData.size,
+    gcvsHipXrefs: xref.byHip.size,
+    gcvsHdXrefs: xref.byHd.size,
+    gcvsGaiaXrefs: xref.byGaia.size,
+    gcvsMatched: matchedByGaia + matchedByHip + matchedByHd,
+    gcvsMatchedByGaia: matchedByGaia,
+    gcvsMatchedByHip: matchedByHip,
+    gcvsMatchedByHd: matchedByHd,
+    gcvsNamed: named,
+    gcvsDesignationCon: desigConSupplied,
   };
 }

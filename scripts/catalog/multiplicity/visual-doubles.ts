@@ -10,6 +10,7 @@ import {
 } from './binary-flags-pure';
 import type { MultiplesTsvRow } from '../companions/companion-promotion';
 import type { Star } from '../parse/stars-parse';
+import type { MultiplicityCounts } from './multiplicity-stage-pure';
 
 // Curated visual-double systems that the CCDM+MultFlag filter (see
 // parseHipCcdm) drops because Hipparcos's main catalogue modelled
@@ -145,7 +146,7 @@ export function applyDoublesFlag(
   ccdmGroups: Map<string, number[]>,
   hipToIndex: Map<number, number>,
   physical: PhysicalPairKeys,
-): { systems: number; flagged: number; suppressed: number } {
+): Pick<MultiplicityCounts, 'ccdmGroups' | 'ccdmResolved' | 'ccdmFlagged' | 'ccdmSuppressedOptical'> {
   const allGroups: Iterable<Iterable<number>> = (function* () {
     yield* ccdmGroups.values();
     for (const sys of KNOWN_VISUAL_DOUBLES) yield sys.components;
@@ -159,5 +160,6 @@ export function applyDoublesFlag(
   };
   const suppress = (primaryIdx: number, memberIndices: number[]): boolean =>
     isOpticalDoublePrimary(primaryIdx, memberIndices, stars, ctx);
-  return flagGroupPrimaries(stars, allGroups, hipToIndex, suppress);
+  const { systems, flagged, suppressed } = flagGroupPrimaries(stars, allGroups, hipToIndex, suppress);
+  return { ccdmGroups: ccdmGroups.size, ccdmResolved: systems, ccdmFlagged: flagged, ccdmSuppressedOptical: suppressed };
 }

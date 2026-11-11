@@ -22,7 +22,7 @@
     "src/astro-core/milkyway/column/milkyway-column-pure.ts": "05659cdc2b1eeb615875af698320072c332bfd69",
     "src/astro-core/perceptual-magnitude.ts": "6d7aac33f16b24ca26a5110d33b86c4e70fb0c52",
     "src/astro-core/tonemap/tonemap-pure.ts": "18dda3006619a2623a578456ee9e013947355f05",
-    "src/catalog-format/record/catalog-pure.ts": "a082749c701911f2f825031f068c795b0542f1a8"
+    "src/catalog-format/record/catalog-pure.ts": "475e85a2fdc731f6632ce2dde7e2599cc58c6d0e"
   },
   "outputs": {
     "src/astro-core/milkyway/calibration/resolved-hole-table.ts": "f617e243cc366de46ad3f15cf5177c1fa13eb87a"
