@@ -33,8 +33,7 @@ import {
 } from '../photometry/v-magnitude-pure';
 import { MULTIPLES_TSV, type MultiplesRecord, type PhotometryVia } from '../../binaries/multiples-tsv';
 import {
-  canonicalCompLetter, composeSyntheticId, parentComponentToken, wdsRootOf,
-  isMoreCanonicalAnchor,
+  canonicalCompLetter, composeSyntheticId, isMoreCanonicalAnchor, parentComponentToken, wdsRootOf,
 } from '../../binaries/component-tokens-pure';
 import { hasRenderableOrbit } from '../../../src/catalog-format/binaries/binaries-format';
 import { readArtifact } from '../../util/sources/source';
