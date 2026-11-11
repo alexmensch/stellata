@@ -8,7 +8,7 @@ import type { FileHashes } from '../../util/build-stamp';
 import type { ArtifactContents, Check } from '../../util/emit-artifacts';
 import { headCommit, inHeadHistory, mergeBaseWithMain, onMainBranch } from '../../util/git-provenance';
 import { REPO_ROOT } from '../../util/paths';
-import { diffLineage, stageDiffText, type DiffJoin, type KeyChange } from './lineage-diff-pure';
+import { diffLineage, stageDiffText, tallyKeyChanges, type DiffJoin, type KeyChangeTally } from './lineage-diff-pure';
 import { deletedSiblingsSince, inputHashesAt, onDiskHashes, type HashesAt } from '../../util/input-hashes-at';
 import {
   ACCEPT_ANY_BASELINE_FLAG, AGAINST_FLAG, acceptedFiles, baseAt, planBaseline, type BaselineContext, type BaselineSource,
@@ -17,7 +17,8 @@ import {
 import { readStageHeader, stageEmission, stageProvenance, streamLineage } from './lineage-io';
 import { invariantCheck, invariantViolations, type LineageInvariant } from './lineage-invariant-pure';
 import { phaseClock } from './phase-clock-pure';
-import { sortLineageLines, type LineageLine } from './lineage-row-pure';
+import { foldStageLines, sortLineageLines, type LineageLine } from './lineage-row-pure';
+import type { StageCode, StageCodes } from './reason-codes/reason-codes-pure';
 import {
   stageFile, stageFileName, type LineageLayout, type StageLineageSpec, type StageOutputKey,
 } from '../../../src/catalog-format/pipeline-outputs/lineage-files';
@@ -53,7 +54,8 @@ export interface StageLineageEmission<F extends string, S extends string> {
   readonly files: Record<StageOutputKey<F, S>, ArtifactContents>;
   readonly members: Map<string, ArtifactContents>;
   readonly checks: Check[];
-  readonly changes: readonly KeyChange[] | null;
+  /** Null when no diff ran. A tally, never the lines: README.md#run-to-run-diff. */
+  readonly changes: KeyChangeTally | null;
 }
 
 function baselineSource<F extends string, S extends string>(run: StageLineageRun<F, S>): BaselineSource {
@@ -163,12 +165,12 @@ export function stageLineage<F extends string, S extends string>(
   });
   const lines = clock.lap('lines', run.lines);
   const sorted = clock.lap('sort', () => sortLineageLines(lines));
-  let changes: KeyChange[] | null = null;
+  let changes: KeyChangeTally | null = null;
   let diff: Uint8Array | null = null;
   if (plan.kind === 'diff') {
     const dir = source.kind === 'against' ? source.dir : run.layout[plan.from === 'previous' ? 'previous' : 'current'];
     const found = clock.lap('diff', () => diffLineage(streamLineage(stageFile(dir, run.diffed)), sorted));
-    changes = found;
+    changes = tallyKeyChanges(found);
     diff = clock.lap('joins and diff text', () => stageDiffText(found, run.joins(dir)));
   } else if (plan.kind === 'refused') {
     console.log(plan.message);
@@ -195,4 +197,21 @@ export function stageLineage<F extends string, S extends string>(
     : { kind: 'pass', report: measured },
     ...invariantChecks];
   return { files, members, checks, changes };
+}
+
+/** stageLineage, plus the stage's count block folded from the same lines inside the timed window. See README.md#counts-fold-from-lineage. */
+export function countedStageLineage<F extends string, S extends string, B extends string, L extends B>(
+  run: StageLineageRun<F, S>, codes: StageCodes<B, S, L>,
+): StageLineageEmission<F, S> & { readonly counts: Readonly<Record<StageCode<S, L>, number>> } {
+  let counts: Record<StageCode<S, L>, number> | undefined;
+  const emission = stageLineage({
+    ...run,
+    lines: () => {
+      const lines = run.lines();
+      counts = foldStageLines(codes, lines);
+      return lines;
+    },
+  });
+  if (counts === undefined) throw new Error(`lineage: ${run.spec.stage}'s lines were never produced, so nothing was counted`);
+  return { ...emission, counts };
 }

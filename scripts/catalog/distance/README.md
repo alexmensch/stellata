@@ -65,9 +65,12 @@ scripts/catalog/distance/
   placement-lineage-pure.ts       Placement as a lineage stage: its codes,
     (+ test)                      the Placement each manifest row's walk
                                   hands on, its one serialiser (rows, or
-                                  their lines), and the parked ledger as a
+                                  their lines), the parked ledger as a
                                   view of its park rows
-                                  (#placement-lineage).
+                                  (#placement-lineage), and the one place
+                                  each shipped tier is read off a placed
+                                  row's layers: shippedDistVia,
+                                  shippedVelocityVia, radialVelocityApplied.
   dust/                           Build-time de-extinction against the
                                   dust grid of Edenhofer 2024
                                   (/data/papers/index.md#edenhofer2024), and
@@ -310,7 +313,7 @@ direction tier's 38.
 
 ## Placement lineage
 
-`build:catalog`'s record walk is the second stage of the
+`build:catalog`'s record walk is the stage after membership in the
 [lineage](../lineage/README.md) contract (`placement-lineage-pure.ts`).
 `readStars` hands on one `Placement` per manifest row, keyed on its origin key: each step the walk
 ran, in walk order, up to the park that stopped it or the record it shipped.

@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
 import { unitVectorFromRaDec } from '../../../../src/astro-core/equatorial-basis';
-import { assertFigureVerticesInFirstChunk, CONSTELLATIONS, createConstellationAssignment, iauEdgeRecords } from './constellations';
+import {
+  assertFigureVerticesInFirstChunk, CONSTELLATIONS, createConstellationAssignment, figuresCounts, figuresSummary, iauEdgeRecords,
+} from './constellations';
 import { STELLARIUM } from './stellarium-source';
 
 const conIndexOf = (code: string): number =>
@@ -69,5 +71,13 @@ describe('assertFigureVerticesInFirstChunk', () => {
     const lines = new Map([[ori, [[0, 10]]], [uma, [[3, 4], [4, 12]]]]);
     expect(() => assertFigureVerticesInFirstChunk(lines, 10))
       .toThrow(/\(10 records\): Ori\/record 10, UMa\/record 12\./);
+  });
+});
+
+describe('figuresCounts', () => {
+  it('counts every polyline and each constellation carrying one', () => {
+    const counts = figuresCounts(new Map([[conIndexOf('ori'), [[0, 5], [5, 9]]], [conIndexOf('uma'), [[3, 4]]]]));
+    expect(counts).toEqual({ figureCount: 3, figureConstellations: 2 });
+    expect(figuresSummary(counts)).toBe('3 stick-figure polylines across 2');
   });
 });
