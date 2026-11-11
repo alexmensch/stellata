@@ -1,8 +1,10 @@
-# Doc figures — counts quoted in docs, generated from the snapshots
+# Doc figures — counts and measured figures quoted in docs, generated from the snapshots
 
 A count a build pins in a committed `*-expected.json` snapshot has one owner:
-that file. A doc that quotes the count wraps it in a marker, and
-`pnpm run docs:figures` rewrites every marked figure from the snapshots.
+that file — and so does a figure a test measures and pins through
+[`figurePins`](#measured-figures--a-tests-pins-as-a-snapshot). A doc that
+quotes either wraps it in a marker, and `pnpm run docs:figures` rewrites
+every marked figure from the snapshots.
 `tests/doc-figures.test.ts` fails when a marker names a value no snapshot has,
 or when a marked figure disagrees with its snapshot.
 
@@ -35,6 +37,11 @@ doc-figures.test.ts        Both listings over a throwaway repo.
 check-staged-figures.ts    The commit-time copy check (below): prints each
                            unmarked snapshot copy on a staged added line and
                            exits 1. Run by commit-sweep-guard.sh.
+figure-pins.ts             figurePins: a test's measured figures asserted
+                           against its snapshot, or recorded and written
+                           under UPDATE_SNAPSHOTS=1 (below).
+figure-pins.test.ts        Assert, missing key, double pin, unpinned keys,
+                           update-mode write.
 rewrite-doc-figures.ts     pnpm run docs:figures. Rewrites stale figures in
                            place; a file with a problem is left unwritten and
                            the run exits 1.
@@ -92,6 +99,26 @@ else). An entry that no longer matches fails too, so the list only shrinks.
 
 Past a million records `k2` renders "1,000k"; that surfaces in the rewrite's
 output, and is the point to add a millions format.
+
+## Measured figures — a test's pins as a snapshot
+
+A figure a test computes from the shipped model (a sightline's surface
+brightness, a calibration check's disagreement) moves whenever an input it
+reads is re-measured. Written as a literal in both the test and the doc, it
+has two owners and the doc copy goes stale silently. `figurePins(path,
+assertClose)` makes the snapshot the one owner:
+
+- `pin(key, actual, digits)` asserts `actual` against the snapshot's value to
+  `digits` decimal places; a key the snapshot lacks fails, naming the refresh.
+- Under `UPDATE_SNAPSHOTS=1` it records instead, and `write()` (the suite's
+  `afterAll`) rewrites the snapshot, keys sorted, full precision.
+- The suite ends with a case asserting `unpinned()` is empty, so a pin
+  removed from the test cannot leave its figure behind for a doc to quote.
+
+After a re-measure fails the suite: `UPDATE_SNAPSHOTS=1 pnpm vitest run
+<the test>`, then `pnpm run docs:figures`, and read every sentence whose
+figure moved. One snapshot per test file, beside it:
+`/tests/integration/milkyway-sightlines-expected.json` is the instance.
 
 ## What gets a marker
 
