@@ -71,7 +71,8 @@ carrying the absmag it used, the Teff, how the tables read the class index —
 `stated`, `default` for a subclass the source did not state, or the
 `unknown-class` neutral row — and which bound clamped it), or
 `non-finite-luminosity`, which ships the 1 R☉ stand-in. A measured Teff the
-class's own treatment overrides comes back as `teffRefused`.
+class's own treatment overrides comes back as `teffRefused`. The size lineage
+stage serialises it ([Size lineage](/scripts/catalog/spectral/README.md#size-lineage)).
 
 `resolveApsisTeff` supplies the measured Teff (2–60 kK sanity window), naming
 the solution it took and each one it refused as out of window;

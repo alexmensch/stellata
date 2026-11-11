@@ -312,8 +312,8 @@ direction tier's 38.
 
 ## Placement lineage
 
-`build:catalog`'s record walk is the second stage of the
-[lineage](../lineage/README.md) contract (`placement-lineage-pure.ts`).
+`build:catalog`'s record walk is a stage of the
+[lineage](../lineage/README.md) contract, after membership, (`placement-lineage-pure.ts`).
 `readStars` hands on one `Placement` per manifest row, keyed on its origin key: each step the walk
 ran, in walk order, up to the park that stopped it or the record it shipped.
 `placementLineageRows` serialises it through an exhaustive `switch`, and

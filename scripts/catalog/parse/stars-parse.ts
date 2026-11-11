@@ -67,6 +67,7 @@ import {
 import { avSolToStar, type DustGrid } from '../distance/dust/dust-deextinction-pure';
 import { GAIA_APSIS } from '../record/gaia-apsis-source';
 import type { BrightnessColour, DustStep, ShippedBrightness } from '../photometry/brightness-colour-lineage-pure';
+import type { Size } from '../spectral/size-lineage-pure';
 import { sourceRowRef } from '../../util/sources/row-ref-pure';
 import { R_V } from '../../../src/astro-core/extinction/dust-raymarch-pure';
 import {
@@ -247,6 +248,7 @@ export type RowOutcome =
     readonly kind: 'shipped';
     readonly placement: PlacedPlacement;
     readonly brightness: ShippedBrightness;
+    readonly size: Size;
     readonly rv: RvRouting;
     readonly star: Star;
     readonly facts: ShippedFacts;
@@ -654,6 +656,12 @@ export function rowResolver({
         velocityClamped,
       },
       brightness: { kind: 'shipped', key, v: vRes, spectral, ci: ciRes, dust },
+      size: {
+        key,
+        radius,
+        apsis: apsis === null ? null : { ref: apsis.ref, teff: apsisTeff },
+        classEvidence: spectral.via === 'none' ? [] : spectral.evidence,
+      },
       rv,
       star,
       facts: {

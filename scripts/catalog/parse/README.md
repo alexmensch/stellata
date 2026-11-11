@@ -208,7 +208,9 @@ never a membership decision — so the walk throws, naming the row.
    via `resolveApsisTeff`, 2–60 kK sanity window) when present, else
    the class-table value; BC always class-table. White dwarfs
    special-cased to 0.013 R☉; Wolf-Rayets keep their own ramps (Apsis
-   models neither). Clamped to [0.08, 2500] R☉.
+   models neither). Clamped to [0.08, 2500] R☉. It returns the route it took
+   ([The radius chain](../../../src/catalog-format/spectral/README.md#the-radius-chain)),
+   which the size stage writes.
 10. **Constellation** — positional, from the resolved xyz
     ([Positional constellation membership](constellations/README.md#positional-constellation-membership)). Nothing here sets the
     DESIGNATION's constellation: the manifest carries no editorial `con` cell.
@@ -230,11 +232,11 @@ records minted rather than walked. `originKey` is build-time-only too: the
 row's `origin_key`, which a later stage's lineage cites the record by
 ([Identity](../lineage/README.md#identity--the-origin-source-row)). Beside
 the records the walk hands `readStars`' `onRow` each row's outcome, parked or
-shipped — its `Placement`, and its `BrightnessColour` wherever the row reached
-V — and keeps none of them: the caller turns each into what
-[placement lineage](../distance/README.md#placement-lineage) and
+shipped — its `Placement`, its `BrightnessColour` wherever the row reached
+V, and a shipped record's `Size` — and keeps none of them: the caller turns
+each into what [placement lineage](../distance/README.md#placement-lineage),
 [brightness-colour lineage](../photometry/README.md#brightness-colour-lineage)
-write.
+and [size lineage](../spectral/README.md#size-lineage) write.
 
 The manifest carries no `x0/y0/z0`, and AT-HYG's was never consumed: it is a
 mixed-epoch merge artifact, tabulated at ~3 dp (a 206 AU grid) and internally

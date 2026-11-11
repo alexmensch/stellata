@@ -85,6 +85,7 @@ import { codeEffects, type StageCodes } from './lineage/reason-codes/reason-code
 import { stageLineage, upstreamLineage, type LineageBudget } from './lineage/stage-lineage';
 import type { LineageInvariant } from './lineage/lineage-invariant-pure';
 import { BRIGHTNESS_COLOUR_CODES, BRIGHTNESS_COLOUR_LINEAGE_BUDGET, brightnessColourLineageLines } from './photometry/brightness-colour-lineage-pure';
+import { SIZE_CODES, SIZE_LINEAGE_BUDGET, sizeLineageLines } from './spectral/size-lineage-pure';
 import {
   buildCatalogRowIndexMap,
   buildComponentDesignations,
@@ -165,7 +166,7 @@ import { loadStoredEdges } from '../sid/stored-edges';
 import { CATALOG_PARTITION } from '../../src/catalog-format/pipeline-outputs/data-files';
 import {
   PROMOTION_LINEAGE, PLACEMENT_LINEAGE, COHERENCE_LINEAGE, ALLOCATION_LINEAGE, ALLOCATION_SIDS_STEM, MEMBERSHIP_LINEAGE,
-  NAMING_LINEAGE, BRIGHTNESS_COLOUR_LINEAGE, type StageLineageSpec,
+  NAMING_LINEAGE, BRIGHTNESS_COLOUR_LINEAGE, SIZE_LINEAGE, type StageLineageSpec,
 } from '../../src/catalog-format/pipeline-outputs/lineage-files';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -204,6 +205,7 @@ function catalogStageLineage<S extends string>(
 function walkManifest(inputs: ReadStarsOptions, stepInputs: FileHashes) {
   let placementLines: LineageLine[] = [];
   const brightnessSpill = new LineSpill();
+  const sizeSpill = new LineSpill();
   try {
     const manifestFounded = new Set<string>();
     const manifest = function* () {
@@ -212,9 +214,10 @@ function walkManifest(inputs: ReadStarsOptions, stepInputs: FileHashes) {
         yield r;
       }
     };
-    const { stars, stats } = readStars(manifest(), inputs, ({ placement, brightness }) => {
-      for (const line of placementLineageLines(placement)) placementLines.push(line);
-      if (brightness !== null) for (const line of brightnessColourLineageLines(brightness)) brightnessSpill.push(line);
+    const { stars, stats } = readStars(manifest(), inputs, (outcome) => {
+      for (const line of placementLineageLines(outcome.placement)) placementLines.push(line);
+      if (outcome.brightness !== null) for (const line of brightnessColourLineageLines(outcome.brightness)) brightnessSpill.push(line);
+      if (outcome.kind === 'shipped') for (const line of sizeLineageLines(outcome.size)) sizeSpill.push(line);
     });
     const parkedLedger = parkedLedgerTsv(placementLines);
     const placementRemovals = placementLines.filter((line) => PLACEMENT_EFFECTS.get(lineageLineCode(line)) !== 'none');
@@ -227,9 +230,13 @@ function walkManifest(inputs: ReadStarsOptions, stepInputs: FileHashes) {
       BRIGHTNESS_COLOUR_LINEAGE, BRIGHTNESS_COLOUR_CODES, () => brightnessSpill.lines(), BRIGHTNESS_COLOUR_LINEAGE_BUDGET, [],
       stepInputs,
     );
-    return { stars, stats, parkedLedger, placementEmission, brightnessEmission, manifestFounded, placementRemovals };
+    const sizeEmission = catalogStageLineage(
+      SIZE_LINEAGE, SIZE_CODES, () => sizeSpill.lines(), SIZE_LINEAGE_BUDGET, [], stepInputs,
+    );
+    return { stars, stats, parkedLedger, placementEmission, brightnessEmission, sizeEmission, manifestFounded, placementRemovals };
   } finally {
     brightnessSpill.dispose();
+    sizeSpill.dispose();
   }
 }
 
@@ -496,7 +503,7 @@ export async function main() {
   console.log(`Reading ${MEMBERSHIP_MANIFEST.file}...`);
   const t0 = Date.now();
   const {
-    stars, stats, parkedLedger, placementEmission, brightnessEmission, manifestFounded, placementRemovals,
+    stars, stats, parkedLedger, placementEmission, brightnessEmission, sizeEmission, manifestFounded, placementRemovals,
   } = walkManifest(inputs, inputHashesAtStart);
   console.log(`  parsed ${stats.total} rows in ${Date.now() - t0}ms`);
   console.log(`  kept ${stars.length} stars; parked ${stats.parked.length}`);
@@ -1316,6 +1323,7 @@ export async function main() {
     simbadSourcedDistances,
     ...placementEmission.files,
     ...brightnessEmission.files,
+    ...sizeEmission.files,
     ...coherenceEmission.files,
     ...lineage.files,
     ...allocationLineage.files,
@@ -1323,7 +1331,7 @@ export async function main() {
     ...registryTexts(CATALOG_PARTITION, allocation.minted, allocation.events),
   };
   const members = new Map([
-    ...chunks, ...placementEmission.members, ...brightnessEmission.members, ...coherenceEmission.members, ...lineage.members, ...allocationLineage.members,
+    ...chunks, ...placementEmission.members, ...brightnessEmission.members, ...sizeEmission.members, ...coherenceEmission.members, ...lineage.members, ...allocationLineage.members,
     ...namingEmission.members,
   ]);
 
@@ -1332,7 +1340,7 @@ export async function main() {
     files,
     members,
     checks: [
-      ...placementEmission.checks, ...brightnessEmission.checks, ...coherenceEmission.checks, ...lineage.checks, ...allocationLineage.checks,
+      ...placementEmission.checks, ...brightnessEmission.checks, ...sizeEmission.checks, ...coherenceEmission.checks, ...lineage.checks, ...allocationLineage.checks,
       ...namingEmission.checks,
       buildCountsCheck({ ...counts, solIndex }), distanceOutliersCheck(stars),
       heap.check(),
