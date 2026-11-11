@@ -665,6 +665,32 @@ the deploy finds each commit's PR. GitHub's merge queue is unavailable: it
 is offered only on organization-owned repositories, and
 `alexmensch/stellata` is user-owned.
 
+**A GitHub stack lands through `gh stack merge <stack> --squash`**, never
+`gh pr merge` (refused on a stack member) and with no auto-merge. It
+releases exactly as that many PRs landed one at a time would:
+
+- **One squash commit per member**, bottom first, each subject
+  `<PR title> (#N)` (the repo's squash title is `PR_TITLE`), signed by
+  GitHub. Stack #603 (#597, #599, #602, #604) landed as four such commits,
+  one second apart.
+- **One push, so one deploy run**, at the top member's commit: a single
+  `deploy` and a single push-triggered `test` run per landing (stack #603 →
+  run 35718846468 at `ce169ff0`; the eleven-PR landing of #557–#567 → run
+  35201718679). The plan walks the whole range from the last release, so
+  each releasing member gets its own version, tag and release page in
+  stack order, and `skip-version-bump` members ship none; pinned in
+  `scripts/release/release-plan-pure.test.ts` on stack #768's shape.
+- **The guards judge a stacked PR whose base is a stack branch.** Their
+  `pull_request: branches: [main]` filter resolves against the stack's
+  trunk, so `version-guard` and `release-notes-guard` run on every member
+  (on #771, base `worktree-hhaw-45-17-2`: runs 42992100173 and
+  42992100106, the notes check executed for its `release:patch`). They run
+  only on an event that fires while the PR is in the stack: a PR opened
+  with `--base <parent>` and linked afterwards has none on its first head
+  (#771 at `962dd1a6` got `test` but neither guard) and reads `BLOCKED`
+  until its next push or a label toggle. The landing's sync pushes every
+  member, which runs them.
+
 **Ruleset settings** (ruleset 15843287; branch rules are the owner's to
 change, by `gh api --method PUT` as above, preserving every rule):
 
