@@ -3,7 +3,7 @@
 import {
   evidenceTexts, stageLineageLine, stageRow, type LineageLine, type LineageParams, type LineageRow,
 } from '../lineage/lineage-row-pure';
-import { outcomeCode, stageCodes, type CodeStatus } from '../lineage/reason-codes/reason-codes-pure';
+import { outcomeCode, stageCodes, retired } from '../lineage/reason-codes/reason-codes-pure';
 import { emptyTallyPartition } from '../../util/counts/tally-pure';
 import type { Star } from '../parse/stars-parse';
 import { sourceRowRefText } from '../../util/sources/row-ref-pure';
@@ -12,7 +12,7 @@ import { COHERENCE_LINEAGE } from '../../../src/catalog-format/pipeline-outputs/
 
 export const COHERENCE_LINEAGE_BUDGET = { gzipBytes: 8_200_000, writeMs: 18_000 };
 
-const RETIRED_7_1_16 = { kind: 'retired', retiredIn: '7.1.16' } as const satisfies CodeStatus;
+const RETIRED_7_1_16 = retired('7.1.16');
 
 const ANCHOR = 'The record is its WDS system\'s distance anchor, the best-tier member, and the system\'s snapped members move onto its distance';
 const INCONSISTENT = 'The record wins its system\'s anchor pick, but its catalogue distance contradicts its own parallax by more than 3 sigma and 20%, so the system is skipped';

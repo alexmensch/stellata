@@ -3,7 +3,7 @@
 import {
   evidenceTexts, stageLineageLine, type LineageLine, type LineageParams, type LineageRow, stageRow,
 } from '../lineage/lineage-row-pure';
-import { outcomeCode, refusalCode, stageCodes, type CodeStatus, type StageCodes } from '../lineage/reason-codes/reason-codes-pure';
+import { outcomeCode, refusalCode, stageCodes, retired, type StageCodes } from '../lineage/reason-codes/reason-codes-pure';
 import { sourceRowRefText, type AnySourceRowRef } from '../../util/sources/row-ref-pure';
 import type { CascadeRefusal } from '../cascade-result';
 import type { ColourIndexResolution, CiVia } from './colour-index-pure';
@@ -20,7 +20,7 @@ export const BRIGHTNESS_COLOUR_LINEAGE_BUDGET = { gzipBytes: 42_400_000, writeMs
 /** Decimal places of `params.av`: 0.1 mmag, far below any V tier's own error. */
 export const AV_PARAM_DECIMALS = 4;
 
-const RETIRED_7_1_16 = { kind: 'retired', retiredIn: '7.1.16' } as const satisfies CodeStatus;
+const RETIRED_7_1_16 = retired('7.1.16');
 
 const V_BRANCHES = {
   gaia_riello: 'v.gaia-riello',
