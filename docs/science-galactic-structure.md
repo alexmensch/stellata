@@ -93,27 +93,28 @@ emissivity counts them twice. The band therefore multiplies the emissivity
 at each step by one minus the catalogue's measured share of the model's
 light there — a table over distance from Sol and |sin b|, read off the
 built catalogue ([The resolution hole](/src/astro-core/milkyway/calibration/README.md#the-resolution-hole--the-band-marches-the-model-minus-the-drawn-stars)).
-At V ≤ 11 the hole removes **0.35 %** of the model's
-light over the tabulated volume — 1.03× the catalogue's own light there,
+At V ≤ 11 the hole removes **<!-- count:milkyway-sightlines/holeShareOfModelPct d2 -->0.35<!-- /count --> %** of the model's
+light over the tabulated volume — about the catalogue's own light there,
 the shell average being blind to structure in longitude — while the
-catalogue carries **77 %** of [Leinert 1998](/data/papers/index.md#leinert1998)'s total starlight at the pole, where
-the column is almost entirely local. In the plane the hole keeps half the
-model's light resolved out to 500 pc and a third at 1 kpc, and the dusty
-column toward the centre — the nearest two kiloparsecs, the dust takes the
-rest — dims 0.65 mag when that share comes out.
+catalogue carries **<!-- count:milkyway-sightlines/catalogueShareOfPoleTotalPct sig2 -->77<!-- /count --> %** of [Leinert 1998](/data/papers/index.md#leinert1998)'s total starlight at the pole, where
+the column is almost entirely local. The resolved share falls with distance
+from Sol, and the dusty column toward the centre — the nearest two
+kiloparsecs, the dust takes the rest — dims <!-- count:milkyway-sightlines/holeDimsGc d2 -->0.65<!-- /count --> mag when that share
+comes out.
 
 **The model cannot also satisfy the sightline it used to be anchored on,
 and no shape parameter bridges the gap.** The earlier calibration pinned
 the north galactic pole to [Leinert 1998](/data/papers/index.md#leinert1998)'s total starlight there *minus* the
 catalogue stars — a defensible target for the pole column, which is almost
 entirely local, but one that says nothing about the Galaxy's total, of
-which the catalogue is a third of a percent. A single emissivity field
+which the catalogue is a fraction of a percent. A single emissivity field
 anchored on the subtracted pole therefore runs a factor of three low
 everywhere else. With the hole taking the resolved share out of both
-sides, the shipped solve is 1.31 mag brighter than that residual at the
-pole and 0.390 mag brighter toward the Galactic centre than
-[Leinert 1998](/data/papers/index.md#leinert1998)'s total at b = 30°, the column that check grades against; band plus catalogue at the pole is 0.41 mag over [Leinert 1998](/data/papers/index.md#leinert1998)'s total,
-where band-without-hole plus catalogue was 0.88 over.
+sides, the shipped solve is <!-- count:milkyway-sightlines/ngpResidualOverModel d2 -->1.31<!-- /count --> mag brighter than that residual at the
+pole and <!-- count:milkyway-sightlines/gcUnderLeinertTotal d3 -->0.390<!-- /count --> mag brighter toward the Galactic centre than
+[Leinert 1998](/data/papers/index.md#leinert1998)'s total at b = 30°, the column that check grades against; band plus
+catalogue at the pole is <!-- count:milkyway-sightlines/poleBandPlusCatalogueOverTotal d2 -->0.41<!-- /count --> mag over [Leinert 1998](/data/papers/index.md#leinert1998)'s total,
+where band-without-hole plus catalogue was <!-- count:milkyway-sightlines/poleDoubleCountedOverTotal d2 -->0.88<!-- /count --> over.
 
 Two things make what remains a scale disagreement between published
 sources rather than a shape error in the model. The two checks have the
