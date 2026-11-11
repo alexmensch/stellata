@@ -388,11 +388,11 @@ pole.
 
 | sightline | mag/arcsec² | Δ vs S_lim | /255 |
 | --- | --- | --- | --- |
-| l = 0, b = 5 | 20.93 | **1.07 OVER** — the maximum | 63.6 |
-| l = 0, b = 0 (GC) | 22.54 | 0.54 under | 21.5 |
-| anticentre | 22.69 | 0.69 under | 15.5 |
+| l = 0, b = 5 | 20.93 | **1.07 OVER** — the maximum | 63.7 |
+| l = 0, b = 0 (GC) | 22.53 | 0.53 under | 21.7 |
+| anticentre | 22.69 | 0.69 under | 15.7 |
 | b = 30 | 23.10 | 1.10 under | 3.6 |
-| NGP | 24.24 | 2.24 under | 0.0 |
+| NGP | 24.23 | 2.23 under | 0.0 |
 
 Plane-to-pole contrast **1.70 mag** photometrically. **The midplane is
 not the maximum** — b ≈ 5° is, because the in-plane sightline eats the
