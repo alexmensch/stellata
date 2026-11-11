@@ -9,7 +9,6 @@ import {
   pairComponentTokens,
   parentComponentToken,
   relatedHier,
-  splitComponents,
   subcomponentTopLetter,
   tokenLetters,
   wdsRootOf,
@@ -19,19 +18,6 @@ describe('isComponentToken', () => {
   it('admits one component and refuses compounds and fixed-width garbage', () => {
     for (const tok of ['A', 'Aa', 'Aa1', 'B', 'Cb']) expect(isComponentToken(tok)).toBe(true);
     for (const tok of ['', 'AB', 'Aab', 'a', '95', 'Aa12', 'r']) expect(isComponentToken(tok)).toBe(false);
-  });
-});
-
-describe('splitComponents', () => {
-  it('splits a two-letter field and a comma-separated one', () => {
-    expect(splitComponents('AB')).toEqual(['A', 'B']);
-    expect(splitComponents('Aa,Ab')).toEqual(['Aa', 'Ab']);
-    expect(splitComponents('BC,D')).toEqual(['BC', 'D']);
-    expect(splitComponents(' Aa1, 2 ')).toEqual(['Aa1', '2']);
-  });
-
-  it('is null for a blank field and for a form with no confident split', () => {
-    for (const field of ['', '   ', 'ABC', 'A', 'A,B,C']) expect(splitComponents(field)).toBeNull();
   });
 });
 

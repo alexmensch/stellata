@@ -1,9 +1,9 @@
-// The WDS summary and ORB6 fixed-width formats: pair rows, orbit rows, and the duplicate-row collapse.
+// The WDS summary and ORB6 fixed-width formats: pair rows, orbit rows, the components field, and the duplicate-row collapse. See README.md.
 
-import { RA_HOURS_TO_DEG } from '../../../src/astro-core/astronomy-constants';
-import type { SkyPosition } from '../../../src/astro-core/equatorial-basis';
-import type { Declared } from '../../util/sources/source';
-import { floatCell, intCell } from '../../util/tsv/table-pure';
+import { RA_HOURS_TO_DEG } from '../../src/astro-core/astronomy-constants';
+import type { SkyPosition } from '../../src/astro-core/equatorial-basis';
+import type { Declared } from '../util/sources/source';
+import { floatCell, intCell } from '../util/tsv/table-pure';
 
 export interface WdsPair {
   /** `HHMMm±DDMM`. */
@@ -244,6 +244,17 @@ export function parseOrb6(text: string, from: Declared): Orb6Parse {
   }
   assertCoverage(entries, from, 'P', (e) => e.pVal !== null, ORB6_PERIOD_COVERAGE_FLOOR);
   return { entries, grades };
+}
+
+/** `AB` → A, B; `Aa,Ab` → Aa, Ab; `BC,D` → BC, D; null where README.md#the-components-field says. */
+export function splitComponents(components: string): readonly [string, string] | null {
+  const s = components.trim();
+  if (s === '') return null;
+  if (s.includes(',')) {
+    const parts = s.split(',').map((p) => p.trim()).filter((p) => p !== '');
+    return parts.length === 2 ? [parts[0], parts[1]] : null;
+  }
+  return s.length === 2 ? [s[0], s[1]] : null;
 }
 
 /** `outcomes` is one per input row. */

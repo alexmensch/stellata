@@ -6,7 +6,7 @@ import type { AthygRow } from '../load/athyg-pure';
 import type { IdentifierIndices } from '../load/indices-pure';
 import type { ReferenceCatalogs } from '../load/reference-catalogs';
 import type { SimbadWdsXid } from '../load/simbad-pure';
-import type { Orb6Entry, WdsPair } from '../load/wds-pure';
+import type { Orb6Entry, WdsPair } from '../../wds/wds-pure';
 import { fold } from '../../util/counts/tally-pure';
 import {
   auditBindingIntegrity, bindingAuditSourceIds, bindingIntegrityCounts,

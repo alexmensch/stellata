@@ -19,6 +19,8 @@ cross-script policy and pointers.
   (two rows per physical pair, with sep+PA+epoch+Δmag columns) and
   `public/binaries.bin` (runtime artifact, one record per pair, for
   the `BinaryOrbitField` per-frame Kepler walk).
+- `wds/` — the WDS summary and ORB6 readers, shared by `binaries/` and
+  `refresh/`.
 - `distance-validation/` —
   [Vaidman 2025](/data/papers/index.md#vaidman2025) BA-supergiant
   cross-check.

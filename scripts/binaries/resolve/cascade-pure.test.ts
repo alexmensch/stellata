@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
 import { componentKey, pairRowKey } from '../component-tokens-pure';
-import { athygRow, orb6Entry, wdsPair } from '../load/load-fixture';
-import type { Orb6Entry, WdsPair } from '../load/wds-pure';
+import { orb6Entry, wdsPair } from '../../wds/wds-fixture';
+import { athygRow } from '../load/load-fixture';
+import type { Orb6Entry, WdsPair } from '../../wds/wds-pure';
 import {
   buildSystemLetterPositions, groupOrb6ByPair, resolveComponent, resolveViaCcdm, resolveViaPosition, resolveViaSimbad,
 } from './cascade-pure';

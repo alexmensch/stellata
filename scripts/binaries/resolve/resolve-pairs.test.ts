@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { componentKey } from '../component-tokens-pure';
 import type { IdentifierIndices } from '../load/indices-pure';
-import { orb6Entry, wdsPair } from '../load/load-fixture';
+import { orb6Entry, wdsPair } from '../../wds/wds-fixture';
 import type { BindingVerdict } from './binding-audit-pure';
 import { componentsOf, type DecomposedPair } from './components-pure';
 import { astrometryRequestIds, resolveCascade, type Stage2Result } from './resolve-pairs';

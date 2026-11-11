@@ -4,7 +4,7 @@ import { canonicalCompLetter, componentKey, compoundContains, relatedHier, type 
 import type { GaiaAstrometryRow } from '../load/gaia-pure';
 import type { IdentifierIndices } from '../load/indices-pure';
 import type { SimbadWdsXid } from '../load/simbad-pure';
-import { measuredOffset, type WdsPair } from '../load/wds-pure';
+import { measuredOffset, type WdsPair } from '../../wds/wds-pure';
 import { fold } from '../../util/counts/tally-pure';
 import { compareSourceIds } from '../../util/tsv/table-pure';
 import { DEG_TO_RAD } from '../../../src/astro-core/astronomy-constants';

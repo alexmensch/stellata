@@ -34,7 +34,9 @@ orb6_orbits.txt    ~1.1 MB, LFS. Sixth catalog of visual binary
 `scripts/binaries/build-binaries.py`:
 
 - `wds_summ.txt` → Stage 1 row parse (every WDS pair → primary +
-  secondary letter decomposition).
+  secondary letter decomposition). `refresh:simbad-wds-xids` reads it too,
+  asking SIMBAD about every component it decomposes into. Their TypeScript
+  reader is [`scripts/wds/`](../../scripts/wds/README.md).
 - `wds_notes.txt` → Stage 5 optical-pair filter tier 1 (flag chars
   `{T, V, Z}` keep, `{S, U, X, Y}` reject).
 - `orb6_orbits.txt` → Stage 2 (`orb6_hip` resolution tier) +

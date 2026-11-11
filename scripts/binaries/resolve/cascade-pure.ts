@@ -2,12 +2,12 @@
 
 import type { SkyPosition } from '../../../src/astro-core/equatorial-basis';
 import {
-  canonicalCompLetter, componentKey, pairComponentTokens, pairRowKey, splitComponents, type ComponentKey, type PairRowKey,
+  canonicalCompLetter, componentKey, pairComponentTokens, pairRowKey, type ComponentKey, type PairRowKey,
 } from '../component-tokens-pure';
 import type { AthygRow } from '../load/athyg-pure';
 import type { IdentifierIndices } from '../load/indices-pure';
 import type { SimbadWdsXid } from '../load/simbad-pure';
-import { measuredOffset, type Orb6Entry, type WdsPair } from '../load/wds-pure';
+import { measuredOffset, splitComponents, type Orb6Entry, type WdsPair } from '../../wds/wds-pure';
 import {
   WDS_PRECISE_COORD_EPOCH, chordSq, chordSqForTolerance, positionsWithin, predictSecondaryPosition, propagatePosition,
 } from '../sky-geometry-pure';

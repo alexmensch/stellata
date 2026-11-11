@@ -1,12 +1,13 @@
 {
-  "inputs": {
-    "data/simbad/wds_xids_overrides.tsv": "fe8ee5dde4b619daecfa3c8c0ec9195e8d9e1c7f",
-    "data/wds/wds_summ.txt": "22cd395cb4c9c6fe19bfa22bb4c45fc120ef473d"
-  },
+  "inputs": {},
   "outputs": {
     "data/simbad/simbad_wds_xids.tsv": "08bd1f5b5f7a101f1f8afc4db02c30579ea17366"
   },
-  "query": "14e3d73cdf001fe9116cb157c42c5cc194b4783b",
+  "query": "50210821d130a19c1f17f469a36cbf1c7a41fbf7",
   "answeredBy": [],
-  "requestFrom": []
+  "request": "00e1d415db3d61caae33d0b57c6c50525bbe1e84",
+  "requestFrom": [
+    "data/wds/wds_summ.txt",
+    "data/simbad/wds_xids_overrides.tsv"
+  ]
 }

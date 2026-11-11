@@ -6,7 +6,7 @@ import {
   type DiscovererKey, type PairRowKey,
 } from '../component-tokens-pure';
 import { mscRenderable, type MscLookup, type MscPairOrbits } from './msc-pure';
-import type { Orb6Entry, WdsPair } from './wds-pure';
+import type { Orb6Entry, WdsPair } from '../../wds/wds-pure';
 
 export const SYNTH_MSC_DISCOVERER = 'MSC';
 

@@ -1,7 +1,7 @@
 // The blank-components rescue: a blank WDS row an ORB6 orbit or a SIMBAD cross-ID confirms becomes its implied AB pair. ../README.md#blank-components-rescue-stage-12-boundary.
 
 import { discovererKey } from '../component-tokens-pure';
-import type { Orb6Entry, WdsPair } from './wds-pure';
+import type { Orb6Entry, WdsPair } from '../../wds/wds-pure';
 
 /** WDS's blank `components` is the implied single pair of a one-pair system. */
 export const IMPLIED_AB_COMPONENTS = 'AB';

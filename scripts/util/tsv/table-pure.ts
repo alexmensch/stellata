@@ -157,6 +157,11 @@ export class TableRow<C extends string> {
     return textCell(this.raw(c));
   }
 
+  /** A hand-curated cell the row exists to state: empty is refused, never skipped. */
+  requiredText(c: C): string {
+    return this.text(c) ?? this.fail(`${c} is empty. A curated row skipped in silence does nothing; complete it or comment it with \`#\``);
+  }
+
   float(c: C): number | null {
     return this.cell(c, floatCell);
   }

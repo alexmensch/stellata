@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { rescueBlankComponents } from './blank-rescue-pure';
-import { blankPair, orb6Entry, wdsPair } from './load-fixture';
+import { blankPair, orb6Entry, wdsPair } from '../../wds/wds-fixture';
 
 describe('rescueBlankComponents', () => {
   const rescue = (pairs: ReturnType<typeof wdsPair>[], opts: { orb6?: ReturnType<typeof orb6Entry>[]; simbad?: string[]; donors?: ReturnType<typeof wdsPair>[] } = {}) =>

@@ -111,9 +111,10 @@ scripts/binaries/
                                   and relatedHier / compoundContains — the
                                   test planRecords uses to tell one link
                                   named twice from two stars collapsed onto
-                                  one record. Also the one parse of a WDS
-                                  `components` field (splitComponents,
-                                  pairComponentTokens), childComponentTokens,
+                                  one record. Also pairComponentTokens (a
+                                  `components` field split by ../wds/'s
+                                  splitComponents, its secondary
+                                  re-anchored), childComponentTokens,
                                   tokenLetters and subcomponentTopLetter
                                   (the root letter, where
                                   parentComponentToken is the immediate
@@ -303,9 +304,6 @@ subprocess in the other language is invisible to both
 ([The step table](/scripts/pipeline/step-table/README.md#the-step-table--stepsts)), so a
 half-TS, half-Python step would miss inputs. Until the switch lands, a
 behaviour change to this step waits for it and is written once, in TS.
-The switch also waits for the package's one other importer,
-`scripts/refresh/refresh-simbad-wds-xids.py` (`parsers`,
-`stage2_resolve`), to port first.
 
 
 ## Stage 2 — WDS component → Gaia DR3 source_id

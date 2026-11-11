@@ -1,8 +1,8 @@
 // Stage 2's per-component binding and the DecomposedPair every pass reads and returns. See README.md.
 
-import { discovererKey, splitComponents, type DiscovererKey } from '../component-tokens-pure';
+import { discovererKey, type DiscovererKey } from '../component-tokens-pure';
 import type { AthygRow } from '../load/athyg-pure';
-import type { WdsPair } from '../load/wds-pure';
+import { splitComponents, type WdsPair } from '../../wds/wds-pure';
 import { RESOLVE_VIA } from '../multiples-tsv';
 import { groupBy } from '../../util/map-buckets-pure';
 
