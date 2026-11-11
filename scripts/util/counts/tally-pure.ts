@@ -29,3 +29,10 @@ export function fold<T extends string, I>(
 export function prefixed<P extends string, K extends string>(prefix: P, tally: Record<K, number>): Record<`${P}${K}`, number> {
   return Object.fromEntries(Object.entries(tally).map(([k, v]) => [`${prefix}${k}`, v])) as Record<`${P}${K}`, number>;
 }
+
+/** `part / whole` for a snapshot rate; throws on an empty whole, which is a
+ *  broken build, not a rate of 0. */
+export function share(part: number, whole: number, rate: string): number {
+  if (whole <= 0) throw new Error(`${rate}: nothing to rate (denominator ${whole})`);
+  return part / whole;
+}

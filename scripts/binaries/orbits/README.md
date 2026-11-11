@@ -29,7 +29,7 @@ scripts/binaries/orbits/
   select-orbit-pure.ts (+ test)  PairOrbit; selectOrbit, the cascade for
                                  one pair; nssSeparationConsistent and
                                  keplerSemimajorAxisAu.
-  attach-orbits.ts               attachStage4 (every pair's candidates,
+  attach-orbits.ts (+ test)      attachStage4 (every pair's candidates,
                                  then selectOrbit), Stage4Result,
                                  orbitTally, stage4Counts, stage4Rates.
   stage4-report-pure.ts          The build-log line, read off the result.
@@ -60,7 +60,8 @@ refresh carrying one outside the window stops the build at Stage 4.
 
 `stage4Counts` returns the `orbit_*` keys, one per route, folded through the
 one tally helper; `stage4Rates` derives `nss_orbit_rate`, the NSS share of
-the pairs with elements. `../build-binaries.test.ts` holds both to the
+the pairs with elements, through the tally module's `share`, which throws
+when no pair has any. `../build-binaries.test.ts` holds both to the
 committed snapshots, as it does Stage 3's
 ([Counts](../astrometry/README.md#counts)).
 
