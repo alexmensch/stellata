@@ -174,8 +174,9 @@ baked into the tier's own string. It appends where a sibling OWNS the same
 designation, which is a stronger test than the label needing to be unique:
 a sibling that owns the designation and then borrows a higher tier
 displays a lettered form of it regardless, so δ Cep A keeps its letter
-beside δ Cep C/D/E even though nothing else displays the bare base. 29 of
-the 79 lettered records are that shape. Where the authority names a
+beside δ Cep C/D/E even though nothing else displays the bare base.
+<!-- count:build-catalog/naming.letter.sibling-owns -->53<!-- /count --> own labels carry a letter because a sibling owns the designation,
+<!-- count:build-catalog/naming.letter.stated -->50<!-- /count --> because the authority attributes it to that component. Where the authority names a
 specific component, that name attaches to that record alone; siblings
 resolve down the ladder on their own.
 
